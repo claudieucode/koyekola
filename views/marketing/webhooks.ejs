@@ -1,0 +1,61 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const canManage = mk.can("webhooks.manage");
+%>
+    <div class="mk-head"><h1>Webhooks <span class="mk-count"><%= endpoints.length %></span></h1></div>
+    <p class="mk-lead">Un webhook notifie une adresse à vous, en HTTP, quand un événement KOYEKOLA se produit (nouveau contact, commande, campagne terminée…). Chaque envoi est signé pour que vous puissiez vérifier qu'il vient bien d'ici.</p>
+
+    <% if (!endpoints.length) { %>
+      <div class="mk-empty">
+        <%- icon("plug", { size: 32 }) %>
+        <h2>Aucun webhook</h2>
+        <p>Créez-en un pour notifier un outil externe de ce qui se passe ici, en temps réel.</p>
+        <% if (canManage) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un webhook</button></div><% } %>
+      </div>
+    <% } else { %>
+      <div class="mk-table-wrap">
+        <table class="mk-table mk-datatable">
+          <caption class="sr-only">Webhooks</caption>
+          <thead><tr><th scope="col">Nom</th><th scope="col">Adresse</th><th scope="col">Événements</th><th scope="col">État</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody>
+            <% endpoints.forEach((e) => { %>
+              <tr>
+                <td data-label="Nom"><a href="/marketing/webhooks/<%= e.id %>"><%= e.name %></a></td>
+                <td data-label="Adresse" class="mk-link-url"><%= e.url %></td>
+                <td data-label="Événements"><%= e.events.includes("*") ? "Tous" : `${e.events.length} événement${e.events.length > 1 ? "s" : ""}` %></td>
+                <td data-label="État"><span class="mk-status <%= e.enabled ? 'mk-status-ok' : '' %>"><%= e.enabled ? "Actif" : "En pause" %></span></td>
+                <td data-label="Actions" class="mk-row-actions"><a class="btn btn-outline btn-sm" href="/marketing/webhooks/<%= e.id %>">Détails</a></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <% if (canManage) { %>
+      <dialog class="mk-dialog mk-modal mk-modal-wide" id="nouveau" data-mk-modal data-mk-modal-hash="nouveau" aria-labelledby="nw-title">
+        <form action="/marketing/webhooks" method="post">
+          <div class="mk-dialog-body">
+            <h2 id="nw-title">Nouveau webhook</h2>
+            <p>La clé de signature sera affichée une seule fois, juste après la création.</p>
+            <div class="field-group"><label for="w-name">Nom *</label><input id="w-name" type="text" name="name" maxlength="80" placeholder="Ex. Zapier, entrepôt de données…" required data-mk-required-message="Le nom du webhook est obligatoire."></div>
+            <div class="field-group"><label for="w-url">Adresse (https://) *</label><input id="w-url" type="url" name="url" maxlength="2048" placeholder="https://exemple.fr/webhooks/koyekola" required data-mk-required-message="L'adresse qui recevra les notifications est obligatoire."></div>
+            <fieldset class="mk-fieldset">
+              <legend>Événements à notifier</legend>
+              <label class="checkbox-row mk-check-all"><input type="checkbox" name="events" value="*"> <span><strong>Tous les événements</strong>, y compris ceux ajoutés plus tard</span></label>
+              <div class="mk-check-grid">
+                <% Object.entries(events).forEach(([key, label]) => { %>
+                  <label class="checkbox-row"><input type="checkbox" name="events" value="<%= key %>"> <span><%= label %> <code><%= key %></code></span></label>
+                <% }) %>
+              </div>
+            </fieldset>
+          </div>
+          <div class="mk-dialog-actions">
+            <button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm">Créer le webhook</button>
+          </div>
+        </form>
+      </dialog>
+      <%- include("partials/modal-reopen", { id: "nouveau" }) %>
+    <% } %>
+<%- include("partials/bottom") %>

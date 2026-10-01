@@ -1,0 +1,119 @@
+<%- include("partials/top", { title, active }) %>
+    <div class="mk-head"><h1>Composants</h1></div>
+    <p class="mk-lead">Référence du design system de l'espace marketing : chaque brique réutilisable, telle qu'elle s'affiche. Toute nouvelle page doit les réutiliser plutôt que d'en créer de nouvelles.</p>
+
+    <section class="mk-spec" aria-labelledby="c-colors">
+      <h2 id="c-colors">Couleurs et espacements</h2>
+      <div class="mk-spec-row">
+        <% [["Bleu nuit", "var(--primary)"], ["Accent", "var(--accent)"], ["Ciel", "var(--sky)"], ["Clair", "var(--accent-light)"], ["Succès", "var(--success)"], ["Alerte", "var(--warning-text)"], ["Erreur", "var(--danger)"]].forEach(([name, value]) => { %>
+          <div class="mk-swatch"><span class="mk-swatch-chip" style="background:<%= value %>"></span><%= name %></div>
+        <% }) %>
+      </div>
+      <p class="field-hint">Style « façon Mailchimp » : menu latéral clair avec bouton « Créer », cartes plates à filet fin (8 px d'arrondi), champs et boutons à 6 px, onglets soulignés, ombres réservées aux menus et fenêtres. Échelle d'espacement : 4 · 8 · 12 · 16 · 24 · 32 px.</p>
+    </section>
+
+    <section class="mk-spec" aria-labelledby="c-buttons">
+      <h2 id="c-buttons">Boutons et messages</h2>
+      <div class="mk-spec-row">
+        <button type="button" class="btn btn-primary btn-sm">Action principale</button>
+        <button type="button" class="btn btn-outline btn-sm">Secondaire</button>
+        <button type="button" class="btn btn-ghost btn-sm">Discret</button>
+        <button type="button" class="btn btn-danger btn-sm">Danger</button>
+        <button type="button" class="btn btn-outline btn-sm" data-tooltip="Info-bulle au survol et au clavier">Avec info-bulle</button>
+        <button type="button" class="btn btn-outline btn-sm" data-mk-toast="Modifications enregistrées." data-mk-toast-type="ok">Afficher un toast</button>
+      </div>
+      <div class="mk-flash" role="note">Message d'information.</div>
+      <div class="mk-flash mk-flash-ok" role="note">Message de réussite.</div>
+      <div class="mk-flash mk-flash-error" role="note">Message d'erreur.</div>
+    </section>
+
+    <section class="mk-spec" aria-labelledby="c-stats">
+      <h2 id="c-stats">Cartes de chiffres et statuts</h2>
+      <div class="mk-stats">
+        <div class="mk-stat"><span class="mk-stat-label">Contacts</span><span class="mk-stat-value">1 240</span><span class="mk-stat-hint">dont 980 joignables</span></div>
+        <div class="mk-stat"><span class="mk-stat-label">Taux d'ouverture</span><span class="mk-stat-value">42 %</span><span class="mk-stat-trend is-up">+3 pts sur 30 jours</span></div>
+        <a class="mk-stat" href="/marketing/conformite"><span class="mk-stat-label">Adresses bloquées</span><span class="mk-stat-value">12</span><span class="mk-stat-trend is-down">+2 cette semaine</span></a>
+      </div>
+      <div class="mk-spec-row">
+        <span class="mk-status mk-status-ok">Actif</span>
+        <span class="mk-status mk-status-warn">En pause</span>
+        <span class="mk-status mk-status-err">Échec</span>
+        <span class="mk-status mk-status-info">Planifié</span>
+        <span class="mk-status">Brouillon</span>
+      </div>
+    </section>
+
+    <section class="mk-spec" aria-labelledby="c-tabs">
+      <h2 id="c-tabs">Onglets, étapes et progression</h2>
+      <div class="mk-tabs" role="tablist" aria-label="Exemple d'onglets" data-mk-tabs>
+        <button type="button" class="mk-tab" role="tab" id="t-1" aria-selected="true" aria-controls="p-1">Tous <span class="mk-tab-count">12</span></button>
+        <button type="button" class="mk-tab" role="tab" id="t-2" aria-selected="false" tabindex="-1" aria-controls="p-2">Brouillons <span class="mk-tab-count">3</span></button>
+      </div>
+      <div class="mk-tabpanel" id="p-1" role="tabpanel" aria-labelledby="t-1"><p>Contenu du premier onglet.</p></div>
+      <div class="mk-tabpanel" id="p-2" role="tabpanel" aria-labelledby="t-2" hidden><p>Contenu du deuxième onglet.</p></div>
+      <ol class="mk-stepper" aria-label="Étapes d'une création guidée">
+        <li class="mk-step is-done">Audience</li>
+        <li class="mk-step is-current" aria-current="step">Contenu</li>
+        <li class="mk-step">Vérification</li>
+      </ol>
+      <div class="mk-progress" role="progressbar" aria-label="Progression" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"><span class="mk-progress-bar" style="width:60%"></span></div>
+    </section>
+
+    <section class="mk-spec" aria-labelledby="c-table">
+      <h2 id="c-table">Recherche, filtres et tableau</h2>
+      <form class="mk-filterbar" role="search" action="/marketing/composants" method="get">
+        <div class="mk-search"><%- icon("search", { size: 16 }) %><label class="sr-only" for="c-q">Rechercher</label><input type="search" id="c-q" placeholder="Rechercher un contact…"></div>
+        <div class="field-group"><label for="c-s">Statut</label><select id="c-s"><option>Tous</option><option>Abonné</option></select></div>
+        <span class="mk-filter-count">2 résultats</span>
+      </form>
+      <div class="mk-bulkbar" data-mk-bulkbar hidden><span data-mk-selected-count>0 sélectionné</span><button type="button" class="btn btn-outline btn-sm">Ajouter une étiquette</button></div>
+      <div class="mk-table-wrap">
+        <table class="mk-table mk-datatable" data-mk-select>
+          <caption class="sr-only">Exemple de tableau</caption>
+          <thead><tr>
+            <th scope="col" class="mk-col-check"><input type="checkbox" data-mk-select-all aria-label="Tout sélectionner"></th>
+            <th scope="col" aria-sort="ascending"><a href="#c-table">Nom</a></th>
+            <th scope="col">Statut</th>
+            <th scope="col" class="mk-num">Achats</th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="mk-col-check" data-label="Sélection"><input type="checkbox" data-mk-select-row aria-label="Sélectionner Awa"></td><td data-label="Nom">Awa</td><td data-label="Statut"><span class="mk-status mk-status-ok">Abonné</span></td><td class="mk-num" data-label="Achats">3</td></tr>
+            <tr><td class="mk-col-check" data-label="Sélection"><input type="checkbox" data-mk-select-row aria-label="Sélectionner Koffi"></td><td data-label="Nom">Koffi</td><td data-label="Statut"><span class="mk-status">Sans consentement</span></td><td class="mk-num" data-label="Achats">0</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="mk-pager"><span>1–2 sur 2</span><div class="mk-pager-links"><span aria-current="page">1</span><a href="#c-table">2</a></div></div>
+    </section>
+
+    <section class="mk-spec" aria-labelledby="c-states">
+      <h2 id="c-states">États vides et chargement</h2>
+      <div class="mk-empty">
+        <%- icon("inbox", { size: 32 }) %>
+        <h3>Aucune campagne pour le moment</h3>
+        <p>Créez votre première campagne pour écrire à votre audience.</p>
+        <div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/campagnes/nouvelle">Créer une campagne</a></div>
+      </div>
+      <div aria-hidden="true"><span class="mk-skeleton mk-skeleton-line"></span><span class="mk-skeleton mk-skeleton-line"></span><span class="mk-skeleton mk-skeleton-block"></span></div>
+    </section>
+
+    <section class="mk-spec" aria-labelledby="c-menus">
+      <h2 id="c-menus">Menu déroulant et confirmation</h2>
+      <div class="mk-spec-row">
+        <div class="mk-dropdown" data-mk-dropdown>
+          <button type="button" class="btn btn-outline btn-sm" aria-haspopup="menu" aria-expanded="false" aria-controls="c-menu">Actions <%- icon("chevronDown", { size: 14 }) %></button>
+          <div class="mk-menu" id="c-menu" role="menu" hidden>
+            <button type="button" role="menuitem">Dupliquer</button>
+            <button type="button" role="menuitem">Exporter</button>
+          </div>
+        </div>
+        <form action="/marketing/composants" method="get">
+          <button type="submit" class="btn btn-danger btn-sm" data-mk-confirm="Cette action est définitive." data-mk-confirm-title="Supprimer cet élément ?" data-mk-confirm-ok="Supprimer">Supprimer (avec confirmation)</button>
+        </form>
+      </div>
+      <p class="field-hint">Aperçu d'une boîte de confirmation (le bouton ci-dessus ouvre la vraie) :</p>
+      <div class="mk-dialog" role="group" aria-label="Aperçu d'une boîte de confirmation">
+        <div class="mk-dialog-body"><h2>Supprimer cet élément ?</h2><p>Cette action est définitive.</p></div>
+        <div class="mk-dialog-actions"><span class="btn btn-outline btn-sm">Annuler</span><span class="btn btn-danger btn-sm">Supprimer</span></div>
+      </div>
+    </section>
+<%- include("partials/bottom") %>

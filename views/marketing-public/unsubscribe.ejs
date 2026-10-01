@@ -1,0 +1,19 @@
+<%- include("../partials/header", { title, seo: { noindex: true, rawTitle: title + " · KOYEKOLA" } }) %>
+  <div class="auth-page">
+    <div class="auth-card">
+      <h1>Se désinscrire</h1>
+      <% if (already) { %>
+        <p class="subtitle">L'adresse <strong><%= masked %></strong> est déjà désinscrite : vous ne recevez plus nos e-mails marketing.</p>
+      <% } else { %>
+        <p class="subtitle">
+          <% if (listName) { %>Ne plus recevoir les messages de la liste « <%= listName %> » à l'adresse <strong><%= masked %></strong> ?
+          <% } else { %>Ne plus recevoir nos e-mails marketing à l'adresse <strong><%= masked %></strong> ?<% } %>
+        </p>
+        <form method="post">
+          <button type="submit" class="btn btn-primary btn-block btn-lg">Confirmer la désinscription</button>
+        </form>
+        <p class="form-footer">Vous continuerez à recevoir les messages liés à votre compte (achat, accès aux formations).</p>
+      <% } %>
+    </div>
+  </div>
+<%- include("../partials/footer") %>

@@ -1,0 +1,170 @@
+<%- include("partials/top", { title, active }) %>
+    <p class="mk-back"><a href="/marketing/contacts">← Contacts</a></p>
+    <div class="mk-head">
+      <h1 class="mk-email"><%= contact.email %></h1>
+      <span class="badge <%= mkh.statusClass(contact.status) %>"><%= mkh.statusLabel(contact.status) %></span>
+    </div>
+    <p class="mk-lead"><%= mkh.fullName(contact) || "Sans nom" %> · source : <%= contact.source %> · ajouté le <%= mkh.fdate(contact.created_at) %><% if (contact.lms_user_id) { %> · compte KOYEKOLA lié<% } %></p>
+
+    <section class="mk-panel mk-verdict <%= sendable.ok ? "is-ok" : "is-no" %>">
+      <h2>Peut-on lui écrire (marketing) ?</h2>
+      <p><strong><%= sendable.ok ? "Oui." : "Non." %></strong> <%= sendable.ok ? "Consentement prouvé, adresse non bloquée." : mkh.reasonLabel(sendable.reason) %></p>
+    </section>
+
+    <div class="mk-stats">
+      <div class="mk-stat"><span class="mk-stat-label">E-mails reçus</span><span class="mk-stat-value"><%= mkh.fmt(summary.messages) %></span><span class="mk-stat-hint"><%= mkh.fmt(summary.clicked) %> avec clic</span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Scénarios en cours</span><span class="mk-stat-value"><%= mkh.fmt(summary.runningAutomations) %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Dernière activité</span><span class="mk-stat-value mk-stat-small"><%= summary.lastActivity ? mkh.fdate(summary.lastActivity) : "—" %></span><span class="mk-stat-hint">clic ou ouverture d'un e-mail</span></div>
+    </div>
+
+    <section class="mk-panel mk-timeline-panel" aria-labelledby="tl-title">
+      <h2 id="tl-title">Chronologie</h2>
+      <ul class="mk-timeline">
+        <% timeline.forEach((a) => { %>
+          <li class="mk-timeline-item">
+            <span class="mk-timeline-mark" aria-hidden="true"><%- icon(a.icon, { size: 16 }) %></span>
+            <span class="mk-timeline-body"><%= a.text %><% if (a.href && mk.can(a.permission)) { %> <a href="<%= a.href %>">Ouvrir</a><% } %></span>
+            <time class="mk-timeline-time" datetime="<%= new Date(a.at).toISOString() %>"><%= mkh.fdate(new Date(a.at).toISOString()) %></time>
+          </li>
+        <% }) %>
+      </ul>
+      <p class="field-hint">Les 50 événements les plus récents. Les ouvertures d'e-mails sont indicatives.</p>
+    </section>
+
+    <div class="mk-grid-2">
+      <section class="mk-panel">
+        <h2>Informations</h2>
+        <form action="/marketing/contacts/<%= contact.id %>" method="post">
+          <div class="field-row">
+            <div class="field-group"><label for="e-fn">Prénom</label><input id="e-fn" type="text" name="first_name" value="<%= contact.first_name %>" maxlength="100" <%= mk.can("contacts.write") ? "" : "disabled" %>></div>
+            <div class="field-group"><label for="e-ln">Nom</label><input id="e-ln" type="text" name="last_name" value="<%= contact.last_name %>" maxlength="100" <%= mk.can("contacts.write") ? "" : "disabled" %>></div>
+          </div>
+          <div class="field-row">
+            <div class="field-group"><label for="e-phone">Téléphone</label><input id="e-phone" type="text" name="phone" value="<%= contact.phone %>" maxlength="40" <%= mk.can("contacts.write") ? "" : "disabled" %>></div>
+            <div class="field-group"><label for="e-company">Société</label><input id="e-company" type="text" name="company" value="<%= contact.company %>" maxlength="200" <%= mk.can("contacts.write") ? "" : "disabled" %>></div>
+          </div>
+          <div class="field-row">
+            <div class="field-group"><label for="e-country">Pays</label><input id="e-country" type="text" name="country" value="<%= contact.country %>" maxlength="100" <%= mk.can("contacts.write") ? "" : "disabled" %>></div>
+            <div class="field-group"><label for="e-lang">Langue</label><input id="e-lang" type="text" name="language" value="<%= contact.language %>" maxlength="20" <%= mk.can("contacts.write") ? "" : "disabled" %>></div>
+          </div>
+          <p class="field-hint">L'adresse e-mail est fixe. Le statut ne se modifie que par un consentement, une désinscription ou un blocage.</p>
+          <% if (mk.can("contacts.write")) { %><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button><% } %>
+        </form>
+      </section>
+
+      <section class="mk-panel">
+        <h2>Propriétés</h2>
+        <% if (!defs.length) { %><p class="field-hint">Aucune propriété personnalisée. <a href="/marketing/proprietes">En créer une</a>.</p>
+        <% } else { %>
+          <form action="/marketing/contacts/<%= contact.id %>/proprietes" method="post">
+            <% defs.forEach((d) => { const v = values[d.key]; const dis = mk.can("contacts.write") ? "" : "disabled"; %>
+              <div class="field-group">
+                <label for="p-<%= d.key %>"><%= d.label %> <span class="field-hint">(<%= d.type === "text" ? "texte" : d.type === "number" ? "nombre" : d.type === "date" ? "date AAAA-MM-JJ" : d.type === "boolean" ? "oui / non" : "choix" %>)</span></label>
+                <% if (d.type === "select") { %>
+                  <select id="p-<%= d.key %>" name="prop_<%= d.key %>" <%= dis %>><option value="">—</option>
+                    <% JSON.parse(d.options).forEach((o) => { %><option value="<%= o %>" <%= v === o ? "selected" : "" %>><%= o %></option><% }) %></select>
+                <% } else if (d.type === "boolean") { %>
+                  <select id="p-<%= d.key %>" name="prop_<%= d.key %>" <%= dis %>><option value="">—</option><option value="oui" <%= v === true ? "selected" : "" %>>Oui</option><option value="non" <%= v === false ? "selected" : "" %>>Non</option></select>
+                <% } else { %>
+                  <input id="p-<%= d.key %>" type="text" name="prop_<%= d.key %>" value="<%= v === undefined ? "" : v %>" maxlength="500" <%= dis %>>
+                <% } %>
+              </div>
+            <% }) %>
+            <% if (mk.can("contacts.write")) { %><button type="submit" class="btn btn-primary btn-sm">Enregistrer les propriétés</button><% } %>
+          </form>
+        <% } %>
+      </section>
+
+      <section class="mk-panel">
+        <h2>Étiquettes</h2>
+        <div class="mk-chips">
+          <% if (!tags.length) { %><span class="field-hint">Aucune étiquette.</span><% } %>
+          <% tags.forEach((t) => { %>
+            <span class="mk-chip"><%= t.name %>
+              <% if (mk.can("contacts.write")) { %><form action="/marketing/contacts/<%= contact.id %>/etiquettes/retirer" method="post" class="mk-inline"><input type="hidden" name="name" value="<%= t.name %>"><button type="submit" class="mk-chip-x" aria-label="Retirer l'étiquette <%= t.name %>"><%- icon("close", { size: 12 }) %></button></form><% } %>
+            </span>
+          <% }) %>
+        </div>
+        <% if (mk.can("contacts.write")) { %>
+          <form action="/marketing/contacts/<%= contact.id %>/etiquettes" method="post" class="mk-inline-form">
+            <label for="t-name" class="sr-only">Nouvelle étiquette</label><input id="t-name" type="text" name="name" maxlength="64" placeholder="Nouvelle étiquette" required>
+            <button type="submit" class="btn btn-outline btn-sm">Ajouter</button>
+          </form>
+        <% } %>
+      </section>
+
+      <section class="mk-panel">
+        <h2>Listes</h2>
+        <ul class="mk-status-list">
+          <% if (!memberOf.length) { %><li class="field-hint">Dans aucune liste.</li><% } %>
+          <% memberOf.forEach((l) => { %>
+            <li><a href="/marketing/listes/<%= l.id %>"><%= l.name %></a>
+              <% if (mk.can("contacts.write")) { %><form action="/marketing/contacts/<%= contact.id %>/listes/retirer" method="post" class="mk-inline"><input type="hidden" name="list_id" value="<%= l.id %>"><button type="submit" class="btn btn-outline btn-sm">Retirer</button></form><% } %>
+            </li>
+          <% }) %>
+        </ul>
+        <% if (mk.can("contacts.write") && allLists.length) { %>
+          <form action="/marketing/contacts/<%= contact.id %>/listes" method="post" class="mk-inline-form">
+            <label for="l-id" class="sr-only">Ajouter à une liste</label>
+            <select id="l-id" name="list_id"><% allLists.forEach((l) => { %><option value="<%= l.id %>"><%= l.name %></option><% }) %></select>
+            <button type="submit" class="btn btn-outline btn-sm">Ajouter à la liste</button>
+          </form>
+          <p class="field-hint">Être dans une liste ne donne aucun consentement.</p>
+        <% } %>
+      </section>
+    </div>
+
+    <section class="mk-panel">
+      <h2>Consentement et désinscription</h2>
+      <% if (!history.length) { %><p class="field-hint">Aucune preuve de consentement enregistrée.</p>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table">
+          <caption class="sr-only">Historique du consentement</caption>
+          <thead><tr><th scope="col">Date</th><th scope="col">Événement</th><th scope="col">Source</th><th scope="col">Texte présenté</th><th scope="col">IP (tronquée)</th></tr></thead>
+          <tbody>
+            <% history.forEach((h) => { %>
+              <tr><td><%= mkh.fdate(h.created_at) %></td><td><%= h.action === "granted" ? "Consentement donné" : "Retrait" %><%= h.purpose !== "marketing" ? " (" + h.purpose + ")" : "" %></td><td><%= h.source %></td><td><%= h.text_shown %></td><td><%= h.ip %></td></tr>
+            <% }) %>
+          </tbody>
+        </table></div>
+      <% } %>
+      <% if (preferences.length) { %>
+        <h3>Préférences</h3>
+        <ul class="mk-status-list"><% preferences.forEach((p) => { %><li><%= p.label %> : <%= p.subscribed ? "accepté" : "refusé" %></li><% }) %></ul>
+      <% } %>
+
+      <% if (mk.can("compliance.manage")) { %>
+        <form action="/marketing/contacts/<%= contact.id %>/consentement" method="post" class="mk-form">
+          <div class="field-group">
+            <label for="cs-text">Enregistrer un consentement (preuve obligatoire)</label>
+            <textarea id="cs-text" name="text" rows="4" maxlength="1000" required placeholder="Où, quand et comment la personne a donné son accord (ex. formulaire papier signé au salon, le 3 mars)"></textarea>
+            <span class="field-hint">Ne réabonne jamais une personne désinscrite ni une adresse bloquée.</span>
+          </div>
+          <button type="submit" class="btn btn-outline btn-sm">Enregistrer le consentement</button>
+        </form>
+      <% } %>
+      <div class="mk-actions">
+        <% if (mk.can("contacts.write") && contact.status !== "unsubscribed") { %>
+          <form action="/marketing/contacts/<%= contact.id %>/desinscrire" method="post"><button type="submit" class="btn btn-outline btn-sm">Marquer comme désinscrit</button></form>
+        <% } %>
+        <% if (mk.can("compliance.manage") && !["suppressed", "bounced", "complained"].includes(contact.status)) { %>
+          <form action="/marketing/contacts/<%= contact.id %>/supprimer-adresse" method="post" class="mk-inline-form">
+            <label for="sp-note" class="sr-only">Motif du blocage</label><input id="sp-note" type="text" name="note" maxlength="500" placeholder="Motif (facultatif)">
+            <button type="submit" class="btn btn-outline btn-sm">Bloquer l'adresse</button>
+          </form>
+        <% } %>
+      </div>
+    </section>
+
+    <% if (mk.can("contacts.delete")) { %>
+      <section class="mk-panel mk-danger">
+        <h2>Effacer ce contact</h2>
+        <p class="field-hint">Supprime définitivement le contact, ses propriétés, étiquettes, appartenances et preuves. Action irréversible.</p>
+        <form action="/marketing/contacts/<%= contact.id %>/effacer" method="post">
+          <label class="checkbox-row"><input type="checkbox" name="confirm" value="on"> Je confirme l'effacement définitif</label>
+          <label class="checkbox-row"><input type="checkbox" name="suppress" value="on"> Garder l'adresse bloquée (empêche un réimport)</label>
+          <button type="submit" class="btn btn-danger btn-sm">Effacer</button>
+        </form>
+      </section>
+    <% } %>
+<%- include("partials/bottom") %>

@@ -1,0 +1,168 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const canWrite = mk.can("contacts.write");
+  const NEXT_DIR = { email: "asc", name: "asc", status: "asc", source: "asc", created: "desc", activity: "desc" };
+  const sortHead = (key, label) => {
+    const on = result.sort === key;
+    const next = on ? (result.dir === "asc" ? "desc" : "asc") : NEXT_DIR[key];
+    const attr = on ? ` aria-sort="${result.dir === "asc" ? "ascending" : "descending"}"` : "";
+    return `<th scope="col"${attr}><a href="${mkh.esc(url({ tri: key, sens: next, page: null }))}">${label}</a></th>`;
+  };
+  // Pages affichées : première, dernière et deux de chaque côté de la page courante
+  const pageNumbers = [];
+  for (let p = 1; p <= result.pages; p++) if (p === 1 || p === result.pages || Math.abs(p - result.page) <= 2) pageNumbers.push(p);
+  // Filtres actifs affichés en puces retirables individuellement (jamais « q » : déjà visible dans le champ de recherche)
+  const nameOf = (list, id) => { const x = list.find((i) => String(i.id) === String(id)); return x ? x.name : String(id); };
+  const activeChips = [];
+  if (filters.status) activeChips.push({ label: "Statut", value: mkh.statusLabel(filters.status), clear: url({ status: null, page: null }) });
+  if (filters.liste) activeChips.push({ label: "Liste", value: nameOf(lists, filters.liste), clear: url({ liste: null, page: null }) });
+  if (filters.etiquette) activeChips.push({ label: "Étiquette", value: nameOf(tags, filters.etiquette), clear: url({ etiquette: null, page: null }) });
+  if (filters.segment) activeChips.push({ label: "Segment", value: nameOf(savedSegments, filters.segment), clear: url({ segment: null, page: null }) });
+  if (filters.source) activeChips.push({ label: "Source", value: mkh.sourceLabel(filters.source), clear: url({ source: null, page: null }) });
+  if (filters.depuis) activeChips.push({ label: "Ajoutés", value: `depuis ${filters.depuis} jours`, clear: url({ depuis: null, page: null }) });
+  if (filters.joignables) activeChips.push({ label: null, value: "Joignables seulement", clear: url({ joignables: null, page: null }) });
+%>
+    <div class="mk-head">
+      <h1>Contacts <span class="mk-count"><%= mkh.fmt(result.total) %></span></h1>
+      <div class="mk-actions">
+        <% if (mk.can("contacts.import")) { %><a href="/marketing/importer" class="btn btn-outline btn-sm">Importer</a><% } %>
+        <% if (mk.can("contacts.export")) { %><a href="<%= exportUrl %>" class="btn btn-outline btn-sm">Exporter (CSV)</a><% } %>
+      </div>
+    </div>
+
+    <form class="mk-filterbar" method="get" action="/marketing/contacts" role="search">
+      <% if (view.tri) { %><input type="hidden" name="tri" value="<%= view.tri %>"><input type="hidden" name="sens" value="<%= view.sens %>"><% } %>
+      <div class="mk-search"><%- icon("search", { size: 16 }) %><label class="sr-only" for="f-q">Rechercher un contact</label><input id="f-q" type="search" name="q" value="<%= filters.q %>" placeholder="E-mail, nom, société" maxlength="100"></div>
+      <button type="submit" class="btn btn-primary btn-sm">Filtrer</button>
+      <% if (hasFilters) { %><a href="/marketing/contacts" class="btn btn-ghost btn-sm">Réinitialiser</a><% } %>
+      <details class="mk-filter-more" data-mk-desktop-open<%= hasFilters ? " open" : "" %>>
+        <summary>Plus de filtres</summary>
+        <div class="mk-filter-fields">
+      <div class="field-group"><label for="f-status">Statut</label>
+        <select id="f-status" name="status"><option value="">Tous</option>
+          <% statuses.forEach((s) => { %><option value="<%= s %>" <%= filters.status === s ? "selected" : "" %>><%= mkh.statusLabel(s) %></option><% }) %>
+        </select></div>
+      <div class="field-group"><label for="f-liste">Liste</label>
+        <select id="f-liste" name="liste"><option value="">Toutes</option>
+          <% lists.forEach((l) => { %><option value="<%= l.id %>" <%= String(filters.liste) === String(l.id) ? "selected" : "" %>><%= l.name %></option><% }) %>
+        </select></div>
+      <div class="field-group"><label for="f-tag">Étiquette</label>
+        <select id="f-tag" name="etiquette"><option value="">Toutes</option>
+          <% tags.forEach((t) => { %><option value="<%= t.id %>" <%= String(filters.etiquette) === String(t.id) ? "selected" : "" %>><%= t.name %></option><% }) %>
+        </select></div>
+      <div class="field-group"><label for="f-segment">Segment</label>
+        <select id="f-segment" name="segment"><option value="">Tous</option>
+          <% savedSegments.forEach((g) => { %><option value="<%= g.id %>" <%= String(filters.segment) === String(g.id) ? "selected" : "" %>><%= g.name %></option><% }) %>
+        </select></div>
+      <div class="field-group"><label for="f-source">Source</label>
+        <select id="f-source" name="source"><option value="">Toutes</option>
+          <% sources.forEach((s) => { %><option value="<%= s %>" <%= filters.source === s ? "selected" : "" %>><%= mkh.sourceLabel(s) %></option><% }) %>
+        </select></div>
+      <div class="field-group"><label for="f-depuis">Ajoutés</label>
+        <select id="f-depuis" name="depuis"><option value="">Depuis toujours</option>
+          <% [7, 30, 90].forEach((d) => { %><option value="<%= d %>" <%= String(filters.depuis) === String(d) ? "selected" : "" %>>Depuis <%= d %> jours</option><% }) %>
+        </select></div>
+      <div class="field-group"><label for="f-taille">Par page</label>
+        <select id="f-taille" name="taille"><% [25, 50, 100].forEach((n) => { %><option value="<%= n %>" <%= result.pageSize === n ? "selected" : "" %>><%= n %></option><% }) %></select></div>
+      <label class="checkbox-row mk-filter-check" for="f-join"><input id="f-join" type="checkbox" name="joignables" value="1" <%= filters.joignables ? "checked" : "" %>> Joignables seulement</label>
+        </div>
+      </details>
+    </form>
+    <% if (activeChips.length) { %>
+      <div class="mk-filter-chips" role="group" aria-label="Filtres actifs">
+        <% activeChips.forEach((chip) => { %>
+          <a class="mk-chip mk-chip-removable" href="<%= chip.clear %>"><%= chip.label ? chip.label + " : " : "" %><%= chip.value %><span class="mk-chip-x-mark" aria-hidden="true">×</span><span class="sr-only">Retirer ce filtre</span></a>
+        <% }) %>
+      </div>
+    <% } %>
+    <p class="mk-filter-count" role="status"><%= mkh.fmt(result.total) %> contact<%= result.total > 1 ? "s" : "" %><%= hasFilters ? " correspondant aux filtres" : "" %></p>
+
+    <% if (canWrite) { %>
+      <div class="mk-bulkbar" data-mk-bulkbar hidden>
+        <form id="bulk-form" method="post" action="/marketing/contacts/actions" class="mk-bulk-form">
+          <input type="hidden" name="back" value="<%= url() %>">
+          <span data-mk-selected-count>0 sélectionné</span>
+          <label class="sr-only" for="b-op">Action sur la sélection</label>
+          <select id="b-op" name="op" data-mk-op>
+            <option value="tag_add">Ajouter une étiquette</option>
+            <option value="tag_remove">Retirer une étiquette</option>
+            <option value="list_add">Ajouter à une liste</option>
+            <option value="list_remove">Retirer d'une liste</option>
+          </select>
+          <span data-mk-show-for="tag_add,tag_remove">
+            <label class="sr-only" for="b-tag">Nom de l'étiquette</label>
+            <input id="b-tag" type="text" name="tag" list="b-tags" maxlength="64" placeholder="Nom de l'étiquette">
+            <datalist id="b-tags"><% tags.forEach((t) => { %><option value="<%= t.name %>"></option><% }) %></datalist>
+          </span>
+          <span data-mk-show-for="list_add,list_remove">
+            <label class="sr-only" for="b-list">Liste</label>
+            <select id="b-list" name="list_id"><% lists.forEach((l) => { %><option value="<%= l.id %>"><%= l.name %></option><% }) %></select>
+          </span>
+          <button type="submit" class="btn btn-outline btn-sm">Appliquer</button>
+        </form>
+      </div>
+    <% } %>
+
+    <% if (!rows.length) { %>
+      <% if (hasFilters) { %>
+        <div class="mk-empty">
+          <%- icon("search", { size: 32 }) %>
+          <h2>Aucun contact ne correspond</h2>
+          <p>Aucun contact ne correspond à ces critères. Élargissez la recherche ou retirez un filtre.</p>
+          <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/contacts">Réinitialiser les filtres</a></div>
+        </div>
+      <% } else { %>
+        <div class="mk-empty">
+          <%- icon("users", { size: 32 }) %>
+          <h2>Aucun contact pour l'instant</h2>
+          <p>Ajoutez un contact ou importez un fichier CSV pour constituer votre audience. Sans preuve de consentement, aucun message marketing ne pourra leur être envoyé.</p>
+          <div class="mk-actions">
+            <% if (canWrite) { %><a class="btn btn-primary btn-sm" href="/marketing/contacts/nouveau">Ajouter un contact</a><% } %>
+            <% if (mk.can("contacts.import")) { %><a class="btn btn-outline btn-sm" href="/marketing/importer">Importer un fichier</a><% } %>
+          </div>
+        </div>
+      <% } %>
+    <% } else { %>
+      <div class="mk-table-wrap">
+        <table class="mk-table mk-datatable" data-mk-select>
+          <caption class="sr-only">Liste des contacts (<%= mkh.fmt(result.total) %>), triée</caption>
+          <thead><tr>
+            <% if (canWrite) { %><th scope="col" class="mk-col-check"><input type="checkbox" data-mk-select-all aria-label="Tout sélectionner sur cette page"></th><% } %>
+            <%- sortHead("email", "E-mail") %>
+            <%- sortHead("name", "Nom") %>
+            <%- sortHead("status", "Statut") %>
+            <th scope="col">Étiquettes</th>
+            <%- sortHead("source", "Source") %>
+            <%- sortHead("created", "Ajouté le") %>
+            <%- sortHead("activity", "Dernière activité") %>
+          </tr></thead>
+          <tbody>
+            <% rows.forEach((c) => { const ctags = tagsOf.get(c.id) || []; %>
+              <tr>
+                <% if (canWrite) { %><td class="mk-col-check" data-label="Sélection"><input type="checkbox" data-mk-select-row form="bulk-form" name="ids" value="<%= c.id %>" aria-label="Sélectionner <%= c.email %>"></td><% } %>
+                <td class="mk-cell-email" data-label="E-mail"><a href="/marketing/contacts/<%= c.id %>"><%= c.email %></a></td>
+                <td data-label="Nom"><%= mkh.fullName(c) %></td>
+                <td data-label="Statut"><span class="mk-status <%= mkh.contactStatus(c.status).cls %>"><%= mkh.statusLabel(c.status) %></span></td>
+                <td data-label="Étiquettes"><% ctags.slice(0, 3).forEach((t) => { %><span class="mk-chip mk-chip-static"><%= t.name %></span> <% }) %><% if (ctags.length > 3) { %><span class="field-hint">+<%= ctags.length - 3 %></span><% } %></td>
+                <td data-label="Source"><%= mkh.sourceLabel(c.source) %></td>
+                <td data-label="Ajouté le"><%= mkh.fdate(c.created_at) %></td>
+                <td data-label="Dernière activité"><%= c.last_activity_at ? mkh.fdate(c.last_activity_at) : "—" %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <div class="mk-pager">
+        <span><%= mkh.fmt(range.from) %>–<%= mkh.fmt(range.to) %> sur <%= mkh.fmt(result.total) %></span>
+        <% if (result.pages > 1) { %>
+          <nav class="mk-pager-links" aria-label="Pagination">
+            <% if (result.page > 1) { %><a href="<%= url({ page: result.page - 1 }) %>" rel="prev" aria-label="Page précédente">Précédent</a><% } %>
+            <% let last = 0; pageNumbers.forEach((p) => { if (p - last > 1) { %><span aria-hidden="true">…</span><% } last = p; %>
+              <% if (p === result.page) { %><span aria-current="page"><%= p %></span><% } else { %><a href="<%= url({ page: p }) %>" aria-label="Page <%= p %>"><%= p %></a><% } %>
+            <% }) %>
+            <% if (result.page < result.pages) { %><a href="<%= url({ page: result.page + 1 }) %>" rel="next" aria-label="Page suivante">Suivant</a><% } %>
+          </nav>
+        <% } %>
+      </div>
+    <% } %>
+<%- include("partials/bottom") %>

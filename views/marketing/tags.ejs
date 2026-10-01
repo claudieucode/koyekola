@@ -1,0 +1,55 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const canWrite = mk.can("lists.write");
+%>
+    <div class="mk-head"><h1>Étiquettes <span class="mk-count"><%= tags.length %></span></h1></div>
+    <p class="mk-lead">Des mots-clés libres à poser sur les contacts (VIP, webinaire…). Elles servent aussi aux segments.</p>
+
+    <% if (!tags.length) { %>
+      <div class="mk-empty">
+        <%- icon("tag", { size: 32 }) %>
+        <h2>Aucune étiquette</h2>
+        <p>Créez-en une ici, ou ajoutez-en directement depuis la fiche d'un contact ou par une action groupée.</p>
+        <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une étiquette</button></div><% } %>
+      </div>
+    <% } else { %>
+      <div class="mk-table-wrap">
+        <table class="mk-table mk-datatable">
+          <caption class="sr-only">Étiquettes</caption>
+          <thead><tr><th scope="col">Étiquette</th><th scope="col" class="mk-num">Contacts</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody>
+            <% tags.forEach((t) => { %>
+              <tr>
+                <td data-label="Étiquette"><span class="mk-chip mk-chip-static"><%= t.name %></span></td>
+                <td class="mk-num" data-label="Contacts"><%= mkh.fmt(t.contact_count) %></td>
+                <td data-label="Actions" class="mk-row-actions">
+                  <a class="btn btn-outline btn-sm" href="/marketing/contacts?etiquette=<%= t.id %>">Voir les contacts</a>
+                  <% if (canWrite) { %><form action="/marketing/etiquettes/<%= t.id %>/supprimer" method="post" class="mk-inline"><button type="submit" class="btn btn-ghost btn-sm" aria-label="Supprimer l'étiquette <%= t.name %>" data-mk-confirm="L'étiquette « <%= t.name %> » sera retirée de <%= t.contact_count %> contact<%= t.contact_count > 1 ? "s" : "" %>. Les contacts ne sont pas supprimés." data-mk-confirm-title="Supprimer cette étiquette ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form><% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <% if (canWrite) { %>
+      <dialog class="mk-dialog mk-modal" id="nouvelle" data-mk-modal data-mk-modal-hash="nouvelle" aria-labelledby="net-title">
+        <form method="post" action="/marketing/etiquettes">
+          <div class="mk-dialog-body">
+            <h2 id="net-title">Créer une étiquette</h2>
+            <p>Un mot-clé libre à poser sur un contact, réutilisable dans les segments et les actions groupées.</p>
+            <div class="field-group">
+              <label for="t-name">Nom de l'étiquette *</label>
+              <input id="t-name" type="text" name="name" maxlength="64" placeholder="Ex. VIP" required data-mk-required-message="Le nom de l'étiquette est obligatoire.">
+            </div>
+          </div>
+          <div class="mk-dialog-actions">
+            <button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm">Créer</button>
+          </div>
+        </form>
+      </dialog>
+      <%- include("partials/modal-reopen", { id: "nouvelle" }) %>
+    <% } %>
+<%- include("partials/bottom") %>

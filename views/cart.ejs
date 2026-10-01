@@ -1,0 +1,43 @@
+<%- include("partials/header", { title: "Mon panier" }) %>
+
+  <div class="container-wide cart-layout">
+    <div>
+      <h1 style="margin-top:36px;">Mon panier</h1>
+      <% if (items.length === 0) { %>
+        <div class="empty-state">
+          <h3>Votre panier est vide</h3>
+          <p>Parcourez le catalogue pour trouver votre prochaine formation.</p>
+          <a href="/catalogue" class="btn btn-primary">Voir le catalogue</a>
+        </div>
+      <% } else { %>
+        <div class="card card-pad">
+          <% items.forEach(course => { %>
+            <div class="cart-item">
+              <div class="thumb">
+                <% if (course.thumbnail_path) { %><img src="<%= course.thumbnail_path %>" alt="" loading="lazy" decoding="async" width="640" height="360"><% } %>
+              </div>
+              <div class="info">
+                <a href="/cours/<%= course.slug %>" class="title" style="text-decoration:none;color:var(--text);"><%= course.title %></a>
+                <p class="instructor">Par <%= course.instructor_name %></p>
+              </div>
+              <span class="price"><%= formatPrice(course.price_cents) %></span>
+              <form action="/panier/retirer/<%= course.id %>" method="post">
+                <button type="submit" class="btn btn-ghost btn-sm">Retirer</button>
+              </form>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <% if (items.length > 0) { %>
+      <aside class="card card-pad summary-card">
+        <h3 style="margin-top:0;">Récapitulatif</h3>
+        <div class="summary-row"><span><%= items.length %> formation<%= items.length > 1 ? "s" : "" %></span><span><%= formatPrice(total) %></span></div>
+        <div class="summary-row total"><span>Total</span><span><%= formatPrice(total) %></span></div>
+        <a href="/commande" class="btn btn-primary btn-block btn-lg" style="margin-top:16px;">Passer la commande</a>
+      </aside>
+    <% } %>
+  </div>
+
+<%- include("partials/footer") %>

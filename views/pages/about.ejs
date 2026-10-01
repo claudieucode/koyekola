@@ -1,0 +1,16 @@
+<%- include("../partials/header", { title: "À propos" }) %>
+
+  <div class="container page-content">
+    <%- include("../partials/breadcrumb", { crumbs }) %>
+    <h1>À propos</h1>
+    <div class="markdown"><%- renderMarkdown(about.content) %></div>
+    <% if (creator && creator.bio) { %>
+      <section class="creator-card">
+        <h2><%= creator.username %></h2>
+        <p><%= creator.bio %></p>
+      </section>
+    <% } %>
+    <p class="page-cta"><a href="/catalogue" class="btn btn-primary">Découvrir les formations</a> <a href="/contact" class="btn btn-outline">Nous écrire</a></p>
+  </div>
+
+<%- include("../partials/footer") %>

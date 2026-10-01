@@ -1,0 +1,41 @@
+<%- include("../partials/header", { title: course ? "FAQ de la formation" : "Questions fréquentes" }) %>
+
+  <div class="container">
+    <p class="field-hint" style="margin-top:28px;"><a href="/formateur" class="back-link"><%- icon('arrowLeft', { size: 14 }) %> Mon espace</a></p>
+    <h1><%= course ? "FAQ : " + course.title : "Questions fréquentes du site" %></h1>
+    <p class="field-hint" style="margin-top:-6px;"><%= course ? "Ces questions s'affichent sur la page de cette formation." : "Ces questions s'affichent sur la page « Questions fréquentes »." %></p>
+
+    <% if (faqs.length) { %>
+      <ul class="faq-admin-list">
+        <% faqs.forEach((faq) => { %>
+          <li>
+            <div>
+              <p class="faq-admin-question"><%= faq.question %></p>
+              <p class="faq-admin-answer"><%= faq.answer.length > 220 ? faq.answer.slice(0, 220) + "…" : faq.answer %></p>
+            </div>
+            <form action="/formateur/faq/<%= faq.id %>/supprimer" method="post" class="inline-form" onsubmit="return confirm('Supprimer cette question ?');">
+              <button type="submit" class="btn btn-danger btn-sm" aria-label="Supprimer la question : <%= faq.question %>">Supprimer</button>
+            </form>
+          </li>
+        <% }) %>
+      </ul>
+    <% } else { %>
+      <p class="empty-state" style="padding:20px 0;">Aucune question pour le moment.</p>
+    <% } %>
+
+    <form action="/formateur/faq/ajouter" method="post" class="content-card">
+      <h2 style="font-size:1.05rem;margin-top:0;">Ajouter une question</h2>
+      <% if (course) { %><input type="hidden" name="course_id" value="<%= course.id %>"><% } %>
+      <div class="field-group">
+        <label for="faq-question">Question</label>
+        <input id="faq-question" type="text" name="question" required maxlength="300">
+      </div>
+      <div class="field-group">
+        <label for="faq-answer">Réponse <span class="field-hint">(**gras**, *italique*, - liste, [lien](https://…))</span></label>
+        <textarea id="faq-answer" name="answer" rows="5" required maxlength="5000"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Ajouter</button>
+    </form>
+  </div>
+
+<%- include("../partials/footer") %>

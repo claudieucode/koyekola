@@ -1,0 +1,15 @@
+<%
+  // Composant partagé (§17 refonte) : message HUMAIN d'abord, détail technique replié pour l'administrateur —
+  // jamais « MARKETING_WORKER=off » imposé en premier à un lecteur non technique. S'inclut avec les locals
+  // workerOn (booléen) et consequence (texte facultatif, ex. « aucune campagne ne partira »).
+  // N'affiche rien quand workerOn est vrai ou absent.
+%>
+<% if (typeof workerOn !== "undefined" && !workerOn) { %>
+  <div class="mk-flash mk-flash-warn" role="note">
+    <span class="mk-flash-icon" aria-hidden="true"><%- icon("info", { size: 18 }) %></span>
+    <span class="mk-flash-body">
+      <p><%= mkh.workerHuman(typeof consequence !== "undefined" ? consequence : "") %></p>
+      <details class="mk-flash-details"><summary>Détails techniques</summary><p><%= mkh.WORKER_DETAIL %></p></details>
+    </span>
+  </div>
+<% } %>

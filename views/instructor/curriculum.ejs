@@ -1,0 +1,213 @@
+<% const totalLessons = sections.reduce((s, sec) => s + sec.lessons.length, 0); %>
+<%- include("../partials/header", { title: "Constructeur — " + course.title }) %>
+
+  <div class="container-wide">
+    <p class="field-hint" style="margin-top:28px;"><a href="/formateur" class="back-link"><%- icon('arrowLeft', { size: 14 }) %> Mon espace</a></p>
+
+    <div class="curriculum-header">
+      <div>
+        <h1 style="margin:0 0 4px;"><%= course.title %></h1>
+        <p class="field-hint" style="margin:0;">Organisez votre formation en chapitres et sous-chapitres vidéo.</p>
+      </div>
+      <div class="publish-status">
+        <% if (course.published) { %>
+          <span class="badge badge-success">Publiée</span>
+        <% } else { %>
+          <span class="badge badge-warning">Brouillon — non visible dans le catalogue</span>
+        <% } %>
+        <form action="/formateur/cours/<%= course.id %>/publier" method="post" class="inline-form">
+          <button type="submit" class="btn <%= course.published ? 'btn-outline' : 'btn-success' %>" <%= (!course.published && totalLessons === 0) ? "disabled title='Ajoutez au moins un sous-chapitre avant de publier'" : "" %>>
+            <%= course.published ? "Dépublier" : "Publier la formation" %>
+          </button>
+        </form>
+        <a href="/formateur/cours/<%= course.id %>/modifier" class="btn btn-outline">Modifier les infos</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-wide builder-layout">
+    <aside class="builder-outline" data-course-id="<%= course.id %>">
+      <% if (sections.length === 0) { %>
+        <p class="empty-state" style="padding:24px 10px;">Ajoutez un premier chapitre pour commencer.</p>
+      <% } %>
+      <div id="sectionList">
+        <% sections.forEach((section, sIndex) => { %>
+          <div class="chapter-block" draggable="true" data-section-id="<%= section.id %>">
+            <div class="chapter-block-header">
+              <span class="drag-handle" title="Glisser pour réordonner"><%- icon('grip', { size: 16 }) %></span>
+              <span class="chapter-name">Chapitre <%= sIndex + 1 %> — <%= section.title %></span>
+              <form action="/formateur/sections/<%= section.id %>/supprimer" method="post" class="inline-form" onsubmit="return confirm('Supprimer ce chapitre et ses sous-chapitres ?');">
+                <button type="submit" class="icon-btn small" title="Supprimer le chapitre"><%- icon('trash', { size: 15 }) %></button>
+              </form>
+            </div>
+
+            <div class="lesson-list" data-section-id="<%= section.id %>">
+              <% section.lessons.forEach(lesson => { %>
+                <a class="lesson-item <%= selected && selected.lesson.id === lesson.id ? 'is-active' : '' %>" href="?lecon=<%= lesson.id %>" draggable="true" data-lesson-id="<%= lesson.id %>">
+                  <span class="drag-handle"><%- icon('grip', { size: 14 }) %></span>
+                  <span class="lesson-item-icon"><%- lesson.video_path || lesson.video_url ? icon('video', { size: 14 }) : icon('video', { size: 14, className: 'is-empty' }) %></span>
+                  <span class="lesson-item-title"><%= lesson.title %></span>
+                  <% if (lesson.quiz) { %><span class="mini-badge">Quiz</span><% } %>
+                </a>
+              <% }) %>
+            </div>
+
+            <form action="/formateur/sections/<%= section.id %>/lecons" method="post" class="quick-add-form">
+              <input type="text" name="title" placeholder="+ Ajouter un sous-chapitre" aria-label="Ajouter un sous-chapitre au chapitre <%= section.title %>" required maxlength="120">
+            </form>
+          </div>
+        <% }) %>
+      </div>
+
+      <form action="/formateur/cours/<%= course.id %>/sections" method="post" class="quick-add-form quick-add-chapter">
+        <input type="text" name="title" placeholder="+ Ajouter un chapitre" aria-label="Ajouter un chapitre" required maxlength="120">
+      </form>
+    </aside>
+
+    <section class="builder-editor">
+      <% if (!selected) { %>
+        <div class="empty-state" style="padding:100px 20px;">
+          <h3>Sélectionnez un sous-chapitre</h3>
+          <p>Cliquez sur un élément à gauche pour l'éditer, ou créez-en un nouveau.</p>
+        </div>
+      <% } else { %>
+        <% if (saved) { %><p class="form-success">Modifications enregistrées.</p><% } %>
+
+        <form action="/formateur/lecons/<%= selected.lesson.id %>/modifier" method="post" enctype="multipart/form-data" class="content-card">
+          <div class="field-group">
+            <label for="f-curriculum-1">Titre du sous-chapitre</label>
+            <input id="f-curriculum-1" type="text" name="title" value="<%= selected.lesson.title %>" required maxlength="120">
+          </div>
+          <div class="field-group">
+            <label for="f-curriculum-2">Contenu de la leçon <span class="field-hint">(affiché sous la vidéo ; **gras**, *italique*, ## titre, - liste, [lien](https://…))</span></label>
+            <textarea id="f-curriculum-2" name="description" rows="8"><%= selected.lesson.description %></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label for="f-curriculum-3">Durée (min)</label>
+              <input id="f-curriculum-3" type="number" name="duration_minutes" min="0" value="<%= selected.lesson.duration_minutes %>">
+            </div>
+            <div class="field-group" style="justify-content:flex-end;">
+              <label class="checkbox-row"><input type="checkbox" name="is_preview" value="1" <%= selected.lesson.is_preview ? "checked" : "" %>> Aperçu gratuit (visible sans achat)</label>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="f-video-file">Vidéo</label>
+            <% if (selected.lesson.video_path || selected.lesson.video_url) { %>
+              <p class="field-hint" style="margin:0 0 6px;">
+                Actuelle : <%= selected.lesson.video_path ? "fichier vidéo uploadé" : selected.lesson.video_url %>
+                &nbsp;<label style="font-weight:400;"><input type="checkbox" name="remove_video" value="1"> supprimer</label>
+              </p>
+            <% } %>
+            <input id="f-video-file" type="file" name="video" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg">
+            <label for="f-video-url" class="field-hint" style="display:block;margin:8px 0 4px;">Ou coller un lien YouTube / Vimeo / .mp4, ou l'identifiant d'une vidéo Bunny Stream :</label>
+            <input id="f-video-url" type="url" name="video_url" placeholder="https://www.youtube.com/watch?v=… ou 32d140e2-e4f4-4eec-9d53-20371e9be607">
+            <p class="field-hint" style="margin:4px 0 0;"><strong>Bunny Stream</strong> protège la vidéo : seul un élève connecté ayant acheté la formation reçoit un lien de lecture temporaire. Avec YouTube « non répertoriée » ou Vimeo, toute personne qui a le lien peut regarder, même sans avoir acheté.</p>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </form>
+
+        <div class="content-card">
+          <h2 style="font-size:1.05rem;margin-top:0;">Ressources de la leçon</h2>
+          <p class="field-hint" style="margin-top:-6px;">Fichiers à télécharger (PDF, archives…), images (affichées dans la leçon) et liens utiles.</p>
+          <% if (selected.attachments.length) { %>
+            <ul class="attachment-admin-list">
+              <% selected.attachments.forEach((a) => { %>
+                <li>
+                  <span class="attachment-name"><%- icon(a.kind === 'link' ? 'arrowRight' : 'clip', { size: 15 }) %> <%= a.title %> <span class="field-hint">(<%= a.kind === 'link' ? a.url : 'fichier' %>)</span></span>
+                  <form action="/formateur/pieces-jointes/<%= a.id %>/supprimer" method="post" class="inline-form" onsubmit="return confirm('Supprimer cette ressource ?');">
+                    <button type="submit" class="icon-btn small" title="Supprimer la ressource" aria-label="Supprimer <%= a.title %>"><%- icon('trash', { size: 15 }) %></button>
+                  </form>
+                </li>
+              <% }) %>
+            </ul>
+          <% } %>
+          <form action="/formateur/lecons/<%= selected.lesson.id %>/pieces-jointes" method="post" enctype="multipart/form-data" class="add-lesson-form">
+            <div class="field-row">
+              <div class="field-group"><label for="f-att-title">Titre <span class="field-hint">(facultatif)</span></label><input id="f-att-title" type="text" name="title" maxlength="120"></div>
+              <div class="field-group"><label for="f-att-file">Fichier</label><input id="f-att-file" type="file" name="attachment" required></div>
+            </div>
+            <button type="submit" class="btn btn-secondary btn-sm">Ajouter le fichier</button>
+          </form>
+          <form action="/formateur/lecons/<%= selected.lesson.id %>/liens" method="post" class="add-lesson-form" style="margin-top:16px;">
+            <div class="field-row">
+              <div class="field-group"><label for="f-link-title">Titre du lien <span class="field-hint">(facultatif)</span></label><input id="f-link-title" type="text" name="title" maxlength="120"></div>
+              <div class="field-group"><label for="f-link-url">Adresse du lien</label><input id="f-link-url" type="url" name="url" placeholder="https://…" required></div>
+            </div>
+            <button type="submit" class="btn btn-secondary btn-sm">Ajouter le lien</button>
+          </form>
+        </div>
+
+        <div class="content-card">
+          <h2 style="font-size:1.05rem;margin-top:0;">Quiz</h2>
+          <% if (!selected.quiz) { %>
+            <p class="field-hint">Ajoutez un quiz pour que l'étudiant doive le réussir avant que ce sous-chapitre soit marqué terminé.</p>
+            <form action="/formateur/lecons/<%= selected.lesson.id %>/quiz" method="post">
+              <button type="submit" class="btn btn-secondary">+ Ajouter un quiz</button>
+            </form>
+          <% } else { %>
+            <form action="/formateur/quiz/<%= selected.quiz.id %>/parametres" method="post" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+              <input type="text" name="title" value="<%= selected.quiz.title %>" aria-label="Titre du quiz" style="max-width:200px;">
+              <label class="field-hint" style="display:flex;align-items:center;gap:6px;">
+                Seuil de réussite
+                <input type="number" name="pass_percentage" min="0" max="100" value="<%= selected.quiz.pass_percentage %>" style="width:70px;">%
+              </label>
+              <button type="submit" class="btn btn-outline btn-sm">Enregistrer</button>
+              <form action="/formateur/quiz/<%= selected.quiz.id %>/supprimer" method="post" class="inline-form" onsubmit="return confirm('Supprimer ce quiz ?');" style="margin-left:auto;">
+                <button type="submit" class="btn btn-danger btn-sm">Supprimer le quiz</button>
+              </form>
+            </form>
+
+            <% selected.quiz.questions.forEach((q, qi) => { %>
+              <div class="quiz-question-row">
+                <div style="display:flex;justify-content:space-between;gap:10px;">
+                  <strong>Q<%= qi + 1 %>. <%= q.question %></strong>
+                  <form action="/formateur/quiz-questions/<%= q.id %>/supprimer" method="post" class="inline-form" onsubmit="return confirm('Supprimer cette question ?');">
+                    <button type="submit" class="btn btn-ghost btn-sm">Supprimer</button>
+                  </form>
+                </div>
+                <ul class="quiz-option-list">
+                  <% q.options.forEach(o => { %>
+                    <li class="<%= o.is_correct ? 'is-correct' : '' %>"><%= o.is_correct ? "✓ " : "" %><%= o.option_text %></li>
+                  <% }) %>
+                </ul>
+              </div>
+            <% }) %>
+
+            <form action="/formateur/quiz/<%= selected.quiz.id %>/questions" method="post" class="add-lesson-form" style="margin-top:10px;">
+              <div class="field-group">
+                <label for="f-curriculum-4">Nouvelle question</label>
+                <input id="f-curriculum-4" type="text" name="question" required maxlength="200" placeholder="Ex. Que fait ce mot-clé ?">
+              </div>
+              <div class="field-row" style="flex-wrap:wrap;">
+                <div class="field-group" style="min-width:180px;"><label for="f-curriculum-5">Réponse A</label><input id="f-curriculum-5" type="text" name="option_1" maxlength="120"></div>
+                <div class="field-group" style="min-width:180px;"><label for="f-curriculum-6">Réponse B</label><input id="f-curriculum-6" type="text" name="option_2" maxlength="120"></div>
+              </div>
+              <div class="field-row" style="flex-wrap:wrap;">
+                <div class="field-group" style="min-width:180px;"><label for="f-curriculum-7">Réponse C <span class="field-hint">(optionnel)</span></label><input id="f-curriculum-7" type="text" name="option_3" maxlength="120"></div>
+                <div class="field-group" style="min-width:180px;"><label for="f-curriculum-8">Réponse D <span class="field-hint">(optionnel)</span></label><input id="f-curriculum-8" type="text" name="option_4" maxlength="120"></div>
+              </div>
+              <div class="field-group" style="max-width:220px;">
+                <label for="f-curriculum-9">Bonne réponse</label>
+                <select id="f-curriculum-9" name="correct" required>
+                  <option value="1">Réponse A</option>
+                  <option value="2">Réponse B</option>
+                  <option value="3">Réponse C</option>
+                  <option value="4">Réponse D</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-secondary" style="align-self:flex-start;">+ Ajouter la question</button>
+            </form>
+          <% } %>
+        </div>
+
+        <form action="/formateur/lecons/<%= selected.lesson.id %>/supprimer" method="post" onsubmit="return confirm('Supprimer ce sous-chapitre ?');">
+          <button type="submit" class="btn btn-danger">Supprimer ce sous-chapitre</button>
+        </form>
+      <% } %>
+    </section>
+  </div>
+
+<%- include("../partials/footer") %>

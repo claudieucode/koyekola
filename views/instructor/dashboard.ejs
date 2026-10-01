@@ -1,0 +1,54 @@
+<%- include("../partials/header", { title: "Mon espace" }) %>
+<% const activeCourses = courses.filter((c) => !c.archived); const archivedCourses = courses.filter((c) => c.archived); %>
+
+  <div class="container-wide dashboard-header">
+    <h1>Mon espace</h1>
+    <p>Créez vos formations, organisez-les en chapitres et sous-chapitres, et suivez vos ventes.</p>
+  </div>
+
+  <div class="container-wide">
+    <div class="dashboard-stats">
+      <div class="dashboard-stat"><div class="value"><%= totals.courseCount %></div><div class="label">Formations créées</div></div>
+      <div class="dashboard-stat"><div class="value"><%= totals.publishedCount %></div><div class="label">Publiées</div></div>
+      <div class="dashboard-stat"><div class="value"><%= totals.studentCount %></div><div class="label">Élèves inscrits</div></div>
+      <div class="dashboard-stat"><div class="value"><%= formatPrice(totals.revenueCents) %></div><div class="label">Revenu total (démo)</div></div>
+    </div>
+
+    <nav class="site-tools" aria-label="Contenu du site">
+      <a href="/marketing" class="btn btn-outline btn-sm">Marketing</a>
+      <a href="/formateur/messages" class="btn btn-outline btn-sm">Messages (<%= unreadMessages %>)</a>
+      <a href="/formateur/profil" class="btn btn-outline btn-sm">Mon profil</a>
+      <a href="/formateur/blog" class="btn btn-outline btn-sm">Blog</a>
+      <a href="/formateur/faq" class="btn btn-outline btn-sm">FAQ du site</a>
+      <a href="/formateur/pages/a-propos" class="btn btn-outline btn-sm">Page À propos</a>
+    </nav>
+
+    <div class="dashboard-toolbar">
+      <h2 style="margin:0;">Mes formations</h2>
+      <a href="/formateur/cours/nouveau" class="btn btn-primary">+ Nouvelle formation</a>
+    </div>
+
+    <% if (activeCourses.length === 0 && archivedCourses.length === 0) { %>
+      <div class="empty-state">
+        <h3>Vous n'avez pas encore de formation</h3>
+        <p>Créez votre première formation pour commencer à enseigner sur KOYEKOLA.</p>
+        <a href="/formateur/cours/nouveau" class="btn btn-primary">Créer ma première formation</a>
+      </div>
+    <% } else if (activeCourses.length === 0) { %>
+      <p class="empty-state" style="padding:24px 0;">Toutes vos formations sont archivées.</p>
+    <% } else { %>
+      <div class="course-manage-list">
+        <% activeCourses.forEach((course) => { %><%- include("course-row", { course }) %><% }) %>
+      </div>
+    <% } %>
+
+    <% if (archivedCourses.length) { %>
+      <h2 style="margin:36px 0 6px;">Archivées</h2>
+      <p class="field-hint" style="margin:0 0 14px;">Hors catalogue et non achetables. Vos étudiants gardent leur accès et l'historique des ventes est conservé.</p>
+      <div class="course-manage-list">
+        <% archivedCourses.forEach((course) => { %><%- include("course-row", { course }) %><% }) %>
+      </div>
+    <% } %>
+  </div>
+
+<%- include("../partials/footer") %>

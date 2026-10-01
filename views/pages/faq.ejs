@@ -1,0 +1,14 @@
+<%- include("../partials/header", { title: "Questions fréquentes" }) %>
+
+  <div class="container page-content">
+    <%- include("../partials/breadcrumb", { crumbs }) %>
+    <h1>Questions fréquentes</h1>
+    <% if (faqs.length) { %>
+      <%- include("../partials/faq-list", { faqs }) %>
+    <% } else { %>
+      <p class="empty-state" style="padding:24px 0;">Aucune question pour le moment. N'hésitez pas à <a href="/contact">nous écrire</a>.</p>
+    <% } %>
+    <p class="page-cta">Vous ne trouvez pas votre réponse ? <a href="/contact">Contactez-nous</a>.</p>
+  </div>
+
+<%- include("../partials/footer") %>

@@ -1,0 +1,9 @@
+<%- include("../partials/header", { title, seo: { noindex: true, rawTitle: title + " · KOYEKOLA" } }) %>
+  <div class="auth-page">
+    <div class="auth-card">
+      <h1><%= heading %></h1>
+      <p class="subtitle"><%= text %></p>
+      <% if (typeof link !== "undefined" && link) { %><p><a class="btn btn-outline" href="<%= link.href %>"><%= link.label %></a></p><% } %>
+    </div>
+  </div>
+<%- include("../partials/footer") %>

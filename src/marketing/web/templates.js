@@ -1,0 +1,215 @@
+// Pages des modèles d'e-mails : liste, création, éditeur par blocs, aperçu, enregistrement, historique.
+const express = require("express");
+const templates = require("../templates");
+const { STARTERS } = require("../templates/starters");
+const library = require("../templates/library");
+const { CATEGORIES } = require("../templates/categories");
+const { listCourses } = require("../bridge/catalog");
+const { MarketingError } = require("../errors");
+const { sendTestEmail, teamRecipients } = require("../templates/testSend");
+const { buildTransport } = require("../../utils/mailer");
+const { createRateLimiter } = require("../../middlewares/security");
+const { attempt, need, safeJson } = require("./kit");
+
+// Palette de l'éditeur : groupes et blocs (libellés français). Aucun bloc « HTML libre ».
+const PALETTE = [
+  { title: "Texte", blocks: [["heading", "Titre"], ["text", "Texte"], ["quote", "Citation"], ["list", "Liste"]] },
+  { title: "Médias", blocks: [["image", "Image"], ["video", "Vidéo"]] },
+  { title: "Actions", blocks: [["button", "Bouton"], ["social", "Réseaux sociaux"], ["course", "Formation"]] },
+  { title: "Mise en page", blocks: [["columns", "Deux colonnes"], ["divider", "Séparateur"], ["spacer", "Espace"]] },
+];
+const KIND_LABEL = { marketing: "Marketing", transactional: "Transactionnel" };
+const TABS_ALL = "";
+
+const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
+
+// Réponse JSON pour les appels de l'éditeur : erreur métier → 400 (409 en cas de conflit, 404 si introuvable)
+function jsonError(res, error) {
+  if (!(error instanceof MarketingError)) throw error;
+  const status = error.code === "conflict" ? 409 : error.code === "not_found" ? 404 : 400;
+  return res.status(status).json({ error: error.message });
+}
+
+module.exports = ({ db }) => {
+  const router = express.Router();
+  const testLimiter = createRateLimiter(10, 60 * 60 * 1000); // 10 e-mails de test par heure et par utilisateur
+
+  router.get("/modeles", need("templates.read"), (req, res) => {
+    const { ctx } = req.mk;
+    const text = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+    const q = text(req.query.q, 100);
+    const categorie = typeof req.query.categorie === "string" && (req.query.categorie === "none" || CATEGORIES.some((c) => c.key === req.query.categorie)) ? req.query.categorie : TABS_ALL;
+    const type = req.query.type === "marketing" || req.query.type === "transactional" ? req.query.type : "";
+    const rows = templates.searchTemplates(ctx, { q, kind: type || undefined, category: categorie || undefined }, { sort: req.query.tri, dir: req.query.sens });
+    const sortKey = ["name", "kind", "category", "updated"].includes(req.query.tri) ? req.query.tri : "updated";
+    const dirKey = req.query.sens === "asc" || req.query.sens === "desc" ? req.query.sens : (sortKey === "updated" ? "desc" : "asc");
+    const view = { ...(q && { q }), ...(categorie && { categorie }), ...(type && { type }), ...(req.query.tri && { tri: sortKey, sens: dirKey }) };
+    const url = (changes = {}) => {
+      const merged = { ...view, ...changes };
+      const qs = new URLSearchParams(Object.entries(merged).filter(([, v]) => v !== null && v !== undefined && v !== "").map(([k, v]) => [k, String(v)])).toString();
+      return `/marketing/modeles${qs ? `?${qs}` : ""}`;
+    };
+    const counts = templates.templateCategoryCounts(ctx);
+    res.render("marketing/templates", {
+      title: "Modèles", active: "templates", templates: rows, rows, counts, categories: CATEGORIES, categorie, type, q, view, url, sortKey, dirKey, hasFilters: Boolean(q || categorie || type),
+      starterGroups: library.starterLibrary(), address: templates.getOrgProfile(ctx).address, kindLabel: KIND_LABEL,
+    });
+  });
+
+  // Bibliothèque : tous les modèles de départ par catégories, avec aperçu réel (dans une iframe isolée)
+  router.get("/modeles/bibliotheque", need("templates.read"), (req, res) => {
+    res.render("marketing/template-library", { title: "Bibliothèque de modèles", active: "templates", groups: library.starterLibrary(), kindLabel: KIND_LABEL });
+  });
+
+  // Contenu de l'iframe d'aperçu : document HTML complet, sans script, chargé uniquement par le même site
+  router.get("/modeles/bibliotheque/:key/apercu", need("templates.read"), (req, res) => {
+    if (!library.starterOf(req.params.key)) return res.status(404).render("error", { message: "Modèle de départ introuvable." });
+    const preview = library.previewStarter(req.mk.ctx, req.params.key);
+    res.set({
+      "Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
+      "X-Frame-Options": "SAMEORIGIN", "X-Robots-Tag": "noindex, nofollow", "Cache-Control": "private, max-age=300",
+    });
+    res.send(preview.html);
+  });
+
+  router.post("/modeles", need("templates.write"), (req, res, next) => {
+    let created = null;
+    attempt(req, res, next, () => (created ? `/marketing/modeles/${created.id}` : "/marketing/modeles"), () => {
+      const starter = library.starterOf(req.body.starter);
+      if (!starter) throw new MarketingError("invalid_field", "Modèle de départ inconnu.");
+      const kind = starter.template.kind === "transactional" || req.body.kind === "transactional" ? "transactional" : "marketing";
+      created = templates.createTemplate(req.mk.ctx, { ...starter.template, name: req.body.name, kind, category: starter.category });
+      return "Modèle créé : personnalisez-le puis enregistrez.";
+    });
+  });
+
+  router.post("/modeles/adresse", need("settings.write"), (req, res, next) =>
+    attempt(req, res, next, "/marketing/modeles", () => {
+      const address = templates.setOrgAddress(req.mk.ctx, req.body.address);
+      return address ? "Adresse enregistrée : elle apparaît dans le pied de page des e-mails marketing." : "Adresse effacée.";
+    }));
+
+  // Aperçu d'un brouillon (rendu réel avec données d'exemple ou d'un contact) : aucun envoi, aucun jeton réel
+  router.post("/modeles/apercu", need("templates.read"), (req, res, next) => {
+    try {
+      const contact = req.body.contactId ? { id: intOrNull(req.body.contactId) } : null;
+      if (contact && !contact.id) throw new MarketingError("invalid_field", "Contact invalide.");
+      const r = templates.previewTemplate(req.mk.ctx, req.body.template, { contact });
+      res.json({ subject: r.subject, html: r.html, text: r.text, warnings: r.warnings });
+    } catch (error) {
+      // Pour l'aperçu, toute erreur métier (contact ou contenu invalide) est une erreur de saisie : 400
+      if (error instanceof MarketingError) return res.status(400).json({ error: error.message });
+      next(error);
+    }
+  });
+
+  const load = (req, res) => {
+    const id = intOrNull(req.params.id);
+    const template = id ? templates.getTemplate(req.mk.ctx, id) : null;
+    if (!template) res.status(404).render("error", { message: "Modèle introuvable." });
+    return template;
+  };
+
+  // Aperçu d'un modèle enregistré (vignette « Contenu » de la liste de contrôle d'une campagne) : même document
+  // isolé que l'aperçu de la bibliothèque — sans script, données d'exemple, chargé uniquement par le même site
+  router.get("/modeles/:id/apercu", need("templates.read"), (req, res, next) => {
+    const template = load(req, res);
+    if (!template) return;
+    try {
+      const preview = templates.previewTemplate(req.mk.ctx, template);
+      res.set({
+        "Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
+        "X-Frame-Options": "SAMEORIGIN", "X-Robots-Tag": "noindex, nofollow", "Cache-Control": "private, no-store",
+      });
+      res.send(preview.html);
+    } catch (error) {
+      if (error instanceof MarketingError) return res.status(422).render("error", { message: error.message });
+      next(error);
+    }
+  });
+
+  router.get("/modeles/:id", need("templates.read"), (req, res) => {
+    const template = load(req, res);
+    if (!template) return;
+    const { ctx } = req.mk;
+    const data = {
+      readOnly: !req.mk.can("templates.write"),
+      template: { id: template.id, name: template.name, kind: template.kind, category: template.category, subject: template.subject, preheader: template.preheader, theme: template.theme, footer: template.footer, blocks: template.blocks, version: template.version },
+      variables: templates.variableCatalog(ctx), categories: CATEGORIES, courses: listCourses(ctx),
+      versions: templates.listVersions(ctx, template.id),
+      contacts: db.prepare("SELECT id, email FROM mk_contacts WHERE organization_id = ? ORDER BY id DESC LIMIT 20").all(ctx.organizationId),
+    };
+    res.render("marketing/template-editor", {
+      title: template.name, active: "templates", template, data: safeJson(data), readOnly: data.readOnly, versions: data.versions, palette: PALETTE, categories: CATEGORIES,
+      recipients: teamRecipients(ctx), currentEmail: String(req.session.user.email || "").toLowerCase(),
+    });
+  });
+
+  router.post("/modeles/:id", need("templates.write"), (req, res, next) => {
+    const id = intOrNull(req.params.id);
+    try {
+      if (!id) throw new MarketingError("not_found", "Modèle introuvable.");
+      if (!Number.isInteger(req.body.version)) throw new MarketingError("invalid_field", "Version du modèle manquante : rechargez la page.");
+      if (!req.body.template || typeof req.body.template !== "object") throw new MarketingError("invalid_field", "Contenu du modèle manquant.");
+      const saved = templates.updateTemplate(req.mk.ctx, id, req.body.template, { expectedVersion: req.body.version });
+      // Instantanés des blocs « formation » pris dans le catalogue : l'éditeur les garde tels quels (le prix ne change pas tout seul)
+      const courseSnapshots = Object.fromEntries(saved.blocks.filter((b) => b.type === "course" && b.snapshot).map((b) => [b.id, b.snapshot]));
+      res.json({ ok: true, version: saved.version, warnings: templates.renderTemplate(req.mk.ctx, id, null).warnings, courseSnapshots });
+    } catch (error) {
+      try { jsonError(res, error); } catch (e) { next(e); }
+    }
+  });
+
+  // E-mail de test vers un membre de l'équipe (jamais une adresse libre)
+  router.post("/modeles/:id/test", need("templates.write"), (req, res, next) => {
+    const template = load(req, res);
+    if (!template) return;
+    const back = `/marketing/modeles/${template.id}`;
+    const key = String(req.session.user.id);
+    if (testLimiter.isLimited(key)) {
+      req.session.mkFlash = { type: "error", text: "Trop d'envois de test : 10 par heure au plus. Réessayez plus tard." };
+      return res.redirect(back);
+    }
+    testLimiter.hit(key); // compté à chaque tentative (y compris refusée) pour empêcher de sonder les adresses
+    const contactId = req.body.contact_id ? intOrNull(req.body.contact_id) : undefined;
+    sendTestEmail(req.mk.ctx, template.id, { to: req.body.to, transport: buildTransport(), from: process.env.SMTP_FROM || process.env.SMTP_USER, contactId }).then(
+      (r) => {
+        req.session.mkFlash = r.sent
+          ? { type: "ok", text: `E-mail de test envoyé à ${r.to} (pensez à vérifier le dossier des indésirables).` }
+          : { type: "error", text: r.reason === "smtp_not_configured" ? "Messagerie non configurée : aucun e-mail n'a été envoyé. Renseignez SMTP_HOST (et les variables SMTP_*) dans la configuration du serveur." : "L'envoi a échoué : vérifiez la configuration SMTP (détails dans le journal du serveur)." };
+        res.redirect(back);
+      },
+      (error) => {
+        if (!(error instanceof MarketingError)) return next(error);
+        req.session.mkFlash = { type: "error", text: error.message };
+        res.redirect(back);
+      },
+    );
+  });
+
+  router.post("/modeles/:id/dupliquer", need("templates.write"), (req, res, next) => {
+    const template = load(req, res);
+    if (!template) return;
+    attempt(req, res, next, "/marketing/modeles", () => `Modèle dupliqué : « ${templates.duplicateTemplate(req.mk.ctx, template.id).name} ».`);
+  });
+
+  router.post("/modeles/:id/supprimer", need("templates.write"), (req, res, next) => {
+    const template = load(req, res);
+    if (!template) return;
+    attempt(req, res, next, "/marketing/modeles", () => {
+      templates.deleteTemplate(req.mk.ctx, template.id);
+      return "Modèle supprimé.";
+    });
+  });
+
+  router.post("/modeles/:id/restaurer", need("templates.write"), (req, res, next) => {
+    const template = load(req, res);
+    if (!template) return;
+    attempt(req, res, next, `/marketing/modeles/${template.id}`, () => {
+      templates.restoreVersion(req.mk.ctx, template.id, intOrNull(req.body.version));
+      return "Version restaurée (une nouvelle version a été créée).";
+    });
+  });
+
+  return router;
+};

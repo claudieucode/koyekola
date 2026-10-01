@@ -1,0 +1,10 @@
+<%- include("partials/header", { title: "Erreur", seo: { noindex: true } }) %>
+
+  <div class="container error-page">
+    <p class="code">Oups</p>
+    <h1>Une erreur est survenue</h1>
+    <p style="color:var(--muted);"><%= message %></p>
+    <a href="/" class="btn btn-primary" style="margin-top:16px;">Retour à l'accueil</a>
+  </div>
+
+<%- include("partials/footer") %>

@@ -1,0 +1,38 @@
+<%- include("../partials/header", { title: "Contact" }) %>
+
+  <div class="container-narrow page-content">
+    <%- include("../partials/breadcrumb", { crumbs }) %>
+    <h1>Contact</h1>
+    <p class="category-lead">Une question sur une formation, un problème d'accès ? Écrivez-nous, nous répondons à chaque message.</p>
+
+    <% if (sent) { %><p class="form-success" role="status">Merci, votre message a bien été envoyé. Nous vous répondrons rapidement.</p><% } %>
+    <% if (error) { %><p class="form-error" role="alert"><%= error %></p><% } %>
+
+    <form action="/contact" method="post" class="content-card contact-form">
+      <div class="field-group">
+        <label for="contact-name">Votre nom</label>
+        <input id="contact-name" type="text" name="name" value="<%= values.name || '' %>" required maxlength="100" autocomplete="name">
+      </div>
+      <div class="field-group">
+        <label for="contact-email">Votre adresse e-mail</label>
+        <input id="contact-email" type="email" name="email" value="<%= values.email || '' %>" required maxlength="200" autocomplete="email">
+      </div>
+      <div class="field-group">
+        <label for="contact-subject">Sujet <span class="field-hint">(facultatif)</span></label>
+        <input id="contact-subject" type="text" name="subject" value="<%= values.subject || '' %>" maxlength="150">
+      </div>
+      <div class="field-group">
+        <label for="contact-message">Votre message</label>
+        <textarea id="contact-message" name="message" rows="7" required minlength="10" maxlength="5000"><%= values.message || '' %></textarea>
+      </div>
+      <%# Champ piège : invisible pour un visiteur, mais rempli par les robots (le message est alors ignoré) %>
+      <div class="hp-field" aria-hidden="true">
+        <label for="contact-website">Ne pas remplir ce champ</label>
+        <input id="contact-website" type="text" name="website" tabindex="-1" autocomplete="off">
+      </div>
+      <p class="field-hint">Vos informations servent uniquement à vous répondre. Elles ne sont jamais transmises à des tiers.</p>
+      <button type="submit" class="btn btn-primary btn-lg">Envoyer le message</button>
+    </form>
+  </div>
+
+<%- include("../partials/footer") %>

@@ -1,0 +1,115 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const canWrite = mk.can("lists.write");
+  const canExport = mk.can("contacts.export");
+  // En-têtes triables : même convention visuelle que Contacts (indicateur ⇅ discret, ▲/▼ sur la colonne active,
+  // jamais un caractère brut dans le texte du libellé — voir .mk-datatable th a::after dans marketing.css).
+  const NEXT_DIR = { name: "asc", contacts: "desc", sendable: "desc", created: "desc" };
+  const sortHead = (key, label, numeric) => {
+    const on = sort === key;
+    const next = on ? (dir === "asc" ? "desc" : "asc") : NEXT_DIR[key];
+    const attr = on ? ` aria-sort="${dir === "asc" ? "ascending" : "descending"}"` : "";
+    return `<th scope="col"${attr}${numeric ? ' class="mk-num"' : ""}><a href="${mkh.esc(url({ tri: key, sens: next }))}">${label}</a></th>`;
+  };
+%>
+    <div class="mk-head">
+      <h1>Listes <span class="mk-count"><%= lists.length %></span></h1>
+    </div>
+    <p class="mk-lead">Organisez vos contacts en groupes pour faciliter la gestion de votre audience et vos campagnes.</p>
+
+    <div class="mk-callout">
+      <%- icon("info", { size: 18 }) %>
+      <div><strong>À propos du consentement</strong>
+        <p>Appartenir à une liste ne constitue pas un consentement marketing. Seuls les contacts disposant d'un consentement valide peuvent être considérés comme « joignables ».</p>
+      </div>
+    </div>
+
+    <% if (lists.length || hasQuery) { %>
+      <form class="mk-filterbar" method="get" action="/marketing/listes" role="search">
+        <% if (sort) { %><input type="hidden" name="tri" value="<%= sort %>"><input type="hidden" name="sens" value="<%= dir %>"><% } %>
+        <div class="mk-search"><%- icon("search", { size: 16 }) %><label class="sr-only" for="l-q">Rechercher une liste</label><input id="l-q" type="search" name="q" value="<%= q %>" placeholder="Rechercher une liste" maxlength="100"></div>
+        <button type="submit" class="btn btn-primary btn-sm">Rechercher</button>
+        <% if (hasQuery) { %><a href="/marketing/listes" class="btn btn-ghost btn-sm">Réinitialiser</a><% } %>
+      </form>
+    <% } %>
+
+    <% if (!lists.length) { %>
+      <% if (hasQuery) { %>
+        <div class="mk-empty">
+          <%- icon("search", { size: 32 }) %>
+          <h2>Aucune liste ne correspond</h2>
+          <p>Aucune liste ne correspond à « <%= q %> ». Essayez un autre terme ou réinitialisez la recherche.</p>
+          <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/listes">Réinitialiser la recherche</a></div>
+        </div>
+      <% } else { %>
+        <div class="mk-empty">
+          <%- icon("list", { size: 32 }) %>
+          <h2>Aucune liste pour le moment</h2>
+          <p>Créez votre première liste pour organiser vos contacts. Exemples : Newsletter, Participants au webinaire, Clients, Prospects, VIP.</p>
+          <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une liste</button></div><% } %>
+        </div>
+      <% } %>
+    <% } else { %>
+      <div class="mk-table-wrap">
+        <table class="mk-table mk-datatable">
+          <caption class="sr-only">Listes de contacts (<%= lists.length %>), triée</caption>
+          <thead><tr>
+            <%- sortHead("name", "Liste") %>
+            <%- sortHead("contacts", "Contacts", true) %>
+            <%- sortHead("sendable", "Joignables", true) %>
+            <%- sortHead("created", "Créée le") %>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr></thead>
+          <tbody>
+            <% lists.forEach((l) => { %>
+              <tr>
+                <td data-label="Liste"><a href="/marketing/listes/<%= l.id %>"><%= l.name %></a><% if (l.description) { %><span class="mk-sub"><%= l.description %></span><% } %></td>
+                <td class="mk-num" data-label="Contacts"><%= mkh.fmt(l.member_count) %></td>
+                <td class="mk-num" data-label="Joignables"><%= mkh.fmt(l.sendable_count) %></td>
+                <td data-label="Créée le"><%= mkh.fdate(l.created_at) %></td>
+                <td data-label="Actions" class="mk-row-actions">
+                  <div class="mk-dropdown" data-mk-dropdown>
+                    <button type="button" class="icon-btn btn-sm" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-liste-<%= l.id %>" aria-label="Actions pour la liste <%= l.name %>"><%- icon("moreVertical", { size: 18 }) %></button>
+                    <div class="mk-menu" id="menu-liste-<%= l.id %>" role="menu" hidden>
+                      <a role="menuitem" href="/marketing/listes/<%= l.id %>">Ouvrir</a>
+                      <a role="menuitem" href="/marketing/contacts?liste=<%= l.id %>">Voir les contacts</a>
+                      <% if (canExport) { %><a role="menuitem" href="/marketing/contacts/export.csv?liste=<%= l.id %>">Exporter (CSV)</a><% } %>
+                      <% if (canWrite) { %>
+                        <form action="/marketing/listes/<%= l.id %>/supprimer" method="post" role="none">
+                          <button type="submit" role="menuitem" class="mk-menu-danger" data-mk-confirm="La liste « <%= l.name %> » sera supprimée. Les contacts ne sont pas supprimés." data-mk-confirm-title="Supprimer cette liste ?" data-mk-confirm-ok="Supprimer">Supprimer</button>
+                        </form>
+                      <% } %>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <% if (canWrite) { %>
+      <dialog class="mk-dialog mk-modal" id="nouvelle" data-mk-modal data-mk-modal-hash="nouvelle" aria-labelledby="mcl-title">
+        <form method="post" action="/marketing/listes">
+          <div class="mk-dialog-body">
+            <h2 id="mcl-title">Créer une liste</h2>
+            <p>Une liste permet de regrouper des contacts afin de les organiser et de les utiliser dans vos campagnes.</p>
+            <div class="field-group">
+              <label for="l-name">Nom de la liste *</label>
+              <input id="l-name" type="text" name="name" maxlength="100" placeholder="Ex. Newsletter" required data-mk-required-message="Le nom de la liste est obligatoire.">
+            </div>
+            <div class="field-group">
+              <label for="l-desc">Description</label>
+              <input id="l-desc" type="text" name="description" maxlength="500" placeholder="Description facultative">
+            </div>
+          </div>
+          <div class="mk-dialog-actions">
+            <button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm">Créer la liste</button>
+          </div>
+        </form>
+      </dialog>
+      <%- include("partials/modal-reopen", { id: "nouvelle" }) %>
+    <% } %>
+<%- include("partials/bottom") %>

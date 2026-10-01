@@ -1,0 +1,109 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const publicUrl = `${baseUrl}/f/${item.slug}`;
+  const propertyTypeLabel = { text: "Texte", number: "Nombre", date: "Date", boolean: "Case oui / non", select: "Choix dans une liste" };
+  const maxTags = 5; // même plafond que forms/index.js (MAX_TAGS), revérifié côté serveur
+  const conv = item.viewCount > 0 ? Math.round((item.submitCount / item.viewCount) * 10000) / 100 : null;
+%>
+    <p class="mk-back"><a href="/marketing/formulaires">&larr; Tous les formulaires</a></p>
+    <div class="mk-head">
+      <h1><%= item.name %> <span class="mk-status <%= item.status === 'published' ? 'mk-status-ok' : '' %>"><%= item.status === 'published' ? "Publié" : "Brouillon" %></span></h1>
+      <% if (mk.can("forms.write")) { %>
+        <div class="mk-actions">
+          <form action="/marketing/formulaires/<%= item.id %>/<%= item.status === 'published' ? 'depublier' : 'publier' %>" method="post" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm"><%= item.status === 'published' ? "Dépublier" : "Publier" %></button></form>
+          <form action="/marketing/formulaires/<%= item.id %>/supprimer" method="post" class="mk-inline"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Le lien /f/<%= item.slug %> cessera de fonctionner immédiatement." data-mk-confirm-title="Supprimer ce formulaire ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form>
+        </div>
+      <% } %>
+    </div>
+
+    <% if (item.status === "published") { %>
+      <p class="mk-key-value"><code><%= publicUrl %></code></p>
+    <% } else { %>
+      <p class="field-hint">Ce formulaire n'est pas encore publié : son adresse (<code>/f/<%= item.slug %></code>) répond « introuvable » tant qu'il n'est pas publié.</p>
+    <% } %>
+
+    <div class="mk-stats mk-stats-3">
+      <div class="mk-stat"><span class="mk-stat-label">Vues</span><span class="mk-stat-value"><%= mkh.fmt(item.viewCount) %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Inscriptions</span><span class="mk-stat-value"><%= mkh.fmt(item.submitCount) %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Conversion</span><span class="mk-stat-value"><%= mkh.rate(conv) %></span></div>
+    </div>
+
+    <section class="mk-panel" aria-labelledby="conf-title">
+      <h2 id="conf-title">Configuration</h2>
+      <% if (typeof flash !== "undefined" && flash) { %><div class="mk-flash <%= flash.type === 'ok' ? 'mk-flash-ok' : 'mk-flash-error' %>" role="status"><%= flash.text %></div><% } %>
+      <form action="/marketing/formulaires/<%= item.id %>" method="post" class="mk-form">
+        <div class="field-group"><label for="ff-name">Nom (usage interne, pas affiché aux visiteurs)</label><input id="ff-name" type="text" name="name" maxlength="80" value="<%= item.name %>" required></div>
+        <div class="field-group"><label for="ff-consent">Texte de consentement (affiché avec la case à cocher)</label><input id="ff-consent" type="text" name="consentText" maxlength="500" value="<%= item.consentText %>" required></div>
+        <fieldset class="seo-fieldset">
+          <legend>Champs demandés en plus de l'adresse</legend>
+          <% Object.entries(fieldCatalog).forEach(([key, label]) => { %>
+            <label class="checkbox-row"><input type="checkbox" name="fields" value="<%= key %>" <%= item.fields.includes(key) ? "checked" : "" %>> <%= label %></label>
+          <% }) %>
+        </fieldset>
+        <div class="field-group">
+          <label for="ff-list">Ajouter les inscrits à cette liste (facultatif)</label>
+          <select id="ff-list" name="listId">
+            <option value="">Aucune liste</option>
+            <% lists.forEach((l) => { %><option value="<%= l.id %>" <%= item.listId === l.id ? "selected" : "" %>><%= l.name %></option><% }) %>
+          </select>
+        </div>
+        <fieldset class="seo-fieldset">
+          <legend>Propriétés demandées en plus (facultatif)</legend>
+          <% if (!properties.length) { %>
+            <p class="field-hint">Aucune propriété définie. Créez-en dans <a href="/marketing/proprietes">Audience → Propriétés</a> (ville, niveau, date de naissance…) pour pouvoir les demander ici.</p>
+          <% } else { %>
+            <p class="field-hint">Chacune s'affiche avec le bon type de champ et sa valeur est vérifiée avant l'inscription. Toutes restent facultatives pour le visiteur.</p>
+            <div class="mk-check-grid">
+              <% properties.forEach((p) => { %>
+                <label class="checkbox-row"><input type="checkbox" name="propertyFields" value="<%= p.key %>" <%= item.propertyFields.includes(p.key) ? "checked" : "" %>> <span><%= p.label %> <span class="mk-sub"><%= propertyTypeLabel[p.type] || p.type %></span></span></label>
+              <% }) %>
+            </div>
+          <% } %>
+        </fieldset>
+
+        <fieldset class="seo-fieldset">
+          <legend>Après l'inscription</legend>
+          <div class="field-group">
+            <label for="ff-tags">Étiquettes posées sur chaque inscrit (facultatif)</label>
+            <input id="ff-tags" type="text" name="tags" maxlength="400" value="<%= item.tags.join(", ") %>" placeholder="Ex. Newsletter, Webinaire de mars" aria-describedby="ff-tags-hint">
+            <p class="field-hint" id="ff-tags-hint">Séparées par des virgules, <%= maxTags %> au plus ; une étiquette qui n'existe pas encore est créée à la première inscription.<% if (existingTags.length) { %> Déjà utilisées : <%= existingTags.slice(0, 12).map((t) => t.name).join(", ") %><%= existingTags.length > 12 ? "…" : "" %>.<% } %></p>
+          </div>
+          <div class="field-group">
+            <label for="ff-thanks">Message de remerciement (facultatif ; sinon un message par défaut s'affiche)</label>
+            <textarea id="ff-thanks" name="thankYouText" maxlength="300" rows="2"><%= item.thankYouText %></textarea>
+          </div>
+          <div class="field-group">
+            <label for="ff-redirect">Rediriger vers une autre page (facultatif)</label>
+            <input id="ff-redirect" type="text" name="redirectUrl" maxlength="2048" value="<%= item.redirectUrl || '' %>" placeholder="https://… ou /catalogue" inputmode="url" aria-describedby="ff-redirect-hint">
+            <p class="field-hint" id="ff-redirect-hint">Remplace la page de remerciement pour le formulaire en page. Le pop-up, lui, affiche toujours le message de remerciement : il ne fait jamais quitter la page en cours de lecture.</p>
+          </div>
+        </fieldset>
+
+        <fieldset class="seo-fieldset">
+          <legend>Pop-up sur le site</legend>
+          <p class="field-hint">En plus de son adresse propre, ce formulaire peut s'afficher en superposition sur les pages du site. Une personne qui l'a déjà vu (ou fermé) ne le revoit pas avant le délai choisi.</p>
+          <label class="checkbox-row"><input type="checkbox" id="ff-popup" name="popupEnabled" value="1" <%= item.popupEnabled ? "checked" : "" %>> Afficher ce formulaire en pop-up</label>
+          <div class="field-row">
+            <div class="field-group">
+              <label for="ff-trigger">Se déclenche</label>
+              <select id="ff-trigger" name="popupTrigger">
+                <option value="delay" <%= item.popupTrigger === "delay" ? "selected" : "" %>>Après un délai</option>
+                <option value="scroll" <%= item.popupTrigger === "scroll" ? "selected" : "" %>>Après avoir défilé la page</option>
+                <option value="exit" <%= item.popupTrigger === "exit" ? "selected" : "" %>>Quand la personne s'apprête à partir</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label for="ff-trigger-value">Valeur (secondes, ou % défilé — ignoré pour « s'apprête à partir »)</label>
+              <input id="ff-trigger-value" type="number" name="popupTriggerValue" min="0" max="120" value="<%= item.popupTriggerValue %>">
+            </div>
+            <div class="field-group">
+              <label for="ff-freq">Ne pas revoir avant (jours)</label>
+              <input id="ff-freq" type="number" name="popupFrequencyDays" min="1" max="90" value="<%= item.popupFrequencyDays %>">
+            </div>
+          </div>
+        </fieldset>
+
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </form>
+    </section>
+<%- include("partials/bottom") %>

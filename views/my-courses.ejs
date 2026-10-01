@@ -1,0 +1,75 @@
+<%- include("partials/header", { title: "Mes formations" }) %>
+
+  <div class="container-wide dashboard-header">
+    <h1>Mes formations</h1>
+    <p>Reprenez où vous en étiez.</p>
+  </div>
+
+  <div class="container-wide section-tight learner-space">
+    <% if (courses.length === 0 && favorites.length === 0) { %>
+      <div class="empty-state">
+        <h3>Vous n'avez pas encore de formation</h3>
+        <p>Direction le catalogue pour trouver votre prochaine compétence à apprendre.</p>
+        <a href="/catalogue" class="btn btn-primary">Voir le catalogue</a>
+      </div>
+    <% } %>
+
+    <% if (resumeCourse) { %>
+      <div class="resume-card">
+        <div>
+          <p class="resume-label">Reprendre là où vous vous étiez arrêté</p>
+          <p class="resume-title"><%= resumeCourse.resume.title %></p>
+          <p class="resume-course"><%= resumeCourse.title %> · <%= resumeCourse.pct %>% terminé</p>
+        </div>
+        <a href="/apprendre/<%= resumeCourse.slug %>/<%= resumeCourse.resume.id %>" class="btn btn-primary btn-lg">Reprendre</a>
+      </div>
+    <% } %>
+
+    <% if (inProgress.length) { %>
+      <section>
+        <h2>En cours</h2>
+        <div class="learner-list"><% inProgress.forEach((course) => { %><%- include("partials/learner-course", { course }) %><% }) %></div>
+      </section>
+    <% } %>
+
+    <% if (finished.length) { %>
+      <section>
+        <h2>Terminées</h2>
+        <div class="learner-list"><% finished.forEach((course) => { %><%- include("partials/learner-course", { course }) %><% }) %></div>
+      </section>
+    <% } %>
+
+    <% if (favorites.length) { %>
+      <section>
+        <h2>Mes favoris</h2>
+        <ul class="favorite-list">
+          <% favorites.forEach((f) => { %>
+            <li>
+              <a href="/cours/<%= f.slug %>" class="favorite-title"><%= f.title %></a>
+              <span class="field-hint">Par <%= f.instructor_name %> · <%= formatPrice(f.price_cents) %></span>
+              <form action="/favoris/<%= f.id %>" method="post" class="inline-form">
+                <button type="submit" class="btn btn-outline btn-sm" aria-label="Retirer <%= f.title %> des favoris">Retirer</button>
+              </form>
+            </li>
+          <% }) %>
+        </ul>
+      </section>
+    <% } %>
+
+    <% if (notes.length) { %>
+      <section>
+        <h2>Mes notes</h2>
+        <ul class="note-list">
+          <% notes.forEach((n) => { %>
+            <li>
+              <a href="/apprendre/<%= n.slug %>/<%= n.lesson_id %>" class="note-title"><%= n.lesson_title %></a>
+              <span class="field-hint"><%= n.course_title %></span>
+              <p class="note-excerpt"><%= n.content.length > 200 ? n.content.slice(0, 200) + "…" : n.content %></p>
+            </li>
+          <% }) %>
+        </ul>
+      </section>
+    <% } %>
+  </div>
+
+<%- include("partials/footer") %>

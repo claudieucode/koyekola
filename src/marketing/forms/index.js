@@ -1,0 +1,259 @@
+// Formulaires d'inscription publics (jalon M5 — Capture, partie 1) : un formulaire = une adresse /f/:slug, un texte de
+// consentement présenté (preuve enregistrée), des champs facultatifs, une liste optionnelle. Un contact créé par un
+// formulaire suit EXACTEMENT les mêmes règles que partout ailleurs (compliance/consent.js) : aucun raccourci ici.
+const { checkCtx, cleanText, audit, MarketingError } = require("../audience/shared");
+const { upsertContact, getContact } = require("../audience/contacts");
+const { addToList } = require("../audience/lists");
+const { recordConsent } = require("../compliance/consent");
+const { setContactProperties, validatePropertyValues } = require("../audience/properties");
+const { tagContact } = require("../audience/tags");
+
+// Champs facultatifs proposables (l'adresse est TOUJOURS demandée, en plus, jamais dans cette liste)
+const FIELD_CATALOG = { first_name: "Prénom", last_name: "Nom", phone: "Téléphone", company: "Société" };
+const STATUSES = ["draft", "published"];
+const MAX_SLUG = 80;
+// Déclencheurs de pop-up : delay (secondes avant affichage), scroll (% de la page défilé), exit (intention de quitter, souris vers le haut)
+const POPUP_TRIGGERS = ["delay", "scroll", "exit"];
+const POPUP_TRIGGER_RANGE = { delay: [1, 120], scroll: [1, 100], exit: [0, 0] };
+const POPUP_FREQUENCY_RANGE = [1, 90];
+const MAX_PROPERTY_FIELDS = 10;
+const MAX_TAGS = 5;
+// Préfixe des propriétés dans le formulaire public : jamais de collision avec email, consent ou le champ piège « website »
+const PROP_PREFIX = "prop_";
+
+const slugify = (text) =>
+  String(text ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, MAX_SLUG) || "formulaire";
+
+function uniqueSlug(ctx, base, excludeId) {
+  let slug = base;
+  for (let n = 2; ; n++) {
+    const row = ctx.db.prepare("SELECT id FROM mk_forms WHERE organization_id = ? AND slug = ?").get(ctx.organizationId, slug);
+    if (!row || row.id === excludeId) return slug;
+    slug = `${base}-${n}`.slice(0, MAX_SLUG);
+  }
+}
+
+function validateFields(input) {
+  const list = [...new Set((Array.isArray(input) ? input : []).map((v) => String(v).trim()).filter(Boolean))];
+  for (const f of list) if (!Object.hasOwn(FIELD_CATALOG, f)) throw new MarketingError("invalid_field", `Champ inconnu : « ${f} ».`);
+  return list;
+}
+
+// Propriétés personnalisées demandées (clés de mk_property_defs, affichées dans l'ordre de la liste des propriétés) : chacune doit exister
+function validatePropertyFields(ctx, input) {
+  const list = [...new Set((Array.isArray(input) ? input : []).map((v) => String(v).trim()).filter(Boolean))];
+  if (list.length > MAX_PROPERTY_FIELDS) throw new MarketingError("invalid_field", `${MAX_PROPERTY_FIELDS} propriétés au plus par formulaire.`);
+  for (const key of list) {
+    if (!ctx.db.prepare("SELECT 1 FROM mk_property_defs WHERE organization_id = ? AND key = ?").get(ctx.organizationId, key)) {
+      throw new MarketingError("invalid_field", `Propriété inconnue : « ${key.slice(0, 40)} ».`);
+    }
+  }
+  return list;
+}
+
+// Étiquettes posées à l'inscription : texte séparé par des virgules (ou tableau) → noms nettoyés, sans doublon
+// (insensible à la casse, comme les étiquettes elles-mêmes), 5 au plus. Créées à la volée à la première inscription.
+function validateTags(input) {
+  const raw = Array.isArray(input) ? input : String(input ?? "").split(",");
+  const seen = new Set();
+  const list = [];
+  for (const item of raw) {
+    const name = String(item).replace(/[\x00-\x1f\x7f]/g, "").trim();
+    if (!name || seen.has(name.toLowerCase())) continue;
+    if (name.length > 64) throw new MarketingError("invalid_field", "Une étiquette fait 64 caractères au plus.");
+    seen.add(name.toLowerCase());
+    list.push(name);
+  }
+  if (list.length > MAX_TAGS) throw new MarketingError("invalid_field", `${MAX_TAGS} étiquettes au plus par formulaire.`);
+  return list;
+}
+
+// Redirection après inscription : une adresse web complète (http/https, sans identifiants) ou un chemin du site
+// (« /… », jamais « // » ni « /\ » qui mèneraient ailleurs). Tout autre protocole (javascript:, data:…) est refusé.
+function validateRedirect(input) {
+  const text = String(input ?? "").trim();
+  if (!text) return null;
+  const invalid = () => new MarketingError("invalid_field", "Adresse de redirection invalide : une adresse web complète (https://…) ou un chemin du site (/…) est attendu.");
+  if (text.length > 2048 || /[\s\x00-\x1f]/.test(text)) throw invalid();
+  if (text.startsWith("/")) {
+    if (/^\/[\/\\]/.test(text)) throw invalid();
+    return text;
+  }
+  let url;
+  try { url = new URL(text); } catch { throw invalid(); }
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw invalid();
+  return url.href;
+}
+
+// Un entier borné, ou la valeur par défaut si absent/hors bornes (jamais une exception pour un réglage secondaire)
+function boundedInt(value, [min, max], fallback) {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= min && n <= max ? n : fallback;
+}
+
+function rowToForm(row) {
+  return {
+    id: row.id, name: row.name, slug: row.slug, status: row.status, fields: JSON.parse(row.fields), consentText: row.consent_text,
+    listId: row.list_id, thankYouText: row.thank_you_text, viewCount: row.view_count, submitCount: row.submit_count,
+    propertyFields: JSON.parse(row.property_fields || "[]"), tags: JSON.parse(row.tags || "[]"), redirectUrl: row.redirect_url || null,
+    popupEnabled: Boolean(row.popup_enabled), popupTrigger: row.popup_trigger, popupTriggerValue: row.popup_trigger_value, popupFrequencyDays: row.popup_frequency_days,
+    createdAt: row.created_at, updatedAt: row.updated_at,
+  };
+}
+
+function createForm(ctx, { name, fields, consentText, listId }) {
+  checkCtx(ctx);
+  const cleanName = cleanText(name, { max: 80, field: "name" });
+  if (!cleanName) throw new MarketingError("invalid_field", "Le nom est obligatoire.");
+  const cleanConsent = cleanText(consentText, { max: 500, field: "consentText" });
+  if (cleanConsent.length < 3) throw new MarketingError("invalid_field", "Le texte de consentement est obligatoire (c'est la preuve présentée à la personne).");
+  const cleanFields = validateFields(fields);
+  const list = Number.isInteger(listId) ? listId : null;
+  const slug = uniqueSlug(ctx, slugify(name));
+  const id = Number(
+    ctx.db
+      .prepare("INSERT INTO mk_forms (organization_id, name, slug, fields, consent_text, list_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      .run(ctx.organizationId, cleanName, slug, JSON.stringify(cleanFields), cleanConsent, list, ctx.userId ?? null).lastInsertRowid
+  );
+  audit(ctx, "form.created", "form", id, { name: cleanName, slug });
+  return getForm(ctx, id);
+}
+
+function listForms(ctx) {
+  checkCtx(ctx);
+  return ctx.db.prepare("SELECT * FROM mk_forms WHERE organization_id = ? ORDER BY id DESC").all(ctx.organizationId).map(rowToForm);
+}
+
+function requireFormRow(ctx, id) {
+  const row = ctx.db.prepare("SELECT * FROM mk_forms WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId);
+  if (!row) throw new MarketingError("not_found", "Formulaire introuvable.");
+  return row;
+}
+
+function getForm(ctx, id) {
+  checkCtx(ctx);
+  return rowToForm(requireFormRow(ctx, id));
+}
+
+function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, popupEnabled, popupTrigger, popupTriggerValue, popupFrequencyDays, propertyFields, tags, redirectUrl }) {
+  checkCtx(ctx);
+  const current = rowToForm(requireFormRow(ctx, id)); // existe et appartient à l'organisation
+  // Réglages absents de l'appel (ancien appelant) : on garde la valeur actuelle plutôt que de l'effacer
+  const cleanPropertyFields = propertyFields === undefined ? current.propertyFields : validatePropertyFields(ctx, propertyFields);
+  const cleanTags = tags === undefined ? current.tags : validateTags(tags);
+  const cleanRedirect = redirectUrl === undefined ? current.redirectUrl : validateRedirect(redirectUrl);
+  const cleanName = cleanText(name, { max: 80, field: "name" });
+  if (!cleanName) throw new MarketingError("invalid_field", "Le nom est obligatoire.");
+  const cleanConsent = cleanText(consentText, { max: 500, field: "consentText" });
+  if (cleanConsent.length < 3) throw new MarketingError("invalid_field", "Le texte de consentement est obligatoire.");
+  const cleanFields = validateFields(fields);
+  const cleanThanks = cleanText(thankYouText, { max: 300, field: "thankYouText" });
+  const list = Number.isInteger(listId) ? listId : null;
+  const trigger = POPUP_TRIGGERS.includes(popupTrigger) ? popupTrigger : "delay";
+  const triggerValue = boundedInt(popupTriggerValue, POPUP_TRIGGER_RANGE[trigger], trigger === "delay" ? 8 : trigger === "scroll" ? 50 : 0);
+  const frequencyDays = boundedInt(popupFrequencyDays, POPUP_FREQUENCY_RANGE, 7);
+  ctx.db
+    .prepare(
+      `UPDATE mk_forms SET name = ?, fields = ?, consent_text = ?, list_id = ?, thank_you_text = ?,
+         popup_enabled = ?, popup_trigger = ?, popup_trigger_value = ?, popup_frequency_days = ?,
+         property_fields = ?, tags = ?, redirect_url = ?, updated_at = datetime('now') WHERE id = ?`
+    )
+    .run(cleanName, JSON.stringify(cleanFields), cleanConsent, list, cleanThanks, popupEnabled ? 1 : 0, trigger, triggerValue, frequencyDays,
+      JSON.stringify(cleanPropertyFields), JSON.stringify(cleanTags), cleanRedirect, id);
+  audit(ctx, "form.updated", "form", id, { name: cleanName, popupEnabled: Boolean(popupEnabled) });
+  return getForm(ctx, id);
+}
+
+function setStatus(ctx, id, status) {
+  checkCtx(ctx);
+  if (!STATUSES.includes(status)) throw new MarketingError("invalid_field", "Statut invalide.");
+  const row = requireFormRow(ctx, id);
+  ctx.db.prepare("UPDATE mk_forms SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, id);
+  audit(ctx, status === "published" ? "form.published" : "form.unpublished", "form", id, { name: row.name });
+  return status === "published" ? `« ${row.name} » est publié : /f/${row.slug} est maintenant accessible.` : `« ${row.name} » n'est plus publié.`;
+}
+
+function deleteForm(ctx, id) {
+  checkCtx(ctx);
+  const row = requireFormRow(ctx, id);
+  ctx.db.prepare("DELETE FROM mk_forms WHERE id = ?").run(id);
+  audit(ctx, "form.deleted", "form", id, { name: row.name });
+  return `« ${row.name} » supprimé.`;
+}
+
+// ---------- Côté public (/f/:slug, /f/popup.json), aucune session ni droit ----------
+
+// Le pop-up actif le plus récemment mis à jour (un seul affiché à la fois : plusieurs superposés serait une mauvaise expérience) ; null si aucun
+function getActivePopup(db, organizationId) {
+  // id en second critère : updated_at (précision à la seconde) peut être identique pour deux mises à jour rapprochées
+  const row = db.prepare("SELECT * FROM mk_forms WHERE organization_id = ? AND status = 'published' AND popup_enabled = 1 ORDER BY updated_at DESC, id DESC LIMIT 1").get(organizationId);
+  return row ? rowToForm(row) : null;
+}
+
+function getPublishedForm(db, organizationId, slug) {
+  const row = db.prepare("SELECT * FROM mk_forms WHERE organization_id = ? AND slug = ? AND status = 'published'").get(organizationId, slug);
+  return row ? rowToForm(row) : null;
+}
+
+// Définitions des propriétés demandées par un formulaire (ordre de la liste des propriétés) ; une propriété supprimée depuis est
+// simplement ignorée (le formulaire continue de fonctionner sans elle). name = nom du champ dans le formulaire public.
+function propertyFieldDefs(db, organizationId, form) {
+  return form.propertyFields
+    .map((key) => db.prepare("SELECT key, label, type, options FROM mk_property_defs WHERE organization_id = ? AND key = ?").get(organizationId, key))
+    .filter(Boolean)
+    .map((d) => ({ key: d.key, name: PROP_PREFIX + d.key, label: d.label, type: d.type, options: JSON.parse(d.options || "[]") }));
+}
+
+function recordView(db, formId) {
+  db.prepare("UPDATE mk_forms SET view_count = view_count + 1 WHERE id = ?").run(formId);
+}
+
+// { ok: true } ou { ok: false, reason } — jamais une exception pour une entrée utilisateur invalide (page publique)
+function submitForm(ctx, formId, input = {}) {
+  checkCtx(ctx);
+  const row = requireFormRow(ctx, formId);
+  if (row.status !== "published") return { ok: false, reason: "not_published" };
+  const form = rowToForm(row);
+  const fields = {};
+  for (const key of form.fields) if (input[key] !== undefined) fields[key] = input[key];
+  // Propriétés : vérifiées AVANT de créer quoi que ce soit (une date impossible ne doit laisser ni contact ni
+  // consentement à moitié enregistrés). Case à cocher non cochée = rien de dit, donc rien d'enregistré.
+  const properties = {};
+  for (const def of propertyFieldDefs(ctx.db, ctx.organizationId, form)) {
+    const raw = input[def.name];
+    if (raw === undefined || raw === null || String(raw).trim() === "") continue;
+    try {
+      validatePropertyValues(ctx, { [def.key]: raw });
+    } catch (error) {
+      if (!(error instanceof MarketingError)) throw error;
+      return { ok: false, reason: "invalid_value", message: error.message.replace(`« ${def.key} »`, `« ${def.label} »`) };
+    }
+    properties[def.key] = raw;
+  }
+  let contact;
+  try {
+    ({ contact } = upsertContact(ctx, { email: input.email, ...fields, source: "form" }));
+  } catch (error) {
+    if (error instanceof MarketingError) return { ok: false, reason: error.code, message: error.message };
+    throw error;
+  }
+  const consent = recordConsent(ctx, contact.id, { source: "form", textShown: form.consentText, ip: input.ip, formId });
+  if (!consent.ok) return { ok: false, reason: consent.reason };
+  if (form.listId) {
+    try {
+      addToList(ctx, form.listId, [contact.id]);
+    } catch {
+      // la liste choisie a été supprimée depuis : le formulaire continue de fonctionner, simplement sans y ajouter personne
+    }
+  }
+  if (Object.keys(properties).length) setContactProperties(ctx, contact.id, properties, { skipEmpty: true });
+  for (const tag of form.tags) tagContact(ctx, contact.id, tag);
+  ctx.db.prepare("UPDATE mk_forms SET submit_count = submit_count + 1 WHERE id = ?").run(formId);
+  // `contact` date d'AVANT recordConsent (qui vient de faire passer son statut à « subscribed ») : on renvoie l'état à jour, pas l'instantané périmé
+  return { ok: true, contact: getContact(ctx, contact.id) };
+}
+
+module.exports = {
+  FIELD_CATALOG, STATUSES, MAX_TAGS, propertyFieldDefs, POPUP_TRIGGERS, POPUP_TRIGGER_RANGE, POPUP_FREQUENCY_RANGE,
+  createForm, listForms, getForm, updateForm, setStatus, deleteForm, getPublishedForm, getActivePopup, recordView, submitForm, slugify,
+};

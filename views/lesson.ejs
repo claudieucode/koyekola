@@ -1,0 +1,162 @@
+<%- include("partials/header", { title: currentLesson.title }) %>
+
+  <div class="learn-layout" style="max-width:1400px;margin:0 auto;">
+    <div class="learn-main">
+      <p class="field-hint"><a href="/cours/<%= course.slug %>" class="back-link"><%- icon('arrowLeft', { size: 14 }) %> <%= course.title %></a></p>
+
+      <% const remoteVideo = currentLesson.video_path ? null : parseVideoUrl(currentLesson.video_url); %>
+      <div class="learn-video"<% if (trackProgress) { %> data-lesson-tracker data-lesson-id="<%= currentLesson.id %>" data-resume="<%= resumeSeconds %>" data-has-quiz="<%= quiz ? 1 : 0 %>"<% } %>>
+        <% if (currentLesson.video_path) { %>
+          <video controls preload="metadata" src="<%= currentLesson.video_path %>" poster="<%= course.thumbnail_path || '' %>"></video>
+        <% } else if (remoteVideo) { %>
+          <%- include("partials/video-player", { video: remoteVideo, title: currentLesson.title, poster: course.thumbnail_path }) %>
+        <% } else { %>
+          <div class="placeholder">
+            <%- icon('video', { size: 32 }) %>
+            <p>Aucune vidéo n'a encore été ajoutée pour ce sous-chapitre.</p>
+          </div>
+        <% } %>
+      </div>
+
+      <% if (trackProgress && resumeSeconds > 0) { %><p class="resume-hint" role="status">Reprise à <%= formatClock(resumeSeconds) %></p><% } %>
+
+      <div class="learn-title-row">
+        <div>
+          <h1 style="margin:0 0 4px;font-size:1.4rem;"><%= currentLesson.title %></h1>
+          <span class="field-hint"><%= currentLesson.duration_minutes %> min<% if (currentLesson.is_preview) { %> · <span class="badge">Aperçu gratuit</span><% } %></span>
+        </div>
+        <% if (hasFullAccess && !quiz) { %>
+          <form action="/apprendre/lecon/<%= currentLesson.id %>/terminer" method="post">
+            <input type="hidden" name="next" value="<%= nextLesson ? `/apprendre/${course.slug}/${nextLesson.id}` : `/apprendre/${course.slug}/${currentLesson.id}` %>">
+            <% if (completedIds.has(currentLesson.id)) { %>
+              <button type="submit" class="btn btn-secondary">✓ Terminée — revoir</button>
+            <% } else { %>
+              <button type="submit" class="btn btn-success">Marquer comme terminée</button>
+            <% } %>
+          </form>
+        <% } %>
+      </div>
+
+      <% if (!hasFullAccess) { %>
+        <div class="payment-badge" style="margin-bottom:16px;">
+          <%- icon('eye', { size: 16 }) %> Vous regardez un aperçu gratuit. <a href="/cours/<%= course.slug %>" style="color:var(--primary-dark);font-weight:700;margin-left:4px;">Achetez la formation</a> pour accéder à tout le programme et suivre votre progression.
+        </div>
+      <% } %>
+
+      <% if (currentLesson.description) { %>
+        <div class="markdown lesson-text"><%- renderMarkdown(currentLesson.description) %></div>
+      <% } %>
+
+      <% if (attachments.length) { %>
+        <section class="content-card lesson-resources" aria-labelledby="lesson-resources-title">
+          <h2 id="lesson-resources-title" style="font-size:1.05rem;margin-top:0;">Ressources de la leçon</h2>
+          <ul class="attachment-list">
+            <% attachments.forEach((a) => { %>
+              <% if (a.kind === 'link') { %>
+                <li><a href="<%= a.url %>" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm"><%- icon('arrowRight', { size: 15 }) %> <%= a.title %></a></li>
+              <% } else if (a.inlineImage) { %>
+                <li class="attachment-image"><figure><img src="<%= a.path %>" alt="<%= a.title %>" loading="lazy" decoding="async"><figcaption><%= a.title %></figcaption></figure></li>
+              <% } else { %>
+                <li><a href="<%= a.path %>" download class="btn btn-outline btn-sm"><%- icon('download', { size: 15 }) %> <%= a.title %></a></li>
+              <% } %>
+            <% }) %>
+          </ul>
+        </section>
+      <% } %>
+
+      <% if (trackProgress) { %>
+        <section class="content-card lesson-notes">
+          <label for="lesson-note" class="notes-title">Mes notes <span class="field-hint">(privées, enregistrées automatiquement)</span></label>
+          <textarea id="lesson-note" data-lesson-note data-lesson-id="<%= currentLesson.id %>" rows="5" maxlength="10000" placeholder="Vos remarques sur cette leçon…"><%= noteContent %></textarea>
+          <p class="field-hint" role="status" aria-live="polite" data-note-status></p>
+        </section>
+      <% } %>
+
+      <% if (quiz) { %>
+        <div class="content-card">
+          <h2 style="font-size:1.1rem;margin-top:0;display:flex;align-items:center;gap:8px;"><%- icon('quiz', { size: 20 }) %> <%= quiz.title %></h2>
+
+          <% if (!hasFullAccess) { %>
+            <p class="field-hint">Achetez la formation pour passer ce quiz.</p>
+          <% } else { %>
+            <% if (quizResult) { %>
+              <p class="<%= quizResult.passed ? 'form-success' : 'form-error' %>">
+                <%= quizResult.passed ? "✓ Quiz réussi" : "Quiz non réussi" %> — score : <%= quizResult.score %>% (seuil requis : <%= quiz.pass_percentage %>%)
+              </p>
+            <% } else if (quizPassed) { %>
+              <p class="form-success">✓ Vous avez déjà réussi ce quiz.</p>
+            <% } %>
+
+            <% if (!quizPassed) { %>
+              <form action="/apprendre/quiz/<%= quiz.id %>/soumettre" method="post">
+                <% quiz.questions.forEach((q, qi) => { %>
+                  <div class="field-group">
+                    <label>Q<%= qi + 1 %>. <%= q.question %></label>
+                    <% q.options.forEach(o => { %>
+                      <label class="checkbox-row" style="margin-bottom:4px;">
+                        <input type="radio" name="q_<%= q.id %>" value="<%= o.id %>" required>
+                        <%= o.option_text %>
+                      </label>
+                    <% }) %>
+                  </div>
+                <% }) %>
+                <button type="submit" class="btn btn-primary">Valider le quiz</button>
+              </form>
+            <% } %>
+          <% } %>
+        </div>
+      <% } %>
+
+      <% if (courseComplete) { %>
+        <div class="payment-badge" style="background:var(--success-light);color:var(--success-dark);margin-bottom:20px;">
+          <%- icon('trophy', { size: 16 }) %> Formation terminée ! <a href="/certificat/<%= course.slug %>" style="color:var(--success-dark);font-weight:700;margin-left:6px;">Voir mon certificat</a>
+        </div>
+      <% } %>
+
+      <div class="learn-nav-buttons">
+        <% if (prevLesson) { %>
+          <a href="/apprendre/<%= course.slug %>/<%= prevLesson.id %>" class="btn btn-outline"><%- icon('arrowLeft', { size: 15 }) %> Sous-chapitre précédent</a>
+        <% } else { %><span></span><% } %>
+        <% if (nextLesson) { %>
+          <a href="/apprendre/<%= course.slug %>/<%= nextLesson.id %>" class="btn btn-primary">Sous-chapitre suivant <%- icon('arrowRight', { size: 15 }) %></a>
+        <% } else { %>
+          <a href="/mes-cours" class="btn btn-primary">Terminer et revenir à mes formations</a>
+        <% } %>
+      </div>
+    </div>
+
+    <aside class="learn-sidebar">
+      <div class="learn-progress-box">
+        <strong><%= course.title %></strong>
+        <div class="progress-bar" style="margin-top:10px;"><div class="progress-bar-fill" style="width:<%= totalLessons ? Math.round((completedCount / totalLessons) * 100) : 0 %>%"></div></div>
+        <p class="progress-label"><%= completedCount %> / <%= totalLessons %> sous-chapitres terminés</p>
+      </div>
+
+      <div class="accordion">
+        <% sections.forEach(section => { %>
+          <% const containsCurrent = section.lessons.some(l => l.id === currentLesson.id); %>
+          <div class="accordion-item <%= containsCurrent ? 'is-open' : '' %>">
+            <button type="button" class="accordion-toggle">
+              <span><%= section.title %></span>
+              <span class="chevron"><%- icon('chevronDown', { size: 16 }) %></span>
+            </button>
+            <div class="accordion-body">
+              <% section.lessons.forEach(lesson => { %>
+                <% const lessonUnlocked = hasFullAccess || lesson.is_preview; %>
+                <div class="lesson-row <%= lesson.id === currentLesson.id ? 'is-current' : '' %>">
+                  <a href="/apprendre/<%= course.slug %>/<%= lesson.id %>">
+                    <span class="lesson-icon <%= completedIds.has(lesson.id) ? 'lesson-check' : '' %>"><%- completedIds.has(lesson.id) ? icon('check', { size: 15 }) : (lessonUnlocked ? icon('play', { size: 15 }) : icon('lock', { size: 15 })) %></span>
+                    <span class="lesson-title"><%= lesson.title %></span>
+                    <span class="lesson-duration"><%= lesson.duration_minutes %> min</span>
+                  </a>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </aside>
+  </div>
+
+<% if (trackProgress) { %><script src="<%= asset('/js/player.js') %>" defer></script><% } %>
+<%- include("partials/footer") %>

@@ -1,0 +1,76 @@
+<%- include("partials/top", { title, active }) %>
+    <div class="mk-head"><h1>Clés d'API <span class="mk-count"><%= keys.length %></span></h1></div>
+    <p class="mk-lead">Une clé donne accès à <code>/api/v1</code> depuis l'extérieur (contacts, événements), jamais aux pages de cet espace. Portée « lecture » ou « lecture/écriture », révocable à tout moment.</p>
+
+    <% if (created) { %>
+      <section class="mk-panel mk-verdict is-ok" aria-labelledby="new-key-title">
+        <h2 id="new-key-title">Clé « <%= created.name %> » créée</h2>
+        <p><strong>Copiez-la maintenant : elle ne sera plus jamais affichée.</strong> Si vous la perdez, révoquez-la et créez-en une nouvelle.</p>
+        <p class="mk-key-value"><code><%= created.key %></code></p>
+        <p class="field-hint">À envoyer dans chaque requête : <code>Authorization: Bearer <%= created.key.slice(0, 12) %>…</code></p>
+      </section>
+    <% } %>
+
+    <% if (!keys.length) { %>
+      <div class="mk-empty"><%- icon("plug", { size: 32 }) %><h2>Aucune clé d'API</h2><p>Créez-en une pour brancher un outil externe (formulaire, automatisation, tableur…) à vos contacts et vos événements.</p>
+        <div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une clé</button></div></div>
+    <% } else { %>
+      <div class="mk-table-wrap">
+        <table class="mk-table mk-datatable">
+          <caption class="sr-only">Clés d'API</caption>
+          <thead><tr><th scope="col">Nom</th><th scope="col">Clé</th><th scope="col">Portée</th><th scope="col">Dernière utilisation</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody>
+            <% keys.forEach((k) => { %>
+              <tr>
+                <td data-label="Nom"><%= k.name %><% if (k.revoked_at) { %> <span class="mk-status mk-badge-danger">Révoquée</span><% } %></td>
+                <td data-label="Clé"><code><%= k.prefix %>…</code></td>
+                <td data-label="Portée"><span class="mk-status <%= k.scope === 'write' ? 'mk-status-warn' : '' %>"><%= k.scope === 'write' ? 'Lecture/écriture' : 'Lecture' %></span></td>
+                <td data-label="Dernière utilisation"><%= k.last_used_at ? mkh.fdate(k.last_used_at) : "Jamais utilisée" %></td>
+                <td data-label="Actions" class="mk-row-actions">
+                  <% if (!k.revoked_at) { %>
+                    <form action="/marketing/api/<%= k.id %>/revoquer" method="post" class="mk-inline">
+                      <button type="submit" class="btn btn-ghost btn-sm" aria-label="Révoquer la clé <%= k.name %>" data-mk-confirm="Toute intégration utilisant « <%= k.name %> » cessera de fonctionner immédiatement." data-mk-confirm-title="Révoquer cette clé ?" data-mk-confirm-ok="Révoquer">Révoquer</button>
+                    </form>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <section class="mk-panel" aria-labelledby="doc-title">
+      <h2 id="doc-title">Utilisation</h2>
+      <p>Toutes les requêtes portent l'en-tête <code>Authorization: Bearer votre_clé</code>. Limite : 120 requêtes par minute et par clé.</p>
+      <ul class="plain-list">
+        <li><code>GET /api/v1/contacts</code> — liste paginée (<code>after</code>, <code>limit</code>)</li>
+        <li><code>GET /api/v1/contacts/:id</code> — une fiche</li>
+        <li><code>POST /api/v1/contacts</code> — créer ou compléter (portée écriture ; le statut d'abonnement n'est jamais modifiable par l'API, comme partout ailleurs)</li>
+        <li><code>POST /api/v1/events</code> — envoyer un événement personnalisé (portée écriture ; en-tête <code>Idempotency-Key</code> conseillé)</li>
+      </ul>
+      <p class="field-hint">Les événements envoyés par l'API peuvent déclencher une automatisation, mais ne sont pas encore utilisables comme critère de segment (réservé aux événements du pont KOYEKOLA pour l'instant).</p>
+    </section>
+
+    <dialog class="mk-dialog mk-modal" id="nouvelle" data-mk-modal data-mk-modal-hash="nouvelle" aria-labelledby="nk-title">
+      <form action="/marketing/api" method="post">
+        <div class="mk-dialog-body">
+          <h2 id="nk-title">Nouvelle clé d'API</h2>
+          <p>La clé complète ne sera affichée qu'une seule fois, juste après la création : prévoyez de la copier.</p>
+          <div class="field-group"><label for="k-name">Nom de la clé *</label>
+            <input id="k-name" type="text" name="name" maxlength="80" placeholder="Ex. site vitrine, Zapier…" required data-mk-required-message="Donnez un nom à la clé pour la reconnaître plus tard."></div>
+          <div class="field-group"><label for="k-scope">Portée</label>
+            <select id="k-scope" name="scope">
+              <option value="read">Lecture seule</option>
+              <option value="write">Lecture et écriture</option>
+            </select>
+            <p class="field-hint">« Lecture seule » suffit pour consulter les contacts ; « Lecture et écriture » permet aussi d'en créer et d'envoyer des événements.</p></div>
+        </div>
+        <div class="mk-dialog-actions">
+          <button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm">Créer la clé</button>
+        </div>
+      </form>
+    </dialog>
+    <%- include("partials/modal-reopen", { id: "nouvelle" }) %>
+<%- include("partials/bottom") %>

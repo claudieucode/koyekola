@@ -1,0 +1,73 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const canWrite = mk.can("contacts.write");
+  const TYPE_LABEL = { text: "Texte", number: "Nombre", date: "Date", boolean: "Oui / non", select: "Choix" };
+%>
+    <div class="mk-head"><h1>Propriétés personnalisées <span class="mk-count"><%= defs.length %></span></h1></div>
+    <p class="mk-lead">Des champs supplémentaires sur vos contacts (niveau, ville, date de naissance…), typés et utilisables dans les segments.</p>
+
+    <% if (!defs.length) { %>
+      <div class="mk-empty">
+        <%- icon("sliders", { size: 32 }) %>
+        <h2>Aucune propriété</h2>
+        <p>Ajoutez par exemple « Niveau » (choix), « Ville » (texte) ou « Date de naissance » (date) : elles apparaîtront sur la fiche des contacts et dans les segments.</p>
+        <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une propriété</button></div><% } %>
+      </div>
+    <% } else { %>
+      <div class="mk-table-wrap">
+        <table class="mk-table mk-datatable">
+          <caption class="sr-only">Propriétés personnalisées</caption>
+          <thead><tr><th scope="col">Propriété</th><th scope="col">Clé</th><th scope="col">Type</th><th scope="col">Options</th><th scope="col" class="mk-num">Renseignée pour</th></tr></thead>
+          <tbody>
+            <% defs.forEach((d) => { const n = usage.get(d.id) || 0; %>
+              <tr>
+                <td data-label="Propriété"><%= d.label %></td>
+                <td data-label="Clé"><code><%= d.key %></code></td>
+                <td data-label="Type"><%= TYPE_LABEL[d.type] %></td>
+                <td data-label="Options"><%= JSON.parse(d.options).join(", ") || "—" %></td>
+                <td class="mk-num" data-label="Renseignée pour"><%= mkh.fmt(n) %> contact<%= n > 1 ? "s" : "" %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <% if (canWrite) { %>
+      <dialog class="mk-dialog mk-modal" id="nouvelle" data-mk-modal data-mk-modal-hash="nouvelle" aria-labelledby="npr-title">
+        <form method="post" action="/marketing/proprietes">
+          <div class="mk-dialog-body">
+            <h2 id="npr-title">Créer une propriété</h2>
+            <p>Un champ supplémentaire sur la fiche de chaque contact, utilisable dans les segments.</p>
+            <div class="field-group">
+              <label for="pr-label">Libellé *</label>
+              <input id="pr-label" type="text" name="label" maxlength="100" required placeholder="Ex. Niveau" data-mk-required-message="Le libellé est obligatoire.">
+            </div>
+            <div class="field-group">
+              <label for="pr-key">Clé <span class="field-hint">(minuscules, chiffres, « _ »)</span> *</label>
+              <input id="pr-key" type="text" name="key" maxlength="40" required placeholder="Ex. niveau" data-mk-required-message="La clé est obligatoire.">
+            </div>
+            <div class="field-group">
+              <label for="pr-type">Type</label>
+              <select id="pr-type" name="type" data-mk-op>
+                <option value="text">Texte</option>
+                <option value="number">Nombre</option>
+                <option value="date">Date</option>
+                <option value="boolean">Oui / non</option>
+                <option value="select">Choix dans une liste</option>
+              </select>
+            </div>
+            <div class="field-group" data-mk-show-for="select">
+              <label for="pr-options">Options <span class="field-hint">(une par ligne)</span></label>
+              <textarea id="pr-options" name="options" rows="3" placeholder="débutant&#10;confirmé"></textarea>
+            </div>
+          </div>
+          <div class="mk-dialog-actions">
+            <button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm">Créer la propriété</button>
+          </div>
+        </form>
+      </dialog>
+      <%- include("partials/modal-reopen", { id: "nouvelle" }) %>
+    <% } %>
+<%- include("partials/bottom") %>

@@ -1,0 +1,303 @@
+<%- include("partials/top", { title, active }) %>
+<% const st = mkh.campaignStatus(campaign.status);
+   const labels = { not_subscribed: "sans consentement", unsubscribed: "désinscrits", blocked: "adresses bloquées (rebond, plainte, blocage)", list_unsubscribed: "désinscrits de cette liste", category_opted_out: "ayant refusé la catégorie", no_consent: "sans preuve de consentement" };
+   const reasonLabel = { unsubscribed: "désinscrit entre-temps", suppressed: "bloqué entre-temps", not_subscribed: "consentement retiré", list_unsubscribed: "désinscrit de la liste", category_opted_out: "catégorie refusée", cancelled: "campagne annulée", contact_removed: "contact supprimé", interrupted: "envoi interrompu (non renvoyé par sécurité)", temporary_exhausted: "échec temporaire répété", rejected: "adresse refusée par le serveur", permanent: "refusé par le serveur", error: "erreur interne", no_consent: "sans preuve de consentement" }; %>
+    <p class="mk-back"><a href="/marketing/campagnes">← Toutes les campagnes</a></p>
+
+<% if (campaign.status === "draft") {
+  // ---------- Brouillon : liste de contrôle à la Mailchimp (Destinataires, Expéditeur, Objet, Contenu…) ----------
+  const canWrite = mk.can("campaigns.write"), canSend = mk.can("campaigns.send");
+  const AUD = ["no_audience", "target_missing"], CONTENT = ["template_missing", "template_not_ready"], SENDER = ["provider_incomplete"];
+  const errOf = (codes) => check.errors.filter((e) => codes.includes(e.code));
+  const generalErrors = check.errors.filter((e) => ![...AUD, ...CONTENT, ...SENDER].includes(e.code));
+  const senderWarnings = check.warnings.filter((w) => w.code === "provider_console");
+  const otherWarnings = check.warnings.filter((w) => w.code !== "provider_console");
+  const aud = check.audience;
+  const cur = `${campaign.target_type}:${campaign.target_id}`;
+  // Chaque formulaire de ligne ne modifie que SON champ : les autres réglages repartent tels quels (champs cachés)
+  const keep = (except) => {
+    const v = { name: campaign.name, target: cur, template_id: String(campaign.template_id ?? ""), category: campaign.category || "" };
+    let html = Object.entries(v).filter(([k]) => !except.includes(k)).map(([k, x]) => `<input type="hidden" name="${k}" value="${mkh.esc(x)}">`).join("");
+    if (!except.includes("tracking")) {
+      if (campaign.track_clicks) html += '<input type="hidden" name="track_clicks" value="on">';
+      if (campaign.track_opens) html += '<input type="hidden" name="track_opens" value="on">';
+    }
+    return html;
+  };
+  const rows = {
+    audience: errOf(AUD).length ? "error" : "done",
+    sender: errOf(SENDER).length ? "error" : sender && sender.from ? "done" : senderWarnings.length ? "warn" : "todo",
+    subject: template && template.subject ? "done" : errOf(CONTENT).length ? "error" : "todo",
+    content: errOf(CONTENT).length ? "error" : "done",
+  };
+  const mark = (state) => icon(state === "done" ? "checkCircle" : state === "error" || state === "warn" ? "alertTriangle" : "clock", { size: 22 });
+  const stateText = { done: "prêt", error: "à corriger", warn: "à vérifier", todo: "à compléter" };
+%>
+    <div class="mk-head mk-builder-head">
+      <div class="mk-builder-title">
+        <h1><%= campaign.name %></h1>
+        <span class="mk-status <%= st.cls %>"><%= st.label %></span>
+      </div>
+      <div class="mk-actions">
+        <a class="btn btn-ghost btn-sm" href="/marketing/campagnes">Terminer plus tard</a>
+        <% if (canWrite) { %><button type="button" class="btn btn-outline btn-sm" data-mk-modal-open="test">Envoyer un test</button><% } %>
+        <% if (canSend) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="envoyer"<%= check.ready ? "" : " disabled" %>>Envoyer</button><% } %>
+        <% if (canWrite) { %>
+          <div class="mk-dropdown" data-mk-dropdown>
+            <button type="button" class="icon-btn btn-sm" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-campagne" aria-label="Autres actions pour la campagne <%= campaign.name %>"><%- icon("moreVertical", { size: 18 }) %></button>
+            <div class="mk-menu" id="menu-campagne" role="menu" hidden>
+              <button type="button" role="menuitem" data-mk-modal-open="renommer">Renommer</button>
+              <form action="/marketing/campagnes/<%= campaign.id %>/dupliquer" method="post" role="none"><button type="submit" role="menuitem">Dupliquer</button></form>
+              <form action="/marketing/campagnes/<%= campaign.id %>/supprimer" method="post" role="none"><button type="submit" role="menuitem" class="mk-menu-danger" data-mk-confirm="Le brouillon « <%= campaign.name %> » sera supprimé. Aucun message n'a été envoyé." data-mk-confirm-title="Supprimer ce brouillon ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+    <p class="mk-lead">E-mail classique · modifié le <%= mkh.fdate(campaign.updated_at) %>
+      <% if (!canSend) { %> · seul un administrateur peut lancer l'envoi<% } else if (!check.ready) { %> · l'envoi sera possible quand tous les éléments ci-dessous seront prêts<% } %></p>
+    <% if (campaign.error) { %><p class="form-error" role="alert"><%= campaign.error %></p><% } %>
+
+    <% if (generalErrors.length) { %>
+      <div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-icon" aria-hidden="true"><%- icon("alertTriangle", { size: 18 }) %></span>
+        <span class="mk-flash-body"><p><strong>À régler avant l'envoi</strong></p><ul class="mk-cl-issues"><% generalErrors.forEach((e) => { %><li><%= e.message %></li><% }) %></ul></span></div>
+    <% } %>
+    <% otherWarnings.forEach((w) => { %>
+      <div class="mk-flash mk-flash-warn" role="note"><span class="mk-flash-icon" aria-hidden="true"><%- icon("info", { size: 18 }) %></span>
+        <span class="mk-flash-body"><p><%= w.message %></p><% if (w.detail) { %><details class="mk-flash-details"><summary>Détails techniques</summary><p><%= w.detail %></p></details><% } %></span></div>
+    <% }) %>
+
+    <ol class="mk-cl" aria-label="Préparation de la campagne">
+      <%# Destinataires %>
+      <li class="mk-cl-row <%= 'is-' + rows.audience %>">
+        <details class="mk-cl-item" id="destinataires"<%= rows.audience === "error" ? " open" : "" %>>
+          <summary class="mk-cl-summary">
+            <span class="mk-cl-mark" aria-hidden="true"><%- mark(rows.audience) %></span>
+            <span class="mk-cl-text"><span class="mk-cl-title">Destinataires <span class="sr-only">— <%= stateText[rows.audience] %></span></span>
+              <span class="mk-cl-desc"><%= campaign.target_type === "list" ? "Liste" : "Segment" %> « <%= targetName %> »<% if (aud) { %> · <strong><%= mkh.fmt(aud.sendable) %> contact<%= aud.sendable > 1 ? "s" : "" %> joignable<%= aud.sendable > 1 ? "s" : "" %></strong> sur <%= mkh.fmt(aud.targetTotal) %><% } %><%= campaign.category ? " · catégorie « " + campaign.category + " »" : "" %></span>
+              <% if (aud && aud.excluded.total) { %><span class="mk-cl-desc">Exclus : <%= Object.keys(labels).filter((k) => aud.excluded[k]).map((k) => aud.excluded[k] + " " + labels[k]).join(", ") %>.</span><% } %>
+              <% errOf(AUD).forEach((e) => { %><span class="mk-cl-error"><%= e.message %></span><% }) %></span>
+            <% if (canWrite) { %><span class="btn btn-outline btn-sm mk-cl-edit">Modifier</span><% } %>
+          </summary>
+          <% if (canWrite) { %>
+            <form action="/marketing/campagnes/<%= campaign.id %>" method="post" class="mk-cl-panel">
+              <%- keep(["target", "category"]) %>
+              <div class="field-group"><label for="c-target">Liste ou segment</label>
+                <select id="c-target" name="target" required>
+                  <optgroup label="Listes"><% lists.forEach((l) => { %><option value="list:<%= l.id %>" <%= cur === "list:" + l.id ? "selected" : "" %>><%= l.name %> (<%= l.member_count %> contacts)</option><% }) %></optgroup>
+                  <optgroup label="Segments"><% segments.forEach((s) => { %><option value="segment:<%= s.id %>" <%= cur === "segment:" + s.id ? "selected" : "" %>><%= s.name %></option><% }) %></optgroup>
+                </select>
+                <span class="field-hint">Seuls les contacts avec un consentement prouvé, non désinscrits et non bloqués recevront le message.</span></div>
+              <div class="field-group"><label for="c-cat">Catégorie de préférences (facultatif)</label>
+                <select id="c-cat" name="category"><option value="">Aucune</option>
+                  <% categories.forEach((k) => { %><option value="<%= k.key %>" <%= campaign.category === k.key ? "selected" : "" %>><%= k.label %></option><% }) %></select>
+                <span class="field-hint">Les contacts qui ont refusé cette catégorie sont exclus.</span></div>
+              <div class="mk-cl-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button><button type="button" class="btn btn-ghost btn-sm" data-mk-cl-cancel>Annuler</button></div>
+            </form>
+          <% } %>
+        </details>
+      </li>
+
+      <%# Expéditeur (réglage commun à toutes les campagnes) %>
+      <li class="mk-cl-row <%= 'is-' + rows.sender %>">
+        <div class="mk-cl-item">
+          <div class="mk-cl-summary">
+            <span class="mk-cl-mark" aria-hidden="true"><%- mark(rows.sender) %></span>
+            <span class="mk-cl-text"><span class="mk-cl-title">Expéditeur <span class="sr-only">— <%= stateText[rows.sender] %></span></span>
+              <span class="mk-cl-desc"><%= sender && sender.from ? sender.from : "Aucun expéditeur défini" %><%= sender && sender.replyTo ? " · réponses à " + sender.replyTo : "" %></span>
+              <span class="mk-cl-desc">Commun à toutes vos campagnes.</span>
+              <% errOf(SENDER).forEach((e) => { %><span class="mk-cl-error"><%= e.message %></span><% }) %>
+              <% senderWarnings.forEach((w) => { %><span class="mk-cl-warn"><%= w.message %></span><% }) %></span>
+            <% if (mk.can("settings.read")) { %><a class="btn btn-outline btn-sm mk-cl-edit" href="/marketing/envoi">Modifier</a><% } %>
+          </div>
+        </div>
+      </li>
+
+      <%# Objet et texte d'aperçu (définis dans le modèle) %>
+      <li class="mk-cl-row <%= 'is-' + rows.subject %>">
+        <div class="mk-cl-item">
+          <div class="mk-cl-summary">
+            <span class="mk-cl-mark" aria-hidden="true"><%- mark(rows.subject) %></span>
+            <span class="mk-cl-text"><span class="mk-cl-title">Objet <span class="sr-only">— <%= stateText[rows.subject] %></span></span>
+              <span class="mk-cl-desc"><%= template && template.subject ? template.subject : "Aucun objet" %></span>
+              <span class="mk-cl-desc">Texte d'aperçu : <%= template && template.preheader ? template.preheader : "aucun" %></span></span>
+            <% if (template && mk.can("templates.write")) { %><a class="btn btn-outline btn-sm mk-cl-edit" href="/marketing/modeles/<%= template.id %>">Modifier</a><% } %>
+          </div>
+        </div>
+      </li>
+
+      <%# Contenu %>
+      <li class="mk-cl-row <%= 'is-' + rows.content %>">
+        <details class="mk-cl-item" id="contenu"<%= rows.content === "error" ? " open" : "" %>>
+          <summary class="mk-cl-summary">
+            <span class="mk-cl-mark" aria-hidden="true"><%- mark(rows.content) %></span>
+            <span class="mk-cl-text"><span class="mk-cl-title">Contenu <span class="sr-only">— <%= stateText[rows.content] %></span></span>
+              <span class="mk-cl-desc">Modèle « <%= template ? template.name : "(supprimé)" %> »</span>
+              <% errOf(CONTENT).forEach((e) => { %><span class="mk-cl-error"><%= e.message %></span><% }) %></span>
+            <% if (canWrite) { %><span class="btn btn-outline btn-sm mk-cl-edit">Modifier</span><% } %>
+          </summary>
+          <% if (canWrite) { %>
+            <div class="mk-cl-panel">
+              <% if (template) { %><p><a class="btn btn-primary btn-sm" href="/marketing/modeles/<%= template.id %>">Modifier le design de l'e-mail</a></p><% } %>
+              <form action="/marketing/campagnes/<%= campaign.id %>" method="post">
+                <%- keep(["template_id"]) %>
+                <div class="field-group"><label for="c-tpl">Ou utiliser un autre modèle</label>
+                  <select id="c-tpl" name="template_id" required>
+                    <% templates.forEach((t) => { %><option value="<%= t.id %>" <%= String(campaign.template_id) === String(t.id) ? "selected" : "" %>><%= t.name %></option><% }) %>
+                  </select></div>
+                <div class="mk-cl-actions"><button type="submit" class="btn btn-outline btn-sm">Changer de modèle</button><button type="button" class="btn btn-ghost btn-sm" data-mk-cl-cancel>Annuler</button></div>
+              </form>
+            </div>
+          <% } %>
+        </details>
+        <% if (template) { %>
+          <div class="mk-cl-thumb"><iframe src="/marketing/modeles/<%= template.id %>/apercu" title="Aperçu de l'e-mail « <%= template.name %> »" loading="lazy" tabindex="-1" sandbox=""></iframe></div>
+        <% } %>
+      </li>
+
+      <%# Paramètres et suivi %>
+      <li class="mk-cl-row is-done">
+        <details class="mk-cl-item" id="suivi">
+          <summary class="mk-cl-summary">
+            <span class="mk-cl-mark" aria-hidden="true"><%- mark("done") %></span>
+            <span class="mk-cl-text"><span class="mk-cl-title">Paramètres et suivi</span>
+              <span class="mk-cl-desc">Suivi des clics : <%= campaign.track_clicks ? "activé" : "désactivé" %> · suivi des ouvertures : <%= campaign.track_opens ? "activé" : "désactivé" %></span></span>
+            <% if (canWrite) { %><span class="btn btn-outline btn-sm mk-cl-edit">Modifier</span><% } %>
+          </summary>
+          <% if (canWrite) { %>
+            <form action="/marketing/campagnes/<%= campaign.id %>" method="post" class="mk-cl-panel">
+              <%- keep(["tracking"]) %>
+              <label class="checkbox-row"><input type="checkbox" name="track_clicks" value="on" <%= campaign.track_clicks ? "checked" : "" %>> Suivre les clics (les liens passent par votre site)</label>
+              <label class="checkbox-row"><input type="checkbox" name="track_opens" value="on" <%= campaign.track_opens ? "checked" : "" %>> Suivre les ouvertures (pixel invisible — indicatif seulement : Apple Mail et d'autres clients pré-chargent les images)</label>
+              <div class="mk-cl-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button><button type="button" class="btn btn-ghost btn-sm" data-mk-cl-cancel>Annuler</button></div>
+            </form>
+          <% } %>
+        </details>
+      </li>
+
+      <%# Heure d'envoi %>
+      <li class="mk-cl-row is-done">
+        <div class="mk-cl-item">
+          <div class="mk-cl-summary">
+            <span class="mk-cl-mark" aria-hidden="true"><%- mark("done") %></span>
+            <span class="mk-cl-text"><span class="mk-cl-title">Heure d'envoi</span>
+              <span class="mk-cl-desc">Tout de suite, ou à la date et l'heure de votre choix : vous choisissez au moment d'envoyer.</span></span>
+            <% if (canSend) { %><button type="button" class="btn btn-outline btn-sm mk-cl-edit" data-mk-modal-open="envoyer"<%= check.ready ? "" : " disabled" %>>Programmer</button><% } %>
+          </div>
+        </div>
+      </li>
+    </ol>
+
+    <% if (canWrite) { %>
+      <dialog class="mk-dialog mk-modal" id="test" data-mk-modal aria-labelledby="test-title">
+        <form action="/marketing/campagnes/<%= campaign.id %>/test" method="post">
+          <div class="mk-dialog-body">
+            <h2 id="test-title">Envoyer un e-mail de test</h2>
+            <p>Il part vers un membre de l'équipe (jamais vers une adresse libre), avec l'objet préfixé [TEST] et des liens factices, par la messagerie SMTP du serveur.</p>
+            <% if (tested) { %><p class="mk-cl-tested">Un e-mail de test a déjà été envoyé pour cette campagne.</p><% } %>
+            <div class="field-group"><label for="t-to">Destinataire du test</label>
+              <select id="t-to" name="to"><% recipients.forEach((r) => { %><option value="<%= r %>"><%= r %></option><% }) %></select></div>
+          </div>
+          <div class="mk-dialog-actions">
+            <button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm">Envoyer le test</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog class="mk-dialog mk-modal" id="renommer" data-mk-modal aria-labelledby="rename-title">
+        <form action="/marketing/campagnes/<%= campaign.id %>" method="post">
+          <div class="mk-dialog-body">
+            <h2 id="rename-title">Renommer la campagne</h2>
+            <p>Le nom n'est visible que par votre équipe.</p>
+            <%- keep(["name"]) %>
+            <div class="field-group"><label for="c-name">Nom de la campagne</label><input id="c-name" type="text" name="name" maxlength="100" required value="<%= campaign.name %>" data-mk-required-message="Le nom de la campagne est obligatoire."></div>
+          </div>
+          <div class="mk-dialog-actions">
+            <button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+          </div>
+        </form>
+      </dialog>
+    <% } %>
+
+    <% if (canSend) { %>
+      <dialog class="mk-dialog mk-modal" id="envoyer" data-mk-modal aria-labelledby="send-title">
+        <form action="/marketing/campagnes/<%= campaign.id %>/lancer" method="post">
+          <div class="mk-dialog-body">
+            <h2 id="send-title">Prêt à envoyer ?</h2>
+            <p>« <%= campaign.name %> » partira vers <strong><%= aud ? mkh.fmt(aud.sendable) : 0 %> contact<%= aud && aud.sendable > 1 ? "s" : "" %></strong> (<%= campaign.target_type === "list" ? "liste" : "segment" %> « <%= targetName %> »). Le contenu et les destinataires sont figés au lancement ; chaque message est revérifié au moment de partir.</p>
+            <div class="field-group"><label for="l-when">Programmer l'envoi (facultatif — heure locale ; vide = tout de suite)</label>
+              <input id="l-when" type="datetime-local" name="send_at"><input type="hidden" name="send_at_utc" id="send-at-utc"></div>
+            <div class="field-group"><label for="l-count">Pour confirmer, tapez le nombre de destinataires : <strong><%= aud ? aud.sendable : 0 %></strong></label>
+              <input id="l-count" type="text" name="confirm_count" inputmode="numeric" autocomplete="off" required></div>
+            <label class="checkbox-row optin-row"><input type="checkbox" name="confirm_ok" value="on"><span>Je confirme que ces personnes ont donné leur consentement à recevoir ce message et que son contenu est prêt.</span></label>
+          </div>
+          <div class="mk-dialog-actions">
+            <button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm"<%= check.ready ? "" : " disabled" %>>Lancer la campagne</button>
+          </div>
+        </form>
+      </dialog>
+    <% } %>
+
+<% } else { %>
+    <%# ---------- Campagne lancée : rapport ---------- %>
+    <div class="mk-head mk-builder-head">
+      <div class="mk-builder-title">
+        <h1><%= campaign.name %></h1>
+        <span class="mk-status <%= st.cls %>"><%= st.label %></span>
+      </div>
+      <% if (mk.can("campaigns.write")) { %><div class="mk-actions"><form action="/marketing/campagnes/<%= campaign.id %>/dupliquer" method="post" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form></div><% } %>
+    </div>
+    <p class="mk-lead">Modèle « <%= template ? template.name : "(supprimé)" %> » · <%= campaign.target_type === "list" ? "liste" : "segment" %> « <%= targetName %> »<%= campaign.category ? " · catégorie « " + campaign.category + " »" : "" %> · suivi des clics <%= campaign.track_clicks ? "activé" : "désactivé" %>, des ouvertures <%= campaign.track_opens ? "activé" : "désactivé" %></p>
+    <% if (campaign.error) { %><p class="form-error" role="alert"><%= campaign.error %></p><% } %>
+      <div <%- autoRefresh ? 'data-autorefresh="1"' : "" %>>
+        <section class="mk-panel">
+          <h2>Avancement</h2>
+          <% const done = campaign.sent_count + campaign.skipped_count + campaign.failed_count + campaign.bounced_count; const pctDone = campaign.total_recipients ? Math.min(100, Math.round(done / campaign.total_recipients * 100)) : 0; %>
+          <div class="mk-progress" role="progressbar" aria-label="Avancement de l'envoi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= pctDone %>"><span class="mk-progress-bar" style="width:<%= pctDone %>%"></span></div>
+          <p><%= mkh.fmt(done) %> / <%= mkh.fmt(campaign.total_recipients) %> traités (<%= pctDone %> %) · envoyés <%= mkh.fmt(campaign.sent_count) %> · ignorés <%= mkh.fmt(campaign.skipped_count) %> · échoués <%= mkh.fmt(campaign.failed_count + campaign.bounced_count) %></p>
+          <% if (["scheduled", "sending"].includes(campaign.status)) { %><%- include("partials/worker-note", { workerOn, consequence: "cet envoi ne progresse pas" }) %><% } %>
+          <% if (campaign.scheduled_at && campaign.status === "scheduled") { %><p>Programmée pour le <%= new Date(campaign.scheduled_at).toISOString().slice(0, 16).replace("T", " ") %> (UTC).</p><% } %>
+          <% if (mk.can("campaigns.send")) { %><div class="mk-actions">
+            <% if (["scheduled", "sending"].includes(campaign.status)) { %><form action="/marketing/campagnes/<%= campaign.id %>/pause" method="post"><button type="submit" class="btn btn-outline btn-sm">Mettre en pause</button></form><% } %>
+            <% if (campaign.status === "paused") { %><form action="/marketing/campagnes/<%= campaign.id %>/reprendre" method="post"><button type="submit" class="btn btn-primary btn-sm">Reprendre</button></form><% } %>
+            <% if (["scheduled", "sending", "paused"].includes(campaign.status)) { %><form action="/marketing/campagnes/<%= campaign.id %>/annuler" method="post"><button type="submit" class="btn btn-danger btn-sm">Annuler la campagne</button></form><% } %>
+          </div><% } %>
+        </section>
+
+        <section class="mk-panel">
+          <h2>Rapport de campagne</h2>
+          <div class="mk-stats mk-stats-3">
+            <div class="mk-stat"><span class="mk-stat-label">Envoyés</span><span class="mk-stat-value"><%= mkh.fmt(stats.counts.sent) %></span></div>
+            <div class="mk-stat"><span class="mk-stat-label">Livrés (<%= mkh.fmt(stats.counts.delivered) %>)</span><span class="mk-stat-value"><%= stats.rates.delivery %> %</span></div>
+            <div class="mk-stat"><span class="mk-stat-label">Clics uniques (<%= mkh.fmt(stats.counts.uniqueClicks) %>)</span><span class="mk-stat-value"><%= stats.rates.click %> %</span></div>
+            <div class="mk-stat"><span class="mk-stat-label">Ouvertures détectées (<%= mkh.fmt(stats.counts.uniqueOpens) %>) — indicatif</span><span class="mk-stat-value"><%= stats.rates.open %> %</span></div>
+            <div class="mk-stat"><span class="mk-stat-label">Rebonds (<%= mkh.fmt(stats.counts.bounced) %>)</span><span class="mk-stat-value"><%= stats.rates.bounce %> %</span></div>
+            <div class="mk-stat"><span class="mk-stat-label">Désinscriptions (<%= mkh.fmt(stats.counts.unsubscribed) %>)</span><span class="mk-stat-value"><%= stats.rates.unsubscribe %> %</span></div>
+          </div>
+          <p class="field-hint">Taux calculés sur les messages envoyés. Plaintes : <%= stats.counts.complained %> (<%= stats.rates.complaint %> %).</p>
+          <% stats.alerts.forEach((a) => { %><p class="mk-warn is-error" role="alert"><%= a.message %></p><% }) %>
+          <% if (stats.links.length) { %>
+            <h3>Liens</h3>
+            <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Clics par lien</caption>
+              <thead><tr><th scope="col">Adresse</th><th scope="col">Clics</th><th scope="col">Clics uniques</th></tr></thead>
+              <tbody><% stats.links.forEach((l) => { %><tr><td><%= l.url %></td><td><%= l.clicks %></td><td><%= l.uniqueClicks %></td></tr><% }) %></tbody></table></div>
+          <% } %>
+          <ul class="mk-status-list"><% stats.notes.forEach((n) => { %><li class="field-hint"><%= n %></li><% }) %></ul>
+        </section>
+
+        <% if (reasons.length) { %>
+          <section class="mk-panel">
+            <h2>Messages non envoyés</h2>
+            <ul class="mk-status-list"><% reasons.forEach((r) => { %><li><%= r.n %> — <%= r.status === "skipped" ? "ignorés" : "échoués" %> : <%= reasonLabel[r.reason] || r.reason %></li><% }) %></ul>
+          </section>
+        <% } %>
+      </div>
+      <% if (["cancelled", "failed"].includes(campaign.status) && mk.can("campaigns.write")) { %>
+        <form action="/marketing/campagnes/<%= campaign.id %>/supprimer" method="post"><button type="submit" class="btn btn-danger btn-sm" data-mk-confirm="La campagne « <%= campaign.name %> » et ses statistiques seront supprimées." data-mk-confirm-title="Supprimer cette campagne ?" data-mk-confirm-ok="Supprimer">Supprimer la campagne</button></form>
+      <% } %>
+<% } %>
+    <script src="<%= asset('/js/marketing-campaign.js') %>" defer></script>
+<%- include("partials/bottom") %>

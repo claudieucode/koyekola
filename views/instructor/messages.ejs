@@ -1,0 +1,32 @@
+<%- include("../partials/header", { title: "Messages reçus" }) %>
+
+  <div class="container">
+    <p class="field-hint" style="margin-top:28px;"><a href="/formateur" class="back-link"><%- icon('arrowLeft', { size: 14 }) %> Mon espace</a></p>
+    <h1>Messages reçus</h1>
+
+    <% if (!messages.length) { %>
+      <p class="empty-state" style="padding:24px 0;">Aucun message pour le moment.</p>
+    <% } %>
+    <ul class="message-list">
+      <% messages.forEach((m) => { %>
+        <li class="message-item<%= m.read_at ? '' : ' is-unread' %>">
+          <div class="message-head">
+            <strong><%= m.name %></strong>
+            <a href="mailto:<%= m.email %>"><%= m.email %></a>
+            <span class="field-hint"><%= formatDateTime(m.created_at) %></span>
+            <% if (!m.read_at) { %><span class="badge">Non lu</span><% } %>
+          </div>
+          <% if (m.subject) { %><p class="message-subject"><%= m.subject %></p><% } %>
+          <p class="message-body"><%= m.message %></p>
+          <div class="message-actions">
+            <% if (!m.read_at) { %>
+              <form action="/formateur/messages/<%= m.id %>/lu" method="post" class="inline-form"><button type="submit" class="btn btn-outline btn-sm">Marquer comme lu</button></form>
+            <% } %>
+            <form action="/formateur/messages/<%= m.id %>/supprimer" method="post" class="inline-form" onsubmit="return confirm('Supprimer ce message ?');"><button type="submit" class="btn btn-danger btn-sm">Supprimer</button></form>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+  </div>
+
+<%- include("../partials/footer") %>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<% const s = (typeof seo !== "undefined" && seo) || {};
+     const pageTitle = s.rawTitle || s.title || (typeof title !== "undefined" ? title : null);
+     const fullTitle = s.rawTitle || (pageTitle ? pageTitle + " · KOYEKOLA" : "KOYEKOLA — Mes formations en ligne");
+     const pageDescription = s.description || "Découvrez et suivez mes formations en ligne, à votre rythme.";
+     const canonicalUrl = s.canonical || absoluteUrl(currentPath); %>
+  <title><%= fullTitle %></title>
+  <meta name="description" content="<%= pageDescription %>">
+  <meta name="theme-color" content="#0277b6">
+  <% if (s.noindex) { %><meta name="robots" content="noindex, nofollow">
+  <% } else { %><link rel="canonical" href="<%= canonicalUrl %>">
+  <meta property="og:site_name" content="KOYEKOLA">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:type" content="<%= s.ogType || 'website' %>">
+  <meta property="og:title" content="<%= pageTitle || 'KOYEKOLA' %>">
+  <meta property="og:description" content="<%= pageDescription %>">
+  <meta property="og:url" content="<%= canonicalUrl %>">
+  <% if (s.publishedTime) { %><meta property="article:published_time" content="<%= s.publishedTime %>">
+  <% } %>  <% if (s.image) { %><meta property="og:image" content="<%= s.image %>">
+  <meta name="twitter:image" content="<%= s.image %>"><% } %>
+  <meta name="twitter:card" content="<%= s.image ? 'summary_large_image' : 'summary' %>">
+  <meta name="twitter:title" content="<%= pageTitle || 'KOYEKOLA' %>">
+  <meta name="twitter:description" content="<%= pageDescription %>">
+  <% if (s.jsonLd && s.jsonLd.length) { %><%- jsonLdTags(s.jsonLd) %>
+  <% } %><% } %>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/fonts/figtree-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
+</head>
+<body>
+  <a class="skip-link" href="#main">Aller au contenu principal</a>
+
+  <header class="site-header">
+    <div class="header-inner container-wide">
+      <button class="icon-btn only-mobile" id="openMenuBtn" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="headerNav"><%- icon('menu') %></button>
+
+      <a href="/" class="logo">KOYEKOLA</a>
+
+      <form action="/catalogue" method="get" class="header-search" role="search">
+        <span class="search-icon" aria-hidden="true"><%- icon('search', { size: 16 }) %></span>
+        <label for="header-q" class="sr-only">Rechercher une formation</label>
+        <input type="text" id="header-q" name="q" placeholder="Rechercher une formation…" value="<%= typeof filters !== 'undefined' ? filters.q : '' %>">
+      </form>
+
+      <nav class="header-nav" id="headerNav" aria-label="Navigation principale">
+        <form action="/catalogue" method="get" class="drawer-search" role="search">
+          <label for="drawer-q" class="sr-only">Rechercher une formation</label>
+          <input type="search" id="drawer-q" name="q" placeholder="Rechercher une formation…" value="<%= typeof filters !== 'undefined' ? filters.q : '' %>">
+          <button type="submit" aria-label="Lancer la recherche"><%- icon('search', { size: 18 }) %></button>
+        </form>
+        <% if (navCategories.length) { %>
+          <div class="nav-dropdown">
+            <button type="button" class="nav-dropdown-toggle" aria-haspopup="true">
+              Catégories <%- icon('chevronDown', { size: 14 }) %>
+            </button>
+            <div class="nav-dropdown-menu">
+              <% navCategories.forEach((cat) => { %>
+                <a href="/categorie/<%= slugify(cat) %>"><%= cat %></a>
+              <% }) %>
+            </div>
+          </div>
+        <% } %>
+        <a href="/catalogue">Catalogue</a>
+        <% if (currentUser && currentUser.role === "formateur") { %>
+          <a href="/formateur">Mon espace</a>
+        <% } else if (currentUser) { %>
+          <a href="/mes-cours">Mes formations</a>
+        <% } %>
+        <div class="mobile-auth-links">
+          <% if (currentUser) { %>
+            <form action="/deconnexion" method="post"><button type="submit" class="btn btn-outline btn-block">Déconnexion</button></form>
+          <% } else { %>
+            <a href="/connexion" class="btn btn-outline btn-block">Connexion</a>
+            <a href="/inscription" class="btn btn-primary btn-block">Commencer</a>
+          <% } %>
+        </div>
+      </nav>
+
+      <div class="header-actions">
+        <a href="/panier" class="cart-link" aria-label="Panier<%= cartCount > 0 ? ' (' + cartCount + ')' : '' %>">
+          <%- icon('cart') %>
+          <% if (cartCount > 0) { %><span class="cart-badge" aria-hidden="true"><%= cartCount %></span><% } %>
+        </a>
+        <div class="header-auth-actions">
+          <% if (currentUser) { %>
+            <div class="user-chip">
+              <span class="avatar avatar-sm" aria-hidden="true" style="background:<%= avatarColor(currentUser.username) %>"><%= currentUser.username.slice(0,1).toUpperCase() %></span>
+              <span class="user-chip-name"><%= currentUser.username %></span>
+            </div>
+            <form action="/deconnexion" method="post" class="inline-form">
+              <button type="submit" class="btn btn-ghost btn-sm">Déconnexion</button>
+            </form>
+          <% } else { %>
+            <a href="/connexion" class="btn btn-ghost btn-sm">Connexion</a>
+            <a href="/inscription" class="btn btn-primary btn-sm">Commencer</a>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">

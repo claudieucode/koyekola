@@ -1,0 +1,40 @@
+<%- include("partials/header", { title: "Paiement" }) %>
+
+  <div class="container-wide cart-layout">
+    <div>
+      <h1 style="margin-top:36px;">Paiement</h1>
+      <p class="payment-badge"><%- icon('info', { size: 16 }) %> Mode démonstration : aucun paiement réel n'est effectué, aucune carte n'est débitée.</p>
+
+      <form action="/commande" method="post" class="card card-pad payment-mock">
+        <div class="field-group">
+          <label for="f-checkout-1">Numéro de carte</label>
+          <input id="f-checkout-1" type="text" placeholder="4242 4242 4242 4242" maxlength="19" required>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label for="f-checkout-2">Date d'expiration</label>
+            <input id="f-checkout-2" type="text" placeholder="MM/AA" maxlength="5" required>
+          </div>
+          <div class="field-group">
+            <label for="f-checkout-3">CVC</label>
+            <input id="f-checkout-3" type="text" placeholder="123" maxlength="4" required>
+          </div>
+        </div>
+        <div class="field-group">
+          <label for="f-checkout-4">Nom sur la carte</label>
+          <input id="f-checkout-4" type="text" placeholder="<%= currentUser.username %>" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg">Payer <%= formatPrice(total) %> (simulation)</button>
+      </form>
+    </div>
+
+    <aside class="card card-pad summary-card">
+      <h3 style="margin-top:0;">Votre commande</h3>
+      <% items.forEach(course => { %>
+        <div class="summary-row"><span><%= course.title %></span><span><%= formatPrice(course.price_cents) %></span></div>
+      <% }) %>
+      <div class="summary-row total"><span>Total</span><span><%= formatPrice(total) %></span></div>
+    </aside>
+  </div>
+
+<%- include("partials/footer") %>

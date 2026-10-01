@@ -1,0 +1,36 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  // Création à la Mailchimp : une seule carte (nom, destinataires, modèle), puis la liste de contrôle du brouillon
+  // pour tout le reste. Noms des champs inchangés (compatibilité avec la création existante).
+  const v = typeof values !== "undefined" && values ? values : null;
+  const cur = v ? v.target : "";
+%>
+    <p class="mk-back"><a href="/marketing/campagnes">← Toutes les campagnes</a></p>
+    <div class="mk-create-page">
+      <div class="mk-create-card">
+        <span class="mk-create-card-icon" aria-hidden="true"><%- icon("send", { size: 26 }) %></span>
+        <h1>Créer un e-mail</h1>
+        <p class="mk-lead">Donnez un nom à votre campagne, choisissez à qui elle s'adresse et le modèle de départ. Vous réglerez ensuite chaque élément (objet, contenu, suivi) dans la liste de contrôle, avant d'envoyer. Rien ne part à cette étape.</p>
+        <% if (!templates.length) { %><p class="mk-note">Aucun modèle marketing : <a href="/marketing/modeles">créez d'abord un modèle</a>, puis revenez ici.</p><% } %>
+        <% if (!lists.length && !segments.length) { %><p class="mk-note">Aucune liste ni aucun segment : <a href="/marketing/listes">créez une liste</a> ou <a href="/marketing/segments/nouveau">un segment</a> pour désigner les destinataires.</p><% } %>
+        <form action="/marketing/campagnes" method="post" class="mk-form" id="mk-campaign-form">
+          <div class="field-group"><label for="c-name">Nom de la campagne</label>
+            <input id="c-name" type="text" name="name" maxlength="100" required value="<%= v ? v.name : "" %>" placeholder="Ex. Lancement Excel — mars" data-mk-required-message="Le nom de la campagne est obligatoire." autofocus>
+            <span class="field-hint">Visible seulement par votre équipe.</span></div>
+          <div class="field-group"><label for="c-target">Destinataires</label>
+            <select id="c-target" name="target" required>
+              <optgroup label="Listes"><% lists.forEach((l) => { %><option value="list:<%= l.id %>" <%= cur === "list:" + l.id ? "selected" : "" %>><%= l.name %> (<%= l.member_count %> contacts)</option><% }) %></optgroup>
+              <optgroup label="Segments"><% segments.forEach((s) => { %><option value="segment:<%= s.id %>" <%= cur === "segment:" + s.id ? "selected" : "" %>><%= s.name %></option><% }) %></optgroup>
+            </select></div>
+          <div class="field-group"><label for="c-tpl">Modèle d'e-mail</label>
+            <select id="c-tpl" name="template_id" required>
+              <% templates.forEach((t) => { %><option value="<%= t.id %>" <%= v && v.template_id === String(t.id) ? "selected" : "" %>><%= t.name %></option><% }) %>
+            </select></div>
+          <input type="hidden" name="category" value="<%= v ? v.category : "" %>">
+          <% if (!v || v.track_clicks) { %><input type="hidden" name="track_clicks" value="on"><% } %>
+          <% if (v && v.track_opens) { %><input type="hidden" name="track_opens" value="on"><% } %>
+          <div class="mk-actions"><button type="submit" class="btn btn-primary">Commencer</button><a class="btn btn-ghost" href="/marketing/campagnes">Annuler</a></div>
+        </form>
+      </div>
+    </div>
+<%- include("partials/bottom") %>

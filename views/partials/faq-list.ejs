@@ -1,0 +1,9 @@
+<%# Questions fréquentes en accordéon accessible (natif, sans JavaScript). Paramètre : faqs [{ question, answer }] %>
+<div class="faq-list">
+  <% faqs.forEach((faq) => { %>
+    <details class="faq-item">
+      <summary><%= faq.question %></summary>
+      <div class="markdown"><%- renderMarkdown(faq.answer) %></div>
+    </details>
+  <% }) %>
+</div>

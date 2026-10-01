@@ -1,0 +1,34 @@
+<%- include("../partials/header", { title: "Mon profil" }) %>
+
+  <div class="container">
+    <p class="field-hint" style="margin-top:28px;"><a href="/formateur" class="back-link"><%- icon('arrowLeft', { size: 14 }) %> Mon espace</a></p>
+    <h1>Mon profil</h1>
+    <p class="field-hint" style="margin-top:-6px;">Ces informations sont affichées dans la section « Votre formateur » de chacune de vos formations.</p>
+    <% if (saved) { %><p class="form-success" role="status">Profil enregistré.</p><% } %>
+
+    <form action="/formateur/profil" method="post" enctype="multipart/form-data" class="content-card">
+      <div class="field-group">
+        <label for="profile-photo">Photo <span class="field-hint">(JPEG, PNG, WebP, GIF ou AVIF ; carrée de préférence)</span></label>
+        <div class="profile-photo-row">
+          <% if (profile.avatar_path) { %>
+            <img class="profile-photo" src="<%= profile.avatar_path %>" alt="Photo actuelle" width="84" height="84">
+          <% } else { %>
+            <span class="avatar avatar-lg" aria-hidden="true" style="background:<%= avatarColor(profile.username) %>"><%= profile.username.slice(0,1).toUpperCase() %></span>
+          <% } %>
+          <div>
+            <input id="profile-photo" type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+            <% if (profile.avatar_path) { %>
+              <label class="checkbox-row" style="margin-top:8px;"><input type="checkbox" name="remove_avatar" value="1"> Retirer ma photo</label>
+            <% } %>
+          </div>
+        </div>
+      </div>
+      <div class="field-group">
+        <label for="profile-bio">Biographie <span class="field-hint">(600 caractères au plus)</span></label>
+        <textarea id="profile-bio" name="bio" rows="6" maxlength="600" placeholder="Présentez votre parcours, votre expérience et ce que vous enseignez…"><%= profile.bio || "" %></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+    </form>
+  </div>
+
+<%- include("../partials/footer") %>

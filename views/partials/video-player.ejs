@@ -1,0 +1,24 @@
+<%# Lecteur vidéo commun (fiche formation et leçons).
+    Paramètres : video (résultat de parseVideoUrl), title, poster (facultatif).
+    À n'inclure QUE pour un visiteur autorisé : le lien Bunny signé est fabriqué ici. %>
+<% if (video && (video.kind === 'youtube' || video.kind === 'vimeo')) { %>
+  <iframe src="<%= video.src %>" title="<%= title %>" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<% } else if (video && video.kind === 'bunny') { %>
+  <% const bunnySrc = signedBunnyUrl(video.videoId); %>
+  <% if (bunnySrc) { %>
+    <iframe data-bunny-player src="<%= bunnySrc %>" title="<%= title %>" loading="lazy" allow="accelerometer; gyroscope; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  <% } else { %>
+    <div class="placeholder">
+      <%- icon('video', { size: 32 }) %>
+      <p>Bunny Stream n'est pas configuré sur ce site : cette vidéo ne peut pas être affichée pour l'instant.</p>
+    </div>
+  <% } %>
+<% } else if (video && video.kind === 'file') { %>
+  <video controls preload="metadata" src="<%= video.src %>"<% if (typeof poster !== 'undefined' && poster) { %> poster="<%= poster %>"<% } %>></video>
+<% } else if (video && video.kind === 'link') { %>
+  <div class="placeholder">
+    <%- icon('video', { size: 32 }) %>
+    <p>Cette vidéo s'ouvre sur un autre site.</p>
+    <a href="<%= video.src %>" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">Ouvrir la vidéo dans un nouvel onglet</a>
+  </div>
+<% } %>

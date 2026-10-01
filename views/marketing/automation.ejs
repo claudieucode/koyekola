@@ -1,0 +1,96 @@
+<%- include("partials/top", { title, active }) %>
+<% const st = STATUS[a.status]; %>
+    <p class="mk-back"><a href="/marketing/automatisations">← Automatisations</a></p>
+    <div class="mk-head"><h1 class="mk-email"><%= a.name %></h1><span class="badge <%= st[1] %>"><%= st[0] %></span></div>
+    <p class="mk-lead"><%= a.kind === "marketing" ? "Scénario marketing : le consentement est revérifié avant chaque e-mail ; une personne désinscrite sort du scénario." : "Scénario transactionnel : pour des messages liés au compte (bienvenue, confirmation). Ne donne aucun consentement marketing ; la liste de suppression est respectée." %></p>
+    <% if (a.error) { %><p class="form-error" role="alert"><%= a.error %></p><% } %>
+    <p id="au-error" class="form-error" role="alert" hidden></p>
+    <noscript><p class="form-error">L'éditeur de scénario demande JavaScript.</p></noscript>
+    <% if (a.status === "active") { %><p class="mk-note">Ce scénario est actif : mettez-le en pause pour modifier son schéma (les passages en cours gardent leurs étapes d'origine).</p><% } %>
+
+    <div id="au-editor">
+      <div class="mk-flow-toolbar">
+        <p class="field-hint">Cliquez sur une étape pour la modifier. Glissez pour la déplacer. Tirez depuis un point de connexion pour relier deux étapes.</p>
+        <div class="mk-actions">
+          <span id="au-status" class="field-hint" role="status" aria-live="polite"></span>
+          <% if (!locked) { %><button type="button" class="btn btn-primary" id="au-save">Enregistrer</button><% } %>
+        </div>
+      </div>
+
+      <% if (!locked) { %><div id="au-add" class="mk-flow-palette" role="group" aria-label="Ajouter une étape"></div><% } %>
+
+      <div class="mk-flow-shell">
+        <div id="au-flow" class="mk-flow-canvas" aria-label="Schéma du scénario"></div>
+        <div class="mk-flow-zoom" role="group" aria-label="Zoom">
+          <button type="button" class="mk-icon-btn" id="au-zoom-out" aria-label="Réduire"><%- icon("minus", { size: 16 }) %></button>
+          <button type="button" class="mk-icon-btn" id="au-zoom-100" aria-label="Zoom 100 %">100 %</button>
+          <button type="button" class="mk-icon-btn" id="au-zoom-in" aria-label="Agrandir"><%- icon("plus", { size: 16 }) %></button>
+          <button type="button" class="mk-icon-btn" id="au-zoom-fit" aria-label="Ajuster à l'écran"><%- icon("maximize", { size: 16 }) %></button>
+        </div>
+        <aside id="au-panel" class="mk-flow-panel" aria-label="Réglages de l'étape">
+          <p class="field-hint mk-flow-panel-empty">Cliquez sur une étape du schéma pour la régler ici.</p>
+        </aside>
+      </div>
+      <p class="sr-only" id="au-live" aria-live="polite"></p>
+    </div>
+
+    <% if (check) { %>
+      <section class="mk-panel <%= check.ready ? "mk-verdict is-ok" : "mk-verdict is-no" %>">
+        <h2>Contrôle avant activation</h2>
+        <% if (check.errors.length) { %><ul class="mk-status-list"><% check.errors.forEach((e) => { %>
+          <li class="mk-warn is-error">
+            <strong>À corriger :</strong> <%= e.message %>
+            <% if (e.templateId && !locked) { %> <button type="button" class="btn btn-outline btn-sm" data-au-goto-template="<%= e.templateId %>">Voir l'étape sur le canevas</button><% } %>
+          </li>
+        <% }) %></ul><% } %>
+        <% if (check.warnings.length) { %><ul class="mk-status-list"><% check.warnings.forEach((w) => { %><li class="mk-warn"><%= w.message %><% if (w.detail) { %><details class="mk-flash-details"><summary>Détails techniques</summary><p><%= w.detail %></p></details><% } %></li><% }) %></ul><% } %>
+        <% if (check.ready) { %><p>Prêt à être activé.</p><% } %>
+        <p class="field-hint">Enregistrez d'abord vos modifications : le contrôle porte sur la version enregistrée.</p>
+      </section>
+    <% } %>
+
+    <section class="mk-panel">
+      <h2>Actions</h2>
+      <div class="mk-actions">
+        <% if (mk.can("automations.activate")) { %>
+          <% if (a.status === "draft") { %><form action="/marketing/automatisations/<%= a.id %>/activer" method="post"><button type="submit" class="btn btn-primary btn-sm" <%= check && check.ready ? "" : "disabled" %>>Activer le scénario</button></form><% } %>
+          <% if (a.status === "active") { %><form action="/marketing/automatisations/<%= a.id %>/pause" method="post"><button type="submit" class="btn btn-outline btn-sm">Mettre en pause</button></form><% } %>
+          <% if (a.status === "paused") { %>
+            <form action="/marketing/automatisations/<%= a.id %>/reprendre" method="post"><button type="submit" class="btn btn-primary btn-sm">Reprendre</button></form>
+            <form action="/marketing/automatisations/<%= a.id %>/activer" method="post"><button type="submit" class="btn btn-outline btn-sm" <%= check && check.ready ? "" : "disabled" %>>Réactiver avec les étapes modifiées</button></form>
+          <% } %>
+        <% } %>
+        <% if (mk.can("automations.write") && a.status !== "active") { %><form action="/marketing/automatisations/<%= a.id %>/supprimer" method="post"><button type="submit" class="btn btn-danger btn-sm">Supprimer</button></form><% } %>
+        <% if (mk.can("automations.write")) { %><form action="/marketing/automatisations/<%= a.id %>/dupliquer" method="post"><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form><% } %>
+      </div>
+    </section>
+
+    <section class="mk-panel">
+      <h2>Statistiques</h2>
+      <div class="dashboard-stats">
+        <div class="dashboard-stat"><div class="value"><%= mkh.fmt(stats.runs.total) %></div><div class="label">Passages</div></div>
+        <div class="dashboard-stat"><div class="value"><%= mkh.fmt(stats.runs.running) %></div><div class="label">En cours</div></div>
+        <div class="dashboard-stat"><div class="value"><%= mkh.fmt(stats.runs.completed) %></div><div class="label">Terminés</div></div>
+        <div class="dashboard-stat"><div class="value"><%= mkh.fmt(stats.runs.exited) %></div><div class="label">Sortis (désinscrits, condition…)</div></div>
+        <div class="dashboard-stat"><div class="value"><%= mkh.fmt(stats.emails.sent) %></div><div class="label">E-mails envoyés</div></div>
+        <div class="dashboard-stat"><div class="value"><%= mkh.fmt(stats.emails.uniqueClicks) %></div><div class="label">Clics uniques</div></div>
+      </div>
+      <% const emailStepStats = stats.steps.filter((s) => s.type === "email"); %>
+      <% if (emailStepStats.length) { %>
+        <h3>Détail par e-mail du scénario</h3>
+        <p class="field-hint">Compté depuis la dernière activation (contenu figé) : modifier le scénario ne change pas ces chiffres tant qu'il n'est pas réactivé.</p>
+        <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Envois et clics par étape</caption>
+          <thead><tr><th scope="col">Étape</th><th scope="col">Envoyés</th><th scope="col">Clics uniques</th></tr></thead>
+          <tbody><% emailStepStats.forEach((s) => { %><tr><td>Étape <%= s.index + 1 %></td><td><%= mkh.fmt(s.sent) %></td><td><%= mkh.fmt(s.uniqueClicks) %></td></tr><% }) %></tbody></table></div>
+      <% } %>
+      <% if (runs.length) { %>
+        <h3>Derniers passages</h3>
+        <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Passages récents</caption>
+          <thead><tr><th scope="col">Contact</th><th scope="col">État</th><th scope="col">Étape</th><th scope="col">Détail</th><th scope="col"><span class="sr-only">Journal</span></th></tr></thead>
+          <tbody><% runs.forEach((r) => { %><tr><td><%= r.email %></td><td><%= RUN_STATUS[r.status] %></td><td><%= r.step_index + 1 %></td><td><%= r.last_error %></td><td><a href="/marketing/automatisations/<%= a.id %>/passages/<%= r.id %>">Voir le journal</a></td></tr><% }) %></tbody></table></div>
+      <% } else { %><p class="field-hint">Aucun passage pour l'instant.</p><% } %>
+    </section>
+
+    <script type="application/json" id="mk-automation-data"><%- data %></script>
+    <script src="<%= asset('/js/automation-flow.js') %>" defer></script>
+<%- include("partials/bottom") %>

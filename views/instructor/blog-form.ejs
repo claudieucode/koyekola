@@ -1,0 +1,41 @@
+<%- include("../partials/header", { title: post ? "Modifier l'article" : "Nouvel article" }) %>
+
+  <div class="container">
+    <p class="field-hint" style="margin-top:28px;"><a href="/formateur/blog" class="back-link"><%- icon('arrowLeft', { size: 14 }) %> Blog</a></p>
+    <h1><%= post ? "Modifier l'article" : "Nouvel article" %></h1>
+    <% if (saved) { %><p class="form-success" role="status">Article enregistré.<% if (post && !post.published) { %> Il reste un brouillon tant que vous ne l'avez pas publié.<% } %></p><% } %>
+
+    <form action="<%= post ? '/formateur/blog/' + post.id + '/modifier' : '/formateur/blog/nouveau' %>" method="post" enctype="multipart/form-data" class="content-card">
+      <div class="field-group">
+        <label for="post-title">Titre</label>
+        <input id="post-title" type="text" name="title" value="<%= post ? post.title : '' %>" required maxlength="150">
+      </div>
+      <div class="field-group">
+        <label for="post-excerpt">Résumé <span class="field-hint">(affiché dans la liste et par les moteurs de recherche, 300 caractères)</span></label>
+        <textarea id="post-excerpt" name="excerpt" rows="2" maxlength="300"><%= post ? post.excerpt : '' %></textarea>
+      </div>
+      <div class="field-group">
+        <label for="post-content">Contenu <span class="field-hint">(## titre, **gras**, *italique*, - liste, [lien](https://…))</span></label>
+        <textarea id="post-content" name="content" rows="16" maxlength="50000"><%= post ? post.content : '' %></textarea>
+      </div>
+      <div class="field-group">
+        <label for="post-cover">Image de couverture <span class="field-hint">(JPEG, PNG, WebP, GIF ou AVIF)</span></label>
+        <% if (post && post.cover_path) { %><img src="<%= post.cover_path %>" alt="Image actuelle" width="160" height="90" style="display:block;margin-bottom:8px;border-radius:8px;object-fit:cover;"><% } %>
+        <input id="post-cover" type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+      </div>
+      <fieldset class="seo-fieldset">
+        <legend>Référencement (facultatif)</legend>
+        <div class="field-group">
+          <label for="post-seo-title">Titre pour les moteurs de recherche <span class="field-hint">(70 caractères)</span></label>
+          <input id="post-seo-title" type="text" name="seo_title" value="<%= post && post.seo_title ? post.seo_title : '' %>" maxlength="70">
+        </div>
+        <div class="field-group">
+          <label for="post-seo-desc">Description pour les moteurs de recherche <span class="field-hint">(160 caractères)</span></label>
+          <textarea id="post-seo-desc" name="seo_description" rows="2" maxlength="160"><%= post && post.seo_description ? post.seo_description : '' %></textarea>
+        </div>
+      </fieldset>
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+    </form>
+  </div>
+
+<%- include("../partials/footer") %>

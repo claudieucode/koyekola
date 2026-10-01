@@ -1,0 +1,21 @@
+<%- include("partials/top", { title, active }) %>
+    <p class="mk-back"><a href="/marketing/contacts">← Contacts</a></p>
+    <h1>Nouveau contact</h1>
+    <p class="mk-lead">Un contact ajouté à la main n'a <strong>aucun consentement</strong> : il ne recevra rien tant que la personne ou vous (avec une preuve) n'avez pas enregistré son accord.</p>
+    <form action="/marketing/contacts" method="post" class="mk-form">
+      <div class="field-group"><label for="c-email">Adresse e-mail</label><input id="c-email" type="email" name="email" required maxlength="254" autocomplete="off"></div>
+      <div class="field-row">
+        <div class="field-group"><label for="c-fn">Prénom</label><input id="c-fn" type="text" name="first_name" maxlength="100"></div>
+        <div class="field-group"><label for="c-ln">Nom</label><input id="c-ln" type="text" name="last_name" maxlength="100"></div>
+      </div>
+      <div class="field-row">
+        <div class="field-group"><label for="c-phone">Téléphone</label><input id="c-phone" type="text" name="phone" maxlength="40"></div>
+        <div class="field-group"><label for="c-company">Société</label><input id="c-company" type="text" name="company" maxlength="200"></div>
+      </div>
+      <div class="field-row">
+        <div class="field-group"><label for="c-country">Pays</label><input id="c-country" type="text" name="country" maxlength="100"></div>
+        <div class="field-group"><label for="c-lang">Langue</label><input id="c-lang" type="text" name="language" maxlength="20" placeholder="fr"></div>
+      </div>
+      <button type="submit" class="btn btn-primary">Créer le contact</button>
+    </form>
+<%- include("partials/bottom") %>

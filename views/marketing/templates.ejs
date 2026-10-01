@@ -1,0 +1,122 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const NEXT_DIR = { name: "asc", kind: "asc", category: "asc", updated: "desc" };
+  const sortHead = (key, label) => {
+    const on = sortKey === key;
+    const next = on ? (dirKey === "asc" ? "desc" : "asc") : NEXT_DIR[key];
+    const attr = on ? ` aria-sort="${dirKey === "asc" ? "ascending" : "descending"}"` : "";
+    return `<th scope="col"${attr}><a href="${mkh.esc(url({ tri: key, sens: next }))}">${label}</a></th>`;
+  };
+  const labelOf = (key) => { const c = categories.find((x) => x.key === key); return c ? c.label : "—"; };
+  const canWrite = mk.can("templates.write");
+%>
+    <div class="mk-head">
+      <h1>Modèles d'e-mails <span class="mk-count"><%= mkh.fmt(counts.all) %></span></h1>
+      <div class="mk-actions"><a href="/marketing/modeles/bibliotheque" class="btn btn-outline btn-sm">Parcourir la bibliothèque</a></div>
+    </div>
+    <p class="mk-lead">Composez vos e-mails par blocs (titre, texte, image, vidéo, bouton, citation, liste, réseaux sociaux, formation du catalogue…). Le lien de désinscription est ajouté automatiquement en bas de chaque e-mail marketing.</p>
+
+    <% if (counts.all === 0) { %>
+      <div class="mk-empty">
+        <%- icon("fileText", { size: 32 }) %>
+        <h2>Aucun modèle</h2>
+        <p>Choisissez un modèle de départ dans la bibliothèque, puis personnalisez-le dans l'éditeur par blocs.</p>
+        <div class="mk-actions"><% if (canWrite) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="creer">Créer un modèle</button><% } %><a class="btn btn-outline btn-sm" href="/marketing/modeles/bibliotheque">Ouvrir la bibliothèque</a></div>
+      </div>
+    <% } else { %>
+      <nav class="mk-tabs" aria-label="Filtrer par catégorie">
+        <a class="mk-tab" href="<%= url({ categorie: null }) %>"<%- categorie === "" ? ' aria-current="page"' : "" %>>Tous <span class="mk-tab-count"><%= counts.all %></span></a>
+        <% categories.filter((c) => counts[c.key]).forEach((c) => { %><a class="mk-tab" href="<%= url({ categorie: c.key }) %>"<%- categorie === c.key ? ' aria-current="page"' : "" %>><%= c.label %> <span class="mk-tab-count"><%= counts[c.key] %></span></a>
+        <% }) %>
+        <% if (counts.none) { %><a class="mk-tab" href="<%= url({ categorie: "none" }) %>"<%- categorie === "none" ? ' aria-current="page"' : "" %>>Sans catégorie <span class="mk-tab-count"><%= counts.none %></span></a><% } %>
+      </nav>
+
+      <form class="mk-filterbar" method="get" action="/marketing/modeles" role="search">
+        <% if (categorie) { %><input type="hidden" name="categorie" value="<%= categorie %>"><% } %>
+        <% if (view.tri) { %><input type="hidden" name="tri" value="<%= view.tri %>"><input type="hidden" name="sens" value="<%= view.sens %>"><% } %>
+        <div class="mk-search"><%- icon("search", { size: 16 }) %><label class="sr-only" for="f-q">Rechercher un modèle</label><input id="f-q" type="search" name="q" value="<%= q %>" placeholder="Nom ou objet" maxlength="100"></div>
+        <div class="field-group"><label for="f-type">Type</label>
+          <select id="f-type" name="type"><option value="">Tous</option><option value="marketing" <%= type === "marketing" ? "selected" : "" %>>Marketing</option><option value="transactional" <%= type === "transactional" ? "selected" : "" %>>Transactionnel</option></select></div>
+        <button type="submit" class="btn btn-primary btn-sm">Filtrer</button>
+        <% if (hasFilters) { %><a href="/marketing/modeles" class="btn btn-ghost btn-sm">Réinitialiser</a><% } %>
+      </form>
+      <p class="mk-filter-count" role="status"><%= rows.length %> modèle<%= rows.length > 1 ? "s" : "" %><%= hasFilters ? " correspondant aux filtres" : "" %></p>
+
+      <% if (!rows.length) { %>
+        <div class="mk-empty"><%- icon("search", { size: 32 }) %><h2>Aucun modèle ne correspond</h2><p>Élargissez la recherche ou changez de catégorie.</p><div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/modeles">Réinitialiser les filtres</a></div></div>
+      <% } else { %>
+        <div class="mk-table-wrap">
+          <table class="mk-table mk-datatable">
+            <caption class="sr-only">Modèles d'e-mails</caption>
+            <thead><tr>
+              <%- sortHead("name", "Modèle") %>
+              <%- sortHead("category", "Catégorie") %>
+              <%- sortHead("kind", "Type") %>
+              <th scope="col" class="mk-num">Blocs</th>
+              <th scope="col">Utilisé par</th>
+              <%- sortHead("updated", "Modifié le") %>
+              <% if (canWrite) { %><th scope="col"><span class="sr-only">Actions</span></th><% } %>
+            </tr></thead>
+            <tbody>
+              <% rows.forEach((t) => { %>
+                <tr>
+                  <td data-label="Modèle"><a href="/marketing/modeles/<%= t.id %>"><%= t.name %></a><% if (t.subject) { %><span class="mk-sub">Objet : <%= t.subject %></span><% } %></td>
+                  <td data-label="Catégorie"><%= labelOf(t.category) %></td>
+                  <td data-label="Type"><%= kindLabel[t.kind] %></td>
+                  <td class="mk-num" data-label="Blocs"><%= t.blockCount %></td>
+                  <td data-label="Utilisé par"><%= t.usedBy ? t.usedBy + " campagne" + (t.usedBy > 1 ? "s" : "") : "—" %></td>
+                  <td data-label="Modifié le"><%= mkh.fdate(t.updated_at) %></td>
+                  <% if (canWrite) { %><td data-label="Actions" class="mk-row-actions">
+                    <div class="mk-dropdown" data-mk-dropdown>
+                      <button type="button" class="icon-btn btn-sm" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-modele-<%= t.id %>" aria-label="Actions pour le modèle <%= t.name %>"><%- icon("moreVertical", { size: 18 }) %></button>
+                      <div class="mk-menu" id="menu-modele-<%= t.id %>" role="menu" hidden>
+                        <a role="menuitem" href="/marketing/modeles/<%= t.id %>">Ouvrir</a>
+                        <form action="/marketing/modeles/<%= t.id %>/dupliquer" method="post" role="none"><button type="submit" role="menuitem">Dupliquer</button></form>
+                        <form action="/marketing/modeles/<%= t.id %>/supprimer" method="post" role="none"><button type="submit" role="menuitem" class="mk-menu-danger" data-mk-confirm="<%= t.usedBy ? "Le modèle « " + t.name + " » est utilisé par " + t.usedBy + " campagne" + (t.usedBy > 1 ? "s" : "") + " : elles gardent leur contenu figé, mais ne pourront plus être modifiées avec ce modèle." : "Le modèle « " + t.name + " » sera supprimé." %>" data-mk-confirm-title="Supprimer ce modèle ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form>
+                      </div>
+                    </div>
+                  </td><% } %>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    <% } %>
+
+    <section class="mk-panel" id="adresse">
+      <h2>Adresse du pied de page</h2>
+      <p class="field-hint">Adresse postale de l'expéditeur, affichée en bas des e-mails marketing (exigée par plusieurs législations).</p>
+      <% if (mk.can("settings.write")) { %>
+        <form action="/marketing/modeles/adresse" method="post" class="mk-form">
+          <div class="field-group"><label for="a-addr">Adresse</label><textarea id="a-addr" name="address" rows="3" maxlength="300" placeholder="KOYEKOLA&#10;12 rue des Écoles&#10;75005 Paris"><%= address %></textarea></div>
+          <button type="submit" class="btn btn-outline btn-sm">Enregistrer l'adresse</button>
+        </form>
+      <% } else { %><p><%= address || "Aucune adresse enregistrée." %></p><% } %>
+    </section>
+
+    <% if (canWrite) { %>
+      <dialog class="mk-dialog mk-modal" id="creer" data-mk-modal data-mk-modal-hash="creer" aria-labelledby="creer-title">
+        <form action="/marketing/modeles" method="post">
+          <div class="mk-dialog-body">
+            <h2 id="creer-title">Créer un modèle</h2>
+            <p>Partez d'un modèle de départ, puis personnalisez-le bloc par bloc dans l'éditeur. <a href="/marketing/modeles/bibliotheque">Voir les aperçus des modèles de départ</a>.</p>
+            <div class="field-group"><label for="m-name">Nom du modèle *</label>
+              <input id="m-name" type="text" name="name" maxlength="100" required autofocus placeholder="Ex. Lettre d'information de mars" data-mk-required-message="Le nom du modèle est obligatoire."></div>
+            <div class="field-group"><label for="m-starter">Modèle de départ</label>
+              <select id="m-starter" name="starter">
+            <% starterGroups.forEach((g) => { %><optgroup label="<%= g.category.label %>"><% g.starters.forEach((s) => { %><option value="<%= s.key %>" <%= s.key === "newsletter" ? "selected" : "" %>><%= s.label %></option><% }) %></optgroup><% }) %>
+          </select></div>
+            <div class="field-group"><label for="m-kind">Type</label>
+              <select id="m-kind" name="kind"><option value="marketing">Marketing (avec désinscription)</option><option value="transactional">Transactionnel (lié à un compte)</option></select>
+              <p class="field-hint">Un modèle de départ transactionnel crée toujours un modèle transactionnel.</p></div>
+          </div>
+          <div class="mk-dialog-actions">
+            <button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm">Créer le modèle</button>
+          </div>
+        </form>
+      </dialog>
+      <%- include("partials/modal-reopen", { id: "creer" }) %>
+    <% } %>
+<%- include("partials/bottom") %>

@@ -1,0 +1,705 @@
+/* Espace marketing — design system. Chargé APRÈS style.css (mêmes jetons de couleur, mêmes boutons et champs),
+   et UNIQUEMENT dans l'espace marketing : rien ici ne touche le site public ni l'espace élève/formateur.
+   Identité « façon Mailchimp », palette bleue KOYEKOLA : menu latéral clair avec bouton « Créer », surfaces plates
+   à filets fins, arrondis sobres, onglets soulignés, typographie très hiérarchisée. Aucune dépendance. */
+
+:root {
+  --mk-sidebar-w: 256px;
+  --mk-sidebar-w-collapsed: 72px;
+  --mk-topbar-h: 56px;
+  --mk-space-1: 4px;
+  --mk-space-2: 8px;
+  --mk-space-3: 12px;
+  --mk-space-4: 16px;
+  --mk-space-5: 24px;
+  --mk-space-6: 32px;
+  --mk-ok: var(--success);
+  --mk-warn: var(--warning-text);
+  --mk-err: var(--danger);
+  --mk-info: var(--accent);
+  /* Jetons propres à l'espace marketing (le site public garde les siens, inchangés) */
+  --mk-bg: #f6f9fb;            /* fond de page : blanc cassé froid, les cartes blanches s'en détachent sans ombre */
+  --mk-surface: #ffffff;
+  --mk-border: #e1e8ee;        /* filet des cartes et tableaux */
+  --mk-border-strong: #c3d1dd; /* contour des champs et boutons secondaires */
+  --mk-hover: #f1f6fa;
+  --mk-selected: #e0f2fe;
+  --mk-text: #0b2a40;
+  --mk-text-soft: #2d4556;
+  --mk-r-sm: 6px;              /* champs, boutons */
+  --mk-r: 8px;                 /* cartes, tableaux */
+  --mk-r-lg: 12px;             /* fenêtres de dialogue */
+  --mk-pop: 0 2px 6px rgba(11, 42, 64, 0.08), 0 16px 40px -12px rgba(11, 42, 64, 0.24); /* menus et dialogues uniquement */
+}
+
+/* Focus : la règle globale de style.css s'applique ; on la renforce dans la coque (sans jamais retirer le contour) */
+.mk-app :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.mk-sidebar :where(a, button):focus-visible { outline-color: var(--accent); outline-offset: -3px; }
+.mk-body { background: var(--mk-bg); color: var(--mk-text); }
+
+/* ===== Structure ===== */
+.mk-app { display: grid; grid-template-columns: var(--mk-sidebar-w) minmax(0, 1fr); min-height: 100vh; }
+html[data-sidebar="collapsed"] .mk-app { grid-template-columns: var(--mk-sidebar-w-collapsed) minmax(0, 1fr); }
+.mk-main { min-width: 0; display: flex; flex-direction: column; }
+.mk-content { padding: 32px 40px 72px; max-width: 1320px; width: 100%; }
+.mk-content:focus { outline: 2px solid transparent; }
+
+/* ===== Menu latéral (clair, à la Mailchimp) ===== */
+.mk-sidebar { background: var(--mk-surface); color: var(--mk-text); position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; border-right: 1px solid var(--mk-border); z-index: 40; }
+.mk-sidebar-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px 10px 18px; min-height: var(--mk-topbar-h); }
+.mk-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--mk-text); min-width: 0; flex: 1 1 auto; }
+.mk-brand-mark { flex: none; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: var(--primary); color: #fff; font-weight: 800; border-radius: var(--mk-r); font-family: var(--font-display); }
+.mk-brand-text { display: flex; flex-direction: column; line-height: 1.1; font-weight: 800; font-family: var(--font-display); letter-spacing: -0.01em; white-space: nowrap; }
+.mk-brand-text small { font-family: var(--font-body); font-weight: 600; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.02em; }
+.mk-collapse-btn, .mk-close-btn { flex: none; background: transparent; border: 0; color: var(--muted); cursor: pointer; min-width: 36px; min-height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--mk-r-sm); }
+.mk-collapse-btn:hover, .mk-close-btn:hover { background: var(--mk-hover); color: var(--mk-text); }
+.mk-collapse-btn[aria-pressed="true"] .icon { transform: scaleX(-1); }
+.mk-close-btn { display: none; }
+
+/* Bouton « Créer » : l'action principale de tout l'espace, toujours au même endroit */
+.mk-create { padding: 4px 14px 12px; }
+.mk-create-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; padding: 8px 14px; background: var(--accent); color: #fff; border: 0; border-radius: var(--mk-r); font: inherit; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: background 0.15s ease; }
+.mk-create-btn:hover, .mk-create-btn[aria-expanded="true"] { background: var(--accent-dark); }
+.mk-create-menu { left: 14px; right: 14px; top: calc(100% - 6px); min-width: 0; }
+.mk-create-menu .icon { color: var(--accent); flex: none; }
+.mk-create-btn .mk-nav-label { flex: none; }
+
+.mk-nav-list { flex: 1 1 auto; overflow-y: auto; padding: 4px 10px 24px; display: flex; flex-direction: column; gap: 2px; scrollbar-width: thin; border-top: 1px solid var(--mk-border); padding-top: 12px; }
+.mk-nav-link, .mk-nav-head { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 42px; padding: 8px 12px; color: var(--mk-text-soft); text-decoration: none; background: transparent; border: 0; font: inherit; font-weight: 600; font-size: 0.92rem; text-align: left; cursor: pointer; border-radius: var(--mk-r); transition: background 0.15s ease, color 0.15s ease; }
+.mk-nav-link:hover, .mk-nav-head:hover { background: var(--mk-hover); color: var(--mk-text); }
+.mk-nav-link[aria-current="page"] { background: var(--mk-selected); color: var(--accent-dark); font-weight: 700; box-shadow: inset 3px 0 0 var(--accent); }
+.mk-nav-link .icon, .mk-nav-head .icon { flex: none; color: var(--muted); }
+.mk-nav-link[aria-current="page"] .icon, .mk-nav-group.is-open > .mk-nav-head .icon { color: var(--accent); }
+.mk-nav-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mk-nav-caret { transition: transform 0.15s; }
+.mk-nav-group.is-open > .mk-nav-head .mk-nav-caret { transform: rotate(180deg); }
+.mk-nav-group.is-open > .mk-nav-head { color: var(--mk-text); }
+.mk-nav-sub { display: none; margin: 2px 0 6px 21px; padding-left: 10px; border-left: 1px solid var(--mk-border); }
+.mk-nav-group.is-open > .mk-nav-sub { display: block; }
+.mk-nav-sublink { display: flex; align-items: center; min-height: 38px; padding: 6px 12px; color: var(--mk-text-soft); text-decoration: none; font-size: 0.88rem; font-weight: 500; border-radius: var(--mk-r); }
+.mk-nav-sublink:hover { background: var(--mk-hover); color: var(--mk-text); }
+.mk-nav-sublink[aria-current="page"] { color: var(--accent-dark); background: var(--mk-selected); font-weight: 700; }
+
+/* Menu réduit (icônes seules) — un clic sur une section le redéploie */
+html[data-sidebar="collapsed"] .mk-brand-text,
+html[data-sidebar="collapsed"] .mk-nav-label,
+html[data-sidebar="collapsed"] .mk-nav-caret,
+html[data-sidebar="collapsed"] .mk-nav-sub,
+html[data-sidebar="collapsed"] .mk-nav-group.is-open > .mk-nav-sub { display: none; } /* sinon « section ouverte » (plus spécifique) l'emporte et le sous-menu dépasse, rogné */
+html[data-sidebar="collapsed"] .mk-sidebar-head { flex-direction: column; padding: 10px 0; gap: 8px; justify-content: center; }
+html[data-sidebar="collapsed"] .mk-brand { flex: none; }
+html[data-sidebar="collapsed"] .mk-nav-link, html[data-sidebar="collapsed"] .mk-nav-head { justify-content: center; padding: 8px 0; }
+html[data-sidebar="collapsed"] .mk-nav-list { padding-left: 8px; padding-right: 8px; }
+html[data-sidebar="collapsed"] .mk-create { padding: 4px 12px 12px; }
+html[data-sidebar="collapsed"] .mk-create-btn { padding: 8px 0; }
+html[data-sidebar="collapsed"] .mk-create-menu { left: calc(100% - 4px); right: auto; top: 4px; min-width: 240px; }
+
+/* ===== Barre du haut ===== */
+.mk-topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 12px; min-height: var(--mk-topbar-h); padding: 8px 40px; background: var(--mk-surface); border-bottom: 1px solid var(--mk-border); }
+.mk-menu-btn { display: none; color: var(--mk-text); }
+.mk-breadcrumb { flex: 1 1 auto; min-width: 0; }
+.mk-breadcrumb ol { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.88rem; color: var(--muted); }
+.mk-breadcrumb li + li::before { content: "/"; margin-right: 8px; color: var(--mk-border-strong); }
+.mk-breadcrumb li[aria-current="page"] { color: var(--mk-text); font-weight: 700; }
+.mk-topbar-actions { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+
+/* ===== Menu déroulant ===== */
+.mk-dropdown { position: relative; }
+.mk-user { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 10px 4px 4px; background: transparent; border: 1px solid transparent; border-radius: var(--radius-pill); cursor: pointer; font: inherit; font-weight: 600; color: var(--mk-text); }
+.mk-user:hover, .mk-user[aria-expanded="true"] { background: var(--mk-hover); border-color: var(--mk-border); }
+.mk-user-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mk-menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 220px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); box-shadow: var(--mk-pop); z-index: 60; padding: 6px; display: flex; flex-direction: column; }
+.mk-menu[hidden] { display: none; }
+.mk-menu a, .mk-menu button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 8px 12px; background: transparent; border: 0; text-align: left; font: inherit; font-size: 0.92rem; font-weight: 500; color: var(--mk-text); text-decoration: none; cursor: pointer; border-radius: var(--mk-r-sm); }
+.mk-menu a:hover, .mk-menu button:hover, .mk-menu [aria-selected="true"] { background: var(--mk-hover); }
+.mk-menu form { margin: 0; }
+.mk-menu-danger { color: var(--danger) !important; }
+
+/* ===== Messages (composant Alert partagé : bandeau de haut de page ET alertes de l'accueil) ===== */
+/* Bloc de retour à la Mailchimp : fond très légèrement teinté, filet coloré à gauche, texte sombre lisible */
+.mk-flash { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; margin: 0 0 20px; border: 1px solid var(--mk-border); border-left: 4px solid var(--accent); border-radius: var(--mk-r); background: #f3f9fd; color: var(--mk-text); font-size: 0.92rem; overflow-wrap: anywhere; }
+.mk-flash-icon { flex: none; margin-top: 1px; color: var(--accent); }
+.mk-flash-body { flex: 1 1 auto; min-width: 0; }
+.mk-flash-body p { margin: 0; }
+.mk-flash-action { display: inline-flex; margin-top: 8px; }
+/* Détail technique replié (§17 : message humain d'abord, détail pour qui en a besoin) */
+.mk-flash-details { margin-top: 6px; }
+.mk-flash-details summary { cursor: pointer; font-weight: 700; font-size: 0.86rem; }
+.mk-flash-details p { margin: 4px 0 0; font-size: 0.86rem; opacity: 0.9; }
+.mk-flash-details code { background: rgba(11, 42, 64, 0.08); padding: 1px 5px; border-radius: 3px; }
+.mk-flash-ok { border-left-color: var(--success); background: #f3faf5; }
+.mk-flash-ok .mk-flash-icon { color: var(--success); }
+.mk-flash-error { border-left-color: var(--danger); background: #fdf4f4; color: #8f0d15; }
+.mk-flash-error .mk-flash-icon { color: var(--danger); }
+.mk-toasts { position: fixed; right: 16px; bottom: 16px; z-index: 90; display: flex; flex-direction: column; gap: 8px; max-width: min(380px, calc(100vw - 32px)); }
+.mk-toast { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; background: var(--primary); color: #fff; border-radius: var(--mk-r); border-left: 4px solid var(--sky); box-shadow: var(--mk-pop); font-size: 0.92rem; }
+.mk-toast-ok { border-left-color: var(--success); }
+.mk-toast-error { border-left-color: var(--danger); }
+.mk-toast button { margin-left: auto; background: transparent; border: 0; color: inherit; cursor: pointer; min-width: 28px; min-height: 28px; font-size: 1.1rem; line-height: 1; }
+
+/* ===== Cartes de chiffres ===== */
+.mk-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin: 0 0 24px; }
+.mk-stat { background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); padding: 18px 20px; min-width: 0; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; transition: border-color 0.15s ease; }
+a.mk-stat:hover { border-color: var(--accent); }
+.mk-stat-label { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+.mk-stat-value { font-family: var(--font-display); font-size: 2rem; font-weight: 700; color: var(--mk-text); line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.mk-stat-hint { font-size: 0.85rem; color: var(--muted); }
+.mk-stat-trend { font-size: 0.85rem; font-weight: 700; }
+.mk-stat-trend.is-up { color: var(--success-dark); }
+.mk-stat-trend.is-down { color: var(--danger); }
+
+/* ===== Pastilles de statut ===== */
+.mk-status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; padding: 3px 10px; border: 0; background: #edf2f6; color: var(--mk-text-soft); white-space: nowrap; border-radius: var(--radius-pill); }
+.mk-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: 0.85; }
+.mk-status-ok { background: var(--success-light); color: var(--success-dark); }
+.mk-status-warn { background: var(--warning-bg); color: var(--warning-text); }
+.mk-status-err { background: var(--danger-light); color: #a50e18; }
+.mk-status-info { background: var(--accent-light); color: var(--accent-dark); }
+
+/* ===== Onglets (soulignés, à la Mailchimp) ===== */
+.mk-tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--mk-border); margin: 0 0 20px; }
+.mk-tab { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; background: transparent; border: 0; color: var(--muted); font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; margin-bottom: -1px; border-bottom: 3px solid transparent; }
+.mk-tab:hover { color: var(--mk-text); border-bottom-color: var(--mk-border-strong); }
+.mk-tab[aria-selected="true"], .mk-tab[aria-current="page"] { color: var(--mk-text); font-weight: 700; border-bottom-color: var(--accent); }
+.mk-tab-count { font-size: 0.78rem; font-weight: 700; padding: 1px 8px; border-radius: var(--radius-pill); background: #edf2f6; color: var(--mk-text-soft); }
+.mk-tab[aria-selected="true"] .mk-tab-count, .mk-tab[aria-current="page"] .mk-tab-count { background: var(--accent-light); color: var(--accent-dark); }
+.mk-tabpanel[hidden] { display: none; }
+
+/* ===== États vides ===== */
+.mk-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 48px 24px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); margin: 0 0 20px; }
+.mk-empty > .icon { box-sizing: content-box; padding: 14px; border-radius: 50%; background: var(--accent-light); color: var(--accent); margin-bottom: 6px; }
+.mk-empty h2, .mk-empty h3 { margin: 4px 0 0; font-size: 1.25rem; font-family: var(--font-display); }
+.mk-empty p { margin: 0; color: var(--muted); max-width: 52ch; }
+.mk-empty .mk-actions { justify-content: center; margin-top: 10px; }
+/* Variante compacte : même composant, pour une carte plus petite (ex. accueil) plutôt qu'une page entière vide */
+.mk-empty-sm { padding: 24px 20px; margin: 0; }
+.mk-empty-sm h3 { font-size: 1.02rem; }
+.mk-empty-sm p { font-size: 0.88rem; }
+
+/* ===== Squelettes de chargement ===== */
+.mk-skeleton { display: block; min-height: 16px; background: var(--mk-hover); background-image: linear-gradient(90deg, var(--mk-hover) 0%, #fbfdfe 50%, var(--mk-hover) 100%); background-size: 200% 100%; animation: mk-shimmer 1.4s linear infinite; border-radius: var(--mk-r-sm); }
+.mk-skeleton-line { height: 14px; margin: 8px 0; }
+.mk-skeleton-block { height: 96px; }
+@keyframes mk-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* ===== Barre de filtres et recherche ===== */
+.mk-filterbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; padding: 14px 16px; margin: 0 0 16px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); }
+.mk-filterbar .field-group { margin-bottom: 0; min-width: 150px; }
+.mk-filterbar .mk-search { flex: 1 1 260px; }
+.mk-search { position: relative; display: flex; align-items: center; }
+.mk-search .icon { position: absolute; left: 12px; color: var(--muted); pointer-events: none; }
+.mk-search input { width: 100%; min-height: 42px; padding: 9px 12px 9px 38px; font: inherit; border: 1px solid var(--mk-border-strong); border-radius: var(--mk-r-sm); background: #fff; }
+.mk-filter-count { color: var(--muted); font-size: 0.9rem; margin-left: auto; }
+
+/* ===== Tableau de données ===== */
+.mk-datatable th a { color: inherit; text-decoration: none; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+/* Indicateur de tri : discret par défaut sur toute colonne triable (fait comprendre qu'elle l'est SANS survol),
+   plus marqué et coloré sur la colonne active — jamais un simple caractère seul dans le texte du libellé. */
+.mk-datatable th a::after { content: "⇅"; font-size: 0.76rem; color: var(--mk-border-strong); }
+.mk-datatable th[aria-sort="ascending"] a::after { content: "▲"; font-size: 0.76rem; color: var(--accent); }
+.mk-datatable th[aria-sort="descending"] a::after { content: "▼"; font-size: 0.76rem; color: var(--accent); }
+.mk-datatable .mk-col-check { width: 44px; text-align: center; }
+.mk-datatable tr.is-selected { background: var(--mk-selected); }
+.mk-datatable td.mk-num, .mk-datatable th.mk-num { text-align: right; font-variant-numeric: tabular-nums; }
+.mk-bulkbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 16px; margin: 0 0 12px; background: var(--primary); color: #fff; border-radius: var(--mk-r); }
+.mk-bulkbar[hidden] { display: none; }
+.mk-bulkbar .btn { border-color: rgba(255, 255, 255, 0.5); }
+.mk-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 12px 0 20px; color: var(--muted); font-size: 0.9rem; }
+.mk-pager-links { display: flex; gap: 4px; flex-wrap: wrap; }
+.mk-pager-links a, .mk-pager-links span { min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 0 10px; border: 1px solid var(--mk-border); border-radius: var(--mk-r-sm); background: #fff; color: var(--mk-text); text-decoration: none; font-weight: 600; }
+.mk-pager-links a:hover { background: var(--mk-hover); border-color: var(--mk-border-strong); }
+.mk-pager-links [aria-current="page"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Petits écrans : chaque ligne du tableau devient une carte */
+@media (max-width: 720px) {
+  .mk-datatable, .mk-datatable tbody, .mk-datatable tr, .mk-datatable td { display: block; width: 100%; }
+  .mk-datatable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  .mk-datatable tr { border: 1px solid var(--mk-border); border-radius: var(--mk-r); margin: 0 0 12px; background: var(--mk-surface); overflow: hidden; }
+  .mk-datatable td { border-top: 0; padding: 6px 12px; display: flex; gap: 12px; justify-content: space-between; }
+  .mk-datatable td::before { content: attr(data-label); font-weight: 700; color: var(--muted); font-size: 0.8rem; flex: none; }
+  .mk-datatable td.mk-num { text-align: right; }
+  /* Cellule à deux lignes (nom + sous-titre, ex. description d'une liste ou d'un segment) : empilée plutôt que
+     compressée par « space-between » (qui, avec 3 éléments flex, réduisait le nom à une colonne trop étroite). */
+  .mk-datatable td:has(.mk-sub) { flex-direction: column; align-items: flex-start; gap: 2px; }
+}
+
+/* ===== Progression et étapes ===== */
+.mk-progress { height: 8px; background: #e8eef3; border-radius: var(--radius-pill); overflow: hidden; }
+.mk-progress-bar { display: block; height: 100%; background: var(--accent); border-radius: var(--radius-pill); }
+.mk-stepper { list-style: none; margin: 0 0 24px; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; counter-reset: mk-step; }
+.mk-step { flex: 1 1 120px; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--mk-border); border-top: 3px solid var(--mk-border); border-radius: var(--mk-r); color: var(--muted); font-weight: 600; font-size: 0.88rem; counter-increment: mk-step; background: var(--mk-surface); }
+.mk-step::before { content: counter(mk-step); flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid currentColor; border-radius: 50%; font-size: 0.8rem; }
+.mk-step.is-done { border-top-color: var(--success); color: var(--success-dark); }
+.mk-step.is-current { border-top-color: var(--accent); color: var(--mk-text); font-weight: 700; }
+.mk-step.is-current::before { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ===== Boîtes de dialogue (confirmation et formulaires) ===== */
+.mk-dialog { border: 1px solid var(--mk-border); border-radius: var(--mk-r-lg); padding: 0; overflow: hidden; max-width: min(460px, calc(100vw - 32px)); width: 100%; background: var(--mk-surface); color: var(--mk-text); box-shadow: var(--mk-pop); }
+.mk-dialog::backdrop { background: rgba(6, 25, 42, 0.5); }
+.mk-dialog-body { padding: 24px 24px 8px; }
+.mk-dialog-body h2 { margin: 0 0 8px; font-size: 1.3rem; font-family: var(--font-display); }
+.mk-dialog-body p { margin: 0 0 14px; color: var(--muted); }
+.mk-dialog-body .field-group:last-child { margin-bottom: 0; }
+.mk-dialog-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; padding: 16px 24px 20px; border-top: 1px solid var(--mk-border); margin-top: 16px; background: #fafcfd; }
+.mk-dialog form { margin: 0; }
+/* Variante formulaire (création/édition) : un peu plus large qu'une simple confirmation */
+.mk-modal { max-width: min(520px, calc(100vw - 32px)); }
+/* Contenu long (petit écran, liste de cases) : le corps défile, les boutons Annuler/Créer restent visibles */
+.mk-modal .mk-dialog-body { max-height: calc(100dvh - 170px); overflow-y: auto; }
+/* Variante large : formulaire avec une grille de choix (ex. événements d'un webhook) */
+.mk-modal-wide { max-width: min(720px, calc(100vw - 32px)); }
+/* Groupe de cases à cocher : un choix « tout » mis à part, puis une grille alignée (2 colonnes dès qu'il y a la place) */
+.mk-fieldset { border: 1px solid var(--mk-border); border-radius: var(--mk-r); padding: 10px 14px 12px; margin: 0; min-width: 0; }
+.mk-fieldset legend { font-weight: 700; font-size: 0.9rem; padding: 0 6px; color: var(--mk-text); }
+.mk-check-all { padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid var(--mk-border); }
+.mk-check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); column-gap: 16px; }
+.mk-check-grid .checkbox-row { align-items: flex-start; padding-top: 10px; }
+.mk-check-grid .checkbox-row code { display: block; font-size: 0.76rem; color: var(--muted); overflow-wrap: anywhere; }
+
+/* ===== Callout d'information (neutre — jamais un avertissement) ===== */
+.mk-callout { display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px; margin: 0 0 20px; background: #f3f9fd; border: 1px solid var(--mk-border); border-radius: var(--mk-r); color: var(--mk-text); font-size: 0.88rem; }
+.mk-callout .icon { flex: none; margin-top: 1px; color: var(--accent); }
+.mk-callout strong { display: block; font-size: 0.88rem; margin-bottom: 2px; }
+.mk-callout p { margin: 0; color: var(--mk-text-soft); }
+
+/* ===== Info-bulle ===== */
+[data-tooltip] { position: relative; }
+[data-tooltip]:hover::after, [data-tooltip]:focus-visible::after { content: attr(data-tooltip); position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%); background: var(--primary); color: #fff; padding: 4px 8px; border-radius: var(--mk-r-sm); font-size: 0.8rem; font-weight: 600; white-space: nowrap; z-index: 70; pointer-events: none; }
+
+/* ===== Zone de dépôt de fichier (glisser-déposer + input classique) ===== */
+.mk-dropzone { position: relative; border: 1px dashed var(--mk-border-strong); border-radius: var(--mk-r); background: #fafcfd; padding: 32px 20px; text-align: center; transition: border-color 0.15s, background 0.15s; }
+.mk-dropzone.is-dragover { border-color: var(--accent); background: var(--accent-light); }
+.mk-dropzone .icon { color: var(--accent); }
+.mk-dropzone-empty p { margin: 8px 0 0; color: var(--muted); }
+.mk-dropzone-browse { color: var(--accent-dark); font-weight: 700; text-decoration: underline; cursor: pointer; }
+.mk-dropzone [data-mk-dropzone-input] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+/* Une fois un fichier choisi, le clic-n'importe-où s'efface (sinon il capterait le clic du bouton « retirer » ci-dessous) */
+.mk-dropzone.has-file [data-mk-dropzone-input] { pointer-events: none; }
+.mk-dropzone-file { display: flex; align-items: center; gap: 12px; text-align: left; }
+.mk-dropzone-file strong { display: block; word-break: break-all; }
+.mk-dropzone-file .icon-btn { margin-left: auto; flex: none; position: relative; pointer-events: auto; }
+
+/* ===== Page « Composants » ===== */
+.mk-spec { margin: 0 0 32px; }
+.mk-spec > h2 { font-size: 1.3rem; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--mk-border); }
+.mk-spec-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 0 0 12px; }
+.mk-swatch { width: 96px; padding: 8px; border: 1px solid var(--mk-border); border-radius: var(--mk-r); font-size: 0.8rem; font-weight: 700; background: var(--mk-surface); }
+.mk-swatch-chip { display: block; height: 32px; margin-bottom: 6px; border: 1px solid rgba(11, 42, 64, 0.15); border-radius: var(--mk-r-sm); }
+
+/* ===== Écrans étroits : le menu devient un tiroir ===== */
+@media (max-width: 960px) {
+  .mk-app, html[data-sidebar="collapsed"] .mk-app { grid-template-columns: minmax(0, 1fr); }
+  .mk-sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: min(300px, 86vw); transform: translateX(-100%); visibility: hidden; transition: transform 0.2s, visibility 0.2s; box-shadow: var(--mk-pop); }
+  .mk-sidebar.is-open { transform: none; visibility: visible; }
+  .mk-overlay { position: fixed; inset: 0; background: rgba(6, 25, 42, 0.5); z-index: 35; }
+  .mk-overlay[hidden] { display: none; }
+  .mk-menu-btn { display: inline-flex; }
+  .mk-collapse-btn { display: none; }
+  .mk-close-btn { display: inline-flex; }
+  .mk-topbar { padding: 8px 12px; }
+  .mk-content { padding: 20px 16px 48px; }
+  .mk-user-name { display: none; }
+  /* le mode « réduit » n'a pas de sens dans le tiroir : libellés toujours visibles */
+  html[data-sidebar="collapsed"] .mk-brand-text, html[data-sidebar="collapsed"] .mk-nav-label { display: initial; }
+  html[data-sidebar="collapsed"] .mk-nav-caret { display: inline; }
+  html[data-sidebar="collapsed"] .mk-nav-group.is-open > .mk-nav-sub { display: block; }
+  html[data-sidebar="collapsed"] .mk-nav-link, html[data-sidebar="collapsed"] .mk-nav-head { justify-content: flex-start; padding: 8px 12px; }
+  html[data-sidebar="collapsed"] .mk-sidebar-head { flex-direction: row; padding: 10px 12px 10px 18px; }
+  html[data-sidebar="collapsed"] .mk-create { padding: 4px 14px 12px; }
+  html[data-sidebar="collapsed"] .mk-create-btn { padding: 8px 14px; }
+  html[data-sidebar="collapsed"] .mk-create-menu { left: 14px; right: 14px; top: calc(100% - 6px); min-width: 0; }
+}
+@media (max-width: 520px) {
+  .mk-topbar-actions .mk-primary { padding: 7px 12px; font-size: 0.82rem; white-space: nowrap; }
+  /* le grand titre de la page dit déjà où l'on est : le fil d'Ariane, qui serait tronqué, laisse la place au bouton */
+  .mk-breadcrumb { visibility: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-skeleton { animation: none; }
+  .mk-sidebar, .mk-nav-caret { transition: none; }
+}
+
+/* Les ancres ne passent pas sous la barre du haut collante */
+.mk-content [id] { scroll-margin-top: calc(var(--mk-topbar-h) + 16px); }
+
+/* ===== Accueil ===== */
+.mk-flash-warn { border-left-color: var(--warning-text); background: #fffbeb; color: var(--mk-text); }
+.mk-flash-warn .mk-flash-icon { color: var(--warning-text); }
+.mk-flash a { color: inherit; font-weight: 800; }
+.mk-alerts { margin: 0 0 8px; }
+.mk-quick { margin: 0 0 24px; }
+.mk-firststeps { border-top-color: var(--accent); }
+.mk-onboarding { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 4px; }
+.mk-onboarding-step { display: flex; gap: 16px; padding: 16px 0; border-top: 1px solid var(--mk-border); }
+.mk-onboarding-step:first-child { border-top: 0; padding-top: 0; }
+.mk-onboarding-num { flex: none; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--accent-light); color: var(--accent-dark); font-weight: 800; font-size: 0.9rem; }
+.mk-onboarding-step.is-done .mk-onboarding-num { background: var(--success-light); color: var(--success-dark); }
+.mk-onboarding-body { min-width: 0; }
+.mk-onboarding-body h3 { margin: 3px 0 4px; font-size: 0.98rem; }
+.mk-onboarding-body p { margin: 0; color: var(--muted); font-size: 0.88rem; }
+.mk-onboarding-body .mk-actions { display: flex; margin-top: 10px; }
+.mk-chart { display: block; width: 100%; height: auto; max-height: 240px; }
+.mk-bar { fill: var(--accent); }
+.mk-bar.is-zero { fill: var(--line); }
+.mk-chart-axis { stroke: var(--line); stroke-width: 1; }
+.mk-chart-value { font-size: 12px; font-weight: 800; fill: var(--primary); }
+.mk-chart-label { font-size: 12px; fill: var(--muted); }
+.mk-readiness-score { margin: 0 0 8px; }
+.mk-checklist { list-style: none; margin: 14px 0; padding: 0; display: grid; gap: 10px; }
+.mk-check { display: flex; gap: 10px; align-items: flex-start; }
+.mk-check-mark { flex: none; margin-top: 1px; }
+.mk-check.is-ok .mk-check-mark { color: var(--success); }
+.mk-check.is-todo .mk-check-mark { color: var(--warning-text); }
+.mk-check-body { min-width: 0; overflow-wrap: anywhere; }
+.mk-check-detail { display: block; font-size: 0.85rem; color: var(--muted); }
+.mk-timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.mk-timeline-item { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--mk-border); }
+.mk-timeline-item:first-child { border-top: 0; }
+.mk-timeline-mark { flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; background: var(--accent-light); color: var(--accent-dark); border-radius: var(--mk-r-sm); }
+.mk-timeline-body { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.mk-timeline-time { flex: none; color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
+.mk-grid-2 { align-items: start; }
+.mk-num { white-space: nowrap; }
+@media (min-width: 900px) { .mk-stats-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.mk-readiness { min-width: 0; }
+.mk-activity { margin-top: 0; }
+.mk-breakdown-title { margin: 20px 0 8px; font-size: 1rem; }
+.mk-breakdown { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px 16px; }
+.mk-breakdown li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--mk-border); }
+.mk-link-url { min-width: 0; overflow-wrap: anywhere; font-size: 0.85rem; color: var(--muted); }
+
+/* ===== Contacts ===== */
+.mk-chip-static { padding: 3px 10px; }
+.mk-filter-check { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 700; }
+.mk-filter-count { margin: 0 0 12px; color: var(--muted); font-size: 0.9rem; }
+/* Filtres actifs, chacun retirable en un clic (toute la puce est un seul lien, pas un bouton imbriqué) */
+.mk-filter-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.mk-chip-removable { text-decoration: none; }
+.mk-chip-removable:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.mk-chip-removable .mk-chip-x-mark { margin-left: 2px; font-weight: 800; }
+.mk-bulk-form { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 0; width: 100%; }
+.mk-bulk-form select, .mk-bulk-form input[type=text] { min-height: 36px; padding: 4px 8px; font: inherit; border: 1px solid var(--line); border-radius: var(--mk-r-sm); background: #fff; color: var(--text); }
+.mk-bulkbar { position: sticky; top: calc(var(--mk-topbar-h) + 8px); z-index: 20; }
+.mk-pager-links span[aria-hidden="true"] { border: 0; background: transparent; min-width: 24px; padding: 0; }
+.mk-stat-small { font-size: 1.3rem; }
+.mk-timeline-panel { margin-top: 0; }
+.mk-cell-email { min-width: 230px; overflow-wrap: anywhere; }
+.mk-filter-more { flex: 1 1 100%; }
+.mk-filter-more > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; color: var(--primary); }
+.mk-filter-fields { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; padding-top: 8px; }
+@media (min-width: 721px) { .mk-filter-more > summary { display: none; } }
+
+/* ===== Segments, listes, étiquettes, propriétés ===== */
+.mk-sub { display: block; font-size: 0.85rem; color: var(--muted); font-weight: 400; }
+.mk-row-actions { white-space: nowrap; }
+.mk-row-actions .mk-inline { display: inline-block; }
+.mk-segment-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 380px); gap: 20px; align-items: start; }
+.mk-segment-main { min-width: 0; }
+.mk-live { position: sticky; top: calc(var(--mk-topbar-h) + 12px); margin-bottom: 0; }
+.mk-summary { margin: 0 0 12px; color: var(--muted); overflow-wrap: anywhere; }
+.mk-live-count { display: flex; flex-direction: column; gap: 2px; margin: 0 0 12px; }
+.mk-live-total { font-size: 2.2rem; font-weight: 800; color: var(--primary); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.mk-live-total.is-busy { opacity: 0.5; }
+.mk-live-detail { font-size: 0.9rem; color: var(--muted); }
+.mk-value select, .mk-rule select { max-width: 100%; }
+.mk-rule-course { flex: 1 1 100%; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mk-rule-note { flex: 1 1 100%; margin: 0; font-size: 0.85rem; color: var(--muted); }
+@media (max-width: 1000px) { .mk-segment-grid { grid-template-columns: minmax(0, 1fr); } .mk-live { position: static; order: -1; } }
+.mk-rule > select[aria-label="Champ"] { flex: 1 1 220px; }
+.mk-rule > select[aria-label="Comparateur"], .mk-rule > .mk-value { flex: 1 1 100%; }
+.mk-value { display: flex; gap: 8px; }
+.mk-value input, .mk-value select { flex: 1 1 0; min-width: 0; width: 100%; }
+
+/* ===== Campagnes : assistant en sept étapes ===== */
+.mk-wizard .mk-stepper { margin-bottom: 12px; }
+.mk-wizard .mk-progress { margin-bottom: 20px; }
+.mk-wizard-step { border: 1px solid var(--mk-border); background: var(--mk-surface); padding: 16px 20px 8px; margin: 0 0 20px; min-width: 0; }
+.mk-wizard-step[hidden] { display: none; }
+.mk-wizard-step legend { font-weight: 800; color: var(--primary); padding: 0 8px; }
+.mk-wizard-nav { margin-top: 8px; }
+.mk-audience-count { min-height: 24px; margin: 0 0 12px; }
+.mk-audience-count p { margin: 0 0 6px; }
+.mk-audience-ok { color: var(--success-dark); }
+.mk-recap { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 12px 0; padding: 12px; background: var(--surface-alt); }
+.mk-recap[hidden] { display: none; }
+.mk-recap dt { font-weight: 800; color: var(--primary); }
+.mk-recap dd { margin: 0; overflow-wrap: anywhere; }
+.mk-step.is-error { border-top-color: var(--danger); color: var(--danger); }
+.mk-step.is-error::before { background: var(--danger); color: #fff; border-color: var(--danger); }
+.mk-wizard-hint { margin: 12px 0 0; color: var(--muted); }
+/* L'attribut hidden doit toujours gagner sur le style des boutons (.btn { display: inline-flex }) */
+.btn[hidden], .mk-wizard-nav [hidden] { display: none; }
+
+/* ===== Modèles : bibliothèque et éditeur v2 (trois colonnes) ===== */
+.mk-lib-section { margin: 0 0 32px; }
+.mk-lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+.mk-lib-card { background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.mk-lib-preview { position: relative; height: 240px; overflow: hidden; border-bottom: 1px solid var(--mk-border); background: #e5edf3; }
+.mk-lib-frame { position: absolute; top: 0; left: 50%; width: 600px; height: 800px; border: 0; background: #fff; transform: translateX(-50%) scale(0.45); transform-origin: top center; pointer-events: none; }
+.mk-lib-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; }
+.mk-lib-body h3 { margin: 0; font-size: 1.05rem; }
+.mk-lib-body p { margin: 0; }
+.mk-lib-form { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+.mk-lib-form input[type=text] { flex: 1 1 140px; min-width: 0; min-height: 36px; padding: 4px 8px; font: inherit; border: 1px solid var(--line); border-radius: var(--mk-r-sm); }
+
+.mk-editor3 { display: grid; grid-template-columns: 210px minmax(0, 1fr) minmax(0, 440px); gap: 20px; align-items: start; }
+.mk-editor3.is-readonly { grid-template-columns: minmax(0, 1fr) minmax(0, 440px); }
+.mk-palette { position: sticky; top: calc(var(--mk-topbar-h) + 12px); background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); padding: 14px; max-height: calc(100vh - var(--mk-topbar-h) - 32px); overflow-y: auto; }
+.mk-palette-hint { margin: 0 0 8px; }
+.mk-palette-group { margin: 0 0 12px; }
+.mk-palette-title { margin: 0 0 8px; font-size: 0.85rem; font-weight: 700; color: var(--muted); }
+.mk-palette-list { display: grid; gap: 6px; }
+.mk-palette-btn { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 6px 10px; background: #fff; border: 1px solid var(--line); border-radius: var(--mk-r-sm); font: inherit; font-weight: 700; color: var(--primary); text-align: left; cursor: grab; }
+.mk-palette-btn:hover { background: var(--accent-light); border-color: var(--accent); }
+.mk-palette-icon { flex: none; display: inline-flex; color: var(--accent); }
+.mk-editor-main { min-width: 0; }
+.mk-editor-main .mk-tabs { margin-bottom: 16px; }
+.mk-editor3 .mk-editor-preview { position: sticky; top: calc(var(--mk-topbar-h) + 12px); }
+.mk-block.is-selected { border-left-color: var(--accent); box-shadow: 0 0 0 3px rgba(2, 119, 182, 0.14); }
+.mk-drop-end { border: 2px dashed var(--accent); padding: 16px; text-align: center; color: var(--accent-dark); font-weight: 700; margin-bottom: 14px; }
+.mk-drop-end[hidden] { display: none; }
+.mk-drop-end.is-over { background: var(--accent-light); }
+.mk-social { display: grid; gap: 8px; }
+.mk-social-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mk-social-row select { flex: 0 0 150px; }
+.mk-social-row input { flex: 1 1 180px; min-width: 0; }
+@media (max-width: 1280px) {
+  .mk-editor3, .mk-editor3.is-readonly { grid-template-columns: 190px minmax(0, 1fr); }
+  .mk-editor3.is-readonly { grid-template-columns: minmax(0, 1fr); }
+  .mk-editor3 .mk-editor-preview { grid-column: 1 / -1; position: static; }
+}
+@media (max-width: 820px) {
+  .mk-editor3, .mk-editor3.is-readonly { grid-template-columns: minmax(0, 1fr); }
+  .mk-palette { position: static; max-height: none; }
+  .mk-palette-group { display: contents; }
+  .mk-palette-list { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .mk-palette-title { grid-column: 1 / -1; }
+  .mk-palette-btn { cursor: pointer; }
+}
+.mk-lib-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* Clé d'API affichée une seule fois, à la création (voir /marketing/api) */
+.mk-key-value { background: var(--surface-alt); border: 1px dashed var(--line); border-radius: var(--mk-r-sm); padding: 12px 14px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9rem; overflow-wrap: anywhere; }
+
+/* ---------- Canevas d'un scénario d'automatisation (src/editor/automation-flow.js, via Drawflow) ---------- */
+.mk-flow-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.mk-flow-toolbar .field-hint { margin: 0; max-width: 60ch; }
+.mk-flow-palette { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.mk-flow-shell { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: stretch; margin-bottom: 20px; }
+.mk-flow-canvas { position: relative; height: 70vh; min-height: 480px; background: var(--surface-alt); border: 1px solid var(--mk-border); border-radius: var(--mk-r); overflow: hidden; touch-action: none; background-image: radial-gradient(rgba(11, 42, 64, 0.09) 1px, transparent 1px); background-size: 22px 22px; }
+.mk-flow-zoom { position: absolute; right: 14px; bottom: 14px; z-index: 5; display: flex; gap: 6px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--radius-pill); padding: 6px; box-shadow: var(--mk-pop); }
+.mk-flow-zoom .mk-icon-btn { min-width: 34px; min-height: 34px; width: auto; padding: 0 10px; border-radius: var(--radius-pill); }
+.mk-flow-panel { background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); padding: 18px; overflow-y: auto; min-width: 0; }
+.mk-flow-panel-title { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 1.02rem; }
+.mk-flow-panel-empty { margin: 0; }
+.mk-flow-panel .field-group { margin-bottom: 14px; }
+.mk-cond-builder { margin-top: 6px; }
+.mk-cond-builder .mk-group-op { margin-bottom: 10px; }
+.mk-trigger-row-title { margin: 20px 0 10px; padding-top: 14px; border-top: 1px solid var(--mk-border); font-size: 0.85rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em; }
+.mk-trigger-row-title:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.mk-flow-panel-delete { margin-top: 6px; }
+
+/* Structure minimale issue de Drawflow (positionnement des nœuds/connexions) : on ne reprend pas son thème par
+   défaut, seulement ce qui est nécessaire au fonctionnement (glisser-déposer, tracé des liaisons, zoom). */
+.mk-flow-canvas .parent-drawflow { display: flex; overflow: hidden; touch-action: none; outline: 0; }
+.mk-flow-canvas .drawflow { position: relative; width: 100%; height: 100%; user-select: none; }
+.mk-flow-canvas .drawflow .parent-node { position: relative; }
+/* Uniquement les connexions (svg.connection posées par Drawflow) — jamais nos icônes de carte, qui sont
+   aussi des <svg> mais doivent rester dans le flux normal du texte. */
+.mk-flow-canvas .drawflow svg.connection { position: absolute; overflow: visible !important; z-index: 0; }
+.mk-flow-canvas .drawflow .drawflow-node { position: absolute; z-index: 2; width: 220px; min-height: 90px; padding: 0; cursor: move; }
+.mk-flow-canvas .drawflow .drawflow-node .inputs, .mk-flow-canvas .drawflow .drawflow-node .outputs { width: 0; }
+.mk-flow-canvas .drawflow .drawflow-node .drawflow_content_node { width: 100%; display: block; }
+.mk-flow-canvas .drawflow .drawflow-node .input, .mk-flow-canvas .drawflow .drawflow-node .output { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); z-index: 1; cursor: crosshair; }
+.mk-flow-canvas .drawflow .drawflow-node .input { left: -8px; top: 50%; transform: translateY(-50%); }
+.mk-flow-canvas .drawflow .drawflow-node .output { right: -8px; top: 50%; transform: translateY(-50%); }
+.mk-flow-canvas .drawflow .drawflow-node.mk-flow-card--condition .output_1, .mk-flow-canvas .drawflow .drawflow-node.mk-flow-card--split .output_1 { top: 34%; }
+.mk-flow-canvas .drawflow .drawflow-node.mk-flow-card--condition .output_2, .mk-flow-canvas .drawflow .drawflow-node.mk-flow-card--split .output_2 { top: 66%; }
+.mk-flow-canvas .drawflow .connection { position: absolute; pointer-events: none; }
+.mk-flow-canvas .drawflow .connection .main-path { fill: none; stroke-width: 3px; stroke: var(--line); pointer-events: all; }
+.mk-flow-canvas .drawflow .connection .main-path:hover { stroke: var(--accent); cursor: pointer; }
+.mk-flow-canvas .drawflow .connection .main-path.selected { stroke: var(--accent); stroke-width: 4px; }
+.mk-flow-canvas .drawflow-delete { position: absolute; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; right: -10px; top: -10px; background: var(--danger); color: #fff; border: 2px solid #fff; border-radius: 50%; font-family: inherit; font-weight: 700; font-size: 0.8rem; line-height: 1; cursor: pointer; z-index: 4; }
+
+/* Habillage propre au projet des cartes-nœuds (mk-* : mêmes tons que le reste de l'admin) */
+.mk-flow-card { display: flex; align-items: flex-start; gap: 10px; width: 100%; min-height: 90px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-left: 4px solid var(--accent); border-radius: var(--mk-r-sm); padding: 12px 14px; }
+.drawflow-node.selected .mk-flow-card { box-shadow: var(--ring); border-left-color: var(--accent-dark); }
+.mk-flow-card--trigger { border-left-color: var(--success); }
+.mk-flow-card--condition, .mk-flow-card--split { border-left-color: var(--star); }
+.mk-flow-card--end { border-left-color: var(--muted); }
+.mk-flow-card-icon { flex: 0 0 auto; color: var(--accent); }
+.mk-flow-card--trigger .mk-flow-card-icon { color: var(--success); }
+.mk-flow-card--condition .mk-flow-card-icon, .mk-flow-card--split .mk-flow-card-icon { color: var(--star); }
+.mk-flow-card--end .mk-flow-card-icon { color: var(--muted); }
+.mk-flow-icon { display: inline-flex; }
+.mk-flow-card-body { min-width: 0; flex: 1 1 auto; }
+.mk-flow-card-title { font-weight: 800; color: var(--primary); font-size: 0.92rem; }
+.mk-flow-card-sub { color: var(--muted); font-size: 0.8rem; margin-top: 2px; overflow-wrap: anywhere; }
+.mk-flow-card-ports { position: absolute; right: 22px; top: 0; height: 100%; display: flex; flex-direction: column; justify-content: space-around; font-size: 0.76rem; font-weight: 700; color: var(--muted); pointer-events: none; }
+.mk-flow-port-label { line-height: 1; }
+.mk-flow-port-yes { color: var(--success); }
+.mk-flow-port-no { color: var(--danger); }
+@media (max-width: 900px) {
+  .mk-flow-shell { grid-template-columns: minmax(0, 1fr); }
+  .mk-flow-panel { max-height: 50vh; }
+}
+
+/* Message d'erreur recopié en tête d'une modale rouverte après une création refusée (voir shell.js) */
+.mk-dialog-error { margin: 0 0 14px; }
+.mk-dialog-body .mk-dialog-error p { margin: 0; color: inherit; }
+
+/* ===== Histogramme en colonnes HTML (Analytics) — voir columnChart() dans web/charts.js ===== */
+.mk-chart-cols { margin: 8px 0 0; }
+.mk-cols-plot { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 3px; align-items: end; height: 200px; border-bottom: 1px solid var(--line); }
+.mk-col { height: 100%; padding-top: 20px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; min-width: 0; }
+.mk-col-bar { display: block; width: min(100%, 44px); min-height: 3px; background: var(--accent); border-radius: 4px 4px 0 0; transition: background 0.16s ease; }
+.mk-col:hover .mk-col-bar { background: var(--accent-dark); }
+.mk-col.is-zero .mk-col-bar { background: var(--line); }
+.mk-col-value { font-size: 0.75rem; white-space: nowrap; font-weight: 800; color: var(--primary); margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+.mk-cols-axis { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 3px; margin-top: 6px; }
+.mk-col-label { font-size: 0.78rem; color: var(--muted); white-space: nowrap; text-align: center; overflow: visible; display: flex; justify-content: center; }
+.mk-col-label:first-child { justify-content: flex-start; }
+.mk-col-label:last-child { justify-content: flex-end; }
+@media (max-width: 720px) {
+  .mk-cols-plot { height: 160px; gap: 2px; }
+  .mk-cols-axis { gap: 2px; }
+  .mk-col-label.is-minor { visibility: hidden; }
+  .mk-chart-cols.is-dense .mk-col-value { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .mk-col-bar { transition: none; } }
+
+/* Onglets sur petit écran : une seule ligne qui défile de côté, plutôt qu'un onglet orphelin sur une 2e ligne */
+@media (max-width: 720px) {
+  .mk-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .mk-tabs::-webkit-scrollbar { display: none; }
+  .mk-tab { flex-shrink: 0; white-space: nowrap; }
+}
+
+/* Chiffres clés sur petit écran : deux par ligne (six cartes empilées une à une faisaient un très long défilement) */
+@media (max-width: 600px) {
+  .mk-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .mk-stat { padding: 14px; }
+  .mk-stat-value { font-size: 1.5rem; }
+}
+
+/* =====================================================================================================
+   Composants partagés avec le site (définis dans style.css) : restylés UNIQUEMENT dans l'espace marketing
+   (portée .mk-body) — le site public, l'espace élève et l'espace formateur gardent leur apparence intacte.
+   ===================================================================================================== */
+
+/* En-tête de page : grand titre net, sous-titre discret, actions alignées à droite */
+.mk-body .mk-head { margin-bottom: 20px; align-items: flex-end; }
+.mk-body .mk-head:has(+ .mk-lead) { margin-bottom: 6px; }
+.mk-body .mk-head h1 { font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; letter-spacing: -0.025em; color: var(--mk-text); line-height: 1.15; }
+.mk-body .mk-count { font-family: var(--font-body); font-size: 0.95rem; font-weight: 600; color: var(--muted); letter-spacing: 0; vertical-align: middle; margin-left: 4px; }
+.mk-body .mk-lead { color: var(--muted); font-size: 0.98rem; margin: 0 0 24px; }
+.mk-body .mk-back { margin: 0 0 10px; }
+.mk-body .mk-back a { color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.88rem; }
+.mk-body .mk-back a:hover { color: var(--accent-dark); text-decoration: underline; }
+.mk-body .mk-h2 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; margin: 32px 0 12px; }
+
+/* Cartes : plates, filet fin, coins sobres (aucune ombre : le fond de page suffit à les détacher) */
+.mk-body .mk-panel { background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); box-shadow: none; padding: 24px; }
+.mk-body .mk-panel h2 { font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 14px; }
+.mk-body .mk-grid-2 { gap: 20px; }
+
+/* Tableaux : en-têtes discrets, lignes aérées, survol léger */
+.mk-body .mk-table-wrap { border: 1px solid var(--mk-border); border-radius: var(--mk-r); box-shadow: none; background: var(--mk-surface); }
+.mk-body .mk-table { font-size: 0.92rem; }
+.mk-body .mk-table th { background: var(--mk-surface); color: var(--muted); font-size: 0.8rem; font-weight: 700; padding: 12px 16px; border-bottom: 1px solid var(--mk-border); }
+.mk-body .mk-table td { padding: 14px 16px; border-top: 1px solid var(--mk-border); color: var(--mk-text); }
+.mk-body .mk-table tbody tr:first-child td { border-top: 0; }
+.mk-body .mk-table tbody tr:hover { background: #f8fbfd; }
+.mk-body .mk-table td a { color: var(--mk-text); font-weight: 600; text-decoration: none; }
+.mk-body .mk-table td a:hover { color: var(--accent-dark); text-decoration: underline; }
+.mk-body .mk-table td a.btn, .mk-body .mk-table td .mk-menu a { font-weight: inherit; }
+.mk-body .mk-table td a.btn:hover, .mk-body .mk-table td .mk-menu a:hover { text-decoration: none; }
+
+/* Boutons : plats, coins sobres, sans effet de soulèvement */
+.mk-body .btn { border-radius: var(--mk-r-sm); padding: 9px 18px; font-weight: 700; box-shadow: none; }
+.mk-body .btn:hover { transform: none; }
+.mk-body .btn-sm { padding: 7px 14px; font-size: 0.88rem; border-radius: var(--mk-r-sm); }
+.mk-body .btn-primary { background: var(--accent); border-color: var(--accent); box-shadow: none; }
+.mk-body .btn-primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); box-shadow: none; }
+.mk-body .btn-outline, .mk-body .btn-secondary { background: #fff; color: var(--mk-text); border: 1px solid var(--mk-border-strong); }
+.mk-body .btn-outline:hover, .mk-body .btn-secondary:hover { background: var(--mk-hover); border-color: var(--mk-text-soft); color: var(--mk-text); }
+.mk-body .btn-ghost { color: var(--accent-dark); }
+.mk-body .btn-ghost:hover { background: var(--mk-hover); color: var(--accent-dark); }
+.mk-body .icon-btn { border-radius: var(--mk-r-sm); }
+.mk-body .icon-btn:hover { background: var(--mk-hover); }
+
+/* Champs de formulaire */
+.mk-body .field-group label { color: var(--mk-text); font-weight: 700; font-size: 0.88rem; }
+.mk-body .field-hint { color: var(--muted); font-size: 0.8rem; }
+.mk-body :where(input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=url], input[type=search], input[type=datetime-local], select, textarea) { border: 1px solid var(--mk-border-strong); border-radius: var(--mk-r-sm); background-color: #fff; }
+.mk-body :where(input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=url], input[type=search], input[type=datetime-local], select, textarea):hover { border-color: var(--mk-text-soft); }
+.mk-body :where(input, select, textarea):focus { border-color: var(--accent); box-shadow: var(--ring); }
+.mk-body .seo-fieldset { border: 1px solid var(--mk-border); border-radius: var(--mk-r); }
+.mk-body .seo-fieldset legend { color: var(--mk-text); font-weight: 700; }
+
+/* Badges, puces, avertissements */
+.mk-body .badge { border-radius: var(--radius-pill); font-weight: 700; }
+.mk-body .mk-chip { border-radius: var(--radius-pill); }
+.mk-body .mk-note { border: 1px solid var(--mk-border); border-left: 4px solid var(--warning-text); border-radius: var(--mk-r); background: #fffbeb; color: var(--mk-text); padding: 12px 14px; }
+.mk-body .mk-warn { border-radius: var(--mk-r-sm); }
+.mk-body .mk-key-value { border-radius: var(--mk-r); }
+.mk-body .mk-advanced summary { color: var(--mk-text); }
+/* Titre de page même quand il n'est pas dans un .mk-head (ex. Nouvelle campagne, Nouveau contact, Import) */
+.mk-body .mk-content > h1, .mk-body .mk-content > header h1 { font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; letter-spacing: -0.025em; color: var(--mk-text); line-height: 1.15; margin: 0 0 8px; }
+.mk-body .mk-wizard-step { border-color: var(--mk-border); border-radius: var(--mk-r); background: var(--mk-surface); padding: 20px 24px 12px; }
+.mk-body .mk-wizard-step legend { font-family: var(--font-display); font-size: 1.05rem; }
+
+/* ===== Campagne en brouillon : liste de contrôle à la Mailchimp ===== */
+.mk-builder-head { align-items: center; }
+.mk-builder-title { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
+.mk-builder-title h1 { margin: 0; }
+.mk-cl { list-style: none; margin: 0 0 32px; padding: 0; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); }
+.mk-cl-row { display: grid; grid-template-columns: minmax(0, 1fr); border-top: 1px solid var(--mk-border); }
+.mk-cl-row:first-child { border-top: 0; }
+.mk-cl-row:has(.mk-cl-thumb) { grid-template-columns: minmax(0, 1fr) 220px; }
+.mk-cl-item { min-width: 0; }
+.mk-cl-summary { display: flex; align-items: flex-start; gap: 16px; padding: 22px 24px; list-style: none; cursor: default; }
+details.mk-cl-item > .mk-cl-summary { cursor: pointer; }
+details.mk-cl-item > .mk-cl-summary::-webkit-details-marker { display: none; }
+details.mk-cl-item > .mk-cl-summary:hover .mk-cl-edit { background: var(--mk-hover); border-color: var(--mk-text-soft); }
+.mk-cl-mark { flex: none; display: inline-flex; color: var(--mk-border-strong); margin-top: 1px; }
+.mk-cl-row.is-done .mk-cl-mark { color: var(--success); }
+.mk-cl-row.is-error .mk-cl-mark { color: var(--danger); }
+.mk-cl-row.is-warn .mk-cl-mark { color: var(--warning-text); }
+.mk-cl-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; overflow-wrap: anywhere; }
+.mk-cl-title { font-family: var(--font-display); font-size: 1.12rem; font-weight: 700; color: var(--mk-text); letter-spacing: -0.01em; }
+.mk-cl-desc { color: var(--mk-text-soft); font-size: 0.92rem; }
+.mk-cl-error { color: #a50e18; font-size: 0.9rem; font-weight: 600; }
+.mk-cl-warn { color: var(--warning-text); font-size: 0.9rem; }
+.mk-cl-edit { flex: none; align-self: center; }
+details.mk-cl-item[open] > .mk-cl-summary .mk-cl-edit { visibility: hidden; }
+.mk-cl-panel { padding: 0 24px 22px 62px; max-width: 760px; }
+.mk-cl-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.mk-cl-issues { margin: 6px 0 0; padding-left: 18px; }
+/* Vignette du contenu : l'e-mail réel réduit (document isolé, sans script) */
+.mk-cl-thumb { position: relative; margin: 16px 24px 16px 0; height: 150px; border: 1px solid var(--mk-border); border-radius: var(--mk-r-sm); overflow: hidden; background: #f3f6f9; }
+.mk-cl-thumb iframe { position: absolute; top: 0; left: 0; width: 600px; height: 460px; border: 0; transform: scale(0.325); transform-origin: top left; pointer-events: none; background: #fff; }
+@media (max-width: 720px) {
+  .mk-cl-row:has(.mk-cl-thumb) { grid-template-columns: minmax(0, 1fr); }
+  .mk-cl-thumb { display: none; }
+  .mk-cl-summary { padding: 16px; gap: 12px; flex-wrap: wrap; }
+  /* icône et texte côte à côte ; le bouton passe dessous, aligné sur le texte */
+  .mk-cl-text { flex: 1 1 calc(100% - 34px); }
+  .mk-cl-edit { margin-left: 34px; }
+  .mk-cl-panel { padding: 0 16px 16px; }
+}
+
+/* Création d'une campagne : une seule carte centrée (à la Mailchimp) */
+.mk-create-page { display: flex; justify-content: center; padding: 8px 0 32px; }
+.mk-create-card { width: min(640px, 100%); background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); padding: 36px 40px; }
+.mk-create-card-icon { display: inline-flex; padding: 12px; border-radius: 50%; background: var(--accent-light); color: var(--accent); margin-bottom: 12px; }
+.mk-body .mk-create-card h1 { font-family: var(--font-display); font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 8px; }
+.mk-create-card .mk-form { max-width: none; }
+@media (max-width: 720px) { .mk-create-card { padding: 24px 20px; } }
+.mk-row-actions .mk-dropdown { display: inline-block; vertical-align: middle; margin-left: 4px; }
+.mk-row-actions .btn { vertical-align: middle; }
+.mk-nowrap { white-space: nowrap; }
+/* Date et heure : même gabarit que les autres champs (style.css ne couvre pas datetime-local) */
+.mk-body input[type=datetime-local] { width: 100%; min-height: 44px; padding: 10px 12px; font: inherit; color: var(--mk-text); }
+.mk-cl-tested { color: var(--success-dark); font-weight: 600; }

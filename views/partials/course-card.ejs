@@ -1,0 +1,42 @@
+<a href="/cours/<%= course.slug %>" class="course-card">
+  <div class="course-thumb">
+    <% if (course.thumbnail_path) { %>
+      <img src="<%= course.thumbnail_path %>" alt="" loading="lazy" decoding="async" width="640" height="360">
+    <% } else { %>
+      <%- icon('book', { size: 36 }) %>
+    <% } %>
+    <div class="course-badges">
+      <% if (!course.price_cents) { %><span class="badge badge-success">Gratuit</span><% } %>
+      <% if (course.student_count >= 5) { %><span class="badge badge-popular">Populaire</span><% } %>
+      <% if (isNewCourse(course.created_at)) { %><span class="badge badge-new">Nouveau</span><% } %>
+    </div>
+  </div>
+  <div class="course-body">
+    <span class="course-category"><%= course.category %></span>
+    <h3 class="course-title"><%= course.title %></h3>
+    <span class="course-instructor">Par <%= course.instructor_name %></span>
+    <% if (course.review_count > 0) { %>
+      <span class="course-rating">
+        <strong><%= Number(course.avg_rating).toFixed(1) %></strong>
+        <%- starRow(course.avg_rating, 13) %>
+        <span class="count">(<%= course.review_count %>)</span>
+      </span>
+    <% } else { %>
+      <span class="course-rating">
+        <%- starRow(0, 13) %>
+        <span class="count">Pas encore noté</span>
+      </span>
+    <% } %>
+    <div class="course-meta-row">
+      <span class="meta-item"><%- icon('users', { size: 14 }) %> <%= course.student_count %></span>
+      <span class="meta-item"><%- icon('video', { size: 14 }) %> <%= course.lesson_count %> sous-chapitre<%= course.lesson_count > 1 ? "s" : "" %></span>
+      <% if (course.total_minutes) { %>
+        <span class="meta-item"><%- icon('clock', { size: 14 }) %> <%= formatDuration(course.total_minutes) %></span>
+      <% } %>
+    </div>
+    <div class="course-footer">
+      <span class="course-price <%= course.price_cents ? '' : 'is-free' %>"><%= formatPrice(course.price_cents) %></span>
+      <span class="badge badge-outline"><%= levelLabel(course.level) %></span>
+    </div>
+  </div>
+</a>

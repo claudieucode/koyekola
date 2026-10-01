@@ -1,0 +1,31 @@
+<%- include("../partials/header", { title, seo: { noindex: true, rawTitle: title + " · KOYEKOLA" } }) %>
+  <div class="auth-page">
+    <div class="auth-card">
+      <h1>Mes préférences</h1>
+      <p class="subtitle">Adresse : <strong><%= masked %></strong></p>
+      <% if (notice) { %><p class="form-success" role="status"><%= notice %></p><% } %>
+
+      <% if (blocked) { %>
+        <p class="form-error">Cette adresse est bloquée (rebond, plainte ou blocage) : elle ne reçoit aucun e-mail marketing.</p>
+      <% } else if (contactStatus === "unsubscribed") { %>
+        <p>Vous êtes désinscrit(e) : vous ne recevez aucun e-mail marketing.</p>
+        <% if (canResubscribe) { %>
+          <form method="post"><input type="hidden" name="action" value="resubscribe"><button type="submit" class="btn btn-primary">Me réabonner</button></form>
+        <% } %>
+      <% } else { %>
+        <form method="post">
+          <input type="hidden" name="action" value="save">
+          <% if (!categories.length) { %><p class="field-hint">Aucune catégorie à choisir pour l'instant.</p><% } %>
+          <% categories.forEach((c) => { %>
+            <div class="field-group">
+              <label class="checkbox-row optin-row"><input type="checkbox" name="cat_<%= c.key %>" value="on" <%= c.subscribed ? "checked" : "" %>>
+                <span><strong><%= c.label %></strong><% if (c.description) { %><br><span class="field-hint"><%= c.description %></span><% } %></span></label>
+            </div>
+          <% }) %>
+          <% if (categories.length) { %><button type="submit" class="btn btn-primary btn-block">Enregistrer mes préférences</button><% } %>
+        </form>
+        <form method="post" class="mk-unsub-all"><input type="hidden" name="action" value="unsubscribe"><button type="submit" class="btn btn-outline btn-block">Me désinscrire de tout</button></form>
+      <% } %>
+    </div>
+  </div>
+<%- include("../partials/footer") %>

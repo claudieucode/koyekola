@@ -1,0 +1,55 @@
+<%- include("partials/top", { title, active }) %>
+    <p class="mk-back"><a href="/marketing/listes">← Listes</a></p>
+    <div class="mk-head">
+      <h1><%= list.name %> <span class="mk-count"><%= mkh.fmt(count) %></span></h1>
+      <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/contacts?liste=<%= list.id %>">Voir dans Contacts</a></div>
+    </div>
+    <% if (list.description) { %><p class="mk-lead"><%= list.description %></p><% } %>
+
+    <div class="mk-stats">
+      <div class="mk-stat"><span class="mk-stat-label">Membres</span><span class="mk-stat-value"><%= mkh.fmt(count) %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Joignables</span><span class="mk-stat-value"><%= mkh.fmt(sendableCount) %></span><span class="mk-stat-hint">consentement prouvé, non désinscrits de cette liste</span></div>
+    </div>
+
+    <% if (mk.can("lists.write")) { %>
+      <section class="mk-panel">
+        <h2>Ajouter des contacts</h2>
+        <form action="/marketing/listes/<%= list.id %>/ajouter" method="post" class="mk-form">
+          <div class="field-group"><label for="a-emails">Adresses e-mail (une par ligne)</label>
+            <textarea id="a-emails" name="emails" rows="4" required placeholder="marie@exemple.fr"></textarea>
+            <span class="field-hint">Seuls les contacts existants sont ajoutés ; les autres sont signalés. Cela ne donne aucun consentement.</span></div>
+          <button type="submit" class="btn btn-primary btn-sm">Ajouter à la liste</button>
+        </form>
+      </section>
+    <% } %>
+
+    <% if (!rows.length) { %>
+      <div class="mk-empty"><%- icon("users", { size: 32 }) %><h2>Liste vide</h2><p>Aucun contact n'est dans cette liste.</p></div>
+    <% } else { %>
+      <div class="mk-table-wrap">
+        <table class="mk-table mk-datatable">
+          <caption class="sr-only">Membres de la liste</caption>
+          <thead><tr><th scope="col">E-mail</th><th scope="col">Nom</th><th scope="col">Statut</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+          <tbody>
+            <% rows.forEach((c) => { %>
+              <tr>
+                <td class="mk-cell-email" data-label="E-mail"><a href="/marketing/contacts/<%= c.id %>"><%= c.email %></a></td>
+                <td data-label="Nom"><%= mkh.fullName(c) %></td>
+                <td data-label="Statut"><span class="mk-status <%= mkh.contactStatus(c.status).cls %>"><%= mkh.statusLabel(c.status) %></span></td>
+                <td data-label="Action"><% if (mk.can("lists.write")) { %><form action="/marketing/listes/<%= list.id %>/retirer" method="post" class="mk-inline"><input type="hidden" name="contact_id" value="<%= c.id %>"><button type="submit" class="btn btn-outline btn-sm" aria-label="Retirer <%= c.email %> de la liste">Retirer</button></form><% } %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% if (nextUrl) { %><p class="mk-more"><a class="btn btn-outline" href="<%= nextUrl %>">Page suivante</a></p><% } %>
+    <% } %>
+
+    <% if (mk.can("lists.write")) { %>
+      <section class="mk-panel mk-danger">
+        <h2>Supprimer la liste</h2>
+        <p class="field-hint">Les contacts ne sont pas supprimés.</p>
+        <form action="/marketing/listes/<%= list.id %>/supprimer" method="post"><button type="submit" class="btn btn-danger btn-sm" data-mk-confirm="La liste « <%= list.name %> » sera supprimée. Les contacts ne sont pas supprimés." data-mk-confirm-title="Supprimer cette liste ?" data-mk-confirm-ok="Supprimer">Supprimer la liste</button></form>
+      </section>
+    <% } %>
+<%- include("partials/bottom") %>

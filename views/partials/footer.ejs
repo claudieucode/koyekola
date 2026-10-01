@@ -1,0 +1,36 @@
+  </main>
+
+  <footer class="site-footer">
+    <div class="container-wide footer-grid">
+      <div class="footer-brand">
+        <p class="logo">KOYEKOLA</p>
+        <p class="footer-tagline">Mes formations en ligne : apprenez à votre rythme, où que vous soyez.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Découvrir</h4>
+        <a href="/catalogue">Toutes les formations</a>
+        <a href="/inscription">Créer un compte</a>
+      </div>
+      <div class="footer-col">
+        <h4>Catégories</h4>
+        <% navCategories.slice(0, 6).forEach((cat) => { %><a href="/categorie/<%= slugify(cat) %>"><%= cat %></a><% }) %>
+      </div>
+      <div class="footer-col">
+        <h4>Informations</h4>
+        <a href="/a-propos">À propos</a>
+        <a href="/blog">Blog</a>
+        <a href="/faq">Questions fréquentes</a>
+        <a href="/contact">Contact</a>
+      </div>
+    </div>
+    <div class="container-wide footer-bottom">
+      <span>KOYEKOLA &copy; 2026 — projet pédagogique, aucun paiement réel n'est traité.</span>
+    </div>
+  </footer>
+
+  <div class="mobile-nav-overlay" id="mobileNavOverlay" hidden></div>
+
+  <script src="<%= asset('/js/main.js') %>" defer></script>
+  <script src="<%= asset('/js/popup.js') %>" defer></script>
+</body>
+</html>

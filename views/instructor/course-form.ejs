@@ -1,0 +1,125 @@
+<%
+  const categories = ["Développement", "Design", "Business", "Marketing", "Musique", "Photographie", "Bien-être", "Langues", "Autre"];
+  const isEdit = Boolean(course && course.id);
+%>
+<%- include("../partials/header", { title: isEdit ? "Modifier la formation" : "Nouvelle formation" }) %>
+
+  <div class="container-wide">
+    <h1 style="margin-top:36px;"><%= isEdit ? "Modifier la formation" : "Créer une nouvelle formation" %></h1>
+
+    <% if (error) { %><p class="form-error"><%= error %></p><% } %>
+    <% if (typeof saved !== "undefined" && saved) { %><p class="form-success">Modifications enregistrées.</p><% } %>
+
+    <form action="<%= isEdit ? `/formateur/cours/${course.id}/modifier` : "/formateur/cours/nouveau" %>" method="post" enctype="multipart/form-data" class="form-layout">
+      <div>
+        <div class="content-card">
+          <div class="field-group">
+            <label for="f-course-form-1">Titre de la formation</label>
+            <input id="f-course-form-1" type="text" name="title" value="<%= course && course.title || '' %>" required maxlength="120" placeholder="Ex. Le guide complet de JavaScript moderne">
+          </div>
+          <div class="field-group">
+            <label for="f-course-form-2">Sous-titre <span class="field-hint">(une phrase d'accroche)</span></label>
+            <input id="f-course-form-2" type="text" name="subtitle" value="<%= course && course.subtitle || '' %>" maxlength="180">
+          </div>
+          <%
+            // Les cinq textes de la formation : chacun est un éditeur de texte riche (public/js/course-editor.js).
+            // Le <textarea> reste dans la page : sans JavaScript, le formulaire fonctionne comme avant.
+            const editors = [
+              { name: "description", id: "f-description", variant: "full", label: "Description", hint: "(mise en forme avec la barre d'outils)", placeholder: "Présentez votre formation, ses objectifs et les résultats que les apprenants pourront obtenir...", rows: 8 },
+              { name: "objectives", id: "f-objectives", variant: "list", label: "Ce que vous apprendrez", hint: "(un objectif par ligne, affichés avec une coche sur la page de la formation)", placeholder: "Ajoutez un objectif par ligne...", rows: 5 },
+              { name: "prerequisites", id: "f-prerequisites", variant: "list", label: "Prérequis", hint: "(un par ligne ; laissez vide s'il n'y en a pas)", placeholder: "Ajoutez un prérequis par ligne...", rows: 3 },
+              { name: "target_audience", id: "f-audience", variant: "list", label: "À qui s'adresse cette formation ?", hint: "(un profil par ligne : écrivez son titre en gras, puis sa description)", placeholder: "Ajoutez un profil par ligne...", rows: 3 },
+              { name: "skills", id: "f-skills", variant: "list", label: "Compétences acquises", hint: "(une par ligne, reprises dans le programme PDF)", placeholder: "Ajoutez une compétence par ligne...", rows: 3 },
+            ];
+            const isRichCourse = Boolean(course) && String(course.rich_text) === "1";
+          %>
+          <% if (isRichCourse) { %><input type="hidden" name="rich_text" value="1"><% } %>
+          <% editors.forEach((ed) => { %>
+            <div class="field-group">
+              <label for="<%= ed.id %>" id="<%= ed.id %>-label"><%= ed.label %> <span class="field-hint"><%= ed.hint %></span></label>
+              <div class="rich-field" data-rich-editor="<%= ed.name %>" data-variant="<%= ed.variant %>" data-placeholder="<%= ed.placeholder %>">
+                <textarea id="<%= ed.id %>" name="<%= ed.name %>" rows="<%= ed.rows %>" placeholder="<%= ed.placeholder %>"><%= course && course[ed.name] || '' %></textarea>
+                <template data-rich-source="<%= ed.name %>">
+<%- sources[ed.name] %>
+                </template>
+              </div>
+            </div>
+          <% }) %>
+          <div class="field-group">
+            <label for="f-intro">Vidéo de présentation <span class="field-hint">(lien YouTube, Vimeo ou fichier .mp4 ; un lien invalide est ignoré)</span></label>
+            <input id="f-intro" type="url" name="intro_video" value="<%= course && course.intro_video || '' %>" placeholder="https://www.youtube.com/watch?v=…">
+          </div>
+          <fieldset class="seo-fieldset">
+            <legend>Référencement (Google)</legend>
+            <div class="field-group">
+              <label for="f-seo-title">Titre pour Google <span class="field-hint">(70 caractères au plus ; sinon le titre de la formation est utilisé)</span></label>
+              <input id="f-seo-title" type="text" name="seo_title" maxlength="70" value="<%= course && course.seo_title || '' %>">
+            </div>
+            <div class="field-group">
+              <label for="f-seo-desc">Description pour Google <span class="field-hint">(160 caractères au plus ; sinon elle est tirée de votre sous-titre)</span></label>
+              <textarea id="f-seo-desc" name="seo_description" rows="3" maxlength="160"><%= course && course.seo_description || '' %></textarea>
+            </div>
+            <% if (isEdit) { %>
+              <div class="field-group">
+                <label for="f-slug">Adresse de la page <span class="field-hint">(lettres, chiffres et tirets ; l'ancienne adresse redirige automatiquement vers la nouvelle)</span></label>
+                <input id="f-slug" type="text" name="slug" maxlength="120" value="<%= course.slug %>">
+              </div>
+            <% } %>
+          </fieldset>
+          <div class="field-row">
+            <div class="field-group">
+              <label for="f-course-form-5">Catégorie</label>
+              <select id="f-course-form-5" name="category">
+                <% categories.forEach(cat => { %>
+                  <option value="<%= cat %>" <%= course && course.category === cat ? "selected" : "" %>><%= cat %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="field-group">
+              <label for="f-course-form-6">Niveau</label>
+              <select id="f-course-form-6" name="level">
+                <option value="debutant" <%= (!course || course.level === "debutant") ? "selected" : "" %>>Débutant</option>
+                <option value="intermediaire" <%= course && course.level === "intermediaire" ? "selected" : "" %>>Intermédiaire</option>
+                <option value="avance" <%= course && course.level === "avance" ? "selected" : "" %>>Avancé</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label for="f-language">Langue</label>
+              <select id="f-language" name="language">
+                <% const currentLanguage = (course && course.language) || "fr"; %>
+                <% Object.entries(LANGUAGES).forEach(([code, name]) => { %>
+                  <option value="<%= code %>"<%= currentLanguage === code ? " selected" : "" %>><%= name %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="field-group">
+              <label for="f-course-form-7">Prix (€) <span class="field-hint">0 = gratuit</span></label>
+              <input id="f-course-form-7" type="number" name="price" min="0" step="0.01" value="<%= course ? (course.price_cents / 100).toFixed(2) : "19.99" %>">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="content-card thumbnail-upload">
+          <label style="font-weight:700;font-size:0.85rem;" for="f-course-form-8">Miniature</label>
+          <div class="thumbnail-preview">
+            <% if (course && course.thumbnail_path) { %>
+              <img src="<%= course.thumbnail_path %>" alt="" data-thumbnail-preview>
+            <% } else { %>
+              <span data-thumbnail-preview-text>1280×720 recommandé</span>
+              <img data-thumbnail-preview alt="Aperçu de la miniature" hidden>
+            <% } %>
+          </div>
+          <input id="f-course-form-8" type="file" name="thumbnail" accept="image/*" data-thumbnail-input>
+          <button type="submit" class="btn btn-primary btn-block"><%= isEdit ? "Enregistrer les modifications" : "Créer la formation" %></button>
+          <% if (isEdit) { %>
+            <a href="/formateur/cours/<%= course.id %>/curriculum" class="btn btn-outline btn-block">Gérer les chapitres</a>
+          <% } %>
+        </div>
+      </div>
+    </form>
+  </div>
+
+<%- include("../partials/footer") %>
+<script src="<%= asset('/js/course-editor.js') %>" defer></script>

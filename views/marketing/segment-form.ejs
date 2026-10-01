@@ -1,0 +1,75 @@
+<%- include("partials/top", { title, active }) %>
+    <p class="mk-back"><a href="/marketing/segments">← Segments</a></p>
+    <div class="mk-head">
+      <h1><%= segment ? "Segment : " + segment.name : "Nouveau segment" %></h1>
+      <% if (segment) { %>
+        <div class="mk-actions">
+          <a class="btn btn-outline btn-sm" href="/marketing/contacts?segment=<%= segment.id %>">Voir les contacts</a>
+          <% if (!readOnly) { %><form action="/marketing/segments/<%= segment.id %>/dupliquer" method="post" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form><% } %>
+        </div>
+      <% } %>
+    </div>
+    <p class="mk-lead">Choisissez les critères : le nombre de contacts se met à jour tout seul. Vérifiez le résultat avant d'enregistrer.</p>
+
+    <form action="<%= segment ? "/marketing/segments/" + segment.id : "/marketing/segments" %>" method="post" class="mk-form-wide" id="mk-segment-form">
+      <div class="mk-segment-grid">
+        <div class="mk-segment-main">
+          <div class="field-row">
+            <div class="field-group"><label for="sg-name">Nom</label><input id="sg-name" type="text" name="name" value="<%= initial.name %>" maxlength="100" required <%= readOnly ? "disabled" : "" %>></div>
+            <div class="field-group"><label for="sg-desc">Description</label><input id="sg-desc" type="text" name="description" value="<%= initial.description %>" maxlength="500" <%= readOnly ? "disabled" : "" %>></div>
+          </div>
+
+          <section class="mk-panel" aria-labelledby="crit-title">
+            <h2 id="crit-title">Critères</h2>
+            <div id="mk-builder" data-readonly="<%= readOnly ? "1" : "0" %>"><noscript>Le constructeur visuel demande JavaScript : utilisez le mode avancé ci-dessous.</noscript></div>
+            <details class="mk-advanced">
+              <summary>Mode avancé (JSON : groupes imbriqués, NON sur un groupe)</summary>
+              <label for="mk-definition" class="sr-only">Définition du segment (JSON)</label>
+              <textarea id="mk-definition" name="definition" rows="10" spellcheck="false" <%= readOnly ? "readonly" : "" %>><%= initial.definition %></textarea>
+              <p class="field-hint">Grammaire : <code>{"op":"and","rules":[{"field":"country","cmp":"eq","value":"FR"}]}</code>. Un groupe vide est refusé.</p>
+            </details>
+          </section>
+
+          <% if (!readOnly) { %>
+            <div class="mk-actions"><button type="submit" class="btn btn-primary">Enregistrer le segment</button></div>
+          <% } %>
+        </div>
+
+        <aside class="mk-panel mk-live" aria-labelledby="live-title">
+          <h2 id="live-title">Aperçu en direct</h2>
+          <p id="mk-summary" class="mk-summary">Ajoutez un critère pour voir le résumé.</p>
+          <div id="mk-live-count" class="mk-live-count" aria-live="polite"></div>
+          <div id="mk-preview" class="mk-preview" aria-live="polite"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="mk-preview-btn">Actualiser l'aperçu</button>
+        </aside>
+      </div>
+    </form>
+
+    <% if (segment) { %>
+      <section class="mk-panel" aria-labelledby="use-title">
+        <h2 id="use-title">Utilisation</h2>
+        <% if (!usage.length) { %>
+          <p>Aucune campagne ne l'utilise pour l'instant.</p>
+        <% } else { %>
+          <p>Utilisé par <%= usage.length %> campagne<%= usage.length > 1 ? "s" : "" %> :</p>
+          <ul class="mk-status-list">
+            <% usage.forEach((u) => { const st = mkh.campaignStatus(u.status); %>
+              <li><% if (mk.can("campaigns.read")) { %><a href="/marketing/campagnes/<%= u.id %>"><%= u.name %></a><% } else { %><%= u.name %><% } %> <span class="mk-status <%= st.cls %>"><%= st.label %></span></li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </section>
+      <% if (!readOnly) { %>
+        <section class="mk-panel mk-danger">
+          <h2>Supprimer le segment</h2>
+          <p class="field-hint">Les contacts ne sont pas touchés.</p>
+          <form action="/marketing/segments/<%= segment.id %>/supprimer" method="post">
+            <button type="submit" class="btn btn-danger btn-sm" data-mk-confirm="<%= usage.length ? "Ce segment est utilisé par " + usage.length + " campagne" + (usage.length > 1 ? "s" : "") + " : elles ne pourront plus cibler ces contacts. Les contacts ne sont pas touchés." : "Aucune campagne ne l'utilise. Les contacts ne sont pas touchés." %>" data-mk-confirm-title="Supprimer ce segment ?" data-mk-confirm-ok="Supprimer">Supprimer</button>
+          </form>
+        </section>
+      <% } %>
+    <% } %>
+
+    <script type="application/json" id="mk-catalog"><%- catalog %></script>
+    <script src="<%= asset('/js/marketing-segments.js') %>" defer></script>
+<%- include("partials/bottom") %>

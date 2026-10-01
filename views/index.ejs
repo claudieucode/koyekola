@@ -1,0 +1,97 @@
+<%- include("partials/header", { title: "Accueil" }) %>
+
+  <section class="hero" data-hero>
+    <div class="container-wide">
+      <div class="hero-stage">
+        <% if (heroImages.length) { %>
+          <%# Diaporama décoratif : seule la 1re photo est chargée d'emblée, les autres après le chargement de la page (main.js) %>
+          <div class="hero-slides" aria-hidden="true" data-hero-slides>
+            <% heroImages.forEach((img, i) => { %>
+              <% if (i === 0) { %>
+                <img class="hero-slide is-active" src="<%= img.src %>" srcset="<%= img.srcset %>" sizes="100vw" alt="" width="1600" height="1067" fetchpriority="high" decoding="async">
+              <% } else { %>
+                <img class="hero-slide" data-src="<%= img.src %>" data-srcset="<%= img.srcset %>" sizes="100vw" alt="" width="1600" height="1067" decoding="async">
+              <% } %>
+            <% }) %>
+          </div>
+        <% } %>
+        <div class="hero-inner">
+          <div class="hero-text">
+            <h1>Apprenez les compétences dont vous avez besoin pour avancer.</h1>
+            <p class="lead">Toutes mes formations vidéo, réunies au même endroit. Suivez un cours où que vous soyez, à vie, sur tous vos appareils.</p>
+            <form action="/catalogue" method="get" class="hero-search" role="search">
+              <input type="text" name="q" aria-label="Rechercher une formation" placeholder="Que voulez-vous apprendre ?">
+              <button type="submit" class="btn btn-primary btn-lg">Rechercher</button>
+            </form>
+            <% if (categories.length) { %>
+              <nav class="hero-chips" aria-label="Catégories à explorer">
+                <span>Explorer</span>
+                <% categories.slice(0, 4).forEach((c) => { %><a class="chip" href="/categorie/<%= slugify(c.category) %>"><%= c.category %></a><% }) %>
+              </nav>
+            <% } %>
+          </div>
+        </div>
+        <% if (heroImages.length > 1) { %>
+          <button type="button" class="hero-pause" aria-label="Mettre en pause le diaporama" aria-pressed="false" data-hero-pause>
+            <span class="hero-pause-icon"><%- icon('pause', { size: 16 }) %></span><span class="hero-play-icon"><%- icon('play', { size: 16 }) %></span>
+          </button>
+        <% } %>
+      </div>
+    </div>
+    <div class="container-wide hero-stats-wrap">
+      <div class="hero-stats">
+        <div class="hero-stat"><strong><%= stats.courseCount %></strong><span>formation<%= stats.courseCount > 1 ? "s" : "" %> publiée<%= stats.courseCount > 1 ? "s" : "" %></span></div>
+        <div class="hero-stat"><strong><%= stats.studentCount %></strong><span>inscription<%= stats.studentCount > 1 ? "s" : "" %></span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="category-strip">
+    <div class="container-wide">
+      <nav class="category-row" aria-label="Catégories">
+        <a href="/catalogue" class="category-pill">Toutes les catégories</a>
+        <% categories.forEach(c => { %>
+          <a href="/categorie/<%= slugify(c.category) %>" class="category-pill"><%= c.category %> · <%= c.count %></a>
+        <% }) %>
+      </nav>
+    </div>
+  </div>
+
+  <section class="container-wide section">
+    <div class="section-header">
+      <h2>Formations populaires</h2>
+      <a href="/catalogue?sort=popular" class="see-all">Voir tout <%- icon('arrowRight', { size: 14 }) %></a>
+    </div>
+    <% if (featured.length === 0) { %>
+      <p class="empty-state">Aucune formation publiée pour l'instant.</p>
+    <% } else { %>
+      <div class="grid-courses">
+        <% featured.forEach(course => { %><%- include("partials/course-card", { course }) %><% }) %>
+      </div>
+    <% } %>
+  </section>
+
+  <section class="container-wide section section-tight">
+    <div class="section-header">
+      <h2>Nouveautés</h2>
+      <a href="/catalogue?sort=recent" class="see-all">Voir tout <%- icon('arrowRight', { size: 14 }) %></a>
+    </div>
+    <div class="grid-courses">
+      <% recent.forEach(course => { %><%- include("partials/course-card", { course }) %><% }) %>
+    </div>
+  </section>
+
+  <% if (creator) { %>
+    <section class="container-wide section">
+      <div class="creator-band">
+        <span class="avatar avatar-lg" style="background:<%= avatarColor(creator.username) %>"><%= creator.username.slice(0,1).toUpperCase() %></span>
+        <div class="creator-copy">
+          <h2>À propos de <%= creator.username %></h2>
+          <p><%= creator.bio || "Créateur de formations sur KOYEKOLA." %></p>
+        </div>
+        <a href="/catalogue" class="btn btn-primary btn-lg">Voir mes formations</a>
+      </div>
+    </section>
+  <% } %>
+
+<%- include("partials/footer") %>

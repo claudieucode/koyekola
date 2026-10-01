@@ -1,0 +1,13 @@
+<%- include("partials/header", { title: "Formations " + category }) %>
+
+  <div class="container-wide category-page">
+    <%- include("partials/breadcrumb", { crumbs }) %>
+    <h1>Formations <%= category %></h1>
+    <p class="category-lead"><%= courses.length %> formation<%= courses.length > 1 ? "s" : "" %> à suivre à votre rythme, avec quiz, ressources et certificat.</p>
+    <div class="grid-courses">
+      <% courses.forEach((course) => { %><%- include("partials/course-card", { course }) %><% }) %>
+    </div>
+    <p style="margin-top:28px;"><a href="/catalogue" class="btn btn-outline">Voir toutes les formations</a></p>
+  </div>
+
+<%- include("partials/footer") %>

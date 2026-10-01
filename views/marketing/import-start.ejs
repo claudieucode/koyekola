@@ -1,0 +1,46 @@
+<%- include("partials/top", { title, active }) %>
+    <div class="mk-head"><h1>Importer des contacts</h1></div>
+    <p class="mk-lead">Envoyez un fichier <strong>CSV</strong> (depuis Excel : « Enregistrer sous » → CSV). Les fichiers Excel .xlsx ne sont pas pris en charge. Taille maximale : <%= maxMb %> Mo, 100 000 lignes.</p>
+
+    <section class="mk-panel">
+      <h2>Ce qu'il faut savoir avant d'importer</h2>
+      <ul class="mk-status-list">
+        <li>Un import ne <strong>donne aucun consentement</strong> : par défaut, les contacts importés ne pourront recevoir aucun e-mail marketing.</li>
+        <li>Vous pouvez déclarer un consentement (avec une preuve écrite) : il ne réabonne jamais une personne désinscrite ni une adresse bloquée.</li>
+        <li>Rien n'est écrit avant votre validation : vous verrez d'abord un aperçu, puis une analyse (doublons, adresses invalides).</li>
+      </ul>
+    </section>
+
+    <form action="/marketing/importer" method="post" enctype="multipart/form-data" class="mk-form">
+      <div class="field-group">
+        <label for="imp-file" class="sr-only">Fichier CSV</label>
+        <div class="mk-dropzone" data-mk-dropzone data-mk-dropzone-max-mb="<%= maxMb %>">
+          <div data-mk-dropzone-empty>
+            <%- icon("upload", { size: 28 }) %>
+            <p>Glissez votre fichier CSV ici, ou <span class="mk-dropzone-browse">parcourez vos fichiers</span></p>
+            <p class="field-hint">CSV uniquement · <%= maxMb %> Mo maximum</p>
+          </div>
+          <div class="mk-dropzone-file" data-mk-dropzone-file hidden>
+            <%- icon("fileText", { size: 24 }) %>
+            <div><strong data-mk-dropzone-name></strong><span class="field-hint" data-mk-dropzone-size></span></div>
+            <button type="button" class="icon-btn" data-mk-dropzone-clear aria-label="Retirer le fichier"><%- icon("close", { size: 18 }) %></button>
+          </div>
+          <input id="imp-file" type="file" name="file" accept=".csv,text/csv,text/plain" required data-mk-dropzone-input>
+        </div>
+        <p class="field-error" data-mk-dropzone-error hidden></p>
+      </div>
+      <button type="submit" class="btn btn-primary">Lire le fichier</button>
+    </form>
+
+    <% if (imports.length) { %>
+      <h2 class="mk-h2">Imports précédents</h2>
+      <div class="mk-table-wrap"><table class="mk-table">
+        <caption class="sr-only">Imports précédents</caption>
+        <thead><tr><th scope="col">Fichier</th><th scope="col">Lignes</th><th scope="col">État</th><th scope="col">Date</th></tr></thead>
+        <tbody><% imports.forEach((i) => { %>
+          <tr><td><a href="/marketing/importer/<%= i.id %>"><%= i.filename %></a></td><td><%= mkh.fmt(i.total_rows) %></td>
+            <td><%= { previewed: "à configurer", running: "en cours", done: "terminé", failed: "en échec" }[i.status] %></td><td><%= mkh.fdate(i.created_at) %></td></tr>
+        <% }) %></tbody>
+      </table></div>
+    <% } %>
+<%- include("partials/bottom") %>

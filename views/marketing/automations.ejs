@@ -1,0 +1,53 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const canWrite = mk.can("automations.write");
+%>
+    <div class="mk-head"><h1>Automatisations</h1></div>
+    <p class="mk-lead">Un scénario réagit à un événement (compte créé, achat, formation terminée…) et enchaîne des étapes : e-mail, attente, condition, étiquette, liste. Seuls les événements <strong>futurs</strong> les déclenchent.</p>
+    <%- include("partials/worker-note", { workerOn, consequence: "aucun scénario ne s'exécutera tant qu'il n'est pas rétabli" }) %>
+
+    <% if (!automations.length) { %>
+      <div class="mk-empty">
+        <%- icon("zap", { size: 32 }) %>
+        <h2>Aucun scénario</h2>
+        <p>Créez par exemple « Bienvenue après inscription » (transactionnel) ou « Suite après une formation terminée » (marketing).</p>
+        <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un scénario</button></div><% } %>
+      </div>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table">
+        <caption class="sr-only">Scénarios</caption>
+        <thead><tr><th scope="col">Nom</th><th scope="col">Type</th><th scope="col">Déclencheur</th><th scope="col">État</th><th scope="col">Étapes</th><th scope="col">Passages</th></tr></thead>
+        <tbody><% automations.forEach((a) => { const st = STATUS[a.status]; %>
+          <tr><td><a href="/marketing/automatisations/<%= a.id %>"><%= a.name %></a></td><td><%= a.kind === "marketing" ? "Marketing" : "Transactionnel" %></td>
+            <td><%= triggers[a.trigger_event] ? triggers[a.trigger_event].label : a.trigger_event %></td>
+            <td><span class="badge <%= st[1] %>"><%= st[0] %></span></td><td><%= a.stepCount %></td><td><%= mkh.fmt(a.run_count) %> (<%= a.running_count %> en cours)</td></tr>
+        <% }) %></tbody>
+      </table></div>
+    <% } %>
+
+    <% if (canWrite) { %>
+      <dialog class="mk-dialog mk-modal" id="nouveau" data-mk-modal data-mk-modal-hash="nouveau" aria-labelledby="na-title">
+        <form action="/marketing/automatisations" method="post">
+          <div class="mk-dialog-body">
+            <h2 id="na-title">Nouveau scénario</h2>
+            <p>Choisissez l'événement qui le déclenche ; les étapes (e-mail, attente, condition…) se construisent ensuite dans l'éditeur.</p>
+            <div class="field-group"><label for="a-name">Nom *</label><input id="a-name" type="text" name="name" maxlength="100" required placeholder="Bienvenue après inscription" data-mk-required-message="Le nom du scénario est obligatoire."></div>
+            <div class="field-group"><label for="a-kind">Type</label>
+              <select id="a-kind" name="kind"><option value="transactional">Transactionnel (lié au compte : bienvenue, confirmation…)</option><option value="marketing">Marketing (avec consentement et désinscription)</option></select></div>
+            <div class="field-group"><label for="a-trigger">Déclencheur</label>
+              <select id="a-trigger" name="trigger_event"><% Object.entries(triggers).forEach(([key, t]) => { %><option value="<%= key %>"><%= t.label %></option><% }) %></select></div>
+            <details class="mk-advanced">
+              <summary>Événement personnalisé</summary>
+              <div class="field-group"><label for="a-trigger-custom">Nom de l'événement (remplace le déclencheur ci-dessus ; par exemple un événement envoyé par l'API)</label>
+                <input id="a-trigger-custom" type="text" name="trigger_event_custom" maxlength="64" placeholder="mon_evenement.special" pattern="[a-z][a-z0-9_.]{1,63}"></div>
+            </details>
+          </div>
+          <div class="mk-dialog-actions">
+            <button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm">Créer le scénario</button>
+          </div>
+        </form>
+      </dialog>
+      <%- include("partials/modal-reopen", { id: "nouveau" }) %>
+    <% } %>
+<%- include("partials/bottom") %>

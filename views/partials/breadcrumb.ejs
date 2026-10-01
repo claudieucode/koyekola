@@ -1,0 +1,8 @@
+<%# Fil d'Ariane. Paramètres : crumbs [{ name, url? }] (le dernier élément est la page courante), dark (fond sombre) %>
+<nav aria-label="Fil d'Ariane" class="breadcrumb<%= typeof dark !== 'undefined' && dark ? ' breadcrumb-dark' : '' %>">
+  <ol>
+    <% crumbs.forEach((crumb, i) => { %>
+      <li><% if (crumb.url && i < crumbs.length - 1) { %><a href="<%= crumb.url %>"><%= crumb.name %></a><% } else { %><span aria-current="page"><%= crumb.name %></span><% } %></li>
+    <% }) %>
+  </ol>
+</nav>

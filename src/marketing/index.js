@@ -1,0 +1,49 @@
+// Point d'entrée du module marketing : applique les migrations, prépare l'organisation KOYEKOLA et ses réglages.
+// Si l'initialisation échoue (migration refusée, sauvegarde impossible…), l'erreur est affichée clairement et le module
+// se déclare « indisponible » : le LMS continue de fonctionner (il n'en dépend pas), rien n'est masqué en silence.
+const path = require("path");
+const { migrate } = require("./db/migrate");
+const { ensureDefaultOrganization, syncInstructorMembers } = require("./organizations");
+const { createSettings } = require("./settings");
+const { createEventBus } = require("./events/bus");
+const { createWorker } = require("./queue/worker");
+const imports = require("./import");
+const sending = require("./sending");
+const bridgeEvents = require("./bridge/events");
+const automations = require("./automations");
+const webhooksOut = require("./webhooks");
+const { syncLmsUsers } = require("./bridge/lms");
+
+const MIGRATIONS_DIR = path.join(__dirname, "migrations");
+
+function initMarketing({ db, dbFile, dataDir, env = process.env, log = console }) {
+  try {
+    const migrations = migrate(db, { dir: MIGRATIONS_DIR, dbPath: dbFile, backupDir: path.join(dataDir, "backups"), log });
+    const organization = ensureDefaultOrganization(db, { name: "KOYEKOLA", slug: "koyekola" });
+    syncInstructorMembers(db, organization.id);
+    // Comptes du LMS → contacts « unknown » (jamais de consentement déduit). Une panne ici ne rend pas le module indisponible.
+    try {
+      syncLmsUsers({ db, organizationId: organization.id, userId: null, bus: null });
+    } catch (error) {
+      log.warn?.("[KOYEKOLA] Synchronisation des comptes vers les contacts marketing impossible :", error.message);
+    }
+    const bus = createEventBus(db, { log });
+    // Le worker n'est démarré que si MARKETING_WORKER=on (voir server.js) : aucun traitement en arrière-plan par défaut
+    const settings = createSettings(db, { encryptionKey: env.ENCRYPTION_KEY });
+    const handlers = {
+      ...bus.jobHandlers(), ...imports.jobHandlers({ db, bus }), ...sending.jobHandlers({ db, bus, settings, env, log }), ...bridgeEvents.jobHandlers({ db, bus, log }),
+      ...automations.jobHandlers({ db, bus, settings, env, log }), ...webhooksOut.jobHandlers({ db, env, log }),
+    };
+    bus.on("*", automations.eventHandler({ db, settings, env, log })); // événements → passages dans les scénarios actifs
+    bus.on("*", webhooksOut.eventHandler({ db, env })); // événements → livraisons de webhooks sortants abonnés
+    const worker = createWorker({ db, handlers, log });
+    // Lance la lecture périodique du LMS (appelé par server.js quand le worker est actif)
+    const startBridge = () => bridgeEvents.startBridge(db, organization.id);
+    return { ready: true, organizationId: organization.id, settings, bus, worker, migrations, startBridge };
+  } catch (error) {
+    log.error("[KOYEKOLA] Module marketing INDISPONIBLE (le reste du site fonctionne normalement) :", error.message);
+    return { ready: false, error: error.message };
+  }
+}
+
+module.exports = { initMarketing, MIGRATIONS_DIR };

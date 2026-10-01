@@ -1,0 +1,41 @@
+<%# Champs communs création / modification d'une campagne, en quatre étapes (fieldsets). Variables : templates, lists, segments, categories, campaign (facultatif), values (saisie conservée, facultatif) %>
+<%
+  const c = typeof campaign !== "undefined" && campaign ? campaign : null;
+  const v = typeof values !== "undefined" && values ? values : null;
+  const cur = c ? `${c.target_type}:${c.target_id}` : v ? v.target : "";
+  const val = { name: c ? c.name : v ? v.name : "", template: c ? String(c.template_id) : v ? v.template_id : "", category: c ? c.category : v ? v.category : "",
+    clicks: c ? Boolean(c.track_clicks) : v ? v.track_clicks : true, opens: c ? Boolean(c.track_opens) : v ? v.track_opens : false };
+%>
+          <fieldset class="mk-wizard-step" data-step="1">
+            <legend>Étape 1 sur 7 · Nom de la campagne</legend>
+            <div class="field-group"><label for="c-name">Nom de la campagne</label><input id="c-name" type="text" name="name" maxlength="100" required value="<%= val.name %>"><span class="field-hint">Visible seulement par votre équipe (par exemple « Lancement Excel — mars »).</span></div>
+          </fieldset>
+          <fieldset class="mk-wizard-step" data-step="2">
+            <legend>Étape 2 sur 7 · Destinataires</legend>
+            <div class="field-group"><label for="c-target">Liste ou segment</label>
+              <select id="c-target" name="target" required>
+                <optgroup label="Listes"><% lists.forEach((l) => { %><option value="list:<%= l.id %>" <%= cur === "list:" + l.id ? "selected" : "" %>><%= l.name %> (<%= l.member_count %> contacts)</option><% }) %></optgroup>
+                <optgroup label="Segments"><% segments.forEach((s) => { %><option value="segment:<%= s.id %>" <%= cur === "segment:" + s.id ? "selected" : "" %>><%= s.name %></option><% }) %></optgroup>
+              </select>
+              <span class="field-hint">Seuls les contacts avec un consentement prouvé, non désinscrits et non bloqués recevront le message.</span></div>
+            <div class="field-group"><label for="c-cat">Catégorie de préférences (facultatif)</label>
+              <select id="c-cat" name="category"><option value="">Aucune</option>
+                <% categories.forEach((k) => { %><option value="<%= k.key %>" <%= val.category === k.key ? "selected" : "" %>><%= k.label %></option><% }) %></select>
+              <span class="field-hint">Les contacts qui ont refusé cette catégorie sont exclus.</span></div>
+            <div id="mk-audience-count" class="mk-audience-count" aria-live="polite"></div>
+          </fieldset>
+          <fieldset class="mk-wizard-step" data-step="3">
+            <legend>Étape 3 sur 7 · Modèle d'e-mail</legend>
+            <div class="field-group"><label for="c-tpl">Modèle</label>
+              <select id="c-tpl" name="template_id" required>
+                <% templates.forEach((t) => { %><option value="<%= t.id %>" data-subject="<%= t.subject %>" <%= val.template === String(t.id) ? "selected" : "" %>><%= t.name %></option><% }) %>
+              </select>
+              <% if (!templates.length) { %><span class="field-hint">Aucun modèle marketing : <a href="/marketing/modeles">créez-en un</a>.</span><% } %>
+              <span class="field-hint" id="mk-template-subject"></span></div>
+          </fieldset>
+          <fieldset class="mk-wizard-step mk-starters" data-step="4">
+            <legend>Étape 4 sur 7 · Suivi</legend>
+            <label class="checkbox-row"><input type="checkbox" name="track_clicks" value="on" <%= val.clicks ? "checked" : "" %>> Suivre les clics (les liens passent par votre site)</label>
+            <label class="checkbox-row"><input type="checkbox" name="track_opens" value="on" <%= val.opens ? "checked" : "" %>> Suivre les ouvertures (pixel invisible — indicatif seulement : Apple Mail et d'autres clients pré-chargent les images)</label>
+            <dl class="mk-recap" id="mk-recap" hidden></dl>
+          </fieldset>

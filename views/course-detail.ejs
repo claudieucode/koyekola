@@ -1,0 +1,345 @@
+<%- include("partials/header", { title: course.title }) %>
+<% const hasPlan = sections.some((s) => s.lessons.length); %>
+
+  <section class="course-hero">
+    <div class="container-wide">
+      <%- include("partials/breadcrumb", { crumbs, dark: true }) %>
+      <h1><%= course.title %></h1>
+      <% if (course.subtitle) { %><p class="subtitle"><%= course.subtitle %></p><% } %>
+      <div class="meta-line">
+        <% if (course.review_count > 0) { %>
+          <%- starRow(course.avg_rating, 15) %>
+          <span><%= Number(course.avg_rating).toFixed(1) %> (<%= course.review_count %> avis)</span>
+        <% } else { %>
+          <span>Pas encore d'avis</span>
+        <% } %>
+        <span>·</span>
+        <span class="meta-item"><%- icon('users', { size: 15 }) %> <%= course.student_count %> inscrit<%= course.student_count > 1 ? "s" : "" %></span>
+        <span>·</span>
+        <span>Par <a href="#formateur" style="color:#fff;text-decoration:underline;"><%= course.instructor_name %></a></span>
+        <span>·</span>
+        <span class="badge badge-on-dark"><%= levelLabel(course.level) %></span>
+        <% if (totalMinutes) { %>
+          <span class="meta-item"><%- icon('clock', { size: 15 }) %> <%= formatDuration(totalMinutes) %></span>
+        <% } %>
+      </div>
+    </div>
+  </section>
+
+  <div class="container-wide course-detail-layout">
+    <div class="course-main">
+
+      <% if (introVideo && introVideo.kind !== 'link') { %>
+        <div class="content-card intro-video-card">
+          <h2 class="sr-only">Présentation de la formation</h2>
+          <div class="learn-video"><%- include("partials/video-player", { video: introVideo, title: "Présentation : " + course.title, poster: course.thumbnail_path }) %></div>
+        </div>
+      <% } %>
+
+      <%# ---- Résumé : les chiffres essentiels d'un coup d'œil (données réelles de la formation) ---- %>
+      <section class="course-summary" aria-labelledby="summaryTitle">
+        <span class="eyebrow">Résumé de la formation</span>
+        <h2 id="summaryTitle"><%= course.title %></h2>
+        <% if (promise) { %><p class="course-summary-promise"><%= promise %></p><% } %>
+        <dl class="summary-stats">
+          <div class="summary-stat">
+            <dt><%- icon('star', { size: 16 }) %> Note</dt>
+            <dd><% if (course.review_count > 0) { %><strong><%= Number(course.avg_rating).toFixed(1) %></strong> <span><%= course.review_count %> avis</span><% } else { %><span>Pas encore d'avis</span><% } %></dd>
+          </div>
+          <div class="summary-stat">
+            <dt><%- icon('users', { size: 16 }) %> Étudiants</dt>
+            <dd><strong><%= course.student_count %></strong> <span>inscrit<%= course.student_count > 1 ? "s" : "" %></span></dd>
+          </div>
+          <div class="summary-stat">
+            <dt><%- icon('clock', { size: 16 }) %> Durée</dt>
+            <dd><% if (totalMinutes) { %><strong><%= formatDuration(totalMinutes) %></strong><% } else { %><span>Non précisée</span><% } %></dd>
+          </div>
+          <div class="summary-stat">
+            <dt><%- icon('video', { size: 16 }) %> Contenu</dt>
+            <dd><strong><%= lessonCount %></strong> <span>sous-chapitre<%= lessonCount > 1 ? "s" : "" %></span></dd>
+          </div>
+          <div class="summary-stat">
+            <dt><%- icon('trophy', { size: 16 }) %> Niveau</dt>
+            <dd><strong><%= levelLabel(course.level) %></strong></dd>
+          </div>
+          <div class="summary-stat">
+            <dt><%- icon('globe', { size: 16 }) %> Langue</dt>
+            <dd><strong><%= languageLabel(course.language) %></strong></dd>
+          </div>
+        </dl>
+        <nav class="summary-anchors" aria-label="Sur cette page">
+          <% if (sections.length) { %><a href="#contenu">Contenu du cours</a><% } %>
+          <a href="#description">Description</a>
+          <a href="#formateur">Formateur</a>
+          <a href="#avis">Avis</a>
+        </nav>
+      </section>
+
+      <% if (objectives.length) { %>
+        <div class="content-card objectives-card" id="apprendre">
+          <h2>Ce que vous apprendrez</h2>
+          <ul class="objectives-list">
+            <% objectives.forEach((goal) => { %>
+              <li><span class="objective-check"><%- icon('check', { size: 14 }) %></span><span><%- goal.html %></span></li>
+            <% }) %>
+          </ul>
+        </div>
+      <% } %>
+
+      <div class="content-card" id="contenu">
+        <h2>Contenu du cours</h2>
+        <div class="program-summary">
+          <span><%= sections.length %> chapitre<%= sections.length > 1 ? "s" : "" %> · <%= lessonCount %> sous-chapitre<%= lessonCount > 1 ? "s" : "" %><%= totalMinutes ? " · " + formatDuration(totalMinutes) : "" %></span>
+          <% if (sections.length > 1) { %><button type="button" class="link-btn" id="toggleAllSections">Tout déplier</button><% } %>
+        </div>
+        <% if (enrolled) { %>
+          <div class="course-progress">
+            <div class="course-progress-head"><strong>Votre progression</strong> <span><%= progress.done %> / <%= progress.total %> terminés</span></div>
+            <div class="progress-bar" role="progressbar" aria-valuenow="<%= progress.pct %>" aria-valuemin="0" aria-valuemax="100" aria-label="Progression dans la formation"><div class="progress-bar-fill" style="width:<%= progress.pct %>%"></div></div>
+          </div>
+        <% } %>
+        <p class="program-download"><a href="/cours/<%= course.slug %>/programme.pdf" class="btn btn-outline btn-sm" download><%- icon('download', { size: 15 }) %> Télécharger le programme PDF</a></p>
+        <% if (sections.length === 0) { %>
+          <p class="empty-state" style="padding:20px 0;">Le programme n'a pas encore été publié.</p>
+        <% } %>
+        <div class="accordion">
+          <% sections.forEach((section, i) => { %>
+            <div class="accordion-item <%= i === 0 ? 'is-open' : '' %>">
+              <button type="button" class="accordion-toggle" aria-expanded="<%= i === 0 ? 'true' : 'false' %>" aria-controls="section-<%= section.id %>">
+                <span class="section-heading">
+                  <span class="section-title"><%= section.title %></span>
+                  <span class="section-meta"><%= section.lessons.length %> sous-chapitre<%= section.lessons.length > 1 ? "s" : "" %><%= section.minutes ? " · " + formatDuration(section.minutes) : "" %></span>
+                </span>
+                <span class="chevron"><%- icon('chevronDown', { size: 18 }) %></span>
+              </button>
+              <div class="accordion-body" id="section-<%= section.id %>">
+                <% section.lessons.forEach(lesson => { %>
+                  <% const unlocked = enrolled || isOwner || lesson.is_preview; const done = completedIds.has(lesson.id); %>
+                  <div class="lesson-row<%= lesson.is_preview ? ' is-preview' : '' %><%= done ? ' is-done' : '' %>" data-lesson-type="<%= lesson.type %>">
+                    <span class="lesson-icon"><%- done ? icon('checkCircle', { size: 16 }) : icon(lesson.type === 'quiz' ? 'quiz' : lesson.type === 'texte' ? 'fileText' : 'play', { size: 15 }) %></span>
+                    <span class="lesson-title">
+                      <% if (unlocked) { %>
+                        <a href="/apprendre/<%= course.slug %>/<%= lesson.id %>" style="color:inherit;text-decoration:none;"><%= lesson.title %></a>
+                      <% } else { %>
+                        <%= lesson.title %>
+                      <% } %>
+                      <% if (lesson.is_preview) { %><span class="badge" style="margin-left:8px;">Aperçu gratuit</span><% } %>
+                      <% if (done) { %><span class="badge badge-success" style="margin-left:8px;">Terminé</span><% } %>
+                    </span>
+                    <span class="lesson-type"><%= lesson.type === 'quiz' ? 'Quiz' : lesson.type === 'texte' ? 'Texte' : 'Vidéo' %></span>
+                    <% if (lesson.duration_minutes) { %><span class="lesson-duration"><%= formatDuration(lesson.duration_minutes) %></span><% } %>
+                    <% if (!unlocked) { %><span class="lesson-lock" title="Réservé aux inscrits"><%- icon('lock', { size: 14 }) %></span><% } %>
+                  </div>
+                <% }) %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="content-card" id="prerequis">
+        <h2>Prérequis</h2>
+        <% if (prerequisites.length) { %>
+          <ul class="plain-list"><% prerequisites.forEach((item) => { %><li><%- item.html %></li><% }) %></ul>
+        <% } else { %>
+          <p class="empty-note">Aucun prérequis particulier n'est nécessaire : cette formation est accessible sans connaissances préalables.</p>
+        <% } %>
+      </div>
+
+      <%# Public visé : une carte autonome par profil (titre + description), en une seule colonne, lue de haut en bas %>
+      <% if (audience.length) { %>
+        <div class="content-card" id="public">
+          <h2 id="audienceTitle" class="audience-heading">À qui s'adresse cette formation ?</h2>
+          <ul class="audience-list" aria-labelledby="audienceTitle">
+            <% audience.forEach((profile) => { %>
+              <li class="audience-item">
+                <span class="audience-badge"><%- icon(profile.icon, { size: 20 }) %></span>
+                <div class="audience-copy">
+                  <h3 class="audience-title"><%= profile.title %></h3>
+                  <% if (profile.description) { %><p class="audience-desc"><%= profile.description %></p><% } %>
+                </div>
+              </li>
+            <% }) %>
+          </ul>
+        </div>
+      <% } %>
+
+      <% if (skills.length) { %>
+        <div class="content-card" id="competences">
+          <h2>Compétences acquises</h2>
+          <ul class="skill-chips"><% skills.forEach((item) => { %><li class="skill-chip"><%- icon('checkCircle', { size: 16 }) %><span><%- item.html %></span></li><% }) %></ul>
+        </div>
+      <% } %>
+
+      <div class="content-card" id="description">
+        <h2>Description</h2>
+        <div class="markdown<%= texts.isRich ? ' rich-content' : '' %>"><%- texts.descriptionHtml || "<p>Aucune description fournie.</p>" %></div>
+      </div>
+
+      <% if (faqs.length) { %>
+        <div class="content-card" id="faq">
+          <h2>Questions fréquentes</h2>
+          <%- include("partials/faq-list", { faqs }) %>
+        </div>
+      <% } %>
+
+      <div class="content-card" id="formateur">
+        <h2>Votre formateur</h2>
+        <div class="instructor-profile">
+          <% if (instructor.avatar_path) { %>
+            <img class="instructor-photo" src="<%= instructor.avatar_path %>" alt="Photo de <%= instructor.username %>" width="96" height="96" loading="lazy" decoding="async">
+          <% } else { %>
+            <span class="avatar avatar-lg" style="background:<%= avatarColor(instructor.username) %>"><%= instructor.username.slice(0,1).toUpperCase() %></span>
+          <% } %>
+          <div class="instructor-info">
+            <p class="name"><%= instructor.username %></p>
+            <p class="role">Formateur KOYEKOLA</p>
+            <ul class="instructor-stats">
+              <% if (instructor.review_count > 0) { %><li><%- icon('star', { size: 15 }) %> <strong><%= Number(instructor.avg_rating).toFixed(1) %></strong> Note moyenne <span>(<%= instructor.review_count %> avis)</span></li><% } %>
+              <li><%- icon('book', { size: 15 }) %> <strong><%= instructor.course_count %></strong> formation<%= instructor.course_count > 1 ? "s" : "" %></li>
+              <li><%- icon('users', { size: 15 }) %> <strong><%= instructor.student_count %></strong> étudiant<%= instructor.student_count > 1 ? "s" : "" %></li>
+            </ul>
+          </div>
+        </div>
+        <% if (instructor.bio) { %><p class="instructor-bio"><%= instructor.bio %></p><% } %>
+      </div>
+
+      <div class="content-card" id="avis">
+        <h2>Avis des étudiants</h2>
+        <div class="review-overview">
+          <div class="review-summary">
+            <span class="big-rating"><%= course.review_count > 0 ? Number(course.avg_rating).toFixed(1) : "—" %></span>
+            <div>
+              <%- starRow(course.avg_rating, 18) %>
+              <span class="field-hint"><%= course.review_count %> avis</span>
+            </div>
+          </div>
+          <% if (course.review_count > 0) { %>
+            <ul class="rating-breakdown" aria-label="Répartition des notes">
+              <% ratingRows.forEach((row) => { %>
+                <li class="rating-row" data-stars="<%= row.stars %>">
+                  <span class="rating-label"><%= row.stars %> étoile<%= row.stars > 1 ? "s" : "" %></span>
+                  <div class="progress-bar" role="progressbar" aria-valuenow="<%= row.pct %>" aria-valuemin="0" aria-valuemax="100" aria-label="<%= row.stars %> étoile<%= row.stars > 1 ? 's' : '' %> : <%= row.pct %> %"><div class="progress-bar-fill" style="width:<%= row.pct %>%"></div></div>
+                  <span class="rating-pct"><%= row.pct %> %</span>
+                  <span class="rating-count"><%= row.count %></span>
+                </li>
+              <% }) %>
+            </ul>
+          <% } %>
+        </div>
+
+        <% if (enrolled) { %>
+          <form action="/cours/<%= course.slug %>/avis" method="post" style="margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border);">
+            <div data-star-picker class="star-picker" role="group" aria-label="Votre note sur 5">
+              <input type="hidden" name="rating" value="<%= myReview ? myReview.rating : 5 %>">
+              <% for (let i = 1; i <= 5; i++) { %>
+                <button type="button" class="star-choice" data-value="<%= i %>" aria-label="<%= i %> étoile<%= i > 1 ? 's' : '' %> sur 5"><%- icon('starOutline', { size: 22 }) %></button>
+              <% } %>
+            </div>
+            <textarea name="comment" rows="3" aria-label="Votre avis sur la formation" placeholder="Partagez votre expérience avec cette formation…"><%= myReview ? myReview.comment : "" %></textarea>
+            <button type="submit" class="btn btn-primary" style="margin-top:10px;"><%= myReview ? "Modifier mon avis" : "Publier mon avis" %></button>
+          </form>
+        <% } %>
+
+        <div id="avisListe" aria-live="polite">
+          <% if (reviews.length === 0) { %>
+            <p class="empty-state" style="padding:10px 0;">Aucun avis pour le moment.</p>
+          <% } %>
+          <% reviews.forEach(r => { %>
+            <div class="review-item">
+              <div class="review-header">
+                <span class="avatar avatar-sm" style="background:<%= avatarColor(r.username) %>"><%= r.username.slice(0,1).toUpperCase() %></span>
+                <span class="name"><%= r.username %></span>
+                <span class="date"><%= formatDate(r.created_at) %></span>
+              </div>
+              <div style="margin-bottom:4px;"><%- starRow(r.rating, 14) %></div>
+              <% if (r.comment) { %><p style="margin:0;"><%= r.comment %></p><% } %>
+            </div>
+          <% }) %>
+          <% if (moreReviewsUrl) { %>
+            <p class="more-reviews"><a class="btn btn-outline" href="<%= moreReviewsUrl %>" data-more-reviews>Voir plus d'avis</a></p>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <aside class="purchase-card">
+      <div class="thumb">
+        <% if (course.thumbnail_path) { %><img src="<%= course.thumbnail_path %>" alt="" decoding="async" width="640" height="360"><% } else { %><%- icon('book', { size: 40 }) %><% } %>
+      </div>
+      <div class="purchase-card-body">
+        <div class="purchase-price <%= course.price_cents ? '' : 'is-free' %>"><%= formatPrice(course.price_cents) %></div>
+
+        <div class="purchase-actions">
+          <% if (isOwner) { %>
+            <a href="/formateur/cours/<%= course.id %>/curriculum" class="btn btn-primary btn-block">Gérer cette formation</a>
+            <% if (sections.some(s => s.lessons.length)) { %>
+              <a href="/apprendre/<%= course.slug %>" class="btn btn-outline btn-block">Aperçu du contenu</a>
+            <% } %>
+          <% } else if (enrolled) { %>
+            <a href="/apprendre/<%= course.slug %>" class="btn btn-success btn-block">Continuer la formation</a>
+          <% } else if (!currentUser) { %>
+            <a href="/connexion?redirect=<%= encodeURIComponent('/cours/' + course.slug) %>" class="btn btn-primary btn-block">Se connecter pour acheter</a>
+          <% } else { %>
+            <form action="/panier/ajouter/<%= course.id %>" method="post">
+              <input type="hidden" name="buyNow" value="1">
+              <button type="submit" class="btn btn-primary btn-block">Acheter maintenant</button>
+            </form>
+            <% if (inCart) { %>
+              <a href="/panier" class="btn btn-outline btn-block">Déjà dans le panier — voir</a>
+            <% } else { %>
+              <form action="/panier/ajouter/<%= course.id %>" method="post">
+                <button type="submit" class="btn btn-secondary btn-block">Ajouter au panier</button>
+              </form>
+            <% } %>
+          <% } %>
+          <% if (hasPlan) { %>
+            <button type="button" class="btn btn-outline btn-block btn-plan" data-plan-url="/cours/<%= course.slug %>/plan" aria-haspopup="dialog" aria-controls="planDialog"><%- icon('list', { size: 17 }) %> Voir le plan du cours</button>
+            <a href="/cours/<%= course.slug %>/programme.pdf" class="btn btn-outline btn-block btn-plan" download><%- icon('download', { size: 17 }) %> Télécharger le plan du cours (PDF)</a>
+          <% } %>
+        </div>
+
+        <% if (!isOwner) { %>
+          <div class="favorite-action">
+            <% if (currentUser) { %>
+              <form action="/favoris/<%= course.id %>" method="post">
+                <button type="submit" class="btn btn-outline btn-block" aria-pressed="<%= isFavorite ? 'true' : 'false' %>"><%- icon(isFavorite ? 'heartFilled' : 'heart', { size: 17 }) %> <%= isFavorite ? "Retirer des favoris" : "Ajouter aux favoris" %></button>
+              </form>
+            <% } else { %>
+              <a href="/connexion?redirect=<%= encodeURIComponent('/cours/' + course.slug) %>" class="btn btn-outline btn-block"><%- icon('heart', { size: 17 }) %> Ajouter aux favoris</a>
+            <% } %>
+          </div>
+        <% } %>
+
+        <ul class="purchase-includes">
+          <li><%- icon('video', { size: 17 }) %> <%= lessonCount %> sous-chapitre<%= lessonCount > 1 ? "s" : "" %> vidéo</li>
+          <% if (totalMinutes) { %><li><%- icon('clock', { size: 17 }) %> <%= formatDuration(totalMinutes) %> de contenu</li><% } %>
+          <li><%- icon('infinity', { size: 17 }) %> Accès illimité après achat</li>
+          <li><%- icon('smartphone', { size: 17 }) %> Sur mobile, tablette et ordinateur</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  <% if (similar.length) { %>
+    <section class="course-similar" id="similaires" aria-labelledby="similarTitle">
+      <div class="container-wide">
+        <div class="section-header"><h2 id="similarTitle">Vous pourriez également aimer</h2></div>
+        <div class="grid-courses">
+          <% similar.forEach((item) => { %><%- include("partials/course-card", { course: item }) %><% }) %>
+        </div>
+      </div>
+    </section>
+  <% } %>
+
+  <% if (hasPlan) { %>
+    <dialog id="planDialog" class="plan-dialog" aria-labelledby="planDialogTitle">
+      <div class="plan-dialog-head">
+        <h2 id="planDialogTitle">Plan du cours</h2>
+        <button type="button" class="icon-btn" data-plan-close aria-label="Fermer le plan du cours"><%- icon('close', { size: 20 }) %></button>
+      </div>
+      <div class="plan-dialog-body" id="planDialogBody" tabindex="-1" aria-live="polite"></div>
+    </dialog>
+  <% } %>
+
+<%- include("partials/footer") %>

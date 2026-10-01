@@ -1,0 +1,78 @@
+// Registre de navigation de l'espace marketing : source UNIQUE du menu latéral, du fil d'Ariane et du bouton principal.
+// Une entrée « soon » est prévue mais jamais affichée : on n'expose pas une fonctionnalité qui n'existe pas encore.
+// (Elle porte la phase où elle arrive : `since`.) Les clés `key` sont celles passées en `active` par les routes.
+
+// Organisation calquée sur Mailchimp : Accueil, Campagnes, Automatisations, Audience (formulaires d'inscription
+// compris), Analytics, Intégrations, puis Paramètres (envoi, conformité) en bas du menu.
+const SECTIONS = [
+  { key: "marketing", label: "Accueil", icon: "home" },
+  { key: "campaigns", label: "Campagnes", icon: "send" },
+  { key: "automations", label: "Automatisations", icon: "zap" },
+  { key: "audience", label: "Audience", icon: "users" },
+  { key: "analytics", label: "Analytics", icon: "activity" },
+  { key: "integrations", label: "Intégrations", icon: "plug" },
+  { key: "settings", label: "Paramètres", icon: "settings" },
+];
+
+const live = (section, key, label, href, icon, permission, primary) => ({ section, key, label, href, icon, permission, status: "live", primary: primary || null });
+const soon = (section, key, label, href, icon, since) => ({ section, key, label, href, icon, permission: "settings.read", status: "soon", since });
+
+const ITEMS = [
+  live("marketing", "dashboard", "Accueil", "/marketing", "home", "contacts.read"),
+
+  live("audience", "contacts", "Tous les contacts", "/marketing/contacts", "user", "contacts.read", { label: "Ajouter un contact", href: "/marketing/contacts/nouveau", permission: "contacts.write" }),
+  live("audience", "lists", "Listes", "/marketing/listes", "list", "lists.read", { label: "Nouvelle liste", href: "/marketing/listes#nouvelle", permission: "lists.write" }),
+  live("audience", "segments", "Segments", "/marketing/segments", "filter", "segments.read", { label: "Nouveau segment", href: "/marketing/segments/nouveau", permission: "segments.write" }),
+  live("audience", "tags", "Étiquettes", "/marketing/etiquettes", "tag", "lists.read", { label: "Nouvelle étiquette", href: "/marketing/etiquettes#nouvelle", permission: "lists.write" }),
+  live("audience", "properties", "Propriétés", "/marketing/proprietes", "sliders", "contacts.read", { label: "Nouvelle propriété", href: "/marketing/proprietes#nouvelle", permission: "contacts.write" }),
+  // Formulaires d'inscription : dans Audience, comme chez Mailchimp (« Signup forms »). Pop-ups : un réglage d'un formulaire.
+  live("audience", "forms", "Formulaires d'inscription", "/marketing/formulaires", "layout", "forms.read", { label: "Nouveau formulaire", href: "/marketing/formulaires#nouveau", permission: "forms.write" }),
+  live("audience", "import", "Importer des contacts", "/marketing/importer", "upload", "contacts.import", { label: "Nouvel import", href: "/marketing/importer", permission: "contacts.import" }),
+
+  live("campaigns", "campaigns", "Toutes les campagnes", "/marketing/campagnes", "send", "campaigns.read", { label: "Créer une campagne", href: "/marketing/campagnes/nouvelle", permission: "campaigns.write" }),
+  live("campaigns", "templates", "Modèles d'e-mails", "/marketing/modeles", "fileText", "templates.read", { label: "Nouveau modèle", href: "/marketing/modeles#creer", permission: "templates.write" }),
+  soon("campaigns", "ab", "Tests A/B", "/marketing/tests-ab", "activity", "M5"),
+
+  live("automations", "automations", "Automatisations", "/marketing/automatisations", "zap", "automations.read", { label: "Nouveau scénario", href: "/marketing/automatisations#nouveau", permission: "automations.write" }),
+
+  live("analytics", "analytics", "Analytics", "/marketing/analytics", "activity", "analytics.read"),
+  soon("analytics", "revenue", "Revenus", "/marketing/revenus", "coin", "R7"),
+
+
+  live("integrations", "events", "KOYEKOLA", "/marketing/evenements", "plug", "contacts.read"),
+  live("integrations", "api", "Clés d'API", "/marketing/api", "plug", "api_keys.manage", { label: "Nouvelle clé", href: "/marketing/api#nouvelle", permission: "api_keys.manage" }),
+  live("integrations", "webhooks", "Webhooks", "/marketing/webhooks", "plug", "webhooks.manage", { label: "Nouveau webhook", href: "/marketing/webhooks#nouveau", permission: "webhooks.manage" }),
+
+  live("settings", "sending", "Réglages d'envoi", "/marketing/envoi", "mail", "settings.read"),
+  soon("settings", "domains", "Domaines", "/marketing/domaines", "globe", "R6"),
+  live("settings", "compliance", "Conformité", "/marketing/conformite", "shield", "compliance.read"),
+
+  // Page de référence du design system : accessible par son adresse, absente du menu
+  { ...live("settings", "components", "Composants", "/marketing/composants", "layout", "settings.read"), hidden: true },
+];
+
+const sectionOf = (key) => SECTIONS.find((s) => s.key === key);
+
+// Menu affiché pour un rôle : uniquement les entrées disponibles ET permises ; une section vide disparaît,
+// une section à une seule entrée devient un lien direct (pas de sous-menu pour un seul lien).
+function buildNav({ can, active }) {
+  const current = ITEMS.find((i) => i.key === active && i.status === "live") || null;
+  const sections = [];
+  for (const s of SECTIONS) {
+    const items = ITEMS.filter((i) => i.section === s.key && i.status === "live" && !i.hidden && can(i.permission)).map((i) => ({
+      key: i.key, label: i.label, href: i.href, icon: i.icon, current: current ? current.key === i.key : false,
+    }));
+    if (!items.length) continue;
+    sections.push({ key: s.key, label: s.label, icon: s.icon, items, flat: items.length === 1, open: items.some((i) => i.current) });
+  }
+  let breadcrumb = null;
+  let primary = null;
+  if (current) {
+    const liveInSection = ITEMS.filter((i) => i.section === current.section && i.status === "live" && !i.hidden);
+    breadcrumb = liveInSection.length === 1 ? [current.label] : [sectionOf(current.section).label, current.label];
+    if (current.primary && can(current.primary.permission)) primary = { label: current.primary.label, href: current.primary.href };
+  }
+  return { sections, breadcrumb, primary };
+}
+
+module.exports = { SECTIONS, ITEMS, buildNav };

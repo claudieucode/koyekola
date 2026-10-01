@@ -1,0 +1,16 @@
+<%- include("../partials/header", { title: post.title }) %>
+
+  <article class="container-narrow page-content post">
+    <%- include("../partials/breadcrumb", { crumbs }) %>
+    <% if (!post.published) { %><p class="form-error" role="status">Brouillon : cet article n'est visible que par vous.</p><% } %>
+    <h1 class="post-title"><%= post.title %></h1>
+    <p class="post-meta">
+      <% if (post.published_at) { %><time datetime="<%= post.published_at.replace(' ', 'T') %>Z"><%= formatDate(post.published_at) %></time><% } %>
+      <% if (author) { %> · par <%= author.username %><% } %>
+    </p>
+    <% if (post.cover_path) { %><img class="post-cover" src="<%= post.cover_path %>" alt="<%= post.title %>" width="800" height="450"><% } %>
+    <div class="markdown"><%- renderMarkdown(post.content) %></div>
+    <p class="page-cta"><a href="/blog" class="btn btn-outline">← Tous les articles</a><a href="/catalogue" class="btn btn-primary">Voir les formations</a></p>
+  </article>
+
+<%- include("../partials/footer") %>

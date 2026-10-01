@@ -1,0 +1,36 @@
+<%- include("../partials/header", { title: "Blog" }) %>
+
+  <div class="container">
+    <p class="field-hint" style="margin-top:28px;"><a href="/formateur" class="back-link"><%- icon('arrowLeft', { size: 14 }) %> Mon espace</a></p>
+    <div class="dashboard-toolbar">
+      <h1 style="margin:0;">Blog</h1>
+      <a href="/formateur/blog/nouveau" class="btn btn-primary">+ Nouvel article</a>
+    </div>
+
+    <% if (posts.length) { %>
+      <ul class="faq-admin-list">
+        <% posts.forEach((post) => { %>
+          <li>
+            <div>
+              <p class="faq-admin-question"><%= post.title %></p>
+              <p class="faq-admin-answer"><%= post.published ? "Publié le " + formatDate(post.published_at) : "Brouillon" %> · /blog/<%= post.slug %></p>
+            </div>
+            <div class="row-actions">
+              <a class="btn btn-outline btn-sm" href="/formateur/blog/<%= post.id %>/modifier">Modifier</a>
+              <a class="btn btn-outline btn-sm" href="/blog/<%= post.slug %>"><%= post.published ? "Voir" : "Aperçu" %></a>
+              <form action="/formateur/blog/<%= post.id %>/publier" method="post" class="inline-form">
+                <button type="submit" class="btn btn-outline btn-sm"><%= post.published ? "Dépublier" : "Publier" %></button>
+              </form>
+              <form action="/formateur/blog/<%= post.id %>/supprimer" method="post" class="inline-form" onsubmit="return confirm('Supprimer définitivement cet article ?');">
+                <button type="submit" class="btn btn-danger btn-sm" aria-label="Supprimer l'article : <%= post.title %>">Supprimer</button>
+              </form>
+            </div>
+          </li>
+        <% }) %>
+      </ul>
+    <% } else { %>
+      <p class="empty-state" style="padding:24px 0;">Aucun article. Rédigez le premier !</p>
+    <% } %>
+  </div>
+
+<%- include("../partials/footer") %>

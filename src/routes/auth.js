@@ -1,0 +1,75 @@
+const express = require("express");
+const bcrypt = require("bcryptjs");
+const db = require("../config/database");
+const { loginBlocked, recordLoginFailure, clearLoginFailures } = require("../middlewares/security");
+const { safePath } = require("../utils/safeRedirect");
+const { SIGNUP_CONSENT_TEXT, registerLmsUserSafely } = require("../marketing/bridge/lms");
+
+const router = express.Router();
+
+router.get("/inscription", (req, res) => {
+  if (req.session.user) return res.redirect("/");
+  res.render("register", { error: null, formValues: {}, consentText: SIGNUP_CONSENT_TEXT });
+});
+
+// L'inscription publique ne crée que des comptes étudiants : ce site n'a qu'un seul
+// créateur (vous), dont le compte "formateur" est créé une fois via le script de seed.
+router.post("/inscription", (req, res) => {
+  const { username, email, password } = req.body;
+
+  if (!username || !email || !password) {
+    return res.status(400).render("register", { error: "Tous les champs sont obligatoires.", formValues: req.body, consentText: SIGNUP_CONSENT_TEXT });
+  }
+  if (password.length < 8) {
+    return res.status(400).render("register", { error: "Le mot de passe doit contenir au moins 8 caractères.", formValues: req.body, consentText: SIGNUP_CONSENT_TEXT });
+  }
+
+  const existing = db.prepare("SELECT id FROM users WHERE email = ? OR username = ?").get(email, username);
+  if (existing) {
+    return res.status(400).render("register", { error: "Ce nom d'utilisateur ou cet email est déjà pris.", formValues: req.body, consentText: SIGNUP_CONSENT_TEXT });
+  }
+
+  const hash = bcrypt.hashSync(password, 10);
+  const info = db
+    .prepare("INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'etudiant')")
+    .run(username, email, hash);
+
+  const userId = Number(info.lastInsertRowid);
+  // Contact marketing : « unknown » par défaut ; la case FACULTATIVE, cochée par la personne (« on » exactement), enregistre
+  // un consentement prouvé. Une panne du module marketing ne doit jamais empêcher l'inscription.
+  registerLmsUserSafely(req.app.locals.marketing, db, { id: userId, username, email }, { optIn: req.body.marketing_optin === "on", ip: req.ip });
+
+  req.session.user = { id: userId, username, email, role: "etudiant" };
+  res.redirect("/mes-cours");
+});
+
+router.get("/connexion", (req, res) => {
+  if (req.session.user) return res.redirect("/");
+  res.render("login", { error: null, redirect: req.query.redirect || "" });
+});
+
+router.post("/connexion", (req, res) => {
+  const { email, password, redirect } = req.body;
+
+  if (loginBlocked(req)) {
+    return res.status(429).render("login", { error: "Trop de tentatives de connexion. Réessayez dans 15 minutes.", redirect: redirect || "" });
+  }
+
+  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+
+  if (!user || typeof password !== "string" || !bcrypt.compareSync(password, user.password_hash)) {
+    recordLoginFailure(req);
+    return res.status(400).render("login", { error: "Email ou mot de passe incorrect.", redirect: redirect || "" });
+  }
+
+  clearLoginFailures(req);
+
+  req.session.user = { id: user.id, username: user.username, email: user.email, role: user.role };
+  res.redirect(safePath(redirect, "/"));
+});
+
+router.post("/deconnexion", (req, res) => {
+  req.session.destroy(() => res.redirect("/"));
+});
+
+module.exports = router;

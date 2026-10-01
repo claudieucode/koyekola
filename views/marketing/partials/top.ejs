@@ -1,0 +1,102 @@
+<%
+  const nav = mkh.buildNav({ can: mk.can, active });
+  const crumbs = nav.breadcrumb || [title];
+  const mySpace = currentUser && currentUser.role === "formateur" ? { href: "/formateur", label: "Mon espace" } : { href: "/mes-cours", label: "Mes formations" };
+%><!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> · Marketing · KOYEKOLA</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <script>try { if (localStorage.getItem("mkSidebar") === "collapsed") document.documentElement.setAttribute("data-sidebar", "collapsed"); } catch (e) {}</script>
+  <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/marketing.css') %>">
+</head>
+<body class="mk-body">
+  <a class="skip-link" href="#main">Aller au contenu principal</a>
+
+  <div class="mk-app">
+    <aside class="mk-sidebar" id="mk-sidebar" aria-label="Menu marketing">
+      <div class="mk-sidebar-head">
+        <a class="mk-brand" href="/marketing"><span class="mk-brand-mark" aria-hidden="true">K</span><span class="mk-brand-text">KOYEKOLA<small>Marketing</small></span></a>
+        <button type="button" class="mk-collapse-btn" data-mk-sidebar-collapse aria-pressed="false" aria-label="Réduire le menu" title="Réduire le menu"><%- icon("panelLeft", { size: 18 }) %></button>
+        <button type="button" class="mk-close-btn" data-mk-sidebar-close aria-label="Fermer le menu"><%- icon("close", { size: 20 }) %></button>
+      </div>
+      <%
+        // Bouton « Créer » (à la Mailchimp) : un seul point d'entrée vers toutes les créations, filtré selon les droits.
+        // Chaque lien mène à l'écran de création déjà existant (page dédiée ou modale ouverte par l'ancre d'URL).
+        const createItems = [
+          { href: "/marketing/campagnes/nouvelle", label: "Campagne e-mail", icon: "send", permission: "campaigns.write" },
+          { href: "/marketing/modeles#creer", label: "Modèle d'e-mail", icon: "fileText", permission: "templates.write" },
+          { href: "/marketing/automatisations#nouveau", label: "Scénario automatisé", icon: "zap", permission: "automations.write" },
+          { href: "/marketing/formulaires#nouveau", label: "Formulaire d'inscription", icon: "layout", permission: "forms.write" },
+          { href: "/marketing/contacts/nouveau", label: "Contact", icon: "user", permission: "contacts.write" },
+          { href: "/marketing/importer", label: "Importer des contacts", icon: "upload", permission: "contacts.import" },
+          { href: "/marketing/listes#nouvelle", label: "Liste", icon: "list", permission: "lists.write" },
+          { href: "/marketing/segments/nouveau", label: "Segment", icon: "filter", permission: "segments.write" },
+        ].filter((i) => mk.can(i.permission));
+      %>
+      <% if (createItems.length) { %>
+        <div class="mk-create mk-dropdown" data-mk-dropdown>
+          <button type="button" class="mk-create-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-create-menu" title="Créer"><%- icon("plus", { size: 18 }) %><span class="mk-nav-label">Créer</span></button>
+          <div class="mk-menu mk-create-menu" id="mk-create-menu" role="menu" hidden>
+            <% createItems.forEach((i) => { %><a role="menuitem" href="<%= i.href %>"><%- icon(i.icon, { size: 16 }) %><%= i.label %></a>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+      <nav class="mk-nav-list" aria-label="Sections du marketing">
+        <% nav.sections.forEach((section) => { %>
+          <% if (section.flat) { const item = section.items[0]; %>
+            <a class="mk-nav-link" href="<%= item.href %>" title="<%= item.label %>"<%- item.current ? ' aria-current="page"' : "" %>><%- icon(section.icon, { size: 18 }) %><span class="mk-nav-label"><%= item.label %></span></a>
+          <% } else { %>
+            <div class="mk-nav-group<%= section.open ? ' is-open' : '' %>" data-mk-group="<%= section.key %>">
+              <button type="button" class="mk-nav-head" aria-expanded="<%= section.open ? 'true' : 'false' %>" aria-controls="mk-sub-<%= section.key %>" title="<%= section.label %>"><%- icon(section.icon, { size: 18 }) %><span class="mk-nav-label"><%= section.label %></span><%- icon("chevronDown", { size: 14, className: "mk-nav-caret" }) %></button>
+              <div class="mk-nav-sub" id="mk-sub-<%= section.key %>">
+                <% section.items.forEach((item) => { %><a class="mk-nav-sublink" href="<%= item.href %>"<%- item.current ? ' aria-current="page"' : "" %>><%= item.label %></a>
+                <% }) %>
+              </div>
+            </div>
+          <% } %>
+        <% }) %>
+      </nav>
+    </aside>
+    <div class="mk-overlay" data-mk-sidebar-close hidden></div>
+
+    <div class="mk-main">
+      <header class="mk-topbar">
+        <button type="button" class="icon-btn mk-menu-btn" data-mk-sidebar-toggle aria-controls="mk-sidebar" aria-expanded="false" aria-label="Ouvrir le menu"><%- icon("menu") %></button>
+        <nav class="mk-breadcrumb" aria-label="Fil d'Ariane">
+          <ol>
+            <% crumbs.forEach((crumb, i) => { %><li<%- i === crumbs.length - 1 ? ' aria-current="page"' : "" %>><%= crumb %></li>
+            <% }) %>
+          </ol>
+        </nav>
+        <div class="mk-topbar-actions">
+          <% if (nav.primary) { %><a class="btn btn-primary btn-sm mk-primary" href="<%= nav.primary.href %>"><%= nav.primary.label %></a><% } %>
+          <div class="mk-dropdown" data-mk-dropdown>
+            <button type="button" class="mk-user" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-user-menu">
+              <span class="avatar avatar-sm" aria-hidden="true" style="background:<%= avatarColor(currentUser.username) %>"><%= currentUser.username.slice(0, 1).toUpperCase() %></span>
+              <span class="mk-user-name"><%= currentUser.username %></span>
+              <%- icon("chevronDown", { size: 14 }) %>
+            </button>
+            <div class="mk-menu" id="mk-user-menu" role="menu" hidden>
+              <a role="menuitem" href="<%= mySpace.href %>"><%= mySpace.label %></a>
+              <a role="menuitem" href="/">Voir le site</a>
+              <form action="/deconnexion" method="post" role="none"><button type="submit" role="menuitem">Déconnexion</button></form>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main id="main" tabindex="-1" class="mk-content">
+        <% if (typeof flash !== "undefined" && flash) { %>
+          <% if (flash.type === "error") { %>
+            <div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-icon" aria-hidden="true"><%- icon("alertTriangle", { size: 18 }) %></span><span class="mk-flash-body"><p><%= flash.text %></p><% if (flash.detail) { %><details class="mk-flash-details"><summary>Détails techniques</summary><p><%= flash.detail %></p></details><% } %></span></div>
+          <% } else { %>
+            <div class="mk-flash mk-flash-ok" role="status"><span class="mk-flash-icon" aria-hidden="true"><%- icon("checkCircle", { size: 18 }) %></span><span class="mk-flash-body"><p><%= flash.text %></p><% if (flash.detail) { %><details class="mk-flash-details"><summary>Détails techniques</summary><p><%= flash.detail %></p></details><% } %></span></div>
+          <% } %>
+        <% } %>

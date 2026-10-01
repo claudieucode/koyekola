@@ -1,0 +1,53 @@
+<%- include("partials/top", { title, active }) %>
+    <div class="mk-head"><h1>Réglages d'envoi</h1></div>
+    <p class="mk-lead">Par quel service partent vos e-mails, sous quel nom, et à quel rythme.</p>
+
+    <section class="mk-panel">
+      <h2>État</h2>
+      <ul class="mk-status-list">
+        <li><strong>Fournisseur actuel :</strong> <%= cfg.provider %></li>
+        <li><strong>ENCRYPTION_KEY :</strong> <%= keyOk ? "définie (liens de désinscription signables, secrets chiffrables)." : "ABSENTE : définissez-la avant d'enregistrer une clé d'API ou d'envoyer une campagne." %></li>
+        <li><strong>SMTP (serveur) :</strong> <%= smtpOk ? "configuré (SMTP_HOST)." : "non configuré (SMTP_HOST vide)." %></li>
+        <li><strong>Adresse publique (SITE_URL) :</strong> <%= baseUrl || "non définie : les liens de désinscription en dépendent." %></li>
+        <li><strong>Traitement en arrière-plan :</strong> <% if (workerOn) { %>actif.<% } else { %><%= mkh.workerHuman("aucune campagne ne partira") %><details class="mk-flash-details"><summary>Détails techniques</summary><p><%= mkh.WORKER_DETAIL %></p></details><% } %></li>
+      </ul>
+      <% if (cfg.provider === "console") { %><p class="mk-note">Fournisseur « console » : rien n'est réellement envoyé (les messages sont seulement journalisés). C'est le réglage sûr par défaut.</p><% } %>
+    </section>
+
+    <form action="/marketing/envoi" method="post" class="mk-form">
+      <section class="mk-panel">
+        <h2>Fournisseur et expéditeur</h2>
+        <div class="field-group"><label for="s-provider">Fournisseur</label>
+          <select id="s-provider" name="provider" <%= canEdit ? "" : "disabled" %>>
+            <option value="console" <%= cfg.provider === "console" ? "selected" : "" %>>Console (essais : rien n'est envoyé)</option>
+            <option value="smtp" <%= cfg.provider === "smtp" ? "selected" : "" %>>SMTP (variables SMTP_* du serveur)</option>
+            <option value="resend" <%= cfg.provider === "resend" ? "selected" : "" %>>Resend (API, avec retours de livraison)</option>
+          </select></div>
+        <div class="field-row">
+          <div class="field-group"><label for="s-from">Expéditeur</label><input id="s-from" type="text" name="from" maxlength="200" value="<%= cfg.from %>" placeholder="KOYEKOLA &lt;no-reply@votre-domaine.fr&gt;" <%= canEdit ? "" : "disabled" %>>
+            <span class="field-hint">Le domaine doit être authentifié chez votre fournisseur (SPF/DKIM), sinon vos messages iront en indésirables.</span></div>
+          <div class="field-group"><label for="s-reply">Adresse de réponse (facultatif)</label><input id="s-reply" type="text" name="reply_to" maxlength="200" value="<%= cfg.replyTo %>" <%= canEdit ? "" : "disabled" %>></div>
+        </div>
+      </section>
+      <section class="mk-panel">
+        <h2>Rythme (garde-fous)</h2>
+        <div class="field-row">
+          <div class="field-group"><label for="s-rate">Messages par minute</label><input id="s-rate" type="number" name="rate" min="1" max="6000" value="<%= cfg.ratePerMinute %>" <%= canEdit ? "" : "disabled" %>></div>
+          <div class="field-group"><label for="s-daily">Plafond par jour (UTC)</label><input id="s-daily" type="number" name="daily" min="1" max="1000000" value="<%= cfg.dailyLimit %>" <%= canEdit ? "" : "disabled" %>>
+            <span class="field-hint">Une campagne plus grosse continue le lendemain. Un plafond bas protège d'une erreur et de la réputation d'un domaine neuf.</span></div>
+        </div>
+      </section>
+      <section class="mk-panel">
+        <h2>Clés (Resend)</h2>
+        <div class="field-group"><label for="s-key">Clé d'API</label><input id="s-key" type="password" name="api_key" autocomplete="new-password" placeholder="<%= cfg.apiKeySet ? "•••••••• (laisser vide pour conserver)" : "re_…" %>" <%= canEdit ? "" : "disabled" %>>
+          <span class="field-hint"><%= cfg.apiKeySet ? "Clé enregistrée (chiffrée, jamais réaffichée)." : "Aucune clé enregistrée." %></span>
+          <% if (canEdit && cfg.apiKeySet) { %><label class="checkbox-row"><input type="checkbox" name="clear_api_key" value="on"> Effacer la clé</label><% } %></div>
+        <div class="field-group"><label for="s-wh">Secret de signature des webhooks</label><input id="s-wh" type="password" name="webhook_secret" autocomplete="new-password" placeholder="<%= cfg.webhookSecretSet ? "•••••••• (laisser vide pour conserver)" : "whsec_…" %>" <%= canEdit ? "" : "disabled" %>>
+          <span class="field-hint"><%= cfg.webhookSecretSet ? "Secret enregistré (chiffré)." : "Aucun secret enregistré : les rebonds et plaintes ne seront pas reçus." %></span>
+          <% if (canEdit && cfg.webhookSecretSet) { %><label class="checkbox-row"><input type="checkbox" name="clear_webhook_secret" value="on"> Effacer le secret</label><% } %></div>
+        <p class="field-hint">Adresse à déclarer chez Resend (événements delivered, bounced, complained) :<br>
+          <code><%= baseUrl ? baseUrl + "/webhooks/email/resend/" + orgId : "(définissez SITE_URL)/webhooks/email/resend/" + orgId %></code></p>
+      </section>
+      <% if (canEdit) { %><button type="submit" class="btn btn-primary">Enregistrer les réglages</button><% } else { %><p class="field-hint">Seul un administrateur peut modifier ces réglages.</p><% } %>
+    </form>
+<%- include("partials/bottom") %>

@@ -1,0 +1,22 @@
+<%- include("../partials/header", { title: "Modifier la page " + title }) %>
+
+  <div class="container">
+    <p class="field-hint" style="margin-top:28px;"><a href="/formateur" class="back-link"><%- icon('arrowLeft', { size: 14 }) %> Mon espace</a></p>
+    <h1>Modifier la page « <%= title %> »</h1>
+    <% if (saved) { %><p class="form-success" role="status">Page enregistrée.</p><% } %>
+
+    <form action="/formateur/pages/<%= slug %>" method="post" class="content-card">
+      <div class="field-group">
+        <label for="page-content">Contenu <span class="field-hint">(mise en forme possible : **gras**, *italique*, ## titre, - liste, [lien](https://…) ; laissez vide pour le texte par défaut)</span></label>
+        <textarea id="page-content" name="content" rows="14"><%= content %></textarea>
+      </div>
+      <div class="field-group">
+        <label for="page-desc">Description pour Google <span class="field-hint">(160 caractères au plus)</span></label>
+        <textarea id="page-desc" name="seo_description" rows="2" maxlength="160"><%= description %></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+      <a href="/a-propos" class="btn btn-outline">Voir la page</a>
+    </form>
+  </div>
+
+<%- include("../partials/footer") %>

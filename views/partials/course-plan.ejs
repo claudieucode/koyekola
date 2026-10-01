@@ -1,0 +1,21 @@
+<%# Plan du cours (contenu de la fenêtre de la fiche). Uniquement des informations descriptives : titres, ordre, durées. %>
+<p class="plan-course-title"><%= course.title %></p>
+<p class="plan-summary"><%= sections.length %> chapitre<%= sections.length > 1 ? "s" : "" %> · <%= lessonCount %> sous-chapitre<%= lessonCount > 1 ? "s" : "" %><%= totalMinutes ? " · " + formatDuration(totalMinutes) : "" %></p>
+<% sections.forEach((section, i) => { %>
+  <section class="plan-chapter">
+    <h3>Chapitre <%= i + 1 %> — <%= section.title %></h3>
+    <% if (section.lessons.length) { %>
+      <ol class="plan-lessons">
+        <% section.lessons.forEach((lesson) => { %>
+          <li>
+            <span class="plan-lesson-title"><%= lesson.title %></span>
+            <% if (lesson.is_preview) { %><span class="badge">Aperçu gratuit</span><% } %>
+            <% if (lesson.duration_minutes) { %><span class="plan-lesson-duration"><%= formatDuration(lesson.duration_minutes) %></span><% } %>
+          </li>
+        <% }) %>
+      </ol>
+    <% } else { %>
+      <p class="field-hint">Aucune leçon dans ce chapitre.</p>
+    <% } %>
+  </section>
+<% }) %>

@@ -1,0 +1,61 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const STATE = { pending: { label: "En attente", cls: "mk-status-warn" }, running: { label: "En cours", cls: "mk-status-warn" }, done: { label: "Livrée", cls: "mk-status-ok" }, dead: { label: "Abandonnée", cls: "mk-badge-danger" } };
+  const when = (ms) => ms ? mkh.fdate(new Date(ms).toISOString()) : "—";
+%>
+    <p class="mk-back"><a href="/marketing/webhooks">&larr; Tous les webhooks</a></p>
+    <div class="mk-head">
+      <h1><%= endpoint.name %> <span class="mk-status <%= endpoint.enabled ? 'mk-status-ok' : '' %>"><%= endpoint.enabled ? "Actif" : "En pause" %></span></h1>
+      <div class="mk-actions">
+        <% if (mk.can("webhooks.manage")) { %>
+          <form action="/marketing/webhooks/<%= endpoint.id %>/tester" method="post" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm">Envoyer un test</button></form>
+          <form action="/marketing/webhooks/<%= endpoint.id %>/<%= endpoint.enabled ? 'pause' : 'activer' %>" method="post" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm"><%= endpoint.enabled ? "Mettre en pause" : "Activer" %></button></form>
+          <form action="/marketing/webhooks/<%= endpoint.id %>/supprimer" method="post" class="mk-inline"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Ce webhook cessera immédiatement de recevoir des événements." data-mk-confirm-title="Supprimer ce webhook ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form>
+        <% } %>
+      </div>
+    </div>
+
+    <section class="mk-panel" aria-labelledby="conf-title">
+      <h2 id="conf-title">Configuration</h2>
+      <p><strong>Adresse</strong> : <span class="mk-link-url"><%= endpoint.url %></span></p>
+      <p><strong>Événements</strong> : <%= endpoint.events.includes("*") ? "Tous les événements" : endpoint.events.map((e) => events[e] || e).join(", ") %></p>
+
+      <% if (secret) { %>
+        <p><strong>Secret de signature</strong> <span class="mk-status mk-status-warn">Visible maintenant seulement</span></p>
+        <p class="mk-key-value"><code><%= secret %></code></p>
+        <p class="field-hint">À utiliser dans votre code pour vérifier l'en-tête <code>X-KOYEKOLA-Signature</code> (voir EMAIL_MARKETING_API.md). Il ne sera plus affiché après ce chargement ; vous pourrez le révéler à nouveau à tout moment.</p>
+      <% } else if (mk.can("webhooks.manage")) { %>
+        <form action="/marketing/webhooks/<%= endpoint.id %>/secret" method="post" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm">Révéler le secret de signature</button></form>
+      <% } %>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="deliv-title">
+      <h2 id="deliv-title">Dernières livraisons</h2>
+      <% if (!deliveries.length) { %>
+        <p class="field-hint">Aucune livraison pour l'instant : elle apparaîtra ici dès qu'un événement abonné se produira (le traitement en arrière-plan doit être actif).</p>
+      <% } else { %>
+        <div class="mk-table-wrap">
+          <table class="mk-table mk-datatable">
+            <caption class="sr-only">Dernières livraisons</caption>
+            <thead><tr><th scope="col">Événement</th><th scope="col">État</th><th scope="col">Tentatives</th><th scope="col">Dernière erreur</th><th scope="col">Créée</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody>
+              <% deliveries.forEach((d) => { const st = STATE[d.state] || { label: d.state, cls: "" }; %>
+                <tr>
+                  <td data-label="Événement"><code><%= d.event_name %></code></td>
+                  <td data-label="État"><span class="mk-status <%= st.cls %>"><%= st.label %></span></td>
+                  <td data-label="Tentatives"><%= d.attempts %>/<%= d.max_attempts %></td>
+                  <td data-label="Dernière erreur"><%= d.last_error || "—" %></td>
+                  <td data-label="Créée"><%= when(d.created_at) %></td>
+                  <td data-label="Actions">
+                    <% if (d.state === "dead" && mk.can("webhooks.manage")) { %>
+                      <form action="/marketing/webhooks/<%= endpoint.id %>/livraisons/<%= d.id %>/rejouer" method="post" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm">Rejouer</button></form>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+<%- include("partials/bottom") %>

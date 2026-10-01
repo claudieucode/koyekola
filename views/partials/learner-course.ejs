@@ -1,0 +1,19 @@
+<%# Carte d'une formation suivie, dans l'espace apprenant. Paramètre : course (avec pct, finished, resume) %>
+<div class="my-course-card">
+  <div class="thumb"><% if (course.thumbnail_path) { %><img src="<%= course.thumbnail_path %>" alt="" loading="lazy" decoding="async" width="640" height="360"><% } %></div>
+  <div class="info">
+    <p class="title"><%= course.title %></p>
+    <p class="instructor">Par <%= course.instructor_name %></p>
+    <div class="progress-bar"><div class="progress-bar-fill" style="width:<%= course.pct %>%"></div></div>
+    <p class="progress-label"><%= course.completed_lessons %> / <%= course.total_lessons %> sous-chapitres terminés (<%= course.pct %>%)</p>
+    <% if (!course.finished && course.resume) { %><p class="progress-label">Dernière leçon : <%= course.resume.title %></p><% } %>
+  </div>
+  <% if (course.finished) { %>
+    <div class="my-course-actions">
+      <a href="/certificat/<%= course.slug %>" class="btn btn-success"><%- icon('trophy', { size: 15 }) %> Certificat</a>
+      <a href="/apprendre/<%= course.slug %>" class="btn btn-outline">Revoir</a>
+    </div>
+  <% } else { %>
+    <a href="/apprendre/<%= course.slug %>" class="btn <%= course.pct > 0 || course.resume ? 'btn-primary' : 'btn-secondary' %>"><%= course.pct > 0 || course.resume ? "Continuer" : "Commencer" %></a>
+  <% } %>
+</div>

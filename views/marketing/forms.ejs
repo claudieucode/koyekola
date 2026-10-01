@@ -1,0 +1,56 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const canWrite = mk.can("forms.write");
+%>
+    <div class="mk-head"><h1>Formulaires <span class="mk-count"><%= items.length %></span></h1></div>
+    <p class="mk-lead">Un formulaire publié est accessible à l'adresse <code>/f/son-adresse</code> : partagez ce lien pour faire grandir votre audience, avec preuve de consentement à chaque inscription.</p>
+
+    <% if (!items.length) { %>
+      <div class="mk-empty">
+        <%- icon("layout", { size: 32 }) %>
+        <h2>Aucun formulaire</h2>
+        <p>Créez-en un pour récolter des inscriptions depuis une adresse publique, avec preuve de consentement.</p>
+        <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un formulaire</button></div><% } %>
+      </div>
+    <% } else { %>
+      <div class="mk-table-wrap">
+        <table class="mk-table mk-datatable">
+          <caption class="sr-only">Formulaires</caption>
+          <thead><tr><th scope="col">Nom</th><th scope="col">État</th><th scope="col" class="mk-num">Vues</th><th scope="col" class="mk-num">Inscriptions</th><th scope="col" class="mk-num">Conversion</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody>
+            <% items.forEach((f) => { %>
+              <tr>
+                <td data-label="Nom"><a href="/marketing/formulaires/<%= f.id %>"><%= f.name %></a></td>
+                <td data-label="État"><span class="mk-status <%= f.status === 'published' ? 'mk-status-ok' : '' %>"><%= f.status === 'published' ? "Publié" : "Brouillon" %></span></td>
+                <td class="mk-num" data-label="Vues"><%= mkh.fmt(f.viewCount) %></td>
+                <td class="mk-num" data-label="Inscriptions"><%= mkh.fmt(f.submitCount) %></td>
+                <td class="mk-num" data-label="Conversion"><%= mkh.rate(f.viewCount > 0 ? Math.round((f.submitCount / f.viewCount) * 10000) / 100 : null) %></td>
+                <td data-label="Actions"><a class="btn btn-outline btn-sm" href="/marketing/formulaires/<%= f.id %>">Détails</a></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <% if (canWrite) { %>
+      <dialog class="mk-dialog mk-modal" id="nouveau" data-mk-modal data-mk-modal-hash="nouveau" aria-labelledby="nf-title">
+        <form action="/marketing/formulaires" method="post">
+          <div class="mk-dialog-body">
+            <h2 id="nf-title">Nouveau formulaire</h2>
+            <p>Les champs, la liste de destination, le message de remerciement et le pop-up se règlent ensuite sur la page du formulaire.</p>
+            <div class="field-group"><label for="f-name">Nom *</label>
+              <input id="f-name" type="text" name="name" maxlength="80" placeholder="Ex. Newsletter, Liste d'attente…" required data-mk-required-message="Le nom du formulaire est obligatoire."></div>
+            <div class="field-group"><label for="f-consent">Texte de consentement *</label>
+              <input id="f-consent" type="text" name="consentText" maxlength="500" placeholder="Ex. Je souhaite recevoir les actualités par e-mail." required data-mk-required-message="Le texte de consentement est obligatoire.">
+              <p class="field-hint">Affiché à côté de la case à cocher, et conservé mot pour mot comme preuve de chaque inscription.</p></div>
+          </div>
+          <div class="mk-dialog-actions">
+            <button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm">Créer le formulaire</button>
+          </div>
+        </form>
+      </dialog>
+      <%- include("partials/modal-reopen", { id: "nouveau" }) %>
+    <% } %>
+<%- include("partials/bottom") %>

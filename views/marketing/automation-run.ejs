@@ -1,0 +1,38 @@
+<%- include("partials/top", { title, active }) %>
+<% const st = STATUS[a.status]; %>
+<% const fmtMs = (ms) => (ms ? new Date(ms).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "medium" }) : "—"); %>
+<% const ACTION_LABELS = { sent: "E-mail envoyé", already_sent: "Déjà envoyé (rejeu sans effet)", failed: "Échec", skipped: "Ignoré (liste de suppression)", wait: "Attente", condition: "Condition évaluée", add_tag: "Étiquette ajoutée", remove_tag: "Étiquette retirée", add_to_list: "Ajouté à une liste", remove_from_list: "Retiré d'une liste", completed: "Passage terminé", exited: "Sortie du scénario" }; %>
+    <p class="mk-back"><a href="/marketing/automatisations/<%= a.id %>">← <%= a.name %></a></p>
+    <div class="mk-head"><h1 class="mk-email">Passage de <%= run.email %></h1><span class="badge <%= st[1] %>"><%= st[0] %></span></div>
+    <p class="mk-lead">Ce que le moteur a réellement fait, étape par étape, pour ce contact dans ce scénario.</p>
+
+    <section class="mk-panel">
+      <h2>Résumé</h2>
+      <div class="dashboard-stats">
+        <div class="dashboard-stat"><div class="value"><%= RUN_STATUS[run.status] %></div><div class="label">État</div></div>
+        <div class="dashboard-stat"><div class="value"><%= run.step_index + 1 %></div><div class="label">Étape actuelle</div></div>
+        <div class="dashboard-stat"><div class="value"><%= fmtMs(run.entered_at) %></div><div class="label">Entré le</div></div>
+        <div class="dashboard-stat"><div class="value"><%= fmtMs(run.finished_at) %></div><div class="label">Terminé le</div></div>
+      </div>
+      <% if (run.last_error) { %><p class="mk-warn is-error"><strong>Dernière erreur :</strong> <%= run.last_error %></p><% } %>
+    </section>
+
+    <section class="mk-panel">
+      <h2>Journal du passage</h2>
+      <% if (log.length) { %>
+        <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Journal pas à pas</caption>
+          <thead><tr><th scope="col">Quand</th><th scope="col">Étape</th><th scope="col">Événement</th><th scope="col">Détail</th></tr></thead>
+          <tbody>
+            <% log.forEach((l) => { const s = steps[l.step_index]; %>
+              <tr>
+                <td><%= fmtMs(l.at) %></td>
+                <td><%= l.step_index + 1 %><% if (s) { %> (<%= STEP_LABELS[s.type] || s.type %>)<% } %></td>
+                <td><%= ACTION_LABELS[l.action] || l.action %></td>
+                <td><%= l.detail %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table></div>
+      <% } else { %><p class="field-hint">Aucun événement enregistré pour l'instant.</p><% } %>
+    </section>
+<%- include("partials/bottom") %>

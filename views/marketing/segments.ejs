@@ -1,0 +1,40 @@
+<%- include("partials/top", { title, active }) %>
+    <div class="mk-head">
+      <h1>Segments <span class="mk-count"><%= segments.length %></span></h1>
+    </div>
+    <p class="mk-lead">Un segment sélectionne des contacts selon des critères (ET / OU / NON). Il est recalculé à chaque usage, donc toujours à jour. Un segment ne donne aucun droit d'envoi : seuls les contacts avec un consentement prouvé sont joignables.</p>
+    <% if (!segments.length) { %>
+      <div class="mk-empty">
+        <%- icon("filter", { size: 32 }) %>
+        <h2>Aucun segment</h2>
+        <p>Créez par exemple « Élèves ayant terminé une formation », « Contacts sans clic depuis 90 jours » ou « Clients ayant dépensé plus de 100 € ».</p>
+        <% if (mk.can("segments.write")) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/segments/nouveau">Créer un segment</a></div><% } %>
+      </div>
+    <% } else { %>
+      <div class="mk-table-wrap">
+        <table class="mk-table mk-datatable">
+          <caption class="sr-only">Segments enregistrés</caption>
+          <thead><tr><th scope="col">Segment</th><th scope="col" class="mk-num">Contacts</th><th scope="col" class="mk-num">Joignables</th><th scope="col">Utilisé par</th><th scope="col">Modifié le</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody>
+            <% segments.forEach((s) => { %>
+              <tr>
+                <td data-label="Segment"><a href="/marketing/segments/<%= s.id %>"><%= s.name %></a><% if (s.description) { %><span class="mk-sub"><%= s.description %></span><% } %></td>
+                <% if (s.broken) { %>
+                  <td data-label="Contacts" colspan="2"><span class="mk-status mk-status-err" title="<%= s.broken %>">Définition à corriger</span></td>
+                <% } else { %>
+                  <td class="mk-num" data-label="Contacts"><%= mkh.fmt(s.count) %><span class="mk-sub"><%= s.sharePercent %> % de l'audience</span></td>
+                  <td class="mk-num" data-label="Joignables"><%= mkh.fmt(s.sendable) %></td>
+                <% } %>
+                <td data-label="Utilisé par"><%= s.usedBy ? s.usedBy + " campagne" + (s.usedBy > 1 ? "s" : "") : "—" %></td>
+                <td data-label="Modifié le"><%= mkh.fdate(s.updated_at) %></td>
+                <td data-label="Actions" class="mk-row-actions">
+                  <a class="btn btn-outline btn-sm" href="/marketing/contacts?segment=<%= s.id %>">Voir les contacts</a>
+                  <% if (mk.can("segments.write")) { %><form action="/marketing/segments/<%= s.id %>/dupliquer" method="post" class="mk-inline"><button type="submit" class="btn btn-ghost btn-sm" aria-label="Dupliquer le segment <%= s.name %>">Dupliquer</button></form><% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+<%- include("partials/bottom") %>

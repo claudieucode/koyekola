@@ -1,0 +1,6 @@
+<%
+  // Composant partagé : après une erreur de création (message flash rouge), la modale de création se rouvre
+  // d'elle-même, message d'erreur en tête et saisies conservées (voir shell.js, « Réouverture après une erreur »).
+  // S'inclut avec le local id (id du <dialog>).
+%>
+<% if (typeof flash !== "undefined" && flash && flash.type === "error") { %><span hidden data-mk-modal-reopen="<%= id %>"></span><% } %>
