@@ -1,0 +1,45 @@
+{
+  "name": "koyekola",
+  "version": "1.0.0",
+  "description": "KOYEKOLA — plateforme pour héberger, publier et vendre des formations en ligne (Express + EJS + SQLite)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node src/config/seed.js",
+    "build:editor": "node scripts/build-editor.js",
+    "build:automation-flow": "node scripts/build-automation-flow.js",
+    "sauvegarde": "node scripts/sauvegarde.js",
+    "creer-formateur": "node scripts/creer-formateur.js",
+    "test": "node --test --test-concurrency=1 \"tests/*.test.js\""
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.8.2",
+    "domutils": "^4.0.2",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "htmlparser2": "^12.0.0",
+    "multer": "^2.0.0",
+    "nodemailer": "^10.0.10",
+    "pdfkit": "^0.20.2",
+    "sanitize-html": "^2.17.7"
+  },
+  "devDependencies": {
+    "@tiptap/core": "^3.31.3",
+    "@tiptap/extension-highlight": "^3.31.3",
+    "@tiptap/extension-list": "^3.31.3",
+    "@tiptap/extension-text-align": "^3.31.3",
+    "@tiptap/extension-text-style": "^3.31.3",
+    "@tiptap/extensions": "^3.31.3",
+    "@tiptap/pm": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
+    "drawflow": "^0.0.60",
+    "esbuild": "^0.28.2"
+  }
+}
