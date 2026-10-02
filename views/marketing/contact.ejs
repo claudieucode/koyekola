@@ -11,6 +11,26 @@
       <p><strong><%= sendable.ok ? "Oui." : "Non." %></strong> <%= sendable.ok ? "Consentement prouvé, adresse non bloquée." : mkh.reasonLabel(sendable.reason) %></p>
     </section>
 
+    <% const smsReasons = { not_subscribed: "Pas d'accord SMS enregistré.", unsubscribed: "A retiré son accord SMS.", suppressed: "Numéro bloqué (STOP, numéro invalide ou blocage manuel).", no_phone: "Aucun numéro valide.", no_consent: "Pas de preuve d'accord SMS pour ce numéro.", not_found: "Contact introuvable." }; %>
+    <section class="mk-panel mk-verdict <%= smsSendable.ok ? "is-ok" : "is-no" %>" id="sms">
+      <h2>Peut-on lui envoyer des SMS (marketing) ?</h2>
+      <p><strong><%= smsSendable.ok ? "Oui." : "Non." %></strong> <%= smsSendable.ok ? "Accord SMS prouvé pour le " + smsPhoneMasked + ", numéro non bloqué." : smsReasons[smsSendable.reason] %></p>
+      <% if (mk.can("compliance.manage") && contact.sms_status !== "unsubscribed") { %>
+        <details class="mk-flash-details"><summary>Enregistrer un accord SMS</summary>
+          <form action="/marketing/contacts/<%= contact.id %>/sms/consentement" method="post" class="mk-form">
+            <div class="field-group"><label for="sms-c-phone">Numéro qui a donné son accord</label><input id="sms-c-phone" type="tel" name="phone" maxlength="40" value="<%= contact.phone %>" placeholder="+243 81 234 5678" required></div>
+            <div class="field-group"><label for="sms-c-text">Preuve (obligatoire)</label>
+              <textarea id="sms-c-text" name="text" rows="3" maxlength="1000" required placeholder="Où, quand et comment la personne a accepté de recevoir des SMS (ex. case cochée sur le bulletin d'inscription papier, le 3 mars)"></textarea>
+              <span class="field-hint">L'accord e-mail ne vaut pas accord SMS : il en faut un spécifique.</span></div>
+            <button type="submit" class="btn btn-outline btn-sm">Enregistrer l'accord SMS</button>
+          </form>
+        </details>
+      <% } %>
+      <% if (mk.can("contacts.write") && contact.sms_status === "subscribed") { %>
+        <form action="/marketing/contacts/<%= contact.id %>/sms/desinscrire" method="post" class="mk-actions"><button type="submit" class="btn btn-outline btn-sm">Désinscrire des SMS</button></form>
+      <% } %>
+    </section>
+
     <div class="mk-stats">
       <div class="mk-stat"><span class="mk-stat-label">E-mails reçus</span><span class="mk-stat-value"><%= mkh.fmt(summary.messages) %></span><span class="mk-stat-hint"><%= mkh.fmt(summary.clicked) %> avec clic</span></div>
       <div class="mk-stat"><span class="mk-stat-label">Scénarios en cours</span><span class="mk-stat-value"><%= mkh.fmt(summary.runningAutomations) %></span></div>
@@ -123,7 +143,7 @@
           <thead><tr><th scope="col">Date</th><th scope="col">Événement</th><th scope="col">Source</th><th scope="col">Texte présenté</th><th scope="col">IP (tronquée)</th></tr></thead>
           <tbody>
             <% history.forEach((h) => { %>
-              <tr><td><%= mkh.fdate(h.created_at) %></td><td><%= h.action === "granted" ? "Consentement donné" : "Retrait" %><%= h.purpose !== "marketing" ? " (" + h.purpose + ")" : "" %></td><td><%= h.source %></td><td><%= h.text_shown %></td><td><%= h.ip %></td></tr>
+              <tr><td><%= mkh.fdate(h.created_at) %></td><td><%= h.action === "granted" ? "Consentement donné" : "Retrait" %><%= h.purpose === "sms" ? " (SMS)" : h.purpose !== "marketing" ? " (" + h.purpose + ")" : "" %></td><td><%= h.source %></td><td><%= h.text_shown %></td><td><%= h.ip %></td></tr>
             <% }) %>
           </tbody>
         </table></div>

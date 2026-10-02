@@ -64,8 +64,9 @@ router.post("/commande", requireAuth, async (req, res, next) => {
 
     req.session.cart = {};
 
-    // L'email est envoyé après l'enregistrement : son échec ne doit jamais annuler l'achat
-    await sendPurchaseWelcomeEmail({
+    // L'e-mail est mis en file APRÈS l'enregistrement : il part en arrière-plan, son échec (ou un serveur SMTP lent)
+    // ne peut ni annuler ni ralentir l'achat
+    sendPurchaseWelcomeEmail(db, {
       to: req.session.user.email,
       username: req.session.user.username,
       courseTitles: items.map((c) => c.title),

@@ -632,8 +632,8 @@ a.mk-stat:hover { border-color: var(--accent); }
 /* Champs de formulaire */
 .mk-body .field-group label { color: var(--mk-text); font-weight: 700; font-size: 0.88rem; }
 .mk-body .field-hint { color: var(--muted); font-size: 0.8rem; }
-.mk-body :where(input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=url], input[type=search], input[type=datetime-local], select, textarea) { border: 1px solid var(--mk-border-strong); border-radius: var(--mk-r-sm); background-color: #fff; }
-.mk-body :where(input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=url], input[type=search], input[type=datetime-local], select, textarea):hover { border-color: var(--mk-text-soft); }
+.mk-body :where(input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=url], input[type=tel], input[type=search], input[type=datetime-local], select, textarea) { border: 1px solid var(--mk-border-strong); border-radius: var(--mk-r-sm); background-color: #fff; }
+.mk-body :where(input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=url], input[type=tel], input[type=search], input[type=datetime-local], select, textarea):hover { border-color: var(--mk-text-soft); }
 .mk-body :where(input, select, textarea):focus { border-color: var(--accent); box-shadow: var(--ring); }
 .mk-body .seo-fieldset { border: 1px solid var(--mk-border); border-radius: var(--mk-r); }
 .mk-body .seo-fieldset legend { color: var(--mk-text); font-weight: 700; }
@@ -703,3 +703,42 @@ details.mk-cl-item[open] > .mk-cl-summary .mk-cl-edit { visibility: hidden; }
 /* Date et heure : même gabarit que les autres champs (style.css ne couvre pas datetime-local) */
 .mk-body input[type=datetime-local] { width: 100%; min-height: 44px; padding: 10px 12px; font: inherit; color: var(--mk-text); }
 .mk-cl-tested { color: var(--success-dark); font-weight: 600; }
+
+/* ---------- SMS : éditeur de campagne (formulaire + aperçu sur un téléphone) ---------- */
+.mk-sms-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--mk-space-5); align-items: start; }
+.mk-sms-main { min-width: 0; }
+.mk-sms-aside { position: sticky; top: calc(var(--mk-topbar-h) + 16px); }
+@media (max-width: 960px) { .mk-sms-layout { grid-template-columns: minmax(0, 1fr); } .mk-sms-aside { position: static; } }
+.mk-sms-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.mk-sms-counter { margin: 6px 0 4px; font-size: 0.85rem; font-weight: 600; color: var(--mk-text-soft); }
+.mk-sms-counter.is-warning { color: var(--mk-warn); }
+.mk-sms-counter.is-error { color: var(--mk-err); }
+.mk-sms-phone { background: var(--mk-surface); border: 1px solid var(--mk-border-strong); border-radius: 28px; padding: 14px; box-shadow: 0 12px 30px -18px rgba(11, 42, 64, 0.35); max-width: 300px; }
+.mk-sms-phone-small { max-width: 100%; border-radius: var(--mk-r-lg); box-shadow: none; }
+.mk-sms-phone-head { display: flex; align-items: center; gap: 10px; padding: 4px 6px 12px; border-bottom: 1px solid var(--mk-border); font-size: 0.92rem; }
+.mk-sms-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; }
+.mk-sms-thread { padding: 14px 4px 6px; min-height: 160px; }
+.mk-sms-bubble { margin: 0; background: var(--mk-hover); color: var(--mk-text); border-radius: 18px 18px 18px 4px; padding: 10px 14px; font-size: 0.9rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mk-sms-blocking .mk-check-mark { color: var(--mk-err); }
+.mk-url { overflow-wrap: anywhere; }
+
+/* ---------- Paramètres → Apparence : cartes de choix du thème ---------- */
+.mk-theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--mk-space-4); border: 0; padding: 0; margin: 0 0 var(--mk-space-5); }
+.mk-theme-card { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 12px; background: var(--mk-surface); border: 1px solid var(--mk-border-strong); border-radius: var(--mk-r); cursor: pointer; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.mk-theme-card:hover { border-color: var(--accent); }
+.mk-theme-card:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.mk-theme-card:has(input:focus-visible) { box-shadow: var(--ring), 0 0 0 2px var(--accent); }
+.mk-theme-card input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.mk-theme-preview { display: grid; grid-template-columns: 34% 1fr; height: 110px; border-radius: var(--mk-r-sm); overflow: hidden; border: 1px solid rgba(127, 127, 127, 0.25); }
+.mk-theme-side { display: flex; flex-direction: column; gap: 7px; padding: 10px 8px; }
+.mk-theme-side i { display: block; height: 7px; border-radius: 4px; }
+.mk-theme-side i:first-child { height: 14px; }
+.mk-theme-main { padding: 12px; display: flex; align-items: flex-start; }
+.mk-theme-card-mini { width: 100%; display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 6px; }
+.mk-theme-card-mini i { display: block; height: 6px; border-radius: 3px; width: 80%; }
+.mk-theme-card-mini b { display: block; height: 14px; width: 45%; border-radius: 4px; margin-top: 4px; }
+.mk-theme-label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.mk-theme-label .mk-sub { flex-basis: 100%; }
+.mk-sms-when { border: 0; padding: 0; margin: 0 0 16px; }
+.mk-sms-when legend { font-weight: 700; margin-bottom: 6px; padding: 0; }
+.mk-sms-when [data-sms-later][hidden] { display: none; }

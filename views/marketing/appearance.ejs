@@ -1,0 +1,21 @@
+<%- include("partials/top", { title, active }) %>
+    <div class="mk-head"><h1>Apparence</h1></div>
+    <p class="mk-lead">Choisissez la couleur de la barre de menu à gauche. Le reste de l'espace marketing reste toujours blanc. Ce choix est personnel : il ne change ni l'affichage des autres membres de l'équipe, ni votre site public, ni vos e-mails.</p>
+
+    <form action="/marketing/apparence" method="post" class="mk-form">
+      <fieldset class="mk-theme-grid">
+        <legend class="sr-only">Couleur du menu</legend>
+        <% themes.forEach((t) => { const [side, active, text, accent] = t.swatch; %>
+          <label class="mk-theme-card">
+            <input type="radio" name="theme" value="<%= t.key %>" <%= current === t.key ? "checked" : "" %>>
+            <span class="mk-theme-preview" aria-hidden="true" style="background: #f6f9fb">
+              <span class="mk-theme-side" style="background: <%= side %>; border-right: 1px solid #e1e8ee"><i style="background: <%= accent %>"></i><i style="background: <%= active %>"></i><i style="background: <%= text %>; opacity: .4"></i><i style="background: <%= text %>; opacity: .4"></i></span>
+              <span class="mk-theme-main"><span class="mk-theme-card-mini" style="background: #ffffff; border: 1px solid #e1e8ee"><i style="background: #0b2a40"></i><i style="background: #0b2a40; opacity: .35"></i><b style="background: #0277b6"></b></span></span>
+            </span>
+            <span class="mk-theme-label"><strong><%= t.label %></strong><% if (current === t.key) { %> <span class="badge">Actuel</span><% } %><span class="mk-sub"><%= t.hint %></span></span>
+          </label>
+        <% }) %>
+      </fieldset>
+      <button type="submit" class="btn btn-primary">Appliquer</button>
+    </form>
+<%- include("partials/bottom") %>

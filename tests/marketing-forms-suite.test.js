@@ -30,6 +30,7 @@ before(async () => {
   const res = await boss.post("/marketing/formulaires", { name: "Newsletter", consentText: "J'accepte de recevoir la lettre." });
   formId = Number(res.location.match(/(\d+)$/)[1]);
   slug = sql("SELECT slug FROM mk_forms WHERE id = ?", formId)[0].slug;
+  run("UPDATE mk_forms SET double_optin = 0 WHERE id = ?", formId); // inscription immédiate (double confirmation : tests/emails.test.js)
   await boss.post(`/marketing/formulaires/${formId}/publier`, {});
 });
 after(() => srv.stop());

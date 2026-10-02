@@ -1,0 +1,29 @@
+/* Apparence de l'espace marketing (Paramètres → Apparence) : couleur de la BARRE DE MENU de gauche uniquement.
+   Clair (défaut, marketing.css), Bleu foncé, Gris, Noir. Le reste de l'interface (contenu, barre du haut, formulaires)
+   reste toujours sur fond blanc. Les jetons sont redéfinis sur .mk-sidebar seulement : ils ne descendent que dans le menu
+   (et son menu « Créer »). Attribut <html data-mk-theme> posé par le serveur : aucun flash au chargement.
+   Contrastes (WCAG AA) : libellés ≥ 9:1, entrée active ≥ 7:1 sur le fond du menu. */
+
+html[data-mk-theme="nuit"] .mk-sidebar {
+  --mk-surface: #0b2a40; --mk-hover: #123a57; --mk-selected: #17496c;
+  --mk-border: #1c4462; --mk-border-strong: #2f5d80; --mk-text: #f1f6fa; --mk-text-soft: #c9d9e6; --muted: #a9c0d2;
+}
+html[data-mk-theme="gris"] .mk-sidebar {
+  --mk-surface: #2b2e33; --mk-hover: #363a40; --mk-selected: #41464d;
+  --mk-border: #3b3f45; --mk-border-strong: #555a62; --mk-text: #f2f2f3; --mk-text-soft: #d3d5d8; --muted: #b0b3b8;
+}
+html[data-mk-theme="noir"] .mk-sidebar {
+  --mk-surface: #0d0d0d; --mk-hover: #1c1c1c; --mk-selected: #262626;
+  --mk-border: #2a2a2a; --mk-border-strong: #454545; --mk-text: #f5f5f5; --mk-text-soft: #d4d4d4; --muted: #a8a8a8;
+}
+
+/* Commun aux menus sombres : accent clair lisible sur fond foncé, boutons pleins en texte foncé */
+html[data-mk-theme] .mk-sidebar {
+  --accent: #5cbdf5; --accent-dark: #93d4fb; --accent-light: rgba(92, 189, 245, 0.16); --primary: var(--mk-text);
+  --mk-pop: 0 2px 6px rgba(0, 0, 0, 0.4), 0 16px 40px -12px rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+}
+html[data-mk-theme] .mk-sidebar :is(.mk-create-btn, .mk-brand-mark) { background: var(--accent); color: #04121d; }
+html[data-mk-theme] .mk-sidebar .mk-create-btn:hover { background: var(--accent-dark); }
+html[data-mk-theme] .mk-sidebar .mk-menu { background: var(--mk-surface); color: var(--mk-text); border-color: var(--mk-border-strong); }
+html[data-mk-theme] .mk-sidebar .mk-menu a:hover { background: var(--mk-hover); }

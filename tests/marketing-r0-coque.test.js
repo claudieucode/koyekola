@@ -19,7 +19,7 @@ describe("registre de navigation", () => {
     for (const i of ITEMS) {
       assert.match(i.href, /^\/marketing(\/|$)/, i.key);
       if (i.status !== "soon") assert.ok(Object.hasOwn(PERMISSIONS, i.permission), `permission inconnue pour ${i.key}`);
-      if (i.status === "soon") assert.match(i.since, /^(M\d|R\d)$/, `${i.key} doit indiquer la phase prévue`);
+      if (i.status === "soon") assert.match(i.since, /^(M\d|R\d|S\d)$/, `${i.key} doit indiquer la phase prévue`);
       if (i.primary) assert.ok(Object.hasOwn(PERMISSIONS, i.primary.permission), `permission du bouton principal de ${i.key}`);
     }
   });
@@ -47,16 +47,18 @@ describe("registre de navigation", () => {
     assert.ok(!viewer.includes("Importer des contacts"), "l'import demande un éditeur");
   });
   test("une section sans entrée visible disparaît ; une section à une seule entrée devient un lien direct", () => {
-    // Organisation à la Mailchimp : Paramètres regroupe envoi + conformité ; un lecteur n'y voit que la conformité
+    // Organisation à la Mailchimp : Paramètres regroupe envoi + conformité + apparence ; un lecteur n'y voit que la
+    // conformité et son apparence (choix personnel) ; l'onglet SMS ne lui montre pas les réglages SMS (administrateur)
     const viewer = buildNav({ can: roleCan("viewer"), active: "dashboard" });
     const viewerSettings = viewer.sections.find((s) => s.key === "settings");
-    assert.equal(viewerSettings.flat, true, "une seule entrée visible pour un lecteur : lien direct");
-    assert.deepEqual(viewerSettings.items.map((i) => i.key), ["compliance"]);
+    assert.deepEqual(viewerSettings.items.map((i) => i.key), ["compliance", "appearance"]);
+    assert.deepEqual(viewer.sections.find((s) => s.key === "sms").items.map((i) => i.key), ["smscampaigns", "smsaudience"]);
+    assert.equal(viewer.sections.find((s) => s.key === "analytics").flat, true, "une seule entrée visible : lien direct");
     const owner = buildNav({ can: roleCan("owner"), active: "dashboard" });
     assert.equal(owner.sections.find((s) => s.key === "settings").flat, false);
     assert.equal(owner.sections.find((s) => s.key === "automations").flat, true);
     assert.equal(owner.sections.find((s) => s.key === "audience").flat, false);
-    assert.deepEqual(owner.sections.map((s) => s.key), ["marketing", "campaigns", "automations", "audience", "analytics", "integrations", "settings"]);
+    assert.deepEqual(owner.sections.map((s) => s.key), ["marketing", "campaigns", "sms", "automations", "audience", "analytics", "integrations", "settings"]);
   });
   test("entrée courante, section ouverte, fil d'Ariane et bouton principal selon la page et le rôle", () => {
     const nav = buildNav({ can: roleCan("editor"), active: "segments" });

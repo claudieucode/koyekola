@@ -1,0 +1,102 @@
+<%- include("partials/top", { title, active }) %>
+<% const hours = Array.from({ length: 24 }, (_, h) => h); const dis = canEdit ? "" : "disabled"; %>
+    <div class="mk-head"><h1>Réglages SMS</h1></div>
+    <p class="mk-lead">Par quel service partent vos SMS, sous quel nom, à quelles heures et à quel rythme. Contrairement à l'e-mail, <strong>chaque SMS est payant</strong> : les garde-fous ci-dessous protègent votre budget autant que vos contacts.</p>
+
+    <section class="mk-panel">
+      <h2>État</h2>
+      <ul class="mk-status-list">
+        <li><strong>Fournisseur actuel :</strong> <%= cfg.provider === "twilio" ? "Twilio" : "Console (essai : rien n'est envoyé)" %></li>
+        <li><strong>Expéditeur :</strong> <%= cfg.sender || "non défini" %></li>
+        <li><strong>Jeton Twilio :</strong> <%= cfg.authTokenSet ? "enregistré (chiffré, jamais réaffiché)." : "non enregistré." %></li>
+        <li><strong>ENCRYPTION_KEY :</strong> <%= keyOk ? "définie." : "ABSENTE : définissez-la avant d'enregistrer le jeton Twilio." %></li>
+      </ul>
+      <% if (cfg.provider === "console") { %><p class="mk-note">Mode « console » : aucun SMS ne part réellement (ils sont seulement notés dans le journal du serveur). C'est le réglage sûr par défaut.</p><% } %>
+    </section>
+
+    <form action="/marketing/sms/reglages" method="post" class="mk-form">
+      <section class="mk-panel">
+        <h2>Fournisseur et expéditeur</h2>
+        <div class="field-group"><label for="sms-provider">Fournisseur</label>
+          <select id="sms-provider" name="provider" <%= dis %>>
+            <option value="console" <%= cfg.provider === "console" ? "selected" : "" %>>Console (essais : rien n'est envoyé)</option>
+            <option value="twilio" <%= cfg.provider === "twilio" ? "selected" : "" %>>Twilio</option>
+          </select></div>
+        <div class="field-group"><label for="sms-sender">Expéditeur</label><input id="sms-sender" type="text" name="sender" maxlength="40" value="<%= cfg.sender %>" placeholder="KOYEKOLA" <%= dis %>>
+          <span class="field-hint">Un <strong>nom</strong> de 11 lettres ou chiffres au plus, sans accent (ex. <code>KOYEKOLA</code>) : vos contacts ne pourront pas y répondre, d'où le lien de désinscription ajouté à chaque SMS. Ou un <strong>numéro Twilio</strong> (<code>+…</code>) : la réponse STOP fonctionnera aussi. Ou un <strong>service de messagerie Twilio</strong> (<code>MG…</code>), qui choisit le bon expéditeur selon le pays.</span></div>
+        <div class="field-group"><label for="sms-country">Pays par défaut</label>
+          <select id="sms-country" name="default_country" <%= dis %>><% countries.forEach((c) => { %><option value="<%= c.code %>" <%= cfg.defaultCountry === c.code ? "selected" : "" %>><%= c.label %></option><% }) %></select>
+          <span class="field-hint">Sert à compléter les numéros saisis sans indicatif (ex. « 081 234 5678 » → +243 81 234 5678).</span></div>
+      </section>
+
+      <section class="mk-panel">
+        <h2>Identifiants Twilio</h2>
+        <p class="field-hint">À trouver sur la page d'accueil de votre console Twilio (console.twilio.com), rubrique « Account Info ». Pensez aussi à autoriser vos pays dans Twilio : <em>Messaging → Settings → Geo permissions</em>.</p>
+        <div class="field-row">
+          <div class="field-group"><label for="sms-sid">Identifiant de compte (Account SID)</label><input id="sms-sid" type="text" name="account_sid" maxlength="34" value="<%= cfg.accountSid %>" placeholder="AC…" autocomplete="off" spellcheck="false" <%= dis %>></div>
+          <div class="field-group"><label for="sms-token">Jeton (Auth Token)</label><input id="sms-token" type="password" name="auth_token" autocomplete="new-password" placeholder="<%= cfg.authTokenSet ? "•••••••• (laisser vide pour conserver)" : "" %>" <%= dis %>>
+            <% if (canEdit && cfg.authTokenSet) { %><label class="checkbox-row"><input type="checkbox" name="clear_auth_token" value="on"> Effacer le jeton</label><% } %></div>
+        </div>
+      </section>
+
+      <section class="mk-panel">
+        <h2>Heures de silence</h2>
+        <p class="field-hint">Aucun SMS marketing ne part pendant cette plage, <strong>à l'heure du destinataire</strong> (Kinshasa, Brazzaville, Paris…). Un SMS prévu pendant la nuit attend le matin. Pour la France, s'y ajoutent automatiquement les <strong>dimanches et jours fériés</strong> (règle des opérateurs français).</p>
+        <div class="field-row">
+          <div class="field-group"><label for="sms-qs">Silence à partir de</label><select id="sms-qs" name="quiet_start" <%= dis %>><% hours.forEach((h) => { %><option value="<%= h %>" <%= cfg.quietStart === h ? "selected" : "" %>><%= h %> h</option><% }) %></select></div>
+          <div class="field-group"><label for="sms-qe">Jusqu'à</label><select id="sms-qe" name="quiet_end" <%= dis %>><% hours.forEach((h) => { %><option value="<%= h %>" <%= cfg.quietEnd === h ? "selected" : "" %>><%= h %> h</option><% }) %></select></div>
+        </div>
+      </section>
+
+      <section class="mk-panel">
+        <h2>Rythme et budget (garde-fous)</h2>
+        <div class="field-row">
+          <div class="field-group"><label for="sms-rate">SMS par minute</label><input id="sms-rate" type="number" name="rate" min="1" max="600" value="<%= cfg.ratePerMinute %>" <%= dis %>></div>
+          <div class="field-group"><label for="sms-daily">Plafond par jour</label><input id="sms-daily" type="number" name="daily" min="1" max="100000" value="<%= cfg.dailyLimit %>" <%= dis %>>
+            <span class="field-hint">Au-delà, l'envoi reprend le lendemain. Protège votre budget d'une erreur de ciblage.</span></div>
+          <div class="field-group"><label for="sms-seg">Longueur maximale d'un SMS (en SMS facturés)</label><input id="sms-seg" type="number" name="max_segments" min="1" max="10" value="<%= cfg.maxSegments %>" <%= dis %>>
+            <span class="field-hint">Un message long est facturé comme plusieurs SMS (160 caractères chacun, 70 avec certains accents comme ê, ô, ç).</span></div>
+        </div>
+        <div class="field-row">
+          <div class="field-group"><label for="sms-price">Prix d'un SMS chez votre fournisseur (facultatif)</label><input id="sms-price" type="text" inputmode="decimal" name="price_per_segment" maxlength="10" value="<%= cfg.pricePerSegment %>" placeholder="0.23" <%= dis %>>
+            <span class="field-hint">Recopiez le tarif Twilio de votre pays principal : chaque campagne affichera son coût estimé avant l'envoi.</span></div>
+          <div class="field-group"><label for="sms-cur">Devise</label><select id="sms-cur" name="currency" <%= dis %>><% currencies.forEach((c) => { %><option value="<%= c %>" <%= cfg.currency === c ? "selected" : "" %>><%= c %></option><% }) %></select></div>
+        </div>
+      </section>
+      <% if (canEdit) { %><button type="submit" class="btn btn-primary">Enregistrer les réglages SMS</button><% } else { %><p class="field-hint">Seul un administrateur peut modifier ces réglages.</p><% } %>
+    </form>
+
+    <% if (canEdit) { %>
+    <section class="mk-panel" id="test">
+      <h2>Envoyer un SMS de test</h2>
+      <p class="field-hint">Envoie un court message fixe à <strong>votre</strong> numéro pour vérifier que tout fonctionne (10 essais par heure). Avec Twilio, ce SMS est facturé.</p>
+      <form action="/marketing/sms/test" method="post" class="mk-inline-form">
+        <label for="sms-to" class="sr-only">Votre numéro</label><input id="sms-to" type="tel" name="to" required maxlength="40" placeholder="+243 81 234 5678" autocomplete="tel">
+        <button type="submit" class="btn btn-outline">Envoyer le test</button>
+      </form>
+    </section>
+    <% } %>
+
+    <section class="mk-panel" id="blocages">
+      <h2>Numéros bloqués</h2>
+      <p class="field-hint">Ces numéros ne reçoivent <strong>jamais</strong> de SMS marketing. Une réponse STOP ou un numéro invalide ne peuvent pas être levés ; un blocage manuel le peut, mais la personne devra redonner elle-même son accord.</p>
+      <% if (canManage) { %>
+        <form action="/marketing/sms/blocages" method="post" class="mk-inline-form mk-create">
+          <label for="b-phone" class="sr-only">Numéro à bloquer</label><input id="b-phone" type="tel" name="phone" required maxlength="40" placeholder="+243 81 234 5678">
+          <label for="b-note" class="sr-only">Motif</label><input id="b-note" type="text" name="note" maxlength="500" placeholder="Motif (facultatif)">
+          <button type="submit" class="btn btn-primary">Bloquer le numéro</button>
+        </form>
+      <% } %>
+      <% if (!suppressions.length) { %><p class="field-hint">Aucun numéro bloqué.</p>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table">
+          <caption class="sr-only">Numéros bloqués</caption>
+          <thead><tr><th scope="col">Numéro</th><th scope="col">Motif</th><th scope="col">Note</th><th scope="col">Depuis le</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+          <tbody><% suppressions.forEach((s) => { %>
+            <tr><td><%= s.masked %></td><td><%= s.label %></td><td><%= s.note %></td><td><%= mkh.fdate(s.created_at) %></td>
+              <td><% if (canManage && s.reason === "manual") { %><form action="/marketing/sms/blocages/<%= s.id %>/retirer" method="post"><button type="submit" class="btn btn-outline btn-sm">Retirer</button></form><% } %></td></tr>
+          <% }) %></tbody>
+        </table></div>
+      <% } %>
+    </section>
+<%- include("partials/bottom") %>

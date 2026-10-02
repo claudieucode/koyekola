@@ -5,6 +5,7 @@
       <h1>Content de vous revoir</h1>
       <p class="subtitle">Connectez-vous pour accéder à vos formations.</p>
       <% if (error) { %><p class="form-error"><%= error %></p><% } %>
+      <% if (typeof notice !== "undefined" && notice) { %><p class="form-success" role="status"><%= notice %></p><% } %>
       <form action="/connexion" method="post">
         <input type="hidden" name="redirect" value="<%= redirect %>">
         <div class="field-group">
@@ -14,6 +15,7 @@
         <div class="field-group">
           <label for="f-login-2">Mot de passe</label>
           <input id="f-login-2" type="password" name="password" required>
+          <a class="field-hint" href="/mot-de-passe-oublie">Mot de passe oublié ?</a>
         </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg">Se connecter</button>
       </form>

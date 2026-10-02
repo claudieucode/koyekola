@@ -12,6 +12,7 @@ const sending = require("./sending");
 const bridgeEvents = require("./bridge/events");
 const automations = require("./automations");
 const webhooksOut = require("./webhooks");
+const smsCampaigns = require("./sms/campaigns");
 const { syncLmsUsers } = require("./bridge/lms");
 
 const MIGRATIONS_DIR = path.join(__dirname, "migrations");
@@ -33,6 +34,7 @@ function initMarketing({ db, dbFile, dataDir, env = process.env, log = console }
     const handlers = {
       ...bus.jobHandlers(), ...imports.jobHandlers({ db, bus }), ...sending.jobHandlers({ db, bus, settings, env, log }), ...bridgeEvents.jobHandlers({ db, bus, log }),
       ...automations.jobHandlers({ db, bus, settings, env, log }), ...webhooksOut.jobHandlers({ db, env, log }),
+      ...smsCampaigns.smsJobHandlers({ db, bus, settings, env, log }),
     };
     bus.on("*", automations.eventHandler({ db, settings, env, log })); // événements → passages dans les scénarios actifs
     bus.on("*", webhooksOut.eventHandler({ db, env })); // événements → livraisons de webhooks sortants abonnés

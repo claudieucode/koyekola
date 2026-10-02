@@ -85,7 +85,14 @@ class Client {
       body = JSON.stringify(json);
       h["Content-Type"] = "application/json";
     }
-    const res = await fetch(this.base + url, { method, headers: h, body, redirect: "manual" });
+    // Délai maximum : une requête qui ne répond pas fait échouer le test avec son adresse, au lieu de bloquer toute la suite
+    let res;
+    try {
+      res = await fetch(this.base + url, { method, headers: h, body, redirect: "manual", signal: AbortSignal.timeout(30000) });
+    } catch (error) {
+      if (error && error.name === "TimeoutError") throw new Error(`Pas de réponse en 30 s : ${method} ${url}`);
+      throw error;
+    }
     for (const line of res.headers.getSetCookie()) {
       const [pair] = line.split(";");
       const i = pair.indexOf("=");

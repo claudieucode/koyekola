@@ -2,8 +2,13 @@
   <div class="auth-page">
     <div class="auth-card">
       <% if (submitted) { %>
-        <h1>Merci !</h1>
-        <p class="subtitle"><%= form.thankYouText && form.thankYouText.trim() ? form.thankYouText : "Votre inscription est enregistrée." %></p>
+        <% if (typeof confirmPending !== "undefined" && confirmPending) { %>
+          <h1>Vérifiez votre boîte e-mail</h1>
+          <p class="subtitle">Un e-mail de confirmation vient de vous être envoyé. Cliquez sur le lien qu'il contient pour finaliser votre inscription. Pensez à regarder dans les courriers indésirables.</p>
+        <% } else { %>
+          <h1>Merci !</h1>
+          <p class="subtitle"><%= form.thankYouText && form.thankYouText.trim() ? form.thankYouText : "Votre inscription est enregistrée." %></p>
+        <% } %>
       <% } else { %>
         <h1><%= form.name %></h1>
         <% if (error) { %><p class="form-error"><%= error %></p><% } %>

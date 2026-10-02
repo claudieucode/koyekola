@@ -1,0 +1,109 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const dis = canWrite ? "" : "disabled";
+  const target = c.target_type === "all" ? "all" : c.target_type + ":" + c.target_id;
+  const est = check.estimate;
+  const a = check.audience;
+  const money = (v) => v === null ? "—" : v.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + cfg.currency;
+%>
+    <p class="mk-back"><a href="/marketing/sms">← Campagnes SMS</a></p>
+    <div class="mk-head"><h1><%= c.name %></h1><span class="badge badge-muted">Brouillon</span></div>
+    <p class="mk-lead">Écrivez votre SMS, choisissez les destinataires, vérifiez le contrôle avant envoi, puis envoyez ou programmez.</p>
+
+    <div class="mk-sms-layout">
+      <form action="/marketing/sms/campagnes/<%= c.id %>" method="post" class="mk-form mk-sms-main" id="sms-form">
+        <section class="mk-panel">
+          <h2>1. Nom et destinataires</h2>
+          <div class="field-group"><label for="c-name">Nom de la campagne (interne)</label><input id="c-name" type="text" name="name" maxlength="120" required value="<%= c.name %>" <%= dis %>></div>
+          <div class="field-group"><label for="c-target">Destinataires</label>
+            <select id="c-target" name="target" <%= dis %>>
+              <option value="all" <%= target === "all" ? "selected" : "" %>>Tous les abonnés SMS</option>
+              <% if (lists.length) { %><optgroup label="Listes"><% lists.forEach((l) => { %><option value="list:<%= l.id %>" <%= target === "list:" + l.id ? "selected" : "" %>><%= l.name %></option><% }) %></optgroup><% } %>
+              <% if (segmentsList.length) { %><optgroup label="Segments"><% segmentsList.forEach((s) => { %><option value="segment:<%= s.id %>" <%= target === "segment:" + s.id ? "selected" : "" %>><%= s.name %></option><% }) %></optgroup><% } %>
+            </select>
+            <span class="field-hint">Seuls les contacts ayant donné leur <strong>accord SMS</strong> le recevront, même dans une liste ou un segment.</span></div>
+        </section>
+
+        <section class="mk-panel">
+          <h2>2. Message</h2>
+          <div class="mk-sms-toolbar" role="group" aria-label="Outils du message">
+            <button type="button" class="btn btn-outline btn-sm" data-sms-insert="{{prenom}}" <%= dis %>>+ Prénom</button>
+            <button type="button" class="btn btn-outline btn-sm" data-sms-insert="{{nom}}" <%= dis %>>+ Nom</button>
+            <button type="button" class="btn btn-outline btn-sm" data-sms-gsm <%= dis %>>Remplacer les accents coûteux</button>
+          </div>
+          <div class="field-group"><label for="c-body">Texte du SMS</label>
+            <textarea id="c-body" name="body" rows="6" maxlength="1600" <%= dis %> data-sms-body data-base-url="<%= baseUrl || "https://votre-site.example" %>" data-max-segments="<%= cfg.maxSegments %>" data-track="<%= c.track_clicks ? "1" : "0" %>" placeholder="Bonjour {{prenom}}, les inscriptions à la formation Excel ouvrent demain ! Places limitées : https://…"><%= c.body %></textarea>
+            <p class="mk-sms-counter" data-sms-counter aria-live="polite"></p>
+            <span class="field-hint">{{prenom}} et {{nom}} sont remplacés pour chaque destinataire ; après « | », la valeur utilisée si la fiche est vide (ex. <code>{{prenom|cher apprenant}}</code>). La mention <strong>« STOP SMS : lien »</strong> est ajoutée automatiquement à la fin (obligatoire, comptée dans la longueur).</span></div>
+          <label class="checkbox-row"><input type="checkbox" name="track_clicks" value="on" <%= c.track_clicks ? "checked" : "" %> <%= dis %> data-sms-track> Raccourcir et suivre les liens (clics dans le rapport)</label>
+        </section>
+        <% if (canWrite) { %><button type="submit" class="btn btn-primary">Enregistrer</button><% } %>
+      </form>
+
+      <aside class="mk-sms-aside" aria-label="Aperçu sur un téléphone">
+        <div class="mk-sms-phone">
+          <div class="mk-sms-phone-head"><span class="mk-sms-avatar" aria-hidden="true"><%= (cfg.sender || "K").slice(0, 1) %></span><strong><%= cfg.sender || "KOYEKOLA" %></strong></div>
+          <div class="mk-sms-thread"><p class="mk-sms-bubble" data-sms-preview><%= est ? est.sample.text : "Votre message apparaîtra ici." %></p></div>
+        </div>
+        <p class="field-hint">Aperçu avec le prénom « Marie ». Les liens y sont montrés raccourcis, comme dans le vrai SMS.</p>
+      </aside>
+    </div>
+
+    <section class="mk-panel" id="controle">
+      <h2>3. Contrôle avant envoi</h2>
+      <p class="field-hint">Calculé sur la dernière version <strong>enregistrée</strong>.</p>
+      <% if (a) { %>
+        <div class="mk-stats">
+          <div class="mk-stat"><span class="mk-stat-label">Destinataires joignables</span><span class="mk-stat-value"><%= mkh.fmt(a.sendable) %></span><span class="mk-stat-hint">sur <%= mkh.fmt(a.targetTotal) %> contact(s) de la cible</span></div>
+          <div class="mk-stat"><span class="mk-stat-label">SMS facturés (segments)</span><span class="mk-stat-value"><%= est ? mkh.fmt(est.segments) : "—" %></span><span class="mk-stat-hint"><%= est ? "jusqu'à " + est.maxSegments + " par destinataire" : "" %></span></div>
+          <div class="mk-stat"><span class="mk-stat-label">Coût estimé</span><span class="mk-stat-value"><%= est ? money(est.cost) : "—" %></span><span class="mk-stat-hint"><%= est && est.price !== null ? est.price + " " + cfg.currency + " par segment" : "prix à saisir dans les réglages" %></span></div>
+        </div>
+        <% if (a.excluded.total) { %>
+          <p class="field-hint"><strong><%= mkh.fmt(a.excluded.total) %> contact(s) exclus :</strong>
+            <%= [[a.excluded.not_subscribed, "sans accord SMS"], [a.excluded.unsubscribed, "désinscrits des SMS"], [a.excluded.blocked, "numéro bloqué"], [a.excluded.no_consent, "sans preuve d'accord"]].filter(([n]) => n).map(([n, l]) => n + " " + l).join(" · ") %>.</p>
+        <% } %>
+      <% } %>
+      <ul class="mk-checklist">
+        <% check.errors.forEach((e) => { %><li class="mk-check is-todo mk-sms-blocking"><span class="mk-check-mark"><%- icon("alertTriangle", { size: 18 }) %></span><span class="mk-check-body"><strong>À corriger :</strong> <%= e.message %></span></li><% }) %>
+        <% check.warnings.forEach((w) => { %><li class="mk-check"><span class="mk-check-mark"><%- icon("info", { size: 18 }) %></span><span class="mk-check-body"><%= w.message %></span></li><% }) %>
+        <% if (check.ready) { %><li class="mk-check is-ok"><span class="mk-check-mark"><%- icon("checkCircle", { size: 18 }) %></span><span class="mk-check-body"><strong>Prêt à être envoyé.</strong></span></li><% } %>
+      </ul>
+    </section>
+
+    <% if (canWrite) { %>
+    <section class="mk-panel" id="test">
+      <h2>4. SMS de test</h2>
+      <p class="field-hint">Recevez le vrai texte sur <strong>votre</strong> téléphone avant l'envoi (précédé de « [TEST] », 10 par heure).</p>
+      <form action="/marketing/sms/campagnes/<%= c.id %>/test" method="post" class="mk-inline-form">
+        <label for="t-to" class="sr-only">Votre numéro</label><input id="t-to" type="tel" name="to" required maxlength="40" placeholder="+243 81 234 5678" autocomplete="tel">
+        <button type="submit" class="btn btn-outline">Envoyer le test</button>
+      </form>
+    </section>
+    <% } %>
+
+    <section class="mk-panel" id="envoi">
+      <h2>5. Envoi</h2>
+      <% if (!canSend) { %><p class="field-hint">Seul un administrateur peut lancer une campagne.</p>
+      <% } else if (!check.ready) { %><p class="field-hint">Corrigez d'abord les points bloquants du contrôle avant envoi.</p>
+      <% } else { %>
+        <form action="/marketing/sms/campagnes/<%= c.id %>/lancer" method="post" class="mk-form" data-sms-launch>
+          <fieldset class="field-group mk-sms-when"><legend>Quand ?</legend>
+            <label class="checkbox-row"><input type="radio" name="when" value="now" checked data-sms-when> Maintenant (en respectant les heures de silence)</label>
+            <label class="checkbox-row"><input type="radio" name="when" value="later" data-sms-when> Programmer</label>
+            <div class="field-group" data-sms-later hidden><label for="l-at">Date et heure (votre heure)</label><input id="l-at" type="datetime-local" name="send_at"><input type="hidden" name="send_at_utc" data-sms-utc></div>
+          </fieldset>
+          <div class="field-group"><label for="l-count">Pour confirmer, tapez le nombre de destinataires : <strong><%= a.sendable %></strong></label><input id="l-count" type="number" name="confirm_count" required min="1" inputmode="numeric" autocomplete="off"></div>
+          <label class="checkbox-row"><input type="checkbox" name="confirm_cost" value="on" required> J'ai vérifié le coût estimé (<%= est ? money(est.cost) : "non calculé" %>) : chaque SMS envoyé est facturé.</label>
+          <div class="mk-actions"><button type="submit" class="btn btn-primary">Envoyer la campagne SMS</button></div>
+        </form>
+      <% } %>
+    </section>
+
+    <% if (canWrite) { %>
+      <div class="mk-actions">
+        <form action="/marketing/sms/campagnes/<%= c.id %>/dupliquer" method="post"><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form>
+        <form action="/marketing/sms/campagnes/<%= c.id %>/supprimer" method="post"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="Le brouillon « <%= c.name %> » sera supprimé. Aucun SMS n'a été envoyé." data-mk-confirm-title="Supprimer ce brouillon ?" data-mk-confirm-ok="Supprimer">Supprimer le brouillon</button></form>
+      </div>
+    <% } %>
+    <script src="<%= asset('/js/marketing-sms.js') %>" defer></script>
+<%- include("partials/bottom") %>

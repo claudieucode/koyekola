@@ -2,6 +2,8 @@
 const express = require("express");
 const { membershipsOf, can } = require("../organizations");
 const helpers = require("./helpers");
+const appearance = require("./appearance");
+const { themeOf } = appearance;
 
 function createMarketingRouters({ db }) {
   const admin = express.Router();
@@ -20,6 +22,7 @@ function createMarketingRouters({ db }) {
       ctx: { db, organizationId: marketing.organizationId, userId: user.id, bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL },
     };
     res.locals.mk = { role: membership.role, can: allowed };
+    res.locals.mkTheme = themeOf(marketing.settings, marketing.organizationId, user.id); // Paramètres → Apparence
     res.locals.mkh = helpers;
     // Message « flash » : affiché une seule fois après une action
     res.locals.flash = req.session.mkFlash ?? null;
@@ -36,12 +39,16 @@ function createMarketingRouters({ db }) {
   admin.use(require("./apiKeys")({ db }));
   admin.use(require("./webhooksOut")({ db }));
   admin.use(require("./forms")({ db }));
+  admin.use(require("./sms")());
+  admin.use(require("./smsCampaigns")());
+  admin.use(appearance.router());
   admin.use(require("./admin")({ db }));
   // Pages publiques (désinscription, préférences, suivi, formulaires) ; les webhooks sont montés à part (corps brut, avant l'analyse JSON)
   const publicRoutes = express.Router();
   publicRoutes.use(require("./public")({ db }));
   publicRoutes.use(require("./tracking")({ db }));
   publicRoutes.use(require("./formsPublic")({ db }));
+  publicRoutes.use(require("./smsPublic")({ db }));
   // API /api/v1 : authentification par clé, jamais par cookie — montée séparément (voir server.js)
   const { createApiRouter } = require("../api/router");
   return { admin, publicRoutes, webhooks: require("./webhooks")({ db }), api: createApiRouter({ db }) };

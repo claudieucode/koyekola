@@ -279,7 +279,7 @@ describe("brouillon : liste de contrôle (à la Mailchimp)", () => {
   });
   test("test sans messagerie configurée : message clair, rien de journalisé", async () => {
     const res = await boss.post(`/marketing/campagnes/${id}/test`, { to: "prof@test.local" });
-    assert.match(await flash(boss, res), /Messagerie non configurée/);
+    assert.match(await flash(boss, res), /Aucun service d(?:'|&#39;)envoi configuré/);
     assert.equal(sql("SELECT COUNT(*) n FROM mk_audit_logs WHERE action = 'campaign.test_sent'")[0].n, 0);
     assert.doesNotMatch((await boss.get(`/marketing/campagnes/${id}`)).text, /a déjà été envoyé/);
   });

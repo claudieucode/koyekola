@@ -3,6 +3,7 @@
 const express = require("express");
 const audience = require("../audience");
 const compliance = require("../compliance");
+const sms = require("../sms");
 const { getOverview } = require("../overview");
 const segmentsService = require("../segments");
 const { parseKey } = require("../security/crypto");
@@ -144,7 +145,7 @@ module.exports = ({ db }) => {
     res.render("marketing/contact", {
       title: contact.email, active: "contacts", contact, defs, values: audience.getContactProperties(ctx, contact.id), tags: audience.tagsOf(ctx, contact.id),
       memberOf, allLists: audience.listLists(ctx), history: compliance.consentHistory(ctx, contact.id), preferences: compliance.preferencesOf(ctx, contact.id),
-      sendable: compliance.isSendable(ctx, contact.id),
+      sendable: compliance.isSendable(ctx, contact.id), smsSendable: sms.isSmsSendable(ctx, contact.id), smsPhoneMasked: sms.maskPhone(contact.sms_phone),
       summary: audience.contactSummary(ctx, contact.id), timeline: audience.contactTimeline(ctx, contact.id, { limit: 50 }),
     });
   });

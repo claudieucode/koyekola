@@ -1,0 +1,12 @@
+<%- include("../partials/header", { title, seo: { noindex: true, rawTitle: title + " · KOYEKOLA" } }) %>
+  <div class="auth-page">
+    <div class="auth-card">
+      <h1>Confirmer mon inscription</h1>
+      <p class="subtitle">Confirmez-vous votre inscription : <strong><%= formName %></strong> ?</p>
+      <form method="post">
+        <button type="submit" class="btn btn-primary btn-block btn-lg">Oui, je confirme</button>
+      </form>
+      <p class="form-footer">Si vous n'avez rien demandé, fermez simplement cette page : vous ne recevrez rien.</p>
+    </div>
+  </div>
+<%- include("../partials/footer") %>

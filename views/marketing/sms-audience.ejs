@@ -1,0 +1,31 @@
+<%- include("partials/top", { title, active }) %>
+<% const SOURCES = { form: "formulaire", admin: "équipe", import: "import", api: "API", signup: "inscription", checkout: "commande", preference_center: "préférences", sms_keyword: "réponse START" }; %>
+    <div class="mk-head"><h1>Abonnés SMS</h1></div>
+    <p class="mk-lead">Les contacts qui ont accepté de recevoir vos SMS. L'accord SMS est distinct de l'accord e-mail : chacun a le sien, avec sa preuve.</p>
+
+    <div class="mk-stats">
+      <div class="mk-stat"><span class="mk-stat-label">Joignables par SMS</span><span class="mk-stat-value"><%= mkh.fmt(counts.sendable) %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Désinscrits des SMS</span><span class="mk-stat-value"><%= mkh.fmt(counts.unsubscribed) %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Numéros bloqués</span><span class="mk-stat-value"><%= mkh.fmt(counts.blocked) %></span><span class="mk-stat-hint"><a href="/marketing/sms/reglages#blocages">Voir</a></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Avec un numéro, sans accord SMS</span><span class="mk-stat-value"><%= mkh.fmt(counts.withPhone) %></span><span class="mk-stat-hint">à inviter par e-mail ou formulaire</span></div>
+    </div>
+    <p class="mk-note">Pour ajouter un abonné : ouvrez sa fiche contact → « Enregistrer un accord SMS », avec la preuve (où et quand la personne a accepté). Un accord e-mail ne suffit jamais.</p>
+
+    <nav class="mk-tabs" aria-label="Filtrer">
+      <a class="mk-tab" href="/marketing/sms/abonnes"<%- filter === "subscribed" ? ' aria-current="page"' : "" %>>Abonnés</a>
+      <a class="mk-tab" href="/marketing/sms/abonnes?statut=unsubscribed"<%- filter === "unsubscribed" ? ' aria-current="page"' : "" %>>Désinscrits</a>
+    </nav>
+    <% if (!rows.length) { %>
+      <div class="mk-empty"><%- icon("smartphone", { size: 32 }) %><h2><%= filter === "subscribed" ? "Aucun abonné SMS pour l'instant" : "Aucun désinscrit" %></h2></div>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table">
+        <caption class="sr-only"><%= filter === "subscribed" ? "Abonnés SMS" : "Désinscrits des SMS" %></caption>
+        <thead><tr><th scope="col">Contact</th><th scope="col">Numéro</th><th scope="col"><%= filter === "subscribed" ? "Accord donné" : "Désinscrit le" %></th></tr></thead>
+        <tbody><% rows.forEach((r) => { %>
+          <tr><td data-label="Contact"><a href="/marketing/contacts/<%= r.id %>#sms"><%= mkh.fullName(r) || r.email %></a><span class="mk-sub"><%= r.email %></span></td>
+            <td data-label="Numéro"><%= r.masked || "—" %></td>
+            <td data-label="Date"><% if (filter === "subscribed") { %><%= r.consent_at ? mkh.fdate(r.consent_at) : "—" %><span class="mk-sub"><%= SOURCES[r.consent_source] || r.consent_source || "" %></span><% } else { %><%= r.sms_unsubscribed_at ? mkh.fdate(r.sms_unsubscribed_at) : "—" %><% } %></td></tr>
+        <% }) %></tbody>
+      </table></div>
+    <% } %>
+<%- include("partials/bottom") %>

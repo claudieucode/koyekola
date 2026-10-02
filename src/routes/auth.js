@@ -4,6 +4,7 @@ const db = require("../config/database");
 const { loginBlocked, recordLoginFailure, clearLoginFailures } = require("../middlewares/security");
 const { safePath } = require("../utils/safeRedirect");
 const { SIGNUP_CONSENT_TEXT, registerLmsUserSafely } = require("../marketing/bridge/lms");
+const { sendSignupWelcomeEmail } = require("../utils/mailer");
 
 const router = express.Router();
 
@@ -39,13 +40,15 @@ router.post("/inscription", (req, res) => {
   // un consentement prouvé. Une panne du module marketing ne doit jamais empêcher l'inscription.
   registerLmsUserSafely(req.app.locals.marketing, db, { id: userId, username, email }, { optIn: req.body.marketing_optin === "on", ip: req.ip });
 
+  sendSignupWelcomeEmail(db, { to: email, username }); // en arrière-plan : n'attend pas le serveur d'e-mail
+
   req.session.user = { id: userId, username, email, role: "etudiant" };
   res.redirect("/mes-cours");
 });
 
 router.get("/connexion", (req, res) => {
   if (req.session.user) return res.redirect("/");
-  res.render("login", { error: null, redirect: req.query.redirect || "" });
+  res.render("login", { error: null, redirect: req.query.redirect || "", notice: req.query.reinitialise === "1" ? "Votre mot de passe a été changé. Connectez-vous avec le nouveau." : null });
 });
 
 router.post("/connexion", (req, res) => {

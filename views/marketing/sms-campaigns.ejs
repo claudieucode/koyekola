@@ -1,0 +1,63 @@
+<%- include("partials/top", { title, active }) %>
+<% const canWrite = mk.can("campaigns.write"); %>
+    <div class="mk-head"><h1>Campagnes SMS <span class="mk-count"><%= mkh.fmt(counts.all) %></span></h1>
+      <% if (canWrite) { %><a class="btn btn-primary" href="#nouvelle"><%- icon("plus", { size: 16 }) %> Créer une campagne SMS</a><% } %></div>
+    <p class="mk-lead">Un SMS court, envoyé à vos abonnés SMS : idéal pour un rappel, une ouverture d'inscriptions ou une offre limitée. Chaque SMS est payant ; le coût est estimé avant tout envoi.</p>
+
+    <div class="mk-stats">
+      <div class="mk-stat"><span class="mk-stat-label">Abonnés SMS joignables</span><span class="mk-stat-value"><%= mkh.fmt(subscribers) %></span><span class="mk-stat-hint"><a href="/marketing/sms/abonnes">Voir les abonnés</a></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Fournisseur</span><span class="mk-stat-value mk-stat-small"><%= cfg.provider === "twilio" ? "Twilio" : "Mode essai" %></span><span class="mk-stat-hint"><a href="/marketing/sms/reglages">Réglages SMS</a></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Expéditeur</span><span class="mk-stat-value mk-stat-small"><%= cfg.sender || "—" %></span><span class="mk-stat-hint">silence <%= cfg.quietStart %> h → <%= cfg.quietEnd %> h</span></div>
+    </div>
+    <% if (cfg.provider === "console") { %><p class="mk-note">Mode essai (« console ») : aucun SMS ne part réellement. Branchez Twilio dans les <a href="/marketing/sms/reglages">réglages SMS</a> pour un vrai envoi.</p><% } %>
+    <%- include("partials/worker-note", { workerOn, consequence: "aucune campagne SMS ne partira tant qu'il n'est pas rétabli" }) %>
+
+    <% if (canWrite) { %>
+      <section class="mk-panel" id="nouvelle">
+        <h2>Nouvelle campagne SMS</h2>
+        <form action="/marketing/sms/campagnes" method="post" class="mk-inline-form">
+          <label for="n-name" class="sr-only">Nom de la campagne</label><input id="n-name" type="text" name="name" maxlength="120" required placeholder="Ex. Rappel ouverture des inscriptions">
+          <button type="submit" class="btn btn-primary">Créer</button>
+        </form>
+        <p class="field-hint">Le nom sert à retrouver la campagne ; il n'est pas envoyé.</p>
+      </section>
+    <% } %>
+
+    <% if (counts.all === 0) { %>
+      <div class="mk-empty">
+        <%- icon("smartphone", { size: 32 }) %>
+        <h2>Aucune campagne SMS</h2>
+        <p>Écrivez un message, choisissez vos destinataires parmi les abonnés SMS, vérifiez le coût estimé, puis envoyez tout de suite ou programmez l'envoi.</p>
+      </div>
+    <% } else { %>
+      <nav class="mk-tabs" aria-label="Filtrer par statut">
+        <% tabs.forEach(([key, label]) => { const n = key ? counts[key] : counts.all; %><a class="mk-tab" href="/marketing/sms<%= key ? "?statut=" + key : "" %>"<%- tab === key ? ' aria-current="page"' : "" %>><%= label %> <span class="mk-tab-count"><%= n %></span></a>
+        <% }) %>
+      </nav>
+      <% if (!rows.length) { %><p class="field-hint">Aucune campagne dans cet onglet.</p>
+      <% } else { %>
+        <div class="mk-table-wrap">
+          <table class="mk-table mk-datatable">
+            <caption class="sr-only">Campagnes SMS</caption>
+            <thead><tr><th scope="col">Campagne</th><th scope="col">Statut</th><th scope="col">Destinataires</th><th scope="col" class="mk-num">Livrés</th><th scope="col" class="mk-num">Clics</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody>
+              <% rows.forEach((c) => { %>
+                <tr>
+                  <td data-label="Campagne"><a href="/marketing/sms/campagnes/<%= c.id %>"><%= c.name %></a>
+                    <span class="mk-sub">SMS · <%= c.status === "draft" ? "modifié le " + mkh.fdate(c.updated_at) : c.finished_at ? "terminé le " + new Date(c.finished_at).toLocaleDateString("fr-FR") : c.scheduled_at && c.status === "scheduled" ? "programmé le " + new Date(c.scheduled_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "créé le " + mkh.fdate(c.created_at) %></span></td>
+                  <td data-label="Statut"><span class="badge <%= c.st[1] %>"><%= c.st[0] %></span></td>
+                  <td data-label="Destinataires"><%= c.target %><% if (c.status !== "draft") { %><span class="mk-sub"><%= mkh.fmt(c.total_recipients) %> destinataire(s) · <%= mkh.fmt(c.sent_count) %> envoyé(s)</span><% } %></td>
+                  <td class="mk-num" data-label="Livrés"><%= c.status === "draft" ? "—" : mkh.fmt(c.delivered_count) %></td>
+                  <td class="mk-num" data-label="Clics"><% if (c.status === "draft" || c.clickRate === null) { %>—<% } else { %><strong><%= c.clickRate %> %</strong><span class="mk-sub"><%= mkh.fmt(c.click_count) %></span><% } %></td>
+                  <td data-label="Actions" class="mk-row-actions">
+                    <a class="btn btn-outline btn-sm" href="/marketing/sms/campagnes/<%= c.id %>"><%= c.status === "draft" ? (canWrite ? "Modifier" : "Voir") : "Voir le rapport" %></a>
+                    <% if (canWrite) { %><form action="/marketing/sms/campagnes/<%= c.id %>/dupliquer" method="post" class="mk-inline"><button type="submit" class="btn btn-ghost btn-sm" aria-label="Dupliquer la campagne <%= c.name %>">Dupliquer</button></form><% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    <% } %>
+<%- include("partials/bottom") %>

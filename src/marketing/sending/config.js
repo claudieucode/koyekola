@@ -86,4 +86,16 @@ function createProviderFor(ctx, deps = {}) {
   return createProvider({ provider: cfg.provider, apiKey: secrets.apiKey }, { ...deps, transport });
 }
 
-module.exports = { DEFAULTS, getSendingConfig, getSecrets, saveSendingConfig, createProviderFor };
+// Canal des e-mails de TEST (modèles, Réglages d'envoi) : le fournisseur choisi s'il s'agit d'une API (Resend), sinon le
+// SMTP du serveur. → { provider } ou { transport } (+ from), ou null si rien n'est configuré.
+function testChannel(ctx) {
+  const cfg = getSendingConfig(ctx);
+  const mailer = require("../../utils/mailer");
+  if (cfg.provider === "resend") {
+    try { return { name: "resend", provider: createProviderFor(ctx), from: cfg.from || mailer.fromAddress() }; } catch { return null; }
+  }
+  const transport = mailer.buildTransport();
+  return transport ? { name: "smtp", transport, from: cfg.from || mailer.fromAddress() } : null;
+}
+
+module.exports = { DEFAULTS, getSendingConfig, getSecrets, saveSendingConfig, createProviderFor, testChannel };

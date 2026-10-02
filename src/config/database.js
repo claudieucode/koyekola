@@ -216,6 +216,20 @@ db.exec(`
   );
 `);
 
+// Mot de passe oublié : seule l'EMPREINTE (SHA-256) du lien est conservée, jamais le lien lui-même ; valable 1 heure,
+// utilisable une seule fois (src/routes/passwordReset.js)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS password_resets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at INTEGER NOT NULL,
+    used_at INTEGER,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);
+`);
+
 // Index : accélèrent les jointures et filtres utilisés à chaque page (chapitres d'une formation,
 // leçons d'un chapitre, ventes d'une formation…). Créés seulement s'ils n'existent pas déjà.
 db.exec(`

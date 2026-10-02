@@ -3,7 +3,7 @@ const express = require("express");
 const db = require("../config/database");
 const { requireInstructor } = require("../middlewares/auth");
 const { createRateLimiter } = require("../middlewares/security");
-const { sendContactNotification } = require("../utils/mailer");
+const { sendContactNotification, sendContactAcknowledgement } = require("../utils/mailer");
 const { UserError } = require("../utils/errors");
 const { absoluteUrl, breadcrumbLd, faqLd } = require("../utils/seo");
 
@@ -164,12 +164,10 @@ router.post("/contact", async (req, res, next) => {
     db.prepare("INSERT INTO contact_messages (name, email, subject, message) VALUES (?, ?, ?, ?)").run(values.name, values.email, values.subject, values.message);
     contactLimiter.hit(req.ip);
 
-    // Prévenu par email si une messagerie est configurée ; le message est de toute façon conservé
-    try {
-      await sendContactNotification(values);
-    } catch (err) {
-      console.error("[KOYEKOLA] Notification de contact non envoyée :", err.message);
-    }
+    // E-mails mis en file (envoyés en arrière-plan, réessayés en cas d'échec) : le formateur est prévenu, la personne
+    // reçoit un accusé de réception. Le message est de toute façon conservé dans « Mon espace ».
+    sendContactNotification(db, values);
+    sendContactAcknowledgement(db, values);
     res.redirect("/contact?envoye=1");
   } catch (err) {
     next(err);

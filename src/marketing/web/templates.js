@@ -7,7 +7,7 @@ const { CATEGORIES } = require("../templates/categories");
 const { listCourses } = require("../bridge/catalog");
 const { MarketingError } = require("../errors");
 const { sendTestEmail, teamRecipients } = require("../templates/testSend");
-const { buildTransport } = require("../../utils/mailer");
+const { testChannel } = require("../sending/config");
 const { createRateLimiter } = require("../../middlewares/security");
 const { attempt, need, safeJson } = require("./kit");
 
@@ -172,11 +172,11 @@ module.exports = ({ db }) => {
     }
     testLimiter.hit(key); // compté à chaque tentative (y compris refusée) pour empêcher de sonder les adresses
     const contactId = req.body.contact_id ? intOrNull(req.body.contact_id) : undefined;
-    sendTestEmail(req.mk.ctx, template.id, { to: req.body.to, transport: buildTransport(), from: process.env.SMTP_FROM || process.env.SMTP_USER, contactId }).then(
+    sendTestEmail(req.mk.ctx, template.id, { to: req.body.to, ...(testChannel(req.mk.ctx) || {}), contactId }).then(
       (r) => {
         req.session.mkFlash = r.sent
           ? { type: "ok", text: `E-mail de test envoyé à ${r.to} (pensez à vérifier le dossier des indésirables).` }
-          : { type: "error", text: r.reason === "smtp_not_configured" ? "Messagerie non configurée : aucun e-mail n'a été envoyé. Renseignez SMTP_HOST (et les variables SMTP_*) dans la configuration du serveur." : "L'envoi a échoué : vérifiez la configuration SMTP (détails dans le journal du serveur)." };
+          : { type: "error", text: r.reason === "smtp_not_configured" ? "Aucun service d'envoi configuré : aucun e-mail n'a été envoyé. Choisissez Resend dans Réglages d'envoi, ou renseignez SMTP_HOST (et les variables SMTP_*) dans la configuration du serveur." : "L'envoi a échoué : vérifiez la configuration SMTP (détails dans le journal du serveur)." };
         res.redirect(back);
       },
       (error) => {

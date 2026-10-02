@@ -16,7 +16,7 @@ module.exports = ({ db }) => {
 
   router.post("/formulaires", need("forms.write"), (req, res, next) => {
     try {
-      const created = forms.createForm(req.mk.ctx, { name: req.body.name, fields: [], consentText: req.body.consentText, listId: null });
+      const created = forms.createForm(req.mk.ctx, { name: req.body.name, fields: [], consentText: req.body.consentText, listId: null, doubleOptin: true });
       res.redirect(`/marketing/formulaires/${created.id}`);
     } catch (error) {
       if (!(error instanceof MarketingError)) return next(error);
@@ -48,6 +48,7 @@ module.exports = ({ db }) => {
         name: req.body.name, fields, consentText: req.body.consentText, listId, thankYouText: req.body.thankYouText,
         popupEnabled: req.body.popupEnabled === "1", popupTrigger: req.body.popupTrigger, popupTriggerValue: Number(req.body.popupTriggerValue), popupFrequencyDays: Number(req.body.popupFrequencyDays),
         propertyFields, tags: req.body.tags ?? "", redirectUrl: req.body.redirectUrl ?? "",
+        doubleOptin: req.body.doubleOptinShown ? req.body.doubleOptin === "1" : undefined, // case absente du formulaire envoyé = inchangé
       });
       req.session.mkFlash = { type: "ok", text: "Formulaire enregistré." };
       res.redirect(`/marketing/formulaires/${id}`);

@@ -12,7 +12,10 @@ const { MarketingError } = require("../errors");
 const { STATUS_GROUPS } = require("../sending/list");
 const { wizardSteps } = require("../sending/wizard");
 const { sendTestEmail, teamRecipients } = require("../templates/testSend");
-const { buildTransport } = require("../../utils/mailer");
+const { testChannel } = require("../sending/config");
+const { buildTransport, fromAddress } = require("../../utils/mailer");
+const { describeError, outboxOverview } = require("../../utils/outbox");
+const { validateEmail } = require("../audience/email");
 const { createRateLimiter } = require("../../middlewares/security");
 const audit = require("../audit");
 const { attempt, need } = require("./kit");
@@ -58,6 +61,7 @@ module.exports = ({ db }) => {
     res.render("marketing/send-settings", {
       title: "Réglages d'envoi", active: "sending", cfg: config.getSendingConfig(ctx), keyOk, smtpOk: smtpAvailable(), workerOn: workerOn(),
       baseUrl: String(process.env.SITE_URL || "").replace(/\/+$/, ""), orgId: ctx.organizationId, canEdit: req.mk.can("settings.write"),
+      outbox: outboxOverview(db, { limit: 20 }), smtpFrom: fromAddress(), contactEmail: process.env.CONTACT_EMAIL || "",
     });
   });
 
@@ -76,6 +80,40 @@ module.exports = ({ db }) => {
       }
       return "Réglages d'envoi enregistrés.";
     }));
+
+  // E-mail de test depuis les réglages : texte FIXE (aucun usage comme relais), 10 par heure, administrateurs seulement.
+  // canal « site » = SMTP du serveur (e-mails du site) ; « campagnes » = fournisseur choisi ci-dessus (Resend…).
+  router.post("/envoi/test", need("settings.write"), (req, res, next) => {
+    const back = "/marketing/envoi#test";
+    const key = `envoi:${req.session.user.id}`;
+    if (testLimiter.isLimited(key)) { req.session.mkFlash = { type: "error", text: "Trop d'e-mails de test : 10 par heure au plus." }; return res.redirect(back); }
+    testLimiter.hit(key);
+    const to = String(req.body.to || "").trim();
+    if (!validateEmail(to).ok) { req.session.mkFlash = { type: "error", text: "Adresse e-mail invalide." }; return res.redirect(back); }
+    const channel = req.body.channel === "campagnes" ? "campagnes" : "site";
+    const { ctx } = req.mk;
+    const cfg = config.getSendingConfig(ctx);
+    const message = {
+      to, subject: "[TEST] KOYEKOLA : votre configuration e-mail fonctionne",
+      text: `Bonjour,\n\nCet e-mail de test a été envoyé depuis KOYEKOLA (Marketing → Réglages d'envoi), canal « ${channel === "site" ? "e-mails du site (SMTP)" : "campagnes (" + cfg.provider + ")"} ».\nS'il est arrivé dans votre boîte de réception (et non dans les indésirables), tout est en ordre.`,
+      headers: { "X-KOYEKOLA-Test": "1" },
+    };
+    const done = (flash) => { req.session.mkFlash = flash; res.redirect(back); };
+    (async () => {
+      if (channel === "campagnes" && cfg.provider === "console") return done({ type: "error", text: "Fournisseur « console » : rien n'est envoyé. Choisissez Resend ou SMTP ci-dessus pour tester les campagnes." });
+      const chan = channel === "campagnes" ? config.testChannel(ctx) : (() => { const t = buildTransport(); return t ? { name: "smtp", transport: t, from: fromAddress() } : null; })();
+      if (!chan) return done({ type: "error", text: channel === "site" ? "SMTP non configuré : renseignez SMTP_HOST, SMTP_USER, SMTP_PASS et SMTP_FROM dans la configuration du serveur." : "Fournisseur incomplet : enregistrez la clé d'API." });
+      if (!chan.from) return done({ type: "error", text: "Aucune adresse d'expéditeur : renseignez SMTP_FROM (ou l'expéditeur ci-dessus)." });
+      try {
+        if (chan.provider) await chan.provider.send({ ...message, from: chan.from });
+        else await chan.transport.sendMail({ ...message, from: chan.from });
+        audit.recordAudit(db, { organizationId: ctx.organizationId, userId: ctx.userId, action: "sending.test_sent", resourceType: "organization", resourceId: ctx.organizationId, metadata: { channel } });
+        done({ type: "ok", text: `E-mail de test envoyé à ${to} par ${chan.name === "resend" ? "Resend" : "SMTP"}. Vérifiez aussi le dossier des indésirables.` });
+      } catch (error) {
+        done({ type: "error", text: `L'envoi a échoué : ${error.kind ? error.message : describeError(error)}.`, detail: "Vérifiez les identifiants, l'expéditeur (domaine authentifié chez le fournisseur) et le port (465 = SMTP_SECURE=true, 587 = false)." });
+      }
+    })().catch(next);
+  });
 
   // ---------- Campagnes ----------
   router.get("/campagnes", need("campaigns.read"), (req, res) => {
@@ -206,13 +244,13 @@ module.exports = ({ db }) => {
     }
     testLimiter.hit(key); // compté à chaque tentative (y compris refusée) : on ne peut pas sonder les adresses
     const { ctx } = req.mk;
-    sendTestEmail(ctx, campaign.template_id, { to: req.body.to, transport: buildTransport(), from: process.env.SMTP_FROM || process.env.SMTP_USER }).then(
+    sendTestEmail(ctx, campaign.template_id, { to: req.body.to, ...(testChannel(ctx) || {}) }).then(
       (r) => {
         if (r.sent) {
           audit.recordAudit(db, { organizationId: ctx.organizationId, userId: ctx.userId, action: "campaign.test_sent", resourceType: "campaign", resourceId: campaign.id, metadata: {} });
           req.session.mkFlash = { type: "ok", text: `E-mail de test envoyé à ${r.to} (pensez à vérifier le dossier des indésirables).` };
         } else {
-          req.session.mkFlash = { type: "error", text: r.reason === "smtp_not_configured" ? "Messagerie non configurée : aucun e-mail n'a été envoyé. Renseignez SMTP_HOST (et les variables SMTP_*) dans la configuration du serveur." : "L'envoi du test a échoué : vérifiez la configuration SMTP." };
+          req.session.mkFlash = { type: "error", text: r.reason === "smtp_not_configured" ? "Aucun service d'envoi configuré : aucun e-mail n'a été envoyé. Choisissez Resend dans Réglages d'envoi, ou renseignez SMTP_HOST (et les variables SMTP_*) dans la configuration du serveur." : "L'envoi du test a échoué : vérifiez la configuration SMTP." };
         }
         res.redirect(back);
       },

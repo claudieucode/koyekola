@@ -228,7 +228,7 @@ describe("e-mail de test", () => {
     const id = tplId("Ma newsletter");
     const r = await post(boss, `/marketing/modeles/${id}/test`, { to: "prof@test.local" });
     assert.equal(r.status, 200);
-    assert.match(r.text, /Messagerie non configurée/);
+    assert.match(r.text, /Aucun service d(?:'|&#39;)envoi configuré/);
   });
   test("adresse hors équipe : refusée", async () => {
     const id = tplId("Ma newsletter");

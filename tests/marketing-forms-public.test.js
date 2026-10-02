@@ -16,6 +16,9 @@ describe("page publique d'un formulaire", () => {
     await boss.post("/marketing/formulaires", { name: "Newsletter publique", consentText: "Oui, je veux recevoir les actualités." });
     const id = one("SELECT id FROM mk_forms WHERE name = 'Newsletter publique'").id;
     slug = one("SELECT slug FROM mk_forms WHERE id = ?", id).slug;
+    // Ces tests vérifient l'inscription IMMÉDIATE : double confirmation désactivée (activée par défaut à la création,
+    // testée dans tests/emails.test.js)
+    { const db = srv.db(); db.prepare("UPDATE mk_forms SET double_optin = 0 WHERE id = ?").run(id); db.close(); }
     await boss.post(`/marketing/formulaires/${id}/publier`);
   });
   after(() => srv.stop());

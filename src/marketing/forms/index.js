@@ -7,6 +7,10 @@ const { addToList } = require("../audience/lists");
 const { recordConsent } = require("../compliance/consent");
 const { setContactProperties, validatePropertyValues } = require("../audience/properties");
 const { tagContact } = require("../audience/tags");
+const crypto = require("crypto");
+const { truncateIp } = require("../compliance/consent");
+
+const BLOCKED = new Set(["bounced", "complained", "suppressed"]);
 
 // Champs facultatifs proposables (l'adresse est TOUJOURS demandée, en plus, jamais dans cette liste)
 const FIELD_CATALOG = { first_name: "Prénom", last_name: "Nom", phone: "Téléphone", company: "Société" };
@@ -96,12 +100,14 @@ function rowToForm(row) {
     id: row.id, name: row.name, slug: row.slug, status: row.status, fields: JSON.parse(row.fields), consentText: row.consent_text,
     listId: row.list_id, thankYouText: row.thank_you_text, viewCount: row.view_count, submitCount: row.submit_count,
     propertyFields: JSON.parse(row.property_fields || "[]"), tags: JSON.parse(row.tags || "[]"), redirectUrl: row.redirect_url || null,
+    doubleOptin: Boolean(row.double_optin),
     popupEnabled: Boolean(row.popup_enabled), popupTrigger: row.popup_trigger, popupTriggerValue: row.popup_trigger_value, popupFrequencyDays: row.popup_frequency_days,
     createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }
 
-function createForm(ctx, { name, fields, consentText, listId }) {
+// doubleOptin : activé par la page de création (nouveaux formulaires) ; désactivé par défaut ici pour les appelants existants
+function createForm(ctx, { name, fields, consentText, listId, doubleOptin = false }) {
   checkCtx(ctx);
   const cleanName = cleanText(name, { max: 80, field: "name" });
   if (!cleanName) throw new MarketingError("invalid_field", "Le nom est obligatoire.");
@@ -112,8 +118,8 @@ function createForm(ctx, { name, fields, consentText, listId }) {
   const slug = uniqueSlug(ctx, slugify(name));
   const id = Number(
     ctx.db
-      .prepare("INSERT INTO mk_forms (organization_id, name, slug, fields, consent_text, list_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .run(ctx.organizationId, cleanName, slug, JSON.stringify(cleanFields), cleanConsent, list, ctx.userId ?? null).lastInsertRowid
+      .prepare("INSERT INTO mk_forms (organization_id, name, slug, fields, consent_text, list_id, created_by, double_optin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(ctx.organizationId, cleanName, slug, JSON.stringify(cleanFields), cleanConsent, list, ctx.userId ?? null, doubleOptin ? 1 : 0).lastInsertRowid
   );
   audit(ctx, "form.created", "form", id, { name: cleanName, slug });
   return getForm(ctx, id);
@@ -135,7 +141,7 @@ function getForm(ctx, id) {
   return rowToForm(requireFormRow(ctx, id));
 }
 
-function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, popupEnabled, popupTrigger, popupTriggerValue, popupFrequencyDays, propertyFields, tags, redirectUrl }) {
+function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, popupEnabled, popupTrigger, popupTriggerValue, popupFrequencyDays, propertyFields, tags, redirectUrl, doubleOptin }) {
   checkCtx(ctx);
   const current = rowToForm(requireFormRow(ctx, id)); // existe et appartient à l'organisation
   // Réglages absents de l'appel (ancien appelant) : on garde la valeur actuelle plutôt que de l'effacer
@@ -156,10 +162,10 @@ function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, 
     .prepare(
       `UPDATE mk_forms SET name = ?, fields = ?, consent_text = ?, list_id = ?, thank_you_text = ?,
          popup_enabled = ?, popup_trigger = ?, popup_trigger_value = ?, popup_frequency_days = ?,
-         property_fields = ?, tags = ?, redirect_url = ?, updated_at = datetime('now') WHERE id = ?`
+         property_fields = ?, tags = ?, redirect_url = ?, double_optin = ?, updated_at = datetime('now') WHERE id = ?`
     )
     .run(cleanName, JSON.stringify(cleanFields), cleanConsent, list, cleanThanks, popupEnabled ? 1 : 0, trigger, triggerValue, frequencyDays,
-      JSON.stringify(cleanPropertyFields), JSON.stringify(cleanTags), cleanRedirect, id);
+      JSON.stringify(cleanPropertyFields), JSON.stringify(cleanTags), cleanRedirect, (doubleOptin === undefined ? current.doubleOptin : doubleOptin) ? 1 : 0, id);
   audit(ctx, "form.updated", "form", id, { name: cleanName, popupEnabled: Boolean(popupEnabled) });
   return getForm(ctx, id);
 }
@@ -237,8 +243,32 @@ function submitForm(ctx, formId, input = {}) {
     if (error instanceof MarketingError) return { ok: false, reason: error.code, message: error.message };
     throw error;
   }
+  // Double confirmation : rien n'est accordé maintenant ; un lien est envoyé (par l'appelant, qui connaît l'adresse du site)
+  if (form.doubleOptin && contact.status !== "subscribed") {
+    if (BLOCKED.has(contact.status) || ctx.db.prepare("SELECT 1 FROM mk_suppressions WHERE organization_id = ? AND email = ?").get(ctx.organizationId, contact.email)) {
+      return { ok: false, reason: "suppressed" };
+    }
+    const token = crypto.randomBytes(32).toString("base64url");
+    const now = ctx.now ? ctx.now() : Date.now();
+    ctx.db.prepare("DELETE FROM mk_pending_confirmations WHERE contact_id = ? AND form_id = ? AND confirmed_at IS NULL").run(contact.id, formId);
+    ctx.db
+      .prepare("INSERT INTO mk_pending_confirmations (organization_id, form_id, contact_id, token_hash, consent_text, ip, payload, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(ctx.organizationId, formId, contact.id, tokenHash(token), form.consentText, truncateIp(input.ip), JSON.stringify({ properties }), now + CONFIRM_TTL_MS, now);
+    ctx.db.prepare("UPDATE mk_forms SET submit_count = submit_count + 1 WHERE id = ?").run(formId);
+    audit(ctx, "form.pending_confirmation", "form", formId, {});
+    return { ok: true, pending: true, token, email: contact.email, contact: getContact(ctx, contact.id) };
+  }
   const consent = recordConsent(ctx, contact.id, { source: "form", textShown: form.consentText, ip: input.ip, formId });
   if (!consent.ok) return { ok: false, reason: consent.reason };
+  applyFormExtras(ctx, form, contact.id, properties);
+  ctx.db.prepare("UPDATE mk_forms SET submit_count = submit_count + 1 WHERE id = ?").run(formId);
+  // `contact` date d'AVANT recordConsent (qui vient de faire passer son statut à « subscribed ») : on renvoie l'état à jour, pas l'instantané périmé
+  return { ok: true, contact: getContact(ctx, contact.id) };
+}
+
+// Liste, propriétés et étiquettes du formulaire : appliquées à l'inscription (ou à la confirmation, en double opt-in)
+function applyFormExtras(ctx, form, contactId, properties) {
+  const contact = { id: contactId };
   if (form.listId) {
     try {
       addToList(ctx, form.listId, [contact.id]);
@@ -248,12 +278,44 @@ function submitForm(ctx, formId, input = {}) {
   }
   if (Object.keys(properties).length) setContactProperties(ctx, contact.id, properties, { skipEmpty: true });
   for (const tag of form.tags) tagContact(ctx, contact.id, tag);
-  ctx.db.prepare("UPDATE mk_forms SET submit_count = submit_count + 1 WHERE id = ?").run(formId);
-  // `contact` date d'AVANT recordConsent (qui vient de faire passer son statut à « subscribed ») : on renvoie l'état à jour, pas l'instantané périmé
-  return { ok: true, contact: getContact(ctx, contact.id) };
+}
+
+// ---------- Double confirmation ----------
+const CONFIRM_TTL_MS = 7 * 24 * 3600 * 1000;
+const TOKEN = /^[A-Za-z0-9_-]{43}$/;
+const tokenHash = (token) => crypto.createHash("sha256").update(token).digest("hex");
+
+// Lien → { pending, form } si valable (non confirmé, non expiré), sinon null. Sert la page de confirmation (GET).
+function findPendingConfirmation(db, token, { now = Date.now() } = {}) {
+  if (typeof token !== "string" || !TOKEN.test(token)) return null;
+  const pending = db.prepare("SELECT * FROM mk_pending_confirmations WHERE token_hash = ?").get(tokenHash(token));
+  if (!pending || pending.confirmed_at !== null || pending.expires_at <= now) return null;
+  const row = db.prepare("SELECT * FROM mk_forms WHERE id = ?").get(pending.form_id);
+  return row ? { pending, form: rowToForm(row) } : null;
+}
+
+// Bouton « Confirmer » : le consentement est enregistré MAINTENANT, avec le texte présenté au départ et la mention de
+// la confirmation par e-mail ; puis liste, propriétés et étiquettes. Usage unique.
+function confirmSubscription(ctx, token, { now = Date.now() } = {}) {
+  checkCtx(ctx);
+  const found = findPendingConfirmation(ctx.db, token, { now });
+  if (!found || found.pending.organization_id !== ctx.organizationId) return { ok: false, reason: "invalid" };
+  const { pending, form } = found;
+  const claimed = ctx.db.prepare("UPDATE mk_pending_confirmations SET confirmed_at = ? WHERE id = ? AND confirmed_at IS NULL").run(now, pending.id).changes;
+  if (!claimed) return { ok: false, reason: "invalid" };
+  const consent = recordConsent(ctx, pending.contact_id, {
+    source: "form", textShown: `${pending.consent_text} [Inscription confirmée par e-mail (double opt-in)]`, ip: pending.ip, formId: form.id,
+  });
+  if (!consent.ok) return { ok: false, reason: consent.reason };
+  let properties = {};
+  try { properties = JSON.parse(pending.payload).properties || {}; } catch { properties = {}; }
+  applyFormExtras(ctx, form, pending.contact_id, properties);
+  audit(ctx, "form.confirmed", "form", form.id, {});
+  return { ok: true, form };
 }
 
 module.exports = {
   FIELD_CATALOG, STATUSES, MAX_TAGS, propertyFieldDefs, POPUP_TRIGGERS, POPUP_TRIGGER_RANGE, POPUP_FREQUENCY_RANGE,
   createForm, listForms, getForm, updateForm, setStatus, deleteForm, getPublishedForm, getActivePopup, recordView, submitForm, slugify,
+  findPendingConfirmation, confirmSubscription, CONFIRM_TTL_MS,
 };

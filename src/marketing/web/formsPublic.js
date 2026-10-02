@@ -3,6 +3,9 @@
 const express = require("express");
 const forms = require("../forms");
 const { createRateLimiter } = require("../../middlewares/security");
+const { sendSubscriptionConfirmation } = require("../../utils/mailer");
+
+const PENDING_TEXT = "Merci ! Un e-mail de confirmation vient de vous être envoyé : cliquez sur le lien qu'il contient pour finaliser votre inscription (pensez aux courriers indésirables).";
 
 module.exports = ({ db }) => {
   const router = express.Router();
@@ -34,12 +37,34 @@ module.exports = ({ db }) => {
     });
   });
 
+  // ---------- Double confirmation : /f/confirmer/:token (AVANT /f/:slug) ----------
+  // Un GET ne confirme JAMAIS (antivirus et aperçus de liens ouvrent les adresses) : il faut cliquer le bouton.
+  const confirmInvalid = (res) => res.status(410).render("marketing-public/message", {
+    title: "Lien expiré", heading: "Ce lien de confirmation n'est plus valable", text: "Il a déjà servi, ou il date de plus de 7 jours. Inscrivez-vous de nouveau pour recevoir un nouveau lien.",
+  });
+  router.get("/f/confirmer/:token", (req, res) => {
+    res.set({ "Referrer-Policy": "no-referrer" });
+    const found = forms.findPendingConfirmation(db, req.params.token);
+    if (!found) return confirmInvalid(res);
+    res.render("marketing-public/confirm-subscription", { title: "Confirmer mon inscription", formName: found.form.name });
+  });
+  router.post("/f/confirmer/:token", (req, res, next) => {
+    try {
+      const ctx = { db, organizationId: req.mkForms.organizationId, userId: null, bus: req.mkForms.bus };
+      const r = forms.confirmSubscription(ctx, req.params.token);
+      if (!r.ok) return confirmInvalid(res);
+      res.render("marketing-public/message", { title: "Inscription confirmée", heading: "Inscription confirmée", text: r.form.thankYouText || "Merci ! Votre inscription est confirmée." });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.get("/f/:slug", (req, res) => {
     const form = forms.getPublishedForm(db, req.mkForms.organizationId, req.params.slug);
     if (!form) return res.status(404).render("error", { message: "Ce formulaire n'existe pas ou n'est plus publié." });
     const submitted = req.query.envoye === "1";
     if (!submitted) forms.recordView(db, form.id); // la page de remerciement n'est pas une nouvelle visite du formulaire
-    res.render("marketing-public/form", { title: form.name, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: forms.propertyFieldDefs(db, req.mkForms.organizationId, form), error: null, values: {}, submitted });
+    res.render("marketing-public/form", { title: form.name, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: forms.propertyFieldDefs(db, req.mkForms.organizationId, form), error: null, values: {}, submitted, confirmPending: submitted && req.query.confirmer === "1" });
   });
 
   router.post("/f/:slug", (req, res, next) => {
@@ -64,6 +89,12 @@ module.exports = ({ db }) => {
       if (!result.ok) {
         const message = result.reason === "invalid_email" ? "Adresse e-mail invalide." : result.message || "Inscription impossible pour le moment.";
         return fail(400, message);
+      }
+      if (result.pending) {
+        // Double confirmation : l'adresse publique du site (SITE_URL) sert au lien ; sinon celle de la requête
+        const base = String(process.env.SITE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
+        sendSubscriptionConfirmation(db, { to: result.email, formName: form.name, url: `${base}/f/confirmer/${result.token}` });
+        return isPopup ? res.json({ ok: true, thankYouText: PENDING_TEXT }) : res.redirect(`/f/${req.params.slug}?envoye=1&confirmer=1`);
       }
       if (isPopup) return res.json({ ok: true, thankYouText: form.thankYouText });
       // Redirection choisie dans la configuration (validée à l'enregistrement : http(s) ou chemin du site), sinon remerciement

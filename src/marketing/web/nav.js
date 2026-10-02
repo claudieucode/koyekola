@@ -2,11 +2,12 @@
 // Une entrée « soon » est prévue mais jamais affichée : on n'expose pas une fonctionnalité qui n'existe pas encore.
 // (Elle porte la phase où elle arrive : `since`.) Les clés `key` sont celles passées en `active` par les routes.
 
-// Organisation calquée sur Mailchimp : Accueil, Campagnes, Automatisations, Audience (formulaires d'inscription
+// Organisation calquée sur Mailchimp : Accueil, Campagnes, SMS, Automatisations, Audience (formulaires d'inscription
 // compris), Analytics, Intégrations, puis Paramètres (envoi, conformité) en bas du menu.
 const SECTIONS = [
   { key: "marketing", label: "Accueil", icon: "home" },
   { key: "campaigns", label: "Campagnes", icon: "send" },
+  { key: "sms", label: "SMS", icon: "smartphone" },
   { key: "automations", label: "Automatisations", icon: "zap" },
   { key: "audience", label: "Audience", icon: "users" },
   { key: "analytics", label: "Analytics", icon: "activity" },
@@ -33,6 +34,11 @@ const ITEMS = [
   live("campaigns", "templates", "Modèles d'e-mails", "/marketing/modeles", "fileText", "templates.read", { label: "Nouveau modèle", href: "/marketing/modeles#creer", permission: "templates.write" }),
   soon("campaigns", "ab", "Tests A/B", "/marketing/tests-ab", "activity", "M5"),
 
+  // Onglet SMS à part entière, comme chez Mailchimp : campagnes, abonnés, réglages
+  live("sms", "smscampaigns", "Campagnes SMS", "/marketing/sms", "smartphone", "campaigns.read", { label: "Créer une campagne SMS", href: "/marketing/sms#nouvelle", permission: "campaigns.write" }),
+  live("sms", "smsaudience", "Abonnés SMS", "/marketing/sms/abonnes", "users", "contacts.read"),
+  live("sms", "sms", "Réglages SMS", "/marketing/sms/reglages", "settings", "settings.read"),
+
   live("automations", "automations", "Automatisations", "/marketing/automatisations", "zap", "automations.read", { label: "Nouveau scénario", href: "/marketing/automatisations#nouveau", permission: "automations.write" }),
 
   live("analytics", "analytics", "Analytics", "/marketing/analytics", "activity", "analytics.read"),
@@ -46,6 +52,7 @@ const ITEMS = [
   live("settings", "sending", "Réglages d'envoi", "/marketing/envoi", "mail", "settings.read"),
   soon("settings", "domains", "Domaines", "/marketing/domaines", "globe", "R6"),
   live("settings", "compliance", "Conformité", "/marketing/conformite", "shield", "compliance.read"),
+  live("settings", "appearance", "Apparence", "/marketing/apparence", "eye", "contacts.read"),
 
   // Page de référence du design system : accessible par son adresse, absente du menu
   { ...live("settings", "components", "Composants", "/marketing/composants", "layout", "settings.read"), hidden: true },

@@ -32,6 +32,7 @@ describe("pop-up public", () => {
     await boss.post("/marketing/formulaires", { name: "Pop-up du site", consentText: "Oui, prévenez-moi." });
     const id = one("SELECT id FROM mk_forms WHERE name = 'Pop-up du site'").id;
     await boss.postJson(`/marketing/formulaires/${id}`, { name: "Pop-up du site", consentText: "Oui, prévenez-moi.", fields: ["first_name"], popupEnabled: "1", popupTrigger: "scroll", popupTriggerValue: 30, popupFrequencyDays: 3 });
+    run("UPDATE mk_forms SET double_optin = 0 WHERE id = ?", id); // inscription immédiate (double confirmation : tests/emails.test.js)
     await boss.post(`/marketing/formulaires/${id}/publier`);
     slug = one("SELECT slug FROM mk_forms WHERE id = ?", id).slug;
     const body = JSON.parse((await new Client(srv.base).get("/f/popup.json")).text);

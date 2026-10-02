@@ -11,6 +11,7 @@ const { bootstrapInstructorFromEnv } = require("./src/config/bootstrap");
 const { securityHeaders, sameOriginOnly } = require("./src/middlewares/security");
 const { injectLocals } = require("./src/middlewares/locals");
 const authRoutes = require("./src/routes/auth");
+const passwordResetRoutes = require("./src/routes/passwordReset");
 const courseRoutes = require("./src/routes/courses");
 const cartRoutes = require("./src/routes/cart");
 const orderRoutes = require("./src/routes/orders");
@@ -58,6 +59,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 // API publique /api/v1 : authentification par clé (jamais par cookie), donc montée avant la session et le contrôle d'origine
 app.use("/api/v1", marketingWeb.api);
+// API mobile /api/mobile : échange email+mot de passe → clé d'API (même logique : pas de cookie, pas de CSRF)
+const { createMobileAuthRouter } = require("./src/marketing/api/mobile-auth");
+app.use("/api/mobile", createMobileAuthRouter({ db }));
 
 // Fichiers du site : quand l'adresse porte un numéro de version (?v=…, voir src/utils/assets.js),
 // le navigateur peut les garder un an ; sans numéro, une heure seulement.
@@ -106,6 +110,7 @@ app.get("/sante", (req, res) => {
 app.use(seoRoutes);
 app.use(mediaRoutes);
 app.use(authRoutes);
+app.use(passwordResetRoutes);
 app.use(courseRoutes);
 app.use(cartRoutes);
 app.use(orderRoutes);
@@ -159,6 +164,10 @@ process.on("unhandledRejection", (reason) => {
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => {
   console.log(`KOYEKOLA disponible sur http://localhost:${PORT}`);
+  // E-mails du site en file d'attente : envoi de ceux laissés en attente, puis nouvelles tentatives chaque minute
+  const outbox = require("./src/utils/outbox");
+  outbox.processOutbox(db).catch((error) => console.error("[KOYEKOLA] File d'envoi :", error.message));
+  outbox.startOutboxTimer(db);
   // Travaux marketing en arrière-plan (événements, envois) : activés seulement avec MARKETING_WORKER=on
   if (marketing.ready && process.env.MARKETING_WORKER === "on") {
     marketing.worker.start();

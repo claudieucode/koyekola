@@ -7,11 +7,45 @@
       <ul class="mk-status-list">
         <li><strong>Fournisseur actuel :</strong> <%= cfg.provider %></li>
         <li><strong>ENCRYPTION_KEY :</strong> <%= keyOk ? "définie (liens de désinscription signables, secrets chiffrables)." : "ABSENTE : définissez-la avant d'enregistrer une clé d'API ou d'envoyer une campagne." %></li>
-        <li><strong>SMTP (serveur) :</strong> <%= smtpOk ? "configuré (SMTP_HOST)." : "non configuré (SMTP_HOST vide)." %></li>
+        <li><strong>SMTP (e-mails du site) :</strong> <%= smtpOk ? "configuré (SMTP_HOST)." : "non configuré (SMTP_HOST vide) : confirmations d'achat, mot de passe oublié, accusés de contact… ne partent pas." %></li>
+        <li><strong>Expéditeur des e-mails du site (SMTP_FROM) :</strong> <%= smtpFrom || "non défini" %></li>
+        <li><strong>Réception des messages de contact (CONTACT_EMAIL) :</strong> <%= contactEmail || (smtpFrom ? smtpFrom + " (SMTP_FROM, faute de CONTACT_EMAIL)" : "non définie") %></li>
         <li><strong>Adresse publique (SITE_URL) :</strong> <%= baseUrl || "non définie : les liens de désinscription en dépendent." %></li>
         <li><strong>Traitement en arrière-plan :</strong> <% if (workerOn) { %>actif.<% } else { %><%= mkh.workerHuman("aucune campagne ne partira") %><details class="mk-flash-details"><summary>Détails techniques</summary><p><%= mkh.WORKER_DETAIL %></p></details><% } %></li>
       </ul>
       <% if (cfg.provider === "console") { %><p class="mk-note">Fournisseur « console » : rien n'est réellement envoyé (les messages sont seulement journalisés). C'est le réglage sûr par défaut.</p><% } %>
+    </section>
+
+    <% if (canEdit) { %>
+    <section class="mk-panel" id="test">
+      <h2>Envoyer un e-mail de test</h2>
+      <p class="field-hint">Un court message fixe, pour vérifier que vos e-mails partent et arrivent bien en boîte de réception (10 par heure).</p>
+      <form action="/marketing/envoi/test" method="post" class="mk-inline-form">
+        <label for="t-to" class="sr-only">Adresse de réception</label><input id="t-to" type="email" name="to" required maxlength="254" placeholder="vous@exemple.com">
+        <label for="t-channel" class="sr-only">Canal</label>
+        <select id="t-channel" name="channel"><option value="site">E-mails du site (SMTP)</option><option value="campagnes">Campagnes (fournisseur choisi)</option></select>
+        <button type="submit" class="btn btn-outline">Envoyer le test</button>
+      </form>
+    </section>
+    <% } %>
+
+    <section class="mk-panel" id="journal">
+      <h2>E-mails du site : derniers envois</h2>
+      <% const ST = { pending: ["En attente", "badge"], sending: ["En cours", "badge"], sent: ["Envoyé", "badge-success"], failed: ["Échec", "mk-badge-danger"], skipped: ["Non envoyé", "badge-warning"] }; const KIND = { purchase: "Confirmation d'achat", contact_notification: "Nouveau message de contact", contact_ack: "Accusé de réception (contact)", signup_welcome: "Bienvenue (inscription)", password_reset: "Mot de passe oublié", newsletter_confirm: "Confirmation newsletter" }; %>
+      <p class="field-hint">Confirmations d'achat, mot de passe oublié, accusés de contact… Ils partent en arrière-plan ; un échec est réessayé 5 fois (1, 2, 4, 8 min).
+        <% if (outbox.counts.failed) { %><strong><%= outbox.counts.failed %> en échec définitif.</strong><% } %></p>
+      <% if (!outbox.rows.length) { %><p class="field-hint">Aucun e-mail du site pour l'instant.</p>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table">
+          <caption class="sr-only">Derniers e-mails du site</caption>
+          <thead><tr><th scope="col">Type</th><th scope="col">Destinataire</th><th scope="col">État</th><th scope="col">Date</th></tr></thead>
+          <tbody><% outbox.rows.forEach((m) => { const st = ST[m.status] || [m.status, "badge"]; %>
+            <tr><td data-label="Type"><%= KIND[m.kind] || m.kind %></td><td data-label="Destinataire"><%= mkh.maskEmail(m.to_email) %></td>
+              <td data-label="État"><span class="badge <%= st[1] %>"><%= st[0] %></span><% if (m.last_error) { %><span class="mk-sub"><%= m.last_error %><%= m.status === "pending" ? " — essai " + (m.attempts + 1) + " à venir" : "" %></span><% } %></td>
+              <td data-label="Date" class="mk-nowrap"><%= new Date(m.sent_at || m.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) %></td></tr>
+          <% }) %></tbody>
+        </table></div>
+      <% } %>
     </section>
 
     <form action="/marketing/envoi" method="post" class="mk-form">
