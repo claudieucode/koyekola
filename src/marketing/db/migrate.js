@@ -95,8 +95,16 @@ function migrate(db, { dir, dbPath, backupDir, log = console } = {}) {
   }
 
   const applied = [];
+  const alreadyApplied = db.prepare("SELECT 1 FROM schema_migrations WHERE scope = ? AND version = ?");
   for (const m of pending) {
     db.exec("BEGIN IMMEDIATE");
+    // Deux exemplaires du serveur peuvent démarrer en même temps (redémarrage chez l'hébergeur) : la liste « en attente »
+    // lue plus haut peut être périmée. Une fois le verrou d'écriture obtenu, on revérifie : si l'autre exemplaire vient
+    // d'appliquer cette migration, on la saute au lieu d'échouer (« table already exists »).
+    if (alreadyApplied.get(SCOPE, m.version)) {
+      db.exec("COMMIT");
+      continue;
+    }
     try {
       db.exec(m.sql);
       db.prepare("INSERT INTO schema_migrations (scope, version, name, checksum) VALUES (?, ?, ?, ?)").run(SCOPE, m.version, m.name, m.checksum);

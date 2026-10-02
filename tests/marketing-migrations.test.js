@@ -43,6 +43,31 @@ describe("application des migrations", () => {
     assert.deepEqual(run().applied, ["002"]);
     assert.deepEqual(applied(), ["001", "002"]);
   });
+  test("deux serveurs qui démarrent en même temps : le second saute ce que le premier vient d'appliquer", () => {
+    write("001_premiere.sql", "CREATE TABLE mk_a (id INTEGER PRIMARY KEY);");
+    write("002_seconde.sql", "CREATE TABLE mk_b (id INTEGER PRIMARY KEY);");
+    const other = new DatabaseSync(dbFile);
+    // Le second serveur a lu la liste des migrations appliquées AVANT que le premier ne les applique
+    const stale = new Proxy(other, {
+      get(target, prop) {
+        if (prop === "prepare") {
+          return (sql) => {
+            const stmt = target.prepare(sql);
+            if (/SELECT version, checksum FROM schema_migrations/.test(sql)) {
+              return { all: (...args) => { const rows = stmt.all(...args); run(); return rows; } };
+            }
+            return stmt;
+          };
+        }
+        const value = target[prop];
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const result = migrate(stale, { dir: migDir, dbPath: dbFile, backupDir, log: quiet });
+    assert.deepEqual(result.applied, []);
+    assert.deepEqual(applied(), ["001", "002"]);
+    other.close();
+  });
   test("plusieurs instructions, déclencheurs et index dans un même fichier", () => {
     write("001_riche.sql", `
       CREATE TABLE mk_log (id INTEGER PRIMARY KEY, msg TEXT NOT NULL);

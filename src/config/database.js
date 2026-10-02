@@ -3,8 +3,9 @@ const { dbFile } = require("./paths");
 
 const db = new DatabaseSync(dbFile);
 db.exec("PRAGMA foreign_keys = ON");
-// Si la base est brièvement occupée (sauvegarde, écriture simultanée), on patiente 5 s au lieu d'échouer
-db.exec("PRAGMA busy_timeout = 5000");
+// Si la base est brièvement occupée (sauvegarde, écriture simultanée, deux exemplaires du serveur qui démarrent en
+// même temps chez l'hébergeur), on patiente jusqu'à 15 s au lieu d'échouer
+db.exec("PRAGMA busy_timeout = 15000");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
