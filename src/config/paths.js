@@ -7,11 +7,14 @@ const path = require("path");
 const projectRoot = path.join(__dirname, "..", "..");
 
 const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(projectRoot, "data");
-const uploadsRoot = process.env.UPLOADS_DIR ? path.resolve(process.env.UPLOADS_DIR) : path.join(projectRoot, "uploads");
+// Fichiers envoyés : UPLOADS_DIR si défini ; sinon, si DATA_DIR est défini (dossier conservé chez l'hébergeur),
+// à côté de la base dans DATA_DIR/uploads — jamais dans le dossier du projet, effacé à chaque redéploiement.
+const uploadsRoot = process.env.UPLOADS_DIR ? path.resolve(process.env.UPLOADS_DIR) : process.env.DATA_DIR ? path.join(dataDir, "uploads") : path.join(projectRoot, "uploads");
+const projectUploads = path.join(projectRoot, "uploads");
 
 fs.mkdirSync(dataDir, { recursive: true });
 ["thumbnails", "videos", "resources", "blog"].forEach((sub) => fs.mkdirSync(path.join(uploadsRoot, sub), { recursive: true }));
 
 const dbFile = path.join(dataDir, "KOYEKOLA.db");
 
-module.exports = { dataDir, uploadsRoot, dbFile };
+module.exports = { dataDir, uploadsRoot, dbFile, projectRoot, projectUploads };

@@ -1041,3 +1041,6 @@
 .kfun-term { background: #0d1117; color: #c9f7c9; font-family: ui-monospace, Menlo, monospace; }
 @keyframes kfun-hit { 20% { transform: translateX(-3px); } 40% { transform: translateX(3px); } 60% { transform: translateX(-2px); } 80% { transform: translateX(2px); } }
 @media (prefers-reduced-motion: reduce) { .kfun-boss.is-hit { animation: none; } }
+/* Image dont le fichier n'existe plus sur le serveur */
+.kb-ed-image.is-broken img { min-height: 80px; width: 100%; background: repeating-linear-gradient(45deg, #fdecec, #fdecec 10px, #fff 10px, #fff 20px); border: 2px dashed var(--danger); border-radius: var(--radius); }
+.kb-ed-broken { display: block; margin-top: 6px; padding: 6px 10px; border-radius: var(--radius); background: #fdecec; color: var(--danger); font-size: 0.82rem; font-weight: 700; }

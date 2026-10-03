@@ -65,6 +65,12 @@ export const KbImage = Node.create({
       dom.dataset.align = a.align;
       dom.dataset.width = a.width;
       const img = document.createElement("img");
+      // Fichier absent du serveur : on le dit clairement au lieu d'afficher un cadre vide
+      img.addEventListener("error", () => {
+        if (dom.querySelector(".kb-ed-broken")) return;
+        dom.classList.add("is-broken");
+        dom.insertBefore(span("kb-ed-broken", `⚠ Fichier image introuvable sur le serveur (${a.src.split("/").pop()}) : sélectionnez le bloc puis « Remplacer » dans l'onglet Bloc.`), img.nextSibling);
+      });
       img.src = a.src;
       img.alt = a.alt || "";
       dom.append(img);
