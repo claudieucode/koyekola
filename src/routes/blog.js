@@ -18,6 +18,8 @@ const seoPages = require("../seo/pages");
 const seoSchema = require("../seo/schema");
 const seoGuard = require("../seo/guard");
 const seoStore = require("../seo/store");
+const seoAudit = require("../seo/audit");
+const seoRules = require("../seo/rules");
 const SEO_LOGGED = ["title", "slug", "seo_title", "seo_description", "canonical_url", "robots_index", "robots_follow", "og_title", "og_description", "og_image_path", "twitter_title", "twitter_description", "twitter_card", "focus_keyword", "secondary_keywords", "schema_type", "status"];
 // Contrôle avant publication côté serveur : si le réglage le demande, une erreur critique bloque la publication
 function guardPublication(fields, status, req, extra = {}) {
@@ -432,6 +434,37 @@ router.post("/formateur/blog/api/seo-check", upload.none(), (req, res) => {
 });
 router.get("/formateur/blog/:id/seo-historique", loadPost, (req, res) => {
   res.json({ changes: seoStore.listChanges({ entityType: "post", entityKey: req.post.id, limit: 100 }).map((c) => ({ field: c.field, before: c.old_value, after: c.new_value, at: c.created_at, by: c.username, source: c.source })) });
+});
+
+// SEO CORE dans l'éditeur : problèmes trouvés par le dernier audit du site pour cet article, et analyse à la demande
+// de la page réellement en ligne (mêmes règles que l'audit). Lecture seule : rien n'est modifié dans l'article.
+const seoIssueJson = (i) => {
+  const rule = seoRules.BY_ID[i.rule_id] || {};
+  return { rule: i.rule_id, title: rule.title || i.rule_id, severity: i.severity, severityLabel: (seoRules.SEVERITIES[i.severity] || {}).label || i.severity, category: seoRules.CATEGORIES[i.category] || i.category, detail: i.detail, recommendation: rule.recommendation || null };
+};
+const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+const bySeverity = (a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9);
+router.get("/formateur/blog/:id/seo-audit", loadPost, (req, res) => {
+  const path = `/blog/${req.post.slug}`;
+  const last = seoAudit.latest();
+  const a = last ? seoAudit.get(last.id) : null;
+  const issues = a ? db.prepare("SELECT * FROM seo_issues WHERE audit_id = ? AND path = ? AND fixed_at IS NULL").all(a.id, path).map(seoIssueJson).sort(bySeverity) : [];
+  // Article publié (ou modifié) après le dernier audit : ses résultats ne reflètent pas la version en ligne
+  const changedAt = String(req.post.updated_at || req.post.published_at || "").replace("T", " ").slice(0, 19);
+  const newerThanAudit = Boolean(a && changedAt && changedAt > a.finished_at);
+  res.json({ online: Boolean(req.post.published), path, audit: a ? { id: a.id, finishedAt: a.finished_at, kind: a.kind } : null, issues, newerThanAudit, links: { analyse: `/formateur/seo/analyse?path=${encodeURIComponent(path)}`, audit: a ? `/formateur/seo/audit?id=${a.id}&q=${encodeURIComponent(path)}` : "/formateur/seo/audit", space: "/formateur/seo" } });
+});
+router.post("/formateur/blog/:id/seo-analyse", loadPost, async (req, res) => {
+  if (!req.post.published) return res.status(409).json({ error: "L'article n'est pas en ligne : publiez-le pour analyser la page réelle. Le contrôle avant publication vérifie déjà le brouillon." });
+  const path = `/blog/${req.post.slug}`;
+  try {
+    const r = await seoAudit.analyzePage(path, req);
+    if (r.status !== 200) return res.status(502).json({ error: r.error ? `Page injoignable : ${r.error}` : `La page en ligne a répondu ${r.status}.` });
+    res.json({ path, at: new Date().toISOString(), issues: r.issues.map(seoIssueJson).sort(bySeverity), score: r.scores && r.scores.overall ? r.scores.overall.score : null });
+  } catch (e) {
+    console.error("[KOLAKISA] Analyse SEO de l'article :", e && e.message);
+    res.status(500).json({ error: "Analyse impossible pour le moment." });
+  }
 });
 
 // Apparence des barres latérales de l'éditeur (choix personnel, enregistré sur le compte)

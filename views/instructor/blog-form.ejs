@@ -218,6 +218,15 @@
             </div>
             <div class="wp-seo-todo" data-seo-todo></div>
 
+            <%- panel("seo-site", "Audit du site (page en ligne)", true) %>
+              <p class="wp-help">Problèmes trouvés sur la page publiée de cet article par l'audit de Mon espace → SEO, et analyse à la demande de la page réellement en ligne.</p>
+              <div class="wp-seo-site" data-seo-site aria-live="polite"></div>
+              <div class="wp-seo-site-actions">
+                <button type="button" class="wp-btn-secondary" data-seo-analyse>Analyser la page en ligne</button>
+                <a class="wp-btn-link" href="/formateur/seo" target="_blank" rel="noopener" data-seo-space>Ouvrir l'espace SEO</a>
+              </div>
+            </div></div>
+
             <%- panel("keyword", "Mot-clé", true) %>
               <label for="post-keyword" class="wp-label">Mot-clé principal</label>
               <input id="post-keyword" type="text" name="focus_keyword" value="<%= v('focus_keyword') %>" maxlength="80" placeholder="Ex. formation en ligne" data-analyze>

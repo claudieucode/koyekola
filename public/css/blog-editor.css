@@ -884,3 +884,15 @@
 .wp-guard-group.is-critical { color: var(--danger); }
 .wp-guard-group.is-warning li { color: var(--warning-text); }
 .wp-guard-group.is-passed li { color: var(--success-dark); }
+
+/* Audit du site (SEO CORE) dans l'onglet SEO */
+.wp-seo-site { margin: 8px 0; display: grid; gap: 8px; }
+.wp-seo-site-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.wp-seo-issues { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.wp-seo-issue { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: var(--radius); font-size: 13px; }
+.wp-seo-issue.is-critical, .wp-seo-issue.is-high { border-left-color: var(--danger); }
+.wp-seo-issue.is-medium { border-left-color: var(--warning-text); }
+.wp-seo-issue-sev { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.wp-seo-issue-title { font-weight: 600; }
+.wp-seo-issue-reco { font-size: 12px; }
+.wp-seo-ok { margin: 0; color: var(--success-dark); font-size: 13px; }

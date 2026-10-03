@@ -890,6 +890,7 @@ function start() {
       $(`[data-sidebar-panel="${t.dataset.sidebarTab}"]`).hidden = !on;
     }
     if (key === "bloc") renderInspector(true);
+    if (key === "seo") loadSeoSite();
   }
   sidebarTabs.forEach((t) => t.addEventListener("click", () => showSidebarTab(t.dataset.sidebarTab)));
   $$("[data-toggle-sidebar]").forEach((b) => b.addEventListener("click", () => {
@@ -921,6 +922,46 @@ function start() {
       if (!changes.length) list.append(h("li", { class: "wp-help" }, "Aucune modification SEO enregistrée pour l'instant."));
     } catch (e) { list.replaceChildren(h("li", { class: "wp-error" }, e.message)); }
   }
+  // Audit du site (SEO CORE) : résultats du dernier audit pour la page publiée, analyse à la demande
+  const seoIssueItem = (i) => h("li", { class: `wp-seo-issue is-${i.severity}` },
+    h("span", { class: "wp-seo-issue-sev" }, i.severityLabel),
+    h("span", { class: "wp-seo-issue-title" }, i.title),
+    i.detail ? h("span", { class: "wp-help" }, i.detail) : null,
+    i.recommendation ? h("span", { class: "wp-seo-issue-reco" }, i.recommendation) : null);
+  const seoIssueList = (issues) => h("ul", { class: "wp-seo-issues" }, ...issues.map(seoIssueItem));
+  let seoSiteLoaded = false;
+  async function loadSeoSite(force) {
+    const box = $("[data-seo-site]");
+    if (!box || (seoSiteLoaded && !force)) return;
+    const btn = $("[data-seo-analyse]");
+    if (!postId) { box.replaceChildren(h("p", { class: "wp-help" }, "Disponible après le premier enregistrement de l'article.")); btn.hidden = true; return; }
+    seoSiteLoaded = true;
+    box.replaceChildren(h("p", { class: "wp-help" }, "Chargement…"));
+    try {
+      const r = await api(`/formateur/blog/${postId}/seo-audit`);
+      btn.hidden = !r.online;
+      $("[data-seo-space]").href = r.online ? r.links.analyse : r.links.space;
+      if (!r.online) { box.replaceChildren(h("p", { class: "wp-help" }, "Non disponible : l'article n'est pas en ligne. Le contrôle SEO s'affiche au moment de publier.")); return; }
+      if (!r.audit) { box.replaceChildren(h("p", { class: "wp-help" }, "Aucun audit du site n'a encore été lancé. Cliquez sur « Analyser la page en ligne » pour vérifier cet article maintenant.")); return; }
+      const when = h("p", { class: "wp-help" }, `Dernier audit : ${fmtDate(r.audit.finishedAt)}.${r.newerThanAudit ? " L'article a changé depuis : relancez une analyse pour voir la version en ligne." : ""}`);
+      box.replaceChildren(when, r.issues.length ? seoIssueList(r.issues) : h("p", { class: "wp-seo-ok" }, "Aucun problème trouvé pour cet article lors du dernier audit."));
+    } catch (e) { box.replaceChildren(h("p", { class: "wp-error" }, e.message)); seoSiteLoaded = false; }
+  }
+  $("[data-seo-analyse]")?.addEventListener("click", async (ev) => {
+    const btn = ev.currentTarget;
+    const box = $("[data-seo-site]");
+    btn.disabled = true;
+    btn.textContent = "Analyse en cours…";
+    try {
+      const r = await api(`/formateur/blog/${postId}/seo-analyse`, { method: "POST" });
+      box.replaceChildren(
+        h("p", { class: "wp-help" }, `Page en ligne analysée à l'instant${r.score === null ? "" : ` · note interne ${r.score} / 100`}.`),
+        r.issues.length ? seoIssueList(r.issues) : h("p", { class: "wp-seo-ok" }, "Aucun problème trouvé sur la page en ligne."));
+    } catch (e) { box.replaceChildren(h("p", { class: "wp-error" }, e.message)); }
+    btn.disabled = false;
+    btn.textContent = "Analyser la page en ligne";
+  });
+
   const revealPanel = (key) => {
     const panel = $(`[data-panel="${key}"]`);
     if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click();
@@ -1409,6 +1450,8 @@ function start() {
       dirty = false;
       localDraft.clear();
       DATA.status = r.status;
+      seoSiteLoaded = false;
+      if (!$('[data-sidebar-panel="seo"]').hidden) loadSeoSite();
       DATA.publishedAt = r.publishedAt ?? DATA.publishedAt;
       DATA.updatedAt = r.updatedAt;
       DATA.createdAt = DATA.createdAt || r.updatedAt;
