@@ -18,7 +18,7 @@ import Superscript from "@tiptap/extension-superscript";
 import { Placeholder, Focus } from "@tiptap/extensions";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { BLOG_NODES, CALLOUT_LABELS } from "./blog/nodes";
-import { BlockHandle, moveBlock, startBlockDrag } from "./blog/dragHandle";
+import { BlockHandle, moveBlock, startBlockDrag, endBlockDrag } from "./blog/dragHandle";
 import { analyze, norm } from "../utils/seoAnalyzer";
 
 const root = document.querySelector("[data-blog-editor]");
@@ -144,7 +144,7 @@ function start() {
   const editor = new Editor({
     element: $("#be-editor"),
     extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3, 4] }, link: { openOnClick: false, autolink: true, defaultProtocol: "https", HTMLAttributes: { rel: null, target: null, class: null } } }),
+      StarterKit.configure({ heading: { levels: [1, 2, 3, 4] }, dropcursor: { class: "kb-dropcursor", color: "var(--accent)", width: 2 }, link: { openOnClick: false, autolink: true, defaultProtocol: "https", HTMLAttributes: { rel: null, target: null, class: null } } }),
       TextStyleKit.configure({ fontFamily: false, fontSize: false, lineHeight: false, backgroundColor: false }),
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
@@ -460,7 +460,11 @@ function start() {
     if (!editor.state.doc.childCount) editor.commands.setContent("<p></p>");
   }
   let toolbarKey = "";
+  // Pendant un glisser de bloc, la barre ne doit pas être reconstruite : le bouton « Glisser » en cours de
+  // déplacement serait retiré de la page et le navigateur annulerait le glisser.
+  let blockDragging = false;
   function renderBlockToolbar() {
+    if (blockDragging) return;
     const b = currentBlock();
     const target = topToolbarMode ? topToolbar : blockToolbar;
     (topToolbarMode ? blockToolbar : topToolbar).hidden = true;
@@ -473,10 +477,14 @@ function start() {
     const type = b.node.type.name;
     const textType = b.text ? b.text.node.type.name : null;
     const typeBtn = tbtn(`${nameOf(b.node)} : changer de type`, ICON_OF[type] || "paragraph", (e) => (b.text && !b.node.isAtom ? transformMenu(e.currentTarget) : null));
-    const grip = tbtn("Glisser", "drag", () => {});
+    // Poignée : pas de preventDefault au mousedown (il empêcherait le navigateur de démarrer le glisser)
+    const grip = h("button", { type: "button", class: "wp-tb-btn wp-tb-grip", "aria-label": "Glisser pour déplacer le bloc (au clavier : flèches de la barre)", title: "Glisser pour déplacer le bloc" }, svg("drag"));
     grip.draggable = true;
-    grip.classList.add("wp-tb-grip");
-    grip.addEventListener("dragstart", (e) => startBlockDrag(editor.view, b.top, e));
+    const endDrag = () => { if (!blockDragging) return; blockDragging = false; toolbarKey = ""; renderBlockToolbar(); };
+    grip.addEventListener("mousedown", () => { blockDragging = true; });
+    grip.addEventListener("mouseup", endDrag);
+    grip.addEventListener("dragstart", (e) => { blockDragging = true; startBlockDrag(editor.view, b.top, e); });
+    grip.addEventListener("dragend", () => { editor.view.dragging = null; endBlockDrag(); endDrag(); });
     const movers = h("div", { class: "wp-tb-movers" }, tbtn("Déplacer vers le haut", "up", () => { editor.commands.setNodeSelection(b.top); moveBlock(editor.state, editor.view.dispatch, -1); }), tbtn("Déplacer vers le bas", "down", () => { editor.commands.setNodeSelection(b.top); moveBlock(editor.state, editor.view.dispatch, 1); }));
     const groups = [tgroup(typeBtn, grip, movers)];
     if (textType === "paragraph" || textType === "heading") {

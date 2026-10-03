@@ -896,3 +896,8 @@
 .wp-seo-issue-title { font-weight: 600; }
 .wp-seo-issue-reco { font-size: 12px; }
 .wp-seo-ok { margin: 0; color: var(--success-dark); font-size: 13px; }
+
+/* Glisser-déposer d'un bloc : ligne d'arrivée (comme Gutenberg) */
+.kb-drop-line { position: absolute; z-index: 20; height: 3px; border-radius: 2px; background: var(--accent); pointer-events: none; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8); }
+.kb-drop-line[hidden] { display: none; }
+.kb-block-dragging .kb-dropcursor { display: none !important; }

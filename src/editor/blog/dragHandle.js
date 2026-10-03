@@ -52,9 +52,9 @@ export const BlockHandle = Extension.create({
   },
   addProseMirrorPlugins() {
     const options = this.options;
-    if (!options.visual) return []; // interface façon Gutenberg : la poignée vit dans la barre d'outils du bloc
+    if (!options.visual) return [blockDropPlugin()]; // interface façon Gutenberg : la poignée vit dans la barre d'outils du bloc
     let current = null; // position du bloc survolé
-    return [
+    return [blockDropPlugin(), 
       new Plugin({
         key: new PluginKey("blockHandle"),
         view(view) {
@@ -120,8 +120,10 @@ export const BlockHandle = Extension.create({
             const dom = view.nodeDOM(current);
             if (dom instanceof HTMLElement) event.dataTransfer.setDragImage(dom, 0, 0);
             view.dragging = { slice, move: true };
+            blockDrag = current;
+            document.body.classList.add("kb-block-dragging");
           });
-          grip.addEventListener("dragend", () => { view.dragging = null; });
+          grip.addEventListener("dragend", () => { view.dragging = null; blockDrag = null; document.body.classList.remove("kb-block-dragging"); });
           view.dom.addEventListener("mousemove", onMove);
           host.addEventListener("mouseleave", (e) => { if (!bar.contains(e.relatedTarget)) bar.hidden = true; });
           return {
@@ -134,9 +136,100 @@ export const BlockHandle = Extension.create({
   },
 });
 
+// Bloc en cours de déplacement (poignée) : début du bloc dans le document
+let blockDrag = null;
+
+// Cible du dépôt, comme Gutenberg : bloc de premier niveau sous le pointeur ; moitié haute → avant, moitié basse → après
+function dropTarget(view, event) {
+  const found = view.posAtCoords({ left: event.clientX, top: event.clientY });
+  let pos = found ? topLevelPos(view.state.doc, found.inside >= 0 ? found.inside : found.pos) : null;
+  if (pos === null) {
+    // Sous le dernier bloc (marge basse de la zone d'écriture) : après le dernier bloc
+    const last = view.state.doc.lastChild;
+    if (!last) return null;
+    pos = view.state.doc.content.size - last.nodeSize;
+  }
+  const node = view.state.doc.nodeAt(pos);
+  const dom = view.nodeDOM(pos);
+  if (!node || !(dom instanceof HTMLElement)) return null;
+  const box = dom.getBoundingClientRect();
+  const after = event.clientY > box.top + box.height / 2;
+  return { pos, node, dom, after, insert: after ? pos + node.nodeSize : pos };
+}
+
+// Dépôt d'un bloc déplacé par sa poignée : ligne bleue à l'endroit d'arrivée, déplacement exact avant / après la cible
+function blockDropPlugin() {
+  let line = null;
+  const hide = () => { if (line) line.hidden = true; };
+  const finish = () => { hide(); blockDrag = null; document.body.classList.remove("kb-block-dragging"); };
+  return new Plugin({
+    key: new PluginKey("blockDrop"),
+    view(view) {
+      const host = view.dom.parentNode;
+      if (getComputedStyle(host).position === "static") host.style.position = "relative";
+      line = document.createElement("div");
+      line.className = "kb-drop-line";
+      line.hidden = true;
+      line.setAttribute("aria-hidden", "true");
+      host.append(line);
+      return { destroy() { line.remove(); line = null; } };
+    },
+    props: {
+      handleDOMEvents: {
+        dragover(view, event) {
+          if (blockDrag === null) return false;
+          const t = dropTarget(view, event);
+          if (!t || !line) { hide(); return false; }
+          const host = view.dom.parentNode;
+          const hostBox = host.getBoundingClientRect();
+          const box = t.dom.getBoundingClientRect();
+          const gap = 4;
+          line.style.top = `${(t.after ? box.bottom + gap : box.top - gap) - hostBox.top + host.scrollTop - 1}px`;
+          line.style.left = `${box.left - hostBox.left}px`;
+          line.style.width = `${box.width}px`;
+          line.hidden = false;
+          event.preventDefault();
+          return false;
+        },
+        dragleave(view, event) { if (!view.dom.parentNode.contains(event.relatedTarget)) hide(); return false; },
+        dragend() { finish(); return false; },
+      },
+      handleDrop(view, event) {
+        if (blockDrag === null) return false;
+        const from = blockDrag;
+        finish();
+        const t = dropTarget(view, event);
+        const node = view.state.doc.nodeAt(from);
+        event.preventDefault();
+        view.dragging = null;
+        if (!t || !node) return true;
+        const to = from + node.nodeSize;
+        // Déposé sur lui-même ou juste à côté de sa place : rien ne change
+        if (t.insert >= from && t.insert <= to) return true;
+        const tr = view.state.tr.delete(from, to);
+        const at = tr.mapping.map(t.insert);
+        tr.insert(at, node);
+        tr.setSelection(NodeSelection.create(tr.doc, at));
+        view.dispatch(tr.scrollIntoView());
+        view.focus();
+        return true;
+      },
+    },
+  });
+}
+
+// Fin du glisser (déposé n'importe où, y compris hors de la zone d'écriture) : tout est remis à zéro
+function endBlockDrag() {
+  blockDrag = null;
+  document.body.classList.remove("kb-block-dragging");
+  document.querySelectorAll(".kb-drop-line").forEach((l) => { l.hidden = true; });
+}
+
 // Glisser un bloc depuis un bouton extérieur (poignée de la barre d'outils du bloc) : pos = début du bloc à déplacer
 function startBlockDrag(view, pos, event) {
   if (!view.state.doc.nodeAt(pos)) return;
+  blockDrag = pos;
+  document.body.classList.add("kb-block-dragging");
   view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, pos)));
   const slice = view.state.selection.content();
   event.dataTransfer.effectAllowed = "move";
@@ -146,4 +239,4 @@ function startBlockDrag(view, pos, event) {
   view.dragging = { slice, move: true };
 }
 
-export { moveBlock, startBlockDrag, topLevelPos };
+export { moveBlock, startBlockDrag, endBlockDrag, topLevelPos };
