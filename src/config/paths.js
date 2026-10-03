@@ -10,7 +10,7 @@ const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path
 const uploadsRoot = process.env.UPLOADS_DIR ? path.resolve(process.env.UPLOADS_DIR) : path.join(projectRoot, "uploads");
 
 fs.mkdirSync(dataDir, { recursive: true });
-["thumbnails", "videos", "resources"].forEach((sub) => fs.mkdirSync(path.join(uploadsRoot, sub), { recursive: true }));
+["thumbnails", "videos", "resources", "blog"].forEach((sub) => fs.mkdirSync(path.join(uploadsRoot, sub), { recursive: true }));
 
 const dbFile = path.join(dataDir, "KOYEKOLA.db");
 

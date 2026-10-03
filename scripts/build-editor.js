@@ -1,14 +1,16 @@
-// Construit public/js/course-editor.js (éditeur de texte riche) à partir de src/editor/course-editor.js.
+// Construit les éditeurs de texte riche à partir de src/editor/ :
+//   - public/js/course-editor.js (formations) ← src/editor/course-editor.js
+//   - public/js/blog-editor.js (articles du blog) ← src/editor/blog-editor.js
 // À relancer après toute modification de la source : npm run build:editor
-// Le fichier construit est livré avec le projet : l'hébergeur n'a rien à compiler.
+// Les fichiers construits sont livrés avec le projet : l'hébergeur n'a rien à compiler.
 const path = require("path");
 const esbuild = require("esbuild");
 
 const root = path.join(__dirname, "..");
-esbuild
-  .build({
-    entryPoints: [path.join(root, "src", "editor", "course-editor.js")],
-    outfile: path.join(root, "public", "js", "course-editor.js"),
+const build = (name) =>
+  esbuild.build({
+    entryPoints: [path.join(root, "src", "editor", `${name}.js`)],
+    outfile: path.join(root, "public", "js", `${name}.js`),
     bundle: true,
     minify: true,
     format: "iife",
@@ -16,5 +18,6 @@ esbuild
     legalComments: "none",
     define: { "process.env.NODE_ENV": '"production"' },
     logLevel: "info",
-  })
-  .catch(() => process.exit(1));
+  });
+
+Promise.all([build("course-editor"), build("blog-editor")]).catch(() => process.exit(1));

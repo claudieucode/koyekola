@@ -11,7 +11,8 @@
 
   <div class="container article-page">
     <%- include("../partials/breadcrumb", { crumbs }) %>
-    <% if (!post.published) { %><p class="form-error" role="status">Brouillon : cet article n'est visible que par vous.</p><% } %>
+    <% if (typeof preview !== "undefined" && preview) { %><p class="form-error" role="status">Aperçu : version en cours de rédaction, visible seulement par vous.</p>
+    <% } else if (!post.published) { %><p class="form-error" role="status"><%= post.status === "scheduled" ? "Programmé" : post.status === "archived" ? "Archivé" : post.status === "review" ? "En relecture" : "Brouillon" %> : cet article n'est visible que par vous.</p><% } %>
 
     <div class="<%= layoutClass %>">
       <%# ---------- Gauche : sommaire, progression, partage (ordinateur) ---------- %>
@@ -19,7 +20,7 @@
         <div class="article-sticky">
           <% if (showToc) { %>
             <nav class="article-toc" aria-labelledby="toc-title">
-              <p class="article-toc-title" id="toc-title">Sommaire</p>
+              <p class="article-toc-title" id="toc-title"><%= typeof tocTitle !== "undefined" ? tocTitle : "Sommaire" %></p>
               <ol class="article-toc-list">
                 <% tocItems.forEach((item) => { %><li class="<%= item.cls %>"><a href="#<%= item.id %>" data-toc-link="<%= item.id %>"><% if (item.number) { %><span class="toc-num" aria-hidden="true"><%= item.number %></span><% } %><span><%= item.text %></span></a></li><% }) %>
               </ol>
@@ -31,7 +32,7 @@
       </aside>
 
       <%# ---------- Centre : l'article ---------- %>
-      <article class="article-main" data-article>
+      <article class="article-main" data-article<% if (typeof lang !== "undefined" && lang) { %> lang="<%= lang %>"<% } %>>
         <header class="article-header">
           <% if (post.category) { %><a class="article-category" href="/blog/categorie/<%= categorySlug %>"><%= post.category %></a><% } %>
           <h1 class="post-title"><%= post.title %></h1>
@@ -53,7 +54,7 @@
 
         <% if (showToc) { %>
           <details class="article-toc-mobile">
-            <summary>Sommaire <span class="toc-count">(<%= tocItems.filter((i) => i.level === 2).length %> parties)</span></summary>
+            <summary><%= typeof tocTitle !== "undefined" ? tocTitle : "Sommaire" %> <span class="toc-count">(<%= tocItems.filter((i) => i.level === 2).length %> parties)</span></summary>
             <ol class="article-toc-list">
               <% tocItems.forEach((item) => { %><li class="<%= item.cls %>"><a href="#<%= item.id %>"><% if (item.number) { %><span class="toc-num" aria-hidden="true"><%= item.number %></span><% } %><span><%= item.text %></span></a></li><% }) %>
             </ol>

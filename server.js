@@ -77,6 +77,8 @@ app.use(express.static(path.join(__dirname, "public"), { maxAge: "1h" }));
 // Miniatures publiques (noms de fichiers uniques, donc mise en cache longue sans risque).
 // Les vidéos et ressources passent par src/routes/media.js (accès vérifié).
 app.use("/uploads/thumbnails", express.static(path.join(uploadsRoot, "thumbnails"), { maxAge: "30d", immutable: true }));
+// Vidéos et fichiers audio publiés dans les articles du blog : publics (contrairement aux vidéos des leçons, protégées)
+app.use("/uploads/blog", express.static(path.join(uploadsRoot, "blog"), { maxAge: "30d", immutable: true }));
 
 // Toutes les pages générées par le site sont personnalisées (connexion, panier) : jamais gardées en cache
 app.use((req, res, next) => {

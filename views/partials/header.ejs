@@ -9,29 +9,32 @@
      const pageDescription = s.description || "Découvrez et suivez mes formations en ligne, à votre rythme.";
      const canonicalUrl = s.canonical || absoluteUrl(currentPath);
      const shareTitle = s.ogTitle || pageTitle || 'KOYEKOLA';
-     const shareDescription = s.ogDescription || pageDescription; %>
+     const shareDescription = s.ogDescription || pageDescription;
+     const xImage = s.twitterImage || s.image;
+     const xCard = s.twitterCard || (xImage ? "summary_large_image" : "summary"); %>
   <title><%= fullTitle %></title>
   <meta name="description" content="<%= pageDescription %>">
   <meta name="theme-color" content="#0277b6">
   <% if (s.noindex) { %><meta name="robots" content="noindex, nofollow">
-  <% } else { %><link rel="canonical" href="<%= canonicalUrl %>">
+  <% } else { %><% if (s.robots) { %><meta name="robots" content="<%= s.robots %>">
+  <% } %><link rel="canonical" href="<%= canonicalUrl %>">
   <meta property="og:site_name" content="KOYEKOLA">
   <meta property="og:locale" content="fr_FR">
   <meta property="og:type" content="<%= s.ogType || 'website' %>">
   <meta property="og:title" content="<%= shareTitle %>">
   <meta property="og:description" content="<%= shareDescription %>">
-  <meta property="og:url" content="<%= canonicalUrl %>">
+  <meta property="og:url" content="<%= s.ogUrl || canonicalUrl %>">
   <% if (s.publishedTime) { %><meta property="article:published_time" content="<%= s.publishedTime %>">
   <% } %><% if (s.modifiedTime) { %><meta property="article:modified_time" content="<%= s.modifiedTime %>">
   <% } %><% if (s.section) { %><meta property="article:section" content="<%= s.section %>">
   <% } %><% (s.tags || []).forEach((t) => { %><meta property="article:tag" content="<%= t %>">
   <% }) %>  <% if (s.image) { %><meta property="og:image" content="<%= s.image %>">
   <% if (s.imageAlt) { %><meta property="og:image:alt" content="<%= s.imageAlt %>">
-  <meta name="twitter:image:alt" content="<%= s.imageAlt %>">
-  <% } %><meta name="twitter:image" content="<%= s.image %>"><% } %>
-  <meta name="twitter:card" content="<%= s.image ? 'summary_large_image' : 'summary' %>">
-  <meta name="twitter:title" content="<%= shareTitle %>">
-  <meta name="twitter:description" content="<%= shareDescription %>">
+  <% } } %><% if (xImage) { %><meta name="twitter:image" content="<%= xImage %>">
+  <% if (s.imageAlt) { %><meta name="twitter:image:alt" content="<%= s.imageAlt %>">
+  <% } } %><meta name="twitter:card" content="<%= xCard %>">
+  <meta name="twitter:title" content="<%= s.twitterTitle || shareTitle %>">
+  <meta name="twitter:description" content="<%= s.twitterDescription || shareDescription %>">
   <% if (s.jsonLd && s.jsonLd.length) { %><%- jsonLdTags(s.jsonLd) %>
   <% } %><% } %>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">

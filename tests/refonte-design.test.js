@@ -7,7 +7,7 @@ const { startServer, Client } = require("./helpers");
 
 const ROOT = path.join(__dirname, "..");
 // Feuilles de style du site ET de l'espace marketing : les mêmes règles de conception s'appliquent aux deux
-const CSS = ["style.css", "marketing.css"].map((f) => fs.readFileSync(path.join(ROOT, "public", "css", f), "utf8")).join("\n");
+const CSS = ["style.css", "marketing.css", "blog-editor.css"].map((f) => fs.readFileSync(path.join(ROOT, "public", "css", f), "utf8")).join("\n");
 
 describe("palette : les codes couleurs d'origine sont conservés", () => {
   const expected = { primary: "#0b2a40", "primary-dark": "#06192a", accent: "#0277b6", "accent-dark": "#0369a1", "accent-light": "#e0f2fe", sky: "#7dd3fc", bg: "#f3f8fc", text: "#10222f", muted: "#5d7182", star: "#9a5809" };
@@ -90,7 +90,7 @@ describe("chaque classe utilisée par les pages a un style", () => {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const p = path.join(dir, entry.name);
         if (entry.isDirectory()) walk(p);
-        else if (/\.(ejs|js)$/.test(entry.name) && !/(?:course-editor|automation-flow)\.js$/.test(entry.name)) {
+        else if (/\.(ejs|js)$/.test(entry.name) && !/(?:course-editor|automation-flow)\.js$/.test(entry.name) && !(entry.name === "blog-editor.js" && dir.endsWith(path.join("public", "js")))) {
           const src = fs.readFileSync(p, "utf8");
           for (const m of src.matchAll(/class="([^"]*)"/g)) m[1].replace(/<%[^%]*%>/g, " ").split(/\s+/).forEach((c) => /^[a-z][\w-]*$/i.test(c) && used.add(c));
           for (const m of src.matchAll(/classList\.(?:add|toggle|remove|contains)\("([^"]+)"/g)) used.add(m[1]);

@@ -14,6 +14,19 @@
       </nav>
     <% } %>
 
+    <% if (typeof featured !== "undefined" && featured) { %>
+      <article class="post-featured">
+        <% if (featured.cover_path) { %><a href="/blog/<%= featured.slug %>" class="post-featured-cover" tabindex="-1" aria-hidden="true"><img src="<%= featured.cover_path %>" alt="" width="960" height="540"></a><% } %>
+        <div class="post-featured-body">
+          <span class="post-featured-label">À la une</span>
+          <% if (featured.category) { %><a class="post-card-category" href="/blog/categorie/<%= featured.categorySlug %>"><%= featured.category %></a><% } %>
+          <h2><a href="/blog/<%= featured.slug %>"><%= featured.title %></a></h2>
+          <p><%= featured.summary %></p>
+          <time datetime="<%= featured.published_at.replace(' ', 'T') %>Z"><%= formatDate(featured.published_at) %></time>
+        </div>
+      </article>
+    <% } %>
+
     <% if (posts.length) { %>
       <div class="post-grid">
         <% posts.forEach((post) => { %>
@@ -40,7 +53,7 @@
           <% if (page < pages) { %><a class="btn btn-outline btn-sm" href="<%= pageUrl(page + 1) %>" rel="next">Articles plus anciens</a><% } %>
         </nav>
       <% } %>
-    <% } else { %>
+    <% } else if (typeof featured === "undefined" || !featured) { %>
       <p class="empty-state" style="padding:24px 0;">Aucun article publié pour le moment.</p>
     <% } %>
   </div>

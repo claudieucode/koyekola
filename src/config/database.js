@@ -303,11 +303,72 @@ const NEW_POST_COLUMNS = {
   canonical_url: "TEXT", // adresse canonique si l'article est publié ailleurs en premier ; sinon : sa propre adresse
   reading_minutes: "INTEGER", // temps de lecture imposé ; sinon : calculé (230 mots par minute)
   views: "INTEGER NOT NULL DEFAULT 0", // consultations (hors formateur et robots) : « articles populaires »
+  // Éditeur éditorial (texte riche) — les articles existants gardent leur format Markdown tant qu'ils ne sont pas réenregistrés
+  content_format: "TEXT NOT NULL DEFAULT 'markdown'", // markdown | html (HTML assaini par src/utils/blogHtml.js)
+  status: "TEXT NOT NULL DEFAULT 'draft'", // draft | review | scheduled | published | archived (published = 1 seulement pour « published »)
+  subcategory: "TEXT NOT NULL DEFAULT ''",
+  secondary_keywords: "TEXT NOT NULL DEFAULT ''", // mots-clés secondaires, séparés par des virgules
+  robots_index: "INTEGER NOT NULL DEFAULT 1", // 0 = noindex
+  robots_follow: "INTEGER NOT NULL DEFAULT 1", // 0 = nofollow
+  toc_enabled: "INTEGER NOT NULL DEFAULT 1",
+  toc_depth: "INTEGER NOT NULL DEFAULT 3", // 2 = titres H2 seulement, 3 = H2 + H3
+  toc_title: "TEXT NOT NULL DEFAULT ''", // sinon « Sommaire »
+  language: "TEXT NOT NULL DEFAULT 'fr'",
+  featured: "INTEGER NOT NULL DEFAULT 0", // article vedette (en tête du blog)
+  twitter_card: "TEXT NOT NULL DEFAULT 'summary_large_image'", // summary | summary_large_image
+  twitter_title: "TEXT",
+  twitter_description: "TEXT",
+  twitter_image_path: "TEXT",
+  schema_type: "TEXT NOT NULL DEFAULT 'BlogPosting'", // BlogPosting | Article
+  reviewed: "INTEGER NOT NULL DEFAULT 0", // case « Article relu » de la liste de contrôle
 };
 for (const [name, definition] of Object.entries(NEW_POST_COLUMNS)) {
   if (!postColumns.includes(name)) db.exec(`ALTER TABLE posts ADD COLUMN ${name} ${definition}`);
 }
 db.exec("CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(published, category)");
+// Statut des articles déjà là : publié ou brouillon, d'après l'ancienne colonne (une seule fois : la colonne vient d'être créée)
+if (!postColumns.includes("status")) db.exec("UPDATE posts SET status = CASE WHEN published = 1 THEN 'published' ELSE 'draft' END");
+db.exec(`
+  -- Historique des versions d'un article (une ligne par enregistrement manuel ou restauration)
+  CREATE TABLE IF NOT EXISTS post_revisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    user_id INTEGER,
+    title TEXT NOT NULL,
+    excerpt TEXT NOT NULL DEFAULT '',
+    content TEXT NOT NULL DEFAULT '',
+    content_format TEXT NOT NULL DEFAULT 'markdown',
+    note TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_post_revisions_post ON post_revisions(post_id, id);
+  -- Sauvegarde automatique (brouillon en cours de frappe, non publié) : une par article
+  CREATE TABLE IF NOT EXISTS post_autosaves (
+    post_id INTEGER PRIMARY KEY REFERENCES posts(id) ON DELETE CASCADE,
+    user_id INTEGER,
+    payload TEXT NOT NULL,
+    saved_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  -- Médiathèque du blog : images (et fichiers audio/vidéo) envoyés, avec leurs textes
+  CREATE TABLE IF NOT EXISTS media (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    path TEXT NOT NULL UNIQUE,
+    kind TEXT NOT NULL DEFAULT 'image', -- image | video | audio
+    mime TEXT NOT NULL DEFAULT '',
+    size INTEGER NOT NULL DEFAULT 0,
+    width INTEGER,
+    height INTEGER,
+    alt TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    caption TEXT NOT NULL DEFAULT '',
+    credit TEXT NOT NULL DEFAULT '',
+    uploaded_by INTEGER,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_media_created ON media(created_at);
+  CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status, published_at);
+`);
 
 // Photo du formateur (chemin d'un fichier envoyé) : colonne ajoutée aux bases déjà existantes
 const userColumns = db.prepare("PRAGMA table_info(users)").all().map((col) => col.name);
