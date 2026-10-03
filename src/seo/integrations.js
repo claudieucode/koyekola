@@ -197,6 +197,25 @@ async function searchConsoleReport(days = 28, { refresh = false } = {}) {
   return { ...report, fetchedAt: new Date().toISOString().slice(0, 19).replace("T", " "), fromCache: false };
 }
 
+// Une seule page (onglet SEO de l'éditeur) : totaux sur deux périodes et requêtes qui l'ont affichée — filtre « page »
+// de l'API Search Analytics. Cache 6 h par adresse.
+async function pageReport(pageUrl, days = 28, { refresh = false } = {}) {
+  const key = `page:${days}:${pageUrl}`;
+  const cached = db.prepare("SELECT data, fetched_at FROM seo_integration_cache WHERE name = 'search_console' AND cache_key = ? AND fetched_at >= datetime('now', '-6 hours')").get(key);
+  if (cached && !refresh) return { ...JSON.parse(cached.data), fetchedAt: cached.fetched_at, fromCache: true };
+  const p = periods(days);
+  const filter = [{ filters: [{ dimension: "page", operator: "equals", expression: pageUrl }] }];
+  const q = (range, dimensions, rowLimit) => gscQuery({ startDate: range.start, endDate: range.end, dimensions, dimensionFilterGroups: filter, rowLimit });
+  const [now, before, queries] = await Promise.all([q(p.current, [], 1), q(p.previous, [], 1), q(p.current, ["query"], 100)]);
+  const report = {
+    page: pageUrl, period: p, days,
+    totals: { current: sum(now), previous: sum(before) },
+    queries: queries.slice().sort((a, b) => b.impressions - a.impressions).slice(0, 50).map((r) => ({ query: r.keys[0], clicks: r.clicks, impressions: r.impressions, ctr: r.ctr, position: r.position })),
+  };
+  db.prepare("INSERT INTO seo_integration_cache (name, cache_key, data, fetched_at) VALUES ('search_console', ?, ?, datetime('now')) ON CONFLICT(name, cache_key) DO UPDATE SET data = excluded.data, fetched_at = excluded.fetched_at").run(key, JSON.stringify(report));
+  return { ...report, fetchedAt: new Date().toISOString().slice(0, 19).replace("T", " "), fromCache: false };
+}
+
 // ---------- Google Analytics 4 ----------
 async function ga4Report(body) {
   const propertyId = row("analytics").config.propertyId;
@@ -275,9 +294,9 @@ async function runPageSpeed(url, strategy = "mobile") {
     return { ok: false, error: e.message };
   }
 }
-const pageSpeedHistory = (limit = 30) => db.prepare("SELECT * FROM seo_pagespeed ORDER BY id DESC LIMIT ?").all(limit).map((r) => ({ ...r, data: r.data ? JSON.parse(r.data) : null }));
+const pageSpeedHistory = (limit = 30, url = null) => (url ? db.prepare("SELECT * FROM seo_pagespeed WHERE url = ? ORDER BY id DESC LIMIT ?").all(url, limit) : db.prepare("SELECT * FROM seo_pagespeed ORDER BY id DESC LIMIT ?").all(limit)).map((r) => ({ ...r, data: r.data ? JSON.parse(r.data) : null }));
 
 module.exports = {
-  NAMES, status, row, saveConfig, disconnect, parseServiceAccount, testSearchConsole, testAnalytics, searchConsoleReport, analyticsReport,
+  NAMES, status, row, saveConfig, disconnect, parseServiceAccount, testSearchConsole, testAnalytics, searchConsoleReport, pageReport, analyticsReport,
   runPageSpeed, parsePageSpeed, pageSpeedHistory, IntegrationError, periods,
 };

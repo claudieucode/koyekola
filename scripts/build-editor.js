@@ -1,6 +1,7 @@
 // Construit les éditeurs de texte riche à partir de src/editor/ :
 //   - public/js/course-editor.js (formations) ← src/editor/course-editor.js
 //   - public/js/blog-editor.js (articles du blog) ← src/editor/blog-editor.js
+//   - public/js/seo-fun.js (Mode Fun facultatif de l'espace de travail SEO) ← src/editor/seo-fun.js
 // À relancer après toute modification de la source : npm run build:editor
 // Les fichiers construits sont livrés avec le projet : l'hébergeur n'a rien à compiler.
 const path = require("path");
@@ -20,4 +21,4 @@ const build = (name) =>
     logLevel: "info",
   });
 
-Promise.all([build("course-editor"), build("blog-editor")]).catch(() => process.exit(1));
+Promise.all([build("course-editor"), build("blog-editor"), build("seo-fun")]).catch(() => process.exit(1));

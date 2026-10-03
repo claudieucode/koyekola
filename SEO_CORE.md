@@ -181,3 +181,52 @@ pas d'API JSON publique, volontairement (rien ne l'utiliserait).
 publication, journal), `seo-integrations` (faux serveur Google qui vérifie la signature du JWT), `seo-jobs` (tâches,
 exécution automatique, surveillance, rapports), plus les tests SEO historiques (`etape3-seo`…). Les intégrations Google
 ne sont testées que contre ce faux serveur : la première connexion réelle se vérifie avec le bouton « Tester la connexion ».
+
+## 13. Espace de travail SEO de l'éditeur d'articles
+
+Onglet SEO de l'éditeur transformé en espace de travail modulaire (permanent, indépendant du Mode Fun).
+
+```
+Panneau (affichage seul)
+   ↓ lit
+Couche de données partagée (navigateur, src/editor/blog/seoPanels.js#createSeoData : cache + requêtes regroupées)
+   ↓
+Moteur SEO : analyse de l'éditeur (src/utils/seoAnalyzer.js, la même que le contrôle serveur) + serveur
+   (src/seo/workspace.js#articleData : inspect, robots, sitemap, audit, intégrations)
+   ↓
+Base de données / API Google
+```
+
+- **Panneaux (17)** : Note SEO, Recommandations, Exploration du site (audit), Mots-clés, Apparence dans Google, Analyse du
+  contenu, Aperçu social, Sommaire et données structurées, Liens internes, Indexation et lecture, Historique SEO,
+  Opportunités, SEO technique, Images, Performance, Search Console, Données externes. Les panneaux sont **déplacés** dans
+  la page (jamais recopiés) : leurs champs restent dans le formulaire de l'article.
+- **Disposition** (`src/editor/blog/workspace.js`) : zones droite (barre latérale), gauche, basse, fenêtres flottantes
+  (déplacer, redimensionner, rester dans la zone de travail) ; onglets (glisser sur l'en-tête d'un autre panneau) ;
+  réduire / agrandir / fermer / rouvrir ; menu contextuel (⋮ ou clic droit) ; redimensionnement des zones à la souris
+  et au clavier (flèches). Sur écran ≤ 1100 px : panneaux en accordéon dans la barre latérale.
+- **Dispositions** : Rédaction, Technique, Analyse, SEO complet, Par défaut ; dispositions nommées (20 au plus).
+  Dernière disposition enregistrée automatiquement sur le compte (`seo_workspace_prefs`), restaurée à l'ouverture.
+- **Mode Focus SEO** : note, recommandations, analyse du contenu ; temporaire ; Échap pour quitter.
+- **Palette de commandes** : **Cmd/Ctrl + Maj + K** (Cmd+K reste « insérer un lien ») ; uniquement de vraies actions.
+- **Non implémenté (affiché tel quel)** : variantes / synonymes des mots-clés, statut d'indexation chez Google
+  (inspection d'URL). Semrush, Ahrefs, DataForSEO : non intégrés (aucun faux fournisseur affiché).
+
+Routes (formateur) : `GET /formateur/blog/:id/espace-seo?parties=page,audit,gsc,psi,external,opportunities,site`,
+`POST /formateur/blog/:id/espace-seo/pagespeed`, `POST /formateur/blog/api/espace-seo/images`,
+`PUT /formateur/blog/api/espace-seo/disposition`, `POST|GET|DELETE /formateur/blog/api/espace-seo/dispositions[/:nom]`,
+`PUT /formateur/blog/api/espace-seo/fun`. Tables : `seo_workspace_prefs`, `seo_workspaces`.
+
+## 14. Mode Fun (couche ludique facultative)
+
+- Fichier séparé `public/js/seo-fun.js` (source `src/editor/seo-fun.js`), **chargé seulement si le Mode Fun est
+  activé** (désactivé par défaut). Pont `window.KolakisaSEO` en lecture seule (copies des données) : la couche peut
+  lire l'analyse et les parties de données, ouvrir un panneau, ajouter des commandes ludiques à la palette, et écrire
+  **uniquement** sa progression (points, badges) — le serveur refuse toute autre clé.
+- Contenu : boss SEO (= nombre réel de points à corriger), points d'expérience et badges décoratifs, docteur / police /
+  pompiers / détective (déclenchés par de vrais problèmes ou de vraies opportunités), cimetière des liens cassés (audit
+  réel), robot, terminal ludique (`seo status` = vraies données ; aucune commande système), « Surprends-moi », code
+  Konami, pause café. Personnalité : Professionnel (défaut), Fun, Chaotique.
+- Anti-agacement : délai minimal entre deux messages (5 min / 2 min / 45 s selon la personnalité), maximum par session,
+  jamais pendant la frappe ni pendant un glisser, jamais deux fois le même message, fermeture immédiate, aucun son.
+- Si la couche plante, est supprimée ou désactivée : l'éditeur et l'espace de travail fonctionnent à 100 %.

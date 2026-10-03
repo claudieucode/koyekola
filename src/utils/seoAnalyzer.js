@@ -148,7 +148,31 @@ function analyze(input = {}) {
 
   const summary = { good: 0, improve: 0, problem: 0 };
   checks.forEach((c) => { summary[c.status]++; });
-  return { checks, summary, words, minutes: Math.max(1, Math.round(words / 230)), headings: x.headings, images: x.images, links: { internal: internal.length, external: external.length } };
+  // Mesures brutes (lues par les panneaux de l'espace de travail : aucun calcul n'est refait côté interface)
+  const allKeywords = [...(kw ? [{ phrase: kw, kind: "principal" }] : []), ...String(input.secondaryKeywords || "").split(",").map((k) => k.trim()).filter(Boolean).map((phrase) => ({ phrase, kind: "secondaire" }))];
+  const keywordStats = allKeywords.map((k) => {
+    const n = countPhrase(x.text, k.phrase);
+    const density = words ? Math.round(((n * Math.max(1, wordsOf(k.phrase).length) * 100) / words) * 10) / 10 : 0;
+    return { ...k, count: n, density, inTitle: contains(seoTitle, k.phrase) || contains(input.title, k.phrase), inHeadings: x.headings.filter((h) => contains(h.text, k.phrase)).length, inMeta: contains(meta, k.phrase) };
+  });
+  const sentenceWords = sentences.map((s) => wordsOf(s).length);
+  const stats = {
+    title: String(input.title || "").trim(), seoTitle, metaDescription: meta,
+    h1: (String(input.title || "").trim() ? 1 : 0) + h1InContent, h1InContent,
+    headings: { h2: x.headings.filter((h) => h.level === 2).length, h3: x.headings.filter((h) => h.level === 3).length, h4: x.headings.filter((h) => h.level === 4).length },
+    paragraphs: x.paragraphs.length, lists: x.lists, sentences: sentences.length,
+    avgSentenceWords: sentenceWords.length ? Math.round((sentenceWords.reduce((a, b) => a + b, 0) / sentenceWords.length) * 10) / 10 : null,
+    longSentences: sentenceWords.filter((n) => n > 25).length,
+    images: { total: x.images.length, withoutAlt: noAlt.length },
+    internalLinks: internal, externalLinks: external,
+  };
+  return { checks, summary, score: scoreOf({ checks, summary }), words, minutes: Math.max(1, Math.round(words / 230)), headings: x.headings, images: x.images, links: { internal: internal.length, external: external.length }, stats, keywordStats };
 }
 
-module.exports = { analyze, norm, countPhrase, extract, TRANSITIONS };
+// Note sur 100 : bon = 1 point, à améliorer = ½, problème = 0, rapporté au nombre de contrôles. Repère interne.
+function scoreOf(r) {
+  const total = r.checks.length || 1;
+  return Math.round((100 * (r.summary.good + r.summary.improve * 0.5)) / total);
+}
+
+module.exports = { analyze, scoreOf, norm, countPhrase, extract, TRANSITIONS };

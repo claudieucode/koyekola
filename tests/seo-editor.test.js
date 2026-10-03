@@ -51,7 +51,7 @@ describe("SEO CORE dans l'éditeur d'articles", () => {
 
   test("le panneau est présent dans l'onglet SEO ; élève refusé", async () => {
     const html = (await prof.get(`/formateur/blog/${liveId}/modifier`)).text;
-    assert.match(html, /Audit du site \(page en ligne\)/);
+    assert.match(html, /Exploration du site \(audit\)/);
     assert.match(html, /data-seo-analyse/);
     const student = await newStudent(srv);
     assert.notEqual((await student.get(`/formateur/blog/${liveId}/seo-audit`)).status, 200);

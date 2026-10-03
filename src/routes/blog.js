@@ -20,6 +20,9 @@ const seoGuard = require("../seo/guard");
 const seoStore = require("../seo/store");
 const seoAudit = require("../seo/audit");
 const seoRules = require("../seo/rules");
+const seoWorkspace = require("../seo/workspace");
+const seoImages = require("../seo/images");
+const seoIntegrations = require("../seo/integrations");
 const SEO_LOGGED = ["title", "slug", "seo_title", "seo_description", "canonical_url", "robots_index", "robots_follow", "og_title", "og_description", "og_image_path", "twitter_title", "twitter_description", "twitter_card", "focus_keyword", "secondary_keywords", "schema_type", "status"];
 // Contrôle avant publication côté serveur : si le réglage le demande, une erreur critique bloque la publication
 function guardPublication(fields, status, req, extra = {}) {
@@ -419,6 +422,7 @@ function editorData(req, post) {
     aiConfigured: blogAi.isConfigured(), siteUrl: absoluteUrl(req, "/").replace(/\/$/, ""),
     newsletterReady: Boolean(marketing && marketing.ready && newsletterForm(req)),
     editorTheme: editorTheme.describe(db.prepare("SELECT editor_theme, editor_color FROM user_prefs WHERE user_id = ?").get(req.session.user.id)), editorThemes: editorTheme.THEMES,
+    seoWorkspace: seoWorkspace.prefsOf(req.session.user.id),
   };
 }
 
@@ -444,16 +448,7 @@ const seoIssueJson = (i) => {
 };
 const SEVERITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
 const bySeverity = (a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9);
-router.get("/formateur/blog/:id/seo-audit", loadPost, (req, res) => {
-  const path = `/blog/${req.post.slug}`;
-  const last = seoAudit.latest();
-  const a = last ? seoAudit.get(last.id) : null;
-  const issues = a ? db.prepare("SELECT * FROM seo_issues WHERE audit_id = ? AND path = ? AND fixed_at IS NULL").all(a.id, path).map(seoIssueJson).sort(bySeverity) : [];
-  // Article publié (ou modifié) après le dernier audit : ses résultats ne reflètent pas la version en ligne
-  const changedAt = String(req.post.updated_at || req.post.published_at || "").replace("T", " ").slice(0, 19);
-  const newerThanAudit = Boolean(a && changedAt && changedAt > a.finished_at);
-  res.json({ online: Boolean(req.post.published), path, audit: a ? { id: a.id, finishedAt: a.finished_at, kind: a.kind } : null, issues, newerThanAudit, links: { analyse: `/formateur/seo/analyse?path=${encodeURIComponent(path)}`, audit: a ? `/formateur/seo/audit?id=${a.id}&q=${encodeURIComponent(path)}` : "/formateur/seo/audit", space: "/formateur/seo" } });
-});
+router.get("/formateur/blog/:id/seo-audit", loadPost, (req, res) => res.json(seoWorkspace.auditPart(req.post)));
 router.post("/formateur/blog/:id/seo-analyse", loadPost, async (req, res) => {
   if (!req.post.published) return res.status(409).json({ error: "L'article n'est pas en ligne : publiez-le pour analyser la page réelle. Le contrôle avant publication vérifie déjà le brouillon." });
   const path = `/blog/${req.post.slug}`;
@@ -465,6 +460,51 @@ router.post("/formateur/blog/:id/seo-analyse", loadPost, async (req, res) => {
     console.error("[KOLAKISA] Analyse SEO de l'article :", e && e.message);
     res.status(500).json({ error: "Analyse impossible pour le moment." });
   }
+});
+
+// ---------- Espace de travail SEO (panneaux de l'éditeur) ----------
+// Données réelles de l'article, par partie, en un seul appel (couche de données partagée des panneaux)
+router.get("/formateur/blog/:id(\\d+)/espace-seo", loadPost, async (req, res) => {
+  const parts = String(req.query.parties || "").split(",").map((x) => x.trim()).filter(Boolean);
+  try { res.json(await seoWorkspace.articleData(req.post, req, parts)); } catch (e) {
+    console.error("[KOLAKISA] Espace SEO :", e && e.message);
+    res.status(500).json({ error: "Données SEO indisponibles pour le moment." });
+  }
+});
+// Mesure PageSpeed de la page de l'article (Google PageSpeed Insights, réelle)
+router.post("/formateur/blog/:id(\\d+)/espace-seo/pagespeed", express.json({ limit: "2kb" }), loadPost, async (req, res) => {
+  const { psi: p } = await seoWorkspace.articleData(req.post, req, ["psi"]);
+  if (!p.canRun) return res.status(409).json({ error: p.reason || "Mesure impossible." });
+  const r = await seoIntegrations.runPageSpeed(p.url, req.body && req.body.strategy === "desktop" ? "desktop" : "mobile");
+  if (!r.ok) return res.status(502).json({ error: r.error });
+  res.json({ ok: true, result: r.result });
+});
+// Images du contenu en cours d'écriture : fichier réellement présent, dimensions, poids
+router.post("/formateur/blog/api/espace-seo/images", express.json({ limit: "64kb" }), (req, res) => {
+  const srcs = (Array.isArray(req.body && req.body.srcs) ? req.body.srcs : []).slice(0, 60).map(String);
+  res.json({ images: srcs.map((src) => ({ src, ...(src.startsWith("/uploads/") ? seoImages.probe(src) : { external: /^https?:\/\//i.test(src), exists: null }) })) });
+});
+// Disposition : la dernière (enregistrée automatiquement) et les dispositions nommées
+router.put("/formateur/blog/api/espace-seo/disposition", express.json({ limit: "64kb" }), (req, res) => {
+  const r = seoWorkspace.saveLayout(req.session.user.id, req.body && req.body.layout);
+  res.status(r.ok ? 200 : 400).json(r.ok ? { ok: true } : { error: r.error });
+});
+router.post("/formateur/blog/api/espace-seo/dispositions", express.json({ limit: "64kb" }), (req, res) => {
+  const r = seoWorkspace.saveNamed(req.session.user.id, req.body && req.body.name, req.body && req.body.layout);
+  res.status(r.ok ? 200 : 400).json(r.ok ? { ok: true, name: r.name, saved: seoWorkspace.prefsOf(req.session.user.id).saved } : { error: r.error });
+});
+router.get("/formateur/blog/api/espace-seo/dispositions/:name", (req, res) => {
+  const layout = seoWorkspace.getNamed(req.session.user.id, req.params.name);
+  if (!layout) return res.status(404).json({ error: "Disposition introuvable." });
+  res.json({ layout });
+});
+router.delete("/formateur/blog/api/espace-seo/dispositions/:name", (req, res) => {
+  seoWorkspace.deleteNamed(req.session.user.id, req.params.name);
+  res.json({ ok: true, saved: seoWorkspace.prefsOf(req.session.user.id).saved });
+});
+// Mode Fun : préférences et progression ludiques uniquement (aucune donnée SEO n'est accessible par cette route)
+router.put("/formateur/blog/api/espace-seo/fun", express.json({ limit: "8kb" }), (req, res) => {
+  res.json({ ok: true, fun: seoWorkspace.saveFun(req.session.user.id, req.body && req.body.fun) });
 });
 
 // Apparence des barres latérales de l'éditeur (choix personnel, enregistré sur le compte)
