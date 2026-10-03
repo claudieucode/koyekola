@@ -1,30 +1,115 @@
 <%- include("../partials/header", { title: post ? "Modifier l'article" : "Nouvel article" }) %>
-
+<%
+  const v = (key, fallback = "") => (post && post[key] !== null && post[key] !== undefined ? post[key] : fallback);
+  const authorId = post && post.author_id ? post.author_id : currentUserId;
+  const pubLocal = post && post.published_at ? post.published_at.replace(" ", "T").slice(0, 16) : "";
+%>
   <div class="container">
     <p class="field-hint" style="margin-top:28px;"><a href="/formateur/blog" class="back-link"><%- icon('arrowLeft', { size: 14 }) %> Blog</a></p>
     <h1><%= post ? "Modifier l'article" : "Nouvel article" %></h1>
-    <% if (saved) { %><p class="form-success" role="status">Article enregistré.<% if (post && !post.published) { %> Il reste un brouillon tant que vous ne l'avez pas publié.<% } %></p><% } %>
+    <% if (saved) { %><p class="form-success" role="status">Article enregistré.<% if (post && !post.published) { %> Il reste un brouillon tant que vous ne l'avez pas publié.<% } %><% if (post) { %> <a href="/blog/<%= post.slug %>"><%= post.published ? "Voir l'article" : "Prévisualiser" %></a><% } %></p><% } %>
 
-    <form action="<%= post ? '/formateur/blog/' + post.id + '/modifier' : '/formateur/blog/nouveau' %>" method="post" enctype="multipart/form-data" class="content-card">
+    <form action="<%= post ? '/formateur/blog/' + post.id + '/modifier' : '/formateur/blog/nouveau' %>" method="post" enctype="multipart/form-data" class="content-card" data-blog-editor>
       <div class="field-group">
         <label for="post-title">Titre</label>
-        <input id="post-title" type="text" name="title" value="<%= post ? post.title : '' %>" required maxlength="150">
+        <input id="post-title" type="text" name="title" value="<%= v('title') %>" required maxlength="150">
       </div>
       <div class="field-group">
-        <label for="post-excerpt">Résumé <span class="field-hint">(affiché dans la liste et par les moteurs de recherche, 300 caractères)</span></label>
-        <textarea id="post-excerpt" name="excerpt" rows="2" maxlength="300"><%= post ? post.excerpt : '' %></textarea>
+        <label for="post-excerpt">Résumé <span class="field-hint">(sous le titre, dans la liste et pour les moteurs de recherche, 300 caractères)</span></label>
+        <textarea id="post-excerpt" name="excerpt" rows="2" maxlength="300"><%= v('excerpt') %></textarea>
       </div>
+
+      <div class="blog-editor-row">
+        <div class="field-group">
+          <label for="post-category">Catégorie</label>
+          <input id="post-category" type="text" name="category" value="<%= v('category') %>" maxlength="60" list="post-categories" placeholder="Ex. Marketing digital">
+          <datalist id="post-categories"><% categories.forEach((c) => { %><option value="<%= c.name %>"><% }) %><% ["Graphisme", "Vidéo", "Intelligence artificielle", "Marketing digital", "SEO", "E-commerce", "Développement web"].forEach((n) => { if (!categories.some((c) => c.name.toLowerCase() === n.toLowerCase())) { %><option value="<%= n %>"><% } }) %></datalist>
+        </div>
+        <div class="field-group">
+          <label for="post-tags">Étiquettes <span class="field-hint">(séparées par des virgules)</span></label>
+          <input id="post-tags" type="text" name="tags" value="<%= v('tags') %>" maxlength="400" placeholder="Ex. DaVinci Resolve, montage">
+        </div>
+        <div class="field-group">
+          <label for="post-author">Auteur</label>
+          <select id="post-author" name="author_id"><% instructors.forEach((u) => { %><option value="<%= u.id %>" <%= u.id === authorId ? "selected" : "" %>><%= u.username %></option><% }) %></select>
+        </div>
+      </div>
+
       <div class="field-group">
-        <label for="post-content">Contenu <span class="field-hint">(## titre, **gras**, *italique*, - liste, [lien](https://…))</span></label>
-        <textarea id="post-content" name="content" rows="16" maxlength="50000"><%= post ? post.content : '' %></textarea>
+        <label for="post-content">Contenu</label>
+        <div class="blog-toolbar" role="toolbar" aria-label="Mise en forme du contenu" aria-controls="post-content" hidden data-blog-toolbar>
+          <button type="button" class="btn btn-outline btn-sm" data-insert="h2" title="Titre de section (apparaît dans le sommaire)">Titre H2</button>
+          <button type="button" class="btn btn-outline btn-sm" data-insert="h3" title="Sous-titre (apparaît dans le sommaire)">Sous-titre H3</button>
+          <button type="button" class="btn btn-outline btn-sm" data-insert="bold"><strong>G</strong><span class="sr-only"> (gras)</span></button>
+          <button type="button" class="btn btn-outline btn-sm" data-insert="italic"><em>I</em><span class="sr-only"> (italique)</span></button>
+          <button type="button" class="btn btn-outline btn-sm" data-insert="ul">• Liste</button>
+          <button type="button" class="btn btn-outline btn-sm" data-insert="ol">1. Liste</button>
+          <button type="button" class="btn btn-outline btn-sm" data-insert="quote">« Citation »</button>
+          <button type="button" class="btn btn-outline btn-sm" data-insert="link">Lien</button>
+          <button type="button" class="btn btn-outline btn-sm" data-insert="conseil">Encadré Conseil</button>
+          <button type="button" class="btn btn-outline btn-sm" data-insert="a-retenir">Encadré À retenir</button>
+          <button type="button" class="btn btn-outline btn-sm" data-insert="bon-a-savoir">Encadré Bon à savoir</button>
+          <button type="button" class="btn btn-outline btn-sm" data-insert="button">Bouton</button>
+          <label class="btn btn-outline btn-sm blog-toolbar-file">Image…<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-insert-image></label>
+          <% if (courses.length) { %>
+            <select class="blog-toolbar-select" data-insert-course aria-label="Insérer une formation">
+              <option value="">Insérer une formation…</option>
+              <% courses.forEach((c) => { %><option value="<%= c.slug %>"><%= c.title %></option><% }) %>
+            </select>
+          <% } %>
+        </div>
+        <textarea id="post-content" name="content" rows="22" maxlength="50000" aria-describedby="post-content-help"><%= v('content') %></textarea>
+        <details class="blog-syntax" id="post-content-help">
+          <summary>Aide à la mise en forme</summary>
+          <ul>
+            <li><code>## Titre de section</code> et <code>### Sous-titre</code> : construisent automatiquement le <strong>sommaire</strong> de l'article.</li>
+            <li><code>**gras**</code>, <code>*italique*</code>, <code>- liste</code>, <code>1. liste numérotée</code>, <code>&gt; citation</code>, <code>[texte](https://adresse)</code>.</li>
+            <li>Encadrés : une ligne <code>:::conseil</code> (ou <code>:::a-retenir</code>, <code>:::bon-a-savoir</code>, <code>:::info</code>, <code>:::attention</code>), le texte, puis une ligne <code>:::</code>.</li>
+            <li>Image : <code>![Texte alternatif](/uploads/… "Titre")</code>, suivie si vous le souhaitez d'une ligne <code>Légende : …</code>. Utilisez le bouton « Image… » pour l'envoyer.</li>
+            <li>Formation : <code>[[formation:adresse-de-la-formation]]</code> affiche sa carte (titre, prix, lien). Bouton : <code>[[bouton:Texte|/catalogue]]</code>.</li>
+          </ul>
+        </details>
+        <p class="field-hint" data-editor-stats><% if (autoMinutes) { %>Temps de lecture calculé : <%= autoMinutes %> min.<% } %></p>
       </div>
-      <div class="field-group">
-        <label for="post-cover">Image de couverture <span class="field-hint">(JPEG, PNG, WebP, GIF ou AVIF)</span></label>
-        <% if (post && post.cover_path) { %><img src="<%= post.cover_path %>" alt="Image actuelle" width="160" height="90" style="display:block;margin-bottom:8px;border-radius:8px;object-fit:cover;"><% } %>
-        <input id="post-cover" type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+
+      <div class="blog-editor-row">
+        <div class="field-group">
+          <label for="post-cover">Image principale <span class="field-hint">(JPEG, PNG, WebP, GIF ou AVIF ; 1200 × 675 conseillé)</span></label>
+          <% if (post && post.cover_path) { %><img src="<%= post.cover_path %>" alt="Image actuelle" width="160" height="90" style="display:block;margin-bottom:8px;border-radius:8px;object-fit:cover;"><% } %>
+          <input id="post-cover" type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+        </div>
+        <div class="field-group">
+          <label for="post-cover-alt">Texte alternatif de l'image principale <span class="field-hint">(décrit l'image ; sinon : le titre)</span></label>
+          <input id="post-cover-alt" type="text" name="cover_alt" value="<%= v('cover_alt') %>" maxlength="200">
+        </div>
       </div>
+
+      <div class="blog-editor-row">
+        <div class="field-group">
+          <label for="post-minutes">Temps de lecture <span class="field-hint">(minutes ; vide = calcul automatique)</span></label>
+          <input id="post-minutes" type="number" name="reading_minutes" min="1" max="120" value="<%= v('reading_minutes') %>" inputmode="numeric">
+        </div>
+        <div class="field-group">
+          <label for="post-slug">Adresse de l'article <span class="field-hint">(/blog/…)</span></label>
+          <input id="post-slug" type="text" name="slug" value="<%= v('slug') %>" maxlength="120" <%= post && post.published_at ? "readonly aria-describedby=post-slug-help" : "" %> placeholder="Tirée du titre si vide">
+          <% if (post && post.published_at) { %><span class="field-hint" id="post-slug-help">Figée depuis la publication : les liens déjà partagés continuent de fonctionner.</span><% } %>
+        </div>
+        <% if (post && post.published_at) { %>
+          <div class="field-group">
+            <label for="post-date">Date de publication</label>
+            <input id="post-date" type="datetime-local" value="<%= pubLocal %>" data-utc-source data-utc-assumed>
+            <input type="hidden" name="published_at_utc" data-utc-target>
+          </div>
+        <% } %>
+      </div>
+
       <fieldset class="seo-fieldset">
         <legend>Référencement (facultatif)</legend>
+        <div class="field-group">
+          <label for="post-keyword">Mot-clé principal <span class="field-hint">(ex. « formation en ligne » : nous vérifions qu'il apparaît au bon endroit)</span></label>
+          <input id="post-keyword" type="text" name="focus_keyword" value="<%= v('focus_keyword') %>" maxlength="80" data-seo-keyword>
+          <ul class="seo-checks" data-seo-checks aria-live="polite"></ul>
+        </div>
         <div class="field-group">
           <label for="post-seo-title">Titre pour les moteurs de recherche <span class="field-hint">(70 caractères)</span></label>
           <input id="post-seo-title" type="text" name="seo_title" value="<%= post && post.seo_title ? post.seo_title : '' %>" maxlength="70">
@@ -33,9 +118,32 @@
           <label for="post-seo-desc">Description pour les moteurs de recherche <span class="field-hint">(160 caractères)</span></label>
           <textarea id="post-seo-desc" name="seo_description" rows="2" maxlength="160"><%= post && post.seo_description ? post.seo_description : '' %></textarea>
         </div>
+        <div class="field-group">
+          <label for="post-canonical">Adresse canonique <span class="field-hint">(seulement si l'article a d'abord été publié sur un autre site ; https://…)</span></label>
+          <input id="post-canonical" type="url" name="canonical_url" value="<%= v('canonical_url') %>" maxlength="500" placeholder="Vide : l'adresse de l'article">
+        </div>
+      </fieldset>
+
+      <fieldset class="seo-fieldset">
+        <legend>Partage sur les réseaux (facultatif)</legend>
+        <div class="field-group">
+          <label for="post-og-title">Titre affiché lors d'un partage <span class="field-hint">(Facebook, LinkedIn, X, WhatsApp ; sinon : le titre SEO puis le titre)</span></label>
+          <input id="post-og-title" type="text" name="og_title" value="<%= v('og_title') %>" maxlength="95">
+        </div>
+        <div class="field-group">
+          <label for="post-og-desc">Description affichée lors d'un partage <span class="field-hint">(200 caractères)</span></label>
+          <textarea id="post-og-desc" name="og_description" rows="2" maxlength="200"><%= v('og_description') %></textarea>
+        </div>
+        <div class="field-group">
+          <label for="post-og-image">Image de partage <span class="field-hint">(1200 × 630 conseillé ; sinon : l'image principale)</span></label>
+          <% if (post && post.og_image_path) { %><img src="<%= post.og_image_path %>" alt="Image de partage actuelle" width="160" height="84" style="display:block;margin-bottom:8px;border-radius:8px;object-fit:cover;">
+            <label class="checkbox-row"><input type="checkbox" name="remove_og_image" value="1"> Retirer cette image de partage</label><% } %>
+          <input id="post-og-image" type="file" name="og_image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+        </div>
       </fieldset>
       <button type="submit" class="btn btn-primary">Enregistrer</button>
     </form>
   </div>
+  <script src="<%= asset('/js/blog-editor.js') %>" defer></script>
 
 <%- include("../partials/footer") %>

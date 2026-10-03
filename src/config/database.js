@@ -289,6 +289,26 @@ for (const [name, definition] of Object.entries(NEW_COURSE_COLUMNS)) {
   if (!courseColumns.includes(name)) db.exec(`ALTER TABLE courses ADD COLUMN ${name} ${definition}`);
 }
 
+// Blog éditorial : catégorie, étiquettes, auteur, référencement et partage, consultations (colonnes ajoutées aux bases existantes)
+const postColumns = db.prepare("PRAGMA table_info(posts)").all().map((col) => col.name);
+const NEW_POST_COLUMNS = {
+  category: "TEXT NOT NULL DEFAULT ''", // catégorie affichée (ex. « Marketing digital ») ; sa page : /blog/categorie/<adresse>
+  tags: "TEXT NOT NULL DEFAULT ''", // étiquettes séparées par des virgules
+  author_id: "INTEGER", // compte formateur auteur (sinon : le premier formateur)
+  cover_alt: "TEXT NOT NULL DEFAULT ''", // texte alternatif de l'image principale (sinon : le titre)
+  focus_keyword: "TEXT NOT NULL DEFAULT ''", // mot-clé principal visé (aide à la rédaction, jamais affiché)
+  og_title: "TEXT", // titre pour le partage (Facebook, LinkedIn, X, WhatsApp) ; sinon : titre SEO puis titre
+  og_description: "TEXT", // description pour le partage ; sinon : description SEO puis résumé
+  og_image_path: "TEXT", // image dédiée au partage ; sinon : l'image principale
+  canonical_url: "TEXT", // adresse canonique si l'article est publié ailleurs en premier ; sinon : sa propre adresse
+  reading_minutes: "INTEGER", // temps de lecture imposé ; sinon : calculé (230 mots par minute)
+  views: "INTEGER NOT NULL DEFAULT 0", // consultations (hors formateur et robots) : « articles populaires »
+};
+for (const [name, definition] of Object.entries(NEW_POST_COLUMNS)) {
+  if (!postColumns.includes(name)) db.exec(`ALTER TABLE posts ADD COLUMN ${name} ${definition}`);
+}
+db.exec("CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(published, category)");
+
 // Photo du formateur (chemin d'un fichier envoyé) : colonne ajoutée aux bases déjà existantes
 const userColumns = db.prepare("PRAGMA table_info(users)").all().map((col) => col.name);
 if (!userColumns.includes("avatar_path")) db.exec("ALTER TABLE users ADD COLUMN avatar_path TEXT");

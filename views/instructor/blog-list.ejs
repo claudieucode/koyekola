@@ -7,13 +7,28 @@
       <a href="/formateur/blog/nouveau" class="btn btn-primary">+ Nouvel article</a>
     </div>
 
+    <% if (saved) { %><p class="form-success" role="status">Réglage enregistré.</p><% } %>
+    <% if (newsletter) { %>
+      <form action="/formateur/blog/newsletter" method="post" class="content-card blog-newsletter-setting">
+        <div class="field-group">
+          <label for="blog-newsletter">Formulaire d'inscription affiché dans les articles (bloc « newsletter »)</label>
+          <select id="blog-newsletter" name="form">
+            <option value="">Automatique : le dernier formulaire publié</option>
+            <% newsletter.forms.forEach((f) => { %><option value="<%= f.slug %>" <%= newsletter.chosen === f.slug ? "selected" : "" %>><%= f.name %></option><% }) %>
+          </select>
+          <span class="field-hint"><% if (!newsletter.forms.length) { %>Aucun formulaire publié : créez-en un dans Marketing → Audience → Formulaires d'inscription, sinon le bloc newsletter n'apparaît pas.<% } else { %>Les inscriptions passent par ce formulaire marketing (preuve de consentement, double confirmation).<% } %></span>
+        </div>
+        <button type="submit" class="btn btn-outline btn-sm">Enregistrer</button>
+      </form>
+    <% } %>
+
     <% if (posts.length) { %>
       <ul class="faq-admin-list">
         <% posts.forEach((post) => { %>
           <li>
             <div>
               <p class="faq-admin-question"><%= post.title %></p>
-              <p class="faq-admin-answer"><%= post.published ? "Publié le " + formatDate(post.published_at) : "Brouillon" %> · /blog/<%= post.slug %></p>
+              <p class="faq-admin-answer"><%= post.published ? "Publié le " + formatDate(post.published_at) : "Brouillon" %><%= post.category ? " · " + post.category : "" %> · /blog/<%= post.slug %><%= post.views ? " · " + post.views + " lecture" + (post.views > 1 ? "s" : "") : "" %></p>
             </div>
             <div class="row-actions">
               <a class="btn btn-outline btn-sm" href="/formateur/blog/<%= post.id %>/modifier">Modifier</a>

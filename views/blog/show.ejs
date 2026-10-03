@@ -1,16 +1,165 @@
 <%- include("../partials/header", { title: post.title }) %>
+<%
+  const iso = (d) => d.replace(" ", "T") + "Z";
+  const showToc = article.toc.length >= 2;
+  const tocNumber = (() => { let n = 0; return (item) => (item.level === 2 ? String(++n).padStart(2, "0") : ""); })();
+  const tocItems = article.toc.map((item) => ({ ...item, number: tocNumber(item), cls: item.level === 3 ? "toc-l3" : "toc-l2" }));
+  const layoutClass = showToc ? "article-layout" : "article-layout article-layout-no-toc";
+  const initials = (name) => String(name || "?").trim().slice(0, 1).toUpperCase();
+%>
+  <div class="article-progress" aria-hidden="true"><span class="article-progress-bar" data-progress-bar></span></div>
 
-  <article class="container-narrow page-content post">
+  <div class="container article-page">
     <%- include("../partials/breadcrumb", { crumbs }) %>
     <% if (!post.published) { %><p class="form-error" role="status">Brouillon : cet article n'est visible que par vous.</p><% } %>
-    <h1 class="post-title"><%= post.title %></h1>
-    <p class="post-meta">
-      <% if (post.published_at) { %><time datetime="<%= post.published_at.replace(' ', 'T') %>Z"><%= formatDate(post.published_at) %></time><% } %>
-      <% if (author) { %> · par <%= author.username %><% } %>
-    </p>
-    <% if (post.cover_path) { %><img class="post-cover" src="<%= post.cover_path %>" alt="<%= post.title %>" width="800" height="450"><% } %>
-    <div class="markdown"><%- renderMarkdown(post.content) %></div>
-    <p class="page-cta"><a href="/blog" class="btn btn-outline">← Tous les articles</a><a href="/catalogue" class="btn btn-primary">Voir les formations</a></p>
-  </article>
+
+    <div class="<%= layoutClass %>">
+      <%# ---------- Gauche : sommaire, progression, partage (ordinateur) ---------- %>
+      <aside class="article-left" aria-label="Navigation dans l'article">
+        <div class="article-sticky">
+          <% if (showToc) { %>
+            <nav class="article-toc" aria-labelledby="toc-title">
+              <p class="article-toc-title" id="toc-title">Sommaire</p>
+              <ol class="article-toc-list">
+                <% tocItems.forEach((item) => { %><li class="<%= item.cls %>"><a href="#<%= item.id %>" data-toc-link="<%= item.id %>"><% if (item.number) { %><span class="toc-num" aria-hidden="true"><%= item.number %></span><% } %><span><%= item.text %></span></a></li><% }) %>
+              </ol>
+            </nav>
+          <% } %>
+          <p class="article-reading">Lecture : <strong data-progress-text>0 %</strong></p>
+          <%- include("partials/share", { variant: "vertical", label: "Partager" }) %>
+        </div>
+      </aside>
+
+      <%# ---------- Centre : l'article ---------- %>
+      <article class="article-main" data-article>
+        <header class="article-header">
+          <% if (post.category) { %><a class="article-category" href="/blog/categorie/<%= categorySlug %>"><%= post.category %></a><% } %>
+          <h1 class="post-title"><%= post.title %></h1>
+          <% if (post.excerpt) { %><p class="article-lead"><%= post.excerpt %></p><% } %>
+          <p class="post-meta article-meta">
+            <% if (post.published_at) { %><time datetime="<%= iso(post.published_at) %>"><%= formatDate(post.published_at) %></time><% } %>
+            <% if (author) { %><span aria-hidden="true">·</span> <span>par <a href="/blog/auteur/<%= author.id %>"><%= author.username %></a></span><% } %>
+            <span aria-hidden="true">·</span> <span class="article-minutes"><%- icon("clock", { size: 14 }) %> <%= minutes %> min de lecture</span>
+            <% if (modified) { %><span aria-hidden="true">·</span> <span>Mis à jour le <time datetime="<%= iso(modified) %>"><%= formatDate(modified) %></time></span><% } %>
+          </p>
+          <%- include("partials/share", { variant: "inline", label: "" }) %>
+        </header>
+
+        <% if (post.cover_path) { %>
+          <figure class="article-cover">
+            <img class="post-cover" src="<%= post.cover_path %>" alt="<%= post.cover_alt || post.title %>" width="1200" height="675" fetchpriority="high" decoding="async">
+          </figure>
+        <% } %>
+
+        <% if (showToc) { %>
+          <details class="article-toc-mobile">
+            <summary>Sommaire <span class="toc-count">(<%= tocItems.filter((i) => i.level === 2).length %> parties)</span></summary>
+            <ol class="article-toc-list">
+              <% tocItems.forEach((item) => { %><li class="<%= item.cls %>"><a href="#<%= item.id %>"><% if (item.number) { %><span class="toc-num" aria-hidden="true"><%= item.number %></span><% } %><span><%= item.text %></span></a></li><% }) %>
+            </ol>
+          </details>
+        <% } %>
+
+        <div class="markdown article-content"><%- article.html %></div>
+
+        <% if (tags.length) { %>
+          <ul class="article-tags" aria-label="Étiquettes">
+            <% tags.forEach((t) => { %><li><a href="/blog/etiquette/<%= slugify(t) %>">#<%= t %></a></li><% }) %>
+          </ul>
+        <% } %>
+
+        <%- include("partials/share", { variant: "end", label: "Cet article vous a été utile ? Partagez-le :" }) %>
+
+        <% if (author) { %>
+          <section class="article-author" aria-labelledby="author-title">
+            <% if (author.avatar_path) { %><img class="article-author-avatar" src="<%= author.avatar_path %>" alt="" width="72" height="72" loading="lazy">
+            <% } else { %><span class="article-author-avatar article-author-initials" style="background:<%= avatarColor(author.username) %>" aria-hidden="true"><%= initials(author.username) %></span><% } %>
+            <div>
+              <h2 class="article-author-label" id="author-title">À propos de l'auteur</h2>
+              <p class="article-author-name"><%= author.username %></p>
+              <% if (author.bio) { %><p class="article-author-bio"><%= author.bio %></p><% } %>
+              <% if (author.postCount > 1) { %><p><a href="/blog/auteur/<%= author.id %>">Voir ses <%= author.postCount %> articles</a></p><% } %>
+            </div>
+          </section>
+        <% } %>
+
+        <% if (previous || next) { %>
+          <nav class="article-pager" aria-label="Articles précédent et suivant">
+            <% if (previous) { %><a class="article-pager-link" href="/blog/<%= previous.slug %>" rel="prev"><span class="article-pager-dir"><%- icon("arrowLeft", { size: 14 }) %> Article précédent</span><span class="article-pager-title"><%= previous.title %></span></a><% } else { %><span></span><% } %>
+            <% if (next) { %><a class="article-pager-link article-pager-next" href="/blog/<%= next.slug %>" rel="next"><span class="article-pager-dir">Article suivant <%- icon("arrowRight", { size: 14 }) %></span><span class="article-pager-title"><%= next.title %></span></a><% } %>
+          </nav>
+        <% } %>
+
+        <section class="article-final-cta">
+          <h2>Prêt à développer vos compétences ?</h2>
+          <p>KOYEKOLA propose des formations en ligne pour apprendre de nouvelles compétences à votre rythme, avec des exercices concrets et un accès à vie.</p>
+          <a href="/catalogue" class="btn btn-primary">Découvrir les formations</a>
+        </section>
+      </article>
+
+      <%# ---------- Droite : populaires, récents, catégories, newsletter, formations ---------- %>
+      <aside class="article-right" aria-label="Plus d'articles">
+        <div class="article-sticky">
+          <% if (sidebar.popular.length) { %>
+            <section class="side-block">
+              <h2 class="side-title">Articles populaires</h2>
+              <ol class="side-list side-list-numbered"><% sidebar.popular.forEach((p) => { %><li><a href="/blog/<%= p.slug %>"><%= p.title %></a></li><% }) %></ol>
+            </section>
+          <% } %>
+          <% if (sidebar.recent.length) { %>
+            <section class="side-block">
+              <h2 class="side-title">Articles récents</h2>
+              <ul class="side-list"><% sidebar.recent.forEach((p) => { %><li><a href="/blog/<%= p.slug %>"><%= p.title %></a><time datetime="<%= iso(p.published_at) %>"><%= formatDate(p.published_at) %></time></li><% }) %></ul>
+            </section>
+          <% } %>
+          <% if (sidebar.categories.length) { %>
+            <section class="side-block">
+              <h2 class="side-title">Catégories</h2>
+              <ul class="side-chips"><% sidebar.categories.forEach((c) => { %><li><a href="/blog/categorie/<%= c.slug %>"<%- c.slug === categorySlug ? ' aria-current="page"' : "" %>><%= c.name %> <span class="side-count"><%= c.count %></span></a></li><% }) %></ul>
+            </section>
+          <% } %>
+          <% if (sidebar.newsletter) { %>
+            <section class="side-block side-newsletter" aria-labelledby="nl-title">
+              <h2 class="side-title" id="nl-title">Recevez nos nouveaux articles et conseils</h2>
+              <form action="/f/<%= sidebar.newsletter.slug %>" method="post" data-blog-newsletter>
+                <div class="hp-field" aria-hidden="true"><label for="nl-website">Ne pas remplir</label><input id="nl-website" type="text" name="website" tabindex="-1" autocomplete="off"></div>
+                <label class="sr-only" for="nl-email">Votre adresse e-mail</label>
+                <input id="nl-email" type="email" name="email" required autocomplete="email" placeholder="Votre adresse e-mail">
+                <label class="side-consent"><input type="checkbox" name="consent" value="1" required> <span><%= sidebar.newsletter.consentText %></span></label>
+                <button type="submit" class="btn btn-primary btn-block">S'inscrire</button>
+                <p class="side-newsletter-msg" role="status" data-newsletter-msg hidden></p>
+              </form>
+            </section>
+          <% } %>
+          <section class="side-block side-cta">
+            <h2 class="side-title">Envie de développer vos compétences ?</h2>
+            <p>Des formations pratiques, à suivre à votre rythme.</p>
+            <a href="/catalogue" class="btn btn-outline btn-block">Découvrir les formations</a>
+          </section>
+        </div>
+      </aside>
+    </div>
+
+    <% if (similar.length) { %>
+      <section class="article-similar" aria-labelledby="similar-title">
+        <h2 id="similar-title">Vous pourriez également aimer</h2>
+        <div class="post-grid">
+          <% similar.forEach((p) => { %>
+            <article class="post-card">
+              <% if (p.cover_path) { %><a href="/blog/<%= p.slug %>" class="post-card-cover" tabindex="-1" aria-hidden="true"><img src="<%= p.cover_path %>" alt="" loading="lazy" width="640" height="360"></a>
+              <% } else { %><span class="post-card-cover post-card-cover-empty" aria-hidden="true"></span><% } %>
+              <div class="post-card-body">
+                <% if (p.category) { %><span class="post-card-category"><%= p.category %></span><% } %>
+                <h3><a href="/blog/<%= p.slug %>"><%= p.title %></a></h3>
+                <p><%= p.summary %></p>
+                <p class="post-card-foot"><time datetime="<%= iso(p.published_at) %>"><%= formatDate(p.published_at) %></time> <a href="/blog/<%= p.slug %>" class="post-card-more" aria-label="Lire l'article « <%= p.title %> »">Lire l'article</a></p>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+      </section>
+    <% } %>
+  </div>
+  <script src="<%= asset('/js/blog-article.js') %>" defer></script>
 
 <%- include("../partials/footer") %>

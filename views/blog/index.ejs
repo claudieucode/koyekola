@@ -1,9 +1,18 @@
-<%- include("../partials/header", { title: "Blog" }) %>
-
+<%- include("../partials/header", { title: heading }) %>
+<% const pageUrl = (n) => (n === 1 ? basePath : basePath + "?page=" + n); %>
   <div class="container page-content">
     <%- include("../partials/breadcrumb", { crumbs }) %>
-    <h1>Blog</h1>
-    <p class="category-lead">Conseils, actualités et ressources autour de nos formations.</p>
+    <h1><%= heading %></h1>
+    <p class="category-lead"><%= lead %></p>
+
+    <% if (categories.length) { %>
+      <nav class="blog-categories" aria-label="Catégories du blog">
+        <ul class="side-chips">
+          <li><a href="/blog"<%- !filter ? ' aria-current="page"' : "" %>>Tous les articles</a></li>
+          <% categories.forEach((c) => { %><li><a href="/blog/categorie/<%= c.slug %>"<%- filter && filter.type === "category" && filter.name.toLowerCase() === c.name.toLowerCase() ? ' aria-current="page"' : "" %>><%= c.name %> <span class="side-count"><%= c.count %></span></a></li><% }) %>
+        </ul>
+      </nav>
+    <% } %>
 
     <% if (posts.length) { %>
       <div class="post-grid">
@@ -15,6 +24,7 @@
               <span class="post-card-cover post-card-cover-empty" aria-hidden="true"></span>
             <% } %>
             <div class="post-card-body">
+              <% if (post.category) { %><a class="post-card-category" href="/blog/categorie/<%= post.categorySlug %>"><%= post.category %></a><% } %>
               <time datetime="<%= post.published_at.replace(' ', 'T') %>Z"><%= formatDate(post.published_at) %></time>
               <h2><a href="/blog/<%= post.slug %>"><%= post.title %></a></h2>
               <p><%= post.summary %></p>
@@ -25,9 +35,9 @@
 
       <% if (pages > 1) { %>
         <nav class="pagination" aria-label="Pagination">
-          <% if (page > 1) { %><a class="btn btn-outline btn-sm" href="<%= page - 1 === 1 ? '/blog' : '/blog?page=' + (page - 1) %>" rel="prev">Articles plus récents</a><% } %>
+          <% if (page > 1) { %><a class="btn btn-outline btn-sm" href="<%= pageUrl(page - 1) %>" rel="prev">Articles plus récents</a><% } %>
           <span>Page <%= page %> sur <%= pages %></span>
-          <% if (page < pages) { %><a class="btn btn-outline btn-sm" href="/blog?page=<%= page + 1 %>" rel="next">Articles plus anciens</a><% } %>
+          <% if (page < pages) { %><a class="btn btn-outline btn-sm" href="<%= pageUrl(page + 1) %>" rel="next">Articles plus anciens</a><% } %>
         </nav>
       <% } %>
     <% } else { %>

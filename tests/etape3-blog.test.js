@@ -147,7 +147,7 @@ describe("page d'un article", () => {
   });
   test("titre, contenu mis en forme et HTML saisi neutralisé", () => {
     assert.match(html, /<h1[^>]*>Article publié<\/h1>/);
-    assert.match(html, /<h3>Titre<\/h3>/);
+    assert.match(html, /<h2 id="titre">Titre<\/h2>/, "## → vrai titre de section (H2) avec ancre pour le sommaire");
     assert.match(html, /<strong>gras<\/strong>/);
     assert.doesNotMatch(html, /<script>alert\(1\)/);
   });
