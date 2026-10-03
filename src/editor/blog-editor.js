@@ -150,7 +150,7 @@ function start() {
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Subscript, Superscript, TaskList, TaskItem.configure({ nested: true }),
       TableKit.configure({ table: { resizable: false } }),
-      Placeholder.configure({ includeChildren: false, placeholder: ({ node, editor: ed }) => (node.type.name === "heading" ? "Titre" : ed.state.doc.childCount <= 1 ? "Saisissez / pour choisir un bloc" : "Saisissez / pour choisir un bloc") }),
+      Placeholder.configure({ includeChildren: false, placeholder: ({ node, editor: ed }) => (node.type.name === "heading" ? "Titre" : ed.state.doc.childCount <= 1 ? "Commencez à écrire, ou tapez / pour ajouter un bloc" : "Tapez / pour ajouter un bloc") }),
       ...BLOG_NODES,
       Focus.configure({ mode: "shallowest", className: "has-focus" }),
       BlockHandle.configure({ visual: false }),
@@ -176,7 +176,9 @@ function start() {
   });
   titleField.addEventListener("input", () => { const t = titleField.value.trim() || "Sans titre"; $("[data-doc-title]").textContent = t; $("[data-card-title]").textContent = t; });
   requestAnimationFrame(growTitle);
-  window.addEventListener("resize", debounce(growTitle, 100));
+  // La largeur de la zone change (panneaux ouverts, fenêtre redimensionnée) : le titre se réajuste
+  if ("ResizeObserver" in window) new ResizeObserver(() => growTitle()).observe($(".wp-canvas"));
+  else window.addEventListener("resize", debounce(growTitle, 100));
 
   // ---------- Insertion ----------
   // Bloc entier sélectionné (image…) : on écrit après lui au lieu de le remplacer
@@ -235,25 +237,25 @@ function start() {
     { id: "gallery", title: "Galerie", cat: "Média", icon: "gallery", desc: "Affichez plusieurs images dans une galerie.", run: () => openMediaModal({ multiple: true, onSelectMany: (list) => blk({ type: "kbGallery", attrs: { columns: "3", images: list.map((m) => ({ src: m.path, alt: m.alt || "", caption: m.caption || "" })) } }) }) },
     { id: "video", title: "Vidéo", cat: "Média", icon: "video", desc: "Vidéo YouTube, Vimeo ou fichier téléversé.", run: () => urlPrompt("Vidéo", "Adresse de la vidéo (YouTube, Vimeo)", "https://www.youtube.com/watch?v=…", (url) => blk({ type: "kbVideo", attrs: { url, caption: "" } }), { kind: "video" }) },
     { id: "audio", title: "Audio", cat: "Média", icon: "audio", desc: "Lecteur audio (MP3).", keywords: "podcast son", run: () => openMediaModal({ kind: "audio", onSelect: (m) => blk({ type: "kbAudio", attrs: { src: m.path, title: m.title || "" } }) }) },
-    { id: "gcallout-info", title: "Encadré Information", cat: "Design", icon: "callout", desc: "Mettez une information en évidence.", keywords: "note info", run: () => blk({ type: "callout", attrs: { type: "info" }, content: [p("")] }) },
-    { id: "gcallout-conseil", title: "Encadré Conseil", cat: "Design", icon: "callout", desc: "Un conseil pratique.", keywords: "astuce tip", run: () => blk({ type: "callout", attrs: { type: "conseil" }, content: [p("")] }) },
-    { id: "gcallout-attention", title: "Encadré Attention", cat: "Design", icon: "callout", desc: "Un avertissement.", keywords: "alerte danger", run: () => blk({ type: "callout", attrs: { type: "attention" }, content: [p("")] }) },
-    { id: "gcallout-retenir", title: "Encadré À retenir", cat: "Design", icon: "callout", desc: "L'idée essentielle.", keywords: "résumé essentiel", run: () => blk({ type: "callout", attrs: { type: "a-retenir" }, content: [p("")] }) },
-    { id: "gcallout-savoir", title: "Encadré Bon à savoir", cat: "Design", icon: "callout", desc: "Une information utile.", run: () => blk({ type: "callout", attrs: { type: "bon-a-savoir" }, content: [p("")] }) },
-    { id: "buttons", title: "Bouton", cat: "Design", icon: "button", desc: "Invitez les lecteurs à agir avec un bouton.", run: () => blk({ type: "kbButton", attrs: { text: "Découvrir les formations", href: "/catalogue", variant: "primary", align: "center", newTab: false } }) },
-    { id: "separator", title: "Séparateur", cat: "Design", icon: "separator", desc: "Créez une coupure entre deux idées.", keywords: "ligne hr", run: () => blk({ type: "horizontalRule" }) },
-    { id: "columns", title: "Comparaison", cat: "Design", icon: "columns", desc: "Deux colonnes : avantages et limites.", keywords: "colonnes pour contre", run: () => blk({ type: "kbCompare", content: [["pro", "Avantages"], ["con", "Limites"]].map(([tone, title]) => ({ type: "kbCompareCol", attrs: { tone }, content: [{ type: "heading", attrs: { level: 4 }, content: [{ type: "text", text: title }] }, { type: "bulletList", content: [{ type: "listItem", content: [p("")] }] }] })) }) },
-    { id: "cta", title: "Appel à l'action", cat: "Design", icon: "cta", desc: "Encadré avec titre, texte et bouton.", keywords: "cta conversion", run: () => blk({ type: "kbCta", content: [{ type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "Envie d'aller plus loin ?" }] }, p("Une phrase qui donne envie."), { type: "kbButton", attrs: { text: "Découvrir les formations", href: "/catalogue", variant: "primary", align: "center" } }] }) },
-    { id: "faq", title: "FAQ", cat: "Widgets", icon: "faq", desc: "Questions et réponses (données structurées FAQPage).", keywords: "questions", run: () => blk(faqNode([{ question: "Question ?", answer: "Réponse." }])) },
-    { id: "steps", title: "Étapes", cat: "Widgets", icon: "steps", desc: "Guide pas à pas (données structurées HowTo).", keywords: "howto tutoriel", run: () => blk({ type: "kbSteps", attrs: { title: "" }, content: [1, 2, 3].map((n) => ({ type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: `Étape ${n}`, marks: [{ type: "bold" }] }, { type: "text", text: " : ce qu'il faut faire." }] }] })) }) },
-    { id: "course", title: "Formation recommandée", cat: "Widgets", icon: "course", desc: "Carte d'une formation du catalogue.", keywords: "cours produit", run: () => { if (!DATA.courses.length) return toast("Aucune formation publiée à recommander.", "error"); return blk({ type: "kbCourse", attrs: { slug: DATA.courses[0].slug } }); } },
-    { id: "newsletter", title: "Newsletter", cat: "Widgets", icon: "newsletter", desc: "Formulaire d'inscription à la newsletter.", keywords: "inscription email", run: () => blk({ type: "kbNewsletter" }) },
+    { id: "gcallout-info", title: "Encadré Information", cat: "Mise en forme", icon: "callout", desc: "Mettez une information en évidence.", keywords: "note info", run: () => blk({ type: "callout", attrs: { type: "info" }, content: [p("")] }) },
+    { id: "gcallout-conseil", title: "Encadré Conseil", cat: "Mise en forme", icon: "callout", desc: "Un conseil pratique.", keywords: "astuce tip", run: () => blk({ type: "callout", attrs: { type: "conseil" }, content: [p("")] }) },
+    { id: "gcallout-attention", title: "Encadré Attention", cat: "Mise en forme", icon: "callout", desc: "Un avertissement.", keywords: "alerte danger", run: () => blk({ type: "callout", attrs: { type: "attention" }, content: [p("")] }) },
+    { id: "gcallout-retenir", title: "Encadré À retenir", cat: "Mise en forme", icon: "callout", desc: "L'idée essentielle.", keywords: "résumé essentiel", run: () => blk({ type: "callout", attrs: { type: "a-retenir" }, content: [p("")] }) },
+    { id: "gcallout-savoir", title: "Encadré Bon à savoir", cat: "Mise en forme", icon: "callout", desc: "Une information utile.", run: () => blk({ type: "callout", attrs: { type: "bon-a-savoir" }, content: [p("")] }) },
+    { id: "buttons", title: "Bouton", cat: "Mise en forme", icon: "button", desc: "Invitez les lecteurs à agir avec un bouton.", run: () => blk({ type: "kbButton", attrs: { text: "Découvrir les formations", href: "/catalogue", variant: "primary", align: "center", newTab: false } }) },
+    { id: "separator", title: "Séparateur", cat: "Mise en forme", icon: "separator", desc: "Créez une coupure entre deux idées.", keywords: "ligne hr", run: () => blk({ type: "horizontalRule" }) },
+    { id: "columns", title: "Comparaison", cat: "Mise en forme", icon: "columns", desc: "Deux colonnes : avantages et limites.", keywords: "colonnes pour contre", run: () => blk({ type: "kbCompare", content: [["pro", "Avantages"], ["con", "Limites"]].map(([tone, title]) => ({ type: "kbCompareCol", attrs: { tone }, content: [{ type: "heading", attrs: { level: 4 }, content: [{ type: "text", text: title }] }, { type: "bulletList", content: [{ type: "listItem", content: [p("")] }] }] })) }) },
+    { id: "cta", title: "Appel à l'action", cat: "KOYEKOLA", brand: true, icon: "cta", desc: "Encadré avec titre, texte et bouton.", keywords: "cta conversion", run: () => blk({ type: "kbCta", content: [{ type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "Envie d'aller plus loin ?" }] }, p("Une phrase qui donne envie."), { type: "kbButton", attrs: { text: "Découvrir les formations", href: "/catalogue", variant: "primary", align: "center" } }] }) },
+    { id: "faq", title: "FAQ", cat: "KOYEKOLA", brand: true, icon: "faq", desc: "Questions et réponses (données structurées FAQPage).", keywords: "questions", run: () => blk(faqNode([{ question: "Question ?", answer: "Réponse." }])) },
+    { id: "steps", title: "Étapes", cat: "KOYEKOLA", brand: true, icon: "steps", desc: "Guide pas à pas (données structurées HowTo).", keywords: "howto tutoriel", run: () => blk({ type: "kbSteps", attrs: { title: "" }, content: [1, 2, 3].map((n) => ({ type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: `Étape ${n}`, marks: [{ type: "bold" }] }, { type: "text", text: " : ce qu'il faut faire." }] }] })) }) },
+    { id: "course", title: "Formation recommandée", cat: "KOYEKOLA", brand: true, icon: "course", desc: "Carte d'une formation du catalogue.", keywords: "cours produit", run: () => { if (!DATA.courses.length) return toast("Aucune formation publiée à recommander.", "error"); return blk({ type: "kbCourse", attrs: { slug: DATA.courses[0].slug } }); } },
+    { id: "newsletter", title: "Newsletter", cat: "KOYEKOLA", brand: true, icon: "newsletter", desc: "Formulaire d'inscription à la newsletter.", keywords: "inscription email", run: () => blk({ type: "kbNewsletter" }) },
     { id: "embed", title: "Contenu embarqué", cat: "Intégrations", icon: "embed", desc: "Intégrez un contenu externe (YouTube et Vimeo deviennent un lecteur, le reste un lien).", keywords: "embed intégration", run: () => urlPrompt("Contenu embarqué", "Adresse du contenu", "https://…", (url) => blk({ type: "kbEmbed", attrs: { url, caption: "" } })) },
     { id: "youtube", title: "YouTube", cat: "Intégrations", icon: "video", desc: "Intégrez une vidéo YouTube.", run: () => urlPrompt("YouTube", "Adresse de la vidéo YouTube", "https://www.youtube.com/watch?v=…", (url) => blk({ type: "kbVideo", attrs: { url, caption: "" } })) },
     { id: "vimeo", title: "Vimeo", cat: "Intégrations", icon: "video", desc: "Intégrez une vidéo Vimeo.", run: () => urlPrompt("Vimeo", "Adresse de la vidéo Vimeo", "https://vimeo.com/…", (url) => blk({ type: "kbVideo", attrs: { url, caption: "" } })) },
   ];
-  const CATS = ["Texte", "Média", "Design", "Widgets", "Intégrations"];
-  const blockButton = (b, after) => h("button", { type: "button", class: "wp-block-type", onclick: () => { after?.(); b.run(); } }, h("span", { class: "wp-block-type-icon" }, svg(b.icon)), h("span", { class: "wp-block-type-title" }, b.title));
+  const CATS = ["Texte", "KOYEKOLA", "Média", "Mise en forme", "Intégrations"];
+  const blockButton = (b, after) => h("button", { type: "button", class: b.brand ? "wp-block-type is-brand" : "wp-block-type", onclick: () => { after?.(); b.run(); } }, h("span", { class: "wp-block-type-icon" }, svg(b.icon)), h("span", { class: "wp-block-type-title" }, b.title));
   const matches = (b, q) => !q || norm(`${b.title} ${b.cat} ${b.keywords || ""} ${b.desc}`).includes(norm(q));
   function urlPrompt(title, label, placeholder, done, { kind } = {}) {
     const url = input({ type: "url", placeholder });
@@ -574,7 +576,7 @@ function start() {
       if (opts.tab) relValue.push("noopener", "noreferrer");
       const linkAttrs = { href, target: opts.tab ? "_blank" : null, rel: relValue.length ? relValue.join(" ") : null };
       if (editor.state.selection.empty && !editor.isActive("link")) ins().insertContent({ type: "text", text: href, marks: [{ type: "link", attrs: linkAttrs }] }).run();
-      else chain().extendMarkRange("link").setLink(linkAttrs).run();
+      else { const to = editor.state.selection.to; chain().extendMarkRange("link").setLink(linkAttrs).setTextSelection(to).unsetMark("link").run(); } // curseur après le lien, sans le prolonger
       pop.close();
     };
     const runSearch = debounce(async () => {
@@ -951,6 +953,9 @@ function start() {
     const scheduled = statusSelect.value === "scheduled";
     $("[data-date-hint]").textContent = scheduled ? "L'article sera publié automatiquement à cette date." : dateInput.value ? "" : "Immédiatement, à la publication.";
     $("[data-publish]").textContent = DATA.status === "published" ? "Mettre à jour" : scheduled ? "Planifier…" : "Publier";
+    const chip = $("[data-doc-status]");
+    chip.dataset.status = DATA.status;
+    chip.textContent = DATA.statuses[DATA.status] || DATA.status;
   }
   statusSelect.addEventListener("change", () => { syncStatus(); refreshPublication(); changed(); });
   dateInput.addEventListener("change", () => { syncStatus(); changed(); });
