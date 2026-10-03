@@ -22,7 +22,6 @@ import { BlockHandle, moveBlock, startBlockDrag } from "./blog/dragHandle";
 import { analyze, norm } from "../utils/seoAnalyzer";
 
 const root = document.querySelector("[data-blog-editor]");
-if (root) start();
 
 // Icônes (24 × 24) dans le style de la bibliothèque d'icônes de WordPress
 const ICONS = {
@@ -168,8 +167,16 @@ function start() {
   const titleField = field("title");
   const growTitle = () => { titleField.style.height = "auto"; titleField.style.height = `${titleField.scrollHeight}px`; };
   titleField.addEventListener("input", growTitle);
-  titleField.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); editor.commands.focus("start"); } });
+  titleField.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    // Focus immédiat (synchrone) : la frappe suivante doit arriver dans le premier bloc, pas dans le titre
+    editor.view.dispatch(editor.state.tr.setSelection(TextSelection.atStart(editor.state.doc)));
+    editor.view.focus();
+  });
+  titleField.addEventListener("input", () => { const t = titleField.value.trim() || "Sans titre"; $("[data-doc-title]").textContent = t; $("[data-card-title]").textContent = t; });
   requestAnimationFrame(growTitle);
+  window.addEventListener("resize", debounce(growTitle, 100));
 
   // ---------- Insertion ----------
   // Bloc entier sélectionné (image…) : on écrit après lui au lieu de le remplacer
@@ -201,8 +208,11 @@ function start() {
     editor.chain().focus().insertContentAt(pos, content).run();
     const end = pos + (editor.state.doc.content.size - size);
     const node = editor.state.doc.nodeAt(Math.max(0, end - 1));
-    if (end >= editor.state.doc.content.size || (node && node.isAtom)) editor.chain().insertContentAt(end, { type: "paragraph" }).setTextSelection(end + 1).run();
-    else editor.commands.setTextSelection(end);
+    const inserted = editor.state.doc.nodeAt(pos);
+    if (end >= editor.state.doc.content.size || (node && node.isAtom)) editor.chain().insertContentAt(end, { type: "paragraph" }).run();
+    // Curseur dans le bloc inséré (titre, encadré…) ; après lui s'il n'a pas de texte (image, séparateur…)
+    if (inserted && !inserted.isAtom && inserted.type.name !== "horizontalRule") editor.view.dispatch(editor.state.tr.setSelection(TextSelection.near(editor.state.doc.resolve(pos + 1))));
+    else editor.commands.setTextSelection(Math.min(end + 1, editor.state.doc.content.size));
     return true;
   }
   const p = (text) => ({ type: "paragraph", content: text ? [{ type: "text", text }] : [] });
@@ -1329,3 +1339,6 @@ function start() {
   // Petit écran : la barre latérale démarre fermée (comme Gutenberg)
   if (window.matchMedia("(max-width: 782px)").matches) { sidebar.hidden = true; root.classList.add("is-sidebar-closed"); $(".wp-header [data-toggle-sidebar]").setAttribute("aria-pressed", "false"); }
 }
+
+// Démarrage une fois tout le module défini (les icônes ci-dessus doivent exister)
+if (root) start();

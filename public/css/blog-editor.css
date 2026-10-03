@@ -23,7 +23,7 @@
 /* Un élément masqué (attribut hidden) le reste, quel que soit son affichage habituel (flex, grid…) */
 .be [hidden], .wp-modal [hidden], .wp-popover [hidden] { display: none !important; }
 .wp-body { margin: 0; background: var(--wp-bg, #fff); overflow: hidden; }
-.wp-body .wp-modal, .wp-body .wp-popover, .wp-body .wp-snackbar { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; font-size: 13px; color: #1e1e1e; }
+.wp-body .wp-modal, .wp-body .wp-popover { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; font-size: 13px; color: #1e1e1e; }
 .wp button { font-family: inherit; }
 .wp :focus-visible, .wp-modal :focus-visible, .wp-popover :focus-visible { outline: 2px solid var(--wp-admin, #3858e9); outline-offset: -2px; }
 
@@ -74,6 +74,7 @@
 .wp-header-right { display: flex; align-items: center; gap: 4px; }
 .wp-save-state { color: #757575; font-size: 13px; padding: 0 6px; white-space: nowrap; }
 .wp-save-state.is-dirty { color: #757575; }
+.wp-save-state.is-saved { display: none; } /* le bouton affiche déjà « Enregistré » */
 .wp-save-state.is-saving { color: #3858e9; animation: wp-pulse 1.2s ease-in-out infinite; }
 @keyframes wp-pulse { 50% { opacity: 0.5; } }
 @media (prefers-reduced-motion: reduce) { .wp-save-state.is-saving { animation: none; } }
@@ -91,7 +92,7 @@
 .wp-notice-success { border-left-color: #4ab866; background: #eff9f1; }
 .wp-notice-warning { border-left-color: #f0b849; background: #fef8ee; }
 .wp-notice-close { border: 0; background: none; font-size: 18px; cursor: pointer; color: #1e1e1e; margin-left: auto; }
-.wp-snackbar { position: fixed; left: 24px; bottom: 40px; z-index: 300; max-width: 600px; padding: 14px 24px; border-radius: 2px; background: #1e1e1e; color: #fff; box-shadow: 0 2px 8px rgba(11, 42, 64, 0.2); font-size: 13px; animation: wp-slide 0.2s ease-out; }
+.wp-snackbar { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; position: fixed; left: 24px; bottom: 40px; z-index: 300; max-width: 600px; padding: 14px 24px; border-radius: 2px; background: #1e1e1e; color: #fff; box-shadow: 0 2px 8px rgba(11, 42, 64, 0.2); font-size: 13px; animation: wp-slide 0.2s ease-out; }
 .wp-snackbar.is-error { background: #cc1818; }
 @keyframes wp-slide { from { transform: translateY(12px); opacity: 0; } }
 
@@ -114,6 +115,7 @@
 .wp-title {
   display: block; width: 100%; margin: 0 0 32px; padding: 0; border: 0; background: transparent; resize: none; overflow: hidden;
   font-family: var(--font-display, Georgia, serif); font-size: 2.6rem; font-weight: 800; line-height: 1.15; color: var(--primary, #1e1e1e);
+  min-height: 0; field-sizing: content;
 }
 .wp-title::placeholder { color: #949494; }
 .wp-title:focus { box-shadow: none; }
@@ -355,7 +357,9 @@
   .wp-sidebar, .wp-secondary, .wp-prepublish { position: fixed; inset: var(--wp-header-h) 0 0 0; z-index: 35; width: auto; border: 0; }
   .wp-content { padding: 24px 16px 40vh; }
   .wp-title { font-size: 1.9rem; margin-bottom: 20px; }
-  .wp-block-toolbar { max-width: calc(100vw - 32px); overflow-x: auto; }
+  /* Comme Gutenberg sur mobile : la barre du bloc se fixe en bas de l'écran */
+  .wp-block-toolbar { position: fixed; top: auto !important; left: 0 !important; right: 0; bottom: 0; z-index: 32; border-width: 1px 0 0; border-radius: 0; overflow-x: auto; }
+  .wp-content { padding-bottom: 60vh; }
   .wp-footer { display: none; }
   .wp-layout { bottom: 0; }
   .wp-library-main { grid-template-columns: minmax(0, 1fr); }
