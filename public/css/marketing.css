@@ -742,3 +742,19 @@ details.mk-cl-item[open] > .mk-cl-summary .mk-cl-edit { visibility: hidden; }
 .mk-sms-when { border: 0; padding: 0; margin: 0 0 16px; }
 .mk-sms-when legend { font-weight: 700; margin-bottom: 6px; padding: 0; }
 .mk-sms-when [data-sms-later][hidden] { display: none; }
+
+/* ---------- Tests A/B ---------- */
+.mk-ab-form { display: grid; gap: 14px; }
+.mk-ab-variant { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; }
+.mk-ab-variant .field-group { margin: 0; }
+.mk-ab-settings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.mk-ab-settings .field-group { margin: 0; }
+.mk-ab-report .mk-ab-winner { background: var(--accent-light); }
+.mk-ab-report .mk-ab-winner th { font-weight: 700; }
+.mk-ab-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 20px; padding: 0; list-style: none; counter-reset: abstep; }
+.mk-ab-steps li { border: 1px solid var(--mk-border); border-radius: var(--mk-r); padding: 14px 16px; background: var(--mk-surface); counter-increment: abstep; }
+.mk-ab-steps li::before { content: counter(abstep); display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-light); color: var(--accent); font-weight: 700; margin-bottom: 8px; }
+.mk-ab-steps strong { display: block; margin-bottom: 4px; }
+@media (max-width: 720px) {
+  .mk-ab-variant, .mk-ab-settings, .mk-ab-steps { grid-template-columns: minmax(0, 1fr); }
+}

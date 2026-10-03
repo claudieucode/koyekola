@@ -237,11 +237,11 @@ describe("brouillon : liste de contrôle (à la Mailchimp)", () => {
     const res = await boss.post("/marketing/campagnes", { name: "Guidée", template_id: String(tplId), target: `list:${listId}`, category: "", track_clicks: "on" });
     id = Number(res.location.match(/(\d+)$/)[1]);
   });
-  test("six éléments : destinataires, expéditeur, objet, contenu, paramètres et suivi, heure d'envoi", async () => {
+  test("sept éléments : destinataires, expéditeur, objet, contenu, test A/B (facultatif), paramètres et suivi, heure d'envoi", async () => {
     const html = (await boss.get(`/marketing/campagnes/${id}`)).text;
     assert.match(html, /<ol class="mk-cl" aria-label="Préparation de la campagne">/);
-    assert.equal((html.match(/<li class="mk-cl-row/g) || []).length, 6);
-    for (const t of ["Destinataires", "Expéditeur", "Objet", "Contenu", "Paramètres et suivi", "Heure d(?:'|&#39;)envoi"]) assert.match(html, new RegExp(`<span class="mk-cl-title">${t}`), t);
+    assert.equal((html.match(/<li class="mk-cl-row/g) || []).length, 7);
+    for (const t of ["Destinataires", "Expéditeur", "Objet", "Contenu", "Test A/B", "Paramètres et suivi", "Heure d(?:'|&#39;)envoi"]) assert.match(html, new RegExp(`<span class="mk-cl-title">${t}`), t);
     assert.match(html, /<li class="mk-cl-row is-done">\s*<details class="mk-cl-item" id="destinataires"/);
     assert.match(html, /3 contacts joignables<\/strong> sur 3/);
     assert.match(html, /Modèle « Modèle R4 »/);

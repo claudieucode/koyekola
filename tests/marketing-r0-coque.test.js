@@ -34,7 +34,7 @@ describe("registre de navigation", () => {
   });
   test("les fonctionnalités futures sont prévues au registre mais JAMAIS affichées", () => {
     const future = ITEMS.filter((i) => i.status === "soon").map((i) => i.label);
-    for (const wanted of ["Tests A/B", "Domaines"]) assert.ok(future.includes(wanted), wanted);
+    for (const wanted of ["Domaines"]) assert.ok(future.includes(wanted), wanted);
     const nav = buildNav({ can: () => true, active: "dashboard" });
     for (const l of future) assert.ok(!labels(nav).includes(l), `${l} ne doit pas être visible`);
   });
@@ -74,7 +74,7 @@ describe("registre de navigation", () => {
   test("aucun bouton principal ne pointe vers une page inexistante : chaque adresse est une route ou une ancre déjà présente", () => {
     const webSrc = fs.readdirSync(path.join(ROOT, "src", "marketing", "web")).map((f) => fs.readFileSync(path.join(ROOT, "src", "marketing", "web", f), "utf8")).join("\n");
     for (const i of ITEMS.filter((x) => x.primary)) {
-      const [pathname] = i.primary.href.replace("/marketing", "").split("#");
+      const [pathname] = i.primary.href.replace("/marketing", "").split(/[?#]/);
       assert.ok(webSrc.includes(`"${pathname || "/"}"`) || webSrc.includes(`"${pathname}"`), `route absente pour ${i.primary.href}`);
     }
   });
@@ -120,7 +120,7 @@ describe("coque dans le navigateur", () => {
   });
   test("aucune fonctionnalité à venir n'apparaît dans l'interface", async () => {
     const html = (await boss.get("/marketing")).text;
-    for (const word of ["Tests A/B", "Domaines"]) assert.ok(!html.includes(word), word);
+    for (const word of ["Domaines"]) assert.ok(!html.includes(word), word);
   });
   test("repli du menu : bouton avec état, libellés portés par title pour le mode icônes", async () => {
     const html = (await boss.get("/marketing")).text;

@@ -8,6 +8,7 @@ const { audienceSummary } = require("./audience");
 const { getSendingConfig } = require("./config");
 const { getSecrets } = require("./config");
 const { WORKER_DETAIL, workerHuman } = require("../workerNotice");
+const { abPreflight } = require("./abtest");
 
 const LOCAL_HTTP = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/i;
 
@@ -53,6 +54,9 @@ function preflight(ctx, campaignId, { workerOn = false, smtpAvailable = Boolean(
     if (e.code !== "not_found") throw e;
     error("target_missing", "La liste ou le segment ciblé n'existe plus.");
   }
+
+  // Test A/B : modèle de chaque version, suivi adapté au critère, cible assez grande pour garder un reste
+  abPreflight(ctx, campaign, { sendable: summary ? summary.sendable : null, error });
 
   if (!getOrgProfile(ctx).address) warn("address_missing", "Aucune adresse postale dans le pied de page (page Modèles) : elle est exigée par plusieurs législations.");
   if (!workerOn) warnings.push({ code: "worker_off", message: workerHuman("aucune campagne ne partira tant qu'il n'est pas rétabli"), detail: WORKER_DETAIL });

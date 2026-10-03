@@ -8,7 +8,7 @@ const templates = require("../templates");
 
 const table = (ctx) => createRepository(ctx.db, ctx.organizationId).table("mk_campaigns");
 const flag = (v, fallback) => (v === undefined ? fallback : v ? 1 : 0);
-const SUMMARY = "id, name, template_id, target_type, target_id, category, track_clicks, track_opens, status, scheduled_at, started_at, finished_at, error, total_recipients, sent_count, delivered_count, bounced_count, complained_count, failed_count, skipped_count, unsubscribed_count, open_count, unique_open_count, click_count, unique_click_count, created_at, updated_at";
+const SUMMARY = "id, name, template_id, target_type, target_id, category, track_clicks, track_opens, ab_variants, ab_winner, ab_decide_at, status, scheduled_at, started_at, finished_at, error, total_recipients, sent_count, delivered_count, bounced_count, complained_count, failed_count, skipped_count, unsubscribed_count, open_count, unique_open_count, click_count, unique_click_count, created_at, updated_at";
 
 function cleanName(value) {
   const name = cleanText(value, { max: 101, field: "name" });
@@ -110,6 +110,16 @@ function duplicateCampaign(ctx, id) {
     name: build(n), templateId: source.template_id, targetType: source.target_type, targetId: source.target_id, category: source.category,
     trackClicks: Boolean(source.track_clicks), trackOpens: Boolean(source.track_opens),
   });
+  // Test A/B : les versions (objet, modèle) et les réglages sont repris ; jamais le contenu figé ni le gagnant
+  let abVariants = "";
+  try {
+    const list = source.ab_variants ? JSON.parse(source.ab_variants) : [];
+    if (Array.isArray(list) && list.length >= 2) abVariants = JSON.stringify(list.map((v) => ({ subject: v.subject, templateId: Number.isInteger(v.templateId) && v.templateId !== source.template_id ? v.templateId : null })));
+  } catch { abVariants = ""; }
+  if (abVariants) {
+    ctx.db.prepare("UPDATE mk_campaigns SET ab_variants = ?, ab_test_percent = ?, ab_metric = ?, ab_wait_minutes = ? WHERE id = ? AND organization_id = ?")
+      .run(abVariants, source.ab_test_percent, source.ab_metric, source.ab_wait_minutes, copy.id, ctx.organizationId);
+  }
   audit(ctx, "campaign.duplicated", "campaign", copy.id, { from: id });
   return copy;
 }

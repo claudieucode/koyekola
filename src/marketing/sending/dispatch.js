@@ -22,6 +22,7 @@ const { sendableClause } = require("./audience");
 const { preflight } = require("./preflight");
 const { buildMessage } = require("./builder");
 const { recordEvent, bump } = require("./events");
+const abtest = require("./abtest");
 
 const DAY = 86400000;
 const MINUTE = 60000;
@@ -61,21 +62,31 @@ function startCampaign(ctx, id, { scheduledAt, now = Date.now() } = {}) {
   const template = templates.getTemplate(ctx, campaign.template_id);
   const snapshot = snapshotOf(template);
   const compiled = compileTemplate(snapshot, { allowed: allowedFor(ctx) });
+  // Test A/B : les liens de CHAQUE version sont suivis (un même lien partagé n'est enregistré qu'une fois)
+  const isAb = abtest.isAbTest(campaign);
+  const compiledAll = [compiled];
+  if (isAb) {
+    for (const v of abtest.variantsOf(campaign)) {
+      const t = templates.getTemplate(ctx, abtest.templateIdOf(campaign, v));
+      if (t) compiledAll.push(compileTemplate({ ...snapshotOf(t), subject: v.subject }, { allowed: allowedFor(ctx) }));
+    }
+  }
 
   return transaction(ctx.db, () => {
     const insertLink = ctx.db.prepare("INSERT OR IGNORE INTO mk_links (organization_id, campaign_id, url) VALUES (?, ?, ?)");
-    if (campaign.track_clicks) for (const url of trackedLinks(compiled, ctx)) insertLink.run(ctx.organizationId, id, url);
+    if (campaign.track_clicks) for (const c of compiledAll) for (const url of trackedLinks(c, ctx)) insertLink.run(ctx.organizationId, id, url);
 
     const { from, params } = sendableClause(ctx, { targetType: campaign.target_type, targetId: campaign.target_id }, campaign.category);
     const recipients = ctx.db
       .prepare(`INSERT INTO mk_campaign_recipients (organization_id, campaign_id, contact_id, email, updated_at) SELECT c.organization_id, ?, c.id, c.email, ? ${from}`)
       .run(id, now, ...params).changes;
+    const ab = isAb ? abtest.assignVariants(ctx, campaign, { snapshotOf, now }) : null;
     ctx.db
       .prepare("UPDATE mk_campaigns SET status = 'scheduled', snapshot = ?, scheduled_at = ?, total_recipients = ?, updated_at = datetime('now') WHERE id = ? AND organization_id = ?")
       .run(JSON.stringify(snapshot), scheduledAt ?? null, recipients, id, ctx.organizationId);
     enqueueDispatch(ctx, id, { runAt: scheduledAt ?? now, key: `campaign:${id}:start` });
-    audit(ctx, "campaign.started", "campaign", id, { recipients, scheduled: scheduledAt !== undefined });
-    return { recipients };
+    audit(ctx, "campaign.started", "campaign", id, { recipients, scheduled: scheduledAt !== undefined, ...(ab ? { abTest: ab.testSize, abHeld: ab.held } : {}) });
+    return ab ? { recipients, abTest: ab.testSize, abHeld: ab.held } : { recipients };
   });
 }
 
@@ -116,7 +127,7 @@ async function processRecipient(ctx, { campaign, recipient, compiled, config, li
     return "skipped";
   }
 
-  ctx.db.prepare("INSERT OR IGNORE INTO mk_messages (organization_id, campaign_id, contact_id, email, provider, status) VALUES (?, ?, ?, ?, ?, 'pending')").run(ctx.organizationId, campaign.id, contact.id, contact.email, provider.name);
+  ctx.db.prepare("INSERT OR IGNORE INTO mk_messages (organization_id, campaign_id, contact_id, email, provider, status, variant) VALUES (?, ?, ?, ?, ?, 'pending', ?)").run(ctx.organizationId, campaign.id, contact.id, contact.email, provider.name, recipient.variant ?? null);
   const message = ctx.db.prepare("SELECT * FROM mk_messages WHERE campaign_id = ? AND contact_id = ?").get(campaign.id, contact.id);
 
   const fail = (status, reason, counter, eventType, detail) =>
@@ -182,8 +193,11 @@ async function dispatchBatch(ctx, campaignId, { provider, now = Date.now(), batc
   }
 
   let compiled;
+  let compiledVariants = [];
   try {
     compiled = compileTemplate(JSON.parse(campaign.snapshot), { allowed: allowedFor(ctx) });
+    // Test A/B : contenu figé de chaque version (le destinataire reçoit celle de son groupe, ou la gagnante)
+    compiledVariants = abtest.variantsOf(campaign).map((v) => (v.snapshot ? compileTemplate(v.snapshot, { allowed: allowedFor(ctx) }) : null));
   } catch (error) {
     if (!(error instanceof MarketingError)) throw error;
     ctx.db.prepare("UPDATE mk_campaigns SET status = 'failed', error = ?, finished_at = ?, updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(error.message.slice(0, 500), now, campaignId, ctx.organizationId);
@@ -203,7 +217,7 @@ async function dispatchBatch(ctx, campaignId, { provider, now = Date.now(), batc
   if (cap.allowed > 0) {
     const limit = Math.min(cap.allowed, batchSize);
     const rows = ctx.db
-      .prepare("SELECT * FROM mk_campaign_recipients WHERE campaign_id = ? AND status = 'queued' AND (next_attempt_at IS NULL OR next_attempt_at <= ?) ORDER BY id LIMIT ?")
+      .prepare("SELECT * FROM mk_campaign_recipients WHERE campaign_id = ? AND held = 0 AND status = 'queued' AND (next_attempt_at IS NULL OR next_attempt_at <= ?) ORDER BY id LIMIT ?")
       .all(campaignId, now, limit);
     const claim = ctx.db.prepare("UPDATE mk_campaign_recipients SET status = 'sending', updated_at = ? WHERE id = ? AND status = 'queued'");
     const claimed = rows.filter((r) => claim.run(now, r.id).changes > 0);
@@ -212,7 +226,8 @@ async function dispatchBatch(ctx, campaignId, { provider, now = Date.now(), batc
     for (let i = 0; i < claimed.length; i++) {
       const status = ctx.db.prepare("SELECT status FROM mk_campaigns WHERE id = ?").get(campaignId).status;
       if (status !== "sending") { release(i); break; } // mise en pause ou annulée pendant le lot
-      const outcome = await processRecipient(ctx, { campaign, recipient: claimed[i], compiled, config: cfg, linkMap, provider, now });
+      const own = claimed[i].variant !== null && claimed[i].variant !== undefined ? compiledVariants[claimed[i].variant] : null;
+      const outcome = await processRecipient(ctx, { campaign, recipient: claimed[i], compiled: own || compiled, config: cfg, linkMap, provider, now });
       if (typeof outcome === "object") { stop = outcome.stop; release(i + 1); break; }
       if (outcome === "sent") summary.sent++; else if (outcome === "skipped") summary.skipped++; else if (outcome === "failed") summary.failed++;
     }
@@ -226,8 +241,17 @@ async function dispatchBatch(ctx, campaignId, { provider, now = Date.now(), batc
 
   const current = requireCampaign(ctx, campaignId);
   if (current.status !== "sending") return { done: current.status !== "paused", paused: current.status === "paused", ...summary };
-  const left = ctx.db.prepare("SELECT COUNT(*) n, MIN(CASE WHEN status = 'queued' THEN COALESCE(next_attempt_at, 0) END) soonest, SUM(status = 'queued') queued FROM mk_campaign_recipients WHERE campaign_id = ? AND status IN ('queued', 'sending')").get(campaignId);
-  if (left.n === 0) { finalize(ctx, current, now); return { done: true, ...summary }; }
+  const left = ctx.db.prepare("SELECT COUNT(*) n, MIN(CASE WHEN status = 'queued' THEN COALESCE(next_attempt_at, 0) END) soonest, SUM(status = 'queued') queued FROM mk_campaign_recipients WHERE campaign_id = ? AND held = 0 AND status IN ('queued', 'sending')").get(campaignId);
+  if (left.n === 0) {
+    // Test A/B envoyé : le reste de la cible attend le gagnant (choix programmé après le délai, ou manuel)
+    const held = ctx.db.prepare("SELECT COUNT(*) n FROM mk_campaign_recipients WHERE campaign_id = ? AND held = 1 AND status = 'queued'").get(campaignId).n;
+    if (held > 0 && (current.ab_winner === null || current.ab_winner === undefined)) {
+      const decideAt = abtest.scheduleDecision(ctx, current, now);
+      return { done: true, abWaiting: true, decideAt, ...summary };
+    }
+    finalize(ctx, current, now);
+    return { done: true, ...summary };
+  }
   if (stop) return { done: false, reason: stop.reason, waitMs: stop.waitMs, ...summary };
   if (!left.queued) return { done: false, reason: "in_flight", waitMs: STUCK_MS, ...summary };
   const next = capacity(ctx, cfg, now);
@@ -279,7 +303,20 @@ function jobHandlers({ db, bus = null, settings, env = process.env, providerFor,
         await new Promise((resolve) => setImmediate(resolve));
       }
     },
+    "campaign.ab_decide": ({ organizationId, campaignId }) => {
+      const ctx = { db, organizationId, userId: null, bus, settings, log, now };
+      try {
+        abtest.decideWinner(ctx, campaignId, { now: now(), enqueueDispatch });
+      } catch (error) {
+        // Campagne annulée ou terminée entre-temps : plus rien à décider (pas de nouvel essai)
+        if (error instanceof MarketingError && ["invalid_state", "not_found"].includes(error.code)) return;
+        throw error;
+      }
+    },
   };
 }
 
-module.exports = { capacity, trackedLinks, snapshotOf, startCampaign, dispatchBatch, pauseCampaign, resumeCampaign, cancelCampaign, jobHandlers, preflight };
+// Choix manuel du gagnant d'un test A/B (bouton de l'équipe) : même circuit que le choix automatique
+const chooseAbWinner = (ctx, id, index, { now = Date.now() } = {}) => abtest.decideWinner(ctx, id, { manualIndex: index, now, enqueueDispatch });
+
+module.exports = { capacity, trackedLinks, snapshotOf, startCampaign, dispatchBatch, pauseCampaign, resumeCampaign, cancelCampaign, chooseAbWinner, jobHandlers, preflight };

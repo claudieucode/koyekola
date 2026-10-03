@@ -7,12 +7,18 @@
 <% if (campaign.status === "draft") {
   // ---------- Brouillon : liste de contrôle à la Mailchimp (Destinataires, Expéditeur, Objet, Contenu…) ----------
   const canWrite = mk.can("campaigns.write"), canSend = mk.can("campaigns.send");
-  const AUD = ["no_audience", "target_missing"], CONTENT = ["template_missing", "template_not_ready"], SENDER = ["provider_incomplete"];
+  const AUD = ["no_audience", "target_missing"], CONTENT = ["template_missing", "template_not_ready"], SENDER = ["provider_incomplete"], AB = ["ab_template", "ab_tracking", "ab_audience"];
   const errOf = (codes) => check.errors.filter((e) => codes.includes(e.code));
-  const generalErrors = check.errors.filter((e) => ![...AUD, ...CONTENT, ...SENDER].includes(e.code));
+  const generalErrors = check.errors.filter((e) => ![...AUD, ...CONTENT, ...SENDER, ...AB].includes(e.code));
   const senderWarnings = check.warnings.filter((w) => w.code === "provider_console");
   const otherWarnings = check.warnings.filter((w) => w.code !== "provider_console");
   const aud = check.audience;
+  const abOn = ab.variants.length >= 2;
+  const abTemplateName = (id) => { const t = templates.find((x) => x.id === id); return t ? t.name : "(modèle supprimé)"; };
+  const abVar = (i) => ab.variants[i] || { subject: i === 0 && template ? template.subject : "", templateId: null };
+  const abTestCount = aud && aud.sendable ? Math.min(aud.sendable, Math.max((abOn ? ab.variants.length : 2) * 2, Math.round(aud.sendable * campaign.ab_test_percent / 100))) : 0;
+  const waitChoices = [[60, "1 heure"], [120, "2 heures"], [240, "4 heures"], [480, "8 heures"], [720, "12 heures"], [1440, "1 jour"], [2880, "2 jours"], [4320, "3 jours"], [10080, "7 jours"]];
+  const waitLabel = (w) => { const f = waitChoices.find(([m]) => m === w); return f ? f[1] : w + " minutes"; };
   const cur = `${campaign.target_type}:${campaign.target_id}`;
   // Chaque formulaire de ligne ne modifie que SON champ : les autres réglages repartent tels quels (champs cachés)
   const keep = (except) => {
@@ -29,9 +35,10 @@
     sender: errOf(SENDER).length ? "error" : sender && sender.from ? "done" : senderWarnings.length ? "warn" : "todo",
     subject: template && template.subject ? "done" : errOf(CONTENT).length ? "error" : "todo",
     content: errOf(CONTENT).length ? "error" : "done",
+    ab: !abOn ? "optional" : errOf(AB).length ? "error" : "done",
   };
-  const mark = (state) => icon(state === "done" ? "checkCircle" : state === "error" || state === "warn" ? "alertTriangle" : "clock", { size: 22 });
-  const stateText = { done: "prêt", error: "à corriger", warn: "à vérifier", todo: "à compléter" };
+  const mark = (state) => icon(state === "done" ? "checkCircle" : state === "error" || state === "warn" ? "alertTriangle" : state === "optional" ? "activity" : "clock", { size: 22 });
+  const stateText = { done: "prêt", error: "à corriger", warn: "à vérifier", todo: "à compléter", optional: "facultatif" };
 %>
     <div class="mk-head mk-builder-head">
       <div class="mk-builder-title">
@@ -54,7 +61,7 @@
         <% } %>
       </div>
     </div>
-    <p class="mk-lead">E-mail classique · modifié le <%= mkh.fdate(campaign.updated_at) %>
+    <p class="mk-lead"><%= abOn ? "Test A/B (" + ab.variants.length + " versions)" : "E-mail classique" %> · modifié le <%= mkh.fdate(campaign.updated_at) %>
       <% if (!canSend) { %> · seul un administrateur peut lancer l'envoi<% } else if (!check.ready) { %> · l'envoi sera possible quand tous les éléments ci-dessous seront prêts<% } %></p>
     <% if (campaign.error) { %><p class="form-error" role="alert"><%= campaign.error %></p><% } %>
 
@@ -119,7 +126,8 @@
           <div class="mk-cl-summary">
             <span class="mk-cl-mark" aria-hidden="true"><%- mark(rows.subject) %></span>
             <span class="mk-cl-text"><span class="mk-cl-title">Objet <span class="sr-only">— <%= stateText[rows.subject] %></span></span>
-              <span class="mk-cl-desc"><%= template && template.subject ? template.subject : "Aucun objet" %></span>
+              <% if (abOn) { %><span class="mk-cl-desc">Défini par le test A/B : <%= ab.variants.map((v, i) => ab.letters[i] + " « " + v.subject + " »").join(" · ") %></span><% } else { %>
+              <span class="mk-cl-desc"><%= template && template.subject ? template.subject : "Aucun objet" %></span><% } %>
               <span class="mk-cl-desc">Texte d'aperçu : <%= template && template.preheader ? template.preheader : "aucun" %></span></span>
             <% if (template && mk.can("templates.write")) { %><a class="btn btn-outline btn-sm mk-cl-edit" href="/marketing/modeles/<%= template.id %>">Modifier</a><% } %>
           </div>
@@ -153,6 +161,56 @@
         <% if (template) { %>
           <div class="mk-cl-thumb"><iframe src="/marketing/modeles/<%= template.id %>/apercu" title="Aperçu de l'e-mail « <%= template.name %> »" loading="lazy" tabindex="-1" sandbox=""></iframe></div>
         <% } %>
+      </li>
+
+      <%# Test A/B (facultatif) : 2 ou 3 versions, la meilleure part ensuite au reste de la cible %>
+      <li class="mk-cl-row <%= 'is-' + rows.ab %>">
+        <details class="mk-cl-item" id="test-ab"<%= rows.ab === "error" || ab.open ? " open" : "" %>>
+          <summary class="mk-cl-summary">
+            <span class="mk-cl-mark" aria-hidden="true"><%- mark(rows.ab) %></span>
+            <span class="mk-cl-text"><span class="mk-cl-title">Test A/B <span class="sr-only">— <%= stateText[rows.ab] %></span></span>
+              <% if (abOn) { %>
+                <span class="mk-cl-desc"><%= ab.variants.length %> versions · <strong><%= campaign.ab_test_percent %> %</strong> de la cible<% if (aud && aud.sendable) { %> (≈ <%= mkh.fmt(abTestCount) %> contacts)<% } %> · gagnant : <%= ab.metrics[campaign.ab_metric] %><%= campaign.ab_metric === "manual" ? "" : " après " + waitLabel(campaign.ab_wait_minutes) %></span>
+                <span class="mk-cl-desc">Le reste de la cible recevra automatiquement la version gagnante.</span>
+              <% } else { %>
+                <span class="mk-cl-desc">Facultatif : comparez 2 ou 3 objets ou contenus sur une partie de la cible, puis envoyez le meilleur à tous les autres.</span>
+              <% } %>
+              <% errOf(AB).forEach((e) => { %><span class="mk-cl-error"><%= e.message %></span><% }) %></span>
+            <% if (canWrite) { %><span class="btn btn-outline btn-sm mk-cl-edit"><%= abOn ? "Modifier" : "Créer un test" %></span><% } %>
+          </summary>
+          <% if (canWrite) { %>
+            <form action="/marketing/campagnes/<%= campaign.id %>/test-ab" method="post" class="mk-cl-panel mk-ab-form">
+              <p class="field-hint">Chaque version a son objet et peut avoir son propre modèle (pour tester le contenu). Laissez la version C vide pour n'en comparer que deux.</p>
+              <% ["a", "b", "c"].forEach((k, i) => { const v = abVar(i); %>
+                <fieldset class="mk-fieldset mk-ab-variant">
+                  <legend>Version <%= ab.letters[i] %><%= i === 2 ? " (facultative)" : "" %></legend>
+                  <div class="field-group"><label for="ab-subject-<%= k %>">Objet</label>
+                    <input id="ab-subject-<%= k %>" type="text" name="subject_<%= k %>" maxlength="200" value="<%= v.subject %>"<%= i < 2 ? " required" : "" %> placeholder="<%= i === 0 ? "Ex. Votre formation Excel vous attend" : i === 1 ? "Ex. -30 % sur Excel jusqu'à dimanche" : "Ex. Une 3e idée d'objet" %>"></div>
+                  <div class="field-group"><label for="ab-template-<%= k %>">Contenu</label>
+                    <select id="ab-template-<%= k %>" name="template_<%= k %>">
+                      <option value="">Modèle de la campagne (« <%= template ? template.name : "(supprimé)" %> »)</option>
+                      <% templates.forEach((t) => { if (template && t.id === template.id) return; %><option value="<%= t.id %>" <%= v.templateId === t.id ? "selected" : "" %>><%= t.name %></option><% }) %>
+                    </select></div>
+                </fieldset>
+              <% }) %>
+              <div class="mk-ab-settings">
+                <div class="field-group"><label for="ab-percent">Part de la cible qui reçoit le test</label>
+                  <select id="ab-percent" name="percent"><% [10, 20, 30, 40, 50].forEach((p) => { %><option value="<%= p %>" <%= campaign.ab_test_percent === p ? "selected" : "" %>><%= p %> %<%= aud && aud.sendable ? " (≈ " + Math.min(aud.sendable, Math.max(4, Math.round(aud.sendable * p / 100))) + " contacts)" : "" %></option><% }) %></select>
+                  <span class="field-hint">Répartie à parts égales entre les versions, tirée au hasard.</span></div>
+                <div class="field-group"><label for="ab-metric">Comment choisir le gagnant</label>
+                  <select id="ab-metric" name="metric"><% Object.entries(ab.metrics).forEach(([key, label]) => { %><option value="<%= key %>" <%= campaign.ab_metric === key ? "selected" : "" %>><%= label %><%= key === "clicks" ? " (recommandé)" : key === "opens" ? " (indicatif)" : "" %></option><% }) %></select>
+                  <span class="field-hint">Le taux de clics est le plus fiable ; les ouvertures sont faussées par Apple Mail.</span></div>
+                <div class="field-group"><label for="ab-wait">Délai avant de choisir le gagnant</label>
+                  <select id="ab-wait" name="wait"><% waitChoices.forEach(([m, l]) => { %><option value="<%= m %>" <%= campaign.ab_wait_minutes === m ? "selected" : "" %>><%= l %></option><% }) %></select>
+                  <span class="field-hint">Compté à partir de la fin de l'envoi du test. En mode manuel, c'est vous qui choisissez.</span></div>
+              </div>
+              <div class="mk-cl-actions">
+                <button type="submit" class="btn btn-primary btn-sm"><%= abOn ? "Enregistrer le test" : "Activer le test A/B" %></button>
+                <% if (abOn) { %><button type="submit" name="action" value="retirer" class="btn btn-ghost btn-sm" formnovalidate>Retirer le test</button><% } else { %><button type="button" class="btn btn-ghost btn-sm" data-mk-cl-cancel>Annuler</button><% } %>
+              </div>
+            </form>
+          <% } %>
+        </details>
       </li>
 
       <%# Paramètres et suivi %>
@@ -227,6 +285,7 @@
           <div class="mk-dialog-body">
             <h2 id="send-title">Prêt à envoyer ?</h2>
             <p>« <%= campaign.name %> » partira vers <strong><%= aud ? mkh.fmt(aud.sendable) : 0 %> contact<%= aud && aud.sendable > 1 ? "s" : "" %></strong> (<%= campaign.target_type === "list" ? "liste" : "segment" %> « <%= targetName %> »). Le contenu et les destinataires sont figés au lancement ; chaque message est revérifié au moment de partir.</p>
+            <% if (abOn) { %><p><strong>Test A/B :</strong> environ <%= mkh.fmt(abTestCount) %> contacts tirés au hasard reçoivent les <%= ab.variants.length %> versions ; les autres recevront la version gagnante<%= campaign.ab_metric === "manual" ? ", quand vous l'aurez choisie" : " après " + waitLabel(campaign.ab_wait_minutes) %>.</p><% } %>
             <div class="field-group"><label for="l-when">Programmer l'envoi (facultatif — heure locale ; vide = tout de suite)</label>
               <input id="l-when" type="datetime-local" name="send_at"><input type="hidden" name="send_at_utc" id="send-at-utc"></div>
             <div class="field-group"><label for="l-count">Pour confirmer, tapez le nombre de destinataires : <strong><%= aud ? aud.sendable : 0 %></strong></label>
@@ -266,6 +325,30 @@
             <% if (["scheduled", "sending", "paused"].includes(campaign.status)) { %><form action="/marketing/campagnes/<%= campaign.id %>/annuler" method="post"><button type="submit" class="btn btn-danger btn-sm">Annuler la campagne</button></form><% } %>
           </div><% } %>
         </section>
+
+        <% if (stats.ab) { const a = stats.ab; const canChoose = mk.can("campaigns.send") && a.phase === "waiting" && ["sending", "paused"].includes(campaign.status); %>
+          <section class="mk-panel mk-ab-report" id="test-ab">
+            <h2>Test A/B</h2>
+            <% if (a.phase === "testing") { %>
+              <p>Envoi du test en cours : <%= a.percent %> % de la cible reçoit les <%= a.results.length %> versions. Les <%= mkh.fmt(a.held) %> autres contacts attendent la version gagnante.</p>
+            <% } else if (a.phase === "waiting") { %>
+              <p>Test envoyé. <% if (a.metric === "manual") { %>Choisissez la version gagnante : elle partira aussitôt aux <%= mkh.fmt(a.held) %> contacts restants.<% } else { %>Le gagnant (<%= a.metricLabel.toLowerCase() %>) sera choisi automatiquement le <strong><%= new Date(a.decideAt).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "UTC" }) %> (UTC)</strong> et partira aux <%= mkh.fmt(a.held) %> contacts restants. Vous pouvez aussi le choisir dès maintenant.<% } %></p>
+            <% } else { %>
+              <p><strong>Version <%= a.winnerLetter %> gagnante</strong> (<%= a.decidedBy === "manual" ? "choisie par l'équipe" : "choisie automatiquement : " + a.metricLabel.toLowerCase() %>) : envoyée au reste de la cible.</p>
+            <% } %>
+            <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Résultats par version</caption>
+              <thead><tr><th scope="col">Version</th><th scope="col">Objet</th><th scope="col">Contenu</th><th scope="col" class="mk-num">Envoyés</th><th scope="col" class="mk-num">Clics uniques</th><th scope="col" class="mk-num">Ouvertures (indicatif)</th><% if (canChoose) { %><th scope="col"><span class="sr-only">Choisir</span></th><% } %></tr></thead>
+              <tbody><% a.results.forEach((r) => { %><tr<%- r.winner ? ' class="mk-ab-winner"' : "" %>>
+                <th scope="row"><%= r.letter %><% if (r.winner) { %> <span class="mk-status mk-status-ok">Gagnante</span><% } %></th>
+                <td><%= r.subject %></td><td><%= r.templateName %></td>
+                <td class="mk-num"><%= mkh.fmt(r.sent) %></td>
+                <td class="mk-num"><strong><%= r.clickRate %> %</strong><span class="mk-sub"><%= mkh.fmt(r.clicks) %></span></td>
+                <td class="mk-num"><%= r.openRate %> %<span class="mk-sub"><%= mkh.fmt(r.opens) %></span></td>
+                <% if (canChoose) { %><td><form action="/marketing/campagnes/<%= campaign.id %>/gagnant" method="post"><input type="hidden" name="variant" value="<%= r.index %>"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="La version <%= r.letter %> (« <%= r.subject %> ») partira aux <%= a.held %> contacts restants. Ce choix est définitif." data-mk-confirm-title="Choisir la version <%= r.letter %> ?" data-mk-confirm-ok="Envoyer la version <%= r.letter %>">Choisir <%= r.letter %></button></form></td><% } %>
+              </tr><% }) %></tbody></table></div>
+            <p class="field-hint">Taux calculés sur les messages envoyés de chaque version. Avec peu de destinataires, l'écart entre versions peut être dû au hasard.</p>
+          </section>
+        <% } %>
 
         <section class="mk-panel">
           <h2>Rapport de campagne</h2>

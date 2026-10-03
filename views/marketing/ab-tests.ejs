@@ -1,0 +1,45 @@
+<%- include("partials/top", { title, active }) %>
+<% const canWrite = mk.can("campaigns.write"); %>
+    <div class="mk-head">
+      <h1>Tests A/B <span class="mk-count"><%= mkh.fmt(result.total) %></span></h1>
+      <% if (canWrite) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/campagnes/nouvelle?ab=1">Créer un test A/B</a></div><% } %>
+    </div>
+    <p class="mk-lead">Comparez 2 ou 3 versions d'un e-mail sur une partie de votre audience, puis envoyez automatiquement la meilleure à tous les autres.</p>
+    <%- include("partials/worker-note", { workerOn, consequence: "aucun test ne partira tant qu'il n'est pas rétabli" }) %>
+
+    <ol class="mk-ab-steps" aria-label="Fonctionnement d'un test A/B">
+      <li><strong>Préparez 2 ou 3 versions</strong>Objet différent, contenu différent (un autre modèle), ou les deux.</li>
+      <li><strong>Testez sur une partie de la cible</strong>10 à 50 % des contacts, tirés au hasard et répartis à parts égales.</li>
+      <li><strong>La meilleure part aux autres</strong>Après le délai choisi, selon le taux de clics ou d'ouvertures — ou c'est vous qui choisissez.</li>
+    </ol>
+
+    <% if (!rows.length) { %>
+      <div class="mk-empty">
+        <%- icon("activity", { size: 32 }) %>
+        <h2>Aucun test A/B</h2>
+        <p>Créez votre premier test, ou ajoutez un test A/B à un brouillon existant depuis sa liste de contrôle (ligne « Test A/B »).</p>
+        <% if (canWrite) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/campagnes/nouvelle?ab=1">Créer un test A/B</a></div><% } %>
+      </div>
+    <% } else { %>
+      <div class="mk-table-wrap">
+        <table class="mk-table mk-datatable">
+          <caption class="sr-only">Tests A/B (<%= mkh.fmt(result.total) %>)</caption>
+          <thead><tr><th scope="col">Campagne</th><th scope="col">Statut</th><th scope="col">Test</th><th scope="col" class="mk-num">Clics</th><th scope="col">Créé le</th></tr></thead>
+          <tbody>
+            <% rows.forEach((c) => {
+                 const st = mkh.campaignStatus(c.status);
+                 const decided = c.ab_winner !== null && c.ab_winner !== undefined;
+                 const phase = c.status === "draft" ? "À préparer" : decided ? "Version " + letters[c.ab_winner] + " gagnante" : c.ab_decide_at ? "En attente du gagnant" : ["cancelled", "failed"].includes(c.status) ? "Interrompu" : "Envoi du test"; %>
+              <tr>
+                <td data-label="Campagne"><a href="/marketing/campagnes/<%= c.id %>#test-ab"><%= c.name %></a><span class="mk-sub">modèle « <%= c.template_name || "(supprimé)" %> »</span></td>
+                <td data-label="Statut"><span class="mk-status <%= st.cls %>"><%= st.label %></span></td>
+                <td data-label="Test"><%= phase %></td>
+                <td class="mk-num" data-label="Clics"><% if (c.status === "draft") { %>—<% } else { %><strong><%= mkh.rate(c.clickRate) %></strong><span class="mk-sub"><%= mkh.fmt(c.unique_click_count) %></span><% } %></td>
+                <td data-label="Créé le" class="mk-nowrap"><%= mkh.fdate(c.created_at) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+<%- include("partials/bottom") %>

@@ -19,10 +19,11 @@ const DEFAULT_PAGE_SIZE = 25;
 const escapeLike = (text) => text.replace(/[\\%_]/g, (ch) => `\\${ch}`);
 const pct = (n, d) => (d > 0 ? Math.round((n / d) * 10000) / 100 : null);
 
-function searchCampaigns(ctx, { status, q } = {}, { sort, dir, page, pageSize } = {}) {
+function searchCampaigns(ctx, { status, q, abOnly = false } = {}, { sort, dir, page, pageSize } = {}) {
   checkCtx(ctx);
   const where = ["c.organization_id = ?", "c.kind = 'campaign'"];
   const params = [ctx.organizationId];
+  if (abOnly) where.push("c.ab_variants <> ''");
   if (typeof status === "string" && Object.hasOwn(STATUS_GROUPS, status)) {
     where.push(`c.status IN (${STATUS_GROUPS[status].map(() => "?").join(", ")})`);
     params.push(...STATUS_GROUPS[status]);
@@ -40,7 +41,7 @@ function searchCampaigns(ctx, { status, q } = {}, { sort, dir, page, pageSize } 
   const current = Math.min(Math.max(wanted, 1), pages);
   const rows = ctx.db
     .prepare(
-      `SELECT c.id, c.name, c.status, c.total_recipients, c.sent_count, c.unique_click_count, c.unique_open_count, c.track_opens, c.created_at, c.updated_at, c.started_at, c.scheduled_at, c.finished_at, c.target_type, c.target_id,
+      `SELECT c.id, c.name, c.status, c.ab_variants <> '' AS is_ab, c.ab_winner, c.ab_decide_at, c.total_recipients, c.sent_count, c.unique_click_count, c.unique_open_count, c.track_opens, c.created_at, c.updated_at, c.started_at, c.scheduled_at, c.finished_at, c.target_type, c.target_id,
               (SELECT t.name FROM mk_templates t WHERE t.id = c.template_id AND t.organization_id = c.organization_id) AS template_name,
               CASE c.target_type
                 WHEN 'list' THEN (SELECT l.name FROM mk_lists l WHERE l.id = c.target_id AND l.organization_id = c.organization_id)

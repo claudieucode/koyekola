@@ -136,6 +136,13 @@ module.exports = ({ db }) => {
     });
   });
 
+  // Tests A/B : les campagnes qui comparent des versions, avec leur phase et leur gagnant
+  router.get("/tests-ab", need("campaigns.read"), (req, res) => {
+    const { ctx } = req.mk;
+    const result = sending.searchCampaigns(ctx, { abOnly: true }, { sort: "created", dir: "desc", pageSize: 50, page: req.query.page });
+    res.render("marketing/ab-tests", { title: "Tests A/B", active: "ab", rows: result.rows, result, letters: sending.LETTERS, workerOn: workerOn() });
+  });
+
   const formData = (ctx) => ({
     templates: templates.listTemplates(ctx).filter((t) => t.kind === "marketing"), lists: audience.listLists(ctx), segments: segments.listSegments(ctx), categories: compliance.listCategories(ctx),
   });
@@ -143,7 +150,8 @@ module.exports = ({ db }) => {
   router.get("/campagnes/nouvelle", need("campaigns.write"), (req, res) => {
     const values = req.session.mkCampaignDraft ?? null; // saisie conservée après une erreur (affichée une seule fois)
     delete req.session.mkCampaignDraft;
-    res.render("marketing/campaign-new", { title: "Nouvelle campagne", active: "campaigns", values, ...formData(req.mk.ctx) });
+    const abStart = req.query.ab === "1";
+    res.render("marketing/campaign-new", { title: abStart ? "Nouveau test A/B" : "Nouvelle campagne", active: abStart ? "ab" : "campaigns", values, abStart, ...formData(req.mk.ctx) });
   });
 
   // Effectif de l'étape « Destinataires » (avant même la création du brouillon)
@@ -164,7 +172,8 @@ module.exports = ({ db }) => {
 
   router.post("/campagnes", need("campaigns.write"), (req, res, next) => {
     let created = null;
-    attempt(req, res, next, () => (created ? `/marketing/campagnes/${created.id}` : "/marketing/campagnes/nouvelle"), () => {
+    const abStart = req.body.ab === "1";
+    attempt(req, res, next, () => (created ? `/marketing/campagnes/${created.id}${abStart ? "?ab=1#test-ab" : ""}` : `/marketing/campagnes/nouvelle${abStart ? "?ab=1" : ""}`), () => {
       const b = req.body;
       try {
         created = sending.createCampaign(req.mk.ctx, { name: b.name, templateId: intOrNull(b.template_id), ...parseTarget(b.target), category: b.category || "", trackClicks: b.track_clicks === "on", trackOpens: b.track_opens === "on" });
@@ -172,7 +181,7 @@ module.exports = ({ db }) => {
         req.session.mkCampaignDraft = { name: String(b.name ?? "").slice(0, 100), template_id: String(b.template_id ?? ""), target: String(b.target ?? ""), category: String(b.category ?? ""), track_clicks: b.track_clicks === "on", track_opens: b.track_opens === "on" };
         throw error;
       }
-      return "Brouillon créé : complétez la liste de contrôle, puis envoyez.";
+      return abStart ? "Brouillon créé : réglez maintenant les versions de votre test A/B." : "Brouillon créé : complétez la liste de contrôle, puis envoyez.";
     });
   });
 
@@ -200,6 +209,7 @@ module.exports = ({ db }) => {
       stats: draft ? null : sending.campaignStats(ctx, campaign.id), ...(draft ? formData(ctx) : {}),
       autoRefresh: ["scheduled", "sending"].includes(campaign.status), workerOn: workerOn(),
       sender: draft ? config.getSendingConfig(ctx) : null, tested,
+      ab: { variants: sending.variantsOf(campaign), letters: sending.LETTERS, metrics: sending.METRICS, open: req.query.ab === "1" },
     });
   });
 
@@ -210,6 +220,33 @@ module.exports = ({ db }) => {
       const b = req.body;
       sending.updateCampaign(req.mk.ctx, campaign.id, { name: b.name, templateId: intOrNull(b.template_id), ...parseTarget(b.target), category: b.category || "", trackClicks: b.track_clicks === "on", trackOpens: b.track_opens === "on" });
       return "Campagne mise à jour.";
+    });
+  });
+
+  // Test A/B (brouillon) : versions A, B, C (objet + modèle), part testée, critère du gagnant, délai
+  router.post("/campagnes/:id/test-ab", need("campaigns.write"), (req, res, next) => {
+    const campaign = load(req, res);
+    if (!campaign) return;
+    attempt(req, res, next, `/marketing/campagnes/${campaign.id}#test-ab`, () => {
+      const b = req.body;
+      if (b.action === "retirer") {
+        sending.saveAbTest(req.mk.ctx, campaign.id, { enabled: false });
+        return "Test A/B retiré : la campagne partira comme un e-mail classique.";
+      }
+      const variants = ["a", "b", "c"].map((k) => ({ subject: typeof b[`subject_${k}`] === "string" ? b[`subject_${k}`] : "", templateId: intOrNull(b[`template_${k}`]) }));
+      sending.saveAbTest(req.mk.ctx, campaign.id, { enabled: true, variants, percent: intOrNull(b.percent), metric: String(b.metric || ""), waitMinutes: intOrNull(b.wait) });
+      return "Test A/B enregistré.";
+    });
+  });
+
+  router.post("/campagnes/:id/gagnant", need("campaigns.send"), (req, res, next) => {
+    const campaign = load(req, res);
+    if (!campaign) return;
+    attempt(req, res, next, `/marketing/campagnes/${campaign.id}#test-ab`, () => {
+      const index = intOrNull(req.body.variant);
+      const r = sending.chooseAbWinner(req.mk.ctx, campaign.id, index ?? -1);
+      if (r.already) return "Le gagnant avait déjà été choisi.";
+      return `Version ${sending.LETTERS[r.winner]} choisie : elle part maintenant au reste de la cible (${r.released} contact${r.released > 1 ? "s" : ""}).`;
     });
   });
 
@@ -225,9 +262,10 @@ module.exports = ({ db }) => {
       if (req.body.confirm_ok !== "on") throw new MarketingError("confirmation", "Cochez la case pour confirmer que ces personnes ont donné leur consentement à recevoir ce message.");
       const scheduledAt = parseSchedule(req.body);
       const r = sending.startCampaign(ctx, campaign.id, { scheduledAt });
-      const text = scheduledAt
+      const abText = r.abTest ? ` Test A/B : ${r.abTest} contacts reçoivent les versions, les ${r.abHeld} autres recevront la gagnante.` : "";
+      const text = (scheduledAt
         ? `Campagne programmée pour le ${new Date(scheduledAt).toISOString().slice(0, 16).replace("T", " ")} (UTC), ${r.recipients} destinataires.`
-        : `Campagne lancée : ${r.recipients} destinataires. L'envoi démarre en arrière-plan.`;
+        : `Campagne lancée : ${r.recipients} destinataires. L'envoi démarre en arrière-plan.`) + abText;
       return workerOn() ? text : { text: `${text} ${workerHuman("l'envoi démarrera dès qu'il sera rétabli")}`, detail: WORKER_DETAIL };
     });
   });
