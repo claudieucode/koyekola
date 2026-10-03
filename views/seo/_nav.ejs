@@ -2,7 +2,7 @@
 <p class="field-hint seo-back"><a href="/formateur" class="back-link"><%- icon('arrowLeft', { size: 14 }) %> Mon espace</a></p>
 <h1 class="seo-title">Référencement (SEO)</h1>
 <nav class="seo-tabs" aria-label="Rubriques SEO">
-  <% [["/formateur/seo", "Vue d'ensemble", "overview"], ["/formateur/seo/audit", "Audit", "audit"], ["/formateur/seo/contenus", "Contenus", "contents"], ["/formateur/seo/redirections", "Redirections", "redirects"], ["/formateur/seo/erreurs-404", "Erreurs 404", "notfound"], ["/formateur/seo/technique", "Robots et sitemap", "technical"], ["/formateur/seo/integrations", "Intégrations", "integrations"], ["/formateur/seo/reglages", "Réglages", "settings"], ["/formateur/seo/journal", "Journal", "journal"]].forEach(([href, label, key]) => { %>
+  <% [["/formateur/seo", "Vue d'ensemble", "overview"], ["/formateur/seo/audit", "Audit", "audit"], ["/formateur/seo/contenus", "Contenus", "contents"], ["/formateur/seo/redirections", "Redirections", "redirects"], ["/formateur/seo/erreurs-404", "Erreurs 404", "notfound"], ["/formateur/seo/technique", "Robots et sitemap", "technical"], ["/formateur/seo/integrations", "Intégrations", "integrations"], ["/formateur/seo/taches", "Tâches", "jobs"], ["/formateur/seo/rapports", "Rapports", "reports"], ["/formateur/seo/reglages", "Réglages", "settings"], ["/formateur/seo/journal", "Journal", "journal"]].forEach(([href, label, key]) => { %>
     <a href="<%= href %>"<%- active === key ? ' aria-current="page"' : "" %>><%= label %></a>
   <% }) %>
 </nav>

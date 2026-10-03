@@ -1,0 +1,40 @@
+<%- include("../partials/header", { title: "SEO · Rapports" }) %>
+<div class="container-wide seo-page">
+  <%- include("_nav", { active: "reports" }) %>
+  <p class="field-hint">Rapports construits au moment du téléchargement, à partir des données enregistrées. Les fichiers CSV s'ouvrent dans Excel, Numbers ou Google Sheets. Aucune clé ni donnée secrète n'est exportée.</p>
+  <section class="content-card">
+    <h2>Synthèse SEO</h2>
+    <dl class="seo-dl">
+      <dt>Dernier audit</dt><dd><%= summary.latest_audit ? `n° ${summary.latest_audit.id} du ${summary.latest_audit.finished_at} UTC — ${summary.latest_audit.pages} pages, ${summary.latest_audit.open_issues} problème(s) ouvert(s)${summary.latest_audit.scores && summary.latest_audit.scores.overall ? `, note ${summary.latest_audit.scores.overall.score} / 100` : ""}` : "Aucun audit terminé" %></dd>
+      <dt>Plan du site</dt><dd><%= summary.sitemap.included %> adresse(s) incluse(s), <%= summary.sitemap.excluded %> exclue(s)</dd>
+      <dt>Redirections</dt><dd><%= summary.redirects.total %> (<%= summary.redirects.chains %> chaîne(s) à raccourcir)</dd>
+      <dt>Erreurs 404</dt><dd><%= summary.not_found.urls %> adresse(s), <%= summary.not_found.human %> visite(s) de personnes</dd>
+      <dt>Intégrations</dt><dd><%= Object.values(summary.integrations).map((i) => i.label).join(" · ") %></dd>
+    </dl>
+    <div class="seo-form-actions"><a class="btn btn-primary btn-sm" href="/formateur/seo/rapports/synthese.json">Télécharger la synthèse (JSON)</a></div>
+  </section>
+  <section class="content-card">
+    <h2>Audits</h2>
+    <% if (!audits.length) { %><p>Aucun audit terminé : lancez-en un depuis l'onglet <a href="/formateur/seo/audit">Audit</a>.</p><% } else { %>
+    <div class="seo-table-wrap"><table class="seo-table"><thead><tr><th scope="col">Audit</th><th scope="col">Terminé le (UTC)</th><th scope="col">Pages</th><th scope="col">Problèmes</th><th scope="col">Télécharger</th></tr></thead>
+      <tbody><% audits.forEach((a) => { %><tr><td>n° <%= a.id %> — <%= kinds[a.kind] || a.kind %></td><td><%= a.finished_at %></td><td><%= a.pages %></td><td><%= a.issues %></td>
+        <td class="seo-actions"><a class="btn btn-outline btn-sm" href="/formateur/seo/rapports/audit-<%= a.id %>.csv">CSV</a><a class="btn btn-outline btn-sm" href="/formateur/seo/rapports/audit-<%= a.id %>.json">JSON</a></td></tr><% }) %></tbody></table></div>
+    <h3>Rapport d'une seule catégorie (dernier audit)</h3>
+    <p class="field-hint">Technique, contenu, liens, images, indexabilité… : uniquement les problèmes de cette catégorie.</p>
+    <form method="get" action="/formateur/seo/rapports/audit-<%= audits[0].id %>.csv" class="seo-filters">
+      <label class="sr-only" for="r-cat">Catégorie</label><select id="r-cat" name="categorie"><% Object.entries(categories).forEach(([k, l]) => { %><option value="<%= k %>"><%= l %></option><% }) %></select>
+      <button class="btn btn-outline btn-sm" type="submit">Télécharger (CSV)</button>
+    </form>
+    <% } %>
+  </section>
+  <section class="content-card">
+    <h2>Autres exports (CSV)</h2>
+    <ul class="seo-checks">
+      <li><a href="/formateur/seo/redirections.csv">Redirections</a> — sources, destinations, utilisations</li>
+      <li><a href="/formateur/seo/rapports/erreurs-404.csv">Erreurs 404</a> — adresses introuvables, visites, pages d'origine</li>
+      <li><a href="/formateur/seo/rapports/journal.csv">Journal des modifications SEO</a> — qui a changé quoi, avant / après</li>
+      <li><a href="/formateur/seo/rapports/pagespeed.csv">Mesures PageSpeed</a> — historique de vitesse des pages</li>
+    </ul>
+  </section>
+</div>
+<%- include("../partials/footer") %>

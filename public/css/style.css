@@ -1819,3 +1819,22 @@ a.post-card-category:hover { text-decoration: underline; }
 .seo-int-config summary { cursor: pointer; font-weight: 700; color: var(--primary); }
 .seo-int-steps { padding-left: 20px; display: grid; gap: 6px; font-size: 0.92rem; }
 .seo-int-config textarea { font-family: ui-monospace, Menlo, monospace; font-size: 0.8rem; }
+/* SEO : tâches programmées */
+.seo-jobs { display: grid; gap: 0; }
+.seo-job { scroll-margin-top: 90px; }
+.seo-job-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.seo-job-head h2 { margin: 0; }
+.seo-job-status { color: var(--muted); font-size: 0.9rem; }
+.seo-job-status.is-ok { color: var(--success-dark); }
+.seo-job-status.is-error { color: var(--danger); }
+.seo-job-status.is-skipped, .seo-job-status.is-busy { color: var(--warning-text); }
+.seo-job-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; }
+.seo-job-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seo-job-form select { width: auto; }
+/* SEO : alertes de surveillance */
+.seo-alerts { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.seo-alert { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--radius); background: var(--surface-alt); border-left: 4px solid var(--border); }
+.seo-alert.is-critical, .seo-alert.is-high { border-left-color: var(--danger); }
+.seo-alert.is-medium { border-left-color: var(--warning-text); }
+.seo-alert-sev { font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; min-width: 70px; }
+.seo-alert-msg { flex: 1 1 260px; overflow-wrap: anywhere; }

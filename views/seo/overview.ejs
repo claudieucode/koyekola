@@ -12,6 +12,20 @@
     <% } %>
   </section>
 
+  <section class="content-card" id="surveillance">
+    <h2>Surveillance</h2>
+    <% if (!monitorAt) { %><p>Non configuré : la surveillance n'a encore jamais tourné. Elle passe chaque jour automatiquement ; vous pouvez la lancer depuis l'onglet <a href="/formateur/seo/taches#tache-monitor">Tâches</a>.</p>
+    <% } else if (!alerts.length) { %><p class="form-success">Aucun changement à signaler. Dernier passage : <%= formatDateTime(monitorAt) %>.</p>
+    <% } else { %>
+      <p class="field-hint">Changements constatés entre deux passages (dernier : <%= formatDateTime(monitorAt) %>).</p>
+      <ul class="seo-alerts">
+        <% alerts.forEach((a) => { const cls = `seo-alert is-${a.severity}`; %><li class="<%= cls %>"><span class="seo-alert-sev"><%= severities[a.severity] ? severities[a.severity].label : a.severity %></span><span class="seo-alert-msg"><%= a.message %> <small class="field-hint"><%= formatDateTime(a.created_at) %></small></span>
+          <form method="post" action="/formateur/seo/alertes/vues" class="inline-form"><input type="hidden" name="id" value="<%= a.id %>"><button class="btn btn-ghost btn-sm" type="submit">Vu</button></form></li><% }) %>
+      </ul>
+      <form method="post" action="/formateur/seo/alertes/vues" class="inline-form"><button class="btn btn-outline btn-sm" type="submit">Tout marquer comme vu</button></form>
+    <% } %>
+  </section>
+
   <section class="content-card">
     <h2>Contenus publics</h2>
     <p class="field-hint">Comptés dans la base du site. « Personnalisés » : contenus ayant au moins un réglage SEO propre ; les autres utilisent les modèles automatiques.</p>

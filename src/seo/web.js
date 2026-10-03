@@ -16,6 +16,8 @@ const sitemap = require("./sitemap");
 const audit = require("./audit");
 const { RULES, SEVERITIES, CATEGORIES } = require("./rules");
 const integrations = require("./integrations");
+const jobs = require("./jobs");
+const reports = require("./reports");
 
 const router = express.Router();
 const canManage = (user) => Boolean(user && user.role === "formateur");
@@ -41,6 +43,7 @@ router.get("/formateur/seo", (req, res) => {
     ],
     changes: listChanges({ limit: 8 }), fieldLabels: FIELD_LABELS,
     audits: audit.list(10).filter((a) => a.status === "done"), categories: CATEGORIES,
+    alerts: jobs.monitor.openAlerts(), monitorAt: jobs.monitor.lastSnapshotAt(), severities: SEVERITIES,
   });
 });
 
@@ -254,5 +257,51 @@ router.post("/formateur/seo/integrations/pagespeed/analyser", async (req, res) =
   const r = await integrations.runPageSpeed(`${siteBase()}${path}`, req.body.strategy === "desktop" ? "desktop" : "mobile");
   back(res, r.ok ? "msg" : "err", r.ok ? "Analyse PageSpeed terminée." : r.error);
 });
+
+// ---------- Tâches programmées ----------
+router.get("/formateur/seo/taches", (req, res) => {
+  res.render("seo/jobs", { list: jobs.list(), frequencies: jobs.FREQUENCIES, msg: req.query.msg || null, err: req.query.err || null, now: new Date().toISOString().slice(0, 16).replace("T", " ") });
+});
+router.post("/formateur/seo/taches/:name", (req, res) => {
+  const r = jobs.configure(req.params.name, { frequency: String(req.body.frequency || ""), hour: req.body.hour });
+  res.redirect(`/formateur/seo/taches?${r.ok ? "msg=" + encodeURIComponent("Programmation enregistrée.") : "err=" + encodeURIComponent(r.error)}`);
+});
+router.post("/formateur/seo/taches/:name/executer", async (req, res, next) => {
+  try {
+    if (!jobs.JOBS[req.params.name]) return res.redirect(`/formateur/seo/taches?err=${encodeURIComponent("Tâche inconnue.")}`);
+    // Un audit peut être long : réponse au plus tard après 20 s, la tâche continue alors en arrière-plan
+    const run = jobs.execute(req.params.name, { trigger: "manual" });
+    const r = await Promise.race([run, new Promise((resolve) => setTimeout(() => resolve(null), 20000))]);
+    if (!r) return res.redirect(`/formateur/seo/taches?msg=${encodeURIComponent("Tâche lancée : elle continue en arrière-plan, rechargez la page pour voir le résultat.")}`);
+    const key = r.status === "ok" ? "msg" : "err";
+    const text = r.status === "ok" ? `Terminé : ${r.message}` : r.status === "skipped" ? `Tâche ignorée : ${r.message}` : r.status === "busy" ? r.message : `Échec : ${r.message}`;
+    res.redirect(`/formateur/seo/taches?${key}=${encodeURIComponent(text)}`);
+  } catch (error) { next(error); }
+});
+
+router.post("/formateur/seo/alertes/vues", (req, res) => {
+  jobs.monitor.markSeen(req.body.id ? Number(req.body.id) : null);
+  res.redirect("/formateur/seo#surveillance");
+});
+
+// ---------- Rapports ----------
+const download = (res, name, type, body) => res.type(`${type}; charset=utf-8`).set("Content-Disposition", `attachment; filename="${name}"`).send(type === "text/csv" ? `﻿${body}` : body);
+const stamp = () => new Date().toISOString().slice(0, 10);
+router.get("/formateur/seo/rapports", (req, res) => {
+  res.render("seo/reports", { audits: audit.list(30).filter((a) => a.status === "done"), summary: reports.summary(), kinds: audit.KINDS, categories: CATEGORIES });
+});
+router.get("/formateur/seo/rapports/audit-:id(\\d+).:ext(csv|json)", (req, res) => {
+  const a = audit.get(Number(req.params.id));
+  if (!a || a.status !== "done") return res.status(404).render("error", { message: "Audit introuvable ou inachevé." });
+  const category = CATEGORIES[req.query.categorie] ? req.query.categorie : "";
+  const suffix = category ? `-${category}` : "";
+  if (req.params.ext === "csv") return download(res, `audit-seo-${a.id}${suffix}-kolakisa.csv`, "text/csv", reports.auditCsv(a.id, { category }));
+  download(res, `audit-seo-${a.id}${suffix}-kolakisa.json`, "application/json", JSON.stringify({ audit: { id: a.id, kind: a.kind, started_at: a.started_at, finished_at: a.finished_at, pages: a.pages, scores: a.scores }, category: category || null, issues: reports.auditRows(a.id, { category }) }, null, 2));
+});
+router.get("/formateur/seo/rapports/:what(erreurs-404|journal|pagespeed).csv", (req, res) => {
+  const body = { "erreurs-404": reports.notFoundCsv, journal: reports.changesCsv, pagespeed: reports.pagespeedCsv }[req.params.what]();
+  download(res, `${req.params.what}-kolakisa-${stamp()}.csv`, "text/csv", body);
+});
+router.get("/formateur/seo/rapports/synthese.json", (req, res) => download(res, `synthese-seo-kolakisa-${stamp()}.json`, "application/json", JSON.stringify(reports.summary(), null, 2)));
 
 module.exports = { router, canManage };

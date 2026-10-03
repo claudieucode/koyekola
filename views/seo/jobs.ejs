@@ -1,0 +1,45 @@
+<%- include("../partials/header", { title: "SEO · Tâches programmées" }) %>
+<%
+  const STATUS = { ok: "Réussie", error: "Échec", skipped: "Ignorée", busy: "En cours" };
+  const stateClass = (s) => `seo-job-status is-${s || "never"}`;
+%>
+<div class="container-wide seo-page">
+  <%- include("_nav", { active: "jobs" }) %>
+  <% if (msg) { %><p class="form-success" role="status"><%= msg %></p><% } %>
+  <% if (err) { %><p class="form-error" role="alert"><%= err %></p><% } %>
+  <p class="field-hint">Ces tâches tournent seules sur le serveur, aux heures indiquées en temps universel (UTC, il est actuellement <%= now %> UTC). Une tâche dont le service n'est pas configuré est « ignorée » avec la raison : rien n'est simulé.</p>
+  <div class="seo-jobs">
+    <% list.forEach((j) => { const running = Boolean(j.running_since); %>
+      <section class="content-card seo-job" id="tache-<%= j.name %>">
+        <div class="seo-job-head">
+          <h2><%= j.label %></h2>
+          <strong class="<%= stateClass(running ? "busy" : j.last_status) %>"><%= running ? `En cours depuis ${j.running_since}` : j.last_status ? STATUS[j.last_status] : "Jamais exécutée" %></strong>
+        </div>
+        <p class="field-hint"><%= j.description %></p>
+        <dl class="seo-dl">
+          <dt>Dernier passage</dt><dd><%= j.last_run_at ? `${j.last_run_at} UTC` : "Jamais" %></dd>
+          <dt>Résultat</dt><dd><%= j.last_message || "—" %></dd>
+          <dt>Prochain passage</dt><dd><%= j.enabled && j.next_run_at ? `${j.next_run_at} UTC` : "Désactivée" %></dd>
+        </dl>
+        <div class="seo-job-actions">
+          <form method="post" action="/formateur/seo/taches/<%= j.name %>" class="seo-job-form">
+            <label class="sr-only" for="f-<%= j.name %>">Fréquence</label>
+            <select id="f-<%= j.name %>" name="frequency"><% Object.entries(frequencies).forEach(([k, l]) => { %><option value="<%= k %>" <%= (j.enabled ? j.frequency : "off") === k ? "selected" : "" %>><%= l %></option><% }) %></select>
+            <label class="sr-only" for="h-<%= j.name %>">Heure (UTC)</label>
+            <select id="h-<%= j.name %>" name="hour"><% for (let h = 0; h < 24; h++) { %><option value="<%= h %>" <%= j.hour === h ? "selected" : "" %>><%= String(h).padStart(2, "0") %> h UTC</option><% } %></select>
+            <button class="btn btn-outline btn-sm" type="submit">Enregistrer</button>
+          </form>
+          <form method="post" action="/formateur/seo/taches/<%= j.name %>/executer" class="inline-form" data-busy="Exécution en cours…"><button class="btn btn-primary btn-sm" type="submit" <%= running ? "disabled" : "" %>>Exécuter maintenant</button></form>
+        </div>
+        <% if (j.runs.length) { %>
+          <details class="seo-int-config"><summary>Historique des passages (<%= j.runs.length === 1 ? "le dernier" : `les ${j.runs.length} derniers` %>)</summary>
+            <div class="seo-table-wrap"><table class="seo-table"><thead><tr><th scope="col">Début (UTC)</th><th scope="col">Déclenchement</th><th scope="col">État</th><th scope="col">Résultat</th></tr></thead>
+              <tbody><% j.runs.forEach((r) => { %><tr><td><%= r.started_at %></td><td><%= r.trigger === "manual" ? "Manuel" : "Automatique" %></td><td><%= STATUS[r.status] || r.status %></td><td><%= r.message %></td></tr><% }) %></tbody></table></div>
+          </details>
+        <% } %>
+      </section>
+    <% }) %>
+  </div>
+</div>
+<script src="<%= asset('/js/seo-admin.js') %>" defer></script>
+<%- include("../partials/footer") %>
