@@ -13,7 +13,7 @@
     categories: categories.map((c) => c.name), subcategories, tags, courses, revisions, statuses,
     autosave: autosave ? { savedAt: autosave.saved_at, data: autosave.data } : null,
     coverPath: post ? post.cover_path : null, ogImagePath: post ? post.og_image_path : null, twitterImagePath: post ? post.twitter_image_path : null,
-    editorTheme, editorThemes,
+    editorTheme, editorThemes, seoWorkspace, funScript: asset('/js/seo-fun.js'),
   };
   const json = JSON.stringify(pageData).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
   const panel = (key, title, open) => `<div class="wp-panel${open ? " is-open" : ""}" data-panel="${key}"><h2 class="wp-panel-title"><button type="button" aria-expanded="${open ? "true" : "false"}" aria-controls="wp-panel-${key}" data-panel-toggle>${title}<span class="wp-chevron" aria-hidden="true"></span></button></h2><div class="wp-panel-body" id="wp-panel-${key}"${open ? "" : " hidden"}>`;
@@ -71,6 +71,10 @@
           <a class="wp-btn-secondary wp-view-post" data-view-post href="<%= post ? '/blog/' + post.slug : '#' %>" target="_blank" rel="noopener" <%= post && post.published ? "" : "hidden" %> title="Ouvrir l'article sur le site, comme le voient les visiteurs">Voir l'article <span aria-hidden="true">↗</span></a>
           <button type="button" class="wp-btn-primary" data-publish><%= status === "published" ? "Mettre à jour" : status === "scheduled" ? "Planifier…" : "Publier" %></button>
           <button type="button" class="wp-btn-icon" data-toggle-sidebar aria-pressed="true" aria-label="Réglages" title="Réglages"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M18 4H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-4 14.5H6c-.3 0-.5-.2-.5-.5V6c0-.3.2-.5.5-.5h8v13zm4.5-.5c0 .3-.2.5-.5.5h-2.5v-13H18c.3 0 .5.2.5.5v12z" fill="currentColor"/></svg></button>
+          <div class="wp-dropdown wsp-menu-wrap">
+            <button type="button" class="wp-btn-icon" data-wsp-menu-toggle aria-haspopup="true" aria-expanded="false" aria-label="Espace de travail SEO" title="Espace de travail SEO (Cmd+Maj+K : commandes)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 4h7v7H4V4Zm1.5 1.5v4h4v-4h-4ZM13 4h7v7h-7V4Zm1.5 1.5v4h4v-4h-4ZM4 13h7v7H4v-7Zm1.5 1.5v4h4v-4h-4ZM13 13h7v7h-7v-7Zm1.5 1.5v4h4v-4h-4Z" fill="currentColor"/></svg></button>
+            <div class="wp-menu wsp-menu" data-wsp-menu hidden role="menu" aria-label="Espace de travail SEO"></div>
+          </div>
           <div class="wp-dropdown">
             <button type="button" class="wp-btn-icon" data-options-toggle aria-haspopup="true" aria-expanded="false" aria-label="Options" title="Options"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M13 19h-2v-2h2v2zm0-6h-2v-2h2v2zm0-6h-2V5h2v2z" fill="currentColor"/></svg></button>
             <div class="wp-menu" data-options-menu hidden role="menu">
@@ -132,6 +136,10 @@
           </div>
         </aside>
 
+        <%# ---------- Espace de travail SEO : zone d'ancrage gauche (vide par défaut) ---------- %>
+        <div class="wsp-dock wsp-dock-side wsp-dock-left" data-dock="left" hidden role="region" aria-label="Panneaux SEO ancrés à gauche"></div>
+
+        <div class="wsp-center" data-wsp-center>
         <%# ---------- Zone d'écriture ---------- %>
         <div class="wp-canvas" data-canvas>
           <div class="wp-top-toolbar" data-top-toolbar hidden></div>
@@ -144,6 +152,12 @@
             <textarea id="post-content" name="content" rows="24" class="wp-code-editor" placeholder="Saisissez le code HTML de l'article"><%= editorHtml %></textarea>
           </div>
         </div>
+
+        <%# ---------- Espace de travail SEO : zone d'ancrage basse, fenêtres flottantes, panneaux fermés ---------- %>
+        <div class="wsp-dock wsp-dock-bottom" data-dock="bottom" hidden role="region" aria-label="Panneaux SEO ancrés en bas"></div>
+        </div>
+        <div class="wsp-float-layer" data-wsp-floats></div>
+        <div class="wsp-parking" data-wsp-parking hidden></div>
 
         <%# ---------- Barre latérale : Article / SEO / Bloc ---------- %>
         <aside class="wp-sidebar" data-sidebar aria-label="Réglages de l'éditeur">
@@ -212,13 +226,20 @@
 
           <%# ===== Onglet SEO ===== %>
           <div role="tabpanel" id="panel-seo" aria-labelledby="tab-seo" data-sidebar-panel="seo" hidden>
-            <div class="wp-seo-score" data-seo-score>
-              <svg class="wp-seo-ring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" class="wp-seo-ring-bg"/><circle cx="32" cy="32" r="27" class="wp-seo-ring-value" data-seo-ring/></svg>
-              <div><p class="wp-seo-score-value"><span data-seo-value>–</span><small> / 100</small></p><p class="wp-help" data-seo-verdict>Repère interne, pas une note de Google.</p></div>
-            </div>
-            <div class="wp-seo-todo" data-seo-todo></div>
+            <div class="wsp-dock-right" data-dock="right">
+            <%- panel("score", "Note SEO", true) %>
+              <div class="wp-seo-score" data-seo-score>
+                <svg class="wp-seo-ring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" class="wp-seo-ring-bg"/><circle cx="32" cy="32" r="27" class="wp-seo-ring-value" data-seo-ring/></svg>
+                <div><p class="wp-seo-score-value"><span data-seo-value>–</span><small> / 100</small></p><p class="wp-help" data-seo-verdict>Repère interne, pas une note de Google.</p></div>
+              </div>
+              <div class="wsp-factors" data-seo-factors></div>
+            </div></div>
 
-            <%- panel("seo-site", "Audit du site (page en ligne)", true) %>
+            <%- panel("reco", "Recommandations", true) %>
+              <div class="wp-seo-todo" data-seo-todo></div>
+            </div></div>
+
+            <%- panel("seo-site", "Exploration du site (audit)", true) %>
               <p class="wp-help">Problèmes trouvés sur la page publiée de cet article par l'audit de Mon espace → SEO, et analyse à la demande de la page réellement en ligne.</p>
               <div class="wp-seo-site" data-seo-site aria-live="polite"></div>
               <div class="wp-seo-site-actions">
@@ -227,11 +248,13 @@
               </div>
             </div></div>
 
-            <%- panel("keyword", "Mot-clé", true) %>
+            <%- panel("keyword", "Mots-clés", true) %>
               <label for="post-keyword" class="wp-label">Mot-clé principal</label>
               <input id="post-keyword" type="text" name="focus_keyword" value="<%= v('focus_keyword') %>" maxlength="80" placeholder="Ex. formation en ligne" data-analyze>
               <label for="post-keywords2" class="wp-label">Mots-clés secondaires</label>
               <input id="post-keywords2" type="text" name="secondary_keywords" value="<%= v('secondary_keywords') %>" maxlength="400" placeholder="Séparés par des virgules" data-analyze>
+              <div class="wsp-kw" data-wsp-keywords aria-live="polite"></div>
+              <div class="wsp-kw-gsc" data-wsp-keywords-gsc></div>
             </div></div>
 
             <%- panel("google", "Apparence dans Google", true) %>
@@ -246,11 +269,12 @@
               <p class="wp-help">Adresse : <strong data-seo-slug></strong> — se modifie dans l'onglet Article (champ « Lien »).</p>
             </div></div>
 
-            <%- panel("analysis", "Analyse détaillée", false) %>
+            <%- panel("analysis", "Analyse du contenu", false) %>
+              <dl class="wsp-stats" data-wsp-content></dl>
               <div class="be-analysis" data-analysis aria-live="polite"></div>
             </div></div>
 
-            <%- panel("social", "Réseaux sociaux", false) %>
+            <%- panel("social", "Aperçu social", false) %>
               <label for="post-og-title" class="wp-label">Titre (Facebook, LinkedIn, WhatsApp) <span class="be-count" data-count-for="post-og-title" data-max="95"></span></label>
               <input id="post-og-title" type="text" name="og_title" value="<%= v('og_title') %>" maxlength="95" placeholder="Sinon : titre SEO ou titre">
               <label for="post-og-desc" class="wp-label">Description <span class="be-count" data-count-for="post-og-desc" data-max="200"></span></label>
@@ -286,7 +310,7 @@
               <ul class="be-schema" data-schema></ul>
             </div></div>
 
-            <%- panel("links", "Maillage interne", false) %>
+            <%- panel("links", "Liens internes", false) %>
               <p class="wp-help">Liens proposés d'après le texte. Sélectionnez d'abord le mot à lier dans l'article.</p>
               <button type="button" class="wp-btn-secondary" data-suggest>Proposer des liens</button>
               <ul class="be-suggestions" data-suggestions aria-live="polite"></ul>
@@ -306,6 +330,37 @@
               <p class="wp-help">Chaque modification SEO enregistrée de cet article : qui, quand, avant → après. Aussi dans Mon espace → SEO → Journal.</p>
               <ul class="be-versions" data-seo-history></ul>
             </div></div>
+
+            <%- panel("opportunities", "Opportunités", false) %>
+              <p class="wp-help">Uniquement ce que le moteur a réellement détecté (audit du site, Search Console), avec la source de chaque élément.</p>
+              <div data-wsp-part="opportunities" aria-live="polite"></div>
+            </div></div>
+
+            <%- panel("technical", "SEO technique", false) %>
+              <p class="wp-help">Page réellement servie aux visiteurs : statut, canonical, robots, plan du site, redirections, données structurées.</p>
+              <div data-wsp-part="technical" aria-live="polite"></div>
+            </div></div>
+
+            <%- panel("images", "Images", false) %>
+              <p class="wp-help">Images du texte en cours : fichier présent sur le site, dimensions, poids, texte alternatif.</p>
+              <div data-wsp-part="images" aria-live="polite"></div>
+            </div></div>
+
+            <%- panel("performance", "Performance", false) %>
+              <p class="wp-help">Vitesse de la page de l'article mesurée par Google PageSpeed Insights.</p>
+              <div data-wsp-part="performance" aria-live="polite"></div>
+            </div></div>
+
+            <%- panel("gsc", "Search Console", false) %>
+              <p class="wp-help">Clics, impressions, position et recherches de cette page, d'après Google Search Console.</p>
+              <div data-wsp-part="gsc" aria-live="polite"></div>
+            </div></div>
+
+            <%- panel("external", "Données externes", false) %>
+              <p class="wp-help">Services réellement intégrés au site et leur état vérifié.</p>
+              <div data-wsp-part="external" aria-live="polite"></div>
+            </div></div>
+            </div>
           </div>
 
           <%# ===== Onglet Bloc ===== %>

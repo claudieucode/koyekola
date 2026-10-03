@@ -19,6 +19,9 @@ import { Placeholder, Focus } from "@tiptap/extensions";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { BLOG_NODES, CALLOUT_LABELS } from "./blog/nodes";
 import { BlockHandle, moveBlock, startBlockDrag, endBlockDrag } from "./blog/dragHandle";
+import { createWorkspace } from "./blog/workspace";
+import { createSeoData, createRenderers } from "./blog/seoPanels";
+import { setupWorkspaceUi } from "./blog/workspaceUi";
 import { analyze, norm } from "../utils/seoAnalyzer";
 
 const root = document.querySelector("[data-blog-editor]");
@@ -71,6 +74,10 @@ function start() {
   const $$ = (sel, el = root) => [...el.querySelectorAll(sel)];
   const field = (name) => form.elements[name];
   let postId = DATA.postId;
+  // Espace de travail SEO (créé à la fin du démarrage, une fois tous les panneaux prêts)
+  let workspace = null;
+  let seoData = null;
+  let seoRenderers = null;
 
   // ---------- Petits outils ----------
   function h(tag, attrs = {}, ...children) {
@@ -899,6 +906,7 @@ function start() {
     }
     if (key === "bloc") renderInspector(true);
     if (key === "seo") loadSeoSite();
+    afterVisibility();
   }
   sidebarTabs.forEach((t) => t.addEventListener("click", () => showSidebarTab(t.dataset.sidebarTab)));
   $$("[data-toggle-sidebar]").forEach((b) => b.addEventListener("click", () => {
@@ -906,9 +914,10 @@ function start() {
     sidebar.hidden = !open;
     root.classList.toggle("is-sidebar-closed", !open);
     $(".wp-header [data-toggle-sidebar]").setAttribute("aria-pressed", String(open));
+    afterVisibility();
   }));
   $$("[data-panel-toggle]").forEach((b) => b.addEventListener("click", () => openPanel(b.closest("[data-panel]").dataset.panel)));
-  function openPanel(key, force) {
+  function openPanel(key, force, { silent = false } = {}) {
     const panel = $(`[data-panel="${key}"]`);
     const btn = panel.querySelector("[data-panel-toggle]");
     const open = force ?? btn.getAttribute("aria-expanded") !== "true";
@@ -916,6 +925,14 @@ function start() {
     panel.classList.toggle("is-open", open);
     panel.querySelector(".wp-panel-body").hidden = !open;
     if (open) { if (key === "structure") refreshStructure(); if (key === "checklist" || key === "revisions") refreshPublication(); if (key === "seo-history") loadSeoHistory(); }
+    if (!silent && workspace) workspace.notifyPanelToggle(key, open);
+    if (open) afterVisibility();
+  }
+  // Panneaux devenus visibles : chargement de leurs données (seulement eux)
+  function afterVisibility() {
+    if (!workspace || !seoRenderers) return;
+    seoRenderers.refreshVisible();
+    if (workspace.isVisible("seo-site")) loadSeoSite();
   }
   // Ouvre la barre latérale sur l'onglet qui contient la section, puis la déplie
   // Historique SEO de l'article (journal du serveur)
@@ -972,12 +989,16 @@ function start() {
 
   const revealPanel = (key) => {
     const panel = $(`[data-panel="${key}"]`);
+    // Panneau SEO déplacé hors de la barre latérale (ancré ailleurs, flottant, fermé) : l'espace de travail le montre
+    if (workspace && workspace.containsPanel(key) && !panel.closest("[data-sidebar-panel]")) { workspace.reveal(key); return; }
+    if (workspace && workspace.containsPanel(key) && panel.closest("[data-wsp-parking]")) { workspace.reveal(key); return; }
     if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click();
     showSidebarTab(panel.closest("[data-sidebar-panel]").dataset.sidebarPanel);
     openPanel(key, true);
     panel.scrollIntoView({ block: "start", behavior: "smooth" });
   };
   function revealSeo() {
+    if (workspace && !$('[data-panel="score"]').closest("[data-sidebar-panel]")) { workspace.reveal("score"); return; }
     if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click();
     showSidebarTab("seo");
     sidebar.scrollTo({ top: 0, behavior: "smooth" });
@@ -1143,6 +1164,7 @@ function start() {
       hasCover: Boolean(imagePicks.cover.current()), coverAlt: field("cover_alt").value,
     });
     lastAnalysis = r;
+    if (seoData) seoData.publishAnalysis(r);
     const groups = {};
     for (const c of r.checks) (groups[c.group] = groups[c.group] || []).push(c);
     $("[data-analysis]").replaceChildren(
@@ -1176,8 +1198,7 @@ function start() {
     editor.chain().focus("start").scrollIntoView().run();
   }
   function renderSeoScore(r) {
-    const total = r.checks.length || 1;
-    const score = Math.round((100 * (r.summary.good + r.summary.improve * 0.5)) / total);
+    const score = r.score;
     const level = score >= 80 ? "good" : score >= 50 ? "improve" : "problem";
     const ring = $("[data-seo-ring]");
     const c = 2 * Math.PI * 27;
@@ -1459,6 +1480,7 @@ function start() {
       localDraft.clear();
       DATA.status = r.status;
       seoSiteLoaded = false;
+      if (seoData) { seoData.invalidate(); seoData.emit("saved", { status: r.status }); }
       if (!$('[data-sidebar-panel="seo"]').hidden) loadSeoSite();
       DATA.publishedAt = r.publishedAt ?? DATA.publishedAt;
       DATA.updatedAt = r.updatedAt;
@@ -1493,7 +1515,8 @@ function start() {
   form.addEventListener("input", (e) => { if (e.target !== codeEditor && !e.target.closest(".wp-modal")) changed(); });
   form.addEventListener("change", (e) => { if (e.target.type === "checkbox" || e.target.tagName === "SELECT") changed(); });
   codeEditor.addEventListener("input", () => changed());
-  editor.on("update", () => { changed(); refreshSlash(); });
+  let lastTypingSignal = 0;
+  editor.on("update", () => { changed(); refreshSlash(); if (seoData && Date.now() - lastTypingSignal > 1000) { lastTypingSignal = Date.now(); seoData.emit("typing", {}); } });
   const refreshUi = () => { renderBlockToolbar(); refreshAppender(); renderInspector(); };
   editor.on("selectionUpdate", () => { refreshUi(); refreshSlash(); });
   let uiFrame = 0;
@@ -1760,10 +1783,40 @@ function start() {
       } }, "Remplacer le passage"), reject));
   }
 
+  // ---------- Espace de travail SEO ----------
+  seoData = createSeoData({ api, postId: () => postId });
+  try {
+    workspace = createWorkspace({
+      root, api, initial: DATA.seoWorkspace,
+      openPanel, isPanelOpen: (key) => $(`[data-panel="${key}"]`).classList.contains("is-open"),
+      showSeoTab: () => showSidebarTab("seo"), isSidebarOpen: () => !sidebar.hidden,
+      openSidebar: () => $(".wp-header [data-toggle-sidebar]").click(),
+      onVisibilityChange: () => afterVisibility(),
+      confirmDialog: (text) => Promise.resolve(window.confirm(text)), toast,
+    });
+    seoRenderers = createRenderers({ h, data: seoData, api, postId: () => postId, isVisible: (k) => workspace.isVisible(k), reveal: (k) => workspace.reveal(k), fmtDate });
+    setupWorkspaceUi({
+      h, modal, control, input, toast, api, ws: workspace, data: seoData, renderers: seoRenderers, DATA, postId: () => postId,
+      actions: () => [
+        { id: "act:analyse", label: "Analyser la page en ligne", run: () => { workspace.reveal("seo-site"); $("[data-seo-analyse]")?.click(); }, disabled: !DATA.everPublished && DATA.status !== "published" },
+        { id: "act:links", label: "Proposer des liens internes", run: () => { workspace.reveal("links"); $("[data-suggest]")?.click(); } },
+        { id: "act:refresh", label: "Actualiser les données SEO (serveur)", run: () => { seoData.invalidate(); toast("Données SEO actualisées."); } },
+        { id: "act:google", label: "Aperçu dans Google", run: () => workspace.reveal("google") },
+        { id: "act:space", label: "Ouvrir l'espace SEO du site", run: () => window.open("/formateur/seo", "_blank", "noopener") },
+      ],
+    });
+  } catch (e) {
+    // L'espace de travail ne doit jamais empêcher d'écrire : en cas de problème, les panneaux restent dans la barre latérale
+    console.error("[KOLAKISA] Espace de travail SEO indisponible :", e);
+    workspace = null;
+  }
+  $("[data-seo-analyse]")?.addEventListener("click", () => seoData.emit("action", { type: "analyse-online" }));
+
   // ---------- Premier affichage ----------
   refreshCounters();
   refreshPreviews();
   refreshAnalysis();
+  afterVisibility();
   refreshPublication();
   setState(DATA.postId ? "Enregistré" : "", DATA.postId ? "is-saved" : "");
   if (!DATA.aiConfigured) $$("[data-ai]").forEach((x) => { x.disabled = true; });
