@@ -121,7 +121,7 @@ function analyze(input = {}) {
   else add("media", "images", noAlt.length ? "problem" : "good", noAlt.length ? `${noAlt.length} image${noAlt.length > 1 ? "s" : ""} sans texte alternatif` : `${x.images.length} image${x.images.length > 1 ? "s" : ""} avec texte alternatif`, noAlt.length ? "Décrivez chaque image : c'est indispensable aux personnes malvoyantes et utile au référencement des images." : "");
   const internal = x.links.filter((h) => /^\/(?!\/)/.test(h) || (input.siteUrl && h.startsWith(String(input.siteUrl).replace(/\/+$/, ""))));
   const external = x.links.filter((h) => /^https?:/i.test(h) && !internal.includes(h));
-  add("links", "internal", internal.length ? "good" : "improve", internal.length ? `${internal.length} lien${internal.length > 1 ? "s" : ""} interne${internal.length > 1 ? "s" : ""}` : "Aucun lien interne", internal.length ? "" : "Reliez l'article à une formation ou à un autre article (onglet Structure : suggestions).");
+  add("links", "internal", internal.length ? "good" : "improve", internal.length ? `${internal.length} lien${internal.length > 1 ? "s" : ""} interne${internal.length > 1 ? "s" : ""}` : "Aucun lien interne", internal.length ? "" : "Reliez l'article à une formation ou à un autre article (onglet SEO, section « Maillage interne »).");
   add("links", "external", external.length ? "good" : "improve", external.length ? `${external.length} lien${external.length > 1 ? "s" : ""} externe${external.length > 1 ? "s" : ""}` : "Aucun lien externe", external.length ? "" : "Citer une source fiable (étude, documentation officielle) renforce la crédibilité.");
 
   // ---------- Lisibilité ----------

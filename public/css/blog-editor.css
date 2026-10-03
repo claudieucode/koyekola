@@ -688,3 +688,80 @@
   .wp-content::before { left: 16px; top: 16px; }
   .wp-block-toolbar { border-radius: 0; border-width: 1px 0 0; height: 52px; }
 }
+
+/* ==========================================================================
+   Disposition KOYEKOLA Studio : rail d'outils à gauche, onglets Article / SEO / Bloc, sans pied de page
+   ========================================================================== */
+.wp-layout { bottom: 0; }
+.wp-rail { flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 76px; padding: 14px 0; background: #fff; border-right: 1px solid var(--border); }
+.wp-rail-btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 64px; padding: 10px 4px 8px; border: 0; border-radius: var(--radius); background: none; color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; }
+.wp-rail-btn svg { width: 24px; height: 24px; }
+.wp-rail-btn:hover { background: var(--bg); color: var(--accent-dark); }
+.wp-rail-btn[aria-pressed="true"] { background: var(--accent-light); color: var(--accent-dark); }
+.wp-rail-score { position: absolute; top: 4px; right: 4px; min-width: 22px; padding: 1px 5px; border-radius: var(--radius-pill); background: var(--surface-alt); color: var(--muted); font-size: 10px; font-weight: 800; }
+.wp-rail-score:empty { display: none; }
+.wp-rail-score[data-level="good"] { background: var(--success-light); color: var(--success-dark); }
+.wp-rail-score[data-level="improve"] { background: var(--warning-bg); color: var(--warning-text); }
+.wp-rail-score[data-level="problem"] { background: var(--danger-light); color: #a40e18; }
+.wp-secondary-dynamic { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.wp-secondary .be-ai-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.wp-secondary .be-ai-actions .wp-btn-secondary { min-height: 36px; padding: 6px 8px; font-size: 12px; white-space: normal; }
+.wp-secondary .be-image-list { margin-bottom: 12px; }
+/* Envoi direct gardé pour le formulaire, mais on passe par la médiathèque (qui téléverse aussi) */
+.wp-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+.wp-doc-stats { flex: none; color: var(--muted); font-size: 12px; font-weight: 500; }
+.wp-doc-stats:empty { display: none; }
+.wp-post-card .wp-image-pick { margin-bottom: 4px; }
+.wp-post-card .wp-post-card-title { margin-top: 12px; }
+
+/* Onglet SEO : note, priorités, jauges */
+.wp-seo-score { display: flex; align-items: center; gap: 14px; padding: 18px 16px; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, var(--bg), #fff); }
+.wp-seo-ring { flex: none; width: 64px; height: 64px; transform: rotate(-90deg); }
+.wp-seo-ring circle { fill: none; stroke-width: 7; }
+.wp-seo-ring-bg { stroke: var(--surface-alt); }
+.wp-seo-ring-value { stroke: var(--line); stroke-linecap: round; transition: stroke-dashoffset 0.4s ease, stroke 0.2s; }
+.wp-seo-score[data-level="good"] .wp-seo-ring-value { stroke: var(--success); }
+.wp-seo-score[data-level="improve"] .wp-seo-ring-value { stroke: #d99a06; }
+.wp-seo-score[data-level="problem"] .wp-seo-ring-value { stroke: var(--danger); }
+.wp-seo-score-value { margin: 0; font-family: var(--font-display); font-size: 30px; font-weight: 800; line-height: 1; color: var(--primary); }
+.wp-seo-score-value small { font-size: 14px; color: var(--muted); font-weight: 600; }
+.wp-seo-score .wp-help { margin-top: 4px; }
+.wp-seo-todo { padding: 8px 16px 14px; border-bottom: 1px solid var(--border); }
+.wp-seo-todo:empty { display: none; }
+.wp-seo-todo-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.wp-seo-todo-list li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: start; font-size: 12.5px; }
+.wp-seo-todo-dot { width: 10px; height: 10px; margin-top: 4px; border-radius: 50%; background: #d99a06; }
+.wp-seo-todo-list li.is-problem .wp-seo-todo-dot { background: var(--danger); }
+.wp-seo-todo-text small { display: block; margin-top: 2px; color: var(--muted); line-height: 1.45; }
+.wp-seo-todo-ok { margin: 6px 0 0; color: var(--success-dark); font-weight: 600; }
+.wp-meter { display: block; height: 5px; margin-top: -2px; border-radius: var(--radius-pill); background: var(--surface-alt); overflow: hidden; }
+.wp-meter span { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--line); transition: width 0.2s, background 0.2s; }
+.wp-meter[data-level="good"] span { background: var(--success); }
+.wp-meter[data-level="improve"] span { background: #d99a06; }
+.wp-meter[data-level="problem"] span { background: var(--danger); }
+.wp-google-device { align-self: flex-start; }
+.be-google { gap: 4px; border-radius: var(--radius); }
+.be-g-head { display: flex; align-items: center; gap: 10px; }
+.be-g-head > span:last-child { display: flex; flex-direction: column; }
+.be-g-favicon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(140deg, var(--sky), var(--accent)); color: #fff; font-size: 12px; font-weight: 800; flex: none; }
+.be-google.is-mobile { max-width: 340px; border-radius: 18px; box-shadow: var(--shadow-sm); }
+.be-google.is-mobile .be-g-title { font-size: 1.05rem; }
+
+/* « + » entre deux blocs */
+.wp-between { position: absolute; z-index: 12; height: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.wp-between-line { position: absolute; inset: -1px 0 auto; height: 2px; border-radius: 2px; background: var(--accent); opacity: 0.55; }
+.wp-between-btn { pointer-events: auto; position: relative; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 2px solid #fff; border-radius: 50%; background: linear-gradient(140deg, var(--sky), var(--accent)); color: #fff; cursor: pointer; box-shadow: 0 3px 8px -2px rgba(2, 119, 182, 0.5); animation: wp-pop 0.12s ease-out; }
+.wp-between-btn svg { width: 22px; height: 22px; }
+.wp-between-btn:hover { background: var(--primary); }
+@keyframes wp-pop { from { transform: scale(0.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .wp-between-btn { animation: none; } }
+
+@media (max-width: 782px) {
+  .wp-layout { flex-direction: column; }
+  .wp-rail { flex-direction: row; justify-content: center; width: auto; padding: 4px 8px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .wp-rail-btn { flex-direction: row; width: auto; padding: 6px 10px; gap: 6px; }
+  .wp-rail-btn svg { width: 20px; height: 20px; }
+  .wp-rail-score { position: static; }
+  .wp-doc-stats { display: none; }
+  .wp-between { display: none; }
+}

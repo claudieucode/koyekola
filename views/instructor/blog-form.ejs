@@ -40,6 +40,7 @@
       <input type="hidden" name="remove_og_image" value="">
       <input type="hidden" name="remove_twitter_image" value="">
 
+
       <%# ---------- Barre supérieure ---------- %>
       <header class="wp-header" role="region" aria-label="Barre d'outils de l'éditeur">
         <a href="/formateur/blog" class="wp-site-icon" aria-label="KOYEKOLA Studio : retour aux articles" title="Retour aux articles"><span class="wp-brand-mark" aria-hidden="true">K</span><span class="wp-brand-name" aria-hidden="true">KOYEKOLA<small>Studio</small></span></a>
@@ -47,16 +48,15 @@
           <button type="button" class="wp-btn-icon wp-inserter-toggle" data-toggle-inserter aria-pressed="false" aria-label="Ajouter un bloc" title="Ajouter un bloc"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M11 12.5V17.5H12.5V12.5H17.5V11H12.5V6H11V11H6V12.5H11Z" fill="currentColor"/></svg></button>
           <button type="button" class="wp-btn-icon" data-undo aria-label="Annuler" title="Annuler (Ctrl+Z)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M18.3 11.7c-.6-.6-1.4-.9-2.3-.9H6.7l2.9-3.3-1.1-1-4.5 5L8.5 16l1-1-2.7-3.2H16c.5 0 .9.2 1.3.5 1 1 1 3.4 1 4.5v.3h1.5v-.2c0-1.5 0-4.3-1.5-5.7z" fill="currentColor"/></svg></button>
           <button type="button" class="wp-btn-icon" data-redo aria-label="Rétablir" title="Rétablir (Ctrl+Maj+Z)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M15.6 6.5l-1.1 1 2.9 3.3H8c-.9 0-1.7.3-2.3.9-1.4 1.5-1.4 4.2-1.4 5.6v.2h1.5v-.3c0-1.1 0-3.5 1-4.5.3-.3.7-.5 1.3-.5h9.2L14.5 15l1.1 1.1 4.6-4.6-4.6-5z" fill="currentColor"/></svg></button>
-          <button type="button" class="wp-btn-icon" data-toggle-listview aria-pressed="false" aria-label="Vue d'ensemble du document" title="Vue d'ensemble du document"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3 6h11v1.5H3V6Zm3.5 5.5h11V13h-11v-1.5ZM21 17H10v1.5h11V17Z" fill="currentColor"/></svg></button>
         </div>
         <div class="wp-header-center">
-          <button type="button" class="wp-document-bar" data-focus-title><span class="wp-doc-type">Article</span><span class="wp-doc-title" data-doc-title><%= v('title') || "Sans titre" %></span><span class="wp-doc-status" data-doc-status data-status="<%= status %>"><%= statuses[status] || status %></span></button>
+          <button type="button" class="wp-document-bar" data-focus-title><span class="wp-doc-title" data-doc-title><%= v('title') || "Sans titre" %></span><span class="wp-doc-status" data-doc-status data-status="<%= status %>"><%= statuses[status] || status %></span><span class="wp-doc-stats" data-stats></span></button>
         </div>
         <div class="wp-header-right">
           <span class="wp-save-state" role="status" aria-live="polite" data-save-state><%= saved || post ? "Enregistré" : "" %></span>
           <button type="submit" class="wp-btn-tertiary" data-save>Enregistrer le brouillon</button>
           <div class="wp-dropdown">
-            <button type="button" class="wp-btn-icon" data-preview-toggle aria-haspopup="true" aria-expanded="false" aria-label="Voir" title="Voir"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M20.5 16h-.7V8c0-1.1-.9-2-2-2H6.2c-1.1 0-2 .9-2 2v8h-.7c-.8 0-1.5.7-1.5 1.5h20c0-.8-.7-1.5-1.5-1.5zM5.7 8c0-.3.2-.5.5-.5h11.6c.3 0 .5.2.5.5v7.6H5.7V8z" fill="currentColor"/></svg></button>
+            <button type="button" class="wp-btn-icon" data-preview-toggle aria-haspopup="true" aria-expanded="false" aria-label="Aperçu" title="Aperçu"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M20.5 16h-.7V8c0-1.1-.9-2-2-2H6.2c-1.1 0-2 .9-2 2v8h-.7c-.8 0-1.5.7-1.5 1.5h20c0-.8-.7-1.5-1.5-1.5zM5.7 8c0-.3.2-.5.5-.5h11.6c.3 0 .5.2.5.5v7.6H5.7V8z" fill="currentColor"/></svg></button>
             <div class="wp-menu" data-preview-menu hidden role="menu">
               <button type="button" role="menuitem" data-preview="desktop">Ordinateur</button>
               <button type="button" role="menuitem" data-preview="tablet">Tablette</button>
@@ -68,7 +68,7 @@
             </div>
           </div>
           <button type="button" class="wp-btn-primary" data-publish><%= status === "published" ? "Mettre à jour" : status === "scheduled" ? "Planifier…" : "Publier" %></button>
-          <button type="button" class="wp-btn-icon" data-toggle-sidebar aria-pressed="true" aria-label="Réglages" title="Réglages"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill-rule="evenodd" d="M10.289 4.836A1 1 0 0111.275 4h1.306a1 1 0 01.987.836l.244 1.466c.787.26 1.503.679 2.108 1.218l1.393-.522a1 1 0 011.216.437l.653 1.13a1 1 0 01-.23 1.273l-1.148.944a6.025 6.025 0 010 2.435l1.149.946a1 1 0 01.23 1.272l-.653 1.13a1 1 0 01-1.216.437l-1.394-.522c-.605.54-1.32.958-2.108 1.218l-.244 1.466a1 1 0 01-.987.836h-1.306a1 1 0 01-.986-.836l-.244-1.466a5.995 5.995 0 01-2.108-1.218l-1.394.522a1 1 0 01-1.217-.436l-.653-1.131a1 1 0 01.23-1.272l1.149-.946a6.026 6.026 0 010-2.435l-1.148-.944a1 1 0 01-.23-1.272l.653-1.131a1 1 0 011.217-.437l1.393.522a5.994 5.994 0 012.108-1.218l.244-1.466zM14.929 12a3 3 0 11-6 0 3 3 0 016 0z" fill="currentColor"/></svg></button>
+          <button type="button" class="wp-btn-icon" data-toggle-sidebar aria-pressed="true" aria-label="Réglages" title="Réglages"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M18 4H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-4 14.5H6c-.3 0-.5-.2-.5-.5V6c0-.3.2-.5.5-.5h8v13zm4.5-.5c0 .3-.2.5-.5.5h-2.5v-13H18c.3 0 .5.2.5.5v12z" fill="currentColor"/></svg></button>
           <div class="wp-dropdown">
             <button type="button" class="wp-btn-icon" data-options-toggle aria-haspopup="true" aria-expanded="false" aria-label="Options" title="Options"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M13 19h-2v-2h2v2zm0-6h-2v-2h2v2zm0-6h-2V5h2v2z" fill="currentColor"/></svg></button>
             <div class="wp-menu" data-options-menu hidden role="menu">
@@ -78,7 +78,7 @@
               <hr>
               <p class="wp-menu-label">Affichage</p>
               <button type="button" role="menuitemcheckbox" aria-checked="false" data-option="focus">Mode concentration</button>
-              <button type="button" role="menuitemcheckbox" aria-checked="false" data-option="toptoolbar">Barre d'outils supérieure</button>
+              <button type="button" role="menuitemcheckbox" aria-checked="false" data-option="toptoolbar">Barre d'outils fixe en haut</button>
               <hr>
               <button type="button" role="menuitem" data-option="shortcuts">Raccourcis clavier</button>
               <a role="menuitem" href="/formateur/blog">Retour aux articles</a>
@@ -94,8 +94,36 @@
       </div>
 
       <div class="wp-layout">
-        <%# ---------- Panneau gauche : insertion / vue d'ensemble ---------- %>
-        <aside class="wp-secondary" data-secondary hidden aria-label="Panneau latéral gauche"></aside>
+        <%# ---------- Rail d'outils (gauche) ---------- %>
+        <nav class="wp-rail" aria-label="Outils">
+          <button type="button" class="wp-rail-btn" data-rail="list" aria-pressed="false" title="Structure de l'article"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3 6h11v1.5H3V6Zm3.5 5.5h11V13h-11v-1.5ZM21 17H10v1.5h11V17Z" fill="currentColor"/></svg><span>Structure</span></button>
+          <button type="button" class="wp-rail-btn" data-rail="media" aria-pressed="false" title="Médias de l'article"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM5 4.5h14c.3 0 .5.2.5.5v8.4l-3-2.9c-.3-.3-.8-.3-1 0L11.9 14 9 12c-.3-.2-.6-.2-.8 0l-3.6 2.6V5c-.1-.3.1-.5.4-.5zm14 15H5c-.3 0-.5-.2-.5-.5v-2.4l4.1-3 3 1.9c.3.2.7.2.9-.1L16 12l3.5 3.4V19c0 .3-.2.5-.5.5z" fill="currentColor"/></svg><span>Médias</span></button>
+          <button type="button" class="wp-rail-btn" data-rail="seo" aria-pressed="false" title="Référencement (SEO)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M13 5c-3.3 0-6 2.7-6 6 0 1.4.5 2.7 1.3 3.7l-3.8 3.8 1.1 1.1 3.8-3.8c1 .8 2.3 1.3 3.7 1.3 3.3 0 6-2.7 6-6S16.3 5 13 5zm0 10.5c-2.5 0-4.5-2-4.5-4.5s2-4.5 4.5-4.5 4.5 2 4.5 4.5-2 4.5-4.5 4.5z" fill="currentColor"/></svg><span>SEO</span><span class="wp-rail-score" data-rail-score></span></button>
+          <button type="button" class="wp-rail-btn" data-rail="ai" aria-pressed="false" title="Assistant IA"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 3l1.8 4.9L19 9.7l-5.2 1.8L12 16.4l-1.8-4.9L5 9.7l5.2-1.8L12 3zm6 11l.9 2.4 2.4.9-2.4.9L18 21l-.9-2.4-2.4-.9 2.4-.9L18 14zM6 15l.7 1.8 1.8.7-1.8.7L6 20l-.7-1.8-1.8-.7 1.8-.7L6 15z" fill="currentColor"/></svg><span>IA</span></button>
+        </nav>
+
+        <%# ---------- Panneau gauche : insertion, structure, médias, IA ---------- %>
+        <aside class="wp-secondary" data-secondary hidden aria-label="Panneau latéral gauche">
+          <div class="wp-secondary-head"><span data-secondary-title></span><button type="button" class="wp-btn-icon" data-secondary-close aria-label="Fermer le panneau">×</button></div>
+          <div class="wp-secondary-dynamic" data-secondary-dynamic></div>
+          <div class="wp-secondary-body" data-secondary-view="media" hidden>
+            <p class="wp-help">Les images utilisées dans l'article. Un texte alternatif manquant est signalé.</p>
+            <ul class="be-image-list" data-image-list></ul>
+            <button type="button" class="wp-btn-secondary" data-open-library>Ouvrir la médiathèque</button>
+          </div>
+          <div class="wp-secondary-body" data-secondary-view="ai" hidden>
+            <% if (!aiConfigured) { %>
+              <p class="wp-help"><strong>Non activé.</strong> Créez une clé sur <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer">console.anthropic.com</a>, puis ajoutez la variable <code>ANTHROPIC_API_KEY</code> dans la configuration du site sur Hostinger (quelques centimes par demande).</p>
+            <% } %>
+            <p class="wp-help">L'IA propose, vous décidez : rien ne change sans votre clic sur « Accepter ». Pour Réécrire, Corriger, Développer, Simplifier et Lisibilité, sélectionnez d'abord le passage.</p>
+            <div class="be-ai-actions" data-ai-actions>
+              <% [["titre", "Améliorer le titre"], ["reecrire", "Réécrire"], ["corriger", "Corriger"], ["resumer", "Résumer"], ["developper", "Développer"], ["simplifier", "Simplifier"], ["lisibilite", "Lisibilité"], ["faq", "Générer une FAQ"], ["meta", "Méta description"], ["mots_cles", "Mots-clés"], ["liens", "Liens internes"]].forEach(([k, label]) => { %>
+                <button type="button" class="wp-btn-secondary" data-ai="<%= k %>" <%= aiConfigured ? "" : "disabled" %>><%= label %></button>
+              <% }) %>
+            </div>
+            <div class="be-ai-result" data-ai-result aria-live="polite"></div>
+          </div>
+        </aside>
 
         <%# ---------- Zone d'écriture ---------- %>
         <div class="wp-canvas" data-canvas>
@@ -110,10 +138,11 @@
           </div>
         </div>
 
-        <%# ---------- Barre latérale : Article / Bloc ---------- %>
+        <%# ---------- Barre latérale : Article / SEO / Bloc ---------- %>
         <aside class="wp-sidebar" data-sidebar aria-label="Réglages de l'éditeur">
           <div class="wp-sidebar-tabs" role="tablist">
             <button type="button" role="tab" id="tab-article" aria-controls="panel-article" aria-selected="true" data-sidebar-tab="article">Article</button>
+            <button type="button" role="tab" id="tab-seo" aria-controls="panel-seo" aria-selected="false" tabindex="-1" data-sidebar-tab="seo">SEO <span class="be-tab-dot" data-seo-dot></span></button>
             <button type="button" role="tab" id="tab-bloc" aria-controls="panel-bloc" aria-selected="false" tabindex="-1" data-sidebar-tab="bloc">Bloc</button>
             <button type="button" class="wp-btn-icon wp-sidebar-close" data-toggle-sidebar aria-label="Fermer les réglages" title="Fermer les réglages">×</button>
           </div>
@@ -121,6 +150,11 @@
           <%# ===== Onglet Article ===== %>
           <div role="tabpanel" id="panel-article" aria-labelledby="tab-article" data-sidebar-panel="article">
             <div class="wp-post-card">
+              <div class="wp-image-pick" data-image-pick="cover"></div>
+              <label for="post-cover" class="sr-only">Téléverser l'image mise en avant</label>
+              <input id="post-cover" class="wp-file" type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+              <label for="post-cover-alt" class="wp-label">Texte alternatif de l'image</label>
+              <input id="post-cover-alt" type="text" name="cover_alt" value="<%= v('cover_alt') %>" maxlength="200" placeholder="Décrivez ce que montre l'image" data-analyze>
               <p class="wp-post-card-title" data-card-title><%= v('title') || "Sans titre" %></p>
               <p class="wp-post-card-meta" data-dates></p>
               <label for="post-excerpt" class="wp-label">Extrait</label>
@@ -142,7 +176,7 @@
               <label class="wp-checkbox"><input type="checkbox" name="featured" value="1" <%= checked('featured', 0) %>> Mettre en avant (« À la une » sur le blog)</label>
             </div>
 
-            <%- panel("categories", "Catégories", true) %>
+            <%- panel("categories", "Catégorie et étiquettes", true) %>
               <label for="post-category" class="wp-label">Catégorie</label>
               <input id="post-category" type="text" name="category" value="<%= v('category') %>" maxlength="60" list="dl-categories" autocomplete="off" placeholder="Rechercher ou créer une catégorie">
               <datalist id="dl-categories"><% categories.forEach((c) => { %><option value="<%= c.name %>"><% }) %><% ["Graphisme", "Vidéo", "Intelligence artificielle", "Marketing digital", "SEO", "E-commerce", "Développement web", "Formation & apprentissage"].forEach((n) => { if (!categories.some((c) => c.name.toLowerCase() === n.toLowerCase())) { %><option value="<%= n %>"><% } }) %></datalist>
@@ -150,45 +184,55 @@
               <label for="post-subcategory" class="wp-label">Sous-catégorie</label>
               <input id="post-subcategory" type="text" name="subcategory" value="<%= v('subcategory') %>" maxlength="60" list="dl-subcategories" autocomplete="off">
               <datalist id="dl-subcategories"></datalist>
-              <span class="wp-help">Une catégorie existante écrite autrement (majuscules, accents) est reconnue : pas de doublon.</span>
-            </div></div>
-
-            <%- panel("tags", "Étiquettes", true) %>
-              <label for="post-tags-input" class="wp-label">Ajouter une nouvelle étiquette</label>
-              <div class="wp-tokens" data-tags><ul class="wp-token-list" data-tag-list></ul><input id="post-tags-input" type="text" list="dl-tags" autocomplete="off" data-tag-input></div>
+              <label for="post-tags-input" class="wp-label">Étiquettes</label>
+              <div class="wp-tokens" data-tags><ul class="wp-token-list" data-tag-list></ul><input id="post-tags-input" type="text" list="dl-tags" autocomplete="off" placeholder="Ajouter…" data-tag-input></div>
               <datalist id="dl-tags"><% tags.forEach((t) => { %><option value="<%= t %>"><% }) %></datalist>
               <input id="post-tags" type="hidden" name="tags" value="<%= v('tags') %>" data-tags-value>
-              <span class="wp-help">Séparez les étiquettes par des virgules ou la touche Entrée.</span>
+              <span class="wp-help">Virgule ou Entrée pour valider une étiquette.</span>
             </div></div>
 
-            <%- panel("featured-image", "Image mise en avant", true) %>
-              <div class="wp-image-pick" data-image-pick="cover"></div>
-              <label for="post-cover" class="wp-label">Téléverser une image <span class="wp-help">(1200 × 675 conseillé)</span></label>
-              <input id="post-cover" type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
-              <label for="post-cover-alt" class="wp-label">Texte alternatif</label>
-              <input id="post-cover-alt" type="text" name="cover_alt" value="<%= v('cover_alt') %>" maxlength="200" placeholder="Décrivez ce que montre l'image" data-analyze>
+            <%- panel("checklist", "Avant de publier", false) %>
+              <ul class="be-checklist" data-checklist></ul>
+              <input type="hidden" name="reviewed" value="0"><label class="wp-checkbox"><input type="checkbox" name="reviewed" value="1" <%= checked('reviewed', 0) %> data-reviewed> J'ai relu l'article</label>
             </div></div>
 
-            <%- panel("seo", 'Référencement (SEO) <span class="be-tab-dot" data-seo-dot></span>', false) %>
+            <%- panel("revisions", 'Révisions <span class="wp-count" data-revision-count></span>', false) %>
+              <ul class="be-versions" data-versions></ul>
+            </div></div>
+          </div>
+
+          <%# ===== Onglet SEO ===== %>
+          <div role="tabpanel" id="panel-seo" aria-labelledby="tab-seo" data-sidebar-panel="seo" hidden>
+            <div class="wp-seo-score" data-seo-score>
+              <svg class="wp-seo-ring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" class="wp-seo-ring-bg"/><circle cx="32" cy="32" r="27" class="wp-seo-ring-value" data-seo-ring/></svg>
+              <div><p class="wp-seo-score-value"><span data-seo-value>–</span><small> / 100</small></p><p class="wp-help" data-seo-verdict>Repère interne, pas une note de Google.</p></div>
+            </div>
+            <div class="wp-seo-todo" data-seo-todo></div>
+
+            <%- panel("keyword", "Mot-clé", true) %>
               <label for="post-keyword" class="wp-label">Mot-clé principal</label>
               <input id="post-keyword" type="text" name="focus_keyword" value="<%= v('focus_keyword') %>" maxlength="80" placeholder="Ex. formation en ligne" data-analyze>
               <label for="post-keywords2" class="wp-label">Mots-clés secondaires</label>
               <input id="post-keywords2" type="text" name="secondary_keywords" value="<%= v('secondary_keywords') %>" maxlength="400" placeholder="Séparés par des virgules" data-analyze>
+            </div></div>
+
+            <%- panel("google", "Apparence dans Google", true) %>
+              <div class="wp-segmented wp-google-device" role="group" aria-label="Appareil"><button type="button" aria-pressed="true" data-google-device="desktop">Ordinateur</button><button type="button" aria-pressed="false" data-google-device="mobile">Mobile</button></div>
+              <div class="be-google" data-google-preview aria-hidden="true"></div>
               <label for="post-seo-title" class="wp-label">Titre SEO <span class="be-count" data-count-for="post-seo-title" data-max="60"></span></label>
               <input id="post-seo-title" type="text" name="seo_title" value="<%= v('seo_title') %>" maxlength="70" placeholder="Sinon : le titre de l'article" data-analyze>
+              <span class="wp-meter" data-meter-for="post-seo-title" data-min="30" data-max="60"><span></span></span>
               <label for="post-seo-desc" class="wp-label">Méta description <span class="be-count" data-count-for="post-seo-desc" data-max="160"></span></label>
               <textarea id="post-seo-desc" name="seo_description" rows="3" maxlength="160" placeholder="120 à 160 caractères qui donnent envie de cliquer" data-analyze><%= v('seo_description') %></textarea>
-              <label for="post-canonical" class="wp-label">URL canonique</label>
-              <input id="post-canonical" type="url" name="canonical_url" value="<%= v('canonical_url') %>" maxlength="500" placeholder="Vide : l'adresse de l'article" data-analyze>
-              <input type="hidden" name="robots_index" value="0"><label class="wp-checkbox"><input type="checkbox" name="robots_index" value="1" <%= checked('robots_index', 1) %>> Autoriser les moteurs de recherche à afficher l'article</label>
-              <input type="hidden" name="robots_follow" value="0"><label class="wp-checkbox"><input type="checkbox" name="robots_follow" value="1" <%= checked('robots_follow', 1) %>> Suivre les liens de l'article</label>
-              <p class="wp-label">Aperçu Google</p>
-              <div class="be-google" data-google-preview aria-hidden="true"></div>
-              <p class="wp-label">Analyse <span class="wp-help">— repères internes, pas un score de Google</span></p>
+              <span class="wp-meter" data-meter-for="post-seo-desc" data-min="120" data-max="160"><span></span></span>
+              <p class="wp-help">Adresse : <strong data-seo-slug></strong> — se modifie dans l'onglet Article (champ « Lien »).</p>
+            </div></div>
+
+            <%- panel("analysis", "Analyse détaillée", false) %>
               <div class="be-analysis" data-analysis aria-live="polite"></div>
             </div></div>
 
-            <%- panel("social", "Partage sur les réseaux", false) %>
+            <%- panel("social", "Réseaux sociaux", false) %>
               <label for="post-og-title" class="wp-label">Titre (Facebook, LinkedIn, WhatsApp) <span class="be-count" data-count-for="post-og-title" data-max="95"></span></label>
               <input id="post-og-title" type="text" name="og_title" value="<%= v('og_title') %>" maxlength="95" placeholder="Sinon : titre SEO ou titre">
               <label for="post-og-desc" class="wp-label">Description <span class="be-count" data-count-for="post-og-desc" data-max="200"></span></label>
@@ -196,7 +240,7 @@
               <p class="wp-label">Image de partage <span class="wp-help">(1200 × 630 ; sinon l'image mise en avant)</span></p>
               <div class="wp-image-pick" data-image-pick="og"></div>
               <label for="post-og-image" class="sr-only">Téléverser l'image de partage</label>
-              <input id="post-og-image" type="file" name="og_image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+              <input id="post-og-image" class="wp-file" type="file" name="og_image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
               <div class="be-social-preview" data-social-preview="og" aria-hidden="true"></div>
               <label for="post-tw-card" class="wp-label">Carte X (Twitter)</label>
               <select id="post-tw-card" name="twitter_card"><option value="summary_large_image" <%= v('twitter_card', 'summary_large_image') !== 'summary' ? 'selected' : '' %>>Grande image</option><option value="summary" <%= v('twitter_card') === 'summary' ? 'selected' : '' %>>Petite image</option></select>
@@ -207,11 +251,11 @@
               <p class="wp-label">Image sur X</p>
               <div class="wp-image-pick" data-image-pick="twitter"></div>
               <label for="post-tw-image" class="sr-only">Téléverser l'image pour X</label>
-              <input id="post-tw-image" type="file" name="twitter_image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+              <input id="post-tw-image" class="wp-file" type="file" name="twitter_image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
               <div class="be-social-preview" data-social-preview="x" aria-hidden="true"></div>
             </div></div>
 
-            <%- panel("structure", "Sommaire et structure", false) %>
+            <%- panel("structure", "Sommaire et données structurées", false) %>
               <input type="hidden" name="toc_enabled" value="0"><label class="wp-checkbox"><input type="checkbox" name="toc_enabled" value="1" <%= checked('toc_enabled', 1) %> data-toc-option> Afficher un sommaire</label>
               <label for="post-toc-depth" class="wp-label">Titres inclus</label>
               <select id="post-toc-depth" name="toc_depth" data-toc-option><option value="3" <%= v('toc_depth', 3) != 2 ? 'selected' : '' %>>H2 + H3</option><option value="2" <%= v('toc_depth') == 2 ? 'selected' : '' %>>H2 seulement</option></select>
@@ -219,46 +263,25 @@
               <input id="post-toc-title" type="text" name="toc_title" value="<%= v('toc_title') %>" maxlength="60" placeholder="Sommaire" data-toc-option>
               <p class="wp-label">Fil d'Ariane</p>
               <p class="be-crumbs" data-crumbs></p>
-              <label for="post-schema" class="wp-label">Données structurées</label>
+              <label for="post-schema" class="wp-label">Type de données structurées</label>
               <select id="post-schema" name="schema_type"><option value="BlogPosting" <%= v('schema_type', 'BlogPosting') !== 'Article' ? 'selected' : '' %>>BlogPosting (article de blog)</option><option value="Article" <%= v('schema_type') === 'Article' ? 'selected' : '' %>>Article (contenu de fond)</option></select>
               <ul class="be-schema" data-schema></ul>
-              <p class="wp-label">Maillage interne</p>
+            </div></div>
+
+            <%- panel("links", "Maillage interne", false) %>
               <p class="wp-help">Liens proposés d'après le texte. Sélectionnez d'abord le mot à lier dans l'article.</p>
               <button type="button" class="wp-btn-secondary" data-suggest>Proposer des liens</button>
               <ul class="be-suggestions" data-suggestions aria-live="polite"></ul>
             </div></div>
 
-            <%- panel("reading", "Temps de lecture", false) %>
-              <label for="post-minutes" class="wp-label">Minutes <span class="wp-help">(vide = calcul automatique)</span></label>
+            <%- panel("indexing", "Indexation et lecture", false) %>
+              <label for="post-canonical" class="wp-label">URL canonique</label>
+              <input id="post-canonical" type="url" name="canonical_url" value="<%= v('canonical_url') %>" maxlength="500" placeholder="Vide : l'adresse de l'article" data-analyze>
+              <input type="hidden" name="robots_index" value="0"><label class="wp-checkbox"><input type="checkbox" name="robots_index" value="1" <%= checked('robots_index', 1) %>> Autoriser les moteurs de recherche à afficher l'article</label>
+              <input type="hidden" name="robots_follow" value="0"><label class="wp-checkbox"><input type="checkbox" name="robots_follow" value="1" <%= checked('robots_follow', 1) %>> Suivre les liens de l'article</label>
+              <label for="post-minutes" class="wp-label">Temps de lecture (minutes) <span class="wp-help">— vide = automatique</span></label>
               <input id="post-minutes" type="number" name="reading_minutes" min="1" max="120" value="<%= v('reading_minutes') %>" inputmode="numeric" placeholder="auto">
               <p class="wp-help" data-minutes-hint></p>
-            </div></div>
-
-            <%- panel("media", "Images de l'article", false) %>
-              <ul class="be-image-list" data-image-list></ul>
-              <button type="button" class="wp-btn-secondary" data-open-library>Ouvrir la médiathèque</button>
-            </div></div>
-
-            <%- panel("ai", "Assistant IA", false) %>
-              <% if (!aiConfigured) { %>
-                <p class="wp-help"><strong>Non activé.</strong> Créez une clé sur <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer">console.anthropic.com</a>, puis ajoutez la variable <code>ANTHROPIC_API_KEY</code> dans la configuration du site sur Hostinger (quelques centimes par demande).</p>
-              <% } %>
-              <p class="wp-help">L'IA propose, vous décidez : rien ne change sans votre clic sur « Accepter ». Pour Réécrire, Corriger, Développer, Simplifier et Lisibilité, sélectionnez d'abord le passage.</p>
-              <div class="be-ai-actions" data-ai-actions>
-                <% [["titre", "Améliorer le titre"], ["reecrire", "Réécrire"], ["corriger", "Corriger"], ["resumer", "Résumer"], ["developper", "Développer"], ["simplifier", "Simplifier"], ["lisibilite", "Lisibilité"], ["faq", "Générer une FAQ"], ["meta", "Méta description"], ["mots_cles", "Mots-clés"], ["liens", "Liens internes"]].forEach(([k, label]) => { %>
-                  <button type="button" class="wp-btn-secondary" data-ai="<%= k %>" <%= aiConfigured ? "" : "disabled" %>><%= label %></button>
-                <% }) %>
-              </div>
-              <div class="be-ai-result" data-ai-result aria-live="polite"></div>
-            </div></div>
-
-            <%- panel("revisions", 'Révisions <span class="wp-count" data-revision-count></span>', false) %>
-              <ul class="be-versions" data-versions></ul>
-            </div></div>
-
-            <%- panel("checklist", "Avant de publier", false) %>
-              <ul class="be-checklist" data-checklist></ul>
-              <input type="hidden" name="reviewed" value="0"><label class="wp-checkbox"><input type="checkbox" name="reviewed" value="1" <%= checked('reviewed', 0) %> data-reviewed> J'ai relu l'article</label>
             </div></div>
           </div>
 
@@ -268,8 +291,6 @@
           </div>
         </aside>
       </div>
-
-      <footer class="wp-footer" aria-label="Fil du bloc"><ol class="wp-breadcrumb" data-breadcrumb><li>Document</li></ol><span class="wp-footer-stats" data-stats></span></footer>
     </form>
   </div>
   <script type="application/json" id="be-data"><%- json %></script>

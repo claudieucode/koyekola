@@ -215,6 +215,7 @@ function start() {
     // Curseur dans le bloc inséré (titre, encadré…) ; après lui s'il n'a pas de texte (image, séparateur…)
     if (inserted && !inserted.isAtom && inserted.type.name !== "horizontalRule") editor.view.dispatch(editor.state.tr.setSelection(TextSelection.near(editor.state.doc.resolve(pos + 1))));
     else editor.commands.setTextSelection(Math.min(end + 1, editor.state.doc.content.size));
+    editor.view.focus(); // tout de suite : la frappe suivante doit arriver dans le bloc inséré
     return true;
   }
   const p = (text) => ({ type: "paragraph", content: text ? [{ type: "text", text }] : [] });
@@ -265,23 +266,33 @@ function start() {
     url.focus();
   }
 
-  // ---------- Panneau gauche : outil d'insertion et vue d'ensemble ----------
+  // ---------- Panneau gauche : outil d'insertion, structure, médias, IA (rail d'outils) ----------
   const secondary = $("[data-secondary]");
+  const secondaryDynamic = $("[data-secondary-dynamic]");
   const inserterToggle = $("[data-toggle-inserter]");
-  const listToggle = $("[data-toggle-listview]");
+  const SECONDARY_TITLES = { inserter: "Ajouter un bloc", list: "Structure de l'article", media: "Médias de l'article", ai: "Assistant IA" };
   let secondaryMode = null;
   function setSecondary(mode) {
     secondaryMode = secondaryMode === mode ? null : mode;
     inserterToggle.setAttribute("aria-pressed", String(secondaryMode === "inserter"));
     inserterToggle.classList.toggle("is-pressed", secondaryMode === "inserter");
-    listToggle.setAttribute("aria-pressed", String(secondaryMode === "list"));
+    $$("[data-rail]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.rail === secondaryMode)));
     secondary.hidden = !secondaryMode;
     root.classList.toggle("has-secondary", Boolean(secondaryMode));
+    $("[data-secondary-title]").textContent = SECONDARY_TITLES[secondaryMode] || "";
+    $$("[data-secondary-view]").forEach((v) => { v.hidden = v.dataset.secondaryView !== secondaryMode; });
+    secondaryDynamic.hidden = !["inserter", "list"].includes(secondaryMode);
+    secondaryDynamic.replaceChildren();
     if (secondaryMode === "inserter") renderInserter();
     if (secondaryMode === "list") renderListView();
+    if (secondaryMode === "media") refreshMedia();
   }
   inserterToggle.addEventListener("click", () => setSecondary("inserter"));
-  listToggle.addEventListener("click", () => setSecondary("list"));
+  $("[data-secondary-close]").addEventListener("click", () => setSecondary(secondaryMode));
+  $$("[data-rail]").forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.rail === "seo") { revealSeo(); return; }
+    setSecondary(b.dataset.rail);
+  }));
   function renderInserter() {
     const search = input({ type: "search", placeholder: "Rechercher", "aria-label": "Rechercher un bloc", class: "wp-search" });
     const grid = h("div", { class: "wp-inserter-blocks" });
@@ -297,7 +308,7 @@ function start() {
     };
     const tabs = segmentedTabs([["blocs", "Blocs"], ["medias", "Médias"]], (k) => { grid.hidden = k !== "blocs"; media.hidden = k !== "medias"; if (k === "medias") loadMediaTab(media); });
     search.addEventListener("input", render);
-    secondary.replaceChildren(h("div", { class: "wp-secondary-head" }, h("span", {}, "Ajouter un bloc"), h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Fermer l'outil d'insertion", onclick: () => setSecondary("inserter") }, "×")), tabs, h("div", { class: "wp-secondary-body" }, search, grid, media));
+    secondaryDynamic.replaceChildren(tabs, h("div", { class: "wp-secondary-body" }, search, grid, media));
     render();
     search.focus();
   }
@@ -331,7 +342,7 @@ function start() {
     if (!hs.length) outline.append(h("li", { class: "wp-help" }, "Le plan s'affiche à partir des titres (blocs Titre)."));
     const tabs = segmentedTabs([["liste", "Vue en liste"], ["plan", "Plan"]], (k) => { list.hidden = k !== "liste"; outline.hidden = k !== "plan"; });
     const stats = lastAnalysis ? h("p", { class: "wp-help wp-outline-stats" }, `Caractères : ${editor.getText().length} · Mots : ${lastAnalysis.words} · Temps de lecture : ${lastAnalysis.minutes} min`) : null;
-    secondary.replaceChildren(h("div", { class: "wp-secondary-head" }, h("span", {}, "Vue d'ensemble du document"), h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Fermer la vue d'ensemble", onclick: () => setSecondary("list") }, "×")), tabs, h("div", { class: "wp-secondary-body" }, stats, list, outline));
+    secondaryDynamic.replaceChildren(tabs, h("div", { class: "wp-secondary-body" }, stats, list, outline));
   }
   function selectBlockAt(pos) {
     const node = editor.state.doc.nodeAt(pos);
@@ -505,6 +516,50 @@ function start() {
     appender.style.top = `${box.top - hostBox.top + box.height / 2 - 12}px`;
     appender.style.left = `${box.right - hostBox.left - 28}px`;
   }
+  // « + » entre deux blocs (comme Gutenberg) : il apparaît au survol de la jonction entre deux blocs
+  const contentHost = $(".wp-content");
+  const between = h("div", { class: "wp-between", hidden: true }, h("span", { class: "wp-between-line", "aria-hidden": "true" }), h("button", { type: "button", class: "wp-between-btn", "aria-label": "Insérer un bloc ici", title: "Insérer un bloc ici" }, svg("plus")));
+  contentHost.append(between);
+  const betweenBtn = between.querySelector("button");
+  let betweenPos = null;
+  contentHost.addEventListener("mousemove", (e) => {
+    if (between.contains(e.target)) return;
+    if (root.classList.contains("is-code-mode") || !editor.isEditable) { between.hidden = true; return; }
+    const hostBox = contentHost.getBoundingClientRect();
+    const domBox = editor.view.dom.getBoundingClientRect();
+    const doc = editor.state.doc;
+    let found = null;
+    if (e.clientX >= domBox.left - 48 && e.clientX <= domBox.right + 48) {
+      let offset = 0;
+      for (let i = 0; i < doc.childCount - 1 && !found; i++) {
+        const size = doc.child(i).nodeSize;
+        const a = editor.view.nodeDOM(offset);
+        const b = editor.view.nodeDOM(offset + size);
+        if (a instanceof HTMLElement && b instanceof HTMLElement) {
+          const ra = a.getBoundingClientRect();
+          const rb = b.getBoundingClientRect();
+          const y = (ra.bottom + rb.top) / 2;
+          if (Math.abs(e.clientY - y) <= Math.max(7, (rb.top - ra.bottom) / 2)) found = { pos: offset + size, y };
+        }
+        offset += size;
+      }
+    }
+    if (!found) { between.hidden = true; return; }
+    betweenPos = found.pos;
+    between.style.top = `${found.y - hostBox.top}px`;
+    between.style.left = `${domBox.left - hostBox.left}px`;
+    between.style.width = `${domBox.width}px`;
+    between.hidden = false;
+  });
+  contentHost.addEventListener("mouseleave", () => { between.hidden = true; });
+  betweenBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  betweenBtn.addEventListener("click", () => {
+    if (betweenPos === null) return;
+    // Un paragraphe vide à cet endroit, que le bloc choisi remplace
+    editor.chain().focus().insertContentAt(betweenPos, { type: "paragraph" }).setTextSelection(betweenPos + 1).run();
+    quickInserter(betweenBtn);
+    between.hidden = true;
+  });
   function quickInserter(anchor, { query = "", replaceRange = null } = {}) {
     const search = input({ type: "search", placeholder: "Rechercher", "aria-label": "Rechercher un bloc", value: query });
     const list = h("div", { class: "wp-block-types is-quick" });
@@ -709,9 +764,17 @@ function start() {
     btn.setAttribute("aria-expanded", String(open));
     panel.classList.toggle("is-open", open);
     panel.querySelector(".wp-panel-body").hidden = !open;
-    if (open) { if (key === "structure") refreshStructure(); if (key === "checklist" || key === "revisions") refreshPublication(); if (key === "media") refreshMedia(); }
+    if (open) { if (key === "structure") refreshStructure(); if (key === "checklist" || key === "revisions") refreshPublication(); }
   }
-  const revealPanel = (key) => { if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click(); showSidebarTab("article"); openPanel(key, true); $(`[data-panel="${key}"]`).scrollIntoView({ block: "start", behavior: "smooth" }); };
+  // Ouvre la barre latérale sur l'onglet qui contient la section, puis la déplie
+  const revealPanel = (key) => {
+    const panel = $(`[data-panel="${key}"]`);
+    if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click();
+    showSidebarTab(panel.closest("[data-sidebar-panel]").dataset.sidebarPanel);
+    openPanel(key, true);
+    panel.scrollIntoView({ block: "start", behavior: "smooth" });
+  };
+  function revealSeo() { if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click(); showSidebarTab("seo"); sidebar.scrollTop = 0; }
 
   // ---------- Onglet Bloc : réglages du bloc sélectionné ----------
   const inspector = $("[data-block-inspector]");
@@ -840,7 +903,9 @@ function start() {
   function refreshPreviews() {
     const title = field("seo_title").value.trim() || field("title").value.trim() || "Titre de l'article";
     const desc = field("seo_description").value.trim() || field("excerpt").value.trim() || "Ajoutez une méta description : sinon Google choisira lui-même un extrait.";
-    $("[data-google-preview]").replaceChildren(h("span", { class: "be-g-site" }, "KOYEKOLA"), h("span", { class: "be-g-url" }, `${siteHost} › blog › ${currentSlug()}`), h("span", { class: "be-g-title" }, cut(`${title} · KOYEKOLA`, 62)), h("span", { class: "be-g-desc" }, cut(desc, 158)));
+    const mobile = googleDevice === "mobile";
+    $("[data-google-preview]").replaceChildren(h("span", { class: "be-g-head" }, h("span", { class: "be-g-favicon", "aria-hidden": "true" }, "K"), h("span", {}, h("span", { class: "be-g-site" }, "KOYEKOLA"), h("span", { class: "be-g-url" }, `${siteHost} › blog › ${currentSlug()}`))), h("span", { class: "be-g-title" }, cut(`${title} · KOYEKOLA`, mobile ? 75 : 62)), h("span", { class: "be-g-desc" }, cut(desc, mobile ? 120 : 158)));
+    refreshMeters();
     const ogTitle = field("og_title").value.trim() || title;
     const ogDesc = field("og_description").value.trim() || desc;
     const ogImg = imagePicks.og.current() || imagePicks.cover.current();
@@ -870,10 +935,64 @@ function start() {
     const dot = $("[data-seo-dot]");
     dot.className = `be-tab-dot ${r.summary.problem ? "be-problem" : r.summary.improve ? "be-improve" : "be-good"}`;
     dot.title = `${r.summary.problem} problème(s), ${r.summary.improve} point(s) à améliorer`;
-    $("[data-stats]").textContent = `${r.words} mots · ${r.minutes} min de lecture`;
+    $("[data-stats]").textContent = `${r.words} mots · ${r.minutes} min`;
+    renderSeoScore(r);
     const minutes = field("reading_minutes").value;
     $("[data-minutes-hint]").textContent = minutes ? `Calcul automatique : ${r.minutes} min (fixé à ${minutes} min).` : `Calculé automatiquement : ${r.minutes} min (230 mots par minute).`;
   }
+
+  // Note sur 100 (bon = 1, à améliorer = ½, problème = 0) et points à corriger en premier
+  const FIX = {
+    keyword: ["keyword", "#post-keyword"], "kw-title": ["google", "#post-seo-title"], "seo-title": ["google", "#post-seo-title"], "kw-meta": ["google", "#post-seo-desc"], meta: ["google", "#post-seo-desc"],
+    "kw-secondary": ["keyword", "#post-keywords2"], "kw-h1": [null, "#post-title"], "kw-slug": ["article", "#post-slug"], slug: ["article", "#post-slug"], canonical: ["indexing", "#post-canonical"],
+    cover: ["article", "#post-cover-alt"], images: ["media", null], internal: ["links", "[data-suggest]"],
+  };
+  function goFix(id) {
+    const [where, sel] = FIX[id] || [];
+    if (where === "media") { if (secondaryMode !== "media") setSecondary("media"); return; }
+    if (where === "article") { if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click(); showSidebarTab("article"); }
+    else if (where) revealPanel(where);
+    const el = sel && $(sel);
+    if (el) { el.scrollIntoView({ block: "center", behavior: "smooth" }); setTimeout(() => el.focus(), 250); }
+    else editor.commands.focus("start");
+  }
+  function renderSeoScore(r) {
+    const total = r.checks.length || 1;
+    const score = Math.round((100 * (r.summary.good + r.summary.improve * 0.5)) / total);
+    const level = score >= 80 ? "good" : score >= 50 ? "improve" : "problem";
+    const ring = $("[data-seo-ring]");
+    const c = 2 * Math.PI * 27;
+    ring.style.strokeDasharray = `${c}`;
+    ring.style.strokeDashoffset = `${c * (1 - score / 100)}`;
+    $("[data-seo-score]").dataset.level = level;
+    $("[data-seo-value]").textContent = String(score);
+    $("[data-seo-verdict]").textContent = level === "good" ? "Très bien optimisé. Repère interne, pas une note de Google." : level === "improve" ? "Correct, quelques points à améliorer." : "À travailler : commencez par les points ci-dessous.";
+    const rail = $("[data-rail-score]");
+    rail.textContent = String(score);
+    rail.dataset.level = level;
+    const todo = [...r.checks.filter((x) => x.status === "problem"), ...r.checks.filter((x) => x.status === "improve")].slice(0, 5);
+    $("[data-seo-todo]").replaceChildren(...(todo.length ? [h("p", { class: "wp-label" }, "À corriger en priorité"), h("ul", { class: "wp-seo-todo-list" }, ...todo.map((x) => h("li", { class: `is-${x.status}` },
+      h("span", { class: "wp-seo-todo-dot", "aria-hidden": "true" }), h("span", { class: "wp-seo-todo-text" }, h("strong", {}, x.label), x.advice ? h("small", {}, x.advice) : null),
+      FIX[x.id] ? h("button", { type: "button", class: "wp-btn-link", onclick: () => goFix(x.id) }, "Corriger") : null)))] : [h("p", { class: "wp-seo-todo-ok" }, "✓ Rien d'important à corriger.")]));
+    $("[data-seo-slug]").textContent = `/blog/${currentSlug()}`;
+  }
+  function refreshMeters() {
+    $$("[data-meter-for]").forEach((m) => {
+      const el = document.getElementById(m.dataset.meterFor);
+      const n = el.value.trim().length;
+      const min = Number(m.dataset.min);
+      const max = Number(m.dataset.max);
+      m.firstElementChild.style.width = `${Math.min(100, Math.round((n / max) * 100))}%`;
+      m.dataset.level = !n ? "empty" : n > max ? "problem" : n < min ? "improve" : "good";
+    });
+  }
+  let googleDevice = "desktop";
+  $$("[data-google-device]").forEach((b) => b.addEventListener("click", () => {
+    googleDevice = b.dataset.googleDevice;
+    $$("[data-google-device]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    $("[data-google-preview]").classList.toggle("is-mobile", googleDevice === "mobile");
+    refreshPreviews();
+  }));
 
   // ---------- Images mise en avant, de partage et X ----------
   function makePick(key, initialPath, hiddenField, removeField, fileInput) {
@@ -881,9 +1000,9 @@ function start() {
     const state = { path: initialPath || null, objectUrl: null };
     const render = () => {
       const img = state.objectUrl || state.path;
-      box.replaceChildren(
+      box.replaceChildren(...[
         img ? h("button", { type: "button", class: "wp-featured-image", "aria-label": "Remplacer l'image", onclick: pick }, h("img", { src: img, alt: "" })) : h("button", { type: "button", class: "wp-featured-placeholder", onclick: pick }, key === "cover" ? "Définir l'image mise en avant" : "Choisir une image"),
-        img ? h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-secondary", onclick: pick }, "Remplacer"), h("button", { type: "button", class: "wp-btn-link is-danger", onclick: () => { state.path = null; state.objectUrl = null; fileInput.value = ""; field(hiddenField).value = ""; field(removeField).value = "1"; render(); changed(); } }, "Retirer")) : null);
+        img ? h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-secondary", onclick: pick }, "Remplacer"), h("button", { type: "button", class: "wp-btn-link is-danger", onclick: () => { state.path = null; state.objectUrl = null; fileInput.value = ""; field(hiddenField).value = ""; field(removeField).value = "1"; render(); changed(); } }, "Retirer")) : null].filter(Boolean));
     };
     function pick() { openMediaModal({ onSelect: (m) => { state.path = m.path; state.objectUrl = null; fileInput.value = ""; field(hiddenField).value = m.path; field(removeField).value = ""; if (key === "cover" && !field("cover_alt").value) field("cover_alt").value = m.alt || ""; render(); changed(); } }); }
     fileInput.addEventListener("change", () => { const f = fileInput.files[0]; state.objectUrl = f ? URL.createObjectURL(f) : null; field(removeField).value = ""; render(); changed(); });
@@ -1050,7 +1169,7 @@ function start() {
     refreshCounters(); refreshPreviews(); refreshAnalysis();
     if ($('[data-panel="structure"]').classList.contains("is-open")) refreshStructure();
     if ($('[data-panel="checklist"]').classList.contains("is-open")) refreshPublication();
-    if ($('[data-panel="media"]').classList.contains("is-open")) refreshMedia();
+    if (secondaryMode === "media") refreshMedia();
     if (secondaryMode === "list") renderListView();
   }, 350);
   function formPayload({ withFiles }) {
@@ -1126,26 +1245,13 @@ function start() {
   form.addEventListener("change", (e) => { if (e.target.type === "checkbox" || e.target.tagName === "SELECT") changed(); });
   codeEditor.addEventListener("input", () => changed());
   editor.on("update", () => { changed(); refreshSlash(); });
-  const refreshUi = () => { renderBlockToolbar(); refreshAppender(); refreshBreadcrumb(); renderInspector(); };
+  const refreshUi = () => { renderBlockToolbar(); refreshAppender(); renderInspector(); };
   editor.on("selectionUpdate", () => { refreshUi(); refreshSlash(); });
   editor.on("transaction", () => requestAnimationFrame(refreshUi));
   editor.on("focus", refreshUi);
   editor.on("blur", () => setTimeout(() => { if (!document.activeElement || !document.activeElement.closest(".wp-block-toolbar, .wp-popover, .wp-top-toolbar")) { blockToolbar.hidden = true; appender.hidden = true; } }, 150));
   window.addEventListener("resize", debounce(refreshUi, 100));
   $(".wp-canvas").addEventListener("scroll", () => requestAnimationFrame(() => { renderBlockToolbar(); refreshAppender(); }), { passive: true });
-
-  // Fil du bloc (pied de page)
-  function refreshBreadcrumb() {
-    const crumbs = $("[data-breadcrumb]");
-    const { $from } = editor.state.selection;
-    const items = [h("li", {}, h("button", { type: "button", onclick: () => editor.commands.blur() }, "Document"))];
-    const sel = editor.state.selection;
-    const depthNodes = [];
-    for (let d = 1; d <= $from.depth; d++) depthNodes.push({ node: $from.node(d), pos: $from.before(d) });
-    if (sel instanceof NodeSelection) depthNodes.push({ node: sel.node, pos: sel.from });
-    for (const { node, pos } of depthNodes) if (LABEL[node.type.name]) items.push(h("li", {}, h("button", { type: "button", onclick: () => (node.isTextblock ? editor.chain().focus().setTextSelection(pos + 1).run() : editor.chain().focus().setNodeSelection(pos).run()) }, nameOf(node))));
-    crumbs.replaceChildren(...items);
-  }
 
   // ---------- Publication (panneau « Prêt à publier ? ») ----------
   const publishBtn = $("[data-publish]");
@@ -1234,7 +1340,7 @@ function start() {
   $$("[data-preview]").forEach((b) => b.addEventListener("click", async () => {
     previewMenu.hidden = true;
     const kind = b.dataset.preview;
-    if (kind === "google") return revealPanel("seo");
+    if (kind === "google") return revealPanel("google");
     if (kind === "social") return revealPanel("social");
     try {
       const id = await ensurePost();
@@ -1336,7 +1442,6 @@ function start() {
   refreshPreviews();
   refreshAnalysis();
   refreshPublication();
-  refreshBreadcrumb();
   setState(DATA.postId ? "Enregistré" : "", DATA.postId ? "is-saved" : "");
   if (DATA.postId) { saveBtn.textContent = "Enregistré"; saveBtn.disabled = true; }
   if (!DATA.aiConfigured) $$("[data-ai]").forEach((x) => { x.disabled = true; });
