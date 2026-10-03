@@ -121,7 +121,7 @@ function start() {
     const dlg = h("dialog", { class: `wp-modal${wide ? " is-wide" : ""}`, "aria-labelledby": "wp-modal-title" });
     const close = () => { dlg.close(); dlg.remove(); };
     const foot = actions.length ? h("div", { class: "wp-modal-actions" }, ...actions.map((a) => h("button", { type: "button", class: a.primary ? "wp-btn-primary" : a.danger ? "wp-btn-danger" : "wp-btn-secondary", onclick: async () => { const keep = await a.run?.(close); if (keep !== true) close(); } }, a.label))) : null;
-    dlg.append(h("div", { class: "wp-modal-head" }, h("h1", { id: "wp-modal-title" }, title), h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Fermer", onclick: close }, "×")), h("div", { class: "wp-modal-body" }, body), foot);
+    dlg.append(h("div", { class: "wp-modal-head" }, h("h1", { id: "wp-modal-title" }, title), h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Fermer", onclick: close }, "×")), h("div", { class: "wp-modal-body" }, body), ...(foot ? [foot] : []));
     dlg.addEventListener("cancel", () => dlg.remove());
     document.body.append(dlg);
     dlg.showModal();
@@ -161,6 +161,7 @@ function start() {
   codeEditor.hidden = true;
   $("[data-content-label]").hidden = true;
   root.classList.add("be-ready");
+  root.editor = editor; // accès pour les vérifications automatiques (navigateur)
   const chain = () => editor.chain().focus();
 
   // Titre : grandit avec le texte, Entrée passe au premier bloc
@@ -366,7 +367,16 @@ function start() {
     }
     return { node: $from.parent, pos: $from.before($from.depth), top: $from.before(1), text: { node: $from.parent, pos: $from.before($from.depth) } };
   }
-  const setAttrsAt = (pos, attrs) => editor.chain().focus().command(({ tr }) => { const node = tr.doc.nodeAt(pos); if (!node) return false; tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...attrs }); return true; }).run();
+  // Modifie les réglages d'un bloc SANS donner le focus à l'éditeur : sinon, pendant la saisie du texte alternatif,
+  // la lettre suivante arrivait dans l'article et remplaçait l'image sélectionnée
+  const setAttrsAt = (pos, attrs) => {
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node) return false;
+    const tr = editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...attrs });
+    if (editor.state.selection instanceof NodeSelection && editor.state.selection.from === pos) tr.setSelection(NodeSelection.create(tr.doc, pos));
+    editor.view.dispatch(tr);
+    return true;
+  };
   const topOf = (pos) => { const $p = editor.state.doc.resolve(pos); return $p.depth === 0 ? pos : $p.before(1); };
 
   // ---------- Barre d'outils du bloc (flottante, ou en haut en mode « Barre d'outils supérieure ») ----------
@@ -449,13 +459,17 @@ function start() {
     editor.chain().focus().command(({ tr }) => { tr.delete(top, top + node.nodeSize); return true; }).run();
     if (!editor.state.doc.childCount) editor.commands.setContent("<p></p>");
   }
+  let toolbarKey = "";
   function renderBlockToolbar() {
     const b = currentBlock();
     const target = topToolbarMode ? topToolbar : blockToolbar;
     (topToolbarMode ? blockToolbar : topToolbar).hidden = true;
-    if (!b || !editor.isFocused && !(editor.state.selection instanceof NodeSelection)) { target.hidden = !topToolbarMode; if (!topToolbarMode) return; }
+    const visible = b && (editor.isFocused || editor.state.selection instanceof NodeSelection || target.contains(document.activeElement)) && !root.classList.contains("is-typing") && !root.classList.contains("is-code-mode");
+    if (!visible) { if (!topToolbarMode) { target.hidden = true; return; } if (!b) { target.replaceChildren(); toolbarKey = ""; return; } }
+    const key = [topToolbarMode, b.pos, b.top, b.node.type.name, b.text ? b.text.node.type.name : "", b.text ? b.text.node.attrs.level : "", editor.isActive({ textAlign: "center" }), editor.isActive({ textAlign: "right" }), editor.isActive("bold"), editor.isActive("italic"), editor.isActive("link")].join("|");
+    if (key === toolbarKey && target.childElementCount) { target.hidden = false; positionToolbar(b); return; }
+    toolbarKey = key;
     target.replaceChildren();
-    if (!b) return;
     const type = b.node.type.name;
     const textType = b.text ? b.text.node.type.name : null;
     const typeBtn = tbtn(`${nameOf(b.node)} : changer de type`, ICON_OF[type] || "paragraph", (e) => (b.text && !b.node.isAtom ? transformMenu(e.currentTarget) : null));
@@ -487,16 +501,20 @@ function start() {
     groups.push(tgroup(tbtn("Options", "more", (e) => blockOptions(e.currentTarget, b))));
     target.append(...groups);
     target.hidden = false;
+    positionToolbar(b);
+  }
+  // Position : juste au-dessus du bloc, aligné à gauche
+  function positionToolbar(b) {
     if (topToolbarMode) return;
-    // Position : juste au-dessus du bloc, aligné à gauche
-    const dom = editor.view.nodeDOM(b.text && !SETTINGS_TYPES.has(type) ? b.text.pos : b.pos);
+    const dom = editor.view.nodeDOM(b.text && !SETTINGS_TYPES.has(b.node.type.name) ? b.text.pos : b.pos);
     const el = dom instanceof HTMLElement ? dom : dom && dom.parentElement;
-    if (!el) { target.hidden = true; return; }
-    const host = blockToolbar.offsetParent || $(".wp-content");
-    const hostBox = host.getBoundingClientRect();
+    if (!el) { blockToolbar.hidden = true; return; }
+    const hostBox = $(".wp-content").getBoundingClientRect();
     const box = el.getBoundingClientRect();
-    target.style.top = `${Math.max(0, box.top - hostBox.top - target.offsetHeight - 10)}px`;
-    target.style.left = `${Math.max(0, box.left - hostBox.left)}px`;
+    const top = `${Math.max(0, Math.round(box.top - hostBox.top - blockToolbar.offsetHeight - 10))}px`;
+    const left = `${Math.max(0, Math.round(box.left - hostBox.left))}px`;
+    if (blockToolbar.style.top !== top) blockToolbar.style.top = top;
+    if (blockToolbar.style.left !== left) blockToolbar.style.left = left;
   }
 
   // ---------- Bouton « + » des paragraphes vides et commande « / » ----------
@@ -606,6 +624,30 @@ function start() {
   editor.setOptions({
     editorProps: {
       ...editor.options.editorProps,
+      handleDOMEvents: {
+        // Premier clic dans l'article après un réglage de la barre latérale : le curseur va exactement où l'on clique
+        // (sans cela, la sélection précédente — une image, un bouton — reprenait la main et le curseur « sautait »)
+        mousedown: (view, event) => {
+          if (view.hasFocus() || event.button !== 0) return false;
+          const found = view.posAtCoords({ left: event.clientX, top: event.clientY });
+          if (!found) return false;
+          const target = found.inside >= 0 ? view.state.doc.nodeAt(found.inside) : null;
+          if (target && target.isAtom) return false; // clic sur une image, un bouton… : sélection du bloc (comportement normal)
+          const $pos = view.state.doc.resolve(found.pos);
+          if (!$pos.parent.isTextblock) return false;
+          view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, found.pos)));
+          return false;
+        },
+      },
+      // Clic dans la marge d'un bloc conteneur (encadré, appel à l'action, FAQ…) : le curseur entre dans le bloc
+      handleClickOn: (view, pos, node, nodePos, event, direct) => {
+        if (!direct || node.isTextblock || node.isAtom || !CONTAINERS.has(node.type.name) || node.type.name === "table") return false;
+        const inside = TextSelection.findFrom(view.state.doc.resolve(nodePos + 1), 1, true);
+        if (!inside || inside.from > nodePos + node.nodeSize) return false;
+        view.dispatch(view.state.tr.setSelection(inside));
+        view.focus();
+        return true;
+      },
       handleDrop: (view, event, slice, moved) => {
         if (moved || !event.dataTransfer || !event.dataTransfer.files.length) return false;
         event.preventDefault();
@@ -623,6 +665,26 @@ function start() {
       },
       handleKeyDown: (view, event) => {
         const mod = event.ctrlKey || event.metaKey;
+        const sel = view.state.selection;
+        if (sel instanceof NodeSelection && sel.node.isAtom && !mod && !event.altKey) {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            const after = sel.to;
+            editor.chain().insertContentAt(after, { type: "paragraph" }).setTextSelection(after + 1).run();
+            return true;
+          }
+          // Taper avec une image / un bouton… sélectionné : on ne l'efface pas, le texte part dans un nouveau paragraphe juste après
+          if (event.key.length === 1) {
+            event.preventDefault();
+            const after = sel.to;
+            editor.chain().insertContentAt(after, { type: "paragraph", content: event.key === " " ? [] : [{ type: "text", text: event.key }] }).setTextSelection(after + 1 + (event.key === " " ? 0 : 1)).run();
+            editor.view.focus();
+            return true;
+          }
+        }
+        // Frappe dans le texte : la barre d'outils du bloc s'efface jusqu'au prochain mouvement de souris (comme Gutenberg)
+        if (!mod && (event.key.length === 1 || event.key === "Backspace" || event.key === "Enter")) setTyping(true);
+        else if (/^(Arrow|Escape|Tab|Home|End|Page)/.test(event.key)) setTyping(false); // navigation au clavier : la barre revient
         if (slash && ["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(event.key)) {
           const options = [...slash.querySelectorAll("button")];
           const i = options.findIndex((o) => o.classList.contains("is-active"));
@@ -656,6 +718,7 @@ function start() {
       if (editor.state.selection.empty && !editor.isActive("link")) ins().insertContent({ type: "text", text: href, marks: [{ type: "link", attrs: linkAttrs }] }).run();
       else { const to = editor.state.selection.to; chain().extendMarkRange("link").setLink(linkAttrs).setTextSelection(to).unsetMark("link").run(); } // curseur après le lien, sans le prolonger
       pop.close();
+      editor.view.focus();
     };
     const runSearch = debounce(async () => {
       const q = url.value.trim();
@@ -673,7 +736,7 @@ function start() {
       checkbox("sponsored (lien sponsorisé ou affilié)", opts.sponsored, (v) => { opts.sponsored = v; }),
       checkbox("ugc (contenu proposé par un utilisateur)", opts.ugc, (v) => { opts.ugc = v; }));
     const anchorEl = anchor || (() => { const c = editor.view.coordsAtPos(editor.state.selection.from); const ghost = h("span", { class: "wp-anchor-ghost" }); ghost.style.top = `${window.scrollY + c.bottom}px`; ghost.style.left = `${window.scrollX + c.left}px`; document.body.append(ghost); setTimeout(() => ghost.remove(), 50); return ghost; })();
-    const pop = popover(anchorEl, h("div", { class: "wp-link-control" }, h("div", { class: "wp-link-input" }, url, h("button", { type: "button", class: "wp-btn-primary", onclick: () => apply() }, "Appliquer")), results, settings, attrs.href ? h("button", { type: "button", class: "wp-btn-link is-danger", onclick: () => { chain().extendMarkRange("link").unsetLink().run(); pop.close(); } }, "Supprimer le lien") : null), { className: "is-link" });
+    const pop = popover(anchorEl, h("div", { class: "wp-link-control" }, h("div", { class: "wp-link-input" }, url, h("button", { type: "button", class: "wp-btn-primary", onclick: () => apply() }, "Appliquer")), results, settings, attrs.href ? h("button", { type: "button", class: "wp-btn-link is-danger", onclick: () => { chain().extendMarkRange("link").unsetLink().run(); pop.close(); editor.view.focus(); } }, "Supprimer le lien") : null), { className: "is-link" });
     url.focus();
     runSearch();
   }
@@ -826,7 +889,7 @@ function start() {
       t.tabIndex = on ? 0 : -1;
       $(`[data-sidebar-panel="${t.dataset.sidebarTab}"]`).hidden = !on;
     }
-    if (key === "bloc") renderInspector();
+    if (key === "bloc") renderInspector(true);
   }
   sidebarTabs.forEach((t) => t.addEventListener("click", () => showSidebarTab(t.dataset.sidebarTab)));
   $$("[data-toggle-sidebar]").forEach((b) => b.addEventListener("click", () => {
@@ -853,14 +916,28 @@ function start() {
     openPanel(key, true);
     panel.scrollIntoView({ block: "start", behavior: "smooth" });
   };
-  function revealSeo() { if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click(); showSidebarTab("seo"); sidebar.scrollTop = 0; }
+  function revealSeo() {
+    if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click();
+    showSidebarTab("seo");
+    sidebar.scrollTo({ top: 0, behavior: "smooth" });
+    const score = $("[data-seo-score]");
+    score.classList.remove("is-flash");
+    void score.offsetWidth; // relance l'animation à chaque clic
+    score.classList.add("is-flash");
+  }
 
   // ---------- Onglet Bloc : réglages du bloc sélectionné ----------
   const inspector = $("[data-block-inspector]");
   const DESC = { paragraph: "Commencez par le bloc de construction de toute narration.", heading: "Introduit une nouvelle section et organise le contenu.", kbImage: "Insérez une image pour illustrer votre propos.", kbGallery: "Affichez plusieurs images dans une galerie.", kbVideo: "Intégrez une vidéo.", kbAudio: "Intégrez un fichier audio.", kbEmbed: "Intégrez un contenu externe.", kbButton: "Invitez les lecteurs à agir.", callout: "Mettez une information en évidence.", kbCourse: "Recommandez une formation du catalogue.", kbNewsletter: "Formulaire d'inscription à la newsletter.", table: "Données structurées en tableau.", kbSteps: "Guide pas à pas (HowTo).", kbFaq: "Questions fréquentes (FAQPage).", kbCompare: "Comparaison en colonnes.", kbCta: "Encadré d'appel à l'action.", bulletList: "Liste à puces.", orderedList: "Liste numérotée.", taskList: "Liste de contrôle.", blockquote: "Mettez en valeur une citation.", codeBlock: "Code en respectant l'espacement.", kbAccordion: "Masquez et affichez du contenu." };
-  function renderInspector() {
+  let inspectorKey = "";
+  function renderInspector(force = false) {
     if ($('[data-sidebar-panel="bloc"]').hidden) return;
     const b = currentBlock();
+    const key = b ? `${b.pos}|${b.node.type.name}|${JSON.stringify(b.node.attrs)}|${b.text ? JSON.stringify(b.text.node.attrs) : ""}` : "";
+    if (!force && key === inspectorKey) return;
+    // Champ du panneau en cours de saisie (même bloc) : on ne touche à rien, sinon le texte tapé serait perdu
+    if (!force && b && inspectorKey.split("|")[0] === String(b.pos) && inspector.contains(document.activeElement)) { inspectorKey = key; return; }
+    inspectorKey = key;
     inspector.replaceChildren();
     if (!b) { inspector.append(h("p", { class: "wp-help wp-empty-inspector" }, "Aucun bloc sélectionné.")); return; }
     const node = b.node;
@@ -905,7 +982,7 @@ function start() {
         h("ul", { class: "wp-gallery-items" }, ...(a.images || []).map((img, i) => {
           const alt = input({ value: img.alt || "", placeholder: "Texte alternatif", "aria-label": `Texte alternatif de l'image ${i + 1}` });
           alt.addEventListener("input", debounce(() => { const images = [...currentBlock().node.attrs.images]; images[i] = { ...images[i], alt: alt.value }; set({ images }); }, 300));
-          return h("li", {}, h("img", { src: img.src, alt: "" }), alt, h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Retirer l'image", onclick: () => { const images = [...currentBlock().node.attrs.images]; images.splice(i, 1); set({ images }); renderInspector(); } }, "×"));
+          return h("li", {}, h("img", { src: img.src, alt: "" }), alt, h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Retirer l'image", onclick: () => { const images = [...currentBlock().node.attrs.images]; images.splice(i, 1); set({ images }); renderInspector(true); } }, "×"));
         })),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ multiple: true, onSelectMany: (list) => set({ images: [...a.images, ...list.map((m) => ({ src: m.path, alt: m.alt || "", caption: m.caption || "" }))] }) }) }, "Ajouter des images")));
     } else if (t === "kbVideo" || t === "kbEmbed") {
@@ -1032,8 +1109,10 @@ function start() {
     if (where === "article") { if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click(); showSidebarTab("article"); }
     else if (where) revealPanel(where);
     const el = sel && $(sel);
-    if (el) { el.scrollIntoView({ block: "center", behavior: "smooth" }); setTimeout(() => el.focus(), 250); }
-    else editor.commands.focus("start");
+    if (el) { el.scrollIntoView({ block: "center", behavior: "smooth" }); setTimeout(() => el.focus(), 250); return; }
+    // Point qui concerne le texte (longueur, intertitres, lisibilité…) : retour dans l'article
+    if (window.matchMedia("(max-width: 782px)").matches) $(".wp-header [data-toggle-sidebar]").click();
+    editor.chain().focus("start").scrollIntoView().run();
   }
   function renderSeoScore(r) {
     const total = r.checks.length || 1;
@@ -1052,7 +1131,7 @@ function start() {
     const todo = [...r.checks.filter((x) => x.status === "problem"), ...r.checks.filter((x) => x.status === "improve")].slice(0, 5);
     $("[data-seo-todo]").replaceChildren(...(todo.length ? [h("p", { class: "wp-label" }, "À corriger en priorité"), h("ul", { class: "wp-seo-todo-list" }, ...todo.map((x) => h("li", { class: `is-${x.status}` },
       h("span", { class: "wp-seo-todo-dot", "aria-hidden": "true" }), h("span", { class: "wp-seo-todo-text" }, h("strong", {}, x.label), x.advice ? h("small", {}, x.advice) : null),
-      FIX[x.id] ? h("button", { type: "button", class: "wp-btn-link", onclick: () => goFix(x.id) }, "Corriger") : null)))] : [h("p", { class: "wp-seo-todo-ok" }, "✓ Rien d'important à corriger.")]));
+      h("button", { type: "button", class: "wp-btn-link", onclick: () => goFix(x.id) }, FIX[x.id] ? "Corriger" : "Aller au texte"))))] : [h("p", { class: "wp-seo-todo-ok" }, "✓ Rien d'important à corriger.")]));
     $("[data-seo-slug]").textContent = `/blog/${currentSlug()}`;
   }
   function refreshMeters() {
@@ -1081,9 +1160,9 @@ function start() {
       const img = state.objectUrl || state.path;
       box.replaceChildren(...[
         img ? h("button", { type: "button", class: "wp-featured-image", "aria-label": "Remplacer l'image", onclick: pick }, h("img", { src: img, alt: "" })) : h("button", { type: "button", class: "wp-featured-placeholder", onclick: pick }, key === "cover" ? "Définir l'image mise en avant" : "Choisir une image"),
-        img ? h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-secondary", onclick: pick }, "Remplacer"), h("button", { type: "button", class: "wp-btn-link is-danger", onclick: () => { state.path = null; state.objectUrl = null; fileInput.value = ""; field(hiddenField).value = ""; field(removeField).value = "1"; render(); changed(); } }, "Retirer")) : null].filter(Boolean));
+        img ? h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-secondary", onclick: pick }, "Remplacer"), h("button", { type: "button", class: "wp-btn-link is-danger", onclick: () => { state.path = null; state.objectUrl = null; fileInput.value = ""; field(hiddenField).value = ""; field(removeField).value = "1"; render(); changed(); refreshPreviews(); } }, "Retirer")) : null].filter(Boolean));
     };
-    function pick() { openMediaModal({ onSelect: (m) => { state.path = m.path; state.objectUrl = null; fileInput.value = ""; field(hiddenField).value = m.path; field(removeField).value = ""; if (key === "cover" && !field("cover_alt").value) field("cover_alt").value = m.alt || ""; render(); changed(); } }); }
+    function pick() { openMediaModal({ onSelect: (m) => { state.path = m.path; state.objectUrl = null; fileInput.value = ""; field(hiddenField).value = m.path; field(removeField).value = ""; if (key === "cover" && !field("cover_alt").value) field("cover_alt").value = m.alt || ""; render(); changed(); refreshPreviews(); } }); }
     fileInput.addEventListener("change", () => { const f = fileInput.files[0]; state.objectUrl = f ? URL.createObjectURL(f) : null; field(removeField).value = ""; render(); changed(); });
     render();
     imagePicks[key] = { current: () => state.objectUrl || state.path, set: (path) => { state.path = path; state.objectUrl = null; fileInput.value = ""; field(hiddenField).value = path; field(removeField).value = ""; render(); }, saved: (path) => { state.path = path; state.objectUrl = null; fileInput.value = ""; field(hiddenField).value = ""; field(removeField).value = ""; render(); } };
@@ -1318,7 +1397,13 @@ function start() {
     } finally { saving = false; }
   }
   form.addEventListener("submit", (e) => { e.preventDefault(); save({ status: DATA.status === "published" ? undefined : statusSelect.value === "published" ? "draft" : undefined }).then((ok) => ok && toast(DATA.status === "published" ? "Article mis à jour." : "Brouillon enregistré.")); });
-  document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); save().then((ok) => ok && toast("Enregistré.")); } if (e.key === "Escape") closePopovers(); });
+  document.addEventListener("keydown", (e) => {
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); save().then((ok) => ok && toast("Enregistré.")); }
+    // Cmd+K hors de l'éditeur (après un clic sur un bouton…) : lien sur la sélection de l'article
+    if (mod && e.key.toLowerCase() === "k" && !editor.view.hasFocus() && !e.target.closest("input, textarea, select, .wp-popover")) { e.preventDefault(); editor.view.focus(); linkPopover(null); }
+    if (e.key === "Escape") closePopovers();
+  });
   window.addEventListener("beforeunload", (e) => { if (dirty) { localDraft.write(); e.preventDefault(); e.returnValue = ""; } });
   form.addEventListener("input", (e) => { if (e.target !== codeEditor && !e.target.closest(".wp-modal")) changed(); });
   form.addEventListener("change", (e) => { if (e.target.type === "checkbox" || e.target.tagName === "SELECT") changed(); });
@@ -1326,9 +1411,28 @@ function start() {
   editor.on("update", () => { changed(); refreshSlash(); });
   const refreshUi = () => { renderBlockToolbar(); refreshAppender(); renderInspector(); };
   editor.on("selectionUpdate", () => { refreshUi(); refreshSlash(); });
-  editor.on("transaction", () => requestAnimationFrame(refreshUi));
-  editor.on("focus", refreshUi);
-  editor.on("blur", () => setTimeout(() => { if (!document.activeElement || !document.activeElement.closest(".wp-block-toolbar, .wp-popover, .wp-top-toolbar")) { blockToolbar.hidden = true; appender.hidden = true; } }, 150));
+  let uiFrame = 0;
+  editor.on("transaction", () => { cancelAnimationFrame(uiFrame); uiFrame = requestAnimationFrame(refreshUi); });
+  function setTyping(on) {
+    if (root.classList.contains("is-typing") === on) return;
+    root.classList.toggle("is-typing", on);
+    if (on) { blockToolbar.hidden = true; between.hidden = true; } else renderBlockToolbar();
+  }
+  let lastMouse = null;
+  document.addEventListener("mousemove", (e) => {
+    if (lastMouse && Math.abs(e.clientX - lastMouse[0]) + Math.abs(e.clientY - lastMouse[1]) < 4) return;
+    lastMouse = [e.clientX, e.clientY];
+    setTyping(false);
+  }, { passive: true });
+  document.addEventListener("mousedown", () => setTyping(false), true);
+  editor.on("focus", () => { refreshUi(); requestAnimationFrame(refreshUi); });
+  // Sortie de l'éditeur : barre masquée, sauf si le focus est revenu entre-temps (annuler, menu…) ou s'il est dans la barre
+  editor.on("blur", () => setTimeout(() => {
+    const el = document.activeElement;
+    if (editor.isFocused || editor.state.selection instanceof NodeSelection || (el && el.closest(".wp-block-toolbar, .wp-popover, .wp-top-toolbar"))) return;
+    blockToolbar.hidden = true;
+    appender.hidden = true;
+  }, 150));
   window.addEventListener("resize", debounce(refreshUi, 100));
   $(".wp-canvas").addEventListener("scroll", () => requestAnimationFrame(() => { renderBlockToolbar(); refreshAppender(); }), { passive: true });
 

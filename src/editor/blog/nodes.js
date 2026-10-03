@@ -103,7 +103,7 @@ export const KbGallery = Node.create({
       dom.className = "kb-ed-gallery";
       dom.style.setProperty("--cols", a.columns);
       for (const i of a.images || []) { const img = document.createElement("img"); img.src = i.src; img.alt = i.alt || ""; dom.append(img); }
-      if (!(a.images || []).length) dom.append(span("kb-ed-empty", "Galerie vide : cliquez puis « Modifier » pour ajouter des images"));
+      if (!(a.images || []).length) dom.append(span("kb-ed-empty", "Galerie vide : sélectionnez-la, puis « Ajouter des images » dans l'onglet Bloc"));
     });
   },
 });

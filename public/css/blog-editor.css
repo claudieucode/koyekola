@@ -775,3 +775,14 @@
 .wp-content.is-dragover { box-shadow: 0 0 0 3px var(--accent), var(--shadow-md); }
 .wp-content.is-dragover::after { content: "Déposez vos images, vidéos ou fichiers audio pour les insérer"; position: sticky; bottom: 24px; display: block; width: fit-content; margin: 0 auto; padding: 10px 18px; border-radius: var(--radius-pill); background: var(--primary); color: #fff; font-weight: 600; pointer-events: none; }
 .is-uploading .wp-content, .is-uploading .wp-modal { cursor: progress; }
+@media (max-width: 782px) {
+  /* Les panneaux s'ouvrent sous le rail d'outils, qui reste utilisable */
+  .wp { --wp-rail-h: 45px; }
+  .wp-rail { position: relative; z-index: 36; height: var(--wp-rail-h); background: #fff; }
+  .wp-sidebar, .wp-secondary, .wp-prepublish { top: calc(var(--wp-header-h) + var(--wp-rail-h)); }
+}
+.wp-seo-score.is-flash { animation: wp-flash 0.9s ease-out; }
+@keyframes wp-flash { 0% { background: var(--accent-light); } 100% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .wp-seo-score.is-flash { animation: none; } }
+/* Pendant la frappe, les commandes flottantes s'effacent (elles reviennent au mouvement de souris), comme Gutenberg */
+.is-typing .wp-block-toolbar, .is-typing .wp-between { display: none; }
