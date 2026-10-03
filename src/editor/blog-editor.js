@@ -552,6 +552,14 @@ function start() {
     between.hidden = false;
   });
   contentHost.addEventListener("mouseleave", () => { between.hidden = true; });
+  let dragDepth = 0;
+  const filesDragged = (e) => [...(e.dataTransfer?.types || [])].includes("Files");
+  contentHost.addEventListener("dragenter", (e) => { if (filesDragged(e)) { dragDepth++; contentHost.classList.add("is-dragover"); } });
+  contentHost.addEventListener("dragleave", () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) contentHost.classList.remove("is-dragover"); });
+  contentHost.addEventListener("drop", () => { dragDepth = 0; contentHost.classList.remove("is-dragover"); });
+  // Un fichier lâché à côté de la zone d'écriture ne doit pas ouvrir l'image dans le navigateur (et faire perdre l'article)
+  window.addEventListener("dragover", (e) => { if (filesDragged(e)) e.preventDefault(); });
+  window.addEventListener("drop", (e) => { if (filesDragged(e) && !e.defaultPrevented) { e.preventDefault(); dragDepth = 0; contentHost.classList.remove("is-dragover"); } });
   betweenBtn.addEventListener("mousedown", (e) => e.preventDefault());
   betweenBtn.addEventListener("click", () => {
     if (betweenPos === null) return;
@@ -598,6 +606,21 @@ function start() {
   editor.setOptions({
     editorProps: {
       ...editor.options.editorProps,
+      handleDrop: (view, event, slice, moved) => {
+        if (moved || !event.dataTransfer || !event.dataTransfer.files.length) return false;
+        event.preventDefault();
+        contentHost.classList.remove("is-dragover");
+        const found = view.posAtCoords({ left: event.clientX, top: event.clientY });
+        insertFiles(event.dataTransfer.files, found ? blockEndAt(found.pos) : editor.state.doc.content.size);
+        return true;
+      },
+      handlePaste: (view, event) => {
+        const files = event.clipboardData ? [...event.clipboardData.files] : [];
+        if (!files.length) return false;
+        event.preventDefault();
+        insertFiles(files, blockEndAt(editor.state.selection.from));
+        return true;
+      },
       handleKeyDown: (view, event) => {
         const mod = event.ctrlKey || event.metaKey;
         if (slash && ["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(event.key)) {
@@ -701,21 +724,50 @@ function start() {
       } catch (e) { grid.replaceChildren(h("li", { class: "wp-error" }, e.message)); }
     };
     q.addEventListener("input", debounce(load, 250));
-    upload.addEventListener("change", async () => {
-      for (const file of upload.files) {
-        try { const m = await uploadMedia(file, kind); chosen.set(m.id, m); showDetails(m); } catch (e) { toast(e.message, "error"); }
+    // Téléversement : bouton « Sélectionner des fichiers » OU glisser-déposer n'importe où dans la fenêtre
+    const status = h("p", { class: "wp-upload-status", role: "status", "aria-live": "polite" });
+    async function handleFiles(fileList) {
+      const files = [...fileList];
+      const ok = files.filter((f) => kindOf(f) === kind);
+      const refused = files.length - ok.length;
+      if (refused) toast(`${refused} fichier(s) ignoré(s) : format non accepté ici (${ACCEPT_LABEL[kind]}).`, "error");
+      if (!ok.length) return;
+      const list = multiple ? ok : ok.slice(0, 1);
+      if (!multiple) chosen.clear();
+      const uploaded = [];
+      for (const [i, file] of list.entries()) {
+        status.textContent = `Téléversement ${i + 1} sur ${list.length} : ${file.name}…`;
+        root.classList.add("is-uploading");
+        try { const media = await uploadMedia(file, kind); uploaded.push(media); chosen.set(media.id, media); showDetails(media); }
+        catch (e) { toast(`${file.name} : ${e.message}`, "error"); }
       }
+      status.textContent = uploaded.length ? `${uploaded.length} fichier(s) téléversé(s).` : "";
+      root.classList.remove("is-uploading");
       upload.value = "";
+      if (!uploaded.length) return;
+      // Ouverte pour insérer : le fichier déposé est inséré tout de suite (comme WordPress), sans clic de plus
+      if (onSelect && !multiple) { m.close(); onSelect(uploaded[0], { alt: uploaded[0].alt || "", caption: "", credit: "" }); toast(kind === "image" ? "Image insérée. Ajoutez son texte alternatif dans l'onglet Bloc." : "Fichier inséré."); return; }
+      if (multiple && onSelectMany && chosen.size >= 2) { const all = [...chosen.values()]; m.close(); onSelectMany(all); toast("Galerie créée."); return; }
       tabsBar.querySelectorAll("button")[1].click();
       selectBtn.disabled = !chosen.size;
-    });
-    const uploadPane = h("div", { class: "wp-upload-pane", hidden: true }, h("p", { class: "wp-upload-title" }, "Déposez des fichiers pour les téléverser"), h("p", {}, "ou"), h("label", { class: "wp-btn-secondary", for: upload.id }, "Sélectionner des fichiers"), upload, h("p", { class: "wp-help" }, kind === "image" ? "JPEG, PNG, WebP, GIF ou AVIF." : kind === "video" ? "MP4 ou WebM." : "MP3, M4A, OGG ou WAV."));
+    }
+    upload.addEventListener("change", () => handleFiles(upload.files));
+    const uploadPane = h("div", { class: "wp-upload-pane", hidden: true }, h("p", { class: "wp-upload-title" }, "Déposez des fichiers pour les téléverser"), h("p", {}, "ou"), h("label", { class: "wp-btn-secondary", for: upload.id }, "Sélectionner des fichiers"), upload, h("p", { class: "wp-help" }, `${ACCEPT_LABEL[kind]}.`), status);
     const libraryPane = h("div", { class: "wp-library-pane" }, h("div", { class: "wp-library-toolbar" }, q), h("div", { class: "wp-library-main" }, grid, details));
     const tabsBar = segmentedTabs([["upload", "Téléverser des fichiers"], ["library", "Médiathèque"]], (k) => { uploadPane.hidden = k !== "upload"; libraryPane.hidden = k !== "library"; if (k === "library") load(); });
     tabsBar.querySelectorAll("button")[0].setAttribute("aria-selected", "false");
     tabsBar.querySelectorAll("button")[1].setAttribute("aria-selected", "true");
     const selectBtn = h("button", { type: "button", class: "wp-btn-primary", disabled: true }, multiple ? "Créer une galerie" : onSelect ? "Sélectionner" : "Fermer");
     const m = modal(kind === "image" ? (multiple ? "Créer une galerie" : "Sélectionner ou téléverser un média") : kind === "video" ? "Sélectionner une vidéo" : "Sélectionner un fichier audio", h("div", { class: "wp-media-modal" }, tabsBar, uploadPane, libraryPane, h("div", { class: "wp-modal-actions" }, selectBtn)), [], { wide: true });
+    const dropZone = m.dlg;
+    const dropHint = h("div", { class: "wp-drop-hint", "aria-hidden": "true" }, h("span", {}, "Déposez pour téléverser"));
+    dropZone.append(dropHint);
+    let depth = 0;
+    const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes("Files");
+    dropZone.addEventListener("dragenter", (e) => { if (!hasFiles(e)) return; e.preventDefault(); depth++; dropZone.classList.add("is-dragover"); });
+    dropZone.addEventListener("dragover", (e) => { if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; });
+    dropZone.addEventListener("dragleave", () => { depth = Math.max(0, depth - 1); if (!depth) dropZone.classList.remove("is-dragover"); });
+    dropZone.addEventListener("drop", (e) => { if (!hasFiles(e)) return; e.preventDefault(); depth = 0; dropZone.classList.remove("is-dragover"); handleFiles(e.dataTransfer.files); });
     selectBtn.addEventListener("click", () => {
       const list = [...chosen.values()];
       m.close();
@@ -725,6 +777,33 @@ function start() {
     if (!onSelect && !onSelectMany) selectBtn.disabled = false;
     load();
   }
+  const ACCEPT = { image: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"], video: ["video/mp4", "video/webm"], audio: ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/x-m4a", "audio/ogg", "audio/wav", "audio/x-wav", "audio/wave"] };
+  const ACCEPT_LABEL = { image: "JPEG, PNG, WebP, GIF ou AVIF", video: "MP4 ou WebM", audio: "MP3, M4A, OGG ou WAV" };
+  const kindOf = (file) => Object.keys(ACCEPT).find((k) => ACCEPT[k].includes(file.type)) || null;
+  // Fichiers déposés ou collés directement dans l'article : téléversés puis insérés à cet endroit
+  async function insertFiles(fileList, at) {
+    const files = [...fileList].filter((f) => kindOf(f));
+    if (!files.length) { toast(`Format non accepté. Images : ${ACCEPT_LABEL.image} ; vidéo : ${ACCEPT_LABEL.video} ; audio : ${ACCEPT_LABEL.audio}.`, "error"); return; }
+    root.classList.add("is-uploading");
+    const done = [];
+    for (const [i, file] of files.entries()) {
+      toast(`Téléversement ${i + 1} sur ${files.length} : ${file.name}…`);
+      try { done.push(await uploadMedia(file, kindOf(file))); } catch (e) { toast(`${file.name} : ${e.message}`, "error"); }
+    }
+    root.classList.remove("is-uploading");
+    if (!done.length) return;
+    const images = done.filter((m) => m.kind === "image");
+    const nodes = [];
+    if (images.length >= 2) nodes.push({ type: "kbGallery", attrs: { columns: images.length >= 3 ? "3" : "2", images: images.map((m) => ({ src: m.path, alt: m.alt || "", caption: "" })) } });
+    else if (images.length) nodes.push({ type: "kbImage", attrs: { src: images[0].path, mediaId: images[0].id, alt: "", caption: "", credit: "", title: images[0].title || "", width: "100", align: "center" } });
+    for (const m of done) {
+      if (m.kind === "video") nodes.push({ type: "kbVideo", attrs: { url: m.path, caption: "" } });
+      if (m.kind === "audio") nodes.push({ type: "kbAudio", attrs: { src: m.path, title: m.title || "" } });
+    }
+    placeAfter(Math.min(at, editor.state.doc.content.size), nodes);
+    toast(images.length ? `${done.length} fichier(s) inséré(s). Ajoutez le texte alternatif dans l'onglet Bloc.` : `${done.length} fichier(s) inséré(s).`);
+  }
+  const blockEndAt = (pos) => { const $p = editor.state.doc.resolve(Math.max(0, Math.min(pos, editor.state.doc.content.size))); return $p.depth ? $p.after(1) : $p.pos; };
   async function uploadMedia(file, kind) {
     const body = new FormData();
     body.append(kind === "image" ? "article_image" : kind === "video" ? "article_video" : "article_audio", file);

@@ -765,3 +765,13 @@
   .wp-doc-stats { display: none; }
   .wp-between { display: none; }
 }
+
+/* Glisser-déposer de fichiers : fenêtre Médiathèque et zone d'écriture */
+.wp-modal { position: fixed; }
+.wp-drop-hint { position: absolute; inset: 8px; z-index: 5; display: none; place-items: center; border: 3px dashed var(--accent); border-radius: var(--radius-lg); background: rgba(224, 242, 254, 0.92); pointer-events: none; }
+.wp-drop-hint span { font-family: var(--font-display); font-size: 24px; font-weight: 800; color: var(--accent-dark); }
+.wp-modal.is-dragover .wp-drop-hint { display: grid; }
+.wp-upload-status { margin: 0; min-height: 1.2em; color: var(--accent-dark); font-weight: 600; }
+.wp-content.is-dragover { box-shadow: 0 0 0 3px var(--accent), var(--shadow-md); }
+.wp-content.is-dragover::after { content: "Déposez vos images, vidéos ou fichiers audio pour les insérer"; position: sticky; bottom: 24px; display: block; width: fit-content; margin: 0 auto; padding: 10px 18px; border-radius: var(--radius-pill); background: var(--primary); color: #fff; font-weight: 600; pointer-events: none; }
+.is-uploading .wp-content, .is-uploading .wp-modal { cursor: progress; }
