@@ -13,6 +13,8 @@ const redirects = require("./redirects");
 const notfound = require("./notfound");
 const robots = require("./robots");
 const sitemap = require("./sitemap");
+const audit = require("./audit");
+const { RULES, SEVERITIES, CATEGORIES } = require("./rules");
 
 const router = express.Router();
 const canManage = (user) => Boolean(user && user.role === "formateur");
@@ -37,6 +39,7 @@ router.get("/formateur/seo", (req, res) => {
       { label: "Adresse publique (SITE_URL)", value: process.env.SITE_URL ? process.env.SITE_URL : "Configuration requise", ok: Boolean(process.env.SITE_URL) },
     ],
     changes: listChanges({ limit: 8 }), fieldLabels: FIELD_LABELS,
+    audits: audit.list(10).filter((a) => a.status === "done"), categories: CATEGORIES,
   });
 });
 
@@ -163,5 +166,37 @@ router.get("/formateur/seo/technique", (req, res) => {
     included: map.included, excluded: map.excluded,
   });
 });
+
+// ---------- Audit ----------
+router.get("/formateur/seo/audit", (req, res) => {
+  const audits = audit.list(30);
+  const id = req.query.id ? Number(req.query.id) : (audit.latest() || {}).id;
+  const current = id ? audit.get(id) : null;
+  const filters = { severity: String(req.query.gravite || ""), category: String(req.query.categorie || ""), q: String(req.query.q || "") };
+  const issues = current && current.status === "done" ? audit.issuesOf(current.id, filters) : [];
+  const counts = current && current.status === "done" ? db.prepare("SELECT severity, COUNT(*) n FROM seo_issues WHERE audit_id = ? AND fixed_at IS NULL GROUP BY severity").all(current.id) : [];
+  res.render("seo/audit", { audits, current, issues, filters, kinds: audit.KINDS, rules: Object.fromEntries(RULES.map((r) => [r.id, r])), severities: SEVERITIES, categories: CATEGORIES, counts: Object.fromEntries(counts.map((c) => [c.severity, c.n])), running: audit.isRunning(), msg: req.query.msg || null });
+});
+router.post("/formateur/seo/audit", async (req, res) => {
+  const r = await audit.runAudit({ kind: String(req.body.kind || "full"), userId: req.session.user.id, req });
+  if (!r.ok) return res.redirect(`/formateur/seo/audit?msg=${encodeURIComponent(r.error)}`);
+  // L'exploration continue en arrière-plan ; la page se met à jour à chaque rechargement (aucune progression simulée)
+  await Promise.race([r.done, new Promise((resolve) => setTimeout(resolve, 20000))]);
+  res.redirect(`/formateur/seo/audit?id=${r.id}`);
+});
+router.post("/formateur/seo/audit/corriger/:id(\\d+)", (req, res) => {
+  const r = audit.fix(Number(req.params.id), req.session.user.id);
+  const back = String(req.body.back || "/formateur/seo/audit");
+  res.redirect(`${back.startsWith("/formateur/seo/audit") ? back : "/formateur/seo/audit"}${back.includes("?") ? "&" : "?"}msg=${encodeURIComponent(r.ok ? "Correction appliquée et enregistrée. Relancez un scan pour recalculer les notes." : r.error)}`);
+});
+router.get("/formateur/seo/analyse", async (req, res, next) => {
+  try {
+    const path = String(req.query.path || "/");
+    if (!path.startsWith("/") || path.startsWith("//")) return res.status(400).render("error", { message: "Adresse invalide." });
+    const result = await audit.analyzePage(path, req);
+    res.render("seo/analyze", { path, result, rules: Object.fromEntries(RULES.map((r) => [r.id, r])), severities: SEVERITIES, categories: CATEGORIES });
+  } catch (error) { next(error); }
+});
+router.get("/formateur/seo/regles", (req, res) => res.render("seo/rules", { rules: RULES, severities: SEVERITIES, categories: CATEGORIES }));
 
 module.exports = { router, canManage };

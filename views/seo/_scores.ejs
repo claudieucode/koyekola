@@ -1,0 +1,8 @@
+<%# Notes par catégorie d'un audit (calcul : part pondérée des contrôles réussis) %>
+<div class="seo-scores">
+  <% if (scores.overall) { %><div class="seo-score is-overall"><span class="seo-score-value"><%= scores.overall.score %></span><span class="seo-score-label">Note globale interne</span></div><% } %>
+  <% Object.entries(categories).forEach(([k, label]) => { const s = scores[k]; %>
+    <div class="seo-score"><span class="seo-score-value"><%= s ? s.score : "—" %></span><span class="seo-score-label"><%= label %></span><span class="field-hint"><%= s ? `${s.checks - s.failed}/${s.checks} contrôles réussis` : "Non évalué" %></span></div>
+  <% }) %>
+</div>
+<p class="field-hint">Notes internes et transparentes : part des contrôles réussis, chaque contrôle pesant selon sa gravité (critique 10, élevée 5, moyenne 3, faible 1, info 0). Ce n'est pas une note de Google. <a href="/formateur/seo/regles">Voir toutes les règles</a></p>

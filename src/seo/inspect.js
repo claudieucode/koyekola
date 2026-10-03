@@ -45,6 +45,9 @@ function parse(html) {
   const main = DomUtils.findOne((n) => n.name === "main", doc.children) || doc;
   const imgs = DomUtils.findAll((n) => n.name === "img", [main]);
   const anchors = DomUtils.findAll((n) => n.name === "a" && n.attribs.href, [main]);
+  // Tous les liens de la page (menu et pied de page compris), pour le graphe des liens internes
+  const mainSet = new Set(anchors);
+  const allAnchors = DomUtils.findAll((n) => n.name === "a" && n.attribs.href, doc.children).map((a) => ({ href: a.attribs.href, inMain: mainSet.has(a), rel: a.attribs.rel || "" }));
   const htmlNode = DomUtils.findOne((n) => n.name === "html", doc.children);
   return {
     lang: htmlNode ? htmlNode.attribs.lang || null : null,
@@ -64,6 +67,8 @@ function parse(html) {
     headings: DomUtils.findAll((n) => /^h[2-4]$/.test(n.name), [main]).map((n) => ({ level: Number(n.name[1]), text: text(n) })),
     images: imgs.map((i) => ({ src: i.attribs.src || "", alt: i.attribs.alt, hasAlt: Object.hasOwn(i.attribs, "alt"), width: i.attribs.width || null, height: i.attribs.height || null, loading: i.attribs.loading || null })),
     links: anchors.map((a) => ({ href: a.attribs.href, text: text(a).slice(0, 120), rel: a.attribs.rel || "" })),
+    allLinks: allAnchors,
+    text: text(main).slice(0, 60000),
     words: text(main).split(/\s+/).filter(Boolean).length,
   };
 }

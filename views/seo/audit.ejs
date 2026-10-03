@@ -1,0 +1,70 @@
+<%- include("../partials/header", { title: "SEO · Audit" }) %>
+<% const sevOrder = ["critical", "high", "medium", "low", "info"]; %>
+<div class="container-wide seo-page">
+  <%- include("_nav", { active: "audit" }) %>
+  <% if (msg) { %><p class="form-success" role="status"><%= msg %></p><% } %>
+  <section class="content-card">
+    <h2>Lancer un scan</h2>
+    <p class="field-hint">Le serveur lit réellement chacune de ses pages publiques (jusqu'à 400), comme un moteur de recherche, puis applique les règles. Le scan complet vérifie aussi jusqu'à 150 liens externes (cela peut prendre une minute).</p>
+    <% if (running) { %><p class="form-error" role="status">Un scan est en cours (n° <%= running %>). Rechargez la page pour suivre son avancement.</p><% } %>
+    <form method="post" action="/formateur/seo/audit" class="seo-scan-buttons">
+      <% Object.entries(kinds).forEach(([k, label]) => { const btnClass = k === "full" ? "btn btn-primary" : "btn btn-outline"; %><button type="submit" name="kind" value="<%= k %>" class="<%= btnClass %>" <%= running ? "disabled" : "" %>><%= label %></button><% }) %>
+    </form>
+  </section>
+
+  <% if (current) { %>
+    <section class="content-card">
+      <h2><%= kinds[current.kind] %> du <%= formatDateTime(current.started_at) %></h2>
+      <% if (current.status === "running") { %><p>En cours : <%= current.pages %> page(s) lue(s) pour l'instant. <a href="/formateur/seo/audit?id=<%= current.id %>">Actualiser</a></p>
+      <% } else if (current.status === "failed") { %><p class="form-error">Échec du scan : <%= current.error %></p>
+      <% } else { %>
+        <p class="field-hint"><%= current.pages %> page(s) lue(s) · <%= current.issues %> problème(s) relevé(s) · terminé le <%= formatDateTime(current.finished_at) %></p>
+        <%- include("_scores", { scores: current.scores, categories }) %>
+        <ul class="seo-severity-counts"><% sevOrder.forEach((s) => { const sevClass = `sev-${s}`; %><li class="<%= sevClass %>"><a href="?id=<%= current.id %>&gravite=<%= s %>"><strong><%= counts[s] || 0 %></strong> <%= severities[s].label %></a></li><% }) %></ul>
+      <% } %>
+    </section>
+
+    <% if (current.status === "done") { %>
+    <section class="content-card">
+      <h2>Problèmes (<%= issues.length %>)</h2>
+      <form method="get" class="seo-filters" role="search">
+        <input type="hidden" name="id" value="<%= current.id %>">
+        <label class="sr-only" for="a-sev">Gravité</label><select id="a-sev" name="gravite"><option value="">Toutes gravités</option><% sevOrder.forEach((s) => { %><option value="<%= s %>" <%= filters.severity === s ? "selected" : "" %>><%= severities[s].label %></option><% }) %></select>
+        <label class="sr-only" for="a-cat">Catégorie</label><select id="a-cat" name="categorie"><option value="">Toutes catégories</option><% Object.entries(categories).forEach(([k, l]) => { %><option value="<%= k %>" <%= filters.category === k ? "selected" : "" %>><%= l %></option><% }) %></select>
+        <label class="sr-only" for="a-q">Rechercher</label><input type="search" id="a-q" name="q" value="<%= filters.q %>" placeholder="Adresse ou détail…">
+        <button class="btn btn-outline btn-sm">Filtrer</button>
+      </form>
+      <% if (!issues.length) { %><p>Aucun problème pour ce filtre.</p><% } else { %>
+      <ul class="seo-issues">
+        <% issues.forEach((i) => { const rule = rules[i.rule_id]; const issueClass = `seo-issue sev-${i.severity}${i.fixed_at ? " is-fixed" : ""}`; %>
+          <li class="<%= issueClass %>">
+            <div class="seo-issue-head"><span class="seo-sev"><%= severities[i.severity].label %></span><strong><%= rule ? rule.title : i.rule_id %></strong><span class="field-hint"><%= categories[i.category] %></span></div>
+            <p class="seo-issue-path"><a href="<%= i.path %>" target="_blank" rel="noopener"><%= i.path %></a> — <%= i.detail %></p>
+            <p class="field-hint"><%= rule ? rule.recommendation : "" %></p>
+            <div class="seo-actions">
+              <% if (i.fixed_at) { %><span class="seo-fixed">✓ Corrigé le <%= formatDateTime(i.fixed_at) %></span>
+              <% } else if (rule && rule.fix && i.data) { %><form method="post" action="/formateur/seo/audit/corriger/<%= i.id %>" class="inline-form"><input type="hidden" name="back" value="/formateur/seo/audit?id=<%= current.id %>"><button class="btn btn-primary btn-sm">Corriger automatiquement</button></form><% } %>
+              <% if (i.rule_id === "not_found_hits" || i.rule_id === "broken_internal_link") { %><a class="btn btn-outline btn-sm" href="/formateur/seo/redirections?source=<%= encodeURIComponent(i.rule_id === "not_found_hits" ? i.path : "") %>">Créer une redirection</a><% } %>
+              <% if (!["redirect_chain", "not_found_hits"].includes(i.rule_id)) { %><a class="btn btn-outline btn-sm" href="/formateur/seo/analyse?path=<%= encodeURIComponent(i.path) %>">Analyser cette page</a><% } %>
+            </div>
+          </li>
+        <% }) %>
+      </ul>
+      <% } %>
+    </section>
+    <% } %>
+  <% } else { %>
+    <section class="content-card"><p>Aucun audit n'a encore été lancé : les notes apparaîtront après le premier scan.</p></section>
+  <% } %>
+
+  <% if (audits.length) { %>
+  <section class="content-card">
+    <h2>Historique des scans</h2>
+    <div class="seo-table-wrap"><table class="seo-table">
+      <thead><tr><th scope="col">Date</th><th scope="col">Scan</th><th scope="col">Pages</th><th scope="col">Problèmes</th><th scope="col">Note globale</th><th scope="col">Par</th></tr></thead>
+      <tbody><% audits.forEach((a) => { %><tr><td><a href="?id=<%= a.id %>"><%= formatDateTime(a.started_at) %></a></td><td><%= kinds[a.kind] %></td><td><%= a.pages %></td><td><%= a.status === "done" ? a.issues : a.status === "failed" ? "Échec" : "En cours" %></td><td><%= a.scores && a.scores.overall ? a.scores.overall.score : "—" %></td><td><%= a.username || (a.source === "schedule" ? "Planifié" : "—") %></td></tr><% }) %></tbody>
+    </table></div>
+  </section>
+  <% } %>
+</div>
+<%- include("../partials/footer") %>

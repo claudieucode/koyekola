@@ -3,6 +3,16 @@
   <%- include("_nav", { active: "overview" }) %>
 
   <section class="content-card">
+    <h2>Dernier audit</h2>
+    <% if (!audits.length) { %><p>Non disponible : aucun audit n'a encore été lancé. <a class="btn btn-primary btn-sm" href="/formateur/seo/audit">Lancer le premier scan</a></p>
+    <% } else { %>
+      <p class="field-hint"><%= audits[0].pages %> page(s) lue(s) le <%= formatDateTime(audits[0].finished_at) %> · <%= audits[0].issues %> problème(s). <a href="/formateur/seo/audit?id=<%= audits[0].id %>">Voir le détail</a></p>
+      <%- include("_scores", { scores: audits[0].scores, categories }) %>
+      <% if (audits.length > 1) { %><h3>Évolution de la note globale</h3><ul class="seo-history"><% audits.slice().reverse().forEach((a) => { %><li><span><%= formatDate(a.finished_at) %></span><strong><%= a.scores && a.scores.overall ? a.scores.overall.score : "—" %></strong></li><% }) %></ul><% } %>
+    <% } %>
+  </section>
+
+  <section class="content-card">
     <h2>Contenus publics</h2>
     <p class="field-hint">Comptés dans la base du site. « Personnalisés » : contenus ayant au moins un réglage SEO propre ; les autres utilisent les modèles automatiques.</p>
     <table class="seo-table">
