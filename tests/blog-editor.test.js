@@ -314,6 +314,13 @@ describe("éditeur : enregistrement, statuts, versions, sauvegarde automatique, 
     assert.doesNotMatch((await prof.get("/formateur/blog/nouveau")).text, /data-ed-theme=/);
     assert.equal((await anon().request("/formateur/blog/api/apparence", { method: "POST", json: { theme: "noir" } })).status, 302);
   });
+  test("images de l'article : dimensions réelles de la médiathèque ajoutées (pas de décalage au chargement)", async () => {
+    run("INSERT INTO media (path, kind, mime, size, width, height, alt, title) VALUES ('/uploads/thumbnails/dim-test.webp', 'image', 'image/webp', 10, 1200, 675, '', '')");
+    run("INSERT INTO posts (slug, title, content, content_format, published, published_at, status) VALUES ('dimensions', 'Dimensions', '<figure class=\"kb-image\"><img src=\"/uploads/thumbnails/dim-test.webp\" alt=\"a\"></figure><figure class=\"kb-image\"><img src=\"/uploads/thumbnails/inconnue.webp\" alt=\"b\"></figure>', 'html', 1, datetime('now'), 'published')");
+    const page = (await anon().get("/blog/dimensions")).text;
+    assert.match(page, /<img src="\/uploads\/thumbnails\/dim-test\.webp" alt="a"[^>]*width="1200" height="675"/);
+    assert.match(page, /<img src="\/uploads\/thumbnails\/inconnue\.webp" alt="b" loading="lazy" decoding="async">/);
+  });
   test("ancien article Markdown : s'ouvre dans l'éditeur (converti) et reste affiché tel quel tant qu'il n'est pas réenregistré", async () => {
     run("INSERT INTO posts (slug, title, content, published, published_at, status) VALUES ('ancien', 'Ancien', ':::conseil\nAstuce\n:::\n\n## Section', 1, datetime('now'), 'published')");
     const editor = (await prof.get(`/formateur/blog/${q("SELECT id FROM posts WHERE slug = 'ancien'")[0].id}/modifier`)).text;

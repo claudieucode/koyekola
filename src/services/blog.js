@@ -114,7 +114,8 @@ function courseCard(slug) {
 
 // Rendu public : Markdown (anciens articles) ou texte riche de l'éditeur
 function renderPost(post, { newsletterHtml = null } = {}) {
-  if (post.content_format === "html") return renderBlogHtml(post.content, { courseCard, newsletterHtml, tocDepth: post.toc_depth === 2 ? 2 : 3 });
+  const imageSize = (src) => db.prepare("SELECT width, height FROM media WHERE path = ?").get(String(src || ""));
+  if (post.content_format === "html") return renderBlogHtml(post.content, { courseCard, newsletterHtml, tocDepth: post.toc_depth === 2 ? 2 : 3, imageSize });
   const r = renderArticle(post.content, { courseCard });
   return { ...r, toc: post.toc_depth === 2 ? r.toc.filter((t) => t.level === 2) : r.toc, faq: [], howto: [], links: [] };
 }

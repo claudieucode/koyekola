@@ -194,7 +194,7 @@ function videoPlayer(url, caption) {
 }
 
 // options : courseCard(slug) → HTML | null ; newsletterHtml → HTML | null ; tocDepth 2|3
-function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, tocDepth = 3 } = {}) {
+function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, tocDepth = 3, imageSize = () => null } = {}) {
   const clean = sanitizeBlogHtml(html);
   const doc = parseDocument(clean);
   const toc = [];
@@ -230,6 +230,11 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
     } else if (name === "img") {
       node.attribs.loading = "lazy";
       node.attribs.decoding = "async";
+      // Dimensions réelles (médiathèque) : le navigateur réserve la place, le texte ne « saute » pas pendant le chargement
+      if (!node.attribs.width || !node.attribs.height) {
+        const size = imageSize(node.attribs.src);
+        if (size && size.width > 0 && size.height > 0) { node.attribs.width = String(size.width); node.attribs.height = String(size.height); }
+      }
       images.push({ src: node.attribs.src, alt: node.attribs.alt || "" });
     } else if (name === "figure" && hasClass(node, "kb-image")) {
       const credit = node.attribs["data-credit"];

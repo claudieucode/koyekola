@@ -758,3 +758,14 @@ details.mk-cl-item[open] > .mk-cl-summary .mk-cl-edit { visibility: hidden; }
 @media (max-width: 720px) {
   .mk-ab-variant, .mk-ab-settings, .mk-ab-steps { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Très petits écrans : le bouton d'action principal se replie sur une ligne de texte plus courte, sans déborder */
+@media (max-width: 400px) {
+  .mk-topbar { gap: 6px; padding: 8px 10px; }
+  .mk-topbar-actions { gap: 4px; min-width: 0; }
+  .mk-topbar-actions .mk-primary { min-width: 0; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+  .mk-user { padding: 4px; }
+}
+/* Longs identifiants techniques (variables d'environnement, extraits JSON) : retour à la ligne au lieu de déborder */
+.mk-main p, .mk-main li, .mk-main .field-hint, .mk-main dd { overflow-wrap: anywhere; }
+.mk-main code { overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
