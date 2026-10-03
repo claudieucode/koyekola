@@ -1,5 +1,6 @@
-<%- include("../partials/header", { title: post ? "Modifier l'article" : "Nouvel article" }) %>
 <%
+  // Éditeur d'article en plein écran, dans l'esprit de l'éditeur de blocs Gutenberg (WordPress) : barre supérieure, zone
+  // d'écriture centrée, barre latérale « Article / Bloc », panneau d'insertion et vue en liste à gauche.
   const v = (key, fallback = "") => (post && post[key] !== null && post[key] !== undefined ? post[key] : fallback);
   const checked = (key, fallback) => ((post ? post[key] : fallback) ? "checked" : "");
   const authorId = post && post.author_id ? post.author_id : currentUserId;
@@ -14,247 +15,264 @@
     coverPath: post ? post.cover_path : null, ogImagePath: post ? post.og_image_path : null, twitterImagePath: post ? post.twitter_image_path : null,
   };
   const json = JSON.stringify(pageData).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
-%>
+  const panel = (key, title, open) => `<div class="wp-panel${open ? " is-open" : ""}" data-panel="${key}"><h2 class="wp-panel-title"><button type="button" aria-expanded="${open ? "true" : "false"}" aria-controls="wp-panel-${key}" data-panel-toggle>${title}<span class="wp-chevron" aria-hidden="true"></span></button></h2><div class="wp-panel-body" id="wp-panel-${key}"${open ? "" : " hidden"}>`;
+%><!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title><%= post ? `Modifier l'article « ${post.title} »` : "Nouvel article" %> · KOYEKOLA</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/blog-editor.css') %>">
-  <div class="be" data-blog-editor>
+</head>
+<body class="wp-body">
+  <div class="be wp" data-blog-editor>
     <form id="be-form" action="<%= post ? '/formateur/blog/' + post.id + '/modifier' : '/formateur/blog/nouveau' %>" method="post" enctype="multipart/form-data" novalidate>
-      <input type="hidden" name="content_format" value="html" data-js-only>
+      <input type="hidden" name="content_format" value="html">
       <input type="hidden" name="status" value="<%= status %>" data-field="status">
       <input type="hidden" name="published_at_utc" value="" data-field="published-at">
-      <input type="hidden" name="cover_media" value="" data-field="cover-media">
-      <input type="hidden" name="og_image_media" value="" data-field="og-media">
-      <input type="hidden" name="twitter_image_media" value="" data-field="twitter-media">
-      <input type="hidden" name="remove_cover" value="" data-field="remove-cover">
-      <input type="hidden" name="remove_og_image" value="" data-field="remove-og">
-      <input type="hidden" name="remove_twitter_image" value="" data-field="remove-twitter">
+      <input type="hidden" name="cover_media" value="">
+      <input type="hidden" name="og_image_media" value="">
+      <input type="hidden" name="twitter_image_media" value="">
+      <input type="hidden" name="remove_cover" value="">
+      <input type="hidden" name="remove_og_image" value="">
+      <input type="hidden" name="remove_twitter_image" value="">
 
-      <div class="be-topbar">
-        <a href="/formateur/blog" class="be-back"><%- icon('arrowLeft', { size: 16 }) %> Articles</a>
-        <span class="be-badge" data-status-badge><%= statuses[status] %></span>
-        <span class="be-save-state" role="status" aria-live="polite" data-save-state><%= saved ? "Enregistré" : post ? "Enregistré" : "Nouvel article" %></span>
-        <span class="be-spacer"></span>
-        <div class="be-menu-wrap">
-          <button type="button" class="btn btn-outline btn-sm" data-preview-toggle aria-haspopup="true" aria-expanded="false">Aperçu</button>
-          <div class="be-menu" data-preview-menu hidden>
-            <button type="button" data-preview="desktop">Ordinateur</button>
-            <button type="button" data-preview="tablet">Tablette</button>
-            <button type="button" data-preview="mobile">Mobile</button>
-            <button type="button" data-preview="google">Résultat Google</button>
-            <button type="button" data-preview="social">Partage Facebook / LinkedIn / X</button>
-          </div>
+      <%# ---------- Barre supérieure ---------- %>
+      <header class="wp-header" role="region" aria-label="Barre d'outils de l'éditeur">
+        <a href="/formateur/blog" class="wp-site-icon" aria-label="Retour aux articles" title="Retour aux articles"><span aria-hidden="true">K</span></a>
+        <div class="wp-header-left">
+          <button type="button" class="wp-btn-icon wp-inserter-toggle" data-toggle-inserter aria-pressed="false" aria-label="Ajouter un bloc" title="Ajouter un bloc"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M11 12.5V17.5H12.5V12.5H17.5V11H12.5V6H11V11H6V12.5H11Z" fill="currentColor"/></svg></button>
+          <button type="button" class="wp-btn-icon" data-undo aria-label="Annuler" title="Annuler (Ctrl+Z)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M18.3 11.7c-.6-.6-1.4-.9-2.3-.9H6.7l2.9-3.3-1.1-1-4.5 5L8.5 16l1-1-2.7-3.2H16c.5 0 .9.2 1.3.5 1 1 1 3.4 1 4.5v.3h1.5v-.2c0-1.5 0-4.3-1.5-5.7z" fill="currentColor"/></svg></button>
+          <button type="button" class="wp-btn-icon" data-redo aria-label="Rétablir" title="Rétablir (Ctrl+Maj+Z)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M15.6 6.5l-1.1 1 2.9 3.3H8c-.9 0-1.7.3-2.3.9-1.4 1.5-1.4 4.2-1.4 5.6v.2h1.5v-.3c0-1.1 0-3.5 1-4.5.3-.3.7-.5 1.3-.5h9.2L14.5 15l1.1 1.1 4.6-4.6-4.6-5z" fill="currentColor"/></svg></button>
+          <button type="button" class="wp-btn-icon" data-toggle-listview aria-pressed="false" aria-label="Vue d'ensemble du document" title="Vue d'ensemble du document"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3 6h11v1.5H3V6Zm3.5 5.5h11V13h-11v-1.5ZM21 17H10v1.5h11V17Z" fill="currentColor"/></svg></button>
         </div>
-        <button type="submit" class="btn btn-outline btn-sm" data-save>Enregistrer</button>
-        <button type="button" class="btn btn-primary btn-sm" data-publish><%= status === "published" ? "Mettre à jour" : "Publier…" %></button>
-      </div>
-      <% if (saved) { %><p class="form-success be-flash" role="status">Article enregistré.<% if (post && !post.published) { %> Il reste hors ligne tant qu'il n'est pas publié.<% } %></p><% } %>
-      <div class="be-restore" data-restore hidden role="alert">
-        <p data-restore-text>Une version plus récente, enregistrée automatiquement, existe.</p>
-        <button type="button" class="btn btn-primary btn-sm" data-restore-yes>Restaurer cette version</button>
-        <button type="button" class="btn btn-ghost btn-sm" data-restore-no>Ignorer</button>
-      </div>
-
-      <div class="be-layout">
-        <div class="be-main">
-          <label for="post-title" class="be-label-title">Titre de l'article <span class="be-hint">(H1, unique sur la page)</span></label>
-          <textarea id="post-title" name="title" class="be-title" rows="1" maxlength="150" required placeholder="Un titre clair qui dit ce que le lecteur va apprendre"><%= v('title') %></textarea>
-          <label for="post-excerpt" class="be-label">Résumé <span class="be-hint">(chapeau sous le titre, liste du blog ; 300 caractères)</span></label>
-          <textarea id="post-excerpt" name="excerpt" class="be-excerpt" rows="2" maxlength="300" placeholder="En deux phrases : ce que l'article apporte."><%= v('excerpt') %></textarea>
-
-          <div class="be-toolbar" role="toolbar" aria-label="Mise en forme" data-toolbar hidden></div>
-          <div class="be-selection-bar" data-block-bar hidden></div>
-          <div class="be-canvas"><div id="be-editor" class="be-editor"></div></div>
-          <label for="post-content" class="be-label" data-content-label>Contenu</label>
-          <textarea id="post-content" name="content" rows="20" class="be-fallback"><%= editorHtml %></textarea>
-          <p class="be-stats" data-stats></p>
+        <div class="wp-header-center">
+          <button type="button" class="wp-document-bar" data-focus-title><span class="wp-doc-type">Article</span><span class="wp-doc-title" data-doc-title><%= v('title') || "Sans titre" %></span></button>
         </div>
-
-        <aside class="be-panels" aria-label="Réglages de l'article">
-          <div class="be-tabs" role="tablist" aria-label="Panneaux">
-            <% [["contenu", "Contenu"], ["seo", "SEO"], ["social", "Social"], ["structure", "Structure"], ["media", "Média"], ["publication", "Publication"], ["ia", "IA"]].forEach(([key, label], i) => { %>
-              <button type="button" role="tab" id="tab-<%= key %>" aria-controls="panel-<%= key %>" aria-selected="<%= i === 0 %>" tabindex="<%= i === 0 ? 0 : -1 %>" data-tab="<%= key %>"><%= label %><% if (key === "seo") { %> <span class="be-tab-dot" data-seo-dot></span><% } %></button>
-            <% }) %>
-          </div>
-
-          <%# ---------- CONTENU ---------- %>
-          <section class="be-panel" role="tabpanel" id="panel-contenu" aria-labelledby="tab-contenu">
-            <div class="field-group">
-              <label for="post-author">Auteur</label>
-              <select id="post-author" name="author_id"><% instructors.forEach((u) => { %><option value="<%= u.id %>" <%= u.id === authorId ? "selected" : "" %>><%= u.username %></option><% }) %></select>
+        <div class="wp-header-right">
+          <span class="wp-save-state" role="status" aria-live="polite" data-save-state><%= saved || post ? "Enregistré" : "" %></span>
+          <button type="submit" class="wp-btn-tertiary" data-save>Enregistrer le brouillon</button>
+          <div class="wp-dropdown">
+            <button type="button" class="wp-btn-icon" data-preview-toggle aria-haspopup="true" aria-expanded="false" aria-label="Voir" title="Voir"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M20.5 16h-.7V8c0-1.1-.9-2-2-2H6.2c-1.1 0-2 .9-2 2v8h-.7c-.8 0-1.5.7-1.5 1.5h20c0-.8-.7-1.5-1.5-1.5zM5.7 8c0-.3.2-.5.5-.5h11.6c.3 0 .5.2.5.5v7.6H5.7V8z" fill="currentColor"/></svg></button>
+            <div class="wp-menu" data-preview-menu hidden role="menu">
+              <button type="button" role="menuitem" data-preview="desktop">Ordinateur</button>
+              <button type="button" role="menuitem" data-preview="tablet">Tablette</button>
+              <button type="button" role="menuitem" data-preview="mobile">Mobile</button>
+              <hr>
+              <button type="button" role="menuitem" data-preview="tab">Prévisualiser dans un nouvel onglet ↗</button>
+              <button type="button" role="menuitem" data-preview="google">Aperçu dans Google</button>
+              <button type="button" role="menuitem" data-preview="social">Aperçu sur les réseaux sociaux</button>
             </div>
-            <div class="field-group">
-              <label for="post-category">Catégorie</label>
-              <input id="post-category" type="text" name="category" value="<%= v('category') %>" maxlength="60" list="dl-categories" autocomplete="off" placeholder="Ex. Marketing digital">
+          </div>
+          <button type="button" class="wp-btn-primary" data-publish><%= status === "published" ? "Mettre à jour" : status === "scheduled" ? "Planifier…" : "Publier" %></button>
+          <button type="button" class="wp-btn-icon" data-toggle-sidebar aria-pressed="true" aria-label="Réglages" title="Réglages"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill-rule="evenodd" d="M10.289 4.836A1 1 0 0111.275 4h1.306a1 1 0 01.987.836l.244 1.466c.787.26 1.503.679 2.108 1.218l1.393-.522a1 1 0 011.216.437l.653 1.13a1 1 0 01-.23 1.273l-1.148.944a6.025 6.025 0 010 2.435l1.149.946a1 1 0 01.23 1.272l-.653 1.13a1 1 0 01-1.216.437l-1.394-.522c-.605.54-1.32.958-2.108 1.218l-.244 1.466a1 1 0 01-.987.836h-1.306a1 1 0 01-.986-.836l-.244-1.466a5.995 5.995 0 01-2.108-1.218l-1.394.522a1 1 0 01-1.217-.436l-.653-1.131a1 1 0 01.23-1.272l1.149-.946a6.026 6.026 0 010-2.435l-1.148-.944a1 1 0 01-.23-1.272l.653-1.131a1 1 0 011.217-.437l1.393.522a5.994 5.994 0 012.108-1.218l.244-1.466zM14.929 12a3 3 0 11-6 0 3 3 0 016 0z" fill="currentColor"/></svg></button>
+          <div class="wp-dropdown">
+            <button type="button" class="wp-btn-icon" data-options-toggle aria-haspopup="true" aria-expanded="false" aria-label="Options" title="Options"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M13 19h-2v-2h2v2zm0-6h-2v-2h2v2zm0-6h-2V5h2v2z" fill="currentColor"/></svg></button>
+            <div class="wp-menu" data-options-menu hidden role="menu">
+              <p class="wp-menu-label">Éditeur</p>
+              <button type="button" role="menuitemradio" aria-checked="true" data-mode="visual">Éditeur visuel</button>
+              <button type="button" role="menuitemradio" aria-checked="false" data-mode="code">Éditeur de code</button>
+              <hr>
+              <p class="wp-menu-label">Affichage</p>
+              <button type="button" role="menuitemcheckbox" aria-checked="false" data-option="focus">Mode concentration</button>
+              <button type="button" role="menuitemcheckbox" aria-checked="false" data-option="toptoolbar">Barre d'outils supérieure</button>
+              <hr>
+              <button type="button" role="menuitem" data-option="shortcuts">Raccourcis clavier</button>
+              <a role="menuitem" href="/formateur/blog">Retour aux articles</a>
+            </div>
+          </div>
+        </div>
+      </header>
+      <% if (saved) { %><p class="wp-notice wp-notice-success" role="status" data-notice>Article enregistré.<% if (post && !post.published) { %> Il reste hors ligne tant qu'il n'est pas publié.<% } %> <button type="button" class="wp-notice-close" aria-label="Fermer" data-notice-close>×</button></p><% } %>
+      <div class="wp-notice wp-notice-warning" data-restore hidden role="alert">
+        <span data-restore-text>Une version plus récente, enregistrée automatiquement, existe.</span>
+        <button type="button" class="wp-btn-link" data-restore-yes>Restaurer la sauvegarde</button>
+        <button type="button" class="wp-btn-link" data-restore-no>Ignorer</button>
+      </div>
+
+      <div class="wp-layout">
+        <%# ---------- Panneau gauche : insertion / vue d'ensemble ---------- %>
+        <aside class="wp-secondary" data-secondary hidden aria-label="Panneau latéral gauche"></aside>
+
+        <%# ---------- Zone d'écriture ---------- %>
+        <div class="wp-canvas" data-canvas>
+          <div class="wp-top-toolbar" data-top-toolbar hidden></div>
+          <div class="wp-content">
+            <label for="post-title" class="sr-only">Titre de l'article</label>
+            <textarea id="post-title" name="title" class="wp-title" rows="1" maxlength="150" required placeholder="Ajouter un titre"><%= v('title') %></textarea>
+            <div class="wp-block-toolbar" data-block-toolbar hidden role="toolbar" aria-label="Outils du bloc"></div>
+            <div id="be-editor" class="wp-editor"></div>
+            <label for="post-content" class="sr-only" data-content-label>Contenu (HTML)</label>
+            <textarea id="post-content" name="content" rows="24" class="wp-code-editor" placeholder="Saisissez le code HTML de l'article"><%= editorHtml %></textarea>
+          </div>
+        </div>
+
+        <%# ---------- Barre latérale : Article / Bloc ---------- %>
+        <aside class="wp-sidebar" data-sidebar aria-label="Réglages de l'éditeur">
+          <div class="wp-sidebar-tabs" role="tablist">
+            <button type="button" role="tab" id="tab-article" aria-controls="panel-article" aria-selected="true" data-sidebar-tab="article">Article</button>
+            <button type="button" role="tab" id="tab-bloc" aria-controls="panel-bloc" aria-selected="false" tabindex="-1" data-sidebar-tab="bloc">Bloc</button>
+            <button type="button" class="wp-btn-icon wp-sidebar-close" data-toggle-sidebar aria-label="Fermer les réglages" title="Fermer les réglages">×</button>
+          </div>
+
+          <%# ===== Onglet Article ===== %>
+          <div role="tabpanel" id="panel-article" aria-labelledby="tab-article" data-sidebar-panel="article">
+            <div class="wp-post-card">
+              <p class="wp-post-card-title" data-card-title><%= v('title') || "Sans titre" %></p>
+              <p class="wp-post-card-meta" data-dates></p>
+              <label for="post-excerpt" class="wp-label">Extrait</label>
+              <textarea id="post-excerpt" name="excerpt" rows="3" maxlength="300" placeholder="Ajouter un extrait…"><%= v('excerpt') %></textarea>
+              <span class="wp-help">Chapeau sous le titre et résumé dans la liste du blog (300 caractères).</span>
+            </div>
+            <div class="wp-summary">
+              <div class="wp-summary-row"><label for="post-status">Statut</label>
+                <select id="post-status" data-status-select><% Object.entries(statuses).forEach(([k, label]) => { %><option value="<%= k %>" <%= status === k ? "selected" : "" %>><%= label %></option><% }) %></select></div>
+              <div class="wp-summary-row"><label for="post-date">Publication</label>
+                <input id="post-date" type="datetime-local" value="<%= toUtcInput(post ? post.published_at : null) %>" data-date-input data-utc="<%= post && post.published_at ? 1 : 0 %>" aria-describedby="post-date-hint"></div>
+              <p class="wp-help" id="post-date-hint" data-date-hint></p>
+              <div class="wp-summary-row"><label for="post-slug">Lien</label>
+                <span class="wp-slug"><span>/blog/</span><input id="post-slug" type="text" name="slug" value="<%= v('slug') %>" maxlength="120" <%= post && post.published_at ? "readonly" : "" %> placeholder="tiré du titre" data-analyze></span></div>
+              <div class="wp-summary-row"><label for="post-author">Auteur</label>
+                <select id="post-author" name="author_id"><% instructors.forEach((u) => { %><option value="<%= u.id %>" <%= u.id === authorId ? "selected" : "" %>><%= u.username %></option><% }) %></select></div>
+              <div class="wp-summary-row"><label for="post-language">Langue</label>
+                <select id="post-language" name="language"><% languages.forEach((l) => { %><option value="<%= l %>" <%= v('language', 'fr') === l ? "selected" : "" %>><%= languageNames[l] || l %></option><% }) %></select></div>
+              <label class="wp-checkbox"><input type="checkbox" name="featured" value="1" <%= checked('featured', 0) %>> Mettre en avant (« À la une » sur le blog)</label>
+            </div>
+
+            <%- panel("categories", "Catégories", true) %>
+              <label for="post-category" class="wp-label">Catégorie</label>
+              <input id="post-category" type="text" name="category" value="<%= v('category') %>" maxlength="60" list="dl-categories" autocomplete="off" placeholder="Rechercher ou créer une catégorie">
               <datalist id="dl-categories"><% categories.forEach((c) => { %><option value="<%= c.name %>"><% }) %><% ["Graphisme", "Vidéo", "Intelligence artificielle", "Marketing digital", "SEO", "E-commerce", "Développement web", "Formation & apprentissage"].forEach((n) => { if (!categories.some((c) => c.name.toLowerCase() === n.toLowerCase())) { %><option value="<%= n %>"><% } }) %></datalist>
-              <span class="field-hint">Une catégorie existante écrite autrement (majuscules, accents) est reconnue : pas de doublon.</span>
-            </div>
-            <div class="field-group">
-              <label for="post-subcategory">Sous-catégorie <span class="be-hint">(facultatif)</span></label>
+              <ul class="wp-term-list" data-category-list><% categories.forEach((c) => { %><li><button type="button" class="wp-btn-link" data-pick-category="<%= c.name %>"><%= c.name %></button> <span class="wp-help">(<%= c.count %>)</span></li><% }) %></ul>
+              <label for="post-subcategory" class="wp-label">Sous-catégorie</label>
               <input id="post-subcategory" type="text" name="subcategory" value="<%= v('subcategory') %>" maxlength="60" list="dl-subcategories" autocomplete="off">
               <datalist id="dl-subcategories"></datalist>
-            </div>
-            <div class="field-group">
-              <label for="post-tags-input">Étiquettes</label>
-              <div class="be-tags" data-tags>
-                <ul class="be-tag-list" data-tag-list></ul>
-                <input id="post-tags-input" type="text" list="dl-tags" autocomplete="off" placeholder="Ajouter puis Entrée" data-tag-input>
-              </div>
+              <span class="wp-help">Une catégorie existante écrite autrement (majuscules, accents) est reconnue : pas de doublon.</span>
+            </div></div>
+
+            <%- panel("tags", "Étiquettes", true) %>
+              <label for="post-tags-input" class="wp-label">Ajouter une nouvelle étiquette</label>
+              <div class="wp-tokens" data-tags><ul class="wp-token-list" data-tag-list></ul><input id="post-tags-input" type="text" list="dl-tags" autocomplete="off" data-tag-input></div>
               <datalist id="dl-tags"><% tags.forEach((t) => { %><option value="<%= t %>"><% }) %></datalist>
               <input id="post-tags" type="hidden" name="tags" value="<%= v('tags') %>" data-tags-value>
-            </div>
-            <div class="be-row">
-              <div class="field-group">
-                <label for="post-language">Langue</label>
-                <select id="post-language" name="language"><% languages.forEach((l) => { %><option value="<%= l %>" <%= v('language', 'fr') === l ? "selected" : "" %>><%= languageNames[l] || l %></option><% }) %></select>
-              </div>
-              <div class="field-group">
-                <label for="post-minutes">Temps de lecture <span class="be-hint">(min)</span></label>
-                <input id="post-minutes" type="number" name="reading_minutes" min="1" max="120" value="<%= v('reading_minutes') %>" inputmode="numeric" placeholder="auto" data-minutes>
-              </div>
-            </div>
-            <p class="field-hint" data-minutes-hint></p>
-            <label class="checkbox-row"><input type="checkbox" name="featured" value="1" <%= checked('featured', 0) %>> Article vedette (affiché « À la une » en tête du blog)</label>
-          </section>
+              <span class="wp-help">Séparez les étiquettes par des virgules ou la touche Entrée.</span>
+            </div></div>
 
-          <%# ---------- SEO ---------- %>
-          <section class="be-panel" role="tabpanel" id="panel-seo" aria-labelledby="tab-seo" hidden>
-            <p class="be-note">Remplissez ce que vous pouvez : chaque champ vide a une valeur par défaut raisonnable.</p>
-            <div class="field-group">
-              <label for="post-keyword">Mot-clé principal</label>
-              <input id="post-keyword" type="text" name="focus_keyword" value="<%= v('focus_keyword') %>" maxlength="80" placeholder="Ex. formation en ligne" data-analyze>
-            </div>
-            <div class="field-group">
-              <label for="post-keywords2">Mots-clés secondaires <span class="be-hint">(séparés par des virgules)</span></label>
-              <input id="post-keywords2" type="text" name="secondary_keywords" value="<%= v('secondary_keywords') %>" maxlength="400" data-analyze>
-            </div>
-            <div class="field-group">
-              <label for="post-seo-title">Titre SEO <span class="be-count" data-count-for="post-seo-title" data-max="60"></span></label>
-              <input id="post-seo-title" type="text" name="seo_title" value="<%= v('seo_title') %>" maxlength="70" placeholder="Sinon : le titre de l'article" data-analyze>
-            </div>
-            <div class="field-group">
-              <label for="post-seo-desc">Meta description <span class="be-count" data-count-for="post-seo-desc" data-max="160"></span></label>
-              <textarea id="post-seo-desc" name="seo_description" rows="3" maxlength="160" placeholder="120 à 160 caractères qui donnent envie de cliquer" data-analyze><%= v('seo_description') %></textarea>
-            </div>
-            <div class="field-group">
-              <label for="post-slug">Adresse (slug)</label>
-              <div class="be-slug"><span>/blog/</span><input id="post-slug" type="text" name="slug" value="<%= v('slug') %>" maxlength="120" <%= post && post.published_at ? "readonly" : "" %> placeholder="tirée du titre" data-analyze></div>
-              <% if (post && post.published_at) { %><span class="field-hint">Figée depuis la publication : les liens déjà partagés continuent de fonctionner.</span><% } %>
-            </div>
-            <div class="field-group">
-              <label for="post-canonical">Adresse canonique <span class="be-hint">(seulement pour un article déjà publié ailleurs)</span></label>
-              <input id="post-canonical" type="url" name="canonical_url" value="<%= v('canonical_url') %>" maxlength="500" placeholder="Vide : l'adresse de l'article" data-analyze>
-            </div>
-            <fieldset class="be-fieldset">
-              <legend>Moteurs de recherche</legend>
-              <input type="hidden" name="robots_index" value="0"><label class="checkbox-row"><input type="checkbox" name="robots_index" value="1" <%= checked('robots_index', 1) %>> Indexer (afficher dans Google)</label>
-              <input type="hidden" name="robots_follow" value="0"><label class="checkbox-row"><input type="checkbox" name="robots_follow" value="1" <%= checked('robots_follow', 1) %>> Suivre les liens de l'article</label>
-            </fieldset>
-            <h3 class="be-h3">Aperçu Google</h3>
-            <div class="be-google" data-google-preview aria-hidden="true"></div>
-            <h3 class="be-h3">Analyse <span class="be-hint">— repères internes, pas un score de Google</span></h3>
-            <div class="be-analysis" data-analysis aria-live="polite"></div>
-          </section>
-
-          <%# ---------- SOCIAL ---------- %>
-          <section class="be-panel" role="tabpanel" id="panel-social" aria-labelledby="tab-social" hidden>
-            <h3 class="be-h3">Facebook, LinkedIn, WhatsApp (Open Graph)</h3>
-            <div class="field-group"><label for="post-og-title">Titre <span class="be-count" data-count-for="post-og-title" data-max="95"></span></label><input id="post-og-title" type="text" name="og_title" value="<%= v('og_title') %>" maxlength="95" placeholder="Sinon : titre SEO ou titre"></div>
-            <div class="field-group"><label for="post-og-desc">Description <span class="be-count" data-count-for="post-og-desc" data-max="200"></span></label><textarea id="post-og-desc" name="og_description" rows="2" maxlength="200" placeholder="Sinon : meta description ou résumé"><%= v('og_description') %></textarea></div>
-            <div class="field-group">
-              <label for="post-og-image">Image de partage <span class="be-hint">(1200 × 630 conseillé ; sinon l'image principale)</span></label>
-              <div class="be-image-pick" data-image-pick="og"></div>
-              <input id="post-og-image" type="file" name="og_image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
-            </div>
-            <p class="field-hint">Adresse partagée : celle de l'article. Type : article.</p>
-            <div class="be-social-preview" data-social-preview="og" aria-hidden="true"></div>
-            <h3 class="be-h3">X (Twitter)</h3>
-            <div class="field-group"><label for="post-tw-card">Format de la carte</label>
-              <select id="post-tw-card" name="twitter_card"><option value="summary_large_image" <%= v('twitter_card', 'summary_large_image') !== 'summary' ? 'selected' : '' %>>Grande image</option><option value="summary" <%= v('twitter_card') === 'summary' ? 'selected' : '' %>>Petite image</option></select></div>
-            <div class="field-group"><label for="post-tw-title">Titre <span class="be-count" data-count-for="post-tw-title" data-max="70"></span></label><input id="post-tw-title" type="text" name="twitter_title" value="<%= v('twitter_title') %>" maxlength="70" placeholder="Sinon : le titre de partage"></div>
-            <div class="field-group"><label for="post-tw-desc">Description</label><textarea id="post-tw-desc" name="twitter_description" rows="2" maxlength="200" placeholder="Sinon : la description de partage"><%= v('twitter_description') %></textarea></div>
-            <div class="field-group">
-              <label for="post-tw-image">Image <span class="be-hint">(sinon l'image de partage)</span></label>
-              <div class="be-image-pick" data-image-pick="twitter"></div>
-              <input id="post-tw-image" type="file" name="twitter_image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
-            </div>
-            <div class="be-social-preview" data-social-preview="x" aria-hidden="true"></div>
-          </section>
-
-          <%# ---------- STRUCTURE ---------- %>
-          <section class="be-panel" role="tabpanel" id="panel-structure" aria-labelledby="tab-structure" hidden>
-            <h3 class="be-h3">Sommaire</h3>
-            <input type="hidden" name="toc_enabled" value="0"><label class="checkbox-row"><input type="checkbox" name="toc_enabled" value="1" <%= checked('toc_enabled', 1) %> data-toc-option> Afficher un sommaire</label>
-            <div class="be-row">
-              <div class="field-group"><label for="post-toc-depth">Titres inclus</label><select id="post-toc-depth" name="toc_depth" data-toc-option><option value="3" <%= v('toc_depth', 3) != 2 ? 'selected' : '' %>>H2 + H3</option><option value="2" <%= v('toc_depth') == 2 ? 'selected' : '' %>>H2 seulement</option></select></div>
-              <div class="field-group"><label for="post-toc-title">Titre du sommaire</label><input id="post-toc-title" type="text" name="toc_title" value="<%= v('toc_title') %>" maxlength="60" placeholder="Sommaire" data-toc-option></div>
-            </div>
-            <ol class="be-outline" data-outline></ol>
-            <h3 class="be-h3">Fil d'Ariane</h3>
-            <p class="be-crumbs" data-crumbs></p>
-            <h3 class="be-h3">Données structurées (Schema.org)</h3>
-            <div class="field-group"><label for="post-schema">Type d'article</label><select id="post-schema" name="schema_type"><option value="BlogPosting" <%= v('schema_type', 'BlogPosting') !== 'Article' ? 'selected' : '' %>>BlogPosting (article de blog)</option><option value="Article" <%= v('schema_type') === 'Article' ? 'selected' : '' %>>Article (contenu de fond)</option></select></div>
-            <ul class="be-schema" data-schema></ul>
-            <h3 class="be-h3">Maillage interne</h3>
-            <p class="field-hint">Des liens vers vos formations et articles, proposés d'après le texte. Rien n'est ajouté sans votre accord : sélectionnez d'abord le mot à lier dans l'article.</p>
-            <button type="button" class="btn btn-outline btn-sm" data-suggest>Proposer des liens</button>
-            <ul class="be-suggestions" data-suggestions aria-live="polite"></ul>
-          </section>
-
-          <%# ---------- MÉDIA ---------- %>
-          <section class="be-panel" role="tabpanel" id="panel-media" aria-labelledby="tab-media" hidden>
-            <h3 class="be-h3">Image principale</h3>
-            <div class="be-image-pick" data-image-pick="cover"></div>
-            <div class="field-group">
-              <label for="post-cover">Envoyer une image <span class="be-hint">(1200 × 675 conseillé)</span></label>
+            <%- panel("featured-image", "Image mise en avant", true) %>
+              <div class="wp-image-pick" data-image-pick="cover"></div>
+              <label for="post-cover" class="wp-label">Téléverser une image <span class="wp-help">(1200 × 675 conseillé)</span></label>
               <input id="post-cover" type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
-            </div>
-            <div class="field-group">
-              <label for="post-cover-alt">Texte alternatif de l'image principale</label>
+              <label for="post-cover-alt" class="wp-label">Texte alternatif</label>
               <input id="post-cover-alt" type="text" name="cover_alt" value="<%= v('cover_alt') %>" maxlength="200" placeholder="Décrivez ce que montre l'image" data-analyze>
-            </div>
-            <button type="button" class="btn btn-outline btn-sm" data-open-library>Ouvrir la médiathèque</button>
-            <h3 class="be-h3">Images de l'article</h3>
-            <ul class="be-image-list" data-image-list></ul>
-          </section>
+            </div></div>
 
-          <%# ---------- PUBLICATION ---------- %>
-          <section class="be-panel" role="tabpanel" id="panel-publication" aria-labelledby="tab-publication" hidden>
-            <div class="field-group">
-              <label for="post-status">Statut</label>
-              <select id="post-status" data-status-select><% Object.entries(statuses).forEach(([k, label]) => { %><option value="<%= k %>" <%= status === k ? "selected" : "" %>><%= label %></option><% }) %></select>
-            </div>
-            <div class="field-group" data-date-group>
-              <label for="post-date">Date de publication <span class="be-hint">(heure locale)</span></label>
-              <input id="post-date" type="datetime-local" value="<%= toUtcInput(post ? post.published_at : null) %>" data-date-input data-utc="<%= post && post.published_at ? 1 : 0 %>">
-              <span class="field-hint" data-date-hint></span>
-            </div>
-            <p class="be-dates" data-dates></p>
-            <h3 class="be-h3">Liste de contrôle</h3>
-            <ul class="be-checklist" data-checklist></ul>
-            <input type="hidden" name="reviewed" value="0"><label class="checkbox-row"><input type="checkbox" name="reviewed" value="1" <%= checked('reviewed', 0) %> data-reviewed> J'ai relu l'article</label>
-            <h3 class="be-h3">Historique des versions</h3>
-            <ul class="be-versions" data-versions></ul>
-          </section>
+            <%- panel("seo", 'Référencement (SEO) <span class="be-tab-dot" data-seo-dot></span>', false) %>
+              <label for="post-keyword" class="wp-label">Mot-clé principal</label>
+              <input id="post-keyword" type="text" name="focus_keyword" value="<%= v('focus_keyword') %>" maxlength="80" placeholder="Ex. formation en ligne" data-analyze>
+              <label for="post-keywords2" class="wp-label">Mots-clés secondaires</label>
+              <input id="post-keywords2" type="text" name="secondary_keywords" value="<%= v('secondary_keywords') %>" maxlength="400" placeholder="Séparés par des virgules" data-analyze>
+              <label for="post-seo-title" class="wp-label">Titre SEO <span class="be-count" data-count-for="post-seo-title" data-max="60"></span></label>
+              <input id="post-seo-title" type="text" name="seo_title" value="<%= v('seo_title') %>" maxlength="70" placeholder="Sinon : le titre de l'article" data-analyze>
+              <label for="post-seo-desc" class="wp-label">Méta description <span class="be-count" data-count-for="post-seo-desc" data-max="160"></span></label>
+              <textarea id="post-seo-desc" name="seo_description" rows="3" maxlength="160" placeholder="120 à 160 caractères qui donnent envie de cliquer" data-analyze><%= v('seo_description') %></textarea>
+              <label for="post-canonical" class="wp-label">URL canonique</label>
+              <input id="post-canonical" type="url" name="canonical_url" value="<%= v('canonical_url') %>" maxlength="500" placeholder="Vide : l'adresse de l'article" data-analyze>
+              <input type="hidden" name="robots_index" value="0"><label class="wp-checkbox"><input type="checkbox" name="robots_index" value="1" <%= checked('robots_index', 1) %>> Autoriser les moteurs de recherche à afficher l'article</label>
+              <input type="hidden" name="robots_follow" value="0"><label class="wp-checkbox"><input type="checkbox" name="robots_follow" value="1" <%= checked('robots_follow', 1) %>> Suivre les liens de l'article</label>
+              <p class="wp-label">Aperçu Google</p>
+              <div class="be-google" data-google-preview aria-hidden="true"></div>
+              <p class="wp-label">Analyse <span class="wp-help">— repères internes, pas un score de Google</span></p>
+              <div class="be-analysis" data-analysis aria-live="polite"></div>
+            </div></div>
 
-          <%# ---------- IA ---------- %>
-          <section class="be-panel" role="tabpanel" id="panel-ia" aria-labelledby="tab-ia" hidden>
-            <% if (!aiConfigured) { %>
-              <div class="be-note">
-                <p><strong>Assistant IA non activé.</strong> Il fonctionne avec Claude (Anthropic). Pour l'activer : créez une clé sur <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer">console.anthropic.com</a>, puis ajoutez la variable <code>ANTHROPIC_API_KEY</code> dans la configuration de votre site sur Hostinger. Chaque demande est facturée par Anthropic (quelques centimes).</p>
+            <%- panel("social", "Partage sur les réseaux", false) %>
+              <label for="post-og-title" class="wp-label">Titre (Facebook, LinkedIn, WhatsApp) <span class="be-count" data-count-for="post-og-title" data-max="95"></span></label>
+              <input id="post-og-title" type="text" name="og_title" value="<%= v('og_title') %>" maxlength="95" placeholder="Sinon : titre SEO ou titre">
+              <label for="post-og-desc" class="wp-label">Description <span class="be-count" data-count-for="post-og-desc" data-max="200"></span></label>
+              <textarea id="post-og-desc" name="og_description" rows="2" maxlength="200" placeholder="Sinon : méta description ou extrait"><%= v('og_description') %></textarea>
+              <p class="wp-label">Image de partage <span class="wp-help">(1200 × 630 ; sinon l'image mise en avant)</span></p>
+              <div class="wp-image-pick" data-image-pick="og"></div>
+              <label for="post-og-image" class="sr-only">Téléverser l'image de partage</label>
+              <input id="post-og-image" type="file" name="og_image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+              <div class="be-social-preview" data-social-preview="og" aria-hidden="true"></div>
+              <label for="post-tw-card" class="wp-label">Carte X (Twitter)</label>
+              <select id="post-tw-card" name="twitter_card"><option value="summary_large_image" <%= v('twitter_card', 'summary_large_image') !== 'summary' ? 'selected' : '' %>>Grande image</option><option value="summary" <%= v('twitter_card') === 'summary' ? 'selected' : '' %>>Petite image</option></select>
+              <label for="post-tw-title" class="wp-label">Titre sur X <span class="be-count" data-count-for="post-tw-title" data-max="70"></span></label>
+              <input id="post-tw-title" type="text" name="twitter_title" value="<%= v('twitter_title') %>" maxlength="70" placeholder="Sinon : le titre de partage">
+              <label for="post-tw-desc" class="wp-label">Description sur X</label>
+              <textarea id="post-tw-desc" name="twitter_description" rows="2" maxlength="200" placeholder="Sinon : la description de partage"><%= v('twitter_description') %></textarea>
+              <p class="wp-label">Image sur X</p>
+              <div class="wp-image-pick" data-image-pick="twitter"></div>
+              <label for="post-tw-image" class="sr-only">Téléverser l'image pour X</label>
+              <input id="post-tw-image" type="file" name="twitter_image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+              <div class="be-social-preview" data-social-preview="x" aria-hidden="true"></div>
+            </div></div>
+
+            <%- panel("structure", "Sommaire et structure", false) %>
+              <input type="hidden" name="toc_enabled" value="0"><label class="wp-checkbox"><input type="checkbox" name="toc_enabled" value="1" <%= checked('toc_enabled', 1) %> data-toc-option> Afficher un sommaire</label>
+              <label for="post-toc-depth" class="wp-label">Titres inclus</label>
+              <select id="post-toc-depth" name="toc_depth" data-toc-option><option value="3" <%= v('toc_depth', 3) != 2 ? 'selected' : '' %>>H2 + H3</option><option value="2" <%= v('toc_depth') == 2 ? 'selected' : '' %>>H2 seulement</option></select>
+              <label for="post-toc-title" class="wp-label">Titre du sommaire</label>
+              <input id="post-toc-title" type="text" name="toc_title" value="<%= v('toc_title') %>" maxlength="60" placeholder="Sommaire" data-toc-option>
+              <p class="wp-label">Fil d'Ariane</p>
+              <p class="be-crumbs" data-crumbs></p>
+              <label for="post-schema" class="wp-label">Données structurées</label>
+              <select id="post-schema" name="schema_type"><option value="BlogPosting" <%= v('schema_type', 'BlogPosting') !== 'Article' ? 'selected' : '' %>>BlogPosting (article de blog)</option><option value="Article" <%= v('schema_type') === 'Article' ? 'selected' : '' %>>Article (contenu de fond)</option></select>
+              <ul class="be-schema" data-schema></ul>
+              <p class="wp-label">Maillage interne</p>
+              <p class="wp-help">Liens proposés d'après le texte. Sélectionnez d'abord le mot à lier dans l'article.</p>
+              <button type="button" class="wp-btn-secondary" data-suggest>Proposer des liens</button>
+              <ul class="be-suggestions" data-suggestions aria-live="polite"></ul>
+            </div></div>
+
+            <%- panel("reading", "Temps de lecture", false) %>
+              <label for="post-minutes" class="wp-label">Minutes <span class="wp-help">(vide = calcul automatique)</span></label>
+              <input id="post-minutes" type="number" name="reading_minutes" min="1" max="120" value="<%= v('reading_minutes') %>" inputmode="numeric" placeholder="auto">
+              <p class="wp-help" data-minutes-hint></p>
+            </div></div>
+
+            <%- panel("media", "Images de l'article", false) %>
+              <ul class="be-image-list" data-image-list></ul>
+              <button type="button" class="wp-btn-secondary" data-open-library>Ouvrir la médiathèque</button>
+            </div></div>
+
+            <%- panel("ai", "Assistant IA", false) %>
+              <% if (!aiConfigured) { %>
+                <p class="wp-help"><strong>Non activé.</strong> Créez une clé sur <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer">console.anthropic.com</a>, puis ajoutez la variable <code>ANTHROPIC_API_KEY</code> dans la configuration du site sur Hostinger (quelques centimes par demande).</p>
+              <% } %>
+              <p class="wp-help">L'IA propose, vous décidez : rien ne change sans votre clic sur « Accepter ». Pour Réécrire, Corriger, Développer, Simplifier et Lisibilité, sélectionnez d'abord le passage.</p>
+              <div class="be-ai-actions" data-ai-actions>
+                <% [["titre", "Améliorer le titre"], ["reecrire", "Réécrire"], ["corriger", "Corriger"], ["resumer", "Résumer"], ["developper", "Développer"], ["simplifier", "Simplifier"], ["lisibilite", "Lisibilité"], ["faq", "Générer une FAQ"], ["meta", "Méta description"], ["mots_cles", "Mots-clés"], ["liens", "Liens internes"]].forEach(([k, label]) => { %>
+                  <button type="button" class="wp-btn-secondary" data-ai="<%= k %>" <%= aiConfigured ? "" : "disabled" %>><%= label %></button>
+                <% }) %>
               </div>
-            <% } %>
-            <p class="field-hint">L'IA propose, vous décidez : rien n'est modifié sans votre clic sur « Accepter ». Pour « Réécrire », « Corriger », « Développer », « Simplifier » et « Lisibilité », sélectionnez d'abord le passage dans l'article.</p>
-            <div class="be-ai-actions" data-ai-actions>
-              <% [["titre", "Améliorer le titre"], ["reecrire", "Réécrire"], ["corriger", "Corriger"], ["resumer", "Résumer"], ["developper", "Développer"], ["simplifier", "Simplifier"], ["lisibilite", "Lisibilité"], ["faq", "Générer une FAQ"], ["meta", "Meta description"], ["mots_cles", "Mots-clés"], ["liens", "Liens internes"]].forEach(([k, label]) => { %>
-                <button type="button" class="btn btn-outline btn-sm" data-ai="<%= k %>" <%= aiConfigured ? "" : "disabled" %>><%= label %></button>
-              <% }) %>
-            </div>
-            <div class="be-ai-result" data-ai-result aria-live="polite"></div>
-          </section>
+              <div class="be-ai-result" data-ai-result aria-live="polite"></div>
+            </div></div>
+
+            <%- panel("revisions", 'Révisions <span class="wp-count" data-revision-count></span>', false) %>
+              <ul class="be-versions" data-versions></ul>
+            </div></div>
+
+            <%- panel("checklist", "Avant de publier", false) %>
+              <ul class="be-checklist" data-checklist></ul>
+              <input type="hidden" name="reviewed" value="0"><label class="wp-checkbox"><input type="checkbox" name="reviewed" value="1" <%= checked('reviewed', 0) %> data-reviewed> J'ai relu l'article</label>
+            </div></div>
+          </div>
+
+          <%# ===== Onglet Bloc ===== %>
+          <div role="tabpanel" id="panel-bloc" aria-labelledby="tab-bloc" data-sidebar-panel="bloc" hidden>
+            <div data-block-inspector><p class="wp-help wp-empty-inspector">Aucun bloc sélectionné.</p></div>
+          </div>
         </aside>
       </div>
+
+      <footer class="wp-footer" aria-label="Fil du bloc"><ol class="wp-breadcrumb" data-breadcrumb><li>Document</li></ol><span class="wp-footer-stats" data-stats></span></footer>
     </form>
   </div>
   <script type="application/json" id="be-data"><%- json %></script>
   <script src="<%= asset('/js/blog-editor.js') %>" defer></script>
-
-<%- include("../partials/footer") %>
+</body>
+</html>

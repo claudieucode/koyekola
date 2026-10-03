@@ -43,7 +43,7 @@ function moveBlock(state, dispatch, dir) {
 
 export const BlockHandle = Extension.create({
   name: "blockHandle",
-  addOptions() { return { onPlus: () => {} }; },
+  addOptions() { return { onPlus: () => {}, visual: true }; },
   addKeyboardShortcuts() {
     return {
       "Alt-ArrowUp": () => moveBlock(this.editor.state, this.editor.view.dispatch, -1),
@@ -52,6 +52,7 @@ export const BlockHandle = Extension.create({
   },
   addProseMirrorPlugins() {
     const options = this.options;
+    if (!options.visual) return []; // interface façon Gutenberg : la poignée vit dans la barre d'outils du bloc
     let current = null; // position du bloc survolé
     return [
       new Plugin({
@@ -133,4 +134,16 @@ export const BlockHandle = Extension.create({
   },
 });
 
-export { moveBlock };
+// Glisser un bloc depuis un bouton extérieur (poignée de la barre d'outils du bloc) : pos = début du bloc à déplacer
+function startBlockDrag(view, pos, event) {
+  if (!view.state.doc.nodeAt(pos)) return;
+  view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, pos)));
+  const slice = view.state.selection.content();
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", " ");
+  const dom = view.nodeDOM(pos);
+  if (dom instanceof HTMLElement) event.dataTransfer.setDragImage(dom, 12, 12);
+  view.dragging = { slice, move: true };
+}
+
+export { moveBlock, startBlockDrag, topLevelPos };

@@ -9,7 +9,8 @@ const { renderArticle } = require("../utils/articleMarkdown");
 const { renderBlogHtml, blogPlainText } = require("../utils/blogHtml");
 const { norm } = require("../utils/seoAnalyzer");
 
-const STATUSES = { draft: "Brouillon", review: "En relecture", scheduled: "Programmé", published: "Publié", archived: "Archivé" };
+// Libellés de l'éditeur de blocs de WordPress (Gutenberg), en français
+const STATUSES = { draft: "Brouillon", review: "En attente de relecture", scheduled: "Planifié", published: "Publié", archived: "Archivé" };
 const MAX_REVISIONS = 50;
 
 const MAX_TAGS = 10;

@@ -242,7 +242,7 @@ describe("éditeur d'article", () => {
     for (const id of ["post-category", "post-tags-input", "post-author", "post-cover-alt", "post-minutes", "post-slug", "post-keyword", "post-canonical", "post-og-title", "post-og-desc", "post-og-image"]) {
       assert.match(form, new RegExp(`<label[^>]+for="${id}"`), id);
     }
-    assert.match(form, /data-toolbar/);
+    assert.match(form, /data-block-toolbar/);
     assert.match(form, /src="\/js\/blog-editor\.js(\?v=[^"]*)?" defer/);
   });
   test("refus clairs : temps de lecture hors bornes, adresse canonique non https, auteur inconnu", async () => {
