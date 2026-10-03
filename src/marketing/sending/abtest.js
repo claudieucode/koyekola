@@ -11,9 +11,10 @@ const { audit } = require("../audience/shared");
 const { enqueue } = require("../queue/jobs");
 const templates = require("../templates");
 const { requireCampaign } = require("./campaigns");
+const { variantRevenue } = require("../revenue");
 
 const LETTERS = ["A", "B", "C"];
-const METRICS = { clicks: "Taux de clics", opens: "Taux d'ouvertures", manual: "Choix manuel" };
+const METRICS = { clicks: "Taux de clics", opens: "Taux d'ouvertures", revenue: "Revenus générés", manual: "Choix manuel" };
 const MIN_PERCENT = 10;
 const MAX_PERCENT = 50;
 const MIN_WAIT = 60; // minutes
@@ -99,6 +100,7 @@ function abPreflight(ctx, campaign, { sendable, error }) {
     if (!ready.ready) error("ab_template", `Test A/B — version ${LETTERS[i]} : le modèle « ${template.name} » n'est pas prêt (${ready.errors.map((e) => e.message).join(" ")}).`);
   });
   if (campaign.ab_metric === "opens" && !campaign.track_opens) error("ab_tracking", "Test A/B sur les ouvertures : activez le suivi des ouvertures (Paramètres et suivi), sinon aucun gagnant ne peut être désigné.");
+  if (campaign.ab_metric === "revenue" && !campaign.track_clicks) error("ab_tracking", "Test A/B sur les revenus : activez le suivi des clics (Paramètres et suivi) : un achat est attribué au dernier e-mail cliqué.");
   if (campaign.ab_metric === "clicks" && !campaign.track_clicks) error("ab_tracking", "Test A/B sur les clics : activez le suivi des clics (Paramètres et suivi), sinon aucun gagnant ne peut être désigné.");
   if (typeof sendable === "number" && sendable > 0) {
     const size = testSize(sendable, campaign.ab_test_percent, variants.length);
@@ -149,19 +151,22 @@ function variantResults(ctx, campaign) {
               FROM mk_messages WHERE campaign_id = ? AND organization_id = ? AND sent_at IS NOT NULL AND variant IS NOT NULL GROUP BY variant`)
     .all(campaign.id, ctx.organizationId);
   const pct = (n, d) => (d > 0 ? Math.round((n / d) * 10000) / 100 : 0);
+  const money = variantRevenue(ctx, campaign.id);
   return variants.map((v, i) => {
     const r = rows.find((x) => x.variant === i) || { sent: 0, opens: 0, clicks: 0, delivered: 0, unsubscribed: 0 };
+    const rev = money.get(i) || { orders: 0, cents: 0 };
     const template = templates.getTemplate(ctx, templateIdOf(campaign, v));
     return {
       index: i, letter: LETTERS[i], subject: v.subject, templateName: template ? template.name : "(supprimé)",
       sent: r.sent, opens: r.opens, clicks: r.clicks, delivered: r.delivered, unsubscribed: r.unsubscribed,
-      openRate: pct(r.opens, r.sent), clickRate: pct(r.clicks, r.sent), winner: campaign.ab_winner === i,
+      openRate: pct(r.opens, r.sent), clickRate: pct(r.clicks, r.sent), revenueCents: rev.cents, orders: rev.orders, winner: campaign.ab_winner === i,
     };
   });
 }
 
-// Meilleure version : taux du critère, puis l'autre taux, puis la première (A) — jamais au hasard
+// Meilleure version : critère choisi, puis taux de clics (ou d'ouvertures), puis la première (A) — jamais au hasard
 function pickWinner(results, metric) {
+  if (metric === "revenue") return [...results].sort((a, b) => b.revenueCents - a.revenueCents || b.clickRate - a.clickRate || a.index - b.index)[0].index;
   const main = metric === "opens" ? "openRate" : "clickRate";
   const other = main === "openRate" ? "clickRate" : "openRate";
   return [...results].sort((a, b) => b[main] - a[main] || b[other] - a[other] || a.index - b.index)[0].index;

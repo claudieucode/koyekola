@@ -1,0 +1,86 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const o = overview;
+  const periodLabel = { 30: "30 derniers jours", 90: "90 derniers jours", 365: "12 derniers mois" };
+  const when = (ms) => new Date(ms).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "UTC" });
+%>
+    <div class="mk-head"><h1>Revenus</h1></div>
+    <p class="mk-lead">Les ventes de formations générées par vos e-mails. Comme chez Mailchimp, une commande est attribuée au <strong>dernier e-mail cliqué</strong> par l'acheteur dans les <strong><%= o.windowDays %> jour<%= o.windowDays > 1 ? "s" : "" %></strong> qui précèdent son achat.</p>
+
+    <nav class="mk-tabs" aria-label="Période">
+      <% o.periods.forEach((d) => { %><a class="mk-tab" href="/marketing/revenus?periode=<%= d %>"<%- o.period === d ? ' aria-current="page"' : "" %>><%= periodLabel[d] %></a><% }) %>
+    </nav>
+
+    <div class="mk-stats mk-stats-3">
+      <div class="mk-stat"><span class="mk-stat-label">Revenus des e-mails</span><span class="mk-stat-value"><%= mkh.euros(o.totals.cents) %></span><span class="mk-stat-hint"><%= mkh.fmt(o.totals.orders) %> commande<%= o.totals.orders > 1 ? "s" : "" %> · <%= mkh.fmt(o.totals.buyers) %> acheteur<%= o.totals.buyers > 1 ? "s" : "" %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Part des ventes du site</span><span class="mk-stat-value"><%= o.share === null ? "—" : String(o.share).replace(".", ",") + " %" %></span><span class="mk-stat-hint"><%= o.sales ? "sur " + mkh.euros(o.sales.cents) + " de ventes (" + mkh.fmt(o.sales.orders) + " commande" + (o.sales.orders > 1 ? "s" : "") + ")" : "ventes du site indisponibles" %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Panier moyen (e-mails)</span><span class="mk-stat-value"><%= mkh.euros(o.totals.average) %></span><span class="mk-stat-hint">par commande attribuée</span></div>
+    </div>
+
+    <% if (!o.totals.orders) { %>
+      <div class="mk-empty">
+        <%- icon("coin", { size: 32 }) %>
+        <h2>Aucune vente attribuée sur cette période</h2>
+        <p>Dès qu'une personne achète une formation après avoir cliqué dans l'un de vos e-mails (campagne ou automatisation), la vente apparaît ici, avec la campagne qui l'a déclenchée.</p>
+        <% if (mk.can("campaigns.write")) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/campagnes/nouvelle">Créer une campagne</a></div><% } %>
+      </div>
+    <% } else { %>
+      <section class="mk-panel" aria-labelledby="rev-camp">
+        <h2 id="rev-camp">Par campagne</h2>
+        <% if (!o.byCampaign.length) { %><p class="field-hint">Aucune vente attribuée à une campagne sur cette période.</p><% } else { %>
+          <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Revenus par campagne</caption>
+            <thead><tr><th scope="col">Campagne</th><th scope="col" class="mk-num">Commandes</th><th scope="col" class="mk-num">Revenus</th><th scope="col" class="mk-num">Par destinataire</th></tr></thead>
+            <tbody><% o.byCampaign.forEach((r) => { %><tr>
+              <td data-label="Campagne"><a href="/marketing/campagnes/<%= r.id %>"><%= r.name %></a></td>
+              <td class="mk-num" data-label="Commandes"><%= mkh.fmt(r.orders) %></td>
+              <td class="mk-num" data-label="Revenus"><strong><%= mkh.euros(r.cents) %></strong></td>
+              <td class="mk-num" data-label="Par destinataire"><%= mkh.euros(r.perRecipient) %></td>
+            </tr><% }) %></tbody></table></div>
+        <% } %>
+      </section>
+
+      <section class="mk-panel" aria-labelledby="rev-auto">
+        <h2 id="rev-auto">Par automatisation</h2>
+        <% if (!o.byAutomation.length) { %><p class="field-hint">Aucune vente attribuée à une automatisation sur cette période.</p><% } else { %>
+          <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Revenus par automatisation</caption>
+            <thead><tr><th scope="col">Automatisation</th><th scope="col" class="mk-num">Commandes</th><th scope="col" class="mk-num">Revenus</th></tr></thead>
+            <tbody><% o.byAutomation.forEach((r) => { %><tr>
+              <td data-label="Automatisation"><a href="/marketing/automatisations/<%= r.id %>"><%= r.name %></a></td>
+              <td class="mk-num" data-label="Commandes"><%= mkh.fmt(r.orders) %></td>
+              <td class="mk-num" data-label="Revenus"><strong><%= mkh.euros(r.cents) %></strong></td>
+            </tr><% }) %></tbody></table></div>
+        <% } %>
+      </section>
+
+      <section class="mk-panel" aria-labelledby="rev-recent">
+        <h2 id="rev-recent">Dernières ventes attribuées</h2>
+        <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Dernières commandes attribuées à un e-mail</caption>
+          <thead><tr><th scope="col">Acheteur</th><th scope="col">E-mail à l'origine</th><th scope="col" class="mk-num">Montant</th><th scope="col">Clic</th><th scope="col">Achat (UTC)</th></tr></thead>
+          <tbody><% o.recent.forEach((r) => { %><tr>
+            <td data-label="Acheteur"><%= r.email ? mkh.maskEmail(r.email) : "(contact supprimé)" %></td>
+            <td data-label="E-mail à l'origine"><% if (r.automation_id) { %>Automatisation « <%= r.automation_name || "(supprimée)" %> »<% } else if (r.campaign_name) { %><a href="/marketing/campagnes/<%= r.campaign_id %>"><%= r.campaign_name %></a><% } else { %>(campagne supprimée)<% } %></td>
+            <td class="mk-num" data-label="Montant"><strong><%= mkh.euros(r.amount_cents) %></strong></td>
+            <td data-label="Clic"><%= when(r.clicked_at) %></td>
+            <td data-label="Achat"><%= when(r.ordered_at) %></td>
+          </tr><% }) %></tbody></table></div>
+      </section>
+    <% } %>
+
+    <section class="mk-panel" id="reglage" aria-labelledby="rev-rule">
+      <h2 id="rev-rule">Règle d'attribution</h2>
+      <ul class="mk-status-list">
+        <li class="field-hint">Seuls les clics de vraies personnes comptent : ceux des robots (antivirus, aperçus de liens) sont exclus.</li>
+        <li class="field-hint">Les ouvertures ne comptent pas : elles sont trop peu fiables (Apple Mail les simule) pour y rattacher une vente.</li>
+        <li class="field-hint">L'acheteur est reconnu par l'adresse e-mail de son compte : elle doit être celle qui a reçu l'e-mail.</li>
+        <li class="field-hint">Une commande n'est attribuée qu'une seule fois. Les formations gratuites ne comptent pas.</li>
+      </ul>
+      <% if (canSet) { %>
+        <form action="/marketing/revenus/fenetre" method="post" class="mk-inline-form">
+          <label for="r-days">Fenêtre d'attribution (jours)</label>
+          <input id="r-days" type="number" name="days" min="<%= limits.min %>" max="<%= limits.max %>" value="<%= o.windowDays %>" required inputmode="numeric">
+          <button type="submit" class="btn btn-outline btn-sm">Enregistrer</button>
+        </form>
+        <p class="field-hint">De <%= limits.min %> à <%= limits.max %> jours. Un changement s'applique aux prochaines commandes.</p>
+      <% } %>
+    </section>
+<%- include("partials/bottom") %>

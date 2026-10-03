@@ -50,6 +50,8 @@ const EVENT_SOURCES = { lms: "Site KOYEKOLA", marketing: "Marketing", api: "API"
 const eventSourceLabel = (source) => EVENT_SOURCES[source] ?? String(source || "—");
 
 const fmt = (n) => Number(n || 0).toLocaleString("fr-FR");
+// Montant en centimes → « 1 234,50 € » (null → « — »)
+const euros = (cents) => (cents === null || cents === undefined ? "—" : `${(Number(cents) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`);
 
 // Adresse affichée sur les pages publiques : « a***@exemple.fr » (la page ne doit pas révéler l'adresse complète)
 function maskEmail(email) {
@@ -75,4 +77,4 @@ const campaignStatus = (status) => CAMPAIGN_STATUS[status] ?? { label: String(st
 
 const { WORKER_DETAIL, workerHuman } = require("../workerNotice");
 
-module.exports = { WORKER_DETAIL, workerHuman, buildNav, barChart, columnChart, rate, campaignStatus, contactStatus, esc, statusLabel, statusClass, reasonLabel, sourceLabel, fdate, fdatetime, eventLabel, eventSourceLabel, fmt, maskEmail, fullName, STATUS };
+module.exports = { WORKER_DETAIL, workerHuman, buildNav, barChart, columnChart, rate, campaignStatus, contactStatus, esc, statusLabel, statusClass, reasonLabel, sourceLabel, fdate, fdatetime, eventLabel, eventSourceLabel, fmt, euros, maskEmail, fullName, STATUS };

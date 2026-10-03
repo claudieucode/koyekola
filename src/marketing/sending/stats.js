@@ -4,6 +4,7 @@ const { MarketingError } = require("../errors");
 const { checkCtx } = require("../audience/shared");
 const { requireCampaign } = require("./campaigns");
 const { abSummary } = require("./abtest");
+const { campaignRevenue, getWindowDays } = require("../revenue");
 
 const BOUNCE_ALERT = 2; // %
 const COMPLAINT_ALERT = 0.1; // %
@@ -37,7 +38,9 @@ function campaignStats(ctx, id) {
     "Clics et ouvertures « uniques » : une fois par destinataire. Les clics de robots (antivirus, aperçus de liens) sont enregistrés mais exclus de ces chiffres.",
   ];
   if (c.sent_count > 0 && c.delivered_count === 0 && c.bounced_count === 0) notes.push("Aucun retour de livraison reçu : les rebonds différés ne sont connus qu'avec un fournisseur à webhooks (Resend) correctement configuré.");
-  return { campaign: { id: c.id, name: c.name, status: c.status }, counts, rates, links, alerts, notes, ab: abSummary(ctx, c) };
+  const money = campaignRevenue(ctx, c.id);
+  const revenue = { ...money, perRecipient: c.sent_count > 0 ? Math.round(money.cents / c.sent_count) : null, windowDays: getWindowDays(ctx) };
+  return { campaign: { id: c.id, name: c.name, status: c.status }, counts, rates, links, alerts, notes, revenue, ab: abSummary(ctx, c) };
 }
 
 module.exports = { campaignStats, MarketingError };

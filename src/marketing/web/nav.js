@@ -42,7 +42,7 @@ const ITEMS = [
   live("automations", "automations", "Automatisations", "/marketing/automatisations", "zap", "automations.read", { label: "Nouveau scénario", href: "/marketing/automatisations#nouveau", permission: "automations.write" }),
 
   live("analytics", "analytics", "Analytics", "/marketing/analytics", "activity", "analytics.read"),
-  soon("analytics", "revenue", "Revenus", "/marketing/revenus", "coin", "R7"),
+  live("analytics", "revenue", "Revenus", "/marketing/revenus", "coin", "analytics.read"),
 
 
   live("integrations", "events", "KOYEKOLA", "/marketing/evenements", "plug", "contacts.read"),

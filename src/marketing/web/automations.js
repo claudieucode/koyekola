@@ -62,7 +62,7 @@ module.exports = ({ db }) => {
     res.render("marketing/automation", {
       title: a.name, active: "automations", a, STATUS, RUN_STATUS, STEP_LABELS: auto.STEP_LABELS, data: safeJson(payload), locked,
       check: a.status === "active" ? null : auto.automationPreflight(ctx, a.id, { workerOn: workerOn(), smtpAvailable: Boolean(process.env.SMTP_HOST) }),
-      stats: auto.automationStats(ctx, a.id), runs: auto.listRuns(ctx, a.id, { limit: 50 }),
+      stats: auto.automationStats(ctx, a.id), revenue: require("../revenue").automationRevenue(ctx, a.id), runs: auto.listRuns(ctx, a.id, { limit: 50 }),
     });
   });
 

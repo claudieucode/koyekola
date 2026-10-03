@@ -337,13 +337,14 @@
               <p><strong>Version <%= a.winnerLetter %> gagnante</strong> (<%= a.decidedBy === "manual" ? "choisie par l'équipe" : "choisie automatiquement : " + a.metricLabel.toLowerCase() %>) : envoyée au reste de la cible.</p>
             <% } %>
             <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Résultats par version</caption>
-              <thead><tr><th scope="col">Version</th><th scope="col">Objet</th><th scope="col">Contenu</th><th scope="col" class="mk-num">Envoyés</th><th scope="col" class="mk-num">Clics uniques</th><th scope="col" class="mk-num">Ouvertures (indicatif)</th><% if (canChoose) { %><th scope="col"><span class="sr-only">Choisir</span></th><% } %></tr></thead>
+              <thead><tr><th scope="col">Version</th><th scope="col">Objet</th><th scope="col">Contenu</th><th scope="col" class="mk-num">Envoyés</th><th scope="col" class="mk-num">Clics uniques</th><th scope="col" class="mk-num">Ouvertures (indicatif)</th><th scope="col" class="mk-num">Revenus</th><% if (canChoose) { %><th scope="col"><span class="sr-only">Choisir</span></th><% } %></tr></thead>
               <tbody><% a.results.forEach((r) => { %><tr<%- r.winner ? ' class="mk-ab-winner"' : "" %>>
                 <th scope="row"><%= r.letter %><% if (r.winner) { %> <span class="mk-status mk-status-ok">Gagnante</span><% } %></th>
                 <td><%= r.subject %></td><td><%= r.templateName %></td>
                 <td class="mk-num"><%= mkh.fmt(r.sent) %></td>
                 <td class="mk-num"><strong><%= r.clickRate %> %</strong><span class="mk-sub"><%= mkh.fmt(r.clicks) %></span></td>
                 <td class="mk-num"><%= r.openRate %> %<span class="mk-sub"><%= mkh.fmt(r.opens) %></span></td>
+                <td class="mk-num"><strong><%= mkh.euros(r.revenueCents) %></strong><span class="mk-sub"><%= mkh.fmt(r.orders) %> commande<%= r.orders > 1 ? "s" : "" %></span></td>
                 <% if (canChoose) { %><td><form action="/marketing/campagnes/<%= campaign.id %>/gagnant" method="post"><input type="hidden" name="variant" value="<%= r.index %>"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="La version <%= r.letter %> (« <%= r.subject %> ») partira aux <%= a.held %> contacts restants. Ce choix est définitif." data-mk-confirm-title="Choisir la version <%= r.letter %> ?" data-mk-confirm-ok="Envoyer la version <%= r.letter %>">Choisir <%= r.letter %></button></form></td><% } %>
               </tr><% }) %></tbody></table></div>
             <p class="field-hint">Taux calculés sur les messages envoyés de chaque version. Avec peu de destinataires, l'écart entre versions peut être dû au hasard.</p>
@@ -359,6 +360,7 @@
             <div class="mk-stat"><span class="mk-stat-label">Ouvertures détectées (<%= mkh.fmt(stats.counts.uniqueOpens) %>) — indicatif</span><span class="mk-stat-value"><%= stats.rates.open %> %</span></div>
             <div class="mk-stat"><span class="mk-stat-label">Rebonds (<%= mkh.fmt(stats.counts.bounced) %>)</span><span class="mk-stat-value"><%= stats.rates.bounce %> %</span></div>
             <div class="mk-stat"><span class="mk-stat-label">Désinscriptions (<%= mkh.fmt(stats.counts.unsubscribed) %>)</span><span class="mk-stat-value"><%= stats.rates.unsubscribe %> %</span></div>
+            <a class="mk-stat" href="/marketing/revenus"><span class="mk-stat-label">Revenus générés (<%= mkh.fmt(stats.revenue.orders) %> commande<%= stats.revenue.orders > 1 ? "s" : "" %>)</span><span class="mk-stat-value"><%= mkh.euros(stats.revenue.cents) %></span><span class="mk-stat-hint"><%= stats.revenue.perRecipient === null ? "—" : mkh.euros(stats.revenue.perRecipient) + " par destinataire" %> · achats dans les <%= stats.revenue.windowDays %> j suivant un clic</span></a>
           </div>
           <p class="field-hint">Taux calculés sur les messages envoyés. Plaintes : <%= stats.counts.complained %> (<%= stats.rates.complaint %> %).</p>
           <% stats.alerts.forEach((a) => { %><p class="mk-warn is-error" role="alert"><%= a.message %></p><% }) %>

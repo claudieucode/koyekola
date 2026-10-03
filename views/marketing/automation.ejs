@@ -74,6 +74,7 @@
         <div class="dashboard-stat"><div class="value"><%= mkh.fmt(stats.runs.exited) %></div><div class="label">Sortis (désinscrits, condition…)</div></div>
         <div class="dashboard-stat"><div class="value"><%= mkh.fmt(stats.emails.sent) %></div><div class="label">E-mails envoyés</div></div>
         <div class="dashboard-stat"><div class="value"><%= mkh.fmt(stats.emails.uniqueClicks) %></div><div class="label">Clics uniques</div></div>
+        <% if (typeof revenue !== "undefined" && revenue) { %><div class="dashboard-stat"><div class="value"><%= mkh.euros(revenue.cents) %></div><div class="label">Revenus générés (<%= mkh.fmt(revenue.orders) %> commande<%= revenue.orders > 1 ? "s" : "" %>)</div></div><% } %>
       </div>
       <% const emailStepStats = stats.steps.filter((s) => s.type === "email"); %>
       <% if (emailStepStats.length) { %>
