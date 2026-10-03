@@ -172,6 +172,18 @@ describe("SEO CORE : réglages, contenus, HTML public", () => {
     }
   });
 
+  test("contrôle des pages : si la boucle locale est indisponible, lecture par l'adresse publique (jamais de faux « injoignable »)", async () => {
+    const { inspect } = require("../src/seo/inspect");
+    const saved = { port: process.env.PORT, site: process.env.SITE_URL };
+    process.env.PORT = "1"; // port fermé : boucle locale indisponible
+    process.env.SITE_URL = srv.base;
+    try {
+      const r = await inspect("/catalogue");
+      assert.equal(r.status, 200);
+      assert.match(r.page.title, /Toutes les formations/);
+    } finally { process.env.PORT = saved.port; if (saved.site === undefined) delete process.env.SITE_URL; else process.env.SITE_URL = saved.site; }
+  });
+
   test("liste des contenus : tous les contenus publics, avec leur adresse", async () => {
     const html = (await prof.get("/formateur/seo/contenus")).text;
     for (const path of ["/", "/catalogue", `/cours/${course.slug}`, "/categorie/test", "/blog/guide", "/blog/categorie/bureautique", "/blog/etiquette/excel"]) assert.match(html, new RegExp(`href="${path.replace(/[/.]/g, "\\$&")}"`), path);

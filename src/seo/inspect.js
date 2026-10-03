@@ -9,8 +9,34 @@ const schema = require("./schema");
 const TIMEOUT_MS = 10000;
 const MAX_BYTES = 3 * 1024 * 1024;
 
-// Le serveur s'interroge lui-même en local (boucle locale) : rapide, sans dépendre du DNS ni du certificat
-function fetchLocal(path, { host = "localhost" } = {}) {
+// Le serveur s'interroge lui-même en local (boucle locale) : rapide, sans dépendre du DNS ni du certificat.
+// Si la boucle locale est indisponible chez l'hébergeur, repli automatique sur l'adresse publique (SITE_URL).
+let mode = "local";
+async function fetchLocal(path, opts = {}) {
+  if (mode === "local") {
+    const r = await fetchLoopback(path, opts);
+    if (r.ok || !process.env.SITE_URL || !/injoignable/.test(r.error || "")) return r;
+    mode = "public";
+  }
+  return fetchPublic(path);
+}
+async function fetchPublic(path) {
+  const base = String(process.env.SITE_URL || "").replace(/\/+$/, "");
+  const started = Date.now();
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(base + path, { redirect: "manual", signal: ctrl.signal, headers: { "User-Agent": "KOLAKISA-SEO-Inspector/1 (+robot interne)", Accept: "text/html" } });
+    const body = (await res.text()).slice(0, MAX_BYTES);
+    const headers = Object.fromEntries(res.headers.entries());
+    let location = res.headers.get("location");
+    if (location && location.startsWith(base)) location = location.slice(base.length) || "/";
+    return { ok: true, status: res.status, headers, location, body, ms: Date.now() - started };
+  } catch (e) {
+    return { ok: false, status: 0, error: e.name === "AbortError" ? "Délai dépassé (10 s)" : "Page injoignable", ms: Date.now() - started };
+  } finally { clearTimeout(timer); }
+}
+function fetchLoopback(path, { host = "localhost" } = {}) {
   const port = Number(process.env.PORT || 3002);
   return new Promise((resolve) => {
     const started = Date.now();

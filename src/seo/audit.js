@@ -85,6 +85,9 @@ async function crawl({ host, onProgress }) {
   const queue = [...new Set(["/", ...inventory.map((e) => e.path)])];
   const seen = new Set();
   const pages = new Map();
+  // Garde-fou : si le site ne peut pas lire sa propre page d'accueil, l'audit s'arrête (aucun faux problème)
+  const first = await inspect("/", { host });
+  if (!first.ok || first.status === 0) throw new Error(`le serveur n'a pas pu lire ses propres pages (${first.error || "aucune réponse"}). Vérifiez la variable SITE_URL.`);
   while (queue.length && pages.size < MAX_PAGES) {
     const path = queue.shift();
     if (seen.has(path) || isPrivate(path)) continue;
