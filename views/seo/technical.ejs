@@ -1,0 +1,28 @@
+<%- include("../partials/header", { title: "SEO · Robots et sitemap" }) %>
+<div class="container-wide seo-page">
+  <%- include("_nav", { active: "technical" }) %>
+  <section class="content-card">
+    <h2>robots.txt</h2>
+    <p class="field-hint">Contenu publié à l'adresse <a href="/robots.txt" target="_blank" rel="noopener">/robots.txt</a>. Les règles supplémentaires se modifient dans <a href="/formateur/seo/reglages#seo-robots_custom">Réglages</a>.</p>
+    <pre class="seo-pre"><%= robotsText %></pre>
+    <% robotsProblems.forEach((p) => { %><p class="<%= p.level === "info" ? "field-hint" : "form-error" %>"><%= p.message %></p><% }) %>
+    <% if (conflicts.length) { %><div class="form-error" role="alert"><strong>Conflit : <%= conflicts.length %> adresse(s) du plan du site interdite(s) à Google par robots.txt</strong><ul><% conflicts.slice(0, 50).forEach((c) => { %><li><%= c %></li><% }) %></ul></div>
+    <% } else { %><p class="form-success">Aucun conflit : toutes les adresses du plan du site sont autorisées à Google.</p><% } %>
+  </section>
+  <section class="content-card">
+    <h2>Plan du site (<%= included.length %> adresses)</h2>
+    <p class="field-hint">Publié à l'adresse <a href="/sitemap.xml" target="_blank" rel="noopener">/sitemap.xml</a>, construit à chaque demande depuis la base : contenus publiés et indexables uniquement.</p>
+    <div class="seo-table-wrap"><table class="seo-table">
+      <thead><tr><th scope="col">Adresse</th><th scope="col">Type</th><th scope="col">Modifié le</th><th scope="col">Images</th></tr></thead>
+      <tbody><% included.forEach((e) => { %><tr><td><a href="<%= e.path %>" target="_blank" rel="noopener"><%= e.path %></a></td><td><%= e.type %></td><td><%= e.lastmod || "—" %></td><td><%= (e.images || []).length %></td></tr><% }) %></tbody>
+    </table></div>
+  </section>
+  <section class="content-card">
+    <h2>Exclues du plan du site (<%= excluded.length %>)</h2>
+    <% if (!excluded.length) { %><p>Aucune adresse publique exclue.</p><% } else { %>
+    <div class="seo-table-wrap"><table class="seo-table"><thead><tr><th scope="col">Adresse</th><th scope="col">Type</th><th scope="col">Raison</th></tr></thead>
+      <tbody><% excluded.forEach((e) => { %><tr><td><%= e.path %></td><td><%= e.type %></td><td><%= e.reason %></td></tr><% }) %></tbody></table></div>
+    <% } %>
+  </section>
+</div>
+<%- include("../partials/footer") %>

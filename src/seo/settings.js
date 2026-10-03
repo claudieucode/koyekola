@@ -38,9 +38,10 @@ const FIELDS = {
 
   index_blog_tags: { group: "indexing", label: "Indexer les pages d'étiquettes", type: "bool", default: false, help: "Non conseillé : elles reprennent les mêmes articles que les catégories. Leurs liens sont suivis dans tous les cas." },
   index_authors: { group: "indexing", label: "Indexer les pages d'auteurs", type: "bool", default: false, help: "Utile seulement s'il y a plusieurs auteurs." },
+  robots_custom: { group: "robots", label: "Règles robots.txt supplémentaires", type: "multiline", max: 4000, default: "", help: "Ajoutées après les règles du site (espaces privés toujours interdits). Exemple : « User-agent: GPTBot » puis « Disallow: / » pour refuser un robot d'IA. Vérifiées à l'enregistrement." },
   publish_guard: { group: "indexing", label: "Contrôle avant publication", type: "choice", choices: ["warn", "block_critical"], labels: { warn: "Avertir seulement", block_critical: "Bloquer en cas d'erreur critique" }, default: "warn" },
 };
-const GROUPS = { site: "Site", home: "Page d'accueil", organization: "Organisation (données structurées)", templates: "Modèles de titres et descriptions", indexing: "Indexation et publication" };
+const GROUPS = { site: "Site", home: "Page d'accueil", organization: "Organisation (données structurées)", templates: "Modèles de titres et descriptions", indexing: "Indexation et publication", robots: "robots.txt" };
 
 let cache = null;
 function all() {
@@ -68,6 +69,12 @@ function validate(key, raw) {
     const bad = list.find((u) => !HTTPS_URL.test(u));
     if (bad) return { error: `${f.label} : « ${bad.slice(0, 60)} » n'est pas une adresse https valide.` };
     return { value: [...new Set(list)] };
+  }
+  if (f.type === "multiline") {
+    const v = String(raw ?? "").replace(/\r\n?/g, "\n").split("\n").map((l) => l.trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    if (v.length > f.max) return { error: `${f.label} : ${f.max} caractères au plus.` };
+    if (key === "robots_custom") { const problems = require("./robots").check(v).filter((x) => x.level === "error"); if (problems.length) return { error: `${f.label} : ${problems.map((x) => x.message).join(" ")}` }; }
+    return { value: v };
   }
   const value = String(raw ?? "").replace(/\s+/g, " ").trim();
   if (f.type === "choice") return f.choices.includes(String(raw)) ? { value: String(raw) } : { error: `${f.label} : choix invalide.` };

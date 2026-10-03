@@ -60,7 +60,8 @@ describe("robots.txt et sitemap.xml", () => {
     assert.equal(r.status, 200);
     assert.match(r.headers.get("content-type"), /xml/);
     assert.match(r.text, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
-    assert.match(r.text, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/);
+    assert.match(r.text, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9"( xmlns:image="http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1")?>/);
+    assert.match(r.text, /<image:image><image:loc>[^<]+\/uploads\/thumbnails\/[^<]+<\/image:loc><\/image:image>/, "image réelle de la formation");
     for (const path of ["/", "/catalogue", `/cours/${course.slug}`, "/categorie/marketing-digital"]) {
       assert.match(r.text, new RegExp(`<loc>${srv.base.replace(/\./g, "\\.")}${path.replace(/\//g, "\\/")}</loc>`), path);
     }

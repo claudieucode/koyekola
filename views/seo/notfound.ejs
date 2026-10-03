@@ -1,0 +1,37 @@
+<%- include("../partials/header", { title: "SEO · Erreurs 404" }) %>
+<div class="container-wide seo-page">
+  <%- include("_nav", { active: "notfound" }) %>
+  <section class="content-card">
+    <h2>Erreurs 404 (pages introuvables)</h2>
+    <p class="field-hint">Enregistrées réellement à chaque visite d'une adresse inexistante depuis la mise en place du journal. Robots repérés à leur signature (navigateur). Aucune adresse IP n'est conservée.</p>
+    <ul class="seo-status">
+      <li><span>Adresses introuvables</span><strong><%= stats.urls %></strong></li>
+      <li><span>Visites de personnes</span><strong><%= stats.human %></strong></li>
+      <li><span>Visites de robots</span><strong><%= stats.bot %></strong></li>
+    </ul>
+    <form method="get" class="seo-filters" role="search">
+      <label class="sr-only" for="nf-f">Filtre</label>
+      <select id="nf-f" name="filtre"><% [["all", "Toutes"], ["human", "Vues par des personnes"], ["bot", "Seulement des robots"], ["ignored", "Ignorées"]].forEach(([k, l]) => { %><option value="<%= k %>" <%= k === filter ? "selected" : "" %>><%= l %></option><% }) %></select>
+      <label class="sr-only" for="nf-q">Rechercher</label><input type="search" id="nf-q" name="q" value="<%= q %>" placeholder="Adresse…"><button class="btn btn-outline btn-sm">Filtrer</button>
+    </form>
+    <% if (!list.length) { %><p>Aucune erreur 404 enregistrée<%= filter !== "all" || q ? " pour ce filtre" : "" %>.</p><% } else { %>
+    <div class="seo-table-wrap"><table class="seo-table">
+      <thead><tr><th scope="col">Adresse</th><th scope="col">Personnes</th><th scope="col">Robots</th><th scope="col">Dernière fois</th><th scope="col">Venait de</th><th scope="col"></th></tr></thead>
+      <tbody>
+        <% list.forEach((r) => { %>
+          <tr>
+            <td><code><%= r.path %></code><br><span class="field-hint">depuis le <%= formatDateTime(r.first_seen) %></span></td>
+            <td><%= r.hits_human %></td><td><%= r.hits_bot %></td><td><%= formatDateTime(r.last_seen) %></td>
+            <td><%= r.last_referrer || "—" %></td>
+            <td class="seo-actions">
+              <% if (!r.ignored) { %><a class="btn btn-outline btn-sm" href="/formateur/seo/redirections?source=<%= encodeURIComponent(r.path) %>">Rediriger</a><% } %>
+              <form method="post" action="/formateur/seo/erreurs-404/action" class="inline-form"><input type="hidden" name="path" value="<%= r.path %>"><button class="btn-link" name="action" value="<%= r.ignored ? "retablir" : "ignorer" %>"><%= r.ignored ? "Rétablir" : "Ignorer" %></button> <button class="btn-link" name="action" value="supprimer">Effacer</button></form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+    <% } %>
+  </section>
+</div>
+<%- include("../partials/footer") %>

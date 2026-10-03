@@ -1774,3 +1774,12 @@ a.post-card-category:hover { text-decoration: underline; }
 .seo-serp-url { font-size: 0.78rem; color: #4d5156; overflow-wrap: anywhere; }
 .seo-serp-title { font-size: 1.15rem; color: #1a0dab; line-height: 1.3; }
 .seo-serp-desc { font-size: 0.85rem; color: #4d5156; line-height: 1.5; }
+.seo-pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface-alt); border-radius: var(--radius); padding: 14px 16px; font-size: 0.85rem; max-height: 420px; overflow: auto; }
+.seo-chain-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.seo-chain-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.seo-chain-list li.is-bad { color: var(--danger); }
+.seo-chain-list code, .seo-table code { overflow-wrap: anywhere; }
+.seo-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seo-form-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.seo-redirect-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px; align-items: end; }
+.seo-redirect-form .seo-form-actions, .seo-redirect-form .checkbox-row { grid-column: 1 / -1; }

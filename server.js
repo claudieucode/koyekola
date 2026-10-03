@@ -80,6 +80,10 @@ app.use("/uploads/thumbnails", express.static(path.join(uploadsRoot, "thumbnails
 // Vidéos et fichiers audio publiés dans les articles du blog : publics (contrairement aux vidéos des leçons, protégées)
 app.use("/uploads/blog", express.static(path.join(uploadsRoot, "blog"), { maxAge: "30d", immutable: true }));
 
+// SEO CORE : redirections gérées (exécutées avant toute page) et journal des erreurs 404
+app.use(require("./src/seo/notfound").middleware);
+app.use(require("./src/seo/redirects").middleware);
+
 // Toutes les pages générées par le site sont personnalisées (connexion, panier) : jamais gardées en cache
 app.use((req, res, next) => {
   res.setHeader("Cache-Control", "private, no-cache");

@@ -9,6 +9,10 @@ const entities = require("./entities");
 const { listChanges } = require("./store");
 const { inspect } = require("./inspect");
 const images = require("./images");
+const redirects = require("./redirects");
+const notfound = require("./notfound");
+const robots = require("./robots");
+const sitemap = require("./sitemap");
 
 const router = express.Router();
 const canManage = (user) => Boolean(user && user.role === "formateur");
@@ -100,6 +104,64 @@ router.post("/formateur/seo/contenus/:type/:key", (req, res, next) => {
 
 router.get("/formateur/seo/journal", (req, res) => {
   res.render("seo/journal", { changes: listChanges({ limit: 300 }), fieldLabels: FIELD_LABELS, labels: { ...entities.LABELS, settings: "Réglages" } });
+});
+
+// ---------- Redirections ----------
+function renderRedirects(req, res, { errors = [], form = {}, status = 200, report = null } = {}) {
+  res.status(status).render("seo/redirects", {
+    list: redirects.list({ q: String(req.query.q || "") }), q: String(req.query.q || ""), chains: redirects.chains(), errors, form,
+    saved: req.query.ok || null, report, edit: req.query.modifier ? redirects.get(Number(req.query.modifier)) : null,
+  });
+}
+router.get("/formateur/seo/redirections", (req, res) => renderRedirects(req, res, { form: { source: String(req.query.source || ""), target: "", status: 301 } }));
+router.post("/formateur/seo/redirections", (req, res) => {
+  const r = redirects.create({ source: req.body.source, target: req.body.target, status: req.body.status, note: req.body.note }, req.session.user.id);
+  if (!r.ok) return renderRedirects(req, res, { errors: r.errors, form: req.body, status: 400 });
+  notfound.remove(redirects.normalizePath(req.body.source)); // l'adresse introuvable est désormais redirigée
+  res.redirect("/formateur/seo/redirections?ok=cree");
+});
+router.post("/formateur/seo/redirections/:id(\\d+)", (req, res) => {
+  const r = redirects.update(Number(req.params.id), { source: req.body.source, target: req.body.target, status: req.body.status, note: req.body.note, enabled: req.body.enabled === "1" ? "1" : "0" }, req.session.user.id);
+  if (!r.ok) return renderRedirects(req, res, { errors: r.errors, form: req.body, status: 400 });
+  res.redirect("/formateur/seo/redirections?ok=modifiee");
+});
+router.post("/formateur/seo/redirections/:id(\\d+)/supprimer", (req, res) => {
+  redirects.remove(Number(req.params.id), req.session.user.id);
+  res.redirect("/formateur/seo/redirections?ok=supprimee");
+});
+router.post("/formateur/seo/redirections/:id(\\d+)/raccourcir", (req, res) => {
+  const r = redirects.fixChain(Number(req.params.id), req.session.user.id);
+  if (!r.ok) return renderRedirects(req, res, { errors: r.errors, status: 400 });
+  res.redirect("/formateur/seo/redirections?ok=raccourcie");
+});
+router.post("/formateur/seo/redirections/import", (req, res) => {
+  const report = redirects.importCsv(String(req.body.csv || ""), req.session.user.id);
+  renderRedirects(req, res, { report });
+});
+router.get("/formateur/seo/redirections.csv", (req, res) => {
+  res.type("text/csv; charset=utf-8").set("Content-Disposition", 'attachment; filename="redirections-kolakisa.csv"').send(`\ufeff${redirects.exportCsv()}`);
+});
+
+// ---------- Erreurs 404 ----------
+router.get("/formateur/seo/erreurs-404", (req, res) => {
+  const filter = ["all", "human", "bot", "ignored"].includes(req.query.filtre) ? req.query.filtre : "all";
+  res.render("seo/notfound", { list: notfound.list({ filter, q: String(req.query.q || "") }), stats: notfound.stats(), filter, q: String(req.query.q || ""), done: req.query.ok || null });
+});
+router.post("/formateur/seo/erreurs-404/action", (req, res) => {
+  const path = String(req.body.path || "");
+  if (req.body.action === "ignorer") notfound.setIgnored(path, true);
+  else if (req.body.action === "retablir") notfound.setIgnored(path, false);
+  else if (req.body.action === "supprimer") notfound.remove(path);
+  res.redirect("/formateur/seo/erreurs-404?ok=1");
+});
+
+// ---------- robots.txt et plan du site ----------
+router.get("/formateur/seo/technique", (req, res) => {
+  const map = sitemap.entries();
+  res.render("seo/technical", {
+    robotsText: robots.text(req), robotsProblems: robots.check(settings.get("robots_custom")), conflicts: robots.conflicts(req, map.included.map((e) => e.path)),
+    included: map.included, excluded: map.excluded,
+  });
 });
 
 module.exports = { router, canManage };
