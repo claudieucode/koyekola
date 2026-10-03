@@ -26,8 +26,11 @@ const AUDIO_SRC = /^\/uploads\/blog\/[A-Za-z0-9_.-]{1,200}\.(?:mp3|m4a|ogg|oga|w
 const MEDIA_URL = /^(https:\/\/[^\s"'<>]{1,500}|\/uploads\/blog\/[A-Za-z0-9_.-]{1,200})$/i;
 const COURSE_SLUG = /^[a-z0-9-]{1,120}$/;
 const REL_TOKENS = new Set(["nofollow", "sponsored", "ugc", "noopener", "noreferrer"]);
-const DIV_CLASSES = ["kb-gallery", "kb-video", "kb-audio", "kb-embed", "kb-course", "kb-newsletter", "kb-cta", "kb-faq", "kb-faq-answer", "kb-accordion-body", "kb-compare", "kb-compare-col", "kb-step-body", "callout", ...CALLOUT_TYPES.map((t) => `callout-${t}`)];
+const DIV_CLASSES = ["kb-spacer", "kb-pagebreak", "kb-columns", "kb-column", "kb-group", "kb-buttons", "kb-gallery", "kb-video", "kb-audio", "kb-embed", "kb-course", "kb-newsletter", "kb-cta", "kb-faq", "kb-faq-answer", "kb-accordion-body", "kb-compare", "kb-compare-col", "kb-step-body", "callout", ...CALLOUT_TYPES.map((t) => `callout-${t}`)];
 
+// Mises en page des colonnes : largeurs en %, 2 à 4 colonnes
+const COLUMN_LAYOUT = /^(50-50|33-67|67-33|25-75|75-25|33-33-33|25-50-25|50-25-25|25-25-50|25-25-25-25)$/;
+const HEX = /^#[0-9a-f]{6}$/i;
 const pick = (attribs, names) => Object.fromEntries(names.filter((n) => attribs[n] !== undefined && attribs[n] !== "").map((n) => [n, String(attribs[n]).slice(0, 500)]));
 const classesOf = (attribs) => String(attribs.class || "").split(/\s+/).filter(Boolean);
 const keepClasses = (attribs, allowed) => classesOf(attribs).filter((c) => allowed.includes(c)).join(" ");
@@ -92,6 +95,11 @@ const transformTags = {
       out["data-callout"] = type;
     }
     if (main === "kb-gallery" && /^[2-4]$/.test(attribs["data-columns"] || "")) out["data-columns"] = attribs["data-columns"];
+    const keep = (name, re) => { if (re.test(String(attribs[name] || ""))) out[name] = attribs[name]; };
+    if (main === "kb-spacer") { keep("data-size", /^(s|m|l|xl)$/); keep("data-size-mobile", /^(s|m|l|xl)$/); }
+    if (main === "kb-columns") { keep("data-layout", COLUMN_LAYOUT); keep("data-gap", /^(none|s|m|l)$/); keep("data-stack", /^(mobile|tablet|never)$/); keep("data-valign", /^(top|center|bottom)$/); }
+    if (main === "kb-group") { keep("data-bg", /^(none|light|accent|dark|warm)$/); keep("data-pad", /^(none|s|m|l)$/); keep("data-border", /^(true)$/); keep("data-width", /^(normal|wide)$/); }
+    if (main === "kb-buttons") keep("data-align", /^(left|center|right)$/);
     if (main === "kb-compare-col" && /^(pro|con|neutral)$/.test(attribs["data-tone"] || "")) out["data-tone"] = attribs["data-tone"];
     Object.assign(out, pick(attribs, ["data-title", "data-caption"]));
     return { tagName: "div", attribs: out };
@@ -118,6 +126,7 @@ const transformTags = {
     if (classesOf(attribs).includes("kb-button")) {
       out.class = "kb-button";
       if (/^(left|center|right)$/.test(attribs["data-align"] || "")) out["data-align"] = attribs["data-align"];
+      for (const [k, re] of [["data-size", /^(s|m|l)$/], ["data-radius", /^(none|s|pill)$/], ["data-width", /^(auto|full)$/], ["data-bg", HEX], ["data-fg", HEX], ["data-border", HEX]]) if (re.test(String(attribs[k] || ""))) out[k] = attribs[k];
     }
     return { tagName, attribs: out };
   },
@@ -126,12 +135,12 @@ const transformTags = {
   pre: (tagName) => ({ tagName, attribs: {} }),
   code: (tagName, attribs) => ({ tagName, attribs: /^language-[a-z0-9+-]{1,20}$/.test(attribs.class || "") ? { class: attribs.class } : {} }),
 };
-for (const h of ["h1", "h2", "h3", "h4"]) transformTags[h] = (tagName, attribs) => ({ tagName, attribs: pick(attribs, ["style"]) });
+for (const h of ["h1", "h2", "h3", "h4", "h5", "h6"]) transformTags[h] = (tagName, attribs) => ({ tagName, attribs: pick(attribs, ["style"]) });
 transformTags.hr = (tagName) => ({ tagName, attribs: {} });
-transformTags.blockquote = (tagName) => ({ tagName, attribs: {} });
+transformTags.blockquote = (tagName, attribs) => ({ tagName, attribs: classesOf(attribs).includes("kb-pullquote") ? { class: "kb-pullquote" } : {} });
 transformTags.table = (tagName) => ({ tagName, attribs: {} });
 // Bloc verrouillé dans l'éditeur (protection contre les modifications accidentelles) : marqueur conservé, valeur stricte
-const LOCKABLE = ["p", "h1", "h2", "h3", "h4", "blockquote", "ul", "ol", "pre", "table", "figure", "div", "details", "hr"];
+const LOCKABLE = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "ul", "ol", "pre", "table", "figure", "div", "details", "hr"];
 for (const tag of LOCKABLE) {
   const base = transformTags[tag];
   transformTags[tag] = (tagName, attribs) => {
@@ -142,14 +151,14 @@ for (const tag of LOCKABLE) {
 }
 
 const saveOptions = {
-  allowedTags: ["p", "br", "strong", "em", "u", "s", "sup", "sub", "h1", "h2", "h3", "h4", "ul", "ol", "li", "a", "hr", "blockquote", "code", "pre", "span", "mark",
+  allowedTags: ["p", "br", "strong", "em", "u", "s", "sup", "sub", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "a", "hr", "blockquote", "code", "pre", "span", "mark",
     "div", "figure", "figcaption", "img", "table", "thead", "tbody", "tfoot", "tr", "th", "td", "colgroup", "col", "details", "summary", "label", "input"],
   allowedAttributes: {
     a: ["href", "target", "rel", "class"], img: ["src", "alt", "title", "width", "height", "data-media-id"],
     figure: ["class", "data-align", "data-width", "data-credit", "data-main"],
-    div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption"],
+    div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption", "data-size", "data-size-mobile", "data-layout", "data-gap", "data-stack", "data-valign", "data-bg", "data-pad", "data-border", "data-width", "data-align"],
     details: ["class"], ol: ["class", "data-title", "start"], ul: ["data-type"], li: ["data-type", "data-checked"], input: ["type", "checked", "disabled"],
-    p: ["style", "class", "data-align"], h1: ["style"], h2: ["style"], h3: ["style"], h4: ["style"], span: ["style"], mark: ["style"],
+    p: ["style", "class", "data-align", "data-size", "data-radius", "data-width", "data-bg", "data-fg", "data-border"], h1: ["style"], h2: ["style"], h3: ["style"], h4: ["style"], h5: ["style"], h6: ["style"], blockquote: ["class"], span: ["style"], mark: ["style"],
     td: ["colspan", "rowspan"], th: ["colspan", "rowspan"], code: ["class"],
   },
   allowedClasses: false, // vérifiées une à une dans transformTags (listes blanches)
@@ -159,7 +168,7 @@ const saveOptions = {
   allowProtocolRelative: false,
   disallowedTagsMode: "discard",
   transformTags,
-  exclusiveFilter: (frame) => (/^h[1-4]$/.test(frame.tag) && !frame.text.trim()) || (frame.tag === "span" && !frame.text.trim() && !Object.keys(frame.attribs).length),
+  exclusiveFilter: (frame) => (/^h[1-6]$/.test(frame.tag) && !frame.text.trim()) || (frame.tag === "span" && !frame.text.trim() && !Object.keys(frame.attribs).length),
 };
 // allowedClasses: false désactive le filtre de classes de sanitize-html ; nos transformations ne laissent passer que les classes listées
 saveOptions.allowedAttributes["*"] = [];
@@ -194,6 +203,8 @@ const insideAny = (node, classes) => {
   return false;
 };
 
+// Carte Google Maps : uniquement l'adresse d'intégration officielle (Partager → Intégrer une carte)
+const GOOGLE_MAP = /^https:\/\/www\.google\.com\/maps\/embed\?pb=[A-Za-z0-9!._%~:-]{10,2000}$/;
 const VIDEO_FILE = /^\/uploads\/blog\/[A-Za-z0-9_.-]{1,200}\.(?:mp4|webm|mov|m4v|ogv)$/i;
 function videoPlayer(url, caption) {
   const v = VIDEO_FILE.test(url) ? { kind: "file", src: url } : parseVideoUrl(url);
@@ -234,7 +245,7 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
   for (const node of DomUtils.findAll(() => true, doc.children)) {
     if (!node.parent && node !== doc && !doc.children.includes(node)) continue; // déjà retiré
     const name = node.name;
-    if (/^h[1-4]$/.test(name)) {
+    if (/^h[1-6]$/.test(name)) {
       if (name === "h1") node.name = "h2", node.attribs.class = "rt-h1"; // la page a déjà son unique H1
       const level = Number(node.name[1]);
       const t = textOf(node);
@@ -258,6 +269,10 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
         if (!cap) { cap = el("figcaption"); DomUtils.appendChild(node, cap); }
         DomUtils.appendChild(cap, el("span", { class: "kb-credit" }, [text(`Crédit : ${credit}`)]));
       }
+    } else if (name === "p" && hasClass(node, "kb-button")) {
+      // Couleurs choisies (validées #rrggbb à l'enregistrement) : variables CSS du bouton
+      const vars = [["data-bg", "--kb-btn-bg"], ["data-fg", "--kb-btn-fg"], ["data-border", "--kb-btn-border"]].filter(([k]) => HEX.test(node.attribs[k] || "")).map(([k, v]) => `${v}: ${node.attribs[k]}`);
+      if (vars.length) node.attribs.style = vars.join("; ");
     } else if (name === "a") {
       links.push({ href: node.attribs.href, internal: !/^https?:/i.test(node.attribs.href) });
     } else if (name === "div" && hasClass(node, "kb-video")) {
@@ -265,7 +280,9 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
     } else if (name === "div" && hasClass(node, "kb-embed")) {
       const url = node.attribs["data-url"];
       const player = videoPlayer(url, node.attribs["data-caption"]);
-      if (player) replace(node, player);
+      const map = GOOGLE_MAP.test(url || "");
+      if (map) replace(node, el("figure", { class: "kb-map" }, [el("div", { class: "kb-map-frame" }, [el("iframe", { src: url, title: node.attribs["data-caption"] || "Carte Google Maps", loading: "lazy", referrerpolicy: "no-referrer-when-downgrade", allowfullscreen: "" })]), ...(node.attribs["data-caption"] ? [el("figcaption", {}, [text(node.attribs["data-caption"])])] : [])]));
+      else if (player) replace(node, player);
       else {
         let host = url;
         try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { /* adresse relative */ }

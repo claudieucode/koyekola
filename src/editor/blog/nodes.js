@@ -2,11 +2,11 @@
 // (src/utils/blogHtml.js) : image, galerie, vidéo, audio, intégration, formation, newsletter, bouton, encadrés, appel à
 // l'action, accordéon, FAQ, étapes, comparaison. Les blocs « à risque » (vidéo, intégration…) ne sont que des marqueurs :
 // le lecteur réel est fabriqué par le serveur à l'affichage.
-import { Node, mergeAttributes } from "@tiptap/core";
+import { Node, Extension, mergeAttributes } from "@tiptap/core";
 
 const WIDTHS = ["25", "33", "50", "66", "75", "100"];
 const ALIGNS = ["left", "center", "right", "wide"];
-export const CALLOUT_LABELS = { info: "Information", conseil: "Conseil", attention: "Attention", "a-retenir": "À retenir", "bon-a-savoir": "Bon à savoir" };
+export const CALLOUT_LABELS = { info: "Information", conseil: "Conseil", attention: "Attention", "a-retenir": "À retenir", "bon-a-savoir": "Bon à savoir", note: "Note", important: "Important", astuce: "Astuce" };
 
 // Vue d'un bloc « atome » dans l'éditeur : une carte non modifiable au clavier (on la règle par sa fenêtre)
 function atomView(build) {
@@ -151,7 +151,7 @@ export const KbButton = Node.create({
   group: "block",
   atom: true,
   draggable: true,
-  addAttributes() { return { text: { default: "Découvrir les formations" }, href: { default: "/catalogue" }, variant: { default: "primary" }, align: { default: "center" }, newTab: { default: false } }; },
+  addAttributes() { return { text: { default: "Découvrir les formations" }, href: { default: "/catalogue" }, variant: { default: "primary" }, align: { default: "center" }, newTab: { default: false }, size: { default: "" }, radius: { default: "" }, width: { default: "" }, bg: { default: "" }, fg: { default: "" }, border: { default: "" } }; },
   parseHTML() {
     return [{
       tag: "p.kb-button",
@@ -159,7 +159,8 @@ export const KbButton = Node.create({
       getAttrs: (el) => {
         const a = el.querySelector("a");
         if (!a) return false;
-        return { text: a.textContent.trim(), href: a.getAttribute("href") || "", variant: /btn-outline/.test(a.className) ? "outline" : "primary", align: el.getAttribute("data-align") || "left", newTab: a.getAttribute("target") === "_blank" };
+        const d = (k) => el.getAttribute(`data-${k}`) || "";
+        return { text: a.textContent.trim(), href: a.getAttribute("href") || "", variant: /btn-outline/.test(a.className) ? "outline" : "primary", align: el.getAttribute("data-align") || "left", newTab: a.getAttribute("target") === "_blank", size: d("size"), radius: d("radius"), width: d("width"), bg: d("bg"), fg: d("fg"), border: d("border") };
       },
     }];
   },
@@ -167,7 +168,8 @@ export const KbButton = Node.create({
     const a = node.attrs;
     const link = { href: a.href, class: `btn btn-${a.variant === "outline" ? "outline" : "primary"}` };
     if (a.newTab) { link.target = "_blank"; link.rel = "noopener noreferrer"; }
-    return ["p", { class: "kb-button", "data-align": a.align, ...lockOf(node) }, ["a", link, a.text]];
+    const style = Object.fromEntries(["size", "radius", "width", "bg", "fg", "border"].filter((k) => a[k]).map((k) => [`data-${k}`, a[k]]));
+    return ["p", { class: "kb-button", "data-align": a.align, ...style, ...lockOf(node) }, ["a", link, a.text]];
   },
   addNodeView() {
     return atomView((dom, a) => {
@@ -271,4 +273,82 @@ export const KbCompareCol = Node.create({
 });
 export const KbCompare = simpleBlock("kbCompare", "div", "kb-compare", "kbCompareCol{2,3}");
 
-export const BLOG_NODES = [KbImage, KbGallery, KbVideo, KbAudio, KbEmbed, KbCourse, KbNewsletter, KbButton, Callout, KbCta, KbSummary, KbAccordionBody, KbAccordion, KbFaqAnswer, KbFaqItem, KbFaq, KbSteps, KbCompareCol, KbCompare];
+// ---------- Mise en page : espaceur, saut de page, colonnes, groupe, groupe de boutons ----------
+export const KbSpacer = Node.create({
+  name: "kbSpacer",
+  group: "block",
+  atom: true,
+  draggable: true,
+  addAttributes() { return { size: { default: "m" }, sizeMobile: { default: "" } }; },
+  parseHTML() { return [{ tag: "div.kb-spacer", priority: 70, getAttrs: (el) => ({ size: el.getAttribute("data-size") || "m", sizeMobile: el.getAttribute("data-size-mobile") || "" }) }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-spacer", "data-size": node.attrs.size, ...(node.attrs.sizeMobile ? { "data-size-mobile": node.attrs.sizeMobile } : {}), ...lockOf(node) }]; },
+  addNodeView() { return atomView((dom, a) => { dom.className = "kb-ed-spacer"; dom.dataset.size = a.size; dom.append(span("kb-ed-spacer-label", `Espace ${({ s: "petit", m: "moyen", l: "grand", xl: "très grand" })[a.size] || ""}${a.sizeMobile ? ` · mobile : ${({ s: "petit", m: "moyen", l: "grand", xl: "très grand" })[a.sizeMobile]}` : ""}`)); }); },
+});
+export const KbPageBreak = Node.create({
+  name: "kbPageBreak",
+  group: "block",
+  atom: true,
+  draggable: true,
+  parseHTML() { return [{ tag: "div.kb-pagebreak", priority: 70 }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-pagebreak", ...lockOf(node) }]; },
+  addNodeView() { return atomView((dom) => { dom.className = "kb-ed-pagebreak"; dom.append(span("kb-ed-pagebreak-label", "Saut de page (impression / PDF)")); }); },
+});
+// Conteneur dont les réglages sont des attributs data-* et le contenu modifiable
+const layoutView = (cls, keys) => ({ node }) => {
+  const dom = document.createElement("div");
+  const paint = (n) => { dom.className = cls; for (const k of keys) { const v = n.attrs[k]; if (v) dom.dataset[k] = v; else delete dom.dataset[k]; } };
+  paint(node);
+  return { dom, contentDOM: dom, update: (n) => { if (n.type !== node.type) return false; paint(n); return true; } };
+};
+const dataAttrs = (node, keys) => Object.fromEntries(keys.filter((k) => node.attrs[k]).map((k) => [`data-${k}`, node.attrs[k]]));
+const readData = (el, keys) => Object.fromEntries(keys.map((k) => [k, el.getAttribute(`data-${k}`) || ""]));
+export const KbColumn = Node.create({
+  name: "kbColumn",
+  content: "block+",
+  defining: true,
+  isolating: true,
+  parseHTML() { return [{ tag: "div.kb-column", priority: 80 }]; },
+  renderHTML() { return ["div", { class: "kb-column" }, 0]; },
+  addNodeView() { return () => { const dom = document.createElement("div"); dom.className = "kb-ed-column"; return { dom, contentDOM: dom }; }; },
+});
+const COLUMN_KEYS = ["layout", "gap", "stack", "valign"];
+export const KbColumns = Node.create({
+  name: "kbColumns",
+  group: "block",
+  content: "kbColumn{2,4}",
+  defining: true,
+  addAttributes() { return { layout: { default: "50-50" }, gap: { default: "" }, stack: { default: "mobile" }, valign: { default: "" } }; },
+  parseHTML() { return [{ tag: "div.kb-columns", priority: 80, getAttrs: (el) => ({ ...readData(el, COLUMN_KEYS), stack: el.getAttribute("data-stack") || "mobile" }) }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-columns", ...dataAttrs(node, COLUMN_KEYS), ...lockOf(node) }, 0]; },
+  addNodeView() { return layoutView("kb-ed-columns", COLUMN_KEYS); },
+});
+const GROUP_KEYS = ["bg", "pad", "border", "width"];
+export const KbGroup = Node.create({
+  name: "kbGroup",
+  group: "block",
+  content: "block+",
+  defining: true,
+  addAttributes() { return { bg: { default: "light" }, pad: { default: "m" }, border: { default: "" }, width: { default: "" } }; },
+  parseHTML() { return [{ tag: "div.kb-group", priority: 80, getAttrs: (el) => readData(el, GROUP_KEYS) }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-group", ...dataAttrs(node, GROUP_KEYS), ...lockOf(node) }, 0]; },
+  addNodeView() { return layoutView("kb-ed-group", GROUP_KEYS); },
+});
+export const KbButtons = Node.create({
+  name: "kbButtons",
+  group: "block",
+  content: "kbButton+",
+  defining: true,
+  addAttributes() { return { align: { default: "left" } }; },
+  parseHTML() { return [{ tag: "div.kb-buttons", priority: 80, getAttrs: (el) => ({ align: el.getAttribute("data-align") || "left" }) }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-buttons", "data-align": node.attrs.align, ...lockOf(node) }, 0]; },
+  addNodeView() { return layoutView("kb-ed-buttons", ["align"]); },
+});
+// Citation mise en avant : variante de la citation (classe kb-pullquote)
+export const PullquoteAttr = Extension.create({
+  name: "kbPullquote",
+  addGlobalAttributes() {
+    return [{ types: ["blockquote"], attributes: { pullquote: { default: false, parseHTML: (el) => el.classList.contains("kb-pullquote"), renderHTML: (a) => (a.pullquote ? { class: "kb-pullquote" } : {}) } } }];
+  },
+});
+
+export const BLOG_NODES = [KbSpacer, KbPageBreak, KbColumn, KbColumns, KbGroup, KbButtons, PullquoteAttr, KbImage, KbGallery, KbVideo, KbAudio, KbEmbed, KbCourse, KbNewsletter, KbButton, Callout, KbCta, KbSummary, KbAccordionBody, KbAccordion, KbFaqAnswer, KbFaqItem, KbFaq, KbSteps, KbCompareCol, KbCompare];

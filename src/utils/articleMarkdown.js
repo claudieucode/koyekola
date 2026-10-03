@@ -21,6 +21,9 @@ const CALLOUTS = {
   "bon-a-savoir": "Bon à savoir",
   info: "Information",
   attention: "Attention",
+  note: "Note",
+  important: "Important",
+  astuce: "Astuce",
 };
 const CALLOUT_ALIASES = { "à-retenir": "a-retenir", retenir: "a-retenir", "bon-à-savoir": "bon-a-savoir", astuce: "conseil", important: "attention" };
 

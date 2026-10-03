@@ -11,10 +11,23 @@ function topLevelPos(doc, pos) {
   return $pos.before(1);
 }
 
+// Zones qui contiennent des blocs (on y déplace et on y dépose des blocs comme au premier niveau)
+export const ZONES = new Set(["kbColumn", "kbGroup"]);
+// Début du bloc « de zone » qui contient une position : enfant direct du document, d'une colonne ou d'un groupe
+function zoneBlockPos(doc, pos) {
+  const $pos = doc.resolve(Math.max(0, Math.min(pos, doc.content.size)));
+  if ($pos.depth === 0) return $pos.pos < doc.content.size ? $pos.pos : null;
+  let best = $pos.before(1);
+  for (let d = 2; d <= $pos.depth; d++) if (ZONES.has($pos.node(d - 1).type.name)) best = $pos.before(d);
+  return best;
+}
+
 function moveBlock(state, dispatch, dir) {
   const { $from } = state.selection;
   if ($from.depth === 0 && !(state.selection instanceof NodeSelection)) return false;
-  const start = state.selection instanceof NodeSelection && state.selection.$from.depth === 0 ? state.selection.from : $from.before(1);
+  // Bloc sélectionné en entier (à n'importe quel niveau), sinon bloc de zone qui contient le curseur
+  const start = state.selection instanceof NodeSelection ? state.selection.from : zoneBlockPos(state.doc, $from.pos);
+  if (start === null) return false;
   const node = state.doc.nodeAt(start);
   if (!node) return false;
   const end = start + node.nodeSize;
@@ -142,7 +155,7 @@ let blockDrag = null;
 // Cible du dépôt, comme Gutenberg : bloc de premier niveau sous le pointeur ; moitié haute → avant, moitié basse → après
 function dropTarget(view, event) {
   const found = view.posAtCoords({ left: event.clientX, top: event.clientY });
-  let pos = found ? topLevelPos(view.state.doc, found.inside >= 0 ? found.inside : found.pos) : null;
+  let pos = found ? zoneBlockPos(view.state.doc, found.inside >= 0 ? found.inside : found.pos) : null;
   if (pos === null) {
     // Sous le dernier bloc (marge basse de la zone d'écriture) : après le dernier bloc
     const last = view.state.doc.lastChild;
@@ -239,4 +252,4 @@ function startBlockDrag(view, pos, event) {
   view.dragging = { slice, move: true };
 }
 
-export { moveBlock, startBlockDrag, endBlockDrag, topLevelPos };
+export { moveBlock, startBlockDrag, endBlockDrag, topLevelPos, zoneBlockPos };

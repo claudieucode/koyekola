@@ -1062,3 +1062,52 @@
 .wp-doc-stats { cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; }
 .wp-save-state.is-error { color: var(--danger); font-weight: 700; }
 .wp-popover.is-context { min-width: 240px; }
+/* ---------- Éditeur : blocs de mise en page (lot 2) ---------- */
+.be-prose h5 { font-size: 1rem; margin: 1em 0 0.3em; }
+.be-prose h6 { font-size: 0.9rem; margin: 1em 0 0.3em; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.be-prose blockquote.kb-pullquote { padding: 18px 8px; border: 0; border-top: 3px solid var(--accent); border-bottom: 3px solid var(--accent); border-radius: 0; background: none; text-align: center; font-family: var(--font-display); font-size: 1.35rem; font-style: normal; }
+.be-prose .callout-note { border-left-color: #6b7280; background: #f4f5f7; }
+.be-prose .callout-important { border-left-color: #c2410c; background: #fff4ea; }
+.be-prose .callout-astuce { border-left-color: #0d9488; background: #ecfbf8; }
+.kb-ed-spacer { position: relative; height: 32px; margin: 4px 0; border: 1px dashed var(--border); border-radius: 6px; background: repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(11, 42, 64, 0.04) 6px, rgba(11, 42, 64, 0.04) 12px); display: grid; place-items: center; }
+.kb-ed-spacer[data-size="s"] { height: 16px; }
+.kb-ed-spacer[data-size="l"] { height: 64px; }
+.kb-ed-spacer[data-size="xl"] { height: 96px; }
+.kb-ed-spacer-label, .kb-ed-pagebreak-label { font-size: 11px; color: var(--muted); background: #fff; padding: 0 6px; border-radius: 4px; }
+.kb-ed-pagebreak { margin: 14px 0; border-top: 2px dashed var(--muted); text-align: center; line-height: 0; }
+.kb-ed-pagebreak-label { position: relative; top: -1px; }
+.kb-ed-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 16px; margin: 1em 0; padding: 6px; border: 1px dashed transparent; border-radius: 8px; }
+.kb-ed-columns:hover, .kb-ed-columns.ProseMirror-selectednode { border-color: var(--border); }
+.kb-ed-columns[data-layout="50-50"] { grid-template-columns: 1fr 1fr; }
+.kb-ed-columns[data-layout="33-67"] { grid-template-columns: 1fr 2fr; }
+.kb-ed-columns[data-layout="67-33"] { grid-template-columns: 2fr 1fr; }
+.kb-ed-columns[data-layout="25-75"] { grid-template-columns: 1fr 3fr; }
+.kb-ed-columns[data-layout="75-25"] { grid-template-columns: 3fr 1fr; }
+.kb-ed-columns[data-layout="33-33-33"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.kb-ed-columns[data-layout="25-50-25"] { grid-template-columns: 1fr 2fr 1fr; }
+.kb-ed-columns[data-layout="50-25-25"] { grid-template-columns: 2fr 1fr 1fr; }
+.kb-ed-columns[data-layout="25-25-50"] { grid-template-columns: 1fr 1fr 2fr; }
+.kb-ed-columns[data-layout="25-25-25-25"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.kb-ed-columns[data-gap="none"] { gap: 0; }
+.kb-ed-columns[data-gap="s"] { gap: 8px; }
+.kb-ed-columns[data-gap="l"] { gap: 32px; }
+.kb-ed-columns[data-valign="center"] { align-items: center; }
+.kb-ed-columns[data-valign="bottom"] { align-items: end; }
+.kb-ed-column { min-width: 0; min-height: 44px; padding: 6px 8px; border: 1px dashed var(--border); border-radius: 6px; }
+.kb-ed-column > :first-child { margin-top: 0; }
+.kb-ed-group { margin: 1em 0; border-radius: 10px; outline: 1px dashed var(--border); outline-offset: 2px; }
+.kb-ed-group[data-pad="s"] { padding: 10px; }
+.kb-ed-group[data-pad="m"] { padding: 18px; }
+.kb-ed-group[data-pad="l"] { padding: 30px; }
+.kb-ed-group[data-bg="light"] { background: var(--surface-alt); }
+.kb-ed-group[data-bg="accent"] { background: var(--accent-light); }
+.kb-ed-group[data-bg="warm"] { background: #fff7e8; }
+.kb-ed-group[data-bg="dark"] { background: var(--primary); color: #fff; }
+.kb-ed-group[data-border="true"] { border: 1px solid var(--border); }
+.kb-ed-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin: 1em 0; padding: 4px; border: 1px dashed var(--border); border-radius: 8px; }
+.kb-ed-buttons[data-align="center"] { justify-content: center; }
+.kb-ed-buttons[data-align="right"] { justify-content: flex-end; }
+.kb-ed-buttons > * { margin: 0; }
+.wp-color-row { display: flex; align-items: center; gap: 8px; }
+.wp-color-row .wp-label { flex: 1; margin: 0; }
+.wp-color-row input[type="color"] { width: 40px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: none; }

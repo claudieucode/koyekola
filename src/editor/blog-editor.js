@@ -18,7 +18,7 @@ import Superscript from "@tiptap/extension-superscript";
 import { Placeholder, Focus } from "@tiptap/extensions";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { BLOG_NODES, CALLOUT_LABELS } from "./blog/nodes";
-import { BlockHandle, moveBlock, startBlockDrag, endBlockDrag } from "./blog/dragHandle";
+import { BlockHandle, moveBlock, startBlockDrag, endBlockDrag, zoneBlockPos, ZONES } from "./blog/dragHandle";
 import { createWorkspace } from "./blog/workspace";
 import { createSeoData, createRenderers } from "./blog/seoPanels";
 import { setupWorkspaceUi } from "./blog/workspaceUi";
@@ -161,7 +161,7 @@ function start() {
   const editor = new Editor({
     element: $("#be-editor"),
     extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3, 4] }, dropcursor: { class: "kb-dropcursor", color: "var(--accent)", width: 2 }, link: { openOnClick: false, autolink: true, defaultProtocol: "https", HTMLAttributes: { rel: null, target: null, class: null } } }),
+      StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] }, dropcursor: { class: "kb-dropcursor", color: "var(--accent)", width: 2 }, link: { openOnClick: false, autolink: true, defaultProtocol: "https", HTMLAttributes: { rel: null, target: null, class: null } } }),
       TextStyleKit.configure({ fontFamily: false, fontSize: false, lineHeight: false, backgroundColor: false }),
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
@@ -210,20 +210,32 @@ function start() {
     if (after >= editor.state.doc.content.size) c.insertContentAt(after, { type: "paragraph" });
     return c.setTextSelection(after + 1);
   };
-  const CONTAINERS = new Set(["callout", "kbCta", "kbFaq", "kbFaqItem", "kbFaqAnswer", "kbAccordion", "kbAccordionBody", "kbCompare", "kbCompareCol", "kbSteps", "table", "blockquote", "bulletList", "orderedList", "taskList"]);
+  const CONTAINERS = new Set(["kbColumns", "kbButtons", "callout", "kbCta", "kbFaq", "kbFaqItem", "kbFaqAnswer", "kbAccordion", "kbAccordionBody", "kbCompare", "kbCompareCol", "kbSteps", "table", "blockquote", "bulletList", "orderedList", "taskList"]);
   // Bloc complexe : jamais imbriqué par accident ; il remplace un paragraphe vide, sinon il se place après le bloc courant
+  const COL = () => ({ type: "kbColumn", content: [p("")] });
+  const GOOGLE_MAP = /^https:\/\/www\.google\.com\/maps\/embed\?pb=[A-Za-z0-9!._%~:-]{10,2000}$/;
+  // Code d'intégration Google Maps collé tel quel : on n'en garde que l'adresse de la carte
+  const mapsUrl = (v) => { const m = String(v || "").match(/src=["']([^"']+)["']/); return (m ? m[1] : String(v || "")).trim().replace(/&amp;/g, "&"); };
   function blk(content) {
     const sel = editor.state.selection;
     const { $from } = sel;
-    for (let d = 1; d <= $from.depth; d++) if (CONTAINERS.has($from.node(d).type.name)) return placeAfter($from.after(1), content);
+    // Zone d'insertion : le document, ou la colonne / le groupe le plus proche du curseur (blocs imbriqués)
+    let zone = 0;
+    for (let d = 1; d <= $from.depth; d++) if (ZONES.has($from.node(d).type.name)) zone = d;
+    for (let d = zone + 1; d <= $from.depth; d++) if (CONTAINERS.has($from.node(d).type.name)) return placeAfter($from.after(zone + 1), content);
     if (sel instanceof NodeSelection) return placeAfter(sel.to, content);
     const parent = $from.parent;
-    if ($from.depth === 1 && parent.type.name === "paragraph" && parent.content.size === 0) {
+    if ($from.depth === zone + 1 && parent.type.name === "paragraph" && parent.content.size === 0 && $from.node(zone).childCount > 1) {
+      const at = $from.before(zone + 1);
+      editor.chain().focus().command(({ tr }) => { tr.delete(at, at + parent.nodeSize); return true; }).run();
+      return placeAfter(at, content);
+    }
+    if ($from.depth === zone + 1 && parent.type.name === "paragraph" && parent.content.size === 0 && zone === 0) {
       const at = $from.before(1);
       editor.chain().focus().command(({ tr }) => { tr.delete(at, at + parent.nodeSize); return true; }).run();
       return placeAfter(at, content);
     }
-    return placeAfter($from.after(1), content);
+    return placeAfter($from.after(zone + 1), content);
   }
   function placeAfter(pos, content) {
     const size = editor.state.doc.content.size;
@@ -264,6 +276,21 @@ function start() {
     { id: "gcallout-retenir", title: "Encadré À retenir", cat: "Mise en forme", icon: "callout", desc: "L'idée essentielle.", keywords: "résumé essentiel", run: () => blk({ type: "callout", attrs: { type: "a-retenir" }, content: [p("")] }) },
     { id: "gcallout-savoir", title: "Encadré Bon à savoir", cat: "Mise en forme", icon: "callout", desc: "Une information utile.", run: () => blk({ type: "callout", attrs: { type: "bon-a-savoir" }, content: [p("")] }) },
     { id: "buttons", title: "Bouton", cat: "Mise en forme", icon: "button", desc: "Invitez les lecteurs à agir avec un bouton.", run: () => blk({ type: "kbButton", attrs: { text: "Découvrir les formations", href: "/catalogue", variant: "primary", align: "center", newTab: false } }) },
+    { id: "pullquote", title: "Citation mise en avant", cat: "Texte", icon: "quote", desc: "Une phrase forte, centrée et en grand.", keywords: "pullquote exergue", run: () => blk({ type: "blockquote", attrs: { pullquote: true }, content: [p("")] }) },
+    { id: "heading5", title: "Titre H5", cat: "Texte", icon: "heading", desc: "Petit intertitre.", keywords: "h5", run: () => blk({ type: "heading", attrs: { level: 5 }, content: [] }) },
+    { id: "heading6", title: "Titre H6", cat: "Texte", icon: "heading", desc: "Plus petit intertitre.", keywords: "h6", run: () => blk({ type: "heading", attrs: { level: 6 }, content: [] }) },
+    { id: "columns2", title: "Colonnes 50 / 50", cat: "Mise en page", icon: "columns", desc: "Deux colonnes égales ; empilées sur mobile. Chaque colonne accepte tous les blocs.", keywords: "colonnes layout grille 2", run: () => blk({ type: "kbColumns", attrs: { layout: "50-50" }, content: [COL(), COL()] }) },
+    { id: "columns2b", title: "Colonnes 33 / 67", cat: "Mise en page", icon: "columns", desc: "Une colonne étroite et une large.", keywords: "colonnes layout grille", run: () => blk({ type: "kbColumns", attrs: { layout: "33-67" }, content: [COL(), COL()] }) },
+    { id: "columns3", title: "3 colonnes", cat: "Mise en page", icon: "columns", desc: "Trois colonnes égales.", keywords: "colonnes layout grille 3", run: () => blk({ type: "kbColumns", attrs: { layout: "33-33-33" }, content: [COL(), COL(), COL()] }) },
+    { id: "columns4", title: "4 colonnes", cat: "Mise en page", icon: "columns", desc: "Quatre colonnes égales.", keywords: "colonnes layout grille 4", run: () => blk({ type: "kbColumns", attrs: { layout: "25-25-25-25" }, content: [COL(), COL(), COL(), COL()] }) },
+    { id: "group", title: "Groupe", cat: "Mise en page", icon: "callout", desc: "Regroupez des blocs sur un fond commun (couleur, marges, bordure).", keywords: "section conteneur fond", run: () => blk({ type: "kbGroup", attrs: { bg: "light", pad: "m" }, content: [p("")] }) },
+    { id: "spacer", title: "Espaceur", cat: "Mise en page", icon: "separator", desc: "De l'espace vertical (taille réglable, aussi sur mobile).", keywords: "espace vide marge", run: () => blk({ type: "kbSpacer", attrs: { size: "m" } }) },
+    { id: "pagebreak", title: "Saut de page", cat: "Mise en page", icon: "separator", desc: "Nouvelle page à l'impression ou en PDF (invisible à l'écran).", keywords: "impression pdf page", run: () => blk({ type: "kbPageBreak" }) },
+    { id: "buttonsgroup", title: "Groupe de boutons", cat: "Mise en forme", icon: "button", desc: "Plusieurs boutons côte à côte.", keywords: "boutons", run: () => blk({ type: "kbButtons", attrs: { align: "center" }, content: [{ type: "kbButton", attrs: { text: "Découvrir les formations", href: "/catalogue", variant: "primary", align: "center", newTab: false } }, { type: "kbButton", attrs: { text: "Nous contacter", href: "/contact", variant: "outline", align: "center", newTab: false } }] }) },
+    { id: "gcallout-note", title: "Encadré Note", cat: "Mise en forme", icon: "callout", desc: "Une remarque.", keywords: "note remarque", run: () => blk({ type: "callout", attrs: { type: "note" }, content: [p("")] }) },
+    { id: "gcallout-important", title: "Encadré Important", cat: "Mise en forme", icon: "callout", desc: "Un point à ne pas manquer.", keywords: "important avertissement", run: () => blk({ type: "callout", attrs: { type: "important" }, content: [p("")] }) },
+    { id: "gcallout-astuce", title: "Encadré Astuce", cat: "Mise en forme", icon: "callout", desc: "Une astuce pratique.", keywords: "astuce truc", run: () => blk({ type: "callout", attrs: { type: "astuce" }, content: [p("")] }) },
+    { id: "maps", title: "Carte Google Maps", cat: "Intégrations", icon: "embed", desc: "Collez le code « Intégrer une carte » de Google Maps (ou son adresse).", keywords: "carte plan adresse map", run: () => urlPrompt("Carte Google Maps", "Code d'intégration ou adresse (Google Maps → Partager → Intégrer une carte)", "<iframe src=\"https://www.google.com/maps/embed?pb=…", (url) => blk({ type: "kbEmbed", attrs: { url, caption: "" } }), { transform: mapsUrl, check: (v) => GOOGLE_MAP.test(v), error: "Ce n'est pas un code d'intégration Google Maps (Partager → Intégrer une carte → Copier le HTML)." }) },
     { id: "separator", title: "Séparateur", cat: "Mise en forme", icon: "separator", desc: "Créez une coupure entre deux idées.", keywords: "ligne hr", run: () => blk({ type: "horizontalRule" }) },
     { id: "columns", title: "Comparaison", cat: "Mise en forme", icon: "columns", desc: "Deux colonnes : avantages et limites.", keywords: "colonnes pour contre", run: () => blk({ type: "kbCompare", content: [["pro", "Avantages"], ["con", "Limites"]].map(([tone, title]) => ({ type: "kbCompareCol", attrs: { tone }, content: [{ type: "heading", attrs: { level: 4 }, content: [{ type: "text", text: title }] }, { type: "bulletList", content: [{ type: "listItem", content: [p("")] }] }] })) }) },
     { id: "cta", title: "Appel à l'action", cat: "KOLAKISA", brand: true, icon: "cta", desc: "Encadré avec titre, texte et bouton.", keywords: "cta conversion", run: () => blk({ type: "kbCta", content: [{ type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "Envie d'aller plus loin ?" }] }, p("Une phrase qui donne envie."), { type: "kbButton", attrs: { text: "Découvrir les formations", href: "/catalogue", variant: "primary", align: "center" } }] }) },
@@ -278,11 +305,11 @@ function start() {
   const CATS = ["Texte", "KOLAKISA", "Média", "Mise en forme", "Intégrations"];
   const blockButton = (b, after) => h("button", { type: "button", class: b.brand ? "wp-block-type is-brand" : "wp-block-type", onclick: () => { after?.(); b.run(); } }, h("span", { class: "wp-block-type-icon" }, svg(b.icon)), h("span", { class: "wp-block-type-title" }, b.title));
   const matches = (b, q) => !q || norm(`${b.title} ${b.cat} ${b.keywords || ""} ${b.desc}`).includes(norm(q));
-  function urlPrompt(title, label, placeholder, done, { kind } = {}) {
-    const url = input({ type: "url", placeholder });
+  function urlPrompt(title, label, placeholder, done, { kind, transform, check, error } = {}) {
+    const url = input({ type: transform ? "text" : "url", placeholder });
     const body = h("div", {}, control(label, url));
     if (kind === "video") body.append(h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { m.close(); openMediaModal({ kind: "video", onSelect: (media) => done(media.path) }); } }, "Ou téléverser un fichier vidéo…"));
-    const m = modal(title, body, [{ label: "Intégrer", primary: true, run: () => { const v = url.value.trim(); if (!/^https:\/\/\S+$/.test(v)) { toast("L'adresse doit commencer par https://", "error"); return true; } done(v); } }]);
+    const m = modal(title, body, [{ label: "Intégrer", primary: true, run: () => { const v = transform ? transform(url.value) : url.value.trim(); if (!/^https:\/\/\S+$/.test(v) || (check && !check(v))) { toast(error || "L'adresse doit commencer par https://", "error"); return true; } done(v); } }]);
     url.focus();
   }
 
@@ -345,8 +372,8 @@ function start() {
       if (!media.length) box.prepend(h("p", { class: "wp-help" }, "Aucune image téléversée pour l'instant."));
     } catch (e) { box.replaceChildren(h("p", { class: "wp-error" }, e.message)); }
   }
-  const LABEL = { paragraph: "Paragraphe", heading: "Titre", bulletList: "Liste", orderedList: "Liste numérotée", listItem: "Élément de liste", taskList: "Liste de contrôle", taskItem: "Élément", blockquote: "Citation", codeBlock: "Code", horizontalRule: "Séparateur", table: "Tableau", tableRow: "Ligne", tableCell: "Cellule", tableHeader: "En-tête", kbImage: "Image", kbGallery: "Galerie", kbVideo: "Vidéo", kbAudio: "Audio", kbEmbed: "Contenu embarqué", kbCourse: "Formation recommandée", kbNewsletter: "Newsletter", kbButton: "Bouton", callout: "Encadré", kbCta: "Appel à l'action", kbAccordion: "Détails", kbSummary: "Résumé", kbAccordionBody: "Contenu", kbFaq: "FAQ", kbFaqItem: "Question", kbFaqAnswer: "Réponse", kbSteps: "Étapes", kbCompare: "Comparaison", kbCompareCol: "Colonne" };
-  const ICON_OF = { paragraph: "paragraph", heading: "heading", bulletList: "list", orderedList: "ordered", taskList: "checklist", blockquote: "quote", codeBlock: "code", horizontalRule: "separator", table: "table", kbImage: "image", kbGallery: "gallery", kbVideo: "video", kbAudio: "audio", kbEmbed: "embed", kbCourse: "course", kbNewsletter: "newsletter", kbButton: "button", callout: "callout", kbCta: "cta", kbAccordion: "details", kbFaq: "faq", kbSteps: "steps", kbCompare: "columns" };
+  const LABEL = { paragraph: "Paragraphe", heading: "Titre", bulletList: "Liste", orderedList: "Liste numérotée", listItem: "Élément de liste", taskList: "Liste de contrôle", taskItem: "Élément", blockquote: "Citation", codeBlock: "Code", horizontalRule: "Séparateur", table: "Tableau", tableRow: "Ligne", tableCell: "Cellule", tableHeader: "En-tête", kbImage: "Image", kbGallery: "Galerie", kbVideo: "Vidéo", kbAudio: "Audio", kbEmbed: "Contenu embarqué", kbCourse: "Formation recommandée", kbNewsletter: "Newsletter", kbButton: "Bouton", callout: "Encadré", kbCta: "Appel à l'action", kbAccordion: "Détails", kbSummary: "Résumé", kbAccordionBody: "Contenu", kbFaq: "FAQ", kbFaqItem: "Question", kbFaqAnswer: "Réponse", kbSteps: "Étapes", kbCompare: "Comparaison", kbCompareCol: "Colonne", kbSpacer: "Espaceur", kbPageBreak: "Saut de page", kbColumns: "Colonnes", kbColumn: "Colonne", kbGroup: "Groupe", kbButtons: "Groupe de boutons" };
+  const ICON_OF = { paragraph: "paragraph", heading: "heading", bulletList: "list", orderedList: "ordered", taskList: "checklist", blockquote: "quote", codeBlock: "code", horizontalRule: "separator", table: "table", kbImage: "image", kbGallery: "gallery", kbVideo: "video", kbAudio: "audio", kbEmbed: "embed", kbCourse: "course", kbNewsletter: "newsletter", kbButton: "button", callout: "callout", kbCta: "cta", kbAccordion: "details", kbFaq: "faq", kbSteps: "steps", kbCompare: "columns", kbSpacer: "separator", kbPageBreak: "separator", kbColumns: "columns", kbGroup: "callout", kbButtons: "button" };
   const nameOf = (node) => (node.type.name === "heading" ? `Titre H${node.attrs.level}` : node.type.name === "callout" ? `Encadré ${CALLOUT_LABELS[node.attrs.type] || ""}` : LABEL[node.type.name] || node.type.name);
   function renderListView() {
     const list = h("ol", { class: "wp-list-view", role: "tree", "aria-label": "Blocs" });
@@ -373,18 +400,22 @@ function start() {
 
   // ---------- Bloc courant ----------
   // Bloc ciblé par la barre d'outils et la barre latérale : bloc entier sélectionné, sinon le plus petit bloc « réglable »
-  const SETTINGS_TYPES = new Set(["kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbSteps", "kbCompare", "table", "kbCta", "kbFaq", "kbAccordion", "bulletList", "orderedList", "taskList", "blockquote"]);
+  // Conteneurs de mise en page : on règle leur contenu bloc par bloc ; eux-mêmes se sélectionnent par « Sélectionner le conteneur »
+  const LAYOUT_TYPES = new Set(["kbColumns", "kbColumn", "kbGroup", "kbButtons"]);
+  const SETTINGS_TYPES = new Set(["kbSpacer", "kbPageBreak", "kbColumns", "kbGroup", "kbButtons", "kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbSteps", "kbCompare", "table", "kbCta", "kbFaq", "kbAccordion", "bulletList", "orderedList", "taskList", "blockquote"]);
   function currentBlock() {
     const sel = editor.state.selection;
-    if (sel instanceof NodeSelection) return { node: sel.node, pos: sel.from, top: sel.$from.depth === 0 ? sel.from : sel.$from.before(1) };
+    // « top » : le bloc à déplacer / dupliquer / supprimer — au premier niveau, ou dans une colonne / un groupe
+    if (sel instanceof NodeSelection) return { node: sel.node, pos: sel.from, top: sel.$from.depth === 0 || ZONES.has(sel.$from.parent.type.name) ? sel.from : zoneBlockPos(editor.state.doc, sel.from) };
     const $from = sel.$from;
     if ($from.depth === 0) return null;
-    // Bloc de texte (paragraphe, titre, code) sauf s'il est dans une liste ou un bloc spécial réglable
+    const top = zoneBlockPos(editor.state.doc, $from.pos);
+    // Bloc de texte (paragraphe, titre, code) sauf s'il est dans une liste ou un bloc spécial réglable (hors conteneurs de mise en page)
     for (let d = 1; d <= $from.depth; d++) {
       const node = $from.node(d);
-      if (SETTINGS_TYPES.has(node.type.name)) return { node, pos: $from.before(d), top: $from.before(1), text: $from.parent.isTextblock ? { node: $from.parent, pos: $from.before($from.depth) } : null };
+      if (SETTINGS_TYPES.has(node.type.name) && !LAYOUT_TYPES.has(node.type.name) && $from.before(d) >= top) return { node, pos: $from.before(d), top, text: $from.parent.isTextblock ? { node: $from.parent, pos: $from.before($from.depth) } : null };
     }
-    return { node: $from.parent, pos: $from.before($from.depth), top: $from.before(1), text: { node: $from.parent, pos: $from.before($from.depth) } };
+    return { node: $from.parent, pos: $from.before($from.depth), top, text: { node: $from.parent, pos: $from.before($from.depth) } };
   }
   // Modifie les réglages d'un bloc SANS donner le focus à l'éditeur : sinon, pendant la saisie du texte alternatif,
   // la lettre suivante arrivait dans l'article et remplaçait l'image sélectionnée
@@ -428,7 +459,7 @@ function start() {
   function transformMenu(anchor) {
     const items = [
       { label: "Paragraphe", icon: "paragraph", run: () => chain().setParagraph().run() },
-      ...[1, 2, 3, 4].map((l) => ({ label: `Titre ${l}${l === 2 ? " (section)" : ""}`, icon: "heading", run: () => chain().setHeading({ level: l }).run() })),
+      ...[1, 2, 3, 4, 5, 6].map((l) => ({ label: `Titre ${l}${l === 2 ? " (section)" : ""}`, icon: "heading", run: () => chain().setHeading({ level: l }).run() })),
       { label: "Liste", icon: "list", run: () => chain().toggleBulletList().run() },
       { label: "Liste numérotée", icon: "ordered", run: () => chain().toggleOrderedList().run() },
       { label: "Liste de contrôle", icon: "checklist", run: () => chain().toggleTaskList().run() },
@@ -476,10 +507,10 @@ function start() {
       { label: "Dupliquer", shortcut: "Ctrl+Maj+D", run: () => duplicateBlock(top) },
       { label: "Insérer un paragraphe avant", run: () => { editor.chain().focus().insertContentAt(top, p("")).setTextSelection(top + 1).run(); } },
       { label: "Insérer un paragraphe après", run: () => { const at = top + node.nodeSize; editor.chain().focus().insertContentAt(at, p("")).setTextSelection(at + 1).run(); } },
-      ...(top > 0 ? [{ label: "Déplacer vers le haut", icon: "up", shortcut: "Alt+↑", run: () => { editor.commands.setNodeSelection(top); moveBlock(editor.state, editor.view.dispatch, -1); } }] : []),
-      ...(top + node.nodeSize < editor.state.doc.content.size ? [{ label: "Déplacer vers le bas", icon: "down", shortcut: "Alt+↓", run: () => { editor.commands.setNodeSelection(top); moveBlock(editor.state, editor.view.dispatch, 1); } }] : []),
+      ...(editor.state.doc.resolve(top).nodeBefore ? [{ label: "Déplacer vers le haut", icon: "up", shortcut: "Alt+↑", run: () => { editor.commands.setNodeSelection(top); moveBlock(editor.state, editor.view.dispatch, -1); } }] : []),
+      ...(editor.state.doc.resolve(top + node.nodeSize).nodeAfter ? [{ label: "Déplacer vers le bas", icon: "down", shortcut: "Alt+↓", run: () => { editor.commands.setNodeSelection(top); moveBlock(editor.state, editor.view.dispatch, 1); } }] : []),
       ...(!locked && TEXT_TYPES.includes(node.type.name) ? [{ label: "Transformer en…", run: () => { editor.chain().focus().setTextSelection(top + 1).run(); transformMenu(lastMenuAnchor || document.querySelector("[data-block-toolbar]")); } }] : []),
-      ...(LOCKABLE_TYPES.includes(node.type.name) ? [{ label: locked ? "🔓 Déverrouiller" : "🔒 Verrouiller (empêche toute modification)", run: () => { setLocked(editor, top, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); } }] : []),
+      ...(LOCKABLE_TYPES.includes(node.type.name) && editor.state.doc.resolve(top).depth === 0 ? [{ label: locked ? "🔓 Déverrouiller" : "🔒 Verrouiller (empêche toute modification)", run: () => { setLocked(editor, top, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); } }] : []),
       ...(blockMenuExtra ? blockMenuExtra(top, node) : []),
       ...(locked ? [] : ["-", { label: "Supprimer", danger: true, shortcut: "Maj+Alt+Z", run: () => deleteBlock(top) }]),
     ];
@@ -496,8 +527,7 @@ function start() {
     if (event.shiftKey || root.classList.contains("is-code-mode")) return;
     const found = editor.view.posAtCoords({ left: event.clientX, top: event.clientY });
     if (!found) return;
-    const $pos = editor.state.doc.resolve(Math.min(found.inside >= 0 ? found.inside : found.pos, editor.state.doc.content.size));
-    const top = $pos.depth === 0 ? (found.inside >= 0 ? found.inside : null) : $pos.before(1);
+    const top = zoneBlockPos(editor.state.doc, found.inside >= 0 ? found.inside : found.pos);
     if (top === null || !editor.state.doc.nodeAt(top)) return;
     event.preventDefault();
     const anchor = h("span", { class: "wp-context-anchor", style: `position:fixed;left:${event.clientX}px;top:${event.clientY - 6}px;width:1px;height:1px;` });
@@ -508,6 +538,24 @@ function start() {
     pop.addEventListener("click", done);
     setTimeout(done, 60000);
     pop.querySelector("button")?.focus();
+  }
+  function setColumnsLayout(pos, layout) {
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node || node.type.name !== "kbColumns") return;
+    const want = layout.split("-").length;
+    const cols = [];
+    node.forEach((c) => cols.push(c.toJSON()));
+    if (cols.length > want) {
+      // Les colonnes retirées versent leur contenu dans la dernière colonne conservée
+      const kept = cols.slice(0, want);
+      for (const extra of cols.slice(want)) kept[want - 1].content.push(...(extra.content || []));
+      cols.splice(0, cols.length, ...kept);
+    }
+    while (cols.length < want) cols.push(COL());
+    const json = { ...node.toJSON(), attrs: { ...node.attrs, layout }, content: cols };
+    const tr = editor.state.tr.replaceWith(pos, pos + node.nodeSize, editor.schema.nodeFromJSON(json));
+    tr.setSelection(NodeSelection.create(tr.doc, pos));
+    editor.view.dispatch(tr);
   }
   function duplicateBlock(top) {
     const node = editor.state.doc.nodeAt(top);
@@ -550,6 +598,8 @@ function start() {
     grip.addEventListener("dragend", () => { editor.view.dragging = null; endBlockDrag(); endDrag(); });
     const movers = h("div", { class: "wp-tb-movers" }, tbtn("Déplacer vers le haut", "up", () => { editor.commands.setNodeSelection(b.top); moveBlock(editor.state, editor.view.dispatch, -1); }), tbtn("Déplacer vers le bas", "down", () => { editor.commands.setNodeSelection(b.top); moveBlock(editor.state, editor.view.dispatch, 1); }));
     const groups = [tgroup(typeBtn, grip, movers)];
+    const parentBox = (() => { const $p = editor.state.doc.resolve(b.pos); for (let d = $p.depth; d >= 1; d--) { const n = $p.node(d); if (["kbColumns", "kbGroup", "kbButtons"].includes(n.type.name)) return { pos: $p.before(d), node: n }; } return null; })();
+    if (parentBox && parentBox.pos !== b.pos) groups.unshift(tgroup(tbtn(`Sélectionner le conteneur (${nameOf(parentBox.node)})`, "up", () => { editor.commands.setNodeSelection(parentBox.pos); showSidebarTab("bloc"); })));
     if (textType === "paragraph" || textType === "heading") {
       const align = editor.isActive({ textAlign: "center" }) ? "alignCenter" : editor.isActive({ textAlign: "right" }) ? "alignRight" : "alignLeft";
       groups.push(tgroup(tbtn("Aligner le texte", align, (e) => popover(e.currentTarget, menuList([["left", "Aligner le texte à gauche", "alignLeft"], ["center", "Centrer le texte", "alignCenter"], ["right", "Aligner le texte à droite", "alignRight"]].map(([v, l, i]) => ({ label: l, icon: i, run: () => chain().setTextAlign(v).run() })))))));
@@ -1072,7 +1122,7 @@ function start() {
 
   // ---------- Onglet Bloc : réglages du bloc sélectionné ----------
   const inspector = $("[data-block-inspector]");
-  const DESC = { paragraph: "Commencez par le bloc de construction de toute narration.", heading: "Introduit une nouvelle section et organise le contenu.", kbImage: "Insérez une image pour illustrer votre propos.", kbGallery: "Affichez plusieurs images dans une galerie.", kbVideo: "Intégrez une vidéo.", kbAudio: "Intégrez un fichier audio.", kbEmbed: "Intégrez un contenu externe.", kbButton: "Invitez les lecteurs à agir.", callout: "Mettez une information en évidence.", kbCourse: "Recommandez une formation du catalogue.", kbNewsletter: "Formulaire d'inscription à la newsletter.", table: "Données structurées en tableau.", kbSteps: "Guide pas à pas (HowTo).", kbFaq: "Questions fréquentes (FAQPage).", kbCompare: "Comparaison en colonnes.", kbCta: "Encadré d'appel à l'action.", bulletList: "Liste à puces.", orderedList: "Liste numérotée.", taskList: "Liste de contrôle.", blockquote: "Mettez en valeur une citation.", codeBlock: "Code en respectant l'espacement.", kbAccordion: "Masquez et affichez du contenu." };
+  const DESC = { paragraph: "Commencez par le bloc de construction de toute narration.", heading: "Introduit une nouvelle section et organise le contenu.", kbImage: "Insérez une image pour illustrer votre propos.", kbGallery: "Affichez plusieurs images dans une galerie.", kbVideo: "Intégrez une vidéo.", kbAudio: "Intégrez un fichier audio.", kbEmbed: "Intégrez un contenu externe.", kbButton: "Invitez les lecteurs à agir.", callout: "Mettez une information en évidence.", kbCourse: "Recommandez une formation du catalogue.", kbNewsletter: "Formulaire d'inscription à la newsletter.", table: "Données structurées en tableau.", kbSteps: "Guide pas à pas (HowTo).", kbFaq: "Questions fréquentes (FAQPage).", kbCompare: "Comparaison en colonnes.", kbCta: "Encadré d'appel à l'action.", bulletList: "Liste à puces.", orderedList: "Liste numérotée.", taskList: "Liste de contrôle.", blockquote: "Mettez en valeur une citation.", codeBlock: "Code en respectant l'espacement.", kbAccordion: "Masquez et affichez du contenu.", kbSpacer: "Ajoutez de l'espace vertical entre deux blocs.", kbPageBreak: "Commence une nouvelle page à l'impression ou en PDF.", kbColumns: "Disposez des blocs côte à côte ; empilés sur mobile.", kbGroup: "Regroupez des blocs sur un fond commun.", kbButtons: "Plusieurs boutons côte à côte." };
   let inspectorKey = "";
   function renderInspector(force = false) {
     if ($('[data-sidebar-panel="bloc"]').hidden) return;
@@ -1097,7 +1147,7 @@ function start() {
         h("p", { class: "wp-label" }, "Alignement"),
         segmented([["left", "Aligner à gauche", "alignLeft"], ["center", "Centrer", "alignCenter"], ["right", "Aligner à droite", "alignRight"]], align, (v) => chain().setTextAlign(v).run()),
         t === "heading" ? h("p", { class: "wp-label" }, "Niveau de titre") : null,
-        t === "heading" ? segmented([1, 2, 3, 4].map((l) => [l, `Titre ${l}`]), a.level, (l) => chain().setHeading({ level: Number(l) }).run()) : null,
+        t === "heading" ? segmented([1, 2, 3, 4, 5, 6].map((l) => [l, `H${l}`]), a.level, (l) => chain().setHeading({ level: Number(l) }).run()) : null,
         t === "heading" ? h("p", { class: "wp-help" }, "H2 et H3 apparaissent dans le sommaire. Le titre de l'article est déjà le H1 de la page.") : null));
       inspector.append(section("Couleur", h("p", { class: "wp-help" }, "Sélectionnez du texte, puis utilisez « Plus » (˅) dans la barre d'outils du bloc pour la couleur et le surligneur.")));
     } else if (t === "kbImage") {
@@ -1140,6 +1190,16 @@ function start() {
         h("p", { class: "wp-label" }, "Style"), segmented([["primary", "Plein"], ["outline", "Contour"]], a.variant, (v) => set({ variant: v })),
         h("p", { class: "wp-label" }, "Alignement"), segmented([["left", "Gauche"], ["center", "Centre"], ["right", "Droite"]], a.align, (v) => set({ align: v })),
         checkbox("Ouvrir dans un nouvel onglet", a.newTab, (v) => set({ newTab: v }))));
+      const colorField = (label, key) => {
+        const c = h("input", { type: "color", value: a[key] || "#0277b6", "aria-label": label });
+        c.addEventListener("input", debounce(() => set({ [key]: c.value }), 150));
+        return h("div", { class: "wp-color-row" }, h("span", { class: "wp-label" }, label), c, h("button", { type: "button", class: "wp-btn-link", onclick: () => set({ [key]: "" }) }, a[key] ? "Par défaut" : "(par défaut)"));
+      };
+      inspector.append(section("Apparence",
+        h("p", { class: "wp-label" }, "Taille"), segmented([["s", "Petite"], ["", "Moyenne"], ["l", "Grande"]], a.size || "", (v) => set({ size: v })),
+        h("p", { class: "wp-label" }, "Coins"), segmented([["", "Défaut"], ["none", "Carrés"], ["s", "Arrondis"], ["pill", "Pilule"]], a.radius || "", (v) => set({ radius: v })),
+        h("p", { class: "wp-label" }, "Largeur"), segmented([["", "Automatique"], ["full", "Pleine largeur"]], a.width || "", (v) => set({ width: v })),
+        colorField("Fond", "bg"), colorField("Texte", "fg"), colorField("Bordure", "border")));
     } else if (t === "callout") {
       inspector.append(section("Réglages", control("Type", (() => { const s = select(Object.entries(CALLOUT_LABELS), a.type); s.addEventListener("change", () => set({ type: s.value })); return s; })()), control("Titre personnalisé", bind(input({ value: a.title || "", placeholder: CALLOUT_LABELS[a.type] }), "title"))));
     } else if (t === "kbCourse") {
@@ -1157,6 +1217,33 @@ function start() {
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => chain().toggleHeaderRow().run() }, "Ligne d'en-tête"),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => chain().addRowAfter().run() }, "+ Ligne"),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => chain().addColumnAfter().run() }, "+ Colonne"))));
+    } else if (t === "blockquote") {
+      inspector.append(section("Réglages", checkbox("Citation mise en avant (grande, centrée)", Boolean(a.pullquote), (v) => set({ pullquote: v }))));
+    } else if (t === "kbSpacer") {
+      const SIZES = [["s", "Petit"], ["m", "Moyen"], ["l", "Grand"], ["xl", "Très grand"]];
+      const mobile = select([["", "Comme sur ordinateur"], ...SIZES], a.sizeMobile || "");
+      mobile.addEventListener("change", () => set({ sizeMobile: mobile.value }));
+      inspector.append(section("Réglages", h("p", { class: "wp-label" }, "Hauteur"), segmented(SIZES, a.size, (v) => set({ size: v })), control("Hauteur sur mobile", mobile)));
+    } else if (t === "kbColumns") {
+      const layouts = [["50-50", "2 colonnes · 50 / 50"], ["33-67", "2 colonnes · 33 / 67"], ["67-33", "2 colonnes · 67 / 33"], ["25-75", "2 colonnes · 25 / 75"], ["75-25", "2 colonnes · 75 / 25"], ["33-33-33", "3 colonnes · égales"], ["25-50-25", "3 colonnes · 25 / 50 / 25"], ["50-25-25", "3 colonnes · 50 / 25 / 25"], ["25-25-50", "3 colonnes · 25 / 25 / 50"], ["25-25-25-25", "4 colonnes · égales"]];
+      const lay = select(layouts, a.layout);
+      lay.addEventListener("change", () => setColumnsLayout(b.pos, lay.value));
+      const stack = select([["mobile", "Sur mobile (conseillé)"], ["tablet", "Sur tablette et mobile"], ["never", "Jamais"]], a.stack || "mobile");
+      stack.addEventListener("change", () => set({ stack: stack.value }));
+      inspector.append(section("Disposition", control("Colonnes et largeurs", lay, "Réduire le nombre de colonnes regroupe le contenu des colonnes retirées dans la dernière."),
+        h("p", { class: "wp-label" }, "Espacement"), segmented([["none", "Aucun"], ["s", "Petit"], ["", "Moyen"], ["l", "Grand"]], a.gap || "", (v) => set({ gap: v })),
+        h("p", { class: "wp-label" }, "Alignement vertical"), segmented([["", "Haut"], ["center", "Centre"], ["bottom", "Bas"]], a.valign || "", (v) => set({ valign: v })),
+        control("Empiler les colonnes", stack)));
+    } else if (t === "kbGroup") {
+      const bg = select([["none", "Aucun fond"], ["light", "Gris clair"], ["accent", "Bleu clair"], ["warm", "Crème"], ["dark", "Bleu nuit (texte blanc)"]], a.bg || "none");
+      bg.addEventListener("change", () => set({ bg: bg.value }));
+      inspector.append(section("Style", control("Fond", bg),
+        h("p", { class: "wp-label" }, "Marges intérieures"), segmented([["none", "Aucune"], ["s", "Petites"], ["m", "Moyennes"], ["l", "Grandes"]], a.pad || "none", (v) => set({ pad: v })),
+        h("p", { class: "wp-label" }, "Largeur"), segmented([["", "Normale"], ["wide", "Large (grand écran)"]], a.width || "", (v) => set({ width: v })),
+        checkbox("Bordure", a.border === "true", (v) => set({ border: v ? "true" : "" }))));
+    } else if (t === "kbButtons") {
+      inspector.append(section("Réglages", h("p", { class: "wp-label" }, "Alignement"), segmented([["left", "Gauche"], ["center", "Centre"], ["right", "Droite"]], a.align, (v) => set({ align: v })),
+        h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { const n = editor.state.doc.nodeAt(b.pos); editor.chain().focus().insertContentAt(b.pos + n.nodeSize - 1, { type: "kbButton", attrs: { text: "Nouveau bouton", href: "/catalogue", variant: "outline", align: a.align, newTab: false } }).run(); } }, "+ Ajouter un bouton")));
     } else if (t === "bulletList" || t === "orderedList") {
       inspector.append(section("Réglages", segmented([["bulletList", "Liste à puces", "list"], ["orderedList", "Liste numérotée", "ordered"]], t, (v) => (v === "orderedList" ? chain().toggleOrderedList().run() : chain().toggleBulletList().run())), h("p", { class: "wp-help" }, "Tabulation : imbriquer un élément. Maj + Tabulation : le sortir d'un niveau.")));
     }
