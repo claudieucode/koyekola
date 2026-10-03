@@ -1,3 +1,5 @@
+const path = require("path");
+const fs = require("fs");
 // Blog : pages publiques (liste, catégories, étiquettes, auteur, article éditorial) et éditeur éditorial du formateur
 // (texte riche, statuts et programmation, sauvegarde automatique, versions, médiathèque, liens internes, analyse SEO, IA).
 const express = require("express");
@@ -691,7 +693,25 @@ router.get("/formateur/blog/api/medias", (req, res) => {
   res.json({ media: media.map((m) => ({ ...m, used: blog.mediaUsage(m.path).length })) });
 });
 
-const mediaUpload = upload.fields([{ name: "article_image", maxCount: 1 }, { name: "article_video", maxCount: 1 }, { name: "article_audio", maxCount: 1 }]);
+const mediaUpload = upload.fields([{ name: "article_image", maxCount: 1 }, { name: "article_video", maxCount: 1 }, { name: "article_audio", maxCount: 1 }, { name: "image_variant", maxCount: 4 }]);
+// Versions réduites d'une image (WebP, préparées par le navigateur) : <nom>-<largeur>w.webp à côté de l'original.
+// Chaque fichier est vérifié (vraiment du WebP, largeur annoncée = largeur réelle, plus petit que l'original) sinon supprimé.
+function keepVariants(req, mainFile, mainWidth) {
+  const files = (req.files && req.files.image_variant) || [];
+  const widths = String(req.body.variant_widths || "").split(",").map((w) => Number(w));
+  const base = mainFile.filename.replace(/\.[a-z0-9]+$/i, "");
+  const kept = [];
+  files.forEach((f, i) => {
+    const w = widths[i];
+    const dims = seoImages.readDimensions(fs.readFileSync(f.path));
+    const ok = f.mimetype === "image/webp" && Number.isInteger(w) && [480, 960, 1600].includes(w) && dims && dims.format === "webp" && dims.width === w && (!mainWidth || w < mainWidth);
+    if (!ok) { fs.unlink(f.path, () => {}); return; }
+    const target = path.join(path.dirname(f.path), `${base}-${w}w.webp`);
+    fs.renameSync(f.path, target);
+    kept.push(w);
+  });
+  return kept;
+}
 router.post("/formateur/blog/api/medias", mediaUpload, (req, res) => {
   const image = fileOf(req, "article_image");
   const video = fileOf(req, "article_video");
@@ -702,7 +722,9 @@ router.post("/formateur/blog/api/medias", mediaUpload, (req, res) => {
   const path = image ? `/uploads/thumbnails/${file.filename}` : `/uploads/blog/${file.filename}`;
   const dim = (v) => (/^\d{1,5}$/.test(String(v || "")) ? Number(v) : null);
   const media = blog.addMedia({ path, kind, mime: file.mimetype, size: file.size, width: dim(req.body.width), height: dim(req.body.height), alt: oneLine(req.body.alt, 300), title: oneLine(req.body.title, 200), userId: req.session.user.id });
-  res.json({ media, path });
+  const variants = image ? keepVariants(req, file, dim(req.body.width)) : [];
+  if (!image) for (const f of (req.files && req.files.image_variant) || []) fs.unlink(f.path, () => {});
+  res.json({ media, path, variants });
 });
 
 // Ancienne adresse d'envoi d'image (barre d'outils précédente) : conservée, l'image rejoint la médiathèque
@@ -725,6 +747,7 @@ router.post("/formateur/blog/api/medias/:mid/supprimer", (req, res) => {
   if (usage.length) return res.status(400).json({ error: `Ce fichier est utilisé par : ${usage.map((u) => `« ${u.title} »`).join(", ")}. Retirez-le d'abord de ces articles.` });
   db.prepare("DELETE FROM media WHERE id = ?").run(m.id);
   removeUploadedFile(m.path);
+  for (const v of blog.imageVariants(m.path)) removeUploadedFile(v.src);
   res.json({ ok: true });
 });
 

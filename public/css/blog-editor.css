@@ -1111,3 +1111,17 @@
 .wp-color-row { display: flex; align-items: center; gap: 8px; }
 .wp-color-row .wp-label { flex: 1; margin: 0; }
 .wp-color-row input[type="color"] { width: 40px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: none; }
+/* Recadrage */
+.wp-crop { display: grid; gap: 10px; }
+.wp-crop-stage { position: relative; justify-self: center; max-width: 100%; line-height: 0; user-select: none; touch-action: none; }
+.wp-crop-img { display: block; max-width: 100%; max-height: 52vh; }
+.wp-crop-box { position: absolute; box-shadow: 0 0 0 9999px rgba(11, 42, 64, 0.55); outline: 2px solid #fff; cursor: move; }
+.wp-crop-box:focus-visible { outline: 3px solid var(--accent); }
+.wp-crop-handle { position: absolute; right: -8px; bottom: -8px; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid var(--accent); cursor: nwse-resize; }
+.wp-crop-stage { overflow: hidden; }
+.wp-image-info .wp-warning.is-error { color: var(--danger); }
+.wp-gallery-items li { align-items: start; }
+.wp-gallery-fields { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.wp-gallery-moves { display: flex; flex-direction: column; gap: 2px; }
+.kb-ed-gallery[data-gap="s"] { gap: 4px; }
+.kb-ed-gallery[data-gap="l"] { gap: 16px; }

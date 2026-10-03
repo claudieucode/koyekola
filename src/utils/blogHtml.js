@@ -67,6 +67,7 @@ const transformTags = {
     if (/^(25|33|50|66|75|100)$/.test(attribs["data-width"] || "")) out["data-width"] = attribs["data-width"];
     if (attribs["data-credit"]) out["data-credit"] = String(attribs["data-credit"]).slice(0, 200);
     if (attribs["data-main"] === "true") out["data-main"] = "true";
+    if (/^(16-9|4-3|1-1|3-2|3-4)$/.test(attribs["data-ratio"] || "")) out["data-ratio"] = attribs["data-ratio"];
     return { tagName, attribs: out };
   },
   div: (tagName, attribs) => {
@@ -79,6 +80,12 @@ const transformTags = {
       if (!MEDIA_URL.test(url)) return { tagName: "div", attribs: {} };
       out["data-url"] = url;
     }
+    if (main === "kb-video") {
+      if (IMG_SRC.test(String(attribs["data-poster"] || ""))) out["data-poster"] = attribs["data-poster"];
+      for (const k of ["data-autoplay", "data-muted", "data-loop", "data-nocontrols"]) if (attribs[k] === "true") out[k] = "true";
+    }
+    if (main === "kb-audio" && attribs["data-author"]) out["data-author"] = String(attribs["data-author"]).slice(0, 120);
+    if (main === "kb-gallery" && /^(s|m|l)$/.test(attribs["data-gap"] || "")) out["data-gap"] = attribs["data-gap"];
     if (main === "kb-audio") {
       const src = String(attribs["data-src"] || "").trim();
       if (!AUDIO_SRC.test(src)) return { tagName: "div", attribs: {} };
@@ -155,8 +162,8 @@ const saveOptions = {
     "div", "figure", "figcaption", "img", "table", "thead", "tbody", "tfoot", "tr", "th", "td", "colgroup", "col", "details", "summary", "label", "input"],
   allowedAttributes: {
     a: ["href", "target", "rel", "class"], img: ["src", "alt", "title", "width", "height", "data-media-id"],
-    figure: ["class", "data-align", "data-width", "data-credit", "data-main"],
-    div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption", "data-size", "data-size-mobile", "data-layout", "data-gap", "data-stack", "data-valign", "data-bg", "data-pad", "data-border", "data-width", "data-align"],
+    figure: ["class", "data-align", "data-width", "data-credit", "data-main", "data-ratio"],
+    div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption", "data-size", "data-size-mobile", "data-layout", "data-gap", "data-stack", "data-valign", "data-bg", "data-pad", "data-border", "data-width", "data-align", "data-poster", "data-autoplay", "data-muted", "data-loop", "data-nocontrols", "data-author", "data-gap"],
     details: ["class"], ol: ["class", "data-title", "start"], ul: ["data-type"], li: ["data-type", "data-checked"], input: ["type", "checked", "disabled"],
     p: ["style", "class", "data-align", "data-size", "data-radius", "data-width", "data-bg", "data-fg", "data-border"], h1: ["style"], h2: ["style"], h3: ["style"], h4: ["style"], h5: ["style"], h6: ["style"], blockquote: ["class"], span: ["style"], mark: ["style"],
     td: ["colspan", "rowspan"], th: ["colspan", "rowspan"], code: ["class"],
@@ -206,20 +213,25 @@ const insideAny = (node, classes) => {
 // Carte Google Maps : uniquement l'adresse d'intégration officielle (Partager → Intégrer une carte)
 const GOOGLE_MAP = /^https:\/\/www\.google\.com\/maps\/embed\?pb=[A-Za-z0-9!._%~:-]{10,2000}$/;
 const VIDEO_FILE = /^\/uploads\/blog\/[A-Za-z0-9_.-]{1,200}\.(?:mp4|webm|mov|m4v|ogv)$/i;
-function videoPlayer(url, caption) {
+function videoPlayer(url, caption, opts = {}) {
   const v = VIDEO_FILE.test(url) ? { kind: "file", src: url } : parseVideoUrl(url);
   if (!v) return null;
   let player;
   if (v.kind === "youtube" || v.kind === "vimeo") {
     player = el("div", { class: "kb-video-frame" }, [el("iframe", { src: v.src, title: caption || "Vidéo", loading: "lazy", allow: "accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen", allowfullscreen: "", referrerpolicy: "strict-origin-when-cross-origin" })]);
   } else if (v.kind === "file" && /^\/uploads\//.test(v.src || url)) {
-    player = el("video", { src: v.src || url, controls: "", preload: "metadata", playsinline: "" }, [text("Votre navigateur ne lit pas cette vidéo.")]);
+    const attrs = { src: v.src || url, ...(opts.nocontrols ? {} : { controls: "" }), preload: "metadata", playsinline: "" };
+    if (opts.poster) attrs.poster = opts.poster;
+    if (opts.loop) attrs.loop = "";
+    // Lecture automatique : toujours muette (règle des navigateurs)
+    if (opts.autoplay) { attrs.autoplay = ""; attrs.muted = ""; } else if (opts.muted) attrs.muted = "";
+    player = el("video", attrs, [text("Votre navigateur ne lit pas cette vidéo.")]);
   } else return null;
   return el("figure", { class: "kb-video" }, [player, ...(caption ? [el("figcaption", {}, [text(caption)])] : [])]);
 }
 
 // options : courseCard(slug) → HTML | null ; newsletterHtml → HTML | null ; tocDepth 2|3
-function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, tocDepth = 3, imageSize = () => null } = {}) {
+function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, tocDepth = 3, imageSize = () => null, imageVariants = () => [] } = {}) {
   const clean = sanitizeBlogHtml(html);
   const doc = parseDocument(clean);
   const toc = [];
@@ -260,6 +272,13 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
         const size = imageSize(node.attribs.src);
         if (size && size.width > 0 && size.height > 0) { node.attribs.width = String(size.width); node.attribs.height = String(size.height); }
       }
+      // Versions réduites WebP présentes : le navigateur choisit la taille adaptée à l'écran
+      const variants = imageVariants(node.attribs.src) || [];
+      if (variants.length) {
+        const full = Number(node.attribs.width) || 0;
+        node.attribs.srcset = [...variants.map((v) => `${v.src} ${v.w}w`), ...(full ? [`${node.attribs.src} ${full}w`] : [])].join(", ");
+        node.attribs.sizes = "(max-width: 760px) 100vw, 760px";
+      }
       images.push({ src: node.attribs.src, alt: node.attribs.alt || "" });
     } else if (name === "figure" && hasClass(node, "kb-image")) {
       const credit = node.attribs["data-credit"];
@@ -276,7 +295,8 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
     } else if (name === "a") {
       links.push({ href: node.attribs.href, internal: !/^https?:/i.test(node.attribs.href) });
     } else if (name === "div" && hasClass(node, "kb-video")) {
-      replace(node, videoPlayer(node.attribs["data-url"], node.attribs["data-caption"]));
+      const b = (k) => node.attribs[k] === "true";
+      replace(node, videoPlayer(node.attribs["data-url"], node.attribs["data-caption"], { poster: node.attribs["data-poster"], autoplay: b("data-autoplay"), muted: b("data-muted"), loop: b("data-loop"), nocontrols: b("data-nocontrols") }));
     } else if (name === "div" && hasClass(node, "kb-embed")) {
       const url = node.attribs["data-url"];
       const player = videoPlayer(url, node.attribs["data-caption"]);
@@ -289,7 +309,7 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
         replace(node, el("p", { class: "kb-embed-link" }, [el("a", { href: url, target: "_blank", rel: "noopener noreferrer nofollow" }, [text(node.attribs["data-caption"] || `Voir le contenu sur ${host}`)])]));
       }
     } else if (name === "div" && hasClass(node, "kb-audio")) {
-      const title = node.attribs["data-title"];
+      const title = [node.attribs["data-title"], node.attribs["data-author"]].filter(Boolean).join(" — ");
       replace(node, el("figure", { class: "kb-audio" }, [el("audio", { src: node.attribs["data-src"], controls: "", preload: "none" }, [text("Votre navigateur ne lit pas ce fichier audio.")]), ...(title ? [el("figcaption", {}, [text(title)])] : [])]));
     } else if (name === "div" && hasClass(node, "kb-course")) {
       const card = courseCard(node.attribs["data-course"]);

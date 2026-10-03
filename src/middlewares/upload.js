@@ -12,7 +12,7 @@ const AUDIO_TYPES = { "audio/mpeg": ".mp3", "audio/mp3": ".mp3", "audio/mp4": ".
 const VIDEO_TYPES = { "video/mp4": ".mp4", "video/webm": ".webm", "video/quicktime": ".mov", "video/x-m4v": ".m4v", "video/ogg": ".ogv" };
 
 // Champs d'image : miniature/couverture, image de partage et images insérées dans un article (mêmes règles, même dossier)
-const IMAGE_FIELDS = new Set(["thumbnail", "og_image", "article_image"]);
+const IMAGE_FIELDS = new Set(["thumbnail", "og_image", "article_image", "image_variant"]);
 
 function destinationFor(fieldname) {
   if (IMAGE_FIELDS.has(fieldname)) return path.join(uploadsRoot, "thumbnails");

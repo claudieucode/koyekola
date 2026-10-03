@@ -539,6 +539,70 @@ function start() {
     setTimeout(done, 60000);
     pop.querySelector("button")?.focus();
   }
+  // Recadrage d'une image : zone choisie à la souris (libre ou proportions fixes), nouvelle image créée dans la
+  // médiathèque (l'originale est conservée), versions réduites générées comme pour tout envoi
+  function cropImage(pos) {
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node || node.type.name !== "kbImage") return;
+    const src = node.attrs.src;
+    const img = h("img", { src, alt: "", class: "wp-crop-img", draggable: "false" });
+    const handle = h("span", { class: "wp-crop-handle", "aria-hidden": "true" });
+    const frame = h("div", { class: "wp-crop-box", role: "slider", tabindex: "0", "aria-label": "Zone conservée (flèches : déplacer, Maj + flèches : redimensionner)" }, handle);
+    const stage = h("div", { class: "wp-crop-stage" }, img, frame);
+    const size = h("p", { class: "wp-help" });
+    let ratio = 0;
+    let r = { x: 0.1, y: 0.1, w: 0.8, h: 0.8 };
+    const clampR = () => { r.w = Math.min(1, Math.max(0.05, r.w)); r.h = Math.min(1, Math.max(0.05, r.h)); r.x = Math.min(1 - r.w, Math.max(0, r.x)); r.y = Math.min(1 - r.h, Math.max(0, r.y)); };
+    const paint = () => { clampR(); Object.assign(frame.style, { left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.w * 100}%`, height: `${r.h * 100}%` }); if (img.naturalWidth) size.textContent = `Zone conservée : ${Math.round(r.w * img.naturalWidth)} × ${Math.round(r.h * img.naturalHeight)} px`; };
+    const fitRatio = () => { if (!ratio || !img.naturalWidth) return paint(); const W = img.naturalWidth; const H = img.naturalHeight; let hh = (r.w * W) / ratio / H; if (hh > 1) { hh = 1; r.w = (hh * H * ratio) / W; } r.h = hh; paint(); };
+    const drag = (e, mode) => {
+      e.preventDefault(); e.stopPropagation();
+      const box = img.getBoundingClientRect();
+      const start = { x: e.clientX, y: e.clientY, r: { ...r } };
+      const move = (ev) => {
+        const dx = (ev.clientX - start.x) / box.width; const dy = (ev.clientY - start.y) / box.height;
+        if (mode === "move") { r.x = start.r.x + dx; r.y = start.r.y + dy; }
+        else { r.w = start.r.w + dx; r.h = ratio ? r.h : start.r.h + dy; if (ratio) fitRatio(); }
+        paint();
+      };
+      const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+      window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+    };
+    frame.addEventListener("pointerdown", (e) => drag(e, "move"));
+    handle.addEventListener("pointerdown", (e) => drag(e, "resize"));
+    frame.addEventListener("keydown", (e) => {
+      const step = 0.01; const k = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+      if (!k) return;
+      e.preventDefault();
+      if (e.shiftKey) { r.w += k[0]; r.h += ratio ? 0 : k[1]; if (ratio) fitRatio(); } else { r.x += k[0]; r.y += k[1]; }
+      paint();
+    });
+    img.addEventListener("load", () => fitRatio());
+    const ratios = segmented([["0", "Libre"], ["1.7778", "16:9"], ["1.3333", "4:3"], ["1.5", "3:2"], ["1", "1:1"], ["0.75", "3:4"]], "0", (v) => { ratio = Number(v); fitRatio(); });
+    modal("Recadrer l'image", h("div", { class: "wp-crop" }, ratios, stage, size, h("p", { class: "wp-help" }, "Une nouvelle image est créée ; l'originale reste dans la médiathèque.")), [
+      { label: "Annuler" },
+      { label: "Appliquer le recadrage", primary: true, run: async () => {
+        if (!img.naturalWidth) { toast("Image non chargée : impossible de la recadrer.", "error"); return true; }
+        const W = img.naturalWidth; const H = img.naturalHeight;
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(r.w * W)); canvas.height = Math.max(1, Math.round(r.h * H));
+        canvas.getContext("2d").drawImage(img, Math.round(r.x * W), Math.round(r.y * H), canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+        const type = /\.png$/i.test(src) ? "image/png" : /\.webp$/i.test(src) ? "image/webp" : "image/jpeg";
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, 0.9));
+        if (!blob) { toast("Recadrage impossible dans ce navigateur.", "error"); return true; }
+        try {
+          const media = await uploadMedia(new File([blob], `recadrage.${type.split("/")[1].replace("jpeg", "jpg")}`, { type }), "image");
+          // Le bloc a pu bouger pendant l'envoi : on le retrouve par son image
+          let at = pos;
+          if (!editor.state.doc.nodeAt(at) || editor.state.doc.nodeAt(at).attrs.src !== src) editor.state.doc.descendants((n, p2) => { if (n.type.name === "kbImage" && n.attrs.src === src) { at = p2; return false; } return true; });
+          setAttrsAt(at, { src: media.path, mediaId: media.id });
+          toast("Image recadrée : nouvelle image créée, l'originale reste dans la médiathèque.");
+        } catch (e) { toast(`Recadrage impossible : ${e.message}`, "error"); return true; }
+        return false;
+      } },
+    ], { wide: false });
+    paint();
+  }
   function setColumnsLayout(pos, layout) {
     const node = editor.state.doc.nodeAt(pos);
     if (!node || node.type.name !== "kbColumns") return;
@@ -998,8 +1062,24 @@ function start() {
     const body = new FormData();
     body.append(kind === "image" ? "article_image" : kind === "video" ? "article_video" : "article_audio", file);
     if (kind === "image") {
-      const dims = await new Promise((resolve) => { const img = new Image(); img.onload = () => resolve([img.naturalWidth, img.naturalHeight]); img.onerror = () => resolve([0, 0]); img.src = URL.createObjectURL(file); });
-      if (dims[0]) { body.append("width", dims[0]); body.append("height", dims[1]); }
+      const url = URL.createObjectURL(file);
+      const img = await new Promise((resolve) => { const i = new Image(); i.onload = () => resolve(i); i.onerror = () => resolve(null); i.src = url; });
+      if (img && img.naturalWidth) {
+        body.append("width", img.naturalWidth); body.append("height", img.naturalHeight);
+        // Versions réduites au format WebP (480, 960, 1600 px) : le site sert à chaque écran l'image adaptée (srcset)
+        if (/^image\/(jpeg|png|webp)$/.test(file.type)) {
+          const widths = [];
+          for (const w of [480, 960, 1600].filter((x) => x < img.naturalWidth)) {
+            const canvas = document.createElement("canvas");
+            canvas.width = w; canvas.height = Math.round((img.naturalHeight * w) / img.naturalWidth);
+            canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.82));
+            if (blob && blob.type === "image/webp") { body.append("image_variant", new File([blob], `variante-${w}.webp`, { type: "image/webp" })); widths.push(w); }
+          }
+          if (widths.length) body.append("variant_widths", widths.join(","));
+        }
+      }
+      URL.revokeObjectURL(url);
     }
     const { media } = await api("/formateur/blog/api/medias", { method: "POST", body });
     return media;
@@ -1164,25 +1244,61 @@ function start() {
         segmented([["25", "25 %"], ["50", "50 %"], ["75", "75 %"], ["100", "100 %"]], a.width, (v) => set({ width: v })),
         h("p", { class: "wp-label" }, "Alignement"),
         segmented([["left", "Gauche"], ["center", "Centre"], ["right", "Droite"], ["wide", "Large"]], a.align, (v) => set({ align: v })),
-        h("p", { class: "wp-help" }, "Chargement différé automatique."),
+        h("p", { class: "wp-label" }, "Proportions"),
+        segmented([["", "Originales"], ["16-9", "16:9"], ["4-3", "4:3"], ["3-2", "3:2"], ["1-1", "1:1"], ["3-4", "3:4"]], a.ratio || "", (v) => set({ ratio: v })),
+        h("p", { class: "wp-help" }, "Chargement différé et versions réduites (WebP) servies selon l'écran."),
         h("div", { class: "wp-button-row" },
           h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ onSelect: (m, extra) => set({ src: m.path, mediaId: m.id, alt: extra.alt || a.alt }) }) }, "Remplacer"),
+          h("button", { type: "button", class: "wp-btn-secondary", onclick: () => cropImage(b.pos) }, "Recadrer…"),
           h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { setCover(a.src, a.alt); toast("Image mise en avant définie."); } }, "Définir comme image mise en avant"))));
+      const href = input({ value: a.href || "", placeholder: "https://… ou /cours/…" });
+      href.addEventListener("input", debounce(() => { const v = href.value.trim(); if (!v || /^(https?:\/\/\S+|\/(?!\/)\S*|mailto:\S+)$/i.test(v)) set({ href: v }); }, 300));
+      inspector.append(section("Lien", control("Lien de l'image", href, "Vide : pas de lien."), checkbox("Ouvrir dans un nouvel onglet", a.newTab, (v) => set({ newTab: v }))));
+      const info = h("div", { class: "wp-image-info", "aria-live": "polite" }, h("p", { class: "wp-help" }, "Vérification du fichier…"));
+      inspector.append(section("Fichier", info));
+      api("/formateur/blog/api/espace-seo/images", { method: "POST", json: { srcs: [a.src] } }).then(({ images }) => {
+        const f = images[0] || {};
+        if (f.exists === false) return info.replaceChildren(h("p", { class: "wp-warning is-error" }, "⚠ Fichier introuvable sur le serveur : remplacez l'image."));
+        if (!f.exists) return info.replaceChildren(h("p", { class: "wp-help" }, "Image externe : non vérifiée."));
+        const warn = [];
+        if (f.bytes > 500 * 1024) warn.push(`Image lourde (${Math.round(f.bytes / 1024)} Ko) : elle ralentit la page. Les versions réduites sont servies aux petits écrans ; pour les autres, une image de moins de 500 Ko est conseillée.`);
+        if (f.width && f.width < 600 && a.width === "100") warn.push(`Image étroite (${f.width} px) affichée en pleine largeur : elle sera floue. Réduisez sa largeur ou choisissez une image plus grande.`);
+        if (f.width > 4000 || f.height > 4000) warn.push(`Dimensions très grandes (${f.width} × ${f.height} px) : inutile pour un article.`);
+        info.replaceChildren(h("p", { class: "wp-help" }, `${f.width || "?"} × ${f.height || "?"} px · ${f.bytes ? `${Math.round(f.bytes / 1024)} Ko` : "?"} · ${String(f.format || "").toUpperCase()}`), ...warn.map((w) => h("p", { class: "wp-warning" }, `⚠ ${w}`)));
+      }).catch(() => info.replaceChildren(h("p", { class: "wp-help" }, "Informations du fichier indisponibles.")));
     } else if (t === "kbGallery") {
       inspector.append(section("Réglages",
         h("p", { class: "wp-label" }, "Colonnes"),
         segmented([["2", "2"], ["3", "3"], ["4", "4"]], a.columns, (v) => set({ columns: v })),
+        h("p", { class: "wp-label" }, "Espacement"),
+        segmented([["s", "Petit"], ["", "Moyen"], ["l", "Grand"]], a.gap || "", (v) => set({ gap: v })),
         h("p", { class: "wp-label" }, "Images"),
         h("ul", { class: "wp-gallery-items" }, ...(a.images || []).map((img, i) => {
           const alt = input({ value: img.alt || "", placeholder: "Texte alternatif", "aria-label": `Texte alternatif de l'image ${i + 1}` });
           alt.addEventListener("input", debounce(() => { const images = [...currentBlock().node.attrs.images]; images[i] = { ...images[i], alt: alt.value }; set({ images }); }, 300));
-          return h("li", {}, h("img", { src: img.src, alt: "" }), alt, h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Retirer l'image", onclick: () => { const images = [...currentBlock().node.attrs.images]; images.splice(i, 1); set({ images }); renderInspector(true); } }, "×"));
+          const cap = input({ value: img.caption || "", placeholder: "Légende", "aria-label": `Légende de l'image ${i + 1}` });
+          cap.addEventListener("input", debounce(() => { const images = [...currentBlock().node.attrs.images]; images[i] = { ...images[i], caption: cap.value }; set({ images }); }, 300));
+          const move = (d) => { const images = [...currentBlock().node.attrs.images]; const j = i + d; if (j < 0 || j >= images.length) return; [images[i], images[j]] = [images[j], images[i]]; set({ images }); renderInspector(true); };
+          return h("li", {}, h("img", { src: img.src, alt: "" }), h("div", { class: "wp-gallery-fields" }, alt, cap),
+            h("div", { class: "wp-gallery-moves" }, h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Avancer l'image", disabled: i === 0 || null, onclick: () => move(-1) }, "↑"), h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Reculer l'image", disabled: i === a.images.length - 1 || null, onclick: () => move(1) }, "↓"),
+              h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Retirer l'image", onclick: () => { const images = [...currentBlock().node.attrs.images]; images.splice(i, 1); set({ images }); renderInspector(true); } }, "×")));
         })),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ multiple: true, onSelectMany: (list) => set({ images: [...a.images, ...list.map((m) => ({ src: m.path, alt: m.alt || "", caption: m.caption || "" }))] }) }) }, "Ajouter des images")));
     } else if (t === "kbVideo" || t === "kbEmbed") {
-      inspector.append(section("Réglages", control("Adresse", bind(input({ value: a.url || "", type: "url" }), "url"), t === "kbVideo" ? "YouTube, Vimeo, ou un fichier vidéo téléversé." : "YouTube et Vimeo deviennent un lecteur ; les autres adresses s'affichent comme un lien (sécurité)."), control("Légende", bind(input({ value: a.caption || "" }), "caption"))));
+      inspector.append(section("Réglages", control("Adresse", bind(input({ value: a.url || "", type: "url" }), "url"), t === "kbVideo" ? "YouTube, Vimeo, ou un fichier vidéo téléversé." : "YouTube, Vimeo et les cartes Google Maps deviennent un lecteur ; les autres adresses s'affichent comme un lien (sécurité)."), control("Légende", bind(input({ value: a.caption || "" }), "caption"))));
+      if (t === "kbVideo") {
+        const isFile = /^\/uploads\/blog\//.test(a.url || "");
+        const flag = (k) => (v) => set({ [k]: v ? "true" : "" });
+        inspector.append(section("Lecture", ...(isFile ? [
+          h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ onSelect: (m) => set({ poster: m.path }) }) }, a.poster ? "Changer l'image d'affiche" : "Choisir une image d'affiche"), a.poster ? h("button", { type: "button", class: "wp-btn-link is-danger", onclick: () => set({ poster: "" }) }, "Retirer") : null),
+          checkbox("Lecture automatique (toujours sans le son)", a.autoplay === "true", flag("autoplay")),
+          checkbox("Muet", a.muted === "true" || a.autoplay === "true", flag("muted")),
+          checkbox("En boucle", a.loop === "true", flag("loop")),
+          checkbox("Masquer les commandes de lecture", a.nocontrols === "true", flag("nocontrols")),
+        ] : [h("p", { class: "wp-help" }, "Affiche, lecture automatique, muet et boucle s'appliquent aux fichiers vidéo téléversés. Pour YouTube et Vimeo, c'est le lecteur du service qui est utilisé.")])));
+      }
     } else if (t === "kbAudio") {
-      inspector.append(section("Réglages", control("Titre", bind(input({ value: a.title || "" }), "title")), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ kind: "audio", onSelect: (m) => set({ src: m.path }) }) }, "Remplacer le fichier")));
+      inspector.append(section("Réglages", control("Titre", bind(input({ value: a.title || "" }), "title")), control("Auteur", bind(input({ value: a.author || "" }), "author")), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ kind: "audio", onSelect: (m) => set({ src: m.path }) }) }, "Remplacer le fichier")));
     } else if (t === "kbButton") {
       const href = input({ value: a.href || "" });
       href.addEventListener("input", debounce(() => { if (/^(https?:\/\/\S+|\/(?!\/)\S*|mailto:\S+)$/i.test(href.value.trim())) set({ href: href.value.trim() }); }, 300));

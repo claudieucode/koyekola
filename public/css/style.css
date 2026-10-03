@@ -1918,3 +1918,14 @@ a.post-card-category:hover { text-decoration: underline; }
 .kb-map-frame { position: relative; aspect-ratio: 16 / 10; border-radius: var(--radius-lg); overflow: hidden; background: var(--surface-alt); }
 .kb-map-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .kb-map figcaption { margin-top: 8px; font-size: 0.88rem; color: var(--muted); text-align: center; }
+/* Images : proportions imposées, lien ; galerie : espacement */
+.kb-image[data-ratio] img { width: 100%; object-fit: cover; }
+.kb-image[data-ratio="16-9"] img { aspect-ratio: 16 / 9; }
+.kb-image[data-ratio="4-3"] img { aspect-ratio: 4 / 3; }
+.kb-image[data-ratio="1-1"] img { aspect-ratio: 1 / 1; }
+.kb-image[data-ratio="3-2"] img { aspect-ratio: 3 / 2; }
+.kb-image[data-ratio="3-4"] img { aspect-ratio: 3 / 4; }
+.kb-image > a { display: block; }
+.kb-image > a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.kb-gallery[data-gap="s"] { gap: 6px; }
+.kb-gallery[data-gap="l"] { gap: 22px; }

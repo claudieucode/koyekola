@@ -2,6 +2,9 @@
 // auteur, carte d'une formation citée) et services de l'éditeur (statuts et programmation, versions, sauvegarde automatique,
 // médiathèque, recherche de liens internes, suggestions de maillage).
 const db = require("../config/database");
+const fs = require("fs");
+const path = require("path");
+const { uploadsRoot } = require("../config/paths");
 const { UserError } = require("../utils/errors");
 const { slugify, formatPrice } = require("../utils/format");
 const { escapeHtml } = require("../utils/markdown");
@@ -115,7 +118,7 @@ function courseCard(slug) {
 // Rendu public : Markdown (anciens articles) ou texte riche de l'éditeur
 function renderPost(post, { newsletterHtml = null } = {}) {
   const imageSize = (src) => db.prepare("SELECT width, height FROM media WHERE path = ?").get(String(src || ""));
-  if (post.content_format === "html") return renderBlogHtml(post.content, { courseCard, newsletterHtml, tocDepth: post.toc_depth === 2 ? 2 : 3, imageSize });
+  if (post.content_format === "html") return renderBlogHtml(post.content, { courseCard, newsletterHtml, tocDepth: post.toc_depth === 2 ? 2 : 3, imageSize, imageVariants });
   const r = renderArticle(post.content, { courseCard });
   return { ...r, toc: post.toc_depth === 2 ? r.toc.filter((t) => t.level === 2) : r.toc, faq: [], howto: [], links: [] };
 }
@@ -293,7 +296,21 @@ function addComment(postId, userId, text) {
 function getComment(id) { return db.prepare("SELECT * FROM blog_comments WHERE id = ?").get(id); }
 function deleteComment(id) { db.prepare("DELETE FROM blog_comments WHERE id = ?").run(id); }
 
+// Versions réduites (WebP) réellement présentes sur le disque pour une image du site : [{ src, w }]
+const variantCache = new Map();
+function imageVariants(src) {
+  const m = /^\/uploads\/thumbnails\/([A-Za-z0-9_-]{1,190})\.(?:png|jpe?g|webp|avif)$/i.exec(String(src || ""));
+  if (!m) return [];
+  const now = Date.now();
+  const hit = variantCache.get(src);
+  if (hit && now - hit.at < 60000) return hit.list;
+  const list = [480, 960, 1600].filter((w) => fs.existsSync(path.join(uploadsRoot, "thumbnails", `${m[1]}-${w}w.webp`))).map((w) => ({ src: `/uploads/thumbnails/${m[1]}-${w}w.webp`, w }));
+  variantCache.set(src, { at: now, list });
+  return list;
+}
+
 module.exports = {
+  imageVariants,
   listComments, countComments, addComment, getComment, deleteComment, COMMENT_MAX,
   STATUSES, parseTags, excerptOf, textOf, categories, categoryBySlug, subcategories, allTags, canonicalCategory, canonicalSubcategory, canonicalTags,
   popular, recent, similar, neighbours, authorOf, instructors, courseCard, renderPost, countView, card, promoteScheduled,

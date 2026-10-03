@@ -28,7 +28,7 @@ export const KbImage = Node.create({
   draggable: true,
   selectable: true,
   addAttributes() {
-    return { src: { default: null }, alt: { default: "" }, title: { default: "" }, caption: { default: "" }, credit: { default: "" }, align: { default: "center" }, width: { default: "100" }, mediaId: { default: null } };
+    return { src: { default: null }, alt: { default: "" }, title: { default: "" }, caption: { default: "" }, credit: { default: "" }, align: { default: "center" }, width: { default: "100" }, mediaId: { default: null }, href: { default: "" }, newTab: { default: false }, ratio: { default: "" } };
   },
   parseHTML() {
     return [
@@ -43,6 +43,8 @@ export const KbImage = Node.create({
             caption: (el.querySelector("figcaption") || { textContent: "" }).textContent.trim(), credit: el.getAttribute("data-credit") || "",
             align: ALIGNS.includes(el.getAttribute("data-align")) ? el.getAttribute("data-align") : "center",
             width: WIDTHS.includes(el.getAttribute("data-width")) ? el.getAttribute("data-width") : "100", mediaId: img.getAttribute("data-media-id"),
+            href: (el.querySelector("a") || { getAttribute: () => "" }).getAttribute("href") || "", newTab: (el.querySelector("a") || { getAttribute: () => "" }).getAttribute("target") === "_blank",
+            ratio: el.getAttribute("data-ratio") || "",
           };
         },
       },
@@ -54,10 +56,12 @@ export const KbImage = Node.create({
     const fig = { class: "kb-image", "data-align": a.align, ...lockOf(node) };
     if (a.width && a.width !== "100") fig["data-width"] = a.width;
     if (a.credit) fig["data-credit"] = a.credit;
+    if (a.ratio) fig["data-ratio"] = a.ratio;
     const img = { src: a.src, alt: a.alt || "" };
     if (a.title) img.title = a.title;
     if (a.mediaId) img["data-media-id"] = String(a.mediaId);
-    return a.caption ? ["figure", fig, ["img", img], ["figcaption", {}, a.caption]] : ["figure", fig, ["img", img]];
+    const picture = a.href ? ["a", { href: a.href, ...(a.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {}) }, ["img", img]] : ["img", img];
+    return a.caption ? ["figure", fig, picture, ["figcaption", {}, a.caption]] : ["figure", fig, picture];
   },
   addNodeView() {
     return atomView((dom, a) => {
@@ -86,13 +90,14 @@ export const KbGallery = Node.create({
   group: "block",
   atom: true,
   draggable: true,
-  addAttributes() { return { images: { default: [] }, columns: { default: "3" } }; },
+  addAttributes() { return { images: { default: [] }, columns: { default: "3" }, gap: { default: "" } }; },
   parseHTML() {
     return [{
       tag: "div.kb-gallery",
       priority: 70,
       getAttrs: (el) => ({
         columns: ["2", "3", "4"].includes(el.getAttribute("data-columns")) ? el.getAttribute("data-columns") : "3",
+        gap: ["s", "m", "l"].includes(el.getAttribute("data-gap")) ? el.getAttribute("data-gap") : "",
         images: [...el.querySelectorAll("figure")].map((f) => {
           const img = f.querySelector("img");
           return img ? { src: img.getAttribute("src"), alt: img.getAttribute("alt") || "", caption: (f.querySelector("figcaption") || { textContent: "" }).textContent.trim() } : null;
@@ -102,11 +107,12 @@ export const KbGallery = Node.create({
   },
   renderHTML({ node }) {
     const figures = (node.attrs.images || []).map((i) => (i.caption ? ["figure", { class: "kb-image" }, ["img", { src: i.src, alt: i.alt || "" }], ["figcaption", {}, i.caption]] : ["figure", { class: "kb-image" }, ["img", { src: i.src, alt: i.alt || "" }]]));
-    return ["div", { class: "kb-gallery", "data-columns": node.attrs.columns, ...lockOf(node) }, ...figures];
+    return ["div", { class: "kb-gallery", "data-columns": node.attrs.columns, ...(node.attrs.gap ? { "data-gap": node.attrs.gap } : {}), ...lockOf(node) }, ...figures];
   },
   addNodeView() {
     return atomView((dom, a) => {
       dom.className = "kb-ed-gallery";
+      if (a.gap) dom.dataset.gap = a.gap;
       dom.style.setProperty("--cols", a.columns);
       for (const i of a.images || []) { const img = document.createElement("img"); img.src = i.src; img.alt = i.alt || ""; dom.append(img); }
       if (!(a.images || []).length) dom.append(span("kb-ed-empty", "Galerie vide : sélectionnez-la, puis « Ajouter des images » dans l'onglet Bloc"));
@@ -139,8 +145,8 @@ function marker({ name, cls, attrs, icon, label }) {
     },
   });
 }
-export const KbVideo = marker({ name: "kbVideo", cls: "kb-video", attrs: { url: "data-url", caption: "data-caption" }, icon: "▶", label: (a) => `Vidéo · ${a.url || "adresse à compléter"}${a.caption ? ` · ${a.caption}` : ""}` });
-export const KbAudio = marker({ name: "kbAudio", cls: "kb-audio", attrs: { src: "data-src", title: "data-title" }, icon: "♪", label: (a) => `Audio · ${a.title || a.src || "fichier à choisir"}` });
+export const KbVideo = marker({ name: "kbVideo", cls: "kb-video", attrs: { url: "data-url", caption: "data-caption", poster: "data-poster", autoplay: "data-autoplay", muted: "data-muted", loop: "data-loop", nocontrols: "data-nocontrols" }, icon: "▶", label: (a) => `Vidéo · ${a.url || "adresse à compléter"}${a.caption ? ` · ${a.caption}` : ""}` });
+export const KbAudio = marker({ name: "kbAudio", cls: "kb-audio", attrs: { src: "data-src", title: "data-title", author: "data-author" }, icon: "♪", label: (a) => `Audio · ${a.title || a.src || "fichier à choisir"}${a.author ? ` — ${a.author}` : ""}` });
 export const KbEmbed = marker({ name: "kbEmbed", cls: "kb-embed", attrs: { url: "data-url", caption: "data-caption" }, icon: "⧉", label: (a) => `Intégration · ${a.url || "adresse à compléter"} (YouTube et Vimeo deviennent un lecteur ; le reste, un lien)` });
 export const KbCourse = marker({ name: "kbCourse", cls: "kb-course", attrs: { slug: "data-course" }, icon: "🎓", label: (a) => `Formation recommandée · ${a.title || a.slug || "à choisir"}` });
 export const KbNewsletter = marker({ name: "kbNewsletter", cls: "kb-newsletter", attrs: {}, icon: "✉", label: () => "Inscription à la newsletter (formulaire choisi dans Blog → réglages)" });
