@@ -653,7 +653,10 @@ router.post("/formateur/blog/api/ia", async (req, res, next) => {
     res.json(await blogAi.assist(input));
   } catch (error) {
     if (error instanceof blogAi.AiError) return res.status(error.code === "not_configured" ? 503 : 400).json({ error: error.message, code: error.code });
-    next(error);
+    // Erreur imprévue : message compréhensible pour l'éditeur (l'article n'est jamais modifié) ; au journal, seulement le
+    // type d'erreur — jamais la requête, ses en-têtes ni la clé
+    console.error("[KOLAKISA] Assistant IA : erreur imprévue :", error && error.name, error && error.status ? `(statut ${error.status})` : "");
+    res.status(502).json({ error: "L'assistant IA a rencontré une erreur inattendue. Votre article n'a pas été modifié : réessayez dans un instant.", code: "unexpected" });
   }
 });
 

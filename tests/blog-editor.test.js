@@ -330,3 +330,54 @@ describe("éditeur : enregistrement, statuts, versions, sauvegarde automatique, 
     assert.match(pub, /<h2 id="section">Section<\/h2>/);
   });
 });
+
+describe("assistant IA : connexion serveur à Anthropic (API simulée localement), clé jamais exposée", () => {
+  const http = require("node:http");
+  const SECRET = "sk-ant-api03-cle-de-test-qui-ne-doit-jamais-sortir";
+  let srv, prof, fake, status = 200, received = [];
+  before(async () => {
+    fake = http.createServer((req, res) => {
+      let body = "";
+      req.on("data", (c) => (body += c));
+      req.on("end", () => {
+        received.push({ key: req.headers["x-api-key"], body: JSON.parse(body) });
+        res.writeHead(status, { "content-type": "application/json" });
+        if (status !== 200) return res.end(JSON.stringify({ type: "error", error: { type: status === 401 ? "authentication_error" : "api_error", message: "x" } }));
+        res.end(JSON.stringify({ id: "m", type: "message", role: "assistant", model: "claude-opus-5-5", content: [{ type: "text", text: JSON.stringify({ text: "Résumé proposé." }) }], stop_reason: "end_turn", usage: { input_tokens: 1, output_tokens: 1 } }));
+      });
+    });
+    await new Promise((r) => fake.listen(0, "127.0.0.1", r));
+    srv = await startServer({ ANTHROPIC_API_KEY: SECRET, ANTHROPIC_BASE_URL: `http://127.0.0.1:${fake.address().port}` });
+    prof = await loginInstructor(srv);
+  });
+  after(async () => { await srv.stop(); fake.close(); });
+  const ask = (body) => prof.request("/formateur/blog/api/ia", { method: "POST", json: body });
+
+  test("la clé part uniquement du serveur vers Anthropic ; la réponse au navigateur ne contient que la proposition", async () => {
+    const r = await ask({ action: "resumer", article: "Un article sur Excel.", title: "Excel" });
+    assert.equal(r.status, 200);
+    assert.equal(JSON.parse(r.text).result.text, "Résumé proposé.");
+    assert.equal(received.at(-1).key, SECRET);
+    assert.equal(received.at(-1).body.model, "claude-opus-5-5");
+    assert.doesNotMatch(r.text, /sk-ant/);
+    assert.match((await prof.get("/formateur/blog/api/ia")).text, /"configured":true/);
+    assert.doesNotMatch((await prof.get("/formateur/blog/nouveau")).text, /sk-ant|Non activé/);
+  });
+  test("clé refusée / panne d'Anthropic : message clair, jamais la clé, rien dans les journaux", async () => {
+    status = 401;
+    const denied = await ask({ action: "resumer", article: "Texte." });
+    assert.equal(denied.status, 400);
+    assert.match(denied.text, /refusée/);
+    status = 500;
+    const down = await ask({ action: "resumer", article: "Texte." });
+    assert.equal(down.status, 400);
+    assert.match(down.text, /Réessayez/);
+    status = 200;
+    for (const r of [denied, down]) assert.doesNotMatch(r.text, /sk-ant/);
+    assert.doesNotMatch(srv.log(), new RegExp(SECRET));
+  });
+  test("réservé au formateur connecté", async () => {
+    const anonymous = await new Client(srv.base).request("/formateur/blog/api/ia", { method: "POST", json: { action: "resumer", article: "x" } });
+    assert.equal(anonymous.status, 302);
+  });
+});

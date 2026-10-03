@@ -94,6 +94,7 @@ Ce sont les réglages secrets du site, saisis dans hPanel (jamais dans le code).
 | `FORMATEUR_USERNAME` | votre pseudo affiché | idem |
 | `CONTACT_EMAIL` | l'adresse qui doit recevoir les messages du formulaire de contact | Facultatif. Nécessite aussi la configuration SMTP ; sans elle, les messages sont seulement lisibles dans Mon espace → Messages |
 | `FORMATEUR_PASSWORD` | un mot de passe solide (**10 caractères minimum**) | idem. **À supprimer juste après.** |
+| `ANTHROPIC_API_KEY` | votre clé Anthropic (`sk-ant-…`) | Facultatif. Active l'**Assistant IA** de l'éditeur d'articles (titre, réécriture, correction, résumé, FAQ, méta description, mots-clés, liens internes). Lue seulement par le serveur. Sans elle, l'assistant affiche « Non activé » |
 
 **Générer le `SESSION_SECRET`** : dans le terminal de votre Mac, tapez
 
@@ -108,6 +109,13 @@ et copiez la longue suite de lettres et chiffres obtenue.
 Cliquez ensuite sur **Déployer**.
 
 ---
+
+### Activer l'Assistant IA (facultatif)
+
+1. Sur [console.anthropic.com](https://console.anthropic.com) : **Settings → API Keys → Create Key**, copiez la clé (elle commence par `sk-ant-`). Prévoyez un peu de crédit (Settings → Billing) : chaque demande coûte quelques centimes.
+2. Dans hPanel : **Sites web → votre site → Node.js → Variables d'environnement → Ajouter** : nom `ANTHROPIC_API_KEY`, valeur = la clé. **Enregistrer**, puis **redémarrer** l'application (ou relancer un déploiement).
+3. Vérification : Mon espace → Blog → ouvrez un article → rail de gauche **IA** : le message « Non activé » a disparu. Cliquez « Résumer » : une proposition s'affiche, l'article n'est modifié que si vous cliquez « Utiliser comme extrait ».
+4. Ne collez jamais la clé dans un article, un e-mail, une capture d'écran ou un fichier du projet. Si elle a fuité : supprimez-la dans la console Anthropic et créez-en une nouvelle.
 
 ## Étape 4 : vérifier que ça marche
 
