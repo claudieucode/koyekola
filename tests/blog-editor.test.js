@@ -334,15 +334,16 @@ describe("éditeur : enregistrement, statuts, versions, sauvegarde automatique, 
 describe("assistant IA : connexion serveur à Anthropic (API simulée localement), clé jamais exposée", () => {
   const http = require("node:http");
   const SECRET = "sk-ant-api03-cle-de-test-qui-ne-doit-jamais-sortir";
-  let srv, prof, fake, status = 200, received = [];
+  let srv, prof, fake, status = 200, received = [], errMessage = "x", betaRefused = false;
   before(async () => {
     fake = http.createServer((req, res) => {
       let body = "";
       req.on("data", (c) => (body += c));
       req.on("end", () => {
-        received.push({ key: req.headers["x-api-key"], body: JSON.parse(body) });
+        received.push({ key: req.headers["x-api-key"], beta: req.headers["anthropic-beta"] || "", body: JSON.parse(body) });
+        if (betaRefused && req.headers["anthropic-beta"]) { res.writeHead(400, { "content-type": "application/json" }); return res.end(JSON.stringify({ type: "error", error: { type: "invalid_request_error", message: "Unexpected value(s) `server-side-fallback-2026-07-01` for the `anthropic-beta` header." } })); }
         res.writeHead(status, { "content-type": "application/json" });
-        if (status !== 200) return res.end(JSON.stringify({ type: "error", error: { type: status === 401 ? "authentication_error" : "api_error", message: "x" } }));
+        if (status !== 200) return res.end(JSON.stringify({ type: "error", error: { type: status === 401 ? "authentication_error" : status === 400 ? "invalid_request_error" : "api_error", message: errMessage } }));
         res.end(JSON.stringify({ id: "m", type: "message", role: "assistant", model: "claude-opus-5-5", content: [{ type: "text", text: JSON.stringify({ text: "Résumé proposé." }) }], stop_reason: "end_turn", usage: { input_tokens: 1, output_tokens: 1 } }));
       });
     });
@@ -375,6 +376,30 @@ describe("assistant IA : connexion serveur à Anthropic (API simulée localement
     status = 200;
     for (const r of [denied, down]) assert.doesNotMatch(r.text, /sk-ant/);
     assert.doesNotMatch(srv.log(), new RegExp(SECRET));
+  });
+  test("crédit Anthropic épuisé (400) : cause expliquée en français", async () => {
+    status = 400;
+    errMessage = "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.";
+    const r = await ask({ action: "resumer", article: "Texte." });
+    assert.equal(r.status, 400);
+    assert.match(r.text, /Crédit Anthropic insuffisant/);
+    errMessage = "messages: text content blocks must be non-empty";
+    assert.match((await ask({ action: "resumer", article: "Texte." })).text, /Anthropic a refusé la demande \(400\) : « messages: text content blocks must be non-empty »/);
+    status = 200;
+    errMessage = "x";
+  });
+  test("option bêta refusée pour le compte : la demande est refaite automatiquement sans elle", async () => {
+    betaRefused = true;
+    received = [];
+    const r = await ask({ action: "resumer", article: "Texte." });
+    betaRefused = false;
+    assert.equal(r.status, 200, r.text);
+    assert.equal(JSON.parse(r.text).result.text, "Résumé proposé.");
+    assert.equal(received.length, 2);
+    assert.match(received[0].beta, /server-side-fallback/);
+    assert.equal(received[1].beta, "");
+    assert.equal(received[1].body.fallbacks, undefined);
+    assert.equal(received[1].body.model, "claude-opus-5-5");
   });
   test("réservé au formateur connecté", async () => {
     const anonymous = await new Client(srv.base).request("/formateur/blog/api/ia", { method: "POST", json: { action: "resumer", article: "x" } });
