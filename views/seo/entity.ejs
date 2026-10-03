@@ -1,0 +1,71 @@
+<%- include("../partials/header", { title: `SEO · ${entity.name}` }) %>
+<% const p = live.page; %>
+<div class="container-wide seo-page">
+  <%- include("_nav", { active: "contents" }) %>
+  <p class="field-hint"><a href="/formateur/seo/contenus?type=<%= entity.type %>">← <%= typeLabel %>s</a></p>
+  <h2 class="seo-entity-title"><%= typeLabel %> : <%= entity.name %> <a class="btn btn-outline btn-sm" href="<%= entity.path %>" target="_blank" rel="noopener">Voir la page ↗</a></h2>
+  <% if (saved) { %><p class="form-success" role="status">Enregistré. Le contrôle ci-dessous relit la page publique pour vérifier qu'elle publie bien ces réglages.</p><% } %>
+  <% if (errors.length) { %><div class="form-error" role="alert"><strong>Rien n'a été enregistré :</strong><ul><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></div><% } %>
+
+  <div class="seo-entity-grid">
+    <form method="post" class="content-card seo-form" data-seo-entity-form>
+      <h2>Réglages SEO</h2>
+      <p class="field-hint">Laissez un champ vide pour garder la valeur automatique (modèle des réglages ou texte du contenu).</p>
+      <% const field = (key, kind) => { const f = fields[key]; const id = `m-${key}`; const v = values[key] === null || values[key] === undefined ? "" : values[key]; %>
+        <div class="field-group">
+          <label for="<%= id %>"><%= f.label %><% if (f.max) { %> <span class="field-hint" data-seo-count="<%= id %>" data-max="<%= key === "seo_title" ? 60 : f.max %>"></span><% } %></label>
+          <% if (kind === "textarea") { %><textarea id="<%= id %>" name="<%= key %>" rows="3" maxlength="<%= f.max %>" placeholder="<%= key === "seo_description" && p ? p.description || "" : "" %>" data-seo-field="<%= key %>"><%= v %></textarea>
+          <% } else if (f.tri) { %><select id="<%= id %>" name="<%= key %>"><option value="" <%= v === "" ? "selected" : "" %>>Automatique</option><option value="1" <%= String(v) === "1" ? "selected" : "" %>><%= key === "robots_index" ? "Indexer (index)" : "Suivre les liens (follow)" %></option><option value="0" <%= String(v) === "0" ? "selected" : "" %>><%= key === "robots_index" ? "Ne pas indexer (noindex)" : "Ne pas suivre (nofollow)" %></option></select>
+          <% } else if (f.image) { %><%- include("_image-select", { id, name: key, value: v, media }) %>
+          <% } else if (f.choices) { %><select id="<%= id %>" name="<%= key %>"><option value="">Automatique</option><option value="summary_large_image" <%= v === "summary_large_image" ? "selected" : "" %>>Grande image</option><option value="summary" <%= v === "summary" ? "selected" : "" %>>Petite image</option></select>
+          <% } else { %><input type="<%= f.url ? "url" : "text" %>" id="<%= id %>" name="<%= key %>" value="<%= v %>" maxlength="<%= f.max %>" placeholder="<%= key === "seo_title" && p ? p.title || "" : "" %>" data-seo-field="<%= key %>"><% } %>
+        </div>
+      <% }; %>
+      <fieldset class="seo-fieldset"><legend>Google</legend><% field("seo_title"); field("seo_description", "textarea"); field("focus_keyword"); field("secondary_keywords"); %></fieldset>
+      <fieldset class="seo-fieldset"><legend>Indexation</legend><% field("robots_index"); field("robots_follow"); field("canonical_url"); %><span class="field-hint">URL canonique : seulement si ce contenu a été publié ailleurs en premier. Vide = l'adresse de la page.</span></fieldset>
+      <fieldset class="seo-fieldset"><legend>Partage (Facebook, LinkedIn, WhatsApp, X)</legend><% field("og_title"); field("og_description", "textarea"); field("og_image_path"); field("twitter_card"); %></fieldset>
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+    </form>
+
+    <div>
+      <section class="content-card">
+        <h2>Aperçu dans Google</h2>
+        <p class="field-hint">Simulation à partir des vraies valeurs : Google peut afficher un titre ou un extrait différents.</p>
+        <% if (p) { %>
+          <div class="seo-serp" data-seo-serp data-title="<%= p.title || "" %>" data-description="<%= p.description || "" %>" data-site="<%= p.og["og:site_name"] || "" %>">
+            <span class="seo-serp-site"><%= p.og["og:site_name"] %></span><span class="seo-serp-url"><%= p.canonical || entity.path %></span>
+            <span class="seo-serp-title" data-serp-title><%= p.title %></span><span class="seo-serp-desc" data-serp-desc><%= p.description %></span>
+          </div>
+        <% } else { %><p class="form-error">Page publique non disponible : <%= live.error || `réponse ${live.status}` %>.</p><% } %>
+      </section>
+
+      <section class="content-card">
+        <h2>Ce que publie la page</h2>
+        <% if (!p) { %><p>Non disponible : la page n'a pas pu être lue (<%= live.error || `réponse ${live.status}` %>).</p>
+        <% } else { %>
+          <p class="field-hint">Lu à l'instant dans le HTML public (<%= live.ms %> ms).</p>
+          <dl class="seo-dl">
+            <dt>Titre</dt><dd><%= p.title || "Absent" %> <span class="field-hint">(<%= (p.title || "").length %> car.)</span></dd>
+            <dt>Description</dt><dd><%= p.description || "Absente" %></dd>
+            <dt>Robots</dt><dd><%= p.robots || "index, follow (par défaut)" %></dd>
+            <dt>Canonical</dt><dd><%= p.canonical || "Absente" %></dd>
+            <dt>H1</dt><dd><%= p.h1.length === 1 ? p.h1[0] : `${p.h1.length} titre(s) H1` %></dd>
+            <dt>Image de partage</dt><dd><%= p.og["og:image"] ? `${p.og["og:image"]}${p.og["og:image:width"] ? ` (${p.og["og:image:width"]} × ${p.og["og:image:height"]})` : ""}` : "Aucune" %></dd>
+            <dt>Données structurées</dt><dd><%= p.jsonLd.flatMap((o) => o["@graph"] || [o]).map((n) => [].concat(n["@type"])[0]).join(", ") || "Aucune" %><% if (p.jsonLdProblems.length) { %><ul class="seo-problems"><% p.jsonLdProblems.forEach((x) => { %><li><%= x.message %></li><% }) %></ul><% } %></dd>
+          </dl>
+          <% if (checks.length) { %>
+            <h3>Contrôle : réglages enregistrés ↔ HTML public</h3>
+            <ul class="seo-checks"><% checks.forEach((c) => { %><li class="<%= c.ok ? "is-ok" : "is-bad" %>"><strong><%= c.ok ? "✓" : "✗" %> <%= c.label %></strong><% if (!c.ok) { %><br><span class="field-hint">Enregistré : <%= c.stored %> — publié : <%= c.actual %></span><% } %></li><% }) %></ul>
+          <% } %>
+        <% } %>
+      </section>
+
+      <section class="content-card">
+        <h2>Historique</h2>
+        <% if (!changes.length) { %><p class="field-hint">Aucune modification SEO pour ce contenu.</p><% } else { %><%- include("_changes", { changes, fieldLabels, showEntity: false }) %><% } %>
+      </section>
+    </div>
+  </div>
+</div>
+<script src="<%= asset('/js/seo-admin.js') %>" defer></script>
+<%- include("../partials/footer") %>

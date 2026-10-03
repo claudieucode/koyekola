@@ -1,0 +1,29 @@
+<%- include("../partials/header", { title: "SEO · Contenus" }) %>
+<div class="container-wide seo-page">
+  <%- include("_nav", { active: "contents" }) %>
+  <section class="content-card">
+    <h2>Contenus publics (<%= list.length %>)</h2>
+    <form method="get" class="seo-filters" role="search">
+      <label class="sr-only" for="seo-type">Type</label>
+      <select id="seo-type" name="type"><option value="">Tous les types</option><% Object.entries(labels).forEach(([k, l]) => { %><option value="<%= k %>" <%= k === type ? "selected" : "" %>><%= l %></option><% }) %></select>
+      <label class="sr-only" for="seo-q">Rechercher</label>
+      <input type="search" id="seo-q" name="q" value="<%= q %>" placeholder="Nom ou adresse…">
+      <button type="submit" class="btn btn-outline btn-sm">Filtrer</button>
+    </form>
+    <% if (!list.length) { %><p>Aucun contenu ne correspond.</p><% } else { %>
+    <div class="seo-table-wrap"><table class="seo-table">
+      <thead><tr><th scope="col">Contenu</th><th scope="col">Type</th><th scope="col">Adresse</th><th scope="col">Réglages</th><th scope="col"></th></tr></thead>
+      <tbody>
+        <% list.forEach((e) => { %>
+          <tr>
+            <td><%= e.name %></td><td><%= labels[e.type] %></td><td><a href="<%= e.path %>" target="_blank" rel="noopener"><%= e.path %></a></td>
+            <td><%= e.type === "post" ? "Dans l'éditeur" : e.custom ? "Personnalisés" : "Automatiques" %></td>
+            <td><a class="btn btn-outline btn-sm" href="<%= e.editUrl || `/formateur/seo/contenus/${e.type}/${e.key}` %>">Modifier</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+    <% } %>
+  </section>
+</div>
+<%- include("../partials/footer") %>

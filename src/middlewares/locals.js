@@ -7,6 +7,7 @@ const { renderMarkdown } = require("../utils/markdown");
 const { signedBunnyUrl } = require("../utils/bunny");
 const { absoluteUrl, plainText, jsonLdTags } = require("../utils/seo");
 const { slugify } = require("../utils/format");
+const seoResolver = require("../seo/resolver");
 
 // Espaces privés et pages sans intérêt pour les moteurs de recherche
 const NOINDEX_PREFIXES = ["/formateur", "/mes-cours", "/panier", "/commande", "/apprendre", "/certificat", "/favoris", "/connexion", "/inscription", "/deconnexion"];
@@ -17,6 +18,7 @@ function injectLocals(req, res, next) {
   res.locals.plainText = plainText;
   res.locals.slugify = slugify;
   res.locals.jsonLdTags = jsonLdTags;
+  res.locals.seoHead = (seo, title) => seoResolver.finalize(req, req.path, seo, title);
   // Réglages de référencement de la page (les routes publiques les précisent en passant `seo` à la vue)
   res.locals.seo = NOINDEX_PREFIXES.some((p) => req.path === p || req.path.startsWith(p + "/")) ? { noindex: true } : {};
   res.locals.signedBunnyUrl = signedBunnyUrl;

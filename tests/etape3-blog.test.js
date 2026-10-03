@@ -14,7 +14,7 @@ const q = (sql, ...a) => {
   return r;
 };
 const meta = (html, name) => (html.match(new RegExp(`<meta[^>]+(?:name|property)="${name}"[^>]+content="([^"]*)"`)) || [])[1];
-const jsonLd = (html) => [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
+const jsonLd = (html) => [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].flatMap((m) => { const o = JSON.parse(m[1]); return o["@graph"] || [o]; });
 const onDisk = (webPath) => fs.existsSync(path.join(srv.dir, "uploads", webPath.replace(/^\/uploads\//, "")));
 
 async function createPost(client, fields = {}, cover) {
@@ -169,7 +169,8 @@ describe("page d'un article", () => {
     assert.equal(b.headline, "Article publié");
     assert.match(b.datePublished, /^\d{4}-\d{2}-\d{2}T/);
     assert.ok(b.dateModified);
-    assert.equal(b.mainEntityOfPage["@id"], `${srv.base}/blog/${p.slug}`);
+    assert.equal(b.mainEntityOfPage["@id"], `${srv.base}/blog/${p.slug}#webpage`, "relié à la page (graphe)");
+    assert.equal(blocks.find((x) => x["@id"] === b.mainEntityOfPage["@id"]).url, `${srv.base}/blog/${p.slug}`);
     assert.equal(b.publisher["@type"], "Organization");
     assert.match(b.image, /^http/);
     assert.deepEqual(blocks.find((x) => x["@type"] === "BreadcrumbList").itemListElement.map((i) => i.name), ["Accueil", "Blog", "Article publié"]);

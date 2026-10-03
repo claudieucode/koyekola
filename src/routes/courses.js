@@ -4,12 +4,13 @@ const { requireAuth } = require("../middlewares/auth");
 const { lessonAccess } = require("../services/access");
 const { parseVideoUrl } = require("../utils/video");
 const { slugify, cleanLanguage } = require("../utils/format");
-const { absoluteUrl, plainText, breadcrumbLd, faqLd } = require("../utils/seo");
+const { absoluteUrl, plainText } = require("../utils/seo");
 const { currentSlugFor } = require("../services/slugs");
 const { buildProgramPdf } = require("../services/programPdf");
 const { courseTexts, htmlText } = require("../utils/richText");
 const { listHeroImages } = require("../utils/heroImages");
 const { siteBase } = require("../utils/seo");
+const seoPages = require("../seo/pages");
 
 const SITE_NAME = "KOLAKISA";
 
@@ -51,25 +52,10 @@ router.get("/", (req, res) => {
       .get().c,
   };
   const creator = db.prepare("SELECT username, bio FROM users WHERE role = 'formateur' ORDER BY id LIMIT 1").get() || null;
-  const home = absoluteUrl(req, "/");
   res.render("index", {
     heroImages: listHeroImages(),
     featured, recent, categories, stats, creator,
-    seo: {
-      rawTitle: "KOLAKISA — Formations en ligne, à apprendre à votre rythme",
-      description: "Formations vidéo en ligne : suivez les cours où que vous soyez, à votre rythme, avec des quiz, des ressources à télécharger et un certificat de réussite.",
-      jsonLd: [
-        {
-          "@context": "https://schema.org", "@type": "WebSite", name: SITE_NAME, url: home, inLanguage: "fr",
-          potentialAction: {
-            "@type": "SearchAction",
-            target: { "@type": "EntryPoint", urlTemplate: absoluteUrl(req, "/catalogue?q={search_term_string}") },
-            "query-input": "required name=search_term_string",
-          },
-        },
-        { "@context": "https://schema.org", "@type": "Organization", name: SITE_NAME, url: home },
-      ],
-    },
+    seo: seoPages.home(req),
   });
 });
 
@@ -112,7 +98,7 @@ router.get("/catalogue", (req, res) => {
 
   res.render("catalogue", {
     courses, categories, filters: { q, category, level, sort },
-    seo: { title: "Toutes les formations", description: "Parcourez toutes les formations KOLAKISA : filtrez par catégorie, niveau et prix, et trouvez celle qui vous convient." },
+    seo: seoPages.catalogue(req),
   });
 });
 
@@ -126,11 +112,7 @@ router.get("/categorie/:slug", (req, res) => {
   const crumbs = [{ name: "Accueil", url: "/" }, { name: "Catalogue", url: "/catalogue" }, { name: category }];
   res.render("category", {
     category, courses, crumbs,
-    seo: {
-      title: `Formations ${category}`,
-      description: `Découvrez les ${courses.length} formation${courses.length > 1 ? "s" : ""} ${category} de ${SITE_NAME} : cours vidéo à suivre à votre rythme, avec quiz et certificat.`,
-      jsonLd: [breadcrumbLd(crumbs.map((c) => ({ name: c.name, url: absoluteUrl(req, c.url || `/categorie/${slugify(category)}`) })))],
-    },
+    seo: seoPages.courseCategory(req, category, courses, crumbs),
   });
 });
 
@@ -232,7 +214,6 @@ router.get("/cours/:slug", (req, res) => {
   const promise = course.subtitle || (texts.isRich ? htmlText(course.description, 150) : plainText(course.description, 150));
 
   const faqs = db.prepare("SELECT * FROM faqs WHERE course_id = ? ORDER BY position, id").all(course.id);
-  const url = absoluteUrl(req, `/cours/${course.slug}`);
   const description = course.seo_description || plainText(course.subtitle || (texts.isRich ? htmlText(course.description, 160) : course.description), 160) || `Formation ${course.title} sur ${SITE_NAME}.`;
   const crumbs = [
     { name: "Accueil", url: "/" },
@@ -240,28 +221,11 @@ router.get("/cours/:slug", (req, res) => {
     { name: course.category, url: `/categorie/${slugify(course.category)}` },
     { name: course.title },
   ];
-  const courseLd = {
-    "@context": "https://schema.org", "@type": "Course", name: course.title, description, url, inLanguage: cleanLanguage(course.language),
-    provider: { "@type": "Organization", name: SITE_NAME, url: absoluteUrl(req, "/") },
-    educationalLevel: course.level, timeRequired: isoDuration(totalMinutes),
-    image: course.thumbnail_path ? absoluteUrl(req, course.thumbnail_path) : undefined,
-    offers: { "@type": "Offer", price: (course.price_cents / 100).toFixed(2), priceCurrency: "EUR", url, availability: "https://schema.org/InStock" },
-    hasCourseInstance: { "@type": "CourseInstance", courseMode: "online" },
-    aggregateRating: course.review_count > 0
-      ? { "@type": "AggregateRating", ratingValue: Number(course.avg_rating).toFixed(1), reviewCount: course.review_count, bestRating: 5 }
-      : undefined,
-  };
 
   res.render("course-detail", {
     course, sections, totalMinutes, lessonCount, enrolled, inCart, isOwner, reviews, myReview, crumbs, faqs, texts,
     completedIds, progress, promise, instructor, similar, ratingRows, moreReviewsUrl,
-    seo: {
-      title: course.seo_title || course.title,
-      description,
-      image: course.thumbnail_path ? absoluteUrl(req, course.thumbnail_path) : null,
-      noindex: !course.published,
-      jsonLd: [courseLd, breadcrumbLd(crumbs.map((c) => ({ name: c.name, url: absoluteUrl(req, c.url || `/cours/${course.slug}`) }))), faqs.length ? faqLd(faqs) : null],
-    },
+    seo: seoPages.course(req, course, { description, crumbs, faqs, timeRequired: isoDuration(totalMinutes), language: cleanLanguage(course.language) }),
     objectives: texts.objectives,
     prerequisites: texts.prerequisites,
     audience: texts.audienceProfiles,

@@ -11,7 +11,7 @@ const q = (sql, ...a) => { const db = srv.db(); const r = db.prepare(sql).all(..
 const run = (sql, ...a) => { const db = srv.db(); db.prepare(sql).run(...a); db.close(); };
 const meta = (html, name) => (html.match(new RegExp(`<meta[^>]+(?:name|property)="${name}"[^>]+content="([^"]*)"`)) || [])[1];
 const metas = (html, name) => [...html.matchAll(new RegExp(`<meta[^>]+(?:name|property)="${name}"[^>]+content="([^"]*)"`, "g"))].map((m) => m[1]);
-const jsonLd = (html) => [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
+const jsonLd = (html) => [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].flatMap((m) => { const o = JSON.parse(m[1]); return o["@graph"] || [o]; });
 const count = (html, re) => (html.match(re) || []).length;
 const PNG = { name: "c.png", type: "image/png" };
 

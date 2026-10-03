@@ -110,6 +110,7 @@ app.get("/sante", (req, res) => {
 });
 
 app.use(seoRoutes);
+app.use(require("./src/seo/web").router);
 app.use(mediaRoutes);
 app.use(authRoutes);
 app.use(passwordResetRoutes);

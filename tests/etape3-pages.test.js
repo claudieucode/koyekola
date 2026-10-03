@@ -11,7 +11,7 @@ const q = (sql, ...a) => {
   db.close();
   return r;
 };
-const jsonLd = (html) => [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
+const jsonLd = (html) => [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].flatMap((m) => { const o = JSON.parse(m[1]); return o["@graph"] || [o]; });
 const addFaq = (client, body) => client.post("/formateur/faq/ajouter", body);
 
 before(async () => {

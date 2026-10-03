@@ -1,0 +1,16 @@
+<%# Liste de modifications SEO : date, qui, contenu, champ, avant → après %>
+<div class="seo-table-wrap"><table class="seo-table seo-changes">
+  <thead><tr><th scope="col">Date</th><th scope="col">Par</th><% if (showEntity) { %><th scope="col">Contenu</th><% } %><th scope="col">Champ</th><th scope="col">Avant</th><th scope="col">Après</th></tr></thead>
+  <tbody>
+    <% changes.forEach((c) => { %>
+      <tr>
+        <td><%= formatDateTime(c.created_at) %></td>
+        <td><%= c.username || "—" %></td>
+        <% if (showEntity) { %><td><% if (c.entity_type === "settings") { %><a href="/formateur/seo/reglages">Réglages du site</a><% } else { %><a href="/formateur/seo/contenus/<%= c.entity_type %>/<%= c.entity_key %>"><%= (typeof labels !== "undefined" && labels[c.entity_type]) || c.entity_type %> · <%= c.entity_key %></a><% } %></td><% } %>
+        <td><%= fieldLabels[c.field] || c.field %></td>
+        <td class="seo-old"><%= c.old_value === null ? "(automatique)" : c.old_value %></td>
+        <td class="seo-new"><%= c.new_value === null ? "(automatique)" : c.new_value %></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table></div>

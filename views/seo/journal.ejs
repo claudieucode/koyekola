@@ -1,0 +1,10 @@
+<%- include("../partials/header", { title: "SEO · Journal" }) %>
+<div class="container-wide seo-page">
+  <%- include("_nav", { active: "journal" }) %>
+  <section class="content-card">
+    <h2>Journal des modifications</h2>
+    <p class="field-hint">Chaque modification d'un réglage SEO (site ou contenu) : qui, quand, valeur avant et après. Les 300 plus récentes.</p>
+    <% if (!changes.length) { %><p>Aucune modification enregistrée pour l'instant.</p><% } else { %><%- include("_changes", { changes, fieldLabels, showEntity: true }) %><% } %>
+  </section>
+</div>
+<%- include("../partials/footer") %>

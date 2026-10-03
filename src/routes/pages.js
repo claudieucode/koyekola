@@ -5,7 +5,7 @@ const { requireInstructor } = require("../middlewares/auth");
 const { createRateLimiter } = require("../middlewares/security");
 const { sendContactNotification, sendContactAcknowledgement } = require("../utils/mailer");
 const { UserError } = require("../utils/errors");
-const { absoluteUrl, breadcrumbLd, faqLd } = require("../utils/seo");
+const seoPages = require("../seo/pages");
 
 const router = express.Router();
 
@@ -35,11 +35,7 @@ router.get("/a-propos", (req, res) => {
   const crumbs = [{ name: "Accueil", url: "/" }, { name: "À propos" }];
   res.render("pages/about", {
     about, creator, crumbs,
-    seo: {
-      title: "À propos",
-      description: about.description || ABOUT_DESCRIPTION,
-      jsonLd: [breadcrumbLd(crumbs.map((c) => ({ name: c.name, url: absoluteUrl(req, c.url || "/a-propos") })))],
-    },
+    seo: seoPages.staticPage(req, "a-propos", { title: "À propos", description: about.description || ABOUT_DESCRIPTION, type: "AboutPage", crumbs }),
   });
 });
 
@@ -75,11 +71,7 @@ router.get("/faq", (req, res) => {
   const crumbs = [{ name: "Accueil", url: "/" }, { name: "Questions fréquentes" }];
   res.render("pages/faq", {
     faqs, crumbs,
-    seo: {
-      title: "Questions fréquentes",
-      description: "Réponses aux questions fréquentes sur les formations KOLAKISA : accès, paiement, certificats et fonctionnement.",
-      jsonLd: [breadcrumbLd(crumbs.map((c) => ({ name: c.name, url: absoluteUrl(req, c.url || "/faq") }))), faqs.length ? faqLd(faqs) : null],
-    },
+    seo: seoPages.faqPage(req, faqs, crumbs),
   });
 });
 
@@ -136,11 +128,7 @@ function renderContact(req, res, { status = 200, error = null, values = {} } = {
   const crumbs = [{ name: "Accueil", url: "/" }, { name: "Contact" }];
   res.status(status).render("pages/contact", {
     error, values, sent: req.query.envoye === "1", crumbs,
-    seo: {
-      title: "Contact",
-      description: "Une question sur une formation ? Écrivez-nous : nous répondons à chaque message.",
-      jsonLd: [breadcrumbLd(crumbs.map((c) => ({ name: c.name, url: absoluteUrl(req, c.url || "/contact") })))],
-    },
+    seo: seoPages.staticPage(req, "contact", { title: "Contact", description: "Une question sur une formation ? Écrivez-nous : nous répondons à chaque message.", type: "ContactPage", crumbs }),
   });
 }
 

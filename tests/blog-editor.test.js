@@ -8,7 +8,7 @@ const { analyze } = require("../src/utils/seoAnalyzer");
 const blogAi = require("../src/services/blogAi");
 
 const meta = (html, name) => (html.match(new RegExp(`<meta[^>]+(?:name|property)="${name}"[^>]+content="([^"]*)"`)) || [])[1];
-const jsonLd = (html) => [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
+const jsonLd = (html) => [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].flatMap((m) => { const o = JSON.parse(m[1]); return o["@graph"] || [o]; });
 
 describe("sécurité du contenu (assainissement)", () => {
   test("aucun script, gestionnaire d'événement, iframe, lien javascript:, image externe ni style dangereux n'est enregistré", () => {
@@ -256,8 +256,9 @@ describe("éditeur : enregistrement, statuts, versions, sauvegarde automatique, 
     assert.equal(meta(h, "twitter:description"), "Desc X");
     assert.equal(meta(h, "robots"), undefined, "indexable par défaut");
     const ld = jsonLd(h);
-    assert.equal(ld[0]["@type"], "Article");
-    assert.equal(ld[0].inLanguage, "en");
+    const art = ld.find((x) => x["@type"] === "Article");
+    assert.ok(art, "Article présent dans le graphe");
+    assert.equal(art.inLanguage, "en");
     assert.deepEqual(ld.find((x) => x["@type"] === "FAQPage").mainEntity[0], { "@type": "Question", name: "Question ?", acceptedAnswer: { "@type": "Answer", text: "Réponse." } });
     assert.deepEqual(ld.find((x) => x["@type"] === "HowTo").step.map((s) => s.name), ["Un", "Deux"]);
     assert.deepEqual(ld.find((x) => x["@type"] === "BreadcrumbList").itemListElement.map((i) => i.name), ["Accueil", "Blog", "Bureautique", "SEO complet"]);

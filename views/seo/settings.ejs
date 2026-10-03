@@ -1,0 +1,39 @@
+<%- include("../partials/header", { title: "SEO · Réglages" }) %>
+<div class="container-wide seo-page">
+  <%- include("_nav", { active: "settings" }) %>
+  <% if (saved) { %><p class="form-success" role="status">Réglages enregistrés : ils s'appliquent immédiatement à toutes les pages publiques.</p><% } %>
+  <% if (errors.length) { %><div class="form-error" role="alert"><strong>Rien n'a été enregistré :</strong><ul><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></div><% } %>
+  <form method="post" action="/formateur/seo/reglages" class="seo-form">
+    <% Object.entries(groups).forEach(([group, title]) => { %>
+      <section class="content-card">
+        <h2><%= title %></h2>
+        <% if (group === "templates") { %><p class="field-hint">Variables remplacées automatiquement : {site_name}, {category}, {tag}, {author}, {courses}. Une variable non autorisée est refusée à l'enregistrement.</p><% } %>
+        <% Object.entries(fields).filter(([, f]) => f.group === group).forEach(([key, f]) => { const id = `seo-${key}`; const v = values[key]; %>
+          <div class="field-group">
+            <% if (f.type === "bool") { %>
+              <input type="hidden" name="<%= key %>" value="0">
+              <label class="checkbox-row" for="<%= id %>"><input type="checkbox" id="<%= id %>" name="<%= key %>" value="1" <%= v === true || v === "1" ? "checked" : "" %>> <span><%= f.label %></span></label>
+            <% } else { %>
+              <label for="<%= id %>"><%= f.label %><% if (f.max && f.type !== "urls") { %> <span class="field-hint" data-seo-count="<%= id %>" data-max="<%= f.max %>"></span><% } %></label>
+              <% if (f.type === "choice") { %>
+                <select id="<%= id %>" name="<%= key %>"><% f.choices.forEach((c) => { %><option value="<%= c %>" <%= c === v ? "selected" : "" %>><%= (f.labels && f.labels[c]) || c.trim() || c %></option><% }) %></select>
+              <% } else if (f.type === "image") { %>
+                <%- include("_image-select", { id, name: key, value: v, media }) %>
+              <% } else if (f.type === "urls") { %>
+                <textarea id="<%= id %>" name="<%= key %>" rows="4" placeholder="https://www.facebook.com/…"><%= Array.isArray(v) ? v.join("\n") : v %></textarea>
+              <% } else if (f.max > 120) { %>
+                <textarea id="<%= id %>" name="<%= key %>" rows="2" maxlength="<%= f.max %>"><%= v %></textarea>
+              <% } else { %>
+                <input type="text" id="<%= id %>" name="<%= key %>" value="<%= v %>" maxlength="<%= f.max %>">
+              <% } %>
+            <% } %>
+            <% if (f.help) { %><span class="field-hint"><%= f.help %></span><% } %>
+          </div>
+        <% }) %>
+      </section>
+    <% }) %>
+    <div class="seo-sticky-actions"><button type="submit" class="btn btn-primary">Enregistrer les réglages</button></div>
+  </form>
+</div>
+<script src="<%= asset('/js/seo-admin.js') %>" defer></script>
+<%- include("../partials/footer") %>

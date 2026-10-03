@@ -14,6 +14,8 @@ const { escapeHtml } = require("../utils/markdown");
 const blog = require("../services/blog");
 const blogAi = require("../services/blogAi");
 const editorTheme = require("../services/editorTheme");
+const seoPages = require("../seo/pages");
+const seoSchema = require("../seo/schema");
 
 const router = express.Router();
 const PER_PAGE = 10;
@@ -81,14 +83,7 @@ function renderList(req, res, { filter = null } = {}) {
   const basePath = filter ? filter.path : "/blog";
   const heading = filter ? filter.heading : "Blog";
   const crumbs = filter ? [{ name: "Accueil", url: "/" }, { name: "Blog", url: "/blog" }, { name: filter.label }] : [{ name: "Accueil", url: "/" }, { name: "Blog" }];
-  const seo = {
-    title: page > 1 ? `${heading} (page ${page})` : heading,
-    description: filter ? filter.lead : "Conseils, actualités et ressources autour de nos formations en ligne.",
-    canonical: absoluteUrl(req, page > 1 ? `${basePath}?page=${page}` : basePath),
-    jsonLd: [breadcrumbLd(crumbs.map((c) => ({ name: c.name, url: absoluteUrl(req, c.url || basePath) })))],
-  };
-  // Pages d'étiquette et d'auteur : utiles aux lecteurs, mais pas indexées (contenu en double des catégories)
-  if (filter && filter.type !== "category") seo.noindex = true;
+  const seo = seoPages.blogList(req, { filter, page, basePath, heading, crumbs, posts });
   res.render("blog/index", {
     posts, page, pages, crumbs, basePath, heading, filter, categories: blog.categories(), featured: featured && page === 1 ? decorate(featured) : null,
     lead: filter ? filter.lead : "Conseils, actualités et ressources autour de nos formations.", seo,
@@ -155,32 +150,36 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
     seo.modifiedTime = isoDateTime(post.updated_at);
     seo.section = post.category || null;
     seo.tags = tags;
-    const images = [socialImage, cover].filter((x, i, a) => x && a.indexOf(x) === i);
-    seo.jsonLd = [
-      {
-        "@context": "https://schema.org",
-        "@type": post.schema_type === "Article" ? "Article" : "BlogPosting",
-        headline: post.title,
-        description,
-        ...(images.length ? { image: images.length > 1 ? images : images[0] } : {}),
-        datePublished: isoDateTime(post.published_at),
-        dateModified: isoDateTime(post.updated_at),
-        mainEntityOfPage: { "@type": "WebPage", "@id": ownUrl },
-        ...(author ? { author: { "@type": "Person", name: author.username, url: absoluteUrl(req, `/blog/auteur/${author.id}`) } } : {}),
-        publisher: { "@type": "Organization", name: "KOLAKISA", url: absoluteUrl(req, "/") },
-        ...(post.category ? { articleSection: post.category } : {}),
-        ...(tags.length ? { keywords: tags.join(", ") } : {}),
-        wordCount: article.words,
-        inLanguage: lang,
-        ...(post.comments_enabled ? { commentCount: blog.countComments(post.id) } : {}),
-      },
-      breadcrumbLd(crumbs.map((c) => ({ name: c.name, url: c.url ? absoluteUrl(req, c.url) : ownUrl }))),
-    ];
-    // FAQ et guide pas à pas : seulement s'ils existent vraiment dans l'article
-    if (article.faq.length) seo.jsonLd.push({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: article.faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) });
-    for (const h of article.howto) {
-      seo.jsonLd.push({ "@context": "https://schema.org", "@type": "HowTo", name: h.name || post.title, step: h.steps.map((s, i) => ({ "@type": "HowToStep", position: i + 1, name: s.name, text: s.text || s.name })) });
-    }
+    // Graphe relié : page → article (BlogPosting / Article) → auteur (Person) et éditeur (organisation) ; FAQ et HowTo
+    // seulement s'ils existent vraiment dans l'article
+    const ids = seoSchema.ids(req);
+    const personId = author ? `${ids.base}/#/person/${author.id}` : null;
+    const imagePath = post.og_image_path || post.cover_path || null;
+    // Images réelles de l'article (partage puis principale), sans doublon et seulement si le fichier existe
+    const imgs = [post.og_image_path, post.cover_path].filter((x, i, a) => x && a.indexOf(x) === i).map((x) => seoSchema.imageObject(req, x, null)).filter(Boolean).map((o) => o.url);
+    const articleNode = {
+      "@type": post.schema_type === "Article" ? "Article" : "BlogPosting",
+      "@id": `${ownUrl}#article`,
+      headline: post.title,
+      description,
+      ...(imgs.length ? { image: imgs.length > 1 ? imgs : imgs[0] } : {}),
+      datePublished: isoDateTime(post.published_at),
+      dateModified: isoDateTime(post.updated_at),
+      mainEntityOfPage: { "@id": `${ownUrl}#webpage` },
+      ...(author ? { author: { "@type": "Person", "@id": personId, name: author.username, url: absoluteUrl(req, `/blog/auteur/${author.id}`) } } : {}),
+      publisher: seoSchema.orgRef(req),
+      ...(post.category ? { articleSection: post.category } : {}),
+      ...(tags.length ? { keywords: tags.join(", ") } : {}),
+      wordCount: article.words,
+      inLanguage: lang,
+      ...(post.comments_enabled ? { commentCount: blog.countComments(post.id) } : {}),
+    };
+    const main = [articleNode];
+    if (article.faq.length) main.push({ "@type": "FAQPage", "@id": `${ownUrl}#faq`, mainEntity: article.faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) });
+    article.howto.forEach((h, i) => main.push({ "@type": "HowTo", "@id": `${ownUrl}#howto-${i + 1}`, name: h.name || post.title, step: h.steps.map((st, n) => ({ "@type": "HowToStep", position: n + 1, name: st.name, text: st.text || st.name })) }));
+    seo.imagePath = imagePath;
+    seo.locale = seoPages.LOCALES[post.language] || undefined;
+    seo.graph = { page: { type: "WebPage", url: ownUrl, crumbs, imagePath, inLanguage: lang, datePublished: isoDateTime(post.published_at), dateModified: isoDateTime(post.updated_at) }, main };
   }
   const { previous, next } = post.published ? blog.neighbours(post) : { previous: null, next: null };
   const toc = post.toc_enabled === 0 ? [] : article.toc;

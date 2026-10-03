@@ -1,0 +1,9 @@
+<%# Choix d'une image de la médiathèque (chemin enregistré) avec aperçu %>
+<select id="<%= id %>" name="<%= name %>" data-seo-image>
+  <option value="">— Aucune —</option>
+  <% let found = !value; media.forEach((m) => { if (m.path === value) found = true; %>
+    <option value="<%= m.path %>" <%= m.path === value ? "selected" : "" %>><%= (m.alt || m.path.split("/").pop()).slice(0, 60) %><%= m.width ? ` (${m.width} × ${m.height})` : "" %></option>
+  <% }) %>
+  <% if (!found) { %><option value="<%= value %>" selected><%= value %></option><% } %>
+</select>
+<img class="seo-image-preview" data-seo-image-preview alt="" <%- value ? `src="${value}"` : "hidden" %>>
