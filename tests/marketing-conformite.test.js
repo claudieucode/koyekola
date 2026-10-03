@@ -13,7 +13,7 @@ beforeEach(() => {
 });
 const code = (fn) => { try { fn(); } catch (e) { return e.code; } return null; };
 const status = (ctx = A, id = c.id) => audience.getContact(ctx, id).status;
-const PROOF = { source: "form", textShown: "Oui, je veux recevoir les actualités de KOYEKOLA", ip: "203.0.113.57" };
+const PROOF = { source: "form", textShown: "Oui, je veux recevoir les actualités de KOLAKISA", ip: "203.0.113.57" };
 
 describe("consentement", () => {
   test("un consentement prouvé abonne le contact et laisse une trace complète (IP tronquée)", () => {

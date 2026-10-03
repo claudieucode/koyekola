@@ -227,7 +227,7 @@ function startSmsCampaign(ctx, id, { scheduledAt, now = Date.now(), workerOn } =
     ctx.db
       .prepare(`UPDATE mk_sms_campaigns SET status = 'scheduled', sender = ?, price_per_segment = ?, currency = ?, scheduled_at = ?, total_recipients = ?, updated_at = datetime('now')
                 WHERE id = ? AND organization_id = ?`)
-      .run(cfg.sender || "KOYEKOLA", cfg.pricePerSegment, cfg.currency, scheduledAt ?? null, recipients, id, ctx.organizationId);
+      .run(cfg.sender || "KOLAKISA", cfg.pricePerSegment, cfg.currency, scheduledAt ?? null, recipients, id, ctx.organizationId);
     enqueueDispatch(ctx, id, { runAt: scheduledAt ?? now, key: `sms_campaign:${id}:start` });
     audit(ctx, "sms_campaign.started", "sms_campaign", id, { recipients, scheduled: scheduledAt !== undefined });
     return { recipients };
@@ -308,7 +308,7 @@ async function processMessage(ctx, { campaign, message, cfg, links, provider, no
     return "sent";
   } catch (error) {
     if (!(error instanceof SmsSendError)) {
-      ctx.log?.error?.("[KOYEKOLA] Erreur imprévue pendant l'envoi d'un SMS de campagne :", error && error.message);
+      ctx.log?.error?.("[KOLAKISA] Erreur imprévue pendant l'envoi d'un SMS de campagne :", error && error.message);
       fail("error");
       return "failed";
     }

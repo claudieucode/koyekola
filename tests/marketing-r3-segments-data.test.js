@@ -1,4 +1,4 @@
-// Marketing R3 (1/2) — segments : critères « Activité KOYEKOLA » et « montant dépensé », usages, duplication, statistiques.
+// Marketing R3 (1/2) — segments : critères « Activité KOLAKISA » et « montant dépensé », usages, duplication, statistiques.
 const { test, describe, beforeEach } = require("node:test");
 const assert = require("node:assert/strict");
 const { freshMarketing, T0 } = require("./marketing-helpers");
@@ -25,7 +25,7 @@ const rule = (field, cmp, value, course) => ({ field, cmp, ...(value !== undefin
 
 beforeEach(() => { m = freshMarketing(); A = m.A; B = m.B; });
 
-describe("moteur : activité KOYEKOLA", () => {
+describe("moteur : activité KOLAKISA", () => {
   test("« a eu lieu » / « n'a jamais eu lieu »", () => {
     const a = mk("a@ex.fr"), b = mk("b@ex.fr"); mk("c@ex.fr");
     ev(a, "lms.course_enrolled", { courseId: 1 }); ev(b, "lms.user_registered");
@@ -90,7 +90,7 @@ describe("moteur : activité KOYEKOLA", () => {
   test("validation : événement inconnu, valeurs et formation invalides, injection", () => {
     const bad = (r) => code(() => segments.validateDefinition(A, seg(r)));
     assert.equal(bad(rule("event:lms.inconnu", "happened")), "invalid_segment");
-    assert.equal(bad(rule("event:contact.created", "happened")), "invalid_segment", "seuls les événements KOYEKOLA sont proposés");
+    assert.equal(bad(rule("event:contact.created", "happened")), "invalid_segment", "seuls les événements KOLAKISA sont proposés");
     assert.equal(bad(rule("event:lms.course_enrolled", "at_least")), "invalid_segment");
     assert.equal(bad(rule("event:lms.course_enrolled", "at_least", 0)), "invalid_segment");
     assert.equal(bad(rule("event:lms.course_enrolled", "at_least", 1.5)), "invalid_segment");
@@ -141,7 +141,7 @@ describe("moteur : montant dépensé", () => {
   });
 });
 
-describe("catalogue : activité KOYEKOLA", () => {
+describe("catalogue : activité KOLAKISA", () => {
   test("champs proposés, libellés français, formations issues des événements (sans lire le LMS)", () => {
     const a = mk("a@ex.fr");
     ev(a, "lms.course_enrolled", { courseId: 1, title: "Excel" }, T0 - 5 * DAY);
@@ -149,7 +149,7 @@ describe("catalogue : activité KOYEKOLA", () => {
     order(a, [{ courseId: 2, title: "Python", priceCents: 100 }]);
     const cat = Object.fromEntries(fieldCatalog(A).map((f) => [f.field, f]));
     for (const f of ["event:lms.order_completed", "event:lms.course_enrolled", "event:lms.lesson_completed", "event:lms.course_completed", "event:lms.review_posted", "event:lms.favorite_added", "event:lms.user_registered", "lms_spent"]) assert.ok(cat[f], f);
-    assert.equal(cat["event:lms.course_completed"].group, "Activité KOYEKOLA");
+    assert.equal(cat["event:lms.course_completed"].group, "Activité KOLAKISA");
     assert.equal(cat["lms_spent"].group, "Achats");
     assert.equal(cat["event:lms.user_registered"].supportsCourse, false);
     assert.equal(cat["event:lms.course_enrolled"].supportsCourse, true);

@@ -85,7 +85,7 @@ describe("contenu du PDF (cahier des charges)", () => {
 
   test("titre de la formation et nom de la plateforme", () => {
     has("Étalonnage vidéo : les bases");
-    has("KOYEKOLA");
+    has("KOLAKISA");
   });
   test("description sans symboles de mise en forme", () => {
     has("complète");

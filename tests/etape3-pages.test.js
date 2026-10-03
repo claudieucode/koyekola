@@ -28,7 +28,7 @@ describe("page À propos", () => {
     const r = await anon().get("/a-propos");
     assert.equal(r.status, 200);
     assert.match(r.text, /<h1[^>]*>À propos<\/h1>/);
-    assert.match(r.text, /KOYEKOLA/);
+    assert.match(r.text, /KOLAKISA/);
     assert.match(r.text, /aria-label="Fil d'Ariane"/);
     assert.match(r.text, /<link rel="canonical" href="[^"]+\/a-propos">/);
   });
@@ -264,7 +264,7 @@ describe("liens et référencement", () => {
   test("chaque page a un titre, une description et un seul H1", async () => {
     for (const [url, title] of [["/a-propos", "À propos"], ["/faq", "Questions fréquentes"], ["/contact", "Contact"]]) {
       const html = (await anon().get(url)).text;
-      assert.match(html, new RegExp(`<title>[^<]*${title}[^<]* · KOYEKOLA</title>`));
+      assert.match(html, new RegExp(`<title>[^<]*${title}[^<]* · KOLAKISA</title>`));
       assert.match(html, /<meta name="description" content="[^"]{20,}"/);
       assert.equal((html.match(/<h1[\s>]/g) || []).length, 1);
     }

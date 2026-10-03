@@ -200,8 +200,8 @@ describe("e-mails du site : pages web", () => {
     assert.equal(m.to_email, "eleve@exemple.cg");
   });
   test("newsletter en double confirmation : e-mail de confirmation, page « vérifiez votre boîte », bouton obligatoire", async () => {
-    await boss.post("/marketing/formulaires", { name: "Lettre KOYEKOLA", consentText: "Oui, je veux la lettre." });
-    const f = q("SELECT id, slug, double_optin FROM mk_forms WHERE name = 'Lettre KOYEKOLA'");
+    await boss.post("/marketing/formulaires", { name: "Lettre KOLAKISA", consentText: "Oui, je veux la lettre." });
+    const f = q("SELECT id, slug, double_optin FROM mk_forms WHERE name = 'Lettre KOLAKISA'");
     assert.equal(f.double_optin, 1); // activée par défaut pour un nouveau formulaire
     await boss.post(`/marketing/formulaires/${f.id}/publier`);
     const v = new Client(srv.base);
@@ -218,8 +218,8 @@ describe("e-mails du site : pages web", () => {
     assert.equal((await v.get(path)).status, 410);
   });
   test("réglage de la double confirmation dans l'éditeur du formulaire : décochable", async () => {
-    const f = q("SELECT id FROM mk_forms WHERE name = 'Lettre KOYEKOLA'");
-    await boss.post(`/marketing/formulaires/${f.id}`, { name: "Lettre KOYEKOLA", consentText: "Oui, je veux la lettre.", doubleOptinShown: "1" });
+    const f = q("SELECT id FROM mk_forms WHERE name = 'Lettre KOLAKISA'");
+    await boss.post(`/marketing/formulaires/${f.id}`, { name: "Lettre KOLAKISA", consentText: "Oui, je veux la lettre.", doubleOptinShown: "1" });
     assert.equal(q("SELECT double_optin FROM mk_forms WHERE id = ?", f.id).double_optin, 0);
   });
   test("Réglages d'envoi : e-mail de test (SMTP absent → message clair) et journal des e-mails du site", async () => {

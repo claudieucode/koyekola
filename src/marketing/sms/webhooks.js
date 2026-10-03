@@ -12,9 +12,9 @@ const STOP_WORDS = new Set(["STOP", "STOPALL", "STOP SMS", "ARRET", "ARRETER", "
 const START_WORDS = new Set(["START", "UNSTOP", "REPRENDRE", "ABONNER"]);
 const HELP_WORDS = new Set(["HELP", "AIDE", "INFO"]);
 const REPLIES = {
-  stop: "KOYEKOLA : vous ne recevrez plus nos SMS. Repondez START pour vous reinscrire.",
-  start: "KOYEKOLA : vous etes de nouveau inscrit(e) a nos SMS. Repondez STOP pour arreter.",
-  help: "KOYEKOLA : SMS d'information sur nos formations. Repondez STOP pour ne plus en recevoir.",
+  stop: "KOLAKISA : vous ne recevrez plus nos SMS. Repondez START pour vous reinscrire.",
+  start: "KOLAKISA : vous etes de nouveau inscrit(e) a nos SMS. Repondez STOP pour arreter.",
+  help: "KOLAKISA : SMS d'information sur nos formations. Repondez STOP pour ne plus en recevoir.",
 };
 // Réponses sans accent : elles restent dans l'alphabet GSM-7 (un seul SMS facturé)
 

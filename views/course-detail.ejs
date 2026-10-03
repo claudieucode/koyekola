@@ -193,7 +193,7 @@
           <% } %>
           <div class="instructor-info">
             <p class="name"><%= instructor.username %></p>
-            <p class="role">Formateur KOYEKOLA</p>
+            <p class="role">Formateur KOLAKISA</p>
             <ul class="instructor-stats">
               <% if (instructor.review_count > 0) { %><li><%- icon('star', { size: 15 }) %> <strong><%= Number(instructor.avg_rating).toFixed(1) %></strong> Note moyenne <span>(<%= instructor.review_count %> avis)</span></li><% } %>
               <li><%- icon('book', { size: 15 }) %> <strong><%= instructor.course_count %></strong> formation<%= instructor.course_count > 1 ? "s" : "" %></li>

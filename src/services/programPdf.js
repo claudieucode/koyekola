@@ -36,7 +36,7 @@ function buildProgramPdf({ course, sections, lists, siteUrl, date = new Date(), 
     margins: { top: 56, bottom: 64, left: 56, right: 56 },
     bufferPages: true,
     compress: false, // texte lisible et vérifiable par les tests ; le poids reste de quelques Ko
-    info: { Title: pdfSafe(`Plan complet de la formation : ${course.title}`), Author: "KOYEKOLA", Subject: "Plan complet de la formation" },
+    info: { Title: pdfSafe(`Plan complet de la formation : ${course.title}`), Author: "KOLAKISA", Subject: "Plan complet de la formation" },
   });
   const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   const bottom = () => doc.page.height - doc.page.margins.bottom;
@@ -70,7 +70,7 @@ function buildProgramPdf({ course, sections, lists, siteUrl, date = new Date(), 
 
   // ---- Bandeau de marque ----
   doc.rect(0, 0, doc.page.width, 64).fill(BLUE);
-  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(20).text("KOYEKOLA", doc.page.margins.left, 22);
+  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(20).text("KOLAKISA", doc.page.margins.left, 22);
   doc.font("Helvetica").fontSize(10).text("Plan de la formation", doc.page.margins.left, 28, { width: contentWidth, align: "right" });
   doc.y = 88;
   doc.x = doc.page.margins.left;

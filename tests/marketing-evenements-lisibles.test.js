@@ -32,7 +32,7 @@ describe("page Événements", () => {
     const achat = rowOf(html, "achat@ex.fr");
     assert.match(achat, /Une commande est passée/);
     assert.match(achat, /<code class="mk-sub">lms\.order_completed<\/code>/);
-    assert.match(achat, />Site KOYEKOLA</);
+    assert.match(achat, />Site KOLAKISA</);
     assert.match(achat, /\d{2}\/\d{2}\/2026 \d{2}:\d{2}/);
     assert.match(achat, /<span class="mk-status mk-status-ok">Traité<\/span>/);
     const abo = rowOf(html, "abo@ex.fr");

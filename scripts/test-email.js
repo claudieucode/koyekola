@@ -20,7 +20,7 @@ const EMAIL = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]{2,}$/;
   console.log(`  Expéditeur  = ${fromAddress() || "(vide : définissez SMTP_FROM)"}`);
   const transport = buildTransport();
   if (!transport) { console.log("\n✗ SMTP_HOST est vide : aucun e-mail ne peut partir."); process.exit(1); }
-  if (!fromAddress()) { console.log("\n✗ Aucun expéditeur : définissez SMTP_FROM (ex. KOYEKOLA <contact@kolakisa.com>)."); process.exit(1); }
+  if (!fromAddress()) { console.log("\n✗ Aucun expéditeur : définissez SMTP_FROM (ex. KOLAKISA <contact@kolakisa.com>)."); process.exit(1); }
   try {
     await transport.verify();
     console.log("\n✓ Connexion au serveur SMTP réussie (identifiants acceptés).");
@@ -31,8 +31,8 @@ const EMAIL = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]{2,}$/;
   }
   try {
     const info = await transport.sendMail({
-      from: fromAddress(), to, subject: "[TEST] KOYEKOLA : votre configuration e-mail fonctionne",
-      text: "Bonjour,\n\nCet e-mail de test a été envoyé par la commande « npm run test-email » de KOYEKOLA.\nS'il est arrivé dans votre boîte de réception (et non dans les indésirables), la configuration est bonne.",
+      from: fromAddress(), to, subject: "[TEST] KOLAKISA : votre configuration e-mail fonctionne",
+      text: "Bonjour,\n\nCet e-mail de test a été envoyé par la commande « npm run test-email » de KOLAKISA.\nS'il est arrivé dans votre boîte de réception (et non dans les indésirables), la configuration est bonne.",
     });
     console.log(`✓ E-mail de test accepté par le serveur pour ${to} (identifiant : ${info.messageId}). Vérifiez votre boîte de réception et les indésirables.`);
   } catch (error) {

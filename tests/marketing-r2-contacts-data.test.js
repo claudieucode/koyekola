@@ -306,7 +306,7 @@ describe("chronologie du contact", () => {
     assert.match(t[1].text, /Entré/);
     assert.equal(t[0].href, `/marketing/automatisations/${a}`);
   });
-  test("événements KOYEKOLA affichés ; ceux déjà représentés (création, étiquette, liste) ne sont pas doublés", () => {
+  test("événements KOLAKISA affichés ; ceux déjà représentés (création, étiquette, liste) ne sont pas doublés", () => {
     const c = add("a@ex.fr", { created: T0 - 20 * DAY });
     const ev = (name, at) => m.db.prepare("INSERT INTO mk_events (organization_id, name, email, contact_id, source, occurred_at, created_at) VALUES (1, ?, 'a@ex.fr', ?, 'lms', ?, ?)").run(name, c.id, at, at);
     ev("lms.order_completed", T0 - 6 * DAY); ev("contact.created", T0 - 20 * DAY); ev("tag.added", T0 - 7 * DAY); ev("x.inconnu", T0 - 8 * DAY);

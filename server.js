@@ -31,14 +31,14 @@ const isProduction = process.env.NODE_ENV === "production" || /^https:/i.test(pr
 const sessionSecret = process.env.SESSION_SECRET;
 const secretIsWeak = !sessionSecret || sessionSecret.length < 16 || sessionSecret === "change-moi-en-production";
 if (secretIsWeak && isProduction) {
-  console.error("[KOYEKOLA] SESSION_SECRET est absente ou trop faible (16 caractères minimum). Définissez-la dans la configuration de l'hébergeur.");
+  console.error("[KOLAKISA] SESSION_SECRET est absente ou trop faible (16 caractères minimum). Définissez-la dans la configuration de l'hébergeur.");
   process.exit(1);
 }
-if (secretIsWeak) console.warn("[KOYEKOLA] Attention : SESSION_SECRET faible ou absente (acceptable en local uniquement).");
+if (secretIsWeak) console.warn("[KOLAKISA] Attention : SESSION_SECRET faible ou absente (acceptable en local uniquement).");
 
 bootstrapInstructorFromEnv();
 
-// Module marketing : migrations, organisation KOYEKOLA, réglages (n'empêche jamais le LMS de démarrer)
+// Module marketing : migrations, organisation KOLAKISA, réglages (n'empêche jamais le LMS de démarrer)
 const marketing = require("./src/marketing").initMarketing({ db, dbFile, dataDir });
 
 const app = express();
@@ -153,28 +153,28 @@ app.use((err, req, res, next) => {
     status = err.status; // erreurs de requête détectées par Express (URL mal formée, corps illisible…)
     message = STATUS_MESSAGES[status] || STATUS_MESSAGES[400];
   } else {
-    console.error(`[KOYEKOLA] Erreur sur ${req.method} ${req.originalUrl} :`, err);
+    console.error(`[KOLAKISA] Erreur sur ${req.method} ${req.originalUrl} :`, err);
   }
   res.status(status).render("error", { message });
 });
 
 // Filet de sécurité : une promesse rejetée sans gestionnaire ne doit pas arrêter tout le site
 process.on("unhandledRejection", (reason) => {
-  console.error("[KOYEKOLA] Promesse rejetée non gérée :", reason);
+  console.error("[KOLAKISA] Promesse rejetée non gérée :", reason);
 });
 
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => {
-  console.log(`KOYEKOLA disponible sur http://localhost:${PORT}`);
+  console.log(`KOLAKISA disponible sur http://localhost:${PORT}`);
   // E-mails du site en file d'attente : envoi de ceux laissés en attente, puis nouvelles tentatives chaque minute
   const outbox = require("./src/utils/outbox");
-  outbox.processOutbox(db).catch((error) => console.error("[KOYEKOLA] File d'envoi :", error.message));
+  outbox.processOutbox(db).catch((error) => console.error("[KOLAKISA] File d'envoi :", error.message));
   outbox.startOutboxTimer(db);
   // Travaux marketing en arrière-plan (événements, envois) : activés seulement avec MARKETING_WORKER=on
   if (marketing.ready && process.env.MARKETING_WORKER === "on") {
     marketing.worker.start();
     marketing.startBridge(); // lecture périodique du LMS → événements (30 s)
-    console.log("[KOYEKOLA] Worker marketing démarré.");
+    console.log("[KOLAKISA] Worker marketing démarré.");
     process.once("SIGTERM", () => marketing.worker.stop().finally(() => process.exit(0)));
   }
 });

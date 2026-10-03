@@ -90,10 +90,10 @@ describe("SMS — réglages", () => {
   });
   test("Twilio exige expéditeur, identifiant de compte et jeton", () => {
     assert.throws(() => sms.saveSmsConfig(m.A, { provider: "twilio" }), /expéditeur/);
-    assert.throws(() => sms.saveSmsConfig(m.A, { provider: "twilio", sender: "KOYEKOLA" }), /identifiant de compte/i);
-    assert.throws(() => sms.saveSmsConfig(m.A, { provider: "twilio", sender: "KOYEKOLA", accountSid: "AC" + "a".repeat(32) }), /jeton/i);
-    const c = sms.saveSmsConfig(m.A, { provider: "twilio", sender: "KOYEKOLA", accountSid: "AC" + "a".repeat(32), authToken: "secret-token" });
-    assert.deepEqual([c.provider, c.sender, c.authTokenSet], ["twilio", "KOYEKOLA", true]);
+    assert.throws(() => sms.saveSmsConfig(m.A, { provider: "twilio", sender: "KOLAKISA" }), /identifiant de compte/i);
+    assert.throws(() => sms.saveSmsConfig(m.A, { provider: "twilio", sender: "KOLAKISA", accountSid: "AC" + "a".repeat(32) }), /jeton/i);
+    const c = sms.saveSmsConfig(m.A, { provider: "twilio", sender: "KOLAKISA", accountSid: "AC" + "a".repeat(32), authToken: "secret-token" });
+    assert.deepEqual([c.provider, c.sender, c.authTokenSet], ["twilio", "KOLAKISA", true]);
   });
   test("le jeton est chiffré en base et jamais rendu par getSmsConfig", () => {
     const row = m.db.prepare("SELECT value, is_secret FROM mk_settings WHERE organization_id = 1 AND key = 'sms.auth_token'").get();
@@ -103,7 +103,7 @@ describe("SMS — réglages", () => {
     assert.equal(sms.getSmsSecrets(m.A).authToken, "secret-token");
   });
   test("expéditeurs refusés : trop long, accent, symbole ; identifiant AC invalide ; heures hors bornes", () => {
-    for (const sender of ["KOYEKOLA SHOP", "Koyékola", "KOYE-KOLA", "12345"]) assert.throws(() => sms.saveSmsConfig(m.A, { sender }), /Expéditeur invalide/, sender);
+    for (const sender of ["KOLAKISA SHOP", "Koyékola", "KOYE-KOLA", "12345"]) assert.throws(() => sms.saveSmsConfig(m.A, { sender }), /Expéditeur invalide/, sender);
     assert.throws(() => sms.saveSmsConfig(m.A, { accountSid: "ACxyz" }), /AC/);
     assert.throws(() => sms.saveSmsConfig(m.A, { quietStart: 24 }), /entre 0 et 23/);
     assert.throws(() => sms.saveSmsConfig(m.A, { maxSegments: 0 }), /entre 1 et 10/);
@@ -124,7 +124,7 @@ describe("SMS — consentement séparé de l'e-mail", () => {
     m = freshMarketing();
     c = audience.upsertContact(m.A, { email: "marie@exemple.cd", phone: "081 234 5678" }).contact;
   });
-  const proof = { source: "form", textShown: "J'accepte de recevoir des SMS de KOYEKOLA." };
+  const proof = { source: "form", textShown: "J'accepte de recevoir des SMS de KOLAKISA." };
 
   test("un abonné e-mail n'est PAS abonné aux SMS", () => {
     compliance.recordConsent(m.A, c.id, proof);
@@ -235,11 +235,11 @@ describe("SMS — fournisseur Twilio (réseau simulé : aucun vrai SMS)", () => 
   test("requête conforme : adresse, authentification, To/From/Body ; MG… = service de messagerie", async () => {
     let seen;
     const p = make(async (url, init) => { seen = { url, init }; return { status: 201, json: async () => ({ sid: "SM123", num_segments: "2" }) }; });
-    const r = await p.send({ from: "KOYEKOLA", to: "+243812345678", body: "Bonjour" });
+    const r = await p.send({ from: "KOLAKISA", to: "+243812345678", body: "Bonjour" });
     assert.deepEqual(r, { providerMessageId: "SM123", segments: 2 });
     assert.equal(seen.url, `https://api.twilio.com/2010-04-01/Accounts/${SID}/Messages.json`);
     assert.equal(seen.init.headers.Authorization, `Basic ${Buffer.from(`${SID}:tok`).toString("base64")}`);
-    assert.deepEqual(Object.fromEntries(new URLSearchParams(seen.init.body)), { To: "+243812345678", Body: "Bonjour", From: "KOYEKOLA" });
+    assert.deepEqual(Object.fromEntries(new URLSearchParams(seen.init.body)), { To: "+243812345678", Body: "Bonjour", From: "KOLAKISA" });
     await p.send({ from: "MG" + "1".repeat(32), to: "+243812345678", body: "x" });
     assert.equal(new URLSearchParams(seen.init.body).get("MessagingServiceSid"), "MG" + "1".repeat(32));
   });
@@ -250,7 +250,7 @@ describe("SMS — fournisseur Twilio (réseau simulé : aucun vrai SMS)", () => 
       [429, { code: 20429 }, "rate_limited"], [503, {}, "temporary"], [400, { code: 21617 }, "permanent"],
     ];
     for (const [status, body, kind] of cases) {
-      await assert.rejects(make(reply(status, body)).send({ from: "KOYEKOLA", to: "+243812345678", body: "x" }), (e) => {
+      await assert.rejects(make(reply(status, body)).send({ from: "KOLAKISA", to: "+243812345678", body: "x" }), (e) => {
         assert.equal(e.kind, kind, `${status}/${body.code}`);
         assert.doesNotMatch(e.message, /tok|\+243|Authenticate/);
         return true;
@@ -272,7 +272,7 @@ describe("SMS — fournisseur Twilio (réseau simulé : aucun vrai SMS)", () => 
   });
   test("SMS de test via Twilio : échec renvoyé proprement (code d'erreur gardé)", async () => {
     const m = freshMarketing();
-    sms.saveSmsConfig(m.A, { provider: "twilio", sender: "KOYEKOLA", accountSid: SID, authToken: "tok" });
+    sms.saveSmsConfig(m.A, { provider: "twilio", sender: "KOLAKISA", accountSid: SID, authToken: "tok" });
     const r = await sms.sendTestSms(m.A, { to: "+243812345678" }, { fetch: reply(400, { code: 21408 }), log: quiet });
     assert.deepEqual([r.ok, r.kind, r.code], [false, "config", 21408]);
   });
@@ -294,7 +294,7 @@ describe("SMS — pages web", () => {
     assert.match(html, /Mode « console »/);
   });
   test("enregistrer Twilio ; le jeton n'est jamais réaffiché", async () => {
-    const res = await boss.post("/marketing/sms/reglages", { provider: "twilio", sender: "KOYEKOLA", default_country: "CG", account_sid: "AC" + "b".repeat(32), auth_token: "jeton-tres-secret", quiet_start: "21", quiet_end: "7", rate: "30", daily: "500", max_segments: "3" });
+    const res = await boss.post("/marketing/sms/reglages", { provider: "twilio", sender: "KOLAKISA", default_country: "CG", account_sid: "AC" + "b".repeat(32), auth_token: "jeton-tres-secret", quiet_start: "21", quiet_end: "7", rate: "30", daily: "500", max_segments: "3" });
     assert.equal(res.status, 302);
     const html = (await boss.get("/marketing/sms/reglages")).text;
     assert.match(html, /Réglages SMS enregistrés/);
@@ -306,7 +306,7 @@ describe("SMS — pages web", () => {
     await boss.post("/marketing/sms/reglages", { sender: "Koyékola Formation" });
     const html = (await boss.get("/marketing/sms/reglages")).text;
     assert.match(html, /Expéditeur invalide/);
-    assert.match(html, /value="KOYEKOLA"/);
+    assert.match(html, /value="KOLAKISA"/);
     await boss.post("/marketing/sms/reglages", { provider: "console" });
   });
   test("SMS de test en mode console : rien ne part, message clair", async () => {

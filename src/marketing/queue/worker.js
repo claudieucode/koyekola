@@ -43,7 +43,7 @@ function createWorker({
       const retryable = !(error instanceof UnrecoverableError);
       const outcome = jobs.fail(db, job, error, { workerId, retryable, now: now(), random });
       metrics.failed++;
-      log.error(`[KOYEKOLA] Travail #${job.id} (${job.type}) en échec, tentative ${job.attempts}/${job.max_attempts} : ${error.message}${outcome.state === "dead" ? " — abandonné (voir le diagnostic)" : ""}`);
+      log.error(`[KOLAKISA] Travail #${job.id} (${job.type}) en échec, tentative ${job.attempts}/${job.max_attempts} : ${error.message}${outcome.state === "dead" ? " — abandonné (voir le diagnostic)" : ""}`);
       return false;
     }
   }
@@ -74,7 +74,7 @@ function createWorker({
     if (timer) return;
     timer = setInterval(() => {
       current = tick()
-        .catch((error) => log.error("[KOYEKOLA] Erreur du worker marketing :", error.message))
+        .catch((error) => log.error("[KOLAKISA] Erreur du worker marketing :", error.message))
         .finally(() => { current = null; });
     }, intervalMs);
     timer.unref?.(); // ne retient jamais l'arrêt du processus

@@ -1,4 +1,4 @@
-# EMAIL MARKETING KOYEKOLA — Base de données
+# EMAIL MARKETING KOLAKISA — Base de données
 
 > Ce document décrit ce qui **existe réellement** (jalon M0) et ce qui est **prévu** (phases suivantes).
 > Source de vérité : les fichiers `src/marketing/migrations/*.sql`.
@@ -31,7 +31,7 @@
 ### Migration 001 — Fondations
 | Table | Rôle | Points clés |
 |---|---|---|
-| `mk_organizations` | Une entreprise cliente (aujourd'hui : KOYEKOLA, `slug = koyekola`) | `status` `active`/`suspended` |
+| `mk_organizations` | Une entreprise cliente (aujourd'hui : KOLAKISA, `slug = koyekola`) | `status` `active`/`suspended` |
 | `mk_org_members` | Qui accède à quelle organisation | PK `(organization_id, user_id)` ; rôle `owner > admin > editor > viewer` ; les formateurs du LMS deviennent `owner` au démarrage (jamais rétrogradés) |
 | `mk_settings` | Réglages par organisation | PK `(organization_id, key)` ; `is_secret = 1` ⇒ valeur chiffrée |
 | `mk_audit_logs` | Journal d'audit : qui, quoi, ressource, quand, métadonnées | **Écriture seule** (déclencheurs `RAISE(ABORT)` sur UPDATE/DELETE) ; une organisation qui a un journal ne peut pas être supprimée ; valeurs sensibles masquées avant écriture |

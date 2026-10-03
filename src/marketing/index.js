@@ -1,4 +1,4 @@
-// Point d'entrée du module marketing : applique les migrations, prépare l'organisation KOYEKOLA et ses réglages.
+// Point d'entrée du module marketing : applique les migrations, prépare l'organisation KOLAKISA et ses réglages.
 // Si l'initialisation échoue (migration refusée, sauvegarde impossible…), l'erreur est affichée clairement et le module
 // se déclare « indisponible » : le LMS continue de fonctionner (il n'en dépend pas), rien n'est masqué en silence.
 const path = require("path");
@@ -21,13 +21,13 @@ const MIGRATIONS_DIR = path.join(__dirname, "migrations");
 function initMarketing({ db, dbFile, dataDir, env = process.env, log = console }) {
   try {
     const migrations = migrate(db, { dir: MIGRATIONS_DIR, dbPath: dbFile, backupDir: path.join(dataDir, "backups"), log });
-    const organization = ensureDefaultOrganization(db, { name: "KOYEKOLA", slug: "koyekola" });
+    const organization = ensureDefaultOrganization(db, { name: "KOLAKISA", slug: "koyekola" });
     syncInstructorMembers(db, organization.id);
     // Comptes du LMS → contacts « unknown » (jamais de consentement déduit). Une panne ici ne rend pas le module indisponible.
     try {
       syncLmsUsers({ db, organizationId: organization.id, userId: null, bus: null });
     } catch (error) {
-      log.warn?.("[KOYEKOLA] Synchronisation des comptes vers les contacts marketing impossible :", error.message);
+      log.warn?.("[KOLAKISA] Synchronisation des comptes vers les contacts marketing impossible :", error.message);
     }
     const bus = createEventBus(db, { log });
     // Le worker n'est démarré que si MARKETING_WORKER=on (voir server.js) : aucun traitement en arrière-plan par défaut
@@ -45,7 +45,7 @@ function initMarketing({ db, dbFile, dataDir, env = process.env, log = console }
     const startBridge = () => bridgeEvents.startBridge(db, organization.id);
     return { ready: true, organizationId: organization.id, settings, bus, worker, migrations, startBridge };
   } catch (error) {
-    log.error("[KOYEKOLA] Module marketing INDISPONIBLE (le reste du site fonctionne normalement) :", error.message);
+    log.error("[KOLAKISA] Module marketing INDISPONIBLE (le reste du site fonctionne normalement) :", error.message);
     return { ready: false, error: error.message };
   }
 }

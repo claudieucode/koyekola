@@ -11,7 +11,7 @@ const { courseTexts, htmlText } = require("../utils/richText");
 const { listHeroImages } = require("../utils/heroImages");
 const { siteBase } = require("../utils/seo");
 
-const SITE_NAME = "KOYEKOLA";
+const SITE_NAME = "KOLAKISA";
 
 // 150 minutes -> "PT2H30M" (durée au format des données structurées)
 function isoDuration(minutes) {
@@ -56,7 +56,7 @@ router.get("/", (req, res) => {
     heroImages: listHeroImages(),
     featured, recent, categories, stats, creator,
     seo: {
-      rawTitle: "KOYEKOLA — Formations en ligne, à apprendre à votre rythme",
+      rawTitle: "KOLAKISA — Formations en ligne, à apprendre à votre rythme",
       description: "Formations vidéo en ligne : suivez les cours où que vous soyez, à votre rythme, avec des quiz, des ressources à télécharger et un certificat de réussite.",
       jsonLd: [
         {
@@ -112,7 +112,7 @@ router.get("/catalogue", (req, res) => {
 
   res.render("catalogue", {
     courses, categories, filters: { q, category, level, sort },
-    seo: { title: "Toutes les formations", description: "Parcourez toutes les formations KOYEKOLA : filtrez par catégorie, niveau et prix, et trouvez celle qui vous convient." },
+    seo: { title: "Toutes les formations", description: "Parcourez toutes les formations KOLAKISA : filtrez par catégorie, niveau et prix, et trouvez celle qui vous convient." },
   });
 });
 

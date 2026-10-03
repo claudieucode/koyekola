@@ -23,7 +23,7 @@ function variableCatalog(ctx) {
     ...CORE.map(([path, label, example]) => ({ path, label, example, group: "Contact" })),
     ...listProperties(ctx).map((p) => ({ path: `contact.props.${p.key}`, label: p.label, example: "", group: "Propriétés" })),
     ...EVENT_FIELDS.map(([path, label, example]) => ({ path, label, example, group: "Événement (automatisation)" })),
-    { path: "org.name", label: "Nom de l'organisation", example: "KOYEKOLA", group: "Organisation" },
+    { path: "org.name", label: "Nom de l'organisation", example: "KOLAKISA", group: "Organisation" },
     { path: "org.address", label: "Adresse postale", example: "12 rue des Écoles, 75005 Paris", group: "Organisation" },
     ...SYSTEM.map(([path, label]) => ({ path, label, example: "", group: path.startsWith("event.") ? "Événement (automatisation)" : "Liens système", system: true })),
   ];

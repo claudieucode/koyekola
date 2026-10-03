@@ -159,8 +159,8 @@ describe("organisations, rôles et permissions", () => {
   test("organisation par défaut créée une seule fois ; le formateur du LMS en devient propriétaire", () => {
     const db = freshDb();
     db.exec("INSERT INTO users (username, email, role) VALUES ('claire', 'c@x.fr', 'formateur'), ('julie', 'j@x.fr', 'etudiant')");
-    const org = ensureDefaultOrganization(db, { name: "KOYEKOLA" });
-    assert.equal(ensureDefaultOrganization(db, { name: "KOYEKOLA" }).id, org.id);
+    const org = ensureDefaultOrganization(db, { name: "KOLAKISA" });
+    assert.equal(ensureDefaultOrganization(db, { name: "KOLAKISA" }).id, org.id);
     assert.equal(db.prepare("SELECT COUNT(*) n FROM mk_organizations").get().n, 1);
     syncInstructorMembers(db, org.id);
     syncInstructorMembers(db, org.id); // idempotent
@@ -290,10 +290,10 @@ describe("intégration au serveur", () => {
     db.close();
     return r;
   };
-  test("au démarrage : migration 001 appliquée, organisation KOYEKOLA créée, le formateur en est propriétaire", () => {
+  test("au démarrage : migration 001 appliquée, organisation KOLAKISA créée, le formateur en est propriétaire", () => {
     assert.deepEqual(q("SELECT version, name FROM schema_migrations WHERE scope = 'marketing' ORDER BY version").map((r) => r.version).slice(0, 1), ["001"]);
     const orgs = q("SELECT id, name, slug FROM mk_organizations");
-    assert.deepEqual(orgs.map((o) => [o.name, o.slug]), [["KOYEKOLA", "koyekola"]]);
+    assert.deepEqual(orgs.map((o) => [o.name, o.slug]), [["KOLAKISA", "koyekola"]]);
     const members = q("SELECT role FROM mk_org_members WHERE organization_id = ?", orgs[0].id);
     assert.deepEqual(members.map((m) => m.role), ["owner"]);
   });

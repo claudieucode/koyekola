@@ -80,7 +80,7 @@ describe("balises de la fiche formation", () => {
     html = (await anon().get(`/cours/${course.slug}`)).text;
   });
   test("titre, description et canonical absolu", () => {
-    assert.match(html, /<title>Marketing &amp; « Ads »[^<]* · KOYEKOLA<\/title>/);
+    assert.match(html, /<title>Marketing &amp; « Ads »[^<]* · KOLAKISA<\/title>/);
     assert.equal(meta(html, "description"), "Lancer sa première campagne");
     assert.equal(link(html, "canonical"), `${srv.base}/cours/${course.slug}`);
   });
@@ -124,7 +124,7 @@ describe("balises de la fiche formation", () => {
       subtitle: "Lancer sa première campagne", description: "d", seo_title: "Apprendre les publicités en ligne", seo_description: "Description optimisée pour Google.",
     });
     const h = (await anon().get(`/cours/${course.slug}`)).text;
-    assert.match(h, /<title>Apprendre les publicités en ligne · KOYEKOLA<\/title>/);
+    assert.match(h, /<title>Apprendre les publicités en ligne · KOLAKISA<\/title>/);
     assert.equal(meta(h, "description"), "Description optimisée pour Google.");
     assert.equal(meta(h, "og:title"), "Apprendre les publicités en ligne");
   });
@@ -169,7 +169,7 @@ describe("accueil : données structurées du site", () => {
     const site = blocks.find((b) => b["@type"] === "WebSite");
     assert.equal(site.url, `${srv.base}/`);
     assert.match(site.potentialAction.target.urlTemplate, /\/catalogue\?q=\{search_term_string\}$/);
-    assert.equal(blocks.find((b) => b["@type"] === "Organization").name, "KOYEKOLA");
+    assert.equal(blocks.find((b) => b["@type"] === "Organization").name, "KOLAKISA");
   });
 });
 

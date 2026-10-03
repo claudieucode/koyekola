@@ -4,7 +4,7 @@
       <h1 class="mk-email"><%= contact.email %></h1>
       <span class="badge <%= mkh.statusClass(contact.status) %>"><%= mkh.statusLabel(contact.status) %></span>
     </div>
-    <p class="mk-lead"><%= mkh.fullName(contact) || "Sans nom" %> · source : <%= contact.source %> · ajouté le <%= mkh.fdate(contact.created_at) %><% if (contact.lms_user_id) { %> · compte KOYEKOLA lié<% } %></p>
+    <p class="mk-lead"><%= mkh.fullName(contact) || "Sans nom" %> · source : <%= contact.source %> · ajouté le <%= mkh.fdate(contact.created_at) %><% if (contact.lms_user_id) { %> · compte KOLAKISA lié<% } %></p>
 
     <section class="mk-panel mk-verdict <%= sendable.ok ? "is-ok" : "is-no" %>">
       <h2>Peut-on lui écrire (marketing) ?</h2>

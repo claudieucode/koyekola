@@ -26,7 +26,7 @@ function violations(html) {
 const ALLOW = (p) => /^(contact\.(first_name|last_name|full_name|email|company|country|props\.[a-z_]+)|org\.(name|address)|unsubscribe_url|preferences_url|view_url)$/.test(p);
 const CTX = (extra = {}) => ({
   contact: { first_name: "Awa", last_name: "Koffi", full_name: "Awa Koffi", email: "awa@ex.fr", company: "", country: "FR", props: { niveau: "confirmé" }, ...extra },
-  org: { name: "KOYEKOLA", address: "12 rue des Écoles\n75005 Paris" },
+  org: { name: "KOLAKISA", address: "12 rue des Écoles\n75005 Paris" },
   unsubscribe_url: "https://k.test/u/tok?a=1&b=2", preferences_url: "https://k.test/preferences/tok", view_url: "",
 });
 const tpl = (over = {}) => ({ kind: "marketing", subject: "Nouveautés de {{org.name}}", preheader: "Le meilleur du mois", blocks: [{ type: "text", markdown: "Bonjour {{contact.first_name}} !" }], ...over });
@@ -88,7 +88,7 @@ describe("pied de page légal", () => {
   });
   test("le texte du pied est personnalisable mais le lien reste", () => {
     const { r } = build({ footer: { text: "Vous recevez ce message car vous suivez {{org.name}}." } });
-    assert.match(r.html, /vous suivez KOYEKOLA/);
+    assert.match(r.html, /vous suivez KOLAKISA/);
     assert.match(r.html, /Se désinscrire/);
   });
   test("sans lien de préférences fourni, seul le lien de désinscription apparaît", () => {
@@ -169,8 +169,8 @@ describe("autres blocs", () => {
     bad({ blocks: [{ type: "heading", text: "x", level: 4 }] }, /niveau/i);
   });
   test("image : https, alt obligatoire (ou décorative), largeur bornée, lien facultatif", () => {
-    const { r } = build({ blocks: [{ type: "image", src: "https://cdn.ex.fr/a.png?x=1&y=2", alt: "Logo \"KOYEKOLA\"", width: 300, href: "https://ex.fr" }] });
-    assert.match(r.html, /<a href="https:\/\/ex\.fr"[^>]*><img src="https:\/\/cdn\.ex\.fr\/a\.png\?x=1&amp;y=2" alt="Logo &quot;KOYEKOLA&quot;" width="300"/);
+    const { r } = build({ blocks: [{ type: "image", src: "https://cdn.ex.fr/a.png?x=1&y=2", alt: "Logo \"KOLAKISA\"", width: 300, href: "https://ex.fr" }] });
+    assert.match(r.html, /<a href="https:\/\/ex\.fr"[^>]*><img src="https:\/\/cdn\.ex\.fr\/a\.png\?x=1&amp;y=2" alt="Logo &quot;KOLAKISA&quot;" width="300"/);
     assert.match(r.html, /style="display:block;border:0;/);
     const deco = build({ blocks: [{ type: "image", src: "https://cdn.ex.fr/a.png", alt: "", decorative: true }] });
     assert.match(deco.r.html, /alt=""/);

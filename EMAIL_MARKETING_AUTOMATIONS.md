@@ -1,4 +1,4 @@
-# Automatisations et pont KOYEKOLA — guide, garanties et limites (jalon M4, éditeur graphique phase 1)
+# Automatisations et pont KOLAKISA — guide, garanties et limites (jalon M4, éditeur graphique phase 1)
 
 ## Comment ça marche
 1. **Le pont** lit régulièrement (toutes les 30 s, worker actif) les tables du site — comptes, commandes, inscriptions, leçons terminées, avis, favoris — et enregistre des **événements** (`lms.user_registered`, `lms.order_completed`, `lms.course_enrolled`, `lms.lesson_completed`, `lms.course_completed` (dérivé : toutes les leçons faites), `lms.review_posted`, `lms.favorite_added`). **Aucune route du LMS n'est modifiée** : le pont ne fait que lire.

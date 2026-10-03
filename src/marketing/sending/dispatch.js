@@ -152,7 +152,7 @@ async function processRecipient(ctx, { campaign, recipient, compiled, config, li
     return "sent";
   } catch (error) {
     if (!(error instanceof SendError)) {
-      ctx.log?.error?.("[KOYEKOLA] Erreur imprévue pendant l'envoi d'un message de campagne :", error && error.message);
+      ctx.log?.error?.("[KOLAKISA] Erreur imprévue pendant l'envoi d'un message de campagne :", error && error.message);
       fail("failed", "error", "failed_count", "failed", { kind: "error" });
       return "failed";
     }

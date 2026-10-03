@@ -25,7 +25,7 @@ describe("page Webhooks", () => {
     const html = (await boss.get("/marketing/webhooks")).text;
     assert.match(html, /<h1>Webhooks/);
     assert.match(html, /Aucun webhook/);
-    assert.match(html, /Un compte est créé sur KOYEKOLA/);
+    assert.match(html, /Un compte est créé sur KOLAKISA/);
   });
 
   let webhookId;

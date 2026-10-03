@@ -6,13 +6,13 @@ const { createSettings } = require("../src/marketing/settings");
 const { createProvider, SendError, parseSender } = require("../src/marketing/sending/providers");
 const config = require("../src/marketing/sending/config");
 
-const MSG = { from: "KOYEKOLA <no-reply@k.test>", to: "awa@ex.fr", replyTo: "aide@k.test", subject: "Bonjour", html: "<p>Salut</p>", text: "Salut", headers: { "List-Unsubscribe": "<https://k.test/u/x>" }, idempotencyKey: "campaign:1:contact:2" };
+const MSG = { from: "KOLAKISA <no-reply@k.test>", to: "awa@ex.fr", replyTo: "aide@k.test", subject: "Bonjour", html: "<p>Salut</p>", text: "Salut", headers: { "List-Unsubscribe": "<https://k.test/u/x>" }, idempotencyKey: "campaign:1:contact:2" };
 const quiet = { log() {}, warn() {}, error() {} };
 const fail = async (fn) => { try { await fn(); } catch (e) { return e; } return null; };
 
 describe("expéditeur", () => {
   test("« Nom <adresse> » ou adresse seule ; nettoyé ; refus des caractères dangereux", () => {
-    assert.deepEqual(parseSender("KOYEKOLA <no-reply@k.test>"), { name: "KOYEKOLA", email: "no-reply@k.test", formatted: "KOYEKOLA <no-reply@k.test>" });
+    assert.deepEqual(parseSender("KOLAKISA <no-reply@k.test>"), { name: "KOLAKISA", email: "no-reply@k.test", formatted: "KOLAKISA <no-reply@k.test>" });
     assert.equal(parseSender("  Aide@K.test ").formatted, "aide@k.test");
     assert.equal(parseSender('"Équipe, K." <a@k.test>').name, "Équipe K.");
     for (const bad of ["", "pas-un-email", "Nom <pas-un-email>", "A <a@k.test>\r\nBcc: x@y.fr", "A <a@k.test> <b@k.test>", null, 42]) assert.equal(parseSender(bad), null, String(bad));
@@ -130,9 +130,9 @@ describe("configuration d'envoi enregistrée", () => {
     assert.deepEqual([c.provider, c.ratePerMinute, c.dailyLimit, c.from, c.apiKeySet], ["console", 60, 1000, "", false]);
   });
   test("enregistrement : validé, clé chiffrée (jamais renvoyée en clair), audit sans secret", () => {
-    config.saveSendingConfig(ctx, { provider: "resend", from: "KOYEKOLA <no-reply@k.test>", replyTo: "aide@k.test", ratePerMinute: 120, dailyLimit: 5000, apiKey: "re_SECRETKEY", webhookSecret: "whsec_dGVzdA==" });
+    config.saveSendingConfig(ctx, { provider: "resend", from: "KOLAKISA <no-reply@k.test>", replyTo: "aide@k.test", ratePerMinute: 120, dailyLimit: 5000, apiKey: "re_SECRETKEY", webhookSecret: "whsec_dGVzdA==" });
     const c = config.getSendingConfig(ctx);
-    assert.deepEqual([c.provider, c.from, c.replyTo, c.ratePerMinute, c.dailyLimit, c.apiKeySet, c.webhookSecretSet], ["resend", "KOYEKOLA <no-reply@k.test>", "aide@k.test", 120, 5000, true, true]);
+    assert.deepEqual([c.provider, c.from, c.replyTo, c.ratePerMinute, c.dailyLimit, c.apiKeySet, c.webhookSecretSet], ["resend", "KOLAKISA <no-reply@k.test>", "aide@k.test", 120, 5000, true, true]);
     assert.equal(c.apiKey, undefined);
     const raw = m.db.prepare("SELECT value, is_secret FROM mk_settings WHERE key = 'email.api_key'").get();
     assert.equal(raw.is_secret, 1);

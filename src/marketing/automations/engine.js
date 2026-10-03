@@ -143,7 +143,7 @@ async function sendEmailStep(ctx, { run, automation, step, contact, provider, no
     return { next: true, log: ["sent", `message ${message.id}`] };
   } catch (error) {
     if (!(error instanceof SendError)) {
-      ctx.log?.error?.("[KOYEKOLA] Erreur imprévue pendant l'envoi d'un e-mail de scénario :", error && error.message);
+      ctx.log?.error?.("[KOLAKISA] Erreur imprévue pendant l'envoi d'un e-mail de scénario :", error && error.message);
       fail("failed", "failed_count", "failed", { kind: "error" });
       return { next: true, log: ["failed", "error"] };
     }

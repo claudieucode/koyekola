@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <% const s = (typeof seo !== "undefined" && seo) || {};
      const pageTitle = s.rawTitle || s.title || (typeof title !== "undefined" ? title : null);
-     const fullTitle = s.rawTitle || (pageTitle ? pageTitle + " · KOYEKOLA" : "KOYEKOLA — Mes formations en ligne");
+     const fullTitle = s.rawTitle || (pageTitle ? pageTitle + " · KOLAKISA" : "KOLAKISA — Mes formations en ligne");
      const pageDescription = s.description || "Découvrez et suivez mes formations en ligne, à votre rythme.";
      const canonicalUrl = s.canonical || absoluteUrl(currentPath);
-     const shareTitle = s.ogTitle || pageTitle || 'KOYEKOLA';
+     const shareTitle = s.ogTitle || pageTitle || 'KOLAKISA';
      const shareDescription = s.ogDescription || pageDescription;
      const xImage = s.twitterImage || s.image;
      const xCard = s.twitterCard || (xImage ? "summary_large_image" : "summary"); %>
@@ -18,7 +18,7 @@
   <% if (s.noindex) { %><meta name="robots" content="noindex, nofollow">
   <% } else { %><% if (s.robots) { %><meta name="robots" content="<%= s.robots %>">
   <% } %><link rel="canonical" href="<%= canonicalUrl %>">
-  <meta property="og:site_name" content="KOYEKOLA">
+  <meta property="og:site_name" content="KOLAKISA">
   <meta property="og:locale" content="fr_FR">
   <meta property="og:type" content="<%= s.ogType || 'website' %>">
   <meta property="og:title" content="<%= shareTitle %>">
@@ -49,7 +49,7 @@
     <div class="header-inner container-wide">
       <button class="icon-btn only-mobile" id="openMenuBtn" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="headerNav"><%- icon('menu') %></button>
 
-      <a href="/" class="logo">KOYEKOLA</a>
+      <a href="/" class="logo">KOLAKISA</a>
 
       <form action="/catalogue" method="get" class="header-search" role="search">
         <span class="search-icon" aria-hidden="true"><%- icon('search', { size: 16 }) %></span>
@@ -75,7 +75,8 @@
             </div>
           </div>
         <% } %>
-        <a href="/catalogue">Catalogue</a>
+        <a href="/catalogue"<%- currentPath === "/catalogue" ? ' aria-current="page"' : "" %>>Catalogue</a>
+        <a href="/blog"<%- currentPath === "/blog" || currentPath.startsWith("/blog/") ? ' aria-current="page"' : "" %>>Blog</a>
         <% if (currentUser && currentUser.role === "formateur") { %>
           <a href="/formateur">Mon espace</a>
         <% } else if (currentUser) { %>

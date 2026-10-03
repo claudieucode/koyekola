@@ -1,5 +1,5 @@
 // Numéros de téléphone pour les SMS : tout numéro est ramené au format international E.164 (« +243812345678 »),
-// le seul que comprennent les fournisseurs. Pas de dépendance externe : une table des pays visés par KOYEKOLA
+// le seul que comprennent les fournisseurs. Pas de dépendance externe : une table des pays visés par KOLAKISA
 // (Afrique centrale et de l'Ouest, Maghreb, Europe francophone) ; ailleurs, un numéro saisi en « +… » reste accepté
 // s'il respecte la norme (8 à 15 chiffres), mais un numéro national sans indicatif exige un pays connu.
 //

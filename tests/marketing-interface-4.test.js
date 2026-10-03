@@ -58,7 +58,7 @@ describe("réglages d'envoi /marketing/envoi", () => {
     assert.match(r.text, /ENCRYPTION_KEY/);
   });
   test("enregistrement : clé chiffrée, jamais réaffichée ; valeurs invalides refusées avec un message", async () => {
-    const ok = await post(boss, "/marketing/envoi", { provider: "resend", from: "KOYEKOLA <no-reply@k.test>", reply_to: "aide@k.test", rate: "100", daily: "2000", api_key: "re_SECRET_1234", webhook_secret: "whsec_dGVzdC1zZWNyZXQ=" });
+    const ok = await post(boss, "/marketing/envoi", { provider: "resend", from: "KOLAKISA <no-reply@k.test>", reply_to: "aide@k.test", rate: "100", daily: "2000", api_key: "re_SECRET_1234", webhook_secret: "whsec_dGVzdC1zZWNyZXQ=" });
     assert.match(ok.text, /Réglages d(&#39;|')envoi enregistrés/);
     assert.doesNotMatch(ok.text, /re_SECRET_1234|whsec_dGVzdC1zZWNyZXQ/);
     assert.match(ok.text, /Clé enregistrée/);

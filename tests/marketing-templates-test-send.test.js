@@ -28,11 +28,11 @@ describe("destinataires autorisés", () => {
   });
   test("envoi à un membre : HTML + texte, objet préfixé [TEST], expéditeur configuré, en-tête de test", async () => {
     const transport = fakeTransport();
-    const r = await sendTestEmail(A, tpl.id, { to: "EQUIPE@exemple.fr", transport, from: "KOYEKOLA <no-reply@k.test>" });
+    const r = await sendTestEmail(A, tpl.id, { to: "EQUIPE@exemple.fr", transport, from: "KOLAKISA <no-reply@k.test>" });
     assert.deepEqual([r.sent, r.reason], [true, undefined]);
     const [msg] = transport.sent;
     assert.equal(msg.to, "equipe@exemple.fr");
-    assert.equal(msg.from, "KOYEKOLA <no-reply@k.test>");
+    assert.equal(msg.from, "KOLAKISA <no-reply@k.test>");
     assert.equal(msg.subject, "[TEST] Bonjour Awa");
     assert.match(msg.html, /^<!DOCTYPE html>/);
     assert.match(msg.text, /Salut Awa/);

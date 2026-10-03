@@ -110,7 +110,7 @@ function sendTestEvent(ctx, endpointId) {
   const testId = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
   return enqueue(ctx.db, {
     organizationId: ctx.organizationId, type: "webhook.deliver", priority: 6, maxAttempts: 6,
-    payload: { endpointId: endpoint.id, eventName: "test.ping", eventId: `test-${testId}`, occurredAt: new Date().toISOString(), metadata: { message: "Événement de test envoyé manuellement depuis KOYEKOLA." } },
+    payload: { endpointId: endpoint.id, eventName: "test.ping", eventId: `test-${testId}`, occurredAt: new Date().toISOString(), metadata: { message: "Événement de test envoyé manuellement depuis KOLAKISA." } },
     idempotencyKey: `webhook:test:${endpoint.id}:${testId}`,
   });
 }

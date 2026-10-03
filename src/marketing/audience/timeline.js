@@ -1,5 +1,5 @@
 // Chronologie d'un contact : tout ce qui lui est arrivé, du plus récent au plus ancien (lecture seule).
-// Sources : création, consentements, désinscriptions, listes, étiquettes, e-mails reçus, scénarios, événements KOYEKOLA.
+// Sources : création, consentements, désinscriptions, listes, étiquettes, e-mails reçus, scénarios, événements KOLAKISA.
 const { checkCtx } = require("./shared");
 const { TRIGGERS } = require("../automations/catalog");
 

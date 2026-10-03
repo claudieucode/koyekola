@@ -32,15 +32,15 @@ function bootstrapInstructorFromEnv() {
 
   const hasInstructor = db.prepare("SELECT 1 FROM users WHERE role = 'formateur' LIMIT 1").get();
   if (hasInstructor) {
-    console.log("[KOYEKOLA] Un compte formateur existe déjà : les variables FORMATEUR_* sont ignorées (vous pouvez les supprimer).");
+    console.log("[KOLAKISA] Un compte formateur existe déjà : les variables FORMATEUR_* sont ignorées (vous pouvez les supprimer).");
     return;
   }
 
   try {
     upsertInstructor({ email, username, password });
-    console.log(`[KOYEKOLA] Compte formateur créé pour ${email}. Supprimez maintenant la variable FORMATEUR_PASSWORD de la configuration.`);
+    console.log(`[KOLAKISA] Compte formateur créé pour ${email}. Supprimez maintenant la variable FORMATEUR_PASSWORD de la configuration.`);
   } catch (err) {
-    console.error(`[KOYEKOLA] Compte formateur non créé : ${err.message}`);
+    console.error(`[KOLAKISA] Compte formateur non créé : ${err.message}`);
   }
 }
 

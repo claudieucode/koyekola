@@ -159,7 +159,7 @@ describe("aperçu : préparation à l'envoi", () => {
     assert.equal(o.readiness.total, 8);
   });
   test("chaque point passe au vert quand la configuration est faite", () => {
-    config.saveSendingConfig(A, { provider: "smtp", from: "KOYEKOLA <no-reply@k.test>" });
+    config.saveSendingConfig(A, { provider: "smtp", from: "KOLAKISA <no-reply@k.test>" });
     templates.setOrgAddress(A, "12 rue des Écoles\n75005 Paris");
     templates.createTemplate(A, { name: "M", subject: "S", blocks: [{ type: "text", markdown: "Bonjour" }] });
     subscribed("a@ex.fr");

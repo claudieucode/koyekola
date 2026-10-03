@@ -59,7 +59,7 @@ conseillé (ou `idempotency_key` dans le corps) : renvoyer deux fois la même re
 la réponse indique `"duplicate": true` la seconde fois, avec le même `id`.
 
 **Limite actuelle, à connaître** : ces événements alimentent les automatisations, mais ne sont *pas encore* utilisables
-comme critère de segment — le moteur de segments n'accepte pour l'instant que les événements du pont KOYEKOLA
+comme critère de segment — le moteur de segments n'accepte pour l'instant que les événements du pont KOLAKISA
 (`event:lms.*`, voir EMAIL_MARKETING_ARCHITECTURE.md §18). Étendre cette liste blanche est un choix délibéré à faire
 séparément (elle protège contre un nom d'événement mal formé qui casserait un segment).
 
@@ -76,7 +76,7 @@ séparément (elle protège contre un nom d'événement mal formé qui casserait
 ## Webhooks sortants
 
 Un webhook **notifie votre système** (Zapier, un entrepôt de données, un service interne…) quand un événement
-KOYEKOLA se produit — l'inverse de l'API : ici, c'est KOYEKOLA qui appelle **votre** adresse.
+KOLAKISA se produit — l'inverse de l'API : ici, c'est KOLAKISA qui appelle **votre** adresse.
 
 ### Créer un webhook
 `Marketing → Intégrations → Webhooks` (droit `webhooks.manage`, réservé aux administrateurs) : nom, adresse
@@ -123,7 +123,7 @@ signature différente. Rejetez toute requête dont la signature ne correspond pa
 - **Livraisons** journalisées sur la fiche du webhook (état, tentatives, dernière erreur) ; une livraison abandonnée
   peut être rejouée manuellement.
 - **Idempotence** : un même événement n'est jamais mis en file deux fois pour le même webhook, même si l'événement
-  est rejoué côté KOYEKOLA. Votre système doit tout de même être idempotent sur `id` (une livraison réessayée après
+  est rejoué côté KOLAKISA. Votre système doit tout de même être idempotent sur `id` (une livraison réessayée après
   un succès non confirmé, ex. coupure réseau juste après votre 200, resterait possible en théorie).
 - **Délai** : 10 secondes par tentative ; au-delà, la tentative est considérée en échec (reprise).
 - Pas encore : tableau de bord des livraisons multi-webhooks, alerte automatique en cas d'échecs répétés, rotation

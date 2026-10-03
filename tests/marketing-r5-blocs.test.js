@@ -28,7 +28,7 @@ function violations(html) {
 const ALLOW = (p) => /^(contact\.(first_name|last_name|full_name|email|company|country)|org\.(name|address)|unsubscribe_url|preferences_url|view_url)$/.test(p);
 const CTX = (first = "Awa") => ({
   contact: { first_name: first, last_name: "Koffi", full_name: `${first} Koffi`, email: "awa@ex.fr", company: "", country: "FR" },
-  org: { name: "KOYEKOLA", address: "12 rue des Écoles" },
+  org: { name: "KOLAKISA", address: "12 rue des Écoles" },
   unsubscribe_url: "https://k.test/u/tok", preferences_url: "https://k.test/preferences/tok", view_url: "",
 });
 const tpl = (blocks) => ({ kind: "marketing", subject: "Sujet", preheader: "Aperçu", blocks });

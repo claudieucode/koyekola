@@ -1,6 +1,6 @@
 // Bunny Stream : vidéos protégées par lien signé à durée limitée.
 //
-// Le formateur envoie ses vidéos sur Bunny Stream et colle leur identifiant dans KOYEKOLA. Le site fabrique,
+// Le formateur envoie ses vidéos sur Bunny Stream et colle leur identifiant dans KOLAKISA. Le site fabrique,
 // pour chaque affichage autorisé, une adresse de lecture valable quelques heures. Sans ce jeton, la
 // vidéo est illisible : quelqu'un qui copie l'adresse de la page ne peut pas la revoir plus tard.
 //

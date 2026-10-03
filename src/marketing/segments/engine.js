@@ -18,7 +18,7 @@ const MAX_LIST = 100;
 const MAX_DAYS = 36500;
 const MAX_COUNT = 100000;
 
-// Activité KOYEKOLA : uniquement les événements du pont LMS. « course » (identifiant de formation) n'existe que pour ceux
+// Activité KOLAKISA : uniquement les événements du pont LMS. « course » (identifiant de formation) n'existe que pour ceux
 // qui portent une formation. Le montant dépensé est la somme des commandes terminées (en centimes dans les métadonnées).
 const EVENT_NAMES = {
   "lms.user_registered": false, "lms.order_completed": true, "lms.course_enrolled": true, "lms.lesson_completed": true,
@@ -142,7 +142,7 @@ function createCompiler(ctx) {
     else if (field === "lms_user_id") kind = "lms";
     else if (field === "lms_spent") kind = "spent";
     else if (field.startsWith("event:")) {
-      if (!Object.hasOwn(EVENT_NAMES, field.slice(6))) throw fail(path, `Événement « ${field.slice(6, 46)} » inconnu (seuls les événements KOYEKOLA sont proposés).`);
+      if (!Object.hasOwn(EVENT_NAMES, field.slice(6))) throw fail(path, `Événement « ${field.slice(6, 46)} » inconnu (seuls les événements KOLAKISA sont proposés).`);
       kind = "event";
     }
     else if (field === "tag") kind = "tag";

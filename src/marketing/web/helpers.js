@@ -25,7 +25,7 @@ const reasonLabel = (reason) => REASONS[reason] ?? "Envoi impossible.";
 // Source d'un contact (mk_contacts.source, jamais modifiée ici — seulement son AFFICHAGE) : la valeur brute
 // « lms » se lit « Ims » dans beaucoup de polices (le « l » minuscule ressemble au « I » majuscule), pas une
 // erreur de donnée. Repli sur la valeur brute pour toute source inconnue (ex. fournie librement par l'API).
-const SOURCES = { manual: "Manuel", import: "Import", form: "Formulaire", lms: "KOYEKOLA", signup: "Inscription", api: "API" };
+const SOURCES = { manual: "Manuel", import: "Import", form: "Formulaire", lms: "KOLAKISA", signup: "Inscription", api: "API" };
 const sourceLabel = (source) => SOURCES[source] ?? String(source || "—");
 
 // « 2027-01-10 10:00:00 » → « 10/01/2027 »
@@ -46,7 +46,7 @@ function fdatetime(value) {
 // noms réellement émis) ; null pour un événement personnalisé (envoyé par l'API, nom libre). Origine traduite.
 const { EVENTS } = require("../webhooks/catalog");
 const eventLabel = (name) => (Object.hasOwn(EVENTS, name) ? EVENTS[name] : null);
-const EVENT_SOURCES = { lms: "Site KOYEKOLA", marketing: "Marketing", api: "API", admin: "Équipe", form: "Formulaire", import: "Import", manual: "Manuel", signup: "Inscription", preference_center: "Centre de préférences" };
+const EVENT_SOURCES = { lms: "Site KOLAKISA", marketing: "Marketing", api: "API", admin: "Équipe", form: "Formulaire", import: "Import", manual: "Manuel", signup: "Inscription", preference_center: "Centre de préférences" };
 const eventSourceLabel = (source) => EVENT_SOURCES[source] ?? String(source || "—");
 
 const fmt = (n) => Number(n || 0).toLocaleString("fr-FR");

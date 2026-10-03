@@ -12,7 +12,7 @@ const { SmsSendError } = require("../src/marketing/sms/providers/errors");
 const { startServer, loginInstructor, newStudent } = require("./helpers");
 
 const NOON = Date.UTC(2026, 9, 5, 11); // lundi 5 octobre 2026, midi à Kinshasa
-const proof = { source: "form", textShown: "J'accepte de recevoir les SMS de KOYEKOLA." };
+const proof = { source: "form", textShown: "J'accepte de recevoir les SMS de KOLAKISA." };
 
 // Base marketing + abonnés SMS (RD Congo) ; ctx avec l'adresse publique du site
 function setup({ subscribers = [["marie@x.cd", "0812345671", "Marie"], ["jean@x.cd", "0812345672", ""]], others = [["paul@x.cd", "0812345679", "Paul"]] } = {}) {
@@ -143,7 +143,7 @@ describe("SMS campagnes — contrôle avant envoi et coût", () => {
   });
   test("Twilio incomplet : bloquant", () => {
     const { A, m } = setup();
-    sms.saveSmsConfig(A, { provider: "twilio", sender: "KOYEKOLA", accountSid: "AC" + "1".repeat(32), authToken: "t" });
+    sms.saveSmsConfig(A, { provider: "twilio", sender: "KOLAKISA", accountSid: "AC" + "1".repeat(32), authToken: "t" });
     m.db.prepare("DELETE FROM mk_settings WHERE key = 'sms.auth_token'").run();
     const c = sms.createSmsCampaign(A, { name: "T" });
     sms.updateSmsCampaign(A, c.id, { body: "Salut" });
@@ -157,7 +157,7 @@ describe("SMS campagnes — lancement et envoi", () => {
     sms.saveSmsConfig(A, { pricePerSegment: "0.1" });
     const id = launch(A, "Voir https://koyekola.com/excel");
     const c = sms.getSmsCampaign(A, id);
-    assert.deepEqual([c.status, c.total_recipients, c.sender, c.price_per_segment], ["scheduled", 2, "KOYEKOLA", "0.1"]);
+    assert.deepEqual([c.status, c.total_recipients, c.sender, c.price_per_segment], ["scheduled", 2, "KOLAKISA", "0.1"]);
     assert.equal(m.db.prepare("SELECT COUNT(*) n FROM mk_sms_links WHERE campaign_id = ?").get(id).n, 1);
     assert.equal(m.db.prepare("SELECT COUNT(*) n FROM mk_jobs WHERE type = 'sms.dispatch'").get().n, 1);
     assert.throws(() => sms.updateSmsCampaign(A, id, { body: "x" }), /lancée/);
@@ -421,7 +421,7 @@ describe("SMS campagnes — pages web", () => {
     assert.doesNotMatch(html, /812345671/);
   });
   test("rapport d'une campagne envoyée ; lien court public : clic, page STOP (GET sans effet), confirmation", async () => {
-    run("UPDATE mk_sms_campaigns SET status = 'sent', sender = 'KOYEKOLA', total_recipients = 1, sent_count = 1 WHERE id = ?", id);
+    run("UPDATE mk_sms_campaigns SET status = 'sent', sender = 'KOLAKISA', total_recipients = 1, sent_count = 1 WHERE id = ?", id);
     run("INSERT INTO mk_sms_links (organization_id, campaign_id, url) VALUES (1, ?, 'https://koyekola.com/excel')", id);
     run("INSERT INTO mk_sms_messages (organization_id, campaign_id, contact_id, phone, status, sent_at) VALUES (1, ?, (SELECT id FROM mk_contacts WHERE email = 'a@x.cd'), '+243812345671', 'sent', 1)", id);
     run("INSERT INTO mk_sms_short_links (code, organization_id, message_id, link_id, kind) VALUES ('Lien2345', 1, (SELECT MAX(id) FROM mk_sms_messages), (SELECT MAX(id) FROM mk_sms_links), 'link'), ('Stop2345', 1, (SELECT MAX(id) FROM mk_sms_messages), NULL, 'unsubscribe')");
@@ -431,7 +431,7 @@ describe("SMS campagnes — pages web", () => {
     assert.deepEqual([click.status, click.location], [302, "https://koyekola.com/excel"]);
     assert.equal(q("SELECT click_count FROM mk_sms_campaigns WHERE id = ?", id).click_count, 1);
     const page = await visitor.get("/s/Stop2345");
-    assert.match(page.text, /Ne plus recevoir les SMS de KOYEKOLA au <strong>\+243 •••• 5671/);
+    assert.match(page.text, /Ne plus recevoir les SMS de KOLAKISA au <strong>\+243 •••• 5671/);
     assert.equal(q("SELECT sms_status FROM mk_contacts WHERE email = 'a@x.cd'").sms_status, "subscribed");
     await visitor.post("/s/Stop2345", {}, { headers: { origin: srv.base } });
     assert.equal(q("SELECT sms_status FROM mk_contacts WHERE email = 'a@x.cd'").sms_status, "unsubscribed");
@@ -446,7 +446,7 @@ describe("SMS campagnes — pages web", () => {
     assert.equal((await post("faux")).status, 403);
     const ok = await post(signature);
     assert.equal(ok.status, 200);
-    assert.match(await ok.text(), /<Message>KOYEKOLA : vous ne recevrez plus nos SMS/);
+    assert.match(await ok.text(), /<Message>KOLAKISA : vous ne recevrez plus nos SMS/);
     assert.equal(q("SELECT reason FROM mk_sms_suppressions WHERE phone = '+243812345672'").reason, "stop");
   });
   test("permissions : un lecteur (viewer) voit les campagnes mais ne peut rien créer ni lancer", async () => {

@@ -1,4 +1,4 @@
-# KOYEKOLA
+# KOLAKISA
 
 Votre plateforme personnelle pour héberger, publier et vendre vos propres formations en ligne (catalogue, panier, paiement, lecteur vidéo, espace de création). **Un seul compte créateur** (vous) — ce n'est pas une place de marché multi-formateurs. Express + EJS + SQLite (`node:sqlite`), sans dépendance externe.
 

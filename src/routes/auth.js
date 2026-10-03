@@ -10,7 +10,7 @@ const router = express.Router();
 
 router.get("/inscription", (req, res) => {
   if (req.session.user) return res.redirect("/");
-  res.render("register", { error: null, formValues: {}, consentText: SIGNUP_CONSENT_TEXT });
+  res.render("register", { error: null, formValues: {}, consentText: SIGNUP_CONSENT_TEXT, redirect: safePath(req.query.redirect, "") });
 });
 
 // L'inscription publique ne crée que des comptes étudiants : ce site n'a qu'un seul
@@ -19,15 +19,15 @@ router.post("/inscription", (req, res) => {
   const { username, email, password } = req.body;
 
   if (!username || !email || !password) {
-    return res.status(400).render("register", { error: "Tous les champs sont obligatoires.", formValues: req.body, consentText: SIGNUP_CONSENT_TEXT });
+    return res.status(400).render("register", { error: "Tous les champs sont obligatoires.", formValues: req.body, consentText: SIGNUP_CONSENT_TEXT, redirect: safePath(req.body.redirect, "") });
   }
   if (password.length < 8) {
-    return res.status(400).render("register", { error: "Le mot de passe doit contenir au moins 8 caractères.", formValues: req.body, consentText: SIGNUP_CONSENT_TEXT });
+    return res.status(400).render("register", { error: "Le mot de passe doit contenir au moins 8 caractères.", formValues: req.body, consentText: SIGNUP_CONSENT_TEXT, redirect: safePath(req.body.redirect, "") });
   }
 
   const existing = db.prepare("SELECT id FROM users WHERE email = ? OR username = ?").get(email, username);
   if (existing) {
-    return res.status(400).render("register", { error: "Ce nom d'utilisateur ou cet email est déjà pris.", formValues: req.body, consentText: SIGNUP_CONSENT_TEXT });
+    return res.status(400).render("register", { error: "Ce nom d'utilisateur ou cet email est déjà pris.", formValues: req.body, consentText: SIGNUP_CONSENT_TEXT, redirect: safePath(req.body.redirect, "") });
   }
 
   const hash = bcrypt.hashSync(password, 10);
@@ -43,7 +43,8 @@ router.post("/inscription", (req, res) => {
   sendSignupWelcomeEmail(db, { to: email, username }); // en arrière-plan : n'attend pas le serveur d'e-mail
 
   req.session.user = { id: userId, username, email, role: "etudiant" };
-  res.redirect("/mes-cours");
+  // Inscription lancée depuis une page (ex. « commenter un article ») : retour à cette page
+  res.redirect(safePath(req.body.redirect, "/mes-cours"));
 });
 
 router.get("/connexion", (req, res) => {

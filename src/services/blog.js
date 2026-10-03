@@ -2,6 +2,7 @@
 // auteur, carte d'une formation citée) et services de l'éditeur (statuts et programmation, versions, sauvegarde automatique,
 // médiathèque, recherche de liens internes, suggestions de maillage).
 const db = require("../config/database");
+const { UserError } = require("../utils/errors");
 const { slugify, formatPrice } = require("../utils/format");
 const { escapeHtml } = require("../utils/markdown");
 const { plainText } = require("../utils/seo");
@@ -268,7 +269,31 @@ function countView(post, req) {
   db.prepare("UPDATE posts SET views = views + 1 WHERE id = ?").run(post.id);
 }
 
+// ---------- Commentaires (membres connectés, texte brut) ----------
+const COMMENT_MAX = 2000;
+function listComments(postId) {
+  return db.prepare(`SELECT c.id, c.body, c.created_at, c.user_id, u.username, u.avatar_path, u.role
+    FROM blog_comments c JOIN users u ON u.id = c.user_id WHERE c.post_id = ? ORDER BY c.created_at, c.id`).all(postId);
+}
+function countComments(postId) { return db.prepare("SELECT COUNT(*) n FROM blog_comments WHERE post_id = ?").get(postId).n; }
+// Texte nettoyé : espaces superflus retirés, 3 sauts de ligne au plus d'affilée, longueur bornée
+function cleanComment(text) {
+  return String(text || "").replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+function addComment(postId, userId, text) {
+  const body = cleanComment(text);
+  if (body.length < 2) throw new UserError("Votre commentaire est vide.");
+  if (body.length > COMMENT_MAX) throw new UserError(`Votre commentaire dépasse ${COMMENT_MAX} caractères.`);
+  // Même texte déjà publié par la même personne sur cet article : pas de doublon (double clic, rechargement)
+  const twin = db.prepare("SELECT id FROM blog_comments WHERE post_id = ? AND user_id = ? AND body = ?").get(postId, userId, body);
+  if (twin) return twin.id;
+  return Number(db.prepare("INSERT INTO blog_comments (post_id, user_id, body) VALUES (?, ?, ?)").run(postId, userId, body).lastInsertRowid);
+}
+function getComment(id) { return db.prepare("SELECT * FROM blog_comments WHERE id = ?").get(id); }
+function deleteComment(id) { db.prepare("DELETE FROM blog_comments WHERE id = ?").run(id); }
+
 module.exports = {
+  listComments, countComments, addComment, getComment, deleteComment, COMMENT_MAX,
   STATUSES, parseTags, excerptOf, textOf, categories, categoryBySlug, subcategories, allTags, canonicalCategory, canonicalSubcategory, canonicalTags,
   popular, recent, similar, neighbours, authorOf, instructors, courseCard, renderPost, countView, card, promoteScheduled,
   addRevision, describeChange, listRevisions, getRevision, getAutosave, setAutosave, clearAutosave,

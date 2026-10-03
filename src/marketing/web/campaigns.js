@@ -94,8 +94,8 @@ module.exports = ({ db }) => {
     const { ctx } = req.mk;
     const cfg = config.getSendingConfig(ctx);
     const message = {
-      to, subject: "[TEST] KOYEKOLA : votre configuration e-mail fonctionne",
-      text: `Bonjour,\n\nCet e-mail de test a été envoyé depuis KOYEKOLA (Marketing → Réglages d'envoi), canal « ${channel === "site" ? "e-mails du site (SMTP)" : "campagnes (" + cfg.provider + ")"} ».\nS'il est arrivé dans votre boîte de réception (et non dans les indésirables), tout est en ordre.`,
+      to, subject: "[TEST] KOLAKISA : votre configuration e-mail fonctionne",
+      text: `Bonjour,\n\nCet e-mail de test a été envoyé depuis KOLAKISA (Marketing → Réglages d'envoi), canal « ${channel === "site" ? "e-mails du site (SMTP)" : "campagnes (" + cfg.provider + ")"} ».\nS'il est arrivé dans votre boîte de réception (et non dans les indésirables), tout est en ordre.`,
       headers: { "X-KOYEKOLA-Test": "1" },
     };
     const done = (flash) => { req.session.mkFlash = flash; res.redirect(back); };

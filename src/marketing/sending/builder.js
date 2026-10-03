@@ -5,7 +5,7 @@ const { buildContext } = require("../templates/context");
 const { unsubscribeToken, preferencesToken } = require("../compliance/consent");
 const { signToken } = require("../security/tokens");
 
-const FALLBACK_FROM = "KOYEKOLA <no-reply@exemple.invalid>"; // fournisseur console uniquement (rien n'est envoyé)
+const FALLBACK_FROM = "KOLAKISA <no-reply@exemple.invalid>"; // fournisseur console uniquement (rien n'est envoyé)
 const trimBase = (url) => String(url || "").replace(/\/+$/, "");
 const unescapeAmp = (s) => s.replace(/&amp;/g, "&");
 

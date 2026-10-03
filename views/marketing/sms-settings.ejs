@@ -22,8 +22,8 @@
             <option value="console" <%= cfg.provider === "console" ? "selected" : "" %>>Console (essais : rien n'est envoyé)</option>
             <option value="twilio" <%= cfg.provider === "twilio" ? "selected" : "" %>>Twilio</option>
           </select></div>
-        <div class="field-group"><label for="sms-sender">Expéditeur</label><input id="sms-sender" type="text" name="sender" maxlength="40" value="<%= cfg.sender %>" placeholder="KOYEKOLA" <%= dis %>>
-          <span class="field-hint">Un <strong>nom</strong> de 11 lettres ou chiffres au plus, sans accent (ex. <code>KOYEKOLA</code>) : vos contacts ne pourront pas y répondre, d'où le lien de désinscription ajouté à chaque SMS. Ou un <strong>numéro Twilio</strong> (<code>+…</code>) : la réponse STOP fonctionnera aussi. Ou un <strong>service de messagerie Twilio</strong> (<code>MG…</code>), qui choisit le bon expéditeur selon le pays.</span></div>
+        <div class="field-group"><label for="sms-sender">Expéditeur</label><input id="sms-sender" type="text" name="sender" maxlength="40" value="<%= cfg.sender %>" placeholder="KOLAKISA" <%= dis %>>
+          <span class="field-hint">Un <strong>nom</strong> de 11 lettres ou chiffres au plus, sans accent (ex. <code>KOLAKISA</code>) : vos contacts ne pourront pas y répondre, d'où le lien de désinscription ajouté à chaque SMS. Ou un <strong>numéro Twilio</strong> (<code>+…</code>) : la réponse STOP fonctionnera aussi. Ou un <strong>service de messagerie Twilio</strong> (<code>MG…</code>), qui choisit le bon expéditeur selon le pays.</span></div>
         <div class="field-group"><label for="sms-country">Pays par défaut</label>
           <select id="sms-country" name="default_country" <%= dis %>><% countries.forEach((c) => { %><option value="<%= c.code %>" <%= cfg.defaultCountry === c.code ? "selected" : "" %>><%= c.label %></option><% }) %></select>
           <span class="field-hint">Sert à compléter les numéros saisis sans indicatif (ex. « 081 234 5678 » → +243 81 234 5678).</span></div>

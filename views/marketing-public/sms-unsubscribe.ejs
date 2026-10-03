@@ -1,11 +1,11 @@
-<%- include("../partials/header", { title, seo: { noindex: true, rawTitle: title + " · KOYEKOLA" } }) %>
+<%- include("../partials/header", { title, seo: { noindex: true, rawTitle: title + " · KOLAKISA" } }) %>
   <div class="auth-page">
     <div class="auth-card">
       <h1>Ne plus recevoir de SMS</h1>
       <% if (already) { %>
         <p class="subtitle">Le numéro <strong><%= masked %></strong> ne reçoit déjà plus nos SMS.</p>
       <% } else { %>
-        <p class="subtitle">Ne plus recevoir les SMS de KOYEKOLA au <strong><%= masked %></strong> ?</p>
+        <p class="subtitle">Ne plus recevoir les SMS de KOLAKISA au <strong><%= masked %></strong> ?</p>
         <form method="post">
           <button type="submit" class="btn btn-primary btn-block btn-lg">Confirmer</button>
         </form>

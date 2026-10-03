@@ -5,12 +5,12 @@
   const lastRead = cursors.map((c) => c.updated_at).sort().pop();
 %>
     <div class="mk-head"><h1>Événements</h1></div>
-    <p class="mk-lead">Ce qui se passe sur KOYEKOLA et déclenche vos scénarios : le pont lit régulièrement les comptes, commandes, inscriptions, leçons, avis et favoris.</p>
+    <p class="mk-lead">Ce qui se passe sur KOLAKISA et déclenche vos scénarios : le pont lit régulièrement les comptes, commandes, inscriptions, leçons, avis et favoris.</p>
 
     <%- include("partials/worker-note", { workerOn, consequence: "le pont ne lit plus le site et aucun scénario ne se déclenche" }) %>
 
     <section class="mk-panel">
-      <h2>Pont KOYEKOLA</h2>
+      <h2>Pont KOLAKISA</h2>
       <p class="field-hint">Le pont lit le site sans jamais le modifier, toutes les 30 secondes environ quand le traitement en arrière-plan est actif. Au premier passage il se place à la fin de l'historique : <strong>les événements passés ne déclenchent jamais rien</strong>.</p>
       <% if (!cursors.length) { %><p class="mk-note">Le pont n'est pas encore initialisé. Il le sera à sa première synchronisation.</p>
       <% } else { %>

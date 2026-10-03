@@ -102,7 +102,7 @@ describe("segments : duplication", () => {
 });
 
 describe("segments : éditeur", () => {
-  test("le catalogue proposé au constructeur contient l'activité KOYEKOLA et le montant dépensé", async () => {
+  test("le catalogue proposé au constructeur contient l'activité KOLAKISA et le montant dépensé", async () => {
     const html = (await boss.get(`/marketing/segments/${segId("Francophones")}`)).text;
     const catalog = JSON.parse(html.match(/<script type="application\/json" id="mk-catalog">([\s\S]*?)<\/script>/)[1]);
     const fields = catalog.map((f) => f.field);
@@ -158,7 +158,7 @@ describe("segments : aperçu (API)", () => {
     assert.ok(j.rows.length >= 1 && j.rows.length <= 10);
     assert.deepEqual(Object.keys(j.rows[0]).sort(), ["email", "id", "name", "status"]);
   });
-  test("critère d'activité KOYEKOLA : compte selon les événements reçus", async () => {
+  test("critère d'activité KOLAKISA : compte selon les événements reçus", async () => {
     const id = idOf("fr0@ex.fr");
     run("INSERT INTO mk_events (organization_id, name, email, contact_id, source, occurred_at, metadata, created_at) VALUES (1, 'lms.order_completed', 'fr0@ex.fr', ?, 'lms', ?, ?, ?)", id, Date.now() - 1000, JSON.stringify({ totalCents: 5000, items: [{ courseId: 4, title: "Excel", priceCents: 5000 }] }), Date.now());
     const bought = JSON.parse((await preview(boss, { op: "and", rules: [{ field: "event:lms.order_completed", cmp: "happened", course: 4 }] })).text);

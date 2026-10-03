@@ -28,7 +28,7 @@ function sendPurchaseWelcomeEmail(db, { to, username, courseTitles }) {
   const subject = courseTitles.length > 1 ? "Bienvenue dans vos nouvelles formations !" : `Bienvenue dans la formation « ${oneLine(courseTitles[0])} » !`;
   const text = [
     `Bonjour ${oneLine(username)},`, "",
-    "Merci pour votre achat sur KOYEKOLA ! Votre ou vos formations sont disponibles dès maintenant :", "",
+    "Merci pour votre achat sur KOLAKISA ! Votre ou vos formations sont disponibles dès maintenant :", "",
     ...courseTitles.map((t) => `- ${oneLine(t)}`), "",
     `Accédez-y ici : ${siteUrl()}/mes-cours`, "", "Bon apprentissage !",
   ].join("\n");
@@ -42,7 +42,7 @@ function sendContactNotification(db, { name, email, subject, message }) {
   if (!to) return { queued: false, reason: "no_recipient" };
   return queueMail(db, {
     kind: "contact_notification", to, replyTo: oneLine(email),
-    subject: `[KOYEKOLA] Message de ${oneLine(name)}${subject ? " : " + oneLine(subject) : ""}`,
+    subject: `[KOLAKISA] Message de ${oneLine(name)}${subject ? " : " + oneLine(subject) : ""}`,
     text: `${oneLine(name)} <${oneLine(email)}>\n\n${message}`,
   });
 }
@@ -54,7 +54,7 @@ function sendContactAcknowledgement(db, { email }) {
     kind: "contact_ack", to: oneLine(email), subject: "Nous avons bien reçu votre message",
     text: [
       "Bonjour,", "",
-      "Nous avons bien reçu votre message envoyé depuis le formulaire de contact de KOYEKOLA. Nous vous répondrons dès que possible.", "",
+      "Nous avons bien reçu votre message envoyé depuis le formulaire de contact de KOLAKISA. Nous vous répondrons dès que possible.", "",
       "Si vous n'êtes pas à l'origine de ce message, ignorez simplement cet e-mail.", "", siteUrl(),
     ].join("\n"),
   });
@@ -62,10 +62,10 @@ function sendContactAcknowledgement(db, { email }) {
 
 function sendSignupWelcomeEmail(db, { to, username }) {
   return queueMail(db, {
-    kind: "signup_welcome", to, subject: "Bienvenue sur KOYEKOLA !",
+    kind: "signup_welcome", to, subject: "Bienvenue sur KOLAKISA !",
     text: [
       `Bonjour ${oneLine(username)},`, "",
-      "Votre compte KOYEKOLA est créé. Vous pouvez dès maintenant parcourir le catalogue et suivre vos formations :", "",
+      "Votre compte KOLAKISA est créé. Vous pouvez dès maintenant parcourir le catalogue et suivre vos formations :", "",
       `${siteUrl()}/catalogue`, "",
       "Si vous n'êtes pas à l'origine de cette inscription, répondez simplement à cet e-mail.", "", "À très vite !",
     ].join("\n"),
@@ -75,10 +75,10 @@ function sendSignupWelcomeEmail(db, { to, username }) {
 // Lien de réinitialisation (valable 1 heure, usage unique). Le texte est effacé de la file une fois l'e-mail parti.
 function sendPasswordResetEmail(db, { to, username, url }) {
   return queueMail(db, {
-    kind: "password_reset", to, subject: "Réinitialiser votre mot de passe KOYEKOLA", sensitive: true,
+    kind: "password_reset", to, subject: "Réinitialiser votre mot de passe KOLAKISA", sensitive: true,
     text: [
       `Bonjour ${oneLine(username)},`, "",
-      "Vous avez demandé à réinitialiser le mot de passe de votre compte KOYEKOLA. Choisissez-en un nouveau ici (lien valable 1 heure, utilisable une seule fois) :", "",
+      "Vous avez demandé à réinitialiser le mot de passe de votre compte KOLAKISA. Choisissez-en un nouveau ici (lien valable 1 heure, utilisable une seule fois) :", "",
       url, "",
       "Si vous n'avez rien demandé, ignorez cet e-mail : votre mot de passe actuel reste valable.",
     ].join("\n"),

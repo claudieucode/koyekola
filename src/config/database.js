@@ -164,6 +164,16 @@ db.exec(`
     course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE
   );
 
+  -- Commentaires des articles du blog : écrits par des membres connectés, texte brut (jamais de HTML)
+  CREATE TABLE IF NOT EXISTS blog_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_blog_comments_post ON blog_comments(post_id, created_at);
+
   -- Préférences d'interface d'un utilisateur (ex. apparence des barres latérales de l'éditeur d'articles)
   CREATE TABLE IF NOT EXISTS user_prefs (
     user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -334,6 +344,7 @@ const NEW_POST_COLUMNS = {
   twitter_image_path: "TEXT",
   schema_type: "TEXT NOT NULL DEFAULT 'BlogPosting'", // BlogPosting | Article
   reviewed: "INTEGER NOT NULL DEFAULT 0", // case « Article relu » de la liste de contrôle
+  comments_enabled: "INTEGER NOT NULL DEFAULT 1", // commentaires des membres inscrits autorisés sous l'article
 };
 for (const [name, definition] of Object.entries(NEW_POST_COLUMNS)) {
   if (!postColumns.includes(name)) db.exec(`ALTER TABLE posts ADD COLUMN ${name} ${definition}`);

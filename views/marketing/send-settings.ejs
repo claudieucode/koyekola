@@ -58,7 +58,7 @@
             <option value="resend" <%= cfg.provider === "resend" ? "selected" : "" %>>Resend (API, avec retours de livraison)</option>
           </select></div>
         <div class="field-row">
-          <div class="field-group"><label for="s-from">Expéditeur</label><input id="s-from" type="text" name="from" maxlength="200" value="<%= cfg.from %>" placeholder="KOYEKOLA &lt;no-reply@votre-domaine.fr&gt;" <%= canEdit ? "" : "disabled" %>>
+          <div class="field-group"><label for="s-from">Expéditeur</label><input id="s-from" type="text" name="from" maxlength="200" value="<%= cfg.from %>" placeholder="KOLAKISA &lt;no-reply@votre-domaine.fr&gt;" <%= canEdit ? "" : "disabled" %>>
             <span class="field-hint">Le domaine doit être authentifié chez votre fournisseur (SPF/DKIM), sinon vos messages iront en indésirables.</span></div>
           <div class="field-group"><label for="s-reply">Adresse de réponse (facultatif)</label><input id="s-reply" type="text" name="reply_to" maxlength="200" value="<%= cfg.replyTo %>" <%= canEdit ? "" : "disabled" %>></div>
         </div>

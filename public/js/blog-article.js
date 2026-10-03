@@ -141,3 +141,20 @@
     });
   }
 })();
+
+// Commentaires : confirmation avant suppression ; compteur de caractères restants
+document.querySelectorAll("form[data-confirm]").forEach((f) => f.addEventListener("submit", (e) => { if (!window.confirm(f.dataset.confirm)) e.preventDefault(); }));
+(() => {
+  const box = document.getElementById("comment-body");
+  if (!box) return;
+  const hint = document.createElement("span");
+  hint.className = "comment-counter";
+  hint.setAttribute("aria-live", "polite");
+  box.after(hint);
+  const max = Number(box.getAttribute("maxlength")) || 2000;
+  const update = () => { const left = max - box.value.length; hint.textContent = left < 200 ? `${left} caractère${left > 1 ? "s" : ""} restant${left > 1 ? "s" : ""}` : ""; };
+  box.addEventListener("input", update);
+  update();
+  // Envoi : bouton désactivé pour éviter un double envoi
+  box.form.addEventListener("submit", () => { const b = box.form.querySelector("button[type=submit]"); if (b) { b.disabled = true; b.textContent = "Publication…"; } });
+})();

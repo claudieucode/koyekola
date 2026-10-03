@@ -2,7 +2,7 @@
 // ailleurs dans le module (voir automations/catalog.js pour les déclencheurs d'automatisation, un sous-ensemble
 // de cette liste) : aucun nom inventé, un webhook ne peut être averti que d'événements qui existent réellement.
 const EVENTS = {
-  "lms.user_registered": "Un compte est créé sur KOYEKOLA",
+  "lms.user_registered": "Un compte est créé sur KOLAKISA",
   "lms.order_completed": "Une commande est passée",
   "lms.course_enrolled": "Un élève s'inscrit à une formation",
   "lms.lesson_completed": "Un élève termine une leçon",

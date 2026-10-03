@@ -17,12 +17,12 @@ const EVENT = [C("happened", "a eu lieu au moins une fois", "none"), C("never", 
   C("within_days", "a eu lieu dans les N derniers jours", "days"), C("not_within_days", "n'a pas eu lieu dans les N derniers jours", "days")];
 const SPENT = [C("gt", "est supérieur à", "number"), C("gte", "est supérieur ou égal à", "number"), C("lt", "est inférieur à", "number"), C("lte", "est inférieur ou égal à", "number"),
   C("between", "est entre", "range"), C("is_empty", "n'a jamais acheté", "none"), C("not_empty", "a déjà acheté", "none")];
-// Activité KOYEKOLA proposée dans les segments : (événement, libellé, porte une formation ?)
+// Activité KOLAKISA proposée dans les segments : (événement, libellé, porte une formation ?)
 const EVENTS = [
-  ["lms.user_registered", "Inscription sur KOYEKOLA", false], ["lms.order_completed", "Achat (commande passée)", true], ["lms.course_enrolled", "Inscription à une formation", true],
+  ["lms.user_registered", "Inscription sur KOLAKISA", false], ["lms.order_completed", "Achat (commande passée)", true], ["lms.course_enrolled", "Inscription à une formation", true],
   ["lms.lesson_completed", "Leçon terminée", true], ["lms.course_completed", "Formation terminée", true], ["lms.review_posted", "Avis publié", true], ["lms.favorite_added", "Formation mise en favori", true],
 ];
-const ACTIVITY_NOTE = "Compté depuis l'activation du pont KOYEKOLA : l'activité plus ancienne n'est pas incluse.";
+const ACTIVITY_NOTE = "Compté depuis l'activation du pont KOLAKISA : l'activité plus ancienne n'est pas incluse.";
 
 // Formations connues, déduites des ÉVÉNEMENTS déjà reçus (le module marketing ne lit jamais les tables du LMS) :
 // le titre le plus récent l'emporte ; les formations d'une commande sont incluses.
@@ -51,14 +51,14 @@ function fieldCatalog(ctx) {
   for (const [field, label] of CORE_TEXT) fields.push({ field, label, group: "Contact", kind: "text", cmps: TEXT });
   fields.push({ field: "status", label: "Statut", group: "Contact", kind: "status", options: STATUSES, cmps: [C("eq", "est", "status"), C("neq", "n'est pas", "status")] });
   for (const [field, label] of CORE_DATES) fields.push({ field, label, group: "Dates", kind: "date", cmps: DATE });
-  fields.push({ field: "lms_user_id", label: "Compte KOYEKOLA", group: "Contact", kind: "lms", cmps: [C("not_empty", "est lié à un compte", "none"), C("is_empty", "n'est pas lié à un compte", "none")] });
+  fields.push({ field: "lms_user_id", label: "Compte KOLAKISA", group: "Contact", kind: "lms", cmps: [C("not_empty", "est lié à un compte", "none"), C("is_empty", "n'est pas lié à un compte", "none")] });
   fields.push({ field: "tag", label: "Étiquette", group: "Organisation", kind: "tag", cmps: [C("has", "a l'étiquette"), C("not_has", "n'a pas l'étiquette")] });
   fields.push({ field: "list", label: "Liste", group: "Organisation", kind: "list", lists: listLists(ctx).map((l) => ({ id: l.id, name: l.name })), cmps: [C("in_list", "est dans la liste", "list"), C("not_in_list", "n'est pas dans la liste", "list")] });
   const courses = knownCourses(ctx);
   for (const [name, label, supportsCourse] of EVENTS) {
-    fields.push({ field: `event:${name}`, label, group: "Activité KOYEKOLA", kind: "event", supportsCourse, courses: supportsCourse ? courses : [], note: ACTIVITY_NOTE, cmps: EVENT });
+    fields.push({ field: `event:${name}`, label, group: "Activité KOLAKISA", kind: "event", supportsCourse, courses: supportsCourse ? courses : [], note: ACTIVITY_NOTE, cmps: EVENT });
   }
-  fields.push({ field: "lms_spent", label: "Montant dépensé sur KOYEKOLA (€)", group: "Achats", kind: "spent", note: ACTIVITY_NOTE, cmps: SPENT });
+  fields.push({ field: "lms_spent", label: "Montant dépensé sur KOLAKISA (€)", group: "Achats", kind: "spent", note: ACTIVITY_NOTE, cmps: SPENT });
   for (const p of listProperties(ctx)) {
     const field = `property:${p.key}`;
     const group = "Propriétés";

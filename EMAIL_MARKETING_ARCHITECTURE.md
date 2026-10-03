@@ -1,7 +1,7 @@
-# EMAIL MARKETING KOYEKOLA — Architecture proposée
+# EMAIL MARKETING KOLAKISA — Architecture proposée
 
 > **Statut : VALIDÉ (« go » de l'utilisateur) — jalon M0 réalisé, M1 à venir.** Voir « État d'avancement » en fin de document.
-> Ce document décrit ce qui a été observé dans KOYEKOLA (état réel au moment de l'analyse), ce que je propose de construire, et les décisions qui vous appartiennent.
+> Ce document décrit ce qui a été observé dans KOLAKISA (état réel au moment de l'analyse), ce que je propose de construire, et les décisions qui vous appartiennent.
 
 ---
 
@@ -48,7 +48,7 @@
 Pourquoi pas un service séparé tout de suite : un seul hébergement (Hostinger), une seule base à sauvegarder, une seule authentification, pas de réseau entre les deux. Le coût d'un service séparé (déploiement, jetons, latence, deux bases) n'est pas justifié pour 5 utilisateurs. Le découpage en modules garde la porte ouverte.
 
 ```
-KOYEKOLA (Express)
+KOLAKISA (Express)
 ├── LMS existant (inchangé)
 │     └── pont : src/marketing/bridge/koyekola.js   ← seul endroit qui connaît le LMS
 │           émet des événements (user_registered, course_purchased…)
@@ -81,7 +81,7 @@ Campagne ──> Audience (segment) ──> destinataires matérialisés (mk_cam
 
 ## 2. Technologies existantes réutilisables
 
-| Besoin | Réutilisé de KOYEKOLA | À ajouter |
+| Besoin | Réutilisé de KOLAKISA | À ajouter |
 |---|---|---|
 | Serveur, routes, vues | Express, EJS, structure `src/routes`, `views/` | — |
 | Base | SQLite `node:sqlite`, index, transactions | **Système de migrations versionnées** (il n'existe pas : le schéma est aujourd'hui créé/modifié dans `database.js`) |
@@ -260,7 +260,7 @@ Je propose de **modifier l'ordre** de vos 18 phases sur un point : **la conformi
 | **M1 Audience** | 3–4 (+ conformité 21/22/20) | Contacts, import CSV avec aperçu/mapping/doublons, propriétés perso, listes, tags, **segments AND/OR/NOT**, consentement, désinscription, liste de suppression, préférences | L | Gérer et segmenter ses contacts |
 | **M2 Contenu** | 5 | Gabarits, moteur de variables sécurisé, éditeur de blocs, aperçu bureau/tablette/mobile | L | Créer un e-mail sans coder |
 | **M3 Envoi** | 6–9 | Fournisseur (`console` + `smtp` + API), campagnes, file/worker/débit/reprises, retours (rebonds, plaintes) via webhooks, suivi clics/ouvertures, stats de base | XL | **Envoyer une vraie campagne**, la suivre |
-| **M4 Lien KOYEKOLA** | 10 (+ 13-14) | Pont LMS, événements réels, automatisations, séquences, e-mails transactionnels séparés | XL | Séquence de bienvenue après achat |
+| **M4 Lien KOLAKISA** | 10 (+ 13-14) | Pont LMS, événements réels, automatisations, séquences, e-mails transactionnels séparés | XL | Séquence de bienvenue après achat |
 | **M5 Croissance** | 11–14 | Tableaux de bord, formulaires et popups, tests A/B, attribution du revenu, API + clés, webhooks sortants | XL | Capter des contacts, mesurer les ventes |
 | **M6 Durcissement** | 15–18 | Délivrabilité/domaines (SPF, DKIM, DMARC), diagnostic/observabilité, sauvegarde/restauration, test de charge 100 000, documentation finale | L | Prêt pour la production |
 
@@ -287,7 +287,7 @@ Vos 5 utilisateurs actuels **n'ont donné aucun consentement marketing** (le for
 ### Décisions à valider (avec ma recommandation)
 1. **Fournisseur d'envoi** → Resend pour démarrer (SES plus tard si le volume l'exige).
 2. **Base et file** → même fichier SQLite + file dans SQLite (limite réaliste : ~100 000 contacts) ; migration PostgreSQL planifiée si vous visez le SaaS multi-clients à grande échelle.
-3. **Multi-organisations** → colonne `organization_id` partout **dès maintenant**, mais **une seule organisation (KOYEKOLA)** et aucune interface d'inscription de clients : le SaaS complet (facturation, quotas, isolation renforcée) est un projet distinct.
+3. **Multi-organisations** → colonne `organization_id` partout **dès maintenant**, mais **une seule organisation (KOLAKISA)** et aucune interface d'inscription de clients : le SaaS complet (facturation, quotas, isolation renforcée) est un projet distinct.
 4. **Éditeur d'e-mail** → éditeur de blocs (ajout, réorganisation par glisser-déposer natif **et** boutons, aperçu 3 tailles) qui produit du HTML d'e-mail compatible ; pas de bibliothèque tierce lourde.
 5. **Moteur de gabarits** → maison, à grammaire fermée (plus sûr et plus simple à tester qu'une bibliothèque).
 6. **Ordre** → conformité avant le premier envoi (voir §11).
@@ -403,7 +403,7 @@ Décisions : EJS + JavaScript natif (pas de React), interface en français, coqu
 
 ## 16. Refonte de l'interface (phase R1 — Accueil, terminée)
 
-- **Module de données** `src/marketing/overview/index.js` (`getOverview`) : lecture seule, une organisation à la fois. Contacts (total, joignables via `sendableSql`, nouveaux et désinscrits sur 30 jours, bloqués), croissance sur 8 semaines glissantes, campagnes (agrégats de la période, 5 récentes ; les campagnes système `kind='automation'` sont exclues), automatisations, préparation à l'envoi (8 vérifications), alertes, activité récente (campagnes terminées, imports, événements KOYEKOLA).
+- **Module de données** `src/marketing/overview/index.js` (`getOverview`) : lecture seule, une organisation à la fois. Contacts (total, joignables via `sendableSql`, nouveaux et désinscrits sur 30 jours, bloqués), croissance sur 8 semaines glissantes, campagnes (agrégats de la période, 5 récentes ; les campagnes système `kind='automation'` sont exclues), automatisations, préparation à l'envoi (8 vérifications), alertes, activité récente (campagnes terminées, imports, événements KOLAKISA).
 - **Honnêteté des chiffres** : aucun envoi sur la période → taux affiché « — » (jamais « 0 % ») ; ouvertures non mises en avant (indicatives) ; seuils d'alerte identiques à `sending/stats.js` (rebond 2 %, plainte 0,1 %, au moins 20 messages).
 - **« Prêt pour un vrai envoi ? »** (administrateurs) : clé de chiffrement, fournisseur (le mode « console » est présenté comme un mode test), expéditeur, adresse postale, traitement en arrière-plan, SITE_URL en https, modèle, contact joignable. La note précise que cela **ne garantit pas la délivrabilité** (SPF/DKIM/DMARC restent à configurer côté DNS).
 - **Alertes** triées (erreurs d'abord) et filtrées par permission : clé absente, travaux définitivement en échec (`queue.manage`), campagne en échec, rebonds/plaintes élevés, passages de scénario en échec, worker désactivé alors que des envois ou scénarios l'attendent.
@@ -415,12 +415,12 @@ Décisions : EJS + JavaScript natif (pas de React), interface en français, coqu
 - **Recherche** `audience.searchContacts(ctx, criteria, { sort, dir, page, pageSize })` : pages numérotées (25/50/100), tri sur liste blanche (`SORTS` : e-mail, nom, statut, source, ajout, dernière activité ; départage stable par identifiant ; « jamais actif » toujours en fin), filtres : statut, liste, étiquette, source, joignables (même fragment SQL que `isSendable`, `sendableSql`), ajoutés depuis N jours. Aucun texte utilisateur n'est copié dans le SQL ; toute valeur invalide est ignorée. Les listes internes (membres d'une liste, etc.) gardent la pagination par curseur.
 - **Actions groupées** `audience/bulk.js` (éditeurs) : ajouter/retirer une étiquette (tout ou rien, 200 contacts au plus, autre organisation refusée) ; ajout/retrait de liste via `addToList`/`removeFromList`. Aucune ne touche au statut ni au consentement. L'adresse de retour est limitée aux pages `/marketing/contacts`.
 - **Export CSV** `audience/export.js` (administrateurs, `contacts.export`) : mêmes filtres que la liste, par lots de 1 000, BOM UTF-8, formules neutralisées, journal d'audit `contacts.exported` (sans adresse).
-- **Fiche** : chiffres (e-mails reçus/cliqués, scénarios en cours, dernière activité) et **chronologie** `audience/timeline.js` (création, consentements, désinscriptions, listes, étiquettes, e-mails envoyés/cliqués/rebonds, scénarios, événements KOYEKOLA ; les événements déjà représentés ne sont pas doublés ; liens filtrés par permission).
+- **Fiche** : chiffres (e-mails reçus/cliqués, scénarios en cours, dernière activité) et **chronologie** `audience/timeline.js` (création, consentements, désinscriptions, listes, étiquettes, e-mails envoyés/cliqués/rebonds, scénarios, événements KOLAKISA ; les événements déjà représentés ne sont pas doublés ; liens filtrés par permission).
 - **Interface** : tableau `mk-datatable` avec en-têtes triables (`aria-sort`), cartes sur mobile, filtres secondaires repliables sur mobile, barre d'actions groupées, pagination numérotée accessible.
 
 ## 18. Refonte de l'interface (phase R3 — Segments, listes, étiquettes, propriétés, terminée)
 
-- **Critères « Activité KOYEKOLA »** (`segments/engine.js`) : `event:lms.*` avec comparateurs `happened`, `never`, `at_least` (N fois), `within_days`, `not_within_days` (les deux négatifs suivent la convention « NON (positif) », donc incluent les contacts sans activité), et un filtre optionnel `course` (identifiant de formation ; pour une commande, recherche dans `items[]`). **« Montant dépensé »** (`lms_spent`, en euros, somme des commandes terminées en centimes ; une commande gratuite est un achat). Seuls les événements du pont LMS sont acceptés ; `course` est refusé ailleurs.
+- **Critères « Activité KOLAKISA »** (`segments/engine.js`) : `event:lms.*` avec comparateurs `happened`, `never`, `at_least` (N fois), `within_days`, `not_within_days` (les deux négatifs suivent la convention « NON (positif) », donc incluent les contacts sans activité), et un filtre optionnel `course` (identifiant de formation ; pour une commande, recherche dans `items[]`). **« Montant dépensé »** (`lms_spent`, en euros, somme des commandes terminées en centimes ; une commande gratuite est un achat). Seuls les événements du pont LMS sont acceptés ; `course` est refusé ailleurs.
 - **Le module marketing ne lit toujours jamais les tables du LMS** : les segments s'appuient sur `mk_events` (déjà alimenté par le pont) et la liste des formations proposées est déduite de ces événements. **Limite documentée dans l'interface** : l'activité antérieure à l'activation du pont n'est pas incluse.
 - **Migration 010** : index `mk_events(organization_id, contact_id, name)` (sans lui, chaque contact parcourrait tous les événements de l'organisation).
 - **Éditeur** : aperçu **en direct** (attente de 400 ms, une seule réponse utile : les réponses périmées sont ignorées), effectif + part de l'audience + joignables + échantillon, résumé en français, choix de la formation, notes sur les limites. Toujours en JavaScript natif, sans HTML injecté.
@@ -495,7 +495,7 @@ du plafond de débit à 120 requêtes** —, `marketing-api-web.test.js` interfa
 
 ## 23. Jalon M5 — Intégrations, partie 2 : webhooks sortants (terminée)
 
-Fin des Intégrations commencées en §22 : KOYEKOLA notifie maintenant un système externe de ses propres événements
+Fin des Intégrations commencées en §22 : KOLAKISA notifie maintenant un système externe de ses propres événements
 (l'inverse de l'API). Décision d'architecture : **aucune nouvelle table de livraisons** — `mk_jobs` (file déjà
 outillée : réservation, bail, reprises à délai croissant, abandon, rejeu manuel) sert directement de journal, lu par
 `json_extract()` sur son `payload` pour l'écran de diagnostic. Même choix minimaliste que « pas de `mk_outbox` » au
@@ -528,7 +528,7 @@ jalon M0 (§14) : une source de vérité de moins à garder synchronisée.
 - **Page** `/marketing/webhooks` (liste + création par cases à cocher) et `/marketing/webhooks/:id` (configuration,
   révélation du secret, dernières livraisons avec bouton « Rejouer » sur les livraisons abandonnées via
   `jobs.retryDead`), permission `webhooks.manage`. Entrée `webhooks` du menu « Intégrations » passée de `soon` à
-  `live` — le triplet Intégrations (KOYEKOLA, Clés d'API, Webhooks) est maintenant complet.
+  `live` — le triplet Intégrations (KOLAKISA, Clés d'API, Webhooks) est maintenant complet.
 
 **Deux vrais bogues trouvés en essayant dans un vrai navigateur, puis corrigés** (comme au jalon R7, aucun n'était
 visible dans les tests écrits avant de regarder l'écran) :
@@ -819,7 +819,7 @@ Demande explicite : faire évoluer les automatisations vers une parité fonction
 Journeys / « Marketing Automation Flows » depuis juin 2025), en s'appuyant sur sa documentation publique réelle —
 jamais en inventant une fonctionnalité, et en présentant le plan avant de coder (règle explicitement demandée).
 
-**Audit KOYEKOLA (relu ligne par ligne, pas de mémoire)** : le moteur (`automations/engine.js`) est plus complet que
+**Audit KOLAKISA (relu ligne par ligne, pas de mémoire)** : le moteur (`automations/engine.js`) est plus complet que
 prévu — historique pas à pas déjà écrit en base (`mk_automation_log`, jamais lu avant cette phase), retry avec
 backoff exponentiel, idempotence garantie (`UNIQUE(automation_id, contact_id)`), garde-fou anti-boucle (100 étapes
 max par passage), pause automatique sur erreur de configuration. Le moteur de **segments** (`segments/engine.js`,
@@ -837,8 +837,8 @@ Automation Flows » (juin 2025). Confirmé : jusqu'à 3 déclencheurs par flux, 
 étapes (offre Standard+) ; distinction **règles** (split conditionnel jusqu'à 5 conditions, split en pourcentage,
 délai, attendre-un-déclencheur) vs **actions** (e-mail, étiquette/dé-étiquette, mettre à jour le contact,
 désabonner, archiver, webhook) ; **un flux actif ne peut pas être édité sans le mettre en pause d'abord** — exactement
-le principe déjà en place dans KOYEKOLA ; rapports avec détail par étape (envois/ouverture/clic) et revenus
-attribués (nécessite une intégration e-commerce, donc **non applicable** à KOYEKOLA tant qu'il n'y a pas de paiement
+le principe déjà en place dans KOLAKISA ; rapports avec détail par étape (envois/ouverture/clic) et revenus
+attribués (nécessite une intégration e-commerce, donc **non applicable** à KOLAKISA tant qu'il n'y a pas de paiement
 réel — Étape 4, toujours en attente). Aucune mention d'un « nœud objectif/goal » trouvée dans la documentation
 actuelle : ne sera pas inventé.
 
@@ -885,7 +885,7 @@ manquait seulement l'accès depuis le panneau du nœud.
   mise en page (page pleine largeur avec aperçu en direct vs panneau latéral étroit) et forcer une abstraction
   commune aurait contraint les deux inutilement ; le FORMAT de données, lui, reste rigoureusement identique.
   Simplification assumée par rapport au constructeur complet de la page Segments : pas de filtre « formation
-  concernée » sur les critères d'activité KOYEKOLA (kind: event, supportsCourse) — le critère porte sur toutes les
+  concernée » sur les critères d'activité KOLAKISA (kind: event, supportsCourse) — le critère porte sur toutes les
   formations confondues quand construit ici.
 - **Sous-titre du nœud** : affiche désormais « N critère(s) (ET/OU) » en mode construction (au lieu d'un « Segment :
   — » trompeur), ou le nom du segment en mode « déjà enregistré », inchangé.
@@ -1058,7 +1058,7 @@ CSS), exactement ce que la section 26 du cahier des charges demandait sans savoi
   Joignables) s'affiche maintenant sous la barre de recherche en puce cliquable qui le retire individuellement
   (`Statut : Pas de consentement ×`), en plus du bouton « Réinitialiser » déjà existant pour tout effacer d'un coup.
 - **Bogue réel de lisibilité trouvé en regardant le tableau rendu** (pas en lisant le code) : la colonne Source
-  affichait « Ims » — en réalité la valeur réelle est `lms` (le pont KOYEKOLA), mais le « l » minuscule se lit comme
+  affichait « Ims » — en réalité la valeur réelle est `lms` (le pont KOLAKISA), mais le « l » minuscule se lit comme
   un « I » majuscule dans la police du site. **La donnée elle-même n'a pas été touchée** (interdiction explicite du
   cahier des charges de changer une donnée pour l'esthétique) : un nouvel helper d'AFFICHAGE
   `mkh.sourceLabel()` (même principe que `statusLabel()`, déjà existant) traduit les codes connus
@@ -1196,7 +1196,7 @@ classique d'un fichier CSV avec un vrai import de bout en bout. Zéro erreur Jav
 
 **Ce qui reste (backlog honnête, pas traité cette tranche — mission bien plus vaste qu'une session)** :
 - Passe UI/UX page par page pour le reste du produit (Campagnes, Modèles, Automatisations, Analytics, Webhooks
-  liste, Clés d'API, Événements KOYEKOLA) — seules Accueil/Contacts/Listes/Étiquettes/Propriétés/Conformité ont
+  liste, Clés d'API, Événements KOLAKISA) — seules Accueil/Contacts/Listes/Étiquettes/Propriétés/Conformité ont
   reçu la passe de cohérence visuelle complète jusqu'ici.
 - Message humanisé pour `MARKETING_WORKER=off` (cahier des charges §17 : distinguer message technique pour
   l'admin vs message humain pour l'utilisateur) — actuellement le même message technique s'affiche partout
@@ -1267,7 +1267,7 @@ alignée (« rétabli » comme partout).
   `webhooks/catalog.js`, source unique des noms réellement émis — rien de recopié), le code technique restant visible
   en petit en dessous ; « Événement personnalisé » pour un nom libre envoyé par l'API ;
 - nouvelle colonne Date (`mkh.fdatetime` : millisecondes ou `datetime('now')` SQLite → « 25/09/2026 14:30 ») ;
-  origine traduite (`mkh.eventSourceLabel` : « Site KOYEKOLA », « Marketing », « API »…) ; état en badge
+  origine traduite (`mkh.eventSourceLabel` : « Site KOLAKISA », « Marketing », « API »…) ; état en badge
   (Traité / En attente) ;
 - le tableau technique du pont (identifiants lus) passe dans une section repliable, sources traduites (Comptes,
   Commandes…) et dates lisibles (avant : `2026-09-25 09:15:00` brut) ; en clair, une seule ligne « Dernière lecture

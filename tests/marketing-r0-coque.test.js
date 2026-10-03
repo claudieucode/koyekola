@@ -40,7 +40,7 @@ describe("registre de navigation", () => {
   });
   test("propriétaire : toutes les pages existantes ; lecteur : seulement ce que son rôle permet", () => {
     const owner = labels(buildNav({ can: roleCan("owner"), active: "dashboard" }));
-    for (const l of ["Accueil", "Tous les contacts", "Listes", "Segments", "Étiquettes", "Propriétés", "Formulaires d'inscription", "Importer des contacts", "Toutes les campagnes", "Modèles d'e-mails", "Automatisations", "Réglages d'envoi", "KOYEKOLA", "Conformité"]) assert.ok(owner.includes(l), l);
+    for (const l of ["Accueil", "Tous les contacts", "Listes", "Segments", "Étiquettes", "Propriétés", "Formulaires d'inscription", "Importer des contacts", "Toutes les campagnes", "Modèles d'e-mails", "Automatisations", "Réglages d'envoi", "KOLAKISA", "Conformité"]) assert.ok(owner.includes(l), l);
     const viewer = labels(buildNav({ can: roleCan("viewer"), active: "dashboard" }));
     assert.ok(viewer.includes("Tous les contacts") && viewer.includes("Conformité"));
     assert.ok(!viewer.includes("Réglages d'envoi"), "les réglages d'envoi demandent un administrateur");

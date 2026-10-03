@@ -1,4 +1,4 @@
-// KOYEKOLA — suivi de lecture et notes personnelles (page de leçon, élèves inscrits uniquement).
+// KOLAKISA — suivi de lecture et notes personnelles (page de leçon, élèves inscrits uniquement).
 //  - reprend la vidéo là où l'élève s'était arrêté ;
 //  - enregistre la position toutes les 10 secondes, en pause et à la fin ;
 //  - le serveur marque la leçon « terminée » à 90 % de la vidéo (sauf leçon avec quiz) ;

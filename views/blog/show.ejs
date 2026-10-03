@@ -91,9 +91,50 @@
           </nav>
         <% } %>
 
+        <% if (post.comments_enabled) { %>
+          <section class="article-comments" id="commentaires" aria-labelledby="comments-title">
+            <h2 id="comments-title">Commentaires <span class="article-comments-count">(<%= comments.length %>)</span></h2>
+            <% if (comments.length) { %>
+              <ol class="comment-list">
+                <% comments.forEach((c) => { %>
+                  <li class="comment" id="commentaire-<%= c.id %>">
+                    <% if (c.avatar_path) { %><img class="comment-avatar" src="<%= c.avatar_path %>" alt="" width="40" height="40" loading="lazy">
+                    <% } else { %><span class="comment-avatar comment-initials" style="background:<%= avatarColor(c.username) %>" aria-hidden="true"><%= initials(c.username) %></span><% } %>
+                    <div class="comment-main">
+                      <p class="comment-meta"><strong><%= c.username %></strong><% if (c.role === "formateur") { %> <span class="comment-badge">Auteur</span><% } %> · <time datetime="<%= c.created_at.replace(' ', 'T') %>Z"><%= formatDateTime(c.created_at) %></time></p>
+                      <div class="comment-body"><% c.body.split(/\n{2,}/).forEach((para) => { %><p><% para.split("\n").forEach((line, i) => { %><% if (i) { %><br><% } %><%= line %><% }) %></p><% }) %></div>
+                      <% if (me && (me.id === c.user_id || me.role === "formateur")) { %>
+                        <form method="post" action="/blog/commentaires/<%= c.id %>/supprimer" class="comment-delete" data-confirm="Supprimer ce commentaire ?"><button type="submit" class="btn-link">Supprimer</button></form>
+                      <% } %>
+                    </div>
+                  </li>
+                <% }) %>
+              </ol>
+            <% } else if (commentsOpen) { %>
+              <p class="comment-empty">Aucun commentaire pour l'instant : soyez le premier à réagir.</p>
+            <% } %>
+            <% if (commentsOpen && me) { %>
+              <form method="post" action="/blog/<%= post.slug %>/commentaires" class="comment-form">
+                <label for="comment-body">Votre commentaire</label>
+                <% if (commentError) { %><p class="form-error" role="alert"><%= commentError %></p><% } %>
+                <textarea id="comment-body" name="body" rows="4" maxlength="<%= commentMax %>" required placeholder="Partagez votre avis, une question, une expérience…"><%= commentDraft %></textarea>
+                <div class="comment-form-foot"><span class="field-hint">Publié sous le nom <strong><%= me.username %></strong>. Texte seul, <%= commentMax %> caractères au plus.</span><button type="submit" class="btn btn-primary">Publier le commentaire</button></div>
+              </form>
+            <% } else if (commentsOpen) { %>
+              <div class="comment-login">
+                <p>Connectez-vous pour laisser un commentaire. Pas encore membre ? L'inscription est gratuite.</p>
+                <div class="comment-login-actions">
+                  <a class="btn btn-primary" href="/inscription?redirect=<%= encodeURIComponent(`/blog/${post.slug}#commentaires`) %>">Créer un compte</a>
+                  <a class="btn btn-outline" href="/connexion?redirect=<%= encodeURIComponent(`/blog/${post.slug}#commentaires`) %>">Se connecter</a>
+                </div>
+              </div>
+            <% } %>
+          </section>
+        <% } %>
+
         <section class="article-final-cta">
           <h2>Prêt à développer vos compétences ?</h2>
-          <p>KOYEKOLA propose des formations en ligne pour apprendre de nouvelles compétences à votre rythme, avec des exercices concrets et un accès à vie.</p>
+          <p>KOLAKISA propose des formations en ligne pour apprendre de nouvelles compétences à votre rythme, avec des exercices concrets et un accès à vie.</p>
           <a href="/catalogue" class="btn btn-primary">Découvrir les formations</a>
         </section>
       </article>

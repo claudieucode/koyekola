@@ -45,7 +45,7 @@ const ITEMS = [
   live("analytics", "revenue", "Revenus", "/marketing/revenus", "coin", "analytics.read"),
 
 
-  live("integrations", "events", "KOYEKOLA", "/marketing/evenements", "plug", "contacts.read"),
+  live("integrations", "events", "KOLAKISA", "/marketing/evenements", "plug", "contacts.read"),
   live("integrations", "api", "Clés d'API", "/marketing/api", "plug", "api_keys.manage", { label: "Nouvelle clé", href: "/marketing/api#nouvelle", permission: "api_keys.manage" }),
   live("integrations", "webhooks", "Webhooks", "/marketing/webhooks", "plug", "webhooks.manage", { label: "Nouveau webhook", href: "/marketing/webhooks#nouveau", permission: "webhooks.manage" }),
 

@@ -1,4 +1,4 @@
-// Pont KOYEKOLA (LMS) → marketing. Sens unique : le LMS alimente le CRM, jamais l'inverse ; aucune table du LMS n'est modifiée.
+// Pont KOLAKISA (LMS) → marketing. Sens unique : le LMS alimente le CRM, jamais l'inverse ; aucune table du LMS n'est modifiée.
 // Règle de conformité : un compte du LMS n'est PAS un consentement. Les comptes existants deviennent des contacts
 // « unknown » (aucun envoi marketing possible) ; seule la case facultative de l'inscription, cochée par la personne,
 // crée une preuve de consentement.
@@ -9,7 +9,7 @@ const { recordConsent } = require("../compliance/consent");
 const { checkCtx, audit } = require("../audience/shared");
 
 // Texte affiché à côté de la case ET enregistré tel quel comme preuve : une seule source pour les deux
-const SIGNUP_CONSENT_TEXT = "Je souhaite recevoir par e-mail les actualités, les nouvelles formations et les offres de KOYEKOLA. Je peux me désinscrire à tout moment.";
+const SIGNUP_CONSENT_TEXT = "Je souhaite recevoir par e-mail les actualités, les nouvelles formations et les offres de KOLAKISA. Je peux me désinscrire à tout moment.";
 
 // Comptes du LMS sans contact → contacts « unknown ». Idempotent, borné (les gros sites avancent par paquets).
 function syncLmsUsers(ctx, { limit = 5000 } = {}) {
@@ -56,7 +56,7 @@ function registerLmsUserSafely(marketing, db, user, options = {}, log = console)
   try {
     return registerLmsUser({ db, organizationId: marketing.organizationId, userId: null, bus: marketing.bus }, user, options);
   } catch (error) {
-    log.error("[KOYEKOLA] Contact marketing non créé à l'inscription (le compte, lui, est bien créé) :", error.message);
+    log.error("[KOLAKISA] Contact marketing non créé à l'inscription (le compte, lui, est bien créé) :", error.message);
     return { ok: false };
   }
 }

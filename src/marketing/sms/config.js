@@ -60,7 +60,7 @@ function saveSmsConfig(ctx, input = {}) {
     if (input.sender === "") writes.push([K.sender, ""]);
     else {
       const p = parseSmsSender(input.sender);
-      if (!p) throw bad("Expéditeur invalide : un nom de 1 à 11 lettres ou chiffres sans accent (ex. KOYEKOLA), un numéro au format +…, ou un identifiant de service Twilio (MG…).");
+      if (!p) throw bad("Expéditeur invalide : un nom de 1 à 11 lettres ou chiffres sans accent (ex. KOLAKISA), un numéro au format +…, ou un identifiant de service Twilio (MG…).");
       writes.push([K.sender, p.value]);
     }
   }

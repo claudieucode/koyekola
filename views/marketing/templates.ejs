@@ -89,7 +89,7 @@
       <p class="field-hint">Adresse postale de l'expéditeur, affichée en bas des e-mails marketing (exigée par plusieurs législations).</p>
       <% if (mk.can("settings.write")) { %>
         <form action="/marketing/modeles/adresse" method="post" class="mk-form">
-          <div class="field-group"><label for="a-addr">Adresse</label><textarea id="a-addr" name="address" rows="3" maxlength="300" placeholder="KOYEKOLA&#10;12 rue des Écoles&#10;75005 Paris"><%= address %></textarea></div>
+          <div class="field-group"><label for="a-addr">Adresse</label><textarea id="a-addr" name="address" rows="3" maxlength="300" placeholder="KOLAKISA&#10;12 rue des Écoles&#10;75005 Paris"><%= address %></textarea></div>
           <button type="submit" class="btn btn-outline btn-sm">Enregistrer l'adresse</button>
         </form>
       <% } else { %><p><%= address || "Aucune adresse enregistrée." %></p><% } %>

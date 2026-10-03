@@ -1,4 +1,4 @@
-# E-mails de KOYEKOLA — fonctionnement, configuration, maintenance
+# E-mails de KOLAKISA — fonctionnement, configuration, maintenance
 
 Deux familles d'e-mails :
 
@@ -20,11 +20,11 @@ Deux familles d'e-mails :
    SMTP_SECURE=true
    SMTP_USER=resend
    SMTP_PASS=<la clé Resend re_…>
-   SMTP_FROM=KOYEKOLA <contacts@kolakisa.com>
+   SMTP_FROM=KOLAKISA <contacts@kolakisa.com>
    CONTACT_EMAIL=<adresse qui reçoit les messages du formulaire de contact>
    MARKETING_WORKER=on
    ```
-4. *Marketing → Réglages d'envoi* : fournisseur **Resend**, même clé, expéditeur `KOYEKOLA <contacts@kolakisa.com>`.
+4. *Marketing → Réglages d'envoi* : fournisseur **Resend**, même clé, expéditeur `KOLAKISA <contacts@kolakisa.com>`.
    Webhook Resend (rebonds/plaintes) : l'adresse affichée sur la page.
 5. Vérifier : bouton **« Envoyer un e-mail de test »** (canal « E-mails du site » puis « Campagnes ») sur la même page,
    ou en terminal : `npm run test-email -- votre-adresse@exemple.com` (diagnostic détaillé, jamais le mot de passe).

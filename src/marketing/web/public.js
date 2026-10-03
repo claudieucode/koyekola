@@ -11,7 +11,7 @@ const tracking = require("../sending/tracking");
 const { createRateLimiter } = require("../../middlewares/security");
 const helpers = require("./helpers");
 
-const REPLY_CONSENT_TEXT = "Je souhaite de nouveau recevoir les e-mails de KOYEKOLA (demande faite depuis le centre de préférences).";
+const REPLY_CONSENT_TEXT = "Je souhaite de nouveau recevoir les e-mails de KOLAKISA (demande faite depuis le centre de préférences).";
 const BLOCKED = new Set(["bounced", "complained", "suppressed"]);
 
 module.exports = ({ db }) => {

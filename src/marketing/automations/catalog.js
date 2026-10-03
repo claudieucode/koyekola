@@ -1,6 +1,6 @@
 // Déclencheurs disponibles (événements du bus) et filtres autorisés. Les libellés sont ceux de l'interface.
 const TRIGGERS = {
-  "lms.user_registered": { label: "Un compte est créé sur KOYEKOLA", filters: [] },
+  "lms.user_registered": { label: "Un compte est créé sur KOLAKISA", filters: [] },
   "lms.order_completed": { label: "Une commande est passée", filters: [] },
   "lms.course_enrolled": { label: "Un élève s'inscrit à une formation", filters: [["courseId", "Identifiant de la formation"]] },
   "lms.lesson_completed": { label: "Un élève termine une leçon", filters: [["courseId", "Identifiant de la formation"]] },

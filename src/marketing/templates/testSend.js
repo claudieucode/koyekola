@@ -30,7 +30,7 @@ async function sendTestEmail(ctx, templateId, { to, transport, provider, from, c
     if (provider) await provider.send(message);
     else await transport.sendMail(message);
   } catch (error) {
-    log.error("[KOYEKOLA] Échec de l'envoi de l'e-mail de test (code :", String(error && (error.code || error.responseCode || error.name)), ")");
+    log.error("[KOLAKISA] Échec de l'envoi de l'e-mail de test (code :", String(error && (error.code || error.responseCode || error.name)), ")");
     return { sent: false, reason: "send_error" };
   }
   audit(ctx, "template.test_sent", "template", templateId, { personalized: Boolean(contactId) });

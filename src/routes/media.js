@@ -63,7 +63,7 @@ function serveProtected(folder, find) {
         res.set("Content-Type", image);
       } else {
         // Tout le reste : toujours en téléchargement, jamais affiché ni exécuté dans le site
-        // (un .html envoyé en pièce jointe ne doit pas pouvoir s'exécuter avec les droits de KOYEKOLA)
+        // (un .html envoyé en pièce jointe ne doit pas pouvoir s'exécuter avec les droits de KOLAKISA)
         res.set("Content-Type", "application/octet-stream");
         res.set("Content-Disposition", attachmentHeader(downloadName(found.title, fileName)));
       }

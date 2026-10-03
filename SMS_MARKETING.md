@@ -22,11 +22,11 @@ Hors périmètre : MMS (Mailchimp ne les propose qu'aux États-Unis et au Canada
 1. Créer un compte sur twilio.com ; noter **Account SID** (AC…) et **Auth Token** (page d'accueil de la console).
 2. **Messaging → Settings → Geo permissions** : cocher les pays visés (RD Congo, Congo, France…). Sinon : erreur 21408.
 3. Choisir l'expéditeur :
-   - un **nom** (« KOYEKOLA », 11 caractères au plus, sans accent) : autorisé dans la plupart des pays visés, mais
+   - un **nom** (« KOLAKISA », 11 caractères au plus, sans accent) : autorisé dans la plupart des pays visés, mais
      **personne ne peut y répondre** — la désinscription se fait par le lien court ajouté à chaque SMS ;
    - un **numéro Twilio** (+…) : la réponse STOP fonctionne en plus (phase 3) ;
    - un **Messaging Service** (MG…) : Twilio choisit l'expéditeur adapté à chaque pays.
-4. KOYEKOLA → Marketing → Paramètres → **Réglages SMS** : fournisseur Twilio, expéditeur, identifiants, pays par défaut.
+4. KOLAKISA → Marketing → Paramètres → **Réglages SMS** : fournisseur Twilio, expéditeur, identifiants, pays par défaut.
    `ENCRYPTION_KEY` doit être définie (le jeton est chiffré en base, jamais réaffiché).
 5. **Envoyer un SMS de test** à votre propre numéro depuis la même page (texte fixe, 10 par heure).
 

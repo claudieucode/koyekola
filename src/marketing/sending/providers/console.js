@@ -7,7 +7,7 @@ function createConsoleProvider({ log = console } = {}) {
     sent,
     async send(message) {
       sent.push({ ...message });
-      log.log?.(`[KOYEKOLA] (fournisseur console : rien n'est envoyé) message « ${String(message.subject).slice(0, 60)} » pour ${message.to}`);
+      log.log?.(`[KOLAKISA] (fournisseur console : rien n'est envoyé) message « ${String(message.subject).slice(0, 60)} » pour ${message.to}`);
       return { providerMessageId: `console-${sent.length}` };
     },
   };

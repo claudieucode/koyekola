@@ -461,7 +461,7 @@ function init() {
       if (instance) editors.push(instance);
     } catch (error) {
       // Si un éditeur échoue, son <textarea> reste visible et utilisable (repli)
-      console.error("[KOYEKOLA] Éditeur indisponible pour", host.dataset.richEditor, error);
+      console.error("[KOLAKISA] Éditeur indisponible pour", host.dataset.richEditor, error);
       const textarea = host.querySelector("textarea");
       if (textarea) textarea.hidden = false;
     }

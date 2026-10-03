@@ -1,4 +1,4 @@
-// Outils des tests d'intégration : un vrai serveur KOYEKOLA est lancé avec ses propres dossiers
+// Outils des tests d'intégration : un vrai serveur KOLAKISA est lancé avec ses propres dossiers
 // de données temporaires (jamais vos vraies données), et interrogé en HTTP comme le ferait un navigateur.
 const { spawn } = require("node:child_process");
 const { DatabaseSync } = require("node:sqlite");

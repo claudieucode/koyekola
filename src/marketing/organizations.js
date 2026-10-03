@@ -1,4 +1,4 @@
-// Organisations, membres et permissions. KOYEKOLA est la première (et pour l'instant la seule) organisation ;
+// Organisations, membres et permissions. KOLAKISA est la première (et pour l'instant la seule) organisation ;
 // toutes les données marketing portent pourtant un organization_id pour pouvoir en accueillir d'autres plus tard.
 
 const ROLE_ORDER = { viewer: 1, editor: 2, admin: 3, owner: 4 };
@@ -23,8 +23,13 @@ const PERMISSIONS = Object.freeze({
 const roleAtLeast = (role, minimum) => Boolean(ROLE_ORDER[role] && ROLE_ORDER[minimum] && ROLE_ORDER[role] >= ROLE_ORDER[minimum]);
 const can = (role, permission) => Object.hasOwn(PERMISSIONS, permission) && roleAtLeast(role, PERMISSIONS[permission]);
 
-function ensureDefaultOrganization(db, { name = "KOYEKOLA", slug = "koyekola" } = {}) {
+function ensureDefaultOrganization(db, { name = "KOLAKISA", slug = "koyekola" } = {}) {
   const existing = db.prepare("SELECT id, name, slug FROM mk_organizations WHERE slug = ?").get(slug);
+  // Le site s'appelle désormais KOLAKISA : l'ancien nom par défaut est renommé (un nom choisi à la main n'est jamais touché)
+  if (existing && existing.name === "KOYE" + "KOLA" && name !== existing.name) {
+    db.prepare("UPDATE mk_organizations SET name = ? WHERE id = ?").run(name, existing.id);
+    return { ...existing, name };
+  }
   if (existing) return existing;
   const info = db.prepare("INSERT INTO mk_organizations (name, slug) VALUES (?, ?)").run(name, slug);
   return { id: Number(info.lastInsertRowid), name, slug };

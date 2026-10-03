@@ -544,7 +544,7 @@
 .is-code-mode .wp-block-toolbar, .is-code-mode .wp-inline-appender { display: none; }
 
 /* ==========================================================================
-   Personnalisation KOYEKOLA : même logique que l'éditeur de blocs, identité du site
+   Personnalisation KOLAKISA : même logique que l'éditeur de blocs, identité du site
    (bleu nuit + bleu ciel, Bricolage Grotesque / Figtree, coins arrondis, feuille posée sur fond bleuté)
    ========================================================================== */
 .wp-body { background: var(--bg); }
@@ -565,7 +565,7 @@
 .wp-btn-icon.wp-inserter-toggle:hover { background: linear-gradient(140deg, var(--accent) 0%, var(--accent-dark) 100%); }
 .wp-btn-icon.wp-inserter-toggle.is-pressed { background: var(--primary); box-shadow: none; }
 
-/* Barre supérieure : marque KOYEKOLA Studio */
+/* Barre supérieure : marque KOLAKISA Studio */
 .wp-header { background: rgba(255, 255, 255, 0.92); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); gap: 10px; }
 .wp-site-icon { display: flex; align-items: center; width: auto; height: auto; padding: 0 10px 0 16px; gap: 10px; background: none; color: var(--primary); font-size: 1rem; }
 .wp-site-icon:hover { background: none; color: var(--accent-dark); }
@@ -589,7 +589,7 @@
 /* Zone d'écriture : une feuille posée sur le fond bleuté du site */
 .wp-canvas { background: var(--bg); }
 .wp-content { max-width: 880px; margin: 28px auto 0; padding: 64px 64px 40vh; background: #fff; border: 1px solid var(--border); border-bottom: 0; border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: var(--shadow-md); min-height: calc(100% - 28px); }
-.wp-content::before { content: "Article · KOYEKOLA"; position: absolute; top: 24px; left: 64px; color: var(--accent-dark); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.wp-content::before { content: "Article · KOLAKISA"; position: absolute; top: 24px; left: 64px; color: var(--accent-dark); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
 .wp-title { letter-spacing: -0.025em; }
 .wp-editor .be-prose > .has-focus:not(p):not(h1):not(h2):not(h3):not(h4) { box-shadow: 0 0 0 2px var(--accent), var(--ring); border-radius: var(--radius); }
 .wp-editor .be-prose .ProseMirror-selectednode { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius); }
@@ -689,7 +689,7 @@
 }
 
 /* ==========================================================================
-   Disposition KOYEKOLA Studio : rail d'outils à gauche, onglets Article / SEO / Bloc, sans pied de page
+   Disposition KOLAKISA Studio : rail d'outils à gauche, onglets Article / SEO / Bloc, sans pied de page
    ========================================================================== */
 .wp-layout { bottom: 0; }
 .wp-rail { flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 76px; padding: 14px 0; background: #fff; border-right: 1px solid var(--border); }

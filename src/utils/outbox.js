@@ -46,7 +46,7 @@ function queueMail(db, { kind, to, subject, text, replyTo = "", sensitive = fals
     .prepare("INSERT INTO mail_outbox (kind, to_email, reply_to, subject, body, sensitive, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
     .run(String(kind).slice(0, 40), address, EMAIL.test(oneLine(replyTo)) ? oneLine(replyTo) : "", oneLine(subject).slice(0, 300), String(text ?? "").slice(0, MAX_TEXT), sensitive ? 1 : 0, now, now);
   const id = Number(info.lastInsertRowid);
-  if (autoSend) setImmediate(() => processOutbox(db).catch((error) => console.error("[KOYEKOLA] File d'envoi :", error.message)));
+  if (autoSend) setImmediate(() => processOutbox(db).catch((error) => console.error("[KOLAKISA] File d'envoi :", error.message)));
   return { queued: true, id };
 }
 
@@ -82,8 +82,8 @@ async function processOutbox(db, { transport, now = Date.now, log = console, lim
       if (!db.prepare("UPDATE mail_outbox SET status = 'sending', updated_at = ? WHERE id = ? AND status = 'pending'").run(now(), row.id).changes) continue;
       if (!smtp) {
         db.prepare("UPDATE mail_outbox SET status = 'skipped', last_error = 'SMTP non configuré (SMTP_HOST vide)', updated_at = ? WHERE id = ?").run(now(), row.id);
-        if (production) log.warn?.(`[KOYEKOLA] E-mail « ${row.kind} » non envoyé : SMTP non configuré.`);
-        else log.log?.(`--- [KOYEKOLA] SMTP non configuré : e-mail non envoyé ---\nÀ : ${row.to_email}\nSujet : ${row.subject}\n\n${row.body}\n--- fin de l'e-mail ---`);
+        if (production) log.warn?.(`[KOLAKISA] E-mail « ${row.kind} » non envoyé : SMTP non configuré.`);
+        else log.log?.(`--- [KOLAKISA] SMTP non configuré : e-mail non envoyé ---\nÀ : ${row.to_email}\nSujet : ${row.subject}\n\n${row.body}\n--- fin de l'e-mail ---`);
         summary.skipped++;
         continue;
       }
@@ -101,7 +101,7 @@ async function processOutbox(db, { transport, now = Date.now, log = console, lim
           db.prepare("UPDATE mail_outbox SET status = 'pending', attempts = ?, last_error = ?, next_attempt_at = ?, updated_at = ? WHERE id = ?").run(attempts, reason, now() + 60000 * 2 ** (attempts - 1), now(), row.id);
           summary.retry++;
         }
-        log.error?.(`[KOYEKOLA] E-mail « ${row.kind} » non envoyé (essai ${attempts}/${MAX_ATTEMPTS}) : ${reason}`);
+        log.error?.(`[KOLAKISA] E-mail « ${row.kind} » non envoyé (essai ${attempts}/${MAX_ATTEMPTS}) : ${reason}`);
       }
     }
     return summary;
@@ -120,7 +120,7 @@ function outboxOverview(db, { limit = 20 } = {}) {
 
 // Relance périodique (nouvelles tentatives) ; l'intervalle ne retient pas le processus
 function startOutboxTimer(db, { everyMs = 60000 } = {}) {
-  const timer = setInterval(() => processOutbox(db).catch((error) => console.error("[KOYEKOLA] File d'envoi :", error.message)), everyMs);
+  const timer = setInterval(() => processOutbox(db).catch((error) => console.error("[KOLAKISA] File d'envoi :", error.message)), everyMs);
   timer.unref?.();
   return timer;
 }

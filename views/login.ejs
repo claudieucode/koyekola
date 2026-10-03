@@ -19,7 +19,7 @@
         </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg">Se connecter</button>
       </form>
-      <p class="form-footer">Pas encore de compte ? <a href="/inscription">Créer un compte</a></p>
+      <p class="form-footer">Pas encore de compte ? <a href="/inscription<%= redirect ? `?redirect=${encodeURIComponent(redirect)}` : "" %>">Créer un compte</a></p>
     </div>
   </div>
 

@@ -51,7 +51,7 @@ describe("liste et création", () => {
     assert.equal(r.status, 200);
     assert.match(r.text, /Nouveau scénario/);
     assert.match(r.text, /value="lms\.order_completed"/);
-    assert.match(r.text, /Un compte est créé sur KOYEKOLA/);
+    assert.match(r.text, /Un compte est créé sur KOLAKISA/);
     const res = await boss.post("/marketing/automatisations", { name: "Bienvenue élève", kind: "transactional", trigger_event: "lms.user_registered" });
     assert.match(res.location, /^\/marketing\/automatisations\/\d+$/);
     assert.match((await post(boss, "/marketing/automatisations", { name: "bienvenue élève", kind: "transactional", trigger_event: "lms.user_registered" })).text, /porte déjà ce nom/);
@@ -258,7 +258,7 @@ describe("événements et pont", () => {
   test("page : état des curseurs, événements récents", async () => {
     const r = await boss.get("/marketing/evenements");
     assert.equal(r.status, 200);
-    assert.match(r.text, /Pont KOYEKOLA/);
+    assert.match(r.text, /Pont KOLAKISA/);
     assert.match(r.text, /Synchroniser maintenant/);
   });
   test("synchronisation manuelle : réservée aux administrateurs, initialise puis lit les nouveautés", async () => {

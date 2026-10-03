@@ -253,7 +253,7 @@ describe("PDF « plan complet de la formation »", () => {
     assert.ok(i >= 0 && j > i && k > j, `ordre incorrect : ${i} ${j} ${k}`);
   });
   test("informations générales et programme réels", () => {
-    for (const s of ["KOYEKOLA", "Du premier plan à l'export", "Débutant", "2 chapitres", "4 leçons", "28 min", "Chapitre 1 — L'interface", "Chapitre 2 — Le montage", "1.1  Présentation de l'interface", "2.2  Timeline"]) {
+    for (const s of ["KOLAKISA", "Du premier plan à l'export", "Débutant", "2 chapitres", "4 leçons", "28 min", "Chapitre 1 — L'interface", "Chapitre 2 — Le montage", "1.1  Présentation de l'interface", "2.2  Timeline"]) {
       assert.ok(text.includes(s), `absent du PDF : « ${s} »`);
     }
   });

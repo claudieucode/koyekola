@@ -14,7 +14,7 @@ router.use("/formateur", requireInstructor);
 
 // ---------- À propos ----------
 
-const DEFAULT_ABOUT = `KOYEKOLA est une plateforme de formation en ligne : des cours vidéo à suivre à votre rythme, avec des quiz, des ressources à télécharger et un certificat de réussite.
+const DEFAULT_ABOUT = `KOLAKISA est une plateforme de formation en ligne : des cours vidéo à suivre à votre rythme, avec des quiz, des ressources à télécharger et un certificat de réussite.
 
 ## Notre approche
 
@@ -22,7 +22,7 @@ const DEFAULT_ABOUT = `KOYEKOLA est une plateforme de formation en ligne : des c
 - Un accès illimité à chaque formation achetée, sur ordinateur, tablette et mobile.
 - Votre progression est enregistrée : vous reprenez exactement là où vous vous étiez arrêté.`;
 
-const ABOUT_DESCRIPTION = "Découvrez KOYEKOLA, la plateforme de formation en ligne : nos formations vidéo, notre approche et la personne qui les conçoit.";
+const ABOUT_DESCRIPTION = "Découvrez KOLAKISA, la plateforme de formation en ligne : nos formations vidéo, notre approche et la personne qui les conçoit.";
 
 function loadAbout() {
   const row = db.prepare("SELECT * FROM site_pages WHERE slug = 'a-propos'").get();
@@ -77,7 +77,7 @@ router.get("/faq", (req, res) => {
     faqs, crumbs,
     seo: {
       title: "Questions fréquentes",
-      description: "Réponses aux questions fréquentes sur les formations KOYEKOLA : accès, paiement, certificats et fonctionnement.",
+      description: "Réponses aux questions fréquentes sur les formations KOLAKISA : accès, paiement, certificats et fonctionnement.",
       jsonLd: [breadcrumbLd(crumbs.map((c) => ({ name: c.name, url: absoluteUrl(req, c.url || "/faq") }))), faqs.length ? faqLd(faqs) : null],
     },
   });

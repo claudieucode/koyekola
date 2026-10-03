@@ -8,7 +8,7 @@ const { SmsSendError } = require("./providers");
 const R = require("./render");
 const { smsLength } = require("./text");
 
-const TEST_BODY = "KOYEKOLA : ceci est un SMS de test. Votre configuration SMS fonctionne.";
+const TEST_BODY = "KOLAKISA : ceci est un SMS de test. Votre configuration SMS fonctionne.";
 
 async function sendTestSms(ctx, { to }, deps = {}) {
   const cfg = getSmsConfig(ctx);
@@ -22,7 +22,7 @@ async function sendTestSms(ctx, { to }, deps = {}) {
     throw new MarketingError("invalid_field", error.message);
   }
   try {
-    const r = await provider.send({ from: cfg.sender || "KOYEKOLA", to: phone.e164, body: TEST_BODY });
+    const r = await provider.send({ from: cfg.sender || "KOLAKISA", to: phone.e164, body: TEST_BODY });
     audit(ctx, "sms.test_sent", "organization", ctx.organizationId, { provider: provider.name, country: phone.country });
     return { ok: true, provider: provider.name, to: maskPhone(phone.e164), providerMessageId: r.providerMessageId };
   } catch (error) {
@@ -47,7 +47,7 @@ async function sendCampaignTest(ctx, campaignId, { to }, deps = {}) {
   let provider;
   try { provider = createSmsProviderFor(ctx, deps); } catch (error) { throw new MarketingError("invalid_field", error.message); }
   try {
-    await provider.send({ from: cfg.sender || "KOYEKOLA", to: phone.e164, body });
+    await provider.send({ from: cfg.sender || "KOLAKISA", to: phone.e164, body });
     audit(ctx, "sms_campaign.test_sent", "sms_campaign", c.id, { provider: provider.name });
     return { ok: true, provider: provider.name, to: maskPhone(phone.e164), segments: smsLength(body).segments, body };
   } catch (error) {

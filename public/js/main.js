@@ -1,4 +1,4 @@
-// KOYEKOLA — interactions front-end légères (aucune dépendance externe)
+// KOLAKISA — interactions front-end légères (aucune dépendance externe)
 
 document.addEventListener("DOMContentLoaded", () => {
   // Menu mobile

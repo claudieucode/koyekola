@@ -10,7 +10,7 @@ function createConsoleSmsProvider({ log = console } = {}) {
     sent,
     async send(message) {
       sent.push({ ...message });
-      log.log?.(`[KOYEKOLA] (SMS console : rien n'est envoyé) SMS de ${String(message.body).length} caractères pour ${maskPhone(message.to)}`);
+      log.log?.(`[KOLAKISA] (SMS console : rien n'est envoyé) SMS de ${String(message.body).length} caractères pour ${maskPhone(message.to)}`);
       return { providerMessageId: `console-sms-${sent.length}` };
     },
   };

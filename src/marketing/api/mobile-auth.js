@@ -70,7 +70,7 @@ function createMobileAuthRouter({ db }) {
         },
       });
     } catch (error) {
-      console.error("[KOYEKOLA mobile-auth] Erreur :", error);
+      console.error("[KOLAKISA mobile-auth] Erreur :", error);
       return res.status(500).json({ error: { code: "server_error", message: "Erreur interne." } });
     }
   });

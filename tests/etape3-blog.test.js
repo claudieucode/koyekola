@@ -39,7 +39,7 @@ describe("blog vide", () => {
     assert.equal(r.status, 200);
     assert.match(r.text, /<h1[^>]*>Blog<\/h1>/);
     assert.match(r.text, /Aucun article/);
-    assert.match(r.text, /<title>Blog · KOYEKOLA<\/title>/);
+    assert.match(r.text, /<title>Blog · KOLAKISA<\/title>/);
   });
 });
 
@@ -179,7 +179,7 @@ describe("page d'un article", () => {
     Object.entries({ title: "Article publié", excerpt: "x", content: "y", seo_title: "Titre pour Google", seo_description: "Description pour Google." }).forEach(([k, v]) => fd.append(k, v));
     await prof.request(`/formateur/blog/${p.id}/modifier`, { method: "POST", multipart: fd });
     const h = (await anon().get(`/blog/${p.slug}`)).text;
-    assert.match(h, /<title>Titre pour Google · KOYEKOLA<\/title>/);
+    assert.match(h, /<title>Titre pour Google · KOLAKISA<\/title>/);
     assert.equal(meta(h, "description"), "Description pour Google.");
   });
   test("sans résumé : description tirée du contenu, sans mise en forme", async () => {

@@ -91,7 +91,7 @@ function migrate(db, { dir, dbPath, backupDir, log = console } = {}) {
   let backup = null;
   if (dbPath && dbPath !== ":memory:" && fs.existsSync(dbPath) && hasData(db)) {
     backup = backupBeforeMigration(db, dbPath, backupDir, pending[pending.length - 1].version);
-    log.log(`[KOYEKOLA] Sauvegarde avant migration : ${backup}`);
+    log.log(`[KOLAKISA] Sauvegarde avant migration : ${backup}`);
   }
 
   const applied = [];
@@ -118,7 +118,7 @@ function migrate(db, { dir, dbPath, backupDir, log = console } = {}) {
       throw new Error(`Migration ${m.version} (${m.name}) échouée : ${err.message}. Elle a été annulée, aucune modification partielle n'a été conservée.${backup ? ` Sauvegarde : ${backup}` : ""}`);
     }
     applied.push(m.version);
-    log.log(`[KOYEKOLA] Migration marketing ${m.version} (${m.name}) appliquée.`);
+    log.log(`[KOLAKISA] Migration marketing ${m.version} (${m.name}) appliquée.`);
   }
   return { applied, backup };
 }

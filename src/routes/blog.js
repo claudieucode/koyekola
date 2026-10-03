@@ -167,11 +167,12 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
         dateModified: isoDateTime(post.updated_at),
         mainEntityOfPage: { "@type": "WebPage", "@id": ownUrl },
         ...(author ? { author: { "@type": "Person", name: author.username, url: absoluteUrl(req, `/blog/auteur/${author.id}`) } } : {}),
-        publisher: { "@type": "Organization", name: "KOYEKOLA", url: absoluteUrl(req, "/") },
+        publisher: { "@type": "Organization", name: "KOLAKISA", url: absoluteUrl(req, "/") },
         ...(post.category ? { articleSection: post.category } : {}),
         ...(tags.length ? { keywords: tags.join(", ") } : {}),
         wordCount: article.words,
         inLanguage: lang,
+        ...(post.comments_enabled ? { commentCount: blog.countComments(post.id) } : {}),
       },
       breadcrumbLd(crumbs.map((c) => ({ name: c.name, url: c.url ? absoluteUrl(req, c.url) : ownUrl }))),
     ];
@@ -189,8 +190,48 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
     categorySlug: post.category ? slugify(post.category) : "",
     sidebar: { popular: blog.popular(4, post.id), recent: blog.recent(4, post.id), categories: blog.categories(), newsletter },
     similar: post.published ? blog.similar(post, 3) : [],
+    comments: post.comments_enabled ? blog.listComments(post.id) : [],
+    commentsOpen: Boolean(post.comments_enabled && post.published && !preview),
+    commentMax: blog.COMMENT_MAX,
+    commentError: req.session.commentError || null,
+    commentDraft: req.session.commentDraft || "",
+    me: req.session.user || null,
   });
+  delete req.session.commentError;
+  delete req.session.commentDraft;
 }
+
+// ---------- Commentaires : réservés aux membres connectés ----------
+const commentLimiter = createRateLimiter(6, 10 * 60 * 1000); // 6 commentaires par tranche de 10 minutes et par membre
+router.post("/blog/:slug/commentaires", (req, res) => {
+  const post = db.prepare("SELECT * FROM posts WHERE slug = ? AND published = 1").get(req.params.slug);
+  if (!post) return res.status(404).render("error", { message: "Article introuvable." });
+  const back = `/blog/${post.slug}`;
+  if (!req.session.user) return res.redirect(`/connexion?redirect=${encodeURIComponent(`${back}#commentaires`)}`);
+  if (!post.comments_enabled) return res.redirect(`${back}#commentaires`);
+  const key = `comment:${req.session.user.id}`;
+  try {
+    if (commentLimiter.isLimited(key)) throw new UserError("Vous avez publié beaucoup de commentaires en peu de temps : réessayez dans quelques minutes.");
+    const id = blog.addComment(post.id, req.session.user.id, req.body.body);
+    commentLimiter.hit(key);
+    res.redirect(`${back}#commentaire-${id}`);
+  } catch (err) {
+    if (!(err instanceof UserError)) throw err;
+    req.session.commentError = err.message;
+    req.session.commentDraft = String(req.body.body || "").slice(0, blog.COMMENT_MAX + 200);
+    res.redirect(`${back}#commentaires`);
+  }
+});
+// Suppression : par son auteur, ou par un formateur (modération)
+router.post("/blog/commentaires/:id/supprimer", (req, res) => {
+  const comment = /^\d{1,9}$/.test(req.params.id) ? blog.getComment(Number(req.params.id)) : null;
+  const user = req.session.user;
+  if (!comment) return res.status(404).render("error", { message: "Commentaire introuvable." });
+  if (!user || (user.id !== comment.user_id && user.role !== "formateur")) return res.status(403).render("error", { message: "Vous ne pouvez pas supprimer ce commentaire." });
+  blog.deleteComment(comment.id);
+  const post = db.prepare("SELECT slug FROM posts WHERE id = ?").get(comment.post_id);
+  res.redirect(post ? `/blog/${post.slug}#commentaires` : "/blog");
+});
 
 router.get("/blog/:slug", (req, res) => {
   const post = db.prepare("SELECT * FROM posts WHERE slug = ?").get(req.params.slug);
@@ -266,6 +307,7 @@ function readFields(body, existing = null) {
     toc_title: oneLine(body.toc_title, 60),
     schema_type: body.schema_type === "Article" ? "Article" : "BlogPosting",
     reviewed: flag(body.reviewed, existing ? existing.reviewed : 0),
+    comments_enabled: flag(body.comments_enabled, existing ? existing.comments_enabled : 1),
   };
   if (!fields.title) throw new UserError("Le titre de l'article est obligatoire.");
   if (fields.reading_minutes !== null && !(Number.isInteger(fields.reading_minutes) && fields.reading_minutes >= 1 && fields.reading_minutes <= 120)) throw new UserError("Temps de lecture : un nombre de minutes entre 1 et 120 (ou vide pour le calcul automatique).");

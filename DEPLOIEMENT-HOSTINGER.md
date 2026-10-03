@@ -1,9 +1,9 @@
-# Mettre KOYEKOLA en ligne sur Hostinger
+# Mettre KOLAKISA en ligne sur Hostinger
 
 Guide pas à pas, pensé pour quelqu'un qui n'a jamais hébergé un site. Comptez 1 à 2 heures la première fois.
 
 > ## À lire avant tout : le paiement est simulé
-> Sur KOYEKOLA, le tunnel de paiement **accepte n'importe quoi et valide toujours la commande**. Personne n'est réellement débité.
+> Sur KOLAKISA, le tunnel de paiement **accepte n'importe quoi et valide toujours la commande**. Personne n'est réellement débité.
 > Vous pouvez donc mettre le site en ligne comme **vitrine ou démonstration**, mais **pas encore vendre pour de vrai**.
 > Pour encaisser, il faudra brancher un prestataire de paiement (Stripe est le plus simple) : c'est un chantier à part.
 
@@ -31,7 +31,7 @@ Vous n'avez rien à faire pour ces points, mais il est utile de savoir qu'ils ex
 
 ## Étape 0 : choisir la bonne offre Hostinger
 
-KOYEKOLA est une application **Node.js**. Sur Hostinger, l'hébergement d'applications Node.js est proposé avec les offres d'hébergement web **Business** et **Cloud** (pas avec les offres d'entrée de gamme), ou sur un **VPS**. Vérifiez sur le site de Hostinger que votre offre indique bien « Node.js » avant de payer.
+KOLAKISA est une application **Node.js**. Sur Hostinger, l'hébergement d'applications Node.js est proposé avec les offres d'hébergement web **Business** et **Cloud** (pas avec les offres d'entrée de gamme), ou sur un **VPS**. Vérifiez sur le site de Hostinger que votre offre indique bien « Node.js » avant de payer.
 
 Le site a besoin de **Node.js 22.12 ou plus** (il utilise le module SQLite intégré). Hostinger propose les versions 18, 20, 22 et 24. **Choisissez la 24.**
 
@@ -42,11 +42,11 @@ Le site a besoin de **Node.js 22.12 ou plus** (il utilise le module SQLite inté
 GitHub est un coffre-fort en ligne pour votre code. Hostinger ira y chercher le site, et le mettra à jour automatiquement à chaque modification.
 
 1. Créez un compte sur [github.com](https://github.com) si ce n'est pas fait.
-2. Créez un **nouveau dépôt** (« New repository »), nommé `KOYEKOLA`, en **Private** (privé). Ne cochez aucune case « Add a README ».
+2. Créez un **nouveau dépôt** (« New repository »), nommé `KOLAKISA`, en **Private** (privé). Ne cochez aucune case « Add a README ».
 3. Dans le terminal, depuis le dossier du site :
 
 ```
-cd ~/ClaudeProjects/KOYEKOLA
+cd ~/ClaudeProjects/KOLAKISA
 git init
 git add .
 git status
@@ -56,9 +56,9 @@ git status
 5. Puis :
 
 ```
-git commit -m "KOYEKOLA : première version"
+git commit -m "KOLAKISA : première version"
 git branch -M main
-git remote add origin https://github.com/VOTRE-NOM/KOYEKOLA.git
+git remote add origin https://github.com/VOTRE-NOM/KOLAKISA.git
 git push -u origin main
 ```
 
@@ -70,7 +70,7 @@ git push -u origin main
 
 1. Connectez-vous à **hPanel** (le tableau de bord Hostinger).
 2. **Sites web** → **Ajouter un site web** → **Déployer une application web** → **Importer un dépôt Git**.
-3. Autorisez GitHub, puis choisissez le dépôt `KOYEKOLA`.
+3. Autorisez GitHub, puis choisissez le dépôt `KOLAKISA`.
 4. Réglages de build :
    - **Framework** : Express.js (ou « Autre » s'il n'est pas détecté)
    - **Fichier d'entrée** : `server.js`
@@ -103,7 +103,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 et copiez la longue suite de lettres et chiffres obtenue.
 
-**À propos du port** : le site écoute sur le port donné par la variable `PORT` (3002 sinon). La documentation de Hostinger ne précise pas comment ce port est attribué. Après le déploiement, ouvrez les **logs** de l'application : vous devez y voir `KOYEKOLA disponible sur http://localhost:XXXX`. Si le site ne s'ouvre pas, c'est le premier endroit où regarder.
+**À propos du port** : le site écoute sur le port donné par la variable `PORT` (3002 sinon). La documentation de Hostinger ne précise pas comment ce port est attribué. Après le déploiement, ouvrez les **logs** de l'application : vous devez y voir `KOLAKISA disponible sur http://localhost:XXXX`. Si le site ne s'ouvre pas, c'est le premier endroit où regarder.
 
 Cliquez ensuite sur **Déployer**.
 
@@ -112,7 +112,7 @@ Cliquez ensuite sur **Déployer**.
 ## Étape 4 : vérifier que ça marche
 
 1. Ouvrez `https://votre-domaine.com/sante` : vous devez voir `{"statut":"ok","formations":0}`.
-2. Ouvrez la page d'accueil : le site doit s'afficher, en bleu ciel, avec « KOYEKOLA ».
+2. Ouvrez la page d'accueil : le site doit s'afficher, en bleu ciel, avec « KOLAKISA ».
 3. Connectez-vous avec l'email et le mot de passe saisis dans `FORMATEUR_*`. Vous devez avoir accès à « Mon espace ».
 4. **Retournez dans hPanel et SUPPRIMEZ la variable `FORMATEUR_PASSWORD`.** (Enregistrer un changement de variable relance le site, c'est normal.) Votre compte existe désormais en base : le mot de passe n'a plus à traîner dans la configuration.
 
@@ -155,13 +155,13 @@ Bonne pratique : pour les longues vidéos, utilisez un service de vidéo et coll
 
 > **Correction** : une version antérieure de ce guide annonçait déjà ce fonctionnement, mais il était faux : les liens YouTube ne s'affichaient pas. C'est corrigé depuis l'Étape 0.
 
-Contrepartie : avec YouTube « non répertoriée » ou Vimeo, quelqu'un qui obtient le lien peut regarder la vidéo sans payer. La protection de KOYEKOLA ne s'applique qu'aux fichiers hébergés sur le site. Un service vidéo protégé (liens signés) est prévu dans la suite du plan.
+Contrepartie : avec YouTube « non répertoriée » ou Vimeo, quelqu'un qui obtient le lien peut regarder la vidéo sans payer. La protection de KOLAKISA ne s'applique qu'aux fichiers hébergés sur le site. Un service vidéo protégé (liens signés) est prévu dans la suite du plan.
 
 ---
 
 ## Vidéos protégées avec Bunny Stream
 
-Bunny Stream est le service vidéo choisi pour vos formations payantes. Le principe : vous envoyez vos vidéos chez Bunny, vous collez leur **identifiant** dans KOYEKOLA, et le site fabrique pour chaque élève autorisé un **lien de lecture temporaire** (6 heures par défaut). Une personne qui n'a pas acheté ne reçoit jamais de lien ; un lien copié cesse de fonctionner après expiration.
+Bunny Stream est le service vidéo choisi pour vos formations payantes. Le principe : vous envoyez vos vidéos chez Bunny, vous collez leur **identifiant** dans KOLAKISA, et le site fabrique pour chaque élève autorisé un **lien de lecture temporaire** (6 heures par défaut). Une personne qui n'a pas acheté ne reçoit jamais de lien ; un lien copié cesse de fonctionner après expiration.
 
 **Mise en place** (les intitulés exacts du tableau de bord Bunny peuvent différer de ceux-ci : je n'ai pas pu les vérifier) :
 1. Créez un compte sur bunny.net, puis une **bibliothèque vidéo** (Stream). Notez son **numéro**.
@@ -243,7 +243,7 @@ Le bandeau de la page d'accueil affiche un diaporama de photos de personnes qui 
 | Les données ont disparu après une mise à jour | Voir **Étape 5** : votre hébergement n'a pas de dossier persistant par défaut. |
 | Un fichier « est introuvable » alors qu'il existe | Le serveur Hostinger (Linux) **distingue majuscules et minuscules**, contrairement à votre Mac : `KOYEKOLA.db` et `koyekola.db` sont deux fichiers différents. Le nom de la base est `KOYEKOLA.db` ; dans `DATA_DIR` et `UPLOADS_DIR`, recopiez les chemins **exactement** comme ils sont écrits. |
 
-> **Note sur le nom** : le site s'appelle KOYEKOLA (en majuscules) partout, sauf dans `package.json` où le champ `name` reste en minuscules (`koyekola`) : npm n'accepte pas de majuscules dans un nom de paquet.
+> **Note sur le nom** : le site s'appelle KOLAKISA (en majuscules) partout, sauf dans `package.json` où le champ `name` reste en minuscules (`koyekola`) : npm n'accepte pas de majuscules dans un nom de paquet.
 
 ---
 

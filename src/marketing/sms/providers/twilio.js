@@ -1,6 +1,6 @@
 // Fournisseur Twilio (API REST « Messages »). Le jeton n'est jamais journalisé ni inclus dans une erreur ; les corps de
 // réponse d'erreur ne sont pas relayés (seul le code d'erreur numérique de Twilio est gardé, pour le diagnostic).
-// Expéditeur : un nom (« KOYEKOLA », 11 caractères au plus — impossible d'y répondre), un numéro Twilio (+…), ou un
+// Expéditeur : un nom (« KOLAKISA », 11 caractères au plus — impossible d'y répondre), un numéro Twilio (+…), ou un
 // « Messaging Service » (MG…) qui choisit lui-même le bon expéditeur selon le pays.
 const { SmsSendError } = require("./errors");
 
@@ -34,7 +34,7 @@ function createTwilioSmsProvider({ accountSid, authToken, timeoutMs = DEFAULT_TI
           body: form.toString(),
         });
       } catch {
-        log.warn?.("[KOYEKOLA] Twilio : requête interrompue (réseau ou délai dépassé).");
+        log.warn?.("[KOLAKISA] Twilio : requête interrompue (réseau ou délai dépassé).");
         throw new SmsSendError("temporary");
       } finally {
         clearTimeout(timer);

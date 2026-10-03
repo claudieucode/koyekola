@@ -29,7 +29,7 @@ function createResendProvider({ apiKey, timeoutMs = DEFAULT_TIMEOUT }, { fetch: 
           }),
         });
       } catch {
-        log.warn?.("[KOYEKOLA] Resend : requête interrompue (réseau ou délai dépassé).");
+        log.warn?.("[KOLAKISA] Resend : requête interrompue (réseau ou délai dépassé).");
         throw new SendError("temporary");
       } finally {
         clearTimeout(timer);
