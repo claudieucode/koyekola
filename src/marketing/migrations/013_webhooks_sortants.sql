@@ -1,5 +1,5 @@
 -- Marketing 013 — Webhooks sortants (jalon M5, partie 2 des Intégrations) : notifier un système externe des
--- événements KOLAKISA. Livraisons journalisées dans mk_jobs (type 'webhook.deliver', déjà outillé : reprises,
+-- événements KOYEKOLA. Livraisons journalisées dans mk_jobs (type 'webhook.deliver', déjà outillé : reprises,
 -- délai croissant, abandon et rejeu manuel) — aucune table dédiée aux livraisons, comme mk_events fait déjà office
 -- de journal pour les événements eux-mêmes (décision similaire, voir §14 de EMAIL_MARKETING_ARCHITECTURE.md).
 
