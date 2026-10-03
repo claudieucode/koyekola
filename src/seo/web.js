@@ -15,6 +15,7 @@ const robots = require("./robots");
 const sitemap = require("./sitemap");
 const audit = require("./audit");
 const { RULES, SEVERITIES, CATEGORIES } = require("./rules");
+const integrations = require("./integrations");
 
 const router = express.Router();
 const canManage = (user) => Boolean(user && user.role === "formateur");
@@ -198,5 +199,60 @@ router.get("/formateur/seo/analyse", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 router.get("/formateur/seo/regles", (req, res) => res.render("seo/rules", { rules: RULES, severities: SEVERITIES, categories: CATEGORIES }));
+
+// ---------- Intégrations Google (PageSpeed, Search Console, Analytics) ----------
+const siteBase = () => String(process.env.SITE_URL || "").replace(/\/+$/, "");
+async function report(fn, state, days, refresh) {
+  if (state !== "connected") return null;
+  try { return { ok: true, data: await fn(days, { refresh }) }; } catch (e) { return { ok: false, error: e.message }; }
+}
+router.get("/formateur/seo/integrations", async (req, res, next) => {
+  try {
+    const days = [7, 28, 90].includes(Number(req.query.jours)) ? Number(req.query.jours) : 28;
+    const refresh = req.query.actualiser === "1";
+    const st = Object.fromEntries(Object.keys(integrations.NAMES).map((n) => [n, integrations.status(n)]));
+    const [gsc, ga] = await Promise.all([report(integrations.searchConsoleReport, st.search_console.state, days, refresh), report(integrations.analyticsReport, st.analytics.state, days, refresh)]);
+    res.render("seo/integrations", {
+      st, names: integrations.NAMES, gsc, ga, days, siteUrl: siteBase(), psi: integrations.pageSpeedHistory(20),
+      config: { search_console: integrations.row("search_console").config, analytics: integrations.row("analytics").config },
+      encryption: Boolean(process.env.ENCRYPTION_KEY), msg: req.query.msg || null, err: req.query.err || null,
+    });
+  } catch (error) { next(error); }
+});
+const back = (res, key, text) => res.redirect(`/formateur/seo/integrations?${key}=${encodeURIComponent(text)}`);
+router.post("/formateur/seo/integrations/:name(search_console|analytics|pagespeed)", async (req, res, next) => {
+  const name = req.params.name;
+  try {
+    if (req.body.action === "deconnecter") { integrations.disconnect(name, req.session.user.id); return back(res, "msg", `${integrations.NAMES[name]} déconnecté.`); }
+    if (name === "pagespeed") {
+      integrations.saveConfig(name, { secret: String(req.body.api_key || "").trim() || null }, req.session.user.id);
+      return back(res, "msg", req.body.api_key ? "Clé PageSpeed enregistrée (chiffrée)." : "Clé PageSpeed retirée.");
+    }
+    const config = name === "search_console" ? { property: String(req.body.property || "").trim() } : { propertyId: String(req.body.property_id || "").trim() };
+    if (name === "search_console" && !/^(sc-domain:[a-z0-9.-]+|https?:\/\/\S+\/)$/i.test(config.property)) return back(res, "err", "Propriété Search Console invalide : « sc-domain:kolakisa.com » ou « https://kolakisa.com/ » (avec la barre finale).");
+    if (name === "analytics" && !/^\d{5,15}$/.test(config.propertyId)) return back(res, "err", "Identifiant de propriété GA4 invalide : uniquement des chiffres (Administration → Paramètres de la propriété).");
+    const keyText = String(req.body.service_account || "").trim();
+    const current = integrations.row(name);
+    if (!keyText && !current.secret) return back(res, "err", "Collez la clé JSON du compte de service.");
+    if (keyText) integrations.parseServiceAccount(keyText);
+    integrations.saveConfig(name, keyText ? { config, secret: keyText } : { config }, req.session.user.id);
+    const t = name === "search_console" ? await integrations.testSearchConsole() : await integrations.testAnalytics();
+    return t.ok ? back(res, "msg", `${integrations.NAMES[name]} connecté : connexion vérifiée auprès de Google.`) : back(res, "err", `Configuration enregistrée, mais la vérification a échoué : ${t.error}`);
+  } catch (e) {
+    if (e instanceof integrations.IntegrationError) return back(res, "err", e.message);
+    next(e);
+  }
+});
+router.post("/formateur/seo/integrations/:name(search_console|analytics)/tester", async (req, res) => {
+  const t = req.params.name === "search_console" ? await integrations.testSearchConsole() : await integrations.testAnalytics();
+  back(res, t.ok ? "msg" : "err", t.ok ? "Connexion vérifiée auprès de Google." : `Échec de la connexion : ${t.error}`);
+});
+router.post("/formateur/seo/integrations/pagespeed/analyser", async (req, res) => {
+  const path = String(req.body.path || "/");
+  if (!siteBase()) return back(res, "err", "Configuration requise : SITE_URL doit être définie pour analyser une page publique.");
+  if (!path.startsWith("/") || path.startsWith("//")) return back(res, "err", "Adresse invalide.");
+  const r = await integrations.runPageSpeed(`${siteBase()}${path}`, req.body.strategy === "desktop" ? "desktop" : "mobile");
+  back(res, r.ok ? "msg" : "err", r.ok ? "Analyse PageSpeed terminée." : r.error);
+});
 
 module.exports = { router, canManage };

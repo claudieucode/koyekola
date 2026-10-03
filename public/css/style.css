@@ -1808,3 +1808,14 @@ a.post-card-category:hover { text-decoration: underline; }
 .seo-history { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .seo-history li { display: flex; flex-direction: column; align-items: center; padding: 8px 12px; border-radius: var(--radius); background: var(--surface-alt); font-size: 0.8rem; }
 .seo-history strong { font-size: 1.2rem; }
+
+/* SEO : intégrations Google */
+.seo-int-state { color: var(--muted); }
+.seo-int-state.is-connected { color: var(--success-dark); }
+.seo-int-state.is-error, .seo-int-state.is-config_required { color: var(--danger); }
+.seo-int-state.is-not_verified { color: var(--warning-text); }
+.seo-int-detail { flex-basis: 100%; overflow-wrap: anywhere; }
+.seo-int-config { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+.seo-int-config summary { cursor: pointer; font-weight: 700; color: var(--primary); }
+.seo-int-steps { padding-left: 20px; display: grid; gap: 6px; font-size: 0.92rem; }
+.seo-int-config textarea { font-family: ui-monospace, Menlo, monospace; font-size: 0.8rem; }
