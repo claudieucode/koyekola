@@ -877,3 +877,10 @@
 .wp-theme-option[aria-checked="true"] { border-color: var(--accent); box-shadow: var(--ring); }
 .wp-theme-swatch { flex: none; width: 28px; height: 28px; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(16, 34, 47, 0.2); }
 .wp-appearance input[type="color"] { width: 64px; height: 40px; padding: 2px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer; }
+/* Contrôle SEO avant publication (panneau de publication) */
+.wp-guard-group { margin: 0 0 10px; }
+.wp-guard-group ul { margin: 4px 0 0; padding-left: 18px; font-size: 13px; }
+.wp-guard-group li { margin-bottom: 3px; }
+.wp-guard-group.is-critical { color: var(--danger); }
+.wp-guard-group.is-warning li { color: var(--warning-text); }
+.wp-guard-group.is-passed li { color: var(--success-dark); }

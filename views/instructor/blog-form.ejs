@@ -292,6 +292,11 @@
               <input id="post-minutes" type="number" name="reading_minutes" min="1" max="120" value="<%= v('reading_minutes') %>" inputmode="numeric" placeholder="auto">
               <p class="wp-help" data-minutes-hint></p>
             </div></div>
+
+            <%- panel("seo-history", "Historique SEO", false) %>
+              <p class="wp-help">Chaque modification SEO enregistrée de cet article : qui, quand, avant → après. Aussi dans Mon espace → SEO → Journal.</p>
+              <ul class="be-versions" data-seo-history></ul>
+            </div></div>
           </div>
 
           <%# ===== Onglet Bloc ===== %>

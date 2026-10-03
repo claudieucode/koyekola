@@ -906,9 +906,21 @@ function start() {
     btn.setAttribute("aria-expanded", String(open));
     panel.classList.toggle("is-open", open);
     panel.querySelector(".wp-panel-body").hidden = !open;
-    if (open) { if (key === "structure") refreshStructure(); if (key === "checklist" || key === "revisions") refreshPublication(); }
+    if (open) { if (key === "structure") refreshStructure(); if (key === "checklist" || key === "revisions") refreshPublication(); if (key === "seo-history") loadSeoHistory(); }
   }
   // Ouvre la barre latérale sur l'onglet qui contient la section, puis la déplie
+  // Historique SEO de l'article (journal du serveur)
+  const SEO_FIELD_LABELS = { title: "Titre", slug: "Lien", seo_title: "Titre SEO", seo_description: "Méta description", canonical_url: "URL canonique", robots_index: "Indexation", robots_follow: "Suivi des liens", og_title: "Titre de partage", og_description: "Description de partage", og_image_path: "Image de partage", twitter_title: "Titre X", twitter_description: "Description X", twitter_card: "Carte X", focus_keyword: "Mot-clé principal", secondary_keywords: "Mots-clés secondaires", schema_type: "Données structurées", status: "Statut", "liens internes": "Liens internes" };
+  async function loadSeoHistory() {
+    const list = $("[data-seo-history]");
+    if (!postId) { list.replaceChildren(h("li", { class: "wp-help" }, "Disponible après le premier enregistrement.")); return; }
+    list.replaceChildren(h("li", { class: "wp-help" }, "Chargement…"));
+    try {
+      const { changes } = await api(`/formateur/blog/${postId}/seo-historique`);
+      list.replaceChildren(...changes.map((c) => h("li", {}, h("span", { class: "be-version-when" }, `${SEO_FIELD_LABELS[c.field] || c.field} · ${fmtDate(c.at)}`), h("span", { class: "be-version-who" }, c.by || "—"), h("span", { class: "be-version-note" }, `${c.before ?? "(vide)"} → ${c.after ?? "(vide)"}`))));
+      if (!changes.length) list.append(h("li", { class: "wp-help" }, "Aucune modification SEO enregistrée pour l'instant."));
+    } catch (e) { list.replaceChildren(h("li", { class: "wp-error" }, e.message)); }
+  }
   const revealPanel = (key) => {
     const panel = $(`[data-panel="${key}"]`);
     if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click();
@@ -1472,7 +1484,6 @@ function start() {
   function openPrePublish() {
     const items = checklist();
     const blocking = items.filter((c) => c.blocking && !c.ok);
-    const advice = items.filter((c) => !c.blocking && !c.ok);
     const when = h("input", { type: "datetime-local", id: `wp-f${++uid}`, value: statusSelect.value === "scheduled" ? dateInput.value : "" });
     const panelEl = h("div", { class: "wp-prepublish", role: "region", "aria-label": "Panneau de prépublication" },
       h("div", { class: "wp-prepublish-head" },
@@ -1485,7 +1496,23 @@ function start() {
         h("div", { class: "wp-panel is-open" }, h("h2", { class: "wp-panel-title is-static" }, "Visibilité : ", h("strong", {}, "Publique"))),
         h("div", { class: "wp-panel is-open" }, h("h2", { class: "wp-panel-title is-static" }, "Publier : ", h("strong", { "data-when-label": "" }, when.value ? new Date(when.value).toLocaleString("fr-FR") : "Immédiatement")),
           h("div", { class: "wp-panel-body" }, control("Planifier (facultatif)", when, "Laissez vide pour publier tout de suite."))),
-        advice.length ? h("div", { class: "wp-panel is-open" }, h("h2", { class: "wp-panel-title is-static" }, "Suggestions"), h("div", { class: "wp-panel-body" }, h("ul", { class: "be-checklist" }, ...advice.map((c) => h("li", { class: "be-improve" }, "☐ ", c.label))))) : null));
+        h("div", { class: "wp-panel is-open", "data-seo-guard": "" }, h("h2", { class: "wp-panel-title is-static" }, "Contrôle SEO avant publication"), h("div", { class: "wp-panel-body" }, h("p", { class: "wp-help" }, "Vérification par le serveur…")))));
+    // Contrôle SEO fait par le serveur : Critique / Avertissements / Recommandations / Réussi
+    (async () => {
+      const box = panelEl.querySelector("[data-seo-guard] .wp-panel-body");
+      try {
+        const data = formPayload({ withFiles: false });
+        if (postId) data.append("post_id", postId);
+        const r = await api("/formateur/blog/api/seo-check", { method: "POST", body: data });
+        const group = (title, list, cls) => (list.length ? h("div", { class: `wp-guard-group ${cls}` }, h("p", { class: "wp-label" }, `${title} (${list.length})`), h("ul", {}, ...list.map((t) => h("li", {}, t)))) : null);
+        box.replaceChildren(...[
+          group("Critique", r.critical, "is-critical"), group("Avertissements", r.warnings, "is-warning"), group("Recommandations", r.recommendations, "is-reco"), group("Réussi", r.passed, "is-passed"),
+          r.blocking ? h("p", { class: "wp-notice-inline is-error" }, "Publication bloquée : corrigez les erreurs critiques (réglage « Bloquer en cas d'erreur critique » dans Mon espace → SEO → Réglages).") : null,
+        ].filter(Boolean));
+        const btn = panelEl.querySelector("[data-confirm-publish]");
+        if (btn && r.blocking) btn.disabled = true;
+      } catch (e) { box.replaceChildren(h("p", { class: "wp-error" }, `Contrôle SEO indisponible : ${e.message}`)); }
+    })();
     when.addEventListener("change", () => {
       const future = when.value && new Date(when.value) > new Date();
       panelEl.querySelector("[data-when-label]").textContent = when.value ? new Date(when.value).toLocaleString("fr-FR") : "Immédiatement";

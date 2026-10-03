@@ -16,6 +16,15 @@ const blogAi = require("../services/blogAi");
 const editorTheme = require("../services/editorTheme");
 const seoPages = require("../seo/pages");
 const seoSchema = require("../seo/schema");
+const seoGuard = require("../seo/guard");
+const seoStore = require("../seo/store");
+const SEO_LOGGED = ["title", "slug", "seo_title", "seo_description", "canonical_url", "robots_index", "robots_follow", "og_title", "og_description", "og_image_path", "twitter_title", "twitter_description", "twitter_card", "focus_keyword", "secondary_keywords", "schema_type", "status"];
+// Contrôle avant publication côté serveur : si le réglage le demande, une erreur critique bloque la publication
+function guardPublication(fields, status, req, extra = {}) {
+  if (status !== "published" && status !== "scheduled") return;
+  const r = seoGuard.checkPost({ ...fields, ...extra }, { req });
+  if (r.blocking) throw new UserError(`Publication bloquée par le contrôle SEO (Réglages SEO → Contrôle avant publication) : ${r.critical.join(" ")}`);
+}
 
 const router = express.Router();
 const PER_PAGE = 10;
@@ -411,6 +420,20 @@ function editorData(req, post) {
   };
 }
 
+// Contrôle SEO avant publication (panneau de publication de l'éditeur) et historique SEO de l'article
+router.post("/formateur/blog/api/seo-check", upload.none(), (req, res) => {
+  const existing = /^\d{1,9}$/.test(String(req.body.post_id || "")) ? db.prepare("SELECT * FROM posts WHERE id = ?").get(Number(req.body.post_id)) : null;
+  let f;
+  // Données incomplètes (ex. titre vide) : le contrôle porte alors sur les valeurs brutes, pour tout signaler d'un coup
+  try { f = readFields(req.body, existing); } catch (error) { if (!(error instanceof UserError)) throw error; f = { ...req.body, robots_index: req.body.robots_index === "0" ? 0 : 1 }; }
+  const cover = libraryImage(req.body.cover_media) || (req.body.remove_cover === "1" ? null : existing && existing.cover_path);
+  const og = libraryImage(req.body.og_image_media) || (req.body.remove_og_image === "1" ? null : existing && existing.og_image_path);
+  res.json(seoGuard.checkPost({ ...f, slug: req.body.slug || (existing && existing.slug) || f.title, cover_path: cover, og_image_path: og }, { req, postId: existing ? existing.id : null }));
+});
+router.get("/formateur/blog/:id/seo-historique", loadPost, (req, res) => {
+  res.json({ changes: seoStore.listChanges({ entityType: "post", entityKey: req.post.id, limit: 100 }).map((c) => ({ field: c.field, before: c.old_value, after: c.new_value, at: c.created_at, by: c.username, source: c.source })) });
+});
+
 // Apparence des barres latérales de l'éditeur (choix personnel, enregistré sur le compte)
 router.post("/formateur/blog/api/apparence", express.json(), (req, res) => {
   const { key, color } = editorTheme.normalize(String((req.body || {}).theme || ""), (req.body || {}).color);
@@ -454,6 +477,7 @@ router.get("/formateur/blog/:id/modifier", loadPost, (req, res) => {
 router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
   const f = readFields(req.body);
   const st = applyStatus(req.body, null, f);
+  guardPublication(f, st.status, req, { slug: req.body.slug });
   const cover = registerUpload(req, fileOf(req, "thumbnail"), f.cover_alt) || libraryImage(req.body.cover_media);
   const og = registerUpload(req, fileOf(req, "og_image")) || libraryImage(req.body.og_image_media);
   const tw = registerUpload(req, fileOf(req, "twitter_image")) || libraryImage(req.body.twitter_image_media);
@@ -474,6 +498,7 @@ router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, r
   const p = req.post;
   const f = readFields(req.body, p);
   const st = applyStatus(req.body, p, f);
+  guardPublication(f, st.status, req, { slug: req.body.slug || p.slug, cover_path: libraryImage(req.body.cover_media) || (req.body.remove_cover === "1" ? null : p.cover_path) });
   // L'adresse ne change pas quand on retouche le titre ; elle ne change que si le formateur la modifie lui-même.
   // Article déjà publié : l'ancienne adresse est gardée et redirige (301) vers la nouvelle, les liens partagés restent valides.
   const slugWanted = oneLine(req.body.slug, 120);
@@ -498,6 +523,7 @@ router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, r
   db.prepare(`UPDATE posts SET ${names.map((n) => `${n} = ?`).join(", ")}, updated_at = datetime('now') WHERE id = ?`).run(...names.map((n) => cols[n]), p.id);
   const after = db.prepare("SELECT * FROM posts WHERE id = ?").get(p.id);
   blog.addRevision(after, req.session.user.id, blog.describeChange(p, after));
+  for (const field of SEO_LOGGED) seoStore.logChange({ entityType: "post", entityKey: String(p.id), field, before: p[field], after: after[field], userId: req.session.user.id, source: "editor" });
   blog.clearAutosave(p.id);
   // Images remplacées : supprimées (fichier et médiathèque) seulement si plus aucun article ne les utilise
   for (const col of ["cover_path", "og_image_path", "twitter_image_path"]) {

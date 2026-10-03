@@ -12,6 +12,7 @@ const { removeUploadedFile } = require("../utils/uploads");
 const { sanitizeRich, normalizeList, editorSources } = require("../utils/richText");
 const { cleanLanguage } = require("../utils/format");
 
+const seoStore = require("../seo/store");
 const router = express.Router();
 // Uniquement sous /formateur : sinon toute URL inconnue du site était redirigée vers la connexion
 router.use("/formateur", requireInstructor);
@@ -226,6 +227,9 @@ router.post("/formateur/cours/:id/modifier", loadOwnedCourse, upload.single("thu
     category || "Autre", level || "debutant", priceCents, thumbnailPath, cleanLanguage(req.body.language), req.course.id
   );
   recordSlugChange(req.course.id, req.course.slug, newSlug);
+  // Journal SEO : titre, adresse, titre et description SEO (qui, quand, avant → après)
+  const after = { title: title.trim(), slug: newSlug, seo_title: lists.seo_title, seo_description: lists.seo_description };
+  for (const field of Object.keys(after)) seoStore.logChange({ entityType: "course", entityKey: String(req.course.id), field, before: req.course[field] ?? null, after: after[field] ?? null, userId: req.session.user.id, source: "editor" });
 
   res.redirect(`/formateur/cours/${req.course.id}/modifier?enregistre=1`);
 });
