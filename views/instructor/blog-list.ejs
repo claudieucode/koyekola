@@ -28,7 +28,7 @@
           <li>
             <div>
               <p class="faq-admin-question"><%= post.title %></p>
-              <p class="faq-admin-answer"><%= post.published ? "Publié le " + formatDate(post.published_at) : "Brouillon" %><%= post.category ? " · " + post.category : "" %> · /blog/<%= post.slug %><%= post.views ? " · " + post.views + " lecture" + (post.views > 1 ? "s" : "") : "" %></p>
+              <p class="faq-admin-answer"><%= post.published ? "Publié le " + formatDate(post.published_at) : post.status === "scheduled" && post.published_at ? "Programmé pour le " + formatDate(post.published_at) : (typeof statuses !== "undefined" && statuses[post.status]) || "Brouillon" %><%= post.category ? " · " + post.category : "" %> · /blog/<%= post.slug %><%= post.views ? " · " + post.views + " lecture" + (post.views > 1 ? "s" : "") : "" %></p>
             </div>
             <div class="row-actions">
               <a class="btn btn-outline btn-sm" href="/formateur/blog/<%= post.id %>/modifier">Modifier</a>
