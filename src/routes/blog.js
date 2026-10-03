@@ -13,6 +13,7 @@ const { sanitizeBlogHtml, markdownToEditorHtml } = require("../utils/blogHtml");
 const { escapeHtml } = require("../utils/markdown");
 const blog = require("../services/blog");
 const blogAi = require("../services/blogAi");
+const editorTheme = require("../services/editorTheme");
 
 const router = express.Router();
 const PER_PAGE = 10;
@@ -193,6 +194,10 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
 
 router.get("/blog/:slug", (req, res) => {
   const post = db.prepare("SELECT * FROM posts WHERE slug = ?").get(req.params.slug);
+  if (!post) {
+    const moved = db.prepare("SELECT posts.slug FROM post_slug_history JOIN posts ON posts.id = post_slug_history.post_id WHERE post_slug_history.old_slug = ?").get(req.params.slug);
+    if (moved) return res.redirect(301, `/blog/${moved.slug}`);
+  }
   // Brouillon, relecture, programmé ou archivé : visible seulement par le formateur (prévisualisation, non indexée)
   if (!post || (!post.published && !isInstructor(req))) return res.status(404).render("error", { message: "Article introuvable." });
   blog.countView(post, req);
@@ -282,7 +287,8 @@ function readDate(body, name = "published_at_utc") {
 function uniqueSlug(title, exceptId = 0) {
   const base = slugify(title).slice(0, 120).replace(/-+$/, "") || "article";
   let slug = base;
-  for (let n = 2; db.prepare("SELECT 1 FROM posts WHERE slug = ? AND id != ?").get(slug, exceptId); n++) slug = `${base}-${n}`;
+  const taken = (s) => db.prepare("SELECT 1 FROM posts WHERE slug = ? AND id != ?").get(s, exceptId) || db.prepare("SELECT 1 FROM post_slug_history WHERE old_slug = ? AND post_id != ?").get(s, exceptId);
+  for (let n = 2; taken(slug); n++) slug = `${base}-${n}`;
   return slug;
 }
 
@@ -360,8 +366,17 @@ function editorData(req, post) {
     statuses: blog.STATUSES, languages: Object.keys(LANGUAGES), currentUserId: req.session.user.id,
     aiConfigured: blogAi.isConfigured(), siteUrl: absoluteUrl(req, "/").replace(/\/$/, ""),
     newsletterReady: Boolean(marketing && marketing.ready && newsletterForm(req)),
+    editorTheme: editorTheme.describe(db.prepare("SELECT editor_theme, editor_color FROM user_prefs WHERE user_id = ?").get(req.session.user.id)), editorThemes: editorTheme.THEMES,
   };
 }
+
+// Apparence des barres latérales de l'éditeur (choix personnel, enregistré sur le compte)
+router.post("/formateur/blog/api/apparence", express.json(), (req, res) => {
+  const { key, color } = editorTheme.normalize(String((req.body || {}).theme || ""), (req.body || {}).color);
+  if (String((req.body || {}).theme) === "perso" && key !== "perso") return res.status(400).json({ error: "Couleur invalide : choisissez une couleur au format #rrggbb." });
+  db.prepare("INSERT INTO user_prefs (user_id, editor_theme, editor_color) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET editor_theme = excluded.editor_theme, editor_color = excluded.editor_color").run(req.session.user.id, key, color);
+  res.json({ ok: true, ...editorTheme.describe({ editor_theme: key, editor_color: color }) });
+});
 
 router.get("/formateur/blog", (req, res) => {
   const marketing = req.app.locals.marketing;
@@ -418,10 +433,14 @@ router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, r
   const p = req.post;
   const f = readFields(req.body, p);
   const st = applyStatus(req.body, p, f);
-  // L'adresse ne change pas quand on retouche le titre (les liens déjà partagés continuent de fonctionner) ;
-  // elle ne change que si le formateur la modifie lui-même, et seulement tant que l'article n'a jamais été publié.
+  // L'adresse ne change pas quand on retouche le titre ; elle ne change que si le formateur la modifie lui-même.
+  // Article déjà publié : l'ancienne adresse est gardée et redirige (301) vers la nouvelle, les liens partagés restent valides.
   const slugWanted = oneLine(req.body.slug, 120);
-  const slug = !p.published_at && slugWanted && slugify(slugWanted) !== p.slug ? uniqueSlug(slugWanted, p.id) : p.slug;
+  const slug = slugWanted && slugify(slugWanted) !== p.slug ? uniqueSlug(slugWanted, p.id) : p.slug;
+  if (slug !== p.slug) {
+    if (p.published_at) db.prepare("INSERT OR REPLACE INTO post_slug_history (old_slug, post_id) VALUES (?, ?)").run(p.slug, p.id);
+    db.prepare("DELETE FROM post_slug_history WHERE old_slug = ?").run(slug);
+  }
   const pick = (field, remove, media) => {
     const uploaded = registerUpload(req, fileOf(req, field), field === "thumbnail" ? f.cover_alt : "");
     if (uploaded) return uploaded;

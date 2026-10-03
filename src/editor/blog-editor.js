@@ -1219,21 +1219,47 @@ function start() {
 
   // ---------- Publication : statut, date, liste de contrôle, révisions ----------
   const statusSelect = $("[data-status-select]");
+  const saveState = $("[data-save-state]");
+  const saveBtn = $("[data-save]");
   const dateInput = $("[data-date-input]");
   if (dateInput.value && dateInput.dataset.utc === "1") {
     const d = new Date(`${dateInput.value}:00Z`);
     if (!Number.isNaN(d.getTime())) dateInput.value = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   }
   const initialDate = dateInput.value;
+  // Statut choisi (liste « Statut ») = ce qui sera enregistré. Les boutons et l'étiquette du document suivent toujours ce choix.
+  const ONLINE = new Set(["published", "scheduled"]);
+  const LEAVE_LABEL = { draft: "Repasser en brouillon", review: "Envoyer en relecture", archived: "Archiver" };
+  const SAVE_LABEL = { draft: "Enregistrer le brouillon", review: "Enregistrer (en relecture)", archived: "Enregistrer (archivé)" };
+  // Bouton principal, comme WordPress : « Publier » tant que l'article n'est pas en ligne ; ensuite « Mettre à jour »,
+  // ou l'action qui correspond au statut choisi (repasser en brouillon, archiver…)
+  function primaryAction() {
+    const want = statusSelect.value;
+    if (!ONLINE.has(DATA.status)) return want === "scheduled" ? { label: "Planifier…", run: "prepublish" } : { label: "Publier", run: "prepublish" };
+    if (want === DATA.status) return { label: "Mettre à jour", run: "save" };
+    if (want === "published") return { label: "Publier maintenant", run: "save" };
+    if (want === "scheduled") return { label: "Planifier…", run: "prepublish" };
+    return { label: LEAVE_LABEL[want] || "Enregistrer", run: "save" };
+  }
+  // Statut à enregistrer avec le bouton secondaire (article pas encore en ligne) : jamais « publié » par ce bouton
+  const secondaryStatus = () => (ONLINE.has(statusSelect.value) ? "draft" : statusSelect.value);
   function syncStatus() {
     field("status").value = statusSelect.value;
     const scheduled = statusSelect.value === "scheduled";
     $("[data-date-hint]").textContent = scheduled ? "L'article sera publié automatiquement à cette date." : dateInput.value ? "" : "Immédiatement, à la publication.";
-    $("[data-publish]").textContent = DATA.status === "published" ? "Mettre à jour" : scheduled ? "Planifier…" : "Publier";
+    $("[data-publish]").textContent = primaryAction().label;
+    // Bouton secondaire : enregistrer sans publier, seulement tant que l'article n'est pas en ligne
+    saveBtn.hidden = ONLINE.has(DATA.status);
+    saveBtn.textContent = SAVE_LABEL[secondaryStatus()] || "Enregistrer";
+    // « Voir l'article » : l'adresse publique, seulement quand l'article est réellement en ligne
+    const view = $("[data-view-post]");
+    view.hidden = DATA.status !== "published";
+    view.href = `/blog/${field("slug").value || DATA.slug}`;
     const chip = $("[data-doc-status]");
     chip.dataset.status = DATA.status;
     chip.textContent = DATA.statuses[DATA.status] || DATA.status;
   }
+  field("slug").addEventListener("blur", () => { const v = field("slug").value.trim(); if (v) field("slug").value = slugify(v); });
   statusSelect.addEventListener("change", () => { syncStatus(); refreshPublication(); changed(); });
   dateInput.addEventListener("change", () => { syncStatus(); changed(); });
   syncStatus();
@@ -1303,8 +1329,6 @@ function start() {
   }
 
   // ---------- Enregistrement, sauvegarde automatique, copie locale ----------
-  const saveState = $("[data-save-state]");
-  const saveBtn = $("[data-save]");
   let dirty = false;
   let saving = false;
   const setState = (text, cls = "") => { saveState.textContent = text; saveState.className = `wp-save-state ${cls}`; };
@@ -1316,9 +1340,7 @@ function start() {
   };
   function changed() {
     dirty = true;
-    setState("", "is-dirty");
-    saveBtn.textContent = DATA.status === "published" ? "Enregistrer" : "Enregistrer le brouillon";
-    saveBtn.disabled = false;
+    setState("Modifications non enregistrées", "is-dirty");
     localDraft.write();
     scheduleAutosave();
     refreshLater();
@@ -1359,7 +1381,7 @@ function start() {
       setState("Enregistrement automatique…", "is-saving");
       const id = await ensurePost();
       await api(`/formateur/blog/${id}/autosave`, { method: "POST", body: formPayload({ withFiles: false }) });
-      setState("Brouillon enregistré automatiquement", "is-auto");
+      setState("Sauvegarde automatique", "is-auto");
     } catch { setState("Modifications non enregistrées", "is-dirty"); }
   }
   async function save({ status } = {}) {
@@ -1368,7 +1390,6 @@ function start() {
     if (!field("title").value.trim()) { toast("Ajoutez un titre avant d'enregistrer.", "error"); titleField.focus(); return false; }
     saving = true;
     setState("Enregistrement…", "is-saving");
-    saveBtn.disabled = true;
     try {
       const url = postId ? `/formateur/blog/${postId}/modifier` : "/formateur/blog/nouveau";
       const r = await api(url, { method: "POST", body: formPayload({ withFiles: true }), headers: { "x-blog-editor": "1" } });
@@ -1381,25 +1402,26 @@ function start() {
       DATA.createdAt = DATA.createdAt || r.updatedAt;
       if (r.revisions) DATA.revisions = r.revisions;
       for (const [key, col] of [["cover", "coverPath"], ["og", "ogImagePath"], ["twitter", "twitterImagePath"]]) if (r[col] !== undefined) imagePicks[key].saved(r[col]);
-      if (r.slug) { field("slug").value = r.slug; if (r.publishedAt) field("slug").readOnly = true; }
+      if (r.slug) { field("slug").value = r.slug; if (r.publishedAt) $("[data-slug-hint]").textContent = "Article en ligne : si vous changez le lien, l'ancienne adresse redirigera vers la nouvelle."; }
       field("remove_cover").value = ""; field("remove_og_image").value = ""; field("remove_twitter_image").value = "";
       setState("Enregistré", "is-saved");
-      saveBtn.textContent = "Enregistré";
       syncStatus();
       refreshPublication();
       refreshPreviews();
       return true;
     } catch (e) {
       setState("Modifications non enregistrées", "is-dirty");
-      saveBtn.disabled = false;
       toast(e.message, "error");
       return false;
     } finally { saving = false; }
   }
-  form.addEventListener("submit", (e) => { e.preventDefault(); save({ status: DATA.status === "published" ? undefined : statusSelect.value === "published" ? "draft" : undefined }).then((ok) => ok && toast(DATA.status === "published" ? "Article mis à jour." : "Brouillon enregistré.")); });
+  // Bouton secondaire (visible seulement avant la mise en ligne)
+  form.addEventListener("submit", (e) => { e.preventDefault(); const st = secondaryStatus(); save({ status: st }).then((ok) => ok && toast(st === "draft" ? "Brouillon enregistré." : `Enregistré : ${DATA.statuses[st]}.`)); });
+  // Cmd+S : enregistre sans jamais publier ni dépublier par surprise (article en ligne : il reste en ligne)
+  const quickSave = () => save({ status: ONLINE.has(DATA.status) ? DATA.status : secondaryStatus() }).then((ok) => ok && toast("Enregistré."));
   document.addEventListener("keydown", (e) => {
     const mod = e.ctrlKey || e.metaKey;
-    if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); save().then((ok) => ok && toast("Enregistré.")); }
+    if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); quickSave(); }
     // Cmd+K hors de l'éditeur (après un clic sur un bouton…) : lien sur la sélection de l'article
     if (mod && e.key.toLowerCase() === "k" && !editor.view.hasFocus() && !e.target.closest("input, textarea, select, .wp-popover")) { e.preventDefault(); editor.view.focus(); linkPopover(null); }
     if (e.key === "Escape") closePopovers();
@@ -1440,8 +1462,12 @@ function start() {
   const publishBtn = $("[data-publish]");
   publishBtn.addEventListener("click", async () => {
     refreshAnalysis();
-    if (DATA.status === "published") { const ok = await save({ status: "published" }); if (ok) toast("Article mis à jour."); return; }
-    openPrePublish();
+    const action = primaryAction();
+    if (action.run === "prepublish") return openPrePublish();
+    const want = statusSelect.value;
+    if (DATA.status === "published" && want !== "published" && !confirm(`L'article sera retiré du site (statut : ${DATA.statuses[want]}). Continuer ?`)) return;
+    const ok = await save({ status: want });
+    if (ok) toast(want === "published" ? "Article mis à jour." : want === DATA.status ? `Enregistré (${DATA.statuses[want]}).` : `Enregistré : ${DATA.statuses[want]}.`);
   });
   function openPrePublish() {
     const items = checklist();
@@ -1522,6 +1548,7 @@ function start() {
   const optionsMenu = dropdown("[data-options-toggle]", "[data-options-menu]");
   $$("[data-preview]").forEach((b) => b.addEventListener("click", async () => {
     previewMenu.hidden = true;
+    optionsMenu.hidden = true;
     const kind = b.dataset.preview;
     if (kind === "google") return revealPanel("google");
     if (kind === "social") return revealPanel("social");
@@ -1550,6 +1577,7 @@ function start() {
   $$("[data-option]").forEach((b) => b.addEventListener("click", () => {
     const opt = b.dataset.option;
     optionsMenu.hidden = true;
+    if (opt === "appearance") return openAppearance();
     if (opt === "shortcuts") return modal("Raccourcis clavier", h("dl", { class: "wp-shortcuts" }, ...[["Ctrl + S", "Enregistrer"], ["Ctrl + Z / Ctrl + Maj + Z", "Annuler / Rétablir"], ["/", "Choisir un bloc (au début d'un paragraphe vide)"], ["Ctrl + B / I / U", "Gras / italique / souligné"], ["Ctrl + K", "Ajouter un lien"], ["Ctrl + Maj + D", "Dupliquer le bloc"], ["Maj + Alt + Z", "Supprimer le bloc"], ["Alt + ↑ / ↓", "Déplacer le bloc"], ["Tab / Maj + Tab", "Imbriquer / désimbriquer un élément de liste"], ["Échap", "Fermer un menu"]].flatMap(([k, d]) => [h("dt", {}, h("kbd", {}, k)), h("dd", {}, d)])));
     const on = b.getAttribute("aria-checked") !== "true";
     b.setAttribute("aria-checked", String(on));
@@ -1557,6 +1585,40 @@ function start() {
     if (opt === "toptoolbar") { topToolbarMode = on; topToolbar.hidden = !on; blockToolbar.hidden = true; root.classList.toggle("has-top-toolbar", on); renderBlockToolbar(); }
     return null;
   }));
+  // Apparence des barres latérales (choix personnel enregistré sur le compte) : 6 couleurs ou une couleur au choix
+  function applyTheme(t) {
+    if (t.key === "clair") { delete root.dataset.edTheme; delete root.dataset.edContrast; root.style.removeProperty("--ed-sidebar"); }
+    else { root.dataset.edTheme = t.key; root.dataset.edContrast = t.contrast; root.style.setProperty("--ed-sidebar", t.color); }
+    DATA.editorTheme = t;
+  }
+  function openAppearance() {
+    const current = DATA.editorTheme || { key: "clair", color: "#ffffff" };
+    let choice = { ...current };
+    const custom = h("input", { type: "color", id: `wp-f${++uid}`, value: current.key === "perso" ? current.color : "#3b5b7a", "aria-label": "Couleur personnalisée" });
+    const list = h("div", { class: "wp-theme-list", role: "radiogroup", "aria-label": "Apparence" });
+    const preview = (t) => { choice = t; list.querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.key === t.key))); applyTheme(t); };
+    for (const t of DATA.editorThemes) {
+      const isCustom = t.key === "perso";
+      list.append(h("button", { type: "button", role: "radio", class: "wp-theme-option", "data-key": t.key, "aria-checked": String(t.key === current.key), onclick: () => preview(isCustom ? { key: "perso", color: custom.value, contrast: contrastOf(custom.value) } : { key: t.key, color: t.color, contrast: contrastOf(t.color) }) },
+        h("span", { class: "wp-theme-swatch", style: `background:${isCustom ? custom.value : t.color}`, "aria-hidden": "true" }), h("span", {}, t.label)));
+    }
+    custom.addEventListener("input", () => { list.querySelector('[data-key="perso"] .wp-theme-swatch').style.background = custom.value; preview({ key: "perso", color: custom.value, contrast: contrastOf(custom.value) }); });
+    let saved = false;
+    const m = modal("Apparence des barres latérales", h("div", { class: "wp-appearance" },
+      h("p", { class: "wp-help" }, "Couleur du rail d'outils, du panneau gauche et de la barre latérale. Le texte s'adapte pour rester lisible. Ce choix vous est propre et ne change rien au site public."),
+      list, control("Couleur personnalisée", custom, "Choisissez n'importe quelle couleur, puis « Couleur personnalisée » ci-dessus.")),
+    [{ label: "Annuler", run: () => applyTheme(current) }, { label: "Enregistrer", primary: true, run: async () => {
+      try { const r = await api("/formateur/blog/api/apparence", { method: "POST", json: { theme: choice.key, color: choice.key === "perso" ? choice.color : null } }); saved = true; applyTheme(r); toast("Apparence enregistrée."); }
+      catch (e) { applyTheme(current); toast(e.message, "error"); }
+    } }]);
+    // Fermée sans enregistrer (×, Échap, Annuler) : l'apparence d'origine revient
+    m.dlg.addEventListener("close", () => { if (!saved) applyTheme(current); });
+  }
+  // Texte clair ou foncé selon la couleur de fond (contraste WCAG)
+  function contrastOf(hex) {
+    const lum = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)).reduce((a, c, i) => a + c * [0.2126, 0.7152, 0.0722][i], 0);
+    return 1.05 / (lum + 0.05) > (lum + 0.05) / 0.05 ? "light" : "dark";
+  }
   $("[data-undo]").addEventListener("click", () => editor.chain().focus().undo().run());
   $("[data-redo]").addEventListener("click", () => editor.chain().focus().redo().run());
   $("[data-focus-title]").addEventListener("click", () => { titleField.focus(); titleField.scrollIntoView({ block: "center" }); });
@@ -1626,7 +1688,6 @@ function start() {
   refreshAnalysis();
   refreshPublication();
   setState(DATA.postId ? "Enregistré" : "", DATA.postId ? "is-saved" : "");
-  if (DATA.postId) { saveBtn.textContent = "Enregistré"; saveBtn.disabled = true; }
   if (!DATA.aiConfigured) $$("[data-ai]").forEach((x) => { x.disabled = true; });
   if (!titleField.value) titleField.focus();
   // Petit écran : la barre latérale démarre fermée (comme Gutenberg)

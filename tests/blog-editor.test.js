@@ -280,6 +280,40 @@ describe("éditeur : enregistrement, statuts, versions, sauvegarde automatique, 
     await save(`/formateur/blog/${id}/modifier`, { ...base, title: "Doublons", toc_enabled: ["0"], featured: "0" });
     assert.equal(q("SELECT toc_enabled FROM posts WHERE id = ?", id)[0].toc_enabled, 0);
   });
+  test("lien modifié après publication : l'ancienne adresse redirige (301), aucune collision avec un ancien lien", async () => {
+    const id = json(await save("/formateur/blog/nouveau", { ...base, title: "Lien mobile", status: "published" })).id;
+    const first = q("SELECT slug FROM posts WHERE id = ?", id)[0].slug;
+    const r = json(await save(`/formateur/blog/${id}/modifier`, { ...base, title: "Lien mobile", status: "published", slug: "Nouvelle Adresse!" }));
+    assert.equal(r.slug, "nouvelle-adresse");
+    const old = await anon().get(`/blog/${first}`);
+    assert.equal(old.status, 301);
+    assert.equal(old.location, "/blog/nouvelle-adresse");
+    assert.equal((await anon().get("/blog/nouvelle-adresse")).status, 200);
+    // un autre article ne peut pas prendre l'ancienne adresse (elle reste réservée à la redirection)
+    const other = json(await save("/formateur/blog/nouveau", { ...base, title: "Autre", slug: first, status: "published" }));
+    assert.notEqual(other.slug, first);
+  });
+  test("statut : un article publié repassé en brouillon est retiré du site (jamais enregistré comme publié)", async () => {
+    const id = json(await save("/formateur/blog/nouveau", { ...base, title: "Va et vient", status: "published" })).id;
+    const slug = q("SELECT slug FROM posts WHERE id = ?", id)[0].slug;
+    for (const st of ["draft", "review", "archived"]) {
+      const r = json(await save(`/formateur/blog/${id}/modifier`, { ...base, title: "Va et vient", status: st }));
+      assert.equal(r.status, st);
+      assert.equal(r.published, 0);
+      assert.equal((await anon().get(`/blog/${slug}`)).status, 404, st);
+    }
+  });
+  test("apparence de l'éditeur : enregistrée sur le compte, couleur personnalisée validée", async () => {
+    const set = (body) => prof.request("/formateur/blog/api/apparence", { method: "POST", json: body });
+    assert.equal(json(await set({ theme: "nuit" })).contrast, "light");
+    assert.match((await prof.get("/formateur/blog/nouveau")).text, /data-ed-theme="nuit"/);
+    const perso = json(await set({ theme: "perso", color: "#F9D7E8" }));
+    assert.deepEqual([perso.key, perso.color, perso.contrast], ["perso", "#f9d7e8", "dark"]);
+    assert.equal((await set({ theme: "perso", color: "red;}" })).status, 400);
+    assert.equal(json(await set({ theme: "inconnu" })).key, "clair");
+    assert.doesNotMatch((await prof.get("/formateur/blog/nouveau")).text, /data-ed-theme=/);
+    assert.equal((await anon().request("/formateur/blog/api/apparence", { method: "POST", json: { theme: "noir" } })).status, 302);
+  });
   test("ancien article Markdown : s'ouvre dans l'éditeur (converti) et reste affiché tel quel tant qu'il n'est pas réenregistré", async () => {
     run("INSERT INTO posts (slug, title, content, published, published_at, status) VALUES ('ancien', 'Ancien', ':::conseil\nAstuce\n:::\n\n## Section', 1, datetime('now'), 'published')");
     const editor = (await prof.get(`/formateur/blog/${q("SELECT id FROM posts WHERE slug = 'ancien'")[0].id}/modifier`)).text;

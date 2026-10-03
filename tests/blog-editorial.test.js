@@ -251,7 +251,7 @@ describe("éditeur d'article", () => {
     assert.equal((await create({ title: "X3", author_id: "99999" })).status, 400);
     assert.equal(q("SELECT COUNT(*) n FROM posts WHERE title LIKE 'X_'")[0].n, 0);
   });
-  test("adresse : modifiable avant la première publication, figée ensuite ; date de publication modifiable", async () => {
+  test("adresse : modifiable avant et après publication (l'ancienne redirige) ; date de publication modifiable", async () => {
     await create({ title: "Adresse" });
     let p = byTitle("Adresse");
     await save(prof, `/formateur/blog/${p.id}/modifier`, { title: "Adresse", content: "x", slug: "nouvelle-adresse" });
@@ -259,8 +259,11 @@ describe("éditeur d'article", () => {
     await prof.post(`/formateur/blog/${p.id}/publier`, {});
     await save(prof, `/formateur/blog/${p.id}/modifier`, { title: "Adresse", content: "x", slug: "encore-une-autre", published_at_utc: "2026-05-04T08:30:00.000Z" });
     p = byTitle("Adresse");
-    assert.equal(p.slug, "nouvelle-adresse");
+    assert.equal(p.slug, "encore-une-autre");
     assert.equal(p.published_at, "2026-05-04 08:30:00");
+    const moved = await new Client(srv.base).get("/blog/nouvelle-adresse");
+    assert.equal(moved.status, 301);
+    assert.equal(moved.location, "/blog/encore-une-autre");
   });
   test("image insérée dans le contenu : enregistrée sur le site (adresse renvoyée) ; SVG refusé ; réservé au formateur", async () => {
     const fd = new FormData();

@@ -164,6 +164,19 @@ db.exec(`
     course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE
   );
 
+  -- Préférences d'interface d'un utilisateur (ex. apparence des barres latérales de l'éditeur d'articles)
+  CREATE TABLE IF NOT EXISTS user_prefs (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    editor_theme TEXT,
+    editor_color TEXT
+  );
+
+  -- Anciennes adresses d'un article dont le lien a été modifié après publication : redirection 301 vers la nouvelle
+  CREATE TABLE IF NOT EXISTS post_slug_history (
+    old_slug TEXT PRIMARY KEY,
+    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE
+  );
+
   -- Textes modifiables du site (aujourd'hui : la page « À propos »)
   CREATE TABLE IF NOT EXISTS site_pages (
     slug TEXT PRIMARY KEY,

@@ -13,6 +13,7 @@
     categories: categories.map((c) => c.name), subcategories, tags, courses, revisions, statuses,
     autosave: autosave ? { savedAt: autosave.saved_at, data: autosave.data } : null,
     coverPath: post ? post.cover_path : null, ogImagePath: post ? post.og_image_path : null, twitterImagePath: post ? post.twitter_image_path : null,
+    editorTheme, editorThemes,
   };
   const json = JSON.stringify(pageData).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
   const panel = (key, title, open) => `<div class="wp-panel${open ? " is-open" : ""}" data-panel="${key}"><h2 class="wp-panel-title"><button type="button" aria-expanded="${open ? "true" : "false"}" aria-controls="wp-panel-${key}" data-panel-toggle>${title}<span class="wp-chevron" aria-hidden="true"></span></button></h2><div class="wp-panel-body" id="wp-panel-${key}"${open ? "" : " hidden"}>`;
@@ -28,7 +29,7 @@
   <link rel="stylesheet" href="<%= asset('/css/blog-editor.css') %>">
 </head>
 <body class="wp-body">
-  <div class="be wp" data-blog-editor>
+  <div class="be wp" data-blog-editor<%- editorTheme.key !== "clair" ? ` data-ed-theme="${editorTheme.key}" data-ed-contrast="${editorTheme.contrast}" style="--ed-sidebar: ${editorTheme.color}"` : "" %>>
     <form id="be-form" action="<%= post ? '/formateur/blog/' + post.id + '/modifier' : '/formateur/blog/nouveau' %>" method="post" enctype="multipart/form-data" novalidate>
       <input type="hidden" name="content_format" value="html">
       <input type="hidden" name="status" value="<%= status %>" data-field="status">
@@ -55,7 +56,7 @@
         <div class="wp-header-right">
           <span class="wp-save-state" role="status" aria-live="polite" data-save-state><%= saved || post ? "Enregistré" : "" %></span>
           <button type="submit" class="wp-btn-tertiary" data-save>Enregistrer le brouillon</button>
-          <div class="wp-dropdown">
+          <div class="wp-dropdown wp-preview-dropdown">
             <button type="button" class="wp-btn-icon" data-preview-toggle aria-haspopup="true" aria-expanded="false" aria-label="Aperçu" title="Aperçu"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M20.5 16h-.7V8c0-1.1-.9-2-2-2H6.2c-1.1 0-2 .9-2 2v8h-.7c-.8 0-1.5.7-1.5 1.5h20c0-.8-.7-1.5-1.5-1.5zM5.7 8c0-.3.2-.5.5-.5h11.6c.3 0 .5.2.5.5v7.6H5.7V8z" fill="currentColor"/></svg></button>
             <div class="wp-menu" data-preview-menu hidden role="menu">
               <button type="button" role="menuitem" data-preview="desktop">Ordinateur</button>
@@ -67,6 +68,7 @@
               <button type="button" role="menuitem" data-preview="social">Aperçu sur les réseaux sociaux</button>
             </div>
           </div>
+          <a class="wp-btn-secondary wp-view-post" data-view-post href="<%= post ? '/blog/' + post.slug : '#' %>" target="_blank" rel="noopener" <%= post && post.published ? "" : "hidden" %> title="Ouvrir l'article sur le site, comme le voient les visiteurs">Voir l'article <span aria-hidden="true">↗</span></a>
           <button type="button" class="wp-btn-primary" data-publish><%= status === "published" ? "Mettre à jour" : status === "scheduled" ? "Planifier…" : "Publier" %></button>
           <button type="button" class="wp-btn-icon" data-toggle-sidebar aria-pressed="true" aria-label="Réglages" title="Réglages"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M18 4H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-4 14.5H6c-.3 0-.5-.2-.5-.5V6c0-.3.2-.5.5-.5h8v13zm4.5-.5c0 .3-.2.5-.5.5h-2.5v-13H18c.3 0 .5.2.5.5v12z" fill="currentColor"/></svg></button>
           <div class="wp-dropdown">
@@ -80,6 +82,11 @@
               <button type="button" role="menuitemcheckbox" aria-checked="false" data-option="focus">Mode concentration</button>
               <button type="button" role="menuitemcheckbox" aria-checked="false" data-option="toptoolbar">Barre d'outils fixe en haut</button>
               <hr>
+              <p class="wp-menu-label wp-mobile-only">Aperçu</p>
+              <button type="button" role="menuitem" class="wp-mobile-only" data-preview="tab">Prévisualiser l'article ↗</button>
+              <button type="button" role="menuitem" class="wp-mobile-only" data-preview="mobile">Aperçu mobile</button>
+              <hr class="wp-mobile-only">
+              <button type="button" role="menuitem" data-option="appearance">Apparence des barres latérales…</button>
               <button type="button" role="menuitem" data-option="shortcuts">Raccourcis clavier</button>
               <a role="menuitem" href="/formateur/blog">Retour aux articles</a>
             </div>
@@ -168,7 +175,8 @@
                 <input id="post-date" type="datetime-local" value="<%= toUtcInput(post ? post.published_at : null) %>" data-date-input data-utc="<%= post && post.published_at ? 1 : 0 %>" aria-describedby="post-date-hint"></div>
               <p class="wp-help" id="post-date-hint" data-date-hint></p>
               <div class="wp-summary-row"><label for="post-slug">Lien</label>
-                <span class="wp-slug"><span>/blog/</span><input id="post-slug" type="text" name="slug" value="<%= v('slug') %>" maxlength="120" <%= post && post.published_at ? "readonly" : "" %> placeholder="tiré du titre" data-analyze></span></div>
+                <span class="wp-slug"><span>/blog/</span><input id="post-slug" type="text" name="slug" value="<%= v('slug') %>" maxlength="120" placeholder="tiré du titre" aria-describedby="post-slug-hint" data-analyze></span></div>
+              <p class="wp-help" id="post-slug-hint" data-slug-hint><%= post && post.published_at ? "Article en ligne : si vous changez le lien, l'ancienne adresse redirigera vers la nouvelle." : "Lettres, chiffres et tirets ; vide = tiré du titre." %></p>
               <div class="wp-summary-row"><label for="post-author">Auteur</label>
                 <select id="post-author" name="author_id"><% instructors.forEach((u) => { %><option value="<%= u.id %>" <%= u.id === authorId ? "selected" : "" %>><%= u.username %></option><% }) %></select></div>
               <div class="wp-summary-row"><label for="post-language">Langue</label>
