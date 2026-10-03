@@ -22,6 +22,7 @@ import { BlockHandle, moveBlock, startBlockDrag, endBlockDrag } from "./blog/dra
 import { createWorkspace } from "./blog/workspace";
 import { createSeoData, createRenderers } from "./blog/seoPanels";
 import { setupWorkspaceUi } from "./blog/workspaceUi";
+import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, isLocked, findMatches, findKey, blockHtml } from "./blog/editing";
 import { analyze, norm } from "../utils/seoAnalyzer";
 
 const root = document.querySelector("[data-blog-editor]");
@@ -78,6 +79,7 @@ function start() {
   let workspace = null;
   let seoData = null;
   let seoRenderers = null;
+  let wsUi = null;
 
   // ---------- Petits outils ----------
   function h(tag, attrs = {}, ...children) {
@@ -123,6 +125,14 @@ function start() {
     setTimeout(() => t.remove(), 4500);
   };
 
+  // Modification refusée sur un bloc verrouillé (message au plus toutes les 4 s)
+  let lockNoticeAt = 0;
+  function lockedNotice() {
+    if (Date.now() - lockNoticeAt < 4000) return;
+    lockNoticeAt = Date.now();
+    toast("Bloc verrouillé : clic droit (ou ⋮) → « Déverrouiller » pour le modifier.", "error");
+  }
+
   // ---------- Fenêtres (modales WordPress) ----------
   function modal(title, body, actions = [], { wide = false } = {}) {
     const dlg = h("dialog", { class: `wp-modal${wide ? " is-wide" : ""}`, "aria-labelledby": "wp-modal-title" });
@@ -161,6 +171,8 @@ function start() {
       ...BLOG_NODES,
       Focus.configure({ mode: "shallowest", className: "has-focus" }),
       BlockHandle.configure({ visual: false }),
+      BlockLock.configure({ onBlocked: () => lockedNotice() }),
+      FindHighlight,
     ],
     content: codeEditor.value,
     editorProps: { attributes: { class: "be-prose wp-block-list", "aria-label": "Contenu de l'article", role: "textbox", "aria-multiline": "true" } },
@@ -442,23 +454,67 @@ function start() {
       h("p", { class: "wp-menu-label" }, "Surligneur"),
       h("div", { class: "wp-swatches" }, ...marks.map(([c, l]) => h("button", { type: "button", class: "wp-swatch", style: `background:${c}`, title: l, "aria-label": `Surligner en ${l}`, onclick: () => { chain().setHighlight({ color: c }).run(); closePopovers(); } })), h("button", { type: "button", class: "wp-swatch is-none", title: "Sans surlignage", "aria-label": "Sans surlignage", onclick: () => { chain().unsetHighlight().run(); closePopovers(); } }))), { className: "is-formats" });
   }
-  function blockOptions(anchor, b) {
-    const top = b.top;
-    popover(anchor, menuList([
-      { label: "Copier", run: () => { const node = editor.state.doc.nodeAt(top); if (node && navigator.clipboard) navigator.clipboard.writeText(node.textContent).then(() => toast("Texte du bloc copié.")); } },
+  // Menu d'un bloc (bouton ⋮ de la barre du bloc, ou clic droit) : seulement les actions possibles pour ce bloc
+  let blockClipboard = null;
+  const TEXT_TYPES = ["paragraph", "heading", "bulletList", "orderedList", "taskList", "blockquote", "codeBlock"];
+  function blockMenuItems(top) {
+    const node = editor.state.doc.nodeAt(top);
+    if (!node) return [];
+    const locked = isLocked(node);
+    const copy = async () => {
+      blockClipboard = { ...node.toJSON(), attrs: { ...node.attrs, locked: false } };
+      const html = blockHtml(editor, top);
+      try {
+        if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([node.textContent], { type: "text/plain" }) })]);
+        else if (navigator.clipboard) await navigator.clipboard.writeText(node.textContent);
+      } catch { /* presse-papiers du système refusé : la copie interne suffit pour « Coller » */ }
+    };
+    const items = [
+      { label: "Copier le bloc", run: async () => { await copy(); toast("Bloc copié."); } },
+      ...(locked ? [] : [{ label: "Couper le bloc", run: async () => { await copy(); deleteBlock(top); toast("Bloc coupé : « Coller après » pour le replacer."); } }]),
+      ...(blockClipboard ? [{ label: "Coller après", run: () => { const at = top + node.nodeSize; editor.chain().focus().insertContentAt(at, blockClipboard).run(); } }] : []),
       { label: "Dupliquer", shortcut: "Ctrl+Maj+D", run: () => duplicateBlock(top) },
-      { label: "Insérer avant", run: () => { editor.chain().focus().insertContentAt(top, p("")).setTextSelection(top + 1).run(); } },
-      { label: "Insérer après", run: () => { const node = editor.state.doc.nodeAt(top); const at = top + node.nodeSize; editor.chain().focus().insertContentAt(at, p("")).setTextSelection(at + 1).run(); } },
-      { label: "Déplacer vers le haut", icon: "up", run: () => { editor.commands.setNodeSelection(top); moveBlock(editor.state, editor.view.dispatch, -1); } },
-      { label: "Déplacer vers le bas", icon: "down", run: () => { editor.commands.setNodeSelection(top); moveBlock(editor.state, editor.view.dispatch, 1); } },
-      "-",
-      { label: "Supprimer", danger: true, shortcut: "Maj+Alt+Z", run: () => deleteBlock(top) },
-    ]));
+      { label: "Insérer un paragraphe avant", run: () => { editor.chain().focus().insertContentAt(top, p("")).setTextSelection(top + 1).run(); } },
+      { label: "Insérer un paragraphe après", run: () => { const at = top + node.nodeSize; editor.chain().focus().insertContentAt(at, p("")).setTextSelection(at + 1).run(); } },
+      ...(top > 0 ? [{ label: "Déplacer vers le haut", icon: "up", shortcut: "Alt+↑", run: () => { editor.commands.setNodeSelection(top); moveBlock(editor.state, editor.view.dispatch, -1); } }] : []),
+      ...(top + node.nodeSize < editor.state.doc.content.size ? [{ label: "Déplacer vers le bas", icon: "down", shortcut: "Alt+↓", run: () => { editor.commands.setNodeSelection(top); moveBlock(editor.state, editor.view.dispatch, 1); } }] : []),
+      ...(!locked && TEXT_TYPES.includes(node.type.name) ? [{ label: "Transformer en…", run: () => { editor.chain().focus().setTextSelection(top + 1).run(); transformMenu(lastMenuAnchor || document.querySelector("[data-block-toolbar]")); } }] : []),
+      ...(LOCKABLE_TYPES.includes(node.type.name) ? [{ label: locked ? "🔓 Déverrouiller" : "🔒 Verrouiller (empêche toute modification)", run: () => { setLocked(editor, top, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); } }] : []),
+      ...(blockMenuExtra ? blockMenuExtra(top, node) : []),
+      ...(locked ? [] : ["-", { label: "Supprimer", danger: true, shortcut: "Maj+Alt+Z", run: () => deleteBlock(top) }]),
+    ];
+    return items;
+  }
+  let blockMenuExtra = null; // actions ajoutées par d'autres modules (blocs réutilisables)
+  let lastMenuAnchor = null;
+  function blockOptions(anchor, b) {
+    lastMenuAnchor = anchor;
+    popover(anchor, menuList(blockMenuItems(b.top)));
+  }
+  // Clic droit sur un bloc : même menu, à l'endroit du pointeur (Maj + clic droit : menu du navigateur)
+  function contextMenuAt(event) {
+    if (event.shiftKey || root.classList.contains("is-code-mode")) return;
+    const found = editor.view.posAtCoords({ left: event.clientX, top: event.clientY });
+    if (!found) return;
+    const $pos = editor.state.doc.resolve(Math.min(found.inside >= 0 ? found.inside : found.pos, editor.state.doc.content.size));
+    const top = $pos.depth === 0 ? (found.inside >= 0 ? found.inside : null) : $pos.before(1);
+    if (top === null || !editor.state.doc.nodeAt(top)) return;
+    event.preventDefault();
+    const anchor = h("span", { class: "wp-context-anchor", style: `position:fixed;left:${event.clientX}px;top:${event.clientY - 6}px;width:1px;height:1px;` });
+    document.body.append(anchor);
+    lastMenuAnchor = anchor;
+    const pop = popover(anchor, h("div", {}, h("p", { class: "wp-menu-label" }, nameOf(editor.state.doc.nodeAt(top))), menuList(blockMenuItems(top))), { className: "is-context" });
+    const done = () => setTimeout(() => anchor.remove(), 300);
+    pop.addEventListener("click", done);
+    setTimeout(done, 60000);
+    pop.querySelector("button")?.focus();
   }
   function duplicateBlock(top) {
     const node = editor.state.doc.nodeAt(top);
     if (!node) return;
-    editor.chain().focus().insertContentAt(top + node.nodeSize, node.toJSON()).run();
+    const json = node.toJSON();
+    if (json.attrs && json.attrs.locked) json.attrs = { ...json.attrs, locked: false };
+    editor.chain().focus().insertContentAt(top + node.nodeSize, json).run();
   }
   function deleteBlock(top) {
     const node = editor.state.doc.nodeAt(top);
@@ -709,7 +765,13 @@ function start() {
           options.forEach((o) => o.classList.toggle("is-active", o === next));
           return true;
         }
-        if (mod && event.key.toLowerCase() === "k") { event.preventDefault(); linkPopover(null); return true; }
+        if (mod && !event.shiftKey && event.key.toLowerCase() === "k") {
+          event.preventDefault();
+          // Avec du texte sélectionné (ou dans un lien) : lien ; sinon : palette de commandes
+          if (!editor.state.selection.empty || editor.isActive("link") || !wsUi) linkPopover(null); else wsUi.openPalette();
+          return true;
+        }
+        if (mod && event.shiftKey && event.key.toLowerCase() === "f") { event.preventDefault(); openFind(); return true; }
         if (mod && event.shiftKey && event.key.toLowerCase() === "d") { event.preventDefault(); const b = currentBlock(); if (b) duplicateBlock(b.top); return true; }
         if (event.shiftKey && event.altKey && event.key.toLowerCase() === "z") { event.preventDefault(); const b = currentBlock(); if (b) deleteBlock(b.top); return true; }
         return false;
@@ -1457,6 +1519,7 @@ function start() {
     try { localStorage.removeItem(before); } catch { /* rien */ }
   }
   const scheduleAutosave = debounce(() => autosave(), 2500);
+  let autosaveRetry = null;
   async function autosave() {
     if (!dirty || saving) return;
     try {
@@ -1464,7 +1527,13 @@ function start() {
       const id = await ensurePost();
       await api(`/formateur/blog/${id}/autosave`, { method: "POST", body: formPayload({ withFiles: false }) });
       setState("Sauvegarde automatique", "is-auto");
-    } catch { setState("Modifications non enregistrées", "is-dirty"); }
+    } catch (e) {
+      // Jamais masquée : l'erreur est affichée, la copie locale du navigateur est conservée, nouvel essai dans 30 s
+      setState("Erreur de sauvegarde automatique (nouvel essai dans 30 s)", "is-error");
+      saveState.title = e.message || "";
+      clearTimeout(autosaveRetry);
+      autosaveRetry = setTimeout(() => autosave(), 30000);
+    }
   }
   async function save({ status } = {}) {
     if (saving) return false;
@@ -1495,8 +1564,9 @@ function start() {
       refreshPreviews();
       return true;
     } catch (e) {
-      setState("Modifications non enregistrées", "is-dirty");
-      toast(e.message, "error");
+      setState("Erreur d'enregistrement : rien n'est perdu, réessayez", "is-error");
+      saveState.title = e.message || "";
+      toast(`Enregistrement impossible : ${e.message}`, "error");
       return false;
     } finally { saving = false; }
   }
@@ -1508,7 +1578,11 @@ function start() {
     const mod = e.ctrlKey || e.metaKey;
     if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); quickSave(); }
     // Cmd+K hors de l'éditeur (après un clic sur un bouton…) : lien sur la sélection de l'article
-    if (mod && e.key.toLowerCase() === "k" && !editor.view.hasFocus() && !e.target.closest("input, textarea, select, .wp-popover")) { e.preventDefault(); editor.view.focus(); linkPopover(null); }
+    if (mod && !e.shiftKey && e.key.toLowerCase() === "k" && !editor.view.hasFocus() && !e.target.closest("input, textarea, select, .wp-popover")) {
+      e.preventDefault();
+      if (!editor.state.selection.empty && wsUi) { editor.view.focus(); linkPopover(null); } else if (wsUi) wsUi.openPalette(); else { editor.view.focus(); linkPopover(null); }
+    }
+    if (mod && e.shiftKey && e.key.toLowerCase() === "f" && !e.target.closest(".wsp-palette")) { e.preventDefault(); openFind(); }
     if (e.key === "Escape") closePopovers();
   });
   window.addEventListener("beforeunload", (e) => { if (dirty) { localDraft.write(); e.preventDefault(); e.returnValue = ""; } });
@@ -1679,7 +1753,7 @@ function start() {
     const opt = b.dataset.option;
     optionsMenu.hidden = true;
     if (opt === "appearance") return openAppearance();
-    if (opt === "shortcuts") return modal("Raccourcis clavier", h("dl", { class: "wp-shortcuts" }, ...[["Ctrl + S", "Enregistrer"], ["Ctrl + Z / Ctrl + Maj + Z", "Annuler / Rétablir"], ["/", "Choisir un bloc (au début d'un paragraphe vide)"], ["Ctrl + B / I / U", "Gras / italique / souligné"], ["Ctrl + K", "Ajouter un lien"], ["Ctrl + Maj + D", "Dupliquer le bloc"], ["Maj + Alt + Z", "Supprimer le bloc"], ["Alt + ↑ / ↓", "Déplacer le bloc"], ["Tab / Maj + Tab", "Imbriquer / désimbriquer un élément de liste"], ["Échap", "Fermer un menu"]].flatMap(([k, d]) => [h("dt", {}, h("kbd", {}, k)), h("dd", {}, d)])));
+    if (opt === "shortcuts") return modal("Raccourcis clavier", h("dl", { class: "wp-shortcuts" }, ...[["Ctrl + S", "Enregistrer"], ["Ctrl + Z / Ctrl + Maj + Z", "Annuler / Rétablir"], ["/", "Choisir un bloc (au début d'un paragraphe vide)"], ["Ctrl + B / I / U", "Gras / italique / souligné"], ["Ctrl + K", "Avec du texte sélectionné : lien ; sinon : palette de commandes"], ["Ctrl + Maj + K", "Palette de commandes"], ["Ctrl + Maj + F", "Rechercher et remplacer dans l'article"], ["Clic droit sur un bloc", "Menu du bloc (copier, couper, coller, verrouiller…) ; Maj + clic droit : menu du navigateur"], ["Ctrl + Maj + D", "Dupliquer le bloc"], ["Maj + Alt + Z", "Supprimer le bloc"], ["Alt + ↑ / ↓", "Déplacer le bloc"], ["Tab / Maj + Tab", "Imbriquer / désimbriquer un élément de liste"], ["Échap", "Fermer un menu"]].flatMap(([k, d]) => [h("dt", {}, h("kbd", {}, k)), h("dd", {}, d)])));
     const on = b.getAttribute("aria-checked") !== "true";
     b.setAttribute("aria-checked", String(on));
     if (opt === "focus") root.classList.toggle("is-focus-mode", on);
@@ -1783,6 +1857,81 @@ function start() {
       } }, "Remplacer le passage"), reject));
   }
 
+  // ---------- Rechercher / remplacer dans l'article ----------
+  let findBar = null;
+  function openFind() {
+    if (findBar) { findBar.querySelector("input").focus(); findBar.querySelector("input").select(); return; }
+    const q = h("input", { type: "text", class: "wp-find-input", placeholder: "Rechercher dans l'article", "aria-label": "Rechercher dans l'article" });
+    const r = h("input", { type: "text", class: "wp-find-input", placeholder: "Remplacer par", "aria-label": "Remplacer par" });
+    const cs = h("input", { type: "checkbox", id: "wp-find-case" });
+    const count = h("span", { class: "wp-find-count", role: "status", "aria-live": "polite" }, "");
+    let matches = [];
+    let index = -1;
+    const publish = () => editor.view.dispatch(editor.state.tr.setMeta(findKey, { matches, index }));
+    const lockedAt = (pos) => { const $p = editor.state.doc.resolve(pos); return $p.depth > 0 && isLocked($p.node(1)); };
+    const search = (keepIndex) => {
+      matches = findMatches(editor.state.doc, q.value, { caseSensitive: cs.checked });
+      index = matches.length ? Math.min(keepIndex ? Math.max(index, 0) : 0, matches.length - 1) : -1;
+      count.textContent = q.value ? (matches.length ? `${index + 1} / ${matches.length}` : "Aucun résultat") : "";
+      publish();
+      if (index >= 0) { const m = matches[index]; editor.commands.setTextSelection({ from: m.from, to: m.to }); editor.commands.scrollIntoView(); }
+    };
+    const go = (d) => { if (!matches.length) return; index = (index + d + matches.length) % matches.length; count.textContent = `${index + 1} / ${matches.length}`; publish(); const m = matches[index]; editor.commands.setTextSelection({ from: m.from, to: m.to }); editor.commands.scrollIntoView(); };
+    const replaceOne = () => {
+      if (index < 0) return;
+      const m = matches[index];
+      if (lockedAt(m.from)) { lockedNotice(); go(1); return; }
+      editor.view.dispatch(editor.state.tr.insertText(r.value, m.from, m.to));
+      search(true);
+    };
+    const replaceAll = () => {
+      const all = findMatches(editor.state.doc, q.value, { caseSensitive: cs.checked });
+      const ok = all.filter((m) => !lockedAt(m.from));
+      if (!ok.length) { toast(all.length ? "Toutes les occurrences sont dans des blocs verrouillés." : "Aucun résultat.", all.length ? "error" : "ok"); return; }
+      const tr = editor.state.tr;
+      for (const m of [...ok].reverse()) tr.insertText(r.value, m.from, m.to);
+      editor.view.dispatch(tr);
+      toast(`${ok.length} remplacement${ok.length > 1 ? "s" : ""}${all.length > ok.length ? ` (${all.length - ok.length} ignoré${all.length - ok.length > 1 ? "s" : ""} : bloc verrouillé)` : ""}.`);
+      search(false);
+    };
+    const close = () => { matches = []; index = -1; publish(); findBar.remove(); findBar = null; editor.commands.focus(); };
+    q.addEventListener("input", () => search(false));
+    cs.addEventListener("change", () => search(false));
+    q.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(e.shiftKey ? -1 : 1); } if (e.key === "Escape") { e.preventDefault(); close(); } });
+    r.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); replaceOne(); } if (e.key === "Escape") { e.preventDefault(); close(); } });
+    findBar = h("div", { class: "wp-findbar", role: "search", "aria-label": "Rechercher et remplacer" },
+      h("div", { class: "wp-find-row" }, q, count,
+        h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Résultat précédent", title: "Précédent (Maj+Entrée)", onclick: () => go(-1) }, "↑"),
+        h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Résultat suivant", title: "Suivant (Entrée)", onclick: () => go(1) }, "↓"),
+        h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Fermer la recherche", title: "Fermer (Échap)", onclick: close }, "×")),
+      h("div", { class: "wp-find-row" }, r,
+        h("button", { type: "button", class: "wp-btn-secondary", onclick: replaceOne }, "Remplacer"),
+        h("button", { type: "button", class: "wp-btn-secondary", onclick: replaceAll }, "Tout remplacer")),
+      h("label", { class: "wp-checkbox wp-find-case", for: "wp-find-case" }, cs, " Respecter les majuscules"));
+    findBar.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } });
+    $("[data-canvas]").prepend(findBar);
+    editor.on("update", () => { if (findBar && q.value) search(true); });
+    const sel = editor.state.selection;
+    if (!sel.empty && sel.to - sel.from < 80) q.value = editor.state.doc.textBetween(sel.from, sel.to, " ");
+    q.focus();
+    if (q.value) search(false);
+  }
+
+  // ---------- Compteurs de l'article (calculés sur le contenu réel) ----------
+  function showCounters(anchor) {
+    const r = lastAnalysis;
+    if (!r) return;
+    const s = r.stats;
+    const row = (k, v) => [h("dt", {}, k), h("dd", {}, v)];
+    popover(anchor, h("div", { class: "wp-counters" }, h("p", { class: "wp-menu-label" }, "Compteurs de l'article"), h("dl", {},
+      ...row("Mots", String(r.words)), ...row("Caractères", `${s.characters} (${s.charactersNoSpaces} sans espaces)`), ...row("Paragraphes", String(s.paragraphs)),
+      ...row("Titres", `H2 : ${s.headings.h2} · H3 : ${s.headings.h3} · H4 : ${s.headings.h4}`), ...row("Images", String(s.images.total)),
+      ...row("Liens", `${s.internalLinks.length} internes · ${s.externalLinks.length} externes`), ...row("Listes", String(s.lists)), ...row("Temps de lecture", `${r.minutes} min (230 mots/min)`))));
+  }
+  $("[data-stats]").addEventListener("click", (e) => { e.stopPropagation(); showCounters(e.currentTarget); });
+  $("[data-stats]").setAttribute("title", "Voir les compteurs de l'article");
+  editor.view.dom.addEventListener("contextmenu", contextMenuAt);
+
   // ---------- Espace de travail SEO ----------
   seoData = createSeoData({ api, postId: () => postId });
   try {
@@ -1795,9 +1944,25 @@ function start() {
       confirmDialog: (text) => Promise.resolve(window.confirm(text)), toast,
     });
     seoRenderers = createRenderers({ h, data: seoData, api, postId: () => postId, isVisible: (k) => workspace.isVisible(k), reveal: (k) => workspace.reveal(k), fmtDate });
-    setupWorkspaceUi({
+    wsUi = setupWorkspaceUi({
       h, modal, control, input, toast, api, ws: workspace, data: seoData, renderers: seoRenderers, DATA, postId: () => postId,
       actions: () => [
+        ...BLOCKS.map((b) => ({ id: `insert:${b.id}`, group: "Insérer", label: `Ajouter : ${b.title}`, run: () => { editor.commands.focus(); b.run(); } })),
+        { id: "ed:save", group: "Article", label: "Enregistrer", run: () => save() },
+        { id: "ed:publish", group: "Article", label: $("[data-publish]").textContent.trim(), run: () => $("[data-publish]").click() },
+        { id: "ed:preview-desktop", group: "Aperçu", label: "Aperçu ordinateur", run: () => $('[data-preview="desktop"]').click() },
+        { id: "ed:preview-tablet", group: "Aperçu", label: "Aperçu tablette", run: () => $('[data-preview="tablet"]').click() },
+        { id: "ed:preview-mobile", group: "Aperçu", label: "Aperçu mobile", run: () => $('[data-preview="mobile"]').click() },
+        { id: "ed:preview-tab", group: "Aperçu", label: "Prévisualiser dans un nouvel onglet", run: () => $('[data-preview="tab"]').click() },
+        { id: "ed:find", group: "Article", label: "Rechercher et remplacer dans l'article", run: () => openFind() },
+        { id: "ed:stats", group: "Article", label: "Compteurs de l'article (mots, caractères, titres…)", run: () => showCounters($("[data-stats]")) },
+        { id: "ed:tab-article", group: "Panneaux", label: "Ouvrir les réglages de l'article (document)", run: () => { if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click(); showSidebarTab("article"); } },
+        { id: "ed:tab-seo", group: "Panneaux", label: "Ouvrir le SEO", run: () => revealSeo() },
+        { id: "ed:tab-bloc", group: "Panneaux", label: "Ouvrir les réglages du bloc", run: () => { if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click(); showSidebarTab("bloc"); } },
+        { id: "ed:undo", group: "Édition", label: "Annuler", run: () => editor.chain().focus().undo().run() },
+        { id: "ed:redo", group: "Édition", label: "Rétablir", run: () => editor.chain().focus().redo().run() },
+        { id: "ed:code", group: "Édition", label: root.classList.contains("is-code-mode") ? "Éditeur visuel" : "Éditeur de code (HTML)", run: () => $(root.classList.contains("is-code-mode") ? '[data-mode="visual"]' : '[data-mode="code"]').click() },
+        { id: "ed:shortcuts", group: "Aide", label: "Raccourcis clavier", run: () => $('[data-option="shortcuts"]').click() },
         { id: "act:analyse", label: "Analyser la page en ligne", run: () => { workspace.reveal("seo-site"); $("[data-seo-analyse]")?.click(); }, disabled: !DATA.everPublished && DATA.status !== "published" },
         { id: "act:links", label: "Proposer des liens internes", run: () => { workspace.reveal("links"); $("[data-suggest]")?.click(); } },
         { id: "act:refresh", label: "Actualiser les données SEO (serveur)", run: () => { seoData.invalidate(); toast("Données SEO actualisées."); } },

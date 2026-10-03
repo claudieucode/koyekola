@@ -127,6 +127,19 @@ const transformTags = {
   code: (tagName, attribs) => ({ tagName, attribs: /^language-[a-z0-9+-]{1,20}$/.test(attribs.class || "") ? { class: attribs.class } : {} }),
 };
 for (const h of ["h1", "h2", "h3", "h4"]) transformTags[h] = (tagName, attribs) => ({ tagName, attribs: pick(attribs, ["style"]) });
+transformTags.hr = (tagName) => ({ tagName, attribs: {} });
+transformTags.blockquote = (tagName) => ({ tagName, attribs: {} });
+transformTags.table = (tagName) => ({ tagName, attribs: {} });
+// Bloc verrouillé dans l'éditeur (protection contre les modifications accidentelles) : marqueur conservé, valeur stricte
+const LOCKABLE = ["p", "h1", "h2", "h3", "h4", "blockquote", "ul", "ol", "pre", "table", "figure", "div", "details", "hr"];
+for (const tag of LOCKABLE) {
+  const base = transformTags[tag];
+  transformTags[tag] = (tagName, attribs) => {
+    const r = base ? base(tagName, attribs) : { tagName, attribs: {} };
+    if (attribs["data-locked"] === "true" && r.tagName === tagName) r.attribs = { ...r.attribs, "data-locked": "true" };
+    return r;
+  };
+}
 
 const saveOptions = {
   allowedTags: ["p", "br", "strong", "em", "u", "s", "sup", "sub", "h1", "h2", "h3", "h4", "ul", "ol", "li", "a", "hr", "blockquote", "code", "pre", "span", "mark",
@@ -150,6 +163,7 @@ const saveOptions = {
 };
 // allowedClasses: false désactive le filtre de classes de sanitize-html ; nos transformations ne laissent passer que les classes listées
 saveOptions.allowedAttributes["*"] = [];
+for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked"];
 
 function tidy(html) {
   return html

@@ -39,6 +39,9 @@ function findVersionRoot(start) {
 
 async function recoverUploads({ log = console.log, uploadsRoot = paths.uploadsRoot, projectRoot = paths.projectRoot, projectUploads = paths.projectUploads } = {}) {
   if (path.resolve(uploadsRoot) === path.resolve(projectUploads)) return { copied: 0, skipped: true };
+  // Uniquement sur l'hébergement (dossier de version « …/versions/<id>/… ») : jamais sur un poste de développement
+  // ni pendant les tests (le dossier du projet y est le stockage réel, il ne doit pas être recopié)
+  if (!findVersionRoot(projectRoot)) return { copied: 0, skipped: true };
   let copied = 0;
   let sources = 0;
   for (const src of candidates({ uploadsRoot, projectRoot, projectUploads })) {

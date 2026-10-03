@@ -160,6 +160,7 @@ function analyze(input = {}) {
     title: String(input.title || "").trim(), seoTitle, metaDescription: meta,
     h1: (String(input.title || "").trim() ? 1 : 0) + h1InContent, h1InContent,
     headings: { h2: x.headings.filter((h) => h.level === 2).length, h3: x.headings.filter((h) => h.level === 3).length, h4: x.headings.filter((h) => h.level === 4).length },
+    characters: x.text.length, charactersNoSpaces: x.text.replace(/\s+/g, "").length,
     paragraphs: x.paragraphs.length, lists: x.lists, sentences: sentences.length,
     avgSentenceWords: sentenceWords.length ? Math.round((sentenceWords.reduce((a, b) => a + b, 0) / sentenceWords.length) * 10) / 10 : null,
     longSentences: sentenceWords.filter((n) => n > 25).length,

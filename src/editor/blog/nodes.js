@@ -51,7 +51,7 @@ export const KbImage = Node.create({
   },
   renderHTML({ node }) {
     const a = node.attrs;
-    const fig = { class: "kb-image", "data-align": a.align };
+    const fig = { class: "kb-image", "data-align": a.align, ...lockOf(node) };
     if (a.width && a.width !== "100") fig["data-width"] = a.width;
     if (a.credit) fig["data-credit"] = a.credit;
     const img = { src: a.src, alt: a.alt || "" };
@@ -102,7 +102,7 @@ export const KbGallery = Node.create({
   },
   renderHTML({ node }) {
     const figures = (node.attrs.images || []).map((i) => (i.caption ? ["figure", { class: "kb-image" }, ["img", { src: i.src, alt: i.alt || "" }], ["figcaption", {}, i.caption]] : ["figure", { class: "kb-image" }, ["img", { src: i.src, alt: i.alt || "" }]]));
-    return ["div", { class: "kb-gallery", "data-columns": node.attrs.columns }, ...figures];
+    return ["div", { class: "kb-gallery", "data-columns": node.attrs.columns, ...lockOf(node) }, ...figures];
   },
   addNodeView() {
     return atomView((dom, a) => {
@@ -114,6 +114,9 @@ export const KbGallery = Node.create({
   },
 });
 
+// Bloc verrouillé : marqueur conservé dans le HTML enregistré (attribut global « locked », voir editing.js)
+export const lockOf = (node) => (node.attrs.locked ? { "data-locked": "true" } : {});
+
 // ---------- Marqueurs (rendus par le serveur) ----------
 function marker({ name, cls, attrs, icon, label }) {
   return Node.create({
@@ -124,7 +127,7 @@ function marker({ name, cls, attrs, icon, label }) {
     addAttributes() { return Object.fromEntries(Object.keys(attrs).map((k) => [k, { default: "" }])); },
     parseHTML() { return [{ tag: `div.${cls}`, priority: 70, getAttrs: (el) => Object.fromEntries(Object.entries(attrs).map(([k, d]) => [k, el.getAttribute(d) || ""])) }]; },
     renderHTML({ node }) {
-      const out = { class: cls };
+      const out = { class: cls, ...lockOf(node) };
       for (const [k, d] of Object.entries(attrs)) if (node.attrs[k]) out[d] = node.attrs[k];
       return ["div", out];
     },
@@ -164,7 +167,7 @@ export const KbButton = Node.create({
     const a = node.attrs;
     const link = { href: a.href, class: `btn btn-${a.variant === "outline" ? "outline" : "primary"}` };
     if (a.newTab) { link.target = "_blank"; link.rel = "noopener noreferrer"; }
-    return ["p", { class: "kb-button", "data-align": a.align }, ["a", link, a.text]];
+    return ["p", { class: "kb-button", "data-align": a.align, ...lockOf(node) }, ["a", link, a.text]];
   },
   addNodeView() {
     return atomView((dom, a) => {
@@ -186,7 +189,7 @@ export const Callout = Node.create({
     return [{ tag: "div.callout", priority: 70, getAttrs: (el) => ({ type: el.getAttribute("data-callout") || (el.className.match(/callout-([a-z-]+)/) || [])[1] || "info", title: el.getAttribute("data-title") || "" }) }];
   },
   renderHTML({ node }) {
-    const out = { class: `callout callout-${node.attrs.type}`, "data-callout": node.attrs.type };
+    const out = { class: `callout callout-${node.attrs.type}`, "data-callout": node.attrs.type, ...lockOf(node) };
     if (node.attrs.title) out["data-title"] = node.attrs.title;
     return ["div", out, 0];
   },
@@ -233,7 +236,7 @@ export const KbAccordion = Node.create({
   content: "kbSummary kbAccordionBody",
   defining: true,
   parseHTML() { return [{ tag: "details.kb-accordion", priority: 70 }, { tag: "details", priority: 40 }]; },
-  renderHTML() { return ["details", { class: "kb-accordion" }, 0]; },
+  renderHTML({ node }) { return ["details", { class: "kb-accordion", ...lockOf(node) }, 0]; },
   addNodeView() { return () => { const dom = document.createElement("div"); dom.className = "kb-ed-accordion"; return { dom, contentDOM: dom }; }; },
 });
 export const KbFaqAnswer = simpleBlock("kbFaqAnswer", "div", "kb-faq-answer", "block+", { group: null });
@@ -254,7 +257,7 @@ export const KbSteps = Node.create({
   content: "listItem+",
   addAttributes() { return { title: { default: "" } }; },
   parseHTML() { return [{ tag: "ol.kb-steps", priority: 70, getAttrs: (el) => ({ title: el.getAttribute("data-title") || "" }) }]; },
-  renderHTML({ node }) { return ["ol", node.attrs.title ? { class: "kb-steps", "data-title": node.attrs.title } : { class: "kb-steps" }, 0]; },
+  renderHTML({ node }) { return ["ol", { ...(node.attrs.title ? { class: "kb-steps", "data-title": node.attrs.title } : { class: "kb-steps" }), ...lockOf(node) }, 0]; },
 });
 
 // Comparaison : 2 ou 3 colonnes (pour / contre / neutre)
