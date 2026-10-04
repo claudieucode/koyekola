@@ -157,9 +157,9 @@ function boxOf(block) {
 const MOBILE_KEYS = {
   "*": ["padTop", "padBottom", "padLeft", "padRight"],
   heading: ["fontSize", "align"], text: ["fontSize", "align"], button: ["fontSize", "align", "fullWidth"], image: ["width", "align"],
-  video: ["width", "align"], spacer: ["height"], social: ["align"], link: ["align"],
+  video: ["width", "align"], spacer: ["height"], social: ["align"], link: ["fontSize", "align"], quote: ["fontSize", "align"], list: ["fontSize", "align"],
 };
-const MOBILE_SIZE = { heading: [16, 44], text: [12, 28], button: [12, 24] };
+const MOBILE_SIZE = { heading: [16, 44], text: [12, 28], button: [12, 24], quote: [12, 32], list: [12, 28], link: [12, 28] };
 function mobileOf(block) {
   if (block.mobile === undefined || block.mobile === null) return null;
   if (typeof block.mobile !== "object" || Array.isArray(block.mobile)) throw fail("Réglages mobiles invalides.");
@@ -438,10 +438,14 @@ function buildBlock(block, env, meta, k = {}) {
       meta.hasText = true;
       const text = plain(block.text, allowed, { max: 500, required: true, label: "La citation" });
       const author = typeof block.author === "string" && block.author.trim() ? plain(block.author, allowed, { max: 100, label: "L'auteur" }) : null;
+      const typo = typography(block, { sizeMin: 12, sizeMax: 32 });
+      const align = block.align === undefined || block.align === null || block.align === "" ? null : alignOf(block.align);
+      const qcss = `border-left:4px solid ${theme.accent};padding:8px 0 8px 16px;font-size:${typo.fontSize || 18}px;line-height:${typo.lineHeight || 1.5};font-style:${block.italic === false ? "normal" : "italic"};color:${typo.color || theme.textColor}`
+        + `${typo.font ? `;font-family:${FONTS[typo.font]}` : ""}${typo.weight ? `;font-weight:${WEIGHTS[typo.weight]}` : ""}${typo.letterSpacing ? `;letter-spacing:${typo.letterSpacing}px` : ""}${align ? `;text-align:${align}` : ""}`;
       return {
-        normalized: { text: block.text.trim(), ...(author ? { author: block.author.trim() } : {}) },
+        normalized: { text: block.text.trim(), ...(author ? { author: block.author.trim() } : {}), ...typo, ...(block.italic === false ? { italic: false } : {}), ...(align ? { align } : {}) }, // citation : italique par défaut
         nodes: [
-          T(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-left:4px solid ${theme.accent};padding:8px 0 8px 16px;font-size:18px;line-height:1.5;font-style:italic;color:${theme.textColor}">“`),
+          T(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td${cls("f")} style="${qcss}">“`),
           ...text,
           T("”"),
           ...(author ? [T(`<br><span style="font-size:14px;font-style:normal;color:${MUTED}">— `), ...author, T("</span>")] : []),
@@ -471,7 +475,11 @@ function buildBlock(block, env, meta, k = {}) {
         items.forEach((item) => nodes.push(T('<li style="margin:0 0 6px">'), ...item, T("</li>")));
         nodes.push(T(`</${tag}>`));
       }
-      return { normalized: { style, items: block.items.map((i) => i.trim()) }, nodes };
+      const typo = typography(block, { sizeMin: 12, sizeMax: 28 });
+      if (block.align !== undefined && block.align !== null && block.align !== "") typo.align = alignOf(block.align);
+      const css = typoCss(typo);
+      const wrapped = css || k.f ? [T(`<div${cls("f")}${css ? ` style="${css}"` : ""}>`), ...nodes, T("</div>")] : nodes;
+      return { normalized: { style, items: block.items.map((i) => i.trim()), ...typo }, nodes: wrapped };
     }
     case "social": {
       meta.hasText = true;
@@ -559,9 +567,12 @@ function buildBlock(block, env, meta, k = {}) {
       const url = localMedia(block.url) || urlNodes(block.url, { mailto: true });
       const align = alignOf(block.align);
       const newTab = optBool(block.newTab);
+      const typo = typography(block, { sizeMin: 12, sizeMax: 28 });
+      const pcss = [typo.font ? `font-family:${FONTS[typo.font]}` : "", typo.fontSize ? `font-size:${typo.fontSize}px` : "", typo.lineHeight ? `line-height:${typo.lineHeight}` : ""].filter(Boolean).map((x) => `;${x}`).join("");
+      const acss = `color:${typo.color || theme.accent};font-weight:${typo.weight ? WEIGHTS[typo.weight] : 700}${typo.italic ? ";font-style:italic" : ""}${typo.letterSpacing ? `;letter-spacing:${typo.letterSpacing}px` : ""};text-decoration:underline`;
       return {
-        normalized: { label: block.label.trim(), url: block.url.trim(), align, ...(newTab ? { newTab } : {}) },
-        nodes: [T(`<p${cls("f")} style="margin:0;text-align:${align}"><a href="`), ...url, T(`"${newTab ? ' target="_blank"' : ""} style="color:${theme.accent};font-weight:700;text-decoration:underline">`), ...label, T("</a></p>")],
+        normalized: { label: block.label.trim(), url: block.url.trim(), align, ...(newTab ? { newTab } : {}), ...typo },
+        nodes: [T(`<p${cls("f")} style="margin:0;text-align:${align}${pcss}"><a href="`), ...url, T(`"${newTab ? ' target="_blank"' : ""} style="${acss}">`), ...label, T("</a></p>")],
       };
     }
     case "coupon": {

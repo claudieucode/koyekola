@@ -40,7 +40,7 @@
   var LIST_STYLES = [["bullets", "Puces"], ["numbers", "Numéros"], ["checks", "Coches ✓"]];
   var ALIGNS = [["left", "À gauche"], ["center", "Centré"], ["right", "À droite"]];
   // Réglages mobiles possibles selon le type (même liste que le serveur : src/marketing/templates/blocks.js MOBILE_KEYS)
-  var MOBILE_FIELDS = { "*": ["padTop", "padBottom", "padLeft", "padRight"], heading: ["fontSize", "align"], text: ["fontSize", "align"], button: ["fontSize", "align", "fullWidth"], image: ["width", "align"], video: ["width", "align"], spacer: ["height"], social: ["align"], link: ["align"] };
+  var MOBILE_FIELDS = { "*": ["padTop", "padBottom", "padLeft", "padRight"], heading: ["fontSize", "align"], text: ["fontSize", "align"], button: ["fontSize", "align", "fullWidth"], image: ["width", "align"], video: ["width", "align"], spacer: ["height"], social: ["align"], link: ["fontSize", "align"], quote: ["fontSize", "align"], list: ["fontSize", "align"] };
   var BORDER_STYLES = [["none", "Aucune"], ["solid", "Pleine"], ["dashed", "Tirets"], ["dotted", "Pointillés"]];
   // Formes du bouton : arrondi prédéfini (le rayon reste la seule donnée enregistrée)
   var SHAPES = [["square", "Carré", 0], ["soft", "Légèrement arrondi", 4], ["rounded", "Arrondi", 12], ["pill", "Ovale", 40]];
@@ -235,8 +235,8 @@
       if (b.stack === false) o.stack = false;
       else if (b.reverse) o.reverse = true;
     }
-    else if (b.type === "quote") { o.text = b.text || ""; if (b.author && b.author.trim()) o.author = b.author; }
-    else if (b.type === "list") { o.style = b.style || "bullets"; o.items = (b.items || []).slice(); }
+    else if (b.type === "quote") { o.text = b.text || ""; if (b.author && b.author.trim()) o.author = b.author; typo(b, o); if (b.italic === false) o.italic = false; if (b.align) o.align = b.align; }
+    else if (b.type === "list") { o.style = b.style || "bullets"; o.items = (b.items || []).slice(); typo(b, o); if (b.align) o.align = b.align; }
     else if (b.type === "social") {
       o.align = b.align || "center"; o.links = (b.links || []).map(function (l) { return { network: l.network, url: l.url || "" }; });
       if (b.display === "buttons") { o.display = "buttons"; if (b.colors === "accent") o.colors = "accent"; }
@@ -249,7 +249,7 @@
       o.courseId = intOrUndefined(b.courseId); o.cta = b.cta || "Voir la formation";
       if (b.snapshot) o.snapshot = b.snapshot;
       if (b.refresh) o.refresh = true;
-    } else if (b.type === "link") { o.label = b.label || ""; o.url = b.url || ""; o.align = b.align || "left"; if (b.newTab) o.newTab = true; }
+    } else if (b.type === "link") { o.label = b.label || ""; o.url = b.url || ""; o.align = b.align || "left"; if (b.newTab) o.newTab = true; typo(b, o); }
     else if (b.type === "coupon") { o.code = b.code || ""; if (b.title && b.title.trim()) o.title = b.title; if (b.details && b.details.trim()) o.details = b.details; if (hexOk(b.color)) o.color = b.color; }
     cleanBox(b, o);
     cleanMobile(b, o);
@@ -300,31 +300,6 @@
     wrap.appendChild(control);
     if (hint) wrap.appendChild(el("span", { "class": "field-hint" }, hint));
     return wrap;
-  }
-  function textField(block, key, labelText, opts) {
-    opts = opts || {};
-    var input = el("input", { type: "text", id: "f-" + block.id + "-" + key, maxlength: String(opts.max || 500) });
-    if (opts.vars) input.setAttribute("data-var-target", "");
-    if (opts.placeholder) input.setAttribute("placeholder", opts.placeholder);
-    input.value = block[key] == null ? "" : String(block[key]);
-    if (readOnly) input.disabled = true;
-    input.addEventListener("input", function () { block[key] = input.value; changed(); });
-    return group(labelText, input, opts.hint);
-  }
-  function selectField(block, key, labelText, options, fallback) {
-    var sel = el("select", { id: "f-" + block.id + "-" + key });
-    options.forEach(function (o) { sel.appendChild(el("option", { value: String(o[0]) }, o[1])); });
-    sel.value = String(block[key] == null ? fallback : block[key]);
-    if (readOnly) sel.disabled = true;
-    sel.addEventListener("change", function () { block[key] = sel.value; changed(); });
-    return group(labelText, sel);
-  }
-  function numberField(block, key, labelText, min, max) {
-    var input = el("input", { type: "number", id: "f-" + block.id + "-" + key, min: String(min), max: String(max), step: "1" });
-    input.value = block[key] == null ? "" : String(block[key]);
-    if (readOnly) input.disabled = true;
-    input.addEventListener("input", function () { block[key] = input.value === "" ? undefined : parseInt(input.value, 10); changed(); });
-    return group(labelText, input);
   }
   function markdownField(block, key, labelText, rows) {
     var wrap = el("div", { "class": "field-group" });
@@ -517,35 +492,6 @@
       groups[v.group].appendChild(el("option", { value: v.path }, v.label + "  ·  {{" + v.path + "}}"));
     });
   }
-  function checkField(block, key, labelText, owner) {
-    var input = el("input", { type: "checkbox", id: "f-" + (owner || block).id + "-" + key });
-    input.checked = !!block[key];
-    if (readOnly) input.disabled = true;
-    input.addEventListener("change", function () { block[key] = input.checked || (owner ? undefined : false); changed(); });
-    var lab = el("label", { "class": "checkbox-row", "for": input.id });
-    lab.appendChild(input);
-    lab.appendChild(document.createTextNode(" " + labelText));
-    var wrap = el("div", { "class": "field-group" });
-    wrap.appendChild(lab);
-    return wrap;
-  }
-  function colorField(block) {
-    var wrap = el("div", { "class": "field-group" });
-    var toggle = el("input", { type: "checkbox", id: "f-" + block.id + "-customcolor" });
-    toggle.checked = !!block.color;
-    var color = el("input", { type: "color", id: "f-" + block.id + "-color", "aria-label": "Couleur du bouton" });
-    color.value = block.color || state.theme.accent || "#0277b6";
-    color.disabled = readOnly || !toggle.checked;
-    toggle.disabled = readOnly;
-    toggle.addEventListener("change", function () { color.disabled = readOnly || !toggle.checked; block.color = toggle.checked ? color.value : undefined; changed(); });
-    color.addEventListener("input", function () { block.color = color.value; changed(); });
-    var lab = el("label", { "class": "checkbox-row", "for": toggle.id });
-    lab.appendChild(toggle);
-    lab.appendChild(document.createTextNode(" Couleur personnalisée (sinon : couleur principale des styles)"));
-    wrap.appendChild(lab);
-    wrap.appendChild(color);
-    return wrap;
-  }
   function itemsField(block) {
     var area = el("textarea", { id: "f-" + block.id + "-items", rows: "5", maxlength: "5000", "data-var-target": "" });
     area.value = (block.items || []).join("\n");
@@ -599,8 +545,8 @@
     out.push(group("Formation du catalogue", sel));
     if (block.snapshot) out.push(el("p", { "class": "field-hint" }, "Enregistré : « " + block.snapshot.title + " » — " + (block.snapshot.priceCents ? (block.snapshot.priceCents / 100).toFixed(2).replace(".", ",") + " €" : "gratuit") + ". Le prix et le titre sont figés dans le modèle."));
     else if (block.courseId) out.push(el("p", { "class": "field-hint" }, "Les informations de la formation seront lues dans le catalogue à l'enregistrement."));
-    out.push(textField(block, "cta", "Texte du bouton", { vars: true, max: 80 }));
-    if (block.snapshot) out.push(checkField(block, "refresh", "Actualiser titre, prix et image depuis le catalogue à l'enregistrement"));
+    out.push(F.text(block, "cta", "Texte du bouton", { owner: block.id, vars: true, max: 80 }));
+    if (block.snapshot) out.push(F.toggle(block, "refresh", "Actualiser titre, prix et image depuis le catalogue à l'enregistrement", { owner: block.id }));
     return out;
   }
   // Image : importer depuis l'ordinateur, choisir dans la médiathèque, ou coller une adresse
@@ -624,116 +570,150 @@
     }
     return wrap;
   }
-  // Réglages d'un bloc, rangés en sections (contenu, apparence…) ; la condition d'affichage vient toujours en dernier
-  // Couleur facultative : case « personnalisée » + pastille (décochée = valeur du thème)
-  function optColorField(target, key, labelText, fallback, idBase) {
-    var wrap = el("div", { "class": "field-group mk-optcolor" });
-    var id = "f-" + (idBase || target.id || "x") + "-" + key.replace(/\W/g, "");
-    var toggle = el("input", { type: "checkbox", id: id + "-on" });
-    var color = el("input", { type: "color", id: id, "aria-label": labelText });
-    toggle.checked = !!target[key]; color.value = target[key] || fallback || "#000000";
-    color.disabled = readOnly || !toggle.checked; toggle.disabled = readOnly;
-    toggle.addEventListener("change", function () { color.disabled = readOnly || !toggle.checked; target[key] = toggle.checked ? color.value : undefined; changed(); });
-    color.addEventListener("input", function () { target[key] = color.value; changed(); });
-    var lab = el("label", { "class": "checkbox-row", "for": toggle.id }); lab.appendChild(toggle); lab.appendChild(document.createTextNode(" " + labelText));
-    wrap.appendChild(lab); wrap.appendChild(color);
-    return wrap;
+  // ---------- Réglages du bloc : système unifié (public/js/mk/fields.js) ----------
+  // Chaque bloc : onglets Contenu / Styles / Visibilité / Avancé. Styles toujours dans le même ordre :
+  // Typographie → réglages propres au bloc → Dimensions → Espacement intérieur → Fond → Bordure.
+  // Seules les propriétés que le moteur d'envoi sait rendre sont proposées.
+  var F = window.MkFields.create({
+    el: el, iconSpan: iconSpan, readOnly: readOnly, announce: announce,
+    changed: function (structural) { changed(structural); },
+    rerender: function () { renderProps(); },
+    theme: function () { var t = {}; Object.keys(THEME_DEFAULTS).forEach(function (k) { t[k] = state.theme && state.theme[k] != null ? state.theme[k] : THEME_DEFAULTS[k]; }); return t; },
+    fonts: function () { return (data.fonts || Object.keys(FONT_LABELS)).map(function (k) { return [k, FONT_LABELS[k] || k]; }); },
+    fontLabel: function (k) { return FONT_LABELS[k] || k; },
+  });
+  function th(k) { return state.theme && state.theme[k] != null ? state.theme[k] : THEME_DEFAULTS[k]; }
+  var SPACING_PX = { compact: 4, normal: 8, large: 16 };
+  // Typographie prise en charge par le moteur, type par type (police, taille [min, max, défaut], interligne, couleur…)
+  function typoSpec(block) {
+    var t = block.type;
+    if (t === "heading") return { font: true, size: [16, 44, { 1: 28, 2: 22, 3: 18 }[block.level || 2]], color: true, align: "left", weight: "bold", italic: true, letterSpacing: true };
+    if (t === "text") return { font: true, size: [12, 28, 16], lineHeight: true, color: true, align: "inherit", weight: "normal", italic: true, letterSpacing: true };
+    if (t === "quote") return { font: true, size: [12, 32, 18], lineHeight: true, color: true, align: "inherit", weight: "normal", italic: "default-on", letterSpacing: true };
+    if (t === "list") return { font: true, size: [12, 28, 16], lineHeight: true, color: true, align: "inherit", weight: "normal", italic: true, letterSpacing: true };
+    if (t === "link") return { font: true, size: [12, 28, 16], lineHeight: true, color: true, colorInherit: th("accent"), colorInheritLabel: "Couleur principale", align: "left", weight: "bold", italic: true, letterSpacing: true };
+    return null;
   }
-  // Nombre facultatif (vide = valeur par défaut) : marges, tailles, arrondis
-  function optNumberField(target, key, labelText, min, max, placeholder, owner) {
-    var id = "f-" + ((owner || target).id || "x") + "-" + key;
-    var input = el("input", { type: "number", id: id, min: String(min), max: String(max), step: "1", placeholder: placeholder || "" });
-    input.value = target[key] == null ? "" : String(target[key]);
-    if (readOnly) input.disabled = true;
-    input.addEventListener("input", function () { var n = parseInt(input.value, 10); target[key] = input.value === "" || isNaN(n) ? undefined : n; changed(); });
-    return group(labelText, input);
-  }
-  function fontField(block) {
-    var opts = [["", "Comme le message (styles globaux)"]].concat((data.fonts || Object.keys(FONT_LABELS)).map(function (k) { return [k, FONT_LABELS[k] || k]; }));
-    return selectField(block, "font", "Police", opts, "");
-  }
-  function lineHeightField(block) {
-    var sel = el("select", { id: "f-" + block.id + "-lineHeight" });
-    [["", "Normal"], ["1.2", "Serré (1,2)"], ["1.4", "1,4"], ["1.6", "Standard (1,6)"], ["1.8", "Aéré (1,8)"], ["2", "Double (2)"]].forEach(function (o) { sel.appendChild(el("option", { value: o[0] }, o[1])); });
-    sel.value = block.lineHeight == null ? "" : String(block.lineHeight);
-    if (readOnly) sel.disabled = true;
-    sel.addEventListener("change", function () { block.lineHeight = sel.value === "" ? undefined : parseFloat(sel.value); changed(); });
-    return group("Interligne", sel);
-  }
-  // Choix en boutons segmentés (un seul actif) : formes, alignements, styles de ligne
-  function segmentField(labelText, options, current, onPick, idBase) {
-    var wrap = el("div", { "class": "field-group" });
-    var lid = "f-" + idBase + "-label";
-    wrap.appendChild(el("span", { "class": "mk-seg-label", id: lid }, labelText));
-    var row = el("div", { "class": "mk-seg", role: "radiogroup", "aria-labelledby": lid });
-    var btns = [];
-    options.forEach(function (o) {
-      var b = el("button", { type: "button", "class": "mk-seg-btn", role: "radio", "aria-checked": String(String(o[0]) === String(current)), tabindex: String(o[0]) === String(current) ? "0" : "-1" }, o[1]);
-      if (readOnly) b.disabled = true;
-      b.addEventListener("click", function () { onPick(o[0]); btns.forEach(function (x) { var on = x === b; x.setAttribute("aria-checked", String(on)); x.tabIndex = on ? 0 : -1; }); });
-      b.addEventListener("keydown", function (e) {
-        var i = btns.indexOf(b), n = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
-        if (!n) return; e.preventDefault(); var t = btns[(i + n + btns.length) % btns.length]; t.focus(); t.click();
-      });
-      btns.push(b); row.appendChild(b);
-    });
-    if (!btns.some(function (b) { return b.tabIndex === 0; }) && btns[0]) btns[0].tabIndex = 0;
-    wrap.appendChild(row);
-    return wrap;
-  }
-  function alignField(target, key, fallback, idBase, labelText) {
-    return segmentField(labelText || "Alignement", ALIGNS, target[key] || fallback, function (v) { target[key] = v; changed(); }, idBase + "-" + key);
-  }
-  // Graisse, italique, espacement des lettres
-  function emphasisFields(block, defaultBold) {
-    var w = segmentField("Graisse", [["normal", "Normale"], ["bold", "Grasse"]], block.weight || (defaultBold ? "bold" : "normal"), function (v) { block.weight = v; changed(); }, block.id + "-weight");
-    return [w, checkField(block, "italic", "Italique"), optNumberField(block, "letterSpacing", "Espacement des lettres (px, 0 à 10)", 0, 10, "0")];
-  }
-  // Espacement intérieur (4 côtés), fond, bordure : communs à TOUS les blocs (onglet Styles)
-  function boxSections(block) {
-    block.box = block.box || {};
-    var box = block.box;
-    var grid = el("div", { "class": "mk-step-row mk-b-row2" });
-    [["padTop", "Haut"], ["padBottom", "Bas"], ["padLeft", "Gauche"], ["padRight", "Droite"]].forEach(function (p) {
-      grid.appendChild(optNumberField(box, p[0], p[1] + " (px)", 0, 64, p[0] === "padLeft" || p[0] === "padRight" ? "24" : "auto", block));
-    });
-    box.border = box.border || {};
-    var bd = box.border;
-    var borderNodes = [segmentField("Style", BORDER_STYLES, bd.style || "none", function (v) { bd.style = v; changed(); renderProps(); }, block.id + "-bstyle")];
-    if (bd.style && bd.style !== "none") {
-      var r2 = el("div", { "class": "mk-step-row mk-b-row2" });
-      r2.appendChild(optNumberField(bd, "width", "Épaisseur (px, 1 à 8)", 1, 8, "1", { id: block.id + "-bd" }));
-      borderNodes.push(r2);
-      borderNodes.push(optColorField(bd, "color", "Couleur de la bordure", "#d5e3ee", block.id + "-bd"));
+  var BORDER_STYLES = [["none", "Aucune"], ["solid", "Pleine"], ["dashed", "Tirets"], ["dotted", "Pointillés"]];
+  var SHAPES = [["0", "Carré"], ["4", "Léger"], ["12", "Arrondi"], ["40", "Ovale"]];
+  // Onglet Contenu
+  function contentSections(block) {
+    var S = F.section, o = { owner: block.id }, t = block.type, out = [];
+    if (t === "heading") {
+      out.push(S("Titre", [F.text(block, "text", "Texte du titre", { owner: block.id, vars: true, max: 200 }), F.segment(block, "level", "Niveau", [[1, "Grand"], [2, "Moyen"], [3, "Petit"]], { owner: block.id, fallback: 2, int: true })]));
+      out.push(S("Lien (facultatif)", [F.text(block, "href", "Adresse au clic (https://… ou mailto:)", { owner: block.id, max: 2000, placeholder: "https://exemple.fr" }), F.toggle(block, "newTab", "Ouvrir dans un nouvel onglet", o)]));
+    } else if (t === "text") {
+      if (typeof block.html === "string") {
+        var write = el("button", { type: "button", "class": "btn btn-primary btn-sm mk-b-write" });
+        write.appendChild(iconSpan("edit")); write.appendChild(document.createTextNode(" Écrire dans l'e-mail"));
+        write.disabled = readOnly;
+        write.addEventListener("click", function () { scrollToBlock(block.id); startInline(block.id); });
+        out.push(S("Texte", [el("p", { "class": "mk-fx-hint mk-b-writehint" }, "Le texte s'écrit directement dans l'e-mail : cliquez dedans. La barre d'outils au-dessus du canevas le met en forme (style, gras, couleurs, liens, alignement, listes, retrait, variables)."), write]));
+      } else out.push(S("Texte", [markdownField(block, "markdown", "Texte", 8)]));
+    } else if (t === "image") {
+      out.push(S("Image", [imageSource(block), F.text(block, "src", "Adresse de l'image (https://…)", { owner: block.id, max: 2000, placeholder: "https://exemple.fr/image.png" }),
+        F.text(block, "alt", "Texte alternatif", { owner: block.id, vars: true, max: 200, hint: "Décrit l'image aux lecteurs d'écran et quand l'image est bloquée." }), F.toggle(block, "decorative", "Image décorative (pas de texte alternatif)", o)]));
+      out.push(S("Lien au clic (facultatif)", [F.text(block, "href", "Adresse (https://…)", { owner: block.id, max: 2000, placeholder: "https://exemple.fr" }), F.toggle(block, "newTab", "Ouvrir dans un nouvel onglet", o)]));
+    } else if (t === "button") {
+      out.push(S("Bouton", [F.text(block, "label", "Texte du bouton", { owner: block.id, vars: true, max: 80 }), F.text(block, "url", "Lien (https://… ou mailto:)", { owner: block.id, max: 2000, placeholder: "https://exemple.fr" }), F.toggle(block, "newTab", "Ouvrir dans un nouvel onglet", o)]));
+    } else if (t === "spacer") {
+      out.push(S("Espace", [el("p", { "class": "mk-fx-hint" }, "Un espace vide entre deux blocs : sa hauteur se règle dans « Styles » (avec une hauteur propre au mobile si besoin).")]));
+    } else if (t === "columns") {
+      var richCols = typeof block.leftHtml === "string";
+      out.push(S("Colonne de gauche", [richCols ? richField(block, "leftHtml", "Colonne de gauche", { rows: 4, hint: false }) : markdownField(block, "left", "Colonne de gauche", 5)]));
+      out.push(S("Colonne de droite", [richCols ? richField(block, "rightHtml", "Colonne de droite", { rows: 4, hint: false }) : markdownField(block, "right", "Colonne de droite", 5)]));
+    } else if (t === "divider") {
+      out.push(S("Ligne de séparation", [el("p", { "class": "mk-fx-hint" }, "Une ligne horizontale entre deux parties du message : son apparence se règle dans « Styles ».")]));
+    } else if (t === "quote") {
+      out.push(S("Citation", [F.text(block, "text", "Citation", { owner: block.id, vars: true, max: 500 }), F.text(block, "author", "Auteur (facultatif)", { owner: block.id, vars: true, max: 100 })]));
+    } else if (t === "list") {
+      out.push(S("Liste", [itemsField(block)]));
+    } else if (t === "social") {
+      out.push(S("Réseaux", [socialField(block)]));
+    } else if (t === "video") {
+      out.push(S("Vidéo", [F.text(block, "url", "Adresse de la vidéo (https://…)", { owner: block.id, max: 2000, placeholder: "https://youtube.com/watch?v=…" }), F.text(block, "title", "Titre de la vidéo (texte alternatif)", { owner: block.id, vars: true, max: 200 }),
+        F.text(block, "thumbnail", "Miniature (adresse d'une image https://…, facultatif)", { owner: block.id, max: 2000, placeholder: "https://exemple.fr/miniature.jpg" }),
+        el("p", { "class": "mk-fx-hint" }, "Un e-mail ne peut pas lire de vidéo : le message affiche la miniature et un lien « Regarder la vidéo ».")]));
+    } else if (t === "course") {
+      out.push(S("Formation", courseField(block)));
+    } else if (t === "link") {
+      out.push(S("Lien", [F.text(block, "label", "Texte du lien", { owner: block.id, vars: true, max: 120 }), F.text(block, "url", "Adresse (https://… ou mailto:)", { owner: block.id, max: 2000, placeholder: "https://exemple.fr" }), F.toggle(block, "newTab", "Ouvrir dans un nouvel onglet", o)]));
+    } else if (t === "coupon") {
+      out.push(S("Offre", [F.text(block, "code", "Code promo", { owner: block.id, vars: true, max: 40, placeholder: "BIENVENUE10" }), F.text(block, "title", "Titre de l'offre (facultatif)", { owner: block.id, vars: true, max: 100 }), F.text(block, "details", "Conditions (facultatif)", { owner: block.id, vars: true, max: 300, placeholder: "Valable jusqu'au 30 septembre." })]));
     }
-    borderNodes.push(optNumberField(bd, "radius", "Arrondi des coins (px, 0 à 40)", 0, 40, "0", { id: block.id + "-bd" }));
-    return [
-      { title: "Espacement intérieur", nodes: [grid, el("p", { "class": "field-hint" }, "Vide = espacement des styles globaux (haut / bas) et 24 px (gauche / droite).")] },
-      { title: "Fond", nodes: [optColorField(box, "background", "Fond du bloc", "#f3f8fc", block.id + "-box")] },
-      { title: "Bordure", nodes: borderNodes },
-    ];
-  }
-  // Styles mobiles : seulement les réglages applicables au type ; vide = comme sur ordinateur
-  function mobileSections(block) {
-    var m = block.mobile;
-    var keys = MOBILE_FIELDS[block.type] || [];
-    var owner = { id: block.id + "-m" };
-    var out = [];
-    var typoNodes = [];
-    var size = { heading: [16, 44], text: [12, 28], button: [12, 24] }[block.type];
-    if (keys.indexOf("fontSize") !== -1) typoNodes.push(optNumberField(m, "fontSize", "Taille du texte sur mobile (px, " + size[0] + " à " + size[1] + ")", size[0], size[1], "comme ordinateur", owner));
-    if (keys.indexOf("align") !== -1) typoNodes.push(segmentField("Alignement sur mobile", [["", "Comme ordinateur"]].concat(ALIGNS), m.align || "", function (v) { m.align = v || undefined; changed(); }, block.id + "-m-align"));
-    if (keys.indexOf("width") !== -1) typoNodes.push(optNumberField(m, "width", "Largeur sur mobile (px, 40 à 720)", 40, 720, "comme ordinateur", owner));
-    if (keys.indexOf("height") !== -1) typoNodes.push(optNumberField(m, "height", "Hauteur sur mobile (px, 4 à 120)", 4, 120, "comme ordinateur", owner));
-    if (keys.indexOf("fullWidth") !== -1) typoNodes.push(checkField(m, "fullWidth", "Bouton sur toute la largeur sur mobile", owner));
-    if (typoNodes.length) out.push({ title: "Affichage sur mobile", nodes: typoNodes });
-    var grid = el("div", { "class": "mk-step-row mk-b-row2" });
-    [["padTop", "Haut"], ["padBottom", "Bas"], ["padLeft", "Gauche"], ["padRight", "Droite"]].forEach(function (p) { grid.appendChild(optNumberField(m, p[0], p[1] + " (px)", 0, 64, "idem", owner)); });
-    out.push({ title: "Espacement intérieur sur mobile", nodes: [grid] });
-    out.push({ title: "", nodes: [el("p", { "class": "field-hint" }, "Vide (« idem ») = même réglage que sur ordinateur. Le canevas est passé en vue « Mobile » pour montrer le rendu réel. Outlook sur ordinateur ignore ces réglages et garde ceux de l'ordinateur.")] });
     return out;
   }
-  // Onglet Styles : « Mêmes styles pour ordinateur et mobiles » (par défaut) ; sinon Ordinateur | Mobile
+  // Onglet Styles (ordinateur, ou commun aux deux quand « mêmes styles »)
+  function styleSections(block) {
+    var S = F.section, o = { owner: block.id }, t = block.type, out = [];
+    var spec = typoSpec(block);
+    if (spec) out.push(S("Typographie", F.typography(block, spec)));
+    if (t === "button") {
+      out.push(S("Texte du bouton", [F.number(block, "fontSize", "Taille", { owner: block.id, min: 12, max: 24, unit: "px", inherit: 16 }),
+        F.color(block, "textColor", "Couleur du texte", { owner: block.id, inherit: "#ffffff", inheritLabel: "Automatique (contraste lisible)" }),
+        F.segment(block, "weight", "Graisse", [["normal", "Normale"], ["bold", "Grasse"]], { owner: block.id, fallback: "bold" }),
+        F.toggle(block, "italic", "Italique", o), F.number(block, "letterSpacing", "Espacement des lettres", { owner: block.id, min: 0, max: 10, unit: "px", inherit: 0 })]));
+      var r = block.radius == null ? th("radius") : block.radius;
+      out.push(S("Bouton", [F.color(block, "color", "Couleur du bouton", { owner: block.id, inherit: th("accent"), inheritLabel: "Couleur principale" }),
+        F.segment({ shape: String(r) }, "shape", "Forme", SHAPES, { owner: block.id, fallback: String(r), onPick: function (v) { block.radius = parseInt(v, 10); renderProps(); } }),
+        F.number(block, "radius", "Arrondi", { owner: block.id, min: 0, max: 40, unit: "px", inherit: th("radius") }),
+        F.segment(block, "size", "Taille", [["s", "Petit"], ["m", "Moyen"], ["l", "Grand"]], { owner: block.id, fallback: "m" })]));
+      var bb = [F.segment(block, "borderStyle", "Bordure du bouton", BORDER_STYLES.slice(1), { owner: block.id, inherit: "Aucune", rerender: true })];
+      if (block.borderStyle && block.borderStyle !== "none") bb.push(F.number(block, "borderWidth", "Épaisseur", { owner: block.id, min: 1, max: 8, unit: "px", inherit: 2 }), F.color(block, "borderColor", "Couleur de la bordure", { owner: block.id, inherit: "#10222f", inheritLabel: "Couleur du texte" }));
+      out.push(S("Bordure du bouton", bb));
+      out.push(S("Dimensions et position", [F.toggle(block, "fullWidth", "Toute la largeur", o), F.segment(block, "align", "Alignement", F.ALIGNS, { owner: block.id, fallback: "center" })]));
+    } else if (t === "image") {
+      out.push(S("Dimensions et position", [F.number(block, "width", "Largeur", { owner: block.id, min: 40, max: 720, unit: "px", inherit: 552, hint: "Hauteur proportionnelle (les e-mails ne déforment pas les images)." }), F.number(block, "radius", "Arrondi des coins", { owner: block.id, min: 0, max: 40, unit: "px", inherit: 0 }), F.segment(block, "align", "Alignement", F.ALIGNS, { owner: block.id, fallback: "left" })]));
+    } else if (t === "divider") {
+      out.push(S("Ligne", [F.segment(block, "style", "Style", BORDER_STYLES.slice(1), { owner: block.id, fallback: "solid" }), F.color(block, "color", "Couleur", { owner: block.id, inherit: th("secondary"), inheritLabel: "Couleur secondaire" })]));
+      out.push(S("Dimensions et position", [F.number(block, "thickness", "Épaisseur", { owner: block.id, min: 1, max: 8, unit: "px", inherit: 1 }), F.number(block, "width", "Largeur", { owner: block.id, min: 10, max: 100, unit: "%", inherit: 100 }), F.segment(block, "align", "Alignement", F.ALIGNS, { owner: block.id, fallback: "center" })]));
+    } else if (t === "spacer") {
+      out.push(S("Dimensions", [F.number(block, "height", "Hauteur", { owner: block.id, min: 4, max: 120, unit: "px", inherit: 24 })]));
+    } else if (t === "columns") {
+      var cols = [F.select(block, "ratio", "Largeurs (gauche / droite)", [["50-50", "50 % / 50 %"], ["60-40", "60 % / 40 %"], ["40-60", "40 % / 60 %"], ["70-30", "70 % / 30 %"], ["30-70", "30 % / 70 %"]], { owner: block.id, fallback: "50-50" }),
+        F.toggle(block, "stack", "Empiler les colonnes sur mobile", { owner: block.id, defaultOn: true, structural: false })];
+      if (block.stack !== false) cols.push(F.toggle(block, "reverse", "Sur mobile : colonne de droite en premier", o));
+      out.push(S("Colonnes", cols));
+    } else if (t === "list") {
+      out.push(S("Liste", [F.segment(block, "style", "Puces", LIST_STYLES, { owner: block.id, fallback: "bullets" })]));
+    } else if (t === "social") {
+      var so = [F.segment(block, "display", "Présentation", [["text", "Liens texte"], ["buttons", "Pastilles"]], { owner: block.id, fallback: "text", rerender: true })];
+      if (block.display === "buttons") so.push(F.segment(block, "colors", "Couleur des pastilles", [["brand", "Réseaux"], ["accent", "Principale"]], { owner: block.id, fallback: "brand" }));
+      so.push(F.segment(block, "align", "Alignement", F.ALIGNS, { owner: block.id, fallback: "center" }));
+      so.push(el("p", { "class": "mk-fx-hint" }, "Pas de logos : Gmail et Outlook bloquent souvent les images d'icônes ; les pastilles s'affichent partout."));
+      out.push(S("Réseaux", so));
+    } else if (t === "video") {
+      out.push(S("Dimensions et position", [F.number(block, "width", "Largeur de la miniature", { owner: block.id, min: 40, max: 600, unit: "px", inherit: 552 }), F.segment(block, "align", "Alignement", F.ALIGNS, { owner: block.id, fallback: "center" })]));
+    } else if (t === "coupon") {
+      out.push(S("Coupon", [F.color(block, "color", "Couleur du cadre et du code", { owner: block.id, inherit: th("accent"), inheritLabel: "Couleur principale" })]));
+    }
+    // Communs à tous les blocs
+    block.box = block.box || {};
+    var pad = SPACING_PX[th("spacing")] || 8;
+    out.push(S("Espacement intérieur", [F.spacing(block.box, "Marges intérieures", { owner: block.id, inherit: { padTop: pad, padBottom: pad, padLeft: 24, padRight: 24 } })]));
+    out.push(S("Fond", [F.color(block.box, "background", "Couleur de fond", { owner: block.id + "-box", inherit: th("contentBackground"), inheritLabel: "Fond du contenu" })]));
+    out.push(S("Bordure du bloc", F.border(block.box, "border", { owner: block.id })));
+    return out;
+  }
+  // Styles mobiles : seulement les réglages applicables ; vide = comme sur ordinateur
+  function mobileSections(block) {
+    var m = block.mobile, keys = MOBILE_FIELDS[block.type] || [], owner = block.id + "-m", out = [];
+    var size = { heading: [16, 44], text: [12, 28], button: [12, 24], quote: [12, 32], list: [12, 28], link: [12, 28] }[block.type];
+    var typo = [];
+    if (keys.indexOf("fontSize") !== -1) typo.push(F.number(m, "fontSize", "Taille du texte sur mobile", { owner: owner, min: size[0], max: size[1], unit: "px", inherit: block.fontSize || "idem" }));
+    if (keys.indexOf("align") !== -1) typo.push(F.segment(m, "align", "Alignement sur mobile", F.ALIGNS, { owner: owner, inherit: "Comme ordinateur" }));
+    if (typo.length) out.push(F.section("Typographie et position (mobile)", typo));
+    var dims = [];
+    if (keys.indexOf("width") !== -1) dims.push(F.number(m, "width", "Largeur sur mobile", { owner: owner, min: 40, max: 720, unit: "px", inherit: block.width || "idem" }));
+    if (keys.indexOf("height") !== -1) dims.push(F.number(m, "height", "Hauteur sur mobile", { owner: owner, min: 4, max: 120, unit: "px", inherit: block.height || "idem" }));
+    if (keys.indexOf("fullWidth") !== -1) dims.push(F.toggle(m, "fullWidth", "Bouton sur toute la largeur sur mobile", { owner: owner }));
+    if (dims.length) out.push(F.section("Dimensions (mobile)", dims));
+    var b = block.box || {};
+    out.push(F.section("Espacement intérieur (mobile)", [F.spacing(m, "Marges intérieures sur mobile", { owner: owner, inherit: { padTop: b.padTop != null ? b.padTop : "idem", padBottom: b.padBottom != null ? b.padBottom : "idem", padLeft: b.padLeft != null ? b.padLeft : "idem", padRight: b.padRight != null ? b.padRight : "idem" }, hint: "Vide (« idem ») = même valeur que sur ordinateur." })]));
+    out.push(F.section("", [el("p", { "class": "mk-fx-hint" }, "Le canevas est passé en vue « Mobile » pour montrer le rendu réel. Outlook sur ordinateur ignore ces réglages et garde ceux de l'ordinateur.")]));
+    return out;
+  }
+  // « Mêmes styles pour ordinateur et mobiles » (par défaut) ; sinon Ordinateur | Mobile
   var stylesDevice = "desktop";
   function setCanvasDevice(dev) {
     var b = document.querySelector(dev === "mobile" ? '[data-size="375"]' : '[data-size][data-tip="Bureau"]');
@@ -741,8 +721,8 @@
   }
   function deviceSwitch(block) {
     var nodes = [];
-    var same = el("input", { type: "checkbox", id: "f-" + block.id + "-samestyles" });
-    same.checked = !block.mobile; if (readOnly) same.disabled = true;
+    var same = el("input", { type: "checkbox", id: "f-" + block.id + "-samestyles", "class": "mk-fx-switch" });
+    same.checked = !block.mobile; same.disabled = readOnly;
     same.addEventListener("change", function () {
       if (same.checked) {
         var filled = block.mobile && Object.keys(block.mobile).some(function (k) { return block.mobile[k] !== undefined && block.mobile[k] !== ""; });
@@ -752,135 +732,90 @@
       changed(true); renderProps();
       announce(same.checked ? "Mêmes styles sur ordinateur et mobile." : "Styles distincts : choisissez Ordinateur ou Mobile.");
     });
-    var lab = el("label", { "class": "checkbox-row mk-b-same", "for": same.id }); lab.appendChild(same); lab.appendChild(document.createTextNode(" Mêmes styles pour ordinateur et mobiles"));
+    var lab = el("label", { "class": "mk-fx-toggle mk-b-same", "for": same.id }); lab.appendChild(same); lab.appendChild(el("span", {}, "Mêmes styles pour ordinateur et mobiles"));
     nodes.push(lab);
-    if (block.mobile) nodes.push(segmentField("Appareil modifié", [["desktop", "Ordinateur"], ["mobile", "Mobile"]], stylesDevice, function (v) { stylesDevice = v; setCanvasDevice(v); renderProps(); }, block.id + "-device"));
-    return { title: "", nodes: nodes, cls: "mk-b-devicebar" };
+    if (block.mobile) nodes.push(F.segment({ d: stylesDevice }, "d", "Appareil modifié", [["desktop", "Ordinateur"], ["mobile", "Mobile"]], { owner: block.id + "-device", fallback: "desktop", onPick: function (v) { stylesDevice = v; setCanvasDevice(v); setTimeout(renderProps, 0); } }));
+    return F.section("", nodes, { cls: "mk-b-devicebar" });
   }
-  // Onglet Visibilité : ordinateur / mobile (au moins l'un des deux), envoi du bloc, condition sur le contact
+  // Onglet Visibilité : appareils (au moins un), envoi, condition sur le contact
   function visibilitySections(block) {
     block.box = block.box || {};
-    var box = block.box;
-    var devs = el("div", { "class": "field-group mk-b-devices", role: "group", "aria-label": "Afficher selon l'appareil" });
-    var hint = el("p", { "class": "field-hint", "aria-live": "polite" });
-    [["hideDesktop", "Afficher sur ordinateur"], ["hideMobile", "Afficher sur mobile"]].forEach(function (d) {
-      var input = el("input", { type: "checkbox", id: "f-" + block.id + "-show-" + d[0] });
-      input.checked = !box[d[0]]; if (readOnly) input.disabled = true;
-      input.addEventListener("change", function () {
-        var other = d[0] === "hideMobile" ? "hideDesktop" : "hideMobile";
-        if (!input.checked && box[other]) { input.checked = true; hint.textContent = "Un bloc s'affiche au moins sur un appareil. Pour ne l'envoyer à personne, utilisez « Envoyer ce bloc » ci-dessous."; return; }
-        hint.textContent = "";
-        box[d[0]] = input.checked ? undefined : true;
-        changed(true);
-        announce(d[1].replace("Afficher", input.checked ? "Affiché" : "Masqué"));
-      });
-      var lab = el("label", { "class": "checkbox-row", "for": input.id }); lab.appendChild(input); lab.appendChild(document.createTextNode(" " + d[1]));
-      devs.appendChild(lab);
-    });
-    var send = el("input", { type: "checkbox", id: "f-" + block.id + "-send" });
-    send.checked = !block.hidden; if (readOnly) send.disabled = true;
+    var box = block.box, msg = el("p", { "class": "mk-fx-error", role: "alert" });
+    var guard = function (key) { return function (hidden, input) { var other = key === "hideMobile" ? "hideDesktop" : "hideMobile"; if (hidden && box[other]) { input.checked = true; msg.textContent = "Un bloc s'affiche au moins sur un appareil. Pour ne l'envoyer à personne, décochez « Envoyer ce bloc »."; return false; } msg.textContent = ""; return true; }; };
+    var send = el("input", { type: "checkbox", id: "f-" + block.id + "-send", "class": "mk-fx-switch" });
+    send.checked = !block.hidden; send.disabled = readOnly;
     send.addEventListener("change", function () { if (send.checked === !block.hidden) return; toggleHidden(block.id); });
-    var sendLab = el("label", { "class": "checkbox-row", "for": send.id }); sendLab.appendChild(send); sendLab.appendChild(document.createTextNode(" Envoyer ce bloc"));
+    var sendLab = el("label", { "class": "mk-fx-toggle", "for": send.id }); sendLab.appendChild(send); sendLab.appendChild(el("span", {}, "Envoyer ce bloc"));
     return [
-      { title: "Appareils", nodes: [devs, hint, el("p", { "class": "field-hint" }, "Vérifiez le résultat avec les vues « Ordinateur » et « Mobile » du canevas.")] },
-      { title: "Envoi", nodes: [sendLab, el("p", { "class": "field-hint" }, "Décoché : le bloc reste dans le modèle (estompé) mais n'est jamais envoyé.")] },
-      { title: "Condition sur le contact", nodes: [textField(block, "showIf", "Afficher ce bloc seulement si…", { max: 200, placeholder: "contact.country == \"FR\"", hint: "Ex. : contact.country == \"FR\" · contact.company · not contact.company. Vide = tous les contacts." })] },
+      F.section("Appareils", [F.toggle(box, "hideDesktop", "Afficher sur ordinateur", { owner: block.id + "-show", invert: true, structural: true, guard: guard("hideDesktop") }),
+        F.toggle(box, "hideMobile", "Afficher sur mobile", { owner: block.id + "-show", invert: true, structural: true, guard: guard("hideMobile") }), msg,
+        el("p", { "class": "mk-fx-hint" }, "Vérifiez le résultat avec les vues « Bureau » et « Mobile » du canevas.")]),
+      F.section("Envoi", [sendLab, el("p", { "class": "mk-fx-hint" }, "Décoché : le bloc reste dans le modèle (estompé) mais n'est jamais envoyé.")]),
+      F.section("Condition sur le contact", [F.text(block, "showIf", "Afficher ce bloc seulement si…", { owner: block.id, max: 200, placeholder: "contact.country == \"FR\"", hint: "Ex. : contact.country == \"FR\" · contact.company · not contact.company. Vide = tous les contacts." })]),
     ];
   }
-  // Réglages d'un bloc par onglet : content / styles (ordinateur) ; visibilité et mobile sont communs
-  function blockSections(block) {
-    var out = { content: [], styles: [] };
-    function sec(tab, title, nodes) { out[tab].push({ title: title, nodes: nodes.filter(Boolean) }); }
-    var t = block.type;
-    if (t === "heading") {
-      sec("content", "Titre", [textField(block, "text", "Texte du titre", { vars: true, max: 200 }), segmentField("Niveau", [[1, "Grand"], [2, "Moyen"], [3, "Petit"]], block.level || 2, function (v) { block.level = v; changed(); }, block.id + "-level")]);
-      sec("content", "Lien (facultatif)", [textField(block, "href", "Adresse au clic (https://… ou mailto:)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
-      sec("styles", "Typographie", [fontField(block), optNumberField(block, "fontSize", "Taille (px, 16 à 44)", 16, 44, "auto"), optColorField(block, "color", "Couleur personnalisée", state.theme.textColor || "#10222f"), alignField(block, "align", "left", block.id)].concat(emphasisFields(block, true)));
-    } else if (t === "text") {
-      if (typeof block.html === "string") {
-        var write = el("button", { type: "button", "class": "btn btn-primary btn-sm mk-b-write" });
-        write.appendChild(iconSpan("edit")); write.appendChild(document.createTextNode(" Écrire dans l'e-mail"));
-        write.disabled = readOnly;
-        write.addEventListener("click", function () { scrollToBlock(block.id); startInline(block.id); });
-        sec("content", "Texte", [el("p", { "class": "field-hint mk-b-writehint" }, "Le texte s'écrit directement dans l'e-mail : cliquez dedans. La barre d'outils au-dessus du canevas le met en forme (style, police, taille, gras, couleurs, liens, alignement, listes, retrait, variables)."), write]);
-      } else sec("content", "Texte", [markdownField(block, "markdown", "Texte", 8)]);
-      sec("styles", "Typographie", [fontField(block), optNumberField(block, "fontSize", "Taille de base (px, 12 à 28)", 12, 28, "16"), lineHeightField(block), optColorField(block, "color", "Couleur du texte personnalisée", state.theme.textColor || "#10222f"), alignField(block, "align", "left", block.id, "Alignement du bloc"), optNumberField(block, "letterSpacing", "Espacement des lettres (px, 0 à 10)", 0, 10, "0")]);
-    } else if (t === "image") {
-      sec("content", "Image", [imageSource(block), textField(block, "src", "Adresse de l'image (https://…)", { max: 2000, placeholder: "https://exemple.fr/image.png" }),
-        textField(block, "alt", "Texte alternatif", { vars: true, max: 200, hint: "Décrit l'image aux lecteurs d'écran et quand l'image est bloquée." }), checkField(block, "decorative", "Image décorative (pas de texte alternatif)")]);
-      sec("content", "Lien au clic (facultatif)", [textField(block, "href", "Adresse (https://…)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
-      sec("styles", "Dimensions", [numberField(block, "width", "Largeur (px, 40 à 720)", 40, 720), alignField(block, "align", "left", block.id), optNumberField(block, "radius", "Arrondi des coins (px, 0 à 40)", 0, 40, "0")]);
-    } else if (t === "button") {
-      sec("content", "Bouton", [textField(block, "label", "Texte du bouton", { vars: true, max: 80 }), textField(block, "url", "Lien (https://… ou mailto:)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
-      var r = block.radius == null ? (state.theme.radius != null ? state.theme.radius : 4) : block.radius;
-      var shape = (SHAPES.filter(function (x) { return x[2] === r; })[0] || ["custom"])[0];
-      var shapeNodes = [segmentField("Coins du bouton", SHAPES.map(function (x) { return [x[0], x[1]]; }).concat([["custom", "Personnalisé"]]), shape, function (v) {
-        var f = SHAPES.filter(function (x) { return x[0] === v; })[0];
-        if (f) block.radius = f[2]; else if (block.radius == null) block.radius = r;
-        changed(); renderProps();
-      }, block.id + "-shape")];
-      if (shape === "custom") shapeNodes.push(optNumberField(block, "radius", "Arrondi (px, 0 à 40)", 0, 40, String(r)));
-      sec("styles", "Forme", shapeNodes);
-      sec("styles", "Couleurs", [colorField(block), optColorField(block, "textColor", "Couleur du texte personnalisée (sinon automatique, lisible)", "#ffffff")]);
-      var bNodes = [segmentField("Style de bordure", BORDER_STYLES, block.borderStyle || "none", function (v) { block.borderStyle = v; changed(); renderProps(); }, block.id + "-btnborder")];
-      if (block.borderStyle && block.borderStyle !== "none") bNodes.push(optNumberField(block, "borderWidth", "Épaisseur (px, 1 à 8)", 1, 8, "2"), optColorField(block, "borderColor", "Couleur de la bordure", "#10222f"));
-      sec("styles", "Bordure du bouton", bNodes);
-      sec("styles", "Texte", [optNumberField(block, "fontSize", "Taille du texte (px, 12 à 24)", 12, 24, "16")].concat(emphasisFields(block, true)));
-      sec("styles", "Taille et position", [segmentField("Taille", [["s", "Petit"], ["m", "Moyen"], ["l", "Grand"]], block.size || "m", function (v) { block.size = v; changed(); }, block.id + "-size"), checkField(block, "fullWidth", "Toute la largeur"), alignField(block, "align", "center", block.id)]);
-    } else if (t === "spacer") {
-      sec("content", "Espace", [numberField(block, "height", "Hauteur (px, 4 à 120)", 4, 120)]);
-    } else if (t === "columns") {
-      var richCols = typeof block.leftHtml === "string";
-      sec("content", "Colonne de gauche", [richCols ? richField(block, "leftHtml", "Colonne de gauche", { rows: 4, hint: false }) : markdownField(block, "left", "Colonne de gauche", 5)]);
-      sec("content", "Colonne de droite", [richCols ? richField(block, "rightHtml", "Colonne de droite", { rows: 4, hint: false }) : markdownField(block, "right", "Colonne de droite", 5)]);
-      var stackBox = checkField(block, "stack", "Empiler les colonnes sur mobile");
-      var stackInput = stackBox.querySelector("input"); stackInput.checked = block.stack !== false;
-      stackInput.addEventListener("change", function () { block.stack = stackInput.checked ? undefined : false; if (!stackInput.checked) block.reverse = undefined; renderProps(); });
-      var revBox = checkField(block, "reverse", "Sur mobile : colonne de droite en premier");
-      if (block.stack === false) revBox.querySelector("input").disabled = true;
-      sec("styles", "Mise en page", [selectField(block, "ratio", "Largeurs (gauche / droite)", [["50-50", "50 % / 50 %"], ["60-40", "60 % / 40 %"], ["40-60", "40 % / 60 %"], ["70-30", "70 % / 30 %"], ["30-70", "30 % / 70 %"]], "50-50"), stackBox, revBox]);
-    } else if (t === "divider") {
-      sec("content", "Ligne de séparation", [el("p", { "class": "field-hint" }, "Une ligne horizontale entre deux parties du message : son apparence se règle dans l'onglet « Styles ».")]);
-      sec("styles", "Ligne", [
-        segmentField("Style", BORDER_STYLES.slice(1), block.style || "solid", function (v) { block.style = v; changed(); }, block.id + "-dstyle"),
-        optNumberField(block, "thickness", "Épaisseur (px, 1 à 8)", 1, 8, "1"), optNumberField(block, "width", "Largeur (%, 10 à 100)", 10, 100, "100"),
-        optColorField(block, "color", "Couleur personnalisée (sinon couleur secondaire)", state.theme.secondary || "#d5e3ee"), alignField(block, "align", "center", block.id)]);
-    } else if (t === "quote") {
-      sec("content", "Citation", [textField(block, "text", "Citation", { vars: true, max: 500 }), textField(block, "author", "Auteur (facultatif)", { vars: true, max: 100 })]);
-    } else if (t === "list") {
-      sec("content", "Liste", [itemsField(block)]);
-      sec("styles", "Liste", [segmentField("Style", LIST_STYLES, block.style || "bullets", function (v) { block.style = v; changed(); }, block.id + "-lstyle")]);
-    } else if (t === "social") {
-      sec("content", "Réseaux", [socialField(block)]);
-      var sNodes = [segmentField("Présentation", [["text", "Liens texte"], ["buttons", "Pastilles"]], block.display || "text", function (v) { block.display = v; changed(); renderProps(); }, block.id + "-sdisplay")];
-      if (block.display === "buttons") sNodes.push(segmentField("Couleur des pastilles", [["brand", "Couleurs des réseaux"], ["accent", "Couleur principale"]], block.colors === "accent" ? "accent" : "brand", function (v) { block.colors = v; changed(); }, block.id + "-scolors"));
-      sNodes.push(alignField(block, "align", "center", block.id));
-      sNodes.push(el("p", { "class": "field-hint" }, "Les logos des réseaux ne sont pas utilisés : Gmail et Outlook bloquent souvent les images d'icônes ; les pastilles de couleur s'affichent partout."));
-      sec("styles", "Présentation", sNodes);
-    } else if (t === "video") {
-      sec("content", "Vidéo", [textField(block, "url", "Adresse de la vidéo (https://…)", { max: 2000, placeholder: "https://youtube.com/watch?v=…" }), textField(block, "title", "Titre de la vidéo (texte alternatif)", { vars: true, max: 200 }),
-        textField(block, "thumbnail", "Miniature (adresse d'une image https://…, facultatif)", { max: 2000, placeholder: "https://exemple.fr/miniature.jpg" }),
-        el("p", { "class": "field-hint" }, "Un e-mail ne peut pas lire de vidéo : le message affiche la miniature et un lien « Regarder la vidéo ».")]);
-      sec("styles", "Dimensions", [numberField(block, "width", "Largeur de la miniature (px, 40 à 600)", 40, 600), alignField(block, "align", "center", block.id)]);
-    } else if (t === "course") {
-      sec("content", "Formation", courseField(block));
-    } else if (t === "link") {
-      sec("content", "Lien", [textField(block, "label", "Texte du lien", { vars: true, max: 120 }), textField(block, "url", "Adresse (https://… ou mailto:)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
-      sec("styles", "Position", [alignField(block, "align", "left", block.id)]);
-    } else if (t === "coupon") {
-      sec("content", "Offre", [textField(block, "code", "Code promo", { vars: true, max: 40, placeholder: "BIENVENUE10" }), textField(block, "title", "Titre de l'offre (facultatif)", { vars: true, max: 100 }), textField(block, "details", "Conditions (facultatif)", { vars: true, max: 300, placeholder: "Valable jusqu'au 30 septembre." })]);
-      sec("styles", "Couleur", [optColorField(block, "color", "Couleur personnalisée (sinon couleur principale)", state.theme.accent || "#0277b6")]);
-    }
-    return out;
+  // Onglet Avancé : identifiant, réglages personnalisés (chacun réinitialisable), réinitialisation complète
+  var CONTENT_KEYS = ["id", "type", "text", "html", "markdown", "label", "url", "href", "newTab", "src", "alt", "decorative", "items", "links", "code", "title", "details", "author", "courseId", "cta", "snapshot", "refresh", "leftHtml", "rightHtml", "left", "right", "level", "thumbnail", "showIf", "hidden", "box", "mobile"];
+  var STYLE_LABELS = { font: "Police", fontSize: "Taille du texte", lineHeight: "Interligne", color: "Couleur", align: "Alignement", weight: "Graisse", italic: "Italique", letterSpacing: "Espacement des lettres", textColor: "Couleur du texte", radius: "Arrondi", size: "Taille du bouton", fullWidth: "Toute la largeur", borderStyle: "Bordure du bouton", borderWidth: "Épaisseur de la bordure", borderColor: "Couleur de la bordure", style: "Style", thickness: "Épaisseur", width: "Largeur", height: "Hauteur", ratio: "Répartition des colonnes", stack: "Empilement sur mobile", reverse: "Ordre sur mobile", display: "Présentation", colors: "Couleur des pastilles" };
+  var BOX_LABELS = { padTop: "Espacement (haut)", padBottom: "Espacement (bas)", padLeft: "Espacement (gauche)", padRight: "Espacement (droite)", background: "Fond", border: "Bordure du bloc" };
+  // Valeurs par défaut enregistrées d'office par le serveur : ce ne sont pas des réglages personnalisés
+  var TYPE_DEFAULTS = { heading: { align: "left" }, button: { align: "center" }, image: { align: "left", width: 552 }, link: { align: "left" }, social: { align: "center" }, list: { style: "bullets" }, video: { align: "center", width: 552 }, spacer: { height: 24 } };
+  var VALUE_LABELS = { left: "À gauche", center: "Centré", right: "À droite", normal: "Normale", bold: "Grasse", s: "Petit", m: "Moyen", l: "Grand", solid: "Pleine", dashed: "Tirets", dotted: "Pointillés", bullets: "Puces", numbers: "Numéros", checks: "Coches", text: "Liens texte", buttons: "Pastilles", accent: "Couleur principale" };
+  var PX_KEYS = ["fontSize", "letterSpacing", "radius", "borderWidth", "thickness", "height", "padTop", "padBottom", "padLeft", "padRight"];
+  function fmt(k, v, type) {
+    if (v === true) return "Oui";
+    if (v === false) return k === "stack" ? "Non (côte à côte)" : "Non";
+    if (typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v)) return v.toUpperCase();
+    if (k === "font") return FONT_LABELS[v] || v;
+    if (k === "width") return v + (type === "divider" ? " %" : " px");
+    if (k === "lineHeight") return String(v).replace(".", ",");
+    if (PX_KEYS.indexOf(k) !== -1) return v + " px";
+    return VALUE_LABELS[v] || String(v);
   }
-  // Sections de l'onglet demandé (les styles mobiles remplacent ceux de l'ordinateur quand « Mobile » est choisi)
+  function overrides(block) {
+    var list = [], defs = TYPE_DEFAULTS[block.type] || {};
+    Object.keys(block).forEach(function (k) { if (CONTENT_KEYS.indexOf(k) === -1 && block[k] != null && block[k] !== "" && defs[k] !== block[k]) list.push({ label: STYLE_LABELS[k] || k, value: fmt(k, block[k], block.type), reset: function () { delete block[k]; } }); });
+    var box = block.box || {};
+    Object.keys(BOX_LABELS).forEach(function (k) { var v = box[k]; if (v == null || (k === "border" && !Object.keys(v).some(function (x) { return v[x] != null; }))) return; list.push({ label: BOX_LABELS[k], value: k === "border" ? [v.style && VALUE_LABELS[v.style], v.width && v.width + " px", v.color && v.color.toUpperCase(), v.radius && "arrondi " + v.radius + " px"].filter(Boolean).join(", ") : fmt(k, v), reset: function () { delete box[k]; } }); });
+    if (block.mobile && Object.keys(block.mobile).some(function (x) { return block.mobile[x] != null; })) list.push({ label: "Réglages mobiles", value: Object.keys(block.mobile).filter(function (x) { return block.mobile[x] != null; }).length + " réglage(s)", reset: function () { block.mobile = undefined; } });
+    return list;
+  }
+  function advancedSections(block) {
+    var idInput = el("input", { type: "text", id: "f-" + block.id + "-blockid", readonly: "readonly" }); idInput.value = block.id;
+    var copy = el("button", { type: "button", "class": "btn btn-outline btn-sm" }, "Copier");
+    copy.addEventListener("click", function () { (navigator.clipboard ? navigator.clipboard.writeText(block.id) : Promise.reject()).then(function () { toast("Identifiant copié.", "ok"); }, function () { idInput.select(); }); });
+    var idRow = el("div", { "class": "mk-fx-copy" }); idRow.appendChild(idInput); idRow.appendChild(copy);
+    var list = overrides(block), nodes = [];
+    if (!list.length) nodes.push(el("p", { "class": "mk-fx-hint" }, "Aucun réglage personnalisé : ce bloc suit entièrement les styles globaux du message."));
+    else {
+      var ul = el("ul", { "class": "mk-fx-overrides" });
+      list.forEach(function (it) {
+        var li = el("li", {});
+        li.appendChild(el("span", { "class": "mk-fx-ov-label" }, it.label));
+        li.appendChild(el("span", { "class": "mk-fx-ov-value" }, it.value));
+        if (!readOnly) { var r = el("button", { type: "button", "class": "mk-fx-reset", "aria-label": it.label + " : revenir à la valeur globale" }, "Réinitialiser"); r.addEventListener("click", function () { it.reset(); changed(true); renderProps(); announce(it.label + " : valeur globale rétablie."); }); li.appendChild(r); }
+        ul.appendChild(li);
+      });
+      nodes.push(ul);
+      if (!readOnly) {
+        var all = el("button", { type: "button", "class": "btn btn-outline btn-sm" }, "Réinitialiser tous les styles du bloc");
+        all.addEventListener("click", function () {
+          if (!window.confirm("Tous les styles personnalisés de ce bloc reviendront aux styles globaux (le contenu est conservé ; Ctrl+Z pour annuler).")) return;
+          list.forEach(function (it) { it.reset(); }); changed(true); renderProps(); announce("Styles du bloc réinitialisés.");
+        });
+        nodes.push(all);
+      }
+    }
+    return [F.section("Identifiant du bloc", [F.field("Identifiant (lecture seule)", idRow, { hint: "Repère technique unique du bloc dans ce modèle (conservé à l'enregistrement)." })]), F.section("Réglages personnalisés", nodes)];
+  }
+  // Sections de l'onglet demandé
   function tabSections(block, tab) {
+    if (tab === "content") return contentSections(block);
     if (tab === "visibility") return visibilitySections(block);
-    var all = blockSections(block);
-    if (tab === "content") return all.content;
+    if (tab === "advanced") return advancedSections(block);
     var list = [deviceSwitch(block)];
     if (block.mobile && stylesDevice === "mobile") return list.concat(mobileSections(block));
-    return list.concat(all.styles, boxSections(block));
+    return list.concat(styleSections(block));
   }
 
   // ---------- Opérations sur les blocs ----------
@@ -997,7 +932,7 @@
       props.appendChild(alertBox);
     }
     // Onglets Contenu / Styles / Visibilité (l'onglet choisi reste actif d'un bloc à l'autre)
-    var TABS = [["content", "Contenu"], ["styles", "Styles"], ["visibility", "Visibilité"]];
+    var TABS = [["content", "Contenu"], ["styles", "Styles"], ["visibility", "Visibilité"], ["advanced", "Avancé"]];
     var tabs = el("div", { "class": "mk-ptabs", role: "tablist", "aria-label": "Réglages du bloc" });
     var panel = el("div", { "class": "mk-b-props-body", role: "tabpanel", id: "mk-props-panel", "aria-labelledby": "mk-tab-" + propsTab, tabindex: "0" });
     TABS.forEach(function (t, i) {
@@ -1021,7 +956,6 @@
       sct.nodes.forEach(function (n) { box.appendChild(n); });
       panel.appendChild(box);
     });
-    if (propsTab === "styles" && !readOnly && blockSections(block).styles.length === 0 && !block.mobile) panel.appendChild(el("p", { "class": "field-hint mk-b-tabnote" }, "Ce bloc reprend les styles globaux du message (onglet « Styles » à gauche) ; ses marges, son fond et sa bordure se règlent ci-dessus."));
     props.appendChild(panel);
     if (toolbar) toolbar.render();
   }
