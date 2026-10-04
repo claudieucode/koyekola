@@ -185,8 +185,14 @@
   let colors = { ...data.prefs.colors };
   const state = app.querySelector("[data-save-state]");
   const HEX = /^#[0-9a-f]{6}$/i;
-  const isDark = (hex) => { const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] < 0.22; };
-  // Même calcul que le serveur (src/services/dashboard.js#tokens) : l'aperçu est exactement ce qui sera enregistré
+  // Même calcul que le serveur (src/services/dashboard.js#tokens), contrastes garantis compris : l'aperçu est exactement ce qui sera enregistré
+  const lum = (hex) => { const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const isDark = (hex) => lum(hex) < 0.22;
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const hex2 = (n) => Math.round(Math.max(0, Math.min(255, n))).toString(16).padStart(2, "0");
+  const mixHex = (a, b, t) => `#${[1, 3, 5].map((i) => hex2(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t)).join("")}`;
+  const ensure = (fg, bg, min = 4.5) => { if (ratio(fg, bg) >= min) return fg; const order = isDark(bg) ? ["#ffffff", "#000000"] : ["#000000", "#ffffff"]; for (const target of order) for (let t = 0.05; t <= 1.001; t += 0.05) { const c = mixHex(fg, target, t); if (ratio(c, bg) >= min) return c; } return ratio("#ffffff", bg) >= ratio("#000000", bg) ? "#ffffff" : "#000000"; };
+  const fill = (color) => { const text = isDark(color) || lum(color) < 0.45 ? "#ffffff" : "#102a3a"; if (ratio(color, text) >= 4.5) return { bg: color, text }; return { bg: text === "#ffffff" ? ensure(color, "#ffffff", 4.6) : ensure(color, "#102a3a", 4.6), text }; };
   const tokens = () => {
     const base = { ...(theme === "perso" ? data.themes.clair : data.themes[theme] || data.themes.clair) };
     if (theme === "perso") {
@@ -197,9 +203,29 @@
       if (colors.button) base.button = colors.button;
       base.accent = colors.accent || base.primary;
     }
+    // Cartes et fond de luminosités opposées (couleurs personnalisées) : aucun texte ne pourrait être lisible sur les deux ;
+    // le fond est alors rapproché de la luminosité des cartes, juste assez pour qu'un texte convienne partout.
+    const both = (c) => ratio(c, base.card) >= 4.5 && ratio(c, base.bg) >= 4.5;
+    // Carte trop « moyenne » (ni claire ni foncée) : légèrement accentuée pour qu'un texte reste possible
+    for (let t = 0.1; t <= 1.001 && ratio("#ffffff", base.card) < 4.8 && ratio("#000000", base.card) < 4.8; t += 0.1) base.card = mixHex(base.card, isDark(base.card) ? "#000000" : "#ffffff", t);
+    for (let t = 0.1; t <= 1.001 && !both("#ffffff") && !both("#000000"); t += 0.1) base.bg = mixHex(base.bg, ratio("#000000", base.card) >= ratio("#ffffff", base.card) ? "#ffffff" : "#000000", t);
     const accent = base.accent || base.primary;
     const sd = isDark(base.sidebar);
-    return { "--dash-bg": base.bg, "--dash-card": base.card, "--dash-text": base.text, "--dash-muted": base.muted, "--dash-border": base.border, "--dash-sidebar": base.sidebar, "--dash-sidebar-text": base.sidebarText, "--dash-primary": base.primary, "--dash-accent": accent, "--dash-button": base.button, "--dash-button-text": isDark(base.button) ? "#ffffff" : "#102a3a", "--dash-hover": sd ? "rgba(255, 255, 255, 0.07)" : "rgba(15, 40, 60, 0.06)", "--dash-active-bg": sd ? "rgba(255, 255, 255, 0.12)" : `${accent}1a`, "--dash-active-text": sd ? "#ffffff" : accent, ...(isDark(base.card) ? { "--dash-success": "#4ade80", "--dash-warning": "#fbbf24", "--dash-danger": "#f87171" } : { "--dash-success": "#15803d", "--dash-warning": "#b45309", "--dash-danger": "#c2410c" }) };
+    const accentFill = fill(accent);
+    const button = fill(base.button);
+    // Texte posé sur une carte, sur le fond, et sur une pastille teintée de sa propre couleur (14 %) : la couleur la plus
+    // proche de celle voulue qui est lisible sur TOUS ces fonds à la fois (éclaircie ou foncée selon ce qui fonctionne)
+    const textOn = (c) => {
+      const bgs = [base.card, base.bg, mixHex(base.card, c, 0.14), mixHex(base.card, base.text, 0.06)];
+      const ok = (x) => bgs.every((b) => ratio(x, b) >= 4.5);
+      if (ok(c)) return c;
+      const order = ratio("#ffffff", base.card) >= ratio("#000000", base.card) ? ["#ffffff", "#000000"] : ["#000000", "#ffffff"];
+      for (let t = 0.05; t <= 1.001; t += 0.05) for (const target of order) { const x = mixHex(c, target, t); if (ok(x)) return x; }
+      return order.find(ok) || order[0];
+    };
+    const activeBg = sd ? mixHex(base.sidebar, "#ffffff", 0.12) : mixHex(base.sidebar, accent, 0.1);
+    const st = isDark(base.card) ? { success: "#4ade80", warning: "#fbbf24", danger: "#f87171" } : { success: "#166534", warning: "#92400e", danger: "#b42318" };
+    return { "--dash-bg": base.bg, "--dash-card": base.card, "--dash-text": textOn(base.text), "--dash-muted": textOn(base.muted), "--dash-border": base.border, "--dash-sidebar": base.sidebar, "--dash-sidebar-text": ensure(base.sidebarText, base.sidebar), "--dash-primary": base.primary, "--dash-accent": accentFill.bg, "--dash-accent-on": accentFill.text, "--dash-accent-text": textOn(accent), "--dash-button": button.bg, "--dash-button-text": button.text, "--dash-hover": sd ? "rgba(255, 255, 255, 0.07)" : "rgba(15, 40, 60, 0.06)", "--dash-active-bg": activeBg, "--dash-active-text": ensure(sd ? "#ffffff" : accent, activeBg), "--dash-success": textOn(st.success), "--dash-warning": textOn(st.warning), "--dash-danger": textOn(st.danger) };
   };
   const apply = () => {
     for (const [k, v] of Object.entries(tokens())) dash.style.setProperty(k, v);

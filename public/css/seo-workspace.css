@@ -9,7 +9,8 @@
   --seo-sidebar: var(--dash-sidebar);
   --seo-card: var(--dash-card);
   --seo-primary: var(--dash-primary);
-  --seo-accent: var(--dash-accent);
+  --seo-accent: var(--dash-accent-text);   /* texte et icônes d'accent */
+  --seo-accent-fill: var(--dash-accent);   /* fonds pleins d'accent (texte --dash-accent-on dessus) */
   --seo-text: var(--dash-text);
   --seo-muted: var(--dash-muted);
   --seo-border: var(--dash-border);
@@ -184,6 +185,8 @@ a.seo-cell-title:hover { color: var(--seo-accent); text-decoration: underline; }
 details.dpanel.seo-more > summary { color: var(--seo-text); font-size: 16px; font-weight: 700; }
 .dash-seo .seo-scores { margin: 0; }
 .dash-seo .seo-score { background: var(--seo-soft); color: var(--seo-text); }
+.dash-seo .seo-score.is-overall { background: var(--seo-accent-fill); color: var(--dash-accent-on); }
+.dash-seo .seo-score.is-overall .seo-score-label { color: inherit; }
 .seo-filterbar .seo-filter-form { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin-left: auto; }
 .seo-filter-form input[type="search"] { width: 200px; }
 .seo-filter-form select, .seo-filter-form input[type="search"] { width: auto; min-width: 0; padding: 7px 10px; border: 1px solid var(--seo-border); border-radius: 8px; background: var(--seo-card); color: var(--seo-text); font: inherit; font-size: 14px; }
@@ -268,7 +271,7 @@ details.dpanel.seo-more > summary { color: var(--seo-text); font-size: 16px; fon
 .seo-sort { display: inline-flex; align-items: center; gap: var(--s2); margin-left: auto; font-size: 13px; color: var(--seo-muted); }
 .seo-sort select { width: auto; padding: 6px 10px; border: 1px solid var(--seo-border); border-radius: 8px; background: var(--seo-card); color: var(--seo-text); font: inherit; font-size: 13px; }
 .dash-seo button.dash-chip { cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; }
-.dash-seo button.dash-chip[aria-pressed="true"] { background: var(--seo-accent); border-color: var(--seo-accent); color: #fff; }
+.dash-seo button.dash-chip[aria-pressed="true"] { background: var(--seo-accent-fill); border-color: var(--seo-accent-fill); color: var(--dash-accent-on); }
 
 /* ---------- Tâches programmées ---------- */
 .dash-seo .seo-jobs { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--s4); }
@@ -318,7 +321,7 @@ details.dpanel.seo-more > summary { color: var(--seo-text); font-size: 16px; fon
 .seo-settings-nav { position: sticky; top: var(--s4); display: grid; gap: 2px; }
 .seo-settings-nav a { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; color: var(--seo-muted); font-size: 14px; font-weight: 600; text-decoration: none; }
 .seo-settings-nav a:hover { background: var(--seo-soft); color: var(--seo-text); }
-.seo-settings-nav a[aria-current="true"] { background: color-mix(in srgb, var(--seo-accent) 12%, transparent); color: var(--seo-accent); }
+.seo-settings-nav a[aria-current="true"] { background: color-mix(in srgb, var(--seo-accent) 10%, var(--seo-card)); color: var(--seo-accent); }
 .seo-dot-error { width: 8px; height: 8px; margin-left: auto; border-radius: 50%; background: var(--seo-danger); }
 .seo-settings.is-tabbed .seo-settings-panel { display: none; }
 .seo-settings.is-tabbed .seo-settings-panel.is-active { display: block; }
