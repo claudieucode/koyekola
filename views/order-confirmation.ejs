@@ -12,6 +12,9 @@
           <span><%= formatPrice(item.price_cents) %></span>
         </div>
       <% }) %>
+      <% if (order.discount_cents) { %>
+        <div class="order-item-row"><span>Code promo « <%= order.coupon_code %> »</span><span>− <%= formatPrice(order.discount_cents) %></span></div>
+      <% } %>
       <div class="order-item-row" style="border-bottom:none;font-weight:800;">
         <span>Total payé</span>
         <span><%= formatPrice(order.total_cents) %></span>

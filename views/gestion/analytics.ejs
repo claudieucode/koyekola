@@ -1,0 +1,47 @@
+<%- include("../partials/header", { title }) %>
+<%- include("_head", { heading: "Analytics", subtitle: `Du ${new Date(period.fromYmd + "T12:00:00Z").toLocaleDateString("fr-FR", { dateStyle: "long", timeZone: "UTC" })} au ${new Date(period.toYmd + "T12:00:00Z").toLocaleDateString("fr-FR", { dateStyle: "long", timeZone: "UTC" })} (heure de Paris)` }) %>
+<% const R = report, K = R.kpis; const unitLabel = { day: "Jour", week: "Semaine du", month: "Mois" }[R.unit]; %>
+<nav class="dash-filters g-tabs" aria-label="Période">
+  <% periods.forEach(([k, label]) => { if (k === "perso") return; %><a class="dash-chip" href="/formateur/gestion/analytics?periode=<%= k %>"<%- period.key === k ? ' aria-current="page"' : "" %>><%= label %></a><% }) %>
+</nav>
+<form class="g-filters g-filters-inline" method="get" action="/formateur/gestion/analytics" aria-label="Période personnalisée">
+  <input type="hidden" name="periode" value="perso">
+  <div class="g-field"><label for="a-du">Du</label><input id="a-du" type="date" name="du" value="<%= period.key === "perso" ? period.fromYmd : "" %>" required></div>
+  <div class="g-field"><label for="a-au">Au</label><input id="a-au" type="date" name="au" value="<%= period.key === "perso" ? period.toYmd : "" %>" required></div>
+  <div class="g-filter-actions"><button type="submit" class="btn btn-outline btn-sm"<%- period.key === "perso" ? ' aria-current="true"' : "" %>>Période personnalisée</button></div>
+</form>
+<% if (period.error) { %><p class="g-flash is-error" role="alert"><%= period.error %> Période affichée : du <%= period.fromYmd %> au <%= period.toYmd %>.</p><% } %>
+
+<section class="dash-kpis g-kpis" aria-label="Indicateurs de la période">
+  <div class="kpi"><span class="kpi-label">Revenus</span><span class="kpi-value"><%= formatAmount(K.revenue) %></span><span class="kpi-trend"><%= K.discount ? `${formatAmount(K.discount)} de remises` : "Montants réellement payés" %></span></div>
+  <div class="kpi"><span class="kpi-label">Commandes</span><span class="kpi-value"><%= K.orders %></span><span class="kpi-trend"><%= K.average != null ? `Panier moyen ${formatAmount(K.average)}` : "Aucune commande" %></span></div>
+  <div class="kpi"><span class="kpi-label">Inscriptions</span><span class="kpi-value"><%= K.enrollments %></span><span class="kpi-trend"><%= K.newStudents %> nouvel(s) élève(s)</span></div>
+  <div class="kpi"><span class="kpi-label">Leçons terminées</span><span class="kpi-value"><%= K.lessons %></span><span class="kpi-trend"><%= K.reviews ? `${K.reviews} avis · ${String(K.rating).replace(".", ",")}/5` : "Aucun avis" %></span></div>
+</section>
+
+<div class="dash-grid-2 dash-section">
+  <section class="dpanel"><%- include("_bars", { caption: "Revenus", values: R.revenueSeries, labels: R.labels, unitLabel, fmt: (v) => formatAmount(v) }) %></section>
+  <section class="dpanel"><%- include("_bars", { caption: "Inscriptions", values: R.enrollSeries, labels: R.labels, unitLabel, fmt: (v) => String(v) }) %></section>
+</div>
+
+<section class="dash-section" aria-labelledby="a-courses">
+  <div class="dash-section-head"><h2 id="a-courses">Performances des formations</h2></div>
+  <% if (!R.courses.length) { %><div class="dash-empty g-state"><h3>Aucune formation</h3><p>Créez une formation pour voir ses performances.</p></div><% } else { %>
+    <div class="dtable-wrap"><table class="dtable g-table">
+      <thead><tr><th scope="col">Formation</th><th scope="col" class="g-num">Ventes</th><th scope="col" class="g-num">Revenus</th><th scope="col" class="g-num">Inscriptions</th><th scope="col" class="g-num">Élèves (total)</th><th scope="col">Progression moyenne (actuelle)</th></tr></thead>
+      <tbody><% R.courses.forEach((c) => { %><tr>
+        <td data-label="Formation"><a href="/formateur/cours/<%= c.id %>"><%= c.title %></a><% if (!c.published) { %> <span class="dash-status is-draft">Brouillon</span><% } %></td>
+        <td data-label="Ventes" class="g-num"><%= c.sales %></td><td data-label="Revenus" class="g-num"><%= formatAmount(c.revenue) %></td><td data-label="Inscriptions" class="g-num"><%= c.enrollments %></td><td data-label="Élèves" class="g-num"><%= c.students %></td>
+        <td data-label="Progression moyenne"><% if (c.avgProgress == null) { %>—<% } else { %><span class="g-progress" role="img" aria-label="<%= c.avgProgress %> %"><span style="width:<%= c.avgProgress %>%"></span></span> <%= c.avgProgress %> %<% } %></td>
+      </tr><% }) %></tbody>
+    </table></div>
+  <% } %>
+</section>
+
+<section class="dash-section dpanel g-honest" aria-labelledby="a-traffic">
+  <h2 id="a-traffic">Trafic et conversion</h2>
+  <p><strong>Données indisponibles pour une période :</strong> le site ne mesure pas les visites des pages (aucun outil de mesure d'audience n'est branché). Le taux de conversion (visiteurs → acheteurs) ne peut donc pas être calculé sans inventer de chiffres.</p>
+  <p>Seul existe un total cumulé des lectures d'articles du blog depuis leur publication : <strong><%= R.blogViews %></strong> lecture(s).</p>
+  <p><a href="/formateur/seo/integrations">Connecter une source de données (Intégrations SEO)</a></p>
+</section>
+<%- include("../partials/footer") %>

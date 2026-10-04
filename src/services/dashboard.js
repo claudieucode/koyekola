@@ -134,6 +134,9 @@ const NAV = [
     { key: "marketing", label: "Marketing", href: "/marketing", icon: "send" },
     { key: "seo", label: "SEO", href: "/formateur/seo", icon: "search" },
   ] },
+  { group: "Gestion", items: [
+    { key: "gestion", label: "Centre de gestion", href: "/formateur/gestion", icon: "barChart", badge: "notifications" },
+  ] },
   { group: "Site", items: [
     { key: "faq", label: "FAQ", href: "/formateur/faq", icon: "help" },
     { key: "about", label: "Page À propos", href: "/formateur/pages/a-propos", icon: "info" },
@@ -163,6 +166,25 @@ const SEO_NAV = [
     { key: "seo-appearance", label: "Apparence", href: "/formateur/seo/apparence", icon: "palette" },
   ] },
 ];
+// Navigation interne du Centre de gestion (un seul élément dans « Mon espace », tout le reste ici)
+const GESTION_NAV = [
+  { group: "Centre de gestion", items: [
+    { key: "g-overview", label: "Vue d'ensemble", href: "/formateur/gestion", icon: "layout" },
+    { key: "g-ventes", label: "Ventes", href: "/formateur/gestion/ventes", icon: "coin" },
+    { key: "g-eleves", label: "Élèves", href: "/formateur/gestion/eleves", icon: "users" },
+    { key: "g-analytics", label: "Analytics", href: "/formateur/gestion/analytics", icon: "barChart" },
+    { key: "g-ressources", label: "Ressources", href: "/formateur/gestion/ressources", icon: "image" },
+    { key: "g-activite", label: "Activité", href: "/formateur/gestion/activite", icon: "bell", badge: "notifications" },
+  ] },
+];
+const isGestionPath = (path) => /^\/formateur\/gestion(\/|$)/.test(path);
+function gestionActiveKey(path) {
+  const m = /^\/formateur\/gestion\/([a-z]+)/.exec(path);
+  return m && GESTION_NAV[0].items.some((i) => i.key === `g-${m[1]}`) ? `g-${m[1]}` : "g-overview";
+}
+// Sous-rubriques des Ventes (onglets) : libellé et adresse, pour le fil d'Ariane
+const GESTION_SUB = { "/formateur/gestion/ventes/transactions": "Transactions", "/formateur/gestion/ventes/remboursements": "Remboursements", "/formateur/gestion/ventes/coupons": "Codes promo", "/formateur/gestion/ventes/commandes": "Commandes" };
+
 function seoActiveKey(path) {
   const map = [["/formateur/seo/audit", "seo-audit"], ["/formateur/seo/analyse", "seo-audit"], ["/formateur/seo/regles", "seo-audit"], ["/formateur/seo/contenus", "seo-contents"], ["/formateur/seo/redirections", "seo-redirects"], ["/formateur/seo/erreurs-404", "seo-404"], ["/formateur/seo/technique", "seo-technical"], ["/formateur/seo/integrations", "seo-integrations"], ["/formateur/seo/surveillance", "seo-monitor"], ["/formateur/seo/taches", "seo-tasks"], ["/formateur/seo/rapports", "seo-reports"], ["/formateur/seo/reglages", "seo-settings"], ["/formateur/seo/journal", "seo-journal"], ["/formateur/seo/apparence", "seo-appearance"]];
   return (map.find(([p]) => path.startsWith(p)) || [])[1] || "seo-overview";
@@ -171,6 +193,7 @@ const isSeoPath = (path) => /^\/formateur\/seo(\/|$)/.test(path);
 
 function activeKey(path) {
   if (path === "/formateur" || path === "/formateur/") return "overview";
+  if (isGestionPath(path)) return "gestion";
   if (/^\/formateur\/(formations|cours)/.test(path)) return /\/curriculum$/.test(path) ? "chapters" : "courses";
   if (/^\/formateur\/(chapitres|sections|lecons|quiz)/.test(path)) return "chapters";
   const map = [["/formateur/categories", "categories"], ["/formateur/messages", "messages"], ["/formateur/blog", "blog"], ["/formateur/seo", "seo"], ["/formateur/faq", "faq"], ["/formateur/pages", "about"], ["/formateur/apparence", "appearance"], ["/formateur/profil", "settings"]];
@@ -179,6 +202,7 @@ function activeKey(path) {
 
 // Modules qui ont leur propre navigation : la navigation générale reste visible sous forme de rail d'icônes
 const MODULES = {
+  gestion: { key: "gestion", label: "Centre de gestion", subtitle: "Ventes, élèves, activité", home: "/formateur/gestion", icon: "barChart" },
   seo: { key: "seo", label: "SEO", subtitle: "Référencement", home: "/formateur/seo", icon: "search" },
   marketing: { key: "marketing", label: "Marketing", subtitle: "E-mails, SMS, audience", home: "/marketing", icon: "send" },
 };
@@ -190,7 +214,18 @@ function crumbs(path, title) {
   const page = String(title || "").replace(/^SEO · /, "").trim();
   const here = path.replace(/\/$/, "") || "/";
   const out = [{ label: "Mon espace", href: "/formateur" }];
-  if (isSeoPath(path)) {
+  if (isGestionPath(path)) {
+    // Mon espace / Centre de gestion / Module / (Sous-rubrique) / Page
+    out.push({ label: "Centre de gestion", href: "/formateur/gestion" });
+    const key = gestionActiveKey(path);
+    const item = GESTION_NAV[0].items.find((i) => i.key === key);
+    if (key !== "g-overview") out.push({ label: item.label, href: item.href });
+    const subPath = Object.keys(GESTION_SUB).find((p) => here === p || here.startsWith(`${p}/`));
+    if (subPath && here.startsWith("/formateur/gestion/ventes/commandes/")) out.push({ label: "Commandes", href: "/formateur/gestion/ventes" });
+    else if (subPath) out.push({ label: GESTION_SUB[subPath], href: subPath });
+    const lastLabel = out[out.length - 1].label;
+    if (page && !same(page, lastLabel) && !same(page, "Centre de gestion") && here !== item.href && here !== subPath) out.push({ label: page });
+  } else if (isSeoPath(path)) {
     out.push({ label: "SEO", href: "/formateur/seo" });
     const key = seoActiveKey(path);
     const item = SEO_NAV.flatMap((g) => g.items).find((i) => i.key === key);
@@ -219,4 +254,4 @@ function stats(userId) {
   };
 }
 
-module.exports = { ratio, ensure, fill, THEMES, COLOR_KEYS, prefsOf, savePrefs, tokens, style, NAV, activeKey, SEO_NAV, seoActiveKey, isSeoPath, MODULES, crumbs, stats, cleanColors };
+module.exports = { ratio, ensure, fill, THEMES, COLOR_KEYS, prefsOf, savePrefs, tokens, style, NAV, activeKey, SEO_NAV, seoActiveKey, isSeoPath, GESTION_NAV, gestionActiveKey, isGestionPath, MODULES, crumbs, stats, cleanColors };

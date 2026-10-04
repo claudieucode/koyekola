@@ -1,0 +1,27 @@
+<%- include("../partials/header", { title }) %>
+<%- include("_head", { heading: "Activité", subtitle: "Ce qui se passe sur vos formations et sur le site." }) %>
+<nav class="dash-filters g-tabs" aria-label="Vues de l'activité">
+  <a class="dash-chip" href="/formateur/gestion/activite"<%- view === "activite" ? ' aria-current="page"' : "" %>>Activité récente</a>
+  <a class="dash-chip" href="/formateur/gestion/activite?vue=notifications"<%- view === "notifications" ? ' aria-current="page"' : "" %>>Notifications<% if (unread) { %> <span class="dash-chip-count">(<%= unread %> non lue(s))</span><% } %></a>
+  <a class="dash-chip" href="/formateur/gestion/activite?vue=alertes"<%- view === "alertes" ? ' aria-current="page"' : "" %>>Alertes <span class="dash-chip-count"><%= alerts.length %></span></a>
+</nav>
+<% if (view === "alertes") { %>
+  <% if (!alerts.length) { %><div class="dash-empty g-state"><h2>Aucune alerte</h2><p>Tout est en ordre : aucun message en attente, aucun fichier manquant, aucun code promo sur le point d'expirer.</p></div><% } else { %>
+    <ul class="g-alerts g-alerts-page"><% alerts.forEach((a) => { %><li class="<%= a.level === "error" ? "is-error" : a.level === "warning" ? "is-warning" : "" %>"><a href="<%= a.href %>"><%= a.title %></a><% if (a.detail) { %><small><%= a.detail %></small><% } %></li><% }) %></ul>
+  <% } %>
+<% } else { const F = feed; %>
+  <form class="g-filters g-filters-inline" method="get" action="/formateur/gestion/activite" aria-label="Filtrer l'activité">
+    <% if (view === "notifications") { %><input type="hidden" name="vue" value="notifications"><% } %>
+    <div class="g-field"><label for="a-type">Type</label><select id="a-type" name="type"><option value="">Tous</option><% Object.entries(types).forEach(([k, label]) => { %><option value="<%= k %>"<%= F.type === k ? " selected" : "" %>><%= label %></option><% }) %></select></div>
+    <% if (view === "notifications") { %><div class="g-field"><label for="a-etat">État</label><select id="a-etat" name="etat"><option value="">Toutes</option><option value="non-lu"<%= F.unreadOnly ? " selected" : "" %>>Non lues</option></select></div><% } %>
+    <div class="g-filter-actions"><button type="submit" class="btn btn-outline btn-sm">Filtrer</button></div>
+  </form>
+  <% if (view === "notifications" && unread) { %><form method="post" action="/formateur/gestion/activite/tout-lu" class="g-markall"><button type="submit" class="btn btn-outline btn-sm">Tout marquer comme lu</button></form><% } %>
+  <% if (!F.rows.length) { %>
+    <div class="dash-empty g-state"><h2><%= view === "notifications" ? (F.unreadOnly ? "Aucune notification non lue" : "Aucune notification") : "Aucune activité récente" %></h2><p><%= F.type ? "Aucun élément de ce type." : "Les commandes, inscriptions, messages et avis apparaîtront ici au fur et à mesure." %></p></div>
+  <% } else { %>
+    <ul class="g-feed g-feed-page"><% F.rows.forEach((it) => { %><%- include("_feed-item", { it }) %><% }) %></ul>
+    <%- include("_pager", { pages: F.pages, pageNum: F.page, total: F.total }) %>
+  <% } %>
+<% } %>
+<%- include("../partials/footer") %>

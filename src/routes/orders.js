@@ -2,6 +2,7 @@ const express = require("express");
 const db = require("../config/database");
 const { requireAuth } = require("../middlewares/auth");
 const { sendPurchaseWelcomeEmail } = require("../utils/mailer");
+const sales = require("../services/gestion/sales");
 
 const router = express.Router();
 
@@ -24,12 +25,35 @@ function syncCart(req, items) {
   req.session.cart = Object.fromEntries(items.map((c) => [c.id, true]));
 }
 
+// Code promo de la session, revérifié à chaque affichage (un code expiré ou épuisé entre-temps est retiré, avec la raison)
+function pricing(req, items) {
+  const subtotal = items.reduce((sum, c) => sum + c.price_cents, 0);
+  const code = req.session.coupon;
+  if (!code) return { subtotal, total: subtotal, discount: 0, coupon: null, couponError: null, lines: new Map(items.map((i) => [i.id, i.price_cents])) };
+  const r = sales.applyCoupon(code, items);
+  if (r.error) { delete req.session.coupon; return { subtotal, total: subtotal, discount: 0, coupon: null, couponError: `Code « ${code} » retiré : ${r.error}`, lines: new Map(items.map((i) => [i.id, i.price_cents])) }; }
+  return { subtotal, total: subtotal - r.discount, discount: r.discount, coupon: r.coupon, couponError: null, lines: r.lines };
+}
+
 router.get("/commande", requireAuth, (req, res) => {
   const items = getPurchasableItems(req);
   syncCart(req, items);
   if (!items.length) return res.redirect("/panier");
-  const total = items.reduce((sum, c) => sum + c.price_cents, 0);
-  res.render("checkout", { items, total });
+  const p = pricing(req, items);
+  const flash = req.session.couponFlash || null;
+  delete req.session.couponFlash;
+  res.render("checkout", { items, total: p.total, subtotal: p.subtotal, discount: p.discount, coupon: p.coupon, couponError: p.couponError || (flash && flash.error) || null, couponOk: flash && flash.ok });
+});
+
+// Code promo : vérifié tout de suite (message clair), appliqué au paiement après une nouvelle vérification
+router.post("/commande/code-promo", requireAuth, (req, res) => {
+  const items = getPurchasableItems(req);
+  if (!items.length) return res.redirect("/panier");
+  if (req.body.retirer) { delete req.session.coupon; req.session.couponFlash = { ok: "Code promo retiré." }; return res.redirect("/commande"); }
+  const r = sales.applyCoupon(req.body.code, items);
+  if (r.error) req.session.couponFlash = { error: r.error };
+  else { req.session.coupon = r.coupon.code; req.session.couponFlash = { ok: `Code « ${r.coupon.code} » appliqué.` }; }
+  res.redirect("/commande");
 });
 
 // Paiement simulé : aucune carte n'est réellement débitée. Voir le README pour brancher
@@ -41,28 +65,44 @@ router.post("/commande", requireAuth, async (req, res, next) => {
     const items = getPurchasableItems(req);
     syncCart(req, items);
     if (!items.length) return res.redirect("/panier");
-    const total = items.reduce((sum, c) => sum + c.price_cents, 0);
 
     // Tout ou rien : la commande, ses lignes et les inscriptions sont écrites ensemble,
     // ou pas du tout (jamais de commande orpheline si une écriture échoue en cours de route).
+    // Le code promo est revérifié DANS la transaction (limite d'utilisation exacte même avec des achats simultanés).
     let orderId;
-    db.exec("BEGIN");
+    db.exec("BEGIN IMMEDIATE");
     try {
-      const orderInfo = db.prepare("INSERT INTO orders (user_id, total_cents) VALUES (?, ?)").run(req.session.user.id, total);
+      let applied = null;
+      if (req.session.coupon) {
+        const r = sales.applyCoupon(req.session.coupon, items);
+        if (r.error) {
+          db.exec("ROLLBACK");
+          delete req.session.coupon;
+          req.session.couponFlash = { error: `Code promo retiré : ${r.error} Vérifiez le nouveau total avant de payer.` };
+          return res.redirect("/commande");
+        }
+        applied = r;
+      }
+      const priceOf = (c) => (applied ? applied.lines.get(c.id) : c.price_cents);
+      const total = items.reduce((sum, c) => sum + priceOf(c), 0);
+      const orderInfo = db.prepare("INSERT INTO orders (user_id, total_cents, coupon_id, coupon_code, discount_cents) VALUES (?, ?, ?, ?, ?)")
+        .run(req.session.user.id, total, applied ? applied.coupon.id : null, applied ? applied.coupon.code : null, applied ? applied.discount : 0);
       orderId = Number(orderInfo.lastInsertRowid);
-      const insertItem = db.prepare("INSERT INTO order_items (order_id, course_id, price_cents) VALUES (?, ?, ?)");
+      // price_cents : montant réellement payé (après remise) ; list_price_cents : prix catalogue
+      const insertItem = db.prepare("INSERT INTO order_items (order_id, course_id, price_cents, list_price_cents) VALUES (?, ?, ?, ?)");
       const insertEnrollment = db.prepare("INSERT OR IGNORE INTO enrollments (user_id, course_id) VALUES (?, ?)");
       items.forEach((course) => {
-        insertItem.run(orderId, course.id, course.price_cents);
+        insertItem.run(orderId, course.id, priceOf(course), course.price_cents);
         insertEnrollment.run(req.session.user.id, course.id);
       });
       db.exec("COMMIT");
     } catch (err) {
-      db.exec("ROLLBACK");
+      try { db.exec("ROLLBACK"); } catch { /* déjà annulée */ }
       throw err;
     }
 
     req.session.cart = {};
+    delete req.session.coupon;
 
     // L'e-mail est mis en file APRÈS l'enregistrement : il part en arrière-plan, son échec (ou un serveur SMTP lent)
     // ne peut ni annuler ni ralentir l'achat

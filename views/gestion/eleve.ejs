@@ -1,0 +1,34 @@
+<%- include("../partials/header", { title }) %>
+<%- include("_head", { heading: user.username, subtitle: `${user.email} · compte créé le ${formatDate(user.created_at)}` }) %>
+<section class="dash-kpis" aria-label="Résumé">
+  <div class="kpi"><span class="kpi-icon"><%- icon("book", { size: 20 }) %></span><span class="kpi-label">Formations</span><span class="kpi-value"><%= courses.length %></span></div>
+  <div class="kpi"><span class="kpi-icon"><%- icon("checkCircle", { size: 20 }) %></span><span class="kpi-label">Progression moyenne</span><span class="kpi-value"><%= courses.length ? Math.round(courses.reduce((s, c) => s + c.percent, 0) / courses.length) + " %" : "—" %></span></div>
+  <div class="kpi"><span class="kpi-icon"><%- icon("coin", { size: 20 }) %></span><span class="kpi-label">Achats</span><span class="kpi-value"><%= formatAmount(spent) %></span></div>
+  <div class="kpi"><span class="kpi-icon"><%- icon("clock", { size: 20 }) %></span><span class="kpi-label">Dernière activité</span><span class="kpi-value g-kpi-small"><%= activity.length ? formatDate(activity[0].at) : "—" %></span></div>
+</section>
+<div class="dash-grid-2 dash-section">
+  <section class="dpanel" aria-labelledby="g-s-courses">
+    <h2 id="g-s-courses">Formations suivies</h2>
+    <ul class="g-course-progress"><% courses.forEach((c) => { %>
+      <li>
+        <div class="g-cp-head"><a href="/formateur/cours/<%= c.id %>"><%= c.title %></a><span><%= c.bought ? "Achetée" : "Gratuite" %></span></div>
+        <% if (c.lessons) { %><span class="g-progress" role="img" aria-label="<%= c.percent %> % (<%= c.done %> leçon(s) terminée(s) sur <%= c.lessons %>)"><span style="width:<%= c.percent %>%"></span></span><small><%= c.percent %> % · <%= c.done %>/<%= c.lessons %> leçon(s) · inscrit le <%= formatDate(c.enrolled_at) %><%= c.last_done ? ` · dernière leçon le ${formatDate(c.last_done)}` : "" %></small><% } else { %><small>Formation sans leçon pour l'instant</small><% } %>
+      </li>
+    <% }) %></ul>
+  </section>
+  <aside>
+    <section class="dpanel" aria-labelledby="g-s-orders">
+      <h2 id="g-s-orders">Achats</h2>
+      <% if (!orders.length) { %><p class="field-hint">Aucun achat : formations gratuites uniquement.</p><% } else { %>
+        <ul class="dlist"><% orders.forEach((o) => { %><li><a class="grow" href="/formateur/gestion/ventes/commandes/<%= o.id %>">Commande #<%= o.id %></a><span><%= formatAmount(o.amount) %></span><br><small><%= formatDate(o.created_at) %> · <%= o.titles %><%= o.coupon_code ? ` · code ${o.coupon_code}` : "" %></small></li><% }) %></ul>
+      <% } %>
+    </section>
+    <section class="dpanel" aria-labelledby="g-s-activity">
+      <h2 id="g-s-activity">Activité récente</h2>
+      <% if (!activity.length) { %><p class="field-hint">Aucune activité.</p><% } else { %>
+        <ol class="g-timeline"><% activity.forEach((a) => { %><li><time><%= formatDateTime(a.at) %></time> <%= a.kind === "lesson" ? `Leçon terminée : « ${a.label} » (${a.context})` : a.kind === "review" ? `Avis ${a.label} sur « ${a.context} »` : `Inscription à « ${a.label} »` %></li><% }) %></ol>
+      <% } %>
+    </section>
+  </aside>
+</div>
+<%- include("../partials/footer") %>

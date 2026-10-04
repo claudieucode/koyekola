@@ -1,0 +1,14 @@
+<%# Histogramme SVG (données réelles) + tableau accessible des mêmes valeurs %>
+<% const max = Math.max(1, ...values); const n = values.length; const w = 100 / Math.max(n, 1); const total = values.reduce((s, v) => s + v, 0); %>
+<figure class="g-chart">
+  <figcaption><strong><%= caption %></strong> <span><%= fmt(total) %> sur la période</span></figcaption>
+  <% if (!total) { %><p class="g-chart-empty">Aucune donnée sur cette période.</p><% } else { %>
+    <svg viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label="<%= caption %> : <%= fmt(total) %> au total, détail dans le tableau ci-dessous">
+      <% values.forEach((v, i) => { const h = v ? Math.max(0.8, (v / max) * 38) : 0; %><rect x="<%= (i * w + w * 0.15).toFixed(3) %>" y="<%= (40 - h).toFixed(3) %>" width="<%= (w * 0.7).toFixed(3) %>" height="<%= h.toFixed(3) %>" rx="0.4"><title><%= labels[i] %> : <%= fmt(v) %></title></rect><% }) %>
+    </svg>
+    <div class="g-chart-axis" aria-hidden="true"><span><%= labels[0] %></span><span><%= labels[n - 1] %></span></div>
+    <details class="g-chart-table"><summary>Voir les valeurs</summary>
+      <table class="dtable"><thead><tr><th scope="col"><%= unitLabel %></th><th scope="col" class="g-num"><%= caption %></th></tr></thead><tbody><% values.forEach((v, i) => { %><tr><td><%= labels[i] %></td><td class="g-num"><%= fmt(v) %></td></tr><% }) %></tbody></table>
+    </details>
+  <% } %>
+</figure>

@@ -1,0 +1,14 @@
+<%- include("../partials/header", { title }) %>
+<%- include("_head", { heading: typeof notFound !== "undefined" && notFound ? "Élément introuvable" : title, subtitle: "" }) %>
+<div class="dash-empty g-state" role="alert">
+  <% if (typeof notFound !== "undefined" && notFound) { %>
+    <h2>Cet élément n'existe pas ou ne vous concerne pas.</h2>
+    <p>Il a peut-être été supprimé, ou il ne fait pas partie de vos formations.</p>
+  <% } else { %>
+    <h2>Impossible de charger cette page.</h2>
+    <p>Une erreur est survenue en lisant les données. Rien n'a été modifié.</p>
+    <a class="btn btn-primary" href="<%= retry %>">Réessayer</a>
+  <% } %>
+  <a class="btn btn-outline" href="<%= back.href %>"><%= back.label %></a>
+</div>
+<%- include("../partials/footer") %>

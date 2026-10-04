@@ -1,0 +1,11 @@
+<%# En-tête d'une page du Centre de gestion : retour au niveau parent (adresse réelle), titre, sous-titre, actions %>
+<a class="g-back" href="<%= back.href %>"><%- icon("arrowLeft", { size: 16 }) %> <%= back.label %></a>
+<div class="dash-head">
+  <div>
+    <h1><%= heading %></h1>
+    <% if (typeof subtitle !== "undefined" && subtitle) { %><p><%= subtitle %></p><% } %>
+  </div>
+  <% if (typeof actions !== "undefined" && actions) { %><div class="dash-head-actions"><%- actions %></div><% } %>
+</div>
+<% if (typeof flash !== "undefined" && flash) { %><p class="g-flash<%= flash.type === "error" ? " is-error" : "" %>" role="<%= flash.type === "error" ? "alert" : "status" %>"><%= flash.text %></p><% } %>
+<script src="<%= asset("/js/gestion.js") %>" defer></script>

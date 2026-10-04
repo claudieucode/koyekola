@@ -1,0 +1,8 @@
+<%# Pagination : liens réels (adresse avec ?page=), désactivés aux extrémités %>
+<% if (pages > 1) { %>
+  <nav class="g-pager" aria-label="Pagination">
+    <% if (pageNum > 1) { %><a class="btn btn-outline btn-sm" href="<%= url({ page: pageNum - 1 }) %>" rel="prev">Précédent</a><% } else { %><span class="btn btn-outline btn-sm is-disabled" aria-disabled="true">Précédent</span><% } %>
+    <span>Page <%= pageNum %> sur <%= pages %> · <%= total %> résultat(s)</span>
+    <% if (pageNum < pages) { %><a class="btn btn-outline btn-sm" href="<%= url({ page: pageNum + 1 }) %>" rel="next">Suivant</a><% } else { %><span class="btn btn-outline btn-sm is-disabled" aria-disabled="true">Suivant</span><% } %>
+  </nav>
+<% } %>

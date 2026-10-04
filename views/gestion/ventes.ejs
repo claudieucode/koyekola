@@ -1,0 +1,95 @@
+<%- include("../partials/header", { title }) %>
+<%- include("_head", { heading: "Ventes", subtitle: "Commandes de vos formations, codes promo, paiements." }) %>
+<nav class="dash-filters g-tabs" aria-label="Rubriques des ventes">
+  <% [["commandes", "Commandes", "/formateur/gestion/ventes"], ["coupons", "Codes promo", "/formateur/gestion/ventes/coupons"], ["transactions", "Transactions", "/formateur/gestion/ventes/transactions"], ["remboursements", "Remboursements", "/formateur/gestion/ventes/remboursements"]].forEach(([k, label, href]) => { %>
+    <a class="dash-chip" href="<%= href %>"<%- tab === k ? ' aria-current="page"' : "" %>><%= label %></a>
+  <% }) %>
+</nav>
+
+<% if (tab === "commandes") { const L = orders; %>
+  <form class="g-filters" method="get" action="/formateur/gestion/ventes" role="search" aria-label="Filtrer les commandes">
+    <div class="g-field g-field-grow"><label for="g-q">Rechercher</label><input id="g-q" type="search" name="q" value="<%= L.q %>" placeholder="N°, élève, e-mail, formation, code"></div>
+    <div class="g-field"><label for="g-course">Formation</label><select id="g-course" name="formation"><option value="">Toutes</option><% courses.forEach((c) => { %><option value="<%= c.id %>"<%= String(query.formation) === String(c.id) ? " selected" : "" %>><%= c.title %></option><% }) %></select></div>
+    <div class="g-field"><label for="g-du">Du</label><input id="g-du" type="date" name="du" value="<%= query.du || "" %>"></div>
+    <div class="g-field"><label for="g-au">Au</label><input id="g-au" type="date" name="au" value="<%= query.au || "" %>"></div>
+    <div class="g-field"><label for="g-promo">Code promo</label><select id="g-promo" name="promo"><option value="">Toutes</option><option value="oui"<%= query.promo === "oui" ? " selected" : "" %>>Avec code</option><option value="non"<%= query.promo === "non" ? " selected" : "" %>>Sans code</option></select></div>
+    <div class="g-field"><label for="g-tri">Trier par</label><select id="g-tri" name="tri"><option value="recent">Plus récentes</option><option value="ancien"<%= L.sort === "ancien" ? " selected" : "" %>>Plus anciennes</option><option value="montant"<%= L.sort === "montant" ? " selected" : "" %>>Montant décroissant</option><option value="montant-asc"<%= L.sort === "montant-asc" ? " selected" : "" %>>Montant croissant</option></select></div>
+    <div class="g-filter-actions"><button type="submit" class="btn btn-primary btn-sm">Filtrer</button><% if (Object.keys(query).some((k) => k !== "page" && query[k])) { %><a class="btn btn-outline btn-sm" href="/formateur/gestion/ventes">Réinitialiser</a><% } %></div>
+  </form>
+  <p class="g-summary" role="status"><strong><%= L.total %></strong> commande(s) · <%= formatAmount(L.sumCents) %> pour vos formations<%= L.q ? ` · recherche « ${L.q} »` : "" %></p>
+  <% if (!L.rows.length) { %>
+    <div class="dash-empty g-state"><h2><%= L.total === 0 && !Object.keys(query).some((k) => query[k]) ? "Aucune commande" : "Aucune commande ne correspond" %></h2>
+      <p><%= Object.keys(query).some((k) => query[k]) ? "Modifiez la recherche ou les filtres." : "Vous n'avez encore aucune commande : elles apparaîtront ici dès le premier achat d'une de vos formations." %></p>
+      <% if (Object.keys(query).some((k) => query[k])) { %><a class="btn btn-outline" href="/formateur/gestion/ventes">Voir toutes les commandes</a><% } %></div>
+  <% } else { %>
+    <div class="dtable-wrap"><table class="dtable g-table">
+      <thead><tr><th scope="col">Commande</th><th scope="col">Date</th><th scope="col">Élève</th><th scope="col">Formation(s)</th><th scope="col">Statut</th><th scope="col" class="g-num">Montant</th></tr></thead>
+      <tbody><% L.rows.forEach((o) => { %>
+        <tr>
+          <td data-label="Commande"><a href="/formateur/gestion/ventes/commandes/<%= o.id %>">#<%= o.id %></a></td>
+          <td data-label="Date"><%= formatDateTime(o.created_at) %></td>
+          <td data-label="Élève"><span><a href="/formateur/gestion/eleves/<%= o.user_id %>"><%= o.username %></a><br><small><%= o.email %></small></span></td>
+          <td data-label="Formation(s)"><span><%= o.courses %><% if (o.coupon_code) { %><br><small>Code <%= o.coupon_code %></small><% } %></span></td>
+          <td data-label="Statut"><span class="dash-status is-published" title="Paiement simulé : aucun prestataire de paiement n'est connecté">Payée (simulé)</span></td>
+          <td data-label="Montant" class="g-num"><%= formatAmount(o.amount) %></td>
+        </tr>
+      <% }) %></tbody>
+    </table></div>
+    <%- include("_pager", { pages: L.pages, pageNum: L.page, total: L.total }) %>
+  <% } %>
+<% } else if (tab === "transactions") { %>
+  <div class="dash-empty g-state g-honest">
+    <h2>Aucun prestataire de paiement connecté</h2>
+    <p>Le paiement du site est aujourd'hui <strong>simulé</strong> : aucune carte n'est débitée et aucune transaction bancaire n'existe. Les transactions réelles (montant encaissé, frais, moyen de paiement, statut) s'afficheront ici dès qu'un prestataire comme Stripe sera branché au paiement.</p>
+    <p><%= simulatedOrders %> commande(s) de vos formations ont été enregistrées avec le paiement simulé.</p>
+    <a class="btn btn-outline" href="/formateur/gestion/ventes">Voir les commandes</a>
+  </div>
+<% } else if (tab === "remboursements") { %>
+  <div class="dash-empty g-state g-honest">
+    <h2>Remboursements indisponibles</h2>
+    <p>Un remboursement doit être exécuté par le prestataire de paiement qui a encaissé la commande. Le paiement du site étant <strong>simulé</strong>, il n'y a rien à rembourser : aucun bouton « Rembourser » n'est proposé tant qu'un vrai prestataire n'est pas connecté.</p>
+    <a class="btn btn-outline" href="/formateur/gestion/ventes">Voir les commandes</a>
+  </div>
+<% } else if (tab === "coupons") { const f = form || {}; const err = errors || {}; %>
+  <div class="dash-grid-2 g-coupons">
+    <section class="dpanel" aria-labelledby="g-coupon-form-title">
+      <h2 id="g-coupon-form-title"><%= editing ? `Modifier le code ${editing.code}` : "Nouveau code promo" %></h2>
+      <form method="post" action="/formateur/gestion/ventes/coupons<%= editing ? `/${editing.id}` : "" %>" class="g-form" novalidate>
+        <div class="g-field"><label for="c-code">Code</label><input id="c-code" name="code" value="<%= f.code || "" %>" maxlength="30" required autocapitalize="characters" spellcheck="false" aria-describedby="c-code-hint<%= err.code ? " c-code-err" : "" %>"<%- err.code ? ' aria-invalid="true"' : "" %>><small id="c-code-hint">Lettres, chiffres, tiret ou souligné (enregistré en majuscules).</small><% if (err.code) { %><small class="field-error" id="c-code-err"><%= err.code %></small><% } %></div>
+        <fieldset class="g-field"><legend>Réduction</legend>
+          <div class="g-radio-row"><label><input type="radio" name="kind" value="percent"<%= f.kind !== "fixed" ? " checked" : "" %>> Pourcentage</label><label><input type="radio" name="kind" value="fixed"<%= f.kind === "fixed" ? " checked" : "" %>> Montant (€)</label></div>
+          <label for="c-value" class="sr-only">Valeur de la réduction</label><input id="c-value" name="value" inputmode="decimal" value="<%= f.value || "" %>" required<%- err.value ? ' aria-invalid="true" aria-describedby="c-value-err"' : "" %>><% if (err.value || err.kind) { %><small class="field-error" id="c-value-err"><%= err.value || err.kind %></small><% } %>
+        </fieldset>
+        <div class="g-field"><label for="c-course">S'applique à</label><select id="c-course" name="course_id"><option value="">Toutes mes formations</option><% courses.forEach((c) => { %><option value="<%= c.id %>"<%= String(f.course_id) === String(c.id) ? " selected" : "" %>><%= c.title %></option><% }) %></select><% if (err.course_id) { %><small class="field-error"><%= err.course_id %></small><% } %></div>
+        <div class="g-field-row">
+          <div class="g-field"><label for="c-start">Début (facultatif)</label><input id="c-start" type="date" name="starts_at" value="<%= f.starts_at || "" %>"><% if (err.starts_at) { %><small class="field-error"><%= err.starts_at %></small><% } %></div>
+          <div class="g-field"><label for="c-end">Fin (incluse, facultatif)</label><input id="c-end" type="date" name="expires_at" value="<%= f.expires_at || "" %>"><% if (err.expires_at) { %><small class="field-error"><%= err.expires_at %></small><% } %></div>
+        </div>
+        <div class="g-field"><label for="c-max">Nombre maximal d'utilisations (facultatif)</label><input id="c-max" type="number" min="1" name="max_uses" value="<%= f.max_uses || "" %>" placeholder="Illimité"><% if (err.max_uses) { %><small class="field-error"><%= err.max_uses %></small><% } %></div>
+        <label class="checkbox-row"><input type="checkbox" name="active"<%= f.active ? " checked" : "" %>> Actif</label>
+        <div class="g-filter-actions"><button type="submit" class="btn btn-primary"><%= editing ? "Enregistrer les modifications" : "Créer le code" %></button><% if (editing) { %><a class="btn btn-outline" href="/formateur/gestion/ventes/coupons">Annuler</a><% } %></div>
+      </form>
+    </section>
+    <section aria-labelledby="g-coupon-list">
+      <h2 id="g-coupon-list" class="g-h2">Vos codes promo</h2>
+      <% if (!coupons.length) { %>
+        <div class="dash-empty g-state"><h3>Aucun code promo</h3><p>Créez un code : les élèves le saisissent au moment du paiement, la remise est appliquée et enregistrée sur la commande.</p></div>
+      <% } else { %>
+        <ul class="g-coupon-list"><% coupons.forEach((c) => { %>
+          <li class="dpanel">
+            <div class="g-coupon-head"><strong class="g-code"><%= c.code %></strong><span class="dash-status <%= c.state.key === "on" ? "is-published" : c.state.key === "off" ? "is-archived" : "is-draft" %>"><%= c.state.label %></span></div>
+            <p class="g-coupon-meta"><%= c.kind === "percent" ? `−${c.value} %` : `−${formatAmount(c.value)}` %> · <%= c.course_title ? `« ${c.course_title} »` : "toutes vos formations" %><br>
+              <%= c.uses %><%= c.max_uses ? ` / ${c.max_uses}` : "" %> utilisation(s) · <%= formatAmount(c.discount_total) %> de remises accordées
+              <% if (c.starts_at || c.expires_at) { %><br><%= c.starts_at ? `Du ${formatDate(c.starts_at)}` : "" %><%= c.expires_at ? ` jusqu'au ${formatDateTime(c.expires_at)}` : "" %><% } %></p>
+            <div class="g-row-actions">
+              <a class="btn btn-outline btn-sm" href="/formateur/gestion/ventes/coupons?modifier=<%= c.id %>">Modifier</a>
+              <form method="post" action="/formateur/gestion/ventes/coupons/<%= c.id %>/<%= c.active ? "desactiver" : "activer" %>"><button type="submit" class="btn btn-outline btn-sm"><%= c.active ? "Désactiver" : "Activer" %></button></form>
+              <form method="post" action="/formateur/gestion/ventes/coupons/<%= c.id %>/supprimer" data-confirm="Supprimer le code <%= c.code %> ? Les commandes passées gardent leur remise. Cette action est définitive."><button type="submit" class="btn btn-outline btn-sm g-danger">Supprimer</button></form>
+            </div>
+          </li>
+        <% }) %></ul>
+      <% } %>
+    </section>
+  </div>
+<% } %>
+<%- include("../partials/footer") %>

@@ -23,6 +23,7 @@ const seoRoutes = require("./src/routes/seo");
 const pagesRoutes = require("./src/routes/pages");
 const blogRoutes = require("./src/routes/blog");
 const profileRoutes = require("./src/routes/profile");
+const gestionRoutes = require("./src/routes/gestion");
 const marketingWeb = require("./src/marketing/web").createMarketingRouters({ db });
 const { UserError } = require("./src/utils/errors");
 
@@ -132,6 +133,7 @@ app.use(favoritesRoutes);
 app.use(pagesRoutes);
 app.use(blogRoutes);
 app.use(profileRoutes);
+app.use(gestionRoutes); // Centre de gestion (Mon espace)
 app.use(instructorRoutes);
 app.use("/marketing", marketingWeb.admin);
 app.use(marketingWeb.publicRoutes);

@@ -33,7 +33,21 @@
       <% items.forEach(course => { %>
         <div class="summary-row"><span><%= course.title %></span><span><%= formatPrice(course.price_cents) %></span></div>
       <% }) %>
+      <% if (discount) { %>
+        <div class="summary-row"><span>Sous-total</span><span><%= formatPrice(subtotal) %></span></div>
+        <div class="summary-row summary-discount"><span>Code « <%= coupon.code %> »</span><span>− <%= formatPrice(discount) %></span></div>
+      <% } %>
       <div class="summary-row total"><span>Total</span><span><%= formatPrice(total) %></span></div>
+      <form action="/commande/code-promo" method="post" class="promo-form">
+        <label for="f-promo">Code promo</label>
+        <% if (coupon) { %>
+          <p class="promo-applied"><strong><%= coupon.code %></strong> appliqué</p>
+          <button type="submit" name="retirer" value="1" class="btn btn-outline btn-sm">Retirer le code</button>
+        <% } else { %>
+          <div class="promo-row"><input id="f-promo" type="text" name="code" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false"><button type="submit" class="btn btn-outline btn-sm">Appliquer</button></div>
+        <% } %>
+        <% if (couponError) { %><p class="field-error" role="alert"><%= couponError %></p><% } else if (couponOk) { %><p class="promo-ok" role="status"><%= couponOk %></p><% } %>
+      </form>
     </aside>
   </div>
 

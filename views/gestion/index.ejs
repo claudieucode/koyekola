@@ -1,0 +1,41 @@
+<%- include("../partials/header", { title }) %>
+<%- include("_head", { heading: "Centre de gestion", subtitle: "Gérez votre activité depuis un seul endroit." }) %>
+<% const o = overview; %>
+<ul class="g-modules" aria-label="Modules du Centre de gestion">
+  <li><a class="g-module" href="/formateur/gestion/ventes">
+    <span class="g-module-icon"><%- icon("coin", { size: 22 }) %></span>
+    <span class="g-module-text"><strong>Ventes</strong><span>Commandes, codes promo, transactions et remboursements</span>
+      <span class="g-module-figure"><%= o.orders %> commande(s) · <%= formatAmount(o.revenue30) %> sur 30 jours<% if (o.coupons) { %> · <%= o.coupons %> code(s) promo actif(s)<% } %></span></span></a></li>
+  <li><a class="g-module" href="/formateur/gestion/eleves">
+    <span class="g-module-icon"><%- icon("users", { size: 22 }) %></span>
+    <span class="g-module-text"><strong>Élèves</strong><span>Profils, formations suivies, progression, achats</span>
+      <span class="g-module-figure"><%= o.students %> élève(s) · <%= o.enrollments30 %> inscription(s) sur 30 jours</span></span></a></li>
+  <li><a class="g-module" href="/formateur/gestion/analytics">
+    <span class="g-module-icon"><%- icon("barChart", { size: 22 }) %></span>
+    <span class="g-module-text"><strong>Analytics</strong><span>Revenus, inscriptions et performances par période</span>
+      <span class="g-module-figure">Aujourd'hui, 7, 30, 90 jours, année ou période personnalisée</span></span></a></li>
+  <li><a class="g-module" href="/formateur/gestion/ressources">
+    <span class="g-module-icon"><%- icon("image", { size: 22 }) %></span>
+    <span class="g-module-text"><strong>Ressources</strong><span>Tous les fichiers du site : images, vidéos, audio, documents</span>
+      <span class="g-module-figure"><%= o.resources %> fichier(s)</span></span></a></li>
+  <li><a class="g-module" href="/formateur/gestion/activite">
+    <span class="g-module-icon"><%- icon("bell", { size: 22 }) %></span>
+    <span class="g-module-text"><strong>Activité</strong><span>Activité récente, notifications et alertes</span>
+      <span class="g-module-figure"><%= o.unread %> notification(s) non lue(s)<% if (o.alerts.length) { %> · <%= o.alerts.length %> alerte(s)<% } %></span></span></a></li>
+</ul>
+
+<div class="dash-grid-2 dash-section">
+  <section class="dpanel" aria-labelledby="g-recent">
+    <div class="dash-section-head"><h2 id="g-recent">Activité récente</h2><a href="/formateur/gestion/activite">Tout voir</a></div>
+    <% if (!o.recent.length) { %><p class="field-hint">Aucune activité récente.</p><% } else { %>
+      <ul class="g-feed"><% o.recent.forEach((it) => { %><%- include("_feed-item", { it, compact: true }) %><% }) %></ul>
+    <% } %>
+  </section>
+  <section class="dpanel" aria-labelledby="g-alerts">
+    <div class="dash-section-head"><h2 id="g-alerts">Alertes</h2><a href="/formateur/gestion/activite?vue=alertes">Ouvrir</a></div>
+    <% if (!o.alerts.length) { %><p class="field-hint">Aucune alerte : tout est en ordre.</p><% } else { %>
+      <ul class="g-alerts"><% o.alerts.forEach((a) => { %><li class="<%= a.level === "error" ? "is-error" : a.level === "warning" ? "is-warning" : "" %>"><a href="<%= a.href %>"><%= a.title %></a><% if (a.detail) { %><small><%= a.detail %></small><% } %></li><% }) %></ul>
+    <% } %>
+  </section>
+</div>
+<%- include("../partials/footer") %>

@@ -1,0 +1,32 @@
+<%- include("../partials/header", { title }) %>
+<%- include("_head", { heading: "Élèves", subtitle: "Les comptes inscrits à vos formations." }) %>
+<% const L = list; const filtered = Object.keys(query).some((k) => k !== "page" && query[k]); %>
+<form class="g-filters" method="get" action="/formateur/gestion/eleves" role="search" aria-label="Filtrer les élèves">
+  <div class="g-field g-field-grow"><label for="e-q">Rechercher</label><input id="e-q" type="search" name="q" value="<%= L.q %>" placeholder="Nom ou e-mail"></div>
+  <div class="g-field"><label for="e-course">Formation</label><select id="e-course" name="formation"><option value="">Toutes</option><% courses.forEach((c) => { %><option value="<%= c.id %>"<%= String(query.formation) === String(c.id) ? " selected" : "" %>><%= c.title %></option><% }) %></select></div>
+  <div class="g-field"><label for="e-achats">Achats</label><select id="e-achats" name="achats"><option value="">Tous</option><option value="oui"<%= query.achats === "oui" ? " selected" : "" %>>Ont acheté</option><option value="non"<%= query.achats === "non" ? " selected" : "" %>>Formations gratuites seulement</option></select></div>
+  <div class="g-field"><label for="e-du">Inscrits du</label><input id="e-du" type="date" name="du" value="<%= query.du || "" %>"></div>
+  <div class="g-field"><label for="e-au">au</label><input id="e-au" type="date" name="au" value="<%= query.au || "" %>"></div>
+  <div class="g-field"><label for="e-tri">Trier par</label><select id="e-tri" name="tri"><option value="recent">Inscription récente</option><option value="ancien"<%= L.sort === "ancien" ? " selected" : "" %>>Inscription ancienne</option><option value="nom"<%= L.sort === "nom" ? " selected" : "" %>>Nom</option><option value="depense"<%= L.sort === "depense" ? " selected" : "" %>>Montant dépensé</option><option value="formations"<%= L.sort === "formations" ? " selected" : "" %>>Nombre de formations</option></select></div>
+  <div class="g-filter-actions"><button type="submit" class="btn btn-primary btn-sm">Filtrer</button><% if (filtered) { %><a class="btn btn-outline btn-sm" href="/formateur/gestion/eleves">Réinitialiser</a><% } %></div>
+</form>
+<p class="g-summary" role="status"><strong><%= L.total %></strong> élève(s)<%= L.q ? ` · recherche « ${L.q} »` : "" %></p>
+<% if (!L.rows.length) { %>
+  <div class="dash-empty g-state"><h2><%= filtered ? "Aucun élève ne correspond" : "Aucun élève" %></h2><p><%= filtered ? "Modifiez la recherche ou les filtres." : "Les élèves apparaîtront ici dès leur inscription à l'une de vos formations." %></p><% if (filtered) { %><a class="btn btn-outline" href="/formateur/gestion/eleves">Voir tous les élèves</a><% } %></div>
+<% } else { %>
+  <div class="dtable-wrap"><table class="dtable g-table">
+    <thead><tr><th scope="col">Élève</th><th scope="col">Première inscription</th><th scope="col">Formations</th><th scope="col">Progression moyenne</th><th scope="col">Dernière activité</th><th scope="col" class="g-num">Dépensé</th></tr></thead>
+    <tbody><% L.rows.forEach((s) => { %>
+      <tr>
+        <td data-label="Élève"><span><a href="/formateur/gestion/eleves/<%= s.id %>"><%= s.username %></a><br><small><%= s.email %></small></span></td>
+        <td data-label="Première inscription"><%= formatDate(s.first_enrolled) %></td>
+        <td data-label="Formations"><%= s.courses %></td>
+        <td data-label="Progression moyenne"><% if (s.progress == null) { %>—<% } else { %><span class="g-progress" role="img" aria-label="<%= s.progress %> %"><span style="width:<%= s.progress %>%"></span></span> <%= s.progress %> %<% } %></td>
+        <td data-label="Dernière activité"><%= s.last_activity ? formatDateTime(s.last_activity) : "Aucune leçon terminée" %></td>
+        <td data-label="Dépensé" class="g-num"><%= formatAmount(s.spent) %></td>
+      </tr>
+    <% }) %></tbody>
+  </table></div>
+  <%- include("_pager", { pages: L.pages, pageNum: L.page, total: L.total }) %>
+<% } %>
+<%- include("../partials/footer") %>

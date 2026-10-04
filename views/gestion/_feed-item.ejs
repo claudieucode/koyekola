@@ -1,0 +1,13 @@
+<%# Un élément d'activité : lien d'ouverture (marque la notification comme lue, puis ouvre l'élément réel) %>
+<% const ICONS = { order: "coin", enroll: "users", user: "user", message: "mail", review: "star", comment: "fileText", post: "fileText", course: "book" }; %>
+<li class="g-feed-item<%= it.unread ? " is-unread" : "" %>">
+  <span class="g-feed-icon" aria-hidden="true"><%- icon(ICONS[it.kind] || "bell", { size: 16 }) %></span>
+  <span class="g-feed-text">
+    <% if (it.href) { %><a href="/formateur/gestion/activite/ouvrir?cle=<%= encodeURIComponent(it.key) %>"><%= it.title %></a><% } else { %><strong><%= it.title %></strong><% } %>
+    <% if (it.unread) { %><span class="dash-badge">nouveau</span><% } %>
+    <small><%= it.detail %><% if (it.amount != null) { %> · <%= formatAmount(it.amount) %><% } %> · <time datetime="<%= it.at.replace(" ", "T") %>Z"><%= formatDateTime(it.at) %></time></small>
+  </span>
+  <% if (typeof compact === "undefined" && it.unread) { %>
+    <form action="/formateur/gestion/activite/lu" method="post" class="g-feed-action"><input type="hidden" name="cle" value="<%= it.key %>"><% if (query.etat === "non-lu") { %><input type="hidden" name="etat" value="non-lu"><% } %><button type="submit" class="btn btn-outline btn-sm">Marquer comme lu</button></form>
+  <% } %>
+</li>

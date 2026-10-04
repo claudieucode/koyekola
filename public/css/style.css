@@ -2116,3 +2116,11 @@ a.post-card-category:hover { text-decoration: underline; }
    Posé seulement pendant l'ouverture : le menu sort du flux (position fixe calculée depuis son bouton), au-dessus du
    contenu, des en-têtes collants et des tiroirs. La classe d'état l'emporte sur le placement d'origine du composant. */
 .kb-floating { position: fixed !important; right: auto !important; bottom: auto !important; margin: 0 !important; z-index: var(--z-dropdown) !important; overflow-y: auto; overscroll-behavior: contain; }
+
+/* Code promo (paiement) */
+.promo-form { display: grid; gap: 8px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+.promo-form label { font-size: 0.86rem; font-weight: 700; color: var(--primary); }
+.promo-row { display: flex; gap: 8px; }
+.promo-row input { min-width: 0; flex: 1; text-transform: uppercase; }
+.promo-applied, .promo-ok { margin: 0; font-size: 0.9rem; color: var(--success-dark); }
+.summary-discount span:last-child { color: var(--success-dark); font-weight: 700; }

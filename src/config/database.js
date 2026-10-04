@@ -404,4 +404,45 @@ for (const [name, definition] of Object.entries({ meta: "TEXT NOT NULL DEFAULT '
 const userColumns = db.prepare("PRAGMA table_info(users)").all().map((col) => col.name);
 if (!userColumns.includes("avatar_path")) db.exec("ALTER TABLE users ADD COLUMN avatar_path TEXT");
 
+// ---------- Centre de gestion ----------
+// Codes promo (appliqués au paiement, aux formations du formateur qui les crée ; une seule formation si course_id)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS coupons (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    instructor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    code TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    kind TEXT NOT NULL CHECK (kind IN ('percent', 'fixed')),
+    value INTEGER NOT NULL CHECK (value > 0),
+    course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+    starts_at TEXT,
+    expires_at TEXT,
+    max_uses INTEGER CHECK (max_uses IS NULL OR max_uses > 0),
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_coupons_instructor ON coupons(instructor_id);
+  -- Notifications du Centre de gestion : état « lu » par formateur (les notifications elles-mêmes viennent des données réelles)
+  CREATE TABLE IF NOT EXISTS activity_reads (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_key TEXT NOT NULL,
+    read_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, item_key)
+  );
+  CREATE TABLE IF NOT EXISTS activity_state (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    read_all_before TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
+  CREATE INDEX IF NOT EXISTS idx_order_items_course ON order_items(course_id);
+  CREATE INDEX IF NOT EXISTS idx_enrollments_course ON enrollments(course_id, created_at);
+`);
+// Commandes : code promo utilisé et remise ; lignes : prix catalogue (price_cents reste le montant réellement payé)
+const orderColumns = db.prepare("PRAGMA table_info(orders)").all().map((col) => col.name);
+if (!orderColumns.includes("coupon_id")) db.exec("ALTER TABLE orders ADD COLUMN coupon_id INTEGER REFERENCES coupons(id) ON DELETE SET NULL");
+if (!orderColumns.includes("coupon_code")) db.exec("ALTER TABLE orders ADD COLUMN coupon_code TEXT");
+if (!orderColumns.includes("discount_cents")) db.exec("ALTER TABLE orders ADD COLUMN discount_cents INTEGER NOT NULL DEFAULT 0");
+const itemColumns = db.prepare("PRAGMA table_info(order_items)").all().map((col) => col.name);
+if (!itemColumns.includes("list_price_cents")) db.exec("ALTER TABLE order_items ADD COLUMN list_price_cents INTEGER");
+
 module.exports = db;

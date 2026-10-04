@@ -1,0 +1,39 @@
+<%- include("../partials/header", { title }) %>
+<%- include("_head", { heading: `Commande #${order.id}`, subtitle: `Passée le ${formatDateTime(order.created_at)}` }) %>
+<div class="dash-grid-2">
+  <section class="dpanel" aria-labelledby="g-o-items">
+    <h2 id="g-o-items">Formations achetées</h2>
+    <div class="dtable-wrap"><table class="dtable g-table">
+      <thead><tr><th scope="col">Formation</th><th scope="col">Progression de l'élève</th><th scope="col" class="g-num">Prix catalogue</th><th scope="col" class="g-num">Payé</th></tr></thead>
+      <tbody><% items.forEach((i) => { const pct = i.lessons ? Math.round(i.done / i.lessons * 100) : 0; %>
+        <tr>
+          <td data-label="Formation"><a href="/formateur/cours/<%= i.course_id %>"><%= i.title %></a></td>
+          <td data-label="Progression"><% if (i.lessons) { %><span class="g-progress" role="img" aria-label="<%= pct %> % (<%= i.done %> leçon(s) sur <%= i.lessons %>)"><span style="width:<%= pct %>%"></span></span> <%= pct %> % · <%= i.done %>/<%= i.lessons %><% } else { %>Aucune leçon<% } %></td>
+          <td data-label="Prix catalogue" class="g-num"><%= formatAmount(i.list_price_cents != null ? i.list_price_cents : i.price_cents) %></td>
+          <td data-label="Payé" class="g-num"><%= formatAmount(i.price_cents) %></td>
+        </tr>
+      <% }) %></tbody>
+    </table></div>
+    <% if (otherItems) { %><p class="field-hint"><%= otherItems %> autre(s) formation(s) d'un autre formateur dans cette commande (non affichée(s)).</p><% } %>
+  </section>
+  <aside class="dpanel" aria-labelledby="g-o-sum">
+    <h2 id="g-o-sum">Récapitulatif</h2>
+    <dl class="g-dl">
+      <dt>Numéro</dt><dd>#<%= order.id %></dd>
+      <dt>Élève</dt><dd><a href="/formateur/gestion/eleves/<%= order.user_id %>"><%= order.username %></a></dd>
+      <dt>E-mail</dt><dd><%= order.email %></dd>
+      <dt>Date</dt><dd><%= formatDateTime(order.created_at) %></dd>
+      <dt>Statut</dt><dd><span class="dash-status is-published">Payée</span></dd>
+      <dt>Paiement</dt><dd>Simulé (aucun prestataire de paiement connecté : aucune carte débitée)</dd>
+      <% if (order.coupon_code) { %><dt>Code promo</dt><dd><%= order.coupon_code %> · −<%= formatAmount(order.discount_cents) %></dd><% } %>
+      <dt>Montant de vos formations</dt><dd><strong><%= formatAmount(myAmount) %></strong></dd>
+      <% if (otherItems) { %><dt>Total de la commande</dt><dd><%= formatAmount(order.total_cents) %></dd><% } %>
+    </dl>
+    <h3 class="g-h3">Historique</h3>
+    <ol class="g-timeline">
+      <li><time><%= formatDateTime(order.created_at) %></time> Commande enregistrée et payée (paiement simulé)</li>
+      <% items.forEach((i) => { if (i.enrolled_at) { %><li><time><%= formatDateTime(i.enrolled_at) %></time> Accès ouvert à « <%= i.title %> »</li><% } }) %>
+    </ol>
+  </aside>
+</div>
+<%- include("../partials/footer") %>
