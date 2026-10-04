@@ -7,6 +7,7 @@
   <% } else { %>
     <h2>Impossible de charger cette page.</h2>
     <p>Une erreur est survenue en lisant les données. Rien n'a été modifié.</p>
+    <% if (typeof detail !== "undefined" && detail) { %><p class="field-hint">Détail technique (à transmettre si le problème continue) : <code><%= detail %></code></p><% } %>
     <a class="btn btn-primary" href="<%= retry %>">Réessayer</a>
   <% } %>
   <a class="btn btn-outline" href="<%= back.href %>"><%= back.label %></a>

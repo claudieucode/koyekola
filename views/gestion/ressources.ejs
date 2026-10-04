@@ -18,11 +18,12 @@
 </nav>
 <form class="g-filters" method="get" action="/formateur/gestion/ressources" role="search" aria-label="Filtrer les fichiers">
   <% if (L.kind) { %><input type="hidden" name="type" value="<%= L.kind %>"><% } %>
-  <div class="g-field g-field-grow"><label for="r-q">Rechercher</label><input id="r-q" type="search" name="q" value="<%= L.q %>" placeholder="Nom, chemin, article ou formation qui l'utilise"></div>
+  <div class="g-field g-field-grow"><label for="r-q">Rechercher</label><input id="r-q" type="search" name="q" value="<%= L.q %>" placeholder="Nom du fichier, chemin ou formation"></div>
   <div class="g-field"><label for="r-src">Provenance</label><select id="r-src" name="source"><option value="">Toutes</option><% Object.entries(sources).forEach(([k, label]) => { %><option value="<%= k %>"<%= L.source === k ? " selected" : "" %>><%= label %></option><% }) %></select></div>
   <div class="g-field"><label for="r-tri">Trier par</label><select id="r-tri" name="tri"><option value="recent">Plus récents</option><option value="taille"<%= L.sort === "taille" ? " selected" : "" %>>Taille</option><option value="nom"<%= L.sort === "nom" ? " selected" : "" %>>Nom</option></select></div>
   <div class="g-filter-actions"><button type="submit" class="btn btn-primary btn-sm">Filtrer</button><% if (filtered) { %><a class="btn btn-outline btn-sm" href="/formateur/gestion/ressources">Réinitialiser</a><% } %></div>
 </form>
+<% (L.problems || []).forEach((pb) => { %><p class="g-flash is-error" role="alert"><strong><%= pb.label %> : liste indisponible.</strong> Les autres fichiers sont affichés. Détail technique : <%= pb.message %></p><% }) %>
 <p class="g-summary" role="status"><strong><%= L.total %></strong> fichier(s) affiché(s) sur <%= C.all %> · <%= (C.bytes / 1048576).toFixed(1).replace(".", ",") %> Mo au total<% if (C.missing) { %> · <span class="g-warn"><%= C.missing %> introuvable(s) sur le serveur</span><% } %></p>
 <% if (!L.rows.length) { %>
   <div class="dash-empty g-state"><h2><%= filtered ? "Aucun fichier ne correspond" : "Aucun fichier" %></h2><p><%= filtered ? "Modifiez la recherche ou les filtres." : "Envoyez un premier fichier avec le formulaire ci-dessus." %></p><% if (filtered) { %><a class="btn btn-outline" href="/formateur/gestion/ressources">Voir tous les fichiers</a><% } %></div>
@@ -33,11 +34,11 @@
       <div class="g-file-body">
         <strong class="g-file-name" title="<%= r.path %>"><%= r.name %></strong>
         <small><%= kinds[r.kind] %> · <%= r.size ? (r.size >= 1048576 ? (r.size / 1048576).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(r.size / 1024)) + " Ko") : "taille inconnue" %><%= r.width ? ` · ${r.width}×${r.height}` : "" %><%= r.date ? ` · ${formatDate(r.date)}` : "" %></small>
-        <small><%= sources[r.source] %><%= r.usedBy && r.usedBy.length ? ` · utilisé : ${r.usedBy.slice(0, 2).join(", ")}${r.usedBy.length > 2 ? "…" : ""}` : r.source === "site" ? " · non utilisé" : "" %></small>
+        <small><%= sources[r.source] %><%= r.usageUnknown ? " · utilisation impossible à vérifier" : r.usedBy && r.usedBy.length ? ` · utilisé : ${r.usedBy.slice(0, 2).join(", ")}${r.usedBy.length > 2 ? "…" : ""}` : r.source === "site" ? " · non utilisé" : "" %></small>
         <div class="g-row-actions">
           <% if (r.exists) { %><a class="btn btn-outline btn-sm" href="<%= r.path %>" target="_blank" rel="noopener">Ouvrir<span class="sr-only"> « <%= r.name %> » (nouvel onglet)</span></a><% } %>
           <% if (r.deletable) { %>
-            <form method="post" action="/formateur/gestion/ressources/<%= r.id %>/supprimer" data-confirm="Supprimer définitivement « <%= r.name %> » ? Le fichier sera effacé du serveur."><input type="hidden" name="retour" value="<%= url({}).replace(/^[^?]*/, "") %>"><button type="submit" class="btn btn-outline btn-sm g-danger"<%= r.usedBy.length ? " disabled" : "" %> title="<%= r.usedBy.length ? "Utilisé : retirez-le d'abord des contenus qui l'utilisent" : "Supprimer" %>">Supprimer<span class="sr-only"> « <%= r.name %> »</span></button></form>
+            <form method="post" action="/formateur/gestion/ressources/<%= r.id %>/supprimer" data-confirm="Supprimer définitivement « <%= r.name %> » ? Le fichier sera effacé du serveur."><input type="hidden" name="retour" value="<%= url({}).replace(/^[^?]*/, "") %>"><button type="submit" class="btn btn-outline btn-sm g-danger"<%= !r.usedBy || r.usedBy.length ? " disabled" : "" %> title="<%= r.usageUnknown ? "Utilisation impossible à vérifier : suppression bloquée par sécurité" : r.usedBy.length ? "Utilisé : retirez-le d'abord des contenus qui l'utilisent" : "Supprimer" %>">Supprimer<span class="sr-only"> « <%= r.name %> »</span></button></form>
           <% } else if (r.manageHref) { %><a class="btn btn-outline btn-sm" href="<%= r.manageHref %>"><%= r.manageLabel || "Gérer dans la formation" %></a><% } %>
         </div>
       </div>

@@ -10,6 +10,7 @@
     <ul class="g-alerts g-alerts-page"><% alerts.forEach((a) => { %><li class="<%= a.level === "error" ? "is-error" : a.level === "warning" ? "is-warning" : "" %>"><a href="<%= a.href %>"><%= a.title %></a><% if (a.detail) { %><small><%= a.detail %></small><% } %></li><% }) %></ul>
   <% } %>
 <% } else { const F = feed; %>
+  <% (F.problems || []).forEach((pb) => { %><p class="g-flash is-error" role="alert"><strong><%= pb.label %> : événements indisponibles.</strong> Les autres sources sont affichées. Détail technique : <%= pb.message %></p><% }) %>
   <form class="g-filters g-filters-inline" method="get" action="/formateur/gestion/activite" aria-label="Filtrer l'activité">
     <% if (view === "notifications") { %><input type="hidden" name="vue" value="notifications"><% } %>
     <div class="g-field"><label for="a-type">Type</label><select id="a-type" name="type"><option value="">Tous</option><% Object.entries(types).forEach(([k, label]) => { %><option value="<%= k %>"<%= F.type === k ? " selected" : "" %>><%= label %></option><% }) %></select></div>

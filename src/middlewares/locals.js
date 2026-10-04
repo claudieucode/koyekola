@@ -48,7 +48,8 @@ function injectLocals(req, res, next) {
       tasks: seo ? require("../seo/tasks").openCount() : 0,
       unread: db.prepare("SELECT COUNT(*) n FROM contact_messages WHERE read_at IS NULL").get().n,
       // Notifications non lues du Centre de gestion (données réelles ; badge de la navigation)
-      notifications: require("../services/gestion/activity").unreadCount(req.session.user.id),
+      // (un échec ne doit jamais empêcher l'affichage de Mon espace : pas de badge dans ce cas)
+      notifications: (() => { try { return require("../services/gestion/activity").unreadCount(req.session.user.id); } catch (error) { console.error("[KOLAKISA] Badge des notifications :", error.message); return 0; } })(),
     };
   }
   // Espace Marketing (application à part, sous /marketing) : la navigation générale de « Mon espace » reste visible (rail)

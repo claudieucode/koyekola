@@ -41,12 +41,24 @@ function page(view, title, build) {
   return (req, res) => {
     let data;
     try { data = build(req, res); } catch (error) {
-      console.error(`[KOLAKISA] Centre de gestion (${req.path}) :`, error.message);
-      return res.status(500).render("gestion/erreur", { title, retry: req.originalUrl, back: backOf(req.path) });
+      console.error(`[KOLAKISA] Centre de gestion (${req.path}) :`, error.stack || error.message);
+      // Détail technique affiché au formateur (page réservée) : permet d'identifier la cause sans accès aux journaux
+      return res.status(500).render("gestion/erreur", { title, retry: req.originalUrl, back: backOf(req.path), detail: String(error.message || error).slice(0, 300) });
     }
     if (data === null) return res.status(404).render("gestion/erreur", { title: "Introuvable", notFound: true, retry: null, back: backOf(req.path) });
     if (data === undefined) return; // réponse déjà envoyée (redirection)
     res.render(view, { title, flash: takeFlash(req), query: req.query, url: urlFor(req), ...data });
+  };
+}
+// Action (formulaire) : une erreur inattendue ne montre jamais une page brute ; le formateur revient sur la page
+// d'origine avec un message clair et le détail technique
+function safely(back, fn) {
+  return (req, res, next) => {
+    try { return fn(req, res, next); } catch (error) {
+      console.error(`[KOLAKISA] Centre de gestion (${req.method} ${req.path}) :`, error.stack || error.message);
+      flash(req, "error", `L'action n'a pas abouti. Détail technique : ${String(error.message || error).slice(0, 200)}`);
+      return res.redirect(back);
+    }
   };
 }
 // Bouton « Retour » : le niveau parent réel (jamais history.back())
@@ -63,19 +75,31 @@ router.use("/formateur/gestion", (req, res, next) => { res.locals.back = backOf(
 router.get("/formateur/gestion", page("gestion/index", "Centre de gestion", (req) => {
   const id = me(req);
   const one = (sql, ...a) => db.prepare(sql).get(...a);
+  // Chaque bloc est calculé séparément : un bloc en échec affiche « Données indisponibles », les autres restent justes
+  const problems = [];
+  const safe = (label, fn, fallback = null) => {
+    try { return fn(); } catch (error) {
+      console.error(`[KOLAKISA] Centre de gestion · Vue d'ensemble (${label}) :`, error.message);
+      problems.push({ label, message: error.message });
+      return fallback;
+    }
+  };
   const p30 = common.period({ periode: "30j" });
+  const SALES = "FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ?";
   return {
     overview: {
-      orders: one("SELECT COUNT(DISTINCT o.id) n FROM orders o JOIN order_items oi ON oi.order_id = o.id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ?", id).n,
-      revenue30: one("SELECT COALESCE(SUM(oi.price_cents), 0) s FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ? AND o.created_at >= ? AND o.created_at < ?", id, p30.from, p30.to).s,
-      students: one("SELECT COUNT(DISTINCT e.user_id) n FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ?", id).n,
-      enrollments30: one("SELECT COUNT(*) n FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ? AND e.created_at >= ? AND e.created_at < ?", id, p30.from, p30.to).n,
-      resources: resources.allResources(id).length,
-      coupons: sales.listCoupons(id).filter((c) => c.state.key === "on").length,
-      unread: activity.unreadCount(id),
-      alerts: activity.alerts(id),
-      recent: activity.feed(id, { page: 1 }).rows.slice(0, 6),
+      orders: safe("Ventes", () => one(`SELECT COUNT(DISTINCT o.id) n ${SALES}`, id).n),
+      revenue30: safe("Ventes", () => one(`SELECT COALESCE(SUM(oi.price_cents), 0) s ${SALES} AND o.created_at >= ? AND o.created_at < ?`, id, p30.from, p30.to).s),
+      coupons: safe("Codes promo", () => sales.listCoupons(id).filter((c) => c.state.key === "on").length),
+      students: safe("Élèves", () => one("SELECT COUNT(DISTINCT e.user_id) n FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ?", id).n),
+      enrollments30: safe("Élèves", () => one("SELECT COUNT(*) n FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ? AND e.created_at >= ? AND e.created_at < ?", id, p30.from, p30.to).n),
+      // Nombre de fichiers seulement : les utilisations (coûteuses) ne sont calculées que dans Ressources
+      resources: safe("Ressources", () => { const all = resources.allResources(id); if (all.problems.length) throw new Error(all.problems.map((x) => `${x.label} : ${x.message}`).join(" · ")); return all.length; }),
+      unread: safe("Notifications", () => activity.unreadCount(id)),
+      alerts: safe("Alertes", () => activity.alerts(id), []),
+      recent: safe("Activité récente", () => activity.feed(id, { page: 1 }).rows.slice(0, 6), []),
     },
+    problems,
   };
 }));
 
@@ -103,26 +127,26 @@ function couponForm(req, res, current) {
   else { sales.createCoupon(me(req), v.values); flash(req, "ok", `Code ${v.values.code} créé${v.values.active ? " et actif" : " (désactivé)"}.`); }
   res.redirect("/formateur/gestion/ventes/coupons");
 }
-router.post("/formateur/gestion/ventes/coupons", (req, res) => couponForm(req, res, null));
-router.post("/formateur/gestion/ventes/coupons/:id(\\d+)", (req, res) => {
+router.post("/formateur/gestion/ventes/coupons", safely("/formateur/gestion/ventes/coupons", (req, res) => couponForm(req, res, null)));
+router.post("/formateur/gestion/ventes/coupons/:id(\\d+)", safely("/formateur/gestion/ventes/coupons", (req, res) => {
   const c = sales.getCoupon(me(req), Number(req.params.id));
   if (!c) return res.status(404).render("gestion/erreur", { title: "Introuvable", notFound: true, back: backOf(req.path) });
   couponForm(req, res, c);
-});
-router.post("/formateur/gestion/ventes/coupons/:id(\\d+)/:action(activer|desactiver|supprimer)", (req, res) => {
+}));
+router.post("/formateur/gestion/ventes/coupons/:id(\\d+)/:action(activer|desactiver|supprimer)", safely("/formateur/gestion/ventes/coupons", (req, res) => {
   const c = sales.getCoupon(me(req), Number(req.params.id));
   if (!c) { flash(req, "error", "Code promo introuvable."); return res.redirect("/formateur/gestion/ventes/coupons"); }
   if (req.params.action === "supprimer") { sales.deleteCoupon(me(req), c.id); flash(req, "ok", `Code ${c.code} supprimé (les commandes passées conservent leur remise).`); }
   else { sales.setCouponActive(me(req), c.id, req.params.action === "activer"); flash(req, "ok", `Code ${c.code} ${req.params.action === "activer" ? "activé" : "désactivé"}.`); }
   res.redirect("/formateur/gestion/ventes/coupons");
-});
+}));
 
 // ---------- Élèves ----------
 router.get("/formateur/gestion/eleves", page("gestion/eleves", "Élèves", (req) => ({ list: students.listStudents(me(req), req.query), courses: sales.myCourses(me(req)) })));
-router.get("/formateur/gestion/eleves/:id(\\d+)", (req, res, next) => {
+router.get("/formateur/gestion/eleves/:id(\\d+)", page("gestion/eleve", "Élève", (req, res) => {
   const s = students.getStudent(me(req), Number(req.params.id));
-  page("gestion/eleve", s ? s.user.username : "Élève", () => s || null)(req, res, next);
-});
+  return s ? { ...s, title: s.user.username } : null;
+}));
 
 // ---------- Analytics ----------
 router.get("/formateur/gestion/analytics", page("gestion/analytics", "Analytics", (req) => {
@@ -143,8 +167,8 @@ const resourceUpload = multer({
   limits: { fileSize: 300 * 1024 * 1024, files: 10 },
 }).array("fichiers", 10);
 router.post("/formateur/gestion/ressources", (req, res) => {
-  resourceUpload(req, res, (err) => {
-    if (err) { flash(req, "error", err.code === "LIMIT_FILE_SIZE" ? "Fichier trop lourd (300 Mo au plus)." : err.code === "LIMIT_FILE_COUNT" || err.code === "LIMIT_UNEXPECTED_FILE" ? "10 fichiers au plus par envoi." : "Envoi impossible."); return res.redirect("/formateur/gestion/ressources"); }
+  resourceUpload(req, res, (err) => { try {
+    if (err) { flash(req, "error", err.code === "LIMIT_FILE_SIZE" ? "Fichier trop lourd (300 Mo au plus)." : err.code === "LIMIT_FILE_COUNT" || err.code === "LIMIT_UNEXPECTED_FILE" ? "10 fichiers au plus par envoi." : `Envoi impossible. Détail technique : ${String(err.message || err).slice(0, 200)}`); return res.redirect("/formateur/gestion/ressources"); }
     const files = req.files || [];
     const refused = Math.max(0, Number(req.body.count || 0) - files.length);
     if (!files.length) { flash(req, "error", "Aucun fichier accepté : images (JPEG, PNG, WebP, GIF, AVIF), vidéos (MP4, WebM, MOV) ou audio (MP3, M4A, AAC, OGG, WAV)."); return res.redirect("/formateur/gestion/ressources"); }
@@ -152,24 +176,35 @@ router.post("/formateur/gestion/ressources", (req, res) => {
       const [kind, dir] = TYPES[f.mimetype];
       let dims = null;
       if (kind === "image") { try { dims = seoImages.readDimensions(fs.readFileSync(f.path)); } catch { dims = null; } }
-      const title = String(f.originalname || "").replace(/\.[a-z0-9]{1,8}$/i, "").replace(/[\r\n]+/g, " ").slice(0, 200);
+      // multer lit le nom d'origine en latin-1 : « Bannière » arriverait en « BanniÃ¨re » ; relu en UTF-8
+      const utf8 = Buffer.from(String(f.originalname || ""), "latin1").toString("utf8");
+      const title = (utf8.includes("\uFFFD") ? String(f.originalname || "") : utf8).replace(/\.[a-z0-9]{1,8}$/i, "").replace(/[\r\n]+/g, " ").slice(0, 200);
       return blog.addMedia({ path: `/uploads/${dir}/${f.filename}`, kind, mime: f.mimetype, size: f.size, width: dims && dims.width, height: dims && dims.height, title, userId: me(req) });
     });
     flash(req, "ok", `${added.length} fichier(s) ajouté(s) à la médiathèque du site${refused ? ` · ${refused} refusé(s) (type non pris en charge)` : ""}.`);
     res.redirect("/formateur/gestion/ressources?source=site");
-  });
+  } catch (error) {
+    console.error("[KOLAKISA] Centre de gestion (envoi de fichiers) :", error.stack || error.message);
+    flash(req, "error", `L'envoi n'a pas abouti. Détail technique : ${String(error.message || error).slice(0, 200)}`);
+    res.redirect("/formateur/gestion/ressources");
+  } });
 });
-router.post("/formateur/gestion/ressources/:id(\\d+)/supprimer", (req, res) => {
+router.post("/formateur/gestion/ressources/:id(\\d+)/supprimer", safely("/formateur/gestion/ressources", (req, res) => {
   const m = blog.getMedia(Number(req.params.id));
   if (!m) { flash(req, "error", "Fichier introuvable."); return res.redirect("/formateur/gestion/ressources"); }
-  const usage = blog.imageReferences(m.path);
+  let usage;
+  try { usage = blog.imageReferences(m.path); } catch (error) {
+    console.error("[KOLAKISA] Centre de gestion · suppression (utilisations) :", error.message);
+    flash(req, "error", "Suppression refusée par sécurité : impossible de vérifier si ce fichier est encore utilisé.");
+    return res.redirect("/formateur/gestion/ressources");
+  }
   if (usage.length) { flash(req, "error", `« ${m.title || path.basename(m.path)} » est encore utilisé : ${usage.slice(0, 4).join(", ")}${usage.length > 4 ? "…" : ""}. Retirez-le d'abord de ces endroits.`); return res.redirect("/formateur/gestion/ressources"); }
   db.prepare("DELETE FROM media WHERE id = ?").run(m.id);
   removeUploadedFile(m.path, "supprimée depuis le Centre de gestion (Ressources)");
   for (const v of blog.imageVariants(m.path)) removeUploadedFile(v.src, "version réduite d'une image supprimée");
   flash(req, "ok", `« ${m.title || path.basename(m.path)} » supprimé.`);
   res.redirect(`/formateur/gestion/ressources${req.body.retour && /^\?[\w=&%.+-]*$/.test(req.body.retour) ? req.body.retour : ""}`);
-});
+}));
 
 // ---------- Activité et notifications ----------
 router.get("/formateur/gestion/activite", page("gestion/activite", "Activité", (req) => {
@@ -177,19 +212,19 @@ router.get("/formateur/gestion/activite", page("gestion/activite", "Activité", 
   return { view, feed: view === "alertes" ? null : activity.feed(me(req), { ...req.query, vue: view }), alerts: activity.alerts(me(req)), types: activity.TYPES, unread: activity.unreadCount(me(req)) };
 }));
 // Ouvrir une notification : marquée comme lue, puis redirection vers l'élément réel (adresse calculée par le serveur)
-router.get("/formateur/gestion/activite/ouvrir", (req, res) => {
+router.get("/formateur/gestion/activite/ouvrir", safely("/formateur/gestion/activite", (req, res) => {
   const it = activity.markRead(me(req), String(req.query.cle || ""));
   if (!it) { flash(req, "error", "Cet élément n'existe plus."); return res.redirect("/formateur/gestion/activite"); }
   res.redirect(it.href || "/formateur/gestion/activite?vue=notifications");
-});
-router.post("/formateur/gestion/activite/lu", (req, res) => {
+}));
+router.post("/formateur/gestion/activite/lu", safely("/formateur/gestion/activite?vue=notifications", (req, res) => {
   if (!activity.markRead(me(req), String(req.body.cle || ""))) flash(req, "error", "Cet élément n'existe plus.");
   res.redirect(`/formateur/gestion/activite?vue=notifications${req.body.etat === "non-lu" ? "&etat=non-lu" : ""}`);
-});
-router.post("/formateur/gestion/activite/tout-lu", (req, res) => {
+}));
+router.post("/formateur/gestion/activite/tout-lu", safely("/formateur/gestion/activite?vue=notifications", (req, res) => {
   activity.markAllRead(me(req));
   flash(req, "ok", "Toutes les notifications sont marquées comme lues.");
   res.redirect("/formateur/gestion/activite?vue=notifications");
-});
+}));
 
 module.exports = router;

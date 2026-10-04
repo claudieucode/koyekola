@@ -319,3 +319,61 @@ test("erreur de chargement : page d'erreur avec « Réessayer » sur la même ad
   db.exec("ALTER TABLE coupons_indisponible RENAME TO coupons");
   assert.equal((await prof.get(url)).status, 200);
 });
+
+test("robustesse : une source en échec n'empêche plus la vue d'ensemble ni Ressources de s'afficher", async () => {
+  const db = srv.db();
+  // Fichier de la médiathèque (doit rester listé même si les fichiers des formations sont illisibles)
+  const fd = new FormData();
+  fd.append("count", "1");
+  fd.append("fichiers", new Blob([PNG], { type: "image/png" }), "Bannière été.png");
+  await prof.request(`${G}/ressources`, { method: "POST", multipart: fd });
+  assert.ok(db.prepare("SELECT id FROM media WHERE title = 'Bannière été'").get(), "nom accentué conservé (UTF-8)");
+
+  db.exec("ALTER TABLE lesson_attachments RENAME COLUMN kind TO kind_casse");
+  try {
+    const res = await prof.get(`${G}/ressources`);
+    assert.equal(res.status, 200);
+    assert.match(res.text, /Formations : liste indisponible/);
+    assert.match(res.text, /Bannière été/);
+    const ov = await prof.get(G);
+    assert.equal(ov.status, 200);
+    assert.match(ov.text, /Ressources : données indisponibles/);
+    assert.match(ov.text, /commande\(s\)/); // les autres blocs restent calculés
+  } finally { db.exec("ALTER TABLE lesson_attachments RENAME COLUMN kind_casse TO kind"); }
+  assert.doesNotMatch((await prof.get(`${G}/ressources`)).text, /liste indisponible/);
+});
+
+test("robustesse : une source d'activité en échec est écartée et signalée, le reste de Mon espace fonctionne", async () => {
+  const db = srv.db();
+  db.exec("ALTER TABLE contact_messages RENAME COLUMN subject TO subject_casse");
+  try {
+    const feed = await prof.get(`${G}/activite`);
+    assert.equal(feed.status, 200);
+    assert.match(feed.text, /Messages : événements indisponibles/);
+    assert.match(feed.text, /Nouvelle commande #/);
+    assert.equal((await prof.get(G)).status, 200);
+    // Badge des notifications calculé sur chaque page de Mon espace : ne doit jamais la casser
+    assert.equal((await prof.get("/formateur/formations")).status, 200);
+  } finally { db.exec("ALTER TABLE contact_messages RENAME COLUMN subject_casse TO subject"); }
+});
+
+test("robustesse : si l'utilisation d'un fichier ne peut pas être vérifiée, la suppression est bloquée", async () => {
+  const db = srv.db();
+  const m = db.prepare("SELECT id FROM media WHERE title = 'Bannière été'").get();
+  db.exec("ALTER TABLE site_pages RENAME COLUMN content TO content_casse");
+  try {
+    const res = await prof.get(`${G}/ressources?q=banni`);
+    assert.equal(res.status, 200);
+    assert.match(res.text, /utilisation impossible à vérifier/);
+    const del = await prof.post(`${G}/ressources/${m.id}/supprimer`, {});
+    assert.equal(del.status, 302);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM media WHERE id = ?").get(m.id).n, 1, "fichier conservé");
+    assert.match((await prof.get(`${G}/ressources`)).text, /Suppression refusée par sécurité/);
+  } finally { db.exec("ALTER TABLE site_pages RENAME COLUMN content_casse TO content"); }
+});
+
+test("profil d'élève : titre de la page = nom de l'élève", async () => {
+  const u1 = srv.db().prepare("SELECT id, username FROM users WHERE email = ?").get(eleve1.email);
+  const r = await prof.get(`${G}/eleves/${u1.id}`);
+  assert.match(r.text, new RegExp(`<title>${u1.username} ·`));
+});
