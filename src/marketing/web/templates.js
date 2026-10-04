@@ -40,7 +40,7 @@ const BLOCKS = {
 // Ajouts en un clic (pas des types de blocs) : préréglages et ensembles prêts à l'emploi, construits avec les blocs ci-dessus
 const PRESETS = { gif: ["GIF animé", "image", "Une image animée (GIF) de la médiathèque"], cta: ["Appel à l'action", "zap", "Titre, texte et bouton"], offer: ["Offre", "coin", "Titre, coupon et bouton"] };
 // Icônes utilisées par le script de l'éditeur (SVG du registre fixe, jamais de texte saisi)
-const EDITOR_ICONS = ["grip", "zap", "coin", "tag", "list", "copy", "eye", "eyeOff", "trash", "arrowUp", "arrowDown", "edit", "grip", "upload", "plus", "search", "alertTriangle", "checkCircle", "close", "image", "fileText", "link", "maximize", "monitor", "tablet", "smartphone", "layers", "palette", "braces", "settings", "undo", "redo", "moreHorizontal", "alertCircle", "chevronRight", "info", "externalLink"];
+const EDITOR_ICONS = ["grip", "zap", "coin", "tag", "list", "copy", "eye", "eyeOff", "trash", "arrowUp", "arrowDown", "edit", "grip", "upload", "plus", "search", "alertTriangle", "checkCircle", "close", "image", "fileText", "link", "maximize", "monitor", "tablet", "smartphone", "layers", "palette", "braces", "settings", "undo", "redo", "moreHorizontal", "alertCircle", "chevronRight", "info", "externalLink", "alignLeft", "alignCenter", "alignRight", "alignJustify", "listOrdered", "indentMore", "indentLess", "highlighter", "clearFormat", "borderBox", "spacing", "chevronDown", "type", "video"];
 // Palette de l'éditeur : groupes et blocs (libellés français)
 const PALETTE = [
   { title: "Texte", blocks: [["heading", "Titre"], ["text", "Texte"], ["quote", "Citation"], ["list", "Liste"]] },

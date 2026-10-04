@@ -110,6 +110,7 @@
     updateHistoryUi();
   }
   function restore(index, message) {
+    if (inline) inline = null; // le canevas est reconstruit depuis l'état restauré
     pos = index; lastKey = null;
     var snap = JSON.parse(history[pos]);
     ["name", "kind", "category", "subject", "preheader", "theme", "footer", "blocks"].forEach(function (k) { state[k] = snap[k]; });
@@ -142,11 +143,12 @@
     status("dirty", "Modifications non enregistrées");
     var a = document.activeElement;
     var typing = a && (a.tagName === "TEXTAREA" || a.isContentEditable || (a.tagName === "INPUT" && a.type !== "checkbox"));
-    record(typing && a.id ? a.id : null);
+    record(inlineTyping && inline ? "inline-" + inline.id : typing && a.id ? a.id : null); // frappe dans l'e-mail : une étape d'annulation par rafale
     if (structural) renderStructure();
     else refreshStructureLabels();
     schedulePreview();
     scheduleAutosave();
+    if (toolbar) toolbar.sync();
   }
 
   // ---------- Contenu envoyé au serveur ----------
@@ -795,7 +797,13 @@
       sec("content", "Lien (facultatif)", [textField(block, "href", "Adresse au clic (https://… ou mailto:)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
       sec("styles", "Typographie", [fontField(block), optNumberField(block, "fontSize", "Taille (px, 16 à 44)", 16, 44, "auto"), optColorField(block, "color", "Couleur personnalisée", state.theme.textColor || "#10222f"), alignField(block, "align", "left", block.id)].concat(emphasisFields(block, true)));
     } else if (t === "text") {
-      sec("content", "Texte", [typeof block.html === "string" ? richField(block, "html", "Texte", { rows: 8 }) : markdownField(block, "markdown", "Texte", 8)]);
+      if (typeof block.html === "string") {
+        var write = el("button", { type: "button", "class": "btn btn-primary btn-sm mk-b-write" });
+        write.appendChild(iconSpan("edit")); write.appendChild(document.createTextNode(" Écrire dans l'e-mail"));
+        write.disabled = readOnly;
+        write.addEventListener("click", function () { scrollToBlock(block.id); startInline(block.id); });
+        sec("content", "Texte", [el("p", { "class": "field-hint mk-b-writehint" }, "Le texte s'écrit directement dans l'e-mail : cliquez dedans. La barre d'outils au-dessus du canevas le met en forme (style, police, taille, gras, couleurs, liens, alignement, listes, retrait, variables)."), write]);
+      } else sec("content", "Texte", [markdownField(block, "markdown", "Texte", 8)]);
       sec("styles", "Typographie", [fontField(block), optNumberField(block, "fontSize", "Taille de base (px, 12 à 28)", 12, 28, "16"), lineHeightField(block), optColorField(block, "color", "Couleur du texte personnalisée", state.theme.textColor || "#10222f"), alignField(block, "align", "left", block.id, "Alignement du bloc"), optNumberField(block, "letterSpacing", "Espacement des lettres (px, 0 à 10)", 0, 10, "0")]);
     } else if (t === "image") {
       sec("content", "Image", [imageSource(block), textField(block, "src", "Adresse de l'image (https://…)", { max: 2000, placeholder: "https://exemple.fr/image.png" }),
@@ -924,6 +932,7 @@
     changed(true); renderProps(); announce(b.hidden ? "Bloc masqué : il ne sera pas envoyé." : "Bloc de nouveau affiché.");
   }
   function select(id, opts) {
+    if (inline && inline.id !== id) stopInline();
     selectedId = id;
     renderProps();
     markSelection();
@@ -966,6 +975,7 @@
       empty.appendChild(el("p", {}, readOnly ? "Cliquez sur un bloc de l'e-mail pour voir ses réglages." : "Cliquez sur un bloc de l'e-mail (ou dans «\u00a0Structure\u00a0») pour le modifier."));
       empty.appendChild(el("p", { "class": "field-hint" }, "L'objet, le préheader et le pied de page se règlent dans l'onglet «\u00a0Message\u00a0» ; les couleurs et la police dans «\u00a0Styles\u00a0»."));
       props.appendChild(empty);
+      if (toolbar) toolbar.render();
       return;
     }
     var head = el("div", { "class": "mk-b-props-head" });
@@ -1013,6 +1023,7 @@
     });
     if (propsTab === "styles" && !readOnly && blockSections(block).styles.length === 0 && !block.mobile) panel.appendChild(el("p", { "class": "field-hint mk-b-tabnote" }, "Ce bloc reprend les styles globaux du message (onglet « Styles » à gauche) ; ses marges, son fond et sa bordure se règlent ci-dessus."));
     props.appendChild(panel);
+    if (toolbar) toolbar.render();
   }
 
   // ---------- Structure (liste des blocs, accessible au clavier, réordonnable) ----------
@@ -1245,7 +1256,7 @@
   var canvas = $("mk-canvas");
   var contactSel = $("mk-contact");
   (data.contacts || []).forEach(function (c) { contactSel.appendChild(el("option", { value: String(c.id) }, c.email)); });
-  contactSel.addEventListener("change", runPreview);
+  contactSel.addEventListener("change", function () { stopInline({ rerender: false }); runPreview(); });
   // Largeur d'affichage : l'e-mail garde sa VRAIE largeur (600 / 480 / 375 px) ; s'il ne tient pas dans le canevas,
   // il est réduit à l'affichage (zoom), jamais recomposé ni coupé. Les marges latérales restent libres pour la barre du bloc.
   var frameWidth = 600, zoom = 1, zoomEl = $("mk-zoom"), zoomFull = false; // zoomFull : 100 % demandé (défilement horizontal dans le canevas)
@@ -1296,8 +1307,16 @@
   applyDesktopWidth();
   fitZoom();
   var previewTimer = null, previewSeq = 0;
-  function schedulePreview() { clearTimeout(previewTimer); previewTimer = setTimeout(runPreview, 350); }
+  var previewBusy = false, pendingInline = null; // rechargement du canevas en cours / écriture à reprendre après
+  function schedulePreview() {
+    if (inline && keepInline()) return;
+    previewBusy = true;
+    clearTimeout(previewTimer); previewTimer = setTimeout(runPreview, 350);
+  }
+  function previewDone() { previewBusy = false; if (pendingInline) { var p = pendingInline; pendingInline = null; startInline(p.id, p.point); } }
   function runPreview() {
+    if (inline && keepInline()) { previewBusy = false; return; }
+    previewBusy = true;
     var seq = ++previewSeq;
     var body = { template: payload(), annotate: true };
     if (contactSel.value) body.contactId = parseInt(contactSel.value, 10);
@@ -1305,7 +1324,7 @@
       .then(function (res) { return res.json().then(function (j) { return { ok: res.ok, j: j }; }); })
       .then(function (r) {
         if (seq !== previewSeq) return; // réponse périmée
-        if (!r.ok) { showError(r.j.error || "Aperçu impossible."); return; }
+        if (!r.ok) { showError(r.j.error || "Aperçu impossible."); previewDone(); return; }
         showError("");
         frame.style.minHeight = frame.offsetHeight + "px"; // pas de saut de défilement pendant le rechargement
         frame.srcdoc = r.j.html;
@@ -1316,7 +1335,7 @@
         renderStructure(); renderCheck();
         if (selectedId) { var err = props && props.querySelector(".mk-warn.is-error"); var has = blockErrors.some(function (x) { return x.id === selectedId; }); if (Boolean(err) !== has) renderProps(); }
       })
-      .catch(function (e) { if (seq === previewSeq) { console.error("[éditeur] aperçu", e); showError("Aperçu impossible pour le moment : vérifiez votre connexion."); } });
+      .catch(function (e) { if (seq === previewSeq) { console.error("[éditeur] aperçu", e); showError("Aperçu impossible pour le moment : vérifiez votre connexion."); previewDone(); } });
   }
   function frameDoc() { try { return frame.contentDocument; } catch (e) { return null; } }
   function rows() { var d = frameDoc(); return d ? [].slice.call(d.querySelectorAll("[data-mk-block]")) : []; }
@@ -1337,7 +1356,10 @@
     canvas.scrollTo({ top: Math.max(0, box.top - 40), behavior: "smooth" });
   }
   // Styles d'édition injectés dans le rendu (contour au survol / à la sélection, ligne d'insertion) — jamais envoyés
-  var EDIT_CSS = "[data-mk-block]{cursor:pointer}[data-mk-block]>td{transition:box-shadow .12s}[data-mk-block][data-mk-hover]>td{box-shadow:inset 0 0 0 1px #7aa7c7}" +
+  var EDIT_CSS = "[data-mk-edit]{outline:none;cursor:text;min-height:1.6em}[data-mk-edit] a{pointer-events:auto;cursor:text}[data-mk-edit] p{margin:0 0 16px}[data-mk-edit]>:last-child{margin-bottom:0}" +
+    "[data-mk-edit] h2{margin:0 0 12px;font-size:22px;line-height:1.25;font-weight:800}[data-mk-edit] h3{margin:0 0 12px;font-size:19px;line-height:1.3;font-weight:700}[data-mk-edit] h4{margin:0 0 10px;font-size:17px;line-height:1.3;font-weight:700}" +
+    "[data-mk-edit] ul,[data-mk-edit] ol{margin:0 0 16px;padding-left:24px}[data-mk-edit] li{margin:0 0 6px}[data-mk-edit] blockquote{margin:0 0 16px;padding:4px 0 4px 14px;border-left:3px solid var(--mk-accent,#0277b6)}[data-mk-edit] a{text-decoration:underline}" +
+    "[data-mk-block][data-mk-editing]>td{box-shadow:inset 0 0 0 2px #0277b6;background-image:none!important}[data-mk-block]{cursor:pointer}[data-mk-block]>td{transition:box-shadow .12s}[data-mk-block][data-mk-hover]>td{box-shadow:inset 0 0 0 1px #7aa7c7}" +
     "[data-mk-block][data-mk-selected]>td{box-shadow:inset 0 0 0 2px #0277b6;position:relative}[data-mk-block][data-mk-selected]>td[data-mk-name]::after{content:attr(data-mk-name);position:absolute;left:0;top:0;padding:1px 8px;border-radius:0 0 6px 0;background:#0277b6;color:#fff;font:600 12px/18px -apple-system,Segoe UI,Roboto,Arial,sans-serif;pointer-events:none;z-index:5}a{pointer-events:none}#mk-insert{position:absolute;left:12px;right:12px;height:0;border-top:3px solid #0277b6;border-radius:2px;pointer-events:none;z-index:10}" +
     "#mk-insert::before{content:'';position:absolute;left:-5px;top:-6.5px;width:10px;height:10px;border-radius:50%;background:#0277b6}" +
     "[data-mk-block][data-mk-selected]>td{background-image:linear-gradient(rgba(2,119,182,.04),rgba(2,119,182,.04))}" +
@@ -1351,13 +1373,21 @@
     d.body.style.position = "relative";
     fitFrame();
     markSelection();
+    setTimeout(previewDone, 0);
     d.addEventListener("click", function (e) {
       e.preventDefault(); // un lien de l'e-mail ne s'ouvre jamais dans l'éditeur
+      if (inline && inline.box.contains(e.target)) return; // dans le texte en cours d'écriture : le curseur se place
       var row = e.target.closest && e.target.closest("[data-mk-block]");
-      if (row) select(row.getAttribute("data-mk-block"), { focus: false });
+      if (row) {
+        var rid = row.getAttribute("data-mk-block");
+        select(rid, { focus: false });
+        var rb = blockById(rid);
+        if (rb && rb.type === "text" && typeof rb.html === "string" && !readOnly) startInline(rid, { x: e.clientX, y: e.clientY });
+      }
       else if (selectedId && !(e.target.closest && e.target.closest(".mk-container"))) select(null); // clic hors du message : désélection
     }, true);
-    d.addEventListener("keydown", function (e) { if (e.key === "Escape" && selectedId) select(null); });
+    d.addEventListener("keydown", function (e) { if (e.key === "Escape" && selectedId && !inline) select(null); });
+    d.addEventListener("selectionchange", function () { if (inline) { textApi.saveRange(); if (toolbar) toolbar.sync(); } });
     d.addEventListener("mouseover", function (e) {
       var row = e.target.closest && e.target.closest("[data-mk-block]");
       rows().forEach(function (n) { n.toggleAttribute("data-mk-hover", n === row); });
@@ -1829,6 +1859,191 @@
       var items = [].slice.call(moreMenu.querySelectorAll("[role=menuitem]")), i = items.indexOf(document.activeElement);
       if (e.key === "Escape") { closeMore(); moreBtn.focus(); }
       else if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus(); }
+    });
+  }
+
+  // ---------- Édition directe du texte dans l'e-mail ----------
+  // Le bloc texte sélectionné devient éditable DANS le canevas (son contenu source, nettoyé) ; chaque frappe met à jour
+  // block.html (même nettoyage que l'ancien champ), l'historique et l'enregistrement automatique. Le canevas n'est pas
+  // rechargé pendant l'écriture (curseur et sélection conservés) ; le rendu réel revient en quittant le bloc.
+  var inline = null, inlineTyping = false;
+  var FONT_STACKS = { system: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif", serif: "Georgia,'Times New Roman',serif", arial: "Arial,Helvetica,sans-serif", verdana: "Verdana,Geneva,sans-serif", trebuchet: "'Trebuchet MS',Helvetica,sans-serif", tahoma: "Tahoma,Verdana,sans-serif", times: "'Times New Roman',Times,serif", courier: "'Courier New',Courier,monospace" };
+  var INLINE_KEYS = ["html", "font", "fontSize", "lineHeight", "color", "letterSpacing", "align", "weight", "italic"];
+  function themeValue(k) { return state.theme && state.theme[k] != null ? state.theme[k] : THEME_DEFAULTS[k]; }
+  function inlineSignature() {
+    // Données telles qu'envoyées au serveur (un réglage vide affiché dans le panneau ne compte pas comme un changement)
+    return JSON.stringify({ t: state.theme, b: state.blocks.map(function (b) { var c = cleanBlock(b); if (b.id === inline.id) INLINE_KEYS.forEach(function (k) { delete c[k]; }); return c; }) });
+  }
+  // Seuls le texte et la typographie du bloc en cours ont changé : on les applique en direct ; sinon, fin de l'écriture
+  function keepInline() {
+    if (!blockById(inline.id)) { inline = null; return false; }
+    if (inlineSignature() === inline.sig) { applyInlineStyle(); return true; }
+    stopInline({ rerender: false });
+    return false;
+  }
+  function applyInlineStyle() {
+    var b = blockById(inline.id), st = inline.box.style;
+    st.fontFamily = FONT_STACKS[b.font || themeValue("fontFamily")] || "";
+    st.fontSize = (b.fontSize || 16) + "px";
+    st.lineHeight = String(b.lineHeight || 1.6);
+    st.color = b.color || themeValue("textColor");
+    st.letterSpacing = b.letterSpacing ? b.letterSpacing + "px" : "";
+    st.textAlign = b.align || "";
+    inline.box.ownerDocument.documentElement.style.setProperty("--mk-accent", themeValue("accent"));
+  }
+  function syncInline() {
+    var b = inline && blockById(inline.id); if (!b) return;
+    var tmp = document.createElement("div");
+    importRich(inline.box, tmp); // liste fermée de balises et de styles, adresses de liens vérifiées
+    b.html = tmp.innerHTML;
+    inlineTyping = true;
+    try { changed(); } finally { inlineTyping = false; }
+  }
+  function inlineInput() { syncInline(); fitFrame(); if (toolbar) toolbar.sync(); }
+  function startInline(id, point) {
+    if (readOnly) return;
+    id = id || selectedId;
+    var b = blockById(id);
+    if (!b || b.type !== "text" || typeof b.html !== "string") return;
+    if (inline && inline.id === id) { inline.box.focus(); return; }
+    if (inline) stopInline();
+    if (selectedId !== id) select(id, { focus: false });
+    if (previewBusy) { pendingInline = { id: id, point: point }; return; } // le canevas se recharge : l'écriture commence ensuite
+    var d = frameDoc();
+    var row = rows().filter(function (n) { return n.getAttribute("data-mk-block") === id; })[0];
+    if (!d || !row || !row.firstElementChild) return;
+    var cell = row.firstElementChild;
+    var box = d.createElement("div");
+    box.setAttribute("data-mk-edit", ""); box.setAttribute("role", "textbox"); box.setAttribute("aria-multiline", "true"); box.setAttribute("aria-label", "Texte du bloc (Échap pour terminer)");
+    box.contentEditable = "true"; box.spellcheck = true;
+    var tmp = document.createElement("div"); setRich(tmp, b.html); // contenu nettoyé (liste fermée), déplacé nœud par nœud
+    while (tmp.firstChild) box.appendChild(tmp.firstChild);
+    cell.textContent = ""; cell.appendChild(box);
+    row.setAttribute("data-mk-editing", "");
+    inline = { id: id, box: box, range: null, sig: null };
+    applyInlineStyle();
+    inline.sig = inlineSignature();
+    try { d.execCommand("defaultParagraphSeparator", false, "p"); } catch (e) { /* navigateur ancien */ }
+    box.addEventListener("input", inlineInput);
+    box.addEventListener("keydown", inlineKeys);
+    // Collage : texte seul (les mises en forme d'autres logiciels cassent les e-mails)
+    box.addEventListener("paste", function (e) { e.preventDefault(); var text = (e.clipboardData || window.clipboardData).getData("text/plain"); d.execCommand("insertText", false, text); });
+    box.focus();
+    var sel = d.getSelection(), r = null;
+    if (point && d.caretRangeFromPoint) { r = d.caretRangeFromPoint(point.x, point.y); if (r && !box.contains(r.startContainer)) r = null; }
+    if (!r) { r = d.createRange(); r.selectNodeContents(box); r.collapse(false); }
+    sel.removeAllRanges(); sel.addRange(r);
+    textApi.saveRange(); fitFrame();
+    if (toolbar) toolbar.sync();
+    announce("Écriture dans le texte : la barre d'outils au-dessus du canevas met en forme la sélection. Échap pour terminer.");
+  }
+  function stopInline(opts) {
+    if (!inline) return;
+    var cur = inline; inline = null;
+    cur.box.contentEditable = "false";
+    if (cur.box.parentNode && cur.box.parentNode.parentNode) cur.box.parentNode.parentNode.removeAttribute("data-mk-editing");
+    if (!opts || opts.rerender !== false) schedulePreview();
+    if (toolbar) toolbar.sync();
+  }
+  function inlineKeys(e) {
+    var k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); stopInline(); announce("Écriture terminée : le bloc reste sélectionné."); return; } // un 2e Échap désélectionne
+    if (!mod) return;
+    if (k === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+    else if (k === "y") { e.preventDefault(); redo(); }
+    else if (k === "s") { e.preventDefault(); save({ manual: true }); }
+    else if (k === "k") { e.preventDefault(); var lb = $("mk-ctxbar").querySelector('[aria-label="Lien (Ctrl+K)"]'); if (lb) lb.click(); }
+  }
+  function rgbHex(v) { var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/.exec(v || ""); if (!m || m[4] === "0") return ""; return "#" + [m[1], m[2], m[3]].map(function (x) { return ("0" + parseInt(x, 10).toString(16)).slice(-2); }).join(""); }
+  // Commandes de texte : toujours sur la sélection de l'e-mail (gardée quand on clique dans la barre)
+  var textApi = {
+    active: function () { return !!inline; },
+    doc: function () { return inline ? inline.box.ownerDocument : null; },
+    saveRange: function () { if (!inline) return; var s = textApi.doc().getSelection(); if (s.rangeCount && inline.box.contains(s.anchorNode)) inline.range = s.getRangeAt(0).cloneRange(); },
+    restore: function () { var d = textApi.doc(); inline.box.focus(); if (inline.range) { var s = d.getSelection(); s.removeAllRanges(); s.addRange(inline.range); } },
+    exec: function (cmd, value, css) {
+      if (!inline) return;
+      var d = textApi.doc(); textApi.restore();
+      try { d.execCommand("styleWithCSS", false, !!css); d.execCommand(cmd, false, value == null ? null : value); } catch (e) { console.error("[éditeur] commande", cmd, e); }
+      textApi.saveRange(); inlineInput();
+    },
+    state: function (cmd) { try { return textApi.doc().queryCommandState(cmd); } catch (e) { return false; } },
+    anchorEl: function () {
+      var s = textApi.doc().getSelection(), n = s.rangeCount ? s.anchorNode : null;
+      if (!n || !inline.box.contains(n)) n = inline.box.firstElementChild || inline.box;
+      return n.nodeType === 3 ? n.parentNode : n;
+    },
+    hasSelection: function () { var s = textApi.doc().getSelection(); return !!(s.rangeCount && !s.isCollapsed && inline.box.contains(s.anchorNode)); },
+    blockTag: function () { for (var n = textApi.anchorEl(); n && n !== inline.box; n = n.parentNode) { if (/^(P|H2|H3|H4|BLOCKQUOTE)$/.test(n.tagName)) return n.tagName.toLowerCase(); if (n.tagName === "LI") return "p"; } return "p"; },
+    setBlock: function (tag) { textApi.exec("formatBlock", "<" + tag + ">"); },
+    sizeAtCaret: function () { var n = textApi.anchorEl(); return Math.round(parseFloat(textApi.doc().defaultView.getComputedStyle(n).fontSize)); },
+    colorAtCaret: function () { return rgbHex(textApi.doc().defaultView.getComputedStyle(textApi.anchorEl()).color); },
+    highlightAtCaret: function () { for (var n = textApi.anchorEl(); n && n !== inline.box; n = n.parentNode) { var v = rgbHex(n.style && n.style.backgroundColor); if (v) return v; } return ""; },
+    setSize: function (px) {
+      textApi.exec("fontSize", "7"); // marque la sélection (<font size=7>), remplacée par une vraie taille en pixels
+      [].forEach.call(inline.box.querySelectorAll('font[size="7"]'), function (f) { var sp = f.ownerDocument.createElement("span"); sp.style.fontSize = px + "px"; while (f.firstChild) sp.appendChild(f.firstChild); f.parentNode.replaceChild(sp, f); });
+      inlineInput();
+    },
+    link: function () { if (!inline) return null; for (var n = textApi.anchorEl(); n && n !== inline.box; n = n.parentNode) if (n.tagName === "A") return n; return null; },
+    applyLink: function (url, newTab) {
+      if (!SAFE_HREF.test(url) || /\s/.test(url)) return "Adresse invalide : commencez par https:// ou mailto: (ou {{unsubscribe_url}}).";
+      var d = textApi.doc(); textApi.restore();
+      var a = textApi.link();
+      if (a) a.setAttribute("href", url);
+      else {
+        var s = d.getSelection();
+        if (s.isCollapsed) { d.execCommand("insertText", false, url); var r = s.getRangeAt(0); r.setStart(r.startContainer, Math.max(0, r.startOffset - url.length)); s.removeAllRanges(); s.addRange(r); } // sans texte choisi : l'adresse devient le texte
+        d.execCommand("createLink", false, url);
+        a = textApi.link() || inline.box.querySelector('a[href="' + url.replace(/"/g, "") + '"]');
+      }
+      if (a) { if (newTab) a.setAttribute("target", "_blank"); else a.removeAttribute("target"); }
+      textApi.saveRange(); inlineInput();
+      return true;
+    },
+    removeLink: function () {
+      var d = textApi.doc(); textApi.restore();
+      var a = textApi.link();
+      if (a) { var r = d.createRange(); r.selectNodeContents(a); var s = d.getSelection(); s.removeAllRanges(); s.addRange(r); }
+      d.execCommand("unlink"); textApi.saveRange(); inlineInput();
+    },
+    insertVariable: function (path) { textApi.exec("insertText", "{{" + path + "}}"); },
+    // Retrait : dans une liste, imbrication réelle ; sinon décalage du paragraphe (24 px par niveau, 4 niveaux)
+    indent: function (delta) {
+      if (!inline) return;
+      textApi.restore();
+      for (var n = textApi.anchorEl(); n && n !== inline.box; n = n.parentNode) if (n.tagName === "LI") { textApi.exec(delta > 0 ? "indent" : "outdent"); return; }
+      var s = textApi.doc().getSelection(), r = s.rangeCount ? s.getRangeAt(0) : null;
+      [].forEach.call(inline.box.querySelectorAll("p, h2, h3, h4, blockquote"), function (blk) {
+        if (r && !r.intersectsNode(blk)) return;
+        var cur = parseInt(blk.style.marginLeft, 10) || 0, next = Math.max(0, Math.min(96, cur + delta * 24));
+        blk.style.marginLeft = next ? next + "px" : "";
+      });
+      inlineInput();
+    },
+    clear: function () { textApi.exec("removeFormat"); textApi.exec("unlink"); },
+  };
+
+  // ---------- Barre d'outils contextuelle (public/js/mk/toolbar.js) ----------
+  var toolbar = null;
+  if (window.MkToolbar && $("mk-ctxbar") && !readOnly) {
+    var varList = function () { var sel = document.createElement("select"); fillVariableOptions(sel); return [].filter.call(sel.options, function (o) { return o.value; }).map(function (o) { return [o.value, o.textContent]; }); };
+    toolbar = window.MkToolbar.create({
+      root: $("mk-ctxbar"), el: el, iconSpan: iconSpan, announce: announce, toast: toast,
+      label: function (b) { return label(b); },
+      block: function () { return selectedId ? blockById(selectedId) : null; },
+      blockChanged: function (opts) { changed(opts && opts.structural); renderProps(); },
+      theme: function () { var t = {}; Object.keys(THEME_DEFAULTS).forEach(function (k) { t[k] = themeValue(k); }); return t; },
+      setTheme: function (k, v) { state.theme[k] = v; syncSettings(); applyDesktopWidth(); changed(); },
+      fonts: function () { return (data.fonts || Object.keys(FONT_LABELS)).map(function (k) { return [k, FONT_LABELS[k] || k]; }); },
+      variables: varList,
+      blockTypes: function () { return Object.keys(TYPES).map(function (t) { return [t, BLOCKS[t] ? BLOCKS[t].label : t]; }); },
+      addBlock: function (type) { addBlock(type); },
+      toggleHidden: function () { if (selectedId) toggleHidden(selectedId); },
+      openProps: function (tab) { propsTab = tab; renderProps(); var f = props.querySelector("#mk-tab-" + tab); if (f) f.focus(); },
+      uploadInto: function (file) { uploadFiles([file], { target: selectedId }); },
+      openMediaFor: function () { pickFor = selectedId; showPane("media"); setMediaStatus("Choisissez une image pour le bloc sélectionné."); },
+      startInline: function () { if (selectedId) { scrollToBlock(selectedId); startInline(selectedId); } },
+      text: textApi,
     });
   }
 

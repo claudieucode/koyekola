@@ -1274,7 +1274,7 @@ a.mk-check-go, a.mk-check-go:hover { color: var(--mk-text); text-decoration: non
 .mk-rich-color input[type="color"] { width: 18px; height: 18px; margin-left: 2px; padding: 0; border: 0; background: none; cursor: pointer; }
 .mk-builder .mk-rich-select { width: auto; min-height: 30px; height: 30px; padding: 0 24px 0 8px; border-color: transparent; background-color: transparent; font-size: var(--b-sm); }
 .mk-builder .mk-rich-select:hover { border-color: var(--mk-border); background-color: var(--mk-surface); }
-.mk-rich-break { flex-basis: 100%; height: 0; }
+.mk-rich-break { display: none; } /* panneau étroit : retour à la ligne naturel (la coupure forcée laissait des lignes à moitié vides) */
 .mk-builder .mk-rich-select { max-width: 112px; padding-right: 20px; background-position: right 4px center; }
 .mk-rich-sep { width: 1px; height: 20px; margin: 0 4px; background: var(--mk-border-strong); }
 .mk-rich-area { min-height: 9em; max-height: 420px; overflow-y: auto; padding: 10px 12px; border: 1px solid var(--mk-border-strong); border-radius: 0 0 var(--b-r) var(--b-r); background: #fff; color: #10222f; font-size: 0.9375rem; line-height: 1.55; cursor: text; transition: border-color var(--b-ease), box-shadow var(--b-ease); }
@@ -1378,3 +1378,87 @@ a.mk-check-go, a.mk-check-go:hover { color: var(--mk-text); text-decoration: non
 .mk-b-devicebar .field-group { margin: var(--b-3) 0 0; }
 .mk-b-same { font-weight: 600; }
 .mk-b-tabnote { margin: var(--b-3) 0 0; }
+
+/* ---------- Barre d'outils contextuelle (au-dessus du canevas, public/js/mk/toolbar.js) ----------
+   Une rangée compacte de groupes séparés par un filet ; les groupes qui ne tiennent pas passent dans « Plus ». */
+.mk-ctxbar { position: relative; z-index: var(--z-sticky); flex: none; border-bottom: 1px solid var(--mk-border); background: var(--mk-surface); }
+.mk-tb-bar { display: flex; flex-wrap: nowrap; align-items: center; min-height: 48px; padding: 6px var(--b-3); gap: 0; min-width: 0; }
+.mk-tb-row { display: flex; gap: 2px; }
+.mk-tb-pop:has(.mk-tb-row) { min-width: 0; }
+.mk-tb-group { flex: none; display: flex; align-items: center; gap: 2px; padding: 0 var(--b-2); min-height: 32px; }
+.mk-tb-group + .mk-tb-group { border-left: 1px solid var(--mk-border); }
+.mk-tb-bar > .mk-tb-more { margin-left: auto; border-left: 1px solid var(--mk-border); }
+.mk-tb-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: none; min-width: 32px; height: 32px; padding: 0 6px; border: 1px solid transparent; border-radius: var(--b-r-sm); background: transparent; color: var(--mk-text); font: inherit; font-size: var(--b-sm); font-weight: 600; cursor: pointer; transition: background var(--b-ease), color var(--b-ease), border-color var(--b-ease); }
+.mk-tb-btn.has-text { padding: 0 10px; }
+.mk-tb-btn:hover:not([aria-disabled="true"]) { background: var(--mk-hover); }
+.mk-tb-btn[aria-pressed="true"], .mk-tb-btn[aria-expanded="true"] { background: var(--accent-light); color: var(--accent-dark); border-color: color-mix(in srgb, var(--accent) 25%, transparent); }
+.mk-tb-btn[aria-disabled="true"] { color: var(--muted); opacity: 0.55; cursor: not-allowed; }
+.mk-tb-btn:focus-visible, .mk-tb-select:focus-visible, .mk-tb-num input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mk-tb-ico { display: inline-flex; }
+.mk-tb-ico svg { width: 18px; height: 18px; }
+.mk-tb-glyph { min-width: 14px; font-size: 0.95rem; line-height: 1; text-align: center; }
+.mk-tb-glyph.is-bold { font-weight: 800; }
+.mk-tb-glyph.is-italic { font-style: italic; font-family: Georgia, "Times New Roman", serif; font-weight: 600; }
+.mk-tb-glyph.is-under { text-decoration: underline; text-underline-offset: 2px; }
+.mk-tb-glyph.is-strike { text-decoration: line-through; }
+.mk-tb-select { height: 32px; max-width: 168px; padding: 0 26px 0 10px; border: 1px solid var(--mk-border); border-radius: var(--b-r-sm); background-color: var(--mk-surface); color: var(--mk-text); font: inherit; font-size: var(--b-sm); font-weight: 600; cursor: pointer; }
+.mk-tb-select:hover:not(:disabled) { border-color: var(--mk-border-strong); }
+.mk-tb-select:disabled { color: var(--muted); opacity: 0.6; cursor: not-allowed; }
+.mk-tb-select.is-style { width: 134px; }
+.mk-tb-select.is-font { width: 150px; }
+.mk-tb-select.is-size { width: 74px; }
+.mk-tb-select.is-vars { width: 116px; }
+.mk-tb-num { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 6px 0 8px; border: 1px solid var(--mk-border); border-radius: var(--b-r-sm); background: var(--mk-surface); font-size: var(--b-xs); color: var(--muted); }
+.mk-tb-num input { width: 46px; height: 28px; padding: 0 2px; border: 0; background: transparent; font: inherit; font-size: var(--b-sm); font-weight: 600; color: var(--mk-text); text-align: right; }
+.mk-tb-num-label { font-weight: 700; }
+.mk-tb-color { position: relative; flex-direction: column; gap: 1px; }
+.mk-tb-swatch { display: block; width: 18px; height: 4px; border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(11, 42, 64, 0.2); }
+.mk-tb-swatch.is-empty { background: repeating-linear-gradient(45deg, #fff 0 3px, #d5e3ee 3px 6px) !important; }
+.mk-tb-colorinput { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.mk-tb-colorinput:disabled { cursor: not-allowed; }
+.mk-tb-note { margin: 0; font-size: var(--b-sm); color: var(--muted); white-space: nowrap; }
+.mk-tb-group[hidden] { display: none; }
+/* Panneaux flottants de la barre (lien, texte alternatif, espacement, bordure, visibilité, « Plus ») */
+.mk-tb-pop { min-width: 260px; max-width: min(360px, calc(100vw - 16px)); padding: var(--b-3); border: 1px solid var(--mk-border); border-radius: var(--mk-r); background: var(--mk-surface); box-shadow: var(--mk-pop); }
+.mk-tb-pop[hidden] { display: none; }
+.mk-tb-pop-title { margin: 0 0 var(--b-2); font-size: var(--b-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.mk-tb-field { margin: 0 0 var(--b-2); }
+.mk-tb-field label { display: block; margin: 0 0 4px; font-size: var(--b-sm); font-weight: 600; color: var(--mk-text); }
+.mk-tb-field input[type="text"], .mk-tb-field input[type="number"], .mk-tb-field select { width: 100%; min-height: 36px; }
+.mk-tb-field input[type="color"] { width: 100%; height: 36px; padding: 2px; }
+.mk-tb-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--b-2); }
+.mk-tb-hint { margin: 4px 0 0; font-size: var(--b-xs); color: var(--muted); }
+.mk-tb-error { margin: 4px 0 0; font-size: var(--b-sm); color: var(--danger); }
+.mk-tb-error:empty { display: none; }
+.mk-tb-pop .checkbox-row { margin: 0 0 var(--b-2); font-size: var(--b-sm); }
+.mk-tb-pop-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--b-2); margin-top: var(--b-2); }
+.mk-tb-pop-actions.is-start { justify-content: flex-start; }
+.mk-tb-addlist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+.mk-tb-additem { min-height: 36px; padding: 6px 10px; border: 1px solid var(--mk-border); border-radius: var(--b-r-sm); background: var(--mk-surface); color: var(--mk-text); font: inherit; font-size: var(--b-sm); font-weight: 600; text-align: left; cursor: pointer; }
+.mk-tb-additem:hover { border-color: var(--accent); background: var(--accent-light); color: var(--accent-dark); }
+.mk-tb-additem:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mk-tb-morepanel { display: flex; flex-wrap: wrap; gap: var(--b-2); max-width: min(420px, calc(100vw - 16px)); }
+.mk-tb-morepanel .mk-tb-group { padding: 0; border-left: 0; flex-wrap: wrap; }
+.mk-tb-morepanel .mk-tb-group + .mk-tb-group { border-left: 0; padding-left: var(--b-2); border-top: 0; }
+.mk-b-writehint { margin: 0 0 var(--b-3); }
+@media (max-width: 860px) {
+  .mk-tb-bar { padding: 6px var(--b-2); }
+}
+
+/* Placement de la barre contextuelle dans la grille de l'éditeur : au-dessus du canevas ET des réglages (bureau),
+   au-dessus du canevas seul quand les réglages s'ouvrent par-dessus (éditeur étroit), en tête du canevas (mobile). */
+.mk-b-body:has(> .mk-ctxbar) { grid-template-rows: auto minmax(0, 1fr); }
+.mk-b-body:has(> .mk-ctxbar) > .mk-b-rail, .mk-b-body:has(> .mk-ctxbar) > .mk-b-side { grid-row: 1 / span 2; }
+.mk-b-body > .mk-ctxbar { grid-column: 3 / -1; grid-row: 1; min-width: 0; }
+.mk-b-body:has(> .mk-ctxbar) > .mk-b-stage { grid-column: 3; grid-row: 2; }
+.mk-b-body:has(> .mk-ctxbar) > .mk-b-props { grid-column: 4; grid-row: 2; }
+@container mk-builder (max-width: 1040px) {
+  .mk-b-body > .mk-ctxbar { grid-column: 3; transition: margin-right 0.18s ease; }
+  .mk-builder.has-selection .mk-b-body > .mk-ctxbar { margin-right: min(var(--b-props), 45%); } /* jamais sous les réglages ouverts par-dessus */
+}
+@container mk-builder (max-width: 860px) {
+  .mk-b-body:has(> .mk-ctxbar) { grid-template-rows: none; }
+  .mk-b-body:has(> .mk-ctxbar) > .mk-b-rail, .mk-b-body:has(> .mk-ctxbar) > .mk-b-side, .mk-b-body > .mk-ctxbar, .mk-b-body:has(> .mk-ctxbar) > .mk-b-stage { grid-column: auto; grid-row: auto; }
+  .mk-b-body > .mk-ctxbar { position: sticky; top: 0; z-index: var(--z-sticky); }
+  .mk-b-props { z-index: var(--z-drawer); } /* feuille des réglages : au-dessus de la barre collante */
+}

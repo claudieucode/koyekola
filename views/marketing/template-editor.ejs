@@ -172,6 +172,7 @@
           </div>
         </section>
 
+        <% if (!readOnly) { %><div class="mk-ctxbar" id="mk-ctxbar" role="toolbar" aria-label="Outils du bloc sélectionné"></div><% } %>
         <main class="mk-b-stage" aria-label="E-mail en cours de conception">
           <div class="mk-b-stagebar">
             <div class="mk-sizes" role="group" aria-label="Largeur d'affichage">
@@ -252,5 +253,6 @@
     </dialog>
 
     <script type="application/json" id="mk-editor-data"><%- data %></script>
+    <script src="<%= asset('/js/mk/toolbar.js') %>" defer></script>
     <script src="<%= asset('/js/marketing-editor.js') %>" defer></script>
 <%- include("partials/bottom") %>
