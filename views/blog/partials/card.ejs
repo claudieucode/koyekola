@@ -1,0 +1,12 @@
+<article class="blog-card">
+  <a href="/blog/<%= post.slug %>" class="blog-card-cover" tabindex="-1" aria-hidden="true"><%- include("cover", { post }) %></a>
+  <div class="blog-card-body">
+    <% if (post.category) { %><a class="post-card-category" href="/blog/categorie/<%= post.categorySlug %>"><%= post.category %></a><% } %>
+    <h3><a href="/blog/<%= post.slug %>"><%= post.title %></a></h3>
+    <p class="blog-card-excerpt"><%= post.summary %></p>
+    <div class="blog-card-foot">
+      <%- include("meta", { post }) %>
+      <span class="blog-more" aria-hidden="true">Lire l'article <%- icon("arrowRight", { size: 16 }) %></span>
+    </div>
+  </div>
+</article>

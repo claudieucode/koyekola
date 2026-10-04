@@ -281,7 +281,7 @@ describe("éditeur : enregistrement, statuts, versions, sauvegarde automatique, 
     assert.deepEqual(ld.find((x) => x["@type"] === "BreadcrumbList").itemListElement.map((i) => i.name), ["Accueil", "Blog", "Bureautique", "SEO complet"]);
     assert.match(h, /<article class="article-main" data-article lang="en">/);
     assert.match(h, /id="toc-title">Au programme<\/p>/);
-    assert.match((await anon().get("/blog")).text, /<article class="post-featured">[\s\S]*SEO complet/);
+    assert.match((await anon().get("/blog")).text, /<article class="blog-featured">[\s\S]*SEO complet/);
     assert.match((await anon().get("/sitemap.xml")).text, new RegExp(slug));
     await save(`/formateur/blog/${id}/modifier`, { ...base, title: "SEO complet", status: "published", robots_index: ["0"], robots_follow: ["0", "1"] });
     h = (await anon().get(`/blog/${slug}`)).text;

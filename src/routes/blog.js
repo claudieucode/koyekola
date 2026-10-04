@@ -12,6 +12,7 @@ const { UserError } = require("../utils/errors");
 const { removeUploadedFile } = require("../utils/uploads");
 const { uploadsRoot } = require("../config/paths");
 const { fileExists } = require("../config/mediaAudit");
+const { themeFor } = require("../utils/blogThemes");
 const { absoluteUrl, breadcrumbLd, isoDate, isoDateTime } = require("../utils/seo");
 const { sanitizeBlogHtml, markdownToEditorHtml } = require("../utils/blogHtml");
 const { escapeHtml } = require("../utils/markdown");
@@ -81,7 +82,19 @@ function newsletterBlockHtml(form) {
     + `<button type="submit" class="btn btn-primary">S'inscrire</button><p class="side-newsletter-msg" role="status" data-newsletter-msg hidden></p></form></aside>`;
 }
 
-// Liste du blog, éventuellement filtrée (catégorie, étiquette, auteur)
+// Recherche : sans accents ni majuscules (« referencement » trouve « Référencement »)
+const fold = (text) => String(text || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+// Temps de lecture affiché sur les cartes : celui saisi dans l'éditeur, sinon calculé comme sur la page de l'article (230 mots/min)
+function readingMinutes(p) {
+  if (Number.isInteger(p.reading_minutes) && p.reading_minutes > 0) return p.reading_minutes;
+  const words = String(blog.textOf(p) || "").split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 230));
+}
+
+// Liste du blog, éventuellement filtrée (catégorie, étiquette, auteur) et/ou recherchée (?q=).
+// Page d'accueil du blog (sans filtre ni recherche, page 1) : « hub » éditorial — à la une, derniers articles,
+// thèmes, articles populaires (vraies lectures), à découvrir.
 function renderList(req, res, { filter = null } = {}) {
   const where = ["published = 1"];
   const params = [];
@@ -89,25 +102,58 @@ function renderList(req, res, { filter = null } = {}) {
   if (filter && filter.type === "author") { where.push("(author_id = ? OR (author_id IS NULL AND ? = (SELECT MIN(id) FROM users WHERE role = 'formateur')))"); params.push(filter.id, filter.id); }
   let rows = db.prepare(`SELECT * FROM posts WHERE ${where.join(" AND ")} ORDER BY published_at DESC, id DESC`).all(...params);
   if (filter && filter.type === "tag") rows = rows.filter((p) => blog.parseTags(p.tags).some((t) => slugify(t) === filter.slug));
-  // Article vedette : en tête de la première page du blog (sans filtre)
+  // Recherche : titre, extrait, catégorie, sous-catégorie, étiquettes et texte de l'article ; tous les mots doivent figurer
+  const q = String(req.query.q || "").replace(/\s+/g, " ").trim().slice(0, 100);
+  if (q) {
+    const terms = fold(q).split(" ");
+    rows = rows.filter((p) => {
+      const hay = fold([p.title, p.excerpt, p.category, p.subcategory, p.tags, blog.textOf(p)].join(" \n "));
+      return terms.every((t) => hay.includes(t));
+    });
+  }
+  const hub = !filter && !q;
+  // Article à la une : celui marqué « à la une » dans l'éditeur, sinon le plus récent (accueil du blog seulement)
   let featured = null;
-  if (!filter) {
-    featured = rows.find((p) => p.featured) || null;
-    if (featured) rows = rows.filter((p) => p.id !== featured.id);
+  if (hub && rows.length) {
+    featured = rows.find((p) => p.featured) || rows[0];
+    rows = rows.filter((p) => p.id !== featured.id);
   }
   const total = rows.length;
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const asked = Number.parseInt(req.query.page, 10);
   const page = Number.isInteger(asked) && asked >= 1 && asked <= pages ? asked : 1;
-  const decorate = (p) => ({ ...p, summary: excerptOf(p), categorySlug: p.category ? slugify(p.category) : "" });
+  // Couverture : uniquement si le fichier existe vraiment (sinon visuel neutre du thème, jamais d'image cassée)
+  const decorate = (p) => ({
+    ...p, summary: excerptOf(p), categorySlug: p.category ? slugify(p.category) : "", minutes: readingMinutes(p),
+    cover: p.cover_path && fileExists(uploadsRoot, p.cover_path) ? p.cover_path : null,
+    theme: themeFor({ name: p.category || "", slug: p.category ? slugify(p.category) : "" }),
+  });
   const posts = rows.slice((page - 1) * PER_PAGE, page * PER_PAGE).map(decorate);
   const basePath = filter ? filter.path : "/blog";
   const heading = filter ? filter.heading : "Blog";
   const crumbs = filter ? [{ name: "Accueil", url: "/" }, { name: "Blog", url: "/blog" }, { name: filter.label }] : [{ name: "Accueil", url: "/" }, { name: "Blog" }];
-  const seo = seoPages.blogList(req, { filter, page, basePath, heading, crumbs, posts });
+  // Données structurées : l'article à la une fait partie de la liste (en tête), comme les autres articles de la page
+  const listed = featured && page === 1 ? [featured, ...posts] : posts;
+  const seo = seoPages.blogList(req, { filter, page, basePath, heading, crumbs, posts: listed });
+  // Résultats de recherche : pas d'indexation (contenu en double des listes), liens suivis
+  if (q) seo.robots = "noindex, follow";
+  const categories = blog.categories().map((c) => ({ ...c, theme: themeFor(c) }));
+  // Sections éditoriales de l'accueil du blog
+  let popular = [], discover = null;
+  if (hub && page === 1) {
+    popular = blog.popular(3).map((p) => decorate(db.prepare("SELECT * FROM posts WHERE id = ?").get(p.id)));
+    const shown = new Set([featured && featured.id, ...posts.map((p) => p.id), ...popular.map((p) => p.id)]);
+    const other = rows.find((p) => !shown.has(p.id));
+    if (other) discover = { type: "post", post: decorate(other) };
+    else {
+      const courses = db.prepare("SELECT COUNT(*) n FROM courses WHERE published = 1 AND archived = 0").get().n;
+      if (courses) discover = { type: "courses", count: courses };
+    }
+  }
   res.render("blog/index", {
-    posts, page, pages, crumbs, basePath, heading, filter, categories: blog.categories(), featured: featured && page === 1 ? decorate(featured) : null,
-    lead: filter ? filter.lead : "Conseils, actualités et ressources autour de nos formations.", seo,
+    posts, page, pages, crumbs, basePath, heading, filter, q, hub, total, categories, popular, discover,
+    featured: featured && page === 1 ? decorate(featured) : null,
+    lead: filter ? filter.lead : "Conseils, idées, ressources et actualités pour apprendre, créer et progresser.", seo,
   });
 }
 

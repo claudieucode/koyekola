@@ -1,0 +1,6 @@
+<%# Métadonnées d'un article : « Catégorie · 6 min de lecture · 2 octobre 2026 » (catégorie facultative) %>
+<p class="blog-meta">
+  <% if (locals.withCategory && post.category) { %><a class="blog-meta-cat" href="/blog/categorie/<%= post.categorySlug %>"><%= post.category %></a><span aria-hidden="true">·</span><% } %>
+  <span><%= post.minutes %> min de lecture</span><span aria-hidden="true">·</span>
+  <time datetime="<%= post.published_at.replace(' ', 'T') %>Z"><%= formatDate(post.published_at) %></time>
+</p>

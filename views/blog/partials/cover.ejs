@@ -1,0 +1,6 @@
+<%# Couverture d'un article : l'image si le fichier existe, sinon un visuel neutre aux couleurs du site avec l'icône du thème %>
+<% if (post.cover) { %>
+  <img src="<%= post.cover %>" alt="<%= post.cover_alt || '' %>" loading="<%= locals.eager ? 'eager' : 'lazy' %>" width="<%= locals.w || 640 %>" height="<%= locals.h || 360 %>">
+<% } else { %>
+  <span class="blog-cover-empty"><%- icon(post.theme.icon, { size: 36 }) %></span>
+<% } %>

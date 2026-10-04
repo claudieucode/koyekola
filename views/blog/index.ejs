@@ -1,60 +1,146 @@
 <%- include("../partials/header", { title: heading }) %>
-<% const pageUrl = (n) => (n === 1 ? basePath : basePath + "?page=" + n); %>
-  <div class="container page-content">
+<% const withQ = (url) => (q ? url + (url.includes("?") ? "&" : "?") + "q=" + encodeURIComponent(q) : url); %>
+<% const pageUrl = (n) => withQ(n === 1 ? basePath : basePath + "?page=" + n); %>
+<% const activeCat = filter && filter.type === "category" ? filter.name.toLowerCase() : null; %>
+  <div class="container-wide page-content blog-hub">
     <%- include("../partials/breadcrumb", { crumbs }) %>
-    <h1><%= heading %></h1>
-    <p class="category-lead"><%= lead %></p>
 
-    <% if (categories.length) { %>
-      <nav class="blog-categories" aria-label="Catégories du blog">
-        <ul class="side-chips">
-          <li><a href="/blog"<%- !filter ? ' aria-current="page"' : "" %>>Tous les articles</a></li>
-          <% categories.forEach((c) => { %><li><a href="/blog/categorie/<%= c.slug %>"<%- filter && filter.type === "category" && filter.name.toLowerCase() === c.name.toLowerCase() ? ' aria-current="page"' : "" %>><%= c.name %> <span class="side-count"><%= c.count %></span></a></li><% }) %>
-        </ul>
-      </nav>
+    <header class="blog-hub-head">
+      <% if (!filter) { %><span class="eyebrow">Les dernières publications de KOLAKISA</span><% } %>
+      <h1><%= heading %></h1>
+      <p class="category-lead"><%= lead %></p>
+    </header>
+
+    <div class="blog-toolbar">
+      <% if (categories.length) { %>
+        <nav class="blog-cats" aria-label="Catégories du blog">
+          <ul>
+            <li><a href="/blog"<%- !filter ? ' aria-current="page"' : "" %>>Tous</a></li>
+            <% categories.forEach((c) => { %><li><a href="/blog/categorie/<%= c.slug %>"<%- activeCat === c.name.toLowerCase() ? ' aria-current="page"' : "" %>><%= c.name %> <span class="blog-cats-count"><%= c.count %></span></a></li><% }) %>
+          </ul>
+        </nav>
+      <% } %>
+      <form class="blog-search" action="<%= basePath %>" method="get" role="search">
+        <label class="sr-only" for="blog-q"><%= filter && filter.type === "category" ? "Rechercher dans « " + filter.name + " »" : "Rechercher dans le blog" %></label>
+        <%- icon("search", { size: 18 }) %>
+        <input id="blog-q" type="search" name="q" value="<%= q %>" maxlength="100" placeholder="Rechercher dans le blog…" autocomplete="off">
+        <button type="submit" class="btn btn-primary btn-sm">Rechercher</button>
+      </form>
+    </div>
+
+    <% if (q) { %>
+      <p class="blog-results" role="status">
+        <strong><%= total %></strong> <%= total > 1 ? "articles trouvés" : "article trouvé" %> pour « <%= q %> »<%= filter && filter.type === "category" ? " dans « " + filter.name + " »" : "" %>
+        · <a href="<%= basePath %>">Effacer la recherche</a>
+      </p>
     <% } %>
 
-    <% if (typeof featured !== "undefined" && featured) { %>
-      <article class="post-featured">
-        <% if (featured.cover_path) { %><a href="/blog/<%= featured.slug %>" class="post-featured-cover" tabindex="-1" aria-hidden="true"><img src="<%= featured.cover_path %>" alt="" width="960" height="540"></a><% } %>
-        <div class="post-featured-body">
-          <span class="post-featured-label">À la une</span>
-          <% if (featured.category) { %><a class="post-card-category" href="/blog/categorie/<%= featured.categorySlug %>"><%= featured.category %></a><% } %>
-          <h2><a href="/blog/<%= featured.slug %>"><%= featured.title %></a></h2>
-          <p><%= featured.summary %></p>
-          <time datetime="<%= featured.published_at.replace(' ', 'T') %>Z"><%= formatDate(featured.published_at) %></time>
-        </div>
-      </article>
+    <% if (featured) { %>
+      <section class="blog-section" aria-labelledby="blog-featured-title">
+        <h2 id="blog-featured-title" class="sr-only">À la une</h2>
+        <article class="blog-featured">
+          <a href="/blog/<%= featured.slug %>" class="blog-featured-cover" tabindex="-1" aria-hidden="true"><%- include("partials/cover", { post: featured, eager: true, w: 960, h: 540 }) %></a>
+          <div class="blog-featured-body">
+            <span class="blog-featured-label">À la une</span>
+            <% if (featured.category) { %><a class="post-card-category" href="/blog/categorie/<%= featured.categorySlug %>"><%= featured.category %></a><% } %>
+            <h3><a href="/blog/<%= featured.slug %>"><%= featured.title %></a></h3>
+            <p class="blog-featured-excerpt"><%= featured.summary %></p>
+            <%- include("partials/meta", { post: featured }) %>
+            <a class="btn btn-primary blog-featured-cta" href="/blog/<%= featured.slug %>">Lire l'article <%- icon("arrowRight", { size: 18 }) %><span class="sr-only"> : <%= featured.title %></span></a>
+          </div>
+        </article>
+      </section>
     <% } %>
 
     <% if (posts.length) { %>
-      <div class="post-grid">
-        <% posts.forEach((post) => { %>
-          <article class="post-card">
-            <% if (post.cover_path) { %>
-              <a href="/blog/<%= post.slug %>" class="post-card-cover" tabindex="-1" aria-hidden="true"><img src="<%= post.cover_path %>" alt="" loading="lazy" width="640" height="360"></a>
-            <% } else { %>
-              <span class="post-card-cover post-card-cover-empty" aria-hidden="true"></span>
-            <% } %>
-            <div class="post-card-body">
-              <% if (post.category) { %><a class="post-card-category" href="/blog/categorie/<%= post.categorySlug %>"><%= post.category %></a><% } %>
-              <time datetime="<%= post.published_at.replace(' ', 'T') %>Z"><%= formatDate(post.published_at) %></time>
-              <h2><a href="/blog/<%= post.slug %>"><%= post.title %></a></h2>
-              <p><%= post.summary %></p>
-            </div>
-          </article>
-        <% }) %>
+      <section class="blog-section" aria-labelledby="blog-latest-title">
+        <div class="blog-section-head">
+          <h2 id="blog-latest-title"><%= hub ? "Derniers articles" : (q ? "Résultats" : "Articles") %></h2>
+        </div>
+        <div class="blog-grid">
+          <% posts.forEach((post) => { %><%- include("partials/card", { post }) %><% }) %>
+        </div>
+        <% if (pages > 1) { %>
+          <nav class="pagination" aria-label="Pagination">
+            <% if (page > 1) { %><a class="btn btn-outline btn-sm" href="<%= pageUrl(page - 1) %>" rel="prev">Articles plus récents</a><% } %>
+            <span>Page <%= page %> sur <%= pages %></span>
+            <% if (page < pages) { %><a class="btn btn-outline btn-sm" href="<%= pageUrl(page + 1) %>" rel="next">Articles plus anciens</a><% } %>
+          </nav>
+        <% } %>
+      </section>
+    <% } else if (!featured) { %>
+      <div class="blog-empty" role="status">
+        <span class="blog-empty-icon"><%- icon(q ? "search" : "fileText", { size: 28 }) %></span>
+        <h2><%= q ? "Aucun article trouvé" : "Aucun article publié pour le moment" %></h2>
+        <p><%= q ? "Essayez avec d'autres mots, ou parcourez tous les articles du blog." : "Les prochains articles apparaîtront ici." %></p>
+        <% if (q || filter) { %><a class="btn btn-outline" href="/blog">Voir tous les articles</a><% } %>
       </div>
+    <% } %>
 
-      <% if (pages > 1) { %>
-        <nav class="pagination" aria-label="Pagination">
-          <% if (page > 1) { %><a class="btn btn-outline btn-sm" href="<%= pageUrl(page - 1) %>" rel="prev">Articles plus récents</a><% } %>
-          <span>Page <%= page %> sur <%= pages %></span>
-          <% if (page < pages) { %><a class="btn btn-outline btn-sm" href="<%= pageUrl(page + 1) %>" rel="next">Articles plus anciens</a><% } %>
-        </nav>
-      <% } %>
-    <% } else if (typeof featured === "undefined" || !featured) { %>
-      <p class="empty-state" style="padding:24px 0;">Aucun article publié pour le moment.</p>
+    <% if (hub && page === 1 && categories.length) { %>
+      <section class="blog-section" aria-labelledby="blog-themes-title">
+        <div class="blog-section-head"><h2 id="blog-themes-title">Explorer par thème</h2></div>
+        <ul class="blog-themes">
+          <% categories.forEach((c) => { %>
+            <li>
+              <a class="blog-theme" href="/blog/categorie/<%= c.slug %>">
+                <span class="blog-theme-icon"><%- icon(c.theme.icon, { size: 22 }) %></span>
+                <span class="blog-theme-text">
+                  <strong><%= c.name %></strong>
+                  <span><%= c.theme.description %></span>
+                  <span class="blog-theme-count"><%= c.count %> <%= c.count > 1 ? "articles" : "article" %></span>
+                </span>
+                <%- icon("arrowRight", { size: 18, className: "blog-theme-arrow" }) %>
+              </a>
+            </li>
+          <% }) %>
+        </ul>
+      </section>
+    <% } %>
+
+    <% if (popular.length || discover) { %>
+      <div class="blog-duo<%= popular.length && discover ? '' : ' blog-duo-single' %>">
+        <% if (popular.length) { %>
+          <section class="blog-section" aria-labelledby="blog-popular-title">
+            <div class="blog-section-head"><h2 id="blog-popular-title">Les articles populaires</h2></div>
+            <ol class="blog-ranking">
+              <% popular.forEach((post, i) => { %>
+                <li>
+                  <span class="blog-rank" aria-hidden="true"><%= String(i + 1).padStart(2, "0") %></span>
+                  <div>
+                    <h3><a href="/blog/<%= post.slug %>"><%= post.title %></a></h3>
+                    <p class="blog-meta"><% if (post.category) { %><span><%= post.category %></span><span aria-hidden="true">·</span><% } %><span><%= post.minutes %> min de lecture</span></p>
+                  </div>
+                </li>
+              <% }) %>
+            </ol>
+          </section>
+        <% } %>
+        <% if (discover) { %>
+          <section class="blog-section" aria-labelledby="blog-discover-title">
+            <div class="blog-section-head"><h2 id="blog-discover-title">À découvrir</h2></div>
+            <% if (discover.type === "post") { const d = discover.post; %>
+              <article class="blog-discover-card">
+                <a href="/blog/<%= d.slug %>" class="blog-discover-cover" tabindex="-1" aria-hidden="true"><%- include("partials/cover", { post: d }) %></a>
+                <div>
+                  <% if (d.category) { %><a class="post-card-category" href="/blog/categorie/<%= d.categorySlug %>"><%= d.category %></a><% } %>
+                  <h3><a href="/blog/<%= d.slug %>"><%= d.title %></a></h3>
+                  <%- include("partials/meta", { post: d }) %>
+                </div>
+              </article>
+            <% } else { %>
+              <div class="blog-discover-card blog-discover-courses">
+                <span class="blog-theme-icon"><%- icon("graduation", { size: 22 }) %></span>
+                <div>
+                  <h3>Passez de la lecture à la pratique</h3>
+                  <p><%= discover.count %> <%= discover.count > 1 ? "formations disponibles" : "formation disponible" %> pour apprendre pas à pas, à votre rythme.</p>
+                  <a class="blog-link" href="/catalogue">Voir les formations <%- icon("arrowRight", { size: 16 }) %></a>
+                </div>
+              </div>
+            <% } %>
+          </section>
+        <% } %>
+      </div>
     <% } %>
   </div>
 

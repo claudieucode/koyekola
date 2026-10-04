@@ -196,17 +196,17 @@ describe("page d'un article", () => {
   test("pages catégorie (indexable), étiquette et auteur (non indexées) ; 404 si inconnues ; plan du site", async () => {
     const cat = (await anon().get("/blog/categorie/bureautique")).text;
     assert.match(cat, /<h1>Bureautique<\/h1>/);
-    assert.equal(count(cat, /class="post-card"/g), 3);
+    assert.equal(count(cat, /class="blog-card"/g), 3);
     assert.doesNotMatch(cat, /noindex/);
     const tag = (await anon().get("/blog/etiquette/excel")).text;
     assert.match(tag, /<h1>Articles : Excel<\/h1>/);
-    assert.equal(count(tag, /class="post-card"/g), 2);
+    assert.equal(count(tag, /class="blog-card"/g), 2);
     assert.match(tag, /noindex/);
     const authorId = q("SELECT id FROM users WHERE role = 'formateur'")[0].id;
-    assert.equal(count((await anon().get(`/blog/auteur/${authorId}`)).text, /class="post-card"/g), 4);
+    assert.equal(count((await anon().get(`/blog/auteur/${authorId}`)).text, /class="blog-card"/g), 4);
     for (const bad of ["/blog/categorie/inconnue", "/blog/etiquette/inconnue", "/blog/auteur/99999"]) assert.equal((await anon().get(bad)).status, 404, bad);
     assert.match((await anon().get("/sitemap.xml")).text, /\/blog\/categorie\/bureautique/);
-    assert.match((await anon().get("/blog")).text, /<nav class="blog-categories"/);
+    assert.match((await anon().get("/blog")).text, /<nav class="blog-cats"/);
   });
   test("newsletter : formulaire marketing publié → bloc d'inscription (consentement, champ piège) ; choix du formulaire par le formateur", async () => {
     run("INSERT INTO mk_forms (organization_id, name, slug, status, consent_text) VALUES (1, 'Lettre du blog', 'lettre-du-blog', 'published', 'J''accepte de recevoir la lettre du blog.')");

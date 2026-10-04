@@ -214,11 +214,11 @@ describe("liste et pagination", () => {
   });
   test("10 articles par page, les plus récents d'abord", async () => {
     const page1 = (await anon().get("/blog")).text;
-    const cards = page1.match(/class="post-card"/g) || [];
+    const cards = page1.match(/class="blog-card"/g) || [];
     assert.equal(cards.length, 10);
     assert.ok(page1.indexOf("Article de série 11") < page1.indexOf("Article de série 05"), "ordre du plus récent au plus ancien");
     const page2 = (await anon().get("/blog?page=2")).text;
-    assert.ok((page2.match(/class="post-card"/g) || []).length >= 1);
+    assert.ok((page2.match(/class="blog-card"/g) || []).length >= 1);
   });
   test("navigation entre les pages et canonical propre à chaque page", async () => {
     const page1 = (await anon().get("/blog")).text;
@@ -230,7 +230,7 @@ describe("liste et pagination", () => {
     for (const bad of ["0", "-3", "abc", "9999"]) {
       const r = await anon().get(`/blog?page=${bad}`);
       assert.equal(r.status, 200);
-      assert.ok((r.text.match(/class="post-card"/g) || []).length >= 1, bad);
+      assert.ok((r.text.match(/class="blog-card"/g) || []).length >= 1, bad);
     }
   });
   test("les cartes affichent titre, résumé et date", async () => {
