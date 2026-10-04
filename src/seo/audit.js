@@ -373,4 +373,4 @@ function fix(issueId, userId) {
   return { ok: true };
 }
 
-module.exports = { runAudit, analyzePage, list, get, issuesOf, latest, fix, KINDS, isRunning: () => running, scoresOf, internalPath, checkExternal };
+module.exports = { KIND_CATEGORIES, runAudit, analyzePage, list, get, issuesOf, latest, fix, KINDS, isRunning: () => running, scoresOf, internalPath, checkExternal };

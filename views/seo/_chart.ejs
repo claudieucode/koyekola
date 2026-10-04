@@ -1,0 +1,14 @@
+<%# Courbe simple (SVG) d'une série réelle de notes sur 100 : points = [{ label, value }] (au moins 2) %>
+<% const W = 600, H = 180, P = 28;
+   const n = points.length;
+   const x = (i) => P + (n === 1 ? 0 : (i * (W - 2 * P)) / (n - 1));
+   const y = (v) => H - P - (v / 100) * (H - 2 * P);
+   const path = points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(" "); %>
+<figure class="seo-chart">
+  <svg viewBox="0 0 <%= W %> <%= H %>" role="img" aria-label="<%= title %> : <%= points.map((p) => `${p.label} ${p.value}`).join(", ") %>" preserveAspectRatio="none">
+    <% [0, 50, 100].forEach((g) => { %><line class="seo-chart-grid" x1="<%= P %>" x2="<%= W - P %>" y1="<%= y(g) %>" y2="<%= y(g) %>"></line><text class="seo-chart-axis" x="4" y="<%= y(g) + 4 %>"><%= g %></text><% }) %>
+    <path class="seo-chart-line" d="<%= path %>"></path>
+    <% points.forEach((p, i) => { %><circle class="seo-chart-dot" cx="<%= x(i) %>" cy="<%= y(p.value) %>" r="4"><title><%= p.label %> : <%= p.value %></title></circle><% }) %>
+  </svg>
+  <figcaption><span><%= points[0].label %></span><span><%= points[n - 1].label %></span></figcaption>
+</figure>

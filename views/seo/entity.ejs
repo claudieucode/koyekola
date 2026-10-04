@@ -1,14 +1,10 @@
 <%- include("../partials/header", { title: `SEO · ${entity.name}` }) %>
 <% const p = live.page; %>
-<div class="container-wide seo-page">
-  <%- include("_nav", { active: "contents" }) %>
-  <p class="field-hint"><a href="/formateur/seo/contenus?type=<%= entity.type %>">← <%= typeLabel %>s</a></p>
-  <h2 class="seo-entity-title"><%= typeLabel %> : <%= entity.name %> <a class="btn btn-outline btn-sm" href="<%= entity.path %>" target="_blank" rel="noopener">Voir la page ↗</a></h2>
-  <% if (saved) { %><p class="form-success" role="status">Enregistré. Le contrôle ci-dessous relit la page publique pour vérifier qu'elle publie bien ces réglages.</p><% } %>
-  <% if (errors.length) { %><div class="form-error" role="alert"><strong>Rien n'a été enregistré :</strong><ul><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></div><% } %>
+<%- include("_head", { section: "Contenus", title: entity.name, intro: `${typeLabel} · ${entity.path}`, audit: false, actions: `<a class="btn btn-outline" href="/formateur/seo/contenus?type=${entity.type}">${icon('arrowLeft', { size: 16 })} ${typeLabel}s</a><a class="btn btn-outline" href="${entity.path}" target="_blank" rel="noopener">${icon('externalLink', { size: 16 })} Voir la page</a>` }) %>
+  <%- include("_flash", { ok: saved ? "Enregistré. Le contrôle ci-dessous relit la page publique pour vérifier qu'elle publie bien ces réglages." : null, errors }) %>
 
   <div class="seo-entity-grid">
-    <form method="post" class="content-card seo-form" data-seo-entity-form>
+    <form method="post" class="dpanel seo-form" data-seo-entity-form>
       <h2>Réglages SEO</h2>
       <p class="field-hint">Laissez un champ vide pour garder la valeur automatique (modèle des réglages ou texte du contenu).</p>
       <% const field = (key, kind) => { const f = fields[key]; const id = `m-${key}`; const v = values[key] === null || values[key] === undefined ? "" : values[key]; %>
@@ -28,7 +24,7 @@
     </form>
 
     <div>
-      <section class="content-card">
+      <section class="dpanel">
         <h2>Aperçu dans Google</h2>
         <p class="field-hint">Simulation à partir des vraies valeurs : Google peut afficher un titre ou un extrait différents.</p>
         <% if (p) { %>
@@ -39,7 +35,7 @@
         <% } else { %><p class="form-error">Page publique non disponible : <%= live.error || `réponse ${live.status}` %>.</p><% } %>
       </section>
 
-      <section class="content-card">
+      <section class="dpanel">
         <h2>Ce que publie la page</h2>
         <% if (!p) { %><p>Non disponible : la page n'a pas pu être lue (<%= live.error || `réponse ${live.status}` %>).</p>
         <% } else { %>
@@ -60,12 +56,11 @@
         <% } %>
       </section>
 
-      <section class="content-card">
+      <section class="dpanel">
         <h2>Historique</h2>
         <% if (!changes.length) { %><p class="field-hint">Aucune modification SEO pour ce contenu.</p><% } else { %><%- include("_changes", { changes, fieldLabels, showEntity: false }) %><% } %>
       </section>
     </div>
   </div>
-</div>
 <script src="<%= asset('/js/seo-admin.js') %>" defer></script>
 <%- include("../partials/footer") %>

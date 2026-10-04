@@ -40,8 +40,10 @@ function injectLocals(req, res, next) {
   if (req.session.user && req.session.user.role === "formateur" && /^\/formateur(\/|$)/.test(req.path)) {
     const dashboard = require("../services/dashboard");
     const prefs = dashboard.prefsOf(req.session.user.id);
+    const seo = dashboard.isSeoPath(req.path);
     res.locals.dash = {
-      active: dashboard.activeKey(req.path), nav: dashboard.NAV, prefs, style: dashboard.style(prefs),
+      seo, active: seo ? dashboard.seoActiveKey(req.path) : dashboard.activeKey(req.path), nav: seo ? dashboard.SEO_NAV : dashboard.NAV, prefs, style: dashboard.style(prefs),
+      tasks: seo ? require("../seo/tasks").openCount() : 0,
       unread: db.prepare("SELECT COUNT(*) n FROM contact_messages WHERE read_at IS NULL").get().n,
     };
   }

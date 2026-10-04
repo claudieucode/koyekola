@@ -18,6 +18,8 @@ const { RULES, SEVERITIES, CATEGORIES } = require("./rules");
 const integrations = require("./integrations");
 const jobs = require("./jobs");
 const reports = require("./reports");
+const tasks = require("./tasks");
+const sitemap2 = sitemap; // plan du site : état d'indexation des contenus
 
 const router = express.Router();
 const canManage = (user) => Boolean(user && user.role === "formateur");
@@ -25,6 +27,20 @@ router.use("/formateur/seo", requireInstructor, (req, res, next) => (canManage(r
 
 const mediaImages = () => db.prepare("SELECT path, alt, width, height FROM media WHERE kind = 'image' ORDER BY id DESC LIMIT 300").all();
 const FIELD_LABELS = { ...Object.fromEntries(Object.entries(meta.FIELDS).map(([k, f]) => [k, f.label])), ...Object.fromEntries(Object.entries(settings.FIELDS).map(([k, f]) => [k, f.label])) };
+
+// Libellé lisible d'une entrée du journal : quoi, sur quel contenu (par son nom), et où la retrouver
+function describeChanges(changes) {
+  const names = new Map(entities.list().map((e) => [`${e.type}:${e.key}`, e.name]));
+  return changes.map((c) => {
+    const field = FIELD_LABELS[c.field] || c.field;
+    if (c.entity_type === "redirect") return { ...c, title: c.old_value === null ? "Redirection créée" : c.new_value === null ? "Redirection supprimée" : "Redirection modifiée", target: c.new_value || c.old_value, href: "/formateur/seo/redirections" };
+    if (c.entity_type === "integration") return { ...c, title: c.new_value === null ? "Intégration déconnectée" : "Intégration configurée", target: integrations.NAMES[c.entity_key] || c.entity_key, href: "/formateur/seo/integrations", hideValues: true };
+    if (c.entity_type === "settings") return { ...c, title: `Modification : ${field}`, target: "Réglages du site", href: "/formateur/seo/reglages" };
+    const name = names.get(`${c.entity_type}:${c.entity_key}`);
+    const label = entities.LABELS[c.entity_type] || c.entity_type;
+    return { ...c, title: `Modification : ${field}`, target: `${label} · ${name || c.entity_key}`, href: c.entity_type === "post" ? `/formateur/blog/${c.entity_key}/modifier` : `/formateur/seo/contenus/${c.entity_type}/${encodeURIComponent(c.entity_key)}` };
+  });
+}
 
 router.get("/formateur/seo", (req, res) => {
   const all = entities.list();
@@ -41,9 +57,10 @@ router.get("/formateur/seo", (req, res) => {
       { label: "Image de partage par défaut", value: st.default_social_image ? (images.probe(st.default_social_image).exists ? "Renseignée" : "Fichier introuvable") : "Non renseignée", ok: Boolean(st.default_social_image && images.probe(st.default_social_image).exists) },
       { label: "Adresse publique (SITE_URL)", value: process.env.SITE_URL ? process.env.SITE_URL : "Configuration requise", ok: Boolean(process.env.SITE_URL) },
     ],
-    changes: listChanges({ limit: 8 }), fieldLabels: FIELD_LABELS,
+    changes: describeChanges(listChanges({ limit: 5 })), fieldLabels: FIELD_LABELS,
     audits: audit.list(10).filter((a) => a.status === "done"), categories: CATEGORIES,
     alerts: jobs.monitor.openAlerts(), monitorAt: jobs.monitor.lastSnapshotAt(), severities: SEVERITIES,
+    todo: tasks.open(), priorities: tasks.PRIORITIES, running: audit.isRunning(), msg: req.query.msg || null,
   });
 });
 
@@ -68,7 +85,32 @@ router.get("/formateur/seo/contenus", (req, res) => {
   const courseCustom = new Set(db.prepare("SELECT id FROM courses WHERE (seo_title IS NOT NULL AND seo_title <> '') OR (seo_description IS NOT NULL AND seo_description <> '')").all().map((r) => `course:${r.id}`));
   const list = entities.list().filter((e) => (!type || e.type === type) && (!q || e.name.toLowerCase().includes(q) || e.path.includes(q)))
     .map((e) => ({ ...e, custom: customKeys.has(`${e.type}:${e.key}`) || courseCustom.has(`${e.type}:${e.key}`) }));
-  res.render("seo/contents", { list, labels: entities.LABELS, type, q });
+  // État SEO de chaque adresse d'après les problèmes ouverts du dernier audit (aucun audit → « Non analysé »)
+  const last = audit.latest();
+  const RANK = { critical: 4, high: 4, medium: 3, low: 2, info: 1 };
+  const worst = new Map();
+  let crawled = new Set();
+  if (last) {
+    for (const r of db.prepare("SELECT path, severity, COUNT(*) n FROM seo_issues WHERE audit_id = ? AND fixed_at IS NULL GROUP BY path, severity").all(last.id)) {
+      const w = worst.get(r.path) || { rank: 0, n: 0 };
+      worst.set(r.path, { rank: Math.max(w.rank, RANK[r.severity] || 0), n: w.n + (r.severity === "info" ? 0 : r.n) });
+    }
+    crawled = new Set(db.prepare("SELECT DISTINCT path FROM seo_issues WHERE audit_id = ?").all(last.id).map((r) => r.path));
+  }
+  const auditedAll = Boolean(last);
+  const STATES = { 0: ["Excellent", "good"], 1: ["Excellent", "good"], 2: ["Bon", "good"], 3: ["À améliorer", "warn"], 4: ["Problème", "bad"] };
+  const map = sitemap2.entries();
+  const inMap = new Set(map.included.map((e) => e.path));
+  const out = new Map(map.excluded.map((e) => [e.path, e.reason]));
+  const rows = list.map((e) => {
+    const w = worst.get(e.path);
+    const state = !auditedAll ? ["Non analysé", "none"] : STATES[w ? w.rank : 0];
+    return { ...e, state: state[0], tone: state[1], openIssues: w ? w.n : 0, indexed: inMap.has(e.path), excludedReason: out.get(e.path) || null, crawled: crawled.has(e.path) };
+  });
+  const all = entities.list();
+  const typeCounts = {};
+  for (const e of all) typeCounts[e.type] = (typeCounts[e.type] || 0) + 1;
+  res.render("seo/contents", { list: rows, labels: entities.LABELS, type, q, typeCounts, total: all.length, lastAudit: last ? audit.get(last.id) : null });
 });
 
 async function renderEntity(req, res, { errors = [], status = 200, values = null } = {}) {
@@ -110,13 +152,22 @@ router.post("/formateur/seo/contenus/:type/:key", (req, res, next) => {
 });
 
 router.get("/formateur/seo/journal", (req, res) => {
-  res.render("seo/journal", { changes: listChanges({ limit: 300 }), fieldLabels: FIELD_LABELS, labels: { ...entities.LABELS, settings: "Réglages" } });
+  const events = [
+    ...describeChanges(listChanges({ limit: 300 })).map((c) => ({ kind: "change", at: c.created_at, c })),
+    ...audit.list(30).map((a) => ({ kind: "audit", at: a.started_at, a })),
+  ].sort((x, y) => (x.at < y.at ? 1 : x.at > y.at ? -1 : 0));
+  res.render("seo/journal", { events, changes: events.filter((e) => e.kind === "change").map((e) => e.c), fieldLabels: FIELD_LABELS, labels: { ...entities.LABELS, settings: "Réglages" }, kinds: audit.KINDS });
 });
 
 // ---------- Redirections ----------
 function renderRedirects(req, res, { errors = [], form = {}, status = 200, report = null } = {}) {
+  const etat = ["actives", "desactivees"].includes(req.query.etat) ? req.query.etat : "toutes";
+  const all = redirects.list({ q: String(req.query.q || "") });
+  const everything = redirects.list({});
+  const stats = { total: everything.length, active: everything.filter((r) => r.enabled).length, hits: everything.reduce((n, r) => n + (r.hits || 0), 0) };
   res.status(status).render("seo/redirects", {
-    list: redirects.list({ q: String(req.query.q || "") }), q: String(req.query.q || ""), chains: redirects.chains(), errors, form,
+    list: all.filter((r) => etat === "toutes" || (etat === "actives" ? r.enabled : !r.enabled)), etat, stats, openForm: status === 400 || Boolean(form.source) || req.query.nouvelle === "1", importOpen: req.query.importer === "1",
+    q: String(req.query.q || ""), chains: redirects.chains(), errors, form,
     saved: req.query.ok || null, report, edit: req.query.modifier ? redirects.get(Number(req.query.modifier)) : null,
   });
 }
@@ -152,7 +203,7 @@ router.get("/formateur/seo/redirections.csv", (req, res) => {
 // ---------- Erreurs 404 ----------
 router.get("/formateur/seo/erreurs-404", (req, res) => {
   const filter = ["all", "human", "bot", "ignored"].includes(req.query.filtre) ? req.query.filtre : "all";
-  res.render("seo/notfound", { list: notfound.list({ filter, q: String(req.query.q || "") }), stats: notfound.stats(), filter, q: String(req.query.q || ""), done: req.query.ok || null });
+  res.render("seo/notfound", { list: notfound.list({ filter, q: String(req.query.q || "") }), stats: notfound.stats(), ignored: notfound.list({ filter: "ignored" }).length, toHandle: notfound.list({ filter: "human" }).length, filter, q: String(req.query.q || ""), done: req.query.ok || null });
 });
 router.post("/formateur/seo/erreurs-404/action", (req, res) => {
   const path = String(req.body.path || "");
@@ -177,13 +228,24 @@ router.get("/formateur/seo/audit", (req, res) => {
   const id = req.query.id ? Number(req.query.id) : (audit.latest() || {}).id;
   const current = id ? audit.get(id) : null;
   const filters = { severity: String(req.query.gravite || ""), category: String(req.query.categorie || ""), q: String(req.query.q || "") };
-  const issues = current && current.status === "done" ? audit.issuesOf(current.id, filters) : [];
-  const counts = current && current.status === "done" ? db.prepare("SELECT severity, COUNT(*) n FROM seo_issues WHERE audit_id = ? AND fixed_at IS NULL GROUP BY severity").all(current.id) : [];
-  res.render("seo/audit", { audits, current, issues, filters, kinds: audit.KINDS, rules: Object.fromEntries(RULES.map((r) => [r.id, r])), severities: SEVERITIES, categories: CATEGORIES, counts: Object.fromEntries(counts.map((c) => [c.severity, c.n])), running: audit.isRunning(), msg: req.query.msg || null });
+  // Vue : tous / critiques (critique + élevée) / avertissements (moyenne + faible + info) / réussites (règles sans problème)
+  const view = ["critiques", "avertissements", "reussites"].includes(req.query.vue) ? req.query.vue : "tous";
+  const rule = String(req.query.regle || "");
+  const done = current && current.status === "done";
+  let issues = done ? audit.issuesOf(current.id, filters) : [];
+  if (rule) issues = issues.filter((i) => i.rule_id === rule);
+  if (view === "critiques") issues = issues.filter((i) => ["critical", "high"].includes(i.severity));
+  if (view === "avertissements") issues = issues.filter((i) => ["medium", "low", "info"].includes(i.severity));
+  const counts = done ? db.prepare("SELECT severity, COUNT(*) n FROM seo_issues WHERE audit_id = ? AND fixed_at IS NULL GROUP BY severity").all(current.id) : [];
+  const failedRules = done ? new Set(db.prepare("SELECT DISTINCT rule_id FROM seo_issues WHERE audit_id = ?").all(current.id).map((r) => r.rule_id)) : new Set();
+  const wanted = current && audit.KIND_CATEGORIES[current.kind];
+  const applicable = wanted ? RULES.filter((r) => wanted.includes(r.category)) : RULES;
+  const passed = done ? applicable.filter((r) => !failedRules.has(r.id)) : [];
+  res.render("seo/audit", { audits, current, issues, filters, view, rule, passed, kinds: audit.KINDS, rules: Object.fromEntries(RULES.map((r) => [r.id, r])), severities: SEVERITIES, categories: CATEGORIES, counts: Object.fromEntries(counts.map((c) => [c.severity, c.n])), running: audit.isRunning(), msg: req.query.msg || null, err: req.query.err || null });
 });
 router.post("/formateur/seo/audit", async (req, res) => {
   const r = await audit.runAudit({ kind: String(req.body.kind || "full"), userId: req.session.user.id, req });
-  if (!r.ok) return res.redirect(`/formateur/seo/audit?msg=${encodeURIComponent(r.error)}`);
+  if (!r.ok) return res.redirect(`/formateur/seo/audit?err=${encodeURIComponent(r.error)}`);
   // L'exploration continue en arrière-plan ; la page se met à jour à chaque rechargement (aucune progression simulée)
   await Promise.race([r.done, new Promise((resolve) => setTimeout(resolve, 20000))]);
   res.redirect(`/formateur/seo/audit?id=${r.id}`);
@@ -191,7 +253,7 @@ router.post("/formateur/seo/audit", async (req, res) => {
 router.post("/formateur/seo/audit/corriger/:id(\\d+)", (req, res) => {
   const r = audit.fix(Number(req.params.id), req.session.user.id);
   const back = String(req.body.back || "/formateur/seo/audit");
-  res.redirect(`${back.startsWith("/formateur/seo/audit") ? back : "/formateur/seo/audit"}${back.includes("?") ? "&" : "?"}msg=${encodeURIComponent(r.ok ? "Correction appliquée et enregistrée. Relancez un scan pour recalculer les notes." : r.error)}`);
+  res.redirect(`${back.startsWith("/formateur/seo/audit") ? back : "/formateur/seo/audit"}${back.includes("?") ? "&" : "?"}${r.ok ? "msg" : "err"}=${encodeURIComponent(r.ok ? "Correction appliquée et enregistrée. Relancez un scan pour recalculer les notes." : r.error)}`);
 });
 router.get("/formateur/seo/analyse", async (req, res, next) => {
   try {
@@ -260,11 +322,28 @@ router.post("/formateur/seo/integrations/pagespeed/analyser", async (req, res) =
 
 // ---------- Tâches programmées ----------
 router.get("/formateur/seo/taches", (req, res) => {
-  res.render("seo/jobs", { list: jobs.list(), frequencies: jobs.FREQUENCIES, msg: req.query.msg || null, err: req.query.err || null, now: new Date().toISOString().slice(0, 16).replace("T", " ") });
+  res.render("seo/jobs", { list: jobs.list(), todo: tasks.list(), priorities: tasks.PRIORITIES, frequencies: jobs.FREQUENCIES, msg: req.query.msg || null, err: req.query.err || null, now: new Date().toISOString().slice(0, 16).replace("T", " ") });
+});
+// Tâche « à faire » : marquer comme terminée ou la rouvrir
+router.post("/formateur/seo/a-faire", (req, res) => {
+  const ok = tasks.setDone(String(req.body.key || ""), req.body.done === "1", req.session.user.id);
+  res.redirect(`/formateur/seo/taches?${ok ? `msg=${encodeURIComponent(req.body.done === "1" ? "Tâche marquée comme terminée." : "Tâche rouverte.")}` : `err=${encodeURIComponent("Tâche inconnue.")}`}#a-faire`);
+});
+
+// ---------- Surveillance ----------
+router.get("/formateur/seo/surveillance", (req, res) => {
+  const job = jobs.list().find((j) => j.name === "monitor") || {};
+  res.render("seo/monitor", { job, alerts: jobs.monitor.openAlerts(), monitorAt: jobs.monitor.lastSnapshotAt(), keyPages: jobs.monitor.KEY_PAGES, severities: SEVERITIES, msg: req.query.msg || null });
+});
+
+// ---------- Apparence (même réglage que « Mon espace ») ----------
+router.get("/formateur/seo/apparence", (req, res) => {
+  const dashboard = require("../services/dashboard");
+  res.render("instructor/appearance", { prefs: dashboard.prefsOf(req.session.user.id), themes: dashboard.THEMES });
 });
 router.post("/formateur/seo/taches/:name", (req, res) => {
   const r = jobs.configure(req.params.name, { frequency: String(req.body.frequency || ""), hour: req.body.hour });
-  res.redirect(`/formateur/seo/taches?${r.ok ? "msg=" + encodeURIComponent("Programmation enregistrée.") : "err=" + encodeURIComponent(r.error)}`);
+  res.redirect(`/formateur/seo/taches?${r.ok ? "msg=" + encodeURIComponent("Programmation enregistrée.") : "err=" + encodeURIComponent(r.error)}#tache-${req.params.name}`);
 });
 router.post("/formateur/seo/taches/:name/executer", async (req, res, next) => {
   try {
@@ -272,23 +351,23 @@ router.post("/formateur/seo/taches/:name/executer", async (req, res, next) => {
     // Un audit peut être long : réponse au plus tard après 20 s, la tâche continue alors en arrière-plan
     const run = jobs.execute(req.params.name, { trigger: "manual" });
     const r = await Promise.race([run, new Promise((resolve) => setTimeout(() => resolve(null), 20000))]);
-    if (!r) return res.redirect(`/formateur/seo/taches?msg=${encodeURIComponent("Tâche lancée : elle continue en arrière-plan, rechargez la page pour voir le résultat.")}`);
+    if (!r) return res.redirect(`/formateur/seo/taches?msg=${encodeURIComponent("Tâche lancée : elle continue en arrière-plan, rechargez la page pour voir le résultat.")}#tache-${req.params.name}`);
     const key = r.status === "ok" ? "msg" : "err";
     const text = r.status === "ok" ? `Terminé : ${r.message}` : r.status === "skipped" ? `Tâche ignorée : ${r.message}` : r.status === "busy" ? r.message : `Échec : ${r.message}`;
-    res.redirect(`/formateur/seo/taches?${key}=${encodeURIComponent(text)}`);
+    res.redirect(`/formateur/seo/taches?${key}=${encodeURIComponent(text)}#tache-${req.params.name}`);
   } catch (error) { next(error); }
 });
 
 router.post("/formateur/seo/alertes/vues", (req, res) => {
   jobs.monitor.markSeen(req.body.id ? Number(req.body.id) : null);
-  res.redirect("/formateur/seo#surveillance");
+  res.redirect(req.body.back === "overview" ? "/formateur/seo" : `/formateur/seo/surveillance?msg=${encodeURIComponent(req.body.id ? "Alerte marquée comme vue." : "Toutes les alertes sont marquées comme vues.")}`);
 });
 
 // ---------- Rapports ----------
 const download = (res, name, type, body) => res.type(`${type}; charset=utf-8`).set("Content-Disposition", `attachment; filename="${name}"`).send(type === "text/csv" ? `﻿${body}` : body);
 const stamp = () => new Date().toISOString().slice(0, 10);
 router.get("/formateur/seo/rapports", (req, res) => {
-  res.render("seo/reports", { audits: audit.list(30).filter((a) => a.status === "done"), summary: reports.summary(), kinds: audit.KINDS, categories: CATEGORIES });
+  res.render("seo/reports", { audits: audit.list(30).filter((a) => a.status === "done"), summary: reports.summary(), kinds: audit.KINDS, categories: CATEGORIES, psi: integrations.pageSpeedHistory(30) });
 });
 router.get("/formateur/seo/rapports/audit-:id(\\d+).:ext(csv|json)", (req, res) => {
   const a = audit.get(Number(req.params.id));

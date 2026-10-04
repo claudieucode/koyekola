@@ -1,56 +1,89 @@
 <%- include("../partials/header", { title: "SEO · Vue d'ensemble" }) %>
-<div class="container-wide seo-page">
-  <%- include("_nav", { active: "overview" }) %>
+<% const last = audits[0]; const sc = last && last.scores ? last.scores : null;
+   const prioClass = (p) => `seo-prio is-${p}`; %>
+<%- include("_head", { section: "", title: "Référencement SEO", intro: "Optimisez la visibilité de votre site et surveillez sa santé technique." }) %>
+<%- include("_flash", { ok: msg }) %>
+<% if (running) { %><div class="seo-alert-box is-info" role="status"><%- icon('activity', { size: 18 }) %><div>Un audit est en cours (n° <%= running %>). <a href="/formateur/seo/audit?id=<%= running %>">Suivre son avancement</a></div></div><% } %>
 
-  <section class="content-card">
-    <h2>Dernier audit</h2>
-    <% if (!audits.length) { %><p>Non disponible : aucun audit n'a encore été lancé. <a class="btn btn-primary btn-sm" href="/formateur/seo/audit">Lancer le premier scan</a></p>
-    <% } else { %>
-      <p class="field-hint"><%= audits[0].pages %> page(s) lue(s) le <%= formatDateTime(audits[0].finished_at) %> · <%= audits[0].issues %> problème(s). <a href="/formateur/seo/audit?id=<%= audits[0].id %>">Voir le détail</a></p>
-      <%- include("_scores", { scores: audits[0].scores, categories }) %>
-      <% if (audits.length > 1) { %><h3>Évolution de la note globale</h3><ul class="seo-history"><% audits.slice().reverse().forEach((a) => { %><li><span><%= formatDate(a.finished_at) %></span><strong><%= a.scores && a.scores.overall ? a.scores.overall.score : "—" %></strong></li><% }) %></ul><% } %>
-    <% } %>
-  </section>
-
-  <section class="content-card" id="surveillance">
-    <h2>Surveillance</h2>
-    <% if (!monitorAt) { %><p>Non configuré : la surveillance n'a encore jamais tourné. Elle passe chaque jour automatiquement ; vous pouvez la lancer depuis l'onglet <a href="/formateur/seo/taches#tache-monitor">Tâches</a>.</p>
-    <% } else if (!alerts.length) { %><p class="form-success">Aucun changement à signaler. Dernier passage : <%= formatDateTime(monitorAt) %>.</p>
-    <% } else { %>
-      <p class="field-hint">Changements constatés entre deux passages (dernier : <%= formatDateTime(monitorAt) %>).</p>
-      <ul class="seo-alerts">
-        <% alerts.forEach((a) => { const cls = `seo-alert is-${a.severity}`; %><li class="<%= cls %>"><span class="seo-alert-sev"><%= severities[a.severity] ? severities[a.severity].label : a.severity %></span><span class="seo-alert-msg"><%= a.message %> <small class="field-hint"><%= formatDateTime(a.created_at) %></small></span>
-          <form method="post" action="/formateur/seo/alertes/vues" class="inline-form"><input type="hidden" name="id" value="<%= a.id %>"><button class="btn btn-ghost btn-sm" type="submit">Vu</button></form></li><% }) %>
-      </ul>
-      <form method="post" action="/formateur/seo/alertes/vues" class="inline-form"><button class="btn btn-outline btn-sm" type="submit">Tout marquer comme vu</button></form>
-    <% } %>
-  </section>
-
-  <section class="content-card">
-    <h2>Contenus publics</h2>
-    <p class="field-hint">Comptés dans la base du site. « Personnalisés » : contenus ayant au moins un réglage SEO propre ; les autres utilisent les modèles automatiques.</p>
-    <div class="seo-table-wrap"><table class="seo-table">
-      <thead><tr><th scope="col">Type</th><th scope="col">Pages publiques</th><th scope="col">Personnalisés</th><th scope="col"></th></tr></thead>
-      <tbody>
-        <% Object.entries(labels).forEach(([type, label]) => { if (!counts[type]) return; %>
-          <tr><td><%= label %></td><td><%= counts[type] %></td><td><%= type === "post" ? "Réglés dans l'éditeur d'articles" : (custom[type] || 0) %></td><td><a href="/formateur/seo/contenus?type=<%= type %>">Voir</a></td></tr>
-        <% }) %>
-      </tbody>
-    </table></div>
-  </section>
-
-  <section class="content-card">
-    <h2>Configuration du site</h2>
-    <ul class="seo-status">
-      <% status.forEach((s) => { %><li class="<%= s.ok ? "is-ok" : "is-missing" %>"><span><%= s.label %></span><strong><%= s.value %></strong></li><% }) %>
+<%# Niveau 1 : santé SEO (score principal) %>
+<section class="seo-health dpanel" aria-labelledby="seo-health-title">
+  <h2 id="seo-health-title" class="sr-only">Santé SEO</h2>
+  <% if (!last) { %>
+    <%- include("_empty", { ico: "searchCheck", title: "Aucun audit pour l'instant", text: "Lancez un premier audit : le serveur lit chaque page publique comme un moteur de recherche et calcule votre score.", action: `<form method="post" action="/formateur/seo/audit" data-busy="Audit en cours…"><input type="hidden" name="kind" value="full"><button class="btn btn-primary" type="submit">Lancer le premier audit</button></form>` }) %>
+  <% } else { %>
+    <div class="seo-health-main">
+      <%- include("_ring", { score: sc && sc.overall ? sc.overall.score : null, size: "lg", label: "Score SEO" }) %>
+      <dl class="seo-health-facts">
+        <div><dt>Dernier audit</dt><dd><%= formatDateTime(last.finished_at) %></dd></div>
+        <div><dt>Pages analysées</dt><dd><%= last.pages %></dd></div>
+        <div><dt>Problèmes détectés</dt><dd><%= last.issues %></dd></div>
+        <div class="seo-health-link"><a href="/formateur/seo/audit?id=<%= last.id %>">Voir le détail de l'audit <%- icon('chevronRight', { size: 14 }) %></a></div>
+      </dl>
+    </div>
+    <ul class="seo-bars" aria-label="Scores par catégorie">
+      <% Object.entries(categories).forEach(([k, label]) => { const s = sc && sc[k]; const v = s ? s.score : null; const tone = v === null ? "none" : v >= 75 ? "good" : v >= 50 ? "warn" : "bad"; const barClass = `seo-bar tone-${tone}`; %>
+        <li class="<%= barClass %>"><span class="seo-bar-label"><%= label %></span><span class="seo-bar-track" aria-hidden="true"><span style="width: <%= v || 0 %>%"></span></span><span class="seo-bar-value"><%= v === null ? "—" : v %></span></li>
+      <% }) %>
     </ul>
-    <p><a class="btn btn-outline btn-sm" href="/formateur/seo/reglages">Ouvrir les réglages</a></p>
+  <% } %>
+</section>
+
+<%# Niveau 2 : ce qui demande une action %>
+<div class="seo-grid">
+  <section class="dpanel seo-todo" aria-labelledby="seo-todo-title">
+    <div class="dash-section-head"><h2 id="seo-todo-title">À corriger</h2><% if (todo.length) { %><a href="/formateur/seo/taches#a-faire">Toutes les tâches (<%= todo.length %>)</a><% } %></div>
+    <% if (!todo.length) { %>
+      <%- include("_empty", { ico: "checkCircle", title: "Rien à corriger", text: last ? "Aucun problème ouvert dans le dernier audit et la configuration est complète." : "La configuration est complète. Lancez un audit pour vérifier vos pages." }) %>
+    <% } else { %>
+      <p class="seo-todo-count"><strong><%= todo.length %></strong> point<%= todo.length > 1 ? "s" : "" %> à traiter</p>
+      <ul class="seo-tasklist">
+        <% todo.slice(0, 6).forEach((t) => { %>
+          <li>
+            <span class="<%= prioClass(t.priority) %>"><%= priorities[t.priority].label %></span>
+            <span class="seo-task-text"><strong><%= t.title %></strong><small><%= t.status %><%= t.detail && t.source === "audit" ? ` · ${t.detail}` : "" %></small></span>
+            <% if (t.href) { %><a class="btn btn-outline btn-sm" href="<%= t.href %>"><%= t.action %></a><% } else { %><span class="seo-task-note" title="<%= t.detail %>">Chez l'hébergeur</span><% } %>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
   </section>
 
-  <section class="content-card">
-    <h2>Dernières modifications SEO</h2>
-    <% if (!changes.length) { %><p class="field-hint">Aucune modification enregistrée pour l'instant.</p>
-    <% } else { %><%- include("_changes", { changes, fieldLabels, showEntity: true, labels }) %><p><a href="/formateur/seo/journal">Tout le journal</a></p><% } %>
-  </section>
+  <div class="seo-side">
+    <section class="dpanel" id="surveillance" aria-labelledby="seo-mon-title">
+      <div class="dash-section-head"><h2 id="seo-mon-title">Surveillance</h2><a href="/formateur/seo/surveillance">Ouvrir</a></div>
+      <% if (!monitorAt) { %><p class="seo-muted">Non configuré : la surveillance n'a encore jamais tourné. Elle compare chaque jour l'état réel du site au passage précédent.</p>
+      <% } else if (!alerts.length) { %><p class="seo-ok"><%- icon('checkCircle', { size: 16 }) %> Aucun changement à signaler.</p><p class="seo-muted">Dernier passage : <%= formatDateTime(monitorAt) %></p>
+      <% } else { %>
+        <ul class="seo-alerts">
+          <% alerts.slice(0, 4).forEach((a) => { const cls = `seo-alert is-${a.severity}`; %><li class="<%= cls %>"><span class="seo-alert-sev"><%= severities[a.severity] ? severities[a.severity].label : a.severity %></span><span class="seo-alert-msg"><%= a.message %></span>
+            <form method="post" action="/formateur/seo/alertes/vues" class="dash-inline-form"><input type="hidden" name="id" value="<%= a.id %>"><input type="hidden" name="back" value="overview"><button class="btn btn-ghost btn-sm" type="submit">Vu</button></form></li><% }) %>
+        </ul>
+        <% if (alerts.length > 4) { %><p class="seo-muted"><a href="/formateur/seo/surveillance"><%= alerts.length - 4 %> autre(s) alerte(s)</a></p><% } %>
+      <% } %>
+    </section>
+
+    <section class="dpanel" aria-labelledby="seo-cont-title">
+      <div class="dash-section-head"><h2 id="seo-cont-title">Contenus publics</h2><a href="/formateur/seo/contenus">Gérer</a></div>
+      <ul class="seo-counts">
+        <% Object.entries(labels).forEach(([type, label]) => { if (!counts[type]) return; %>
+          <li><a href="/formateur/seo/contenus?type=<%= type %>"><span><%= label %></span><strong><%= counts[type] %></strong></a></li>
+        <% }) %>
+      </ul>
+    </section>
+  </div>
 </div>
+
+<%# Niveau 3 : activité récente (détails dans le journal) %>
+<section class="dpanel seo-recent" aria-labelledby="seo-recent-title">
+  <div class="dash-section-head"><h2 id="seo-recent-title">Dernières modifications</h2><a href="/formateur/seo/journal">Tout le journal</a></div>
+  <% if (!changes.length) { %><p class="seo-muted">Aucune modification enregistrée pour l'instant.</p>
+  <% } else { %>
+    <ul class="seo-timeline is-compact">
+      <% changes.forEach((c) => { %>
+        <li><time datetime="<%= c.created_at %>"><%= formatDateTime(c.created_at) %></time>
+          <span><strong><%= c.title %></strong> · <a href="<%= c.href %>"><%= c.target %></a><% if (c.username) { %> <small>par <%= c.username %></small><% } %></span></li>
+      <% }) %>
+    </ul>
+  <% } %>
+</section>
 <%- include("../partials/footer") %>

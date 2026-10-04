@@ -26,11 +26,4 @@
     [titleIn, descIn].forEach((el) => el && el.addEventListener("input", update));
   }
 })();
-// Confirmation avant suppression
-document.querySelectorAll("form[data-confirm]").forEach((f) => f.addEventListener("submit", (e) => { if (!window.confirm(f.dataset.confirm)) e.preventDefault(); }));
-// Appel long vers Google : bouton désactivé et message tant que le serveur travaille (aucune progression simulée)
-document.querySelectorAll("form[data-busy]").forEach((f) => f.addEventListener("submit", () => {
-  const btn = f.querySelector('button[type="submit"]');
-  if (!btn) return;
-  setTimeout(() => { btn.disabled = true; btn.textContent = f.dataset.busy; }, 0);
-}));
+// Confirmations (data-confirm) et attente des traitements longs (data-busy) : gérées par dashboard.js pour tout l'espace

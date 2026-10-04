@@ -14,14 +14,14 @@ db.exec(`
 // Thèmes prédéfinis : couleurs de la barre latérale, du fond, des cartes, du texte et de l'accent
 const THEMES = {
   clair: { label: "Clair (par défaut)", sidebar: "#ffffff", sidebarText: "#334155", bg: "#f4f8fb", card: "#ffffff", text: "#102a3a", muted: "#64748b", border: "#e2e8f0", primary: "#0b83c6", button: "#0b83c6", dark: false },
-  "bleu-fonce": { label: "Bleu foncé", sidebar: "#0b2538", sidebarText: "#c9d8e4", bg: "#f4f8fb", card: "#ffffff", text: "#102a3a", muted: "#64748b", border: "#e2e8f0", primary: "#0b83c6", button: "#0b83c6", dark: false },
+  "bleu-fonce": { label: "Bleu foncé", sidebar: "#0b2538", sidebarText: "#c9d8e4", bg: "#f4f8fb", card: "#ffffff", text: "#102a3a", muted: "#64748b", border: "#dce7ef", primary: "#0b83c6", button: "#0b83c6", dark: false },
   noir: { label: "Noir", sidebar: "#0b0d0f", sidebarText: "#b8c0c8", bg: "#111418", card: "#181c21", text: "#e8ecef", muted: "#98a2ad", border: "#262c33", primary: "#3aa8e8", button: "#2b8fd0", dark: true },
   "gris-clair": { label: "Gris clair", sidebar: "#e9ecef", sidebarText: "#2b3440", bg: "#f4f5f7", card: "#ffffff", text: "#17202a", muted: "#5f6b78", border: "#dde1e6", primary: "#2563a8", button: "#2563a8", dark: false },
   "gris-moyen": { label: "Gris moyen", sidebar: "#4b525b", sidebarText: "#e3e6ea", bg: "#e6e8eb", card: "#f7f8f9", text: "#1c232b", muted: "#55606c", border: "#cfd4da", primary: "#1f6fb2", button: "#1f6fb2", dark: false },
   "gris-fonce": { label: "Gris foncé", sidebar: "#1f2329", sidebarText: "#c3c9d0", bg: "#2a2f36", card: "#33393f", text: "#e6e9ec", muted: "#a3acb6", border: "#424951", primary: "#5aa9e0", button: "#3d8fcc", dark: true },
 };
 const HEX = /^#[0-9a-f]{6}$/i;
-const COLOR_KEYS = ["primary", "accent", "sidebar", "bg", "button"];
+const COLOR_KEYS = ["primary", "accent", "sidebar", "bg", "card", "button"];
 
 // Luminance relative (WCAG) : texte clair ou foncé selon le fond choisi
 const lum = (hex) => {
@@ -54,6 +54,8 @@ function tokens({ theme, colors }) {
   if (theme === "perso") {
     const c = colors || {};
     if (c.bg) { base.bg = c.bg; const dark = isDark(c.bg); Object.assign(base, dark ? { card: "#1c2128", text: "#e8ecef", muted: "#9aa4ae", border: "#2f363e", dark: true } : { card: "#ffffff", text: "#102a3a", muted: "#64748b", border: "#e2e8f0", dark: false }); }
+    // Cartes : couleur choisie, texte et bordures recalculés pour rester lisibles
+    if (c.card) { base.card = c.card; Object.assign(base, isDark(c.card) ? { text: "#e8ecef", muted: "#9aa4ae", border: "#2f363e" } : { text: "#102a3a", muted: "#64748b", border: "#e2e8f0" }); }
     if (c.sidebar) { base.sidebar = c.sidebar; base.sidebarText = isDark(c.sidebar) ? "#d6dee6" : "#2b3440"; }
     if (c.primary) base.primary = c.primary;
     if (c.button) base.button = c.button;
@@ -67,6 +69,8 @@ function tokens({ theme, colors }) {
     "--dash-hover": isDark(base.sidebar) ? "rgba(255, 255, 255, 0.07)" : "rgba(15, 40, 60, 0.06)",
     "--dash-active-bg": isDark(base.sidebar) ? "rgba(255, 255, 255, 0.12)" : `${accent}1a`,
     "--dash-active-text": isDark(base.sidebar) ? "#ffffff" : accent,
+    // États (réussite, avertissement, problème) : teintes lisibles sur le fond des cartes
+    ...(isDark(base.card) ? { "--dash-success": "#4ade80", "--dash-warning": "#fbbf24", "--dash-danger": "#f87171" } : { "--dash-success": "#15803d", "--dash-warning": "#b45309", "--dash-danger": "#c2410c" }),
   };
 }
 const style = (prefs) => Object.entries(tokens(prefs)).map(([k, v]) => `${k}: ${v}`).join("; ");
@@ -96,6 +100,32 @@ const NAV = [
     { key: "settings", label: "Profil et paramètres", href: "/formateur/profil", icon: "settings" },
   ] },
 ];
+// Navigation interne de l'espace SEO (même coquille que « Mon espace », rubriques propres)
+const SEO_NAV = [
+  { group: "SEO Workspace", items: [
+    { key: "seo-overview", label: "Vue d'ensemble", href: "/formateur/seo", icon: "layout" },
+    { key: "seo-audit", label: "Audit", href: "/formateur/seo/audit", icon: "searchCheck" },
+    { key: "seo-contents", label: "Contenus", href: "/formateur/seo/contenus", icon: "fileText" },
+    { key: "seo-redirects", label: "Redirections", href: "/formateur/seo/redirections", icon: "arrowRightLeft" },
+    { key: "seo-404", label: "Erreurs 404", href: "/formateur/seo/erreurs-404", icon: "alertCircle" },
+    { key: "seo-technical", label: "Robots & Sitemap", href: "/formateur/seo/technique", icon: "network" },
+    { key: "seo-integrations", label: "Intégrations", href: "/formateur/seo/integrations", icon: "plug" },
+    { key: "seo-monitor", label: "Surveillance", href: "/formateur/seo/surveillance", icon: "activity" },
+    { key: "seo-tasks", label: "Tâches", href: "/formateur/seo/taches", icon: "listChecks", badge: "tasks" },
+    { key: "seo-reports", label: "Rapports", href: "/formateur/seo/rapports", icon: "barChart" },
+  ] },
+  { group: "Configuration", items: [
+    { key: "seo-settings", label: "Réglages", href: "/formateur/seo/reglages", icon: "settings" },
+    { key: "seo-journal", label: "Journal", href: "/formateur/seo/journal", icon: "history" },
+    { key: "seo-appearance", label: "Apparence", href: "/formateur/seo/apparence", icon: "palette" },
+  ] },
+];
+function seoActiveKey(path) {
+  const map = [["/formateur/seo/audit", "seo-audit"], ["/formateur/seo/analyse", "seo-audit"], ["/formateur/seo/regles", "seo-audit"], ["/formateur/seo/contenus", "seo-contents"], ["/formateur/seo/redirections", "seo-redirects"], ["/formateur/seo/erreurs-404", "seo-404"], ["/formateur/seo/technique", "seo-technical"], ["/formateur/seo/integrations", "seo-integrations"], ["/formateur/seo/surveillance", "seo-monitor"], ["/formateur/seo/taches", "seo-tasks"], ["/formateur/seo/rapports", "seo-reports"], ["/formateur/seo/reglages", "seo-settings"], ["/formateur/seo/journal", "seo-journal"], ["/formateur/seo/apparence", "seo-appearance"]];
+  return (map.find(([p]) => path.startsWith(p)) || [])[1] || "seo-overview";
+}
+const isSeoPath = (path) => /^\/formateur\/seo(\/|$)/.test(path);
+
 function activeKey(path) {
   if (path === "/formateur" || path === "/formateur/") return "overview";
   if (/^\/formateur\/(formations|cours)/.test(path)) return /\/curriculum$/.test(path) ? "chapters" : "courses";
@@ -116,4 +146,4 @@ function stats(userId) {
   };
 }
 
-module.exports = { THEMES, COLOR_KEYS, prefsOf, savePrefs, tokens, style, NAV, activeKey, stats, cleanColors };
+module.exports = { THEMES, COLOR_KEYS, prefsOf, savePrefs, tokens, style, NAV, activeKey, SEO_NAV, seoActiveKey, isSeoPath, stats, cleanColors };

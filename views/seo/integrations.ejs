@@ -8,30 +8,37 @@
   const FIELD_CAT = { FAST: "bon", AVERAGE: "à améliorer", SLOW: "mauvais" };
   const badgeClass = (s) => `seo-int-state is-${s.state}`;
 %>
-<div class="container-wide seo-page">
-  <%- include("_nav", { active: "integrations" }) %>
-  <% if (msg) { %><p class="form-success" role="status"><%= msg %></p><% } %>
-  <% if (err) { %><p class="form-error" role="alert"><%= err %></p><% } %>
-  <p class="field-hint">Les chiffres de cette page viennent directement de Google. Tant qu'un service n'est pas connecté, rien n'est affiché à sa place : aucun chiffre n'est estimé ni inventé.</p>
+<% const SERVICES = [
+     { key: "search_console", anchor: "search-console", logo: "search", desc: "Clics, impressions, positions et requêtes de vos pages dans Google." },
+     { key: "analytics", anchor: "analytics", logo: "barChart", desc: "Visiteurs, sessions, sources de trafic et pages les plus vues." },
+     { key: "pagespeed", anchor: "pagespeed", logo: "zap", desc: "Vitesse réelle des pages mesurée par Google (Core Web Vitals)." },
+   ]; %>
+<%- include("_head", { section: "Intégrations", title: "Intégrations SEO", intro: "Les chiffres viennent directement de Google. Tant qu'un service n'est pas connecté, rien n'est estimé ni inventé.", audit: false }) %>
+<%- include("_flash", { ok: msg, error: err }) %>
+<% if (!encryption) { %><div class="seo-alert-box is-error" role="alert"><%- icon('alertTriangle', { size: 18 }) %><div>Configuration requise : la variable d'environnement ENCRYPTION_KEY n'est pas définie sur le serveur. Sans elle, les clés Google ne peuvent pas être stockées de façon chiffrée.</div></div><% } %>
 
-  <section class="content-card">
-    <h2>État des connexions</h2>
-    <ul class="seo-status">
-      <% Object.entries(names).forEach(([key, label]) => { const s = st[key]; %>
-        <li><span><%= label %></span><strong class="<%= badgeClass(s) %>"><%= s.label %></strong><% if (s.detail) { %><span class="field-hint seo-int-detail"><%= s.detail %></span><% } %></li>
-      <% }) %>
-    </ul>
-    <% if (!encryption) { %><p class="form-error">Configuration requise : la variable d'environnement ENCRYPTION_KEY n'est pas définie sur le serveur. Sans elle, les clés Google ne peuvent pas être stockées de façon chiffrée.</p><% } %>
-  </section>
+<ul class="seo-integrations">
+  <% SERVICES.forEach((sv) => { const s = st[sv.key]; const connected = s.state === "connected"; const btnClass = `btn ${connected ? "btn-outline" : "btn-primary"} btn-sm`; %>
+    <li class="dpanel seo-integration">
+      <span class="seo-integration-logo" aria-hidden="true"><%- icon(sv.logo, { size: 22 }) %></span>
+      <div class="seo-integration-body">
+        <h2><%= names[sv.key] %></h2>
+        <p><%= sv.desc %></p>
+        <span class="<%= badgeClass(s) %>"><%= s.label %></span><% if (s.detail) { %><small class="seo-int-detail"><%= s.detail %></small><% } %>
+      </div>
+      <a class="<%= btnClass %>" href="#<%= sv.anchor %>"><%= connected ? "Voir les données" : "Configurer" %></a>
+    </li>
+  <% }) %>
+</ul>
 
-  <section class="content-card" id="search-console">
+  <section class="dpanel seo-int-section" id="search-console">
     <h2>Google Search Console</h2>
     <% if (st.search_console.state === "connected") { %>
       <form method="get" class="seo-filters"><label class="sr-only" for="i-days">Période</label>
         <select id="i-days" name="jours"><% [7, 28, 90].forEach((d) => { %><option value="<%= d %>" <%= d === days ? "selected" : "" %>><%= d %> derniers jours disponibles</option><% }) %></select>
         <button class="btn btn-outline btn-sm">Afficher</button>
         <button class="btn btn-outline btn-sm" name="actualiser" value="1">Actualiser depuis Google</button></form>
-      <% if (gsc && !gsc.ok) { %><p class="form-error"><%= gsc.error %></p><% } %>
+      <% if (gsc && !gsc.ok) { %><p class="seo-error"><%= gsc.error %></p><% } %>
       <% if (gsc && gsc.ok) { const g = gsc.data; const c = g.totals.current; const p = g.totals.previous; %>
         <p class="field-hint">Du <%= g.period.current.start %> au <%= g.period.current.end %>, comparé au <%= g.period.previous.start %> → <%= g.period.previous.end %>. Données reçues le <%= g.fetchedAt %> (UTC)<%= g.fromCache ? ", mises en cache 6 h" : "" %>. Search Console publie ses chiffres avec environ 3 jours de retard.</p>
         <div class="seo-scores">
@@ -44,32 +51,32 @@
         <% const tables = [["Pages en progression", g.insights.growing, "Clics gagnés par rapport à la période précédente (5 clics ou plus)."], ["Pages en recul", g.insights.declining, "Clics perdus par rapport à la période précédente (5 clics ou plus)."]]; %>
         <% tables.forEach(([title, rows, hint]) => { if (!rows.length) return; %>
           <h3><%= title %></h3><p class="field-hint"><%= hint %></p>
-          <div class="seo-table-wrap"><table class="seo-table"><thead><tr><th scope="col">Page</th><th scope="col">Avant</th><th scope="col">Maintenant</th><th scope="col">Écart</th></tr></thead>
+          <div class="dtable-wrap"><table class="dtable seo-table-modern"><thead><tr><th scope="col">Page</th><th scope="col">Avant</th><th scope="col">Maintenant</th><th scope="col">Écart</th></tr></thead>
             <tbody><% rows.forEach((r) => { %><tr><td><a href="<%= r.page %>" target="_blank" rel="noopener"><%= r.page %></a></td><td><%= nf(r.before) %></td><td><%= nf(r.clicks) %></td><td><%= delta(r.clicks, r.before) %></td></tr><% }) %></tbody></table></div>
         <% }) %>
         <% if (g.insights.lowCtr.length) { %>
           <h3>Recherches à faible taux de clic</h3><p class="field-hint">Au moins 100 impressions mais moins de 2 % de clics : améliorer le titre et la description affichés dans Google peut aider.</p>
-          <div class="seo-table-wrap"><table class="seo-table"><thead><tr><th scope="col">Recherche</th><th scope="col">Impressions</th><th scope="col">Taux de clic</th><th scope="col">Position</th></tr></thead>
+          <div class="dtable-wrap"><table class="dtable seo-table-modern"><thead><tr><th scope="col">Recherche</th><th scope="col">Impressions</th><th scope="col">Taux de clic</th><th scope="col">Position</th></tr></thead>
             <tbody><% g.insights.lowCtr.forEach((r) => { %><tr><td><%= r.query %></td><td><%= nf(r.impressions) %></td><td><%= pct(r.ctr) %></td><td><%= pos(r.position) %></td></tr><% }) %></tbody></table></div>
         <% } %>
         <% if (g.insights.nearTop.length) { %>
           <h3>Opportunités : presque en première page</h3><p class="field-hint">Position moyenne entre 8 et 20 avec au moins 50 impressions : un contenu enrichi ou des liens internes peuvent faire passer en première page.</p>
-          <div class="seo-table-wrap"><table class="seo-table"><thead><tr><th scope="col">Recherche</th><th scope="col">Impressions</th><th scope="col">Position</th></tr></thead>
+          <div class="dtable-wrap"><table class="dtable seo-table-modern"><thead><tr><th scope="col">Recherche</th><th scope="col">Impressions</th><th scope="col">Position</th></tr></thead>
             <tbody><% g.insights.nearTop.forEach((r) => { %><tr><td><%= r.query %></td><td><%= nf(r.impressions) %></td><td><%= pos(r.position) %></td></tr><% }) %></tbody></table></div>
         <% } %>
         <% if (g.insights.emerging.length) { %>
           <h3>Nouvelles recherches</h3><p class="field-hint">Absentes de la période précédente, au moins 20 impressions.</p>
-          <div class="seo-table-wrap"><table class="seo-table"><thead><tr><th scope="col">Recherche</th><th scope="col">Impressions</th><th scope="col">Position</th></tr></thead>
+          <div class="dtable-wrap"><table class="dtable seo-table-modern"><thead><tr><th scope="col">Recherche</th><th scope="col">Impressions</th><th scope="col">Position</th></tr></thead>
             <tbody><% g.insights.emerging.forEach((r) => { %><tr><td><%= r.query %></td><td><%= nf(r.impressions) %></td><td><%= pos(r.position) %></td></tr><% }) %></tbody></table></div>
         <% } %>
         <% if (g.topQueries.length) { %>
           <h3>Principales recherches</h3>
-          <div class="seo-table-wrap"><table class="seo-table"><thead><tr><th scope="col">Recherche</th><th scope="col">Clics</th><th scope="col">Impressions</th><th scope="col">Taux de clic</th><th scope="col">Position</th></tr></thead>
+          <div class="dtable-wrap"><table class="dtable seo-table-modern"><thead><tr><th scope="col">Recherche</th><th scope="col">Clics</th><th scope="col">Impressions</th><th scope="col">Taux de clic</th><th scope="col">Position</th></tr></thead>
             <tbody><% g.topQueries.forEach((r) => { %><tr><td><%= r.query %></td><td><%= nf(r.clicks) %></td><td><%= nf(r.impressions) %></td><td><%= pct(r.ctr) %></td><td><%= pos(r.position) %></td></tr><% }) %></tbody></table></div>
         <% } %>
         <% if (g.topPages.length) { %>
           <h3>Principales pages</h3>
-          <div class="seo-table-wrap"><table class="seo-table"><thead><tr><th scope="col">Page</th><th scope="col">Clics</th><th scope="col">Impressions</th><th scope="col">Taux de clic</th><th scope="col">Position</th></tr></thead>
+          <div class="dtable-wrap"><table class="dtable seo-table-modern"><thead><tr><th scope="col">Page</th><th scope="col">Clics</th><th scope="col">Impressions</th><th scope="col">Taux de clic</th><th scope="col">Position</th></tr></thead>
             <tbody><% g.topPages.forEach((r) => { %><tr><td><a href="<%= r.page %>" target="_blank" rel="noopener"><%= r.page %></a></td><td><%= nf(r.clicks) %></td><td><%= nf(r.impressions) %></td><td><%= pct(r.ctr) %></td><td><%= pos(r.position) %></td></tr><% }) %></tbody></table></div>
         <% } %>
       <% } %>
@@ -93,10 +100,10 @@
     </details>
   </section>
 
-  <section class="content-card" id="analytics">
+  <section class="dpanel seo-int-section" id="analytics">
     <h2>Google Analytics 4</h2>
     <% if (st.analytics.state === "connected") { %>
-      <% if (ga && !ga.ok) { %><p class="form-error"><%= ga.error %></p><% } %>
+      <% if (ga && !ga.ok) { %><p class="seo-error"><%= ga.error %></p><% } %>
       <% if (ga && ga.ok) { const a = ga.data; %>
         <p class="field-hint"><%= a.days %> derniers jours (jusqu'à hier). Données reçues le <%= a.fetchedAt %> (UTC)<%= a.fromCache ? ", mises en cache 6 h" : "" %>.</p>
         <div class="seo-scores">
@@ -106,10 +113,10 @@
           <div class="seo-score"><span class="seo-score-value"><%= nf(a.totals.keyEvents) %></span><span class="seo-score-label">Événements clés</span></div>
         </div>
         <% if (a.channels.length) { %><h3>Sources de trafic</h3>
-          <div class="seo-table-wrap"><table class="seo-table"><thead><tr><th scope="col">Canal</th><th scope="col">Sessions</th></tr></thead>
+          <div class="dtable-wrap"><table class="dtable seo-table-modern"><thead><tr><th scope="col">Canal</th><th scope="col">Sessions</th></tr></thead>
             <tbody><% a.channels.forEach((r) => { %><tr><td><%= r.channel %></td><td><%= nf(r.sessions) %></td></tr><% }) %></tbody></table></div><% } %>
         <% if (a.pages.length) { %><h3>Pages les plus vues</h3>
-          <div class="seo-table-wrap"><table class="seo-table"><thead><tr><th scope="col">Page</th><th scope="col">Vues</th><th scope="col">Utilisateurs</th></tr></thead>
+          <div class="dtable-wrap"><table class="dtable seo-table-modern"><thead><tr><th scope="col">Page</th><th scope="col">Vues</th><th scope="col">Utilisateurs</th></tr></thead>
             <tbody><% a.pages.forEach((r) => { %><tr><td><%= r.path %></td><td><%= nf(r.views) %></td><td><%= nf(r.users) %></td></tr><% }) %></tbody></table></div><% } %>
         <% if (!a.pages.length && !a.channels.length) { %><p>Aucune donnée sur cette période.</p><% } %>
       <% } %>
@@ -134,9 +141,9 @@
     </details>
   </section>
 
-  <section class="content-card" id="pagespeed">
+  <section class="dpanel seo-int-section" id="pagespeed">
     <h2>PageSpeed Insights (vitesse des pages)</h2>
-    <% if (!siteUrl) { %><p class="form-error">Configuration requise : SITE_URL n'est pas définie, Google ne peut pas analyser le site.</p><% } else { %>
+    <% if (!siteUrl) { %><p class="seo-error">Configuration requise : SITE_URL n'est pas définie, Google ne peut pas analyser le site.</p><% } else { %>
       <p class="field-hint">Google charge réellement la page <%= siteUrl %>… depuis ses serveurs (environ 30 secondes). Sans clé d'API, le quota gratuit partagé peut être atteint.</p>
       <form method="post" action="/formateur/seo/integrations/pagespeed/analyser" class="seo-filters" data-busy="Analyse en cours chez Google (environ 30 s)…">
         <label class="sr-only" for="psi-path">Adresse à analyser</label><input type="text" id="psi-path" name="path" value="/" placeholder="/blog/mon-article">
@@ -145,11 +152,11 @@
       </form>
     <% } %>
     <% if (!psi.length) { %><p>Aucune analyse pour l'instant.</p><% } else { %>
-      <div class="seo-table-wrap"><table class="seo-table">
+      <div class="dtable-wrap"><table class="dtable seo-table-modern">
         <thead><tr><th scope="col">Date (UTC)</th><th scope="col">Adresse</th><th scope="col">Appareil</th><th scope="col">Performance</th><th scope="col">LCP</th><th scope="col">CLS</th><th scope="col">TBT</th><th scope="col">Visiteurs réels (CrUX)</th></tr></thead>
         <tbody><% psi.forEach((r) => { const d = r.data; %><tr>
           <td><%= r.fetched_at %></td><td><%= r.url.replace(siteUrl, "") || "/" %></td><td><%= r.strategy === "desktop" ? "Ordinateur" : "Mobile" %></td>
-          <% if (!r.ok) { %><td colspan="5" class="form-error"><%= r.error %></td><% } else { %>
+          <% if (!r.ok) { %><td colspan="5" class="seo-error"><%= r.error %></td><% } else { %>
             <td><strong><%= d.performance === null ? "Non disponible" : `${d.performance} / 100` %></strong></td><td><%= sec(d.lab.lcp) %></td><td><%= d.lab.cls === null ? "Non disponible" : d.lab.cls.toLocaleString("fr-FR", { maximumFractionDigits: 3 }) %></td><td><%= d.lab.tbt === null ? "Non disponible" : `${Math.round(d.lab.tbt)} ms` %></td>
             <td><% if (!d.fieldAvailable) { %>Non disponible (pas assez de visites mesurées par Google)<% } else { %>
               LCP <%= d.field.lcp ? `${sec(d.field.lcp.value)} (${FIELD_CAT[d.field.lcp.category] || d.field.lcp.category})` : "Non disponible" %> ·
@@ -169,6 +176,5 @@
       </form>
     </details>
   </section>
-</div>
 <script src="<%= asset('/js/seo-admin.js') %>" defer></script>
 <%- include("../partials/footer") %>

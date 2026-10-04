@@ -1,0 +1,7 @@
+<%# État vide : icône, titre, explication courte, action facultative (HTML) %>
+<div class="seo-empty">
+  <span class="seo-empty-icon" aria-hidden="true"><%- icon(typeof ico !== "undefined" ? ico : 'inbox', { size: 26 }) %></span>
+  <h3><%= title %></h3>
+  <% if (typeof text !== "undefined" && text) { %><p><%= text %></p><% } %>
+  <% if (typeof action !== "undefined" && action) { %><div class="seo-empty-action"><%- action %></div><% } %>
+</div>

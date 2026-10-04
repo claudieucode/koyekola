@@ -1,67 +1,89 @@
 <%- include("../partials/header", { title: "SEO · Redirections" }) %>
-<% const MSG = { cree: "Redirection créée : elle fonctionne immédiatement.", modifiee: "Redirection modifiée.", supprimee: "Redirection supprimée.", raccourcie: "Chaîne raccourcie : la redirection mène désormais directement à la destination finale." }; %>
-<div class="container-wide seo-page">
-  <%- include("_nav", { active: "redirects" }) %>
-  <% if (saved && MSG[saved]) { %><p class="form-success" role="status"><%= MSG[saved] %></p><% } %>
-  <% if (errors.length) { %><div class="form-error" role="alert"><strong>Rien n'a été enregistré :</strong><ul><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></div><% } %>
-  <% if (report) { %><div class="<%= report.errors.length ? "form-error" : "form-success" %>" role="status"><strong><%= report.created %> redirection(s) importée(s).</strong><% if (report.errors.length) { %><ul><% report.errors.slice(0, 30).forEach((e) => { %><li><%= e %></li><% }) %></ul><% } %></div><% } %>
+<% const MSG = { cree: "Redirection créée : elle fonctionne immédiatement.", modifiee: "Redirection modifiée.", supprimee: "Redirection supprimée.", raccourcie: "Chaîne raccourcie : la redirection mène désormais directement à la destination finale." };
+   const f = edit ? { source: edit.source_path, target: edit.target, status: edit.status, note: edit.note, enabled: edit.enabled } : form;
+   const showDialog = Boolean(edit) || openForm;
+   const qs = (o) => { const p = new URLSearchParams(); if (q) p.set("q", q); if (o.etat && o.etat !== "toutes") p.set("etat", o.etat); const s = p.toString(); return s ? `?${s}` : ""; }; %>
+<%- include("_head", { section: "Redirections", title: "Redirections", intro: "Envoyez visiteurs et moteurs de recherche d'une ancienne adresse vers la bonne page.", audit: false,
+  actions: `<a href="/formateur/seo/redirections?nouvelle=1" class="btn btn-primary" data-dialog-open="redirect-dialog">${icon('plus', { size: 16 })} Nouvelle redirection</a>`,
+  menu: `<a role="menuitem" href="/formateur/seo/redirections?importer=1" data-dialog-open="import-dialog">${icon('upload', { size: 16 })} Importer des redirections (CSV)</a><a role="menuitem" href="/formateur/seo/redirections.csv">${icon('download', { size: 16 })} Exporter les redirections (CSV)</a>` }) %>
+<%- include("_flash", { ok: saved && MSG[saved] ? MSG[saved] : null, errors: showDialog ? [] : errors }) %>
+<% if (report) { %><div class="seo-alert-box <%= report.errors.length ? "is-error" : "is-ok" %>" role="status"><%- icon(report.errors.length ? 'alertTriangle' : 'checkCircle', { size: 18 }) %><div><strong><%= report.created %> redirection(s) importée(s).</strong><% if (report.errors.length) { %><ul><% report.errors.slice(0, 30).forEach((e) => { %><li><%= e %></li><% }) %></ul><% } %></div></div><% } %>
 
-  <section class="content-card">
-    <h2><%= edit ? "Modifier la redirection" : "Nouvelle redirection" %></h2>
-    <% const f = edit ? { source: edit.source_path, target: edit.target, status: edit.status, note: edit.note, enabled: edit.enabled } : form; %>
-    <form method="post" action="/formateur/seo/redirections<%= edit ? `/${edit.id}` : "" %>" class="seo-redirect-form">
-      <% if (form.from404) { %><input type="hidden" name="from404" value="<%= form.from404 %>"><% } %>
-      <div class="field-group"><label for="r-source">Ancienne adresse</label><input type="text" id="r-source" name="source" required value="<%= f.source || "" %>" placeholder="/ancienne-page"></div>
-      <div class="field-group"><label for="r-target">Nouvelle adresse</label><input type="text" id="r-target" name="target" required value="<%= f.target || "" %>" placeholder="/nouvelle-page ou https://…"></div>
-      <div class="field-group"><label for="r-status">Type</label><select id="r-status" name="status"><option value="301" <%= String(f.status) !== "302" ? "selected" : "" %>>301 — définitive (conseillé)</option><option value="302" <%= String(f.status) === "302" ? "selected" : "" %>>302 — temporaire</option></select></div>
-      <div class="field-group"><label for="r-note">Note <span class="field-hint">(facultatif)</span></label><input type="text" id="r-note" name="note" maxlength="200" value="<%= f.note || "" %>"></div>
-      <% if (edit) { %><input type="hidden" name="enabled" value="0"><label class="checkbox-row" for="r-enabled"><input type="checkbox" id="r-enabled" name="enabled" value="1" <%= f.enabled ? "checked" : "" %>> <span>Active</span></label><% } %>
-      <div class="seo-form-actions"><button type="submit" class="btn btn-primary"><%= edit ? "Enregistrer" : "Créer la redirection" %></button><% if (edit) { %><a class="btn btn-outline" href="/formateur/seo/redirections">Annuler</a><% } %></div>
-    </form>
-    <p class="field-hint">La redirection s'exécute sur le serveur, avant toute page. Les espaces privés (connexion, administration, fichiers) ne peuvent pas être redirigés ; une boucle est refusée.</p>
+<ul class="seo-stats">
+  <li><span>Redirections actives</span><strong><%= stats.active %></strong></li>
+  <li><span>Désactivées</span><strong><%= stats.total - stats.active %></strong></li>
+  <li><span>Utilisations</span><strong><%= stats.hits %></strong></li>
+  <li class="<%= chains.length ? "is-warn" : "" %>"><span>Chaînes à raccourcir</span><strong><%= chains.length %></strong></li>
+</ul>
+
+<% if (chains.length) { %>
+  <section class="dpanel seo-chains">
+    <h2>Chaînes et boucles détectées (<%= chains.length %>)</h2>
+    <p class="seo-muted">Une chaîne fait passer le visiteur (et Google) par plusieurs redirections : mieux vaut mener directement à la destination finale.</p>
+    <ul class="seo-chain-list">
+      <% chains.forEach((c) => { %><li class="<%= c.loop ? "is-bad" : "" %>"><code><%= c.path.join(" → ") %></code> <%= c.loop ? "— boucle" : "" %>
+        <% if (!c.loop && c.id) { %><form method="post" action="/formateur/seo/redirections/<%= c.id %>/raccourcir" class="dash-inline-form"><button class="btn btn-outline btn-sm" type="submit">Raccourcir en <%= c.source %> → <%= c.final %></button></form><% } else if (!c.id) { %><span class="seo-muted">(changement d'adresse automatique : modifiez la redirection qui suit)</span><% } %></li><% }) %>
+    </ul>
   </section>
+<% } %>
 
-  <% if (chains.length) { %>
-    <section class="content-card">
-      <h2>Chaînes et boucles détectées (<%= chains.length %>)</h2>
-      <p class="field-hint">Une chaîne fait passer le visiteur (et Google) par plusieurs redirections : mieux vaut mener directement à la destination finale.</p>
-      <ul class="seo-chain-list">
-        <% chains.forEach((c) => { %><li class="<%= c.loop ? "is-bad" : "" %>"><code><%= c.path.join(" → ") %></code> <%= c.loop ? "— boucle" : "" %>
-          <% if (!c.loop && c.id) { %><form method="post" action="/formateur/seo/redirections/<%= c.id %>/raccourcir" class="inline-form"><button class="btn btn-outline btn-sm" type="submit">Raccourcir en <%= c.source %> → <%= c.final %></button></form><% } else if (!c.id) { %><span class="field-hint">(changement d'adresse automatique : modifiez la redirection qui suit)</span><% } %></li><% }) %>
-      </ul>
-    </section>
+<section class="dpanel">
+  <div class="dash-filters">
+    <% [["toutes", "Toutes"], ["actives", "Actives"], ["desactivees", "Désactivées"]].forEach(([k, l]) => { %><a class="dash-chip" href="/formateur/seo/redirections<%= qs({ etat: k }) %>"<%- etat === k ? ' aria-current="page"' : "" %>><%= l %></a><% }) %>
+    <form method="get" class="dash-search" role="search"><% if (etat !== "toutes") { %><input type="hidden" name="etat" value="<%= etat %>"><% } %><label class="sr-only" for="r-q">Rechercher</label><input type="search" id="r-q" name="q" value="<%= q %>" placeholder="Rechercher une adresse…"></form>
+  </div>
+  <% if (!list.length) { %>
+    <%- include("_empty", { ico: "arrowRightLeft", title: q || etat !== "toutes" ? "Aucune redirection pour ce filtre" : "Aucune redirection pour l'instant", text: "Une redirection évite les pages introuvables quand une adresse change.", action: `<a class="btn btn-primary" href="/formateur/seo/redirections?nouvelle=1" data-dialog-open="redirect-dialog">Créer une redirection</a>` }) %>
+  <% } else { %>
+  <div class="dtable-wrap"><table class="dtable seo-table-modern">
+    <thead><tr><th scope="col">Adresse source</th><th scope="col">Destination</th><th scope="col">Type</th><th scope="col">Statut</th><th scope="col">Utilisations</th><th scope="col">Créée le</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+      <% list.forEach((r) => { const stClass = `seo-state ${r.enabled ? "tone-good" : "tone-none"}`; %>
+        <tr>
+          <td><a class="seo-cell-title" href="<%= r.source_path %>" target="_blank" rel="noopener"><%= r.source_path %></a><% if (r.note) { %><small class="seo-cell-path"><%= r.note %></small><% } %></td>
+          <td class="seo-cell-wrap"><%= r.target %></td>
+          <td><span class="seo-code"><%= r.status %></span></td>
+          <td><span class="<%= stClass %>"><%= r.enabled ? "Active" : "Désactivée" %></span></td>
+          <td><%= r.hits %><% if (r.last_hit_at) { %><small class="seo-cell-path">dernière : <%= formatDateTime(r.last_hit_at) %></small><% } %></td>
+          <td><%= r.created_at ? formatDate(r.created_at) : "—" %></td>
+          <td class="seo-row-actions">
+            <div class="dmenu">
+              <button type="button" class="dmenu-btn" aria-haspopup="true" aria-expanded="false" aria-label="Actions : <%= r.source_path %>" title="Actions"><%- icon('moreVertical', { size: 16 }) %></button>
+              <div class="dmenu-list" role="menu" hidden>
+                <a role="menuitem" href="/formateur/seo/redirections?modifier=<%= r.id %>"><%- icon('settings', { size: 16 }) %> Modifier</a>
+                <a role="menuitem" href="<%= r.source_path %>" target="_blank" rel="noopener"><%- icon('externalLink', { size: 16 }) %> Tester</a>
+                <hr>
+                <form method="post" action="/formateur/seo/redirections/<%= r.id %>/supprimer" data-confirm="Supprimer la redirection <%= r.source_path %> ?"><button class="is-danger" type="submit" role="menuitem"><%- icon('trash', { size: 16 }) %> Supprimer</button></form>
+              </div>
+            </div>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table></div>
   <% } %>
+</section>
 
-  <section class="content-card">
-    <h2>Redirections (<%= list.length %>)</h2>
-    <form method="get" class="seo-filters" role="search"><label class="sr-only" for="r-q">Rechercher</label><input type="search" id="r-q" name="q" value="<%= q %>" placeholder="Rechercher une adresse…"><button class="btn btn-outline btn-sm">Rechercher</button>
-      <a class="btn btn-outline btn-sm" href="/formateur/seo/redirections.csv">Exporter (CSV)</a></form>
-    <% if (!list.length) { %><p>Aucune redirection pour l'instant.</p><% } else { %>
-    <div class="seo-table-wrap"><table class="seo-table">
-      <thead><tr><th scope="col">Ancienne adresse</th><th scope="col">Nouvelle adresse</th><th scope="col">Type</th><th scope="col">Utilisations</th><th scope="col">État</th><th scope="col"></th></tr></thead>
-      <tbody>
-        <% list.forEach((r) => { %>
-          <tr>
-            <td><a href="<%= r.source_path %>" target="_blank" rel="noopener"><%= r.source_path %></a><% if (r.note) { %><br><span class="field-hint"><%= r.note %></span><% } %></td>
-            <td><%= r.target %></td><td><%= r.status %></td>
-            <td><%= r.hits %><% if (r.last_hit_at) { %><br><span class="field-hint">dernière : <%= formatDateTime(r.last_hit_at) %></span><% } %></td>
-            <td><%= r.enabled ? "Active" : "Désactivée" %></td>
-            <td class="seo-actions"><a class="btn btn-outline btn-sm" href="/formateur/seo/redirections?modifier=<%= r.id %>">Modifier</a>
-              <form method="post" action="/formateur/seo/redirections/<%= r.id %>/supprimer" class="inline-form" data-confirm="Supprimer cette redirection ?"><button class="btn-link" type="submit">Supprimer</button></form></td>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table></div>
-    <% } %>
-  </section>
+<dialog class="seo-dialog" id="redirect-dialog" aria-labelledby="redirect-dialog-title" <%= showDialog ? "open" : "" %> <%= showDialog ? "data-autoshow" : "" %>>
+  <form method="post" action="/formateur/seo/redirections<%= edit ? `/${edit.id}` : "" %>" class="seo-dialog-body">
+    <div class="seo-dialog-head"><h2 id="redirect-dialog-title"><%= edit ? "Modifier la redirection" : "Nouvelle redirection" %></h2><a href="/formateur/seo/redirections" class="seo-dialog-close" data-dialog-close aria-label="Fermer"><%- icon('close', { size: 18 }) %></a></div>
+    <% if (errors.length) { %><div class="seo-alert-box is-error" role="alert"><%- icon('alertTriangle', { size: 18 }) %><div><strong>Rien n'a été enregistré :</strong><ul><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></div></div><% } %>
+    <% if (form.from404) { %><input type="hidden" name="from404" value="<%= form.from404 %>"><% } %>
+    <div class="field-group"><label for="r-source">Ancienne adresse</label><input type="text" id="r-source" name="source" required value="<%= f.source || "" %>" placeholder="/ancienne-page"></div>
+    <div class="field-group"><label for="r-target">Nouvelle adresse</label><input type="text" id="r-target" name="target" required value="<%= f.target || "" %>" placeholder="/nouvelle-page ou https://…"></div>
+    <div class="field-group"><label for="r-status">Type</label><select id="r-status" name="status"><option value="301" <%= String(f.status) !== "302" ? "selected" : "" %>>301 — définitive (conseillé)</option><option value="302" <%= String(f.status) === "302" ? "selected" : "" %>>302 — temporaire</option></select></div>
+    <div class="field-group"><label for="r-note">Note <span class="field-hint">(facultatif)</span></label><input type="text" id="r-note" name="note" maxlength="200" value="<%= f.note || "" %>"></div>
+    <% if (edit) { %><input type="hidden" name="enabled" value="0"><label class="checkbox-row" for="r-enabled"><input type="checkbox" id="r-enabled" name="enabled" value="1" <%= f.enabled ? "checked" : "" %>> <span>Active</span></label><% } %>
+    <p class="seo-muted">La redirection s'exécute sur le serveur, avant toute page. Les espaces privés (connexion, administration, fichiers) ne peuvent pas être redirigés ; une boucle est refusée.</p>
+    <div class="seo-dialog-actions"><a class="btn btn-outline" href="/formateur/seo/redirections" data-dialog-close>Annuler</a><button type="submit" class="btn btn-primary"><%= edit ? "Enregistrer" : "Créer la redirection" %></button></div>
+  </form>
+</dialog>
 
-  <section class="content-card">
-    <h2>Importer des redirections</h2>
-    <form method="post" action="/formateur/seo/redirections/import">
-      <div class="field-group"><label for="r-csv">Une redirection par ligne : <code>ancienne,nouvelle,301,note</code></label><textarea id="r-csv" name="csv" rows="5" placeholder="/ancien-article,/blog/nouvel-article,301"></textarea></div>
-      <button class="btn btn-outline" type="submit">Importer</button>
-    </form>
-  </section>
-</div>
-<script src="<%= asset('/js/seo-admin.js') %>" defer></script>
+<dialog class="seo-dialog" id="import-dialog" aria-labelledby="import-dialog-title" <%= importOpen ? "open data-autoshow" : "" %>>
+  <form method="post" action="/formateur/seo/redirections/import" class="seo-dialog-body">
+    <div class="seo-dialog-head"><h2 id="import-dialog-title">Importer des redirections</h2><a href="/formateur/seo/redirections" class="seo-dialog-close" data-dialog-close aria-label="Fermer"><%- icon('close', { size: 18 }) %></a></div>
+    <div class="field-group"><label for="r-csv">Une redirection par ligne : <code>ancienne,nouvelle,301,note</code></label><textarea id="r-csv" name="csv" rows="6" placeholder="/ancien-article,/blog/nouvel-article,301"></textarea></div>
+    <div class="seo-dialog-actions"><a class="btn btn-outline" href="/formateur/seo/redirections" data-dialog-close>Annuler</a><button class="btn btn-primary" type="submit">Importer</button></div>
+  </form>
+</dialog>
 <%- include("../partials/footer") %>

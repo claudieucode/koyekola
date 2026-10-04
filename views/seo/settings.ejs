@@ -1,14 +1,34 @@
 <%- include("../partials/header", { title: "SEO · Réglages" }) %>
-<div class="container-wide seo-page">
-  <%- include("_nav", { active: "settings" }) %>
-  <% if (saved) { %><p class="form-success" role="status">Réglages enregistrés : ils s'appliquent immédiatement à toutes les pages publiques.</p><% } %>
-  <% if (errors.length) { %><div class="form-error" role="alert"><strong>Rien n'a été enregistré :</strong><ul><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></div><% } %>
-  <form method="post" action="/formateur/seo/reglages" class="seo-form">
-    <% Object.entries(groups).forEach(([group, title]) => { %>
-      <section class="content-card">
-        <h2><%= title %></h2>
-        <% if (group === "templates") { %><p class="field-hint">Variables remplacées automatiquement : {site_name}, {category}, {tag}, {author}, {courses}. Une variable non autorisée est refusée à l'enregistrement.</p><% } %>
-        <% Object.entries(fields).filter(([, f]) => f.group === group).forEach(([key, f]) => { const id = `seo-${key}`; const v = values[key]; %>
+<%
+  // Rubriques de la page (présentation seulement : chaque réglage garde sa validation dans src/seo/settings.js)
+  const SECTIONS = [
+    { key: "general", label: "Général", icon: "settings", hint: "Nom du site et description utilisés quand une page n'a pas les siens.", fields: ["site_name", "title_separator", "default_description", "og_locale"] },
+    { key: "titles", label: "Titres & métadonnées", icon: "fileText", hint: "Modèles appliqués automatiquement. Variables : {site_name}, {category}, {tag}, {author}, {courses}, {title}, {sep}. Une variable non autorisée est refusée.", fields: ["title_template", "home_title", "home_description", "catalogue_title", "catalogue_description", "course_category_title", "course_category_description", "blog_title", "blog_description", "blog_category_description", "blog_tag_title", "blog_tag_description", "author_title", "author_description"] },
+    { key: "indexing", label: "Indexation & sitemap", icon: "network", hint: "Quelles pages Google peut indexer et ce qui se passe à la publication.", fields: ["index_blog_tags", "index_authors", "publish_guard"] },
+    { key: "robots", label: "Robots.txt", icon: "bot", hint: "Règles ajoutées après celles du site. Le résultat est visible dans Robots & Sitemap.", fields: ["robots_custom"] },
+    { key: "social", label: "Open Graph (partage)", icon: "send", hint: "Image affichée quand une page est partagée sur Facebook, LinkedIn, WhatsApp ou X.", fields: ["default_social_image"] },
+    { key: "schema", label: "Données structurées", icon: "layout", hint: "Votre organisation telle que Google la comprend (nom, logo, profils officiels).", fields: ["org_type", "org_name", "org_logo", "org_description", "social_profiles"] },
+  ];
+  const placed = new Set(SECTIONS.flatMap((s) => s.fields));
+  const rest = Object.keys(fields).filter((k) => !placed.has(k));
+  if (rest.length) SECTIONS.push({ key: "advanced", label: "Avancé", icon: "sliders", hint: "Autres réglages.", fields: rest });
+  const errorKeys = new Set(errors.map((e) => Object.keys(fields).find((k) => e.includes(fields[k].label))).filter(Boolean));
+%>
+<%- include("_head", { section: "Réglages", title: "Réglages SEO", intro: "Les réglages s'appliquent immédiatement à toutes les pages publiques.", audit: false }) %>
+<%- include("_flash", { ok: saved ? "Réglages enregistrés : ils s'appliquent immédiatement à toutes les pages publiques." : null, errors }) %>
+
+<form method="post" action="/formateur/seo/reglages" class="seo-settings" data-settings>
+  <nav class="seo-settings-nav" aria-label="Rubriques des réglages">
+    <% SECTIONS.forEach((s, i) => { const bad = s.fields.some((k) => errorKeys.has(k)); %>
+      <a href="#rubrique-<%= s.key %>" data-settings-tab="<%= s.key %>"<%- i === 0 ? ' aria-current="true"' : "" %>><%- icon(s.icon, { size: 16 }) %><span><%= s.label %></span><% if (bad) { %><span class="seo-dot-error" aria-label="contient une erreur"></span><% } %></a>
+    <% }) %>
+  </nav>
+  <div class="seo-settings-panels">
+    <% SECTIONS.forEach((s) => { %>
+      <section class="dpanel seo-settings-panel" id="rubrique-<%= s.key %>" data-settings-panel="<%= s.key %>">
+        <h2><%= s.label %></h2>
+        <p class="seo-muted"><%= s.hint %></p>
+        <% s.fields.forEach((key) => { const f = fields[key]; if (!f) return; const id = `seo-${key}`; const v = values[key]; %>
           <div class="field-group">
             <% if (f.type === "bool") { %>
               <input type="hidden" name="<%= key %>" value="0">
@@ -21,6 +41,8 @@
                 <%- include("_image-select", { id, name: key, value: v, media }) %>
               <% } else if (f.type === "urls") { %>
                 <textarea id="<%= id %>" name="<%= key %>" rows="4" placeholder="https://www.facebook.com/…"><%= Array.isArray(v) ? v.join("\n") : v %></textarea>
+              <% } else if (f.type === "multiline") { %>
+                <textarea id="<%= id %>" name="<%= key %>" rows="8" class="seo-code-input" spellcheck="false" maxlength="<%= f.max %>"><%= v %></textarea>
               <% } else if (f.max > 120) { %>
                 <textarea id="<%= id %>" name="<%= key %>" rows="2" maxlength="<%= f.max %>"><%= v %></textarea>
               <% } else { %>
@@ -32,8 +54,8 @@
         <% }) %>
       </section>
     <% }) %>
-    <div class="seo-sticky-actions"><button type="submit" class="btn btn-primary">Enregistrer les réglages</button></div>
-  </form>
-</div>
+    <div class="seo-sticky-actions"><span class="seo-muted" data-dirty hidden>Modifications non enregistrées</span><button type="submit" class="btn btn-primary">Enregistrer les réglages</button></div>
+  </div>
+</form>
 <script src="<%= asset('/js/seo-admin.js') %>" defer></script>
 <%- include("../partials/footer") %>

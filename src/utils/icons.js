@@ -107,6 +107,16 @@ const ICONS = {
   externalLink: { body: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>' },
   alertTriangle: { body: '<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"></circle>' },
   inbox: { body: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.8 1.1z"></path>' },
+  // Espace SEO
+  searchCheck: { body: '<circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><polyline points="8 11 10.5 13.5 14.5 9"></polyline>' },
+  arrowRightLeft: { body: '<polyline points="16 3 20 7 16 11"></polyline><line x1="20" y1="7" x2="4" y2="7"></line><polyline points="8 21 4 17 8 13"></polyline><line x1="4" y1="17" x2="20" y2="17"></line>' },
+  alertCircle: { body: '<circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="12.5"></line><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"></circle>' },
+  network: { body: '<rect x="9" y="2" width="6" height="6" rx="1"></rect><rect x="2" y="16" width="6" height="6" rx="1"></rect><rect x="16" y="16" width="6" height="6" rx="1"></rect><path d="M5 16v-3h14v3"></path><line x1="12" y1="8" x2="12" y2="13"></line>' },
+  bot: { body: '<rect x="4" y="8" width="16" height="12" rx="2"></rect><line x1="12" y1="4" x2="12" y2="8"></line><circle cx="12" cy="3" r="1"></circle><line x1="9" y1="13" x2="9" y2="15"></line><line x1="15" y1="13" x2="15" y2="15"></line><line x1="2" y1="13" x2="2" y2="16"></line><line x1="22" y1="13" x2="22" y2="16"></line>' },
+  listChecks: { body: '<polyline points="3 6 4.5 7.5 7 5"></polyline><polyline points="3 12 4.5 13.5 7 11"></polyline><polyline points="3 18 4.5 19.5 7 17"></polyline><line x1="11" y1="6" x2="21" y2="6"></line><line x1="11" y1="12" x2="21" y2="12"></line><line x1="11" y1="18" x2="21" y2="18"></line>' },
+  barChart: { body: '<line x1="4" y1="20" x2="20" y2="20"></line><rect x="6" y="11" width="3" height="7" rx="0.5"></rect><rect x="11" y="6" width="3" height="12" rx="0.5"></rect><rect x="16" y="13" width="3" height="5" rx="0.5"></rect>' },
+  history: { body: '<path d="M3 12a9 9 0 1 0 3-6.7"></path><polyline points="3 3 3 8 8 8"></polyline><polyline points="12 7 12 12 15 14"></polyline>' },
+  palette: { body: '<path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"></path><circle cx="7.5" cy="11" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="10" cy="7" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="15" cy="7" r="1.2" fill="currentColor" stroke="none"></circle>' },
 };
 
 function icon(name, opts = {}) {

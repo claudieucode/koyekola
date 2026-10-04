@@ -1,10 +1,33 @@
 <%- include("../partials/header", { title: "SEO · Journal" }) %>
-<div class="container-wide seo-page">
-  <%- include("_nav", { active: "journal" }) %>
-  <section class="content-card">
-    <h2>Journal des modifications</h2>
-    <p class="field-hint">Chaque modification d'un réglage SEO (site ou contenu) : qui, quand, valeur avant et après. Les 300 plus récentes.</p>
-    <% if (!changes.length) { %><p>Aucune modification enregistrée pour l'instant.</p><% } else { %><%- include("_changes", { changes, fieldLabels, showEntity: true }) %><% } %>
+<% const days = [];
+   events.forEach((e) => { const d = e.at.slice(0, 10); if (!days.length || days[days.length - 1].day !== d) days.push({ day: d, items: [] }); days[days.length - 1].items.push(e); });
+   const short = (v) => (v === null ? "(automatique)" : String(v).length > 140 ? `${String(v).slice(0, 139)}…` : v); %>
+<%- include("_head", { section: "Journal", title: "Journal", intro: "Chaque modification SEO (site ou contenu) et chaque audit : qui, quand, et la valeur avant / après.", audit: false,
+  actions: `<a class="btn btn-outline" href="/formateur/seo/rapports/journal.csv">${icon('download', { size: 16 })} Exporter (CSV)</a>` }) %>
+
+<% if (!events.length) { %>
+  <section class="dpanel"><%- include("_empty", { ico: "history", title: "Aucune modification enregistrée pour l'instant", text: "Les changements de réglages SEO et les audits apparaîtront ici, du plus récent au plus ancien." }) %></section>
+<% } else { %>
+  <section class="dpanel">
+    <ol class="seo-timeline">
+      <% days.forEach((d) => { %>
+        <li class="seo-timeline-day"><h2><%= formatDate(`${d.day} 00:00:00`) %></h2>
+          <ol>
+            <% d.items.forEach((e) => { if (e.kind === "audit") { const a = e.a; %>
+              <li class="is-audit"><span class="seo-timeline-dot" aria-hidden="true"><%- icon('searchCheck', { size: 14 }) %></span>
+                <div><strong><%= kinds[a.kind] || "Audit" %> <%= a.status === "done" ? "terminé" : a.status === "failed" ? "en échec" : "lancé" %></strong>
+                  <small><time datetime="<%= a.started_at %>"><%= a.started_at.slice(11, 16) %> UTC</time><%= a.username ? ` · par ${a.username}` : a.source === "scheduled" ? " · planifié" : "" %><%= a.status === "done" ? ` · ${a.pages} pages, ${a.issues} problème(s)${a.scores && a.scores.overall ? `, score ${a.scores.overall.score}` : ""}` : "" %></small>
+                  <a href="/formateur/seo/audit?id=<%= a.id %>">Voir l'audit</a></div></li>
+            <% } else { const c = e.c; %>
+              <li><span class="seo-timeline-dot" aria-hidden="true"><%- icon('settings', { size: 14 }) %></span>
+                <div><strong><%= c.title %></strong>
+                  <small><time datetime="<%= c.created_at %>"><%= c.created_at.slice(11, 16) %> UTC</time><%= c.username ? ` · par ${c.username}` : "" %> · <a href="<%= c.href %>"><%= c.target %></a></small>
+                  <% if (!c.hideValues && c.old_value !== null && c.new_value !== null) { %><details class="seo-diff"><summary>Avant / après</summary><p><span class="seo-old"><%= short(c.old_value) %></span> → <span class="seo-new"><%= short(c.new_value) %></span></p></details><% } else if (!c.hideValues && c.entity_type !== "redirect") { %><p class="seo-diff-one"><%= c.new_value === null ? "Valeur retirée (automatique)" : short(c.new_value) %></p><% } %></div></li>
+            <% } }) %>
+          </ol>
+        </li>
+      <% }) %>
+    </ol>
   </section>
-</div>
+<% } %>
 <%- include("../partials/footer") %>

@@ -1,13 +1,11 @@
 <%- include("../partials/header", { title: "SEO · Règles" }) %>
-<div class="container-wide seo-page">
-  <%- include("_nav", { active: "audit" }) %>
-  <section class="content-card">
+<%- include("_head", { section: "Audit", title: "Règles de l'audit", intro: "Toutes les règles appliquées par l'audit, avec leur gravité et la correction conseillée." }) %>
+  <section class="dpanel">
     <h2>Règles de l'audit (<%= rules.length %>)</h2>
     <p class="field-hint">Gravité : critique (la page ne peut pas être correctement indexée), élevée (problème net), moyenne (effet probable mais limité), faible (amélioration conseillée), info (constat).</p>
-    <div class="seo-table-wrap"><table class="seo-table">
+    <div class="dtable-wrap"><table class="dtable seo-table-modern">
       <thead><tr><th scope="col">Règle</th><th scope="col">Catégorie</th><th scope="col">Gravité</th><th scope="col">Recommandation</th><th scope="col">Correction</th></tr></thead>
       <tbody><% rules.forEach((r) => { %><tr><td><strong><%= r.title %></strong><br><code><%= r.id %></code></td><td><%= categories[r.category] %></td><td><%= severities[r.severity].label %></td><td><%= r.recommendation %></td><td><%= r.fix ? "Automatique" : "Manuelle" %></td></tr><% }) %></tbody>
     </table></div>
   </section>
-</div>
 <%- include("../partials/footer") %>

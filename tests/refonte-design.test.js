@@ -7,7 +7,7 @@ const { startServer, Client } = require("./helpers");
 
 const ROOT = path.join(__dirname, "..");
 // Feuilles de style du site ET de l'espace marketing : les mêmes règles de conception s'appliquent aux deux
-const CSS = ["style.css", "marketing.css", "blog-editor.css", "dashboard.css"].map((f) => fs.readFileSync(path.join(ROOT, "public", "css", f), "utf8")).join("\n");
+const CSS = ["style.css", "marketing.css", "blog-editor.css", "dashboard.css", "seo-workspace.css"].map((f) => fs.readFileSync(path.join(ROOT, "public", "css", f), "utf8")).join("\n");
 
 describe("palette : les codes couleurs d'origine sont conservés", () => {
   const expected = { primary: "#0b2a40", "primary-dark": "#06192a", accent: "#0277b6", "accent-dark": "#0369a1", "accent-light": "#e0f2fe", sky: "#7dd3fc", bg: "#f3f8fc", text: "#10222f", muted: "#5d7182", star: "#9a5809" };
@@ -68,7 +68,7 @@ describe("polices : hébergées sur le site, aucun service externe", () => {
     }
   });
   test("aucun appel à Google Fonts ni à un CDN de polices", () => {
-    for (const f of ["style.css", "marketing.css", "dashboard.css"]) {
+    for (const f of ["style.css", "marketing.css", "dashboard.css", "seo-workspace.css"]) {
       assert.doesNotMatch(fs.readFileSync(path.join(ROOT, "public", "css", f), "utf8"), /fonts\.googleapis|fonts\.gstatic|use\.typekit|cdnjs|jsdelivr|unpkg/);
     }
     for (const dir of ["views", "views/partials"]) {

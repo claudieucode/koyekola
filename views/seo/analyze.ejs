@@ -1,7 +1,6 @@
 <%- include("../partials/header", { title: "SEO · Analyse d'une page" }) %>
-<div class="container-wide seo-page">
-  <%- include("_nav", { active: "audit" }) %>
-  <section class="content-card">
+<%- include("_head", { section: "Audit", title: "Analyse d'une page", intro: "Les règles applicables à une page seule, sur la version publiée en ce moment." }) %>
+  <section class="dpanel">
     <h2>Analyse de <a href="<%= path %>" target="_blank" rel="noopener"><%= path %></a></h2>
     <form method="get" class="seo-filters"><label class="sr-only" for="an-path">Adresse</label><input type="text" id="an-path" name="path" value="<%= path %>"><button class="btn btn-outline btn-sm">Analyser</button></form>
     <% if (result.status !== 200) { %><p class="form-error">La page répond <%= result.status || "rien" %><%= result.error ? ` (${result.error})` : "" %> : analyse impossible.</p>
@@ -11,5 +10,4 @@
     <% } %>
     <p class="field-hint">Les règles qui demandent tout le site (pages orphelines, doublons, cannibalisation) ne sont évaluées que par un scan complet.</p>
   </section>
-</div>
 <%- include("../partials/footer") %>

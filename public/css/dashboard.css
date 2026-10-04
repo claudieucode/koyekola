@@ -257,3 +257,14 @@
 .theme-mini-perso .theme-mini-side { background: conic-gradient(from 90deg, #0b83c6, #7cc4a3, #f4c95d, #e56b6f, #0b83c6); }
 .theme-mini-perso .theme-mini-main { background: var(--dash-bg); }
 .theme-mini-perso i { background: var(--dash-border); }
+
+/* ---------- Notifications (toasts) ---------- */
+.dash-toasts { position: fixed; right: var(--s4, 16px); bottom: var(--s4, 16px); z-index: 90; display: grid; gap: 8px; width: min(380px, calc(100vw - 32px)); }
+.dash-toast { display: flex; align-items: flex-start; gap: 10px; padding: 12px 12px 12px 14px; border: 1px solid var(--dash-border, #e2e8f0); border-left: 4px solid var(--dash-success, #15803d); border-radius: 10px; background: var(--dash-card, #fff); color: var(--dash-text, #102a3a); font-size: 14px; box-shadow: var(--dash-shadow-pop, 0 12px 32px rgba(15, 30, 45, 0.16)); animation: dash-toast-in 200ms ease; transition: opacity 250ms ease, transform 250ms ease; }
+.dash-toast > .icon { margin-top: 1px; color: var(--dash-success, #15803d); }
+.dash-toast > span { flex: 1; }
+.dash-toast.is-leaving { opacity: 0; transform: translateY(6px); }
+.dash-toast-close { flex: none; width: 26px; height: 26px; border: 0; border-radius: 6px; background: none; color: var(--dash-muted, #64748b); font-size: 18px; line-height: 1; cursor: pointer; }
+.dash-toast-close:hover { background: var(--dash-hover, rgba(15, 40, 60, 0.06)); color: var(--dash-text, #102a3a); }
+@keyframes dash-toast-in { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .dash-toast { animation: none; transition: none; } }

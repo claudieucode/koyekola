@@ -1,0 +1,43 @@
+<%- include("../partials/header", { title: "SEO · Surveillance" }) %>
+<% const active = Boolean(job.enabled);
+   const stClass = `seo-state ${monitorAt && active ? "tone-good" : "tone-none"}`;
+   const runForm = `<form method="post" action="/formateur/seo/taches/monitor/executer" data-busy="Vérification en cours…" class="dash-inline-form"><button class="btn btn-primary" type="submit">Lancer une vérification</button></form>`; %>
+<%- include("_head", { section: "Surveillance", title: "Surveillance SEO", intro: "Chaque passage photographie l'état réel du site et le compare au précédent : seuls les changements constatés deviennent des alertes.", audit: false, actions: monitorAt ? runForm : "" }) %>
+<%- include("_flash", { ok: msg }) %>
+
+<% if (!monitorAt) { %>
+  <section class="dpanel">
+    <%- include("_empty", { ico: "activity", title: "Aucune surveillance active", text: "Votre site n'est pas encore surveillé automatiquement. Le premier passage enregistre l'état de référence ; les suivants signalent ce qui change (pages principales, noindex, canonical, titres, robots.txt, plan du site, nouvelles erreurs 404).", action: `${runForm}<a class="btn btn-outline" href="/formateur/seo/taches#tache-monitor">Configurer la surveillance</a>` }) %>
+  </section>
+<% } else { %>
+  <ul class="seo-stats">
+    <li><span>Statut</span><strong><span class="<%= stClass %>"><%= active ? "Active" : "Programmation désactivée" %></span></strong></li>
+    <li><span>Dernière vérification</span><strong class="is-small"><%= formatDateTime(monitorAt) %></strong></li>
+    <li><span>Pages principales surveillées</span><strong><%= keyPages.length %></strong></li>
+    <li class="<%= alerts.length ? "is-warn" : "" %>"><span>Nouveaux changements</span><strong><%= alerts.length %></strong></li>
+  </ul>
+
+  <section class="dpanel">
+    <div class="dash-section-head"><h2>Changements constatés</h2><% if (alerts.length) { %><form method="post" action="/formateur/seo/alertes/vues" class="dash-inline-form"><button class="btn btn-outline btn-sm" type="submit">Tout marquer comme vu</button></form><% } %></div>
+    <% if (!alerts.length) { %>
+      <p class="seo-ok"><%- icon('checkCircle', { size: 16 }) %> Aucun changement à signaler depuis le dernier passage.</p>
+    <% } else { %>
+      <ul class="seo-alerts">
+        <% alerts.forEach((a) => { const cls = `seo-alert is-${a.severity}`; %><li class="<%= cls %>"><span class="seo-alert-sev"><%= severities[a.severity] ? severities[a.severity].label : a.severity %></span><span class="seo-alert-msg"><%= a.message %> <small class="seo-muted"><%= formatDateTime(a.created_at) %></small></span>
+          <form method="post" action="/formateur/seo/alertes/vues" class="dash-inline-form"><input type="hidden" name="id" value="<%= a.id %>"><button class="btn btn-ghost btn-sm" type="submit">Vu</button></form></li><% }) %>
+      </ul>
+    <% } %>
+  </section>
+
+  <section class="dpanel">
+    <h2>Ce qui est surveillé</h2>
+    <ul class="seo-checklist">
+      <li>Pages principales : <% keyPages.forEach((p, i) => { %><code><%= p %></code><%= i < keyPages.length - 1 ? ", " : "" %><% }) %> (réponse, titre, noindex, canonical)</li>
+      <li>Contenu de robots.txt et pages bloquées</li>
+      <li>Adresses du plan du site (ajouts et retraits)</li>
+      <li>Nouvelles erreurs 404 vues par des personnes</li>
+    </ul>
+    <p class="seo-muted">Programmation : <%= active ? `${job.frequency === "daily" ? "chaque jour" : job.frequency === "weekly" ? "chaque lundi" : job.frequency} à ${String(job.hour).padStart(2, "0")} h UTC` : "désactivée" %>. <a href="/formateur/seo/taches#tache-monitor">Modifier</a></p>
+  </section>
+<% } %>
+<%- include("../partials/footer") %>

@@ -1,0 +1,8 @@
+<%# Anneau de score SEO (0–100) : la note réelle d'un audit, ou « — » sans audit. Paramètres : score, size ('lg' ou 'sm'), label %>
+<% const g = score === null || score === undefined ? { label: "Non évalué", tone: "none" } : score >= 90 ? { label: "Excellent", tone: "good" } : score >= 75 ? { label: "Bon", tone: "good" } : score >= 50 ? { label: "À améliorer", tone: "warn" } : { label: "Faible", tone: "bad" };
+   const ringClass = `seo-ring is-${typeof size !== "undefined" ? size : "lg"} tone-${g.tone}`; %>
+<div class="<%= ringClass %>" style="--p: <%= score || 0 %>" role="img" aria-label="Note SEO : <%= score === null || score === undefined ? "non évaluée" : `${score} sur 100, ${g.label}` %>">
+  <span class="seo-ring-value"><%= score === null || score === undefined ? "—" : score %></span>
+  <span class="seo-ring-label"><%= typeof label !== "undefined" ? label : "Score SEO" %></span>
+  <span class="seo-ring-grade"><%= g.label %></span>
+</div>

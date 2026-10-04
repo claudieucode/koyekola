@@ -1,45 +1,85 @@
-<%- include("../partials/header", { title: "SEO · Tâches programmées" }) %>
+<%- include("../partials/header", { title: "SEO · Tâches" }) %>
 <%
   const STATUS = { ok: "Réussie", error: "Échec", skipped: "Ignorée", busy: "En cours" };
   const stateClass = (s) => `seo-job-status is-${s || "never"}`;
+  const open = todo.filter((t) => !t.done);
+  const closed = todo.filter((t) => t.done);
+  const prioClass = (p) => `seo-prio is-${p}`;
 %>
-<div class="container-wide seo-page">
-  <%- include("_nav", { active: "jobs" }) %>
-  <% if (msg) { %><p class="form-success" role="status"><%= msg %></p><% } %>
-  <% if (err) { %><p class="form-error" role="alert"><%= err %></p><% } %>
-  <p class="field-hint">Ces tâches tournent seules sur le serveur, aux heures indiquées en temps universel (UTC, il est actuellement <%= now %> UTC). Une tâche dont le service n'est pas configuré est « ignorée » avec la raison : rien n'est simulé.</p>
-  <div class="seo-jobs">
-    <% list.forEach((j) => { const running = Boolean(j.running_since); %>
-      <section class="content-card seo-job" id="tache-<%= j.name %>">
-        <div class="seo-job-head">
-          <h2><%= j.label %></h2>
-          <strong class="<%= stateClass(running ? "busy" : j.last_status) %>"><%= running ? `En cours depuis ${j.running_since}` : j.last_status ? STATUS[j.last_status] : "Jamais exécutée" %></strong>
-        </div>
-        <p class="field-hint"><%= j.description %></p>
-        <dl class="seo-dl">
-          <dt>Dernier passage</dt><dd><%= j.last_run_at ? `${j.last_run_at} UTC` : "Jamais" %></dd>
-          <dt>Résultat</dt><dd><%= j.last_message || "—" %></dd>
-          <dt>Prochain passage</dt><dd><%= j.enabled && j.next_run_at ? `${j.next_run_at} UTC` : "Désactivée" %></dd>
-        </dl>
-        <div class="seo-job-actions">
-          <form method="post" action="/formateur/seo/taches/<%= j.name %>" class="seo-job-form">
-            <label class="sr-only" for="f-<%= j.name %>">Fréquence</label>
-            <select id="f-<%= j.name %>" name="frequency"><% Object.entries(frequencies).forEach(([k, l]) => { %><option value="<%= k %>" <%= (j.enabled ? j.frequency : "off") === k ? "selected" : "" %>><%= l %></option><% }) %></select>
-            <label class="sr-only" for="h-<%= j.name %>">Heure (UTC)</label>
-            <select id="h-<%= j.name %>" name="hour"><% for (let h = 0; h < 24; h++) { %><option value="<%= h %>" <%= j.hour === h ? "selected" : "" %>><%= String(h).padStart(2, "0") %> h UTC</option><% } %></select>
-            <button class="btn btn-outline btn-sm" type="submit">Enregistrer</button>
-          </form>
-          <form method="post" action="/formateur/seo/taches/<%= j.name %>/executer" class="inline-form" data-busy="Exécution en cours…"><button class="btn btn-primary btn-sm" type="submit" <%= running ? "disabled" : "" %>>Exécuter maintenant</button></form>
-        </div>
-        <% if (j.runs.length) { %>
-          <details class="seo-int-config"><summary>Historique des passages (<%= j.runs.length === 1 ? "le dernier" : `les ${j.runs.length} derniers` %>)</summary>
-            <div class="seo-table-wrap"><table class="seo-table"><thead><tr><th scope="col">Début (UTC)</th><th scope="col">Déclenchement</th><th scope="col">État</th><th scope="col">Résultat</th></tr></thead>
-              <tbody><% j.runs.forEach((r) => { %><tr><td><%= r.started_at %></td><td><%= r.trigger === "manual" ? "Manuel" : "Automatique" %></td><td><%= STATUS[r.status] || r.status %></td><td><%= r.message %></td></tr><% }) %></tbody></table></div>
-          </details>
-        <% } %>
-      </section>
-    <% }) %>
+<%- include("_head", { section: "Tâches", title: "Tâches SEO", intro: "Ce qu'il reste à faire pour améliorer votre référencement, et les tâches qui tournent seules sur le serveur." }) %>
+<%- include("_flash", { ok: msg, error: err }) %>
+
+<div class="seo-tabs-local" data-tabs>
+  <div class="seo-tablist" role="tablist" aria-label="Tâches">
+    <button type="button" role="tab" id="tab-todo" aria-controls="a-faire" aria-selected="true">À faire <span class="dash-chip-count"><%= open.length %></span></button>
+    <button type="button" role="tab" id="tab-jobs" aria-controls="programmees" aria-selected="false">Tâches programmées <span class="dash-chip-count"><%= list.length %></span></button>
   </div>
+
+  <section role="tabpanel" id="a-faire" aria-labelledby="tab-todo" class="dpanel" data-tasklist>
+    <% if (!todo.length) { %>
+      <%- include("_empty", { ico: "checkCircle", title: "Aucune tâche", text: "La configuration est complète et le dernier audit n'a relevé aucun problème à corriger." }) %>
+    <% } else { %>
+      <div class="dash-filters">
+        <% [["all", "Toutes", open.length], ["critical", "Critiques", open.filter((t) => t.priority === "critical").length], ["important", "Importantes", open.filter((t) => t.priority === "important").length], ["recommended", "Recommandées", open.filter((t) => t.priority === "recommended").length], ["done", "Terminées", closed.length]].forEach(([k, l, n], i) => { %>
+          <button type="button" class="dash-chip" data-task-filter="<%= k %>" aria-pressed="<%= i === 0 %>"><%= l %> <span class="dash-chip-count"><%= n %></span></button>
+        <% }) %>
+        <label class="seo-sort"><span>Trier</span><select data-task-sort><option value="priority">Par priorité</option><option value="pages">Par pages concernées</option><option value="title">Par nom</option></select></label>
+      </div>
+      <div class="dtable-wrap"><table class="dtable seo-table-modern">
+        <thead><tr><th scope="col">Priorité</th><th scope="col">Tâche</th><th scope="col">Statut</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>
+          <% todo.forEach((t) => { const rowClass = t.done ? "is-done" : ""; %>
+            <tr class="<%= rowClass %>" data-task data-priority="<%= t.priority %>" data-rank="<%= priorities[t.priority].rank %>" data-pages="<%= t.pages || 0 %>" data-title="<%= t.title %>" data-done="<%= t.done ? "1" : "0" %>" <%= t.done ? "hidden" : "" %>>
+              <td><span class="<%= prioClass(t.priority) %>"><%= priorities[t.priority].label %></span></td>
+              <td><strong><%= t.title %></strong><small class="seo-cell-path"><%= t.status %> · <%= t.detail %></small><% if (t.recommendation) { %><small class="seo-cell-path"><%= t.recommendation %></small><% } %></td>
+              <td><%= t.done ? `Terminée le ${formatDateTime(t.doneAt)}` : "À faire" %></td>
+              <td class="seo-row-actions">
+                <% if (t.href && !t.done) { %><a class="btn btn-outline btn-sm" href="<%= t.href %>"><%= t.action %></a><% } %>
+                <form method="post" action="/formateur/seo/a-faire" class="dash-inline-form"><input type="hidden" name="key" value="<%= t.key %>"><input type="hidden" name="done" value="<%= t.done ? "0" : "1" %>"><button type="submit" class="btn btn-ghost btn-sm" title="<%= t.done ? "Rouvrir la tâche" : "Marquer comme terminée" %>"><%- icon(t.done ? 'inbox' : 'check', { size: 15 }) %> <%= t.done ? "Rouvrir" : "Terminé" %></button></form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+      <p class="seo-muted" data-task-empty hidden>Aucune tâche dans cette vue.</p>
+      <p class="seo-muted">Une tâche issue de l'audit réapparaît si l'audit suivant retrouve le même problème.</p>
+    <% } %>
+  </section>
+
+  <section role="tabpanel" id="programmees" aria-labelledby="tab-jobs">
+    <p class="seo-muted">Ces tâches tournent seules sur le serveur, aux heures indiquées en temps universel (UTC, il est actuellement <%= now %> UTC). Une tâche dont le service n'est pas configuré est « ignorée » avec la raison : rien n'est simulé.</p>
+    <div class="seo-jobs">
+      <% list.forEach((j) => { const running = Boolean(j.running_since); %>
+        <section class="dpanel seo-job" id="tache-<%= j.name %>">
+          <div class="seo-job-head">
+            <h2><%= j.label %></h2>
+            <strong class="<%= stateClass(running ? "busy" : j.last_status) %>"><%= running ? `En cours depuis ${j.running_since}` : j.last_status ? STATUS[j.last_status] : "Jamais exécutée" %></strong>
+          </div>
+          <p class="seo-muted"><%= j.description %></p>
+          <dl class="seo-facts is-compact">
+            <div><dt>Dernier passage</dt><dd><%= j.last_run_at ? `${j.last_run_at} UTC` : "Jamais" %></dd></div>
+            <div><dt>Prochain passage</dt><dd><%= j.enabled && j.next_run_at ? `${j.next_run_at} UTC` : "Désactivée" %></dd></div>
+          </dl>
+          <% if (j.last_message) { %><p class="seo-job-result"><%= j.last_message %></p><% } %>
+          <div class="seo-job-actions">
+            <form method="post" action="/formateur/seo/taches/<%= j.name %>" class="seo-job-form">
+              <label class="sr-only" for="f-<%= j.name %>">Fréquence</label>
+              <select id="f-<%= j.name %>" name="frequency"><% Object.entries(frequencies).forEach(([k, l]) => { %><option value="<%= k %>" <%= (j.enabled ? j.frequency : "off") === k ? "selected" : "" %>><%= l %></option><% }) %></select>
+              <label class="sr-only" for="h-<%= j.name %>">Heure (UTC)</label>
+              <select id="h-<%= j.name %>" name="hour"><% for (let h = 0; h < 24; h++) { %><option value="<%= h %>" <%= j.hour === h ? "selected" : "" %>><%= String(h).padStart(2, "0") %> h UTC</option><% } %></select>
+              <button class="btn btn-outline btn-sm" type="submit">Enregistrer</button>
+            </form>
+            <form method="post" action="/formateur/seo/taches/<%= j.name %>/executer" class="dash-inline-form" data-busy="Exécution en cours…"><button class="btn btn-primary btn-sm" type="submit" <%= running ? "disabled" : "" %>>Exécuter maintenant</button></form>
+          </div>
+          <% if (j.runs.length) { %>
+            <details class="seo-more"><summary>Historique des passages (<%= j.runs.length === 1 ? "le dernier" : `les ${j.runs.length} derniers` %>)</summary>
+              <div class="dtable-wrap"><table class="dtable"><thead><tr><th scope="col">Début (UTC)</th><th scope="col">Déclenchement</th><th scope="col">État</th><th scope="col">Résultat</th></tr></thead>
+                <tbody><% j.runs.forEach((r) => { %><tr><td><%= r.started_at %></td><td><%= r.trigger === "manual" ? "Manuel" : "Automatique" %></td><td><%= STATUS[r.status] || r.status %></td><td><%= r.message %></td></tr><% }) %></tbody></table></div>
+            </details>
+          <% } %>
+        </section>
+      <% }) %>
+    </div>
+  </section>
 </div>
-<script src="<%= asset('/js/seo-admin.js') %>" defer></script>
 <%- include("../partials/footer") %>

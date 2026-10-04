@@ -1,70 +1,105 @@
 <%- include("../partials/header", { title: "SEO · Audit" }) %>
-<% const sevOrder = ["critical", "high", "medium", "low", "info"]; %>
-<div class="container-wide seo-page">
-  <%- include("_nav", { active: "audit" }) %>
-  <% if (msg) { %><p class="form-success" role="status"><%= msg %></p><% } %>
-  <section class="content-card">
-    <h2>Lancer un scan</h2>
-    <p class="field-hint">Le serveur lit réellement chacune de ses pages publiques (jusqu'à 400), comme un moteur de recherche, puis applique les règles. Le scan complet vérifie aussi jusqu'à 150 liens externes (cela peut prendre une minute).</p>
-    <% if (running) { %><p class="form-error" role="status">Un scan est en cours (n° <%= running %>). Rechargez la page pour suivre son avancement.</p><% } %>
-    <form method="post" action="/formateur/seo/audit" class="seo-scan-buttons">
-      <% Object.entries(kinds).forEach(([k, label]) => { const btnClass = k === "full" ? "btn btn-primary" : "btn btn-outline"; %><button type="submit" name="kind" value="<%= k %>" class="<%= btnClass %>" <%= running ? "disabled" : "" %>><%= label %></button><% }) %>
-    </form>
+<% const sevOrder = ["critical", "high", "medium", "low", "info"];
+   const done = current && current.status === "done";
+   const nCrit = (counts.critical || 0) + (counts.high || 0);
+   const nWarn = (counts.medium || 0) + (counts.low || 0) + (counts.info || 0);
+   const base = current ? `?id=${current.id}` : "?";
+   const kindMenu = `<div class="dmenu"><button type="button" class="dmenu-btn seo-btn-split" aria-haspopup="true" aria-expanded="false" aria-label="Scans ciblés" title="Scans ciblés">${icon('chevronDown', { size: 16 })}</button><div class="dmenu-list" role="menu" hidden><form method="post" action="/formateur/seo/audit" data-busy="Audit en cours…">${Object.entries(kinds).filter(([k]) => k !== "full").map(([k, l]) => `<button type="submit" name="kind" value="${k}" role="menuitem"${running ? " disabled" : ""}>${l}</button>`).join("")}</form></div></div>`; %>
+<%- include("_head", { section: "Audit", title: "Audit SEO", intro: "Le serveur lit réellement chaque page publique (jusqu'à 400), comme un moteur de recherche, puis applique les règles.", audit: false,
+  actions: `<form method="post" action="/formateur/seo/audit" data-busy="Audit en cours…" class="dash-inline-form"><input type="hidden" name="kind" value="full"><button type="submit" class="btn btn-primary"${running ? " disabled" : ""}>${icon('searchCheck', { size: 16 })} Lancer un nouvel audit</button></form>${kindMenu}` }) %>
+<%- include("_flash", { ok: msg, error: err }) %>
+<% if (running) { %><div class="seo-alert-box is-info" role="status"><%- icon('activity', { size: 18 }) %><div>Un scan est en cours (n° <%= running %>). Rechargez la page pour suivre son avancement.</div></div><% } %>
+
+<% if (!current) { %>
+  <section class="dpanel"><%- include("_empty", { ico: "searchCheck", title: "Aucun audit n'a encore été lancé", text: "Les notes et la liste des problèmes apparaîtront après le premier scan (une minute environ).", action: `<form method="post" action="/formateur/seo/audit" data-busy="Audit en cours…"><input type="hidden" name="kind" value="full"><button class="btn btn-primary" type="submit">Lancer le premier audit</button></form>` }) %></section>
+<% } else { %>
+  <section class="dpanel seo-audit-summary">
+    <% if (current.status === "running") { %>
+      <div class="seo-skeleton-row" aria-hidden="true"><span></span><span></span><span></span></div>
+      <p>En cours : <%= current.pages %> page(s) lue(s) pour l'instant. <a href="/formateur/seo/audit?id=<%= current.id %>">Actualiser</a></p>
+    <% } else if (current.status === "failed") { %>
+      <div class="seo-alert-box is-error" role="alert"><%- icon('alertTriangle', { size: 18 }) %><div>Échec du scan : <%= current.error %></div></div>
+    <% } else { %>
+      <div class="seo-audit-top">
+        <%- include("_ring", { score: current.scores && current.scores.overall ? current.scores.overall.score : null, size: "sm", label: "Score" }) %>
+        <dl class="seo-facts">
+          <div><dt>Dernier audit</dt><dd><%= kinds[current.kind] %> · <%= formatDateTime(current.finished_at) %></dd></div>
+          <div><dt>Pages analysées</dt><dd><%= current.pages %></dd></div>
+          <div class="is-bad"><dt>Problèmes</dt><dd><%= nCrit %></dd></div>
+          <div class="is-warn"><dt>Avertissements</dt><dd><%= nWarn %></dd></div>
+          <div class="is-good"><dt>Réussites</dt><dd><%= passed.length %></dd></div>
+        </dl>
+      </div>
+      <details class="seo-more">
+        <summary>Notes par catégorie</summary>
+        <%- include("_scores", { scores: current.scores, categories }) %>
+      </details>
+    <% } %>
   </section>
 
-  <% if (current) { %>
-    <section class="content-card">
-      <h2><%= kinds[current.kind] %> du <%= formatDateTime(current.started_at) %></h2>
-      <% if (current.status === "running") { %><p>En cours : <%= current.pages %> page(s) lue(s) pour l'instant. <a href="/formateur/seo/audit?id=<%= current.id %>">Actualiser</a></p>
-      <% } else if (current.status === "failed") { %><p class="form-error">Échec du scan : <%= current.error %></p>
-      <% } else { %>
-        <p class="field-hint"><%= current.pages %> page(s) lue(s) · <%= current.issues %> problème(s) relevé(s) · terminé le <%= formatDateTime(current.finished_at) %></p>
-        <%- include("_scores", { scores: current.scores, categories }) %>
-        <ul class="seo-severity-counts"><% sevOrder.forEach((s) => { const sevClass = `sev-${s}`; %><li class="<%= sevClass %>"><a href="?id=<%= current.id %>&gravite=<%= s %>"><strong><%= counts[s] || 0 %></strong> <%= severities[s].label %></a></li><% }) %></ul>
-      <% } %>
-    </section>
-
-    <% if (current.status === "done") { %>
-    <section class="content-card">
-      <h2>Problèmes (<%= issues.length %>)</h2>
-      <form method="get" class="seo-filters" role="search">
-        <input type="hidden" name="id" value="<%= current.id %>">
-        <label class="sr-only" for="a-sev">Gravité</label><select id="a-sev" name="gravite"><option value="">Toutes gravités</option><% sevOrder.forEach((s) => { %><option value="<%= s %>" <%= filters.severity === s ? "selected" : "" %>><%= severities[s].label %></option><% }) %></select>
-        <label class="sr-only" for="a-cat">Catégorie</label><select id="a-cat" name="categorie"><option value="">Toutes catégories</option><% Object.entries(categories).forEach(([k, l]) => { %><option value="<%= k %>" <%= filters.category === k ? "selected" : "" %>><%= l %></option><% }) %></select>
-        <label class="sr-only" for="a-q">Rechercher</label><input type="search" id="a-q" name="q" value="<%= filters.q %>" placeholder="Adresse ou détail…">
+  <% if (done) { %>
+  <section class="dpanel">
+    <div class="dash-filters seo-filterbar">
+      <% [["tous", "Tous", nCrit + nWarn], ["critiques", "Critiques", nCrit], ["avertissements", "Avertissements", nWarn], ["reussites", "Réussites", passed.length]].forEach(([k, l, n]) => { %>
+        <a class="dash-chip" href="<%= base %>&vue=<%= k %>"<%- view === k ? ' aria-current="page"' : "" %>><%= l %> <span class="dash-chip-count"><%= n %></span></a>
+      <% }) %>
+      <% if (view !== "reussites") { %>
+      <form method="get" class="seo-filter-form" role="search">
+        <input type="hidden" name="id" value="<%= current.id %>"><input type="hidden" name="vue" value="<%= view %>"><% if (rule) { %><input type="hidden" name="regle" value="<%= rule %>"><% } %>
+        <label class="sr-only" for="a-sev">Gravité</label><select id="a-sev" name="gravite" data-autosubmit><option value="">Toutes gravités</option><% sevOrder.forEach((s) => { %><option value="<%= s %>" <%= filters.severity === s ? "selected" : "" %>><%= severities[s].label %></option><% }) %></select>
+        <label class="sr-only" for="a-cat">Catégorie</label><select id="a-cat" name="categorie" data-autosubmit><option value="">Toutes catégories</option><% Object.entries(categories).forEach(([k, l]) => { %><option value="<%= k %>" <%= filters.category === k ? "selected" : "" %>><%= l %></option><% }) %></select>
+        <label class="sr-only" for="a-q">Rechercher</label><input type="search" id="a-q" name="q" value="<%= filters.q %>" placeholder="Rechercher une adresse…">
         <button class="btn btn-outline btn-sm">Filtrer</button>
       </form>
-      <% if (!issues.length) { %><p>Aucun problème pour ce filtre.</p><% } else { %>
+      <% } %>
+    </div>
+    <% if (rule) { %><p class="seo-muted">Filtré sur la règle « <%= rules[rule] ? rules[rule].title : rule %> ». <a href="<%= base %>&vue=<%= view %>">Retirer ce filtre</a></p><% } %>
+
+    <% if (view === "reussites") { %>
+      <% if (!passed.length) { %><%- include("_empty", { ico: "info", title: "Aucune règle entièrement réussie", text: "Chaque règle applicable a relevé au moins un point dans cet audit." }) %>
+      <% } else { %>
+        <ul class="seo-passed"><% passed.forEach((r) => { %><li><%- icon('checkCircle', { size: 16 }) %><span><strong><%= r.title %></strong><small><%= categories[r.category] %></small></span></li><% }) %></ul>
+      <% } %>
+    <% } else if (!issues.length) { %>
+      <%- include("_empty", { ico: "checkCircle", title: "Aucun problème pour ce filtre", text: "Essayez une autre vue ou retirez les filtres." }) %>
+    <% } else { %>
       <ul class="seo-issues">
-        <% issues.forEach((i) => { const rule = rules[i.rule_id]; const issueClass = `seo-issue sev-${i.severity}${i.fixed_at ? " is-fixed" : ""}`; %>
+        <% issues.forEach((i) => { const r = rules[i.rule_id]; const issueClass = `seo-issue sev-${i.severity}${i.fixed_at ? " is-fixed" : ""}`; %>
           <li class="<%= issueClass %>">
-            <div class="seo-issue-head"><span class="seo-sev"><%= severities[i.severity].label %></span><strong><%= rule ? rule.title : i.rule_id %></strong><span class="field-hint"><%= categories[i.category] %></span></div>
-            <p class="seo-issue-path"><a href="<%= i.path %>" target="_blank" rel="noopener"><%= i.path %></a> — <%= i.detail %></p>
-            <p class="field-hint"><%= rule ? rule.recommendation : "" %></p>
-            <div class="seo-actions">
+            <span class="seo-sev"><%= severities[i.severity].label %></span>
+            <div class="seo-issue-body">
+              <div class="seo-issue-head"><strong><%= r ? r.title : i.rule_id %></strong><span class="seo-muted"><%= categories[i.category] %></span></div>
+              <p class="seo-issue-path"><a href="<%= i.path %>" target="_blank" rel="noopener"><%= i.path %></a> — <%= i.detail %></p>
+              <% if (r && r.recommendation) { %><p class="seo-muted"><%= r.recommendation %></p><% } %>
+            </div>
+            <div class="seo-issue-actions">
               <% if (i.fixed_at) { %><span class="seo-fixed">✓ Corrigé le <%= formatDateTime(i.fixed_at) %></span>
-              <% } else if (rule && rule.fix && i.data) { %><form method="post" action="/formateur/seo/audit/corriger/<%= i.id %>" class="inline-form"><input type="hidden" name="back" value="/formateur/seo/audit?id=<%= current.id %>"><button class="btn btn-primary btn-sm">Corriger automatiquement</button></form><% } %>
-              <% if (i.rule_id === "not_found_hits" || i.rule_id === "broken_internal_link") { %><a class="btn btn-outline btn-sm" href="/formateur/seo/redirections?source=<%= encodeURIComponent(i.rule_id === "not_found_hits" ? i.path : "") %>">Créer une redirection</a><% } %>
-              <% if (!["redirect_chain", "not_found_hits"].includes(i.rule_id)) { %><a class="btn btn-outline btn-sm" href="/formateur/seo/analyse?path=<%= encodeURIComponent(i.path) %>">Analyser cette page</a><% } %>
+              <% } else if (r && r.fix && i.data) { %><form method="post" action="/formateur/seo/audit/corriger/<%= i.id %>" class="dash-inline-form"><input type="hidden" name="back" value="/formateur/seo/audit?id=<%= current.id %>"><button class="btn btn-primary btn-sm">Corriger automatiquement</button></form><% } %>
+              <div class="dmenu">
+                <button type="button" class="dmenu-btn" aria-haspopup="true" aria-expanded="false" aria-label="Actions : <%= r ? r.title : i.rule_id %>" title="Actions"><%- icon('moreVertical', { size: 16 }) %></button>
+                <div class="dmenu-list" role="menu" hidden>
+                  <a role="menuitem" href="<%= i.path %>" target="_blank" rel="noopener"><%- icon('externalLink', { size: 16 }) %> Ouvrir la page</a>
+                  <% if (!["redirect_chain", "not_found_hits"].includes(i.rule_id)) { %><a role="menuitem" href="/formateur/seo/analyse?path=<%= encodeURIComponent(i.path) %>"><%- icon('search', { size: 16 }) %> Analyser cette page</a><% } %>
+                  <% if (i.rule_id === "not_found_hits" || i.rule_id === "broken_internal_link") { %><a role="menuitem" href="/formateur/seo/redirections?source=<%= encodeURIComponent(i.rule_id === "not_found_hits" ? i.path : "") %>"><%- icon('arrowRightLeft', { size: 16 }) %> Créer une redirection</a><% } %>
+                  <a role="menuitem" href="<%= base %>&vue=<%= view %>&regle=<%= encodeURIComponent(i.rule_id) %>"><%- icon('filter', { size: 16 }) %> Voir toutes les pages concernées</a>
+                </div>
+              </div>
             </div>
           </li>
         <% }) %>
       </ul>
-      <% } %>
-    </section>
     <% } %>
-  <% } else { %>
-    <section class="content-card"><p>Aucun audit n'a encore été lancé : les notes apparaîtront après le premier scan.</p></section>
-  <% } %>
-
-  <% if (audits.length) { %>
-  <section class="content-card">
-    <h2>Historique des scans</h2>
-    <div class="seo-table-wrap"><table class="seo-table">
-      <thead><tr><th scope="col">Date</th><th scope="col">Scan</th><th scope="col">Pages</th><th scope="col">Problèmes</th><th scope="col">Note globale</th><th scope="col">Par</th></tr></thead>
-      <tbody><% audits.forEach((a) => { %><tr><td><a href="?id=<%= a.id %>"><%= formatDateTime(a.started_at) %></a></td><td><%= kinds[a.kind] %></td><td><%= a.pages %></td><td><%= a.status === "done" ? a.issues : a.status === "failed" ? "Échec" : "En cours" %></td><td><%= a.scores && a.scores.overall ? a.scores.overall.score : "—" %></td><td><%= a.username || (a.source === "schedule" ? "Planifié" : "—") %></td></tr><% }) %></tbody>
-    </table></div>
   </section>
   <% } %>
-</div>
+<% } %>
+
+<% if (audits.length) { %>
+<details class="dpanel seo-more seo-history-panel">
+  <summary>Historique des scans (<%= audits.length %>)</summary>
+  <div class="dtable-wrap"><table class="dtable">
+    <thead><tr><th scope="col">Date</th><th scope="col">Scan</th><th scope="col">Pages</th><th scope="col">Problèmes</th><th scope="col">Note globale</th><th scope="col">Par</th></tr></thead>
+    <tbody><% audits.forEach((a) => { %><tr><td><a href="?id=<%= a.id %>"><%= formatDateTime(a.started_at) %></a></td><td><%= kinds[a.kind] %></td><td><%= a.pages %></td><td><%= a.status === "done" ? a.issues : a.status === "failed" ? "Échec" : "En cours" %></td><td><%= a.scores && a.scores.overall ? a.scores.overall.score : "—" %></td><td><%= a.username || (a.source === "schedule" || a.source === "scheduled" ? "Planifié" : "—") %></td></tr><% }) %></tbody>
+  </table></div>
+</details>
+<% } %>
 <%- include("../partials/footer") %>

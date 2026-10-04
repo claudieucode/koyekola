@@ -1,37 +1,46 @@
 <%- include("../partials/header", { title: "SEO · Erreurs 404" }) %>
-<div class="container-wide seo-page">
-  <%- include("_nav", { active: "notfound" }) %>
-  <section class="content-card">
-    <h2>Erreurs 404 (pages introuvables)</h2>
-    <p class="field-hint">Enregistrées réellement à chaque visite d'une adresse inexistante depuis la mise en place du journal. Robots repérés à leur signature (navigateur). Aucune adresse IP n'est conservée.</p>
-    <ul class="seo-status">
-      <li><span>Adresses introuvables</span><strong><%= stats.urls %></strong></li>
-      <li><span>Visites de personnes</span><strong><%= stats.human %></strong></li>
-      <li><span>Visites de robots</span><strong><%= stats.bot %></strong></li>
-    </ul>
-    <form method="get" class="seo-filters" role="search">
-      <label class="sr-only" for="nf-f">Filtre</label>
-      <select id="nf-f" name="filtre"><% [["all", "Toutes"], ["human", "Vues par des personnes"], ["bot", "Seulement des robots"], ["ignored", "Ignorées"]].forEach(([k, l]) => { %><option value="<%= k %>" <%= k === filter ? "selected" : "" %>><%= l %></option><% }) %></select>
-      <label class="sr-only" for="nf-q">Rechercher</label><input type="search" id="nf-q" name="q" value="<%= q %>" placeholder="Adresse…"><button class="btn btn-outline btn-sm">Filtrer</button>
-    </form>
-    <% if (!list.length) { %><p>Aucune erreur 404 enregistrée<%= filter !== "all" || q ? " pour ce filtre" : "" %>.</p><% } else { %>
-    <div class="seo-table-wrap"><table class="seo-table">
-      <thead><tr><th scope="col">Adresse</th><th scope="col">Personnes</th><th scope="col">Robots</th><th scope="col">Dernière fois</th><th scope="col">Venait de</th><th scope="col"></th></tr></thead>
-      <tbody>
-        <% list.forEach((r) => { %>
-          <tr>
-            <td><code><%= r.path %></code><br><span class="field-hint">depuis le <%= formatDateTime(r.first_seen) %></span></td>
-            <td><%= r.hits_human %></td><td><%= r.hits_bot %></td><td><%= formatDateTime(r.last_seen) %></td>
-            <td><%= r.last_referrer || "—" %></td>
-            <td class="seo-actions">
-              <% if (!r.ignored) { %><a class="btn btn-outline btn-sm" href="/formateur/seo/redirections?source=<%= encodeURIComponent(r.path) %>">Rediriger</a><% } %>
-              <form method="post" action="/formateur/seo/erreurs-404/action" class="inline-form"><input type="hidden" name="path" value="<%= r.path %>"><button class="btn-link" name="action" value="<%= r.ignored ? "retablir" : "ignorer" %>"><%= r.ignored ? "Rétablir" : "Ignorer" %></button> <button class="btn-link" name="action" value="supprimer">Effacer</button></form>
-            </td>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table></div>
-    <% } %>
-  </section>
-</div>
+<%- include("_head", { section: "Erreurs 404", title: "Erreurs 404", intro: "Les adresses introuvables réellement visitées sur votre site. Aucune adresse IP n'est conservée.", audit: false }) %>
+<%- include("_flash", { ok: done ? "Modification enregistrée." : null }) %>
+
+<ul class="seo-stats">
+  <li><span>Adresses détectées</span><strong><%= stats.urls %></strong></li>
+  <% const handleClass = toHandle ? "is-warn" : ""; %><li class="<%= handleClass %>"><span>À traiter (vues par des personnes)</span><strong><%= toHandle %></strong></li>
+  <li><span>Visites de robots</span><strong><%= stats.bot %></strong></li>
+  <li><span>Ignorées</span><strong><%= ignored %></strong></li>
+</ul>
+
+<section class="dpanel">
+  <div class="dash-filters">
+    <% [["all", "Toutes"], ["human", "À traiter"], ["bot", "Robots seulement"], ["ignored", "Ignorées"]].forEach(([k, l]) => { %><a class="dash-chip" href="/formateur/seo/erreurs-404?filtre=<%= k %><%= q ? `&q=${encodeURIComponent(q)}` : "" %>"<%- filter === k ? ' aria-current="page"' : "" %>><%= l %></a><% }) %>
+    <form method="get" class="dash-search" role="search"><input type="hidden" name="filtre" value="<%= filter %>"><label class="sr-only" for="nf-q">Rechercher</label><input type="search" id="nf-q" name="q" value="<%= q %>" placeholder="Rechercher une adresse…"></form>
+  </div>
+  <% if (!list.length) { %>
+    <%- include("_empty", { ico: "checkCircle", title: filter !== "all" || q ? "Aucune erreur 404 pour ce filtre" : "Aucune erreur 404 enregistrée", text: "Chaque visite d'une adresse inexistante est enregistrée ici automatiquement." }) %>
+  <% } else { %>
+  <div class="dtable-wrap"><table class="dtable seo-table-modern">
+    <thead><tr><th scope="col">Adresse</th><th scope="col">Personnes</th><th scope="col">Robots</th><th scope="col">Dernière détection</th><th scope="col">Venait de</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+      <% list.forEach((r) => { %>
+        <tr>
+          <td><code><%= r.path %></code><small class="seo-cell-path">depuis le <%= formatDateTime(r.first_seen) %></small></td>
+          <td><strong><%= r.hits_human %></strong></td><td><%= r.hits_bot %></td><td><%= formatDateTime(r.last_seen) %></td>
+          <td class="seo-cell-wrap"><%= r.last_referrer || "—" %></td>
+          <td class="seo-row-actions">
+            <% if (!r.ignored) { %><a class="btn btn-outline btn-sm" href="/formateur/seo/redirections?source=<%= encodeURIComponent(r.path) %>">Rediriger</a><% } %>
+            <div class="dmenu">
+              <button type="button" class="dmenu-btn" aria-haspopup="true" aria-expanded="false" aria-label="Actions : <%= r.path %>" title="Actions"><%- icon('moreVertical', { size: 16 }) %></button>
+              <div class="dmenu-list" role="menu" hidden>
+                <a role="menuitem" href="<%= r.path %>" target="_blank" rel="noopener"><%- icon('eye', { size: 16 }) %> Voir</a>
+                <form method="post" action="/formateur/seo/erreurs-404/action"><input type="hidden" name="path" value="<%= r.path %>"><button type="submit" role="menuitem" name="action" value="<%= r.ignored ? "retablir" : "ignorer" %>"><%- icon(r.ignored ? 'inbox' : 'minus', { size: 16 }) %> <%= r.ignored ? "Rétablir" : "Ignorer" %></button></form>
+                <hr>
+                <form method="post" action="/formateur/seo/erreurs-404/action" data-confirm="Effacer <%= r.path %> du journal ?"><input type="hidden" name="path" value="<%= r.path %>"><button type="submit" role="menuitem" class="is-danger" name="action" value="supprimer"><%- icon('trash', { size: 16 }) %> Effacer</button></form>
+              </div>
+            </div>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table></div>
+  <% } %>
+</section>
 <%- include("../partials/footer") %>

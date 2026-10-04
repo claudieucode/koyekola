@@ -20,7 +20,7 @@
       <div data-custom <%= prefs.theme === "perso" ? "" : "hidden" %>>
         <h2 class="dash-section">Couleurs personnalisées</h2>
         <div class="color-fields">
-          <% [["primary", "Couleur principale"], ["accent", "Couleur d'accent"], ["sidebar", "Barre latérale"], ["bg", "Fond"], ["button", "Boutons"]].forEach(([key, label]) => { %>
+          <% [["primary", "Couleur principale"], ["accent", "Couleur d'accent"], ["sidebar", "Barre latérale"], ["bg", "Arrière-plan"], ["card", "Cartes"], ["button", "Boutons"]].forEach(([key, label]) => { %>
             <div class="color-field" data-color="<%= key %>">
               <label for="color-<%= key %>"><%= label %></label>
               <div class="color-field-row"><input type="color" id="color-<%= key %>-pick" aria-label="<%= label %> (sélecteur)"><input type="text" id="color-<%= key %>" maxlength="7" inputmode="text" spellcheck="false" placeholder="#0B83C6" aria-describedby="color-help"></div>

@@ -1,0 +1,4 @@
+<%# Notifications de l'espace SEO : succès en notification (toast) ; erreurs affichées dans la page (elles demandent une action). %>
+<% if (typeof ok !== "undefined" && ok) { %><div class="dash-toast" data-toast role="status"><%- icon('checkCircle', { size: 18 }) %><span><%= ok %></span></div><% } %>
+<% if (typeof error !== "undefined" && error) { %><div class="seo-alert-box is-error" role="alert"><%- icon('alertTriangle', { size: 18 }) %><div><%= error %></div></div><% } %>
+<% if (typeof errors !== "undefined" && errors && errors.length) { %><div class="seo-alert-box is-error" role="alert"><%- icon('alertTriangle', { size: 18 }) %><div><strong>Rien n'a été enregistré :</strong><ul><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></div></div><% } %>

@@ -1,29 +1,48 @@
 <%- include("../partials/header", { title: "SEO · Contenus" }) %>
-<div class="container-wide seo-page">
-  <%- include("_nav", { active: "contents" }) %>
-  <section class="content-card">
-    <h2>Contenus publics (<%= list.length %>)</h2>
-    <form method="get" class="seo-filters" role="search">
-      <label class="sr-only" for="seo-type">Type</label>
-      <select id="seo-type" name="type"><option value="">Tous les types</option><% Object.entries(labels).forEach(([k, l]) => { %><option value="<%= k %>" <%= k === type ? "selected" : "" %>><%= l %></option><% }) %></select>
-      <label class="sr-only" for="seo-q">Rechercher</label>
-      <input type="search" id="seo-q" name="q" value="<%= q %>" placeholder="Nom ou adresse…">
-      <button type="submit" class="btn btn-outline btn-sm">Filtrer</button>
-    </form>
-    <% if (!list.length) { %><p>Aucun contenu ne correspond.</p><% } else { %>
-    <div class="seo-table-wrap"><table class="seo-table">
-      <thead><tr><th scope="col">Contenu</th><th scope="col">Type</th><th scope="col">Adresse</th><th scope="col">Réglages</th><th scope="col"></th></tr></thead>
-      <tbody>
-        <% list.forEach((e) => { %>
-          <tr>
-            <td><%= e.name %></td><td><%= labels[e.type] %></td><td><a href="<%= e.path %>" target="_blank" rel="noopener"><%= e.path %></a></td>
-            <td><%= e.type === "post" ? "Dans l'éditeur" : e.custom ? "Personnalisés" : "Automatiques" %></td>
-            <td><a class="btn btn-outline btn-sm" href="<%= e.editUrl || `/formateur/seo/contenus/${e.type}/${e.key}` %>">Modifier</a></td>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table></div>
-    <% } %>
-  </section>
-</div>
+<%- include("_head", { section: "Contenus", title: "Contenus", intro: "Le référencement de chaque page publique : état SEO d'après le dernier audit, indexation et réglages." }) %>
+
+<ul class="seo-typestats" aria-label="Contenus publics par type">
+  <li><a href="/formateur/seo/contenus<%= q ? `?q=${encodeURIComponent(q)}` : "" %>"<%- !type ? ' aria-current="page"' : "" %>><span>Tous</span><strong><%= total %></strong></a></li>
+  <% Object.entries(labels).forEach(([k, l]) => { if (!typeCounts[k]) return; %>
+    <li><a href="/formateur/seo/contenus?type=<%= k %><%= q ? `&q=${encodeURIComponent(q)}` : "" %>"<%- type === k ? ' aria-current="page"' : "" %>><span><%= l %></span><strong><%= typeCounts[k] %></strong></a></li>
+  <% }) %>
+</ul>
+
+<section class="dpanel">
+  <div class="dash-filters">
+    <h2 class="seo-panel-title">Contenus publics (<%= list.length %>)</h2>
+    <form method="get" class="dash-search" role="search"><% if (type) { %><input type="hidden" name="type" value="<%= type %>"><% } %><label class="sr-only" for="seo-q">Rechercher</label><input type="search" id="seo-q" name="q" value="<%= q %>" placeholder="Rechercher un nom ou une adresse…"></form>
+  </div>
+  <% if (!lastAudit) { %><p class="seo-muted">État SEO : « Non analysé » tant qu'aucun audit n'a été lancé.</p><% } else { %><p class="seo-muted">État SEO d'après l'audit du <%= formatDateTime(lastAudit.finished_at) %>.</p><% } %>
+  <% if (!list.length) { %>
+    <%- include("_empty", { ico: "fileText", title: "Aucun contenu ne correspond", text: "Modifiez la recherche ou choisissez un autre type." }) %>
+  <% } else { %>
+  <div class="dtable-wrap"><table class="dtable seo-table-modern">
+    <thead><tr><th scope="col">Contenu</th><th scope="col">Type</th><th scope="col">SEO</th><th scope="col">Indexation</th><th scope="col">Réglages</th><th scope="col">Modifié</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+      <% list.forEach((e) => { const stateClass = `seo-state tone-${e.tone}`; %>
+        <tr>
+          <td><a class="seo-cell-title" href="<%= e.editUrl || `/formateur/seo/contenus/${e.type}/${e.key}` %>"><%= e.name %></a><small class="seo-cell-path"><%= e.path %></small></td>
+          <td><%= labels[e.type] %></td>
+          <td><span class="<%= stateClass %>"><%= e.state %></span><% if (e.openIssues) { %> <small class="seo-muted"><%= e.openIssues %> point(s)</small><% } %></td>
+          <td><% if (e.indexed) { %><span class="seo-index is-on">Indexée</span><% } else if (e.excludedReason) { %><span class="seo-index is-off" title="<%= e.excludedReason %>">Exclue</span><small class="seo-cell-path"><%= e.excludedReason %></small><% } else { %><span class="seo-index">Hors plan du site</span><% } %></td>
+          <td><%= e.type === "post" ? "Dans l'éditeur" : e.custom ? "Personnalisés" : "Automatiques" %></td>
+          <td><%= e.updatedAt ? formatDate(e.updatedAt) : "—" %></td>
+          <td class="seo-row-actions">
+            <a class="btn btn-outline btn-sm" href="<%= e.editUrl || `/formateur/seo/contenus/${e.type}/${e.key}` %>">Modifier</a>
+            <div class="dmenu">
+              <button type="button" class="dmenu-btn" aria-haspopup="true" aria-expanded="false" aria-label="Actions : <%= e.name %>" title="Actions"><%- icon('moreVertical', { size: 16 }) %></button>
+              <div class="dmenu-list" role="menu" hidden>
+                <a role="menuitem" href="<%= e.path %>" target="_blank" rel="noopener"><%- icon('externalLink', { size: 16 }) %> Voir la page</a>
+                <a role="menuitem" href="/formateur/seo/analyse?path=<%= encodeURIComponent(e.path) %>"><%- icon('search', { size: 16 }) %> Analyser maintenant</a>
+                <% if (e.openIssues && lastAudit) { %><a role="menuitem" href="/formateur/seo/audit?id=<%= lastAudit.id %>&q=<%= encodeURIComponent(e.path) %>"><%- icon('alertCircle', { size: 16 }) %> Voir les points relevés</a><% } %>
+              </div>
+            </div>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table></div>
+  <% } %>
+</section>
 <%- include("../partials/footer") %>
