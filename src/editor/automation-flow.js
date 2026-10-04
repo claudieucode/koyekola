@@ -9,6 +9,7 @@ import { icon } from "../utils/icons";
 import { STEP_LABELS } from "../utils/stepLabels";
 import { openStepDialog, openStepMenu, closeStepMenu, confirmAction } from "./automation/ui";
 import { UNITS, CHECKS, FIELD_LABELS, hasEditor, buildEditor, validate, clean } from "./automation/stepEditors";
+import { buildPalette, DRAG_TYPE } from "./automation/palette";
 
 (function () {
   "use strict";
@@ -75,6 +76,9 @@ import { UNITS, CHECKS, FIELD_LABELS, hasEditor, buildEditor, validate, clean } 
   editor.zoom_min = 0.4;
   editor.zoom_value = 0.1;
   editor.start();
+  // Drawflow reconnaît le fond du canevas à sa PREMIÈRE classe (« parent-drawflow ») : sans cela, un clic sur le fond
+  // ne désélectionne pas l'étape et ne permet pas de faire glisser le canevas hors de la zone déjà dessinée.
+  container.className = "parent-drawflow " + container.className.replace(/\bparent-drawflow\b/, "").trim();
 
   var seq = 0;
   var uid = function () { return "u" + Date.now().toString(36) + "-" + (++seq); };
@@ -180,7 +184,9 @@ import { UNITS, CHECKS, FIELD_LABELS, hasEditor, buildEditor, validate, clean } 
       .map(function (x) { return { id: x.id, label: subtitleFor("email", x.n.data) }; });
   }
 
-  function openEditor(myId) {
+  // opts.isNew : étape qui vient d'être ajoutée — « Annuler » la retire (opts.onDiscard), rien n'est enregistré
+  function openEditor(myId, opts) {
+    opts = opts || {};
     var n = nodeOf(myId);
     if (!n || !hasEditor(n.name)) return; // « Fin » : rien à régler, aucune fenêtre vide
     closeStepMenu();
@@ -196,13 +202,14 @@ import { UNITS, CHECKS, FIELD_LABELS, hasEditor, buildEditor, validate, clean } 
     var dom = nodeDom(myId);
     if (dom) dom.classList.add("is-editing");
     openStepDialog({
-      title: locked ? "Réglages : " + (LABELS[type] || type) : DIALOG_TITLES[type] || LABELS[type],
+      title: locked ? "Réglages : " + (LABELS[type] || type) : opts.isNew ? "Nouvelle étape : " + (LABELS[type] || type) : DIALOG_TITLES[type] || LABELS[type],
+      saveLabel: opts.isNew ? "Ajouter l'étape" : "Enregistrer",
       iconHtml: icon(ICON_NAMES[type] || "help", { size: 20 }),
       body: body,
       wide: type === "condition" || type === "trigger",
       readOnly: locked,
       isDirty: function () { return JSON.stringify(draft) !== initial; },
-      onClose: function () { var d = nodeDom(myId); if (d) d.classList.remove("is-editing"); },
+      onClose: function (saved) { var d = nodeDom(myId); if (d) d.classList.remove("is-editing"); if (!saved && opts.onDiscard) opts.onDiscard(); },
       onSave: function () {
         var errors = validate(type, ctx, draft);
         if (errors.length) return { errors: errors };
@@ -216,7 +223,11 @@ import { UNITS, CHECKS, FIELD_LABELS, hasEditor, buildEditor, validate, clean } 
         changed();
         announce("Étape « " + (LABELS[type] || type) + " » mise à jour.");
         // Enregistrement immédiat du scénario : la valeur survit à un rechargement sans autre action
-        return persist().then(function (r) { if (r.ok) toast("Étape enregistrée.", "ok"); return {}; });
+        return persist().then(function (r) {
+          if (r.ok) toast(opts.isNew ? "Étape ajoutée." : "Étape enregistrée.", "ok");
+          else if (opts.isNew) toast("Impossible d'ajouter cette étape. Veuillez réessayer." + (r.error ? " (" + r.error + ")" : ""), "error");
+          return {};
+        });
       },
     });
   }
@@ -301,26 +312,145 @@ import { UNITS, CHECKS, FIELD_LABELS, hasEditor, buildEditor, validate, clean } 
     setTimeout(function () { showError(""); }, 4000);
   });
 
-  // ---------- Palette : ajouter une étape ----------
-  if (!locked) {
-    var palette = $("au-add");
-    var addCount = 0;
-    Object.keys(MAKE).forEach(function (type) {
-      var b = el("button", { type: "button", class: "btn btn-outline btn-sm" }, "+ " + LABELS[type]);
-      b.addEventListener("click", function () {
-        var myId = uid();
-        var pos = { x: 320 + (addCount % 3) * 260, y: 260 + Math.floor(addCount / 3) * 170 };
-        addCount++;
-        addNode(myId, type, MAKE[type](), pos);
-        changed();
-        announce("Étape « " + LABELS[type] + " » ajoutée sur le canevas.");
-        openEditor(myId); // réglée tout de suite (sauf « Fin », sans réglage)
-      });
-      palette.appendChild(b);
+  // ---------- Ajout d'une étape (palette : clic ou glisser-déposer) ----------
+  // Ajout par clic : APRÈS l'étape sélectionnée sur le canevas (point d'insertion), sinon à la fin du parcours principal
+  // (avant une éventuelle « Fin »). L'étape est reliée automatiquement (insérée entre l'étape d'avant et sa suite), les
+  // étapes en dessous descendent d'un cran, puis sa fenêtre de réglage s'ouvre : « Ajouter l'étape » l'enregistre,
+  // « Annuler » la retire et remet tout comme avant. Les connexions passent par l'API Drawflow, comme à la main.
+  var ROW = NODE_H + 54;
+  var selectedMyId = null;
+  var rawNode = function (myId) { return editor.drawflow.drawflow[editor.module].data[dfId[myId]]; };
+  var hasOutputs = function (myId) { var n = nodeOf(myId); return n && ioFor(n.name)[1] > 0; };
+  var firstTarget = function (myId, out) { var r = rawNode(myId); var c = r && r.outputs[out] && r.outputs[out].connections[0]; return c ? myIdOfDf(c.node) : null; };
+  // Fin du parcours principal : on suit la 1re sortie depuis le déclencheur jusqu'à une étape sans suite (ou suivie d'une « Fin »)
+  function chainEnd() {
+    var cur = TRIGGER_ID, seen = {};
+    while (cur && !seen[cur]) {
+      seen[cur] = true;
+      var next = firstTarget(cur, "output_1");
+      if (!next) return cur;
+      var nn = nodeOf(next);
+      if (!nn || nn.name === "end" || !hasOutputs(next)) return cur;
+      cur = next;
+    }
+    return TRIGGER_ID;
+  }
+  function moveNode(myId, x, y) {
+    var r = rawNode(myId), dom = nodeDom(myId);
+    if (!r || !dom) return;
+    r.pos_x = x; r.pos_y = y;
+    dom.style.left = x + "px"; dom.style.top = y + "px";
+    editor.updateConnectionNodes("node-" + dfId[myId]);
+  }
+  function anchorLabel(myId) { var n = nodeOf(myId); return n ? (LABELS[n.name] || n.name) + (n.name === "trigger" ? "" : " — " + subtitleFor(n.name, n.data)) : ""; }
+  function updateTarget() {
+    if (!pal) return;
+    var sel = selectedMyId && dfId[selectedMyId] != null && hasOutputs(selectedMyId) ? selectedMyId : null;
+    pal.setTarget(sel ? "Ajout après : " + anchorLabel(sel) : "Ajout à la fin du parcours");
+  }
+
+  function addStep(type, where) {
+    where = where || {};
+    if (!MAKE[type]) return;
+    try {
+      var wasDirty = dirty, statusBefore = $("au-status") ? $("au-status").textContent : "";
+      var undo = { moved: [], removed: null };
+      var anchor = null, pos;
+      if (where.at) pos = where.at;
+      else {
+        anchor = where.anchor || (selectedMyId && dfId[selectedMyId] != null && hasOutputs(selectedMyId) ? selectedMyId : chainEnd());
+        if (!hasOutputs(anchor)) anchor = chainEnd();
+        var a0 = rawNode(anchor);
+        pos = { x: a0.pos_x, y: a0.pos_y + ROW };
+      }
+      var myId = uid();
+      var target = null, out = "output_1";
+      if (anchor) {
+        var an = nodeOf(anchor);
+        if (BRANCH[an.name] && !firstTarget(anchor, "output_1")) out = "output_1";
+        else if (BRANCH[an.name] && !firstTarget(anchor, "output_2")) { out = "output_2"; pos = { x: pos.x + NODE_W + 60, y: pos.y }; }
+        target = firstTarget(anchor, out);
+        // Place libre : les étapes situées dessous, dans la même colonne, descendent d'un cran
+        var ax = rawNode(anchor).pos_x;
+        Object.keys(dfId).forEach(function (k) {
+          var r = rawNode(k);
+          if (k !== anchor && r && r.pos_y >= pos.y - NODE_H / 2 && Math.abs(r.pos_x - pos.x) < NODE_W + 40) { undo.moved.push([k, r.pos_x, r.pos_y]); moveNode(k, r.pos_x, r.pos_y + ROW); }
+        });
+        if (Math.abs(ax - pos.x) > 1 && !undo.moved.length) { /* branche B : nouvelle colonne, rien à décaler */ }
+      }
+      addNode(myId, type, MAKE[type](), pos);
+      if (anchor) {
+        var insertable = type !== "end" || !target; // une « Fin » ne s'intercale jamais avant une suite existante
+        if (insertable) {
+          if (target) { editor.removeSingleConnection(dfId[anchor], dfId[target], out, "input_1"); undo.removed = [anchor, target, out]; }
+          editor.addConnection(dfId[anchor], dfId[myId], out, "input_1");
+          if (target && hasOutputs(myId)) editor.addConnection(dfId[myId], dfId[target], "output_1", "input_1");
+        }
+      }
+      changed();
+      var label = LABELS[type] || type;
+      announce("Étape « " + label + " » ajoutée" + (anchor ? " après « " + (LABELS[nodeOf(anchor).name] || "") + " »" : " sur le canevas") + ".");
+      if (!where.at) centerOnNode(myId); // déposée à un endroit précis : le canevas ne bouge pas
+      var discard = function () {
+        if (dfId[myId] != null) { editor.removeNodeId("node-" + dfId[myId]); delete dfId[myId]; }
+        undo.moved.forEach(function (m) { moveNode(m[0], m[1], m[2]); });
+        if (undo.removed && dfId[undo.removed[0]] != null && dfId[undo.removed[1]] != null) editor.addConnection(dfId[undo.removed[0]], dfId[undo.removed[1]], undo.removed[2], "input_1");
+        dirty = wasDirty; setStatus(statusBefore);
+        announce("Ajout annulé.");
+      };
+      if (hasEditor(type)) openEditor(myId, { isNew: true, onDiscard: discard });
+      else persist().then(function (r) { if (r.ok) toast("Étape ajoutée.", "ok"); else toast("Impossible d'ajouter cette étape. Veuillez réessayer." + (r.error ? " (" + r.error + ")" : ""), "error"); });
+      return myId;
+    } catch (e) {
+      console.error("[automatisation] ajout d'étape impossible", e); // erreur réelle, jamais masquée
+      toast("Impossible d'ajouter cette étape. Veuillez réessayer.", "error");
+      return null;
+    }
+  }
+
+  var pal = null;
+  if (!locked && $("au-palette")) {
+    pal = buildPalette({
+      root: $("au-palette"),
+      workspace: $("au-workspace"),
+      openButton: $("au-palette-open"),
+      iconHtml: function (name, size) { return icon(ICON_NAMES[name] || name, { size: size }); },
+      onAdd: function (type) { addStep(type); },
+    });
+    editor.on("nodeSelected", function (id) { selectedMyId = myIdOfDf(id) || null; updateTarget(); });
+    editor.on("nodeUnselected", function () { selectedMyId = null; updateTarget(); });
+    editor.on("nodeRemoved", function () { if (selectedMyId && dfId[selectedMyId] == null) selectedMyId = null; updateTarget(); });
+    updateTarget();
+
+    // Glisser-déposer depuis la palette : sur une étape → insérée juste après elle ; ailleurs → posée à cet endroit
+    var dropOn = null;
+    var setDropOn = function (elx) { if (dropOn === elx) return; if (dropOn) dropOn.classList.remove("is-drop-target"); dropOn = elx; if (dropOn) dropOn.classList.add("is-drop-target"); };
+    var isStepDrag = function (e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, DRAG_TYPE) !== -1; };
+    container.addEventListener("dragover", function (e) {
+      if (!isStepDrag(e)) return;
+      e.preventDefault(); e.dataTransfer.dropEffect = "copy";
+      container.classList.add("is-drop-zone");
+      var nodeEl = e.target.closest && e.target.closest(".drawflow-node");
+      var myId = nodeEl && myIdOfDf(nodeEl.id.replace("node-", ""));
+      setDropOn(myId && hasOutputs(myId) ? nodeEl : null);
+    });
+    container.addEventListener("dragleave", function (e) { if (!container.contains(e.relatedTarget)) { container.classList.remove("is-drop-zone"); setDropOn(null); } });
+    container.addEventListener("drop", function (e) {
+      if (!isStepDrag(e)) return;
+      e.preventDefault();
+      var type = e.dataTransfer.getData(DRAG_TYPE);
+      var onNode = dropOn ? myIdOfDf(dropOn.id.replace("node-", "")) : null;
+      container.classList.remove("is-drop-zone"); setDropOn(null);
+      if (onNode) { addStep(type, { anchor: onNode }); return; }
+      var r = editor.precanvas.getBoundingClientRect();
+      var zoom = editor.zoom || 1;
+      addStep(type, { at: { x: Math.round((e.clientX - r.left) / zoom - NODE_W / 2), y: Math.round((e.clientY - r.top) / zoom - 30) } });
     });
   }
 
   // ---------- Zoom ----------
+  // Point fixe du zoom de Drawflow (transform-origin du canevas interne, au centre par défaut)
+  function zoomOrigin() { var cs = getComputedStyle(editor.precanvas).transformOrigin.split(" "); return { x: parseFloat(cs[0]) || 0, y: parseFloat(cs[1]) || 0 }; }
   var zin = $("au-zoom-in"), zout = $("au-zoom-out"), z100 = $("au-zoom-100"), zfit = $("au-zoom-fit");
   if (zin) zin.addEventListener("click", function () { editor.zoom_in(); });
   if (zout) zout.addEventListener("click", function () { editor.zoom_out(); });
@@ -339,7 +469,11 @@ import { UNITS, CHECKS, FIELD_LABELS, hasEditor, buildEditor, validate, clean } 
     var pad = 60;
     var zoom = Math.min(1.2, Math.max(editor.zoom_min, Math.min((rect.width - pad * 2) / Math.max(1, maxX - minX), (rect.height - pad * 2) / Math.max(1, maxY - minY))));
     editor.zoom = zoom; editor.zoom_last_value = zoom;
-    editor.canvas_x = -minX * zoom + pad; editor.canvas_y = -minY * zoom + pad;
+    // Drawflow agrandit depuis le CENTRE du canevas (transform-origin par défaut) : l'origine entre dans le calcul
+    var o = zoomOrigin();
+    var spanW = (maxX - minX) * zoom, spanH = (maxY - minY) * zoom;
+    var offX = Math.max(pad, (rect.width - spanW) / 2), offY = Math.max(pad, (rect.height - spanH) / 2);
+    editor.canvas_x = offX - o.x - (minX - o.x) * zoom; editor.canvas_y = offY - o.y - (minY - o.y) * zoom;
     editor.precanvas.style.transform = "translate(" + editor.canvas_x + "px, " + editor.canvas_y + "px) scale(" + editor.zoom + ")";
     editor.dispatch("zoom", editor.zoom);
   });
@@ -353,8 +487,9 @@ import { UNITS, CHECKS, FIELD_LABELS, hasEditor, buildEditor, validate, clean } 
     var zoom = Math.min(1, Math.max(editor.zoom_min, editor.zoom || 1));
     var cx = n.pos_x + NODE_W / 2, cy = n.pos_y + NODE_H / 2;
     editor.zoom = zoom; editor.zoom_last_value = zoom;
-    editor.canvas_x = rect.width / 2 - cx * zoom;
-    editor.canvas_y = rect.height / 2 - cy * zoom;
+    var o = zoomOrigin();
+    editor.canvas_x = rect.width / 2 - o.x - (cx - o.x) * zoom;
+    editor.canvas_y = rect.height / 2 - o.y - (cy - o.y) * zoom;
     editor.precanvas.style.transform = "translate(" + editor.canvas_x + "px, " + editor.canvas_y + "px) scale(" + editor.zoom + ")";
     editor.dispatch("zoom", editor.zoom);
     return true;

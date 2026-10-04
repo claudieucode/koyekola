@@ -485,7 +485,59 @@ a.mk-stat:hover { border-color: var(--accent); }
 /* ---------- Canevas d'un scénario d'automatisation (src/editor/automation-flow.js, via Drawflow) ---------- */
 .mk-flow-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .mk-flow-toolbar .field-hint { margin: 0; max-width: 60ch; }
-.mk-flow-palette { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+/* Espace de travail : palette d'actions (gauche) + canevas (droite, toute la place restante) */
+.mk-flow-workspace { --pal-w: 252px; display: grid; grid-template-columns: var(--pal-w) minmax(0, 1fr); gap: 16px; align-items: stretch; margin-bottom: 20px; }
+.mk-flow-workspace[data-locked] { grid-template-columns: minmax(0, 1fr); } /* lecture seule : pas de palette */
+.mk-flow-workspace.is-palette-collapsed { --pal-w: 60px; }
+.mk-flow-workspace .mk-flow-shell { margin-bottom: 0; min-width: 0; }
+.mk-flow-add-btn { display: none; }
+.mk-flow-add-btn .icon { margin-right: 2px; }
+/* Palette */
+.mk-flow-pal { display: flex; flex-direction: column; min-width: 0; height: calc(100vh - 260px); height: calc(100dvh - 260px); min-height: 520px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); overflow: hidden; }
+.mk-pal-head { display: flex; align-items: flex-start; gap: 10px; padding: 14px 12px 12px 14px; border-bottom: 1px solid var(--mk-border); }
+.mk-pal-head-icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 30px; height: 30px; border-radius: 8px; background: var(--accent-light); color: var(--accent-dark); }
+.mk-pal-titles { flex: 1; min-width: 0; }
+.mk-pal-titles h2 { margin: 0; font-family: var(--font-display); font-size: 1rem; line-height: 1.3; color: var(--mk-text); }
+.mk-pal-titles p { margin: 2px 0 0; font-size: 0.78rem; line-height: 1.35; color: var(--muted); }
+.mk-pal-collapse, .mk-pal-close { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; width: 30px; height: 30px; padding: 0; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+.mk-pal-collapse:hover, .mk-pal-close:hover { background: var(--mk-hover); color: var(--mk-text); }
+.mk-pal-close { display: none; font-size: 1.4rem; line-height: 1; }
+.mk-pal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 10px 14px; scrollbar-width: thin; }
+.mk-pal-search { position: relative; margin: 0 2px 8px; }
+.mk-pal-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); display: inline-flex; color: var(--muted); pointer-events: none; }
+.mk-pal-search input { width: 100%; min-height: 36px; padding: 6px 10px 6px 32px; font-size: 0.86rem; border-radius: 8px; }
+.mk-pal-target { margin: 0 4px 10px; font-size: 0.76rem; line-height: 1.35; color: var(--muted); overflow-wrap: anywhere; }
+.mk-pal-group + .mk-pal-group { margin-top: 6px; }
+.mk-pal-cat { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 30px; padding: 4px 6px; border: 0; border-radius: 6px; background: none; color: var(--muted); font: inherit; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; cursor: pointer; }
+.mk-pal-cat:hover { color: var(--mk-text); background: var(--mk-hover); }
+.mk-pal-chev { display: inline-flex; transition: transform 0.15s ease; }
+.mk-pal-cat[aria-expanded="false"] .mk-pal-chev { transform: rotate(-90deg); }
+.mk-pal-list { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.mk-pal-list[hidden], .mk-pal-group[hidden], .mk-pal-list li[hidden] { display: none; }
+.mk-pal-item { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 7px 8px; border: 1px solid transparent; border-radius: 8px; background: none; color: var(--mk-text); font: inherit; text-align: left; cursor: grab; transition: background-color 0.12s ease, border-color 0.12s ease; }
+.mk-pal-item:hover { background: var(--mk-hover); border-color: var(--mk-border); }
+.mk-pal-item:active, .mk-pal-item.is-dragging { cursor: grabbing; background: var(--accent-light); border-color: color-mix(in srgb, var(--accent) 35%, var(--mk-border)); }
+.mk-pal-item:focus-visible, .mk-pal-cat:focus-visible, .mk-pal-collapse:focus-visible, .mk-pal-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mk-pal-icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 30px; height: 30px; border-radius: 8px; background: var(--accent-light); color: var(--accent-dark); }
+.mk-pal-item--condition .mk-pal-icon, .mk-pal-item--split .mk-pal-icon { background: color-mix(in srgb, var(--star) 12%, var(--mk-surface)); color: var(--star); }
+.mk-pal-item--end .mk-pal-icon { background: var(--surface-alt); color: var(--muted); }
+.mk-pal-text { display: flex; flex-direction: column; min-width: 0; }
+.mk-pal-name { font-size: 0.88rem; font-weight: 700; line-height: 1.25; }
+.mk-pal-desc { font-size: 0.75rem; line-height: 1.3; color: var(--muted); }
+.mk-pal-empty { margin: 12px 6px; font-size: 0.86rem; color: var(--muted); text-align: center; }
+.mk-pal-help { margin: 14px 4px 0; padding-top: 12px; border-top: 1px solid var(--mk-border); font-size: 0.75rem; line-height: 1.4; color: var(--muted); }
+/* Palette réduite : icônes seules, infobulles (même rendu que celles du rail « Mon espace ») */
+.is-palette-collapsed .mk-flow-pal { overflow: visible; }
+.is-palette-collapsed .mk-pal-head { flex-direction: column; align-items: center; padding: 12px 0 10px; }
+.is-palette-collapsed .mk-pal-titles, .is-palette-collapsed .mk-pal-search, .is-palette-collapsed .mk-pal-target, .is-palette-collapsed .mk-pal-help, .is-palette-collapsed .mk-pal-text, .is-palette-collapsed .mk-pal-empty { display: none; }
+.is-palette-collapsed .mk-pal-body { padding: 8px 0; overflow: visible; }
+.is-palette-collapsed .mk-pal-cat { display: none; }
+.is-palette-collapsed .mk-pal-group + .mk-pal-group { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--mk-border); }
+.is-palette-collapsed .mk-pal-item { justify-content: center; width: 44px; min-height: 40px; margin: 0 auto; padding: 4px; }
+.is-palette-collapsed .mk-pal-item:hover::after, .is-palette-collapsed .mk-pal-item:focus-visible::after, .is-palette-collapsed .mk-pal-collapse:hover::after, .is-palette-collapsed .mk-pal-collapse:focus-visible::after { content: attr(data-tip); position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); z-index: 30; padding: 6px 10px; border-radius: 6px; background: #0f1d29; color: #fff; font-family: var(--font-body, inherit); font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; box-shadow: var(--mk-pop); }
+/* Canevas pendant un glisser-déposer depuis la palette */
+.mk-flow-canvas.is-drop-zone { outline: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -6px; }
+.drawflow-node.is-drop-target .mk-flow-card { box-shadow: var(--ring); border-color: var(--accent); }
 /* Canevas pleine largeur : les réglages d'une étape s'ouvrent dans une boîte de dialogue (src/editor/automation/), plus de panneau latéral */
 .mk-flow-shell { position: relative; margin-bottom: 20px; }
 .mk-flow-canvas { position: relative; height: calc(100vh - 260px); height: calc(100dvh - 260px); min-height: 520px; background: var(--surface-alt); border: 1px solid var(--mk-border); border-radius: var(--mk-r); overflow: hidden; touch-action: none; background-image: radial-gradient(rgba(11, 42, 64, 0.09) 1px, transparent 1px); background-size: 22px 22px; }
@@ -538,7 +590,23 @@ a.mk-stat:hover { border-color: var(--accent); }
 .mk-flow-port-no { color: var(--danger); }
 @media (max-width: 900px) {
   .mk-flow-canvas { height: 65vh; min-height: 420px; }
+  /* Petit écran : la palette devient un tiroir ouvert par « + Ajouter une étape » */
+  .mk-flow-workspace, .mk-flow-workspace.is-palette-collapsed { grid-template-columns: minmax(0, 1fr); }
+  .mk-flow-add-btn { display: inline-flex; align-items: center; gap: 6px; }
+  .mk-flow-pal { position: fixed; z-index: 90; top: 0; bottom: 0; left: 0; width: min(320px, 86vw); height: auto; min-height: 0; border-radius: 0 var(--mk-r) var(--mk-r) 0; box-shadow: var(--mk-pop); transform: translateX(-105%); visibility: hidden; transition: transform 0.2s ease, visibility 0.2s; }
+  .is-palette-open .mk-flow-pal { transform: none; visibility: visible; }
+  .is-palette-open::before { content: ""; position: fixed; inset: 0; z-index: 89; background: rgba(6, 25, 42, 0.45); }
+  .mk-pal-collapse { display: none; }
+  .mk-pal-close { display: inline-flex; }
+  .is-palette-collapsed .mk-flow-pal { overflow: hidden; }
+  .is-palette-collapsed .mk-pal-titles, .is-palette-collapsed .mk-pal-search, .is-palette-collapsed .mk-pal-target, .is-palette-collapsed .mk-pal-help, .is-palette-collapsed .mk-pal-text { display: revert; }
+  .is-palette-collapsed .mk-pal-head { flex-direction: row; align-items: flex-start; padding: 14px 12px 12px 14px; }
+  .is-palette-collapsed .mk-pal-body { padding: 12px 10px 14px; overflow-y: auto; }
+  .is-palette-collapsed .mk-pal-cat { display: flex; }
+  .is-palette-collapsed .mk-pal-item { justify-content: flex-start; width: 100%; min-height: 44px; padding: 7px 8px; }
+  .is-palette-collapsed .mk-pal-text { display: flex; }
 }
+@media (prefers-reduced-motion: reduce) { .mk-flow-pal, .mk-pal-chev { transition: none; } }
 
 /* Bouton « ⋯ » d'une étape (en haut à droite du bloc) */
 .mk-flow-card { position: relative; padding-right: 40px; }

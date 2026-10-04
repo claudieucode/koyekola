@@ -10,22 +10,24 @@
 
     <div id="au-editor">
       <div class="mk-flow-toolbar">
-        <p class="field-hint"><% if (locked) { %>Cliquez sur une étape pour voir ses réglages.<% } else { %>Cliquez sur une étape pour la régler ; son bouton « ⋯ » propose aussi Dupliquer et Supprimer. Glissez pour déplacer, tirez depuis un point de connexion pour relier deux étapes. Les réglages d'une étape s'enregistrent aussitôt ; « Enregistrer » sauvegarde les déplacements et connexions.<% } %></p>
+        <p class="field-hint"><% if (locked) { %>Cliquez sur une étape pour voir ses réglages.<% } else { %>Ajoutez une étape depuis la palette (clic ou glisser-déposer) : elle se place après l'étape sélectionnée, sinon à la fin du parcours. Cliquez sur une étape pour la régler ; « ⋯ » propose aussi Dupliquer et Supprimer.<% } %></p>
         <div class="mk-actions">
+          <% if (!locked) { %><button type="button" class="btn btn-outline mk-flow-add-btn" id="au-palette-open" aria-controls="au-palette" aria-expanded="false"><%- icon("plus", { size: 16 }) %> Ajouter une étape</button><% } %>
           <span id="au-status" class="field-hint" role="status" aria-live="polite"></span>
           <% if (!locked) { %><button type="button" class="btn btn-primary" id="au-save">Enregistrer</button><% } %>
         </div>
       </div>
 
-      <% if (!locked) { %><div id="au-add" class="mk-flow-palette" role="group" aria-label="Ajouter une étape"></div><% } %>
-
-      <div class="mk-flow-shell">
-        <div id="au-flow" class="mk-flow-canvas" aria-label="Schéma du scénario"></div>
-        <div class="mk-flow-zoom" role="group" aria-label="Zoom">
-          <button type="button" class="mk-icon-btn" id="au-zoom-out" aria-label="Réduire"><%- icon("minus", { size: 16 }) %></button>
-          <button type="button" class="mk-icon-btn" id="au-zoom-100" aria-label="Zoom 100 %">100 %</button>
-          <button type="button" class="mk-icon-btn" id="au-zoom-in" aria-label="Agrandir"><%- icon("plus", { size: 16 }) %></button>
-          <button type="button" class="mk-icon-btn" id="au-zoom-fit" aria-label="Ajuster à l'écran"><%- icon("maximize", { size: 16 }) %></button>
+      <div class="mk-flow-workspace" id="au-workspace"<%= locked ? " data-locked" : "" %>>
+        <% if (!locked) { %><aside id="au-palette" class="mk-flow-pal" aria-label="Actions"></aside><% } %>
+        <div class="mk-flow-shell">
+          <div id="au-flow" class="mk-flow-canvas" aria-label="Schéma du scénario"></div>
+          <div class="mk-flow-zoom" role="group" aria-label="Zoom">
+            <button type="button" class="mk-icon-btn" id="au-zoom-out" aria-label="Réduire"><%- icon("minus", { size: 16 }) %></button>
+            <button type="button" class="mk-icon-btn" id="au-zoom-100" aria-label="Zoom 100 %">100 %</button>
+            <button type="button" class="mk-icon-btn" id="au-zoom-in" aria-label="Agrandir"><%- icon("plus", { size: 16 }) %></button>
+            <button type="button" class="mk-icon-btn" id="au-zoom-fit" aria-label="Ajuster à l'écran"><%- icon("maximize", { size: 16 }) %></button>
+          </div>
         </div>
       </div>
       <p class="sr-only" id="au-live" aria-live="polite"></p>

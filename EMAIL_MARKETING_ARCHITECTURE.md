@@ -1460,3 +1460,22 @@ Le panneau latéral droit de l'éditeur (`#au-panel`) est supprimé : le canevas
 
 **Vérifié** : suite complète ; parcours navigateur des 12 types d'étape (ouvrir, annuler, modifier, enregistrer, résumé,
 base, rechargement, connexions intactes), menu au clavier, validation, dupliquer/supprimer, lecture seule, mobile.
+
+### Palette d'actions latérale (2026-10-04)
+
+La rangée horizontale « + Étape » au-dessus du canevas est remplacée par une palette à gauche
+(`src/editor/automation/palette.js`, rendue dans `<aside id="au-palette">`) : en-tête « Actions », recherche (sans
+accents, avec synonymes : « attente » → Attendre / Attendre jusqu'à), 5 catégories repliables, mode réduit (icônes +
+infobulles, mémorisé dans le navigateur), tiroir sur petit écran (bouton « + Ajouter une étape »). Absente en lecture seule.
+
+- **Ajout** (`addStep` dans `automation-flow.js`) : clic → après l'étape sélectionnée sur le canevas, sinon à la fin du
+  parcours principal (avant une éventuelle « Fin ») ; reliée automatiquement (insérée entre l'étape d'avant et sa suite,
+  sortie libre d'une condition/d'un tirage), étapes du dessous décalées. Glisser-déposer : sur une étape → insérée
+  après elle ; ailleurs → posée sous le pointeur, non reliée. Mêmes appels Drawflow qu'à la main (`addConnection`,
+  `removeSingleConnection`), même format `canvas`.
+- **Nouvelle étape** : sa fenêtre s'ouvre (« Ajouter l'étape ») ; Annuler la retire et remet connexions et positions ;
+  « Fin » (sans réglage) est enregistrée directement. Chaque ajout validé enregistre le scénario (même route).
+- Pas d'« Envoyer un SMS » : ce n'est pas une étape du moteur (`steps.js`).
+- Corrigés au passage : le fond du canevas n'était pas reconnu par Drawflow (classe `parent-drawflow` pas en première
+  position → ni désélection ni déplacement du canevas hors de la zone dessinée) ; « Ajuster à l'écran » et le centrage
+  ignoraient l'origine du zoom de Drawflow (centre) → étapes hors cadre dès que le zoom changeait.

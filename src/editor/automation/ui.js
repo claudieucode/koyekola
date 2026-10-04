@@ -69,7 +69,7 @@ export function confirmAction({ title, text: body, ok }) {
 // Modifie un BROUILLON : rien n'est appliqué tant que « Enregistrer » n'a pas réussi. Annuler, ×, Échap et clic sur
 // le fond ferment sans rien changer (avec confirmation si le brouillon a été modifié). Le focus est piégé par
 // <dialog>.showModal() et revient à l'élément d'origine à la fermeture.
-export function openStepDialog({ title, iconHtml, body, wide = false, readOnly = false, isDirty = () => false, onSave, onClose = () => {} }) {
+export function openStepDialog({ title, iconHtml, body, wide = false, readOnly = false, saveLabel = "Enregistrer", isDirty = () => false, onSave, onClose = () => {} }) {
   const titleId = nextId();
   const dlg = el("dialog", { class: `mk-dialog mk-modal mk-step-dialog${wide ? " mk-modal-wide" : ""}`, "aria-labelledby": titleId });
   const head = el("div", { class: "mk-step-dialog-head" });
@@ -85,7 +85,7 @@ export function openStepDialog({ title, iconHtml, body, wide = false, readOnly =
   const cancel = el("button", { type: "button", class: "btn btn-outline btn-sm" }, readOnly ? "Fermer" : "Annuler");
   actions.appendChild(cancel);
   let save = null;
-  if (!readOnly) { save = el("button", { type: "submit", class: "btn btn-primary btn-sm", "data-step-save": "" }, "Enregistrer"); actions.appendChild(save); }
+  if (!readOnly) { save = el("button", { type: "submit", class: "btn btn-primary btn-sm", "data-step-save": "" }, saveLabel); actions.appendChild(save); }
   const form = el("form", { method: "dialog", novalidate: true });
   form.appendChild(content); form.appendChild(actions);
   dlg.appendChild(head); dlg.appendChild(form);
@@ -104,14 +104,14 @@ export function openStepDialog({ title, iconHtml, body, wide = false, readOnly =
     else { const ul = el("ul"); list.forEach((m) => ul.appendChild(el("li", {}, m))); errorBox.appendChild(ul); }
     errorBox.scrollIntoView({ block: "nearest" });
   };
-  const finish = () => { dlg.close(); dlg.remove(); onClose(); if (previous && previous.isConnected && previous.focus) previous.focus(); };
+  const finish = (saved) => { dlg.close(); dlg.remove(); onClose(Boolean(saved)); if (previous && previous.isConnected && previous.focus) previous.focus(); }; // saved : fermée par « Enregistrer »
   const attemptClose = async () => {
     if (busy) return;
     if (!readOnly && isDirty()) {
       const ok = await confirmAction({ title: "Abandonner les modifications ?", text: "Les réglages modifiés dans cette fenêtre ne seront pas appliqués à l'étape.", ok: "Abandonner" });
       if (!ok) return;
     }
-    finish();
+    finish(false);
   };
   cancel.addEventListener("click", attemptClose);
   x.addEventListener("click", attemptClose);
@@ -123,14 +123,14 @@ export function openStepDialog({ title, iconHtml, body, wide = false, readOnly =
     busy = true; save.disabled = true; cancel.disabled = true; save.textContent = "Enregistrement…";
     let result;
     try { result = await onSave(); } catch (err) { result = { errors: [err.message || "Enregistrement impossible."] }; }
-    busy = false; save.disabled = false; cancel.disabled = false; save.textContent = "Enregistrer";
+    busy = false; save.disabled = false; cancel.disabled = false; save.textContent = saveLabel;
     if (result && result.errors && result.errors.length) { showErrors(result.errors); return; }
-    finish();
+    finish(true);
   });
   dlg.showModal();
   const first = body.querySelector("input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])");
   (first || cancel).focus();
-  return { dlg, showErrors, close: finish };
+  return { dlg, showErrors, close: () => finish(false) };
 }
 
 // ---------- Menu « ⋯ » d'une étape ----------
