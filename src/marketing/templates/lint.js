@@ -36,4 +36,4 @@ function lintEmail(compiled, rendered) {
   return warnings;
 }
 
-module.exports = { lintEmail, missingImages };
+module.exports = { lintEmail, missingImages, HEAVY_BYTES };

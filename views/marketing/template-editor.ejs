@@ -196,19 +196,42 @@
       </div>
     </div>
 
-    <dialog class="mk-dialog mk-b-preview" id="mk-preview-dialog" aria-labelledby="mk-preview-title">
-      <div class="mk-b-preview-head">
+    <dialog class="mk-dialog mk-b-preview" id="mk-preview-dialog" aria-labelledby="mk-preview-title" aria-busy="false">
+      <div class="mk-pv-head">
         <h2 id="mk-preview-title">Aperçu de l'e-mail</h2>
-        <div class="mk-sizes" role="group" aria-label="Largeur de l'aperçu">
-          <button type="button" class="btn btn-outline btn-sm" data-psize="600" aria-pressed="true"><%- icon("monitor", { size: 16 }) %> Bureau</button>
-          <button type="button" class="btn btn-outline btn-sm" data-psize="480" aria-pressed="false"><%- icon("tablet", { size: 16 }) %> Tablette</button>
-          <button type="button" class="btn btn-outline btn-sm" data-psize="375" aria-pressed="false"><%- icon("smartphone", { size: 16 }) %> Mobile</button>
+        <div class="mk-pv-devices" role="group" aria-label="Appareil simulé">
+          <button type="button" class="mk-pv-dev" data-pdevice="desktop" aria-pressed="true"><%- icon("monitor", { size: 16 }) %><span>Bureau</span></button>
+          <button type="button" class="mk-pv-dev" data-pdevice="tablet" aria-pressed="false"><%- icon("tablet", { size: 16 }) %><span>Tablette</span></button>
+          <button type="button" class="mk-pv-dev" data-pdevice="mobile" aria-pressed="false"><%- icon("smartphone", { size: 16 }) %><span>Mobile</span></button>
+          <label class="sr-only" for="mk-pv-width">Largeur d'écran simulée</label>
+          <select id="mk-pv-width" class="mk-pv-select" title="Largeur d'écran réelle du rendu"></select>
         </div>
-        <button type="button" class="btn btn-primary btn-sm" data-close-dialog>Retour à l'éditeur</button>
+        <div class="mk-pv-tools">
+          <label class="sr-only" for="mk-pv-contact">Données utilisées pour les balises de fusion</label>
+          <select id="mk-pv-contact" class="mk-pv-select" title="Données des balises de fusion"><option value="">Données d'exemple</option><% (contacts || []).forEach((c) => { %><option value="<%= c.id %>"><%= c.email %></option><% }) %></select>
+          <button type="button" class="btn btn-outline btn-sm" id="mk-pv-refresh" title="Régénérer l'aperçu"><%- icon("history", { size: 16 }) %><span class="mk-pv-hide-sm"> Actualiser</span></button>
+          <button type="button" class="btn btn-outline btn-sm" id="mk-pv-browser"><%- icon("externalLink", { size: 16 }) %><span class="mk-pv-hide-sm"> Afficher dans le navigateur</span></button>
+          <button type="button" class="btn btn-primary btn-sm" data-close-dialog>Retour à l'éditeur</button>
+        </div>
       </div>
-      <p class="mk-b-preview-subject"><strong>Objet :</strong> <span id="mk-preview-subject"></span></p>
-      <div class="mk-b-preview-body"><iframe id="mk-preview-frame" title="Aperçu de l'e-mail" sandbox=""></iframe></div>
-      <details class="mk-b-preview-text"><summary>Version texte brut</summary><pre id="mk-text" class="mk-text"></pre></details>
+      <div class="mk-pv-body">
+        <div class="mk-pv-stage" id="mk-pv-stage">
+          <p class="mk-pv-scale" id="mk-pv-scale" aria-live="polite"></p>
+          <div class="mk-pv-device" id="mk-pv-device"><iframe id="mk-preview-frame" title="Aperçu de l'e-mail (rendu réel)" sandbox="allow-same-origin"></iframe></div>
+          <p class="mk-pv-status" id="mk-pv-status" role="status"></p>
+        </div>
+        <aside class="mk-pv-side" aria-label="Informations et vérifications">
+          <section class="mk-pv-sec" aria-labelledby="mk-pv-h-info"><h3 id="mk-pv-h-info">Informations de l'e-mail</h3><dl class="mk-pv-info" id="mk-pv-info"></dl></section>
+          <section class="mk-pv-sec" aria-labelledby="mk-pv-h-checks"><h3 id="mk-pv-h-checks">Vérifications</h3><p class="mk-pv-global" id="mk-pv-global"></p><ul class="mk-pv-checks" id="mk-pv-checks"></ul></section>
+          <% if (!readOnly) { %><section class="mk-pv-sec" aria-labelledby="mk-pv-h-test"><h3 id="mk-pv-h-test">Envoyer un e-mail de test</h3>
+            <div class="mk-pv-test"><label class="sr-only" for="mk-pv-test-to">Destinataire du test</label><select id="mk-pv-test-to" class="mk-pv-select"><% recipients.forEach((r) => { %><option value="<%= r %>" <%= r === currentEmail ? "selected" : "" %>><%= r %></option><% }) %></select><button type="button" class="btn btn-primary btn-sm" id="mk-pv-test-send">Envoyer le test</button></div>
+            <p class="mk-pv-muted">Uniquement aux membres de l'équipe · objet préfixé [TEST] · version enregistrée (enregistrement automatique avant l'envoi).</p>
+            <p class="mk-pv-test-msg" id="mk-pv-test-msg" role="status" aria-live="polite"></p></section><% } %>
+          <section class="mk-pv-sec" aria-labelledby="mk-pv-h-links"><h3 id="mk-pv-h-links">Liens <span class="mk-pv-count" id="mk-pv-links-count">0</span></h3><div id="mk-pv-links"></div></section>
+          <section class="mk-pv-sec" aria-labelledby="mk-pv-h-tags"><h3 id="mk-pv-h-tags">Balises de fusion</h3><div id="mk-pv-tags"></div></section>
+          <details class="mk-pv-sec mk-b-preview-text"><summary>Version texte brut</summary><pre id="mk-text" class="mk-text"></pre></details>
+        </aside>
+      </div>
     </dialog>
 
     <% if (!readOnly) { %>
@@ -254,5 +277,6 @@
 
     <script type="application/json" id="mk-editor-data"><%- data %></script>
     <script src="<%= asset('/js/mk/toolbar.js') %>" defer></script>
+    <script src="<%= asset('/js/mk/preview.js') %>" defer></script>
     <script src="<%= asset('/js/marketing-editor.js') %>" defer></script>
 <%- include("partials/bottom") %>

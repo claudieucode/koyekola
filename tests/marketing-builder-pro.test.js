@@ -83,7 +83,7 @@ describe("colonnes", () => {
   test("non empilées : côte à côte même sur mobile ; inversées : colonne de droite d'abord sur mobile (dir=rtl)", () => {
     assert.doesNotMatch(build([{ id: "c1", type: "columns", leftHtml: "<p>G</p>", rightHtml: "<p>D</p>", stack: false }]).r.html, /class="mk-col"/);
     const { r } = build([{ id: "c1", type: "columns", leftHtml: "<p>G</p>", rightHtml: "<p>D</p>", reverse: true, ratio: "70-30" }]);
-    assert.match(r.html, /<table role="presentation" width="100%" cellpadding="0" cellspacing="0" dir="rtl"><tr><td class="mk-col" width="30%" valign="top" dir="ltr"[^>]*><p[^>]*>D<\/p><\/td><td class="mk-col" width="70%" valign="top" dir="ltr"[^>]*><p[^>]*>G/);
+    assert.match(r.html, /<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed" dir="rtl"><tr><td class="mk-col" width="30%" valign="top" dir="ltr"[^>]*><p[^>]*>D<\/p><\/td><td class="mk-col" width="70%" valign="top" dir="ltr"[^>]*><p[^>]*>G/);
     bad([{ id: "c1", type: "columns", leftHtml: "<p>G</p>", rightHtml: "<p>D</p>", ratio: "90-10" }], /répartition/i);
   });
 });
@@ -102,7 +102,7 @@ describe("réglages communs des blocs", () => {
   test("styles globaux : largeur maximale, espacement général, couleur secondaire (séparateur)", () => {
     const { r } = build([{ id: "d", type: "divider" }], { theme: { maxWidth: 680, spacing: "large", secondary: "#aabbcc" } });
     assert.match(r.html, /class="mk-container" width="680"[^>]*style="width:680px/);
-    assert.match(r.html, /max-width:700px/);
+    assert.match(r.html, /max-width:704px/); // bascule mobile = largeur du message + marges extérieures (2 × 12 px)
     assert.match(r.html, /padding:16px 24px 16px/);
     assert.match(r.html, /border-top:1px solid #aabbcc/);
   });

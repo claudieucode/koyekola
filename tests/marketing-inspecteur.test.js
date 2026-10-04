@@ -47,7 +47,7 @@ describe("moteur commun : nouveaux réglages", () => {
     assert.match(html, /border-radius:40px;border:3px dotted #000000"><a class="mkf-b"/);
     assert.match(html, /font-weight:400;font-style:italic;letter-spacing:1px;text-decoration:none/);
     assert.match(html, /<table role="presentation" width="60%" align="right"[^>]*><tr><td style="border-top:4px dashed #00aa00/);
-    assert.match(html, /<td style="background:#0277b6;border-radius:4px"><a href="https:\/\/linkedin.com\/x"[^>]*>LinkedIn<\/a>/);
+    assert.match(html, /<a href="https:\/\/linkedin.com\/x" style="display:inline-block;margin:4px;padding:8px 14px;background:#0277b6;[^"]*">LinkedIn<\/a>/); // pastilles qui passent à la ligne
     assert.match(html, /<tr class="mk-hide-m"[^>]*><td class="mkc-i"/, "masqué sur mobile");
     assert.match(html, /<tr class="mk-hide-d" style="display:none;mso-hide:all/, "masqué sur ordinateur (Outlook compris)");
   });

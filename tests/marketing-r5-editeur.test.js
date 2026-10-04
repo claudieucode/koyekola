@@ -200,7 +200,7 @@ describe("éditeur : barre d'outils, onglets, canevas, réglages", () => {
     assert.match(html, /<nav class="mk-b-rail" role="tablist" aria-label="Outils de l'éditeur" aria-orientation="vertical">/);
     assert.match(html, /<nav class="mk-palette" id="mk-palette" aria-label="Ajouter un bloc">/);
     assert.match(html, /<iframe id="mk-frame"[^>]*sandbox="allow-same-origin"/, "canevas : rendu manipulable par l'éditeur, aucun script");
-    assert.match(html, /<iframe id="mk-preview-frame"[^>]*sandbox=""/, "aperçu plein écran : totalement isolé");
+    assert.match(html, /<iframe id="mk-preview-frame"[^>]*sandbox="allow-same-origin"/, "aperçu plein écran : aucun script (sandbox sans allow-scripts), mesurable par l'éditeur");
     assert.match(html, /<aside class="mk-b-props" id="mk-props" aria-label="Réglages du bloc sélectionné">/);
   });
   test("la palette propose CHAQUE type de bloc, en groupes, avec icône et description, sans « HTML libre »", () => {

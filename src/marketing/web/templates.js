@@ -7,6 +7,9 @@ const { CATEGORIES } = require("../templates/categories");
 const { listCourses } = require("../bridge/catalog");
 const { MarketingError } = require("../errors");
 const { sendTestEmail, teamRecipients } = require("../templates/testSend");
+const inspect = require("../templates/inspect");
+const { missingImages } = require("../templates/lint");
+const { getSendingConfig } = require("../sending/config");
 const { markdownToRich } = require("../templates/richtext");
 const { FONTS } = require("../templates/blocks");
 // Ouverture dans l'éditeur : un texte (ou des colonnes) encore en Markdown est présenté en texte riche. Rien n'est
@@ -125,8 +128,23 @@ module.exports = ({ db }) => {
     try {
       const contact = req.body.contactId ? { id: intOrNull(req.body.contactId) } : null;
       if (contact && !contact.id) throw new MarketingError("invalid_field", "Contact invalide.");
-      const r = templates.previewTemplate(req.mk.ctx, req.body.template, { contact, annotate: req.body.annotate === true });
-      res.json({ subject: r.subject, html: r.html, text: r.text, warnings: r.warnings, blockErrors: r.blockErrors || [] });
+      const full = req.body.mode === "preview"; // fenêtre « Aperçu » : rendu réel + informations et vérifications
+      const r = templates.previewTemplate(req.mk.ctx, req.body.template, { contact, annotate: req.body.annotate === true, tolerant: full });
+      const body = { subject: r.subject, html: r.html, text: r.text, warnings: r.warnings, blockErrors: r.blockErrors || [] };
+      if (full) {
+        const cfg = getSendingConfig(req.mk.ctx);
+        const from = cfg.from || require("../../utils/mailer").fromAddress() || "";
+        Object.assign(body, {
+          preheader: inspect.preheaderOf(r.html),
+          sender: from ? { address: from, provider: cfg.provider || "smtp" } : null,
+          recipient: r.contact ? { email: r.contact.email, name: [r.contact.first_name, r.contact.last_name].filter(Boolean).join(" "), sample: false } : { email: r.data.contact.email, name: r.data.contact.full_name, sample: true },
+          links: inspect.analyzeLinks(r.html),
+          size: inspect.sizeInfo(r.html),
+          mergeTags: inspect.mergeTags(r.variables, r.data),
+          missingImages: missingImages(r.html),
+        });
+      }
+      res.json(body);
     } catch (error) {
       // Pour l'aperçu, toute erreur métier (contact ou contenu invalide) est une erreur de saisie : 400
       if (error instanceof MarketingError) return res.status(400).json({ error: error.message });
@@ -147,9 +165,10 @@ module.exports = ({ db }) => {
     const template = load(req, res);
     if (!template) return;
     try {
-      const preview = templates.previewTemplate(req.mk.ctx, template);
+      const contactId = req.query.contact ? intOrNull(req.query.contact) : null;
+      const preview = templates.previewTemplate(req.mk.ctx, template, { contact: contactId ? { id: contactId } : null });
       res.set({
-        "Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
+        "Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": "default-src 'none'; img-src 'self' https: data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
         "X-Frame-Options": "SAMEORIGIN", "X-Robots-Tag": "noindex, nofollow", "Cache-Control": "private, no-store",
       });
       res.send(preview.html);
@@ -175,7 +194,7 @@ module.exports = ({ db }) => {
     };
     res.render("marketing/template-editor", {
       title: template.name, active: "templates", template, data: safeJson(data), readOnly: data.readOnly, versions: data.versions, palette: PALETTE, blockInfo: BLOCKS, presetInfo: PRESETS, categories: CATEGORIES,
-      recipients: teamRecipients(ctx), currentEmail: String(req.session.user.email || "").toLowerCase(),
+      recipients: teamRecipients(ctx), currentEmail: String(req.session.user.email || "").toLowerCase(), contacts: data.contacts,
     });
   });
 
@@ -229,23 +248,22 @@ module.exports = ({ db }) => {
     if (!template) return;
     const back = `/marketing/modeles/${template.id}`;
     const key = String(req.session.user.id);
-    if (testLimiter.isLimited(key)) {
-      req.session.mkFlash = { type: "error", text: "Trop d'envois de test : 10 par heure au plus. Réessayez plus tard." };
-      return res.redirect(back);
-    }
+    // Depuis l'aperçu (fetch) : réponse JSON ; sinon message affiché après redirection (formulaire classique)
+    const wantsJson = /application\/json/.test(req.get("Accept") || "");
+    const reply = (type, text, status) => { if (wantsJson) return res.status(status || (type === "ok" ? 200 : 400)).json({ ok: type === "ok", message: text }); req.session.mkFlash = { type, text }; return res.redirect(back); };
+    if (testLimiter.isLimited(key)) return reply("error", "Trop d'envois de test : 10 par heure au plus. Réessayez plus tard.", 429);
     testLimiter.hit(key); // compté à chaque tentative (y compris refusée) pour empêcher de sonder les adresses
     const contactId = req.body.contact_id ? intOrNull(req.body.contact_id) : undefined;
     sendTestEmail(req.mk.ctx, template.id, { to: req.body.to, ...(testChannel(req.mk.ctx) || {}), contactId }).then(
       (r) => {
-        req.session.mkFlash = r.sent
+        const msg = r.sent
           ? { type: "ok", text: `E-mail de test envoyé à ${r.to} (pensez à vérifier le dossier des indésirables).` }
           : { type: "error", text: r.reason === "smtp_not_configured" ? "Aucun service d'envoi configuré : aucun e-mail n'a été envoyé. Choisissez Resend dans Réglages d'envoi, ou renseignez SMTP_HOST (et les variables SMTP_*) dans la configuration du serveur." : "L'envoi a échoué : vérifiez la configuration SMTP (détails dans le journal du serveur)." };
-        res.redirect(back);
+        reply(msg.type, msg.text, msg.type === "ok" ? 200 : 502);
       },
       (error) => {
         if (!(error instanceof MarketingError)) return next(error);
-        req.session.mkFlash = { type: "error", text: error.message };
-        res.redirect(back);
+        reply("error", error.message, 400);
       },
     );
   });

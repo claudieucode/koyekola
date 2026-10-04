@@ -217,9 +217,10 @@ function renderTemplate(ctx, id, contact, { urls, event } = {}) {
 
 // Aperçu d'un brouillon non enregistré
 // annotate : aperçu de l'éditeur (blocs repérables, bloc incomplet montré à sa place → blockErrors), jamais un envoi
-function previewTemplate(ctx, input, { contact, annotate = false } = {}) {
+// tolerant : fenêtre « Aperçu » (bloc incomplet montré à sa place, sans marques d'édition ; le reste est le vrai rendu)
+function previewTemplate(ctx, input, { contact, annotate = false, tolerant = false } = {}) {
   checkCtx(ctx);
-  const c = compileTemplate({ ...input, blocks: resolveCourseBlocks(ctx, input && input.blocks) }, { allowed: context.allowedFor(ctx), annotate });
+  const c = compileTemplate({ ...input, blocks: resolveCourseBlocks(ctx, input && input.blocks) }, { allowed: context.allowedFor(ctx), annotate, tolerant });
   let data = context.sampleContext(ctx);
   if (contact) {
     const own = getContact(ctx, contact.id);
@@ -227,7 +228,7 @@ function previewTemplate(ctx, input, { contact, annotate = false } = {}) {
     data = context.buildContext(ctx, own, { urls: {} });
     data.unsubscribe_url = "https://exemple.invalid/desinscription";
   }
-  return { ...withWarnings(c, data), normalized: c.normalized, blockErrors: c.meta.blockErrors };
+  return { ...withWarnings(c, data), normalized: c.normalized, blockErrors: c.meta.blockErrors, data, contact: contact ? data.contact : null };
 }
 
 function templateReadiness(ctx, id) {

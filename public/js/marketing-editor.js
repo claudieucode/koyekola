@@ -1820,21 +1820,25 @@
   function openDialog(id) { var d = $(id); if (d && !d.open) { d.showModal(); if (window.mkDialogFocusFirst) window.mkDialogFocusFirst(d); } return d; }
   [].forEach.call(document.querySelectorAll("[data-close-dialog]"), function (b) { b.addEventListener("click", function () { var d = b.closest("dialog"); if (d) d.close(); }); });
   [].forEach.call(document.querySelectorAll("dialog"), function (d) { d.addEventListener("click", function (e) { if (e.target === d) d.close(); }); });
-  var pframe = $("mk-preview-frame");
-  if ($("mk-open-preview")) $("mk-open-preview").addEventListener("click", function () {
-    openDialog("mk-preview-dialog");
-    $("mk-preview-subject").textContent = "…";
-    var body = { template: payload() };
-    if (contactSel.value) body.contactId = parseInt(contactSel.value, 10);
-    postJson("/marketing/modeles/apercu", body).then(function (j) { pframe.srcdoc = j.html; $("mk-preview-subject").textContent = j.subject; $("mk-text").textContent = j.text; })
-      .catch(function (e) { pframe.srcdoc = ""; $("mk-preview-subject").textContent = "Aperçu impossible : " + e.message; });
-  });
-  [].forEach.call(document.querySelectorAll("[data-psize]"), function (btn) {
-    btn.addEventListener("click", function () {
-      pframe.style.width = btn.getAttribute("data-psize") + "px";
-      [].forEach.call(document.querySelectorAll("[data-psize]"), function (b) { b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
-    });
-  });
+  // Fenêtre « Aperçu » (public/js/mk/preview.js) : rendu réel, appareils, vérifications, navigateur, test
+  var previewWin = window.MkPreview ? window.MkPreview.create({
+    el: el, announce: announce, toast: toast, postJson: postJson, payload: payload, templateId: state.id,
+    openDialog: openDialog,
+    contact: function () { return contactSel.value; },
+    setContact: function (v) { if (contactSel.value !== v) { contactSel.value = v; stopInline({ rerender: false }); runPreview(); } },
+    // Version enregistrée à jour (test, navigateur) : attend un enregistrement automatique en cours, puis enregistre si besoin
+    ensureSaved: function () {
+      if (readOnly) return Promise.resolve(true);
+      return new Promise(function (resolve) {
+        (function attempt(n) {
+          if (saving) { if (n > 75) resolve(false); else setTimeout(function () { attempt(n + 1); }, 200); return; }
+          if (!dirty) { resolve(true); return; }
+          save({ manual: true }).then(resolve, function () { resolve(false); });
+        })(0);
+      });
+    },
+  }) : null;
+  if ($("mk-open-preview")) $("mk-open-preview").addEventListener("click", function () { stopInline(); if (previewWin) previewWin.open(); });
   if ($("mk-open-test")) $("mk-open-test").addEventListener("click", function () { openDialog("mk-test-dialog"); });
   var testForm = $("mk-test-dialog") && $("mk-test-dialog").querySelector("form");
   if (testForm) testForm.addEventListener("submit", function (e) {

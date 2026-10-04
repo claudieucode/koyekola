@@ -383,7 +383,7 @@ function buildBlock(block, env, meta, k = {}) {
       return {
         normalized: { label: block.label.trim(), url: block.url.trim(), align, ...(block.color ? { color } : {}), ...(textColor ? { textColor } : {}), ...(fontSize !== 16 ? { fontSize } : {}), ...(block.radius !== undefined && block.radius !== null ? { radius } : {}), ...(size !== "m" ? { size } : {}), ...(fullWidth ? { fullWidth } : {}), ...(newTab ? { newTab } : {}), ...emph, ...(border || {}) },
         nodes: [
-          T(`<table${cls("a")} role="presentation" align="${fullWidth ? "center" : align}" cellpadding="0" cellspacing="0"${fullWidth ? ' width="100%"' : ""} style="margin:${align === "center" || fullWidth ? "0 auto" : "0"}${fullWidth ? ";width:100%" : ""}"><tr><td align="center" style="background:${color};border-radius:${radius}px${borderCss}"><a${cls("f")} href="`),
+          T(`<table${cls("a")} role="presentation" align="${fullWidth ? "center" : align}" cellpadding="0" cellspacing="0"${fullWidth ? ' width="100%"' : ""} style="margin:${align === "center" || fullWidth ? "0 auto" : "0"}${fullWidth ? ";width:100%" : ";max-width:100%"}"><tr><td align="center" style="background:${color};border-radius:${radius}px${borderCss}"><a${cls("f")} href="`),
           ...url,
           T(`"${newTab ? ' target="_blank"' : ""} style="display:${fullWidth ? "block" : "inline-block"};padding:${BUTTON_SIZES[size]};font-size:${fontSize}px;font-weight:${emph.weight ? WEIGHTS[emph.weight] : 700};${emph.italic ? "font-style:italic;" : ""}${emph.letterSpacing ? `letter-spacing:${emph.letterSpacing}px;` : ""}text-decoration:none;color:${ink};border-radius:${radius}px">`),
           ...label,
@@ -428,7 +428,7 @@ function buildBlock(block, env, meta, k = {}) {
       return {
         normalized: { ...(rich ? { leftHtml: leftC.html, rightHtml: rightC.html } : { left: block.left, right: block.right }), ...(ratio !== "50-50" ? { ratio } : {}), ...(stack ? {} : { stack: false }), ...(reverse ? { reverse: true } : {}) },
         nodes: [
-          T(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"${reverse ? ' dir="rtl"' : ""}><tr>`),
+          T(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed"${reverse ? ' dir="rtl"' : ""}><tr>`),
           ...(reverse ? [...cell(wr, "r", right), ...cell(wl, "l", left)] : [...cell(wl, "l", left), ...cell(wr, "r", right)]),
           T("</tr></table>"),
         ],
@@ -484,7 +484,7 @@ function buildBlock(block, env, meta, k = {}) {
       const brand = block.colors !== "accent"; // pastilles : couleurs des réseaux (par défaut) ou couleur principale du message
       const seen = new Set();
       const nodes = display === "buttons"
-        ? [T(`<table${cls("a")} role="presentation" align="${align}" cellpadding="0" cellspacing="0" style="margin:${align === "center" ? "0 auto" : align === "right" ? "0 0 0 auto" : "0"}"><tr>`)]
+        ? [T(`<div${cls("f")} style="font-size:0;line-height:0;text-align:${align}">`)]
         : [T(`<p${cls("f")} style="margin:0;font-size:15px;line-height:1.8;text-align:${align}">`)];
       const normalizedLinks = block.links.map((link, i) => {
         if (!link || typeof link !== "object") throw fail(`Lien ${i + 1} invalide.`);
@@ -494,14 +494,14 @@ function buildBlock(block, env, meta, k = {}) {
         const url = urlNodes(link.url, { system: false });
         if (display === "buttons") {
           const bg = brand ? NETWORK_COLORS[link.network] : theme.accent;
-          nodes.push(T(`<td style="padding:4px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${bg};border-radius:${theme.radius}px"><a href="`), ...url, T(`" style="display:inline-block;padding:8px 14px;font-size:14px;font-weight:700;line-height:1.2;color:${textOn(bg)};text-decoration:none;border-radius:${theme.radius}px">${NETWORKS[link.network]}</a></td></tr></table></td>`));
+          nodes.push(T('<a href="'), ...url, T(`" style="display:inline-block;margin:4px;padding:8px 14px;background:${bg};font-size:14px;font-weight:700;line-height:1.2;color:${textOn(bg)};text-decoration:none;border-radius:${theme.radius}px">${NETWORKS[link.network]}</a>`));
         } else {
           if (i > 0) nodes.push(T("&nbsp;·&nbsp; "));
           nodes.push(T('<a href="'), ...url, T(`" style="color:${theme.accent};font-weight:700;text-decoration:underline">${NETWORKS[link.network]}</a>`));
         }
         return { network: link.network, url: link.url.trim() };
       });
-      nodes.push(T(display === "buttons" ? "</tr></table>" : "</p>"));
+      nodes.push(T(display === "buttons" ? "</div>" : "</p>"));
       return { normalized: { links: normalizedLinks, align, ...(display !== "text" ? { display } : {}), ...(display === "buttons" && !brand ? { colors: "accent" } : {}) }, nodes };
     }
     case "video": {
@@ -608,7 +608,7 @@ function footerNodes(kind, footer, env) {
 // annotate (aperçu de l'éditeur UNIQUEMENT, jamais un envoi) : chaque bloc porte data-mk-block="<id>" pour être
 // sélectionné dans le rendu, et un bloc incomplet est montré à sa place (avec son problème, listé dans
 // meta.blockErrors) au lieu de faire échouer tout l'aperçu. Le rendu d'un envoi reste strict.
-function compileTemplate(template, { allowed = () => false, annotate = false } = {}) {
+function compileTemplate(template, { allowed = () => false, annotate = false, tolerant = false } = {}) {
   if (!template || typeof template !== "object") throw fail("Modèle invalide.");
   const kind = template.kind === undefined ? "marketing" : template.kind;
   if (!KINDS.includes(kind)) throw fail("Type de modèle invalide (marketing ou transactional).");
@@ -669,9 +669,9 @@ function compileTemplate(template, { allowed = () => false, annotate = false } =
     } catch (error) {
       if (!(error instanceof MarketingError)) throw error;
       // Éditeur : le bloc fautif reste visible à sa place, avec son problème ; le reste du message s'affiche normalement
-      if (annotate && typeof id === "string" && /^[a-z0-9_-]{1,40}$/.test(id)) {
+      if ((annotate || tolerant) && typeof id === "string" && /^[a-z0-9_-]{1,40}$/.test(id)) {
         meta.blockErrors.push({ id, type: block.type, index, message: error.message });
-        bodyNodes.push(T(`<tr data-mk-block="${id}" data-mk-error="true"><td style="padding:8px 24px"><div style="padding:16px;border:2px dashed #b7860b;border-radius:8px;background:#fff8e1;color:#6a4e00;font:14px/1.45 -apple-system,Segoe UI,Roboto,Arial,sans-serif">${escapeHtml(error.message)}</div></td></tr>`));
+        bodyNodes.push(T(`<tr${annotate ? ` data-mk-block="${id}"` : ""} data-mk-error="true"><td style="padding:8px 24px"><div style="padding:16px;border:2px dashed #b7860b;border-radius:8px;background:#fff8e1;color:#6a4e00;font:14px/1.45 -apple-system,Segoe UI,Roboto,Arial,sans-serif">${escapeHtml(error.message)}</div></td></tr>`));
         return;
       }
       throw fail(`${at} : ${error.message}`);
@@ -683,10 +683,12 @@ function compileTemplate(template, { allowed = () => false, annotate = false } =
   const ast = [
     T('<!DOCTYPE html>\n<html lang="fr" xmlns="http://www.w3.org/1999/xhtml">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<meta name="x-apple-disable-message-reformatting">\n<meta name="color-scheme" content="light">\n<title>'),
     ...escapeAst(subjectAst),
-    T(`</title>\n<style>@media only screen and (max-width:${theme.maxWidth + 20}px){.mk-container{width:100%!important}.mk-col{display:block!important;width:100%!important;padding:0 0 16px 0!important}.mk-hide-m{display:none!important}.mk-hide-d{display:table-row!important;max-height:none!important;overflow:visible!important}${mobileRules.join("")}}</style>\n</head>\n<body style="margin:0;padding:0;background:${theme.background}">\n`),
+    T(`</title>\n<style>@media only screen and (max-width:${theme.maxWidth + 24}px){.mk-container{width:100%!important}.mk-col{display:block!important;width:100%!important;padding:0 0 16px 0!important}.mk-hide-m{display:none!important}.mk-hide-d{display:table-row!important;max-height:none!important;overflow:visible!important}${mobileRules.join("")}}</style>\n</head>\n<body style="margin:0;padding:0;background:${theme.background}">\n`),
     ...(preheaderSource ? [T(`<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:${theme.background}">`), ...preheaderNodes, T(`${padding}</div>\n`)] : []),
     T(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${theme.background}"><tr><td align="center" style="padding:24px 12px">\n`),
-    T(`<table role="presentation" class="mk-container" width="${theme.maxWidth}" cellpadding="0" cellspacing="0" style="width:${theme.maxWidth}px;max-width:100%;background:${theme.contentBackground};font-family:${font};color:${theme.textColor}">\n`),
+    // Largeur fixe des colonnes (table-layout) + coupure des mots et adresses trop longs : le contenu ne peut jamais
+    // élargir le message au-delà de l'écran (sinon une cellule s'étire à la taille du plus long mot)
+    T(`<table role="presentation" class="mk-container" width="${theme.maxWidth}" cellpadding="0" cellspacing="0" style="width:${theme.maxWidth}px;max-width:100%;table-layout:fixed;overflow-wrap:anywhere;word-wrap:break-word;word-break:break-word;background:${theme.contentBackground};font-family:${font};color:${theme.textColor}">\n`),
     ...bodyNodes,
     ...footerNodes(kind, template.footer, env),
     T("\n</table>\n</td></tr></table>\n</body>\n</html>"),

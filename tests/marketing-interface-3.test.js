@@ -104,7 +104,10 @@ describe("éditeur", () => {
     const data = editorData(page.text);
     assert.equal(data.template.name, "</script><img src=x onerror=alert(1)>");
     assert.ok(data.variables.some((v) => v.path === "contact.first_name"));
-    assert.match(page.text, /<iframe[^>]*sandbox=""/);
+    // Aperçu : rendu sans aucun script (sandbox sans allow-scripts) ; allow-same-origin seul permet de mesurer le rendu
+    // (débordements, images) depuis l'éditeur — formulaires, fenêtres et navigation restent bloqués
+    for (const m of page.text.matchAll(/<iframe[^>]*sandbox="([^"]*)"/g)) assert.match(m[1], /^(allow-same-origin)?$/, m[0]);
+    assert.match(page.text, /<iframe id="mk-preview-frame"[^>]*sandbox="allow-same-origin"/);
     assert.match(page.text, /marketing-editor\.js/);
     assert.equal((await boss.get("/js/marketing-editor.js")).status, 200);
   });
