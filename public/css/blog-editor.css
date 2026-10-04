@@ -1125,3 +1125,25 @@
 .wp-gallery-moves { display: flex; flex-direction: column; gap: 2px; }
 .kb-ed-gallery[data-gap="s"] { gap: 4px; }
 .kb-ed-gallery[data-gap="l"] { gap: 16px; }
+/* Blocs réutilisables, favoris */
+.kb-ed-reusable { margin: 1em 0; border: 2px solid #8fb9d6; border-radius: 10px; overflow: hidden; }
+.kb-ed-reusable.is-editing { border-color: var(--accent); border-style: dashed; }
+.kb-ed-reusable.is-missing { border-color: var(--danger); }
+.kb-ed-reusable-head { display: block; padding: 6px 12px; background: #e8f3fb; color: #035f92; font-size: 12px; font-weight: 700; }
+.kb-ed-reusable.is-editing .kb-ed-reusable-head { background: var(--accent-light); color: var(--accent-dark); }
+.kb-ed-reusable-body, .kb-ed-reusable > div:last-child { padding: 8px 14px; }
+.kb-ed-reusable:not(.is-editing) .kb-ed-reusable-body { pointer-events: none; opacity: 0.92; }
+.wp-block-type-wrap { position: relative; }
+.wp-block-type-wrap > .wp-block-type { width: 100%; }
+.wp-fav { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; border: 0; border-radius: 6px; background: none; color: var(--muted); font-size: 14px; line-height: 1; cursor: pointer; opacity: 0; }
+.wp-block-type-wrap:hover .wp-fav, .wp-fav:focus-visible, .wp-fav.is-on { opacity: 1; }
+.wp-fav.is-on { color: #d97706; }
+.wp-reusable-list { display: grid; gap: 6px; margin-bottom: 8px; }
+.wp-reusable-item { display: grid; gap: 2px; text-align: left; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; cursor: pointer; font: inherit; font-size: 13px; color: var(--primary); }
+.wp-reusable-item:hover { border-color: var(--accent); }
+.wp-reusable-item small { color: var(--muted); font-size: 11px; }
+.wp-reusable-manage { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.wp-reusable-manage li { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius); }
+.wp-reusable-manage-fields { display: grid; gap: 6px; }
+.wp-reusable-banner { margin: 8px 12px; padding: 10px; border-radius: var(--radius); background: var(--accent-light); color: var(--accent-dark); font-size: 13px; font-weight: 600; display: grid; gap: 8px; }
+.wp-reusable-banner p { margin: 0; }

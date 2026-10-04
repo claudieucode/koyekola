@@ -10,7 +10,7 @@ import { DOMSerializer } from "@tiptap/pm/model";
 
 // Blocs de premier niveau qui peuvent être verrouillés
 export const LOCKABLE_TYPES = ["paragraph", "heading", "blockquote", "bulletList", "orderedList", "taskList", "codeBlock", "table", "horizontalRule", "details",
-  "kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbCta", "kbAccordion", "kbFaq", "kbSteps", "kbCompare", "kbSpacer", "kbPageBreak", "kbColumns", "kbGroup", "kbButtons"];
+  "kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbCta", "kbAccordion", "kbFaq", "kbSteps", "kbCompare", "kbSpacer", "kbPageBreak", "kbColumns", "kbGroup", "kbButtons", "kbReusable"];
 const LOCK_META = "kbLockChange";
 export const lockKey = new PluginKey("kbBlockLock");
 
@@ -125,6 +125,14 @@ export function findMatches(doc, query, { caseSensitive = false } = {}) {
     return false;
   });
   return out;
+}
+
+// HTML du contenu d'un nœud (blocs enfants)
+export function contentHtml(editor, node) {
+  const frag = DOMSerializer.fromSchema(editor.schema).serializeFragment(node.content);
+  const wrap = document.createElement("div");
+  wrap.append(frag);
+  return wrap.innerHTML;
 }
 
 // HTML d'un bloc (copier vers le presse-papiers du système)

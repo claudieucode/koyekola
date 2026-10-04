@@ -357,4 +357,61 @@ export const PullquoteAttr = Extension.create({
   },
 });
 
-export const BLOG_NODES = [KbSpacer, KbPageBreak, KbColumn, KbColumns, KbGroup, KbButtons, PullquoteAttr, KbImage, KbGallery, KbVideo, KbAudio, KbEmbed, KbCourse, KbNewsletter, KbButton, Callout, KbCta, KbSummary, KbAccordionBody, KbAccordion, KbFaqAnswer, KbFaqItem, KbFaq, KbSteps, KbCompareCol, KbCompare];
+// ---------- Blocs réutilisables synchronisés ----------
+// Repère vers un bloc enregistré : le contenu est lu sur le serveur (lecture seule ici, modifiable via « Modifier l'original »)
+const reusableCache = new Map();
+export const reusableContent = (ref) => {
+  if (!reusableCache.has(ref)) reusableCache.set(ref, fetch(`/formateur/blog/api/blocs/${ref}`, { credentials: "same-origin", headers: { Accept: "application/json" } }).then((r) => (r.ok ? r.json() : null)).then((d) => (d ? d.block : null)).catch(() => null));
+  return reusableCache.get(ref);
+};
+export const forgetReusable = (ref) => reusableCache.delete(ref);
+export const KbReusable = Node.create({
+  name: "kbReusable",
+  group: "block",
+  atom: true,
+  draggable: true,
+  addAttributes() { return { ref: { default: "" }, name: { default: "" } }; },
+  parseHTML() { return [{ tag: "div.kb-reusable", priority: 80, getAttrs: (el) => (/^\d+$/.test(el.getAttribute("data-ref") || "") ? { ref: el.getAttribute("data-ref") } : false) }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-reusable", "data-ref": node.attrs.ref, ...lockOf(node) }]; },
+  addNodeView() {
+    return ({ node }) => {
+      const dom = document.createElement("div");
+      dom.className = "kb-ed-reusable";
+      dom.contentEditable = "false";
+      const head = span("kb-ed-reusable-head", "↻ Bloc synchronisé…");
+      const body = document.createElement("div");
+      body.className = "kb-ed-reusable-body";
+      dom.append(head, body);
+      reusableContent(node.attrs.ref).then((b) => {
+        if (!b) { head.textContent = "⚠ Bloc synchronisé introuvable (supprimé ?)"; dom.classList.add("is-missing"); return; }
+        head.textContent = `↻ Bloc synchronisé : « ${b.name} » — le modifier le change partout`;
+        body.innerHTML = b.content; // contenu déjà filtré par le serveur à l'enregistrement
+      });
+      return { dom };
+    };
+  },
+});
+// Bloc synchronisé en cours de modification : contenu modifiable ; enregistré comme repère (jamais dupliqué dans l'article)
+export const KbReusableEdit = Node.create({
+  name: "kbReusableEdit",
+  group: "block",
+  content: "block+",
+  defining: true,
+  isolating: true,
+  addAttributes() { return { ref: { default: "" }, name: { default: "" } }; },
+  parseHTML() { return []; },
+  renderHTML({ node }) { return ["div", { class: "kb-reusable", "data-ref": node.attrs.ref }]; },
+  addNodeView() {
+    return ({ node }) => {
+      const dom = document.createElement("div");
+      dom.className = "kb-ed-reusable is-editing";
+      const head = span("kb-ed-reusable-head", `✎ Modification du bloc synchronisé « ${node.attrs.name} » — s'appliquera partout (onglet Bloc : Enregistrer / Annuler)`);
+      head.contentEditable = "false";
+      const body = document.createElement("div");
+      dom.append(head, body);
+      return { dom, contentDOM: body };
+    };
+  },
+});
+
+export const BLOG_NODES = [KbReusable, KbReusableEdit, KbSpacer, KbPageBreak, KbColumn, KbColumns, KbGroup, KbButtons, PullquoteAttr, KbImage, KbGallery, KbVideo, KbAudio, KbEmbed, KbCourse, KbNewsletter, KbButton, Callout, KbCta, KbSummary, KbAccordionBody, KbAccordion, KbFaqAnswer, KbFaqItem, KbFaq, KbSteps, KbCompareCol, KbCompare];

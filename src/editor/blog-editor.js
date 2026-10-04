@@ -17,12 +17,13 @@ import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
 import { Placeholder, Focus } from "@tiptap/extensions";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
-import { BLOG_NODES, CALLOUT_LABELS } from "./blog/nodes";
+import { DOMParser as PMDOMParser } from "@tiptap/pm/model";
+import { BLOG_NODES, CALLOUT_LABELS, reusableContent, forgetReusable } from "./blog/nodes";
 import { BlockHandle, moveBlock, startBlockDrag, endBlockDrag, zoneBlockPos, ZONES } from "./blog/dragHandle";
 import { createWorkspace } from "./blog/workspace";
 import { createSeoData, createRenderers } from "./blog/seoPanels";
 import { setupWorkspaceUi } from "./blog/workspaceUi";
-import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, isLocked, findMatches, findKey, blockHtml } from "./blog/editing";
+import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, isLocked, findMatches, findKey, blockHtml, contentHtml } from "./blog/editing";
 import { analyze, norm } from "../utils/seoAnalyzer";
 
 const root = document.querySelector("[data-blog-editor]");
@@ -302,8 +303,22 @@ function start() {
     { id: "youtube", title: "YouTube", cat: "Intégrations", icon: "video", desc: "Intégrez une vidéo YouTube.", run: () => urlPrompt("YouTube", "Adresse de la vidéo YouTube", "https://www.youtube.com/watch?v=…", (url) => blk({ type: "kbVideo", attrs: { url, caption: "" } })) },
     { id: "vimeo", title: "Vimeo", cat: "Intégrations", icon: "video", desc: "Intégrez une vidéo Vimeo.", run: () => urlPrompt("Vimeo", "Adresse de la vidéo Vimeo", "https://vimeo.com/…", (url) => blk({ type: "kbVideo", attrs: { url, caption: "" } })) },
   ];
-  const CATS = ["Texte", "KOLAKISA", "Média", "Mise en forme", "Intégrations"];
-  const blockButton = (b, after) => h("button", { type: "button", class: b.brand ? "wp-block-type is-brand" : "wp-block-type", onclick: () => { after?.(); b.run(); } }, h("span", { class: "wp-block-type-icon" }, svg(b.icon)), h("span", { class: "wp-block-type-title" }, b.title));
+  const CATS = ["Texte", "KOLAKISA", "Média", "Mise en forme", "Mise en page", "Intégrations"];
+  // ---------- Préférences personnelles : favoris, récents, réglages (enregistrées sur le compte) ----------
+  let editorPrefs = DATA.editorPrefs || { favorites: [], recents: [], settings: {} };
+  const persistPrefs = debounce(() => { api("/formateur/blog/api/preferences", { method: "PUT", json: { favorites: editorPrefs.favorites, recents: editorPrefs.recents, settings: editorPrefs.settings } }).then((r) => { editorPrefs = r.prefs; }).catch(() => toast("Préférences de l'éditeur non enregistrées (connexion ?).", "error")); }, 600);
+  const useBlock = (id) => { editorPrefs.recents = [id, ...editorPrefs.recents.filter((x) => x !== id)].slice(0, 8); persistPrefs(); };
+  const toggleFavorite = (id) => { editorPrefs.favorites = editorPrefs.favorites.includes(id) ? editorPrefs.favorites.filter((x) => x !== id) : [...editorPrefs.favorites, id]; persistPrefs(); };
+  // ---------- Blocs réutilisables ----------
+  let reusableList = [];
+  const loadReusable = () => api("/formateur/blog/api/blocs").then((r) => { reusableList = r.blocks; return reusableList; }).catch(() => reusableList);
+  const insertReusable = (b) => (b.synced ? blk({ type: "kbReusable", attrs: { ref: String(b.id), name: b.name } }) : editor.chain().focus().insertContent(b.content).run());
+  const blockButton = (b, after, { star = false, onStar } = {}) => {
+    const btn = h("button", { type: "button", class: b.brand ? "wp-block-type is-brand" : "wp-block-type", onclick: () => { after?.(); useBlock(b.id); b.run(); } }, h("span", { class: "wp-block-type-icon" }, svg(b.icon)), h("span", { class: "wp-block-type-title" }, b.title));
+    if (!star) return btn;
+    const fav = editorPrefs.favorites.includes(b.id);
+    return h("div", { class: "wp-block-type-wrap" }, btn, h("button", { type: "button", class: `wp-fav${fav ? " is-on" : ""}`, "aria-pressed": String(fav), "aria-label": fav ? `Retirer « ${b.title} » des favoris` : `Ajouter « ${b.title} » aux favoris`, title: fav ? "Retirer des favoris" : "Ajouter aux favoris", onclick: (e) => { e.stopPropagation(); toggleFavorite(b.id); onStar?.(); } }, fav ? "★" : "☆"));
+  };
   const matches = (b, q) => !q || norm(`${b.title} ${b.cat} ${b.keywords || ""} ${b.desc}`).includes(norm(q));
   function urlPrompt(title, label, placeholder, done, { kind, transform, check, error } = {}) {
     const url = input({ type: transform ? "text" : "url", placeholder });
@@ -344,15 +359,26 @@ function start() {
     const search = input({ type: "search", placeholder: "Rechercher", "aria-label": "Rechercher un bloc", class: "wp-search" });
     const grid = h("div", { class: "wp-inserter-blocks" });
     const media = h("div", { class: "wp-inserter-media", hidden: true });
-    const render = () => {
+    const hidden = new Set((editorPrefs.settings && editorPrefs.settings.hiddenBlocks) || []);
+    const visible = BLOCKS.filter((b) => !hidden.has(b.id));
+    const byId = (id) => visible.find((b) => b.id === id);
+    const section = (title, items) => { if (items.length) grid.append(h("h2", { class: "wp-inserter-cat" }, title), h("div", { class: "wp-block-types" }, ...items.map((b) => blockButton(b, null, { star: true, onStar: render })))); };
+    function render() {
       grid.replaceChildren();
-      for (const cat of CATS) {
-        const items = BLOCKS.filter((b) => b.cat === cat && matches(b, search.value));
-        if (!items.length) continue;
-        grid.append(h("h2", { class: "wp-inserter-cat" }, cat), h("div", { class: "wp-block-types" }, ...items.map((b) => blockButton(b))));
+      const q = search.value;
+      if (!q) {
+        section("★ Favoris", editorPrefs.favorites.map(byId).filter(Boolean));
+        section("Récents", editorPrefs.recents.map(byId).filter(Boolean).slice(0, 6));
       }
-      if (!grid.children.length) grid.append(h("p", { class: "wp-help" }, "Aucun résultat."));
-    };
+      for (const cat of CATS) section(cat, visible.filter((b) => b.cat === cat && matches(b, q)));
+      const reus = reusableList.filter((b) => !q || norm(`${b.name} ${b.category}`).includes(norm(q)));
+      grid.append(h("h2", { class: "wp-inserter-cat" }, "Réutilisables"));
+      if (reus.length) grid.append(h("div", { class: "wp-reusable-list" }, ...reus.map((b) => h("button", { type: "button", class: "wp-reusable-item", onclick: () => { insertReusable(b); } }, h("strong", {}, b.name), h("small", {}, `${b.synced ? "↻ Synchronisé" : "Copie"}${b.category ? ` · ${b.category}` : ""}${b.synced && b.uses ? ` · ${b.uses} article(s)` : ""}`)))));
+      else grid.append(h("p", { class: "wp-help" }, q ? "Aucun bloc réutilisable ne correspond." : "Aucun bloc réutilisable : clic droit sur un bloc → « Enregistrer comme bloc réutilisable »."));
+      grid.append(h("button", { type: "button", class: "wp-btn-link", onclick: manageReusable }, "Gérer les blocs réutilisables…"));
+      if (!grid.querySelector(".wp-block-type, .wp-reusable-item") && q) grid.prepend(h("p", { class: "wp-help" }, "Aucun résultat."));
+    }
+    loadReusable().then(() => { if (secondaryMode === "inserter") render(); });
     const tabs = segmentedTabs([["blocs", "Blocs"], ["medias", "Médias"]], (k) => { grid.hidden = k !== "blocs"; media.hidden = k !== "medias"; if (k === "medias") loadMediaTab(media); });
     search.addEventListener("input", render);
     secondaryDynamic.replaceChildren(tabs, h("div", { class: "wp-secondary-body" }, search, grid, media));
@@ -372,7 +398,7 @@ function start() {
       if (!media.length) box.prepend(h("p", { class: "wp-help" }, "Aucune image téléversée pour l'instant."));
     } catch (e) { box.replaceChildren(h("p", { class: "wp-error" }, e.message)); }
   }
-  const LABEL = { paragraph: "Paragraphe", heading: "Titre", bulletList: "Liste", orderedList: "Liste numérotée", listItem: "Élément de liste", taskList: "Liste de contrôle", taskItem: "Élément", blockquote: "Citation", codeBlock: "Code", horizontalRule: "Séparateur", table: "Tableau", tableRow: "Ligne", tableCell: "Cellule", tableHeader: "En-tête", kbImage: "Image", kbGallery: "Galerie", kbVideo: "Vidéo", kbAudio: "Audio", kbEmbed: "Contenu embarqué", kbCourse: "Formation recommandée", kbNewsletter: "Newsletter", kbButton: "Bouton", callout: "Encadré", kbCta: "Appel à l'action", kbAccordion: "Détails", kbSummary: "Résumé", kbAccordionBody: "Contenu", kbFaq: "FAQ", kbFaqItem: "Question", kbFaqAnswer: "Réponse", kbSteps: "Étapes", kbCompare: "Comparaison", kbCompareCol: "Colonne", kbSpacer: "Espaceur", kbPageBreak: "Saut de page", kbColumns: "Colonnes", kbColumn: "Colonne", kbGroup: "Groupe", kbButtons: "Groupe de boutons" };
+  const LABEL = { paragraph: "Paragraphe", heading: "Titre", bulletList: "Liste", orderedList: "Liste numérotée", listItem: "Élément de liste", taskList: "Liste de contrôle", taskItem: "Élément", blockquote: "Citation", codeBlock: "Code", horizontalRule: "Séparateur", table: "Tableau", tableRow: "Ligne", tableCell: "Cellule", tableHeader: "En-tête", kbImage: "Image", kbGallery: "Galerie", kbVideo: "Vidéo", kbAudio: "Audio", kbEmbed: "Contenu embarqué", kbCourse: "Formation recommandée", kbNewsletter: "Newsletter", kbButton: "Bouton", callout: "Encadré", kbCta: "Appel à l'action", kbAccordion: "Détails", kbSummary: "Résumé", kbAccordionBody: "Contenu", kbFaq: "FAQ", kbFaqItem: "Question", kbFaqAnswer: "Réponse", kbSteps: "Étapes", kbCompare: "Comparaison", kbCompareCol: "Colonne", kbSpacer: "Espaceur", kbPageBreak: "Saut de page", kbColumns: "Colonnes", kbColumn: "Colonne", kbGroup: "Groupe", kbButtons: "Groupe de boutons", kbReusable: "Bloc synchronisé", kbReusableEdit: "Bloc synchronisé (modification)" };
   const ICON_OF = { paragraph: "paragraph", heading: "heading", bulletList: "list", orderedList: "ordered", taskList: "checklist", blockquote: "quote", codeBlock: "code", horizontalRule: "separator", table: "table", kbImage: "image", kbGallery: "gallery", kbVideo: "video", kbAudio: "audio", kbEmbed: "embed", kbCourse: "course", kbNewsletter: "newsletter", kbButton: "button", callout: "callout", kbCta: "cta", kbAccordion: "details", kbFaq: "faq", kbSteps: "steps", kbCompare: "columns", kbSpacer: "separator", kbPageBreak: "separator", kbColumns: "columns", kbGroup: "callout", kbButtons: "button" };
   const nameOf = (node) => (node.type.name === "heading" ? `Titre H${node.attrs.level}` : node.type.name === "callout" ? `Encadré ${CALLOUT_LABELS[node.attrs.type] || ""}` : LABEL[node.type.name] || node.type.name);
   function renderListView() {
@@ -402,7 +428,9 @@ function start() {
   // Bloc ciblé par la barre d'outils et la barre latérale : bloc entier sélectionné, sinon le plus petit bloc « réglable »
   // Conteneurs de mise en page : on règle leur contenu bloc par bloc ; eux-mêmes se sélectionnent par « Sélectionner le conteneur »
   const LAYOUT_TYPES = new Set(["kbColumns", "kbColumn", "kbGroup", "kbButtons"]);
-  const SETTINGS_TYPES = new Set(["kbSpacer", "kbPageBreak", "kbColumns", "kbGroup", "kbButtons", "kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbSteps", "kbCompare", "table", "kbCta", "kbFaq", "kbAccordion", "bulletList", "orderedList", "taskList", "blockquote"]);
+  // Bloc synchronisé en cours de modification qui contient le curseur (actions dans l'onglet Bloc)
+  const editingReusableAt = () => { const $p = editor.state.selection.$from; for (let d = $p.depth; d >= 1; d--) if ($p.node(d).type.name === "kbReusableEdit") return { pos: $p.before(d), node: $p.node(d) }; return null; };
+  const SETTINGS_TYPES = new Set(["kbReusable", "kbSpacer", "kbPageBreak", "kbColumns", "kbGroup", "kbButtons", "kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbSteps", "kbCompare", "table", "kbCta", "kbFaq", "kbAccordion", "bulletList", "orderedList", "taskList", "blockquote"]);
   function currentBlock() {
     const sel = editor.state.selection;
     // « top » : le bloc à déplacer / dupliquer / supprimer — au premier niveau, ou dans une colonne / un groupe
@@ -516,7 +544,12 @@ function start() {
     ];
     return items;
   }
-  let blockMenuExtra = null; // actions ajoutées par d'autres modules (blocs réutilisables)
+  // Actions des blocs réutilisables dans le menu du bloc
+  const blockMenuExtra = (top, node) => {
+    if (node.type.name === "kbReusable") return [{ label: "✎ Modifier l'original (tous les articles)", run: () => editReusable(top) }, { label: "Convertir en blocs normaux", run: () => detachReusable(top) }];
+    if (node.type.name === "kbReusableEdit") return [{ label: "✓ Enregistrer le bloc (tous les articles)", run: () => commitReusable(top) }, { label: "Annuler les modifications du bloc", run: () => commitReusable(top, { cancel: true }) }];
+    return [{ label: "Enregistrer comme bloc réutilisable…", run: () => saveAsReusable(top) }];
+  };
   let lastMenuAnchor = null;
   function blockOptions(anchor, b) {
     lastMenuAnchor = anchor;
@@ -539,6 +572,97 @@ function start() {
     setTimeout(done, 60000);
     pop.querySelector("button")?.focus();
   }
+  // ---------- Blocs réutilisables : enregistrer, modifier l'original, convertir, gérer ----------
+  function saveAsReusable(top) {
+    const node = editor.state.doc.nodeAt(top);
+    if (!node) return;
+    const name = input({ maxlength: 80, placeholder: "Ex. Encadré d'inscription" });
+    const cat = input({ maxlength: 40, placeholder: "Ex. Appels à l'action" });
+    const synced = h("input", { type: "checkbox", id: "wp-reusable-synced", checked: true });
+    const err = h("p", { class: "wp-error", hidden: true });
+    modal("Enregistrer comme bloc réutilisable", h("div", {}, control("Nom", name), control("Catégorie (facultatif)", cat),
+      h("label", { class: "wp-checkbox", for: "wp-reusable-synced" }, synced, " Synchronisé : une modification du bloc s'appliquera à tous les articles qui l'utilisent"),
+      h("p", { class: "wp-help" }, "Non synchronisé : chaque insertion est une copie indépendante."), err), [
+      { label: "Annuler" },
+      { label: "Enregistrer", primary: true, run: async () => {
+        try {
+          const json = node.toJSON();
+          if (json.attrs && json.attrs.locked) json.attrs = { ...json.attrs, locked: false };
+          const html = blockHtml(editor, top).replace(/ data-locked="true"/g, "");
+          const { block } = await api("/formateur/blog/api/blocs", { method: "POST", json: { name: name.value, category: cat.value, html, synced: synced.checked } });
+          reusableList = [...reusableList, block];
+          if (block.synced) {
+            const cur = editor.state.doc.nodeAt(top);
+            if (cur) editor.view.dispatch(editor.state.tr.replaceWith(top, top + cur.nodeSize, editor.schema.nodes.kbReusable.create({ ref: String(block.id), name: block.name })));
+          }
+          toast(block.synced ? `Bloc synchronisé « ${block.name} » créé : il est maintenant relié à l'original.` : `Bloc « ${block.name} » enregistré dans les réutilisables.`);
+          return false;
+        } catch (e) { err.textContent = e.message; err.hidden = false; return true; }
+      } },
+    ]);
+    setTimeout(() => name.focus(), 30);
+  }
+  async function editReusable(pos) {
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node || node.type.name !== "kbReusable") return;
+    forgetReusable(node.attrs.ref);
+    const b = await reusableContent(node.attrs.ref);
+    if (!b) { toast("Bloc synchronisé introuvable.", "error"); return; }
+    const container = document.createElement("div");
+    container.innerHTML = b.content;
+    const doc = PMDOMParser.fromSchema(editor.schema).parse(container);
+    const edit = editor.schema.nodes.kbReusableEdit.create({ ref: node.attrs.ref, name: b.name }, doc.content);
+    const cur = editor.state.doc.nodeAt(pos);
+    editor.view.dispatch(editor.state.tr.replaceWith(pos, pos + cur.nodeSize, edit));
+    toast(`Vous modifiez l'original de « ${b.name} » : « Enregistrer le bloc » (onglet Bloc) l'appliquera partout.`);
+  }
+  async function commitReusable(pos, { cancel = false } = {}) {
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node || node.type.name !== "kbReusableEdit") return true;
+    if (!cancel) {
+      try {
+        await api(`/formateur/blog/api/blocs/${node.attrs.ref}`, { method: "POST", json: { html: contentHtml(editor, node) } });
+      } catch (e) { toast(`Bloc non enregistré : ${e.message}`, "error"); return false; }
+    }
+    forgetReusable(node.attrs.ref);
+    let at = pos;
+    if (editor.state.doc.nodeAt(at) !== node) editor.state.doc.descendants((n, p2) => { if (n === node) { at = p2; return false; } return true; });
+    editor.view.dispatch(editor.state.tr.replaceWith(at, at + node.nodeSize, editor.schema.nodes.kbReusable.create({ ref: node.attrs.ref, name: node.attrs.name })));
+    if (!cancel) toast(`Bloc « ${node.attrs.name} » enregistré : modifié dans tous les articles qui l'utilisent.`);
+    loadReusable();
+    return true;
+  }
+  // Avant d'enregistrer l'article : les blocs synchronisés en cours de modification sont enregistrés d'abord
+  async function commitAllReusableEdits() {
+    const edits = [];
+    editor.state.doc.descendants((n, p2) => { if (n.type.name === "kbReusableEdit") edits.push(p2); return n.type.name !== "kbReusableEdit"; });
+    for (const p2 of edits.reverse()) if (!(await commitReusable(p2))) return false;
+    return true;
+  }
+  async function detachReusable(pos) {
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node || node.type.name !== "kbReusable") return;
+    const b = await reusableContent(node.attrs.ref);
+    if (!b) { toast("Bloc synchronisé introuvable.", "error"); return; }
+    const cur = editor.state.doc.nodeAt(pos);
+    editor.chain().focus().command(({ tr }) => { tr.delete(pos, pos + cur.nodeSize); return true; }).insertContentAt(pos, b.content).run();
+    toast("Converti en blocs normaux : ce contenu n'est plus relié à l'original.");
+  }
+  function manageReusable() {
+    const listEl = h("ul", { class: "wp-reusable-manage" });
+    const draw = () => listEl.replaceChildren(...(reusableList.length ? reusableList.map((b) => {
+      const nm = input({ value: b.name, maxlength: 80, "aria-label": "Nom" });
+      const ct = input({ value: b.category, maxlength: 40, placeholder: "Catégorie", "aria-label": "Catégorie" });
+      return h("li", {}, h("div", { class: "wp-reusable-manage-fields" }, nm, ct, h("small", {}, `${b.synced ? `↻ Synchronisé · ${b.uses || 0} article(s)` : "Copie"} · modifié le ${fmtDate(b.updatedAt)}`)),
+        h("div", { class: "wp-button-row" },
+          h("button", { type: "button", class: "wp-btn-secondary", onclick: async () => { try { await api(`/formateur/blog/api/blocs/${b.id}`, { method: "POST", json: { name: nm.value, category: ct.value } }); await loadReusable(); toast("Bloc renommé."); draw(); } catch (e) { toast(e.message, "error"); } } }, "Enregistrer"),
+          h("button", { type: "button", class: "wp-btn-link is-danger", onclick: async () => { if (!confirm(`Supprimer le bloc « ${b.name} » ?`)) return; try { await api(`/formateur/blog/api/blocs/${b.id}/supprimer`, { method: "POST" }); await loadReusable(); toast("Bloc supprimé."); draw(); } catch (e) { toast(e.message, "error"); } } }, "Supprimer")));
+    }) : [h("li", { class: "wp-help" }, "Aucun bloc réutilisable.")]));
+    loadReusable().then(draw);
+    draw();
+    modal("Blocs réutilisables", h("div", {}, h("p", { class: "wp-help" }, "Pour modifier le contenu d'un bloc synchronisé : insérez-le, puis « Modifier l'original » (onglet Bloc)."), listEl), [{ label: "Fermer" }]);
+  }
+
   // Recadrage d'une image : zone choisie à la souris (libre ou proportions fixes), nouvelle image créée dans la
   // médiathèque (l'originale est conservée), versions réduites générées comme pour tout envoi
   function cropImage(pos) {
@@ -1218,6 +1342,9 @@ function start() {
     const t = node.type.name;
     const a = node.attrs;
     const set = (attrs) => setAttrsAt(b.pos, attrs);
+    const editingReusable = editingReusableAt();
+    if (editingReusable) inspector.append(h("div", { class: "wp-reusable-banner" }, h("p", {}, `✎ Modification de l'original « ${editingReusable.node.attrs.name} »`),
+      h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-primary", onclick: () => commitReusable(editingReusable.pos) }, "Enregistrer le bloc (partout)"), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => commitReusable(editingReusable.pos, { cancel: true }) }, "Annuler"))));
     inspector.append(h("div", { class: "wp-block-card" }, h("span", { class: "wp-block-card-icon" }, svg(ICON_OF[t] || "paragraph")), h("div", {}, h("h2", {}, nameOf(node)), h("p", {}, DESC[t] || ""))));
     const section = (title, ...children) => h("div", { class: "wp-panel is-open" }, h("h2", { class: "wp-panel-title is-static" }, title), h("div", { class: "wp-panel-body" }, ...children));
     const bind = (el, key, transform = (x) => x) => { el.addEventListener("input", debounce(() => set({ [key]: transform(el.value) }), 300)); return el; };
@@ -1333,6 +1460,9 @@ function start() {
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => chain().toggleHeaderRow().run() }, "Ligne d'en-tête"),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => chain().addRowAfter().run() }, "+ Ligne"),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => chain().addColumnAfter().run() }, "+ Colonne"))));
+    } else if (t === "kbReusable") {
+      inspector.append(section("Bloc synchronisé", h("p", { class: "wp-help" }, "Ce contenu est partagé : le modifier change tous les articles qui l'utilisent."),
+        h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-primary", onclick: () => editReusable(b.pos) }, "Modifier l'original"), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => detachReusable(b.pos) }, "Convertir en blocs normaux"))));
     } else if (t === "blockquote") {
       inspector.append(section("Réglages", checkbox("Citation mise en avant (grande, centrée)", Boolean(a.pullquote), (v) => set({ pullquote: v }))));
     } else if (t === "kbSpacer") {
@@ -1742,6 +1872,7 @@ function start() {
     if (saving) return false;
     if (status) { statusSelect.value = status; syncStatus(); }
     if (!field("title").value.trim()) { toast("Ajoutez un titre avant d'enregistrer.", "error"); titleField.focus(); return false; }
+    if (!(await commitAllReusableEdits())) return false;
     saving = true;
     setState("Enregistrement…", "is-saving");
     try {
@@ -2150,7 +2281,9 @@ function start() {
     wsUi = setupWorkspaceUi({
       h, modal, control, input, toast, api, ws: workspace, data: seoData, renderers: seoRenderers, DATA, postId: () => postId,
       actions: () => [
-        ...BLOCKS.map((b) => ({ id: `insert:${b.id}`, group: "Insérer", label: `Ajouter : ${b.title}`, run: () => { editor.commands.focus(); b.run(); } })),
+        ...BLOCKS.map((b) => ({ id: `insert:${b.id}`, group: "Insérer", label: `Ajouter : ${b.title}`, run: () => { editor.commands.focus(); useBlock(b.id); b.run(); } })),
+        ...reusableList.map((b) => ({ id: `reusable:${b.id}`, group: "Réutilisables", label: `Insérer le bloc réutilisable : ${b.name}${b.synced ? " (synchronisé)" : ""}`, run: () => { editor.commands.focus(); insertReusable(b); } })),
+        { id: "ed:reusable", group: "Réutilisables", label: "Gérer les blocs réutilisables…", run: () => manageReusable() },
         { id: "ed:save", group: "Article", label: "Enregistrer", run: () => save() },
         { id: "ed:publish", group: "Article", label: $("[data-publish]").textContent.trim(), run: () => $("[data-publish]").click() },
         { id: "ed:preview-desktop", group: "Aperçu", label: "Aperçu ordinateur", run: () => $('[data-preview="desktop"]').click() },
@@ -2181,6 +2314,7 @@ function start() {
   $("[data-seo-analyse]")?.addEventListener("click", () => seoData.emit("action", { type: "analyse-online" }));
 
   // ---------- Premier affichage ----------
+  loadReusable();
   refreshCounters();
   refreshPreviews();
   refreshAnalysis();

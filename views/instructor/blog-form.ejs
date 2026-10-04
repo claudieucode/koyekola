@@ -13,7 +13,7 @@
     categories: categories.map((c) => c.name), subcategories, tags, courses, revisions, statuses,
     autosave: autosave ? { savedAt: autosave.saved_at, data: autosave.data } : null,
     coverPath: post ? post.cover_path : null, ogImagePath: post ? post.og_image_path : null, twitterImagePath: post ? post.twitter_image_path : null,
-    editorTheme, editorThemes, seoWorkspace, funScript: asset('/js/seo-fun.js'),
+    editorTheme, editorThemes, seoWorkspace, editorPrefs, funScript: asset('/js/seo-fun.js'),
   };
   const json = JSON.stringify(pageData).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
   const panel = (key, title, open) => `<div class="wp-panel${open ? " is-open" : ""}" data-panel="${key}"><h2 class="wp-panel-title"><button type="button" aria-expanded="${open ? "true" : "false"}" aria-controls="wp-panel-${key}" data-panel-toggle>${title}<span class="wp-chevron" aria-hidden="true"></span></button></h2><div class="wp-panel-body" id="wp-panel-${key}"${open ? "" : " hidden"}>`;

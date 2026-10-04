@@ -23,6 +23,7 @@ const seoStore = require("../seo/store");
 const seoAudit = require("../seo/audit");
 const seoRules = require("../seo/rules");
 const seoWorkspace = require("../seo/workspace");
+const reusable = require("../services/reusableBlocks");
 const seoImages = require("../seo/images");
 const seoIntegrations = require("../seo/integrations");
 const SEO_LOGGED = ["title", "slug", "seo_title", "seo_description", "canonical_url", "robots_index", "robots_follow", "og_title", "og_description", "og_image_path", "twitter_title", "twitter_description", "twitter_card", "focus_keyword", "secondary_keywords", "schema_type", "status"];
@@ -425,6 +426,7 @@ function editorData(req, post) {
     newsletterReady: Boolean(marketing && marketing.ready && newsletterForm(req)),
     editorTheme: editorTheme.describe(db.prepare("SELECT editor_theme, editor_color FROM user_prefs WHERE user_id = ?").get(req.session.user.id)), editorThemes: editorTheme.THEMES,
     seoWorkspace: seoWorkspace.prefsOf(req.session.user.id),
+    editorPrefs: reusable.prefsOf(req.session.user.id),
   };
 }
 
@@ -508,6 +510,22 @@ router.delete("/formateur/blog/api/espace-seo/dispositions/:name", (req, res) =>
 router.put("/formateur/blog/api/espace-seo/fun", express.json({ limit: "8kb" }), (req, res) => {
   res.json({ ok: true, fun: seoWorkspace.saveFun(req.session.user.id, req.body && req.body.fun) });
 });
+
+// ---------- Blocs réutilisables et préférences de l'éditeur ----------
+const reusableJson = (b) => ({ id: b.id, name: b.name, category: b.category, synced: Boolean(b.synced), content: b.content, updatedAt: b.updated_at, uses: b.synced ? reusable.usage(b.id).length : null });
+const userError = (res, e) => { if (e instanceof UserError) return res.status(400).json({ error: e.message }); throw e; };
+router.get("/formateur/blog/api/blocs", (req, res) => res.json({ blocks: reusable.list({ q: String(req.query.q || "") }).map(reusableJson) }));
+router.get("/formateur/blog/api/blocs/:bid(\\d+)", (req, res) => { const b = reusable.get(Number(req.params.bid)); if (!b) return res.status(404).json({ error: "Bloc introuvable." }); res.json({ block: reusableJson(b) }); });
+router.post("/formateur/blog/api/blocs", express.json({ limit: "600kb" }), (req, res) => {
+  try { res.json({ block: reusableJson(reusable.create(req.body || {}, req.session.user.id)) }); } catch (e) { userError(res, e); }
+});
+router.post("/formateur/blog/api/blocs/:bid(\\d+)", express.json({ limit: "600kb" }), (req, res) => {
+  try { res.json({ block: reusableJson(reusable.update(Number(req.params.bid), req.body || {})) }); } catch (e) { userError(res, e); }
+});
+router.post("/formateur/blog/api/blocs/:bid(\\d+)/supprimer", (req, res) => {
+  try { reusable.remove(Number(req.params.bid)); res.json({ ok: true }); } catch (e) { userError(res, e); }
+});
+router.put("/formateur/blog/api/preferences", express.json({ limit: "16kb" }), (req, res) => res.json({ prefs: reusable.savePrefs(req.session.user.id, req.body || {}) }));
 
 // Apparence des barres latérales de l'éditeur (choix personnel, enregistré sur le compte)
 router.post("/formateur/blog/api/apparence", express.json(), (req, res) => {
