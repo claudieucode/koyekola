@@ -34,6 +34,11 @@ const RATIOS = { "50-50": [50, 50], "60-40": [60, 40], "40-60": [40, 60], "70-30
 const BUTTON_SIZES = { s: "8px 16px", m: "12px 24px", l: "16px 32px" };
 const NETWORKS = { facebook: "Facebook", instagram: "Instagram", x: "X", linkedin: "LinkedIn", youtube: "YouTube", tiktok: "TikTok", whatsapp: "WhatsApp", website: "Site web" };
 const LIST_STYLES = ["bullets", "numbers", "checks"];
+const BORDER_STYLES = ["solid", "dashed", "dotted"];
+const WEIGHTS = { normal: 400, bold: 700 };
+// Couleurs officielles des réseaux (pastilles du bloc « réseaux sociaux », texte blanc lisible sur chacune)
+const NETWORK_COLORS = { facebook: "#1877f2", instagram: "#c13584", x: "#000000", linkedin: "#0a66c2", youtube: "#cc0000", tiktok: "#010101", whatsapp: "#128c4b", website: "#334155" };
+const SOCIAL_STYLES = ["text", "buttons"];
 const MAX_LIST_ITEMS = 20;
 const MAX_SOCIAL = 8;
 const LOCAL_HTTP = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?(\/[^\s<>"'`\\]*)?$/i;
@@ -107,9 +112,19 @@ function typography(block, { sizeMin = 12, sizeMax = 28 } = {}) {
   }
   const color = optHex(block.color, "Couleur du texte");
   if (color) out.color = color;
+  Object.assign(out, emphasis(block));
   return out;
 }
-const typoCss = (t) => [t.font ? `font-family:${FONTS[t.font]}` : "", t.fontSize ? `font-size:${t.fontSize}px` : "", t.lineHeight ? `line-height:${t.lineHeight}` : "", t.color ? `color:${t.color}` : ""].filter(Boolean).join(";");
+// Graisse, italique, espacement des lettres (titre, texte, bouton)
+function emphasis(block) {
+  const out = {};
+  if (block.weight !== undefined && block.weight !== null && block.weight !== "") { if (!Object.hasOwn(WEIGHTS, block.weight)) throw fail("Graisse inconnue (normal ou bold)."); out.weight = block.weight; }
+  if (optBool(block.italic)) out.italic = true;
+  if (block.letterSpacing !== undefined && block.letterSpacing !== null && block.letterSpacing !== 0) out.letterSpacing = intIn(block.letterSpacing, 0, 10, "Espacement des lettres (0 à 10 px)");
+  return out;
+}
+const emphasisCss = (t) => [t.weight ? `font-weight:${WEIGHTS[t.weight]}` : "", t.italic ? "font-style:italic" : "", t.letterSpacing ? `letter-spacing:${t.letterSpacing}px` : ""].filter(Boolean).join(";");
+const typoCss = (t) => [t.font ? `font-family:${FONTS[t.font]}` : "", t.fontSize ? `font-size:${t.fontSize}px` : "", t.lineHeight ? `line-height:${t.lineHeight}` : "", t.color ? `color:${t.color}` : "", emphasisCss(t), t.align ? `text-align:${t.align}` : ""].filter(Boolean).join(";");
 // Réglages communs à tout bloc : marges intérieures haut/bas, fond, affichage par appareil
 function boxOf(block) {
   if (block.box === undefined || block.box === null) return null;
@@ -117,11 +132,67 @@ function boxOf(block) {
   const b = block.box, out = {};
   if (b.padTop !== undefined && b.padTop !== null) out.padTop = intIn(b.padTop, 0, 64, "Marge du haut (0 à 64 px)");
   if (b.padBottom !== undefined && b.padBottom !== null) out.padBottom = intIn(b.padBottom, 0, 64, "Marge du bas (0 à 64 px)");
+  if (b.padLeft !== undefined && b.padLeft !== null) out.padLeft = intIn(b.padLeft, 0, 64, "Marge de gauche (0 à 64 px)");
+  if (b.padRight !== undefined && b.padRight !== null) out.padRight = intIn(b.padRight, 0, 64, "Marge de droite (0 à 64 px)");
+  if (b.border !== undefined && b.border !== null) {
+    if (typeof b.border !== "object" || Array.isArray(b.border)) throw fail("Bordure du bloc invalide.");
+    // Même forme à l'entrée et à la sortie (réenregistrable telle quelle) : { style, width, color, radius }
+    const style = b.border.style, border = {};
+    if (style !== undefined && style !== null && style !== "none") {
+      if (!BORDER_STYLES.includes(style)) throw fail("Style de bordure inconnu (solid, dashed ou dotted).");
+      Object.assign(border, { style, width: b.border.width === undefined || b.border.width === null ? 1 : intIn(b.border.width, 1, 8, "Épaisseur de la bordure (1 à 8 px)"), color: optHex(b.border.color, "Couleur de la bordure") || "#d5e3ee" });
+    }
+    if (b.border.radius !== undefined && b.border.radius !== null && b.border.radius !== 0) border.radius = intIn(b.border.radius, 0, 40, "Arrondi du bloc (0 à 40 px)");
+    if (Object.keys(border).length) out.border = border;
+  }
   const bg = optHex(b.background, "Fond du bloc"); if (bg) out.background = bg;
   if (optBool(b.hideMobile)) out.hideMobile = true;
   if (optBool(b.hideDesktop)) out.hideDesktop = true;
   if (out.hideMobile && out.hideDesktop) throw fail("Un bloc ne peut pas être masqué à la fois sur ordinateur et sur mobile (utilisez « Masquer le bloc »).");
   return Object.keys(out).length ? out : null;
+}
+// Réglages propres au mobile (« Mêmes styles pour ordinateur et mobiles » décoché) : seulement ce qui s'applique au type
+// du bloc. Traduits en règles CSS dans la requête média du message (Gmail, Apple Mail, clients mobiles) ; les clients
+// qui ignorent les requêtes média (Outlook sur ordinateur) gardent les réglages ordinateur — jamais l'inverse.
+const MOBILE_KEYS = {
+  "*": ["padTop", "padBottom", "padLeft", "padRight"],
+  heading: ["fontSize", "align"], text: ["fontSize", "align"], button: ["fontSize", "align", "fullWidth"], image: ["width", "align"],
+  video: ["width", "align"], spacer: ["height"], social: ["align"], link: ["align"],
+};
+const MOBILE_SIZE = { heading: [16, 44], text: [12, 28], button: [12, 24] };
+function mobileOf(block) {
+  if (block.mobile === undefined || block.mobile === null) return null;
+  if (typeof block.mobile !== "object" || Array.isArray(block.mobile)) throw fail("Réglages mobiles invalides.");
+  const allowedKeys = [...MOBILE_KEYS["*"], ...(MOBILE_KEYS[block.type] || [])];
+  const m = block.mobile, out = {};
+  for (const key of Object.keys(m)) {
+    const v = m[key];
+    if (v === undefined || v === null || v === "") continue;
+    if (!allowedKeys.includes(key)) throw fail(`Réglage mobile « ${key.slice(0, 20)} » non applicable à ce bloc.`);
+    if (key.startsWith("pad")) out[key] = intIn(v, 0, 64, "Marge sur mobile (0 à 64 px)");
+    else if (key === "fontSize") { const [a, b] = MOBILE_SIZE[block.type]; out.fontSize = intIn(v, a, b, `Taille du texte sur mobile (${a} à ${b} px)`); }
+    else if (key === "align") out.align = alignOf(v);
+    else if (key === "width") out.width = intIn(v, 40, 720, "Largeur sur mobile (40 à 720 px)");
+    else if (key === "height") out.height = intIn(v, 4, 120, "Hauteur sur mobile (4 à 120 px)");
+    else if (key === "fullWidth") { if (v === true) out.fullWidth = true; }
+  }
+  return Object.keys(out).length ? out : null;
+}
+// Règles CSS mobiles d'un bloc (classes mkc-/mkf-/mka-/mkw-<id> posées par le rendu ; identifiants déjà validés)
+function mobileCss(id, m) {
+  const r = [];
+  const pads = ["padTop", "padRight", "padBottom", "padLeft"].filter((k) => m[k] !== undefined);
+  if (pads.length) r.push(`.mkc-${id}{${pads.map((k) => `padding-${k.slice(3).toLowerCase()}:${m[k]}px!important`).join(";")}}`);
+  if (m.fontSize) r.push(`.mkf-${id}{font-size:${m.fontSize}px!important}`);
+  if (m.align) {
+    r.push(`.mkf-${id}{text-align:${m.align}!important}`);
+    const [l, rr] = m.align === "center" ? ["auto", "auto"] : m.align === "right" ? ["auto", "0"] : ["0", "auto"];
+    r.push(`.mka-${id}{float:none!important;margin-left:${l}!important;margin-right:${rr}!important}`);
+  }
+  if (m.width) r.push(`.mkw-${id}{width:${m.width}px!important;max-width:100%!important}`);
+  if (m.height) r.push(`.mkh-${id}{height:${m.height}px!important;line-height:${m.height}px!important}`);
+  if (m.fullWidth) r.push(`.mka-${id}{width:100%!important}.mkf-${id}{display:block!important}`);
+  return r.join("");
 }
 function plain(source, allowed, { max = 200, required = false, label = "Le champ" } = {}) {
   const text = (typeof source === "string" ? source : "").replace(CONTROLS, " ").trim();
@@ -235,23 +306,30 @@ function markdownNodes(source, env, { max = MARKDOWN_MAX, label = "Le texte" } =
 }
 
 // ---------- Blocs ----------
-function buildBlock(block, env, meta) {
+function buildBlock(block, env, meta, k = {}) {
   const { theme, allowed } = env;
+  // Classes posées seulement si le bloc a des réglages mobiles (k.f : police/alignement, k.a : bloc aligné, k.w : largeur, k.h : hauteur)
+  const cls = (name) => (k[name] ? ` class="${k[name]}"` : "");
   switch (block.type) {
     case "heading": {
       const level = block.level === undefined ? 2 : block.level;
-      if (level !== 1 && level !== 2) throw fail("Niveau de titre invalide (1 ou 2).");
+      if (![1, 2, 3].includes(level)) throw fail("Niveau de titre invalide (1, 2 ou 3).");
       const align = alignOf(block.align);
       const text = plain(block.text, allowed, { required: true, label: "Le titre" });
       const typo = typography(block, { sizeMin: 16, sizeMax: 44 });
+      const href = typeof block.href === "string" && block.href.trim() ? urlNodes(block.href, { mailto: true }) : null;
+      const newTab = Boolean(href) && optBool(block.newTab);
       meta.hasText = true;
-      const css = `margin:0;font-size:${typo.fontSize || (level === 1 ? 28 : 22)}px;line-height:${typo.lineHeight || 1.25};font-weight:800;color:${typo.color || theme.textColor};text-align:${align}${typo.font ? `;font-family:${FONTS[typo.font]}` : ""}`;
-      return { normalized: { text: block.text.trim(), level, align, ...typo }, nodes: [T(`<h${level} style="${css}">`), ...text, T(`</h${level}>`)] };
+      const color = typo.color || theme.textColor;
+      const css = `margin:0;font-size:${typo.fontSize || { 1: 28, 2: 22, 3: 18 }[level]}px;line-height:${typo.lineHeight || 1.25};font-weight:${typo.weight ? WEIGHTS[typo.weight] : 800};color:${color};text-align:${align}${typo.font ? `;font-family:${FONTS[typo.font]}` : ""}${typo.italic ? ";font-style:italic" : ""}${typo.letterSpacing ? `;letter-spacing:${typo.letterSpacing}px` : ""}`;
+      const inner = href ? [T('<a href="'), ...href, T(`"${newTab ? ' target="_blank"' : ""} style="color:${color};text-decoration:none">`), ...text, T("</a>")] : text;
+      return { normalized: { text: block.text.trim(), level, align, ...typo, ...(href ? { href: block.href.trim() } : {}), ...(newTab ? { newTab } : {}) }, nodes: [T(`<h${level}${cls("f")} style="${css}">`), ...inner, T(`</h${level}>`)] };
     }
     case "text": {
       meta.hasText = true;
       const typo = typography(block);
-      const wrap = (nodes) => { const css = typoCss(typo); return css ? [T(`<div style="${css}">`), ...nodes, T("</div>")] : nodes; };
+      if (block.align !== undefined && block.align !== null && block.align !== "") typo.align = alignOf(block.align);
+      const wrap = (nodes) => { const css = typoCss(typo); return css || k.f ? [T(`<div${cls("f")}${css ? ` style="${css}"` : ""}>`), ...nodes, T("</div>")] : nodes; };
       if (typeof block.html === "string") {
         const rich = richNodes(block.html, env, { color: typo.color });
         return { normalized: { html: rich.html, ...typo }, nodes: wrap(rich.nodes) };
@@ -275,7 +353,7 @@ function buildBlock(block, env, meta) {
         normalized: { src: block.src.trim(), alt: (block.alt || "").trim(), decorative, width, align, ...(href ? { href: block.href.trim() } : {}), ...(radius ? { radius } : {}), ...(newTab && href ? { newTab } : {}) },
         nodes: [
           ...(href ? [T('<a href="'), ...href, T(`"${newTab ? ' target="_blank"' : ""} style="text-decoration:none">`)] : []),
-          T('<img src="'), ...src, T('" alt="'), ...alt, T(`" width="${width}" style="display:block;border:0;max-width:100%;height:auto;${margin}${radius ? `border-radius:${radius}px;` : ""}">`),
+          T(`<img${k.w || k.a ? ` class="${[k.w, k.a].filter(Boolean).join(" ")}"` : ""} src="`), ...src, T('" alt="'), ...alt, T(`" width="${width}" style="display:block;border:0;max-width:100%;height:auto;${margin}${radius ? `border-radius:${radius}px;` : ""}">`),
           ...(href ? [T("</a>")] : []),
         ],
       };
@@ -294,24 +372,42 @@ function buildBlock(block, env, meta) {
       const size = block.size === undefined ? "m" : block.size;
       if (!Object.hasOwn(BUTTON_SIZES, size)) throw fail("Taille de bouton inconnue (s, m ou l).");
       const fullWidth = optBool(block.fullWidth), newTab = optBool(block.newTab);
+      const emph = emphasis(block);
+      let border = null;
+      if (block.borderStyle !== undefined && block.borderStyle !== null && block.borderStyle !== "none") {
+        if (!BORDER_STYLES.includes(block.borderStyle)) throw fail("Style de bordure du bouton inconnu (solid, dashed ou dotted).");
+        border = { borderStyle: block.borderStyle, borderWidth: block.borderWidth === undefined ? 2 : intIn(block.borderWidth, 1, 8, "Épaisseur de la bordure du bouton (1 à 8 px)"), borderColor: optHex(block.borderColor, "Couleur de la bordure du bouton") || ink };
+      }
+      const borderCss = border ? `;border:${border.borderWidth}px ${border.borderStyle} ${border.borderColor}` : "";
       meta.hasButton = true;
       return {
-        normalized: { label: block.label.trim(), url: block.url.trim(), align, ...(block.color ? { color } : {}), ...(textColor ? { textColor } : {}), ...(fontSize !== 16 ? { fontSize } : {}), ...(block.radius !== undefined && block.radius !== null ? { radius } : {}), ...(size !== "m" ? { size } : {}), ...(fullWidth ? { fullWidth } : {}), ...(newTab ? { newTab } : {}) },
+        normalized: { label: block.label.trim(), url: block.url.trim(), align, ...(block.color ? { color } : {}), ...(textColor ? { textColor } : {}), ...(fontSize !== 16 ? { fontSize } : {}), ...(block.radius !== undefined && block.radius !== null ? { radius } : {}), ...(size !== "m" ? { size } : {}), ...(fullWidth ? { fullWidth } : {}), ...(newTab ? { newTab } : {}), ...emph, ...(border || {}) },
         nodes: [
-          T(`<table role="presentation" align="${fullWidth ? "center" : align}" cellpadding="0" cellspacing="0"${fullWidth ? ' width="100%"' : ""} style="margin:${align === "center" || fullWidth ? "0 auto" : "0"}${fullWidth ? ";width:100%" : ""}"><tr><td align="center" style="background:${color};border-radius:${radius}px"><a href="`),
+          T(`<table${cls("a")} role="presentation" align="${fullWidth ? "center" : align}" cellpadding="0" cellspacing="0"${fullWidth ? ' width="100%"' : ""} style="margin:${align === "center" || fullWidth ? "0 auto" : "0"}${fullWidth ? ";width:100%" : ""}"><tr><td align="center" style="background:${color};border-radius:${radius}px${borderCss}"><a${cls("f")} href="`),
           ...url,
-          T(`"${newTab ? ' target="_blank"' : ""} style="display:${fullWidth ? "block" : "inline-block"};padding:${BUTTON_SIZES[size]};font-size:${fontSize}px;font-weight:700;text-decoration:none;color:${ink};border-radius:${radius}px">`),
+          T(`"${newTab ? ' target="_blank"' : ""} style="display:${fullWidth ? "block" : "inline-block"};padding:${BUTTON_SIZES[size]};font-size:${fontSize}px;font-weight:${emph.weight ? WEIGHTS[emph.weight] : 700};${emph.italic ? "font-style:italic;" : ""}${emph.letterSpacing ? `letter-spacing:${emph.letterSpacing}px;` : ""}text-decoration:none;color:${ink};border-radius:${radius}px">`),
           ...label,
           T("</a></td></tr></table>"),
         ],
       };
     }
-    case "divider":
-      return { normalized: {}, nodes: [T(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid ${theme.secondary};font-size:0;line-height:0;height:1px">&nbsp;</td></tr></table>`)] };
+    case "divider": {
+      // « style » : seulement solid / dashed / dotted ; toute autre valeur (ancien champ libre, injection) est ignorée
+      const style = BORDER_STYLES.includes(block.style) ? block.style : "solid";
+      const thickness = block.thickness === undefined || block.thickness === null ? 1 : intIn(block.thickness, 1, 8, "Épaisseur de la ligne (1 à 8 px)");
+      const width = block.width === undefined || block.width === null ? 100 : intIn(block.width, 10, 100, "Largeur de la ligne (10 à 100 %)");
+      const color = optHex(block.color, "Couleur de la ligne");
+      const align = alignOf(block.align === undefined ? "center" : block.align);
+      const margin = align === "center" ? "0 auto" : align === "right" ? "0 0 0 auto" : "0";
+      return {
+        normalized: { ...(style !== "solid" ? { style } : {}), ...(thickness !== 1 ? { thickness } : {}), ...(width !== 100 ? { width } : {}), ...(color ? { color } : {}), ...(align !== "center" ? { align } : {}) },
+        nodes: [T(`<table role="presentation" width="${width}%" align="${align}" cellpadding="0" cellspacing="0" style="width:${width}%;margin:${margin}"><tr><td style="border-top:${thickness}px ${style} ${color || theme.secondary};font-size:0;line-height:0;height:1px">&nbsp;</td></tr></table>`)],
+      };
+    }
     case "spacer": {
       const height = block.height === undefined ? 24 : block.height;
       if (!Number.isInteger(height) || height < 4 || height > 120) throw fail("Hauteur invalide (4 à 120 pixels).");
-      return { normalized: { height }, nodes: [T(`<div style="height:${height}px;line-height:${height}px;font-size:0">&nbsp;</div>`)] };
+      return { normalized: { height }, nodes: [T(`<div${cls("h")} style="height:${height}px;line-height:${height}px;font-size:0">&nbsp;</div>`)] };
     }
     case "columns": {
       meta.hasText = true;
@@ -383,20 +479,30 @@ function buildBlock(block, env, meta) {
       if (block.links.length < 1) throw fail("Ajoutez au moins un réseau social.");
       if (block.links.length > MAX_SOCIAL) throw fail(`Trop de liens (${MAX_SOCIAL} au plus).`);
       const align = alignOf(block.align === undefined ? "center" : block.align);
+      const display = block.display === undefined || block.display === null ? "text" : block.display;
+      if (!SOCIAL_STYLES.includes(display)) throw fail("Présentation des réseaux inconnue (text ou buttons).");
+      const brand = block.colors !== "accent"; // pastilles : couleurs des réseaux (par défaut) ou couleur principale du message
       const seen = new Set();
-      const nodes = [T(`<p style="margin:0;font-size:15px;line-height:1.8;text-align:${align}">`)];
+      const nodes = display === "buttons"
+        ? [T(`<table${cls("a")} role="presentation" align="${align}" cellpadding="0" cellspacing="0" style="margin:${align === "center" ? "0 auto" : align === "right" ? "0 0 0 auto" : "0"}"><tr>`)]
+        : [T(`<p${cls("f")} style="margin:0;font-size:15px;line-height:1.8;text-align:${align}">`)];
       const normalizedLinks = block.links.map((link, i) => {
         if (!link || typeof link !== "object") throw fail(`Lien ${i + 1} invalide.`);
         if (!Object.hasOwn(NETWORKS, link.network)) throw fail(`Réseau inconnu « ${String(link.network).slice(0, 20)} » (${Object.keys(NETWORKS).join(", ")}).`);
         if (seen.has(link.network)) throw fail(`Le réseau « ${NETWORKS[link.network]} » est présent deux fois.`);
         seen.add(link.network);
         const url = urlNodes(link.url, { system: false });
-        if (i > 0) nodes.push(T("&nbsp;·&nbsp; "));
-        nodes.push(T('<a href="'), ...url, T(`" style="color:${theme.accent};font-weight:700;text-decoration:underline">${NETWORKS[link.network]}</a>`));
+        if (display === "buttons") {
+          const bg = brand ? NETWORK_COLORS[link.network] : theme.accent;
+          nodes.push(T(`<td style="padding:4px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${bg};border-radius:${theme.radius}px"><a href="`), ...url, T(`" style="display:inline-block;padding:8px 14px;font-size:14px;font-weight:700;line-height:1.2;color:${textOn(bg)};text-decoration:none;border-radius:${theme.radius}px">${NETWORKS[link.network]}</a></td></tr></table></td>`));
+        } else {
+          if (i > 0) nodes.push(T("&nbsp;·&nbsp; "));
+          nodes.push(T('<a href="'), ...url, T(`" style="color:${theme.accent};font-weight:700;text-decoration:underline">${NETWORKS[link.network]}</a>`));
+        }
         return { network: link.network, url: link.url.trim() };
       });
-      nodes.push(T("</p>"));
-      return { normalized: { links: normalizedLinks, align }, nodes };
+      nodes.push(T(display === "buttons" ? "</tr></table>" : "</p>"));
+      return { normalized: { links: normalizedLinks, align, ...(display !== "text" ? { display } : {}), ...(display === "buttons" && !brand ? { colors: "accent" } : {}) }, nodes };
     }
     case "video": {
       meta.hasText = true;
@@ -411,8 +517,8 @@ function buildBlock(block, env, meta) {
       return {
         normalized: { url: block.url.trim(), ...(thumb ? { thumbnail: block.thumbnail.trim() } : {}), title: block.title.trim(), width, align },
         nodes: [
-          ...(thumb ? [T('<a href="'), ...url, T('" style="text-decoration:none"><img src="'), ...thumb, T('" alt="'), ...title, T(`" width="${width}" style="display:block;border:0;max-width:100%;height:auto;${margin}"></a>`)] : []),
-          T(`<p style="margin:${thumb ? "8px" : "0"} 0 0;text-align:${align}"><a href="`), ...url, T(`" style="color:${theme.accent};font-weight:700;text-decoration:underline">▶ Regarder la vidéo : `), ...title, T("</a></p>"),
+          ...(thumb ? [T('<a href="'), ...url, T(`" style="text-decoration:none"><img${k.w || k.a ? ` class="${[k.w, k.a].filter(Boolean).join(" ")}"` : ""} src="`), ...thumb, T('" alt="'), ...title, T(`" width="${width}" style="display:block;border:0;max-width:100%;height:auto;${margin}"></a>`)] : []),
+          T(`<p${cls("f")} style="margin:${thumb ? "8px" : "0"} 0 0;text-align:${align}"><a href="`), ...url, T(`" style="color:${theme.accent};font-weight:700;text-decoration:underline">▶ Regarder la vidéo : `), ...title, T("</a></p>"),
         ],
       };
     }
@@ -455,7 +561,7 @@ function buildBlock(block, env, meta) {
       const newTab = optBool(block.newTab);
       return {
         normalized: { label: block.label.trim(), url: block.url.trim(), align, ...(newTab ? { newTab } : {}) },
-        nodes: [T(`<p style="margin:0;text-align:${align}"><a href="`), ...url, T(`"${newTab ? ' target="_blank"' : ""} style="color:${theme.accent};font-weight:700;text-decoration:underline">`), ...label, T("</a></p>")],
+        nodes: [T(`<p${cls("f")} style="margin:0;text-align:${align}"><a href="`), ...url, T(`"${newTab ? ' target="_blank"' : ""} style="color:${theme.accent};font-weight:700;text-decoration:underline">`), ...label, T("</a></p>")],
       };
     }
     case "coupon": {
@@ -523,6 +629,7 @@ function compileTemplate(template, { allowed = () => false, annotate = false } =
 
   const bodyNodes = [];
   const normalizedBlocks = [];
+  const mobileRules = [];
   const seenIds = new Set();
   blocks.forEach((block, index) => {
     const at = `Bloc ${index + 1}`;
@@ -533,7 +640,9 @@ function compileTemplate(template, { allowed = () => false, annotate = false } =
       seenIds.add(id);
       // Bloc masqué : conservé dans le modèle (et réaffichable), jamais envoyé ; visible estompé dans l'éditeur
       const hidden = block.hidden === true;
-      const built = buildBlock(block, env, hidden ? { ...meta, lowContrast: [] } : meta);
+      const mobile = mobileOf(block);
+      const k = mobile ? { f: `mkf-${id}`, a: `mka-${id}`, w: `mkw-${id}`, h: `mkh-${id}` } : {};
+      const built = buildBlock(block, env, hidden ? { ...meta, lowContrast: [] } : meta, k);
       if (!hidden) meta.blockTypes.push(block.type);
       let showIf = null;
       if (block.showIf !== undefined && block.showIf !== null && block.showIf !== "") {
@@ -548,10 +657,15 @@ function compileTemplate(template, { allowed = () => false, annotate = false } =
       // Masqué sur ordinateur : caché par défaut (y compris Outlook : mso-hide), affiché par la règle mobile
       const rowStyle = [box && box.hideDesktop ? "display:none;mso-hide:all;max-height:0;overflow:hidden" : "", hidden && annotate ? "opacity:.35" : ""].filter(Boolean).join(";");
       const mark = `${classes ? ` class="${classes}"` : ""}${rowStyle ? ` style="${rowStyle}"` : ""}${annotate ? ` data-mk-block="${id}"${hidden ? ' data-mk-hidden="true"' : ""}` : ""}`;
-      const cellStyle = `padding:${box && box.padTop !== undefined ? box.padTop : pad}px 24px ${box && box.padBottom !== undefined ? box.padBottom : pad}px;font-size:16px;line-height:1.6;color:${theme.textColor}${box && box.background ? `;background:${box.background}` : ""}`;
-      const row = [T(`<tr${mark}><td style="${cellStyle}">`), ...built.nodes, T("</td></tr>")];
+      const side = (key) => (box && box[key] !== undefined ? box[key] : 24);
+      const borderCss = box && box.border && box.border.style ? `;border:${box.border.width}px ${box.border.style} ${box.border.color}` : "";
+      // Même écriture qu'avant quand gauche = droite : le HTML des messages existants reste identique
+      const sides = `${side("padRight")}px`;
+      const cellStyle = `padding:${box && box.padTop !== undefined ? box.padTop : pad}px ${sides} ${box && box.padBottom !== undefined ? box.padBottom : pad}px${side("padLeft") === side("padRight") ? "" : ` ${side("padLeft")}px`};font-size:16px;line-height:1.6;color:${theme.textColor}${box && box.background ? `;background:${box.background}` : ""}${borderCss}${box && box.border && box.border.radius ? `;border-radius:${box.border.radius}px` : ""}`;
+      if (mobile && (!hidden || annotate)) mobileRules.push(mobileCss(id, mobile));
+      const row = [T(`<tr${mark}><td${mobile ? ` class="mkc-${id}"` : ""} style="${cellStyle}">`), ...built.nodes, T("</td></tr>")];
       if (!hidden || annotate) bodyNodes.push(...(showIf && !annotate ? [{ t: "if", branches: [{ cond: showIf, body: row }], else: null }] : row));
-      normalizedBlocks.push({ id, type: block.type, ...(hidden ? { hidden: true } : {}), ...(showIf ? { showIf: block.showIf.trim() } : {}), ...(box ? { box } : {}), ...built.normalized });
+      normalizedBlocks.push({ id, type: block.type, ...(hidden ? { hidden: true } : {}), ...(showIf ? { showIf: block.showIf.trim() } : {}), ...(box ? { box } : {}), ...(mobile ? { mobile } : {}), ...built.normalized });
     } catch (error) {
       if (!(error instanceof MarketingError)) throw error;
       // Éditeur : le bloc fautif reste visible à sa place, avec son problème ; le reste du message s'affiche normalement
@@ -569,7 +683,7 @@ function compileTemplate(template, { allowed = () => false, annotate = false } =
   const ast = [
     T('<!DOCTYPE html>\n<html lang="fr" xmlns="http://www.w3.org/1999/xhtml">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<meta name="x-apple-disable-message-reformatting">\n<meta name="color-scheme" content="light">\n<title>'),
     ...escapeAst(subjectAst),
-    T(`</title>\n<style>@media only screen and (max-width:${theme.maxWidth + 20}px){.mk-container{width:100%!important}.mk-col{display:block!important;width:100%!important;padding:0 0 16px 0!important}.mk-hide-m{display:none!important}.mk-hide-d{display:table-row!important;max-height:none!important;overflow:visible!important}}</style>\n</head>\n<body style="margin:0;padding:0;background:${theme.background}">\n`),
+    T(`</title>\n<style>@media only screen and (max-width:${theme.maxWidth + 20}px){.mk-container{width:100%!important}.mk-col{display:block!important;width:100%!important;padding:0 0 16px 0!important}.mk-hide-m{display:none!important}.mk-hide-d{display:table-row!important;max-height:none!important;overflow:visible!important}${mobileRules.join("")}}</style>\n</head>\n<body style="margin:0;padding:0;background:${theme.background}">\n`),
     ...(preheaderSource ? [T(`<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:${theme.background}">`), ...preheaderNodes, T(`${padding}</div>\n`)] : []),
     T(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${theme.background}"><tr><td align="center" style="padding:24px 12px">\n`),
     T(`<table role="presentation" class="mk-container" width="${theme.maxWidth}" cellpadding="0" cellspacing="0" style="width:${theme.maxWidth}px;max-width:100%;background:${theme.contentBackground};font-family:${font};color:${theme.textColor}">\n`),

@@ -6,6 +6,7 @@ const { validateEmail } = require("../audience/email");
 const { checkCtx, audit, MarketingError } = require("../audience/shared");
 const templates = require("./index");
 const { SAMPLE_URLS } = require("./context");
+const { missingImages } = require("./lint");
 
 function teamRecipients(ctx) {
   checkCtx(ctx);
@@ -24,6 +25,9 @@ async function sendTestEmail(ctx, templateId, { to, transport, provider, from, c
     throw new MarketingError("invalid_recipient", "L'e-mail de test ne peut être envoyé qu'à un membre de l'équipe marketing.");
   }
   const rendered = templates.renderTemplate(ctx, templateId, contactId ? { id: contactId } : null, { urls: SAMPLE_URLS });
+  // Vérification avant l'envoi : une image absente du serveur donnerait un message cassé
+  const lost = missingImages(rendered.html);
+  if (lost.length) throw new MarketingError("image_missing", `Test non envoyé : ${lost.length > 1 ? "des images n'existent" : "une image n'existe"} plus sur le serveur (${lost.map((p) => p.split("/").pop()).join(", ")}). Réimportez-la puis remplacez-la dans le bloc.`);
   if (!transport && !provider) return { sent: false, reason: "smtp_not_configured" };
   const message = { from, to: check.email, subject: `[TEST] ${rendered.subject}`, html: rendered.html, text: rendered.text, headers: { "X-KOYEKOLA-Test": "1" } };
   try {

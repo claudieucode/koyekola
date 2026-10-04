@@ -2,6 +2,15 @@
 // Ces règles sont des CONSEILS de délivrabilité : elles ne garantissent pas l'arrivée en boîte de réception.
 const HEAVY_BYTES = 90000; // Gmail coupe (« message tronqué ») au-delà d'environ 102 Ko
 
+// Images de la médiathèque citées par le message mais absentes du serveur (fichier supprimé ou perdu) : liste des adresses
+function missingImages(html) {
+  const { uploadsRoot } = require("../../config/paths");
+  const { fileExists } = require("../../config/mediaAudit");
+  const out = new Set();
+  for (const m of String(html || "").matchAll(/<img[^>]+src="[^"]*?(\/uploads\/marketing\/[^"?#]+)"/g)) if (!fileExists(uploadsRoot, m[1])) out.add(m[1]);
+  return [...out];
+}
+
 function lintEmail(compiled, rendered) {
   const warnings = [];
   const add = (level, code, message) => warnings.push({ level, code, message });
@@ -10,6 +19,8 @@ function lintEmail(compiled, rendered) {
 
   if (!subject.trim()) add("error", "subject_empty", "L'objet est vide.");
   if (!meta.blockCount) add("error", "no_content", "Le modèle ne contient aucun bloc.");
+  const lost = missingImages(rendered.html);
+  if (lost.length) add("error", "image_missing", `${lost.length > 1 ? `${lost.length} images n'existent` : "Une image n'existe"} plus sur le serveur (${lost.map((p) => p.split("/").pop()).join(", ")}) : réimportez-la depuis la médiathèque puis remplacez-la dans le bloc.`);
   if (subject.length > 60) add("warning", "subject_long", `L'objet fait ${subject.length} caractères : au-delà de 60, il est coupé sur mobile.`);
   const letters = subject.replace(/[^A-Za-zÀ-ÿ]/g, "");
   if (letters.length >= 8 && letters.replace(/[^A-ZÀ-Þ]/g, "").length / letters.length > 0.8) add("warning", "subject_caps", "L'objet est presque entièrement en majuscules : c'est un signal de courrier indésirable.");
@@ -25,4 +36,4 @@ function lintEmail(compiled, rendered) {
   return warnings;
 }
 
-module.exports = { lintEmail };
+module.exports = { lintEmail, missingImages };

@@ -39,6 +39,11 @@
   var NETWORKS = [["facebook", "Facebook"], ["instagram", "Instagram"], ["x", "X"], ["linkedin", "LinkedIn"], ["youtube", "YouTube"], ["tiktok", "TikTok"], ["whatsapp", "WhatsApp"], ["website", "Site web"]];
   var LIST_STYLES = [["bullets", "Puces"], ["numbers", "Numéros"], ["checks", "Coches ✓"]];
   var ALIGNS = [["left", "À gauche"], ["center", "Centré"], ["right", "À droite"]];
+  // Réglages mobiles possibles selon le type (même liste que le serveur : src/marketing/templates/blocks.js MOBILE_KEYS)
+  var MOBILE_FIELDS = { "*": ["padTop", "padBottom", "padLeft", "padRight"], heading: ["fontSize", "align"], text: ["fontSize", "align"], button: ["fontSize", "align", "fullWidth"], image: ["width", "align"], video: ["width", "align"], spacer: ["height"], social: ["align"], link: ["align"] };
+  var BORDER_STYLES = [["none", "Aucune"], ["solid", "Pleine"], ["dashed", "Tirets"], ["dotted", "Pointillés"]];
+  // Formes du bouton : arrondi prédéfini (le rayon reste la seule donnée enregistrée)
+  var SHAPES = [["square", "Carré", 0], ["soft", "Légèrement arrondi", 4], ["rounded", "Arrondi", 12], ["pill", "Ovale", 40]];
   var THEME_DEFAULTS = { background: "#f3f8fc", contentBackground: "#ffffff", textColor: "#10222f", accent: "#0277b6", fontFamily: "system", secondary: "#d5e3ee", maxWidth: 600, radius: 4, spacing: "normal" };
   // Ensembles prêts à l'emploi : plusieurs vrais blocs insérés d'un coup (chacun ensuite modifiable séparément)
   var PRESETS = {
@@ -152,22 +157,53 @@
     var fs = intOrUndefined(b.fontSize); if (fs !== undefined) o.fontSize = fs;
     if (typeof b.lineHeight === "number") o.lineHeight = b.lineHeight;
     if (hexOk(b.color)) o.color = b.color;
+    emph(b, o);
+  }
+  function emph(b, o) {
+    if (b.weight === "normal" || b.weight === "bold") o.weight = b.weight;
+    if (b.italic) o.italic = true;
+    var ls = intOrUndefined(b.letterSpacing); if (ls) o.letterSpacing = ls;
   }
   function cleanBox(b, o) {
     if (!b.box) return;
     var x = {}, t = intOrUndefined(b.box.padTop), bt = intOrUndefined(b.box.padBottom);
     if (t !== undefined) x.padTop = t;
     if (bt !== undefined) x.padBottom = bt;
+    var pl = intOrUndefined(b.box.padLeft), pr = intOrUndefined(b.box.padRight);
+    if (pl !== undefined) x.padLeft = pl;
+    if (pr !== undefined) x.padRight = pr;
     if (hexOk(b.box.background)) x.background = b.box.background;
+    var bd = b.box.border;
+    if (bd) {
+      var y = {};
+      if (bd.style && bd.style !== "none") { y.style = bd.style; var bw = intOrUndefined(bd.width); if (bw !== undefined) y.width = bw; if (hexOk(bd.color)) y.color = bd.color; }
+      var rr = intOrUndefined(bd.radius); if (rr) y.radius = rr;
+      if (Object.keys(y).length) x.border = y;
+    }
     if (b.box.hideMobile) x.hideMobile = true;
     if (b.box.hideDesktop) x.hideDesktop = true;
     if (Object.keys(x).length) o.box = x;
   }
+  // Réglages mobiles : seulement les valeurs saisies (vide = comme sur ordinateur)
+  function cleanMobile(b, o) {
+    if (!b.mobile) return;
+    var m = {}, keys = MOBILE_FIELDS["*"].concat(MOBILE_FIELDS[b.type] || []);
+    keys.forEach(function (k) {
+      var v = b.mobile[k];
+      if (k === "align") { if (v === "left" || v === "center" || v === "right") m.align = v; }
+      else if (k === "fullWidth") { if (v === true) m.fullWidth = true; }
+      else { var n = intOrUndefined(v); if (n !== undefined) m[k] = n; }
+    });
+    if (Object.keys(m).length) o.mobile = m;
+  }
   // Ce qui part au serveur : uniquement les champs connus de chaque type (le serveur revalide et nettoie tout)
   function cleanBlock(b) {
     var o = { id: b.id, type: b.type };
-    if (b.type === "heading") { o.text = b.text || ""; o.level = intOrUndefined(b.level) || 2; o.align = b.align || "left"; typo(b, o); delete o.lineHeight; }
-    else if (b.type === "text") { if (typeof b.html === "string") o.html = b.html; else o.markdown = b.markdown || ""; typo(b, o); }
+    if (b.type === "heading") {
+      o.text = b.text || ""; o.level = intOrUndefined(b.level) || 2; o.align = b.align || "left"; typo(b, o); delete o.lineHeight;
+      if (b.href && b.href.trim()) { o.href = b.href.trim(); if (b.newTab) o.newTab = true; }
+    }
+    else if (b.type === "text") { if (typeof b.html === "string") o.html = b.html; else o.markdown = b.markdown || ""; typo(b, o); if (b.align) o.align = b.align; }
     else if (b.type === "image") {
       o.src = b.src || ""; o.alt = b.alt || ""; o.decorative = !!b.decorative; o.align = b.align || "left";
       var w = intOrUndefined(b.width); if (w !== undefined) o.width = w;
@@ -182,6 +218,14 @@
       if (b.size && b.size !== "m") o.size = b.size;
       if (b.fullWidth) o.fullWidth = true;
       if (b.newTab) o.newTab = true;
+      emph(b, o);
+      if (b.borderStyle && b.borderStyle !== "none") { o.borderStyle = b.borderStyle; var bbw = intOrUndefined(b.borderWidth); if (bbw !== undefined) o.borderWidth = bbw; if (hexOk(b.borderColor)) o.borderColor = b.borderColor; }
+    } else if (b.type === "divider") {
+      if (b.style && b.style !== "solid") o.style = b.style;
+      var th = intOrUndefined(b.thickness); if (th !== undefined) o.thickness = th;
+      var dw = intOrUndefined(b.width); if (dw !== undefined) o.width = dw;
+      if (hexOk(b.color)) o.color = b.color;
+      if (b.align && b.align !== "center") o.align = b.align;
     } else if (b.type === "spacer") { var h = intOrUndefined(b.height); if (h !== undefined) o.height = h; }
     else if (b.type === "columns") {
       if (typeof b.leftHtml === "string" || typeof b.rightHtml === "string") { o.leftHtml = b.leftHtml || ""; o.rightHtml = b.rightHtml || ""; } else { o.left = b.left || ""; o.right = b.right || ""; }
@@ -191,7 +235,10 @@
     }
     else if (b.type === "quote") { o.text = b.text || ""; if (b.author && b.author.trim()) o.author = b.author; }
     else if (b.type === "list") { o.style = b.style || "bullets"; o.items = (b.items || []).slice(); }
-    else if (b.type === "social") { o.align = b.align || "center"; o.links = (b.links || []).map(function (l) { return { network: l.network, url: l.url || "" }; }); }
+    else if (b.type === "social") {
+      o.align = b.align || "center"; o.links = (b.links || []).map(function (l) { return { network: l.network, url: l.url || "" }; });
+      if (b.display === "buttons") { o.display = "buttons"; if (b.colors === "accent") o.colors = "accent"; }
+    }
     else if (b.type === "video") {
       o.url = b.url || ""; o.title = b.title || ""; o.align = b.align || "center";
       if (b.thumbnail && b.thumbnail.trim()) o.thumbnail = b.thumbnail.trim();
@@ -203,6 +250,7 @@
     } else if (b.type === "link") { o.label = b.label || ""; o.url = b.url || ""; o.align = b.align || "left"; if (b.newTab) o.newTab = true; }
     else if (b.type === "coupon") { o.code = b.code || ""; if (b.title && b.title.trim()) o.title = b.title; if (b.details && b.details.trim()) o.details = b.details; if (hexOk(b.color)) o.color = b.color; }
     cleanBox(b, o);
+    cleanMobile(b, o);
     if (b.showIf && b.showIf.trim()) o.showIf = b.showIf.trim();
     if (b.hidden) o.hidden = true;
     return o;
@@ -467,11 +515,11 @@
       groups[v.group].appendChild(el("option", { value: v.path }, v.label + "  ·  {{" + v.path + "}}"));
     });
   }
-  function checkField(block, key, labelText) {
-    var input = el("input", { type: "checkbox", id: "f-" + block.id + "-" + key });
+  function checkField(block, key, labelText, owner) {
+    var input = el("input", { type: "checkbox", id: "f-" + (owner || block).id + "-" + key });
     input.checked = !!block[key];
     if (readOnly) input.disabled = true;
-    input.addEventListener("change", function () { block[key] = input.checked; changed(); });
+    input.addEventListener("change", function () { block[key] = input.checked || (owner ? undefined : false); changed(); });
     var lab = el("label", { "class": "checkbox-row", "for": input.id });
     lab.appendChild(input);
     lab.appendChild(document.createTextNode(" " + labelText));
@@ -610,98 +658,221 @@
     sel.addEventListener("change", function () { block.lineHeight = sel.value === "" ? undefined : parseFloat(sel.value); changed(); });
     return group("Interligne", sel);
   }
-  // Espacement et affichage : communs à TOUS les blocs (marges haut/bas, fond, appareil)
-  function boxSection(block) {
+  // Choix en boutons segmentés (un seul actif) : formes, alignements, styles de ligne
+  function segmentField(labelText, options, current, onPick, idBase) {
+    var wrap = el("div", { "class": "field-group" });
+    var lid = "f-" + idBase + "-label";
+    wrap.appendChild(el("span", { "class": "mk-seg-label", id: lid }, labelText));
+    var row = el("div", { "class": "mk-seg", role: "radiogroup", "aria-labelledby": lid });
+    var btns = [];
+    options.forEach(function (o) {
+      var b = el("button", { type: "button", "class": "mk-seg-btn", role: "radio", "aria-checked": String(String(o[0]) === String(current)), tabindex: String(o[0]) === String(current) ? "0" : "-1" }, o[1]);
+      if (readOnly) b.disabled = true;
+      b.addEventListener("click", function () { onPick(o[0]); btns.forEach(function (x) { var on = x === b; x.setAttribute("aria-checked", String(on)); x.tabIndex = on ? 0 : -1; }); });
+      b.addEventListener("keydown", function (e) {
+        var i = btns.indexOf(b), n = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+        if (!n) return; e.preventDefault(); var t = btns[(i + n + btns.length) % btns.length]; t.focus(); t.click();
+      });
+      btns.push(b); row.appendChild(b);
+    });
+    if (!btns.some(function (b) { return b.tabIndex === 0; }) && btns[0]) btns[0].tabIndex = 0;
+    wrap.appendChild(row);
+    return wrap;
+  }
+  function alignField(target, key, fallback, idBase, labelText) {
+    return segmentField(labelText || "Alignement", ALIGNS, target[key] || fallback, function (v) { target[key] = v; changed(); }, idBase + "-" + key);
+  }
+  // Graisse, italique, espacement des lettres
+  function emphasisFields(block, defaultBold) {
+    var w = segmentField("Graisse", [["normal", "Normale"], ["bold", "Grasse"]], block.weight || (defaultBold ? "bold" : "normal"), function (v) { block.weight = v; changed(); }, block.id + "-weight");
+    return [w, checkField(block, "italic", "Italique"), optNumberField(block, "letterSpacing", "Espacement des lettres (px, 0 à 10)", 0, 10, "0")];
+  }
+  // Espacement intérieur (4 côtés), fond, bordure : communs à TOUS les blocs (onglet Styles)
+  function boxSections(block) {
     block.box = block.box || {};
     var box = block.box;
+    var grid = el("div", { "class": "mk-step-row mk-b-row2" });
+    [["padTop", "Haut"], ["padBottom", "Bas"], ["padLeft", "Gauche"], ["padRight", "Droite"]].forEach(function (p) {
+      grid.appendChild(optNumberField(box, p[0], p[1] + " (px)", 0, 64, p[0] === "padLeft" || p[0] === "padRight" ? "24" : "auto", block));
+    });
+    box.border = box.border || {};
+    var bd = box.border;
+    var borderNodes = [segmentField("Style", BORDER_STYLES, bd.style || "none", function (v) { bd.style = v; changed(); renderProps(); }, block.id + "-bstyle")];
+    if (bd.style && bd.style !== "none") {
+      var r2 = el("div", { "class": "mk-step-row mk-b-row2" });
+      r2.appendChild(optNumberField(bd, "width", "Épaisseur (px, 1 à 8)", 1, 8, "1", { id: block.id + "-bd" }));
+      borderNodes.push(r2);
+      borderNodes.push(optColorField(bd, "color", "Couleur de la bordure", "#d5e3ee", block.id + "-bd"));
+    }
+    borderNodes.push(optNumberField(bd, "radius", "Arrondi des coins (px, 0 à 40)", 0, 40, "0", { id: block.id + "-bd" }));
+    return [
+      { title: "Espacement intérieur", nodes: [grid, el("p", { "class": "field-hint" }, "Vide = espacement des styles globaux (haut / bas) et 24 px (gauche / droite).")] },
+      { title: "Fond", nodes: [optColorField(box, "background", "Fond du bloc", "#f3f8fc", block.id + "-box")] },
+      { title: "Bordure", nodes: borderNodes },
+    ];
+  }
+  // Styles mobiles : seulement les réglages applicables au type ; vide = comme sur ordinateur
+  function mobileSections(block) {
+    var m = block.mobile;
+    var keys = MOBILE_FIELDS[block.type] || [];
+    var owner = { id: block.id + "-m" };
+    var out = [];
+    var typoNodes = [];
+    var size = { heading: [16, 44], text: [12, 28], button: [12, 24] }[block.type];
+    if (keys.indexOf("fontSize") !== -1) typoNodes.push(optNumberField(m, "fontSize", "Taille du texte sur mobile (px, " + size[0] + " à " + size[1] + ")", size[0], size[1], "comme ordinateur", owner));
+    if (keys.indexOf("align") !== -1) typoNodes.push(segmentField("Alignement sur mobile", [["", "Comme ordinateur"]].concat(ALIGNS), m.align || "", function (v) { m.align = v || undefined; changed(); }, block.id + "-m-align"));
+    if (keys.indexOf("width") !== -1) typoNodes.push(optNumberField(m, "width", "Largeur sur mobile (px, 40 à 720)", 40, 720, "comme ordinateur", owner));
+    if (keys.indexOf("height") !== -1) typoNodes.push(optNumberField(m, "height", "Hauteur sur mobile (px, 4 à 120)", 4, 120, "comme ordinateur", owner));
+    if (keys.indexOf("fullWidth") !== -1) typoNodes.push(checkField(m, "fullWidth", "Bouton sur toute la largeur sur mobile", owner));
+    if (typoNodes.length) out.push({ title: "Affichage sur mobile", nodes: typoNodes });
+    var grid = el("div", { "class": "mk-step-row mk-b-row2" });
+    [["padTop", "Haut"], ["padBottom", "Bas"], ["padLeft", "Gauche"], ["padRight", "Droite"]].forEach(function (p) { grid.appendChild(optNumberField(m, p[0], p[1] + " (px)", 0, 64, "idem", owner)); });
+    out.push({ title: "Espacement intérieur sur mobile", nodes: [grid] });
+    out.push({ title: "", nodes: [el("p", { "class": "field-hint" }, "Vide (« idem ») = même réglage que sur ordinateur. Le canevas est passé en vue « Mobile » pour montrer le rendu réel. Outlook sur ordinateur ignore ces réglages et garde ceux de l'ordinateur.")] });
+    return out;
+  }
+  // Onglet Styles : « Mêmes styles pour ordinateur et mobiles » (par défaut) ; sinon Ordinateur | Mobile
+  var stylesDevice = "desktop";
+  function setCanvasDevice(dev) {
+    var b = document.querySelector(dev === "mobile" ? '[data-size="375"]' : '[data-size][data-tip="Bureau"]');
+    if (b && b.getAttribute("aria-pressed") !== "true") b.click();
+  }
+  function deviceSwitch(block) {
     var nodes = [];
-    var row = el("div", { "class": "mk-step-row mk-b-row2" });
-    row.appendChild(optNumberField(box, "padTop", "Marge du haut (px)", 0, 64, "auto", block));
-    row.appendChild(optNumberField(box, "padBottom", "Marge du bas (px)", 0, 64, "auto", block));
-    nodes.push(row);
-    nodes.push(optColorField(box, "background", "Fond du bloc", "#f3f8fc", block.id + "-box"));
-    var dev = el("div", { "class": "field-group mk-b-devices", role: "group", "aria-label": "Affichage selon l'appareil" });
-    [["hideMobile", "Masquer sur mobile"], ["hideDesktop", "Masquer sur ordinateur"]].forEach(function (d) {
-      var input = el("input", { type: "checkbox", id: "f-" + block.id + "-" + d[0] });
-      input.checked = !!box[d[0]]; if (readOnly) input.disabled = true;
+    var same = el("input", { type: "checkbox", id: "f-" + block.id + "-samestyles" });
+    same.checked = !block.mobile; if (readOnly) same.disabled = true;
+    same.addEventListener("change", function () {
+      if (same.checked) {
+        var filled = block.mobile && Object.keys(block.mobile).some(function (k) { return block.mobile[k] !== undefined && block.mobile[k] !== ""; });
+        if (filled && !window.confirm("Les réglages propres au mobile de ce bloc seront supprimés (Ctrl+Z pour annuler). Continuer ?")) { same.checked = false; return; }
+        block.mobile = undefined; stylesDevice = "desktop"; setCanvasDevice("desktop");
+      } else block.mobile = {};
+      changed(true); renderProps();
+      announce(same.checked ? "Mêmes styles sur ordinateur et mobile." : "Styles distincts : choisissez Ordinateur ou Mobile.");
+    });
+    var lab = el("label", { "class": "checkbox-row mk-b-same", "for": same.id }); lab.appendChild(same); lab.appendChild(document.createTextNode(" Mêmes styles pour ordinateur et mobiles"));
+    nodes.push(lab);
+    if (block.mobile) nodes.push(segmentField("Appareil modifié", [["desktop", "Ordinateur"], ["mobile", "Mobile"]], stylesDevice, function (v) { stylesDevice = v; setCanvasDevice(v); renderProps(); }, block.id + "-device"));
+    return { title: "", nodes: nodes, cls: "mk-b-devicebar" };
+  }
+  // Onglet Visibilité : ordinateur / mobile (au moins l'un des deux), envoi du bloc, condition sur le contact
+  function visibilitySections(block) {
+    block.box = block.box || {};
+    var box = block.box;
+    var devs = el("div", { "class": "field-group mk-b-devices", role: "group", "aria-label": "Afficher selon l'appareil" });
+    var hint = el("p", { "class": "field-hint", "aria-live": "polite" });
+    [["hideDesktop", "Afficher sur ordinateur"], ["hideMobile", "Afficher sur mobile"]].forEach(function (d) {
+      var input = el("input", { type: "checkbox", id: "f-" + block.id + "-show-" + d[0] });
+      input.checked = !box[d[0]]; if (readOnly) input.disabled = true;
       input.addEventListener("change", function () {
-        box[d[0]] = input.checked || undefined;
         var other = d[0] === "hideMobile" ? "hideDesktop" : "hideMobile";
-        if (input.checked && box[other]) { box[other] = undefined; var o = $("f-" + block.id + "-" + other); if (o) o.checked = false; }
+        if (!input.checked && box[other]) { input.checked = true; hint.textContent = "Un bloc s'affiche au moins sur un appareil. Pour ne l'envoyer à personne, utilisez « Envoyer ce bloc » ci-dessous."; return; }
+        hint.textContent = "";
+        box[d[0]] = input.checked ? undefined : true;
         changed(true);
+        announce(d[1].replace("Afficher", input.checked ? "Affiché" : "Masqué"));
       });
       var lab = el("label", { "class": "checkbox-row", "for": input.id }); lab.appendChild(input); lab.appendChild(document.createTextNode(" " + d[1]));
-      dev.appendChild(lab);
+      devs.appendChild(lab);
     });
-    nodes.push(dev);
-    nodes.push(el("p", { "class": "field-hint" }, "Vide = espacement des styles globaux. Le canevas en vue « Mobile » montre le rendu réel."));
-    return nodes;
+    var send = el("input", { type: "checkbox", id: "f-" + block.id + "-send" });
+    send.checked = !block.hidden; if (readOnly) send.disabled = true;
+    send.addEventListener("change", function () { if (send.checked === !block.hidden) return; toggleHidden(block.id); });
+    var sendLab = el("label", { "class": "checkbox-row", "for": send.id }); sendLab.appendChild(send); sendLab.appendChild(document.createTextNode(" Envoyer ce bloc"));
+    return [
+      { title: "Appareils", nodes: [devs, hint, el("p", { "class": "field-hint" }, "Vérifiez le résultat avec les vues « Ordinateur » et « Mobile » du canevas.")] },
+      { title: "Envoi", nodes: [sendLab, el("p", { "class": "field-hint" }, "Décoché : le bloc reste dans le modèle (estompé) mais n'est jamais envoyé.")] },
+      { title: "Condition sur le contact", nodes: [textField(block, "showIf", "Afficher ce bloc seulement si…", { max: 200, placeholder: "contact.country == \"FR\"", hint: "Ex. : contact.country == \"FR\" · contact.company · not contact.company. Vide = tous les contacts." })] },
+    ];
   }
+  // Réglages d'un bloc par onglet : content / styles (ordinateur) ; visibilité et mobile sont communs
   function blockSections(block) {
-    var out = [];
-    function sec(title, nodes) { out.push({ title: title, nodes: nodes.filter(Boolean) }); }
-    if (block.type === "heading") {
-      sec("Contenu", [textField(block, "text", "Titre", { vars: true, max: 200 })]);
-      sec("Apparence", [selectField(block, "level", "Niveau", [[1, "Grand titre"], [2, "Titre moyen"]], 2), selectField(block, "align", "Alignement", ALIGNS, "left")]);
-      sec("Typographie", [fontField(block), optNumberField(block, "fontSize", "Taille (px, 16 à 44)", 16, 44, "auto"), optColorField(block, "color", "Couleur personnalisée", state.theme.textColor || "#10222f")]);
-    } else if (block.type === "text") {
-      sec("Contenu", [typeof block.html === "string" ? richField(block, "html", "Texte", { rows: 8 }) : markdownField(block, "markdown", "Texte", 8)]);
-      sec("Typographie", [fontField(block), optNumberField(block, "fontSize", "Taille de base (px, 12 à 28)", 12, 28, "16"), lineHeightField(block), optColorField(block, "color", "Couleur du texte personnalisée", state.theme.textColor || "#10222f")]);
-    } else if (block.type === "image") {
-      sec("Image", [imageSource(block), textField(block, "src", "Adresse de l'image (https://…)", { max: 2000, placeholder: "https://exemple.fr/image.png" }),
+    var out = { content: [], styles: [] };
+    function sec(tab, title, nodes) { out[tab].push({ title: title, nodes: nodes.filter(Boolean) }); }
+    var t = block.type;
+    if (t === "heading") {
+      sec("content", "Titre", [textField(block, "text", "Texte du titre", { vars: true, max: 200 }), segmentField("Niveau", [[1, "Grand"], [2, "Moyen"], [3, "Petit"]], block.level || 2, function (v) { block.level = v; changed(); }, block.id + "-level")]);
+      sec("content", "Lien (facultatif)", [textField(block, "href", "Adresse au clic (https://… ou mailto:)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
+      sec("styles", "Typographie", [fontField(block), optNumberField(block, "fontSize", "Taille (px, 16 à 44)", 16, 44, "auto"), optColorField(block, "color", "Couleur personnalisée", state.theme.textColor || "#10222f"), alignField(block, "align", "left", block.id)].concat(emphasisFields(block, true)));
+    } else if (t === "text") {
+      sec("content", "Texte", [typeof block.html === "string" ? richField(block, "html", "Texte", { rows: 8 }) : markdownField(block, "markdown", "Texte", 8)]);
+      sec("styles", "Typographie", [fontField(block), optNumberField(block, "fontSize", "Taille de base (px, 12 à 28)", 12, 28, "16"), lineHeightField(block), optColorField(block, "color", "Couleur du texte personnalisée", state.theme.textColor || "#10222f"), alignField(block, "align", "left", block.id, "Alignement du bloc"), optNumberField(block, "letterSpacing", "Espacement des lettres (px, 0 à 10)", 0, 10, "0")]);
+    } else if (t === "image") {
+      sec("content", "Image", [imageSource(block), textField(block, "src", "Adresse de l'image (https://…)", { max: 2000, placeholder: "https://exemple.fr/image.png" }),
         textField(block, "alt", "Texte alternatif", { vars: true, max: 200, hint: "Décrit l'image aux lecteurs d'écran et quand l'image est bloquée." }), checkField(block, "decorative", "Image décorative (pas de texte alternatif)")]);
-      sec("Mise en page", [numberField(block, "width", "Largeur (px, 40 à 720)", 40, 720), selectField(block, "align", "Alignement", ALIGNS, "left"), optNumberField(block, "radius", "Arrondi des coins (px, 0 à 40)", 0, 40, "0")]);
-      sec("Lien", [textField(block, "href", "Lien au clic (facultatif)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
-    } else if (block.type === "button") {
-      sec("Contenu", [textField(block, "label", "Texte du bouton", { vars: true, max: 80 }), textField(block, "url", "Adresse (https://… ou mailto:)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
-      sec("Apparence", [selectField(block, "align", "Alignement", ALIGNS, "center"), selectField(block, "size", "Taille", [["s", "Petit"], ["m", "Moyen"], ["l", "Grand"]], "m"), checkField(block, "fullWidth", "Toute la largeur"), colorField(block), optColorField(block, "textColor", "Couleur du texte personnalisée (sinon automatique, lisible)", "#ffffff"), optNumberField(block, "fontSize", "Taille du texte (px, 12 à 24)", 12, 24, "16"), optNumberField(block, "radius", "Arrondi (px, 0 à 40)", 0, 40, String(state.theme.radius != null ? state.theme.radius : 4))]);
-    } else if (block.type === "spacer") {
-      sec("Dimensions", [numberField(block, "height", "Hauteur (px, 4 à 120)", 4, 120)]);
-    } else if (block.type === "columns") {
+      sec("content", "Lien au clic (facultatif)", [textField(block, "href", "Adresse (https://…)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
+      sec("styles", "Dimensions", [numberField(block, "width", "Largeur (px, 40 à 720)", 40, 720), alignField(block, "align", "left", block.id), optNumberField(block, "radius", "Arrondi des coins (px, 0 à 40)", 0, 40, "0")]);
+    } else if (t === "button") {
+      sec("content", "Bouton", [textField(block, "label", "Texte du bouton", { vars: true, max: 80 }), textField(block, "url", "Lien (https://… ou mailto:)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
+      var r = block.radius == null ? (state.theme.radius != null ? state.theme.radius : 4) : block.radius;
+      var shape = (SHAPES.filter(function (x) { return x[2] === r; })[0] || ["custom"])[0];
+      var shapeNodes = [segmentField("Coins du bouton", SHAPES.map(function (x) { return [x[0], x[1]]; }).concat([["custom", "Personnalisé"]]), shape, function (v) {
+        var f = SHAPES.filter(function (x) { return x[0] === v; })[0];
+        if (f) block.radius = f[2]; else if (block.radius == null) block.radius = r;
+        changed(); renderProps();
+      }, block.id + "-shape")];
+      if (shape === "custom") shapeNodes.push(optNumberField(block, "radius", "Arrondi (px, 0 à 40)", 0, 40, String(r)));
+      sec("styles", "Forme", shapeNodes);
+      sec("styles", "Couleurs", [colorField(block), optColorField(block, "textColor", "Couleur du texte personnalisée (sinon automatique, lisible)", "#ffffff")]);
+      var bNodes = [segmentField("Style de bordure", BORDER_STYLES, block.borderStyle || "none", function (v) { block.borderStyle = v; changed(); renderProps(); }, block.id + "-btnborder")];
+      if (block.borderStyle && block.borderStyle !== "none") bNodes.push(optNumberField(block, "borderWidth", "Épaisseur (px, 1 à 8)", 1, 8, "2"), optColorField(block, "borderColor", "Couleur de la bordure", "#10222f"));
+      sec("styles", "Bordure du bouton", bNodes);
+      sec("styles", "Texte", [optNumberField(block, "fontSize", "Taille du texte (px, 12 à 24)", 12, 24, "16")].concat(emphasisFields(block, true)));
+      sec("styles", "Taille et position", [segmentField("Taille", [["s", "Petit"], ["m", "Moyen"], ["l", "Grand"]], block.size || "m", function (v) { block.size = v; changed(); }, block.id + "-size"), checkField(block, "fullWidth", "Toute la largeur"), alignField(block, "align", "center", block.id)]);
+    } else if (t === "spacer") {
+      sec("content", "Espace", [numberField(block, "height", "Hauteur (px, 4 à 120)", 4, 120)]);
+    } else if (t === "columns") {
       var richCols = typeof block.leftHtml === "string";
-      sec("Colonne de gauche", [richCols ? richField(block, "leftHtml", "Colonne de gauche", { rows: 4, hint: false }) : markdownField(block, "left", "Colonne de gauche", 5)]);
-      sec("Colonne de droite", [richCols ? richField(block, "rightHtml", "Colonne de droite", { rows: 4, hint: false }) : markdownField(block, "right", "Colonne de droite", 5)]);
+      sec("content", "Colonne de gauche", [richCols ? richField(block, "leftHtml", "Colonne de gauche", { rows: 4, hint: false }) : markdownField(block, "left", "Colonne de gauche", 5)]);
+      sec("content", "Colonne de droite", [richCols ? richField(block, "rightHtml", "Colonne de droite", { rows: 4, hint: false }) : markdownField(block, "right", "Colonne de droite", 5)]);
       var stackBox = checkField(block, "stack", "Empiler les colonnes sur mobile");
       var stackInput = stackBox.querySelector("input"); stackInput.checked = block.stack !== false;
       stackInput.addEventListener("change", function () { block.stack = stackInput.checked ? undefined : false; if (!stackInput.checked) block.reverse = undefined; renderProps(); });
       var revBox = checkField(block, "reverse", "Sur mobile : colonne de droite en premier");
       if (block.stack === false) revBox.querySelector("input").disabled = true;
-      sec("Mise en page", [selectField(block, "ratio", "Largeurs (gauche / droite)", [["50-50", "50 % / 50 %"], ["60-40", "60 % / 40 %"], ["40-60", "40 % / 60 %"], ["70-30", "70 % / 30 %"], ["30-70", "30 % / 70 %"]], "50-50"), stackBox, revBox]);
-    } else if (block.type === "divider") {
-      sec("Réglages", [el("p", { "class": "field-hint" }, "Une ligne fine de séparation : aucun réglage.")]);
-    } else if (block.type === "quote") {
-      sec("Contenu", [textField(block, "text", "Citation", { vars: true, max: 500 }), textField(block, "author", "Auteur (facultatif)", { vars: true, max: 100 })]);
-    } else if (block.type === "list") {
-      sec("Contenu", [itemsField(block)]);
-      sec("Apparence", [selectField(block, "style", "Style", LIST_STYLES, "bullets")]);
-    } else if (block.type === "social") {
-      sec("Liens", [socialField(block)]);
-      sec("Apparence", [selectField(block, "align", "Alignement", ALIGNS, "center")]);
-    } else if (block.type === "video") {
-      sec("Vidéo", [textField(block, "url", "Adresse de la vidéo (https://…)", { max: 2000, placeholder: "https://youtube.com/watch?v=…" }), textField(block, "title", "Titre de la vidéo (texte alternatif)", { vars: true, max: 200 }),
+      sec("styles", "Mise en page", [selectField(block, "ratio", "Largeurs (gauche / droite)", [["50-50", "50 % / 50 %"], ["60-40", "60 % / 40 %"], ["40-60", "40 % / 60 %"], ["70-30", "70 % / 30 %"], ["30-70", "30 % / 70 %"]], "50-50"), stackBox, revBox]);
+    } else if (t === "divider") {
+      sec("content", "Ligne de séparation", [el("p", { "class": "field-hint" }, "Une ligne horizontale entre deux parties du message : son apparence se règle dans l'onglet « Styles ».")]);
+      sec("styles", "Ligne", [
+        segmentField("Style", BORDER_STYLES.slice(1), block.style || "solid", function (v) { block.style = v; changed(); }, block.id + "-dstyle"),
+        optNumberField(block, "thickness", "Épaisseur (px, 1 à 8)", 1, 8, "1"), optNumberField(block, "width", "Largeur (%, 10 à 100)", 10, 100, "100"),
+        optColorField(block, "color", "Couleur personnalisée (sinon couleur secondaire)", state.theme.secondary || "#d5e3ee"), alignField(block, "align", "center", block.id)]);
+    } else if (t === "quote") {
+      sec("content", "Citation", [textField(block, "text", "Citation", { vars: true, max: 500 }), textField(block, "author", "Auteur (facultatif)", { vars: true, max: 100 })]);
+    } else if (t === "list") {
+      sec("content", "Liste", [itemsField(block)]);
+      sec("styles", "Liste", [segmentField("Style", LIST_STYLES, block.style || "bullets", function (v) { block.style = v; changed(); }, block.id + "-lstyle")]);
+    } else if (t === "social") {
+      sec("content", "Réseaux", [socialField(block)]);
+      var sNodes = [segmentField("Présentation", [["text", "Liens texte"], ["buttons", "Pastilles"]], block.display || "text", function (v) { block.display = v; changed(); renderProps(); }, block.id + "-sdisplay")];
+      if (block.display === "buttons") sNodes.push(segmentField("Couleur des pastilles", [["brand", "Couleurs des réseaux"], ["accent", "Couleur principale"]], block.colors === "accent" ? "accent" : "brand", function (v) { block.colors = v; changed(); }, block.id + "-scolors"));
+      sNodes.push(alignField(block, "align", "center", block.id));
+      sNodes.push(el("p", { "class": "field-hint" }, "Les logos des réseaux ne sont pas utilisés : Gmail et Outlook bloquent souvent les images d'icônes ; les pastilles de couleur s'affichent partout."));
+      sec("styles", "Présentation", sNodes);
+    } else if (t === "video") {
+      sec("content", "Vidéo", [textField(block, "url", "Adresse de la vidéo (https://…)", { max: 2000, placeholder: "https://youtube.com/watch?v=…" }), textField(block, "title", "Titre de la vidéo (texte alternatif)", { vars: true, max: 200 }),
         textField(block, "thumbnail", "Miniature (adresse d'une image https://…, facultatif)", { max: 2000, placeholder: "https://exemple.fr/miniature.jpg" }),
         el("p", { "class": "field-hint" }, "Un e-mail ne peut pas lire de vidéo : le message affiche la miniature et un lien « Regarder la vidéo ».")]);
-      sec("Mise en page", [numberField(block, "width", "Largeur de la miniature (px, 40 à 600)", 40, 600), selectField(block, "align", "Alignement", ALIGNS, "center")]);
-    } else if (block.type === "course") {
-      sec("Formation", courseField(block));
-    } else if (block.type === "link") {
-      sec("Contenu", [textField(block, "label", "Texte du lien", { vars: true, max: 120 }), textField(block, "url", "Adresse (https://… ou mailto:)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
-      sec("Apparence", [selectField(block, "align", "Alignement", ALIGNS, "left")]);
-    } else if (block.type === "coupon") {
-      sec("Contenu", [textField(block, "code", "Code promo", { vars: true, max: 40, placeholder: "BIENVENUE10" }), textField(block, "title", "Titre de l'offre (facultatif)", { vars: true, max: 100 }), textField(block, "details", "Conditions (facultatif)", { vars: true, max: 300, placeholder: "Valable jusqu'au 30 septembre." })]);
-      sec("Apparence", [optColorField(block, "color", "Couleur personnalisée (sinon couleur principale)", state.theme.accent || "#0277b6")]);
+      sec("styles", "Dimensions", [numberField(block, "width", "Largeur de la miniature (px, 40 à 600)", 40, 600), alignField(block, "align", "center", block.id)]);
+    } else if (t === "course") {
+      sec("content", "Formation", courseField(block));
+    } else if (t === "link") {
+      sec("content", "Lien", [textField(block, "label", "Texte du lien", { vars: true, max: 120 }), textField(block, "url", "Adresse (https://… ou mailto:)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
+      sec("styles", "Position", [alignField(block, "align", "left", block.id)]);
+    } else if (t === "coupon") {
+      sec("content", "Offre", [textField(block, "code", "Code promo", { vars: true, max: 40, placeholder: "BIENVENUE10" }), textField(block, "title", "Titre de l'offre (facultatif)", { vars: true, max: 100 }), textField(block, "details", "Conditions (facultatif)", { vars: true, max: 300, placeholder: "Valable jusqu'au 30 septembre." })]);
+      sec("styles", "Couleur", [optColorField(block, "color", "Couleur personnalisée (sinon couleur principale)", state.theme.accent || "#0277b6")]);
     }
-    if (!readOnly || block.box) out.push({ title: "Espacement et affichage", nodes: boxSection(block) });
     return out;
   }
-  function conditionSection(block) {
-    var details = el("details", { "class": "mk-advanced mk-b-section" });
-    var sum = el("summary", { "class": "mk-b-section-title" }, "Condition d'affichage");
-    if (block.showIf) sum.appendChild(el("span", { "class": "mk-b-pill" }, "Active"));
-    details.appendChild(sum);
-    details.appendChild(textField(block, "showIf", "Afficher ce bloc seulement si…", { max: 200, placeholder: "contact.country == \"FR\"", hint: "Ex. : contact.country == \"FR\" · contact.company · not contact.company" }));
-    if (block.showIf) details.open = true;
-    return details;
+  // Sections de l'onglet demandé (les styles mobiles remplacent ceux de l'ordinateur quand « Mobile » est choisi)
+  function tabSections(block, tab) {
+    if (tab === "visibility") return visibilitySections(block);
+    var all = blockSections(block);
+    if (tab === "content") return all.content;
+    var list = [deviceSwitch(block)];
+    if (block.mobile && stylesDevice === "mobile") return list.concat(mobileSections(block));
+    return list.concat(all.styles, boxSections(block));
   }
 
   // ---------- Opérations sur les blocs ----------
@@ -782,6 +953,7 @@
     return bar;
   }
   var builder = $("mk-editor");
+  var propsTab = "content";
   function renderProps() {
     if (!props) return;
     props.textContent = "";
@@ -814,15 +986,33 @@
       alertBox.appendChild(el("p", {}, "À compléter : " + err.message));
       props.appendChild(alertBox);
     }
-    var body = el("div", { "class": "mk-b-props-body" });
-    blockSections(block).forEach(function (sct) {
-      var box = el("section", { "class": "mk-b-section" });
-      box.appendChild(el("h3", { "class": "mk-b-section-title" }, sct.title));
-      sct.nodes.forEach(function (n) { box.appendChild(n); });
-      body.appendChild(box);
+    // Onglets Contenu / Styles / Visibilité (l'onglet choisi reste actif d'un bloc à l'autre)
+    var TABS = [["content", "Contenu"], ["styles", "Styles"], ["visibility", "Visibilité"]];
+    var tabs = el("div", { "class": "mk-ptabs", role: "tablist", "aria-label": "Réglages du bloc" });
+    var panel = el("div", { "class": "mk-b-props-body", role: "tabpanel", id: "mk-props-panel", "aria-labelledby": "mk-tab-" + propsTab, tabindex: "0" });
+    TABS.forEach(function (t, i) {
+      var on = t[0] === propsTab;
+      var b = el("button", { type: "button", role: "tab", id: "mk-tab-" + t[0], "class": "mk-ptab", "aria-selected": String(on), "aria-controls": "mk-props-panel", tabindex: on ? "0" : "-1" }, t[1]);
+      if (t[0] === "visibility" && (block.hidden || block.showIf || (block.box && (block.box.hideMobile || block.box.hideDesktop)))) b.appendChild(el("span", { "class": "mk-ptab-dot", "aria-label": " (réglage actif)" }));
+      if (t[0] === "styles" && block.mobile) b.appendChild(el("span", { "class": "mk-ptab-dot", "aria-label": " (styles mobiles)" }));
+      b.addEventListener("click", function () { propsTab = t[0]; renderProps(); var nb = $("mk-tab-" + t[0]); if (nb) nb.focus(); });
+      b.addEventListener("keydown", function (e) {
+        var n = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+        if (e.key === "Home") n = -i; else if (e.key === "End") n = TABS.length - 1 - i;
+        if (!n) return; e.preventDefault(); propsTab = TABS[(i + n + TABS.length) % TABS.length][0]; renderProps(); var nb = $("mk-tab-" + propsTab); if (nb) nb.focus();
+      });
+      tabs.appendChild(b);
     });
-    body.appendChild(conditionSection(block));
-    props.appendChild(body);
+    props.appendChild(tabs);
+    tabSections(block, propsTab).forEach(function (sct) {
+      if (!sct.nodes.length) return;
+      var box = el("section", { "class": "mk-b-section" + (sct.cls ? " " + sct.cls : "") });
+      if (sct.title) box.appendChild(el("h3", { "class": "mk-b-section-title" }, sct.title));
+      sct.nodes.forEach(function (n) { box.appendChild(n); });
+      panel.appendChild(box);
+    });
+    if (propsTab === "styles" && !readOnly && blockSections(block).styles.length === 0 && !block.mobile) panel.appendChild(el("p", { "class": "field-hint mk-b-tabnote" }, "Ce bloc reprend les styles globaux du message (onglet « Styles » à gauche) ; ses marges, son fond et sa bordure se règlent ci-dessus."));
+    props.appendChild(panel);
   }
 
   // ---------- Structure (liste des blocs, accessible au clavier, réordonnable) ----------
@@ -1148,7 +1338,7 @@
   }
   // Styles d'édition injectés dans le rendu (contour au survol / à la sélection, ligne d'insertion) — jamais envoyés
   var EDIT_CSS = "[data-mk-block]{cursor:pointer}[data-mk-block]>td{transition:box-shadow .12s}[data-mk-block][data-mk-hover]>td{box-shadow:inset 0 0 0 1px #7aa7c7}" +
-    "[data-mk-block][data-mk-selected]>td{box-shadow:inset 0 0 0 2px #0277b6}a{pointer-events:none}#mk-insert{position:absolute;left:12px;right:12px;height:0;border-top:3px solid #0277b6;border-radius:2px;pointer-events:none;z-index:10}" +
+    "[data-mk-block][data-mk-selected]>td{box-shadow:inset 0 0 0 2px #0277b6;position:relative}[data-mk-block][data-mk-selected]>td[data-mk-name]::after{content:attr(data-mk-name);position:absolute;left:0;top:0;padding:1px 8px;border-radius:0 0 6px 0;background:#0277b6;color:#fff;font:600 12px/18px -apple-system,Segoe UI,Roboto,Arial,sans-serif;pointer-events:none;z-index:5}a{pointer-events:none}#mk-insert{position:absolute;left:12px;right:12px;height:0;border-top:3px solid #0277b6;border-radius:2px;pointer-events:none;z-index:10}" +
     "#mk-insert::before{content:'';position:absolute;left:-5px;top:-6.5px;width:10px;height:10px;border-radius:50%;background:#0277b6}" +
     "[data-mk-block][data-mk-selected]>td{background-image:linear-gradient(rgba(2,119,182,.04),rgba(2,119,182,.04))}" +
     "[data-mk-block][data-mk-dragging]>td{opacity:.35}" +
@@ -1165,7 +1355,9 @@
       e.preventDefault(); // un lien de l'e-mail ne s'ouvre jamais dans l'éditeur
       var row = e.target.closest && e.target.closest("[data-mk-block]");
       if (row) select(row.getAttribute("data-mk-block"), { focus: false });
+      else if (selectedId && !(e.target.closest && e.target.closest(".mk-container"))) select(null); // clic hors du message : désélection
     }, true);
+    d.addEventListener("keydown", function (e) { if (e.key === "Escape" && selectedId) select(null); });
     d.addEventListener("mouseover", function (e) {
       var row = e.target.closest && e.target.closest("[data-mk-block]");
       rows().forEach(function (n) { n.toggleAttribute("data-mk-hover", n === row); });
@@ -1225,7 +1417,12 @@
   // Contour + étiquette + mini-barre d'outils du bloc sélectionné, dans le rendu
   function markSelection() {
     var d = frameDoc();
-    if (d && d.body) rows().forEach(function (n) { n.toggleAttribute("data-mk-selected", n.getAttribute("data-mk-block") === selectedId); });
+    if (d && d.body) rows().forEach(function (n) {
+      var on = n.getAttribute("data-mk-block") === selectedId;
+      n.toggleAttribute("data-mk-selected", on);
+      var cell = n.firstElementChild, b = on && blockById(selectedId);
+      if (cell) { if (b) cell.setAttribute("data-mk-name", label(b)); else cell.removeAttribute("data-mk-name"); }
+    });
     [].forEach.call(structure ? structure.querySelectorAll(".mk-structure-item") : [], function (li) {
       var on = li.getAttribute("data-id") === selectedId;
       li.classList.toggle("is-selected", on);
