@@ -70,7 +70,12 @@ describe("structure de l'e-mail", () => {
     bad({ theme: { accent: "red; background:url(https://evil.example/x)" } }, /couleur/i);
     bad({ theme: { accent: "#12345" } }, /couleur/i);
     bad({ theme: { fontFamily: "Comic Sans" } }, /police/i);
-    assert.deepEqual(Object.keys(DEFAULT_THEME).sort(), ["accent", "background", "contentBackground", "fontFamily", "textColor"]);
+    assert.deepEqual(Object.keys(DEFAULT_THEME).sort(), ["accent", "background", "contentBackground", "fontFamily", "maxWidth", "radius", "secondary", "spacing", "textColor"]);
+    // styles globaux étendus : bornés, jamais injectés tels quels
+    bad({ theme: { maxWidth: 2000 } }, /largeur maximale/i);
+    bad({ theme: { radius: "4px;x" } }, /arrondi/i);
+    bad({ theme: { spacing: "énorme" } }, /espacement/i);
+    bad({ theme: { secondary: "blue" } }, /couleur/i);
   });
 });
 

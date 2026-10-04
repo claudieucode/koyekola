@@ -22,12 +22,14 @@
 
   var TYPES = {
     heading: function () { return { type: "heading", text: "Votre titre", level: 2, align: "left" }; },
-    text: function () { return { type: "text", markdown: "Votre texte ici." }; },
+    text: function () { return { type: "text", html: "<p>Votre texte ici.</p>" }; },
     image: function () { return { type: "image", src: "", alt: "", decorative: false, width: 552, align: "center" }; },
     button: function () { return { type: "button", label: "Cliquez ici", url: "", align: "center" }; },
     divider: function () { return { type: "divider" }; },
     spacer: function () { return { type: "spacer", height: 24 }; },
-    columns: function () { return { type: "columns", left: "Colonne de gauche", right: "Colonne de droite" }; },
+    columns: function () { return { type: "columns", leftHtml: "<p>Colonne de gauche</p>", rightHtml: "<p>Colonne de droite</p>", ratio: "50-50" }; },
+    link: function () { return { type: "link", label: "En savoir plus", url: "", align: "left" }; },
+    coupon: function () { return { type: "coupon", code: "BIENVENUE10", title: "-10 % sur votre première formation", details: "" }; },
     quote: function () { return { type: "quote", text: "Une citation inspirante.", author: "" }; },
     list: function () { return { type: "list", style: "bullets", items: ["Premier élément", "Deuxième élément"] }; },
     social: function () { return { type: "social", align: "center", links: [{ network: "facebook", url: "" }] }; },
@@ -37,7 +39,14 @@
   var NETWORKS = [["facebook", "Facebook"], ["instagram", "Instagram"], ["x", "X"], ["linkedin", "LinkedIn"], ["youtube", "YouTube"], ["tiktok", "TikTok"], ["whatsapp", "WhatsApp"], ["website", "Site web"]];
   var LIST_STYLES = [["bullets", "Puces"], ["numbers", "Numéros"], ["checks", "Coches ✓"]];
   var ALIGNS = [["left", "À gauche"], ["center", "Centré"], ["right", "À droite"]];
-  var THEME_DEFAULTS = { background: "#f3f8fc", contentBackground: "#ffffff", textColor: "#10222f", accent: "#0277b6", fontFamily: "system" };
+  var THEME_DEFAULTS = { background: "#f3f8fc", contentBackground: "#ffffff", textColor: "#10222f", accent: "#0277b6", fontFamily: "system", secondary: "#d5e3ee", maxWidth: 600, radius: 4, spacing: "normal" };
+  // Ensembles prêts à l'emploi : plusieurs vrais blocs insérés d'un coup (chacun ensuite modifiable séparément)
+  var PRESETS = {
+    gif: function () { return [{ type: "image", src: "", alt: "", decorative: false, width: 400, align: "center" }]; },
+    cta: function () { return [{ type: "heading", text: "Prêt à commencer ?", level: 2, align: "center" }, { type: "text", html: "<p style=\"text-align:center\">Rejoignez la formation et progressez à votre rythme.</p>" }, { type: "button", label: "Je m'inscris", url: "", align: "center" }]; },
+    offer: function () { return [{ type: "heading", text: "Une offre pour vous", level: 2, align: "center" }, { type: "coupon", code: "OFFRE20", title: "-20 % sur toutes les formations", details: "Valable 7 jours." }, { type: "button", label: "En profiter", url: "", align: "center" }]; }
+  };
+  var FONT_LABELS = { system: "Sans empattement (système)", arial: "Arial", verdana: "Verdana", trebuchet: "Trebuchet MS", tahoma: "Tahoma", serif: "Georgia", times: "Times New Roman", courier: "Courier New" };
 
   var dirty = false;
   var saving = false;
@@ -101,7 +110,7 @@
     ["name", "kind", "category", "subject", "preheader", "theme", "footer", "blocks"].forEach(function (k) { state[k] = snap[k]; });
     state.footer = state.footer || { text: "" }; state.theme = state.theme || {};
     if (selectedId && indexOfId(selectedId) === -1) selectedId = null;
-    syncSettings(); renderStructure(); renderProps(); updateHistoryUi();
+    syncSettings(); renderStructure(); renderProps(); updateHistoryUi(); applyDesktopWidth();
     dirty = pos !== savedPos;
     if (dirty) { status("dirty", "Modifications non enregistrées"); scheduleAutosave(); } else status("saved", savedLabel());
     schedulePreview();
@@ -127,7 +136,7 @@
     dirty = true;
     status("dirty", "Modifications non enregistrées");
     var a = document.activeElement;
-    var typing = a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && a.type !== "checkbox"));
+    var typing = a && (a.tagName === "TEXTAREA" || a.isContentEditable || (a.tagName === "INPUT" && a.type !== "checkbox"));
     record(typing && a.id ? a.id : null);
     if (structural) renderStructure();
     else refreshStructureLabels();
@@ -137,19 +146,49 @@
 
   // ---------- Contenu envoyé au serveur ----------
   function intOrUndefined(v) { var n = parseInt(v, 10); return isNaN(n) ? undefined : n; }
+  var hexOk = function (v) { return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v); };
+  function typo(b, o) {
+    if (b.font) o.font = b.font;
+    var fs = intOrUndefined(b.fontSize); if (fs !== undefined) o.fontSize = fs;
+    if (typeof b.lineHeight === "number") o.lineHeight = b.lineHeight;
+    if (hexOk(b.color)) o.color = b.color;
+  }
+  function cleanBox(b, o) {
+    if (!b.box) return;
+    var x = {}, t = intOrUndefined(b.box.padTop), bt = intOrUndefined(b.box.padBottom);
+    if (t !== undefined) x.padTop = t;
+    if (bt !== undefined) x.padBottom = bt;
+    if (hexOk(b.box.background)) x.background = b.box.background;
+    if (b.box.hideMobile) x.hideMobile = true;
+    if (b.box.hideDesktop) x.hideDesktop = true;
+    if (Object.keys(x).length) o.box = x;
+  }
+  // Ce qui part au serveur : uniquement les champs connus de chaque type (le serveur revalide et nettoie tout)
   function cleanBlock(b) {
     var o = { id: b.id, type: b.type };
-    if (b.type === "heading") { o.text = b.text || ""; o.level = intOrUndefined(b.level) || 2; o.align = b.align || "left"; }
-    else if (b.type === "text") { o.markdown = b.markdown || ""; }
+    if (b.type === "heading") { o.text = b.text || ""; o.level = intOrUndefined(b.level) || 2; o.align = b.align || "left"; typo(b, o); delete o.lineHeight; }
+    else if (b.type === "text") { if (typeof b.html === "string") o.html = b.html; else o.markdown = b.markdown || ""; typo(b, o); }
     else if (b.type === "image") {
       o.src = b.src || ""; o.alt = b.alt || ""; o.decorative = !!b.decorative; o.align = b.align || "left";
       var w = intOrUndefined(b.width); if (w !== undefined) o.width = w;
-      if (b.href && b.href.trim()) o.href = b.href.trim();
+      if (b.href && b.href.trim()) { o.href = b.href.trim(); if (b.newTab) o.newTab = true; }
+      var ir = intOrUndefined(b.radius); if (ir) o.radius = ir;
     } else if (b.type === "button") {
       o.label = b.label || ""; o.url = b.url || ""; o.align = b.align || "center";
       if (b.color) o.color = b.color;
+      if (hexOk(b.textColor)) o.textColor = b.textColor;
+      var bf = intOrUndefined(b.fontSize); if (bf !== undefined) o.fontSize = bf;
+      var br = intOrUndefined(b.radius); if (br !== undefined) o.radius = br;
+      if (b.size && b.size !== "m") o.size = b.size;
+      if (b.fullWidth) o.fullWidth = true;
+      if (b.newTab) o.newTab = true;
     } else if (b.type === "spacer") { var h = intOrUndefined(b.height); if (h !== undefined) o.height = h; }
-    else if (b.type === "columns") { o.left = b.left || ""; o.right = b.right || ""; }
+    else if (b.type === "columns") {
+      if (typeof b.leftHtml === "string" || typeof b.rightHtml === "string") { o.leftHtml = b.leftHtml || ""; o.rightHtml = b.rightHtml || ""; } else { o.left = b.left || ""; o.right = b.right || ""; }
+      if (b.ratio && b.ratio !== "50-50") o.ratio = b.ratio;
+      if (b.stack === false) o.stack = false;
+      else if (b.reverse) o.reverse = true;
+    }
     else if (b.type === "quote") { o.text = b.text || ""; if (b.author && b.author.trim()) o.author = b.author; }
     else if (b.type === "list") { o.style = b.style || "bullets"; o.items = (b.items || []).slice(); }
     else if (b.type === "social") { o.align = b.align || "center"; o.links = (b.links || []).map(function (l) { return { network: l.network, url: l.url || "" }; }); }
@@ -161,7 +200,9 @@
       o.courseId = intOrUndefined(b.courseId); o.cta = b.cta || "Voir la formation";
       if (b.snapshot) o.snapshot = b.snapshot;
       if (b.refresh) o.refresh = true;
-    }
+    } else if (b.type === "link") { o.label = b.label || ""; o.url = b.url || ""; o.align = b.align || "left"; if (b.newTab) o.newTab = true; }
+    else if (b.type === "coupon") { o.code = b.code || ""; if (b.title && b.title.trim()) o.title = b.title; if (b.details && b.details.trim()) o.details = b.details; if (hexOk(b.color)) o.color = b.color; }
+    cleanBox(b, o);
     if (b.showIf && b.showIf.trim()) o.showIf = b.showIf.trim();
     if (b.hidden) o.hidden = true;
     return o;
@@ -173,6 +214,12 @@
   // ---------- Variables ----------
   function insertAtCursor(input, text) {
     if (!input) return false;
+    if (input.isContentEditable) {
+      input.focus();
+      if (input._range) { var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(input._range); }
+      document.execCommand("insertText", false, text);
+      return true;
+    }
     var start = input.selectionStart == null ? input.value.length : input.selectionStart;
     var end = input.selectionEnd == null ? input.value.length : input.selectionEnd;
     input.setRangeText(text, start, end, "end");
@@ -254,6 +301,171 @@
     wrap.appendChild(area);
     wrap.appendChild(el("span", { "class": "field-hint" }, "Markdown : **gras**, *italique*, [lien](https://…), « - » pour une liste. Le HTML n'est pas accepté."));
     return wrap;
+  }
+  // ---------- Éditeur de texte riche ----------
+  // Zone d'édition du navigateur (contenteditable) + barre d'outils. Le contenu est reconstruit nœud par nœud à partir
+  // d'une liste fermée (jamais d'insertion HTML brute) ; le serveur le renettoie et le met en forme pour l'e-mail.
+  var RICH_TAGS = { P: 1, H2: 1, H3: 1, H4: 1, STRONG: 1, B: 1, EM: 1, I: 1, U: 1, S: 1, STRIKE: 1, SUP: 1, SUB: 1, A: 1, UL: 1, OL: 1, LI: 1, BR: 1, SPAN: 1, BLOCKQUOTE: 1, DIV: 1, FONT: 1 };
+  var RICH_STYLES = ["color", "background-color", "font-size", "text-align", "margin-left", "padding-left"];
+  var SAFE_HREF = /^(https:\/\/|mailto:|\{\{\s*(unsubscribe_url|preferences_url|view_url)\s*\}\})/i;
+  function importRich(node, into) {
+    [].forEach.call(node.childNodes, function (n) {
+      if (n.nodeType === 3) { into.appendChild(document.createTextNode(n.nodeValue)); return; }
+      if (n.nodeType !== 1) return;
+      if (!RICH_TAGS[n.tagName]) { importRich(n, into); return; } // balise inconnue : on garde seulement son texte
+      var tag = { B: "strong", I: "em", STRIKE: "s", DIV: "p", FONT: "span" }[n.tagName] || n.tagName.toLowerCase();
+      var out = document.createElement(tag);
+      RICH_STYLES.forEach(function (prop) { var v = n.style && n.style.getPropertyValue(prop); if (v) out.style.setProperty(prop, v); });
+      if (n.tagName === "FONT" && n.getAttribute("color")) out.style.color = n.getAttribute("color");
+      if (tag === "a") { var href = n.getAttribute("href") || ""; if (SAFE_HREF.test(href)) out.setAttribute("href", href); if (n.getAttribute("target") === "_blank") out.setAttribute("target", "_blank"); }
+      importRich(n, out);
+      into.appendChild(out);
+    });
+  }
+  function setRich(editor, html) {
+    editor.textContent = "";
+    importRich(new DOMParser().parseFromString(String(html || ""), "text/html").body, editor);
+    if (!editor.firstChild) editor.appendChild(el("p", {}, ""));
+  }
+  var FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32];
+  function richField(block, key, labelText, opts) {
+    opts = opts || {};
+    var wrap = el("div", { "class": "field-group mk-rich" });
+    var id = "f-" + block.id + "-" + key;
+    var lab = el("span", { "class": "mk-rich-label", id: id + "-label" }, labelText);
+    wrap.appendChild(lab);
+    var editor = el("div", { "class": "mk-rich-area", id: id, role: "textbox", "aria-multiline": "true", "aria-labelledby": id + "-label", "data-var-target": "", spellcheck: "true" });
+    editor.contentEditable = readOnly ? "false" : "true";
+    editor.style.minHeight = (opts.rows || 6) * 1.5 + "em";
+    setRich(editor, block[key]);
+    var sync = function () { block[key] = editor.innerHTML; changed(); };
+    if (!readOnly) {
+      var bar = el("div", { "class": "mk-rich-bar", role: "toolbar", "aria-label": "Mise en forme : " + labelText, "aria-controls": id });
+      var more = el("div", { "class": "mk-rich-bar mk-rich-more", role: "toolbar", "aria-label": "Mise en forme avancée", hidden: true });
+      var saveRange = function () { var sel = window.getSelection(); if (sel.rangeCount && editor.contains(sel.anchorNode)) editor._range = sel.getRangeAt(0).cloneRange(); };
+      var restoreRange = function () { editor.focus(); if (editor._range) { var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(editor._range); } };
+      var exec = function (cmd, value, css) { restoreRange(); document.execCommand("styleWithCSS", false, !!css); document.execCommand(cmd, false, value == null ? null : value); saveRange(); refresh(); sync(); };
+      var states = [];
+      var btn = function (target, icon, text, title, run, stateCmd) {
+        var b = el("button", { type: "button", "class": "mk-rich-btn", "aria-label": title, "data-tip": title });
+        if (stateCmd) b.setAttribute("aria-pressed", "false");
+        if (icon) b.appendChild(iconSpan(icon)); else b.appendChild(el("span", { "class": "mk-rich-glyph", "aria-hidden": "true" }, text));
+        b.addEventListener("mousedown", function (e) { e.preventDefault(); }); // garde la sélection dans la zone de texte
+        b.addEventListener("click", run);
+        if (stateCmd) states.push([b, stateCmd]);
+        target.appendChild(b);
+        return b;
+      };
+      var sep = function (target) { target.appendChild(el("span", { "class": "mk-rich-sep", "aria-hidden": "true" })); };
+      var select = function (target, title, options, run) {
+        var s = el("select", { "class": "mk-rich-select", "aria-label": title, title: title });
+        options.forEach(function (o) { s.appendChild(el("option", { value: o[0] }, o[1])); });
+        s.addEventListener("change", function () { if (s.value !== "") run(s.value); s.value = ""; });
+        target.appendChild(s);
+        return s;
+      };
+      var colorBtn = function (target, title, glyph, cmd) {
+        var l = el("label", { "class": "mk-rich-btn mk-rich-color", title: title, "data-tip": title });
+        l.appendChild(el("span", { "class": "mk-rich-glyph", "aria-hidden": "true" }, glyph));
+        var c = el("input", { type: "color", "aria-label": title, value: cmd === "foreColor" ? "#d1121f" : "#fff3a0" });
+        l.addEventListener("mousedown", saveRange);
+        c.addEventListener("change", function () { exec(cmd, c.value, true); });
+        l.appendChild(c); target.appendChild(l);
+      };
+      select(bar, "Style du paragraphe", [["", "Paragraphe"], ["p", "Texte normal"], ["h2", "Grand titre"], ["h3", "Titre moyen"], ["h4", "Petit titre"], ["blockquote", "Citation"]], function (v) { exec("formatBlock", "<" + v + ">"); });
+      btn(bar, null, "B", "Gras (Ctrl+B)", function () { exec("bold"); }, "bold");
+      btn(bar, null, "I", "Italique (Ctrl+I)", function () { exec("italic"); }, "italic");
+      btn(bar, null, "U", "Souligné (Ctrl+U)", function () { exec("underline"); }, "underline");
+      btn(bar, null, "S", "Barré", function () { exec("strikeThrough"); }, "strikeThrough");
+      sep(bar);
+      var linkBtn = btn(bar, "link", null, "Lien (Ctrl+K)", function () { openLink(); });
+      var toggle = btn(bar, "moreHorizontal", null, "Plus d'options de mise en forme", function () { more.hidden = !more.hidden; toggle.setAttribute("aria-expanded", String(!more.hidden)); });
+      toggle.setAttribute("aria-expanded", "false");
+      bar.appendChild(el("span", { "class": "mk-rich-break", "aria-hidden": "true" }));
+      btn(bar, "list", null, "Liste à puces", function () { exec("insertUnorderedList"); }, "insertUnorderedList");
+      btn(bar, null, "1.", "Liste numérotée", function () { exec("insertOrderedList"); }, "insertOrderedList");
+      sep(bar);
+      select(bar, "Alignement", [["", "Aligner"], ["justifyLeft", "À gauche"], ["justifyCenter", "Centré"], ["justifyRight", "À droite"], ["justifyFull", "Justifié"]], function (v) { exec(v, null, true); });
+      colorBtn(bar, "Couleur du texte", "A", "foreColor");
+      var vars = el("select", { "class": "mk-rich-select", "aria-label": "Insérer une variable", title: "Insérer une variable" });
+      vars.appendChild(el("option", { value: "" }, "{ } Variable"));
+      fillVariableOptions(vars);
+      vars.addEventListener("mousedown", saveRange);
+      vars.addEventListener("change", function () { if (vars.value) { restoreRange(); document.execCommand("insertText", false, "{{" + vars.value + "}}"); saveRange(); sync(); } vars.value = ""; });
+      bar.appendChild(vars);
+      select(more, "Taille du texte", [["", "Taille"]].concat(FONT_SIZES.map(function (n) { return [String(n), n + " px"]; })), function (v) {
+        exec("fontSize", "7"); // le navigateur marque la sélection (<font size=7>) : remplacée par une vraie taille en pixels
+        [].forEach.call(editor.querySelectorAll('font[size="7"]'), function (f) { var sp = document.createElement("span"); sp.style.fontSize = v + "px"; while (f.firstChild) sp.appendChild(f.firstChild); f.parentNode.replaceChild(sp, f); });
+        sync();
+      });
+      colorBtn(more, "Couleur de fond (surlignage)", "▮", "hiliteColor");
+      btn(more, null, "⇥", "Augmenter le retrait", function () { exec("indent", null, true); });
+      btn(more, null, "⇤", "Diminuer le retrait", function () { exec("outdent", null, true); });
+      btn(more, null, "x²", "Exposant", function () { exec("superscript"); }, "superscript");
+      btn(more, null, "x₂", "Indice", function () { exec("subscript"); }, "subscript");
+      btn(more, null, "Tx", "Effacer la mise en forme", function () { exec("removeFormat"); exec("unlink"); });
+      btn(more, "undo", null, "Annuler la saisie", function () { exec("undo"); });
+      btn(more, "redo", null, "Rétablir la saisie", function () { exec("redo"); });
+      wrap.appendChild(bar); wrap.appendChild(more);
+      // Lien : adresse (https://, mailto: ou lien système), nouvel onglet ; validé avant d'être appliqué
+      var linkBox = el("div", { "class": "mk-rich-link", hidden: true });
+      var linkInput = el("input", { type: "text", id: id + "-href", placeholder: "https://… ou mailto:…", "aria-label": "Adresse du lien", maxlength: "2000" });
+      var linkNew = el("input", { type: "checkbox", id: id + "-newtab" });
+      var linkNewLab = el("label", { "class": "checkbox-row", "for": id + "-newtab" }); linkNewLab.appendChild(linkNew); linkNewLab.appendChild(document.createTextNode(" Nouvel onglet"));
+      var linkOk = el("button", { type: "button", "class": "btn btn-primary btn-sm" }, "Appliquer");
+      var linkDel = el("button", { type: "button", "class": "btn btn-outline btn-sm" }, "Retirer le lien");
+      var linkMsg = el("p", { "class": "mk-rich-link-msg", role: "alert" });
+      linkBox.appendChild(linkInput); linkBox.appendChild(linkNewLab); linkBox.appendChild(linkOk); linkBox.appendChild(linkDel); linkBox.appendChild(linkMsg);
+      var currentLink = function () { var sel = window.getSelection(); var n = sel.rangeCount ? sel.anchorNode : null; while (n && n !== editor) { if (n.nodeType === 1 && n.tagName === "A") return n; n = n.parentNode; } return null; };
+      function openLink() {
+        saveRange();
+        var a = currentLink();
+        linkInput.value = a ? a.getAttribute("href") || "" : ""; linkNew.checked = !!(a && a.getAttribute("target") === "_blank");
+        linkMsg.textContent = ""; linkBox.hidden = false; linkInput.focus();
+      }
+      linkOk.addEventListener("click", function () {
+        var url = linkInput.value.trim();
+        if (!SAFE_HREF.test(url) || /\s/.test(url)) { linkMsg.textContent = "Adresse invalide : commencez par https:// ou mailto: (ou {{unsubscribe_url}})."; linkInput.focus(); return; }
+        restoreRange();
+        var sel = window.getSelection();
+        if (sel.isCollapsed && !currentLink()) document.execCommand("insertText", false, url); // pas de texte choisi : l'adresse devient le texte
+        if (sel.isCollapsed && !currentLink()) { var r = sel.getRangeAt(0); r.setStart(r.startContainer, Math.max(0, r.startOffset - url.length)); sel.removeAllRanges(); sel.addRange(r); }
+        document.execCommand("createLink", false, url);
+        var a = currentLink() || editor.querySelector('a[href="' + url.replace(/"/g, "") + '"]');
+        if (a) { if (linkNew.checked) a.setAttribute("target", "_blank"); else a.removeAttribute("target"); }
+        linkBox.hidden = true; saveRange(); sync(); announce("Lien appliqué.");
+      });
+      linkDel.addEventListener("click", function () { restoreRange(); var a = currentLink(); if (a) { var r = document.createRange(); r.selectNodeContents(a); var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); } document.execCommand("unlink"); linkBox.hidden = true; sync(); announce("Lien retiré."); });
+      linkInput.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); linkOk.click(); } else if (e.key === "Escape") { e.stopPropagation(); linkBox.hidden = true; editor.focus(); } });
+      wrap.appendChild(linkBox);
+      // État des boutons (gras actif…) selon la position du curseur
+      var refresh = function () { states.forEach(function (s) { var on = false; try { on = document.queryCommandState(s[1]); } catch (e) { on = false; } s[0].setAttribute("aria-pressed", on ? "true" : "false"); }); linkBtn.setAttribute("aria-pressed", currentLink() ? "true" : "false"); };
+      editor._richRefresh = function () { saveRange(); refresh(); };
+      editor.addEventListener("keydown", function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openLink(); }
+      });
+    }
+    editor.addEventListener("focus", function () { try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch (e) { /* navigateur ancien */ } });
+    // Collage : texte seul (les mises en forme d'autres logiciels cassent les e-mails) — paragraphes conservés
+    editor.addEventListener("paste", function (e) {
+      if (readOnly) return;
+      var text = (e.clipboardData || window.clipboardData).getData("text/plain");
+      e.preventDefault();
+      document.execCommand("insertText", false, text);
+    });
+    editor.addEventListener("input", sync);
+    editor.addEventListener("blur", function () { var sel = window.getSelection(); if (sel.rangeCount && editor.contains(sel.anchorNode)) editor._range = sel.getRangeAt(0).cloneRange(); });
+    wrap.appendChild(editor);
+    if (opts.hint !== false) wrap.appendChild(el("span", { "class": "field-hint" }, "Sélectionnez du texte puis choisissez une mise en forme. Les variables {{…}} sont remplacées pour chaque destinataire."));
+    return wrap;
+  }
+  document.addEventListener("selectionchange", function () { var a = document.activeElement; if (a && a._richRefresh) a._richRefresh(); }); // un seul écouteur pour toutes les zones
+  function fillVariableOptions(sel) {
+    var groups = {};
+    (data.variables || []).forEach(function (v) {
+      if (!groups[v.group]) { groups[v.group] = el("optgroup", { label: v.group }); sel.appendChild(groups[v.group]); }
+      groups[v.group].appendChild(el("option", { value: v.path }, v.label + "  ·  {{" + v.path + "}}"));
+    });
   }
   function checkField(block, key, labelText) {
     var input = el("input", { type: "checkbox", id: "f-" + block.id + "-" + key });
@@ -363,26 +575,98 @@
     return wrap;
   }
   // Réglages d'un bloc, rangés en sections (contenu, apparence…) ; la condition d'affichage vient toujours en dernier
+  // Couleur facultative : case « personnalisée » + pastille (décochée = valeur du thème)
+  function optColorField(target, key, labelText, fallback, idBase) {
+    var wrap = el("div", { "class": "field-group mk-optcolor" });
+    var id = "f-" + (idBase || target.id || "x") + "-" + key.replace(/\W/g, "");
+    var toggle = el("input", { type: "checkbox", id: id + "-on" });
+    var color = el("input", { type: "color", id: id, "aria-label": labelText });
+    toggle.checked = !!target[key]; color.value = target[key] || fallback || "#000000";
+    color.disabled = readOnly || !toggle.checked; toggle.disabled = readOnly;
+    toggle.addEventListener("change", function () { color.disabled = readOnly || !toggle.checked; target[key] = toggle.checked ? color.value : undefined; changed(); });
+    color.addEventListener("input", function () { target[key] = color.value; changed(); });
+    var lab = el("label", { "class": "checkbox-row", "for": toggle.id }); lab.appendChild(toggle); lab.appendChild(document.createTextNode(" " + labelText));
+    wrap.appendChild(lab); wrap.appendChild(color);
+    return wrap;
+  }
+  // Nombre facultatif (vide = valeur par défaut) : marges, tailles, arrondis
+  function optNumberField(target, key, labelText, min, max, placeholder, owner) {
+    var id = "f-" + ((owner || target).id || "x") + "-" + key;
+    var input = el("input", { type: "number", id: id, min: String(min), max: String(max), step: "1", placeholder: placeholder || "" });
+    input.value = target[key] == null ? "" : String(target[key]);
+    if (readOnly) input.disabled = true;
+    input.addEventListener("input", function () { var n = parseInt(input.value, 10); target[key] = input.value === "" || isNaN(n) ? undefined : n; changed(); });
+    return group(labelText, input);
+  }
+  function fontField(block) {
+    var opts = [["", "Comme le message (styles globaux)"]].concat((data.fonts || Object.keys(FONT_LABELS)).map(function (k) { return [k, FONT_LABELS[k] || k]; }));
+    return selectField(block, "font", "Police", opts, "");
+  }
+  function lineHeightField(block) {
+    var sel = el("select", { id: "f-" + block.id + "-lineHeight" });
+    [["", "Normal"], ["1.2", "Serré (1,2)"], ["1.4", "1,4"], ["1.6", "Standard (1,6)"], ["1.8", "Aéré (1,8)"], ["2", "Double (2)"]].forEach(function (o) { sel.appendChild(el("option", { value: o[0] }, o[1])); });
+    sel.value = block.lineHeight == null ? "" : String(block.lineHeight);
+    if (readOnly) sel.disabled = true;
+    sel.addEventListener("change", function () { block.lineHeight = sel.value === "" ? undefined : parseFloat(sel.value); changed(); });
+    return group("Interligne", sel);
+  }
+  // Espacement et affichage : communs à TOUS les blocs (marges haut/bas, fond, appareil)
+  function boxSection(block) {
+    block.box = block.box || {};
+    var box = block.box;
+    var nodes = [];
+    var row = el("div", { "class": "mk-step-row mk-b-row2" });
+    row.appendChild(optNumberField(box, "padTop", "Marge du haut (px)", 0, 64, "auto", block));
+    row.appendChild(optNumberField(box, "padBottom", "Marge du bas (px)", 0, 64, "auto", block));
+    nodes.push(row);
+    nodes.push(optColorField(box, "background", "Fond du bloc", "#f3f8fc", block.id + "-box"));
+    var dev = el("div", { "class": "field-group mk-b-devices", role: "group", "aria-label": "Affichage selon l'appareil" });
+    [["hideMobile", "Masquer sur mobile"], ["hideDesktop", "Masquer sur ordinateur"]].forEach(function (d) {
+      var input = el("input", { type: "checkbox", id: "f-" + block.id + "-" + d[0] });
+      input.checked = !!box[d[0]]; if (readOnly) input.disabled = true;
+      input.addEventListener("change", function () {
+        box[d[0]] = input.checked || undefined;
+        var other = d[0] === "hideMobile" ? "hideDesktop" : "hideMobile";
+        if (input.checked && box[other]) { box[other] = undefined; var o = $("f-" + block.id + "-" + other); if (o) o.checked = false; }
+        changed(true);
+      });
+      var lab = el("label", { "class": "checkbox-row", "for": input.id }); lab.appendChild(input); lab.appendChild(document.createTextNode(" " + d[1]));
+      dev.appendChild(lab);
+    });
+    nodes.push(dev);
+    nodes.push(el("p", { "class": "field-hint" }, "Vide = espacement des styles globaux. Le canevas en vue « Mobile » montre le rendu réel."));
+    return nodes;
+  }
   function blockSections(block) {
     var out = [];
     function sec(title, nodes) { out.push({ title: title, nodes: nodes.filter(Boolean) }); }
     if (block.type === "heading") {
       sec("Contenu", [textField(block, "text", "Titre", { vars: true, max: 200 })]);
-      sec("Apparence", [selectField(block, "level", "Taille", [[1, "Grand"], [2, "Moyen"]], 2), selectField(block, "align", "Alignement", ALIGNS, "left")]);
+      sec("Apparence", [selectField(block, "level", "Niveau", [[1, "Grand titre"], [2, "Titre moyen"]], 2), selectField(block, "align", "Alignement", ALIGNS, "left")]);
+      sec("Typographie", [fontField(block), optNumberField(block, "fontSize", "Taille (px, 16 à 44)", 16, 44, "auto"), optColorField(block, "color", "Couleur personnalisée", state.theme.textColor || "#10222f")]);
     } else if (block.type === "text") {
-      sec("Contenu", [markdownField(block, "markdown", "Texte", 8)]);
+      sec("Contenu", [typeof block.html === "string" ? richField(block, "html", "Texte", { rows: 8 }) : markdownField(block, "markdown", "Texte", 8)]);
+      sec("Typographie", [fontField(block), optNumberField(block, "fontSize", "Taille de base (px, 12 à 28)", 12, 28, "16"), lineHeightField(block), optColorField(block, "color", "Couleur du texte personnalisée", state.theme.textColor || "#10222f")]);
     } else if (block.type === "image") {
       sec("Image", [imageSource(block), textField(block, "src", "Adresse de l'image (https://…)", { max: 2000, placeholder: "https://exemple.fr/image.png" }),
         textField(block, "alt", "Texte alternatif", { vars: true, max: 200, hint: "Décrit l'image aux lecteurs d'écran et quand l'image est bloquée." }), checkField(block, "decorative", "Image décorative (pas de texte alternatif)")]);
-      sec("Mise en page", [numberField(block, "width", "Largeur (px, 40 à 600)", 40, 600), selectField(block, "align", "Alignement", ALIGNS, "left")]);
-      sec("Lien", [textField(block, "href", "Lien au clic (facultatif)", { max: 2000, placeholder: "https://exemple.fr" })]);
+      sec("Mise en page", [numberField(block, "width", "Largeur (px, 40 à 720)", 40, 720), selectField(block, "align", "Alignement", ALIGNS, "left"), optNumberField(block, "radius", "Arrondi des coins (px, 0 à 40)", 0, 40, "0")]);
+      sec("Lien", [textField(block, "href", "Lien au clic (facultatif)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
     } else if (block.type === "button") {
-      sec("Contenu", [textField(block, "label", "Texte du bouton", { vars: true, max: 80 }), textField(block, "url", "Adresse (https://… ou mailto:)", { max: 2000, placeholder: "https://exemple.fr" })]);
-      sec("Apparence", [selectField(block, "align", "Alignement", ALIGNS, "center"), colorField(block)]);
+      sec("Contenu", [textField(block, "label", "Texte du bouton", { vars: true, max: 80 }), textField(block, "url", "Adresse (https://… ou mailto:)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
+      sec("Apparence", [selectField(block, "align", "Alignement", ALIGNS, "center"), selectField(block, "size", "Taille", [["s", "Petit"], ["m", "Moyen"], ["l", "Grand"]], "m"), checkField(block, "fullWidth", "Toute la largeur"), colorField(block), optColorField(block, "textColor", "Couleur du texte personnalisée (sinon automatique, lisible)", "#ffffff"), optNumberField(block, "fontSize", "Taille du texte (px, 12 à 24)", 12, 24, "16"), optNumberField(block, "radius", "Arrondi (px, 0 à 40)", 0, 40, String(state.theme.radius != null ? state.theme.radius : 4))]);
     } else if (block.type === "spacer") {
       sec("Dimensions", [numberField(block, "height", "Hauteur (px, 4 à 120)", 4, 120)]);
     } else if (block.type === "columns") {
-      sec("Contenu", [markdownField(block, "left", "Colonne de gauche", 5), markdownField(block, "right", "Colonne de droite", 5), el("p", { "class": "field-hint" }, "Sur mobile, les deux colonnes s'affichent l'une sous l'autre.")]);
+      var richCols = typeof block.leftHtml === "string";
+      sec("Colonne de gauche", [richCols ? richField(block, "leftHtml", "Colonne de gauche", { rows: 4, hint: false }) : markdownField(block, "left", "Colonne de gauche", 5)]);
+      sec("Colonne de droite", [richCols ? richField(block, "rightHtml", "Colonne de droite", { rows: 4, hint: false }) : markdownField(block, "right", "Colonne de droite", 5)]);
+      var stackBox = checkField(block, "stack", "Empiler les colonnes sur mobile");
+      var stackInput = stackBox.querySelector("input"); stackInput.checked = block.stack !== false;
+      stackInput.addEventListener("change", function () { block.stack = stackInput.checked ? undefined : false; if (!stackInput.checked) block.reverse = undefined; renderProps(); });
+      var revBox = checkField(block, "reverse", "Sur mobile : colonne de droite en premier");
+      if (block.stack === false) revBox.querySelector("input").disabled = true;
+      sec("Mise en page", [selectField(block, "ratio", "Largeurs (gauche / droite)", [["50-50", "50 % / 50 %"], ["60-40", "60 % / 40 %"], ["40-60", "40 % / 60 %"], ["70-30", "70 % / 30 %"], ["30-70", "30 % / 70 %"]], "50-50"), stackBox, revBox]);
     } else if (block.type === "divider") {
       sec("Réglages", [el("p", { "class": "field-hint" }, "Une ligne fine de séparation : aucun réglage.")]);
     } else if (block.type === "quote") {
@@ -400,7 +684,14 @@
       sec("Mise en page", [numberField(block, "width", "Largeur de la miniature (px, 40 à 600)", 40, 600), selectField(block, "align", "Alignement", ALIGNS, "center")]);
     } else if (block.type === "course") {
       sec("Formation", courseField(block));
+    } else if (block.type === "link") {
+      sec("Contenu", [textField(block, "label", "Texte du lien", { vars: true, max: 120 }), textField(block, "url", "Adresse (https://… ou mailto:)", { max: 2000, placeholder: "https://exemple.fr" }), checkField(block, "newTab", "Ouvrir dans un nouvel onglet")]);
+      sec("Apparence", [selectField(block, "align", "Alignement", ALIGNS, "left")]);
+    } else if (block.type === "coupon") {
+      sec("Contenu", [textField(block, "code", "Code promo", { vars: true, max: 40, placeholder: "BIENVENUE10" }), textField(block, "title", "Titre de l'offre (facultatif)", { vars: true, max: 100 }), textField(block, "details", "Conditions (facultatif)", { vars: true, max: 300, placeholder: "Valable jusqu'au 30 septembre." })]);
+      sec("Apparence", [optColorField(block, "color", "Couleur personnalisée (sinon couleur principale)", state.theme.accent || "#0277b6")]);
     }
+    if (!readOnly || block.box) out.push({ title: "Espacement et affichage", nodes: boxSection(block) });
     return out;
   }
   function conditionSection(block) {
@@ -415,7 +706,18 @@
 
   // ---------- Opérations sur les blocs ----------
   function insertIndex() { var i = selectedId ? indexOfId(selectedId) : -1; return i === -1 ? state.blocks.length : i + 1; }
+  // Ensemble prêt à l'emploi : plusieurs vrais blocs, insérés ensemble (une seule étape d'annulation)
+  function addPreset(key, at) {
+    if (!PRESETS[key] || readOnly) return;
+    var index = at == null ? insertIndex() : Math.max(0, Math.min(at, state.blocks.length));
+    var added = PRESETS[key]().map(function (b) { b.id = genId(); return b; });
+    Array.prototype.splice.apply(state.blocks, [index, 0].concat(added));
+    selectedId = added[0].id;
+    changed(true); renderProps();
+    announce(added.length + " bloc" + (added.length > 1 ? "s" : "") + " ajouté" + (added.length > 1 ? "s" : "") + " en position " + (index + 1) + ".");
+  }
   function addBlock(type, at, preset) {
+    if (typeof type === "string" && type.indexOf("preset:") === 0) { addPreset(type.slice(7), at); return null; }
     if (!TYPES[type] || readOnly) return null;
     var block = Object.assign(TYPES[type](), preset || {}); block.id = genId();
     var index = at == null ? insertIndex() : Math.max(0, Math.min(at, state.blocks.length));
@@ -527,15 +829,19 @@
   var structure = $("mk-structure");
   var dragFrom = -1;
   var BLOCK_DRAG = "text/mk-block", MOVE_DRAG = "text/mk-move";
+  // Texte visible d'un contenu riche : document inerte (DOMParser) — rien n'y est exécuté ni chargé
+  function htmlText(html) { return new DOMParser().parseFromString(String(html || ""), "text/html").body.textContent || ""; }
   function plain(md) { return String(md || "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[*#_>`]/g, "").replace(/^\s*-\s+/gm, ""); }
   function summaryOf(b) {
     var s = "";
     if (b.type === "heading" || b.type === "quote") s = b.text;
-    else if (b.type === "text") s = plain(b.markdown);
+    else if (b.type === "text") s = typeof b.html === "string" ? htmlText(b.html) : plain(b.markdown);
     else if (b.type === "button") s = (b.label || "") + (b.url ? " → " + b.url : "");
     else if (b.type === "image") s = b.alt || (b.src ? b.src.split("/").pop() : "");
     else if (b.type === "list") s = (b.items || []).join(" · ");
-    else if (b.type === "columns") s = plain(b.left) + (b.right ? " | " + plain(b.right) : "");
+    else if (b.type === "columns") s = typeof b.leftHtml === "string" ? htmlText(b.leftHtml) + " | " + htmlText(b.rightHtml) : plain(b.left) + (b.right ? " | " + plain(b.right) : "");
+    else if (b.type === "link") s = (b.label || "") + (b.url ? " → " + b.url : "");
+    else if (b.type === "coupon") s = (b.code || "") + (b.title ? " · " + b.title : "");
     else if (b.type === "video") s = b.title || b.url;
     else if (b.type === "social") s = (b.links || []).map(function (l) { var n = NETWORKS.filter(function (x) { return x[0] === l.network; })[0]; return n ? n[1] : l.network; }).join(", ");
     else if (b.type === "course") { var c = (data.courses || []).filter(function (x) { return x.id === b.courseId; })[0]; s = c ? c.title : (b.snapshot ? b.snapshot.title : ""); }
@@ -571,6 +877,8 @@
       if (b.hidden) nameLine.appendChild(el("span", { "class": "mk-structure-tag" }, "Masqué"));
       if (blockErrors.some(function (x) { return x.id === b.id; })) nameLine.appendChild(el("span", { "class": "mk-structure-tag is-error" }, "À compléter"));
       if (b.showIf) nameLine.appendChild(el("span", { "class": "mk-structure-tag" }, "Condition"));
+      if (b.box && b.box.hideMobile) nameLine.appendChild(el("span", { "class": "mk-structure-tag" }, "Ordinateur seulement"));
+      if (b.box && b.box.hideDesktop) nameLine.appendChild(el("span", { "class": "mk-structure-tag" }, "Mobile seulement"));
       txt.appendChild(nameLine);
       var sum = summaryOf(b);
       txt.appendChild(el("span", { "class": "mk-structure-sum" + (sum ? "" : " is-empty"), title: sum || undefined }, sum || "Aucun contenu"));
@@ -640,6 +948,11 @@
       btn.addEventListener("click", function () { addBlock(type); scrollToBlock(selectedId); });
       btn.addEventListener("dragstart", function (e) { e.dataTransfer.effectAllowed = "copy"; e.dataTransfer.setData(BLOCK_DRAG, type); e.dataTransfer.setData("text/plain", type); });
     });
+    [].forEach.call(document.querySelectorAll("[data-add-preset]"), function (btn) {
+      var key = btn.getAttribute("data-add-preset");
+      btn.addEventListener("click", function () { addPreset(key); scrollToBlock(selectedId); });
+      btn.addEventListener("dragstart", function (e) { e.dataTransfer.effectAllowed = "copy"; e.dataTransfer.setData(BLOCK_DRAG, "preset:" + key); e.dataTransfer.setData("text/plain", key); });
+    });
   }
 
   // ---------- Onglets de gauche ----------
@@ -683,8 +996,22 @@
   bind("t-subject", function () { return state.subject || ""; }, function (v) { state.subject = v; });
   bind("t-preheader", function () { return state.preheader || ""; }, function (v) { state.preheader = v; });
   bind("t-footer", function () { return state.footer.text || ""; }, function (v) { state.footer.text = v; });
-  [["t-bg", "background"], ["t-cbg", "contentBackground"], ["t-text", "textColor"], ["t-accent", "accent"], ["t-font", "fontFamily"]].forEach(function (pair) {
+  [["t-bg", "background"], ["t-cbg", "contentBackground"], ["t-text", "textColor"], ["t-accent", "accent"], ["t-secondary", "secondary"], ["t-font", "fontFamily"], ["t-spacing", "spacing"]].forEach(function (pair) {
     bind(pair[0], function () { return state.theme[pair[1]] || THEME_DEFAULTS[pair[1]]; }, function (v) { state.theme[pair[1]] = v; });
+  });
+  // Nombres bornés (largeur du message, arrondi) : une saisie hors limites n'est appliquée qu'une fois corrigée
+  [["t-maxwidth", "maxWidth", 480, 720], ["t-radius", "radius", 0, 24]].forEach(function (d) {
+    var input = $(d[0]); if (!input) return;
+    var show = function () { input.value = String(state.theme[d[1]] != null ? state.theme[d[1]] : THEME_DEFAULTS[d[1]]); input.removeAttribute("aria-invalid"); };
+    show(); bindings.push(show);
+    if (readOnly) { input.disabled = true; return; }
+    input.addEventListener("input", function () {
+      var n = parseInt(input.value, 10);
+      if (isNaN(n) || n < d[2] || n > d[3]) { input.setAttribute("aria-invalid", "true"); return; }
+      input.removeAttribute("aria-invalid"); state.theme[d[1]] = n; changed();
+      if (d[1] === "maxWidth") applyDesktopWidth();
+    });
+    input.addEventListener("blur", show);
   });
   // Code hexadécimal à côté de chaque couleur : lisible, copiable, saisissable (#RRGGBB)
   [].forEach.call(document.querySelectorAll("[data-hex-for]"), function (hex) {
@@ -720,7 +1047,7 @@
   var nameInput = $("t-name");
   if (nameInput) { var nameTitle = function () { nameInput.title = nameInput.value; }; nameInput.addEventListener("input", nameTitle); bindings.push(nameTitle); }
   if ($("mk-theme-reset")) $("mk-theme-reset").addEventListener("click", function () {
-    state.theme = Object.assign({}, THEME_DEFAULTS); syncSettings(); changed(); announce("Styles réinitialisés.");
+    state.theme = Object.assign({}, THEME_DEFAULTS); syncSettings(); changed(); applyDesktopWidth(); announce("Styles réinitialisés.");
   });
 
   // ---------- Canevas : rendu réel de l'e-mail, blocs cliquables, glisser-déposer ----------
@@ -767,6 +1094,16 @@
   else window.addEventListener("resize", function () { fitZoom(); placeBlockbar(); });
   frame.style.width = frameWidth + "px";
   if (zoomEl) zoomEl.addEventListener("click", function () { zoomFull = !zoomFull; fitZoom(); });
+  // Vue « Bureau » = largeur du message choisie dans les styles globaux (480 à 720 px)
+  function applyDesktopWidth() {
+    var desk = document.querySelector('[data-size][data-tip="Bureau"]');
+    var mw = parseInt(state.theme.maxWidth, 10) || 600;
+    var w = mw + 32; // comme une messagerie sur ordinateur : le message et 16 px de fond de chaque côté (jamais la règle mobile)
+    if (!desk) return;
+    desk.setAttribute("data-size", String(w)); desk.setAttribute("aria-label", "Bureau (message de " + mw + " px)");
+    if (desk.getAttribute("aria-pressed") === "true") { frameWidth = w; frame.style.width = w + "px"; fitZoom(); setTimeout(fitFrame, 50); }
+  }
+  applyDesktopWidth();
   fitZoom();
   var previewTimer = null, previewSeq = 0;
   function schedulePreview() { clearTimeout(previewTimer); previewTimer = setTimeout(runPreview, 350); }
@@ -813,7 +1150,9 @@
   var EDIT_CSS = "[data-mk-block]{cursor:pointer}[data-mk-block]>td{transition:box-shadow .12s}[data-mk-block][data-mk-hover]>td{box-shadow:inset 0 0 0 1px #7aa7c7}" +
     "[data-mk-block][data-mk-selected]>td{box-shadow:inset 0 0 0 2px #0277b6}a{pointer-events:none}#mk-insert{position:absolute;left:12px;right:12px;height:0;border-top:3px solid #0277b6;border-radius:2px;pointer-events:none;z-index:10}" +
     "#mk-insert::before{content:'';position:absolute;left:-5px;top:-6.5px;width:10px;height:10px;border-radius:50%;background:#0277b6}" +
-    "[data-mk-block][data-mk-selected]>td{background-image:linear-gradient(rgba(2,119,182,.04),rgba(2,119,182,.04))}";
+    "[data-mk-block][data-mk-selected]>td{background-image:linear-gradient(rgba(2,119,182,.04),rgba(2,119,182,.04))}" +
+    "[data-mk-block][data-mk-dragging]>td{opacity:.35}" +
+    "#mk-insert::after{content:'Déposer ici';position:absolute;left:50%;top:-11px;transform:translateX(-50%);padding:0 10px;border-radius:10px;background:#0277b6;color:#fff;font:600 12px/20px -apple-system,Segoe UI,Roboto,Arial,sans-serif;white-space:nowrap}";
   frame.addEventListener("load", decorateFrame);
   function decorateFrame() {
     var d = frameDoc();
@@ -830,7 +1169,9 @@
     d.addEventListener("mouseover", function (e) {
       var row = e.target.closest && e.target.closest("[data-mk-block]");
       rows().forEach(function (n) { n.toggleAttribute("data-mk-hover", n === row); });
+      if (row) showHoverGrip(row.getAttribute("data-mk-block"));
     });
+    d.addEventListener("mouseleave", function () { hideHoverGrip(300); });
     d.addEventListener("mouseleave", function () { rows().forEach(function (n) { n.removeAttribute("data-mk-hover"); }); });
     if (readOnly) return;
     d.addEventListener("dragover", function (e) {
@@ -908,6 +1249,7 @@
       badge.innerHTML = info.icon || ""; // icône du registre (serveur)
       blockbar.appendChild(badge);
       blockbar.appendChild(el("span", { "class": "sr-only" }, label(block) + ", bloc " + (i + 1) + " sur " + state.blocks.length));
+      blockbar.appendChild(dragHandle(block.id, "mk-b-icon mk-b-grip"));
       [["arrowUp", "Monter", function () { move(indexOfId(selectedId), indexOfId(selectedId) - 1); }, i === 0],
         ["arrowDown", "Descendre", function () { move(indexOfId(selectedId), indexOfId(selectedId) + 1); }, i === state.blocks.length - 1],
         ["edit", "Modifier (réglages à droite)", function () { select(selectedId, { focus: true }); }],
@@ -922,6 +1264,92 @@
     blockbar.hidden = false;
     placeBlockbar();
   }
+  // ---------- Glisser-déplacer DANS le canevas : poignée « Déplacer » ----------
+  // Événements de pointeur (souris, pavé tactile, écran tactile) capturés par la poignée : le mouvement est suivi même
+  // au-dessus de l'e-mail ; une ligne d'insertion montre l'emplacement ; le canevas défile près des bords.
+  // Clavier : flèches haut / bas sur la poignée. Échap annule.
+  var dragging = null;
+  function dragHandle(id, cls) {
+    var b = el("button", { type: "button", "class": cls, "aria-label": "Déplacer le bloc (glisser, ou flèches haut / bas)", "data-tip": "Déplacer (glisser)", "aria-roledescription": "poignée de déplacement" });
+    b.appendChild(iconSpan("grip"));
+    b.addEventListener("pointerdown", function (e) { if (e.button === 0) startCanvasDrag(e, id, b); });
+    b.addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      e.preventDefault();
+      var from = indexOfId(id); move(from, from + (e.key === "ArrowUp" ? -1 : 1));
+      select(id, { scroll: true });
+      setTimeout(function () { var g = blockbar && blockbar.querySelector(".mk-b-grip"); if (g) g.focus(); }, 0);
+    });
+    return b;
+  }
+  function startCanvasDrag(e, id, handle) {
+    if (readOnly || indexOfId(id) === -1) return;
+    e.preventDefault();
+    try { handle.setPointerCapture(e.pointerId); } catch (x) { /* capture indisponible : suivi par le document */ }
+    var startX = e.clientX, startY = e.clientY, lastY = null, chip = null;
+    var frameY = function (clientY) { var fr = frame.getBoundingClientRect(); return (clientY - fr.top) / zoom; };
+    var cleanup = function () {
+      handle.removeEventListener("pointermove", onMove); handle.removeEventListener("pointerup", onUp); handle.removeEventListener("pointercancel", onCancel);
+      document.removeEventListener("keydown", onKey, true);
+      if (chip) chip.remove();
+      builder.classList.remove("is-block-dragging");
+      rows().forEach(function (n) { n.removeAttribute("data-mk-dragging"); });
+      hideInsert(); dragging = null;
+    };
+    var onMove = function (ev) {
+      if (!dragging) {
+        if (Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) < 5) return; // simple clic : pas de déplacement
+        var block = blockById(id);
+        dragging = { id: id };
+        builder.classList.add("is-block-dragging");
+        hideHoverGrip(0);
+        rows().forEach(function (n) { n.toggleAttribute("data-mk-dragging", n.getAttribute("data-mk-block") === id); });
+        chip = el("div", { "class": "mk-b-dragchip", "aria-hidden": "true" }, "Déplacer : " + label(block));
+        document.body.appendChild(chip);
+      }
+      chip.style.left = ev.clientX + 14 + "px"; chip.style.top = ev.clientY + 10 + "px";
+      var cr = canvas.getBoundingClientRect();
+      if (ev.clientY < cr.top + 48) canvas.scrollTop -= 14; else if (ev.clientY > cr.bottom - 48) canvas.scrollTop += 14;
+      lastY = frameY(ev.clientY);
+      showInsert(lastY, {});
+    };
+    var onUp = function () {
+      var wasDragging = !!dragging, y = lastY;
+      cleanup();
+      if (!wasDragging) { select(id, { scroll: false }); return; }
+      if (y == null) return;
+      var spot = dropSpot(y, {}), from = indexOfId(id);
+      var to = from < spot.index ? spot.index - 1 : spot.index;
+      if (from !== -1 && to !== from) move(from, to); else announce("Bloc laissé à sa place.");
+      select(id, { scroll: false });
+    };
+    var onCancel = function () { cleanup(); };
+    var onKey = function (ev) { if (ev.key === "Escape" && dragging) { ev.preventDefault(); ev.stopPropagation(); cleanup(); announce("Déplacement annulé."); } };
+    handle.addEventListener("pointermove", onMove); handle.addEventListener("pointerup", onUp); handle.addEventListener("pointercancel", onCancel);
+    document.addEventListener("keydown", onKey, true);
+  }
+  // Poignée au survol : à gauche de n'importe quel bloc du rendu (sans avoir à le sélectionner d'abord)
+  var hoverGrip = null, hoverFor = null, hoverTimer = null;
+  function showHoverGrip(id) {
+    if (readOnly || dragging || !canvas) return;
+    clearTimeout(hoverTimer);
+    if (!hoverGrip) {
+      hoverGrip = el("div", { "class": "mk-b-hovergrip" });
+      hoverGrip.addEventListener("mouseenter", function () { clearTimeout(hoverTimer); });
+      hoverGrip.addEventListener("mouseleave", function () { hideHoverGrip(300); });
+      canvas.appendChild(hoverGrip);
+    }
+    if (hoverFor !== id) { hoverGrip.textContent = ""; hoverGrip.appendChild(dragHandle(id, "mk-b-hovergrip-btn")); hoverFor = id; }
+    var box = blockBox(id);
+    if (!box) return;
+    hoverGrip.hidden = false;
+    hoverGrip.style.top = Math.round(box.top + 4) + "px";
+    hoverGrip.style.left = Math.max(2, Math.round(box.left - 30)) + "px";
+  }
+  function hideHoverGrip(delay) {
+    clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(function () { if (hoverGrip && !dragging) hoverGrip.hidden = true; }, delay || 0);
+  }
   var placeQueued = false;
   function placeBlockbar() {
     if (!blockbar || blockbar.hidden || !selectedId) return;
@@ -933,7 +1361,7 @@
     top = Math.min(top, Math.max(box.top, viewBottom - h));
     top = Math.max(0, Math.min(top, canvas.scrollHeight - h));
     blockbar.style.top = Math.round(top) + "px";
-    blockbar.style.left = Math.round(box.right + 10) + "px";
+    blockbar.style.left = Math.round(box.right - (frameWidth > parseInt(state.theme.maxWidth || 600, 10) ? 12 * zoom : -10)) + "px"; // sur le fond autour du message
   }
   canvas.addEventListener("scroll", function () { if (placeQueued) return; placeQueued = true; requestAnimationFrame(function () { placeQueued = false; placeBlockbar(); }); }, { passive: true });
 

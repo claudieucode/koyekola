@@ -11,6 +11,7 @@ const { renderMarkdown } = require("../../utils/markdown");
 const { MarketingError } = require("../errors");
 const engine = require("./engine");
 const { htmlToText } = require("./text");
+const { richNodes } = require("./richtext");
 
 const MAX_BLOCKS = 60;
 const MARKDOWN_MAX = 10000;
@@ -20,9 +21,17 @@ const SYSTEM_URL = /^\{\{\s*(unsubscribe_url|preferences_url|view_url|event\.cou
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const ALIGN = ["left", "center", "right"];
 const MUTED = "#5d7182";
-const FONTS = { system: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif", serif: "Georgia,'Times New Roman',serif" };
-const DEFAULT_THEME = { background: "#f3f8fc", contentBackground: "#ffffff", textColor: "#10222f", accent: "#0277b6", fontFamily: "system" };
-const TYPES = ["heading", "text", "image", "button", "divider", "spacer", "columns", "quote", "list", "social", "video", "course"];
+// Polices sûres pour l'e-mail (installées partout, avec replis) — aucune police web téléchargée
+const FONTS = {
+  system: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif", serif: "Georgia,'Times New Roman',serif",
+  arial: "Arial,Helvetica,sans-serif", verdana: "Verdana,Geneva,sans-serif", trebuchet: "'Trebuchet MS',Helvetica,sans-serif",
+  tahoma: "Tahoma,Verdana,sans-serif", times: "'Times New Roman',Times,serif", courier: "'Courier New',Courier,monospace",
+};
+const SPACING = { compact: 4, normal: 8, large: 16 };
+const DEFAULT_THEME = { background: "#f3f8fc", contentBackground: "#ffffff", textColor: "#10222f", accent: "#0277b6", fontFamily: "system", secondary: "#d5e3ee", maxWidth: 600, radius: 4, spacing: "normal" };
+const TYPES = ["heading", "text", "image", "button", "divider", "spacer", "columns", "quote", "list", "social", "video", "course", "link", "coupon"];
+const RATIOS = { "50-50": [50, 50], "60-40": [60, 40], "40-60": [40, 60], "70-30": [70, 30], "30-70": [30, 70] };
+const BUTTON_SIZES = { s: "8px 16px", m: "12px 24px", l: "16px 32px" };
 const NETWORKS = { facebook: "Facebook", instagram: "Instagram", x: "X", linkedin: "LinkedIn", youtube: "YouTube", tiktok: "TikTok", whatsapp: "WhatsApp", website: "Site web" };
 const LIST_STYLES = ["bullets", "numbers", "checks"];
 const MAX_LIST_ITEMS = 20;
@@ -58,7 +67,7 @@ const textOn = (bg) => (contrast("#ffffff", bg) >= contrast("#10222f", bg) ? "#f
 function normalizeTheme(input = {}) {
   if (input === null || typeof input !== "object" || Array.isArray(input)) throw fail("Le thème doit être un objet.");
   const theme = { ...DEFAULT_THEME };
-  for (const key of ["background", "contentBackground", "textColor", "accent"]) {
+  for (const key of ["background", "contentBackground", "textColor", "accent", "secondary"]) {
     if (input[key] === undefined) continue;
     if (typeof input[key] !== "string" || !HEX.test(input[key])) throw fail(`Couleur invalide pour « ${key} » : utilisez le format #rrggbb.`);
     theme[key] = input[key].toLowerCase();
@@ -67,10 +76,53 @@ function normalizeTheme(input = {}) {
     if (!Object.hasOwn(FONTS, input.fontFamily)) throw fail(`Police inconnue (${Object.keys(FONTS).join(", ")}).`);
     theme.fontFamily = input.fontFamily;
   }
+  if (input.maxWidth !== undefined) theme.maxWidth = intIn(input.maxWidth, 480, 720, "Largeur maximale du message (480 à 720 px)");
+  if (input.radius !== undefined) theme.radius = intIn(input.radius, 0, 24, "Arrondi des boutons et encadrés (0 à 24 px)");
+  if (input.spacing !== undefined) {
+    if (!Object.hasOwn(SPACING, input.spacing)) throw fail("Espacement général inconnu (compact, normal ou large).");
+    theme.spacing = input.spacing;
+  }
   return theme;
 }
 
 // ---------- Champs ----------
+function intIn(value, min, max, label) {
+  if (!Number.isInteger(value) || value < min || value > max) throw fail(`${label} : valeur invalide.`);
+  return value;
+}
+const optHex = (value, label) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string" || !HEX.test(value)) throw fail(`${label} : couleur invalide (format #rrggbb).`);
+  return value.toLowerCase();
+};
+const optBool = (value) => value === true;
+// Typographie propre à un bloc (titre, texte) : police, taille, interligne, couleur — sinon celles du thème
+function typography(block, { sizeMin = 12, sizeMax = 28 } = {}) {
+  const out = {};
+  if (block.font !== undefined && block.font !== "") { if (!Object.hasOwn(FONTS, block.font)) throw fail("Police inconnue."); out.font = block.font; }
+  if (block.fontSize !== undefined && block.fontSize !== null) out.fontSize = intIn(block.fontSize, sizeMin, sizeMax, `Taille du texte (${sizeMin} à ${sizeMax} px)`);
+  if (block.lineHeight !== undefined && block.lineHeight !== null) {
+    if (typeof block.lineHeight !== "number" || !(block.lineHeight >= 1 && block.lineHeight <= 2.4)) throw fail("Interligne invalide (1 à 2,4).");
+    out.lineHeight = Math.round(block.lineHeight * 10) / 10;
+  }
+  const color = optHex(block.color, "Couleur du texte");
+  if (color) out.color = color;
+  return out;
+}
+const typoCss = (t) => [t.font ? `font-family:${FONTS[t.font]}` : "", t.fontSize ? `font-size:${t.fontSize}px` : "", t.lineHeight ? `line-height:${t.lineHeight}` : "", t.color ? `color:${t.color}` : ""].filter(Boolean).join(";");
+// Réglages communs à tout bloc : marges intérieures haut/bas, fond, affichage par appareil
+function boxOf(block) {
+  if (block.box === undefined || block.box === null) return null;
+  if (typeof block.box !== "object" || Array.isArray(block.box)) throw fail("Réglages du bloc invalides.");
+  const b = block.box, out = {};
+  if (b.padTop !== undefined && b.padTop !== null) out.padTop = intIn(b.padTop, 0, 64, "Marge du haut (0 à 64 px)");
+  if (b.padBottom !== undefined && b.padBottom !== null) out.padBottom = intIn(b.padBottom, 0, 64, "Marge du bas (0 à 64 px)");
+  const bg = optHex(b.background, "Fond du bloc"); if (bg) out.background = bg;
+  if (optBool(b.hideMobile)) out.hideMobile = true;
+  if (optBool(b.hideDesktop)) out.hideDesktop = true;
+  if (out.hideMobile && out.hideDesktop) throw fail("Un bloc ne peut pas être masqué à la fois sur ordinateur et sur mobile (utilisez « Masquer le bloc »).");
+  return Object.keys(out).length ? out : null;
+}
 function plain(source, allowed, { max = 200, required = false, label = "Le champ" } = {}) {
   const text = (typeof source === "string" ? source : "").replace(CONTROLS, " ").trim();
   if (required && !text) throw fail(`${label} est obligatoire.`);
@@ -191,12 +243,20 @@ function buildBlock(block, env, meta) {
       if (level !== 1 && level !== 2) throw fail("Niveau de titre invalide (1 ou 2).");
       const align = alignOf(block.align);
       const text = plain(block.text, allowed, { required: true, label: "Le titre" });
+      const typo = typography(block, { sizeMin: 16, sizeMax: 44 });
       meta.hasText = true;
-      return { normalized: { text: block.text.trim(), level, align }, nodes: [T(`<h${level} style="margin:0;font-size:${level === 1 ? 28 : 22}px;line-height:1.25;font-weight:800;color:${theme.textColor};text-align:${align}">`), ...text, T(`</h${level}>`)] };
+      const css = `margin:0;font-size:${typo.fontSize || (level === 1 ? 28 : 22)}px;line-height:${typo.lineHeight || 1.25};font-weight:800;color:${typo.color || theme.textColor};text-align:${align}${typo.font ? `;font-family:${FONTS[typo.font]}` : ""}`;
+      return { normalized: { text: block.text.trim(), level, align, ...typo }, nodes: [T(`<h${level} style="${css}">`), ...text, T(`</h${level}>`)] };
     }
     case "text": {
       meta.hasText = true;
-      return { normalized: { markdown: block.markdown }, nodes: markdownNodes(block.markdown, env) };
+      const typo = typography(block);
+      const wrap = (nodes) => { const css = typoCss(typo); return css ? [T(`<div style="${css}">`), ...nodes, T("</div>")] : nodes; };
+      if (typeof block.html === "string") {
+        const rich = richNodes(block.html, env, { color: typo.color });
+        return { normalized: { html: rich.html, ...typo }, nodes: wrap(rich.nodes) };
+      }
+      return { normalized: { markdown: block.markdown, ...typo }, nodes: wrap(markdownNodes(block.markdown, env)) };
     }
     case "image": {
       const src = localMedia(block.src) || urlNodes(block.src, { system: false });
@@ -204,16 +264,18 @@ function buildBlock(block, env, meta) {
       const alt = plain(block.alt, allowed, { max: 200, label: "Le texte alternatif" });
       if (!decorative && !(typeof block.alt === "string" && block.alt.trim())) throw fail("Le texte alternatif est obligatoire (ou cochez « image décorative »).");
       const width = block.width === undefined ? 552 : block.width;
-      if (!Number.isInteger(width) || width < 40 || width > 600) throw fail("Largeur invalide (40 à 600 pixels).");
+      if (!Number.isInteger(width) || width < 40 || width > 720) throw fail("Largeur invalide (40 à 720 pixels).");
       const align = alignOf(block.align);
       const href = block.href ? urlNodes(block.href) : null;
       const margin = align === "center" ? "margin:0 auto;" : align === "right" ? "margin:0 0 0 auto;" : "";
+      const radius = block.radius === undefined || block.radius === null ? 0 : intIn(block.radius, 0, 40, "Arrondi de l'image (0 à 40 px)");
+      const newTab = optBool(block.newTab);
       meta.hasImage = true;
       return {
-        normalized: { src: block.src.trim(), alt: (block.alt || "").trim(), decorative, width, align, ...(href ? { href: block.href.trim() } : {}) },
+        normalized: { src: block.src.trim(), alt: (block.alt || "").trim(), decorative, width, align, ...(href ? { href: block.href.trim() } : {}), ...(radius ? { radius } : {}), ...(newTab && href ? { newTab } : {}) },
         nodes: [
-          ...(href ? [T('<a href="'), ...href, T('" style="text-decoration:none">')] : []),
-          T('<img src="'), ...src, T('" alt="'), ...alt, T(`" width="${width}" style="display:block;border:0;max-width:100%;height:auto;${margin}">`),
+          ...(href ? [T('<a href="'), ...href, T(`"${newTab ? ' target="_blank"' : ""} style="text-decoration:none">`)] : []),
+          T('<img src="'), ...src, T('" alt="'), ...alt, T(`" width="${width}" style="display:block;border:0;max-width:100%;height:auto;${margin}${radius ? `border-radius:${radius}px;` : ""}">`),
           ...(href ? [T("</a>")] : []),
         ],
       };
@@ -223,23 +285,29 @@ function buildBlock(block, env, meta) {
       const url = localMedia(block.url) || urlNodes(block.url, { mailto: true });
       if (block.color !== undefined && (typeof block.color !== "string" || !HEX.test(block.color))) throw fail("Couleur invalide pour le bouton : utilisez le format #rrggbb.");
       const color = (block.color || theme.accent).toLowerCase();
-      const ink = textOn(color);
+      const textColor = optHex(block.textColor, "Couleur du texte du bouton");
+      const ink = textColor || textOn(color);
       if (contrast(ink, color) < 4.5) meta.lowContrast.push(color);
       const align = alignOf(block.align === undefined ? "center" : block.align);
+      const fontSize = block.fontSize === undefined || block.fontSize === null ? 16 : intIn(block.fontSize, 12, 24, "Taille du texte du bouton (12 à 24 px)");
+      const radius = block.radius === undefined || block.radius === null ? theme.radius : intIn(block.radius, 0, 40, "Arrondi du bouton (0 à 40 px)");
+      const size = block.size === undefined ? "m" : block.size;
+      if (!Object.hasOwn(BUTTON_SIZES, size)) throw fail("Taille de bouton inconnue (s, m ou l).");
+      const fullWidth = optBool(block.fullWidth), newTab = optBool(block.newTab);
       meta.hasButton = true;
       return {
-        normalized: { label: block.label.trim(), url: block.url.trim(), align, ...(block.color ? { color } : {}) },
+        normalized: { label: block.label.trim(), url: block.url.trim(), align, ...(block.color ? { color } : {}), ...(textColor ? { textColor } : {}), ...(fontSize !== 16 ? { fontSize } : {}), ...(block.radius !== undefined && block.radius !== null ? { radius } : {}), ...(size !== "m" ? { size } : {}), ...(fullWidth ? { fullWidth } : {}), ...(newTab ? { newTab } : {}) },
         nodes: [
-          T(`<table role="presentation" align="${align}" cellpadding="0" cellspacing="0" style="margin:${align === "center" ? "0 auto" : "0"}"><tr><td style="background:${color};border-radius:4px"><a href="`),
+          T(`<table role="presentation" align="${fullWidth ? "center" : align}" cellpadding="0" cellspacing="0"${fullWidth ? ' width="100%"' : ""} style="margin:${align === "center" || fullWidth ? "0 auto" : "0"}${fullWidth ? ";width:100%" : ""}"><tr><td align="center" style="background:${color};border-radius:${radius}px"><a href="`),
           ...url,
-          T(`" style="display:inline-block;padding:12px 24px;font-size:16px;font-weight:700;text-decoration:none;color:${ink}">`),
+          T(`"${newTab ? ' target="_blank"' : ""} style="display:${fullWidth ? "block" : "inline-block"};padding:${BUTTON_SIZES[size]};font-size:${fontSize}px;font-weight:700;text-decoration:none;color:${ink};border-radius:${radius}px">`),
           ...label,
           T("</a></td></tr></table>"),
         ],
       };
     }
     case "divider":
-      return { normalized: {}, nodes: [T('<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #d5e3ee;font-size:0;line-height:0;height:1px">&nbsp;</td></tr></table>')] };
+      return { normalized: {}, nodes: [T(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid ${theme.secondary};font-size:0;line-height:0;height:1px">&nbsp;</td></tr></table>`)] };
     case "spacer": {
       const height = block.height === undefined ? 24 : block.height;
       if (!Number.isInteger(height) || height < 4 || height > 120) throw fail("Hauteur invalide (4 à 120 pixels).");
@@ -247,16 +315,26 @@ function buildBlock(block, env, meta) {
     }
     case "columns": {
       meta.hasText = true;
-      const left = markdownNodes(block.left, env, { max: COLUMN_MAX, label: "La colonne de gauche" });
-      const right = markdownNodes(block.right, env, { max: COLUMN_MAX, label: "La colonne de droite" });
+      const rich = typeof block.leftHtml === "string" || typeof block.rightHtml === "string";
+      const leftC = rich ? richNodes(block.leftHtml, env, { max: COLUMN_MAX * 2, label: "La colonne de gauche" }) : null;
+      const rightC = rich ? richNodes(block.rightHtml, env, { max: COLUMN_MAX * 2, label: "La colonne de droite" }) : null;
+      const left = rich ? leftC.nodes : markdownNodes(block.left, env, { max: COLUMN_MAX, label: "La colonne de gauche" });
+      const right = rich ? rightC.nodes : markdownNodes(block.right, env, { max: COLUMN_MAX, label: "La colonne de droite" });
+      const ratio = block.ratio === undefined ? "50-50" : block.ratio;
+      if (!Object.hasOwn(RATIOS, ratio)) throw fail("Répartition des colonnes inconnue (50-50, 60-40, 40-60, 70-30 ou 30-70).");
+      const stack = block.stack !== false; // empilées sur mobile (par défaut)
+      const reverse = stack && optBool(block.reverse); // sur mobile : la colonne de droite d'abord
+      const [wl, wr] = RATIOS[ratio];
+      const cls = stack ? ' class="mk-col"' : "";
+      const cell = (w, side, nodes) => [T(`<td${cls} width="${w}%" valign="top"${reverse ? ' dir="ltr"' : ""} style="width:${w}%;padding:${side === "l" ? "0 8px 0 0" : "0 0 0 8px"}">`), ...nodes, T("</td>")];
+      // Inversion : technique dir="rtl" (cellules dans l'ordre droite → gauche, affichées gauche → droite sur ordinateur,
+      // empilées droite d'abord sur mobile) — comprise par Outlook, Gmail et Apple Mail
       return {
-        normalized: { left: block.left, right: block.right },
+        normalized: { ...(rich ? { leftHtml: leftC.html, rightHtml: rightC.html } : { left: block.left, right: block.right }), ...(ratio !== "50-50" ? { ratio } : {}), ...(stack ? {} : { stack: false }), ...(reverse ? { reverse: true } : {}) },
         nodes: [
-          T('<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td class="mk-col" width="50%" valign="top" style="width:50%;padding:0 8px 0 0">'),
-          ...left,
-          T('</td><td class="mk-col" width="50%" valign="top" style="width:50%;padding:0 0 0 8px">'),
-          ...right,
-          T("</td></tr></table>"),
+          T(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"${reverse ? ' dir="rtl"' : ""}><tr>`),
+          ...(reverse ? [...cell(wr, "r", right), ...cell(wl, "l", left)] : [...cell(wl, "l", left), ...cell(wr, "r", right)]),
+          T("</tr></table>"),
         ],
       };
     }
@@ -326,7 +404,7 @@ function buildBlock(block, env, meta) {
       const title = plain(block.title, allowed, { max: 200, required: true, label: "Le titre de la vidéo" });
       const thumb = block.thumbnail ? urlNodes(block.thumbnail, { system: false }) : null;
       const width = block.width === undefined ? 552 : block.width;
-      if (!Number.isInteger(width) || width < 40 || width > 600) throw fail("Largeur invalide (40 à 600 pixels).");
+      if (!Number.isInteger(width) || width < 40 || width > 720) throw fail("Largeur invalide (40 à 720 pixels).");
       const align = alignOf(block.align === undefined ? "center" : block.align);
       const margin = align === "center" ? "margin:0 auto;" : align === "right" ? "margin:0 0 0 auto;" : "";
       if (thumb) meta.hasImage = true;
@@ -366,6 +444,34 @@ function buildBlock(block, env, meta) {
           T('<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #d5e3ee"><tr>'),
           ...(image ? [T(`<td class="mk-col" width="200" valign="top" style="width:200px"><img src="${escapeHtml(image)}" alt="${escapeHtml(title)}" width="200" style="display:block;border:0;max-width:100%;height:auto"></td>`)] : []),
           T('<td class="mk-col" valign="top" style="padding:16px">'), ...text, T("</td></tr></table>"),
+        ],
+      };
+    }
+    case "link": {
+      meta.hasText = true;
+      const label = plain(block.label, allowed, { max: 120, required: true, label: "Le texte du lien" });
+      const url = localMedia(block.url) || urlNodes(block.url, { mailto: true });
+      const align = alignOf(block.align);
+      const newTab = optBool(block.newTab);
+      return {
+        normalized: { label: block.label.trim(), url: block.url.trim(), align, ...(newTab ? { newTab } : {}) },
+        nodes: [T(`<p style="margin:0;text-align:${align}"><a href="`), ...url, T(`"${newTab ? ' target="_blank"' : ""} style="color:${theme.accent};font-weight:700;text-decoration:underline">`), ...label, T("</a></p>")],
+      };
+    }
+    case "coupon": {
+      meta.hasText = true;
+      const code = plain(block.code, allowed, { max: 40, required: true, label: "Le code promo" });
+      const title = typeof block.title === "string" && block.title.trim() ? plain(block.title, allowed, { max: 100, label: "Le titre de l'offre" }) : null;
+      const details = typeof block.details === "string" && block.details.trim() ? plain(block.details, allowed, { max: 300, label: "Les conditions" }) : null;
+      const border = optHex(block.color, "Couleur du coupon") || theme.accent;
+      return {
+        normalized: { code: block.code.trim(), ...(title ? { title: block.title.trim() } : {}), ...(details ? { details: block.details.trim() } : {}), ...(block.color ? { color: border } : {}) },
+        nodes: [
+          T(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:20px 16px;border:2px dashed ${border};border-radius:${theme.radius}px;text-align:center">`),
+          ...(title ? [T(`<p style="margin:0 0 8px;font-size:17px;font-weight:700;color:${theme.textColor}">`), ...title, T("</p>")] : []),
+          T(`<p style="margin:0;font-family:'Courier New',Courier,monospace;font-size:26px;font-weight:700;letter-spacing:3px;color:${border}">`), ...code, T("</p>"),
+          ...(details ? [T(`<p style="margin:8px 0 0;font-size:13px;line-height:1.5;color:${MUTED}">`), ...details, T("</p>")] : []),
+          T("</td></tr></table>"),
         ],
       };
     }
@@ -436,10 +542,16 @@ function compileTemplate(template, { allowed = () => false, annotate = false } =
         if (/\{\{|\{%|%\}|\}\}/.test(block.showIf)) throw fail("Condition d'affichage invalide : écrivez seulement la condition (ex. contact.country == \"FR\").");
         showIf = engine.compileCondition(block.showIf, { allowed });
       }
-      const mark = annotate ? ` data-mk-block="${id}"${hidden ? ' data-mk-hidden="true" style="opacity:.35"' : ""}` : "";
-      const row = [T(`<tr${mark}><td style="padding:8px 24px;font-size:16px;line-height:1.6;color:${theme.textColor}">`), ...built.nodes, T("</td></tr>")];
+      const box = boxOf(block);
+      const pad = SPACING[theme.spacing];
+      const classes = [box && box.hideMobile ? "mk-hide-m" : "", box && box.hideDesktop ? "mk-hide-d" : ""].filter(Boolean).join(" ");
+      // Masqué sur ordinateur : caché par défaut (y compris Outlook : mso-hide), affiché par la règle mobile
+      const rowStyle = [box && box.hideDesktop ? "display:none;mso-hide:all;max-height:0;overflow:hidden" : "", hidden && annotate ? "opacity:.35" : ""].filter(Boolean).join(";");
+      const mark = `${classes ? ` class="${classes}"` : ""}${rowStyle ? ` style="${rowStyle}"` : ""}${annotate ? ` data-mk-block="${id}"${hidden ? ' data-mk-hidden="true"' : ""}` : ""}`;
+      const cellStyle = `padding:${box && box.padTop !== undefined ? box.padTop : pad}px 24px ${box && box.padBottom !== undefined ? box.padBottom : pad}px;font-size:16px;line-height:1.6;color:${theme.textColor}${box && box.background ? `;background:${box.background}` : ""}`;
+      const row = [T(`<tr${mark}><td style="${cellStyle}">`), ...built.nodes, T("</td></tr>")];
       if (!hidden || annotate) bodyNodes.push(...(showIf && !annotate ? [{ t: "if", branches: [{ cond: showIf, body: row }], else: null }] : row));
-      normalizedBlocks.push({ id, type: block.type, ...(hidden ? { hidden: true } : {}), ...(showIf ? { showIf: block.showIf.trim() } : {}), ...built.normalized });
+      normalizedBlocks.push({ id, type: block.type, ...(hidden ? { hidden: true } : {}), ...(showIf ? { showIf: block.showIf.trim() } : {}), ...(box ? { box } : {}), ...built.normalized });
     } catch (error) {
       if (!(error instanceof MarketingError)) throw error;
       // Éditeur : le bloc fautif reste visible à sa place, avec son problème ; le reste du message s'affiche normalement
@@ -457,10 +569,10 @@ function compileTemplate(template, { allowed = () => false, annotate = false } =
   const ast = [
     T('<!DOCTYPE html>\n<html lang="fr" xmlns="http://www.w3.org/1999/xhtml">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<meta name="x-apple-disable-message-reformatting">\n<meta name="color-scheme" content="light">\n<title>'),
     ...escapeAst(subjectAst),
-    T(`</title>\n<style>@media only screen and (max-width:620px){.mk-container{width:100%!important}.mk-col{display:block!important;width:100%!important;padding:0 0 16px 0!important}}</style>\n</head>\n<body style="margin:0;padding:0;background:${theme.background}">\n`),
+    T(`</title>\n<style>@media only screen and (max-width:${theme.maxWidth + 20}px){.mk-container{width:100%!important}.mk-col{display:block!important;width:100%!important;padding:0 0 16px 0!important}.mk-hide-m{display:none!important}.mk-hide-d{display:table-row!important;max-height:none!important;overflow:visible!important}}</style>\n</head>\n<body style="margin:0;padding:0;background:${theme.background}">\n`),
     ...(preheaderSource ? [T(`<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:${theme.background}">`), ...preheaderNodes, T(`${padding}</div>\n`)] : []),
     T(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${theme.background}"><tr><td align="center" style="padding:24px 12px">\n`),
-    T(`<table role="presentation" class="mk-container" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:${theme.contentBackground};font-family:${font};color:${theme.textColor}">\n`),
+    T(`<table role="presentation" class="mk-container" width="${theme.maxWidth}" cellpadding="0" cellspacing="0" style="width:${theme.maxWidth}px;max-width:100%;background:${theme.contentBackground};font-family:${font};color:${theme.textColor}">\n`),
     ...bodyNodes,
     ...footerNodes(kind, template.footer, env),
     T("\n</table>\n</td></tr></table>\n</body>\n</html>"),
@@ -493,4 +605,4 @@ function renderEmail(compiled, context, options = {}) {
   return { subject, html, text: htmlToText(html), meta: { addressPresent: typeof address === "string" && address.trim() !== "" } };
 }
 
-module.exports = { compileTemplate, renderEmail, normalizeTheme, DEFAULT_THEME, TYPES, KINDS, MAX_BLOCKS };
+module.exports = { compileTemplate, renderEmail, normalizeTheme, DEFAULT_THEME, TYPES, KINDS, MAX_BLOCKS, FONTS, RATIOS };
