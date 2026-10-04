@@ -52,11 +52,16 @@
       <p class="field-hint">Les événements envoyés par l'API peuvent déclencher une automatisation, mais ne sont pas encore utilisables comme critère de segment (réservé aux événements du pont KOLAKISA pour l'instant).</p>
     </section>
 
-    <dialog class="mk-dialog mk-modal" id="nouvelle" data-mk-modal data-mk-modal-hash="nouvelle" aria-labelledby="nk-title">
+    <dialog class="mk-dialog mk-modal" id="nouvelle" data-mk-modal data-mk-modal-hash="nouvelle" aria-labelledby="nk-title" aria-describedby="nk-desc">
       <form action="/marketing/api" method="post">
+        <header class="mk-dialog-head">
+          <div class="mk-dialog-titles">
+            <h2 id="nk-title">Nouvelle clé d'API</h2>
+            <p class="mk-dialog-desc" id="nk-desc">La clé complète ne sera affichée qu'une seule fois, juste après la création : prévoyez de la copier.</p>
+          </div>
+          <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button>
+        </header>
         <div class="mk-dialog-body">
-          <h2 id="nk-title">Nouvelle clé d'API</h2>
-          <p>La clé complète ne sera affichée qu'une seule fois, juste après la création : prévoyez de la copier.</p>
           <div class="field-group"><label for="k-name">Nom de la clé *</label>
             <input id="k-name" type="text" name="name" maxlength="80" placeholder="Ex. site vitrine, Zapier…" required data-mk-required-message="Donnez un nom à la clé pour la reconnaître plus tard."></div>
           <div class="field-group"><label for="k-scope">Portée</label>

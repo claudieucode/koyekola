@@ -1162,7 +1162,7 @@
   window.addEventListener("beforeunload", function (e) { if (dirty || saving) { e.preventDefault(); e.returnValue = ""; } });
 
   // ---------- Boîtes de dialogue : aperçu, test, versions ; menu « Plus » ----------
-  function openDialog(id) { var d = $(id); if (d && !d.open) d.showModal(); return d; }
+  function openDialog(id) { var d = $(id); if (d && !d.open) { d.showModal(); if (window.mkDialogFocusFirst) window.mkDialogFocusFirst(d); } return d; }
   [].forEach.call(document.querySelectorAll("[data-close-dialog]"), function (b) { b.addEventListener("click", function () { var d = b.closest("dialog"); if (d) d.close(); }); });
   [].forEach.call(document.querySelectorAll("dialog"), function (d) { d.addEventListener("click", function (e) { if (e.target === d) d.close(); }); });
   var pframe = $("mk-preview-frame");

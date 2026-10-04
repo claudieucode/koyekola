@@ -30,10 +30,16 @@
   --mk-r: 8px;                 /* cartes, tableaux */
   --mk-r-lg: 12px;             /* fenêtres de dialogue */
   --mk-pop: 0 2px 6px rgba(11, 42, 64, 0.08), 0 16px 40px -12px rgba(11, 42, 64, 0.24); /* menus et dialogues uniquement */
+  --mk-focus: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);      /* halo d'un champ actif */
+  --mk-focus-err: 0 0 0 3px color-mix(in srgb, var(--danger) 14%, transparent);
+  --mk-field-h: 40px;
 }
 
-/* Focus : la règle globale de style.css s'applique ; on la renforce dans la coque (sans jamais retirer le contour) */
-.mk-app :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+/* Focus (tout l'espace Marketing, y compris les fenêtres ajoutées au <body>) : toujours visible, jamais agressif.
+   Boutons, liens, cases : anneau fin de 2 px. Champs de saisie : bordure d'accent + halo léger (voir « Champs de
+   formulaire ») — pas de contour supplémentaire, donc plus de double cadre bleu. */
+.mk-body :where(a, button, summary, [tabindex], input[type=checkbox], input[type=radio]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mk-body :where(input:not([type=checkbox]):not([type=radio]):not([type=color]), select, textarea):focus-visible { outline: 2px solid transparent; outline-offset: 0; }
 .mk-sidebar :where(a, button):focus-visible { outline-color: var(--accent); outline-offset: -3px; }
 .mk-body { background: var(--mk-bg); color: var(--mk-text); }
 
@@ -235,21 +241,58 @@ a.mk-stat:hover { border-color: var(--accent); }
 .mk-step.is-current { border-top-color: var(--accent); color: var(--mk-text); font-weight: 700; }
 .mk-step.is-current::before { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-/* ===== Boîtes de dialogue (confirmation et formulaires) ===== */
-.mk-dialog { border: 1px solid var(--mk-border); border-radius: var(--mk-r-lg); padding: 0; overflow: hidden; max-width: min(460px, calc(100vw - 32px)); width: 100%; background: var(--mk-surface); color: var(--mk-text); box-shadow: var(--mk-pop); }
-.mk-dialog::backdrop { background: rgba(6, 25, 42, 0.5); }
-.mk-dialog-body { padding: 24px 24px 8px; }
-.mk-dialog-body h2 { margin: 0 0 8px; font-size: 1.3rem; font-family: var(--font-display); }
-.mk-dialog-body p { margin: 0 0 14px; color: var(--muted); }
+/* ===== Fenêtres (dialogues) : UN système pour tout le Marketing =====
+   Structure commune : <dialog class="mk-dialog [taille]"> → (form) → .mk-dialog-head (titre, description, ×) ·
+   .mk-dialog-body (défile seul) · .mk-dialog-actions (Annuler · action principale à droite).
+   Tailles : .mk-dialog-sm 440 px (confirmation) · .mk-modal 560 px (formulaire, par défaut) · .mk-modal-wide 720 px ·
+   .mk-step-dialog 760 px (configuration d'une étape). Ouverture : fondu + léger glissement ; aucun si mouvement réduit. */
+.mk-dialog {
+  --dlg-w: 560px; --dlg-pad: 24px;
+  width: min(var(--dlg-w), calc(100vw - 32px)); max-width: none; max-height: min(calc(100dvh - 48px), 900px);
+  padding: 0; border: 1px solid var(--mk-border); border-radius: var(--mk-r-lg); overflow: hidden;
+  background: var(--mk-surface); color: var(--mk-text);
+  box-shadow: 0 1px 3px rgba(11, 42, 64, 0.06), 0 24px 56px -16px rgba(11, 42, 64, 0.3);
+  opacity: 0; transform: translateY(8px) scale(0.985);
+  transition: opacity 0.16s ease, transform 0.16s ease, overlay 0.16s ease allow-discrete, display 0.16s ease allow-discrete;
+}
+.mk-dialog[open] { display: flex; flex-direction: column; opacity: 1; transform: none; }
+@starting-style { .mk-dialog[open] { opacity: 0; transform: translateY(8px) scale(0.985); } }
+.mk-dialog:focus-visible { outline: 2px solid transparent; } /* le focus est donné au premier champ (shell.js) */
+.mk-dialog::backdrop { background: rgba(9, 27, 43, 0); transition: background 0.16s ease, overlay 0.16s ease allow-discrete, display 0.16s ease allow-discrete; }
+.mk-dialog[open]::backdrop { background: rgba(9, 27, 43, 0.42); }
+@starting-style { .mk-dialog[open]::backdrop { background: rgba(9, 27, 43, 0); } }
+html:has(.mk-dialog[open]) { overflow: hidden; } /* la page derrière ne défile pas */
+.mk-dialog-sm { --dlg-w: 440px; }
+.mk-dialog-sample { display: flex; flex-direction: column; opacity: 1; transform: none; margin: 8px 0 0; } /* aperçu statique (galerie des composants) */
+.mk-modal { --dlg-w: 560px; }
+.mk-modal-wide { --dlg-w: 720px; }
+.mk-dialog > form { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; margin: 0; }
+/* En-tête */
+.mk-dialog-head { display: flex; align-items: flex-start; gap: 16px; flex: none; padding: 20px 16px 16px var(--dlg-pad); border-bottom: 1px solid var(--mk-border); }
+.mk-dialog-titles { flex: 1; min-width: 0; padding-top: 2px; }
+.mk-dialog-head h2 { margin: 0; font-family: var(--font-display); font-size: 1.125rem; font-weight: 700; line-height: 1.35; letter-spacing: -0.01em; color: var(--mk-text); overflow-wrap: anywhere; }
+.mk-dialog-desc { margin: 4px 0 0; max-width: 62ch; font-size: 0.875rem; line-height: 1.5; color: var(--muted); }
+.mk-dialog-close { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 36px; height: 36px; margin: -4px 0 0; padding: 0; border: 0; border-radius: var(--mk-r); background: transparent; color: var(--muted); cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
+.mk-dialog-close:hover { background: var(--mk-hover); color: var(--mk-text); }
+/* Contenu : seul à défiler */
+.mk-dialog-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 20px var(--dlg-pad) 24px; }
+.mk-dialog-body > p { margin: 0 0 16px; color: var(--muted); font-size: 0.9375rem; line-height: 1.55; }
+.mk-dialog-body .field-group { margin-bottom: 16px; }
 .mk-dialog-body .field-group:last-child { margin-bottom: 0; }
-.mk-dialog-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; padding: 16px 24px 20px; border-top: 1px solid var(--mk-border); margin-top: 16px; background: #fafcfd; }
+.mk-dialog .field-group > label:not(.checkbox-row) { display: block; margin-bottom: 6px; font-size: 0.875rem; font-weight: 600; color: var(--mk-text); }
+.mk-dialog :where(input[type=text], input[type=email], input[type=password], input[type=number], input[type=url], input[type=search], input[type=datetime-local], input[type=date], select) { min-height: var(--mk-field-h); padding: 8px 12px; font-size: 0.9375rem; border-radius: var(--mk-r); }
+.mk-dialog textarea { padding: 10px 12px; font-size: 0.9375rem; border-radius: var(--mk-r); }
+.mk-dialog .field-hint { display: block; margin-top: 6px; font-size: 0.8125rem; line-height: 1.45; }
+/* Pied : action principale à droite, toujours visible */
+.mk-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; flex: none; margin: 0; padding: 14px var(--dlg-pad); border-top: 1px solid var(--mk-border); background: color-mix(in srgb, var(--mk-bg) 70%, var(--mk-surface)); }
+.mk-dialog-actions .btn { min-height: 38px; padding-left: 16px; padding-right: 16px; }
 .mk-dialog form { margin: 0; }
-/* Variante formulaire (création/édition) : un peu plus large qu'une simple confirmation */
-.mk-modal { max-width: min(520px, calc(100vw - 32px)); }
-/* Contenu long (petit écran, liste de cases) : le corps défile, les boutons Annuler/Créer restent visibles */
-.mk-modal .mk-dialog-body { max-height: calc(100dvh - 170px); overflow-y: auto; }
-/* Variante large : formulaire avec une grille de choix (ex. événements d'un webhook) */
-.mk-modal-wide { max-width: min(720px, calc(100vw - 32px)); }
+@media (max-width: 600px) {
+  .mk-dialog { --dlg-pad: 18px; width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .mk-dialog-head { padding: 16px 10px 14px var(--dlg-pad); }
+  .mk-dialog-actions .btn { flex: 1 1 0; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) { .mk-dialog, .mk-dialog::backdrop { transition: none; transform: none; } }
 /* Groupe de cases à cocher : un choix « tout » mis à part, puis une grille alignée (2 colonnes dès qu'il y a la place) */
 .mk-fieldset { border: 1px solid var(--mk-border); border-radius: var(--mk-r); padding: 10px 14px 12px; margin: 0; min-width: 0; }
 .mk-fieldset legend { font-weight: 700; font-size: 0.9rem; padding: 0 6px; color: var(--mk-text); }
@@ -614,22 +657,13 @@ a.mk-stat:hover { border-color: var(--accent); }
 .drawflow-node.is-editing .mk-flow-card { box-shadow: var(--ring); border-color: var(--accent); }
 .mk-step-menu { min-width: 180px; z-index: 1000; }
 
-/* Boîte de dialogue d'une étape */
-.mk-step-dialog-head { display: flex; align-items: center; gap: 10px; padding: 18px 20px 14px 24px; border-bottom: 1px solid var(--mk-border); }
-.mk-step-dialog-head h2 { flex: 1; min-width: 0; margin: 0; font-family: var(--font-display); font-size: 1.15rem; }
-.mk-step-dialog-close { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 1.5rem; line-height: 1; cursor: pointer; }
-.mk-step-dialog-close:hover { background: var(--mk-hover); color: var(--mk-text); }
-.mk-step-dialog .field-group { margin-bottom: 16px; }
+/* Fenêtre de configuration d'une étape (structure et apparence : système commun « Fenêtres ») */
 .mk-step-dialog .field-group select, .mk-step-dialog .field-group input[type="text"], .mk-step-dialog .field-group input[type="number"] { width: 100%; }
 .mk-step-dialog-error { margin: 0 0 16px; }
 .mk-step-dialog-error ul { margin: 0; padding-left: 18px; }
 .mk-step-add { margin-top: 4px; }
 .mk-step-dialog .mk-rule { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--mk-border); }
 .mk-step-dialog .mk-rule select, .mk-step-dialog .mk-rule input { width: auto; max-width: 100%; }
-/* Petit écran : boutons du pied sur toute la largeur */
-@media (max-width: 600px) {
-  .mk-step-dialog .mk-dialog-actions .btn { flex: 1 1 0; }
-}
 
 /* Message d'erreur recopié en tête d'une modale rouverte après une création refusée (voir shell.js) */
 .mk-dialog-error { margin: 0 0 14px; }
@@ -719,8 +753,12 @@ a.mk-stat:hover { border-color: var(--accent); }
 .mk-body .field-group label { color: var(--mk-text); font-weight: 700; font-size: 0.88rem; }
 .mk-body .field-hint { color: var(--muted); font-size: 0.8rem; }
 .mk-body :where(input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=url], input[type=tel], input[type=search], input[type=datetime-local], select, textarea) { border: 1px solid var(--mk-border-strong); border-radius: var(--mk-r-sm); background-color: #fff; }
-.mk-body :where(input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=url], input[type=tel], input[type=search], input[type=datetime-local], select, textarea):hover { border-color: var(--mk-text-soft); }
-.mk-body :where(input, select, textarea):focus { border-color: var(--accent); box-shadow: var(--ring); }
+.mk-body :where(input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=url], input[type=tel], input[type=search], input[type=datetime-local], select, textarea):hover:not(:disabled):not(:focus) { border-color: color-mix(in srgb, var(--mk-border-strong) 55%, var(--mk-text-soft)); }
+.mk-body :where(input, select, textarea):focus { border-color: var(--accent); box-shadow: var(--mk-focus); }
+/* États : erreur (saisie refusée par le navigateur ou signalée par le code), désactivé */
+.mk-body :where(input, select, textarea):is([aria-invalid="true"], :user-invalid) { border-color: var(--danger); }
+.mk-body :where(input, select, textarea):is([aria-invalid="true"], :user-invalid):focus { border-color: var(--danger); box-shadow: var(--mk-focus-err); }
+.mk-body :where(input, select, textarea):disabled { background-color: var(--surface-alt); color: var(--muted); cursor: not-allowed; }
 .mk-body .seo-fieldset { border: 1px solid var(--mk-border); border-radius: var(--mk-r); }
 .mk-body .seo-fieldset legend { color: var(--mk-text); font-weight: 700; }
 
@@ -880,13 +918,7 @@ details.mk-cl-item[open] > .mk-cl-summary .mk-cl-edit { visibility: hidden; }
 
 /* Fenêtre de configuration d'une étape : même structure pour toutes (en-tête · contenu · pied), largeur
    professionnelle, hauteur selon le contenu ; seul le contenu défile, l'en-tête et le pied restent visibles */
-.mk-step-dialog { width: min(760px, calc(100vw - 48px)); max-width: none; max-height: calc(100dvh - 48px); }
-.mk-step-dialog[open] { display: flex; flex-direction: column; }
-.mk-step-dialog > form { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.mk-step-dialog-head { flex: none; padding: 18px 22px 16px 28px; }
-.mk-step-dialog-head h2 { font-size: 1.2rem; }
-.mk-step-dialog .mk-step-dialog-body { flex: 1 1 auto; min-height: 0; max-height: none; padding: 24px 28px 8px; overflow-y: auto; }
-.mk-step-dialog .mk-dialog-actions { flex: none; margin-top: 0; }
+.mk-step-dialog { --dlg-w: 760px; --dlg-pad: 28px; }
 .mk-step-section { padding: 0 0 22px; margin: 0 0 22px; border-bottom: 1px solid var(--mk-border); }
 .mk-step-section:last-child { border-bottom: 0; margin-bottom: 0; }
 .mk-step-section-title { margin: 0 0 12px; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
@@ -900,13 +932,11 @@ details.mk-cl-item[open] > .mk-cl-summary .mk-cl-edit { visibility: hidden; }
 .mk-step-branches li { padding: 10px 14px; border: 1px solid var(--mk-border); border-radius: var(--mk-r); font-size: 0.9rem; overflow-wrap: anywhere; }
 /* Deux champs sur une ligne (ex. Délai maximal | Unité) */
 .mk-step-row { display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); gap: 16px; align-items: start; }
-.mk-unsaved-dialog { max-width: min(520px, calc(100vw - 32px)); }
+.mk-unsaved-dialog { --dlg-w: 520px; }
 .mk-btn-danger-outline { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--mk-border)); }
 .mk-btn-danger-outline:hover { background: var(--danger-light); color: var(--danger); }
 @media (max-width: 760px) {
-  .mk-step-dialog { width: 100vw; max-height: 100dvh; height: 100dvh; margin: 0; border-radius: 0; }
-  .mk-step-dialog-head { padding: 14px 16px 12px 18px; }
-  .mk-step-dialog .mk-step-dialog-body { padding: 18px 18px 8px; }
+  .mk-step-dialog { --dlg-pad: 18px; width: 100vw; max-height: 100dvh; height: 100dvh; margin: 0; border-radius: 0; }
   .mk-step-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
   .mk-step-preview { height: 320px; }
 }

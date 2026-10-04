@@ -204,11 +204,16 @@
     </dialog>
 
     <% if (!readOnly) { %>
-    <dialog class="mk-dialog mk-modal" id="mk-test-dialog" aria-labelledby="mk-test-title">
+    <dialog class="mk-dialog mk-modal" id="mk-test-dialog" aria-labelledby="mk-test-title" aria-describedby="mk-test-desc">
       <form action="/marketing/modeles/<%= template.id %>/test" method="post">
+        <header class="mk-dialog-head">
+          <div class="mk-dialog-titles">
+            <h2 id="mk-test-title">Envoyer un e-mail de test</h2>
+            <p class="mk-dialog-desc" id="mk-test-desc">Envoyé uniquement à un membre de l'équipe, avec des données d'exemple, des liens factices et un objet préfixé « [TEST] ». Le test utilise la version enregistrée.</p>
+          </div>
+          <button type="button" class="mk-dialog-close" data-close-dialog aria-label="Fermer"><%- icon("close", { size: 18 }) %></button>
+        </header>
         <div class="mk-dialog-body">
-          <h2 id="mk-test-title">Envoyer un e-mail de test</h2>
-          <p>Envoyé uniquement à un membre de l'équipe, avec des données d'exemple, des liens factices et un objet préfixé « [TEST] ». Le test utilise la version enregistrée.</p>
           <div class="field-group"><label for="test-to">Destinataire</label><select id="test-to" name="to"><% recipients.forEach((r) => { %><option value="<%= r %>" <%= r === currentEmail ? "selected" : "" %>><%= r %></option><% }) %></select></div>
         </div>
         <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-close-dialog>Annuler</button><button type="submit" class="btn btn-primary btn-sm" id="mk-test-send">Envoyer le test</button></div>
@@ -216,10 +221,15 @@
     </dialog>
     <% } %>
 
-    <dialog class="mk-dialog mk-modal mk-modal-wide" id="mk-versions-dialog" aria-labelledby="mk-versions-title">
+    <dialog class="mk-dialog mk-modal mk-modal-wide" id="mk-versions-dialog" aria-labelledby="mk-versions-title" aria-describedby="mk-versions-desc">
+      <header class="mk-dialog-head">
+        <div class="mk-dialog-titles">
+          <h2 id="mk-versions-title">Versions précédentes</h2>
+          <p class="mk-dialog-desc" id="mk-versions-desc">Les 20 dernières versions sont conservées (l'enregistrement automatique en garde au plus une toutes les 10 minutes). Restaurer crée une nouvelle version : rien n'est perdu.</p>
+        </div>
+        <button type="button" class="mk-dialog-close" data-close-dialog aria-label="Fermer"><%- icon("close", { size: 18 }) %></button>
+      </header>
       <div class="mk-dialog-body">
-        <h2 id="mk-versions-title">Versions précédentes</h2>
-        <p>Les 20 dernières versions sont conservées (l'enregistrement automatique en garde au plus une toutes les 10 minutes). Restaurer crée une nouvelle version : rien n'est perdu.</p>
         <% if (versions.length) { %>
           <div class="mk-table-wrap"><table class="mk-table">
             <caption class="sr-only">Versions précédentes</caption>

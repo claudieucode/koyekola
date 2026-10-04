@@ -34,11 +34,16 @@
     <% } %>
 
     <% if (canWrite) { %>
-      <dialog class="mk-dialog mk-modal" id="nouvelle" data-mk-modal data-mk-modal-hash="nouvelle" aria-labelledby="net-title">
+      <dialog class="mk-dialog mk-modal" id="nouvelle" data-mk-modal data-mk-modal-hash="nouvelle" aria-labelledby="net-title" aria-describedby="net-desc">
         <form method="post" action="/marketing/etiquettes">
+          <header class="mk-dialog-head">
+            <div class="mk-dialog-titles">
+              <h2 id="net-title">Créer une étiquette</h2>
+              <p class="mk-dialog-desc" id="net-desc">Un mot-clé libre à poser sur un contact, réutilisable dans les segments et les actions groupées.</p>
+            </div>
+            <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button>
+          </header>
           <div class="mk-dialog-body">
-            <h2 id="net-title">Créer une étiquette</h2>
-            <p>Un mot-clé libre à poser sur un contact, réutilisable dans les segments et les actions groupées.</p>
             <div class="field-group">
               <label for="t-name">Nom de l'étiquette *</label>
               <input id="t-name" type="text" name="name" maxlength="64" placeholder="Ex. VIP" required data-mk-required-message="Le nom de l'étiquette est obligatoire.">

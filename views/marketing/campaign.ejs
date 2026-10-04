@@ -247,11 +247,16 @@
     </ol>
 
     <% if (canWrite) { %>
-      <dialog class="mk-dialog mk-modal" id="test" data-mk-modal aria-labelledby="test-title">
+      <dialog class="mk-dialog mk-modal" id="test" data-mk-modal aria-labelledby="test-title" aria-describedby="test-desc">
         <form action="/marketing/campagnes/<%= campaign.id %>/test" method="post">
+          <header class="mk-dialog-head">
+            <div class="mk-dialog-titles">
+              <h2 id="test-title">Envoyer un e-mail de test</h2>
+              <p class="mk-dialog-desc" id="test-desc">Il part vers un membre de l'équipe (jamais vers une adresse libre), avec l'objet préfixé [TEST] et des liens factices, par la messagerie SMTP du serveur.</p>
+            </div>
+            <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button>
+          </header>
           <div class="mk-dialog-body">
-            <h2 id="test-title">Envoyer un e-mail de test</h2>
-            <p>Il part vers un membre de l'équipe (jamais vers une adresse libre), avec l'objet préfixé [TEST] et des liens factices, par la messagerie SMTP du serveur.</p>
             <% if (tested) { %><p class="mk-cl-tested">Un e-mail de test a déjà été envoyé pour cette campagne.</p><% } %>
             <div class="field-group"><label for="t-to">Destinataire du test</label>
               <select id="t-to" name="to"><% recipients.forEach((r) => { %><option value="<%= r %>"><%= r %></option><% }) %></select></div>
@@ -263,11 +268,16 @@
         </form>
       </dialog>
 
-      <dialog class="mk-dialog mk-modal" id="renommer" data-mk-modal aria-labelledby="rename-title">
+      <dialog class="mk-dialog mk-modal" id="renommer" data-mk-modal aria-labelledby="rename-title" aria-describedby="rename-desc">
         <form action="/marketing/campagnes/<%= campaign.id %>" method="post">
+          <header class="mk-dialog-head">
+            <div class="mk-dialog-titles">
+              <h2 id="rename-title">Renommer la campagne</h2>
+              <p class="mk-dialog-desc" id="rename-desc">Le nom n'est visible que par votre équipe.</p>
+            </div>
+            <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button>
+          </header>
           <div class="mk-dialog-body">
-            <h2 id="rename-title">Renommer la campagne</h2>
-            <p>Le nom n'est visible que par votre équipe.</p>
             <%- keep(["name"]) %>
             <div class="field-group"><label for="c-name">Nom de la campagne</label><input id="c-name" type="text" name="name" maxlength="100" required value="<%= campaign.name %>" data-mk-required-message="Le nom de la campagne est obligatoire."></div>
           </div>
@@ -280,11 +290,16 @@
     <% } %>
 
     <% if (canSend) { %>
-      <dialog class="mk-dialog mk-modal" id="envoyer" data-mk-modal aria-labelledby="send-title">
+      <dialog class="mk-dialog mk-modal" id="envoyer" data-mk-modal aria-labelledby="send-title" aria-describedby="send-desc">
         <form action="/marketing/campagnes/<%= campaign.id %>/lancer" method="post">
+          <header class="mk-dialog-head">
+            <div class="mk-dialog-titles">
+              <h2 id="send-title">Prêt à envoyer ?</h2>
+              <p class="mk-dialog-desc" id="send-desc">« <%= campaign.name %> » partira vers <strong><%= aud ? mkh.fmt(aud.sendable) : 0 %> contact<%= aud && aud.sendable > 1 ? "s" : "" %></strong> (<%= campaign.target_type === "list" ? "liste" : "segment" %> « <%= targetName %> »). Le contenu et les destinataires sont figés au lancement ; chaque message est revérifié au moment de partir.</p>
+            </div>
+            <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button>
+          </header>
           <div class="mk-dialog-body">
-            <h2 id="send-title">Prêt à envoyer ?</h2>
-            <p>« <%= campaign.name %> » partira vers <strong><%= aud ? mkh.fmt(aud.sendable) : 0 %> contact<%= aud && aud.sendable > 1 ? "s" : "" %></strong> (<%= campaign.target_type === "list" ? "liste" : "segment" %> « <%= targetName %> »). Le contenu et les destinataires sont figés au lancement ; chaque message est revérifié au moment de partir.</p>
             <% if (abOn) { %><p><strong>Test A/B :</strong> environ <%= mkh.fmt(abTestCount) %> contacts tirés au hasard reçoivent les <%= ab.variants.length %> versions ; les autres recevront la version gagnante<%= campaign.ab_metric === "manual" ? ", quand vous l'aurez choisie" : " après " + waitLabel(campaign.ab_wait_minutes) %>.</p><% } %>
             <div class="field-group"><label for="l-when">Programmer l'envoi (facultatif — heure locale ; vide = tout de suite)</label>
               <input id="l-when" type="datetime-local" name="send_at"><input type="hidden" name="send_at_utc" id="send-at-utc"></div>

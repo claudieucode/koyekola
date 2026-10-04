@@ -114,25 +114,46 @@
   window.mkToast = toast;
   $$("[data-mk-toast]").forEach(function (b) { b.addEventListener("click", function () { toast(b.getAttribute("data-mk-toast"), b.getAttribute("data-mk-toast-type") || "info"); }); });
 
+  // ---------- Fenêtres : en-tête commun (titre, description, fermer) — même structure que les fenêtres des pages ----------
+  // Utilisé par les fenêtres construites en JavaScript (confirmation ici, éditeur de scénarios via window.mkDialogHead).
+  var CLOSE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+  function dialogHead(o) {
+    var head = document.createElement("header"); head.setAttribute("class", "mk-dialog-head");
+    var titles = document.createElement("div"); titles.setAttribute("class", "mk-dialog-titles");
+    var h = document.createElement("h2"); h.id = o.titleId; h.textContent = o.title; titles.appendChild(h);
+    if (o.desc) { var p = document.createElement("p"); p.setAttribute("class", "mk-dialog-desc"); if (o.descId) p.id = o.descId; p.textContent = o.desc; titles.appendChild(p); }
+    var close = document.createElement("button"); close.type = "button"; close.setAttribute("class", "mk-dialog-close"); close.setAttribute("aria-label", o.closeLabel || "Fermer");
+    close.innerHTML = CLOSE_SVG; // icône fixe (aucune donnée saisie)
+    head.appendChild(titles); head.appendChild(close);
+    return { el: head, close: close };
+  }
+  window.mkDialogHead = dialogHead;
+  // À l'ouverture : focus sur le premier champ du contenu (sinon le navigateur le donne au bouton « Fermer » ou à la fenêtre)
+  function focusFirst(dlg) {
+    var field = dlg.querySelector(".mk-dialog-body :is(input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled]))");
+    var target = field || dlg.querySelector(".mk-dialog-actions .btn:not([disabled])");
+    if (target) target.focus();
+  }
+  window.mkDialogFocusFirst = focusFirst;
+
   // ---------- Confirmation avant une action grave ----------
   // <button data-mk-confirm="Texte" data-mk-confirm-title="Titre" data-mk-confirm-ok="Supprimer"> dans un <form>
   function confirmDialog(opts, onYes, onNo) {
     onNo = onNo || function () {};
     if (typeof HTMLDialogElement !== "function") { if (window.confirm(opts.text)) onYes(); else onNo(); return; }
-    var dlg = document.createElement("dialog"); dlg.setAttribute("class", "mk-dialog");
+    var dlg = document.createElement("dialog"); dlg.setAttribute("class", "mk-dialog mk-dialog-sm");
+    dlg.setAttribute("role", "alertdialog");
     dlg.setAttribute("aria-labelledby", "mk-dlg-title"); dlg.setAttribute("aria-describedby", "mk-dlg-text");
-    var body = document.createElement("div"); body.setAttribute("class", "mk-dialog-body");
-    var h = document.createElement("h2"); h.id = "mk-dlg-title"; h.textContent = opts.title;
-    var p = document.createElement("p"); p.id = "mk-dlg-text"; p.textContent = opts.text;
-    body.appendChild(h); body.appendChild(p);
+    var head = dialogHead({ titleId: "mk-dlg-title", title: opts.title, descId: "mk-dlg-text", desc: opts.text, closeLabel: "Annuler" });
     var actions = document.createElement("div"); actions.setAttribute("class", "mk-dialog-actions");
     var no = document.createElement("button"); no.type = "button"; no.setAttribute("class", "btn btn-outline btn-sm"); no.textContent = "Annuler";
     var yes = document.createElement("button"); yes.type = "button"; yes.setAttribute("class", "btn btn-danger btn-sm"); yes.textContent = opts.ok;
-    actions.appendChild(no); actions.appendChild(yes); dlg.appendChild(body); dlg.appendChild(actions);
+    actions.appendChild(no); actions.appendChild(yes); dlg.appendChild(head.el); dlg.appendChild(actions);
     document.body.appendChild(dlg);
     var previous = document.activeElement;
     function done() { dlg.close(); dlg.remove(); if (previous && previous.focus) previous.focus(); onNo(); }
     no.addEventListener("click", done);
+    head.close.addEventListener("click", done);
     yes.addEventListener("click", function () { dlg.close(); dlg.remove(); onYes(); });
     dlg.addEventListener("cancel", function (e) { e.preventDefault(); done(); });
     dlg.showModal(); no.focus();
@@ -161,7 +182,7 @@
   // (ex. #nouvelle) pour qu'un lien externe (bouton principal du bandeau) puisse l'ouvrir directement.
   // Fermeture : [data-mk-modal-close] à l'intérieur, clic sur le fond, ou Échap (natif à <dialog>, qui piège aussi le focus).
   var allModals = $$("dialog[data-mk-modal]");
-  function openModalEl(dlg) { if (dlg && typeof dlg.showModal === "function" && !dlg.open) dlg.showModal(); }
+  function openModalEl(dlg) { if (dlg && typeof dlg.showModal === "function" && !dlg.open) { dlg.showModal(); focusFirst(dlg); } }
   function closeModalEl(dlg) { if (dlg && dlg.open) dlg.close(); }
   $$("[data-mk-modal-open]").forEach(function (trigger) {
     trigger.addEventListener("click", function (e) {
@@ -183,7 +204,12 @@
     var hash = location.hash.slice(1);
     if (!hash) return;
     var dlg = allModals.filter(function (d) { return d.getAttribute("data-mk-modal-hash") === hash; })[0];
-    if (dlg) openModalEl(dlg);
+    if (!dlg) return;
+    openModalEl(dlg);
+    // Ouverte par l'ancre de l'adresse : après le chargement, le navigateur donne le focus à la cible de l'ancre
+    // (la fenêtre elle-même) ; on le rend au premier champ.
+    var refocus = function () { if (dlg.open && (document.activeElement === dlg || document.activeElement === document.body)) focusFirst(dlg); };
+    if (document.readyState === "complete") setTimeout(refocus, 0); else window.addEventListener("load", function () { setTimeout(refocus, 0); }, { once: true });
   }
   openModalFromHash();
   window.addEventListener("hashchange", openModalFromHash);

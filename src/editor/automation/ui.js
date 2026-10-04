@@ -65,24 +65,36 @@ export function confirmAction({ title, text: body, ok }) {
   });
 }
 
+// En-tête commun des fenêtres (titre, description, bouton fermer) : celui de KOLAKISA Marketing (shell.js), même structure
+function dialogHead(titleId, title, closeLabel, descId, desc) {
+  if (typeof window.mkDialogHead === "function") return window.mkDialogHead({ titleId, title, closeLabel, descId, desc });
+  const headEl = el("header", { class: "mk-dialog-head" });
+  const titles = el("div", { class: "mk-dialog-titles" });
+  titles.appendChild(el("h2", { id: titleId }, title));
+  if (desc) titles.appendChild(el("p", { class: "mk-dialog-desc", id: descId }, desc));
+  const close = el("button", { type: "button", class: "mk-dialog-close", "aria-label": closeLabel }, "×");
+  headEl.append(titles, close);
+  return { el: headEl, close };
+}
+
 // ---------- Modifications non enregistrées : continuer, abandonner ou enregistrer ----------
 // Renvoie "continue" | "discard" | "save". Échap = continuer (rien n'est perdu).
 function unsavedChoice() {
   return new Promise((resolve) => {
     const titleId = nextId();
-    const d = el("dialog", { class: "mk-dialog mk-unsaved-dialog", "aria-labelledby": titleId, role: "alertdialog" });
-    const body = el("div", { class: "mk-dialog-body" });
-    body.appendChild(el("h2", { id: titleId }, "Vous avez des modifications non enregistrées."));
-    body.appendChild(el("p", {}, "Enregistrez-les pour les appliquer à l'étape, ou abandonnez-les pour revenir aux réglages d'avant."));
+    const descId = nextId();
+    const d = el("dialog", { class: "mk-dialog mk-unsaved-dialog", "aria-labelledby": titleId, "aria-describedby": descId, role: "alertdialog" });
+    const head = dialogHead(titleId, "Vous avez des modifications non enregistrées.", "Continuer la modification", descId, "Enregistrez-les pour les appliquer à l'étape, ou abandonnez-les pour revenir aux réglages d'avant.");
     const actions = el("div", { class: "mk-dialog-actions" });
     const keep = el("button", { type: "button", class: "btn btn-outline btn-sm" }, "Continuer la modification");
     const discard = el("button", { type: "button", class: "btn btn-outline btn-sm mk-btn-danger-outline" }, "Abandonner");
     const save = el("button", { type: "button", class: "btn btn-primary btn-sm" }, "Enregistrer");
     actions.append(keep, discard, save);
-    d.append(body, actions);
+    d.append(head.el, actions);
     document.body.appendChild(d);
     const done = (v) => { d.close(); d.remove(); resolve(v); };
     keep.addEventListener("click", () => done("continue"));
+    head.close.addEventListener("click", () => done("continue"));
     discard.addEventListener("click", () => done("discard"));
     save.addEventListener("click", () => done("save"));
     d.addEventListener("cancel", (e) => { e.preventDefault(); done("continue"); });
@@ -100,10 +112,7 @@ function unsavedChoice() {
 export function openStepDialog({ title, body, readOnly = false, saveLabel = "Enregistrer", isDirty = () => false, onSave, onClose = () => {} }) {
   const titleId = nextId();
   const dlg = el("dialog", { class: "mk-dialog mk-step-dialog", "aria-labelledby": titleId });
-  const head = el("div", { class: "mk-step-dialog-head" });
-  head.appendChild(el("h2", { id: titleId }, title));
-  const x = el("button", { type: "button", class: "mk-step-dialog-close", "aria-label": "Fermer la configuration" }, "×");
-  head.appendChild(x);
+  const { el: head, close: x } = dialogHead(titleId, title, "Fermer la configuration");
   const errorBox = el("div", { class: "form-error mk-step-dialog-error", role: "alert", hidden: true });
   const content = el("div", { class: "mk-dialog-body mk-step-dialog-body" });
   content.appendChild(errorBox);

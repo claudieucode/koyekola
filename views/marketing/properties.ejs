@@ -34,11 +34,16 @@
     <% } %>
 
     <% if (canWrite) { %>
-      <dialog class="mk-dialog mk-modal" id="nouvelle" data-mk-modal data-mk-modal-hash="nouvelle" aria-labelledby="npr-title">
+      <dialog class="mk-dialog mk-modal" id="nouvelle" data-mk-modal data-mk-modal-hash="nouvelle" aria-labelledby="npr-title" aria-describedby="npr-desc">
         <form method="post" action="/marketing/proprietes">
+          <header class="mk-dialog-head">
+            <div class="mk-dialog-titles">
+              <h2 id="npr-title">Créer une propriété</h2>
+              <p class="mk-dialog-desc" id="npr-desc">Un champ supplémentaire sur la fiche de chaque contact, utilisable dans les segments.</p>
+            </div>
+            <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button>
+          </header>
           <div class="mk-dialog-body">
-            <h2 id="npr-title">Créer une propriété</h2>
-            <p>Un champ supplémentaire sur la fiche de chaque contact, utilisable dans les segments.</p>
             <div class="field-group">
               <label for="pr-label">Libellé *</label>
               <input id="pr-label" type="text" name="label" maxlength="100" required placeholder="Ex. Niveau" data-mk-required-message="Le libellé est obligatoire.">
