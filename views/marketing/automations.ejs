@@ -2,7 +2,7 @@
 <%
   const canWrite = mk.can("automations.write");
 %>
-    <div class="mk-head"><h1>Automatisations</h1></div>
+    <div class="mk-head"><h1>Automatisations</h1><a class="btn btn-outline btn-sm" href="/marketing/automatisations/parcours"><%- icon("layers", { size: 16 }) %> Parcours tout prêts</a></div>
     <p class="mk-lead">Un scénario réagit à un événement (compte créé, achat, formation terminée…) et enchaîne des étapes : e-mail, attente, condition, étiquette, liste. Seuls les événements <strong>futurs</strong> les déclenchent.</p>
     <%- include("partials/worker-note", { workerOn, consequence: "aucun scénario ne s'exécutera tant qu'il n'est pas rétabli" }) %>
 
@@ -10,8 +10,8 @@
       <div class="mk-empty">
         <%- icon("zap", { size: 32 }) %>
         <h2>Aucun scénario</h2>
-        <p>Créez par exemple « Bienvenue après inscription » (transactionnel) ou « Suite après une formation terminée » (marketing).</p>
-        <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un scénario</button></div><% } %>
+        <p>Partez d'un parcours tout prêt (bienvenue, suivi après achat, relance…) ou créez votre propre scénario.</p>
+        <div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/automatisations/parcours">Voir les parcours tout prêts</a><% if (canWrite) { %><button type="button" class="btn btn-outline btn-sm" data-mk-modal-open="nouveau">Créer un scénario</button><% } %></div>
       </div>
     <% } else { %>
       <div class="mk-table-wrap"><table class="mk-table">

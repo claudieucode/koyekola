@@ -40,7 +40,7 @@ describe("registre de navigation", () => {
   });
   test("propriétaire : toutes les pages existantes ; lecteur : seulement ce que son rôle permet", () => {
     const owner = labels(buildNav({ can: roleCan("owner"), active: "dashboard" }));
-    for (const l of ["Accueil", "Tous les contacts", "Listes", "Segments", "Étiquettes", "Propriétés", "Formulaires d'inscription", "Importer des contacts", "Toutes les campagnes", "Modèles d'e-mails", "Automatisations", "Réglages d'envoi", "KOLAKISA", "Conformité"]) assert.ok(owner.includes(l), l);
+    for (const l of ["Accueil", "Tous les contacts", "Listes", "Segments", "Étiquettes", "Propriétés", "Formulaires d'inscription", "Importer des contacts", "Toutes les campagnes", "Modèles d'e-mails", "Tous les scénarios", "Parcours tout prêts", "Réglages d'envoi", "KOLAKISA", "Conformité"]) assert.ok(owner.includes(l), l);
     const viewer = labels(buildNav({ can: roleCan("viewer"), active: "dashboard" }));
     assert.ok(viewer.includes("Tous les contacts") && viewer.includes("Conformité"));
     assert.ok(!viewer.includes("Réglages d'envoi"), "les réglages d'envoi demandent un administrateur");
@@ -60,7 +60,10 @@ describe("registre de navigation", () => {
     assert.ok(flat.every((s) => s.flat === true), "toute section à une seule entrée devient un lien direct");
     const owner = buildNav({ can: roleCan("owner"), active: "dashboard" });
     assert.equal(owner.sections.find((s) => s.key === "settings").flat, false);
-    assert.equal(owner.sections.find((s) => s.key === "automations").flat, true);
+    // Automatisations : scénarios + parcours tout prêts (comme « All journeys » / « Pre-built journeys » chez Mailchimp)
+    const automations = owner.sections.find((s) => s.key === "automations");
+    assert.deepEqual(automations.items.map((i) => i.key), ["automations", "journeys"]);
+    assert.equal(automations.flat, false);
     assert.equal(owner.sections.find((s) => s.key === "audience").flat, false);
     assert.deepEqual(owner.sections.map((s) => s.key), ["marketing", "campaigns", "sms", "automations", "audience", "analytics", "integrations", "settings"]);
   });

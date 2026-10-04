@@ -1,0 +1,37 @@
+<%- include("partials/top", { title, active }) %>
+<% const j = journey; const canWrite = mk.can("automations.write"); %>
+    <p class="mk-back"><a href="/marketing/automatisations/parcours">← Parcours tout prêts</a></p>
+    <div class="mk-head"><h1><%= j.label %></h1>
+      <% if (canWrite && !j.unavailable) { %><form action="/marketing/automatisations/parcours/<%= j.key %>" method="post"><button type="submit" class="btn btn-primary btn-sm">Utiliser ce parcours</button></form><% } %>
+    </div>
+    <p class="mk-lead"><%= j.objective %></p>
+    <% if (j.unavailable) { %>
+      <div class="mk-callout"><p><strong>Pas encore disponible.</strong> <%= j.unavailable %></p></div>
+    <% } else { %>
+      <%- include("partials/worker-note", { workerOn, consequence: "une fois activé, le parcours ne s'exécutera pas tant qu'il n'est pas rétabli" }) %>
+      <div class="mk-grid-2 mk-journey">
+        <section class="mk-lib-card" aria-labelledby="j-about">
+          <div class="mk-lib-body">
+            <h2 id="j-about" class="mk-h2">Comment il fonctionne</h2>
+            <p><%= j.description %></p>
+            <dl class="mk-journey-facts">
+              <dt>Déclencheur</dt><dd><%= j.trigger.label %><%= j.trigger.filter ? ` — étiquette « ${j.trigger.filter.value} »` : "" %></dd>
+              <dt>Type</dt><dd><%= j.kind === "transactional" ? "Transactionnel : lié à un achat ou une formation, sans contenu promotionnel, envoyé à tous les élèves concernés." : "Marketing : envoyé uniquement aux contacts abonnés, avec lien de désinscription." %></dd>
+              <dt>À savoir</dt><dd><%= j.note %></dd>
+            </dl>
+            <h3 class="mk-journey-sub">E-mails créés (modifiables)</h3>
+            <ol class="mk-journey-emails"><% j.emails.forEach((e) => { %><li><strong><%= e.name %></strong> — objet : « <%= e.subject %> »</li><% }) %></ol>
+          </div>
+        </section>
+        <section class="mk-lib-card" aria-labelledby="j-steps">
+          <div class="mk-lib-body">
+            <h2 id="j-steps" class="mk-h2">Étapes du parcours</h2>
+            <ol class="mk-journey-steps">
+              <li class="mk-journey-step is-trigger"><span class="mk-journey-icon" aria-hidden="true"><%- icon("zap", { size: 16 }) %></span><span>Déclencheur : <%= j.trigger.label %></span></li>
+              <% j.steps.forEach((s) => { %><li class="mk-journey-step"><span class="mk-journey-icon" aria-hidden="true"><%- icon(s.icon, { size: 16 }) %></span><span><span class="mk-journey-n">Étape <%= s.n %></span> <%= s.text %></span></li><% }) %>
+            </ol>
+          </div>
+        </section>
+      </div>
+    <% } %>
+<%- include("partials/bottom") %>

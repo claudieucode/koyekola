@@ -7,7 +7,7 @@ const { MarketingError } = require("../errors");
 
 const TRIGGER_ID = "trigger";
 const EXIT_ID = "exit";
-const NODE_W = 220, NODE_H = 90, ROW_GAP = 140;
+const NODE_W = 220, ROW_GAP = 140;
 
 // Étapes à DEUX sorties (comme une condition) : condition (vrai/faux) et split (A/B, tirage aléatoire) partagent la
 // même mécanique de branchement, seuls les noms de champ et les libellés de port changent.
@@ -38,7 +38,7 @@ function stepsToGraph(automation) {
 
   // Colonne unique, une ligne par étape : lisible de haut en bas comme l'ancien éditeur linéaire, sans zigzag
   // horizontal (un vrai rangement en grille n'aurait de sens qu'en tenant compte des embranchements — phase 2).
-  steps.forEach((step, i) => nodes.push({ id: idOf(i), type: step.type, data: { ...stepData(step), ...(step.type === "condition" && step.ref !== undefined ? { ref: idOf(step.ref) } : {}) }, position: { x: 40, y: 40 + NODE_H + i * ROW_GAP } }));
+  steps.forEach((step, i) => nodes.push({ id: idOf(i), type: step.type, data: { ...stepData(step), ...(step.type === "condition" && step.ref !== undefined ? { ref: idOf(step.ref) } : {}) }, position: { x: 40, y: 40 + (i + 1) * ROW_GAP } })); // même écart que entre deux étapes (le déclencheur aussi a sa hauteur)
 
   if (steps.length) addEdge(TRIGGER_ID, idOf(0));
 
@@ -58,7 +58,7 @@ function stepsToGraph(automation) {
     if (target !== null) addEdge(idOf(i), idOf(target));
   });
 
-  if (needExit) nodes.push({ id: EXIT_ID, type: "end", data: { exit: true }, position: { x: 40, y: 40 + NODE_H + (steps.length + 1) * ROW_GAP } });
+  if (needExit) nodes.push({ id: EXIT_ID, type: "end", data: { exit: true }, position: { x: 40, y: 40 + (steps.length + 1) * ROW_GAP } });
   return { nodes, edges };
 }
 

@@ -42,6 +42,22 @@ Variables utilisables dans les modèles d'un scénario : `{{event.course_title}}
 2. Créez un modèle transactionnel « Bienvenue », un scénario « Bienvenue après inscription » (déclencheur : compte créé) avec une étape e-mail, activez-le.
 3. Activez `MARKETING_WORKER=on`, inscrivez un compte de test : au bout de ~30 s (ou via **Événements → Synchroniser maintenant**), le message apparaît dans le journal du serveur.
 
+## Parcours tout prêts
+
+Marketing → Automatisations → **Parcours tout prêts** (équivalent des « Pre-built journeys » de Mailchimp). Chaque parcours est un scénario complet — déclencheur, attentes, conditions, étiquettes et e-mails rédigés — défini dans `src/marketing/automations/journeys.js`. « Utiliser ce parcours » crée, en une seule transaction, les modèles d'e-mails (modifiables) et le scénario **en brouillon** ; rien n'est envoyé avant l'activation, qui passe par le contrôle habituel.
+
+| Parcours | Déclencheur | Type | Ce qu'il fait |
+|---|---|---|---|
+| Bienvenue aux nouveaux abonnés | abonnement avec consentement | marketing | bienvenue → J+2 découverte → J+5 : étiquette « engagé » si clic, sinon aide au choix |
+| Bienvenue aux nouveaux élèves | compte créé | marketing | bienvenue → J+3 : aide au choix si aucune inscription |
+| Suivi après achat | commande passée | transactionnel | merci → aide au démarrage si aucune leçon terminée en 3 jours |
+| Encourager le démarrage | inscription à une formation | transactionnel | rappels à J+3 puis J+10 tant qu'aucune leçon n'est terminée |
+| Félicitations et avis | formation terminée | transactionnel | félicitations → demande d'avis à J+3 si aucun avis |
+| Relance après un favori | formation mise en favori | marketing | rappel à J+2 si aucun achat |
+| Reconquérir les inactifs | étiquette « a-relancer » ajoutée | marketing | 2 e-mails ; étiquettes « réactivé » ou « inactif » selon les ouvertures |
+
+Non proposés (affichés avec la raison) : panier abandonné (panier non enregistré côté serveur), anniversaire (pas de déclencheur à date), bienvenue SMS (pas d'étape SMS dans les scénarios). Tests : `tests/marketing-parcours.test.js`.
+
 ## Limites connues
 - **Éditeur graphique (canevas)** : glisser-déposer, zoom/ajuster à l'écran, panneau latéral par étape — voir
   `EMAIL_MARKETING_ARCHITECTURE.md` §27. Phase 1 seulement : pas encore de mini-carte, de rangement automatique, de

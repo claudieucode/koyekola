@@ -342,9 +342,10 @@ describe("parcours réel avec le worker : inscription sur le site → e-mail de 
     assert.equal(reg.status, 302);
     await follow(client, await client.post("/marketing/evenements/synchroniser", {}));
     let msgs = [];
-    for (let i = 0; i < 60 && !msgs.length; i++) {
+    // Le message est d'abord enregistré « pending » puis envoyé par le worker : on attend la fin de l'envoi, pas sa création
+    for (let i = 0; i < 60 && !(msgs.length && msgs[0].status !== "pending"); i++) {
       msgs = q("SELECT status, provider, subject FROM mk_messages WHERE email = 'eleve-e2e@test.local'");
-      if (!msgs.length) await new Promise((r) => setTimeout(r, 250));
+      if (!(msgs.length && msgs[0].status !== "pending")) await new Promise((r) => setTimeout(r, 250));
     }
     assert.equal(msgs.length, 1);
     assert.deepEqual([msgs[0].status, msgs[0].provider], ["sent", "console"]);

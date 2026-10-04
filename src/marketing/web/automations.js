@@ -8,6 +8,7 @@ const audience = require("../audience");
 const { listTags } = require("../audience/tags");
 const sendingConfig = require("../sending/config");
 const bridge = require("../bridge/events");
+const journeys = require("../automations/journeys");
 const { MarketingError } = require("../errors");
 const { attempt, need, safeJson } = require("./kit");
 
@@ -32,6 +33,25 @@ module.exports = ({ db }) => {
     attempt(req, res, next, () => (created ? `/marketing/automatisations/${created.id}` : "/marketing/automatisations"), () => {
       created = auto.createAutomation(req.mk.ctx, { name: req.body.name, kind: req.body.kind, triggerEvent: customEvent || req.body.trigger_event });
       return "Scénario créé : ajoutez ses étapes puis activez-le.";
+    });
+  });
+
+  // ---------- Parcours tout prêts (comme les « Pre-built journeys » de Mailchimp) ----------
+  // Avant « /automatisations/:id » : « parcours » n'est pas un identifiant. Création = brouillon complet dans l'éditeur.
+  router.get("/automatisations/parcours", need("automations.read"), (req, res) => {
+    res.render("marketing/journeys", { title: "Parcours tout prêts", active: "journeys", groups: journeys.journeyLibrary() });
+  });
+  router.get("/automatisations/parcours/:key", need("automations.read"), (req, res) => {
+    const j = journeys.byKey(req.params.key);
+    if (!j) return res.status(404).render("error", { message: "Parcours introuvable." });
+    res.render("marketing/journey", { title: j.label, active: "journeys", journey: journeys.summary(j), workerOn: workerOn() });
+  });
+  router.post("/automatisations/parcours/:key", need("automations.write"), (req, res, next) => {
+    let created = null;
+    attempt(req, res, next, () => (created ? `/marketing/automatisations/${created.id}` : `/marketing/automatisations/parcours/${encodeURIComponent(req.params.key)}`), () => {
+      created = journeys.createJourney(req.mk.ctx, req.params.key);
+      const n = created.steps.filter((s) => s.type === "email").length;
+      return `Parcours créé en brouillon avec ${n} e-mail${n > 1 ? "s" : ""} (modèles « ${created.name.replace(/^Parcours · /, "")} »). Relisez chaque e-mail, ajustez les délais si besoin, puis activez-le : rien n'est envoyé avant.`;
     });
   });
 

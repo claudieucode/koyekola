@@ -39,7 +39,9 @@ const ITEMS = [
   live("sms", "smsaudience", "Abonnés SMS", "/marketing/sms/abonnes", "users", "contacts.read"),
   live("sms", "sms", "Réglages SMS", "/marketing/sms/reglages", "settings", "settings.read"),
 
-  live("automations", "automations", "Automatisations", "/marketing/automatisations", "zap", "automations.read", { label: "Nouveau scénario", href: "/marketing/automatisations#nouveau", permission: "automations.write" }),
+  live("automations", "automations", "Tous les scénarios", "/marketing/automatisations", "zap", "automations.read", { label: "Nouveau scénario", href: "/marketing/automatisations#nouveau", permission: "automations.write" }),
+  // Parcours tout prêts (« Pre-built journeys » de Mailchimp) : un parcours complet créé en brouillon en un clic
+  live("automations", "journeys", "Parcours tout prêts", "/marketing/automatisations/parcours", "layers", "automations.read", { label: "Nouveau scénario", href: "/marketing/automatisations#nouveau", permission: "automations.write" }),
 
   live("analytics", "analytics", "Analytics", "/marketing/analytics", "activity", "analytics.read"),
   live("analytics", "revenue", "Revenus", "/marketing/revenus", "coin", "analytics.read"),
