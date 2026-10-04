@@ -68,6 +68,15 @@
 .dash-overlay { position: fixed; inset: 0; z-index: 45; background: rgba(10, 20, 30, 0.45); }
 .dash-overlay[hidden] { display: none; }
 
+/* ---------- Fil d'Ariane (Mon espace → module → page) ---------- */
+.dash-crumbs { margin: 0 0 var(--s3); font-size: 13px; }
+.dash-crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 0; }
+.dash-crumbs li { display: inline-flex; align-items: center; min-width: 0; color: var(--dash-muted); }
+.dash-crumbs li + li::before { content: "/"; margin: 0 8px; opacity: 0.6; }
+.dash-crumbs a { color: var(--dash-muted); text-decoration: none; border-radius: 4px; }
+.dash-crumbs a:hover { color: var(--dash-accent); text-decoration: underline; }
+.dash-crumbs [aria-current="page"] { color: var(--dash-text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60vw; }
+
 /* ---------- En-tête de page ---------- */
 .dash-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--s4); margin-bottom: var(--s5); }
 .dash-head h1 { margin: 0; font-size: 28px; line-height: 1.2; color: var(--dash-text); }
@@ -160,8 +169,6 @@
 .dash-empty h3 { margin: 0 0 var(--s2); color: var(--dash-text); }
 
 /* ---------- Gestion d'une formation : en-tête et onglets ---------- */
-.course-hub-back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: var(--s3); font-size: 14px; font-weight: 600; color: var(--dash-muted); text-decoration: none; }
-.course-hub-back:hover { color: var(--dash-accent); }
 .course-hub-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s4); margin-bottom: var(--s4); }
 .course-hub-thumb { width: 96px; aspect-ratio: 16 / 9; border-radius: var(--dash-radius-sm); overflow: hidden; background: color-mix(in srgb, var(--dash-accent) 10%, var(--dash-card)); flex: none; display: grid; place-items: center; color: var(--dash-accent); }
 .course-hub-thumb img { width: 100%; height: 100%; object-fit: cover; }

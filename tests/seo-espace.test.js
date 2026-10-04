@@ -21,18 +21,18 @@ before(async () => {
 after(() => srv.stop());
 
 describe("Coquille de l'espace SEO", () => {
-  test("navigation SEO propre, retour à Mon espace, fil d'Ariane, pas de pied de page public", async () => {
+  test("navigation SEO propre, rail « Mon espace », fil d'Ariane, pas de pied de page public", async () => {
     const r = await prof.get("/formateur/seo/audit");
     assert.equal(r.status, 200);
-    assert.match(r.text, /class="dash dash-seo"/);
+    assert.match(r.text, /class="dash has-rail dash-seo"/);
+    assert.match(r.text, /class="app-rail"/);
     assert.match(r.text, /seo-workspace\.css/);
     assert.match(r.text, />SEO Workspace</);
     for (const href of ["/formateur/seo", "/formateur/seo/audit", "/formateur/seo/contenus", "/formateur/seo/redirections", "/formateur/seo/erreurs-404", "/formateur/seo/technique", "/formateur/seo/integrations", "/formateur/seo/surveillance", "/formateur/seo/taches", "/formateur/seo/rapports", "/formateur/seo/reglages", "/formateur/seo/journal", "/formateur/seo/apparence"]) {
       assert.match(r.text, new RegExp(`href="${href.replace(/\//g, "\\/")}"`), href);
     }
     assert.match(r.text, /href="\/formateur\/seo\/audit" class="dash-link" data-tip="Audit" aria-current="page"/);
-    assert.match(r.text, /class="dash-link dash-back"/);
-    assert.match(r.text, /aria-label="Fil d'Ariane"/);
+    assert.match(r.text, /<nav class="dash-crumbs" aria-label="Fil d'Ariane">/);
     assert.doesNotMatch(r.text, /class="site-footer"/);
     // « Mon espace » garde sa propre navigation
     const home = await prof.get("/formateur");

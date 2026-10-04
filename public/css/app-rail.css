@@ -1,0 +1,55 @@
+/* =====================================================================
+   KOLAKISA — Rail « Mon espace » (navigation générale réduite)
+   Visible à gauche des modules qui ont leur propre menu (SEO, Marketing) : le contexte général n'est jamais perdu.
+   Couleurs : thème de « Mon espace » (variables --dash-*, posées sur le rail ou sur la coquille).
+   ===================================================================== */
+.app-rail { --rail-w: 64px; position: sticky; top: 0; z-index: 41; display: flex; flex-direction: column; align-items: center; width: var(--rail-w); height: 100vh; padding: 12px 0; background: var(--dash-sidebar, #0b2538); color: var(--dash-sidebar-text, #c9d8e4); border-right: 1px solid var(--dash-border, rgba(255, 255, 255, 0.08)); box-sizing: border-box; }
+.app-rail-brand { display: grid; place-items: center; width: 36px; height: 36px; margin-bottom: 12px; flex: none; border-radius: 10px; background: var(--dash-accent, #0b83c6); color: #fff; font-family: var(--font-display, inherit); font-size: 17px; font-weight: 800; text-decoration: none; }
+.app-rail-list { list-style: none; margin: 0; padding: 0 0 8px; display: grid; gap: 2px; flex: 1; overflow-y: auto; scrollbar-width: none; }
+.app-rail-list::-webkit-scrollbar { display: none; }
+.app-rail-sep { height: 1px; margin: 6px 12px; background: currentColor; opacity: 0.15; }
+.app-rail-link { position: relative; display: grid; place-items: center; width: 40px; height: 40px; margin: 0 12px; border: 0; border-radius: 10px; background: none; color: inherit; cursor: pointer; opacity: 0.78; text-decoration: none; transition: background 160ms ease, opacity 160ms ease; }
+.app-rail-link:hover { opacity: 1; background: var(--dash-hover, rgba(255, 255, 255, 0.08)); }
+.app-rail-link[aria-current="true"] { opacity: 1; background: var(--dash-active-bg, rgba(255, 255, 255, 0.12)); color: var(--dash-active-text, #fff); }
+.app-rail-link[aria-current="true"]::before { content: ""; position: absolute; left: -12px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--dash-accent, #0b83c6); }
+.app-rail-link:focus-visible, .app-rail-brand:focus-visible { outline: 2px solid var(--dash-accent, #0b83c6); outline-offset: 2px; }
+.app-rail-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--dash-accent, #0b83c6); box-shadow: 0 0 0 2px var(--dash-sidebar, #0b2538); }
+.app-rail-foot { display: grid; gap: 2px; padding-top: 8px; border-top: 1px solid var(--dash-border, rgba(255, 255, 255, 0.08)); }
+.app-rail-foot form { margin: 0; }
+/* Infobulle : le nom de la rubrique, au survol et au clavier */
+.app-rail-link:hover::after, .app-rail-link:focus-visible::after, .app-rail-brand:hover::after, .app-rail-brand:focus-visible::after { content: attr(data-tip); position: fixed; left: calc(var(--rail-w) + 6px); padding: 6px 10px; border-radius: 6px; background: #0f1d29; color: #fff; font-family: var(--font-body, inherit); font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; z-index: 95; }
+
+/* ---------- Coquille « Mon espace » avec un module (SEO) : rail + menu du module + contenu ---------- */
+.dash.has-rail { grid-template-columns: 64px var(--dash-sidebar-w) minmax(0, 1fr); }
+.dash.has-rail.is-collapsed { grid-template-columns: 64px var(--dash-sidebar-w-collapsed) minmax(0, 1fr); }
+.dash.has-rail.is-collapsed .dash-link:hover::after, .dash.has-rail.is-collapsed .dash-link:focus-visible::after { left: calc(64px + var(--dash-sidebar-w-collapsed) + 6px); }
+.dash-module-head { display: flex; align-items: center; gap: 10px; min-width: 0; color: inherit; text-decoration: none; }
+.dash-module-icon { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: color-mix(in srgb, var(--dash-accent) 16%, transparent); color: var(--dash-accent); }
+.dash-module-text { display: grid; min-width: 0; line-height: 1.2; }
+.dash-module-text strong { font-family: var(--font-display); font-size: 16px; font-weight: 800; white-space: nowrap; }
+.dash-module-text small { font-size: 12px; opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dash.is-collapsed .dash-module-text { display: none; }
+@media (max-width: 1100px) {
+  .dash.has-rail { grid-template-columns: 64px var(--dash-sidebar-w-collapsed) minmax(0, 1fr); }
+  .dash.has-rail:not(.is-drawer) .dash-module-text { display: none; }
+  .dash.has-rail:not(.is-drawer) .dash-link:hover::after, .dash.has-rail:not(.is-drawer) .dash-link:focus-visible::after { left: calc(64px + var(--dash-sidebar-w-collapsed) + 6px); }
+}
+@media (max-width: 760px) {
+  .dash.has-rail, .dash.has-rail.is-collapsed { grid-template-columns: minmax(0, 1fr); }
+  .dash.has-rail .app-rail { position: fixed; inset: 0 auto 0 0; transform: translateX(-100%); visibility: hidden; transition: transform 200ms ease, visibility 0s 200ms; z-index: 61; }
+  .dash.has-rail.is-drawer .app-rail { transform: none; visibility: visible; transition: transform 200ms ease; }
+  .dash.has-rail .dash-sidebar { left: 64px; width: min(270px, calc(86vw - 64px)); }
+}
+
+/* ---------- Espace Marketing (application à part) : rail + menu marketing + contenu ---------- */
+.mk-app.has-rail { grid-template-columns: 64px var(--mk-sidebar-w) minmax(0, 1fr); }
+html[data-sidebar="collapsed"] .mk-app.has-rail { grid-template-columns: 64px var(--mk-sidebar-w-collapsed) minmax(0, 1fr); }
+.mk-breadcrumb a { color: inherit; text-decoration: none; }
+.mk-breadcrumb a:hover { color: var(--accent); text-decoration: underline; }
+@media (max-width: 960px) {
+  .mk-app.has-rail, html[data-sidebar="collapsed"] .mk-app.has-rail { grid-template-columns: minmax(0, 1fr); }
+  .mk-app.has-rail .app-rail { position: fixed; inset: 0 auto 0 0; transform: translateX(-100%); visibility: hidden; transition: transform 0.2s, visibility 0.2s; z-index: 41; }
+  .mk-app.has-rail:has(.mk-sidebar.is-open) .app-rail { transform: none; visibility: visible; }
+  .mk-app.has-rail .mk-sidebar { left: 64px; width: min(280px, calc(86vw - 64px)); }
+}
+@media (prefers-reduced-motion: reduce) { .app-rail, .app-rail-link { transition: none; } }

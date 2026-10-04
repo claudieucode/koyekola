@@ -1,6 +1,16 @@
 <%
   const nav = mkh.buildNav({ can: mk.can, active });
   const crumbs = nav.breadcrumb || [title];
+  // Fil d'Ariane cliquable : Mon espace → Marketing → section → page (le dernier élément n'est pas un lien)
+  const trail = [];
+  if (currentUser && currentUser.role === "formateur") trail.push({ label: "Mon espace", href: "/formateur" });
+  trail.push({ label: "Marketing", href: "/marketing" });
+  nav.trail.forEach((t) => trail.push(t));
+  const lastLabel = trail[trail.length - 1].label;
+  // Page plus profonde que la rubrique (fiche, création…) : son titre devient le dernier niveau
+  const herePath = appRail ? appRail.path.replace(/\/$/, "") : null;
+  const lastHref = trail[trail.length - 1].href;
+  if (title && title !== lastLabel && active !== "dashboard" && (!herePath || herePath !== lastHref)) trail.push({ label: title });
   const mySpace = currentUser && currentUser.role === "formateur" ? { href: "/formateur", label: "Mon espace" } : { href: "/mes-cours", label: "Mes formations" };
 %><!DOCTYPE html>
 <% const theme = typeof mkTheme === "string" && mkTheme !== "clair" ? mkTheme : null; %><html lang="fr"<%- theme ? ` data-mk-theme="${theme}"` : "" %>>
@@ -14,12 +24,14 @@
   <script>try { if (localStorage.getItem("mkSidebar") === "collapsed") document.documentElement.setAttribute("data-sidebar", "collapsed"); } catch (e) {}</script>
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/marketing.css') %>">
+  <% if (appRail) { %><link rel="stylesheet" href="<%= asset('/css/app-rail.css') %>"><% } %>
   <% if (theme) { %><link rel="stylesheet" href="<%= asset('/css/marketing-themes.css') %>"><% } %>
 </head>
 <body class="mk-body">
   <a class="skip-link" href="#main">Aller au contenu principal</a>
 
-  <div class="mk-app">
+  <% const appClass = appRail ? "mk-app has-rail" : "mk-app"; %><div class="<%= appClass %>">
+    <% if (appRail) { %><%- include("../../partials/app-rail", { railNav: appRail.nav, railActive: appRail.active, railUnread: appRail.unread, railStyle: appRail.style }) %><% } %>
     <aside class="mk-sidebar" id="mk-sidebar" aria-label="Menu marketing">
       <div class="mk-sidebar-head">
         <a class="mk-brand" href="/marketing"><span class="mk-brand-mark" aria-hidden="true">K</span><span class="mk-brand-text">KOLAKISA<small>Marketing</small></span></a>
@@ -74,7 +86,7 @@
         <button type="button" class="icon-btn mk-menu-btn" data-mk-sidebar-toggle aria-controls="mk-sidebar" aria-expanded="false" aria-label="Ouvrir le menu"><%- icon("menu") %></button>
         <nav class="mk-breadcrumb" aria-label="Fil d'Ariane">
           <ol>
-            <% crumbs.forEach((crumb, i) => { %><li<%- i === crumbs.length - 1 ? ' aria-current="page"' : "" %>><%= crumb %></li>
+            <% trail.forEach((c, i) => { const last = i === trail.length - 1; %><li<%- last ? ' aria-current="page"' : "" %>><% if (c.href && !last) { %><a href="<%= c.href %>"><%= c.label %></a><% } else { %><%= c.label %><% } %></li>
             <% }) %>
           </ol>
         </nav>

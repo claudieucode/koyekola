@@ -1,10 +1,6 @@
 <%# En-tête d'une page de l'espace SEO : fil d'Ariane discret, titre, phrase d'aide, action principale et menu « ⋯ ».
-    Paramètres : section (libellé du fil d'Ariane, vide sur la vue d'ensemble), title, intro, actions (HTML facultatif),
+    Le fil d'Ariane est affiché par la coquille (partials/dash-open.ejs). Paramètres : title, intro, actions (HTML facultatif),
     audit (false pour masquer « Lancer un audit »). %>
-<nav class="seo-crumbs" aria-label="Fil d'Ariane">
-  <a href="/formateur">Mon espace</a><span aria-hidden="true">/</span>
-  <% if (typeof section !== "undefined" && section) { %><a href="/formateur/seo">SEO</a><span aria-hidden="true">/</span><span aria-current="page"><%= section %></span><% } else { %><span aria-current="page">SEO</span><% } %>
-</nav>
 <div class="dash-head seo-head">
   <div><h1><%= title %></h1><% if (typeof intro !== "undefined" && intro) { %><p><%= intro %></p><% } %></div>
   <div class="dash-head-actions">

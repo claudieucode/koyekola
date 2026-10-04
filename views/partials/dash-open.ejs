@@ -1,13 +1,15 @@
 <%# Coquille de « Mon espace » : barre latérale (repliable, tiroir sur mobile), barre du haut, zone de travail %>
-<% const dashClass = dash.seo ? "dash dash-seo" : "dash"; %><div class="<%= dashClass %>" id="dash" style="<%= dash.style %>">
+<% const dashClass = dash.module ? `dash has-rail dash-${dash.module.key}` : "dash";
+   const trail = dash.crumbs(typeof title !== "undefined" ? title : ""); %><div class="<%= dashClass %>" id="dash" style="<%= dash.style %>">
   <script>try { if (localStorage.getItem("kolakisa-dash-collapsed") === "1" && window.innerWidth > 1100) document.getElementById("dash").classList.add("is-collapsed"); } catch (e) { /* stockage indisponible */ }</script>
+  <% if (dash.module) { %><%- include("app-rail", { railNav: dash.globalNav, railActive: dash.module.key, railUnread: dash.unread }) %><% } %>
   <aside class="dash-sidebar" id="dashSidebar" aria-label="<%= dash.seo ? "Navigation de l'espace SEO" : "Navigation de Mon espace" %>">
     <div class="dash-brand">
-      <a href="/formateur" class="dash-logo" aria-label="KOLAKISA — Mon espace"><span class="dash-logo-mark" aria-hidden="true">K</span><span class="dash-logo-text">KOLAKISA</span></a>
+      <% if (dash.module) { %><a href="<%= dash.module.home %>" class="dash-module-head" aria-label="<%= dash.module.label %> — vue d'ensemble du module"><span class="dash-module-icon" aria-hidden="true"><%- icon(dash.module.icon, { size: 18 }) %></span><span class="dash-module-text"><strong><%= dash.module.label %></strong><small><%= dash.module.subtitle %></small></span></a>
+      <% } else { %><a href="/formateur" class="dash-logo" aria-label="KOLAKISA — Mon espace"><span class="dash-logo-mark" aria-hidden="true">K</span><span class="dash-logo-text">KOLAKISA</span></a><% } %>
       <button type="button" class="dash-collapse" data-dash-collapse aria-label="Réduire la barre latérale" title="Réduire la barre latérale" aria-pressed="false"><%- icon('panelLeft', { size: 18 }) %></button>
     </div>
     <nav class="dash-nav">
-      <% if (dash.seo) { %><a href="/formateur" class="dash-link dash-back" data-tip="Retour à Mon espace"><%- icon('arrowLeft', { size: 18 }) %><span class="dash-link-label">Mon espace</span></a><% } %>
       <% dash.nav.forEach((g) => { %>
         <p class="dash-group"><%= g.group %></p>
         <ul class="dash-list">
@@ -17,19 +19,22 @@
         </ul>
       <% }) %>
     </nav>
-    <div class="dash-sidebar-foot">
+<% if (!dash.module) { %>    <div class="dash-sidebar-foot">
       <a href="/" class="dash-link" data-tip="Voir le site"><%- icon('globe', { size: 18 }) %><span class="dash-link-label">Voir le site</span></a>
       <form action="/deconnexion" method="post"><button type="submit" class="dash-link" data-tip="Déconnexion"><%- icon('logout', { size: 18 }) %><span class="dash-link-label">Déconnexion</span></button></form>
-    </div>
+    </div><% } %>
   </aside>
   <div class="dash-overlay" data-dash-overlay hidden></div>
   <div class="dash-main">
     <header class="dash-topbar">
       <button type="button" class="dash-menu-btn" data-dash-menu aria-label="Ouvrir le menu" aria-controls="dashSidebar" aria-expanded="false"><%- icon('menu', { size: 20 }) %></button>
-      <span class="dash-topbar-brand">KOLAKISA</span>
+      <span class="dash-topbar-brand"><%= dash.module ? dash.module.label : "KOLAKISA" %></span>
       <div class="dash-user">
         <span class="avatar avatar-sm" aria-hidden="true" style="background:<%= avatarColor(currentUser.username) %>"><%= currentUser.username.slice(0, 1).toUpperCase() %></span>
         <span class="dash-user-name"><%= currentUser.username %></span>
       </div>
     </header>
     <main id="main" tabindex="-1" class="dash-content">
+      <% if (trail.length > 1) { %><nav class="dash-crumbs" aria-label="Fil d'Ariane"><ol>
+        <% trail.forEach((c, i) => { const last = i === trail.length - 1; %><li><% if (c.href && !last) { %><a href="<%= c.href %>"><%= c.label %></a><% } else { %><span<%- last ? ' aria-current="page"' : "" %>><%= c.label %></span><% } %></li><% }) %>
+      </ol></nav><% } %>

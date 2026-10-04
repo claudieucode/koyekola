@@ -74,12 +74,21 @@ function buildNav({ can, active }) {
   }
   let breadcrumb = null;
   let primary = null;
+  // trail : le même fil d'Ariane avec les vraies adresses (section → sa première page permise ; page → son adresse)
+  let trail = [];
   if (current) {
     const liveInSection = ITEMS.filter((i) => i.section === current.section && i.status === "live" && !i.hidden);
     breadcrumb = liveInSection.length === 1 ? [current.label] : [sectionOf(current.section).label, current.label];
+    const section = sections.find((x) => x.key === current.section);
+    if (current.key !== "dashboard") {
+      const sectionHref = section ? section.items[0].href : null;
+      if (liveInSection.length > 1 && sectionHref !== current.href) trail.push({ label: sectionOf(current.section).label, href: sectionHref });
+      // Page d'entrée de la section (« Toutes les campagnes ») : on l'appelle par le nom de la section (« Campagnes »)
+      trail.push({ label: liveInSection.length > 1 && sectionHref === current.href ? sectionOf(current.section).label : current.label, href: current.href });
+    }
     if (current.primary && can(current.primary.permission)) primary = { label: current.primary.label, href: current.primary.href };
   }
-  return { sections, breadcrumb, primary };
+  return { sections, breadcrumb, trail, primary };
 }
 
 module.exports = { SECTIONS, ITEMS, buildNav };

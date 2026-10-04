@@ -20,15 +20,7 @@
   --seo-radius: 14px;
 }
 
-/* ---------- Navigation : retour à Mon espace ---------- */
-.dash-seo .dash-back { margin-bottom: var(--s2); color: inherit; opacity: 0.8; }
-.dash-seo .dash-back:hover { opacity: 1; }
-
-/* ---------- En-tête et fil d'Ariane ---------- */
-.seo-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: var(--s2); font-size: 13px; color: var(--seo-muted); }
-.seo-crumbs a { color: var(--seo-muted); text-decoration: none; }
-.seo-crumbs a:hover { color: var(--seo-accent); text-decoration: underline; }
-.seo-crumbs [aria-current] { color: var(--seo-text); font-weight: 600; }
+/* ---------- En-tête (le fil d'Ariane est celui de la coquille) ---------- */
 .seo-head { align-items: center; }
 .seo-head .dmenu { margin-left: 0; }
 .seo-head-menu .dmenu-btn, .seo-btn-split { width: 40px; height: 40px; }

@@ -42,10 +42,18 @@ function injectLocals(req, res, next) {
     const prefs = dashboard.prefsOf(req.session.user.id);
     const seo = dashboard.isSeoPath(req.path);
     res.locals.dash = {
-      seo, active: seo ? dashboard.seoActiveKey(req.path) : dashboard.activeKey(req.path), nav: seo ? dashboard.SEO_NAV : dashboard.NAV, prefs, style: dashboard.style(prefs),
+      seo, module: seo ? dashboard.MODULES.seo : null, globalNav: dashboard.NAV, path: req.path, crumbs: (title) => dashboard.crumbs(req.path, title),
+      active: seo ? dashboard.seoActiveKey(req.path) : dashboard.activeKey(req.path), nav: seo ? dashboard.SEO_NAV : dashboard.NAV, prefs, style: dashboard.style(prefs),
       tasks: seo ? require("../seo/tasks").openCount() : 0,
       unread: db.prepare("SELECT COUNT(*) n FROM contact_messages WHERE read_at IS NULL").get().n,
     };
+  }
+  // Espace Marketing (application à part, sous /marketing) : la navigation générale de « Mon espace » reste visible (rail)
+  res.locals.appRail = null;
+  if (req.session.user && req.session.user.role === "formateur" && /^\/marketing(\/|$)/.test(req.path)) {
+    const dashboard = require("../services/dashboard");
+    const prefs = dashboard.prefsOf(req.session.user.id);
+    res.locals.appRail = { path: req.originalUrl.split("?")[0], nav: dashboard.NAV, active: "marketing", style: dashboard.style(prefs), unread: db.prepare("SELECT COUNT(*) n FROM contact_messages WHERE read_at IS NULL").get().n };
   }
   res.locals.avatarColor = avatarColor;
   res.locals.LANGUAGES = LANGUAGES;

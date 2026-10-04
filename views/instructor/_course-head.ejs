@@ -1,6 +1,5 @@
 <%# En-tête d'une formation dans « Mon espace » + onglets. Paramètres : course, tab %>
 <% const st = course.archived ? ["is-archived", "Archivée"] : course.published ? ["is-published", "Publiée"] : ["is-draft", "Brouillon"]; const stClass = `dash-status ${st[0]}`; %>
-<a href="/formateur/formations" class="course-hub-back"><%- icon('arrowLeft', { size: 16 }) %> Retour aux formations</a>
 <div class="course-hub-head">
   <div class="course-hub-thumb"><% if (course.thumbnail_path) { %><img src="<%= course.thumbnail_path %>" alt="" width="640" height="360"><% } else { %><%- icon('book', { size: 24 }) %><% } %></div>
   <div class="course-hub-title"><h1><%= course.title %></h1><span class="<%= stClass %>"><%= st[1] %></span></div>

@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { startServer, Client, loginInstructor, newStudent, createCourse, buy } = require("./helpers");
 
-const CSS = ["style.css", "marketing.css", "dashboard.css", "seo-workspace.css"].map((f) => fs.readFileSync(path.join(__dirname, "..", "public", "css", f), "utf8")).join("\n");
+const CSS = ["style.css", "marketing.css", "dashboard.css", "seo-workspace.css", "app-rail.css"].map((f) => fs.readFileSync(path.join(__dirname, "..", "public", "css", f), "utf8")).join("\n");
 const VIEWS = path.join(__dirname, "..", "views");
 
 // ---------- utilitaires de contraste (formule WCAG 2.x) ----------

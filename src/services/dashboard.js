@@ -134,6 +134,36 @@ function activeKey(path) {
   return (map.find(([p]) => path.startsWith(p)) || [])[1] || "overview";
 }
 
+// Modules qui ont leur propre navigation : la navigation générale reste visible sous forme de rail d'icônes
+const MODULES = {
+  seo: { key: "seo", label: "SEO", subtitle: "Référencement", home: "/formateur/seo", icon: "search" },
+  marketing: { key: "marketing", label: "Marketing", subtitle: "E-mails, SMS, audience", home: "/marketing", icon: "send" },
+};
+
+// Fil d'Ariane réel : Mon espace → module ou rubrique → sous-rubrique → page. Chaque niveau mène à sa vraie adresse ;
+// le dernier (la page affichée) n'est pas un lien. title : titre de la page (passé à l'en-tête).
+function crumbs(path, title) {
+  const same = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+  const page = String(title || "").replace(/^SEO · /, "").trim();
+  const here = path.replace(/\/$/, "") || "/";
+  const out = [{ label: "Mon espace", href: "/formateur" }];
+  if (isSeoPath(path)) {
+    out.push({ label: "SEO", href: "/formateur/seo" });
+    const key = seoActiveKey(path);
+    const item = SEO_NAV.flatMap((g) => g.items).find((i) => i.key === key);
+    if (key !== "seo-overview" && item) out.push({ label: item.label, href: item.href });
+    if (page && item && here !== item.href && !same(page, item.label) && !same(page, "Vue d'ensemble") && !same(page, "SEO")) out.push({ label: page });
+  } else {
+    const key = activeKey(path);
+    const item = NAV.flatMap((g) => g.items).find((i) => i.key === key);
+    if (key !== "overview" && item) out.push({ label: item.label, href: item.href });
+    if (page && item && here !== item.href && !same(page, item.label) && !same(page, "Mon espace") && here !== "/formateur") out.push({ label: page });
+  }
+  const last = out[out.length - 1];
+  if (last.href && last.href === here) delete last.href;
+  return out;
+}
+
 // Statistiques réelles (formations du formateur) et tendance du mois en cours
 function stats(userId) {
   const one = (sql, ...a) => db.prepare(sql).get(...a);
@@ -146,4 +176,4 @@ function stats(userId) {
   };
 }
 
-module.exports = { THEMES, COLOR_KEYS, prefsOf, savePrefs, tokens, style, NAV, activeKey, SEO_NAV, seoActiveKey, isSeoPath, stats, cleanColors };
+module.exports = { THEMES, COLOR_KEYS, prefsOf, savePrefs, tokens, style, NAV, activeKey, SEO_NAV, seoActiveKey, isSeoPath, MODULES, crumbs, stats, cleanColors };
