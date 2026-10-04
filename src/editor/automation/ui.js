@@ -92,26 +92,22 @@ function unsavedChoice() {
   });
 }
 
-// ---------- Grande interface de configuration d'une étape ----------
+// ---------- Fenêtre de configuration d'une étape (composant commun à TOUTES les étapes) ----------
+// En-tête (titre « Configurer : … » + fermer) · contenu fourni par l'éditeur du type d'étape · pied Annuler / Enregistrer.
 // Modifie un BROUILLON : rien n'est appliqué tant que « Enregistrer » n'a pas réussi (étape mise à jour ET scénario
 // enregistré sur le serveur). Fermer (×, Annuler, Échap, fond) avec des modifications → continuer / abandonner /
-// enregistrer. Un échec d'enregistrement garde la fenêtre ouverte avec le message, pour réessayer. Colonne de gauche
-// (aside) : identité de l'étape et résumé tenu à jour pendant la saisie (refreshAside). Focus piégé par showModal().
-export function openStepDialog({ title, iconHtml, body, aside = null, wide = false, readOnly = false, saveLabel = "Enregistrer", isDirty = () => false, onSave, onClose = () => {}, onChange = () => {} }) {
+// enregistrer. Un échec d'enregistrement garde la fenêtre ouverte avec le message, pour réessayer. Focus piégé par showModal().
+export function openStepDialog({ title, body, readOnly = false, saveLabel = "Enregistrer", isDirty = () => false, onSave, onClose = () => {} }) {
   const titleId = nextId();
-  const dlg = el("dialog", { class: `mk-dialog mk-step-dialog${wide ? " is-wide" : ""}${aside ? " has-aside" : ""}`, "aria-labelledby": titleId });
+  const dlg = el("dialog", { class: "mk-dialog mk-step-dialog", "aria-labelledby": titleId });
   const head = el("div", { class: "mk-step-dialog-head" });
-  if (iconHtml) { const ic = el("span", { class: "mk-step-dialog-icon", "aria-hidden": "true" }); ic.innerHTML = iconHtml; head.appendChild(ic); } // SVG du registre fixe icons.js
   head.appendChild(el("h2", { id: titleId }, title));
   const x = el("button", { type: "button", class: "mk-step-dialog-close", "aria-label": "Fermer la configuration" }, "×");
   head.appendChild(x);
   const errorBox = el("div", { class: "form-error mk-step-dialog-error", role: "alert", hidden: true });
-  const main = el("div", { class: "mk-step-main" });
-  main.appendChild(errorBox);
-  main.appendChild(body);
   const content = el("div", { class: "mk-dialog-body mk-step-dialog-body" });
-  if (aside) content.appendChild(aside);
-  content.appendChild(main);
+  content.appendChild(errorBox);
+  content.appendChild(body);
   const actions = el("div", { class: "mk-dialog-actions" });
   const cancel = el("button", { type: "button", class: "btn btn-outline btn-sm" }, readOnly ? "Fermer" : "Annuler");
   actions.appendChild(cancel);
@@ -122,10 +118,6 @@ export function openStepDialog({ title, iconHtml, body, aside = null, wide = fal
   dlg.appendChild(head); dlg.appendChild(form);
   // Les raccourcis du canevas (Suppr…) écoutent le document : une frappe dans la fenêtre ne doit jamais les atteindre
   dlg.addEventListener("keydown", (e) => { if (e.key !== "Escape") e.stopPropagation(); });
-  // Résumé de la colonne de gauche mis à jour pendant la saisie (après les gestionnaires des champs)
-  form.addEventListener("input", () => onChange());
-  form.addEventListener("change", () => onChange());
-  form.addEventListener("click", (e) => { if (e.target.closest("button[type=button]")) setTimeout(onChange, 0); });
   document.body.appendChild(dlg);
   const previous = document.activeElement;
   let busy = false;

@@ -81,6 +81,7 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
       (locked && type === "end" ? "" : '<button type="button" class="mk-flow-more" aria-haspopup="menu" aria-expanded="false">' + icon("moreHorizontal", { size: 18 }) + "</button>") +
       "</div>" +
       '<div class="mk-flow-card-sub"></div>' +
+      (type === "trigger" ? "" : '<span class="mk-flow-card-orphan" title="Aucune connexion ne mène à cette étape depuis le déclencheur">Non reliée au scénario</span>') +
       (BRANCH[type] ? '<div class="mk-flow-card-ports"><span class="mk-flow-port-label mk-flow-port-yes">' + BRANCH[type].tLabel + '</span><span class="mk-flow-port-label mk-flow-port-no">' + BRANCH[type].fLabel + "</span></div>" : "") +
       "</div>"
     );
@@ -129,8 +130,8 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
   });
   if (!dfId[TRIGGER_ID]) addNode(TRIGGER_ID, "trigger", { triggers: [{ event: a.triggerEvent, filter: a.triggerFilter || {} }], triggerEvent: a.triggerEvent, triggerFilter: a.triggerFilter || {} }, { x: 40, y: 40 });
   // Les résumés (et l'état « Non configuré ») dépendent des autres étapes (une condition vise un e-mail) : redessinés
-  // une fois TOUT le schéma chargé
-  setTimeout(repaintAll, 0);
+  // une fois TOUT le schéma chargé ; les étapes non reliées au déclencheur sont signalées
+  setTimeout(function () { repaintAll(); markOrphans(); }, 0);
 
   // ---------- Étapes : menu « ⋯ » et boîte de dialogue « Modifier » ----------
   var clone = function (v) { return JSON.parse(JSON.stringify(v)); };
@@ -181,37 +182,17 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
     var ctx = ctxFor(myId);
     var body = document.createElement("div");
     body.className = "mk-step-editor";
-    function rerender() { body.textContent = ""; body.appendChild(buildEditor(type, ctx, draft, rerender)); refreshAside(); }
-    // Colonne de gauche : identité de l'étape, état et résumé tenus à jour pendant la saisie
-    var aside = el("aside", { class: "mk-step-aside", "aria-label": "Résumé de l'étape" });
-    var big = el("span", { class: "mk-step-aside-icon" + (def.tone ? " is-" + def.tone : ""), "aria-hidden": "true" }); big.innerHTML = icon(def.icon, { size: 26 });
-    var state = el("span", { class: "mk-step-state" });
-    var sum = el("p", { class: "mk-step-aside-summary", "aria-live": "polite" });
-    aside.appendChild(big);
-    aside.appendChild(el("p", { class: "mk-step-aside-name" }, def.label));
-    aside.appendChild(el("p", { class: "mk-step-aside-desc" }, def.description || ""));
-    aside.appendChild(state);
-    aside.appendChild(el("p", { class: "mk-step-aside-label" }, "Résumé"));
-    aside.appendChild(sum);
-    function refreshAside() {
-      var shown = type === "trigger" ? { triggers: draft.triggers } : draft;
-      var errs = type === "trigger" ? validate("trigger", ctx, draft) : validate(type, ctx, draft);
-      state.textContent = errs.length ? "À configurer" : "Configurée";
-      state.className = "mk-step-state " + (errs.length ? "is-todo" : "is-ok");
-      sum.textContent = errs.length ? errs[0] : summary(type, ctx, shown);
-    }
+    function rerender() { body.textContent = ""; body.appendChild(buildEditor(type, ctx, draft, rerender)); }
     rerender();
     var dom = nodeDom(myId);
     if (dom) dom.classList.add("is-editing");
+    // Même fenêtre pour toutes les étapes : titre « Configurer : … » (seule mention du nom), contenu propre au type,
+    // pied Annuler / Enregistrer. Aucune colonne qui répète le nom, l'icône ou un résumé.
     openStepDialog({
       title: locked ? "Réglages : " + def.label : def.title || "Configurer : " + def.label,
-      iconHtml: icon(def.icon, { size: 20 }),
       body: body,
-      aside: aside,
-      wide: !!def.wide,
       readOnly: locked,
       isDirty: function () { return JSON.stringify(draft) !== initial; },
-      onChange: refreshAside,
       onClose: function () { var d = nodeDom(myId); if (d) d.classList.remove("is-editing"); },
       onSave: function () {
         var errors = validate(type, ctx, draft);
@@ -246,9 +227,10 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
     var raw = editor.drawflow.drawflow[editor.module].data[dfId[myId]];
     if (!n || !raw || myId === TRIGGER_ID) return;
     var copyId = uid();
-    addNode(copyId, n.name, clone(withoutId(n.data)), { x: raw.pos_x + 40, y: raw.pos_y + NODE_H + 40 });
+    addNode(copyId, n.name, clone(withoutId(n.data)), freeSpot({ x: raw.pos_x + NODE_W + 40, y: raw.pos_y })); // copie indépendante : aucune connexion
     changed();
-    announce("Étape « " + (LABELS[n.name] || n.name) + " » dupliquée : reliez la copie à la suite voulue.");
+    markOrphans();
+    announce("Étape « " + (LABELS[n.name] || n.name) + " » dupliquée, non reliée : reliez la copie à la suite voulue.");
     persist().then(function (r) { if (r.ok) toast("Étape dupliquée.", "ok"); });
   }
 
@@ -261,6 +243,7 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
       editor.removeNodeId("node-" + dfId[myId]); // retire aussi toutes ses connexions
       delete dfId[myId];
       changed();
+      markOrphans();
       announce("Étape supprimée.");
       persist().then(function (r) { if (r.ok) toast("Étape supprimée.", "ok"); });
     });
@@ -310,10 +293,81 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
   editor.on("nodeRemoved", function (id) {
     var gone = myIdOfDf(id);
     if (gone && gone !== TRIGGER_ID) delete dfId[gone]; // supprimé au clavier (Suppr) : l'annuaire reste exact
+    markOrphans();
   });
   editor.on("nodeMoved", changed);
-  editor.on("connectionCreated", changed);
-  editor.on("connectionRemoved", changed);
+  // ---------- Connexions manuelles (glisser du point de sortie d'une étape au point d'entrée d'une autre) ----------
+  // Seule façon de relier deux étapes. Chaque connexion créée ou supprimée est vérifiée puis enregistrée aussitôt.
+  var undoingConnection = false;
+  function dropConnection(c, why) {
+    undoingConnection = true;
+    editor.removeSingleConnection(c.output_id, c.input_id, c.output_class, c.input_class);
+    undoingConnection = false;
+    markOrphans();
+    showError(why); toast(why, "error"); announce(why);
+  }
+  var connectionSave = null;
+  function saveConnections() { clearTimeout(connectionSave); connectionSave = setTimeout(function () { persist({ quiet: true }).then(onConnectionSaved); }, 250); }
+  var lastConnection = null;
+  function onConnectionSaved(r) {
+    if (r.ok || !lastConnection) return;
+    // Refusée par le serveur (boucle : une connexion qui ramène en arrière) : la connexion est retirée, rien n'est perdu
+    var c = lastConnection; lastConnection = null;
+    var why = r.error || "Connexion impossible.";
+    dropConnection(c, why);
+    persist({ quiet: true }).then(function () { showError(why); }); // l'explication reste affichée après l'enregistrement
+  }
+  editor.on("connectionCreated", function (c) {
+    if (undoingConnection) return;
+    var out = editor.getNodeFromId(c.output_id).outputs[c.output_class];
+    // Une sortie ne mène qu'à une étape (le moteur n'en suit qu'une) : pour changer la suite, supprimer l'ancienne connexion
+    if (out && out.connections.length > 1) { dropConnection(c, "Cette sortie est déjà reliée à une étape : supprimez d'abord la connexion existante (cliquez dessus, puis « Supprimer la connexion »)."); return; }
+    changed();
+    markOrphans();
+    lastConnection = c;
+    announce("Connexion créée.");
+    saveConnections();
+  });
+  // Suppression d'une connexion : clic dessus → bouton « Supprimer la connexion » à l'endroit du clic (ou touche Suppr)
+  var selectedConn = null, lastDown = null;
+  var connBtn = el("button", { type: "button", class: "mk-flow-conn-del", hidden: "" });
+  connBtn.innerHTML = icon("trash", { size: 14 }); // SVG du registre fixe icons.js
+  connBtn.appendChild(document.createTextNode(" Supprimer la connexion"));
+  container.parentElement.appendChild(connBtn);
+  container.addEventListener("mousedown", function (e) { lastDown = { x: e.clientX, y: e.clientY }; }, true);
+  function hideConnBtn() { connBtn.hidden = true; }
+  function removeSelectedConnection() {
+    if (!selectedConn) return;
+    var c = selectedConn; selectedConn = null; hideConnBtn();
+    editor.removeSingleConnection(c.output_id, c.input_id, c.output_class, c.input_class); // → connectionRemoved (enregistré)
+  }
+  editor.on("connectionSelected", function (c) {
+    if (locked) return;
+    selectedConn = c;
+    var box = container.parentElement.getBoundingClientRect();
+    connBtn.hidden = false;
+    connBtn.style.left = Math.max(8, Math.min(box.width - connBtn.offsetWidth - 8, (lastDown ? lastDown.x : box.left + box.width / 2) - box.left + 10)) + "px";
+    connBtn.style.top = Math.max(8, (lastDown ? lastDown.y : box.top + 40) - box.top - connBtn.offsetHeight - 10) + "px";
+    announce("Connexion sélectionnée : « Supprimer la connexion » ou touche Suppr pour la retirer.");
+  });
+  editor.on("connectionUnselected", function () { selectedConn = null; hideConnBtn(); });
+  connBtn.addEventListener("mousedown", function (e) { e.stopPropagation(); });
+  connBtn.addEventListener("click", removeSelectedConnection);
+  document.addEventListener("keydown", function (e) {
+    if (!selectedConn || (e.key !== "Delete" && e.key !== "Backspace")) return;
+    if (e.target.closest && e.target.closest("input, textarea, select, [contenteditable], dialog")) return;
+    e.preventDefault();
+    removeSelectedConnection();
+  });
+  editor.on("connectionRemoved", function () {
+    hideConnBtn();
+    if (undoingConnection) return;
+    changed();
+    markOrphans();
+    lastConnection = null;
+    announce("Connexion supprimée.");
+    saveConnections();
+  });
   editor.on("nodeRemoved", function (id) {
     // Le déclencheur ne peut pas être supprimé : Drawflow n'offre pas de blocage par nœud,
     // on le recrée donc immédiatement s'il vient de disparaître.
@@ -326,95 +380,39 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
   });
 
   // ---------- Ajout d'une étape (palette : clic ou glisser-déposer) ----------
-  // Ajout par clic : APRÈS l'étape sélectionnée sur le canevas (point d'insertion), sinon à la fin du parcours principal
-  // (avant une éventuelle « Fin »). L'étape est reliée automatiquement (insérée entre l'étape d'avant et sa suite), les
-  // étapes en dessous descendent d'un cran, puis sa fenêtre de réglage s'ouvre : « Ajouter l'étape » l'enregistre,
-  // « Annuler » la retire et remet tout comme avant. Les connexions passent par l'API Drawflow, comme à la main.
-  var ROW = NODE_H + 54;
-  var selectedMyId = null;
+  // Ajouter = créer et placer l'étape, RIEN d'autre : aucune connexion n'est jamais créée automatiquement (ni vers la
+  // dernière étape, ni vers l'étape sélectionnée, ni vers celle sur laquelle on dépose). Les connexions sont faites
+  // par la personne, du point de sortie d'une étape au point d'entrée d'une autre (glisser natif de Drawflow).
   var rawNode = function (myId) { return editor.drawflow.drawflow[editor.module].data[dfId[myId]]; };
-  var hasOutputs = function (myId) { var n = nodeOf(myId); return n && ioFor(n.name)[1] > 0; };
-  var firstTarget = function (myId, out) { var r = rawNode(myId); var c = r && r.outputs[out] && r.outputs[out].connections[0]; return c ? myIdOfDf(c.node) : null; };
-  // Fin du parcours principal : on suit la 1re sortie depuis le déclencheur jusqu'à une étape sans suite (ou suivie d'une « Fin »)
-  function chainEnd() {
-    var cur = TRIGGER_ID, seen = {};
-    while (cur && !seen[cur]) {
-      seen[cur] = true;
-      var next = firstTarget(cur, "output_1");
-      if (!next) return cur;
-      var nn = nodeOf(next);
-      if (!nn || nn.name === "end" || !hasOutputs(next)) return cur;
-      cur = next;
-    }
-    return TRIGGER_ID;
+  // Emplacement libre : la position voulue (centre de la zone visible, point de dépôt…) décalée vers le bas tant
+  // qu'elle chevauche une étape existante — les étapes existantes ne sont jamais déplacées
+  function freeSpot(pos) {
+    var p = { x: Math.round(pos.x), y: Math.round(pos.y) };
+    var all = Object.keys(dfId).map(rawNode).filter(Boolean);
+    for (var i = 0; i < 60 && all.some(function (r) { return Math.abs(r.pos_x - p.x) < NODE_W + 16 && Math.abs(r.pos_y - p.y) < NODE_H + 16; }); i++) p.y += NODE_H + 24;
+    return p;
   }
-  function moveNode(myId, x, y) {
-    var r = rawNode(myId), dom = nodeDom(myId);
-    if (!r || !dom) return;
-    r.pos_x = x; r.pos_y = y;
-    dom.style.left = x + "px"; dom.style.top = y + "px";
-    editor.updateConnectionNodes("node-" + dfId[myId]);
-  }
-  function anchorLabel(myId) { var n = nodeOf(myId); return n ? (LABELS[n.name] || n.name) + (n.name === "trigger" ? "" : " — " + subtitleFor(n.name, n.data)) : ""; }
-  function updateTarget() {
-    if (!pal) return;
-    var sel = selectedMyId && dfId[selectedMyId] != null && hasOutputs(selectedMyId) ? selectedMyId : null;
-    pal.setTarget(sel ? "Ajout après : " + anchorLabel(sel) : "Ajout à la fin du parcours");
+  function viewCenter() {
+    var c = container.getBoundingClientRect(), r = editor.precanvas.getBoundingClientRect(), zoom = editor.zoom || 1;
+    return { x: (c.left + c.width / 2 - r.left) / zoom - NODE_W / 2, y: (c.top + c.height / 3 - r.top) / zoom - NODE_H / 2 };
   }
 
   function addStep(type, where) {
     where = where || {};
-    if (!action(type).make) return;
+    if (!action(type).make) return null;
     try {
       var wasDirty = dirty, statusBefore = $("au-status") ? $("au-status").textContent : "";
-      var undo = { moved: [], removed: null };
-      var anchor = null, pos;
-      if (where.at) pos = where.at;
-      else {
-        anchor = where.anchor || (selectedMyId && dfId[selectedMyId] != null && hasOutputs(selectedMyId) ? selectedMyId : chainEnd());
-        if (!hasOutputs(anchor)) anchor = chainEnd();
-        var a0 = rawNode(anchor);
-        pos = { x: a0.pos_x, y: a0.pos_y + ROW };
-      }
       var myId = uid();
-      var target = null, out = "output_1";
-      if (anchor) {
-        var an = nodeOf(anchor);
-        if (BRANCH[an.name] && !firstTarget(anchor, "output_1")) out = "output_1";
-        else if (BRANCH[an.name] && !firstTarget(anchor, "output_2")) { out = "output_2"; pos = { x: pos.x + NODE_W + 60, y: pos.y }; }
-        target = firstTarget(anchor, out);
-        // Place libre : les étapes situées dessous, dans la même colonne, descendent d'un cran
-        var ax = rawNode(anchor).pos_x;
-        Object.keys(dfId).forEach(function (k) {
-          var r = rawNode(k);
-          if (k !== anchor && r && r.pos_y >= pos.y - NODE_H / 2 && Math.abs(r.pos_x - pos.x) < NODE_W + 40) { undo.moved.push([k, r.pos_x, r.pos_y]); moveNode(k, r.pos_x, r.pos_y + ROW); }
-        });
-        if (Math.abs(ax - pos.x) > 1 && !undo.moved.length) { /* branche B : nouvelle colonne, rien à décaler */ }
-      }
-      addNode(myId, type, action(type).make({ data: data, a: a }), pos);
-      if (anchor) {
-        var insertable = type !== "end" || !target; // une « Fin » ne s'intercale jamais avant une suite existante
-        if (insertable) {
-          if (target) { editor.removeSingleConnection(dfId[anchor], dfId[target], out, "input_1"); undo.removed = [anchor, target, out]; }
-          editor.addConnection(dfId[anchor], dfId[myId], out, "input_1");
-          if (target && hasOutputs(myId)) editor.addConnection(dfId[myId], dfId[target], "output_1", "input_1");
-        }
-      }
+      addNode(myId, type, action(type).make({ data: data, a: a }), freeSpot(where.at || viewCenter()));
       changed();
-      var label = LABELS[type] || type;
-      announce("Étape « " + label + " » ajoutée" + (anchor ? " après « " + (LABELS[nodeOf(anchor).name] || "") + " »" : " sur le canevas") + ".");
-      if (!where.at) centerOnNode(myId); // déposée à un endroit précis : le canevas ne bouge pas
-      var discard = function () {
-        if (dfId[myId] != null) { editor.removeNodeId("node-" + dfId[myId]); delete dfId[myId]; }
-        undo.moved.forEach(function (m) { moveNode(m[0], m[1], m[2]); });
-        if (undo.removed && dfId[undo.removed[0]] != null && dfId[undo.removed[1]] != null) editor.addConnection(dfId[undo.removed[0]], dfId[undo.removed[1]], undo.removed[2], "input_1");
-        dirty = wasDirty; setStatus(statusBefore);
-        announce("Ajout annulé.");
-      };
-      // Insérer ≠ configurer : aucune fenêtre ne s'ouvre ; l'étape est enregistrée telle quelle (« Non configuré »
-      // si elle attend un réglage) et se configure ensuite d'un clic. En cas d'échec, l'insertion est annulée.
+      markOrphans();
+      announce("Étape « " + (LABELS[type] || type) + " » ajoutée sur le canevas, non reliée : tirez depuis le point de sortie d'une étape vers son point d'entrée pour la relier.");
+      // Insérer ≠ configurer : aucune fenêtre ; l'étape est enregistrée telle quelle et se configure d'un clic.
       persist().then(function (r) {
-        if (!r.ok) { discard(); toast("Impossible d'ajouter cette étape. Veuillez réessayer." + (r.error ? " (" + r.error + ")" : ""), "error"); }
+        if (r.ok) return;
+        if (dfId[myId] != null) { editor.removeNodeId("node-" + dfId[myId]); delete dfId[myId]; }
+        dirty = wasDirty; setStatus(statusBefore); markOrphans();
+        toast("Impossible d'ajouter cette étape. Veuillez réessayer." + (r.error ? " (" + r.error + ")" : ""), "error");
       });
       return myId;
     } catch (e) {
@@ -422,6 +420,23 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
       toast("Impossible d'ajouter cette étape. Veuillez réessayer.", "error");
       return null;
     }
+  }
+
+  // Étapes qui ne sont reliées à aucun chemin partant du déclencheur : signalées sur le canevas (et au contrôle avant
+  // activation côté serveur). Un brouillon peut en contenir pendant sa construction : rien n'est relié à leur place.
+  function markOrphans() {
+    var reach = {}, stack = [TRIGGER_ID];
+    while (stack.length) {
+      var id = stack.pop();
+      if (reach[id] || dfId[id] == null) continue;
+      reach[id] = true;
+      var r = rawNode(id);
+      Object.keys((r && r.outputs) || {}).forEach(function (o) { r.outputs[o].connections.forEach(function (c) { var t = myIdOfDf(c.node); if (t) stack.push(t); }); });
+    }
+    Object.keys(dfId).forEach(function (k) {
+      var dom = nodeDom(k);
+      if (dom) dom.classList.toggle("is-orphan", k !== TRIGGER_ID && !reach[k]);
+    });
   }
 
   var pal = null;
@@ -434,31 +449,19 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
       onAdd: function (type) { addStep(type); },
       onAddTrigger: function () { openEditor(TRIGGER_ID, { addTrigger: true }); },
     });
-    editor.on("nodeSelected", function (id) { selectedMyId = myIdOfDf(id) || null; updateTarget(); });
-    editor.on("nodeUnselected", function () { selectedMyId = null; updateTarget(); });
-    editor.on("nodeRemoved", function () { if (selectedMyId && dfId[selectedMyId] == null) selectedMyId = null; updateTarget(); });
-    updateTarget();
-
-    // Glisser-déposer depuis la palette : sur une étape → insérée juste après elle ; ailleurs → posée à cet endroit
-    var dropOn = null;
-    var setDropOn = function (elx) { if (dropOn === elx) return; if (dropOn) dropOn.classList.remove("is-drop-target"); dropOn = elx; if (dropOn) dropOn.classList.add("is-drop-target"); };
+    // Glisser-déposer depuis la palette : l'étape est posée sous le pointeur (place libre la plus proche), jamais reliée
     var isStepDrag = function (e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, DRAG_TYPE) !== -1; };
     container.addEventListener("dragover", function (e) {
       if (!isStepDrag(e)) return;
       e.preventDefault(); e.dataTransfer.dropEffect = "copy";
       container.classList.add("is-drop-zone");
-      var nodeEl = e.target.closest && e.target.closest(".drawflow-node");
-      var myId = nodeEl && myIdOfDf(nodeEl.id.replace("node-", ""));
-      setDropOn(myId && hasOutputs(myId) ? nodeEl : null);
     });
-    container.addEventListener("dragleave", function (e) { if (!container.contains(e.relatedTarget)) { container.classList.remove("is-drop-zone"); setDropOn(null); } });
+    container.addEventListener("dragleave", function (e) { if (!container.contains(e.relatedTarget)) container.classList.remove("is-drop-zone"); });
     container.addEventListener("drop", function (e) {
       if (!isStepDrag(e)) return;
       e.preventDefault();
       var type = e.dataTransfer.getData(DRAG_TYPE);
-      var onNode = dropOn ? myIdOfDf(dropOn.id.replace("node-", "")) : null;
-      container.classList.remove("is-drop-zone"); setDropOn(null);
-      if (onNode) { addStep(type, { anchor: onNode }); return; }
+      container.classList.remove("is-drop-zone");
       var r = editor.precanvas.getBoundingClientRect();
       var zoom = editor.zoom || 1;
       addStep(type, { at: { x: Math.round((e.clientX - r.left) / zoom - NODE_W / 2), y: Math.round((e.clientY - r.top) / zoom - 30) } });

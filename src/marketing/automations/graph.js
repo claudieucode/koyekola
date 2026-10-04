@@ -161,7 +161,7 @@ function reachableIds(graph) {
   const walk = (id) => { if (seen.has(id) || id === EXIT_ID) return; seen.add(id); for (const e of edges) if (e.source === id) walk(e.target); };
   walk(TRIGGER_ID);
   seen.delete(TRIGGER_ID);
-  return seen;
+  return seen; // (EXIT_ID n'y figure jamais : la sortie implicite n'est pas une étape)
 }
 // Nœuds reliés au déclencheur dont le réglage obligatoire n'a pas encore été fait : [{ id, type }]
 function incompleteNodes(graph) {
@@ -170,4 +170,11 @@ function incompleteNodes(graph) {
   return graph.nodes.filter((n) => reach.has(n.id) && INCOMPLETE[n.type] && INCOMPLETE[n.type](n.data || {})).map((n) => ({ id: n.id, type: n.type }));
 }
 
-module.exports = { stepsToGraph, graphToSteps, incompleteNodes, TRIGGER_ID, EXIT_ID };
+// Nœuds posés sur le canevas mais reliés à aucun chemin partant du déclencheur (rien ne les relie automatiquement)
+function orphanNodes(graph) {
+  if (!graph || !Array.isArray(graph.nodes)) return [];
+  const reach = reachableIds(graph);
+  return graph.nodes.filter((n) => n.id !== TRIGGER_ID && !reach.has(n.id) && !(n.id === EXIT_ID && !(graph.edges || []).length)).map((n) => ({ id: n.id, type: n.type }));
+}
+
+module.exports = { stepsToGraph, graphToSteps, incompleteNodes, orphanNodes, TRIGGER_ID, EXIT_ID };

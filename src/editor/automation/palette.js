@@ -38,10 +38,9 @@ export function buildPalette({ root, workspace, iconHtml, onAdd, onAddTrigger, o
   const searchIcon = el("span", { class: "mk-pal-search-icon", "aria-hidden": "true" }); searchIcon.innerHTML = iconHtml("search", 16);
   const search = el("input", { type: "search", id: "au-pal-search", placeholder: "Rechercher une action…", autocomplete: "off", "aria-label": "Rechercher une action" });
   searchWrap.append(searchIcon, search);
-  const target = el("p", { class: "mk-pal-target", "aria-live": "polite" });
   const groups = el("div", { class: "mk-pal-groups" });
   const empty = el("p", { class: "mk-pal-empty", role: "status", hidden: true }, "Aucune action trouvée");
-  const help = el("p", { class: "mk-pal-help" }, "Cliquez pour insérer, ou glissez une action sur le canevas. Cliquez ensuite sur l'étape pour la configurer.");
+  const help = el("p", { class: "mk-pal-help" }, "Cliquez ou glissez une action sur le canevas : elle y est posée sans être reliée. Reliez les étapes en tirant du point de sortie de l'une au point d'entrée de l'autre ; cliquez sur une étape pour la configurer.");
 
   const allButtons = [];
   const groupEls = groupsFromRegistry().map((cat) => {
@@ -86,7 +85,7 @@ export function buildPalette({ root, workspace, iconHtml, onAdd, onAddTrigger, o
     groups.appendChild(section);
     return { cat, section, toggle, list, items };
   });
-  body.append(searchWrap, target, groups, empty, help);
+  body.append(searchWrap, groups, empty, help);
   root.append(head, body);
   root.setAttribute("aria-labelledby", "au-pal-title");
 
@@ -146,8 +145,5 @@ export function buildPalette({ root, workspace, iconHtml, onAdd, onAddTrigger, o
   workspace.addEventListener("click", (e) => { if (e.target === workspace && workspace.classList.contains("is-palette-open")) setDrawer(false); }); // fond assombri
   root.addEventListener("keydown", (e) => { if (e.key === "Escape" && workspace.classList.contains("is-palette-open")) { e.preventDefault(); setDrawer(false); } });
 
-  return {
-    // Où la prochaine étape sera ajoutée (affiché sous la recherche)
-    setTarget(textValue) { target.textContent = textValue; },
-  };
+  return {};
 }

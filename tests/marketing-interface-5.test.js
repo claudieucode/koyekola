@@ -279,9 +279,14 @@ describe("brouillon : étapes insérées mais pas encore configurées", () => {
     assert.match(page.text, /2 étapes du schéma sont à configurer/);
     await boss.post(`/marketing/automatisations/${id}/activer`, {});
     assert.equal(sql("SELECT status FROM mk_automations WHERE id = ?", id)[0].status, "draft", "activation refusée");
-    // Un nœud isolé (non relié) ne bloque rien
-    const isolated = { nodes: [...base.nodes, { id: "u3", type: "add_tag", data: { tag: "" }, position: { x: 300, y: 300 } }], edges: base.edges };
-    assert.deepEqual(JSON.parse((await boss.postJson(`/marketing/automatisations/${id}`, { canvas: isolated })).text).incomplete, []);
+    // Un nœud isolé (non relié) est accepté dans le brouillon, mais signalé et bloquant à l'activation
+    const isolated = { nodes: [...base.nodes, { id: "u3", type: "add_tag", data: { tag: "Isolée" }, position: { x: 300, y: 300 } }], edges: base.edges };
+    const iso = await boss.postJson(`/marketing/automatisations/${id}`, { canvas: isolated });
+    assert.equal(iso.status, 200);
+    assert.deepEqual(JSON.parse(iso.text).incomplete, []);
+    assert.equal(JSON.parse(sql("SELECT canvas FROM mk_automations WHERE id = ?", id)[0].canvas).edges.length, 1, "aucune connexion créée automatiquement");
+    assert.match((await post(boss, `/marketing/automatisations/${id}/activer`, {})).text, /1 étape n&#39;est reliée à aucun chemin d&#39;exécution/);
+    assert.equal(sql("SELECT status FROM mk_automations WHERE id = ?", id)[0].status, "draft", "activation refusée tant qu'une étape est isolée");
     // Configurées : étapes recalculées et validées comme avant
     draft.nodes[2].data.tag = "Studio"; draft.nodes[3].data.listId = sql("INSERT INTO mk_lists (organization_id, name) VALUES (1, 'Studio') RETURNING id")[0].id;
     const ok = await boss.postJson(`/marketing/automatisations/${id}`, { canvas: draft });

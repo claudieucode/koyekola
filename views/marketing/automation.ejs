@@ -10,7 +10,7 @@
 
     <div id="au-editor">
       <div class="mk-flow-toolbar">
-        <p class="field-hint"><% if (locked) { %>Cliquez sur une étape pour voir ses réglages.<% } else { %>Palette : un clic (ou un glisser-déposer) insère l'étape, après l'étape sélectionnée ou à la fin du parcours. Cliquez ensuite sur une étape pour la configurer ; « ⋯ » propose aussi Dupliquer et Supprimer.<% } %></p>
+        <p class="field-hint"><% if (locked) { %>Cliquez sur une étape pour voir ses réglages.<% } else { %>Ajoutez des étapes depuis la palette (elles ne sont pas reliées automatiquement), puis reliez-les en tirant du point de sortie d'une étape au point d'entrée de la suivante. Cliquez sur une connexion pour la supprimer ; cliquez sur une étape pour la configurer.<% } %></p>
         <div class="mk-actions">
           <% if (!locked) { %><button type="button" class="btn btn-outline mk-flow-add-btn" id="au-palette-open" aria-controls="au-palette" aria-expanded="false"><%- icon("plus", { size: 16 }) %> Ajouter une étape</button><% } %>
           <span id="au-status" class="field-hint" role="status" aria-live="polite"></span>

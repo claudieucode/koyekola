@@ -12,7 +12,7 @@ const { getSendingConfig, getSecrets } = require("../sending/config");
 const { trackedLinks, snapshotOf } = require("../sending/dispatch");
 const { TRIGGERS } = require("./catalog");
 const { validateSteps, STEP_LABELS } = require("./steps");
-const { incompleteNodes } = require("./graph");
+const { incompleteNodes, orphanNodes } = require("./graph");
 const { enqueueRun } = require("./jobs");
 const { WORKER_DETAIL, workerHuman } = require("../workerNotice");
 
@@ -153,6 +153,8 @@ function automationPreflight(ctx, id, { workerOn = false, smtpAvailable = Boolea
   if (a.canvas) {
     const todo = incompleteNodes(a.canvas);
     if (todo.length) errors.push({ code: "incomplete", nodes: todo.map((n) => n.id), message: `${todo.length} étape${todo.length > 1 ? "s" : ""} du schéma ${todo.length > 1 ? "sont" : "est"} à configurer (${todo.map((n) => STEP_LABELS[n.type] || n.type).join(", ")}) : cliquez sur chacune pour la régler.` });
+    const loose = orphanNodes(a.canvas);
+    if (loose.length) errors.push({ code: "orphan", nodes: loose.map((n) => n.id), message: `${loose.length} étape${loose.length > 1 ? "s ne sont reliées" : " n'est reliée"} à aucun chemin d'exécution (${loose.map((n) => STEP_LABELS[n.type] || n.type).join(", ")}) : reliez-${loose.length > 1 ? "les" : "la"} depuis le déclencheur ou supprimez-${loose.length > 1 ? "les" : "la"}.` });
   }
   if (!a.steps.length) errors.push({ code: "no_steps", message: "Le scénario n'a aucune étape." });
   // « step » (position dans `a.steps`) et « templateId » accompagnent chaque erreur d'e-mail : l'éditeur graphique
