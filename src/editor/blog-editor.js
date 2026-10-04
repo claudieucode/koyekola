@@ -916,7 +916,7 @@ function start() {
     const m = empty && /^\/([\p{L}\p{N} '-]{0,30})$/u.exec(text);
     if (!m || $from.parentOffset !== text.length) { if (slash) { slash.remove(); slash = null; } return; }
     const range = { from: $from.start(), to: $from.end() };
-    const found = BLOCKS.filter((b) => matches(b, m[1])).slice(0, 8);
+    const found = BLOCKS.filter((b) => !((editorPrefs.settings && editorPrefs.settings.hiddenBlocks) || []).includes(b.id) && matches(b, m[1])).slice(0, 8);
     if (!slash) { slash = h("div", { class: "wp-popover wp-slash", role: "listbox", "aria-label": "Blocs" }); document.body.append(slash); }
     slash.replaceChildren(...found.map((b, i) => h("button", { type: "button", role: "option", class: i === 0 ? "is-active" : "", onmousedown: (e) => e.preventDefault(), onclick: () => applySlash(b, range) }, svg(b.icon, 20), h("span", {}, b.title))));
     if (!found.length) slash.append(h("p", { class: "wp-help" }, "Aucun bloc trouvé."));
@@ -1191,7 +1191,7 @@ function start() {
       if (img && img.naturalWidth) {
         body.append("width", img.naturalWidth); body.append("height", img.naturalHeight);
         // Versions réduites au format WebP (480, 960, 1600 px) : le site sert à chaque écran l'image adaptée (srcset)
-        if (/^image\/(jpeg|png|webp)$/.test(file.type)) {
+        if (/^image\/(jpeg|png|webp)$/.test(file.type) && (editorPrefs.settings || {}).imageVariants !== false) {
           const widths = [];
           for (const w of [480, 960, 1600].filter((x) => x < img.naturalWidth)) {
             const canvas = document.createElement("canvas");
@@ -1781,8 +1781,64 @@ function start() {
       h("span", { class: "be-version-when" }, fmtDate(r.created_at)), h("span", { class: "be-version-who" }, r.author || "—"), h("span", { class: "be-version-note" }, r.note || "Enregistrement"),
       h("span", { class: "be-version-actions" },
         h("button", { type: "button", class: "wp-btn-link", onclick: () => viewVersion(r) }, "Consulter"),
+        i > 0 ? h("button", { type: "button", class: "wp-btn-link", onclick: () => compareVersion(r) }, "Comparer") : null,
         i > 0 ? h("button", { type: "button", class: "wp-btn-link", onclick: () => restoreVersion(r) }, "Restaurer") : h("span", { class: "wp-help" }, "actuelle")))));
     if (!DATA.revisions.length) list.append(h("li", { class: "wp-help" }, "Les révisions apparaîtront après le premier enregistrement."));
+  }
+  // ---------- Comparaison d'une révision avec l'article actuel ----------
+  // Texte par blocs (titres, paragraphes, éléments de liste…) ; différences ligne par ligne, puis mot par mot
+  const blockLines = (html, format) => {
+    if (format && format !== "html") return String(html || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    const box = document.createElement("div");
+    box.innerHTML = String(html || "");
+    const out = [];
+    box.querySelectorAll("h1, h2, h3, h4, h5, h6, p, li, figcaption, summary, td, th, pre").forEach((el) => {
+      if (el.querySelector("p, li, h1, h2, h3, h4, h5, h6")) return;
+      const t = el.textContent.replace(/\s+/g, " ").trim();
+      const tag = el.tagName.toLowerCase();
+      if (t) out.push(/^h[1-6]$/.test(tag) ? `${tag.toUpperCase()} · ${t}` : t);
+    });
+    box.querySelectorAll("img").forEach((img) => out.push(`Image · ${img.getAttribute("alt") || img.getAttribute("src")}`));
+    return out;
+  };
+  function lcs(a, b) {
+    const n = a.length; const m = b.length;
+    const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    const ops = [];
+    let i = 0; let j = 0;
+    while (i < n && j < m) { if (a[i] === b[j]) { ops.push(["=", a[i]]); i++; j++; } else if (dp[i + 1][j] >= dp[i][j + 1]) ops.push(["-", a[i++]]); else ops.push(["+", b[j++]]); }
+    while (i < n) ops.push(["-", a[i++]]);
+    while (j < m) ops.push(["+", b[j++]]);
+    return ops;
+  }
+  const wordDiff = (a, b) => { const A = a.split(/(\s+)/); const B = b.split(/(\s+)/); if (A.length * B.length > 400000) return null; return lcs(A, B).map(([op, w]) => (op === "=" ? w : h(op === "-" ? "del" : "ins", {}, w))); };
+  async function compareVersion(r) {
+    try {
+      const v = await api(`/formateur/blog/${postId}/versions/${r.id}`);
+      const before = [`Titre · ${v.title}`, ...blockLines(v.content, v.content_format)].slice(0, 1500);
+      const after = [`Titre · ${field("title").value}`, ...blockLines(editor.getHTML(), "html")].slice(0, 1500);
+      const ops = lcs(before, after);
+      const rows = [];
+      let same = 0;
+      const flushSame = () => { if (same) rows.push(h("li", { class: "is-same" }, `… ${same} bloc${same > 1 ? "s" : ""} identique${same > 1 ? "s" : ""}`)); same = 0; };
+      for (let k = 0; k < ops.length; k++) {
+        const [op, line] = ops[k];
+        if (op === "=") { same++; continue; }
+        flushSame();
+        // Un retrait suivi d'un ajout : bloc modifié → différences mot par mot
+        if (op === "-" && ops[k + 1] && ops[k + 1][0] === "+") { const w = wordDiff(line, ops[k + 1][1]); if (w) { rows.push(h("li", { class: "is-changed" }, ...w)); k++; continue; } }
+        rows.push(h("li", { class: op === "-" ? "is-removed" : "is-added" }, h(op === "-" ? "del" : "ins", {}, line)));
+      }
+      flushSame();
+      const changed = ops.filter(([op]) => op !== "=").length;
+      modal(`Comparer avec la révision du ${fmtDate(v.created_at)}`, h("div", { class: "be-diff" },
+        h("p", { class: "wp-help" }, changed ? "En rouge barré : présent dans la révision, absent aujourd'hui. En vert : ajouté depuis." : "Aucune différence de texte avec l'article actuel."),
+        h("ol", { class: "be-diff-list" }, ...rows)), [
+        { label: "Fermer" },
+        { label: "Restaurer cette révision", danger: true, run: () => { restoreVersion(r); } },
+      ], { wide: true });
+    } catch (e) { toast(e.message, "error"); }
   }
   async function viewVersion(r) {
     try {
@@ -1823,7 +1879,8 @@ function start() {
     refreshLater();
   }
   const refreshLater = debounce(() => {
-    refreshCounters(); refreshPreviews(); refreshAnalysis();
+    refreshCounters(); refreshPreviews();
+    if ((editorPrefs.settings || {}).seoAnalysis !== false || !$('[data-sidebar-panel="seo"]').hidden) refreshAnalysis();
     if ($('[data-panel="structure"]').classList.contains("is-open")) refreshStructure();
     if ($('[data-panel="checklist"]').classList.contains("is-open")) refreshPublication();
     if (secondaryMode === "media") refreshMedia();
@@ -1851,7 +1908,13 @@ function start() {
     history.replaceState(null, "", `/formateur/blog/${r.id}/modifier`);
     try { localStorage.removeItem(before); } catch { /* rien */ }
   }
-  const scheduleAutosave = debounce(() => autosave(), 2500);
+  let autosaveTimer = null;
+  const scheduleAutosave = () => {
+    const st = editorPrefs.settings || {};
+    if (st.autosave === false) return;
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => autosave(), Math.max(2, Number(st.autosaveDelay) || 2) * 1000 + 500);
+  };
   let autosaveRetry = null;
   async function autosave() {
     if (!dirty || saving) return;
@@ -2087,13 +2150,59 @@ function start() {
     const opt = b.dataset.option;
     optionsMenu.hidden = true;
     if (opt === "appearance") return openAppearance();
-    if (opt === "shortcuts") return modal("Raccourcis clavier", h("dl", { class: "wp-shortcuts" }, ...[["Ctrl + S", "Enregistrer"], ["Ctrl + Z / Ctrl + Maj + Z", "Annuler / Rétablir"], ["/", "Choisir un bloc (au début d'un paragraphe vide)"], ["Ctrl + B / I / U", "Gras / italique / souligné"], ["Ctrl + K", "Avec du texte sélectionné : lien ; sinon : palette de commandes"], ["Ctrl + Maj + K", "Palette de commandes"], ["Ctrl + Maj + F", "Rechercher et remplacer dans l'article"], ["Clic droit sur un bloc", "Menu du bloc (copier, couper, coller, verrouiller…) ; Maj + clic droit : menu du navigateur"], ["Ctrl + Maj + D", "Dupliquer le bloc"], ["Maj + Alt + Z", "Supprimer le bloc"], ["Alt + ↑ / ↓", "Déplacer le bloc"], ["Tab / Maj + Tab", "Imbriquer / désimbriquer un élément de liste"], ["Échap", "Fermer un menu"]].flatMap(([k, d]) => [h("dt", {}, h("kbd", {}, k)), h("dd", {}, d)])));
+    if (opt === "settings") return openEditorSettings();
+    if (opt === "shortcuts") return modal("Raccourcis clavier", h("dl", { class: "wp-shortcuts" }, ...[["Ctrl + S", "Enregistrer"], ["Ctrl + Z / Ctrl + Maj + Z", "Annuler / Rétablir"], ["/", "Choisir un bloc (au début d'un paragraphe vide)"], ["Ctrl + B / I / U", "Gras / italique / souligné"], ["Ctrl + K", "Avec du texte sélectionné : lien ; sinon : palette de commandes"], ["Ctrl + Maj + K", "Palette de commandes"], ["Ctrl + Maj + F", "Rechercher et remplacer dans l'article"], ["Clic droit sur un bloc", "Menu du bloc (copier, couper, coller, verrouiller…) ; Maj + clic droit : menu du navigateur"], ["Ctrl + Maj + D", "Dupliquer le bloc"], ["Maj + Alt + Z", "Supprimer le bloc"], ["Alt + ↑ / ↓", "Déplacer le bloc"], ["Tab / Maj + Tab", "Imbriquer / désimbriquer un élément de liste"], ["Ctrl + Maj + P", "Aperçu dans l'appareil par défaut"], ["Échap", "Fermer un menu"]].flatMap(([k, d]) => [h("dt", {}, h("kbd", {}, k)), h("dd", {}, d)])));
     const on = b.getAttribute("aria-checked") !== "true";
     b.setAttribute("aria-checked", String(on));
     if (opt === "focus") root.classList.toggle("is-focus-mode", on);
     if (opt === "toptoolbar") { topToolbarMode = on; topToolbar.hidden = !on; blockToolbar.hidden = true; root.classList.toggle("has-top-toolbar", on); renderBlockToolbar(); }
     return null;
   }));
+  // ---------- Réglages de l'éditeur (enregistrés sur le compte, appliqués immédiatement) ----------
+  function applyEditorSettings() {
+    const st = editorPrefs.settings || {};
+    root.dataset.edWidth = st.width || "normal";
+    root.dataset.edDensity = st.density || "comfortable";
+    $("[data-stats]").hidden = st.counters === false;
+    editor.view.dom.spellcheck = st.spellcheck !== false;
+    titleField.spellcheck = st.spellcheck !== false;
+    const ai = $('[data-rail="ai"]');
+    if (ai) ai.hidden = st.aiAssistant === false;
+    if (st.aiAssistant === false && secondaryMode === "ai") setSecondary("ai");
+    const tt = $('[data-option="toptoolbar"]');
+    if (tt && (tt.getAttribute("aria-checked") === "true") !== Boolean(st.topToolbar)) { tt.setAttribute("aria-checked", String(Boolean(st.topToolbar))); topToolbarMode = Boolean(st.topToolbar); topToolbar.hidden = !topToolbarMode; blockToolbar.hidden = true; root.classList.toggle("has-top-toolbar", topToolbarMode); renderBlockToolbar(); }
+    $$("[data-preview]").forEach((b) => b.classList.toggle("is-default", b.dataset.preview === (st.previewDevice || "desktop")));
+    if (st.autosave === false) clearTimeout(autosaveTimer);
+  }
+  async function saveEditorSettings(patch) {
+    editorPrefs = { ...editorPrefs, settings: { ...editorPrefs.settings, ...patch } };
+    applyEditorSettings();
+    try { editorPrefs = (await api("/formateur/blog/api/preferences", { method: "PUT", json: { settings: editorPrefs.settings } })).prefs; applyEditorSettings(); }
+    catch (e) { toast(`Réglage non enregistré : ${e.message}`, "error"); }
+  }
+  function openEditorSettings() {
+    const st = { ...editorPrefs.settings };
+    const sec = (title, ...kids) => h("section", { class: "wp-settings-section" }, h("h2", {}, title), ...kids);
+    const tog = (label, key, help) => { const cb = h("input", { type: "checkbox", id: `wp-set-${key}`, checked: st[key] !== false }); cb.addEventListener("change", () => saveEditorSettings({ [key]: cb.checked })); return h("div", {}, h("label", { class: "wp-checkbox", for: cb.id }, cb, ` ${label}`), help ? h("p", { class: "wp-help" }, help) : null); };
+    const pick = (label, key, options) => { const s2 = select(options, st[key]); s2.addEventListener("change", () => saveEditorSettings({ [key]: s2.value })); return control(label, s2); };
+    const hidden = new Set(st.hiddenBlocks || []);
+    const blocksList = h("div", { class: "wp-settings-blocks" }, ...BLOCKS.map((b) => { const cb = h("input", { type: "checkbox", id: `wp-blk-${b.id}`, checked: !hidden.has(b.id) }); cb.addEventListener("change", () => { if (cb.checked) hidden.delete(b.id); else hidden.add(b.id); saveEditorSettings({ hiddenBlocks: [...hidden] }); }); return h("label", { class: "wp-checkbox", for: cb.id }, cb, ` ${b.title}`, h("small", {}, ` · ${b.cat}`)); }));
+    const fav = (editorPrefs.favorites || []).map((id) => (BLOCKS.find((b) => b.id === id) || {}).title).filter(Boolean);
+    modal("Réglages de l'éditeur", h("div", { class: "wp-settings" },
+      sec("Interface", pick("Largeur de la zone d'écriture", "width", [["normal", "Normale"], ["wide", "Large"], ["full", "Toute la largeur"]]), pick("Densité", "density", [["comfortable", "Confortable"], ["compact", "Compacte"]]),
+        tog("Barre d'outils fixe en haut", "topToolbar"), tog("Compteurs de mots dans la barre du haut", "counters")),
+      sec("Écriture", tog("Sauvegarde automatique", "autosave", "Désactivée : seul « Enregistrer » sauvegarde (une copie reste dans ce navigateur)."), pick("Délai avant la sauvegarde automatique", "autosaveDelay", [["2", "2 secondes"], ["5", "5 secondes"], ["10", "10 secondes"], ["30", "30 secondes"]]), tog("Correcteur orthographique du navigateur", "spellcheck")),
+      sec("Blocs", h("p", { class: "wp-help" }, "Blocs proposés dans l'inséreur, le menu « / » et la palette. Les favoris se choisissent avec l'étoile dans l'inséreur."), h("p", { class: "wp-help" }, `Favoris : ${fav.length ? fav.join(", ") : "aucun"}.`), blocksList),
+      sec("Médias", tog("Créer les versions réduites WebP des images envoyées (affichage rapide sur mobile)", "imageVariants"), h("p", { class: "wp-help" }, "Chargement différé des images : toujours actif sur la page publique.")),
+      sec("SEO", tog("Analyse SEO en direct pendant la frappe", "seoAnalysis", "Désactivée : l'analyse se met à jour à l'ouverture de l'onglet SEO et à l'enregistrement.")),
+      sec("IA", tog("Afficher l'assistant IA", "aiAssistant", DATA.aiConfigured ? "L'IA propose, vous décidez : rien ne change sans votre accord." : "Assistant non activé sur le serveur (clé ANTHROPIC_API_KEY absente).")),
+      sec("Aperçu", pick("Appareil par défaut (Ctrl + Maj + P)", "previewDevice", [["desktop", "Ordinateur"], ["tablet", "Tablette"], ["mobile", "Mobile"]])),
+      sec("Raccourcis", h("button", { type: "button", class: "wp-btn-secondary", onclick: () => $('[data-option="shortcuts"]').click() }, "Voir les raccourcis clavier"), h("p", { class: "wp-help" }, "Les raccourcis suivent les conventions de Gutenberg ; ils ne sont pas personnalisables."))),
+    [{ label: "Fermer" }], { wide: true });
+  }
+  // Aperçu dans l'appareil par défaut
+  document.addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "p") { e.preventDefault(); $(`[data-preview="${(editorPrefs.settings || {}).previewDevice || "desktop"}"]`)?.click(); } });
+
   // Apparence des barres latérales (choix personnel enregistré sur le compte) : 6 couleurs ou une couleur au choix
   function applyTheme(t) {
     if (t.key === "clair") { delete root.dataset.edTheme; delete root.dataset.edContrast; root.style.removeProperty("--ed-sidebar"); }
@@ -2281,7 +2390,7 @@ function start() {
     wsUi = setupWorkspaceUi({
       h, modal, control, input, toast, api, ws: workspace, data: seoData, renderers: seoRenderers, DATA, postId: () => postId,
       actions: () => [
-        ...BLOCKS.map((b) => ({ id: `insert:${b.id}`, group: "Insérer", label: `Ajouter : ${b.title}`, run: () => { editor.commands.focus(); useBlock(b.id); b.run(); } })),
+        ...BLOCKS.filter((b) => !((editorPrefs.settings && editorPrefs.settings.hiddenBlocks) || []).includes(b.id)).map((b) => ({ id: `insert:${b.id}`, group: "Insérer", label: `Ajouter : ${b.title}`, run: () => { editor.commands.focus(); useBlock(b.id); b.run(); } })),
         ...reusableList.map((b) => ({ id: `reusable:${b.id}`, group: "Réutilisables", label: `Insérer le bloc réutilisable : ${b.name}${b.synced ? " (synchronisé)" : ""}`, run: () => { editor.commands.focus(); insertReusable(b); } })),
         { id: "ed:reusable", group: "Réutilisables", label: "Gérer les blocs réutilisables…", run: () => manageReusable() },
         { id: "ed:save", group: "Article", label: "Enregistrer", run: () => save() },
@@ -2298,6 +2407,7 @@ function start() {
         { id: "ed:undo", group: "Édition", label: "Annuler", run: () => editor.chain().focus().undo().run() },
         { id: "ed:redo", group: "Édition", label: "Rétablir", run: () => editor.chain().focus().redo().run() },
         { id: "ed:code", group: "Édition", label: root.classList.contains("is-code-mode") ? "Éditeur visuel" : "Éditeur de code (HTML)", run: () => $(root.classList.contains("is-code-mode") ? '[data-mode="visual"]' : '[data-mode="code"]').click() },
+        { id: "ed:settings", group: "Réglages", label: "Réglages de l'éditeur…", run: () => openEditorSettings() },
         { id: "ed:shortcuts", group: "Aide", label: "Raccourcis clavier", run: () => $('[data-option="shortcuts"]').click() },
         { id: "act:analyse", label: "Analyser la page en ligne", run: () => { workspace.reveal("seo-site"); $("[data-seo-analyse]")?.click(); }, disabled: !DATA.everPublished && DATA.status !== "published" },
         { id: "act:links", label: "Proposer des liens internes", run: () => { workspace.reveal("links"); $("[data-suggest]")?.click(); } },
@@ -2315,6 +2425,7 @@ function start() {
 
   // ---------- Premier affichage ----------
   loadReusable();
+  applyEditorSettings();
   refreshCounters();
   refreshPreviews();
   refreshAnalysis();

@@ -90,6 +90,7 @@
               <button type="button" role="menuitem" class="wp-mobile-only" data-preview="tab">Prévisualiser l'article ↗</button>
               <button type="button" role="menuitem" class="wp-mobile-only" data-preview="mobile">Aperçu mobile</button>
               <hr class="wp-mobile-only">
+              <button type="button" role="menuitem" data-option="settings">⚙ Réglages de l'éditeur…</button>
               <button type="button" role="menuitem" data-option="appearance">Apparence des barres latérales…</button>
               <button type="button" role="menuitem" data-option="shortcuts">Raccourcis clavier</button>
               <a role="menuitem" href="/formateur/blog">Retour aux articles</a>
@@ -300,7 +301,9 @@
             <%- panel("structure", "Sommaire et données structurées", false) %>
               <input type="hidden" name="toc_enabled" value="0"><label class="wp-checkbox"><input type="checkbox" name="toc_enabled" value="1" <%= checked('toc_enabled', 1) %> data-toc-option> Afficher un sommaire</label>
               <label for="post-toc-depth" class="wp-label">Titres inclus</label>
-              <select id="post-toc-depth" name="toc_depth" data-toc-option><option value="3" <%= v('toc_depth', 3) != 2 ? 'selected' : '' %>>H2 + H3</option><option value="2" <%= v('toc_depth') == 2 ? 'selected' : '' %>>H2 seulement</option></select>
+              <select id="post-toc-depth" name="toc_depth" data-toc-option><option value="3" <%= v('toc_depth', 3) == 3 ? 'selected' : '' %>>H2 + H3</option><option value="2" <%= v('toc_depth') == 2 ? 'selected' : '' %>>H2 seulement</option><option value="4" <%= v('toc_depth') == 4 ? 'selected' : '' %>>H2 → H4</option></select>
+              <label for="post-toc-numbering" class="wp-label">Numérotation</label>
+              <select id="post-toc-numbering" name="toc_numbering" data-toc-option><option value="h2" <%= v('toc_numbering', 'h2') === 'h2' ? 'selected' : '' %>>Parties seulement (01, 02…)</option><option value="full" <%= v('toc_numbering') === 'full' ? 'selected' : '' %>>Hiérarchique (1, 1.1, 1.1.1)</option><option value="none" <%= v('toc_numbering') === 'none' ? 'selected' : '' %>>Aucune</option></select>
               <label for="post-toc-title" class="wp-label">Titre du sommaire</label>
               <input id="post-toc-title" type="text" name="toc_title" value="<%= v('toc_title') %>" maxlength="60" placeholder="Sommaire" data-toc-option>
               <p class="wp-label">Fil d'Ariane</p>

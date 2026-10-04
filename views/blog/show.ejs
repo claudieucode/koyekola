@@ -2,8 +2,15 @@
 <%
   const iso = (d) => d.replace(" ", "T") + "Z";
   const showToc = article.toc.length >= 2;
-  const tocNumber = (() => { let n = 0; return (item) => (item.level === 2 ? String(++n).padStart(2, "0") : ""); })();
-  const tocItems = article.toc.map((item) => ({ ...item, number: tocNumber(item), cls: item.level === 3 ? "toc-l3" : "toc-l2" }));
+  // Numérotation du sommaire : aucune, H2 seulement (01, 02…) ou hiérarchique (1, 1.1, 1.1.1)
+  const numbering = typeof tocNumbering !== "undefined" ? tocNumbering : "h2";
+  const tocNumber = (() => { const c = [0, 0, 0]; return (item) => {
+    if (numbering === "none") return "";
+    if (numbering === "h2") return item.level === 2 ? String(++c[0]).padStart(2, "0") : "";
+    const i = item.level - 2; c[i]++; for (let k = i + 1; k < c.length; k++) c[k] = 0;
+    return c.slice(0, i + 1).map((n) => n || 1).join(".");
+  }; })();
+  const tocItems = article.toc.map((item) => ({ ...item, number: tocNumber(item), cls: `toc-l${item.level}` }));
   const layoutClass = showToc ? "article-layout" : "article-layout article-layout-no-toc";
   const initials = (name) => String(name || "?").trim().slice(0, 1).toUpperCase();
 %>

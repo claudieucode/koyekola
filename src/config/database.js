@@ -334,7 +334,8 @@ const NEW_POST_COLUMNS = {
   robots_index: "INTEGER NOT NULL DEFAULT 1", // 0 = noindex
   robots_follow: "INTEGER NOT NULL DEFAULT 1", // 0 = nofollow
   toc_enabled: "INTEGER NOT NULL DEFAULT 1",
-  toc_depth: "INTEGER NOT NULL DEFAULT 3", // 2 = titres H2 seulement, 3 = H2 + H3
+  toc_depth: "INTEGER NOT NULL DEFAULT 3", // 2 = titres H2 seulement, 3 = H2 + H3, 4 = H2 → H4
+  toc_numbering: "TEXT NOT NULL DEFAULT 'h2'", // none | h2 (01, 02…) | full (1, 1.1, 1.1.1)
   toc_title: "TEXT NOT NULL DEFAULT ''", // sinon « Sommaire »
   language: "TEXT NOT NULL DEFAULT 'fr'",
   featured: "INTEGER NOT NULL DEFAULT 0", // article vedette (en tête du blog)

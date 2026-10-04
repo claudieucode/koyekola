@@ -1147,3 +1147,23 @@
 .wp-reusable-manage-fields { display: grid; gap: 6px; }
 .wp-reusable-banner { margin: 8px 12px; padding: 10px; border-radius: var(--radius); background: var(--accent-light); color: var(--accent-dark); font-size: 13px; font-weight: 600; display: grid; gap: 8px; }
 .wp-reusable-banner p { margin: 0; }
+/* Réglages de l'éditeur : largeur et densité */
+.wp[data-ed-width="wide"] .wp-content { max-width: 1100px; }
+.wp[data-ed-width="full"] .wp-content { max-width: none; }
+.wp[data-ed-density="compact"] .be-prose > * { margin-top: 0.4em; margin-bottom: 0.4em; }
+.wp[data-ed-density="compact"] .wp-panel-title button { min-height: 38px; }
+.wp[data-ed-density="compact"] .wp-panel-body { gap: 5px; padding-bottom: 10px; }
+.wp-settings { display: grid; gap: 14px; }
+.wp-settings-section { display: grid; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.wp-settings-section h2 { margin: 0; font-size: 14px; }
+.wp-settings-blocks { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 12px; max-height: 220px; overflow: auto; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius); }
+.wp-settings-blocks small { color: var(--muted); }
+[data-preview].is-default::after { content: " · par défaut"; color: var(--muted); font-size: 0.9em; }
+/* Comparaison des révisions */
+.be-diff-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; line-height: 1.5; }
+.be-diff-list li { padding: 6px 10px; border-radius: 6px; background: var(--surface-alt); overflow-wrap: anywhere; }
+.be-diff-list li.is-same { background: none; color: var(--muted); font-size: 12px; font-style: italic; }
+.be-diff-list li.is-removed { background: #fdecec; }
+.be-diff-list li.is-added { background: #e7f8ee; }
+.be-diff-list del { color: #a40e18; background: #fbd5d7; text-decoration: line-through; }
+.be-diff-list ins { color: #14532d; background: #c9f0d6; text-decoration: none; }

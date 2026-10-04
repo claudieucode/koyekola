@@ -202,7 +202,7 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
   const toc = post.toc_enabled === 0 ? [] : article.toc;
   res.render("blog/show", {
     post, crumbs, author, seo, article: { ...article, toc }, minutes, tags, modified, previous, next, shareUrl: ownUrl, lang: post.language && post.language !== "fr" ? post.language : null,
-    tocTitle: post.toc_title || "Sommaire", preview,
+    tocTitle: post.toc_title || "Sommaire", tocNumbering: post.toc_numbering || "h2", preview,
     categorySlug: post.category ? slugify(post.category) : "",
     sidebar: { popular: blog.popular(4, post.id), recent: blog.recent(4, post.id), categories: blog.categories(), newsletter },
     similar: post.published ? blog.similar(post, 3) : [],
@@ -319,7 +319,8 @@ function readFields(body, existing = null) {
     robots_index: flag(body.robots_index, existing ? existing.robots_index : 1),
     robots_follow: flag(body.robots_follow, existing ? existing.robots_follow : 1),
     toc_enabled: flag(body.toc_enabled, existing ? existing.toc_enabled : 1),
-    toc_depth: body.toc_depth === "2" ? 2 : body.toc_depth === "3" ? 3 : existing ? existing.toc_depth : 3,
+    toc_depth: ["2", "3", "4"].includes(String(body.toc_depth)) ? Number(body.toc_depth) : existing ? existing.toc_depth : 3,
+    toc_numbering: ["none", "h2", "full"].includes(body.toc_numbering) ? body.toc_numbering : existing ? existing.toc_numbering || "h2" : "h2",
     toc_title: oneLine(body.toc_title, 60),
     schema_type: body.schema_type === "Article" ? "Article" : "BlogPosting",
     reviewed: flag(body.reviewed, existing ? existing.reviewed : 0),
@@ -675,7 +676,8 @@ router.get("/formateur/blog/:id/apercu", loadPost, (req, res) => {
     for (const k of ["title", "excerpt", "category", "tags", "cover_alt", "seo_title", "seo_description"]) if (typeof d[k] === "string") merged[k] = d[k];
     if (typeof d.content === "string") { merged.content = d.content; merged.content_format = "html"; }
     if (d.toc_enabled !== undefined) merged.toc_enabled = flag(d.toc_enabled, 1);
-    if (d.toc_depth) merged.toc_depth = d.toc_depth === "2" ? 2 : 3;
+    if (d.toc_depth) merged.toc_depth = ["2", "3", "4"].includes(String(d.toc_depth)) ? Number(d.toc_depth) : 3;
+    if (["none", "h2", "full"].includes(d.toc_numbering)) merged.toc_numbering = d.toc_numbering;
     if (typeof d.toc_title === "string") merged.toc_title = d.toc_title;
     if (IMG_PATH.test(d.cover_media || "")) merged.cover_path = d.cover_media;
   }

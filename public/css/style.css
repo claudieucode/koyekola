@@ -1418,6 +1418,7 @@ ul[data-type="taskList"] > li > div { flex: 1; min-width: 0; }
 .article-toc-list a:hover { color: var(--primary); background: var(--surface-alt); }
 .article-toc-list a.is-active { color: var(--accent-dark); border-left-color: var(--accent); background: var(--accent-light); font-weight: 600; }
 .article-toc-list .toc-l3 a { padding-left: 30px; font-size: 0.85rem; }
+.article-toc-list .toc-l4 a { padding-left: 46px; font-size: 0.82rem; }
 .toc-num { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); font-size: 0.8rem; min-width: 1.6em; }
 .article-reading { margin: 0; font-size: 0.85rem; color: var(--muted); }
 .article-reading strong { color: var(--primary); font-variant-numeric: tabular-nums; }

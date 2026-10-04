@@ -266,7 +266,7 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
       const t = textOf(node);
       if (!t) continue;
       node.attribs.id = uniqueId(t);
-      if ((level === 2 || (level === 3 && tocDepth >= 3)) && !insideAny(node, ["kb-cta", "callout", "kb-faq", "details"])) toc.push({ level, id: node.attribs.id, text: t });
+      if ((level === 2 || (level === 3 && tocDepth >= 3) || (level === 4 && tocDepth >= 4)) && !insideAny(node, ["kb-cta", "callout", "kb-faq", "details"])) toc.push({ level, id: node.attribs.id, text: t });
     } else if (name === "img") {
       node.attribs.loading = "lazy";
       node.attribs.decoding = "async";
