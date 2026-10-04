@@ -191,33 +191,37 @@ describe("aperçu d'un modèle de départ (contenu de l'iframe)", () => {
   });
 });
 
-describe("éditeur : trois colonnes", () => {
+describe("éditeur : barre d'outils, onglets, canevas, réglages", () => {
   let id, html;
   before(async () => { id = tplId("Offre d'été"); html = (await boss.get(`/marketing/modeles/${id}`)).text; });
 
-  test("palette à gauche, canevas au centre, aperçu à droite", () => {
-    assert.match(html, /<div class="mk-editor3" id="mk-editor">/);
+  test("quatre zones : onglets d'outils, panneau, canevas (rendu réel sans script), réglages du bloc", () => {
+    assert.match(html, /<div class="mk-builder" id="mk-editor">/);
+    assert.match(html, /<nav class="mk-b-rail" role="tablist" aria-label="Outils de l'éditeur" aria-orientation="vertical">/);
     assert.match(html, /<nav class="mk-palette" id="mk-palette" aria-label="Ajouter un bloc">/);
-    assert.match(html, /id="mk-blocks"/);
-    assert.match(html, /<aside class="mk-editor-preview" aria-label="Aperçu">/);
-    assert.match(html, /<iframe[^>]*sandbox=""/);
+    assert.match(html, /<iframe id="mk-frame"[^>]*sandbox="allow-same-origin"/, "canevas : rendu manipulable par l'éditeur, aucun script");
+    assert.match(html, /<iframe id="mk-preview-frame"[^>]*sandbox=""/, "aperçu plein écran : totalement isolé");
+    assert.match(html, /<aside class="mk-b-props" id="mk-props" aria-label="Réglages du bloc sélectionné">/);
   });
-  test("la palette propose CHAQUE type de bloc, en groupes, sans « HTML libre »", () => {
-    for (const type of TYPES) assert.match(html, new RegExp(`<button type="button" class="mk-palette-btn" data-add="${type}" draggable="true"`), type);
+  test("la palette propose CHAQUE type de bloc, en groupes, avec icône et description, sans « HTML libre »", () => {
+    for (const type of TYPES) assert.match(html, new RegExp(`<button type="button" class="mk-palette-btn" data-add="${type}" draggable="true" aria-label="Ajouter un bloc « [^»]+ » : [^"]+"`), type);
     for (const group of ["Texte", "Médias", "Actions", "Mise en page"]) assert.match(html, new RegExp(`<h3 class="mk-palette-title">${group}</h3>`), group);
     assert.doesNotMatch(html, /data-add="(html|code|embed|iframe|script)"/);
   });
   test("annuler / rétablir : boutons nommés, désactivés au départ, raccourcis annoncés", () => {
-    assert.match(html, /<button type="button" class="btn btn-outline btn-sm" id="mk-undo" aria-label="Annuler la dernière modification \(Ctrl\+Z\)" disabled>/);
-    assert.match(html, /<button type="button" class="btn btn-outline btn-sm" id="mk-redo" aria-label="Rétablir \(Ctrl\+Maj\+Z\)" disabled>/);
+    assert.match(html, /id="mk-undo" aria-label="Annuler la dernière modification \(Ctrl\+Z\)" data-tip="Annuler" disabled>/);
+    assert.match(html, /id="mk-redo" aria-label="Rétablir \(Ctrl\+Maj\+Z\)" data-tip="Rétablir" disabled>/);
   });
-  test("deux volets : Contenu et Réglages (onglets accessibles) ; tous les champs historiques sont toujours là", () => {
-    assert.match(html, /<div class="mk-tabs" role="tablist" aria-label="Volets de l'éditeur" data-mk-tabs>/);
-    assert.match(html, /role="tab" id="tab-content" aria-selected="true" aria-controls="mk-pane-content"/);
-    assert.match(html, /role="tab" id="tab-settings" aria-selected="false" tabindex="-1" aria-controls="mk-pane-settings"/);
-    assert.match(html, /id="mk-pane-content" role="tabpanel" aria-labelledby="tab-content"/);
-    assert.match(html, /id="mk-pane-settings" role="tabpanel" aria-labelledby="tab-settings" hidden/);
+  test("onglets accessibles (Blocs, Structure, Médias, Styles, Message, Vérification) ; tous les champs historiques sont toujours là", () => {
+    assert.match(html, /role="tab" class="mk-b-tab" id="tab-blocks" data-pane="blocks" aria-controls="pane-blocks" aria-selected="true" tabindex="0"/);
+    for (const key of ["structure", "media", "styles", "message", "check"]) assert.match(html, new RegExp(`id="tab-${key}" data-pane="${key}" aria-controls="pane-${key}" aria-selected="false" tabindex="-1"`), key);
+    assert.match(html, /id="pane-message" role="tabpanel" aria-labelledby="tab-message" hidden/);
     for (const field of ["t-name", "t-kind", "t-category", "t-subject", "t-preheader", "t-bg", "t-cbg", "t-text", "t-accent", "t-font", "t-footer", "mk-var", "mk-contact", "mk-save", "mk-status", "mk-live"]) assert.ok(html.includes(`id="${field}"`), field);
+    // fonctions conservées : versions, test, duplication, suppression
+    assert.match(html, /action="\/marketing\/modeles\/\d+\/restaurer"|Aucune version précédente/);
+    assert.match(html, /action="\/marketing\/modeles\/\d+\/test"/);
+    assert.match(html, /action="\/marketing\/modeles\/\d+\/dupliquer"/);
+    assert.match(html, /action="\/marketing\/modeles\/\d+\/supprimer"/);
   });
   test("champ « catégorie » : toutes les catégories proposées", () => {
     assert.match(html, /<select id="t-category">/);
@@ -232,14 +236,17 @@ describe("éditeur : trois colonnes", () => {
   test("lecteur : consultation seule, sans palette d'ajout ni bouton d'enregistrement", async () => {
     const v = (await (await member("viewer")).get(`/marketing/modeles/${id}`)).text;
     assert.equal(editorData(v).readOnly, true);
-    assert.doesNotMatch(v, /data-add=|id="mk-save"|id="mk-undo"/);
+    assert.doesNotMatch(v, /data-add=|id="mk-save"|id="mk-undo"|id="mk-media-file"/);
   });
   test("le script de l'éditeur est servi et déclare l'historique", async () => {
     const js = await boss.get("/js/marketing-editor.js");
     assert.equal(js.status, 200);
     assert.match(js.text, /mk-undo/);
     assert.match(js.text, /mk-redo/);
-    assert.doesNotMatch(js.text, /innerHTML\s*=/, "aucune donnée insérée comme HTML");
+    // innerHTML : uniquement les icônes du registre fournies par le serveur (jamais une donnée saisie)
+    const uses = js.text.split("\n").filter((l) => /innerHTML\s*=/.test(l));
+    assert.ok(uses.length > 0);
+    for (const l of uses) assert.match(l, /innerHTML = (ICONS\[(name|a\[0\])\] \|\| ""|info\.icon \|\| ""|\(BLOCKS\[b\.type\] \|\| \{\}\)\.icon \|\| "")/, l.trim());
   });
 });
 

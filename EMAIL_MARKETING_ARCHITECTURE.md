@@ -1503,3 +1503,31 @@ infobulles, mémorisé dans le navigateur), tiroir sur petit écran (bouton « +
   20 %–160 %, « Ajuster à l'écran » descend jusqu'à 10 % pour un grand scénario.
 - Non proposés (absents du moteur) : Désactiver une étape, Envoyer un SMS, Webhook, « Attendre jusqu'à » une date/heure
   (l'étape existante attend un ÉVÉNEMENT avec un délai maximal).
+
+## Éditeur d'e-mails v3 : canevas réel, médiathèque, enregistrement automatique (2026-10-04)
+
+- **Disposition** (`views/marketing/template-editor.ejs`, `public/js/marketing-editor.js`, CSS `.mk-b-*`) : barre
+  d'outils (retour, nom modifiable, état d'enregistrement, annuler/rétablir, prévisualiser, test, Enregistrer, Plus :
+  versions/dupliquer/supprimer) · onglets Blocs / Structure / Médias / Styles / Message / Vérification · canevas =
+  RENDU RÉEL de l'e-mail · réglages du bloc sélectionné. Mise en page selon la largeur de l'éditeur (requêtes de
+  conteneur) : 4 zones, puis réglages en panneau superposé (le canevas lui laisse la place), puis mobile (feuille).
+- **Canevas** : `POST /marketing/modeles/apercu` avec `annotate: true` → chaque bloc porte `data-mk-block` ; un bloc
+  incomplet est rendu à sa place avec son problème (`blockErrors`) au lieu de faire échouer l'aperçu. Rendu dans une
+  iframe `sandbox="allow-same-origin"` (aucun script) que l'éditeur décore : contour, étiquette, mini-barre (monter,
+  descendre, modifier, dupliquer, masquer, supprimer), ligne d'insertion. Le rendu d'ENVOI reste strict et non annoté.
+- **Glisser-déposer** : bloc de la palette → emplacement exact ; réordonnancement (structure, Alt+flèches) ; fichiers de
+  l'ordinateur → médiathèque → bloc Image (ou remplace l'image d'un bloc Image visé ; PDF → bouton de téléchargement).
+  Vidéo, SVG, format inconnu : refus expliqué, jamais d'acceptation silencieuse.
+- **Médiathèque** (`src/marketing/media/index.js`, migration `024_medias.sql`, routes `/marketing/medias`) : type lu
+  dans le fichier (signature), dimensions lues dans l'en-tête, 5 Mo/image, 10 Mo/PDF, stockage `UPLOADS_DIR/marketing/
+  <organisation>/`, adresse publique permanente servie avec nosniff. Recherche, filtre, texte alternatif, suppression
+  refusée si un modèle l'utilise (le fichier reste sur le disque s'il a servi dans une campagne lancée).
+- **Bloc masqué** (`hidden: true`) : enregistré, estompé dans l'éditeur, jamais envoyé.
+- **Enregistrement automatique** (2,5 s après la dernière modification, `autosave: true`) : contenu enregistré à chaque
+  fois ; l'historique (20 versions) ne garde au plus qu'un instantané toutes les 10 minutes ; l'enregistrement manuel
+  crée toujours une version. État affiché : Enregistré / Enregistrement… / Modifications non enregistrées /
+  « N blocs à compléter · non enregistré » / Impossible d'enregistrer (+ Réessayer). Conflit de version → 409.
+- **Non proposés** (le moteur ne les rend pas) : sections imbriquées, 3–4 colonnes ou colonnes contenant des blocs,
+  galerie, image + texte, produit/coupon/bannière, contenu conditionnel autre que « Condition d'affichage » par bloc,
+  HTML/code libre (refusé volontairement), réglages responsive distincts par appareil. Fonctionnalités nécessitant une
+  implémentation dans le moteur de rendu (`templates/blocks.js`).

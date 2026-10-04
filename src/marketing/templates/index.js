@@ -119,16 +119,23 @@ function templateCategoryCounts(ctx) {
   return counts;
 }
 
-function saveContent(ctx, current, merged, { expectedVersion, action }) {
+// autosave : enregistrement automatique de l'éditeur — le contenu est bien enregistré (version + 1), mais l'historique
+// ne garde au plus qu'un instantané toutes les 10 minutes, pour que les 20 versions conservées restent utiles.
+const AUTOSAVE_SNAPSHOT_MS = 10 * 60 * 1000;
+function saveContent(ctx, current, merged, { expectedVersion, action, autosave = false }) {
   const { normalized } = compileTemplate({ ...merged, blocks: resolveCourseBlocks(ctx, merged.blocks) }, { allowed: context.allowedFor(ctx) });
   const name = cleanName(merged.name);
   const category = cleanCategory(merged.category === undefined ? current.category : merged.category);
   const repo = table(ctx);
   if (name.toLowerCase() !== current.name.toLowerCase() && repo.count({ name }) > 0) throw new MarketingError("duplicate", "Un modèle porte déjà ce nom.");
   return transaction(ctx.db, () => {
-    ctx.db
-      .prepare("INSERT INTO mk_template_versions (organization_id, template_id, version, snapshot, created_by) VALUES (?, ?, ?, ?, ?)")
-      .run(ctx.organizationId, current.id, current.version, JSON.stringify(content(current)), current.updated_by);
+    const last = autosave ? ctx.db.prepare("SELECT created_at FROM mk_template_versions WHERE template_id = ? AND organization_id = ? ORDER BY version DESC LIMIT 1").get(current.id, ctx.organizationId) : null;
+    const recent = last && Date.now() - Date.parse(`${last.created_at.replace(" ", "T")}Z`) < AUTOSAVE_SNAPSHOT_MS;
+    if (!recent) {
+      ctx.db
+        .prepare("INSERT INTO mk_template_versions (organization_id, template_id, version, snapshot, created_by) VALUES (?, ?, ?, ?, ?)")
+        .run(ctx.organizationId, current.id, current.version, JSON.stringify(content(current)), current.updated_by);
+    }
     // Mise à jour conditionnelle : si quelqu'un a enregistré entre-temps, on ne l'écrase pas
     const row = ctx.db
       .prepare(
@@ -140,19 +147,19 @@ function saveContent(ctx, current, merged, { expectedVersion, action }) {
     ctx.db
       .prepare("DELETE FROM mk_template_versions WHERE template_id = ? AND version NOT IN (SELECT version FROM mk_template_versions WHERE template_id = ? ORDER BY version DESC LIMIT ?)")
       .run(current.id, current.id, KEEP_VERSIONS);
-    audit(ctx, action, "template", current.id, { version: row.version });
+    if (!autosave || !recent) audit(ctx, action, "template", current.id, { version: row.version }); // journal : pas une ligne par frappe
     return parse(row);
   });
 }
 
-function updateTemplate(ctx, id, patch = {}, { expectedVersion } = {}) {
+function updateTemplate(ctx, id, patch = {}, { expectedVersion, autosave = false } = {}) {
   const current = requireTemplate(ctx, id);
   if (expectedVersion !== undefined && expectedVersion !== current.version) {
     throw new MarketingError("conflict", `Ce modèle a été modifié entre-temps (version ${current.version} au lieu de ${expectedVersion}) : rechargez la page avant d'enregistrer.`);
   }
   const merged = content(current);
   for (const key of CONTENT_KEYS) if (patch[key] !== undefined) merged[key] = patch[key];
-  return saveContent(ctx, current, merged, { action: "template.updated" });
+  return saveContent(ctx, current, merged, { action: autosave ? "template.autosaved" : "template.updated", autosave });
 }
 
 function duplicateTemplate(ctx, id) {
@@ -209,9 +216,10 @@ function renderTemplate(ctx, id, contact, { urls, event } = {}) {
 }
 
 // Aperçu d'un brouillon non enregistré
-function previewTemplate(ctx, input, { contact } = {}) {
+// annotate : aperçu de l'éditeur (blocs repérables, bloc incomplet montré à sa place → blockErrors), jamais un envoi
+function previewTemplate(ctx, input, { contact, annotate = false } = {}) {
   checkCtx(ctx);
-  const c = compileTemplate({ ...input, blocks: resolveCourseBlocks(ctx, input && input.blocks) }, { allowed: context.allowedFor(ctx) });
+  const c = compileTemplate({ ...input, blocks: resolveCourseBlocks(ctx, input && input.blocks) }, { allowed: context.allowedFor(ctx), annotate });
   let data = context.sampleContext(ctx);
   if (contact) {
     const own = getContact(ctx, contact.id);
@@ -219,7 +227,7 @@ function previewTemplate(ctx, input, { contact } = {}) {
     data = context.buildContext(ctx, own, { urls: {} });
     data.unsubscribe_url = "https://exemple.invalid/desinscription";
   }
-  return { ...withWarnings(c, data), normalized: c.normalized };
+  return { ...withWarnings(c, data), normalized: c.normalized, blockErrors: c.meta.blockErrors };
 }
 
 function templateReadiness(ctx, id) {

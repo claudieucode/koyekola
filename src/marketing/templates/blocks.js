@@ -97,6 +97,12 @@ function trustedUrl(value, label) {
   if (/^https?:\/\/[^/?#]*@/i.test(url)) throw fail(`${label} : l'adresse ne doit pas contenir d'identifiant.`);
   return url;
 }
+// Fichier de la médiathèque en développement local (http://localhost/uploads/marketing/…) : accepté comme un
+// instantané de formation. En production, l'adresse publique est en https et passe par la règle commune.
+function localMedia(value) {
+  const url = typeof value === "string" ? value.trim() : "";
+  return LOCAL_HTTP.test(url) && /^http:\/\/[^/]+\/uploads\/marketing\//.test(url) ? [T(escapeHtml(trustedUrl(url, "Fichier")))] : null;
+}
 const euros = (cents) => (cents === 0 ? "Gratuit" : `${(cents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`);
 
 const alignOf = (v) => {
@@ -193,7 +199,7 @@ function buildBlock(block, env, meta) {
       return { normalized: { markdown: block.markdown }, nodes: markdownNodes(block.markdown, env) };
     }
     case "image": {
-      const src = urlNodes(block.src, { system: false });
+      const src = localMedia(block.src) || urlNodes(block.src, { system: false });
       const decorative = block.decorative === true;
       const alt = plain(block.alt, allowed, { max: 200, label: "Le texte alternatif" });
       if (!decorative && !(typeof block.alt === "string" && block.alt.trim())) throw fail("Le texte alternatif est obligatoire (ou cochez « image décorative »).");
@@ -214,7 +220,7 @@ function buildBlock(block, env, meta) {
     }
     case "button": {
       const label = plain(block.label, allowed, { max: 80, required: true, label: "Le libellé du bouton" });
-      const url = urlNodes(block.url, { mailto: true });
+      const url = localMedia(block.url) || urlNodes(block.url, { mailto: true });
       if (block.color !== undefined && (typeof block.color !== "string" || !HEX.test(block.color))) throw fail("Couleur invalide pour le bouton : utilisez le format #rrggbb.");
       const color = (block.color || theme.accent).toLowerCase();
       const ink = textOn(color);
@@ -387,7 +393,10 @@ function footerNodes(kind, footer, env) {
 }
 
 // ---------- Compilation d'un modèle ----------
-function compileTemplate(template, { allowed = () => false } = {}) {
+// annotate (aperçu de l'éditeur UNIQUEMENT, jamais un envoi) : chaque bloc porte data-mk-block="<id>" pour être
+// sélectionné dans le rendu, et un bloc incomplet est montré à sa place (avec son problème, listé dans
+// meta.blockErrors) au lieu de faire échouer tout l'aperçu. Le rendu d'un envoi reste strict.
+function compileTemplate(template, { allowed = () => false, annotate = false } = {}) {
   if (!template || typeof template !== "object") throw fail("Modèle invalide.");
   const kind = template.kind === undefined ? "marketing" : template.kind;
   if (!KINDS.includes(kind)) throw fail("Type de modèle invalide (marketing ou transactional).");
@@ -397,7 +406,7 @@ function compileTemplate(template, { allowed = () => false } = {}) {
 
   const theme = normalizeTheme(template.theme);
   const env = { theme, allowed };
-  const meta = { kind, blockCount: blocks.length, blockTypes: [], hasText: false, hasImage: false, hasButton: false, lowContrast: [], varsNoDefault: [], preheader: "" };
+  const meta = { kind, blockCount: blocks.filter((b) => b && !b.hidden).length, blockTypes: [], hasText: false, hasImage: false, hasButton: false, lowContrast: [], varsNoDefault: [], preheader: "", blockErrors: [] };
 
   const subjectSource = (typeof template.subject === "string" ? template.subject : "").replace(CONTROLS, " ").trim();
   if (subjectSource.length > 200) throw fail("L'objet est trop long (200 caractères au plus).");
@@ -412,12 +421,14 @@ function compileTemplate(template, { allowed = () => false } = {}) {
   blocks.forEach((block, index) => {
     const at = `Bloc ${index + 1}`;
     if (!block || typeof block !== "object" || Array.isArray(block)) throw fail(`${at} invalide : un objet est attendu.`);
+    let id = block.id === undefined ? `b${index + 1}` : block.id;
     try {
-      let id = block.id === undefined ? `b${index + 1}` : block.id;
       if (typeof id !== "string" || !/^[a-z0-9_-]{1,40}$/.test(id) || seenIds.has(id)) throw fail("Identifiant de bloc invalide ou en double (minuscules, chiffres, - et _, 40 caractères au plus).");
       seenIds.add(id);
-      const built = buildBlock(block, env, meta);
-      meta.blockTypes.push(block.type);
+      // Bloc masqué : conservé dans le modèle (et réaffichable), jamais envoyé ; visible estompé dans l'éditeur
+      const hidden = block.hidden === true;
+      const built = buildBlock(block, env, hidden ? { ...meta, lowContrast: [] } : meta);
+      if (!hidden) meta.blockTypes.push(block.type);
       let showIf = null;
       if (block.showIf !== undefined && block.showIf !== null && block.showIf !== "") {
         if (typeof block.showIf !== "string") throw fail("La condition d'affichage doit être un texte.");
@@ -425,12 +436,19 @@ function compileTemplate(template, { allowed = () => false } = {}) {
         if (/\{\{|\{%|%\}|\}\}/.test(block.showIf)) throw fail("Condition d'affichage invalide : écrivez seulement la condition (ex. contact.country == \"FR\").");
         showIf = engine.compileCondition(block.showIf, { allowed });
       }
-      const row = [T(`<tr><td style="padding:8px 24px;font-size:16px;line-height:1.6;color:${theme.textColor}">`), ...built.nodes, T("</td></tr>")];
-      bodyNodes.push(...(showIf ? [{ t: "if", branches: [{ cond: showIf, body: row }], else: null }] : row));
-      normalizedBlocks.push({ id, type: block.type, ...(showIf ? { showIf: block.showIf.trim() } : {}), ...built.normalized });
+      const mark = annotate ? ` data-mk-block="${id}"${hidden ? ' data-mk-hidden="true" style="opacity:.35"' : ""}` : "";
+      const row = [T(`<tr${mark}><td style="padding:8px 24px;font-size:16px;line-height:1.6;color:${theme.textColor}">`), ...built.nodes, T("</td></tr>")];
+      if (!hidden || annotate) bodyNodes.push(...(showIf && !annotate ? [{ t: "if", branches: [{ cond: showIf, body: row }], else: null }] : row));
+      normalizedBlocks.push({ id, type: block.type, ...(hidden ? { hidden: true } : {}), ...(showIf ? { showIf: block.showIf.trim() } : {}), ...built.normalized });
     } catch (error) {
-      if (error instanceof MarketingError) throw fail(`${at} : ${error.message}`);
-      throw error;
+      if (!(error instanceof MarketingError)) throw error;
+      // Éditeur : le bloc fautif reste visible à sa place, avec son problème ; le reste du message s'affiche normalement
+      if (annotate && typeof id === "string" && /^[a-z0-9_-]{1,40}$/.test(id)) {
+        meta.blockErrors.push({ id, type: block.type, index, message: error.message });
+        bodyNodes.push(T(`<tr data-mk-block="${id}" data-mk-error="true"><td style="padding:8px 24px"><div style="padding:16px;border:2px dashed #b7860b;border-radius:8px;background:#fff8e1;color:#6a4e00;font:14px/1.45 -apple-system,Segoe UI,Roboto,Arial,sans-serif">${escapeHtml(error.message)}</div></td></tr>`));
+        return;
+      }
+      throw fail(`${at} : ${error.message}`);
     }
   });
 

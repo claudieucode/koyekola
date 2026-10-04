@@ -10,8 +10,24 @@ const { sendTestEmail, teamRecipients } = require("../templates/testSend");
 const { testChannel } = require("../sending/config");
 const { createRateLimiter } = require("../../middlewares/security");
 const { attempt, need, safeJson } = require("./kit");
+const { icon } = require("../../utils/icons");
+const multer = require("multer");
+const media = require("../media");
 
-// Palette de l'éditeur : groupes et blocs (libellés français). Aucun bloc « HTML libre ».
+// Fichiers de la médiathèque : en mémoire le temps de vérifier leur contenu (le type est lu dans le fichier lui-même)
+const mediaUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: media.MAX_DOCUMENT, files: 1 } });
+
+// Blocs de l'éditeur : libellé, icône (utils/icons.js, flat), description courte. Seuls les blocs que le moteur sait
+// rendre (templates/blocks.js#TYPES) ; aucun bloc « HTML libre » ni « code » (contenu non maîtrisé dans un e-mail).
+const BLOCKS = {
+  heading: ["Titre", "type", "Un titre de section"], text: ["Texte", "alignLeft", "Paragraphes, gras, liens, listes"], quote: ["Citation", "quote", "Une phrase mise en avant"], list: ["Liste", "list", "Puces, numéros ou coches"],
+  image: ["Image", "image", "Depuis la médiathèque ou une adresse"], video: ["Vidéo", "video", "Miniature cliquable vers la vidéo"],
+  button: ["Bouton", "mousePointer", "Un appel à l'action"], social: ["Réseaux sociaux", "share2", "Liens vers vos réseaux"], course: ["Formation", "graduation", "Une formation du catalogue"],
+  columns: ["Deux colonnes", "columns", "Deux textes côte à côte"], divider: ["Séparateur", "minus", "Une ligne fine"], spacer: ["Espace", "moveVertical", "Un espace vertical"],
+};
+// Icônes utilisées par le script de l'éditeur (SVG du registre fixe, jamais de texte saisi)
+const EDITOR_ICONS = ["copy", "eye", "eyeOff", "trash", "arrowUp", "arrowDown", "edit", "grip", "upload", "plus", "search", "alertTriangle", "checkCircle", "close", "image", "fileText", "link", "maximize", "monitor", "tablet", "smartphone", "layers", "palette", "braces", "settings", "undo", "redo", "moreHorizontal"];
+// Palette de l'éditeur : groupes et blocs (libellés français)
 const PALETTE = [
   { title: "Texte", blocks: [["heading", "Titre"], ["text", "Texte"], ["quote", "Citation"], ["list", "Liste"]] },
   { title: "Médias", blocks: [["image", "Image"], ["video", "Vidéo"]] },
@@ -94,8 +110,8 @@ module.exports = ({ db }) => {
     try {
       const contact = req.body.contactId ? { id: intOrNull(req.body.contactId) } : null;
       if (contact && !contact.id) throw new MarketingError("invalid_field", "Contact invalide.");
-      const r = templates.previewTemplate(req.mk.ctx, req.body.template, { contact });
-      res.json({ subject: r.subject, html: r.html, text: r.text, warnings: r.warnings });
+      const r = templates.previewTemplate(req.mk.ctx, req.body.template, { contact, annotate: req.body.annotate === true });
+      res.json({ subject: r.subject, html: r.html, text: r.text, warnings: r.warnings, blockErrors: r.blockErrors || [] });
     } catch (error) {
       // Pour l'aperçu, toute erreur métier (contact ou contenu invalide) est une erreur de saisie : 400
       if (error instanceof MarketingError) return res.status(400).json({ error: error.message });
@@ -137,10 +153,12 @@ module.exports = ({ db }) => {
       template: { id: template.id, name: template.name, kind: template.kind, category: template.category, subject: template.subject, preheader: template.preheader, theme: template.theme, footer: template.footer, blocks: template.blocks, version: template.version },
       variables: templates.variableCatalog(ctx), categories: CATEGORIES, courses: listCourses(ctx),
       versions: templates.listVersions(ctx, template.id),
+      blocks: Object.fromEntries(Object.entries(BLOCKS).map(([type, [label, ic, description]]) => [type, { label, icon: icon(ic, { size: 18 }), description }])),
+      icons: Object.fromEntries(EDITOR_ICONS.map((n) => [n, icon(n, { size: 16 })])),
       contacts: db.prepare("SELECT id, email FROM mk_contacts WHERE organization_id = ? ORDER BY id DESC LIMIT 20").all(ctx.organizationId),
     };
     res.render("marketing/template-editor", {
-      title: template.name, active: "templates", template, data: safeJson(data), readOnly: data.readOnly, versions: data.versions, palette: PALETTE, categories: CATEGORIES,
+      title: template.name, active: "templates", template, data: safeJson(data), readOnly: data.readOnly, versions: data.versions, palette: PALETTE, blockInfo: BLOCKS, categories: CATEGORIES,
       recipients: teamRecipients(ctx), currentEmail: String(req.session.user.email || "").toLowerCase(),
     });
   });
@@ -151,13 +169,42 @@ module.exports = ({ db }) => {
       if (!id) throw new MarketingError("not_found", "Modèle introuvable.");
       if (!Number.isInteger(req.body.version)) throw new MarketingError("invalid_field", "Version du modèle manquante : rechargez la page.");
       if (!req.body.template || typeof req.body.template !== "object") throw new MarketingError("invalid_field", "Contenu du modèle manquant.");
-      const saved = templates.updateTemplate(req.mk.ctx, id, req.body.template, { expectedVersion: req.body.version });
+      const saved = templates.updateTemplate(req.mk.ctx, id, req.body.template, { expectedVersion: req.body.version, autosave: req.body.autosave === true });
       // Instantanés des blocs « formation » pris dans le catalogue : l'éditeur les garde tels quels (le prix ne change pas tout seul)
       const courseSnapshots = Object.fromEntries(saved.blocks.filter((b) => b.type === "course" && b.snapshot).map((b) => [b.id, b.snapshot]));
       res.json({ ok: true, version: saved.version, warnings: templates.renderTemplate(req.mk.ctx, id, null).warnings, courseSnapshots });
     } catch (error) {
       try { jsonError(res, error); } catch (e) { next(e); }
     }
+  });
+
+  // ---------- Médiathèque (images et PDF des e-mails) ----------
+  router.get("/medias", need("templates.read"), (req, res) => {
+    res.json(media.listMedia(req.mk.ctx, { q: req.query.q, kind: req.query.type, limit: req.query.limite, offset: req.query.depuis }));
+  });
+  router.post("/medias", need("templates.write"), (req, res, next) => {
+    mediaUpload.single("file")(req, res, (uploadError) => {
+      if (uploadError) {
+        const message = uploadError.code === "LIMIT_FILE_SIZE" ? `Fichier trop lourd : ${media.MAX_DOCUMENT / 1048576} Mo au plus (5 Mo pour une image).` : "Envoi du fichier impossible.";
+        return res.status(400).json({ error: message });
+      }
+      try {
+        if (!req.file) throw new MarketingError("invalid_field", "Aucun fichier reçu.");
+        // multer lit le nom du fichier en latin-1 : « Bannière » arriverait en « BanniÃ¨re » ; on le relit en UTF-8
+        const utf8 = Buffer.from(req.file.originalname, "latin1").toString("utf8");
+        const originalName = utf8.includes("\uFFFD") ? req.file.originalname : utf8;
+        const saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype });
+        res.status(201).json({ media: saved });
+      } catch (error) {
+        try { jsonError(res, error); } catch (e) { next(e); }
+      }
+    });
+  });
+  router.post("/medias/:id", need("templates.write"), (req, res, next) => {
+    try { res.json({ media: media.updateMedia(req.mk.ctx, intOrNull(req.params.id), req.body || {}) }); } catch (error) { try { jsonError(res, error); } catch (e) { next(e); } }
+  });
+  router.post("/medias/:id/supprimer", need("templates.write"), (req, res, next) => {
+    try { res.json({ ok: media.deleteMedia(req.mk.ctx, intOrNull(req.params.id)) }); } catch (error) { try { jsonError(res, error); } catch (e) { next(e); } }
   });
 
   // E-mail de test vers un membre de l'équipe (jamais une adresse libre)

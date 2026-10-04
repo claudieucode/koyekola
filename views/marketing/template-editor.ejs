@@ -1,147 +1,189 @@
 <%- include("partials/top", { title, active }) %>
-<%
-  const ICONS = { heading: "fileText", text: "fileText", quote: "book", list: "list", image: "layout", video: "video", button: "send", social: "globe", course: "graduation", columns: "panelLeft", divider: "menu", spacer: "menu" };
-  const LABELS = { heading: "Titre", text: "Texte", quote: "Citation", list: "Liste", image: "Image", video: "Vidéo", button: "Bouton", social: "Réseaux sociaux", course: "Formation", columns: "Deux colonnes", divider: "Séparateur", spacer: "Espace" };
-%>
-    <p class="mk-back"><a href="/marketing/modeles">← Modèles</a></p>
-    <div class="mk-head">
-      <h1 class="mk-email"><%= template.name %></h1>
-      <div class="mk-actions">
-        <span id="mk-status" class="field-hint" role="status" aria-live="polite">Version <%= template.version %></span>
-        <% if (!readOnly) { %>
-          <button type="button" class="btn btn-outline btn-sm" id="mk-undo" aria-label="Annuler la dernière modification (Ctrl+Z)" disabled><%- icon("arrowLeft", { size: 16 }) %> Annuler</button>
-          <button type="button" class="btn btn-outline btn-sm" id="mk-redo" aria-label="Rétablir (Ctrl+Maj+Z)" disabled>Rétablir <%- icon("arrowRight", { size: 16 }) %></button>
-          <button type="button" class="btn btn-primary" id="mk-save">Enregistrer</button>
-        <% } %>
-      </div>
-    </div>
-    <noscript><p class="form-error">L'éditeur de blocs demande JavaScript.</p></noscript>
-    <p id="mk-editor-error" class="form-error" role="alert" hidden></p>
-
-    <div class="mk-editor3<%= readOnly ? ' is-readonly' : '' %>" id="mk-editor">
-      <% if (!readOnly) { %>
-        <nav class="mk-palette" id="mk-palette" aria-label="Ajouter un bloc">
-          <p class="field-hint mk-palette-hint">Cliquez ou glissez un bloc dans le message.</p>
-          <% palette.forEach((g) => { %>
-            <div class="mk-palette-group">
-              <h3 class="mk-palette-title"><%= g.title %></h3>
-              <div class="mk-palette-list">
-                <% g.blocks.forEach(([type, label]) => { %><button type="button" class="mk-palette-btn" data-add="<%= type %>" draggable="true"><span class="mk-palette-icon" aria-hidden="true"><%- icon(ICONS[type], { size: 18 }) %></span><span><%= label %></span></button>
-                <% }) %>
-              </div>
+<%# Éditeur d'e-mails (Campagnes → Modèles d'e-mails) : barre d'outils, onglets (blocs, structure, médias, styles,
+    message, vérification), canevas = rendu réel de l'e-mail (aperçu serveur annoté), réglages du bloc sélectionné.
+    Le script public/js/marketing-editor.js pilote tout ; le serveur valide, normalise et rend (rien n'est « cru »). %>
+    <div class="mk-builder<%= readOnly ? ' is-readonly' : '' %>" id="mk-editor">
+      <header class="mk-b-top">
+        <a class="mk-b-back" href="/marketing/modeles"><%- icon("arrowLeft", { size: 16 }) %> Modèles</a>
+        <div class="mk-b-name">
+          <label for="t-name" class="sr-only">Nom du modèle</label>
+          <input id="t-name" type="text" maxlength="100" value="<%= template.name %>" <%= readOnly ? "disabled" : "" %>>
+        </div>
+        <span id="mk-status" class="mk-b-status" data-state="saved" role="status" aria-live="polite">Enregistré · version <%= template.version %></span>
+        <button type="button" class="btn btn-outline btn-sm mk-b-retry" id="mk-retry" hidden>Réessayer</button>
+        <div class="mk-b-tools">
+          <% if (!readOnly) { %>
+            <button type="button" class="mk-b-icon" id="mk-undo" aria-label="Annuler la dernière modification (Ctrl+Z)" data-tip="Annuler" disabled><%- icon("undo", { size: 18 }) %></button>
+            <button type="button" class="mk-b-icon" id="mk-redo" aria-label="Rétablir (Ctrl+Maj+Z)" data-tip="Rétablir" disabled><%- icon("redo", { size: 18 }) %></button>
+          <% } %>
+          <button type="button" class="btn btn-outline btn-sm" id="mk-open-preview"><%- icon("eye", { size: 16 }) %> Prévisualiser</button>
+          <% if (!readOnly) { %>
+            <button type="button" class="btn btn-outline btn-sm" id="mk-open-test"><%- icon("send", { size: 16 }) %> Envoyer un test</button>
+            <button type="button" class="btn btn-primary btn-sm" id="mk-save">Enregistrer</button>
+          <% } %>
+          <div class="mk-b-more">
+            <button type="button" class="mk-b-icon" id="mk-more" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-more-menu" aria-label="Plus d'actions" data-tip="Plus"><%- icon("moreHorizontal", { size: 18 }) %></button>
+            <div class="mk-menu" id="mk-more-menu" role="menu" hidden>
+              <button type="button" role="menuitem" id="mk-open-versions"><%- icon("history", { size: 16 }) %> Versions précédentes (<%= versions.length %>)</button>
+              <% if (!readOnly) { %>
+                <form action="/marketing/modeles/<%= template.id %>/dupliquer" method="post" role="none"><button type="submit" role="menuitem"><%- icon("copy", { size: 16 }) %> Dupliquer ce modèle</button></form>
+                <form action="/marketing/modeles/<%= template.id %>/supprimer" method="post" role="none"><button type="submit" role="menuitem" class="mk-menu-danger" data-mk-confirm="Le modèle « <%= template.name %> » sera supprimé. Les campagnes déjà lancées gardent leur contenu." data-mk-confirm-title="Supprimer ce modèle ?" data-mk-confirm-ok="Supprimer"><%- icon("trash", { size: 16 }) %> Supprimer ce modèle</button></form>
+              <% } %>
             </div>
+          </div>
+        </div>
+      </header>
+      <noscript><p class="form-error">L'éditeur d'e-mails demande JavaScript.</p></noscript>
+      <p id="mk-editor-error" class="form-error" role="alert" hidden></p>
+
+      <div class="mk-b-body">
+        <nav class="mk-b-rail" role="tablist" aria-label="Outils de l'éditeur" aria-orientation="vertical">
+          <% const firstPane = readOnly ? "structure" : "blocks"; [["blocks", "plus", "Blocs"], ["structure", "layers", "Structure"], ["media", "image", "Médias"], ["styles", "palette", "Styles"], ["message", "settings", "Message"], ["check", "checkCircle", "Vérification"]].forEach(([key, ic, label]) => { if (readOnly && ["blocks", "media"].includes(key)) return; %>
+            <button type="button" role="tab" class="mk-b-tab" id="tab-<%= key %>" data-pane="<%= key %>" aria-controls="pane-<%= key %>" aria-selected="<%= key === firstPane ? "true" : "false" %>" tabindex="<%= key === firstPane ? "0" : "-1" %>">
+              <span class="mk-b-tab-icon" aria-hidden="true"><%- icon(ic, { size: 18 }) %></span><span class="mk-b-tab-label"><%= label %></span><% if (key === "check") { %><span class="mk-b-badge" id="mk-check-count" hidden></span><% } %>
+            </button>
           <% }) %>
         </nav>
-      <% } %>
 
-      <div class="mk-editor-main">
-        <div class="mk-tabs" role="tablist" aria-label="Volets de l'éditeur" data-mk-tabs>
-          <button type="button" class="mk-tab" role="tab" id="tab-content" aria-selected="true" aria-controls="mk-pane-content">Contenu</button>
-          <button type="button" class="mk-tab" role="tab" id="tab-settings" aria-selected="false" tabindex="-1" aria-controls="mk-pane-settings">Réglages</button>
-        </div>
-
-        <div id="mk-pane-content" role="tabpanel" aria-labelledby="tab-content">
-          <section class="mk-panel">
-            <h2>Contenu du message</h2>
-            <div class="mk-blocks-bar">
-              <label for="mk-var" class="sr-only">Insérer une variable</label>
-              <select id="mk-var" <%= readOnly ? "disabled" : "" %>><option value="">Insérer une variable…</option></select>
-              <span class="field-hint">Placez le curseur dans un champ, puis choisissez une variable (ex. le prénom).</span>
+        <section class="mk-b-side" aria-label="Panneau des outils">
+          <% if (!readOnly) { %>
+          <div class="mk-b-pane" id="pane-blocks" role="tabpanel" aria-labelledby="tab-blocks">
+            <h2 class="mk-b-pane-title">Blocs</h2>
+            <p class="field-hint">Cliquez pour ajouter après le bloc sélectionné, ou glissez dans l'e-mail. Vous pouvez aussi y glisser une image ou un PDF depuis votre ordinateur.</p>
+            <nav class="mk-palette" id="mk-palette" aria-label="Ajouter un bloc">
+              <% palette.forEach((g) => { %>
+                <div class="mk-palette-group">
+                  <h3 class="mk-palette-title"><%= g.title %></h3>
+                  <div class="mk-palette-list">
+                    <% g.blocks.forEach(([type, label]) => { const b = blockInfo[type]; %><button type="button" class="mk-palette-btn" data-add="<%= type %>" draggable="true" aria-label="Ajouter un bloc « <%= label %> » : <%= b[2] %>" title="<%= b[2] %>"><span class="mk-palette-icon" aria-hidden="true"><%- icon(b[1], { size: 18 }) %></span><span class="mk-palette-label"><%= label %></span></button><% }) %>
+                  </div>
+                </div>
+              <% }) %>
+            </nav>
+          </div>
+          <% } %>
+          <div class="mk-b-pane" id="pane-structure" role="tabpanel" aria-labelledby="tab-structure"<%= readOnly ? "" : " hidden" %>>
+            <h2 class="mk-b-pane-title">Structure</h2>
+            <p class="field-hint">L'ordre des blocs du message. Glissez une ligne pour la déplacer (ou Alt + flèche haut / bas).</p>
+            <ol class="mk-structure" id="mk-structure" aria-label="Blocs du message"></ol>
+          </div>
+          <% if (!readOnly) { %>
+          <div class="mk-b-pane" id="pane-media" role="tabpanel" aria-labelledby="tab-media" hidden>
+            <h2 class="mk-b-pane-title">Médiathèque</h2>
+            <div class="mk-media-drop" id="mk-media-drop">
+              <p><strong>Déposez des images ou des PDF ici</strong></p>
+              <p class="field-hint">JPEG, PNG, GIF, WebP (5 Mo) · PDF (10 Mo)</p>
+              <label class="btn btn-outline btn-sm mk-media-pick"><%- icon("upload", { size: 16 }) %> Importer depuis l'ordinateur<input type="file" id="mk-media-file" accept="image/jpeg,image/png,image/gif,image/webp,application/pdf" multiple class="sr-only"></label>
             </div>
-            <div id="mk-blocks" class="mk-blocks" aria-label="Blocs du message"></div>
-            <div id="mk-drop-end" class="mk-drop-end" hidden>Déposez ici pour ajouter à la fin</div>
-            <p class="sr-only" id="mk-live" aria-live="polite"></p>
-          </section>
-        </div>
-
-        <div id="mk-pane-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
-          <section class="mk-panel">
-            <h2>Message</h2>
-            <div class="field-row">
-              <div class="field-group"><label for="t-name">Nom du modèle</label><input id="t-name" type="text" maxlength="100"></div>
-              <div class="field-group"><label for="t-kind">Type</label><select id="t-kind"><option value="marketing">Marketing</option><option value="transactional">Transactionnel</option></select></div>
-              <div class="field-group"><label for="t-category">Catégorie</label>
-                <select id="t-category"><option value="">Aucune catégorie</option><% categories.forEach((c) => { %><option value="<%= c.key %>"><%= c.label %></option><% }) %></select></div>
+            <div class="mk-media-tools">
+              <label for="mk-media-q" class="sr-only">Rechercher un média</label>
+              <input type="search" id="mk-media-q" placeholder="Rechercher un média…">
+              <label for="mk-media-kind" class="sr-only">Type de média</label>
+              <select id="mk-media-kind"><option value="">Tous</option><option value="image">Images</option><option value="document">Documents</option></select>
             </div>
-            <div class="field-group"><label for="t-subject">Objet</label><input id="t-subject" type="text" maxlength="200" data-var-target></div>
-            <div class="field-group"><label for="t-preheader">Préheader <span class="field-hint">(texte d'aperçu affiché après l'objet dans la boîte de réception)</span></label><input id="t-preheader" type="text" maxlength="200" data-var-target></div>
-          </section>
-
-          <section class="mk-panel">
-            <h2>Apparence</h2>
+            <p class="mk-media-status" id="mk-media-status" role="status" aria-live="polite"></p>
+            <ul class="mk-media-grid" id="mk-media-grid" aria-label="Médias"></ul>
+            <button type="button" class="btn btn-outline btn-sm" id="mk-media-more" hidden>Afficher plus</button>
+          </div>
+          <% } %>
+          <div class="mk-b-pane" id="pane-styles" role="tabpanel" aria-labelledby="tab-styles" hidden>
+            <h2 class="mk-b-pane-title">Styles globaux</h2>
+            <p class="field-hint">Appliqués à tout le message ; un bouton peut avoir sa propre couleur.</p>
             <div class="mk-theme">
               <div class="field-group"><label for="t-bg">Fond de page</label><input id="t-bg" type="color"></div>
               <div class="field-group"><label for="t-cbg">Fond du message</label><input id="t-cbg" type="color"></div>
-              <div class="field-group"><label for="t-text">Texte</label><input id="t-text" type="color"></div>
-              <div class="field-group"><label for="t-accent">Couleur d'accent</label><input id="t-accent" type="color"></div>
+              <div class="field-group"><label for="t-text">Couleur du texte</label><input id="t-text" type="color"></div>
+              <div class="field-group"><label for="t-accent">Couleur principale (liens, boutons)</label><input id="t-accent" type="color"></div>
               <div class="field-group"><label for="t-font">Police</label><select id="t-font"><option value="system">Sans empattement (système)</option><option value="serif">Avec empattement (Georgia)</option></select></div>
             </div>
-          </section>
-
-          <section class="mk-panel">
-            <h2>Pied de page</h2>
-            <p class="field-hint">Ajouté automatiquement : le lien « Se désinscrire », le lien des préférences et l'adresse postale de l'organisation. Vous pouvez personnaliser la phrase d'introduction.</p>
-            <div class="field-group"><label for="t-footer">Phrase d'introduction</label><input id="t-footer" type="text" maxlength="1000" data-var-target placeholder="Vous recevez cet e-mail parce que vous êtes en relation avec {{org.name}}."></div>
-          </section>
-        </div>
-      </div>
-
-      <aside class="mk-editor-preview" aria-label="Aperçu">
-        <div class="mk-panel">
-          <h2>Aperçu</h2>
-          <div class="mk-preview-bar">
-            <div class="mk-sizes" role="group" aria-label="Taille de l'aperçu">
-              <button type="button" class="btn btn-outline btn-sm" data-size="600" aria-pressed="true">Bureau</button>
-              <button type="button" class="btn btn-outline btn-sm" data-size="480" aria-pressed="false">Tablette</button>
-              <button type="button" class="btn btn-outline btn-sm" data-size="375" aria-pressed="false">Mobile</button>
-            </div>
-            <label for="mk-contact" class="sr-only">Contact utilisé pour l'aperçu</label>
-            <select id="mk-contact"><option value="">Données d'exemple (Awa Koffi)</option></select>
+            <% if (!readOnly) { %><button type="button" class="btn btn-outline btn-sm" id="mk-theme-reset">Réinitialiser le style</button><% } %>
           </div>
-          <p class="mk-preview-subject"><strong>Objet :</strong> <span id="mk-subject"></span></p>
-          <div class="mk-frame-wrap"><iframe id="mk-frame" title="Aperçu de l'e-mail" sandbox="" srcdoc=""></iframe></div>
-          <div id="mk-warnings" class="mk-warnings" aria-live="polite"></div>
-          <details><summary>Version texte brut</summary><pre id="mk-text" class="mk-text"></pre></details>
-        </div>
-      </aside>
+          <div class="mk-b-pane" id="pane-message" role="tabpanel" aria-labelledby="tab-message" hidden>
+            <h2 class="mk-b-pane-title">Message</h2>
+            <div class="field-group"><label for="t-subject">Objet</label><input id="t-subject" type="text" maxlength="200" data-var-target></div>
+            <div class="field-group"><label for="t-preheader">Préheader <span class="field-hint">(texte affiché après l'objet dans la boîte de réception)</span></label><input id="t-preheader" type="text" maxlength="200" data-var-target></div>
+            <div class="field-group"><label for="t-kind">Type</label><select id="t-kind"><option value="marketing">Marketing</option><option value="transactional">Transactionnel</option></select></div>
+            <div class="field-group"><label for="t-category">Catégorie</label><select id="t-category"><option value="">Aucune catégorie</option><% categories.forEach((c) => { %><option value="<%= c.key %>"><%= c.label %></option><% }) %></select></div>
+            <div class="field-group"><label for="t-footer">Pied de page : phrase d'introduction</label><input id="t-footer" type="text" maxlength="1000" data-var-target placeholder="Vous recevez cet e-mail parce que vous êtes en relation avec {{org.name}}."></div>
+            <p class="field-hint">Ajoutés automatiquement : le lien « Se désinscrire », le lien des préférences et l'adresse postale de l'organisation.</p>
+            <div class="mk-blocks-bar">
+              <label for="mk-var">Insérer une variable</label>
+              <select id="mk-var" <%= readOnly ? "disabled" : "" %>><option value="">Choisir une variable…</option></select>
+              <span class="field-hint">Placez d'abord le curseur dans un champ de texte (objet, titre, texte…).</span>
+            </div>
+          </div>
+          <div class="mk-b-pane" id="pane-check" role="tabpanel" aria-labelledby="tab-check" hidden>
+            <h2 class="mk-b-pane-title">Vérification de l'e-mail</h2>
+            <div id="mk-check" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <main class="mk-b-stage" aria-label="E-mail en cours de conception">
+          <div class="mk-b-stagebar">
+            <div class="mk-sizes" role="group" aria-label="Largeur d'affichage">
+              <button type="button" class="mk-b-icon" data-size="600" aria-pressed="true" aria-label="Bureau (600 px)" data-tip="Bureau"><%- icon("monitor", { size: 18 }) %></button>
+              <button type="button" class="mk-b-icon" data-size="480" aria-pressed="false" aria-label="Tablette (480 px)" data-tip="Tablette"><%- icon("tablet", { size: 18 }) %></button>
+              <button type="button" class="mk-b-icon" data-size="375" aria-pressed="false" aria-label="Mobile (375 px)" data-tip="Mobile"><%- icon("smartphone", { size: 18 }) %></button>
+            </div>
+            <p class="mk-preview-subject"><strong>Objet :</strong> <span id="mk-subject"></span></p>
+            <label for="mk-contact" class="sr-only">Contact utilisé pour l'aperçu</label>
+            <select id="mk-contact"><option value="">Données d'exemple</option></select>
+          </div>
+          <div class="mk-b-canvas" id="mk-canvas">
+            <iframe id="mk-frame" title="E-mail en cours de conception (cliquez sur un bloc pour le modifier)" sandbox="allow-same-origin" srcdoc=""></iframe>
+          </div>
+          <p class="sr-only" id="mk-live" aria-live="polite"></p>
+        </main>
+
+        <aside class="mk-b-props" id="mk-props" aria-label="Réglages du bloc sélectionné"></aside>
+      </div>
     </div>
 
-    <% if (versions.length) { %>
-      <section class="mk-panel">
-        <h2>Versions précédentes</h2>
-        <p class="field-hint">Les 20 dernières versions sont conservées. Restaurer crée une nouvelle version : rien n'est perdu.</p>
-        <div class="mk-table-wrap"><table class="mk-table">
-          <caption class="sr-only">Versions précédentes</caption>
-          <thead><tr><th scope="col">Version</th><th scope="col">Date</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
-          <tbody><% versions.forEach((v) => { %>
-            <tr><td><%= v.version %></td><td><%= mkh.fdate(v.created_at) %></td>
-              <td><% if (!readOnly) { %><form action="/marketing/modeles/<%= template.id %>/restaurer" method="post"><input type="hidden" name="version" value="<%= v.version %>"><button type="submit" class="btn btn-outline btn-sm">Restaurer</button></form><% } %></td></tr>
-          <% }) %></tbody>
-        </table></div>
-      </section>
-    <% } %>
-
-    <% if (!readOnly) { %>
-      <section class="mk-panel">
-        <h2>Envoyer un e-mail de test</h2>
-        <p class="field-hint">Envoyé uniquement à un membre de l'équipe, avec des données d'exemple et des liens factices, et un objet préfixé « [TEST] ». Enregistrez d'abord vos modifications : le test utilise la version enregistrée.</p>
-        <form action="/marketing/modeles/<%= template.id %>/test" method="post" class="mk-inline-form">
-          <label for="test-to" class="sr-only">Destinataire du test</label>
-          <select id="test-to" name="to"><% recipients.forEach((r) => { %><option value="<%= r %>" <%= r === currentEmail ? "selected" : "" %>><%= r %></option><% }) %></select>
-          <button type="submit" class="btn btn-outline btn-sm">Envoyer le test</button>
-        </form>
-      </section>
-    <% } %>
-
-    <% if (!readOnly) { %>
-      <section class="mk-panel mk-danger">
-        <h2>Actions</h2>
-        <div class="mk-actions">
-          <form action="/marketing/modeles/<%= template.id %>/dupliquer" method="post"><button type="submit" class="btn btn-outline btn-sm">Dupliquer ce modèle</button></form>
-          <form action="/marketing/modeles/<%= template.id %>/supprimer" method="post"><button type="submit" class="btn btn-danger btn-sm" data-mk-confirm="Le modèle « <%= template.name %> » sera supprimé. Les campagnes déjà lancées gardent leur contenu figé." data-mk-confirm-title="Supprimer ce modèle ?" data-mk-confirm-ok="Supprimer">Supprimer ce modèle</button></form>
+    <dialog class="mk-dialog mk-b-preview" id="mk-preview-dialog" aria-labelledby="mk-preview-title">
+      <div class="mk-b-preview-head">
+        <h2 id="mk-preview-title">Aperçu de l'e-mail</h2>
+        <div class="mk-sizes" role="group" aria-label="Largeur de l'aperçu">
+          <button type="button" class="btn btn-outline btn-sm" data-psize="600" aria-pressed="true"><%- icon("monitor", { size: 16 }) %> Bureau</button>
+          <button type="button" class="btn btn-outline btn-sm" data-psize="480" aria-pressed="false"><%- icon("tablet", { size: 16 }) %> Tablette</button>
+          <button type="button" class="btn btn-outline btn-sm" data-psize="375" aria-pressed="false"><%- icon("smartphone", { size: 16 }) %> Mobile</button>
         </div>
-      </section>
+        <button type="button" class="btn btn-primary btn-sm" data-close-dialog>Retour à l'éditeur</button>
+      </div>
+      <p class="mk-b-preview-subject"><strong>Objet :</strong> <span id="mk-preview-subject"></span></p>
+      <div class="mk-b-preview-body"><iframe id="mk-preview-frame" title="Aperçu de l'e-mail" sandbox=""></iframe></div>
+      <details class="mk-b-preview-text"><summary>Version texte brut</summary><pre id="mk-text" class="mk-text"></pre></details>
+    </dialog>
+
+    <% if (!readOnly) { %>
+    <dialog class="mk-dialog mk-modal" id="mk-test-dialog" aria-labelledby="mk-test-title">
+      <form action="/marketing/modeles/<%= template.id %>/test" method="post">
+        <div class="mk-dialog-body">
+          <h2 id="mk-test-title">Envoyer un e-mail de test</h2>
+          <p>Envoyé uniquement à un membre de l'équipe, avec des données d'exemple, des liens factices et un objet préfixé « [TEST] ». Le test utilise la version enregistrée.</p>
+          <div class="field-group"><label for="test-to">Destinataire</label><select id="test-to" name="to"><% recipients.forEach((r) => { %><option value="<%= r %>" <%= r === currentEmail ? "selected" : "" %>><%= r %></option><% }) %></select></div>
+        </div>
+        <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-close-dialog>Annuler</button><button type="submit" class="btn btn-primary btn-sm" id="mk-test-send">Envoyer le test</button></div>
+      </form>
+    </dialog>
     <% } %>
+
+    <dialog class="mk-dialog mk-modal mk-modal-wide" id="mk-versions-dialog" aria-labelledby="mk-versions-title">
+      <div class="mk-dialog-body">
+        <h2 id="mk-versions-title">Versions précédentes</h2>
+        <p>Les 20 dernières versions sont conservées (l'enregistrement automatique en garde au plus une toutes les 10 minutes). Restaurer crée une nouvelle version : rien n'est perdu.</p>
+        <% if (versions.length) { %>
+          <div class="mk-table-wrap"><table class="mk-table">
+            <caption class="sr-only">Versions précédentes</caption>
+            <thead><tr><th scope="col">Version</th><th scope="col">Date</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+            <tbody><% versions.forEach((v) => { %>
+              <tr><td><%= v.version %></td><td><%= mkh.fdate(v.created_at) %></td>
+                <td><% if (!readOnly) { %><form action="/marketing/modeles/<%= template.id %>/restaurer" method="post"><input type="hidden" name="version" value="<%= v.version %>"><button type="submit" class="btn btn-outline btn-sm">Restaurer</button></form><% } %></td></tr>
+            <% }) %></tbody>
+          </table></div>
+        <% } else { %><p class="field-hint">Aucune version précédente pour l'instant.</p><% } %>
+      </div>
+      <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-close-dialog>Fermer</button></div>
+    </dialog>
 
     <script type="application/json" id="mk-editor-data"><%- data %></script>
     <script src="<%= asset('/js/marketing-editor.js') %>" defer></script>

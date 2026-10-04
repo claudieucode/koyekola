@@ -79,6 +79,12 @@ app.use(express.static(path.join(__dirname, "public"), { maxAge: "1h" }));
 app.use("/uploads/thumbnails", express.static(path.join(uploadsRoot, "thumbnails"), { maxAge: "30d", immutable: true }));
 // Vidéos et fichiers audio publiés dans les articles du blog : publics (contrairement aux vidéos des leçons, protégées)
 app.use("/uploads/blog", express.static(path.join(uploadsRoot, "blog"), { maxAge: "30d", immutable: true }));
+// Médiathèque de KOLAKISA Marketing : images et PDF insérés dans les e-mails, publics (lus par les messageries).
+// Type vérifié à l'envoi (signature du fichier : JPEG, PNG, GIF, WebP, PDF — jamais de HTML ni de SVG) ; nosniff.
+app.use("/uploads/marketing", express.static(path.join(uploadsRoot, "marketing"), {
+  maxAge: "30d", immutable: true, index: false,
+  setHeaders: (res) => { res.set("X-Content-Type-Options", "nosniff"); },
+}));
 
 // SEO CORE : redirections gérées (exécutées avant toute page) et journal des erreurs 404
 app.use(require("./src/seo/notfound").middleware);
