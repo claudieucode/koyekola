@@ -26,6 +26,7 @@ import { setupWorkspaceUi } from "./blog/workspaceUi";
 import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, isLocked, findMatches, findKey, blockHtml, contentHtml } from "./blog/editing";
 import { BlockIdentity, walkBlocks, findBlock, activeBlockId, setHidden, placeOf, restorePosition, ID_ONLY_META } from "./blog/blocks";
 import { attachDatePicker, parseLocal, timeZoneLabel } from "./blog/datePicker";
+import { Indent, listItemAt } from "./blog/indent";
 import { analyze, norm } from "../utils/seoAnalyzer";
 
 const root = document.querySelector("[data-blog-editor]");
@@ -65,6 +66,11 @@ const ICONS = {
   down: "M17.5 11.6L12 16l-5.5-4.4.9-1.2L12 14l4.5-3.6 1 1.2z",
   drag: "M8 7h2V5H8v2zm0 6h2v-2H8v2zm0 6h2v-2H8v2zm6-14v2h2V5h-2zm0 8h2v-2h-2v2zm0 6h2v-2h-2v2z",
   alignLeft: "M13 5.5H4V4h9v1.5Zm7 7H4V11h16v1.5Zm-7 7H4V18h9v1.5Z",
+  alignJustify: "M4 5.5h16V4H4v1.5Zm0 4.6h16V8.6H4v1.5Zm0 4.6h16v-1.5H4v1.5Zm0 4.8h16V18H4v1.5Z",
+  underline: "M7 4h1.5v7a3.5 3.5 0 0 0 7 0V4H17v7a5 5 0 0 1-10 0V4Zm-1 16h12v-1.5H6V20Z",
+  strike: "M4 11.25h16v1.5H4v-1.5Zm8.2-6.75c2 0 3.6.9 4.2 2.4l-1.4.6c-.4-.9-1.4-1.5-2.8-1.5-1.6 0-2.7.8-2.7 1.9 0 .5.2.9.6 1.2H8.2a3 3 0 0 1-.2-1.2c0-2 1.8-3.4 4.2-3.4Zm2.9 9.75c.2.4.3.8.3 1.2 0 2.1-1.9 3.6-4.6 3.6-2.2 0-4-1-4.6-2.7l1.4-.6c.4 1.1 1.6 1.8 3.2 1.8 1.8 0 3.1-.8 3.1-2 0-.5-.2-.9-.6-1.3h1.8Z",
+  indent: "M4 4h16v1.5H4V4Zm7 5h9v1.5h-9V9Zm0 5h9v1.5h-9V14Zm-7 5h16v1.5H4V19ZM4 8.5l4 3.25L4 15V8.5Z",
+  outdent: "M4 4h16v1.5H4V4Zm7 5h9v1.5h-9V9Zm0 5h9v1.5h-9V14Zm-7 5h16v1.5H4V19ZM8 8.5V15l-4-3.25L8 8.5Z",
   alignCenter: "M7.5 5.5h9V4h-9v1.5Zm-3.5 7h16V11H4v1.5Zm3.5 7h9V18h-9v1.5Z",
   alignRight: "M11.111 5.5H20V4h-8.889v1.5ZM4 12.5h16V11H4v1.5Zm7.111 7H20V18h-8.889v1.5Z",
   plus: "M11 12.5V17.5H12.5V12.5H17.5V11H12.5V6H11V11H6V12.5H11Z",
@@ -174,12 +180,23 @@ function start() {
   const codeEditor = $("#post-content");
   // Nom affiché d'un bloc masqué : disponible dès la création de l'éditeur (le nom complet est branché plus bas)
   let blockNameOf = () => "Bloc";
+  // Collage depuis Word, Google Docs ou une page web : seules les tailles proposées par l'éditeur sont gardées
+  // (sinon elles s'afficheraient puis disparaîtraient à l'enregistrement) ; styles et classes propres à Word retirés.
+  function cleanPastedHtml(html) {
+    return String(html)
+      .replace(/<o:p>[\s\S]*?<\/o:p>/gi, "")
+      .replace(/\sclass="Mso[^"]*"/gi, "")
+      .replace(/style="([^"]*)"/gi, (m, css) => {
+        const kept = css.split(";").map((d) => d.trim()).filter((d) => d && !/^mso-/i.test(d) && !/^font-family/i.test(d) && !(/^font-size/i.test(d) && !/^font-size:\s*(0\.875|1\.25|1\.5)em$/i.test(d)));
+        return kept.length ? `style="${kept.join("; ")}"` : "";
+      });
+  }
   const editor = new Editor({
     element: $("#be-editor"),
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] }, dropcursor: { class: "kb-dropcursor", color: "var(--accent)", width: 2 }, link: { openOnClick: false, autolink: true, defaultProtocol: "https", HTMLAttributes: { rel: null, target: null, class: null } } }),
-      TextStyleKit.configure({ fontFamily: false, fontSize: false, lineHeight: false, backgroundColor: false }),
-      Highlight.configure({ multicolor: true }),
+      TextStyleKit.configure({ fontFamily: false, lineHeight: false, backgroundColor: false }),
+      Highlight.configure({ multicolor: true }), Indent,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Subscript, Superscript, TaskList, TaskItem.configure({ nested: true }),
       TableKit.configure({ table: { resizable: false } }),
@@ -192,7 +209,7 @@ function start() {
       FindHighlight,
     ],
     content: codeEditor.value,
-    editorProps: { attributes: { class: "be-prose wp-block-list", "aria-label": "Contenu de l'article", role: "textbox", "aria-multiline": "true" } },
+    editorProps: { attributes: { class: "be-prose wp-block-list", "aria-label": "Contenu de l'article", role: "textbox", "aria-multiline": "true" }, transformPastedHTML: cleanPastedHtml },
   });
   codeEditor.hidden = true;
   $("[data-content-label]").hidden = true;
@@ -721,10 +738,29 @@ function start() {
   const menuList = (items) => h("div", { class: "wp-menu-list", role: "menu" }, ...items.map((it) => (it === "-" ? h("hr") : h("button", { type: "button", role: "menuitem", class: it.danger ? "is-danger" : "", onclick: () => { closePopovers(); it.run(); } }, it.icon ? svg(it.icon) : null, h("span", {}, it.label), it.shortcut ? h("kbd", {}, it.shortcut) : null))));
 
   // Transformations du bloc de texte (comme le sélecteur de type de Gutenberg)
+  // Sort la sélection de toute liste / citation (les éléments deviennent des paragraphes), niveau par niveau
+  // Les listes (et citations) touchées par la sélection sont défaites niveau par niveau, mais SEULEMENT pour la partie
+  // sélectionnée : une sélection qui déborde sur un paragraphe voisin ou ne prend qu'une partie d'une liste reste exacte.
+  function unwrapBlocks() {
+    const WRAPPERS = ["bulletList", "orderedList", "taskList", "blockquote"];
+    for (let guard = 0; guard < 40; guard++) {
+      const { from, to } = editor.state.selection;
+      let target = null;
+      editor.state.doc.nodesBetween(from, to, (node, pos) => { if (target) return false; if (WRAPPERS.includes(node.type.name)) { target = { node, pos }; return false; } return true; });
+      if (!target) break;
+      const start = target.pos + 1, end = target.pos + target.node.nodeSize - 1;
+      editor.commands.setTextSelection({ from: Math.max(from, start), to: Math.min(to, end) });
+      const ok = target.node.type.name === "blockquote" ? editor.commands.lift("blockquote") : editor.commands.liftListItem(target.node.type.name === "taskList" ? "taskItem" : "listItem");
+      if (!ok) break;
+    }
+  }
+  function blocksToParagraphs() { unwrapBlocks(); chain().setParagraph().run(); }
+  function unwrapQuoteOnly() { if (editor.isActive("blockquote") && !editor.isActive("bulletList") && !editor.isActive("orderedList")) chain().toggleBlockquote().run(); }
+  function toHeading(level) { unwrapBlocks(); chain().setHeading({ level }).run(); }
   function transformMenu(anchor) {
     const items = [
-      { label: "Paragraphe", icon: "paragraph", run: () => chain().setParagraph().run() },
-      ...[1, 2, 3, 4, 5, 6].map((l) => ({ label: `Titre ${l}${l === 2 ? " (section)" : ""}`, icon: "heading", run: () => chain().setHeading({ level: l }).run() })),
+      { label: "Paragraphe", icon: "paragraph", run: blocksToParagraphs },
+      ...[1, 2, 3, 4, 5, 6].map((l) => ({ label: `Titre ${l}${l === 2 ? " (section)" : ""}`, icon: "heading", run: () => toHeading(l) })),
       { label: "Liste", icon: "list", run: () => chain().toggleBulletList().run() },
       { label: "Liste numérotée", icon: "ordered", run: () => chain().toggleOrderedList().run() },
       { label: "Liste de contrôle", icon: "checklist", run: () => chain().toggleTaskList().run() },
@@ -732,6 +768,15 @@ function start() {
       { label: "Code", icon: "code", run: () => chain().setCodeBlock().run() },
     ];
     popover(anchor, h("div", {}, h("p", { class: "wp-menu-label" }, "Transformer en"), menuList(items)));
+  }
+  async function pastePlain() {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) { toast("Le presse-papiers est vide."); return; }
+      const paras = text.replace(/\r\n?/g, "\n").split(/\n{2,}/).map((t) => t.trim()).filter(Boolean);
+      const content = paras.map((t) => ({ type: "paragraph", content: t.split("\n").flatMap((line, i) => [...(i ? [{ type: "hardBreak" }] : []), ...(line ? [{ type: "text", text: line }] : [])]) }));
+      chain().insertContent(content.length === 1 ? content[0].content || [] : content).run();
+    } catch { toast("Accès au presse-papiers refusé par le navigateur : utilisez Ctrl+Maj+V (Cmd+Maj+V sur Mac) pour coller sans mise en forme."); }
   }
   function moreFormats(anchor) {
     const colors = [["#0b2a40", "Bleu nuit"], ["#3858e9", "Bleu"], ["#1e7a34", "Vert"], ["#b45309", "Orange"], ["#cc1818", "Rouge"], ["#6b21a8", "Violet"], ["#757575", "Gris"]];
@@ -744,7 +789,10 @@ function start() {
         { label: "Exposant", run: () => chain().toggleSuperscript().run() },
         { label: "Indice", run: () => chain().toggleSubscript().run() },
         { label: "Effacer la mise en forme", run: () => chain().unsetAllMarks().run() },
+        { label: "Coller sans mise en forme", shortcut: "Ctrl+Maj+V", run: () => pastePlain() },
       ]),
+      h("p", { class: "wp-menu-label" }, "Taille du texte"),
+      h("div", { class: "wp-size-row" }, ...[["0.875em", "Petit"], ["", "Normal"], ["1.25em", "Grand"], ["1.5em", "Très grand"]].map(([v, l]) => h("button", { type: "button", class: "wp-size-btn", "aria-pressed": String(v ? editor.isActive("textStyle", { fontSize: v }) : !editor.getAttributes("textStyle").fontSize), onclick: () => { if (v) chain().setFontSize(v).run(); else chain().unsetFontSize().run(); closePopovers(); } }, l))),
       h("p", { class: "wp-menu-label" }, "Couleur du texte"),
       h("div", { class: "wp-swatches" }, ...colors.map(([c, l]) => h("button", { type: "button", class: "wp-swatch", style: `background:${c}`, title: l, "aria-label": `Couleur ${l}`, onclick: () => { chain().setColor(c).run(); closePopovers(); } })), h("button", { type: "button", class: "wp-swatch is-none", title: "Par défaut", "aria-label": "Couleur par défaut", onclick: () => { chain().unsetColor().run(); closePopovers(); } })),
       h("p", { class: "wp-menu-label" }, "Surligneur"),
@@ -774,7 +822,7 @@ function start() {
       { label: "Insérer un paragraphe après", run: () => { const at = top + node.nodeSize; editor.chain().focus().insertContentAt(at, p("")).setTextSelection(at + 1).run(); } },
       ...(editor.state.doc.resolve(top).nodeBefore ? [{ label: "Déplacer vers le haut", icon: "up", shortcut: "Alt+↑", run: () => { editor.commands.setNodeSelection(top); moveBlock(editor.state, editor.view.dispatch, -1); } }] : []),
       ...(editor.state.doc.resolve(top + node.nodeSize).nodeAfter ? [{ label: "Déplacer vers le bas", icon: "down", shortcut: "Alt+↓", run: () => { editor.commands.setNodeSelection(top); moveBlock(editor.state, editor.view.dispatch, 1); } }] : []),
-      ...(!locked && TEXT_TYPES.includes(node.type.name) ? [{ label: "Transformer en…", run: () => { editor.chain().focus().setTextSelection(top + 1).run(); transformMenu(lastMenuAnchor || document.querySelector("[data-block-toolbar]")); } }] : []),
+      ...(!locked && TEXT_TYPES.includes(node.type.name) ? [{ label: "Transformer en…", run: () => { const sel = editor.state.selection; if (sel.to <= top || sel.from >= top + node.nodeSize) editor.chain().focus().setTextSelection(top + 1).run(); else editor.commands.focus(); /* plusieurs blocs sélectionnés : la sélection est gardée */ transformMenu(lastMenuAnchor || document.querySelector("[data-block-toolbar]")); } }] : []),
       ...(LOCKABLE_TYPES.includes(node.type.name) && editor.state.doc.resolve(top).depth === 0 ? [{ label: locked ? "🔓 Déverrouiller" : "🔒 Verrouiller (empêche toute modification)", run: () => { setLocked(editor, top, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); } }] : []),
       ...(blockMenuExtra ? blockMenuExtra(top, node) : []),
       ...(locked ? [] : ["-", { label: "Supprimer", danger: true, shortcut: "Maj+Alt+Z", run: () => deleteBlock(top) }]),
@@ -987,7 +1035,7 @@ function start() {
       element: host,
       extensions: [
         StarterKit.configure({ heading: { levels: [2, 3, 4, 5, 6] }, link: { openOnClick: false, autolink: true, defaultProtocol: "https" } }),
-        TextStyleKit.configure({ fontFamily: false, fontSize: false, lineHeight: false, backgroundColor: false }), Highlight.configure({ multicolor: true }),
+        TextStyleKit.configure({ fontFamily: false, lineHeight: false, backgroundColor: false }), Highlight.configure({ multicolor: true }), Indent,
         TextAlign.configure({ types: ["heading", "paragraph"] }), Subscript, Superscript, TaskList, TaskItem.configure({ nested: true }), TableKit.configure({ table: { resizable: false } }),
         Placeholder.configure({ placeholder: "Contenu du bloc…" }),
         ...BLOG_NODES,
@@ -1168,10 +1216,10 @@ function start() {
     const parentBox = (() => { const $p = editor.state.doc.resolve(b.pos); for (let d = $p.depth; d >= 1; d--) { const n = $p.node(d); if (["kbColumns", "kbGroup", "kbButtons"].includes(n.type.name)) return { pos: $p.before(d), node: n }; } return null; })();
     if (parentBox && parentBox.pos !== b.pos) groups.unshift(tgroup(tbtn(`Sélectionner le conteneur (${nameOf(parentBox.node)})`, "up", () => { editor.commands.setNodeSelection(parentBox.pos); showSidebarTab("bloc"); })));
     if (textType === "paragraph" || textType === "heading") {
-      const align = editor.isActive({ textAlign: "center" }) ? "alignCenter" : editor.isActive({ textAlign: "right" }) ? "alignRight" : "alignLeft";
-      groups.push(tgroup(tbtn("Aligner le texte", align, (e) => popover(e.currentTarget, menuList([["left", "Aligner le texte à gauche", "alignLeft"], ["center", "Centrer le texte", "alignCenter"], ["right", "Aligner le texte à droite", "alignRight"]].map(([v, l, i]) => ({ label: l, icon: i, run: () => chain().setTextAlign(v).run() })))))));
+      const align = editor.isActive({ textAlign: "center" }) ? "alignCenter" : editor.isActive({ textAlign: "right" }) ? "alignRight" : editor.isActive({ textAlign: "justify" }) ? "alignJustify" : "alignLeft";
+      groups.push(tgroup(tbtn("Aligner le texte", align, (e) => popover(e.currentTarget, menuList([["left", "Aligner le texte à gauche", "alignLeft"], ["center", "Centrer le texte", "alignCenter"], ["right", "Aligner le texte à droite", "alignRight"], ["justify", "Justifier le texte", "alignJustify"]].map(([v, l, i]) => ({ label: l, icon: i, run: () => chain().setTextAlign(v).run() })))))));
     }
-    if (textType === "heading") groups.push(tgroup(tbtn("Changer le niveau de titre", null, (e) => popover(e.currentTarget, menuList([1, 2, 3, 4].map((l) => ({ label: `Titre ${l}`, run: () => chain().setHeading({ level: l }).run() })))), { text: `H${b.text.node.attrs.level}` })));
+    if (textType === "heading") groups.push(tgroup(tbtn("Changer le niveau de titre", null, (e) => popover(e.currentTarget, menuList([1, 2, 3, 4, 5, 6].map((l) => ({ label: `Titre ${l}`, run: () => chain().setHeading({ level: l }).run() })))), { text: `H${b.text.node.attrs.level}` })));
     if (type === "kbImage") groups.push(tgroup(tbtn("Remplacer", null, () => openMediaModal({ onSelect: (m, extra) => setAttrsAt(b.pos, { src: m.path, mediaId: m.id, alt: extra.alt || b.node.attrs.alt }) }), { text: "Remplacer" })));
     if (type === "table") groups.push(tgroup(tbtn("Modifier le tableau", "table", (e) => popover(e.currentTarget, menuList([
       { label: "Insérer une ligne avant", run: () => chain().addRowBefore().run() }, { label: "Insérer une ligne après", run: () => chain().addRowAfter().run() },
@@ -1180,11 +1228,22 @@ function start() {
       { label: "Fusionner / séparer les cellules", run: () => chain().mergeOrSplit().run() }])))));
     if (b.text && !b.node.isAtom && textType !== "codeBlock") {
       groups.push(tgroup(
-        tbtn("Gras", "bold", () => chain().toggleBold().run(), { pressed: editor.isActive("bold") }),
-        tbtn("Italique", "italic", () => chain().toggleItalic().run(), { pressed: editor.isActive("italic") }),
-        tbtn("Lien", "link", (e) => linkPopover(e.currentTarget), { pressed: editor.isActive("link") }),
-        tbtn("Plus", "chevronDown", (e) => moreFormats(e.currentTarget)),
+        tbtn("Gras (Ctrl+B)", "bold", () => chain().toggleBold().run(), { pressed: editor.isActive("bold") }),
+        tbtn("Italique (Ctrl+I)", "italic", () => chain().toggleItalic().run(), { pressed: editor.isActive("italic") }),
+        tbtn("Souligné (Ctrl+U)", "underline", () => chain().toggleUnderline().run(), { pressed: editor.isActive("underline") }),
+        tbtn("Barré", "strike", () => chain().toggleStrike().run(), { pressed: editor.isActive("strike") }),
+        tbtn("Lien (Ctrl+K)", "link", (e) => linkPopover(e.currentTarget), { pressed: editor.isActive("link") }),
       ));
+      if (["paragraph", "heading"].includes(textType) || ["bulletList", "orderedList"].includes(type)) {
+        const inList = Boolean(listItemAt(editor.state));
+        groups.push(tgroup(
+          tbtn("Liste à puces", "list", () => (editor.isActive("bulletList") ? blocksToParagraphs() : (unwrapQuoteOnly(), chain().toggleBulletList().run())), { pressed: editor.isActive("bulletList") }),
+          tbtn("Liste numérotée", "ordered", () => (editor.isActive("orderedList") ? blocksToParagraphs() : (unwrapQuoteOnly(), chain().toggleOrderedList().run())), { pressed: editor.isActive("orderedList") }),
+          tbtn(inList ? "Augmenter le retrait (sous-liste) — Tab" : "Augmenter le retrait", "indent", () => chain().indent().run()),
+          tbtn(inList ? "Diminuer le retrait — Maj+Tab" : "Diminuer le retrait", "outdent", () => chain().outdent().run()),
+        ));
+      }
+      groups.push(tgroup(tbtn("Plus de mises en forme", "chevronDown", (e) => moreFormats(e.currentTarget))));
     }
     groups.push(tgroup(tbtn("Options", "more", (e) => blockOptions(e.currentTarget, b))));
     target.append(...groups);

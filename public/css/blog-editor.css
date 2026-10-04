@@ -1655,3 +1655,13 @@
 }
 @media (max-width: 480px) { .wp-header .wp-save-state { display: none; } }
 @media (max-width: 400px) { .wp-rail-label { font-size: 12px; } .wp-rail-score { display: none; } }
+/* Retrait des paragraphes et titres (même rendu que la page publique) ; tailles du texte (menu « Plus ») */
+.be-prose [data-indent="1"] { margin-left: 2em; }
+.be-prose [data-indent="2"] { margin-left: 4em; }
+.be-prose [data-indent="3"] { margin-left: 6em; }
+.be-prose [data-indent="4"] { margin-left: 8em; }
+.wp-size-row { display: flex; gap: 4px; padding: 2px 6px 8px; }
+.wp-size-btn { flex: 1; min-height: 32px; padding: 0 8px; border: 1px solid var(--ed-border); border-radius: 6px; background: var(--ed-surface-2); color: var(--ed-text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.wp-size-btn:hover { border-color: var(--ed-border-hover); }
+.wp-size-btn[aria-pressed="true"] { background: var(--ed-primary-soft); color: var(--ed-primary-fg); border-color: var(--ed-primary); }
+.wp-size-btn:focus-visible { outline: 2px solid var(--ed-focus); outline-offset: 1px; }

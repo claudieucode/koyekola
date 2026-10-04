@@ -131,6 +131,7 @@ const transformTags = {
   },
   p: (tagName, attribs) => {
     const out = pick(attribs, ["style"]);
+    if (/^[1-4]$/.test(String(attribs["data-indent"] || ""))) out["data-indent"] = attribs["data-indent"];
     if (classesOf(attribs).includes("kb-button")) {
       out.class = "kb-button";
       if (/^(left|center|right)$/.test(attribs["data-align"] || "")) out["data-align"] = attribs["data-align"];
@@ -143,7 +144,7 @@ const transformTags = {
   pre: (tagName) => ({ tagName, attribs: {} }),
   code: (tagName, attribs) => ({ tagName, attribs: /^language-[a-z0-9+-]{1,20}$/.test(attribs.class || "") ? { class: attribs.class } : {} }),
 };
-for (const h of ["h1", "h2", "h3", "h4", "h5", "h6"]) transformTags[h] = (tagName, attribs) => ({ tagName, attribs: pick(attribs, ["style"]) });
+for (const h of ["h1", "h2", "h3", "h4", "h5", "h6"]) transformTags[h] = (tagName, attribs) => ({ tagName, attribs: { ...pick(attribs, ["style"]), ...(/^[1-4]$/.test(String(attribs["data-indent"] || "")) ? { "data-indent": attribs["data-indent"] } : {}) } });
 transformTags.hr = (tagName) => ({ tagName, attribs: {} });
 transformTags.blockquote = (tagName, attribs) => ({ tagName, attribs: classesOf(attribs).includes("kb-pullquote") ? { class: "kb-pullquote" } : {} });
 transformTags.table = (tagName) => ({ tagName, attribs: {} });
@@ -170,11 +171,12 @@ const saveOptions = {
     figure: ["class", "data-align", "data-width", "data-credit", "data-main", "data-ratio"],
     div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption", "data-size", "data-size-mobile", "data-layout", "data-gap", "data-stack", "data-valign", "data-bg", "data-pad", "data-border", "data-width", "data-align", "data-poster", "data-autoplay", "data-muted", "data-loop", "data-nocontrols", "data-author", "data-gap", "data-ref"],
     details: ["class"], ol: ["class", "data-title", "start"], ul: ["data-type"], li: ["data-type", "data-checked"], input: ["type", "checked", "disabled"],
-    p: ["style", "class", "data-align", "data-size", "data-radius", "data-width", "data-bg", "data-fg", "data-border"], h1: ["style"], h2: ["style"], h3: ["style"], h4: ["style"], h5: ["style"], h6: ["style"], blockquote: ["class"], span: ["style"], mark: ["style"],
+    p: ["style", "data-indent", "class", "data-align", "data-size", "data-radius", "data-width", "data-bg", "data-fg", "data-border"], h1: ["style", "data-indent"], h2: ["style", "data-indent"], h3: ["style", "data-indent"], h4: ["style", "data-indent"], h5: ["style", "data-indent"], h6: ["style", "data-indent"], blockquote: ["class"], span: ["style"], mark: ["style"],
     td: ["colspan", "rowspan"], th: ["colspan", "rowspan"], code: ["class"],
   },
   allowedClasses: false, // vérifiées une à une dans transformTags (listes blanches)
-  allowedStyles: { "*": { color: COLOR, "background-color": COLOR, "text-align": [/^(left|right|center|justify)$/] } },
+  // Taille du texte : seulement les 3 tailles proposées par l'éditeur (relatives au texte de l'article)
+  allowedStyles: { "*": { color: COLOR, "background-color": COLOR, "text-align": [/^(left|right|center|justify)$/], "font-size": [/^(0\.875|1\.25|1\.5)em$/] } },
   allowedSchemes: ["http", "https", "mailto"],
   allowedSchemesAppliedToAttributes: ["href", "src"],
   allowProtocolRelative: false,

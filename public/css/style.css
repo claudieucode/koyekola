@@ -1969,3 +1969,9 @@ a.post-card-category:hover { text-decoration: underline; }
 .kb-image > a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 .kb-gallery[data-gap="s"] { gap: 6px; }
 .kb-gallery[data-gap="l"] { gap: 22px; }
+/* Retrait des paragraphes et titres choisi dans l'éditeur du blog (1 à 4 niveaux) */
+.rich-content [data-indent="1"] { margin-left: 2em; }
+.rich-content [data-indent="2"] { margin-left: 4em; }
+.rich-content [data-indent="3"] { margin-left: 6em; }
+.rich-content [data-indent="4"] { margin-left: 8em; }
+@media (max-width: 600px) { .rich-content [data-indent] { margin-left: 1.25em; } }
