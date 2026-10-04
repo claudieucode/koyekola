@@ -1,55 +1,46 @@
 <%- include("../partials/header", { title: "Mon espace" }) %>
-<% const activeCourses = courses.filter((c) => !c.archived); const archivedCourses = courses.filter((c) => c.archived); %>
-
-  <div class="container-wide dashboard-header">
-    <h1>Mon espace</h1>
-    <p>Créez vos formations, organisez-les en chapitres et sous-chapitres, et suivez vos ventes.</p>
+<div class="dash-head">
+  <div>
+    <h1>Bonjour <%= currentUser.username %></h1>
+    <p>Voici l'essentiel de votre activité sur KOLAKISA.</p>
   </div>
+  <div class="dash-head-actions"><a href="/formateur/cours/nouveau" class="btn btn-primary"><%- icon('plus', { size: 16 }) %> Nouvelle formation</a></div>
+</div>
 
-  <div class="container-wide">
-    <div class="dashboard-stats">
-      <div class="dashboard-stat"><div class="value"><%= totals.courseCount %></div><div class="label">Formations créées</div></div>
-      <div class="dashboard-stat"><div class="value"><%= totals.publishedCount %></div><div class="label">Publiées</div></div>
-      <div class="dashboard-stat"><div class="value"><%= totals.studentCount %></div><div class="label">Élèves inscrits</div></div>
-      <div class="dashboard-stat"><div class="value"><%= formatPrice(totals.revenueCents) %></div><div class="label">Revenu total (démo)</div></div>
-    </div>
+<section class="dash-kpis" aria-label="Statistiques">
+  <div class="kpi"><span class="kpi-icon"><%- icon('book', { size: 20 }) %></span><span class="kpi-label">Formations créées</span><span class="kpi-value"><%= stats.courses %></span><span class="kpi-trend<%= stats.coursesMonth ? " is-up" : "" %>"><%= stats.coursesMonth ? `+${stats.coursesMonth} ce mois` : "Aucune nouvelle ce mois" %></span></div>
+  <div class="kpi"><span class="kpi-icon"><%- icon('checkCircle', { size: 20 }) %></span><span class="kpi-label">Publiées</span><span class="kpi-value"><%= stats.published %></span><span class="kpi-trend"><%= stats.drafts %> brouillon<%= stats.drafts > 1 ? "s" : "" %></span></div>
+  <div class="kpi"><span class="kpi-icon"><%- icon('users', { size: 20 }) %></span><span class="kpi-label">Élèves inscrits</span><span class="kpi-value"><%= stats.students %></span><span class="kpi-trend<%= stats.studentsMonth ? " is-up" : "" %>"><%= stats.studentsMonth ? `+${stats.studentsMonth} ce mois` : "Aucune inscription ce mois" %></span></div>
+  <div class="kpi"><span class="kpi-icon"><%- icon('coin', { size: 20 }) %></span><span class="kpi-label">Revenus</span><span class="kpi-value"><%= formatAmount(stats.revenueCents) %></span><span class="kpi-trend<%= stats.revenueMonthCents ? " is-up" : "" %>"><%= stats.revenueMonthCents ? `+${formatAmount(stats.revenueMonthCents)} ce mois` : "Aucune vente ce mois" %></span></div>
+</section>
 
-    <nav class="site-tools" aria-label="Contenu du site">
-      <a href="/marketing" class="btn btn-outline btn-sm">Marketing</a>
-      <a href="/formateur/messages" class="btn btn-outline btn-sm">Messages (<%= unreadMessages %>)</a>
-      <a href="/formateur/profil" class="btn btn-outline btn-sm">Mon profil</a>
-      <a href="/formateur/blog" class="btn btn-outline btn-sm">Blog</a>
-      <a href="/formateur/seo" class="btn btn-outline btn-sm">SEO</a>
-      <a href="/formateur/faq" class="btn btn-outline btn-sm">FAQ du site</a>
-      <a href="/formateur/pages/a-propos" class="btn btn-outline btn-sm">Page À propos</a>
-    </nav>
-
-    <div class="dashboard-toolbar">
-      <h2 style="margin:0;">Mes formations</h2>
-      <a href="/formateur/cours/nouveau" class="btn btn-primary">+ Nouvelle formation</a>
-    </div>
-
-    <% if (activeCourses.length === 0 && archivedCourses.length === 0) { %>
-      <div class="empty-state">
-        <h3>Vous n'avez pas encore de formation</h3>
-        <p>Créez votre première formation pour commencer à enseigner sur KOLAKISA.</p>
-        <a href="/formateur/cours/nouveau" class="btn btn-primary">Créer ma première formation</a>
-      </div>
-    <% } else if (activeCourses.length === 0) { %>
-      <p class="empty-state" style="padding:24px 0;">Toutes vos formations sont archivées.</p>
+<div class="dash-grid-2 dash-section">
+  <section>
+    <div class="dash-section-head"><h2>Mes formations</h2><a href="/formateur/formations">Tout voir (<%= courses.filter((c) => !c.archived).length %>)</a></div>
+    <% if (!courses.length) { %>
+      <div class="dash-empty"><h3>Vous n'avez pas encore de formation</h3><p>Créez votre première formation pour commencer à enseigner sur KOLAKISA.</p><a href="/formateur/cours/nouveau" class="btn btn-primary">Créer ma première formation</a></div>
+    <% } else if (!recent.length) { %>
+      <div class="dash-empty"><p>Toutes vos formations sont archivées.</p><a href="/formateur/formations?statut=archivees" class="btn btn-outline btn-sm">Voir les archives</a></div>
     <% } else { %>
-      <div class="course-manage-list">
-        <% activeCourses.forEach((course) => { %><%- include("course-row", { course }) %><% }) %>
-      </div>
+      <div class="dash-cards"><% recent.forEach((course) => { %><%- include("_course-card", { course }) %><% }) %></div>
     <% } %>
-
-    <% if (archivedCourses.length) { %>
-      <h2 style="margin:36px 0 6px;">Archivées</h2>
-      <p class="field-hint" style="margin:0 0 14px;">Hors catalogue et non achetables. Vos étudiants gardent leur accès et l'historique des ventes est conservé.</p>
-      <div class="course-manage-list">
-        <% archivedCourses.forEach((course) => { %><%- include("course-row", { course }) %><% }) %>
-      </div>
-    <% } %>
-  </div>
-
+  </section>
+  <aside>
+    <div class="dpanel">
+      <div class="dash-section-head"><h2>Messages</h2><a href="/formateur/messages">Ouvrir<%= unreadMessages ? ` (${unreadMessages} non lu${unreadMessages > 1 ? "s" : ""})` : "" %></a></div>
+      <% if (!messages.length) { %><p class="field-hint">Aucun message reçu pour l'instant.</p><% } else { %>
+        <ul class="dlist"><% messages.forEach((m) => { %><li><span class="grow"><strong><%= m.name %></strong><% if (!m.read_at) { %> <span class="dash-badge" aria-label="non lu">•</span><% } %><br><small><%= m.subject || "Sans objet" %> · <%= formatDate(m.created_at) %></small></span></li><% }) %></ul>
+      <% } %>
+    </div>
+    <div class="dpanel">
+      <h2>Raccourcis</h2>
+      <ul class="dlist">
+        <li><%- icon('fileText', { size: 18 }) %><a class="grow" href="/formateur/blog/nouveau">Écrire un article</a></li>
+        <li><%- icon('send', { size: 18 }) %><a class="grow" href="/marketing">Envoyer une campagne</a></li>
+        <li><%- icon('search', { size: 18 }) %><a class="grow" href="/formateur/seo">Vérifier le référencement</a></li>
+        <li><%- icon('sliders', { size: 18 }) %><a class="grow" href="/formateur/apparence">Personnaliser l'apparence</a></li>
+      </ul>
+    </div>
+  </aside>
+</div>
 <%- include("../partials/footer") %>

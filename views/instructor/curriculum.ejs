@@ -2,11 +2,11 @@
 <%- include("../partials/header", { title: "Constructeur — " + course.title }) %>
 
   <div class="container-wide">
-    <p class="field-hint" style="margin-top:28px;"><a href="/formateur" class="back-link"><%- icon('arrowLeft', { size: 14 }) %> Mon espace</a></p>
+    <%- include("_course-head", { course, tab: "chapters" }) %>
 
     <div class="curriculum-header">
       <div>
-        <h1 style="margin:0 0 4px;"><%= course.title %></h1>
+        <h2 style="margin:0 0 4px;">Programme</h2>
         <p class="field-hint" style="margin:0;">Organisez votre formation en chapitres et sous-chapitres vidéo.</p>
       </div>
       <div class="publish-status">

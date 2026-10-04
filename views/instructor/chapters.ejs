@@ -1,0 +1,13 @@
+<%- include("../partials/header", { title: "Chapitres" }) %>
+<div class="dash-head"><div><h1>Chapitres</h1><p>Organisez le programme de chaque formation : chapitres, sous-chapitres, quiz et ressources.</p></div></div>
+<% if (!courses.length) { %>
+  <div class="dash-empty"><h3>Aucune formation</h3><p>Créez une formation pour lui ajouter des chapitres.</p><a href="/formateur/cours/nouveau" class="btn btn-primary">Nouvelle formation</a></div>
+<% } else { %>
+  <div class="dpanel"><div class="dtable-wrap"><table class="dtable">
+    <thead><tr><th scope="col">Formation</th><th scope="col">Chapitres</th><th scope="col">Sous-chapitres</th><th scope="col">Statut</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+    <tbody><% courses.forEach((c) => { const st = c.archived ? ["is-archived", "Archivée"] : c.published ? ["is-published", "Publiée"] : ["is-draft", "Brouillon"]; const cls = `dash-status ${st[0]}`; %>
+      <tr><td><a href="/formateur/cours/<%= c.id %>"><%= c.title %></a></td><td><%= c.section_count %></td><td><%= c.lesson_count %></td><td><span class="<%= cls %>"><%= st[1] %></span></td><td><a class="btn btn-outline btn-sm" href="/formateur/cours/<%= c.id %>/curriculum">Gérer les chapitres</a></td></tr>
+    <% }) %></tbody>
+  </table></div></div>
+<% } %>
+<%- include("../partials/footer") %>

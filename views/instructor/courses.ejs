@@ -1,0 +1,22 @@
+<%- include("../partials/header", { title: "Mes formations" }) %>
+<div class="dash-head">
+  <div><h1>Mes formations</h1><p>Gérez vos formations, chapitres, contenus et publications.</p></div>
+  <div class="dash-head-actions"><a href="/formateur/cours/nouveau" class="btn btn-primary"><%- icon('plus', { size: 16 }) %> Nouvelle formation</a></div>
+</div>
+<div class="dash-filters">
+  <% Object.entries(filters).forEach(([key, label]) => { %>
+    <a class="dash-chip" href="/formateur/formations?statut=<%= key %><%= q ? `&q=${encodeURIComponent(q)}` : "" %>"<%- statut === key ? ' aria-current="page"' : "" %>><%= label %> <span class="dash-chip-count"><%= counts[key] %></span></a>
+  <% }) %>
+  <form class="dash-search" role="search" method="get"><input type="hidden" name="statut" value="<%= statut %>"><label class="sr-only" for="dash-q">Rechercher une formation</label><input type="search" id="dash-q" name="q" value="<%= q %>" placeholder="Rechercher une formation…"></form>
+</div>
+<% if (statut === "archivees") { %><p class="field-hint">Hors catalogue et non achetables. Vos étudiants gardent leur accès et l'historique des ventes est conservé.</p><% } %>
+<% if (!courses.length) { %>
+  <div class="dash-empty">
+    <% if (q) { %><p>Aucune formation ne correspond à « <%= q %> ».</p>
+    <% } else if (statut === "toutes") { %><h3>Vous n'avez pas encore de formation</h3><p>Créez votre première formation pour commencer à enseigner sur KOLAKISA.</p><a href="/formateur/cours/nouveau" class="btn btn-primary">Créer ma première formation</a>
+    <% } else { %><p>Aucune formation dans « <%= filters[statut] %> ».</p><% } %>
+  </div>
+<% } else { %>
+  <div class="dash-cards"><% courses.forEach((course) => { %><%- include("_course-card", { course }) %><% }) %></div>
+<% } %>
+<%- include("../partials/footer") %>

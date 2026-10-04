@@ -1,8 +1,7 @@
 <%- include("../partials/header", { title: course ? "FAQ de la formation" : "Questions fréquentes" }) %>
 
   <div class="container">
-    <p class="field-hint" style="margin-top:28px;"><a href="/formateur" class="back-link"><%- icon('arrowLeft', { size: 14 }) %> Mon espace</a></p>
-    <h1><%= course ? "FAQ : " + course.title : "Questions fréquentes du site" %></h1>
+    <% if (course) { %><%- include("_course-head", { course, tab: "faq" }) %><h2>FAQ de la formation</h2><% } else { %><h1>Questions fréquentes du site</h1><% } %>
     <p class="field-hint" style="margin-top:-6px;"><%= course ? "Ces questions s'affichent sur la page de cette formation." : "Ces questions s'affichent sur la page « Questions fréquentes »." %></p>
 
     <% if (faqs.length) { %>

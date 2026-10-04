@@ -1,0 +1,44 @@
+<%- include("../partials/header", { title: "Apparence" }) %>
+<div class="dash-head"><div><h1>Personnaliser l'apparence</h1><p>Choisissez l'apparence de votre espace de travail. Le changement est immédiat et enregistré sur votre compte.</p></div></div>
+<div data-appearance>
+  <script type="application/json" data-appearance-data><%- JSON.stringify({ prefs, themes }).replace(/</g, "\\u003c") %></script>
+  <div class="dash-grid-2">
+    <section class="dpanel">
+      <h2>Thèmes</h2>
+      <div class="theme-grid">
+        <% Object.entries(themes).forEach(([key, t]) => { %>
+          <button type="button" class="theme-card" data-theme="<%= key %>" aria-pressed="<%= prefs.theme === key %>">
+            <span class="theme-mini" aria-hidden="true"><span class="theme-mini-side" style="background:<%= t.sidebar %>"><i style="background:<%= t.sidebarText %>"></i><i style="background:<%= t.sidebarText %>"></i><i style="background:<%= t.primary %>"></i></span><span class="theme-mini-main" style="background:<%= t.bg %>"><i style="background:<%= t.text %>"></i><i style="background:<%= t.card %>; border:1px solid <%= t.border %>"></i><i style="background:<%= t.button %>; width:40%"></i></span></span>
+            <span class="theme-name"><%= t.label %><span class="theme-active" <%= prefs.theme === key ? "" : "hidden" %>>✓ Actif</span></span>
+          </button>
+        <% }) %>
+        <button type="button" class="theme-card" data-theme="perso" aria-pressed="<%= prefs.theme === "perso" %>">
+          <span class="theme-mini theme-mini-perso" aria-hidden="true"><span class="theme-mini-side"><i></i><i></i><i></i></span><span class="theme-mini-main"><i></i><i></i><i></i></span></span>
+          <span class="theme-name">Personnalisé<span class="theme-active" <%= prefs.theme === "perso" ? "" : "hidden" %>>✓ Actif</span></span>
+        </button>
+      </div>
+      <div data-custom <%= prefs.theme === "perso" ? "" : "hidden" %>>
+        <h2 class="dash-section">Couleurs personnalisées</h2>
+        <div class="color-fields">
+          <% [["primary", "Couleur principale"], ["accent", "Couleur d'accent"], ["sidebar", "Barre latérale"], ["bg", "Fond"], ["button", "Boutons"]].forEach(([key, label]) => { %>
+            <div class="color-field" data-color="<%= key %>">
+              <label for="color-<%= key %>"><%= label %></label>
+              <div class="color-field-row"><input type="color" id="color-<%= key %>-pick" aria-label="<%= label %> (sélecteur)"><input type="text" id="color-<%= key %>" maxlength="7" inputmode="text" spellcheck="false" placeholder="#0B83C6" aria-describedby="color-help"></div>
+            </div>
+          <% }) %>
+        </div>
+        <p class="field-hint" id="color-help">Code couleur au format #RRGGBB. Les couleurs du texte s'adaptent automatiquement pour rester lisibles.</p>
+      </div>
+      <div class="dash-actions-row"><button type="button" class="btn btn-outline btn-sm" data-reset>Réinitialiser</button><span class="dash-save-state" data-save-state role="status" aria-live="polite"></span></div>
+    </section>
+    <section class="dpanel">
+      <h2>Aperçu</h2>
+      <div class="preview-frame" aria-hidden="true">
+        <div class="preview-side"><b>KOLAKISA</b><span class="on">Vue d'ensemble</span><span>Mes formations</span><span>Messages</span></div>
+        <div class="preview-main"><strong>Tableau de bord</strong><div class="preview-kpis"><span>3</span><span>12</span><span>49 €</span></div><span class="preview-btn">+ Nouvelle formation</span></div>
+      </div>
+      <p class="field-hint">L'aperçu et toute la page suivent votre choix en direct.</p>
+    </section>
+  </div>
+</div>
+<%- include("../partials/footer") %>

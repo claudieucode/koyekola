@@ -1,4 +1,4 @@
-const { LANGUAGES, languageLabel, avatarColor, formatPrice, formatDate, formatDateTime, formatDuration, formatClock, isNewCourse, levelLabel } = require("../utils/format");
+const { LANGUAGES, languageLabel, avatarColor, formatPrice, formatAmount, formatDate, formatDateTime, formatDuration, formatClock, isNewCourse, levelLabel } = require("../utils/format");
 const { icon, starRow } = require("../utils/icons");
 const db = require("../config/database");
 const { parseVideoUrl } = require("../utils/video");
@@ -35,10 +35,21 @@ function injectLocals(req, res, next) {
   if (req.session.user && !req.session.cart) req.session.cart = {};
   res.locals.currentUser = req.session.user || null;
   res.locals.cartCount = Object.keys(req.session.cart || {}).length;
+  // « Mon espace » : coquille de tableau de bord (barre latérale, apparence personnelle) au lieu de l'en-tête public
+  res.locals.dash = null;
+  if (req.session.user && req.session.user.role === "formateur" && /^\/formateur(\/|$)/.test(req.path)) {
+    const dashboard = require("../services/dashboard");
+    const prefs = dashboard.prefsOf(req.session.user.id);
+    res.locals.dash = {
+      active: dashboard.activeKey(req.path), nav: dashboard.NAV, prefs, style: dashboard.style(prefs),
+      unread: db.prepare("SELECT COUNT(*) n FROM contact_messages WHERE read_at IS NULL").get().n,
+    };
+  }
   res.locals.avatarColor = avatarColor;
   res.locals.LANGUAGES = LANGUAGES;
   res.locals.languageLabel = languageLabel;
   res.locals.formatPrice = formatPrice;
+  res.locals.formatAmount = formatAmount;
   res.locals.formatDate = formatDate;
   res.locals.formatDateTime = formatDateTime;
   res.locals.formatDuration = formatDuration;

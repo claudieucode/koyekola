@@ -215,7 +215,8 @@ describe("messages reçus (administration)", () => {
   });
   test("le tableau de bord indique le nombre de messages non lus", async () => {
     const n = q("SELECT COUNT(*) n FROM contact_messages WHERE read_at IS NULL")[0].n;
-    assert.match((await prof.get("/formateur")).text, new RegExp(`Messages[^<]*\\(${n}\\)|Messages \\(${n}\\)`));
+    // Pastille du nombre de non lus sur l'entrée « Messages » de la barre latérale
+    assert.match((await prof.get("/formateur")).text, new RegExp(`Messages</span><span class="dash-badge" aria-label="${n} non lu\\(s\\)">${n}</span>`));
   });
   test("marquer comme lu, puis supprimer", async () => {
     const id = q("SELECT id FROM contact_messages WHERE name = 'Julie Martin'")[0].id;

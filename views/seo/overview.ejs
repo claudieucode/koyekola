@@ -29,14 +29,14 @@
   <section class="content-card">
     <h2>Contenus publics</h2>
     <p class="field-hint">Comptés dans la base du site. « Personnalisés » : contenus ayant au moins un réglage SEO propre ; les autres utilisent les modèles automatiques.</p>
-    <table class="seo-table">
+    <div class="seo-table-wrap"><table class="seo-table">
       <thead><tr><th scope="col">Type</th><th scope="col">Pages publiques</th><th scope="col">Personnalisés</th><th scope="col"></th></tr></thead>
       <tbody>
         <% Object.entries(labels).forEach(([type, label]) => { if (!counts[type]) return; %>
           <tr><td><%= label %></td><td><%= counts[type] %></td><td><%= type === "post" ? "Réglés dans l'éditeur d'articles" : (custom[type] || 0) %></td><td><a href="/formateur/seo/contenus?type=<%= type %>">Voir</a></td></tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
   </section>
 
   <section class="content-card">

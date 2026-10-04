@@ -23,6 +23,11 @@ function formatPrice(cents) {
   return (cents / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
 }
 
+// Montant (revenus, totaux) : « 0,00 € » plutôt que « Gratuit »
+function formatAmount(cents) {
+  return ((cents || 0) / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+}
+
 function formatDate(iso) {
   return new Date(`${iso}Z`).toLocaleDateString("fr-FR", { dateStyle: "long" });
 }
@@ -66,4 +71,4 @@ function levelLabel(level) {
   return LEVEL_LABELS[level] || level;
 }
 
-module.exports = { LANGUAGES, cleanLanguage, languageLabel, avatarColor, slugify, formatPrice, formatDate, formatDateTime, formatDuration, formatClock, isNewCourse, levelLabel };
+module.exports = { LANGUAGES, cleanLanguage, languageLabel, avatarColor, slugify, formatPrice, formatAmount, formatDate, formatDateTime, formatDuration, formatClock, isNewCourse, levelLabel };

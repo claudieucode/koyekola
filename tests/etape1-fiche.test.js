@@ -125,9 +125,10 @@ describe("archivage (à la place de la suppression)", () => {
     await autre.post("/commande", {});
     assert.equal(row("SELECT COUNT(*) n FROM enrollments WHERE course_id = ?", course.id).n, 1);
   });
-  test("le tableau de bord la range dans une section « Archivées »", async () => {
-    const html = (await prof.get("/formateur")).text;
-    assert.match(html, /Archivées/);
+  test("l'espace la range dans le filtre « Archivées »", async () => {
+    assert.match((await prof.get("/formateur/formations")).text, /href="\/formateur\/formations\?statut=archivees"/);
+    const html = (await prof.get("/formateur/formations?statut=archivees")).text;
+    assert.match(html, /Archivée/);
     assert.match(html, /À archiver/);
     assert.match(html, new RegExp(`/formateur/cours/${course.id}/restaurer`));
   });

@@ -78,27 +78,81 @@ function removeFilesOfLessons(lessonIds) {
 
 // ---------- Tableau de bord ----------
 
+// ---------- « Mon espace » : vue d'ensemble, formations, chapitres, catégories, apparence ----------
+const dashboard = require("../services/dashboard");
+const coursesOf = (userId) => db
+  .prepare(
+    `SELECT courses.*,
+      (SELECT COUNT(*) FROM enrollments WHERE course_id = courses.id) AS student_count,
+      (SELECT COALESCE(SUM(price_cents), 0) FROM order_items WHERE course_id = courses.id) AS revenue_cents,
+      (SELECT COUNT(*) FROM order_items WHERE course_id = courses.id) AS sales_count,
+      (SELECT COUNT(*) FROM sections WHERE course_id = courses.id) AS section_count,
+      (SELECT COUNT(*) FROM lessons JOIN sections ON sections.id = lessons.section_id WHERE sections.course_id = courses.id) AS lesson_count
+     FROM courses WHERE instructor_id = ? ORDER BY created_at DESC`
+  )
+  .all(userId);
+
 router.get("/formateur", (req, res) => {
-  const courses = db
-    .prepare(
-      `SELECT courses.*,
-        (SELECT COUNT(*) FROM enrollments WHERE course_id = courses.id) AS student_count,
-        (SELECT COALESCE(SUM(price_cents), 0) FROM order_items WHERE course_id = courses.id) AS revenue_cents,
-        (SELECT COUNT(*) FROM order_items WHERE course_id = courses.id) AS sales_count,
-        (SELECT COUNT(*) FROM lessons JOIN sections ON sections.id = lessons.section_id WHERE sections.course_id = courses.id) AS lesson_count
-       FROM courses WHERE instructor_id = ? ORDER BY created_at DESC`
-    )
-    .all(req.session.user.id);
+  const courses = coursesOf(req.session.user.id);
+  const messages = db.prepare("SELECT id, name, subject, created_at, read_at FROM contact_messages ORDER BY id DESC LIMIT 4").all();
+  res.render("instructor/dashboard", { courses, recent: courses.filter((c) => !c.archived).slice(0, 3), stats: dashboard.stats(req.session.user.id), messages, unreadMessages: res.locals.dash ? res.locals.dash.unread : 0 });
+});
 
-  const totals = {
-    courseCount: courses.length,
-    studentCount: courses.reduce((sum, c) => sum + c.student_count, 0),
-    revenueCents: courses.reduce((sum, c) => sum + c.revenue_cents, 0),
-    publishedCount: courses.filter((c) => c.published).length,
-  };
+const STATUS_FILTERS = { toutes: "Toutes", publiees: "Publiées", brouillons: "Brouillons", archivees: "Archivées" };
+router.get("/formateur/formations", (req, res) => {
+  const all = coursesOf(req.session.user.id);
+  const statut = STATUS_FILTERS[req.query.statut] ? req.query.statut : "toutes";
+  const q = String(req.query.q || "").trim();
+  const match = (c) => ({ toutes: !c.archived, publiees: c.published && !c.archived, brouillons: !c.published && !c.archived, archivees: c.archived })[statut];
+  const counts = { toutes: all.filter((c) => !c.archived).length, publiees: all.filter((c) => c.published && !c.archived).length, brouillons: all.filter((c) => !c.published && !c.archived).length, archivees: all.filter((c) => c.archived).length };
+  const courses = all.filter(match).filter((c) => !q || c.title.toLowerCase().includes(q.toLowerCase()));
+  res.render("instructor/courses", { courses, statut, q, counts, filters: STATUS_FILTERS });
+});
 
-  const unreadMessages = db.prepare("SELECT COUNT(*) n FROM contact_messages WHERE read_at IS NULL").get().n;
-  res.render("instructor/dashboard", { courses, totals, unreadMessages });
+// Gestion d'une formation : vue d'ensemble, étudiants, ventes
+const courseStats = (id) => db.prepare(`SELECT
+    (SELECT COUNT(*) FROM enrollments WHERE course_id = @id) AS students,
+    (SELECT COUNT(*) FROM enrollments WHERE course_id = @id AND created_at >= date('now', 'start of month')) AS students_month,
+    (SELECT COALESCE(SUM(price_cents), 0) FROM order_items WHERE course_id = @id) AS revenue_cents,
+    (SELECT COUNT(*) FROM order_items WHERE course_id = @id) AS sales,
+    (SELECT COUNT(*) FROM sections WHERE course_id = @id) AS sections,
+    (SELECT COUNT(*) FROM lessons JOIN sections ON sections.id = lessons.section_id WHERE sections.course_id = @id) AS lessons`).get({ id });
+const enrollmentsOf = (id, limit = 500) => db.prepare(`SELECT u.username, u.email, e.created_at,
+    (SELECT COUNT(*) FROM lesson_progress lp JOIN lessons l ON l.id = lp.lesson_id JOIN sections s ON s.id = l.section_id WHERE lp.user_id = u.id AND s.course_id = e.course_id) AS done
+  FROM enrollments e JOIN users u ON u.id = e.user_id WHERE e.course_id = ? ORDER BY e.id DESC LIMIT ?`).all(id, limit);
+const salesOf = (id, limit = 500) => db.prepare(`SELECT o.id AS order_id, o.created_at, oi.price_cents, u.username FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN users u ON u.id = o.user_id WHERE oi.course_id = ? ORDER BY o.id DESC LIMIT ?`).all(id, limit);
+router.get("/formateur/cours/:id(\\d+)", loadOwnedCourse, (req, res) => {
+  res.render("instructor/course-hub", { course: req.course, tab: "overview", stats: courseStats(req.course.id), enrollments: enrollmentsOf(req.course.id, 5), sales: salesOf(req.course.id, 5) });
+});
+router.get("/formateur/cours/:id(\\d+)/etudiants", loadOwnedCourse, (req, res) => {
+  const st = courseStats(req.course.id);
+  res.render("instructor/course-hub", { course: req.course, tab: "students", stats: st, enrollments: enrollmentsOf(req.course.id) });
+});
+router.get("/formateur/cours/:id(\\d+)/ventes", loadOwnedCourse, (req, res) => {
+  res.render("instructor/course-hub", { course: req.course, tab: "sales", stats: courseStats(req.course.id), sales: salesOf(req.course.id) });
+});
+
+router.get("/formateur/chapitres", (req, res) => {
+  res.render("instructor/chapters", { courses: coursesOf(req.session.user.id) });
+});
+
+router.get("/formateur/categories", (req, res) => {
+  const categories = db.prepare("SELECT category, COUNT(*) AS n, SUM(published) AS pub FROM courses WHERE instructor_id = ? GROUP BY category ORDER BY category COLLATE NOCASE").all(req.session.user.id);
+  res.render("instructor/categories", { categories, done: req.query.ok || null, error: req.query.erreur || null });
+});
+router.post("/formateur/categories/renommer", (req, res) => {
+  const from = String(req.body.from || "");
+  const to = String(req.body.to || "").trim().replace(/\s+/g, " ");
+  if (!to || to.length > 60) return res.redirect(`/formateur/categories?erreur=${encodeURIComponent("Nouveau nom : 1 à 60 caractères.")}`);
+  const r = db.prepare("UPDATE courses SET category = ? WHERE instructor_id = ? AND category = ?").run(to, req.session.user.id, from);
+  res.redirect(`/formateur/categories?ok=${encodeURIComponent(`« ${from} » renommée en « ${to} » (${r.changes} formation${r.changes > 1 ? "s" : ""}).`)}`);
+});
+
+router.get("/formateur/apparence", (req, res) => {
+  res.render("instructor/appearance", { prefs: dashboard.prefsOf(req.session.user.id), themes: dashboard.THEMES });
+});
+router.post("/formateur/apparence", express.json({ limit: "4kb" }), (req, res) => {
+  res.json({ ok: true, prefs: dashboard.savePrefs(req.session.user.id, req.body || {}) });
 });
 
 // ---------- Formation : création / édition ----------

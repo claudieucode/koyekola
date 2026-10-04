@@ -1,7 +1,6 @@
 <%- include("../partials/header", { title: "Mon profil" }) %>
 
   <div class="container">
-    <p class="field-hint" style="margin-top:28px;"><a href="/formateur" class="back-link"><%- icon('arrowLeft', { size: 14 }) %> Mon espace</a></p>
     <h1>Mon profil</h1>
     <p class="field-hint" style="margin-top:-6px;">Ces informations sont affichées dans la section « Votre formateur » de chacune de vos formations.</p>
     <% if (saved) { %><p class="form-success" role="status">Profil enregistré.</p><% } %>

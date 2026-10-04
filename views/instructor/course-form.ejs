@@ -5,7 +5,8 @@
 <%- include("../partials/header", { title: isEdit ? "Modifier la formation" : "Nouvelle formation" }) %>
 
   <div class="container-wide">
-    <h1 style="margin-top:36px;"><%= isEdit ? "Modifier la formation" : "Créer une nouvelle formation" %></h1>
+    <% if (isEdit) { %><%- include("_course-head", { course, tab: "edit" }) %><h2 class="sr-only">Modifier la formation</h2>
+    <% } else { %><a href="/formateur/formations" class="course-hub-back"><%- icon('arrowLeft', { size: 16 }) %> Retour aux formations</a><div class="dash-head"><div><h1>Nouvelle formation</h1><p>Renseignez l'essentiel ; vous ajouterez les chapitres ensuite.</p></div></div><% } %>
 
     <% if (error) { %><p class="form-error"><%= error %></p><% } %>
     <% if (typeof saved !== "undefined" && saved) { %><p class="form-success">Modifications enregistrées.</p><% } %>
