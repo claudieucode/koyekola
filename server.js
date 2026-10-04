@@ -182,7 +182,10 @@ app.listen(PORT, () => {
   outbox.processOutbox(db).catch((error) => console.error("[KOLAKISA] File d'envoi :", error.message));
   outbox.startOutboxTimer(db);
   // Fichiers envoyés retrouvés dans le dossier du projet ou d'anciennes versions : recopiés dans le dossier conservé
-  require("./src/config/recoverUploads").recoverUploads().catch((error) => console.error("[KOLAKISA] Récupération des fichiers :", error.message));
+  // Médias : recopie des fichiers restés dans d'anciens builds, puis diagnostic (emplacement, fichiers introuvables)
+  require("./src/config/recoverUploads").recoverUploads()
+    .catch((error) => console.error("[KOLAKISA] Récupération des fichiers :", error.message))
+    .then(() => { if (process.env.NODE_ENV !== "test") require("./src/config/mediaAudit").logStartupAudit(db); });
   // Tâches SEO programmées (audit, PageSpeed, Search Console, Analytics, nettoyage) : SEO_JOBS=off pour les couper
   if ((process.env.SEO_JOBS || (process.env.NODE_ENV === "test" ? "off" : "on")) === "on") require("./src/seo/jobs").start();
   // Travaux marketing en arrière-plan (événements, envois) : activés seulement avec MARKETING_WORKER=on

@@ -239,7 +239,7 @@ function imageReferences(p) {
 function releaseImage(p) {
   if (!p || imageReferences(p).length) return false;
   db.prepare("DELETE FROM media WHERE path = ?").run(p);
-  removeUploadedFile(p);
+  removeUploadedFile(p, "image remplacée ou article supprimé, citée nulle part ailleurs");
   return true;
 }
 // Résumé d'une modification (« Titre modifié · Contenu : +120 mots · Statut : Publié »)

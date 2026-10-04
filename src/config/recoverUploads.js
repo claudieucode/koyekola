@@ -37,14 +37,41 @@ function findVersionRoot(start) {
   return null;
 }
 
+// Structure réelle chez Hostinger : …/domains/<site>/hbuilds/<build>/… (« current » pointe vers le dernier build).
+// Remonte jusqu'au dossier « hbuilds », puis cherche les dossiers « uploads » des builds précédents (profondeur bornée).
+function findHbuilds(start) {
+  let dir = start;
+  for (let i = 0; i < 6; i++) { if (path.basename(dir) === "hbuilds") return dir; const parent = path.dirname(dir); if (parent === dir) return null; dir = parent; }
+  return null;
+}
+function uploadsDirsUnder(root, maxDepth = 5) {
+  const out = [];
+  const walk = (dir, depth) => {
+    if (depth > maxDepth) return;
+    let entries = [];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (!e.isDirectory() || e.name === "node_modules" || e.name.startsWith(".")) continue;
+      const full = path.join(dir, e.name);
+      if (e.name === "uploads") out.push(full); else walk(full, depth + 1);
+    }
+  };
+  walk(root, 0);
+  return out;
+}
+
 async function recoverUploads({ log = console.log, uploadsRoot = paths.uploadsRoot, projectRoot = paths.projectRoot, projectUploads = paths.projectUploads } = {}) {
   if (path.resolve(uploadsRoot) === path.resolve(projectUploads)) return { copied: 0, skipped: true };
-  // Uniquement sur l'hébergement (dossier de version « …/versions/<id>/… ») : jamais sur un poste de développement
-  // ni pendant les tests (le dossier du projet y est le stockage réel, il ne doit pas être recopié)
-  if (!findVersionRoot(projectRoot)) return { copied: 0, skipped: true };
+  // Uniquement sur l'hébergement (builds Hostinger) : jamais sur un poste de développement ni pendant les tests
+  // (le dossier du projet y est le stockage réel, il ne doit pas être recopié)
+  const hbuilds = findHbuilds(projectRoot);
+  if (!findVersionRoot(projectRoot) && !hbuilds) return { copied: 0, skipped: true };
   let copied = 0;
   let sources = 0;
-  for (const src of candidates({ uploadsRoot, projectRoot, projectUploads })) {
+  const realUploads = (() => { try { return fs.realpathSync(uploadsRoot); } catch { return path.resolve(uploadsRoot); } })();
+  const all = new Set(candidates({ uploadsRoot, projectRoot, projectUploads }).map((d) => path.resolve(d)));
+  if (hbuilds) for (const d of uploadsDirsUnder(hbuilds)) { const r = (() => { try { return fs.realpathSync(d); } catch { return path.resolve(d); } })(); if (r !== realUploads) all.add(r); }
+  for (const src of all) {
     let found = false;
     for (const sub of SUBDIRS) {
       let files = [];
@@ -61,8 +88,8 @@ async function recoverUploads({ log = console.log, uploadsRoot = paths.uploadsRo
     }
     if (found) sources++;
   }
-  if (copied) log(`[KOLAKISA] Fichiers envoyés récupérés dans le dossier conservé : ${copied} (depuis ${sources} ancien(s) dossier(s)).`);
-  return { copied, sources };
+  log(`[médias] Récupération au démarrage : ${copied} fichier(s) recopié(s) dans le dossier conservé, depuis ${sources} ancien(s) dossier(s) de build examiné(s) sur ${all.size}.`);
+  return { copied, sources, scanned: all.size };
 }
 
-module.exports = { recoverUploads, candidates, findVersionRoot };
+module.exports = { recoverUploads, candidates, findVersionRoot, findHbuilds, uploadsDirsUnder };

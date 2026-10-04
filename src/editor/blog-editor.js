@@ -213,6 +213,18 @@ function start() {
   });
   codeEditor.hidden = true;
   $("[data-content-label]").hidden = true;
+  // Image dont le fichier n'est plus sur le serveur : signalée sur le canevas (« Fichier introuvable »), jamais masquée
+  $("#be-editor").addEventListener("error", (e) => {
+    const img = e.target;
+    if (!(img instanceof HTMLImageElement)) return;
+    const fig = img.closest(".kb-ed-image, figure");
+    if (fig) { fig.setAttribute("data-missing", "true"); fig.setAttribute("data-missing-path", img.getAttribute("src") || ""); }
+  }, true);
+  $("#be-editor").addEventListener("load", (e) => { const fig = e.target instanceof HTMLImageElement && e.target.closest("[data-missing]"); if (fig) fig.removeAttribute("data-missing"); }, true);
+  // Images déjà en échec avant que l'écoute ne commence (chargement très rapide) : même signalement
+  const flagBroken = () => $$("#be-editor img").forEach((img) => { if (img.complete && img.naturalWidth === 0 && img.getAttribute("src")) { const fig = img.closest(".kb-ed-image, figure"); if (fig) { fig.setAttribute("data-missing", "true"); fig.setAttribute("data-missing-path", img.getAttribute("src")); } } });
+  window.addEventListener("load", flagBroken);
+  setTimeout(flagBroken, 1500);
   root.classList.add("be-ready");
   root.editor = editor; // accès pour les vérifications automatiques (navigateur)
   const chain = () => editor.chain().focus();
@@ -1522,9 +1534,13 @@ function start() {
       try {
         const { media } = await api(`/formateur/blog/api/medias?type=${kind}&q=${encodeURIComponent(q.value)}`);
         grid.replaceChildren(...media.map((m) => {
-          const li = h("li", { role: "option", tabindex: 0, class: chosen.has(m.id) ? "is-selected" : "", "aria-selected": String(chosen.has(m.id)), "aria-label": m.alt || m.title || m.path.split("/").pop() },
-            m.kind === "image" ? h("img", { src: m.path, alt: "" }) : h("span", { class: "wp-attachment-file" }, m.kind === "video" ? "▶" : "♪", h("small", {}, m.title || m.path.split("/").pop())));
+          const name = m.title || m.path.split("/").pop();
+          const li = h("li", { role: "option", tabindex: 0, class: `${chosen.has(m.id) ? "is-selected" : ""}${m.missing ? " is-missing" : ""}`, "aria-selected": String(chosen.has(m.id)), "aria-label": `${m.missing ? "Fichier introuvable : " : ""}${m.alt || name}` },
+            m.missing ? h("span", { class: "wp-attachment-missing" }, "Fichier introuvable", h("small", {}, name))
+              : m.kind === "image" ? h("img", { src: m.path, alt: "" }) : h("span", { class: "wp-attachment-file" }, m.kind === "video" ? "▶" : "♪", h("small", {}, name)));
           const toggle = () => {
+            // Fichier absent du serveur : jamais inséré (il s'afficherait cassé) ; détails et suppression de la fiche seulement
+            if (m.missing) { showDetails(m); details.prepend(h("p", { class: "wp-warning" }, "⚠ Ce fichier n'existe plus sur le serveur. Réimportez l'image (bouton « Téléverser »), puis remplacez-la dans les articles qui l'utilisaient.")); return; }
             if (!multiple) { chosen.clear(); grid.querySelectorAll(".is-selected").forEach((x) => { x.classList.remove("is-selected"); x.setAttribute("aria-selected", "false"); }); }
             if (chosen.has(m.id)) chosen.delete(m.id); else chosen.set(m.id, m);
             li.classList.toggle("is-selected", chosen.has(m.id));

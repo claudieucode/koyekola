@@ -11,6 +11,7 @@ const { slugify } = require("../utils/format");
 const { UserError } = require("../utils/errors");
 const { removeUploadedFile } = require("../utils/uploads");
 const { uploadsRoot } = require("../config/paths");
+const { fileExists } = require("../config/mediaAudit");
 const { absoluteUrl, breadcrumbLd, isoDate, isoDateTime } = require("../utils/seo");
 const { sanitizeBlogHtml, markdownToEditorHtml } = require("../utils/blogHtml");
 const { escapeHtml } = require("../utils/markdown");
@@ -385,7 +386,7 @@ function withCleanup(handler) {
     try {
       handler(req, res, next);
     } catch (err) {
-      for (const name of FILE_FIELDS) { const f = fileOf(req, name); if (f) removeUploadedFile(`/uploads/thumbnails/${f.filename}`); }
+      for (const name of FILE_FIELDS) { const f = fileOf(req, name); if (f) removeUploadedFile(`/uploads/thumbnails/${f.filename}`, "enregistrement de l'article refusé : fichier jamais utilisé"); }
       if (wantsJson(req) && err instanceof UserError) return res.status(400).json({ error: err.message });
       next(err);
     }
@@ -771,7 +772,8 @@ router.post("/formateur/blog/:id(\\d+)/versions/:rid/restaurer", loadPost, (req,
 // ---------- Médiathèque ----------
 router.get("/formateur/blog/api/medias", (req, res) => {
   const media = blog.listMedia({ q: String(req.query.q || ""), kind: String(req.query.type || "") });
-  res.json({ media: media.map((m) => ({ ...m, used: blog.imageReferences(m.path).length })) });
+  // missing : fiche présente mais fichier absent du serveur — affiché « Fichier introuvable », jamais en image cassée muette
+  res.json({ media: media.map((m) => ({ ...m, used: blog.imageReferences(m.path).length, missing: !fileExists(uploadsRoot, m.path) })) });
 });
 
 const mediaUpload = upload.fields([{ name: "article_image", maxCount: 1 }, { name: "article_video", maxCount: 1 }, { name: "article_audio", maxCount: 1 }, { name: "image_variant", maxCount: 4 }]);
@@ -827,8 +829,8 @@ router.post("/formateur/blog/api/medias/:mid/supprimer", (req, res) => {
   const usage = blog.imageReferences(m.path); // partout où l'image est citée, pas seulement dans les articles
   if (usage.length) return res.status(400).json({ error: `Ce fichier est encore utilisé : ${usage.slice(0, 5).join(", ")}${usage.length > 5 ? "…" : ""}. Retirez-le d'abord de ces endroits.` });
   db.prepare("DELETE FROM media WHERE id = ?").run(m.id);
-  removeUploadedFile(m.path);
-  for (const v of blog.imageVariants(m.path)) removeUploadedFile(v.src);
+  removeUploadedFile(m.path, "supprimée à la main depuis la médiathèque");
+  for (const v of blog.imageVariants(m.path)) removeUploadedFile(v.src, "version réduite d'une image supprimée");
   res.json({ ok: true });
 });
 
