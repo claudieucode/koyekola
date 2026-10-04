@@ -76,7 +76,8 @@ function auditMedia(db, { uploadsRoot = paths.uploadsRoot, siteHost = "" } = {})
 // Résumé pour les journaux du serveur (chemins et nombres seulement : aucune donnée personnelle ni secret)
 function logStartupAudit(db, { log = console.log, warn = console.error } = {}) {
   const s = storageInfo();
-  if (s.deployedBuild && s.uploadsInsideApp) warn(`[médias] ERREUR : les fichiers envoyés sont rangés dans le dossier de l'application (${s.uploadsRoot}), remplacé à chaque déploiement — ils seront perdus. Définissez UPLOADS_DIR (ou DATA_DIR) vers un dossier conservé.`);
+  if (paths.uploadsEnvIgnored) warn("[médias] ERREUR : la variable UPLOADS_DIR n'est pas un chemin absolu (valeur masquée) — elle est ignorée. Donnez-lui un chemin complet commençant par « / » hors du dossier de l'application, ou supprimez-la (les fichiers vont alors dans DATA_DIR/uploads).");
+  if (s.deployedBuild && s.uploadsInsideApp) warn("[médias] ERREUR : les fichiers envoyés sont rangés dans le dossier de l'application, remplacé à chaque déploiement — ils seront perdus. Définissez UPLOADS_DIR (chemin absolu) ou DATA_DIR vers un dossier conservé.");
   else log(`[médias] Stockage des fichiers envoyés : ${s.uploadsRoot}${s.uploadsInsideApp ? " (dossier de l'application)" : " (dossier conservé, hors application)"} · base : ${s.dataInsideApp ? "dans l'application" : "dossier conservé"}`);
   let a;
   try { a = auditMedia(db, { siteHost: (process.env.SITE_URL || "").replace(/^https?:\/\//, "").replace(/\/.*$/, "") }); } catch (e) { warn("[médias] Audit impossible :", e.message); return null; }

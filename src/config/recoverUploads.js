@@ -53,7 +53,10 @@ function uploadsDirsUnder(root, maxDepth = 5) {
     for (const e of entries) {
       if (!e.isDirectory() || e.name === "node_modules" || e.name.startsWith(".")) continue;
       const full = path.join(dir, e.name);
-      if (e.name === "uploads") out.push(full); else walk(full, depth + 1);
+      // Dossier d'envois : nommé « uploads », ou reconnaissable à sa structure (thumbnails + marketing),
+      // quel que soit son nom (cas d'une variable UPLOADS_DIR relative, rangée dans le build)
+      const isUploads = e.name === "uploads" || (fs.existsSync(path.join(full, "thumbnails")) && fs.existsSync(path.join(full, "marketing")));
+      if (isUploads) out.push(full); else walk(full, depth + 1);
     }
   };
   walk(root, 0);

@@ -9,7 +9,12 @@ const projectRoot = path.join(__dirname, "..", "..");
 const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(projectRoot, "data");
 // Fichiers envoyés : UPLOADS_DIR si défini ; sinon, si DATA_DIR est défini (dossier conservé chez l'hébergeur),
 // à côté de la base dans DATA_DIR/uploads — jamais dans le dossier du projet, effacé à chaque redéploiement.
-const uploadsRoot = process.env.UPLOADS_DIR ? path.resolve(process.env.UPLOADS_DIR) : process.env.DATA_DIR ? path.join(dataDir, "uploads") : path.join(projectRoot, "uploads");
+// UPLOADS_DIR doit être un chemin ABSOLU : une valeur relative (ex. un mot de passe collé par erreur) serait rangée
+// dans le dossier de l'application, remplacé à chaque déploiement → tous les fichiers envoyés perdus. Elle est donc
+// ignorée (signalée au démarrage, sans jamais afficher sa valeur).
+const uploadsEnvIgnored = Boolean(process.env.UPLOADS_DIR) && !path.isAbsolute(process.env.UPLOADS_DIR);
+const uploadsEnv = process.env.UPLOADS_DIR && !uploadsEnvIgnored ? process.env.UPLOADS_DIR : "";
+const uploadsRoot = uploadsEnv ? path.resolve(uploadsEnv) : process.env.DATA_DIR ? path.join(dataDir, "uploads") : path.join(projectRoot, "uploads");
 const projectUploads = path.join(projectRoot, "uploads");
 
 fs.mkdirSync(dataDir, { recursive: true });
@@ -17,4 +22,4 @@ fs.mkdirSync(dataDir, { recursive: true });
 
 const dbFile = path.join(dataDir, "KOYEKOLA.db");
 
-module.exports = { dataDir, uploadsRoot, dbFile, projectRoot, projectUploads };
+module.exports = { dataDir, uploadsRoot, dbFile, projectRoot, projectUploads, uploadsEnvIgnored };

@@ -70,3 +70,40 @@ describe("audit (lecture seule)", () => {
     assert.ok(fs.existsSync(path.join(up, "thumbnails/sans-fiche.png")), "l'audit ne supprime rien");
   });
 });
+
+describe("variable UPLOADS_DIR mal renseignée (cause racine en production)", () => {
+  test("une valeur relative est ignorée : fichiers dans DATA_DIR/uploads, valeur jamais affichée dans les journaux", () => {
+    const { execFileSync } = require("child_process");
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kb-upenv-"));
+    const secret = "Valeur-Relative-Secrete123";
+    const out = execFileSync(process.execPath, ["-e", `
+      const p = require(${JSON.stringify(path.join(__dirname, "../src/config/paths"))});
+      const { DatabaseSync } = require("node:sqlite");
+      const logs = [];
+      require(${JSON.stringify(path.join(__dirname, "../src/config/mediaAudit"))}).logStartupAudit(new DatabaseSync(":memory:"), { log: (...a) => logs.push(a.join(" ")), warn: (...a) => logs.push(a.join(" ")) });
+      console.log(JSON.stringify({ root: p.uploadsRoot, ignored: p.uploadsEnvIgnored, logs }));`], { cwd: dir, env: { ...process.env, DATA_DIR: path.join(dir, "data"), UPLOADS_DIR: secret, NODE_ENV: "test" } }).toString();
+    const r = JSON.parse(out.trim().split("\n").pop());
+    assert.equal(r.ignored, true);
+    assert.equal(fs.realpathSync(r.root), fs.realpathSync(path.join(dir, "data", "uploads")));
+    assert.ok(!fs.existsSync(path.join(dir, secret)), "aucun dossier créé avec la valeur relative");
+    assert.ok(r.logs.some((l) => l.includes("UPLOADS_DIR n'est pas un chemin absolu")));
+    assert.ok(r.logs.every((l) => !l.includes(secret)), "la valeur n'apparaît dans aucun journal");
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  test("récupération : un ancien dossier d'envois mal nommé (structure thumbnails + marketing) est retrouvé", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kb-hb2-"));
+    const hb = path.join(dir, "domains", "site", "hbuilds");
+    const app = path.join(hb, "versions", "new", "nodejs");
+    const old = path.join(hb, "versions", "old", "nodejs", "Nom-Bizarre");
+    write(path.join(old, "thumbnails", "perdue.png"), "IMG");
+    fs.mkdirSync(path.join(old, "marketing"), { recursive: true });
+    const keep = path.join(dir, "keep", "uploads");
+    fs.mkdirSync(app, { recursive: true });
+    const r = await recoverUploads({ log: () => {}, uploadsRoot: keep, projectRoot: app, projectUploads: path.join(app, "uploads") });
+    assert.equal(r.copied, 1);
+    assert.equal(fs.readFileSync(path.join(keep, "thumbnails", "perdue.png"), "utf8"), "IMG");
+    assert.ok(fs.existsSync(path.join(old, "thumbnails", "perdue.png")), "la source n'est jamais supprimée");
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
