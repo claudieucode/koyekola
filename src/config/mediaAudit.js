@@ -7,6 +7,8 @@
 const fs = require("fs");
 const path = require("path");
 const paths = require("./paths");
+// Chargé à la demande : storage dépend de paths, déjà chargé ici
+const storage = require("../utils/storage");
 
 const UPLOAD_RE = /(?:https?:\/\/[^"'\s)<>]*?)?(\/uploads\/[A-Za-z0-9_.\/-]+\.[A-Za-z0-9]{2,5})/g;
 const TEMP_RE = /(blob:[^"'\s)<>]+|data:image\/[^"'\s)<>]{0,40}|https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?\/[^"'\s)<>]+)/g;
@@ -25,14 +27,18 @@ const SOURCES = [
   ["site_pages", "SELECT slug AS id, title AS label, content AS txt FROM site_pages", (r) => `Page « ${r.label} »`],
   ["courses", "SELECT id, title AS label, COALESCE(thumbnail_path,'') || ' ' || COALESCE(description,'') AS txt FROM courses", (r) => `Formation « ${r.label} »`],
   ["lessons", "SELECT id, title AS label, COALESCE(video_path,'') || ' ' || COALESCE(resource_path,'') || ' ' || COALESCE(description,'') AS txt FROM lessons", (r) => `Leçon « ${r.label} »`],
-  ["lesson_attachments", "SELECT id, name AS label, path AS txt FROM lesson_attachments", (r) => `Pièce jointe « ${r.label} »`],
+  ["lesson_attachments", "SELECT id, title AS label, path AS txt FROM lesson_attachments", (r) => `Pièce jointe « ${r.label} »`],
   ["users", "SELECT id, id AS label, avatar_path AS txt FROM users WHERE avatar_path IS NOT NULL", (r) => `Photo de profil (compte n° ${r.label})`],
   ["blog_reusable_blocks", "SELECT id, name AS label, content AS txt FROM blog_reusable_blocks", (r) => `Bloc réutilisable « ${r.label} »`],
   ["mk_templates", "SELECT id, name AS label, blocks AS txt FROM mk_templates", (r) => `Modèle d'e-mail « ${r.label} »`],
 ];
 
+// Même règle que le reste du site (src/utils/storage.js) ; un autre dossier racine n'est utilisé que par les tests
 function fileExists(uploadsRoot, publicPath) {
-  try { return fs.statSync(path.join(uploadsRoot, publicPath.replace(/^\/uploads\//, ""))).isFile(); } catch { return false; }
+  if (path.resolve(uploadsRoot) === storage.uploadsRoot) return storage.fileExists(publicPath);
+  const p = String(publicPath || "");
+  if (!/^\/uploads\//.test(p) || p.includes("..")) return false;
+  try { return fs.statSync(path.join(uploadsRoot, p.replace(/^\/uploads\//, ""))).isFile(); } catch { return false; }
 }
 
 function auditMedia(db, { uploadsRoot = paths.uploadsRoot, siteHost = "" } = {}) {

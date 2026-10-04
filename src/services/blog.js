@@ -297,6 +297,7 @@ function listMedia({ q = "", kind = "", limit = 60 } = {}) {
   const where = ["1 = 1"];
   const params = [];
   if (["image", "video", "audio"].includes(kind)) { where.push("kind = ?"); params.push(kind); }
+  else where.push("kind IN ('image', 'video', 'audio')"); // les documents (PDF, Centre de gestion → Ressources) ne s'insèrent pas comme médias
   if (q) { where.push("(alt LIKE ? OR title LIKE ? OR caption LIKE ? OR path LIKE ?)"); const like = `%${String(q).slice(0, 80)}%`; params.push(like, like, like, like); }
   return db.prepare(`SELECT * FROM media WHERE ${where.join(" AND ")} ORDER BY id DESC LIMIT ?`).all(...params, Math.min(200, limit));
 }

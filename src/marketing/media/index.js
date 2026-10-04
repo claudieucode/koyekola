@@ -8,6 +8,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { uploadsRoot } = require("../../config/paths");
 const { checkCtx, audit, MarketingError } = require("../audience/shared");
+const { removeUploadedFile } = require("../../utils/uploads");
 
 const MAX_IMAGE = 5 * 1024 * 1024; // une image d'e-mail au-delà de 5 Mo n'a pas de sens (chargement, filtres)
 const MAX_DOCUMENT = 10 * 1024 * 1024;
@@ -110,10 +111,19 @@ function deleteMedia(ctx, id) {
   if (!media) throw new MarketingError("not_found", "Fichier introuvable.");
   const used = mediaUsage(ctx, media);
   if (used.length) throw new MarketingError("invalid_state", `Ce fichier est utilisé par ${used.length} modèle${used.length > 1 ? "s" : ""} (${used.slice(0, 3).map((t) => `« ${t.name} »`).join(", ")}${used.length > 3 ? "…" : ""}) : retirez-le d'abord de ${used.length > 1 ? "ces modèles" : "ce modèle"}.`);
-  ctx.db.prepare("DELETE FROM mk_media WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
   // Les e-mails déjà envoyés pointent vers ce fichier : il n'est retiré du disque que s'il n'a jamais servi dans une campagne lancée
   const sent = ctx.db.prepare("SELECT 1 FROM mk_campaigns WHERE organization_id = ? AND snapshot LIKE ? ESCAPE '\\' LIMIT 1").get(ctx.organizationId, `%${media.path.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
-  if (!sent) fs.rmSync(path.join(uploadsRoot, media.path.replace(/^\/uploads\//, "")), { force: true });
+  // Fiche et fichier ensemble : si l'effacement du fichier échoue, la fiche est rétablie (jamais de fichier sans fiche)
+  ctx.db.exec("SAVEPOINT mk_media_delete");
+  try {
+    ctx.db.prepare("DELETE FROM mk_media WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
+    if (!sent) removeUploadedFile(media.path, "fichier de la médiathèque marketing supprimé");
+    ctx.db.exec("RELEASE mk_media_delete");
+  } catch (error) {
+    ctx.db.exec("ROLLBACK TO mk_media_delete");
+    ctx.db.exec("RELEASE mk_media_delete");
+    throw error;
+  }
   audit(ctx, "media.deleted", "media", id, { kept: Boolean(sent) });
   return true;
 }

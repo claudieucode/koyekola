@@ -12,6 +12,10 @@ const { requireInstructor } = require("../middlewares/auth");
 const { IMAGE_TYPES, VIDEO_TYPES, AUDIO_TYPES } = require("../middlewares/upload");
 const { uploadsRoot } = require("../config/paths");
 const { removeUploadedFile } = require("../utils/uploads");
+const { resolveUpload, fileState } = require("../utils/storage");
+const { membershipsOf, can } = require("../marketing/organizations");
+const marketingMedia = require("../marketing/media");
+const { MarketingError } = require("../marketing/errors");
 const blog = require("../services/blog");
 const seoImages = require("../seo/images");
 const common = require("../services/gestion/common");
@@ -94,7 +98,8 @@ router.get("/formateur/gestion", page("gestion/index", "Centre de gestion", (req
       students: safe("Élèves", () => one("SELECT COUNT(DISTINCT e.user_id) n FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ?", id).n),
       enrollments30: safe("Élèves", () => one("SELECT COUNT(*) n FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ? AND e.created_at >= ? AND e.created_at < ?", id, p30.from, p30.to).n),
       // Nombre de fichiers seulement : les utilisations (coûteuses) ne sont calculées que dans Ressources
-      resources: safe("Ressources", () => { const all = resources.allResources(id); if (all.problems.length) throw new Error(all.problems.map((x) => `${x.label} : ${x.message}`).join(" · ")); return all.length; }),
+      resources: safe("Ressources", () => { const all = resources.allResources(id); if (all.problems.length) throw new Error(all.problems.map((x) => `${x.label} : ${x.message}`).join(" · ")); return all.filter((r) => r.exists).length; }),
+      resourcesTodo: safe("Ressources", () => resources.allResources(id).filter((r) => !r.exists).length, 0),
       unread: safe("Notifications", () => activity.unreadCount(id)),
       alerts: safe("Alertes", () => activity.alerts(id), []),
       recent: safe("Activité récente", () => activity.feed(id, { page: 1 }).rows.slice(0, 6), []),
@@ -157,7 +162,7 @@ router.get("/formateur/gestion/analytics", page("gestion/analytics", "Analytics"
 // ---------- Ressources ----------
 router.get("/formateur/gestion/ressources", page("gestion/ressources", "Ressources", (req) => ({ list: resources.listResources(me(req), req.query), kinds: resources.KIND_LABELS, sources: resources.SOURCE_LABELS })));
 // Envoi réel vers la médiathèque du site : dossier et extension choisis d'après le VRAI type du fichier (jamais son nom)
-const TYPES = { ...Object.fromEntries(Object.entries(IMAGE_TYPES).map(([m, e]) => [m, ["image", "thumbnails", e]])), ...Object.fromEntries(Object.entries(VIDEO_TYPES).map(([m, e]) => [m, ["video", "blog", e]])), ...Object.fromEntries(Object.entries(AUDIO_TYPES).map(([m, e]) => [m, ["audio", "blog", e]])) };
+const TYPES = { ...Object.fromEntries(Object.entries(IMAGE_TYPES).map(([m, e]) => [m, ["image", "thumbnails", e]])), ...Object.fromEntries(Object.entries(VIDEO_TYPES).map(([m, e]) => [m, ["video", "blog", e]])), ...Object.fromEntries(Object.entries(AUDIO_TYPES).map(([m, e]) => [m, ["audio", "blog", e]])), "application/pdf": ["document", "blog", ".pdf"] };
 const resourceUpload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, path.join(uploadsRoot, TYPES[file.mimetype][1])),
@@ -171,40 +176,137 @@ router.post("/formateur/gestion/ressources", (req, res) => {
     if (err) { flash(req, "error", err.code === "LIMIT_FILE_SIZE" ? "Fichier trop lourd (300 Mo au plus)." : err.code === "LIMIT_FILE_COUNT" || err.code === "LIMIT_UNEXPECTED_FILE" ? "10 fichiers au plus par envoi." : `Envoi impossible. Détail technique : ${String(err.message || err).slice(0, 200)}`); return res.redirect("/formateur/gestion/ressources"); }
     const files = req.files || [];
     const refused = Math.max(0, Number(req.body.count || 0) - files.length);
-    if (!files.length) { flash(req, "error", "Aucun fichier accepté : images (JPEG, PNG, WebP, GIF, AVIF), vidéos (MP4, WebM, MOV) ou audio (MP3, M4A, AAC, OGG, WAV)."); return res.redirect("/formateur/gestion/ressources"); }
-    const added = files.map((f) => {
-      const [kind, dir] = TYPES[f.mimetype];
-      let dims = null;
-      if (kind === "image") { try { dims = seoImages.readDimensions(fs.readFileSync(f.path)); } catch { dims = null; } }
-      // multer lit le nom d'origine en latin-1 : « Bannière » arriverait en « BanniÃ¨re » ; relu en UTF-8
-      const utf8 = Buffer.from(String(f.originalname || ""), "latin1").toString("utf8");
-      const title = (utf8.includes("\uFFFD") ? String(f.originalname || "") : utf8).replace(/\.[a-z0-9]{1,8}$/i, "").replace(/[\r\n]+/g, " ").slice(0, 200);
-      return blog.addMedia({ path: `/uploads/${dir}/${f.filename}`, kind, mime: f.mimetype, size: f.size, width: dims && dims.width, height: dims && dims.height, title, userId: me(req) });
-    });
+    if (!files.length) { flash(req, "error", "Aucun fichier accepté : images (JPEG, PNG, WebP, GIF, AVIF), vidéos (MP4, WebM, MOV), audio (MP3, M4A, AAC, OGG, WAV) ou documents PDF."); return res.redirect("/formateur/gestion/ressources"); }
+    // Fiches créées seulement pour des fichiers réellement écrits et vérifiés ; tout ou rien : en cas d'erreur, aucune
+    // fiche n'est gardée et les fichiers écrits par cet envoi sont effacés (ni fiche fantôme, ni fichier orphelin)
+    let added;
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      added = files.map((f) => {
+        const [kind, dir] = TYPES[f.mimetype];
+        const publicPath = `/uploads/${dir}/${f.filename}`;
+        const st = fileState(publicPath);
+        if (st.state !== "ok" || st.size !== f.size) throw new Error(`fichier « ${f.originalname} » mal enregistré dans le stockage`);
+        // PDF : contenu réellement vérifié (signature « %PDF- »), jamais sur la seule foi du type annoncé par le navigateur
+        if (kind === "document") { const fd = fs.openSync(f.path, "r"); const sig = Buffer.alloc(5); fs.readSync(fd, sig, 0, 5, 0); fs.closeSync(fd); if (sig.toString("latin1") !== "%PDF-") throw Object.assign(new Error(`« ${f.originalname} » n'est pas un vrai PDF : envoi annulé.`), { user: true }); }
+        let dims = null;
+        if (kind === "image") { try { dims = seoImages.readDimensions(fs.readFileSync(f.path)); } catch { dims = null; } }
+        // multer lit le nom d'origine en latin-1 : « Bannière » arriverait en « BanniÃ¨re » ; relu en UTF-8
+        const utf8 = Buffer.from(String(f.originalname || ""), "latin1").toString("utf8");
+        const title = (utf8.includes("\uFFFD") ? String(f.originalname || "") : utf8).replace(/\.[a-z0-9]{1,8}$/i, "").replace(/[\r\n]+/g, " ").slice(0, 200);
+        return blog.addMedia({ path: publicPath, kind, mime: f.mimetype, size: f.size, width: dims && dims.width, height: dims && dims.height, title, userId: me(req) });
+      });
+      db.exec("COMMIT");
+    } catch (error) {
+      try { db.exec("ROLLBACK"); } catch { /* déjà annulée */ }
+      for (const f of files) fs.rmSync(f.path, { force: true });
+      throw error;
+    }
     flash(req, "ok", `${added.length} fichier(s) ajouté(s) à la médiathèque du site${refused ? ` · ${refused} refusé(s) (type non pris en charge)` : ""}.`);
     res.redirect("/formateur/gestion/ressources?source=site");
   } catch (error) {
+    for (const f of req.files || []) fs.rmSync(f.path, { force: true });
+    if (error.user) { flash(req, "error", error.message); return res.redirect("/formateur/gestion/ressources"); }
     console.error("[KOLAKISA] Centre de gestion (envoi de fichiers) :", error.stack || error.message);
     flash(req, "error", `L'envoi n'a pas abouti. Détail technique : ${String(error.message || error).slice(0, 200)}`);
     res.redirect("/formateur/gestion/ressources");
   } });
 });
-router.post("/formateur/gestion/ressources/:id(\\d+)/supprimer", safely("/formateur/gestion/ressources", (req, res) => {
-  const m = blog.getMedia(Number(req.params.id));
-  if (!m) { flash(req, "error", "Fichier introuvable."); return res.redirect("/formateur/gestion/ressources"); }
-  let usage;
-  try { usage = blog.imageReferences(m.path); } catch (error) {
-    console.error("[KOLAKISA] Centre de gestion · suppression (utilisations) :", error.message);
-    flash(req, "error", "Suppression refusée par sécurité : impossible de vérifier si ce fichier est encore utilisé.");
-    return res.redirect("/formateur/gestion/ressources");
+// Droit d'écriture sur la médiathèque marketing (mêmes règles que le module Marketing : rôle relu à chaque action)
+function marketingWriter(req, organizationId) {
+  const m = membershipsOf(db, me(req)).find((x) => x.organization_id === organizationId);
+  return m && can(m.role, "templates.write") ? { db, organizationId, userId: me(req) } : null;
+}
+// Retour à la même vue (filtres conservés) après une action
+const backTo = (req) => `/formateur/gestion/ressources${req.body && req.body.retour && /^\?[\w=&%.+-]*$/.test(req.body.retour) ? req.body.retour : ""}`;
+
+// Supprimer une ressource disponible, ou nettoyer la fiche d'un fichier absent : dépendances revérifiées ici (jamais
+// sur la seule foi de la page), confirmation demandée par la page, fichier ET fiche traités ensemble.
+function deleteResource(req, res, key) {
+  const r = resources.findResource(me(req), key);
+  if (!r || !r.deletable) { flash(req, "error", "Ressource introuvable ou non supprimable ici."); return res.redirect(backTo(req)); }
+  if (!r.canDelete) { flash(req, "error", `Suppression refusée. ${r.deleteBlockedReason}.`); return res.redirect(backTo(req)); }
+  const what = r.state === "ok" ? "supprimé" : "retiré de la médiathèque (fiche nettoyée ; le fichier était déjà absent du stockage)";
+  if (r.source === "marketing") {
+    const ctx = marketingWriter(req, r.organizationId);
+    if (!ctx) { flash(req, "error", "Suppression refusée : votre rôle Marketing ne permet pas de modifier la médiathèque des e-mails."); return res.redirect(backTo(req)); }
+    try { marketingMedia.deleteMedia(ctx, r.id); } catch (error) {
+      if (error instanceof MarketingError) { flash(req, "error", error.message); return res.redirect(backTo(req)); }
+      throw error;
+    }
+    flash(req, "ok", `« ${r.name} » ${what}.`);
+    return res.redirect(backTo(req));
   }
-  if (usage.length) { flash(req, "error", `« ${m.title || path.basename(m.path)} » est encore utilisé : ${usage.slice(0, 4).join(", ")}${usage.length > 4 ? "…" : ""}. Retirez-le d'abord de ces endroits.`); return res.redirect("/formateur/gestion/ressources"); }
-  db.prepare("DELETE FROM media WHERE id = ?").run(m.id);
-  removeUploadedFile(m.path, "supprimée depuis le Centre de gestion (Ressources)");
-  for (const v of blog.imageVariants(m.path)) removeUploadedFile(v.src, "version réduite d'une image supprimée");
-  flash(req, "ok", `« ${m.title || path.basename(m.path)} » supprimé.`);
-  res.redirect(`/formateur/gestion/ressources${req.body.retour && /^\?[\w=&%.+-]*$/.test(req.body.retour) ? req.body.retour : ""}`);
-}));
+  // Médiathèque du site : fiche supprimée et fichier effacé dans la même transaction (si l'effacement échoue, la fiche
+  // est rétablie : jamais de fiche sans fichier créée par une suppression)
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    if (blog.imageReferences(r.path).length) throw Object.assign(new Error("Ce fichier vient d'être utilisé par un contenu : suppression annulée."), { user: true });
+    db.prepare("DELETE FROM media WHERE id = ?").run(r.id);
+    removeUploadedFile(r.path, "supprimée depuis le Centre de gestion (Ressources)");
+    db.exec("COMMIT");
+  } catch (error) {
+    try { db.exec("ROLLBACK"); } catch { /* déjà annulée */ }
+    if (error.user) { flash(req, "error", error.message); return res.redirect(backTo(req)); }
+    throw error;
+  }
+  // Versions réduites (WebP) : effacées ensuite ; un échec est seulement journalisé (fichiers dérivés, sans fiche)
+  for (const v of blog.imageVariants(r.path)) { try { removeUploadedFile(v.src, "version réduite d'une image supprimée"); } catch (e) { console.error("[médias] Version réduite non effacée :", e.message); } }
+  flash(req, "ok", `« ${r.name} » ${what}.`);
+  res.redirect(backTo(req));
+}
+router.post("/formateur/gestion/ressources/supprimer", safely("/formateur/gestion/ressources", (req, res) => deleteResource(req, res, String(req.body.cle || ""))));
+// Ancienne adresse (fiche de la médiathèque du site par son numéro)
+router.post("/formateur/gestion/ressources/:id(\\d+)/supprimer", safely("/formateur/gestion/ressources", (req, res) => deleteResource(req, res, `site:${req.params.id}`)));
+
+// Réparer : remettre un fichier au MÊME emplacement que le fichier disparu. Les articles, modèles d'e-mails, formations
+// qui l'utilisent fonctionnent de nouveau, sans rien modifier d'autre. Le fichier doit être du même type (contenu vérifié).
+const SAME_EXT = { ".jpeg": ".jpg", ".jpg": ".jpg", ".png": ".png", ".gif": ".gif", ".webp": ".webp", ".avif": ".avif" };
+const IMAGE_FORMATS = { ".jpg": "jpeg", ".png": "png", ".gif": "gif", ".webp": "webp" };
+const repairUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => { const dir = path.join(uploadsRoot, ".reparations"); fs.mkdirSync(dir, { recursive: true }); cb(null, dir); },
+    filename: (req, file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(8).toString("hex")}`),
+  }),
+  limits: { fileSize: 300 * 1024 * 1024, files: 1 },
+}).single("fichier");
+router.post("/formateur/gestion/ressources/reparer", (req, res) => {
+  repairUpload(req, res, (err) => {
+    const tmp = req.file && req.file.path;
+    const fail = (text) => { if (tmp) fs.rmSync(tmp, { force: true }); flash(req, "error", text); res.redirect("/formateur/gestion/ressources?etat=a-traiter"); };
+    try {
+      if (err) return fail(err.code === "LIMIT_FILE_SIZE" ? "Fichier trop lourd (300 Mo au plus)." : `Envoi impossible. Détail technique : ${String(err.message || err).slice(0, 200)}`);
+      const r = resources.findResource(me(req), String(req.body.cle || ""));
+      if (!r) return fail("Ressource introuvable.");
+      if (!r.canRepair) return fail("Ce fichier n'a pas besoin d'être réparé (il est présent, ou son adresse n'est pas un fichier du site).");
+      if (!req.file) return fail("Choisissez le fichier de remplacement.");
+      if (r.source === "marketing" && !marketingWriter(req, r.organizationId)) return fail("Réparation refusée : votre rôle Marketing ne permet pas de modifier la médiathèque des e-mails.");
+      const target = resolveUpload(r.path);
+      if (!target) return fail("Adresse du fichier invalide : réparation impossible.");
+      const want = path.extname(target).toLowerCase();
+      const got = path.extname(String(req.file.originalname || "")).toLowerCase();
+      if ((SAME_EXT[want] || want) !== (SAME_EXT[got] || got)) return fail(`Le fichier de remplacement doit être du même type que l'original (${want || "sans extension"}) : les contenus qui l'utilisent l'attendent sous ce format.`);
+      let dims = null;
+      if (IMAGE_FORMATS[SAME_EXT[want]]) {
+        const fd = fs.openSync(tmp, "r"); const head = Buffer.alloc(65536); const n = fs.readSync(fd, head, 0, head.length, 0); fs.closeSync(fd);
+        dims = seoImages.readDimensions(head.subarray(0, n));
+        if (!dims || dims.format !== IMAGE_FORMATS[SAME_EXT[want]]) return fail("Ce fichier n'est pas une image valide de ce format.");
+      }
+      if (fs.existsSync(target)) return fail("Un fichier est déjà présent à cet emplacement : rien n'a été remplacé.");
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.renameSync(tmp, target); // même disque : opération atomique, jamais de fichier à moitié écrit
+      const size = fs.statSync(target).size;
+      if (r.source === "site") db.prepare("UPDATE media SET size = ?, width = COALESCE(?, width), height = COALESCE(?, height) WHERE id = ?").run(size, dims && dims.width, dims && dims.height, r.id);
+      if (r.source === "marketing") db.prepare("UPDATE mk_media SET size = ?, width = COALESCE(?, width), height = COALESCE(?, height) WHERE id = ?").run(size, dims && dims.width, dims && dims.height, r.id);
+      console.log(`[médias] MEDIA_REPAIRED ${r.path} — remplacé depuis le Centre de gestion`);
+      flash(req, "ok", `« ${r.name} » réparé : le fichier est de nouveau disponible${r.usedBy && r.usedBy.length ? ` pour ${r.usedBy.length} contenu(s)` : ""}.`);
+      res.redirect("/formateur/gestion/ressources?etat=a-traiter");
+    } catch (error) {
+      console.error("[KOLAKISA] Centre de gestion (réparation) :", error.stack || error.message);
+      fail(`La réparation n'a pas abouti. Détail technique : ${String(error.message || error).slice(0, 200)}`);
+    }
+  });
+});
 
 // ---------- Activité et notifications ----------
 router.get("/formateur/gestion/activite", page("gestion/activite", "Activité", (req) => {

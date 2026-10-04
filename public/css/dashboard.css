@@ -416,6 +416,22 @@
 .g-file-name { font-size: 14px; color: var(--dash-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .g-file-body .g-row-actions { margin-top: var(--s2); }
 
+/* Ressources : fichiers à traiter (fiche présente, fichier absent) — zone distincte de la médiathèque */
+.g-chip-todo { border-color: color-mix(in srgb, var(--dash-warning) 55%, var(--dash-border)); color: var(--dash-warning); }
+.g-chip-todo[aria-current="page"] { background: var(--dash-warning); border-color: var(--dash-warning); color: #fff; }
+.g-todo-intro { margin-bottom: var(--s4); }
+.g-file-note { color: var(--dash-muted); }
+.g-problems { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); }
+.g-problem { display: grid; gap: var(--s2); padding: var(--s4); background: var(--dash-card); border: 1px solid var(--dash-border); border-left: 4px solid var(--dash-warning); border-radius: var(--dash-radius); }
+.g-problem-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2); min-width: 0; }
+.g-problem-meta, .g-problem-reason, .g-problem-deps-title { margin: 0; font-size: 14px; color: var(--dash-muted); overflow-wrap: anywhere; }
+.g-problem-reason { color: var(--dash-text); }
+.g-problem-deps-title { font-weight: 600; color: var(--dash-text); }
+.g-problem-deps { margin: 0; padding-left: var(--s5); font-size: 14px; color: var(--dash-text); }
+.g-problem-deps a { color: var(--dash-accent-text); }
+.g-repair { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0; }
+.g-repair input[type=file] { max-width: 100%; font-size: 13px; }
+
 /* Mobile : tableaux empilés (chaque cellule affiche son intitulé), filtres sur toute la largeur */
 @media (max-width: 760px) {
   .g-filters { padding: var(--s3); }

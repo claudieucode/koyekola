@@ -368,7 +368,7 @@ test("robustesse : si l'utilisation d'un fichier ne peut pas être vérifiée, l
     const del = await prof.post(`${G}/ressources/${m.id}/supprimer`, {});
     assert.equal(del.status, 302);
     assert.equal(db.prepare("SELECT COUNT(*) n FROM media WHERE id = ?").get(m.id).n, 1, "fichier conservé");
-    assert.match((await prof.get(`${G}/ressources`)).text, /Suppression refusée par sécurité/);
+    assert.match((await prof.get(`${G}/ressources`)).text, /suppression bloquée par sécurité/);
   } finally { db.exec("ALTER TABLE site_pages RENAME COLUMN content_casse TO content"); }
 });
 

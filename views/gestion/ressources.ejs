@@ -1,46 +1,102 @@
 <%- include("../partials/header", { title }) %>
 <%- include("_head", { heading: "Ressources", subtitle: "Tous les fichiers du site au même endroit." }) %>
-<% const L = list; const C = L.counts; const filtered = Object.keys(query).some((k) => k !== "page" && query[k]); %>
+<% const L = list; const C = L.counts; const todo = L.view === "a-traiter";
+   const filtered = Object.keys(query).some((k) => !["page", "etat"].includes(k) && query[k]);
+   const home = todo ? "/formateur/gestion/ressources?etat=a-traiter" : "/formateur/gestion/ressources";
+   const retour = url({}).replace(/^[^?]*/, "");
+   const sizeOf = (n) => (n ? (n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(n / 1024)) + " Ko") : "taille inconnue"); %>
+<% if (!todo) { %>
 <section class="dpanel g-upload" aria-labelledby="r-up">
   <h2 id="r-up">Ajouter à la médiathèque du site</h2>
   <form method="post" action="/formateur/gestion/ressources" enctype="multipart/form-data" class="g-upload-form" data-g-upload>
     <label for="r-files" class="sr-only">Fichiers à envoyer</label>
-    <input id="r-files" type="file" name="fichiers" multiple required accept="image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,video/quicktime,video/x-m4v,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/wav">
+    <input id="r-files" type="file" name="fichiers" multiple required accept="image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,video/quicktime,video/x-m4v,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/wav,application/pdf">
     <input type="hidden" name="count" value="0" data-g-count>
     <button type="submit" class="btn btn-primary">Envoyer</button>
   </form>
-  <p class="field-hint">Images (JPEG, PNG, WebP, GIF, AVIF), vidéos (MP4, WebM, MOV) ou audio (MP3, M4A, AAC, OGG, WAV) · 300 Mo au plus par fichier, 10 fichiers par envoi. Les documents de cours (PDF…) s'ajoutent dans la leçon concernée.</p>
+  <p class="field-hint">Images (JPEG, PNG, WebP, GIF, AVIF), vidéos (MP4, WebM, MOV), audio (MP3, M4A, AAC, OGG, WAV) ou documents PDF · 300 Mo au plus par fichier, 10 fichiers par envoi. Un fichier n'apparaît qu'une fois réellement enregistré sur le serveur.</p>
 </section>
+<% } %>
 
 <nav class="dash-filters g-tabs" aria-label="Type de fichier">
-  <a class="dash-chip" href="<%= url({ type: "", page: 1 }) %>"<%- !L.kind ? ' aria-current="page"' : "" %>>Tous <span class="dash-chip-count"><%= C.all %></span></a>
-  <% Object.entries(kinds).forEach(([k, label]) => { %><a class="dash-chip" href="<%= url({ type: k, page: 1 }) %>"<%- L.kind === k ? ' aria-current="page"' : "" %>><%= label %>s <span class="dash-chip-count"><%= C[k] %></span></a><% }) %>
+  <a class="dash-chip" href="/formateur/gestion/ressources"<%- !todo && !L.kind ? ' aria-current="page"' : "" %>>Tous <span class="dash-chip-count"><%= C.all %></span></a>
+  <% Object.entries(kinds).forEach(([k, label]) => { %><a class="dash-chip" href="/formateur/gestion/ressources?type=<%= k %>"<%- !todo && L.kind === k ? ' aria-current="page"' : "" %>><%= label %>s <span class="dash-chip-count"><%= C[k] %></span></a><% }) %>
+  <% if (C.problems || todo) { %><a class="dash-chip g-chip-todo" href="/formateur/gestion/ressources?etat=a-traiter"<%- todo ? ' aria-current="page"' : "" %>>Fichiers à traiter <span class="dash-chip-count"><%= C.problems %></span></a><% } %>
 </nav>
 <form class="g-filters" method="get" action="/formateur/gestion/ressources" role="search" aria-label="Filtrer les fichiers">
+  <% if (todo) { %><input type="hidden" name="etat" value="a-traiter"><% } %>
   <% if (L.kind) { %><input type="hidden" name="type" value="<%= L.kind %>"><% } %>
   <div class="g-field g-field-grow"><label for="r-q">Rechercher</label><input id="r-q" type="search" name="q" value="<%= L.q %>" placeholder="Nom du fichier, chemin ou formation"></div>
   <div class="g-field"><label for="r-src">Provenance</label><select id="r-src" name="source"><option value="">Toutes</option><% Object.entries(sources).forEach(([k, label]) => { %><option value="<%= k %>"<%= L.source === k ? " selected" : "" %>><%= label %></option><% }) %></select></div>
   <div class="g-field"><label for="r-tri">Trier par</label><select id="r-tri" name="tri"><option value="recent">Plus récents</option><option value="taille"<%= L.sort === "taille" ? " selected" : "" %>>Taille</option><option value="nom"<%= L.sort === "nom" ? " selected" : "" %>>Nom</option></select></div>
-  <div class="g-filter-actions"><button type="submit" class="btn btn-primary btn-sm">Filtrer</button><% if (filtered) { %><a class="btn btn-outline btn-sm" href="/formateur/gestion/ressources">Réinitialiser</a><% } %></div>
+  <div class="g-filter-actions"><button type="submit" class="btn btn-primary btn-sm">Filtrer</button><% if (filtered) { %><a class="btn btn-outline btn-sm" href="<%= home %>">Réinitialiser</a><% } %></div>
 </form>
 <% (L.problems || []).forEach((pb) => { %><p class="g-flash is-error" role="alert"><strong><%= pb.label %> : liste indisponible.</strong> Les autres fichiers sont affichés. Détail technique : <%= pb.message %></p><% }) %>
-<p class="g-summary" role="status"><strong><%= L.total %></strong> fichier(s) affiché(s) sur <%= C.all %> · <%= (C.bytes / 1048576).toFixed(1).replace(".", ",") %> Mo au total<% if (C.missing) { %> · <span class="g-warn"><%= C.missing %> introuvable(s) sur le serveur</span><% } %></p>
+
+<% if (todo) { %>
+  <section class="dpanel g-honest g-todo-intro" aria-labelledby="r-todo">
+    <h2 id="r-todo">Fichiers à traiter</h2>
+    <p><%= C.total %> fiche(s) enregistrée(s) au total : <strong><%= C.all %> disponible(s)</strong> dans la médiathèque, <strong><%= C.problems %> à traiter</strong> (la fiche existe mais le fichier n'est plus sur le serveur). Elles ne sont ni comptées ni affichées dans la médiathèque.</p>
+    <p>Pour chacune : <strong>Remplacer le fichier</strong> remet un fichier au même emplacement (tout ce qui l'utilise fonctionne de nouveau) ; <strong>Nettoyer</strong> retire la fiche quand plus rien ne l'utilise. Rien n'est supprimé automatiquement.</p>
+  </section>
+<% } else { %>
+  <p class="g-summary" role="status"><strong><%= L.total %></strong> fichier(s) disponible(s) affiché(s) · <%= (C.bytes / 1048576).toFixed(1).replace(".", ",") %> Mo au total<% if (C.problems) { %> · <a href="/formateur/gestion/ressources?etat=a-traiter"><%= C.problems %> fichier(s) à traiter</a><% } %></p>
+<% } %>
+
 <% if (!L.rows.length) { %>
-  <div class="dash-empty g-state"><h2><%= filtered ? "Aucun fichier ne correspond" : "Aucun fichier" %></h2><p><%= filtered ? "Modifiez la recherche ou les filtres." : "Envoyez un premier fichier avec le formulaire ci-dessus." %></p><% if (filtered) { %><a class="btn btn-outline" href="/formateur/gestion/ressources">Voir tous les fichiers</a><% } %></div>
+  <% if (todo) { %>
+    <div class="dash-empty g-state"><h2><%= filtered ? "Aucun fichier à traiter ne correspond" : "Aucun fichier à traiter" %></h2><p><%= filtered ? "Modifiez la recherche ou les filtres." : "Chaque fiche de la médiathèque correspond à un fichier réellement présent sur le serveur." %></p><a class="btn btn-outline" href="/formateur/gestion/ressources">Retour à la médiathèque</a></div>
+  <% } else { %>
+    <div class="dash-empty g-state"><h2><%= filtered ? "Aucun fichier ne correspond" : "Aucun fichier" %></h2><p><%= filtered ? "Modifiez la recherche ou les filtres." : "Envoyez un premier fichier avec le formulaire ci-dessus." %></p><% if (filtered) { %><a class="btn btn-outline" href="/formateur/gestion/ressources">Voir tous les fichiers</a><% } %></div>
+  <% } %>
+<% } else if (todo) { %>
+  <ul class="g-problems"><% L.rows.forEach((r) => { const fid = "rep-" + r.key.replace(/[^a-z0-9]/gi, "-"); %>
+    <li class="g-problem">
+      <div class="g-problem-head">
+        <strong class="g-file-name" title="<%= r.path %>"><%= r.name %></strong>
+        <span class="dash-status is-draft"><%= r.stateLabel %></span>
+      </div>
+      <p class="g-problem-meta"><%= kinds[r.kind] %> · <%= sources[r.source] %><%= r.date ? ` · enregistré le ${formatDate(r.date)}` : "" %> · <code><%= r.path || "(adresse vide)" %></code></p>
+      <p class="g-problem-reason"><%= r.reason %></p>
+      <% if (r.usageUnknown) { %><p class="g-warn">Utilisation impossible à vérifier pour le moment : aucune suppression n'est proposée.</p>
+      <% } else if (r.deps.length) { %>
+        <p class="g-problem-deps-title">Encore utilisé par :</p>
+        <ul class="g-problem-deps"><% r.deps.slice(0, 8).forEach((d) => { %><li><% if (d.href) { %><a href="<%= d.href %>"><%= d.label %></a><% } else { %><%= d.label %><% } %><%= d.blocking ? "" : " — n'empêche pas le nettoyage" %></li><% }) %><% if (r.deps.length > 8) { %><li>… et <%= r.deps.length - 8 %> autre(s)</li><% } %></ul>
+      <% } else { %><p class="g-problem-deps-title">Utilisé nulle part : la fiche peut être nettoyée sans risque.</p><% } %>
+      <div class="g-row-actions">
+        <% if (r.canRepair) { %>
+          <form method="post" action="/formateur/gestion/ressources/reparer" enctype="multipart/form-data" class="g-repair">
+            <input type="hidden" name="cle" value="<%= r.key %>">
+            <label for="<%= fid %>" class="sr-only">Fichier de remplacement pour « <%= r.name %> »</label>
+            <input id="<%= fid %>" type="file" name="fichier" required>
+            <button type="submit" class="btn btn-outline btn-sm">Remplacer le fichier<span class="sr-only"> « <%= r.name %> »</span></button>
+          </form>
+        <% } %>
+        <% if (r.canDelete) { %>
+          <form method="post" action="/formateur/gestion/ressources/supprimer" data-confirm="Nettoyer « <%= r.name %> » ? La fiche sera retirée de la médiathèque (le fichier est déjà absent du serveur). Rien d'autre n'est modifié."><input type="hidden" name="cle" value="<%= r.key %>"><input type="hidden" name="retour" value="<%= retour %>"><button type="submit" class="btn btn-outline btn-sm g-danger">Nettoyer<span class="sr-only"> « <%= r.name %> »</span></button></form>
+        <% } %>
+        <% if (r.manageHref) { %><a class="btn btn-outline btn-sm" href="<%= r.manageHref %>"><%= r.manageLabel || "Gérer dans la formation" %></a><% } %>
+      </div>
+      <% if (!r.canDelete && r.deletable && r.deleteBlockedReason) { %><p class="field-hint">Nettoyage impossible : <%= r.deleteBlockedReason %>. Retirez d'abord le fichier de ces contenus, ou remplacez-le.</p><% } %>
+    </li>
+  <% }) %></ul>
+  <%- include("_pager", { pages: L.pages, pageNum: L.page, total: L.total }) %>
 <% } else { %>
   <ul class="g-files"><% L.rows.forEach((r) => { %>
-    <li class="g-file<%= r.exists ? "" : " is-missing" %>">
-      <div class="g-file-preview"><% if (!r.exists) { %><span class="g-file-missing">Fichier introuvable</span><% } else if (r.kind === "image") { %><img src="<%= r.path %>" alt="<%= r.alt || "" %>" loading="lazy"><% } else { %><span class="g-file-icon" aria-hidden="true"><%- icon(r.kind === "video" ? "video" : r.kind === "audio" ? "play" : "fileText", { size: 28 }) %></span><% } %></div>
+    <li class="g-file">
+      <div class="g-file-preview"><% if (r.kind === "image") { %><img src="<%= r.path %>" alt="<%= r.alt || "" %>" loading="lazy"><% } else { %><span class="g-file-icon" aria-hidden="true"><%- icon(r.kind === "video" ? "video" : r.kind === "audio" ? "play" : "fileText", { size: 28 }) %></span><% } %></div>
       <div class="g-file-body">
         <strong class="g-file-name" title="<%= r.path %>"><%= r.name %></strong>
-        <small><%= kinds[r.kind] %> · <%= r.size ? (r.size >= 1048576 ? (r.size / 1048576).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(r.size / 1024)) + " Ko") : "taille inconnue" %><%= r.width ? ` · ${r.width}×${r.height}` : "" %><%= r.date ? ` · ${formatDate(r.date)}` : "" %></small>
-        <small><%= sources[r.source] %><%= r.usageUnknown ? " · utilisation impossible à vérifier" : r.usedBy && r.usedBy.length ? ` · utilisé : ${r.usedBy.slice(0, 2).join(", ")}${r.usedBy.length > 2 ? "…" : ""}` : r.source === "site" ? " · non utilisé" : "" %></small>
+        <small><%= kinds[r.kind] %> · <%= sizeOf(r.size) %><%= r.width ? ` · ${r.width}×${r.height}` : "" %><%= r.date ? ` · ${formatDate(r.date)}` : "" %><%= r.state === "external" ? " · adresse externe" : "" %></small>
+        <small><%= sources[r.source] %><%= r.usageUnknown ? " · utilisation impossible à vérifier" : r.usedBy && r.usedBy.length ? ` · utilisé : ${r.usedBy.slice(0, 2).join(", ")}${r.usedBy.length > 2 ? "…" : ""}` : r.deletable ? " · non utilisé" : "" %></small>
         <div class="g-row-actions">
-          <% if (r.exists) { %><a class="btn btn-outline btn-sm" href="<%= r.path %>" target="_blank" rel="noopener">Ouvrir<span class="sr-only"> « <%= r.name %> » (nouvel onglet)</span></a><% } %>
-          <% if (r.deletable) { %>
-            <form method="post" action="/formateur/gestion/ressources/<%= r.id %>/supprimer" data-confirm="Supprimer définitivement « <%= r.name %> » ? Le fichier sera effacé du serveur."><input type="hidden" name="retour" value="<%= url({}).replace(/^[^?]*/, "") %>"><button type="submit" class="btn btn-outline btn-sm g-danger"<%= !r.usedBy || r.usedBy.length ? " disabled" : "" %> title="<%= r.usageUnknown ? "Utilisation impossible à vérifier : suppression bloquée par sécurité" : r.usedBy.length ? "Utilisé : retirez-le d'abord des contenus qui l'utilisent" : "Supprimer" %>">Supprimer<span class="sr-only"> « <%= r.name %> »</span></button></form>
-          <% } else if (r.manageHref) { %><a class="btn btn-outline btn-sm" href="<%= r.manageHref %>"><%= r.manageLabel || "Gérer dans la formation" %></a><% } %>
+          <a class="btn btn-outline btn-sm" href="<%= r.path %>" target="_blank" rel="noopener">Ouvrir<span class="sr-only"> « <%= r.name %> » (nouvel onglet)</span></a>
+          <% if (r.canDelete) { %>
+            <form method="post" action="/formateur/gestion/ressources/supprimer" data-confirm="Supprimer définitivement « <%= r.name %> » ? Le fichier sera effacé du serveur."><input type="hidden" name="cle" value="<%= r.key %>"><input type="hidden" name="retour" value="<%= retour %>"><button type="submit" class="btn btn-outline btn-sm g-danger">Supprimer<span class="sr-only"> « <%= r.name %> »</span></button></form>
+          <% } %>
+          <% if (r.manageHref) { %><a class="btn btn-outline btn-sm" href="<%= r.manageHref %>"><%= r.manageLabel || "Gérer dans la formation" %></a><% } %>
         </div>
+        <% if (!r.canDelete && r.deleteBlockedReason) { %><small class="g-file-note">Suppression impossible : <%= r.deleteBlockedReason %>.</small><% } %>
       </div>
     </li>
   <% }) %></ul>
