@@ -126,6 +126,13 @@ function start() {
     setTimeout(() => t.remove(), 4500);
   };
 
+  // Curseur dans un lien ou juste à son bord (clic sur un lien) : Cmd+K le modifie au lieu d'ouvrir la palette
+  const cursorOnLink = () => {
+    if (editor.isActive("link")) return true;
+    const { $from } = editor.state.selection;
+    const isLink = (n) => Boolean(n && n.marks && n.marks.some((m) => m.type.name === "link"));
+    return isLink($from.nodeBefore) || isLink($from.nodeAfter);
+  };
   // Modification refusée sur un bloc verrouillé (message au plus toutes les 4 s)
   let lockNoticeAt = 0;
   function lockedNotice() {
@@ -1006,7 +1013,7 @@ function start() {
         if (mod && !event.shiftKey && event.key.toLowerCase() === "k") {
           event.preventDefault();
           // Avec du texte sélectionné (ou dans un lien) : lien ; sinon : palette de commandes
-          if (!editor.state.selection.empty || editor.isActive("link") || !wsUi) linkPopover(null); else wsUi.openPalette();
+          if (!editor.state.selection.empty || cursorOnLink() || !wsUi) linkPopover(null); else wsUi.openPalette();
           return true;
         }
         if (mod && event.shiftKey && event.key.toLowerCase() === "f") { event.preventDefault(); openFind(); return true; }
@@ -1975,7 +1982,7 @@ function start() {
     const mod = e.ctrlKey || e.metaKey;
     if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); quickSave(); }
     // Cmd+K hors de l'éditeur (après un clic sur un bouton…) : lien sur la sélection de l'article
-    if (mod && !e.shiftKey && e.key.toLowerCase() === "k" && !editor.view.hasFocus() && !e.target.closest("input, textarea, select, .wp-popover")) {
+    if (mod && !e.shiftKey && e.key.toLowerCase() === "k" && !e.defaultPrevented && !editor.view.hasFocus() && !e.target.closest("input, textarea, select, .wp-popover, .ProseMirror")) {
       e.preventDefault();
       if (!editor.state.selection.empty && wsUi) { editor.view.focus(); linkPopover(null); } else if (wsUi) wsUi.openPalette(); else { editor.view.focus(); linkPopover(null); }
     }
