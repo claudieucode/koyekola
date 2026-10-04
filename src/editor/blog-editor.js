@@ -24,6 +24,7 @@ import { createWorkspace } from "./blog/workspace";
 import { createSeoData, createRenderers } from "./blog/seoPanels";
 import { setupWorkspaceUi } from "./blog/workspaceUi";
 import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, isLocked, findMatches, findKey, blockHtml, contentHtml } from "./blog/editing";
+import { BlockIdentity, walkBlocks, findBlock, activeBlockId, setHidden, placeOf, restorePosition, ID_ONLY_META } from "./blog/blocks";
 import { analyze, norm } from "../utils/seoAnalyzer";
 
 const root = document.querySelector("[data-blog-editor]");
@@ -66,6 +67,10 @@ const ICONS = {
   alignCenter: "M7.5 5.5h9V4h-9v1.5Zm-3.5 7h16V11H4v1.5Zm3.5 7h9V18h-9v1.5Z",
   alignRight: "M11.111 5.5H20V4h-8.889v1.5ZM4 12.5h16V11H4v1.5Zm7.111 7H20V18h-8.889v1.5Z",
   plus: "M11 12.5V17.5H12.5V12.5H17.5V11H12.5V6H11V11H6V12.5H11Z",
+  eye: "M12 5C6.8 5 3 9.3 2 12c1 2.7 4.8 7 10 7s9-4.3 10-7c-1-2.7-4.8-7-10-7Zm0 12.5c-3.8 0-6.9-3-8.4-5.5C5.1 9.5 8.2 6.5 12 6.5s6.9 3 8.4 5.5c-1.5 2.5-4.6 5.5-8.4 5.5ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z",
+  eyeOff: "M4.6 3.5 3.5 4.6l2.8 2.8C4.2 8.8 2.7 10.6 2 12c1 2.7 4.8 7 10 7 1.6 0 3-.4 4.3-1l3.1 3.1 1.1-1.1L4.6 3.5Zm4.9 7.1 3.9 3.9A3 3 0 0 1 9.5 10.6ZM12 17.5c-3.8 0-6.9-3-8.4-5.5.6-1 1.5-2.2 2.8-3.3l1.9 1.9a4.5 4.5 0 0 0 6.2 6.2l.6.6c-.9.1-2 .1-3.1.1ZM12 6.5c3.8 0 6.9 3 8.4 5.5-.5.8-1.2 1.8-2.1 2.7l1.1 1.1c1.2-1.2 2.1-2.5 2.6-3.8-1-2.7-4.8-7-10-7-1 0-2 .2-2.9.5l1.2 1.2c.5-.1 1.1-.2 1.7-.2Z",
+  trash: "M12 5.5A2.25 2.25 0 0 0 9.878 7h4.244A2.25 2.25 0 0 0 12 5.5ZM12 4a3.751 3.751 0 0 0-3.675 3H5v1.5h1.27l.818 8.997a2.75 2.75 0 0 0 2.739 2.501h4.347a2.75 2.75 0 0 0 2.738-2.5L17.73 8.5H19V7h-3.325A3.751 3.751 0 0 0 12 4Zm4.224 4.5H7.776l.806 8.861a1.25 1.25 0 0 0 1.245 1.137h4.347a1.25 1.25 0 0 0 1.245-1.137l.805-8.861Z",
+  restore: "M12 4a8 8 0 1 1-7.5 10.8l1.4-.5A6.5 6.5 0 1 0 6.9 7.4L9 9.5H3.5V4l2.3 2.3A8 8 0 0 1 12 4Z",
   search: "M13 5c-3.3 0-6 2.7-6 6 0 1.4.5 2.7 1.3 3.7l-3.8 3.8 1.1 1.1 3.8-3.8c1 .8 2.3 1.3 3.7 1.3 3.3 0 6-2.7 6-6S16.3 5 13 5zm0 10.5c-2.5 0-4.5-2-4.5-4.5s2-4.5 4.5-4.5 4.5 2 4.5 4.5-2 4.5-4.5 4.5z",
 };
 
@@ -166,6 +171,8 @@ function start() {
 
   // ---------- L'éditeur ----------
   const codeEditor = $("#post-content");
+  // Nom affiché d'un bloc masqué : disponible dès la création de l'éditeur (le nom complet est branché plus bas)
+  let blockNameOf = () => "Bloc";
   const editor = new Editor({
     element: $("#be-editor"),
     extensions: [
@@ -180,6 +187,7 @@ function start() {
       Focus.configure({ mode: "shallowest", className: "has-focus" }),
       BlockHandle.configure({ visual: false }),
       BlockLock.configure({ onBlocked: () => lockedNotice() }),
+      BlockIdentity.configure({ hiddenLabel: (n) => blockNameOf(n), onShow: (id) => { setHidden(editor, id, false); toast("Bloc de nouveau visible."); } }),
       FindHighlight,
     ],
     content: codeEditor.value,
@@ -406,29 +414,242 @@ function start() {
     } catch (e) { box.replaceChildren(h("p", { class: "wp-error" }, e.message)); }
   }
   const LABEL = { paragraph: "Paragraphe", heading: "Titre", bulletList: "Liste", orderedList: "Liste numérotée", listItem: "Élément de liste", taskList: "Liste de contrôle", taskItem: "Élément", blockquote: "Citation", codeBlock: "Code", horizontalRule: "Séparateur", table: "Tableau", tableRow: "Ligne", tableCell: "Cellule", tableHeader: "En-tête", kbImage: "Image", kbGallery: "Galerie", kbVideo: "Vidéo", kbAudio: "Audio", kbEmbed: "Contenu embarqué", kbCourse: "Formation recommandée", kbNewsletter: "Newsletter", kbButton: "Bouton", callout: "Encadré", kbCta: "Appel à l'action", kbAccordion: "Détails", kbSummary: "Résumé", kbAccordionBody: "Contenu", kbFaq: "FAQ", kbFaqItem: "Question", kbFaqAnswer: "Réponse", kbSteps: "Étapes", kbCompare: "Comparaison", kbCompareCol: "Colonne", kbSpacer: "Espaceur", kbPageBreak: "Saut de page", kbColumns: "Colonnes", kbColumn: "Colonne", kbGroup: "Groupe", kbButtons: "Groupe de boutons", kbReusable: "Bloc synchronisé", kbReusableEdit: "Bloc synchronisé (modification)" };
-  const ICON_OF = { paragraph: "paragraph", heading: "heading", bulletList: "list", orderedList: "ordered", taskList: "checklist", blockquote: "quote", codeBlock: "code", horizontalRule: "separator", table: "table", kbImage: "image", kbGallery: "gallery", kbVideo: "video", kbAudio: "audio", kbEmbed: "embed", kbCourse: "course", kbNewsletter: "newsletter", kbButton: "button", callout: "callout", kbCta: "cta", kbAccordion: "details", kbFaq: "faq", kbSteps: "steps", kbCompare: "columns", kbSpacer: "separator", kbPageBreak: "separator", kbColumns: "columns", kbGroup: "callout", kbButtons: "button" };
+  const ICON_OF = { paragraph: "paragraph", heading: "heading", bulletList: "list", orderedList: "ordered", taskList: "checklist", blockquote: "quote", codeBlock: "code", horizontalRule: "separator", table: "table", kbImage: "image", kbGallery: "gallery", kbVideo: "video", kbAudio: "audio", kbEmbed: "embed", kbCourse: "course", kbNewsletter: "newsletter", kbButton: "button", callout: "callout", kbCta: "cta", kbAccordion: "details", kbFaq: "faq", kbSteps: "steps", kbCompare: "columns", kbSpacer: "separator", kbPageBreak: "separator", kbColumns: "columns", kbColumn: "columns", kbGroup: "callout", kbButtons: "button" };
   const nameOf = (node) => (node.type.name === "heading" ? `Titre H${node.attrs.level}` : node.type.name === "callout" ? `Encadré ${CALLOUT_LABELS[node.attrs.type] || ""}` : LABEL[node.type.name] || node.type.name);
+  // ---------- Structure de l'article : vue en liste, plan, corbeille ----------
+  // Une seule source de vérité : le document de l'éditeur. Chaque ligne porte l'identifiant du bloc (blockId) ;
+  // la zone d'écriture et la liste se retrouvent par cet identifiant, jamais par un rang dans un tableau.
+  let structureTab = "liste";
+  let listRows = new Map(); // blockId → ligne de la vue en liste (reconstruite à chaque rendu)
+  let listActive = null;
+  let trashItems = null; // éléments de la corbeille (serveur), chargés à la demande
+  let pendingTrash = []; // article jamais enregistré : éléments envoyés au premier enregistrement
+  blockNameOf = nameOf;
+  const blockLabel = (node) => nameOf(node);
+  const blockPreview = (node) => (node.isAtom ? (node.attrs.alt || node.attrs.caption || node.attrs.title || node.attrs.text || node.attrs.url || node.attrs.src || "") : node.textContent).replace(/\s+/g, " ").trim().slice(0, 80);
+  const hasBlock = (id) => Boolean(findBlock(editor.state.doc, id));
   function renderListView() {
-    const list = h("ol", { class: "wp-list-view", role: "tree", "aria-label": "Blocs" });
-    const outline = h("ol", { class: "wp-outline", hidden: true });
-    const current = currentBlock();
-    editor.state.doc.forEach((node, offset) => {
-      const preview = node.isAtom ? "" : node.textContent.slice(0, 40);
-      const item = h("li", { role: "treeitem", class: current && current.pos === offset ? "is-selected" : "" }, h("button", { type: "button", onclick: () => selectBlockAt(offset) }, svg(ICON_OF[node.type.name] || "paragraph", 20), h("span", { class: "wp-list-name" }, nameOf(node)), preview ? h("span", { class: "wp-list-preview" }, preview) : null));
-      list.append(item);
+    const body = h("div", { class: "wp-secondary-body", "data-structure-body": "" });
+    const list = h("ul", { class: "wp-list-view", role: "tree", "aria-label": "Blocs de l'article", hidden: structureTab !== "liste" });
+    const outline = h("ol", { class: "wp-outline", hidden: structureTab !== "plan" });
+    const trash = h("div", { class: "wp-trash", hidden: structureTab !== "corbeille" });
+    listRows = new Map();
+    // Arborescence réelle : colonnes, groupes et boutons gardent leurs enfants
+    const stack = [{ depth: -1, ul: list }];
+    let count = 0;
+    walkBlocks(editor.state.doc, (node, pos, { depth }) => {
+      while (stack[stack.length - 1].depth >= depth) stack.pop();
+      const id = node.attrs.blockId;
+      const locked = isLocked(node);
+      const hidden = Boolean(node.attrs.hidden);
+      const name = blockLabel(node);
+      const preview = blockPreview(node);
+      const fixedChild = node.type.name === "kbColumn"; // une colonne se gère par la mise en page du bloc Colonnes
+      const select = h("button", { type: "button", class: "wp-lv-select", "data-block-select": id || "", onclick: () => selectBlockById(id) },
+        svg(ICON_OF[node.type.name] || "paragraph", 18), h("span", { class: "wp-list-name" }, name), preview ? h("span", { class: "wp-list-preview" }, preview) : null);
+      const eye = h("button", { type: "button", class: `wp-lv-action${hidden ? " is-on" : ""}`, "data-block-hide": id || "", "aria-pressed": String(hidden), disabled: locked || fixedChild || !id,
+        "aria-label": hidden ? `Afficher le bloc ${name}` : `Masquer le bloc ${name}`, title: locked ? "Bloc verrouillé" : hidden ? "Afficher le bloc" : "Masquer le bloc",
+        onclick: () => toggleHidden(id) }, svg(hidden ? "eyeOff" : "eye", 18));
+      const del = h("button", { type: "button", class: "wp-lv-action is-danger", "data-block-delete": id || "", disabled: locked || fixedChild || !id,
+        "aria-label": `Supprimer le bloc ${name}`, title: locked ? "Bloc verrouillé" : fixedChild ? "Changez le nombre de colonnes dans les réglages du bloc Colonnes" : "Supprimer (vers la corbeille)",
+        onclick: () => trashBlock(id) }, svg("trash", 18));
+      const row = h("li", { role: "treeitem", "aria-level": String(depth + 1), "aria-selected": "false", class: `wp-lv-item${hidden ? " is-hidden" : ""}`, "data-block-row": id || "" },
+        h("div", { class: "wp-lv-row" }, select, h("span", { class: "wp-lv-actions" }, eye, del)));
+      stack[stack.length - 1].ul.append(row);
+      if (id) listRows.set(id, row);
+      count += 1;
+      if (["kbColumns", "kbColumn", "kbGroup", "kbButtons"].includes(node.type.name) && node.childCount) {
+        const sub = h("ul", { role: "group", class: "wp-lv-children" });
+        row.append(sub);
+        stack.push({ depth, ul: sub });
+      }
+      return hidden ? false : undefined; // les enfants d'un bloc masqué sont masqués avec lui
     });
+    if (!count) list.append(h("li", { class: "wp-help" }, "L'article est vide."));
     const hs = headingsOf();
     outline.append(...hs.map((x) => h("li", { class: `wp-outline-l${x.level}` }, h("button", { type: "button", onclick: () => editor.chain().focus().setTextSelection(x.pos + 1).scrollIntoView().run() }, h("span", { class: "wp-outline-level" }, `H${x.level}`), x.text || "(titre vide)"))));
     if (!hs.length) outline.append(h("li", { class: "wp-help" }, "Le plan s'affiche à partir des titres (blocs Titre)."));
-    const tabs = segmentedTabs([["liste", "Vue en liste"], ["plan", "Plan"]], (k) => { list.hidden = k !== "liste"; outline.hidden = k !== "plan"; });
+    const trashCount = visibleTrash().length;
+    const tabs = structureTabs([["liste", "Vue en liste"], ["plan", "Plan"], ["corbeille", trashCount ? `Corbeille (${trashCount})` : "Corbeille"]], (k) => {
+      structureTab = k; list.hidden = k !== "liste"; outline.hidden = k !== "plan"; trash.hidden = k !== "corbeille";
+      if (k === "corbeille") renderTrash(trash, true);
+      if (k === "liste") syncListSelection(true);
+    });
     const stats = lastAnalysis ? h("p", { class: "wp-help wp-outline-stats" }, `Caractères : ${editor.getText().length} · Mots : ${lastAnalysis.words} · Temps de lecture : ${lastAnalysis.minutes} min`) : null;
-    secondaryDynamic.replaceChildren(tabs, h("div", { class: "wp-secondary-body" }, stats, list, outline));
+    const old = secondaryDynamic.querySelector("[data-structure-body]");
+    const scroll = old ? old.scrollTop : 0;
+    // Le focus clavier reste sur le même bouton du même bloc après le nouveau rendu
+    const fa = document.activeElement;
+    const focusKey = fa && secondaryDynamic.contains(fa) ? ["data-block-select", "data-block-hide", "data-block-delete", "data-structure-tab"].map((a) => (fa.hasAttribute(a) ? `[${a}="${fa.getAttribute(a)}"]` : null)).find(Boolean) : null;
+    body.append(stats, list, outline, trash);
+    secondaryDynamic.replaceChildren(tabs, body);
+    body.scrollTop = scroll;
+    if (focusKey) { const again = secondaryDynamic.querySelector(focusKey); if (again && !again.disabled) again.focus({ preventScroll: true }); }
+    if (structureTab === "corbeille") renderTrash(trash, trashItems === null);
+    listActive = null;
+    syncListSelection();
+  }
+  // Ctrl+Z / Ctrl+Maj+Z depuis le panneau Structure : même historique que la zone d'écriture
+  secondaryDynamic.addEventListener("keydown", (e) => {
+    if (secondaryMode !== "list" || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z" || e.target.matches("input, textarea")) return;
+    e.preventDefault();
+    if (e.shiftKey) editor.commands.redo(); else editor.commands.undo();
+    renderListView();
+    const again = secondaryDynamic.querySelector(".wp-lv-item.is-selected .wp-lv-select") || secondaryDynamic.querySelector(".wp-lv-select");
+    if (again) again.focus();
+  });
+  function structureTabs(items, onchange) {
+    const bar = h("div", { class: "wp-tabs", role: "tablist" });
+    items.forEach(([k, label]) => bar.append(h("button", { type: "button", role: "tab", "data-structure-tab": k, "aria-selected": String(k === structureTab), onclick: (e) => { bar.querySelectorAll("button").forEach((b) => b.setAttribute("aria-selected", "false")); e.currentTarget.setAttribute("aria-selected", "true"); onchange(k); } }, label)));
+    return bar;
+  }
+  // Zone d'écriture → liste : le bloc qui contient le curseur (le plus profond) est sélectionné et rendu visible
+  function syncListSelection(force) {
+    if (secondaryMode !== "list") return;
+    const id = activeBlockId(editor.state);
+    if (id === listActive && !force) return;
+    const prev = listActive && listRows.get(listActive);
+    if (prev) { prev.classList.remove("is-selected"); prev.setAttribute("aria-selected", "false"); }
+    listActive = id;
+    const row = id && listRows.get(id);
+    if (!row) return;
+    row.classList.add("is-selected");
+    row.setAttribute("aria-selected", "true");
+    if (structureTab === "liste") row.querySelector(".wp-lv-row").scrollIntoView({ block: "nearest" });
+  }
+  // Liste → zone d'écriture : le même bloc est sélectionné, la page défile jusqu'à lui et il est mis en évidence
+  function selectBlockById(id) {
+    const b = findBlock(editor.state.doc, id);
+    if (!b) return;
+    const node = b.node;
+    const chain = editor.chain().focus();
+    if (!node.attrs.hidden && node.isTextblock) chain.setTextSelection(b.pos + 1);
+    else chain.setNodeSelection(b.pos);
+    chain.scrollIntoView().run();
+    const dom = node.attrs.hidden ? editor.view.dom.querySelector(`[data-hidden-stub="${id}"]`) : editor.view.nodeDOM(b.pos);
+    if (dom && dom.scrollIntoView) {
+      dom.scrollIntoView({ block: "center", behavior: "smooth" });
+      dom.classList.remove("is-list-target");
+      void dom.offsetWidth;
+      dom.classList.add("is-list-target");
+      setTimeout(() => dom.classList.remove("is-list-target"), 1600);
+    }
+    syncListSelection(true);
   }
   function selectBlockAt(pos) {
     const node = editor.state.doc.nodeAt(pos);
     if (!node) return;
     if (node.isAtom || !node.isTextblock) editor.chain().focus().setNodeSelection(pos).scrollIntoView().run();
     else editor.chain().focus().setTextSelection(pos + 1).scrollIntoView().run();
+  }
+  function toggleHidden(id) {
+    const b = findBlock(editor.state.doc, id);
+    if (!b) return;
+    if (isLocked(b.node)) { lockedNotice(); return; }
+    const hide = !b.node.attrs.hidden;
+    setHidden(editor, id, hide);
+    toast(hide ? `${blockLabel(b.node)} masqué : il reste dans l'article mais ne sera pas publié.` : `${blockLabel(b.node)} de nouveau visible.`);
+    renderListView();
+  }
+  // Suppression vers la corbeille : le bloc quitte l'article (transaction normale, « Annuler » la défait) ;
+  // son contenu exact et sa place sont enregistrés pour une restauration au même endroit
+  async function trashBlock(id) {
+    const place = placeOf(editor.state.doc, id);
+    if (!place) return;
+    const { node, pos, parent } = place;
+    if (isLocked(node)) { lockedNotice(); return; }
+    const container = parent || editor.state.doc;
+    if (!container.canReplace(place.index, place.index + 1)) { toast("Ce bloc ne peut pas être supprimé seul : supprimez ou modifiez le bloc qui le contient.", "error"); return; }
+    const item = { blockId: id, type: node.type.name, label: blockLabel(node), preview: blockPreview(node), node: node.toJSON(), parentId: place.parentId, prevId: place.prevId, nextId: place.nextId, position: place.position, deletedAt: null };
+    editor.view.dispatch(editor.state.tr.delete(pos, pos + node.nodeSize).scrollIntoView());
+    toast(`${item.label} déplacé dans la corbeille (Ctrl+Z pour annuler).`);
+    trashItems = [{ ...item, deletedAt: new Date().toISOString().slice(0, 19).replace("T", " ") }, ...(trashItems || []).filter((t) => t.blockId !== id)];
+    renderListView();
+    try {
+      if (!postId) { pendingTrash.push(item); await ensurePost(); await flushPendingTrash(); return; }
+      await api(`/formateur/blog/${postId}/corbeille`, { method: "POST", json: item });
+    } catch (e) { toast(`Corbeille : enregistrement impossible (${e.message}). Le bloc reste récupérable avec Ctrl+Z.`, "error"); }
+  }
+  async function flushPendingTrash() {
+    while (postId && pendingTrash.length) { const item = pendingTrash[0]; await api(`/formateur/blog/${postId}/corbeille`, { method: "POST", json: item }); pendingTrash.shift(); }
+  }
+  // Corbeille affichée : éléments dont le bloc n'est pas dans l'article (un bloc revenu par « Annuler » n'y figure plus)
+  const visibleTrash = () => (trashItems || []).filter((t) => !hasBlock(t.blockId));
+  async function loadTrash() {
+    if (!postId) { trashItems = trashItems || []; return; }
+    const { items } = await api(`/formateur/blog/${postId}/corbeille`);
+    const local = (trashItems || []).filter((t) => !items.some((i) => i.blockId === t.blockId) && pendingTrash.some((p) => p.blockId === t.blockId));
+    trashItems = [...local, ...items];
+  }
+  const ago = (sql) => {
+    if (!sql) return "";
+    const s = Math.max(0, Math.round((Date.now() - new Date(`${sql.replace(" ", "T")}Z`).getTime()) / 1000));
+    return s < 60 ? "à l'instant" : s < 3600 ? `il y a ${Math.round(s / 60)} min` : s < 86400 ? `il y a ${Math.round(s / 3600)} h` : `le ${fmtDate(sql)}`;
+  };
+  async function renderTrash(box, reload) {
+    if (reload) {
+      box.replaceChildren(h("p", { class: "wp-help" }, "Chargement de la corbeille…"));
+      try { await loadTrash(); } catch (e) { box.replaceChildren(h("p", { class: "wp-error" }, e.message)); return; }
+    }
+    const items = visibleTrash();
+    const tab = secondaryDynamic.querySelector('[data-structure-tab="corbeille"]');
+    if (tab) tab.textContent = items.length ? `Corbeille (${items.length})` : "Corbeille";
+    if (!items.length) { box.replaceChildren(h("div", { class: "wp-trash-empty" }, svg("trash", 28), h("p", {}, "La corbeille est vide."), h("p", { class: "wp-help" }, "Les blocs supprimés depuis la vue en liste arrivent ici et peuvent être restaurés à leur place."))); return; }
+    const head = h("div", { class: "wp-trash-head" }, h("strong", {}, `${items.length} élément${items.length > 1 ? "s" : ""} supprimé${items.length > 1 ? "s" : ""}`),
+      h("span", { class: "wp-trash-bulk" },
+        h("button", { type: "button", class: "wp-btn-link", "data-trash-restore-all": "", onclick: () => restoreAll() }, "Tout restaurer"),
+        h("button", { type: "button", class: "wp-btn-link is-danger", "data-trash-empty": "", onclick: () => emptyTrash() }, "Vider la corbeille")));
+    const ul = h("ul", { class: "wp-trash-list" }, ...items.map((t) => h("li", { class: "wp-trash-item", "data-trash-item": t.blockId },
+      h("div", { class: "wp-trash-what" }, svg(ICON_OF[t.type] || "paragraph", 18), h("div", {}, h("strong", {}, t.label), t.preview ? h("p", { class: "wp-trash-preview" }, `« ${t.preview} »`) : null, h("p", { class: "wp-help" }, `Supprimé ${ago(t.deletedAt)}`))),
+      h("div", { class: "wp-trash-actions" },
+        h("button", { type: "button", class: "wp-btn-secondary", "data-trash-restore": t.blockId, "aria-label": `Restaurer le bloc ${t.label}`, title: "Restaurer à sa place", onclick: () => restoreItem(t) }, svg("restore", 16), " Restaurer"),
+        h("button", { type: "button", class: "wp-btn-link is-danger", "data-trash-purge": t.blockId, "aria-label": `Supprimer définitivement le bloc ${t.label}`, title: "Supprimer définitivement", onclick: () => purgeItem(t) }, "Supprimer définitivement")))));
+    box.replaceChildren(head, ul);
+  }
+  // Restaurer : le bloc revient à sa place d'origine (voisins, bloc parent, rang), sinon à la meilleure place possible
+  function restoreItem(t, { quiet = false } = {}) {
+    if (hasBlock(t.blockId)) return true;
+    let node;
+    try { node = editor.schema.nodeFromJSON(t.node); node.check(); } catch { toast(`« ${t.label} » ne peut pas être restauré : son contenu n'est plus compatible avec l'éditeur.`, "error"); return false; }
+    const at = restorePosition(editor.state.doc, node, t);
+    if (!at) { toast(`Aucune place valide pour restaurer « ${t.label} ».`, "error"); return false; }
+    editor.view.dispatch(editor.state.tr.insert(at.pos, node).scrollIntoView());
+    if (!quiet) { toast(`${t.label} restauré ${at.how}.`); renderListView(); selectBlockById(t.blockId); }
+    return true;
+  }
+  function restoreAll() {
+    // Du plus récent au plus ancien (comme « Annuler ») : chaque bloc retrouve ses voisins tels qu'ils étaient à sa suppression
+    const items = visibleTrash();
+    let n = 0;
+    for (const t of items) if (restoreItem(t, { quiet: true })) n += 1;
+    toast(`${n} bloc(s) restauré(s) à leur place.`);
+    renderListView();
+  }
+  function purgeItem(t) {
+    modal("Supprimer définitivement cet élément ?", h("p", {}, `« ${t.label}${t.preview ? ` — ${t.preview.slice(0, 60)}` : ""} » sera supprimé de la corbeille. Cette action est irréversible.`), [
+      { label: "Annuler" },
+      { label: "Supprimer définitivement", danger: true, run: async () => {
+        try { if (postId) await api(`/formateur/blog/${postId}/corbeille/${t.blockId}`, { method: "DELETE" }); } catch (e) { toast(e.message, "error"); return; }
+        pendingTrash = pendingTrash.filter((p) => p.blockId !== t.blockId);
+        trashItems = (trashItems || []).filter((x) => x.blockId !== t.blockId);
+        toast("Élément supprimé définitivement.");
+        renderListView();
+      } },
+    ]);
+  }
+  function emptyTrash() {
+    const n = visibleTrash().length;
+    modal("Vider la corbeille ?", h("p", {}, `${n} élément${n > 1 ? "s" : ""} ser${n > 1 ? "ont" : "a"} supprimé${n > 1 ? "s" : ""} définitivement. Cette action est irréversible.`), [
+      { label: "Annuler" },
+      { label: "Vider la corbeille", danger: true, run: async () => {
+        try { if (postId) { for (const t of visibleTrash()) await api(`/formateur/blog/${postId}/corbeille/${t.blockId}`, { method: "DELETE" }); } } catch (e) { toast(e.message, "error"); return; }
+        const gone = new Set(visibleTrash().map((t) => t.blockId));
+        pendingTrash = pendingTrash.filter((p) => !gone.has(p.blockId));
+        trashItems = (trashItems || []).filter((x) => !gone.has(x.blockId));
+        toast("Corbeille vidée.");
+        renderListView();
+      } },
+    ]);
   }
 
   // ---------- Bloc courant ----------
@@ -1914,6 +2135,8 @@ function start() {
     form.action = `/formateur/blog/${r.id}/modifier`;
     history.replaceState(null, "", `/formateur/blog/${r.id}/modifier`);
     try { localStorage.removeItem(before); } catch { /* rien */ }
+    // Blocs supprimés avant le tout premier enregistrement : envoyés maintenant dans la corbeille de l'article
+    if (pendingTrash.length) setTimeout(() => flushPendingTrash().catch(() => {}), 0);
   }
   let autosaveTimer = null;
   const scheduleAutosave = () => {
@@ -1994,9 +2217,9 @@ function start() {
   form.addEventListener("change", (e) => { if (e.target.type === "checkbox" || e.target.tagName === "SELECT") changed(); });
   codeEditor.addEventListener("input", () => changed());
   let lastTypingSignal = 0;
-  editor.on("update", () => { changed(); refreshSlash(); if (seoData && Date.now() - lastTypingSignal > 1000) { lastTypingSignal = Date.now(); seoData.emit("typing", {}); } });
+  editor.on("update", ({ transaction }) => { if (transaction && transaction.getMeta(ID_ONLY_META)) return; changed(); refreshSlash(); if (seoData && Date.now() - lastTypingSignal > 1000) { lastTypingSignal = Date.now(); seoData.emit("typing", {}); } });
   const refreshUi = () => { renderBlockToolbar(); refreshAppender(); renderInspector(); };
-  editor.on("selectionUpdate", () => { refreshUi(); refreshSlash(); });
+  editor.on("selectionUpdate", () => { refreshUi(); refreshSlash(); syncListSelection(); });
   let uiFrame = 0;
   editor.on("transaction", () => { cancelAnimationFrame(uiFrame); uiFrame = requestAnimationFrame(refreshUi); });
   function setTyping(on) {

@@ -14,6 +14,7 @@ const { absoluteUrl, breadcrumbLd, isoDate, isoDateTime } = require("../utils/se
 const { sanitizeBlogHtml, markdownToEditorHtml } = require("../utils/blogHtml");
 const { escapeHtml } = require("../utils/markdown");
 const blog = require("../services/blog");
+const blockTrash = require("../services/blockTrash");
 const blogAi = require("../services/blogAi");
 const editorTheme = require("../services/editorTheme");
 const seoPages = require("../seo/pages");
@@ -617,6 +618,7 @@ router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, r
   db.prepare(`UPDATE posts SET ${names.map((n) => `${n} = ?`).join(", ")}, updated_at = datetime('now') WHERE id = ?`).run(...names.map((n) => cols[n]), p.id);
   const after = db.prepare("SELECT * FROM posts WHERE id = ?").get(p.id);
   blog.addRevision(after, req.session.user.id, blog.describeChange(p, after));
+  blockTrash.settle(p.id, after.content); // blocs de nouveau dans l'article (restaurés ou « Annuler ») : retirés de la corbeille
   for (const field of SEO_LOGGED) seoStore.logChange({ entityType: "post", entityKey: String(p.id), field, before: p[field], after: after[field], userId: req.session.user.id, source: "editor" });
   blog.clearAutosave(p.id);
   // Images remplacées : supprimées (fichier et médiathèque) seulement si plus aucun article ne les utilise
@@ -684,6 +686,16 @@ router.get("/formateur/blog/:id/apercu", loadPost, (req, res) => {
   res.set("Cache-Control", "no-store");
   renderPostPage(req, res, merged, { preview: true });
 });
+
+// ---------- Corbeille des blocs (Structure de l'article → Corbeille) ----------
+router.get("/formateur/blog/:id(\\d+)/corbeille", loadPost, (req, res) => res.json({ items: blockTrash.list(req.post.id) }));
+router.post("/formateur/blog/:id(\\d+)/corbeille", express.json({ limit: "512kb" }), loadPost, (req, res) => {
+  try { res.json({ item: blockTrash.add(req.post.id, req.body || {}, req.session.user.id) }); } catch (e) { if (e instanceof UserError) return res.status(400).json({ error: e.message }); throw e; }
+});
+router.delete("/formateur/blog/:id(\\d+)/corbeille/:blockId", loadPost, (req, res) => {
+  try { res.json({ ok: blockTrash.purge(req.post.id, req.params.blockId) }); } catch (e) { if (e instanceof UserError) return res.status(400).json({ error: e.message }); throw e; }
+});
+router.delete("/formateur/blog/:id(\\d+)/corbeille", loadPost, (req, res) => res.json({ removed: blockTrash.empty(req.post.id) }));
 
 // ---------- Versions ----------
 router.get("/formateur/blog/:id/versions", loadPost, (req, res) => res.json({ revisions: blog.listRevisions(req.post.id) }));

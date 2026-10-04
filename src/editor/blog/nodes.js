@@ -121,7 +121,12 @@ export const KbGallery = Node.create({
 });
 
 // Bloc verrouillé : marqueur conservé dans le HTML enregistré (attribut global « locked », voir editing.js)
-export const lockOf = (node) => (node.attrs.locked ? { "data-locked": "true" } : {});
+// Repères communs aux blocs dessinés par leur propre renderHTML : verrou, identité du bloc, bloc masqué
+export const lockOf = (node) => ({
+  ...(node.attrs.locked ? { "data-locked": "true" } : {}),
+  ...(node.attrs.blockId ? { "data-block-id": node.attrs.blockId } : {}),
+  ...(node.attrs.hidden ? { "data-hidden": "true" } : {}),
+});
 
 // ---------- Marqueurs (rendus par le serveur) ----------
 function marker({ name, cls, attrs, icon, label }) {
@@ -314,7 +319,7 @@ export const KbColumn = Node.create({
   defining: true,
   isolating: true,
   parseHTML() { return [{ tag: "div.kb-column", priority: 80 }]; },
-  renderHTML() { return ["div", { class: "kb-column" }, 0]; },
+  renderHTML({ node }) { return ["div", { class: "kb-column", ...lockOf(node) }, 0]; },
   addNodeView() { return () => { const dom = document.createElement("div"); dom.className = "kb-ed-column"; return { dom, contentDOM: dom }; }; },
 });
 const COLUMN_KEYS = ["layout", "gap", "stack", "valign"];

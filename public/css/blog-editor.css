@@ -1167,3 +1167,54 @@
 .be-diff-list li.is-added { background: #e7f8ee; }
 .be-diff-list del { color: #a40e18; background: #fbd5d7; text-decoration: line-through; }
 .be-diff-list ins { color: #14532d; background: #c9f0d6; text-decoration: none; }
+
+/* ---------- Structure de l'article : vue en liste (panneau de contrôle des blocs) ---------- */
+.wp-list-view, .wp-lv-children { list-style: none; margin: 0; padding: 0; }
+.wp-lv-children { margin-left: 14px; padding-left: 8px; border-left: 1px solid var(--border); }
+.wp-lv-row { position: relative; display: flex; align-items: center; gap: 2px; border-radius: 8px; transition: background 120ms ease; }
+.wp-lv-row:hover { background: var(--surface-alt); }
+.wp-list-view .wp-lv-select { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 4px 6px 4px 8px; border: 0; border-radius: 8px; background: none; color: var(--primary); font-size: 13px; text-align: left; cursor: pointer; }
+.wp-list-view .wp-lv-select:hover { background: none; }
+.wp-list-view .wp-lv-select:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.wp-lv-select svg { flex: none; opacity: 0.75; }
+.wp-lv-actions { flex: none; display: inline-flex; gap: 2px; padding-right: 4px; opacity: 0; transition: opacity 120ms ease; }
+.wp-lv-row:hover .wp-lv-actions, .wp-lv-row:focus-within .wp-lv-actions, .wp-lv-item.is-selected > .wp-lv-row .wp-lv-actions, .wp-lv-item.is-hidden > .wp-lv-row .wp-lv-actions { opacity: 1; }
+.wp-list-view .wp-lv-action { display: grid; place-items: center; width: 30px; height: 30px; min-height: 0; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer; }
+.wp-list-view .wp-lv-action:hover:not(:disabled) { background: var(--accent-light); color: var(--accent-dark); }
+.wp-list-view .wp-lv-action.is-danger:hover:not(:disabled) { background: rgba(204, 24, 24, 0.08); color: var(--danger); }
+.wp-list-view .wp-lv-action.is-on { color: var(--accent-dark); }
+.wp-list-view .wp-lv-action:disabled { opacity: 0.35; cursor: not-allowed; }
+.wp-list-view .wp-lv-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Bloc sélectionné : fond léger + repère à gauche (synchronisé avec la zone d'écriture) */
+.wp-lv-item.is-selected > .wp-lv-row { background: var(--accent-light); box-shadow: inset 3px 0 0 var(--accent); }
+.wp-lv-item.is-selected > .wp-lv-row .wp-lv-select, .wp-lv-item.is-selected > .wp-lv-row .wp-list-preview { color: var(--accent-dark); }
+.wp-lv-item.is-selected > .wp-lv-row .wp-list-name { font-weight: 650; }
+/* Bloc masqué : ligne atténuée, l'œil barré reste visible */
+.wp-lv-item.is-hidden > .wp-lv-row .wp-lv-select { opacity: 0.55; }
+.wp-lv-item.is-hidden > .wp-lv-row .wp-list-name::after { content: " · masqué"; font-weight: 400; color: var(--muted); }
+
+/* ---------- Zone d'écriture : bloc masqué et bloc ciblé depuis la liste ---------- */
+.be-prose .is-block-hidden { display: none !important; }
+.be-prose .kb-hidden-stub { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 10px 0; padding: 7px 12px; border: 1px dashed var(--border); border-radius: 8px; background: var(--surface-alt); color: var(--muted); font-size: 13px; user-select: none; }
+.be-prose .kb-hidden-stub button { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+.be-prose .kb-hidden-stub button:hover { background: var(--accent-light); }
+.be-prose .kb-hidden-stub button:focus-visible { outline: 2px solid var(--accent); }
+.be-prose .is-list-target { animation: wp-list-target 1.6s ease; }
+@keyframes wp-list-target { 0%, 35% { box-shadow: 0 0 0 3px var(--accent-light), 0 0 0 4px var(--accent); border-radius: 6px; } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .be-prose .is-list-target { animation: none; outline: 2px solid var(--accent); } }
+
+/* ---------- Corbeille ---------- */
+.wp-trash-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin: 0 0 10px; font-size: 13px; color: var(--primary); }
+.wp-trash-bulk { display: inline-flex; gap: 12px; }
+.wp-trash-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.wp-trash-item { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+.wp-trash-what { display: flex; gap: 10px; align-items: flex-start; min-width: 0; }
+.wp-trash-what svg { flex: none; margin-top: 1px; color: var(--muted); }
+.wp-trash-what > div { min-width: 0; }
+.wp-trash-what strong { display: block; font-size: 13px; color: var(--primary); }
+.wp-trash-preview { margin: 2px 0 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wp-trash-what .wp-help { margin: 2px 0 0; }
+.wp-trash-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 12px; }
+.wp-trash-actions .wp-btn-secondary { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 10px; font-size: 13px; }
+.wp-trash-empty { display: grid; justify-items: center; gap: 4px; padding: 24px 8px; text-align: center; color: var(--muted); }
+.wp-trash-empty p { margin: 0; }

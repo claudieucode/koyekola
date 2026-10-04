@@ -148,12 +148,16 @@ transformTags.hr = (tagName) => ({ tagName, attribs: {} });
 transformTags.blockquote = (tagName, attribs) => ({ tagName, attribs: classesOf(attribs).includes("kb-pullquote") ? { class: "kb-pullquote" } : {} });
 transformTags.table = (tagName) => ({ tagName, attribs: {} });
 // Bloc verrouillé dans l'éditeur (protection contre les modifications accidentelles) : marqueur conservé, valeur stricte
+const BLOCK_ID = /^b[a-z0-9]{8}$/;
 const LOCKABLE = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "ul", "ol", "pre", "table", "figure", "div", "details", "hr"];
 for (const tag of LOCKABLE) {
   const base = transformTags[tag];
   transformTags[tag] = (tagName, attribs) => {
     const r = base ? base(tagName, attribs) : { tagName, attribs: {} };
     if (attribs["data-locked"] === "true" && r.tagName === tagName) r.attribs = { ...r.attribs, "data-locked": "true" };
+    // Identité stable du bloc (vue en liste, corbeille) et bloc masqué : valeurs strictes
+    if (r.tagName === tagName && BLOCK_ID.test(attribs["data-block-id"] || "")) r.attribs = { ...r.attribs, "data-block-id": attribs["data-block-id"] };
+    if (r.tagName === tagName && attribs["data-hidden"] === "true") r.attribs = { ...r.attribs, "data-hidden": "true" };
     return r;
   };
 }
@@ -180,13 +184,22 @@ const saveOptions = {
 };
 // allowedClasses: false désactive le filtre de classes de sanitize-html ; nos transformations ne laissent passer que les classes listées
 saveOptions.allowedAttributes["*"] = [];
-for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked"];
+for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-block-id", "data-hidden"];
 
 function tidy(html) {
   return html
     .replace(/<(br|hr|input|img|col)([^>]*?)\s*\/>/g, "<$1$2>")
     .replace(/<(span|div)><\/\1>/g, "") // restes d'éléments refusés (image externe, bloc invalide)
     .replace(/\n{3,}/g, "\n\n");
+}
+
+// Version publique : les blocs masqués dans l'éditeur ne sont jamais publiés ; les repères internes de l'éditeur sont retirés
+function withoutHidden(html) {
+  if (!/data-hidden="true"|data-block-id=/.test(html)) return html;
+  const doc = parseDocument(html);
+  for (const n of DomUtils.findAll((x) => x.attribs && x.attribs["data-hidden"] === "true", doc.children)) DomUtils.removeElement(n);
+  for (const n of DomUtils.findAll((x) => x.attribs && (x.attribs["data-block-id"] || x.attribs["data-hidden"]), doc.children)) { delete n.attribs["data-block-id"]; delete n.attribs["data-hidden"]; }
+  return render(doc.children, { encodeEntities: "utf8" });
 }
 
 function sanitizeBlogHtml(html) {
@@ -235,7 +248,7 @@ function videoPlayer(url, caption, opts = {}) {
 function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, tocDepth = 3, imageSize = () => null, imageVariants = () => [], reusableHtml = () => null } = {}) {
   // Blocs réutilisables synchronisés : contenu lu à l'affichage (une modification s'applique partout) ; jamais imbriqués
   const REF = /<div class="kb-reusable"[^>]*data-ref="(\d+)"[^>]*><\/div>/g;
-  const clean = sanitizeBlogHtml(html).replace(REF, (m, id) => sanitizeBlogHtml(reusableHtml(Number(id)) || "").replace(REF, ""));
+  const clean = withoutHidden(sanitizeBlogHtml(html)).replace(REF, (m, id) => withoutHidden(sanitizeBlogHtml(reusableHtml(Number(id)) || "")).replace(REF, ""));
   const doc = parseDocument(clean);
   const toc = [];
   const faq = [];
@@ -350,7 +363,7 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
 
 // Texte brut d'un contenu (analyse, résumé automatique)
 function blogPlainText(html) {
-  return DomUtils.textContent(parseDocument(sanitizeBlogHtml(html))).replace(/\s+/g, " ").trim();
+  return DomUtils.textContent(parseDocument(withoutHidden(sanitizeBlogHtml(html)))).replace(/\s+/g, " ").trim();
 }
 
 // ---------- 3. Ancien article Markdown → HTML de l'éditeur ----------
@@ -366,4 +379,4 @@ function markdownToEditorHtml(markdown) {
   return sanitizeBlogHtml(converted);
 }
 
-module.exports = { sanitizeBlogHtml, renderBlogHtml, blogPlainText, markdownToEditorHtml, CALLOUT_TYPES, WORDS_PER_MINUTE };
+module.exports = { sanitizeBlogHtml, renderBlogHtml, blogPlainText, withoutHidden, markdownToEditorHtml, CALLOUT_TYPES, WORDS_PER_MINUTE };
