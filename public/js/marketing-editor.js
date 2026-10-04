@@ -70,6 +70,7 @@
   var statusEl = $("mk-status"), retryBtn = $("mk-retry");
   function status(kind, text) {
     statusEl.textContent = text;
+    statusEl.title = text;
     statusEl.setAttribute("data-state", kind); // saved | dirty | saving | error | invalid
     if (retryBtn) retryBtn.hidden = kind !== "error";
   }
@@ -236,9 +237,9 @@
     area.addEventListener("input", function () { block[key] = area.value; changed(); });
     wrap.appendChild(el("label", { "for": area.id }, labelText));
     if (!readOnly) {
-      var tools = el("div", { "class": "mk-tools", role: "group", "aria-label": "Mise en forme" });
+      var tools = el("div", { "class": "mk-tools", role: "group", "aria-label": "Mise en forme : " + labelText });
       [["Gras", "**", "**", "texte"], ["Italique", "*", "*", "texte"], ["Lien", "[", "](https://)", "texte du lien"], ["Titre", "## ", "", "Titre"], ["Liste", "- ", "", "élément"]].forEach(function (t) {
-        var b = el("button", { type: "button" }, t[0]);
+        var b = el("button", { type: "button", "class": "mk-tools-btn" + (t[0] === "Gras" ? " is-bold" : t[0] === "Italique" ? " is-italic" : "") }, t[0]);
         b.addEventListener("click", function () {
           var s = area.selectionStart, e = area.selectionEnd, sel = area.value.slice(s, e) || t[3];
           var text = t[0] === "Liste" ? sel.split("\n").map(function (l) { return "- " + l; }).join("\n") : t[1] + sel + t[2];
@@ -361,60 +362,55 @@
     }
     return wrap;
   }
-  function blockFields(block) {
-    var f = [];
+  // Réglages d'un bloc, rangés en sections (contenu, apparence…) ; la condition d'affichage vient toujours en dernier
+  function blockSections(block) {
+    var out = [];
+    function sec(title, nodes) { out.push({ title: title, nodes: nodes.filter(Boolean) }); }
     if (block.type === "heading") {
-      f.push(textField(block, "text", "Titre", { vars: true, max: 200 }));
-      f.push(selectField(block, "level", "Taille", [[1, "Grand"], [2, "Moyen"]], 2));
-      f.push(selectField(block, "align", "Alignement", ALIGNS, "left"));
+      sec("Contenu", [textField(block, "text", "Titre", { vars: true, max: 200 })]);
+      sec("Apparence", [selectField(block, "level", "Taille", [[1, "Grand"], [2, "Moyen"]], 2), selectField(block, "align", "Alignement", ALIGNS, "left")]);
     } else if (block.type === "text") {
-      f.push(markdownField(block, "markdown", "Texte", 8));
+      sec("Contenu", [markdownField(block, "markdown", "Texte", 8)]);
     } else if (block.type === "image") {
-      f.push(imageSource(block));
-      f.push(textField(block, "src", "Adresse de l'image (https://…)", { max: 2000, placeholder: "https://exemple.fr/image.png" }));
-      f.push(textField(block, "alt", "Texte alternatif (décrit l'image aux lecteurs d'écran et si l'image est bloquée)", { vars: true, max: 200 }));
-      f.push(checkField(block, "decorative", "Image décorative (pas de texte alternatif)"));
-      f.push(numberField(block, "width", "Largeur (px, 40 à 600)", 40, 600));
-      f.push(selectField(block, "align", "Alignement", ALIGNS, "left"));
-      f.push(textField(block, "href", "Lien au clic (facultatif)", { max: 2000, placeholder: "https://exemple.fr" }));
+      sec("Image", [imageSource(block), textField(block, "src", "Adresse de l'image (https://…)", { max: 2000, placeholder: "https://exemple.fr/image.png" }),
+        textField(block, "alt", "Texte alternatif", { vars: true, max: 200, hint: "Décrit l'image aux lecteurs d'écran et quand l'image est bloquée." }), checkField(block, "decorative", "Image décorative (pas de texte alternatif)")]);
+      sec("Mise en page", [numberField(block, "width", "Largeur (px, 40 à 600)", 40, 600), selectField(block, "align", "Alignement", ALIGNS, "left")]);
+      sec("Lien", [textField(block, "href", "Lien au clic (facultatif)", { max: 2000, placeholder: "https://exemple.fr" })]);
     } else if (block.type === "button") {
-      f.push(textField(block, "label", "Texte du bouton", { vars: true, max: 80 }));
-      f.push(textField(block, "url", "Adresse (https://… ou mailto:)", { max: 2000, placeholder: "https://exemple.fr" }));
-      f.push(selectField(block, "align", "Alignement", ALIGNS, "center"));
-      f.push(colorField(block));
+      sec("Contenu", [textField(block, "label", "Texte du bouton", { vars: true, max: 80 }), textField(block, "url", "Adresse (https://… ou mailto:)", { max: 2000, placeholder: "https://exemple.fr" })]);
+      sec("Apparence", [selectField(block, "align", "Alignement", ALIGNS, "center"), colorField(block)]);
     } else if (block.type === "spacer") {
-      f.push(numberField(block, "height", "Hauteur (px, 4 à 120)", 4, 120));
+      sec("Dimensions", [numberField(block, "height", "Hauteur (px, 4 à 120)", 4, 120)]);
     } else if (block.type === "columns") {
-      f.push(markdownField(block, "left", "Colonne de gauche", 5));
-      f.push(markdownField(block, "right", "Colonne de droite", 5));
-      f.push(el("p", { "class": "field-hint" }, "Sur mobile, les deux colonnes s'affichent l'une sous l'autre."));
+      sec("Contenu", [markdownField(block, "left", "Colonne de gauche", 5), markdownField(block, "right", "Colonne de droite", 5), el("p", { "class": "field-hint" }, "Sur mobile, les deux colonnes s'affichent l'une sous l'autre.")]);
     } else if (block.type === "divider") {
-      f.push(el("p", { "class": "field-hint" }, "Une ligne fine de séparation : aucun réglage."));
+      sec("Réglages", [el("p", { "class": "field-hint" }, "Une ligne fine de séparation : aucun réglage.")]);
     } else if (block.type === "quote") {
-      f.push(textField(block, "text", "Citation", { vars: true, max: 500 }));
-      f.push(textField(block, "author", "Auteur (facultatif)", { vars: true, max: 100 }));
+      sec("Contenu", [textField(block, "text", "Citation", { vars: true, max: 500 }), textField(block, "author", "Auteur (facultatif)", { vars: true, max: 100 })]);
     } else if (block.type === "list") {
-      f.push(selectField(block, "style", "Style", LIST_STYLES, "bullets"));
-      f.push(itemsField(block));
+      sec("Contenu", [itemsField(block)]);
+      sec("Apparence", [selectField(block, "style", "Style", LIST_STYLES, "bullets")]);
     } else if (block.type === "social") {
-      f.push(selectField(block, "align", "Alignement", ALIGNS, "center"));
-      f.push(socialField(block));
+      sec("Liens", [socialField(block)]);
+      sec("Apparence", [selectField(block, "align", "Alignement", ALIGNS, "center")]);
     } else if (block.type === "video") {
-      f.push(textField(block, "url", "Adresse de la vidéo (https://…)", { max: 2000, placeholder: "https://youtube.com/watch?v=…" }));
-      f.push(textField(block, "thumbnail", "Miniature (adresse d'une image https://…, facultatif)", { max: 2000, placeholder: "https://exemple.fr/miniature.jpg" }));
-      f.push(textField(block, "title", "Titre de la vidéo (texte alternatif)", { vars: true, max: 200 }));
-      f.push(numberField(block, "width", "Largeur de la miniature (px, 40 à 600)", 40, 600));
-      f.push(selectField(block, "align", "Alignement", ALIGNS, "center"));
-      f.push(el("p", { "class": "field-hint" }, "Un e-mail ne peut pas lire de vidéo : le message affiche la miniature et un lien « Regarder la vidéo »."));
+      sec("Vidéo", [textField(block, "url", "Adresse de la vidéo (https://…)", { max: 2000, placeholder: "https://youtube.com/watch?v=…" }), textField(block, "title", "Titre de la vidéo (texte alternatif)", { vars: true, max: 200 }),
+        textField(block, "thumbnail", "Miniature (adresse d'une image https://…, facultatif)", { max: 2000, placeholder: "https://exemple.fr/miniature.jpg" }),
+        el("p", { "class": "field-hint" }, "Un e-mail ne peut pas lire de vidéo : le message affiche la miniature et un lien « Regarder la vidéo ».")]);
+      sec("Mise en page", [numberField(block, "width", "Largeur de la miniature (px, 40 à 600)", 40, 600), selectField(block, "align", "Alignement", ALIGNS, "center")]);
     } else if (block.type === "course") {
-      courseField(block).forEach(function (n) { f.push(n); });
+      sec("Formation", courseField(block));
     }
-    var details = el("details", { "class": "mk-advanced" });
-    details.appendChild(el("summary", {}, "Condition d'affichage (facultatif)"));
+    return out;
+  }
+  function conditionSection(block) {
+    var details = el("details", { "class": "mk-advanced mk-b-section" });
+    var sum = el("summary", { "class": "mk-b-section-title" }, "Condition d'affichage");
+    if (block.showIf) sum.appendChild(el("span", { "class": "mk-b-pill" }, "Active"));
+    details.appendChild(sum);
     details.appendChild(textField(block, "showIf", "Afficher ce bloc seulement si…", { max: 200, placeholder: "contact.country == \"FR\"", hint: "Ex. : contact.country == \"FR\" · contact.company · not contact.company" }));
     if (block.showIf) details.open = true;
-    f.push(details);
-    return f;
+    return details;
   }
 
   // ---------- Opérations sur les blocs ----------
@@ -464,15 +460,23 @@
 
   // ---------- Réglages du bloc sélectionné (colonne de droite) ----------
   var props = $("mk-props");
+  function textBtn(iconName, text, labelText, onClick, cls) {
+    var b = el("button", { type: "button", "class": "mk-b-textbtn" + (cls ? " " + cls : ""), "aria-label": labelText, "data-tip": labelText });
+    b.appendChild(iconSpan(iconName)); b.appendChild(el("span", { "class": "mk-b-textbtn-label" }, text));
+    b.addEventListener("click", onClick);
+    return b;
+  }
   function blockToolbar(block) {
     var i = indexOfId(block.id);
     var bar = el("div", { "class": "mk-b-blocktools", role: "toolbar", "aria-label": "Actions du bloc" });
+    var order = el("div", { "class": "mk-b-blocktools-group", role: "group", "aria-label": "Position" });
     var up = iconBtn("arrowUp", "Monter le bloc", function () { move(indexOfId(block.id), indexOfId(block.id) - 1); }); up.disabled = i === 0;
     var down = iconBtn("arrowDown", "Descendre le bloc", function () { move(indexOfId(block.id), indexOfId(block.id) + 1); }); down.disabled = i === state.blocks.length - 1;
-    bar.appendChild(up); bar.appendChild(down);
-    bar.appendChild(iconBtn("copy", "Dupliquer le bloc", function () { duplicate(block.id); }));
-    bar.appendChild(iconBtn(block.hidden ? "eye" : "eyeOff", block.hidden ? "Afficher le bloc" : "Masquer le bloc (non envoyé)", function () { toggleHidden(block.id); }));
-    bar.appendChild(iconBtn("trash", "Supprimer le bloc", function () { remove(block.id); }, { "class": "mk-b-icon is-danger" }));
+    order.appendChild(up); order.appendChild(down);
+    bar.appendChild(order);
+    bar.appendChild(textBtn("copy", "Dupliquer", "Dupliquer le bloc", function () { duplicate(block.id); }));
+    bar.appendChild(textBtn(block.hidden ? "eye" : "eyeOff", block.hidden ? "Afficher" : "Masquer", block.hidden ? "Afficher le bloc" : "Masquer le bloc (non envoyé)", function () { toggleHidden(block.id); }));
+    bar.appendChild(iconBtn("trash", "Supprimer le bloc", function () { remove(block.id); }, { "class": "mk-b-icon is-danger mk-b-blocktools-del" }));
     return bar;
   }
   var builder = $("mk-editor");
@@ -481,11 +485,12 @@
     props.textContent = "";
     var block = selectedId ? blockById(selectedId) : null;
     builder.classList.toggle("has-selection", !!block); // écran moyen / mobile : les réglages s'ouvrent en panneau
+    buildBlockbar();
     if (!block) {
       var empty = el("div", { "class": "mk-b-props-empty" });
       empty.appendChild(iconSpan("edit", "mk-b-props-empty-ico"));
-      empty.appendChild(el("p", {}, readOnly ? "Cliquez sur un bloc de l'e-mail pour voir ses réglages." : "Cliquez sur un bloc de l'e-mail (ou dans « Structure ») pour le modifier."));
-      empty.appendChild(el("p", { "class": "field-hint" }, "L'objet, le préheader et le pied de page se règlent dans l'onglet « Message » ; les couleurs et la police dans « Styles »."));
+      empty.appendChild(el("p", {}, readOnly ? "Cliquez sur un bloc de l'e-mail pour voir ses réglages." : "Cliquez sur un bloc de l'e-mail (ou dans «\u00a0Structure\u00a0») pour le modifier."));
+      empty.appendChild(el("p", { "class": "field-hint" }, "L'objet, le préheader et le pied de page se règlent dans l'onglet «\u00a0Message\u00a0» ; les couleurs et la police dans «\u00a0Styles\u00a0»."));
       props.appendChild(empty);
       return;
     }
@@ -501,9 +506,20 @@
     props.appendChild(head);
     if (!readOnly) props.appendChild(blockToolbar(block));
     var err = blockErrors.filter(function (x) { return x.id === block.id; })[0];
-    if (err) props.appendChild(el("p", { "class": "mk-warn is-error", role: "alert" }, "À compléter : " + err.message));
+    if (err) {
+      var alertBox = el("div", { "class": "mk-b-alert", role: "alert" });
+      alertBox.appendChild(iconSpan("alertCircle"));
+      alertBox.appendChild(el("p", {}, "À compléter : " + err.message));
+      props.appendChild(alertBox);
+    }
     var body = el("div", { "class": "mk-b-props-body" });
-    blockFields(block).forEach(function (n) { body.appendChild(n); });
+    blockSections(block).forEach(function (sct) {
+      var box = el("section", { "class": "mk-b-section" });
+      box.appendChild(el("h3", { "class": "mk-b-section-title" }, sct.title));
+      sct.nodes.forEach(function (n) { box.appendChild(n); });
+      body.appendChild(box);
+    });
+    body.appendChild(conditionSection(block));
     props.appendChild(body);
   }
 
@@ -511,25 +527,54 @@
   var structure = $("mk-structure");
   var dragFrom = -1;
   var BLOCK_DRAG = "text/mk-block", MOVE_DRAG = "text/mk-move";
+  function plain(md) { return String(md || "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[*#_>`]/g, "").replace(/^\s*-\s+/gm, ""); }
   function summaryOf(b) {
-    var s = b.text || b.label || b.title || (b.markdown ? b.markdown.replace(/[*#_[\]()]/g, "").slice(0, 60) : "") || (b.type === "image" ? (b.alt || (b.src ? b.src.split("/").pop() : "")) : "") || (b.items ? b.items.join(", ") : "");
-    return String(s || "").replace(/\s+/g, " ").trim().slice(0, 60);
+    var s = "";
+    if (b.type === "heading" || b.type === "quote") s = b.text;
+    else if (b.type === "text") s = plain(b.markdown);
+    else if (b.type === "button") s = (b.label || "") + (b.url ? " → " + b.url : "");
+    else if (b.type === "image") s = b.alt || (b.src ? b.src.split("/").pop() : "");
+    else if (b.type === "list") s = (b.items || []).join(" · ");
+    else if (b.type === "columns") s = plain(b.left) + (b.right ? " | " + plain(b.right) : "");
+    else if (b.type === "video") s = b.title || b.url;
+    else if (b.type === "social") s = (b.links || []).map(function (l) { var n = NETWORKS.filter(function (x) { return x[0] === l.network; })[0]; return n ? n[1] : l.network; }).join(", ");
+    else if (b.type === "course") { var c = (data.courses || []).filter(function (x) { return x.id === b.courseId; })[0]; s = c ? c.title : (b.snapshot ? b.snapshot.title : ""); }
+    else if (b.type === "spacer") s = (b.height || 24) + " px";
+    else if (b.type === "divider") s = "Ligne de séparation";
+    return String(s || "").replace(/\s+/g, " ").trim().slice(0, 140);
+  }
+  function structureAction(iconName, text, onClick, opts) {
+    opts = opts || {};
+    var b = iconBtn(iconName, text, function (e) { e.stopPropagation(); onClick(); }, { "class": "mk-b-icon mk-structure-act" + (opts.danger ? " is-danger" : "") });
+    if (opts.disabled) b.disabled = true;
+    return b;
   }
   function renderStructure() {
     if (!structure) return;
     structure.textContent = "";
+    var count = $("mk-structure-count"); if (count) count.textContent = state.blocks.length ? String(state.blocks.length) : "";
     if (!state.blocks.length) structure.appendChild(el("li", { "class": "mk-structure-empty" }, readOnly ? "Aucun bloc." : "Aucun bloc : ajoutez-en depuis l'onglet « Blocs »."));
     state.blocks.forEach(function (b, index) {
       var li = el("li", { "class": "mk-structure-item" + (b.id === selectedId ? " is-selected" : "") + (b.hidden ? " is-hidden" : ""), "data-id": b.id });
-      var btn = el("button", { type: "button", "class": "mk-structure-btn", "aria-current": b.id === selectedId ? "true" : undefined, "aria-label": "Bloc " + (index + 1) + " : " + label(b) + (b.hidden ? " (masqué)" : "") + ". Alt + flèches pour déplacer.", draggable: readOnly ? undefined : "true" });
+      var row = el("div", { "class": "mk-structure-row" });
+      if (!readOnly) {
+        var grip = el("span", { "class": "mk-structure-grip", draggable: "true", title: "Glisser pour déplacer", "aria-hidden": "true" });
+        grip.appendChild(iconSpan("grip"));
+        row.appendChild(grip);
+      }
+      var btn = el("button", { type: "button", "class": "mk-structure-btn", "aria-current": b.id === selectedId ? "true" : undefined, "aria-label": "Bloc " + (index + 1) + " : " + label(b) + (b.hidden ? " (masqué)" : "") + (summaryOf(b) ? " — " + summaryOf(b) : "") + ". Alt + flèches pour déplacer.", draggable: readOnly ? undefined : "true" });
       var ic = el("span", { "class": "mk-structure-icon", "aria-hidden": "true" }); ic.innerHTML = (BLOCKS[b.type] || {}).icon || "";
       btn.appendChild(ic);
       var txt = el("span", { "class": "mk-structure-text" });
-      txt.appendChild(el("span", { "class": "mk-structure-name" }, (index + 1) + ". " + label(b)));
-      txt.appendChild(el("span", { "class": "mk-structure-sum" }, summaryOf(b)));
+      var nameLine = el("span", { "class": "mk-structure-line" });
+      nameLine.appendChild(el("span", { "class": "mk-structure-name" }, (index + 1) + ". " + label(b)));
+      if (b.hidden) nameLine.appendChild(el("span", { "class": "mk-structure-tag" }, "Masqué"));
+      if (blockErrors.some(function (x) { return x.id === b.id; })) nameLine.appendChild(el("span", { "class": "mk-structure-tag is-error" }, "À compléter"));
+      if (b.showIf) nameLine.appendChild(el("span", { "class": "mk-structure-tag" }, "Condition"));
+      txt.appendChild(nameLine);
+      var sum = summaryOf(b);
+      txt.appendChild(el("span", { "class": "mk-structure-sum" + (sum ? "" : " is-empty"), title: sum || undefined }, sum || "Aucun contenu"));
       btn.appendChild(txt);
-      if (b.hidden) btn.appendChild(el("span", { "class": "mk-structure-tag" }, "Masqué"));
-      if (blockErrors.some(function (x) { return x.id === b.id; })) btn.appendChild(el("span", { "class": "mk-structure-tag is-error" }, "À compléter"));
       btn.addEventListener("click", function () { select(b.id, { scroll: true }); });
       btn.addEventListener("keydown", function (e) {
         if (readOnly || !e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
@@ -538,9 +583,22 @@
         move(from, to);
         var again = structure.querySelector('[data-id="' + b.id + '"] .mk-structure-btn'); if (again) again.focus();
       });
+      row.appendChild(btn);
+      li.appendChild(row);
       if (!readOnly) {
-        btn.addEventListener("dragstart", function (e) { dragFrom = indexOfId(b.id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData(MOVE_DRAG, b.id); e.dataTransfer.setData("text/plain", label(b)); li.classList.add("is-dragging"); });
-        btn.addEventListener("dragend", function () { dragFrom = -1; li.classList.remove("is-dragging"); clearStructureMarks(); });
+        // Zone d'actions : toujours présente pour le bloc sélectionné, révélée au survol / au clavier pour les autres
+        var acts = el("div", { "class": "mk-structure-actions", role: "group", "aria-label": "Actions du bloc " + (index + 1) });
+        acts.appendChild(structureAction("arrowUp", "Monter", function () { move(indexOfId(b.id), indexOfId(b.id) - 1); }, { disabled: index === 0 }));
+        acts.appendChild(structureAction("arrowDown", "Descendre", function () { move(indexOfId(b.id), indexOfId(b.id) + 1); }, { disabled: index === state.blocks.length - 1 }));
+        acts.appendChild(structureAction("edit", "Modifier", function () { select(b.id, { scroll: true, focus: true }); }));
+        acts.appendChild(structureAction("copy", "Dupliquer", function () { duplicate(b.id); }));
+        acts.appendChild(structureAction(b.hidden ? "eye" : "eyeOff", b.hidden ? "Afficher" : "Masquer", function () { toggleHidden(b.id); }));
+        acts.appendChild(structureAction("trash", "Supprimer", function () { remove(b.id); }, { danger: true }));
+        li.appendChild(acts);
+        var startDrag = function (e) { dragFrom = indexOfId(b.id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData(MOVE_DRAG, b.id); e.dataTransfer.setData("text/plain", label(b)); try { e.dataTransfer.setDragImage(li, 24, 20); } catch (x) { /* image de glisser par défaut */ } li.classList.add("is-dragging"); structure.classList.add("is-sorting"); };
+        var endDrag = function () { dragFrom = -1; li.classList.remove("is-dragging"); structure.classList.remove("is-sorting"); clearStructureMarks(); };
+        btn.addEventListener("dragstart", startDrag); grip.addEventListener("dragstart", startDrag);
+        btn.addEventListener("dragend", endDrag); grip.addEventListener("dragend", endDrag);
         li.addEventListener("dragover", function (e) {
           if (!isDrag(e, MOVE_DRAG) && !isDrag(e, BLOCK_DRAG)) return;
           e.preventDefault();
@@ -559,14 +617,18 @@
           move(from, from < target ? target - 1 : target);
         });
       }
-      li.appendChild(btn);
       structure.appendChild(li);
     });
   }
   function clearStructureMarks() { [].forEach.call(structure.querySelectorAll(".is-drop-before, .is-drop-after"), function (n) { n.classList.remove("is-drop-before", "is-drop-after"); }); }
   function refreshStructureLabels() {
     if (!structure) return;
-    state.blocks.forEach(function (b) { var s = structure.querySelector('[data-id="' + b.id + '"] .mk-structure-sum'); if (s) s.textContent = summaryOf(b); });
+    state.blocks.forEach(function (b) {
+      var s = structure.querySelector('[data-id="' + b.id + '"] .mk-structure-sum'); if (!s) return;
+      var sum = summaryOf(b);
+      s.textContent = sum || "Aucun contenu"; s.classList.toggle("is-empty", !sum);
+      if (sum) s.title = sum; else s.removeAttribute("title");
+    });
   }
   function isDrag(e, type) { return !!(e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], type) !== -1); }
   function isFileDrag(e) { return isDrag(e, "Files"); }
@@ -588,8 +650,9 @@
       t.setAttribute("aria-selected", on ? "true" : "false"); t.tabIndex = on ? 0 : -1;
       var pane = $("pane-" + t.getAttribute("data-pane")); if (pane) pane.hidden = !on;
     });
-    if (key === "media") loadMedia(false);
+    if (key === "media") { loadMedia(false); renderMedia(); }
     if (key === "check") renderCheck();
+    if (key === "message") refreshMessageFields();
   }
   tabs.forEach(function (t, i) {
     t.addEventListener("click", function () { showPane(t.getAttribute("data-pane")); });
@@ -623,6 +686,39 @@
   [["t-bg", "background"], ["t-cbg", "contentBackground"], ["t-text", "textColor"], ["t-accent", "accent"], ["t-font", "fontFamily"]].forEach(function (pair) {
     bind(pair[0], function () { return state.theme[pair[1]] || THEME_DEFAULTS[pair[1]]; }, function (v) { state.theme[pair[1]] = v; });
   });
+  // Code hexadécimal à côté de chaque couleur : lisible, copiable, saisissable (#RRGGBB)
+  [].forEach.call(document.querySelectorAll("[data-hex-for]"), function (hex) {
+    var color = $(hex.getAttribute("data-hex-for"));
+    if (!color) return;
+    var show = function () { hex.value = color.value.toUpperCase(); hex.removeAttribute("aria-invalid"); };
+    color.addEventListener("input", show);
+    bindings.push(show);
+    show();
+    hex.addEventListener("input", function () {
+      var v = hex.value.trim(); if (v && v.charAt(0) !== "#") v = "#" + v;
+      if (/^#[0-9a-f]{6}$/i.test(v)) { hex.removeAttribute("aria-invalid"); color.value = v.toLowerCase(); color.dispatchEvent(new Event("input", { bubbles: true })); }
+      else hex.setAttribute("aria-invalid", "true");
+    });
+    hex.addEventListener("blur", show);
+  });
+  // Objet / préheader : une seule ligne (pas de retour à la ligne) mais affichés en entier ; compteurs de caractères
+  function autogrow(area) { area.style.height = "auto"; area.style.height = area.scrollHeight + 2 + "px"; }
+  var growers = [].slice.call(document.querySelectorAll(".mk-autogrow"));
+  growers.forEach(function (area) {
+    if (area.hasAttribute("data-single-line")) {
+      area.addEventListener("keydown", function (e) { if (e.key === "Enter") e.preventDefault(); });
+      area.addEventListener("input", function () { if (/[\r\n]/.test(area.value)) { var at = area.selectionStart; area.value = area.value.replace(/[\r\n]+/g, " "); area.setSelectionRange(at, at); area.dispatchEvent(new Event("change")); } });
+    }
+    area.addEventListener("input", function () { autogrow(area); updateCount(area); });
+  });
+  function updateCount(area) {
+    var c = document.querySelector('[data-count-for="' + area.id + '"]');
+    if (c) c.textContent = area.value.length + " / " + area.getAttribute("maxlength");
+  }
+  function refreshMessageFields() { growers.forEach(function (a) { if (a.offsetParent) autogrow(a); updateCount(a); }); }
+  bindings.push(refreshMessageFields);
+  var nameInput = $("t-name");
+  if (nameInput) { var nameTitle = function () { nameInput.title = nameInput.value; }; nameInput.addEventListener("input", nameTitle); bindings.push(nameTitle); }
   if ($("mk-theme-reset")) $("mk-theme-reset").addEventListener("click", function () {
     state.theme = Object.assign({}, THEME_DEFAULTS); syncSettings(); changed(); announce("Styles réinitialisés.");
   });
@@ -633,13 +729,45 @@
   var contactSel = $("mk-contact");
   (data.contacts || []).forEach(function (c) { contactSel.appendChild(el("option", { value: String(c.id) }, c.email)); });
   contactSel.addEventListener("change", runPreview);
+  // Largeur d'affichage : l'e-mail garde sa VRAIE largeur (600 / 480 / 375 px) ; s'il ne tient pas dans le canevas,
+  // il est réduit à l'affichage (zoom), jamais recomposé ni coupé. Les marges latérales restent libres pour la barre du bloc.
+  var frameWidth = 600, zoom = 1, zoomEl = $("mk-zoom"), zoomFull = false; // zoomFull : 100 % demandé (défilement horizontal dans le canevas)
   [].forEach.call(document.querySelectorAll("[data-size]"), function (btn) {
     btn.addEventListener("click", function () {
-      frame.style.width = btn.getAttribute("data-size") + "px";
+      frameWidth = parseInt(btn.getAttribute("data-size"), 10);
+      frame.style.width = frameWidth + "px";
       [].forEach.call(document.querySelectorAll("[data-size]"), function (b) { b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
-      setTimeout(fitFrame, 50);
+      fitZoom(); setTimeout(fitFrame, 50);
     });
   });
+  function fitZoom() {
+    var cs = getComputedStyle(canvas);
+    var avail = canvas.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    var fit = avail > 0 ? Math.min(1, Math.floor((avail / frameWidth) * 100) / 100) : 1;
+    // Très petit écran (téléphone) : une réduction sous 60 % serait illisible → l'e-mail (adaptatif) est affiché à la
+    // largeur disponible, comme sur un téléphone ; sinon il garde sa largeur réelle.
+    var narrow = fit < 0.6 && !zoomFull;
+    frame.style.width = (narrow ? Math.max(280, Math.floor(avail)) : frameWidth) + "px";
+    var z = zoomFull ? 1 : narrow ? 1 : fit;
+    if (zoomEl) {
+      zoomEl.hidden = fit >= 0.95 && !narrow; // réduction imperceptible : pas d'indicateur
+      zoomEl.setAttribute("aria-pressed", zoomFull ? "true" : "false");
+      zoomEl.textContent = zoomFull ? "100 %" : narrow ? "Largeur de l'écran" : "Zoom " + Math.round(fit * 100) + " %";
+      zoomEl.title = zoomFull ? "Affiché à 100 % (faites défiler horizontalement). Cliquez pour ajuster à l'espace disponible."
+        : narrow ? "Espace trop étroit : l'e-mail (adaptatif) est affiché à la largeur disponible, comme sur un téléphone. Cliquez pour l'afficher à sa vraie largeur (" + frameWidth + " px)."
+        : "L'e-mail est réduit pour tenir dans l'espace disponible ; il garde sa vraie largeur (" + frameWidth + " px). Cliquez pour l'afficher à 100 %.";
+      zoomEl.setAttribute("aria-label", zoomEl.title);
+    }
+    if (z === zoom && frame.style.zoom) return;
+    zoom = z;
+    frame.style.zoom = String(zoom);
+    placeBlockbar();
+  }
+  if (window.ResizeObserver) new ResizeObserver(function () { fitZoom(); placeBlockbar(); }).observe(canvas);
+  else window.addEventListener("resize", function () { fitZoom(); placeBlockbar(); });
+  frame.style.width = frameWidth + "px";
+  if (zoomEl) zoomEl.addEventListener("click", function () { zoomFull = !zoomFull; fitZoom(); });
+  fitZoom();
   var previewTimer = null, previewSeq = 0;
   function schedulePreview() { clearTimeout(previewTimer); previewTimer = setTimeout(runPreview, 350); }
   function runPreview() {
@@ -665,21 +793,27 @@
   }
   function frameDoc() { try { return frame.contentDocument; } catch (e) { return null; } }
   function rows() { var d = frameDoc(); return d ? [].slice.call(d.querySelectorAll("[data-mk-block]")) : []; }
-  function fitFrame() { var d = frameDoc(); if (!d || !d.documentElement) return; frame.style.height = Math.max(400, d.documentElement.scrollHeight) + "px"; frame.style.minHeight = ""; }
-  function scrollToBlock(id) {
+  function fitFrame() { var d = frameDoc(); if (!d || !d.documentElement) return; frame.style.height = Math.max(400, d.documentElement.scrollHeight) + "px"; frame.style.minHeight = ""; placeBlockbar(); }
+  // Coordonnées d'un bloc du rendu dans le canevas (le rendu peut être réduit : coordonnées internes × zoom)
+  function blockBox(id) {
     var r = rows().filter(function (n) { return n.getAttribute("data-mk-block") === id; })[0];
-    if (!r) return;
-    var top = frame.getBoundingClientRect().top - canvas.getBoundingClientRect().top + canvas.scrollTop + r.getBoundingClientRect().top - 40;
-    canvas.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    if (!r) return null;
+    var fr = frame.getBoundingClientRect(), cr = canvas.getBoundingClientRect(), rr = r.getBoundingClientRect();
+    var top = fr.top - cr.top + canvas.scrollTop + rr.top * zoom;
+    return { top: top, bottom: top + rr.height * zoom, right: fr.right - cr.left + canvas.scrollLeft, left: fr.left - cr.left + canvas.scrollLeft };
+  }
+  function scrollToBlock(id) {
+    var box = blockBox(id);
+    if (!box) return;
+    var view = canvas.clientHeight;
+    if (box.top >= canvas.scrollTop + 16 && box.bottom <= canvas.scrollTop + view - 16) return; // déjà visible : pas de saut
+    canvas.scrollTo({ top: Math.max(0, box.top - 40), behavior: "smooth" });
   }
   // Styles d'édition injectés dans le rendu (contour au survol / à la sélection, ligne d'insertion) — jamais envoyés
   var EDIT_CSS = "[data-mk-block]{cursor:pointer}[data-mk-block]>td{transition:box-shadow .12s}[data-mk-block][data-mk-hover]>td{box-shadow:inset 0 0 0 1px #7aa7c7}" +
     "[data-mk-block][data-mk-selected]>td{box-shadow:inset 0 0 0 2px #0277b6}a{pointer-events:none}#mk-insert{position:absolute;left:12px;right:12px;height:0;border-top:3px solid #0277b6;border-radius:2px;pointer-events:none;z-index:10}" +
     "#mk-insert::before{content:'';position:absolute;left:-5px;top:-6.5px;width:10px;height:10px;border-radius:50%;background:#0277b6}" +
-    "#mk-bar{position:absolute;z-index:11;display:flex;gap:2px;padding:3px;background:#fff;border:1px solid #d5e3ee;border-radius:8px;box-shadow:0 2px 8px rgba(11,42,64,.18)}" +
-    "#mk-bar button{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border:0;border-radius:6px;background:none;color:#10222f;cursor:pointer}" +
-    "#mk-bar button:hover{background:#eaf3fa}#mk-bar button.is-danger{color:#d1121f}#mk-bar span{display:inline-flex}" +
-    "#mk-tag{position:absolute;z-index:11;padding:2px 8px;border-radius:6px 6px 0 0;background:#0277b6;color:#fff;font:600 11px/1.6 -apple-system,Segoe UI,Roboto,Arial,sans-serif;pointer-events:none}";
+    "[data-mk-block][data-mk-selected]>td{background-image:linear-gradient(rgba(2,119,182,.04),rgba(2,119,182,.04))}";
   frame.addEventListener("load", decorateFrame);
   function decorateFrame() {
     var d = frameDoc();
@@ -690,7 +824,6 @@
     markSelection();
     d.addEventListener("click", function (e) {
       e.preventDefault(); // un lien de l'e-mail ne s'ouvre jamais dans l'éditeur
-      if (e.target.closest && e.target.closest("#mk-bar")) return;
       var row = e.target.closest && e.target.closest("[data-mk-block]");
       if (row) select(row.getAttribute("data-mk-block"), { focus: false });
     }, true);
@@ -721,7 +854,7 @@
   }
   // Où insérer : avant / après le bloc le plus proche (moitié haute / basse) ; image déposée SUR un bloc image → remplace
   function dropSpot(y, e) {
-    var list = rows().filter(function (n) { return !n.closest("#mk-bar"); });
+    var list = rows();
     var index = state.blocks.length, line = null, onImage = null;
     for (var i = 0; i < list.length; i++) {
       var r = list[i].getBoundingClientRect();
@@ -750,42 +883,59 @@
   function hideInsert() { var d = frameDoc(); var m = d && d.getElementById("mk-insert"); if (m) m.remove(); rows().forEach(function (n) { n.removeAttribute("data-mk-hover"); }); }
   // Contour + étiquette + mini-barre d'outils du bloc sélectionné, dans le rendu
   function markSelection() {
-    var d = frameDoc(); if (!d || !d.body) return;
-    var old = d.getElementById("mk-bar"); if (old) old.remove();
-    var oldTag = d.getElementById("mk-tag"); if (oldTag) oldTag.remove();
-    var row = null;
-    rows().forEach(function (n) { var on = n.getAttribute("data-mk-block") === selectedId; n.toggleAttribute("data-mk-selected", on); if (on) row = n; });
+    var d = frameDoc();
+    if (d && d.body) rows().forEach(function (n) { n.toggleAttribute("data-mk-selected", n.getAttribute("data-mk-block") === selectedId); });
     [].forEach.call(structure ? structure.querySelectorAll(".mk-structure-item") : [], function (li) {
       var on = li.getAttribute("data-id") === selectedId;
       li.classList.toggle("is-selected", on);
       var b = li.querySelector(".mk-structure-btn"); if (b) { if (on) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current"); }
     });
-    if (!row) return;
-    var block = blockById(selectedId);
-    var r = row.getBoundingClientRect(), scroll = d.documentElement.scrollTop || d.body.scrollTop;
-    var tag = d.createElement("div"); tag.id = "mk-tag"; tag.textContent = label(block) + (block.hidden ? " · masqué" : "");
-    tag.style.left = (r.left + 4) + "px"; tag.style.top = (r.top + scroll - 19) + "px";
-    d.body.appendChild(tag);
-    if (readOnly) return;
-    var bar = d.createElement("div"); bar.id = "mk-bar"; bar.setAttribute("role", "toolbar"); bar.setAttribute("aria-label", "Actions du bloc");
-    var i = indexOfId(selectedId);
-    [["arrowUp", "Monter", function () { move(indexOfId(selectedId), indexOfId(selectedId) - 1); }, i === 0],
-      ["arrowDown", "Descendre", function () { move(indexOfId(selectedId), indexOfId(selectedId) + 1); }, i === state.blocks.length - 1],
-      ["edit", "Modifier (réglages à droite)", function () { select(selectedId, { focus: true }); }],
-      ["copy", "Dupliquer", function () { duplicate(selectedId); }],
-      [block.hidden ? "eye" : "eyeOff", block.hidden ? "Afficher" : "Masquer (non envoyé)", function () { toggleHidden(selectedId); }],
-      ["trash", "Supprimer", function () { remove(selectedId); }, false, true]].forEach(function (a) {
-      var b = d.createElement("button"); b.type = "button"; b.title = a[1]; b.setAttribute("aria-label", a[1]);
-      var s = d.createElement("span"); s.innerHTML = ICONS[a[0]] || ""; b.appendChild(s);
-      if (a[3]) { b.disabled = true; b.style.opacity = ".35"; }
-      if (a[4]) b.className = "is-danger";
-      b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); if (!b.disabled) a[2](); });
-      bar.appendChild(b);
-    });
-    d.body.appendChild(bar);
-    bar.style.top = (r.top + scroll - 40 < 0 ? r.bottom + scroll + 4 : r.top + scroll - 40) + "px";
-    bar.style.right = Math.max(4, d.documentElement.clientWidth - r.right + 4) + "px"; // ancrée à droite du bloc, jamais hors de l'e-mail
+    buildBlockbar();
   }
+  // Barre d'actions du bloc sélectionné : dans la marge du canevas, à droite de l'e-mail, alignée sur le bloc et
+  // maintenue visible pendant le défilement (jamais par-dessus le contenu, jamais hors du canevas).
+  var blockbar = $("mk-blockbar"), barFor = null;
+  function buildBlockbar() {
+    if (!blockbar) return;
+    var block = selectedId ? blockById(selectedId) : null;
+    if (!block || readOnly) { blockbar.hidden = true; blockbar.textContent = ""; barFor = null; return; }
+    var i = indexOfId(block.id), key = block.id + ":" + i + ":" + state.blocks.length + ":" + !!block.hidden;
+    if (barFor !== key) {
+      barFor = key;
+      blockbar.textContent = "";
+      var badge = el("span", { "class": "mk-b-blockbar-type", "data-tip": label(block) + " · bloc " + (i + 1) + " sur " + state.blocks.length });
+      var info = BLOCKS[block.type] || {};
+      badge.innerHTML = info.icon || ""; // icône du registre (serveur)
+      blockbar.appendChild(badge);
+      blockbar.appendChild(el("span", { "class": "sr-only" }, label(block) + ", bloc " + (i + 1) + " sur " + state.blocks.length));
+      [["arrowUp", "Monter", function () { move(indexOfId(selectedId), indexOfId(selectedId) - 1); }, i === 0],
+        ["arrowDown", "Descendre", function () { move(indexOfId(selectedId), indexOfId(selectedId) + 1); }, i === state.blocks.length - 1],
+        ["edit", "Modifier (réglages à droite)", function () { select(selectedId, { focus: true }); }],
+        ["copy", "Dupliquer", function () { duplicate(selectedId); }],
+        [block.hidden ? "eye" : "eyeOff", block.hidden ? "Afficher" : "Masquer (non envoyé)", function () { toggleHidden(selectedId); }],
+        ["trash", "Supprimer", function () { remove(selectedId); }, false, true]].forEach(function (a) {
+        var b = iconBtn(a[0], a[1], function () { a[2](); }, { "class": "mk-b-icon" + (a[4] ? " is-danger" : "") });
+        if (a[3]) b.disabled = true;
+        blockbar.appendChild(b);
+      });
+    }
+    blockbar.hidden = false;
+    placeBlockbar();
+  }
+  var placeQueued = false;
+  function placeBlockbar() {
+    if (!blockbar || blockbar.hidden || !selectedId) return;
+    var box = blockBox(selectedId);
+    if (!box) { blockbar.style.visibility = "hidden"; return; }
+    blockbar.style.visibility = "";
+    var h = blockbar.offsetHeight, viewTop = canvas.scrollTop + 8, viewBottom = canvas.scrollTop + canvas.clientHeight - 8;
+    var top = Math.max(box.top, Math.min(viewTop, box.bottom - h)); // suit le bloc, reste visible s'il est long
+    top = Math.min(top, Math.max(box.top, viewBottom - h));
+    top = Math.max(0, Math.min(top, canvas.scrollHeight - h));
+    blockbar.style.top = Math.round(top) + "px";
+    blockbar.style.left = Math.round(box.right + 10) + "px";
+  }
+  canvas.addEventListener("scroll", function () { if (placeQueued) return; placeQueued = true; requestAnimationFrame(function () { placeQueued = false; placeBlockbar(); }); }, { passive: true });
 
   // ---------- Fichiers : glisser-déposer et import → médiathèque (persistant) → bloc ----------
   var IMG_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -850,7 +1000,7 @@
   var mediaCache = [], mediaMore = false, mediaLoaded = false, pickFor = null;
   var mediaGrid = $("mk-media-grid"), mediaQ = $("mk-media-q"), mediaKind = $("mk-media-kind"), mediaMoreBtn = $("mk-media-more");
   function setMediaStatus(t) { var s = $("mk-media-status"); if (s) s.textContent = t || ""; }
-  function fmtSize(n) { return n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(n / 1024)) + " Ko"; }
+  function fmtSize(n) { return n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + "\u00a0Mo" : Math.max(1, Math.round(n / 1024)) + "\u00a0Ko"; }
   function loadMedia(more) {
     if (!mediaGrid || (mediaLoaded && !more && !loadMedia.force)) return;
     loadMedia.force = false;
@@ -865,23 +1015,30 @@
   if (mediaQ) mediaQ.addEventListener("input", function () { clearTimeout(mediaSearchTimer); mediaSearchTimer = setTimeout(function () { loadMedia.force = true; loadMedia(false); }, 250); });
   if (mediaKind) mediaKind.addEventListener("change", function () { loadMedia.force = true; loadMedia(false); });
   if (mediaMoreBtn) mediaMoreBtn.addEventListener("click", function () { loadMedia(true); });
+  function mediaType(m) { var t = { "image/png": "PNG", "image/jpeg": "JPEG", "image/gif": "GIF", "image/webp": "WebP", "application/pdf": "PDF" }[m.mime]; return t || (m.kind === "image" ? "Image" : "Document"); }
   function renderMedia() {
     if (!mediaGrid) return;
     mediaGrid.textContent = "";
+    var selectedImage = selectedId && blockById(selectedId) && blockById(selectedId).type === "image";
     mediaCache.forEach(function (m) {
       var li = el("li", { "class": "mk-media-item" });
-      var pick = el("button", { type: "button", "class": "mk-media-pick-btn", "aria-label": (m.kind === "image" ? "Insérer l'image « " : "Insérer le document « ") + m.name + " »" });
+      var replaces = m.kind === "image" && (pickFor || selectedImage);
+      var pick = el("button", { type: "button", "class": "mk-media-pick-btn", "aria-label": (replaces ? "Utiliser l'image « " : m.kind === "image" ? "Insérer l'image « " : "Insérer le document « ") + m.name + " »" + (replaces ? " dans le bloc image sélectionné" : "") });
       if (m.kind === "image") pick.appendChild(el("img", { src: m.url, alt: "", loading: "lazy", width: "120", height: "90" }));
       else pick.appendChild(iconSpan("fileText", "mk-media-doc"));
+      var chip = el("span", { "class": "mk-media-insert", "aria-hidden": "true" });
+      chip.appendChild(iconSpan("plus")); chip.appendChild(el("span", {}, replaces ? "Utiliser" : "Insérer"));
+      pick.appendChild(chip);
+      pick.appendChild(el("span", { "class": "mk-media-type", "aria-hidden": "true" }, mediaType(m)));
       pick.addEventListener("click", function () {
-        var target = pickFor || (selectedId && blockById(selectedId) && blockById(selectedId).type === "image" ? selectedId : null);
+        var target = pickFor || (selectedImage ? selectedId : null);
         useMedia(m, { target: m.kind === "image" ? target : null });
         pickFor = null;
       });
       li.appendChild(pick);
       var meta = el("div", { "class": "mk-media-meta" });
       meta.appendChild(el("span", { "class": "mk-media-name", title: m.name }, m.name));
-      meta.appendChild(el("span", { "class": "mk-media-info" }, (m.width ? m.width + " × " + m.height + " · " : "PDF · ") + fmtSize(m.size)));
+      meta.appendChild(el("span", { "class": "mk-media-info" }, (m.width ? m.width + " × " + m.height + " · " : "") + fmtSize(m.size)));
       li.appendChild(meta);
       var actions = el("div", { "class": "mk-media-actions" });
       if (m.kind === "image") actions.appendChild(iconBtn("edit", "Texte alternatif de « " + m.name + " »", function () { editAlt(m); }));
@@ -923,25 +1080,38 @@
   function renderCheck() {
     var box = $("mk-check"), badge = $("mk-check-count");
     var errors = lintWarnings.filter(function (w) { return w.level === "error"; });
+    var tips = lintWarnings.length - errors.length;
     var count = blockErrors.length + errors.length;
     if (badge) { badge.hidden = !count; badge.textContent = String(count); badge.setAttribute("aria-label", count + " problème" + (count > 1 ? "s" : "") + " à corriger"); }
     if (!box) return;
     box.textContent = "";
-    if (!count && !lintWarnings.length) { box.appendChild(el("p", { "class": "mk-check-ok" }, "Aucun problème détecté.")); return; }
-    if (count) box.appendChild(el("p", { "class": "mk-check-sum" }, count + " problème" + (count > 1 ? "s" : "") + " à corriger avant l'envoi"));
+    var sum = el("div", { "class": "mk-check-summary " + (count ? "is-error" : tips ? "is-warning" : "is-ok") });
+    sum.appendChild(iconSpan(count ? "alertCircle" : tips ? "alertTriangle" : "checkCircle", "mk-check-summary-icon"));
+    var st = el("div", {});
+    st.appendChild(el("p", { "class": count ? "mk-check-sum" : "mk-check-ok" }, count ? count + " problème" + (count > 1 ? "s" : "") + " à corriger avant l'envoi" : tips ? "Aucun problème bloquant" : "Aucun problème détecté"));
+    st.appendChild(el("p", { "class": "mk-check-sub" }, tips ? tips + " conseil" + (tips > 1 ? "s" : "") + " pour améliorer le message" : count ? "Les blocs incomplets ne sont pas enregistrés automatiquement." : "Le message est prêt à être envoyé."));
+    sum.appendChild(st);
+    box.appendChild(sum);
+    if (!count && !tips) return;
     var ul = el("ul", { "class": "mk-check-list" });
+    function item(level, text, onGo) {
+      var li = el("li", { "class": level === "error" ? "is-error" : "is-warning" });
+      var link = typeof onGo === "string"; // réglage hors de l'éditeur : ouvert dans un nouvel onglet (le travail en cours reste ici)
+      var node = link ? el("a", { "class": "mk-check-go", href: onGo, target: "_blank", rel: "noopener" }) : el(onGo ? "button" : "div", onGo ? { type: "button", "class": "mk-check-go" } : { "class": "mk-check-go is-static" });
+      node.appendChild(el("span", { "class": "mk-check-badge" }, level === "error" ? "Erreur" : "Conseil"));
+      node.appendChild(el("span", { "class": "mk-check-msg" }, text + (link ? " (s'ouvre dans un nouvel onglet)" : "")));
+      if (onGo) node.appendChild(iconSpan(link ? "externalLink" : "chevronRight", "mk-check-chev"));
+      if (onGo && !link) node.addEventListener("click", onGo);
+      li.appendChild(node); ul.appendChild(li);
+    }
     blockErrors.forEach(function (be) {
-      var li = el("li", { "class": "is-error" });
-      var b = el("button", { type: "button", "class": "mk-check-go" }, "Bloc " + (indexOfId(be.id) + 1) + " (" + (BLOCKS[be.type] ? BLOCKS[be.type].label : be.type) + ") : " + be.message);
-      b.addEventListener("click", function () { select(be.id, { scroll: true, focus: true }); });
-      li.appendChild(b); ul.appendChild(li);
+      item("error", "Bloc " + (indexOfId(be.id) + 1) + " (" + (BLOCKS[be.type] ? BLOCKS[be.type].label : be.type) + ") : " + be.message, function () { select(be.id, { scroll: true, focus: true }); });
     });
     lintWarnings.forEach(function (w) {
-      var li = el("li", { "class": w.level === "error" ? "is-error" : "is-warning" });
-      var goMessage = /^subject|^preheader|address/.test(w.code || "");
-      var b = el("button", { type: "button", "class": "mk-check-go" }, (w.level === "error" ? "" : "Conseil : ") + w.message);
-      b.addEventListener("click", function () { if (goMessage) { showPane("message"); var f = $(/preheader/.test(w.code) ? "t-preheader" : "t-subject"); if (f) f.focus(); } });
-      li.appendChild(b); ul.appendChild(li);
+      var code = w.code || "";
+      var go = /^address/.test(code) ? "/marketing/modeles#adresse"
+        : /^subject|^preheader/.test(code) ? function () { showPane("message"); var f = $(/preheader/.test(code) ? "t-preheader" : "t-subject"); if (f) f.focus(); } : null;
+      item(w.level === "error" ? "error" : "warning", w.message, go);
     });
     box.appendChild(ul);
   }
@@ -1035,6 +1205,7 @@
   state.blocks.forEach(function (b) { if (!b.id) b.id = genId(); });
   renderStructure();
   renderProps();
+  refreshMessageFields();
   record(null);
   savedPos = 0;
   updateHistoryUi();

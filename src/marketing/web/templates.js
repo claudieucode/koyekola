@@ -26,7 +26,7 @@ const BLOCKS = {
   columns: ["Deux colonnes", "columns", "Deux textes côte à côte"], divider: ["Séparateur", "minus", "Une ligne fine"], spacer: ["Espace", "moveVertical", "Un espace vertical"],
 };
 // Icônes utilisées par le script de l'éditeur (SVG du registre fixe, jamais de texte saisi)
-const EDITOR_ICONS = ["copy", "eye", "eyeOff", "trash", "arrowUp", "arrowDown", "edit", "grip", "upload", "plus", "search", "alertTriangle", "checkCircle", "close", "image", "fileText", "link", "maximize", "monitor", "tablet", "smartphone", "layers", "palette", "braces", "settings", "undo", "redo", "moreHorizontal"];
+const EDITOR_ICONS = ["copy", "eye", "eyeOff", "trash", "arrowUp", "arrowDown", "edit", "grip", "upload", "plus", "search", "alertTriangle", "checkCircle", "close", "image", "fileText", "link", "maximize", "monitor", "tablet", "smartphone", "layers", "palette", "braces", "settings", "undo", "redo", "moreHorizontal", "alertCircle", "chevronRight", "info", "externalLink"];
 // Palette de l'éditeur : groupes et blocs (libellés français)
 const PALETTE = [
   { title: "Texte", blocks: [["heading", "Titre"], ["text", "Texte"], ["quote", "Citation"], ["list", "Liste"]] },

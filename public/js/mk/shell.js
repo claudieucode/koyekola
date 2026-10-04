@@ -15,9 +15,9 @@
   var collapseBtn = document.querySelector("[data-mk-sidebar-collapse]");
   var toggleBtn = document.querySelector("[data-mk-sidebar-toggle]");
 
-  function setCollapsed(collapsed) {
+  function setCollapsed(collapsed, remember) {
     if (collapsed) root.setAttribute("data-sidebar", "collapsed"); else root.removeAttribute("data-sidebar");
-    store("mkSidebar", collapsed ? "collapsed" : "open");
+    if (remember) store("mkSidebar", collapsed ? "collapsed" : "open"); // seul un choix de l'utilisateur est mémorisé
     if (collapseBtn) {
       collapseBtn.setAttribute("aria-pressed", collapsed ? "true" : "false");
       var label = collapsed ? "Déployer le menu" : "Réduire le menu";
@@ -26,7 +26,7 @@
   }
   if (collapseBtn) {
     setCollapsed(root.getAttribute("data-sidebar") === "collapsed");
-    collapseBtn.addEventListener("click", function () { setCollapsed(root.getAttribute("data-sidebar") !== "collapsed"); });
+    collapseBtn.addEventListener("click", function () { setCollapsed(root.getAttribute("data-sidebar") !== "collapsed", true); });
   }
 
   function openDrawer() {
@@ -58,7 +58,7 @@
     $$(".mk-nav-head", sidebar).forEach(function (head) {
       head.addEventListener("click", function () {
         var group = head.closest(".mk-nav-group");
-        if (DESKTOP.matches && root.getAttribute("data-sidebar") === "collapsed") { setCollapsed(false); group.classList.add("is-open"); head.setAttribute("aria-expanded", "true"); return; }
+        if (DESKTOP.matches && root.getAttribute("data-sidebar") === "collapsed") { setCollapsed(false, true); group.classList.add("is-open"); head.setAttribute("aria-expanded", "true"); return; }
         var open = !group.classList.contains("is-open");
         group.classList.toggle("is-open", open);
         head.setAttribute("aria-expanded", open ? "true" : "false");

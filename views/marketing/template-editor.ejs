@@ -1,28 +1,34 @@
-<%- include("partials/top", { title, active }) %>
+<%- include("partials/top", { title, active, compactNav: true }) %>
 <%# Éditeur d'e-mails (Campagnes → Modèles d'e-mails) : barre d'outils, onglets (blocs, structure, médias, styles,
     message, vérification), canevas = rendu réel de l'e-mail (aperçu serveur annoté), réglages du bloc sélectionné.
     Le script public/js/marketing-editor.js pilote tout ; le serveur valide, normalise et rend (rien n'est « cru »). %>
     <div class="mk-builder<%= readOnly ? ' is-readonly' : '' %>" id="mk-editor">
       <header class="mk-b-top">
-        <a class="mk-b-back" href="/marketing/modeles"><%- icon("arrowLeft", { size: 16 }) %> Modèles</a>
-        <div class="mk-b-name">
-          <label for="t-name" class="sr-only">Nom du modèle</label>
-          <input id="t-name" type="text" maxlength="100" value="<%= template.name %>" <%= readOnly ? "disabled" : "" %>>
+        <div class="mk-b-top-start">
+          <a class="mk-b-back" href="/marketing/modeles" aria-label="Retour aux modèles" data-tip="Retour aux modèles"><%- icon("arrowLeft", { size: 18 }) %></a>
+          <div class="mk-b-name">
+            <label for="t-name" class="sr-only">Nom du modèle</label>
+            <input id="t-name" type="text" maxlength="100" value="<%= template.name %>" title="<%= template.name %>" <%= readOnly ? "disabled" : "" %>>
+          </div>
         </div>
-        <span id="mk-status" class="mk-b-status" data-state="saved" role="status" aria-live="polite">Enregistré · version <%= template.version %></span>
-        <button type="button" class="btn btn-outline btn-sm mk-b-retry" id="mk-retry" hidden>Réessayer</button>
+        <div class="mk-b-top-mid">
+          <span id="mk-status" class="mk-b-status" data-state="saved" role="status" aria-live="polite">Enregistré · version <%= template.version %></span>
+          <button type="button" class="btn btn-outline btn-sm mk-b-retry" id="mk-retry" hidden>Réessayer</button>
+        </div>
         <div class="mk-b-tools">
           <% if (!readOnly) { %>
-            <button type="button" class="mk-b-icon" id="mk-undo" aria-label="Annuler la dernière modification (Ctrl+Z)" data-tip="Annuler" disabled><%- icon("undo", { size: 18 }) %></button>
-            <button type="button" class="mk-b-icon" id="mk-redo" aria-label="Rétablir (Ctrl+Maj+Z)" data-tip="Rétablir" disabled><%- icon("redo", { size: 18 }) %></button>
+            <div class="mk-b-history" role="group" aria-label="Historique des modifications">
+              <button type="button" class="mk-b-icon" id="mk-undo" aria-label="Annuler la dernière modification (Ctrl+Z)" data-tip="Annuler" disabled><%- icon("undo", { size: 18 }) %></button>
+              <button type="button" class="mk-b-icon" id="mk-redo" aria-label="Rétablir (Ctrl+Maj+Z)" data-tip="Rétablir" disabled><%- icon("redo", { size: 18 }) %></button>
+            </div>
           <% } %>
-          <button type="button" class="btn btn-outline btn-sm" id="mk-open-preview"><%- icon("eye", { size: 16 }) %> Prévisualiser</button>
+          <button type="button" class="btn btn-outline btn-sm mk-b-btn" id="mk-open-preview" aria-label="Prévisualiser l'e-mail" data-tip="Prévisualiser"><%- icon("eye", { size: 16 }) %><span class="mk-b-btn-label">Prévisualiser</span></button>
           <% if (!readOnly) { %>
-            <button type="button" class="btn btn-outline btn-sm" id="mk-open-test"><%- icon("send", { size: 16 }) %> Envoyer un test</button>
-            <button type="button" class="btn btn-primary btn-sm" id="mk-save">Enregistrer</button>
+            <button type="button" class="btn btn-outline btn-sm mk-b-btn" id="mk-open-test" aria-label="Envoyer un e-mail de test" data-tip="Envoyer un test"><%- icon("send", { size: 16 }) %><span class="mk-b-btn-label">Envoyer un test</span></button>
+            <button type="button" class="btn btn-primary btn-sm mk-b-save" id="mk-save" aria-keyshortcuts="Control+S">Enregistrer</button>
           <% } %>
           <div class="mk-b-more">
-            <button type="button" class="mk-b-icon" id="mk-more" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-more-menu" aria-label="Plus d'actions" data-tip="Plus"><%- icon("moreHorizontal", { size: 18 }) %></button>
+            <button type="button" class="mk-b-icon" id="mk-more" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-more-menu" aria-label="Plus d'actions" data-tip="Plus d'actions"><%- icon("moreHorizontal", { size: 18 }) %></button>
             <div class="mk-menu" id="mk-more-menu" role="menu" hidden>
               <button type="button" role="menuitem" id="mk-open-versions"><%- icon("history", { size: 16 }) %> Versions précédentes (<%= versions.length %>)</button>
               <% if (!readOnly) { %>
@@ -48,8 +54,10 @@
         <section class="mk-b-side" aria-label="Panneau des outils">
           <% if (!readOnly) { %>
           <div class="mk-b-pane" id="pane-blocks" role="tabpanel" aria-labelledby="tab-blocks">
-            <h2 class="mk-b-pane-title">Blocs</h2>
-            <p class="field-hint">Cliquez pour ajouter après le bloc sélectionné, ou glissez dans l'e-mail. Vous pouvez aussi y glisser une image ou un PDF depuis votre ordinateur.</p>
+            <div class="mk-b-pane-head">
+              <h2 class="mk-b-pane-title">Blocs</h2>
+              <p class="mk-b-pane-hint">Cliquez pour ajouter après le bloc sélectionné, ou glissez dans l'e-mail.</p>
+            </div>
             <nav class="mk-palette" id="mk-palette" aria-label="Ajouter un bloc">
               <% palette.forEach((g) => { %>
                 <div class="mk-palette-group">
@@ -60,60 +68,99 @@
                 </div>
               <% }) %>
             </nav>
+            <p class="mk-b-pane-foot">Astuce : glissez aussi une image ou un PDF de votre ordinateur directement dans l'e-mail.</p>
           </div>
           <% } %>
           <div class="mk-b-pane" id="pane-structure" role="tabpanel" aria-labelledby="tab-structure"<%= readOnly ? "" : " hidden" %>>
-            <h2 class="mk-b-pane-title">Structure</h2>
-            <p class="field-hint">L'ordre des blocs du message. Glissez une ligne pour la déplacer (ou Alt + flèche haut / bas).</p>
+            <div class="mk-b-pane-head">
+              <h2 class="mk-b-pane-title">Structure <span class="mk-b-count" id="mk-structure-count"></span></h2>
+              <p class="mk-b-pane-hint"><% if (readOnly) { %>L'ordre des blocs du message.<% } else { %>Glissez une ligne par sa poignée pour la déplacer (ou Alt + flèche haut / bas). Cliquez sur une ligne pour la modifier.<% } %></p>
+            </div>
             <ol class="mk-structure" id="mk-structure" aria-label="Blocs du message"></ol>
           </div>
           <% if (!readOnly) { %>
           <div class="mk-b-pane" id="pane-media" role="tabpanel" aria-labelledby="tab-media" hidden>
-            <h2 class="mk-b-pane-title">Médiathèque</h2>
+            <div class="mk-b-pane-head">
+              <h2 class="mk-b-pane-title">Médiathèque</h2>
+              <p class="mk-b-pane-hint">Cliquez sur « Insérer » pour l'ajouter à l'e-mail (ou remplacer l'image du bloc sélectionné).</p>
+            </div>
             <div class="mk-media-drop" id="mk-media-drop">
-              <p><strong>Déposez des images ou des PDF ici</strong></p>
-              <p class="field-hint">JPEG, PNG, GIF, WebP (5 Mo) · PDF (10 Mo)</p>
-              <label class="btn btn-outline btn-sm mk-media-pick"><%- icon("upload", { size: 16 }) %> Importer depuis l'ordinateur<input type="file" id="mk-media-file" accept="image/jpeg,image/png,image/gif,image/webp,application/pdf" multiple class="sr-only"></label>
+              <span class="mk-media-drop-icon" aria-hidden="true"><%- icon("upload", { size: 20 }) %></span>
+              <p class="mk-media-drop-title">Déposez des images ou des PDF ici</p>
+              <p class="mk-media-drop-hint">JPEG, PNG, GIF, WebP (5&nbsp;Mo) · PDF (10&nbsp;Mo)</p>
+              <label class="btn btn-outline btn-sm mk-media-pick">Importer depuis l'ordinateur<input type="file" id="mk-media-file" accept="image/jpeg,image/png,image/gif,image/webp,application/pdf" multiple class="sr-only"></label>
             </div>
             <div class="mk-media-tools">
-              <label for="mk-media-q" class="sr-only">Rechercher un média</label>
-              <input type="search" id="mk-media-q" placeholder="Rechercher un média…">
+              <div class="mk-media-search">
+                <span class="mk-media-search-icon" aria-hidden="true"><%- icon("search", { size: 16 }) %></span>
+                <label for="mk-media-q" class="sr-only">Rechercher un média</label>
+                <input type="search" id="mk-media-q" placeholder="Rechercher…">
+              </div>
               <label for="mk-media-kind" class="sr-only">Type de média</label>
               <select id="mk-media-kind"><option value="">Tous</option><option value="image">Images</option><option value="document">Documents</option></select>
             </div>
             <p class="mk-media-status" id="mk-media-status" role="status" aria-live="polite"></p>
             <ul class="mk-media-grid" id="mk-media-grid" aria-label="Médias"></ul>
-            <button type="button" class="btn btn-outline btn-sm" id="mk-media-more" hidden>Afficher plus</button>
+            <button type="button" class="btn btn-outline btn-sm mk-media-more" id="mk-media-more" hidden>Afficher plus</button>
           </div>
           <% } %>
           <div class="mk-b-pane" id="pane-styles" role="tabpanel" aria-labelledby="tab-styles" hidden>
-            <h2 class="mk-b-pane-title">Styles globaux</h2>
-            <p class="field-hint">Appliqués à tout le message ; un bouton peut avoir sa propre couleur.</p>
-            <div class="mk-theme">
-              <div class="field-group"><label for="t-bg">Fond de page</label><input id="t-bg" type="color"></div>
-              <div class="field-group"><label for="t-cbg">Fond du message</label><input id="t-cbg" type="color"></div>
-              <div class="field-group"><label for="t-text">Couleur du texte</label><input id="t-text" type="color"></div>
-              <div class="field-group"><label for="t-accent">Couleur principale (liens, boutons)</label><input id="t-accent" type="color"></div>
-              <div class="field-group"><label for="t-font">Police</label><select id="t-font"><option value="system">Sans empattement (système)</option><option value="serif">Avec empattement (Georgia)</option></select></div>
+            <div class="mk-b-pane-head">
+              <h2 class="mk-b-pane-title">Styles globaux</h2>
+              <p class="mk-b-pane-hint">Appliqués à tout le message ; un bouton peut avoir sa propre couleur.</p>
             </div>
-            <% if (!readOnly) { %><button type="button" class="btn btn-outline btn-sm" id="mk-theme-reset">Réinitialiser le style</button><% } %>
+            <section class="mk-b-section" aria-labelledby="mk-styles-colors">
+              <h3 class="mk-b-section-title" id="mk-styles-colors">Couleurs</h3>
+              <% [["t-bg", "Fond de page"], ["t-cbg", "Fond du message"], ["t-text", "Couleur du texte"], ["t-accent", "Couleur principale", "Liens et boutons"]].forEach(([id, label, hint]) => { %>
+                <div class="mk-style-row">
+                  <label for="<%= id %>" class="mk-style-label"><%= label %><% if (hint) { %><span class="mk-style-hint"><%= hint %></span><% } %></label>
+                  <div class="mk-style-color">
+                    <input id="<%= id %>" type="color">
+                    <label for="<%= id %>-hex" class="sr-only"><%= label %> (code hexadécimal)</label>
+                    <input id="<%= id %>-hex" class="mk-style-hex" type="text" maxlength="7" spellcheck="false" autocomplete="off" data-hex-for="<%= id %>" <%= readOnly ? "disabled" : "" %>>
+                  </div>
+                </div>
+              <% }) %>
+            </section>
+            <section class="mk-b-section" aria-labelledby="mk-styles-type">
+              <h3 class="mk-b-section-title" id="mk-styles-type">Typographie</h3>
+              <div class="field-group"><label for="t-font">Police</label><select id="t-font"><option value="system">Sans empattement (système)</option><option value="serif">Avec empattement (Georgia)</option></select></div>
+            </section>
+            <% if (!readOnly) { %><button type="button" class="mk-b-ghost" id="mk-theme-reset"><%- icon("undo", { size: 16 }) %> Réinitialiser le style</button><% } %>
           </div>
           <div class="mk-b-pane" id="pane-message" role="tabpanel" aria-labelledby="tab-message" hidden>
-            <h2 class="mk-b-pane-title">Message</h2>
-            <div class="field-group"><label for="t-subject">Objet</label><input id="t-subject" type="text" maxlength="200" data-var-target></div>
-            <div class="field-group"><label for="t-preheader">Préheader <span class="field-hint">(texte affiché après l'objet dans la boîte de réception)</span></label><input id="t-preheader" type="text" maxlength="200" data-var-target></div>
-            <div class="field-group"><label for="t-kind">Type</label><select id="t-kind"><option value="marketing">Marketing</option><option value="transactional">Transactionnel</option></select></div>
-            <div class="field-group"><label for="t-category">Catégorie</label><select id="t-category"><option value="">Aucune catégorie</option><% categories.forEach((c) => { %><option value="<%= c.key %>"><%= c.label %></option><% }) %></select></div>
-            <div class="field-group"><label for="t-footer">Pied de page : phrase d'introduction</label><input id="t-footer" type="text" maxlength="1000" data-var-target placeholder="Vous recevez cet e-mail parce que vous êtes en relation avec {{org.name}}."></div>
-            <p class="field-hint">Ajoutés automatiquement : le lien « Se désinscrire », le lien des préférences et l'adresse postale de l'organisation.</p>
-            <div class="mk-blocks-bar">
-              <label for="mk-var">Insérer une variable</label>
-              <select id="mk-var" <%= readOnly ? "disabled" : "" %>><option value="">Choisir une variable…</option></select>
-              <span class="field-hint">Placez d'abord le curseur dans un champ de texte (objet, titre, texte…).</span>
+            <div class="mk-b-pane-head">
+              <h2 class="mk-b-pane-title">Message</h2>
+              <p class="mk-b-pane-hint">Ce que voit le destinataire avant d'ouvrir l'e-mail, et le pied de page.</p>
             </div>
+            <section class="mk-b-section" aria-labelledby="mk-msg-info">
+              <h3 class="mk-b-section-title" id="mk-msg-info">Informations du message</h3>
+              <div class="field-group"><label for="t-subject">Objet <span class="mk-count" data-count-for="t-subject"></span></label><textarea id="t-subject" rows="1" maxlength="200" data-var-target data-single-line class="mk-autogrow"></textarea></div>
+              <div class="field-group"><label for="t-preheader">Préheader <span class="mk-count" data-count-for="t-preheader"></span></label><textarea id="t-preheader" rows="1" maxlength="200" data-var-target data-single-line class="mk-autogrow"></textarea><span class="field-hint">Texte affiché après l'objet dans la boîte de réception.</span></div>
+            </section>
+            <section class="mk-b-section" aria-labelledby="mk-msg-config">
+              <h3 class="mk-b-section-title" id="mk-msg-config">Configuration</h3>
+              <div class="field-group"><label for="t-kind">Type</label><select id="t-kind"><option value="marketing">Marketing</option><option value="transactional">Transactionnel</option></select></div>
+              <div class="field-group"><label for="t-category">Catégorie</label><select id="t-category"><option value="">Aucune catégorie</option><% categories.forEach((c) => { %><option value="<%= c.key %>"><%= c.label %></option><% }) %></select></div>
+            </section>
+            <section class="mk-b-section" aria-labelledby="mk-msg-footer">
+              <h3 class="mk-b-section-title" id="mk-msg-footer">Pied de page</h3>
+              <div class="field-group"><label for="t-footer">Phrase d'introduction</label><textarea id="t-footer" rows="3" maxlength="1000" data-var-target class="mk-autogrow" placeholder="Vous recevez cet e-mail parce que vous êtes en relation avec {{org.name}}."></textarea><span class="field-hint">Ajoutés automatiquement : le lien « Se désinscrire », le lien des préférences et l'adresse postale de l'organisation.</span></div>
+            </section>
+            <section class="mk-b-section" aria-labelledby="mk-msg-vars">
+              <h3 class="mk-b-section-title" id="mk-msg-vars">Variables</h3>
+              <div class="field-group mk-blocks-bar">
+                <label for="mk-var">Insérer une variable</label>
+                <select id="mk-var" <%= readOnly ? "disabled" : "" %>><option value="">Choisir une variable…</option></select>
+                <span class="field-hint">Placez d'abord le curseur dans un champ de texte (objet, titre, texte…).</span>
+              </div>
+            </section>
           </div>
           <div class="mk-b-pane" id="pane-check" role="tabpanel" aria-labelledby="tab-check" hidden>
-            <h2 class="mk-b-pane-title">Vérification de l'e-mail</h2>
+            <div class="mk-b-pane-head">
+              <h2 class="mk-b-pane-title">Vérification</h2>
+              <p class="mk-b-pane-hint">Mise à jour à chaque modification. Cliquez sur un problème pour aller au bloc ou au champ concerné.</p>
+            </div>
             <div id="mk-check" aria-live="polite"></div>
           </div>
         </section>
@@ -126,11 +173,13 @@
               <button type="button" class="mk-b-icon" data-size="375" aria-pressed="false" aria-label="Mobile (375 px)" data-tip="Mobile"><%- icon("smartphone", { size: 18 }) %></button>
             </div>
             <p class="mk-preview-subject"><strong>Objet :</strong> <span id="mk-subject"></span></p>
+            <button type="button" class="mk-b-zoom" id="mk-zoom" aria-pressed="false" hidden></button>
             <label for="mk-contact" class="sr-only">Contact utilisé pour l'aperçu</label>
             <select id="mk-contact"><option value="">Données d'exemple</option></select>
           </div>
           <div class="mk-b-canvas" id="mk-canvas">
             <iframe id="mk-frame" title="E-mail en cours de conception (cliquez sur un bloc pour le modifier)" sandbox="allow-same-origin" srcdoc=""></iframe>
+            <div class="mk-b-blockbar" id="mk-blockbar" role="toolbar" aria-orientation="vertical" aria-label="Actions du bloc sélectionné" hidden></div>
           </div>
           <p class="sr-only" id="mk-live" aria-live="polite"></p>
         </main>
