@@ -1,6 +1,13 @@
 // KOLAKISA — interactions front-end légères (aucune dépendance externe)
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Fuseau horaire du navigateur (ex. « Africa/Kinshasa ») transmis par les formulaires d'inscription et de connexion :
+  // sert uniquement à envoyer les e-mails à l'heure locale de la personne (Marketing → heure d'envoi)
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+    document.querySelectorAll("input[data-tz]").forEach((input) => { input.value = tz; });
+  } catch (e) { /* navigateur sans Intl : fuseau inconnu, rien n'est envoyé */ }
+
   // Menu mobile
   const openBtn = document.getElementById("openMenuBtn");
   const nav = document.getElementById("headerNav");

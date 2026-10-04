@@ -8,8 +8,9 @@ const { getOverview } = require("../overview");
 const segmentsService = require("../segments");
 const { parseKey } = require("../security/crypto");
 const { attempt, need, flashError } = require("./kit");
+const sendtime = require("../sending/sendtime");
 
-const PROFILE_FIELDS = ["first_name", "last_name", "phone", "company", "country", "language"];
+const PROFILE_FIELDS = ["first_name", "last_name", "phone", "company", "country", "language", "timezone"];
 const pick = (body, keys) => Object.fromEntries(keys.filter((k) => typeof body[k] === "string").map((k) => [k, body[k]]));
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 
@@ -147,6 +148,8 @@ module.exports = ({ db }) => {
       memberOf, allLists: audience.listLists(ctx), history: compliance.consentHistory(ctx, contact.id), preferences: compliance.preferencesOf(ctx, contact.id),
       sendable: compliance.isSendable(ctx, contact.id), smsSendable: sms.isSmsSendable(ctx, contact.id), smsPhoneMasked: sms.maskPhone(contact.sms_phone),
       summary: audience.contactSummary(ctx, contact.id), timeline: audience.contactTimeline(ctx, contact.id, { limit: 50 }),
+      // Fuseau réellement utilisé pour l'envoi à l'heure locale, et d'où il vient (contact, compte, pays, défaut)
+      zone: sendtime.contactZones(ctx, [contact.id])[contact.id], zoneBasis: sendtime.BASIS_LABELS, timeZones: sendtime.timeZoneList(),
     });
   });
 

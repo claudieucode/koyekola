@@ -6,7 +6,7 @@
       <p class="subtitle">Créez votre compte pour acheter et suivre les formations.</p>
       <% if (error) { %><p class="form-error"><%= error %></p><% } %>
 
-      <form action="/inscription" method="post">
+      <form action="/inscription" method="post"><input type="hidden" name="tz" data-tz>
         <% if (typeof redirect !== "undefined" && redirect) { %><input type="hidden" name="redirect" value="<%= redirect %>"><% } %>
         <div class="field-group">
           <label for="f-register-1">Nom d'utilisateur</label>

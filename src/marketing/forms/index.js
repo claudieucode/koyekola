@@ -3,6 +3,7 @@
 // formulaire suit EXACTEMENT les mêmes règles que partout ailleurs (compliance/consent.js) : aucun raccourci ici.
 const { checkCtx, cleanText, audit, MarketingError } = require("../audience/shared");
 const { upsertContact, getContact } = require("../audience/contacts");
+const { cleanTimeZone } = require("../sending/sendtime");
 const { addToList } = require("../audience/lists");
 const { recordConsent } = require("../compliance/consent");
 const { setContactProperties, validatePropertyValues } = require("../audience/properties");
@@ -238,7 +239,9 @@ function submitForm(ctx, formId, input = {}) {
   }
   let contact;
   try {
-    ({ contact } = upsertContact(ctx, { email: input.email, ...fields, source: "form" }));
+    // Fuseau du navigateur (champ caché rempli par le formulaire) : seulement s'il est valide, jamais bloquant
+    const timezone = cleanTimeZone(input.tz);
+    ({ contact } = upsertContact(ctx, { email: input.email, ...fields, ...(timezone ? { timezone } : {}), source: "form" }));
   } catch (error) {
     if (error instanceof MarketingError) return { ok: false, reason: error.code, message: error.message };
     throw error;

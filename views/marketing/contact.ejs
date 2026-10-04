@@ -67,6 +67,11 @@
             <div class="field-group"><label for="e-country">Pays</label><input id="e-country" type="text" name="country" value="<%= contact.country %>" maxlength="100" <%= mk.can("contacts.write") ? "" : "disabled" %>></div>
             <div class="field-group"><label for="e-lang">Langue</label><input id="e-lang" type="text" name="language" value="<%= contact.language %>" maxlength="20" <%= mk.can("contacts.write") ? "" : "disabled" %>></div>
           </div>
+          <div class="field-group"><label for="e-tz">Fuseau horaire</label>
+            <input id="e-tz" type="text" name="timezone" value="<%= contact.timezone %>" maxlength="64" list="tz-list" placeholder="Africa/Kinshasa" aria-describedby="e-tz-hint" <%= mk.can("contacts.write") ? "" : "disabled" %>>
+            <datalist id="tz-list"><% timeZones.forEach((z) => { %><option value="<%= z %>"><% }) %></datalist>
+            <p class="field-hint" id="e-tz-hint">Utilisé pour l'envoi à l'heure locale. Fuseau retenu actuellement : <strong><%= zone.tz %></strong> (<%= zoneBasis[zone.basis] %>). Vide = déduit du compte KOLAKISA, du pays, sinon fuseau par défaut.</p>
+          </div>
           <p class="field-hint">L'adresse e-mail est fixe. Le statut ne se modifie que par un consentement, une désinscription ou un blocage.</p>
           <% if (mk.can("contacts.write")) { %><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button><% } %>
         </form>

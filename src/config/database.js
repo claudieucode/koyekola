@@ -403,6 +403,9 @@ for (const [name, definition] of Object.entries({ meta: "TEXT NOT NULL DEFAULT '
 // Photo du formateur (chemin d'un fichier envoyé) : colonne ajoutée aux bases déjà existantes
 const userColumns = db.prepare("PRAGMA table_info(users)").all().map((col) => col.name);
 if (!userColumns.includes("avatar_path")) db.exec("ALTER TABLE users ADD COLUMN avatar_path TEXT");
+// Fuseau horaire du navigateur (IANA), relevé à l'inscription et à chaque connexion : sert à l'envoi des e-mails à
+// l'heure locale de l'élève (Marketing → heure d'envoi). Vide = inconnu.
+if (!userColumns.includes("timezone")) db.exec("ALTER TABLE users ADD COLUMN timezone TEXT NOT NULL DEFAULT ''");
 
 // ---------- Centre de gestion ----------
 // Codes promo (appliqués au paiement, aux formations du formateur qui les crée ; une seule formation si course_id)

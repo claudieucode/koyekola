@@ -12,7 +12,7 @@
       <% } else { %>
         <h1><%= form.name %></h1>
         <% if (error) { %><p class="form-error"><%= error %></p><% } %>
-        <form method="post" action="/f/<%= form.slug %>" novalidate>
+        <form method="post" action="/f/<%= form.slug %>" novalidate><input type="hidden" name="tz" data-tz>
           <div class="hp-field" aria-hidden="true"><label for="f-website">Ne pas remplir</label><input id="f-website" type="text" name="website" tabindex="-1" autocomplete="off"></div>
           <div class="field-group"><label for="f-email">Adresse e-mail</label><input id="f-email" type="email" name="email" value="<%= values.email || '' %>" required autofocus></div>
           <% form.fields.forEach((key) => { %>

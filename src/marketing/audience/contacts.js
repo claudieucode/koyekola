@@ -9,14 +9,21 @@ const { setContactProperties } = require("./properties");
 const { sendableSql } = require("../compliance/sendable");
 
 const STATUSES = ["unknown", "subscribed", "unsubscribed", "bounced", "complained", "suppressed"];
+const { isTimeZone } = require("../sending/sendtime");
 const TEXT_FIELDS = { first_name: 100, last_name: 100, phone: 40, company: 200, country: 100, language: 20, source: 50 };
-const EDITABLE = new Set([...Object.keys(TEXT_FIELDS), "lms_user_id"]);
+const EDITABLE = new Set([...Object.keys(TEXT_FIELDS), "lms_user_id", "timezone"]);
 const MAX_PAGE = 200;
 
 function readFields(input, { forCreate }) {
   const out = {};
   for (const [field, max] of Object.entries(TEXT_FIELDS)) {
     if (input[field] !== undefined) out[field] = cleanText(input[field], { max, field });
+  }
+  // Fuseau horaire IANA (« Africa/Kinshasa ») : sert à l'envoi à l'heure locale ; vide = inconnu
+  if (input.timezone !== undefined && input.timezone !== null) {
+    const tz = String(input.timezone).trim();
+    if (tz && !isTimeZone(tz)) throw new MarketingError("invalid_field", "Fuseau horaire inconnu (exemple : Africa/Kinshasa, Europe/Paris).");
+    out.timezone = tz;
   }
   if (input.lms_user_id !== undefined && input.lms_user_id !== null) {
     if (!Number.isInteger(input.lms_user_id) || input.lms_user_id < 1) throw new MarketingError("invalid_field", "lms_user_id doit être un entier positif.");

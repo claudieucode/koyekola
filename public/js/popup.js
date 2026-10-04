@@ -3,6 +3,8 @@
 // Sans dépendance, comme le reste du site (public/js/main.js).
 (function () {
   "use strict";
+  // Fuseau horaire du navigateur, transmis avec l'inscription (envoi des e-mails à l'heure locale)
+  function browserTimeZone() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) { return ""; } }
   if (location.pathname.indexOf("/f/") === 0 || location.pathname.indexOf("/marketing") === 0) return;
 
   function ready(fn) {
@@ -65,6 +67,7 @@
       '<div class="mk-popup-error" hidden></div>' +
       '<form class="mk-popup-form" novalidate>' +
       '<div class="hp-field" aria-hidden="true"><label>Ne pas remplir<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>' +
+      '<input type="hidden" name="tz" value="' + esc(browserTimeZone()) + '">' +
       '<div class="field-group"><label>Adresse e-mail<input type="email" name="email" required></label></div>' +
       fieldsHtml(popup.fields) +
       '<label class="checkbox-row optin-row"><input type="checkbox" name="consent" value="1" required> ' + esc(popup.consentText) + "</label>" +

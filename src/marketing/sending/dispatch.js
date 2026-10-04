@@ -22,6 +22,7 @@ const { sendableClause } = require("./audience");
 const { preflight } = require("./preflight");
 const { buildMessage } = require("./builder");
 const { recordEvent, bump } = require("./events");
+const sendtime = require("./sendtime");
 const abtest = require("./abtest");
 
 const DAY = 86400000;
@@ -49,10 +50,15 @@ function trackedLinks(compiled, ctx) {
   return [...urls];
 }
 
-function startCampaign(ctx, id, { scheduledAt, now = Date.now() } = {}) {
+// sendMode : « standard » (tout de suite, ou à scheduledAt), « local » (sendDate + sendTime dans le fuseau de chaque
+// contact) ou « optimized » (meilleure heure de chaque contact le jour sendDate) — voir sendtime.js.
+function startCampaign(ctx, id, { scheduledAt, now = Date.now(), sendMode = "standard", sendDate, sendTime } = {}) {
   checkCtx(ctx);
   const campaign = requireCampaign(ctx, id);
   if (campaign.status !== "draft") throw new MarketingError("invalid_state", "Cette campagne a déjà été lancée.");
+  if (!["standard", "local", "optimized"].includes(sendMode)) throw new MarketingError("invalid_field", "Mode d'envoi inconnu.");
+  if (sendMode !== "standard" && abtest.isAbTest(campaign)) throw new MarketingError("invalid_field", "Un test A/B s'envoie en une fois (le gagnant est choisi après) : l'heure locale et la meilleure heure ne s'appliquent pas aux tests A/B.");
+  if (sendMode !== "standard") scheduledAt = undefined; // l'heure vient du plan de chaque destinataire
   if (scheduledAt !== undefined && (!Number.isInteger(scheduledAt) || scheduledAt <= now || scheduledAt > now + MAX_SCHEDULE_MS)) {
     throw new MarketingError("invalid_field", "La date d'envoi doit être dans le futur (moins d'un an).");
   }
@@ -81,12 +87,23 @@ function startCampaign(ctx, id, { scheduledAt, now = Date.now() } = {}) {
       .prepare(`INSERT INTO mk_campaign_recipients (organization_id, campaign_id, contact_id, email, updated_at) SELECT c.organization_id, ?, c.id, c.email, ? ${from}`)
       .run(id, now, ...params).changes;
     const ab = isAb ? abtest.assignVariants(ctx, campaign, { snapshotOf, now }) : null;
+    // Heure par destinataire : chaque destinataire attend son heure (« pas avant », déjà respecté par l'envoi par lots) ;
+    // la campagne démarre à la première de ces heures. Une erreur (heure passée, historique insuffisant) annule tout.
+    let plan = null;
+    if (sendMode !== "standard") {
+      const ids = ctx.db.prepare("SELECT contact_id FROM mk_campaign_recipients WHERE campaign_id = ?").all(id).map((r) => r.contact_id);
+      plan = sendtime.planSendTimes(ctx, ids, { mode: sendMode, date: sendDate, time: sendTime }, now);
+      const setTime = ctx.db.prepare("UPDATE mk_campaign_recipients SET next_attempt_at = ?, send_tz = ?, send_basis = ? WHERE campaign_id = ? AND contact_id = ?");
+      for (const [contactId, t] of plan.times) setTime.run(t.at, t.tz, t.basis, id, contactId);
+      scheduledAt = plan.first ?? undefined;
+    }
     ctx.db
-      .prepare("UPDATE mk_campaigns SET status = 'scheduled', snapshot = ?, scheduled_at = ?, total_recipients = ?, updated_at = datetime('now') WHERE id = ? AND organization_id = ?")
-      .run(JSON.stringify(snapshot), scheduledAt ?? null, recipients, id, ctx.organizationId);
+      .prepare("UPDATE mk_campaigns SET status = 'scheduled', snapshot = ?, scheduled_at = ?, total_recipients = ?, send_mode = ?, send_plan = ?, updated_at = datetime('now') WHERE id = ? AND organization_id = ?")
+      .run(JSON.stringify(snapshot), scheduledAt ?? null, recipients, sendMode, JSON.stringify(plan ? plan.summary : {}), id, ctx.organizationId);
     enqueueDispatch(ctx, id, { runAt: scheduledAt ?? now, key: `campaign:${id}:start` });
-    audit(ctx, "campaign.started", "campaign", id, { recipients, scheduled: scheduledAt !== undefined, ...(ab ? { abTest: ab.testSize, abHeld: ab.held } : {}) });
-    return ab ? { recipients, abTest: ab.testSize, abHeld: ab.held } : { recipients };
+    audit(ctx, "campaign.started", "campaign", id, { recipients, scheduled: scheduledAt !== undefined, sendMode, ...(ab ? { abTest: ab.testSize, abHeld: ab.held } : {}) });
+    const base = ab ? { recipients, abTest: ab.testSize, abHeld: ab.held } : { recipients };
+    return plan ? { ...base, plan: plan.summary } : base;
   });
 }
 

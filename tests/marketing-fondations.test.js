@@ -305,6 +305,8 @@ describe("intégration au serveur", () => {
   });
   test("les tables du LMS sont intactes (aucune table existante modifiée)", () => {
     const users = q("PRAGMA table_info(users)").map((c) => c.name);
-    assert.deepEqual(users, ["id", "username", "email", "password_hash", "role", "bio", "created_at", "avatar_path"]);
+    // Colonnes du schéma du LMS lui-même (src/config/database.js) : « timezone » y est ajoutée par le site (fuseau du
+    // navigateur relevé à l'inscription), jamais par le module marketing, qui ne fait que la lire
+    assert.deepEqual(users, ["id", "username", "email", "password_hash", "role", "bio", "created_at", "avatar_path", "timezone"]);
   });
 });

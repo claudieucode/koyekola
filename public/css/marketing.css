@@ -1582,3 +1582,9 @@ input.mk-fx-switch[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed
 .mk-journey-step.is-trigger .mk-journey-icon { background: var(--accent); color: #fff; border-color: transparent; }
 .mk-journey-n { display: block; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--mk-text-soft); }
 @media (max-width: 700px) { .mk-journey-facts { grid-template-columns: 1fr; gap: 2px; } .mk-journey-facts dd { margin-bottom: 8px; } }
+
+/* Fenêtre d'envoi d'une campagne : « Quand ? » (tout de suite, date, heure locale, meilleure heure) */
+.mk-when { display: grid; gap: 6px; }
+.mk-when-detail { padding: 2px 0 6px 26px; }
+.mk-when-detail[hidden] { display: none; }
+.mk-when-detail .field-hint { margin: 4px 0 0; }

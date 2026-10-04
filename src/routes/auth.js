@@ -5,6 +5,7 @@ const { loginBlocked, recordLoginFailure, clearLoginFailures } = require("../mid
 const { safePath } = require("../utils/safeRedirect");
 const { SIGNUP_CONSENT_TEXT, registerLmsUserSafely } = require("../marketing/bridge/lms");
 const { sendSignupWelcomeEmail } = require("../utils/mailer");
+const { cleanTimeZone } = require("../marketing/sending/sendtime");
 
 const router = express.Router();
 
@@ -31,9 +32,10 @@ router.post("/inscription", (req, res) => {
   }
 
   const hash = bcrypt.hashSync(password, 10);
+  // Fuseau du navigateur (champ caché « tz ») : enregistré seulement s'il est valide, pour l'envoi à l'heure locale
   const info = db
-    .prepare("INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'etudiant')")
-    .run(username, email, hash);
+    .prepare("INSERT INTO users (username, email, password_hash, role, timezone) VALUES (?, ?, ?, 'etudiant', ?)")
+    .run(username, email, hash, cleanTimeZone(req.body.tz));
 
   const userId = Number(info.lastInsertRowid);
   // Contact marketing : « unknown » par défaut ; la case FACULTATIVE, cochée par la personne (« on » exactement), enregistre
@@ -67,6 +69,9 @@ router.post("/connexion", (req, res) => {
   }
 
   clearLoginFailures(req);
+  // Fuseau du navigateur mis à jour à chaque connexion (un élève qui déménage ou voyage reçoit à son heure actuelle)
+  const tz = cleanTimeZone(req.body.tz);
+  if (tz && tz !== user.timezone) db.prepare("UPDATE users SET timezone = ? WHERE id = ?").run(tz, user.id);
 
   req.session.user = { id: user.id, username: user.username, email: user.email, role: user.role };
   res.redirect(safePath(redirect, "/"));

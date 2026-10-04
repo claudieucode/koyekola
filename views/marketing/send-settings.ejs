@@ -84,4 +84,14 @@
       </section>
       <% if (canEdit) { %><button type="submit" class="btn btn-primary">Enregistrer les réglages</button><% } else { %><p class="field-hint">Seul un administrateur peut modifier ces réglages.</p><% } %>
     </form>
+
+    <section class="mk-panel" id="fuseau">
+      <h2>Fuseau horaire par défaut</h2>
+      <p class="field-hint">Utilisé pour l'envoi « à l'heure locale » des contacts dont le fuseau est inconnu (ni fourni par un formulaire, ni par leur compte KOLAKISA, ni déductible de leur pays), et pour la journée d'envoi « à la meilleure heure ».</p>
+      <form action="/marketing/envoi/fuseau" method="post">
+        <div class="field-group"><label for="s-tz">Fuseau</label>
+          <select id="s-tz" name="timezone"<%= canEdit ? "" : " disabled" %>><% timeZones.forEach((z) => { %><option value="<%= z %>"<%= z === orgTz ? " selected" : "" %>><%= z %></option><% }) %></select></div>
+        <% if (canEdit) { %><button type="submit" class="btn btn-outline btn-sm">Enregistrer le fuseau</button><% } %>
+      </form>
+    </section>
 <%- include("partials/bottom") %>

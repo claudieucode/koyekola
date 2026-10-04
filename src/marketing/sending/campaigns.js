@@ -8,7 +8,7 @@ const templates = require("../templates");
 
 const table = (ctx) => createRepository(ctx.db, ctx.organizationId).table("mk_campaigns");
 const flag = (v, fallback) => (v === undefined ? fallback : v ? 1 : 0);
-const SUMMARY = "id, name, template_id, target_type, target_id, category, track_clicks, track_opens, ab_variants, ab_winner, ab_decide_at, status, scheduled_at, started_at, finished_at, error, total_recipients, sent_count, delivered_count, bounced_count, complained_count, failed_count, skipped_count, unsubscribed_count, open_count, unique_open_count, click_count, unique_click_count, created_at, updated_at";
+const SUMMARY = "id, name, template_id, target_type, target_id, category, track_clicks, track_opens, ab_variants, ab_winner, ab_decide_at, status, scheduled_at, send_mode, send_plan, started_at, finished_at, error, total_recipients, sent_count, delivered_count, bounced_count, complained_count, failed_count, skipped_count, unsubscribed_count, open_count, unique_open_count, click_count, unique_click_count, created_at, updated_at";
 
 function cleanName(value) {
   const name = cleanText(value, { max: 101, field: "name" });

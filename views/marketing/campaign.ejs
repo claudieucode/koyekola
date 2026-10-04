@@ -239,7 +239,7 @@
           <div class="mk-cl-summary">
             <span class="mk-cl-mark" aria-hidden="true"><%- mark("done") %></span>
             <span class="mk-cl-text"><span class="mk-cl-title">Heure d'envoi</span>
-              <span class="mk-cl-desc">Tout de suite, ou à la date et l'heure de votre choix : vous choisissez au moment d'envoyer.</span></span>
+              <span class="mk-cl-desc">Tout de suite, à une date précise, à l'heure locale de chaque contact ou à sa meilleure heure : vous choisissez au moment d'envoyer.</span></span>
             <% if (canSend) { %><button type="button" class="btn btn-outline btn-sm mk-cl-edit" data-mk-modal-open="envoyer"<%= check.ready ? "" : " disabled" %>>Programmer</button><% } %>
           </div>
         </div>
@@ -301,8 +301,29 @@
           </header>
           <div class="mk-dialog-body">
             <% if (abOn) { %><p><strong>Test A/B :</strong> environ <%= mkh.fmt(abTestCount) %> contacts tirés au hasard reçoivent les <%= ab.variants.length %> versions ; les autres recevront la version gagnante<%= campaign.ab_metric === "manual" ? ", quand vous l'aurez choisie" : " après " + waitLabel(campaign.ab_wait_minutes) %>.</p><% } %>
-            <div class="field-group"><label for="l-when">Programmer l'envoi (facultatif — heure locale ; vide = tout de suite)</label>
-              <input id="l-when" type="datetime-local" name="send_at"><input type="hidden" name="send_at_utc" id="send-at-utc"></div>
+            <% const P = sendPreview; const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10); %>
+            <fieldset class="mk-fieldset mk-when" data-mk-when>
+              <legend>Quand ?</legend>
+              <label class="checkbox-row"><input type="radio" name="send_mode" value="now" checked> Tout de suite</label>
+              <label class="checkbox-row"><input type="radio" name="send_mode" value="later"> À une date précise (votre heure)</label>
+              <div class="field-group mk-when-detail" data-when="later"><label for="l-when">Date et heure</label>
+                <input id="l-when" type="datetime-local" name="send_at"><input type="hidden" name="send_at_utc" id="send-at-utc"></div>
+              <label class="checkbox-row"><input type="radio" name="send_mode" value="local"<%= abOn ? " disabled" : "" %>> À l'heure locale de chaque contact</label>
+              <div class="mk-when-detail" data-when="local">
+                <div class="field-row">
+                  <div class="field-group"><label for="l-local-date">Jour</label><input id="l-local-date" type="date" name="local_date" min="<%= tomorrow %>"></div>
+                  <div class="field-group"><label for="l-local-time">Heure (horloge du contact)</label><input id="l-local-time" type="time" name="local_time" value="09:00"></div>
+                </div>
+                <% if (P) { %><p class="field-hint">Fuseaux de cette audience — <%= Object.entries(P.bases).map(([b, n]) => `${basisLabels[b] || b} : ${mkh.fmt(n)}`).join(" · ") %> — <%= P.zoneCount %> fuseau<%= P.zoneCount > 1 ? "x" : "" %> différent<%= P.zoneCount > 1 ? "s" : "" %> (défaut : <%= P.orgTz %>). L'heure doit être encore à venir dans tous les fuseaux : programmez au moins 24 h à l'avance.</p><% } %>
+              </div>
+              <label class="checkbox-row"><input type="radio" name="send_mode" value="optimized"<%= abOn || (P && !P.optimizedReady) ? " disabled" : "" %>> À la meilleure heure de chaque contact</label>
+              <div class="mk-when-detail" data-when="optimized">
+                <div class="field-group"><label for="l-opt-date">Jour (les envois s'étalent sur ces 24 h)</label><input id="l-opt-date" type="date" name="opt_date" min="<%= tomorrow %>"></div>
+                <% if (P && P.optimizedReady) { %><p class="field-hint">D'après les ouvertures et clics réels (robots exclus) : <%= mkh.fmt(P.personal) %> contact<%= P.personal > 1 ? "s ont" : " a" %> assez d'historique pour une heure personnelle ; les autres recevront à <%= P.audienceHour %> h, l'heure la plus active de l'audience (dans leur fuseau).</p><% } %>
+              </div>
+              <% if (abOn) { %><p class="field-hint">Test A/B : l'heure locale et la meilleure heure ne s'appliquent pas (les versions partent ensemble, puis la gagnante).</p>
+              <% } else if (P && !P.optimizedReady) { %><p class="field-hint">Meilleure heure indisponible : il faut au moins <%= P.minAudience %> ouvertures ou clics de <%= P.minContacts %> contacts différents dans cette audience (actuellement <%= mkh.fmt(P.engagement) %>, de <%= mkh.fmt(P.contributors) %> contact<%= P.contributors > 1 ? "s" : "" %>).</p><% } %>
+            </fieldset>
             <div class="field-group"><label for="l-count">Pour confirmer, tapez le nombre de destinataires : <strong><%= aud ? aud.sendable : 0 %></strong></label>
               <input id="l-count" type="text" name="confirm_count" inputmode="numeric" autocomplete="off" required></div>
             <label class="checkbox-row optin-row"><input type="checkbox" name="confirm_ok" value="on"><span>Je confirme que ces personnes ont donné leur consentement à recevoir ce message et que son contenu est prêt.</span></label>
@@ -325,6 +346,10 @@
       <% if (mk.can("campaigns.write")) { %><div class="mk-actions"><form action="/marketing/campagnes/<%= campaign.id %>/dupliquer" method="post" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form></div><% } %>
     </div>
     <p class="mk-lead">Modèle « <%= template ? template.name : "(supprimé)" %> » · <%= campaign.target_type === "list" ? "liste" : "segment" %> « <%= targetName %> »<%= campaign.category ? " · catégorie « " + campaign.category + " »" : "" %> · suivi des clics <%= campaign.track_clicks ? "activé" : "désactivé" %>, des ouvertures <%= campaign.track_opens ? "activé" : "désactivé" %></p>
+    <% if (campaign.send_mode && campaign.send_mode !== "standard" && sendPlan && sendPlan.first) { const fmtUtc = (t) => new Date(t).toISOString().slice(0, 16).replace("T", " "); const zones = Object.keys(sendPlan.zones || {}); %>
+      <p class="mk-callout"><span><strong><%= campaign.send_mode === "local" ? `Heure locale : ${sendPlan.time} le ${sendPlan.date} dans le fuseau de chaque contact.` : `Meilleure heure de chaque contact, le ${sendPlan.date} : ${sendPlan.personal} d'après leur historique, les autres à ${sendPlan.audienceHour} h.` %></strong>
+        Envois du <%= fmtUtc(sendPlan.first) %> au <%= fmtUtc(sendPlan.last) %> (UTC) · <%= zones.length %> fuseau<%= zones.length > 1 ? "x" : "" %> (<%= zones.slice(0, 4).join(", ") %><%= zones.length > 4 ? "…" : "" %>) · origine du fuseau — <%= Object.entries(sendPlan.bases || {}).map(([b, n]) => `${basisLabels[b] || b} : ${n}`).join(", ") %>.</span></p>
+    <% } %>
     <% if (campaign.error) { %><p class="form-error" role="alert"><%= campaign.error %></p><% } %>
       <div <%- autoRefresh ? 'data-autorefresh="1"' : "" %>>
         <section class="mk-panel">

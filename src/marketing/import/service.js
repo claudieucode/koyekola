@@ -15,13 +15,14 @@ const { tagContact } = require("../audience/tags");
 const { recordConsent } = require("../compliance/consent");
 const { checkCtx, cleanText, audit, emit, MarketingError } = require("../audience/shared");
 const { parseCsv, decodeCsv, toCsv, DEFAULT_LIMITS } = require("./csv");
+const { cleanTimeZone } = require("../sending/sendtime");
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const SAMPLE_ROWS = 10;
 const EXAMPLES = 20;
 const MAX_REJECTS = 1000;
 const MAX_TAGS_PER_ROW = 20;
-const TEXT_TARGETS = ["first_name", "last_name", "phone", "company", "country", "language"];
+const TEXT_TARGETS = ["first_name", "last_name", "phone", "company", "country", "language", "timezone"];
 const MODES = ["fill", "skip", "overwrite"];
 
 const norm = (s) => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -33,6 +34,7 @@ const SYNONYMS = {
   company: ["societe", "entreprise", "company", "organisation", "organization"],
   country: ["pays", "country"],
   language: ["langue", "language", "lang"],
+  timezone: ["fuseau", "fuseau horaire", "timezone", "time zone", "tz"],
   tags: ["tags", "tag", "etiquettes", "etiquette"],
 };
 
@@ -202,6 +204,8 @@ function processRows(ctx, imp, parsed, from, to, { mapping, options, dryRun }) {
     }
     const fields = {};
     for (const target of TEXT_TARGETS) if (col(target) >= 0) fields[target] = cells[col(target)] ?? "";
+    // Fuseau inconnu ou mal écrit : ignoré (vide), jamais une raison de refuser le contact
+    if (fields.timezone !== undefined) fields.timezone = cleanTimeZone(fields.timezone);
     const properties = {};
     mapping.forEach((target, c) => { if (target.startsWith("property:")) properties[target.slice(9)] = cells[c] ?? ""; });
     const tags = splitTags(col("tags") >= 0 ? cells[col("tags")] : "");

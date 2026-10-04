@@ -37,3 +37,13 @@ Webhook Resend : déclarez `https://votre-domaine.fr/webhooks/email/resend/1` (�
 - **Un envoi interrompu n'est pas rejoué** : il faut vérifier « Messages non envoyés » sur la campagne. Si votre fournisseur a déjà accepté le message, un renvoi manuel créerait un doublon.
 - Le texte brut des messages n'est pas suivi (seul le HTML l'est). Pas de test A/B, d'automatisations ni d'attribution du revenu à ce stade (jalons M4/M5). Pas encore de webhook pour SES/Sendgrid.
 - Volumes : SQLite tient ~100 000 contacts ; les campagnes plus lourdes demandent PostgreSQL et un worker séparé.
+
+## Heure d'envoi : heure locale et meilleure heure
+
+Dans la fenêtre « Prêt à envoyer ? », rubrique **Quand ?** (`src/marketing/sending/sendtime.js`) :
+
+- **Tout de suite** ou **à une date précise** : comportement habituel.
+- **À l'heure locale de chaque contact** (équivalent de Timewarp) : chaque destinataire reçoit le message à l'heure choisie dans *son* fuseau. Si l'heure est déjà passée dans certains fuseaux, le lancement est refusé avec le nombre de contacts concernés (programmer au moins 24 h à l'avance couvre tous les fuseaux).
+- **À la meilleure heure de chaque contact** (équivalent de Send Time Optimization) : heure locale la plus fréquente de ses ouvertures et clics réels des 12 derniers mois (robots exclus, au moins 3 engagements) ; sinon l'heure la plus active de l'audience. Indisponible tant que l'audience n'a pas au moins 20 engagements venant de 5 contacts. Les envois s'étalent sur les 24 h du jour choisi (fuseau par défaut).
+
+Fuseau d'un contact, dans cet ordre : fuseau du contact (formulaire d'inscription, fiche, import — colonne « fuseau ») → fuseau du navigateur de son compte KOLAKISA (relevé à l'inscription et à chaque connexion) → pays à fuseau unique → fuseau par défaut (Réglages d'envoi). Aucune géolocalisation par adresse IP. Chaque destinataire garde son heure (`next_attempt_at`), son fuseau et l'origine de ce fuseau (`send_tz`, `send_basis`) ; le rapport de campagne résume le plan. Non disponible pour les tests A/B. Tests : `tests/marketing-heure-envoi.test.js`.

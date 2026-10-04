@@ -20,6 +20,8 @@ const { createRateLimiter } = require("../../middlewares/security");
 const audit = require("../audit");
 const { attempt, need } = require("./kit");
 const { WORKER_DETAIL, workerHuman } = require("../workerNotice");
+const sendtime = require("../sending/sendtime");
+const { sendableClause } = require("../sending/audience");
 
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 const STATUS = {
@@ -62,8 +64,14 @@ module.exports = ({ db }) => {
       title: "Réglages d'envoi", active: "sending", cfg: config.getSendingConfig(ctx), keyOk, smtpOk: smtpAvailable(), workerOn: workerOn(),
       baseUrl: String(process.env.SITE_URL || "").replace(/\/+$/, ""), orgId: ctx.organizationId, canEdit: req.mk.can("settings.write"),
       outbox: outboxOverview(db, { limit: 20 }), smtpFrom: fromAddress(), contactEmail: process.env.CONTACT_EMAIL || "",
+      orgTz: sendtime.orgTimeZone(ctx), timeZones: sendtime.timeZoneList(),
     });
   });
+  router.post("/envoi/fuseau", need("settings.write"), (req, res, next) =>
+    attempt(req, res, next, "/marketing/envoi#fuseau", () => {
+      sendtime.setOrgTimeZone(req.mk.ctx, String(req.body.timezone || "").trim());
+      return `Fuseau horaire par défaut : ${String(req.body.timezone).trim()}.`;
+    }));
 
   router.post("/envoi", need("settings.write"), (req, res, next) =>
     attempt(req, res, next, "/marketing/envoi", () => {
@@ -203,7 +211,16 @@ module.exports = ({ db }) => {
     const check = draft ? sending.preflight(ctx, campaign.id, { workerOn: workerOn(), smtpAvailable: smtpAvailable() }) : null;
     const tested = draft && Boolean(db.prepare("SELECT 1 FROM mk_audit_logs WHERE organization_id = ? AND action = 'campaign.test_sent' AND resource_type = 'campaign' AND resource_id = ? LIMIT 1").get(ctx.organizationId, campaign.id));
     const wizard = draft ? wizardSteps(campaign, { check, tested }) : null;
+    // Heure d'envoi : fuseaux réellement connus de l'audience et disponibilité de la meilleure heure (calcul en lecture seule)
+    let sendPreview = null;
+    if (draft && req.mk.can("campaigns.send") && check && check.audience) {
+      const { from, params } = sendableClause(ctx, { targetType: campaign.target_type, targetId: campaign.target_id }, campaign.category);
+      const ids = db.prepare(`SELECT c.id ${from}`).all(...params).map((r) => r.id);
+      sendPreview = sendtime.sendTimePreview(ctx, ids);
+    }
+    const plan = (() => { try { return JSON.parse(campaign.send_plan || "{}"); } catch { return {}; } })();
     res.render("marketing/campaign", {
+      sendPreview, sendPlan: plan, basisLabels: sendtime.BASIS_LABELS,
       title: campaign.name, active: "campaigns", campaign, template, targetName: target ? target.name : "(supprimée)", STATUS, reasons,
       check, wizard, stepAnchor: STEP_ANCHOR, recipients: draft && req.mk.can("campaigns.write") ? teamRecipients(ctx) : [], values: null,
       stats: draft ? null : sending.campaignStats(ctx, campaign.id), ...(draft ? formData(ctx) : {}),
@@ -260,12 +277,20 @@ module.exports = ({ db }) => {
       const expected = check.audience ? check.audience.sendable : -1;
       if (String(req.body.confirm_count ?? "").trim() !== String(expected)) throw new MarketingError("confirmation", "Tapez exactement le nombre de destinataires affiché dans le contrôle avant envoi pour confirmer.");
       if (req.body.confirm_ok !== "on") throw new MarketingError("confirmation", "Cochez la case pour confirmer que ces personnes ont donné leur consentement à recevoir ce message.");
-      const scheduledAt = parseSchedule(req.body);
-      const r = sending.startCampaign(ctx, campaign.id, { scheduledAt });
+      // Quand : tout de suite / à une date (heure du navigateur) / à l'heure locale de chaque contact / à sa meilleure heure
+      const mode = ["local", "optimized"].includes(req.body.send_mode) ? req.body.send_mode : "standard";
+      const scheduledAt = mode === "standard" && req.body.send_mode !== "now" ? parseSchedule(req.body) : undefined;
+      const r = sending.startCampaign(ctx, campaign.id, mode === "local" ? { sendMode: "local", sendDate: req.body.local_date, sendTime: req.body.local_time }
+        : mode === "optimized" ? { sendMode: "optimized", sendDate: req.body.opt_date } : { scheduledAt });
       const abText = r.abTest ? ` Test A/B : ${r.abTest} contacts reçoivent les versions, les ${r.abHeld} autres recevront la gagnante.` : "";
-      const text = (scheduledAt
-        ? `Campagne programmée pour le ${new Date(scheduledAt).toISOString().slice(0, 16).replace("T", " ")} (UTC), ${r.recipients} destinataires.`
-        : `Campagne lancée : ${r.recipients} destinataires. L'envoi démarre en arrière-plan.`) + abText;
+      const span = r.plan ? `du ${new Date(r.plan.first).toISOString().slice(0, 16).replace("T", " ")} au ${new Date(r.plan.last).toISOString().slice(0, 16).replace("T", " ")} (UTC), ${Object.keys(r.plan.zones).length} fuseau${Object.keys(r.plan.zones).length > 1 ? "x" : ""}` : "";
+      const text = (r.plan && mode === "local"
+        ? `Campagne programmée à ${r.plan.time} le ${r.plan.date}, heure locale de chaque contact : ${r.recipients} destinataires, envois ${span}.`
+        : r.plan
+          ? `Campagne programmée à la meilleure heure de chaque contact le ${r.plan.date} : ${r.plan.personal} d'après leur propre historique, les autres à ${r.plan.audienceHour ?? "—"} h (heure la plus active de l'audience) ; envois ${span}.`
+          : scheduledAt
+            ? `Campagne programmée pour le ${new Date(scheduledAt).toISOString().slice(0, 16).replace("T", " ")} (UTC), ${r.recipients} destinataires.`
+            : `Campagne lancée : ${r.recipients} destinataires. L'envoi démarre en arrière-plan.`) + abText;
       return workerOn() ? text : { text: `${text} ${workerHuman("l'envoi démarrera dès qu'il sera rétabli")}`, detail: WORKER_DETAIL };
     });
   });

@@ -170,7 +170,7 @@
           <% if (sidebar.newsletter) { %>
             <section class="side-block side-newsletter" aria-labelledby="nl-title">
               <h2 class="side-title" id="nl-title">Recevez nos nouveaux articles et conseils</h2>
-              <form action="/f/<%= sidebar.newsletter.slug %>" method="post" data-blog-newsletter>
+              <form action="/f/<%= sidebar.newsletter.slug %>" method="post" data-blog-newsletter><input type="hidden" name="tz" data-tz>
                 <div class="hp-field" aria-hidden="true"><label for="nl-website">Ne pas remplir</label><input id="nl-website" type="text" name="website" tabindex="-1" autocomplete="off"></div>
                 <label class="sr-only" for="nl-email">Votre adresse e-mail</label>
                 <input id="nl-email" type="email" name="email" required autocomplete="email" placeholder="Votre adresse e-mail">
