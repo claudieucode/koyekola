@@ -1533,3 +1533,125 @@
 .kdp.is-sheet { left: 8px; right: 8px; bottom: 8px; top: auto; width: auto; max-width: 420px; margin: 0 auto; }
 .kdp.is-sheet .kdp-day { height: 40px; }
 @media (prefers-reduced-motion: reduce) { .kdp { animation: none; } .kdp-day:active { transform: none; } }
+
+/* ==========================================================================
+   BLOG STUDIO — harmonisation avec KOLAKISA (Mon espace, Marketing). Dernière couche, purement visuelle.
+   Même langage que les espaces de gestion : marque « K » sobre, surfaces à filet fin, rayons de 8 px, boutons
+   plats (une seule action principale), navigation icône + libellé avec état actif (fond doux + repère d'accent),
+   pastilles d'état, focus discret mais visible. Uniquement des jetons --ed-* : toutes les apparences de l'éditeur
+   (clair, nuit, noir, gris…) restent valables. La feuille d'écriture reste volontairement la plus sobre.
+   ========================================================================== */
+.wp-body { --wp-header-h: 60px; --bs-r: 8px; --bs-ease: 0.15s ease; }
+
+/* Niveau 1 — contexte : barre supérieure */
+.wp-header { gap: 12px; background: var(--ed-surface); backdrop-filter: none; -webkit-backdrop-filter: none; border-bottom: 1px solid var(--ed-border); box-shadow: none; }
+.wp-site-icon { padding: 0 8px 0 16px; gap: 10px; color: var(--ed-text); }
+.wp-site-icon:hover { color: var(--ed-primary-fg); }
+.wp-brand-mark { width: 32px; height: 32px; border-radius: var(--bs-r); background: var(--ed-brand); box-shadow: none; font-size: 17px; }
+.wp-brand-name { font-size: 15px; letter-spacing: -0.01em; }
+.wp-brand-name small { margin-top: 2px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; color: var(--ed-primary-fg); text-transform: none; }
+.wp-header-left { gap: 4px; margin-left: 4px; padding-left: 12px; border-left: 1px solid var(--ed-border); }
+.wp-header .wp-btn-icon { width: 36px; min-width: 36px; height: 36px; min-height: 36px; border-radius: var(--bs-r); color: var(--ed-text-2); transition: background var(--bs-ease), color var(--bs-ease); }
+.wp-header .wp-btn-icon svg { width: 20px; height: 20px; }
+.wp-header .wp-btn-icon:hover { background: var(--ed-hover); color: var(--ed-text); }
+.wp-header .wp-btn-icon[aria-pressed="true"], .wp-header .wp-btn-icon[aria-expanded="true"] { background: var(--ed-primary-soft); color: var(--ed-primary-fg); }
+/* « Ajouter un bloc » : bouton d'accent plat, comme « Créer » dans Marketing */
+.wp-header .wp-btn-icon.wp-inserter-toggle { background: var(--ed-primary); color: var(--ed-on-primary); box-shadow: none; }
+.wp-header .wp-btn-icon.wp-inserter-toggle:hover { background: var(--ed-primary-hover); color: var(--ed-on-primary); }
+.wp-header .wp-btn-icon.wp-inserter-toggle.is-pressed { background: var(--ed-pressed-bg); color: var(--ed-pressed-fg); }
+/* Titre + statut de l'article */
+.wp-document-bar { height: 38px; gap: 10px; padding: 0 14px; border: 1px solid var(--ed-border); border-radius: var(--bs-r); background: var(--ed-bg); box-shadow: none; }
+.wp-document-bar:hover { border-color: var(--ed-border-hover); background: var(--ed-surface-2); box-shadow: none; }
+.wp-doc-title { font-family: var(--font-body); font-size: 14px; font-weight: 700; color: var(--ed-text); }
+.wp-doc-status { height: 22px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0; background: var(--ed-surface-2); box-shadow: inset 0 0 0 1px var(--ed-border); }
+.wp-doc-status[data-status="published"] { background: var(--ed-success-soft); color: var(--ed-success); box-shadow: none; }
+.wp-doc-status[data-status="scheduled"] { background: var(--ed-primary-soft); color: var(--ed-primary-fg); box-shadow: none; }
+.wp-doc-status[data-status="review"] { background: var(--ed-warning-soft); color: var(--ed-warning); box-shadow: none; }
+.wp-doc-stats { font-size: 12px; color: var(--ed-muted); }
+/* État d'enregistrement : pastille + point de couleur — reflète l'état réel renvoyé par le serveur */
+.wp-header .wp-save-state { display: inline-flex; align-items: center; gap: 6px; height: 28px; max-width: 260px; padding: 0 10px; border-radius: 999px; background: var(--ed-bg); color: var(--ed-muted); font-size: 12px; font-weight: 600; animation: none; }
+.wp-header .wp-save-state:empty { display: none; }
+.wp-header .wp-save-state::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--ed-border-strong); }
+.wp-header .wp-save-state.is-saved::before { background: var(--ed-success); }
+.wp-header .wp-save-state.is-dirty { color: var(--ed-warning); background: var(--ed-warning-soft); }
+.wp-header .wp-save-state.is-dirty::before { background: var(--ed-warning-line); }
+.wp-header .wp-save-state.is-saving { color: var(--ed-primary-fg); }
+.wp-header .wp-save-state.is-saving::before { background: var(--ed-primary); animation: wp-pulse 1.2s ease-in-out infinite; }
+.wp-header .wp-save-state.is-auto::before { background: var(--ed-primary-fg); }
+.wp-header .wp-save-state.is-error { color: var(--ed-danger); background: var(--ed-danger-soft); font-weight: 700; }
+.wp-header .wp-save-state.is-error::before { background: var(--ed-danger); }
+/* Boutons : une action principale (Publier / Mettre à jour), les autres secondaires — mêmes formes que Marketing */
+.wp-btn-primary, .wp-btn-secondary, .wp-btn-tertiary, .wp-btn-danger { border-radius: var(--bs-r); min-height: 36px; padding: 6px 14px; font-weight: 600; transition: background var(--bs-ease), box-shadow var(--bs-ease), color var(--bs-ease); }
+.wp-btn-primary { background: var(--ed-primary); color: var(--ed-on-primary); box-shadow: none; }
+.wp-btn-primary:hover { background: var(--ed-primary-hover); color: var(--ed-on-primary); }
+.wp-btn-secondary { background: transparent; color: var(--ed-text-2); box-shadow: inset 0 0 0 1px var(--ed-border-strong); }
+.wp-btn-secondary:hover { background: var(--ed-primary-soft); color: var(--ed-primary-fg); box-shadow: inset 0 0 0 1px var(--ed-primary); }
+.wp-header .wp-btn-tertiary[data-save] { color: var(--ed-text-2); box-shadow: inset 0 0 0 1px var(--ed-border-strong); }
+.wp-header .wp-btn-tertiary[data-save]:hover { background: var(--ed-primary-soft); color: var(--ed-primary-fg); box-shadow: inset 0 0 0 1px var(--ed-primary); }
+.wp-header [data-publish] { min-width: 96px; }
+.wp-menu { border: 1px solid var(--ed-border); border-radius: var(--bs-r); box-shadow: var(--ed-shadow); }
+.wp-menu button, .wp-menu a { border-radius: 6px; }
+
+/* Niveau 1 — navigation : rail d'outils (même composition que les onglets de l'éditeur d'e-mails) */
+.wp-rail { width: 80px; align-items: stretch; gap: 4px; padding: 10px 4px; background: var(--ed-surface); border-right: 1px solid var(--ed-border); }
+.wp-rail-btn { width: 100%; gap: 4px; padding: 8px 0; border-radius: var(--bs-r); background: none; color: var(--ed-muted); font-size: 12px; font-weight: 600; letter-spacing: -0.01em; transition: color var(--bs-ease); }
+.wp-rail-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 32px; border-radius: var(--bs-r); transition: background var(--bs-ease), color var(--bs-ease); }
+.wp-rail-icon svg { width: 20px; height: 20px; }
+.wp-rail-btn:hover { background: none; color: var(--ed-text); }
+.wp-rail-btn:hover .wp-rail-icon { background: var(--ed-hover); }
+.wp-rail-btn[aria-pressed="true"] { background: none; color: var(--ed-primary-fg); }
+.wp-rail-btn[aria-pressed="true"] .wp-rail-icon { background: var(--ed-primary-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ed-primary) 25%, transparent); }
+.wp-rail-btn[aria-pressed="true"]::before { content: ""; position: absolute; left: -4px; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--ed-primary); }
+.wp-rail-label { line-height: 1.2; }
+.wp-rail-score { top: 2px; right: 8px; min-width: 22px; height: 18px; padding: 0 5px; line-height: 18px; font-size: 12px; font-weight: 700; text-align: center; }
+.wp-rail-btn:focus-visible { outline: 2px solid var(--ed-focus); outline-offset: -2px; }
+.wp-secondary { border-right: 1px solid var(--ed-border); }
+.wp-secondary-head { height: 52px; font-family: var(--font-body); font-size: 15px; font-weight: 700; color: var(--ed-text); border-bottom: 1px solid var(--ed-border); }
+
+/* Niveau 2 — création : la feuille d'écriture, sobre et lisible */
+.wp-canvas { background: var(--ed-bg); }
+.wp-content { margin-top: 24px; border: 1px solid var(--ed-border); border-bottom: 0; border-radius: 12px 12px 0 0; box-shadow: 0 1px 2px rgba(11, 42, 64, 0.04), 0 10px 28px -16px rgba(11, 42, 64, 0.18); }
+.wp-content::before { font-size: 12px; letter-spacing: 0.08em; }
+
+/* Niveau 3 — outils avancés : réglages Article / SEO / Bloc */
+.wp-sidebar { border-left: 1px solid var(--ed-border); }
+.wp-sidebar-tabs { height: 52px; gap: 4px; padding: 0 8px; border-bottom: 1px solid var(--ed-border); background: var(--ed-surface); }
+.wp-sidebar-tabs [role="tab"] { height: 34px; padding: 0 14px; border-radius: var(--bs-r); color: var(--ed-muted); font-size: 13px; font-weight: 600; transition: background var(--bs-ease), color var(--bs-ease); }
+.wp-sidebar-tabs [role="tab"]:hover { color: var(--ed-text); background: var(--ed-hover); }
+.wp-sidebar-tabs [role="tab"][aria-selected="true"] { background: var(--ed-primary-soft); color: var(--ed-primary-fg); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ed-primary) 25%, transparent); }
+.wp-sidebar-tabs [role="tab"]:focus-visible { outline: 2px solid var(--ed-focus); outline-offset: 1px; }
+/* Accordéons : compacts, lisibles, un filet entre chaque */
+.wp-panel { border-bottom: 1px solid var(--ed-border); }
+.wp-panel.is-open { background: none; }
+.wp-panel-title button { min-height: 48px; padding: 0 12px 0 16px; font-family: var(--font-body); font-size: 14px; font-weight: 700; color: var(--ed-text); transition: background var(--bs-ease); }
+.wp-panel-title button:hover { background: var(--ed-hover); }
+.wp-panel-title button.wsp-act { width: 28px; min-height: 28px; height: 28px; border-radius: 6px; color: var(--ed-muted); }
+.wp-panel-title button.wsp-act:hover { background: var(--ed-hover); color: var(--ed-text); }
+.wp-panel-body { padding: 0 16px 16px; }
+/* Note SEO : grande, intégrée, sans dégradé */
+.wp-seo-score { padding: 16px; background: none; }
+.wp-seo-score-value { font-size: 32px; color: var(--ed-text); }
+/* Champs : même focus que Marketing (bordure d'accent + halo léger, aucun double contour) */
+.wp-body .wp-sidebar :where(input[type=text], input[type=url], input[type=number], input[type=datetime-local], select, textarea):focus,
+.wp-body .wp-secondary :where(input[type=text], input[type=search], select, textarea):focus { border-color: var(--ed-focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ed-focus) 16%, transparent); outline: 2px solid transparent; }
+
+@media (prefers-reduced-motion: reduce) { .wp-header .wp-save-state.is-saving::before { animation: none; } }
+/* Blog Studio — adaptation : mêmes dispositions qu'avant (rail horizontal sous la barre sur petit écran,
+   panneaux en plein écran), avec le nouveau langage visuel */
+@media (max-width: 1100px) { .wp-header .wp-save-state { max-width: 150px; } }
+@media (max-width: 782px) {
+  .wp-header { gap: 4px; }
+  .wp-site-icon { padding: 0 4px 0 12px; }
+  .wp-header-left { margin-left: 0; padding-left: 8px; }
+  /* état d'enregistrement : le point de couleur seul (le texte reste lu par les lecteurs d'écran) */
+  .wp-header .wp-save-state { width: 28px; padding: 0; justify-content: center; font-size: 0; background: none; }
+  .wp-rail { width: auto; flex-direction: row; align-items: center; justify-content: space-between; gap: 0; padding: 4px; border-right: 0; border-bottom: 1px solid var(--ed-border); }
+  .wp-rail-btn { flex: 1 1 0; min-width: 0; flex-direction: row; justify-content: center; gap: 6px; padding: 4px 2px; }
+  .wp-rail-icon { width: 30px; height: 28px; }
+  .wp-rail-icon svg { width: 18px; height: 18px; }
+  .wp-rail-btn[aria-pressed="true"]::before { left: 12px; right: 12px; top: auto; bottom: -4px; width: auto; height: 3px; border-radius: 3px 3px 0 0; }
+  .wp-rail-score { position: static; height: 18px; }
+  .wp-content { margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+}
+@media (max-width: 480px) { .wp-header .wp-save-state { display: none; } }
+@media (max-width: 400px) { .wp-rail-label { font-size: 12px; } .wp-rail-score { display: none; } }

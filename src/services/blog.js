@@ -202,11 +202,42 @@ function revisionImages(rows) {
   for (const r of rows) { let m = {}; try { m = JSON.parse(r.meta || "{}") || {}; } catch { m = {}; } for (const k of IMAGE_META) if (m[k]) out.add(m[k]); }
   return [...out];
 }
-const revisionUses = (p) => Boolean(db.prepare("SELECT 1 FROM post_revisions WHERE meta LIKE ? LIMIT 1").get(`%${JSON.stringify(String(p)).slice(1, -1)}%`));
-// Image envoyée qui n'est plus utilisée nulle part (article, contenu, révision) : supprimée du disque et de la médiathèque.
-// Tant qu'une révision la cite, elle est gardée pour que « Restaurer » puisse rendre l'image d'origine.
+// ---------- Où une image envoyée est-elle encore citée ? ----------
+// TOUT ce qui peut contenir une adresse /uploads/… : article (couverture, partage, texte), révisions (texte et réglages),
+// sauvegardes automatiques, blocs réutilisables, corbeille des blocs, pages du site, formations, leçons, FAQ, modèles
+// d'e-mails (et leurs versions), campagnes envoyées. Une image citée quelque part n'est JAMAIS supprimée.
+// (Les tables absentes — module pas encore initialisé — sont simplement ignorées.)
+const likeOf = (p) => `%${String(p).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+const IMAGE_REFERENCES = [
+  ["SELECT title AS label FROM posts WHERE cover_path = ?1 OR og_image_path = ?1 OR twitter_image_path = ?1 OR content LIKE ?2 ESCAPE '\\'", (r) => `Article « ${r.label} »`],
+  ["SELECT DISTINCT p.title AS label FROM post_revisions r JOIN posts p ON p.id = r.post_id WHERE r.content LIKE ?2 ESCAPE '\\' OR r.meta LIKE ?3 ESCAPE '\\'", (r) => `Révision de « ${r.label} »`],
+  ["SELECT DISTINCT COALESCE(p.title, 'nouvel article') AS label FROM post_autosaves a LEFT JOIN posts p ON p.id = a.post_id WHERE a.payload LIKE ?2 ESCAPE '\\' OR a.payload LIKE ?3 ESCAPE '\\'", (r) => `Sauvegarde automatique de « ${r.label} »`],
+  ["SELECT name AS label FROM blog_reusable_blocks WHERE content LIKE ?2 ESCAPE '\\' OR content LIKE ?3 ESCAPE '\\'", (r) => `Bloc réutilisable « ${r.label} »`],
+  ["SELECT DISTINCT label FROM blog_block_trash WHERE node LIKE ?2 ESCAPE '\\' OR node LIKE ?3 ESCAPE '\\'", (r) => `Corbeille des blocs (${r.label || "bloc"})`],
+  ["SELECT title AS label FROM site_pages WHERE content LIKE ?2 ESCAPE '\\'", (r) => `Page « ${r.label} »`],
+  ["SELECT title AS label FROM courses WHERE thumbnail_path = ?1 OR description LIKE ?2 ESCAPE '\\'", (r) => `Formation « ${r.label} »`],
+  ["SELECT title AS label FROM lessons WHERE description LIKE ?2 ESCAPE '\\'", (r) => `Leçon « ${r.label} »`],
+  ["SELECT question AS label FROM faqs WHERE answer LIKE ?2 ESCAPE '\\'", (r) => `FAQ « ${r.label} »`],
+  ["SELECT name AS label FROM mk_templates WHERE blocks LIKE ?2 ESCAPE '\\'", (r) => `Modèle d'e-mail « ${r.label} »`],
+  ["SELECT DISTINCT t.name AS label FROM mk_template_versions v JOIN mk_templates t ON t.id = v.template_id WHERE v.snapshot LIKE ?2 ESCAPE '\\'", (r) => `Version du modèle d'e-mail « ${r.label} »`],
+  ["SELECT name AS label FROM mk_campaigns WHERE snapshot LIKE ?2 ESCAPE '\\'", (r) => `Campagne « ${r.label} »`],
+];
+function imageReferences(p) {
+  if (!p) return [];
+  const exact = String(p), like = likeOf(p), likeJson = likeOf(JSON.stringify(String(p)).slice(1, -1)); // texte brut et texte dans du JSON
+  const found = [];
+  for (const [sql, label] of IMAGE_REFERENCES) {
+    let rows = [];
+    const used = Math.max(...(sql.match(/\?(\d)/g) || ["?0"]).map((m) => Number(m.slice(1)))); // paramètres ?1 ?2 ?3 réellement utilisés
+    try { rows = db.prepare(sql).all(...[exact, like, likeJson].slice(0, used)); } catch (e) { if (!/no such table/i.test(e.message)) throw e; continue; }
+    for (const r of rows) found.push(label(r));
+  }
+  return [...new Set(found)];
+}
+// Image envoyée qui n'est plus citée nulle part (voir imageReferences) : supprimée du disque et de la médiathèque.
+// Tant qu'une révision, une sauvegarde automatique, un bloc ou un e-mail la cite, elle est gardée.
 function releaseImage(p) {
-  if (!p || mediaUsage(p).length || revisionUses(p)) return false;
+  if (!p || imageReferences(p).length) return false;
   db.prepare("DELETE FROM media WHERE path = ?").run(p);
   removeUploadedFile(p);
   return true;
@@ -284,8 +315,7 @@ function updateMedia(id, fields) {
 }
 // Articles qui utilisent un fichier (image principale, partage, contenu)
 function mediaUsage(p) {
-  const like = `%${p}%`;
-  return db.prepare("SELECT id, title FROM posts WHERE cover_path = ? OR og_image_path = ? OR twitter_image_path = ? OR content LIKE ?").all(p, p, p, like);
+  return db.prepare("SELECT id, title FROM posts WHERE cover_path = ? OR og_image_path = ? OR twitter_image_path = ? OR content LIKE ? ESCAPE '\\'").all(p, p, p, likeOf(p));
 }
 
 // ---------- Liens internes : recherche et suggestions ----------
@@ -380,5 +410,5 @@ module.exports = {
   STATUSES, parseTags, excerptOf, textOf, categories, categoryBySlug, subcategories, allTags, canonicalCategory, canonicalSubcategory, canonicalTags,
   popular, recent, similar, neighbours, authorOf, instructors, courseCard, renderPost, countView, card, promoteScheduled,
   addRevision, describeChange, revisionKind, revisionFingerprint, listRevisions, countRevisions, getRevision, metaOf, revisionImages, releaseImage, REVISION_META, RESTORED_META, REVISION_KINDS, MAX_REVISIONS, getAutosave, setAutosave, clearAutosave,
-  listMedia, addMedia, getMedia, mediaByPath, updateMedia, mediaUsage, searchLinks, suggestLinks, PAGES,
+  listMedia, addMedia, getMedia, mediaByPath, updateMedia, mediaUsage, imageReferences, searchLinks, suggestLinks, PAGES,
 };

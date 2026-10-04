@@ -771,7 +771,7 @@ router.post("/formateur/blog/:id(\\d+)/versions/:rid/restaurer", loadPost, (req,
 // ---------- Médiathèque ----------
 router.get("/formateur/blog/api/medias", (req, res) => {
   const media = blog.listMedia({ q: String(req.query.q || ""), kind: String(req.query.type || "") });
-  res.json({ media: media.map((m) => ({ ...m, used: blog.mediaUsage(m.path).length })) });
+  res.json({ media: media.map((m) => ({ ...m, used: blog.imageReferences(m.path).length })) });
 });
 
 const mediaUpload = upload.fields([{ name: "article_image", maxCount: 1 }, { name: "article_video", maxCount: 1 }, { name: "article_audio", maxCount: 1 }, { name: "image_variant", maxCount: 4 }]);
@@ -824,8 +824,8 @@ router.post("/formateur/blog/api/medias/:mid", (req, res) => {
 router.post("/formateur/blog/api/medias/:mid/supprimer", (req, res) => {
   const m = blog.getMedia(Number(req.params.mid));
   if (!m) return res.status(404).json({ error: "Fichier introuvable." });
-  const usage = blog.mediaUsage(m.path);
-  if (usage.length) return res.status(400).json({ error: `Ce fichier est utilisé par : ${usage.map((u) => `« ${u.title} »`).join(", ")}. Retirez-le d'abord de ces articles.` });
+  const usage = blog.imageReferences(m.path); // partout où l'image est citée, pas seulement dans les articles
+  if (usage.length) return res.status(400).json({ error: `Ce fichier est encore utilisé : ${usage.slice(0, 5).join(", ")}${usage.length > 5 ? "…" : ""}. Retirez-le d'abord de ces endroits.` });
   db.prepare("DELETE FROM media WHERE id = ?").run(m.id);
   removeUploadedFile(m.path);
   for (const v of blog.imageVariants(m.path)) removeUploadedFile(v.src);
