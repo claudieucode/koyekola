@@ -1,0 +1,327 @@
+// Réglages de chaque type d'étape, affichés dans la boîte de dialogue « Modifier ». Chaque éditeur modifie un
+// BROUILLON (copie des données du nœud) ; validate() reprend les règles du serveur (src/marketing/automations/steps.js,
+// qui reste seul juge à l'enregistrement) pour signaler une erreur avant d'envoyer quoi que ce soit.
+import { el, field, select, text, number, checkbox, note, hint } from "./ui";
+
+// Mêmes valeurs que steps.js#UNITS / CHECKS / EDITABLE_FIELDS (à tenir synchronisées avec le serveur)
+export const UNITS = [["minutes", "minutes"], ["hours", "heures"], ["days", "jours"]];
+const UNIT_MS = { minutes: 60000, hours: 3600000, days: 86400000 };
+const MAX_WAIT_MS = 365 * 86400000;
+export const CHECKS = [["segment", "correspond à un segment"], ["opened", "a ouvert un e-mail précédent"], ["clicked", "a cliqué un e-mail précédent"]];
+export const FIELD_OPTIONS = [["first_name", "Prénom"], ["last_name", "Nom"], ["phone", "Téléphone"], ["company", "Société"], ["country", "Pays"], ["language", "Langue"], ["source", "Source"]];
+export const FIELD_LABELS = Object.fromEntries(FIELD_OPTIONS);
+const EVENT_NAME = /^[a-z][a-z0-9_.]{1,63}$/;
+const PROPERTY_KEY = /^[a-z][a-z0-9_]{0,39}$/;
+const STATUS_LABELS = { unknown: "Pas de consentement", subscribed: "Abonné", unsubscribed: "Désinscrit", bounced: "Rebond", complained: "Plainte", suppressed: "Bloqué" };
+const clone = (v) => JSON.parse(JSON.stringify(v));
+
+// ---------- Condition construite sur place (ET/OU) : même format que le moteur de segments ----------
+// { op: "and"|"or", rules: [...] }, volontairement plat (comme le constructeur simple de la page Segments).
+function catalogBy(ctx) { const m = {}; (ctx.data.segmentCatalog || []).forEach((f) => { m[f.field] = f; }); return m; }
+function cmpInfo(cat, fieldName, cmp) { const f = cat[fieldName]; return f ? f.cmps.find((c) => c.cmp === cmp) : null; }
+function defaultRuleValue(f, c) {
+  if (c.value === "range") return ["", ""];
+  if (c.value === "status" || c.value === "select") return f.options[0];
+  if (c.value === "list") return f.lists && f.lists.length ? f.lists[0].id : undefined;
+  if (c.value === "none") return undefined;
+  return c.value === "days" || c.value === "number" ? undefined : "";
+}
+function ruleIsComplete(cat, rule) {
+  const c = cmpInfo(cat, rule.field, rule.cmp);
+  if (!c) return false;
+  if (c.value === "none") return true;
+  const v = rule.value;
+  if (c.value === "range") return Array.isArray(v) && v[0] !== "" && v[1] !== "" && Number.isFinite(Number(v[0])) && Number.isFinite(Number(v[1]));
+  if (c.value === "textlist") return Array.isArray(v) && v.length > 0;
+  if (c.value === "days" || c.value === "number" || c.value === "list") return typeof v === "number" && Number.isFinite(v);
+  return typeof v === "string" && v !== "";
+}
+function ruleValueControl(rule, c, f, locked) {
+  const wrap = el("span", { class: "mk-value" });
+  const input = (type, extra) => { const i = el("input", { type, ...extra, "aria-label": "Valeur" }); i.disabled = locked; return i; };
+  if (c.value === "text") {
+    const t = input("text", { maxlength: "200" }); t.value = rule.value || "";
+    t.addEventListener("input", () => { rule.value = t.value; }); wrap.appendChild(t);
+  } else if (c.value === "textlist") {
+    const t = input("text", {}); t.value = (rule.value || []).join(", ");
+    t.addEventListener("input", () => { rule.value = t.value.split(",").map((s) => s.trim()).filter(Boolean); }); wrap.appendChild(t);
+  } else if (c.value === "date") {
+    const d = input("date", {}); d.value = rule.value || "";
+    d.addEventListener("input", () => { rule.value = d.value; }); wrap.appendChild(d);
+  } else if (c.value === "days" || c.value === "number") {
+    const n = input("number", c.value === "days" ? { min: "0", step: "1" } : { step: "any" });
+    n.value = rule.value === undefined ? "" : String(rule.value);
+    n.addEventListener("input", () => { rule.value = n.value === "" ? undefined : c.value === "days" ? parseInt(n.value, 10) : Number(n.value); }); wrap.appendChild(n);
+  } else if (c.value === "range") {
+    if (!Array.isArray(rule.value)) rule.value = ["", ""];
+    [0, 1].forEach((k) => {
+      const r = input("number", { step: "any", "aria-label": k ? "Maximum" : "Minimum" });
+      r.value = rule.value[k] === "" ? "" : String(rule.value[k]);
+      r.addEventListener("input", () => { rule.value[k] = r.value === "" ? "" : Number(r.value); }); wrap.appendChild(r);
+    });
+  } else if (c.value === "status" || c.value === "select" || c.value === "list") {
+    const options = c.value === "list" ? (f.lists || []).map((l) => [l.id, l.name]) : f.options.map((o) => [o, c.value === "status" ? STATUS_LABELS[o] || o : o]);
+    wrap.appendChild(select(options, rule.value, (v) => { rule.value = c.value === "list" ? Number(v) : v; }, { disabled: locked, label: "Valeur" }));
+  }
+  return wrap;
+}
+function conditionBuilder(ctx, draft, rerender) {
+  const cat = catalogBy(ctx);
+  const locked = ctx.locked;
+  if (!draft.definition || !Array.isArray(draft.definition.rules)) draft.definition = { op: "and", rules: [] };
+  const def = draft.definition;
+  const box = el("div", { class: "mk-cond-builder" });
+  const opRow = el("div", { class: "mk-group-op" });
+  opRow.appendChild(el("span", {}, "Le contact respecte"));
+  opRow.appendChild(select([["and", "tous les critères (ET)"], ["or", "au moins un critère (OU)"]], def.op || "and", (v) => { def.op = v; }, { disabled: locked, label: "Combinaison des critères" }));
+  box.appendChild(opRow);
+  if (!def.rules.length) box.appendChild(hint("Aucun critère : ajoutez-en un."));
+  def.rules.forEach((raw, index) => {
+    const not = raw && raw.op === "not";
+    const rule = not ? raw.rule : raw;
+    if (!rule || !cat[rule.field]) return;
+    const f = cat[rule.field];
+    const line = el("div", { class: "mk-rule", role: "group", "aria-label": `Critère ${index + 1}` });
+    const notCb = el("input", { type: "checkbox" }); notCb.checked = not; notCb.disabled = locked;
+    notCb.addEventListener("change", () => { def.rules[index] = notCb.checked ? { op: "not", rule } : rule; });
+    const notLabel = el("label", { class: "mk-not" }); notLabel.appendChild(notCb); notLabel.appendChild(document.createTextNode(" NON"));
+    line.appendChild(notLabel);
+    const fieldSel = el("select", { "aria-label": "Champ" });
+    const groups = {};
+    (ctx.data.segmentCatalog || []).forEach((c) => {
+      if (!groups[c.group]) { groups[c.group] = el("optgroup", { label: c.group }); fieldSel.appendChild(groups[c.group]); }
+      groups[c.group].appendChild(el("option", { value: c.field }, c.label));
+    });
+    fieldSel.value = rule.field; fieldSel.disabled = locked;
+    fieldSel.addEventListener("change", () => {
+      const nf = cat[fieldSel.value];
+      const next = { field: fieldSel.value, cmp: nf.cmps[0].cmp, value: defaultRuleValue(nf, nf.cmps[0]) };
+      def.rules[index] = not ? { op: "not", rule: next } : next;
+      rerender();
+    });
+    line.appendChild(fieldSel);
+    line.appendChild(select(f.cmps.map((c) => [c.cmp, c.label]), rule.cmp, (v) => { rule.cmp = v; rule.value = defaultRuleValue(f, cmpInfo(cat, rule.field, v)); rerender(); }, { disabled: locked, label: "Comparaison" }));
+    const c = cmpInfo(cat, rule.field, rule.cmp);
+    if (c && c.value !== "none") line.appendChild(ruleValueControl(rule, c, f, locked));
+    if (f.note) line.appendChild(el("p", { class: "mk-rule-note field-hint" }, f.note));
+    if (!locked) {
+      const rm = el("button", { type: "button", class: "btn btn-outline btn-sm", "aria-label": `Supprimer le critère ${index + 1}` }, "Supprimer");
+      rm.addEventListener("click", () => { def.rules.splice(index, 1); rerender(); });
+      line.appendChild(rm);
+    }
+    box.appendChild(line);
+  });
+  if (!locked) {
+    const add = el("button", { type: "button", class: "btn btn-outline btn-sm" }, "+ Ajouter un critère");
+    add.addEventListener("click", () => {
+      const f0 = (ctx.data.segmentCatalog || [])[0];
+      if (!f0) return;
+      def.rules.push({ field: f0.field, cmp: f0.cmps[0].cmp, value: defaultRuleValue(f0, f0.cmps[0]) });
+      rerender();
+    });
+    box.appendChild(add);
+  }
+  return box;
+}
+
+// ---------- Étiquette : choisie parmi celles de l'organisation, ou nouvelle (créée au premier passage) ----------
+const NEW_TAG = "__new__";
+function tagEditor(ctx, draft, rerender, removing) {
+  const box = el("div");
+  const known = (ctx.data.tags || []).slice();
+  const current = draft.tag || "";
+  if (current && !known.includes(current)) known.unshift(current);
+  if (!known.length && removing) {
+    box.appendChild(note("Aucune étiquette n'existe encore dans votre audience."));
+    box.appendChild(field("Étiquette à retirer", text(current, (v) => { draft.tag = v; }, { maxlength: 64, disabled: ctx.locked })));
+    return box;
+  }
+  const typing = draft._newTag === true || (!removing && !known.length);
+  const options = [["", "Choisir une étiquette…", true], ...known.map((t) => [t, t])];
+  if (!removing) options.push([NEW_TAG, "+ Nouvelle étiquette…"]);
+  box.appendChild(field(removing ? "Étiquette à retirer" : "Étiquette à ajouter", select(options, typing ? NEW_TAG : current, (v) => {
+    if (v === NEW_TAG) { draft._newTag = true; draft.tag = ""; } else { draft._newTag = false; draft.tag = v; }
+    rerender();
+  }, { disabled: ctx.locked })));
+  if (typing && !removing) {
+    box.appendChild(field("Nom de la nouvelle étiquette", text(draft.tag, (v) => { draft.tag = v; }, { maxlength: 64, placeholder: "Client potentiel", disabled: ctx.locked }), "Elle sera créée dans votre audience au premier contact qui passera par cette étape."));
+  }
+  return box;
+}
+
+// ---------- Éditeurs (un par type d'étape) ----------
+const EDITORS = {
+  trigger(ctx, draft, rerender) {
+    const box = el("div");
+    const catalog = ctx.data.triggers;
+    box.appendChild(field("Nom du scénario", text(draft.name, (v) => { draft.name = v; }, { maxlength: 150, disabled: ctx.locked })));
+    const opts = Object.keys(catalog).map((k) => [k, catalog[k].label]);
+    draft.triggers.forEach((trig, ti) => {
+      if (draft.triggers.length > 1) box.appendChild(el("h3", { class: "mk-trigger-row-title" }, `Déclencheur ${ti + 1} sur ${draft.triggers.length}`));
+      const custom = trig.event && !catalog[trig.event];
+      const options = custom ? [[trig.event, `Événement personnalisé : ${trig.event}`], ...opts] : opts;
+      box.appendChild(field("Se déclenche quand…", select(options, trig.event, (v) => { trig.event = v; trig.filter = {}; rerender(); }, { disabled: ctx.locked })));
+      const filters = catalog[trig.event] ? catalog[trig.event].filters : [];
+      if (filters.length) box.appendChild(field(filters[0][1], text(trig.filter && trig.filter.value, (v) => { trig.filter = v ? { key: filters[0][0], value: v } : {}; }, { disabled: ctx.locked }), "Facultatif : laissez vide pour réagir à tous."));
+      const customInput = text("", (v) => { if (v) { trig.event = v.trim(); trig.filter = {}; rerender(); } }, { maxlength: 64, placeholder: "mon_evenement.special", pattern: "[a-z][a-z0-9_.]{1,63}", event: "change", disabled: ctx.locked });
+      box.appendChild(field("…ou un événement personnalisé", customInput, "Remplace le choix ci-dessus (par exemple un événement envoyé par l'API). Validé en quittant le champ."));
+      if (!ctx.locked && draft.triggers.length > 1) {
+        const rm = el("button", { type: "button", class: "btn btn-outline btn-sm" }, "Retirer ce déclencheur");
+        rm.addEventListener("click", () => { draft.triggers.splice(ti, 1); rerender(); });
+        box.appendChild(rm);
+      }
+    });
+    if (!ctx.locked && draft.triggers.length < 3) {
+      const add = el("button", { type: "button", class: "btn btn-outline btn-sm mk-step-add" }, `+ Ajouter un déclencheur (${draft.triggers.length}/3)`);
+      add.addEventListener("click", () => { draft.triggers.push({ event: Object.keys(catalog)[0] || "", filter: {} }); rerender(); });
+      box.appendChild(add);
+    }
+    if (draft.triggers.length > 1) box.appendChild(hint("N'importe lequel de ces déclencheurs démarre le scénario (3 au plus)."));
+    return box;
+  },
+  email(ctx, draft, rerender) {
+    const box = el("div");
+    const tpls = ctx.data.templates;
+    if (!tpls.length) box.appendChild(note(`Aucun modèle de ce type : créez d'abord un modèle « ${ctx.a.kind === "marketing" ? "marketing" : "transactionnel"} » dans Modèles.`));
+    const tpl = tpls.find((t) => t.id === draft.templateId);
+    box.appendChild(field("Modèle d'e-mail", select([["", "Choisir un modèle…", true], ...tpls.map((t) => [t.id, t.name])], tpl ? tpl.id : "", (v) => { draft.templateId = parseInt(v, 10); rerender(); }, { disabled: ctx.locked }),
+      tpl ? `Objet : ${tpl.subject || "(sans objet)"}` : "L'objet, l'expéditeur et le contenu sont ceux du modèle (page Modèles)."));
+    box.appendChild(checkbox("Suivre les clics", draft.trackClicks, (v) => { draft.trackClicks = v; }, { disabled: ctx.locked }));
+    return box;
+  },
+  wait(ctx, draft) {
+    const box = el("div", { class: "mk-step-row" });
+    box.appendChild(field("Durée", number(draft.amount, (v) => { draft.amount = v; }, { disabled: ctx.locked })));
+    box.appendChild(field("Unité", select(UNITS, draft.unit, (v) => { draft.unit = v; }, { disabled: ctx.locked })));
+    const wrap = el("div"); wrap.appendChild(box); wrap.appendChild(hint("Un an au plus."));
+    return wrap;
+  },
+  wait_for_event(ctx, draft) {
+    const box = el("div");
+    box.appendChild(field("Événement attendu", text(draft.event, (v) => { draft.event = v.trim(); }, { maxlength: 64, placeholder: "lms.course_completed", pattern: "[a-z][a-z0-9_.]{1,63}", disabled: ctx.locked }), "Minuscules, chiffres, « _ » et « . » ; commence par une lettre."));
+    const row = el("div", { class: "mk-step-row" });
+    row.appendChild(field("Délai maximal", number(draft.amount, (v) => { draft.amount = v; }, { disabled: ctx.locked })));
+    row.appendChild(field("Unité", select(UNITS, draft.unit, (v) => { draft.unit = v; }, { disabled: ctx.locked })));
+    box.appendChild(row);
+    box.appendChild(hint("Si l'événement n'arrive jamais, le scénario reprend une fois le délai maximal écoulé : jamais d'attente sans fin."));
+    return box;
+  },
+  condition(ctx, draft, rerender) {
+    const box = el("div");
+    box.appendChild(field("Condition", select(CHECKS.map((c) => [c[0], `Le contact ${c[1]}`]), draft.check, (v) => {
+      draft.check = v;
+      if (v === "segment" && draft.definition === undefined) { const s0 = ctx.data.segments[0]; draft.definition = s0 ? clone(s0.definition) : null; draft._segmentId = s0 ? s0.id : null; }
+      rerender();
+    }, { disabled: ctx.locked })));
+    if (draft.check === "segment") {
+      const mode = draft._segmentId != null ? "saved" : "custom";
+      box.appendChild(field("Comment définir la condition ?", select([["saved", "Choisir un segment déjà enregistré"], ["custom", "Construire la condition ici (ET / OU)"]], mode, (v) => {
+        if (v === "saved") { const s0 = ctx.data.segments[0]; draft._segmentId = s0 ? s0.id : null; draft.definition = s0 ? clone(s0.definition) : null; }
+        else { draft._segmentId = null; draft.definition = draft.definition && Array.isArray(draft.definition.rules) ? draft.definition : { op: "and", rules: [] }; }
+        rerender();
+      }, { disabled: ctx.locked })));
+      if (mode === "saved") {
+        if (!ctx.data.segments.length) box.appendChild(note("Aucun segment enregistré : créez-en un dans Segments, ou construisez la condition ici."));
+        else box.appendChild(field("Segment", select(ctx.data.segments.map((s) => [s.id, s.name]), draft._segmentId, (v) => {
+          const seg = ctx.data.segments.find((s) => String(s.id) === v);
+          if (seg) { draft._segmentId = seg.id; draft.definition = clone(seg.definition); }
+        }, { disabled: ctx.locked })));
+      } else if (!(ctx.data.segmentCatalog || []).length) box.appendChild(note("Aucun champ disponible."));
+      else box.appendChild(conditionBuilder(ctx, draft, rerender));
+    } else {
+      const refs = ctx.emailNodes();
+      if (!refs.length) box.appendChild(note("Aucune étape « Envoyer un e-mail » sur le canevas : ajoutez-en une pour vérifier son ouverture ou son clic."));
+      else box.appendChild(field("E-mail concerné", select([["", "Choisir un e-mail…", true], ...refs.map((r) => [r.id, `L'e-mail « ${r.label} »`])], draft.ref, (v) => { draft.ref = v; }, { disabled: ctx.locked }), "Il doit précéder cette condition dans le scénario."));
+    }
+    box.appendChild(hint("Reliez ensuite la sortie « Oui » et la sortie « Non » aux étapes voulues sur le canevas."));
+    return box;
+  },
+  split(ctx, draft) {
+    const box = el("div");
+    const rest = el("p", { class: "field-hint", "aria-live": "polite" });
+    const sync = () => { rest.textContent = Number.isInteger(draft.percentage) && draft.percentage >= 1 && draft.percentage <= 99 ? `Branche B : ${100 - draft.percentage} %` : "Branche B : le reste"; };
+    box.appendChild(field("Branche A (%)", number(draft.percentage, (v) => { draft.percentage = v; sync(); }, { min: 1, max: 99, disabled: ctx.locked })));
+    sync(); box.appendChild(rest);
+    box.appendChild(hint("Tirage au sort à chaque passage, sans lien avec les données du contact (utile pour un test A/B du parcours)."));
+    return box;
+  },
+  update_field(ctx, draft, rerender) {
+    const box = el("div");
+    const isProp = typeof draft.field === "string" && draft.field.indexOf("property:") === 0;
+    box.appendChild(field("Champ à modifier", select([...FIELD_OPTIONS, ["property", "Propriété personnalisée…"]], isProp ? "property" : draft.field, (v) => {
+      draft.field = v === "property" ? "property:" : v; rerender();
+    }, { disabled: ctx.locked })));
+    if (isProp) box.appendChild(field("Nom de la propriété", text(draft.field.slice(9), (v) => { draft.field = `property:${v.trim()}`; }, { maxlength: 40, placeholder: "niveau_client", disabled: ctx.locked }), "Clé de la propriété (page Propriétés) : minuscules, chiffres et « _ »."));
+    box.appendChild(field("Nouvelle valeur", text(draft.value, (v) => { draft.value = v; }, { maxlength: 300, disabled: ctx.locked }), "Laissez vide pour effacer la valeur."));
+    return box;
+  },
+  add_tag: (ctx, draft, rerender) => tagEditor(ctx, draft, rerender, false),
+  remove_tag: (ctx, draft, rerender) => tagEditor(ctx, draft, rerender, true),
+  add_to_list: (ctx, draft) => listEditor(ctx, draft, "Ajouter à la liste"),
+  remove_from_list: (ctx, draft) => listEditor(ctx, draft, "Retirer de la liste"),
+};
+function listEditor(ctx, draft, label) {
+  const box = el("div");
+  if (!ctx.data.lists.length) box.appendChild(note("Aucune liste : créez-en une dans Listes."));
+  else box.appendChild(field(label, select([["", "Choisir une liste…", true], ...ctx.data.lists.map((l) => [l.id, l.name])], ctx.data.lists.some((l) => l.id === draft.listId) ? draft.listId : "", (v) => { draft.listId = parseInt(v, 10); }, { disabled: ctx.locked })));
+  return box;
+}
+
+export const hasEditor = (type) => Object.hasOwn(EDITORS, type);
+export const buildEditor = (type, ctx, draft, rerender) => EDITORS[type](ctx, draft, rerender);
+
+// ---------- Validation avant application (mêmes règles que steps.js) ----------
+function waitErrors(d, label) {
+  const unit = Object.hasOwn(UNIT_MS, d.unit) ? d.unit : null;
+  if (!Number.isInteger(d.amount) || d.amount < 1) return [`${label} : un nombre entier supérieur ou égal à 1.`];
+  if (!unit) return ["Unité invalide (minutes, heures ou jours)."];
+  if (d.amount * UNIT_MS[unit] > MAX_WAIT_MS) return [`${label} : un an au plus.`];
+  return [];
+}
+export function validate(type, ctx, d) {
+  switch (type) {
+    case "trigger": {
+      const errors = [];
+      if (!String(d.name || "").trim()) errors.push("Le nom du scénario est obligatoire.");
+      d.triggers.forEach((t, i) => { if (!t.event || (!ctx.data.triggers[t.event] && !EVENT_NAME.test(t.event))) errors.push(`Déclencheur ${i + 1} : événement invalide.`); });
+      return errors;
+    }
+    case "email": return ctx.data.templates.some((t) => t.id === d.templateId) ? [] : ["Choisissez le modèle d'e-mail à envoyer."];
+    case "wait": return waitErrors(d, "Durée");
+    case "wait_for_event": return [...(EVENT_NAME.test(d.event || "") ? [] : ["Nom d'événement invalide (minuscules, chiffres, « _ » et « . », 2 à 64 caractères, commence par une lettre)."]), ...waitErrors(d, "Délai maximal")];
+    case "split": return Number.isInteger(d.percentage) && d.percentage >= 1 && d.percentage <= 99 ? [] : ["Pourcentage de la branche A : un nombre entier de 1 à 99."];
+    case "update_field": {
+      const errors = [];
+      if (typeof d.field === "string" && d.field.indexOf("property:") === 0) { if (!PROPERTY_KEY.test(d.field.slice(9))) errors.push("Nom de propriété invalide (minuscules, chiffres et « _ », commence par une lettre, 40 caractères au plus)."); }
+      else if (!FIELD_LABELS[d.field]) errors.push("Choisissez le champ à modifier.");
+      if (String(d.value || "").length > 300) errors.push("Valeur trop longue (300 caractères au plus).");
+      return errors;
+    }
+    case "add_tag": case "remove_tag": {
+      const t = String(d.tag || "").trim();
+      if (!t) return ["Choisissez une étiquette."];
+      return t.length > 64 ? ["Nom d'étiquette trop long (64 caractères au plus)."] : [];
+    }
+    case "add_to_list": case "remove_from_list": return ctx.data.lists.some((l) => l.id === d.listId) ? [] : ["Choisissez une liste."];
+    case "condition": {
+      if (d.check === "segment") {
+        if (d._segmentId != null) return ctx.data.segments.some((s) => s.id === d._segmentId) ? [] : ["Choisissez un segment."];
+        const cat = catalogBy(ctx);
+        const rules = d.definition && Array.isArray(d.definition.rules) ? d.definition.rules : [];
+        if (!rules.length) return ["Ajoutez au moins un critère."];
+        const incomplete = rules.map((r, i) => (ruleIsComplete(cat, r && r.op === "not" ? r.rule : r) ? null : i + 1)).filter(Boolean);
+        return incomplete.length ? [`Critère${incomplete.length > 1 ? "s" : ""} ${incomplete.join(", ")} incomplet${incomplete.length > 1 ? "s" : ""} : renseignez la valeur.`] : [];
+      }
+      return ctx.emailNodes().some((r) => r.id === d.ref) ? [] : ["Choisissez l'e-mail dont l'ouverture ou le clic est vérifié."];
+    }
+    default: return [];
+  }
+}
+// Données finales (le marqueur d'interface « nouvelle étiquette » et les espaces superflus ne sont jamais enregistrés)
+export function clean(type, d) {
+  const out = clone(d);
+  delete out._newTag;
+  if (type === "add_tag" || type === "remove_tag") out.tag = String(out.tag || "").trim();
+  if (type === "trigger") out.name = String(out.name || "").trim();
+  return out;
+}

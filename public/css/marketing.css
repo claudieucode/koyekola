@@ -486,19 +486,15 @@ a.mk-stat:hover { border-color: var(--accent); }
 .mk-flow-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .mk-flow-toolbar .field-hint { margin: 0; max-width: 60ch; }
 .mk-flow-palette { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-.mk-flow-shell { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: stretch; margin-bottom: 20px; }
-.mk-flow-canvas { position: relative; height: 70vh; min-height: 480px; background: var(--surface-alt); border: 1px solid var(--mk-border); border-radius: var(--mk-r); overflow: hidden; touch-action: none; background-image: radial-gradient(rgba(11, 42, 64, 0.09) 1px, transparent 1px); background-size: 22px 22px; }
+/* Canevas pleine largeur : les réglages d'une étape s'ouvrent dans une boîte de dialogue (src/editor/automation/), plus de panneau latéral */
+.mk-flow-shell { position: relative; margin-bottom: 20px; }
+.mk-flow-canvas { position: relative; height: calc(100vh - 260px); height: calc(100dvh - 260px); min-height: 520px; background: var(--surface-alt); border: 1px solid var(--mk-border); border-radius: var(--mk-r); overflow: hidden; touch-action: none; background-image: radial-gradient(rgba(11, 42, 64, 0.09) 1px, transparent 1px); background-size: 22px 22px; }
 .mk-flow-zoom { position: absolute; right: 14px; bottom: 14px; z-index: 5; display: flex; gap: 6px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--radius-pill); padding: 6px; box-shadow: var(--mk-pop); }
 .mk-flow-zoom .mk-icon-btn { min-width: 34px; min-height: 34px; width: auto; padding: 0 10px; border-radius: var(--radius-pill); }
-.mk-flow-panel { background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); padding: 18px; overflow-y: auto; min-width: 0; }
-.mk-flow-panel-title { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 1.02rem; }
-.mk-flow-panel-empty { margin: 0; }
-.mk-flow-panel .field-group { margin-bottom: 14px; }
 .mk-cond-builder { margin-top: 6px; }
 .mk-cond-builder .mk-group-op { margin-bottom: 10px; }
 .mk-trigger-row-title { margin: 20px 0 10px; padding-top: 14px; border-top: 1px solid var(--mk-border); font-size: 0.85rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em; }
 .mk-trigger-row-title:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
-.mk-flow-panel-delete { margin-top: 6px; }
 
 /* Structure minimale issue de Drawflow (positionnement des nœuds/connexions) : on ne reprend pas son thème par
    défaut, seulement ce qui est nécessaire au fonctionnement (glisser-déposer, tracé des liaisons, zoom). */
@@ -541,8 +537,43 @@ a.mk-stat:hover { border-color: var(--accent); }
 .mk-flow-port-yes { color: var(--success); }
 .mk-flow-port-no { color: var(--danger); }
 @media (max-width: 900px) {
-  .mk-flow-shell { grid-template-columns: minmax(0, 1fr); }
-  .mk-flow-panel { max-height: 50vh; }
+  .mk-flow-canvas { height: 65vh; min-height: 420px; }
+}
+
+/* Bouton « ⋯ » d'une étape (en haut à droite du bloc) */
+.mk-flow-card { position: relative; padding-right: 40px; }
+.mk-flow-more { position: absolute; top: 6px; right: 6px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+.mk-flow-more:hover, .mk-flow-more[aria-expanded="true"] { background: var(--mk-hover); border-color: var(--mk-border); color: var(--mk-text); }
+.mk-flow-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mk-flow-canvas .drawflow .drawflow-node { cursor: pointer; }
+.mk-flow-canvas .drawflow .drawflow-node:active { cursor: grabbing; }
+.drawflow-node.is-editing .mk-flow-card { box-shadow: var(--ring); border-color: var(--accent); }
+.mk-step-menu { min-width: 180px; z-index: 1000; }
+
+/* Boîte de dialogue d'une étape */
+.mk-step-dialog { max-width: min(560px, calc(100vw - 32px)); }
+.mk-step-dialog.mk-modal-wide { max-width: min(760px, calc(100vw - 32px)); }
+.mk-step-dialog-head { display: flex; align-items: center; gap: 10px; padding: 18px 20px 14px 24px; border-bottom: 1px solid var(--mk-border); }
+.mk-step-dialog-head h2 { flex: 1; min-width: 0; margin: 0; font-family: var(--font-display); font-size: 1.15rem; }
+.mk-step-dialog-icon { display: inline-flex; color: var(--accent); }
+.mk-step-dialog-close { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 1.5rem; line-height: 1; cursor: pointer; }
+.mk-step-dialog-close:hover { background: var(--mk-hover); color: var(--mk-text); }
+.mk-step-dialog .mk-dialog-body { padding-top: 20px; max-height: calc(100dvh - 200px); overflow-y: auto; }
+.mk-step-dialog .field-group { margin-bottom: 16px; }
+.mk-step-dialog .field-group select, .mk-step-dialog .field-group input[type="text"], .mk-step-dialog .field-group input[type="number"] { width: 100%; }
+.mk-step-dialog-error { margin: 0 0 16px; }
+.mk-step-dialog-error ul { margin: 0; padding-left: 18px; }
+.mk-step-row { display: grid; grid-template-columns: minmax(0, 140px) minmax(0, 220px); gap: 12px; align-items: start; }
+.mk-step-add { margin-top: 4px; }
+.mk-step-dialog .mk-rule { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--mk-border); }
+.mk-step-dialog .mk-rule select, .mk-step-dialog .mk-rule input { width: auto; max-width: 100%; }
+/* Petit écran : la fenêtre occupe presque tout l'écran, les boutons restent visibles */
+@media (max-width: 600px) {
+  .mk-step-dialog, .mk-step-dialog.mk-modal-wide { max-width: calc(100vw - 16px); width: calc(100vw - 16px); }
+  .mk-step-dialog .mk-dialog-body { max-height: calc(100dvh - 180px); padding-left: 18px; padding-right: 18px; }
+  .mk-step-dialog-head { padding-left: 18px; }
+  .mk-step-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .mk-step-dialog .mk-dialog-actions .btn { flex: 1 1 0; }
 }
 
 /* Message d'erreur recopié en tête d'une modale rouverte après une création refusée (voir shell.js) */

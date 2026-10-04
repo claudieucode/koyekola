@@ -1438,3 +1438,25 @@ page de suivi conservée, titre « Rapport de campagne ».
 refusé par le serveur en cas d'erreur, saisie conservée, lecteur sans action) ; `marketing-r0-coque.test.js` mis à
 jour pour la nouvelle organisation du menu. Le garde-fou « aucune classe orpheline » a signalé deux classes
 construites dynamiquement / sans style — corrigé. Vérifié en vrai navigateur (1440 et 390 px, copie jetable).
+
+## Éditeur de scénarios : réglages par boîte de dialogue (2026-10-04)
+
+Le panneau latéral droit de l'éditeur (`#au-panel`) est supprimé : le canevas occupe toute la largeur.
+
+- **Bloc** : clic (sans glisser) → boîte de dialogue « Modifier » ; bouton « ⋯ » → menu Modifier / Dupliquer /
+  Supprimer (déclencheur : Modifier seulement ; « Fin » : Dupliquer / Supprimer, aucune fenêtre vide ; scénario actif :
+  « Voir les réglages », fenêtre en lecture seule).
+- **Fichiers** : `src/editor/automation/ui.js` (champs, boîte de dialogue `.mk-dialog`, menu `.mk-menu`),
+  `src/editor/automation/stepEditors.js` (un éditeur par type + `validate()` qui reprend les règles de `steps.js`),
+  `src/editor/automation-flow.js` (canevas, menu, persistance). Confirmation : `window.mkConfirm` (shell.js).
+- **Brouillon** : la fenêtre modifie une copie des données du nœud ; Annuler / × / Échap / clic sur le fond ne changent
+  rien (confirmation si modifié). « Enregistrer » valide, remplace les données du nœud, puis **enregistre aussitôt le
+  scénario** (même route `POST /marketing/automatisations/:id`, sans rechargement). Dupliquer et Supprimer aussi. Le
+  bouton « Enregistrer » du haut reste pour les déplacements et connexions.
+- **Aucun changement de format** (`canvas` / `steps`) ni de migration ; le moteur (`engine.js`) n'est pas touché. Seul
+  ajout côté serveur : `tags` (étiquettes existantes) dans les données de l'éditeur.
+- Non proposés car absents du moteur : désactivation d'une étape, unité « semaines ».
+- `public/js/marketing-automation.js` (ancien éditeur linéaire, plus chargé par aucune page) est retiré du dépôt.
+
+**Vérifié** : suite complète ; parcours navigateur des 12 types d'étape (ouvrir, annuler, modifier, enregistrer, résumé,
+base, rechargement, connexions intactes), menu au clavier, validation, dupliquer/supprimer, lecture seule, mobile.

@@ -1,10 +1,14 @@
 // Éditeur visuel d'un scénario d'automatisation (canevas de nœuds/arêtes, via Drawflow).
 // Le canevas est une simple VUE d'édition : à l'enregistrement, il est envoyé tel quel comme `canvas`
 // et le serveur en dérive les `steps` exécutés par le moteur (src/marketing/automations/graph.js).
+// Réglage d'une étape : clic sur le bloc (ou « ⋯ » → Modifier) → boîte de dialogue (./automation/stepEditors.js) qui
+// modifie un brouillon ; « Enregistrer » l'applique au nœud puis enregistre aussitôt le scénario sur le serveur.
 // Aucune donnée n'est insérée comme HTML : uniquement textContent / value, jamais innerHTML sur du texte saisi.
 import Drawflow from "drawflow";
 import { icon } from "../utils/icons";
 import { STEP_LABELS } from "../utils/stepLabels";
+import { openStepDialog, openStepMenu, closeStepMenu, confirmAction } from "./automation/ui";
+import { UNITS, CHECKS, FIELD_LABELS, hasEditor, buildEditor, validate, clean } from "./automation/stepEditors";
 
 (function () {
   "use strict";
@@ -20,11 +24,8 @@ import { STEP_LABELS } from "../utils/stepLabels";
   var LABELS = STEP_LABELS;
   // Icônes du design system du site (src/utils/icons.js), les mêmes que partout ailleurs — jamais d'emoji.
   var ICON_NAMES = { trigger: "zap", email: "mail", wait: "clock", wait_for_event: "bell", condition: "gitBranch", split: "shuffle", update_field: "sliders", add_tag: "tag", remove_tag: "tag", add_to_list: "list", remove_from_list: "list", end: "stopCircle" };
-  var UNITS = [["minutes", "minutes"], ["hours", "heures"], ["days", "jours"]];
-  var CHECKS = [["segment", "correspond à un segment"], ["opened", "a ouvert un e-mail précédent"], ["clicked", "a cliqué un e-mail précédent"]];
-  // Mêmes champs que steps.js#EDITABLE_FIELDS (jamais l'e-mail ni le statut) : à tenir synchronisé avec le serveur.
-  var FIELD_OPTIONS = [["first_name", "Prénom"], ["last_name", "Nom"], ["phone", "Téléphone"], ["company", "Société"], ["country", "Pays"], ["language", "Langue"], ["source", "Source"]];
-  var FIELD_LABELS = {}; FIELD_OPTIONS.forEach(function (f) { FIELD_LABELS[f[0]] = f[1]; });
+  // Titre de la boîte de dialogue de chaque type d'étape
+  var DIALOG_TITLES = { trigger: "Modifier le déclencheur", email: "Modifier l'e-mail", wait: "Modifier l'attente", wait_for_event: "Modifier « Attendre jusqu'à »", condition: "Modifier la condition", split: "Modifier le tirage aléatoire", update_field: "Mettre à jour un champ", add_tag: "Ajouter une étiquette", remove_tag: "Retirer une étiquette", add_to_list: "Ajouter à une liste", remove_from_list: "Retirer d'une liste" };
   // Types d'étape à DEUX sorties — mêmes noms de handle que graph.js#BRANCH_FIELDS côté serveur (tHandle/fHandle) :
   // s'ils divergent, une condition/un split se traduit vers la mauvaise branche sans qu'aucune erreur ne le signale.
   var BRANCH = { condition: { t: "onTrue", f: "onFalse", tHandle: "true", fHandle: "false", tLabel: "Oui", fLabel: "Non" }, split: { t: "onA", f: "onB", tHandle: "a", fHandle: "b", tLabel: "A", fLabel: "B" } };
@@ -85,6 +86,7 @@ import { STEP_LABELS } from "../utils/stepLabels";
       '<div class="mk-flow-card mk-flow-card--' + type + '">' +
       '<div class="mk-flow-card-icon" aria-hidden="true">' + icon(ICON_NAMES[type] || "help", { size: 18 }) + "</div>" +
       '<div class="mk-flow-card-body"><div class="mk-flow-card-title"></div><div class="mk-flow-card-sub"></div></div>' +
+      (locked && (type === "end") ? "" : '<button type="button" class="mk-flow-more" aria-haspopup="menu" aria-expanded="false">' + icon("moreHorizontal", { size: 18 }) + "</button>") +
       (BRANCH[type] ? '<div class="mk-flow-card-ports"><span class="mk-flow-port-label mk-flow-port-yes">' + BRANCH[type].tLabel + '</span><span class="mk-flow-port-label mk-flow-port-no">' + BRANCH[type].fLabel + "</span></div>" : "") +
       "</div>"
     );
@@ -128,6 +130,8 @@ import { STEP_LABELS } from "../utils/stepLabels";
     var sub = wrap.querySelector(".mk-flow-card-sub");
     if (title) title.textContent = LABELS[type] || type;
     if (sub) sub.textContent = subtitleFor(type, d);
+    var more = wrap.querySelector(".mk-flow-more");
+    if (more) more.setAttribute("aria-label", "Actions de l'étape « " + (LABELS[type] || type) + " » : " + subtitleFor(type, d));
   }
 
   function ioFor(type) { return type === "trigger" ? [0, 1] : BRANCH[type] ? [1, 2] : type === "end" ? [1, 0] : [1, 1]; }
@@ -153,371 +157,136 @@ import { STEP_LABELS } from "../utils/stepLabels";
   });
   if (!dfId[TRIGGER_ID]) addNode(TRIGGER_ID, "trigger", { triggers: [{ event: a.triggerEvent, filter: a.triggerFilter || {} }], triggerEvent: a.triggerEvent, triggerFilter: a.triggerFilter || {} }, { x: 40, y: 40 });
 
-  // ---------- Panneau latéral ----------
-  var panel = $("au-panel");
-  var selectedMyId = null;
+  // ---------- Étapes : menu « ⋯ » et boîte de dialogue « Modifier » ----------
+  var clone = function (v) { return JSON.parse(JSON.stringify(v)); };
+  var myIdOfDf = function (id) { return Object.keys(dfId).filter(function (k) { return String(dfId[k]) === String(id); })[0]; };
+  var nodeOf = function (myId) { return dfId[myId] != null ? editor.getNodeFromId(dfId[myId]) : null; };
+  var withoutId = function (d) { var out = Object.assign({}, d); delete out._id; return out; };
+  var nodeDom = function (myId) { return document.getElementById("node-" + dfId[myId]); };
+  var triggersOf = function (d) { return Array.isArray(d.triggers) && d.triggers.length ? d.triggers : [{ event: d.triggerEvent || "", filter: d.triggerFilter || {} }]; };
 
-  function field(labelText, control) {
-    var w = el("div", { class: "field-group" });
-    w.appendChild(el("label", { for: control.id }, labelText));
-    w.appendChild(control);
-    return w;
-  }
-  function makeSelect(options, value, onChange) {
-    var s = el("select", { id: "au-p-" + (++seq) });
-    options.forEach(function (o) { s.appendChild(el("option", { value: String(o[0]) }, o[1])); });
-    s.value = value == null ? "" : String(value);
-    if (locked) s.disabled = true;
-    s.addEventListener("change", function () { onChange(s.value); });
-    return s;
-  }
-  function makeText(value, maxlength, onChange) {
-    var t = el("input", { type: "text", id: "au-p-" + (++seq), maxlength: String(maxlength || 200) });
-    t.value = value || "";
-    if (locked) t.disabled = true;
-    t.addEventListener("input", function () { onChange(t.value); });
-    return t;
-  }
-  function makeNumber(value, onChange) {
-    var n = el("input", { type: "number", min: "1", step: "1", id: "au-p-" + (++seq) });
-    n.value = value == null ? "" : String(value);
-    if (locked) n.disabled = true;
-    n.addEventListener("input", function () { onChange(n.value === "" ? undefined : parseInt(n.value, 10)); });
-    return n;
-  }
-
-  // ---------- Condition construite ici (ET/OU), sans passer par un segment déjà enregistré ----------
-  // Même format que le moteur de segments (src/marketing/segments/engine.js) : { op: "and"|"or", rules: [...] },
-  // volontairement PLAT (pas de groupes imbriqués, comme le constructeur visuel de la page Segments en mode
-  // simple) — une réimplémentation compacte plutôt qu'un partage de code avec public/js/marketing-segments.js,
-  // les deux panneaux (page dédiée vs panneau latéral étroit) n'ayant pas la même mise en page ; le format de
-  // données, lui, reste identique et interchangeable (une condition construite ici a exactement la forme d'un
-  // segment enregistré, et réciproquement).
-  var CATALOG_BY_FIELD = {};
-  (data.segmentCatalog || []).forEach(function (f) { CATALOG_BY_FIELD[f.field] = f; });
-  var STATUS_LABELS = { unknown: "Pas de consentement", subscribed: "Abonné", unsubscribed: "Désinscrit", bounced: "Rebond", complained: "Plainte", suppressed: "Bloqué" };
-
-  function cmpInfoFor(field, cmp) {
-    var f = CATALOG_BY_FIELD[field];
-    return f ? f.cmps.filter(function (c) { return c.cmp === cmp; })[0] : null;
-  }
-  function defaultRuleValue(f, c) {
-    if (c.value === "range") return ["", ""];
-    if (c.value === "status" || c.value === "select") return f.options[0];
-    if (c.value === "list") return f.lists && f.lists.length ? f.lists[0].id : undefined;
-    if (c.value === "none") return undefined;
-    return c.value === "days" || c.value === "number" ? undefined : "";
-  }
-  function ruleIsComplete(rule) {
-    var c = cmpInfoFor(rule.field, rule.cmp);
-    if (!c) return false;
-    if (c.value === "none") return true;
-    var v = rule.value;
-    if (c.value === "range") return Array.isArray(v) && isFinite(v[0]) && isFinite(v[1]) && v[0] !== "" && v[1] !== "";
-    if (c.value === "textlist") return Array.isArray(v) && v.length > 0;
-    if (c.value === "days" || c.value === "number" || c.value === "list") return typeof v === "number" && isFinite(v);
-    return typeof v === "string" && v !== "";
-  }
-  function ruleValueControl(rule, c, f, onChange) {
-    var wrap = el("span", { class: "mk-value" });
-    function input(type, extra) {
-      var i = el("input", Object.assign({ type: type, id: "au-p-" + (++seq) }, extra || {}));
-      if (locked) i.disabled = true;
-      return i;
-    }
-    if (c.value === "text") {
-      var t = input("text", { maxlength: "200" }); t.value = rule.value || "";
-      t.addEventListener("input", function () { rule.value = t.value; onChange(false); });
-      wrap.appendChild(t);
-    } else if (c.value === "textlist") {
-      var tl = input("text", {}); tl.value = (rule.value || []).join(", ");
-      tl.addEventListener("input", function () { rule.value = tl.value.split(",").map(function (s) { return s.trim(); }).filter(Boolean); onChange(false); });
-      wrap.appendChild(tl);
-    } else if (c.value === "date") {
-      var dt = input("date", {}); dt.value = rule.value || "";
-      dt.addEventListener("input", function () { rule.value = dt.value; onChange(false); });
-      wrap.appendChild(dt);
-    } else if (c.value === "days" || c.value === "number") {
-      var nb = input("number", c.value === "days" ? { min: "0", step: "1" } : { step: "any" });
-      nb.value = rule.value === undefined ? "" : String(rule.value);
-      nb.addEventListener("input", function () { rule.value = nb.value === "" ? undefined : (c.value === "days" ? parseInt(nb.value, 10) : Number(nb.value)); onChange(false); });
-      wrap.appendChild(nb);
-    } else if (c.value === "range") {
-      if (!Array.isArray(rule.value)) rule.value = ["", ""];
-      [0, 1].forEach(function (k) {
-        var r = input("number", { step: "any", "aria-label": k ? "Maximum" : "Minimum" });
-        r.value = rule.value[k] === "" ? "" : String(rule.value[k]);
-        r.addEventListener("input", function () { rule.value[k] = r.value === "" ? "" : Number(r.value); onChange(false); });
-        wrap.appendChild(r);
-      });
-    } else if (c.value === "status" || c.value === "select" || c.value === "list") {
-      var options = c.value === "list" ? (f.lists || []).map(function (l) { return [l.id, l.name]; }) : f.options.map(function (o) { return [o, c.value === "status" ? (STATUS_LABELS[o] || o) : o]; });
-      var sel = makeSelect(options, rule.value, function (v) { rule.value = c.value === "list" ? Number(v) : v; onChange(false); });
-      wrap.appendChild(sel);
-    }
-    return wrap;
-  }
-  // renderRows : true → reconstruit tout (changement de structure, ex. champ/comparateur) ; false → valeur seule (pas de perte de focus)
-  function buildConditionEditor(myId) {
-    var box = el("div", { class: "mk-cond-builder" });
-    // editor.getNodeFromId() renvoie un CLONE JSON à chaque appel (jamais la même référence) : le relire après une
-    // mutation locale perdrait le changement. `def` est donc lu UNE SEULE fois puis gardé comme unique source de
-    // vérité en mémoire tant que ce panneau existe ; chaque mutation (ligne ajoutée, champ changé…) le modifie en
-    // place, et `commit()` envoie CET objet — jamais un nouveau clone relu entre-temps.
-    var live = editor.getNodeFromId(dfId[myId]).data;
-    var def = (live.definition && typeof live.definition === "object" && Array.isArray(live.definition.rules)) ? live.definition : { op: "and", rules: [] };
-    function commit() { saveNodeData(myId, { definition: def }); }
-    function renderRows(full) {
-      if (!full) return;
-      box.textContent = "";
-
-      var opRow = el("div", { class: "mk-group-op" });
-      opRow.appendChild(el("span", {}, "Le contact respecte"));
-      opRow.appendChild(makeSelect([["and", "tous les critères (ET)"], ["or", "au moins un critère (OU)"]], def.op || "and", function (v) { def.op = v; commit(); }));
-      box.appendChild(opRow);
-
-      if (!def.rules.length) box.appendChild(el("p", { class: "field-hint" }, "Aucun critère : ajoutez-en un."));
-      def.rules.forEach(function (raw, index) {
-        var not = raw && raw.op === "not";
-        var rule = not ? raw.rule : raw;
-        if (!rule || !CATALOG_BY_FIELD[rule.field]) return;
-        var f = CATALOG_BY_FIELD[rule.field];
-        var line = el("div", { class: "mk-rule" });
-
-        var notLabel = el("label", { class: "mk-not" });
-        var notCb = el("input", { type: "checkbox" }); notCb.checked = not; if (locked) notCb.disabled = true;
-        notCb.addEventListener("change", function () { def.rules[index] = notCb.checked ? { op: "not", rule: rule } : rule; commit(); });
-        notLabel.appendChild(notCb); notLabel.appendChild(document.createTextNode(" NON"));
-        line.appendChild(notLabel);
-
-        var groups = {};
-        var fieldSelEl = el("select", { id: "au-p-" + (++seq), "aria-label": "Champ" });
-        (data.segmentCatalog || []).forEach(function (c) {
-          if (!groups[c.group]) { groups[c.group] = el("optgroup", { label: c.group }); fieldSelEl.appendChild(groups[c.group]); }
-          groups[c.group].appendChild(el("option", { value: c.field }, c.label));
-        });
-        fieldSelEl.value = rule.field; if (locked) fieldSelEl.disabled = true;
-        fieldSelEl.addEventListener("change", function () {
-          var nf = CATALOG_BY_FIELD[fieldSelEl.value];
-          var next = { field: fieldSelEl.value, cmp: nf.cmps[0].cmp, value: defaultRuleValue(nf, nf.cmps[0]) };
-          def.rules[index] = not ? { op: "not", rule: next } : next;
-          commit(); renderRows(true);
-        });
-        line.appendChild(fieldSelEl);
-
-        var cmpSelEl = makeSelect(f.cmps.map(function (c) { return [c.cmp, c.label]; }), rule.cmp, function (v) {
-          rule.cmp = v; rule.value = defaultRuleValue(f, cmpInfoFor(rule.field, v)); commit(); renderRows(true);
-        });
-        line.appendChild(cmpSelEl);
-
-        var c = cmpInfoFor(rule.field, rule.cmp);
-        if (c && c.value !== "none") line.appendChild(ruleValueControl(rule, c, f, commit));
-        if (f.note) line.appendChild(el("p", { class: "mk-rule-note field-hint" }, f.note));
-
-        if (!locked) {
-          var rm = el("button", { type: "button", class: "btn btn-outline btn-sm", "aria-label": "Supprimer le critère " + (index + 1) }, "Supprimer");
-          rm.addEventListener("click", function () { def.rules.splice(index, 1); commit(); renderRows(true); });
-          line.appendChild(rm);
-        }
-        box.appendChild(line);
-      });
-
-      if (!locked) {
-        var add = el("button", { type: "button", class: "btn btn-outline btn-sm" }, "+ Ajouter un critère");
-        add.addEventListener("click", function () {
-          var f0 = (data.segmentCatalog || [])[0];
-          if (!f0) return;
-          def.rules.push({ field: f0.field, cmp: f0.cmps[0].cmp, value: defaultRuleValue(f0, f0.cmps[0]) });
-          commit(); renderRows(true);
-        });
-        box.appendChild(add);
-      }
-    }
-    renderRows(true);
-    return box;
-  }
-
-  function saveNodeData(myId, patch) {
+  // Remplace les données d'un nœud (jamais une fusion : une clé retirée dans la boîte de dialogue disparaît vraiment)
+  function setNodeData(myId, d) {
     var id = dfId[myId];
-    var current = editor.getNodeFromId(id).data;
-    var next = Object.assign({}, current, patch);
+    var next = Object.assign({}, d, { _id: myId });
     editor.updateNodeDataFromId(id, next);
-    var type = editor.getNodeFromId(id).name;
-    paint(id, type, next);
+    paint(id, editor.getNodeFromId(id).name, next);
     if (myId === TRIGGER_ID) lastTriggerData = { myId: myId, data: next };
-    changed();
+  }
+  // Étapes « e-mail » du canevas (autres que celle en cours) : cible possible d'une condition « a ouvert / a cliqué »
+  function emailNodesExcept(myId) {
+    return Object.keys(dfId).filter(function (k) { return k !== myId; }).map(function (k) { return { id: k, n: nodeOf(k) }; })
+      .filter(function (x) { return x.n && x.n.name === "email"; })
+      .map(function (x) { return { id: x.id, label: subtitleFor("email", x.n.data) }; });
   }
 
-  function panelFor(myId) {
-    var id = dfId[myId];
-    var n = editor.getNodeFromId(id);
-    var type = n.name, d = n.data;
-    panel.textContent = "";
-    var h = el("h3", { class: "mk-flow-panel-title" });
-    h.appendChild(iconEl(ICON_NAMES[type] || "help", { size: 16 }));
-    h.appendChild(document.createTextNode(" " + (LABELS[type] || type)));
-    panel.appendChild(h);
-
-    if (type === "trigger") {
-      var nameInput = makeText(a.name, 150, function (v) { a.name = v; changed(); });
-      panel.appendChild(field("Nom du scénario", nameInput));
-      // CATALOGUE global (voir la remarque dans subtitleFor) — jamais confondu avec `d.triggers`, la liste (1 à 3)
-      // des déclencheurs configurés sur CE nœud, la seule chose qu'on modifie dans cette boucle.
-      var triggerCatalog = data.triggers;
-      if (!Array.isArray(d.triggers) || !d.triggers.length) d.triggers = [{ event: d.triggerEvent || "", filter: d.triggerFilter || {} }];
-      var triggerOpts = Object.keys(triggerCatalog).map(function (k) { return [k, triggerCatalog[k].label]; });
-      function commitTriggers() { saveNodeData(myId, { triggers: d.triggers, triggerEvent: d.triggers[0].event, triggerFilter: d.triggers[0].filter }); }
-
-      d.triggers.forEach(function (trig, ti) {
-        if (d.triggers.length > 1) panel.appendChild(el("h4", { class: "mk-trigger-row-title" }, "Déclencheur " + (ti + 1) + " sur " + d.triggers.length));
-        var isCustomTrigger = !triggerCatalog[trig.event];
-        if (isCustomTrigger && trig.event) panel.appendChild(el("p", { class: "mk-note" }, "Déclencheur personnalisé actuel : « " + trig.event + " ». Choisir un élément ci-dessous le remplace."));
-        panel.appendChild(field("Se déclenche quand…", makeSelect(triggerOpts, trig.event, function (v) {
-          trig.event = v; trig.filter = {};
-          commitTriggers(); panelFor(myId);
-        })));
-        var filters = triggerCatalog[trig.event] ? triggerCatalog[trig.event].filters : [];
-        if (filters.length) {
-          var fv = makeText(trig.filter && trig.filter.value, 200, function (v) { trig.filter = v ? { key: filters[0][0], value: v } : {}; commitTriggers(); });
-          panel.appendChild(field(filters[0][1], fv));
-        }
-        // « change » (pas « input ») : ne s'applique qu'une fois la saisie terminée (Entrée/perte du focus), sinon
-        // chaque frappe redessinerait le panneau entier (via panelFor, pour rafraîchir la note ci-dessus) et
-        // interromprait la saisie à la première lettre.
-        var customTrigger = el("input", { type: "text", id: "au-p-" + (++seq), maxlength: "64", pattern: "[a-z][a-z0-9_.]{1,63}", placeholder: "mon_evenement.special" });
-        if (locked) customTrigger.disabled = true;
-        customTrigger.addEventListener("change", function () {
-          if (customTrigger.value) { trig.event = customTrigger.value; trig.filter = {}; commitTriggers(); panelFor(myId); }
-        });
-        panel.appendChild(field("…ou un événement personnalisé (remplace le choix ci-dessus ; par exemple un événement envoyé par l'API)", customTrigger));
-        if (!locked && d.triggers.length > 1) {
-          var rmTrigger = el("button", { type: "button", class: "btn btn-outline btn-sm" }, "Retirer ce déclencheur");
-          rmTrigger.addEventListener("click", function () { d.triggers.splice(ti, 1); commitTriggers(); panelFor(myId); });
-          panel.appendChild(rmTrigger);
-        }
-      });
-      if (!locked && d.triggers.length < 3) {
-        var addTrigger = el("button", { type: "button", class: "btn btn-outline btn-sm" }, "+ Ajouter un déclencheur (" + d.triggers.length + "/3)");
-        addTrigger.addEventListener("click", function () {
-          d.triggers.push({ event: Object.keys(triggerCatalog)[0] || "", filter: {} });
-          commitTriggers(); panelFor(myId);
-        });
-        panel.appendChild(addTrigger);
-      }
-      if (d.triggers.length > 1) panel.appendChild(el("p", { class: "field-hint" }, "N'importe lequel de ces déclencheurs démarre ce scénario (jusqu'à 3, comme les flux d'automatisation Mailchimp)."));
-    } else if (type === "email") {
-      if (!data.templates.length) panel.appendChild(el("p", { class: "mk-note" }, "Aucun modèle de ce type : créez d'abord un modèle « " + (a.kind === "marketing" ? "marketing" : "transactionnel") + " » dans Modèles."));
-      panel.appendChild(field("Modèle", makeSelect(data.templates.map(function (t) { return [t.id, t.name]; }), d.templateId, function (v) { saveNodeData(myId, { templateId: parseInt(v, 10) }); })));
-      var cb = el("input", { type: "checkbox", id: "au-p-" + (++seq) });
-      cb.checked = !!d.trackClicks; if (locked) cb.disabled = true;
-      cb.addEventListener("change", function () { saveNodeData(myId, { trackClicks: cb.checked }); });
-      var lab = el("label", { class: "checkbox-row", for: cb.id }); lab.appendChild(cb); lab.appendChild(document.createTextNode(" Suivre les clics"));
-      panel.appendChild(lab);
-    } else if (type === "wait") {
-      panel.appendChild(field("Durée", makeNumber(d.amount, function (v) { saveNodeData(myId, { amount: v }); })));
-      panel.appendChild(field("Unité", makeSelect(UNITS, d.unit, function (v) { saveNodeData(myId, { unit: v }); })));
-    } else if (type === "wait_for_event") {
-      var evInput = el("input", { type: "text", id: "au-p-" + (++seq), maxlength: "64", pattern: "[a-z][a-z0-9_.]{1,63}", placeholder: "lms.course_completed" });
-      evInput.value = d.event || ""; if (locked) evInput.disabled = true;
-      evInput.addEventListener("change", function () { saveNodeData(myId, { event: evInput.value }); });
-      panel.appendChild(field("Nom de l'événement attendu", evInput));
-      panel.appendChild(field("Délai maximal", makeNumber(d.amount, function (v) { saveNodeData(myId, { amount: v }); })));
-      panel.appendChild(field("Unité", makeSelect(UNITS, d.unit, function (v) { saveNodeData(myId, { unit: v }); })));
-      panel.appendChild(el("p", { class: "field-hint" }, "Si l'événement n'arrive jamais, le scénario reprend quand même une fois le délai maximal écoulé — jamais d'attente sans fin."));
-    } else if (type === "condition" || type === "split") {
-      if (type === "condition") {
-        panel.appendChild(field("Condition", makeSelect(CHECKS.map(function (c) { return [c[0], "Le contact " + c[1]]; }), d.check, function (v) {
-          var patch = { check: v };
-          if (v === "segment" && d.definition === undefined) { var s0 = data.segments[0]; patch.definition = s0 ? JSON.parse(JSON.stringify(s0.definition)) : null; patch._segmentId = s0 ? s0.id : null; }
-          saveNodeData(myId, patch); panelFor(myId);
-        })));
-        if (d.check === "segment") {
-          var segMode = d._segmentId != null ? "saved" : "custom";
-          panel.appendChild(field("Comment définir la condition ?", makeSelect(
-            [["saved", "Choisir un segment déjà enregistré"], ["custom", "Construire une condition ici (ET / OU)"]], segMode,
-            function (v) {
-              if (v === "saved") { var s0 = data.segments[0]; saveNodeData(myId, { _segmentId: s0 ? s0.id : null, definition: s0 ? JSON.parse(JSON.stringify(s0.definition)) : null }); }
-              else saveNodeData(myId, { _segmentId: null, definition: (d.definition && Array.isArray(d.definition.rules)) ? d.definition : { op: "and", rules: [] } });
-              panelFor(myId);
-            }
-          )));
-          if (segMode === "saved") {
-            if (!data.segments.length) panel.appendChild(el("p", { class: "mk-note" }, "Aucun segment enregistré : créez-en un dans Segments, ou construisez la condition ici."));
-            var segOpts = data.segments.map(function (s) { return [s.id, s.name]; });
-            panel.appendChild(field("Segment", makeSelect(segOpts, d._segmentId, function (v) {
-              var seg = data.segments.filter(function (s) { return String(s.id) === v; })[0];
-              if (seg) saveNodeData(myId, { _segmentId: seg.id, definition: JSON.parse(JSON.stringify(seg.definition)) });
-            })));
-          } else {
-            if (!data.segmentCatalog || !data.segmentCatalog.length) panel.appendChild(el("p", { class: "mk-note" }, "Aucun champ disponible."));
-            else panel.appendChild(buildConditionEditor(myId));
-          }
-        } else {
-          var refOpts = graph_.nodesOfType("email").filter(function (p) { return p.id !== myId; }).map(function (p) { return [p.id, "L'e-mail « " + subtitleFor("email", editor.getNodeFromId(dfId[p.id]).data) + " »"]; });
-          if (!refOpts.length) panel.appendChild(el("p", { class: "mk-note" }, "Aucune étape « e-mail » sur le canevas : ajoutez-en une pour vérifier son ouverture ou son clic."));
-          panel.appendChild(field("E-mail concerné", makeSelect(refOpts, d.ref, function (v) { saveNodeData(myId, { ref: v }); })));
-        }
-      } else {
-        panel.appendChild(field("Pourcentage vers « A »", makeNumber(d.percentage, function (v) { saveNodeData(myId, { percentage: v }); })));
-        panel.appendChild(el("p", { class: "field-hint" }, "Tirage aléatoire à chaque passage : aucun lien avec les données du contact (utile pour un test A/B sur le parcours lui-même)."));
-      }
-      panel.appendChild(el("p", { class: "field-hint" }, "Reliez la sortie « " + BRANCH[type].tLabel + " » et la sortie « " + BRANCH[type].fLabel + " » du nœud aux étapes voulues sur le canevas."));
-    } else if (type === "update_field") {
-      var isProp = typeof d.field === "string" && d.field.indexOf("property:") === 0;
-      panel.appendChild(field("Champ à modifier", makeSelect(FIELD_OPTIONS, isProp ? "" : d.field, function (v) { saveNodeData(myId, { field: v }); })));
-      var propInput = makeText(isProp ? d.field.slice(9) : "", 40, function (v) { if (v) saveNodeData(myId, { field: "property:" + v }); });
-      panel.appendChild(field("…ou le nom d'une propriété personnalisée (remplace le choix ci-dessus)", propInput));
-      panel.appendChild(field("Nouvelle valeur", makeText(d.value, 300, function (v) { saveNodeData(myId, { value: v }); })));
-    } else if (type === "add_tag" || type === "remove_tag") {
-      panel.appendChild(field("Étiquette", makeText(d.tag, 64, function (v) { saveNodeData(myId, { tag: v }); })));
-    } else if (type === "add_to_list" || type === "remove_from_list") {
-      if (!data.lists.length) panel.appendChild(el("p", { class: "mk-note" }, "Aucune liste : créez-en une dans Listes."));
-      panel.appendChild(field("Liste", makeSelect(data.lists.map(function (l) { return [l.id, l.name]; }), d.listId, function (v) { saveNodeData(myId, { listId: parseInt(v, 10) }); })));
-    } else if (type === "end") {
-      panel.appendChild(el("p", { class: "field-hint" }, "Le passage du contact se termine ici."));
-    }
-
-    if (!locked && type !== "trigger") {
-      var del = el("button", { type: "button", class: "btn btn-outline btn-sm mk-flow-panel-delete" }, "Supprimer cette étape");
-      del.addEventListener("click", function () {
-        editor.removeNodeId("node-" + id);
-        delete dfId[myId];
-        closePanel();
+  function openEditor(myId) {
+    var n = nodeOf(myId);
+    if (!n || !hasEditor(n.name)) return; // « Fin » : rien à régler, aucune fenêtre vide
+    closeStepMenu();
+    var type = n.name;
+    var original = type === "trigger" ? { name: a.name, triggers: clone(triggersOf(n.data)) } : withoutId(n.data);
+    var initial = JSON.stringify(original);
+    var draft = clone(original);
+    var ctx = { data: data, a: a, locked: locked, emailNodes: function () { return emailNodesExcept(myId); } };
+    var body = document.createElement("div");
+    body.className = "mk-step-editor";
+    function rerender() { body.textContent = ""; body.appendChild(buildEditor(type, ctx, draft, rerender)); }
+    rerender();
+    var dom = nodeDom(myId);
+    if (dom) dom.classList.add("is-editing");
+    openStepDialog({
+      title: locked ? "Réglages : " + (LABELS[type] || type) : DIALOG_TITLES[type] || LABELS[type],
+      iconHtml: icon(ICON_NAMES[type] || "help", { size: 20 }),
+      body: body,
+      wide: type === "condition" || type === "trigger",
+      readOnly: locked,
+      isDirty: function () { return JSON.stringify(draft) !== initial; },
+      onClose: function () { var d = nodeDom(myId); if (d) d.classList.remove("is-editing"); },
+      onSave: function () {
+        var errors = validate(type, ctx, draft);
+        if (errors.length) return { errors: errors };
+        var final = clean(type, draft);
+        if (type === "trigger") {
+          a.name = final.name;
+          var h1 = document.querySelector(".mk-head h1");
+          if (h1) h1.textContent = a.name;
+          setNodeData(TRIGGER_ID, { triggers: final.triggers, triggerEvent: final.triggers[0].event, triggerFilter: final.triggers[0].filter });
+        } else setNodeData(myId, final);
         changed();
-        announce("Étape supprimée.");
-      });
-      panel.appendChild(del);
+        announce("Étape « " + (LABELS[type] || type) + " » mise à jour.");
+        // Enregistrement immédiat du scénario : la valeur survit à un rechargement sans autre action
+        return persist().then(function (r) { if (r.ok) toast("Étape enregistrée.", "ok"); return {}; });
+      },
+    });
+  }
+
+  function duplicateStep(myId) {
+    var n = nodeOf(myId);
+    var raw = editor.drawflow.drawflow[editor.module].data[dfId[myId]];
+    if (!n || !raw || myId === TRIGGER_ID) return;
+    var copyId = uid();
+    addNode(copyId, n.name, clone(withoutId(n.data)), { x: raw.pos_x + 40, y: raw.pos_y + NODE_H + 40 });
+    changed();
+    announce("Étape « " + (LABELS[n.name] || n.name) + " » dupliquée : reliez la copie à la suite voulue.");
+    persist().then(function (r) { if (r.ok) toast("Étape dupliquée.", "ok"); });
+  }
+
+  function deleteStep(myId) {
+    var n = nodeOf(myId);
+    if (!n || myId === TRIGGER_ID) return;
+    var label = LABELS[n.name] || n.name;
+    confirmAction({ title: "Supprimer cette étape ?", text: "L'étape « " + label + " » (" + subtitleFor(n.name, n.data) + ") et ses connexions seront retirées du scénario.", ok: "Supprimer" }).then(function (ok) {
+      if (!ok || dfId[myId] == null) return;
+      editor.removeNodeId("node-" + dfId[myId]); // retire aussi toutes ses connexions
+      delete dfId[myId];
+      changed();
+      announce("Étape supprimée.");
+      persist().then(function (r) { if (r.ok) toast("Étape supprimée.", "ok"); });
+    });
+  }
+
+  function menuFor(myId, button) {
+    var n = nodeOf(myId);
+    if (!n) return;
+    var type = n.name, items = [];
+    if (hasEditor(type)) items.push({ label: locked ? "Voir les réglages" : "Modifier", run: function () { openEditor(myId); } });
+    if (!locked && type !== "trigger") {
+      items.push({ label: "Dupliquer", run: function () { duplicateStep(myId); } });
+      items.push({ label: "Supprimer", danger: true, run: function () { deleteStep(myId); } });
     }
+    if (items.length) openStepMenu(button, items, "Actions de l'étape « " + (LABELS[type] || type) + " »");
   }
 
-  function closePanel() {
-    selectedMyId = null;
-    panel.textContent = "";
-    panel.appendChild(el("p", { class: "field-hint mk-flow-panel-empty" }, "Cliquez sur une étape du schéma pour la régler ici."));
-  }
-  closePanel();
-
-  // petit annuaire pour retrouver les nœuds d'un type donné (utilisé par le panneau « condition »)
-  var graph_ = {
-    nodesOfType: function (type) {
-      var out = [];
-      Object.keys(dfId).forEach(function (myId) {
-        var n = editor.getNodeFromId(dfId[myId]);
-        if (n && n.name === type) out.push({ id: myId, data: n.data });
-      });
-      return out;
-    },
-  };
-
-  editor.on("nodeSelected", function (id) {
-    // Drawflow émet l'identifiant en chaîne (tiré de l'id DOM "node-<n>"), alors qu'addNode() renvoie un nombre :
-    // comparaison en chaîne des deux côtés, sinon la correspondance échoue toujours (===).
-    var myId = Object.keys(dfId).filter(function (k) { return String(dfId[k]) === String(id); })[0];
-    if (!myId) return;
-    selectedMyId = myId;
-    panelFor(myId);
+  // Bouton « ⋯ » : ni glisser ni sélection Drawflow (mousedown arrêté avant d'atteindre le canevas)
+  ["mousedown", "touchstart", "pointerdown"].forEach(function (evt) {
+    container.addEventListener(evt, function (e) { if (e.target.closest && e.target.closest(".mk-flow-more")) e.stopPropagation(); }, true);
   });
-  editor.on("nodeUnselected", closePanel);
+  container.addEventListener("click", function (e) {
+    var more = e.target.closest && e.target.closest(".mk-flow-more");
+    if (!more) return;
+    e.preventDefault();
+    var nodeEl = more.closest(".drawflow-node");
+    var myId = nodeEl && myIdOfDf(nodeEl.id.replace("node-", ""));
+    if (myId) menuFor(myId, more);
+  });
+  // Clic sur un bloc (sans le déplacer) : ouvre « Modifier ». Un glisser, un point de connexion ou « ⋯ » n'ouvrent rien.
+  var downAt = null;
+  container.addEventListener("pointerdown", function (e) {
+    var nodeEl = e.target.closest && e.target.closest(".drawflow-node");
+    downAt = nodeEl && e.button === 0 && !e.target.closest(".input, .output, .mk-flow-more") ? { x: e.clientX, y: e.clientY, node: nodeEl } : null;
+  }, true);
+  container.addEventListener("pointerup", function (e) {
+    var start = downAt; downAt = null;
+    if (!start || Math.abs(e.clientX - start.x) + Math.abs(e.clientY - start.y) > 6) return;
+    var myId = myIdOfDf(start.node.id.replace("node-", ""));
+    if (myId) openEditor(myId);
+  });
+
+  editor.on("nodeRemoved", function (id) {
+    var gone = myIdOfDf(id);
+    if (gone && gone !== TRIGGER_ID) delete dfId[gone]; // supprimé au clavier (Suppr) : l'annuaire reste exact
+  });
   editor.on("nodeMoved", changed);
   editor.on("connectionCreated", changed);
   editor.on("connectionRemoved", changed);
@@ -545,6 +314,7 @@ import { STEP_LABELS } from "../utils/stepLabels";
         addNode(myId, type, MAKE[type](), pos);
         changed();
         announce("Étape « " + LABELS[type] + " » ajoutée sur le canevas.");
+        openEditor(myId); // réglée tout de suite (sauf « Fin », sans réglage)
       });
       palette.appendChild(b);
     });
@@ -592,10 +362,9 @@ import { STEP_LABELS } from "../utils/stepLabels";
   function selectNode(myId) {
     var prev = container.querySelector(".drawflow-node.selected");
     if (prev) prev.classList.remove("selected");
-    var dom = document.getElementById("node-" + dfId[myId]);
-    if (dom) { dom.classList.add("selected"); editor.node_selected = dom; }
-    selectedMyId = myId;
-    panelFor(myId);
+    var dom = nodeDom(myId);
+    if (dom) dom.classList.add("selected");
+    openEditor(myId);
   }
 
   // ---------- Contrôle avant activation : sauter directement au nœud fautif ----------
@@ -638,23 +407,33 @@ import { STEP_LABELS } from "../utils/stepLabels";
     return { nodes: nodes, edges: edges };
   }
 
-  var saving = false;
-  function save() {
-    if (locked || saving) return;
-    saving = true; showError(""); setStatus("Enregistrement…");
+  var saving = null; // promesse de l'enregistrement en cours
+  var again = false;
+  function toast(t, type) { if (typeof window.mkToast === "function") window.mkToast(t, type); }
+  // Envoie le scénario complet (nom, déclencheurs, canevas) ; le serveur en dérive et valide les étapes exécutées
+  function persist() {
+    if (locked) return Promise.resolve({ ok: false });
+    if (saving) { again = true; return saving.then(function () { return again ? (again = false, persist()) : { ok: !dirty }; }); }
+    showError(""); setStatus("Enregistrement…");
     var canvas = exportGraph();
     var trig = editor.getNodeFromId(dfId[TRIGGER_ID]).data;
-    var triggers = Array.isArray(trig.triggers) && trig.triggers.length ? trig.triggers : [{ event: trig.triggerEvent, filter: trig.triggerFilter || {} }];
+    var triggers = triggersOf(trig);
     var payload = { name: a.name, triggers: triggers, triggerEvent: triggers[0].event, triggerFilter: triggers[0].filter, canvas: canvas };
-    fetch("/marketing/automatisations/" + a.id, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
-      .then(function (res) { return res.json().then(function (j) { return { ok: res.ok, j: j }; }); })
+    saving = fetch("/marketing/automatisations/" + a.id, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+      .then(function (res) { return res.json().catch(function () { return {}; }).then(function (j) { return { ok: res.ok, j: j }; }); })
       .then(function (r) {
-        if (r.ok) { dirty = false; setStatus("Enregistré."); window.location.reload(); }
-        else { setStatus("Non enregistré"); showError(r.j.error || "Enregistrement impossible."); }
+        if (r.ok) { dirty = false; setStatus("Enregistré à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })); return { ok: true }; }
+        setStatus("Non enregistré");
+        showError((r.j && r.j.error) || "Enregistrement impossible.");
+        toast("Le scénario n'a pas pu être enregistré : " + ((r.j && r.j.error) || "erreur inconnue"), "error");
+        return { ok: false, error: r.j && r.j.error };
       })
-      .catch(function () { setStatus("Non enregistré"); showError("Enregistrement impossible pour le moment."); })
-      .then(function () { saving = false; });
+      .catch(function () { setStatus("Non enregistré"); showError("Enregistrement impossible pour le moment (connexion ?)."); return { ok: false }; })
+      .then(function (r) { saving = null; return r; });
+    return saving;
   }
+  // Bouton « Enregistrer » du haut (déplacements, connexions, ajouts) : rechargement pour actualiser le contrôle avant activation
+  function save() { persist().then(function (r) { if (r.ok) window.location.reload(); }); }
   var saveBtn = $("au-save");
   if (saveBtn) saveBtn.addEventListener("click", save);
   window.addEventListener("beforeunload", function (e) { if (dirty) { e.preventDefault(); e.returnValue = ""; } });

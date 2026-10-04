@@ -89,7 +89,11 @@ describe("éditeur", () => {
     assert.ok(d.triggers["lms.course_completed"].filters.length === 1);
     assert.equal((await boss.get("/js/automation-flow.js")).status, 200);
     assert.match(page.text, /id="au-flow"/);
-    assert.match(page.text, /id="au-panel"/);
+    // Plus de panneau latéral : les réglages d'une étape s'ouvrent dans une boîte de dialogue (canevas pleine largeur)
+    assert.doesNotMatch(page.text, /id="au-panel"/);
+    // Étiquettes existantes proposées dans « Ajouter / Retirer une étiquette »
+    await boss.post("/marketing/etiquettes", { name: "Client potentiel" });
+    assert.ok(data((await boss.get(`/marketing/automatisations/${id}`)).text).tags.includes("Client potentiel"));
     assert.doesNotMatch(page.text, /id="au-steps"/, "l'ancienne liste d'étapes est remplacée par le canevas");
   });
   test("canevas : une automatisation sans canvas enregistré en reçoit un calculé ; round-trip nœuds/arêtes", async () => {

@@ -5,6 +5,7 @@ const templates = require("../templates");
 const segments = require("../segments");
 const { fieldCatalog } = require("../segments/catalog");
 const audience = require("../audience");
+const { listTags } = require("../audience/tags");
 const bridge = require("../bridge/events");
 const { MarketingError } = require("../errors");
 const { attempt, need, safeJson } = require("./kit");
@@ -53,6 +54,8 @@ module.exports = ({ db }) => {
       canvas: a.canvas || auto.stepsToGraph({ steps: a.steps, triggers: a.triggers, triggerEvent: a.trigger_event, triggerFilter: a.triggerFilter }),
       templates: templates.listTemplates(ctx).filter((t) => t.kind === a.kind).map((t) => ({ id: t.id, name: t.name, kind: t.kind, subject: t.subject })),
       lists: audience.listLists(ctx).map((l) => ({ id: l.id, name: l.name })),
+      // Étiquettes existantes : proposées dans « Ajouter / Retirer une étiquette » (une nouvelle reste possible à l'ajout)
+      tags: listTags(ctx).map((t) => t.name),
       segments: segments.listSegments(ctx).map((s) => ({ id: s.id, name: s.name, definition: s.definition })),
       // Catalogue des champs/comparateurs : permet de construire une condition ET/OU directement dans le panneau
       // du nœud (src/editor/automation-flow.js), sans devoir d'abord enregistrer un segment séparé.

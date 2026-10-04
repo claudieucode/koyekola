@@ -10,7 +10,7 @@
 
     <div id="au-editor">
       <div class="mk-flow-toolbar">
-        <p class="field-hint">Cliquez sur une étape pour la modifier. Glissez pour la déplacer. Tirez depuis un point de connexion pour relier deux étapes.</p>
+        <p class="field-hint"><% if (locked) { %>Cliquez sur une étape pour voir ses réglages.<% } else { %>Cliquez sur une étape pour la régler ; son bouton « ⋯ » propose aussi Dupliquer et Supprimer. Glissez pour déplacer, tirez depuis un point de connexion pour relier deux étapes. Les réglages d'une étape s'enregistrent aussitôt ; « Enregistrer » sauvegarde les déplacements et connexions.<% } %></p>
         <div class="mk-actions">
           <span id="au-status" class="field-hint" role="status" aria-live="polite"></span>
           <% if (!locked) { %><button type="button" class="btn btn-primary" id="au-save">Enregistrer</button><% } %>
@@ -27,9 +27,6 @@
           <button type="button" class="mk-icon-btn" id="au-zoom-in" aria-label="Agrandir"><%- icon("plus", { size: 16 }) %></button>
           <button type="button" class="mk-icon-btn" id="au-zoom-fit" aria-label="Ajuster à l'écran"><%- icon("maximize", { size: 16 }) %></button>
         </div>
-        <aside id="au-panel" class="mk-flow-panel" aria-label="Réglages de l'étape">
-          <p class="field-hint mk-flow-panel-empty">Cliquez sur une étape du schéma pour la régler ici.</p>
-        </aside>
       </div>
       <p class="sr-only" id="au-live" aria-live="polite"></p>
     </div>

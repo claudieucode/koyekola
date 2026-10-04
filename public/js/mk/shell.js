@@ -116,8 +116,9 @@
 
   // ---------- Confirmation avant une action grave ----------
   // <button data-mk-confirm="Texte" data-mk-confirm-title="Titre" data-mk-confirm-ok="Supprimer"> dans un <form>
-  function confirmDialog(opts, onYes) {
-    if (typeof HTMLDialogElement !== "function") { if (window.confirm(opts.text)) onYes(); return; }
+  function confirmDialog(opts, onYes, onNo) {
+    onNo = onNo || function () {};
+    if (typeof HTMLDialogElement !== "function") { if (window.confirm(opts.text)) onYes(); else onNo(); return; }
     var dlg = document.createElement("dialog"); dlg.setAttribute("class", "mk-dialog");
     dlg.setAttribute("aria-labelledby", "mk-dlg-title"); dlg.setAttribute("aria-describedby", "mk-dlg-text");
     var body = document.createElement("div"); body.setAttribute("class", "mk-dialog-body");
@@ -130,12 +131,13 @@
     actions.appendChild(no); actions.appendChild(yes); dlg.appendChild(body); dlg.appendChild(actions);
     document.body.appendChild(dlg);
     var previous = document.activeElement;
-    function done() { dlg.close(); dlg.remove(); if (previous && previous.focus) previous.focus(); }
+    function done() { dlg.close(); dlg.remove(); if (previous && previous.focus) previous.focus(); onNo(); }
     no.addEventListener("click", done);
     yes.addEventListener("click", function () { dlg.close(); dlg.remove(); onYes(); });
     dlg.addEventListener("cancel", function (e) { e.preventDefault(); done(); });
     dlg.showModal(); no.focus();
   }
+  window.mkConfirm = confirmDialog; // réutilisée par l'éditeur de scénarios (src/editor/automation/ui.js)
   $$("[data-mk-confirm]").forEach(function (trigger) {
     trigger.addEventListener("click", function (e) {
       if (trigger.getAttribute("data-mk-confirmed") === "1") return;
