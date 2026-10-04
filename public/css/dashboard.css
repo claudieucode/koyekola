@@ -83,7 +83,7 @@
   --star: var(--dash-warning);
 }
 /* Champs de formulaire : fond, texte, bordure et indication du thème (règle globale du site neutralisée) */
-.dash :is(input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="date"], input[type="url"], input[type="tel"], input[type="search"], input[type="datetime-local"], textarea, select):not(.rt-editor *) { background: var(--dash-card); color: var(--dash-text); border-color: var(--line); }
+.dash :is(input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="date"], input[type="url"], input[type="tel"], input[type="search"], input[type="datetime-local"], textarea, select):not(.rt-editor *) { background-color: var(--dash-card); color: var(--dash-text); border-color: var(--line); }
 .dash :is(input, textarea)::placeholder { color: var(--dash-muted); opacity: 1; }
 .dash select option { background: var(--dash-card); color: var(--dash-text); }
 

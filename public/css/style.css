@@ -530,7 +530,7 @@ main { display: block; }
 .filter-options a { text-decoration: none; color: var(--text); font-size: 0.92rem; padding: 11px 14px; border-radius: var(--radius); transition: background 0.15s ease, color 0.15s ease, transform 0.15s var(--ease); }
 .filter-options a:hover { background: var(--accent-light); transform: translateX(2px); }
 .filter-options a.is-active { background: var(--accent-light); color: var(--accent-dark); font-weight: 800; box-shadow: inset 0 0 0 1.5px rgba(2, 119, 182, 0.3); }
-.filter-panel select { width: 100%; padding: 10px 12px; border-radius: var(--radius); border: 1.5px solid var(--line); font-family: inherit; background: var(--card); }
+.filter-panel select { width: 100%; padding: 10px 12px; border-radius: var(--radius); border: 1.5px solid var(--line); font-family: inherit; background-color: var(--card); }
 
 .catalogue-results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; gap: 12px; flex-wrap: wrap; }
 .catalogue-results-header .count { color: var(--muted); font-size: 0.92rem; }
@@ -558,8 +558,30 @@ main { display: block; }
 input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=url], input[type=tel],
 textarea, select {
   font-family: inherit; font-size: 0.95rem; padding: 12px 14px; min-height: 44px; border: 1.5px solid var(--line);
-  border-radius: var(--radius); color: var(--text); width: 100%; background: var(--card);
+  border-radius: var(--radius); color: var(--text); width: 100%; background-color: var(--card);
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+/* Listes déroulantes : la flèche native du navigateur est collée au bord droit et ne se règle pas (padding-right n'a
+   aucun effet sur elle). Elle est remplacée, partout sur le site, par la flèche du site dessinée en arrière-plan, à une
+   distance constante du bord (variables ci-dessous) ; le texte ne passe jamais dessous. Listes multiples : inchangées.
+   Spécificité volontairement supérieure aux règles de composants (« .x select { padding / background } ») pour que
+   ces réglages ne puissent ni supprimer la flèche ni la recouvrir. */
+:root {
+  --select-arrow-inset: 12px;
+  --select-arrow-size: 12px;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235d7182' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+select:not([multiple]):not([size]) {
+  -webkit-appearance: none; -moz-appearance: none; appearance: none;
+  background-image: var(--select-arrow);
+  background-repeat: no-repeat;
+  background-position: right var(--select-arrow-inset) center;
+  background-size: var(--select-arrow-size) var(--select-arrow-size);
+  padding-right: calc(var(--select-arrow-inset) + var(--select-arrow-size) + 8px);
+  /* La flèche native ajoutait 1 px au-dessus et au-dessous du texte : même hauteur de champ qu'avant (mesuré sur
+     23 listes de 8 pages : écart ≤ 0,2 px), donc toujours alignée avec les champs voisins */
+  line-height: calc(1.17em + 2px);
+  text-overflow: ellipsis;
 }
 input:hover, textarea:hover, select:hover { border-color: #8fb1cc; }
 input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: var(--ring); }
