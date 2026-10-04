@@ -30,21 +30,19 @@
   window.matchMedia("(min-width: 761px)").addEventListener("change", (m) => { if (m.matches && dash.classList.contains("is-drawer")) setDrawer(false); });
 
   // Menus « ⋯ »
-  const closeMenus = (except) => document.querySelectorAll(".dmenu-btn[aria-expanded='true']").forEach((b) => { if (b !== except) { b.setAttribute("aria-expanded", "false"); b.nextElementSibling.hidden = true; } });
+  const closeMenus = (except) => document.querySelectorAll(".dmenu-btn[aria-expanded='true']").forEach((b) => { if (b !== except) { window.kbFloat?.close(b.nextElementSibling); b.setAttribute("aria-expanded", "false"); b.nextElementSibling.hidden = true; } });
   document.addEventListener("click", (e) => {
     const btn = e.target.closest(".dmenu-btn");
     if (!btn) { if (!e.target.closest(".dmenu-list")) closeMenus(); return; }
     const list = btn.nextElementSibling;
     const open = btn.getAttribute("aria-expanded") !== "true";
-    closeMenus(btn);
-    btn.setAttribute("aria-expanded", String(open));
-    list.hidden = !open;
-    if (open) {
-      // Ouvre vers le bas s'il n'y a pas la place au-dessus
-      list.classList.remove("is-below");
-      if (btn.getBoundingClientRect().top - list.offsetHeight < 70) list.classList.add("is-below");
-      list.querySelector("a, button:not([disabled])")?.focus();
-    }
+    closeMenus(open ? btn : null);
+    if (!open) return;
+    btn.setAttribute("aria-expanded", "true");
+    list.hidden = false;
+    // Calque flottant (sous le bouton, au-dessus s'il manque de place, toujours dans l'écran)
+    window.kbFloat?.open(btn, list, { onClose: () => { btn.setAttribute("aria-expanded", "false"); list.hidden = true; } });
+    list.querySelector("a, button:not([disabled])")?.focus();
   });
   document.addEventListener("keydown", (e) => {
     const list = e.target.closest && e.target.closest(".dmenu-list");

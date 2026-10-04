@@ -1815,9 +1815,15 @@
   });
   if ($("mk-open-versions")) $("mk-open-versions").addEventListener("click", function () { closeMore(); openDialog("mk-versions-dialog"); });
   var moreBtn = $("mk-more"), moreMenu = $("mk-more-menu");
-  function closeMore() { if (moreMenu) { moreMenu.hidden = true; moreBtn.setAttribute("aria-expanded", "false"); } }
+  function closeMore() { if (moreMenu) { if (window.kbFloat) window.kbFloat.close(moreMenu); moreMenu.hidden = true; moreBtn.setAttribute("aria-expanded", "false"); } }
   if (moreBtn) {
-    moreBtn.addEventListener("click", function (e) { e.stopPropagation(); var open = moreMenu.hidden; moreMenu.hidden = !open; moreBtn.setAttribute("aria-expanded", String(open)); if (open) { var f = moreMenu.querySelector("[role=menuitem]"); if (f) f.focus(); } });
+    moreBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (!moreMenu.hidden) { closeMore(); return; }
+      moreMenu.hidden = false; moreBtn.setAttribute("aria-expanded", "true");
+      if (window.kbFloat) window.kbFloat.open(moreBtn, moreMenu, { onClose: function () { moreMenu.hidden = true; moreBtn.setAttribute("aria-expanded", "false"); } });
+      var f = moreMenu.querySelector("[role=menuitem]"); if (f) f.focus();
+    });
     document.addEventListener("click", function (e) { if (!moreMenu.contains(e.target)) closeMore(); });
     moreMenu.addEventListener("keydown", function (e) {
       var items = [].slice.call(moreMenu.querySelectorAll("[role=menuitem]")), i = items.indexOf(document.activeElement);

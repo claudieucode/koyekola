@@ -23,7 +23,7 @@
 .dash.is-collapsed { grid-template-columns: var(--dash-sidebar-w-collapsed) minmax(0, 1fr); }
 
 /* ---------- Barre latérale ---------- */
-.dash-sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; background: var(--dash-sidebar); color: var(--dash-sidebar-text); border-right: 1px solid var(--dash-border); overflow: hidden; z-index: 40; }
+.dash-sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; background: var(--dash-sidebar); color: var(--dash-sidebar-text); border-right: 1px solid var(--dash-border); overflow: hidden; z-index: var(--z-sidebar); }
 .dash-brand { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); padding: var(--s4) var(--s3) var(--s3) var(--s4); }
 .dash-logo { display: inline-flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; min-width: 0; }
 .dash-logo-mark { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--dash-accent); color: var(--dash-accent-on); font-family: var(--font-display); font-weight: 800; font-size: 17px; }
@@ -56,7 +56,7 @@
 
 /* ---------- Zone principale ---------- */
 .dash-main { min-width: 0; display: flex; flex-direction: column; }
-.dash-topbar { position: sticky; top: 0; z-index: 30; display: none; align-items: center; gap: var(--s3); height: 56px; padding: 0 var(--s4); background: var(--dash-card); border-bottom: 1px solid var(--dash-border); }
+.dash-topbar { position: sticky; top: 0; z-index: var(--z-sticky); display: none; align-items: center; gap: var(--s3); height: 56px; padding: 0 var(--s4); background: var(--dash-card); border-bottom: 1px solid var(--dash-border); }
 .dash-topbar-brand { font-family: var(--font-display); font-weight: 800; }
 .dash-menu-btn { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: var(--dash-radius-sm); background: none; color: var(--dash-text); cursor: pointer; }
 .dash-menu-btn:hover { background: var(--dash-hover); }
@@ -158,9 +158,8 @@
 .dmenu-btn { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--dash-border); border-radius: var(--dash-radius-sm); background: var(--dash-card); color: var(--dash-text); cursor: pointer; transition: border-color var(--dash-ease); }
 .dmenu-btn:hover, .dmenu-btn[aria-expanded="true"] { border-color: var(--dash-accent); color: var(--dash-accent-text); }
 .dmenu-btn:focus-visible { outline: 2px solid var(--dash-accent); outline-offset: 1px; }
-.dmenu-list { position: absolute; right: 0; bottom: calc(100% + 6px); z-index: 50; min-width: 220px; padding: 6px; background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: var(--dash-radius-sm); box-shadow: var(--dash-shadow-pop); }
+.dmenu-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: var(--z-dropdown); min-width: 220px; padding: 6px; background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: var(--dash-radius-sm); box-shadow: var(--dash-shadow-pop); }
 .dmenu-list[hidden] { display: none; }
-.dmenu-list.is-below { bottom: auto; top: calc(100% + 6px); }
 .dmenu-list a, .dmenu-list button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 6px; background: none; color: var(--dash-text); font: inherit; font-size: 14px; text-align: left; text-decoration: none; cursor: pointer; }
 .dmenu-list a:hover, .dmenu-list button:hover, .dmenu-list a:focus-visible, .dmenu-list button:focus-visible { background: var(--dash-hover); outline-offset: -3px; }
 .dmenu-list form { margin: 0; }
@@ -284,7 +283,7 @@
 .theme-mini-perso i { background: var(--dash-border); }
 
 /* ---------- Notifications (toasts) ---------- */
-.dash-toasts { position: fixed; right: var(--s4, 16px); bottom: var(--s4, 16px); z-index: 90; display: grid; gap: 8px; width: min(380px, calc(100vw - 32px)); }
+.dash-toasts { position: fixed; right: var(--s4, 16px); bottom: var(--s4, 16px); z-index: var(--z-toast); display: grid; gap: 8px; width: min(380px, calc(100vw - 32px)); }
 .dash-toast { display: flex; align-items: flex-start; gap: 10px; padding: 12px 12px 12px 14px; border: 1px solid var(--dash-border, #e2e8f0); border-left: 4px solid var(--dash-success, #15803d); border-radius: 10px; background: var(--dash-card, #fff); color: var(--dash-text, #102a3a); font-size: 14px; box-shadow: var(--dash-shadow-pop, 0 12px 32px rgba(15, 30, 45, 0.16)); animation: dash-toast-in 200ms ease; transition: opacity 250ms ease, transform 250ms ease; }
 .dash-toast > .icon { margin-top: 1px; color: var(--dash-success, #15803d); }
 .dash-toast > span { flex: 1; }

@@ -71,6 +71,7 @@
   function closeDropdown(d, returnFocus) {
     var btn = d.querySelector("[aria-haspopup]"), menu = d.querySelector("[role=menu]");
     if (!menu || menu.hidden) return;
+    if (window.kbFloat) window.kbFloat.close(menu);
     menu.hidden = true; btn.setAttribute("aria-expanded", "false");
     if (returnFocus) btn.focus();
   }
@@ -81,8 +82,11 @@
     btn.addEventListener("click", function () {
       var open = menu.hidden;
       dropdowns.forEach(function (o) { if (o !== d) closeDropdown(o, false); });
-      menu.hidden = !open; btn.setAttribute("aria-expanded", open ? "true" : "false");
-      if (open) { var first = items()[0]; if (first) first.focus(); }
+      if (!open) { closeDropdown(d, false); return; }
+      menu.hidden = false; btn.setAttribute("aria-expanded", "true");
+      // Calque flottant : la ligne, la carte ou le tableau ne changent jamais de taille
+      if (window.kbFloat) window.kbFloat.open(btn, menu, { onClose: function () { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); } });
+      var first = items()[0]; if (first) first.focus();
     });
     d.addEventListener("keydown", function (e) {
       if (e.key === "Escape") { closeDropdown(d, true); return; }

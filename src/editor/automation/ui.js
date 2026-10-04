@@ -184,21 +184,16 @@ export function openStepMenu(button, items, label) {
     return b;
   });
   document.body.appendChild(menu);
-  // Sous le bouton (au-dessus s'il manque de place), toujours dans l'écran ; suit le bouton si la page défile
-  const place = () => {
-    const r = button.getBoundingClientRect();
-    const w = menu.offsetWidth, h = menu.offsetHeight;
-    const left = Math.min(Math.max(8, r.right - w), window.innerWidth - w - 8);
-    const top = r.bottom + 6 + h > window.innerHeight - 8 ? Math.max(8, r.top - h - 6) : r.bottom + 6;
-    menu.style.position = "fixed"; menu.style.left = `${left}px`; menu.style.top = `${top}px`; menu.style.right = "auto";
-  };
-  place();
+  // Calque flottant commun (public/js/floating.js) : sous le bouton, au-dessus s'il manque de place, toujours dans
+  // l'écran, recalculé au défilement et au redimensionnement ; un seul menu ouvert sur toute la page
+  window.kbFloat.open(button, menu, { onClose: () => close(false) });
   button.setAttribute("aria-expanded", "true");
   const onDoc = (e) => { if (!menu.contains(e.target) && e.target !== button && !button.contains(e.target)) close(false); };
-  const onScroll = place;
   function close(refocus) {
+    if (!menu.isConnected) return;
+    window.kbFloat.close(menu);
     menu.remove(); button.setAttribute("aria-expanded", "false");
-    document.removeEventListener("pointerdown", onDoc, true); window.removeEventListener("resize", onScroll); window.removeEventListener("scroll", onScroll, true);
+    document.removeEventListener("pointerdown", onDoc, true);
     openMenu = null;
     if (refocus) button.focus();
   }
@@ -211,6 +206,6 @@ export function openStepMenu(button, items, label) {
     else if (e.key === "Tab") close(false);
     e.stopPropagation(); // jamais jusqu'aux raccourcis du canevas
   });
-  setTimeout(() => { document.addEventListener("pointerdown", onDoc, true); window.addEventListener("resize", onScroll); window.addEventListener("scroll", onScroll, true); }, 0);
+  setTimeout(() => { document.addEventListener("pointerdown", onDoc, true); }, 0);
   buttons[0].focus();
 }

@@ -51,7 +51,7 @@ html[data-sidebar="collapsed"] .mk-app { grid-template-columns: var(--mk-sidebar
 .mk-content:focus { outline: 2px solid transparent; }
 
 /* ===== Menu latéral (clair, à la Mailchimp) ===== */
-.mk-sidebar { background: var(--mk-surface); color: var(--mk-text); position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; border-right: 1px solid var(--mk-border); z-index: 40; }
+.mk-sidebar { background: var(--mk-surface); color: var(--mk-text); position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; border-right: 1px solid var(--mk-border); z-index: var(--z-sidebar); }
 .mk-sidebar-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px 10px 18px; min-height: var(--mk-topbar-h); }
 .mk-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--mk-text); min-width: 0; flex: 1 1 auto; }
 .mk-brand-mark { flex: none; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: var(--primary); color: #fff; font-weight: 800; border-radius: var(--mk-r); font-family: var(--font-display); }
@@ -101,7 +101,7 @@ html[data-sidebar="collapsed"] .mk-create-btn { padding: 8px 0; }
 html[data-sidebar="collapsed"] .mk-create-menu { left: calc(100% - 4px); right: auto; top: 4px; min-width: 240px; }
 
 /* ===== Barre du haut ===== */
-.mk-topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 12px; min-height: var(--mk-topbar-h); padding: 8px 40px; background: var(--mk-surface); border-bottom: 1px solid var(--mk-border); }
+.mk-topbar { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: 12px; min-height: var(--mk-topbar-h); padding: 8px 40px; background: var(--mk-surface); border-bottom: 1px solid var(--mk-border); }
 .mk-menu-btn { display: none; color: var(--mk-text); }
 .mk-breadcrumb { flex: 1 1 0; min-width: 0; } /* prend l'espace restant, jamais celui des actions (menu du compte) */
 .mk-breadcrumb ol { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.88rem; color: var(--muted); }
@@ -116,7 +116,7 @@ html[data-sidebar="collapsed"] .mk-create-menu { left: calc(100% - 4px); right: 
 .mk-user { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 10px 4px 4px; background: transparent; border: 1px solid transparent; border-radius: var(--radius-pill); cursor: pointer; font: inherit; font-weight: 600; color: var(--mk-text); }
 .mk-user:hover, .mk-user[aria-expanded="true"] { background: var(--mk-hover); border-color: var(--mk-border); }
 .mk-user-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mk-menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 220px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); box-shadow: var(--mk-pop); z-index: 60; padding: 6px; display: flex; flex-direction: column; }
+.mk-menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 220px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); box-shadow: var(--mk-pop); z-index: var(--z-dropdown); padding: 6px; display: flex; flex-direction: column; }
 .mk-menu[hidden] { display: none; }
 .mk-menu a, .mk-menu button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 8px 12px; background: transparent; border: 0; text-align: left; font: inherit; font-size: 0.92rem; font-weight: 500; color: var(--mk-text); text-decoration: none; cursor: pointer; border-radius: var(--mk-r-sm); }
 .mk-menu a:hover, .mk-menu button:hover, .mk-menu [aria-selected="true"] { background: var(--mk-hover); }
@@ -139,7 +139,7 @@ html[data-sidebar="collapsed"] .mk-create-menu { left: calc(100% - 4px); right: 
 .mk-flash-ok .mk-flash-icon { color: var(--success); }
 .mk-flash-error { border-left-color: var(--danger); background: #fdf4f4; color: #8f0d15; }
 .mk-flash-error .mk-flash-icon { color: var(--danger); }
-.mk-toasts { position: fixed; right: 16px; bottom: 16px; z-index: 90; display: flex; flex-direction: column; gap: 8px; max-width: min(380px, calc(100vw - 32px)); }
+.mk-toasts { position: fixed; right: 16px; bottom: 16px; z-index: var(--z-toast); display: flex; flex-direction: column; gap: 8px; max-width: min(380px, calc(100vw - 32px)); }
 .mk-toast { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; background: var(--primary); color: #fff; border-radius: var(--mk-r); border-left: 4px solid var(--sky); box-shadow: var(--mk-pop); font-size: 0.92rem; }
 .mk-toast-ok { border-left-color: var(--success); }
 .mk-toast-error { border-left-color: var(--danger); }
@@ -309,7 +309,7 @@ html:has(.mk-dialog[open]) { overflow: hidden; } /* la page derrière ne défile
 
 /* ===== Info-bulle ===== */
 [data-tooltip] { position: relative; }
-[data-tooltip]:hover::after, [data-tooltip]:focus-visible::after { content: attr(data-tooltip); position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%); background: var(--primary); color: #fff; padding: 4px 8px; border-radius: var(--mk-r-sm); font-size: 0.8rem; font-weight: 600; white-space: nowrap; z-index: 70; pointer-events: none; }
+[data-tooltip]:hover::after, [data-tooltip]:focus-visible::after { content: attr(data-tooltip); position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%); background: var(--primary); color: #fff; padding: 4px 8px; border-radius: var(--mk-r-sm); font-size: 0.8rem; font-weight: 600; white-space: nowrap; z-index: var(--z-tooltip); pointer-events: none; }
 
 /* ===== Zone de dépôt de fichier (glisser-déposer + input classique) ===== */
 .mk-dropzone { position: relative; border: 1px dashed var(--mk-border-strong); border-radius: var(--mk-r); background: #fafcfd; padding: 32px 20px; text-align: center; transition: border-color 0.15s, background 0.15s; }
@@ -655,7 +655,7 @@ html:has(.mk-dialog[open]) { overflow: hidden; } /* la page derrière ne défile
 .mk-flow-canvas .drawflow .drawflow-node { cursor: pointer; }
 .mk-flow-canvas .drawflow .drawflow-node:active { cursor: grabbing; }
 .drawflow-node.is-editing .mk-flow-card { box-shadow: var(--ring); border-color: var(--accent); }
-.mk-step-menu { min-width: 180px; z-index: 1000; }
+.mk-step-menu { min-width: 180px; }
 
 /* Fenêtre de configuration d'une étape (structure et apparence : système commun « Fenêtres ») */
 .mk-step-dialog .field-group select, .mk-step-dialog .field-group input[type="text"], .mk-step-dialog .field-group input[type="number"] { width: 100%; }
@@ -1015,7 +1015,7 @@ details.mk-cl-item[open] > .mk-cl-summary .mk-cl-edit { visibility: hidden; }
 .mk-b-btn { position: relative; display: inline-flex; align-items: center; gap: var(--b-2); }
 .mk-b-save { min-width: 112px; justify-content: center; }
 .mk-b-more { position: relative; }
-.mk-b-more .mk-menu { right: 0; left: auto; z-index: 50; }
+.mk-b-more .mk-menu { right: 0; left: auto; }
 
 /* Bouton-icône commun (en-tête, réglages, médiathèque, structure, barre du bloc) */
 .mk-b-icon { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--b-ctl); height: var(--b-ctl); padding: 0; border: 1px solid transparent; border-radius: var(--b-r); background: transparent; color: var(--mk-text); cursor: pointer; transition: background var(--b-ease), border-color var(--b-ease), color var(--b-ease); }

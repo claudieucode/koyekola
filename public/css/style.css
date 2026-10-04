@@ -26,6 +26,15 @@
 }
 
 :root {
+  /* Superposition (z-index) : une seule échelle pour tout le site. Contenu < éléments collants < barres latérales
+     < voile < tiroirs < menus flottants < info-bulles < messages ; les boîtes de dialogue (<dialog>) passent au-dessus de tout. */
+  --z-sticky: 30;
+  --z-sidebar: 40;
+  --z-drawer: 60;
+  --z-dropdown: 80;
+  --z-tooltip: 90;
+  --z-toast: 95;
+  --z-modal: 200;
   --primary: #0b2a40;        /* bleu nuit : titres, scène du bandeau, pied de page */
   --primary-dark: #06192a;
   --accent: #0277b6;         /* bleu ciel soutenu : boutons, liens, coches (contraste AA) */
@@ -2080,3 +2089,8 @@ a.post-card-category:hover { text-decoration: underline; }
 .rich-content [data-indent="3"] { margin-left: 6em; }
 .rich-content [data-indent="4"] { margin-left: 8em; }
 @media (max-width: 600px) { .rich-content [data-indent] { margin-left: 1.25em; } }
+
+/* ---------- Calque flottant des menus « ⋮ » et déroulants (public/js/floating.js) ----------
+   Posé seulement pendant l'ouverture : le menu sort du flux (position fixe calculée depuis son bouton), au-dessus du
+   contenu, des en-têtes collants et des tiroirs. La classe d'état l'emporte sur le placement d'origine du composant. */
+.kb-floating { position: fixed !important; right: auto !important; bottom: auto !important; margin: 0 !important; z-index: var(--z-dropdown) !important; overflow-y: auto; overscroll-behavior: contain; }

@@ -738,12 +738,17 @@ function start() {
     closePopovers();
     const pop = h("div", { class: `wp-popover ${className}`, role: "dialog" }, content);
     document.body.append(pop);
-    const r = anchor.getBoundingClientRect();
-    pop.style.top = `${window.scrollY + r.bottom + 6}px`;
-    pop.style.left = `${Math.max(8, Math.min(window.scrollX + r.left, window.scrollX + window.innerWidth - pop.offsetWidth - 8))}px`;
+    // Calque flottant commun (public/js/floating.js) : sous le bouton, au-dessus s'il manque de place, toujours dans l'écran
+    const done = () => { window.kbFloat?.close(pop); pop.remove(); document.removeEventListener("mousedown", outside); };
+    if (window.kbFloat) window.kbFloat.open(anchor, pop, { align: "start", onClose: done });
+    else {
+      const r = anchor.getBoundingClientRect();
+      pop.style.top = `${window.scrollY + r.bottom + 6}px`;
+      pop.style.left = `${Math.max(8, Math.min(window.scrollX + r.left, window.scrollX + window.innerWidth - pop.offsetWidth - 8))}px`;
+    }
     setTimeout(() => document.addEventListener("mousedown", outside), 0);
-    function outside(e) { if (!pop.contains(e.target) && e.target !== anchor) { pop.remove(); document.removeEventListener("mousedown", outside); } }
-    pop.close = () => { pop.remove(); document.removeEventListener("mousedown", outside); };
+    function outside(e) { if (!pop.contains(e.target) && e.target !== anchor) done(); }
+    pop.close = done;
     return pop;
   }
   function closePopovers() { document.querySelectorAll(".wp-popover").forEach((x) => x.close ? x.close() : x.remove()); }
@@ -2782,15 +2787,23 @@ function start() {
   const dropdown = (toggleSel, menuSel) => {
     const toggle = $(toggleSel);
     const menu = $(menuSel);
-    toggle.addEventListener("click", () => { const open = menu.hidden; $$(".wp-menu").forEach((m) => { m.hidden = true; }); menu.hidden = !open; toggle.setAttribute("aria-expanded", String(open)); });
-    document.addEventListener("click", (e) => { if (!e.target.closest(".wp-dropdown")) { menu.hidden = true; toggle.setAttribute("aria-expanded", "false"); } });
+    const close = () => { window.kbFloat?.close(menu); menu.hidden = true; toggle.setAttribute("aria-expanded", "false"); };
+    toggle.addEventListener("click", () => {
+      if (!menu.hidden) return close();
+      $$(".wp-menu").forEach((m) => { if (m !== menu && !m.hidden) m.close(); });
+      menu.hidden = false; toggle.setAttribute("aria-expanded", "true");
+      window.kbFloat?.open(toggle, menu, { onClose: () => { menu.hidden = true; toggle.setAttribute("aria-expanded", "false"); } });
+    });
+    document.addEventListener("click", (e) => { if (!menu.hidden && !e.target.closest(".wp-dropdown")) close(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !menu.hidden) { close(); toggle.focus(); } });
+    menu.close = close;
     return menu;
   };
   const previewMenu = dropdown("[data-preview-toggle]", "[data-preview-menu]");
   const optionsMenu = dropdown("[data-options-toggle]", "[data-options-menu]");
   $$("[data-preview]").forEach((b) => b.addEventListener("click", async () => {
-    previewMenu.hidden = true;
-    optionsMenu.hidden = true;
+    previewMenu.close();
+    optionsMenu.close();
     const kind = b.dataset.preview;
     if (kind === "google") return revealPanel("google");
     if (kind === "social") return revealPanel("social");
@@ -2812,13 +2825,13 @@ function start() {
   $$("[data-mode]").forEach((b) => b.addEventListener("click", () => {
     const code = b.dataset.mode === "code";
     $$("[data-mode]").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
-    optionsMenu.hidden = true;
+    optionsMenu.close();
     if (code) { codeEditor.value = editor.getHTML(); codeEditor.hidden = false; $("#be-editor").hidden = true; blockToolbar.hidden = true; root.classList.add("is-code-mode"); codeEditor.focus(); }
     else { editor.commands.setContent(codeEditor.value); codeEditor.hidden = true; $("#be-editor").hidden = false; root.classList.remove("is-code-mode"); editor.commands.focus("start"); }
   }));
   $$("[data-option]").forEach((b) => b.addEventListener("click", () => {
     const opt = b.dataset.option;
-    optionsMenu.hidden = true;
+    optionsMenu.close();
     if (opt === "appearance") return openAppearance();
     if (opt === "settings") return openEditorSettings();
     if (opt === "shortcuts") return modal("Raccourcis clavier", h("dl", { class: "wp-shortcuts" }, ...[["Ctrl + S", "Enregistrer"], ["Ctrl + Z / Ctrl + Maj + Z", "Annuler / Rétablir"], ["/", "Choisir un bloc (au début d'un paragraphe vide)"], ["Ctrl + B / I / U", "Gras / italique / souligné"], ["Ctrl + K", "Avec du texte sélectionné : lien ; sinon : palette de commandes"], ["Ctrl + Maj + K", "Palette de commandes"], ["Ctrl + Maj + F", "Rechercher et remplacer dans l'article"], ["Clic droit sur un bloc", "Menu du bloc (copier, couper, coller, verrouiller…) ; Maj + clic droit : menu du navigateur"], ["Ctrl + Maj + D", "Dupliquer le bloc"], ["Maj + Alt + Z", "Supprimer le bloc"], ["Alt + ↑ / ↓", "Déplacer le bloc"], ["Tab / Maj + Tab", "Imbriquer / désimbriquer un élément de liste"], ["Ctrl + Maj + P", "Aperçu dans l'appareil par défaut"], ["Échap", "Fermer un menu"]].flatMap(([k, d]) => [h("dt", {}, h("kbd", {}, k)), h("dd", {}, d)])));
