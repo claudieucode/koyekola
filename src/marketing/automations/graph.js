@@ -140,4 +140,34 @@ function graphToSteps(graph) {
   });
 }
 
-module.exports = { stepsToGraph, graphToSteps, TRIGGER_ID, EXIT_ID };
+// ---------- Étapes à configurer (brouillon) ----------
+// Une étape insérée depuis la palette n'est pas encore réglée : rien de choisi (modèle, étiquette, liste, critères…).
+// C'est un état de BROUILLON légitime, distinct d'une donnée invalide (champ inconnu, valeur hors bornes), qui reste
+// refusée comme avant. Seules les étapes RELIÉES au déclencheur comptent : un nœud isolé n'exécute rien.
+const blank = (v) => v === undefined || v === null || (typeof v === "string" && !v.trim());
+const INCOMPLETE = {
+  email: (d) => blank(d.templateId),
+  wait: (d) => blank(d.amount) || blank(d.unit),
+  wait_for_event: (d) => blank(d.event) || blank(d.amount) || blank(d.unit),
+  condition: (d) => ((d.check || "segment") === "segment" ? !d.definition || !Array.isArray(d.definition.rules) || !d.definition.rules.length : blank(d.ref)),
+  split: (d) => blank(d.percentage),
+  update_field: (d) => blank(d.field) || d.field === "property:",
+  add_tag: (d) => blank(d.tag), remove_tag: (d) => blank(d.tag),
+  add_to_list: (d) => blank(d.listId), remove_from_list: (d) => blank(d.listId),
+};
+function reachableIds(graph) {
+  const edges = Array.isArray(graph.edges) ? graph.edges : [];
+  const seen = new Set();
+  const walk = (id) => { if (seen.has(id) || id === EXIT_ID) return; seen.add(id); for (const e of edges) if (e.source === id) walk(e.target); };
+  walk(TRIGGER_ID);
+  seen.delete(TRIGGER_ID);
+  return seen;
+}
+// Nœuds reliés au déclencheur dont le réglage obligatoire n'a pas encore été fait : [{ id, type }]
+function incompleteNodes(graph) {
+  if (!graph || !Array.isArray(graph.nodes)) return [];
+  const reach = reachableIds(graph);
+  return graph.nodes.filter((n) => reach.has(n.id) && INCOMPLETE[n.type] && INCOMPLETE[n.type](n.data || {})).map((n) => ({ id: n.id, type: n.type }));
+}
+
+module.exports = { stepsToGraph, graphToSteps, incompleteNodes, TRIGGER_ID, EXIT_ID };

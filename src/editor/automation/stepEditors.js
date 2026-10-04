@@ -149,6 +149,30 @@ function tagEditor(ctx, draft, rerender, removing) {
   return box;
 }
 
+// Section titrée de la grande interface de configuration
+function section(title, ...children) {
+  const sec = el("section", { class: "mk-step-section" });
+  sec.appendChild(el("h3", { class: "mk-step-section-title" }, title));
+  children.flat().filter(Boolean).forEach((c) => sec.appendChild(c));
+  return sec;
+}
+const readOnlyRow = (label, value, extra) => {
+  const row = el("div", { class: "mk-step-readonly" });
+  row.appendChild(el("span", { class: "mk-step-readonly-label" }, label));
+  row.appendChild(el("span", { class: "mk-step-readonly-value" }, value));
+  if (extra) row.appendChild(extra);
+  return row;
+};
+const link = (href, text) => el("a", { href, class: "mk-step-link", target: "_blank", rel: "noopener" }, text);
+// Où mènent les deux sorties d'une condition / d'un tirage, d'après les connexions du canevas
+function branchesSection(ctx, yes, no) {
+  const b = ctx.branches ? ctx.branches() : { t: null, f: null };
+  const line = (label, target) => { const li = el("li"); li.append(el("strong", {}, `${label} → `), document.createTextNode(target || "aucune étape reliée : le contact sort du scénario")); return li; };
+  const ul = el("ul", { class: "mk-step-branches" });
+  ul.append(line(yes, b.t), line(no, b.f));
+  return section("Chemins", ul, hint("Les chemins se relient sur le canevas, depuis les points de sortie du bloc."));
+}
+
 // ---------- Éditeurs (un par type d'étape) ----------
 const EDITORS = {
   trigger(ctx, draft, rerender) {
@@ -159,7 +183,7 @@ const EDITORS = {
     draft.triggers.forEach((trig, ti) => {
       if (draft.triggers.length > 1) box.appendChild(el("h3", { class: "mk-trigger-row-title" }, `Déclencheur ${ti + 1} sur ${draft.triggers.length}`));
       const custom = trig.event && !catalog[trig.event];
-      const options = custom ? [[trig.event, `Événement personnalisé : ${trig.event}`], ...opts] : opts;
+      const options = custom ? [[trig.event, `Événement personnalisé : ${trig.event}`], ...opts] : trig.event ? opts : [["", "Choisir un événement…", true], ...opts];
       box.appendChild(field("Se déclenche quand…", select(options, trig.event, (v) => { trig.event = v; trig.filter = {}; rerender(); }, { disabled: ctx.locked })));
       const filters = catalog[trig.event] ? catalog[trig.event].filters : [];
       if (filters.length) box.appendChild(field(filters[0][1], text(trig.filter && trig.filter.value, (v) => { trig.filter = v ? { key: filters[0][0], value: v } : {}; }, { disabled: ctx.locked }), "Facultatif : laissez vide pour réagir à tous."));
@@ -180,21 +204,38 @@ const EDITORS = {
     return box;
   },
   email(ctx, draft, rerender) {
-    const box = el("div");
+    const box = el("div", { class: "mk-step-sections" });
     const tpls = ctx.data.templates;
-    if (!tpls.length) box.appendChild(note(`Aucun modèle de ce type : créez d'abord un modèle « ${ctx.a.kind === "marketing" ? "marketing" : "transactionnel"} » dans Modèles.`));
     const tpl = tpls.find((t) => t.id === draft.templateId);
-    box.appendChild(field("Modèle d'e-mail", select([["", "Choisir un modèle…", true], ...tpls.map((t) => [t.id, t.name])], tpl ? tpl.id : "", (v) => { draft.templateId = parseInt(v, 10); rerender(); }, { disabled: ctx.locked }),
-      tpl ? `Objet : ${tpl.subject || "(sans objet)"}` : "L'objet, l'expéditeur et le contenu sont ceux du modèle (page Modèles)."));
-    box.appendChild(checkbox("Suivre les clics", draft.trackClicks, (v) => { draft.trackClicks = v; }, { disabled: ctx.locked }));
+    const sender = ctx.data.sender || {};
+    box.appendChild(section("Destinataire",
+      readOnlyRow("À", "Le contact qui suit ce parcours"),
+      ctx.a.kind === "marketing" ? hint("Scénario marketing : le consentement est revérifié avant chaque envoi ; un contact désinscrit sort du scénario.") : hint("Scénario transactionnel : message lié au compte du contact.")));
+    box.appendChild(section("Expéditeur",
+      readOnlyRow("De", sender.from || "Aucune adresse d'expédition enregistrée", link("/marketing/envoi", "Réglages d'envoi")),
+      sender.replyTo ? readOnlyRow("Réponse à", sender.replyTo) : null,
+      sender.provider === "console" ? note("Fournisseur « console » : rien ne sera réellement envoyé tant que les réglages d'envoi ne sont pas faits.") : null));
+    const msg = [];
+    if (!tpls.length) msg.push(note(`Aucun modèle ${ctx.a.kind === "marketing" ? "marketing" : "transactionnel"} : créez-en un dans Modèles.`));
+    msg.push(field("Modèle d'e-mail", select([["", "Choisir un modèle…", true], ...tpls.map((t) => [t.id, t.name])], tpl ? tpl.id : "", (v) => { draft.templateId = parseInt(v, 10); rerender(); }, { disabled: ctx.locked })));
+    if (tpl) msg.push(readOnlyRow("Objet", tpl.subject || "(sans objet)", link(`/marketing/modeles/${tpl.id}`, "Modifier ce modèle")));
+    else { const p = el("p", { class: "field-hint" }, "L'objet, le contenu et les variables viennent du modèle. "); p.appendChild(link("/marketing/modeles", "Ouvrir les modèles")); msg.push(p); }
+    msg.push(checkbox("Suivre les clics sur les liens", draft.trackClicks, (v) => { draft.trackClicks = v; }, { disabled: ctx.locked }));
+    box.appendChild(section("Message", msg));
+    if (tpl) {
+      const frame = el("iframe", { class: "mk-step-preview", title: `Aperçu du modèle « ${tpl.name} »`, sandbox: "", loading: "lazy", src: `/marketing/modeles/${tpl.id}/apercu` });
+      box.appendChild(section("Aperçu", frame, hint("Rendu réel du modèle avec des données d'exemple : aucun envoi.")));
+    }
     return box;
   },
   wait(ctx, draft) {
     const box = el("div", { class: "mk-step-row" });
     box.appendChild(field("Durée", number(draft.amount, (v) => { draft.amount = v; }, { disabled: ctx.locked })));
     box.appendChild(field("Unité", select(UNITS, draft.unit, (v) => { draft.unit = v; }, { disabled: ctx.locked })));
-    const wrap = el("div"); wrap.appendChild(box); wrap.appendChild(hint("Un an au plus."));
-    return wrap;
+    const sentence = el("p", { class: "mk-step-sentence", "aria-live": "polite" });
+    const sync = () => { const u = (UNITS.find((x) => x[0] === draft.unit) || [null, ""])[1]; sentence.textContent = Number.isInteger(draft.amount) && draft.amount > 0 ? `Le contact attend ${draft.amount} ${draft.amount === 1 ? u.replace(/s$/, "") : u} avant l'étape suivante.` : "Indiquez une durée."; };
+    box.addEventListener("input", sync); box.addEventListener("change", sync); sync();
+    return section("Durée", box, sentence, hint("Un an au plus. Minutes, heures ou jours (unités gérées par le moteur d'exécution)."));
   },
   wait_for_event(ctx, draft) {
     const box = el("div");
@@ -233,7 +274,7 @@ const EDITORS = {
       if (!refs.length) box.appendChild(note("Aucune étape « Envoyer un e-mail » sur le canevas : ajoutez-en une pour vérifier son ouverture ou son clic."));
       else box.appendChild(field("E-mail concerné", select([["", "Choisir un e-mail…", true], ...refs.map((r) => [r.id, `L'e-mail « ${r.label} »`])], draft.ref, (v) => { draft.ref = v; }, { disabled: ctx.locked }), "Il doit précéder cette condition dans le scénario."));
     }
-    box.appendChild(hint("Reliez ensuite la sortie « Oui » et la sortie « Non » aux étapes voulues sur le canevas."));
+    box.appendChild(branchesSection(ctx, "Si oui", "Si non"));
     return box;
   },
   split(ctx, draft) {
@@ -243,12 +284,13 @@ const EDITORS = {
     box.appendChild(field("Branche A (%)", number(draft.percentage, (v) => { draft.percentage = v; sync(); }, { min: 1, max: 99, disabled: ctx.locked })));
     sync(); box.appendChild(rest);
     box.appendChild(hint("Tirage au sort à chaque passage, sans lien avec les données du contact (utile pour un test A/B du parcours)."));
+    box.appendChild(branchesSection(ctx, "Chemin A", "Chemin B"));
     return box;
   },
   update_field(ctx, draft, rerender) {
     const box = el("div");
     const isProp = typeof draft.field === "string" && draft.field.indexOf("property:") === 0;
-    box.appendChild(field("Champ à modifier", select([...FIELD_OPTIONS, ["property", "Propriété personnalisée…"]], isProp ? "property" : draft.field, (v) => {
+    box.appendChild(field("Champ à modifier", select([["", "Choisir un champ…", true], ...FIELD_OPTIONS, ["property", "Propriété personnalisée…"]], isProp ? "property" : draft.field, (v) => {
       draft.field = v === "property" ? "property:" : v; rerender();
     }, { disabled: ctx.locked })));
     if (isProp) box.appendChild(field("Nom de la propriété", text(draft.field.slice(9), (v) => { draft.field = `property:${v.trim()}`; }, { maxlength: 40, placeholder: "niveau_client", disabled: ctx.locked }), "Clé de la propriété (page Propriétés) : minuscules, chiffres et « _ »."));

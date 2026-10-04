@@ -65,22 +65,53 @@ export function confirmAction({ title, text: body, ok }) {
   });
 }
 
-// ---------- Boîte de dialogue d'une étape ----------
-// Modifie un BROUILLON : rien n'est appliqué tant que « Enregistrer » n'a pas réussi. Annuler, ×, Échap et clic sur
-// le fond ferment sans rien changer (avec confirmation si le brouillon a été modifié). Le focus est piégé par
-// <dialog>.showModal() et revient à l'élément d'origine à la fermeture.
-export function openStepDialog({ title, iconHtml, body, wide = false, readOnly = false, saveLabel = "Enregistrer", isDirty = () => false, onSave, onClose = () => {} }) {
+// ---------- Modifications non enregistrées : continuer, abandonner ou enregistrer ----------
+// Renvoie "continue" | "discard" | "save". Échap = continuer (rien n'est perdu).
+function unsavedChoice() {
+  return new Promise((resolve) => {
+    const titleId = nextId();
+    const d = el("dialog", { class: "mk-dialog mk-unsaved-dialog", "aria-labelledby": titleId, role: "alertdialog" });
+    const body = el("div", { class: "mk-dialog-body" });
+    body.appendChild(el("h2", { id: titleId }, "Vous avez des modifications non enregistrées."));
+    body.appendChild(el("p", {}, "Enregistrez-les pour les appliquer à l'étape, ou abandonnez-les pour revenir aux réglages d'avant."));
+    const actions = el("div", { class: "mk-dialog-actions" });
+    const keep = el("button", { type: "button", class: "btn btn-outline btn-sm" }, "Continuer la modification");
+    const discard = el("button", { type: "button", class: "btn btn-outline btn-sm mk-btn-danger-outline" }, "Abandonner");
+    const save = el("button", { type: "button", class: "btn btn-primary btn-sm" }, "Enregistrer");
+    actions.append(keep, discard, save);
+    d.append(body, actions);
+    document.body.appendChild(d);
+    const done = (v) => { d.close(); d.remove(); resolve(v); };
+    keep.addEventListener("click", () => done("continue"));
+    discard.addEventListener("click", () => done("discard"));
+    save.addEventListener("click", () => done("save"));
+    d.addEventListener("cancel", (e) => { e.preventDefault(); done("continue"); });
+    d.addEventListener("keydown", (e) => e.stopPropagation());
+    d.showModal();
+    keep.focus();
+  });
+}
+
+// ---------- Grande interface de configuration d'une étape ----------
+// Modifie un BROUILLON : rien n'est appliqué tant que « Enregistrer » n'a pas réussi (étape mise à jour ET scénario
+// enregistré sur le serveur). Fermer (×, Annuler, Échap, fond) avec des modifications → continuer / abandonner /
+// enregistrer. Un échec d'enregistrement garde la fenêtre ouverte avec le message, pour réessayer. Colonne de gauche
+// (aside) : identité de l'étape et résumé tenu à jour pendant la saisie (refreshAside). Focus piégé par showModal().
+export function openStepDialog({ title, iconHtml, body, aside = null, wide = false, readOnly = false, saveLabel = "Enregistrer", isDirty = () => false, onSave, onClose = () => {}, onChange = () => {} }) {
   const titleId = nextId();
-  const dlg = el("dialog", { class: `mk-dialog mk-modal mk-step-dialog${wide ? " mk-modal-wide" : ""}`, "aria-labelledby": titleId });
+  const dlg = el("dialog", { class: `mk-dialog mk-step-dialog${wide ? " is-wide" : ""}${aside ? " has-aside" : ""}`, "aria-labelledby": titleId });
   const head = el("div", { class: "mk-step-dialog-head" });
   if (iconHtml) { const ic = el("span", { class: "mk-step-dialog-icon", "aria-hidden": "true" }); ic.innerHTML = iconHtml; head.appendChild(ic); } // SVG du registre fixe icons.js
   head.appendChild(el("h2", { id: titleId }, title));
-  const x = el("button", { type: "button", class: "mk-step-dialog-close", "aria-label": "Fermer" }, "×");
+  const x = el("button", { type: "button", class: "mk-step-dialog-close", "aria-label": "Fermer la configuration" }, "×");
   head.appendChild(x);
   const errorBox = el("div", { class: "form-error mk-step-dialog-error", role: "alert", hidden: true });
-  const content = el("div", { class: "mk-dialog-body" });
-  content.appendChild(errorBox);
-  content.appendChild(body);
+  const main = el("div", { class: "mk-step-main" });
+  main.appendChild(errorBox);
+  main.appendChild(body);
+  const content = el("div", { class: "mk-dialog-body mk-step-dialog-body" });
+  if (aside) content.appendChild(aside);
+  content.appendChild(main);
   const actions = el("div", { class: "mk-dialog-actions" });
   const cancel = el("button", { type: "button", class: "btn btn-outline btn-sm" }, readOnly ? "Fermer" : "Annuler");
   actions.appendChild(cancel);
@@ -91,6 +122,10 @@ export function openStepDialog({ title, iconHtml, body, wide = false, readOnly =
   dlg.appendChild(head); dlg.appendChild(form);
   // Les raccourcis du canevas (Suppr…) écoutent le document : une frappe dans la fenêtre ne doit jamais les atteindre
   dlg.addEventListener("keydown", (e) => { if (e.key !== "Escape") e.stopPropagation(); });
+  // Résumé de la colonne de gauche mis à jour pendant la saisie (après les gestionnaires des champs)
+  form.addEventListener("input", () => onChange());
+  form.addEventListener("change", () => onChange());
+  form.addEventListener("click", (e) => { if (e.target.closest("button[type=button]")) setTimeout(onChange, 0); });
   document.body.appendChild(dlg);
   const previous = document.activeElement;
   let busy = false;
@@ -105,11 +140,21 @@ export function openStepDialog({ title, iconHtml, body, wide = false, readOnly =
     errorBox.scrollIntoView({ block: "nearest" });
   };
   const finish = (saved) => { dlg.close(); dlg.remove(); onClose(Boolean(saved)); if (previous && previous.isConnected && previous.focus) previous.focus(); }; // saved : fermée par « Enregistrer »
+  async function submit() {
+    if (readOnly || busy) return;
+    busy = true; save.disabled = true; cancel.disabled = true; save.textContent = "Enregistrement…";
+    let result;
+    try { result = await onSave(); } catch (err) { console.error("[automatisation] enregistrement de l'étape", err); result = { errors: ["Impossible d'enregistrer les modifications. Réessayez."] }; }
+    busy = false; save.disabled = false; cancel.disabled = false; save.textContent = saveLabel;
+    if (result && result.errors && result.errors.length) { showErrors(result.errors); return; }
+    finish(true);
+  }
   const attemptClose = async () => {
     if (busy) return;
     if (!readOnly && isDirty()) {
-      const ok = await confirmAction({ title: "Abandonner les modifications ?", text: "Les réglages modifiés dans cette fenêtre ne seront pas appliqués à l'étape.", ok: "Abandonner" });
-      if (!ok) return;
+      const choice = await unsavedChoice();
+      if (choice === "continue") return;
+      if (choice === "save") { submit(); return; }
     }
     finish(false);
   };
@@ -117,16 +162,7 @@ export function openStepDialog({ title, iconHtml, body, wide = false, readOnly =
   x.addEventListener("click", attemptClose);
   dlg.addEventListener("cancel", (e) => { e.preventDefault(); attemptClose(); });
   dlg.addEventListener("click", (e) => { if (e.target === dlg) attemptClose(); }); // clic sur le fond (règle de shell.js)
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (readOnly || busy) return;
-    busy = true; save.disabled = true; cancel.disabled = true; save.textContent = "Enregistrement…";
-    let result;
-    try { result = await onSave(); } catch (err) { result = { errors: [err.message || "Enregistrement impossible."] }; }
-    busy = false; save.disabled = false; cancel.disabled = false; save.textContent = saveLabel;
-    if (result && result.errors && result.errors.length) { showErrors(result.errors); return; }
-    finish(true);
-  });
+  form.addEventListener("submit", (e) => { e.preventDefault(); submit(); });
   dlg.showModal();
   const first = body.querySelector("input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])");
   (first || cancel).focus();
@@ -141,8 +177,8 @@ export function openStepMenu(button, items, label) {
   closeStepMenu();
   const menu = el("div", { class: "mk-menu mk-step-menu", role: "menu", "aria-label": label });
   const buttons = items.map((it) => {
-    const b = el("button", { type: "button", role: "menuitem", class: it.danger ? "mk-menu-danger" : undefined, tabindex: "-1" }, it.label);
-    b.addEventListener("click", () => { close(false); it.run(); });
+    const b = el("button", { type: "button", role: "menuitem", class: it.danger ? "mk-menu-danger" : undefined, tabindex: "-1", "aria-disabled": it.disabled ? "true" : undefined }, it.label);
+    b.addEventListener("click", () => { if (it.disabled) return; close(false); it.run(); });
     menu.appendChild(b);
     return b;
   });

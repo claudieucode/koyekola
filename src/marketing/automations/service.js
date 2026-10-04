@@ -11,7 +11,8 @@ const { parseKey } = require("../security/crypto");
 const { getSendingConfig, getSecrets } = require("../sending/config");
 const { trackedLinks, snapshotOf } = require("../sending/dispatch");
 const { TRIGGERS } = require("./catalog");
-const { validateSteps } = require("./steps");
+const { validateSteps, STEP_LABELS } = require("./steps");
+const { incompleteNodes } = require("./graph");
 const { enqueueRun } = require("./jobs");
 const { WORKER_DETAIL, workerHuman } = require("../workerNotice");
 
@@ -148,6 +149,11 @@ function automationPreflight(ctx, id, { workerOn = false, smtpAvailable = Boolea
   const a = requireAutomation(ctx, id);
   const errors = [];
   const warnings = [];
+  // Schéma enregistré en brouillon avec des étapes pas encore réglées : activation impossible tant qu'il en reste
+  if (a.canvas) {
+    const todo = incompleteNodes(a.canvas);
+    if (todo.length) errors.push({ code: "incomplete", nodes: todo.map((n) => n.id), message: `${todo.length} étape${todo.length > 1 ? "s" : ""} du schéma ${todo.length > 1 ? "sont" : "est"} à configurer (${todo.map((n) => STEP_LABELS[n.type] || n.type).join(", ")}) : cliquez sur chacune pour la régler.` });
+  }
   if (!a.steps.length) errors.push({ code: "no_steps", message: "Le scénario n'a aucune étape." });
   // « step » (position dans `a.steps`) et « templateId » accompagnent chaque erreur d'e-mail : l'éditeur graphique
   // s'en sert pour sélectionner directement le nœud fautif sur le canevas plutôt que de laisser chercher à l'œil.

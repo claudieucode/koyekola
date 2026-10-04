@@ -6,6 +6,7 @@ const segments = require("../segments");
 const { fieldCatalog } = require("../segments/catalog");
 const audience = require("../audience");
 const { listTags } = require("../audience/tags");
+const sendingConfig = require("../sending/config");
 const bridge = require("../bridge/events");
 const { MarketingError } = require("../errors");
 const { attempt, need, safeJson } = require("./kit");
@@ -54,6 +55,8 @@ module.exports = ({ db }) => {
       canvas: a.canvas || auto.stepsToGraph({ steps: a.steps, triggers: a.triggers, triggerEvent: a.trigger_event, triggerFilter: a.triggerFilter }),
       templates: templates.listTemplates(ctx).filter((t) => t.kind === a.kind).map((t) => ({ id: t.id, name: t.name, kind: t.kind, subject: t.subject })),
       lists: audience.listLists(ctx).map((l) => ({ id: l.id, name: l.name })),
+      // Expéditeur réel (réglages d'envoi), affiché dans la configuration d'une étape « Envoyer un e-mail »
+      sender: (({ provider, from, replyTo }) => ({ provider, from, replyTo }))(sendingConfig.getSendingConfig(ctx)),
       // Étiquettes existantes : proposées dans « Ajouter / Retirer une étiquette » (une nouvelle reste possible à l'ajout)
       tags: listTags(ctx).map((t) => t.name),
       segments: segments.listSegments(ctx).map((s) => ({ id: s.id, name: s.name, definition: s.definition })),
@@ -104,10 +107,14 @@ module.exports = ({ db }) => {
       // Le canevas (nœuds + arêtes) est la source à partir de cette phase : les étapes exécutées par le moteur
       // en sont DÉRIVÉES ici, jamais l'inverse — engine.js continue de ne lire que `steps`, inchangé.
       const steps = b.canvas ? auto.graphToSteps(b.canvas) : b.steps;
+      // Brouillon : des étapes insérées mais pas encore réglées. Le schéma (et le nom, les déclencheurs) est
+      // enregistré, les étapes exécutées restent celles d'avant ; l'activation est bloquée par le contrôle avant
+      // activation tant qu'il en reste (automationPreflight). Une donnée INVALIDE reste refusée (400) comme avant.
+      const incomplete = b.canvas ? auto.incompleteNodes(b.canvas) : [];
       // `triggers` (liste complète, jusqu'à 3) prime s'il est fourni par le nœud déclencheur du canevas ;
       // triggerEvent/triggerFilter restent acceptés pour compatibilité (ne touchent alors que le 1er déclencheur).
-      auto.updateAutomation(req.mk.ctx, id, { name: b.name, triggers: b.triggers, triggerEvent: b.triggerEvent, triggerFilter: b.triggerFilter, steps, canvas: b.canvas });
-      res.json({ ok: true });
+      auto.updateAutomation(req.mk.ctx, id, { name: b.name, triggers: b.triggers, triggerEvent: b.triggerEvent, triggerFilter: b.triggerFilter, steps: incomplete.length ? undefined : steps, canvas: b.canvas });
+      res.json({ ok: true, incomplete });
     } catch (error) {
       if (error instanceof MarketingError) return res.status(error.code === "not_found" ? 404 : 400).json({ error: error.message });
       next(error);

@@ -2,15 +2,15 @@
 // infobulles), tiroir sur petit écran, ajout par clic ou par glisser-déposer. Elle ne crée rien elle-même : elle
 // appelle onAdd(type) — l'éditeur (automation-flow.js) crée l'étape avec son propre système de nœuds.
 import { el } from "./ui";
+import { CATEGORIES, insertable } from "./registry";
 
-// Mêmes types que le moteur (steps.js) ; mots-clés : synonymes acceptés par la recherche
-export const CATEGORIES = [
-  { key: "communication", label: "Communication", items: [["email", "Envoyer un e-mail", "Un modèle de votre bibliothèque", "email mail courriel message envoi"]] },
-  { key: "temps", label: "Temps", items: [["wait", "Attendre", "Une durée fixe", "attente delai pause duree"], ["wait_for_event", "Attendre jusqu'à", "Un événement, avec délai maximal", "attente evenement delai"]] },
-  { key: "logique", label: "Logique", items: [["condition", "Condition", "Deux chemins : oui / non", "si segment branche ouvert clic"], ["split", "Tirage aléatoire", "Deux chemins : A / B", "test ab aleatoire hasard pourcentage branche"]] },
-  { key: "contact", label: "Contact", items: [["update_field", "Mettre à jour un champ", "Prénom, société, propriété…", "champ modifier propriete contact"], ["add_tag", "Ajouter une étiquette", "Étiquette existante ou nouvelle", "tag etiquette"], ["remove_tag", "Retirer une étiquette", "Retire une étiquette du contact", "tag etiquette enlever supprimer"], ["add_to_list", "Ajouter à une liste", "Inscrit le contact à une liste", "liste abonnement"], ["remove_from_list", "Retirer d'une liste", "Désinscrit le contact d'une liste", "liste enlever desabonnement"]] },
-  { key: "fin", label: "Fin", items: [["end", "Fin", "Le passage du contact s'arrête", "fin terminer stop sortie"]] },
-];
+// Catégories et actions : tirées du registre central (registry.js), jamais redéfinies ici
+const groupsFromRegistry = () => CATEGORIES.map(([key, label]) => ({
+  key, label,
+  items: key === "trigger"
+    ? [{ type: "__trigger", label: "Ajouter un déclencheur", description: "Jusqu'à 3 événements qui démarrent le scénario", keywords: "declencheur evenement demarrer", icon: "zap", trigger: true }]
+    : insertable().filter((x) => x.category === key),
+})).filter((g) => g.items.length);
 export const DRAG_TYPE = "application/x-kolakisa-step";
 const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
 const store = {
@@ -18,7 +18,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* stockage indisponible : préférence non gardée */ } },
 };
 
-export function buildPalette({ root, workspace, iconHtml, onAdd, openButton }) {
+export function buildPalette({ root, workspace, iconHtml, onAdd, onAddTrigger, openButton }) {
   const prefs = store.get("kolakisa-flow-palette") || {};
   const closed = new Set(prefs.closed || []);
   const save = () => store.set("kolakisa-flow-palette", { collapsed: workspace.classList.contains("is-palette-collapsed"), closed: [...closed] });
@@ -41,10 +41,10 @@ export function buildPalette({ root, workspace, iconHtml, onAdd, openButton }) {
   const target = el("p", { class: "mk-pal-target", "aria-live": "polite" });
   const groups = el("div", { class: "mk-pal-groups" });
   const empty = el("p", { class: "mk-pal-empty", role: "status", hidden: true }, "Aucune action trouvée");
-  const help = el("p", { class: "mk-pal-help" }, "Cliquez pour ajouter, ou glissez une action sur le canevas.");
+  const help = el("p", { class: "mk-pal-help" }, "Cliquez pour insérer, ou glissez une action sur le canevas. Cliquez ensuite sur l'étape pour la configurer.");
 
   const allButtons = [];
-  const groupEls = CATEGORIES.map((cat) => {
+  const groupEls = groupsFromRegistry().map((cat) => {
     const listId = `au-pal-${cat.key}`;
     const section = el("section", { class: "mk-pal-group", "data-group": cat.key });
     const toggle = el("button", { type: "button", class: "mk-pal-cat", "aria-expanded": String(!closed.has(cat.key)), "aria-controls": listId });
@@ -59,21 +59,24 @@ export function buildPalette({ root, workspace, iconHtml, onAdd, openButton }) {
       if (open) closed.delete(cat.key); else closed.add(cat.key);
       save();
     });
-    const items = cat.items.map(([type, label, desc, keywords]) => {
+    const items = cat.items.map((it) => {
+      const { type, label, description: desc, keywords = "" } = it;
       const li = el("li");
-      const b = el("button", { type: "button", class: `mk-pal-item mk-pal-item--${type}`, draggable: "true", "data-step-type": type, "data-tip": label, "aria-label": `Ajouter l'étape « ${label} »` });
-      const ic = el("span", { class: "mk-pal-icon", "aria-hidden": "true" }); ic.innerHTML = iconHtml(type, 18);
+      const b = it.trigger
+        ? el("button", { type: "button", class: "mk-pal-item mk-pal-item--trigger", "data-add-trigger": "", "data-tip": label, "aria-label": "Ajouter un déclencheur (ouvre la configuration du déclencheur)" })
+        : el("button", { type: "button", class: `mk-pal-item mk-pal-item--${type}${it.tone ? ` is-${it.tone}` : ""}`, draggable: "true", "data-step-type": type, "data-tip": label, "aria-label": `Insérer l'étape « ${label} »` });
+      const ic = el("span", { class: "mk-pal-icon", "aria-hidden": "true" }); ic.innerHTML = iconHtml(it.icon, 18);
       const txt = el("span", { class: "mk-pal-text" });
       txt.append(el("span", { class: "mk-pal-name" }, label), el("span", { class: "mk-pal-desc" }, desc));
       b.append(ic, txt);
-      b.addEventListener("click", () => { onAdd(type); if (workspace.classList.contains("is-palette-open")) setDrawer(false); });
-      b.addEventListener("dragstart", (e) => {
+      b.addEventListener("click", () => { if (it.trigger) onAddTrigger(); else onAdd(type); if (workspace.classList.contains("is-palette-open")) setDrawer(false); });
+      if (!it.trigger) b.addEventListener("dragstart", (e) => {
         e.dataTransfer.setData(DRAG_TYPE, type);
         e.dataTransfer.setData("text/plain", label);
         e.dataTransfer.effectAllowed = "copy";
         b.classList.add("is-dragging");
       });
-      b.addEventListener("dragend", () => { b.classList.remove("is-dragging"); });
+      if (!it.trigger) b.addEventListener("dragend", () => { b.classList.remove("is-dragging"); });
       li.appendChild(b);
       list.appendChild(li);
       allButtons.push(b);

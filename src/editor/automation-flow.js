@@ -1,14 +1,16 @@
 // Éditeur visuel d'un scénario d'automatisation (canevas de nœuds/arêtes, via Drawflow).
 // Le canevas est une simple VUE d'édition : à l'enregistrement, il est envoyé tel quel comme `canvas`
 // et le serveur en dérive les `steps` exécutés par le moteur (src/marketing/automations/graph.js).
-// Réglage d'une étape : clic sur le bloc (ou « ⋯ » → Modifier) → boîte de dialogue (./automation/stepEditors.js) qui
-// modifie un brouillon ; « Enregistrer » l'applique au nœud puis enregistre aussitôt le scénario sur le serveur.
+// Règle d'usage : palette = INSÉRER (aucune fenêtre) ; clic sur une étape (ou « ⋯ » → Configurer) = CONFIGURER, dans
+// la grande interface (./automation/ui.js + stepEditors.js) qui modifie un brouillon ; « Enregistrer » l'applique au
+// nœud puis enregistre aussitôt le scénario. Icônes, libellés, résumés : registre central ./automation/registry.js.
 // Aucune donnée n'est insérée comme HTML : uniquement textContent / value, jamais innerHTML sur du texte saisi.
 import Drawflow from "drawflow";
 import { icon } from "../utils/icons";
 import { STEP_LABELS } from "../utils/stepLabels";
 import { openStepDialog, openStepMenu, closeStepMenu, confirmAction } from "./automation/ui";
-import { UNITS, CHECKS, FIELD_LABELS, hasEditor, buildEditor, validate, clean } from "./automation/stepEditors";
+import { buildEditor, validate, clean } from "./automation/stepEditors";
+import { action, configurable, isConfigured, summary } from "./automation/registry";
 import { buildPalette, DRAG_TYPE } from "./automation/palette";
 
 (function () {
@@ -23,26 +25,11 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
   var NODE_W = 220, NODE_H = 96;
 
   var LABELS = STEP_LABELS;
-  // Icônes du design system du site (src/utils/icons.js), les mêmes que partout ailleurs — jamais d'emoji.
-  var ICON_NAMES = { trigger: "zap", email: "mail", wait: "clock", wait_for_event: "bell", condition: "gitBranch", split: "shuffle", update_field: "sliders", add_tag: "tag", remove_tag: "tag", add_to_list: "list", remove_from_list: "list", end: "stopCircle" };
-  // Titre de la boîte de dialogue de chaque type d'étape
-  var DIALOG_TITLES = { trigger: "Modifier le déclencheur", email: "Modifier l'e-mail", wait: "Modifier l'attente", wait_for_event: "Modifier « Attendre jusqu'à »", condition: "Modifier la condition", split: "Modifier le tirage aléatoire", update_field: "Mettre à jour un champ", add_tag: "Ajouter une étiquette", remove_tag: "Retirer une étiquette", add_to_list: "Ajouter à une liste", remove_from_list: "Retirer d'une liste" };
   // Types d'étape à DEUX sorties — mêmes noms de handle que graph.js#BRANCH_FIELDS côté serveur (tHandle/fHandle) :
   // s'ils divergent, une condition/un split se traduit vers la mauvaise branche sans qu'aucune erreur ne le signale.
   var BRANCH = { condition: { t: "onTrue", f: "onFalse", tHandle: "true", fHandle: "false", tLabel: "Oui", fLabel: "Non" }, split: { t: "onA", f: "onB", tHandle: "a", fHandle: "b", tLabel: "A", fLabel: "B" } };
-  var MAKE = {
-    email: function () { return { templateId: data.templates.length ? data.templates[0].id : null, trackClicks: a.kind === "marketing" }; },
-    wait: function () { return { amount: 1, unit: "days" }; },
-    wait_for_event: function () { return { event: "", amount: 7, unit: "days" }; },
-    condition: function () { var s = data.segments[0]; return { check: "segment", definition: s ? JSON.parse(JSON.stringify(s.definition)) : null, _segmentId: s ? s.id : null }; },
-    split: function () { return { percentage: 50 }; },
-    update_field: function () { return { field: "first_name", value: "" }; },
-    add_tag: function () { return { tag: "" }; },
-    remove_tag: function () { return { tag: "" }; },
-    add_to_list: function () { return { listId: data.lists.length ? data.lists[0].id : null }; },
-    remove_from_list: function () { return { listId: data.lists.length ? data.lists[0].id : null }; },
-    end: function () { return {}; },
-  };
+  var hasEditor = configurable;
+  var iconOf = function (type) { return action(type).icon; }; // icône du registre (design system du site, jamais d'emoji)
 
   var $ = function (id) { return document.getElementById(id); };
   var container = $("au-flow");
@@ -73,7 +60,7 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
   editor.reroute = false;
   editor.editor_mode = locked ? "view" : "edit";
   editor.zoom_max = 1.6;
-  editor.zoom_min = 0.4;
+  editor.zoom_min = 0.2;
   editor.zoom_value = 0.1;
   editor.start();
   // Drawflow reconnaît le fond du canevas à sa PREMIÈRE classe (« parent-drawflow ») : sans cela, un clic sur le fond
@@ -86,57 +73,38 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
   var lastTriggerData = null; // conservé pour pouvoir recréer le déclencheur si jamais supprimé
 
   function nodeHtml(type) {
+    var tone = action(type).tone;
     return (
-      '<div class="mk-flow-card mk-flow-card--' + type + '">' +
-      '<div class="mk-flow-card-icon" aria-hidden="true">' + icon(ICON_NAMES[type] || "help", { size: 18 }) + "</div>" +
-      '<div class="mk-flow-card-body"><div class="mk-flow-card-title"></div><div class="mk-flow-card-sub"></div></div>' +
-      (locked && (type === "end") ? "" : '<button type="button" class="mk-flow-more" aria-haspopup="menu" aria-expanded="false">' + icon("moreHorizontal", { size: 18 }) + "</button>") +
+      '<div class="mk-flow-card mk-flow-card--' + type + (tone ? " is-" + tone : "") + '">' +
+      '<div class="mk-flow-card-head"><span class="mk-flow-card-icon" aria-hidden="true">' + icon(iconOf(type) || "help", { size: 18 }) + "</span>" +
+      '<span class="mk-flow-card-title"></span>' +
+      (locked && type === "end" ? "" : '<button type="button" class="mk-flow-more" aria-haspopup="menu" aria-expanded="false">' + icon("moreHorizontal", { size: 18 }) + "</button>") +
+      "</div>" +
+      '<div class="mk-flow-card-sub"></div>' +
       (BRANCH[type] ? '<div class="mk-flow-card-ports"><span class="mk-flow-port-label mk-flow-port-yes">' + BRANCH[type].tLabel + '</span><span class="mk-flow-port-label mk-flow-port-no">' + BRANCH[type].fLabel + "</span></div>" : "") +
       "</div>"
     );
   }
 
-  function subtitleFor(type, d) {
-    if (type === "trigger") {
-      // ATTENTION : `data.triggers` (fermeture externe) est le CATALOGUE global {clé: {label,filters}} ; `d.triggers`
-      // (ce nœud) est la liste — 1 à 3 — des déclencheurs CONFIGURÉS ici. Même nom, portées différentes.
-      var t = data.triggers[d.triggerEvent];
-      var base = (t ? t.label : d.triggerEvent) + (d.triggerFilter && d.triggerFilter.value ? " · " + d.triggerFilter.value : "");
-      var n = Array.isArray(d.triggers) ? d.triggers.length : 1;
-      return base + (n > 1 ? " (+ " + (n - 1) + " autre" + (n > 2 ? "s" : "") + ")" : "");
-    }
-    if (type === "email") { var tpl = data.templates.filter(function (x) { return x.id === d.templateId; })[0]; return tpl ? tpl.name : "Aucun modèle sélectionné"; }
-    if (type === "wait") return (d.amount == null ? "?" : d.amount) + " " + (UNITS.filter(function (u) { return u[0] === d.unit; })[0] || [null, d.unit])[1];
-    if (type === "wait_for_event") return (d.event || "Événement non défini") + " (" + (d.amount == null ? "?" : d.amount) + " " + (UNITS.filter(function (u) { return u[0] === d.unit; })[0] || [null, d.unit])[1] + " au plus)";
-    if (type === "split") return (d.percentage == null ? "?" : d.percentage) + " % vers A";
-    if (type === "update_field") {
-      var label = d.field && d.field.indexOf("property:") === 0 ? "Propriété « " + d.field.slice(9) + " »" : FIELD_LABELS[d.field] || d.field || "Champ non défini";
-      return label + " = " + (d.value ? "« " + d.value + " »" : "(vide)");
-    }
-    if (type === "condition") {
-      if (d.check === "segment") {
-        if (d._segmentId != null) { var seg = data.segments.filter(function (s) { return s.id === d._segmentId; })[0]; return "Segment : " + (seg ? seg.name : "—"); }
-        var n = d.definition && Array.isArray(d.definition.rules) ? d.definition.rules.length : 0;
-        return n ? n + " critère" + (n > 1 ? "s" : "") + " (" + (d.definition.op === "or" ? "OU" : "ET") + ")" : "Condition à construire";
-      }
-      return "Le contact " + (CHECKS.filter(function (c) { return c[0] === d.check; })[0] || [null, d.check])[1];
-    }
-    if (type === "add_tag" || type === "remove_tag") return d.tag ? "« " + d.tag + " »" : "Étiquette non définie";
-    if (type === "add_to_list" || type === "remove_from_list") { var l = data.lists.filter(function (x) { return x.id === d.listId; })[0]; return l ? l.name : "Aucune liste sélectionnée"; }
-    if (type === "end") return "Fin du passage";
-    return "";
-  }
+  // Contexte des règles du registre pour un nœud (une condition « a ouvert » vise un AUTRE e-mail du canevas)
+  function ctxFor(myId) { return { data: data, a: a, locked: locked, emailNodes: function () { return emailNodesExcept(myId); }, branches: function () { return branchesOf(myId); } }; }
+  function subtitleFor(type, d, myId) { return summary(type, ctxFor(myId), d); }
+  var serverTodo = {}; // nœuds signalés « à configurer » par le serveur au dernier enregistrement
 
   function paint(dfNodeId, type, d) {
     var wrap = document.getElementById("node-" + dfNodeId);
     if (!wrap) return;
+    var myId = d && d._id;
     var title = wrap.querySelector(".mk-flow-card-title");
     var sub = wrap.querySelector(".mk-flow-card-sub");
+    var ok = isConfigured(type, ctxFor(myId), d || {}) && !serverTodo[myId];
     if (title) title.textContent = LABELS[type] || type;
-    if (sub) sub.textContent = subtitleFor(type, d);
+    if (sub) sub.textContent = ok ? subtitleFor(type, d, myId) : "Non configuré";
+    wrap.classList.toggle("is-unconfigured", !ok);
     var more = wrap.querySelector(".mk-flow-more");
-    if (more) more.setAttribute("aria-label", "Actions de l'étape « " + (LABELS[type] || type) + " » : " + subtitleFor(type, d));
+    if (more) more.setAttribute("aria-label", "Actions de l'étape « " + (LABELS[type] || type) + " » : " + (ok ? subtitleFor(type, d, myId) : "non configurée"));
   }
+  function repaintAll() { Object.keys(dfId).forEach(function (k) { var n = nodeOf(k); if (n) paint(dfId[k], n.name, n.data); }); }
 
   function ioFor(type) { return type === "trigger" ? [0, 1] : BRANCH[type] ? [1, 2] : type === "end" ? [1, 0] : [1, 1]; }
 
@@ -160,11 +128,14 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
     if (srcId != null && tgtId != null) editor.addConnection(srcId, tgtId, out, "input_1");
   });
   if (!dfId[TRIGGER_ID]) addNode(TRIGGER_ID, "trigger", { triggers: [{ event: a.triggerEvent, filter: a.triggerFilter || {} }], triggerEvent: a.triggerEvent, triggerFilter: a.triggerFilter || {} }, { x: 40, y: 40 });
+  // Les résumés (et l'état « Non configuré ») dépendent des autres étapes (une condition vise un e-mail) : redessinés
+  // une fois TOUT le schéma chargé
+  setTimeout(repaintAll, 0);
 
   // ---------- Étapes : menu « ⋯ » et boîte de dialogue « Modifier » ----------
   var clone = function (v) { return JSON.parse(JSON.stringify(v)); };
-  var myIdOfDf = function (id) { return Object.keys(dfId).filter(function (k) { return String(dfId[k]) === String(id); })[0]; };
-  var nodeOf = function (myId) { return dfId[myId] != null ? editor.getNodeFromId(dfId[myId]) : null; };
+  function myIdOfDf(id) { return Object.keys(dfId).filter(function (k) { return String(dfId[k]) === String(id); })[0]; }
+  function nodeOf(myId) { return dfId[myId] != null ? editor.getNodeFromId(dfId[myId]) : null; }
   var withoutId = function (d) { var out = Object.assign({}, d); delete out._id; return out; };
   var nodeDom = function (myId) { return document.getElementById("node-" + dfId[myId]); };
   var triggersOf = function (d) { return Array.isArray(d.triggers) && d.triggers.length ? d.triggers : [{ event: d.triggerEvent || "", filter: d.triggerFilter || {} }]; };
@@ -184,49 +155,87 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
       .map(function (x) { return { id: x.id, label: subtitleFor("email", x.n.data) }; });
   }
 
-  // opts.isNew : étape qui vient d'être ajoutée — « Annuler » la retire (opts.onDiscard), rien n'est enregistré
+  // Où mènent les deux sorties d'une condition / d'un tirage (connexions actuelles du canevas)
+  function branchesOf(myId) {
+    var r = dfId[myId] != null ? editor.drawflow.drawflow[editor.module].data[dfId[myId]] : null;
+    var target = function (out) {
+      var c = r && r.outputs[out] && r.outputs[out].connections[0];
+      var t = c && myIdOfDf(c.node), tn = t && nodeOf(t);
+      return tn ? (LABELS[tn.name] || tn.name) + (tn.name === "end" ? "" : " — " + subtitleFor(tn.name, tn.data, t)) : null;
+    };
+    return { t: target("output_1"), f: target("output_2") };
+  }
+
+  // Grande interface de configuration d'une étape (ou du déclencheur). opts.addTrigger : ouvre le déclencheur avec
+  // une ligne de déclencheur supplémentaire prête à choisir (« Ajouter un déclencheur »).
   function openEditor(myId, opts) {
     opts = opts || {};
     var n = nodeOf(myId);
     if (!n || !hasEditor(n.name)) return; // « Fin » : rien à régler, aucune fenêtre vide
     closeStepMenu();
-    var type = n.name;
+    var type = n.name, def = action(type);
     var original = type === "trigger" ? { name: a.name, triggers: clone(triggersOf(n.data)) } : withoutId(n.data);
     var initial = JSON.stringify(original);
     var draft = clone(original);
-    var ctx = { data: data, a: a, locked: locked, emailNodes: function () { return emailNodesExcept(myId); } };
+    if (type === "trigger" && opts.addTrigger && draft.triggers.length < 3) draft.triggers.push({ event: "", filter: {} });
+    var ctx = ctxFor(myId);
     var body = document.createElement("div");
     body.className = "mk-step-editor";
-    function rerender() { body.textContent = ""; body.appendChild(buildEditor(type, ctx, draft, rerender)); }
+    function rerender() { body.textContent = ""; body.appendChild(buildEditor(type, ctx, draft, rerender)); refreshAside(); }
+    // Colonne de gauche : identité de l'étape, état et résumé tenus à jour pendant la saisie
+    var aside = el("aside", { class: "mk-step-aside", "aria-label": "Résumé de l'étape" });
+    var big = el("span", { class: "mk-step-aside-icon" + (def.tone ? " is-" + def.tone : ""), "aria-hidden": "true" }); big.innerHTML = icon(def.icon, { size: 26 });
+    var state = el("span", { class: "mk-step-state" });
+    var sum = el("p", { class: "mk-step-aside-summary", "aria-live": "polite" });
+    aside.appendChild(big);
+    aside.appendChild(el("p", { class: "mk-step-aside-name" }, def.label));
+    aside.appendChild(el("p", { class: "mk-step-aside-desc" }, def.description || ""));
+    aside.appendChild(state);
+    aside.appendChild(el("p", { class: "mk-step-aside-label" }, "Résumé"));
+    aside.appendChild(sum);
+    function refreshAside() {
+      var shown = type === "trigger" ? { triggers: draft.triggers } : draft;
+      var errs = type === "trigger" ? validate("trigger", ctx, draft) : validate(type, ctx, draft);
+      state.textContent = errs.length ? "À configurer" : "Configurée";
+      state.className = "mk-step-state " + (errs.length ? "is-todo" : "is-ok");
+      sum.textContent = errs.length ? errs[0] : summary(type, ctx, shown);
+    }
     rerender();
     var dom = nodeDom(myId);
     if (dom) dom.classList.add("is-editing");
     openStepDialog({
-      title: locked ? "Réglages : " + (LABELS[type] || type) : opts.isNew ? "Nouvelle étape : " + (LABELS[type] || type) : DIALOG_TITLES[type] || LABELS[type],
-      saveLabel: opts.isNew ? "Ajouter l'étape" : "Enregistrer",
-      iconHtml: icon(ICON_NAMES[type] || "help", { size: 20 }),
+      title: locked ? "Réglages : " + def.label : def.title || "Configurer : " + def.label,
+      iconHtml: icon(def.icon, { size: 20 }),
       body: body,
-      wide: type === "condition" || type === "trigger",
+      aside: aside,
+      wide: !!def.wide,
       readOnly: locked,
       isDirty: function () { return JSON.stringify(draft) !== initial; },
-      onClose: function (saved) { var d = nodeDom(myId); if (d) d.classList.remove("is-editing"); if (!saved && opts.onDiscard) opts.onDiscard(); },
+      onChange: refreshAside,
+      onClose: function () { var d = nodeDom(myId); if (d) d.classList.remove("is-editing"); },
       onSave: function () {
         var errors = validate(type, ctx, draft);
         if (errors.length) return { errors: errors };
         var final = clean(type, draft);
+        var before = clone(n.data), nameBefore = a.name;
         if (type === "trigger") {
           a.name = final.name;
-          var h1 = document.querySelector(".mk-head h1");
-          if (h1) h1.textContent = a.name;
           setNodeData(TRIGGER_ID, { triggers: final.triggers, triggerEvent: final.triggers[0].event, triggerFilter: final.triggers[0].filter });
         } else setNodeData(myId, final);
         changed();
-        announce("Étape « " + (LABELS[type] || type) + " » mise à jour.");
-        // Enregistrement immédiat du scénario : la valeur survit à un rechargement sans autre action
-        return persist().then(function (r) {
-          if (r.ok) toast(opts.isNew ? "Étape ajoutée." : "Étape enregistrée.", "ok");
-          else if (opts.isNew) toast("Impossible d'ajouter cette étape. Veuillez réessayer." + (r.error ? " (" + r.error + ")" : ""), "error");
-          return {};
+        // Enregistrement immédiat du scénario ; en cas d'échec, l'étape reprend ses réglages enregistrés et la
+        // fenêtre reste ouverte avec la saisie, pour réessayer (rien n'est perdu, rien n'est faussement « enregistré »)
+        return persist({ quiet: true }).then(function (r) {
+          if (r.ok) {
+            var h1 = document.querySelector(".mk-head h1");
+            if (h1) h1.textContent = a.name;
+            announce("Étape « " + def.label + " » configurée.");
+            toast("Configuration enregistrée.", "ok");
+            return {};
+          }
+          a.name = nameBefore;
+          setNodeData(myId, withoutId(before));
+          return { errors: ["Impossible d'enregistrer les modifications. " + (r.error || "Vérifiez votre connexion puis réessayez.")] };
         });
       },
     });
@@ -261,7 +270,11 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
     var n = nodeOf(myId);
     if (!n) return;
     var type = n.name, items = [];
-    if (hasEditor(type)) items.push({ label: locked ? "Voir les réglages" : "Modifier", run: function () { openEditor(myId); } });
+    if (hasEditor(type)) items.push({ label: locked ? "Voir les réglages" : "Configurer", run: function () { openEditor(myId); } });
+    if (!locked && type === "trigger") {
+      var count = triggersOf(n.data).length;
+      items.push({ label: count < 3 ? "Ajouter un déclencheur" : "Ajouter un déclencheur (3 au plus)", disabled: count >= 3, run: function () { openEditor(TRIGGER_ID, { addTrigger: true }); } });
+    }
     if (!locked && type !== "trigger") {
       items.push({ label: "Dupliquer", run: function () { duplicateStep(myId); } });
       items.push({ label: "Supprimer", danger: true, run: function () { deleteStep(myId); } });
@@ -351,7 +364,7 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
 
   function addStep(type, where) {
     where = where || {};
-    if (!MAKE[type]) return;
+    if (!action(type).make) return;
     try {
       var wasDirty = dirty, statusBefore = $("au-status") ? $("au-status").textContent : "";
       var undo = { moved: [], removed: null };
@@ -378,7 +391,7 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
         });
         if (Math.abs(ax - pos.x) > 1 && !undo.moved.length) { /* branche B : nouvelle colonne, rien à décaler */ }
       }
-      addNode(myId, type, MAKE[type](), pos);
+      addNode(myId, type, action(type).make({ data: data, a: a }), pos);
       if (anchor) {
         var insertable = type !== "end" || !target; // une « Fin » ne s'intercale jamais avant une suite existante
         if (insertable) {
@@ -398,8 +411,11 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
         dirty = wasDirty; setStatus(statusBefore);
         announce("Ajout annulé.");
       };
-      if (hasEditor(type)) openEditor(myId, { isNew: true, onDiscard: discard });
-      else persist().then(function (r) { if (r.ok) toast("Étape ajoutée.", "ok"); else toast("Impossible d'ajouter cette étape. Veuillez réessayer." + (r.error ? " (" + r.error + ")" : ""), "error"); });
+      // Insérer ≠ configurer : aucune fenêtre ne s'ouvre ; l'étape est enregistrée telle quelle (« Non configuré »
+      // si elle attend un réglage) et se configure ensuite d'un clic. En cas d'échec, l'insertion est annulée.
+      persist().then(function (r) {
+        if (!r.ok) { discard(); toast("Impossible d'ajouter cette étape. Veuillez réessayer." + (r.error ? " (" + r.error + ")" : ""), "error"); }
+      });
       return myId;
     } catch (e) {
       console.error("[automatisation] ajout d'étape impossible", e); // erreur réelle, jamais masquée
@@ -414,8 +430,9 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
       root: $("au-palette"),
       workspace: $("au-workspace"),
       openButton: $("au-palette-open"),
-      iconHtml: function (name, size) { return icon(ICON_NAMES[name] || name, { size: size }); },
+      iconHtml: function (name, size) { return icon(name, { size: size }); },
       onAdd: function (type) { addStep(type); },
+      onAddTrigger: function () { openEditor(TRIGGER_ID, { addTrigger: true }); },
     });
     editor.on("nodeSelected", function (id) { selectedMyId = myIdOfDf(id) || null; updateTarget(); });
     editor.on("nodeUnselected", function () { selectedMyId = null; updateTarget(); });
@@ -451,7 +468,17 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
   // ---------- Zoom ----------
   // Point fixe du zoom de Drawflow (transform-origin du canevas interne, au centre par défaut)
   function zoomOrigin() { var cs = getComputedStyle(editor.precanvas).transformOrigin.split(" "); return { x: parseFloat(cs[0]) || 0, y: parseFloat(cs[1]) || 0 }; }
-  var zin = $("au-zoom-in"), zout = $("au-zoom-out"), z100 = $("au-zoom-100"), zfit = $("au-zoom-fit");
+  var zin = $("au-zoom-in"), zout = $("au-zoom-out"), z100 = $("au-zoom-100"), zfit = $("au-zoom-fit"), zlevel = $("au-zoom-level");
+  // Contrôle de zoom : niveau affiché en direct, boutons désactivés aux limites (fonctions de zoom de Drawflow)
+  function showZoom() {
+    var z = editor.zoom || 1, pct = Math.round(z * 100) + " %";
+    if (zlevel) zlevel.textContent = pct;
+    if (z100) z100.setAttribute("aria-label", "Zoom actuel : " + pct + ". Revenir à 100 %");
+    if (zin) zin.disabled = z >= editor.zoom_max - 0.001;
+    if (zout) zout.disabled = z <= editor.zoom_min + 0.001;
+  }
+  editor.on("zoom", function () { setTimeout(showZoom, 0); });
+  setTimeout(showZoom, 0);
   if (zin) zin.addEventListener("click", function () { editor.zoom_in(); });
   if (zout) zout.addEventListener("click", function () { editor.zoom_out(); });
   if (z100) z100.addEventListener("click", function () { editor.zoom_reset(); });
@@ -467,7 +494,8 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
     });
     var rect = container.getBoundingClientRect();
     var pad = 60;
-    var zoom = Math.min(1.2, Math.max(editor.zoom_min, Math.min((rect.width - pad * 2) / Math.max(1, maxX - minX), (rect.height - pad * 2) / Math.max(1, maxY - minY))));
+    // Vue d'ensemble : peut descendre sous le zoom minimal manuel pour qu'un grand scénario tienne entièrement à l'écran
+    var zoom = Math.min(1.2, Math.max(0.1, Math.min((rect.width - pad * 2) / Math.max(1, maxX - minX), (rect.height - pad * 2) / Math.max(1, maxY - minY))));
     editor.zoom = zoom; editor.zoom_last_value = zoom;
     // Drawflow agrandit depuis le CENTRE du canevas (transform-origin par défaut) : l'origine entre dans le calcul
     var o = zoomOrigin();
@@ -546,9 +574,10 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
   var again = false;
   function toast(t, type) { if (typeof window.mkToast === "function") window.mkToast(t, type); }
   // Envoie le scénario complet (nom, déclencheurs, canevas) ; le serveur en dérive et valide les étapes exécutées
-  function persist() {
+  function persist(opts) {
+    opts = opts || {};
     if (locked) return Promise.resolve({ ok: false });
-    if (saving) { again = true; return saving.then(function () { return again ? (again = false, persist()) : { ok: !dirty }; }); }
+    if (saving) { again = true; return saving.then(function () { return again ? (again = false, persist(opts)) : { ok: !dirty }; }); }
     showError(""); setStatus("Enregistrement…");
     var canvas = exportGraph();
     var trig = editor.getNodeFromId(dfId[TRIGGER_ID]).data;
@@ -557,13 +586,22 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
     saving = fetch("/marketing/automatisations/" + a.id, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
       .then(function (res) { return res.json().catch(function () { return {}; }).then(function (j) { return { ok: res.ok, j: j }; }); })
       .then(function (r) {
-        if (r.ok) { dirty = false; setStatus("Enregistré à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })); return { ok: true }; }
+        if (r.ok) {
+          dirty = false;
+          serverTodo = {};
+          (r.j.incomplete || []).forEach(function (x) { serverTodo[x.id] = true; });
+          var todo = (r.j.incomplete || []).length;
+          setStatus("Enregistré à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + (todo ? " · " + todo + " étape" + (todo > 1 ? "s" : "") + " à configurer" : ""));
+          repaintAll();
+          return { ok: true, incomplete: r.j.incomplete || [] };
+        }
         setStatus("Non enregistré");
+        console.error("[automatisation] enregistrement refusé par le serveur", r.j);
         showError((r.j && r.j.error) || "Enregistrement impossible.");
-        toast("Le scénario n'a pas pu être enregistré : " + ((r.j && r.j.error) || "erreur inconnue"), "error");
+        if (!opts.quiet) toast("Le scénario n'a pas pu être enregistré : " + ((r.j && r.j.error) || "erreur inconnue"), "error");
         return { ok: false, error: r.j && r.j.error };
       })
-      .catch(function () { setStatus("Non enregistré"); showError("Enregistrement impossible pour le moment (connexion ?)."); return { ok: false }; })
+      .catch(function (err) { console.error("[automatisation] enregistrement impossible", err); setStatus("Non enregistré"); showError("Enregistrement impossible pour le moment (connexion ?)."); return { ok: false }; })
       .then(function (r) { saving = null; return r; });
     return saving;
   }

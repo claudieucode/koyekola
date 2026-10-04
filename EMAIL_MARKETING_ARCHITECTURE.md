@@ -1479,3 +1479,27 @@ infobulles, mémorisé dans le navigateur), tiroir sur petit écran (bouton « +
 - Corrigés au passage : le fond du canevas n'était pas reconnu par Drawflow (classe `parent-drawflow` pas en première
   position → ni désélection ni déplacement du canevas hors de la zone dessinée) ; « Ajuster à l'écran » et le centrage
   ignoraient l'origine du zoom de Drawflow (centre) → étapes hors cadre dès que le zoom changeait.
+
+### Studio d'automatisation : insérer ≠ configurer (2026-10-04)
+
+- **Registre central** `src/editor/automation/registry.js` : libellé, description, catégorie, icône, valeurs
+  d'insertion, titre de configuration, résumé du bloc, « configurée ? » — utilisé par la palette, les blocs et la
+  configuration (plus aucune liste dupliquée). Icônes ajoutées à `utils/icons.js` : calendarClock, userPen,
+  tagPlus/tagMinus, listPlus/listMinus.
+- **Palette = insérer** : un clic ou un glisser-déposer crée l'étape (reliée, enregistrée), AUCUNE fenêtre. Les
+  valeurs d'insertion ne choisissent rien à la place de la personne (pas de « premier modèle » imposé) : le bloc
+  affiche « Non configuré » (bordure pointillée, pastille). « Ajouter un déclencheur » (palette et ⋯ du déclencheur)
+  ouvre la configuration du déclencheur avec une nouvelle ligne.
+- **Clic sur un bloc / ⋯ → Configurer = grande interface** (`ui.js#openStepDialog`) : colonne résumé (icône, état
+  Configurée / À configurer, résumé en direct) + formulaire par sections. E-mail : destinataire, expéditeur réel
+  (réglages d'envoi), modèle + objet, suivi des clics, aperçu réel (`/marketing/modeles/:id/apercu`). Condition /
+  tirage : où mènent les deux chemins sur le canevas. Fermeture avec modifications : Continuer / Abandonner /
+  Enregistrer. Échec d'enregistrement : fenêtre gardée ouverte, étape remise comme avant, « Réessayer ».
+- **Serveur — brouillon incomplet** (`graph.js#incompleteNodes`) : un schéma dont des étapes RELIÉES n'ont pas encore
+  leur réglage obligatoire est enregistré (`canvas`, nom, déclencheurs) ; les `steps` exécutées restent celles
+  d'avant ; la réponse liste `incomplete` ; `automationPreflight` ajoute l'erreur « étapes à configurer » →
+  activation refusée. Une donnée INVALIDE (champ inconnu…) reste refusée en 400. Aucun changement de schéma SQL.
+- **Zoom** : contrôle vertical (+ / niveau en % = retour à 100 % / − / ajuster), limites désactivées ; zoom manuel
+  20 %–160 %, « Ajuster à l'écran » descend jusqu'à 10 % pour un grand scénario.
+- Non proposés (absents du moteur) : Désactiver une étape, Envoyer un SMS, Webhook, « Attendre jusqu'à » une date/heure
+  (l'étape existante attend un ÉVÉNEMENT avec un délai maximal).

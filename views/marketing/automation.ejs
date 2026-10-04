@@ -10,7 +10,7 @@
 
     <div id="au-editor">
       <div class="mk-flow-toolbar">
-        <p class="field-hint"><% if (locked) { %>Cliquez sur une étape pour voir ses réglages.<% } else { %>Ajoutez une étape depuis la palette (clic ou glisser-déposer) : elle se place après l'étape sélectionnée, sinon à la fin du parcours. Cliquez sur une étape pour la régler ; « ⋯ » propose aussi Dupliquer et Supprimer.<% } %></p>
+        <p class="field-hint"><% if (locked) { %>Cliquez sur une étape pour voir ses réglages.<% } else { %>Palette : un clic (ou un glisser-déposer) insère l'étape, après l'étape sélectionnée ou à la fin du parcours. Cliquez ensuite sur une étape pour la configurer ; « ⋯ » propose aussi Dupliquer et Supprimer.<% } %></p>
         <div class="mk-actions">
           <% if (!locked) { %><button type="button" class="btn btn-outline mk-flow-add-btn" id="au-palette-open" aria-controls="au-palette" aria-expanded="false"><%- icon("plus", { size: 16 }) %> Ajouter une étape</button><% } %>
           <span id="au-status" class="field-hint" role="status" aria-live="polite"></span>
@@ -22,11 +22,12 @@
         <% if (!locked) { %><aside id="au-palette" class="mk-flow-pal" aria-label="Actions"></aside><% } %>
         <div class="mk-flow-shell">
           <div id="au-flow" class="mk-flow-canvas" aria-label="Schéma du scénario"></div>
-          <div class="mk-flow-zoom" role="group" aria-label="Zoom">
-            <button type="button" class="mk-icon-btn" id="au-zoom-out" aria-label="Réduire"><%- icon("minus", { size: 16 }) %></button>
-            <button type="button" class="mk-icon-btn" id="au-zoom-100" aria-label="Zoom 100 %">100 %</button>
-            <button type="button" class="mk-icon-btn" id="au-zoom-in" aria-label="Agrandir"><%- icon("plus", { size: 16 }) %></button>
-            <button type="button" class="mk-icon-btn" id="au-zoom-fit" aria-label="Ajuster à l'écran"><%- icon("maximize", { size: 16 }) %></button>
+          <div class="mk-flow-zoom" role="toolbar" aria-label="Zoom du canevas" aria-orientation="vertical">
+            <button type="button" class="mk-zoom-btn" id="au-zoom-in" aria-label="Zoom avant" data-tip="Zoom avant"><%- icon("plus", { size: 18 }) %></button>
+            <button type="button" class="mk-zoom-btn mk-zoom-level" id="au-zoom-100" aria-label="Revenir à 100 %" data-tip="Revenir à 100 %"><span id="au-zoom-level">100 %</span></button>
+            <button type="button" class="mk-zoom-btn" id="au-zoom-out" aria-label="Zoom arrière" data-tip="Zoom arrière"><%- icon("minus", { size: 18 }) %></button>
+            <span class="mk-zoom-sep" aria-hidden="true"></span>
+            <button type="button" class="mk-zoom-btn" id="au-zoom-fit" aria-label="Ajuster le scénario à l'écran" data-tip="Ajuster à l'écran"><%- icon("maximize", { size: 18 }) %></button>
           </div>
         </div>
       </div>

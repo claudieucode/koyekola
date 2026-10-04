@@ -4,6 +4,13 @@
 const ICONS = {
   search: { body: '<circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>' },
   moreVertical: { body: '<circle cx="12" cy="5" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="12" cy="19" r="1.6" fill="currentColor" stroke="none"></circle>' },
+  // Étapes des scénarios d'automatisation (même trait que le reste du set : 24 px, contour 2)
+  calendarClock: { body: '<path d="M21 10V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5"></path><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="12" y2="10"></line><circle cx="17" cy="17" r="5"></circle><polyline points="17 14.5 17 17 18.5 18"></polyline>' },
+  userPen: { body: '<circle cx="10" cy="7" r="4"></circle><path d="M3 21v-2a4 4 0 0 1 4-4h5"></path><path d="M18.4 13.6a1.9 1.9 0 0 1 2.7 2.7L16 21.4l-3.4.7.7-3.4z"></path>' },
+  tagPlus: { body: '<path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"></path><line x1="7.5" y1="5.5" x2="7.5" y2="9.5"></line><line x1="5.5" y1="7.5" x2="9.5" y2="7.5"></line>' },
+  tagMinus: { body: '<path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"></path><line x1="5.5" y1="7.5" x2="9.5" y2="7.5"></line>' },
+  listPlus: { body: '<line x1="3" y1="6" x2="15" y2="6"></line><line x1="3" y1="12" x2="12" y2="12"></line><line x1="3" y1="18" x2="11" y2="18"></line><line x1="18" y1="12" x2="18" y2="20"></line><line x1="14" y1="16" x2="22" y2="16"></line>' },
+  listMinus: { body: '<line x1="3" y1="6" x2="15" y2="6"></line><line x1="3" y1="12" x2="12" y2="12"></line><line x1="3" y1="18" x2="11" y2="18"></line><line x1="14" y1="16" x2="22" y2="16"></line>' },
   moreHorizontal: { body: '<circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"></circle>' },
   cart: {
     body:

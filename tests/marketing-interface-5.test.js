@@ -258,6 +258,40 @@ describe("éditeur", () => {
   });
 });
 
+describe("brouillon : étapes insérées mais pas encore configurées", () => {
+  test("schéma enregistré, étapes exécutées inchangées, activation refusée tant qu'il en reste ; donnée invalide toujours refusée", async () => {
+    await post(boss, "/marketing/automatisations", { name: "Brouillon studio", kind: "transactional", trigger_event: "lms.user_registered" });
+    const id = autoId("Brouillon studio");
+    const tpl = await createTemplate(boss, "Studio transac", "transactional");
+    const base = { nodes: [{ id: "trigger", type: "trigger", data: { triggers: [{ event: "lms.user_registered", filter: {} }] }, position: { x: 0, y: 0 } }, { id: "n0", type: "email", data: { templateId: tpl }, position: { x: 0, y: 150 } }], edges: [{ id: "e0", source: "trigger", target: "n0" }] };
+    assert.equal((await boss.postJson(`/marketing/automatisations/${id}`, { canvas: base })).status, 200);
+    const stepsBefore = sql("SELECT steps FROM mk_automations WHERE id = ?", id)[0].steps;
+    // Deux étapes insérées depuis la palette, pas encore réglées (étiquette vide, liste non choisie)
+    const draft = { nodes: [...base.nodes, { id: "u1", type: "add_tag", data: { tag: "" }, position: { x: 0, y: 300 } }, { id: "u2", type: "add_to_list", data: { listId: null }, position: { x: 0, y: 450 } }],
+      edges: [...base.edges, { id: "e1", source: "n0", target: "u1" }, { id: "e2", source: "u1", target: "u2" }] };
+    const r = await boss.postJson(`/marketing/automatisations/${id}`, { canvas: draft });
+    assert.equal(r.status, 200);
+    assert.deepEqual(JSON.parse(r.text).incomplete.map((x) => x.id).sort(), ["u1", "u2"]);
+    const row = sql("SELECT steps, canvas FROM mk_automations WHERE id = ?", id)[0];
+    assert.equal(JSON.parse(row.canvas).nodes.length, 4, "schéma enregistré (rechargement fidèle)");
+    assert.equal(row.steps, stepsBefore, "étapes exécutées inchangées tant que le brouillon est incomplet");
+    const page = await boss.get(`/marketing/automatisations/${id}`);
+    assert.match(page.text, /2 étapes du schéma sont à configurer/);
+    await boss.post(`/marketing/automatisations/${id}/activer`, {});
+    assert.equal(sql("SELECT status FROM mk_automations WHERE id = ?", id)[0].status, "draft", "activation refusée");
+    // Un nœud isolé (non relié) ne bloque rien
+    const isolated = { nodes: [...base.nodes, { id: "u3", type: "add_tag", data: { tag: "" }, position: { x: 300, y: 300 } }], edges: base.edges };
+    assert.deepEqual(JSON.parse((await boss.postJson(`/marketing/automatisations/${id}`, { canvas: isolated })).text).incomplete, []);
+    // Configurées : étapes recalculées et validées comme avant
+    draft.nodes[2].data.tag = "Studio"; draft.nodes[3].data.listId = sql("INSERT INTO mk_lists (organization_id, name) VALUES (1, 'Studio') RETURNING id")[0].id;
+    const ok = await boss.postJson(`/marketing/automatisations/${id}`, { canvas: draft });
+    assert.equal(ok.status, 200);
+    assert.deepEqual(JSON.parse(ok.text).incomplete, []);
+    assert.deepEqual(JSON.parse(sql("SELECT steps FROM mk_automations WHERE id = ?", id)[0].steps).map((x) => x.type), ["email", "add_tag", "add_to_list"]);
+    assert.doesNotMatch((await boss.get(`/marketing/automatisations/${id}`)).text, /à configurer/);
+  });
+});
+
 describe("événements et pont", () => {
   test("page : état des curseurs, événements récents", async () => {
     const r = await boss.get("/marketing/evenements");

@@ -541,8 +541,6 @@ a.mk-stat:hover { border-color: var(--accent); }
 /* Canevas pleine largeur : les réglages d'une étape s'ouvrent dans une boîte de dialogue (src/editor/automation/), plus de panneau latéral */
 .mk-flow-shell { position: relative; margin-bottom: 20px; }
 .mk-flow-canvas { position: relative; height: calc(100vh - 260px); height: calc(100dvh - 260px); min-height: 520px; background: var(--surface-alt); border: 1px solid var(--mk-border); border-radius: var(--mk-r); overflow: hidden; touch-action: none; background-image: radial-gradient(rgba(11, 42, 64, 0.09) 1px, transparent 1px); background-size: 22px 22px; }
-.mk-flow-zoom { position: absolute; right: 14px; bottom: 14px; z-index: 5; display: flex; gap: 6px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--radius-pill); padding: 6px; box-shadow: var(--mk-pop); }
-.mk-flow-zoom .mk-icon-btn { min-width: 34px; min-height: 34px; width: auto; padding: 0 10px; border-radius: var(--radius-pill); }
 .mk-cond-builder { margin-top: 6px; }
 .mk-cond-builder .mk-group-op { margin-bottom: 10px; }
 .mk-trigger-row-title { margin: 20px 0 10px; padding-top: 14px; border-top: 1px solid var(--mk-border); font-size: 0.85rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em; }
@@ -581,7 +579,6 @@ a.mk-stat:hover { border-color: var(--accent); }
 .mk-flow-card--condition .mk-flow-card-icon, .mk-flow-card--split .mk-flow-card-icon { color: var(--star); }
 .mk-flow-card--end .mk-flow-card-icon { color: var(--muted); }
 .mk-flow-icon { display: inline-flex; }
-.mk-flow-card-body { min-width: 0; flex: 1 1 auto; }
 .mk-flow-card-title { font-weight: 800; color: var(--primary); font-size: 0.92rem; }
 .mk-flow-card-sub { color: var(--muted); font-size: 0.8rem; margin-top: 2px; overflow-wrap: anywhere; }
 .mk-flow-card-ports { position: absolute; right: 22px; top: 0; height: 100%; display: flex; flex-direction: column; justify-content: space-around; font-size: 0.76rem; font-weight: 700; color: var(--muted); pointer-events: none; }
@@ -609,8 +606,6 @@ a.mk-stat:hover { border-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .mk-flow-pal, .mk-pal-chev { transition: none; } }
 
 /* Bouton « ⋯ » d'une étape (en haut à droite du bloc) */
-.mk-flow-card { position: relative; padding-right: 40px; }
-.mk-flow-more { position: absolute; top: 6px; right: 6px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
 .mk-flow-more:hover, .mk-flow-more[aria-expanded="true"] { background: var(--mk-hover); border-color: var(--mk-border); color: var(--mk-text); }
 .mk-flow-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .mk-flow-canvas .drawflow .drawflow-node { cursor: pointer; }
@@ -619,14 +614,11 @@ a.mk-stat:hover { border-color: var(--accent); }
 .mk-step-menu { min-width: 180px; z-index: 1000; }
 
 /* Boîte de dialogue d'une étape */
-.mk-step-dialog { max-width: min(560px, calc(100vw - 32px)); }
-.mk-step-dialog.mk-modal-wide { max-width: min(760px, calc(100vw - 32px)); }
 .mk-step-dialog-head { display: flex; align-items: center; gap: 10px; padding: 18px 20px 14px 24px; border-bottom: 1px solid var(--mk-border); }
 .mk-step-dialog-head h2 { flex: 1; min-width: 0; margin: 0; font-family: var(--font-display); font-size: 1.15rem; }
 .mk-step-dialog-icon { display: inline-flex; color: var(--accent); }
 .mk-step-dialog-close { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 1.5rem; line-height: 1; cursor: pointer; }
 .mk-step-dialog-close:hover { background: var(--mk-hover); color: var(--mk-text); }
-.mk-step-dialog .mk-dialog-body { padding-top: 20px; max-height: calc(100dvh - 200px); overflow-y: auto; }
 .mk-step-dialog .field-group { margin-bottom: 16px; }
 .mk-step-dialog .field-group select, .mk-step-dialog .field-group input[type="text"], .mk-step-dialog .field-group input[type="number"] { width: 100%; }
 .mk-step-dialog-error { margin: 0 0 16px; }
@@ -868,3 +860,87 @@ details.mk-cl-item[open] > .mk-cl-summary .mk-cl-edit { visibility: hidden; }
 /* Longs identifiants techniques (variables d'environnement, extraits JSON) : retour à la ligne au lieu de déborder */
 .mk-main p, .mk-main li, .mk-main .field-hint, .mk-main dd { overflow-wrap: anywhere; }
 .mk-main code { overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
+
+/* =========================================================================================================
+   Studio d'automatisation : blocs compacts, grande interface de configuration, contrôle de zoom
+   ========================================================================================================= */
+/* Bloc : [icône] Titre ⋯ / résumé — état « Non configuré » visible sans être criard */
+.mk-flow-canvas .drawflow .drawflow-node { min-height: 0; }
+.mk-flow-card { display: flex; flex-direction: column; align-items: stretch; gap: 4px; min-height: 76px; padding: 10px 10px 12px 12px; }
+.mk-flow-card-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mk-flow-card-icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 28px; height: 28px; border-radius: 8px; background: var(--accent-light); color: var(--accent-dark); }
+.mk-flow-card.is-trigger .mk-flow-card-icon { background: var(--success-light); color: var(--success-dark); }
+.mk-flow-card.is-branch .mk-flow-card-icon { background: color-mix(in srgb, var(--star) 12%, var(--mk-surface)); color: var(--star); }
+.mk-flow-card.is-end .mk-flow-card-icon { background: var(--surface-alt); color: var(--muted); }
+.mk-flow-card-title { flex: 1; min-width: 0; font-size: 0.9rem; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mk-flow-card-sub { margin: 0 0 0 36px; font-size: 0.8rem; line-height: 1.35; }
+.mk-flow-more { position: static; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+.mk-flow-card-ports { right: -34px; }
+.drawflow-node.is-unconfigured .mk-flow-card { border-style: dashed; border-left-style: solid; border-left-color: #b7860b; background: color-mix(in srgb, var(--warning-bg) 55%, var(--mk-surface)); }
+.drawflow-node.is-unconfigured .mk-flow-card-sub { color: var(--warning-text); font-weight: 600; }
+.drawflow-node.is-unconfigured .mk-flow-card-sub::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: #b7860b; vertical-align: 1px; }
+.drawflow-node.selected .mk-flow-card { box-shadow: var(--ring); border-color: var(--accent); }
+.mk-menu [aria-disabled="true"] { color: var(--muted); cursor: not-allowed; }
+.mk-pal-item--trigger .mk-pal-icon { background: var(--success-light); color: var(--success-dark); }
+
+/* Grande interface de configuration */
+.mk-step-dialog { width: min(820px, calc(100vw - 48px)); max-width: none; height: min(680px, calc(100dvh - 48px)); }
+.mk-step-dialog.is-wide { width: min(1080px, calc(100vw - 48px)); height: min(820px, calc(100dvh - 48px)); }
+.mk-step-dialog[open] { display: flex; flex-direction: column; }
+.mk-step-dialog > form { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.mk-step-dialog-head { flex: none; padding: 18px 22px 16px 26px; }
+.mk-step-dialog-head h2 { font-size: 1.2rem; }
+.mk-step-dialog .mk-step-dialog-body { flex: 1; min-height: 0; max-height: none; padding: 0; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr); }
+.mk-step-dialog.has-aside .mk-step-dialog-body { grid-template-columns: 260px minmax(0, 1fr); }
+.mk-step-main { min-height: 0; overflow-y: auto; padding: 24px 28px 8px; }
+.mk-step-dialog .mk-dialog-actions { flex: none; margin-top: 0; }
+.mk-step-aside { min-height: 0; overflow-y: auto; padding: 24px 22px; border-right: 1px solid var(--mk-border); background: var(--surface-alt); }
+.mk-step-aside-icon { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 14px; background: var(--accent-light); color: var(--accent-dark); }
+.mk-step-aside-icon.is-trigger { background: var(--success-light); color: var(--success-dark); }
+.mk-step-aside-icon.is-branch { background: color-mix(in srgb, var(--star) 12%, var(--mk-surface)); color: var(--star); }
+.mk-step-aside-name { margin: 14px 0 4px; font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; color: var(--mk-text); }
+.mk-step-aside-desc { margin: 0 0 14px; font-size: 0.86rem; line-height: 1.45; color: var(--muted); }
+.mk-step-state { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--radius-pill); font-size: 0.78rem; font-weight: 700; }
+.mk-step-state::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.mk-step-state.is-ok { background: var(--success-light); color: var(--success-dark); }
+.mk-step-state.is-todo { background: var(--warning-bg); color: var(--warning-text); }
+.mk-step-aside-label { margin: 26px 0 6px; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+.mk-step-aside-summary { margin: 0; padding: 12px 14px; border: 1px solid var(--mk-border); border-radius: var(--mk-r); background: var(--mk-surface); font-size: 0.9rem; line-height: 1.45; color: var(--mk-text); overflow-wrap: anywhere; }
+.mk-step-section { padding: 0 0 22px; margin: 0 0 22px; border-bottom: 1px solid var(--mk-border); }
+.mk-step-section:last-child { border-bottom: 0; margin-bottom: 0; }
+.mk-step-section-title { margin: 0 0 12px; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+.mk-step-readonly { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 10px; }
+.mk-step-readonly-label { min-width: 86px; font-size: 0.86rem; font-weight: 700; color: var(--mk-text); }
+.mk-step-readonly-value { flex: 1; min-width: 0; font-size: 0.92rem; color: var(--mk-text); overflow-wrap: anywhere; }
+.mk-step-link { font-size: 0.86rem; font-weight: 600; }
+.mk-step-preview { display: block; width: 100%; height: 440px; border: 1px solid var(--mk-border); border-radius: var(--mk-r); background: #fff; }
+.mk-step-sentence { margin: 4px 0 8px; padding: 10px 14px; border-radius: var(--mk-r); background: var(--surface-alt); font-weight: 600; color: var(--mk-text); }
+.mk-step-branches { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
+.mk-step-branches li { padding: 10px 14px; border: 1px solid var(--mk-border); border-radius: var(--mk-r); font-size: 0.9rem; overflow-wrap: anywhere; }
+.mk-step-row { grid-template-columns: minmax(0, 160px) minmax(0, 240px); }
+.mk-unsaved-dialog { max-width: min(520px, calc(100vw - 32px)); }
+.mk-btn-danger-outline { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--mk-border)); }
+.mk-btn-danger-outline:hover { background: var(--danger-light); color: var(--danger); }
+@media (max-width: 760px) {
+  .mk-step-dialog, .mk-step-dialog.is-wide { width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0; }
+  .mk-step-dialog.has-aside .mk-step-dialog-body { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+  .mk-step-aside { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 18px; border-right: 0; border-bottom: 1px solid var(--mk-border); overflow: visible; }
+  .mk-step-aside-icon { width: 36px; height: 36px; border-radius: 10px; }
+  .mk-step-aside-name { flex: 1; min-width: 0; margin: 0; font-size: 1rem; }
+  .mk-step-aside-desc, .mk-step-aside-label { display: none; }
+  .mk-step-aside-summary { flex-basis: 100%; padding: 8px 12px; font-size: 0.85rem; }
+  .mk-step-main { overflow: visible; padding: 18px 18px 8px; }
+  .mk-step-preview { height: 320px; }
+}
+
+/* Contrôle de zoom du canevas : + / niveau (retour à 100 %) / − / ajuster à l'écran */
+.mk-flow-zoom { position: absolute; right: 16px; bottom: 16px; z-index: 5; display: flex; flex-direction: column; align-items: stretch; padding: 4px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: 12px; box-shadow: var(--shadow-md); }
+.mk-zoom-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--mk-text); font: inherit; cursor: pointer; }
+.mk-zoom-btn:hover:not(:disabled) { background: var(--mk-hover); color: var(--accent-dark); }
+.mk-zoom-btn:active:not(:disabled) { background: var(--accent-light); }
+.mk-zoom-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.mk-zoom-btn:disabled { color: var(--line); cursor: not-allowed; }
+.mk-zoom-level { height: 30px; font-size: 0.75rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--muted); }
+.mk-zoom-sep { height: 1px; margin: 4px 6px; background: var(--mk-border); }
+.mk-zoom-btn:hover::after, .mk-zoom-btn:focus-visible::after { content: attr(data-tip); position: absolute; right: calc(100% + 12px); top: 50%; transform: translateY(-50%); padding: 6px 10px; border-radius: 6px; background: #0f1d29; color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; box-shadow: var(--mk-pop); }
+
