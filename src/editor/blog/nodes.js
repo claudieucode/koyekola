@@ -387,12 +387,17 @@ export const KbReusable = Node.create({
       const body = document.createElement("div");
       body.className = "kb-ed-reusable-body";
       dom.append(head, body);
-      reusableContent(node.attrs.ref).then((b) => {
-        if (!b) { head.textContent = "⚠ Bloc synchronisé introuvable (supprimé ?)"; dom.classList.add("is-missing"); return; }
-        head.textContent = `↻ Bloc synchronisé : « ${b.name} » — le modifier le change partout`;
+      const draw = () => reusableContent(node.attrs.ref).then((b) => {
+        if (!b) { head.textContent = "⚠ Bloc synchronisé introuvable (supprimé ?)"; dom.classList.add("is-missing"); body.replaceChildren(); return; }
+        dom.classList.remove("is-missing");
+        head.textContent = `↻ Bloc synchronisé : « ${b.name} »${b.occurrences > 1 ? ` — utilisé ${b.occurrences} fois` : ""} — le modifier le change partout`;
         body.innerHTML = b.content; // contenu déjà filtré par le serveur à l'enregistrement
       });
-      return { dom };
+      // Le bloc a été modifié (bibliothèque, autre occurrence) : nouvelle version affichée aussitôt
+      const onChange = (e) => { if (e.detail && String(e.detail.ref) === String(node.attrs.ref)) draw(); };
+      window.addEventListener("kb-reusable-changed", onChange);
+      draw();
+      return { dom, destroy: () => window.removeEventListener("kb-reusable-changed", onChange) };
     };
   },
 });

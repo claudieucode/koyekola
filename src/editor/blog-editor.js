@@ -327,7 +327,13 @@ function start() {
   // ---------- Blocs réutilisables ----------
   let reusableList = [];
   const loadReusable = () => api("/formateur/blog/api/blocs").then((r) => { reusableList = r.blocks; return reusableList; }).catch(() => reusableList);
-  const insertReusable = (b) => (b.synced ? blk({ type: "kbReusable", attrs: { ref: String(b.id), name: b.name } }) : editor.chain().focus().insertContent(b.content).run());
+  // Mode choisi à chaque insertion : « synchronisé » (repère vers le bloc, mis à jour partout) ou « copie » (contenu indépendant)
+  const insertReusable = (b, mode = "sync") => {
+    if (mode === "copy") { editor.chain().focus().insertContent(b.content).run(); toast(`Copie indépendante de « ${b.name} » insérée : elle ne suivra pas les modifications du bloc.`); return; }
+    blk({ type: "kbReusable", attrs: { ref: String(b.id), name: b.name } });
+    toast(`Bloc synchronisé « ${b.name} » inséré : il suivra chaque modification du bloc.`);
+  };
+  const usesText = (b) => (b.occurrences ? `Utilisé ${b.occurrences} fois · ${b.uses} article${b.uses > 1 ? "s" : ""}` : "Pas encore utilisé");
   const blockButton = (b, after, { star = false, onStar } = {}) => {
     const btn = h("button", { type: "button", class: b.brand ? "wp-block-type is-brand" : "wp-block-type", onclick: () => { after?.(); useBlock(b.id); b.run(); } }, h("span", { class: "wp-block-type-icon" }, svg(b.icon)), h("span", { class: "wp-block-type-title" }, b.title));
     if (!star) return btn;
@@ -388,9 +394,11 @@ function start() {
       for (const cat of CATS) section(cat, visible.filter((b) => b.cat === cat && matches(b, q)));
       const reus = reusableList.filter((b) => !q || norm(`${b.name} ${b.category}`).includes(norm(q)));
       grid.append(h("h2", { class: "wp-inserter-cat" }, "Réutilisables"));
-      if (reus.length) grid.append(h("div", { class: "wp-reusable-list" }, ...reus.map((b) => h("button", { type: "button", class: "wp-reusable-item", onclick: () => { insertReusable(b); } }, h("strong", {}, b.name), h("small", {}, `${b.synced ? "↻ Synchronisé" : "Copie"}${b.category ? ` · ${b.category}` : ""}${b.synced && b.uses ? ` · ${b.uses} article(s)` : ""}`)))));
+      if (reus.length) grid.append(h("div", { class: "wp-reusable-list" }, ...reus.map((b) => h("div", { class: "wp-reusable-row" },
+        h("button", { type: "button", class: "wp-reusable-item", "data-reusable-insert": b.id, title: "Insérer comme bloc synchronisé (suit les modifications du bloc)", onclick: () => insertReusable(b, "sync") }, h("strong", {}, b.name), h("small", {}, `↻ ${usesText(b)}${b.category ? ` · ${b.category}` : ""}`)),
+        h("button", { type: "button", class: "wp-reusable-copy", "data-reusable-copy": b.id, "aria-label": `Insérer une copie indépendante de ${b.name}`, title: "Insérer comme copie indépendante", onclick: () => insertReusable(b, "copy") }, "Copie")))));
       else grid.append(h("p", { class: "wp-help" }, q ? "Aucun bloc réutilisable ne correspond." : "Aucun bloc réutilisable : clic droit sur un bloc → « Enregistrer comme bloc réutilisable »."));
-      grid.append(h("button", { type: "button", class: "wp-btn-link", onclick: manageReusable }, "Gérer les blocs réutilisables…"));
+      grid.append(h("button", { type: "button", class: "wp-btn-link", onclick: manageReusable }, "Bibliothèque des blocs réutilisables…"));
       if (!grid.querySelector(".wp-block-type, .wp-reusable-item") && q) grid.prepend(h("p", { class: "wp-help" }, "Aucun résultat."));
     }
     loadReusable().then(() => { if (secondaryMode === "inserter") render(); });
@@ -774,7 +782,7 @@ function start() {
   }
   // Actions des blocs réutilisables dans le menu du bloc
   const blockMenuExtra = (top, node) => {
-    if (node.type.name === "kbReusable") return [{ label: "✎ Modifier l'original (tous les articles)", run: () => editReusable(top) }, { label: "Convertir en blocs normaux", run: () => detachReusable(top) }];
+    if (node.type.name === "kbReusable") return [{ label: "✎ Modifier le bloc synchronisé…", run: () => editReusable(top) }, { label: "Créer une copie indépendante", run: () => detachReusable(top) }];
     if (node.type.name === "kbReusableEdit") return [{ label: "✓ Enregistrer le bloc (tous les articles)", run: () => commitReusable(top) }, { label: "Annuler les modifications du bloc", run: () => commitReusable(top, { cancel: true }) }];
     return [{ label: "Enregistrer comme bloc réutilisable…", run: () => saveAsReusable(top) }];
   };
@@ -807,10 +815,11 @@ function start() {
     const name = input({ maxlength: 80, placeholder: "Ex. Encadré d'inscription" });
     const cat = input({ maxlength: 40, placeholder: "Ex. Appels à l'action" });
     const synced = h("input", { type: "checkbox", id: "wp-reusable-synced", checked: true });
+    // Le mode se choisit à chaque insertion ; ici : relier tout de suite ce contenu au bloc (il devient sa première occurrence)
     const err = h("p", { class: "wp-error", hidden: true });
     modal("Enregistrer comme bloc réutilisable", h("div", {}, control("Nom", name), control("Catégorie (facultatif)", cat),
-      h("label", { class: "wp-checkbox", for: "wp-reusable-synced" }, synced, " Synchronisé : une modification du bloc s'appliquera à tous les articles qui l'utilisent"),
-      h("p", { class: "wp-help" }, "Non synchronisé : chaque insertion est une copie indépendante."), err), [
+      h("label", { class: "wp-checkbox", for: "wp-reusable-synced" }, synced, " Relier ce contenu au bloc (il suivra les modifications du bloc)"),
+      h("p", { class: "wp-help" }, "À chaque insertion, vous choisirez : bloc synchronisé (mis à jour partout) ou copie indépendante."), err), [
       { label: "Annuler" },
       { label: "Enregistrer", primary: true, run: async () => {
         try {
@@ -819,18 +828,33 @@ function start() {
           const html = blockHtml(editor, top).replace(/ data-locked="true"/g, "");
           const { block } = await api("/formateur/blog/api/blocs", { method: "POST", json: { name: name.value, category: cat.value, html, synced: synced.checked } });
           reusableList = [...reusableList, block];
-          if (block.synced) {
+          if (synced.checked) {
             const cur = editor.state.doc.nodeAt(top);
             if (cur) editor.view.dispatch(editor.state.tr.replaceWith(top, top + cur.nodeSize, editor.schema.nodes.kbReusable.create({ ref: String(block.id), name: block.name })));
           }
-          toast(block.synced ? `Bloc synchronisé « ${block.name} » créé : il est maintenant relié à l'original.` : `Bloc « ${block.name} » enregistré dans les réutilisables.`);
+          toast(synced.checked ? `Bloc « ${block.name} » créé : ce contenu est maintenant relié au bloc.` : `Bloc « ${block.name} » enregistré dans la bibliothèque.`);
           return false;
         } catch (e) { err.textContent = e.message; err.hidden = false; return true; }
       } },
     ]);
     setTimeout(() => name.focus(), 30);
   }
+  // Avant de modifier une occurrence : on dit clairement que le bloc change partout, et on propose une copie à la place
   async function editReusable(pos) {
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node || node.type.name !== "kbReusable") return;
+    let used = null;
+    try { used = await api(`/formateur/blog/api/blocs/${node.attrs.ref}/utilisations`); } catch { used = null; }
+    const where = used && used.posts.length ? h("ul", { class: "wp-reusable-where" }, ...used.posts.slice(0, 8).map((p) => h("li", {}, `${p.title}${p.count > 1 ? ` (${p.count} fois)` : ""}${String(p.id) === String(postId) ? " — cet article" : ""}`))) : null;
+    modal("Modifier un bloc synchronisé", h("div", {},
+      h("p", {}, "Ce bloc est synchronisé. Les modifications seront appliquées à toutes ses occurrences."),
+      used ? h("p", { class: "wp-help" }, `Utilisé ${used.occurrences} fois dans ${used.posts.length} article(s) :`) : null, where), [
+      { label: "Annuler" },
+      { label: "Créer une copie indépendante", run: () => detachReusable(pos) },
+      { label: "Modifier le bloc", primary: true, run: () => startReusableEdit(pos) },
+    ]);
+  }
+  async function startReusableEdit(pos) {
     const node = editor.state.doc.nodeAt(pos);
     if (!node || node.type.name !== "kbReusable") return;
     forgetReusable(node.attrs.ref);
@@ -852,7 +876,7 @@ function start() {
         await api(`/formateur/blog/api/blocs/${node.attrs.ref}`, { method: "POST", json: { html: contentHtml(editor, node) } });
       } catch (e) { toast(`Bloc non enregistré : ${e.message}`, "error"); return false; }
     }
-    forgetReusable(node.attrs.ref);
+    refreshReusableViews(node.attrs.ref);
     let at = pos;
     if (editor.state.doc.nodeAt(at) !== node) editor.state.doc.descendants((n, p2) => { if (n === node) { at = p2; return false; } return true; });
     editor.view.dispatch(editor.state.tr.replaceWith(at, at + node.nodeSize, editor.schema.nodes.kbReusable.create({ ref: node.attrs.ref, name: node.attrs.name })));
@@ -874,21 +898,147 @@ function start() {
     if (!b) { toast("Bloc synchronisé introuvable.", "error"); return; }
     const cur = editor.state.doc.nodeAt(pos);
     editor.chain().focus().command(({ tr }) => { tr.delete(pos, pos + cur.nodeSize); return true; }).insertContentAt(pos, b.content).run();
-    toast("Converti en blocs normaux : ce contenu n'est plus relié à l'original.");
+    toast("Copie indépendante créée : ce contenu n'est plus relié au bloc.");
   }
+  // ---------- Bibliothèque des blocs réutilisables ----------
+  // Après chaque changement de la bibliothèque : liste rechargée et panneau « Ajouter un bloc » redessiné s'il est ouvert
+  const libraryChanged = async () => { await loadReusable(); if (secondaryMode === "inserter") renderInserter(); };
   function manageReusable() {
-    const listEl = h("ul", { class: "wp-reusable-manage" });
-    const draw = () => listEl.replaceChildren(...(reusableList.length ? reusableList.map((b) => {
-      const nm = input({ value: b.name, maxlength: 80, "aria-label": "Nom" });
-      const ct = input({ value: b.category, maxlength: 40, placeholder: "Catégorie", "aria-label": "Catégorie" });
-      return h("li", {}, h("div", { class: "wp-reusable-manage-fields" }, nm, ct, h("small", {}, `${b.synced ? `↻ Synchronisé · ${b.uses || 0} article(s)` : "Copie"} · modifié le ${fmtDate(b.updatedAt)}`)),
-        h("div", { class: "wp-button-row" },
-          h("button", { type: "button", class: "wp-btn-secondary", onclick: async () => { try { await api(`/formateur/blog/api/blocs/${b.id}`, { method: "POST", json: { name: nm.value, category: ct.value } }); await loadReusable(); toast("Bloc renommé."); draw(); } catch (e) { toast(e.message, "error"); } } }, "Enregistrer"),
-          h("button", { type: "button", class: "wp-btn-link is-danger", onclick: async () => { if (!confirm(`Supprimer le bloc « ${b.name} » ?`)) return; try { await api(`/formateur/blog/api/blocs/${b.id}/supprimer`, { method: "POST" }); await loadReusable(); toast("Bloc supprimé."); draw(); } catch (e) { toast(e.message, "error"); } } }, "Supprimer")));
-    }) : [h("li", { class: "wp-help" }, "Aucun bloc réutilisable.")]));
+    const search = input({ type: "search", placeholder: "Rechercher un bloc…", "aria-label": "Rechercher un bloc", class: "wp-search" });
+    const listEl = h("ul", { class: "wp-library" });
+    const draw = () => {
+      const q = norm(search.value || "");
+      const items = reusableList.filter((b) => !q || norm(`${b.name} ${b.category} ${b.content.replace(/<[^>]*>/g, " ")}`).includes(q));
+      if (!items.length) { listEl.replaceChildren(h("li", { class: "wp-library-empty" }, h("p", {}, q ? "Aucun bloc ne correspond." : "Aucun bloc réutilisable pour l'instant."), h("p", { class: "wp-help" }, "Créez-en un ci-dessus, ou faites un clic droit sur un bloc de l'article → « Enregistrer comme bloc réutilisable »."))); return; }
+      listEl.replaceChildren(...items.map((b) => {
+        const preview = h("div", { class: "wp-library-preview", "aria-hidden": "true" });
+        preview.innerHTML = b.content; // contenu filtré par le serveur à l'enregistrement
+        const where = h("details", { class: "wp-library-where" }, h("summary", {}, usesText(b)));
+        where.addEventListener("toggle", async () => {
+          if (!where.open || where.dataset.loaded) return;
+          where.dataset.loaded = "1";
+          try {
+            const u = await api(`/formateur/blog/api/blocs/${b.id}/utilisations`);
+            where.append(u.posts.length ? h("ul", {}, ...u.posts.map((p) => h("li", {}, h("a", { href: `/formateur/blog/${p.id}/modifier`, target: "_blank", rel: "noopener" }, p.title), ` ${p.count > 1 ? `· ${p.count} fois ` : ""}· ${p.published ? "publié" : "brouillon"}`))) : h("p", { class: "wp-help" }, "Utilisé nulle part."));
+          } catch (e) { where.append(h("p", { class: "wp-error" }, e.message)); }
+        });
+        return h("li", { class: "wp-library-item", "data-library-item": b.id },
+          h("div", { class: "wp-library-head" }, h("div", {}, h("strong", {}, b.name), h("small", {}, `${b.category ? `${b.category} · ` : ""}modifié le ${fmtDate(b.updatedAt)}`)),
+            h("div", { class: "wp-library-actions" },
+              h("button", { type: "button", class: "wp-btn-secondary", "data-library-edit": b.id, onclick: () => editLibraryBlock(b, draw) }, "Modifier"),
+              h("button", { type: "button", class: "wp-btn-tertiary", "data-library-rename": b.id, onclick: () => renameLibraryBlock(b, draw) }, "Renommer"),
+              h("button", { type: "button", class: "wp-btn-tertiary", "data-library-duplicate": b.id, onclick: async () => { try { const r = await api(`/formateur/blog/api/blocs/${b.id}/dupliquer`, { method: "POST" }); await libraryChanged(); toast(`« ${r.block.name} » créé (bloc indépendant).`); draw(); } catch (e) { toast(e.message, "error"); } } }, "Dupliquer"),
+              h("button", { type: "button", class: "wp-btn-link is-danger", "data-library-delete": b.id, onclick: () => deleteLibraryBlock(b, draw) }, "Supprimer"))),
+          preview, where);
+      }));
+    };
+    search.addEventListener("input", draw);
+    const create = h("button", { type: "button", class: "wp-btn-primary", "data-library-new": "", onclick: () => editLibraryBlock(null, draw) }, "+ Nouveau bloc");
     loadReusable().then(draw);
     draw();
-    modal("Blocs réutilisables", h("div", {}, h("p", { class: "wp-help" }, "Pour modifier le contenu d'un bloc synchronisé : insérez-le, puis « Modifier l'original » (onglet Bloc)."), listEl), [{ label: "Fermer" }]);
+    modal("Bibliothèque des blocs réutilisables", h("div", { class: "wp-library-wrap" },
+      h("p", { class: "wp-help" }, "Un bloc est enregistré une seule fois. Inséré « synchronisé », il se met à jour partout dès que vous le modifiez ici ; inséré en « copie », il devient indépendant."),
+      h("div", { class: "wp-library-bar" }, search, create), listEl), [{ label: "Fermer" }], { wide: true });
+    setTimeout(() => search.focus(), 30);
+  }
+  function renameLibraryBlock(b, done) {
+    const nm = input({ value: b.name, maxlength: 80 });
+    const ct = input({ value: b.category, maxlength: 40, placeholder: "Ex. Appels à l'action" });
+    modal("Renommer le bloc", h("div", {}, control("Nom", nm), control("Catégorie (facultatif)", ct), h("p", { class: "wp-help" }, "Le nom ne change pas son identifiant : les articles qui l'utilisent restent reliés.")), [
+      { label: "Annuler" },
+      { label: "Enregistrer", primary: true, run: async () => { try { await api(`/formateur/blog/api/blocs/${b.id}`, { method: "POST", json: { name: nm.value, category: ct.value } }); await libraryChanged(); toast("Bloc renommé."); done(); } catch (e) { toast(e.message, "error"); return true; } } },
+    ]);
+    setTimeout(() => nm.focus(), 30);
+  }
+  // Suppression sans jamais laisser de repère cassé : copies ou retrait des occurrences
+  async function deleteLibraryBlock(b, done) {
+    let u = { posts: [], occurrences: 0 };
+    try { u = await api(`/formateur/blog/api/blocs/${b.id}/utilisations`); } catch { /* compteur indisponible */ }
+    const run = (mode) => async () => {
+      try {
+        const r = await api(`/formateur/blog/api/blocs/${b.id}/supprimer`, { method: "POST", json: { mode } });
+        forgetReusable(String(b.id));
+        const here = applyDeletionHere(String(b.id), mode, b.content);
+        await libraryChanged();
+        if (here) toast(`Cet article : ${here} occurrence(s) ${mode === "copies" ? "converties en copies" : "retirées"} — pensez à l'enregistrer.`);
+        toast(r.converted ? `Bloc supprimé : ${r.converted} occurrence(s) converties en copies.` : r.removed ? `Bloc supprimé : ${r.removed} occurrence(s) retirées.` : "Bloc supprimé.");
+        done();
+        refreshReusableViews(String(b.id));
+      } catch (e) { toast(e.message, "error"); return true; }
+    };
+    if (!u.occurrences) {
+      modal(`Supprimer « ${b.name} » ?`, h("p", {}, "Ce bloc n'est utilisé dans aucun article. Cette action est irréversible."), [{ label: "Annuler" }, { label: "Supprimer le bloc", danger: true, run: run(null) }]);
+      return;
+    }
+    modal(`Supprimer « ${b.name} » ?`, h("div", {}, h("p", {}, `Ce bloc est actuellement utilisé dans ${u.occurrences} endroit(s) (${u.posts.length} article(s)).`),
+      h("ul", { class: "wp-reusable-where" }, ...u.posts.slice(0, 8).map((p) => h("li", {}, `${p.title}${p.count > 1 ? ` (${p.count} fois)` : ""}`))),
+      h("p", { class: "wp-help" }, "« Convertir en copies » : chaque occurrence garde son contenu actuel, devenu indépendant. « Retirer les occurrences » : le contenu disparaît de ces articles.")), [
+      { label: "Annuler" },
+      { label: "Retirer les occurrences", danger: true, run: run("retirer") },
+      { label: "Convertir en copies et supprimer", primary: true, run: run("copies") },
+    ]);
+  }
+  // Éditeur du bloc (bibliothèque) : même moteur que l'article, sans les outils propres à l'article
+  function editLibraryBlock(b, done) {
+    const host = h("div", { class: "wp-library-editor be-prose-host" });
+    const name = input({ value: b ? b.name : "", maxlength: 80, placeholder: "Ex. À propos de KOLAKISA" });
+    const mini = new Editor({
+      element: host,
+      extensions: [
+        StarterKit.configure({ heading: { levels: [2, 3, 4, 5, 6] }, link: { openOnClick: false, autolink: true, defaultProtocol: "https" } }),
+        TextStyleKit.configure({ fontFamily: false, fontSize: false, lineHeight: false, backgroundColor: false }), Highlight.configure({ multicolor: true }),
+        TextAlign.configure({ types: ["heading", "paragraph"] }), Subscript, Superscript, TaskList, TaskItem.configure({ nested: true }), TableKit.configure({ table: { resizable: false } }),
+        Placeholder.configure({ placeholder: "Contenu du bloc…" }),
+        ...BLOG_NODES,
+      ],
+      content: b ? b.content : "<p></p>",
+      editorProps: { attributes: { class: "be-prose", "aria-label": "Contenu du bloc" } },
+    });
+    const tool = (label, title, cmd, active) => { const btn = h("button", { type: "button", class: "wp-btn-icon wp-mini-tool", title, "aria-label": title, onclick: () => { cmd(mini.chain().focus()).run(); } }, label); if (active) mini.on("transaction", () => btn.setAttribute("aria-pressed", String(active()))); return btn; };
+    const toolbar = h("div", { class: "wp-mini-toolbar", role: "toolbar", "aria-label": "Mise en forme du bloc" },
+      tool("B", "Gras", (c) => c.toggleBold(), () => mini.isActive("bold")), tool("I", "Italique", (c) => c.toggleItalic(), () => mini.isActive("italic")),
+      tool("H2", "Titre H2", (c) => c.toggleHeading({ level: 2 }), () => mini.isActive("heading", { level: 2 })), tool("H3", "Titre H3", (c) => c.toggleHeading({ level: 3 }), () => mini.isActive("heading", { level: 3 })),
+      tool("•", "Liste à puces", (c) => c.toggleBulletList(), () => mini.isActive("bulletList")), tool("1.", "Liste numérotée", (c) => c.toggleOrderedList(), () => mini.isActive("orderedList")),
+      tool("❝", "Citation", (c) => c.toggleBlockquote(), () => mini.isActive("blockquote")), tool("↶", "Annuler", (c) => c.undo()), tool("↷", "Rétablir", (c) => c.redo()));
+    const note = b && b.occurrences ? h("p", { class: "wp-reusable-warning" }, `Ce bloc est synchronisé : l'enregistrer met à jour ses ${b.occurrences} occurrence(s) dans ${b.uses} article(s).`) : null;
+    const m = modal(b ? `Modifier « ${b.name} »` : "Nouveau bloc réutilisable", h("div", { class: "wp-library-edit" }, control("Nom", name), note, toolbar, host), [
+      { label: "Annuler" },
+      { label: b ? "Enregistrer le bloc" : "Créer le bloc", primary: true, run: async () => {
+        try {
+          const json = { name: name.value, html: mini.getHTML() };
+          if (b) await api(`/formateur/blog/api/blocs/${b.id}`, { method: "POST", json });
+          else await api("/formateur/blog/api/blocs", { method: "POST", json: { ...json, category: "" } });
+          await libraryChanged();
+          if (b) { forgetReusable(String(b.id)); refreshReusableViews(String(b.id)); }
+          toast(b ? `« ${name.value} » enregistré : mis à jour dans toutes ses occurrences.` : `Bloc « ${name.value} » créé.`);
+          done();
+        } catch (e) { toast(e.message, "error"); return true; }
+      } },
+    ], { wide: true });
+    m.dlg.addEventListener("close", () => mini.destroy());
+    setTimeout(() => (b ? mini.commands.focus("end") : name.focus()), 30);
+  }
+  // Occurrences affichées dans l'article ouvert : redessinées avec la nouvelle version (ou signalées si supprimé)
+  function refreshReusableViews(ref) {
+    forgetReusable(String(ref));
+    window.dispatchEvent(new CustomEvent("kb-reusable-changed", { detail: { ref: String(ref) } }));
+  }
+  // Bloc supprimé de la bibliothèque : l'article ouvert applique le même choix (copies ou retrait) à ses occurrences,
+  // pour ne jamais réenregistrer un repère vers un bloc qui n'existe plus
+  function applyDeletionHere(ref, mode, html) {
+    const spots = [];
+    editor.state.doc.descendants((n, pos) => { if (n.type.name === "kbReusable" && n.attrs.ref === ref) spots.push({ pos, size: n.nodeSize }); });
+    if (!spots.length) return 0;
+    let tr = editor.state.tr;
+    for (const sp of spots.reverse()) {
+      if (mode === "copies") {
+        const box = document.createElement("div"); box.innerHTML = html;
+        const frag = PMDOMParser.fromSchema(editor.schema).parse(box).content;
+        tr = tr.replaceWith(sp.pos, sp.pos + sp.size, frag);
+      } else tr = tr.delete(sp.pos, sp.pos + sp.size);
+    }
+    editor.view.dispatch(tr.setMeta("kbLockChange", true));
+    return spots.length;
   }
 
   // Recadrage d'une image : zone choisie à la souris (libre ou proportions fixes), nouvelle image créée dans la
@@ -1689,8 +1839,10 @@ function start() {
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => chain().addRowAfter().run() }, "+ Ligne"),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => chain().addColumnAfter().run() }, "+ Colonne"))));
     } else if (t === "kbReusable") {
-      inspector.append(section("Bloc synchronisé", h("p", { class: "wp-help" }, "Ce contenu est partagé : le modifier change tous les articles qui l'utilisent."),
-        h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-primary", onclick: () => editReusable(b.pos) }, "Modifier l'original"), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => detachReusable(b.pos) }, "Convertir en blocs normaux"))));
+      const info = reusableList.find((x) => String(x.id) === String(a.ref));
+      inspector.append(section("Bloc synchronisé", h("p", { class: "wp-help" }, `« ${info ? info.name : a.name || "Bloc"} » est partagé : le modifier change toutes ses occurrences.${info ? ` ${usesText(info)}.` : ""}`),
+        h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-primary", onclick: () => editReusable(b.pos) }, "Modifier le bloc…"), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => detachReusable(b.pos) }, "Créer une copie indépendante")),
+        h("button", { type: "button", class: "wp-btn-link", onclick: manageReusable }, "Ouvrir la bibliothèque")));
     } else if (t === "blockquote") {
       inspector.append(section("Réglages", checkbox("Citation mise en avant (grande, centrée)", Boolean(a.pullquote), (v) => set({ pullquote: v }))));
     } else if (t === "kbSpacer") {
@@ -2623,8 +2775,11 @@ function start() {
       h, modal, control, input, toast, api, ws: workspace, data: seoData, renderers: seoRenderers, DATA, postId: () => postId,
       actions: () => [
         ...BLOCKS.filter((b) => !((editorPrefs.settings && editorPrefs.settings.hiddenBlocks) || []).includes(b.id)).map((b) => ({ id: `insert:${b.id}`, group: "Insérer", label: `Ajouter : ${b.title}`, run: () => { editor.commands.focus(); useBlock(b.id); b.run(); } })),
-        ...reusableList.map((b) => ({ id: `reusable:${b.id}`, group: "Réutilisables", label: `Insérer le bloc réutilisable : ${b.name}${b.synced ? " (synchronisé)" : ""}`, run: () => { editor.commands.focus(); insertReusable(b); } })),
-        { id: "ed:reusable", group: "Réutilisables", label: "Gérer les blocs réutilisables…", run: () => manageReusable() },
+        ...reusableList.flatMap((b) => [
+          { id: `reusable:${b.id}`, group: "Réutilisables", label: `Insérer « ${b.name} » (synchronisé)`, run: () => { editor.commands.focus(); insertReusable(b, "sync"); } },
+          { id: `reusable-copy:${b.id}`, group: "Réutilisables", label: `Insérer une copie de « ${b.name} »`, run: () => { editor.commands.focus(); insertReusable(b, "copy"); } },
+        ]),
+        { id: "ed:reusable", group: "Réutilisables", label: "Bibliothèque des blocs réutilisables…", run: () => manageReusable() },
         { id: "ed:save", group: "Article", label: "Enregistrer", run: () => save() },
         { id: "ed:publish", group: "Article", label: $("[data-publish]").textContent.trim(), run: () => $("[data-publish]").click() },
         { id: "ed:preview-desktop", group: "Aperçu", label: "Aperçu ordinateur", run: () => $('[data-preview="desktop"]').click() },

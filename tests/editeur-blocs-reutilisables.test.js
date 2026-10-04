@@ -16,7 +16,7 @@ describe("Blocs réutilisables et préférences de l'éditeur", () => {
     assert.equal((await post("/formateur/blog/api/blocs", { name: "Vide", html: "<script>alert(1)</script>" })).status, 400);
     const b = json(await post("/formateur/blog/api/blocs", { name: "Promo", category: "Offres", synced: true, html: '<p onclick="x()">Offre<script>alert(1)</script></p><div class="kb-reusable" data-ref="1"></div>' })).block;
     assert.equal(b.content, "<p>Offre</p>");
-    assert.equal(b.synced, true);
+    assert.equal(typeof b.id, "number"); // le mode (synchronisé ou copie) se choisit à chaque insertion
   });
 
   test("synchronisé : l'article affiche la version à jour ; suppression refusée tant qu'il est utilisé", async () => {
@@ -31,7 +31,7 @@ describe("Blocs réutilisables et préférences de l'éditeur", () => {
     assert.doesNotMatch(page, /Version 1/);
     const del = await post(`/formateur/blog/api/blocs/${block.id}/supprimer`, {});
     assert.equal(del.status, 400);
-    assert.match(json(del).error, /Avec bandeau/);
+    assert.match(json(del).error, /utilisé 1 fois \(1 article/); // détail des articles : route /utilisations
     assert.equal(json(await prof.get("/formateur/blog/api/blocs")).blocks.find((x) => x.id === block.id).uses, 1);
   });
 

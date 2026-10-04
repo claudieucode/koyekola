@@ -1,8 +1,10 @@
 // Blocs réutilisables de l'éditeur d'articles et préférences personnelles de l'éditeur.
-//   - Bloc « copie » : inséré comme un contenu normal (modifiable indépendamment).
-//   - Bloc « synchronisé » : l'article ne contient qu'un repère <div class="kb-reusable" data-ref="id"> ; le contenu
-//     est lu dans cette table au moment de l'affichage. Modifier le bloc le modifie partout où il est utilisé.
-// Contenu toujours passé par le filtre de sécurité du blog à l'enregistrement (jamais de HTML brut).
+// Un bloc est enregistré UNE fois (table blog_reusable_blocks, identifiant stable). Le mode se choisit À CHAQUE insertion :
+//   - « synchronisé » : l'article ne contient qu'un repère <div class="kb-reusable" data-ref="id"> ; le contenu est lu dans
+//     cette table au moment de l'affichage. Modifier le bloc le modifie partout où il est utilisé (tous les articles).
+//   - « copie » : le contenu est inséré dans l'article et devient indépendant.
+// Supprimer un bloc utilisé ne laisse jamais de repère cassé : ses repères sont convertis en copies ou retirés
+// (articles, brouillons automatiques et versions). Contenu toujours passé par le filtre de sécurité du blog.
 const db = require("../config/database");
 const { UserError } = require("../utils/errors");
 
@@ -54,17 +56,55 @@ function list({ q = "" } = {}) {
   const like = `%${String(q).trim()}%`;
   return db.prepare("SELECT * FROM blog_reusable_blocks WHERE name LIKE ? OR category LIKE ? ORDER BY category COLLATE NOCASE, name COLLATE NOCASE").all(like, like);
 }
-// Articles qui utilisent un bloc synchronisé
-const usage = (id) => db.prepare("SELECT id, title FROM posts WHERE content LIKE ?").all(`%class="kb-reusable" data-ref="${Number(id)}"%`);
-function remove(id) {
+// Repères d'un bloc dans un HTML (même bloc plusieurs fois possible)
+const refPattern = (id) => new RegExp(`<div class="kb-reusable"[^>]*\\bdata-ref="${Number(id)}"[^>]*></div>`, "g");
+const countRefs = (html, id) => (String(html || "").match(refPattern(id)) || []).length;
+// Où un bloc est utilisé : articles (avec le nombre d'occurrences) et total des occurrences
+function usage(id) {
+  const posts = db.prepare("SELECT id, title, slug, status, published, content FROM posts WHERE content LIKE ?").all(`%data-ref="${Number(id)}"%`)
+    .map((p) => ({ id: p.id, title: p.title, slug: p.slug, status: p.status, published: Boolean(p.published), count: countRefs(p.content, id) }))
+    .filter((p) => p.count > 0);
+  return { posts, occurrences: posts.reduce((n, p) => n + p.count, 0) };
+}
+// Supprimer un bloc. Utilisé : mode obligatoire — « copies » (les repères deviennent son contenu, indépendant)
+// ou « retirer » (les repères sont retirés). Appliqué aux articles, aux brouillons automatiques et aux versions.
+function remove(id, { mode = null } = {}) {
   const b = get(id);
   if (!b) throw new UserError("Bloc introuvable.");
-  const used = b.synced ? usage(id) : [];
-  if (used.length) throw new UserError(`Ce bloc synchronisé est utilisé par : ${used.map((p) => `« ${p.title} »`).join(", ")}. Convertissez-le d'abord en blocs normaux dans ces articles.`);
-  db.prepare("DELETE FROM blog_reusable_blocks WHERE id = ?").run(id);
+  const used = usage(id);
+  if (used.occurrences && !["copies", "retirer"].includes(mode)) {
+    throw new UserError(`Ce bloc est utilisé ${used.occurrences} fois (${used.posts.length} article(s)). Choisissez : le convertir en copies ou retirer ses occurrences.`);
+  }
+  const replacement = mode === "copies" ? b.content : "";
+  const swap = (html) => String(html || "").replace(refPattern(id), () => replacement);
+  const like = `%data-ref="${Number(id)}"%`;
+  db.exec("BEGIN");
+  try {
+    for (const p of db.prepare("SELECT id, content FROM posts WHERE content LIKE ?").all(like)) db.prepare("UPDATE posts SET content = ? WHERE id = ?").run(swap(p.content), p.id);
+    for (const r of db.prepare("SELECT id, content FROM post_revisions WHERE content LIKE ?").all(like)) db.prepare("UPDATE post_revisions SET content = ? WHERE id = ?").run(swap(r.content), r.id);
+    // Brouillons automatiques : contenu dans un JSON
+    for (const a of db.prepare("SELECT post_id, payload FROM post_autosaves WHERE payload LIKE ?").all(`%data-ref=\\"${Number(id)}\\"%`)) {
+      try { const data = JSON.parse(a.payload); if (data && typeof data.content === "string") { data.content = swap(data.content); db.prepare("UPDATE post_autosaves SET payload = ? WHERE post_id = ?").run(JSON.stringify(data), a.post_id); } } catch { /* brouillon illisible : ignoré */ }
+    }
+    db.prepare("DELETE FROM blog_reusable_blocks WHERE id = ?").run(id);
+    db.exec("COMMIT");
+  } catch (e) { db.exec("ROLLBACK"); throw e; }
+  return { converted: mode === "copies" ? used.occurrences : 0, removed: mode === "retirer" ? used.occurrences : 0, posts: used.posts.length };
 }
-// Contenu d'un bloc synchronisé pour l'affichage d'un article
-const syncedHtml = (id) => { const b = get(id); return b && b.synced ? b.content : null; };
+// Dupliquer : nouveau bloc indépendant (nouvel identifiant), même contenu
+function duplicate(id, userId) {
+  const b = get(id);
+  if (!b) throw new UserError("Bloc introuvable.");
+  return create({ name: `${b.name} (copie)`.slice(0, 80), category: b.category, html: b.content, synced: b.synced }, userId);
+}
+// Repères vers des blocs supprimés retirés du HTML enregistré (jamais de référence cassée en base)
+function pruneMissing(html) {
+  const text = String(html || "");
+  if (!text.includes('class="kb-reusable"')) return text;
+  return text.replace(/<div class="kb-reusable"[^>]*\bdata-ref="(\d+)"[^>]*><\/div>/g, (m, id) => (get(Number(id)) ? m : ""));
+}
+// Contenu d'un bloc pour l'affichage d'un article (tout bloc référencé est résolu, quel que soit son mode d'origine)
+const syncedHtml = (id) => { const b = get(id); return b ? b.content : null; };
 
 // ---------- Préférences de l'éditeur (favoris, récents, réglages) ----------
 const SETTINGS = {
@@ -101,4 +141,4 @@ function savePrefs(userId, patch) {
   return next;
 }
 
-module.exports = { create, update, get, list, remove, usage, syncedHtml, prefsOf, savePrefs, cleanPrefs, SETTINGS };
+module.exports = { create, update, get, list, remove, duplicate, usage, countRefs, pruneMissing, syncedHtml, prefsOf, savePrefs, cleanPrefs, SETTINGS };

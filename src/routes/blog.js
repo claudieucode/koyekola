@@ -297,7 +297,7 @@ function readFields(body, existing = null) {
   const fields = {
     title: oneLine(body.title, 150),
     excerpt: oneLine(body.excerpt, 300),
-    content: format === "html" ? sanitizeBlogHtml(raw) : raw,
+    content: format === "html" ? reusable.pruneMissing(sanitizeBlogHtml(raw)) : raw,
     content_format: format,
     seo_title: oneLine(body.seo_title, 70),
     seo_description: oneLine(body.seo_description, 160),
@@ -514,7 +514,7 @@ router.put("/formateur/blog/api/espace-seo/fun", express.json({ limit: "8kb" }),
 });
 
 // ---------- Blocs réutilisables et préférences de l'éditeur ----------
-const reusableJson = (b) => ({ id: b.id, name: b.name, category: b.category, synced: Boolean(b.synced), content: b.content, updatedAt: b.updated_at, uses: b.synced ? reusable.usage(b.id).length : null });
+const reusableJson = (b) => { const u = reusable.usage(b.id); return { id: b.id, name: b.name, category: b.category, content: b.content, createdAt: b.created_at, updatedAt: b.updated_at, uses: u.posts.length, occurrences: u.occurrences }; };
 const userError = (res, e) => { if (e instanceof UserError) return res.status(400).json({ error: e.message }); throw e; };
 router.get("/formateur/blog/api/blocs", (req, res) => res.json({ blocks: reusable.list({ q: String(req.query.q || "") }).map(reusableJson) }));
 router.get("/formateur/blog/api/blocs/:bid(\\d+)", (req, res) => { const b = reusable.get(Number(req.params.bid)); if (!b) return res.status(404).json({ error: "Bloc introuvable." }); res.json({ block: reusableJson(b) }); });
@@ -524,8 +524,16 @@ router.post("/formateur/blog/api/blocs", express.json({ limit: "600kb" }), (req,
 router.post("/formateur/blog/api/blocs/:bid(\\d+)", express.json({ limit: "600kb" }), (req, res) => {
   try { res.json({ block: reusableJson(reusable.update(Number(req.params.bid), req.body || {})) }); } catch (e) { userError(res, e); }
 });
-router.post("/formateur/blog/api/blocs/:bid(\\d+)/supprimer", (req, res) => {
-  try { reusable.remove(Number(req.params.bid)); res.json({ ok: true }); } catch (e) { userError(res, e); }
+router.post("/formateur/blog/api/blocs/:bid(\\d+)/supprimer", express.json({ limit: "2kb" }), (req, res) => {
+  try { res.json({ ok: true, ...reusable.remove(Number(req.params.bid), { mode: (req.body || {}).mode || null }) }); } catch (e) { userError(res, e); }
+});
+// Où le bloc est utilisé (articles et nombre d'occurrences)
+router.get("/formateur/blog/api/blocs/:bid(\\d+)/utilisations", (req, res) => {
+  if (!reusable.get(Number(req.params.bid))) return res.status(404).json({ error: "Bloc introuvable." });
+  res.json(reusable.usage(Number(req.params.bid)));
+});
+router.post("/formateur/blog/api/blocs/:bid(\\d+)/dupliquer", (req, res) => {
+  try { res.json({ block: reusableJson(reusable.duplicate(Number(req.params.bid), req.session.user.id)) }); } catch (e) { userError(res, e); }
 });
 router.put("/formateur/blog/api/preferences", express.json({ limit: "16kb" }), (req, res) => res.json({ prefs: reusable.savePrefs(req.session.user.id, req.body || {}) }));
 
@@ -659,7 +667,7 @@ router.post("/formateur/blog/api/brouillon", upload.none(), (req, res) => {
 router.post("/formateur/blog/:id/autosave", loadPost, upload.none(), (req, res) => {
   const data = {};
   for (const [k, v] of Object.entries(req.body)) if (typeof v === "string" && /^[a-z_]{1,40}$/.test(k)) data[k] = v.slice(0, k === "content" ? MAX_HTML : 5000);
-  if (data.content) data.content = sanitizeBlogHtml(data.content);
+  if (data.content) data.content = reusable.pruneMissing(sanitizeBlogHtml(data.content));
   const savedAt = blog.setAutosave(req.post.id, req.session.user.id, data);
   res.json({ ok: true, savedAt });
 });
