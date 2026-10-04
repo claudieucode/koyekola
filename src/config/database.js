@@ -394,6 +394,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_media_created ON media(created_at);
   CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status, published_at);
 `);
+// Révisions : réglages de l'article (catégorie, étiquettes, image, SEO…) en JSON, type de révision, empreinte (anti-doublon)
+const revisionColumns = db.prepare("PRAGMA table_info(post_revisions)").all().map((col) => col.name);
+for (const [name, definition] of Object.entries({ meta: "TEXT NOT NULL DEFAULT '{}'", kind: "TEXT NOT NULL DEFAULT 'save'", fingerprint: "TEXT NOT NULL DEFAULT ''" })) {
+  if (!revisionColumns.includes(name)) db.exec(`ALTER TABLE post_revisions ADD COLUMN ${name} ${definition}`);
+}
 
 // Photo du formateur (chemin d'un fichier envoyé) : colonne ajoutée aux bases déjà existantes
 const userColumns = db.prepare("PRAGMA table_info(users)").all().map((col) => col.name);

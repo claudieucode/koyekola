@@ -2,6 +2,8 @@
 // auteur, carte d'une formation citée) et services de l'éditeur (statuts et programmation, versions, sauvegarde automatique,
 // médiathèque, recherche de liens internes, suggestions de maillage).
 const db = require("../config/database");
+const crypto = require("crypto");
+const { removeUploadedFile } = require("../utils/uploads");
 const fs = require("fs");
 const path = require("path");
 const { uploadsRoot } = require("../config/paths");
@@ -15,7 +17,8 @@ const { norm } = require("../utils/seoAnalyzer");
 
 // Libellés de l'éditeur de blocs de WordPress (Gutenberg), en français
 const STATUSES = { draft: "Brouillon", review: "En attente de relecture", scheduled: "Planifié", published: "Publié", archived: "Archivé" };
-const MAX_REVISIONS = 50;
+// Nombre de révisions gardées par article (les plus récentes) ; BLOG_MAX_REVISIONS=0 : aucune limite
+const MAX_REVISIONS = (() => { const n = Number(process.env.BLOG_MAX_REVISIONS); return process.env.BLOG_MAX_REVISIONS !== undefined && Number.isInteger(n) && n >= 0 ? n : 100; })();
 
 const MAX_TAGS = 10;
 // Robots (moteurs, aperçus de liens, outils) : leurs visites ne comptent pas comme des lectures
@@ -156,12 +159,57 @@ function subcategories() {
   return db.prepare("SELECT DISTINCT category, subcategory FROM posts WHERE category <> '' AND subcategory <> '' ORDER BY category, subcategory").all();
 }
 
-// ---------- Versions ----------
-function addRevision(post, userId, note) {
-  db.prepare("INSERT INTO post_revisions (post_id, user_id, title, excerpt, content, content_format, note) VALUES (?, ?, ?, ?, ?, ?, ?)")
-    .run(post.id, userId ?? null, post.title, post.excerpt || "", post.content || "", post.content_format || "markdown", String(note || "").slice(0, 300));
-  // On garde les 50 plus récentes
-  db.prepare("DELETE FROM post_revisions WHERE post_id = ? AND id NOT IN (SELECT id FROM post_revisions WHERE post_id = ? ORDER BY id DESC LIMIT ?)").run(post.id, post.id, MAX_REVISIONS);
+// ---------- Versions (révisions) ----------
+// Une révision = l'état complet de l'article APRÈS un enregistrement : contenu, titre, résumé et réglages (meta).
+// La plus récente est donc toujours la version actuelle ; un enregistrement sans aucun changement n'en crée pas.
+const REVISION_META = ["slug", "status", "published_at", "category", "subcategory", "tags", "author_id", "cover_path", "cover_alt",
+  "seo_title", "seo_description", "focus_keyword", "secondary_keywords", "canonical_url", "robots_index", "robots_follow", "schema_type",
+  "og_title", "og_description", "og_image_path", "twitter_card", "twitter_title", "twitter_description", "twitter_image_path",
+  "reading_minutes", "language", "featured", "toc_enabled", "toc_depth", "toc_numbering", "toc_title", "comments_enabled"];
+// Restaurer une révision rend son contenu et ses réglages, mais jamais l'état de publication ni l'adresse (statut, date, slug) :
+// restaurer ne met pas un article hors ligne et ne casse pas les liens déjà partagés.
+const NOT_RESTORED = new Set(["slug", "status", "published_at"]);
+const RESTORED_META = REVISION_META.filter((k) => !NOT_RESTORED.has(k));
+const REVISION_KINDS = { create: "Création", save: "Modification manuelle", publish: "Publication", schedule: "Planification", status: "Changement de statut", restore: "Restauration", before_restore: "Avant restauration" };
+const metaOf = (post) => Object.fromEntries(REVISION_META.map((k) => [k, post[k] ?? null]));
+const revisionFingerprint = (post) => crypto.createHash("sha1").update(JSON.stringify([post.title, post.excerpt || "", post.content || "", post.content_format || "markdown", metaOf(post)])).digest("hex");
+// Type d'une révision d'après le changement de statut (publication, planification…), sinon modification manuelle
+function revisionKind(before, after) {
+  if (!before) return "create";
+  if (before.status === after.status) return "save";
+  return after.status === "published" ? "publish" : after.status === "scheduled" ? "schedule" : "status";
+}
+// Enregistre une révision ; renvoie son identifiant, ou null si rien n'a changé depuis la dernière (pas de doublon)
+function addRevision(post, userId, note, kind = "save") {
+  const fingerprint = revisionFingerprint(post);
+  const last = db.prepare("SELECT fingerprint FROM post_revisions WHERE post_id = ? ORDER BY id DESC LIMIT 1").get(post.id);
+  if (last && last.fingerprint === fingerprint) return null;
+  const info = db.prepare("INSERT INTO post_revisions (post_id, user_id, title, excerpt, content, content_format, note, meta, kind, fingerprint) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(post.id, userId ?? null, post.title, post.excerpt || "", post.content || "", post.content_format || "markdown", String(note || "").slice(0, 300), JSON.stringify(metaOf(post)), Object.hasOwn(REVISION_KINDS, kind) ? kind : "save", fingerprint);
+  if (MAX_REVISIONS) {
+    const dropped = db.prepare("SELECT meta FROM post_revisions WHERE post_id = ? AND id NOT IN (SELECT id FROM post_revisions WHERE post_id = ? ORDER BY id DESC LIMIT ?)").all(post.id, post.id, MAX_REVISIONS);
+    if (dropped.length) {
+      db.prepare("DELETE FROM post_revisions WHERE post_id = ? AND id NOT IN (SELECT id FROM post_revisions WHERE post_id = ? ORDER BY id DESC LIMIT ?)").run(post.id, post.id, MAX_REVISIONS);
+      for (const p of revisionImages(dropped)) releaseImage(p); // images qui n'étaient plus gardées que pour ces révisions
+    }
+  }
+  return Number(info.lastInsertRowid);
+}
+// Images (couverture, Facebook, X) citées par des révisions
+const IMAGE_META = ["cover_path", "og_image_path", "twitter_image_path"];
+function revisionImages(rows) {
+  const out = new Set();
+  for (const r of rows) { let m = {}; try { m = JSON.parse(r.meta || "{}") || {}; } catch { m = {}; } for (const k of IMAGE_META) if (m[k]) out.add(m[k]); }
+  return [...out];
+}
+const revisionUses = (p) => Boolean(db.prepare("SELECT 1 FROM post_revisions WHERE meta LIKE ? LIMIT 1").get(`%${JSON.stringify(String(p)).slice(1, -1)}%`));
+// Image envoyée qui n'est plus utilisée nulle part (article, contenu, révision) : supprimée du disque et de la médiathèque.
+// Tant qu'une révision la cite, elle est gardée pour que « Restaurer » puisse rendre l'image d'origine.
+function releaseImage(p) {
+  if (!p || mediaUsage(p).length || revisionUses(p)) return false;
+  db.prepare("DELETE FROM media WHERE path = ?").run(p);
+  removeUploadedFile(p);
+  return true;
 }
 // Résumé d'une modification (« Titre modifié · Contenu : +120 mots · Statut : Publié »)
 function describeChange(before, after) {
@@ -176,12 +224,29 @@ function describeChange(before, after) {
   }
   if (before.status !== after.status) parts.push(`Statut : ${STATUSES[after.status] || after.status}`);
   if ((before.seo_title || "") !== (after.seo_title || "") || (before.seo_description || "") !== (after.seo_description || "")) parts.push("Référencement modifié");
+  if ((before.category || "") !== (after.category || "") || (before.subcategory || "") !== (after.subcategory || "")) parts.push("Catégorie modifiée");
+  if ((before.tags || "") !== (after.tags || "")) parts.push("Étiquettes modifiées");
+  if ((before.cover_path || "") !== (after.cover_path || "")) parts.push("Image mise en avant modifiée");
+  if (before.slug !== after.slug) parts.push("Adresse modifiée");
   return parts.join(" · ") || "Réglages modifiés";
 }
-function listRevisions(postId) {
-  return db.prepare("SELECT r.id, r.title, r.note, r.created_at, r.content_format, u.username AS author FROM post_revisions r LEFT JOIN users u ON u.id = r.user_id WHERE r.post_id = ? ORDER BY r.id DESC").all(postId);
+// Révisions d'un article, des plus récentes aux plus anciennes, par pages (before : identifiant de la dernière révision déjà affichée)
+function listRevisions(postId, { before = 0, limit = 30 } = {}) {
+  const n = Math.min(Math.max(Number(limit) || 30, 1), 100);
+  return db.prepare(`SELECT r.id, r.title, r.note, r.kind, r.created_at, r.content_format, u.username AS author FROM post_revisions r LEFT JOIN users u ON u.id = r.user_id
+    WHERE r.post_id = ? ${before ? "AND r.id < ?" : ""} ORDER BY r.id DESC LIMIT ?`).all(...[postId, ...(before ? [Number(before)] : []), n])
+    .map((r) => ({ ...r, kindLabel: REVISION_KINDS[r.kind] || REVISION_KINDS.save }));
 }
-const getRevision = (postId, id) => db.prepare("SELECT * FROM post_revisions WHERE post_id = ? AND id = ?").get(postId, id);
+const countRevisions = (postId) => db.prepare("SELECT COUNT(*) n FROM post_revisions WHERE post_id = ?").get(postId).n;
+// Une révision de CET article uniquement (jamais celle d'un autre), réglages décodés
+function getRevision(postId, id) {
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const r = db.prepare("SELECT r.*, u.username AS author FROM post_revisions r LEFT JOIN users u ON u.id = r.user_id WHERE r.post_id = ? AND r.id = ?").get(postId, id);
+  if (!r) return null;
+  let meta = {};
+  try { meta = JSON.parse(r.meta || "{}") || {}; } catch { meta = {}; }
+  return { ...r, meta, kindLabel: REVISION_KINDS[r.kind] || REVISION_KINDS.save };
+}
 
 // ---------- Sauvegarde automatique ----------
 function getAutosave(postId) {
@@ -314,6 +379,6 @@ module.exports = {
   listComments, countComments, addComment, getComment, deleteComment, COMMENT_MAX,
   STATUSES, parseTags, excerptOf, textOf, categories, categoryBySlug, subcategories, allTags, canonicalCategory, canonicalSubcategory, canonicalTags,
   popular, recent, similar, neighbours, authorOf, instructors, courseCard, renderPost, countView, card, promoteScheduled,
-  addRevision, describeChange, listRevisions, getRevision, getAutosave, setAutosave, clearAutosave,
+  addRevision, describeChange, revisionKind, revisionFingerprint, listRevisions, countRevisions, getRevision, metaOf, revisionImages, releaseImage, REVISION_META, RESTORED_META, REVISION_KINDS, MAX_REVISIONS, getAutosave, setAutosave, clearAutosave,
   listMedia, addMedia, getMedia, mediaByPath, updateMedia, mediaUsage, searchLinks, suggestLinks, PAGES,
 };

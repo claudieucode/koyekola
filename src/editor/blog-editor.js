@@ -2163,16 +2163,21 @@ function start() {
     renderVersions();
   }
   $("[data-reviewed]").addEventListener("change", refreshPublication);
+  // ---------- Révisions : aperçu dans le panneau latéral ; écran « Révisions » (comparer, aperçu, restaurer) ----------
   function renderVersions() {
     const list = $("[data-versions]");
-    $("[data-revision-count]").textContent = DATA.revisions.length ? String(DATA.revisions.length) : "";
-    list.replaceChildren(...DATA.revisions.map((r, i) => h("li", {},
-      h("span", { class: "be-version-when" }, fmtDate(r.created_at)), h("span", { class: "be-version-who" }, r.author || "—"), h("span", { class: "be-version-note" }, r.note || "Enregistrement"),
-      h("span", { class: "be-version-actions" },
-        h("button", { type: "button", class: "wp-btn-link", onclick: () => viewVersion(r) }, "Consulter"),
-        i > 0 ? h("button", { type: "button", class: "wp-btn-link", onclick: () => compareVersion(r) }, "Comparer") : null,
-        i > 0 ? h("button", { type: "button", class: "wp-btn-link", onclick: () => restoreVersion(r) }, "Restaurer") : h("span", { class: "wp-help" }, "actuelle")))));
-    if (!DATA.revisions.length) list.append(h("li", { class: "wp-help" }, "Les révisions apparaîtront après le premier enregistrement."));
+    const total = DATA.revisionTotal ?? DATA.revisions.length;
+    $("[data-revision-count]").textContent = total ? String(total) : "";
+    if (!postId || !DATA.revisions.length) {
+      list.replaceChildren(h("li", { class: "wp-help be-versions-empty" }, "Aucune révision pour l'instant. Elles apparaîtront après le premier enregistrement."));
+      return;
+    }
+    list.replaceChildren(...DATA.revisions.slice(0, 5).map((r, i) => h("li", {},
+      h("button", { type: "button", class: "be-version-open", onclick: () => openRevisions(r.id), "aria-label": `${i === 0 ? "Version actuelle" : "Révision"} du ${fmtDate(r.created_at)}, ${r.kindLabel || "Modification manuelle"}${r.author ? `, par ${r.author}` : ""}. Ouvrir` },
+        h("span", { class: "be-version-when" }, fmtDate(r.created_at)),
+        h("span", { class: `be-version-kind${i === 0 ? " is-current" : ""}` }, i === 0 ? "Actuelle" : r.kindLabel || "Modification manuelle"),
+        h("span", { class: "be-version-note" }, [r.author, r.note].filter(Boolean).join(" · "))))),
+    h("li", { class: "be-versions-more" }, h("button", { type: "button", class: "wp-btn-secondary", "data-open-revisions": "", onclick: () => openRevisions() }, total > 1 ? `Parcourir les ${total} révisions` : "Ouvrir les révisions")));
   }
   // ---------- Comparaison d'une révision avec l'article actuel ----------
   // Texte par blocs (titres, paragraphes, éléments de liste…) ; différences ligne par ligne, puis mot par mot
@@ -2201,53 +2206,251 @@ function start() {
     while (j < m) ops.push(["+", b[j++]]);
     return ops;
   }
-  const wordDiff = (a, b) => { const A = a.split(/(\s+)/); const B = b.split(/(\s+)/); if (A.length * B.length > 400000) return null; return lcs(A, B).map(([op, w]) => (op === "=" ? w : h(op === "-" ? "del" : "ins", {}, w))); };
-  async function compareVersion(r) {
-    try {
-      const v = await api(`/formateur/blog/${postId}/versions/${r.id}`);
-      const before = [`Titre · ${v.title}`, ...blockLines(v.content, v.content_format)].slice(0, 1500);
-      const after = [`Titre · ${field("title").value}`, ...blockLines(editor.getHTML(), "html")].slice(0, 1500);
-      const ops = lcs(before, after);
-      const rows = [];
-      let same = 0;
-      const flushSame = () => { if (same) rows.push(h("li", { class: "is-same" }, `… ${same} bloc${same > 1 ? "s" : ""} identique${same > 1 ? "s" : ""}`)); same = 0; };
-      for (let k = 0; k < ops.length; k++) {
-        const [op, line] = ops[k];
-        if (op === "=") { same++; continue; }
-        flushSame();
-        // Un retrait suivi d'un ajout : bloc modifié → différences mot par mot
-        if (op === "-" && ops[k + 1] && ops[k + 1][0] === "+") { const w = wordDiff(line, ops[k + 1][1]); if (w) { rows.push(h("li", { class: "is-changed" }, ...w)); k++; continue; } }
-        rows.push(h("li", { class: op === "-" ? "is-removed" : "is-added" }, h(op === "-" ? "del" : "ins", {}, line)));
+  // Différences mot par mot ; les mots retirés / ajoutés à la suite sont regroupés (un seul passage barré ou souligné)
+  const wordDiff = (a, b) => {
+    const A = a.split(/(\s+)/); const B = b.split(/(\s+)/);
+    if (A.length * B.length > 400000) return null;
+    const runs = [];
+    for (const [op, w] of lcs(A, B)) {
+      const last = runs[runs.length - 1];
+      if (last && last.op === op) last.text += w; else runs.push({ op, text: w });
+    }
+    // « mot1 mot2 » retiré puis ajouté : les espaces isolées entre deux passages du même type sont fusionnées
+    const merged = [];
+    for (let i = 0; i < runs.length; i++) {
+      const r = runs[i]; const prev = merged[merged.length - 1]; const next = runs[i + 1];
+      if (r.op === "=" && /^\s+$/.test(r.text) && prev && next && prev.op !== "=" && prev.op === next.op) { prev.text += r.text + next.text; i++; continue; }
+      if (prev && prev.op === r.op) prev.text += r.text; else merged.push({ ...r });
+    }
+    return merged.map((r) => (r.op === "=" ? r.text : h(r.op === "-" ? "del" : "ins", {}, r.text)));
+  };
+  // Réglages comparés (et restaurés, sauf statut, date de publication et adresse : l'état de publication ne bouge jamais)
+  const REV_FIELDS = [["category", "Catégorie"], ["subcategory", "Sous-catégorie"], ["tags", "Étiquettes"], ["author_id", "Auteur"], ["cover_path", "Image mise en avant"], ["cover_alt", "Texte alternatif de l'image"],
+    ["seo_title", "Titre SEO"], ["seo_description", "Méta-description"], ["focus_keyword", "Mot-clé principal"], ["secondary_keywords", "Mots-clés secondaires"], ["canonical_url", "Adresse canonique"],
+    ["robots_index", "Indexation par les moteurs"], ["robots_follow", "Suivi des liens"], ["schema_type", "Données structurées"], ["og_title", "Titre Facebook"], ["og_description", "Description Facebook"], ["og_image_path", "Image Facebook"],
+    ["twitter_card", "Carte X"], ["twitter_title", "Titre X"], ["twitter_description", "Description X"], ["twitter_image_path", "Image X"], ["reading_minutes", "Temps de lecture"], ["language", "Langue"],
+    ["featured", "Article vedette"], ["toc_enabled", "Sommaire"], ["toc_depth", "Profondeur du sommaire"], ["toc_numbering", "Numérotation du sommaire"], ["toc_title", "Titre du sommaire"], ["comments_enabled", "Commentaires"],
+    ["status", "Statut"], ["published_at", "Date de publication"], ["slug", "Adresse (slug)"]];
+  const YES_NO = new Set(["robots_index", "robots_follow", "featured", "toc_enabled", "comments_enabled"]);
+  const revValue = (k, v) => {
+    if (v === null || v === undefined || v === "") return "—";
+    if (YES_NO.has(k)) return Number(v) ? "Oui" : "Non";
+    if (k === "status") return DATA.statuses[v] || v;
+    if (k === "published_at") return fmtDate(v);
+    if (k === "author_id") return (DATA.authors || []).find((a) => a.id === Number(v))?.name || `Auteur n° ${v}`;
+    if (k === "reading_minutes") return `${v} min`;
+    if (k === "toc_numbering") return { none: "Aucune", h2: "Titres principaux", full: "Complète" }[v] || v;
+    return String(v);
+  };
+  const revCell = (k, v) => (/_path$/.test(k) && v ? h("span", { class: "rv-image" }, h("img", { src: v, alt: "", loading: "lazy" }), h("span", {}, String(v).split("/").pop())) : h("span", {}, revValue(k, v)));
+  const revWhen = (r) => new Date(`${r.created_at.replace(" ", "T")}Z`).toLocaleString("fr-FR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(" à ", " — ");
+
+  function openRevisions(selectId = null) {
+    if (!postId) { toast("Enregistrez l'article une première fois : l'historique des révisions commencera alors.", "error"); return; }
+    const cache = new Map(); // révisions déjà chargées (détail)
+    const st = { list: [], total: 0, more: false, selected: null, mode: "compare", against: "current", loading: false, restoring: false };
+    const listEl = h("ul", { class: "rv-list", role: "listbox", "aria-label": "Révisions de l'article", tabindex: "-1" });
+    const listStatus = h("p", { class: "rv-list-status", role: "status" });
+    const moreBtn = h("button", { type: "button", class: "wp-btn-secondary rv-more", hidden: true, onclick: () => loadList(true) }, "Afficher les révisions plus anciennes");
+    const countEl = h("p", { class: "rv-count" });
+    const detail = h("section", { class: "rv-detail", "aria-label": "Révision sélectionnée" });
+    const restoreBtn = h("button", { type: "button", class: "wp-btn-primary", "data-revision-restore": "", disabled: true, onclick: () => restore() }, "Restaurer cette version");
+    const restoreHelp = h("p", { class: "rv-foot-help", "aria-live": "polite" });
+    const layout = h("div", { class: "rv-layout" },
+      h("aside", { class: "rv-side" }, countEl, listEl, listStatus, moreBtn),
+      detail);
+    const dlg = h("dialog", { class: "wp-modal is-wide wp-revisions", "aria-labelledby": "rv-title" },
+      h("div", { class: "wp-modal-head" }, h("h1", { id: "rv-title" }, "Révisions"), h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Fermer les révisions", onclick: () => close() }, "×")),
+      h("div", { class: "wp-modal-body rv-body" }, layout),
+      h("div", { class: "wp-modal-actions rv-foot" }, restoreHelp, h("button", { type: "button", class: "wp-btn-secondary", onclick: () => close() }, "Fermer"), restoreBtn));
+    const close = () => { if (st.restoring) return; dlg.close(); dlg.remove(); $("[data-open-revisions]")?.focus(); };
+    dlg.addEventListener("cancel", (e) => { if (st.restoring) { e.preventDefault(); return; } dlg.remove(); });
+    document.body.append(dlg);
+    dlg.showModal();
+
+    function drawList() {
+      countEl.textContent = st.total ? `${st.total} révision${st.total > 1 ? "s" : ""}` : "";
+      listEl.replaceChildren(...st.list.map((r, i) => {
+        const sel = st.selected === r.id;
+        const first = !st.more && i === st.list.length - 1;
+        return h("li", { role: "option", id: `rv-opt-${r.id}`, "aria-selected": String(sel), tabindex: sel ? "0" : "-1", class: `rv-item${sel ? " is-selected" : ""}`, "data-revision": String(r.id), onclick: () => select(r.id) },
+          h("span", { class: "rv-item-when" }, revWhen(r)),
+          h("span", { class: "rv-item-tags" }, i === 0 ? h("span", { class: "rv-badge is-current" }, "Version actuelle") : null, h("span", { class: "rv-badge" }, r.kindLabel || "Modification manuelle"), first && i > 0 ? h("span", { class: "rv-badge" }, "Première version") : null),
+          h("span", { class: "rv-item-note" }, [r.author, r.note].filter(Boolean).join(" · ")));
+      }));
+      if (!st.list.length && !st.loading) listEl.replaceChildren(h("li", { class: "rv-empty" }, "Aucune révision pour l'instant. Elles apparaîtront après le prochain enregistrement."));
+      moreBtn.hidden = !st.more;
+    }
+    async function loadList(older = false) {
+      st.loading = true;
+      listStatus.textContent = "Chargement des versions…";
+      moreBtn.disabled = true;
+      try {
+        const last = st.list[st.list.length - 1];
+        const r = await api(`/formateur/blog/${postId}/versions?limite=30${older && last ? `&avant=${last.id}` : ""}`);
+        st.list = older ? [...st.list, ...r.revisions] : r.revisions;
+        st.total = r.total; st.more = r.more;
+        listStatus.textContent = "";
+      } catch (e) {
+        listStatus.replaceChildren(h("span", { class: "wp-error" }, `Impossible de charger les versions : ${e.message} `), h("button", { type: "button", class: "wp-btn-link", onclick: () => loadList(older) }, "Réessayer"));
       }
-      flushSame();
-      const changed = ops.filter(([op]) => op !== "=").length;
-      modal(`Comparer avec la révision du ${fmtDate(v.created_at)}`, h("div", { class: "be-diff" },
-        h("p", { class: "wp-help" }, changed ? "En rouge barré : présent dans la révision, absent aujourd'hui. En vert : ajouté depuis." : "Aucune différence de texte avec l'article actuel."),
-        h("ol", { class: "be-diff-list" }, ...rows)), [
-        { label: "Fermer" },
-        { label: "Restaurer cette révision", danger: true, run: () => { restoreVersion(r); } },
-      ], { wide: true });
-    } catch (e) { toast(e.message, "error"); }
+      st.loading = false; moreBtn.disabled = false;
+      drawList();
+    }
+    const fetchRevision = async (id) => { if (!cache.has(id)) cache.set(id, await api(`/formateur/blog/${postId}/versions/${id}`)); return cache.get(id); };
+
+    async function select(id, { focus = false } = {}) {
+      st.selected = id;
+      drawList();
+      if (focus) $(`#rv-opt-${id}`, dlg)?.focus();
+      layout.classList.add("is-detail");
+      detail.replaceChildren(h("p", { class: "rv-loading", role: "status" }, "Chargement de la révision…"));
+      restoreBtn.disabled = true; restoreHelp.textContent = "";
+      try {
+        const v = await fetchRevision(id);
+        if (st.selected !== id) return;
+        await drawDetail(v);
+      } catch (e) {
+        if (st.selected !== id) return;
+        detail.replaceChildren(h("div", { class: "rv-error", role: "alert" }, h("p", {}, `Impossible d'afficher cette révision : ${e.message}`), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => select(id) }, "Réessayer")));
+      }
+    }
+    // Révision juste plus ancienne (pour « Comparer avec : la révision précédente »)
+    const previousOf = (id) => { const i = st.list.findIndex((r) => r.id === id); return i >= 0 ? st.list[i + 1] || null : null; };
+
+    async function drawDetail(v) {
+      const prev = previousOf(v.id);
+      if (st.against === "previous" && !prev) st.against = "current";
+      let base; // l'état auquel on compare la révision
+      if (st.against === "previous") { const p = await fetchRevision(prev.id); base = { label: `la révision du ${fmtDate(p.created_at)}`, title: p.title, excerpt: p.excerpt, content: p.content, content_format: p.content_format, meta: p.meta }; }
+      else base = { label: "la version actuelle", ...v.current };
+      // Avant ← base, après ← révision quand on compare à la précédente ; sinon révision → version actuelle
+      const [from, to, fromLabel, toLabel] = st.against === "previous" ? [base, v, "Révision précédente", "Cette révision"] : [v, base, "Cette révision", "Version actuelle"];
+      const isCurrent = v.isCurrent || st.list[0]?.id === v.id && !dirty;
+      const back = h("button", { type: "button", class: "wp-btn-link rv-back", onclick: () => { layout.classList.remove("is-detail"); $(`#rv-opt-${v.id}`, dlg)?.focus(); } }, "← Toutes les révisions");
+      const tab = (key, label) => h("button", { type: "button", role: "tab", "aria-selected": String(st.mode === key), class: `rv-tab${st.mode === key ? " is-active" : ""}`, onclick: () => { st.mode = key; drawDetail(v); } }, label);
+      const againstSel = h("select", { id: "rv-against", "aria-label": "Comparer avec" },
+        h("option", { value: "current" }, "la version actuelle"), h("option", { value: "previous", disabled: !prev }, prev ? "la révision précédente" : "la révision précédente (aucune)"));
+      againstSel.value = st.against;
+      againstSel.addEventListener("change", () => { st.against = againstSel.value; drawDetail(v); });
+      const head = h("div", { class: "rv-detail-head" }, back,
+        h("h2", { class: "rv-detail-title" }, `${isCurrent ? "Version actuelle" : "Révision"} du ${revWhen(v)}`),
+        h("p", { class: "rv-detail-meta" }, [v.kindLabel, v.author ? `par ${v.author}` : "", v.note].filter(Boolean).join(" · ")),
+        h("div", { class: "rv-toolbar" }, h("div", { class: "rv-tabs", role: "tablist", "aria-label": "Affichage" }, tab("compare", "Comparer"), tab("preview", "Aperçu")),
+          st.mode === "compare" ? h("label", { class: "rv-against" }, "Comparer avec ", againstSel) : null));
+      let body;
+      if (st.mode === "preview") {
+        const content = h("div", { class: "markdown article-content" });
+        content.innerHTML = v.html; // HTML assaini et rendu par le serveur
+        body = h("div", { class: "rv-preview" }, h("h2", {}, v.title), v.excerpt ? h("p", { class: "article-lead" }, v.excerpt) : null, content);
+      } else {
+        // Réglages modifiés
+        const known = Object.keys(v.meta || {}).length > 0;
+        const fieldRows = [];
+        if (from.title !== to.title) fieldRows.push(["title", "Titre", from.title, to.title]);
+        if ((from.excerpt || "") !== (to.excerpt || "")) fieldRows.push(["excerpt", "Résumé", from.excerpt, to.excerpt]);
+        if (known && Object.keys(from.meta || {}).length && Object.keys(to.meta || {}).length) for (const [k, label] of REV_FIELDS) { const a = from.meta[k] ?? null, b = to.meta[k] ?? null; if (String(a ?? "") !== String(b ?? "")) fieldRows.push([k, label, a, b]); }
+        // Contenu : blocs (titres, paragraphes, listes, images…) puis mots
+        const ops = lcs(blockLines(from.content, from.content_format).slice(0, 1500), blockLines(to.content, to.content_format).slice(0, 1500));
+        const rows = []; let same = 0, added = 0, removed = 0, changed = 0;
+        const flush = () => { if (same) rows.push(h("li", { class: "is-same" }, `… ${same} bloc${same > 1 ? "s" : ""} identique${same > 1 ? "s" : ""}`)); same = 0; };
+        for (let k = 0; k < ops.length; k++) {
+          const [op, line] = ops[k];
+          if (op === "=") { same++; continue; }
+          flush();
+          if (op === "-" && ops[k + 1] && ops[k + 1][0] === "+") { const w = wordDiff(line, ops[k + 1][1]); if (w) { rows.push(h("li", { class: "is-changed" }, h("span", { class: "rv-mark" }, "Modifié"), ...w)); changed++; k++; continue; } }
+          if (op === "-") removed++; else added++;
+          rows.push(h("li", { class: op === "-" ? "is-removed" : "is-added" }, h("span", { class: "rv-mark" }, op === "-" ? "Supprimé" : "Ajouté"), h(op === "-" ? "del" : "ins", {}, line)));
+        }
+        flush();
+        const plural = (n, one, many) => `${n} ${n > 1 ? many : one}`;
+        const nothing = !added && !removed && !changed && !fieldRows.length;
+        body = h("div", { class: "rv-compare" },
+          h("p", { class: "rv-summary" }, nothing ? `Aucune différence avec ${base.label}.` : [added && plural(added, "bloc ajouté", "blocs ajoutés"), removed && plural(removed, "bloc supprimé", "blocs supprimés"), changed && plural(changed, "bloc modifié", "blocs modifiés"), fieldRows.length && plural(fieldRows.length, "réglage modifié", "réglages modifiés")].filter(Boolean).join(" · ")),
+          dirty && st.against === "current" ? h("p", { class: "rv-note" }, "Vous avez des modifications non enregistrées : la comparaison porte sur la dernière version enregistrée.") : null,
+          !known ? h("p", { class: "rv-note" }, "Révision antérieure à l'historique des réglages : seuls le titre, le résumé et le contenu sont comparés et restaurés.") : null,
+          fieldRows.length ? h("div", { class: "rv-fields-wrap" }, h("table", { class: "rv-fields" },
+            h("caption", { class: "sr-only" }, "Réglages modifiés"),
+            h("thead", {}, h("tr", {}, h("th", { scope: "col" }, "Réglage"), h("th", { scope: "col" }, fromLabel), h("th", { scope: "col" }, toLabel))),
+            h("tbody", {}, ...fieldRows.map(([k, label, a, b]) => h("tr", {}, h("th", { scope: "row" }, label, ["status", "published_at", "slug"].includes(k) ? h("small", {}, "non restauré") : null), h("td", { class: "is-old" }, revCell(k, a)), h("td", { class: "is-new" }, revCell(k, b))))))) : null,
+          rows.length && (added || removed || changed) ? h("div", {}, h("h3", { class: "rv-section" }, "Contenu"), h("p", { class: "rv-legend" }, h("span", { class: "rv-key is-removed" }, `Barré : dans « ${fromLabel.toLowerCase()} », retiré ensuite`), h("span", { class: "rv-key is-added" }, `Souligné : ajouté dans « ${toLabel.toLowerCase()} »`)), h("ol", { class: "be-diff-list" }, ...rows)) : null);
+      }
+      detail.replaceChildren(head, body);
+      restoreBtn.disabled = isCurrent;
+      restoreHelp.textContent = isCurrent ? "Cette version est déjà la version actuelle." : "";
+    }
+
+    async function restore() {
+      const v = cache.get(st.selected);
+      if (!v || st.restoring) return;
+      const ok = await confirmRestore(v);
+      if (!ok) return;
+      st.restoring = true;
+      restoreBtn.disabled = true; restoreBtn.textContent = "Restauration…";
+      restoreHelp.textContent = "Restauration en cours…";
+      try {
+        // Modifications non enregistrées : enregistrées d'abord, elles restent ainsi dans l'historique
+        if (dirty) {
+          restoreHelp.textContent = "Enregistrement de vos modifications…";
+          const saved = await save({ status: ONLINE.has(DATA.status) ? DATA.status : secondaryStatus() });
+          if (!saved) throw new Error("vos modifications n'ont pas pu être enregistrées d'abord");
+        }
+        const r = await api(`/formateur/blog/${postId}/versions/${v.id}/restaurer`, { method: "POST", headers: { "x-blog-editor": "1" } });
+        dirty = false;
+        localDraft.clear();
+        const params = new URLSearchParams({ restaure: "1" });
+        if (r.kept && r.kept.length) params.set("conserve", r.kept.join(","));
+        location.href = `/formateur/blog/${postId}/modifier?${params}`; // l'article est rechargé avec son contenu restauré
+      } catch (e) {
+        st.restoring = false;
+        restoreBtn.disabled = false; restoreBtn.textContent = "Restaurer cette version";
+        restoreHelp.textContent = "";
+        toast(`Impossible de restaurer cette version : ${e.message}`, "error");
+      }
+    }
+
+    // Clavier : flèches, Début/Fin dans la liste
+    listEl.addEventListener("keydown", (e) => {
+      const i = st.list.findIndex((r) => r.id === st.selected);
+      const to = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: st.list.length - 1 }[e.key];
+      if (to === undefined) return;
+      e.preventDefault();
+      const r = st.list[Math.max(0, Math.min(st.list.length - 1, to))];
+      if (r && r.id !== st.selected) select(r.id, { focus: true });
+    });
+
+    (async () => {
+      await loadList();
+      const target = st.list.find((r) => r.id === selectId) || st.list[1] || st.list[0];
+      if (target) await select(target.id, { focus: true });
+      else detail.replaceChildren(h("div", { class: "rv-empty-detail" }, h("p", {}, "Aucune révision pour l'instant."), h("p", { class: "wp-help" }, "Chaque enregistrement qui modifie l'article crée une révision. Vous pourrez alors comparer et restaurer.")));
+    })();
   }
-  async function viewVersion(r) {
-    try {
-      const v = await api(`/formateur/blog/${postId}/versions/${r.id}`);
-      const body = h("div", { class: "be-version-view" }, h("p", { class: "wp-help" }, `${fmtDate(v.created_at)} · ${v.note}`), h("h2", {}, v.title), v.excerpt ? h("p", { class: "article-lead" }, v.excerpt) : null);
-      const content = h("div", { class: "markdown article-content" });
-      content.innerHTML = v.html; // HTML déjà assaini et rendu par le serveur
-      body.append(content);
-      modal("Révision", body, [{ label: "Restaurer cette révision", primary: true, run: () => restoreVersion(r) }], { wide: true });
-    } catch (e) { toast(e.message, "error"); }
+  // Confirmation de restauration (claire sur ce qui change et ce qui ne change pas)
+  function confirmRestore(v) {
+    return new Promise((resolve) => {
+      const body = h("div", { class: "rv-confirm" },
+        h("p", {}, `Le titre, le résumé, le contenu et les réglages de l'article seront remplacés par ceux de la révision du ${fmtDate(v.created_at)}.`),
+        h("ul", {},
+          h("li", {}, "L'état actuel est d'abord conservé dans l'historique : vous pourrez y revenir."),
+          h("li", {}, "Le statut, la date de publication et l'adresse de l'article ne changent pas."),
+          dirty ? h("li", {}, "Vos modifications non enregistrées seront enregistrées avant la restauration.") : null));
+      const m = modal("Restaurer cette version ?", body, [
+        { label: "Annuler", run: () => resolve(false) },
+        { label: "Restaurer cette version", primary: true, run: () => resolve(true) },
+      ]);
+      m.dlg.addEventListener("close", () => resolve(false));
+    });
   }
-  async function restoreVersion(r) {
-    if (!confirm(`Restaurer la révision du ${fmtDate(r.created_at)} ? La version actuelle reste dans l'historique.`)) return true;
-    try {
-      await api(`/formateur/blog/${postId}/versions/${r.id}/restaurer`, { method: "POST", headers: { "x-blog-editor": "1" } });
-      dirty = false;
-      localDraft.clear();
-      location.reload();
-    } catch (e) { toast(e.message, "error"); }
-    return true;
+  // Retour après une restauration : message, puis adresse nettoyée
+  {
+    const params = new URLSearchParams(location.search);
+    if (params.has("restaure")) {
+      const kept = (params.get("conserve") || "").split(",").filter(Boolean);
+      toast(kept.length ? "Révision restaurée avec succès. L'image d'origine n'existe plus : l'image actuelle a été gardée." : "Révision restaurée avec succès.");
+      params.delete("restaure"); params.delete("conserve");
+      history.replaceState(null, "", `${location.pathname}${params.size ? `?${params}` : ""}${location.hash}`);
+    }
   }
 
   // ---------- Enregistrement, sauvegarde automatique, copie locale ----------
@@ -2342,7 +2545,7 @@ function start() {
       DATA.publishedAt = r.publishedAt ?? DATA.publishedAt;
       DATA.updatedAt = r.updatedAt;
       DATA.createdAt = DATA.createdAt || r.updatedAt;
-      if (r.revisions) DATA.revisions = r.revisions;
+      if (r.revisions) { DATA.revisions = r.revisions; DATA.revisionTotal = r.revisionTotal ?? r.revisions.length; }
       for (const [key, col] of [["cover", "coverPath"], ["og", "ogImagePath"], ["twitter", "twitterImagePath"]]) if (r[col] !== undefined) imagePicks[key].saved(r[col]);
       if (r.slug) { field("slug").value = r.slug; if (r.publishedAt) $("[data-slug-hint]").textContent = "Article en ligne : si vous changez le lien, l'ancienne adresse redirigera vers la nouvelle."; }
       field("remove_cover").value = ""; field("remove_og_image").value = ""; field("remove_twitter_image").value = "";

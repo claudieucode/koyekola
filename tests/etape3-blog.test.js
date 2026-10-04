@@ -94,7 +94,7 @@ describe("éditeur (administration)", () => {
     assert.equal(after.slug, p.slug, "l'adresse ne change pas quand on retouche le titre");
     assert.equal(after.title, "Avec image (modifié)");
     assert.match(after.cover_path, /\.webp$/);
-    assert.equal(onDisk(p.cover_path), false, "l'ancienne image est supprimée du disque");
+    assert.equal(onDisk(p.cover_path), true, "l'ancienne image reste sur le disque tant qu'une révision la cite (restauration possible)");
     assert.ok(onDisk(after.cover_path));
   });
   test("réservé au formateur", async () => {

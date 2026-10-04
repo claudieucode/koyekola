@@ -10,6 +10,7 @@ const { createRateLimiter } = require("../middlewares/security");
 const { slugify } = require("../utils/format");
 const { UserError } = require("../utils/errors");
 const { removeUploadedFile } = require("../utils/uploads");
+const { uploadsRoot } = require("../config/paths");
 const { absoluteUrl, breadcrumbLd, isoDate, isoDateTime } = require("../utils/seo");
 const { sanitizeBlogHtml, markdownToEditorHtml } = require("../utils/blogHtml");
 const { escapeHtml } = require("../utils/markdown");
@@ -25,6 +26,7 @@ const seoAudit = require("../seo/audit");
 const seoRules = require("../seo/rules");
 const seoWorkspace = require("../seo/workspace");
 const reusable = require("../services/reusableBlocks");
+const { transaction } = require("../marketing/db/tx");
 const seoImages = require("../seo/images");
 const seoIntegrations = require("../seo/integrations");
 const SEO_LOGGED = ["title", "slug", "seo_title", "seo_description", "canonical_url", "robots_index", "robots_follow", "og_title", "og_description", "og_image_path", "twitter_title", "twitter_description", "twitter_card", "focus_keyword", "secondary_keywords", "schema_type", "status"];
@@ -401,11 +403,8 @@ function registerUpload(req, file, alt = "") {
 }
 
 // Une image qui ne sert plus à aucun article est retirée du disque et de la médiathèque
-function forgetIfUnused(path) {
-  if (blog.mediaUsage(path).length) return;
-  db.prepare("DELETE FROM media WHERE path = ?").run(path);
-  removeUploadedFile(path);
-}
+// Image remplacée ou article supprimé : fichier et médiathèque libérés si plus rien ne l'utilise (révisions comprises)
+const forgetIfUnused = (path) => blog.releaseImage(path);
 
 function loadPost(req, res, next) {
   const post = db.prepare("SELECT * FROM posts WHERE id = ?").get(Number(req.params.id));
@@ -422,7 +421,7 @@ function editorData(req, post) {
     editorHtml: post ? (post.content_format === "html" ? post.content : markdownToEditorHtml(post.content)) : "",
     // Sauvegarde automatique plus récente que la dernière version enregistrée : proposée à la restauration
     autosave: autosave && post && autosave.saved_at > post.updated_at ? autosave : null,
-    revisions: post ? blog.listRevisions(post.id) : [],
+    revisions: post ? blog.listRevisions(post.id) : [], revisionTotal: post ? blog.countRevisions(post.id) : 0,
     instructors: blog.instructors(), categories: blog.categories(), subcategories: blog.subcategories(), tags: blog.allTags(),
     courses: db.prepare("SELECT slug, title FROM courses WHERE published = 1 AND archived = 0 ORDER BY title COLLATE NOCASE").all(),
     statuses: blog.STATUSES, languages: Object.keys(LANGUAGES), currentUserId: req.session.user.id,
@@ -593,7 +592,7 @@ router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
   const names = Object.keys(cols);
   const info = db.prepare(`INSERT INTO posts (${names.join(", ")}) VALUES (${names.map(() => "?").join(", ")})`).run(...names.map((n) => cols[n]));
   const post = db.prepare("SELECT * FROM posts WHERE id = ?").get(Number(info.lastInsertRowid));
-  blog.addRevision(post, req.session.user.id, "Création de l'article");
+  blog.addRevision(post, req.session.user.id, "Création de l'article", "create");
   if (wantsJson(req)) return res.json({ ok: true, id: post.id, slug: post.slug, status: post.status, published: post.published, publishedAt: post.published_at, editUrl: `/formateur/blog/${post.id}/modifier`, updatedAt: post.updated_at, coverPath: post.cover_path, ogImagePath: post.og_image_path, twitterImagePath: post.twitter_image_path, revisions: blog.listRevisions(post.id).slice(0, 20) });
   res.redirect(`/formateur/blog/${post.id}/modifier?enregistre=1`);
 }));
@@ -627,7 +626,7 @@ router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, r
   const names = Object.keys(cols);
   db.prepare(`UPDATE posts SET ${names.map((n) => `${n} = ?`).join(", ")}, updated_at = datetime('now') WHERE id = ?`).run(...names.map((n) => cols[n]), p.id);
   const after = db.prepare("SELECT * FROM posts WHERE id = ?").get(p.id);
-  blog.addRevision(after, req.session.user.id, blog.describeChange(p, after));
+  blog.addRevision(after, req.session.user.id, blog.describeChange(p, after), blog.revisionKind(p, after));
   blockTrash.settle(p.id, after.content); // blocs de nouveau dans l'article (restaurés ou « Annuler ») : retirés de la corbeille
   for (const field of SEO_LOGGED) seoStore.logChange({ entityType: "post", entityKey: String(p.id), field, before: p[field], after: after[field], userId: req.session.user.id, source: "editor" });
   blog.clearAutosave(p.id);
@@ -635,7 +634,7 @@ router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, r
   for (const col of ["cover_path", "og_image_path", "twitter_image_path"]) {
     if (p[col] && p[col] !== after[col]) forgetIfUnused(p[col]);
   }
-  if (wantsJson(req)) return res.json({ ok: true, id: after.id, slug: after.slug, status: after.status, published: after.published, publishedAt: after.published_at, updatedAt: after.updated_at, coverPath: after.cover_path, ogImagePath: after.og_image_path, twitterImagePath: after.twitter_image_path, revisions: blog.listRevisions(after.id).slice(0, 20) });
+  if (wantsJson(req)) return res.json({ ok: true, id: after.id, slug: after.slug, status: after.status, published: after.published, publishedAt: after.published_at, updatedAt: after.updated_at, coverPath: after.cover_path, ogImagePath: after.og_image_path, twitterImagePath: after.twitter_image_path, revisions: blog.listRevisions(after.id, { limit: 20 }), revisionTotal: blog.countRevisions(after.id) });
   res.redirect(`/formateur/blog/${p.id}/modifier?enregistre=1`);
 }));
 
@@ -646,13 +645,14 @@ router.post("/formateur/blog/:id/publier", loadPost, (req, res) => {
   if (publish && !String(p.content || "").replace(/<[^>]*>/g, "").trim()) throw new UserError("Impossible de publier un article vide.");
   db.prepare("UPDATE posts SET published = ?, status = ?, published_at = CASE WHEN ? = 1 THEN COALESCE(published_at, datetime('now')) ELSE published_at END, updated_at = datetime('now') WHERE id = ?")
     .run(publish ? 1 : 0, publish ? "published" : "draft", publish ? 1 : 0, p.id);
-  blog.addRevision(db.prepare("SELECT * FROM posts WHERE id = ?").get(p.id), req.session.user.id, publish ? "Statut : Publié" : "Statut : Brouillon");
+  blog.addRevision(db.prepare("SELECT * FROM posts WHERE id = ?").get(p.id), req.session.user.id, publish ? "Statut : Publié" : "Statut : Brouillon", publish ? "publish" : "status");
   res.redirect("/formateur/blog");
 });
 
 router.post("/formateur/blog/:id/supprimer", loadPost, (req, res) => {
-  db.prepare("DELETE FROM posts WHERE id = ?").run(req.post.id);
-  for (const col of ["cover_path", "og_image_path", "twitter_image_path"]) if (req.post[col]) forgetIfUnused(req.post[col]);
+  const kept = blog.revisionImages(db.prepare("SELECT meta FROM post_revisions WHERE post_id = ?").all(req.post.id));
+  db.prepare("DELETE FROM posts WHERE id = ?").run(req.post.id); // révisions supprimées avec l'article (ON DELETE CASCADE)
+  for (const p of new Set([...["cover_path", "og_image_path", "twitter_image_path"].map((col) => req.post[col]).filter(Boolean), ...kept])) forgetIfUnused(p);
   res.redirect("/formateur/blog");
 });
 
@@ -662,7 +662,7 @@ router.post("/formateur/blog/api/brouillon", upload.none(), (req, res) => {
   const title = oneLine(req.body.title, 150) || "Article sans titre";
   const info = db.prepare("INSERT INTO posts (slug, title, content_format, status, author_id) VALUES (?, ?, 'html', 'draft', ?)").run(uniqueSlug(title), title, req.session.user.id);
   const post = db.prepare("SELECT * FROM posts WHERE id = ?").get(Number(info.lastInsertRowid));
-  blog.addRevision(post, req.session.user.id, "Création de l'article (sauvegarde automatique)");
+  blog.addRevision(post, req.session.user.id, "Création de l'article (sauvegarde automatique)", "create");
   res.json({ ok: true, id: post.id, slug: post.slug, editUrl: `/formateur/blog/${post.id}/modifier` });
 });
 
@@ -707,26 +707,65 @@ router.delete("/formateur/blog/:id(\\d+)/corbeille/:blockId", loadPost, (req, re
 });
 router.delete("/formateur/blog/:id(\\d+)/corbeille", loadPost, (req, res) => res.json({ removed: blockTrash.empty(req.post.id) }));
 
-// ---------- Versions ----------
-router.get("/formateur/blog/:id/versions", loadPost, (req, res) => res.json({ revisions: blog.listRevisions(req.post.id) }));
-
-router.get("/formateur/blog/:id/versions/:rid", loadPost, (req, res) => {
-  const r = blog.getRevision(req.post.id, Number(req.params.rid));
-  if (!r) return res.status(404).json({ error: "Version introuvable." });
-  const html = blog.renderPost({ ...req.post, content: r.content, content_format: r.content_format }).html;
-  res.json({ id: r.id, title: r.title, excerpt: r.excerpt, note: r.note, created_at: r.created_at, html });
+// ---------- Versions (révisions) ----------
+// Accès : tout formateur connecté (comme l'édition de l'article, router.use(requireInstructor)) ; une révision n'est lue ou
+// restaurée qu'à travers SON article (post_id vérifié par blog.getRevision) : jamais celle d'un autre article.
+const revisionId = (raw) => (/^\d{1,12}$/.test(String(raw)) ? Number(raw) : 0);
+router.get("/formateur/blog/:id(\\d+)/versions", loadPost, (req, res) => {
+  const limit = Math.min(Number(req.query.limite) || 30, 100);
+  const revisions = blog.listRevisions(req.post.id, { before: revisionId(req.query.avant), limit });
+  res.json({ revisions, total: blog.countRevisions(req.post.id), more: revisions.length === limit && blog.listRevisions(req.post.id, { before: revisions[revisions.length - 1].id, limit: 1 }).length > 0 });
 });
 
-router.post("/formateur/blog/:id/versions/:rid/restaurer", loadPost, (req, res) => {
-  const r = blog.getRevision(req.post.id, Number(req.params.rid));
+router.get("/formateur/blog/:id(\\d+)/versions/:rid", loadPost, (req, res) => {
+  const r = blog.getRevision(req.post.id, revisionId(req.params.rid));
   if (!r) return res.status(404).json({ error: "Version introuvable." });
-  db.prepare("UPDATE posts SET title = ?, excerpt = ?, content = ?, content_format = ?, updated_at = datetime('now') WHERE id = ?").run(r.title, r.excerpt, r.content, r.content_format, req.post.id);
-  const after = db.prepare("SELECT * FROM posts WHERE id = ?").get(req.post.id);
-  const when = new Date(`${r.created_at.replace(" ", "T")}Z`).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" });
-  blog.addRevision(after, req.session.user.id, `Restauration de la version du ${when}`);
-  blog.clearAutosave(req.post.id);
-  if (wantsJson(req)) return res.json({ ok: true });
-  res.redirect(`/formateur/blog/${req.post.id}/modifier?enregistre=1`);
+  const html = blog.renderPost({ ...req.post, content: r.content, content_format: r.content_format }).html;
+  res.json({
+    id: r.id, title: r.title, excerpt: r.excerpt, content: r.content, content_format: r.content_format, note: r.note, kind: r.kind, kindLabel: r.kindLabel, author: r.author, created_at: r.created_at, html,
+    meta: r.meta, // réglages enregistrés avec la révision (vide pour les révisions antérieures à leur prise en charge)
+    current: { title: req.post.title, excerpt: req.post.excerpt || "", content: req.post.content || "", content_format: req.post.content_format, meta: blog.metaOf(req.post) }, // article tel qu'enregistré
+    isCurrent: r.fingerprint !== "" && r.fingerprint === blog.revisionFingerprint(req.post),
+    restored: blog.RESTORED_META,
+  });
+});
+
+// Restauration : une seule transaction. L'état actuel est d'abord garanti dans l'historique (« Avant restauration » s'il n'y
+// est pas déjà), puis la révision choisie devient le contenu de l'article, et la restauration est elle-même une révision.
+// Rien n'est supprimé : on peut toujours revenir à l'état d'avant.
+router.post("/formateur/blog/:id(\\d+)/versions/:rid/restaurer", loadPost, (req, res) => {
+  const fail = (status, error) => (wantsJson(req) ? res.status(status).json({ error }) : res.status(status).render("error", { message: error }));
+  const r = blog.getRevision(req.post.id, revisionId(req.params.rid));
+  if (!r) return fail(404, "Version introuvable.");
+  const before = req.post;
+  const kept = []; // réglages non rendus (image d'origine supprimée…)
+  const result = transaction(db, () => {
+    const current = db.prepare("SELECT * FROM posts WHERE id = ?").get(before.id);
+    const cols = { title: r.title, excerpt: r.excerpt, content: r.content_format === "html" ? reusable.pruneMissing(r.content) : r.content, content_format: r.content_format };
+    for (const k of blog.RESTORED_META) {
+      if (!Object.hasOwn(r.meta, k)) continue; // révision ancienne : réglage non connu, valeur actuelle gardée
+      let v = r.meta[k];
+      if (/_path$/.test(k) && v && !fs.existsSync(path.join(uploadsRoot, String(v).replace(/^\/uploads\//, "")))) { if (v !== current[k]) kept.push(k); continue; }
+      if (k === "author_id" && v && !db.prepare("SELECT 1 FROM users WHERE id = ? AND role = 'formateur'").get(v)) { kept.push(k); continue; }
+      cols[k] = v;
+    }
+    const restoredState = { ...current, ...cols };
+    if (blog.revisionFingerprint(restoredState) === blog.revisionFingerprint(current)) return { same: true };
+    // L'état actuel doit être dans l'historique avant d'être remplacé (sans doublon s'il y est déjà)
+    blog.addRevision(current, req.session.user.id, "État de l'article avant la restauration", "before_restore");
+    const names = Object.keys(cols);
+    db.prepare(`UPDATE posts SET ${names.map((n) => `${n} = ?`).join(", ")}, updated_at = datetime('now') WHERE id = ?`).run(...names.map((n) => cols[n]), current.id);
+    const after = db.prepare("SELECT * FROM posts WHERE id = ?").get(current.id);
+    const when = new Date(`${r.created_at.replace(" ", "T")}Z`).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" });
+    const revision = blog.addRevision(after, req.session.user.id, `Restauration de la version du ${when}`, "restore");
+    blog.clearAutosave(current.id);
+    blockTrash.settle(current.id, after.content);
+    for (const field of SEO_LOGGED) seoStore.logChange({ entityType: "post", entityKey: String(current.id), field, before: current[field], after: after[field], userId: req.session.user.id, source: "editor" });
+    return { after, revision };
+  });
+  if (result.same) return fail(409, "Cette version est déjà la version actuelle.");
+  if (wantsJson(req)) return res.json({ ok: true, revision: result.revision, kept, revisions: blog.listRevisions(req.post.id), revisionTotal: blog.countRevisions(req.post.id) });
+  res.redirect(`/formateur/blog/${req.post.id}/modifier?restaure=1`);
 });
 
 // ---------- Médiathèque ----------
