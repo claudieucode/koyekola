@@ -1,11 +1,11 @@
-// Apparence des barres latérales de l'éditeur d'articles : choix PERSONNEL de chaque formateur (table user_prefs), comme Paramètres → Apparence dans l'espace marketing. Ne change rien au site public.
+// Apparence de l'éditeur d'articles (toute l'interface sauf la feuille d'écriture) : choix PERSONNEL de chaque formateur (table user_prefs). Ne change rien au site public.
 const THEMES = [
   { key: "clair", label: "Clair", color: "#ffffff" },
-  { key: "nuit", label: "Bleu foncé", color: "#0b2a40" },
-  { key: "gris-clair", label: "Gris clair", color: "#e7e9ec" },
-  { key: "gris-moyen", label: "Gris moyen", color: "#4f555d" },
-  { key: "gris-fonce", label: "Gris foncé", color: "#2b2e33" },
-  { key: "noir", label: "Noir", color: "#0d0d0d" },
+  { key: "nuit", label: "Bleu foncé", color: "#0c1d2b" },
+  { key: "gris-clair", label: "Gris clair", color: "#eceef1" },
+  { key: "gris-moyen", label: "Gris moyen", color: "#474c53" },
+  { key: "gris-fonce", label: "Gris foncé", color: "#27292d" },
+  { key: "noir", label: "Noir", color: "#0f1215" },
   { key: "perso", label: "Couleur personnalisée", color: null },
 ];
 const KEYS = new Set(THEMES.map((t) => t.key));

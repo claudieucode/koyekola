@@ -2433,10 +2433,12 @@ function start() {
   // Aperçu dans l'appareil par défaut
   document.addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "p") { e.preventDefault(); $(`[data-preview="${(editorPrefs.settings || {}).previewDevice || "desktop"}"]`)?.click(); } });
 
-  // Apparence des barres latérales (choix personnel enregistré sur le compte) : 6 couleurs ou une couleur au choix
+  // Apparence de l'éditeur (choix personnel enregistré sur le compte) : 6 thèmes ou une couleur au choix
+  // Le thème est posé sur <body> : toute l'interface (fenêtres et menus compris) suit les jetons --ed-* du thème
   function applyTheme(t) {
-    if (t.key === "clair") { delete root.dataset.edTheme; delete root.dataset.edContrast; root.style.removeProperty("--ed-sidebar"); }
-    else { root.dataset.edTheme = t.key; root.dataset.edContrast = t.contrast; root.style.setProperty("--ed-sidebar", t.color); }
+    const b = document.body;
+    if (t.key === "clair") { delete b.dataset.edTheme; delete b.dataset.edContrast; b.style.removeProperty("--ed-base"); }
+    else { b.dataset.edTheme = t.key; b.dataset.edContrast = t.contrast; b.style.setProperty("--ed-base", t.color); }
     DATA.editorTheme = t;
   }
   function openAppearance() {
@@ -2452,8 +2454,8 @@ function start() {
     }
     custom.addEventListener("input", () => { list.querySelector('[data-key="perso"] .wp-theme-swatch').style.background = custom.value; preview({ key: "perso", color: custom.value, contrast: contrastOf(custom.value) }); });
     let saved = false;
-    const m = modal("Apparence des barres latérales", h("div", { class: "wp-appearance" },
-      h("p", { class: "wp-help" }, "Couleur du rail d'outils, du panneau gauche et de la barre latérale. Le texte s'adapte pour rester lisible. Ce choix vous est propre et ne change rien au site public."),
+    const m = modal("Apparence de l'éditeur", h("div", { class: "wp-appearance" },
+      h("p", { class: "wp-help" }, "Apparence de toute l'interface de l'éditeur (barres, panneaux, fenêtres). La feuille d'écriture reste claire pour un aperçu fidèle de l'article publié. Ce choix vous est propre et ne change rien au site public."),
       list, control("Couleur personnalisée", custom, "Choisissez n'importe quelle couleur, puis « Couleur personnalisée » ci-dessus.")),
     [{ label: "Annuler", run: () => applyTheme(current) }, { label: "Enregistrer", primary: true, run: async () => {
       try { const r = await api("/formateur/blog/api/apparence", { method: "POST", json: { theme: choice.key, color: choice.key === "perso" ? choice.color : null } }); saved = true; applyTheme(r); toast("Apparence enregistrée."); }
