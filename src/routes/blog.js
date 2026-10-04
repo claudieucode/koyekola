@@ -362,7 +362,9 @@ function applyStatus(body, current, fields) {
     if (!plain && !/<(img|div class="kb-)/.test(fields.content)) throw new UserError("Impossible de publier un article vide : écrivez d'abord son contenu.");
   }
   if (wanted === "scheduled") {
-    const at = chosenDate || (current && current.status === "scheduled" ? current.published_at : null);
+    // Date effacée explicitement (« Effacer » dans le calendrier) : jamais de retour silencieux à l'ancienne date
+    const cleared = Object.hasOwn(body, "published_at_utc") && !String(body.published_at_utc || "").trim();
+    const at = chosenDate || (!cleared && current && current.status === "scheduled" ? current.published_at : null);
     if (!at || at <= now) throw new UserError("Programmation : choisissez une date et une heure dans le futur.");
     return { status: "scheduled", published: 0, published_at: at };
   }

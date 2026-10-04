@@ -172,6 +172,23 @@ describe("éditeur : enregistrement, statuts, versions, sauvegarde automatique, 
     assert.equal((await anon().get(`/blog/${p().slug}`)).status, 404, "archivé : hors ligne");
     assert.ok(p().published_at, "date de première publication conservée");
   });
+  test("calendrier de publication : date UTC exacte enregistrée, « Effacer » sur un article planifié refusé (pas de retour silencieux à l'ancienne date)", async () => {
+    const id = json(await save("/formateur/blog/nouveau", { ...base, title: "Calendrier" })).id;
+    const p = () => ({ ...q("SELECT status, published_at FROM posts WHERE id = ?", id)[0] });
+    // 02/10/2027 15:00 à Los Angeles = 22:00 UTC : ni le jour ni l'heure ne glissent
+    await save(`/formateur/blog/${id}/modifier`, { ...base, title: "Calendrier", status: "scheduled", published_at_utc: "2027-10-02T22:00:00.000Z" });
+    assert.deepEqual(p(), { status: "scheduled", published_at: "2027-10-02 22:00:00" });
+    const form = await prof.get(`/formateur/blog/${id}/modifier`);
+    assert.match(form.text, /id="post-date" type="datetime-local" value="2027-10-02T22:00" data-date-input data-utc="1"/);
+    // Enregistrement sans toucher à la date : conservée
+    await save(`/formateur/blog/${id}/modifier`, { ...base, title: "Calendrier", status: "scheduled" });
+    assert.equal(p().published_at, "2027-10-02 22:00:00");
+    // Date effacée dans le calendrier : refus explicite, l'ancienne date n'est pas réappliquée en douce
+    const cleared = await save(`/formateur/blog/${id}/modifier`, { ...base, title: "Calendrier", status: "scheduled", published_at_utc: "" });
+    assert.equal(cleared.status, 400);
+    assert.match(json(cleared).error, /date/i);
+    assert.deepEqual(p(), { status: "scheduled", published_at: "2027-10-02 22:00:00" });
+  });
   test("versions : une par enregistrement, avec auteur et résumé ; consulter ; restaurer (ajoute une version)", async () => {
     const id = json(await save("/formateur/blog/nouveau", { ...base, title: "Versions", content: "<p>Première version.</p>" })).id;
     await save(`/formateur/blog/${id}/modifier`, { ...base, title: "Versions (modifié)", content: "<p>Deuxième version avec plus de mots ici.</p>" });

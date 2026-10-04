@@ -25,6 +25,7 @@ import { createSeoData, createRenderers } from "./blog/seoPanels";
 import { setupWorkspaceUi } from "./blog/workspaceUi";
 import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, isLocked, findMatches, findKey, blockHtml, contentHtml } from "./blog/editing";
 import { BlockIdentity, walkBlocks, findBlock, activeBlockId, setHidden, placeOf, restorePosition, ID_ONLY_META } from "./blog/blocks";
+import { attachDatePicker, parseLocal, timeZoneLabel } from "./blog/datePicker";
 import { analyze, norm } from "../utils/seoAnalyzer";
 
 const root = document.querySelector("[data-blog-editor]");
@@ -2084,6 +2085,9 @@ function start() {
     if (!Number.isNaN(d.getTime())) dateInput.value = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   }
   const initialDate = dateInput.value;
+  // Calendrier de l'éditeur (aux couleurs du thème) : il pilote ce champ, dont la valeur reste en heure locale
+  const datePicker = attachDatePicker(dateInput, { empty: "Immédiatement", label: "Date de publication" });
+  const isFuture = (v) => { const p = parseLocal(v); return Boolean(p) && new Date(p.y, p.mo, p.d, p.h, p.mi) > new Date(); };
   // Statut choisi (liste « Statut ») = ce qui sera enregistré. Les boutons et l'étiquette du document suivent toujours ce choix.
   const ONLINE = new Set(["published", "scheduled"]);
   const LEAVE_LABEL = { draft: "Repasser en brouillon", review: "Envoyer en relecture", archived: "Archiver" };
@@ -2103,7 +2107,12 @@ function start() {
   function syncStatus() {
     field("status").value = statusSelect.value;
     const scheduled = statusSelect.value === "scheduled";
-    $("[data-date-hint]").textContent = scheduled ? "L'article sera publié automatiquement à cette date." : dateInput.value ? "" : "Immédiatement, à la publication.";
+    const tz = timeZoneLabel();
+    const hint = $("[data-date-hint]");
+    hint.classList.remove("is-warning");
+    if (scheduled) hint.textContent = dateInput.value ? `L'article sera publié automatiquement à cette date (heure : ${tz}).` : "Choisissez la date et l'heure de publication automatique.";
+    else if (dateInput.value && isFuture(dateInput.value) && !ONLINE.has(DATA.status)) { hint.textContent = "Date dans le futur : choisissez le statut « Planifié » (ou « Planifier… ») pour une publication automatique à cette date."; hint.classList.add("is-warning"); }
+    else hint.textContent = dateInput.value ? `Heure : ${tz}.` : "Immédiatement, à la publication.";
     $("[data-publish]").textContent = primaryAction().label;
     // Bouton secondaire : enregistrer sans publier, seulement tant que l'article n'est pas en ligne
     saveBtn.hidden = ONLINE.has(DATA.status);
@@ -2411,19 +2420,20 @@ function start() {
   function openPrePublish() {
     const items = checklist();
     const blocking = items.filter((c) => c.blocking && !c.ok);
-    const when = h("input", { type: "datetime-local", id: `wp-f${++uid}`, value: statusSelect.value === "scheduled" ? dateInput.value : "" });
+    const when = h("input", { type: "hidden", id: `wp-f${++uid}`, value: statusSelect.value === "scheduled" ? dateInput.value : "" });
     const panelEl = h("div", { class: "wp-prepublish", role: "region", "aria-label": "Panneau de prépublication" },
       h("div", { class: "wp-prepublish-head" },
-        blocking.length ? null : h("button", { type: "button", class: "wp-btn-primary", "data-confirm-publish": "", onclick: confirmPublish }, "Publier"),
+        blocking.length ? null : h("button", { type: "button", class: "wp-btn-primary", "data-confirm-publish": "", onclick: confirmPublish }, when.value && new Date(when.value) > new Date() ? "Planifier" : "Publier"),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => panelEl.remove() }, "Annuler")),
       h("div", { class: "wp-prepublish-body" },
         h("p", { class: "wp-prepublish-title" }, blocking.length ? "Encore un effort avant de publier" : "Confirmez-vous la publication ?"),
         h("p", { class: "wp-help" }, "Vérifiez vos réglages avant de publier."),
         blocking.length ? h("div", { class: "wp-notice-inline is-error" }, h("strong", {}, "À corriger :"), h("ul", {}, ...blocking.map((c) => h("li", {}, c.label)))) : null,
         h("div", { class: "wp-panel is-open" }, h("h2", { class: "wp-panel-title is-static" }, "Visibilité : ", h("strong", {}, "Publique"))),
-        h("div", { class: "wp-panel is-open" }, h("h2", { class: "wp-panel-title is-static" }, "Publier : ", h("strong", { "data-when-label": "" }, when.value ? new Date(when.value).toLocaleString("fr-FR") : "Immédiatement")),
+        h("div", { class: "wp-panel is-open" }, h("h2", { class: "wp-panel-title is-static" }, "Publier : ", h("strong", { "data-when-label": "" }, when.value ? new Date(when.value).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" }) : "Immédiatement")),
           h("div", { class: "wp-panel-body" }, control("Planifier (facultatif)", when, "Laissez vide pour publier tout de suite."))),
         h("div", { class: "wp-panel is-open", "data-seo-guard": "" }, h("h2", { class: "wp-panel-title is-static" }, "Contrôle SEO avant publication"), h("div", { class: "wp-panel-body" }, h("p", { class: "wp-help" }, "Vérification par le serveur…")))));
+    attachDatePicker(when, { empty: "Immédiatement", label: "Planifier la publication" });
     // Contrôle SEO fait par le serveur : Critique / Avertissements / Recommandations / Réussi
     (async () => {
       const box = panelEl.querySelector("[data-seo-guard] .wp-panel-body");
@@ -2442,14 +2452,14 @@ function start() {
     })();
     when.addEventListener("change", () => {
       const future = when.value && new Date(when.value) > new Date();
-      panelEl.querySelector("[data-when-label]").textContent = when.value ? new Date(when.value).toLocaleString("fr-FR") : "Immédiatement";
+      panelEl.querySelector("[data-when-label]").textContent = when.value ? new Date(when.value).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" }) : "Immédiatement";
       const btn = panelEl.querySelector("[data-confirm-publish]");
       if (btn) btn.textContent = future ? "Planifier" : "Publier";
     });
     async function confirmPublish() {
       const future = when.value && new Date(when.value) > new Date();
       if (when.value && !future) { toast("Choisissez une date dans le futur pour planifier.", "error"); return; }
-      if (future) dateInput.value = when.value;
+      if (future) { dateInput.value = when.value; datePicker.render(); }
       const ok = await save({ status: future ? "scheduled" : "published" });
       if (!ok) return;
       panelEl.replaceChildren(h("div", { class: "wp-prepublish-body" },

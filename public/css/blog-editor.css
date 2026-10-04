@@ -1412,3 +1412,45 @@
 .wp-library-editor .ProseMirror { min-height: 150px; outline: none; }
 .wp-library-editor .ProseMirror :is(h2, h3) { color: #0b2a40; }
 
+
+/* ---------- Calendrier de publication (remplace le calendrier natif du navigateur) ----------
+   Tout vient des jetons du thème (--ed-*) : il suit automatiquement l'apparence choisie. */
+.kdp-trigger { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 34px; padding: 6px 10px; border: 1px solid var(--ed-input-border); border-radius: 8px; background: var(--ed-input-bg); color: var(--ed-input-text); font: inherit; font-size: 13px; text-align: left; cursor: pointer; transition: border-color 120ms ease; }
+.kdp-trigger:hover { border-color: var(--ed-border-hover); }
+.kdp-trigger:focus-visible { outline: 2px solid var(--ed-focus); outline-offset: 1px; }
+.kdp-trigger[aria-expanded="true"] { border-color: var(--ed-focus); box-shadow: 0 0 0 1px var(--ed-focus); }
+.kdp-trigger span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kdp-trigger.is-empty span { color: var(--ed-muted); }
+.kdp-trigger svg { flex: none; color: var(--ed-muted); }
+.wp-help.is-warning { color: var(--ed-warning); }
+.kdp { position: fixed; z-index: 400; width: 292px; padding: 12px; border: 1px solid var(--ed-border); border-radius: 12px; background: var(--ed-surface-2); color: var(--ed-text); box-shadow: var(--ed-shadow); font-family: var(--font-body); font-size: 13px; animation: kdp-in 120ms ease-out; }
+@keyframes kdp-in { from { opacity: 0; transform: translateY(-4px); } }
+.kdp-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px; }
+.kdp-title { margin: 0; font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--ed-text); text-transform: capitalize; }
+.kdp-nav { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 8px; background: none; color: var(--ed-text-2); cursor: pointer; }
+.kdp-nav:hover { background: var(--ed-hover); color: var(--ed-text); }
+.kdp-week, .kdp-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.kdp-week { margin-bottom: 2px; }
+.kdp-week span { text-align: center; font-size: 12px; font-weight: 600; color: var(--ed-muted); padding: 4px 0; }
+.kdp-grid { display: grid; gap: 2px; }
+.kdp-day { position: relative; height: 34px; border: 0; border-radius: 8px; background: none; color: var(--ed-text); font: inherit; font-size: 13px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.kdp-day:hover { background: var(--ed-hover); }
+.kdp-day.is-outside { color: var(--ed-muted); opacity: 0.7; }
+.kdp-day.is-today { font-weight: 700; color: var(--ed-primary-fg); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ed-primary-fg) 55%, transparent); }
+.kdp-day.is-selected, .kdp-day.is-selected:hover { background: var(--ed-pressed-bg); color: var(--ed-pressed-fg); font-weight: 700; box-shadow: none; opacity: 1; }
+.kdp-day:active { transform: scale(0.96); }
+.kdp :is(button, select):focus-visible { outline: 2px solid var(--ed-focus); outline-offset: 1px; }
+.kdp-time { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--ed-border); }
+.kdp-time-label { font-weight: 600; color: var(--ed-text-2); margin-right: 2px; }
+.kdp-time select { width: auto; min-height: 32px; padding: 4px 8px; border: 1px solid var(--ed-input-border); border-radius: 8px; background: var(--ed-input-bg); color: var(--ed-input-text); font: inherit; font-size: 13px; font-variant-numeric: tabular-nums; }
+.kdp-tz { margin-left: auto; font-size: 12px; color: var(--ed-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+.kdp-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.kdp-foot-right { display: inline-flex; align-items: center; gap: 4px; }
+.kdp-link { min-height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: none; color: var(--ed-link); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.kdp-link:hover { background: var(--ed-hover); }
+.kdp-ok { min-height: 32px; padding: 0 14px; border: 0; border-radius: 8px; background: var(--ed-primary); color: var(--ed-on-primary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.kdp-ok:hover { background: var(--ed-primary-hover); }
+/* Petit écran : feuille en bas de l'écran, jamais coupée */
+.kdp.is-sheet { left: 8px; right: 8px; bottom: 8px; top: auto; width: auto; max-width: 420px; margin: 0 auto; }
+.kdp.is-sheet .kdp-day { height: 40px; }
+@media (prefers-reduced-motion: reduce) { .kdp { animation: none; } .kdp-day:active { transform: none; } }
