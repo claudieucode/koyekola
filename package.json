@@ -10,6 +10,7 @@
     "build:editor": "node scripts/build-editor.js",
     "build:automation-flow": "node scripts/build-automation-flow.js",
     "sauvegarde": "node scripts/sauvegarde.js",
+    "restaurer": "node scripts/restaurer.js",
     "creer-formateur": "node scripts/creer-formateur.js",
     "test": "node --test --test-concurrency=1 \"tests/*.test.js\"",
     "test-email": "node scripts/test-email.js",
