@@ -30,7 +30,18 @@
             <button type="button" class="btn btn-outline btn-sm" data-sms-insert="{{prenom}}" <%= dis %>>+ Prénom</button>
             <button type="button" class="btn btn-outline btn-sm" data-sms-insert="{{nom}}" <%= dis %>>+ Nom</button>
             <button type="button" class="btn btn-outline btn-sm" data-sms-gsm <%= dis %>>Remplacer les accents coûteux</button>
+            <% if (canWrite) { %><button type="button" class="btn btn-outline btn-sm" data-sms-ai-shorten<%= aiConfigured ? "" : " disabled" %>>Raccourcir avec l'IA</button><% } %>
           </div>
+          <% if (canWrite) { %>
+            <details class="mk-sms-ai" data-sms-ai>
+              <summary>Rédiger avec l'IA</summary>
+              <% if (!aiConfigured) { %><p class="mk-note">L'assistant IA n'est pas activé sur ce serveur (clé ANTHROPIC_API_KEY manquante). Voir Paramètres → Assistant IA.</p><% } %>
+              <div class="field-group"><label for="sms-ai-brief">Ce que doit dire le SMS</label><textarea id="sms-ai-brief" rows="2" maxlength="2000" placeholder="Ex. Rappeler que les inscriptions à Excel avancé ferment vendredi"<%= aiConfigured ? "" : " disabled" %>></textarea></div>
+              <button type="button" class="btn btn-primary btn-sm" data-sms-ai-write<%= aiConfigured ? "" : " disabled" %>>Rédiger</button>
+              <p class="field-hint">L'IA propose un texte court (un seul SMS facturé si possible) ; il ne remplace le vôtre que si vous cliquez sur « Utiliser ce texte ».</p>
+            </details>
+            <div class="mk-ai-out" data-sms-ai-out aria-live="polite"></div>
+          <% } %>
           <div class="field-group"><label for="c-body">Texte du SMS</label>
             <textarea id="c-body" name="body" rows="6" maxlength="1600" <%= dis %> data-sms-body data-base-url="<%= baseUrl || "https://votre-site.example" %>" data-max-segments="<%= cfg.maxSegments %>" data-track="<%= c.track_clicks ? "1" : "0" %>" placeholder="Bonjour {{prenom}}, les inscriptions à la formation Excel ouvrent demain ! Places limitées : https://…"><%= c.body %></textarea>
             <p class="mk-sms-counter" data-sms-counter aria-live="polite"></p>

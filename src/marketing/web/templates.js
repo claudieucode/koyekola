@@ -194,6 +194,7 @@ module.exports = ({ db }) => {
       fonts: Object.keys(FONTS),
       icons: Object.fromEntries(EDITOR_ICONS.map((n) => [n, icon(n, { size: 16 })])),
       contacts: db.prepare("SELECT id, email FROM mk_contacts WHERE organization_id = ? ORDER BY id DESC LIMIT 20").all(ctx.organizationId),
+      ai: { configured: require("../../services/aiCore").isConfigured() }, // onglet « IA » (point 10)
     };
     res.render("marketing/template-editor", {
       title: template.name, active: "templates", template, data: safeJson(data), readOnly: data.readOnly, versions: data.versions, palette: PALETTE, blockInfo: BLOCKS, presetInfo: PRESETS, categories: CATEGORIES,

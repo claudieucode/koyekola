@@ -1,0 +1,46 @@
+<%- include("partials/top", { title, active }) %>
+    <div class="mk-head"><h1>Assistant IA</h1></div>
+    <p class="mk-lead">L'assistant de rédaction propose des objets, réécrit un passage, rédige un brouillon d'e-mail ou de SMS et donne des conseils d'optimisation. Il propose seulement : c'est vous qui choisissez ce qui est gardé, et rien n'est envoyé sans votre action.</p>
+
+    <section class="mk-panel" aria-labelledby="ai-state">
+      <h2 id="ai-state">État</h2>
+      <% if (settings.configured) { %>
+        <p><span class="mk-status mk-status-ok">Activé</span> Modèle Claude <code><%= settings.model %></code> (Anthropic).</p>
+      <% } else { %>
+        <p><span class="mk-status mk-status-warn">Non activé</span> Ajoutez la variable <code>ANTHROPIC_API_KEY</code> (clé créée sur console.anthropic.com) dans la configuration du serveur, puis redémarrez le site. Les boutons « IA » des éditeurs l'indiqueront tant qu'elle manque.</p>
+      <% } %>
+      <div class="mk-stats mk-stats-3">
+        <div class="mk-stat"><span class="mk-stat-label">Demandes (24 h)</span><span class="mk-stat-value"><%= mkh.fmt(usage.last24h) %></span><span class="mk-stat-hint">sur <%= mkh.fmt(settings.dailyLimit) %> autorisées · <%= mkh.fmt(usage.ok24h) %> réussie<%= usage.ok24h > 1 ? "s" : "" %></span></div>
+        <% Object.entries(ACTIONS).forEach(([k, label]) => { %>
+          <div class="mk-stat"><span class="mk-stat-label"><%= label %></span><span class="mk-stat-value"><%= mkh.fmt(usage.last30d[k] || 0) %></span><span class="mk-stat-hint">sur 30 jours</span></div>
+        <% }) %>
+      </div>
+      <p class="field-hint">Seuls l'action, le résultat et des tailles sont notés pour ce décompte : vos textes ne sont jamais conservés par le site. Ils sont transmis à Anthropic le temps de la demande.</p>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="ai-voice">
+      <h2 id="ai-voice">Voix de la marque et plafond</h2>
+      <form method="post" action="/marketing/ia" class="mk-form">
+        <div class="field-group">
+          <label for="ai-voice-text">Voix de la marque (facultatif)</label>
+          <textarea id="ai-voice-text" name="voice" rows="4" maxlength="1000" aria-describedby="ai-voice-hint"<%= canWrite ? "" : " disabled" %>><%= settings.voice %></textarea>
+          <p class="field-hint" id="ai-voice-hint">Ajoutée à chaque demande. Ex. : « Tutoiement, ton encourageant, phrases courtes ; on parle de progression concrète, jamais de promesses de revenus. »</p>
+        </div>
+        <div class="field-group">
+          <label for="ai-limit">Plafond de demandes par 24 heures</label>
+          <input id="ai-limit" type="number" name="dailyLimit" min="1" max="2000" step="1" value="<%= settings.dailyLimit %>" required aria-describedby="ai-limit-hint"<%= canWrite ? "" : " disabled" %>>
+          <p class="field-hint" id="ai-limit-hint">Chaque demande est facturée par Anthropic sur votre compte : ce plafond évite une dépense imprévue.</p>
+        </div>
+        <% if (canWrite) { %><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button><% } %>
+      </form>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="ai-where">
+      <h2 id="ai-where">Où le trouver</h2>
+      <ul class="mk-breakdown">
+        <li><span>Éditeur d'e-mails → onglet « IA » : brouillon complet, objets et préheaders, conseils d'optimisation</span></li>
+        <li><span>Éditeur d'e-mails → bloc de texte sélectionné : réécrire, raccourcir, allonger, changer de ton, corriger</span></li>
+        <li><span>Campagne SMS → « Rédiger avec l'IA », « Raccourcir », « Retirer les accents coûteux »</span></li>
+      </ul>
+    </section>
+<%- include("partials/bottom") %>

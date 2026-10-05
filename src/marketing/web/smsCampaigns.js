@@ -90,6 +90,7 @@ module.exports = () => {
         title: c.name, active: "smscampaigns", c, cfg, check: sms.smsPreflight(ctx, c.id, { workerOn: workerOn() }),
         lists: audience.listLists(ctx), segmentsList: segments.listSegments(ctx), canWrite: req.mk.can("campaigns.write"), canSend: req.mk.can("campaigns.send"),
         baseUrl: String(process.env.SITE_URL || "").replace(/\/+$/, ""), targetLabel: targetName(ctx, c),
+        aiConfigured: require("../../services/aiCore").isConfigured(), // « Rédiger avec l'IA » (point 10)
       });
     }
     const report = sms.smsCampaignReport(ctx, c.id);

@@ -1,5 +1,5 @@
 // Éditeur de campagne SMS : compteur de caractères et de SMS facturés EN DIRECT, aperçu sur un téléphone, insertion
-// du prénom/nom, remplacement des accents coûteux, choix de la date d'envoi. Même calcul que src/marketing/sms/text.js
+// du prénom/nom, remplacement des accents coûteux, assistant IA (rédiger, raccourcir), choix de la date d'envoi. Même calcul que src/marketing/sms/text.js
 // et render.js (le serveur refait toujours le calcul : ceci n'est qu'une aide à l'écriture).
 (function () {
   "use strict";
@@ -68,6 +68,42 @@
     if (gsmBtn) gsmBtn.addEventListener("click", function () {
       textarea.value = chars(textarea.value).map(function (ch) { return GSM.indexOf(ch) !== -1 || EXT.indexOf(ch) !== -1 ? ch : (REPLACE[ch] !== undefined ? REPLACE[ch] : ch); }).join("");
       update();
+    });
+    // Assistant IA (point 10) : rédiger ou raccourcir ; la proposition ne remplace le texte qu'après « Utiliser ce texte »
+    var aiOut = document.querySelector("[data-sms-ai-out]");
+    function aiRequest(btn, payload) {
+      var label = btn.textContent;
+      btn.disabled = true; btn.textContent = "L'IA rédige…"; btn.setAttribute("aria-busy", "true");
+      aiOut.textContent = "";
+      fetch("/marketing/ia/sms", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(payload) })
+        .then(function (res) { return res.json().catch(function () { return {}; }).then(function (j) { if (!res.ok || !j.ok) throw new Error(j.error || "Demande impossible (" + res.status + ")."); return j; }); })
+        .then(function (r) {
+          var card = document.createElement("div"); card.className = "mk-ai-card";
+          var p = document.createElement("p"); p.className = "mk-ai-proposal"; p.textContent = r.text; card.appendChild(p);
+          var info = document.createElement("p"); info.className = "field-hint";
+          info.textContent = r.segments + " SMS facturé" + (r.segments > 1 ? "s" : "") + " par envoi avec la mention STOP" + (r.encoding === "GSM-7" ? "" : " (caractères spéciaux : 70 par SMS)") + (r.overLimit ? " — au-delà de la limite de " + r.maxSegments + " : raccourcissez." : ".");
+          card.appendChild(info);
+          var row = document.createElement("div"); row.className = "mk-ai-actions";
+          var use = document.createElement("button"); use.type = "button"; use.className = "btn btn-primary btn-sm"; use.textContent = "Utiliser ce texte";
+          use.addEventListener("click", function () { textarea.value = r.text; update(); aiOut.textContent = ""; textarea.focus(); });
+          var no = document.createElement("button"); no.type = "button"; no.className = "btn btn-ghost btn-sm"; no.textContent = "Ignorer";
+          no.addEventListener("click", function () { aiOut.textContent = ""; });
+          row.appendChild(use); row.appendChild(no); card.appendChild(row);
+          aiOut.appendChild(card);
+        })
+        .catch(function (e) { var err = document.createElement("p"); err.className = "form-error"; err.setAttribute("role", "alert"); err.textContent = e.message; aiOut.appendChild(err); })
+        .then(function () { btn.disabled = false; btn.textContent = label; btn.removeAttribute("aria-busy"); });
+    }
+    var aiWrite = document.querySelector("[data-sms-ai-write]");
+    if (aiWrite && aiOut) aiWrite.addEventListener("click", function () {
+      var brief = document.getElementById("sms-ai-brief");
+      if (!brief.value.trim()) { brief.focus(); return; }
+      aiRequest(aiWrite, { mode: "write", brief: brief.value, trackClicks: !track || track.checked });
+    });
+    var aiShorten = document.querySelector("[data-sms-ai-shorten]");
+    if (aiShorten && aiOut) aiShorten.addEventListener("click", function () {
+      if (!textarea.value.trim()) { textarea.focus(); return; }
+      aiRequest(aiShorten, { mode: "shorten", text: textarea.value, trackClicks: !track || track.checked });
     });
     textarea.addEventListener("input", update);
     if (track) track.addEventListener("change", update);

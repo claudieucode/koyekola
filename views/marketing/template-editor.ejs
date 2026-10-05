@@ -44,7 +44,7 @@
 
       <div class="mk-b-body">
         <nav class="mk-b-rail" role="tablist" aria-label="Outils de l'éditeur" aria-orientation="vertical">
-          <% const firstPane = readOnly ? "structure" : "blocks"; [["blocks", "plus", "Blocs"], ["structure", "layers", "Structure"], ["media", "image", "Médias"], ["styles", "palette", "Styles"], ["message", "settings", "Message"], ["check", "checkCircle", "Vérification"]].forEach(([key, ic, label]) => { if (readOnly && ["blocks", "media"].includes(key)) return; %>
+          <% const firstPane = readOnly ? "structure" : "blocks"; [["blocks", "plus", "Blocs"], ["structure", "layers", "Structure"], ["media", "image", "Médias"], ["styles", "palette", "Styles"], ["message", "settings", "Message"], ["ai", "bot", "IA"], ["check", "checkCircle", "Vérification"]].forEach(([key, ic, label]) => { if (readOnly && ["blocks", "media", "ai"].includes(key)) return; %>
             <button type="button" role="tab" class="mk-b-tab" id="tab-<%= key %>" data-pane="<%= key %>" aria-controls="pane-<%= key %>" aria-selected="<%= key === firstPane ? "true" : "false" %>" tabindex="<%= key === firstPane ? "0" : "-1" %>">
               <span class="mk-b-tab-icon" aria-hidden="true"><%- icon(ic, { size: 18 }) %></span><span class="mk-b-tab-label"><%= label %></span><% if (key === "check") { %><span class="mk-b-badge" id="mk-check-count" hidden></span><% } %>
             </button>
@@ -163,6 +163,39 @@
               </div>
             </section>
           </div>
+          <% if (!readOnly) { %>
+          <div class="mk-b-pane" id="pane-ai" role="tabpanel" aria-labelledby="tab-ai" hidden>
+            <div class="mk-b-pane-head">
+              <h2 class="mk-b-pane-title">Assistant IA</h2>
+              <p class="mk-b-pane-hint">L'IA propose, vous choisissez : rien ne change dans l'e-mail tant que vous ne cliquez pas sur « Utiliser » ou « Ajouter ». Ctrl + Z annule.</p>
+            </div>
+            <p class="mk-note" id="ai-off" hidden>L'assistant IA n'est pas activé sur ce serveur (clé ANTHROPIC_API_KEY manquante). Voir Paramètres → Assistant IA.</p>
+            <section class="mk-b-section" aria-labelledby="ai-draft-title">
+              <h3 class="mk-b-section-title" id="ai-draft-title">Rédiger un brouillon</h3>
+              <div class="field-group"><label for="ai-topic">Sujet de l'e-mail</label><textarea id="ai-topic" rows="2" maxlength="300" placeholder="Ex. Lancement de la formation Excel avancé, inscriptions ouvertes"></textarea></div>
+              <div class="field-group"><label for="ai-goal">Objectif (facultatif)</label><input id="ai-goal" type="text" maxlength="300" placeholder="Ex. obtenir des inscriptions avant fin octobre"></div>
+              <div class="field-group"><label for="ai-audience">Destinataires (facultatif)</label><input id="ai-audience" type="text" maxlength="300" placeholder="Ex. abonnés qui ont suivi Excel débutant"></div>
+              <div class="field-group"><label for="ai-tone">Ton</label><select id="ai-tone"><option value="amical">Amical</option><option value="professionnel">Professionnel</option><option value="enthousiaste">Enthousiaste</option><option value="simple">Très simple</option><option value="urgent">Urgence (honnête)</option></select></div>
+              <div class="field-group"><label for="ai-length">Longueur</label><select id="ai-length"><option value="court">Court</option><option value="moyen" selected>Moyen</option><option value="long">Long</option></select></div>
+              <div class="field-group"><label for="ai-course">Formation à mettre en avant (facultatif)</label><select id="ai-course"><option value="">Aucune</option></select></div>
+              <div class="field-group"><label for="ai-cta-url">Lien du bouton (si pas de formation)</label><input id="ai-cta-url" type="text" maxlength="2000" inputmode="url" placeholder="https://… ou /catalogue"></div>
+              <button type="button" class="btn btn-primary btn-sm" id="ai-draft-go">Rédiger</button>
+              <div id="ai-draft-out" class="mk-ai-out" aria-live="polite"></div>
+            </section>
+            <section class="mk-b-section" aria-labelledby="ai-subj-title">
+              <h3 class="mk-b-section-title" id="ai-subj-title">Objet et préheader</h3>
+              <p class="field-hint">5 propositions tirées du contenu actuel de l'e-mail.</p>
+              <button type="button" class="btn btn-outline btn-sm" id="ai-subj-go">Proposer des objets</button>
+              <div id="ai-subj-out" class="mk-ai-out" aria-live="polite"></div>
+            </section>
+            <section class="mk-b-section" aria-labelledby="ai-opt-title">
+              <h3 class="mk-b-section-title" id="ai-opt-title">Conseils d'optimisation</h3>
+              <p class="field-hint">Objet, appel à l'action, lisibilité, personnalisation, délivrabilité : des conseils concrets, sans faux score.</p>
+              <button type="button" class="btn btn-outline btn-sm" id="ai-opt-go">Analyser l'e-mail</button>
+              <div id="ai-opt-out" class="mk-ai-out" aria-live="polite"></div>
+            </section>
+          </div>
+          <% } %>
           <div class="mk-b-pane" id="pane-check" role="tabpanel" aria-labelledby="tab-check" hidden>
             <div class="mk-b-pane-head">
               <h2 class="mk-b-pane-title">Vérification</h2>

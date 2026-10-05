@@ -61,6 +61,7 @@ const ITEMS = [
   live("settings", "sending", "Réglages d'envoi", "/marketing/envoi", "mail", "settings.read"),
   soon("settings", "domains", "Domaines", "/marketing/domaines", "globe", "R6"),
   live("settings", "compliance", "Conformité", "/marketing/conformite", "shield", "compliance.read"),
+  live("settings", "ai", "Assistant IA", "/marketing/ia", "bot", "settings.read"),
   live("settings", "appearance", "Apparence", "/marketing/apparence", "eye", "contacts.read"),
 
   // Page de référence du design system : accessible par son adresse, absente du menu

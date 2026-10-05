@@ -36,6 +36,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./rss")());
   admin.use(require("./landing")());
   admin.use(require("./surveys")());
+  admin.use(require("./ai")());
   admin.use(require("./automations")({ db }));
   admin.use(require("./imports")({ db }));
   admin.use(require("./analytics")({ db }));

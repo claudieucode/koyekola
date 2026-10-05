@@ -1,5 +1,5 @@
 /* Éditeur d'e-mails (v3) — Campagnes → Modèles d'e-mails.
-   Zones : onglets (blocs, structure, médias, styles, message, vérification) · canevas = RENDU RÉEL de l'e-mail (aperçu
+   Zones : onglets (blocs, structure, médias, styles, message, IA, vérification) · canevas = RENDU RÉEL de l'e-mail (aperçu
    serveur « annoté » : chaque bloc porte data-mk-block, un bloc incomplet s'affiche à sa place avec son problème) ·
    réglages du bloc sélectionné. Annuler / rétablir, glisser-déposer (blocs, réordonnancement, fichiers de l'ordinateur),
    médiathèque persistante (/marketing/medias), enregistrement automatique (jamais « Enregistré » si ce n'est pas vrai).
@@ -619,6 +619,7 @@
         write.disabled = readOnly;
         write.addEventListener("click", function () { scrollToBlock(block.id); startInline(block.id); });
         out.push(S("Texte", [el("p", { "class": "mk-fx-hint mk-b-writehint" }, "Le texte s'écrit directement dans l'e-mail : cliquez dedans. La barre d'outils au-dessus du canevas le met en forme (style, gras, couleurs, liens, alignement, listes, retrait, variables)."), write]));
+        if (!readOnly) out.push(S("Assistant IA", [aiTextSection(block)]));
       } else out.push(S("Texte", [markdownField(block, "markdown", "Texte", 8)]));
     } else if (t === "image") {
       out.push(S("Image", [imageSource(block), F.text(block, "src", "Adresse de l'image (https://…)", { owner: block.id, max: 2000, placeholder: "https://exemple.fr/image.png" }),
@@ -2020,6 +2021,143 @@
       startInline: function () { if (selectedId) { scrollToBlock(selectedId); startInline(selectedId); } },
       text: textApi,
     });
+  }
+
+  // ---------- Assistant IA (point 10) : l'IA propose, la personne choisit ; tout ajout s'annule par Ctrl + Z ----------
+  var aiOn = !!(data.ai && data.ai.configured);
+  function emailText() {
+    return state.blocks.filter(function (b) { return !b.hidden; }).map(function (b) {
+      if (b.type === "text") return typeof b.html === "string" ? htmlText(b.html) : plain(b.markdown);
+      if (b.type === "heading") return "# " + (b.text || "");
+      if (b.type === "button" || b.type === "link") return "[Bouton : " + (b.label || "") + "]";
+      if (b.type === "list") return (b.items || []).map(function (i) { return "- " + i; }).join("\n");
+      return summaryOf(b);
+    }).filter(function (t) { return t && t.trim(); }).join("\n\n");
+  }
+  function aiBusy(btn, busy, text) {
+    btn.disabled = busy || !aiOn;
+    if (busy) { btn.setAttribute("data-label", btn.textContent); btn.textContent = text || "L'IA rédige…"; btn.setAttribute("aria-busy", "true"); }
+    else { if (btn.getAttribute("data-label")) btn.textContent = btn.getAttribute("data-label"); btn.removeAttribute("aria-busy"); }
+  }
+  function aiCall(action, body, btn, out) {
+    if (!aiOn) return Promise.reject(new Error("Assistant IA non activé."));
+    aiBusy(btn, true); out.textContent = "";
+    return postJson("/marketing/ia/" + action, body)
+      .then(function (r) { aiBusy(btn, false); return r; })
+      .catch(function (e) { aiBusy(btn, false); out.textContent = ""; out.appendChild(el("p", { "class": "form-error", role: "alert" }, e.message)); throw e; });
+  }
+  function useBtn(text, onClick, cls) { var b = el("button", { type: "button", "class": cls || "btn btn-outline btn-sm" }, text); b.addEventListener("click", onClick); return b; }
+  function insertBlocks(blocks, replace) {
+    var added = blocks.map(function (b) { var c = JSON.parse(JSON.stringify(b)); c.id = genId(); return c; });
+    if (replace) state.blocks = added;
+    else Array.prototype.splice.apply(state.blocks, [insertIndex(), 0].concat(added));
+    selectedId = added[0] ? added[0].id : null;
+    changed(true); renderProps();
+  }
+  (function setupAiPane() {
+    var off = $("ai-off"); if (!off) return;
+    off.hidden = aiOn;
+    var course = $("ai-course");
+    (data.courses || []).forEach(function (c) { course.appendChild(el("option", { value: String(c.id) }, c.title)); });
+    ["ai-draft-go", "ai-subj-go", "ai-opt-go"].forEach(function (id) { $(id).disabled = !aiOn; });
+
+    $("ai-draft-go").addEventListener("click", function () {
+      var btn = this, out = $("ai-draft-out");
+      var topic = $("ai-topic").value.trim();
+      if (!topic) { out.textContent = ""; out.appendChild(el("p", { "class": "form-error", role: "alert" }, "Indiquez le sujet de l'e-mail.")); $("ai-topic").focus(); return; }
+      aiCall("brouillon", { topic: topic, goal: $("ai-goal").value, audience: $("ai-audience").value, tone: $("ai-tone").value, length: $("ai-length").value, courseId: course.value ? parseInt(course.value, 10) : undefined, ctaUrl: $("ai-cta-url").value.trim() }, btn, out).then(function (r) {
+        var d = r.draft;
+        var box = el("div", { "class": "mk-ai-card" });
+        box.appendChild(el("p", { "class": "mk-ai-subject" }, "Objet : " + d.subject));
+        box.appendChild(el("p", { "class": "field-hint" }, "Préheader : " + d.preheader));
+        var list = el("ol", { "class": "mk-ai-blocks" });
+        d.blocks.forEach(function (b) { list.appendChild(el("li", {}, label(b) + " — " + summaryOf(b))); });
+        box.appendChild(list);
+        if (r.missingLink) box.appendChild(el("p", { "class": "mk-fx-hint" }, "Aucun bouton : indiquez un lien ou une formation pour en ajouter un."));
+        var withSubject = el("label", { "class": "checkbox-row" });
+        var cb = el("input", { type: "checkbox" }); cb.checked = !state.subject;
+        withSubject.appendChild(cb); withSubject.appendChild(document.createTextNode(" Utiliser aussi cet objet et ce préheader"));
+        box.appendChild(withSubject);
+        var apply = function (replace) {
+          if (cb.checked) { state.subject = d.subject; state.preheader = d.preheader; syncSettings(); }
+          insertBlocks(d.blocks, replace);
+          announce(d.blocks.length + " blocs " + (replace ? "mis à la place du contenu" : "ajoutés") + ". Ctrl + Z pour annuler.");
+          toast(replace ? "Brouillon mis à la place du contenu (Ctrl + Z pour annuler)." : "Brouillon ajouté à l'e-mail.", "ok");
+        };
+        var row = el("div", { "class": "mk-ai-actions" });
+        row.appendChild(useBtn("Ajouter à l'e-mail", function () { apply(false); }, "btn btn-primary btn-sm"));
+        if (state.blocks.length) row.appendChild(useBtn("Remplacer tout le contenu", function () { apply(true); }));
+        box.appendChild(row);
+        out.appendChild(box);
+      }).catch(function () {});
+    });
+
+    $("ai-subj-go").addEventListener("click", function () {
+      var btn = this, out = $("ai-subj-out"), content = emailText();
+      if (!content) { out.textContent = ""; out.appendChild(el("p", { "class": "form-error", role: "alert" }, "L'e-mail est vide : écrivez d'abord son contenu (ou rédigez un brouillon).")); return; }
+      aiCall("objets", { content: content, subject: state.subject }, btn, out).then(function (r) {
+        var list = el("ul", { "class": "mk-ai-list" });
+        r.proposals.forEach(function (p) {
+          var li = el("li", { "class": "mk-ai-card" });
+          li.appendChild(el("p", { "class": "mk-ai-subject" }, p.subject));
+          li.appendChild(el("p", { "class": "field-hint" }, p.preheader));
+          if (p.why) li.appendChild(el("p", { "class": "mk-fx-hint" }, p.why));
+          li.appendChild(useBtn("Utiliser", function () { state.subject = p.subject; state.preheader = p.preheader; syncSettings(); changed(); announce("Objet et préheader remplacés. Ctrl + Z pour annuler."); toast("Objet et préheader mis à jour.", "ok"); }));
+          list.appendChild(li);
+        });
+        out.appendChild(list);
+      }).catch(function () {});
+    });
+
+    $("ai-opt-go").addEventListener("click", function () {
+      var btn = this, out = $("ai-opt-out"), content = emailText();
+      if (!content) { out.textContent = ""; out.appendChild(el("p", { "class": "form-error", role: "alert" }, "L'e-mail est vide : rien à analyser.")); return; }
+      aiCall("optimiser", { subject: state.subject, preheader: state.preheader, content: content }, btn, out).then(function (r) {
+        if (r.summary) out.appendChild(el("p", { "class": "mk-ai-summary" }, r.summary));
+        var list = el("ol", { "class": "mk-ai-list" });
+        r.tips.forEach(function (t) {
+          var li = el("li", { "class": "mk-ai-card" });
+          li.appendChild(el("span", { "class": "mk-chip mk-chip-static" }, t.areaLabel));
+          li.appendChild(el("p", {}, t.issue));
+          li.appendChild(el("p", { "class": "mk-ai-tip" }, t.suggestion));
+          list.appendChild(li);
+        });
+        out.appendChild(list);
+      }).catch(function () {});
+    });
+  })();
+
+  // Réglages d'un bloc de texte : réécrire / raccourcir / allonger / ton / corriger (proposition à accepter)
+  var AI_MODES = [["reecrire", "Réécrire"], ["raccourcir", "Raccourcir"], ["allonger", "Allonger"], ["corriger", "Corriger l'orthographe"], ["ton_amical", "Ton amical"], ["ton_professionnel", "Ton professionnel"], ["ton_enthousiaste", "Ton enthousiaste"], ["ton_simple", "Plus simple"]];
+  function aiTextSection(block) {
+    var wrap = el("div", { "class": "mk-ai-block" });
+    if (!aiOn) { wrap.appendChild(el("p", { "class": "mk-fx-hint" }, "Assistant IA non activé (Paramètres → Assistant IA).")); return wrap; }
+    var sel = el("select", { id: "ai-mode-" + block.id, "aria-label": "Action de l'IA" });
+    AI_MODES.forEach(function (m) { sel.appendChild(el("option", { value: m[0] }, m[1])); });
+    var go = el("button", { type: "button", "class": "btn btn-outline btn-sm" }, "Proposer");
+    var out = el("div", { "class": "mk-ai-out", "aria-live": "polite" });
+    var row = el("div", { "class": "mk-ai-actions" }); row.appendChild(sel); row.appendChild(go);
+    wrap.appendChild(row); wrap.appendChild(out);
+    go.disabled = readOnly;
+    go.addEventListener("click", function () {
+      var text = typeof block.html === "string" ? htmlText(block.html.replace(/<\/(p|li|h\d)>/g, "$&\n\n")) : plain(block.markdown);
+      if (!text.trim()) { out.textContent = ""; out.appendChild(el("p", { "class": "form-error", role: "alert" }, "Le bloc est vide.")); return; }
+      aiCall("reecrire", { text: text.replace(/\n{3,}/g, "\n\n").trim(), mode: sel.value }, go, out).then(function (r) {
+        var card = el("div", { "class": "mk-ai-card" });
+        card.appendChild(el("p", { "class": "mk-ai-proposal" }, r.text));
+        var actions = el("div", { "class": "mk-ai-actions" });
+        actions.appendChild(useBtn("Remplacer le texte", function () {
+          var b = blockById(block.id); if (!b) return;
+          if (inline && inline.id === b.id) stopInline({ rerender: false });
+          b.html = r.html; delete b.markdown;
+          changed(true); renderProps(); announce("Texte remplacé. Ctrl + Z pour annuler."); toast("Texte remplacé (Ctrl + Z pour annuler).", "ok");
+        }, "btn btn-primary btn-sm"));
+        actions.appendChild(useBtn("Ignorer", function () { out.textContent = ""; }, "btn btn-ghost btn-sm"));
+        card.appendChild(actions);
+        out.appendChild(card);
+      }).catch(function () {});
+    });
+    return wrap;
   }
 
   // ---------- Démarrage ----------
