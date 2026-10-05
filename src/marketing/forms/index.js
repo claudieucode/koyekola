@@ -10,6 +10,9 @@ const { setContactProperties, validatePropertyValues } = require("../audience/pr
 const { tagContact } = require("../audience/tags");
 const crypto = require("crypto");
 const { truncateIp } = require("../compliance/consent");
+const { recordSmsConsent } = require("../sms/consent");
+const { normalizePhone } = require("../sms/phone");
+const { getSmsConfig } = require("../sms/config");
 
 const BLOCKED = new Set(["bounced", "complained", "suppressed"]);
 
@@ -101,7 +104,7 @@ function rowToForm(row) {
     id: row.id, name: row.name, slug: row.slug, status: row.status, fields: JSON.parse(row.fields), consentText: row.consent_text,
     listId: row.list_id, thankYouText: row.thank_you_text, viewCount: row.view_count, submitCount: row.submit_count,
     propertyFields: JSON.parse(row.property_fields || "[]"), tags: JSON.parse(row.tags || "[]"), redirectUrl: row.redirect_url || null,
-    doubleOptin: Boolean(row.double_optin),
+    doubleOptin: Boolean(row.double_optin), smsConsentText: row.sms_consent_text || "",
     popupEnabled: Boolean(row.popup_enabled), popupTrigger: row.popup_trigger, popupTriggerValue: row.popup_trigger_value, popupFrequencyDays: row.popup_frequency_days,
     createdAt: row.created_at, updatedAt: row.updated_at,
   };
@@ -142,13 +145,21 @@ function getForm(ctx, id) {
   return rowToForm(requireFormRow(ctx, id));
 }
 
-function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, popupEnabled, popupTrigger, popupTriggerValue, popupFrequencyDays, propertyFields, tags, redirectUrl, doubleOptin }) {
+// Texte de la case « accepter les SMS » : vide = pas de SMS proposé ; sinon une vraie phrase (c'est la preuve)
+function validateSmsConsentText(value) {
+  const text = cleanText(value ?? "", { max: 500, field: "smsConsentText" });
+  if (text && text.length < 10) throw new MarketingError("invalid_field", "Le texte d'accord SMS est trop court : écrivez la phrase exacte que la personne accepte (ex. « J'accepte de recevoir des SMS de KOLAKISA. Désinscription : STOP »).");
+  return text;
+}
+
+function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, popupEnabled, popupTrigger, popupTriggerValue, popupFrequencyDays, propertyFields, tags, redirectUrl, doubleOptin, smsConsentText }) {
   checkCtx(ctx);
   const current = rowToForm(requireFormRow(ctx, id)); // existe et appartient à l'organisation
   // Réglages absents de l'appel (ancien appelant) : on garde la valeur actuelle plutôt que de l'effacer
   const cleanPropertyFields = propertyFields === undefined ? current.propertyFields : validatePropertyFields(ctx, propertyFields);
   const cleanTags = tags === undefined ? current.tags : validateTags(tags);
   const cleanRedirect = redirectUrl === undefined ? current.redirectUrl : validateRedirect(redirectUrl);
+  const cleanSms = smsConsentText === undefined ? current.smsConsentText : validateSmsConsentText(smsConsentText);
   const cleanName = cleanText(name, { max: 80, field: "name" });
   if (!cleanName) throw new MarketingError("invalid_field", "Le nom est obligatoire.");
   const cleanConsent = cleanText(consentText, { max: 500, field: "consentText" });
@@ -163,10 +174,10 @@ function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, 
     .prepare(
       `UPDATE mk_forms SET name = ?, fields = ?, consent_text = ?, list_id = ?, thank_you_text = ?,
          popup_enabled = ?, popup_trigger = ?, popup_trigger_value = ?, popup_frequency_days = ?,
-         property_fields = ?, tags = ?, redirect_url = ?, double_optin = ?, updated_at = datetime('now') WHERE id = ?`
+         property_fields = ?, tags = ?, redirect_url = ?, double_optin = ?, sms_consent_text = ?, updated_at = datetime('now') WHERE id = ?`
     )
     .run(cleanName, JSON.stringify(cleanFields), cleanConsent, list, cleanThanks, popupEnabled ? 1 : 0, trigger, triggerValue, frequencyDays,
-      JSON.stringify(cleanPropertyFields), JSON.stringify(cleanTags), cleanRedirect, (doubleOptin === undefined ? current.doubleOptin : doubleOptin) ? 1 : 0, id);
+      JSON.stringify(cleanPropertyFields), JSON.stringify(cleanTags), cleanRedirect, (doubleOptin === undefined ? current.doubleOptin : doubleOptin) ? 1 : 0, cleanSms, id);
   audit(ctx, "form.updated", "form", id, { name: cleanName, popupEnabled: Boolean(popupEnabled) });
   return getForm(ctx, id);
 }
@@ -237,6 +248,15 @@ function submitForm(ctx, formId, input = {}) {
     }
     properties[def.key] = raw;
   }
+  // Accord SMS (seconde case, facultative) : numéro vérifié AVANT de créer quoi que ce soit, comme les propriétés
+  let sms = null;
+  if (form.smsConsentText && input.sms_consent) {
+    const raw = String(input.sms_phone || input.phone || "").trim();
+    if (!raw) return { ok: false, reason: "invalid_phone", message: "Indiquez votre numéro de mobile pour recevoir les SMS (ou décochez la case SMS)." };
+    const r = normalizePhone(raw, { defaultCountry: ctx.settings ? getSmsConfig(ctx).defaultCountry : undefined });
+    if (!r.ok) return { ok: false, reason: "invalid_phone", message: `Numéro de mobile invalide : ${r.reason}` };
+    sms = { phone: r.e164, text: form.smsConsentText };
+  }
   let contact;
   try {
     // Fuseau du navigateur (champ caché rempli par le formulaire) : seulement s'il est valide, jamais bloquant
@@ -256,7 +276,7 @@ function submitForm(ctx, formId, input = {}) {
     ctx.db.prepare("DELETE FROM mk_pending_confirmations WHERE contact_id = ? AND form_id = ? AND confirmed_at IS NULL").run(contact.id, formId);
     ctx.db
       .prepare("INSERT INTO mk_pending_confirmations (organization_id, form_id, contact_id, token_hash, consent_text, ip, payload, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(ctx.organizationId, formId, contact.id, tokenHash(token), form.consentText, truncateIp(input.ip), JSON.stringify({ properties }), now + CONFIRM_TTL_MS, now);
+      .run(ctx.organizationId, formId, contact.id, tokenHash(token), form.consentText, truncateIp(input.ip), JSON.stringify({ properties, ...(sms ? { sms } : {}) }), now + CONFIRM_TTL_MS, now);
     ctx.db.prepare("UPDATE mk_forms SET submit_count = submit_count + 1 WHERE id = ?").run(formId);
     audit(ctx, "form.pending_confirmation", "form", formId, {});
     return { ok: true, pending: true, token, email: contact.email, contact: getContact(ctx, contact.id) };
@@ -264,9 +284,21 @@ function submitForm(ctx, formId, input = {}) {
   const consent = recordConsent(ctx, contact.id, { source: "form", textShown: form.consentText, ip: input.ip, formId });
   if (!consent.ok) return { ok: false, reason: consent.reason };
   applyFormExtras(ctx, form, contact.id, properties);
+  const smsResult = sms ? applySmsConsent(ctx, form, contact.id, sms, input.ip) : null;
   ctx.db.prepare("UPDATE mk_forms SET submit_count = submit_count + 1 WHERE id = ?").run(formId);
   // `contact` date d'AVANT recordConsent (qui vient de faire passer son statut à « subscribed ») : on renvoie l'état à jour, pas l'instantané périmé
-  return { ok: true, contact: getContact(ctx, contact.id) };
+  return { ok: true, contact: getContact(ctx, contact.id), sms: smsResult };
+}
+
+// Accord SMS donné dans le formulaire : enregistré avec SA preuve (texte de la case + numéro + IP tronquée + formulaire).
+// Jamais bloquant pour l'inscription e-mail : un numéro bloqué (STOP) reste simplement non joignable par SMS.
+function applySmsConsent(ctx, form, contactId, sms, ip) {
+  try {
+    return recordSmsConsent(ctx, contactId, { phone: sms.phone, source: "form", textShown: sms.text, ip, formId: form.id });
+  } catch (error) {
+    if (!(error instanceof MarketingError)) throw error;
+    return { ok: false, reason: error.code };
+  }
 }
 
 // Liste, propriétés et étiquettes du formulaire : appliquées à l'inscription (ou à la confirmation, en double opt-in)
@@ -310,9 +342,11 @@ function confirmSubscription(ctx, token, { now = Date.now() } = {}) {
     source: "form", textShown: `${pending.consent_text} [Inscription confirmée par e-mail (double opt-in)]`, ip: pending.ip, formId: form.id,
   });
   if (!consent.ok) return { ok: false, reason: consent.reason };
-  let properties = {};
-  try { properties = JSON.parse(pending.payload).properties || {}; } catch { properties = {}; }
-  applyFormExtras(ctx, form, pending.contact_id, properties);
+  let payload = {};
+  try { payload = JSON.parse(pending.payload) || {}; } catch { payload = {}; }
+  applyFormExtras(ctx, form, pending.contact_id, payload.properties || {});
+  // Accord SMS donné au moment du formulaire : enregistré à la confirmation, avec le texte présenté à l'époque
+  if (payload.sms && payload.sms.phone && payload.sms.text) applySmsConsent(ctx, form, pending.contact_id, payload.sms, pending.ip);
   audit(ctx, "form.confirmed", "form", form.id, {});
   return { ok: true, form };
 }

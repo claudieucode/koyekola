@@ -147,6 +147,7 @@ function graphToSteps(graph) {
 const blank = (v) => v === undefined || v === null || (typeof v === "string" && !v.trim());
 const INCOMPLETE = {
   email: (d) => blank(d.templateId),
+  sms: (d) => blank(d.body),
   wait: (d) => blank(d.amount) || blank(d.unit),
   wait_for_event: (d) => blank(d.event) || blank(d.amount) || blank(d.unit),
   condition: (d) => ((d.check || "segment") === "segment" ? !d.definition || !Array.isArray(d.definition.rules) || !d.definition.rules.length : blank(d.ref)),

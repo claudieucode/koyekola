@@ -7,6 +7,7 @@ const { fieldCatalog } = require("../segments/catalog");
 const audience = require("../audience");
 const { listTags } = require("../audience/tags");
 const sendingConfig = require("../sending/config");
+const { getSmsConfig } = require("../sms/config");
 const bridge = require("../bridge/events");
 const journeys = require("../automations/journeys");
 const { MarketingError } = require("../errors");
@@ -51,7 +52,9 @@ module.exports = ({ db }) => {
     attempt(req, res, next, () => (created ? `/marketing/automatisations/${created.id}` : `/marketing/automatisations/parcours/${encodeURIComponent(req.params.key)}`), () => {
       created = journeys.createJourney(req.mk.ctx, req.params.key);
       const n = created.steps.filter((s) => s.type === "email").length;
-      return `Parcours créé en brouillon avec ${n} e-mail${n > 1 ? "s" : ""} (modèles « ${created.name.replace(/^Parcours · /, "")} »). Relisez chaque e-mail, ajustez les délais si besoin, puis activez-le : rien n'est envoyé avant.`;
+      const k = created.steps.filter((s) => s.type === "sms").length;
+      if (!n) return `Parcours créé en brouillon avec ${k} SMS. Relisez chaque SMS (cliquez sur l'étape), ajustez les délais si besoin, puis activez-le : rien n'est envoyé avant.`;
+      return `Parcours créé en brouillon avec ${n} e-mail${n > 1 ? "s" : ""}${k ? ` et ${k} SMS` : ""} (modèles « ${created.name.replace(/^Parcours · /, "")} »). Relisez chaque e-mail, ajustez les délais si besoin, puis activez-le : rien n'est envoyé avant.`;
     });
   });
 
@@ -84,6 +87,8 @@ module.exports = ({ db }) => {
       // du nœud (src/editor/automation-flow.js), sans devoir d'abord enregistrer un segment séparé.
       segmentCatalog: fieldCatalog(ctx),
       triggers: auto.TRIGGERS,
+      // Étape « Envoyer un SMS » : expéditeur, limite facturée et heures de silence réels (réglages SMS), pour le compteur
+      sms: (({ provider, sender, maxSegments, quietStart, quietEnd }) => ({ provider, sender, maxSegments, quietStart, quietEnd, baseUrl: process.env.SITE_URL || "" }))(getSmsConfig(ctx)),
     };
     res.render("marketing/automation", {
       title: a.name, active: "automations", a, STATUS, RUN_STATUS, STEP_LABELS: auto.STEP_LABELS, data: safeJson(payload), locked,

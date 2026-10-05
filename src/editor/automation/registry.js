@@ -15,6 +15,7 @@ const plural = (n, unit) => (n === 1 && /s$/.test(unit) ? unit.slice(0, -1) : un
 export const ACTIONS = {
   trigger: { category: "trigger", icon: "zap", tone: "trigger", description: "Ce qui fait entrer un contact dans le scénario", title: "Configurer le déclencheur" },
   email: { category: "communication", icon: "mail", description: "Un modèle de votre bibliothèque", keywords: "email mail courriel message envoi", title: "Configurer : Envoyer un e-mail", make: (ctx) => ({ templateId: null, trackClicks: ctx.a.kind === "marketing" }) },
+  sms: { category: "communication", icon: "smartphone", description: "Aux contacts qui ont accepté les SMS", keywords: "sms texto mobile telephone message", title: "Configurer : Envoyer un SMS", make: () => ({ body: "", trackClicks: true }) },
   wait: { category: "temps", icon: "clock", description: "Une durée fixe avant la suite", keywords: "attente attendre delai pause duree", title: "Configurer : Attendre", make: () => ({ amount: 1, unit: "days" }) },
   wait_for_event: { category: "temps", icon: "calendarClock", description: "Un événement, avec un délai maximal", keywords: "attente attendre evenement delai jusqu", title: "Configurer : Attendre jusqu'à", make: () => ({ event: "", amount: 7, unit: "days" }) },
   condition: { category: "logique", icon: "gitBranch", tone: "branch", description: "Deux chemins : oui / non", keywords: "si segment branche ouvert clic critere", title: "Configurer : Condition", make: () => ({ check: "segment", definition: null, _segmentId: null }) },
@@ -51,6 +52,7 @@ export function summary(type, ctx, d) {
   if (!isConfigured(type, ctx, d)) return "Non configuré";
   switch (type) {
     case "email": { const tpl = data.templates.find((x) => x.id === d.templateId); return tpl ? tpl.name : "Modèle introuvable"; }
+    case "sms": { const t = String(d.body).replace(/\s+/g, " "); return t.length > 60 ? `${t.slice(0, 57)}…` : t; }
     case "wait": return `${d.amount} ${plural(d.amount, unitLabel(d.unit))}`;
     case "wait_for_event": return `${d.event} (${d.amount} ${plural(d.amount, unitLabel(d.unit))} au plus)`;
     case "split": return `A ${d.percentage} % · B ${100 - d.percentage} %`;

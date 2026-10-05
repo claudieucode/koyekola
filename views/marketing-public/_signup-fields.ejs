@@ -1,5 +1,5 @@
 <%# Champs d'inscription d'un formulaire (page du formulaire /f/… et section « inscription » d'une page d'atterrissage) :
-    piège à robots, e-mail, champs du formulaire, propriétés, case de consentement (preuve). p = préfixe des identifiants. %>
+    piège à robots, e-mail, champs du formulaire, propriétés, case de consentement (preuve), accord SMS facultatif. p = préfixe des identifiants. %>
 <% const p = typeof prefix !== "undefined" && prefix ? prefix : "f"; %>
           <div class="hp-field" aria-hidden="true"><label for="<%= p %>-website">Ne pas remplir</label><input id="<%= p %>-website" type="text" name="website" tabindex="-1" autocomplete="off"></div>
           <div class="field-group"><label for="<%= p %>-email">Adresse e-mail</label><input id="<%= p %>-email" type="email" name="email" value="<%= values.email || '' %>"<%- typeof autofocus === "undefined" || autofocus ? " required autofocus" : " required" %>></div>
@@ -19,3 +19,10 @@
             <% } %>
           <% }) %>
           <label class="checkbox-row optin-row"><input type="checkbox" name="consent" value="1" required> <%= form.consentText %></label>
+          <% if (form.smsConsentText) { %>
+            <%# Accord SMS : facultatif et SÉPARÉ de l'e-mail (seconde case, jamais pré-cochée) ; numéro demandé à part si le formulaire n'a pas « Téléphone » %>
+            <% if (!form.fields.includes("phone")) { %>
+              <div class="field-group"><label for="<%= p %>-sms-phone">Numéro de mobile (pour les SMS)</label><input id="<%= p %>-sms-phone" type="tel" name="sms_phone" maxlength="40" autocomplete="tel" value="<%= values.sms_phone || '' %>"></div>
+            <% } %>
+            <label class="checkbox-row optin-row"><input type="checkbox" name="sms_consent" value="1"<%- values.sms_consent ? " checked" : "" %>> <%= form.smsConsentText %></label>
+          <% } %>

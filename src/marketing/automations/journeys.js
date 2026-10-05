@@ -242,10 +242,23 @@ const JOURNEYS = [
     objective: "Souhaiter l'anniversaire de vos contacts.",
     unavailable: "Les automatisations de KOLAKISA démarrent sur un événement, pas encore sur une date enregistrée dans la fiche du contact.",
   },
+  // SMS seulement (aucun e-mail) : textes sans « ê, ç, œ… » pour rester à 160 caractères par SMS (alphabet GSM-7)
   {
-    key: "bienvenue-sms", group: "welcome", label: "Bienvenue aux abonnés SMS",
+    key: "bienvenue-sms", group: "welcome", label: "Bienvenue aux abonnés SMS", kind: "marketing",
     objective: "Accueillir par SMS les nouveaux abonnés SMS.",
-    unavailable: "L'étape « Envoyer un SMS » n'existe pas encore dans les automatisations (prévue au point 8 du plan : SMS dans les formulaires et les parcours).",
+    description: "Démarre quand un contact accepte les SMS (case SMS d'un formulaire, centre de préférences, réponse START). Un SMS de bienvenue tout de suite, puis 3 jours plus tard un SMS vers le catalogue. Seuls les contacts avec un accord SMS prouvé le reçoivent ; la mention « STOP SMS » est ajoutée à chaque message.",
+    trigger: { event: "contact.sms_subscribed", filter: {} },
+    note: "Pour le remplir : ajoutez une case « accepter les SMS » à un formulaire (Formulaires → votre formulaire). Les SMS respectent les heures de silence et le plafond quotidien des réglages SMS.",
+    emails: () => [],
+    sms: (base) => [
+      { name: "Bienvenue", body: "Bonjour {{prenom|à vous}}, merci d'avoir accepté les SMS de KOLAKISA ! Vous recevrez ici nos nouvelles formations et nos offres." },
+      { name: "Catalogue", body: `{{prenom|Bonjour}}, envie d'apprendre quelque chose de nouveau ? Découvrez nos formations : ${catalogUrl(base)}` },
+    ],
+    steps: [
+      { type: "sms", sms: 0 },
+      { type: "wait", amount: 3, unit: "days" },
+      { type: "sms", sms: 1 },
+    ],
   },
 ];
 
@@ -258,6 +271,7 @@ function describeStep(j, s, i, emails) {
   const target = (t) => (t === "exit" ? "fin du parcours" : t === "next" || t === undefined ? "étape suivante" : `étape ${t + 1}`);
   switch (s.type) {
     case "email": return { icon: "mail", text: `Envoyer l'e-mail « ${emails[s.email].subject.replace(/\{\{[^}]*\}\}/g, "…")} »` };
+    case "sms": return { icon: "smartphone", text: `Envoyer le SMS « ${j.sms("https://votre-site")[s.sms].name} »` };
     case "wait": return { icon: "clock", text: `Attendre ${s.amount} ${unit[s.unit]}` };
     case "wait_for_event": return { icon: "clock", text: `Attendre « ${(TRIGGERS[s.event] || { label: s.event }).label} » (${s.amount} ${unit[s.unit]} au plus)` };
     case "condition": {
@@ -292,6 +306,7 @@ function summary(j) {
     emailCount: STEP_COUNT(j), stepCount: j.steps.length,
     steps: j.steps.map((s, i) => ({ n: i + 1, ...describeStep(j, s, i, emails) })),
     emails: emails.map((e) => ({ name: e.name, subject: e.subject, preheader: e.preheader })),
+    sms: j.sms ? j.sms("https://votre-site").map((m) => ({ name: m.name, body: m.body })) : [],
   };
 }
 
@@ -317,7 +332,8 @@ function createJourney(ctx, key) {
       kind: e.kind || j.kind, category: j.kind === "transactional" ? "transactional" : j.group === "welcome" ? "welcome" : j.group === "reengage" ? "reengage" : "general",
       subject: e.subject, preheader: e.preheader, blocks: e.blocks,
     }).id);
-    const steps = j.steps.map((s) => (s.type === "email" ? { type: "email", templateId: ids[s.email] } : s));
+    const texts = j.sms ? j.sms(base) : [];
+    const steps = j.steps.map((s) => (s.type === "email" ? { type: "email", templateId: ids[s.email] } : s.type === "sms" ? { type: "sms", body: texts[s.sms].body, trackClicks: true } : s));
     const automation = service.createAutomation(ctx, { name: automationName, kind: j.kind, triggers: [j.trigger], steps });
     audit(ctx, "automation.journey_created", "automation", automation.id, { journey: j.key, templates: ids.length });
     return automation;

@@ -22,6 +22,9 @@ const { getSendingConfig, createProviderFor } = require("../sending/config");
 const { buildMessage } = require("../sending/builder");
 const { capacity } = require("../sending/dispatch");
 const { recordEvent, bump } = require("../sending/events");
+const { isSmsSendable } = require("../sms/consent");
+const { getSmsConfig, createSmsProviderFor } = require("../sms/config");
+const { smsCapacity, processMessage } = require("../sms/campaigns");
 const { UNITS } = require("./steps");
 const { enqueueRun } = require("./jobs");
 
@@ -165,7 +168,63 @@ async function sendEmailStep(ctx, { run, automation, step, contact, provider, no
   }
 }
 
-async function runAutomation(ctx, runId, { provider, now = nowOf(ctx) } = {}) {
+// ---------- Étape « Envoyer un SMS » ----------
+// Même chemin que l'envoi d'une campagne SMS (sms/campaigns.js#processMessage) : accord SMS revérifié, heures de silence
+// du destinataire, liens courts suivis, mention STOP, longueur facturée, erreurs du fournisseur. Différences voulues :
+//  - un contact SANS accord SMS passe simplement l'étape (il reste dans le parcours : ses e-mails continuent) ;
+//  - « nuit » chez le destinataire ou plafond atteint : le passage attend (date de réveil), sans compter d'essai ;
+//  - un SMS dont l'envoi a été interrompu (serveur arrêté pendant l'appel) n'est JAMAIS renvoyé : il est marqué échoué.
+const SMS_STUCK_MS = 10 * 60000;
+async function sendSmsStep(ctx, { automation, step, contact, smsProvider, now }) {
+  const org = ctx.organizationId;
+  const campaign = ctx.db.prepare("SELECT * FROM mk_sms_campaigns WHERE id = ? AND organization_id = ? AND automation_id = ? AND kind = 'automation'").get(step.smsCampaignId, org, automation.id);
+  if (!campaign) return { next: true, log: ["failed", "campagne SMS système introuvable"] };
+  const bumpC = (column) => ctx.db.prepare(`UPDATE mk_sms_campaigns SET ${column} = ${column} + 1, updated_at = datetime('now') WHERE id = ?`).run(campaign.id);
+
+  let message = ctx.db.prepare("SELECT * FROM mk_sms_messages WHERE campaign_id = ? AND contact_id = ?").get(campaign.id, contact.id);
+  if (!message) {
+    const check = isSmsSendable(ctx, contact.id);
+    if (!check.ok) return { next: true, log: ["skipped", `sms : ${check.reason}`] };
+    ctx.db.prepare("INSERT OR IGNORE INTO mk_sms_messages (organization_id, campaign_id, contact_id, phone, updated_at) VALUES (?, ?, ?, ?, ?)").run(org, campaign.id, contact.id, check.phone, now);
+    bumpC("total_recipients");
+    message = ctx.db.prepare("SELECT * FROM mk_sms_messages WHERE campaign_id = ? AND contact_id = ?").get(campaign.id, contact.id);
+  }
+  if (message.status === "sending") {
+    if (message.updated_at > now - SMS_STUCK_MS) return { retry: SMS_STUCK_MS };
+    transaction(ctx.db, () => {
+      ctx.db.prepare("UPDATE mk_sms_messages SET status = 'failed', reason = 'interrupted', updated_at = ? WHERE id = ? AND status = 'sending'").run(now, message.id);
+      bumpC("failed_count");
+    });
+    return { next: true, log: ["failed", `sms ${message.id} : interrompu`] };
+  }
+  if (message.status !== "queued") return { next: true, log: ["already_sent", `sms ${message.id}`] };
+  if (message.next_attempt_at && message.next_attempt_at > now) return { retry: message.next_attempt_at - now };
+
+  const cfg = getSmsConfig(ctx);
+  const cap = smsCapacity(ctx, cfg, now);
+  if (cap.allowed <= 0) return { retry: cap.waitMs };
+  let provider;
+  try {
+    provider = smsProvider ? smsProvider() : createSmsProviderFor(ctx);
+  } catch (error) {
+    return { pause: `SMS : ${error.message}` };
+  }
+  if (!ctx.db.prepare("UPDATE mk_sms_messages SET status = 'sending', updated_at = ? WHERE id = ? AND status = 'queued'").run(now, message.id).changes) return { retry: 1000 };
+  const links = ctx.db.prepare("SELECT id, url FROM mk_sms_links WHERE campaign_id = ?").all(campaign.id);
+  const outcome = await processMessage(ctx, { campaign, message: { ...message, status: "sending" }, cfg, links, provider, now });
+  if (typeof outcome === "object") {
+    if (outcome.stop.pause) return { pause: `SMS : ${outcome.stop.pause}` };
+    return { retry: outcome.stop.waitMs ?? 30000 };
+  }
+  if (outcome === "deferred" || outcome === "retry") {
+    const next = ctx.db.prepare("SELECT next_attempt_at FROM mk_sms_messages WHERE id = ?").get(message.id).next_attempt_at;
+    return { retry: Math.max(1000, (next ?? now + 60000) - now) };
+  }
+  const row = ctx.db.prepare("SELECT reason FROM mk_sms_messages WHERE id = ?").get(message.id);
+  return { next: true, log: [outcome, `sms ${message.id}${row && row.reason ? ` : ${row.reason}` : ""}`] };
+}
+
+async function runAutomation(ctx, runId, { provider, smsProvider, now = nowOf(ctx) } = {}) {
   const org = ctx.organizationId;
   const run = ctx.db.prepare("SELECT * FROM mk_automation_runs WHERE id = ? AND organization_id = ?").get(runId, org);
   if (!run) throw new MarketingError("not_found", "Passage introuvable.");
@@ -270,6 +329,9 @@ async function runAutomation(ctx, runId, { provider, now = nowOf(ctx) } = {}) {
       case "email":
         out = await sendEmailStep(actx, { run, automation, step, contact, provider, now, attempts });
         break;
+      case "sms":
+        out = await sendSmsStep(actx, { automation, step, contact, smsProvider, now });
+        break;
       default:
         out = { next: true };
     }
@@ -303,12 +365,14 @@ function eventHandler({ db, settings, env = process.env, log = console }) {
   };
 }
 
-function jobHandlers({ db, bus = null, settings, env = process.env, providerFor, now = Date.now, log = console }) {
+function jobHandlers({ db, bus = null, settings, env = process.env, providerFor, smsProviderFor, now = Date.now, log = console }) {
   return {
     "automation.run": async ({ organizationId, runId }) => {
       const ctx = { db, organizationId, userId: null, bus, settings, tokenKey: env.ENCRYPTION_KEY, baseUrl: env.SITE_URL, log, now };
       const provider = providerFor ? providerFor(ctx) : createProviderFor(ctx);
-      const result = await runAutomation(ctx, runId, { provider, now: now() });
+      // Fournisseur SMS construit seulement si une étape SMS est atteinte (identifiants absents ⇒ scénario en pause)
+      const smsProvider = smsProviderFor ? () => smsProviderFor(ctx) : undefined;
+      const result = await runAutomation(ctx, runId, { provider, smsProvider, now: now() });
       if (!result.done && !result.paused && result.waitMs > 0) enqueueRun(db, { organizationId, runId, runAt: now() + result.waitMs, tag: "wake" });
     },
   };

@@ -34,6 +34,11 @@
       <form action="/marketing/formulaires/<%= item.id %>" method="post" class="mk-form">
         <div class="field-group"><label for="ff-name">Nom (usage interne, pas affiché aux visiteurs)</label><input id="ff-name" type="text" name="name" maxlength="80" value="<%= item.name %>" required></div>
         <div class="field-group"><label for="ff-consent">Texte de consentement (affiché avec la case à cocher)</label><input id="ff-consent" type="text" name="consentText" maxlength="500" value="<%= item.consentText %>" required></div>
+        <div class="field-group">
+          <label for="ff-sms-consent">Proposer aussi les SMS (facultatif) : texte de la seconde case à cocher</label>
+          <textarea id="ff-sms-consent" name="smsConsentText" maxlength="500" rows="2" placeholder="Ex. J'accepte de recevoir des SMS de KOLAKISA (actualités, offres). Désinscription à tout moment : STOP." aria-describedby="ff-sms-consent-hint"><%= item.smsConsentText %></textarea>
+          <p class="field-hint" id="ff-sms-consent-hint">Laissez vide pour ne pas proposer les SMS. Sinon, une seconde case (jamais pré-cochée) apparaît avec un champ « Numéro de mobile » (sauf si « Téléphone » est déjà demandé) : la personne n'est abonnée aux SMS que si elle la coche, et ce texte est enregistré comme preuve avec son numéro. Elle peut alors entrer dans un parcours déclenché par « Un contact accepte les SMS ».</p>
+        </div>
         <fieldset class="seo-fieldset">
           <legend>Champs demandés en plus de l'adresse</legend>
           <% Object.entries(fieldCatalog).forEach(([key, label]) => { %>

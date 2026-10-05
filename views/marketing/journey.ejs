@@ -19,8 +19,14 @@
               <dt>Type</dt><dd><%= j.kind === "transactional" ? "Transactionnel : lié à un achat ou une formation, sans contenu promotionnel, envoyé à tous les élèves concernés." : "Marketing : envoyé uniquement aux contacts abonnés, avec lien de désinscription." %></dd>
               <dt>À savoir</dt><dd><%= j.note %></dd>
             </dl>
-            <h3 class="mk-journey-sub">E-mails créés (modifiables)</h3>
-            <ol class="mk-journey-emails"><% j.emails.forEach((e) => { %><li><strong><%= e.name %></strong> — objet : « <%= e.subject %> »</li><% }) %></ol>
+            <% if (j.emails.length) { %>
+              <h3 class="mk-journey-sub">E-mails créés (modifiables)</h3>
+              <ol class="mk-journey-emails"><% j.emails.forEach((e) => { %><li><strong><%= e.name %></strong> — objet : « <%= e.subject %> »</li><% }) %></ol>
+            <% } %>
+            <% if (j.sms.length) { %>
+              <h3 class="mk-journey-sub">SMS du parcours (modifiables dans le scénario)</h3>
+              <ol class="mk-journey-emails"><% j.sms.forEach((m) => { %><li><strong><%= m.name %></strong> — « <%= m.body %> »</li><% }) %></ol>
+            <% } %>
           </div>
         </section>
         <section class="mk-lib-card" aria-labelledby="j-steps">

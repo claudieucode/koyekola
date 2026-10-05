@@ -5,6 +5,9 @@ const { getList } = require("../audience/lists");
 const segments = require("../segments");
 const templates = require("../templates");
 const { STEP_LABELS } = require("../../utils/stepLabels");
+const smsRender = require("../sms/render");
+
+const MAX_SMS_BODY = 1600; // même limite que sms/campaigns.js#MAX_BODY (le coût réel se contrôle avant activation)
 
 const MAX_STEPS = 30;
 const UNITS = { minutes: 60000, hours: 3600000, days: 86400000 };
@@ -57,6 +60,17 @@ function validateSteps(ctx, steps, kind) {
         if (!template) throw new MarketingError("not_found", `Étape ${i + 1} : modèle introuvable.`);
         if (template.kind !== kind) throw bad(i, kind === "marketing" ? "un scénario marketing utilise un modèle marketing." : "un scénario transactionnel utilise un modèle transactionnel.");
         return withNext({ type: "email", templateId: template.id, trackClicks: raw.trackClicks === undefined ? kind === "marketing" : Boolean(raw.trackClicks) }, raw, i, steps);
+      }
+      // SMS marketing : envoyé seulement si le contact a un accord SMS prouvé (isSmsSendable, revérifié à l'envoi) ;
+      // mention « STOP SMS » ajoutée automatiquement. Réservé aux scénarios marketing (l'accord SMS est un accord marketing).
+      case "sms": {
+        if (kind !== "marketing") throw bad(i, "l'envoi d'un SMS est réservé aux scénarios marketing (il exige l'accord SMS du contact).");
+        const body = typeof raw.body === "string" ? raw.body.replace(/\r\n?/g, "\n").trim() : "";
+        if (!body) throw bad(i, "le texte du SMS est vide.");
+        if (body.length > MAX_SMS_BODY) throw bad(i, `texte du SMS trop long (${MAX_SMS_BODY} caractères au plus).`);
+        const tags = smsRender.unknownTags(body);
+        if (tags.length) throw bad(i, `balise de personnalisation inconnue : ${tags.join(", ")}. Utilisez {{prenom}} ou {{nom}}.`);
+        return withNext({ type: "sms", body, trackClicks: raw.trackClicks === undefined ? true : Boolean(raw.trackClicks) }, raw, i, steps);
       }
       case "wait": {
         const unit = Object.hasOwn(UNITS, raw.unit) ? raw.unit : null;
@@ -115,7 +129,7 @@ function validateSteps(ctx, steps, kind) {
       case "end":
         return { type: "end" };
       default:
-        throw bad(i, `type d'étape inconnu « ${String(raw.type).slice(0, 30)} » (email, wait, wait_for_event, condition, split, update_field, add_tag, remove_tag, add_to_list, remove_from_list, end).`);
+        throw bad(i, `type d'étape inconnu « ${String(raw.type).slice(0, 30)} » (email, sms, wait, wait_for_event, condition, split, update_field, add_tag, remove_tag, add_to_list, remove_from_list, end).`);
     }
   });
 }

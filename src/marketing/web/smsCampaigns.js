@@ -44,7 +44,9 @@ module.exports = () => {
   const testLimiter = createRateLimiter(10, 60 * 60 * 1000);
 
   const load = (req, res) => {
-    const c = sms.getSmsCampaign(req.mk.ctx, intParam(req.params.id));
+    // Une campagne SYSTÈME d'étape de scénario (kind 'automation') est pilotée par son scénario : jamais ici
+    const found = sms.getSmsCampaign(req.mk.ctx, intParam(req.params.id));
+    const c = found && found.kind !== "automation" ? found : null;
     if (!c) res.status(404).render("error", { message: "Campagne SMS introuvable." });
     return c;
   };

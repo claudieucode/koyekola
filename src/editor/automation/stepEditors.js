@@ -2,6 +2,7 @@
 // BROUILLON (copie des données du nœud) ; validate() reprend les règles du serveur (src/marketing/automations/steps.js,
 // qui reste seul juge à l'enregistrement) pour signaler une erreur avant d'envoyer quoi que ce soit.
 import { el, field, select, text, number, checkbox, note, hint } from "./ui";
+import { estimateFor, unknownTags } from "../../marketing/sms/render";
 
 // Mêmes valeurs que steps.js#UNITS / CHECKS / EDITABLE_FIELDS (à tenir synchronisées avec le serveur)
 export const UNITS = [["minutes", "minutes"], ["hours", "heures"], ["days", "jours"]];
@@ -14,6 +15,7 @@ const EVENT_NAME = /^[a-z][a-z0-9_.]{1,63}$/;
 const PROPERTY_KEY = /^[a-z][a-z0-9_]{0,39}$/;
 const STATUS_LABELS = { unknown: "Pas de consentement", subscribed: "Abonné", unsubscribed: "Désinscrit", bounced: "Rebond", complained: "Plainte", suppressed: "Bloqué" };
 const clone = (v) => JSON.parse(JSON.stringify(v));
+const MAX_SMS_BODY = 1600; // même limite que steps.js
 
 // ---------- Condition construite sur place (ET/OU) : même format que le moteur de segments ----------
 // { op: "and"|"or", rules: [...] }, volontairement plat (comme le constructeur simple de la page Segments).
@@ -228,6 +230,41 @@ const EDITORS = {
     }
     return box;
   },
+  // Texte du SMS : compteur réel (même calcul que le serveur : liens courts, mention STOP ajoutée, accents qui
+  // font passer de 160 à 70 caractères par SMS), prénom d'exemple pour la personnalisation.
+  sms(ctx, draft) {
+    const box = el("div", { class: "mk-step-sections" });
+    const cfg = ctx.data.sms || {};
+    box.appendChild(section("Destinataire",
+      readOnlyRow("À", "Le numéro de mobile du contact"),
+      hint("Seuls les contacts qui ont accepté les SMS (accord prouvé, numéro valide, non bloqué) le reçoivent ; les autres passent l'étape et continuent le parcours."),
+      ctx.a.kind !== "marketing" ? note("Réservé aux scénarios marketing : l'accord SMS est un accord marketing.") : null));
+    box.appendChild(section("Expéditeur",
+      readOnlyRow("De", cfg.sender || "Aucun expéditeur SMS enregistré", link("/marketing/sms/reglages", "Réglages SMS")),
+      cfg.provider === "console" ? note("Fournisseur SMS « console » : aucun SMS ne partira réellement tant que les réglages SMS ne sont pas faits.") : null));
+    const area = el("textarea", { rows: "5", maxlength: String(MAX_SMS_BODY), "aria-describedby": "au-sms-count" });
+    area.value = draft.body || "";
+    area.disabled = ctx.locked;
+    const count = el("p", { class: "field-hint", id: "au-sms-count", "aria-live": "polite" });
+    const preview = el("p", { class: "mk-step-sentence" });
+    preview.style.whiteSpace = "pre-line";
+    const sync = () => {
+      const body = area.value;
+      if (!body.trim()) { count.textContent = "Écrivez le texte du SMS."; preview.textContent = ""; return; }
+      const est = estimateFor(body, { first_name: "Awa", last_name: "Diallo" }, { baseUrl: cfg.baseUrl, trackClicks: draft.trackClicks !== false });
+      const over = cfg.maxSegments && est.segments > cfg.maxSegments ? ` — au-delà de la limite de ${cfg.maxSegments} SMS (réglages SMS) : raccourcissez` : "";
+      count.textContent = `${est.units} caractères avec la mention STOP · ${est.segments} SMS facturé${est.segments > 1 ? "s" : ""} par envoi (${est.encoding === "GSM-7" ? "160 caractères par SMS" : "caractères spéciaux : 70 par SMS"})${over}.`;
+      preview.textContent = est.text;
+    };
+    area.addEventListener("input", () => { draft.body = area.value; sync(); });
+    const msg = [field("Texte du SMS", area), count,
+      hint("Personnalisation : {{prenom}} et {{nom}} (avec une valeur de secours : {{prenom|cher apprenant}}). La mention « STOP SMS : lien » est ajoutée automatiquement et ne peut pas être retirée."),
+      checkbox("Suivre les clics (liens raccourcis)", draft.trackClicks !== false, (v) => { draft.trackClicks = v; sync(); }, { disabled: ctx.locked })];
+    box.appendChild(section("Message", msg));
+    box.appendChild(section("Aperçu pour « Awa Diallo »", preview, hint(`Heures de silence : ${cfg.quietStart ?? 21} h – ${cfg.quietEnd ?? 8} h à l'heure du destinataire ; un SMS prévu la nuit part le matin.`)));
+    sync();
+    return box;
+  },
   wait(ctx, draft) {
     const box = el("div", { class: "mk-step-row" });
     box.appendChild(field("Durée", number(draft.amount, (v) => { draft.amount = v; }, { disabled: ctx.locked })));
@@ -329,6 +366,14 @@ export function validate(type, ctx, d) {
       return errors;
     }
     case "email": return ctx.data.templates.some((t) => t.id === d.templateId) ? [] : ["Choisissez le modèle d'e-mail à envoyer."];
+    case "sms": {
+      const body = String(d.body || "").trim();
+      if (ctx.a.kind !== "marketing") return ["L'envoi d'un SMS est réservé aux scénarios marketing."];
+      if (!body) return ["Écrivez le texte du SMS."];
+      if (body.length > MAX_SMS_BODY) return [`Texte du SMS trop long (${MAX_SMS_BODY} caractères au plus).`];
+      const tags = unknownTags(body);
+      return tags.length ? [`Balise inconnue : ${tags.join(", ")}. Utilisez {{prenom}} ou {{nom}}.`] : [];
+    }
     case "wait": return waitErrors(d, "Durée");
     case "wait_for_event": return [...(EVENT_NAME.test(d.event || "") ? [] : ["Nom d'événement invalide (minuscules, chiffres, « _ » et « . », 2 à 64 caractères, commence par une lettre)."]), ...waitErrors(d, "Délai maximal")];
     case "split": return Number.isInteger(d.percentage) && d.percentage >= 1 && d.percentage <= 99 ? [] : ["Pourcentage de la branche A : un nombre entier de 1 à 99."];
@@ -365,5 +410,6 @@ export function clean(type, d) {
   delete out._newTag;
   if (type === "add_tag" || type === "remove_tag") out.tag = String(out.tag || "").trim();
   if (type === "trigger") out.name = String(out.name || "").trim();
+  if (type === "sms") out.body = String(out.body || "").replace(/\r\n?/g, "\n").trim();
   return out;
 }

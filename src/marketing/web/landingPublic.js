@@ -20,10 +20,10 @@ module.exports = ({ db }) => {
     res.set("Cache-Control", "no-store");
     const marketing = req.app.locals.marketing;
     if (!marketing || !marketing.ready) return res.status(503).render("error", { message: "Cette page est momentanément indisponible." });
-    req.mkPages = { organizationId: marketing.organizationId, bus: marketing.bus };
+    req.mkPages = { organizationId: marketing.organizationId, bus: marketing.bus, settings: marketing.settings };
     next();
   });
-  const ctxOf = (req) => ({ db, organizationId: req.mkPages.organizationId, userId: null, bus: req.mkPages.bus, baseUrl: process.env.SITE_URL });
+  const ctxOf = (req) => ({ db, organizationId: req.mkPages.organizationId, userId: null, bus: req.mkPages.bus, settings: req.mkPages.settings, baseUrl: process.env.SITE_URL });
   const loadForm = (page) => (page.form_id ? forms.getForm({ db, organizationId: page.organization_id }, page.form_id) : null);
   const show = (req, res, page, { status = 200, error = null, values = {}, thanks = null } = {}) => {
     const form = loadForm(page);

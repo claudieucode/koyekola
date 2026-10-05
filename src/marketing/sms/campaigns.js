@@ -105,9 +105,9 @@ function listSmsCampaigns(ctx, { tab = "" } = {}) {
   checkCtx(ctx);
   const statuses = TABS[tab];
   const where = statuses ? `AND status IN (${statuses.map(() => "?").join(", ")})` : "";
-  const rows = ctx.db.prepare(`SELECT * FROM mk_sms_campaigns WHERE organization_id = ? ${where} ORDER BY id DESC LIMIT 200`).all(ctx.organizationId, ...(statuses || []));
+  const rows = ctx.db.prepare(`SELECT * FROM mk_sms_campaigns WHERE organization_id = ? AND kind = 'campaign' ${where} ORDER BY id DESC LIMIT 200`).all(ctx.organizationId, ...(statuses || []));
   const counts = Object.fromEntries(Object.keys(TABS).map((k) => [k, 0]));
-  for (const r of ctx.db.prepare("SELECT status, COUNT(*) n FROM mk_sms_campaigns WHERE organization_id = ? GROUP BY status").all(ctx.organizationId)) {
+  for (const r of ctx.db.prepare("SELECT status, COUNT(*) n FROM mk_sms_campaigns WHERE organization_id = ? AND kind = 'campaign' GROUP BY status").all(ctx.organizationId)) {
     for (const [k, list] of Object.entries(TABS)) if (list.includes(r.status)) counts[k] += r.n;
   }
   counts.all = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -481,5 +481,5 @@ function smsJobHandlers({ db, bus = null, settings, env = process.env, providerF
 module.exports = {
   getSmsCampaign, requireSmsCampaign, createSmsCampaign, updateSmsCampaign, duplicateSmsCampaign, deleteSmsCampaign, listSmsCampaigns,
   smsAudienceSummary, estimateSmsCampaign, smsPreflight, startSmsCampaign, dispatchSmsBatch, pauseSmsCampaign, resumeSmsCampaign,
-  cancelSmsCampaign, smsCampaignReport, smsRecipients, smsJobHandlers, smsCapacity,
+  cancelSmsCampaign, smsCampaignReport, smsRecipients, smsJobHandlers, smsCapacity, processMessage, MAX_BODY,
 };

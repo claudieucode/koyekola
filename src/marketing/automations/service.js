@@ -15,6 +15,8 @@ const { validateSteps, STEP_LABELS } = require("./steps");
 const { incompleteNodes, orphanNodes } = require("./graph");
 const { enqueueRun } = require("./jobs");
 const { WORKER_DETAIL, workerHuman } = require("../workerNotice");
+const { getSmsConfig } = require("../sms/config");
+const smsRender = require("../sms/render");
 
 const KINDS = ["marketing", "transactional"];
 const LOCAL_HTTP = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/i;
@@ -182,16 +184,53 @@ function automationPreflight(ctx, id, { workerOn = false, smtpAvailable = Boolea
       if (!getOrgProfile(ctx).address) warnings.push({ code: "address_missing", message: "Aucune adresse postale dans le pied de page des e-mails marketing." });
     }
   }
+  // Étapes « Envoyer un SMS » : fournisseur SMS réglé, lien STOP possible (SITE_URL), longueur sous la limite facturée
+  const smsSteps = a.steps.map((s, step) => ({ s, step })).filter(({ s }) => s.type === "sms");
+  if (smsSteps.length) {
+    const cfg = getSmsConfig(ctx);
+    const base = String(ctx.baseUrl || "").replace(/\/+$/, "");
+    if (cfg.provider === "console") warnings.push({ code: "sms_provider_console", message: "Fournisseur SMS « console » : aucun SMS ne partira réellement (réglages SMS)." });
+    else if (!cfg.sender || !cfg.accountSid || !cfg.authTokenSet) errors.push({ code: "sms_provider_incomplete", message: "Réglages SMS incomplets (expéditeur, identifiant de compte Twilio, jeton) : réglez-les dans SMS → Réglages." });
+    if (!/^https:\/\/[^\s/]+/i.test(base) && !(cfg.provider === "console" && LOCAL_HTTP.test(base)) && !errors.some((e) => e.code === "base_url")) {
+      errors.push({ code: "base_url", message: "L'adresse publique du site (SITE_URL) doit être en https:// (lien de désinscription obligatoire des SMS)." });
+    }
+    for (const { s, step } of smsSteps) {
+      const est = smsRender.estimateFor(s.body, { first_name: "Prénom", last_name: "Nom" }, { baseUrl: base, trackClicks: s.trackClicks });
+      if (est.segments > cfg.maxSegments) errors.push({ code: "sms_too_long", step, message: `Étape ${step + 1} (SMS) : ${est.segments} SMS facturés par envoi, au-delà de la limite de ${cfg.maxSegments} (réglages SMS) — raccourcissez le texte.` });
+      else if (est.encoding !== "GSM-7") warnings.push({ code: "sms_unicode", step, message: `Étape ${step + 1} (SMS) : caractères spéciaux (${est.unsupported.join(" ") || "accents"}) — 70 caractères par SMS au lieu de 160.` });
+    }
+    warnings.push({ code: "sms_quiet", message: `SMS : heures de silence de ${cfg.quietStart} h à ${cfg.quietEnd} h (heure du destinataire) — un SMS prévu la nuit part le matin. Un contact sans accord SMS passe l'étape sans rien recevoir.` });
+  }
   if (!workerOn) warnings.push({ code: "worker_off", message: workerHuman("le scénario ne s'exécutera pas tant qu'il n'est pas rétabli"), detail: WORKER_DETAIL });
   return { ready: errors.length === 0, errors, warnings };
 }
 
-// ---------- Activation : contenu figé + campagnes système (une par étape d'e-mail) ----------
+// ---------- Activation : contenu figé + campagnes système (une par étape d'e-mail, une par étape SMS) ----------
+// SMS : texte, expéditeur et prix figés comme pour une campagne SMS lancée ; statut « sending » permanent (c'est le
+// scénario qui envoie, message par message) — jamais listée ni pilotable depuis la page des campagnes SMS.
+function freezeSms(ctx, a, step, seq) {
+  const cfg = getSmsConfig(ctx);
+  const now = nowOf(ctx);
+  const campaign = ctx.db
+    .prepare(
+      `INSERT INTO mk_sms_campaigns (organization_id, name, status, target_type, body, track_clicks, sender, price_per_segment, currency, started_at, kind, automation_id, created_by)
+       VALUES (?, ?, 'sending', 'all', ?, ?, ?, ?, ?, ?, 'automation', ?, ?) RETURNING id`
+    )
+    .get(ctx.organizationId, `auto-${a.id}-sms-${seq}`, step.body, step.trackClicks ? 1 : 0, cfg.sender || "KOLAKISA", cfg.pricePerSegment, cfg.currency, now, a.id, ctx.userId ?? null);
+  if (step.trackClicks) {
+    const insert = ctx.db.prepare("INSERT OR IGNORE INTO mk_sms_links (organization_id, campaign_id, url) VALUES (?, ?, ?)");
+    for (const url of smsRender.linksIn(step.body)) insert.run(ctx.organizationId, campaign.id, url);
+  }
+  return { ...step, smsCampaignId: campaign.id };
+}
+
 function freeze(ctx, a) {
   const n = ctx.db.prepare("SELECT COUNT(*) n FROM mk_campaigns WHERE automation_id = ? AND organization_id = ?").get(a.id, ctx.organizationId).n;
   const insertLink = ctx.db.prepare("INSERT OR IGNORE INTO mk_links (organization_id, campaign_id, url) VALUES (?, ?, ?)");
   let seq = n;
+  let smsSeq = ctx.db.prepare("SELECT COUNT(*) n FROM mk_sms_campaigns WHERE automation_id = ? AND organization_id = ?").get(a.id, ctx.organizationId).n;
   return a.steps.map((step) => {
+    if (step.type === "sms") return freezeSms(ctx, a, step, ++smsSeq);
     if (step.type !== "email") return step;
     const template = templates.getTemplate(ctx, step.templateId);
     const snapshot = snapshotOf(template);
@@ -246,6 +285,7 @@ function deleteAutomation(ctx, id) {
   if (a.status === "active") throw new MarketingError("invalid_state", "Un scénario actif ne se supprime pas : mettez-le d'abord en pause.");
   return transaction(ctx.db, () => {
     ctx.db.prepare("DELETE FROM mk_campaigns WHERE automation_id = ? AND organization_id = ? AND kind = 'automation'").run(id, ctx.organizationId);
+    ctx.db.prepare("DELETE FROM mk_sms_campaigns WHERE automation_id = ? AND organization_id = ? AND kind = 'automation'").run(id, ctx.organizationId);
     const removed = table(ctx).remove(id);
     if (removed) audit(ctx, "automation.deleted", "automation", id, {});
     return removed;
@@ -281,12 +321,23 @@ function automationStats(ctx, id) {
     .get(id, ctx.organizationId);
   const frozen = a.active_steps ? JSON.parse(a.active_steps) : [];
   const perStep = frozen.map((step, index) => {
+    if (step.smsCampaignId) {
+      const m = ctx.db.prepare("SELECT sent_count, click_count FROM mk_sms_campaigns WHERE id = ? AND organization_id = ?").get(step.smsCampaignId, ctx.organizationId);
+      return { index, type: step.type, sent: m ? m.sent_count : 0, uniqueClicks: m ? m.click_count : 0 };
+    }
     const c = step.campaignId ? ctx.db.prepare("SELECT sent_count, unique_click_count FROM mk_campaigns WHERE id = ?").get(step.campaignId) : null;
     return { index, type: step.type, sent: c ? c.sent_count : 0, uniqueClicks: c ? c.unique_click_count : 0 };
   });
+  const sms = ctx.db
+    .prepare(
+      `SELECT COALESCE(SUM(sent_count), 0) sent, COALESCE(SUM(delivered_count), 0) delivered, COALESCE(SUM(failed_count + undelivered_count), 0) failed,
+              COALESCE(SUM(skipped_count), 0) skipped, COALESCE(SUM(click_count), 0) clicks, COALESCE(SUM(unsubscribe_count), 0) unsubscribed, COALESCE(SUM(segments_count), 0) segments
+       FROM mk_sms_campaigns WHERE automation_id = ? AND organization_id = ? AND kind = 'automation'`
+    )
+    .get(id, ctx.organizationId);
   return {
     runs: { running: runs.running ?? 0, completed: runs.completed ?? 0, exited: runs.exited ?? 0, failed: runs.failed ?? 0, total: Object.values(runs).reduce((x, y) => x + y, 0) },
-    emails: sumRow, steps: perStep,
+    emails: sumRow, sms, steps: perStep,
   };
 }
 

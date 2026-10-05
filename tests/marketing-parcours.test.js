@@ -35,7 +35,7 @@ describe("parcours : création", () => {
 
   test("chaque parcours disponible crée un brouillon complet, ses e-mails prêts, et s'active sans retouche", () => {
     const available = journeys.JOURNEYS.filter((j) => !j.unavailable);
-    assert.equal(available.length, 7);
+    assert.equal(available.length, 8);
     for (const j of available) {
       const a = journeys.createJourney(A, j.key);
       assert.equal(a.status, "draft", j.key);
@@ -64,7 +64,7 @@ describe("parcours : création", () => {
   });
 
   test("parcours indisponibles (donnée non enregistrée par le site) : jamais créés ; clé inconnue refusée", () => {
-    for (const key of ["panier-abandonne", "anniversaire", "bienvenue-sms"]) assert.equal(code(() => journeys.createJourney(A, key)), "invalid_state");
+    for (const key of ["panier-abandonne", "anniversaire"]) assert.equal(code(() => journeys.createJourney(A, key)), "invalid_state");
     assert.equal(code(() => journeys.createJourney(A, "inexistant")), "not_found");
     assert.equal(m.db.prepare("SELECT COUNT(*) n FROM mk_automations").get().n, 0);
     assert.equal(m.db.prepare("SELECT COUNT(*) n FROM mk_templates").get().n, 0, "aucun modèle orphelin");
@@ -158,7 +158,7 @@ describe("parcours : pages et droits", () => {
   test("galerie : parcours disponibles avec aperçu et bouton ; indisponibles avec la raison, sans bouton", async () => {
     const r = await boss.get("/marketing/automatisations/parcours");
     assert.equal(r.status, 200);
-    assert.equal((r.text.match(/Utiliser ce parcours<span/g) || []).length, 7);
+    assert.equal((r.text.match(/Utiliser ce parcours<span/g) || []).length, 8);
     assert.match(r.text, /Panier abandonné/);
     assert.match(r.text, /Pas encore disponible/);
     assert.doesNotMatch(r.text, /action="\/marketing\/automatisations\/parcours\/panier-abandonne"/);

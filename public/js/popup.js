@@ -71,6 +71,10 @@
       '<div class="field-group"><label>Adresse e-mail<input type="email" name="email" required></label></div>' +
       fieldsHtml(popup.fields) +
       '<label class="checkbox-row optin-row"><input type="checkbox" name="consent" value="1" required> ' + esc(popup.consentText) + "</label>" +
+      (popup.smsConsentText
+        ? (popup.smsPhoneField ? '<div class="field-group"><label>Numéro de mobile (pour les SMS)<input type="tel" name="sms_phone" maxlength="40" autocomplete="tel"></label></div>' : "") +
+          '<label class="checkbox-row optin-row"><input type="checkbox" name="sms_consent" value="1"> ' + esc(popup.smsConsentText) + "</label>"
+        : "") +
       '<button type="submit" class="btn btn-primary btn-block">S\'inscrire</button>' +
       "</form>" +
       "</div>" +

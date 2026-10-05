@@ -24,7 +24,7 @@
                 <% } else { %>
                   <p class="mk-lib-meta"><span class="mk-status <%= j.kind === "transactional" ? "mk-status-info" : "" %>"><%= kindLabel[j.kind] %></span></p>
                   <p class="mk-journey-trigger"><%- icon("zap", { size: 14 }) %> <%= j.trigger.label %><%= j.trigger.filter ? ` (« ${j.trigger.filter.value} »)` : "" %></p>
-                  <p class="field-hint"><%= j.emailCount %> e-mail<%= j.emailCount > 1 ? "s" : "" %> · <%= j.stepCount %> étapes</p>
+                  <p class="field-hint"><% if (j.sms.length) { %><%= j.sms.length %> SMS<% } else { %><%= j.emailCount %> e-mail<%= j.emailCount > 1 ? "s" : "" %><% } %> · <%= j.stepCount %> étapes</p>
                   <div class="mk-lib-form">
                     <a class="btn btn-outline btn-sm" href="/marketing/automatisations/parcours/<%= j.key %>">Aperçu<span class="sr-only"> du parcours « <%= j.label %> »</span></a>
                     <% if (canWrite) { %><form action="/marketing/automatisations/parcours/<%= j.key %>" method="post"><button type="submit" class="btn btn-primary btn-sm">Utiliser ce parcours<span class="sr-only"> « <%= j.label %> »</span></button></form><% } %>

@@ -15,7 +15,7 @@ module.exports = ({ db }) => {
     res.set("Cache-Control", "no-store");
     const marketing = req.app.locals.marketing;
     if (!marketing || !marketing.ready) return res.status(503).render("error", { message: "Ce formulaire est momentanément indisponible." });
-    req.mkForms = { organizationId: marketing.organizationId, bus: marketing.bus };
+    req.mkForms = { organizationId: marketing.organizationId, bus: marketing.bus, settings: marketing.settings };
     next();
   });
 
@@ -28,6 +28,8 @@ module.exports = ({ db }) => {
     res.json({
       form: {
         slug: popup.slug, name: popup.name, consentText: popup.consentText,
+        // Accord SMS facultatif : texte de la seconde case ; le numéro est demandé à part si le formulaire n'a pas déjà « Téléphone »
+        smsConsentText: popup.smsConsentText || "", smsPhoneField: Boolean(popup.smsConsentText) && !popup.fields.includes("phone"),
         fields: [
           ...popup.fields.map((key) => ({ key, label: forms.FIELD_CATALOG[key] })),
           ...forms.propertyFieldDefs(db, req.mkForms.organizationId, popup).map((d) => ({ key: d.name, label: d.label, type: d.type, options: d.options })),
@@ -50,7 +52,7 @@ module.exports = ({ db }) => {
   });
   router.post("/f/confirmer/:token", (req, res, next) => {
     try {
-      const ctx = { db, organizationId: req.mkForms.organizationId, userId: null, bus: req.mkForms.bus };
+      const ctx = { db, organizationId: req.mkForms.organizationId, userId: null, bus: req.mkForms.bus, settings: req.mkForms.settings };
       const r = forms.confirmSubscription(ctx, req.params.token);
       if (!r.ok) return confirmInvalid(res);
       res.render("marketing-public/message", { title: "Inscription confirmée", heading: "Inscription confirmée", text: r.form.thankYouText || "Merci ! Votre inscription est confirmée." });
@@ -84,7 +86,7 @@ module.exports = ({ db }) => {
     if (!req.body.consent) return fail(400, "Cochez la case pour confirmer votre inscription.");
     limiter.hit(req.ip);
     try {
-      const ctx = { db, organizationId: req.mkForms.organizationId, userId: null, bus: req.mkForms.bus };
+      const ctx = { db, organizationId: req.mkForms.organizationId, userId: null, bus: req.mkForms.bus, settings: req.mkForms.settings };
       const result = forms.submitForm(ctx, form.id, { ...req.body, ip: req.ip });
       if (!result.ok) {
         const message = result.reason === "invalid_email" ? "Adresse e-mail invalide." : result.message || "Inscription impossible pour le moment.";

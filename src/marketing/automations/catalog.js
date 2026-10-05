@@ -9,6 +9,7 @@ const TRIGGERS = {
   "lms.favorite_added": { label: "Une formation est mise en favori", filters: [["courseId", "Identifiant de la formation"]] },
   "contact.created": { label: "Un contact est créé", filters: [] },
   "contact.subscribed": { label: "Un contact s'abonne (consentement prouvé)", filters: [] },
+  "contact.sms_subscribed": { label: "Un contact accepte les SMS (accord SMS prouvé)", filters: [] },
   "tag.added": { label: "Une étiquette est ajoutée", filters: [["tag", "Nom de l'étiquette"]] },
   "list.member_added": { label: "Un contact est ajouté à une liste", filters: [["listId", "Identifiant de la liste"]] },
 };
