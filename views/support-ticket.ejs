@@ -5,7 +5,7 @@
     <h1 style="margin-bottom:4px;"><%= ticket.subject %></h1>
     <p style="color:var(--muted);margin-top:0;">Demande #<%= ticket.id %> · <span class="dash-status <%= ticket.status === "closed" ? "is-archived" : ticket.status === "answered" ? "is-published" : "is-draft" %>"><%= statuses[ticket.status] %></span><%= ticket.course_title ? " · " + ticket.course_title : "" %></p>
 
-    <ol class="support-thread" style="list-style:none;padding:0;">
+    <ol style="list-style:none;padding:0;">
       <% messages.forEach((m) => { %>
         <li class="card card-pad" style="margin-bottom:12px;<%= m.is_staff ? "border-left:4px solid var(--primary);" : "" %>">
           <strong><%= m.is_staff ? "Formateur" : "Vous" %></strong> <small style="color:var(--muted);">· <%= formatDateTime(m.created_at) %></small>
