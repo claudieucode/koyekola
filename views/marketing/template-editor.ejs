@@ -232,20 +232,23 @@
     <dialog class="mk-dialog mk-b-preview" id="mk-preview-dialog" aria-labelledby="mk-preview-title" aria-busy="false">
       <div class="mk-pv-head">
         <h2 id="mk-preview-title">Aperçu de l'e-mail</h2>
-        <div class="mk-pv-devices" role="group" aria-label="Appareil simulé">
-          <button type="button" class="mk-pv-dev" data-pdevice="desktop" aria-pressed="true"><%- icon("monitor", { size: 16 }) %><span>Bureau</span></button>
-          <button type="button" class="mk-pv-dev" data-pdevice="tablet" aria-pressed="false"><%- icon("tablet", { size: 16 }) %><span>Tablette</span></button>
-          <button type="button" class="mk-pv-dev" data-pdevice="mobile" aria-pressed="false"><%- icon("smartphone", { size: 16 }) %><span>Mobile</span></button>
-          <label class="sr-only" for="mk-pv-width">Largeur d'écran simulée</label>
-          <select id="mk-pv-width" class="mk-pv-select" title="Largeur d'écran réelle du rendu"></select>
+        <div class="mk-pv-controls">
+          <div class="mk-pv-devices" role="group" aria-label="Appareil simulé">
+            <button type="button" class="mk-pv-dev" data-pdevice="desktop" aria-pressed="true"><%- icon("monitor", { size: 16 }) %><span>Bureau</span></button>
+            <button type="button" class="mk-pv-dev" data-pdevice="tablet" aria-pressed="false"><%- icon("tablet", { size: 16 }) %><span>Tablette</span></button>
+            <button type="button" class="mk-pv-dev" data-pdevice="mobile" aria-pressed="false"><%- icon("smartphone", { size: 16 }) %><span>Mobile</span></button>
+            <label class="sr-only" for="mk-pv-width">Largeur d'écran simulée</label>
+            <select id="mk-pv-width" class="mk-pv-select" title="Largeur d'écran réelle du rendu"></select>
+          </div>
+          <div class="mk-pv-tools">
+            <label class="sr-only" for="mk-pv-contact">Données utilisées pour les balises de fusion</label>
+            <select id="mk-pv-contact" class="mk-pv-select" title="Données des balises de fusion"><option value="">Données d'exemple</option><% (contacts || []).forEach((c) => { %><option value="<%= c.id %>"><%= c.email %></option><% }) %></select>
+            <button type="button" class="btn btn-outline btn-sm" id="mk-pv-refresh" title="Régénérer l'aperçu"><%- icon("history", { size: 16 }) %><span class="mk-pv-hide-sm"> Actualiser</span></button>
+            <button type="button" class="btn btn-outline btn-sm" id="mk-pv-browser"><%- icon("externalLink", { size: 16 }) %><span class="mk-pv-hide-sm"> Afficher dans le navigateur</span></button>
+          </div>
         </div>
-        <div class="mk-pv-tools">
-          <label class="sr-only" for="mk-pv-contact">Données utilisées pour les balises de fusion</label>
-          <select id="mk-pv-contact" class="mk-pv-select" title="Données des balises de fusion"><option value="">Données d'exemple</option><% (contacts || []).forEach((c) => { %><option value="<%= c.id %>"><%= c.email %></option><% }) %></select>
-          <button type="button" class="btn btn-outline btn-sm" id="mk-pv-refresh" title="Régénérer l'aperçu"><%- icon("history", { size: 16 }) %><span class="mk-pv-hide-sm"> Actualiser</span></button>
-          <button type="button" class="btn btn-outline btn-sm" id="mk-pv-browser"><%- icon("externalLink", { size: 16 }) %><span class="mk-pv-hide-sm"> Afficher dans le navigateur</span></button>
-          <button type="button" class="btn btn-primary btn-sm" data-close-dialog>Retour à l'éditeur</button>
-        </div>
+        <%# Coin supérieur droit : toujours au même endroit, quelle que soit la largeur (voir .mk-pv-head) %>
+        <div class="mk-pv-close"><button type="button" class="btn btn-primary btn-sm" data-close-dialog><%- icon("arrowLeft", { size: 16 }) %> Retour à l'éditeur</button></div>
       </div>
       <div class="mk-pv-body">
         <div class="mk-pv-stage" id="mk-pv-stage">

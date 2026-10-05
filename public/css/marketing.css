@@ -1451,7 +1451,13 @@ a.mk-check-go, a.mk-check-go:hover { color: var(--mk-text); text-decoration: non
 /* ---------- Fenêtre « Aperçu » (public/js/mk/preview.js) ----------
    Le cadre a la largeur RÉELLE choisie (règles mobiles du message réellement appliquées) ; si la place manque,
    il est seulement réduit à l'affichage (transform), sans changer le viewport du message. */
-.mk-pv-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 16px; border-bottom: 1px solid var(--mk-border); }
+/* Barre de l'aperçu : titre | contrôles (appareil, largeur, données, actualiser, navigateur) | « Retour à l'éditeur »,
+   toujours dans le coin supérieur droit ; quand la place manque, les contrôles passent sur une seconde ligne. */
+.mk-pv-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "title controls close"; align-items: center; gap: 10px 16px; padding: 12px 16px; border-bottom: 1px solid var(--mk-border); }
+.mk-pv-head > h2 { grid-area: title; }
+.mk-pv-controls { grid-area: controls; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+.mk-pv-close { grid-area: close; justify-self: end; display: flex; }
+.mk-pv-close .btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .mk-pv-head h2 { margin: 0; font-size: 1.05rem; }
 .mk-pv-devices { display: flex; align-items: center; gap: 4px; padding: 3px; border: 1px solid var(--mk-border); border-radius: var(--mk-r); background: var(--surface-alt); }
 .mk-pv-dev { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border: 0; border-radius: calc(var(--mk-r) - 3px); background: transparent; color: var(--mk-text-soft); font: inherit; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
@@ -1459,8 +1465,10 @@ a.mk-check-go, a.mk-check-go:hover { color: var(--mk-text); text-decoration: non
 .mk-pv-dev[aria-pressed="true"] { background: var(--mk-surface); color: var(--accent-dark); box-shadow: 0 1px 2px rgba(11, 42, 64, 0.12), inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
 .mk-pv-dev:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .mk-pv-select { min-height: 32px; height: 32px; padding: 0 10px; font-size: 0.875rem; max-width: 220px; }
-.mk-pv-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
-.mk-pv-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 360px; }
+/* Groupe d'outils insécable : il passe en bloc à la ligne si la place manque (sur téléphone seulement, il peut se replier) */
+.mk-pv-tools { display: flex; flex: 0 0 auto; flex-wrap: nowrap; align-items: center; gap: 8px; margin-left: auto; }
+.mk-pv-tools .btn { flex: 0 0 auto; white-space: nowrap; }
+.mk-pv-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) clamp(340px, 28vw, 400px); }
 .mk-pv-stage { min-width: 0; min-height: 0; overflow: auto; padding: 16px; background: var(--surface-alt); }
 .mk-pv-scale { margin: 0 0 10px; text-align: center; font-size: 0.8125rem; color: var(--muted); }
 .mk-pv-device { position: relative; margin: 0 auto; overflow: hidden; border-radius: 10px; box-shadow: var(--shadow-md); background: #fff; }
@@ -1468,52 +1476,76 @@ a.mk-check-go, a.mk-check-go:hover { color: var(--mk-text); text-decoration: non
 .mk-pv-status { margin: 10px 0 0; text-align: center; font-size: 0.875rem; color: var(--muted); }
 .mk-pv-status:empty { display: none; }
 .mk-b-preview[aria-busy="true"] .mk-pv-device { opacity: 0.55; }
-.mk-pv-side { min-width: 0; min-height: 0; overflow-y: auto; border-left: 1px solid var(--mk-border); background: var(--mk-surface); }
-.mk-pv-sec { padding: 14px 16px; border-bottom: 1px solid var(--mk-border); }
-.mk-pv-sec h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+/* Chaque section est une bande indépendante (fond de surface, filets fins) séparée de la suivante par 8 px de fond
+   teinté : on voit où une section commence sans empiler de grosses cartes. Même titre, même marge, même padding partout. */
+.mk-pv-side { min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 8px 0 16px; border-left: 1px solid var(--mk-border); background: var(--surface-alt); }
+.mk-pv-sec { padding: 16px 20px 18px; border-block: 1px solid var(--mk-border); background: var(--mk-surface); }
+.mk-pv-sec h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; font-family: var(--font-body); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--mk-text); }
 .mk-pv-count { padding: 0 7px; border-radius: 999px; background: var(--surface-alt); color: var(--mk-text); font-size: 0.75rem; letter-spacing: 0; }
-.mk-pv-info { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; margin: 0; font-size: 0.875rem; }
-.mk-pv-info dt { color: var(--muted); font-weight: 600; }
-.mk-pv-info dd { margin: 0; color: var(--mk-text); overflow-wrap: anywhere; }
+.mk-pv-info { margin: 0; font-size: 0.875rem; }
+.mk-pv-info dt { margin: 0 0 2px; padding-top: 10px; border-top: 1px solid var(--mk-border); font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+.mk-pv-info dt:first-child { padding-top: 0; border-top: 0; }
+.mk-pv-info dd { margin: 0 0 10px; color: var(--mk-text); font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+.mk-pv-info dd:last-child { margin-bottom: 0; }
 .mk-pv-info dd.is-warning, .mk-pv-tags dd.is-warning { color: #8a5a00; }
 .mk-pv-info dd.is-error { color: var(--danger); }
-.mk-pv-global { margin: 0 0 10px; padding: 8px 10px; border-radius: var(--mk-r-sm); font-size: 0.875rem; font-weight: 700; }
+.mk-pv-global { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; padding: 10px 12px; border-radius: var(--mk-r); border: 1px solid color-mix(in srgb, currentColor 22%, transparent); font-size: 0.875rem; font-weight: 700; line-height: 1.35; }
+.mk-pv-global::before { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--pv-tone); color: var(--mk-surface); font-size: 0.75rem; font-weight: 800; }
+.mk-pv-global.is-ok::before { content: "✓"; }
+.mk-pv-global.is-warning::before { content: "!"; }
+.mk-pv-global.is-error::before { content: "✕"; }
 .mk-pv-global:empty { display: none; }
-.mk-pv-global.is-ok { background: #e8f6ee; color: #14632f; }
-.mk-pv-global.is-warning { background: #fff6e0; color: #7a4f00; }
-.mk-pv-global.is-error { background: #fdecec; color: #a3151f; }
+.mk-pv-global.is-ok { --pv-tone: #14632f; background: #e8f6ee; color: #14632f; }
+.mk-pv-global.is-warning { --pv-tone: #7a4f00; background: #fff6e0; color: #7a4f00; }
+.mk-pv-global.is-error { --pv-tone: #a3151f; background: #fdecec; color: #a3151f; }
 .mk-pv-checks, .mk-pv-linklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.mk-pv-check-head { display: grid; grid-template-columns: 22px auto minmax(0, 1fr); align-items: baseline; gap: 4px 8px; font-size: 0.875rem; }
-.mk-pv-check-sum { color: var(--mk-text-soft); overflow-wrap: anywhere; }
+.mk-pv-checks { gap: 0; }
+.mk-pv-check { padding: 10px 0; border-top: 1px solid var(--mk-border); }
+.mk-pv-check:first-child { border-top: 0; }
+.mk-pv-check:last-child { padding-bottom: 0; }
+.mk-pv-check-head { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: 2px 10px; font-size: 0.875rem; }
+.mk-pv-check-head > .mk-pv-badge { grid-row: 1 / span 2; margin-top: 1px; }
+.mk-pv-check-head > strong { grid-column: 2; line-height: 1.35; }
+.mk-pv-check-sum { grid-column: 2; font-size: 0.8125rem; line-height: 1.45; color: var(--mk-text-soft); overflow-wrap: anywhere; }
 .mk-pv-badge { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 0.75rem; font-weight: 800; }
 .is-ok > .mk-pv-check-head .mk-pv-badge, li.is-ok > .mk-pv-badge { background: #e8f6ee; color: #14632f; }
 .is-warning > .mk-pv-check-head .mk-pv-badge, li.is-warning > .mk-pv-badge { background: #fff6e0; color: #7a4f00; }
 .is-error > .mk-pv-check-head .mk-pv-badge, li.is-error > .mk-pv-badge { background: #fdecec; color: #a3151f; }
-.mk-pv-check-details { margin: 6px 0 0 30px; padding: 0; list-style: disc; font-size: 0.8125rem; color: var(--mk-text-soft); overflow-wrap: anywhere; }
-.mk-pv-linklist li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; font-size: 0.8125rem; }
-.mk-pv-linklist strong, .mk-pv-href { display: block; overflow-wrap: anywhere; }
-.mk-pv-href { color: var(--accent-dark); }
+.mk-pv-check-details { display: grid; gap: 4px; margin: 6px 0 0 32px; padding: 0 0 0 14px; list-style: disc; font-size: 0.8125rem; line-height: 1.45; color: var(--mk-text-soft); overflow-wrap: anywhere; }
+.mk-pv-linklist li { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: 10px; padding: 10px 12px; border: 1px solid var(--mk-border); border-radius: var(--mk-r); background: var(--mk-surface); font-size: 0.8125rem; line-height: 1.45; }
+.mk-pv-linklist li > .mk-pv-badge { margin-top: 1px; }
+.mk-pv-linklist strong { display: block; font-size: 0.875rem; color: var(--mk-text); overflow-wrap: anywhere; }
+.mk-pv-href { display: block; margin-top: 2px; color: var(--accent-dark); overflow-wrap: anywhere; }
+.mk-pv-linklist .mk-pv-muted { margin-top: 4px; }
 .mk-pv-muted { display: block; margin: 0; font-size: 0.8125rem; color: var(--muted); }
 .mk-pv-tags { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 0.8125rem; }
 .mk-pv-tags dt { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--mk-text-soft); }
 .mk-pv-tags dd { margin: 0; overflow-wrap: anywhere; }
-.mk-pv-test { display: flex; gap: 8px; margin: 0 0 6px; }
-.mk-pv-test select { flex: 1; min-width: 0; max-width: none; }
+.mk-pv-test { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; }
+.mk-pv-test select { flex: 1 1 180px; min-width: 0; max-width: none; height: 36px; min-height: 36px; }
+.mk-pv-test .btn { flex: 0 0 auto; min-height: 36px; }
+.mk-pv-sec > .mk-pv-muted { line-height: 1.5; }
 .mk-pv-test-msg { margin: 6px 0 0; font-size: 0.875rem; font-weight: 600; }
 .mk-pv-test-msg:empty { display: none; }
 .mk-pv-test-msg.is-ok { color: #14632f; }
 .mk-pv-test-msg.is-error { color: #a3151f; }
 .mk-b-preview-text summary { cursor: pointer; font-size: 0.875rem; font-weight: 600; }
+@media (max-width: 1480px) {
+  /* Barre : titre et « Retour à l'éditeur » en première ligne (coin supérieur droit), contrôles en dessous */
+  .mk-pv-head { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title close" "controls controls"; }
+}
 @media (max-width: 1000px) {
   /* Écran étroit : l'e-mail (hauteur réelle) puis le panneau, le tout défilant d'un seul bloc */
   .mk-pv-body { display: block; overflow-y: auto; }
   .mk-pv-stage { overflow: visible; }
   .mk-pv-side { border-left: 0; border-top: 1px solid var(--mk-border); overflow: visible; }
+  .mk-pv-body { grid-template-columns: none; }
 }
 @media (max-width: 640px) {
   .mk-pv-hide-sm { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .mk-pv-dev span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-  .mk-pv-tools { margin-left: 0; }
+  .mk-pv-tools { margin-left: 0; flex: 1 1 100%; flex-wrap: wrap; }
+  .mk-pv-tools .mk-pv-select { flex: 1 1 160px; max-width: none; }
 }
 
 /* ---------- Réglages des blocs : système unifié (public/js/mk/fields.js) ----------
