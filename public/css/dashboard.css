@@ -40,6 +40,10 @@
 .dash-link[aria-current="page"] { background: var(--dash-active-bg); color: var(--dash-active-text); font-weight: 650; }
 .dash-link[aria-current="page"] .icon { opacity: 1; }
 .dash-link[aria-current="page"]::before { content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--dash-accent); }
+/* Centre de gestion (menu réduit à ses icônes) : même mise en valeur discrète que dans le rail */
+.dash.is-collapsed .dash-link[data-tip="Centre de gestion"]:not([aria-current="page"]) { background: color-mix(in srgb, var(--dash-accent) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dash-accent) 28%, transparent); }
+.dash.is-collapsed .dash-link[data-tip="Centre de gestion"]:not([aria-current="page"]) .icon { opacity: 1; }
+.dash.is-collapsed .dash-link[data-tip="Centre de gestion"]:not([aria-current="page"]):hover { background: color-mix(in srgb, var(--dash-accent) 26%, transparent); }
 .dash-link-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dash-badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--dash-accent); color: var(--dash-accent-on); font-size: 12px; font-weight: 700; display: inline-grid; place-items: center; }
 .dash-sidebar-foot { padding: var(--s3); border-top: 1px solid var(--dash-border); display: grid; gap: 2px; }
@@ -251,6 +255,8 @@
   .dash:not(.is-drawer) .dash-logo-text, .dash:not(.is-drawer) .dash-link-label, .dash:not(.is-drawer) .dash-group, .dash:not(.is-drawer) .dash-badge, .dash:not(.is-drawer) .dash-collapse { display: none; }
   .dash:not(.is-drawer) .dash-brand { justify-content: center; padding: var(--s4) 0 var(--s2); }
   .dash:not(.is-drawer) .dash-link { justify-content: center; padding: 0; }
+  .dash:not(.is-drawer) .dash-link[data-tip="Centre de gestion"]:not([aria-current="page"]) { background: color-mix(in srgb, var(--dash-accent) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dash-accent) 28%, transparent); }
+  .dash:not(.is-drawer) .dash-link[data-tip="Centre de gestion"]:not([aria-current="page"]) .icon { opacity: 1; }
   .dash:not(.is-drawer) .dash-link:hover::after, .dash:not(.is-drawer) .dash-link:focus-visible::after { content: attr(data-tip); position: fixed; left: calc(var(--dash-sidebar-w-collapsed) + 6px); padding: 6px 10px; border-radius: 6px; background: #0f1d29; color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; z-index: 90; }
   .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dash-grid-2 { grid-template-columns: minmax(0, 1fr); }

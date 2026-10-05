@@ -12,6 +12,9 @@
 .app-rail-link:hover { opacity: 1; background: var(--dash-hover, rgba(255, 255, 255, 0.08)); }
 .app-rail-link[aria-current="true"] { opacity: 1; background: var(--dash-active-bg, rgba(255, 255, 255, 0.12)); color: var(--dash-active-text, #fff); }
 .app-rail-link[aria-current="true"]::before { content: ""; position: absolute; left: -12px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--dash-accent, #0b83c6); }
+/* Centre de gestion : présence un peu plus marquée (fond teinté + liseré intérieur, sans changer la taille ni l'emplacement) */
+.app-rail-link[data-tip="Centre de gestion"]:not([aria-current="true"]) { opacity: 1; background: color-mix(in srgb, var(--dash-accent, #0b83c6) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dash-accent, #0b83c6) 28%, transparent); }
+.app-rail-link[data-tip="Centre de gestion"]:not([aria-current="true"]):hover { background: color-mix(in srgb, var(--dash-accent, #0b83c6) 26%, transparent); }
 .app-rail-link:focus-visible, .app-rail-brand:focus-visible { outline: 2px solid var(--dash-accent, #0b83c6); outline-offset: 2px; }
 .app-rail-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--dash-accent, #0b83c6); box-shadow: 0 0 0 2px var(--dash-sidebar, #0b2538); }
 .app-rail-foot { display: grid; gap: 2px; padding-top: 8px; border-top: 1px solid var(--dash-border, rgba(255, 255, 255, 0.08)); }

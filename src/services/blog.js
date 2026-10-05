@@ -228,8 +228,11 @@ function imageReferences(p) {
   const found = [];
   for (const [sql, label] of IMAGE_REFERENCES) {
     let rows = [];
-    const used = Math.max(...(sql.match(/\?(\d)/g) || ["?0"]).map((m) => Number(m.slice(1)))); // paramètres ?1 ?2 ?3 réellement utilisés
-    try { rows = db.prepare(sql).all(...[exact, like, likeJson].slice(0, used)); } catch (e) { if (!/no such table/i.test(e.message)) throw e; continue; }
+    // ?1 ?2 ?3 → « ? » simples, valeurs données dans l'ordre d'apparition : node:sqlite lie mal les paramètres numérotés
+    // sur certaines versions de Node 22 (« column index out of range » → erreur 500 de la médiathèque)
+    const args = [];
+    const plain = sql.replace(/\?(\d)/g, (_, n) => { args.push([exact, like, likeJson][Number(n) - 1]); return "?"; });
+    try { rows = db.prepare(plain).all(...args); } catch (e) { if (!/no such table/i.test(e.message)) throw e; continue; }
     for (const r of rows) found.push(label(r));
   }
   return [...new Set(found)];
