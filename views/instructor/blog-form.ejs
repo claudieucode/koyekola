@@ -49,6 +49,11 @@
           <button type="button" class="wp-btn-icon wp-inserter-toggle" data-toggle-inserter aria-pressed="false" aria-label="Ajouter un bloc" title="Ajouter un bloc"><%- icon("plus", { size: 20 }) %></button>
           <button type="button" class="wp-btn-icon" data-undo aria-label="Annuler" title="Annuler (Ctrl+Z)"><%- icon("undo", { size: 20 }) %></button>
           <button type="button" class="wp-btn-icon" data-redo aria-label="Rétablir" title="Rétablir (Ctrl+Maj+Z)"><%- icon("redo", { size: 20 }) %></button>
+          <%# Mode d'édition : deux interfaces pour le MÊME article (même contenu, même enregistrement) %>
+          <div class="wp-mode-switch" role="radiogroup" aria-label="Mode d'édition">
+            <button type="button" role="radio" aria-checked="true" data-edit-mode="blocks" title="Construction par blocs"><%- icon("layers", { size: 16 }) %><span>Blocs</span></button>
+            <button type="button" role="radio" aria-checked="false" data-edit-mode="document" title="Rédaction documentaire (traitement de texte)"><%- icon("fileText", { size: 16 }) %><span>Document</span></button>
+          </div>
         </div>
         <div class="wp-header-center">
           <button type="button" class="wp-document-bar" data-focus-title><span class="wp-doc-title" data-doc-title><%= v('title') || "Sans titre" %></span><span class="wp-doc-status" data-doc-status data-status="<%= status %>"><%= statuses[status] || status %></span><span class="wp-doc-stats" data-stats></span></button>

@@ -114,6 +114,7 @@ const SETTINGS = {
   spellcheck: { type: "bool", default: true }, seoAnalysis: { type: "bool", default: true }, aiAssistant: { type: "bool", default: true },
   previewDevice: { type: "enum", values: ["desktop", "tablet", "mobile"], default: "desktop" }, imageVariants: { type: "bool", default: true },
   hiddenBlocks: { type: "list", max: 80 },
+  editMode: { type: "enum", values: ["blocks", "document"], default: "blocks" }, // mode d'édition : par blocs ou Document
 };
 function cleanPrefs(input = {}) {
   const out = { favorites: [], recents: [], settings: {} };

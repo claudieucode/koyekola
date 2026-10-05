@@ -175,8 +175,9 @@ const saveOptions = {
     td: ["colspan", "rowspan"], th: ["colspan", "rowspan"], code: ["class"],
   },
   allowedClasses: false, // vérifiées une à une dans transformTags (listes blanches)
-  // Taille du texte : seulement les 3 tailles proposées par l'éditeur (relatives au texte de l'article)
-  allowedStyles: { "*": { color: COLOR, "background-color": COLOR, "text-align": [/^(left|right|center|justify)$/], "font-size": [/^(0\.875|1\.25|1\.5)em$/] } },
+  // Taille du texte : seulement les 3 tailles proposées par l'éditeur (relatives au texte de l'article) ; police : seulement
+  // les 4 familles du ruban du mode Document (polices chargées par le site ou familles système — src/editor/blog/documentMode.js)
+  allowedStyles: { "*": { color: COLOR, "background-color": COLOR, "text-align": [/^(left|right|center|justify)$/], "font-size": [/^(0\.875|1\.25|1\.5)em$/], "font-family": [/^(Figtree, sans-serif|["']?Bricolage Grotesque["']?, sans-serif|Georgia, serif|ui-monospace, Menlo, monospace)$/] } },
   allowedSchemes: ["http", "https", "mailto"],
   allowedSchemesAppliedToAttributes: ["href", "src"],
   allowProtocolRelative: false,

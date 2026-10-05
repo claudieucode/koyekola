@@ -28,6 +28,7 @@ import { BlockIdentity, walkBlocks, findBlock, activeBlockId, setHidden, placeOf
 import { attachDatePicker, parseLocal, timeZoneLabel } from "./blog/datePicker";
 import { Indent, listItemAt } from "./blog/indent";
 import { analyze, norm } from "../utils/seoAnalyzer";
+import { setupDocumentMode } from "./blog/documentMode";
 
 const root = document.querySelector("[data-blog-editor]");
 
@@ -195,7 +196,7 @@ function start() {
     element: $("#be-editor"),
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] }, dropcursor: { class: "kb-dropcursor", color: "var(--accent)", width: 2 }, link: { openOnClick: false, autolink: true, defaultProtocol: "https", HTMLAttributes: { rel: null, target: null, class: null } } }),
-      TextStyleKit.configure({ fontFamily: false, lineHeight: false, backgroundColor: false }),
+      TextStyleKit.configure({ lineHeight: false, backgroundColor: false }), // police : ruban du mode Document (valeurs fixes, voir blog/documentMode.js)
       Highlight.configure({ multicolor: true }), Indent,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Subscript, Superscript, TaskList, TaskItem.configure({ nested: true }),
@@ -725,6 +726,7 @@ function start() {
 
   // ---------- Barre d'outils du bloc (flottante, ou en haut en mode « Barre d'outils supérieure ») ----------
   const blockToolbar = $("[data-block-toolbar]");
+  let docMode = null; // mode Document (créé à la fin du démarrage)
   const topToolbar = $("[data-top-toolbar]");
   let topToolbarMode = false;
   const tbtn = (label, icon, run, { pressed, text } = {}) => {
@@ -1208,6 +1210,8 @@ function start() {
   let blockDragging = false;
   function renderBlockToolbar() {
     if (blockDragging) return;
+    // Mode Document : le ruban remplace la barre du bloc (flottante ou fixe en haut)
+    if (docMode && docMode.isActive()) { blockToolbar.hidden = true; topToolbar.hidden = true; return; }
     const b = currentBlock();
     const target = topToolbarMode ? topToolbar : blockToolbar;
     (topToolbarMode ? blockToolbar : topToolbar).hidden = true;
@@ -3110,6 +3114,15 @@ function start() {
     workspace = null;
   }
   $("[data-seo-analyse]")?.addEventListener("click", () => seoData.emit("action", { type: "analyse-online" }));
+
+  // ---------- Mode Document : seconde interface autour du MÊME éditeur (même contenu, historique et sauvegarde) ----------
+  docMode = setupDocumentMode({
+    editor, root, h, svg, chain, BLOCKS, CATS, blk, openMediaModal, linkPopover, popover, menuList, closePopovers, setAttrsAt, toast, modal, showSidebarTab, pastePlain,
+    nameOf, openSidebar: () => { if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click(); },
+    getMode: () => (editorPrefs.settings || {}).editMode || "blocks",
+    saveMode: (m) => { editorPrefs.settings = { ...(editorPrefs.settings || {}), editMode: m }; persistPrefs(); },
+    onToggle: (doc) => { toolbarKey = ""; if (!doc) topToolbar.hidden = !topToolbarMode; renderBlockToolbar(); },
+  });
 
   // ---------- Premier affichage ----------
   loadReusable();

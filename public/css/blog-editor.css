@@ -1676,3 +1676,128 @@
 .wp-body:is([data-ed-theme="nuit"], [data-ed-theme="noir"], [data-ed-theme="gris-fonce"], [data-ed-theme="gris-moyen"], [data-ed-theme="perso"][data-ed-contrast="light"]) {
   --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c5d3df' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 }
+
+/* ==========================================================================
+   Mode Document — seconde interface autour du MÊME éditeur (src/editor/blog/documentMode.js)
+   Uniquement les jetons de l'éditeur (--ed-*, --bs-r = 8 px, contrôles de 36 px, pas de 4 / 8 px) : mêmes thèmes,
+   mêmes arrondis, mêmes états que le reste de Blog Studio. Les groupes d'outils se touchent par des filets de 1 px.
+   ========================================================================== */
+
+/* Sélecteur de mode (barre supérieure) : interrupteur à deux positions, clairement un choix de MODE */
+.wp-mode-switch { display: inline-flex; align-items: center; gap: 2px; margin-left: 8px; padding: 2px; border: 1px solid var(--ed-border); border-radius: var(--bs-r); background: var(--ed-bg); }
+.wp-mode-switch button { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 0; border-radius: calc(var(--bs-r) - 2px); background: transparent; color: var(--ed-muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background var(--bs-ease), color var(--bs-ease), box-shadow var(--bs-ease); }
+.wp-mode-switch button:hover { color: var(--ed-text); }
+.wp-mode-switch button[aria-checked="true"] { background: var(--ed-surface); color: var(--ed-text); box-shadow: 0 0 0 1px var(--ed-border), 0 1px 2px rgba(11, 42, 64, 0.08); }
+.wp-mode-switch button:focus-visible { outline: 2px solid var(--ed-focus); outline-offset: 1px; }
+.wp-mode-switch svg { flex: 0 0 auto; }
+
+/* Ruban + bande contextuelle : collés en haut de la zone d'écriture */
+.doc-chrome { position: sticky; top: 0; z-index: 16; background: var(--ed-surface); border-bottom: 1px solid var(--ed-border); }
+.doc-chrome[hidden] { display: none; }
+.doc-ribbon { display: flex; align-items: flex-start; gap: 8px; padding: 8px 16px; }
+.doc-groups { display: flex; flex-wrap: wrap; align-items: center; row-gap: 8px; flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.doc-group { display: flex; align-items: center; flex: 0 0 auto; gap: 4px; padding: 0 8px; border-left: 1px solid var(--ed-border); }
+.doc-group:first-child, .doc-group.is-line-start { padding-left: 0; border-left: 0; }
+.doc-group[hidden] { display: none; }
+.doc-ribbon-end { display: flex; align-items: center; flex: 0 0 auto; gap: 4px; padding-left: 8px; border-left: 1px solid var(--ed-border); }
+
+/* Boutons d'outil : 36 × 36, icônes centrées au pixel, mêmes états que la barre du bloc */
+.doc-btn { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 36px; height: 36px; padding: 0; border: 0; border-radius: var(--bs-r); background: transparent; color: var(--ed-text-2); cursor: pointer; transition: background var(--bs-ease), color var(--bs-ease); }
+.doc-btn:hover:not(:disabled) { background: var(--ed-hover); color: var(--ed-text); }
+.doc-btn[aria-pressed="true"] { background: var(--ed-active); color: var(--ed-primary-fg); }
+.doc-btn:focus-visible { outline: 2px solid var(--ed-focus); outline-offset: -2px; }
+.doc-btn:disabled { opacity: 0.4; cursor: default; }
+.doc-btn[hidden] { display: none; }
+.doc-btn svg, .doc-ico svg { display: block; }
+.doc-btn-narrow { width: 24px; }
+.doc-ico { display: inline-flex; align-items: center; justify-content: center; line-height: 0; }
+
+/* Groupes soudés (gras / italique…, alignement, listes) : un contour, des filets internes, coins seulement aux bouts */
+.doc-seg { display: inline-flex; flex: 0 0 auto; height: 36px; border: 1px solid var(--ed-border); border-radius: var(--bs-r); overflow: hidden; background: var(--ed-surface); }
+.doc-seg .doc-btn { width: 34px; height: 34px; border-radius: 0; }
+.doc-seg .doc-btn + .doc-btn { border-left: 1px solid var(--ed-border); }
+.doc-seg + .doc-seg { margin-left: 4px; }
+
+/* Listes déroulantes (style, police, taille) : largeur fixe, la valeur ne fait jamais bouger le ruban */
+.doc-select { display: inline-flex; align-items: center; justify-content: space-between; flex: 0 0 auto; gap: 8px; height: 36px; padding: 0 8px 0 12px; border: 1px solid var(--ed-input-border); border-radius: var(--bs-r); background: var(--ed-input-bg); color: var(--ed-input-text); font: inherit; font-size: 14px; cursor: pointer; transition: border-color var(--bs-ease); }
+.doc-select:hover:not(:disabled) { border-color: var(--ed-border-hover); }
+.doc-select:focus-visible { outline: 2px solid var(--ed-focus); outline-offset: -2px; }
+.doc-select:disabled { opacity: 0.4; cursor: default; }
+.doc-select-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-select .doc-ico { color: var(--ed-muted); }
+.doc-group[data-group="font"] .doc-select + .doc-select { margin-left: 4px; }
+
+/* Couleur du texte / surbrillance : glyphe + barre de la couleur courante */
+.doc-glyph { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1; }
+.doc-letter { font-size: 16px; font-weight: 700; }
+.doc-colorbar { display: block; width: 18px; height: 4px; border-radius: 2px; background: currentColor; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ed-text) 18%, transparent); }
+
+/* « Insérer » : l'entrée vers tous les blocs, légèrement accentuée */
+.doc-insert { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border: 0; border-radius: var(--bs-r); background: var(--ed-primary-soft); color: var(--ed-primary-fg); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background var(--bs-ease); white-space: nowrap; }
+.doc-insert:hover { background: var(--ed-active); }
+.doc-insert:focus-visible { outline: 2px solid var(--ed-focus); outline-offset: -2px; }
+.doc-focus-btn[aria-pressed="true"] { background: var(--ed-pressed-bg); color: var(--ed-pressed-fg); }
+
+/* Bande contextuelle : hauteur fixe (aucun saut quand la sélection change) */
+.doc-context { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-top: 1px solid var(--ed-border); background: var(--ed-bg); font-size: 13px; overflow-x: auto; scrollbar-width: thin; }
+.doc-ctx-label { flex: 0 0 auto; padding-right: 8px; border-right: 1px solid var(--ed-border); color: var(--ed-muted); font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+.doc-ctx-btn { display: inline-flex; align-items: center; flex: 0 0 auto; gap: 4px; height: 30px; padding: 0 10px; border: 1px solid var(--ed-border); border-radius: var(--bs-r); background: var(--ed-surface); color: var(--ed-text-2); font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: border-color var(--bs-ease), background var(--bs-ease); }
+.doc-ctx-btn:hover { border-color: var(--ed-border-hover); background: var(--ed-hover); }
+.doc-ctx-btn:focus-visible { outline: 2px solid var(--ed-focus); outline-offset: 1px; }
+.doc-ctx-btn.is-danger { color: var(--ed-danger); }
+.doc-ctx-url { flex: 0 1 auto; min-width: 0; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ed-primary-fg); }
+.doc-ctx-hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ed-muted); }
+
+/* Menus du ruban : mêmes popovers que le mode blocs */
+.doc-pop .doc-choice button { gap: 8px; }
+.doc-check { display: inline-block; width: 16px; color: var(--ed-primary-fg); font-weight: 700; text-align: center; }
+.doc-choice .doc-style-h1 span:last-child { font-size: 20px; font-weight: 800; }
+.doc-choice .doc-style-h2 span:last-child { font-size: 18px; font-weight: 800; }
+.doc-choice .doc-style-h3 span:last-child { font-size: 16px; font-weight: 700; }
+.doc-swatch-pop .wp-menu-label { margin-top: 0; }
+.doc-grid-pop { padding: 4px; }
+.doc-grid { display: grid; grid-template-columns: repeat(6, 24px); gap: 4px; }
+.doc-grid-cell { width: 24px; height: 24px; padding: 0; border: 1px solid var(--ed-border-strong); border-radius: 4px; background: var(--ed-surface); cursor: pointer; }
+.doc-grid-cell.is-on { border-color: var(--ed-focus); background: var(--ed-primary-soft); }
+.doc-grid-cell:focus-visible { outline: 2px solid var(--ed-focus); outline-offset: 1px; }
+.doc-grid-label { margin: 8px 0 0; color: var(--ed-muted); font-size: 13px; text-align: center; }
+.wp-popover.doc-pop-wide { width: min(520px, calc(100vw - 16px)); max-width: none; max-height: min(70vh, 560px); overflow-y: auto; }
+.doc-insert-cat + .doc-insert-cat { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--ed-border); }
+.doc-insert-cat .wp-menu-label { margin: 0 0 4px; }
+.doc-insert-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px; }
+.doc-insert-item { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 8px; border: 0; border-radius: var(--bs-r); background: none; color: var(--ed-text-2); font: inherit; font-size: 13px; font-weight: 500; text-align: left; cursor: pointer; }
+.doc-insert-item:hover, .doc-insert-item:focus-visible { background: var(--ed-hover); color: var(--ed-text); outline: none; }
+.doc-insert-item:focus-visible { box-shadow: inset 0 0 0 2px var(--ed-focus); }
+.doc-insert-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 32px; height: 32px; border-radius: var(--bs-r); background: var(--ed-bg); color: var(--ed-primary-fg); }
+.doc-insert-item.is-brand .doc-insert-icon { background: var(--ed-primary-soft); }
+.doc-form { display: grid; gap: 16px; min-width: min(440px, 80vw); }
+.doc-field { display: grid; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ed-text); }
+.doc-field input { min-height: 40px; }
+
+/* La feuille : une page centrée, bordée de tous côtés, ombre très légère ; la barre du bloc et les poignées disparaissent */
+.is-doc-mode .wp-content { max-width: 816px; margin: 32px auto 64px; padding: 80px 88px 96px; border: 1px solid var(--ed-border); border-radius: var(--bs-r); box-shadow: 0 1px 2px rgba(11, 42, 64, 0.04), 0 8px 24px -16px rgba(11, 42, 64, 0.2); min-height: calc(100vh - 200px); }
+.is-doc-mode .wp-content::before { content: "Document · KOLAKISA"; top: 40px; left: 88px; }
+.is-doc-mode .wp-block-toolbar, .is-doc-mode .wp-top-toolbar, .is-doc-mode .wp-inline-appender, .is-doc-mode .kb-ed-handle { display: none !important; }
+.is-doc-mode .wp-editor .be-prose > .has-focus:not(p):not(h1):not(h2):not(h3):not(h4):not(.kb-ed-image):not(.kb-ed-marker) { box-shadow: none; }
+/* Blocs spéciaux : repérables d'un coup d'œil (filet pointillé discret), jamais transformés en texte */
+.is-doc-mode .wp-editor .be-prose > :is(.kb-ed-marker, .kb-ed-gallery, .kb-ed-columns, .kb-ed-group, .kb-ed-buttons, .kb-ed-accordion, .kb-ed-spacer, .kb-ed-pagebreak, [class*="kb-ed-callout"], .kb-ed-reusable) { outline: 1px dashed var(--ed-border-strong); outline-offset: 4px; border-radius: 2px; }
+.is-code-mode .doc-chrome { display: none; }
+
+/* Plein écran : seule la feuille et ses outils restent (Échap ou le bouton pour revenir) */
+.is-doc-focus .wp-rail, .is-doc-focus .wp-sidebar, .is-doc-focus .wp-secondary, .is-doc-focus .wsp-dock { display: none !important; }
+
+@media (max-width: 960px) {
+  .is-doc-mode .wp-content { padding: 64px 48px 80px; }
+  .is-doc-mode .wp-content::before { left: 48px; top: 28px; }
+}
+@media (max-width: 782px) {
+  .wp-mode-switch { margin-left: 4px; }
+  .wp-mode-switch button { padding: 0 8px; }
+  .wp-mode-switch button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .doc-ribbon { padding: 8px; }
+  .doc-context { padding: 0 8px; }
+  .is-doc-mode .wp-content { margin: 16px 8px 32px; padding: 48px 20px 64px; }
+  .is-doc-mode .wp-content::before { left: 20px; top: 20px; }
+}
+/* Mode Document : annuler / rétablir sont dans le ruban (pas en double dans la barre supérieure) */
+.is-doc-mode .wp-header-left [data-undo], .is-doc-mode .wp-header-left [data-redo] { display: none; }
