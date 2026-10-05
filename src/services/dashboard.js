@@ -175,7 +175,9 @@ const GESTION_NAV = [
     { key: "g-eleves", label: "Élèves", href: "/formateur/gestion/eleves", icon: "users" },
     { key: "g-analytics", label: "Analytics", href: "/formateur/gestion/analytics", icon: "barChart" },
     { key: "g-ressources", label: "Ressources", href: "/formateur/gestion/ressources", icon: "image" },
+    { key: "g-support", label: "Support", href: "/formateur/gestion/support", icon: "mail", badge: "support" },
     { key: "g-activite", label: "Activité", href: "/formateur/gestion/activite", icon: "bell", badge: "notifications" },
+    { key: "g-journal", label: "Journal", href: "/formateur/gestion/journal", icon: "listChecks" },
   ] },
 ];
 const isGestionPath = (path) => /^\/formateur\/gestion(\/|$)/.test(path);

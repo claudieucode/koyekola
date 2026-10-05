@@ -10,7 +10,7 @@ const { slugify } = require("../utils/format");
 const seoResolver = require("../seo/resolver");
 
 // Espaces privés et pages sans intérêt pour les moteurs de recherche
-const NOINDEX_PREFIXES = ["/formateur", "/mes-cours", "/panier", "/commande", "/apprendre", "/certificat", "/favoris", "/connexion", "/inscription", "/deconnexion"];
+const NOINDEX_PREFIXES = ["/formateur", "/mes-cours", "/panier", "/commande", "/apprendre", "/certificat", "/favoris", "/support", "/notifications", "/connexion", "/inscription", "/deconnexion"];
 
 function injectLocals(req, res, next) {
   res.locals.absoluteUrl = (urlPath) => absoluteUrl(req, urlPath);
@@ -35,6 +35,11 @@ function injectLocals(req, res, next) {
   if (req.session.user && !req.session.cart) req.session.cart = {};
   res.locals.currentUser = req.session.user || null;
   res.locals.cartCount = Object.keys(req.session.cart || {}).length;
+  // Cloche de l'en-tête : notifications non lues d'un élève (le formateur a le flux d'activité de Mon espace). Une panne n'affiche rien.
+  res.locals.notifCount = 0;
+  if (req.session.user && req.session.user.role !== "formateur") {
+    try { res.locals.notifCount = require("../services/notifications").unreadCount(req.session.user.id); } catch { /* pas de badge */ }
+  }
   // « Mon espace » : coquille de tableau de bord (barre latérale, apparence personnelle) au lieu de l'en-tête public
   res.locals.dash = null;
   if (req.session.user && req.session.user.role === "formateur" && /^\/formateur(\/|$)/.test(req.path)) {
@@ -46,6 +51,7 @@ function injectLocals(req, res, next) {
       seo, gestion, module: seo ? dashboard.MODULES.seo : gestion ? dashboard.MODULES.gestion : null, globalNav: dashboard.NAV, path: req.path, crumbs: (title) => dashboard.crumbs(req.path, title),
       active: seo ? dashboard.seoActiveKey(req.path) : gestion ? dashboard.gestionActiveKey(req.path) : dashboard.activeKey(req.path), nav: seo ? dashboard.SEO_NAV : gestion ? dashboard.GESTION_NAV : dashboard.NAV, prefs, style: dashboard.style(prefs),
       tasks: seo ? require("../seo/tasks").openCount() : 0,
+      support: (() => { try { return require("../services/support").openCount(req.session.user.id); } catch { return 0; } })(), // tickets en attente de réponse
       unread: db.prepare("SELECT COUNT(*) n FROM contact_messages WHERE read_at IS NULL").get().n,
       // Notifications non lues du Centre de gestion (données réelles ; badge de la navigation)
       // (un échec ne doit jamais empêcher l'affichage de Mon espace : pas de badge dans ce cas)

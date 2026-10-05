@@ -1,0 +1,26 @@
+<%- include("partials/header", { title: "Notifications", seo: { noindex: true } }) %>
+
+  <div class="container" style="max-width:760px;padding:40px 20px 60px;">
+    <h1>Notifications</h1>
+    <% if (unread) { %>
+      <form action="/notifications/tout-lire" method="post" style="margin-bottom:16px;"><button type="submit" class="btn btn-outline btn-sm">Tout marquer comme lu (<%= unread %>)</button></form>
+    <% } %>
+    <% if (!list.length) { %>
+      <div class="card card-pad"><p style="margin:0;">Aucune notification pour l'instant. Vous serez prévenu(e) ici des réponses à vos demandes, de vos certificats et de vos commandes.</p></div>
+    <% } else { %>
+      <ul class="dlist">
+        <% list.forEach((n) => { %>
+          <li class="card card-pad" style="margin-bottom:10px;<%= n.read_at ? "" : "border-left:4px solid var(--primary);" %>">
+            <strong><%= n.title %></strong><% if (!n.read_at) { %> <span class="dash-status is-draft">Nouveau</span><% } %><br>
+            <% if (n.body) { %><span style="color:var(--muted);"><%= n.body %></span><br><% } %>
+            <small><%= formatDateTime(n.created_at) %></small>
+            <% if (n.url || !n.read_at) { %>
+              <form action="/notifications/<%= n.id %>/lue" method="post" style="display:inline;margin-left:8px;"><button type="submit" class="btn btn-outline btn-sm"><%= n.url ? "Ouvrir" : "Marquer comme lu" %></button></form>
+            <% } %>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </div>
+
+<%- include("partials/footer") %>

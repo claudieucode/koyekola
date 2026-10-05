@@ -7,6 +7,7 @@ const { isInlineImage } = require("../utils/attachments");
 const { currentSlugFor } = require("../services/slugs");
 const { applyEffectivePrices } = require("../services/pricing");
 const certificates = require("../services/certificates");
+const notifications = require("../services/notifications");
 const { buildCertificatePdf } = require("../services/certificatePdf");
 const { createRateLimiter } = require("../middlewares/security");
 const { siteBase } = require("../utils/seo");
@@ -121,7 +122,8 @@ function issueCertificateIfComplete(user, courseId) {
     const course = db.prepare("SELECT courses.*, users.username AS instructor_name FROM courses JOIN users ON users.id = courses.instructor_id WHERE courses.id = ?").get(courseId);
     if (!course) return;
     const completion = db.prepare(`SELECT MAX(completed_at) d FROM lesson_progress JOIN lessons ON lessons.id = lesson_progress.lesson_id JOIN sections ON sections.id = lessons.section_id WHERE sections.course_id = ? AND lesson_progress.user_id = ?`).get(courseId, user.id);
-    certificates.issue({ userId: user.id, userName: user.username, course, completedAt: completion.d });
+    const { created } = certificates.issue({ userId: user.id, userName: user.username, course, completedAt: completion.d });
+    if (created) notifications.notify(user.id, { kind: "certificate", title: `Votre certificat est prêt : ${course.title}`, body: "Félicitations ! Vous pouvez l'afficher et le télécharger en PDF.", url: `/certificat/${course.slug}` });
   } catch (error) {
     console.error(`[KOLAKISA] Certificat non délivré (élève ${user && user.id}, formation ${courseId}) :`, error.message);
   }

@@ -13,7 +13,7 @@
       <% dash.nav.forEach((g) => { %>
         <p class="dash-group"><%= g.group %></p>
         <ul class="dash-list">
-          <% g.items.forEach((it) => { const on = it.key === dash.active; const count = it.badge === "unread" ? dash.unread : it.badge === "tasks" ? dash.tasks : it.badge === "notifications" ? dash.notifications : 0; const countLabel = it.badge === "tasks" ? `${count} tâche(s) à faire` : it.badge === "notifications" ? `${count} notification(s) non lue(s)` : `${count} non lu(s)`; %>
+          <% g.items.forEach((it) => { const on = it.key === dash.active; const count = it.badge === "unread" ? dash.unread : it.badge === "tasks" ? dash.tasks : it.badge === "notifications" ? dash.notifications : it.badge === "support" ? dash.support : 0; const countLabel = it.badge === "tasks" ? `${count} tâche(s) à faire` : it.badge === "notifications" ? `${count} notification(s) non lue(s)` : `${count} non lu(s)`; %>
             <li><a href="<%= it.href %>" class="dash-link" data-tip="<%= it.label %>"<%- on ? ' aria-current="page"' : "" %>><%- icon(it.icon, { size: 18 }) %><span class="dash-link-label"><%= it.label %></span><% if (count) { %><span class="dash-badge" aria-label="<%= countLabel %>"><%= count %></span><% } %></a></li>
           <% }) %>
         </ul>

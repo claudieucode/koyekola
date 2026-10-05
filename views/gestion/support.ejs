@@ -1,0 +1,23 @@
+<%- include("../partials/header", { title }) %>
+<%- include("_head", { heading: "Support", subtitle: "Demandes de vos élèves. Répondez ici : l'élève est prévenu dans ses notifications." }) %>
+<form class="g-filters" method="get" action="/formateur/gestion/support" role="search" aria-label="Filtrer les demandes">
+  <div class="g-field g-field-grow"><label for="s-q">Rechercher</label><input id="s-q" type="search" name="q" value="<%= filters.q %>" placeholder="Sujet, élève, e-mail"></div>
+  <div class="g-field"><label for="s-st">Statut</label><select id="s-st" name="statut"><option value="">Tous</option><% Object.entries(statuses).forEach(([k, v]) => { %><option value="<%= k %>"<%= filters.statut === k ? " selected" : "" %>><%= v %></option><% }) %></select></div>
+  <div class="g-filter-actions"><button type="submit" class="btn btn-primary">Filtrer</button></div>
+</form>
+<% if (!tickets.length) { %>
+  <div class="dash-empty g-state"><h3>Aucune demande</h3><p><%= filters.q || filters.statut ? "Aucune demande ne correspond à ces filtres." : "Quand un élève vous écrit depuis la page Aide, sa demande apparaît ici." %></p></div>
+<% } else { %>
+  <div class="dtable-wrap"><table class="dtable g-table">
+    <caption class="sr-only">Demandes de support</caption>
+    <thead><tr><th scope="col">Demande</th><th scope="col">Élève</th><th scope="col">Statut</th><th scope="col">Priorité</th><th scope="col">Dernière activité</th></tr></thead>
+    <tbody><% tickets.forEach((t) => { %><tr>
+      <td data-label="Demande"><a href="/formateur/gestion/support/<%= t.id %>"><strong><%= t.subject %></strong></a><br><small>#<%= t.id %> · <%= t.message_count %> message<%= t.message_count > 1 ? "s" : "" %><%= t.course_title ? " · " + t.course_title : "" %></small></td>
+      <td data-label="Élève"><%= t.student_name %><br><small><%= t.student_email %></small></td>
+      <td data-label="Statut"><span class="dash-status <%= t.status === "closed" ? "is-archived" : t.status === "answered" ? "is-published" : "is-draft" %>"><%= statuses[t.status] %></span></td>
+      <td data-label="Priorité"><%= priorities[t.priority] %></td>
+      <td data-label="Dernière activité"><%= formatDateTime(t.updated_at) %></td>
+    </tr><% }) %></tbody>
+  </table></div>
+<% } %>
+<%- include("../partials/footer") %>

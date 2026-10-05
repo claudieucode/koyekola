@@ -23,6 +23,8 @@ const sales = require("../services/gestion/sales");
 const students = require("../services/gestion/students");
 const crm = require("../services/gestion/crm");
 const certificates = require("../services/certificates");
+const support = require("../services/support");
+const audit = require("../services/auditLog");
 const payments = require("../services/payments");
 const analytics = require("../services/gestion/analytics");
 const resources = require("../services/gestion/resources");
@@ -72,6 +74,7 @@ function safely(back, fn) {
 function backOf(p) {
   if (/^\/formateur\/gestion\/ventes\/commandes\/\d+/.test(p)) return { href: "/formateur/gestion/ventes", label: "Retour aux commandes" };
   if (/^\/formateur\/gestion\/eleves\/\d+/.test(p)) return { href: "/formateur/gestion/eleves", label: "Retour aux élèves" };
+  if (/^\/formateur\/gestion\/support\/\d+/.test(p)) return { href: "/formateur/gestion/support", label: "Retour au support" };
   if (/^\/formateur\/gestion\/ventes\/.+/.test(p)) return { href: "/formateur/gestion/ventes", label: "Retour aux ventes" };
   if (/^\/formateur\/gestion\/.+/.test(p)) return { href: "/formateur/gestion", label: "Retour au Centre de gestion" };
   return { href: "/formateur", label: "Retour à Mon espace" };
@@ -143,6 +146,7 @@ function couponForm(req, res, current) {
   }
   if (current) { sales.updateCoupon(me(req), current.id, v.values); flash(req, "ok", `Code ${v.values.code} modifié.`); }
   else { sales.createCoupon(me(req), v.values); flash(req, "ok", `Code ${v.values.code} créé${v.values.active ? " et actif" : " (désactivé)"}.`); }
+  audit.record(req, { action: current ? "coupon.updated" : "coupon.created", resourceType: "coupon", resourceId: current ? current.id : null, summary: `Code promo ${v.values.code} ${current ? "modifié" : "créé"} (${v.values.kind === "percent" ? v.values.value + " %" : (v.values.value / 100).toFixed(2) + " €"}${v.values.active ? "" : ", désactivé"})`, details: { kind: v.values.kind, value: v.values.value, course_id: v.values.course_id, starts_at: v.values.starts_at, expires_at: v.values.expires_at, max_uses: v.values.max_uses, active: v.values.active } });
   res.redirect("/formateur/gestion/ventes/coupons");
 }
 router.post("/formateur/gestion/ventes/coupons", safely("/formateur/gestion/ventes/coupons", (req, res) => couponForm(req, res, null)));
@@ -156,6 +160,7 @@ router.post("/formateur/gestion/ventes/coupons/:id(\\d+)/:action(activer|desacti
   if (!c) { flash(req, "error", "Code promo introuvable."); return res.redirect("/formateur/gestion/ventes/coupons"); }
   if (req.params.action === "supprimer") { sales.deleteCoupon(me(req), c.id); flash(req, "ok", `Code ${c.code} supprimé (les commandes passées conservent leur remise).`); }
   else { sales.setCouponActive(me(req), c.id, req.params.action === "activer"); flash(req, "ok", `Code ${c.code} ${req.params.action === "activer" ? "activé" : "désactivé"}.`); }
+  audit.record(req, { action: req.params.action === "supprimer" ? "coupon.deleted" : req.params.action === "activer" ? "coupon.activated" : "coupon.deactivated", resourceType: "coupon", resourceId: c.id, summary: `Code promo ${c.code} ${req.params.action === "supprimer" ? "supprimé" : req.params.action === "activer" ? "activé" : "désactivé"}` });
   res.redirect("/formateur/gestion/ventes/coupons");
 }));
 
@@ -173,10 +178,55 @@ for (const [action, fn, text] of [["revoquer", (id, req) => certificates.revoke(
     const cert = db.prepare("SELECT user_id FROM certificates WHERE id = ? AND instructor_id = ?").get(Number(req.params.id), me(req));
     if (!cert) return res.status(404).render("gestion/erreur", { title: "Introuvable", notFound: true, retry: null, back: "/formateur/gestion/eleves" });
     fn(Number(req.params.id), req);
+    audit.record(req, { action: action === "revoquer" ? "certificate.revoked" : "certificate.restored", resourceType: "certificate", resourceId: req.params.id, summary: `Certificat n° ${req.params.id} ${action === "revoquer" ? "révoqué" : "rétabli"}`, details: { user_id: cert.user_id, reason: action === "revoquer" ? String(req.body && req.body.reason || "").slice(0, 200) : undefined } });
     flash(req, "ok", text);
     res.redirect(`/formateur/gestion/eleves/${cert.user_id}`);
   });
 }
+
+// ---------- Journal d'activité (lecture seule) ----------
+router.get("/formateur/gestion/journal", page("gestion/journal", "Journal d'activité", (req) => {
+  const q = common.cleanQ(req.query.q);
+  const type = audit.TYPES[req.query.type] ? req.query.type : "";
+  const total = audit.list({ type, q, limit: 1 }).total;
+  const pg = common.paginate(total, common.page(req.query), 50);
+  return { log: { ...audit.list({ type, q, limit: pg.limit, offset: pg.offset }), ...pg }, types: audit.TYPES, filters: { type, q } };
+}));
+
+// ---------- Support (tickets des élèves) : le formateur ne voit que les tickets qui lui sont adressés ----------
+router.get("/formateur/gestion/support", page("gestion/support", "Support", (req) => ({
+  tickets: support.listForInstructor(me(req), { status: req.query.statut, q: req.query.q }), statuses: support.STATUSES, priorities: support.PRIORITIES,
+  filters: { statut: support.STATUSES[req.query.statut] ? req.query.statut : "", q: String(req.query.q || "").slice(0, 80) },
+})));
+router.get("/formateur/gestion/support/:id(\\d+)", page("gestion/support-ticket", "Demande de support", (req) => {
+  const ticket = support.getForInstructor(me(req), Number(req.params.id));
+  return ticket ? { ticket, title: `Demande #${ticket.id}`, messages: support.messagesOf(ticket.id), statuses: support.STATUSES, priorities: support.PRIORITIES } : null;
+}));
+const ownTicket = (req, res) => {
+  const ticket = support.getForInstructor(me(req), Number(req.params.id));
+  if (!ticket) res.status(404).render("gestion/erreur", { title: "Introuvable", notFound: true, retry: null, back: "/formateur/gestion/support" });
+  return ticket;
+};
+router.post("/formateur/gestion/support/:id(\\d+)/repondre", safely("/formateur/gestion/support", (req, res) => {
+  const ticket = ownTicket(req, res); if (!ticket) return;
+  const r = support.addMessage(ticket, req.session.user, req.body.message, { staff: true });
+  flash(req, r.error ? "error" : "ok", r.error || "Réponse envoyée : l'élève est prévenu.");
+  res.redirect(`/formateur/gestion/support/${ticket.id}`);
+}));
+router.post("/formateur/gestion/support/:id(\\d+)/fermer", safely("/formateur/gestion/support", (req, res) => {
+  const ticket = ownTicket(req, res); if (!ticket) return;
+  support.close(ticket.id); flash(req, "ok", "Demande close."); res.redirect(`/formateur/gestion/support/${ticket.id}`);
+}));
+router.post("/formateur/gestion/support/:id(\\d+)/rouvrir", safely("/formateur/gestion/support", (req, res) => {
+  const ticket = ownTicket(req, res); if (!ticket) return;
+  support.reopen(ticket.id); flash(req, "ok", "Demande rouverte."); res.redirect(`/formateur/gestion/support/${ticket.id}`);
+}));
+router.post("/formateur/gestion/support/:id(\\d+)/priorite", safely("/formateur/gestion/support", (req, res) => {
+  const ticket = ownTicket(req, res); if (!ticket) return;
+  const ok = support.setPriority(me(req), ticket.id, req.body.priority);
+  flash(req, ok ? "ok" : "error", ok ? "Priorité modifiée." : "Priorité inconnue.");
+  res.redirect(`/formateur/gestion/support/${ticket.id}`);
+}));
 
 // ---------- Analytics ----------
 router.get("/formateur/gestion/analytics", page("gestion/analytics", "Analytics", (req) => {

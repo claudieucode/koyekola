@@ -519,6 +519,69 @@ db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS uq_certificates_user_course ON certificates(user_id, course_id) WHERE course_id IS NOT NULL;
   CREATE INDEX IF NOT EXISTS idx_certificates_instructor ON certificates(instructor_id, issued_at);
 `);
+// Support : tickets des élèves au formateur. status : open = en attente du formateur, answered = le formateur a répondu,
+// closed = clos (un nouveau message de l'élève le rouvre). instructor_id = formateur destinataire (propriétaire de la formation
+// concernée, sinon le formateur de la plateforme) : un formateur ne voit que SES tickets.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS support_tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    instructor_id INTEGER,
+    course_id INTEGER REFERENCES courses(id) ON DELETE SET NULL,
+    subject TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'answered', 'closed')),
+    priority TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    closed_at TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_support_tickets_user ON support_tickets(user_id, updated_at);
+  CREATE INDEX IF NOT EXISTS idx_support_tickets_instructor ON support_tickets(instructor_id, status, updated_at);
+  CREATE TABLE IF NOT EXISTS support_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+    author_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    is_staff INTEGER NOT NULL DEFAULT 0,
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_support_messages_ticket ON support_messages(ticket_id, id);
+  -- Notifications des élèves (centre de notifications) : écrites par les modules (support, certificats, commandes…) via
+  -- src/services/notifications.js ; read_at vide = non lue. (Le formateur garde le flux d'activité du Centre de gestion.)
+  CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL DEFAULT '',
+    url TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    read_at TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, read_at, id);
+`);
+// Journal d'activité du site : qui a fait quoi, sur quelle ressource, quand, avec quel résultat. EN ÉCRITURE SEULE : des
+// déclencheurs refusent toute modification ou suppression d'une ligne (aucune interface ni requête du site ne les efface).
+// Pas de clé étrangère : l'entrée survit à la suppression du compte (actor_name garde le nom au moment de l'action).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    at TEXT NOT NULL DEFAULT (datetime('now')),
+    actor_id INTEGER,
+    actor_name TEXT NOT NULL DEFAULT '',
+    action TEXT NOT NULL,                           -- ressource.verbe, ex. course.price_changed
+    resource_type TEXT NOT NULL,
+    resource_id TEXT,
+    summary TEXT NOT NULL,                          -- phrase lisible (français)
+    details TEXT NOT NULL DEFAULT '{}',             -- JSON : avant / après, jamais de secret
+    result TEXT NOT NULL DEFAULT 'ok' CHECK (result IN ('ok', 'refused', 'error')),
+    ip TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_audit_log_at ON audit_log(at, id);
+  CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action, id);
+  CREATE TRIGGER IF NOT EXISTS audit_log_no_update BEFORE UPDATE ON audit_log BEGIN SELECT RAISE(ABORT, 'Le journal d''activité est en écriture seule.'); END;
+  CREATE TRIGGER IF NOT EXISTS audit_log_no_delete BEFORE DELETE ON audit_log BEGIN SELECT RAISE(ABORT, 'Le journal d''activité est en écriture seule.'); END;
+`);
 // Quiz : nombre maximal de tentatives (vide = illimité)
 const quizColumns = db.prepare("PRAGMA table_info(quizzes)").all().map((col) => col.name);
 if (!quizColumns.includes("max_attempts")) db.exec("ALTER TABLE quizzes ADD COLUMN max_attempts INTEGER CHECK (max_attempts IS NULL OR max_attempts > 0)");

@@ -8,6 +8,7 @@ const { parseVideoUrl } = require("../utils/video");
 const { UserError } = require("../utils/errors");
 const { duplicateCourse } = require("../services/courses");
 const offers = require("../services/offers");
+const audit = require("../services/auditLog");
 const { recordSlugChange } = require("../services/slugs");
 const { removeUploadedFile } = require("../utils/uploads");
 const { sanitizeRich, normalizeList, editorSources } = require("../utils/richText");
@@ -152,8 +153,10 @@ function saveOffer(req, res, current) {
   if (v.errors) {
     return renderOffers(req, res, { status: 400, editing: current, form: { ...req.body, active: req.body.active ? 1 : 0 }, errors: v.errors, flash: { type: "error", text: "L'offre n'a pas été enregistrée : corrigez les champs signalés." } });
   }
+  let offerId = current ? current.id : null;
   if (current) offers.updateOffer(req.course.id, current.id, v.values);
-  else offers.createOffer(req.session.user.id, req.course.id, v.values);
+  else offerId = offers.createOffer(req.session.user.id, req.course.id, v.values);
+  audit.record(req, { action: current ? "offer.updated" : "offer.created", resourceType: "offer", resourceId: offerId, summary: `Offre « ${v.values.name} » ${current ? "modifiée" : "créée"} sur « ${req.course.title} » : ${(v.values.price_cents / 100).toFixed(2)} € (prix standard ${(req.course.price_cents / 100).toFixed(2)} €)`, details: { course_id: req.course.id, price_cents: v.values.price_cents, starts_at: v.values.starts_at, ends_at: v.values.ends_at, active: v.values.active, avant: current ? { price_cents: current.price_cents, starts_at: current.starts_at, ends_at: current.ends_at, active: current.active } : null } });
   req.session.offerFlash = { type: "ok", text: current ? "Offre modifiée." : "Offre créée." };
   res.redirect(offersUrl(req.course));
 }
@@ -167,12 +170,14 @@ router.post("/formateur/cours/:id(\\d+)/offres/:offerId(\\d+)", loadOwnedCourse,
 for (const [action, active, text] of [["activer", true, "Offre activée."], ["desactiver", false, "Offre désactivée."]]) {
   router.post(`/formateur/cours/:id(\\d+)/offres/:offerId(\\d+)/${action}`, loadOwnedCourse, loadOffer, (req, res) => {
     offers.setOfferActive(req.course.id, req.offer.id, active);
+    audit.record(req, { action: active ? "offer.activated" : "offer.deactivated", resourceType: "offer", resourceId: req.offer.id, summary: `Offre « ${req.offer.name} » ${active ? "activée" : "désactivée"} sur « ${req.course.title} »` });
     req.session.offerFlash = { type: "ok", text };
     res.redirect(offersUrl(req.course));
   });
 }
 router.post("/formateur/cours/:id(\\d+)/offres/:offerId(\\d+)/supprimer", loadOwnedCourse, loadOffer, (req, res) => {
   offers.deleteOffer(req.course.id, req.offer.id);
+  audit.record(req, { action: "offer.deleted", resourceType: "offer", resourceId: req.offer.id, summary: `Offre « ${req.offer.name} » supprimée sur « ${req.course.title} »`, details: { price_cents: req.offer.price_cents } });
   req.session.offerFlash = { type: "ok", text: "Offre supprimée. Les commandes passées gardent leur prix." };
   res.redirect(offersUrl(req.course));
 });
@@ -266,7 +271,7 @@ router.post("/formateur/cours/nouveau", upload.single("thumbnail"), (req, res) =
     slug = `${baseSlug}-${suffix}`;
   }
 
-  const priceCents = Math.max(0, Math.round(parseFloat(price || "0") * 100)) || 0;
+  const priceCents = Math.max(0, Math.round(parseFloat(String(price || "0").replace(",", ".")) * 100)) || 0; // « 39,90 » (virgule française) = 39,90 €
   const thumbnailPath = req.file ? `/uploads/thumbnails/${req.file.filename}` : null;
 
   const info = db
@@ -280,6 +285,7 @@ router.post("/formateur/cours/nouveau", upload.single("thumbnail"), (req, res) =
       category || "Autre", level || "debutant", priceCents, thumbnailPath, cleanLanguage(req.body.language)
     );
 
+  audit.record(req, { action: "course.created", resourceType: "course", resourceId: info.lastInsertRowid, summary: `Formation « ${title.trim()} » créée (prix ${(priceCents / 100).toFixed(2)} €)`, details: { price_cents: priceCents } });
   res.redirect(`/formateur/cours/${info.lastInsertRowid}/curriculum`);
 });
 
@@ -309,7 +315,7 @@ router.post("/formateur/cours/:id/modifier", loadOwnedCourse, upload.single("thu
     newSlug = wanted;
   }
 
-  const priceCents = Math.max(0, Math.round(parseFloat(price || "0") * 100)) || 0;
+  const priceCents = Math.max(0, Math.round(parseFloat(String(price || "0").replace(",", ".")) * 100)) || 0; // « 39,90 » (virgule française) = 39,90 €
   let thumbnailPath = req.course.thumbnail_path;
   if (req.file) {
     removeUploadedFile(thumbnailPath);
@@ -326,6 +332,15 @@ router.post("/formateur/cours/:id/modifier", loadOwnedCourse, upload.single("thu
     category || "Autre", level || "debutant", priceCents, thumbnailPath, cleanLanguage(req.body.language), req.course.id
   );
   recordSlugChange(req.course.id, req.course.slug, newSlug);
+  // Journal d'activité : champs modifiés (avant → après) ; un changement de PRIX a sa propre entrée
+  const changes = {};
+  for (const [field, now] of Object.entries({ title: title.trim(), slug: newSlug, category: category || "Autre", level: level || "debutant", language: cleanLanguage(req.body.language) })) {
+    if ((req.course[field] ?? null) !== now) changes[field] = { avant: req.course[field] ?? null, apres: now };
+  }
+  if (req.course.price_cents !== priceCents) {
+    audit.record(req, { action: "course.price_changed", resourceType: "course", resourceId: req.course.id, summary: `Prix de « ${title.trim()} » : ${(req.course.price_cents / 100).toFixed(2)} € → ${(priceCents / 100).toFixed(2)} €`, details: { avant_cents: req.course.price_cents, apres_cents: priceCents } });
+  }
+  if (Object.keys(changes).length) audit.record(req, { action: "course.updated", resourceType: "course", resourceId: req.course.id, summary: `Formation « ${title.trim()} » modifiée (${Object.keys(changes).join(", ")})`, details: changes });
   // Journal SEO : titre, adresse, titre et description SEO (qui, quand, avant → après)
   const after = { title: title.trim(), slug: newSlug, seo_title: lists.seo_title, seo_description: lists.seo_description };
   for (const field of Object.keys(after)) seoStore.logChange({ entityType: "course", entityKey: String(req.course.id), field, before: req.course[field] ?? null, after: after[field] ?? null, userId: req.session.user.id, source: "editor" });
@@ -340,6 +355,9 @@ router.post("/formateur/cours/:id/publier", loadOwnedCourse, (req, res) => {
   // Une formation archivée doit d'abord être restaurée : elle ne peut pas être publiée directement
   const nextState = req.course.archived ? 0 : req.course.published ? 0 : hasContent ? 1 : 0;
   db.prepare("UPDATE courses SET published = ? WHERE id = ?").run(nextState, req.course.id);
+  if (nextState !== (req.course.published ? 1 : 0)) {
+    audit.record(req, { action: nextState ? "course.published" : "course.unpublished", resourceType: "course", resourceId: req.course.id, summary: `Formation « ${req.course.title} » ${nextState ? "publiée" : "dépubliée"}` });
+  }
   res.redirect(`/formateur/cours/${req.course.id}/curriculum`);
 });
 
@@ -347,6 +365,7 @@ router.post("/formateur/cours/:id/publier", loadOwnedCourse, (req, res) => {
 // en brouillon. Les ventes, inscriptions et avis ne sont jamais copiés.
 router.post("/formateur/cours/:id/dupliquer", loadOwnedCourse, (req, res) => {
   const newId = duplicateCourse(req.course.id);
+  audit.record(req, { action: "course.duplicated", resourceType: "course", resourceId: newId, summary: `Formation « ${req.course.title} » dupliquée`, details: { source: req.course.id } });
   res.redirect(`/formateur/cours/${newId}/modifier`);
 });
 
@@ -354,12 +373,14 @@ router.post("/formateur/cours/:id/dupliquer", loadOwnedCourse, (req, res) => {
 // gardent leur accès et son historique de ventes est conservé (contrairement à la suppression).
 router.post("/formateur/cours/:id/archiver", loadOwnedCourse, (req, res) => {
   db.prepare("UPDATE courses SET published = 0, archived = 1, updated_at = datetime('now') WHERE id = ?").run(req.course.id);
+  audit.record(req, { action: "course.archived", resourceType: "course", resourceId: req.course.id, summary: `Formation « ${req.course.title} » archivée` });
   res.redirect("/formateur");
 });
 
 // Restaurer : la formation revient en brouillon, jamais publiée d'office
 router.post("/formateur/cours/:id/restaurer", loadOwnedCourse, (req, res) => {
   db.prepare("UPDATE courses SET archived = 0, published = 0, updated_at = datetime('now') WHERE id = ?").run(req.course.id);
+  audit.record(req, { action: "course.restored", resourceType: "course", resourceId: req.course.id, summary: `Formation « ${req.course.title} » restaurée (en brouillon)` });
   res.redirect("/formateur");
 });
 
@@ -368,6 +389,7 @@ router.post("/formateur/cours/:id/supprimer", loadOwnedCourse, (req, res) => {
   // l'historique des ventes. On la refuse : il faut la dépublier, elle quitte alors le catalogue.
   const sales = db.prepare("SELECT (SELECT COUNT(*) FROM enrollments WHERE course_id = ?) + (SELECT COUNT(*) FROM order_items WHERE course_id = ?) AS n").get(req.course.id, req.course.id).n;
   if (sales > 0) {
+    audit.record(req, { action: "course.deleted", resourceType: "course", resourceId: req.course.id, summary: `Suppression refusée : « ${req.course.title} » a déjà été achetée`, result: "refused" });
     return res.status(409).render("error", {
       message: "Cette formation a déjà été achetée : la supprimer effacerait l'accès de vos étudiants et votre historique de ventes. Dépubliez-la plutôt : elle disparaît du catalogue et ses étudiants gardent leur accès.",
     });
@@ -380,6 +402,7 @@ router.post("/formateur/cours/:id/supprimer", loadOwnedCourse, (req, res) => {
     .map((l) => l.id);
   removeFilesOfLessons(lessonIds);
   db.prepare("DELETE FROM courses WHERE id = ?").run(req.course.id);
+  audit.record(req, { action: "course.deleted", resourceType: "course", resourceId: req.course.id, summary: `Formation « ${req.course.title} » supprimée`, details: { price_cents: req.course.price_cents } });
   res.redirect("/formateur");
 });
 
@@ -596,6 +619,9 @@ router.post("/formateur/quiz/:quizId/parametres", loadOwnedQuiz, (req, res) => {
   const rawMax = String(req.body.max_attempts || "").trim();
   const maxAttempts = /^\d{1,3}$/.test(rawMax) && Number(rawMax) >= 1 && Number(rawMax) <= 100 ? Number(rawMax) : null;
   db.prepare("UPDATE quizzes SET title = ?, pass_percentage = ?, max_attempts = ? WHERE id = ?").run(req.body.title || "Quiz", pass, maxAttempts, req.quiz.id);
+  if (pass !== req.quiz.pass_percentage || maxAttempts !== (req.quiz.max_attempts ?? null)) {
+    audit.record(req, { action: "quiz.updated", resourceType: "quiz", resourceId: req.quiz.id, summary: `Réglages du quiz « ${req.body.title || "Quiz"} » modifiés (seuil ${pass} %, tentatives ${maxAttempts ?? "illimitées"})`, details: { avant: { pass_percentage: req.quiz.pass_percentage, max_attempts: req.quiz.max_attempts ?? null }, apres: { pass_percentage: pass, max_attempts: maxAttempts } } });
+  }
   res.redirect(`/formateur/cours/${req.quiz.course_id}/curriculum?lecon=${req.quiz.lesson_id}`);
 });
 

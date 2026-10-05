@@ -6,6 +6,7 @@
 // Variables : STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET. STRIPE_API_BASE ne sert qu'aux tests (faux serveur Stripe).
 const crypto = require("node:crypto");
 const { sendPurchaseWelcomeEmail } = require("../utils/mailer");
+const notifications = require("./notifications");
 
 const CURRENCY = "eur";
 const MIN_AMOUNT_CENTS = 50; // minimum accepté par Stripe en euros
@@ -131,6 +132,7 @@ function fulfillCheckout(db, stripeSession) {
   const user = db.prepare("SELECT email, username FROM users WHERE id = ?").get(cs.user_id);
   const titles = db.prepare(`SELECT title FROM courses WHERE id IN (${items.map(() => "?").join(",")})`).all(...items.map((i) => i.course_id)).map((c) => c.title);
   if (user) sendPurchaseWelcomeEmail(db, { to: user.email, username: user.username, courseTitles: titles });
+  notifications.notify(cs.user_id, { kind: "order", title: `Commande n° ${orderId} confirmée`, body: titles.join(", "), url: "/mes-cours" });
   return { status: "paid", orderId };
 }
 

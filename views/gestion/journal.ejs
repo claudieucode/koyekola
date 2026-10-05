@@ -1,0 +1,23 @@
+<%- include("../partials/header", { title }) %>
+<%- include("_head", { heading: "Journal d'activité", subtitle: "Qui a fait quoi, et quand. Le journal est en lecture seule : aucune entrée ne peut être modifiée ni effacée." }) %>
+<form class="g-filters" method="get" action="/formateur/gestion/journal" role="search" aria-label="Filtrer le journal">
+  <div class="g-field g-field-grow"><label for="j-q">Rechercher</label><input id="j-q" type="search" name="q" value="<%= filters.q %>" placeholder="Formation, offre, code, personne…"></div>
+  <div class="g-field"><label for="j-type">Type</label><select id="j-type" name="type"><option value="">Tous</option><% Object.entries(types).forEach(([k, v]) => { %><option value="<%= k %>"<%= filters.type === k ? " selected" : "" %>><%= v %></option><% }) %></select></div>
+  <div class="g-filter-actions"><button type="submit" class="btn btn-primary">Filtrer</button></div>
+</form>
+<% if (!log.rows.length) { %>
+  <div class="dash-empty g-state"><h3>Aucune entrée</h3><p><%= filters.q || filters.type ? "Aucune entrée ne correspond à ces filtres." : "Les modifications importantes (prix, publication, offres, codes promo, certificats) apparaîtront ici." %></p></div>
+<% } else { %>
+  <div class="dtable-wrap"><table class="dtable g-table">
+    <caption class="sr-only">Journal d'activité</caption>
+    <thead><tr><th scope="col">Date</th><th scope="col">Qui</th><th scope="col">Action</th><th scope="col">Résultat</th></tr></thead>
+    <tbody><% log.rows.forEach((r) => { %><tr>
+      <td data-label="Date"><%= formatDateTime(r.at) %></td>
+      <td data-label="Qui"><%= r.actor_name || "Système" %></td>
+      <td data-label="Action"><%= r.summary %><br><small><code><%= r.action %></code><%= r.resource_id ? " · n° " + r.resource_id : "" %></small></td>
+      <td data-label="Résultat"><span class="dash-status <%= r.result === "ok" ? "is-published" : "is-archived" %>"><%= r.result === "ok" ? "Réussi" : r.result === "refused" ? "Refusé" : "Erreur" %></span></td>
+    </tr><% }) %></tbody>
+  </table></div>
+  <%- include("_pager", { pages: log.pages, pageNum: log.page, total: log.total }) %>
+<% } %>
+<%- include("../partials/footer") %>

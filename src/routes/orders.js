@@ -6,6 +6,7 @@ const { sendPurchaseWelcomeEmail } = require("../utils/mailer");
 const { UserError } = require("../utils/errors");
 const sales = require("../services/gestion/sales");
 const payments = require("../services/payments");
+const notifications = require("../services/notifications");
 const { applyEffectivePrices } = require("../services/pricing");
 
 const router = express.Router();
@@ -201,6 +202,7 @@ router.post("/commande", requireAuth, async (req, res, next) => {
 
     req.session.cart = {};
     delete req.session.coupon;
+    notifications.notify(req.session.user.id, { kind: "order", title: `Commande n° ${orderId} confirmée`, body: items.map((c) => c.title).join(", "), url: "/mes-cours" });
 
     // L'e-mail est mis en file APRÈS l'enregistrement : il part en arrière-plan, son échec (ou un serveur SMTP lent)
     // ne peut ni annuler ni ralentir l'achat

@@ -78,6 +78,7 @@
           <a href="/formateur">Mon espace</a>
         <% } else if (currentUser) { %>
           <a href="/mes-cours">Mes formations</a>
+          <a href="/support">Aide</a>
         <% } %>
         <div class="mobile-auth-links">
           <% if (currentUser) { %>
@@ -90,6 +91,12 @@
       </nav>
 
       <div class="header-actions">
+        <% if (currentUser && currentUser.role !== "formateur") { %>
+        <a href="/notifications" class="cart-link" aria-label="Notifications<%= notifCount > 0 ? ' (' + notifCount + ' non lue' + (notifCount > 1 ? 's' : '') + ')' : '' %>">
+          <%- icon('bell') %>
+          <% if (notifCount > 0) { %><span class="cart-badge" aria-hidden="true"><%= notifCount > 99 ? "99+" : notifCount %></span><% } %>
+        </a>
+        <% } %>
         <a href="/panier" class="cart-link" aria-label="Panier<%= cartCount > 0 ? ' (' + cartCount + ')' : '' %>">
           <%- icon('cart') %>
           <% if (cartCount > 0) { %><span class="cart-badge" aria-hidden="true"><%= cartCount %></span><% } %>
