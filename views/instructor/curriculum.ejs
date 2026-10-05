@@ -154,6 +154,10 @@
                 Seuil de réussite
                 <input type="number" name="pass_percentage" min="0" max="100" value="<%= selected.quiz.pass_percentage %>" style="width:70px;">%
               </label>
+              <label class="field-hint" style="display:flex;align-items:center;gap:6px;">
+                Tentatives max.
+                <input type="number" name="max_attempts" min="1" max="100" value="<%= selected.quiz.max_attempts || "" %>" placeholder="Illimité" style="width:90px;">
+              </label>
               <button type="submit" class="btn btn-outline btn-sm">Enregistrer</button>
               <form action="/formateur/quiz/<%= selected.quiz.id %>/supprimer" method="post" class="inline-form" onsubmit="return confirm('Supprimer ce quiz ?');" style="margin-left:auto;">
                 <button type="submit" class="btn btn-danger btn-sm">Supprimer le quiz</button>

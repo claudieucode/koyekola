@@ -11,7 +11,7 @@ const { syncLmsUsers } = require("./lms");
 const { enqueue } = require("../queue/jobs");
 
 const INTERVAL_MS = 30000;
-const SOURCES = ["users", "orders", "enrollments", "lesson_progress", "reviews", "favorites"];
+const SOURCES = ["users", "orders", "enrollments", "lesson_progress", "reviews", "favorites", "certificates"];
 const idColumn = (source) => (source === "favorites" ? "rowid" : "id");
 const stamp = (text) => { const t = Date.parse(`${String(text).replace(" ", "T")}Z`); return Number.isFinite(t) ? t : Date.now(); };
 
@@ -42,6 +42,8 @@ const reader = {
       .all(cursor, limit),
   reviews: (ctx, cursor, limit) =>
     ctx.db.prepare("SELECT r.id, r.user_id, r.course_id, r.rating, r.created_at, c.title, c.slug FROM reviews r LEFT JOIN courses c ON c.id = r.course_id WHERE r.id > ? ORDER BY r.id LIMIT ?").all(cursor, limit),
+  certificates: (ctx, cursor, limit) =>
+    ctx.db.prepare("SELECT c.id, c.user_id, c.course_id, c.code, c.issued_at AS created_at, c.course_title AS title, co.slug FROM certificates c LEFT JOIN courses co ON co.id = c.course_id WHERE c.id > ? ORDER BY c.id LIMIT ?").all(cursor, limit),
   favorites: (ctx, cursor, limit) =>
     ctx.db.prepare("SELECT f.rowid AS id, f.user_id, f.course_id, f.created_at, c.title, c.slug FROM favorites f LEFT JOIN courses c ON c.id = f.course_id WHERE f.rowid > ? ORDER BY f.rowid LIMIT ?").all(cursor, limit),
 };
@@ -69,6 +71,8 @@ function eventsFor(ctx, source, row) {
       return [{ name: "lms.review_posted", userId: row.user_id, key: `review:${row.id}`, at, metadata: { courseId: row.course_id, rating: row.rating, title: row.title ?? "", slug: row.slug ?? "" } }];
     case "favorites":
       return [{ name: "lms.favorite_added", userId: row.user_id, key: `favorite:${row.id}`, at, metadata: { courseId: row.course_id, title: row.title ?? "", slug: row.slug ?? "" } }];
+    case "certificates":
+      return [{ name: "lms.certificate_issued", userId: row.user_id, key: `certificate:${row.id}`, at, metadata: { courseId: row.course_id, title: row.title ?? "", slug: row.slug ?? "", certificateCode: row.code } }];
     default:
       return [];
   }
@@ -95,6 +99,8 @@ function syncLmsEvents(ctx, { limit = 200 } = {}) {
 
   for (const source of SOURCES) {
     const table = source;
+    // Table source absente (base du LMS plus ancienne, ou base de test réduite) : cette source est ignorée, jamais une erreur
+    if (!ctx.db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table)) continue;
     const col = idColumn(source);
     const max = ctx.db.prepare(`SELECT COALESCE(MAX(${col}), 0) m FROM ${table}`).get().m;
     const cursor = ctx.db.prepare("SELECT last_id FROM mk_bridge_cursors WHERE organization_id = ? AND source = ?").get(ctx.organizationId, source);

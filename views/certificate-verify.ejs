@@ -1,0 +1,37 @@
+<%- include("partials/header", { title: "Vérifier un certificat", seo: { noindex: true } }) %>
+
+  <div class="container" style="max-width:640px;padding:40px 20px 60px;">
+    <h1>Vérifier un certificat</h1>
+    <% if (state === "form" || state === "invalid" || state === "unknown") { %>
+      <p style="color:var(--muted);">Saisissez le numéro inscrit sur le certificat (de la forme <strong>KLK-XXXX-XXXX-XXXX</strong>).</p>
+      <% if (state === "invalid") { %><p class="field-error" role="alert">Ce numéro n'a pas le bon format. Vérifiez-le et réessayez.</p><% } %>
+      <% if (state === "unknown") { %><p class="field-error" role="alert"><strong>Aucun certificat ne correspond à ce numéro.</strong> Vérifiez qu'il est recopié exactement ; un certificat qui n'existe pas ne doit pas être considéré comme authentique.</p><% } %>
+      <form action="/verifier-certificat" method="get" class="card card-pad" role="search" aria-label="Vérifier un certificat">
+        <div class="field-group">
+          <label for="f-code">Numéro du certificat</label>
+          <input id="f-code" type="text" name="code" value="<%= state === "form" ? "" : code %>" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false" required placeholder="KLK-XXXX-XXXX-XXXX">
+        </div>
+        <button type="submit" class="btn btn-primary">Vérifier</button>
+      </form>
+    <% } else { %>
+      <div class="card card-pad" role="status">
+        <% if (state === "valid") { %>
+          <p style="color:var(--success);font-weight:700;margin-top:0;"><%- icon('checkCircle', { size: 18 }) %> Certificat authentique</p>
+        <% } else { %>
+          <p class="field-error" style="font-weight:700;margin-top:0;"><%- icon('alertCircle', { size: 18 }) %> Certificat révoqué : il n'est plus valable.</p>
+        <% } %>
+        <dl class="g-dl">
+          <dt>Numéro</dt><dd><%= certificate.code %></dd>
+          <dt>Décerné à</dt><dd><%= certificate.student_name %></dd>
+          <dt>Formation</dt><dd><%= certificate.course_title %></dd>
+          <% if (certificate.instructor_name) { %><dt>Dispensée par</dt><dd><%= certificate.instructor_name %></dd><% } %>
+          <dt>Formation terminée le</dt><dd><%= formatDate(certificate.completed_at || certificate.issued_at) %></dd>
+          <dt>Certificat délivré le</dt><dd><%= formatDate(certificate.issued_at) %></dd>
+          <% if (state === "revoked") { %><dt>Révoqué le</dt><dd><%= formatDate(certificate.revoked_at) %></dd><% } %>
+        </dl>
+      </div>
+      <p style="margin-top:16px;"><a href="/verifier-certificat">Vérifier un autre certificat</a></p>
+    <% } %>
+  </div>
+
+<%- include("partials/footer") %>

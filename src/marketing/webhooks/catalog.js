@@ -8,6 +8,7 @@ const EVENTS = {
   "lms.lesson_completed": "Un élève termine une leçon",
   "lms.course_completed": "Un élève termine une formation",
   "lms.review_posted": "Un avis est publié",
+  "lms.certificate_issued": "Un certificat est délivré",
   "lms.favorite_added": "Une formation est mise en favori",
   "contact.created": "Un contact est créé",
   "contact.subscribed": "Un contact s'abonne (consentement prouvé)",

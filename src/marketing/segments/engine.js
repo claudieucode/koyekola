@@ -22,7 +22,7 @@ const MAX_COUNT = 100000;
 // qui portent une formation. Le montant dépensé est la somme des commandes terminées (en centimes dans les métadonnées).
 const EVENT_NAMES = {
   "lms.user_registered": false, "lms.order_completed": true, "lms.course_enrolled": true, "lms.lesson_completed": true,
-  "lms.course_completed": true, "lms.review_posted": true, "lms.favorite_added": true,
+  "lms.course_completed": true, "lms.review_posted": true, "lms.favorite_added": true, "lms.certificate_issued": true,
 };
 const DAY_MS = 86400000;
 

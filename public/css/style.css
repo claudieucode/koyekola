@@ -1166,6 +1166,7 @@ label:has(> input[type=checkbox]) { display: inline-flex; align-items: center; g
 .certificate-text { color: var(--muted); margin: 4px 0; }
 .certificate-course { font-size: 1.4rem; margin: 8px 0 14px; color: var(--accent-dark); font-weight: 800; }
 .certificate-date { margin-top: 24px; font-size: 0.9rem; color: var(--muted); }
+.certificate-code { margin-top: 18px; color: var(--muted); line-height: 1.5; }
 .certificate-seal { display: flex; justify-content: center; margin-top: 16px; color: var(--star); }
 
 @media print {

@@ -498,4 +498,29 @@ const itemColumnsOffers = db.prepare("PRAGMA table_info(order_items)").all().map
 if (!itemColumnsOffers.includes("offer_id")) db.exec("ALTER TABLE order_items ADD COLUMN offer_id INTEGER REFERENCES offers(id) ON DELETE SET NULL");
 if (!itemColumnsOffers.includes("offer_name")) db.exec("ALTER TABLE order_items ADD COLUMN offer_name TEXT");
 
+// Certificats délivrés : enregistrés une seule fois par élève et par formation (code public unique, impossible à deviner), avec un
+// instantané du nom et du titre (le certificat reste vérifiable même si le compte ou la formation changent de nom).
+// Un certificat révoqué par le formateur reste visible comme « révoqué » sur la page de vérification.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS certificates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    course_id INTEGER REFERENCES courses(id) ON DELETE SET NULL,
+    instructor_id INTEGER,                          -- propriétaire de la formation au moment de la délivrance
+    student_name TEXT NOT NULL,
+    course_title TEXT NOT NULL,
+    instructor_name TEXT NOT NULL DEFAULT '',
+    completed_at TEXT,
+    issued_at TEXT NOT NULL DEFAULT (datetime('now')),
+    revoked_at TEXT,
+    revoked_reason TEXT
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS uq_certificates_user_course ON certificates(user_id, course_id) WHERE course_id IS NOT NULL;
+  CREATE INDEX IF NOT EXISTS idx_certificates_instructor ON certificates(instructor_id, issued_at);
+`);
+// Quiz : nombre maximal de tentatives (vide = illimité)
+const quizColumns = db.prepare("PRAGMA table_info(quizzes)").all().map((col) => col.name);
+if (!quizColumns.includes("max_attempts")) db.exec("ALTER TABLE quizzes ADD COLUMN max_attempts INTEGER CHECK (max_attempts IS NULL OR max_attempts > 0)");
+
 module.exports = db;

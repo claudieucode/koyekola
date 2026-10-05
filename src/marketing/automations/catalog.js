@@ -6,6 +6,7 @@ const TRIGGERS = {
   "lms.lesson_completed": { label: "Un élève termine une leçon", filters: [["courseId", "Identifiant de la formation"]] },
   "lms.course_completed": { label: "Un élève termine une formation", filters: [["courseId", "Identifiant de la formation"]] },
   "lms.review_posted": { label: "Un avis est publié", filters: [["courseId", "Identifiant de la formation"]] },
+  "lms.certificate_issued": { label: "Un certificat est délivré", filters: [["courseId", "Identifiant de la formation"]] },
   "lms.favorite_added": { label: "Une formation est mise en favori", filters: [["courseId", "Identifiant de la formation"]] },
   "contact.created": { label: "Un contact est créé", filters: [] },
   "contact.subscribed": { label: "Un contact s'abonne (consentement prouvé)", filters: [] },

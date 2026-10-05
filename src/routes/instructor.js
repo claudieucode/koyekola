@@ -592,7 +592,10 @@ router.post("/formateur/quiz/:quizId/supprimer", loadOwnedQuiz, (req, res) => {
 
 router.post("/formateur/quiz/:quizId/parametres", loadOwnedQuiz, (req, res) => {
   const pass = Math.min(100, Math.max(0, parseInt(req.body.pass_percentage, 10) || 70));
-  db.prepare("UPDATE quizzes SET title = ?, pass_percentage = ? WHERE id = ?").run(req.body.title || "Quiz", pass, req.quiz.id);
+  // Tentatives maximales : entier de 1 à 100, vide = illimité (une valeur invalide ne bloque jamais les élèves : illimité)
+  const rawMax = String(req.body.max_attempts || "").trim();
+  const maxAttempts = /^\d{1,3}$/.test(rawMax) && Number(rawMax) >= 1 && Number(rawMax) <= 100 ? Number(rawMax) : null;
+  db.prepare("UPDATE quizzes SET title = ?, pass_percentage = ?, max_attempts = ? WHERE id = ?").run(req.body.title || "Quiz", pass, maxAttempts, req.quiz.id);
   res.redirect(`/formateur/cours/${req.quiz.course_id}/curriculum?lecon=${req.quiz.lesson_id}`);
 });
 

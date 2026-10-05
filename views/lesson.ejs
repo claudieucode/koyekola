@@ -87,7 +87,13 @@
               <p class="form-success">✓ Vous avez déjà réussi ce quiz.</p>
             <% } %>
 
-            <% if (!quizPassed) { %>
+            <% if (quizAttempts.n) { %><p class="field-hint">Tentative<%= quizAttempts.n > 1 ? "s" : "" %> : <%= quizAttempts.n %><%= quiz.max_attempts ? ` sur ${quiz.max_attempts}` : "" %> · meilleur score : <%= quizAttempts.best %>%</p><% } %>
+            <% if (!quizPassed && attemptsLeft === 0) { %>
+              <p class="form-error" role="alert">Vous avez utilisé toutes vos tentatives pour ce quiz (<%= quiz.max_attempts %>). Contactez le formateur si vous avez besoin d'une nouvelle tentative.</p>
+            <% } else if (!quizPassed && quiz.max_attempts) { %>
+              <p class="field-hint">Il vous reste <strong><%= attemptsLeft %></strong> tentative<%= attemptsLeft > 1 ? "s" : "" %>.</p>
+            <% } %>
+            <% if (!quizPassed && attemptsLeft !== 0) { %>
               <form action="/apprendre/quiz/<%= quiz.id %>/soumettre" method="post">
                 <% quiz.questions.forEach((q, qi) => { %>
                   <div class="field-group">

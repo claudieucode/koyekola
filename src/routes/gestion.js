@@ -22,6 +22,7 @@ const common = require("../services/gestion/common");
 const sales = require("../services/gestion/sales");
 const students = require("../services/gestion/students");
 const crm = require("../services/gestion/crm");
+const certificates = require("../services/certificates");
 const payments = require("../services/payments");
 const analytics = require("../services/gestion/analytics");
 const resources = require("../services/gestion/resources");
@@ -163,8 +164,19 @@ router.get("/formateur/gestion/eleves", page("gestion/eleves", "Élèves", (req)
 router.get("/formateur/gestion/eleves/:id(\\d+)", page("gestion/eleve", "Élève", (req, res) => {
   const s = students.getStudent(me(req), Number(req.params.id));
   // Relation (prospect / étudiant / client) et fiche contact marketing du même compte : lues, jamais recopiées
-  return s ? { ...s, title: s.user.username, relation: crm.relationOf(s.user.id), relations: crm.RELATIONS, contact: crm.contactOfUser(req.app.locals.marketing, s.user.id) } : null;
+  return s ? { ...s, title: s.user.username, relation: crm.relationOf(s.user.id), relations: crm.RELATIONS, certificates: certificates.listForStudent(me(req), s.user.id), contact: crm.contactOfUser(req.app.locals.marketing, s.user.id) } : null;
 }));
+
+// Révocation / rétablissement d'un certificat : réservé au formateur PROPRIÉTAIRE de la formation (instructor_id vérifié en base)
+for (const [action, fn, text] of [["revoquer", (id, req) => certificates.revoke(me(req), id, req.body && req.body.reason), "Certificat révoqué : la page de vérification l'indique désormais comme non valable."], ["retablir", (id, req) => certificates.restore(me(req), id), "Certificat rétabli."]]) {
+  router.post(`/formateur/gestion/certificats/:id(\\d+)/${action}`, (req, res) => {
+    const cert = db.prepare("SELECT user_id FROM certificates WHERE id = ? AND instructor_id = ?").get(Number(req.params.id), me(req));
+    if (!cert) return res.status(404).render("gestion/erreur", { title: "Introuvable", notFound: true, retry: null, back: "/formateur/gestion/eleves" });
+    fn(Number(req.params.id), req);
+    flash(req, "ok", text);
+    res.redirect(`/formateur/gestion/eleves/${cert.user_id}`);
+  });
+}
 
 // ---------- Analytics ----------
 router.get("/formateur/gestion/analytics", page("gestion/analytics", "Analytics", (req) => {

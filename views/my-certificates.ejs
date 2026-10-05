@@ -1,0 +1,25 @@
+<%- include("partials/header", { title: "Mes certificats", seo: { noindex: true } }) %>
+
+  <div class="container" style="max-width:760px;padding:40px 20px 60px;">
+    <h1>Mes certificats</h1>
+    <% if (!list.length) { %>
+      <div class="card card-pad"><p style="margin:0;">Vous n'avez pas encore de certificat. Terminez tous les sous-chapitres d'une formation (et réussissez ses quiz) pour l'obtenir.</p>
+      <p><a href="/mes-cours" class="btn btn-primary">Mes formations</a></p></div>
+    <% } else { %>
+      <ul class="dlist">
+        <% list.forEach((c) => { %>
+          <li class="card card-pad" style="margin-bottom:12px;">
+            <strong><%= c.course_title %></strong>
+            <% if (c.revoked_at) { %><span class="dash-status is-archived">Révoqué</span><% } %><br>
+            <small>Délivré le <%= formatDate(c.issued_at) %> · n° <%= c.code %></small><br>
+            <% if (!c.revoked_at && c.course_slug) { %>
+              <a href="/certificat/<%= c.course_slug %>">Afficher</a> · <a href="/certificat/<%= c.course_slug %>/telecharger">Télécharger le PDF</a> ·
+            <% } %>
+            <a href="/certificat/verifier/<%= c.code %>">Page de vérification</a>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </div>
+
+<%- include("partials/footer") %>

@@ -31,6 +31,21 @@
         <p><a href="/marketing/contacts/<%= contact.id %>">Ouvrir la fiche contact marketing</a></p>
       <% } %>
     </section>
+    <section class="dpanel" aria-labelledby="g-s-certs">
+      <h2 id="g-s-certs">Certificats</h2>
+      <% if (!certificates.length) { %><p class="field-hint">Aucun certificat délivré pour vos formations.</p><% } else { %>
+        <ul class="dlist"><% certificates.forEach((c) => { %><li>
+          <strong><%= c.course_title %></strong> <% if (c.revoked_at) { %><span class="dash-status is-archived">Révoqué</span><% } %><br>
+          <small>n° <%= c.code %> · délivré le <%= formatDate(c.issued_at) %></small><br>
+          <a href="/certificat/verifier/<%= c.code %>">Page de vérification</a>
+          <% if (!c.revoked_at) { %>
+            <form method="post" action="/formateur/gestion/certificats/<%= c.id %>/revoquer" data-confirm="Révoquer ce certificat ? Il apparaîtra comme non valable pour toute personne qui le vérifie."><button type="submit" class="btn btn-outline btn-sm g-danger">Révoquer</button></form>
+          <% } else { %>
+            <form method="post" action="/formateur/gestion/certificats/<%= c.id %>/retablir"><button type="submit" class="btn btn-outline btn-sm">Rétablir</button></form>
+          <% } %>
+        </li><% }) %></ul>
+      <% } %>
+    </section>
     <section class="dpanel" aria-labelledby="g-s-orders">
       <h2 id="g-s-orders">Achats</h2>
       <% if (!orders.length) { %><p class="field-hint">Aucun achat : formations gratuites uniquement.</p><% } else { %>

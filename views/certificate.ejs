@@ -2,18 +2,20 @@
 
   <div class="container" style="padding:40px 20px 60px;">
     <div class="no-print" style="text-align:center;margin-bottom:20px;">
-      <button onclick="window.print()" class="btn btn-primary"><%- icon('printer', { size: 16 }) %> Imprimer / Enregistrer en PDF</button>
+      <a href="/certificat/<%= course.slug %>/telecharger" class="btn btn-primary"><%- icon('download', { size: 16 }) %> Télécharger le PDF</a>
+      <button onclick="window.print()" class="btn btn-outline"><%- icon('printer', { size: 16 }) %> Imprimer</button>
       <a href="/mes-cours" class="btn btn-outline"><%- icon('arrowLeft', { size: 15 }) %> Mes formations</a>
     </div>
 
     <div class="certificate-card">
       <p class="certificate-brand">KOLAKISA</p>
       <p class="certificate-kicker">Certificat de réussite</p>
-      <h1 class="certificate-name"><%= currentUser.username %></h1>
+      <h1 class="certificate-name"><%= certificate.student_name %></h1>
       <p class="certificate-text">a terminé avec succès la formation</p>
       <h2 class="certificate-course"><%= course.title %></h2>
       <p class="certificate-text">dispensée par <strong><%= course.instructor_name %></strong></p>
       <p class="certificate-date"><%= formatDate(completedAt) %></p>
+      <p class="certificate-code">Certificat n° <strong><%= certificate.code %></strong><br><small>Authenticité à vérifier sur <%= verifyUrl %></small></p>
       <div class="certificate-seal"><%- icon('trophy', { size: 40 }) %></div>
     </div>
   </div>

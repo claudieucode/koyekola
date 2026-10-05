@@ -6,6 +6,10 @@ const { safePath } = require("../utils/safeRedirect");
 const { isInlineImage } = require("../utils/attachments");
 const { currentSlugFor } = require("../services/slugs");
 const { applyEffectivePrices } = require("../services/pricing");
+const certificates = require("../services/certificates");
+const { buildCertificatePdf } = require("../services/certificatePdf");
+const { createRateLimiter } = require("../middlewares/security");
+const { siteBase } = require("../utils/seo");
 
 const router = express.Router();
 
@@ -107,6 +111,22 @@ function isCourseComplete(userId, courseId) {
   return completed >= total;
 }
 
+// Délivre le certificat dès que le parcours est réellement terminé (leçons faites, quiz réussis compris), même si l'élève
+// n'ouvre jamais la page du certificat : il est ainsi enregistré, visible dans l'historique et déclenche les automatisations.
+// Idempotent ; une panne ici ne doit JAMAIS empêcher d'enregistrer la progression.
+function issueCertificateIfComplete(user, courseId) {
+  try {
+    if (!user || !courseId || !isCourseComplete(user.id, courseId)) return;
+    if (!db.prepare("SELECT 1 FROM enrollments WHERE user_id = ? AND course_id = ?").get(user.id, courseId)) return;
+    const course = db.prepare("SELECT courses.*, users.username AS instructor_name FROM courses JOIN users ON users.id = courses.instructor_id WHERE courses.id = ?").get(courseId);
+    if (!course) return;
+    const completion = db.prepare(`SELECT MAX(completed_at) d FROM lesson_progress JOIN lessons ON lessons.id = lesson_progress.lesson_id JOIN sections ON sections.id = lessons.section_id WHERE sections.course_id = ? AND lesson_progress.user_id = ?`).get(courseId, user.id);
+    certificates.issue({ userId: user.id, userName: user.username, course, completedAt: completion.d });
+  } catch (error) {
+    console.error(`[KOLAKISA] Certificat non délivré (élève ${user && user.id}, formation ${courseId}) :`, error.message);
+  }
+}
+
 // Formation renommée : les liens de leçons déjà partagés redirigent (301) vers la nouvelle adresse
 function redirectRenamed(req, res) {
   const renamed = currentSlugFor(req.params.slug);
@@ -198,6 +218,10 @@ router.get("/apprendre/:slug/:lessonId", (req, res) => {
     quiz && currentUser
       ? Boolean(db.prepare("SELECT 1 FROM quiz_attempts WHERE user_id = ? AND quiz_id = ? AND passed = 1").get(currentUser.id, quiz.id))
       : false;
+  const quizAttempts = quiz && currentUser
+    ? db.prepare("SELECT COUNT(*) n, MAX(score_percentage) best FROM quiz_attempts WHERE user_id = ? AND quiz_id = ?").get(currentUser.id, quiz.id)
+    : { n: 0, best: null };
+  const attemptsLeft = quiz && quiz.max_attempts ? Math.max(0, quiz.max_attempts - quizAttempts.n) : null; // null = illimité
   const quizResult = req.query.resultat !== undefined ? { score: Number(req.query.resultat), passed: req.query.reussi === "1" } : null;
 
   res.render("lesson", {
@@ -212,6 +236,7 @@ router.get("/apprendre/:slug/:lessonId", (req, res) => {
     quiz,
     quizPassed,
     quizResult,
+    quizAttempts, attemptsLeft, attemptsExhausted: req.query.tentatives === "epuisees",
     attachments: db.prepare("SELECT * FROM lesson_attachments WHERE lesson_id = ? ORDER BY position, id").all(currentLesson.id).map((a) => ({ ...a, inlineImage: isInlineImage(a.path) })),
     courseComplete: currentUser ? isCourseComplete(currentUser.id, course.id) : false,
     hasFullAccess: isOwner || enrolled,
@@ -259,6 +284,7 @@ router.post("/apprendre/lecon/:lessonId/progression", requireAuth, loadTrackedLe
   const hasQuiz = Boolean(db.prepare("SELECT 1 FROM quizzes WHERE lesson_id = ?").get(lessonId));
   if (duration > 0 && clamped / duration >= AUTO_COMPLETE_RATIO && !hasQuiz) {
     db.prepare("INSERT OR IGNORE INTO lesson_progress (user_id, lesson_id) VALUES (?, ?)").run(userId, lessonId);
+    issueCertificateIfComplete(req.session.user, req.trackedLesson.course_id);
     completed = true;
   }
   res.json({ completed });
@@ -298,6 +324,7 @@ router.post("/apprendre/lecon/:lessonId/terminer", requireAuth, (req, res) => {
   const enrolled = db.prepare("SELECT 1 FROM enrollments WHERE user_id = ? AND course_id = ?").get(req.session.user.id, lesson.course_id);
   if (enrolled) {
     db.prepare("INSERT OR IGNORE INTO lesson_progress (user_id, lesson_id) VALUES (?, ?)").run(req.session.user.id, lesson.id);
+    issueCertificateIfComplete(req.session.user, lesson.course_id);
   }
 
   // `next` vient du formulaire : on n'accepte qu'une page de lecture de ce site
@@ -322,6 +349,14 @@ router.post("/apprendre/quiz/:quizId/soumettre", requireAuth, (req, res) => {
   const enrolled = db.prepare("SELECT 1 FROM enrollments WHERE user_id = ? AND course_id = ?").get(req.session.user.id, quiz.course_id);
   if (!enrolled) return res.redirect(`/apprendre/${quiz.course_slug}/${quiz.lesson_id}`);
 
+  // Limite de tentatives (vérifiée ICI, jamais seulement dans la page) : un quiz déjà réussi n'a plus de limite à respecter,
+  // un quiz dont les tentatives sont épuisées n'est plus corrigé.
+  if (quiz.max_attempts) {
+    const alreadyPassed = db.prepare("SELECT 1 FROM quiz_attempts WHERE user_id = ? AND quiz_id = ? AND passed = 1").get(req.session.user.id, quiz.id);
+    const used = db.prepare("SELECT COUNT(*) n FROM quiz_attempts WHERE user_id = ? AND quiz_id = ?").get(req.session.user.id, quiz.id).n;
+    if (!alreadyPassed && used >= quiz.max_attempts) return res.redirect(`/apprendre/${quiz.course_slug}/${quiz.lesson_id}?tentatives=epuisees`);
+  }
+
   const questions = db.prepare("SELECT id FROM quiz_questions WHERE quiz_id = ?").all(quiz.id);
   let correctCount = 0;
   questions.forEach((q) => {
@@ -338,23 +373,30 @@ router.post("/apprendre/quiz/:quizId/soumettre", requireAuth, (req, res) => {
     score,
     passed ? 1 : 0
   );
-  if (passed) db.prepare("INSERT OR IGNORE INTO lesson_progress (user_id, lesson_id) VALUES (?, ?)").run(req.session.user.id, quiz.lesson_id);
+  if (passed) {
+    db.prepare("INSERT OR IGNORE INTO lesson_progress (user_id, lesson_id) VALUES (?, ?)").run(req.session.user.id, quiz.lesson_id);
+    issueCertificateIfComplete(req.session.user, quiz.course_id);
+  }
 
   res.redirect(`/apprendre/${quiz.course_slug}/${quiz.lesson_id}?resultat=${score}&reussi=${passed ? 1 : 0}`);
 });
 
-router.get("/certificat/:slug", requireAuth, (req, res) => {
+// ---------- Certificats ----------
+
+// Vérifie que l'élève a droit au certificat (formation possédée, parcours réellement terminé, quiz réussis compris)
+// puis le délivre (une seule fois) ou renvoie celui déjà délivré. Répond lui-même en cas de refus → null.
+function certificateFor(req, res) {
   const course = db
     .prepare("SELECT courses.*, users.username AS instructor_name FROM courses JOIN users ON users.id = courses.instructor_id WHERE slug = ?")
     .get(req.params.slug);
-  if (!course) return res.status(404).render("error", { message: "Formation introuvable." });
+  if (!course) { res.status(404).render("error", { message: "Formation introuvable." }); return null; }
 
   const enrolled = db.prepare("SELECT 1 FROM enrollments WHERE user_id = ? AND course_id = ?").get(req.session.user.id, course.id);
-  if (!enrolled) return res.status(403).render("error", { message: "Vous devez posséder cette formation pour obtenir un certificat." });
+  if (!enrolled) { res.status(403).render("error", { message: "Vous devez posséder cette formation pour obtenir un certificat." }); return null; }
   if (!isCourseComplete(req.session.user.id, course.id)) {
-    return res.status(403).render("error", { message: "Terminez tous les sous-chapitres (et réussissez les quiz) pour obtenir votre certificat." });
+    res.status(403).render("error", { message: "Terminez tous les sous-chapitres (et réussissez les quiz) pour obtenir votre certificat." });
+    return null;
   }
-
   const completion = db
     .prepare(
       `SELECT MAX(completed_at) d FROM lesson_progress
@@ -363,8 +405,46 @@ router.get("/certificat/:slug", requireAuth, (req, res) => {
        WHERE sections.course_id = ? AND lesson_progress.user_id = ?`
     )
     .get(course.id, req.session.user.id);
+  const { certificate } = certificates.issue({ userId: req.session.user.id, userName: req.session.user.username, course, completedAt: completion.d });
+  if (certificate.revoked_at) { res.status(403).render("error", { message: "Ce certificat a été révoqué par le formateur. Contactez-le pour en savoir plus." }); return null; }
+  return { course, certificate };
+}
+const verifyUrlOf = (req, certificate) => `${siteBase(req)}/certificat/verifier/${certificate.code}`;
 
-  res.render("certificate", { course, completedAt: completion.d });
+router.get("/certificat/:slug", requireAuth, (req, res) => {
+  const ctx = certificateFor(req, res);
+  if (!ctx) return;
+  res.render("certificate", { course: ctx.course, certificate: ctx.certificate, completedAt: ctx.certificate.completed_at || ctx.certificate.issued_at, verifyUrl: verifyUrlOf(req, ctx.certificate) });
+});
+
+router.get("/certificat/:slug/telecharger", requireAuth, (req, res) => {
+  const ctx = certificateFor(req, res);
+  if (!ctx) return;
+  res.set({ "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="certificat-${ctx.certificate.code}.pdf"`, "Cache-Control": "private, no-store" });
+  buildCertificatePdf({ certificate: ctx.certificate, verifyUrl: verifyUrlOf(req, ctx.certificate) }).pipe(res);
+});
+
+// Historique de l'élève : tous ses certificats, avec leur état
+router.get("/mes-certificats", requireAuth, (req, res) => {
+  res.render("my-certificates", { list: certificates.listForUser(req.session.user.id), siteUrl: siteBase(req) });
+});
+
+// Vérification PUBLIQUE (sans connexion) : un employeur ou un tiers contrôle l'authenticité d'un certificat avec son code.
+// Limitée par adresse IP (le code est de toute façon impossible à deviner) ; jamais indexée.
+const verifyLimiter = createRateLimiter(30, 60 * 1000);
+router.get("/verifier-certificat", (req, res) => {
+  const code = String(req.query.code || "").trim();
+  if (!code) return res.render("certificate-verify", { state: "form", certificate: null, code: "" });
+  const canonical = certificates.normalizeCode(code);
+  if (!canonical) return res.status(400).render("certificate-verify", { state: "invalid", certificate: null, code });
+  res.redirect(`/certificat/verifier/${canonical}`);
+});
+router.get("/certificat/verifier/:code", (req, res) => {
+  if (verifyLimiter.isLimited(req.ip)) return res.status(429).render("error", { message: "Trop de vérifications. Réessayez dans une minute." });
+  verifyLimiter.hit(req.ip);
+  const certificate = certificates.findByCode(req.params.code);
+  if (!certificate) return res.status(404).render("certificate-verify", { state: "unknown", certificate: null, code: req.params.code });
+  res.render("certificate-verify", { state: certificate.revoked_at ? "revoked" : "valid", certificate, code: certificate.code });
 });
 
 module.exports = router;

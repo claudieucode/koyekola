@@ -64,7 +64,7 @@ function duplicateCourse(courseId) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     );
     const insertAttachment = db.prepare("INSERT INTO lesson_attachments (lesson_id, kind, title, path, url, position) VALUES (?, ?, ?, ?, ?, ?)");
-    const insertQuiz = db.prepare("INSERT INTO quizzes (lesson_id, title, pass_percentage) VALUES (?, ?, ?)");
+    const insertQuiz = db.prepare("INSERT INTO quizzes (lesson_id, title, pass_percentage, max_attempts) VALUES (?, ?, ?, ?)");
     const insertQuestion = db.prepare("INSERT INTO quiz_questions (quiz_id, question, position) VALUES (?, ?, ?)");
     const insertOption = db.prepare("INSERT INTO quiz_options (question_id, option_text, is_correct, position) VALUES (?, ?, ?, ?)");
 
@@ -82,7 +82,7 @@ function duplicateCourse(courseId) {
 
         const quiz = db.prepare("SELECT * FROM quizzes WHERE lesson_id = ?").get(lesson.id);
         if (quiz) {
-          const newQuizId = Number(insertQuiz.run(newLessonId, quiz.title, quiz.pass_percentage).lastInsertRowid);
+          const newQuizId = Number(insertQuiz.run(newLessonId, quiz.title, quiz.pass_percentage, quiz.max_attempts ?? null).lastInsertRowid);
           for (const q of db.prepare("SELECT * FROM quiz_questions WHERE quiz_id = ? ORDER BY position, id").all(quiz.id)) {
             const newQuestionId = Number(insertQuestion.run(newQuizId, q.question, q.position).lastInsertRowid);
             for (const o of db.prepare("SELECT * FROM quiz_options WHERE question_id = ? ORDER BY position, id").all(q.id)) {

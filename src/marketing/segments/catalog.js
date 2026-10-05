@@ -21,6 +21,7 @@ const SPENT = [C("gt", "est supérieur à", "number"), C("gte", "est supérieur 
 const EVENTS = [
   ["lms.user_registered", "Inscription sur KOLAKISA", false], ["lms.order_completed", "Achat (commande passée)", true], ["lms.course_enrolled", "Inscription à une formation", true],
   ["lms.lesson_completed", "Leçon terminée", true], ["lms.course_completed", "Formation terminée", true], ["lms.review_posted", "Avis publié", true], ["lms.favorite_added", "Formation mise en favori", true],
+  ["lms.certificate_issued", "Certificat délivré", true],
 ];
 const ACTIVITY_NOTE = "Compté depuis l'activation du pont KOLAKISA : l'activité plus ancienne n'est pas incluse.";
 
@@ -30,7 +31,7 @@ function knownCourses(ctx) {
   const rows = ctx.db
     .prepare(
       `SELECT CAST(json_extract(metadata, '$.courseId') AS INTEGER) AS id, json_extract(metadata, '$.title') AS title, occurred_at
-       FROM mk_events WHERE organization_id = ? AND name IN ('lms.course_enrolled', 'lms.lesson_completed', 'lms.course_completed', 'lms.review_posted', 'lms.favorite_added') AND json_extract(metadata, '$.courseId') IS NOT NULL
+       FROM mk_events WHERE organization_id = ? AND name IN ('lms.course_enrolled', 'lms.lesson_completed', 'lms.course_completed', 'lms.review_posted', 'lms.favorite_added', 'lms.certificate_issued') AND json_extract(metadata, '$.courseId') IS NOT NULL
        UNION ALL
        SELECT CAST(json_extract(j.value, '$.courseId') AS INTEGER), json_extract(j.value, '$.title'), e.occurred_at
        FROM mk_events e, json_each(e.metadata, '$.items') j WHERE e.organization_id = ? AND e.name = 'lms.order_completed' AND json_extract(j.value, '$.courseId') IS NOT NULL
