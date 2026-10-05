@@ -40,7 +40,7 @@ const LEGACY = [
       ] },
       { name: "Découvrir les formations", subject: "Par où commencer ?", preheader: "Nos formations pour bien démarrer", blocks: [
         { type: "heading", text: "Trouvez la formation qui vous correspond", level: 1 },
-        { type: "text", markdown: `Bonjour ${HELLO}, toutes nos formations se suivent à votre rythme, en vidéo, avec des exercices et un certificat à la fin.` },
+        { type: "text", markdown: `Bonjour ${HELLO}, toutes nos formations se suivent à votre rythme, en vidéo, avec un certificat de réussite à la fin.` },
         { type: "list", style: "checks", items: ["Des leçons courtes, à suivre quand vous voulez", "Un accès à vie à la formation", "Un certificat de réussite"] },
         { type: "button", label: "Voir le catalogue", url: catalogUrl(base), align: "left" },
       ] },
@@ -77,7 +77,7 @@ const LEGACY = [
       ] },
       { name: "Première formation", subject: "Choisissez votre première formation", preheader: "Commencez quand vous voulez", blocks: [
         { type: "heading", text: "Prêt(e) à commencer ?", level: 1 },
-        { type: "text", markdown: `${HELLO}, vous n'avez pas encore choisi de formation. Parcourez le catalogue : chaque fiche présente le programme et une leçon gratuite.` },
+        { type: "text", markdown: `${HELLO}, vous n'avez pas encore choisi de formation. Parcourez le catalogue : chaque fiche présente le programme et le niveau.` },
         { type: "button", label: "Choisir une formation", url: catalogUrl(base), align: "left" },
       ] },
     ],
@@ -182,7 +182,7 @@ const LEGACY = [
     emails: () => [
       { name: "Formation favorite", subject: "Toujours intéressé(e) par {{event.course_title}} ?", preheader: "Votre formation favorite vous attend", blocks: [
         { type: "heading", text: "Votre formation favorite vous attend", level: 1 },
-        { type: "text", markdown: `${HELLO}, vous avez mis **{{event.course_title}}** en favori. Consultez le programme et la leçon gratuite pour vous décider.` },
+        { type: "text", markdown: `${HELLO}, vous avez mis **{{event.course_title}}** en favori. Consultez son programme pour vous décider.` },
         { type: "button", label: "Voir la formation", url: "{{event.course_url}}", align: "left" },
       ] },
     ],
