@@ -105,7 +105,7 @@ test("offre à 0 € : commande gratuite directe, enregistrée avec l'offre", as
   addOffer(course.id, 0, { name: "Gratuite" });
   const e = await fresh(course.id);
   const checkout = (await e.get("/commande")).text;
-  assert.match(checkout, /Valider la commande gratuite/);
+  assert.match(checkout, /Rien à payer : votre commande est gratuite/);
   await e.post("/commande", { expected_total: "0" });
   const o = orderOf(e.email);
   assert.equal(o.total_cents, 0);

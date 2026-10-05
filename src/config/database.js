@@ -603,4 +603,15 @@ db.exec(`
 // Les sauvegardes (VACUUM INTO) restent cohérentes dans ce mode.
 db.exec("PRAGMA journal_mode = WAL");
 
+// Index des clés étrangères des tables ajoutées (offres, paiements, certificats, support) : suppressions en cascade et jointures
+// sans parcourir toute la table (même règle que les index ci-dessus ; vérifié par tests/audit-corrections.test.js).
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_order_items_offer ON order_items(offer_id);
+  CREATE INDEX IF NOT EXISTS idx_checkout_sessions_order ON checkout_sessions(order_id);
+  CREATE INDEX IF NOT EXISTS idx_offers_instructor ON offers(instructor_id);
+  CREATE INDEX IF NOT EXISTS idx_certificates_course ON certificates(course_id);
+  CREATE INDEX IF NOT EXISTS idx_support_tickets_course ON support_tickets(course_id);
+  CREATE INDEX IF NOT EXISTS idx_support_messages_author ON support_messages(author_id);
+`);
+
 module.exports = db;
