@@ -7,6 +7,7 @@ const { slugify } = require("../utils/format");
 const { parseVideoUrl } = require("../utils/video");
 const { UserError } = require("../utils/errors");
 const { duplicateCourse } = require("../services/courses");
+const offers = require("../services/offers");
 const { recordSlugChange } = require("../services/slugs");
 const { removeUploadedFile } = require("../utils/uploads");
 const { sanitizeRich, normalizeList, editorSources } = require("../utils/richText");
@@ -130,6 +131,50 @@ router.get("/formateur/cours/:id(\\d+)/etudiants", loadOwnedCourse, (req, res) =
 });
 router.get("/formateur/cours/:id(\\d+)/ventes", loadOwnedCourse, (req, res) => {
   res.render("instructor/course-hub", { course: req.course, tab: "sales", stats: courseStats(req.course.id), sales: salesOf(req.course.id) });
+});
+
+// ---------- Offres (prix promo avec dates) : toutes les routes passent par loadOwnedCourse (propriétaire vérifié) ----------
+const offersUrl = (course) => `/formateur/cours/${course.id}/offres`;
+function renderOffers(req, res, { status = 200, editing = null, form = null, errors = {}, flash = null } = {}) {
+  const stored = req.session.offerFlash || null; // message affiché une seule fois après une action
+  delete req.session.offerFlash;
+  res.status(status).render("instructor/course-hub", {
+    course: req.course, tab: "offers", stats: courseStats(req.course.id), offers: offers.listOffers(req.course.id), editing,
+    form: form || (editing ? offers.formOf(editing) : { active: 1 }), errors, flash: flash || stored,
+  });
+}
+router.get("/formateur/cours/:id(\\d+)/offres", loadOwnedCourse, (req, res) => {
+  const editing = req.query.modifier ? offers.getOffer(req.course.id, Number(req.query.modifier)) : null;
+  renderOffers(req, res, { editing });
+});
+function saveOffer(req, res, current) {
+  const v = offers.validateOffer(req.course, req.body || {});
+  if (v.errors) {
+    return renderOffers(req, res, { status: 400, editing: current, form: { ...req.body, active: req.body.active ? 1 : 0 }, errors: v.errors, flash: { type: "error", text: "L'offre n'a pas été enregistrée : corrigez les champs signalés." } });
+  }
+  if (current) offers.updateOffer(req.course.id, current.id, v.values);
+  else offers.createOffer(req.session.user.id, req.course.id, v.values);
+  req.session.offerFlash = { type: "ok", text: current ? "Offre modifiée." : "Offre créée." };
+  res.redirect(offersUrl(req.course));
+}
+router.post("/formateur/cours/:id(\\d+)/offres", loadOwnedCourse, (req, res) => saveOffer(req, res, null));
+function loadOffer(req, res, next) {
+  req.offer = offers.getOffer(req.course.id, Number(req.params.offerId)); // limitée à CETTE formation : pas d'accès par simple changement d'identifiant
+  if (!req.offer) return res.status(404).render("error", { message: "Offre introuvable." });
+  next();
+}
+router.post("/formateur/cours/:id(\\d+)/offres/:offerId(\\d+)", loadOwnedCourse, loadOffer, (req, res) => saveOffer(req, res, req.offer));
+for (const [action, active, text] of [["activer", true, "Offre activée."], ["desactiver", false, "Offre désactivée."]]) {
+  router.post(`/formateur/cours/:id(\\d+)/offres/:offerId(\\d+)/${action}`, loadOwnedCourse, loadOffer, (req, res) => {
+    offers.setOfferActive(req.course.id, req.offer.id, active);
+    req.session.offerFlash = { type: "ok", text };
+    res.redirect(offersUrl(req.course));
+  });
+}
+router.post("/formateur/cours/:id(\\d+)/offres/:offerId(\\d+)/supprimer", loadOwnedCourse, loadOffer, (req, res) => {
+  offers.deleteOffer(req.course.id, req.offer.id);
+  req.session.offerFlash = { type: "ok", text: "Offre supprimée. Les commandes passées gardent leur prix." };
+  res.redirect(offersUrl(req.course));
 });
 
 router.get("/formateur/chapitres", (req, res) => {

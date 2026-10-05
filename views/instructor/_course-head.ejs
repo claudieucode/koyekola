@@ -9,7 +9,7 @@
   </div>
 </div>
 <nav class="course-tabs" aria-label="Gestion de la formation">
-  <% [["overview", "Vue d'ensemble", `/formateur/cours/${course.id}`], ["edit", "Contenu et paramètres", `/formateur/cours/${course.id}/modifier`], ["chapters", "Chapitres", `/formateur/cours/${course.id}/curriculum`], ["faq", "FAQ", `/formateur/cours/${course.id}/faq`], ["students", "Étudiants", `/formateur/cours/${course.id}/etudiants`], ["sales", "Ventes", `/formateur/cours/${course.id}/ventes`]].forEach(([key, label, href]) => { %>
+  <% [["overview", "Vue d'ensemble", `/formateur/cours/${course.id}`], ["edit", "Contenu et paramètres", `/formateur/cours/${course.id}/modifier`], ["chapters", "Chapitres", `/formateur/cours/${course.id}/curriculum`], ["faq", "FAQ", `/formateur/cours/${course.id}/faq`], ["students", "Étudiants", `/formateur/cours/${course.id}/etudiants`], ["sales", "Ventes", `/formateur/cours/${course.id}/ventes`], ["offers", "Offres", `/formateur/cours/${course.id}/offres`]].forEach(([key, label, href]) => { %>
     <a href="<%= href %>"<%- key === tab ? ' aria-current="page"' : "" %>><%= label %></a>
   <% }) %>
 </nav>

@@ -30,5 +30,42 @@
       <tbody><% sales.forEach((v) => { %><tr><td>n° <%= v.order_id %></td><td><%= formatDate(v.created_at) %></td><td><%= v.username %></td><td><%= formatPrice(v.price_cents) %></td></tr><% }) %></tbody></table></div>
     <% } %>
   </div>
+<% } else if (tab === "offers") { const f = form || {}; const err = errors || {}; %>
+  <% if (flash) { %><p class="g-flash<%= flash.type === "error" ? " is-error" : "" %>" role="<%= flash.type === "error" ? "alert" : "status" %>"><%= flash.text %></p><% } %>
+  <div class="dash-grid-2 g-coupons">
+    <section class="dpanel" aria-labelledby="o-form-title">
+      <h2 id="o-form-title"><%= editing ? `Modifier l'offre « ${editing.name} »` : "Nouvelle offre" %></h2>
+      <p class="field-hint">Prix standard de la formation : <strong><%= formatPrice(course.price_cents) %></strong>. Une offre baisse ce prix pendant sa période ; l'ancien prix est affiché barré. Hors période, le prix standard s'applique.</p>
+      <form method="post" action="/formateur/cours/<%= course.id %>/offres<%= editing ? `/${editing.id}` : "" %>" class="g-form" novalidate>
+        <div class="g-field"><label for="o-name">Nom de l'offre</label><input id="o-name" name="name" value="<%= f.name || "" %>" maxlength="60" required placeholder="Lancement, Soldes d'été…"<%- err.name ? ' aria-invalid="true" aria-describedby="o-name-err"' : "" %>><% if (err.name) { %><small class="field-error" id="o-name-err"><%= err.name %></small><% } %></div>
+        <div class="g-field"><label for="o-price">Prix de l'offre (€)</label><input id="o-price" name="price" inputmode="decimal" value="<%= f.price || "" %>" required<%- err.price ? ' aria-invalid="true" aria-describedby="o-price-err"' : "" %>><% if (err.price) { %><small class="field-error" id="o-price-err"><%= err.price %></small><% } %></div>
+        <div class="g-field-row">
+          <div class="g-field"><label for="o-start">Début (facultatif)</label><input id="o-start" type="date" name="starts_at" value="<%= f.starts_at || "" %>"><% if (err.starts_at) { %><small class="field-error"><%= err.starts_at %></small><% } %></div>
+          <div class="g-field"><label for="o-end">Fin (incluse, facultatif)</label><input id="o-end" type="date" name="ends_at" value="<%= f.ends_at || "" %>"><% if (err.ends_at) { %><small class="field-error"><%= err.ends_at %></small><% } %></div>
+        </div>
+        <label class="checkbox-row"><input type="checkbox" name="active"<%= f.active ? " checked" : "" %>> Active</label>
+        <div class="g-filter-actions"><button type="submit" class="btn btn-primary"><%= editing ? "Enregistrer les modifications" : "Créer l'offre" %></button><% if (editing) { %><a class="btn btn-outline" href="/formateur/cours/<%= course.id %>/offres">Annuler</a><% } %></div>
+      </form>
+    </section>
+    <section aria-labelledby="o-list">
+      <h2 id="o-list" class="g-h2">Offres de cette formation</h2>
+      <% if (!offers.length) { %>
+        <div class="dash-empty g-state"><h3>Aucune offre</h3><p>La formation est vendue à son prix standard. Créez une offre pour un lancement ou des soldes.</p></div>
+      <% } else { %>
+        <ul class="g-coupon-list"><% offers.forEach((o) => { %>
+          <li class="dpanel">
+            <div class="g-coupon-head"><strong class="g-code"><%= o.name %></strong><span class="dash-status <%= o.state.key === "on" ? "is-published" : o.state.key === "off" ? "is-archived" : "is-draft" %>"><%= o.state.label %></span></div>
+            <p class="g-coupon-meta"><%= formatPrice(o.price_cents) %> <s><%= formatPrice(course.price_cents) %></s>
+              <% if (o.starts_at || o.ends_at) { %><br><%= o.days.starts_at ? `Du ${formatDate(o.days.starts_at)}` : "Dès maintenant" %><%= o.days.ends_at ? ` jusqu'au ${formatDate(o.days.ends_at)} inclus` : "" %><% } %></p>
+            <div class="g-row-actions">
+              <a class="btn btn-outline btn-sm" href="/formateur/cours/<%= course.id %>/offres?modifier=<%= o.id %>">Modifier</a>
+              <form method="post" action="/formateur/cours/<%= course.id %>/offres/<%= o.id %>/<%= o.active ? "desactiver" : "activer" %>"><button type="submit" class="btn btn-outline btn-sm"><%= o.active ? "Désactiver" : "Activer" %></button></form>
+              <form method="post" action="/formateur/cours/<%= course.id %>/offres/<%= o.id %>/supprimer" data-confirm="Supprimer l'offre « <%= o.name %> » ? Les commandes passées gardent leur prix. Cette action est définitive."><button type="submit" class="btn btn-outline btn-sm g-danger">Supprimer</button></form>
+            </div>
+          </li>
+        <% }) %></ul>
+      <% } %>
+    </section>
+  </div>
 <% } %>
 <%- include("../partials/footer") %>
