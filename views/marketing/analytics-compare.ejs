@@ -1,0 +1,163 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const r = report, f = r.filters;
+  const byCampaign = f.groupBy === "campaign";
+  const show = (key, v) => (METRICS[key].kind === "money" ? mkh.euros(v) : METRICS[key].kind === "count" ? mkh.fmt(v) : mkh.rate(v));
+  const isBest = (key, v) => Object.hasOwn(r.best, key) && v === r.best[key];
+  const cols = ["sent", "openRate", "clickRate", "clickToOpen", "bounceRate", "unsubscribeRate", "revenueCents"].filter((k) => !(METRICS[k].emailOnly && !r.hasEmail) && !(k === "revenueCents" && !r.hasEmail));
+  const chartMax = Math.max(0, ...r.chart.map((c) => Number(c.value) || 0));
+  const exportUrl = saved ? `/marketing/analytics/comparer/export.csv?rapport=${saved.id}` : `/marketing/analytics/comparer/export.csv?${r.query}`;
+%>
+    <div class="mk-head">
+      <h1><%= saved ? saved.name : "Rapports comparatifs" %></h1>
+      <div class="mk-actions">
+        <a class="btn btn-outline btn-sm" href="<%= exportUrl %>" download><%- icon("download", { size: 16 }) %> Exporter (CSV)</a>
+      </div>
+    </div>
+    <p class="mk-lead">Comparez vos campagnes e-mail et SMS terminées : côte à côte, ou regroupées par mois, jour, heure d'envoi, audience, étiquette ou canal. Les taux d'un groupe sont recalculés sur ses totaux.</p>
+
+    <form class="mk-filterbar" method="get" action="/marketing/analytics/comparer" aria-label="Filtres du rapport">
+      <div class="field-group"><label for="cmp-from">Du</label><input id="cmp-from" type="date" name="from" value="<%= f.from %>" required></div>
+      <div class="field-group"><label for="cmp-to">Au</label><input id="cmp-to" type="date" name="to" value="<%= f.to %>" required></div>
+      <div class="field-group"><label for="cmp-channel">Canal</label>
+        <select id="cmp-channel" name="channel"><% Object.entries(CHANNELS).forEach(([k, l]) => { %><option value="<%= k %>"<%= f.channel === k ? " selected" : "" %>><%= l %></option><% }) %></select></div>
+      <div class="field-group"><label for="cmp-target">Audience</label>
+        <select id="cmp-target" name="target">
+          <option value="">Toutes</option>
+          <% if (lists.length) { %><optgroup label="Listes"><% lists.forEach((l) => { %><option value="list:<%= l.id %>"<%= f.target === `list:${l.id}` ? " selected" : "" %>><%= l.name %></option><% }) %></optgroup><% } %>
+          <% if (segments.length) { %><optgroup label="Segments"><% segments.forEach((s) => { %><option value="segment:<%= s.id %>"<%= f.target === `segment:${s.id}` ? " selected" : "" %>><%= s.name %></option><% }) %></optgroup><% } %>
+          <option value="sms-all"<%= f.target === "sms-all" ? " selected" : "" %>>Tous les abonnés SMS</option>
+        </select></div>
+      <div class="field-group"><label for="cmp-tag">Étiquette</label>
+        <select id="cmp-tag" name="tag"><option value="">Toutes</option><% r.tags.forEach((t) => { %><option value="<%= t %>"<%= f.tag.toLowerCase() === t.toLowerCase() ? " selected" : "" %>><%= t %></option><% }) %><% if (f.tag && !r.tags.some((t) => t.toLowerCase() === f.tag.toLowerCase())) { %><option value="<%= f.tag %>" selected><%= f.tag %></option><% } %></select></div>
+      <div class="mk-search"><%- icon("search", { size: 16 }) %><label class="sr-only" for="cmp-q">Nom de campagne</label><input id="cmp-q" type="search" name="q" value="<%= f.q %>" placeholder="Nom de campagne" maxlength="80"></div>
+      <div class="field-group"><label for="cmp-group">Comparer par</label>
+        <select id="cmp-group" name="groupBy"><% Object.entries(GROUPS).forEach(([k, l]) => { %><option value="<%= k %>"<%= f.groupBy === k ? " selected" : "" %>><%= l %></option><% }) %></select></div>
+      <div class="field-group"><label for="cmp-metric">Graphique</label>
+        <select id="cmp-metric" name="metric"><% Object.entries(METRICS).forEach(([k, m]) => { %><option value="<%= k %>"<%= f.metric === k ? " selected" : "" %>><%= m.label %></option><% }) %></select></div>
+      <% if (f.ids.length) { %><input type="hidden" name="ids" value="<%= f.ids.join(",") %>"><% } %>
+      <button type="submit" class="btn btn-primary btn-sm">Comparer</button>
+      <a href="/marketing/analytics/comparer" class="btn btn-ghost btn-sm">Réinitialiser</a>
+    </form>
+    <% if (f.warning) { %><p class="mk-note" role="status"><%= f.warning %></p><% } %>
+    <% if (f.ids.length) { %>
+      <p class="mk-filter-chips"><a class="mk-chip mk-chip-removable" href="/marketing/analytics/comparer?<%= r.query.replace(/(^|&)ids=[^&]*/, "") %>">Sélection : <%= f.ids.length %> campagne<%= f.ids.length > 1 ? "s" : "" %> <span class="mk-chip-x-mark" aria-hidden="true">×</span><span class="sr-only"> (retirer la sélection)</span></a></p>
+    <% } %>
+
+    <details class="mk-panel mk-cmp-side" open>
+      <summary><h2 class="mk-cmp-side-title">Rapports enregistrés (<%= savedReports.length %>)</h2></summary>
+      <div class="mk-cmp-side-body">
+      <div>
+      <% if (!savedReports.length) { %>
+        <p class="field-hint">Aucun pour l'instant. Réglez les filtres, puis enregistrez le rapport pour le rouvrir en un clic.</p>
+      <% } else { %>
+        <ul class="mk-cmp-saved">
+          <% savedReports.forEach((s) => { %>
+            <li>
+              <a href="/marketing/analytics/comparer?rapport=<%= s.id %>"<%- saved && saved.id === s.id ? ' aria-current="page"' : "" %>><%= s.name %></a>
+              <span class="mk-sub"><%= s.definition.rollingDays ? `${s.definition.rollingDays} derniers jours` : `du ${String(s.definition.from).split("-").reverse().join("/")} au ${String(s.definition.to).split("-").reverse().join("/")}` %> · par <%= (GROUPS[s.definition.groupBy] || "").toLowerCase() %></span>
+              <% if (canWrite) { %><form method="post" action="/marketing/analytics/rapports/<%= s.id %>/supprimer"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Le rapport enregistré sera supprimé (les campagnes ne sont pas touchées)." data-mk-confirm-title="Supprimer ce rapport ?" data-mk-confirm-ok="Supprimer">Supprimer<span class="sr-only"> « <%= s.name %> »</span></button></form><% } %>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+      </div>
+      <% if (canWrite) { %>
+        <form method="post" action="/marketing/analytics/comparer/enregistrer" class="mk-form">
+          <input type="hidden" name="query" value="<%= r.query %>">
+          <div class="field-group"><label for="cmp-save-name">Enregistrer ce rapport</label><input id="cmp-save-name" type="text" name="name" maxlength="80" required value="<%= saved ? saved.name : "" %>" placeholder="Ex. Newsletters du trimestre"></div>
+          <p class="field-hint">Si la période se termine aujourd'hui, le rapport garde sa durée et se met à jour à chaque ouverture. Même nom = mise à jour.</p>
+          <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+        </form>
+      <% } %>
+      </div>
+    </details>
+    <div class="mk-cmp-main">
+        <% if (!r.selectedCount) { %>
+          <div class="mk-empty">
+            <%- icon("barChart", { size: 32 }) %>
+            <h2>Aucune campagne terminée ne correspond</h2>
+            <p>Élargissez la période ou retirez un filtre. Seules les campagnes entièrement envoyées sont comparées (pas les brouillons ni les envois en cours).</p>
+          </div>
+        <% } else { %>
+          <div class="mk-stats mk-stats-3">
+            <div class="mk-stat"><span class="mk-stat-label">Campagnes</span><span class="mk-stat-value"><%= mkh.fmt(r.totals.campaigns) %></span><span class="mk-stat-hint">du <%= f.from.split("-").reverse().join("/") %> au <%= f.to.split("-").reverse().join("/") %></span></div>
+            <div class="mk-stat"><span class="mk-stat-label">Envoyés</span><span class="mk-stat-value"><%= mkh.fmt(r.totals.sums.sent) %></span><span class="mk-stat-hint">remise : <%= mkh.rate(r.totals.metrics.deliveryRate) %></span></div>
+            <div class="mk-stat"><span class="mk-stat-label">Taux de clic</span><span class="mk-stat-value"><%= mkh.rate(r.totals.metrics.clickRate) %></span><span class="mk-stat-hint"><%= mkh.fmt(r.totals.sums.clicks) %> clic<%= r.totals.sums.clicks > 1 ? "s" : "" %> uniques</span></div>
+            <% if (r.hasEmail) { %>
+              <div class="mk-stat"><span class="mk-stat-label">Taux d'ouverture</span><span class="mk-stat-value"><%= mkh.rate(r.totals.metrics.openRate) %></span><span class="mk-stat-hint">e-mails seulement — indicatif</span></div>
+              <div class="mk-stat"><span class="mk-stat-label">Revenus</span><span class="mk-stat-value"><%= mkh.euros(r.totals.sums.revenueCents) %></span><span class="mk-stat-hint"><%= mkh.fmt(r.totals.sums.orders) %> commande<%= r.totals.sums.orders > 1 ? "s" : "" %> après un clic</span></div>
+            <% } %>
+            <div class="mk-stat"><span class="mk-stat-label">Désinscriptions</span><span class="mk-stat-value"><%= mkh.rate(r.totals.metrics.unsubscribeRate) %></span><span class="mk-stat-hint"><%= mkh.fmt(r.totals.sums.unsubscribed) %> au total</span></div>
+          </div>
+
+          <section class="mk-panel" aria-labelledby="cmp-chart-title">
+            <h2 id="cmp-chart-title"><%= METRICS[f.metric].label %> — par <%= GROUPS[f.groupBy].toLowerCase() %></h2>
+            <% if (!r.chart.some((c) => c.value !== null && c.value !== undefined)) { %>
+              <p class="field-hint">Cette mesure n'existe pas pour les campagnes affichées<%= METRICS[f.metric].emailOnly ? " (elle ne concerne que l'e-mail)" : "" %>.</p>
+            <% } else { %>
+              <ul class="mk-sv-bars">
+                <% r.chart.forEach((c) => { const v = Number(c.value) || 0; const w = chartMax > 0 ? Math.round((v / chartMax) * 100) : 0; %>
+                  <li><span class="mk-sv-label"><%= c.label %></span><span class="mk-sv-bar" aria-hidden="true"><span style="width:<%= w %>%"></span></span><span class="mk-sv-n"><%= show(f.metric, c.value) %></span></li>
+                <% }) %>
+              </ul>
+              <% if (r.lines.length > r.chart.length) { %><p class="field-hint">Graphique limité aux 20 premières lignes ; le tableau et l'export les contiennent toutes.</p><% } %>
+            <% } %>
+          </section>
+
+          <section class="mk-panel" aria-labelledby="cmp-table-title">
+            <h2 id="cmp-table-title"><%= byCampaign ? "Campagnes côte à côte" : `Par ${GROUPS[f.groupBy].toLowerCase()}` %></h2>
+            <% if (byCampaign) { %><form method="post" action="/marketing/analytics/comparer/etiqueter" id="cmp-select"><input type="hidden" name="query" value="<%= r.query %>"><% } %>
+            <div class="mk-table-wrap">
+              <table class="mk-table mk-datatable">
+                <caption class="sr-only"><%= byCampaign ? "Campagnes comparées" : `Campagnes regroupées par ${GROUPS[f.groupBy].toLowerCase()}` %> ; la meilleure valeur de chaque colonne est en gras</caption>
+                <thead><tr>
+                  <% if (byCampaign) { %><th scope="col"><span class="sr-only">Sélection</span></th><% } %>
+                  <th scope="col"><%= GROUPS[f.groupBy] %></th>
+                  <% if (!byCampaign) { %><th scope="col" class="mk-num">Campagnes</th><% } %>
+                  <% cols.forEach((k) => { %><th scope="col" class="mk-num"><abbr title="<%= METRICS[k].label %>"><%= METRICS[k].short %></abbr></th><% }) %>
+                </tr></thead>
+                <tbody>
+                  <% r.lines.forEach((l) => { %>
+                    <tr>
+                      <% if (byCampaign) { %><td data-label="Sélection"><input type="checkbox" name="ids" value="<%= l.key %>" aria-label="Sélectionner « <%= l.label %> »"<%= f.ids.includes(l.key) ? " checked" : "" %>></td><% } %>
+                      <th scope="row" data-label="<%= GROUPS[f.groupBy] %>">
+                        <% if (byCampaign) { %>
+                          <a href="<%= l.link %>"><%= l.label %></a>
+                          <span class="mk-sub"><%= l.channel === "sms" ? "SMS" : "E-mail" %> · <%= day(l.at) %> · <%= l.targetLabel %></span>
+                          <% if (l.tags.length) { %><span class="mk-cmp-tags"><% l.tags.forEach((t) => { %><span class="mk-chip mk-chip-static"><%= t %></span><% }) %></span><% } %>
+                        <% } else { %><%= l.label %><% } %>
+                      </th>
+                      <% if (!byCampaign) { %><td class="mk-num" data-label="Campagnes"><%= mkh.fmt(l.campaigns) %></td><% } %>
+                      <% cols.forEach((k) => { const v = l.metrics[k]; %><td class="mk-num<%= isBest(k, v) ? " mk-cmp-best" : "" %>" data-label="<%= METRICS[k].label %>"><%= show(k, v) %><% if (isBest(k, v)) { %><span class="sr-only"> (meilleur)</span><% } %></td><% }) %>
+                    </tr>
+                  <% }) %>
+                </tbody>
+                <tfoot><tr>
+                  <% if (byCampaign) { %><td class="sr-only"></td><% } %>
+                  <th scope="row">Total</th>
+                  <% if (!byCampaign) { %><td class="mk-num" data-label="Campagnes"><%= mkh.fmt(r.totals.campaigns) %></td><% } %>
+                  <% cols.forEach((k) => { %><td class="mk-num" data-label="<%= METRICS[k].label %>"><%= show(k, r.totals.metrics[k]) %></td><% }) %>
+                </tr></tfoot>
+              </table>
+            </div>
+            <% if (r.truncated) { %><p class="field-hint">Rapport limité aux 500 campagnes les plus récentes de la période : réduisez la période pour voir les autres.</p><% } %>
+            <% if (f.groupBy === "tag") { %><p class="field-hint">Une campagne qui porte plusieurs étiquettes compte dans chacune : la somme des lignes peut dépasser le total.</p><% } %>
+            <% if (byCampaign) { %>
+              <div class="mk-cmp-actions">
+                <button type="submit" class="btn btn-outline btn-sm" formmethod="get" formaction="/marketing/analytics/comparer" name="groupBy" value="campaign">Comparer seulement les cochées</button>
+                <% if (canWrite) { %>
+                  <div class="field-group"><label for="cmp-newtag">Étiquette de campagne</label><input id="cmp-newtag" type="text" name="tag" maxlength="40" placeholder="Ex. Newsletter, Promo rentrée" list="cmp-tags-list"></div>
+                  <datalist id="cmp-tags-list"><% r.tags.forEach((t) => { %><option value="<%= t %>"></option><% }) %></datalist>
+                  <button type="submit" class="btn btn-primary btn-sm" name="op" value="add">Étiqueter les cochées</button>
+                  <button type="submit" class="btn btn-ghost btn-sm" name="op" value="remove">Retirer cette étiquette</button>
+                <% } %>
+              </div>
+              <p class="field-hint">Les étiquettes de campagne servent à ranger et comparer vos envois (ex. « Newsletter » contre « Promo ») ; elles ne touchent pas vos contacts.</p>
+              </form>
+            <% } %>
+          </section>
+        <% } %>
+        <p class="field-hint">Les ouvertures sont indicatives (protection de la vie privée d'Apple Mail, images bloquées) ; le taux de clic est plus fiable. Ouverture, rebond et plainte ne concernent que l'e-mail. Les revenus sont ceux des commandes passées après un clic dans l'e-mail (réglage de la fenêtre dans « Revenus »).</p>
+    </div>
+<%- include("partials/bottom") %>

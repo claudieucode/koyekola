@@ -51,6 +51,7 @@ const ITEMS = [
 
   live("analytics", "analytics", "Analytics", "/marketing/analytics", "activity", "analytics.read"),
   live("analytics", "revenue", "Revenus", "/marketing/revenus", "coin", "analytics.read"),
+  live("analytics", "compare", "Rapports comparatifs", "/marketing/analytics/comparer", "barChart", "analytics.read"),
 
 
   live("integrations", "events", "KOLAKISA", "/marketing/evenements", "plug", "contacts.read"),

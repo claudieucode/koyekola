@@ -54,8 +54,8 @@ describe("registre de navigation", () => {
     assert.deepEqual(viewerSettings.items.map((i) => i.key), ["compliance", "appearance"]);
     assert.deepEqual(viewer.sections.find((s) => s.key === "sms").items.map((i) => i.key), ["smscampaigns", "smsaudience"]);
     const analytics = viewer.sections.find((s) => s.key === "analytics");
-    assert.deepEqual(analytics.items.map((i) => i.key), ["analytics", "revenue"], "Analytics + Revenus");
-    assert.notEqual(analytics.flat, true, "deux entrées : un groupe, pas un lien direct");
+    assert.deepEqual(analytics.items.map((i) => i.key), ["analytics", "revenue", "compare"], "Analytics + Revenus + Rapports comparatifs");
+    assert.notEqual(analytics.flat, true, "plusieurs entrées : un groupe, pas un lien direct");
     const flat = viewer.sections.filter((s) => s.items.length === 1);
     assert.ok(flat.every((s) => s.flat === true), "toute section à une seule entrée devient un lien direct");
     const owner = buildNav({ can: roleCan("owner"), active: "dashboard" });

@@ -1621,3 +1621,21 @@ input.mk-fx-switch[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed
 .mk-sv-others, .mk-sv-texts { margin-top: 10px; }
 .mk-sv-texts { padding-left: 20px; display: grid; gap: 6px; }
 @media (max-width: 640px) { .mk-sv-bars li { grid-template-columns: 1fr auto; } .mk-sv-bar { grid-column: 1 / -1; } }
+
+/* ---------- Rapports comparatifs (Analytics → Rapports comparatifs) ---------- */
+.mk-cmp-main { min-width: 0; }
+.mk-cmp-side { margin-bottom: 16px; }
+.mk-cmp-side > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; list-style-position: inside; }
+.mk-cmp-side-title { display: inline; margin: 0; font-size: 1.05rem; }
+.mk-cmp-side-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 20px; align-items: start; padding-top: 12px; }
+.mk-cmp-saved { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.mk-cmp-saved li { display: grid; gap: 2px; padding-bottom: 10px; border-bottom: 1px solid var(--mk-border); }
+.mk-cmp-saved a[aria-current="page"] { font-weight: 800; }
+.mk-cmp-saved form { justify-self: start; }
+.mk-cmp-best { font-weight: 800; color: var(--primary); }
+.mk-cmp-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.mk-cmp-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 14px; }
+.mk-cmp-actions .field-group { margin-bottom: 0; min-width: 200px; }
+.mk-table tbody th[scope="row"] .mk-sub { display: block; font-weight: 400; }
+@media (max-width: 800px) { .mk-cmp-side-body { grid-template-columns: 1fr; } }
+.mk-table th abbr[title] { text-decoration: none; cursor: help; }
