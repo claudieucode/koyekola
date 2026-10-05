@@ -1,0 +1,20 @@
+<%- include("partials/top", { title, active }) %>
+<% const canWrite = mk.can("campaigns.write");
+   const when = (r) => r.frequency === "daily" ? `Chaque jour à ${r.send_time}` : r.frequency === "weekly" ? `Chaque ${r.days.map((d) => WEEKDAYS[d - 1]).join(", ")} à ${r.send_time}` : `Le ${r.month_day} de chaque mois à ${r.send_time}`; %>
+    <div class="mk-head"><h1>Campagnes RSS</h1><% if (canWrite) { %><a class="btn btn-primary btn-sm" href="/marketing/rss/nouvelle">Créer une campagne RSS</a><% } %></div>
+    <p class="mk-lead">Vos nouveaux articles (blog KOLAKISA ou autre flux) envoyés automatiquement selon une fréquence. Chaque envoi est une campagne ordinaire, visible dans Toutes les campagnes avec son rapport.</p>
+    <%- include("partials/worker-note", { workerOn, consequence: "aucune campagne RSS ne sera vérifiée ni envoyée tant qu'il n'est pas rétabli" }) %>
+    <% if (!items.length) { %>
+      <div class="mk-empty"><%- icon("layers", { size: 32 }) %><h2>Aucune campagne RSS</h2><p>Créez-en une pour que chaque nouvel article parte automatiquement à vos abonnés.</p>
+        <% if (canWrite) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/rss/nouvelle">Créer une campagne RSS</a></div><% } %></div>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table">
+        <caption class="sr-only">Campagnes RSS</caption>
+        <thead><tr><th scope="col">Nom</th><th scope="col">Source</th><th scope="col">Fréquence</th><th scope="col">État</th><th scope="col">Envois</th><th scope="col">Dernière vérification</th></tr></thead>
+        <tbody><% items.forEach((r) => { %>
+          <tr><td><a href="/marketing/rss/<%= r.id %>"><%= r.name %></a></td><td><%= r.source === "feed" ? "Flux externe" : r.blog_category ? `Blog · ${r.blog_category}` : "Blog" %></td><td><%= when(r) %></td>
+            <td><span class="mk-status <%= STATUS_CLASS[r.status] %>"><%= STATUSES[r.status] %></span></td><td><%= mkh.fmt(r.sends) %></td><td><%= r.last_result || "—" %></td></tr>
+        <% }) %></tbody>
+      </table></div>
+    <% } %>
+<%- include("partials/bottom") %>

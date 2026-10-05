@@ -19,6 +19,7 @@ function lintEmail(compiled, rendered) {
 
   if (!subject.trim()) add("error", "subject_empty", "L'objet est vide.");
   if (!meta.blockCount) add("error", "no_content", "Le modèle ne contient aucun bloc.");
+  if (meta.postsEmpty) add("error", "posts_empty", "Le bloc « Articles » est vide : aucun article à afficher. (Dans une campagne RSS, il est rempli automatiquement à chaque envoi.)");
   const lost = missingImages(rendered.html);
   if (lost.length) add("error", "image_missing", `${lost.length > 1 ? `${lost.length} images n'existent` : "Une image n'existe"} plus sur le serveur (${lost.map((p) => p.split("/").pop()).join(", ")}) : réimportez-la depuis la médiathèque puis remplacez-la dans le bloc.`);
   if (subject.length > 60) add("warning", "subject_long", `L'objet fait ${subject.length} caractères : au-delà de 60, il est coupé sur mobile.`);

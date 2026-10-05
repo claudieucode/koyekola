@@ -33,6 +33,8 @@ const ITEMS = [
   live("campaigns", "campaigns", "Toutes les campagnes", "/marketing/campagnes", "send", "campaigns.read", { label: "Créer une campagne", href: "/marketing/campagnes/nouvelle", permission: "campaigns.write" }),
   live("campaigns", "templates", "Modèles d'e-mails", "/marketing/modeles", "fileText", "templates.read", { label: "Nouveau modèle", href: "/marketing/modeles#creer", permission: "templates.write" }),
   live("campaigns", "ab", "Tests A/B", "/marketing/tests-ab", "activity", "campaigns.read", { label: "Créer un test A/B", href: "/marketing/campagnes/nouvelle?ab=1", permission: "campaigns.write" }),
+  // Campagnes RSS (« RSS-to-email » de Mailchimp) : nouveaux articles envoyés automatiquement selon une fréquence
+  live("campaigns", "rss", "Campagnes RSS", "/marketing/rss", "layers", "campaigns.read", { label: "Créer une campagne RSS", href: "/marketing/rss/nouvelle", permission: "campaigns.write" }),
 
   // Onglet SMS à part entière, comme chez Mailchimp : campagnes, abonnés, réglages
   live("sms", "smscampaigns", "Campagnes SMS", "/marketing/sms", "smartphone", "campaigns.read", { label: "Créer une campagne SMS", href: "/marketing/sms#nouvelle", permission: "campaigns.write" }),

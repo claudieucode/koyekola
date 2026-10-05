@@ -34,7 +34,8 @@
     list: function () { return { type: "list", style: "bullets", items: ["Premier élément", "Deuxième élément"] }; },
     social: function () { return { type: "social", align: "center", links: [{ network: "facebook", url: "" }] }; },
     video: function () { return { type: "video", url: "", thumbnail: "", title: "", width: 552, align: "center" }; },
-    course: function () { return { type: "course", courseId: data.courses && data.courses.length ? data.courses[0].id : undefined, cta: "Voir la formation" }; }
+    course: function () { return { type: "course", courseId: data.courses && data.courses.length ? data.courses[0].id : undefined, cta: "Voir la formation" }; },
+    posts: function () { return { type: "posts", count: 3, layout: "excerpt", showImages: true, cta: "Lire la suite" }; }
   };
   var NETWORKS = [["facebook", "Facebook"], ["instagram", "Instagram"], ["x", "X"], ["linkedin", "LinkedIn"], ["youtube", "YouTube"], ["tiktok", "TikTok"], ["whatsapp", "WhatsApp"], ["website", "Site web"]];
   var LIST_STYLES = [["bullets", "Puces"], ["numbers", "Numéros"], ["checks", "Coches ✓"]];
@@ -248,6 +249,11 @@
     } else if (b.type === "course") {
       o.courseId = intOrUndefined(b.courseId); o.cta = b.cta || "Voir la formation";
       if (b.snapshot) o.snapshot = b.snapshot;
+      if (b.refresh) o.refresh = true;
+    } else if (b.type === "posts") {
+      var pc = intOrUndefined(b.count); o.count = pc && pc >= 1 && pc <= 10 ? pc : 3;
+      o.layout = b.layout === "titles" ? "titles" : "excerpt"; o.showImages = b.showImages !== false; o.cta = b.cta || "Lire la suite";
+      if (b.items) o.items = b.items;
       if (b.refresh) o.refresh = true;
     } else if (b.type === "link") { o.label = b.label || ""; o.url = b.url || ""; o.align = b.align || "left"; if (b.newTab) o.newTab = true; typo(b, o); }
     else if (b.type === "coupon") { o.code = b.code || ""; if (b.title && b.title.trim()) o.title = b.title; if (b.details && b.details.trim()) o.details = b.details; if (hexOk(b.color)) o.color = b.color; }
@@ -636,6 +642,17 @@
         el("p", { "class": "mk-fx-hint" }, "Un e-mail ne peut pas lire de vidéo : le message affiche la miniature et un lien « Regarder la vidéo ».")]));
     } else if (t === "course") {
       out.push(S("Formation", courseField(block)));
+    } else if (t === "posts") {
+      var shown = (block.items || []).length;
+      out.push(S("Articles", [
+        F.number(block, "count", "Nombre d'articles", { owner: block.id, min: 1, max: 10, inherit: 3 }),
+        F.segment(block, "layout", "Présentation", [["excerpt", "Image et résumé"], ["titles", "Titres seuls"]], { owner: block.id, fallback: "excerpt" }),
+        F.toggle(block, "showImages", "Afficher l'image de chaque article", o),
+        F.text(block, "cta", "Texte du lien", { owner: block.id, vars: true, max: 40 }),
+        el("p", { "class": "field-hint" }, shown ? "Aperçu : les " + shown + " derniers articles du blog, figés à l'enregistrement." : "Les derniers articles du blog seront lus à l'enregistrement."),
+        el("p", { "class": "mk-fx-hint" }, "Dans une campagne RSS, ce bloc est rempli automatiquement avec les NOUVEAUX articles à chaque envoi."),
+        shown ? F.toggle(block, "refresh", "Actualiser avec les derniers articles à l'enregistrement", { owner: block.id }) : null,
+      ]));
     } else if (t === "link") {
       out.push(S("Lien", [F.text(block, "label", "Texte du lien", { owner: block.id, vars: true, max: 120 }), F.text(block, "url", "Adresse (https://… ou mailto:)", { owner: block.id, max: 2000, placeholder: "https://exemple.fr" }), F.toggle(block, "newTab", "Ouvrir dans un nouvel onglet", o)]));
     } else if (t === "coupon") {
@@ -980,6 +997,7 @@
     else if (b.type === "video") s = b.title || b.url;
     else if (b.type === "social") s = (b.links || []).map(function (l) { var n = NETWORKS.filter(function (x) { return x[0] === l.network; })[0]; return n ? n[1] : l.network; }).join(", ");
     else if (b.type === "course") { var c = (data.courses || []).filter(function (x) { return x.id === b.courseId; })[0]; s = c ? c.title : (b.snapshot ? b.snapshot.title : ""); }
+    else if (b.type === "posts") s = (b.items || []).length ? (b.items || []).map(function (i) { return i.title; }).join(" · ") : "Rempli avec les nouveaux articles à chaque envoi RSS";
     else if (b.type === "spacer") s = (b.height || 24) + " px";
     else if (b.type === "divider") s = "Ligne de séparation";
     return String(s || "").replace(/\s+/g, " ").trim().slice(0, 140);

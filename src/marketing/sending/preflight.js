@@ -12,7 +12,9 @@ const { abPreflight } = require("./abtest");
 
 const LOCAL_HTTP = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/i;
 
-function preflight(ctx, campaignId, { workerOn = false, smtpAvailable = Boolean(process.env.SMTP_HOST) } = {}) {
+// postItems : articles injectés dans le bloc « Articles » au lancement (envoi d'une campagne RSS) — un bloc vide dans le
+// modèle parent n'est alors pas un défaut (il sera rempli), toutes les autres vérifications restent identiques.
+function preflight(ctx, campaignId, { workerOn = false, smtpAvailable = Boolean(process.env.SMTP_HOST), postItems = null } = {}) {
   const campaign = requireCampaign(ctx, campaignId);
   const errors = [];
   const warnings = [];
@@ -24,7 +26,8 @@ function preflight(ctx, campaignId, { workerOn = false, smtpAvailable = Boolean(
   if (!template) error("template_missing", "Le modèle de cette campagne n'existe plus.");
   else {
     const ready = templates.templateReadiness(ctx, template.id);
-    if (!ready.ready) error("template_not_ready", `Le modèle n'est pas prêt : ${ready.errors.map((e) => e.message).join(" ")}`);
+    const blocking = ready.errors.filter((e) => !(postItems && postItems.length && e.code === "posts_empty"));
+    if (blocking.length) error("template_not_ready", `Le modèle n'est pas prêt : ${blocking.map((e) => e.message).join(" ")}`);
   }
 
   // Fournisseur

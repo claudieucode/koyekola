@@ -29,7 +29,7 @@ const FONTS = {
 };
 const SPACING = { compact: 4, normal: 8, large: 16 };
 const DEFAULT_THEME = { background: "#f3f8fc", contentBackground: "#ffffff", textColor: "#10222f", accent: "#0277b6", fontFamily: "system", secondary: "#d5e3ee", maxWidth: 600, radius: 4, spacing: "normal" };
-const TYPES = ["heading", "text", "image", "button", "divider", "spacer", "columns", "quote", "list", "social", "video", "course", "link", "coupon"];
+const TYPES = ["heading", "text", "image", "button", "divider", "spacer", "columns", "quote", "list", "social", "video", "course", "link", "coupon", "posts"];
 const RATIOS = { "50-50": [50, 50], "60-40": [60, 40], "40-60": [40, 60], "70-30": [70, 30], "30-70": [30, 70] };
 const BUTTON_SIZES = { s: "8px 16px", m: "12px 24px", l: "16px 32px" };
 const NETWORKS = { facebook: "Facebook", instagram: "Instagram", x: "X", linkedin: "LinkedIn", youtube: "YouTube", tiktok: "TikTok", whatsapp: "WhatsApp", website: "Site web" };
@@ -530,6 +530,37 @@ function buildBlock(block, env, meta, k = {}) {
         ],
       };
     }
+    // Articles : liste d'articles (blog KOLAKISA ou flux RSS) prise en instantané par le SERVEUR (templates/posts.js, ou
+    // injectée à chaque envoi d'une campagne RSS). Vide : autorisé dans un modèle (rempli à l'envoi d'une campagne RSS),
+    // mais signalé comme bloquant pour un envoi ordinaire (lint « posts_empty »).
+    case "posts": {
+      meta.hasText = true;
+      const count = Number.isInteger(block.count) && block.count >= 1 && block.count <= 10 ? block.count : 3;
+      const layout = block.layout === "titles" ? "titles" : "excerpt";
+      const showImages = block.showImages !== false;
+      const cta = block.cta === undefined ? "Lire la suite" : block.cta;
+      const label = plain(cta, allowed, { max: 40, required: true, label: "Le libellé du lien" });
+      const raw = Array.isArray(block.items) ? block.items.slice(0, 20) : [];
+      const items = raw.map((it, i) => {
+        if (!it || typeof it !== "object") throw fail(`Articles : élément ${i + 1} invalide.`);
+        const title = typeof it.title === "string" ? it.title.replace(CONTROLS, " ").trim().slice(0, 200) : "";
+        if (!title) throw fail(`Articles : l'élément ${i + 1} n'a pas de titre.`);
+        return { title, url: trustedUrl(it.url, "Article"), excerpt: typeof it.excerpt === "string" ? it.excerpt.replace(CONTROLS, " ").trim().slice(0, 300) : "", image: it.image ? trustedUrl(it.image, "Article (image)") : "", date: Number.isFinite(it.date) ? it.date : null };
+      });
+      if (!items.length) meta.postsEmpty = true;
+      const nodes = [];
+      if (!items.length) nodes.push(T(`<p style="margin:0;padding:16px;border:1px dashed #d5e3ee;color:${MUTED};font-size:15px">Les derniers articles s'afficheront ici.</p>`));
+      items.forEach((it, i) => {
+        if (showImages && it.image && layout === "excerpt") { meta.hasImage = true; nodes.push(T(`<a href="${escapeHtml(it.url)}" style="text-decoration:none"><img src="${escapeHtml(it.image)}" alt="${escapeHtml(it.title)}" width="${Math.max(200, (theme.maxWidth || 600) - 40)}" style="display:block;border:0;width:100%;max-width:100%;height:auto;margin:0 0 10px"></a>`)); }
+        const day = it.date ? new Date(it.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : "";
+        nodes.push(T(`<p style="margin:0 0 4px;font-size:${layout === "titles" ? 17 : 20}px;line-height:1.3;font-weight:800"><a href="${escapeHtml(it.url)}" style="color:${theme.textColor};text-decoration:none">${escapeHtml(it.title)}</a></p>`));
+        if (day && layout === "excerpt") nodes.push(T(`<p style="margin:0 0 6px;font-size:13px;color:${MUTED}">${escapeHtml(day)}</p>`));
+        if (it.excerpt && layout === "excerpt") nodes.push(T(`<p style="margin:0 0 8px;font-size:15px;line-height:1.5;color:${theme.textColor}">${escapeHtml(it.excerpt)}</p>`));
+        if (layout === "excerpt") { nodes.push(T(`<p style="margin:0"><a href="${escapeHtml(it.url)}" style="color:${theme.accent};font-weight:700;text-decoration:underline">`), ...label, T(" →</a></p>")); }
+        if (i < items.length - 1) nodes.push(T(`<hr style="border:0;border-top:1px solid #d5e3ee;margin:${layout === "titles" ? 10 : 20}px 0">`));
+      });
+      return { normalized: { count, layout, showImages, cta: cta.trim(), items }, nodes };
+    }
     case "course": {
       meta.hasText = true;
       const snap = block.snapshot;
@@ -629,7 +660,7 @@ function compileTemplate(template, { allowed = () => false, annotate = false, to
 
   const theme = normalizeTheme(template.theme);
   const env = { theme, allowed };
-  const meta = { kind, blockCount: blocks.filter((b) => b && !b.hidden).length, blockTypes: [], hasText: false, hasImage: false, hasButton: false, lowContrast: [], varsNoDefault: [], preheader: "", blockErrors: [] };
+  const meta = { kind, blockCount: blocks.filter((b) => b && !b.hidden).length, blockTypes: [], hasText: false, hasImage: false, hasButton: false, lowContrast: [], varsNoDefault: [], preheader: "", blockErrors: [], postsEmpty: false };
 
   const subjectSource = (typeof template.subject === "string" ? template.subject : "").replace(CONTROLS, " ").trim();
   if (subjectSource.length > 200) throw fail("L'objet est trop long (200 caractères au plus).");

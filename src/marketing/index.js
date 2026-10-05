@@ -34,7 +34,7 @@ function initMarketing({ db, dbFile, dataDir, env = process.env, log = console }
     const settings = createSettings(db, { encryptionKey: env.ENCRYPTION_KEY });
     const handlers = {
       ...bus.jobHandlers(), ...imports.jobHandlers({ db, bus }), ...sending.jobHandlers({ db, bus, settings, env, log }), ...bridgeEvents.jobHandlers({ db, bus, log }),
-      ...automations.jobHandlers({ db, bus, settings, env, log }), ...webhooksOut.jobHandlers({ db, env, log }),
+      ...automations.jobHandlers({ db, bus, settings, env, log }), ...webhooksOut.jobHandlers({ db, env, log }), ...require("./rss").jobHandlers({ db, bus, settings, env, log }),
       ...smsCampaigns.smsJobHandlers({ db, bus, settings, env, log }),
     };
     bus.on("*", automations.eventHandler({ db, settings, env, log })); // événements → passages dans les scénarios actifs

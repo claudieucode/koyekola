@@ -1,0 +1,12 @@
+<%- include("partials/top", { title, active }) %>
+    <p class="mk-back"><a href="/marketing/rss">← Campagnes RSS</a></p>
+    <div class="mk-head"><h1>Nouvelle campagne RSS</h1></div>
+    <p class="mk-lead">Envoyez automatiquement vos nouveaux articles à une audience, chaque jour, chaque semaine ou chaque mois. La campagne est créée en brouillon : rien ne part avant son activation.</p>
+    <% if (!rssTemplates.length && mk.can("templates.write")) { %>
+      <form action="/marketing/rss/modele" method="post" class="mk-callout"><span>Il faut un modèle d'e-mail avec un bloc « Articles ». <button type="submit" class="btn btn-outline btn-sm">Créer le modèle « Nouveaux articles »</button></span></form>
+    <% } %>
+    <form action="/marketing/rss" method="post" class="mk-form">
+      <%- include("partials/rss-form", { v: values, wantedTemplate }) %>
+      <div class="mk-actions"><button type="submit" class="btn btn-primary"<%= rssTemplates.length ? "" : " disabled" %>>Créer la campagne RSS</button><a class="btn btn-ghost" href="/marketing/rss">Annuler</a></div>
+    </form>
+<%- include("partials/bottom") %>

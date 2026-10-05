@@ -33,6 +33,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./segments")({ db }));
   admin.use(require("./templates")({ db }));
   admin.use(require("./campaigns")({ db }));
+  admin.use(require("./rss")());
   admin.use(require("./automations")({ db }));
   admin.use(require("./imports")({ db }));
   admin.use(require("./analytics")({ db }));

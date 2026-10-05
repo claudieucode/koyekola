@@ -23,4 +23,33 @@ function getCourse(ctx, id) {
   }
 }
 
-module.exports = { listCourses, getCourse };
+// Articles du blog visibles par le public (publiés, ou programmés dont l'heure est passée), du plus récent au plus ancien.
+// → [{ key: "post:12", title, url, excerpt, image, date (ms) }] ; un LMS sans blog donne une liste vide.
+const SQL_DATE = (v) => { const t = Date.parse(`${String(v).replace(" ", "T")}Z`); return Number.isFinite(t) ? t : null; };
+function listPosts(ctx, { since = null, limit = 20, category = "" } = {}) {
+  checkCtx(ctx);
+  const base = String(ctx.baseUrl || "").replace(/\/+$/, "");
+  const now = new Date(typeof ctx.now === "function" ? ctx.now() : Date.now()).toISOString().slice(0, 19).replace("T", " ");
+  const where = ["published_at IS NOT NULL", "published_at <= ?", "(published = 1 OR status = 'scheduled')"];
+  const args = [now];
+  if (since) { where.push("published_at > ?"); args.push(new Date(since).toISOString().slice(0, 19).replace("T", " ")); }
+  if (category) { where.push("category = ?"); args.push(category); }
+  try {
+    return ctx.db.prepare(`SELECT id, slug, title, excerpt, cover_path, published_at FROM posts WHERE ${where.join(" AND ")} ORDER BY published_at DESC, id DESC LIMIT ?`).all(...args, Math.min(Math.max(limit, 1), 50))
+      .map((p) => ({
+        key: `post:${p.id}`, title: p.title, url: `${base}/blog/${encodeURIComponent(p.slug)}`,
+        excerpt: String(p.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 300),
+        image: p.cover_path ? (/^https?:\/\//i.test(p.cover_path) ? p.cover_path : `${base}${p.cover_path.startsWith("/") ? "" : "/"}${p.cover_path}`) : "",
+        date: SQL_DATE(p.published_at),
+      }));
+  } catch {
+    return [];
+  }
+}
+// Catégories du blog réellement utilisées (filtre d'une campagne RSS)
+function blogCategories(ctx) {
+  checkCtx(ctx);
+  try { return ctx.db.prepare("SELECT category, COUNT(*) n FROM posts WHERE published = 1 GROUP BY category ORDER BY category COLLATE NOCASE").all(); } catch { return []; }
+}
+
+module.exports = { listCourses, getCourse, listPosts, blogCategories };

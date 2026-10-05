@@ -1,0 +1,48 @@
+<%- include("partials/top", { title, active }) %>
+<% const fmtDate = (t) => t ? new Date(t).toLocaleString("fr-FR", { timeZone: orgTz, dateStyle: "full", timeStyle: "short" }) : "—"; %>
+    <p class="mk-back"><a href="/marketing/rss">← Campagnes RSS</a></p>
+    <div class="mk-head"><div class="mk-builder-title"><h1><%= r.name %></h1><span class="mk-status <%= STATUS_CLASS[r.status] %>"><%= STATUSES[r.status] %></span></div>
+      <% if (canSend) { %><div class="mk-actions">
+        <% if (r.status !== "active") { %><form action="/marketing/rss/<%= r.id %>/activer" method="post"><button type="submit" class="btn btn-primary btn-sm"><%= r.status === "paused" ? "Réactiver" : "Activer" %></button></form>
+        <% } else { %><form action="/marketing/rss/<%= r.id %>/pause" method="post"><button type="submit" class="btn btn-outline btn-sm">Mettre en pause</button></form><% } %>
+      </div><% } %>
+    </div>
+    <%- include("partials/worker-note", { workerOn, consequence: "cette campagne RSS ne sera ni vérifiée ni envoyée tant qu'il n'est pas rétabli" }) %>
+    <section class="mk-panel" aria-labelledby="rss-state">
+      <h2 id="rss-state">État</h2>
+      <dl class="mk-journey-facts">
+        <dt>Prochaine vérification</dt><dd><%= r.status === "active" ? fmtDate(r.next_run_at) + ` (${orgTz})` : "aucune (campagne " + STATUSES[r.status].toLowerCase() + ")" %></dd>
+        <dt>Dernière vérification</dt><dd><%= r.last_run_at ? `${fmtDate(r.last_run_at)} — ${r.last_result}` : "jamais" %></dd>
+        <dt>Modèle</dt><dd><% if (template) { %><a href="/marketing/modeles/<%= template.id %>"><%= template.name %></a><% } else { %>(supprimé)<% } %></dd>
+        <dt>Source</dt><dd><%= r.source === "feed" ? r.feed_url : r.blog_category ? `Blog KOLAKISA, catégorie « ${r.blog_category} »` : "Blog KOLAKISA (toutes les catégories)" %></dd>
+      </dl>
+    </section>
+    <section class="mk-panel" aria-labelledby="rss-next">
+      <h2 id="rss-next">Si l'échéance tombait maintenant</h2>
+      <% if (preview.error) { %><p class="form-error" role="alert">Source illisible : <%= preview.error %></p>
+      <% } else if (!preview.items.length) { %><p>Aucun <%= preview.firstRun ? "article récent" : "nouvel article" %> : rien ne serait envoyé.<%= preview.firstRun ? " (Premier envoi : seulement les articles de la fenêtre récente.)" : "" %></p>
+      <% } else { %>
+        <p><%= preview.items.length %> article<%= preview.items.length > 1 ? "s" : "" %> partirai<%= preview.items.length > 1 ? "ent" : "t" %><%= preview.more ? ` (et ${preview.more} plus ancien${preview.more > 1 ? "s" : ""} au-delà du maximum, qui ne seront pas envoyé${preview.more > 1 ? "s" : ""})` : "" %> :</p>
+        <ol class="mk-journey-emails"><% preview.items.forEach((i) => { %><li><a href="<%= i.url %>" target="_blank" rel="noopener"><%= i.title %></a><%= i.date ? " — " + new Date(i.date).toLocaleDateString("fr-FR", { timeZone: orgTz }) : "" %></li><% }) %></ol>
+      <% } %>
+    </section>
+    <section class="mk-panel" aria-labelledby="rss-sends">
+      <h2 id="rss-sends">Envois</h2>
+      <% if (!sends.length) { %><p class="field-hint">Aucun envoi pour l'instant.</p><% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Envois de cette campagne RSS</caption>
+          <thead><tr><th scope="col">Campagne</th><th scope="col">Destinataires</th><th scope="col">Envoyés</th><th scope="col">Ouvertures uniques</th><th scope="col">Clics uniques</th></tr></thead>
+          <tbody><% sends.forEach((c) => { %><tr><td><a href="/marketing/campagnes/<%= c.id %>"><%= c.name %></a></td><td><%= mkh.fmt(c.total_recipients) %></td><td><%= mkh.fmt(c.sent_count) %></td><td><%= mkh.fmt(c.unique_open_count) %></td><td><%= mkh.fmt(c.unique_click_count) %></td></tr><% }) %></tbody>
+        </table></div>
+      <% } %>
+    </section>
+    <% if (canWrite) { %>
+      <section class="mk-panel" aria-labelledby="rss-settings">
+        <h2 id="rss-settings">Réglages</h2>
+        <form action="/marketing/rss/<%= r.id %>" method="post" class="mk-form">
+          <%- include("partials/rss-form", { v: r }) %>
+          <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button></div>
+        </form>
+        <form action="/marketing/rss/<%= r.id %>/supprimer" method="post" class="mk-rss-delete"><button type="submit" class="btn btn-danger btn-sm" data-mk-confirm="Les envois déjà faits restent dans Toutes les campagnes, avec leurs rapports." data-mk-confirm-title="Supprimer cette campagne RSS ?" data-mk-confirm-ok="Supprimer">Supprimer la campagne RSS</button></form>
+      </section>
+    <% } %>
+<%- include("partials/bottom") %>

@@ -124,4 +124,4 @@ function duplicateCampaign(ctx, id) {
   return copy;
 }
 
-module.exports = { duplicateCampaign, createCampaign, getCampaign, requireCampaign, listCampaigns, updateCampaign, deleteCampaign };
+module.exports = { duplicateCampaign, createCampaign, getCampaign, requireCampaign, listCampaigns, updateCampaign, deleteCampaign, checkTemplate, checkTarget, checkCategory };

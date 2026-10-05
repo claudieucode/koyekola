@@ -1588,3 +1588,7 @@ input.mk-fx-switch[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed
 .mk-when-detail { padding: 2px 0 6px 26px; }
 .mk-when-detail[hidden] { display: none; }
 .mk-when-detail .field-hint { margin: 4px 0 0; }
+
+/* Campagnes RSS */
+.mk-days { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.mk-rss-delete { margin-top: 16px; }

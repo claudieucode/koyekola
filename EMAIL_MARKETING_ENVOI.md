@@ -47,3 +47,17 @@ Dans la fenêtre « Prêt à envoyer ? », rubrique **Quand ?** (`src/marketing/
 - **À la meilleure heure de chaque contact** (équivalent de Send Time Optimization) : heure locale la plus fréquente de ses ouvertures et clics réels des 12 derniers mois (robots exclus, au moins 3 engagements) ; sinon l'heure la plus active de l'audience. Indisponible tant que l'audience n'a pas au moins 20 engagements venant de 5 contacts. Les envois s'étalent sur les 24 h du jour choisi (fuseau par défaut).
 
 Fuseau d'un contact, dans cet ordre : fuseau du contact (formulaire d'inscription, fiche, import — colonne « fuseau ») → fuseau du navigateur de son compte KOLAKISA (relevé à l'inscription et à chaque connexion) → pays à fuseau unique → fuseau par défaut (Réglages d'envoi). Aucune géolocalisation par adresse IP. Chaque destinataire garde son heure (`next_attempt_at`), son fuseau et l'origine de ce fuseau (`send_tz`, `send_basis`) ; le rapport de campagne résume le plan. Non disponible pour les tests A/B. Tests : `tests/marketing-heure-envoi.test.js`.
+
+## Campagnes RSS
+
+Campagnes → **Campagnes RSS** (`src/marketing/rss/`, migration 026). Une campagne RSS = un modèle « parent » contenant un bloc **Articles**, une source (blog KOLAKISA, éventuellement une catégorie, ou flux RSS/Atom externe), une audience et une fréquence (chaque jour, certains jours de la semaine, ou un jour du mois, à une heure du fuseau par défaut). À chaque échéance (tâche « rss.run » de la file) :
+
+- seuls les articles **jamais envoyés** par cette campagne partent (mémorisés dans `mk_rss_seen`) ; aucun nouvel article → rien n'est envoyé ;
+- au premier envoi, seulement les articles des dernières 24 h, 7 jours ou 30 jours selon la fréquence ; les plus anciens servent de point de départ et ne partent jamais ;
+- au plus N articles par envoi (les plus récents) ; un envoi par jour au maximum ;
+- chaque envoi est une campagne ordinaire (« enfant », `mk_campaigns.rss_id`) lancée avec les contrôles habituels (consentement, désinscription, rythme), visible dans Toutes les campagnes avec son rapport.
+
+Le bloc **Articles** existe aussi dans les modèles ordinaires : il affiche les derniers articles du blog, figés à l'enregistrement (case « Actualiser »). Vide, il est autorisé dans un modèle mais bloque l'envoi d'une campagne ordinaire.
+
+Flux externe : http(s) seulement, jamais une adresse du réseau interne (vérifiée au moment de la connexion, redirections comprises), 2 Mo et 10 s au plus ; le contenu est réduit à du texte brut. Tests : `tests/marketing-rss.test.js`.
+

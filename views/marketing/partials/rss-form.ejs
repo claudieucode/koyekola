@@ -1,0 +1,42 @@
+<%# Formulaire d'une campagne RSS (création et modification) : v = valeurs (saisie précédente ou campagne existante) %>
+<% const val = (k, d) => (v && v[k] !== undefined && v[k] !== null ? v[k] : d);
+   const days = (v && v.days ? (Array.isArray(v.days) ? v.days : [v.days]) : [1]).map(Number);
+   const target = v ? (v.target || (v.target_type ? `${v.target_type}:${v.target_id}` : "")) : "";
+   const tplWanted = String(val("template_id", typeof wantedTemplate !== "undefined" && wantedTemplate ? wantedTemplate : "")); %>
+<div class="field-group"><label for="r-name">Nom</label>
+  <input id="r-name" type="text" name="name" maxlength="100" required value="<%= val("name", "") %>" placeholder="Ex. Lettre hebdomadaire du blog"><span class="field-hint">Chaque envoi s'appellera « nom — date ».</span></div>
+<fieldset class="mk-fieldset mk-when">
+  <legend>Source des articles</legend>
+  <label class="checkbox-row"><input type="radio" name="source" value="blog"<%= val("source", "blog") === "blog" ? " checked" : "" %>> Blog KOLAKISA</label>
+  <div class="field-group mk-when-detail"><label for="r-cat">Catégorie</label>
+    <select id="r-cat" name="blog_category"><option value="">Toutes les catégories</option><% blogCats.forEach((c) => { %><option value="<%= c.category %>"<%= val("blog_category", "") === c.category ? " selected" : "" %>><%= c.category %> (<%= c.n %>)</option><% }) %></select></div>
+  <label class="checkbox-row"><input type="radio" name="source" value="feed"<%= val("source", "blog") === "feed" ? " checked" : "" %>> Flux RSS ou Atom d'un autre site (chaîne YouTube, podcast…)</label>
+  <div class="field-group mk-when-detail"><label for="r-feed">Adresse du flux</label>
+    <input id="r-feed" type="url" name="feed_url" maxlength="500" value="<%= val("feed_url", "") %>" placeholder="https://www.youtube.com/feeds/videos.xml?channel_id=…"></div>
+</fieldset>
+<div class="field-group"><label for="r-tpl">Modèle d'e-mail (avec un bloc « Articles »)</label>
+  <% if (rssTemplates.length) { %><select id="r-tpl" name="template_id" required><% rssTemplates.forEach((t) => { %><option value="<%= t.id %>"<%= tplWanted === String(t.id) ? " selected" : "" %>><%= t.name %></option><% }) %></select>
+  <% } else { %><p class="field-hint">Aucun modèle ne contient encore de bloc « Articles ». Créez le modèle de départ ci-dessous, ou ajoutez ce bloc à un modèle existant.</p><% } %>
+</div>
+<div class="field-group"><label for="r-target">Destinataires</label>
+  <select id="r-target" name="target" required>
+    <optgroup label="Listes"><% lists.forEach((l) => { %><option value="list:<%= l.id %>"<%= target === "list:" + l.id ? " selected" : "" %>><%= l.name %> (<%= l.member_count %> contacts)</option><% }) %></optgroup>
+    <optgroup label="Segments"><% segments.forEach((s) => { %><option value="segment:<%= s.id %>"<%= target === "segment:" + s.id ? " selected" : "" %>><%= s.name %></option><% }) %></optgroup>
+  </select></div>
+<% if (categories.length) { %><div class="field-group"><label for="r-category">Catégorie de préférences (désinscription ciblée)</label>
+  <select id="r-category" name="category"><option value="">Aucune</option><% categories.forEach((c) => { %><option value="<%= c.key %>"<%= val("category", "") === c.key ? " selected" : "" %>><%= c.label %></option><% }) %></select></div><% } %>
+<fieldset class="mk-fieldset mk-when">
+  <legend>Fréquence</legend>
+  <label class="checkbox-row"><input type="radio" name="frequency" value="daily"<%= val("frequency", "weekly") === "daily" ? " checked" : "" %>> Chaque jour</label>
+  <label class="checkbox-row"><input type="radio" name="frequency" value="weekly"<%= val("frequency", "weekly") === "weekly" ? " checked" : "" %>> Chaque semaine, le :</label>
+  <div class="mk-when-detail mk-days"><% WEEKDAYS.forEach((d, i) => { %><label class="checkbox-row"><input type="checkbox" name="days" value="<%= i + 1 %>"<%= days.includes(i + 1) ? " checked" : "" %>> <%= d %></label><% }) %></div>
+  <label class="checkbox-row"><input type="radio" name="frequency" value="monthly"<%= val("frequency", "weekly") === "monthly" ? " checked" : "" %>> Chaque mois, le jour</label>
+  <div class="field-group mk-when-detail"><label for="r-mday" class="sr-only">Jour du mois</label><input id="r-mday" type="number" name="month_day" min="1" max="28" value="<%= val("month_day", 1) %>"></div>
+  <div class="field-row">
+    <div class="field-group"><label for="r-time">Heure de vérification (<%= orgTz %>)</label><input id="r-time" type="time" name="send_time" required value="<%= val("send_time", "09:00") %>"></div>
+    <div class="field-group"><label for="r-max">Articles par envoi (au plus)</label><input id="r-max" type="number" name="max_items" min="1" max="20" required value="<%= val("max_items", 5) %>"></div>
+  </div>
+  <p class="field-hint">À chaque échéance, seuls les articles jamais envoyés partent ; s'il n'y en a aucun, rien n'est envoyé. Au premier envoi : seulement ceux des dernières 24 h, 7 jours ou 30 jours selon la fréquence. Un envoi par jour au plus.</p>
+</fieldset>
+<label class="checkbox-row"><input type="checkbox" name="track_clicks" value="on"<%= val("track_clicks", 1) ? " checked" : "" %>> Suivre les clics</label>
+<label class="checkbox-row"><input type="checkbox" name="track_opens" value="on"<%= val("track_opens", 0) ? " checked" : "" %>> Suivre les ouvertures</label>

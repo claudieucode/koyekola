@@ -6,7 +6,7 @@ const { checkCtx, cleanText, audit, MarketingError } = require("../audience/shar
 const { compileTemplate, renderEmail } = require("./blocks");
 const { lintEmail } = require("./lint");
 const context = require("./context");
-const { resolveCourseBlocks } = require("./courses");
+const { resolveSiteBlocks } = require("./courses");
 const { CATEGORIES, isCategory } = require("./categories");
 
 const KEEP_VERSIONS = 20;
@@ -54,7 +54,7 @@ const fields = (norm, category = "") => ({ kind: norm.kind, category, subject: n
 function createTemplate(ctx, input = {}) {
   checkCtx(ctx);
   const name = cleanName(input.name);
-  const { normalized } = compileTemplate({ ...input, blocks: resolveCourseBlocks(ctx, input.blocks) }, { allowed: context.allowedFor(ctx) });
+  const { normalized } = compileTemplate({ ...input, blocks: resolveSiteBlocks(ctx, input.blocks) }, { allowed: context.allowedFor(ctx) });
   const category = cleanCategory(input.category);
   const repo = table(ctx);
   if (repo.count({ name }) > 0) throw new MarketingError("duplicate", "Un modèle porte déjà ce nom.");
@@ -123,7 +123,7 @@ function templateCategoryCounts(ctx) {
 // ne garde au plus qu'un instantané toutes les 10 minutes, pour que les 20 versions conservées restent utiles.
 const AUTOSAVE_SNAPSHOT_MS = 10 * 60 * 1000;
 function saveContent(ctx, current, merged, { expectedVersion, action, autosave = false }) {
-  const { normalized } = compileTemplate({ ...merged, blocks: resolveCourseBlocks(ctx, merged.blocks) }, { allowed: context.allowedFor(ctx) });
+  const { normalized } = compileTemplate({ ...merged, blocks: resolveSiteBlocks(ctx, merged.blocks) }, { allowed: context.allowedFor(ctx) });
   const name = cleanName(merged.name);
   const category = cleanCategory(merged.category === undefined ? current.category : merged.category);
   const repo = table(ctx);
@@ -220,7 +220,7 @@ function renderTemplate(ctx, id, contact, { urls, event } = {}) {
 // tolerant : fenêtre « Aperçu » (bloc incomplet montré à sa place, sans marques d'édition ; le reste est le vrai rendu)
 function previewTemplate(ctx, input, { contact, annotate = false, tolerant = false } = {}) {
   checkCtx(ctx);
-  const c = compileTemplate({ ...input, blocks: resolveCourseBlocks(ctx, input && input.blocks) }, { allowed: context.allowedFor(ctx), annotate, tolerant });
+  const c = compileTemplate({ ...input, blocks: resolveSiteBlocks(ctx, input && input.blocks) }, { allowed: context.allowedFor(ctx), annotate, tolerant });
   let data = context.sampleContext(ctx);
   if (contact) {
     const own = getContact(ctx, contact.id);

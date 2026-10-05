@@ -555,7 +555,7 @@ main { display: block; }
 .field-row { display: flex; gap: 16px; flex-wrap: wrap; }
 .field-row .field-group { flex: 1; min-width: min(140px, 100%); }
 
-input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=url], input[type=tel],
+input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=time], input[type=url], input[type=tel],
 textarea, select {
   font-family: inherit; font-size: 0.95rem; padding: 12px 14px; min-height: 44px; border: 1.5px solid var(--line);
   border-radius: var(--radius); color: var(--text); width: 100%; background-color: var(--card);

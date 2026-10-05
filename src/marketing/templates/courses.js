@@ -2,7 +2,7 @@
 // puis conservé dans le modèle. La compilation (blocks.js) n'a donc jamais besoin du LMS : un envoi de 100 000 messages n'en
 // dépend pas, et un prix modifié plus tard ne change pas un e-mail déjà rédigé (sauf « actualiser » explicite).
 const { MarketingError } = require("../errors");
-const { getCourse } = require("../bridge/catalog");
+const { getCourse, listPosts } = require("../bridge/catalog");
 
 const fail = (message) => new MarketingError("invalid_template", message);
 
@@ -27,4 +27,20 @@ function resolveCourseBlocks(ctx, blocks) {
   });
 }
 
-module.exports = { resolveCourseBlocks };
+// Bloc « Articles » : les derniers articles publiés du blog, pris en instantané à l'enregistrement (comme une formation) ;
+// « refresh » les relit. Dans une campagne RSS, l'instantané est remplacé à chaque envoi par les NOUVEAUX articles.
+function resolvePostBlocks(ctx, blocks) {
+  if (!Array.isArray(blocks)) return blocks;
+  return blocks.map((block) => {
+    if (!block || typeof block !== "object" || block.type !== "posts") return block;
+    if (Array.isArray(block.items) && block.items.length && block.refresh !== true) return block;
+    const count = Number.isInteger(block.count) && block.count >= 1 && block.count <= 10 ? block.count : 3;
+    const items = listPosts(ctx, { limit: count }).map(({ title, url, excerpt, image, date }) => ({ title, url, excerpt, image, date }));
+    const { refresh, ...rest } = block;
+    return { ...rest, items };
+  });
+}
+// Les deux instantanés (formations et articles), dans l'ordre où le serveur les prépare avant compilation
+const resolveSiteBlocks = (ctx, blocks) => resolvePostBlocks(ctx, resolveCourseBlocks(ctx, blocks));
+
+module.exports = { resolveCourseBlocks, resolvePostBlocks, resolveSiteBlocks };

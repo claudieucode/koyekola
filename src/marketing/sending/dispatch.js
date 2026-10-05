@@ -52,7 +52,8 @@ function trackedLinks(compiled, ctx) {
 
 // sendMode : « standard » (tout de suite, ou à scheduledAt), « local » (sendDate + sendTime dans le fuseau de chaque
 // contact) ou « optimized » (meilleure heure de chaque contact le jour sendDate) — voir sendtime.js.
-function startCampaign(ctx, id, { scheduledAt, now = Date.now(), sendMode = "standard", sendDate, sendTime } = {}) {
+// postItems (campagne RSS) : articles placés dans chaque bloc « Articles » du contenu figé au lancement.
+function startCampaign(ctx, id, { scheduledAt, now = Date.now(), sendMode = "standard", sendDate, sendTime, postItems = null } = {}) {
   checkCtx(ctx);
   const campaign = requireCampaign(ctx, id);
   if (campaign.status !== "draft") throw new MarketingError("invalid_state", "Cette campagne a déjà été lancée.");
@@ -62,11 +63,12 @@ function startCampaign(ctx, id, { scheduledAt, now = Date.now(), sendMode = "sta
   if (scheduledAt !== undefined && (!Number.isInteger(scheduledAt) || scheduledAt <= now || scheduledAt > now + MAX_SCHEDULE_MS)) {
     throw new MarketingError("invalid_field", "La date d'envoi doit être dans le futur (moins d'un an).");
   }
-  const check = preflight(ctx, id, { workerOn: true });
+  const check = preflight(ctx, id, { workerOn: true, postItems });
   if (!check.ready) throw new MarketingError("preflight_failed", check.errors.map((e) => e.message).join(" "));
 
   const template = templates.getTemplate(ctx, campaign.template_id);
   const snapshot = snapshotOf(template);
+  if (postItems) snapshot.blocks = snapshot.blocks.map((b) => (b && b.type === "posts" ? { ...b, items: postItems } : b));
   const compiled = compileTemplate(snapshot, { allowed: allowedFor(ctx) });
   // Test A/B : les liens de CHAQUE version sont suivis (un même lien partagé n'est enregistré qu'une fois)
   const isAb = abtest.isAbTest(campaign);
