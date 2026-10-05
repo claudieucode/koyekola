@@ -21,6 +21,8 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <%# Doublon de l'en-tête HTTP (le CDN de l'hébergeur remplace la politique envoyée par le serveur) %>
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title><%= post ? `Modifier l'article « ${post.title} »` : "Nouvel article" %> · KOLAKISA</title>

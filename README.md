@@ -30,9 +30,9 @@ Pour utiliser la plateforme avec votre propre identité, changez simplement le n
 
 Aucun prestataire de paiement n'est branché : une commande inscrit l'élève sans débiter de carte (aucun champ de carte n'est affiché).
 
-- **En production** (`NODE_ENV=production`), les commandes payantes sont **refusées** : la fiche d'une formation payante affiche « L'achat en ligne ouvre bientôt » et un lien vers le contact. Les commandes à 0 € (formations gratuites, code promo à 100 %) restent possibles.
-- `PAIEMENT_SIMULE=1` rouvre le mode démonstration en production (commande payante validée sans paiement) : à ne jamais utiliser avec de vrais clients.
-- En développement et dans les tests, le mode démonstration reste ouvert.
+- Par défaut, les commandes payantes sont **refusées** : la fiche d'une formation payante affiche « L'achat en ligne ouvre bientôt » et un lien vers le contact. Les commandes à 0 € (formations gratuites, code promo à 100 %) restent possibles.
+- `PAIEMENT_SIMULE=1` ouvre le mode démonstration (commande payante validée sans paiement) : à ne jamais utiliser avec de vrais clients.
+- Les tests automatiques gardent le mode démonstration.
 
 Pour accepter de vrais paiements, il faut brancher un prestataire (Stripe Checkout est le plus simple à intégrer).
 

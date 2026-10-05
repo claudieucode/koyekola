@@ -68,7 +68,29 @@ describe("B1 / B5 : production sans paiement réel", () => {
   });
 });
 
-describe("B5 / M2 / M3 : mode démonstration (hors production)", () => {
+describe("B1 : fermé par défaut, quel que soit l'environnement", () => {
+  for (const env of [{ NODE_ENV: "development" }, { NODE_ENV: "" }, { NODE_ENV: "production", PAIEMENT_SIMULE: "" }]) {
+    test(`NODE_ENV=${JSON.stringify(env.NODE_ENV)} : pas d'achat payant`, async () => {
+      const srv = await startServer(env);
+      try {
+        const prof = await loginInstructor(srv);
+        const course = await createCourse(prof, srv, { title: "Payante défaut", price: 12 });
+        assert.match((await new Client(srv.base).get(`/cours/${course.slug}`)).text, /L'achat en ligne ouvre bientôt/);
+      } finally { await srv.stop(); }
+    });
+  }
+  test("PAIEMENT_SIMULE=1 : mode démonstration ouvert", async () => {
+    const srv = await startServer({ NODE_ENV: "production", PAIEMENT_SIMULE: "1" });
+    try {
+      const prof = await loginInstructor(srv);
+      const course = await createCourse(prof, srv, { title: "Payante démo", price: 12 });
+      const s = await newStudent(srv);
+      assert.match((await s.get(`/cours/${course.slug}`)).text, /Acheter maintenant/);
+    } finally { await srv.stop(); }
+  });
+});
+
+describe("B5 / M2 / M3 : mode démonstration (tests)", () => {
   let srv, prof;
   before(async () => { srv = await startServer(); prof = await loginInstructor(srv); });
   after(() => srv.stop());
@@ -186,5 +208,7 @@ describe("finitions de l'audit", () => {
   test("S3 : politique de sécurité du contenu (plugins interdits, <base> et cadres étrangers bloqués)", async () => {
     const r = await prof.get("/catalogue");
     assert.equal(r.headers.get("content-security-policy"), "object-src 'none'; base-uri 'self'; frame-ancestors 'self'");
+    // Doublon dans la page : le CDN de l'hébergeur remplace l'en-tête HTTP
+    assert.match(r.text, /<meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">/);
   });
 });
