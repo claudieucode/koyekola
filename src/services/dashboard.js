@@ -1,6 +1,7 @@
 // « Mon espace » (tableau de bord du formateur) : apparence personnelle, navigation, statistiques réelles.
 // L'apparence est enregistrée sur le compte (table dashboard_prefs) ; elle ne concerne que l'espace de gestion.
 const db = require("../config/database");
+const { parisToday, parisDayStart, sqlUtc } = require("./gestion/common");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS dashboard_prefs (
@@ -243,11 +244,13 @@ function crumbs(path, title) {
 }
 
 // Statistiques réelles (formations du formateur) et tendance du mois en cours
-function stats(userId) {
+function stats(userId, now = new Date()) {
   const one = (sql, ...a) => db.prepare(sql).get(...a);
-  const courses = one("SELECT COUNT(*) n, SUM(published) pub, SUM(CASE WHEN created_at >= date('now', 'start of month') THEN 1 ELSE 0 END) month FROM courses WHERE instructor_id = ?", userId);
-  const students = one("SELECT COUNT(*) n, SUM(CASE WHEN e.created_at >= date('now', 'start of month') THEN 1 ELSE 0 END) month FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ?", userId);
-  const revenue = one("SELECT COALESCE(SUM(oi.price_cents), 0) total, COALESCE(SUM(CASE WHEN o.created_at >= date('now', 'start of month') THEN oi.price_cents ELSE 0 END), 0) month FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ?", userId);
+  // Début du mois à l'heure de Paris (comme le Centre de gestion) : une vente à 00:30 le 1er compte dans le nouveau mois
+  const monthStart = sqlUtc(parisDayStart(`${parisToday(now).slice(0, 8)}01`));
+  const courses = one("SELECT COUNT(*) n, SUM(published) pub, SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) month FROM courses WHERE instructor_id = ?", monthStart, userId);
+  const students = one("SELECT COUNT(*) n, SUM(CASE WHEN e.created_at >= ? THEN 1 ELSE 0 END) month FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ?", monthStart, userId);
+  const revenue = one("SELECT COALESCE(SUM(oi.price_cents), 0) total, COALESCE(SUM(CASE WHEN o.created_at >= ? THEN oi.price_cents ELSE 0 END), 0) month FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ?", monthStart, userId);
   return {
     courses: courses.n || 0, coursesMonth: courses.month || 0, published: courses.pub || 0, drafts: (courses.n || 0) - (courses.pub || 0),
     students: students.n || 0, studentsMonth: students.month || 0, revenueCents: revenue.total || 0, revenueMonthCents: revenue.month || 0,

@@ -28,7 +28,7 @@ function label(ymd, unit) {
 function report(instructorId, p) {
   const one = (sql, ...a) => db.prepare(sql).get(...a);
   const SALES = "FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ? AND o.created_at >= ? AND o.created_at < ?";
-  const sales = one(`SELECT COALESCE(SUM(oi.price_cents), 0) revenue, COUNT(DISTINCT o.id) orders, COUNT(*) items, COALESCE(SUM(CASE WHEN o.coupon_id IS NOT NULL THEN 1 ELSE 0 END), 0) promo_items ${SALES}`, instructorId, p.from, p.to);
+  const sales = one(`SELECT COALESCE(SUM(oi.price_cents), 0) revenue, COUNT(DISTINCT o.id) orders, COUNT(DISTINCT CASE WHEN o.total_cents > 0 THEN o.id END) paid_orders, COUNT(*) items, COALESCE(SUM(CASE WHEN o.coupon_id IS NOT NULL THEN 1 ELSE 0 END), 0) promo_items ${SALES}`, instructorId, p.from, p.to);
   const discount = one(`SELECT COALESCE(SUM(o.discount_cents), 0) d, COUNT(*) n FROM orders o JOIN coupons cp ON cp.id = o.coupon_id WHERE cp.instructor_id = ? AND o.created_at >= ? AND o.created_at < ?`, instructorId, p.from, p.to);
   const enrollments = one("SELECT COUNT(*) n, COUNT(DISTINCT e.user_id) students FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ? AND e.created_at >= ? AND e.created_at < ?", instructorId, p.from, p.to);
   const newStudents = one(`SELECT COUNT(*) n FROM (SELECT e.user_id, MIN(e.created_at) first FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ? GROUP BY e.user_id) WHERE first >= ? AND first < ?`, instructorId, p.from, p.to).n;
@@ -59,7 +59,7 @@ function report(instructorId, p) {
   const blogViews = one("SELECT COALESCE(SUM(views), 0) v FROM posts WHERE published = 1").v;
 
   return {
-    kpis: { revenue: sales.revenue, orders: sales.orders, average: sales.orders ? Math.round(sales.revenue / sales.orders) : null, enrollments: enrollments.n, newStudents, lessons, reviews: reviews.n, rating: reviews.avg ? Math.round(reviews.avg * 10) / 10 : null, discount: discount.d, promoOrders: discount.n },
+    kpis: { revenue: sales.revenue, orders: sales.orders, average: sales.paid_orders ? Math.round(sales.revenue / sales.paid_orders) : null, enrollments: enrollments.n, newStudents, lessons, reviews: reviews.n, rating: reviews.avg ? Math.round(reviews.avg * 10) / 10 : null, discount: discount.d, promoOrders: discount.n },
     unit, labels: buckets.map((b) => b.label), revenueSeries, enrollSeries, courses, blogViews,
   };
 }

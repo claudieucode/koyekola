@@ -14,7 +14,7 @@
 
 <section class="dash-kpis g-kpis" aria-label="Indicateurs de la période">
   <div class="kpi"><span class="kpi-label">Revenus</span><span class="kpi-value"><%= formatAmount(K.revenue) %></span><span class="kpi-trend"><%= K.discount ? `${formatAmount(K.discount)} de remises` : "Montants réellement payés" %></span></div>
-  <div class="kpi"><span class="kpi-label">Commandes</span><span class="kpi-value"><%= K.orders %></span><span class="kpi-trend"><%= K.average != null ? `Panier moyen ${formatAmount(K.average)}` : "Aucune commande" %></span></div>
+  <div class="kpi"><span class="kpi-label">Commandes</span><span class="kpi-value"><%= K.orders %></span><span class="kpi-trend"><%= K.average != null ? `Panier moyen ${formatAmount(K.average)} (commandes payantes)` : "Aucune commande payante" %></span></div>
   <div class="kpi"><span class="kpi-label">Inscriptions</span><span class="kpi-value"><%= K.enrollments %></span><span class="kpi-trend"><%= K.newStudents %> nouvel(s) élève(s)</span></div>
   <div class="kpi"><span class="kpi-label">Leçons terminées</span><span class="kpi-value"><%= K.lessons %></span><span class="kpi-trend"><%= K.reviews ? `${K.reviews} avis · ${String(K.rating).replace(".", ",")}/5` : "Aucun avis" %></span></div>
 </section>
