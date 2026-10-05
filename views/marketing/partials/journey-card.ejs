@@ -7,7 +7,7 @@
   const channelText = { email: "E-mail", sms: "SMS", email_sms: "E-mail + SMS" }[e.channel];
   const days = e.duration;
   const span = days < 1 ? "" : days === 1 ? " · sur 1 jour" : ` · sur ${Number.isInteger(days) ? days : Math.ceil(days)} jours`;
-  const needsSetup = (j.needs || []).includes("list") || (j.needs || []).includes("site_event");
+  const needsSetup = (j.needs || []).some((n) => ["list", "site_event", "course"].includes(n));
 %>
 <article class="mk-lib-card mk-journey-card<%= v.usable ? "" : " mk-journey-off" %>" data-journey="<%= j.key %>">
   <div class="mk-lib-body">

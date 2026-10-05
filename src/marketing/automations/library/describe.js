@@ -16,7 +16,7 @@ const target = (t, i) => (t === "exit" ? "exit" : t === undefined || t === "next
 function ruleText(rule) {
   const f = String(rule.field);
   if (f.startsWith("event:")) {
-    const n = noun(f.slice(6));
+    const n = noun(f.slice(6)) + (rule.course !== undefined ? " pour cette formation" : "");
     switch (rule.cmp) {
       case "within_days": return `${n} dans les ${rule.value} derniers jours`;
       case "not_within_days": return `aucune ${n} depuis ${rule.value} jours`;

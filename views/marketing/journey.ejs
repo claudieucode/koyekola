@@ -3,6 +3,7 @@
   const j = journey; const canWrite = mk.can("automations.write");
   const tone = { ok: "mk-status-ok", warn: "mk-status-warn", info: "mk-status-info", tracking: "mk-status-track", off: "mk-status-off" }[j.tone || (j.status === "tracking" ? "tracking" : "off")] || "";
   const needsList = (j.needs || []).includes("list");
+  const needsCourse = (j.needs || []).includes("course");
   const back = "/marketing/automatisations/parcours/" + j.key;
   // Classes complètes (jamais assemblées en morceaux : chaque classe doit exister telle quelle dans la feuille de style)
   const flowClass = { email: "mk-flow-email", sms: "mk-flow-sms", wait: "mk-flow-wait", condition: "mk-flow-condition", action: "mk-flow-action", end: "mk-flow-end" };
@@ -41,7 +42,13 @@
                   <% } else { %><p class="field-hint">Aucune liste n'existe encore. <a href="/marketing/listes">Créez-en une</a> (par exemple celle de votre formulaire), puis revenez ici.</p><% } %>
                 </div>
               <% } %>
-              <button type="submit" class="btn btn-primary"<%- needsList && !j.lists.length ? " disabled" : "" %>>Utiliser ce parcours</button>
+              <% if (needsCourse) { %>
+                <div class="field-group"><label for="j-formation">Formation concernée</label>
+                  <% if (j.courses.length) { %><select id="j-formation" name="formation" required><option value="">Choisir une formation…</option><% j.courses.forEach((c) => { %><option value="<%= c.id %>"><%= c.title %></option><% }) %></select>
+                  <% } else { %><p class="field-hint">Aucune formation n'existe encore. <a href="/formateur/formations">Créez-en une</a>, puis revenez ici.</p><% } %>
+                </div>
+              <% } %>
+              <button type="submit" class="btn btn-primary"<%- (needsList && !j.lists.length) || (needsCourse && !j.courses.length) ? " disabled" : "" %>>Utiliser ce parcours</button>
             </form>
           <% } else { %><p class="field-hint">Vous pouvez consulter ce parcours ; seul un membre autorisé à modifier les automatisations peut le créer.</p><% } %>
         </div>

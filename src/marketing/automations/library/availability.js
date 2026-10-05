@@ -64,6 +64,8 @@ function check(j) {
   if (filter.key && !(known && TRIGGERS[event].filters.some(([k]) => k === filter.key))) bad(`filtre « ${filter.key} » non pris en charge par le déclencheur « ${event} »`);
   if (!known && !(j.needs || []).includes("site_event")) bad("un événement personnalisé exige une configuration de l'API (needs « site_event »)");
   if (filter.value === "@liste" && !(j.needs || []).includes("list")) bad("filtre de liste sans paramètre « list »");
+  if (filter.value === "@formation" && !(j.needs || []).includes("course")) bad("filtre de formation sans paramètre « course »");
+  if ((j.needs || []).includes("course") && !(filter.key === "courseId" && filter.value === "@formation")) bad("paramètre « course » sans filtre de formation sur le déclencheur");
 
   // Étapes
   if (!steps.length) bad("aucune étape");
@@ -88,6 +90,7 @@ function check(j) {
       if (s.check === "segment") {
         for (const r of (s.definition && s.definition.rules) || []) {
           const f = String(r.field || "");
+          if (r.course !== undefined && !(r.course === "@formation" && (j.needs || []).includes("course") && f.startsWith("event:"))) bad(`${at} : formation d'une règle non pilotée par le paramètre « course »`);
           if (f.startsWith("event:")) {
             if (!LMS_EVENTS.has(f.slice(6))) bad(`${at} : événement « ${f.slice(6)} » absent des segments`);
             if (!EVENT_CMPS.has(r.cmp)) bad(`${at} : comparateur « ${r.cmp} » invalide pour un événement`);
@@ -140,6 +143,7 @@ function requirements(j, env) {
   if (steps.some((s) => s.type === "condition" && s.check === "segment")) out.push({ label: "Segments (conditions)", ok: true, detail: "moteur de segments existant" });
   if (steps.some((s) => ["wait", "wait_for_event"].includes(s.type))) out.push({ label: "Planificateur (worker marketing)", ok: env.workerOn === undefined ? null : env.workerOn, detail: env.workerOn === false ? "arrêté sur ce serveur : le parcours ne s'exécutera pas tant qu'il n'est pas rétabli" : "exécute les attentes et les envois" });
   if ((j.needs || []).includes("list")) out.push({ label: "Liste de contacts", ok: null, detail: "à choisir au moment de l'utilisation" });
+  if ((j.needs || []).includes("course")) out.push({ label: "Formation concernée", ok: null, detail: "à choisir au moment de l'utilisation : le parcours ne concerne que cette formation" });
   if ((j.needs || []).includes("site_event")) out.push({ label: "Événement envoyé par votre site", ok: null, detail: j.siteEvent ? j.siteEvent.help : "à envoyer à l'API Événements" });
   return out;
 }
@@ -164,6 +168,7 @@ function evaluate(j, env) {
   const needs = j.needs || [];
   const missing = [];
   if (needs.includes("list")) missing.push("Choisir la liste concernée au moment de l'utilisation.");
+  if (needs.includes("course")) missing.push("Choisir la formation concernée au moment de l'utilisation.");
   if (needs.includes("site_event")) missing.push(j.siteEvent ? j.siteEvent.help : "Votre site doit envoyer l'événement déclencheur à l'API.");
   if ((j.steps || []).some((s) => s.type === "sms") && !env.smsReady) missing.push("Régler le fournisseur SMS (SMS → Réglages) avant l'activation.");
   if (missing.length) return done("config", { missing });

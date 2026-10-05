@@ -61,14 +61,18 @@ module.exports = ({ db }) => {
     } catch (error) { next(error); }
   });
   router.get("/automatisations/parcours/:key", need("automations.read"), (req, res) => {
-    const journey = journeys.detailFor(req.mk.ctx, req.params.key, { workerOn: workerOn() });
+    // Formations proposées au sélecteur : lues ici (couche web), jamais par le module marketing lui-même
+    const courses = db.prepare("SELECT id, title FROM courses ORDER BY title COLLATE NOCASE LIMIT 300").all();
+    const journey = journeys.detailFor(req.mk.ctx, req.params.key, { workerOn: workerOn(), courses });
     if (!journey) return res.status(404).render("error", { message: "Parcours introuvable." });
     res.render("marketing/journey", { title: journey.label, active: "journeys", journey, workerOn: workerOn() });
   });
   router.post("/automatisations/parcours/:key", need("automations.write"), (req, res, next) => {
     let created = null;
     attempt(req, res, next, () => (created ? `/marketing/automatisations/${created.id}` : `/marketing/automatisations/parcours/${encodeURIComponent(req.params.key)}`), () => {
-      created = journeys.createJourney(req.mk.ctx, req.params.key, { listId: req.body.liste });
+      const courseId = intOrNull(req.body.formation);
+      if (courseId && !db.prepare("SELECT 1 FROM courses WHERE id = ?").get(courseId)) throw new MarketingError("not_found", "Formation introuvable.");
+      created = journeys.createJourney(req.mk.ctx, req.params.key, { listId: req.body.liste, courseId });
       const n = created.steps.filter((s) => s.type === "email").length;
       const k = created.steps.filter((s) => s.type === "sms").length;
       if (!n) return `Parcours créé en brouillon avec ${k} SMS. Relisez chaque SMS (cliquez sur l'étape), ajustez les délais si besoin, puis activez-le : rien n'est envoyé avant.`;

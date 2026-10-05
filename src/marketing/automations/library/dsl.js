@@ -41,6 +41,13 @@ const atLeast = (event, n) => all(rule(`event:${event}`, "at_least", n));
 const spentAtLeast = (euros) => all(rule("lms_spent", "gte", euros));
 const hasBought = () => all(rule("lms_spent", "not_empty"));
 const isSubscribed = () => all(rule("status", "eq", "subscribed"));
+// Règles limitées à LA formation choisie à l'utilisation : le repère « @formation » devient son identifiant (journeys.js#instantiate)
+const COURSE = "@formation";
+const forCourse = (field, cmp, value) => ({ ...rule(field, cmp, value), course: COURSE });
+const happenedForCourse = (event, days) => all(forCourse(`event:${event}`, "within_days", days));
+const notWithinForCourse = (event, days) => all(forCourse(`event:${event}`, "not_within_days", days));
+const neverForCourse = (event) => all(forCourse(`event:${event}`, "never"));
+const atLeastForCourse = (event, n) => all(forCourse(`event:${event}`, "at_least", n));
 
 // ---------- Étapes ----------
 // yes / no : « @repère », « exit » (sortie du parcours) ou « next » (étape suivante)
@@ -81,4 +88,4 @@ function flow(nodes) {
 // Texte de l'étape « retirer de la liste » : l'identifiant de la liste est posé à l'utilisation (voir library/index.js)
 const LIST_PLACEHOLDER = "@liste";
 
-module.exports = { HELLO, mail, sms, emailBlocks, smsBody, ctaUrl, rule, all, happened, notWithin, never, atLeast, spentAtLeast, hasBought, isSubscribed, step, flow, LIST_PLACEHOLDER };
+module.exports = { HELLO, mail, sms, emailBlocks, smsBody, ctaUrl, rule, all, forCourse, happened, notWithin, never, atLeast, spentAtLeast, hasBought, isSubscribed, COURSE, happenedForCourse, notWithinForCourse, neverForCourse, atLeastForCourse, step, flow, LIST_PLACEHOLDER };

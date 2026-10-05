@@ -175,7 +175,7 @@ describe("bibliothèque : utilisation, copie et exécution réelle", () => {
   test("« Utiliser » copie le modèle : le modèle de la bibliothèque reste strictement identique", () => {
     const before = JSON.stringify(journeys.JOURNEYS);
     const listId = audience.createList(A, { name: "Formulaire" }).id;
-    for (const j of usable()) journeys.createJourney(A, j.key, { listId });
+    for (const j of usable()) journeys.createJourney(A, j.key, { listId, courseId: 3 });
     assert.equal(JSON.stringify(journeys.JOURNEYS), before, "aucun modèle modifié");
     assert.ok(Object.isFrozen(journeys.JOURNEYS[0]));
     // Modifier la copie ne touche pas le modèle
@@ -208,6 +208,41 @@ describe("bibliothèque : utilisation, copie et exécution réelle", () => {
     assert.ok(clean.steps.some((s) => s.type === "remove_from_list" && s.listId === list.id));
   });
 
+  test("parcours d'une formation précise : formation obligatoire, posée dans le déclencheur ET dans les conditions", () => {
+    assert.equal(code(() => journeys.createJourney(A, "inactivite-formation-choisie")), "invalid_field", "formation non choisie");
+    assert.equal(m.db.prepare("SELECT COUNT(*) n FROM mk_automations").get().n, 0, "rien créé en cas d'erreur");
+    assert.equal(m.db.prepare("SELECT COUNT(*) n FROM mk_templates").get().n, 0, "aucun modèle orphelin");
+    const a = journeys.createJourney(A, "inactivite-formation-choisie", { courseId: 7 });
+    assert.deepEqual(a.triggers[0], { event: "lms.lesson_completed", filter: { key: "courseId", value: "7" } });
+    const cond = a.steps.find((s) => s.type === "condition");
+    assert.equal(cond.definition.rules[0].course, 7, "la condition ne compte que les leçons de CETTE formation");
+    assert.equal(JSON.stringify(journeys.byKey("inactivite-formation-choisie").steps).includes("@formation"), true, "le modèle garde son repère");
+    assert.ok(availability.evaluate(journeys.byKey("inactivite-formation-choisie"), { smsReady: true }).missing.some((x) => /formation/i.test(x)));
+  });
+
+  test("isolation entre formations : seuls les élèves de la formation choisie entrent ; une leçon d'une autre formation ne compte pas", async () => {
+    const act = (key, courseId) => { const a = journeys.createJourney(A, key, { courseId }); auto.activateAutomation(A, a.id, { workerOn: true, smtpAvailable: true }); return a; };
+    const rec = (name, c, at, courseId, key) => m.db.prepare("INSERT INTO mk_events (organization_id, name, email, contact_id, source, occurred_at, metadata, idempotency_key, created_at) VALUES (1, ?, ?, ?, 'lms', ?, ?, ?, ?)").run(name, c.email, c.id, at, JSON.stringify({ courseId }), key, at);
+    const a = act("inactivite-formation-choisie", 3);
+    const ev = (c, courseId, id) => ({ id, organizationId: 1, name: "lms.lesson_completed", contactId: c.id, email: c.email, metadata: { courseId, courseTitle: "Photo", title: "Photo" } });
+    const wrong = consenting("autre@ex.fr");
+    assert.equal(auto.onEvent(A, ev(wrong, 4, 1)), 0, "leçon d'une autre formation : n'entre pas");
+    const right = consenting("bon@ex.fr");
+    assert.equal(auto.onEvent(A, ev(right, 3, 2)), 1, "leçon de la formation choisie : entre");
+    // Il continue, mais dans une AUTRE formation : cela ne compte pas comme une reprise de la formation choisie
+    const B = T0 + 20 * DAY;
+    rec("lms.lesson_completed", right, T0, 3, "r1");
+    rec("lms.lesson_completed", right, T0 + 10 * DAY, 4, "r2");
+    clock = T0;
+    const run = m.db.prepare("SELECT id FROM mk_automation_runs WHERE contact_id = ? AND automation_id = ?").get(right.id, a.id);
+    await auto.runAutomation(A, run.id, { provider, now: T0 });
+    clock = B;
+    const sent = provider.sent.length;
+    await auto.runAutomation(A, run.id, { provider, now: B });
+    assert.equal(provider.sent.length, sent + 1, "rien dans la formation choisie depuis 14 jours : e-mail de reprise, malgré la leçon d'une autre formation");
+    assert.match(provider.sent.at(-1).subject, /Reprenez Photo|Reprenez/);
+  });
+
   test("parcours indisponibles : jamais créés (suivi nécessaire ou donnée absente)", () => {
     for (const j of journeys.JOURNEYS.filter((x) => x.unavailable)) assert.equal(code(() => journeys.createJourney(A, j.key)), "invalid_state", j.key);
     assert.equal(m.db.prepare("SELECT COUNT(*) n FROM mk_automations").get().n, 0);
@@ -218,7 +253,7 @@ describe("bibliothèque : utilisation, copie et exécution réelle", () => {
     let n = 0;
     for (const j of usable()) {
       clock += 400 * DAY; // le temps simulé ne revient jamais en arrière (la cadence d'envoi dépend de l'horloge)
-      const a = journeys.createJourney(A, j.key, { listId });
+      const a = journeys.createJourney(A, j.key, { listId, courseId: 3 });
       auto.activateAutomation(A, a.id, { workerOn: true, smtpAvailable: true });
       const c = consenting(`${j.key}@ex.fr`);
       assert.ok(auto.onEvent(A, eventFor(a, c)) >= 1, `${j.key} : le contact entre dans le parcours`);
@@ -245,7 +280,7 @@ describe("bibliothèque : utilisation, copie et exécution réelle", () => {
     let paths = 0;
     for (const j of usable()) {
       clock += 400 * DAY;
-      const a = journeys.createJourney(A, j.key, { listId });
+      const a = journeys.createJourney(A, j.key, { listId, courseId: 3 });
       auto.activateAutomation(A, a.id, { workerOn: true, smtpAvailable: true });
       const c = consenting(`actif-${j.key}@ex.fr`);
       // l'activité du contact : chaque événement KOLAKISA, deux fois, et un montant dépensé
@@ -564,6 +599,22 @@ describe("bibliothèque : pages et droits", () => {
     assert.match(ok.location, /^\/marketing\/automatisations\/\d+$/);
     const trig = JSON.parse(rows().prepare("SELECT triggers FROM mk_automations ORDER BY id DESC LIMIT 1").get().triggers);
     assert.equal(trig[0].filter.value, String(list.lastInsertRowid));
+  });
+
+  test("parcours d'une formation précise : sélecteur de formation, refus sans formation, création avec formation", async () => {
+    const page = await boss.get(`${base}/inactivite-formation-choisie`);
+    assert.match(page.text, /Formation concernée/);
+    rows().prepare("INSERT INTO courses (instructor_id, title, slug, description, price_cents, level, published) VALUES (1, 'Photo pour débutants', 'photo-debutants', 'd', 1000, 'debutant', 1)").run();
+    const courseId = rows().prepare("SELECT id FROM courses WHERE slug = 'photo-debutants'").get().id;
+    assert.match((await boss.get(`${base}/inactivite-formation-choisie`)).text, /Photo pour débutants/);
+    const bad = await boss.post(`${base}/inactivite-formation-choisie`, {});
+    assert.equal(bad.location, `${base}/inactivite-formation-choisie`, "retour sur l'aperçu avec le message");
+    const unknown = await boss.post(`${base}/inactivite-formation-choisie`, { formation: "99999" });
+    assert.equal(unknown.location, `${base}/inactivite-formation-choisie`, "formation inconnue refusée");
+    const ok = await boss.post(`${base}/inactivite-formation-choisie`, { formation: String(courseId) });
+    assert.match(ok.location, /^\/marketing\/automatisations\/\d+$/);
+    const trig = JSON.parse(rows().prepare("SELECT triggers FROM mk_automations ORDER BY id DESC LIMIT 1").get().triggers);
+    assert.equal(trig[0].filter.value, String(courseId));
   });
 
   test("parcours à événement du site : consigne d'envoi à l'API affichée", async () => {

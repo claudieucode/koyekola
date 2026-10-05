@@ -25,7 +25,7 @@ const GOALS = {
 };
 const CHANNELS = { email: "E-mail", sms: "SMS", email_sms: "E-mail + SMS" };
 
-const FAMILIES = [require("./welcome"), require("./courses"), require("./commerce"), require("./reengage"), require("./leads"), require("./sms"), require("./site"), require("./unavailable")];
+const FAMILIES = [require("./welcome"), require("./courses"), require("./formation"), require("./commerce"), require("./reengage"), require("./leads"), require("./sms"), require("./site"), require("./unavailable")];
 
 function deepFreeze(value) {
   if (value && typeof value === "object" && !Object.isFrozen(value)) { Object.freeze(value); for (const v of Object.values(value)) deepFreeze(v); }

@@ -40,7 +40,7 @@ describe("parcours : création", () => {
     assert.ok(available.length >= 8);
     const listId = audience.createList(A, { name: "Ma liste" }).id; // pour les parcours qui concernent une liste choisie
     for (const j of available) {
-      const a = journeys.createJourney(A, j.key, { listId });
+      const a = journeys.createJourney(A, j.key, { listId, courseId: 3 });
       assert.equal(a.status, "draft", j.key);
       assert.equal(a.kind, j.kind);
       assert.deepEqual(a.triggers.map((t) => t.event), [j.trigger.event]);

@@ -325,11 +325,11 @@ function browseLibrary(ctx, query, { workerOn } = {}) {
   const env = availability.environment(ctx, { workerOn });
   return browser.browse({ journeys: JOURNEYS, describe: describeStatic, env, favorites: store.favoriteKeys(ctx), usage: store.usageCounts(ctx), recents: store.recentKeys(ctx, 8), query });
 }
-function detailFor(ctx, key, { workerOn } = {}) {
+function detailFor(ctx, key, { workerOn, courses = [] } = {}) {
   const j = byKey(key);
   if (!j) return null;
   const env = availability.environment(ctx, { workerOn });
-  return { ...summary(j, env), favorite: store.favoriteKeys(ctx).has(key), uses: store.usageCounts(ctx).get(key) || 0, lists: j.needs && j.needs.includes("list") ? require("../audience/lists").listLists(ctx).map((l) => ({ id: l.id, name: l.name })) : [] };
+  return { ...summary(j, env), favorite: store.favoriteKeys(ctx).has(key), uses: store.usageCounts(ctx).get(key) || 0, lists: j.needs && j.needs.includes("list") ? require("../audience/lists").listLists(ctx).map((l) => ({ id: l.id, name: l.name })) : [], courses: j.needs && j.needs.includes("course") ? courses : [] };
 }
 
 // Nom libre : « Base », sinon « Base (2) », « Base (3) »… (les noms de modèles et de scénarios sont uniques)
@@ -343,7 +343,9 @@ function freeName(ctx, table, base) {
 // Copie du modèle (jamais le modèle lui-même) avec la liste choisie à la place du repère « @liste »
 function instantiate(j, params) {
   const listId = Number.parseInt(params && params.listId, 10);
+  const courseId = Number.parseInt(params && params.courseId, 10);
   const needsList = (j.needs || []).includes("list");
+  const needsCourse = (j.needs || []).includes("course");
   const copy = (v) => JSON.parse(JSON.stringify(v));
   const trigger = copy(j.trigger);
   const steps = copy(j.steps);
@@ -352,7 +354,12 @@ function instantiate(j, params) {
     if (trigger.filter && trigger.filter.value === "@liste") trigger.filter = { key: trigger.filter.key, value: String(listId) };
     for (const s of steps) if (s.listId === "@liste") s.listId = listId;
   }
-  return { trigger, steps, listId: needsList ? listId : null };
+  if (needsCourse) {
+    if (!Number.isInteger(courseId) || courseId < 1) throw new MarketingError("invalid_field", "Choisissez la formation concernée par ce parcours.");
+    if (trigger.filter && trigger.filter.value === "@formation") trigger.filter = { key: trigger.filter.key, value: String(courseId) };
+    for (const s of steps) if (s.type === "condition" && s.definition) for (const r of s.definition.rules) if (r.course === "@formation") r.course = courseId;
+  }
+  return { trigger, steps, listId: needsList ? listId : null, courseId: needsCourse ? courseId : null };
 }
 
 // Crée les modèles d'e-mails et le scénario (brouillon), tout ou rien. Renvoie le scénario créé.
