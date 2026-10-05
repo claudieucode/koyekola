@@ -205,7 +205,7 @@ a.mk-stat:hover { border-color: var(--accent); }
 .mk-filter-count { color: var(--muted); font-size: 0.9rem; margin-left: auto; }
 
 /* ===== Tableau de données ===== */
-.mk-datatable th a { color: inherit; text-decoration: none; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.mk-datatable th a { color: inherit; text-decoration: none; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; min-height: 24px; }
 /* Indicateur de tri : discret par défaut sur toute colonne triable (fait comprendre qu'elle l'est SANS survol),
    plus marqué et coloré sur la colonne active — jamais un simple caractère seul dans le texte du libellé. */
 .mk-datatable th a::after { content: "⇅"; font-size: 0.76rem; color: var(--mk-border-strong); }
@@ -230,6 +230,10 @@ a.mk-stat:hover { border-color: var(--accent); }
   .mk-datatable tr { border: 1px solid var(--mk-border); border-radius: var(--mk-r); margin: 0 0 12px; background: var(--mk-surface); overflow: hidden; }
   .mk-datatable td { border-top: 0; padding: 6px 12px; display: flex; gap: 12px; justify-content: space-between; }
   .mk-datatable td::before { content: attr(data-label); font-weight: 700; color: var(--muted); font-size: 0.8rem; flex: none; }
+  /* Case de sélection en mode carte : jamais écrasée par la ligne flexible, cible tactile de 24 px (WCAG 2.5.8) */
+  .mk-datatable td > input[type="checkbox"] { flex: none; inline-size: 24px; block-size: 24px; margin: 0; }
+  /* Lien seul dans une cellule (adresse, nom…) : au moins 24 px de haut */
+  .mk-datatable td > a:only-child { display: inline-flex; align-items: center; min-height: 24px; }
   /* Ligne en carte : la cellule a la largeur de la carte, la pastille peut donc revenir à la ligne */
   .mk-datatable td > .mk-status { white-space: normal; overflow-wrap: anywhere; }
   .mk-datatable td.mk-num { text-align: right; }
