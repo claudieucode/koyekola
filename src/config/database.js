@@ -473,4 +473,23 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_checkout_sessions_user ON checkout_sessions(user_id, status);
 `);
 
+// Offres : prix spécial d'une formation (lancement, soldes) pendant une période. Le prix standard reste courses.price_cents ;
+// une offre ne peut que le BAISSER (voir src/services/pricing.js). instructor_id = propriétaire (comme courses et coupons).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS offers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    instructor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    price_cents INTEGER NOT NULL CHECK (price_cents >= 0),
+    starts_at TEXT,                                 -- UTC « AAAA-MM-JJ HH:MM:SS » ; vide = déjà commencée
+    ends_at TEXT,                                   -- UTC, borne exclue ; vide = sans fin
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (starts_at IS NULL OR ends_at IS NULL OR ends_at > starts_at)
+  );
+  CREATE INDEX IF NOT EXISTS idx_offers_course ON offers(course_id, active);
+`);
+
 module.exports = db;
