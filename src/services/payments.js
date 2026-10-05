@@ -110,10 +110,13 @@ function fulfillCheckout(db, stripeSession) {
     const info = db.prepare("INSERT INTO orders (user_id, total_cents, coupon_id, coupon_code, discount_cents) VALUES (?, ?, ?, ?, ?)")
       .run(cs.user_id, cs.total_cents, couponId, cs.coupon_code, cs.discount_cents);
     orderId = Number(info.lastInsertRowid);
-    const insertItem = db.prepare("INSERT INTO order_items (order_id, course_id, price_cents, list_price_cents) VALUES (?, ?, ?, ?)");
+    const insertItem = db.prepare("INSERT INTO order_items (order_id, course_id, price_cents, list_price_cents, offer_id, offer_name) VALUES (?, ?, ?, ?, ?, ?)");
+    const offerExists = db.prepare("SELECT id FROM offers WHERE id = ?");
     const insertEnrollment = db.prepare("INSERT OR IGNORE INTO enrollments (user_id, course_id) VALUES (?, ?)");
     for (const item of items) {
-      insertItem.run(orderId, item.course_id, item.price_cents, item.list_price_cents);
+      // Sessions créées avant les offres : pas d'offer_id (undefined → vide). Offre supprimée depuis : le nom reste, l'id non.
+      const offerId = item.offer_id && offerExists.get(item.offer_id) ? item.offer_id : null;
+      insertItem.run(orderId, item.course_id, item.price_cents, item.list_price_cents, offerId, item.offer_name ?? null);
       insertEnrollment.run(cs.user_id, item.course_id);
     }
     db.prepare("UPDATE checkout_sessions SET status = 'paid', order_id = ?, paid_at = datetime('now'), stripe_session_id = COALESCE(stripe_session_id, ?), stripe_payment_intent = ? WHERE id = ?")

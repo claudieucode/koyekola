@@ -268,7 +268,7 @@
         <% if (course.thumbnail_path) { %><img src="<%= course.thumbnail_path %>" alt="" decoding="async" width="640" height="360"><% } else { %><%- icon('book', { size: 40 }) %><% } %>
       </div>
       <div class="purchase-card-body">
-        <div class="purchase-price <%= course.price_cents ? '' : 'is-free' %>"><%= formatPrice(course.price_cents) %></div>
+        <div class="purchase-price <%= course.price_cents ? '' : 'is-free' %>"><%- include("partials/price", { course }) %><% if (course.offer) { %><p class="field-hint" style="margin:6px 0 0;">Offre « <%= course.offer.name %> »<%= course.offer.ends_day ? " · jusqu'au " + formatDate(course.offer.ends_day + " 12:00:00") + " inclus" : "" %></p><% } %></div>
 
         <div class="purchase-actions">
           <% if (isOwner) { %>

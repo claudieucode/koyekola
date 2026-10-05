@@ -56,7 +56,7 @@
           <li class="dpanel">
             <div class="g-coupon-head"><strong class="g-code"><%= o.name %></strong><span class="dash-status <%= o.state.key === "on" ? "is-published" : o.state.key === "off" ? "is-archived" : "is-draft" %>"><%= o.state.label %></span></div>
             <p class="g-coupon-meta"><%= formatPrice(o.price_cents) %> <s><%= formatPrice(course.price_cents) %></s>
-              <% if (o.starts_at || o.ends_at) { %><br><%= o.days.starts_at ? `Du ${formatDate(o.days.starts_at)}` : "Dès maintenant" %><%= o.days.ends_at ? ` jusqu'au ${formatDate(o.days.ends_at)} inclus` : "" %><% } %></p>
+              <% if (o.starts_at || o.ends_at) { %><br><%= o.days.starts_at ? `Du ${formatDate(o.days.starts_at + " 12:00:00")}` : "Dès maintenant" %><%= o.days.ends_at ? ` jusqu'au ${formatDate(o.days.ends_at + " 12:00:00")} inclus` : "" %><% } %></p>
             <div class="g-row-actions">
               <a class="btn btn-outline btn-sm" href="/formateur/cours/<%= course.id %>/offres?modifier=<%= o.id %>">Modifier</a>
               <form method="post" action="/formateur/cours/<%= course.id %>/offres/<%= o.id %>/<%= o.active ? "desactiver" : "activer" %>"><button type="submit" class="btn btn-outline btn-sm"><%= o.active ? "Désactiver" : "Activer" %></button></form>

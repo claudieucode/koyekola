@@ -11,6 +11,9 @@ const { courseTexts, htmlText } = require("../utils/richText");
 const { listHeroImages } = require("../utils/heroImages");
 const { siteBase } = require("../utils/seo");
 const seoPages = require("../seo/pages");
+const { applyEffectivePrices } = require("../services/pricing");
+const { effectivePriceSql, nowParams } = require("../services/pricingSql");
+const { dayOf } = require("../services/offers");
 
 const SITE_NAME = "KOLAKISA";
 
@@ -24,6 +27,15 @@ function isoDuration(minutes) {
 
 const router = express.Router();
 
+// Prix effectif (offre en cours comprise) sur une formation déjà chargée : price_cents = prix à payer, standard_price_cents = prix habituel
+function priceInPlace(course) {
+  const p = applyEffectivePrices([course])[0];
+  course.standard_price_cents = p.standard_price_cents;
+  course.price_cents = p.price_cents;
+  course.offer = p.offer ? { ...p.offer, ends_day: p.offer.ends_at ? dayOf(p.offer.ends_at, true) : "" } : null;
+  return course;
+}
+
 const COURSE_SELECT = `
   SELECT courses.*, users.username AS instructor_name,
     (SELECT COUNT(*) FROM enrollments WHERE enrollments.course_id = courses.id) AS student_count,
@@ -36,8 +48,8 @@ const COURSE_SELECT = `
 `;
 
 router.get("/", (req, res) => {
-  const featured = db.prepare(`${COURSE_SELECT} WHERE courses.published = 1 ORDER BY student_count DESC, courses.created_at DESC LIMIT 6`).all();
-  const recent = db.prepare(`${COURSE_SELECT} WHERE courses.published = 1 ORDER BY courses.created_at DESC LIMIT 8`).all();
+  const featured = applyEffectivePrices(db.prepare(`${COURSE_SELECT} WHERE courses.published = 1 ORDER BY student_count DESC, courses.created_at DESC LIMIT 6`).all());
+  const recent = applyEffectivePrices(db.prepare(`${COURSE_SELECT} WHERE courses.published = 1 ORDER BY courses.created_at DESC LIMIT 8`).all());
   const categories = db.prepare("SELECT category, COUNT(*) AS count FROM courses WHERE published = 1 GROUP BY category ORDER BY count DESC").all();
   const stats = {
     courseCount: db.prepare("SELECT COUNT(*) c FROM courses WHERE published = 1").get().c,
@@ -83,16 +95,18 @@ router.get("/catalogue", (req, res) => {
     params.push(level);
   }
 
+  // Tri par prix : le prix EFFECTIF (offre en cours comprise), celui qui est affiché ; les « ? » de l'offre sont liés en dernier
+  const priceSort = sort === "price_asc" || sort === "price_desc";
   const orderBy = {
-    price_asc: "courses.price_cents ASC",
-    price_desc: "courses.price_cents DESC",
+    price_asc: `${effectivePriceSql("courses")} ASC`,
+    price_desc: `${effectivePriceSql("courses")} DESC`,
     popular: "student_count DESC",
     rating: "avg_rating DESC",
   }[sort] || "courses.created_at DESC";
 
-  const courses = db
+  const courses = applyEffectivePrices(db
     .prepare(`${COURSE_SELECT} WHERE ${conditions.join(" AND ")} ORDER BY ${orderBy}`)
-    .all(...params);
+    .all(...params, ...(priceSort ? nowParams() : [])));
 
   const categories = db.prepare("SELECT DISTINCT category FROM courses WHERE published = 1 ORDER BY category").all();
 
@@ -108,7 +122,7 @@ router.get("/categorie/:slug", (req, res) => {
   const category = categories.find((c) => slugify(c) === req.params.slug);
   if (!category) return res.status(404).render("error", { message: "Catégorie introuvable." });
 
-  const courses = db.prepare(`${COURSE_SELECT} WHERE courses.published = 1 AND courses.category = ? ORDER BY courses.created_at DESC`).all(category);
+  const courses = applyEffectivePrices(db.prepare(`${COURSE_SELECT} WHERE courses.published = 1 AND courses.category = ? ORDER BY courses.created_at DESC`).all(category));
   const crumbs = [{ name: "Accueil", url: "/" }, { name: "Catalogue", url: "/catalogue" }, { name: category }];
   res.render("category", {
     category, courses, crumbs,
@@ -130,6 +144,7 @@ router.get("/cours/:slug", (req, res) => {
   if (lessonAccess(req.session.user, course, null).hidden) {
     return res.status(404).render("error", { message: "Formation introuvable." });
   }
+  priceInPlace(course);
 
   const sections = db.prepare("SELECT * FROM sections WHERE course_id = ? ORDER BY position, id").all(course.id);
   // has_quiz : le sous-chapitre porte un quiz ; type : « quiz », « video » (fichier ou lien) ou « texte » (rien d'autre que le texte)
@@ -254,6 +269,7 @@ router.get("/cours/:slug/plan", (req, res, next) => {
       return res.status(404).render("error", { message: "Formation introuvable." });
     }
     if (lessonAccess(req.session.user, course, null).hidden) return res.status(404).render("error", { message: "Formation introuvable." });
+    priceInPlace(course);
 
     const sections = loadProgram(course.id);
     const lessonCount = sections.reduce((n, s) => n + s.lessons.length, 0);
@@ -276,6 +292,7 @@ router.get("/cours/:slug/programme.pdf", (req, res, next) => {
       return res.status(404).render("error", { message: "Formation introuvable." });
     }
     if (lessonAccess(req.session.user, course, null).hidden) return res.status(404).render("error", { message: "Formation introuvable." });
+    priceInPlace(course);
 
     const sections = loadProgram(course.id);
     const texts = courseTexts(course);

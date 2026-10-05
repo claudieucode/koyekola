@@ -120,3 +120,26 @@ test("contraintes : prix négatif et période inversée refusés ; la formation 
   db.prepare("DELETE FROM courses WHERE id = ?").run(temp);
   assert.equal(db.prepare("SELECT COUNT(*) n FROM offers WHERE course_id = ?").get(temp).n, 0);
 });
+
+test("module Marketing (e-mails, pages d'atterrissage) : le prix lu est le prix effectif, avec le prix habituel à côté", () => {
+  clearOffers();
+  const { getCourse } = require("../src/marketing/bridge/catalog");
+  const ctx = { db, organizationId: 1 };
+  assert.equal(getCourse(ctx, course.id).price_cents, course.price_cents, "sans offre : prix standard");
+  offer(course.price_cents - 700, { name: "Promo e-mail" });
+  const c = getCourse(ctx, course.id);
+  assert.equal(c.price_cents, course.price_cents - 700);
+  assert.equal(c.standard_price_cents, course.price_cents);
+  clearOffers();
+});
+
+test("module Marketing sur une base sans table d'offres (ancienne base) : retombe sur le prix standard", () => {
+  const { getCourse } = require("../src/marketing/bridge/catalog");
+  const { DatabaseSync } = require("node:sqlite");
+  const old = new DatabaseSync(":memory:");
+  old.exec("CREATE TABLE courses (id INTEGER PRIMARY KEY, title TEXT, slug TEXT, subtitle TEXT, price_cents INTEGER, thumbnail_path TEXT, published INTEGER)");
+  old.prepare("INSERT INTO courses VALUES (1, 'Ancienne', 'ancienne', '', 1234, '', 1)").run();
+  const c = getCourse({ db: old, organizationId: 1 }, 1);
+  assert.equal(c.price_cents, 1234);
+  old.close();
+});

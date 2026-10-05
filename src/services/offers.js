@@ -19,14 +19,17 @@ function listOffers(courseId, now = new Date()) {
 }
 const getOffer = (courseId, id) => db.prepare("SELECT * FROM offers WHERE id = ? AND course_id = ?").get(id, courseId) || null;
 
+// Jour de Paris (« AAAA-MM-JJ ») d'une date SQL UTC ; pour une FIN (borne exclue), le dernier jour inclus
+function dayOf(v, end = false) {
+  if (!v) return "";
+  const d = new Date(`${v.replace(" ", "T")}Z`);
+  if (end) d.setTime(d.getTime() - 1000);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d);
+}
+
 // Valeurs du formulaire à partir d'une offre enregistrée (dates affichées en jour de Paris, fin incluse)
 function formOf(o) {
-  const day = (v, end) => {
-    if (!v) return "";
-    const d = new Date(`${v.replace(" ", "T")}Z`);
-    if (end) d.setTime(d.getTime() - 1000);
-    return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d);
-  };
+  const day = dayOf;
   return { name: o.name, price: (o.price_cents / 100).toFixed(2), starts_at: day(o.starts_at), ends_at: day(o.ends_at, true), active: o.active };
 }
 
@@ -67,4 +70,4 @@ const setOfferActive = (courseId, id, active) =>
   db.prepare("UPDATE offers SET active = ?, updated_at = datetime('now') WHERE id = ? AND course_id = ?").run(active ? 1 : 0, id, courseId).changes === 1;
 const deleteOffer = (courseId, id) => db.prepare("DELETE FROM offers WHERE id = ? AND course_id = ?").run(id, courseId).changes === 1;
 
-module.exports = { stateOf, listOffers, getOffer, formOf, validateOffer, createOffer, updateOffer, setOfferActive, deleteOffer };
+module.exports = { dayOf, stateOf, listOffers, getOffer, formOf, validateOffer, createOffer, updateOffer, setOfferActive, deleteOffer };

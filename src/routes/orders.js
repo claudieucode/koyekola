@@ -6,6 +6,7 @@ const { sendPurchaseWelcomeEmail } = require("../utils/mailer");
 const { UserError } = require("../utils/errors");
 const sales = require("../services/gestion/sales");
 const payments = require("../services/payments");
+const { applyEffectivePrices } = require("../services/pricing");
 
 const router = express.Router();
 
@@ -25,13 +26,15 @@ function payMode(total) {
 function getPurchasableItems(req) {
   const ids = Object.keys(req.session.cart || {});
   if (!ids.length) return [];
-  return db
+  const courses = db
     .prepare(
       `SELECT * FROM courses
        WHERE id IN (${ids.map(() => "?").join(",")}) AND published = 1
          AND id NOT IN (SELECT course_id FROM enrollments WHERE user_id = ?)`
     )
     .all(...ids, req.session.user.id);
+  // price_cents = prix à payer (offre en cours comprise) ; standard_price_cents = prix du catalogue ; offer = offre appliquée ou null
+  return applyEffectivePrices(courses);
 }
 
 // Le panier ne garde que ce qui reste achetable
@@ -56,7 +59,7 @@ router.get("/commande", requireAuth, (req, res) => {
   const p = pricing(req, items);
   const flash = req.session.couponFlash || null;
   delete req.session.couponFlash;
-  res.render("checkout", { items, total: p.total, subtotal: p.subtotal, discount: p.discount, coupon: p.coupon, couponError: p.couponError || (flash && flash.error) || null, couponOk: flash && flash.ok, payMode: payMode(p.total), minAmount: payments.MIN_AMOUNT_CENTS });
+  res.render("checkout", { items, total: p.total, subtotal: p.subtotal, discount: p.discount, coupon: p.coupon, couponError: p.couponError || (flash && flash.error) || null, couponOk: flash && flash.ok, payMode: payMode(p.total), minAmount: payments.MIN_AMOUNT_CENTS, expectedTotal: p.total });
 });
 
 // Paiement par carte : la commande n'existe pas encore. Le panier et les montants (calculés ici, jamais lus dans le
@@ -68,7 +71,7 @@ async function startStripeCheckout(req, res, items, p) {
   }
   if (p.total < payments.MIN_AMOUNT_CENTS) throw new UserError("Le montant minimum payable par carte est de 0,50 €.", 400);
   const ref = crypto.randomUUID();
-  const rows = items.map((c) => ({ course_id: c.id, price_cents: p.lines.get(c.id), list_price_cents: c.price_cents }));
+  const rows = items.map((c) => ({ course_id: c.id, price_cents: p.lines.get(c.id), list_price_cents: c.standard_price_cents, offer_id: c.offer ? c.offer.id : null, offer_name: c.offer ? c.offer.name : null }));
   db.prepare("INSERT INTO checkout_sessions (ref, user_id, items_json, coupon_id, coupon_code, discount_cents, total_cents, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
     .run(ref, req.session.user.id, JSON.stringify(rows), p.coupon ? p.coupon.id : null, p.coupon ? p.coupon.code : null, p.discount, p.total, payments.CURRENCY);
   let session;
@@ -148,6 +151,12 @@ router.post("/commande", requireAuth, async (req, res, next) => {
       req.session.couponFlash = { error: pricingNow.couponError };
       return res.redirect("/commande");
     }
+    // Le prix affiché au client est celui qu'il paie : si une offre a pris fin (ou commencé) entre l'affichage et le clic,
+    // le total a changé et il doit le voir avant de payer (le formulaire transmet le total affiché).
+    if (req.body.expected_total !== undefined && String(req.body.expected_total) !== String(pricingNow.total)) {
+      req.session.couponFlash = { error: "Le prix de votre commande a changé. Vérifiez le nouveau total avant de payer." };
+      return res.redirect("/commande");
+    }
     const mode = payMode(pricingNow.total);
     if (mode === "stripe") return await startStripeCheckout(req, res, items, pricingNow);
     if (mode === "unavailable") throw new UserError("Le paiement en ligne n'est pas encore disponible. Réessayez plus tard.", 503);
@@ -174,11 +183,14 @@ router.post("/commande", requireAuth, async (req, res, next) => {
       const orderInfo = db.prepare("INSERT INTO orders (user_id, total_cents, coupon_id, coupon_code, discount_cents) VALUES (?, ?, ?, ?, ?)")
         .run(req.session.user.id, total, applied ? applied.coupon.id : null, applied ? applied.coupon.code : null, applied ? applied.discount : 0);
       orderId = Number(orderInfo.lastInsertRowid);
-      // price_cents : montant réellement payé (après remise) ; list_price_cents : prix catalogue
-      const insertItem = db.prepare("INSERT INTO order_items (order_id, course_id, price_cents, list_price_cents) VALUES (?, ?, ?, ?)");
+      // price_cents : montant réellement payé (après offre et remise) ; list_price_cents : prix standard du catalogue ;
+      // offer_id / offer_name : offre appliquée (id vide si l'offre vient d'être supprimée : le nom reste)
+      const insertItem = db.prepare("INSERT INTO order_items (order_id, course_id, price_cents, list_price_cents, offer_id, offer_name) VALUES (?, ?, ?, ?, ?, ?)");
+      const offerExists = db.prepare("SELECT id FROM offers WHERE id = ?");
       const insertEnrollment = db.prepare("INSERT OR IGNORE INTO enrollments (user_id, course_id) VALUES (?, ?)");
       items.forEach((course) => {
-        insertItem.run(orderId, course.id, priceOf(course), course.price_cents);
+        const offerId = course.offer && offerExists.get(course.offer.id) ? course.offer.id : null;
+        insertItem.run(orderId, course.id, priceOf(course), course.standard_price_cents, offerId, course.offer ? course.offer.name : null);
         insertEnrollment.run(req.session.user.id, course.id);
       });
       db.exec("COMMIT");

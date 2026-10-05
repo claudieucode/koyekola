@@ -5,6 +5,7 @@ const { lessonAccess, isEnrolled } = require("../services/access");
 const { safePath } = require("../utils/safeRedirect");
 const { isInlineImage } = require("../utils/attachments");
 const { currentSlugFor } = require("../services/slugs");
+const { applyEffectivePrices } = require("../services/pricing");
 
 const router = express.Router();
 
@@ -44,14 +45,14 @@ router.get("/mes-cours", requireAuth, (req, res) => {
   // La formation à reprendre en priorité : celle consultée le plus récemment parmi celles en cours
   const resumeCourse = inProgress.filter((c) => c.resume).sort((a, b) => b.resume.updated_at - a.resume.updated_at)[0] || null;
 
-  const favorites = db
+  const favorites = applyEffectivePrices(db
     .prepare(
       `SELECT courses.id, courses.slug, courses.title, courses.price_cents, users.username AS instructor_name
        FROM favorites JOIN courses ON courses.id = favorites.course_id JOIN users ON users.id = courses.instructor_id
        WHERE favorites.user_id = ? AND courses.published = 1
        ORDER BY favorites.created_at DESC, favorites.rowid DESC`
     )
-    .all(userId);
+    .all(userId));
 
   const notes = db
     .prepare(

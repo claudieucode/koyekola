@@ -517,6 +517,8 @@ main { display: block; }
 .course-footer { margin-top: auto; display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-top: 1px solid var(--border); margin-left: -18px; margin-right: -18px; }
 .course-price { font-family: var(--font-display); font-weight: 800; font-size: 1.3rem; letter-spacing: -0.02em; color: var(--primary); }
 .course-price.is-free { color: var(--success); }
+/* Prix habituel barré quand une offre est en cours (même taille de texte : lisible, jamais plus petit que le prix) */
+.price-old { font-weight: 500; color: var(--muted); margin-left: 6px; letter-spacing: 0; }
 .course-meta-row { display: flex; gap: 6px 14px; font-size: 0.82rem; color: var(--muted); flex-wrap: wrap; padding-bottom: 14px; }
 .course-meta-row .meta-item { display: inline-flex; align-items: center; gap: 4px; }
 

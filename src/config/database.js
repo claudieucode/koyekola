@@ -448,6 +448,7 @@ if (!orderColumns.includes("discount_cents")) db.exec("ALTER TABLE orders ADD CO
 const itemColumns = db.prepare("PRAGMA table_info(order_items)").all().map((col) => col.name);
 if (!itemColumns.includes("list_price_cents")) db.exec("ALTER TABLE order_items ADD COLUMN list_price_cents INTEGER");
 
+
 // Paiements Stripe en cours : le panier et les montants (fixés par le serveur) sont gardés ici le temps du paiement.
 // La commande (orders) et les inscriptions ne sont écrites qu'une fois le paiement confirmé par Stripe (webhook signé) :
 // aucune commande impayée n'apparaît donc dans les ventes, le CRM ou les statistiques.
@@ -491,5 +492,10 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_offers_course ON offers(course_id, active);
 `);
+// Ligne de commande : offre appliquée (le nom est conservé même si l'offre est supprimée ensuite) ; vide = prix standard.
+// list_price_cents reste le prix standard du catalogue, price_cents le montant réellement payé.
+const itemColumnsOffers = db.prepare("PRAGMA table_info(order_items)").all().map((col) => col.name);
+if (!itemColumnsOffers.includes("offer_id")) db.exec("ALTER TABLE order_items ADD COLUMN offer_id INTEGER REFERENCES offers(id) ON DELETE SET NULL");
+if (!itemColumnsOffers.includes("offer_name")) db.exec("ALTER TABLE order_items ADD COLUMN offer_name TEXT");
 
 module.exports = db;

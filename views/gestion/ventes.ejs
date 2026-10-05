@@ -38,18 +38,45 @@
     <%- include("_pager", { pages: L.pages, pageNum: L.page, total: L.total }) %>
   <% } %>
 <% } else if (tab === "transactions") { %>
+  <% if (!stripe) { %>
   <div class="dash-empty g-state g-honest">
     <h2>Aucun prestataire de paiement connecté</h2>
-    <p>Le paiement du site est aujourd'hui <strong>simulé</strong> : aucune carte n'est débitée et aucune transaction bancaire n'existe. Les transactions réelles (montant encaissé, frais, moyen de paiement, statut) s'afficheront ici dès qu'un prestataire comme Stripe sera branché au paiement.</p>
+    <p>Le paiement du site est aujourd'hui <strong>simulé</strong> : aucune carte n'est débitée et aucune transaction bancaire n'existe. Les transactions réelles (montant encaissé, statut) s'afficheront ici dès que Stripe sera configuré (clés <code>STRIPE_SECRET_KEY</code> et <code>STRIPE_WEBHOOK_SECRET</code>).</p>
     <p><%= simulatedOrders %> commande(s) de vos formations ont été enregistrées avec le paiement simulé.</p>
     <a class="btn btn-outline" href="/formateur/gestion/ventes">Voir les commandes</a>
   </div>
+  <% } else if (!payments.length) { %>
+  <div class="dash-empty g-state"><h3>Aucun paiement par carte</h3><p>Les paiements Stripe de vos formations apparaîtront ici dès le premier achat.</p></div>
+  <% } else { const STATUS = { paid: ["Payé", "is-published"], pending: ["En attente", "is-draft"], expired: ["Expiré", "is-archived"], failed: ["Échoué", "is-archived"] }; %>
+  <div class="dtable-wrap"><table class="dtable g-table">
+    <caption class="sr-only">Paiements par carte (Stripe) de vos formations</caption>
+    <thead><tr><th scope="col">Date</th><th scope="col">Élève</th><th scope="col" class="g-num">Montant</th><th scope="col">Statut</th><th scope="col">Commande</th><th scope="col">Référence Stripe</th></tr></thead>
+    <tbody><% payments.forEach((p) => { const st = STATUS[p.status] || [p.status, "is-draft"]; %>
+      <tr>
+        <td data-label="Date"><%= formatDateTime(p.paid_at || p.created_at) %></td>
+        <td data-label="Élève"><%= p.username %><br><small><%= p.email %></small></td>
+        <td data-label="Montant" class="g-num"><%= formatAmount(p.total_cents) %><% if (p.coupon_code) { %><br><small>code <%= p.coupon_code %></small><% } %></td>
+        <td data-label="Statut"><span class="dash-status <%= st[1] %>"><%= st[0] %></span><% if (p.failure_reason) { %><br><small><%= p.failure_reason %> : à vérifier dans Stripe</small><% } %></td>
+        <td data-label="Commande"><% if (p.order_id) { %><a href="/formateur/gestion/ventes/commandes/<%= p.order_id %>">#<%= p.order_id %></a><% } else { %>—<% } %></td>
+        <td data-label="Référence Stripe"><%= p.stripe_payment_intent || "—" %></td>
+      </tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } %>
 <% } else if (tab === "remboursements") { %>
+  <% if (!stripe) { %>
   <div class="dash-empty g-state g-honest">
     <h2>Remboursements indisponibles</h2>
-    <p>Un remboursement doit être exécuté par le prestataire de paiement qui a encaissé la commande. Le paiement du site étant <strong>simulé</strong>, il n'y a rien à rembourser : aucun bouton « Rembourser » n'est proposé tant qu'un vrai prestataire n'est pas connecté.</p>
+    <p>Un remboursement doit être exécuté par le prestataire de paiement qui a encaissé la commande. Le paiement du site étant <strong>simulé</strong>, il n'y a rien à rembourser : aucun bouton « Rembourser » n'est proposé tant que Stripe n'est pas configuré.</p>
     <a class="btn btn-outline" href="/formateur/gestion/ventes">Voir les commandes</a>
   </div>
+  <% } else { %>
+  <div class="dash-empty g-state g-honest">
+    <h2>Les remboursements se font dans Stripe</h2>
+    <p>Ce site n'exécute pas de remboursement lui-même : ouvrez le paiement dans votre tableau de bord Stripe (la <strong>référence Stripe</strong> est indiquée dans l'onglet Transactions) et utilisez « Rembourser ». L'accès de l'élève à la formation n'est pas retiré automatiquement.</p>
+    <a class="btn btn-outline" href="/formateur/gestion/ventes/transactions">Voir les transactions</a>
+  </div>
+  <% } %>
 <% } else if (tab === "coupons") { const f = form || {}; const err = errors || {}; %>
   <div class="dash-grid-2 g-coupons">
     <section class="dpanel" aria-labelledby="g-coupon-form-title">

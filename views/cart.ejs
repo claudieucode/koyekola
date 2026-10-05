@@ -20,7 +20,7 @@
                 <a href="/cours/<%= course.slug %>" class="title" style="text-decoration:none;color:var(--text);"><%= course.title %></a>
                 <p class="instructor">Par <%= course.instructor_name %></p>
               </div>
-              <span class="price"><%= formatPrice(course.price_cents) %></span>
+              <span class="price"><%- include("partials/price", { course }) %></span>
               <form action="/panier/retirer/<%= course.id %>" method="post">
                 <button type="submit" class="btn btn-ghost btn-sm">Retirer</button>
               </form>

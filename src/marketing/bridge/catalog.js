@@ -1,6 +1,7 @@
 // Catalogue des formations du LMS, en LECTURE SEULE, pour le bloc « formation » des e-mails. Comme le pont d'événements,
 // c'est le seul endroit (avec bridge/) où le module marketing lit les tables du LMS. Un LMS absent ou incomplet donne une liste vide.
 const { checkCtx } = require("../audience/shared");
+const { effectivePriceSql, nowParams } = require("../../services/pricingSql"); // partie pure : aucun accès à la base à l'import
 
 // Formations publiées proposées dans l'éditeur (identifiant et titre seulement)
 function listCourses(ctx) {
@@ -16,10 +17,16 @@ function listCourses(ctx) {
 function getCourse(ctx, id) {
   checkCtx(ctx);
   if (!Number.isInteger(id) || id < 1) return null;
+  // price_cents = prix à payer MAINTENANT (offre en cours comprise : un e-mail ou une page ne doit jamais afficher un prix
+  // différent de celui du site) ; standard_price_cents = prix habituel. Sans table d'offres (base ancienne), prix standard.
   try {
-    return ctx.db.prepare("SELECT id, title, slug, subtitle, price_cents, thumbnail_path FROM courses WHERE id = ? AND published = 1").get(id) ?? null;
+    return ctx.db.prepare(`SELECT id, title, slug, subtitle, ${effectivePriceSql("courses")} AS price_cents, price_cents AS standard_price_cents, thumbnail_path FROM courses WHERE id = ? AND published = 1`).get(...nowParams(), id) ?? null;
   } catch {
-    return null;
+    try {
+      return ctx.db.prepare("SELECT id, title, slug, subtitle, price_cents, price_cents AS standard_price_cents, thumbnail_path FROM courses WHERE id = ? AND published = 1").get(id) ?? null;
+    } catch {
+      return null;
+    }
   }
 }
 

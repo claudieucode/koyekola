@@ -38,6 +38,19 @@
   <% } %>
 </section>
 
+<% if (R.offers.list.length) { %>
+<section class="dash-section" aria-labelledby="a-offers">
+  <div class="dash-section-head"><h2 id="a-offers">Ventes par offre</h2></div>
+  <div class="dtable-wrap"><table class="dtable g-table">
+    <thead><tr><th scope="col">Offre</th><th scope="col" class="g-num">Ventes</th><th scope="col" class="g-num">Revenus</th></tr></thead>
+    <tbody>
+      <% R.offers.list.forEach((o) => { %><tr><td data-label="Offre"><%= o.name %></td><td data-label="Ventes" class="g-num"><%= o.sales %></td><td data-label="Revenus" class="g-num"><%= formatAmount(o.revenue) %></td></tr><% }) %>
+      <tr><td data-label="Offre">Prix standard (sans offre)</td><td data-label="Ventes" class="g-num"><%= R.offers.standard.sales %></td><td data-label="Revenus" class="g-num"><%= formatAmount(R.offers.standard.revenue) %></td></tr>
+    </tbody>
+  </table></div>
+</section>
+<% } %>
+
 <section class="dash-section dpanel g-honest" aria-labelledby="a-traffic">
   <h2 id="a-traffic">Trafic et conversion</h2>
   <p><strong>Données indisponibles pour une période :</strong> le site ne mesure pas les visites des pages (aucun outil de mesure d'audience n'est branché). Le taux de conversion (visiteurs → acheteurs) ne peut donc pas être calculé sans inventer de chiffres.</p>

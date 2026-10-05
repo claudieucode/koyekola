@@ -22,6 +22,7 @@ const common = require("../services/gestion/common");
 const sales = require("../services/gestion/sales");
 const students = require("../services/gestion/students");
 const crm = require("../services/gestion/crm");
+const payments = require("../services/payments");
 const analytics = require("../services/gestion/analytics");
 const resources = require("../services/gestion/resources");
 const activity = require("../services/gestion/activity");
@@ -113,8 +114,18 @@ router.get("/formateur/gestion", page("gestion/index", "Centre de gestion", (req
 router.get("/formateur/gestion/ventes", page("gestion/ventes", "Ventes", (req) => ({ tab: "commandes", orders: sales.listOrders(me(req), req.query), courses: sales.myCourses(me(req)) })));
 router.get("/formateur/gestion/ventes/commandes", (req, res) => res.redirect(301, `/formateur/gestion/ventes${req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : ""}`));
 router.get("/formateur/gestion/ventes/commandes/:id(\\d+)", (req, res, next) => page("gestion/commande", `Commande #${req.params.id}`, (r) => sales.getOrder(me(r), Number(r.params.id)) || null)(req, res, next));
-router.get("/formateur/gestion/ventes/transactions", page("gestion/ventes", "Transactions", (req) => ({ tab: "transactions", simulatedOrders: db.prepare("SELECT COUNT(DISTINCT o.id) n FROM orders o JOIN order_items oi ON oi.order_id = o.id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ?").get(me(req)).n })));
-router.get("/formateur/gestion/ventes/remboursements", page("gestion/ventes", "Remboursements", () => ({ tab: "remboursements" })));
+// Paiements par carte (Stripe) des formations du formateur : lus dans checkout_sessions, jamais inventés.
+// Sans Stripe, le paiement du site est une démonstration : l'onglet le dit.
+function stripePayments(instructorId) {
+  return db.prepare(`SELECT cs.id, cs.created_at, cs.paid_at, cs.status, cs.failure_reason, cs.total_cents, cs.coupon_code, cs.stripe_payment_intent, cs.order_id, u.username, u.email
+    FROM checkout_sessions cs JOIN users u ON u.id = cs.user_id
+    WHERE EXISTS (SELECT 1 FROM json_each(cs.items_json) j JOIN courses c ON c.id = json_extract(j.value, '$.course_id') WHERE c.instructor_id = ?)
+    ORDER BY cs.id DESC LIMIT 200`).all(instructorId);
+}
+router.get("/formateur/gestion/ventes/transactions", page("gestion/ventes", "Transactions", (req) => ({
+  tab: "transactions", stripe: payments.stripeEnabled(), simulatedOrders: db.prepare("SELECT COUNT(DISTINCT o.id) n FROM orders o JOIN order_items oi ON oi.order_id = o.id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ?").get(me(req)).n , payments: payments.stripeEnabled() ? stripePayments(me(req)) : [],
+})));
+router.get("/formateur/gestion/ventes/remboursements", page("gestion/ventes", "Remboursements", () => ({ tab: "remboursements", stripe: payments.stripeEnabled() })));
 router.get("/formateur/gestion/ventes/coupons", page("gestion/ventes", "Codes promo", (req) => {
   const editing = req.query.modifier ? sales.getCoupon(me(req), Number(req.query.modifier)) : null;
   return { tab: "coupons", coupons: sales.listCoupons(me(req)), courses: sales.myCourses(me(req)), editing, form: editing ? formOf(editing) : { active: 1, kind: "percent" }, errors: {} };

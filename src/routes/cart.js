@@ -2,6 +2,7 @@ const express = require("express");
 const db = require("../config/database");
 const { requireAuth } = require("../middlewares/auth");
 const { refererPath } = require("../utils/safeRedirect");
+const { applyEffectivePrices } = require("../services/pricing");
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ router.post("/panier/retirer/:id", requireAuth, (req, res) => {
 
 router.get("/panier", requireAuth, (req, res) => {
   const ids = Object.keys(req.session.cart);
-  const items = ids.length
+  const found = ids.length
     ? db
         .prepare(
           `SELECT courses.*, users.username AS instructor_name FROM courses
@@ -33,6 +34,7 @@ router.get("/panier", requireAuth, (req, res) => {
         )
         .all(...ids)
     : [];
+  const items = applyEffectivePrices(found); // price_cents = prix à payer (offre en cours comprise)
   const total = items.reduce((sum, c) => sum + c.price_cents, 0);
   res.render("cart", { items, total });
 });

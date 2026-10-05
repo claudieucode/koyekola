@@ -229,3 +229,65 @@ test("commande gratuite (remise de 100 %) : enregistrée sans passer par Stripe"
   assert.equal(stripe.created.length, avant, "Stripe n'est pas appelé");
   assert.equal(count("SELECT COUNT(*) n FROM orders o JOIN users u ON u.id = o.user_id WHERE u.email = ? AND o.total_cents = 0", e.email), 1);
 });
+
+test("offre en cours : Stripe reçoit le prix de l'offre, la commande garde l'offre et le prix standard", async () => {
+  const db = srv.db();
+  const offerId = Number(db.prepare("INSERT INTO offers (course_id, instructor_id, name, price_cents) VALUES (?, (SELECT instructor_id FROM courses WHERE id = ?), 'Offre Stripe', 3000)").run(courseA.id, courseA.id).lastInsertRowid);
+  db.close();
+  try {
+    const e = await newStudent(srv);
+    const { r, created } = await startPayment(e, [courseA.id]);
+    assert.equal(r.status, 303);
+    assert.deepEqual(created[0].amounts, [3000], "50 € standard, 30 € avec l'offre");
+    const cs = pending(e.email);
+    assert.equal(cs.total_cents, 3000);
+    assert.equal((await webhook("checkout.session.completed", paidSession(cs))).status, 200);
+    const d = srv.db();
+    const order = d.prepare("SELECT o.id, o.total_cents FROM orders o JOIN users u ON u.id = o.user_id WHERE u.email = ?").get(e.email);
+    const item = d.prepare("SELECT price_cents, list_price_cents, offer_id, offer_name FROM order_items WHERE order_id = ?").get(order.id);
+    d.close();
+    assert.equal(order.total_cents, 3000);
+    assert.deepEqual({ ...item }, { price_cents: 3000, list_price_cents: 5000, offer_id: offerId, offer_name: "Offre Stripe" });
+  } finally {
+    const d = srv.db();
+    d.exec("DELETE FROM offers");
+    d.close();
+  }
+});
+
+test("paiement en cours créé AVANT les offres (sans offer_id) : accepté, ligne sans offre", async () => {
+  const e = await newStudent(srv);
+  await startPayment(e, [courseA.id]);
+  const cs = pending(e.email);
+  const d = srv.db();
+  // Ancien format de session : lignes sans offer_id / offer_name
+  d.prepare("UPDATE checkout_sessions SET items_json = ? WHERE ref = ?").run(JSON.stringify([{ course_id: courseA.id, price_cents: cs.total_cents, list_price_cents: 5000 }]), cs.ref);
+  d.close();
+  assert.equal((await webhook("checkout.session.completed", paidSession(cs))).status, 200);
+  const d2 = srv.db();
+  const item = d2.prepare("SELECT offer_id, offer_name FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN users u ON u.id = o.user_id WHERE u.email = ?").get(e.email);
+  d2.close();
+  assert.deepEqual({ ...item }, { offer_id: null, offer_name: null });
+});
+
+test("Centre de gestion : l'onglet Transactions liste les vrais paiements Stripe (payé, en attente, échoué), Remboursements renvoie vers Stripe", async () => {
+  const ok = await newStudent(srv);
+  await startPayment(ok, [courseA.id]);
+  const csOk = pending(ok.email);
+  await webhook("checkout.session.completed", paidSession(csOk));
+  const wait = await newStudent(srv);
+  await startPayment(wait, [courseA.id]);
+  const bad = await newStudent(srv);
+  await startPayment(bad, [courseA.id]);
+  await webhook("checkout.session.completed", paidSession(pending(bad.email), { amount_total: 1 })); // montant inattendu : échoué
+
+  const page = (await prof.get(`${G}/ventes/transactions`)).text;
+  assert.doesNotMatch(page, /Aucun prestataire de paiement connecté/);
+  const rowOf = (email) => page.slice(page.indexOf(email), page.indexOf("</tr>", page.indexOf(email)));
+  assert.match(rowOf(ok.email), /Payé/);
+  assert.match(rowOf(ok.email), new RegExp(csOk.stripe_payment_intent || "pi_"));
+  assert.match(rowOf(wait.email), /En attente/);
+  assert.match(rowOf(bad.email), /Échoué/);
+  assert.match(rowOf(bad.email), /montant inattendu : à vérifier dans Stripe/);
+  assert.match((await prof.get(`${G}/ventes/remboursements`)).text, /Les remboursements se font dans Stripe/);
+});

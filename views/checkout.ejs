@@ -7,6 +7,7 @@
       <p class="payment-badge"><%- icon('info', { size: 16 }) %> Mode démonstration : aucun paiement réel n'est effectué, aucune carte n'est débitée.</p>
 
       <form action="/commande" method="post" class="card card-pad payment-mock">
+        <input type="hidden" name="expected_total" value="<%= expectedTotal %>">
         <div class="field-group">
           <label for="f-checkout-1">Numéro de carte</label>
           <input id="f-checkout-1" type="text" placeholder="4242 4242 4242 4242" maxlength="19" required>
@@ -29,6 +30,7 @@
       </form>
 <% } else if (payMode === "stripe") { %>
       <form action="/commande" method="post" class="card card-pad">
+        <input type="hidden" name="expected_total" value="<%= expectedTotal %>">
         <p class="payment-badge"><%- icon('info', { size: 16 }) %> Paiement sécurisé par Stripe : vous serez redirigé vers sa page de paiement. Aucune donnée de carte ne passe par ce site.</p>
         <% if (total < minAmount) { %>
           <p class="field-error" role="alert">Le montant minimum payable par carte est de 0,50 €.</p>
@@ -37,6 +39,7 @@
       </form>
 <% } else if (payMode === "free") { %>
       <form action="/commande" method="post" class="card card-pad">
+        <input type="hidden" name="expected_total" value="<%= expectedTotal %>">
         <p style="margin-top:0;">Aucun paiement n'est nécessaire pour cette commande.</p>
         <button type="submit" class="btn btn-primary btn-block btn-lg">Valider la commande gratuite</button>
       </form>
@@ -50,7 +53,7 @@
     <aside class="card card-pad summary-card">
       <h3 style="margin-top:0;">Votre commande</h3>
       <% items.forEach(course => { %>
-        <div class="summary-row"><span><%= course.title %></span><span><%= formatPrice(course.price_cents) %></span></div>
+        <div class="summary-row"><span><%= course.title %></span><span><%- include("partials/price", { course }) %></span></div>
       <% }) %>
       <% if (discount) { %>
         <div class="summary-row"><span>Sous-total</span><span><%= formatPrice(subtotal) %></span></div>

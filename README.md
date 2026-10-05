@@ -26,6 +26,10 @@ Pour utiliser la plateforme avec votre propre identité, changez simplement le n
 - Espace étudiant : mes formations, suivi de progression, lecteur vidéo
 - **Mon espace** (réservé à votre compte créateur) : création/édition de formation, upload de miniature et de vidéos, gestion du programme (chapitres, sous-chapitres, réordonnancement), publication, suivi des ventes
 
+## Offres : prix promo avec dates
+
+Dans **Mon espace → une formation → Offres**, vous créez une offre (nom, prix, début et fin facultatifs). Pendant sa période, le catalogue, la fiche, le panier, le paiement (Stripe compris), les e-mails et pages marketing affichent le prix de l'offre avec le prix habituel barré. Règles : une offre ne peut que **baisser** le prix standard (la formation garde son prix), la moins chère l'emporte si plusieurs sont actives, la fin est incluse (toute la journée choisie, heure de Paris). Les codes promo s'appliquent **par-dessus** le prix de l'offre. La commande conserve l'offre appliquée (`order_items.offer_name`), visible dans le détail de la commande et dans **Centre de gestion → Analytics → Ventes par offre**. Si le prix change entre l'affichage du paiement et le clic (fin d'offre), le client voit le nouveau total avant de payer. La règle de prix est dans `src/services/pricing.js` (et `pricingSql.js` pour le tri du catalogue).
+
 ## Paiement : Stripe Checkout
 
 Avec `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` (voir `.env.example`), « Payer » envoie le client sur la page de paiement hébergée par Stripe. Aucune donnée de carte ne passe par ce site. Les montants (prix, code promo) sont calculés par le serveur ; la commande et l'accès à la formation ne sont créés qu'après la confirmation de Stripe (webhook signé `POST /stripe/webhook`, ou relecture de la session au retour du client).

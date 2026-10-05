@@ -4,11 +4,7 @@
 //  - plusieurs offres actives en même temps : la moins chère l'emporte (résultat prévisible, pas d'ordre caché) ;
 //  - le prix barré affiché est toujours le prix standard de la formation.
 const db = require("../config/database");
-
-// « AAAA-MM-JJ HH:MM:SS » en UTC : même format que les colonnes created_at du site
-const sqlNow = (now = new Date()) => new Date(now).toISOString().slice(0, 19).replace("T", " ");
-
-const ACTIVE = "o.active = 1 AND (o.starts_at IS NULL OR o.starts_at <= ?) AND (o.ends_at IS NULL OR ? < o.ends_at)";
+const { sqlNow, ACTIVE, effectivePriceSql, nowParams } = require("./pricingSql"); // partie SQL pure, partagée avec le module Marketing
 
 function resolve(course, offer) {
   const list = course.price_cents;
@@ -38,10 +34,16 @@ function effectivePrices(courses, now = new Date()) {
   return out;
 }
 
-// Fragment SQL équivalent (tri et filtre par prix du catalogue) : doit rester identique à effectivePrice (testé).
-// `alias` = alias de la table courses ; les deux « ? » à lier sont l'instant courant (utiliser nowParams()).
-const effectivePriceSql = (alias = "courses") =>
-  `COALESCE((SELECT MIN(o.price_cents) FROM offers o WHERE o.course_id = ${alias}.id AND o.price_cents < ${alias}.price_cents AND ${ACTIVE}), ${alias}.price_cents)`;
-const nowParams = (now = new Date()) => [sqlNow(now), sqlNow(now)];
+// Formations avec leur prix effectif : price_cents devient le prix à payer (tout le code existant qui lit price_cents
+// — panier, remises, totaux — fonctionne donc sans changement) ; le prix standard est gardé dans standard_price_cents.
+function applyEffectivePrices(courses, now = new Date()) {
+  const prices = effectivePrices(courses, now);
+  return courses.map((c) => {
+    const p = prices.get(c.id);
+    return { ...c, standard_price_cents: c.price_cents, price_cents: p.price_cents, offer: p.offer };
+  });
+}
 
-module.exports = { effectivePrice, effectivePrices, effectivePriceSql, nowParams, sqlNow };
+// effectivePriceSql / nowParams (tri et filtre par prix du catalogue) viennent de pricingSql.js : même règle que
+// effectivePrice, vérifiée par les tests de parité.
+module.exports = { effectivePrice, effectivePrices, applyEffectivePrices, effectivePriceSql, nowParams, sqlNow };

@@ -55,12 +55,17 @@ function report(instructorId, p) {
     FROM courses c WHERE c.instructor_id = ? AND c.archived = 0 ORDER BY revenue DESC, enrollments DESC, c.title COLLATE NOCASE`).all(p.from, p.to, p.from, p.to, p.from, p.to, instructorId)
     .map((c) => ({ ...c, avgProgress: c.students && c.lessons ? Math.round((c.done / (c.students * c.lessons)) * 100) : null }));
 
+  // Ventes par offre (période) : nom conservé sur la ligne de commande même si l'offre est supprimée ensuite.
+  // Les lignes sans offre sont « au prix standard ». Montants = payé réellement (après offre et code promo).
+  const offerRows = db.prepare(`SELECT COALESCE(oi.offer_name, '') AS name, COUNT(*) sales, COALESCE(SUM(oi.price_cents), 0) revenue ${SALES} GROUP BY COALESCE(oi.offer_name, '') ORDER BY revenue DESC, sales DESC`).all(instructorId, p.from, p.to);
+  const offers = { standard: offerRows.find((r) => r.name === "") || { sales: 0, revenue: 0 }, list: offerRows.filter((r) => r.name !== "") };
+
   // Lectures des articles du blog : seul un total cumulé existe (pas de date de lecture) → pas de chiffre par période
   const blogViews = one("SELECT COALESCE(SUM(views), 0) v FROM posts WHERE published = 1").v;
 
   return {
     kpis: { revenue: sales.revenue, orders: sales.orders, average: sales.paid_orders ? Math.round(sales.revenue / sales.paid_orders) : null, enrollments: enrollments.n, newStudents, lessons, reviews: reviews.n, rating: reviews.avg ? Math.round(reviews.avg * 10) / 10 : null, discount: discount.d, promoOrders: discount.n },
-    unit, labels: buckets.map((b) => b.label), revenueSeries, enrollSeries, courses, blogViews,
+    unit, labels: buckets.map((b) => b.label), revenueSeries, enrollSeries, courses, offers, blogViews,
   };
 }
 

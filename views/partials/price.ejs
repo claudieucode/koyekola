@@ -1,0 +1,2 @@
+<%# Prix d'une formation avec offre éventuelle. Paramètres : course (price_cents = prix à payer ; standard_price_cents et offer si une offre est en cours) %>
+<%= formatPrice(course.price_cents) %><% if (course.offer) { %> <s class="price-old"><span class="sr-only">Prix habituel : </span><%= formatPrice(course.standard_price_cents) %></s><% } %>

@@ -7,7 +7,7 @@
       <thead><tr><th scope="col">Formation</th><th scope="col">Progression de l'élève</th><th scope="col" class="g-num">Prix catalogue</th><th scope="col" class="g-num">Payé</th></tr></thead>
       <tbody><% items.forEach((i) => { const pct = i.lessons ? Math.round(i.done / i.lessons * 100) : 0; %>
         <tr>
-          <td data-label="Formation"><a href="/formateur/cours/<%= i.course_id %>"><%= i.title %></a></td>
+          <td data-label="Formation"><a href="/formateur/cours/<%= i.course_id %>"><%= i.title %></a><% if (i.offer_name) { %><br><small>Offre « <%= i.offer_name %> »</small><% } %></td>
           <td data-label="Progression"><% if (i.lessons) { %><span class="g-progress" role="img" aria-label="<%= pct %> % (<%= i.done %> leçon(s) sur <%= i.lessons %>)"><span style="width:<%= pct %>%"></span></span> <%= pct %> % · <%= i.done %>/<%= i.lessons %><% } else { %>Aucune leçon<% } %></td>
           <td data-label="Prix catalogue" class="g-num"><%= formatAmount(i.list_price_cents != null ? i.list_price_cents : i.price_cents) %></td>
           <td data-label="Payé" class="g-num"><%= formatAmount(i.price_cents) %></td>
