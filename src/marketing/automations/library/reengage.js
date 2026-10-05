@@ -1,0 +1,135 @@
+// Familles « Réengager » (reengage) et « Engagement e-mail » (engagement). Le suivi des ouvertures et des clics existe
+// (conditions « a ouvert / a cliqué l'e-mail de l'étape N ») ; les relances inactifs se déclenchent sur un événement
+// réel puis vérifient l'inactivité après un délai, ou sur une étiquette posée à la main ou par un segment.
+const { mail, step: S, flow, all, rule, never } = require("./dsl");
+
+module.exports = [
+  // ================= Réengager =================
+  {
+    key: "ancien-eleve-reconquete", group: "reengage", kind: "marketing", audience: "eleves", goal: "reengager",
+    label: "Reconquérir un ancien élève",
+    objective: "Proposer une nouvelle formation à un élève qui a terminé la sienne il y a trois mois et n'a plus rien fait depuis.",
+    description: "Environ trois mois après une formation terminée, vérifie qu'aucune leçon n'a été terminée ni aucune commande passée depuis 90 jours ; si l'élève est inactif, un e-mail l'invite à découvrir la suite.",
+    trigger: { event: "lms.course_completed" },
+    note: "Marketing (abonnés uniquement). L'élève n'entre qu'une fois, à sa première formation terminée après l'activation.",
+    keywords: ["win-back", "ancien élève", "reconquête", "réactivation", "90 jours"],
+    emails: [mail("Nouvelle formation", "Prêt(e) pour une nouvelle formation ?", "Trois mois après votre réussite", "On continue, {h} ?", "Cela fait trois mois que vous avez terminé votre formation. Les compétences se cultivent : découvrez ce qui pourrait vous faire progresser maintenant.", ["Voir le catalogue", "catalogue"])],
+    steps: flow([S.wait(95, "days"), S.seg(all(rule("event:lms.lesson_completed", "not_within_days", 90), rule("event:lms.order_completed", "not_within_days", 90)), "next", "exit"), S.email(0)]),
+  },
+  {
+    key: "achat-jamais-commence", group: "reengage", kind: "transactional", audience: "clients", goal: "activer",
+    label: "Relance après un achat jamais commencé",
+    objective: "Relancer un acheteur qui n'a terminé aucune leçon six semaines après son achat.",
+    description: "Quarante-cinq jours après la commande, si aucune leçon n'a jamais été terminée, étiquette « achat-non-utilisé » et e-mail qui rappelle que la formation est disponible.",
+    trigger: { event: "lms.order_completed" },
+    note: "Transactionnel : message de service lié à un achat, sans contenu promotionnel. La vérification porte sur toutes les formations de l'élève.",
+    keywords: ["abandon", "formation non commencée", "jamais commencé", "45 jours", "relance après achat"],
+    emails: [mail("Toujours disponible", "Votre formation vous attend toujours", "Elle est à vous, sans limite", "Prêt(e) à commencer ?", "{h}, vous avez acheté une formation mais n'avez pas encore terminé de leçon. Elle est toujours disponible dans votre espace : commencez par la première, quelques minutes suffisent.", ["Commencer ma formation", "accès"], { kind: "transactional" })],
+    steps: flow([S.wait(45, "days"), S.seg(never("lms.lesson_completed"), "next", "exit"), S.tag("achat-non-utilisé"), S.email(0)]),
+  },
+  {
+    key: "compte-jamais-utilise-60-jours", group: "reengage", kind: "marketing", audience: "prospects", goal: "reengager",
+    label: "Compte créé mais jamais utilisé (60 jours)",
+    objective: "Réveiller les comptes qui n'ont ni inscription à une formation ni achat deux mois après leur création.",
+    description: "Soixante jours après la création du compte, si aucune inscription ni commande n'a eu lieu, étiquette « compte-dormant » et e-mail qui propose un point de départ.",
+    trigger: { event: "lms.user_registered" },
+    note: "Marketing (abonnés uniquement) : seuls les comptes qui ont accepté de recevoir des e-mails le reçoivent.",
+    keywords: ["compte dormant", "inactif", "60 jours", "jamais utilisé", "réveil"],
+    emails: [mail("Compte dormant", "Votre compte vous attend", "Un bon point de départ", "Par où commencer, {h} ?", "Vous avez créé un compte mais pas encore choisi de formation. Parcourez le catalogue : chaque fiche présente le programme et une leçon gratuite.", ["Voir les formations", "catalogue"])],
+    steps: flow([S.wait(60, "days"), S.seg(all(rule("event:lms.course_enrolled", "never"), rule("event:lms.order_completed", "never")), "next", "exit"), S.tag("compte-dormant"), S.email(0)]),
+  },
+  {
+    key: "nettoyage-liste-inactifs", group: "reengage", kind: "marketing", audience: "abonnes", goal: "reengager", needs: ["list"],
+    label: "Dernière chance avant de retirer un inactif d'une liste",
+    objective: "Garder une liste saine : demander aux inactifs de confirmer leur intérêt, puis retirer ceux qui ne répondent pas.",
+    description: "Démarre quand vous ajoutez l'étiquette « nettoyage-liste ». Un e-mail demande de cliquer pour rester ; dix jours plus tard, un clic donne l'étiquette « actif-confirmé », l'absence de clic retire le contact de la liste choisie.",
+    trigger: { event: "tag.added", filter: { key: "tag", value: "nettoyage-liste" } },
+    note: "Le contact reste dans votre audience (il n'est pas supprimé) : seule son appartenance à la liste choisie est retirée. Pour lancer : étiquetez un segment « dernière ouverture il y a plus de 90 jours ».",
+    keywords: ["nettoyage", "inactifs", "liste", "hygiène", "dernière chance"],
+    emails: [mail("Rester", "Souhaitez-vous rester dans notre liste ?", "Un clic suffit", "On continue ensemble ?", "{h}, nous allons alléger notre liste. Si vous souhaitez continuer à recevoir nos nouvelles, cliquez simplement ci-dessous : sinon, nous vous retirerons de cette liste dans quelques jours.", ["Oui, je reste", "catalogue"])],
+    steps: flow([
+      S.email(0, "m0"), S.wait(10, "days"), S.clicked("@m0", "@reste", "@retire"),
+      S.untag("nettoyage-liste", "reste"), S.tag("actif-confirmé"), S.end(),
+      S.removeFromList("retire"), S.untag("nettoyage-liste"), S.tag("retiré-de-la-liste"),
+    ]),
+  },
+
+  // ================= Engagement e-mail =================
+  {
+    key: "relance-non-ouvreurs", group: "engagement", kind: "marketing", audience: "abonnes", goal: "reengager",
+    label: "Renvoyer un message aux non-ouvreurs",
+    objective: "Donner une seconde chance à un e-mail important auprès de ceux qui ne l'ont pas ouvert.",
+    description: "Un premier e-mail, puis trois jours plus tard : s'il a été ouvert, le parcours s'arrête ; sinon le même message est renvoyé avec un nouvel objet.",
+    trigger: { event: "contact.subscribed" },
+    note: "Nécessite le suivi des ouvertures (actif par défaut sur les e-mails marketing). Modifiez le texte de l'e-mail pour y mettre votre vrai message.",
+    keywords: ["non ouvert", "non-ouvreurs", "email ouvert", "ouverture", "engagement faible"],
+    emails: [
+      mail("Premier envoi", "Découvrez nos formations", "Pour bien démarrer", "Découvrez nos formations", "{h}, voici nos formations pour apprendre à votre rythme, avec des exercices et un accompagnement.", ["Voir les formations", "catalogue"]),
+      mail("Second envoi", "Vous l'avez peut-être manqué : nos formations", "Au cas où, voici le message", "Un petit rappel", "{h}, au cas où notre précédent message vous aurait échappé, voici nos formations pour apprendre à votre rythme.", ["Voir les formations", "catalogue"]),
+    ],
+    steps: flow([S.email(0, "m0"), S.wait(3, "days"), S.opened("@m0", "exit", "@renvoi"), S.email(1, "renvoi")]),
+  },
+  {
+    key: "clic-catalogue-suivi", group: "engagement", kind: "marketing", audience: "abonnes", goal: "convertir",
+    label: "Suivre un abonné qui clique vers le catalogue",
+    objective: "Prolonger la conversation avec ceux qui ont montré de l'intérêt pour vos formations.",
+    description: "Un e-mail qui renvoie vers le catalogue. Deux jours plus tard, ceux qui ont cliqué reçoivent l'étiquette « intéressé-par-les-formations » et un e-mail pour répondre à leurs questions ; les autres sortent du parcours.",
+    trigger: { event: "contact.subscribed" },
+    note: "Nécessite le suivi des clics (actif par défaut).",
+    keywords: ["clic", "clic vers une formation", "clic vers une offre", "intérêt", "lien spécifique"],
+    emails: [
+      mail("Catalogue", "Les formations du moment", "Trouvez la vôtre", "Trouvez votre prochaine formation", "{h}, voici nos formations. Chaque fiche présente le programme, le niveau et une leçon gratuite.", ["Voir le catalogue", "catalogue"]),
+      mail("Une question ?", "Une question avant de choisir ?", "Nous répondons volontiers", "Besoin d'un conseil ?", "{h}, vous avez regardé nos formations : si vous hésitez, répondez à cet e-mail avec votre objectif, nous vous indiquerons la plus adaptée.", ["Revoir le catalogue", "catalogue"]),
+    ],
+    steps: flow([S.email(0, "m0"), S.wait(2, "days"), S.clicked("@m0", "@oui", "exit"), S.tag("intéressé-par-les-formations", "oui"), S.email(1)]),
+  },
+  {
+    key: "aucun-clic-rappel", group: "engagement", kind: "marketing", audience: "abonnes", goal: "reengager",
+    label: "Rappel aux abonnés qui n'ont pas cliqué",
+    objective: "Relancer, avec un autre angle, ceux qui ont lu votre message sans passer à l'action.",
+    description: "Un premier e-mail. Quatre jours plus tard, ceux qui ont cliqué reçoivent l'étiquette « a-cliqué » ; les autres reçoivent un rappel qui reprend l'invitation sous un autre angle.",
+    trigger: { event: "contact.subscribed" },
+    note: "Nécessite le suivi des clics (actif par défaut).",
+    keywords: ["aucun clic", "pas de clic", "rappel", "engagement faible", "relance"],
+    emails: [
+      mail("Invitation", "Votre première formation vous attend", "Choisissez-la en quelques minutes", "Prêt(e) à apprendre ?", "{h}, choisissez votre première formation : toutes sont accessibles à votre rythme.", ["Choisir une formation", "catalogue"]),
+      mail("Rappel", "Une minute pour choisir", "Un dernier coup d'œil", "Il suffit d'un premier pas", "{h}, pas besoin de tout planifier : ouvrez une fiche, regardez la leçon gratuite et décidez ensuite.", ["Voir une leçon gratuite", "catalogue"]),
+    ],
+    steps: flow([S.email(0, "m0"), S.wait(4, "days"), S.clicked("@m0", "@clic", "@rappel"), S.tag("a-cliqué", "clic"), S.end(), S.email(1, "rappel")]),
+  },
+  {
+    key: "scoring-engagement", group: "engagement", kind: "marketing", audience: "abonnes", goal: "qualifier",
+    label: "Classer les abonnés selon leur engagement",
+    objective: "Distinguer les abonnés très engagés, engagés et peu engagés grâce à des étiquettes exploitables dans vos segments.",
+    description: "Un e-mail, puis cinq jours plus tard : l'abonné qui l'a ouvert et a cliqué reçoit « très-engagé », celui qui l'a seulement ouvert « engagé », les autres « peu-engagé ».",
+    trigger: { event: "contact.subscribed" },
+    note: "Ce parcours sert à étiqueter : vous réutilisez ensuite ces étiquettes dans vos segments et vos campagnes. Nécessite le suivi des ouvertures et des clics.",
+    keywords: ["engagement élevé", "engagement faible", "scoring", "segmentation", "étiquette", "score"],
+    emails: [mail("Conseils", "Nos conseils pour bien apprendre", "Trois idées à retenir", "Apprendre efficacement", "{h}, voici trois idées simples : planifiez de courts créneaux, pratiquez tout de suite, et revoyez ce que vous avez appris le lendemain.", ["Découvrir les formations", "catalogue"])],
+    steps: flow([
+      S.email(0, "m0"), S.wait(5, "days"), S.opened("@m0", "@clic", "@peu"),
+      S.clicked("@m0", "@tres", "@engage", "clic"),
+      S.tag("très-engagé", "tres"), S.end(),
+      S.tag("engagé", "engage"), S.end(),
+      S.tag("peu-engagé", "peu"),
+    ]),
+  },
+  {
+    key: "test-ab-bienvenue", group: "engagement", kind: "marketing", audience: "abonnes", goal: "qualifier",
+    label: "Tester deux messages de bienvenue (A/B)",
+    objective: "Savoir quel message de bienvenue obtient le plus de clics.",
+    description: "Chaque nouvel abonné reçoit au hasard le message A (formations) ou B (conseil). Quatre jours plus tard, ceux qui ont cliqué reçoivent l'étiquette « préfère-A » ou « préfère-B ».",
+    trigger: { event: "contact.subscribed" },
+    note: "Comptez les étiquettes dans Audience → Étiquettes pour comparer les deux messages. Le tirage est aléatoire (50 % / 50 %).",
+    keywords: ["test a/b", "ab test", "comparaison", "split", "tirage"],
+    emails: [
+      mail("Message A", "Découvrez nos formations", "Pour apprendre à votre rythme", "Bienvenue, {h}", "Merci de votre abonnement. Voici nos formations pour apprendre à votre rythme, avec des exercices et une leçon gratuite.", ["Voir les formations", "catalogue"]),
+      mail("Message B", "Un conseil pour bien démarrer", "Une idée simple", "Bienvenue, {h}", "Merci de votre abonnement. Un conseil : choisissez une seule formation et lancez-vous cette semaine, même dix minutes par jour changent tout.", ["Choisir ma formation", "catalogue"]),
+    ],
+    steps: flow([
+      S.split(50, "next", "@b"),
+      S.email(0, "a"), S.wait(4, "days"), S.clicked("@a", "@ta", "exit"), S.tag("préfère-A", "ta"), S.end(),
+      S.email(1, "b"), S.wait(4, "days"), S.clicked("@b", "@tb", "exit"), S.tag("préfère-B", "tb"),
+    ]),
+  },
+];

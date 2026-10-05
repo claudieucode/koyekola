@@ -9,14 +9,13 @@ const { audit } = require("../audience/shared");
 const templates = require("../templates");
 const service = require("./service");
 const { TRIGGERS } = require("./catalog");
+const library = require("./library");
+const describe = require("./library/describe");
+const availability = require("./library/availability");
+const browser = require("./library/browse");
+const store = require("./library/store");
 
 const HELLO = '{{contact.first_name | default:"cher(e) membre"}}';
-const GROUPS = [
-  ["welcome", "Accueillir les nouveaux contacts"],
-  ["nurture", "Accompagner les élèves"],
-  ["reengage", "Réengager"],
-  ["commerce", "E-commerce"],
-];
 // Condition « l'événement est survenu (ou non) dans les N derniers jours » — moteur de segments existant
 const happened = (event, days) => ({ op: "and", rules: [{ field: `event:${event}`, cmp: "within_days", value: days }] });
 const never = (event) => ({ op: "and", rules: [{ field: `event:${event}`, cmp: "never" }] });
@@ -25,7 +24,7 @@ const never = (event) => ({ op: "and", rules: [{ field: `event:${event}`, cmp: "
 // l'adresse publique du site connue à la création (SITE_URL) : jamais un lien d'exemple à remplacer.
 const catalogUrl = (base) => `${base}/catalogue`;
 
-const JOURNEYS = [
+const LEGACY = [
   {
     key: "bienvenue-abonnes", group: "welcome", kind: "marketing",
     label: "Bienvenue aux nouveaux abonnés",
@@ -262,52 +261,75 @@ const JOURNEYS = [
   },
 ];
 
+// Parcours historiques (définis ci-dessus) + parcours de la bibliothèque (library/*.js), tous gelés : un modèle ne se
+// modifie jamais. Les parcours historiques reçoivent seulement leurs métadonnées de classement (library/index.js).
+const JOURNEYS = [...LEGACY.map((j) => library.deepFreeze({ ...j, ...(library.LEGACY_META[j.key] || {}) })), ...library.EXTRA];
+const GROUPS = library.GROUPS;
+
 const byKey = (key) => JOURNEYS.find((j) => j.key === key) || null;
 const STEP_COUNT = (j) => (j.steps || []).filter((s) => s.type === "email").length;
+const SITE = "https://votre-site";
+const triggerOf = (j) => ({ ...j.trigger, label: (TRIGGERS[j.trigger.event] || { label: `Événement « ${j.trigger.event} » envoyé par votre site` }).label });
 
-// Description lisible d'une étape (aperçu avant création) : uniquement des informations réelles du parcours
-function describeStep(j, s, i, emails) {
-  const unit = { minutes: "minute(s)", hours: "heure(s)", days: "jour(s)" };
-  const target = (t) => (t === "exit" ? "fin du parcours" : t === "next" || t === undefined ? "étape suivante" : `étape ${t + 1}`);
-  switch (s.type) {
-    case "email": return { icon: "mail", text: `Envoyer l'e-mail « ${emails[s.email].subject.replace(/\{\{[^}]*\}\}/g, "…")} »` };
-    case "sms": return { icon: "smartphone", text: `Envoyer le SMS « ${j.sms("https://votre-site")[s.sms].name} »` };
-    case "wait": return { icon: "clock", text: `Attendre ${s.amount} ${unit[s.unit]}` };
-    case "wait_for_event": return { icon: "clock", text: `Attendre « ${(TRIGGERS[s.event] || { label: s.event }).label} » (${s.amount} ${unit[s.unit]} au plus)` };
-    case "condition": {
-      const what = s.check === "clicked" ? `A cliqué dans l'e-mail de l'étape ${s.ref + 1} ?` : s.check === "opened" ? `A ouvert l'e-mail de l'étape ${s.ref + 1} ?` : conditionText(s.definition);
-      return { icon: "gitBranch", text: `${what} Oui → ${target(s.onTrue)} · Non → ${target(s.onFalse)}` };
-    }
-    case "add_tag": return { icon: "tag", text: `Ajouter l'étiquette « ${s.tag} »` };
-    case "remove_tag": return { icon: "tag", text: `Retirer l'étiquette « ${s.tag} »` };
-    case "end": return { icon: "stopCircle", text: "Fin du parcours" };
-    default: return { icon: "zap", text: s.type };
-  }
-}
-function conditionText(def) {
-  const r = def.rules[0];
-  const label = (TRIGGERS[r.field.slice(6)] || { label: r.field }).label.replace(/^Un(e)? /, "").toLowerCase();
-  return r.cmp === "never" ? `N'a jamais eu « ${label} » ?` : `« ${label} » dans les ${r.value} derniers jours ?`;
+// Parties d'un parcours qui ne dépendent d'aucun réglage (mémorisées par la page de la bibliothèque)
+function describeStatic(j) {
+  const base = { channel: library.channelOf(j), stepCount: (j.steps || []).length, duration: 0, stepsText: "", triggerLabel: j.trigger ? triggerOf(j).label : "" };
+  if (j.unavailable) return base;
+  const emails = j.emails(SITE);
+  const texts = j.sms ? j.sms(SITE) : [];
+  const lines = j.steps.map((s) => describe.describeStep(j, s, emails, texts).text);
+  return { ...base, duration: describe.durationDays(j.steps), stepsText: lines.join(" ") };
 }
 
-// Catalogue pour l'interface : groupes, parcours disponibles (avec aperçu) et indisponibles (avec la raison)
-function journeyLibrary() {
-  return GROUPS.map(([key, label]) => ({
-    key, label,
-    items: JOURNEYS.filter((j) => j.group === key).map((j) => summary(j)),
-  })).filter((g) => g.items.length);
-}
-function summary(j) {
-  if (j.unavailable) return { key: j.key, label: j.label, objective: j.objective, unavailable: j.unavailable };
-  const emails = j.emails("https://votre-site");
+// Aperçu complet d'un parcours (lecture seule) : texte de chaque étape, schéma, e-mails, SMS, dépendances, règles
+function summary(j, env = { smsReady: false }) {
+  const head = { key: j.key, label: j.label, objective: j.objective, group: j.group, audience: j.audience, goal: j.goal };
+  const verdict = availability.evaluate(j, env);
+  if (j.unavailable) return { ...head, unavailable: j.unavailable, status: verdict.status, statusLabel: verdict.label, requirements: [], missing: verdict.missing };
+  const emails = j.emails(SITE);
+  const texts = j.sms ? j.sms(SITE) : [];
+  const channel = library.channelOf(j);
+  const days = describe.durationDays(j.steps);
   return {
-    key: j.key, label: j.label, objective: j.objective, description: j.description, note: j.note, kind: j.kind,
-    trigger: { ...j.trigger, label: (TRIGGERS[j.trigger.event] || { label: j.trigger.event }).label },
-    emailCount: STEP_COUNT(j), stepCount: j.steps.length,
-    steps: j.steps.map((s, i) => ({ n: i + 1, ...describeStep(j, s, i, emails) })),
+    ...head, description: j.description, note: j.note, kind: j.kind, needs: j.needs || [], siteEvent: j.siteEvent || null,
+    trigger: triggerOf(j), channel, channelLabel: library.CHANNELS[channel],
+    audienceLabel: library.AUDIENCES[j.audience], goalLabel: library.GOALS[j.goal], groupLabel: GROUPS.find(([k]) => k === j.group)[1],
+    emailCount: STEP_COUNT(j), smsCount: texts.length ? j.steps.filter((s) => s.type === "sms").length : 0, stepCount: j.steps.length,
+    duration: days, durationLabel: describe.dayLabel(days),
+    status: verdict.status, statusLabel: verdict.label, usable: verdict.usable, tone: verdict.tone, missing: verdict.missing, requirements: verdict.requirements,
+    steps: j.steps.map((s, i) => ({ n: i + 1, ...describe.describeStep(j, s, emails, texts) })),
+    flow: describe.flowModel(j, emails, texts),
+    stopRules: stopRules(j),
     emails: emails.map((e) => ({ name: e.name, subject: e.subject, preheader: e.preheader })),
-    sms: j.sms ? j.sms("https://votre-site").map((m) => ({ name: m.name, body: m.body })) : [],
+    sms: texts.map((m) => ({ name: m.name, body: m.body })),
   };
+}
+
+// Règles d'entrée et de sortie : déduites du parcours et du moteur (jamais décoratives)
+function stopRules(j) {
+  const rules = [];
+  rules.push("Un contact n'entre qu'une seule fois dans ce parcours.");
+  rules.push(j.kind === "transactional"
+    ? "Message de service : envoyé même aux contacts désabonnés du marketing ; la liste de suppression (rebonds, plaintes) est toujours respectée."
+    : "Marketing : consentement vérifié avant chaque envoi ; un contact qui se désabonne sort immédiatement du parcours.");
+  const exits = j.steps.filter((s) => s.type === "condition" && (s.onTrue === "exit" || s.onFalse === "exit")).length;
+  if (exits) rules.push(`${exits} condition${exits > 1 ? "s" : ""} font sortir du parcours (par exemple quand l'objectif est déjà atteint).`);
+  if (j.steps.some((s) => s.type === "wait_for_event")) rules.push("Une attente peut être interrompue plus tôt par l'événement attendu ; sinon elle prend fin au délai maximal.");
+  if (j.steps.some((s) => s.type === "sms")) rules.push("SMS : sans accord SMS prouvé, l'étape est passée sans rien envoyer ; heures de silence et plafond quotidien respectés.");
+  rules.push("Mettre le parcours en pause conserve les contacts en cours ; ils reprennent à la réactivation.");
+  return rules;
+}
+
+// ---------- Bibliothèque : recherche, filtres, tri, favoris, récents (aucune écriture) ----------
+function browseLibrary(ctx, query, { workerOn } = {}) {
+  const env = availability.environment(ctx, { workerOn });
+  return browser.browse({ journeys: JOURNEYS, describe: describeStatic, env, favorites: store.favoriteKeys(ctx), usage: store.usageCounts(ctx), recents: store.recentKeys(ctx, 8), query });
+}
+function detailFor(ctx, key, { workerOn } = {}) {
+  const j = byKey(key);
+  if (!j) return null;
+  const env = availability.environment(ctx, { workerOn });
+  return { ...summary(j, env), favorite: store.favoriteKeys(ctx).has(key), uses: store.usageCounts(ctx).get(key) || 0, lists: j.needs && j.needs.includes("list") ? require("../audience/lists").listLists(ctx).map((l) => ({ id: l.id, name: l.name })) : [] };
 }
 
 // Nom libre : « Base », sinon « Base (2) », « Base (3) »… (les noms de modèles et de scénarios sont uniques)
@@ -318,13 +340,32 @@ function freeName(ctx, table, base) {
   throw new MarketingError("duplicate", "Trop de copies de ce parcours : renommez ou supprimez les anciennes.");
 }
 
+// Copie du modèle (jamais le modèle lui-même) avec la liste choisie à la place du repère « @liste »
+function instantiate(j, params) {
+  const listId = Number.parseInt(params && params.listId, 10);
+  const needsList = (j.needs || []).includes("list");
+  const copy = (v) => JSON.parse(JSON.stringify(v));
+  const trigger = copy(j.trigger);
+  const steps = copy(j.steps);
+  if (needsList) {
+    if (!Number.isInteger(listId) || listId < 1) throw new MarketingError("invalid_field", "Choisissez la liste concernée par ce parcours.");
+    if (trigger.filter && trigger.filter.value === "@liste") trigger.filter = { key: trigger.filter.key, value: String(listId) };
+    for (const s of steps) if (s.listId === "@liste") s.listId = listId;
+  }
+  return { trigger, steps, listId: needsList ? listId : null };
+}
+
 // Crée les modèles d'e-mails et le scénario (brouillon), tout ou rien. Renvoie le scénario créé.
-function createJourney(ctx, key) {
+function createJourney(ctx, key, params = {}) {
   const j = byKey(key);
   if (!j) throw new MarketingError("not_found", "Parcours introuvable.");
   if (j.unavailable) throw new MarketingError("invalid_state", `Ce parcours n'est pas disponible : ${j.unavailable}`);
+  const problems = availability.check(j);
+  if (problems.length) throw new MarketingError("invalid_state", `Ce parcours n'est pas disponible : ${problems[0]}.`);
   const base = String(ctx.baseUrl || "").replace(/\/+$/, "") || "https://exemple.invalid";
   return transaction(ctx.db, () => {
+    const mine = instantiate(j, params);
+    if (mine.listId && !require("../audience/lists").getList(ctx, mine.listId)) throw new MarketingError("not_found", "Liste introuvable.");
     const automationName = freeName(ctx, "mk_automations", `Parcours · ${j.label}`);
     const suffix = automationName.slice(`Parcours · ${j.label}`.length); // « (2) » si le parcours a déjà été créé
     const ids = j.emails(base).map((e, i) => templates.createTemplate(ctx, {
@@ -333,11 +374,14 @@ function createJourney(ctx, key) {
       subject: e.subject, preheader: e.preheader, blocks: e.blocks,
     }).id);
     const texts = j.sms ? j.sms(base) : [];
-    const steps = j.steps.map((s) => (s.type === "email" ? { type: "email", templateId: ids[s.email] } : s.type === "sms" ? { type: "sms", body: texts[s.sms].body, trackClicks: true } : s));
-    const automation = service.createAutomation(ctx, { name: automationName, kind: j.kind, triggers: [j.trigger], steps });
+    const steps = mine.steps.map((s) => (s.type === "email" ? { type: "email", templateId: ids[s.email] } : s.type === "sms" ? { type: "sms", body: texts[s.sms].body, trackClicks: true } : s));
+    // Les références d'e-mail d'une condition (« a ouvert l'e-mail de l'étape N ») restent des numéros d'étape : inchangées.
+    const automation = service.createAutomation(ctx, { name: automationName, kind: j.kind, triggers: [mine.trigger], steps });
     audit(ctx, "automation.journey_created", "automation", automation.id, { journey: j.key, templates: ids.length });
+    store.recordUsage(ctx, j.key, automation.id);
     return automation;
   });
 }
 
-module.exports = { JOURNEYS, GROUPS, journeyLibrary, createJourney, byKey, summary };
+// Journal lisible de la création (utilisé par la page) : combien d'e-mails et de SMS le scénario contient
+module.exports = { JOURNEYS, GROUPS, createJourney, byKey, summary, browseLibrary, detailFor, toggleFavorite: store.toggleFavorite, instantiate };

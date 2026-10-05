@@ -1,0 +1,36 @@
+<%# Carte d'un parcours de la bibliothèque. Paramètres : e (entrée : j, verdict, favorite, uses, stepCount, duration, channel), canWrite, back (adresse de retour), compact %>
+<%
+  const j = e.j, v = e.verdict;
+  const tone = { ok: "mk-status-ok", warn: "mk-status-warn", info: "mk-status-info", tracking: "mk-status-track", off: "mk-status-off" }[v.tone] || "";
+  const trigger = e.triggerLabel || "";
+  const channelIcon = { email: "mail", sms: "smartphone", email_sms: "mail" }[e.channel];
+  const channelText = { email: "E-mail", sms: "SMS", email_sms: "E-mail + SMS" }[e.channel];
+  const days = e.duration;
+  const span = days < 1 ? "" : days === 1 ? " · sur 1 jour" : ` · sur ${Number.isInteger(days) ? days : Math.ceil(days)} jours`;
+  const needsSetup = (j.needs || []).includes("list") || (j.needs || []).includes("site_event");
+%>
+<article class="mk-lib-card mk-journey-card<%= v.usable ? "" : " mk-journey-off" %>" data-journey="<%= j.key %>">
+  <div class="mk-lib-body">
+    <div class="mk-journey-card-head">
+      <h3><a href="/marketing/automatisations/parcours/<%= j.key %>"><%= j.label %></a></h3>
+      <form action="/marketing/automatisations/parcours/<%= j.key %>/favori" method="post" class="mk-fav-form">
+        <input type="hidden" name="retour" value="<%= back %>">
+        <button type="submit" class="mk-fav<%= e.favorite ? " is-on" : "" %>" aria-pressed="<%= e.favorite ? "true" : "false" %>" title="<%= e.favorite ? "Retirer des favoris" : "Ajouter aux favoris" %>"><%- icon(e.favorite ? "star" : "starOutline", { size: 18 }) %><span class="sr-only"><%= e.favorite ? "Retirer des favoris : " : "Ajouter aux favoris : " %><%= j.label %></span></button>
+      </form>
+    </div>
+    <p class="mk-lib-meta"><span class="mk-status <%= tone %>"><%= v.label %></span></p>
+    <p class="field-hint mk-clamp"><%= j.objective %></p>
+    <% if (v.usable) { %>
+      <p class="mk-journey-trigger"><%- icon("zap", { size: 14 }) %> <%= trigger %><%= j.trigger.filter && j.trigger.filter.key === "tag" ? ` (« ${j.trigger.filter.value} »)` : "" %></p>
+      <p class="field-hint mk-journey-count"><%- icon(channelIcon, { size: 14 }) %> <%= channelText %> · <%= e.stepCount %> étape<%= e.stepCount > 1 ? "s" : "" %><%= span %></p>
+      <div class="mk-lib-form">
+        <a class="btn btn-outline btn-sm" href="/marketing/automatisations/parcours/<%= j.key %>">Aperçu<span class="sr-only"> du parcours « <%= j.label %> »</span></a>
+        <% if (canWrite && !needsSetup) { %><form action="/marketing/automatisations/parcours/<%= j.key %>" method="post"><button type="submit" class="btn btn-primary btn-sm">Utiliser ce parcours<span class="sr-only"> « <%= j.label %> »</span></button></form>
+        <% } else if (canWrite) { %><a class="btn btn-primary btn-sm" href="/marketing/automatisations/parcours/<%= j.key %>#utiliser">Configurer et utiliser<span class="sr-only"> « <%= j.label %> »</span></a><% } %>
+      </div>
+    <% } else { %>
+      <p class="mk-journey-reason mk-clamp-3"><%= v.missing[0] %></p>
+      <div class="mk-lib-form"><a class="btn btn-outline btn-sm" href="/marketing/automatisations/parcours/<%= j.key %>">Voir pourquoi<span class="sr-only"> : « <%= j.label %> »</span></a></div>
+    <% } %>
+  </div>
+</article>

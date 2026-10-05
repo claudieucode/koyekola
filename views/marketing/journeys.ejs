@@ -1,39 +1,80 @@
 <%- include("partials/top", { title, active }) %>
-<% const canWrite = mk.can("automations.write"); const kindLabel = { marketing: "Marketing · abonnés uniquement", transactional: "Transactionnel · tous les élèves concernés" }; %>
+<%
+  const canWrite = mk.can("automations.write");
+  const q = lib.q, base = "/marketing/automatisations/parcours";
+  const link = (override) => base + qs(q, { page: 1, ...override });
+  const back = base + qs(q, {});
+  const shown = lib.entries.length;
+  const optionSel = (cur, val) => (String(cur) === String(val) ? " selected" : "");
+  const stateLabel = lib.facets.statuses.find(([k]) => k === q.statut);
+%>
     <p class="mk-back"><a href="/marketing/automatisations">← Automatisations</a></p>
     <div class="mk-head"><h1>Parcours tout prêts</h1></div>
-    <p class="mk-lead">Des parcours complets — déclencheur, délais, conditions et e-mails déjà rédigés — reliés aux événements réels de KOLAKISA. « Utiliser ce parcours » le crée <strong>en brouillon</strong> : vous relisez les e-mails, ajustez si besoin, puis l'activez. Rien n'est envoyé avant.</p>
+    <p class="mk-lead">Une bibliothèque de <strong><%= lib.counts.usable %> parcours</strong> complets — déclencheur, délais, conditions et messages déjà rédigés — reliés aux événements réels de KOLAKISA. « Utiliser ce parcours » le crée <strong>en brouillon</strong> : vous relisez les messages, ajustez si besoin, puis l'activez. Rien n'est envoyé avant.</p>
 
-    <nav class="mk-tabs" aria-label="Catégories de parcours">
-      <% groups.forEach((g) => { %><a class="mk-tab" href="#g-<%= g.key %>"><%= g.label %> <span class="mk-tab-count"><%= g.items.length %></span></a>
+    <form class="mk-filterbar mk-lib-filters" method="get" action="<%= base %>" role="search" data-journey-filters>
+      <% if (q.vue !== "tous") { %><input type="hidden" name="vue" value="<%= q.vue %>"><% } %>
+      <div class="mk-search"><%- icon("search", { size: 16 }) %><label class="sr-only" for="lib-q">Rechercher un parcours</label><input id="lib-q" type="search" name="q" value="<%= q.q %>" placeholder="Rechercher : panier, élève, anniversaire, SMS, bienvenue…" maxlength="80" autocomplete="off"></div>
+      <div class="field-group"><label for="lib-categorie">Catégorie</label>
+        <select id="lib-categorie" name="categorie"><option value="">Toutes</option><% lib.facets.groups.forEach(([k, label]) => { %><option value="<%= k %>"<%= optionSel(q.categorie, k) %>><%= label %></option><% }) %></select></div>
+      <div class="field-group"><label for="lib-canal">Canal</label>
+        <select id="lib-canal" name="canal"><option value="">Tous</option><% lib.facets.channels.forEach(([k, label]) => { %><option value="<%= k %>"<%= optionSel(q.canal, k) %>><%= label %></option><% }) %></select></div>
+      <div class="field-group"><label for="lib-objectif">Objectif</label>
+        <select id="lib-objectif" name="objectif"><option value="">Tous</option><% lib.facets.goals.forEach(([k, label]) => { %><option value="<%= k %>"<%= optionSel(q.objectif, k) %>><%= label %></option><% }) %></select></div>
+      <div class="field-group"><label for="lib-declencheur">Déclencheur</label>
+        <select id="lib-declencheur" name="declencheur"><option value="">Tous</option><% lib.facets.triggers.forEach(([k, label]) => { %><option value="<%= k %>"<%= optionSel(q.declencheur, k) %>><%= label %></option><% }) %></select></div>
+      <div class="field-group"><label for="lib-audience">Audience</label>
+        <select id="lib-audience" name="audience"><option value="">Toutes</option><% lib.facets.audiences.forEach(([k, label]) => { %><option value="<%= k %>"<%= optionSel(q.audience, k) %>><%= label %></option><% }) %></select></div>
+      <div class="field-group"><label for="lib-etapes">Longueur</label>
+        <select id="lib-etapes" name="etapes"><option value="">Toutes</option><% lib.facets.stepRanges.forEach(([k, label]) => { %><option value="<%= k %>"<%= optionSel(q.etapes, k) %>><%= label %></option><% }) %></select></div>
+      <div class="field-group"><label for="lib-statut">Statut</label>
+        <select id="lib-statut" name="statut"><option value="">Utilisables</option><option value="tous"<%= optionSel(q.statut, "tous") %>>Tous (y compris non disponibles)</option><% lib.facets.statuses.forEach(([k, label]) => { %><option value="<%= k %>"<%= optionSel(q.statut, k) %>><%= label %></option><% }) %></select></div>
+      <div class="field-group"><label for="lib-tri">Trier par</label>
+        <select id="lib-tri" name="tri"><option value="">Ordre de la bibliothèque</option><% lib.facets.sorts.forEach(([k, label]) => { %><option value="<%= k %>"<%= optionSel(q.tri, k) %>><%= label %></option><% }) %></select></div>
+      <button type="submit" class="btn btn-primary btn-sm">Filtrer</button>
+      <% if (lib.searching || q.tri) { %><a href="<%= base %>" class="btn btn-ghost btn-sm">Réinitialiser</a><% } %>
+    </form>
+
+    <nav class="mk-tabs" aria-label="Affichage de la bibliothèque">
+      <a class="mk-tab" href="<%= link({ vue: "tous" }) %>"<%- q.vue === "tous" ? ' aria-current="page"' : "" %>>Tous les parcours</a>
+      <a class="mk-tab" href="<%= link({ vue: "favoris" }) %>"<%- q.vue === "favoris" ? ' aria-current="page"' : "" %>><%- icon("star", { size: 14 }) %> Mes favoris <span class="mk-tab-count"><%= lib.counts.favorites %></span></a>
+      <a class="mk-tab" href="<%= link({ vue: "recents" }) %>"<%- q.vue === "recents" ? ' aria-current="page"' : "" %>><%- icon("history", { size: 14 }) %> Récemment utilisés <span class="mk-tab-count"><%= lib.counts.recents %></span></a>
+    </nav>
+
+    <nav class="mk-lib-chips" aria-label="Catégories de parcours">
+      <a class="mk-chip" href="<%= link({ categorie: "" }) %>"<%- !q.categorie ? ' aria-current="true"' : "" %>>Toutes <span class="mk-tab-count"><%= Object.values(lib.counts.groups).reduce((a, b) => a + b, 0) %></span></a>
+      <% lib.facets.groups.forEach(([k, label]) => { if (!lib.counts.groups[k] && q.categorie !== k) return; %>
+        <a class="mk-chip" href="<%= link({ categorie: k }) %>"<%- q.categorie === k ? ' aria-current="true"' : "" %>><%= label %> <span class="mk-tab-count"><%= lib.counts.groups[k] || 0 %></span></a>
       <% }) %>
     </nav>
 
-    <% groups.forEach((g) => { %>
-      <section class="mk-lib-section" id="g-<%= g.key %>" aria-labelledby="h-<%= g.key %>">
-        <h2 id="h-<%= g.key %>" class="mk-h2"><%= g.label %></h2>
-        <div class="mk-lib-grid">
-          <% g.items.forEach((j) => { %>
-            <article class="mk-lib-card<%= j.unavailable ? " mk-journey-off" : "" %>">
-              <div class="mk-lib-body">
-                <h3><%= j.label %></h3>
-                <p class="field-hint"><%= j.objective %></p>
-                <% if (j.unavailable) { %>
-                  <p class="mk-lib-meta"><span class="mk-status mk-status-warn">Pas encore disponible</span></p>
-                  <p class="mk-journey-reason"><%= j.unavailable %></p>
-                <% } else { %>
-                  <p class="mk-lib-meta"><span class="mk-status <%= j.kind === "transactional" ? "mk-status-info" : "" %>"><%= kindLabel[j.kind] %></span></p>
-                  <p class="mk-journey-trigger"><%- icon("zap", { size: 14 }) %> <%= j.trigger.label %><%= j.trigger.filter ? ` (« ${j.trigger.filter.value} »)` : "" %></p>
-                  <p class="field-hint"><% if (j.sms.length) { %><%= j.sms.length %> SMS<% } else { %><%= j.emailCount %> e-mail<%= j.emailCount > 1 ? "s" : "" %><% } %> · <%= j.stepCount %> étapes</p>
-                  <div class="mk-lib-form">
-                    <a class="btn btn-outline btn-sm" href="/marketing/automatisations/parcours/<%= j.key %>">Aperçu<span class="sr-only"> du parcours « <%= j.label %> »</span></a>
-                    <% if (canWrite) { %><form action="/marketing/automatisations/parcours/<%= j.key %>" method="post"><button type="submit" class="btn btn-primary btn-sm">Utiliser ce parcours<span class="sr-only"> « <%= j.label %> »</span></button></form><% } %>
-                  </div>
-                <% } %>
-              </div>
-            </article>
-          <% }) %>
-        </div>
+    <p class="mk-filter-count mk-lib-count" role="status" aria-live="polite">
+      <strong><%= lib.total %></strong> parcours<%= lib.searching ? " correspondant à votre recherche" : "" %><%= shown < lib.total ? ` · ${shown} affichés` : "" %>
+      <% if (q.statut === "") { const hidden = (lib.counts.statuses.unavailable || 0) + (lib.counts.statuses.tracking || 0); if (hidden) { %> · <a href="<%= link({ statut: "tous" }) %>">Afficher aussi les <%= hidden %> parcours non disponibles</a><% } } %>
+      <% if (stateLabel) { %> · statut : <%= stateLabel[1] %><% } %>
+    </p>
+
+    <% if (lib.recentEntries.length) { %>
+      <section class="mk-lib-section" aria-labelledby="h-recents">
+        <h2 id="h-recents" class="mk-h2">Récemment utilisés</h2>
+        <div class="mk-lib-grid"><% lib.recentEntries.forEach((e) => { %><%- include("partials/journey-card", { e, canWrite, back }) %><% }) %></div>
       </section>
-    <% }) %>
+    <% } %>
+
+    <% if (!lib.entries.length) { %>
+      <div class="mk-empty"><%- icon("search", { size: 32 }) %>
+        <h2><%= q.vue === "favoris" ? "Aucun favori pour le moment" : q.vue === "recents" ? "Aucun parcours utilisé pour le moment" : "Aucun parcours ne correspond" %></h2>
+        <p><%= q.vue === "favoris" ? "Cliquez sur l'étoile d'un parcours pour le retrouver ici." : q.vue === "recents" ? "Les parcours que vous créez avec « Utiliser ce parcours » apparaissent ici." : "Essayez un autre mot, ou retirez un filtre." %></p>
+        <div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= q.vue === "tous" ? base : link({ vue: "tous" }) %>"><%= q.vue === "tous" ? "Réinitialiser les filtres" : "Voir tous les parcours" %></a></div>
+      </div>
+    <% } else { %>
+      <section class="mk-lib-section" id="liste" aria-label="Parcours">
+        <% if (lib.recentEntries.length) { %><h2 class="mk-h2">Tous les parcours</h2><% } %>
+        <div class="mk-lib-grid"><% lib.entries.forEach((e) => { %><%- include("partials/journey-card", { e, canWrite, back }) %><% }) %></div>
+      </section>
+      <% if (lib.hasMore) { %>
+        <p class="mk-lib-more"><a class="btn btn-outline" href="<%= link({ page: lib.nextPage }) %>#liste">Afficher plus de parcours <span class="mk-tab-count"><%= lib.total - shown %> restants</span></a></p>
+      <% } %>
+    <% } %>
+    <script src="<%= asset('/js/marketing-journeys.js') %>" defer></script>
 <%- include("partials/bottom") %>

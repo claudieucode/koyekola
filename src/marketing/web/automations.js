@@ -19,6 +19,14 @@ const RUN_STATUS = { running: "en cours", completed: "terminé", exited: "sorti"
 const { WORKER_DETAIL, workerHuman } = require("../workerNotice");
 const workerOn = () => process.env.MARKETING_WORKER === "on";
 
+// Adresse de la bibliothèque avec ses filtres (pour les liens « catégorie », « afficher plus », favoris) : valeurs vides omises
+const LIBRARY_KEYS = ["q", "categorie", "canal", "objectif", "declencheur", "audience", "statut", "etapes", "vue", "tri", "page"];
+const libraryQuery = (q, override = {}) => {
+  const merged = { ...q, ...override };
+  const parts = LIBRARY_KEYS.filter((k) => merged[k] !== undefined && merged[k] !== "" && merged[k] !== null && !(k === "vue" && merged[k] === "tous") && !(k === "page" && Number(merged[k]) === 1)).map((k) => `${k}=${encodeURIComponent(merged[k])}`);
+  return parts.length ? `?${parts.join("&")}` : "";
+};
+
 module.exports = ({ db }) => {
   const router = express.Router();
 
@@ -40,17 +48,27 @@ module.exports = ({ db }) => {
   // ---------- Parcours tout prêts (comme les « Pre-built journeys » de Mailchimp) ----------
   // Avant « /automatisations/:id » : « parcours » n'est pas un identifiant. Création = brouillon complet dans l'éditeur.
   router.get("/automatisations/parcours", need("automations.read"), (req, res) => {
-    res.render("marketing/journeys", { title: "Parcours tout prêts", active: "journeys", groups: journeys.journeyLibrary() });
+    const lib = journeys.browseLibrary(req.mk.ctx, req.query, { workerOn: workerOn() });
+    res.render("marketing/journeys", { title: "Parcours tout prêts", active: "journeys", lib, qs: libraryQuery });
+  });
+  // Favori (personnel) : bascule puis retour sur la liste, filtres conservés. N'écrit que dans mk_journey_favorites.
+  router.post("/automatisations/parcours/:key/favori", need("automations.read"), (req, res, next) => {
+    try {
+      if (!journeys.byKey(req.params.key)) return res.status(404).render("error", { message: "Parcours introuvable." });
+      journeys.toggleFavorite(req.mk.ctx, req.params.key);
+      const back = String(req.body.retour || "");
+      res.redirect(/^\/marketing\/automatisations\/parcours(\/[a-z0-9-]+)?(\?[A-Za-z0-9=&%_.+-]*)?(#[a-z0-9-]+)?$/.test(back) ? back : "/marketing/automatisations/parcours");
+    } catch (error) { next(error); }
   });
   router.get("/automatisations/parcours/:key", need("automations.read"), (req, res) => {
-    const j = journeys.byKey(req.params.key);
-    if (!j) return res.status(404).render("error", { message: "Parcours introuvable." });
-    res.render("marketing/journey", { title: j.label, active: "journeys", journey: journeys.summary(j), workerOn: workerOn() });
+    const journey = journeys.detailFor(req.mk.ctx, req.params.key, { workerOn: workerOn() });
+    if (!journey) return res.status(404).render("error", { message: "Parcours introuvable." });
+    res.render("marketing/journey", { title: journey.label, active: "journeys", journey, workerOn: workerOn() });
   });
   router.post("/automatisations/parcours/:key", need("automations.write"), (req, res, next) => {
     let created = null;
     attempt(req, res, next, () => (created ? `/marketing/automatisations/${created.id}` : `/marketing/automatisations/parcours/${encodeURIComponent(req.params.key)}`), () => {
-      created = journeys.createJourney(req.mk.ctx, req.params.key);
+      created = journeys.createJourney(req.mk.ctx, req.params.key, { listId: req.body.liste });
       const n = created.steps.filter((s) => s.type === "email").length;
       const k = created.steps.filter((s) => s.type === "sms").length;
       if (!n) return `Parcours créé en brouillon avec ${k} SMS. Relisez chaque SMS (cliquez sur l'étape), ajustez les délais si besoin, puis activez-le : rien n'est envoyé avant.`;

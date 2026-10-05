@@ -33,7 +33,8 @@ const FROZEN = {
   "021_double_optin.sql": "d2d0ff266b4381838cbe9c50e778f81ac7bcb23a0494ac1b6f12034a5f1b8b5e",
   "022_tests_ab.sql": "d80e9b4c5538975468d01e8490561bfb9e5a22f5749fed0590a96b0b7ff1b1c9",
   "023_revenus.sql": "c4d67399a995ce1a08a0008fc0db55ee5b3a5ac15f655d588b2111470e988b33",
-  "024_medias.sql": "c86eb7f59e824b0bc8c3392db747ae71695a8376027e25842ad8b35c83b922db"
+  "024_medias.sql": "c86eb7f59e824b0bc8c3392db747ae71695a8376027e25842ad8b35c83b922db",
+  "034_parcours_bibliotheque.sql": "6a2204704c6e9f80ef75581ef11539e675b2e823948a9ee2475365798c9e6576"
 };
 
 test("aucune migration marketing publiée n'a été modifiée", () => {

@@ -35,9 +35,12 @@ describe("parcours : création", () => {
 
   test("chaque parcours disponible crée un brouillon complet, ses e-mails prêts, et s'active sans retouche", () => {
     const available = journeys.JOURNEYS.filter((j) => !j.unavailable);
-    assert.equal(available.length, 8);
+    // Les 8 parcours historiques sont toujours là, inchangés ; la bibliothèque en ajoute d'autres (voir marketing-parcours-bibliotheque.test.js)
+    for (const key of ["bienvenue-abonnes", "bienvenue-eleves", "suivi-achat", "encourager-demarrage", "formation-terminee", "relance-favori", "reconquete", "bienvenue-sms"]) assert.ok(available.some((j) => j.key === key), key);
+    assert.ok(available.length >= 8);
+    const listId = audience.createList(A, { name: "Ma liste" }).id; // pour les parcours qui concernent une liste choisie
     for (const j of available) {
-      const a = journeys.createJourney(A, j.key);
+      const a = journeys.createJourney(A, j.key, { listId });
       assert.equal(a.status, "draft", j.key);
       assert.equal(a.kind, j.kind);
       assert.deepEqual(a.triggers.map((t) => t.event), [j.trigger.event]);
@@ -158,10 +161,13 @@ describe("parcours : pages et droits", () => {
   test("galerie : parcours disponibles avec aperçu et bouton ; indisponibles avec la raison, sans bouton", async () => {
     const r = await boss.get("/marketing/automatisations/parcours");
     assert.equal(r.status, 200);
-    assert.equal((r.text.match(/Utiliser ce parcours<span/g) || []).length, 8);
-    assert.match(r.text, /Panier abandonné/);
-    assert.match(r.text, /Pas encore disponible/);
-    assert.doesNotMatch(r.text, /action="\/marketing\/automatisations\/parcours\/panier-abandonne"/);
+    assert.ok((r.text.match(/Utiliser ce parcours<span/g) || []).length >= 8, "des parcours à utiliser en un clic");
+    // Par défaut, seuls les parcours utilisables sont proposés ; les autres s'affichent à la demande, avec la raison
+    assert.doesNotMatch(r.text, /Panier abandonné/);
+    const all = await boss.get("/marketing/automatisations/parcours?statut=tous&q=panier");
+    assert.match(all.text, /Panier abandonné/);
+    assert.match(all.text, /Nécessite le suivi des visiteurs/);
+    assert.doesNotMatch(all.text, /action="\/marketing\/automatisations\/parcours\/panier-abandonne"/);
     // Accessible depuis le menu et depuis la page des automatisations
     assert.match((await boss.get("/marketing/automatisations")).text, /href="\/marketing\/automatisations\/parcours"/);
   });

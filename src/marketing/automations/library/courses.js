@@ -1,0 +1,107 @@
+// Familles « Accompagner les élèves » (nurture) et « Formations » (courses) : le parcours pédagogique d'un élève, de
+// l'inscription à la formation terminée. Déclencheurs : inscription, leçon terminée, formation terminée, favori.
+const { mail, step: S, flow, all, rule, happened, notWithin, never, atLeast } = require("./dsl");
+
+module.exports = [
+  // ================= Accompagner les élèves (nurture) =================
+  {
+    key: "premiere-lecon-terminee", group: "nurture", kind: "transactional", audience: "eleves", goal: "activer",
+    label: "Félicitations après la première leçon",
+    objective: "Encourager un élève qui vient de terminer sa première leçon à poursuivre jusqu'au bout.",
+    description: "Un e-mail de félicitations dès la première leçon terminée. S'il n'a pas terminé la formation une semaine plus tard, un second e-mail l'invite à garder le rythme.",
+    trigger: { event: "lms.lesson_completed" },
+    note: "Un élève n'entre qu'une fois dans le parcours : à sa première leçon terminée après l'activation.",
+    keywords: ["première leçon", "premier module", "démarrage", "progression"],
+    emails: [
+      mail("Bravo", "Bravo pour votre première leçon", "{{event.course_title}}", "Premier pas réussi, {h}", "Vous venez de terminer une leçon de **{{event.course_title}}** : le plus difficile est fait. Chaque leçon vous rapproche de votre objectif.", ["Continuer la formation", "accès"], { kind: "transactional" }),
+      mail("Garder le rythme", "Gardez le rythme", "{{event.course_title}}", "Votre formation vous attend", "{h}, vous avez bien commencé. Quelques minutes aujourd'hui suffisent pour avancer encore d'une leçon.", ["Reprendre ma formation", "accès"], { kind: "transactional" }),
+    ],
+    steps: flow([S.email(0), S.waitFor("lms.course_completed", 7, "days"), S.seg(happened("lms.course_completed", 7), "exit", "next"), S.email(1)]),
+  },
+  {
+    key: "premiere-semaine-eleve", group: "nurture", kind: "transactional", audience: "eleves", goal: "activer",
+    label: "Réussir sa première semaine de formation",
+    objective: "Accompagner un nouvel inscrit pendant sa première semaine, avec un message adapté à son avancement.",
+    description: "Le lendemain de l'inscription, trois conseils pour bien démarrer. Trois jours plus tard : s'il a terminé au moins une leçon, un message d'encouragement ; sinon un rappel pour faire le premier pas.",
+    trigger: { event: "lms.course_enrolled" },
+    note: "Complète « Encourager le démarrage » : celui-ci donne des conseils avant de relancer. Activez l'un ou l'autre pour éviter deux relances proches.",
+    keywords: ["onboarding", "première semaine", "démarrage", "inscription formation"],
+    emails: [
+      mail("Conseils", "Trois conseils pour bien démarrer", "{{event.course_title}}", "Bien démarrer {{event.course_title}}", "{h}, voici comment réussir : bloquez un petit créneau régulier, commencez par la première leçon, et notez vos questions pour y revenir.", ["Commencer maintenant", "accès"], { kind: "transactional" }),
+      mail("Beau départ", "Beau départ !", "{{event.course_title}}", "Vous avez bien commencé", "Vous avez déjà terminé une leçon : continuez sur cette lancée, la suite est aussi accessible.", ["Poursuivre", "accès"], { kind: "transactional" }),
+      mail("Un petit pas", "Un petit pas suffit", "{{event.course_title}}", "On s'y met ?", "{h}, votre formation est prête et la première leçon ne dure que quelques minutes. Lancez-la aujourd'hui, le reste suivra.", ["Commencer la première leçon", "accès"], { kind: "transactional" }),
+    ],
+    steps: flow([
+      S.wait(1, "days"), S.email(0), S.wait(3, "days"), S.seg(happened("lms.lesson_completed", 4), "@bravo", "@rappel"),
+      S.email(1, "bravo"), S.end(), S.email(2, "rappel"),
+    ]),
+  },
+  {
+    key: "eleve-arrete-14-jours", group: "nurture", kind: "transactional", audience: "eleves", goal: "reengager",
+    label: "Relance d'un élève inactif depuis 14 jours",
+    objective: "Faire reprendre sa formation à un élève qui n'a plus terminé de leçon depuis deux semaines.",
+    description: "Quatorze jours après une leçon terminée, vérifie qu'aucune autre n'a été terminée depuis ; si l'élève s'est arrêté, un e-mail l'invite à reprendre là où il en était.",
+    trigger: { event: "lms.lesson_completed" },
+    note: "Un élève n'entre qu'une fois (à sa première leçon après l'activation) : l'e-mail part s'il n'a rien terminé dans les 14 jours qui suivent.",
+    keywords: ["inactif", "abandon", "reprise", "14 jours", "relance"],
+    emails: [mail("Reprise", "Reprenez là où vous vous êtes arrêté(e)", "{{event.course_title}}", "Votre formation vous attend", "{h}, cela fait deux semaines que vous n'avez pas terminé de leçon dans **{{event.course_title}}**. Votre progression est conservée : reprenez où vous en étiez.", ["Reprendre ma formation", "accès"], { kind: "transactional" })],
+    steps: flow([S.wait(14, "days"), S.seg(notWithin("lms.lesson_completed", 14), "next", "exit"), S.email(0)]),
+  },
+  {
+    key: "eleve-absence-longue-30-jours", group: "nurture", kind: "marketing", audience: "eleves", goal: "reengager",
+    label: "Élève de retour après une longue absence",
+    objective: "Réveiller un élève sans aucune leçon terminée depuis un mois.",
+    description: "Trente jours après une leçon terminée, si aucune autre n'a été terminée, l'élève reçoit l'étiquette « absent-30j » puis un e-mail pour reprendre en douceur.",
+    trigger: { event: "lms.lesson_completed" },
+    note: "Marketing (abonnés uniquement). Pour un rappel plus rapide et transactionnel, utilisez « Relance d'un élève inactif depuis 14 jours ».",
+    keywords: ["absence", "inactif", "30 jours", "retour", "reprise"],
+    emails: [mail("Retour", "Content de vous revoir ?", "Votre progression vous attend", "Cela fait un moment, {h}", "Votre formation est toujours là et votre progression est conservée. Reprenez par la leçon de votre choix : même quelques minutes comptent.", ["Reprendre", "espace"])],
+    steps: flow([S.wait(30, "days"), S.seg(notWithin("lms.lesson_completed", 30), "next", "exit"), S.tag("absent-30j"), S.email(0)]),
+  },
+  {
+    key: "eleve-tres-actif", group: "nurture", kind: "transactional", audience: "eleves", goal: "activer",
+    label: "Féliciter un élève qui progresse vite",
+    objective: "Encourager les élèves très actifs : cinq leçons terminées ou plus en une semaine.",
+    description: "Une semaine après la première leçon terminée, si l'élève en a terminé au moins cinq, il reçoit un e-mail de félicitations ; sinon il sort du parcours.",
+    trigger: { event: "lms.lesson_completed" },
+    note: "Le comptage porte sur les leçons terminées depuis l'activation du pont KOLAKISA. Le seuil (5) se modifie dans la condition du scénario.",
+    keywords: ["très actif", "progression", "rythme", "engagé"],
+    emails: [mail("Beau rythme", "Quel beau rythme !", "Vous avancez vite", "Bravo, {h}", "Vous avez terminé plusieurs leçons en une semaine : c'est un excellent rythme. Continuez ainsi, vous êtes sur la bonne voie.", ["Continuer", "accès"], { kind: "transactional" })],
+    steps: flow([S.wait(7, "days"), S.seg(atLeast("lms.lesson_completed", 5), "next", "exit"), S.email(0)]),
+  },
+
+  // ================= Formations (courses) =================
+  {
+    key: "bienvenue-inscription-formation", group: "courses", kind: "transactional", audience: "eleves", goal: "accueillir",
+    label: "Bienvenue dans une formation",
+    objective: "Accueillir chaque élève qui s'inscrit à une formation (gratuite ou payante) et lui indiquer comment démarrer.",
+    description: "Un e-mail de service dès l'inscription : le titre de la formation, le lien pour y accéder et la marche à suivre.",
+    trigger: { event: "lms.course_enrolled" },
+    note: "Une inscription payante déclenche aussi « Suivi après achat ». Pour éviter un doublon, activez celui des deux qui vous convient.",
+    keywords: ["inscription formation", "accès", "bienvenue formation"],
+    emails: [mail("Bienvenue", "Bienvenue dans {{event.course_title}}", "Votre accès est prêt", "Bienvenue, {h}", "Vous êtes inscrit(e) à **{{event.course_title}}**. Vous pouvez commencer dès maintenant, à votre rythme : votre progression est enregistrée automatiquement.", ["Commencer la formation", "accès"], { kind: "transactional" })],
+    steps: flow([S.email(0)]),
+  },
+  {
+    key: "formation-terminee-suite", group: "courses", kind: "marketing", audience: "eleves", goal: "convertir",
+    label: "Formation terminée : proposer la suite",
+    objective: "Transformer une formation terminée en prochain achat, avec une recommandation de formation complémentaire.",
+    description: "Étiquette « a-terminé-une-formation », puis, deux jours après la fin de la formation, un e-mail qui invite à découvrir la suite du parcours dans le catalogue.",
+    trigger: { event: "lms.course_completed" },
+    note: "Marketing (abonnés uniquement). Pour une demande d'avis, voir « Félicitations et avis ».",
+    keywords: ["recommandation", "formation complémentaire", "niveau supérieur", "suite", "cross-sell", "upsell", "certification"],
+    emails: [mail("La suite", "Et maintenant, quelle formation ?", "La suite de votre parcours", "Bravo pour {{event.course_title}}", "{h}, vous avez terminé **{{event.course_title}}**. Pour continuer sur votre lancée, découvrez les formations qui complètent ce que vous venez d'apprendre.", ["Voir les autres formations", "catalogue"])],
+    steps: flow([S.tag("a-terminé-une-formation"), S.wait(2, "days"), S.email(0)]),
+  },
+  {
+    key: "favoris-multiples-aide-choix", group: "courses", kind: "marketing", audience: "eleves", goal: "convertir",
+    label: "Aider un élève qui hésite entre plusieurs favoris",
+    objective: "Convertir les élèves qui ont mis au moins trois formations en favori sans rien acheter.",
+    description: "Une semaine après le premier favori ajouté, vérifie s'il y en a au moins trois et qu'aucun achat n'a eu lieu ; si oui, étiquette « hésite » et e-mail d'aide au choix.",
+    trigger: { event: "lms.favorite_added" },
+    note: "Un contact n'entre qu'une fois : au premier favori ajouté après l'activation, puis la vérification a lieu 7 jours plus tard. Pour relancer un seul favori, voir « Relance après un favori ».",
+    keywords: ["favoris", "hésitation", "choisir", "plusieurs formations"],
+    emails: [mail("Aide au choix", "Besoin d'aide pour choisir ?", "Trois formations en favori", "Difficile de choisir ?", "{h}, vous avez mis plusieurs formations en favori. Comparez leurs programmes et leurs niveaux, ou répondez à cet e-mail : nous vous conseillerons celle qui correspond à votre objectif.", ["Comparer les formations", "catalogue"])],
+    steps: flow([S.wait(7, "days"), S.seg(all(rule("event:lms.favorite_added", "at_least", 3), rule("event:lms.order_completed", "never")), "next", "exit"), S.tag("hésite"), S.email(0)]),
+  },
+];
