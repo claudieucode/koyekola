@@ -107,6 +107,8 @@ app.use(
   })
 );
 
+// Compte relu en base à chaque requête (session fermée si le compte est supprimé ou le mot de passe changé)
+app.use(require("./src/middlewares/sessionUser").refreshSessionUser);
 app.use(injectLocals);
 // Après injectLocals : la page d'erreur affichée en cas de refus a besoin de ses variables
 app.use(sameOriginOnly);

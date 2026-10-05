@@ -3,6 +3,7 @@ const db = require("../config/database");
 const { requireAuth } = require("../middlewares/auth");
 const { sendPurchaseWelcomeEmail } = require("../utils/mailer");
 const sales = require("../services/gestion/sales");
+const { paidCheckoutOpen } = require("../services/payment");
 
 const router = express.Router();
 
@@ -42,7 +43,7 @@ router.get("/commande", requireAuth, (req, res) => {
   const p = pricing(req, items);
   const flash = req.session.couponFlash || null;
   delete req.session.couponFlash;
-  res.render("checkout", { items, total: p.total, subtotal: p.subtotal, discount: p.discount, coupon: p.coupon, couponError: p.couponError || (flash && flash.error) || null, couponOk: flash && flash.ok });
+  res.render("checkout", { items, total: p.total, subtotal: p.subtotal, discount: p.discount, coupon: p.coupon, couponError: p.couponError || (flash && flash.error) || null, couponOk: flash && flash.ok, orderError: (flash && flash.orderError) || null });
 });
 
 // Code promo : vérifié tout de suite (message clair), appliqué au paiement après une nouvelle vérification
@@ -57,7 +58,7 @@ router.post("/commande/code-promo", requireAuth, (req, res) => {
 });
 
 // Paiement simulé : aucune carte n'est réellement débitée. Voir le README pour brancher
-// un vrai prestataire de paiement (Stripe, etc.) avant toute mise en production.
+// un vrai prestataire de paiement (Stripe, etc.). En production, seules les commandes à 0 € passent (src/services/payment.js).
 router.post("/commande", requireAuth, async (req, res, next) => {
   // Un gestionnaire async doit intercepter ses erreurs lui-même : Express 4 ne le fait pas,
   // et une erreur non interceptée ferait tomber tout le serveur.
@@ -85,6 +86,11 @@ router.post("/commande", requireAuth, async (req, res, next) => {
       }
       const priceOf = (c) => (applied ? applied.lines.get(c.id) : c.price_cents);
       const total = items.reduce((sum, c) => sum + priceOf(c), 0);
+      if (total > 0 && !paidCheckoutOpen()) {
+        db.exec("ROLLBACK");
+        req.session.couponFlash = { orderError: "Le paiement en ligne n'est pas encore ouvert : aucune commande payante ne peut être passée pour l'instant." };
+        return res.redirect("/commande");
+      }
       const orderInfo = db.prepare("INSERT INTO orders (user_id, total_cents, coupon_id, coupon_code, discount_cents) VALUES (?, ?, ?, ?, ?)")
         .run(req.session.user.id, total, applied ? applied.coupon.id : null, applied ? applied.coupon.code : null, applied ? applied.discount : 0);
       orderId = Number(orderInfo.lastInsertRowid);

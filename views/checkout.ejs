@@ -3,29 +3,25 @@
   <div class="container-wide cart-layout">
     <div>
       <h1 style="margin-top:36px;">Paiement</h1>
-      <p class="payment-badge"><%- icon('info', { size: 16 }) %> Mode démonstration : aucun paiement réel n'est effectué, aucune carte n'est débitée.</p>
-
-      <form action="/commande" method="post" class="card card-pad payment-mock">
-        <div class="field-group">
-          <label for="f-checkout-1">Numéro de carte</label>
-          <input id="f-checkout-1" type="text" placeholder="4242 4242 4242 4242" maxlength="19" required>
+      <% if (orderError) { %><p class="field-error" role="alert"><%= orderError %></p><% } %>
+      <% if (total === 0) { %>
+        <form action="/commande" method="post" class="card card-pad payment-mock">
+          <p class="payment-badge"><%- icon('info', { size: 16 }) %> Rien à payer : votre commande est gratuite.</p>
+          <button type="submit" class="btn btn-primary btn-block btn-lg">Confirmer l'inscription</button>
+        </form>
+      <% } else if (paidCheckoutOpen) { %>
+        <%# Mode démonstration : aucun champ de carte (personne ne doit y taper sa vraie carte), aucun débit %>
+        <form action="/commande" method="post" class="card card-pad payment-mock">
+          <p class="payment-badge"><%- icon('info', { size: 16 }) %> Mode démonstration : aucun paiement réel n'est effectué, aucune carte n'est demandée ni débitée.</p>
+          <button type="submit" class="btn btn-primary btn-block btn-lg">Confirmer la commande de <%= formatPrice(total) %> (démonstration)</button>
+        </form>
+      <% } else { %>
+        <div class="card card-pad payment-mock">
+          <p class="payment-badge"><%- icon('info', { size: 16 }) %> Le paiement en ligne ouvre bientôt. Les formations payantes ne peuvent pas encore être commandées sur le site.</p>
+          <p>Pour suivre cette formation dès maintenant, écrivez-nous.</p>
+          <a href="/contact" class="btn btn-primary btn-block btn-lg">Nous contacter</a>
         </div>
-        <div class="field-row">
-          <div class="field-group">
-            <label for="f-checkout-2">Date d'expiration</label>
-            <input id="f-checkout-2" type="text" placeholder="MM/AA" maxlength="5" required>
-          </div>
-          <div class="field-group">
-            <label for="f-checkout-3">CVC</label>
-            <input id="f-checkout-3" type="text" placeholder="123" maxlength="4" required>
-          </div>
-        </div>
-        <div class="field-group">
-          <label for="f-checkout-4">Nom sur la carte</label>
-          <input id="f-checkout-4" type="text" placeholder="<%= currentUser.username %>" required>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block btn-lg">Payer <%= formatPrice(total) %> (simulation)</button>
-      </form>
+      <% } %>
     </div>
 
     <aside class="card card-pad summary-card">

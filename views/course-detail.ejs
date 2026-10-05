@@ -280,6 +280,9 @@
             <a href="/apprendre/<%= course.slug %>" class="btn btn-success btn-block">Continuer la formation</a>
           <% } else if (!currentUser) { %>
             <a href="/connexion?redirect=<%= encodeURIComponent('/cours/' + course.slug) %>" class="btn btn-primary btn-block">Se connecter pour acheter</a>
+          <% } else if (course.price_cents > 0 && !paidCheckoutOpen) { %>
+            <p class="purchase-soon" role="note">L'achat en ligne ouvre bientôt.</p>
+            <a href="/contact" class="btn btn-primary btn-block">Nous contacter pour la suivre</a>
           <% } else { %>
             <form action="/panier/ajouter/<%= course.id %>" method="post">
               <input type="hidden" name="buyNow" value="1">

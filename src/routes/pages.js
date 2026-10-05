@@ -76,7 +76,8 @@ router.get("/faq", (req, res) => {
 });
 
 function loadCourseOr404(req, res, courseId) {
-  const course = db.prepare("SELECT id, title FROM courses WHERE id = ? AND instructor_id = ?").get(Number(courseId), req.session.user.id);
+  // Toutes les colonnes : l'en-tête commun des pages d'une formation (_course-head) affiche son statut, sa miniature et son lien public
+  const course = db.prepare("SELECT * FROM courses WHERE id = ? AND instructor_id = ?").get(Number(courseId), req.session.user.id);
   if (!course) res.status(404).render("error", { message: "Formation introuvable." });
   return course;
 }

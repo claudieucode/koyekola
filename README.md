@@ -28,7 +28,13 @@ Pour utiliser la plateforme avec votre propre identité, changez simplement le n
 
 ## Paiement : ce qui est simulé
 
-Le tunnel de paiement (`/commande`) accepte n'importe quelle saisie et valide toujours la commande — c'est une démonstration, pas une intégration réelle. Pour accepter de vrais paiements, il faut brancher un prestataire (Stripe Checkout est le plus simple à intégrer) avant toute mise en ligne publique.
+Aucun prestataire de paiement n'est branché : une commande inscrit l'élève sans débiter de carte (aucun champ de carte n'est affiché).
+
+- **En production** (`NODE_ENV=production`), les commandes payantes sont **refusées** : la fiche d'une formation payante affiche « L'achat en ligne ouvre bientôt » et un lien vers le contact. Les commandes à 0 € (formations gratuites, code promo à 100 %) restent possibles.
+- `PAIEMENT_SIMULE=1` rouvre le mode démonstration en production (commande payante validée sans paiement) : à ne jamais utiliser avec de vrais clients.
+- En développement et dans les tests, le mode démonstration reste ouvert.
+
+Pour accepter de vrais paiements, il faut brancher un prestataire (Stripe Checkout est le plus simple à intégrer).
 
 ## Publier le site en ligne
 

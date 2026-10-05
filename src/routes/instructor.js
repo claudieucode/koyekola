@@ -65,15 +65,23 @@ function loadOwnedQuiz(req, res, next) {
 }
 
 // Efface du disque tous les fichiers de ces leçons : vidéos et pièces jointes
-function removeFilesOfLessons(lessonIds) {
-  if (!lessonIds.length) return;
+// Fichiers (vidéos, pièces jointes) de ces leçons. Relevés AVANT la suppression en base, effacés APRÈS :
+// si la suppression en base échoue, aucune fiche ne pointe vers un fichier déjà effacé.
+function filesOfLessons(lessonIds) {
+  if (!lessonIds.length) return [];
   const marks = lessonIds.map(() => "?").join(",");
-  db.prepare(
+  return db.prepare(
     `SELECT video_path AS p FROM lessons WHERE id IN (${marks}) AND video_path IS NOT NULL
      UNION SELECT path FROM lesson_attachments WHERE lesson_id IN (${marks}) AND path IS NOT NULL`
   )
     .all(...lessonIds, ...lessonIds)
-    .forEach((row) => removeUploadedFile(row.p));
+    .map((row) => row.p);
+}
+
+// Supprime en base (requête `remove`), puis efface les fichiers relevés avant
+function deleteThenRemoveFiles(files, remove) {
+  remove();
+  files.filter(Boolean).forEach((file) => removeUploadedFile(file));
 }
 
 // ---------- Tableau de bord ----------
@@ -328,13 +336,11 @@ router.post("/formateur/cours/:id/supprimer", loadOwnedCourse, (req, res) => {
     });
   }
 
-  removeUploadedFile(req.course.thumbnail_path);
   const lessonIds = db
     .prepare("SELECT lessons.id FROM lessons JOIN sections ON sections.id = lessons.section_id WHERE sections.course_id = ?")
     .all(req.course.id)
     .map((l) => l.id);
-  removeFilesOfLessons(lessonIds);
-  db.prepare("DELETE FROM courses WHERE id = ?").run(req.course.id);
+  deleteThenRemoveFiles([req.course.thumbnail_path, ...filesOfLessons(lessonIds)], () => db.prepare("DELETE FROM courses WHERE id = ?").run(req.course.id));
   res.redirect("/formateur");
 });
 
@@ -393,8 +399,8 @@ router.post("/formateur/cours/:id/sections/reorder", loadOwnedCourse, (req, res)
 });
 
 router.post("/formateur/sections/:sectionId/supprimer", loadOwnedSection, (req, res) => {
-  removeFilesOfLessons(db.prepare("SELECT id FROM lessons WHERE section_id = ?").all(req.section.id).map((l) => l.id));
-  db.prepare("DELETE FROM sections WHERE id = ?").run(req.section.id);
+  const files = filesOfLessons(db.prepare("SELECT id FROM lessons WHERE section_id = ?").all(req.section.id).map((l) => l.id));
+  deleteThenRemoveFiles(files, () => db.prepare("DELETE FROM sections WHERE id = ?").run(req.section.id));
   res.redirect(`/formateur/cours/${req.section.course_id}/curriculum`);
 });
 
@@ -465,8 +471,7 @@ router.post(
 );
 
 router.post("/formateur/lecons/:lessonId/supprimer", loadOwnedLesson, (req, res) => {
-  removeFilesOfLessons([req.lesson.id]);
-  db.prepare("DELETE FROM lessons WHERE id = ?").run(req.lesson.id);
+  deleteThenRemoveFiles(filesOfLessons([req.lesson.id]), () => db.prepare("DELETE FROM lessons WHERE id = ?").run(req.lesson.id));
   res.redirect(`/formateur/cours/${req.lesson.course_id}/curriculum`);
 });
 
@@ -524,8 +529,7 @@ router.post("/formateur/lecons/:lessonId/liens", loadOwnedLesson, (req, res) => 
 });
 
 router.post("/formateur/pieces-jointes/:attachmentId/supprimer", loadOwnedAttachment, (req, res) => {
-  if (req.attachment.path) removeUploadedFile(req.attachment.path);
-  db.prepare("DELETE FROM lesson_attachments WHERE id = ?").run(req.attachment.id);
+  deleteThenRemoveFiles([req.attachment.path], () => db.prepare("DELETE FROM lesson_attachments WHERE id = ?").run(req.attachment.id));
   res.redirect(`/formateur/cours/${req.attachment.course_id}/curriculum?lecon=${req.attachment.lesson_id}`);
 });
 

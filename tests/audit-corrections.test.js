@@ -1,0 +1,147 @@
+// Corrections de l'audit (octobre 2026) :
+// - B1 : en production, sans paiement réel branché, aucune commande payante (sinon toute formation payante est gratuite) ;
+// - B5 : plus aucun champ de carte bancaire factice ;
+// - M2 : suppression d'une formation, d'un chapitre, d'une leçon : la base d'abord, les fichiers ensuite ;
+// - M3 : en-tête de la FAQ d'une formation (statut et lien « Aperçu »).
+const { describe, test, before, after } = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("fs");
+const path = require("path");
+const { startServer, loginInstructor, newStudent, createCourse, buy } = require("./helpers");
+
+const G = "/formateur/gestion";
+
+describe("B1 / B5 : production sans paiement réel", () => {
+  let srv, prof;
+  before(async () => { srv = await startServer({ NODE_ENV: "production" }); prof = await loginInstructor(srv); });
+  after(() => srv.stop());
+
+  test("formation payante : pas de bouton d'achat, un lien vers le contact", async () => {
+    const course = await createCourse(prof, srv, { title: "Payante prod", price: 49 });
+    const s = await newStudent(srv);
+    const page = (await s.get(`/cours/${course.slug}`)).text;
+    assert.match(page, /L'achat en ligne ouvre bientôt/);
+    assert.match(page, /href="\/contact" class="btn btn-primary btn-block">Nous contacter pour la suivre/);
+    assert.doesNotMatch(page, /Acheter maintenant/);
+  });
+
+  test("commande payante forcée (panier puis POST) : refusée, aucune inscription, aucune commande", async () => {
+    const course = await createCourse(prof, srv, { title: "Payante forcée", price: 30 });
+    const s = await newStudent(srv);
+    await s.post(`/panier/ajouter/${course.id}`, {});
+    const checkout = (await s.get("/commande")).text;
+    assert.match(checkout, /Le paiement en ligne ouvre bientôt/);
+    assert.doesNotMatch(checkout, /<form action="\/commande" method="post"/, "aucun bouton de commande");
+    const r = await s.post("/commande", {});
+    assert.equal(r.status, 302);
+    assert.equal(r.location, "/commande");
+    assert.match((await s.get("/commande")).text, /role="alert">Le paiement en ligne n(&#39;|')est pas encore ouvert/);
+    const db = srv.db();
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM enrollments e JOIN users u ON u.id = e.user_id WHERE u.email = ?").get(s.email).n, 0);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM orders o JOIN users u ON u.id = o.user_id WHERE u.email = ?").get(s.email).n, 0);
+    db.close();
+  });
+
+  test("formation gratuite : inscription toujours possible", async () => {
+    const course = await createCourse(prof, srv, { title: "Gratuite prod", price: 0 });
+    const s = await newStudent(srv);
+    assert.match((await s.get(`/cours/${course.slug}`)).text, /Acheter maintenant/);
+    await s.post(`/panier/ajouter/${course.id}`, {});
+    assert.match((await s.get("/commande")).text, /Confirmer l'inscription/);
+    const r = await s.post("/commande", {});
+    assert.match(r.location, /^\/commande\/confirmation\/\d+$/);
+  });
+
+  test("code promo à 100 % : la commande à 0 € passe", async () => {
+    const course = await createCourse(prof, srv, { title: "Payante offerte", price: 25 });
+    assert.equal((await prof.post(`${G}/ventes/coupons`, { code: "OFFERT100", kind: "percent", value: "100", active: "on" })).status, 302);
+    const s = await newStudent(srv);
+    await s.post(`/panier/ajouter/${course.id}`, {});
+    await s.post("/commande/code-promo", { code: "OFFERT100" });
+    assert.match((await s.get("/commande")).text, /Confirmer l'inscription/);
+    const r = await s.post("/commande", {});
+    assert.match(r.location, /^\/commande\/confirmation\/\d+$/);
+  });
+});
+
+describe("B5 / M2 / M3 : mode démonstration (hors production)", () => {
+  let srv, prof;
+  before(async () => { srv = await startServer(); prof = await loginInstructor(srv); });
+  after(() => srv.stop());
+
+  test("B5 : la page de paiement n'affiche aucun champ de carte", async () => {
+    const course = await createCourse(prof, srv, { title: "Démo", price: 19 });
+    const s = await newStudent(srv);
+    await s.post(`/panier/ajouter/${course.id}`, {});
+    const page = (await s.get("/commande")).text;
+    assert.doesNotMatch(page, /Numéro de carte|CVC|Date d'expiration|Nom sur la carte/);
+    assert.match(page, /Mode démonstration : aucun paiement réel/);
+    assert.match(page, /Confirmer la commande de .* \(démonstration\)/);
+    assert.match((await s.post("/commande", {})).location, /^\/commande\/confirmation\/\d+$/);
+  });
+
+  test("M3 : l'en-tête de la FAQ d'une formation publiée affiche son vrai statut et un lien « Aperçu » valide", async () => {
+    const course = await createCourse(prof, srv, { title: "Avec FAQ", price: 10 });
+    const page = (await prof.get(`/formateur/cours/${course.id}/faq`)).text;
+    assert.doesNotMatch(page, /href="\/cours\/"/, "plus de lien vers /cours/ (404)");
+    assert.match(page, new RegExp(`href="/cours/${course.slug}"`));
+    assert.doesNotMatch(page, /Brouillon/);
+  });
+
+  test("M2 : supprimer une leçon efface la fiche puis sa vidéo", async () => {
+    const course = await createCourse(prof, srv, { title: "Avec vidéo", publish: false, lessons: [{ title: "Vidéo", video: Buffer.from("fausse vidéo") }] });
+    const db = srv.db();
+    const { video_path } = db.prepare("SELECT video_path FROM lessons WHERE id = ?").get(course.lessons[0].id);
+    assert.ok(video_path);
+    const file = path.join(srv.dir, "uploads", video_path.replace(/^\/?(uploads\/)?/, ""));
+    const exists = () => fs.existsSync(file) || fs.readdirSync(path.join(srv.dir, "uploads"), { recursive: true }).some((f) => String(f).endsWith(path.basename(video_path)));
+    assert.ok(exists(), "fichier présent avant suppression");
+    await prof.post(`/formateur/lecons/${course.lessons[0].id}/supprimer`, {});
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM lessons WHERE id = ?").get(course.lessons[0].id).n, 0);
+    assert.ok(!exists(), "fichier effacé après la fiche");
+    db.close();
+  });
+
+  test("M2 : supprimer une formation sans élève efface tout ; une formation avec élèves (même gratuite) est protégée", async () => {
+    const empty = await createCourse(prof, srv, { title: "Vide", publish: false });
+    assert.equal((await prof.post(`/formateur/cours/${empty.id}/supprimer`, {})).status, 302);
+    const db = srv.db();
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM courses WHERE id = ?").get(empty.id).n, 0);
+    const free = await createCourse(prof, srv, { title: "Gratuite suivie", price: 0 });
+    const s = await newStudent(srv);
+    await buy(s, free);
+    const r = await prof.post(`/formateur/cours/${free.id}/supprimer`, {});
+    assert.equal(r.status, 409);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM courses WHERE id = ?").get(free.id).n, 1);
+    db.close();
+  });
+});
+
+describe("D2 / D3 : base de données", () => {
+  let srv;
+  before(async () => { srv = await startServer(); });
+  after(() => srv.stop());
+
+  test("D2 : journal WAL actif", () => {
+    const db = srv.db();
+    assert.equal(db.prepare("PRAGMA journal_mode").get().journal_mode, "wal");
+    db.close();
+  });
+
+  test("D3 : toutes les clés étrangères des tables du site et des tables marketing à fort volume ont un index", () => {
+    const db = srv.db();
+    // organization_id : une seule organisation, jamais supprimée ; tables marketing peu volumineuses : non concernées
+    const ignored = /^(organization_id)$/;
+    const missing = [];
+    for (const { name } of db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all()) {
+      const firstCols = db.prepare(`PRAGMA index_list("${name}")`).all().map((i) => db.prepare(`PRAGMA index_info("${i.name}")`).all()[0]?.name);
+      const pk = db.prepare(`PRAGMA table_info("${name}")`).all().find((c) => c.pk === 1)?.name;
+      for (const fk of db.prepare(`PRAGMA foreign_key_list("${name}")`).all()) {
+        if (ignored.test(fk.from) || firstCols.includes(fk.from) || pk === fk.from) continue;
+        missing.push(`${name}.${fk.from}`);
+      }
+    }
+    db.close();
+    assert.deepEqual(missing, []);
+  });
+});

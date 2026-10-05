@@ -8,6 +8,7 @@ const { signedBunnyUrl } = require("../utils/bunny");
 const { absoluteUrl, plainText, jsonLdTags } = require("../utils/seo");
 const { slugify } = require("../utils/format");
 const seoResolver = require("../seo/resolver");
+const { paidCheckoutOpen } = require("../services/payment");
 
 // Espaces privés et pages sans intérêt pour les moteurs de recherche
 const NOINDEX_PREFIXES = ["/formateur", "/mes-cours", "/panier", "/commande", "/apprendre", "/certificat", "/favoris", "/connexion", "/inscription", "/deconnexion"];
@@ -35,6 +36,8 @@ function injectLocals(req, res, next) {
   if (req.session.user && !req.session.cart) req.session.cart = {};
   res.locals.currentUser = req.session.user || null;
   res.locals.cartCount = Object.keys(req.session.cart || {}).length;
+  // Achat des formations payantes possible (mode démonstration) ou fermé tant qu'aucun paiement réel n'est branché
+  res.locals.paidCheckoutOpen = paidCheckoutOpen();
   // « Mon espace » : coquille de tableau de bord (barre latérale, apparence personnelle) au lieu de l'en-tête public
   res.locals.dash = null;
   if (req.session.user && req.session.user.role === "formateur" && /^\/formateur(\/|$)/.test(req.path)) {

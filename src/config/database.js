@@ -448,4 +448,21 @@ if (!orderColumns.includes("discount_cents")) db.exec("ALTER TABLE orders ADD CO
 const itemColumns = db.prepare("PRAGMA table_info(order_items)").all().map((col) => col.name);
 if (!itemColumns.includes("list_price_cents")) db.exec("ALTER TABLE order_items ADD COLUMN list_price_cents INTEGER");
 
+// Index des clés étrangères qui n'en avaient pas : suppressions en cascade (une leçon, un quiz, un compte…) et jointures
+// sans parcourir toute la table quand le volume grandit
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_quiz_attempts_quiz ON quiz_attempts(quiz_id);
+  CREATE INDEX IF NOT EXISTS idx_orders_coupon ON orders(coupon_id);
+  CREATE INDEX IF NOT EXISTS idx_lesson_state_lesson ON lesson_state(lesson_id);
+  CREATE INDEX IF NOT EXISTS idx_lesson_notes_lesson ON lesson_notes(lesson_id);
+  CREATE INDEX IF NOT EXISTS idx_course_slug_history_course ON course_slug_history(course_id);
+  CREATE INDEX IF NOT EXISTS idx_blog_comments_user ON blog_comments(user_id);
+  CREATE INDEX IF NOT EXISTS idx_post_slug_history_post ON post_slug_history(post_id);
+  CREATE INDEX IF NOT EXISTS idx_coupons_course ON coupons(course_id);
+`);
+
+// Journal WAL : les lectures (pages du site) ne sont plus bloquées pendant une écriture (file d'envoi marketing…).
+// Les sauvegardes (VACUUM INTO) restent cohérentes dans ce mode.
+db.exec("PRAGMA journal_mode = WAL");
+
 module.exports = db;
