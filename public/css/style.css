@@ -583,6 +583,20 @@ select:not([multiple]):not([size]) {
   line-height: calc(1.17em + 2px);
   text-overflow: ellipsis;
 }
+/* Champ de recherche : même rendu que les autres champs du site. Sans cette règle, un input[type=search] sans composant
+   dédié gardait le rendu brut du navigateur (bordure 2 px « inset », coins carrés, police 13 px) à côté de listes
+   déroulantes et de champs au style du site (ex. Centre de gestion : Rechercher | Provenance | Trier par).
+   Priorité nulle (:where) : les recherches qui ont leur propre composant (loupe Marketing, pilules SEO et Formations,
+   blog, éditeurs) gardent leur dessin sur chaque propriété qu'elles fixent. Ni hauteur minimale ni largeur ici : elles
+   viennent du conteneur (.g-field, .field-group…), jamais imposées à une recherche compacte.
+   Safari dessine sinon un champ natif qui ignore arrondi et marges : apparence du site, bouton d'effacement gardé. */
+:where(input[type=search]) {
+  font-family: inherit; font-size: 0.95rem; padding: 12px 14px; border: 1.5px solid var(--line);
+  border-radius: var(--radius); color: var(--text); background-color: var(--card);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  -webkit-appearance: none; appearance: none;
+}
+input[type=search]::-webkit-search-decoration { -webkit-appearance: none; }
 input:hover, textarea:hover, select:hover { border-color: #8fb1cc; }
 input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: var(--ring); }
 textarea { resize: vertical; font-family: inherit; }

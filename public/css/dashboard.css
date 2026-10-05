@@ -328,8 +328,12 @@
 .g-field { display: grid; gap: 4px; min-width: 140px; }
 .g-field-grow { flex: 1 1 260px; }
 .g-field label, .g-field legend { font-size: 13px; font-weight: 600; color: var(--dash-text); }
-.g-field input, .g-field select { min-height: 38px; }
+/* Une seule hauteur pour tous les contrôles d'une ligne de filtres (recherche, listes, dates) et ses boutons : celle
+   d'une liste déroulante du site (46 px), donc aucun décalage entre « Rechercher », « Provenance », « Trier par » et « Filtrer » */
+.g-filters { --g-control-h: 46px; }
+.g-field input, .g-field select { min-height: var(--g-control-h); }
 .g-filter-actions { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.g-filter-actions .btn { min-height: var(--g-control-h); }
 .g-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--s3); margin: var(--s4) 0; font-size: 14px; color: var(--dash-muted); }
 .btn.is-disabled { opacity: 0.5; pointer-events: none; }
 .g-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
