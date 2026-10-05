@@ -166,6 +166,10 @@ describe("e-mails du site : pages web", () => {
     assert.equal((await new Client(srv.base).post("/connexion", { email: "prof@test.local", password: "NouveauMdp2026" })).status, 302);
     assert.equal((await new Client(srv.base).post("/connexion", { email: "prof@test.local", password: "MotDePasseProf123" })).status, 400);
     assert.match((await v.get("/connexion?reinitialise=1")).text, /Votre mot de passe a été changé/);
+    // Les sessions ouvertes avec l'ancien mot de passe sont fermées : le formateur se reconnecte avec le nouveau
+    assert.equal((await boss.get("/formateur")).status, 302);
+    await boss.login("prof@test.local", "NouveauMdp2026");
+    assert.equal((await boss.get("/formateur")).status, 200);
   });
   test("lien expiré (plus d'une heure) ou inventé : refusé", async () => {
     await new Client(srv.base).post("/mot-de-passe-oublie", { email: "prof@test.local" });

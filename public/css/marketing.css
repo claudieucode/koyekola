@@ -1621,6 +1621,61 @@ input.mk-fx-switch[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed
 .mk-journey-step.is-trigger .mk-journey-icon { background: var(--accent); color: #fff; border-color: transparent; }
 .mk-journey-n { display: block; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--mk-text-soft); }
 @media (max-width: 700px) { .mk-journey-facts { grid-template-columns: 1fr; gap: 2px; } .mk-journey-facts dd { margin-bottom: 8px; } }
+/* ===== Bibliothèque de parcours : filtres, cartes, favoris, schéma du parcours (propre à /automatisations/parcours) ===== */
+.mk-status-track { background: #eaf1fb; color: #1f4f9a; }
+.mk-status-off { background: #eef0f2; color: #5b6770; }
+.mk-lib-filters .field-group select { min-width: 150px; max-width: 220px; }
+.mk-lib-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.mk-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 4px 12px; border: 1px solid var(--mk-border); border-radius: var(--radius-pill); background: var(--mk-surface); color: var(--mk-text); font-size: 0.86rem; font-weight: 600; text-decoration: none; }
+.mk-chip:hover { border-color: var(--mk-border-strong); }
+.mk-chip[aria-current="true"] { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
+.mk-chip[aria-current="true"] .mk-tab-count { background: #fff; }
+.mk-lib-count { margin: 4px 0 16px; }
+.mk-journey-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.mk-journey-card-head h3 a { color: inherit; text-decoration: none; }
+.mk-journey-card-head h3 a:hover { text-decoration: underline; }
+.mk-fav-form { margin: 0; flex: none; }
+.mk-fav { display: inline-flex; align-items: center; gap: 6px; padding: 6px; border: 0; border-radius: 8px; background: none; color: var(--muted); cursor: pointer; font: inherit; }
+.mk-fav:hover { background: var(--mk-hover); color: var(--mk-text); }
+.mk-fav.is-on { color: #b97a00; }
+.mk-clamp, .mk-clamp-3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.mk-clamp-3 { -webkit-line-clamp: 3; line-clamp: 3; }
+.mk-journey-count { display: flex; align-items: center; gap: 6px; }
+.mk-lib-more { text-align: center; margin: 8px 0 32px; }
+.mk-journey-col { display: grid; gap: 20px; min-width: 0; }
+.mk-journey-use { margin: 0 0 20px; }
+.mk-journey-use-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.mk-callout-warn { background: var(--warning-bg); }
+.mk-callout-warn .icon { color: var(--warning-text); }
+.mk-journey-todo, .mk-journey-rules { margin: 4px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: 0.9rem; }
+.mk-journey-code { margin: 8px 0 0; font-size: 0.85rem; }
+.mk-journey-code code { overflow-wrap: anywhere; font-size: 0.8rem; }
+.mk-journey-deps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 0.9rem; }
+.mk-journey-deps li { display: flex; gap: 8px; align-items: flex-start; }
+.mk-journey-deps .is-ok .mk-dep-mark { color: var(--mk-ok); }
+.mk-journey-deps .is-missing .mk-dep-mark { color: var(--mk-warn); }
+.mk-journey-deps .is-todo .mk-dep-mark { color: var(--mk-text-soft); }
+.mk-dep-mark { flex: none; margin-top: 2px; }
+.mk-flow { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.mk-flow-node { position: relative; display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; }
+.mk-flow-node + .mk-flow-node::before { content: ""; position: absolute; left: 15px; top: -6px; height: 12px; border-left: 2px solid var(--mk-border-strong); }
+.mk-flow-body { display: grid; gap: 2px; min-width: 0; flex: 1 1 auto; font-size: 0.9rem; overflow-wrap: anywhere; }
+.mk-flow-node.is-trigger .mk-journey-icon { background: var(--accent); color: #fff; border-color: transparent; }
+.mk-flow-condition .mk-journey-icon { background: var(--accent-light); color: var(--accent-dark); border-color: transparent; }
+.mk-flow-end .mk-journey-icon { background: #eef0f2; color: #5b6770; }
+.mk-flow-email .mk-journey-icon { color: var(--accent-dark); }
+.mk-flow-sms .mk-journey-icon { color: var(--mk-ok); }
+.mk-flow-wait .mk-journey-icon { color: var(--mk-text-soft); }
+.mk-flow-action .mk-journey-icon { color: var(--mk-text); }
+.mk-flow-exits { list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.mk-flow-exit { display: grid; gap: 2px; padding: 6px 8px; font-size: 0.82rem; background: var(--mk-bg); border: 1px solid var(--mk-border); border-radius: var(--mk-r-sm); }
+.mk-flow-exit-yes { border-left: 3px solid var(--mk-ok); }
+.mk-flow-exit-no { border-left: 3px solid var(--mk-border-strong); }
+.mk-flow-exit-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mk-text-soft); }
+a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
+.mk-flow-jump { font-size: 0.82rem; color: var(--mk-text-soft); }
+@media (max-width: 520px) { .mk-flow-exits { grid-template-columns: 1fr; } .mk-lib-filters .field-group select { max-width: none; width: 100%; } }
+
 
 /* Fenêtre d'envoi d'une campagne : « Quand ? » (tout de suite, date, heure locale, meilleure heure) */
 .mk-when { display: grid; gap: 6px; }

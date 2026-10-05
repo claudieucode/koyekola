@@ -6,6 +6,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const { membershipsOf } = require("../organizations");
 const { createApiKey, listApiKeys } = require("./keys");
+const { loginBlocked, recordLoginFailure, clearLoginFailures } = require("../../middlewares/security");
 
 const MOBILE_KEY_NAME = "App Mobile";
 
@@ -20,14 +21,22 @@ function createMobileAuthRouter({ db }) {
         return res.status(400).json({ error: { code: "invalid_field", message: "Email et mot de passe requis." } });
       }
 
+      // Même limite que la connexion du site (10 échecs par adresse IP en 15 minutes, compteur partagé)
+      if (loginBlocked(req)) {
+        return res.status(429).json({ error: { code: "rate_limited", message: "Trop de tentatives de connexion. Réessayez dans 15 minutes." } });
+      }
+
       // Vérifier les identifiants dans la table users
       const user = db
         .prepare("SELECT id, username, email, role, password_hash FROM users WHERE email = ?")
         .get(email.trim().toLowerCase());
 
       if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+        recordLoginFailure(req);
         return res.status(401).json({ error: { code: "unauthorized", message: "Email ou mot de passe incorrect." } });
       }
+
+      clearLoginFailures(req);
 
       // Seuls les formateurs (administrateurs) peuvent accéder au module marketing
       if (user.role !== "formateur") {

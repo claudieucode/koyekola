@@ -1,0 +1,92 @@
+// Famille « Bienvenue » : accueillir un contact selon la façon dont il arrive (abonnement, formulaire, compte, achat…).
+// Chaque parcours n'utilise que des événements réellement émis par KOLAKISA (voir automations/catalog.js).
+const { mail, step: S, flow, isSubscribed, atLeast } = require("./dsl");
+
+module.exports = [
+  {
+    key: "bienvenue-nouveaux-contacts", group: "welcome", kind: "marketing", audience: "contacts", goal: "accueillir",
+    label: "Bienvenue aux contacts ajoutés puis abonnés",
+    objective: "Accueillir un contact ajouté à votre audience dès qu'il confirme son abonnement.",
+    description: "Démarre quand un contact est créé (import, ajout manuel, formulaire). Attend jusqu'à 7 jours qu'il s'abonne avec consentement prouvé ; s'il l'a fait, il reçoit un e-mail de bienvenue, sinon il sort du parcours sans rien recevoir.",
+    trigger: { event: "contact.created" },
+    note: "Aucun e-mail marketing n'est envoyé à un contact qui n'a pas donné son consentement : le parcours vérifie son statut avant d'écrire.",
+    keywords: ["nouveau contact", "inscription", "import"],
+    emails: [mail("Bienvenue", "Bienvenue chez {{org.name}}", "Merci de votre confiance", "Bienvenue, {h}",
+      "Merci d'avoir rejoint notre audience. Vous recevrez nos nouvelles formations, nos conseils et nos offres — sans excès, et vous pouvez vous désabonner à tout moment.", ["Découvrir les formations", "catalogue"])],
+    steps: flow([
+      S.waitFor("contact.subscribed", 7, "days"), S.seg(isSubscribed(), "next", "exit"), S.email(0), S.end(),
+    ]),
+  },
+  {
+    key: "bienvenue-serie-trois-emails", group: "welcome", kind: "marketing", audience: "abonnes", goal: "accueillir",
+    label: "Série de bienvenue en 3 e-mails",
+    objective: "Installer une relation régulière avec chaque nouvel abonné pendant sa première semaine.",
+    description: "Un e-mail de bienvenue tout de suite, un second deux jours plus tard pour expliquer comment tirer parti des formations, puis un troisième au bout d'une semaine pour découvrir le catalogue.",
+    trigger: { event: "contact.subscribed" },
+    note: "Se déclenche à chaque nouvel abonnement avec consentement. Plus complet que « Bienvenue aux nouveaux abonnés », sans embranchement.",
+    keywords: ["newsletter", "série", "séquence", "abonnement"],
+    emails: [
+      mail("Bienvenue", "Bienvenue chez {{org.name}}", "Voici ce qui vous attend", "Bienvenue, {h}", "Merci de votre abonnement. Dans les prochains jours, nous vous expliquons comment profiter au mieux de nos formations.", ["Voir les formations", "catalogue"]),
+      mail("Comment ça marche", "Comment profiter de nos formations", "Trois idées simples", "Apprendre à votre rythme",
+        "{h}, nos formations se suivent en vidéo, quand vous voulez. Choisissez-en une, commencez par la première leçon : quelques minutes suffisent.", ["Choisir une formation", "catalogue"]),
+      mail("Le catalogue", "Par où commencer ?", "Toutes les formations au même endroit", "Trouvez la formation qui vous correspond",
+        "{h}, voici l'ensemble de nos formations. Chaque fiche présente le programme, le niveau et ce que vous saurez faire à la fin.", ["Parcourir le catalogue", "catalogue"]),
+    ],
+    steps: flow([S.email(0), S.wait(2, "days"), S.email(1), S.wait(5, "days"), S.email(2)]),
+  },
+  {
+    key: "bienvenue-creation-compte", group: "welcome", kind: "transactional", audience: "eleves", goal: "accueillir",
+    label: "Confirmation de création de compte",
+    objective: "Confirmer à chaque élève que son compte est prêt et lui indiquer où retrouver ses formations.",
+    description: "Un seul e-mail de service, envoyé dès la création du compte, avec le lien vers l'espace de l'élève. Aucun contenu promotionnel.",
+    trigger: { event: "lms.user_registered" },
+    note: "Transactionnel : envoyé à chaque nouveau compte, même à ceux qui n'ont pas accepté les e-mails marketing. Pour un accueil promotionnel, utilisez « Bienvenue aux nouveaux élèves ».",
+    keywords: ["compte", "création de compte", "inscription"],
+    emails: [mail("Compte créé", "Votre compte est prêt", "Retrouvez vos formations en un clic", "Votre compte est créé",
+      "{h}, votre compte {{org.name}} est prêt. Vous y retrouverez vos formations, votre progression et vos certificats.", ["Accéder à mon espace", "accès"], { kind: "transactional" })],
+    steps: flow([S.email(0)]),
+  },
+  {
+    key: "bienvenue-apres-formulaire", group: "welcome", kind: "marketing", audience: "abonnes", goal: "accueillir", needs: ["list"],
+    label: "Bienvenue après un formulaire d'inscription",
+    objective: "Remercier chaque personne inscrite via un formulaire précis et lui proposer la suite.",
+    description: "Démarre quand un contact est ajouté à la liste que vous choisissez (la liste alimentée par votre formulaire). Un e-mail de remerciement tout de suite, puis un e-mail pour aller plus loin trois jours plus tard.",
+    trigger: { event: "list.member_added", filter: { key: "listId", value: "@liste" } },
+    note: "Choisissez la liste de votre formulaire au moment de l'utilisation : le parcours ne concerne que les contacts ajoutés à cette liste.",
+    keywords: ["formulaire", "inscription", "liste"],
+    emails: [
+      mail("Merci", "Merci de votre inscription", "Voici la suite", "Merci, {h}", "Nous avons bien enregistré votre inscription. Vous recevrez bientôt de nos nouvelles.", ["Découvrir les formations", "catalogue"]),
+      mail("Pour aller plus loin", "Pour aller plus loin", "Nos formations, à votre rythme", "Et maintenant ?", "{h}, si vous souhaitez approfondir le sujet, nos formations vous guident pas à pas.", ["Voir le catalogue", "catalogue"]),
+    ],
+    steps: flow([S.email(0), S.wait(3, "days"), S.email(1)]),
+  },
+  {
+    key: "bienvenue-ressource-telechargee", group: "welcome", kind: "marketing", audience: "prospects", goal: "qualifier", needs: ["list"],
+    label: "Bienvenue après le téléchargement d'une ressource",
+    objective: "Prolonger la relation avec les personnes qui ont téléchargé une ressource gratuite et repérer les plus intéressées.",
+    description: "Démarre quand un contact est ajouté à la liste de la ressource (celle de votre formulaire). Étiquette « a-téléchargé-une-ressource », e-mail de remerciement ; s'il clique, il reçoit l'étiquette « intéressé », sinon un conseil pour exploiter la ressource.",
+    trigger: { event: "list.member_added", filter: { key: "listId", value: "@liste" } },
+    note: "Créez un formulaire qui remet la ressource et ajoute à une liste dédiée, puis choisissez cette liste à l'utilisation. L'envoi de la ressource elle-même se fait dans la page de remerciement du formulaire.",
+    keywords: ["ressource", "téléchargement", "lead magnet", "guide"],
+    emails: [
+      mail("Merci", "Merci d'avoir téléchargé notre ressource", "Voici comment en tirer parti", "Merci, {h}", "Votre ressource est en route. Pour mettre ce que vous y apprenez en pratique, découvrez nos formations.", ["Voir les formations", "catalogue"]),
+      mail("Conseil", "Un conseil pour exploiter votre ressource", "Passez à la pratique", "Un petit conseil", "{h}, la meilleure façon de retenir une ressource est de l'appliquer tout de suite. Choisissez une seule idée et mettez-la en pratique cette semaine.", ["Parcourir les formations", "catalogue"]),
+    ],
+    steps: flow([
+      S.tag("a-téléchargé-une-ressource"), S.email(0, "m0"), S.wait(3, "days"), S.clicked("@m0", "@interesse", "@conseil"),
+      S.tag("intéressé", "interesse"), S.end(), S.email(1, "conseil"),
+    ]),
+  },
+  {
+    key: "bienvenue-premier-achat", group: "welcome", kind: "marketing", audience: "clients", goal: "accueillir",
+    label: "Bienvenue au nouveau client (premier achat)",
+    objective: "Accueillir chaque élève qui effectue son tout premier achat.",
+    description: "À chaque commande, vérifie qu'il s'agit de la première ; si oui, étiquette « client » et e-mail de bienvenue. Les achats suivants ne déclenchent rien.",
+    trigger: { event: "lms.order_completed" },
+    note: "La commande elle-même est confirmée par « Suivi après achat » (transactionnel). Celui-ci est un message d'accueil, envoyé aux abonnés uniquement.",
+    keywords: ["achat", "premier achat", "commande", "client"],
+    emails: [mail("Bienvenue", "Bienvenue parmi nos élèves", "Merci pour votre confiance", "Bienvenue, {h}",
+      "Merci pour votre première commande. Vous faites désormais partie de nos élèves : retrouvez votre formation dans votre espace, et n'hésitez pas à nous écrire si vous avez une question.", ["Accéder à mon espace", "accès"])],
+    steps: flow([S.seg(atLeast("lms.order_completed", 2), "exit", "next"), S.tag("client"), S.email(0), S.end()]),
+  },
+];

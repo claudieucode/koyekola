@@ -8,6 +8,7 @@ const { signedBunnyUrl } = require("../utils/bunny");
 const { absoluteUrl, plainText, jsonLdTags } = require("../utils/seo");
 const { slugify } = require("../utils/format");
 const seoResolver = require("../seo/resolver");
+const { paidCheckoutOpen } = require("../services/payment");
 
 // Espaces privés et pages sans intérêt pour les moteurs de recherche
 const NOINDEX_PREFIXES = ["/formateur", "/mes-cours", "/panier", "/commande", "/apprendre", "/certificat", "/favoris", "/support", "/notifications", "/connexion", "/inscription", "/deconnexion"];
@@ -35,6 +36,8 @@ function injectLocals(req, res, next) {
   if (req.session.user && !req.session.cart) req.session.cart = {};
   res.locals.currentUser = req.session.user || null;
   res.locals.cartCount = Object.keys(req.session.cart || {}).length;
+  // Achat des formations payantes possible (mode démonstration) ou fermé tant qu'aucun paiement réel n'est branché
+  res.locals.paidCheckoutOpen = paidCheckoutOpen();
   // Cloche de l'en-tête : notifications non lues d'un élève (le formateur a le flux d'activité de Mon espace). Une panne n'affiche rien.
   res.locals.notifCount = 0;
   if (req.session.user && req.session.user.role !== "formateur") {

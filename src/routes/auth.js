@@ -6,6 +6,7 @@ const { safePath } = require("../utils/safeRedirect");
 const { SIGNUP_CONSENT_TEXT, registerLmsUserSafely } = require("../marketing/bridge/lms");
 const { sendSignupWelcomeEmail } = require("../utils/mailer");
 const { cleanTimeZone } = require("../marketing/sending/sendtime");
+const { openSession } = require("../middlewares/sessionUser");
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ router.get("/inscription", (req, res) => {
 
 // L'inscription publique ne crée que des comptes étudiants : ce site n'a qu'un seul
 // créateur (vous), dont le compte "formateur" est créé une fois via le script de seed.
-router.post("/inscription", (req, res) => {
+router.post("/inscription", (req, res, next) => {
   const { username, email, password } = req.body;
 
   if (!username || !email || !password) {
@@ -44,9 +45,11 @@ router.post("/inscription", (req, res) => {
 
   sendSignupWelcomeEmail(db, { to: email, username }); // en arrière-plan : n'attend pas le serveur d'e-mail
 
-  req.session.user = { id: userId, username, email, role: "etudiant" };
   // Inscription lancée depuis une page (ex. « commenter un article ») : retour à cette page
-  res.redirect(safePath(req.body.redirect, "/mes-cours"));
+  openSession(req, { id: userId, username, email, role: "etudiant", password_hash: hash }, (error) => {
+    if (error) return next(error);
+    res.redirect(safePath(req.body.redirect, "/mes-cours"));
+  });
 });
 
 router.get("/connexion", (req, res) => {
@@ -54,7 +57,7 @@ router.get("/connexion", (req, res) => {
   res.render("login", { error: null, redirect: req.query.redirect || "", notice: req.query.reinitialise === "1" ? "Votre mot de passe a été changé. Connectez-vous avec le nouveau." : null });
 });
 
-router.post("/connexion", (req, res) => {
+router.post("/connexion", (req, res, next) => {
   const { email, password, redirect } = req.body;
 
   if (loginBlocked(req)) {
@@ -73,8 +76,10 @@ router.post("/connexion", (req, res) => {
   const tz = cleanTimeZone(req.body.tz);
   if (tz && tz !== user.timezone) db.prepare("UPDATE users SET timezone = ? WHERE id = ?").run(tz, user.id);
 
-  req.session.user = { id: user.id, username: user.username, email: user.email, role: user.role };
-  res.redirect(safePath(redirect, "/"));
+  openSession(req, user, (error) => {
+    if (error) return next(error);
+    res.redirect(safePath(redirect, "/"));
+  });
 });
 
 router.post("/deconnexion", (req, res) => {

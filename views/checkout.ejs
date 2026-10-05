@@ -3,32 +3,14 @@
   <div class="container-wide cart-layout">
     <div>
       <h1 style="margin-top:36px;">Paiement</h1>
-<% if (payMode === "demo") { %>
-      <p class="payment-badge"><%- icon('info', { size: 16 }) %> Mode démonstration : aucun paiement réel n'est effectué, aucune carte n'est débitée.</p>
-
-      <form action="/commande" method="post" class="card card-pad payment-mock">
-        <input type="hidden" name="expected_total" value="<%= expectedTotal %>">
-        <div class="field-group">
-          <label for="f-checkout-1">Numéro de carte</label>
-          <input id="f-checkout-1" type="text" placeholder="4242 4242 4242 4242" maxlength="19" required>
-        </div>
-        <div class="field-row">
-          <div class="field-group">
-            <label for="f-checkout-2">Date d'expiration</label>
-            <input id="f-checkout-2" type="text" placeholder="MM/AA" maxlength="5" required>
-          </div>
-          <div class="field-group">
-            <label for="f-checkout-3">CVC</label>
-            <input id="f-checkout-3" type="text" placeholder="123" maxlength="4" required>
-          </div>
-        </div>
-        <div class="field-group">
-          <label for="f-checkout-4">Nom sur la carte</label>
-          <input id="f-checkout-4" type="text" placeholder="<%= currentUser.username %>" required>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block btn-lg">Payer <%= formatPrice(total) %> (simulation)</button>
-      </form>
-<% } else if (payMode === "stripe") { %>
+      <% if (orderError) { %><p class="field-error" role="alert"><%= orderError %></p><% } %>
+      <% if (payMode === "free") { %>
+        <form action="/commande" method="post" class="card card-pad payment-mock">
+          <input type="hidden" name="expected_total" value="<%= expectedTotal %>">
+          <p class="payment-badge"><%- icon('info', { size: 16 }) %> Rien à payer : votre commande est gratuite.</p>
+          <button type="submit" class="btn btn-primary btn-block btn-lg">Confirmer l'inscription</button>
+        </form>
+      <% } else if (payMode === "stripe") { %>
       <form action="/commande" method="post" class="card card-pad">
         <input type="hidden" name="expected_total" value="<%= expectedTotal %>">
         <p class="payment-badge"><%- icon('info', { size: 16 }) %> Paiement sécurisé par Stripe : vous serez redirigé vers sa page de paiement. Aucune donnée de carte ne passe par ce site.</p>
@@ -37,17 +19,20 @@
         <% } %>
         <button type="submit" class="btn btn-primary btn-block btn-lg"<%= total < minAmount ? " disabled" : "" %>>Payer <%= formatPrice(total) %> par carte</button>
       </form>
-<% } else if (payMode === "free") { %>
-      <form action="/commande" method="post" class="card card-pad">
-        <input type="hidden" name="expected_total" value="<%= expectedTotal %>">
-        <p style="margin-top:0;">Aucun paiement n'est nécessaire pour cette commande.</p>
-        <button type="submit" class="btn btn-primary btn-block btn-lg">Valider la commande gratuite</button>
-      </form>
-<% } else { %>
-      <div class="card card-pad">
-        <p class="field-error" role="alert" style="margin:0;">Le paiement en ligne n'est pas encore disponible. Réessayez plus tard.</p>
-      </div>
-<% } %>
+<% } else if (payMode === "demo") { %>
+        <%# Mode démonstration : aucun champ de carte (personne ne doit y taper sa vraie carte), aucun débit %>
+        <form action="/commande" method="post" class="card card-pad payment-mock">
+          <input type="hidden" name="expected_total" value="<%= expectedTotal %>">
+          <p class="payment-badge"><%- icon('info', { size: 16 }) %> Mode démonstration : aucun paiement réel n'est effectué, aucune carte n'est demandée ni débitée.</p>
+          <button type="submit" class="btn btn-primary btn-block btn-lg">Confirmer la commande de <%= formatPrice(total) %> (démonstration)</button>
+        </form>
+      <% } else { %>
+        <div class="card card-pad payment-mock">
+          <p class="payment-badge"><%- icon('info', { size: 16 }) %> Le paiement en ligne ouvre bientôt. Les formations payantes ne peuvent pas encore être commandées sur le site.</p>
+          <p>Pour suivre cette formation dès maintenant, écrivez-nous.</p>
+          <a href="/contact" class="btn btn-primary btn-block btn-lg">Nous contacter</a>
+        </div>
+      <% } %>
     </div>
 
     <aside class="card card-pad summary-card">

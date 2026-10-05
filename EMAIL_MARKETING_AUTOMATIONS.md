@@ -42,21 +42,29 @@ Variables utilisables dans les modèles d'un scénario : `{{event.course_title}}
 2. Créez un modèle transactionnel « Bienvenue », un scénario « Bienvenue après inscription » (déclencheur : compte créé) avec une étape e-mail, activez-le.
 3. Activez `MARKETING_WORKER=on`, inscrivez un compte de test : au bout de ~30 s (ou via **Événements → Synchroniser maintenant**), le message apparaît dans le journal du serveur.
 
-## Parcours tout prêts
+## Parcours tout prêts (bibliothèque)
 
-Marketing → Automatisations → **Parcours tout prêts** (équivalent des « Pre-built journeys » de Mailchimp). Chaque parcours est un scénario complet — déclencheur, attentes, conditions, étiquettes et e-mails rédigés — défini dans `src/marketing/automations/journeys.js`. « Utiliser ce parcours » crée, en une seule transaction, les modèles d'e-mails (modifiables) et le scénario **en brouillon** ; rien n'est envoyé avant l'activation, qui passe par le contrôle habituel.
+Marketing → Automatisations → **Parcours tout prêts** (équivalent des « Pre-built journeys » de Mailchimp). Chaque parcours est un scénario complet — déclencheur, attentes, conditions, étiquettes et messages rédigés. « Utiliser ce parcours » crée, en une seule transaction, une **copie** : les modèles d'e-mails (modifiables) et le scénario **en brouillon**. Rien n'est envoyé avant l'activation, qui passe par le contrôle habituel. Le modèle de la bibliothèque n'est jamais modifié (définitions gelées avec `Object.freeze`).
 
-| Parcours | Déclencheur | Type | Ce qu'il fait |
-|---|---|---|---|
-| Bienvenue aux nouveaux abonnés | abonnement avec consentement | marketing | bienvenue → J+2 découverte → J+5 : étiquette « engagé » si clic, sinon aide au choix |
-| Bienvenue aux nouveaux élèves | compte créé | marketing | bienvenue → J+3 : aide au choix si aucune inscription |
-| Suivi après achat | commande passée | transactionnel | merci → aide au démarrage si aucune leçon terminée en 3 jours |
-| Encourager le démarrage | inscription à une formation | transactionnel | rappels à J+3 puis J+10 tant qu'aucune leçon n'est terminée |
-| Félicitations et avis | formation terminée | transactionnel | félicitations → demande d'avis à J+3 si aucun avis |
-| Relance après un favori | formation mise en favori | marketing | rappel à J+2 si aucun achat |
-| Reconquérir les inactifs | étiquette « a-relancer » ajoutée | marketing | 2 e-mails ; étiquettes « réactivé » ou « inactif » selon les ouvertures |
+### Architecture
+- **Données** : `src/marketing/automations/library/*.js`, une famille par fichier (`welcome`, `courses`, `formation`, `commerce`, `reengage`, `leads`, `sms`, `site`, `unavailable`). Les 8 parcours historiques restent dans `journeys.js`, inchangés ; `library/index.js` les classe sans les modifier. Un parcours est une donnée (`key`, `group`, `kind`, `audience`, `goal`, `trigger`, `steps`, `emails`/`sms`, `note`, `needs`, `keywords`) ; `library/dsl.js` fournit seulement des outils d'écriture (sauts par repères `@nom`, conditions de segment).
+- **Disponibilité** (`library/availability.js`) : calculée, jamais déclarée. Contrôle structurel pur (déclencheur réel, types d'étapes de la grammaire du moteur, sauts vers l'avant, conditions d'ouverture/clic sur un e-mail précédent, étapes toutes atteintes, variables `{{event.…}}` disponibles pour le déclencheur, SMS en GSM-7) + dépendances vivantes (fournisseur SMS réglé, liste choisie, événement envoyé par le site). Statuts : **Prêt à utiliser**, **Transactionnel**, **Nécessite une configuration** (utilisables), **Nécessite le suivi des visiteurs**, **Non disponible** (jamais créés).
+- **Parcours à paramètre** : ceux qui concernent une liste (`needs: ["list"]`) demandent la liste sur la page d'aperçu ; elle est posée dans le déclencheur (`list.member_added`) et dans l'étape « retirer de la liste ». Ceux qui concernent une formation (`needs: ["course"]`, `library/formation.js`) demandent la formation : son identifiant est posé dans le filtre `courseId` du déclencheur ET dans la règle `course` de chaque condition de segment (repère `@formation`) — un élève d'une autre formation n'entre pas, et une leçon d'une autre formation ne compte pas. Les formations du sélecteur sont lues par la couche web (jamais par le module marketing).
+- **Événements du site** (`library/site.js`) : parcours déclenchés par un événement personnalisé que VOTRE site envoie à `POST /api/v1/events` (panier abandonné, paiement abandonné, formation consultée, retour après absence, tickets de support). KOLAKISA n'enregistre pas ces comportements : tant que l'événement n'est pas envoyé, le parcours ne démarre jamais. Les événements personnalisés ne sont pas des critères de segment : les conditions de ces parcours n'utilisent que les achats KOLAKISA.
+- **Base de données** (migration 034) : `mk_journey_favorites` (favoris par personne) et `mk_journey_usage` (chaque création : « Récemment utilisés », compteur). Rien d'autre n'est écrit par la bibliothèque.
+- **Page** : recherche (nom, description, déclencheur, actions, catégorie, canal, audience, mots-clés ; accents, pluriels et synonymes « étudiant/élève » ignorés), filtres (catégorie, canal, objectif, déclencheur, audience, longueur, statut), tri, favoris, récents, chargement progressif (24 par page). Fonctionne sans JavaScript (formulaire GET) ; `public/js/marketing-journeys.js` ajoute la recherche instantanée.
+- **Aperçu** : nom, objectif, déclencheur, audience, canal, type, étapes et durée maximale, e-mails/SMS, règles d'entrée et d'arrêt, dépendances, **schéma du parcours** (chaque condition montre ses sorties Oui / Non vers l'étape visée). Lecture seule.
 
-Non proposés (affichés avec la raison) : panier abandonné (panier non enregistré côté serveur), anniversaire (pas de déclencheur à date), bienvenue SMS (pas d'étape SMS dans les scénarios). Tests : `tests/marketing-parcours.test.js`.
+### Règles du moteur à connaître pour écrire un parcours
+- Un contact n'entre **qu'une seule fois** dans un scénario (à la première occurrence du déclencheur après l'activation). Pour réagir à un événement FUTUR (deuxième commande, deuxième formation terminée), le parcours attend l'événement (« Attendre jusqu'à », max. un an) puis vérifie par un segment (`at_least`).
+- Les conditions de segment évaluent l'activité **comptée depuis l'activation du pont KOLAKISA** (l'historique antérieur n'est pas rejoué).
+- Délai maximal d'une attente : 365 jours (c'est ce qui permet les anniversaires à un an). Aucun déclencheur « à telle date » : l'anniversaire de naissance et les rappels à date fixe ne sont pas disponibles.
+- Les actions d'un scénario (étiquette, liste) n'émettent aucun événement : un parcours ne peut pas en déclencher un autre.
+
+### Parcours non disponibles (affichés avec la raison, jamais créés)
+Visite d'une page, visites répétées, ajout au panier, panier abandonné natif, recherche (aucun suivi des visiteurs) ; progression en pourcentage, quiz, expiration d'accès, abonnements, code promo/accès anticipé, baisse de prix/stock, rappels à date, NPS, intérêts par élève (donnée ou événement absent). Les clés sont dans `library/unavailable.js` et `journeys.js`.
+
+Tests : `tests/marketing-parcours.test.js` (parcours historiques, déroulé réel), `tests/marketing-parcours-bibliotheque.test.js` (définitions, disponibilité, copie du modèle, exécution réelle de CHAQUE parcours utilisable par le moteur, recherche, filtres, favoris, récents, pages et droits).
 
 ## Limites connues
 - **Éditeur graphique (canevas)** : glisser-déposer, zoom/ajuster à l'écran, panneau latéral par étape — voir

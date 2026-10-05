@@ -42,7 +42,7 @@ Avec `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` (voir `.env.example`), « Pa
 
 Configuration dans le tableau de bord Stripe : ajouter un point de terminaison webhook `<SITE_URL>/stripe/webhook` avec les événements `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` et `checkout.session.expired`, puis copier son « secret de signature » dans `STRIPE_WEBHOOK_SECRET`. Commencez par les clés de **test** (`sk_test_…`, carte `4242 4242 4242 4242`).
 
-Sans clé Stripe : en local, le paiement reste une **démonstration** (rien n'est débité) ; **en ligne** (`NODE_ENV=production` ou `SITE_URL` en https), toute commande payante est refusée. Les commandes gratuites (formation à 0 € ou code promo à 100 %) ne passent pas par Stripe. Un paiement encaissé dont le montant ne correspond pas, ou dont la formation a été supprimée, n'ouvre aucun accès et est signalé dans les journaux : à vérifier et rembourser dans Stripe.
+Sans clé Stripe : en local, le paiement reste une **démonstration** (rien n'est débité) ; **en ligne** (`NODE_ENV=production` ou `SITE_URL` en https), toute commande payante est refusée. Les commandes gratuites (formation à 0 € ou code promo à 100 %) ne passent pas par Stripe. Un paiement encaissé dont le montant ne correspond pas, ou dont la formation a été supprimée, n'ouvre aucun accès et est signalé dans les journaux : à vérifier et rembourser dans Stripe. **`PAIEMENT_SIMULE=1`** rouvre le mode démonstration en production (commande payante validée sans paiement) : à ne jamais utiliser avec de vrais clients ; il est ignoré dès que Stripe est configuré.
 
 ## Publier le site en ligne
 
