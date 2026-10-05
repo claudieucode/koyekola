@@ -59,7 +59,7 @@ const ITEMS = [
   live("integrations", "webhooks", "Webhooks", "/marketing/webhooks", "plug", "webhooks.manage", { label: "Nouveau webhook", href: "/marketing/webhooks#nouveau", permission: "webhooks.manage" }),
 
   live("settings", "sending", "Réglages d'envoi", "/marketing/envoi", "mail", "settings.read"),
-  soon("settings", "domains", "Domaines", "/marketing/domaines", "globe", "R6"),
+  live("settings", "domains", "Domaines", "/marketing/domaines", "globe", "settings.read"),
   live("settings", "compliance", "Conformité", "/marketing/conformite", "shield", "compliance.read"),
   live("settings", "ai", "Assistant IA", "/marketing/ia", "bot", "settings.read"),
   live("settings", "appearance", "Apparence", "/marketing/apparence", "eye", "contacts.read"),

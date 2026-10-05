@@ -16,6 +16,7 @@ const { incompleteNodes, orphanNodes } = require("./graph");
 const { enqueueRun } = require("./jobs");
 const { WORKER_DETAIL, workerHuman } = require("../workerNotice");
 const { getSmsConfig } = require("../sms/config");
+const { senderWarning } = require("../domains");
 const smsRender = require("../sms/render");
 
 const KINDS = ["marketing", "transactional"];
@@ -176,6 +177,8 @@ function automationPreflight(ctx, id, { workerOn = false, smtpAvailable = Boolea
       if (!cfg.from) errors.push({ code: "provider_incomplete", message: "Aucune adresse d'expédition n'est enregistrée (réglages d'envoi)." });
       if (cfg.provider === "smtp" && !smtpAvailable) errors.push({ code: "provider_incomplete", message: "SMTP n'est pas configuré sur le serveur (SMTP_HOST…)." });
       if (cfg.provider === "resend" && !secrets.apiKey) errors.push({ code: "provider_incomplete", message: "La clé d'API Resend n'est pas enregistrée." });
+      const domainWarning = cfg.from ? senderWarning(ctx) : null;
+      if (domainWarning) warnings.push({ code: "sender_domain", message: domainWarning });
     }
     const base = String(ctx.baseUrl || "").replace(/\/+$/, "");
     if (!/^https:\/\/[^\s/]+/i.test(base) && !(cfg.provider === "console" && LOCAL_HTTP.test(base))) errors.push({ code: "base_url", message: "L'adresse publique du site (SITE_URL) doit être en https://." });

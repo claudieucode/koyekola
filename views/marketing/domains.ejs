@@ -1,0 +1,43 @@
+<%- include("partials/top", { title, active }) %>
+    <div class="mk-head"><h1>Domaines</h1></div>
+    <p class="mk-lead">Le domaine de votre adresse d'expédition (ex. kolakisa.com dans news@kolakisa.com) doit être <strong>vérifié</strong> (il est à vous) puis <strong>authentifié</strong> (SPF, DKIM, DMARC) : sans cela, Gmail, Yahoo et Outlook classent vos e-mails en indésirables, ou les refusent.</p>
+
+    <% if (sender) { %>
+      <div class="mk-panel">
+        <h2>Adresse d'expédition actuelle</h2>
+        <p>Domaine <strong><%= sender.domain %></strong> :
+          <% if (sender.free) { %><span class="mk-status mk-status-err">messagerie gratuite</span> — impossible à authentifier : choisissez une adresse sur votre propre domaine dans <a href="/marketing/envoi">Réglages d'envoi</a>.
+          <% } else if (!sender.status) { %><span class="mk-status mk-status-warn">pas encore ajouté</span> — ajoutez-le ci-dessous.
+          <% } else { %><span class="mk-status <%= sender.status === "authenticated" ? "mk-status-ok" : "mk-status-warn" %>"><%= STATUS_LABELS[sender.status] %></span> — <a href="/marketing/domaines/<%= sender.id %>">voir le détail</a>.<% } %>
+        </p>
+      </div>
+    <% } %>
+
+    <section class="mk-panel" aria-labelledby="dom-list">
+      <h2 id="dom-list">Vos domaines</h2>
+      <% if (!items.length) { %>
+        <p class="field-hint">Aucun domaine ajouté.</p>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table mk-datatable">
+          <caption class="sr-only">Domaines d'envoi et leur état</caption>
+          <thead><tr><th scope="col">Domaine</th><th scope="col">État</th><th scope="col">SPF</th><th scope="col">DKIM</th><th scope="col">DMARC</th><th scope="col">Dernière vérification</th></tr></thead>
+          <tbody>
+            <% items.forEach((d) => { const c = d.checks; const s = (k) => (c[k] ? (c[k].state === "ok" ? "✓" : c[k].state === "unknown" ? "?" : "✗") : "—"); %>
+              <tr>
+                <th scope="row" data-label="Domaine"><a href="/marketing/domaines/<%= d.id %>"><%= d.domain %></a></th>
+                <td data-label="État"><span class="mk-status <%= d.status === "authenticated" ? "mk-status-ok" : d.status === "verified" ? "mk-status-warn" : "" %>"><%= d.statusLabel %></span></td>
+                <td data-label="SPF"><%= s("spf") %></td><td data-label="DKIM"><%= s("dkim") %></td><td data-label="DMARC"><%= s("dmarc") %></td>
+                <td data-label="Dernière vérification"><%= d.checked_at ? mkh.fdatetime(d.checked_at) : "jamais" %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table></div>
+      <% } %>
+      <% if (canWrite) { %>
+        <form method="post" action="/marketing/domaines" class="mk-form mk-dom-add">
+          <div class="field-group"><label for="dom-name">Ajouter un domaine</label><input id="dom-name" type="text" name="domain" maxlength="253" required placeholder="kolakisa.com" value="<%= sender && !sender.free && !sender.status ? sender.domain : "" %>" autocomplete="off" spellcheck="false"></div>
+          <button type="submit" class="btn btn-primary btn-sm">Ajouter</button>
+        </form>
+      <% } %>
+    </section>
+<%- include("partials/bottom") %>

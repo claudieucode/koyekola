@@ -9,6 +9,7 @@ const { getSendingConfig } = require("./config");
 const { getSecrets } = require("./config");
 const { WORKER_DETAIL, workerHuman } = require("../workerNotice");
 const { abPreflight } = require("./abtest");
+const { senderWarning } = require("../domains");
 
 const LOCAL_HTTP = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/i;
 
@@ -38,6 +39,9 @@ function preflight(ctx, campaignId, { workerOn = false, smtpAvailable = Boolean(
     if (!cfg.from) error("provider_incomplete", "Aucune adresse d'expédition n'est enregistrée (réglages d'envoi).");
     if (cfg.provider === "smtp" && !smtpAvailable) error("provider_incomplete", "SMTP n'est pas configuré sur le serveur (variables SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS).");
     if (cfg.provider === "resend" && !secrets.apiKey) error("provider_incomplete", "La clé d'API Resend n'est pas enregistrée (réglages d'envoi).");
+    // Domaine de l'expéditeur (Paramètres → Domaines) : avertissement seulement, l'envoi reste possible
+    const domainWarning = cfg.from ? senderWarning(ctx) : null;
+    if (domainWarning) warn("sender_domain", domainWarning);
   }
 
   // Liens de désinscription : adresse publique https du site, et clé de signature valide

@@ -59,7 +59,12 @@
           </select></div>
         <div class="field-row">
           <div class="field-group"><label for="s-from">Expéditeur</label><input id="s-from" type="text" name="from" maxlength="200" value="<%= cfg.from %>" placeholder="KOLAKISA &lt;no-reply@votre-domaine.fr&gt;" <%= canEdit ? "" : "disabled" %>>
-            <span class="field-hint">Le domaine doit être authentifié chez votre fournisseur (SPF/DKIM), sinon vos messages iront en indésirables.</span></div>
+            <span class="field-hint">Le domaine doit être authentifié (SPF, DKIM, DMARC), sinon vos messages iront en indésirables.</span>
+            <% if (senderDomain) { %><span class="field-hint">Domaine <strong><%= senderDomain.domain %></strong> :
+              <% if (senderDomain.free) { %><span class="mk-status mk-status-err">messagerie gratuite — à remplacer</span>
+              <% } else if (!senderDomain.status) { %><span class="mk-status mk-status-warn">non ajouté</span> <a href="/marketing/domaines">Ajouter ce domaine</a>
+              <% } else { %><span class="mk-status <%= senderDomain.status === "authenticated" ? "mk-status-ok" : "mk-status-warn" %>"><%= domainLabels[senderDomain.status] %></span> <a href="/marketing/domaines/<%= senderDomain.id %>">Voir le domaine</a><% } %>
+            </span><% } %></div>
           <div class="field-group"><label for="s-reply">Adresse de réponse (facultatif)</label><input id="s-reply" type="text" name="reply_to" maxlength="200" value="<%= cfg.replyTo %>" <%= canEdit ? "" : "disabled" %>></div>
         </div>
       </section>

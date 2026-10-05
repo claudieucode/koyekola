@@ -1654,3 +1654,13 @@ input.mk-fx-switch[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed
 .mk-ai-block select { min-width: 0; flex: 1 1 140px; }
 .mk-sms-ai { margin: 0 0 12px; }
 .mk-sms-ai > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; color: var(--primary); }
+
+/* ---------- Domaines d'envoi ---------- */
+.mk-dom-add { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 14px; }
+.mk-dom-add .field-group { margin-bottom: 0; flex: 1 1 240px; }
+.mk-dom-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.mk-dom-checks li { display: grid; grid-template-columns: 130px auto minmax(0, 1fr); gap: 6px 12px; align-items: start; padding-bottom: 10px; border-bottom: 1px solid var(--mk-border); }
+.mk-dom-check-name { font-weight: 700; }
+.mk-dom-check-msg { min-width: 0; }
+.mk-dom-value { display: block; margin-top: 4px; padding: 4px 6px; background: var(--mk-hover); border-radius: 6px; font-size: 0.85rem; overflow-wrap: anywhere; word-break: break-all; }
+@media (max-width: 640px) { .mk-dom-checks li { grid-template-columns: 1fr; } }

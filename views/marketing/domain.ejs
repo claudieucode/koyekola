@@ -1,0 +1,65 @@
+<%- include("partials/top", { title, active }) %>
+<% const c = d.checks; const badge = (k) => STATE[(c[k] && c[k].state) || "unknown"]; %>
+    <div class="mk-head">
+      <h1><%= d.domain %></h1>
+      <div class="mk-actions">
+        <span class="mk-status <%= d.status === "authenticated" ? "mk-status-ok" : d.status === "verified" ? "mk-status-warn" : "" %>"><%= d.statusLabel %></span>
+        <% if (canWrite) { %><form method="post" action="/marketing/domaines/<%= d.id %>/verifier"><button type="submit" class="btn btn-primary btn-sm">Vérifier maintenant</button></form><% } %>
+      </div>
+    </div>
+    <p class="mk-lead"><%= isSender ? "C'est le domaine de votre adresse d'expédition actuelle. " : "" %>Publiez les enregistrements ci-dessous chez votre hébergeur DNS (Hostinger : Domaines → DNS / serveurs de noms), puis cliquez sur « Vérifier maintenant ». La propagation peut prendre de quelques minutes à 48 heures.</p>
+
+    <section class="mk-panel" aria-labelledby="dom-checks">
+      <h2 id="dom-checks">Résultat de la vérification</h2>
+      <% if (!d.checked_at) { %>
+        <p class="field-hint">Pas encore vérifié.</p>
+      <% } else { %>
+        <p class="field-hint">Dernière vérification : <%= mkh.fdatetime(d.checked_at) %><%= c.providerNote ? ` — ${c.providerNote}` : "" %></p>
+        <ul class="mk-dom-checks">
+          <% [["ownership", "Propriété"], ["spf", "SPF"], ["dkim", "DKIM"], ["dmarc", "DMARC"], ["mx", "MX (réception)"]].forEach(([k, label]) => { const b = badge(k); %>
+            <li>
+              <span class="mk-dom-check-name"><%= label %></span>
+              <span class="mk-status <%= b[0] %>"><%= b[1] %></span>
+              <span class="mk-dom-check-msg"><%= c[k] ? c[k].message : "" %><% if (c[k] && c[k].value) { %><code class="mk-dom-value"><%= c[k].value %></code><% } %></span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="dom-records">
+      <h2 id="dom-records">Enregistrements DNS à publier</h2>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable">
+        <caption class="sr-only">Enregistrements à ajouter dans la zone DNS du domaine</caption>
+        <thead><tr><th scope="col">Rôle</th><th scope="col">Type</th><th scope="col">Nom</th><th scope="col">Valeur</th></tr></thead>
+        <tbody>
+          <% records.forEach((r) => { %>
+            <tr>
+              <th scope="row" data-label="Rôle"><%= r.purpose %><% if (r.done) { %> <span class="mk-status mk-status-ok">Déjà en place</span><% } else if (r.providerStatus) { %> <span class="mk-sub">Resend : <%= r.providerStatus %></span><% } %></th>
+              <td data-label="Type"><%= r.type %><%= r.priority !== null && r.priority !== undefined ? ` (priorité ${r.priority})` : "" %></td>
+              <td data-label="Nom"><code class="mk-dom-value"><%= r.name %></code></td>
+              <td data-label="Valeur"><code class="mk-dom-value"><%= r.value %></code><% if (r.hint) { %><span class="mk-sub"><%= r.hint %></span><% } %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+      <p class="field-hint">Chez certains hébergeurs, le champ « Nom » s'écrit sans le domaine (ex. <code>_dmarc</code> au lieu de <code>_dmarc.<%= d.domain %></code>) ; « @ » désigne le domaine lui-même.</p>
+    </section>
+
+    <% if (!d.providerRecords.length) { %>
+      <section class="mk-panel" aria-labelledby="dom-selector">
+        <h2 id="dom-selector">Sélecteur DKIM</h2>
+        <p class="field-hint">Envoi par SMTP : votre hébergeur d'e-mails signe vos messages avec une clé DKIM publiée sous un « sélecteur » (ex. <code>hostingermail1</code>, <code>google</code>). Sans sélecteur, les plus courants sont essayés.</p>
+        <% if (canWrite) { %>
+          <form method="post" action="/marketing/domaines/<%= d.id %>/selecteur" class="mk-form mk-dom-add">
+            <div class="field-group"><label for="dom-sel">Sélecteur</label><input id="dom-sel" type="text" name="selector" maxlength="63" value="<%= d.dkim_selector %>" placeholder="ex. hostingermail1" spellcheck="false"></div>
+            <button type="submit" class="btn btn-outline btn-sm">Enregistrer</button>
+          </form>
+        <% } else if (d.dkim_selector) { %><p>Sélecteur : <code><%= d.dkim_selector %></code></p><% } %>
+      </section>
+    <% } %>
+
+    <% if (canWrite) { %>
+      <form method="post" action="/marketing/domaines/<%= d.id %>/supprimer"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Le domaine est retiré de cette liste. Vos enregistrements DNS ne sont pas modifiés." data-mk-confirm-title="Retirer ce domaine ?" data-mk-confirm-ok="Retirer">Retirer ce domaine</button></form>
+    <% } %>
+<%- include("partials/bottom") %>

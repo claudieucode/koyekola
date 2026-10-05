@@ -65,6 +65,7 @@ module.exports = ({ db }) => {
       baseUrl: String(process.env.SITE_URL || "").replace(/\/+$/, ""), orgId: ctx.organizationId, canEdit: req.mk.can("settings.write"),
       outbox: outboxOverview(db, { limit: 20 }), smtpFrom: fromAddress(), contactEmail: process.env.CONTACT_EMAIL || "",
       orgTz: sendtime.orgTimeZone(ctx), timeZones: sendtime.timeZoneList(),
+      senderDomain: require("../domains").senderDomainStatus(ctx), domainLabels: require("../domains").STATUS_LABELS,
     });
   });
   router.post("/envoi/fuseau", need("settings.write"), (req, res, next) =>

@@ -32,9 +32,10 @@ describe("registre de navigation", () => {
     assert.ok(used.size >= 12, `seulement ${used.size} clés trouvées`);
     assert.deepEqual([...used].filter((k) => !ITEMS.some((i) => i.key === k)), []);
   });
-  test("les fonctionnalités futures sont prévues au registre mais JAMAIS affichées", () => {
+  test("les fonctionnalités futures sont prévues au registre mais JAMAIS affichées ; « Domaines » est désormais en service", () => {
     const future = ITEMS.filter((i) => i.status === "soon").map((i) => i.label);
-    for (const wanted of ["Domaines"]) assert.ok(future.includes(wanted), wanted);
+    assert.ok(!future.includes("Domaines"), "Domaines : livré (point 11)");
+    assert.ok(labels(buildNav({ can: roleCan("owner"), active: "dashboard" })).includes("Domaines"));
     const nav = buildNav({ can: () => true, active: "dashboard" });
     for (const l of future) assert.ok(!labels(nav).includes(l), `${l} ne doit pas être visible`);
   });
@@ -125,9 +126,11 @@ describe("coque dans le navigateur", () => {
     assert.doesNotMatch(v, /href="\/marketing\/envoi"|href="\/marketing\/importer"/);
     assert.match(v, /href="\/marketing\/conformite"/);
   });
-  test("aucune fonctionnalité à venir n'apparaît dans l'interface", async () => {
+  test("aucune fonctionnalité à venir n'apparaît dans l'interface ; les fonctionnalités livrées y sont", async () => {
     const html = (await boss.get("/marketing")).text;
-    for (const word of ["Domaines"]) assert.ok(!html.includes(word), word);
+    const future = require("../src/marketing/web/nav").ITEMS.filter((i) => i.status === "soon").map((i) => i.label);
+    for (const word of future) assert.ok(!html.includes(`>${word}<`), word);
+    assert.match(html, /href="\/marketing\/domaines"/, "Domaines (point 11) est livré");
   });
   test("repli du menu : bouton avec état, libellés portés par title pour le mode icônes", async () => {
     const html = (await boss.get("/marketing")).text;
