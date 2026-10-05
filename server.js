@@ -44,6 +44,8 @@ const marketing = require("./src/marketing").initMarketing({ db, dbFile, dataDir
 
 const app = express();
 app.locals.marketing = marketing;
+// Pont CRM (fiche élève ↔ fiche contact) : mis à disposition du module marketing sans qu'il importe la base du LMS
+app.locals.crm = require("./src/services/gestion/crm");
 
 app.disable("x-powered-by");
 // L'hébergeur place un proxy HTTPS devant l'application : nécessaire pour req.secure et req.ip

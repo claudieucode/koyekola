@@ -21,6 +21,7 @@ const seoImages = require("../seo/images");
 const common = require("../services/gestion/common");
 const sales = require("../services/gestion/sales");
 const students = require("../services/gestion/students");
+const crm = require("../services/gestion/crm");
 const analytics = require("../services/gestion/analytics");
 const resources = require("../services/gestion/resources");
 const activity = require("../services/gestion/activity");
@@ -150,7 +151,8 @@ router.post("/formateur/gestion/ventes/coupons/:id(\\d+)/:action(activer|desacti
 router.get("/formateur/gestion/eleves", page("gestion/eleves", "Élèves", (req) => ({ list: students.listStudents(me(req), req.query), courses: sales.myCourses(me(req)) })));
 router.get("/formateur/gestion/eleves/:id(\\d+)", page("gestion/eleve", "Élève", (req, res) => {
   const s = students.getStudent(me(req), Number(req.params.id));
-  return s ? { ...s, title: s.user.username } : null;
+  // Relation (prospect / étudiant / client) et fiche contact marketing du même compte : lues, jamais recopiées
+  return s ? { ...s, title: s.user.username, relation: crm.relationOf(s.user.id), relations: crm.RELATIONS, contact: crm.contactOfUser(req.app.locals.marketing, s.user.id) } : null;
 }));
 
 // ---------- Analytics ----------

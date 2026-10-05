@@ -17,6 +17,20 @@
     <% }) %></ul>
   </section>
   <aside>
+    <section class="dpanel" aria-labelledby="g-s-crm">
+      <h2 id="g-s-crm">Relation et contact</h2>
+      <p><span class="badge"><%= relations[relation].label %></span> <small><%= relations[relation].hint %></small></p>
+      <% if (!contact) { %>
+        <p class="field-hint">Pas de fiche contact marketing pour ce compte.</p>
+      <% } else { %>
+        <ul class="dlist">
+          <li>Statut marketing : <strong><%= contact.status_label %></strong></li>
+          <li>Étiquettes : <%= contact.tags.length ? contact.tags.join(", ") : "aucune" %></li>
+          <li>Listes : <%= contact.lists.length ? contact.lists.join(", ") : "aucune" %></li>
+        </ul>
+        <p><a href="/marketing/contacts/<%= contact.id %>">Ouvrir la fiche contact marketing</a></p>
+      <% } %>
+    </section>
     <section class="dpanel" aria-labelledby="g-s-orders">
       <h2 id="g-s-orders">Achats</h2>
       <% if (!orders.length) { %><p class="field-hint">Aucun achat : formations gratuites uniquement.</p><% } else { %>

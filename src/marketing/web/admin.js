@@ -148,6 +148,8 @@ module.exports = ({ db }) => {
       memberOf, allLists: audience.listLists(ctx), history: compliance.consentHistory(ctx, contact.id), preferences: compliance.preferencesOf(ctx, contact.id),
       sendable: compliance.isSendable(ctx, contact.id), smsSendable: sms.isSmsSendable(ctx, contact.id), smsPhoneMasked: sms.maskPhone(contact.sms_phone),
       summary: audience.contactSummary(ctx, contact.id), timeline: audience.contactTimeline(ctx, contact.id, { limit: 50 }),
+      // Compte KOLAKISA lié (relation, formations, achats) : fourni par server.js, absent si le pont CRM n'est pas branché
+      lms: req.app.locals.crm ? req.app.locals.crm.lmsOfContact(req.session.user.id, contact) : null, relations: req.app.locals.crm ? req.app.locals.crm.RELATIONS : {},
       // Fuseau réellement utilisé pour l'envoi à l'heure locale, et d'où il vient (contact, compte, pays, défaut)
       zone: sendtime.contactZones(ctx, [contact.id])[contact.id], zoneBasis: sendtime.BASIS_LABELS, timeZones: sendtime.timeZoneList(),
     });

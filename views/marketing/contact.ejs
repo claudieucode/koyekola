@@ -6,6 +6,20 @@
     </div>
     <p class="mk-lead"><%= mkh.fullName(contact) || "Sans nom" %> · source : <%= contact.source %> · ajouté le <%= mkh.fdate(contact.created_at) %><% if (contact.lms_user_id) { %> · compte KOLAKISA lié<% } %></p>
 
+    <% if (lms) { %>
+    <section class="mk-panel" id="compte" aria-labelledby="lms-title">
+      <h2 id="lms-title">Compte KOLAKISA</h2>
+      <p><span class="badge"><%= (relations[lms.relation] || {}).label || lms.relation %></span> <span class="field-hint"><%= (relations[lms.relation] || {}).hint %></span></p>
+      <% if (!lms.student) { %>
+        <p class="field-hint">Compte « <%= lms.user.username %> » créé le <%= mkh.fdate(lms.user.created_at) %>, sans inscription à vos formations.</p>
+      <% } else { %>
+        <p><strong><%= lms.student.courses.length %></strong> formation(s) · <strong><%= mkh.euros(lms.student.spent) %></strong> d'achats · <%= lms.student.orders.length %> commande(s)</p>
+        <ul class="dlist"><% lms.student.courses.forEach((c) => { %><li><%= c.title %> — <%= c.percent %> % <small>(<%= c.bought ? "achetée" : "gratuite" %>)</small></li><% }) %></ul>
+        <p><a href="/formateur/gestion/eleves/<%= lms.user.id %>">Ouvrir la fiche élève</a></p>
+      <% } %>
+    </section>
+    <% } %>
+
     <section class="mk-panel mk-verdict <%= sendable.ok ? "is-ok" : "is-no" %>">
       <h2>Peut-on lui écrire (marketing) ?</h2>
       <p><strong><%= sendable.ok ? "Oui." : "Non." %></strong> <%= sendable.ok ? "Consentement prouvé, adresse non bloquée." : mkh.reasonLabel(sendable.reason) %></p>
