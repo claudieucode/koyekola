@@ -157,8 +157,13 @@ a.mk-stat:hover { border-color: var(--accent); }
 .mk-stat-trend.is-down { color: var(--danger); }
 
 /* ===== Pastilles de statut ===== */
-.mk-status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; padding: 3px 10px; border: 0; background: #edf2f6; color: var(--mk-text-soft); white-space: nowrap; border-radius: var(--radius-pill); }
-.mk-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: 0.85; }
+/* Pastille de statut : jamais plus large que son conteneur. Un texte long revient à la ligne (jamais coupé ni tronqué,
+   un mot sans espace compris) ; le point garde sa taille et reste centré sur la PREMIÈRE ligne (identique à avant pour
+   un texte d'une ligne). Dans une cellule de tableau, elle reste sur une ligne comme avant : la cellule s'élargit et le
+   tableau défile, rien ne sort de son parent (sauf en mode « cartes » sur mobile, voir plus bas). */
+.mk-status { display: inline-flex; align-items: flex-start; gap: 6px; max-width: 100%; min-width: 0; font-size: 0.8rem; font-weight: 700; padding: 3px 10px; border: 0; background: #edf2f6; color: var(--mk-text-soft); white-space: normal; overflow-wrap: anywhere; text-align: left; border-radius: var(--radius-pill); }
+:where(td, th) > .mk-status { white-space: nowrap; overflow-wrap: normal; }
+.mk-status::before { content: ""; flex: 0 0 auto; width: 7px; height: 7px; margin-top: calc(0.5lh - 3.5px); border-radius: 50%; background: currentColor; opacity: 0.85; }
 .mk-status-ok { background: var(--success-light); color: var(--success-dark); }
 .mk-status-warn { background: var(--warning-bg); color: var(--warning-text); }
 .mk-status-err { background: var(--danger-light); color: #a50e18; }
@@ -225,6 +230,8 @@ a.mk-stat:hover { border-color: var(--accent); }
   .mk-datatable tr { border: 1px solid var(--mk-border); border-radius: var(--mk-r); margin: 0 0 12px; background: var(--mk-surface); overflow: hidden; }
   .mk-datatable td { border-top: 0; padding: 6px 12px; display: flex; gap: 12px; justify-content: space-between; }
   .mk-datatable td::before { content: attr(data-label); font-weight: 700; color: var(--muted); font-size: 0.8rem; flex: none; }
+  /* Ligne en carte : la cellule a la largeur de la carte, la pastille peut donc revenir à la ligne */
+  .mk-datatable td > .mk-status { white-space: normal; overflow-wrap: anywhere; }
   .mk-datatable td.mk-num { text-align: right; }
   /* Cellule à deux lignes (nom + sous-titre, ex. description d'une liste ou d'un segment) : empilée plutôt que
      compressée par « space-between » (qui, avec 3 éléments flex, réduisait le nom à une colonne trop étroite). */

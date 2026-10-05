@@ -159,8 +159,11 @@ a.seo-cell-title:hover { color: var(--seo-accent); text-decoration: underline; }
 .dash-seo code { overflow-wrap: anywhere; }
 
 /* États (pastilles) */
-.seo-state { --tone: var(--seo-muted); display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; color: var(--tone); background: color-mix(in srgb, var(--tone) 12%, transparent); }
-.seo-state::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+/* Même règle que les pastilles de Marketing (.mk-status) : jamais plus large que le conteneur, retour à la ligne, point
+   centré sur la première ligne */
+.seo-state { --tone: var(--seo-muted); display: inline-flex; align-items: flex-start; gap: 6px; max-width: 100%; min-width: 0; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: normal; overflow-wrap: anywhere; text-align: left; color: var(--tone); background: color-mix(in srgb, var(--tone) 12%, transparent); }
+:where(td, th) > .seo-state { white-space: nowrap; overflow-wrap: normal; }
+.seo-state::before { content: ""; flex: 0 0 auto; width: 6px; height: 6px; margin-top: calc(0.5lh - 3px); border-radius: 50%; background: currentColor; }
 .seo-state.tone-good { --tone: var(--seo-success); }
 .seo-state.tone-warn { --tone: var(--seo-warning); }
 .seo-state.tone-bad { --tone: var(--seo-danger); }
