@@ -38,6 +38,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./surveys")());
   admin.use(require("./ai")());
   admin.use(require("./domains")());
+  admin.use(require("./social")());
   admin.use(require("./automations")({ db }));
   admin.use(require("./imports")({ db }));
   admin.use(require("./analytics")({ db }));
@@ -57,6 +58,7 @@ function createMarketingRouters({ db }) {
   publicRoutes.use(require("./landingPublic")({ db }));
   publicRoutes.use(require("./surveysPublic")({ db }));
   publicRoutes.use(require("./smsPublic")({ db }));
+  publicRoutes.use(require("./socialPublic")({ db }));
   // API /api/v1 : authentification par clé, jamais par cookie — montée séparément (voir server.js)
   const { createApiRouter } = require("../api/router");
   return { admin, publicRoutes, webhooks: require("./webhooks")({ db }), api: createApiRouter({ db }) };

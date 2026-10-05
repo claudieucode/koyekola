@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= v.subject %></title>
+  <meta name="description" content="<%= v.description %>">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="<%= v.subject %>">
+  <meta property="og:description" content="<%= v.description %>">
+  <meta property="og:url" content="<%= url %>">
+  <% if (v.image) { %><meta property="og:image" content="<%= v.image %>"><meta name="twitter:card" content="summary_large_image"><% } else { %><meta name="twitter:card" content="summary"><% } %>
+  <meta name="twitter:title" content="<%= v.subject %>">
+  <meta name="robots" content="noindex, follow">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="<%= asset("/css/landing.css") %>">
+</head>
+<body class="lp-body ev-body">
+  <header class="ev-bar">
+    <p class="ev-title"><%= v.subject %></p>
+    <nav class="ev-share" aria-label="Partager cet e-mail">
+      <% share.forEach((s) => { %><a class="ev-share-link" href="<%= s.href %>" target="_blank" rel="noopener noreferrer">Partager sur <%= s.label %></a><% }) %>
+    </nav>
+  </header>
+  <main id="main" class="ev-main">
+    <iframe class="ev-frame" src="/e/<%= token %>/contenu" title="<%= v.subject %>" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation" loading="eager"></iframe>
+  </main>
+  <script src="<%= asset("/js/web-version.js") %>" defer></script>
+</body>
+</html>

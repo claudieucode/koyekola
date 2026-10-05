@@ -38,6 +38,14 @@ function parseTarget(value) {
   return { targetType: m[1], targetId: Number(m[2]) };
 }
 
+// Version web et liens de partage d'une campagne envoyée (point 12) ; null pour un brouillon ou une campagne en attente
+function shareOf(ctx, campaign) {
+  if (campaign.kind !== "campaign" || !["sending", "sent"].includes(campaign.status)) return null;
+  const web = require("../social/webVersion");
+  const url = campaign.web_disabled ? "" : web.webUrl(ctx, campaign.id);
+  return { disabled: Boolean(campaign.web_disabled), url, links: url ? web.shareLinks(url, "") : [] };
+}
+
 // Heure de programmation : « send_at_utc » (ISO, fournie par le navigateur) ou « send_at » lu comme UTC ; vide = tout de suite
 function parseSchedule(body) {
   const raw = String(body.send_at_utc || body.send_at || "").trim();
@@ -228,6 +236,18 @@ module.exports = ({ db }) => {
       autoRefresh: ["scheduled", "sending"].includes(campaign.status), workerOn: workerOn(),
       sender: draft ? config.getSendingConfig(ctx) : null, tested,
       ab: { variants: sending.variantsOf(campaign), letters: sending.LETTERS, metrics: sending.METRICS, open: req.query.ab === "1" },
+      share: shareOf(ctx, campaign),
+    });
+  });
+
+  // Version web (point 12) : activer / désactiver le lien « Voir dans le navigateur » et le partage de cette campagne
+  router.post("/campagnes/:id/version-web", need("campaigns.write"), (req, res, next) => {
+    const campaign = load(req, res);
+    if (!campaign) return;
+    attempt(req, res, next, `/marketing/campagnes/${campaign.id}`, () => {
+      const off = req.body.disabled === "1";
+      db.prepare("UPDATE mk_campaigns SET web_disabled = ?, updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(off ? 1 : 0, campaign.id, req.mk.ctx.organizationId);
+      return off ? "Version web désactivée : son lien affiche désormais « page indisponible »." : "Version web réactivée.";
     });
   });
 

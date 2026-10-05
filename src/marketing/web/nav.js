@@ -39,6 +39,7 @@ const ITEMS = [
   live("campaigns", "rss", "Campagnes RSS", "/marketing/rss", "layers", "campaigns.read", { label: "Créer une campagne RSS", href: "/marketing/rss/nouvelle", permission: "campaigns.write" }),
   // Pages d'atterrissage (« Landing pages » de Mailchimp) : pages web hébergées avec inscription et statistiques
   live("campaigns", "landing", "Pages d'atterrissage", "/marketing/pages", "layout", "forms.read", { label: "Créer une page", href: "/marketing/pages#nouvelle", permission: "forms.write" }),
+  live("campaigns", "social", "Réseaux sociaux", "/marketing/reseaux", "send", "campaigns.read", { label: "Créer une publication", href: "/marketing/reseaux#nouvelle", permission: "campaigns.write" }),
 
   // Onglet SMS à part entière, comme chez Mailchimp : campagnes, abonnés, réglages
   live("sms", "smscampaigns", "Campagnes SMS", "/marketing/sms", "smartphone", "campaigns.read", { label: "Créer une campagne SMS", href: "/marketing/sms#nouvelle", permission: "campaigns.write" }),
@@ -62,6 +63,7 @@ const ITEMS = [
   live("settings", "domains", "Domaines", "/marketing/domaines", "globe", "settings.read"),
   live("settings", "compliance", "Conformité", "/marketing/conformite", "shield", "compliance.read"),
   live("settings", "ai", "Assistant IA", "/marketing/ia", "bot", "settings.read"),
+  live("settings", "socialsettings", "Réseaux sociaux", "/marketing/reseaux/reglages", "globe", "settings.read"),
   live("settings", "appearance", "Apparence", "/marketing/apparence", "eye", "contacts.read"),
 
   // Page de référence du design system : accessible par son adresse, absente du menu

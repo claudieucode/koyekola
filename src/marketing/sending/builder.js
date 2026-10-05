@@ -5,6 +5,7 @@ const { buildContext } = require("../templates/context");
 const { unsubscribeToken, preferencesToken } = require("../compliance/consent");
 const { signToken } = require("../security/tokens");
 const { respondentToken } = require("../surveys");
+const { webUrl } = require("../social/webVersion");
 
 const FALLBACK_FROM = "KOLAKISA <no-reply@exemple.invalid>"; // fournisseur console uniquement (rien n'est envoyé)
 const trimBase = (url) => String(url || "").replace(/\/+$/, "");
@@ -15,7 +16,9 @@ function buildMessage(ctx, { campaign, compiled, contact, message, config, linkM
   const unsubscribeUrl = `${base}/u/${unsubscribeToken(ctx, contact.id, ctx.tokenKey, { messageId: message.id })}`;
   const preferencesUrl = `${base}/preferences/${preferencesToken(ctx, contact.id, ctx.tokenKey)}`;
   // Transactionnel : ni lien ni en-tête de désinscription marketing (le message concerne le compte de la personne)
-  const data = buildContext(ctx, contact, { urls: transactional ? {} : { unsubscribe_url: unsubscribeUrl, preferences_url: preferencesUrl }, event });
+  // « Voir dans le navigateur » : version web de la campagne (sans données personnelles) ; pas pour un scénario
+  const viewUrl = !transactional && campaign.kind === "campaign" && !campaign.web_disabled ? webUrl(ctx, campaign.id) : "";
+  const data = buildContext(ctx, contact, { urls: transactional ? {} : { unsubscribe_url: unsubscribeUrl, preferences_url: preferencesUrl, view_url: viewUrl }, event });
   // Lien personnel des blocs « Sondage » : la réponse est rattachée à ce contact (jeton signé, sans date limite)
   data.survey_token = ctx.tokenKey ? respondentToken(ctx.organizationId, contact.id, ctx.tokenKey) : "";
   const rendered = renderEmail(compiled, data);

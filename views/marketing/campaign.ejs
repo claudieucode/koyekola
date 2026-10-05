@@ -413,6 +413,25 @@
           <ul class="mk-status-list"><% stats.notes.forEach((n) => { %><li class="field-hint"><%= n %></li><% }) %></ul>
         </section>
 
+        <% if (share) { %>
+          <section class="mk-panel" aria-labelledby="share-title">
+            <h2 id="share-title">Version web et partage</h2>
+            <% if (share.disabled) { %>
+              <p>La version web de cette campagne est <strong>désactivée</strong> : son lien « Voir dans le navigateur » affiche « page indisponible ».</p>
+            <% } else if (!share.url) { %>
+              <p class="field-hint">La version web demande l'adresse publique du site (SITE_URL) et la clé ENCRYPTION_KEY.</p>
+            <% } else { %>
+              <p>Version web (sans données personnelles) : <a href="<%= share.url %>" target="_blank" rel="noopener">ouvrir</a></p>
+              <div class="field-group"><label for="share-url">Adresse à partager</label><input id="share-url" type="text" value="<%= share.url %>" readonly></div>
+              <div class="mk-actions">
+                <% share.links.forEach((s) => { %><a class="btn btn-outline btn-sm" href="<%= s.href %>" target="_blank" rel="noopener noreferrer">Partager sur <%= s.label %></a><% }) %>
+                <% if (mk.can("campaigns.write")) { %><a class="btn btn-primary btn-sm" href="/marketing/reseaux?campagne=<%= campaign.id %>#nouvelle">Publier sur vos réseaux</a><% } %>
+              </div>
+            <% } %>
+            <% if (mk.can("campaigns.write")) { %><form method="post" action="/marketing/campagnes/<%= campaign.id %>/version-web"><input type="hidden" name="disabled" value="<%= share.disabled ? "0" : "1" %>"><button type="submit" class="btn btn-ghost btn-sm"><%= share.disabled ? "Réactiver la version web" : "Désactiver la version web" %></button></form><% } %>
+          </section>
+        <% } %>
+
         <% if (reasons.length) { %>
           <section class="mk-panel">
             <h2>Messages non envoyés</h2>

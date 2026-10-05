@@ -1664,3 +1664,10 @@ input.mk-fx-switch[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed
 .mk-dom-check-msg { min-width: 0; }
 .mk-dom-value { display: block; margin-top: 4px; padding: 4px 6px; background: var(--mk-hover); border-radius: 6px; font-size: 0.85rem; overflow-wrap: anywhere; word-break: break-all; }
 @media (max-width: 640px) { .mk-dom-checks li { grid-template-columns: 1fr; } }
+
+/* ---------- Réseaux sociaux ---------- */
+.mk-soc-text { display: block; white-space: pre-line; overflow-wrap: anywhere; font-weight: 600; }
+.mk-soc-error { color: var(--danger, #b42318); }
+[data-social-later][hidden] { display: none; }
+.mk-soc-url { overflow-wrap: anywhere; word-break: break-all; }
+@media (min-width: 761px) { .mk-soc-table td { white-space: nowrap; } .mk-soc-table td[data-label="Actions"] { white-space: normal; min-width: 96px; } .mk-soc-table th[scope="row"] { min-width: 220px; } }

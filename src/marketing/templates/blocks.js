@@ -659,7 +659,10 @@ function footerNodes(kind, footer, env) {
   if (kind === "marketing") {
     const link = `color:${MUTED};text-decoration:underline`;
     nodes.push(
-      T(`<p style="margin:0"><a href="`), V("unsubscribe_url"), T(`" style="${link}">Se désinscrire</a>`),
+      T('<p style="margin:0">'),
+      // « Voir dans le navigateur » : version web de la campagne (lien rempli seulement pour une campagne envoyée)
+      { t: "if", branches: [{ cond: engine.compileCondition("view_url", { allowed: anything }), body: [T('<a href="'), V("view_url"), T(`" style="${link}">Voir dans le navigateur</a> · `)] }], else: null },
+      T('<a href="'), V("unsubscribe_url"), T(`" style="${link}">Se désinscrire</a>`),
       { t: "if", branches: [{ cond: engine.compileCondition("preferences_url", { allowed: anything }), body: [T(' · <a href="'), V("preferences_url"), T(`" style="${link}">Gérer mes préférences</a>`)] }], else: null },
       T("</p>"),
     );

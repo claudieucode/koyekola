@@ -1,0 +1,36 @@
+<%- include("partials/top", { title, active }) %>
+<% const dis = canWrite ? "" : " disabled"; const state = (on) => on ? '<span class="mk-status mk-status-ok">Relié</span>' : '<span class="mk-status">Non relié</span>'; %>
+    <div class="mk-head"><h1>Réseaux sociaux</h1></div>
+    <p class="mk-lead">Reliez vos comptes pour publier depuis Campagnes → Réseaux sociaux. Les jetons d'accès sont chiffrés, jamais affichés ni journalisés. Sans eux, vous pouvez toujours partager une campagne avec les boutons de partage de sa version web.</p>
+
+    <form method="post" action="/marketing/reseaux/reglages" class="mk-form">
+      <section class="mk-panel" aria-labelledby="soc-fb">
+        <h2 id="soc-fb">Facebook et Instagram (Meta) <%- state(cfg.facebook.connected) %></h2>
+        <p class="field-hint">Il faut une page Facebook (et, pour Instagram, un compte professionnel relié à cette page) et un <strong>jeton d'accès de page</strong> durable avec les droits <code>pages_manage_posts</code> (et <code>instagram_content_publish</code> pour Instagram), créé avec l'outil « Explorateur de l'API Graph » de developers.facebook.com.</p>
+        <div class="field-group"><label for="fb-page">Identifiant de la page Facebook</label><input id="fb-page" type="text" name="facebook_page_id" inputmode="numeric" maxlength="25" value="<%= cfg.facebook.pageId %>"<%= dis %>><% if (cfg.facebook.pageName) { %><span class="field-hint">Page : <%= cfg.facebook.pageName %></span><% } %></div>
+        <div class="field-group"><label for="fb-token">Jeton d'accès de la page<%= cfg.facebook.tokenSet ? " (enregistré — laissez vide pour le garder)" : "" %></label><input id="fb-token" type="password" name="facebook_token" autocomplete="off" spellcheck="false"<%= dis %>></div>
+        <div class="field-group"><label for="ig-user">Identifiant du compte Instagram professionnel (facultatif)</label><input id="ig-user" type="text" name="instagram_user_id" inputmode="numeric" maxlength="25" value="<%= cfg.instagram.userId %>"<%= dis %>><span class="field-hint">Instagram utilise le même jeton que la page. <%- state(cfg.instagram.connected) %></span></div>
+        <% if (canWrite && cfg.facebook.tokenSet) { %><label class="checkbox-row"><input type="checkbox" name="clear_facebook" value="1"> Effacer le jeton Meta</label><% } %>
+      </section>
+      <section class="mk-panel" aria-labelledby="soc-li">
+        <h2 id="soc-li">LinkedIn <%- state(cfg.linkedin.connected) %></h2>
+        <p class="field-hint">Il faut une application LinkedIn avec le produit « Share on LinkedIn » (profil, droit <code>w_member_social</code>) ou « Community Management » (page entreprise, droit <code>w_organization_social</code>), et un jeton d'accès (valable 60 jours : pensez à le renouveler).</p>
+        <div class="field-group"><label for="li-author">Auteur</label><input id="li-author" type="text" name="linkedin_author" maxlength="80" value="<%= cfg.linkedin.author %>" placeholder="urn:li:organization:12345678" spellcheck="false"<%= dis %>></div>
+        <div class="field-group"><label for="li-token">Jeton d'accès<%= cfg.linkedin.tokenSet ? " (enregistré — laissez vide pour le garder)" : "" %></label><input id="li-token" type="password" name="linkedin_token" autocomplete="off" spellcheck="false"<%= dis %>></div>
+        <% if (canWrite && cfg.linkedin.tokenSet) { %><label class="checkbox-row"><input type="checkbox" name="clear_linkedin" value="1"> Effacer le jeton LinkedIn</label><% } %>
+      </section>
+      <% if (canWrite) { %><button type="submit" class="btn btn-primary">Enregistrer</button><% } %>
+    </form>
+
+    <% if (canWrite) { %>
+      <section class="mk-panel" aria-labelledby="soc-test">
+        <h2 id="soc-test">Tester la connexion</h2>
+        <div class="mk-actions">
+          <% [["facebook", "Facebook"], ["instagram", "Instagram"], ["linkedin", "LinkedIn"]].forEach(([n, l]) => { %>
+            <form method="post" action="/marketing/reseaux/reglages/tester/<%= n %>"><button type="submit" class="btn btn-outline btn-sm"<%= cfg[n].connected ? "" : " disabled" %>>Tester <%= l %></button></form>
+          <% }) %>
+        </div>
+        <p class="field-hint">Lecture seule : rien n'est publié.</p>
+      </section>
+    <% } %>
+<%- include("partials/bottom") %>
