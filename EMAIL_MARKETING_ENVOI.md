@@ -61,3 +61,13 @@ Le bloc **Articles** existe aussi dans les modèles ordinaires : il affiche les 
 
 Flux externe : http(s) seulement, jamais une adresse du réseau interne (vérifiée au moment de la connexion, redirections comprises), 2 Mo et 10 s au plus ; le contenu est réduit à du texte brut. Tests : `tests/marketing-rss.test.js`.
 
+## Pages d'atterrissage
+
+Campagnes → **Pages d'atterrissage** (`src/marketing/landing/`, migration 027). Pages web hébergées à l'adresse `/p/<adresse>`, composées de sections (bandeau, texte, image, liste, formation du catalogue, bouton, citation, formulaire d'inscription), aux couleurs choisies. Grammaire fermée : aucun HTML libre ; liens https:// ou pages du site, images https:// ou médiathèque marketing ; textes échappés (Markdown sûr).
+
+- **Inscription** : par un formulaire d'inscription existant (consentement prouvé, double confirmation, liste, étiquettes du formulaire) ; la page ajoute jusqu'à 5 étiquettes. Mêmes protections que les formulaires publics (champ piège, limite par adresse IP).
+- **Publication** : contrôles (contenu, formulaire publié, formation publiée) ; en ligne mais non indexée par défaut (comme Mailchimp), option d'indexation ; mise hors ligne → page indisponible ; une formation dépubliée fait disparaître sa section.
+- **Statistiques** : visites, visiteurs uniques (empreinte quotidienne non réversible, sans cookie ni adresse IP conservée, robots exclus), clics par lien (redirection uniquement vers un lien enregistré), inscriptions, taux de conversion (inscriptions / visiteurs uniques). Pas de chiffre d'affaires par page (non mesuré).
+
+Tests : `tests/marketing-pages-atterrissage.test.js`.
+

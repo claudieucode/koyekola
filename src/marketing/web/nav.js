@@ -35,6 +35,8 @@ const ITEMS = [
   live("campaigns", "ab", "Tests A/B", "/marketing/tests-ab", "activity", "campaigns.read", { label: "Créer un test A/B", href: "/marketing/campagnes/nouvelle?ab=1", permission: "campaigns.write" }),
   // Campagnes RSS (« RSS-to-email » de Mailchimp) : nouveaux articles envoyés automatiquement selon une fréquence
   live("campaigns", "rss", "Campagnes RSS", "/marketing/rss", "layers", "campaigns.read", { label: "Créer une campagne RSS", href: "/marketing/rss/nouvelle", permission: "campaigns.write" }),
+  // Pages d'atterrissage (« Landing pages » de Mailchimp) : pages web hébergées avec inscription et statistiques
+  live("campaigns", "landing", "Pages d'atterrissage", "/marketing/pages", "layout", "forms.read", { label: "Créer une page", href: "/marketing/pages#nouvelle", permission: "forms.write" }),
 
   // Onglet SMS à part entière, comme chez Mailchimp : campagnes, abonnés, réglages
   live("sms", "smscampaigns", "Campagnes SMS", "/marketing/sms", "smartphone", "campaigns.read", { label: "Créer une campagne SMS", href: "/marketing/sms#nouvelle", permission: "campaigns.write" }),

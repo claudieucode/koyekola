@@ -34,6 +34,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./templates")({ db }));
   admin.use(require("./campaigns")({ db }));
   admin.use(require("./rss")());
+  admin.use(require("./landing")());
   admin.use(require("./automations")({ db }));
   admin.use(require("./imports")({ db }));
   admin.use(require("./analytics")({ db }));
@@ -50,6 +51,7 @@ function createMarketingRouters({ db }) {
   publicRoutes.use(require("./public")({ db }));
   publicRoutes.use(require("./tracking")({ db }));
   publicRoutes.use(require("./formsPublic")({ db }));
+  publicRoutes.use(require("./landingPublic")({ db }));
   publicRoutes.use(require("./smsPublic")({ db }));
   // API /api/v1 : authentification par clé, jamais par cookie — montée séparément (voir server.js)
   const { createApiRouter } = require("../api/router");

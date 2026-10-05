@@ -1,0 +1,28 @@
+<%- include("partials/top", { title, active }) %>
+<% const canWrite = mk.can("forms.write"); %>
+    <div class="mk-head"><h1>Pages d'atterrissage</h1><% if (canWrite) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une page</button><% } %></div>
+    <p class="mk-lead">Des pages web hébergées par KOLAKISA (adresse /p/…) pour présenter une offre ou une formation et recueillir des inscriptions. En ligne, elles ne sont pas indexées par les moteurs de recherche, sauf si vous le choisissez.</p>
+    <% if (!pages.length) { %>
+      <div class="mk-empty"><%- icon("layout", { size: 32 }) %><h2>Aucune page</h2><p>Créez une page d'inscription à votre lettre, ou une page de présentation d'une formation.</p>
+        <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une page</button></div><% } %></div>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table">
+        <caption class="sr-only">Pages d'atterrissage</caption>
+        <thead><tr><th scope="col">Nom</th><th scope="col">Adresse</th><th scope="col">État</th><th scope="col">Visiteurs uniques</th><th scope="col">Inscriptions</th></tr></thead>
+        <tbody><% pages.forEach((p) => { %>
+          <tr><td><a href="/marketing/pages/<%= p.id %>"><%= p.name %></a></td><td>/p/<%= p.slug %></td><td><span class="mk-status <%= STATUS_CLASS[p.status] %>"><%= STATUSES[p.status] %></span></td><td><%= mkh.fmt(p.visitors) %></td><td><%= mkh.fmt(p.signups) %></td></tr>
+        <% }) %></tbody>
+      </table></div>
+    <% } %>
+    <% if (canWrite) { %>
+      <dialog class="mk-dialog mk-modal" id="nouvelle" data-mk-modal data-mk-modal-hash="nouvelle" aria-labelledby="lp-new-title">
+        <form action="/marketing/pages" method="post">
+          <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="lp-new-title">Nouvelle page</h2><p class="mk-dialog-desc">Un nom pour vous retrouver ; vous composerez la page ensuite. Rien n'est mis en ligne avant la publication.</p></div>
+            <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
+          <div class="mk-dialog-body"><div class="field-group"><label for="lp-name">Nom de la page *</label><input id="lp-name" type="text" name="name" maxlength="100" required placeholder="Guide gratuit : bien débuter en photo"></div></div>
+          <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button><button type="submit" class="btn btn-primary btn-sm">Créer la page</button></div>
+        </form>
+      </dialog>
+      <%- include("partials/modal-reopen", { id: "nouvelle" }) %>
+    <% } %>
+<%- include("partials/bottom") %>

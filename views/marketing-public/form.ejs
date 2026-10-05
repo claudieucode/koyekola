@@ -13,24 +13,7 @@
         <h1><%= form.name %></h1>
         <% if (error) { %><p class="form-error"><%= error %></p><% } %>
         <form method="post" action="/f/<%= form.slug %>" novalidate><input type="hidden" name="tz" data-tz>
-          <div class="hp-field" aria-hidden="true"><label for="f-website">Ne pas remplir</label><input id="f-website" type="text" name="website" tabindex="-1" autocomplete="off"></div>
-          <div class="field-group"><label for="f-email">Adresse e-mail</label><input id="f-email" type="email" name="email" value="<%= values.email || '' %>" required autofocus></div>
-          <% form.fields.forEach((key) => { %>
-            <div class="field-group"><label for="f-<%= key %>"><%= fieldCatalog[key] %></label><input id="f-<%= key %>" type="text" name="<%= key %>" maxlength="200" value="<%= values[key] || '' %>"></div>
-          <% }) %>
-          <% (typeof propertyDefs !== "undefined" ? propertyDefs : []).forEach((d) => { const id = "f-prop-" + d.key; const v = values[d.name] || ""; %>
-            <% if (d.type === "boolean") { %>
-              <label class="checkbox-row"><input id="<%= id %>" type="checkbox" name="<%= d.name %>" value="oui"<%- v ? " checked" : "" %>> <%= d.label %></label>
-            <% } else if (d.type === "select") { %>
-              <div class="field-group"><label for="<%= id %>"><%= d.label %></label><select id="<%= id %>" name="<%= d.name %>">
-                <option value="">—</option>
-                <% d.options.forEach((o) => { %><option value="<%= o %>"<%- v === o ? " selected" : "" %>><%= o %></option><% }) %>
-              </select></div>
-            <% } else { %>
-              <div class="field-group"><label for="<%= id %>"><%= d.label %></label><input id="<%= id %>" type="<%= d.type === "number" ? "number" : d.type === "date" ? "date" : "text" %>" name="<%= d.name %>" value="<%= v %>"<%- d.type === "text" ? ' maxlength="500"' : d.type === "number" ? ' step="any"' : "" %>></div>
-            <% } %>
-          <% }) %>
-          <label class="checkbox-row optin-row"><input type="checkbox" name="consent" value="1" required> <%= form.consentText %></label>
+          <%- include("_signup-fields", { form, fieldCatalog, propertyDefs: typeof propertyDefs !== "undefined" ? propertyDefs : [], values, prefix: "f" }) %>
           <button type="submit" class="btn btn-primary btn-block btn-lg">S'inscrire</button>
         </form>
       <% } %>
