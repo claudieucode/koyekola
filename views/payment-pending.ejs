@@ -1,0 +1,11 @@
+<%- include("partials/header", { title: "Paiement en cours de vérification", seo: { noindex: true } }) %>
+
+  <div class="container error-page">
+    <p class="code">Un instant</p>
+    <h1>Nous vérifions votre paiement</h1>
+    <p style="color:var(--muted);">Stripe n'a pas encore confirmé votre paiement. Cela prend en général quelques secondes. Votre accès à la formation sera ouvert dès la confirmation, et vous recevrez un e-mail.</p>
+    <a href="/commande/retour/<%= ref %>" class="btn btn-primary" style="margin-top:16px;">Actualiser</a>
+    <a href="/mes-cours" class="btn btn-outline" style="margin-top:16px;">Mes formations</a>
+  </div>
+
+<%- include("partials/footer") %>

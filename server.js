@@ -56,6 +56,8 @@ app.use(compression()); // pages, CSS et JS envoyés compressés (gzip) : enviro
 app.use(securityHeaders);
 // Webhooks du fournisseur d'envoi : corps BRUT (la signature porte sur les octets exacts), donc avant l'analyse JSON
 app.use("/webhooks", express.raw({ type: "*/*", limit: "256kb" }), marketingWeb.webhooks);
+// Webhook de paiement Stripe : même principe (corps brut, signature vérifiée, pas de cookie ni de contrôle d'origine)
+app.use("/stripe", express.raw({ type: "*/*", limit: "256kb" }), require("./src/routes/stripeWebhook"));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 // API publique /api/v1 : authentification par clé (jamais par cookie), donc montée avant la session et le contrôle d'origine

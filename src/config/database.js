@@ -448,4 +448,29 @@ if (!orderColumns.includes("discount_cents")) db.exec("ALTER TABLE orders ADD CO
 const itemColumns = db.prepare("PRAGMA table_info(order_items)").all().map((col) => col.name);
 if (!itemColumns.includes("list_price_cents")) db.exec("ALTER TABLE order_items ADD COLUMN list_price_cents INTEGER");
 
+// Paiements Stripe en cours : le panier et les montants (fixés par le serveur) sont gardés ici le temps du paiement.
+// La commande (orders) et les inscriptions ne sont écrites qu'une fois le paiement confirmé par Stripe (webhook signé) :
+// aucune commande impayée n'apparaît donc dans les ventes, le CRM ou les statistiques.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS checkout_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ref TEXT NOT NULL UNIQUE,                       -- référence interne aléatoire, transmise à Stripe (client_reference_id)
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    stripe_session_id TEXT UNIQUE,
+    stripe_payment_intent TEXT,                     -- utile pour un remboursement
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'expired', 'failed')),
+    items_json TEXT NOT NULL,                       -- [{ course_id, price_cents (payé), list_price_cents }]
+    coupon_id INTEGER,
+    coupon_code TEXT,
+    discount_cents INTEGER NOT NULL DEFAULT 0,
+    total_cents INTEGER NOT NULL,
+    currency TEXT NOT NULL DEFAULT 'eur',
+    order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL,
+    failure_reason TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    paid_at TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_checkout_sessions_user ON checkout_sessions(user_id, status);
+`);
+
 module.exports = db;

@@ -3,6 +3,7 @@
   <div class="container-wide cart-layout">
     <div>
       <h1 style="margin-top:36px;">Paiement</h1>
+<% if (payMode === "demo") { %>
       <p class="payment-badge"><%- icon('info', { size: 16 }) %> Mode démonstration : aucun paiement réel n'est effectué, aucune carte n'est débitée.</p>
 
       <form action="/commande" method="post" class="card card-pad payment-mock">
@@ -26,6 +27,24 @@
         </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg">Payer <%= formatPrice(total) %> (simulation)</button>
       </form>
+<% } else if (payMode === "stripe") { %>
+      <form action="/commande" method="post" class="card card-pad">
+        <p class="payment-badge"><%- icon('info', { size: 16 }) %> Paiement sécurisé par Stripe : vous serez redirigé vers sa page de paiement. Aucune donnée de carte ne passe par ce site.</p>
+        <% if (total < minAmount) { %>
+          <p class="field-error" role="alert">Le montant minimum payable par carte est de 0,50 €.</p>
+        <% } %>
+        <button type="submit" class="btn btn-primary btn-block btn-lg"<%= total < minAmount ? " disabled" : "" %>>Payer <%= formatPrice(total) %> par carte</button>
+      </form>
+<% } else if (payMode === "free") { %>
+      <form action="/commande" method="post" class="card card-pad">
+        <p style="margin-top:0;">Aucun paiement n'est nécessaire pour cette commande.</p>
+        <button type="submit" class="btn btn-primary btn-block btn-lg">Valider la commande gratuite</button>
+      </form>
+<% } else { %>
+      <div class="card card-pad">
+        <p class="field-error" role="alert" style="margin:0;">Le paiement en ligne n'est pas encore disponible. Réessayez plus tard.</p>
+      </div>
+<% } %>
     </div>
 
     <aside class="card card-pad summary-card">

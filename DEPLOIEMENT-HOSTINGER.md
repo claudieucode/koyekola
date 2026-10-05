@@ -2,10 +2,10 @@
 
 Guide pas à pas, pensé pour quelqu'un qui n'a jamais hébergé un site. Comptez 1 à 2 heures la première fois.
 
-> ## À lire avant tout : le paiement est simulé
-> Sur KOLAKISA, le tunnel de paiement **accepte n'importe quoi et valide toujours la commande**. Personne n'est réellement débité.
-> Vous pouvez donc mettre le site en ligne comme **vitrine ou démonstration**, mais **pas encore vendre pour de vrai**.
-> Pour encaisser, il faudra brancher un prestataire de paiement (Stripe est le plus simple) : c'est un chantier à part.
+> ## À lire avant tout : le paiement passe par Stripe
+> En ligne, **sans clé Stripe, toute commande payante est refusée** (plus aucun paiement fictif). Pour vendre, ajoutez dans les variables d'environnement
+> `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET`, et déclarez dans Stripe le webhook `https://VOTRE-SITE/stripe/webhook` (détails dans le README, section « Paiement »).
+> **Essayez d'abord avec les clés de test** (`sk_test_…`, carte `4242 4242 4242 4242`) avant de passer aux clés réelles.
 
 ---
 

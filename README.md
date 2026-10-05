@@ -22,13 +22,17 @@ Pour utiliser la plateforme avec votre propre identité, changez simplement le n
 
 - Page d'accueil et catalogue public de **vos** formations, avec recherche, filtres (catégorie, niveau, prix), tri, et un bloc « À propos de vous »
 - Fiche formation : programme en **chapitres et sous-chapitres**, avis notés, aperçus gratuits
-- Panier + paiement **simulé** (aucune carte n'est réellement débitée — voir plus bas)
+- Panier + paiement par carte via **Stripe Checkout** (démonstration sans débit si Stripe n'est pas configuré, en local uniquement — voir plus bas)
 - Espace étudiant : mes formations, suivi de progression, lecteur vidéo
 - **Mon espace** (réservé à votre compte créateur) : création/édition de formation, upload de miniature et de vidéos, gestion du programme (chapitres, sous-chapitres, réordonnancement), publication, suivi des ventes
 
-## Paiement : ce qui est simulé
+## Paiement : Stripe Checkout
 
-Le tunnel de paiement (`/commande`) accepte n'importe quelle saisie et valide toujours la commande — c'est une démonstration, pas une intégration réelle. Pour accepter de vrais paiements, il faut brancher un prestataire (Stripe Checkout est le plus simple à intégrer) avant toute mise en ligne publique.
+Avec `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` (voir `.env.example`), « Payer » envoie le client sur la page de paiement hébergée par Stripe. Aucune donnée de carte ne passe par ce site. Les montants (prix, code promo) sont calculés par le serveur ; la commande et l'accès à la formation ne sont créés qu'après la confirmation de Stripe (webhook signé `POST /stripe/webhook`, ou relecture de la session au retour du client).
+
+Configuration dans le tableau de bord Stripe : ajouter un point de terminaison webhook `<SITE_URL>/stripe/webhook` avec les événements `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` et `checkout.session.expired`, puis copier son « secret de signature » dans `STRIPE_WEBHOOK_SECRET`. Commencez par les clés de **test** (`sk_test_…`, carte `4242 4242 4242 4242`).
+
+Sans clé Stripe : en local, le paiement reste une **démonstration** (rien n'est débité) ; **en ligne** (`NODE_ENV=production` ou `SITE_URL` en https), toute commande payante est refusée. Les commandes gratuites (formation à 0 € ou code promo à 100 %) ne passent pas par Stripe. Un paiement encaissé dont le montant ne correspond pas, ou dont la formation a été supprimée, n'ouvre aucun accès et est signalé dans les journaux : à vérifier et rembourser dans Stripe.
 
 ## Publier le site en ligne
 

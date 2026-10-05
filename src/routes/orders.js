@@ -1,10 +1,24 @@
+const crypto = require("node:crypto");
 const express = require("express");
 const db = require("../config/database");
 const { requireAuth } = require("../middlewares/auth");
 const { sendPurchaseWelcomeEmail } = require("../utils/mailer");
+const { UserError } = require("../utils/errors");
 const sales = require("../services/gestion/sales");
+const payments = require("../services/payments");
 
 const router = express.Router();
+
+// En ligne (même règle que server.js) : pas de paiement simulé, un achat payant exige Stripe
+const isProduction = () => process.env.NODE_ENV === "production" || /^https:/i.test(process.env.SITE_URL || "");
+const siteBase = (req) => String(process.env.SITE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
+
+// Comment le paiement se déroule pour ce total : carte via Stripe, commande gratuite, démonstration (local), ou indisponible
+function payMode(total) {
+  if (total <= 0) return "free";
+  if (payments.stripeEnabled()) return "stripe";
+  return isProduction() ? "unavailable" : "demo";
+}
 
 // Formations du panier qui peuvent réellement être achetées maintenant : publiées et pas déjà possédées.
 // (Une formation dépubliée depuis l'ajout au panier, ou achetée entre-temps, en est écartée.)
@@ -42,7 +56,67 @@ router.get("/commande", requireAuth, (req, res) => {
   const p = pricing(req, items);
   const flash = req.session.couponFlash || null;
   delete req.session.couponFlash;
-  res.render("checkout", { items, total: p.total, subtotal: p.subtotal, discount: p.discount, coupon: p.coupon, couponError: p.couponError || (flash && flash.error) || null, couponOk: flash && flash.ok });
+  res.render("checkout", { items, total: p.total, subtotal: p.subtotal, discount: p.discount, coupon: p.coupon, couponError: p.couponError || (flash && flash.error) || null, couponOk: flash && flash.ok, payMode: payMode(p.total), minAmount: payments.MIN_AMOUNT_CENTS });
+});
+
+// Paiement par carte : la commande n'existe pas encore. Le panier et les montants (calculés ici, jamais lus dans le
+// formulaire) sont gardés dans checkout_sessions, puis le client est envoyé sur la page de paiement de Stripe.
+async function startStripeCheckout(req, res, items, p) {
+  if (p.couponError) { // code devenu invalide : le client revoit le nouveau total avant de payer
+    req.session.couponFlash = { error: p.couponError };
+    return res.redirect("/commande");
+  }
+  if (p.total < payments.MIN_AMOUNT_CENTS) throw new UserError("Le montant minimum payable par carte est de 0,50 €.", 400);
+  const ref = crypto.randomUUID();
+  const rows = items.map((c) => ({ course_id: c.id, price_cents: p.lines.get(c.id), list_price_cents: c.price_cents }));
+  db.prepare("INSERT INTO checkout_sessions (ref, user_id, items_json, coupon_id, coupon_code, discount_cents, total_cents, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(ref, req.session.user.id, JSON.stringify(rows), p.coupon ? p.coupon.id : null, p.coupon ? p.coupon.code : null, p.discount, p.total, payments.CURRENCY);
+  let session;
+  try {
+    session = await payments.createStripeSession({
+      ref,
+      email: req.session.user.email,
+      // Une formation devenue gratuite grâce au code n'est pas une ligne de paiement (Stripe n'accepte que des montants > 0)
+      lines: items.filter((c) => p.lines.get(c.id) > 0).map((c) => ({ title: c.title, amountCents: p.lines.get(c.id) })),
+      successUrl: `${siteBase(req)}/commande/retour/${ref}`,
+      cancelUrl: `${siteBase(req)}/commande`,
+    });
+    if (!session || !session.id || !session.url) throw new Error("réponse de Stripe sans adresse de paiement");
+  } catch (error) {
+    db.prepare("UPDATE checkout_sessions SET status = 'failed', failure_reason = 'page de paiement non créée' WHERE ref = ?").run(ref);
+    console.error(`[KOLAKISA] ${error.message}`);
+    throw new UserError("Le paiement est momentanément indisponible. Réessayez dans un instant : vous n'avez pas été débité.", 502);
+  }
+  db.prepare("UPDATE checkout_sessions SET stripe_session_id = ? WHERE ref = ?").run(session.id, ref);
+  res.redirect(303, session.url);
+}
+
+// Retour du client depuis Stripe. Le webhook est le chemin principal ; ici on relit la session auprès de Stripe
+// (authentifiée par notre clé secrète) pour ne pas dépendre de la rapidité du webhook. Les deux chemins sont idempotents.
+router.get("/commande/retour/:ref", requireAuth, async (req, res, next) => {
+  try {
+    const cs = db.prepare("SELECT * FROM checkout_sessions WHERE ref = ? AND user_id = ?").get(req.params.ref, req.session.user.id);
+    if (!cs) return res.status(404).render("error", { message: "Paiement introuvable." });
+    let result = cs.status === "paid" ? { status: "already", orderId: cs.order_id } : null;
+    if (!result && cs.status === "pending" && cs.stripe_session_id) {
+      try {
+        result = payments.fulfillCheckout(db, await payments.retrieveStripeSession(cs.stripe_session_id));
+      } catch (error) {
+        console.error(`[KOLAKISA] Relecture du paiement ${cs.ref} : ${error.message}`);
+      }
+    }
+    if (result && (result.status === "paid" || result.status === "already")) {
+      req.session.cart = {};
+      delete req.session.coupon;
+      return res.redirect(`/commande/confirmation/${result.orderId}`);
+    }
+    if (cs.status === "failed" || cs.status === "expired") {
+      return res.status(402).render("error", { message: "Le paiement n'a pas abouti. Vous n'avez pas été débité : vous pouvez réessayer depuis votre panier." });
+    }
+    res.render("payment-pending", { ref: cs.ref });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Code promo : vérifié tout de suite (message clair), appliqué au paiement après une nouvelle vérification
@@ -65,6 +139,18 @@ router.post("/commande", requireAuth, async (req, res, next) => {
     const items = getPurchasableItems(req);
     syncCart(req, items);
     if (!items.length) return res.redirect("/panier");
+
+    // Total à payer : décide du chemin. Carte → Stripe (la commande n'est créée qu'au paiement confirmé).
+    // Gratuit (formations à 0 € ou remise totale) → enregistré directement, comme avant.
+    // Démonstration (sans Stripe) → uniquement hors production ; en ligne, aucun paiement fictif n'est accepté.
+    const pricingNow = pricing(req, items);
+    if (pricingNow.couponError) { // code expiré ou épuisé entre-temps : le client revoit le nouveau total avant de payer
+      req.session.couponFlash = { error: pricingNow.couponError };
+      return res.redirect("/commande");
+    }
+    const mode = payMode(pricingNow.total);
+    if (mode === "stripe") return await startStripeCheckout(req, res, items, pricingNow);
+    if (mode === "unavailable") throw new UserError("Le paiement en ligne n'est pas encore disponible. Réessayez plus tard.", 503);
 
     // Tout ou rien : la commande, ses lignes et les inscriptions sont écrites ensemble,
     // ou pas du tout (jamais de commande orpheline si une écriture échoue en cours de route).
