@@ -4,7 +4,8 @@ const db = require("../config/database");
 const { loginBlocked, recordLoginFailure, clearLoginFailures } = require("../middlewares/security");
 const { safePath } = require("../utils/safeRedirect");
 const { SIGNUP_CONSENT_TEXT, registerLmsUserSafely } = require("../marketing/bridge/lms");
-const { sendSignupWelcomeEmail } = require("../utils/mailer");
+const { sendSignupWelcomeEmail, siteUrl } = require("../utils/mailer");
+const emailVerification = require("../services/emailVerification");
 const { cleanTimeZone } = require("../marketing/sending/sendtime");
 const { openSession } = require("../middlewares/sessionUser");
 
@@ -43,7 +44,8 @@ router.post("/inscription", (req, res, next) => {
   // un consentement prouvé. Une panne du module marketing ne doit jamais empêcher l'inscription.
   registerLmsUserSafely(req.app.locals.marketing, db, { id: userId, username, email }, { optIn: req.body.marketing_optin === "on", ip: req.ip });
 
-  sendSignupWelcomeEmail(db, { to: email, username }); // en arrière-plan : n'attend pas le serveur d'e-mail
+  // En arrière-plan : n'attend pas le serveur d'e-mail. Le lien de confirmation de l'adresse y est joint.
+  sendSignupWelcomeEmail(db, { to: email, username, verifyUrl: `${siteUrl()}/confirmer-email/${emailVerification.tokenFor({ id: userId, email })}` });
 
   // Inscription lancée depuis une page (ex. « commenter un article ») : retour à cette page
   openSession(req, { id: userId, username, email, role: "etudiant", password_hash: hash }, (error) => {
@@ -57,29 +59,34 @@ router.get("/connexion", (req, res) => {
   res.render("login", { error: null, redirect: req.query.redirect || "", notice: req.query.reinitialise === "1" ? "Votre mot de passe a été changé. Connectez-vous avec le nouveau." : null });
 });
 
-router.post("/connexion", (req, res, next) => {
-  const { email, password, redirect } = req.body;
+// Vérification du mot de passe sans bloquer le serveur (bcrypt prend ~70 ms : les autres visiteurs ne patientent pas)
+router.post("/connexion", async (req, res, next) => {
+  try {
+    const { email, password, redirect } = req.body;
 
-  if (loginBlocked(req)) {
-    return res.status(429).render("login", { error: "Trop de tentatives de connexion. Réessayez dans 15 minutes.", redirect: redirect || "" });
+    if (loginBlocked(req)) {
+      return res.status(429).render("login", { error: "Trop de tentatives de connexion. Réessayez dans 15 minutes.", redirect: redirect || "" });
+    }
+
+    const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+
+    if (!user || typeof password !== "string" || !(await bcrypt.compare(password, user.password_hash))) {
+      recordLoginFailure(req);
+      return res.status(400).render("login", { error: "Email ou mot de passe incorrect.", redirect: redirect || "" });
+    }
+
+    clearLoginFailures(req);
+    // Fuseau du navigateur mis à jour à chaque connexion (un élève qui déménage ou voyage reçoit à son heure actuelle)
+    const tz = cleanTimeZone(req.body.tz);
+    if (tz && tz !== user.timezone) db.prepare("UPDATE users SET timezone = ? WHERE id = ?").run(tz, user.id);
+
+    openSession(req, user, (error) => {
+      if (error) return next(error);
+      res.redirect(safePath(redirect, "/"));
+    });
+  } catch (error) {
+    next(error);
   }
-
-  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
-
-  if (!user || typeof password !== "string" || !bcrypt.compareSync(password, user.password_hash)) {
-    recordLoginFailure(req);
-    return res.status(400).render("login", { error: "Email ou mot de passe incorrect.", redirect: redirect || "" });
-  }
-
-  clearLoginFailures(req);
-  // Fuseau du navigateur mis à jour à chaque connexion (un élève qui déménage ou voyage reçoit à son heure actuelle)
-  const tz = cleanTimeZone(req.body.tz);
-  if (tz && tz !== user.timezone) db.prepare("UPDATE users SET timezone = ? WHERE id = ?").run(tz, user.id);
-
-  openSession(req, user, (error) => {
-    if (error) return next(error);
-    res.redirect(safePath(redirect, "/"));
-  });
 });
 
 router.post("/deconnexion", (req, res) => {

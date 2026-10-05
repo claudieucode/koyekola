@@ -30,6 +30,8 @@
 </head>
 <body class="wp-body"<%- editorTheme.key !== "clair" ? ` data-ed-theme="${editorTheme.key}" data-ed-contrast="${editorTheme.contrast}" style="--ed-base: ${editorTheme.color}"` : "" %>>
   <div class="be wp" data-blog-editor>
+    <%# Titre de la page pour les lecteurs d'écran (le titre visible est le champ « Titre de l'article ») %>
+    <h1 class="sr-only"><%= post ? "Modifier l'article" : "Nouvel article" %></h1>
     <form id="be-form" action="<%= post ? '/formateur/blog/' + post.id + '/modifier' : '/formateur/blog/nouveau' %>" method="post" enctype="multipart/form-data" novalidate>
       <input type="hidden" name="content_format" value="html">
       <input type="hidden" name="status" value="<%= status %>" data-field="status">

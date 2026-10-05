@@ -1,0 +1,41 @@
+<%- include("../partials/header", { title }) %>
+<% const sizeOf = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(n / 1024)) + " Ko");
+   const kinds = { auto: "Automatique", manuelle: "Manuelle", migration: "Avant mise à jour" };
+   // formatDateTime attend une date au format SQLite (UTC, sans « Z »)
+   const when = (d) => formatDateTime(d.toISOString().slice(0, 19).replace("T", " ")); %>
+<%- include("_head", { heading: "Sauvegardes", subtitle: "Copies de la base de données et téléchargement de vos fichiers.", actions: `<form method="post" action="/formateur/gestion/sauvegardes"><button type="submit" class="btn btn-primary btn-sm">Sauvegarder maintenant</button></form>` }) %>
+
+<div class="g-flash is-warning" role="note">
+  <strong>Gardez une copie hors du serveur.</strong> Les sauvegardes ci-dessous sont enregistrées sur le même disque que le site : elles protègent contre une erreur ou une donnée abîmée, pas contre la perte du serveur. Téléchargez régulièrement la dernière sauvegarde de la base <em>et</em> l'archive de vos fichiers, et rangez-les ailleurs (ordinateur, disque externe, stockage en ligne). Ces fichiers contiennent toutes les données du site, dont celles de vos élèves : conservez-les en lieu sûr.
+</div>
+
+<section class="dpanel" aria-labelledby="bk-db">
+  <h2 id="bk-db">Base de données</h2>
+  <p class="field-hint"><%= autoEnabled ? "Une copie automatique est faite chaque jour ; les 14 dernières sont gardées." : "Copie automatique désactivée (SAUVEGARDE_AUTO=0)." %> Une sauvegarde est aussi faite avant chaque mise à jour du module marketing.</p>
+  <% if (!list.length) { %>
+    <div class="dash-empty g-state"><h3>Aucune sauvegarde pour l'instant</h3><p>La première copie automatique est faite quelques minutes après le démarrage du site. Vous pouvez aussi en créer une tout de suite.</p></div>
+  <% } else { %>
+    <div class="dtable-wrap"><table class="dtable g-table">
+      <caption class="sr-only">Sauvegardes de la base, les plus récentes d'abord</caption>
+      <thead><tr><th scope="col">Date</th><th scope="col">Type</th><th scope="col" class="g-num">Taille</th><th scope="col"><span class="sr-only">Télécharger</span></th></tr></thead>
+      <tbody><% list.forEach((b) => { %>
+        <tr>
+          <td data-label="Date"><%= when(b.createdAt) %></td>
+          <td data-label="Type"><%= kinds[b.kind] %></td>
+          <td class="g-num" data-label="Taille"><%= sizeOf(b.size) %></td>
+          <td data-label="Télécharger"><a class="btn btn-outline btn-sm" href="/formateur/gestion/sauvegardes/<%= encodeURIComponent(b.name) %>" download><%- icon("download", { size: 16 }) %> Télécharger<span class="sr-only"> la sauvegarde du <%= when(b.createdAt) %></span></a></td>
+        </tr>
+      <% }) %></tbody>
+    </table></div>
+  <% } %>
+</section>
+
+<section class="dpanel" aria-labelledby="bk-files">
+  <h2 id="bk-files">Fichiers envoyés</h2>
+  <p class="field-hint">Images, vidéos, pièces jointes et médias : <%= uploads.count %> fichier<%= uploads.count > 1 ? "s" : "" %><%= uploads.count ? `, ${sizeOf(uploads.size)} au total` : "" %>. Ils ne sont pas inclus dans les sauvegardes de la base.</p>
+  <% if (uploads.count) { %>
+    <a class="btn btn-outline" href="/formateur/gestion/sauvegardes/fichiers.tar" download><%- icon("download", { size: 16 }) %> Télécharger tous les fichiers (archive .tar)</a>
+    <p class="field-hint">L'archive s'ouvre avec l'utilitaire d'archives de votre ordinateur (double-clic sur Mac, 7-Zip sous Windows).</p>
+  <% } %>
+</section>
+<%- include("../partials/footer") %>

@@ -81,6 +81,7 @@
         <% } %>
         <div class="mobile-auth-links">
           <% if (currentUser) { %>
+            <a href="/mon-compte" class="btn btn-ghost btn-block">Mon compte</a>
             <form action="/deconnexion" method="post"><button type="submit" class="btn btn-outline btn-block">Déconnexion</button></form>
           <% } else { %>
             <a href="/connexion" class="btn btn-outline btn-block">Connexion</a>
@@ -96,10 +97,11 @@
         </a>
         <div class="header-auth-actions">
           <% if (currentUser) { %>
-            <div class="user-chip">
+            <a class="user-chip" href="/mon-compte" title="Mon compte">
               <span class="avatar avatar-sm" aria-hidden="true" style="background:<%= avatarColor(currentUser.username) %>"><%= currentUser.username.slice(0,1).toUpperCase() %></span>
               <span class="user-chip-name"><%= currentUser.username %></span>
-            </div>
+              <span class="sr-only">— Mon compte</span>
+            </a>
             <form action="/deconnexion" method="post" class="inline-form">
               <button type="submit" class="btn btn-ghost btn-sm">Déconnexion</button>
             </form>

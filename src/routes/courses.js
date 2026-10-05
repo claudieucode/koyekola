@@ -96,9 +96,12 @@ router.get("/catalogue", (req, res) => {
 
   const categories = db.prepare("SELECT DISTINCT category FROM courses WHERE published = 1 ORDER BY category").all();
 
+  const seo = seoPages.catalogue(req);
+  // Variantes filtrées ou triées : même titre que le catalogue et adresse canonique /catalogue → non indexées (liens suivis)
+  if (q || category || level || sort !== "recent") seo.robots = "noindex, follow";
   res.render("catalogue", {
     courses, categories, filters: { q, category, level, sort },
-    seo: seoPages.catalogue(req),
+    seo,
   });
 });
 

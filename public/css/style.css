@@ -254,7 +254,8 @@ main { display: block; }
   box-shadow: 0 0 0 2px #fff;
 }
 
-.user-chip { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.9rem; color: var(--primary); }
+.user-chip { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.9rem; color: var(--primary); text-decoration: none; border-radius: 999px; }
+a.user-chip:hover .user-chip-name { text-decoration: underline; }
 .user-chip-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .icon-btn { background: none; border: none; cursor: pointer; color: inherit; padding: 4px; display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border-radius: var(--radius); }
@@ -2145,3 +2146,16 @@ a.post-card-category:hover { text-decoration: underline; }
 .promo-row input { min-width: 0; flex: 1; text-transform: uppercase; }
 .promo-applied, .promo-ok { margin: 0; font-size: 0.9rem; color: var(--success-dark); }
 .summary-discount span:last-child { color: var(--success-dark); font-weight: 700; }
+
+/* ---------- Mon compte (données personnelles, suppression du compte) ---------- */
+.account-page { display: flex; flex-direction: column; gap: 20px; max-width: 760px; }
+.account-section h2 { margin: 0 0 12px; font-size: 1.15rem; }
+.account-section > p { margin: 0 0 14px; }
+.account-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px 24px; margin: 0 0 14px; }
+.account-facts dt { font-size: 0.8rem; color: var(--muted); }
+.account-facts dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.account-danger { border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
+.account-delete-form { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; max-width: 420px; }
+.account-delete-form .field-group { width: 100%; margin: 0; }
+.account-notice { margin: 0; padding: 12px 16px; border-radius: var(--radius); background: var(--success-light); color: var(--success-dark); font-weight: 600; }
+.account-inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 0 0 14px; }

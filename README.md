@@ -44,6 +44,8 @@ Commandes utiles :
 
 - `npm run creer-formateur -- email pseudo motdepasse` : crée ou met à jour le compte formateur **sans rien effacer** (contrairement à `npm run seed`, à ne jamais lancer en ligne).
 - `npm run sauvegarde` : sauvegarde de la base dans `data/backups/`.
+- Sauvegarde automatique quotidienne de la base, et téléchargement de la base et des fichiers : Mon espace → Centre de gestion → Sauvegardes.
+- « Mon compte » (lien sur le nom en haut à droite) : confirmation de l'adresse e-mail, export des données personnelles (JSON), suppression du compte (anonymisé : les ventes restent dans la comptabilité).
 - `GET /sante` : page de contrôle (`{"statut":"ok"}`).
 
 Variables d’environnement : voir `.env.example`.

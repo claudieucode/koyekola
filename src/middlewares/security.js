@@ -7,10 +7,30 @@ function securityHeaders(req, res, next) {
     "X-Frame-Options": "SAMEORIGIN",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    // Politique de sécurité du contenu, limitée aux directives qui ne peuvent rien casser sur le site :
+    // aucun plugin (<object>/<embed>), pas de <base> injectée qui détournerait les liens et scripts relatifs, pas
+    // d'affichage dans le cadre d'un autre site. (script-src et form-action ne sont pas restreints : scripts intégrés
+    // aux pages, et formulaires marketing qui redirigent vers l'adresse choisie par le formateur.)
+    // Les pages qui fixent leur propre politique, plus stricte (versions web des e-mails…), la remplacent.
+    "Content-Security-Policy": "object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
   });
   // HTTPS uniquement (req.secure est fiable grâce à "trust proxy", voir server.js)
   if (req.secure) res.set("Strict-Transport-Security", "max-age=15552000");
   next();
+}
+
+// www.<domaine> → <domaine> (adresse de SITE_URL) : une seule adresse publique pour les visiteurs et les moteurs de recherche.
+// Seulement pour les lectures (GET/HEAD) ; sans SITE_URL, ou si SITE_URL commence elle-même par www., rien ne change.
+function canonicalHost(req, res, next) {
+  if (!["GET", "HEAD"].includes(req.method) || !process.env.SITE_URL) return next();
+  let site;
+  try {
+    site = new URL(process.env.SITE_URL);
+  } catch {
+    return next();
+  }
+  if (site.hostname.startsWith("www.") || req.hostname !== `www.${site.hostname}`) return next();
+  res.redirect(301, `${site.origin}${req.originalUrl}`);
 }
 
 // Refuse les envois de formulaire (POST, etc.) qui viennent d'un autre site (protection CSRF).
@@ -93,4 +113,4 @@ function createRateLimiter(max, windowMs) {
   };
 }
 
-module.exports = { securityHeaders, sameOriginOnly, loginBlocked, recordLoginFailure, clearLoginFailures, createRateLimiter };
+module.exports = { securityHeaders, canonicalHost, sameOriginOnly, loginBlocked, recordLoginFailure, clearLoginFailures, createRateLimiter };

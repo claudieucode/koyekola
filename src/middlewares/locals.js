@@ -11,7 +11,7 @@ const seoResolver = require("../seo/resolver");
 const { paidCheckoutOpen } = require("../services/payment");
 
 // Espaces privés et pages sans intérêt pour les moteurs de recherche
-const NOINDEX_PREFIXES = ["/formateur", "/mes-cours", "/panier", "/commande", "/apprendre", "/certificat", "/favoris", "/connexion", "/inscription", "/deconnexion"];
+const NOINDEX_PREFIXES = ["/formateur", "/mes-cours", "/panier", "/commande", "/apprendre", "/certificat", "/favoris", "/connexion", "/inscription", "/deconnexion", "/mon-compte"];
 
 function injectLocals(req, res, next) {
   res.locals.absoluteUrl = (urlPath) => absoluteUrl(req, urlPath);

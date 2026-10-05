@@ -307,8 +307,9 @@ function applyFormExtras(ctx, form, contactId, properties) {
   if (form.listId) {
     try {
       addToList(ctx, form.listId, [contact.id]);
-    } catch {
+    } catch (error) {
       // la liste choisie a été supprimée depuis : le formulaire continue de fonctionner, simplement sans y ajouter personne
+      console.error(`[KOLAKISA] Formulaire ${form.id} : contact non ajouté à la liste ${form.listId} :`, error.message);
     }
   }
   if (Object.keys(properties).length) setContactProperties(ctx, contact.id, properties, { skipEmpty: true });

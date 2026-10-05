@@ -157,7 +157,7 @@ function createApiRouter({ db }) {
       if (!campaign) return fail(res, 404, "not_found", "Campagne introuvable.");
       let stats = null;
       if (campaign.status !== "draft") {
-        try { stats = sending.campaignStats(req.mkCtx, id); } catch { /* pas de stats pour cette campagne */ }
+        try { stats = sending.campaignStats(req.mkCtx, id); } catch (error) { console.error("[KOLAKISA] API : statistiques de campagne indisponibles :", error.message); }
       }
       res.json({ data: { ...campaign, stats } });
     } catch (error) { next(error); }

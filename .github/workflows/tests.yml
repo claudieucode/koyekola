@@ -1,0 +1,30 @@
+# Tests automatiques à chaque envoi sur GitHub (audit O1) : toute la suite (environ 2 500 tests) sur une machine neuve.
+# Hostinger publie le site dès l'envoi, sans attendre ce contrôle : un échec signalé ici (croix rouge sur le commit,
+# e-mail de GitHub) veut dire qu'il faut corriger tout de suite.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+        env:
+          # Clé factice, propre à cette machine de test jetable (jamais celle du site)
+          ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"

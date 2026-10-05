@@ -175,6 +175,7 @@ const GESTION_NAV = [
     { key: "g-analytics", label: "Analytics", href: "/formateur/gestion/analytics", icon: "barChart" },
     { key: "g-ressources", label: "Ressources", href: "/formateur/gestion/ressources", icon: "image" },
     { key: "g-activite", label: "Activité", href: "/formateur/gestion/activite", icon: "bell", badge: "notifications" },
+    { key: "g-sauvegardes", label: "Sauvegardes", href: "/formateur/gestion/sauvegardes", icon: "shield" },
   ] },
 ];
 const isGestionPath = (path) => /^\/formateur\/gestion(\/|$)/.test(path);

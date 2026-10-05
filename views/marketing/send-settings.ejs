@@ -31,7 +31,7 @@
 
     <section class="mk-panel" id="journal">
       <h2>E-mails du site : derniers envois</h2>
-      <% const ST = { pending: ["En attente", "badge"], sending: ["En cours", "badge"], sent: ["Envoyé", "badge-success"], failed: ["Échec", "mk-badge-danger"], skipped: ["Non envoyé", "badge-warning"] }; const KIND = { purchase: "Confirmation d'achat", contact_notification: "Nouveau message de contact", contact_ack: "Accusé de réception (contact)", signup_welcome: "Bienvenue (inscription)", password_reset: "Mot de passe oublié", newsletter_confirm: "Confirmation newsletter" }; %>
+      <% const ST = { pending: ["En attente", "badge"], sending: ["En cours", "badge"], sent: ["Envoyé", "badge-success"], failed: ["Échec", "mk-badge-danger"], skipped: ["Non envoyé", "badge-warning"] }; const KIND = { purchase: "Confirmation d'achat", contact_notification: "Nouveau message de contact", contact_ack: "Accusé de réception (contact)", signup_welcome: "Bienvenue (inscription)", email_verification: "Confirmation de l'adresse e-mail", password_reset: "Mot de passe oublié", newsletter_confirm: "Confirmation newsletter" }; %>
       <p class="field-hint">Confirmations d'achat, mot de passe oublié, accusés de contact… Ils partent en arrière-plan ; un échec est réessayé 5 fois (1, 2, 4, 8 min).
         <% if (outbox.counts.failed) { %><strong><%= outbox.counts.failed %> en échec définitif.</strong><% } %></p>
       <% if (!outbox.rows.length) { %><p class="field-hint">Aucun e-mail du site pour l'instant.</p>
