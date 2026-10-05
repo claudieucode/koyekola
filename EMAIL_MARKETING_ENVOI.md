@@ -71,3 +71,15 @@ Campagnes → **Pages d'atterrissage** (`src/marketing/landing/`, migration 027)
 
 Tests : `tests/marketing-pages-atterrissage.test.js`.
 
+## Sondages
+
+Audience → **Sondages** (`src/marketing/surveys/`, migration 028). Questions : choix unique, choix multiples (option « Autre »), échelle 1-5 ou 1-10, texte court ou long ; obligatoires ou non. Page publique `/sondage/<adresse>` (non indexée) ; ouverture, clôture.
+
+- **Dans un e-mail** : bloc « Sondage » (bouton, et en option la 1re question cliquable). Chaque destinataire reçoit un lien personnel signé (`survey_token`, jeton « survey » dérivé d'ENCRYPTION_KEY) : sa réponse est rattachée à sa fiche ; une nouvelle réponse remplace la précédente.
+- **Lien public** : réponse anonyme, ou rattachée à l'adresse saisie (facultative, obligatoire ou jamais demandée). Inscription à une liste seulement si la case de consentement est cochée (preuve enregistrée).
+- **Étiquettes automatiques** : « Réponse | étiquette » dans les réponses possibles ; et depuis le rapport, « Étiqueter N contacts » ayant choisi une réponse.
+- **Rapport** : répartition et pourcentages, moyenne des échelles, réponses « Autre » et textes, réponses individuelles ; export CSV (administrateurs, formules neutralisées).
+- Dès la première réponse, les types de questions et leurs réponses possibles sont figés (les intitulés restent modifiables).
+
+Tests : `tests/marketing-sondages.test.js`.
+

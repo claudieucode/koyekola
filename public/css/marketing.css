@@ -1607,3 +1607,17 @@ input.mk-fx-switch[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed
 .mk-lp-side { display: grid; gap: 16px; position: sticky; top: 76px; }
 .mk-lp-preview iframe { width: 100%; height: 560px; border: 1px solid var(--mk-border); border-radius: var(--mk-r-sm); background: #fff; }
 @media (max-width: 1100px) { .mk-lp-layout { grid-template-columns: 1fr; } .mk-lp-side { position: static; } }
+
+/* Sondages : résultats par question */
+.mk-sv-q h2 { font-size: 1.05rem; }
+.mk-sv-bars { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.mk-sv-bars li { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(120px, 2fr) auto; gap: 6px 12px; align-items: center; }
+.mk-sv-label { overflow-wrap: anywhere; }
+.mk-sv-bar { display: block; height: 12px; border-radius: 999px; background: var(--mk-hover); overflow: hidden; }
+.mk-sv-bar > span { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
+.mk-sv-n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mk-sv-tag { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0; }
+.mk-sv-tag input[type=text] { min-height: 34px; width: 180px; max-width: 100%; }
+.mk-sv-others, .mk-sv-texts { margin-top: 10px; }
+.mk-sv-texts { padding-left: 20px; display: grid; gap: 6px; }
+@media (max-width: 640px) { .mk-sv-bars li { grid-template-columns: 1fr auto; } .mk-sv-bar { grid-column: 1 / -1; } }

@@ -1,0 +1,29 @@
+<%- include("partials/top", { title, active }) %>
+<% const canWrite = mk.can("forms.write"); %>
+    <div class="mk-head"><h1>Sondages</h1><% if (canWrite) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un sondage</button><% } %></div>
+    <p class="mk-lead">Posez des questions à vos contacts : partagez le lien du sondage, ou insérez un bloc « Sondage » dans un e-mail (chaque réponse est alors rattachée au contact). Les réponses peuvent ajouter des étiquettes automatiquement.</p>
+    <% if (!items.length) { %>
+      <div class="mk-empty"><%- icon("listChecks", { size: 32 }) %><h2>Aucun sondage</h2><p>Par exemple : la satisfaction après une formation, ou les sujets qui intéressent vos abonnés.</p>
+        <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un sondage</button></div><% } %></div>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table">
+        <caption class="sr-only">Sondages</caption>
+        <thead><tr><th scope="col">Nom</th><th scope="col">Adresse</th><th scope="col">État</th><th scope="col">Questions</th><th scope="col">Réponses</th></tr></thead>
+        <tbody><% items.forEach((s) => { %>
+          <tr><td><a href="/marketing/sondages/<%= s.id %>"><%= s.name %></a></td><td>/sondage/<%= s.slug %></td><td><span class="mk-status <%= STATUS_CLASS[s.status] %>"><%= STATUSES[s.status] %></span></td><td><%= s.questions.length %></td>
+            <td><% if (s.responses) { %><a href="/marketing/sondages/<%= s.id %>/resultats"><%= mkh.fmt(s.responses) %></a><% } else { %>0<% } %></td></tr>
+        <% }) %></tbody>
+      </table></div>
+    <% } %>
+    <% if (canWrite) { %>
+      <dialog class="mk-dialog mk-modal" id="nouveau" data-mk-modal data-mk-modal-hash="nouveau" aria-labelledby="sv-new-title">
+        <form action="/marketing/sondages" method="post">
+          <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="sv-new-title">Nouveau sondage</h2><p class="mk-dialog-desc">Un nom pour vous retrouver ; vous écrirez les questions ensuite. Rien n'est ouvert avant votre décision.</p></div>
+            <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
+          <div class="mk-dialog-body"><div class="field-group"><label for="sv-name">Nom du sondage *</label><input id="sv-name" type="text" name="name" maxlength="100" required placeholder="Satisfaction après la formation"></div></div>
+          <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button><button type="submit" class="btn btn-primary btn-sm">Créer le sondage</button></div>
+        </form>
+      </dialog>
+      <%- include("partials/modal-reopen", { id: "nouveau" }) %>
+    <% } %>
+<%- include("partials/bottom") %>

@@ -35,7 +35,8 @@
     social: function () { return { type: "social", align: "center", links: [{ network: "facebook", url: "" }] }; },
     video: function () { return { type: "video", url: "", thumbnail: "", title: "", width: 552, align: "center" }; },
     course: function () { return { type: "course", courseId: data.courses && data.courses.length ? data.courses[0].id : undefined, cta: "Voir la formation" }; },
-    posts: function () { return { type: "posts", count: 3, layout: "excerpt", showImages: true, cta: "Lire la suite" }; }
+    posts: function () { return { type: "posts", count: 3, layout: "excerpt", showImages: true, cta: "Lire la suite" }; },
+    survey: function () { return { type: "survey", surveyId: data.surveys && data.surveys.length ? data.surveys[0].id : undefined, cta: "Répondre au sondage", inline: true }; }
   };
   var NETWORKS = [["facebook", "Facebook"], ["instagram", "Instagram"], ["x", "X"], ["linkedin", "LinkedIn"], ["youtube", "YouTube"], ["tiktok", "TikTok"], ["whatsapp", "WhatsApp"], ["website", "Site web"]];
   var LIST_STYLES = [["bullets", "Puces"], ["numbers", "Numéros"], ["checks", "Coches ✓"]];
@@ -255,6 +256,9 @@
       o.layout = b.layout === "titles" ? "titles" : "excerpt"; o.showImages = b.showImages !== false; o.cta = b.cta || "Lire la suite";
       if (b.items) o.items = b.items;
       if (b.refresh) o.refresh = true;
+    } else if (b.type === "survey") {
+      o.surveyId = intOrUndefined(b.surveyId); o.cta = b.cta || "Répondre au sondage"; o.inline = Boolean(b.inline);
+      if (b.snapshot) o.snapshot = b.snapshot;
     } else if (b.type === "link") { o.label = b.label || ""; o.url = b.url || ""; o.align = b.align || "left"; if (b.newTab) o.newTab = true; typo(b, o); }
     else if (b.type === "coupon") { o.code = b.code || ""; if (b.title && b.title.trim()) o.title = b.title; if (b.details && b.details.trim()) o.details = b.details; if (hexOk(b.color)) o.color = b.color; }
     cleanBox(b, o);
@@ -642,6 +646,20 @@
         el("p", { "class": "mk-fx-hint" }, "Un e-mail ne peut pas lire de vidéo : le message affiche la miniature et un lien « Regarder la vidéo ».")]));
     } else if (t === "course") {
       out.push(S("Formation", courseField(block)));
+    } else if (t === "survey") {
+      var svs = data.surveys || [];
+      var ssel = el("select", { id: "f-" + block.id + "-survey" });
+      ssel.appendChild(el("option", { value: "" }, "Choisir un sondage…"));
+      svs.forEach(function (sv) { ssel.appendChild(el("option", { value: String(sv.id) }, sv.name + (sv.status === "published" ? "" : sv.status === "closed" ? " (clos)" : " (brouillon : à ouvrir avant l'envoi)"))); });
+      ssel.value = block.surveyId == null ? "" : String(block.surveyId);
+      if (readOnly) ssel.disabled = true;
+      ssel.addEventListener("change", function () { block.surveyId = ssel.value === "" ? undefined : parseInt(ssel.value, 10); block.snapshot = undefined; renderProps(); changed(); });
+      out.push(S("Sondage", [
+        svs.length ? group("Sondage", ssel) : el("p", { "class": "mk-note" }, "Aucun sondage : créez-en un dans Audience → Sondages."),
+        F.text(block, "cta", "Texte du bouton", { owner: block.id, vars: true, max: 60 }),
+        F.toggle(block, "inline", "Afficher la 1re question cliquable dans l'e-mail (choix unique ou échelle)", o),
+        el("p", { "class": "mk-fx-hint" }, "Chaque destinataire reçoit son lien personnel : sa réponse est rattachée à sa fiche contact (et peut ajouter des étiquettes)."),
+      ]));
     } else if (t === "posts") {
       var shown = (block.items || []).length;
       out.push(S("Articles", [
@@ -997,6 +1015,7 @@
     else if (b.type === "video") s = b.title || b.url;
     else if (b.type === "social") s = (b.links || []).map(function (l) { var n = NETWORKS.filter(function (x) { return x[0] === l.network; })[0]; return n ? n[1] : l.network; }).join(", ");
     else if (b.type === "course") { var c = (data.courses || []).filter(function (x) { return x.id === b.courseId; })[0]; s = c ? c.title : (b.snapshot ? b.snapshot.title : ""); }
+    else if (b.type === "survey") { var sv = (data.surveys || []).filter(function (x) { return x.id === b.surveyId; })[0]; s = sv ? sv.name : ""; }
     else if (b.type === "posts") s = (b.items || []).length ? (b.items || []).map(function (i) { return i.title; }).join(" · ") : "Rempli avec les nouveaux articles à chaque envoi RSS";
     else if (b.type === "spacer") s = (b.height || 24) + " px";
     else if (b.type === "divider") s = "Ligne de séparation";

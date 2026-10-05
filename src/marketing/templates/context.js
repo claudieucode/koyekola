@@ -89,6 +89,7 @@ function sampleContext(ctx) {
     org: { name: org.name, address: org.address },
     event: { course_title: "Final Cut Pro", course_url: "https://exemple.invalid/formation", learn_url: "https://exemple.invalid/mes-cours", lesson_title: "Interface", order_id: "1024", order_total: "49,00 €" },
     ...SAMPLE_URLS,
+    survey_token: "", // aperçu : lien anonyme (le vrai jeton personnel est ajouté à l'envoi)
   };
 }
 

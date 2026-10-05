@@ -1,0 +1,33 @@
+<%- include("partials/top", { title, active }) %>
+<% const S = r.survey; const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0); %>
+    <p class="mk-back"><a href="/marketing/sondages/<%= S.id %>">← <%= S.name %></a></p>
+    <div class="mk-head"><h1>Résultats</h1><% if (canExport && r.total) { %><a class="btn btn-outline btn-sm" href="/marketing/sondages/<%= S.id %>/export.csv">Exporter (CSV)</a><% } %></div>
+    <p class="mk-lead"><strong><%= mkh.fmt(r.total) %></strong> réponse<%= r.total > 1 ? "s" : "" %>, dont <%= mkh.fmt(r.known) %> de contacts identifiés (lien personnel ou adresse donnée) et <%= mkh.fmt(r.total - r.known) %> anonyme<%= r.total - r.known > 1 ? "s" : "" %>.</p>
+    <% if (!r.total) { %><div class="mk-empty"><%- icon("listChecks", { size: 32 }) %><h2>Aucune réponse pour l'instant</h2><p>Partagez le lien du sondage ou insérez un bloc « Sondage » dans une campagne.</p></div><% } %>
+    <% r.questions.forEach((q) => { %>
+      <section class="mk-panel mk-sv-q" aria-labelledby="sv-r<%= q.index %>">
+        <h2 id="sv-r<%= q.index %>"><%= q.index + 1 %>. <%= q.text %></h2>
+        <p class="field-hint"><%= mkh.fmt(q.answered) %> réponse<%= q.answered > 1 ? "s" : "" %><%= q.average !== undefined && q.average !== null ? ` · moyenne ${String(q.average).replace(".", ",")} / ${q.scale}` : "" %></p>
+        <% if (q.counts) { %>
+          <ul class="mk-sv-bars"><% q.counts.forEach((c, j) => { %>
+            <li><span class="mk-sv-label"><%= c.label %></span><span class="mk-sv-bar" aria-hidden="true"><span style="width:<%= pct(c.n, q.answered) %>%"></span></span><span class="mk-sv-n"><%= c.n %> (<%= pct(c.n, q.answered) %> %)</span>
+              <% if (canTag && q.options && c.contacts) { %><form action="/marketing/sondages/<%= S.id %>/etiqueter" method="post" class="mk-sv-tag"><input type="hidden" name="q" value="<%= q.index %>"><input type="hidden" name="o" value="<%= j %>">
+                <label class="sr-only" for="tg-<%= q.index %>-<%= j %>">Étiquette pour les <%= c.contacts %> contacts ayant répondu « <%= c.label %> »</label><input id="tg-<%= q.index %>-<%= j %>" type="text" name="tag" maxlength="64" required value="<%= c.tag || "" %>" placeholder="étiquette">
+                <button type="submit" class="btn btn-outline btn-sm">Étiqueter <%= c.contacts %> contact<%= c.contacts > 1 ? "s" : "" %></button></form><% } %></li>
+          <% }) %></ul>
+          <% if (q.others && q.others.length) { %><details class="mk-sv-others"><summary>Réponses « Autre » (<%= q.others.length %>)</summary><ul><% q.others.slice(0, 200).forEach((o) => { %><li><%= o %></li><% }) %></ul></details><% } %>
+        <% } else if (q.texts) { %>
+          <% if (!q.texts.length) { %><p class="field-hint">Aucune réponse écrite.</p><% } else { %><ul class="mk-sv-texts"><% q.texts.slice(0, 200).forEach((t) => { %><li><%= t.text %><% if (t.email) { %> <span class="field-hint">— <%= t.email %></span><% } %></li><% }) %></ul><% } %>
+        <% } %>
+      </section>
+    <% }) %>
+    <% if (r.total) { %>
+      <section class="mk-panel" aria-labelledby="sv-ind"><h2 id="sv-ind">Réponses individuelles</h2>
+        <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Réponses individuelles (200 plus récentes)</caption>
+          <thead><tr><th scope="col">Date</th><th scope="col">Contact</th><th scope="col">Source</th><% S.questions.forEach((q, i) => { %><th scope="col"><%= i + 1 %>. <%= q.text.length > 40 ? q.text.slice(0, 40) + "…" : q.text %></th><% }) %></tr></thead>
+          <tbody><% r.rows.slice(0, 200).forEach((row) => { %><tr><td><%= new Date(row.updated_at).toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "short", timeStyle: "short" }) %></td><td><% if (row.contact_id) { %><a href="/marketing/contacts/<%= row.contact_id %>"><%= row.email %></a><% } else { %>anonyme<% } %></td><td><%= row.source === "email" ? "e-mail" : "lien" %></td>
+            <% S.questions.forEach((q, i) => { %><td><%= answerText(q, row.answers["q" + i]) %></td><% }) %></tr><% }) %></tbody>
+        </table></div>
+      </section>
+    <% } %>
+<%- include("partials/bottom") %>

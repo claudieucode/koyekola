@@ -29,7 +29,7 @@ const FONTS = {
 };
 const SPACING = { compact: 4, normal: 8, large: 16 };
 const DEFAULT_THEME = { background: "#f3f8fc", contentBackground: "#ffffff", textColor: "#10222f", accent: "#0277b6", fontFamily: "system", secondary: "#d5e3ee", maxWidth: 600, radius: 4, spacing: "normal" };
-const TYPES = ["heading", "text", "image", "button", "divider", "spacer", "columns", "quote", "list", "social", "video", "course", "link", "coupon", "posts"];
+const TYPES = ["heading", "text", "image", "button", "divider", "spacer", "columns", "quote", "list", "social", "video", "course", "link", "coupon", "posts", "survey"];
 const RATIOS = { "50-50": [50, 50], "60-40": [60, 40], "40-60": [40, 60], "70-30": [70, 30], "30-70": [30, 70] };
 const BUTTON_SIZES = { s: "8px 16px", m: "12px 24px", l: "16px 32px" };
 const NETWORKS = { facebook: "Facebook", instagram: "Instagram", x: "X", linkedin: "LinkedIn", youtube: "YouTube", tiktok: "TikTok", whatsapp: "WhatsApp", website: "Site web" };
@@ -560,6 +560,28 @@ function buildBlock(block, env, meta, k = {}) {
         if (i < items.length - 1) nodes.push(T(`<hr style="border:0;border-top:1px solid #d5e3ee;margin:${layout === "titles" ? 10 : 20}px 0">`));
       });
       return { normalized: { count, layout, showImages, cta: cta.trim(), items }, nodes };
+    }
+    // Sondage : bouton vers la page du sondage avec le jeton PERSONNEL du destinataire (variable système survey_token,
+    // ajoutée par l'envoi) ; en option, la 1re question (choix unique ou échelle) cliquable directement dans l'e-mail.
+    case "survey": {
+      meta.hasText = true;
+      const snap = block.snapshot;
+      if (!Number.isInteger(block.surveyId) || !snap || snap.id !== block.surveyId) throw fail("Choisissez un sondage (bloc « Sondage »).");
+      const url = trustedUrl(snap.url, "Sondage");
+      const cta = block.cta === undefined ? "Répondre au sondage" : block.cta;
+      const label = plain(cta, allowed, { max: 60, required: true, label: "Le texte du bouton" });
+      const ink = textOn(theme.accent);
+      const link = (extra) => [T(`${escapeHtml(url)}?r=`), V("survey_token"), T(extra)];
+      const first = block.inline && snap.first && (snap.first.type === "single" || snap.first.type === "range") ? snap.first : null;
+      const nodes = [];
+      if (first) {
+        nodes.push(T(`<p style="margin:0 0 10px;font-size:17px;font-weight:700;color:${theme.textColor}">${escapeHtml(String(first.text || "").slice(0, 300))}</p><p style="margin:0 0 16px">`));
+        const choices = first.type === "range" ? Array.from({ length: first.scale === 10 ? 10 : 5 }, (_, k) => [k + 1, String(k + 1)]) : (first.options || []).slice(0, 10).map((o, k) => [k, String(o).slice(0, 120)]);
+        choices.forEach(([value, text]) => { nodes.push(T(`<a href="`), ...link(`&amp;p=${value}`), T(`" style="display:inline-block;margin:0 6px 6px 0;padding:8px 14px;border:1px solid ${theme.accent};border-radius:4px;color:${theme.accent};font-weight:700;text-decoration:none">${escapeHtml(text)}</a>`)); });
+        nodes.push(T("</p>"));
+      }
+      nodes.push(T(`<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${theme.accent};border-radius:4px"><a href="`), ...link(""), T(`" style="display:inline-block;padding:12px 24px;font-size:16px;font-weight:700;text-decoration:none;color:${ink}">`), ...label, T("</a></td></tr></table>"));
+      return { normalized: { surveyId: block.surveyId, cta: cta.trim(), inline: Boolean(block.inline), snapshot: { id: snap.id, url, title: String(snap.title || "").slice(0, 150), ...(snap.first ? { first: snap.first } : {}) } }, nodes };
     }
     case "course": {
       meta.hasText = true;

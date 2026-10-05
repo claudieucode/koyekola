@@ -40,18 +40,19 @@ const BLOCKS = {
   columns: ["Deux colonnes", "columns", "Deux textes côte à côte, largeurs réglables"], divider: ["Séparateur", "minus", "Une ligne fine"], spacer: ["Espace", "moveVertical", "Un espace vertical"],
   link: ["Lien", "link", "Un lien texte (site, PDF, e-mail)"], coupon: ["Coupon", "tag", "Un code promo mis en valeur"],
   posts: ["Articles", "fileText", "Les derniers articles du blog (rempli à chaque envoi d'une campagne RSS)"],
+  survey: ["Sondage", "listChecks", "Un bouton (et la 1re question) vers un sondage, avec le lien personnel de chaque destinataire"],
 };
 // Ajouts en un clic (pas des types de blocs) : préréglages et ensembles prêts à l'emploi, construits avec les blocs ci-dessus
 const PRESETS = { gif: ["GIF animé", "image", "Une image animée (GIF) de la médiathèque"], cta: ["Appel à l'action", "zap", "Titre, texte et bouton"], offer: ["Offre", "coin", "Titre, coupon et bouton"] };
 // Icônes utilisées par le script de l'éditeur (SVG du registre fixe, jamais de texte saisi)
-const EDITOR_ICONS = ["grip", "zap", "coin", "tag", "list", "copy", "eye", "eyeOff", "trash", "arrowUp", "arrowDown", "edit", "grip", "upload", "plus", "search", "alertTriangle", "checkCircle", "close", "image", "fileText", "link", "maximize", "monitor", "tablet", "smartphone", "layers", "palette", "braces", "settings", "undo", "redo", "moreHorizontal", "alertCircle", "chevronRight", "info", "externalLink", "alignLeft", "alignCenter", "alignRight", "alignJustify", "listOrdered", "indentMore", "indentLess", "highlighter", "clearFormat", "borderBox", "spacing", "chevronDown", "type", "video"];
+const EDITOR_ICONS = ["listChecks", "grip", "zap", "coin", "tag", "list", "copy", "eye", "eyeOff", "trash", "arrowUp", "arrowDown", "edit", "grip", "upload", "plus", "search", "alertTriangle", "checkCircle", "close", "image", "fileText", "link", "maximize", "monitor", "tablet", "smartphone", "layers", "palette", "braces", "settings", "undo", "redo", "moreHorizontal", "alertCircle", "chevronRight", "info", "externalLink", "alignLeft", "alignCenter", "alignRight", "alignJustify", "listOrdered", "indentMore", "indentLess", "highlighter", "clearFormat", "borderBox", "spacing", "chevronDown", "type", "video"];
 // Palette de l'éditeur : groupes et blocs (libellés français)
 const PALETTE = [
   { title: "Texte", blocks: [["heading", "Titre"], ["text", "Texte"], ["quote", "Citation"], ["list", "Liste"]] },
   { title: "Médias", blocks: [["image", "Image"], ["video", "Vidéo"]], presets: [["gif", "GIF animé"]] },
   { title: "Actions", blocks: [["button", "Bouton"], ["link", "Lien"], ["social", "Réseaux sociaux"]] },
   { title: "Mise en page", blocks: [["columns", "Deux colonnes"], ["divider", "Séparateur"], ["spacer", "Espace"]] },
-  { title: "Contenu", blocks: [["course", "Formation"], ["posts", "Articles"], ["coupon", "Coupon"]], presets: [["cta", "Appel à l'action"], ["offer", "Offre"]] },
+  { title: "Contenu", blocks: [["course", "Formation"], ["posts", "Articles"], ["survey", "Sondage"], ["coupon", "Coupon"]], presets: [["cta", "Appel à l'action"], ["offer", "Offre"]] },
 ];
 const KIND_LABEL = { marketing: "Marketing", transactional: "Transactionnel" };
 const TABS_ALL = "";
@@ -187,6 +188,7 @@ module.exports = ({ db }) => {
       readOnly: !req.mk.can("templates.write"),
       template: { id: template.id, name: template.name, kind: template.kind, category: template.category, subject: template.subject, preheader: template.preheader, theme: template.theme, footer: template.footer, blocks: forEditor(template.blocks), version: template.version },
       variables: templates.variableCatalog(ctx), categories: CATEGORIES, courses: listCourses(ctx),
+      surveys: ctx.db.prepare("SELECT id, name, status FROM mk_surveys WHERE organization_id = ? ORDER BY name COLLATE NOCASE").all(ctx.organizationId),
       versions: templates.listVersions(ctx, template.id),
       blocks: Object.fromEntries(Object.entries(BLOCKS).map(([type, [label, ic, description]]) => [type, { label, icon: icon(ic, { size: 18 }), description }])),
       fonts: Object.keys(FONTS),

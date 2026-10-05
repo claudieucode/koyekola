@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= survey.title || survey.name %></title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="<%= asset("/css/landing.css") %>">
+</head>
+<body class="lp-body">
+  <% if (preview) { %><p class="lp-preview-bar">Aperçu — les réponses ne sont pas enregistrées.</p><% } %>
+  <main class="lp-main" id="main">
+    <header class="lp-hero"><h1><%= survey.title || survey.name %></h1><% if (survey.intro && !done) { %><p class="lp-lead"><%= survey.intro %></p><% } %></header>
+    <% if (done) { %>
+      <p class="lp-thanks" role="status"><%= survey.thank_you %></p>
+    <% } else if (survey.status === "closed") { %>
+      <p class="lp-error" role="status">Ce sondage est clos : il n'accepte plus de réponses. Merci de votre intérêt.</p>
+    <% } else { %>
+      <form method="post" action="/sondage/<%= survey.slug %>" class="lp-section lp-signup lp-survey" novalidate>
+        <% if (error) { %><p class="lp-error" role="alert"><%= error %></p><% } %>
+        <% if (contact) { const at = contact.email.indexOf("@"); %><p class="lp-who">Réponse rattachée à <strong><%= contact.email.slice(0, 1) %>…<%= contact.email.slice(at) %></strong>.</p><% } %>
+        <input type="hidden" name="r" value="<%= token %>">
+        <div class="hp-field" aria-hidden="true"><label for="s-website">Ne pas remplir</label><input id="s-website" type="text" name="website" tabindex="-1" autocomplete="off"></div>
+        <% survey.questions.forEach((q, i) => { const k = "q" + i; const v = values[k]; const picked = Array.isArray(v) ? v.map(String) : v === undefined ? [] : [String(v)]; %>
+          <fieldset class="lp-question">
+            <legend><%= q.text %><% if (q.required) { %> <span class="lp-req" aria-hidden="true">*</span><span class="sr-only">(obligatoire)</span><% } %></legend>
+            <% if (q.help) { %><p class="lp-help"><%= q.help %></p><% } %>
+            <% if (q.type === "single" || q.type === "multiple") { const t = q.type === "single" ? "radio" : "checkbox"; %>
+              <% q.options.forEach((o, j) => { %><label class="checkbox-row"><input type="<%= t %>" name="<%= k %>" value="<%= j %>"<%= picked.includes(String(j)) ? " checked" : "" %>> <%= o.label %></label><% }) %>
+              <% if (q.other) { %><label class="checkbox-row"><input type="<%= t %>" name="<%= k %>" value="other"<%= picked.includes("other") ? " checked" : "" %>> Autre :</label>
+                <label class="sr-only" for="<%= k %>-other">Précisez « Autre »</label><input id="<%= k %>-other" type="text" name="<%= k %>_other" maxlength="200" value="<%= values[k + "_other"] || "" %>"><% } %>
+            <% } else if (q.type === "range") { %>
+              <div class="lp-scale" role="radiogroup" aria-label="<%= q.text %> (de 1, <%= q.low %>, à <%= q.scale %>, <%= q.high %>)">
+                <% for (let n = 1; n <= q.scale; n++) { %><label class="lp-scale-item"><input type="radio" name="<%= k %>" value="<%= n %>"<%= picked.includes(String(n)) ? " checked" : "" %>><span><%= n %></span></label><% } %>
+              </div>
+              <p class="lp-scale-ends"><span>1 : <%= q.low %></span><span><%= q.scale %> : <%= q.high %></span></p>
+            <% } else if (q.type === "text") { %>
+              <label class="sr-only" for="<%= k %>-t">Votre réponse</label><input id="<%= k %>-t" type="text" name="<%= k %>" maxlength="300" value="<%= typeof v === "string" ? v : "" %>">
+            <% } else { %>
+              <label class="sr-only" for="<%= k %>-t">Votre réponse</label><textarea id="<%= k %>-t" name="<%= k %>" rows="4" maxlength="3000"><%= typeof v === "string" ? v : "" %></textarea>
+            <% } %>
+          </fieldset>
+        <% }) %>
+        <% if (!contact && survey.ask_email !== "no") { %>
+          <div class="field-group"><label for="s-email">Votre adresse e-mail<%= survey.ask_email === "required" ? " *" : " (facultatif)" %></label><input id="s-email" type="email" name="email" maxlength="254" value="<%= values.email || "" %>"<%= survey.ask_email === "required" ? " required" : "" %>></div>
+        <% } %>
+        <% if (survey.list_id && survey.consent_text && (contact || survey.ask_email !== "no")) { %>
+          <label class="checkbox-row optin-row"><input type="checkbox" name="consent" value="1"<%= values.consent ? " checked" : "" %>> <%= survey.consent_text %></label>
+        <% } %>
+        <button type="submit" class="lp-btn lp-btn-block"<%= preview ? " disabled" : "" %>>Envoyer mes réponses</button>
+      </form>
+    <% } %>
+  </main>
+  <footer class="lp-foot"><a href="/">KOLAKISA</a></footer>
+</body>
+</html>

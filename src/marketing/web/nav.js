@@ -28,6 +28,8 @@ const ITEMS = [
   live("audience", "properties", "Propriétés", "/marketing/proprietes", "sliders", "contacts.read", { label: "Nouvelle propriété", href: "/marketing/proprietes#nouvelle", permission: "contacts.write" }),
   // Formulaires d'inscription : dans Audience, comme chez Mailchimp (« Signup forms »). Pop-ups : un réglage d'un formulaire.
   live("audience", "forms", "Formulaires d'inscription", "/marketing/formulaires", "layout", "forms.read", { label: "Nouveau formulaire", href: "/marketing/formulaires#nouveau", permission: "forms.write" }),
+  // Sondages (« Surveys » de Mailchimp) : questions, lien public ou personnel, étiquettes selon les réponses
+  live("audience", "surveys", "Sondages", "/marketing/sondages", "listChecks", "forms.read", { label: "Créer un sondage", href: "/marketing/sondages#nouveau", permission: "forms.write" }),
   live("audience", "import", "Importer des contacts", "/marketing/importer", "upload", "contacts.import", { label: "Nouvel import", href: "/marketing/importer", permission: "contacts.import" }),
 
   live("campaigns", "campaigns", "Toutes les campagnes", "/marketing/campagnes", "send", "campaigns.read", { label: "Créer une campagne", href: "/marketing/campagnes/nouvelle", permission: "campaigns.write" }),

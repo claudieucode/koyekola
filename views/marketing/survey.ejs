@@ -1,0 +1,71 @@
+<%- include("partials/top", { title, active }) %>
+<% const dis = canWrite ? "" : " disabled"; const locked = responses > 0; %>
+    <p class="mk-back"><a href="/marketing/sondages">← Sondages</a></p>
+    <div class="mk-head"><div class="mk-builder-title"><h1><%= survey.name %></h1><span class="mk-status <%= STATUS_CLASS[survey.status] %>"><%= STATUSES[survey.status] %></span></div>
+      <div class="mk-actions">
+        <% if (responses) { %><a class="btn btn-outline btn-sm" href="/marketing/sondages/<%= survey.id %>/resultats">Résultats (<%= mkh.fmt(responses) %>)</a><% } %>
+        <% if (canWrite) { %><% if (survey.status === "published") { %><form action="/marketing/sondages/<%= survey.id %>/clore" method="post"><button type="submit" class="btn btn-outline btn-sm">Clore le sondage</button></form>
+        <% } else { %><form action="/marketing/sondages/<%= survey.id %>/ouvrir" method="post"><button type="submit" class="btn btn-primary btn-sm"><%= survey.status === "closed" ? "Rouvrir" : "Ouvrir le sondage" %></button></form><% } %><% } %>
+      </div>
+    </div>
+    <% if (survey.status !== "draft") { %><p class="mk-callout"><span>Lien public : <a href="/sondage/<%= survey.slug %>" target="_blank" rel="noopener"><%= publicUrl %></a>. Dans un e-mail, utilisez plutôt le bloc « Sondage » : chaque destinataire reçoit son lien personnel et sa réponse est rattachée à sa fiche.</span></p><% } %>
+    <% if (locked) { %><p class="mk-callout"><span>Ce sondage a déjà des réponses : les types de questions et leurs réponses possibles sont figés (les intitulés, aides et étiquettes restent modifiables).</span></p><% } %>
+
+    <div class="mk-lp-layout">
+      <form action="/marketing/sondages/<%= survey.id %>" method="post" class="mk-form mk-lp-editor">
+        <section class="mk-panel" aria-labelledby="sv-settings">
+          <h2 id="sv-settings">Réglages</h2>
+          <div class="field-row">
+            <div class="field-group"><label for="sv-name">Nom (interne)</label><input id="sv-name" type="text" name="name" maxlength="100" required value="<%= survey.name %>"<%= dis %>></div>
+            <div class="field-group"><label for="sv-slug">Adresse : /sondage/…</label><input id="sv-slug" type="text" name="slug" maxlength="60" required pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" value="<%= survey.slug %>"<%= dis %>></div>
+          </div>
+          <div class="field-group"><label for="sv-title">Titre affiché</label><input id="sv-title" type="text" name="title" maxlength="150" value="<%= survey.title %>"<%= dis %>></div>
+          <div class="field-group"><label for="sv-intro">Introduction</label><textarea id="sv-intro" name="intro" rows="2" maxlength="1000"<%= dis %>><%= survey.intro %></textarea></div>
+          <div class="field-group"><label for="sv-thanks">Message de remerciement</label><textarea id="sv-thanks" name="thank_you" rows="2" maxlength="500"<%= dis %>><%= survey.thank_you %></textarea></div>
+          <div class="field-group"><label for="sv-ask">Adresse e-mail des répondants arrivés par le lien public</label>
+            <select id="sv-ask" name="ask_email"<%= dis %>><option value="optional"<%= survey.ask_email === "optional" ? " selected" : "" %>>Facultative</option><option value="required"<%= survey.ask_email === "required" ? " selected" : "" %>>Obligatoire</option><option value="no"<%= survey.ask_email === "no" ? " selected" : "" %>>Jamais demandée (réponses anonymes)</option></select>
+            <span class="field-hint">Depuis un e-mail, la réponse est toujours rattachée au contact sans rien demander.</span></div>
+          <div class="field-row">
+            <div class="field-group"><label for="sv-list">Proposer l'inscription à une liste</label><select id="sv-list" name="list_id"<%= dis %>><option value="">Non</option><% lists.forEach((l) => { %><option value="<%= l.id %>"<%= survey.list_id === l.id ? " selected" : "" %>><%= l.name %></option><% }) %></select></div>
+            <div class="field-group"><label for="sv-consent">Texte de la case de consentement</label><input id="sv-consent" type="text" name="consent_text" maxlength="500" value="<%= survey.consent_text %>" placeholder="Oui, je souhaite recevoir vos actualités par e-mail."<%= dis %>></div>
+          </div>
+        </section>
+
+        <section aria-labelledby="sv-q-title">
+          <h2 id="sv-q-title" class="mk-h2">Questions</h2>
+          <% survey.questions.forEach((q, i) => { const n = `questions[${i}]`; const id = `q${i}`; %>
+            <div class="mk-panel mk-lp-section" id="question-<%= i %>">
+              <div class="mk-lp-section-head"><strong><%= i + 1 %>. <%= TYPES[q.type] %></strong>
+                <% if (canWrite) { %><span class="mk-lp-section-actions">
+                  <button type="submit" name="action" value="up:<%= i %>" class="btn btn-ghost btn-sm"<%= i === 0 || locked ? " disabled" : "" %>>Monter<span class="sr-only"> la question <%= i + 1 %></span></button>
+                  <button type="submit" name="action" value="down:<%= i %>" class="btn btn-ghost btn-sm"<%= i === survey.questions.length - 1 || locked ? " disabled" : "" %>>Descendre<span class="sr-only"> la question <%= i + 1 %></span></button>
+                  <button type="submit" name="action" value="remove:<%= i %>" class="btn btn-ghost btn-sm"<%= locked || survey.questions.length === 1 ? " disabled" : "" %> data-mk-confirm="La question sera retirée (les autres modifications sont enregistrées)." data-mk-confirm-title="Supprimer cette question ?" data-mk-confirm-ok="Supprimer">Supprimer<span class="sr-only"> la question <%= i + 1 %></span></button>
+                </span><% } %></div>
+              <input type="hidden" name="<%= n %>[type]" value="<%= q.type %>">
+              <div class="field-group"><label for="<%= id %>-t">Intitulé</label><input id="<%= id %>-t" type="text" name="<%= n %>[text]" maxlength="300" required value="<%= q.text %>"<%= dis %>></div>
+              <div class="field-group"><label for="<%= id %>-h">Aide (facultatif)</label><input id="<%= id %>-h" type="text" name="<%= n %>[help]" maxlength="300" value="<%= q.help || "" %>"<%= dis %>></div>
+              <% if (q.options) { %>
+                <div class="field-group"><label for="<%= id %>-o">Réponses possibles (une par ligne ; « Réponse | étiquette » pour étiqueter automatiquement)</label><textarea id="<%= id %>-o" name="<%= n %>[options]" rows="4"<%= dis %>><%= optionsText(q) %></textarea></div>
+                <label class="checkbox-row"><input type="checkbox" name="<%= n %>[other]" value="on"<%= q.other ? " checked" : "" %><%= dis %>> Proposer « Autre » avec un champ libre</label>
+              <% } else if (q.type === "range") { %>
+                <div class="field-row">
+                  <div class="field-group"><label for="<%= id %>-sc">Échelle</label><select id="<%= id %>-sc" name="<%= n %>[scale]"<%= dis %>><option value="5"<%= q.scale === 5 ? " selected" : "" %>>1 à 5</option><option value="10"<%= q.scale === 10 ? " selected" : "" %>>1 à 10</option></select></div>
+                  <div class="field-group"><label for="<%= id %>-lo">Libellé du 1</label><input id="<%= id %>-lo" type="text" name="<%= n %>[low]" maxlength="60" value="<%= q.low %>"<%= dis %>></div>
+                  <div class="field-group"><label for="<%= id %>-hi">Libellé du maximum</label><input id="<%= id %>-hi" type="text" name="<%= n %>[high]" maxlength="60" value="<%= q.high %>"<%= dis %>></div>
+                </div>
+              <% } %>
+              <label class="checkbox-row"><input type="checkbox" name="<%= n %>[required]" value="on"<%= q.required ? " checked" : "" %><%= dis %>> Réponse obligatoire</label>
+            </div>
+          <% }) %>
+          <% if (canWrite) { %>
+            <% if (!locked) { %><div class="mk-panel mk-lp-add"><span class="mk-lp-add-label">Ajouter une question :</span><% Object.entries(TYPES).forEach(([k, label]) => { %><button type="submit" name="action" value="add:<%= k %>" class="btn btn-outline btn-sm"><%= label %></button><% }) %></div><% } %>
+            <div class="mk-actions mk-lp-save"><button type="submit" name="action" value="save" class="btn btn-primary">Enregistrer</button></div>
+          <% } %>
+        </section>
+      </form>
+      <aside class="mk-lp-side" aria-label="Aperçu">
+        <section class="mk-panel mk-lp-preview" aria-labelledby="sv-prev"><h2 id="sv-prev">Aperçu</h2><iframe src="/marketing/sondages/<%= survey.id %>/apercu" title="Aperçu du sondage" loading="lazy"></iframe></section>
+        <% if (canWrite) { %><form action="/marketing/sondages/<%= survey.id %>/supprimer" method="post"><button type="submit" class="btn btn-danger btn-sm" data-mk-confirm="Le sondage et toutes ses réponses seront supprimés définitivement." data-mk-confirm-title="Supprimer ce sondage ?" data-mk-confirm-ok="Supprimer">Supprimer le sondage</button></form><% } %>
+      </aside>
+    </div>
+<%- include("partials/bottom") %>
