@@ -35,7 +35,7 @@ module.exports = [
     trigger: { event: "lms.user_registered" },
     note: "Marketing (abonnés uniquement) : seuls les comptes qui ont accepté de recevoir des e-mails le reçoivent.",
     keywords: ["compte dormant", "inactif", "60 jours", "jamais utilisé", "réveil"],
-    emails: [mail("Compte dormant", "Votre compte vous attend", "Un bon point de départ", "Par où commencer, {h} ?", "Vous avez créé un compte mais pas encore choisi de formation. Parcourez le catalogue : chaque fiche présente le programme et une leçon gratuite.", ["Voir les formations", "catalogue"])],
+    emails: [mail("Compte dormant", "Votre compte vous attend", "Un bon point de départ", "Par où commencer, {h} ?", "Vous avez créé un compte mais pas encore choisi de formation. Parcourez le catalogue : chaque fiche présente le programme et le niveau.", ["Voir les formations", "catalogue"])],
     steps: flow([S.wait(60, "days"), S.seg(all(rule("event:lms.course_enrolled", "never"), rule("event:lms.order_completed", "never")), "next", "exit"), S.tag("compte-dormant"), S.email(0)]),
   },
   {
@@ -64,7 +64,7 @@ module.exports = [
     note: "Nécessite le suivi des ouvertures (actif par défaut sur les e-mails marketing). Modifiez le texte de l'e-mail pour y mettre votre vrai message.",
     keywords: ["non ouvert", "non-ouvreurs", "email ouvert", "ouverture", "engagement faible"],
     emails: [
-      mail("Premier envoi", "Découvrez nos formations", "Pour bien démarrer", "Découvrez nos formations", "{h}, voici nos formations pour apprendre à votre rythme, avec des exercices et un accompagnement.", ["Voir les formations", "catalogue"]),
+      mail("Premier envoi", "Découvrez nos formations", "Pour bien démarrer", "Découvrez nos formations", "{h}, voici nos formations pour apprendre à votre rythme.", ["Voir les formations", "catalogue"]),
       mail("Second envoi", "Vous l'avez peut-être manqué : nos formations", "Au cas où, voici le message", "Un petit rappel", "{h}, au cas où notre précédent message vous aurait échappé, voici nos formations pour apprendre à votre rythme.", ["Voir les formations", "catalogue"]),
     ],
     steps: flow([S.email(0, "m0"), S.wait(3, "days"), S.opened("@m0", "exit", "@renvoi"), S.email(1, "renvoi")]),
@@ -78,7 +78,7 @@ module.exports = [
     note: "Nécessite le suivi des clics (actif par défaut).",
     keywords: ["clic", "clic vers une formation", "clic vers une offre", "intérêt", "lien spécifique"],
     emails: [
-      mail("Catalogue", "Les formations du moment", "Trouvez la vôtre", "Trouvez votre prochaine formation", "{h}, voici nos formations. Chaque fiche présente le programme, le niveau et une leçon gratuite.", ["Voir le catalogue", "catalogue"]),
+      mail("Catalogue", "Les formations du moment", "Trouvez la vôtre", "Trouvez votre prochaine formation", "{h}, voici nos formations. Chaque fiche présente le programme et le niveau.", ["Voir le catalogue", "catalogue"]),
       mail("Une question ?", "Une question avant de choisir ?", "Nous répondons volontiers", "Besoin d'un conseil ?", "{h}, vous avez regardé nos formations : si vous hésitez, répondez à cet e-mail avec votre objectif, nous vous indiquerons la plus adaptée.", ["Revoir le catalogue", "catalogue"]),
     ],
     steps: flow([S.email(0, "m0"), S.wait(2, "days"), S.clicked("@m0", "@oui", "exit"), S.tag("intéressé-par-les-formations", "oui"), S.email(1)]),
@@ -93,7 +93,7 @@ module.exports = [
     keywords: ["aucun clic", "pas de clic", "rappel", "engagement faible", "relance"],
     emails: [
       mail("Invitation", "Votre première formation vous attend", "Choisissez-la en quelques minutes", "Prêt(e) à apprendre ?", "{h}, choisissez votre première formation : toutes sont accessibles à votre rythme.", ["Choisir une formation", "catalogue"]),
-      mail("Rappel", "Une minute pour choisir", "Un dernier coup d'œil", "Il suffit d'un premier pas", "{h}, pas besoin de tout planifier : ouvrez une fiche, regardez la leçon gratuite et décidez ensuite.", ["Voir une leçon gratuite", "catalogue"]),
+      mail("Rappel", "Une minute pour choisir", "Un dernier coup d'œil", "Il suffit d'un premier pas", "{h}, pas besoin de tout planifier : ouvrez une fiche, consultez le programme et décidez ensuite.", ["Voir le catalogue", "catalogue"]),
     ],
     steps: flow([S.email(0, "m0"), S.wait(4, "days"), S.clicked("@m0", "@clic", "@rappel"), S.tag("a-cliqué", "clic"), S.end(), S.email(1, "rappel")]),
   },
@@ -123,7 +123,7 @@ module.exports = [
     note: "Comptez les étiquettes dans Audience → Étiquettes pour comparer les deux messages. Le tirage est aléatoire (50 % / 50 %).",
     keywords: ["test a/b", "ab test", "comparaison", "split", "tirage"],
     emails: [
-      mail("Message A", "Découvrez nos formations", "Pour apprendre à votre rythme", "Bienvenue, {h}", "Merci de votre abonnement. Voici nos formations pour apprendre à votre rythme, avec des exercices et une leçon gratuite.", ["Voir les formations", "catalogue"]),
+      mail("Message A", "Découvrez nos formations", "Pour apprendre à votre rythme", "Bienvenue, {h}", "Merci de votre abonnement. Voici nos formations pour apprendre à votre rythme.", ["Voir les formations", "catalogue"]),
       mail("Message B", "Un conseil pour bien démarrer", "Une idée simple", "Bienvenue, {h}", "Merci de votre abonnement. Un conseil : choisissez une seule formation et lancez-vous cette semaine, même dix minutes par jour changent tout.", ["Choisir ma formation", "catalogue"]),
     ],
     steps: flow([

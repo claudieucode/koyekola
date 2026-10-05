@@ -19,7 +19,7 @@ module.exports = [
     emails: [
       mail("Erreurs à éviter", "Trois erreurs à éviter pour apprendre en ligne", "Gagnez du temps dès le départ", "Apprendre en ligne sans se décourager", "{h}, les trois erreurs les plus fréquentes : viser trop grand au début, apprendre sans pratiquer, et abandonner au premier obstacle. Le contraire fonctionne : un objectif précis, de la pratique, de la régularité.", ["Découvrir les formations", "catalogue"]),
       mail("Choisir", "Comment choisir sa formation", "Quatre questions à vous poser", "Choisir la bonne formation", "{h}, posez-vous quatre questions : quel est mon objectif ? quel est mon niveau ? combien de temps puis-je y consacrer ? veux-je un certificat ? Les fiches de nos formations y répondent.", ["Comparer les formations", "catalogue"]),
-      mail("Se lancer", "Prêt(e) à vous lancer ?", "La première leçon est gratuite", "Il est temps de commencer", "{h}, vous avez maintenant tout ce qu'il faut pour choisir. Ouvrez la fiche qui vous plaît et regardez la leçon gratuite : c'est le meilleur moyen de décider.", ["Choisir ma formation", "catalogue"]),
+      mail("Se lancer", "Prêt(e) à vous lancer ?", "Choisissez en toute connaissance", "Il est temps de commencer", "{h}, vous avez maintenant tout ce qu'il faut pour choisir. Ouvrez la fiche qui vous plaît et consultez son programme et ses leçons d'aperçu : c'est le meilleur moyen de décider.", ["Choisir ma formation", "catalogue"]),
     ],
     steps: flow([S.email(0), S.wait(3, "days"), S.email(1), S.wait(4, "days"), S.email(2), S.untag("nurturing-7j")]),
   },
@@ -35,7 +35,7 @@ module.exports = [
       mail("Objectifs", "Que souhaitez-vous apprendre ?", "Commençons par votre objectif", "Quel est votre objectif ?", "{h}, avant de choisir une formation, écrivez en une phrase ce que vous voulez savoir faire dans trois mois. Cette phrase guidera tous vos choix.", ["Voir les formations", "catalogue"]),
       mail("Méthode", "Une méthode simple pour progresser", "Apprendre, pratiquer, revoir", "Apprendre, pratiquer, revoir", "{h}, pour retenir durablement : apprenez une notion, pratiquez-la immédiatement, puis revoyez-la le lendemain. Dix minutes par jour valent mieux qu'une longue session isolée.", ["Découvrir les formations", "catalogue"]),
       mail("Rythme", "Fixez-vous un rythme réaliste", "La régularité avant la durée", "Trouver son rythme", "{h}, choisissez deux ou trois créneaux par semaine, même courts, et gardez-les. Une formation en ligne se suit à votre rythme : le plus important est de ne pas s'arrêter.", ["Choisir une formation", "catalogue"]),
-      mail("Se lancer", "Votre première leçon vous attend", "C'est le bon moment", "Passez à l'action", "{h}, vous connaissez maintenant votre objectif, une méthode et un rythme. Il ne reste qu'à choisir : ouvrez une fiche et regardez la leçon gratuite.", ["Voir le catalogue", "catalogue"]),
+      mail("Se lancer", "Votre première leçon vous attend", "C'est le bon moment", "Passez à l'action", "{h}, vous connaissez maintenant votre objectif, une méthode et un rythme. Il ne reste qu'à choisir : ouvrez une fiche et consultez son programme.", ["Voir le catalogue", "catalogue"]),
     ],
     steps: flow([S.email(0), S.wait(4, "days"), S.email(1), S.wait(5, "days"), S.email(2), S.wait(5, "days"), S.email(3), S.untag("nurturing-14j")]),
   },
@@ -52,7 +52,7 @@ module.exports = [
       mail("Méthode", "Comment retenir ce que l'on apprend", "Trois habitudes simples", "Apprendre efficacement", "{h}, pratiquez dès que possible, expliquez à quelqu'un ce que vous venez d'apprendre, et revoyez vos notes le lendemain. Ces trois habitudes font la différence.", ["Découvrir les formations", "catalogue"]),
       mail("Niveaux", "Débutant ou confirmé ? Trouvez votre niveau", "Chaque formation indique son niveau", "Quel est votre niveau ?", "{h}, chaque formation précise son niveau (débutant, intermédiaire, avancé) et ce qu'il faut savoir avant de commencer. Choisissez celle qui vous met juste au défi.", ["Voir les niveaux", "catalogue"]),
       mail("Questions", "Une question ? Écrivez-nous", "Nous répondons personnellement", "Nous sommes là pour vous aider", "{h}, si vous hésitez, répondez à cet e-mail avec votre objectif : nous vous indiquerons la formation qui y correspond.", ["Voir le catalogue", "catalogue"]),
-      mail("Invitation", "Et si vous commenciez aujourd'hui ?", "La première leçon est gratuite", "Votre première leçon vous attend", "{h}, vous avez eu un mois pour y réfléchir. Ouvrez la fiche de la formation qui vous plaît et regardez la leçon gratuite.", ["Choisir ma formation", "catalogue"]),
+      mail("Invitation", "Et si vous commenciez aujourd'hui ?", "Votre formation vous attend", "Votre première leçon vous attend", "{h}, vous avez eu un mois pour y réfléchir. Ouvrez la fiche de la formation qui vous plaît et consultez son programme.", ["Choisir ma formation", "catalogue"]),
     ],
     steps: flow([S.email(0), S.wait(7, "days"), S.email(1), S.wait(7, "days"), S.email(2), S.wait(7, "days"), S.email(3), S.wait(9, "days"), S.email(4), S.untag("nurturing-30j")]),
   },
@@ -65,7 +65,7 @@ module.exports = [
     note: "Les étiquettes obtenues alimentent les parcours « Suivi d'un prospect chaud » et « Réveil d'un prospect froid ».",
     keywords: ["lead chaud", "lead froid", "lead très engagé", "qualification", "nouveau prospect", "scoring"],
     emails: [
-      mail("Présentation", "Découvrez ce que nous proposons", "Des formations pour progresser", "Ravi de vous compter parmi nous", "{h}, nous proposons des formations en ligne pour apprendre à votre rythme. Explorez le catalogue et regardez les leçons gratuites.", ["Explorer le catalogue", "catalogue"]),
+      mail("Présentation", "Découvrez ce que nous proposons", "Des formations pour progresser", "Ravi de vous compter parmi nous", "{h}, nous proposons des formations en ligne pour apprendre à votre rythme. Explorez le catalogue et consultez les programmes.", ["Explorer le catalogue", "catalogue"]),
       mail("Relance", "Avez-vous trouvé votre formation ?", "Besoin d'un coup de pouce ?", "On vous aide à choisir", "{h}, indiquez-nous ce que vous cherchez en répondant à cet e-mail, ou parcourez le catalogue par thème.", ["Parcourir le catalogue", "catalogue"]),
     ],
     steps: flow([
@@ -102,7 +102,7 @@ module.exports = [
     trigger: { event: "tag.added", filter: { key: "tag", value: "prospect-froid" } },
     note: "Les « prospect-inactif » peuvent être exclus de vos prochains envois ou passer par « Dernière chance avant de retirer un inactif d'une liste ».",
     keywords: ["lead froid", "prospect froid", "réveil", "inactif", "jamais répondu"],
-    emails: [mail("Idée", "Une idée simple pour démarrer", "Un petit pas vaut mieux qu'une grande résolution", "Et si on commençait petit ?", "{h}, pas besoin de tout planifier : choisissez une formation courte, regardez la leçon gratuite et voyez si elle vous plaît.", ["Voir une leçon gratuite", "catalogue"])],
+    emails: [mail("Idée", "Une idée simple pour démarrer", "Un petit pas vaut mieux qu'une grande résolution", "Et si on commençait petit ?", "{h}, pas besoin de tout planifier : choisissez une formation courte, consultez son programme et voyez si elle vous plaît.", ["Voir le catalogue", "catalogue"])],
     steps: flow([
       S.email(0, "m0"), S.wait(10, "days"), S.clicked("@m0", "@tiede", "@inactif"),
       S.untag("prospect-froid", "tiede"), S.tag("prospect-tiède"), S.end(),
@@ -118,7 +118,7 @@ module.exports = [
     note: "Le statut « a acheté » compte depuis l'activation du pont KOLAKISA. L'étiquette « prospect » est retirée quand le contact devient client.",
     keywords: ["conversion", "prospect client", "premier achat", "lead", "devenir client"],
     emails: [
-      mail("Se lancer", "Prêt(e) à vous lancer ?", "Votre première formation", "Vous êtes prêt(e) ?", "{h}, vous avez exploré nos formations : le plus dur est de commencer. Choisissez-en une, regardez la première leçon gratuite et lancez-vous.", ["Choisir ma formation", "catalogue"]),
+      mail("Se lancer", "Prêt(e) à vous lancer ?", "Votre première formation", "Vous êtes prêt(e) ?", "{h}, vous avez exploré nos formations : le plus dur est de commencer. Choisissez-en une, consultez son programme et lancez-vous.", ["Choisir ma formation", "catalogue"]),
       mail("Dernière question", "Une dernière question ?", "Nous pouvons vous aider", "Qu'est-ce qui vous retient ?", "{h}, si quelque chose vous retient, répondez à cet e-mail : nous préférons connaître vos questions plutôt que vous laisser hésiter.", ["Voir le catalogue", "catalogue"]),
     ],
     steps: flow([
@@ -138,7 +138,7 @@ module.exports = [
     keywords: ["compte", "nouveau compte", "sans achat", "première commande", "3 jours", "7 jours", "30 jours", "nurturing"],
     emails: [
       mail("Jour 3", "Trois questions pour choisir", "Trouvez la formation adaptée", "Choisir en trois questions", "{h}, quel est votre objectif, votre niveau et le temps dont vous disposez ? Les fiches du catalogue indiquent tout cela.", ["Voir le catalogue", "catalogue"]),
-      mail("Jour 7", "Regardez une leçon gratuite", "Sans engagement", "Essayez avant de choisir", "{h}, chaque formation propose une leçon gratuite : le meilleur moyen de savoir si elle vous convient.", ["Voir une leçon gratuite", "catalogue"]),
+      mail("Jour 7", "Comparez les programmes", "Sans engagement", "Comparez avant de choisir", "{h}, chaque fiche présente le programme et le niveau : le meilleur moyen de savoir si la formation vous convient.", ["Voir le catalogue", "catalogue"]),
       mail("Jour 30", "Un mois déjà : où en êtes-vous ?", "Nous pouvons vous aider", "Prêt(e) à vous lancer ?", "{h}, vous avez créé votre compte il y a un mois. Si une question vous retient, répondez à cet e-mail : nous vous aiderons à choisir.", ["Voir le catalogue", "catalogue"]),
     ],
     steps: flow([

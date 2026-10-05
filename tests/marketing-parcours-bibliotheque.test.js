@@ -86,6 +86,13 @@ describe("bibliothèque : définitions", () => {
     }
   });
 
+  test("aucune promesse sur le produit que l'on ne peut pas garantir (accompagnement, leçon gratuite pour chaque formation…)", () => {
+    for (const j of usable().filter((x) => !library.LEGACY_META[x.key])) {
+      const text = JSON.stringify([j.emails("https://k.test"), j.sms ? j.sms("https://k.test") : []]);
+      assert.doesNotMatch(text, /accompagnement|leçons? gratuites?|première leçon est gratuite|chaque formation propose/i, `${j.key} : promesse non vérifiée`);
+    }
+  });
+
   test("durée et description de chaque étape : aucune étape sans texte, durée cohérente", () => {
     for (const j of usable()) {
       const emails = j.emails("https://k.test"), texts = j.sms ? j.sms("https://k.test") : [];
@@ -230,6 +237,36 @@ describe("bibliothèque : utilisation, copie et exécution réelle", () => {
       n++;
     }
     assert.ok(n >= 60);
+  });
+
+  test("EXÉCUTION, monde « actif » : le contact a tout fait (achats, leçons, avis…), ouvre et clique — les branches « oui » aussi vont au bout", async () => {
+    const listId = audience.createList(A, { name: "Liste" }).id;
+    const EVENTS = ["lms.user_registered", "lms.order_completed", "lms.course_enrolled", "lms.lesson_completed", "lms.course_completed", "lms.review_posted", "lms.favorite_added"];
+    let paths = 0;
+    for (const j of usable()) {
+      clock += 400 * DAY;
+      const a = journeys.createJourney(A, j.key, { listId });
+      auto.activateAutomation(A, a.id, { workerOn: true, smtpAvailable: true });
+      const c = consenting(`actif-${j.key}@ex.fr`);
+      // l'activité du contact : chaque événement KOLAKISA, deux fois, et un montant dépensé
+      EVENTS.forEach((name, i) => [1, 2, 3, 4, 5].forEach((n) => m.db.prepare("INSERT INTO mk_events (organization_id, name, email, contact_id, source, occurred_at, metadata, idempotency_key, created_at) VALUES (1, ?, ?, ?, 'lms', ?, ?, ?, ?)")
+        .run(name, c.email, c.id, clock - n * 1000, JSON.stringify({ courseId: 3, items: [{ courseId: 3, title: "Photo", priceCents: 40000 }], totalCents: 40000 }), `${j.key}:${name}:${n}`, clock - n * 1000)));
+      assert.ok(auto.onEvent(A, eventFor(a, c)) >= 1, `${j.key} : entrée`);
+      for (let i = 0; i < 80; i++) {
+        const run = runOf(c, a.id);
+        if (run.status !== "running") break;
+        await auto.runAutomation(A, run.id, { provider, now: clock });
+        m.db.prepare("UPDATE mk_messages SET open_count = 1, click_count = 1 WHERE contact_id = ?").run(c.id); // il ouvre et clique chaque message reçu
+        clock += 370 * DAY;
+        // l'événement attendu survient (réveil anticipé), comme dans la réalité
+        for (const name of EVENTS) auto.onEvent(A, { id: 5e8 + i, organizationId: 1, name, contactId: c.id, email: c.email, metadata: { courseId: 3 } });
+      }
+      const run = runOf(c, a.id);
+      assert.ok(["completed", "exited"].includes(run.status), `${j.key} : statut final « ${run.status} » (${run.last_error || ""})`);
+      assert.ok(["", null, "condition", "split", "next"].includes(run.last_error), `${j.key} : aucune erreur (${run.last_error})`);
+      paths++;
+    }
+    assert.ok(paths >= 60);
   });
 
   test("EXÉCUTION : e-mails, étiquettes et sorties réels sur des cas précis", async () => {

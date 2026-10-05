@@ -28,7 +28,7 @@ module.exports = [
     emails: [
       mail("Bienvenue", "Bienvenue chez {{org.name}}", "Voici ce qui vous attend", "Bienvenue, {h}", "Merci de votre abonnement. Dans les prochains jours, nous vous expliquons comment profiter au mieux de nos formations.", ["Voir les formations", "catalogue"]),
       mail("Comment ça marche", "Comment profiter de nos formations", "Trois idées simples", "Apprendre à votre rythme",
-        "{h}, nos formations se suivent en vidéo, quand vous voulez, avec des exercices pour vérifier ce que vous retenez. Choisissez-en une, commencez par la première leçon : quelques minutes suffisent.", ["Choisir une formation", "catalogue"]),
+        "{h}, nos formations se suivent en vidéo, quand vous voulez. Choisissez-en une, commencez par la première leçon : quelques minutes suffisent.", ["Choisir une formation", "catalogue"]),
       mail("Le catalogue", "Par où commencer ?", "Toutes les formations au même endroit", "Trouvez la formation qui vous correspond",
         "{h}, voici l'ensemble de nos formations. Chaque fiche présente le programme, le niveau et ce que vous saurez faire à la fin.", ["Parcourir le catalogue", "catalogue"]),
     ],
@@ -56,7 +56,7 @@ module.exports = [
     keywords: ["formulaire", "inscription", "liste"],
     emails: [
       mail("Merci", "Merci de votre inscription", "Voici la suite", "Merci, {h}", "Nous avons bien enregistré votre inscription. Vous recevrez bientôt de nos nouvelles.", ["Découvrir les formations", "catalogue"]),
-      mail("Pour aller plus loin", "Pour aller plus loin", "Nos formations, à votre rythme", "Et maintenant ?", "{h}, si vous souhaitez approfondir le sujet, nos formations vous guident pas à pas, avec des exercices et un accompagnement.", ["Voir le catalogue", "catalogue"]),
+      mail("Pour aller plus loin", "Pour aller plus loin", "Nos formations, à votre rythme", "Et maintenant ?", "{h}, si vous souhaitez approfondir le sujet, nos formations vous guident pas à pas.", ["Voir le catalogue", "catalogue"]),
     ],
     steps: flow([S.email(0), S.wait(3, "days"), S.email(1)]),
   },
