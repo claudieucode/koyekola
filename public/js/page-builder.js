@@ -80,7 +80,11 @@
   // ---------- Modèle : sections (racine) et éléments imbriqués ----------
   var content = clone(boot.content);
   var CONTAINERS = SPEC.types.filter(function (t) { return t.container; }).map(function (t) { return t.type; });
-  var isNode = function (it) { return Boolean(it && NT[it.type]); };
+  // Section ou élément ? Certaines sections prêtes portent le nom d'un élément (texte, image, liste, bouton…) : une
+  // section se reconnaît à sa place (racine de la page) ou à sa marque (section pas encore placée, copiée, déplacée)
+  var SECTION_MARK = new WeakSet();
+  var markSection = function (it) { if (it && typeof it === "object") SECTION_MARK.add(it); return it; };
+  var isNode = function (it) { return Boolean(it && NT[it.type] && !it.section && !SECTION_MARK.has(it) && (!content || content.sections.indexOf(it) < 0)); };
   var kidsOf = function (it) { return it && (it.type === "layout" || CONTAINERS.indexOf(it.type) >= 0) ? (it.children || (it.children = [])) : null; };
   function ensureIds(list) {
     (list || []).forEach(function (it) {
@@ -276,8 +280,8 @@
     if (t.unavailable) { toast(t.unavailable, true); return; }
     if (type === "form" && content.sections.some(function (s) { return s.type === "form"; })) { toast("Une page n'a qu'un formulaire d'inscription.", true); return; }
     var where = at && at.parent === null ? at : { parent: null, index: insertionPoint({ type: type }).index };
-    if (t.asks) return ask("Nouvelle vidéo", [["url", "url", "Adresse (YouTube, Vimeo ou fichier https://)"], ["title", "text", "Titre de la vidéo"]], function (v) { addItems([{ type: "video", url: v.url, title: v.title, caption: "" }], where); });
-    addItems([clone(t.blank)], where);
+    if (t.asks) return ask("Nouvelle vidéo", [["url", "url", "Adresse (YouTube, Vimeo ou fichier https://)"], ["title", "text", "Titre de la vidéo"]], function (v) { addItems([markSection({ type: "video", url: v.url, title: v.title, caption: "" })], where); });
+    addItems([markSection(clone(t.blank))], where);
   }
 
   // ---------- Opérations sur la sélection ----------
@@ -290,14 +294,21 @@
     ids = ids || selection;
     return ids.filter(function (id) { var l = locate(id); return l && !l.ancestors.some(function (a) { return ids.indexOf(a.id) >= 0; }); });
   }
-  function removeSelected() {
-    var ids = topLevelSelection();
+  function removeSelected() { removeItems(topLevelSelection()); }
+  // Suppression (avec toute la descendance) : modèle, calques, canevas et sélection mis à jour ; annulable (Ctrl/⌘ + Z)
+  function removeItems(ids) {
+    ids = topLevelSelection(ids);
     if (!ids.length || refuseLocked(ids)) return;
+    var label = ids.length === 1 ? "« " + nameOf(byId(ids[0])) + " »" : ids.length + " éléments";
     change(function () {
       ids.forEach(function (id) { var l = locate(id); if (l) l.list.splice(l.index, 1); });
-      selection = [];
+      selection = selection.filter(function (id) { return byId(id); });
     });
+    markCanvasSelection(false);
+    toast(label + " supprimé. Ctrl/⌘ + Z pour annuler.");
   }
+  // Nombre d'éléments contenus (toute la descendance)
+  function countDeep(it) { var n = 0; (kidsOf(it) || []).forEach(function (c) { n += 1 + countDeep(c); }); return n; }
   function duplicateSelected() {
     var ids = topLevelSelection();
     if (!ids.length) return;
@@ -328,6 +339,7 @@
     if (parent && lockedDeep(parent.id)) { toast("Emplacement verrouillé.", true); return; }
     if (parent && ids.some(function (id) { return id === parent.id || locate(parent.id).ancestors.some(function (a) { return a.id === id; }); })) { toast("Un élément ne peut pas aller à l'intérieur de lui-même.", true); return; }
     var items = ids.map(byId);
+    items.forEach(function (it) { if (!isNode(it)) markSection(it); }); // reste une section une fois retirée de la racine
     if (parent && items.some(function (it) { return !isNode(it); })) { toast("Une section ne se place pas dans un conteneur.", true); return; }
     change(function () {
       var targetList = parent ? kidsOf(parent) : content.sections;
@@ -378,7 +390,7 @@
   function copySelected(cut) {
     var ids = topLevelSelection();
     if (!ids.length) return;
-    clipboard = ids.map(function (id) { return clone(byId(id)); });
+    clipboard = ids.map(function (id) { var it = byId(id); var c = clone(it); if (!isNode(it)) c.section = true; return c; });
     store.set("clipboard", clipboard);
     if (cut) { if (refuseLocked(ids)) return; removeSelected(); toast("Coupé (" + ids.length + ")."); }
     else toast("Copié (" + ids.length + ").");
@@ -386,7 +398,7 @@
   function paste() {
     var items = clipboard || store.get("clipboard", null);
     if (!items || !items.length) { toast("Rien à coller.", true); return; }
-    addItems(items.map(function (it) { return reId(clone(it)); }));
+    addItems(items.map(function (it) { var c = reId(clone(it)); if (c.section) { delete c.section; markSection(c); } return c; }));
   }
   // Copier / coller le style (styles par écran et par état ; préréglages des sections)
   function copyStyle() {
@@ -490,7 +502,8 @@
           h("span", { class: "pb-node-name", text: nameOf(it) }),
           h("span", { class: "pb-node-flags" },
             h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it.hidden ? " is-on" : ""), "aria-pressed": String(Boolean(it.hidden)), "aria-label": (it.hidden ? "Afficher « " : "Masquer « ") + nameOf(it) + " »", "data-tip": it.hidden ? "Afficher" : "Masquer", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([it.id], "hidden", !it.hidden); } }, icon(it.hidden ? "eyeOff" : "eye")),
-            h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it.locked ? " is-on" : ""), "aria-pressed": String(Boolean(it.locked)), "aria-label": (it.locked ? "Déverrouiller « " : "Verrouiller « ") + nameOf(it) + " »", "data-tip": it.locked ? "Déverrouiller" : "Verrouiller", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([it.id], "locked", !it.locked); } }, icon("lock"))));
+            h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it.locked ? " is-on" : ""), "aria-pressed": String(Boolean(it.locked)), "aria-label": (it.locked ? "Déverrouiller « " : "Verrouiller « ") + nameOf(it) + " »", "data-tip": it.locked ? "Déverrouiller" : "Verrouiller", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([it.id], "locked", !it.locked); } }, icon("lock")),
+            h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-delete", "aria-label": "Supprimer « " + nameOf(it) + " »" + (kids && kids.length ? " et ses " + countDeep(it) + " élément(s)" : ""), "data-tip": kids && kids.length ? "Supprimer (avec ses " + countDeep(it) + " élément(s))" : "Supprimer", disabled: !canWrite || lockedDeep(it.id), onclick: function (e) { e.stopPropagation(); removeItems([it.id]); } }, icon("trash"))));
         row.addEventListener("click", function (e) { select(it.id, e.shiftKey || e.metaKey || e.ctrlKey); });
         row.addEventListener("dblclick", function (e) { if (canWrite && !e.target.closest("button")) startRename(row, it); });
         row.addEventListener("contextmenu", function (e) { e.preventDefault(); if (selection.indexOf(it.id) < 0) select(it.id); openMenu(e.clientX, e.clientY); });
@@ -610,8 +623,8 @@
       if (!items.length) return;
       var ul = h("ul", { class: "pb-palette" });
       items.forEach(function (it) {
-        var btn = h("button", { type: "button", class: "pb-pal-item", disabled: !canWrite || Boolean(it.disabled), "data-tip": it.disabled || null, onclick: function () { addElement(it.type); } }, icon(it.icon), h("span", { text: it.label }));
-        if (!it.disabled) draggableSource(btn, { type: it.type }, function (target) { addElement(it.type, target); });
+        var btn = h("button", { type: "button", class: "pb-pal-item", disabled: !canWrite || Boolean(it.disabled), "data-tip": it.disabled || null, onclick: function () { if (it.legacy) addLegacy(it.type); else addElement(it.type); } }, icon(it.icon), h("span", { text: it.label }));
+        if (!it.disabled) draggableSource(btn, it.legacy ? { type: it.type, section: true } : { type: it.type }, function (target) { if (it.legacy) addLegacy(it.type, target); else addElement(it.type, target); });
         ul.appendChild(h("li", {}, btn));
       });
       box.appendChild(h("section", { class: "pb-pal-group" }, h("h3", { class: "pb-sub", text: g.label }), ul));
@@ -622,7 +635,7 @@
 
   var TOOLS = [
     { key: "select", label: "Sélection (V)", icon: "mousePointer", mode: true },
-    { key: "hand", label: "Main : faire défiler la page en la glissant (H)", icon: "arrowRightLeft", mode: true },
+    { key: "hand", label: "Main (H)", tip: "Main : faire défiler la page en la glissant (H)", icon: "arrowRightLeft", mode: true },
     { sep: true },
     { key: "layout", label: "Section libre" }, { key: "container", label: "Conteneur" }, { key: "columns", label: "Colonnes" }, { key: "grid", label: "Grille" }, { key: "stack", label: "Pile" }, { key: "group", label: "Groupe" },
     { sep: true },
@@ -634,23 +647,68 @@
     { sep: true },
     { key: "divider", label: "Séparateur" }, { key: "spacer", label: "Espace" }, { key: "form", label: "Formulaire d'inscription" }, { key: "countdown", label: "Compte à rebours" }, { key: "course", label: "Formation" },
   ];
+  // Barre d'outils : compacte (icônes, nom en infobulle) ou étendue (icône + nom) — préférence d'interface mémorisée
+  var toolLabel = function (label) { return label.replace(/\s*\([^)]*\)$/, ""); };
   function renderTools() {
     var nav = $("[data-pb-tools]");
     nav.textContent = "";
+    var expanded = Boolean(panels.toolsExpanded);
+    nav.appendChild(h("button", { type: "button", class: "pb-tool pb-tools-toggle", "aria-expanded": String(expanded), "aria-label": expanded ? "Réduire la barre d'outils" : "Déployer la barre d'outils (noms des outils)", "data-tip": expanded ? "Réduire la barre d'outils" : "Déployer la barre d'outils",
+      onclick: function () { panels.toolsExpanded = !panels.toolsExpanded; applyPanels(); renderTools(); } }, icon(expanded ? "chevronLeft" : "chevronRight"), h("span", { class: "pb-tool-label", text: expanded ? "Réduire" : "Déployer" })));
+    nav.appendChild(h("span", { class: "pb-tools-sep", role: "separator" }));
     TOOLS.forEach(function (t) {
       if (t.sep) { nav.appendChild(h("span", { class: "pb-tools-sep", role: "separator" })); return; }
       var ic = t.mode ? t.icon : t.key === "layout" ? "layout" : t.key === "form" ? "fileText" : NT[t.key] ? NT[t.key].icon : "plus";
       var unavailable = t.key === "course" && !boot.courses.length ? "publiez d'abord une formation" : t.key === "form" && LEGACY.form && LEGACY.form.unavailable ? LEGACY.form.unavailable : null;
-      var btn = h("button", { type: "button", class: "pb-tool", "aria-label": t.label, "data-tip": unavailable ? t.label + " — " + unavailable : t.label, "data-mode": t.mode ? t.key : null, "aria-pressed": t.mode ? String(tool === t.key) : null, disabled: (!t.mode && !canWrite) || Boolean(unavailable),
-        onclick: function () { if (t.mode) setTool(t.key); else addElement(t.key); } }, icon(ic));
+      var btn = h("button", { type: "button", class: "pb-tool", "aria-label": t.label, "data-tip": unavailable ? t.label + " — " + unavailable : t.tip || t.label, "data-mode": t.mode ? t.key : null, "aria-pressed": t.mode ? String(tool === t.key) : null, disabled: (!t.mode && !canWrite) || Boolean(unavailable),
+        onclick: function () { if (t.mode) setTool(t.key); else addElement(t.key); } }, icon(ic), h("span", { class: "pb-tool-label", text: toolLabel(t.label) }));
       if (!t.mode && !unavailable) draggableSource(btn, { type: t.key }, function (target) { addElement(t.key, target); });
       nav.appendChild(btn);
     });
     nav.appendChild(h("span", { class: "pb-tools-grow" }));
-    nav.appendChild(h("button", { type: "button", class: "pb-tool", "aria-label": "Médiathèque", "data-tip": "Médiathèque", onclick: function () { openMedia({ title: "Médiathèque" }); } }, icon("image")));
-    nav.appendChild(h("button", { type: "button", class: "pb-tool", "aria-label": "Panneau des éléments", "data-tip": panels.leftHidden ? "Afficher le panneau des éléments" : "Masquer le panneau des éléments", "aria-pressed": String(!panels.leftHidden), onclick: function () { togglePanel("left"); } }, icon("layers")));
-    nav.appendChild(h("button", { type: "button", class: "pb-tool", "aria-label": "Panneau des calques", "data-tip": panels.rightHidden ? "Afficher les calques et l'inspecteur" : "Masquer les calques et l'inspecteur", "aria-pressed": String(!panels.rightHidden), onclick: function () { togglePanel("right"); } }, icon("listChecks")));
+    nav.appendChild(h("button", { type: "button", class: "pb-tool", "aria-label": "Médiathèque", "data-tip": "Médiathèque", onclick: function () { openMedia({ title: "Médiathèque" }); } }, icon("image"), h("span", { class: "pb-tool-label", text: "Médiathèque" })));
+    nav.appendChild(h("button", { type: "button", class: "pb-tool", "aria-label": "Règles (R)", "data-tip": "Règles (R)", "data-aid": "rulers", "aria-pressed": String(Boolean(aids.rulers)), onclick: function () { setAid("rulers", !aids.rulers); } }, icon("spacing"), h("span", { class: "pb-tool-label", text: "Règles" })));
+    nav.appendChild(h("button", { type: "button", class: "pb-tool", "aria-label": "Guides", "data-tip": "Afficher les guides (tirez-les depuis les règles)", "data-aid": "guides", "aria-pressed": String(aids.guides !== false), onclick: function () { setAid("guides", aids.guides === false); } }, icon("columns"), h("span", { class: "pb-tool-label", text: "Guides" })));
+    nav.appendChild(h("button", { type: "button", class: "pb-tool", "aria-label": "Panneau des éléments", "data-tip": panels.leftHidden ? "Afficher le panneau des éléments" : "Masquer le panneau des éléments", "aria-pressed": String(!panels.leftHidden), onclick: function () { togglePanel("left"); } }, icon("layers"), h("span", { class: "pb-tool-label", text: "Éléments" })));
+    nav.appendChild(h("button", { type: "button", class: "pb-tool", "aria-label": "Calques", "data-tip": panels.rightHidden ? "Afficher les calques et l'inspecteur" : "Masquer les calques et l'inspecteur", "aria-pressed": String(!panels.rightHidden), onclick: function () { togglePanel("right"); } }, icon("listChecks"), h("span", { class: "pb-tool-label", text: "Calques" })));
   }
+
+  // ---------- Infobulles (une seule, au-dessus de l'interface : jamais coupée par un panneau qui défile) ----------
+  var tipEl = h("div", { class: "pb-tip", role: "tooltip", id: "pb-tip", hidden: true });
+  document.body.appendChild(tipEl);
+  var tipTimer = null, tipFor = null;
+  function hideTip() { clearTimeout(tipTimer); tipTimer = null; if (tipFor) tipFor.removeAttribute("aria-describedby"); tipFor = null; tipEl.hidden = true; }
+  function showTip(el) {
+    var text = el.getAttribute("data-tip");
+    if (!text) return;
+    // Barre étendue : le nom est déjà affiché, l'infobulle n'ajoute que ce qui manque (raccourci, indisponibilité)
+    var label = el.querySelector(".pb-tool-label");
+    if (panels.toolsExpanded && label && el.closest(".pb-tools") && toolLabel(text) === label.textContent && text === label.textContent) return;
+    tipEl.textContent = text;
+    tipEl.hidden = false;
+    var r = el.getBoundingClientRect(), t = tipEl.getBoundingClientRect();
+    var side = el.closest(".pb-tools");
+    var left = side ? r.right + 10 : r.left + r.width / 2 - t.width / 2;
+    var top = side ? r.top + r.height / 2 - t.height / 2 : r.bottom + 8;
+    if (!side && top + t.height > window.innerHeight - 8) top = r.top - t.height - 8;
+    tipEl.style.left = Math.max(8, Math.min(left, window.innerWidth - t.width - 8)) + "px";
+    tipEl.style.top = Math.max(8, Math.min(top, window.innerHeight - t.height - 8)) + "px";
+    tipEl.classList.toggle("is-side", Boolean(side));
+    el.setAttribute("aria-describedby", "pb-tip");
+    tipFor = el;
+  }
+  function armTip(el) {
+    if (tipFor === el) return;
+    hideTip();
+    tipFor = el;
+    tipTimer = setTimeout(function () { tipFor = null; showTip(el); }, 350);
+  }
+  document.addEventListener("mouseover", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el) armTip(el); else if (tipFor) hideTip(); });
+  document.addEventListener("mouseout", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && !el.contains(e.relatedTarget)) hideTip(); });
+  document.addEventListener("focusin", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && el.matches(":focus-visible")) armTip(el); });
+  document.addEventListener("focusout", hideTip);
+  document.addEventListener("mousedown", hideTip, true);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") hideTip(); }, true);
   function setTool(k) {
     tool = k;
     $$(".pb-tool[data-mode]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.mode === k)); });
@@ -691,7 +749,7 @@
       ul.appendChild(h("li", { class: "pb-comp" },
         h("div", {}, h("strong", { text: c.name }), h("span", { class: "pb-hint", text: (c.global ? "Global" : "Ce site") + " · " + (c.type === "layout" ? "Section libre" : LEGACY[c.type] ? LEGACY[c.type].label : c.type) })),
         h("div", { class: "pb-row pb-wrap" }, syncBtn,
-          h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () { fetchComponent(c.id).then(function (comp) { var s = reId(clone(comp.section)); ensureIds([s]); addItems([s], { parent: null, index: insertionPoint({ type: "layout" }).index }); }, apiFail); } }, "Copie"),
+          h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () { fetchComponent(c.id).then(function (comp) { var s = markSection(reId(clone(comp.section))); ensureIds([s]); addItems([s], { parent: null, index: insertionPoint({ type: "layout" }).index }); }, apiFail); } }, "Copie"),
           h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () {
             if (!window.confirm("Supprimer le composant « " + c.name + " » ? (Refusé s'il est encore utilisé par une page.)")) return;
             api("POST", "/marketing/site-web/composants/" + c.id + "/supprimer", {}).then(function () { components = components.filter(function (x) { return x.id !== c.id; }); renderComponents(); toast("Composant supprimé."); }, apiFail);
@@ -701,7 +759,7 @@
   // Enregistrer un élément ou une section comme composant (un élément est enregistré dans une section libre)
   function saveAsComponent(it, name, global) {
     var section = clone(it);
-    if (isNode(section)) section = { type: "layout", children: [section] };
+    if (isNode(it)) section = { type: "layout", children: [section] };
     delete section.id; delete section.locked;
     return api("POST", "/marketing/site-web/composants", { name: name, section: section, global: global, siteId: PAGE.siteId }).then(function (r) {
       components.push(r.component); renderComponents(); toast("Composant « " + r.component.name + " » enregistré (onglet Composants)."); return r.component;
@@ -1071,6 +1129,83 @@
     box.appendChild(det);
   }
 
+  // ---------- Informations (selon la sélection : uniquement des données réelles du modèle et du canevas) ----------
+  var KIND_LABEL = { layout: "Section", container: "Conteneur", columns: "Colonnes", column: "Colonne", grid: "Grille", stack: "Pile", group: "Groupe" };
+  function measured(id) {
+    var doc = frame.contentDocument;
+    var el = doc && doc.querySelector('[data-node-id="' + id + '"],[data-section-id="' + id + '"]');
+    if (!el) return null;
+    var r = el.getBoundingClientRect();
+    return { w: Math.round(r.width), h: Math.round(r.height), el: el };
+  }
+  function infoRows(it) {
+    var rows = [];
+    var add = function (k, v) { if (v !== undefined && v !== null && v !== "") rows.push([k, String(v)]); };
+    if (!it) {
+      var count = 0; walk(function () { count += 1; });
+      add("Nom", PAGE.name);
+      add("Adresse", "/p/" + PAGE.slug);
+      add("Statut", $("[data-pb-status]").textContent);
+      add("Sections", content.sections.length);
+      add("Éléments", count - content.sections.length);
+      add("Écran affiché", bpLabel(device) + " · " + WIDTH[device] + " px de large");
+      add("Zoom", Math.round(zoom * 100) + " %");
+      add("Enregistrement", $("[data-pb-save]").textContent || "—");
+      return rows;
+    }
+    var l = locate(it.id);
+    var p = it.props || {};
+    var m = measured(it.id);
+    var node = isNode(it);
+    add("Type", KIND_LABEL[it.type] || (node ? typeLabel(it) + (it.type === "heading" ? " (H" + p.level + ")" : it.type === "text" ? " (texte riche)" : it.type === "list" ? (p.ordered ? " (numérotée)" : " (à puces)") : "") : (LEGACY[it.type] ? LEGACY[it.type].label : typeLabel(it)) + " (section prête)"));
+    add("Nom", it.name || "—");
+    add("Identifiant", it.id);
+    add("Parent", l && l.parent ? nameOf(l.parent) : "Page");
+    if (kidsOf(it)) add("Enfants", kidsOf(it).length + (countDeep(it) > kidsOf(it).length ? " (" + countDeep(it) + " au total)" : ""));
+    if (m) add("Dimensions affichées", m.w + " × " + m.h + " px (" + bpLabel(device).toLowerCase() + ")");
+    if (node && (it.type === "heading" || it.type === "quote")) add("Contenu", (p.text || "").slice(0, 120));
+    if (!node && (it.markdown || it.text)) { var md = String(it.markdown || it.text).replace(/[#*_>\[\]()`-]/g, " ").replace(/\s+/g, " ").trim(); add("Contenu", md.slice(0, 120) + (md.length > 120 ? "…" : "")); }
+    if (node && it.type === "text") { var txt = (p.html || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(); add("Contenu", txt.slice(0, 120) + (txt.length > 120 ? "…" : "")); add("Mots", txt ? txt.split(" ").length : 0); }
+    if ((node && it.type === "image") || (!node && ((it.type === "hero" && it.image) || (it.type === "image" && it.src)))) {
+      var src = p.src || it.src || it.image;
+      add("Source", src);
+      add("Format", (String(src).split("?")[0].split(".").pop() || "").toUpperCase());
+      add("Texte de remplacement", p.decorative ? "Image décorative" : (p.alt || it.alt || it.imageAlt || "manquant"));
+      var img = m && (m.el.tagName === "IMG" ? m.el : m.el.querySelector("img"));
+      if (img && img.naturalWidth) add("Taille d'origine", img.naturalWidth + " × " + img.naturalHeight + " px");
+    }
+    if (!node && it.type === "button") { add("Texte", it.label); add("Adresse", it.url); }
+    if (node && (it.type === "button" || it.type === "link")) { add("Texte", p.label); add("Adresse", p.url); if (it.type === "button") add("Apparence", { primary: "Plein", outline: "Contour", ghost: "Discret" }[p.variant] || p.variant); add("Nouvel onglet", p.newTab ? "oui" : "non"); }
+    if (it.type === "form") { add("Formulaire", PAGE.formName || "aucun (à choisir dans les réglages de la page)"); add("Publié", PAGE.formId ? (PAGE.formPublished ? "oui" : "non : la page ne peut pas être publiée") : "—"); add("Titre", it.heading); }
+    if (!node && it.type !== "layout" && it.type !== "form" && it.type !== "button") add("Titre", it.title || it.heading);
+    var bps = BPS.filter(function (b) { return it.styles && it.styles[b] && Object.keys(it.styles[b]).length; });
+    add("Réglages par écran", bps.length ? bps.map(bpLabel).join(", ") : "aucun (style par défaut)");
+    var sts = Object.keys(it.states || {});
+    if (sts.length) add("États stylés", sts.map(function (k) { return { hover: "survol", focus: "focus", active: "clic" }[k]; }).join(", "));
+    if (it.audience) add("Affiché à", (SPEC.audiences.find(function (a) { return a[0] === it.audience.who; }) || [0, it.audience.who])[1] + (it.audience.value !== undefined ? " " + it.audience.value : ""));
+    if (it.hideOn && it.hideOn.length) add("Masqué sur", it.hideOn.map(bpLabel).join(", "));
+    add("État", [it.hidden ? "masqué" : "", lockedDeep(it.id) ? "verrouillé" : ""].filter(Boolean).join(", ") || "visible, modifiable");
+    return rows;
+  }
+  var infoOpen = store.get("info-open", true);
+  function infoBlock(it) {
+    var det = h("details", { class: "pb-info", "data-pb-info": it ? it.id : "page" });
+    det.open = infoOpen;
+    det.addEventListener("toggle", function () { infoOpen = det.open; store.set("info-open", infoOpen); });
+    det.appendChild(h("summary", { text: "Informations" }));
+    det.appendChild(h("dl", { class: "pb-meta" }, infoRows(it).reduce(function (all, r) { return all.concat(h("dt", { text: r[0] }), h("dd", { text: r[1] })); }, [])));
+    return det;
+  }
+  // Mesures du canevas changées (nouveau rendu, écran, zoom) : seules les informations sont redessinées
+  function refreshInfo() {
+    var box = $("[data-pb-info]");
+    if (!box) return;
+    var it = box.dataset.pbInfo === "page" ? null : byId(box.dataset.pbInfo);
+    if (box.dataset.pbInfo !== "page" && !it) return;
+    var dl = box.querySelector("dl");
+    dl.replaceWith(h("dl", { class: "pb-meta" }, infoRows(it).reduce(function (all, r) { return all.concat(h("dt", { text: r[0] }), h("dd", { text: r[1] })); }, [])));
+  }
+
   // ---------- Inspecteur ----------
   var inspTab = store.get("insp-tab", "content");
   function renderInspector() {
@@ -1079,7 +1214,8 @@
     fieldSeq = 0;
     var items = selectedItems();
     if (!items.length) {
-      box.appendChild(h("div", { class: "pb-insp-head" }, h("h2", { text: "Page" }), h("p", { class: "pb-hint", text: content.sections.length + " section(s). Cliquez un élément dans la page ou dans les calques." })));
+      box.appendChild(h("div", { class: "pb-insp-head" }, h("p", { class: "pb-kind", text: "Page" }), h("h2", { text: PAGE.name }), h("p", { class: "pb-hint", text: "Cliquez un élément dans la page ou dans les calques pour le régler." })));
+      box.appendChild(infoBlock(null));
       box.appendChild(h("p", { class: "pb-note", text: "Titre, description, SEO et couleurs de la page : onglet « Page » du panneau de gauche." }));
       return;
     }
@@ -1088,7 +1224,8 @@
     var locked = lockedAny(items);
     var l = locate(it.id);
     var crumbs = multi ? null : h("nav", { class: "pb-crumbs", "aria-label": "Parents de l'élément" }, [h("button", { type: "button", onclick: function () { select(null); }, text: "Page" })].concat(l.ancestors.map(function (a) { return h("button", { type: "button", onclick: function () { select(a.id); }, text: nameOf(a) }); })));
-    box.appendChild(h("div", { class: "pb-insp-head" }, crumbs, h("h2", { text: multi ? items.length + " éléments sélectionnés" : nameOf(it) }), h("p", { class: "pb-hint", text: multi ? "Les réglages de style s'appliquent à tous." : typeLabel(it) + (kidsOf(it) ? " · " + kidsOf(it).length + " enfant(s)" : "") })));
+    box.appendChild(h("div", { class: "pb-insp-head" }, crumbs, h("p", { class: "pb-kind", text: multi ? "Sélection multiple" : (KIND_LABEL[it.type] || typeLabel(it)) }), h("h2", { text: multi ? items.length + " éléments sélectionnés" : nameOf(it) }), h("p", { class: "pb-hint", text: multi ? "Les réglages de style s'appliquent à tous." : typeLabel(it) + (kidsOf(it) ? " · " + kidsOf(it).length + " enfant(s)" : "") })));
+    if (!multi) box.appendChild(infoBlock(it));
     if (locked && canWrite) box.appendChild(h("p", { class: "pb-note is-warn", text: "Verrouillé : déverrouillez-le (cadenas dans les calques) pour le modifier, le déplacer ou le supprimer." }));
     var tabs = multi ? [["style", "Style"], ["advanced", "Actions"]] : it.type === "component" ? [["content", "Contenu"], ["advanced", "Avancé"]] : [["content", "Contenu"], ["style", "Style"], ["advanced", "Avancé"]];
     if (!tabs.some(function (t) { return t[0] === inspTab; })) inspTab = tabs[0][0];
@@ -1210,7 +1347,7 @@
         }, { multiline: fd[1] === "textarea" || fd[1] === "markdown" || fd[1] === "lines", disabled: !canWrite || lockedDeep(s.id) }));
       });
       if (canWrite) holder.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () {
-        change(function () { var l = locate(s.id); var copy = reId(clone(sec)); copy.id = s.id; ensureIds([copy]); if (s.hideOn) copy.hideOn = s.hideOn; if (s.name) copy.name = s.name; l.list[l.index] = copy; });
+        change(function () { var l = locate(s.id); var copy = markSection(reId(clone(sec))); copy.id = s.id; ensureIds([copy]); if (s.hideOn) copy.hideOn = s.hideOn; if (s.name) copy.name = s.name; l.list[l.index] = copy; });
         toast("Composant détaché : cette section est maintenant une copie indépendante.");
       } }, "Détacher (copie indépendante)"));
     }, function (err) { holder.textContent = ""; holder.appendChild(h("p", { class: "pb-note is-warn", text: err.message })); });
@@ -1414,7 +1551,11 @@
   // ---------- Canevas (rendu réel) ----------
   var renderTimer = null, renderSeq = 0, pendingRender = false;
   var payload = function () { return { sections: content.sections, title: content.title, description: content.description, theme: content.theme, seo: content.seo }; };
-  function scheduleRender() { if (editing) { pendingRender = true; return; } clearTimeout(renderTimer); renderTimer = setTimeout(renderCanvas, 220); }
+  // Pas de nouveau rendu pendant une édition directe ou un geste dans le canevas (guide, poignée) : le document serait
+  // remplacé sous la souris ; le rendu attend la fin du geste
+  var gesture = false;
+  function scheduleRender() { if (editing || gesture) { pendingRender = true; return; } clearTimeout(renderTimer); renderTimer = setTimeout(renderCanvas, 220); }
+  function endGesture() { gesture = false; if (pendingRender && !editing) { pendingRender = false; scheduleRender(); } }
   var errorItemId = null;
   // « Section 3 › élément 2 « Titre » : … » → identifiant de l'élément en cause (mis en évidence dans les calques)
   function itemFromError(message) {
@@ -1425,7 +1566,7 @@
     return it ? it.id : null;
   }
   function renderCanvas() {
-    if (editing) { pendingRender = true; return; }
+    if (editing || gesture) { pendingRender = true; return; }
     var seq = ++renderSeq;
     fetch("/marketing/pages/" + PAGE.id + "/rendu", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: payload() }) })
       .then(function (r) { return r.text().then(function (text) { return { ok: r.ok, text: text }; }); })
@@ -1443,7 +1584,7 @@
         }
         errBox.hidden = true;
         if (errorItemId) { errorItemId = null; markError(); }
-        if (editing) { pendingRender = true; return; }
+        if (editing || gesture) { pendingRender = true; return; }
         var y = 0;
         try { y = frame.contentWindow.scrollY; } catch (e) { y = 0; }
         frame.onload = function () { setupCanvas(y); };
@@ -1462,6 +1603,7 @@
     if (aids.grid) { var g = doc.createElement("div"); g.className = "pb-grid-overlay"; for (var i = 0; i < 12; i++) g.appendChild(doc.createElement("span")); doc.body.appendChild(g); }
     frame.contentWindow.scrollTo(0, y);
     doc.addEventListener("click", function (e) {
+      if (selectedGuide) { selectedGuide = null; drawGuides(); }
       if (tool === "hand") { e.preventDefault(); return; }
       if (editing && editing.el.contains(e.target)) return;
       e.preventDefault();
@@ -1527,15 +1669,25 @@
       performDrop(t.target);
     });
     frame.contentWindow.addEventListener("scroll", function () { drawOverlays(); drawRulers(); }, { passive: true });
+    // Position du pointeur reportée sur les règles
+    var raf = 0;
+    doc.addEventListener("mousemove", function (e) {
+      if (!aids.rulers) return;
+      pointerPage = { x: e.clientX + frame.contentWindow.scrollX, y: e.clientY + frame.contentWindow.scrollY };
+      if (!raf) raf = requestAnimationFrame(function () { raf = 0; drawRulers(); });
+    });
+    doc.addEventListener("mouseleave", function () { pointerPage = null; drawRulers(); });
     markCanvasSelection(false);
     drawRulers();
+    drawGuides();
+    refreshInfo();
   }
   // Cible de dépôt dans le canevas : avant / après un élément (selon l'axe de son parent) ou dans un conteneur
   function canvasDropTarget(e) {
     var doc = frame.contentDocument;
     var el = targetOf(e);
     var sample = dragNew ? dragNew.sample : byId((dragIds || [])[0]);
-    var placingNode = Boolean(sample && NT[sample.type]);
+    var placingNode = Boolean(sample && (dragNew ? NT[sample.type] && !sample.section : isNode(sample)));
     if (!el) return { target: { parent: null, index: content.sections.length }, el: null, pos: "end" };
     var l = locate(idOfEl(el));
     if (!l) return null;
@@ -1642,18 +1794,24 @@
     var doc = frame.contentDocument;
     var start = { x: e.clientX, y: e.clientY, w: el.getBoundingClientRect().width, h: el.getBoundingClientRect().height };
     var dim = doc.createElement("div"); dim.className = "pb-dim"; doc.body.appendChild(dim);
+    gesture = true;
     var snap = function (v) { return aids.snap ? Math.round(v / 8) * 8 : Math.round(v); };
     var cur = { w: null, h: null };
+    // Magnétisme : le bord droit / bas se cale sur un guide proche (6 px), sinon sur le pas de 8 px
+    var origin = pageRect(el);
+    var toGuide = function (edge, list) { if (!aids.snap || aids.guides === false) return null; var best = null; list.forEach(function (g) { if (Math.abs(g - edge) <= 6 && (best === null || Math.abs(g - edge) < Math.abs(best - edge))) best = g; }); return best; };
     var move = function (ev) {
-      if (dir !== "s") { cur.w = Math.max(16, snap(start.w + ev.clientX - start.x)); el.style.width = cur.w + "px"; }
-      if (dir !== "e") { cur.h = Math.max(8, snap(start.h + ev.clientY - start.y)); el.style.height = cur.h + "px"; }
+      var gl = guidesFor(), onGuide = false;
+      if (dir !== "s") { var w = start.w + ev.clientX - start.x; var gv = toGuide(origin.left + w, gl.v); cur.w = Math.max(16, gv !== null ? Math.round(gv - origin.left) : snap(w)); onGuide = onGuide || gv !== null; el.style.width = cur.w + "px"; }
+      if (dir !== "e") { var hh = start.h + ev.clientY - start.y; var gh = toGuide(origin.top + hh, gl.h); cur.h = Math.max(8, gh !== null ? Math.round(gh - origin.top) : snap(hh)); onGuide = onGuide || gh !== null; el.style.height = cur.h + "px"; }
       var r = pageRect(el);
-      dim.textContent = Math.round(r.width) + " × " + Math.round(r.height);
+      dim.textContent = Math.round(r.width) + " × " + Math.round(r.height) + (onGuide ? " · calé sur un guide" : "");
       dim.style.left = (r.left + r.width + 8) + "px"; dim.style.top = (r.top + r.height + 8) + "px";
     };
     var up = function () {
       doc.removeEventListener("mousemove", move); doc.removeEventListener("mouseup", up); dim.remove();
-      if (cur.w === null && cur.h === null) return;
+      gesture = false;
+      if (cur.w === null && cur.h === null) { endGesture(); return; }
       change(function () {
         var s = styleSet(byId(id), device, "normal", true);
         if (cur.w !== null) s.width = cur.w + "px";
@@ -1677,12 +1835,13 @@
   var WIDTH = { desktop: 1280, tablet: 820, mobile: 390 };
   function setDevice(d) {
     if (editing) commitEdit();
+    selectedGuide = null;
     device = d;
     $$(".pb-top .pb-devices button").forEach(function (b) { b.setAttribute("aria-checked", String(b.dataset.device === d)); });
     wrap.dataset.device = d;
     applyZoom();
     renderInspector(); renderContext();
-    setTimeout(drawOverlays, 60);
+    setTimeout(function () { drawOverlays(); drawGuides(); drawRulers(); refreshInfo(); }, 60);
   }
   $$(".pb-top .pb-devices button").forEach(function (b) { b.addEventListener("click", function () { setDevice(b.dataset.device); }); });
   function applyZoom() {
@@ -1696,6 +1855,7 @@
     wrap.style.marginBottom = -((1 - zoom) * hgt) + "px";
     $("[data-pb-zoom='100']").textContent = Math.round(zoom * 100) + " %";
     drawRulers();
+    refreshInfo();
   }
   function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(2, Math.max(0.25, z)); applyZoom(); }
   $$("[data-pb-zoom]").forEach(function (b) { b.addEventListener("click", function () { var v = b.dataset.pbZoom; setZoom(v === "fit" ? "fit" : v === "100" ? 1 : v === "+" ? Math.round((zoom + 0.1) * 10) / 10 : Math.round((zoom - 0.1) * 10) / 10); }); });
@@ -1704,8 +1864,8 @@
   if (window.ResizeObserver) new ResizeObserver(function () { applyZoom(); }).observe(stage);
   function setAid(k, v) {
     aids[k] = v; store.set("aids", aids);
-    $$("[data-pb-toggle='" + k + "']").forEach(function (b) { b.setAttribute("aria-pressed", String(v)); });
-    if (k === "rulers") { $("[data-pb-ruler-x]").hidden = !v; $("[data-pb-ruler-y]").hidden = !v; $("[data-pb-canvas]").classList.toggle("has-rulers", v); drawRulers(); }
+    $$("[data-pb-toggle='" + k + "'], [data-aid='" + k + "']").forEach(function (b) { b.setAttribute("aria-pressed", String(k === "guides" ? v !== false : Boolean(v))); });
+    if (k === "rulers") { $("[data-pb-ruler-x]").hidden = !v; $("[data-pb-ruler-y]").hidden = !v; $("[data-pb-ruler-corner]").hidden = !v; $("[data-pb-canvas]").classList.toggle("has-rulers", v); drawRulers(); }
     var doc = frame.contentDocument;
     if (k === "outlines" && doc && doc.body) doc.body.classList.toggle("pb-outlines", v);
     if (k === "grid" && doc && doc.body) {
@@ -1713,41 +1873,231 @@
       if (v && !g) { g = doc.createElement("div"); g.className = "pb-grid-overlay"; for (var i = 0; i < 12; i++) g.appendChild(doc.createElement("span")); doc.body.appendChild(g); }
       if (!v && g) g.remove();
     }
+    if (k === "guides" || k === "guidesLocked") { drawGuides(); drawRulers(); }
   }
   $$("[data-pb-toggle]").forEach(function (b) { b.addEventListener("click", function () { setAid(b.dataset.pbToggle, !aids[b.dataset.pbToggle]); }); });
-  // Règles : pixels de la page (axe horizontal = largeur de l'écran ; vertical = position dans la page)
+
+  // ---------- Règles et guides ----------
+  // Coordonnées : celles de la page affichée, en pixels CSS (origine : coin haut gauche de la page ; l'axe vertical
+  // suit le défilement de la page). Le zoom ne change que l'échelle d'affichage. Les guides sont une préférence
+  // d'interface propre à chaque page et à chaque écran (jamais enregistrés dans le contenu de la page).
+  var RULER_UNIT = { name: "px", perPx: 1 }; // une autre unité : nombre d'unités par pixel CSS
+  var RULER = 20;
+  var guides = store.get("guides-" + PAGE.id, {});
+  var selectedGuide = null;
+  var pointerPage = null;
+  var guidesFor = function (d) { var g = guides[d || device]; if (!g) g = guides[d || device] = { h: [], v: [] }; return g; };
+  var saveGuides = function () { store.set("guides-" + PAGE.id, guides); };
+  function rulerStep() {
+    var steps = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000];
+    for (var i = 0; i < steps.length; i++) if (steps[i] * zoom >= 56) return steps[i];
+    return 5000;
+  }
   function drawRulers() {
     if (!aids.rulers) return;
     var rx = $("[data-pb-ruler-x]"), ry = $("[data-pb-ruler-y]");
     var cr = $("[data-pb-canvas]").getBoundingClientRect(), fr = frame.getBoundingClientRect();
     var dpr = window.devicePixelRatio || 1;
-    var paint = function (cv, len, horizontal, origin, offset) {
-      cv.width = (horizontal ? len : 20) * dpr; cv.height = (horizontal ? 20 : len) * dpr;
-      cv.style.width = (horizontal ? len : 20) + "px"; cv.style.height = (horizontal ? 20 : len) + "px";
-      var g = cv.getContext("2d"); g.scale(dpr, dpr);
-      g.fillStyle = "#f8fafc"; g.fillRect(0, 0, horizontal ? len : 20, horizontal ? 20 : len);
-      g.fillStyle = "#475569"; g.strokeStyle = "#94a3b8"; g.font = "9px system-ui, sans-serif"; g.lineWidth = 1;
-      var step = zoom >= 1 ? 50 : zoom >= 0.5 ? 100 : 200;
-      var first = Math.floor(offset / step) * step - step;
-      for (var v = first; v < offset + len / zoom + step; v += step / 5) {
-        var pos = origin + (v - offset) * zoom;
+    var sy = 0, sx = 0; try { sy = frame.contentWindow.scrollY; sx = frame.contentWindow.scrollX; } catch (e) { sy = 0; }
+    var step = rulerStep();
+    var minor = step * zoom >= 120 ? step / 10 : step * zoom >= 60 ? step / 5 : step / 2;
+    var g = guidesFor();
+    var paint = function (cv, len, horizontal, origin, offset, marks, pointer) {
+      cv.width = Math.max(1, Math.round((horizontal ? len : RULER) * dpr)); cv.height = Math.max(1, Math.round((horizontal ? RULER : len) * dpr));
+      cv.style.width = (horizontal ? len : RULER) + "px"; cv.style.height = (horizontal ? RULER : len) + "px";
+      var c = cv.getContext("2d"); c.scale(dpr, dpr);
+      c.fillStyle = "#f8fafc"; c.fillRect(0, 0, horizontal ? len : RULER, horizontal ? RULER : len);
+      c.strokeStyle = "#cbd5e1"; c.beginPath(); if (horizontal) { c.moveTo(0, RULER - 0.5); c.lineTo(len, RULER - 0.5); } else { c.moveTo(RULER - 0.5, 0); c.lineTo(RULER - 0.5, len); } c.stroke();
+      c.fillStyle = "#475569"; c.strokeStyle = "#94a3b8"; c.font = "9px system-ui, sans-serif"; c.lineWidth = 1;
+      var from = Math.floor((offset - origin / zoom) / minor) * minor;
+      var to = offset + (len - origin) / zoom;
+      for (var v = from; v <= to; v += minor) {
+        var pos = Math.round(origin + (v - offset) * zoom) + 0.5;
         if (pos < 0 || pos > len) continue;
-        var major = Math.round(v) % step === 0;
-        g.beginPath();
-        if (horizontal) { g.moveTo(pos + 0.5, major ? 4 : 13); g.lineTo(pos + 0.5, 20); } else { g.moveTo(major ? 4 : 13, pos + 0.5); g.lineTo(20, pos + 0.5); }
-        g.stroke();
-        if (major && v >= 0) { if (horizontal) g.fillText(String(Math.round(v)), pos + 3, 10); else { g.save(); g.translate(9, pos + 3); g.rotate(Math.PI / 2); g.fillText(String(Math.round(v)), 0, 0); g.restore(); } }
+        var major = Math.abs(v / step - Math.round(v / step)) < 1e-6;
+        var half = !major && Math.abs((v * 2) / step - Math.round((v * 2) / step)) < 1e-6;
+        var tick = major ? RULER - 4 : half ? 8 : 5;
+        c.beginPath();
+        if (horizontal) { c.moveTo(pos, RULER - tick); c.lineTo(pos, RULER); } else { c.moveTo(RULER - tick, pos); c.lineTo(RULER, pos); }
+        c.stroke();
+        if (major) {
+          var text = String(Math.round(v * RULER_UNIT.perPx));
+          if (horizontal) c.fillText(text, pos + 3, 9);
+          else { c.save(); c.translate(9, pos + 3); c.rotate(Math.PI / 2); c.fillText(text, 0, 0); c.restore(); }
+        }
       }
+      // Guides de cet écran, et position du pointeur dans la page
+      c.fillStyle = "#0891b2";
+      marks.forEach(function (m) { var p = origin + (m - offset) * zoom; if (p < 0 || p > len) return; c.beginPath(); if (horizontal) { c.moveTo(p - 4, 0); c.lineTo(p + 4, 0); c.lineTo(p, 6); } else { c.moveTo(0, p - 4); c.lineTo(0, p + 4); c.lineTo(6, p); } c.fill(); });
+      if (pointer !== null) { var pp = Math.round(origin + (pointer - offset) * zoom) + 0.5; if (pp >= 0 && pp <= len) { c.strokeStyle = "#e11d48"; c.beginPath(); if (horizontal) { c.moveTo(pp, 0); c.lineTo(pp, RULER); } else { c.moveTo(0, pp); c.lineTo(RULER, pp); } c.stroke(); } }
     };
-    var sy = 0; try { sy = frame.contentWindow.scrollY; } catch (e) { sy = 0; }
-    paint(rx, cr.width, true, fr.left - cr.left, 0);
-    paint(ry, cr.height, false, fr.top - cr.top, sy);
+    paint(rx, Math.max(0, cr.width - RULER), true, fr.left - (cr.left + RULER), sx, g.v, pointerPage ? pointerPage.x : null);
+    paint(ry, Math.max(0, cr.height - RULER), false, fr.top - (cr.top + RULER), sy, g.h, pointerPage ? pointerPage.y : null);
   }
   stage.addEventListener("scroll", drawRulers, { passive: true });
+  // Position dans la page (coordonnées CSS) d'un point de l'écran ; inside : au-dessus de la page affichée
+  function pageAt(clientX, clientY) {
+    var fr = frame.getBoundingClientRect();
+    var win = frame.contentWindow;
+    return { x: Math.round((clientX - fr.left) / zoom + win.scrollX), y: Math.round((clientY - fr.top) / zoom + win.scrollY), inside: clientX >= fr.left && clientX <= fr.right && clientY >= fr.top && clientY <= fr.bottom };
+  }
+  // Guides dans le canevas : lignes en coordonnées de page (elles suivent le défilement et le zoom)
+  function drawGuides() {
+    var doc = frame.contentDocument;
+    if (!doc || !doc.body) return;
+    $$(".pb-guide", doc).forEach(function (x) { x.remove(); });
+    if (aids.guides === false) return;
+    var g = guidesFor();
+    var H = doc.documentElement.scrollHeight;
+    ["h", "v"].forEach(function (axis) {
+      g[axis].forEach(function (pos, i) {
+        var el = doc.createElement("div");
+        el.className = "pb-guide pb-guide-" + axis + (selectedGuide && selectedGuide.axis === axis && selectedGuide.i === i ? " is-selected" : "") + (aids.guidesLocked ? " is-locked" : "");
+        if (axis === "h") el.style.top = pos + "px"; else { el.style.left = pos + "px"; el.style.height = H + "px"; }
+        el.setAttribute("title", (axis === "h" ? "Guide horizontal : " : "Guide vertical : ") + pos + " " + RULER_UNIT.name + (aids.guidesLocked ? " (verrouillé)" : " — glisser pour déplacer, hors de la page pour supprimer"));
+        el.addEventListener("mousedown", function (e) { guideDrag(e, axis, i, el); });
+        el.addEventListener("contextmenu", function (e) { e.preventDefault(); e.stopPropagation(); selectedGuide = { axis: axis, i: i }; drawGuides(); var r = frame.getBoundingClientRect(); guideMenu(r.left + e.clientX * zoom, r.top + e.clientY * zoom); });
+        el.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); });
+        doc.body.appendChild(el);
+      });
+    });
+  }
+  function guideLabel(doc, axis, pos) {
+    var lab = doc.querySelector(".pb-guide-label") || doc.body.appendChild(Object.assign(doc.createElement("div"), { className: "pb-guide-label" }));
+    var win = frame.contentWindow;
+    lab.textContent = pos + " " + RULER_UNIT.name;
+    lab.style.left = (axis === "v" ? pos + 6 : win.scrollX + 6) + "px";
+    lab.style.top = (axis === "h" ? pos + 6 : win.scrollY + 6) + "px";
+    return lab;
+  }
+  // Déplacer un guide (dans le canevas) ; relâché au bord de la page (vers la règle) : supprimé
+  function guideDrag(e, axis, i, el) {
+    if (e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    selectedGuide = { axis: axis, i: i };
+    if (aids.guidesLocked) { drawGuides(); toast("Guides verrouillés : clic droit sur une règle pour les déverrouiller."); return; }
+    var doc = frame.contentDocument, win = frame.contentWindow;
+    gesture = true;
+    var moved = false, out = false, cur = guidesFor()[axis][i];
+    el.classList.add("is-selected");
+    var place = function (v, isOut) {
+      moved = true;
+      out = isOut;
+      cur = Math.max(0, Math.round(v));
+      el.style[axis === "h" ? "top" : "left"] = cur + "px";
+      el.classList.toggle("is-removing", out);
+      if (out) { var l0 = doc.querySelector(".pb-guide-label"); if (l0) l0.textContent = "Relâcher : supprimer"; } else guideLabel(doc, axis, cur);
+      drawRulers();
+    };
+    // Dans la page (coordonnées du canevas) ; vers le bord de la page : suppression
+    var move = function (ev) { pointerPage = { x: ev.clientX + win.scrollX, y: ev.clientY + win.scrollY }; place(axis === "h" ? ev.clientY + win.scrollY : ev.clientX + win.scrollX, axis === "h" ? ev.clientY < 4 : ev.clientX < 4); };
+    // Hors de la page (règles, panneaux) : le déplacement continue ; relâché du côté de sa règle (au-dessus ou à
+    // gauche de la page), le guide est supprimé
+    var pmove = function (ev) {
+      var fr = frame.getBoundingClientRect(), pp = pageAt(ev.clientX, ev.clientY);
+      place(axis === "h" ? pp.y : pp.x, axis === "h" ? ev.clientY < fr.top : ev.clientX < fr.left);
+    };
+    var finished = false;
+    var up = function () {
+      if (finished) return;
+      finished = true;
+      doc.removeEventListener("mousemove", move); doc.removeEventListener("mouseup", up);
+      document.removeEventListener("mousemove", pmove); document.removeEventListener("mouseup", up);
+      var lab = doc.querySelector(".pb-guide-label"); if (lab) lab.remove();
+      if (moved) {
+        var g = guidesFor();
+        if (out) { g[axis].splice(i, 1); selectedGuide = null; toast("Guide supprimé."); }
+        else g[axis][i] = cur;
+        saveGuides();
+      }
+      drawGuides(); drawRulers();
+      endGesture();
+    };
+    doc.addEventListener("mousemove", move); doc.addEventListener("mouseup", up);
+    document.addEventListener("mousemove", pmove); document.addEventListener("mouseup", up);
+  }
+  // Créer un guide en le tirant depuis une règle (horizontale → guide horizontal, verticale → guide vertical)
+  function rulerDrag(axis) {
+    return function (e) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      if (aids.guides === false) setAid("guides", true);
+      var cv = e.currentTarget;
+      cv.setPointerCapture(e.pointerId);
+      var doc = frame.contentDocument;
+      if (!doc || !doc.body) return;
+      gesture = true;
+      var temp = doc.createElement("div");
+      temp.className = "pb-guide pb-guide-" + axis + " is-temp";
+      if (axis === "v") temp.style.height = doc.documentElement.scrollHeight + "px";
+      temp.style.display = "none";
+      doc.body.appendChild(temp);
+      var pos = null;
+      var move = function (ev) {
+        var p = pageAt(ev.clientX, ev.clientY);
+        // Guide horizontal : seule la hauteur compte (relâché à côté d'une page étroite, il est créé quand même) ;
+        // guide vertical : seule la position horizontale compte
+        var fr = frame.getBoundingClientRect(), cv0 = $("[data-pb-canvas]").getBoundingClientRect();
+        var inBand = axis === "h" ? ev.clientY >= fr.top && ev.clientY <= fr.bottom && ev.clientX >= cv0.left && ev.clientX <= cv0.right
+          : ev.clientX >= fr.left && ev.clientX <= fr.right && ev.clientY >= cv0.top && ev.clientY <= cv0.bottom;
+        pos = inBand ? Math.max(0, axis === "h" ? p.y : p.x) : null;
+        temp.style.display = pos === null ? "none" : "";
+        if (pos !== null) { temp.style[axis === "h" ? "top" : "left"] = pos + "px"; guideLabel(doc, axis, pos); }
+        pointerPage = p.inside ? { x: p.x, y: p.y } : null;
+        drawRulers();
+      };
+      var up = function () {
+        cv.removeEventListener("pointermove", move); cv.removeEventListener("pointerup", up);
+        temp.remove();
+        var lab = doc.querySelector(".pb-guide-label"); if (lab) lab.remove();
+        if (pos !== null) {
+          var g = guidesFor();
+          g[axis].push(pos);
+          selectedGuide = { axis: axis, i: g[axis].length - 1 };
+          saveGuides();
+          toast((axis === "h" ? "Guide horizontal" : "Guide vertical") + " à " + pos + " " + RULER_UNIT.name + " (écran " + bpLabel(device).toLowerCase() + "). Glissez-le hors de la page pour le supprimer.");
+        }
+        drawGuides(); drawRulers();
+        endGesture();
+      };
+      cv.addEventListener("pointermove", move); cv.addEventListener("pointerup", up);
+    };
+  }
+  $("[data-pb-ruler-x]").addEventListener("pointerdown", rulerDrag("h"));
+  $("[data-pb-ruler-y]").addEventListener("pointerdown", rulerDrag("v"));
+  function removeSelectedGuide() {
+    if (!selectedGuide) return false;
+    var g = guidesFor();
+    if (g[selectedGuide.axis][selectedGuide.i] === undefined) { selectedGuide = null; return false; }
+    g[selectedGuide.axis].splice(selectedGuide.i, 1);
+    selectedGuide = null;
+    saveGuides(); drawGuides(); drawRulers();
+    toast("Guide supprimé.");
+    return true;
+  }
+  function clearGuides() { guides[device] = { h: [], v: [] }; selectedGuide = null; saveGuides(); drawGuides(); drawRulers(); toast("Guides de l'écran « " + bpLabel(device) + " » supprimés."); }
+  function guideMenu(x, y) {
+    var entries = [
+      selectedGuide ? ["Supprimer ce guide", removeSelectedGuide, false, "Suppr"] : null,
+      [aids.guidesLocked ? "Déverrouiller les guides" : "Verrouiller les guides", function () { setAid("guidesLocked", !aids.guidesLocked); }, false],
+      [aids.guides === false ? "Afficher les guides" : "Masquer les guides", function () { setAid("guides", aids.guides === false); }, false],
+      ["Supprimer tous les guides de cet écran", clearGuides, !(guidesFor().h.length || guidesFor().v.length)],
+    ].filter(Boolean);
+    menu.textContent = "";
+    entries.forEach(function (en) { menu.appendChild(h("button", { type: "button", role: "menuitem", class: "pb-menu-item", disabled: en[2] || null, tabindex: "-1", onclick: function () { closeMenu(); en[1](); } }, h("span", { text: en[0] }), en[3] ? h("kbd", { text: en[3] }) : null)); });
+    menu.hidden = false;
+    var r = menu.getBoundingClientRect();
+    menu.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + "px";
+    menu.style.top = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + "px";
+    var first = menu.querySelector(".pb-menu-item:not([disabled])"); if (first) first.focus();
+  }
+  ["[data-pb-ruler-x]", "[data-pb-ruler-y]", "[data-pb-ruler-corner]"].forEach(function (sel) { $(sel).addEventListener("contextmenu", function (e) { e.preventDefault(); selectedGuide = null; guideMenu(e.clientX, e.clientY); }); });
 
   // ---------- Panneaux redimensionnables ----------
   var main = $("[data-pb-main]");
   function applyPanels() {
+    main.style.setProperty("--pb-tools-w", panels.toolsExpanded ? "176px" : "48px");
+    main.classList.toggle("is-tools-expanded", Boolean(panels.toolsExpanded));
     main.style.setProperty("--pb-left-w", panels.left + "px");
     main.style.setProperty("--pb-right-w", panels.right + "px");
     main.classList.toggle("is-left-hidden", panels.leftHidden);
@@ -2036,7 +2386,10 @@
       { label: "Sélectionner le parent", run: function () { var l = locate(selection[0]); if (l && l.parent) select(l.parent.id); }, off: !has },
       { label: "Écran : ordinateur", run: function () { setDevice("desktop"); } }, { label: "Écran : tablette", run: function () { setDevice("tablet"); } }, { label: "Écran : mobile", run: function () { setDevice("mobile"); } },
       { label: "Zoom : ajuster à l'écran", run: function () { setZoom("fit"); } }, { label: "Zoom : 100 %", run: function () { setZoom(1); } },
-      { label: "Grille : afficher / masquer", run: function () { setAid("grid", !aids.grid); } }, { label: "Contours : afficher / masquer", run: function () { setAid("outlines", !aids.outlines); } }, { label: "Règles : afficher / masquer", run: function () { setAid("rulers", !aids.rulers); } },
+      { label: "Grille : afficher / masquer", run: function () { setAid("grid", !aids.grid); } },
+      { label: "Guides : afficher / masquer", run: function () { setAid("guides", aids.guides === false); } },
+      { label: aids.guidesLocked ? "Guides : déverrouiller" : "Guides : verrouiller", run: function () { setAid("guidesLocked", !aids.guidesLocked); } },
+      { label: "Guides : tout supprimer (cet écran)", run: clearGuides, off: !(guidesFor().h.length || guidesFor().v.length) }, { label: "Contours : afficher / masquer", run: function () { setAid("outlines", !aids.outlines); } }, { label: "Règles : afficher / masquer", run: function () { setAid("rulers", !aids.rulers); } },
       { label: "Panneau des éléments : afficher / masquer", run: function () { togglePanel("left"); } }, { label: "Calques et inspecteur : afficher / masquer", run: function () { togglePanel("right"); } },
       { label: "Réglages de la page (SEO, titre)", run: function () { openTab($("#pb-tab-page")); } },
     ]).filter(function (c) { return !c.off; });
@@ -2169,7 +2522,9 @@
     if (mod && e.altKey && (k === "c" || e.code === "KeyC")) { e.preventDefault(); copyStyle(); return; }
     if (mod && e.altKey && (k === "v" || e.code === "KeyV")) { e.preventDefault(); pasteStyle(); return; }
     if (mod && k === "c") { e.preventDefault(); copySelected(false); return; }
-    if (k === "escape") { if (selection.length) select(null); return; }
+    if (k === "escape") { if (selectedGuide) { selectedGuide = null; drawGuides(); return; } if (selection.length) select(null); return; }
+    if ((k === "delete" || k === "backspace") && selectedGuide) { e.preventDefault(); removeSelectedGuide(); return; }
+    if (!mod && !e.altKey && !e.shiftKey && k === "r") { e.preventDefault(); setAid("rulers", !aids.rulers); return; }
     if (!canWrite) return;
     if (mod && k === "x") { e.preventDefault(); copySelected(true); return; }
     if (mod && k === "v") { e.preventDefault(); paste(); return; }
@@ -2202,7 +2557,7 @@
   })();
   if (!canWrite) setSave("Lecture seule");
   Object.keys(aids).forEach(function (k) { $$("[data-pb-toggle='" + k + "']").forEach(function (b) { b.setAttribute("aria-pressed", String(aids[k])); }); });
-  if (aids.rulers) { $("[data-pb-ruler-x]").hidden = false; $("[data-pb-ruler-y]").hidden = false; $("[data-pb-canvas]").classList.add("has-rulers"); }
+  if (aids.rulers) { $("[data-pb-ruler-x]").hidden = false; $("[data-pb-ruler-y]").hidden = false; $("[data-pb-ruler-corner]").hidden = false; $("[data-pb-canvas]").classList.add("has-rulers"); }
   zoomFit = true;
   applyPanels();
   updateStatus();

@@ -39,7 +39,7 @@
       <div class="pb-group-btns" role="group" aria-label="Aides visuelles">
         <button type="button" class="pb-icon-btn" data-pb-toggle="grid" aria-pressed="false" data-tip="Grille de 12 colonnes" aria-label="Grille"><%- icon("columns", { size: 15 }) %></button>
         <button type="button" class="pb-icon-btn" data-pb-toggle="outlines" aria-pressed="false" data-tip="Contours de tous les éléments" aria-label="Contours des éléments"><%- icon("borderBox", { size: 15 }) %></button>
-        <button type="button" class="pb-icon-btn" data-pb-toggle="rulers" aria-pressed="false" data-tip="Règles en pixels" aria-label="Règles"><%- icon("spacing", { size: 15 }) %></button>
+        <button type="button" class="pb-icon-btn" data-pb-toggle="rulers" aria-pressed="false" data-tip="Règles et guides (R)" aria-label="Règles"><%- icon("spacing", { size: 15 }) %></button>
         <button type="button" class="pb-icon-btn" data-pb-toggle="snap" aria-pressed="true" data-tip="Magnétisme : redimensionner par pas de 8 px" aria-label="Magnétisme"><%- icon("grip", { size: 15 }) %></button>
       </div>
       <span class="pb-save" data-pb-save role="status" aria-live="polite"></span>
@@ -85,8 +85,9 @@
     <%# ---------- Canevas ---------- %>
     <main class="pb-canvas" id="pb-canvas" tabindex="-1" aria-label="Page en cours d'édition" data-pb-canvas>
       <p class="pb-error" data-pb-render-error role="alert" hidden></p>
-      <canvas class="pb-ruler pb-ruler-x" data-pb-ruler-x aria-hidden="true" hidden></canvas>
-      <canvas class="pb-ruler pb-ruler-y" data-pb-ruler-y aria-hidden="true" hidden></canvas>
+      <div class="pb-ruler-corner" data-pb-ruler-corner hidden title="Unité : pixels. Clic droit : guides">px</div>
+      <canvas class="pb-ruler pb-ruler-x" data-pb-ruler-x aria-hidden="true" hidden title="Règle horizontale : tirez vers la page pour créer un guide horizontal"></canvas>
+      <canvas class="pb-ruler pb-ruler-y" data-pb-ruler-y aria-hidden="true" hidden title="Règle verticale : tirez vers la page pour créer un guide vertical"></canvas>
       <div class="pb-stage" data-pb-stage>
         <div class="pb-frame-wrap" data-pb-frame-wrap data-device="desktop">
           <iframe class="pb-frame" data-pb-frame title="Page en cours d'édition"></iframe>
@@ -156,7 +157,7 @@
   <div class="pb-menu" data-pb-menu role="menu" aria-label="Actions" hidden></div>
   <div class="pb-toast" data-pb-toast role="status" aria-live="polite" hidden></div>
 
-  <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone"].concat(spec.types.map((t) => t.icon)).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
+  <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone"].concat(spec.types.map((t) => t.icon)).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
   <script type="application/json" id="pb-boot"><%- boot %></script>
   <script src="<%= asset('/js/page-builder.js') %>" defer></script>
 </body>

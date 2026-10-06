@@ -285,3 +285,15 @@ body.pb-hand,body.pb-hand *{cursor:grab}
 /* Personnalisation (canevas de l'éditeur) : public d'affichage indiqué sur la section ou l'élément */
 .lp-builder [data-audience-label] { position: relative; }
 .lp-builder [data-audience-label]::after { content: "Affiché à : " attr(data-audience-label); position: absolute; top: 4px; right: 4px; z-index: 108; padding: 2px 7px; border-radius: 4px; background: #0f766e; color: #fff; font: 600 11px/1.6 system-ui, sans-serif; pointer-events: none; white-space: nowrap; }
+/* Guides (règles du Page Builder) : ligne fine, zone de prise de 9 px, valeur affichée pendant le déplacement */
+.pb-guide { position: absolute; z-index: 111; }
+.pb-guide-h { left: 0; right: 0; height: 9px; margin-top: -4px; cursor: row-resize; }
+.pb-guide-v { top: 0; width: 9px; margin-left: -4px; cursor: col-resize; }
+.pb-guide::before { content: ""; position: absolute; background: #06b6d4; }
+.pb-guide-h::before { left: 0; right: 0; top: 4px; height: 1px; }
+.pb-guide-v::before { top: 0; bottom: 0; left: 4px; width: 1px; }
+.pb-guide.is-selected::before { background: #0e7490; box-shadow: 0 0 0 1px rgba(14, 116, 144, 0.35); }
+.pb-guide.is-temp::before { background: #22d3ee; }
+.pb-guide.is-locked { pointer-events: none; }
+.pb-guide-label { position: absolute; z-index: 115; padding: 1px 6px; border-radius: 4px; background: #0e7490; color: #fff; font: 600 11px/1.6 system-ui, sans-serif; pointer-events: none; white-space: nowrap; }
+.pb-guide.is-removing::before { background: #e11d48; }
