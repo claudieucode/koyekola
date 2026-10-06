@@ -28,6 +28,32 @@ const tree = () => layout([
 ]);
 
 describe("modèle (sans serveur)", () => {
+  test("largeurs des colonnes (proportions par écran), ancres uniques, options de lecture des vidéos", () => {
+    const { A } = freshMarketing();
+    const p = pages.createPage(A, { name: "Structures", kind: "page" });
+    const col = (id, styles) => ({ id, type: "column", children: [], ...(styles ? { styles } : {}) });
+    const vid = (id, props) => ({ id, type: "video", props: { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", title: "Démo", ...props } });
+    const page = (children) => pages.saveDraft(A, p.id, { sections: [layout(children)] }, { revision: pages.getPage(A, p.id).revision });
+    const r = page([
+      { id: "cols00000001", type: "columns", children: [col("cola00000001", { desktop: { flexGrow: 1.4 }, tablet: { flexGrow: 1.2 } }), col("colb00000001", { desktop: { flexGrow: 0.6 } })] },
+      { id: "head00000001", type: "heading", anchor: "Tarifs", props: { text: "Tarifs", level: 2 } },
+      vid("vid000000001", { autoplay: true, loop: true, controls: false, muted: false }),
+      vid("vid000000002", { muted: true }),
+    ]);
+    const css = nodes.pageCss(r.content.sections);
+    assert.match(css, /\.kw-n-cola00000001\{flex-grow:1\.4\}/);
+    assert.match(css, /@media \(max-width: 1023px\)\{[^}]*\.kw-n-cola00000001\{flex-grow:1\.2\}/);
+    const kids = r.content.sections[0].children;
+    assert.equal(kids[1].anchor, "tarifs", "ancre en minuscules");
+    assert.deepEqual(kids[2].props, { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", title: "Démo", autoplay: true, muted: true, loop: true, controls: false }, "lecture automatique : toujours sans le son");
+    assert.deepEqual(kids[3].props, { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", title: "Démo", muted: true });
+    assert.throws(() => page([col("cola00000001", { desktop: { flexGrow: 0 } })]), /valeur invalide pour « flexGrow »/);
+    assert.throws(() => page([vid("vid000000001", { controls: false })]), /sans commandes de lecture, activez la lecture automatique/);
+    assert.throws(() => page([{ id: "head00000001", type: "heading", anchor: "1-tarifs", props: { text: "A", level: 2 } }]), /ancre invalide/);
+    assert.throws(() => page([{ id: "head00000001", type: "heading", anchor: "main", props: { text: "A", level: 2 } }]), /réservée/);
+    assert.throws(() => page([{ id: "head00000001", type: "heading", anchor: "prix", props: { text: "A", level: 2 } }, { id: "head00000002", type: "heading", anchor: "prix", props: { text: "B", level: 2 } }]), /déjà utilisée/);
+  });
+
   test("arbre imbriqué validé : identifiants gardés, styles par écran et par état, CSS généré", () => {
     const { A } = freshMarketing();
     const p = pages.createPage(A, { name: "Libre", kind: "page" });

@@ -329,3 +329,41 @@
 .pb-kid-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 .pb-cat-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; }
 .pb-cat-head strong { font-size: 13px; }
+
+/* Barre d'outils en deux colonnes (outils nommés sous l'icône) */
+.pb-main.is-tools-dense .pb-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: min-content; align-content: start; gap: 3px; padding: 6px 5px; }
+.pb-main.is-tools-dense .pb-tool { flex-direction: column; justify-content: center; gap: 3px; height: 52px; padding: 4px 2px; text-align: center; font-size: 10.5px; font-weight: 600; }
+.pb-main.is-tools-dense .pb-tool-label { flex: none; width: 100%; opacity: 1; line-height: 1.15; }
+.pb-main.is-tools-dense .pb-tools-sep, .pb-main.is-tools-dense .pb-tools-grow { grid-column: 1 / -1; width: auto; }
+.pb-main.is-tools-dense .pb-tools-grow { min-height: 6px; }
+
+/* Barre d'actions posée sur l'élément sélectionné (canevas) */
+.pb-cbar { position: fixed; z-index: 40; display: flex; align-items: center; gap: 1px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--card, #fff); box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16); }
+.pb-cbar[hidden] { display: none; }
+.pb-cbar-btn { display: inline-grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 6px; background: none; color: var(--primary); cursor: pointer; }
+.pb-cbar-btn .icon { width: 16px; height: 16px; }
+.pb-cbar-btn:hover:not(:disabled) { background: var(--accent-light); color: var(--accent-dark); }
+.pb-cbar-btn[aria-pressed="true"] { background: var(--accent-light); color: var(--accent-dark); }
+.pb-cbar-btn.is-danger:hover:not(:disabled) { background: #fdecec; color: #b42318; }
+.pb-cbar-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.pb-cbar-btn[data-action="move"] { cursor: grab; }
+.pb-cbar-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Navigation du canevas (bas droite) */
+.pb-gizmo { position: absolute; right: 14px; bottom: 14px; z-index: 6; display: inline-flex; align-items: center; gap: 1px; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--card, #fff); box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12); }
+.pb-gizmo .pb-icon-btn { width: 30px; height: 30px; }
+.pb-gizmo .pb-zoom-value { display: inline-grid; place-items: center; min-width: 50px; height: 30px; cursor: default; }
+.pb-gizmo .pb-zoom-value:hover { background: none; }
+.pb-gizmo-sep { width: 1px; height: 18px; margin: 0 3px; background: var(--border); }
+.pb-gizmo-btn { height: 30px; min-width: 34px; padding: 0 6px; border: 0; border-radius: 7px; background: none; color: var(--primary); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; font-variant-numeric: tabular-nums; }
+.pb-gizmo-btn:hover { background: var(--accent-light); color: var(--accent-dark); }
+
+/* Inspecteur : compteurs (colonnes, lignes) et largeurs des colonnes */
+.pb-stepper { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.pb-stepper .pb-icon-btn { width: 28px; height: 28px; }
+.pb-stepper-value { min-width: 28px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pb-cols-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.pb-col-row { display: grid; grid-template-columns: minmax(0, 1fr) 58px auto auto auto auto; align-items: center; gap: 2px; }
+.pb-col-row input { width: 100%; height: 30px; padding: 0 6px; text-align: right; }
+.pb-col-row .pb-icon-btn { width: 26px; height: 26px; }
+.pb-unit { font-size: 12px; color: var(--muted); padding-right: 2px; }

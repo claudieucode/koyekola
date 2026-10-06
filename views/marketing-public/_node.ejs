@@ -5,7 +5,7 @@
   identifiant (sélection, glisser-déposer, édition directe) et les éléments masqués restent visibles en transparence.
 %>
 <% const p = n.props || {}; const cls = ["kw-node", `kw-${n.type}`, `kw-n-${n.id}`, n.hidden ? "is-hidden" : "", n.locked ? "is-locked" : ""].filter(Boolean).join(" ");
-   const attrs = isBuilder ? ` data-node-id="${n.id}" data-node-type="${n.type}"` + (n.audienceLabel ? ` data-audience-label="${String(n.audienceLabel).replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[c])}"` : "") : "";
+   const attrs = (n.anchor ? ` id="${n.anchor}"` : "") + (isBuilder ? ` data-node-id="${n.id}" data-node-type="${n.type}"` + (n.audienceLabel ? ` data-audience-label="${String(n.audienceLabel).replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[c])}"` : "") : "");
    const kids = () => (n.children || []).forEach((c) => { if (c.hidden && !isBuilder) return; %><%- include("_node", { n: c, isBuilder, href, depth: depth + 1 }) %><% }); %>
 <% if (["container", "columns", "column", "grid", "stack", "group"].includes(n.type)) { %>
   <div class="<%= cls %>"<%- attrs %>><% if (isBuilder && !(n.children || []).length) { %><p class="kw-empty">Déposez des éléments ici</p><% } %><% kids() %></div>
@@ -27,9 +27,13 @@
   <figure class="<%= cls %>"<%- attrs %>><% if (p.link) { %><a href="<%= href(p.link) %>"><img src="<%= p.src %>" alt="<%= p.alt %>" loading="lazy" decoding="async"></a><% } else { %><img src="<%= p.src %>" alt="<%= p.alt %>" loading="lazy" decoding="async"><% } %><% if (p.caption) { %><figcaption><%= p.caption %></figcaption><% } %></figure>
 <% } else if (n.type === "gallery") { %>
   <div class="<%= cls %>"<%- attrs %>><% p.images.forEach((im) => { %><img src="<%= im.src %>" alt="<%= im.alt %>" loading="lazy" decoding="async"><% }) %></div>
-<% } else if (n.type === "video") { const v = parseVideoUrl(p.url); %>
-  <div class="<%= cls %>"<%- attrs %>><% if (v && v.kind === "file") { %><video src="<%= v.src %>" controls preload="metadata" title="<%= p.title %>"></video>
-    <% } else if (v) { %><div class="lp-video-frame"><iframe src="<%= v.src %>" title="<%= p.title %>" loading="lazy" allow="encrypted-media; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><% } %></div>
+<% } else if (n.type === "video") { const v = parseVideoUrl(p.url);
+     // Options de lecture : attributs pour un fichier, paramètres du lecteur pour YouTube / Vimeo
+     const yt = v && v.kind === "youtube", ytId = yt ? (v.src.match(/\/embed\/([^?]+)/) || [])[1] : null;
+     const q = [p.autoplay ? "autoplay=1" : "", p.muted ? (yt ? "mute=1" : "muted=1") : "", p.loop ? "loop=1" + (yt ? `&playlist=${ytId}` : "") : "", p.controls === false ? "controls=0" : "", p.autoplay && yt ? "playsinline=1" : ""].filter(Boolean).join("&");
+     const embed = v && v.src ? v.src + (q ? (v.src.includes("?") ? "&" : "?") + q : "") : ""; %>
+  <div class="<%= cls %>"<%- attrs %>><% if (v && v.kind === "file") { %><video src="<%= v.src %>"<%= p.controls === false ? "" : " controls" %><%= p.autoplay ? " autoplay playsinline" : "" %><%= p.muted ? " muted" : "" %><%= p.loop ? " loop" : "" %><% if (p.poster) { %> poster="<%= p.poster %>"<% } %> preload="metadata" title="<%= p.title %>"></video>
+    <% } else if (v) { %><div class="lp-video-frame"><iframe src="<%= embed %>" title="<%= p.title %>" loading="lazy" allow="<%= p.autoplay ? "autoplay; " : "" %>encrypted-media; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><% } %></div>
 <% } else if (n.type === "audio") { %>
   <figure class="<%= cls %>"<%- attrs %>><% if (p.title) { %><figcaption><%= p.title %></figcaption><% } %><audio src="<%= p.src %>" controls preload="none"></audio></figure>
 <% } else if (n.type === "button") { %>

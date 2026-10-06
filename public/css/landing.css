@@ -140,6 +140,8 @@
 .lp-builder .lp-block.is-selected { outline: 2px solid #0277b6; }
 .lp-builder .lp-block.is-hidden { opacity: 0.35; }
 .lp-builder a, .lp-builder button, .lp-builder summary { pointer-events: none; }
+/* Un bouton ou un lien de la page reste sélectionnable (le clic ne suit jamais le lien dans l'éditeur) */
+.lp-builder a[data-node-id], .lp-builder a[data-node-id] * { pointer-events: auto; }
 .lp-placeholder { opacity: 0.7; border-style: dashed; }
 
 /* Sections libres (Page Builder) : styles de base des éléments ; les réglages de chaque élément viennent de sa classe
@@ -297,3 +299,11 @@ body.pb-hand,body.pb-hand *{cursor:grab}
 .pb-guide.is-locked { pointer-events: none; }
 .pb-guide-label { position: absolute; z-index: 115; padding: 1px 6px; border-radius: 4px; background: #0e7490; color: #fff; font: 600 11px/1.6 system-ui, sans-serif; pointer-events: none; white-space: nowrap; }
 .pb-guide.is-removing::before { background: #e11d48; }
+.pb-col-split{ position:absolute;z-index:114;width:12px;margin-left:-6px;cursor:col-resize;display:flex;justify-content:center}
+.pb-col-split::before{ content:"";width:3px;height:100%;border-radius:2px;background:rgba(2,119,182,.35)}
+.pb-col-split:hover::before{ background:#0277b6}
+.lp-builder .pb-struct-add{ pointer-events:auto }
+.pb-struct-add{ position:absolute;z-index:115;width:24px;height:24px;margin:-12px 0 0 -12px;padding:0;border:0;border-radius:50%;background:#0277b6;color:#fff;font:700 17px/24px system-ui,sans-serif;text-align:center;cursor:pointer;box-shadow:0 2px 6px rgba(15,23,42,.25)}
+.pb-struct-add:hover{ background:#015a8a}
+.pb-struct-add.is-col{ margin-left:2px}
+.pb-struct-add.is-row{ margin-top:2px}

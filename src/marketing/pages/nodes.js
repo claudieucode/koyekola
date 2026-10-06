@@ -13,6 +13,8 @@ const { parseVideoUrl } = require("../../utils/video");
 const MAX_NODES = 400;   // éléments d'une page (toutes sections libres confondues)
 const MAX_DEPTH = 8;
 const NODE_ID = /^[a-z0-9]{6,20}$/;
+const ANCHOR = /^[a-z][a-z0-9-]{0,39}$/;
+const RESERVED_ANCHORS = new Set(["main", "contenu", "top", "haut", "kw-consent"]);
 // Écrans : la liste peut s'allonger (ordinateur portable, écran personnalisé) sans changer le modèle
 const BREAKPOINTS = [
   { key: "desktop", label: "Ordinateur", media: null },
@@ -72,6 +74,8 @@ const STYLE_PROPS = {
   maxWidth: { css: "max-width", check: len, group: "size" },
   minHeight: { css: "min-height", check: len, group: "size" },
   maxHeight: { css: "max-height", check: len, group: "size" },
+  // Part de largeur d'une colonne dans « Colonnes » (proportions : 1 / 1 = moitié-moitié, 2 / 1 = deux tiers - un tiers)
+  flexGrow: { css: "flex-grow", check: numberIn(0.05, 20), group: "size" },
   marginTop: { css: "margin-top", check: marginLen, group: "spacing" },
   marginRight: { css: "margin-right", check: marginLen, group: "spacing" },
   marginBottom: { css: "margin-bottom", check: marginLen, group: "spacing" },
@@ -215,12 +219,24 @@ const NODE_TYPES = {
     if (!images.length) throw new Error(`${at} (galerie) : au moins une image.`);
     return { images };
   } },
-  video: { label: "Vidéo", category: "media", props: (p, at) => {
+  video: { label: "Vidéo", category: "media", props: (p, at, h) => {
     const url = line(p.url, 500);
     if (!url || !parseVideoUrl(url)) throw new Error(`${at} (vidéo) : adresse YouTube, Vimeo ou fichier vidéo https:// attendue.`);
     const title = line(p.title, 150);
     if (!title) throw new Error(`${at} (vidéo) : un titre est obligatoire (accessibilité).`);
-    return { url, title };
+    // Lecture : les navigateurs n'acceptent la lecture automatique que sans le son ; sans commandes, il faut la lecture
+    // automatique (sinon la vidéo ne peut pas démarrer). L'image d'attente ne vaut que pour un fichier vidéo.
+    const out = { url, title };
+    if (p.autoplay === true) { out.autoplay = true; out.muted = true; }
+    else if (p.muted === true) out.muted = true;
+    if (p.loop === true) out.loop = true;
+    if (p.controls === false) {
+      if (!out.autoplay) throw new Error(`${at} (vidéo) : sans commandes de lecture, activez la lecture automatique (sinon la vidéo ne peut pas démarrer).`);
+      out.controls = false;
+    }
+    const poster = p.poster ? h.imageUrl(p.poster, `${at} (image d'attente de la vidéo)`) : "";
+    if (poster) out.poster = poster;
+    return out;
   } },
   audio: { label: "Audio", category: "media", props: (p, at) => {
     const src = line(p.src, 1000);
@@ -311,7 +327,7 @@ const STYLE_UI = {
   alignItems: ["Alignement des enfants", { stretch: "Étirés", "flex-start": "Début", center: "Centre", "flex-end": "Fin", baseline: "Ligne de base" }],
   alignSelf: ["Alignement dans le parent", { auto: "Auto", "flex-start": "Début", center: "Centre", "flex-end": "Fin", stretch: "Étiré" }],
   gap: ["Écart entre enfants"], columns: ["Colonnes (grille)"],
-  width: ["Largeur"], height: ["Hauteur"], minWidth: ["Largeur min."], maxWidth: ["Largeur max."], minHeight: ["Hauteur min."], maxHeight: ["Hauteur max."],
+  width: ["Largeur"], height: ["Hauteur"], flexGrow: ["Proportion de la colonne"], minWidth: ["Largeur min."], maxWidth: ["Largeur max."], minHeight: ["Hauteur min."], maxHeight: ["Hauteur max."],
   marginTop: ["Marge haut"], marginRight: ["Marge droite"], marginBottom: ["Marge bas"], marginLeft: ["Marge gauche"],
   paddingTop: ["Intérieur haut"], paddingRight: ["Intérieur droite"], paddingBottom: ["Intérieur bas"], paddingLeft: ["Intérieur gauche"],
   fontFamily: ["Police", { heading: "Titres du site", body: "Texte du site", system: "Système", serif: "Avec empattements", mono: "Chasse fixe" }],
@@ -337,7 +353,7 @@ function editorSpec() {
   const kind = (k) => {
     const p = STYLE_PROPS[k];
     if (p.check === color || [ "color", "backgroundColor", "borderColor" ].includes(k)) return "color";
-    if (["columns", "lineHeight", "opacity", "zIndex"].includes(k)) return "number";
+    if (["columns", "lineHeight", "opacity", "zIndex", "flexGrow"].includes(k)) return "number";
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
   return {
@@ -443,6 +459,16 @@ function normalizeNode(raw, at, h, depth, counter) {
   if (label) node.name = label;
   if (raw.hidden === true) node.hidden = true;
   if (raw.locked === true) node.locked = true;
+  // Ancre : identifiant HTML pour les liens internes (« /p/ma-page#tarifs »), unique dans la page
+  if (raw.anchor) {
+    const anchor = String(raw.anchor).trim().toLowerCase();
+    if (!ANCHOR.test(anchor)) throw new Error(`${where} : ancre invalide (lettres minuscules, chiffres et tirets, commence par une lettre).`);
+    if (RESERVED_ANCHORS.has(anchor) || anchor.startsWith("kw-") || anchor.startsWith("lp-")) throw new Error(`${where} : l'ancre « ${anchor} » est réservée.`);
+    counter.anchors = counter.anchors || new Set();
+    if (counter.anchors.has(anchor)) throw new Error(`${where} : l'ancre « ${anchor} » est déjà utilisée sur la page.`);
+    counter.anchors.add(anchor);
+    node.anchor = anchor;
+  }
   const audience = normalizeAudience(raw.audience, where);
   if (audience) node.audience = audience;
   const styles = normalizeStyles(raw.styles, raw.states, where, h);

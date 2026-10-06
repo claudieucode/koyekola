@@ -30,12 +30,6 @@
         <button type="button" role="radio" aria-checked="false" data-device="tablet" data-tip="Tablette (820 px)"><%- icon("tablet", { size: 16 }) %><span class="sr-only">Tablette</span></button>
         <button type="button" role="radio" aria-checked="false" data-device="mobile" data-tip="Mobile (390 px)"><%- icon("smartphone", { size: 16 }) %><span class="sr-only">Mobile</span></button>
       </div>
-      <div class="pb-zoom" role="group" aria-label="Zoom du canevas">
-        <button type="button" class="pb-icon-btn" data-pb-zoom="-" data-tip="Zoom arrière (Ctrl/⌘ + -)" aria-label="Zoom arrière"><%- icon("minus", { size: 15 }) %></button>
-        <button type="button" class="pb-zoom-value" data-pb-zoom="100" data-tip="Zoom à 100 % (Ctrl/⌘ + 0)">100 %</button>
-        <button type="button" class="pb-icon-btn" data-pb-zoom="+" data-tip="Zoom avant (Ctrl/⌘ + +)" aria-label="Zoom avant"><%- icon("plus", { size: 15 }) %></button>
-        <button type="button" class="pb-icon-btn" data-pb-zoom="fit" data-tip="Ajuster à l'écran (Maj + 1)" aria-label="Ajuster à l'écran"><%- icon("maximize", { size: 15 }) %></button>
-      </div>
       <div class="pb-group-btns" role="group" aria-label="Aides visuelles">
         <button type="button" class="pb-icon-btn" data-pb-toggle="grid" aria-pressed="false" data-tip="Grille de 12 colonnes" aria-label="Grille"><%- icon("columns", { size: 15 }) %></button>
         <button type="button" class="pb-icon-btn" data-pb-toggle="outlines" aria-pressed="false" data-tip="Contours de tous les éléments" aria-label="Contours des éléments"><%- icon("borderBox", { size: 15 }) %></button>
@@ -92,6 +86,15 @@
         <div class="pb-frame-wrap" data-pb-frame-wrap data-device="desktop">
           <iframe class="pb-frame" data-pb-frame title="Page en cours d'édition"></iframe>
         </div>
+      </div>
+      <%# Navigation du canevas (bas droite) : zoom réel, partagé avec les règles, les guides et le magnétisme %>
+      <div class="pb-gizmo" role="group" aria-label="Zoom du canevas">
+        <button type="button" class="pb-icon-btn" data-pb-zoom="-" data-tip="Zoom arrière (Ctrl/⌘ + -)" aria-label="Zoom arrière"><%- icon("minus", { size: 15 }) %></button>
+        <output class="pb-zoom-value" data-pb-zoom-value aria-live="polite" title="Niveau de zoom">100 %</output>
+        <button type="button" class="pb-icon-btn" data-pb-zoom="+" data-tip="Zoom avant (Ctrl/⌘ + +)" aria-label="Zoom avant"><%- icon("plus", { size: 15 }) %></button>
+        <span class="pb-gizmo-sep" aria-hidden="true"></span>
+        <button type="button" class="pb-gizmo-btn" data-pb-zoom="100" data-tip="Taille réelle : 100 % (Ctrl/⌘ + 0)" aria-label="Zoom à 100 %">1:1</button>
+        <button type="button" class="pb-icon-btn" data-pb-zoom="fit" data-tip="Ajuster à l'écran : toute la largeur de la page visible (Maj + 1)" aria-label="Ajuster à l'écran"><%- icon("maximize", { size: 15 }) %></button>
       </div>
     </main>
     <div class="pb-resizer" data-pb-resize="right" role="separator" aria-orientation="vertical" aria-label="Largeur du panneau des calques (flèches gauche et droite)" tabindex="0"></div>
@@ -154,7 +157,7 @@
   <div class="pb-menu" data-pb-menu role="menu" aria-label="Actions" hidden></div>
   <div class="pb-toast" data-pb-toast role="status" aria-live="polite" hidden></div>
 
-  <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone"].concat(spec.types.map((t) => t.icon)).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
+  <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone", "sliders", "moreHorizontal", "listPlus", "listMinus", "undo", "redo"].concat(spec.types.map((t) => t.icon)).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
   <script type="application/json" id="pb-boot"><%- boot %></script>
   <script src="<%= asset('/js/page-builder.js') %>" defer></script>
 </body>

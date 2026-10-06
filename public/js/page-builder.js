@@ -93,7 +93,7 @@
       if (k) ensureIds(k);
     });
   }
-  function reId(it) { it.id = newId(); delete it.locked; var k = kidsOf(it); if (k) k.forEach(reId); return it; }
+  function reId(it) { it.id = newId(); delete it.locked; delete it.anchor; var k = kidsOf(it); if (k) k.forEach(reId); return it; }
   ensureIds(content.sections);
   // Recherche d'un élément : { item, list, index, parent (null = racine), depth, ancestors }
   function locate(id, list, parent, depth, ancestors) {
@@ -178,6 +178,7 @@
     renderTree();
     if (!light) { renderInspector(); renderContext(); renderPageSettings(); }
     updateHistoryButtons();
+    placeCanvasBar();
     scheduleRender();
     scheduleSave();
   }
@@ -319,6 +320,108 @@
       selection = copies;
     });
   }
+  // Ancre d'un élément (lien direct #ancre) : vérifiée ici pour un message immédiat, revérifiée par le serveur
+  function setAnchor(id, value) {
+    var v = String(value || "").trim().toLowerCase();
+    if (v && !/^[a-z][a-z0-9-]{0,39}$/.test(v)) { toast("Ancre invalide : lettres minuscules, chiffres et tirets, en commençant par une lettre.", true); renderInspector(); return; }
+    var taken = false;
+    walk(function (x) { if (x.id !== id && x.anchor === v) taken = true; });
+    if (v && taken) { toast("L'ancre « " + v + " » est déjà utilisée sur cette page.", true); renderInspector(); return; }
+    change(function () { var it = byId(id); if (v) it.anchor = v; else delete it.anchor; });
+  }
+
+  // ---------- Structures : colonnes et grille ----------
+  // Largeur des colonnes : proportions (flex-grow) par écran, ramenées à une moyenne de 1 (1 / 1 = moitié-moitié).
+  var MAX_COLS = 6;
+  function growAt(c, from) {
+    for (var j = from; j >= 0; j--) { var s = c.styles && c.styles[BPS[j]]; if (s && s.flexGrow !== undefined) return Number(s.flexGrow); }
+    return 1;
+  }
+  // Parts de la largeur (en %) de chaque colonne, pour l'écran modifié
+  function columnShares(it) {
+    var g = (kidsOf(it) || []).map(function (c) { return growAt(c, BPS.indexOf(device)); });
+    var tot = g.reduce(function (a, b) { return a + b; }, 0) || 1;
+    return g.map(function (x) { return x / tot * 100; });
+  }
+  // Enregistre des parts (en %) pour l'écran modifié : une valeur égale à celle héritée n'est pas répétée
+  function storeShares(colsItem, shares) {
+    var k = kidsOf(colsItem), avg = 100 / k.length, i0 = BPS.indexOf(device);
+    k.forEach(function (c, i) {
+      var g = Math.max(0.05, Math.round(shares[i] / avg * 100) / 100);
+      var inh = growAt(c, i0 - 1);
+      var s = styleSet(c, device, "normal", true);
+      if (Math.abs(g - inh) < 0.01) delete s.flexGrow; else s.flexGrow = g;
+      cleanStyles(c);
+    });
+  }
+  function equalizeColumns(colsItem) {
+    kidsOf(colsItem).forEach(function (c) { if (c.styles) BPS.forEach(function (b) { if (c.styles[b]) delete c.styles[b].flexGrow; }); cleanStyles(c); });
+  }
+  var pct = function (v) { return (Math.round(v * 10) / 10).toString().replace(".", ",") + " %"; };
+  function addColumn(id) {
+    var it = byId(id);
+    if (!it || it.type !== "columns" || refuseLocked([id])) return;
+    var n = kidsOf(it).length;
+    if (n >= MAX_COLS) { toast("Au plus " + MAX_COLS + " colonnes : utilisez une grille pour davantage.", true); return; }
+    change(function () { var x = byId(id); kidsOf(x).push(newNode("column")); equalizeColumns(x); selection = [id]; });
+    toast((n + 1) + " colonnes de " + pct(100 / (n + 1)) + " chacune (largeurs modifiables).");
+  }
+  function removeColumn(id, index) {
+    var it = byId(id);
+    if (!it || refuseLocked([id])) return;
+    var k = kidsOf(it);
+    if (k.length <= 1) { toast("Il reste une seule colonne : supprimez plutôt toute la structure.", true); return; }
+    var i = index === undefined ? k.length - 1 : index;
+    var inside = countDeep(k[i]);
+    change(function () { kidsOf(byId(id)).splice(i, 1); selection = [id]; });
+    toast("Colonne " + (i + 1) + " retirée" + (inside ? " avec ses " + inside + " élément(s)" : "") + ". Ctrl/⌘ + Z pour annuler.");
+  }
+  function moveColumn(id, i, delta) {
+    if (refuseLocked([id])) return;
+    change(function () { var k = kidsOf(byId(id)); var j = i + delta; if (j < 0 || j >= k.length) return false; var t = k[i]; k[i] = k[j]; k[j] = t; });
+  }
+  // Largeur d'une colonne (en %) : les autres se partagent le reste en gardant leurs proportions
+  function setColumnShare(id, i, value) {
+    var it = byId(id);
+    if (!it || refuseLocked([id])) return;
+    var sh = columnShares(it);
+    if (sh.length < 2) return;
+    var v = Math.min(95, Math.max(5, value));
+    var rest = 100 - sh[i], next = sh.map(function (x, j) { return j === i ? v : rest > 0 ? x / rest * (100 - v) : (100 - v) / (sh.length - 1); });
+    if (next.some(function (x) { return x < 2; })) { toast("Chaque colonne garde au moins quelques pour cent de la largeur.", true); renderInspector(); return; }
+    change(function () { storeShares(byId(id), next); });
+  }
+  // Grille : nombre de colonnes réellement affiché (réglage de l'écran, sinon celui mesuré dans le canevas)
+  function gridColumnsOf(it) {
+    for (var j = BPS.indexOf(device); j >= 0; j--) { var s = it.styles && it.styles[BPS[j]]; if (s && s.columns !== undefined) return Number(s.columns); }
+    var el = canvasEl(it.id);
+    if (el) { var t = frame.contentWindow.getComputedStyle(el).gridTemplateColumns; if (t && t !== "none") return t.split(" ").length; }
+    return 3;
+  }
+  function gridSetColumns(id, n) {
+    n = Math.min(12, Math.max(1, n));
+    setStyle([id], "columns", n);
+  }
+  function gridAddRow(id) {
+    var it = byId(id);
+    if (!it || refuseLocked([id])) return;
+    var cols = gridColumnsOf(it), n = kidsOf(it).length;
+    var add = (cols - n % cols) % cols + cols; // compléter la dernière ligne, puis une ligne entière
+    if (n + add > 96) { toast("Une grille compte au plus 96 cellules.", true); return; }
+    change(function () { var k = kidsOf(byId(id)); for (var i = 0; i < add; i++) k.push(newNode("container", { name: "Cellule " + (n + i + 1) })); selection = [id]; });
+    toast("Ligne ajoutée (" + add + " cellule" + (add > 1 ? "s" : "") + ").");
+  }
+  function gridRemoveRow(id) {
+    var it = byId(id);
+    if (!it || refuseLocked([id])) return;
+    var cols = gridColumnsOf(it), k = kidsOf(it);
+    if (k.length <= cols) { toast("La grille garde au moins une ligne.", true); return; }
+    var drop = k.length % cols || cols;
+    var inside = k.slice(-drop).reduce(function (a, c) { return a + countDeep(c); }, 0);
+    change(function () { kidsOf(byId(id)).splice(-drop, drop); selection = [id]; });
+    toast("Dernière ligne retirée (" + drop + " cellule" + (drop > 1 ? "s" : "") + (inside ? ", " + inside + " élément(s)" : "") + "). Ctrl/⌘ + Z pour annuler.");
+  }
+
   // Déplacer d'un cran parmi ses voisins (Alt + ↑ / ↓)
   function nudge(delta) {
     var ids = topLevelSelection();
@@ -644,7 +747,7 @@
       box.appendChild(h("div", { class: "pb-cat-head" }, h("strong", { text: g0 ? g0.label : "" }), h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: function () { setCategory(""); } }, "Tout afficher")));
     }
     shown.forEach(function (g) {
-      var items = g.items.filter(function (it) { return !f || norm(it.label).indexOf(f) >= 0 || norm(g.label).indexOf(f) >= 0; });
+      var items = g.items.filter(function (it) { return !f || norm(it.label).indexOf(f) >= 0 || norm(g.label).indexOf(f) >= 0 || norm(SEARCH_WORDS[it.type] || "").indexOf(f) >= 0; });
       if (!items.length) return;
       var ul = h("ul", { class: "pb-palette" });
       items.forEach(function (it) {
@@ -656,6 +759,8 @@
     });
     if (box.querySelectorAll(".pb-pal-group").length === 0) box.appendChild(h("p", { class: "pb-hint", text: "Aucun élément ne correspond." }));
   }
+  // Mots de recherche supplémentaires (ce que l'on tape naturellement pour trouver un élément)
+  var SEARCH_WORDS = { image: "photo visuel illustration media", gallery: "photos images diaporama media", video: "youtube vimeo film media", audio: "son musique podcast mp3", button: "bouton cta appel action lien", link: "lien url", heading: "titre h1 h2 texte", text: "paragraphe texte riche", accordion: "faq questions reponses accordeon", tabs: "onglets", columns: "colonnes grille mise en page layout", column: "colonne", grid: "grille tableau colonnes lignes", container: "boite bloc conteneur div", stack: "pile empiler", spacer: "espace vide marge", divider: "separateur ligne trait", countdown: "compte a rebours minuteur urgence", course: "formation cours produit vente", form: "formulaire inscription email champs", icon: "icone pictogramme", table: "tableau", quote: "citation temoignage", layout: "section libre bloc" };
   // Choisir une catégorie (barre d'outils) : le panneau de gauche s'ouvre sur la bibliothèque correspondante
   function setCategory(key) {
     elCategory = key;
@@ -688,9 +793,11 @@
   function renderTools() {
     var nav = $("[data-pb-tools]");
     nav.textContent = "";
-    var expanded = Boolean(panels.toolsExpanded);
+    var expanded = Boolean(panels.toolsExpanded), dense = Boolean(panels.toolsDense);
     nav.appendChild(h("button", { type: "button", class: "pb-tool pb-tools-toggle", "aria-expanded": String(expanded), "aria-label": expanded ? "Réduire la barre d'outils" : "Déployer la barre d'outils (noms des outils)", "data-tip": expanded ? "Réduire la barre d'outils" : "Déployer la barre d'outils",
-      onclick: function () { panels.toolsExpanded = !panels.toolsExpanded; applyPanels(); renderTools(); } }, icon(expanded ? "chevronLeft" : "chevronRight"), h("span", { class: "pb-tool-label", text: expanded ? "Réduire" : "Déployer" })));
+      onclick: function () { panels.toolsExpanded = !panels.toolsExpanded; if (panels.toolsExpanded) panels.toolsDense = false; applyPanels(); renderTools(); } }, icon(expanded ? "chevronLeft" : "chevronRight"), h("span", { class: "pb-tool-label", text: expanded ? "Réduire" : "Déployer" })));
+    nav.appendChild(h("button", { type: "button", class: "pb-tool pb-tools-cols", "aria-pressed": String(dense), "aria-label": dense ? "Barre d'outils sur une colonne" : "Barre d'outils sur deux colonnes", "data-tip": dense ? "Une colonne (compacte)" : "Deux colonnes (outils nommés, barre plus courte)",
+      onclick: function () { panels.toolsDense = !panels.toolsDense; if (panels.toolsDense) panels.toolsExpanded = false; applyPanels(); renderTools(); } }, icon("columns"), h("span", { class: "pb-tool-label", text: dense ? "1 colonne" : "2 colonnes" })));
     nav.appendChild(h("span", { class: "pb-tools-sep", role: "separator" }));
     TOOLS.forEach(function (t) {
       if (t.sep) { nav.appendChild(h("span", { class: "pb-tools-sep", role: "separator" })); return; }
@@ -717,7 +824,7 @@
     if (!text) return;
     // Barre étendue : le nom est déjà affiché, l'infobulle n'ajoute que ce qui manque (raccourci, indisponibilité)
     var label = el.querySelector(".pb-tool-label");
-    if (panels.toolsExpanded && label && el.closest(".pb-tools") && toolLabel(text) === label.textContent && text === label.textContent) return;
+    if ((panels.toolsExpanded || panels.toolsDense) && label && el.closest(".pb-tools") && text === label.textContent && label.scrollWidth <= label.clientWidth) return;
     tipEl.textContent = text;
     tipEl.hidden = false;
     var r = el.getBoundingClientRect(), t = tipEl.getBoundingClientRect();
@@ -748,6 +855,7 @@
     $$(".pb-tool[data-mode]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.mode === k)); });
     var doc = frame.contentDocument;
     if (doc && doc.body) doc.body.classList.toggle("pb-hand", k === "hand");
+    placeCanvasBar();
   }
   function renderBlocks() {
     var box = $("[data-pb-blocks]");
@@ -823,7 +931,8 @@
     var cb = h("input", { type: "checkbox", disabled: opts && opts.disabled });
     cb.checked = Boolean(value);
     cb.addEventListener("change", function () { onChange(cb.checked); });
-    return h("label", { class: "pb-check" }, cb, " " + label);
+    var lab = h("label", { class: "pb-check" }, cb, " " + label);
+    return opts && opts.hint ? h("div", {}, lab, h("p", { class: "pb-hint", text: opts.hint })) : lab;
   }
   document.body.appendChild(h("datalist", { id: "pb-tags" }, (boot.tags || []).map(function (t) { return h("option", { value: t }); })));
   document.body.appendChild(h("datalist", { id: "pb-links" }, boot.links.map(function (l) { return h("option", { value: l.url, label: l.label }); })));
@@ -870,6 +979,16 @@
       case "video":
         box.appendChild(textField("Adresse (YouTube, Vimeo ou fichier https://)", p.url, set("url"), { type: "url", disabled: disabled }));
         box.appendChild(textField("Titre (lu par les lecteurs d'écran)", p.title, set("title"), { max: 150, disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-sub", text: "Lecture" }));
+        box.appendChild(checkField("Lecture automatique (sans le son, exigé par les navigateurs)", p.autoplay, function (v) { change(function () { var x = byId(it.id).props; if (v) { x.autoplay = true; x.muted = true; } else { delete x.autoplay; if (x.controls === false) delete x.controls; } }); }, { disabled: disabled }));
+        box.appendChild(checkField("Son coupé au départ", p.muted || p.autoplay, function (v) { setProp(it.id, "muted", v); }, { disabled: disabled || p.autoplay }));
+        box.appendChild(checkField("Lire en boucle", p.loop, function (v) { setProp(it.id, "loop", v); }, { disabled: disabled }));
+        box.appendChild(checkField("Afficher les commandes de lecture", p.controls !== false, function (v) { change(function () { var x = byId(it.id).props; if (v) delete x.controls; else x.controls = false; }); }, { disabled: disabled || !p.autoplay, hint: p.autoplay ? null : "Les commandes restent affichées sans lecture automatique (sinon la vidéo ne pourrait pas démarrer)." }));
+        if (/\.(mp4|webm|ogg|mov|m4v)(\?|$)/i.test(p.url || "")) {
+          box.appendChild(h("p", { class: "pb-sub", text: "Image d'attente (avant la lecture)" }));
+          box.appendChild(mediaPreview(p.poster, function (m) { setProp(it.id, "poster", m.path); }, disabled));
+          if (p.poster) box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled, onclick: function () { change(function () { delete byId(it.id).props.poster; }); } }, "Retirer l'image d'attente"));
+        }
         break;
       case "audio":
         box.appendChild(textField("Adresse https:// du fichier", p.src, set("src"), { type: "url", disabled: disabled }));
@@ -1181,14 +1300,14 @@
     GROUP_ORDER.forEach(function (g) {
       if (!schema.groups || schema.groups[g] === undefined) return;
       var spec = schema.groups[g];
-      var keys = g === "spacing" ? [] : Array.isArray(spec) ? spec : SPEC.styleProps.filter(function (p) { return p.group === g; }).map(function (p) { return p.key; });
+      var keys = g === "spacing" ? [] : Array.isArray(spec) ? spec : SPEC.styleProps.filter(function (p) { return p.group === g && (p.key !== "flexGrow" || it.type === "column"); }).map(function (p) { return p.key; });
       box.appendChild(styleSection(items, g, keys));
     });
     if (schema.presets && !isNode(it)) legacyLayout(items, box);
   }
   // Un groupe repliable de l'inspecteur (état ouvert / fermé mémorisé)
   function styleSection(items, g, keys) {
-    var det = h("details", { class: "pb-acc" });
+    var det = h("details", { class: "pb-acc", "data-group": g });
     if (store.get("open-" + g, ["layout", "spacing", "typography", "media"].indexOf(g) >= 0)) det.open = true;
     det.addEventListener("toggle", function () { store.set("open-" + g, det.open); });
     var set = keys.filter(function (k) { return items.some(function (x) { return ownValue(x, k) !== undefined; }); }).length + (g === "spacing" ? ["marginTop", "marginRight", "marginBottom", "marginLeft", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft"].filter(function (k) { return ownValue(items[0], k) !== undefined; }).length : 0);
@@ -1312,7 +1431,7 @@
     if (!items.length) {
       box.appendChild(h("div", { class: "pb-insp-empty" },
         h("h2", { text: "Aucun élément sélectionné" }),
-        h("p", { class: "pb-hint", text: "Sélectionnez un élément dans la page ou dans les calques pour modifier ses propriétés." })));
+        h("p", { class: "pb-hint", text: "Sélectionnez un élément sur le canevas ou dans les calques pour modifier ses propriétés." })));
       box.appendChild(breakpointSwitch([{}]));
       box.appendChild(h("div", { class: "pb-row pb-wrap" },
         h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { openTab($("#pb-tab-page")); } }, "Réglages de la page"),
@@ -1359,8 +1478,54 @@
         return h("li", {}, h("button", { type: "button", class: "pb-kid", onclick: function () { select(c.id); } }, icon(isNode(c) ? NT[c.type].icon : "layout"), h("span", { class: "pb-kid-kind", text: (inspectorFor(c) || {}).kind || typeLabel(c) }), h("span", { class: "pb-kid-name", text: c.name || preview(c) })));
       })));
     }
-    box.appendChild(h("p", { class: "pb-hint", text: "Pour ajouter un élément ici : gardez ce conteneur sélectionné et choisissez-le à gauche (ou glissez-le dedans)." }));
-    if (it.type === "columns") box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: !canWrite || lockedDeep(it.id) || kids.length >= 6, onclick: function () { addItems([newNode("column")], { parent: it, index: kids.length }); } }, icon("plus"), "Ajouter une colonne"));
+    if (it.type === "columns") columnsContent(it, box);
+    else if (it.type === "grid") gridContent(it, box);
+    box.appendChild(h("div", { class: "pb-row pb-wrap" }, h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: !canWrite || lockedDeep(it.id) || it.type === "columns", onclick: function () { openCommands("Ajouter", { inside: it.id }); } }, icon("plus"), "Ajouter un élément à l'intérieur")));
+    box.appendChild(h("p", { class: "pb-hint", text: it.type === "columns" ? "Chaque colonne reçoit ses propres éléments : sélectionnez une colonne puis ajoutez-y un élément (ou glissez-le dedans)." : "Vous pouvez aussi glisser un élément de la bibliothèque (à gauche) directement dedans." }));
+  }
+  // Colonnes : nombre, largeur de chacune (en % de la ligne, pour l'écran modifié), ordre
+  function columnsContent(it, box) {
+    var kids = kidsOf(it), dis = !canWrite || lockedDeep(it.id);
+    var shares = columnShares(it);
+    box.appendChild(h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "Colonnes" }),
+      h("div", { class: "pb-stepper" },
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Retirer la dernière colonne", "data-tip": "Retirer la dernière colonne", disabled: dis || kids.length <= 1, onclick: function () { removeColumn(it.id); } }, icon("minus")),
+        h("output", { class: "pb-stepper-value", "data-pb-col-count": "", text: String(kids.length) }),
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Ajouter une colonne", "data-tip": "Ajouter une colonne (largeurs réparties également)", disabled: dis || kids.length >= MAX_COLS, onclick: function () { addColumn(it.id); } }, icon("plus")))));
+    if (device === "mobile") box.appendChild(h("p", { class: "pb-hint", text: "Sur mobile, les colonnes s'affichent l'une sous l'autre : leurs largeurs se règlent sur ordinateur et tablette." }));
+    var list = h("ol", { class: "pb-cols-list" });
+    kids.forEach(function (c, i) {
+      var id = fid();
+      var input = h("input", { id: id, type: "number", min: "5", max: "95", step: "1", value: String(Math.round(shares[i] * 10) / 10), disabled: dis || device === "mobile" || kids.length < 2, "data-pb-col-share": String(i) });
+      input.addEventListener("change", function () { var v = Number(input.value); if (!isFinite(v)) return; setColumnShare(it.id, i, v); });
+      list.appendChild(h("li", { class: "pb-col-row" },
+        h("button", { type: "button", class: "pb-kid", onclick: function () { select(c.id); } }, h("span", { class: "pb-kid-name", text: c.name || "Colonne " + (i + 1) }), h("span", { class: "pb-kid-kind", text: (kidsOf(c) || []).length + " élément(s)" })),
+        h("label", { class: "sr-only", for: id, text: "Largeur de la colonne " + (i + 1) + " en %" }), input, h("span", { class: "pb-unit", text: "%" }),
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Déplacer la colonne " + (i + 1) + " vers la gauche", "data-tip": "Vers la gauche", disabled: dis || i === 0, onclick: function () { moveColumn(it.id, i, -1); } }, icon("chevronLeft")),
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Déplacer la colonne " + (i + 1) + " vers la droite", "data-tip": "Vers la droite", disabled: dis || i === kids.length - 1, onclick: function () { moveColumn(it.id, i, 1); } }, icon("chevronRight")),
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Supprimer la colonne " + (i + 1), "data-tip": "Supprimer cette colonne", disabled: dis || kids.length <= 1, onclick: function () { removeColumn(it.id, i); } }, icon("trash"))));
+    });
+    box.appendChild(list);
+    box.appendChild(h("div", { class: "pb-row pb-wrap" }, h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis || device === "mobile", onclick: function () { change(function () { equalizeColumns(byId(it.id)); }); } }, "Répartir également")));
+    box.appendChild(h("p", { class: "pb-hint", text: "Astuce : dans la page, tirez la séparation entre deux colonnes pour changer leurs largeurs." }));
+  }
+  // Grille : colonnes (écran modifié) et lignes (calculées à partir du nombre de cellules)
+  function gridContent(it, box) {
+    var dis = !canWrite || lockedDeep(it.id);
+    var cols = gridColumnsOf(it), n = kidsOf(it).length, rows = Math.max(1, Math.ceil(n / cols));
+    var stepper = function (label, value, attr, minus, plus, offMinus, offPlus) {
+      return h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: label }), h("div", { class: "pb-stepper" },
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": minus[0], "data-tip": minus[0], disabled: dis || offMinus, onclick: minus[1] }, icon("minus")),
+        h("output", { class: "pb-stepper-value", text: String(value) }, null),
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": plus[0], "data-tip": plus[0], disabled: dis || offPlus, onclick: plus[1] }, icon("plus"))));
+    };
+    var c = stepper("Colonnes", cols, "cols", ["Retirer une colonne", function () { gridSetColumns(it.id, cols - 1); }], ["Ajouter une colonne", function () { gridSetColumns(it.id, cols + 1); }], cols <= 1, cols >= 12);
+    c.querySelector("output").setAttribute("data-pb-grid-cols", "");
+    box.appendChild(c);
+    var r = stepper("Lignes", rows, "rows", ["Retirer la dernière ligne", function () { gridRemoveRow(it.id); }], ["Ajouter une ligne", function () { gridAddRow(it.id); }], n <= cols, n >= 96);
+    r.querySelector("output").setAttribute("data-pb-grid-rows", "");
+    box.appendChild(r);
+    box.appendChild(h("p", { class: "pb-hint", text: "Colonnes pour l'écran « " + bpLabel(device) + " » ; une ligne = " + cols + " cellule(s). L'écart se règle dans Style › Mise en page." }));
   }
   function advancedTab(items, box, locked) {
     var it = items[0];
@@ -1370,6 +1535,7 @@
       var info = infoBlock(it);
       box.appendChild(info);
       box.appendChild(textField("Nom du calque", it.name, function (v) { rename(it.id, v); }, { max: 60, placeholder: inspectorFor(it).kind, onChange: true, disabled: !canWrite }));
+      if (isNode(it)) box.appendChild(textField("Ancre (identifiant pour un lien #…)", it.anchor, function (v) { setAnchor(it.id, v); }, { max: 40, placeholder: "ex. tarifs", onChange: true, disabled: !canWrite || locked, hint: it.anchor ? "Lien vers cet élément : " + (PAGE.slug ? "/p/" + PAGE.slug : "") + "#" + it.anchor : "Lettres minuscules, chiffres et tirets. Permet un lien direct vers cet élément (menu, bouton « Voir les tarifs »…)." }));
     }
     // Position et plan (propriétés avancées de placement), pour l'écran actif
     if (inspectorFor(it).groups) {
@@ -1585,6 +1751,7 @@
     if (editing) commitEdit();
     if (selection.length !== 1 || selection[0] !== id) { selection = [id]; markTreeSelection(); renderInspector(); }
     editing = { id: id, el: el, rich: INLINE[it.type] === "rich", before: it.type === "text" ? el.innerHTML : el.textContent };
+    placeCanvasBar();
     $$(".pb-handle", doc).forEach(function (x) { x.remove(); });
     el.setAttribute("contenteditable", "true");
     el.classList.add("pb-editing");
@@ -1598,6 +1765,7 @@
     if (!editing) return;
     var ed = editing;
     editing = null;
+    placeCanvasBar();
     ed.el.removeAttribute("contenteditable");
     ed.el.classList.remove("pb-editing");
     var it = byId(ed.id);
@@ -1723,6 +1891,7 @@
       }, function () { var errBox = $("[data-pb-render-error]"); errBox.textContent = "Aperçu indisponible (connexion au serveur interrompue)."; errBox.hidden = false; });
   }
   function markError() { $$(".pb-row-item.is-error", treeEl).forEach(function (r) { r.classList.remove("is-error"); }); if (errorItemId) { var r = treeEl.querySelector('.pb-node[data-id="' + errorItemId + '"] > .pb-row-item'); if (r) r.classList.add("is-error"); } }
+  var ignoreClickUntil = 0;
   var targetOf = function (e) { return e.target && e.target.closest ? e.target.closest("[data-node-id],[data-section-id]") : null; };
   var idOfEl = function (el) { return el ? el.getAttribute("data-node-id") || el.getAttribute("data-section-id") : null; };
   function setupCanvas(y) {
@@ -1736,6 +1905,8 @@
     doc.addEventListener("click", function (e) {
       if (selectedGuide) { selectedGuide = null; drawGuides(); }
       if (tool === "hand") { e.preventDefault(); return; }
+      // Fin d'un redimensionnement (poignée, séparation de colonnes) : le relâchement n'est pas un clic de sélection
+      if (Date.now() < ignoreClickUntil) { e.preventDefault(); return; }
       if (editing && editing.el.contains(e.target)) return;
       e.preventDefault();
       if (e.target.closest(".pb-handle")) return;
@@ -1894,7 +2065,8 @@
   function drawOverlays() {
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
-    $$(".pb-sel-box, .pb-sel-badge, .pb-parent-box, .pb-handle, .pb-dim", doc).forEach(function (x) { x.remove(); });
+    $$(".pb-sel-box, .pb-sel-badge, .pb-parent-box, .pb-handle, .pb-dim, .pb-col-split, .pb-struct-add", doc).forEach(function (x) { x.remove(); });
+    placeCanvasBar();
     selection.forEach(function (id, n) {
       var el = doc.querySelector('[data-node-id="' + id + '"],[data-section-id="' + id + '"]');
       if (!el) return;
@@ -1917,7 +2089,81 @@
           doc.body.appendChild(hEl);
         });
       }
+      if (selection.length === 1 && canWrite && !lockedDeep(id) && !editing) structureOverlays(it, el, r);
     });
+  }
+  // Colonnes et grille sélectionnées : séparations à tirer (largeurs) et bouton « + » au bord (colonne, ligne)
+  function structureOverlays(it, el, r) {
+    var doc = frame.contentDocument;
+    var plus = function (cls, x, y, label, fn) {
+      var b = doc.createElement("button");
+      b.type = "button"; b.className = "pb-struct-add " + cls; b.textContent = "+"; b.title = label; b.setAttribute("aria-label", label);
+      b.style.left = x + "px"; b.style.top = y + "px";
+      b.addEventListener("mousedown", function (e) { e.preventDefault(); e.stopPropagation(); });
+      b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); fn(); });
+      doc.body.appendChild(b);
+    };
+    if (it.type === "columns") {
+      var kids = kidsOf(it);
+      if (kids.length < MAX_COLS) plus("is-col", r.left + r.width, r.top + r.height / 2, "Ajouter une colonne", function () { addColumn(it.id); });
+      if (frame.contentWindow.getComputedStyle(el).flexDirection.indexOf("row") !== 0) return; // colonnes empilées (mobile)
+      var els = kids.map(function (c) { return canvasEl(c.id); });
+      if (els.some(function (x) { return !x; })) return;
+      for (var i = 0; i < els.length - 1; i++) {
+        var a = pageRect(els[i]), b = pageRect(els[i + 1]);
+        if (Math.abs(a.top - b.top) > 4) continue; // colonnes passées à la ligne
+        var sp = doc.createElement("div");
+        sp.className = "pb-col-split";
+        sp.title = "Tirer pour changer la largeur des colonnes " + (i + 1) + " et " + (i + 2);
+        sp.style.cssText = "left:" + ((a.left + a.width + b.left) / 2) + "px;top:" + r.top + "px;height:" + r.height + "px";
+        (function (k) { sp.addEventListener("mousedown", function (e) { columnSplitStart(e, it.id, k); }); })(i);
+        doc.body.appendChild(sp);
+      }
+    } else if (it.type === "grid") {
+      plus("is-row", r.left + r.width / 2, r.top + r.height, "Ajouter une ligne", function () { gridAddRow(it.id); });
+      plus("is-col", r.left + r.width, r.top + r.height / 2, "Ajouter une colonne", function () { gridSetColumns(it.id, gridColumnsOf(it) + 1); });
+    } else if (kidsOf(it) && !kidsOf(it).length) {
+      plus("is-inside", r.left + r.width / 2, r.top + r.height / 2, "Ajouter un élément ici", function () { openCommands("Ajouter", { inside: it.id }); });
+    }
+  }
+  // Tirer la séparation entre deux colonnes : les deux voisines se partagent leur largeur commune
+  function columnSplitStart(e, colsId, i) {
+    e.preventDefault(); e.stopPropagation();
+    var doc = frame.contentDocument;
+    var cols = kidsOf(byId(colsId)).map(function (c) { return canvasEl(c.id); });
+    var widths = cols.map(function (x) { return x.getBoundingClientRect().width; });
+    var pair = widths[i] + widths[i + 1], total = widths.reduce(function (a, b) { return a + b; }, 0), x0 = e.clientX, a0 = widths[i];
+    var min = total * 0.05;
+    var nice = [25, 100 / 3, 50, 200 / 3, 75, 20, 40, 60, 80];
+    var dim = doc.createElement("div"); dim.className = "pb-dim"; doc.body.appendChild(dim);
+    gesture = true;
+    var shares = null;
+    var move = function (ev) {
+      var a = Math.min(pair - min, Math.max(min, a0 + ev.clientX - x0));
+      var w = widths.slice(); w[i] = a; w[i + 1] = pair - a;
+      shares = w.map(function (x) { return x / total * 100; });
+      if (aids.snap) { // magnétisme : pour cent entiers, et fractions courantes (¼, ⅓, ½…) à 1,5 % près
+        var near = nice.filter(function (n) { return Math.abs(n - shares[i]) <= 1.5; })[0];
+        var target = near !== undefined ? near : Math.round(shares[i]);
+        var both = shares[i] + shares[i + 1];
+        target = Math.min(both - 5, Math.max(5, target));
+        shares[i] = target; shares[i + 1] = both - target;
+      }
+      cols.forEach(function (c, k) { c.style.flexGrow = String(shares[k]); });
+      var r = pageRect(cols[i + 1]);
+      dim.textContent = shares.map(pct).join(" · ");
+      dim.style.left = r.left + "px"; dim.style.top = Math.max(0, r.top - 30) + "px";
+    };
+    var up = function () {
+      doc.removeEventListener("mousemove", move); doc.removeEventListener("mouseup", up); dim.remove();
+      cols.forEach(function (c) { c.style.flexGrow = ""; });
+      gesture = false;
+      ignoreClickUntil = Date.now() + 250;
+      if (!shares) { endGesture(); return; }
+      change(function () { storeShares(byId(colsId), shares); });
+      toast("Largeurs enregistrées pour l'écran « " + bpLabel(device) + " » : " + shares.map(pct).join(" / ") + ".");
+    };
+    doc.addEventListener("mousemove", move); doc.addEventListener("mouseup", up);
   }
   // Redimensionner à la souris : largeur / hauteur en pixels, pour l'écran modifié (par pas de 8 px si magnétisme)
   function resizeStart(e, id, el, dir) {
@@ -1942,6 +2188,7 @@
     var up = function () {
       doc.removeEventListener("mousemove", move); doc.removeEventListener("mouseup", up); dim.remove();
       gesture = false;
+      ignoreClickUntil = Date.now() + 250;
       if (cur.w === null && cur.h === null) { endGesture(); return; }
       change(function () {
         var s = styleSet(byId(id), device, "normal", true);
@@ -1952,6 +2199,95 @@
     };
     doc.addEventListener("mousemove", move); doc.addEventListener("mouseup", up);
   }
+  // ---------- Barre d'actions du canevas (posée sur l'élément sélectionné) ----------
+  // Registre extensible : chaque action déclare son icône, son libellé, quand elle est indisponible et ce qu'elle fait ;
+  // chaque type d'élément liste ses actions propres, complétées des actions communes selon le contexte.
+  var canvasEl = function (id) { var doc = frame.contentDocument; return doc ? doc.querySelector('[data-node-id="' + id + '"],[data-section-id="' + id + '"]') : null; };
+  var cbar = h("div", { class: "pb-cbar", role: "toolbar", "aria-label": "Actions sur la sélection", hidden: true });
+  document.body.appendChild(cbar);
+  var anyFlag = function (k) { return selectedItems().some(function (x) { return x[k]; }); };
+  var CANVAS_ACTIONS = {
+    parent: { icon: "arrowUp", label: "Sélectionner le parent", run: function (it) { var l = locate(it.id); if (l && l.parent) select(l.parent.id, false, { scroll: false }); } },
+    move: { icon: "grip", label: "Déplacer : tirez vers un nouvel emplacement (ou Alt + ↑ / ↓)", drag: true },
+    edit: { icon: "edit", label: "Modifier le texte (ou double-clic)", run: function (it) { startEdit(it.id); } },
+    replace: { icon: "image", label: "Remplacer l'image", run: function (it) { openMedia({ title: "Remplacer l'image", onPick: function (m) { change(function () { var x = byId(it.id); x.props.src = m.path; if (m.alt) { x.props.alt = m.alt; delete x.props.decorative; } }); } }); } },
+    crop: { icon: "borderBox", label: "Recadrer : cadrage, point focal, proportions", run: function () { openInspector("style", "media"); } },
+    settings: { icon: "sliders", label: "Réglages du contenu", run: function () { openInspector("content"); } },
+    addCol: { icon: "plus", label: "Ajouter une colonne", off: function (it) { return kidsOf(it).length >= MAX_COLS; }, run: function (it) { addColumn(it.id); } },
+    delCol: { icon: "minus", label: "Retirer la dernière colonne", off: function (it) { return kidsOf(it).length <= 1; }, run: function (it) { removeColumn(it.id); } },
+    gridCol: { icon: "columns", label: "Ajouter une colonne à la grille", off: function (it) { return gridColumnsOf(it) >= 12; }, run: function (it) { gridSetColumns(it.id, gridColumnsOf(it) + 1); } },
+    gridRow: { icon: "listPlus", label: "Ajouter une ligne", run: function (it) { gridAddRow(it.id); } },
+    gridRowDel: { icon: "listMinus", label: "Retirer la dernière ligne", off: function (it) { return kidsOf(it).length <= gridColumnsOf(it); }, run: function (it) { gridRemoveRow(it.id); } },
+    addInside: { icon: "plus", label: "Ajouter un élément à l'intérieur", run: function (it) { openCommands("Ajouter", { inside: it.id }); } },
+    addSection: { icon: "listPlus", label: "Ajouter une section en dessous", run: function (it) { openCommands("Ajouter", { after: topOf(it.id).id }); } },
+    duplicate: { icon: "copy", label: "Dupliquer (Ctrl/⌘ + D)", run: function () { duplicateSelected(); } },
+    hide: { icon: function () { return anyFlag("hidden") ? "eye" : "eyeOff"; }, label: function () { return anyFlag("hidden") ? "Afficher (Ctrl/⌘ + Maj + H)" : "Masquer : reste dans la page et les calques (Ctrl/⌘ + Maj + H)"; }, pressed: function () { return anyFlag("hidden"); }, run: function () { setFlag(selection.slice(), "hidden", !anyFlag("hidden")); } },
+    lock: { icon: "lock", label: function () { return anyFlag("locked") ? "Déverrouiller (Ctrl/⌘ + Maj + L)" : "Verrouiller : ni déplacé, ni modifié, ni supprimé (Ctrl/⌘ + Maj + L)"; }, pressed: function () { return anyFlag("locked"); }, run: function () { setFlag(selection.slice(), "locked", !anyFlag("locked")); } },
+    remove: { icon: "trash", label: "Supprimer (Suppr) — Ctrl/⌘ + Z pour annuler", danger: true, run: function () { removeSelected(); } },
+    more: { icon: "moreHorizontal", label: "Plus d'actions : copier, coller, style, grouper, ajouter…", run: function (it, btn) { var r = btn.getBoundingClientRect(); openMenu(r.left, r.bottom + 4); } },
+  };
+  var TEXTISH = ["edit"], SETTINGS = ["settings"];
+  var TYPE_ACTIONS = { heading: TEXTISH, text: TEXTISH, button: TEXTISH, link: TEXTISH, quote: TEXTISH, image: ["replace", "crop"], video: SETTINGS, audio: SETTINGS, gallery: SETTINGS, accordion: SETTINGS, tabs: SETTINGS, table: SETTINGS, list: SETTINGS, countdown: SETTINGS, course: SETTINGS, icon: SETTINGS, code: SETTINGS,
+    columns: ["addCol", "delCol"], grid: ["gridCol", "gridRow", "gridRowDel"], container: ["addInside"], column: ["addInside"], stack: ["addInside"], group: ["addInside"], layout: ["addInside", "addSection"], form: ["settings", "addSection"], legacy: ["settings", "addSection"], component: ["settings"] };
+  var STRUCTURAL = ["layout", "container", "columns", "column", "grid", "stack", "group"];
+  function canvasActionsFor(items) {
+    if (!items.length || !canWrite) return [];
+    if (items.length > 1) return ["duplicate", "hide", "lock", "remove", "more"];
+    var it = items[0], l = locate(it.id);
+    if (it.locked) return ["lock", "more"];
+    if (lockedDeep(it.id)) return l.parent ? ["parent", "more"] : ["more"];
+    var key = isNode(it) ? it.type : it.type === "layout" || it.type === "component" || it.type === "form" ? it.type : "legacy";
+    var list = (l.parent ? ["parent"] : []).concat(isNode(it) ? ["move"] : []).concat(TYPE_ACTIONS[key] || []).concat(["duplicate", "hide"]);
+    if (STRUCTURAL.indexOf(it.type) >= 0 || !isNode(it)) list.push("lock");
+    return list.concat(["remove", "more"]);
+  }
+  var val = function (v) { return typeof v === "function" ? v() : v; };
+  function buildCanvasBar(acts, it) {
+    cbar.textContent = "";
+    acts.forEach(function (k) {
+      var a = CANVAS_ACTIONS[k];
+      var label = val(a.label);
+      var b = h("button", { type: "button", class: "pb-cbar-btn" + (a.danger ? " is-danger" : ""), "data-action": k, "aria-label": label, "data-tip": label, "aria-pressed": a.pressed ? String(a.pressed()) : null, disabled: a.off && a.off(it) ? true : null }, icon(val(a.icon)));
+      if (a.drag) {
+        b.setAttribute("draggable", "true");
+        b.addEventListener("dragstart", function (e) { dragIds = selection.slice(); dragNew = null; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "pb-move"); hideTip(); });
+      } else b.addEventListener("click", function (e) { e.preventDefault(); hideTip(); a.run(it, b); });
+      cbar.appendChild(b);
+    });
+  }
+  // Position : au-dessus de l'élément (bord droit), en dessous s'il n'y a pas la place ; masquée hors de la zone visible
+  function placeCanvasBar() {
+    if (!cbar) return; // appel pendant l'initialisation
+    var items = selectedItems();
+    var acts = editing || gesture || tool === "hand" ? [] : canvasActionsFor(items);
+    var el = acts.length ? canvasEl(selection[0]) : null;
+    if (!el) { cbar.hidden = true; return; }
+    var key = selection.join(",") + "|" + acts.join(",") + "|" + items.map(function (x) { return (x.hidden ? "h" : "") + (x.locked ? "l" : "") + ((kidsOf(x) || []).length); }).join(",") + "|" + device;
+    if (cbar.dataset.key !== key) { buildCanvasBar(acts, items[0]); cbar.dataset.key = key; }
+    var fr = frame.getBoundingClientRect(), sr = stage.getBoundingClientRect(), r = el.getBoundingClientRect();
+    var top = fr.top + r.top * zoom, bottom = fr.top + r.bottom * zoom, right = fr.left + r.right * zoom;
+    if (bottom < sr.top + 8 || top > sr.bottom - 8 || !r.width) { cbar.hidden = true; return; }
+    cbar.hidden = false;
+    var bw = cbar.offsetWidth, bh = cbar.offsetHeight;
+    // Au-dessus si possible ; sinon dans le coin haut de l'élément s'il est assez grand (on ne cache pas son voisin) ;
+    // sinon en dessous
+    var y = top - bh - 6;
+    if (y < sr.top + 4) y = bottom - top >= bh * 2.5 ? Math.max(top, sr.top) + 4 : bottom + 6 + bh < sr.bottom ? bottom + 6 : sr.top + 4;
+    var x = Math.min(Math.max(right - bw, sr.left + 4), sr.right - bw - 4);
+    cbar.style.left = Math.round(x) + "px"; cbar.style.top = Math.round(y) + "px";
+  }
+  stage.addEventListener("scroll", placeCanvasBar, { passive: true });
+  window.addEventListener("resize", placeCanvasBar);
+  // Ouvrir l'inspecteur sur un onglet (et un groupe de réglages déplié)
+  function openInspector(tab, group) {
+    if (panels.rightHidden) togglePanel("right");
+    inspTab = tab; store.set("insp-tab", tab);
+    if (group) store.set("open-" + group, true);
+    renderInspector();
+    var target = group ? $("[data-pb-inspector] details[data-group='" + group + "']") : $("[data-pb-inspector] .pb-insp-body");
+    if (target) { target.scrollIntoView({ block: "nearest" }); var f = target.querySelector("input, select, textarea, button"); if (f) f.focus({ preventScroll: true }); }
+  }
+
   // Outil « main » : faire défiler la page en la glissant
   function panStart(e) {
     e.preventDefault();
@@ -1984,11 +2320,13 @@
     wrap.style.transform = "scale(" + zoom + ")";
     wrap.style.marginRight = -((1 - zoom) * w) + "px";
     wrap.style.marginBottom = -((1 - zoom) * hgt) + "px";
-    $("[data-pb-zoom='100']").textContent = Math.round(zoom * 100) + " %";
+    $("[data-pb-zoom-value]").textContent = Math.round(zoom * 100) + " %";
+    $$("[data-pb-zoom]").forEach(function (b) { var v = b.dataset.pbZoom; b.disabled = (v === "-" && zoom <= 0.25) || (v === "+" && zoom >= 2); });
     drawRulers();
     refreshInfo();
+    placeCanvasBar();
   }
-  function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(2, Math.max(0.25, z)); applyZoom(); }
+  function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(2, Math.max(0.25, z)); applyZoom(); setTimeout(function () { drawOverlays(); drawGuides(); }, 30); }
   $$("[data-pb-zoom]").forEach(function (b) { b.addEventListener("click", function () { var v = b.dataset.pbZoom; setZoom(v === "fit" ? "fit" : v === "100" ? 1 : v === "+" ? Math.round((zoom + 0.1) * 10) / 10 : Math.round((zoom - 0.1) * 10) / 10); }); });
   window.addEventListener("resize", function () { if (zoomFit) applyZoom(); else drawRulers(); });
   // La zone du canevas change de taille (panneaux, fenêtre, mise en page initiale) : le cadre suit
@@ -2227,8 +2565,9 @@
   // ---------- Panneaux redimensionnables ----------
   var main = $("[data-pb-main]");
   function applyPanels() {
-    main.style.setProperty("--pb-tools-w", panels.toolsExpanded ? "176px" : "48px");
+    main.style.setProperty("--pb-tools-w", panels.toolsExpanded ? "176px" : panels.toolsDense ? "136px" : "48px");
     main.classList.toggle("is-tools-expanded", Boolean(panels.toolsExpanded));
+    main.classList.toggle("is-tools-dense", Boolean(panels.toolsDense) && !panels.toolsExpanded);
     main.style.setProperty("--pb-left-w", panels.left + "px");
     main.style.setProperty("--pb-right-w", panels.right + "px");
     main.classList.toggle("is-left-hidden", panels.leftHidden);
@@ -2530,7 +2869,10 @@
   function addAt(type, legacy) {
     var anchor = cmdAnchor; cmdAnchor = null;
     var at;
-    if (anchor) {
+    if (anchor && anchor.inside) {
+      var box = byId(anchor.inside);
+      if (box && kidsOf(box)) at = { parent: box, index: kidsOf(box).length };
+    } else if (anchor) {
       var l = locate(anchor.before || anchor.after);
       if (l) {
         var node = !legacy && type !== "layout";
