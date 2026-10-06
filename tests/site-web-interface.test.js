@@ -29,11 +29,12 @@ before(async () => {
 after(() => srv.stop());
 
 describe("navigation et tableau de bord", () => {
-  test("menu : section « Site Web » (Tableau de bord, Sites, Pages) ; pas de « Tunnels » tant qu'ils n'existent pas", async () => {
+  test("menu : section « Site Web » (Tableau de bord, Sites, Pages), puis « Tunnels » (noms exacts)", async () => {
     const html = (await boss.get("/marketing/site-web")).text;
     assert.match(html, />Site Web</);
     for (const href of ["/marketing/site-web", "/marketing/site-web/sites", "/marketing/pages"]) assert.match(html, new RegExp(`href="${href}"`));
-    assert.doesNotMatch(html, /Tunnels/, "aucune entrée pour une fonctionnalité pas encore construite");
+    assert.match(html, /href="\/marketing\/tunnels"/, "section Tunnels (phase 8)");
+    assert.doesNotMatch(html, /Funnels|Kolakisa Web/, "noms imposés : « Site Web » et « Tunnels »");
     assert.doesNotMatch(html, /Pages d'atterrissage</, "les pages d'atterrissage sont rattachées à Site Web → Pages");
   });
 
