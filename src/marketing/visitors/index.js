@@ -35,6 +35,8 @@ function record(db, organizationId, { visitorId, sessionId, events, userAgent = 
   const pageIdOf = db.prepare("SELECT id FROM mk_landing_pages WHERE organization_id = ? AND slug = ?");
   let saved = 0;
   const pageViews = []; // pages du moteur vues dans ce lot (déclencheurs d'automatisation, voir visitors/triggers.js)
+  const signals = [];   // formations consultées, ajouts au panier, commande commencée (déclencheurs e-commerce)
+  const signal = (s) => { if (!signals.some((x) => x.kind === s.kind && x.key === s.key)) signals.push(s); };
   for (const e of list) {
     if (!e || !TYPES.includes(e.t) || e.t === "form_submit") continue; // l'envoi d'un formulaire est enregistré par le serveur lui-même
     const path = cleanPath(e.p);
@@ -48,8 +50,13 @@ function record(db, organizationId, { visitorId, sessionId, events, userAgent = 
       cut(e.us, 80), cut(e.um, 80), cut(e.uc, 80), DEVICES.includes(e.d) ? e.d : "", at);
     saved += 1;
     if (e.t === "page_view" && page && !pageViews.some((v) => v.pageId === page.id)) pageViews.push({ pageId: page.id, path });
+    const course = e.t === "page_view" ? /^\/cours\/([a-z0-9-]{1,120})\/?$/.exec(path) : null;
+    if (course) signal({ kind: "course", key: course[1] });
+    if (e.t === "page_view" && /^\/commande\/?$/.test(path)) signal({ kind: "checkout", key: "commande" });
+    const cart = e.t === "button_click" ? /^add_to_cart:(\d{1,9})$/.exec(String(e.x || "")) : null;
+    if (cart) signal({ kind: "cart", key: cart[1] });
   }
-  return { ok: true, saved, sessionId: sid, pageViews };
+  return { ok: true, saved, sessionId: sid, pageViews, signals };
 }
 
 // Le visiteur devient un contact connu (inscription, connexion) : ses visites passées et futures sont reliées à sa fiche

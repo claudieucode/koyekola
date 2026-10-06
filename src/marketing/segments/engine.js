@@ -23,6 +23,9 @@ const MAX_COUNT = 100000;
 const EVENT_NAMES = {
   "lms.user_registered": false, "lms.order_completed": true, "lms.course_enrolled": true, "lms.lesson_completed": true,
   "lms.course_completed": true, "lms.review_posted": true, "lms.favorite_added": true,
+  "lms.course_progress_10": true, "lms.course_progress_50": true, "lms.course_progress_90": true,
+  "lms.course_viewed": true, "lms.cart_added": true, "lms.checkout_started": false,
+  "page.visited": false, "funnel.step_reached": false, "funnel.completed": false,
 };
 const DAY_MS = 86400000;
 

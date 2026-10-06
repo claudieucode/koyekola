@@ -26,7 +26,8 @@ describe("enregistrement (sans serveur)", () => {
       { t: "page_view", p: "https://autre.site/x" },
       { t: "button_click", p: "/catalogue", x: "Je commence", at: 1 },
     ] });
-    assert.deepEqual(r, { ok: true, saved: 3 });
+    assert.deepEqual([r.ok, r.saved], [true, 3]);
+    assert.deepEqual(r.pageViews.map((v) => v.path), ["/p/offre"], "pages du moteur vues (déclencheurs d'automatisation)");
     const rows = all();
     assert.equal(rows[0].path, "/p/offre", "jamais la suite de l'adresse (paramètres, ancre)");
     assert.equal(rows[0].referrer, "google.com");

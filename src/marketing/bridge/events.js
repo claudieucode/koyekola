@@ -88,6 +88,27 @@ function completedCourses(ctx, rows) {
   return out;
 }
 
+// Progression d'un élève dans une formation : 10 %, 50 % et 90 % des leçons faites (100 % = « formation terminée »).
+// Une fois par élève, par formation et par palier ; un saut (ex. 0 → 60 %) émet les paliers franchis (10 et 50).
+const MILESTONES = [10, 50, 90];
+function progressMilestones(ctx, rows) {
+  const seen = new Set();
+  const out = [];
+  for (const r of rows) {
+    if (!r.course_id || seen.has(`${r.user_id}:${r.course_id}`)) continue;
+    seen.add(`${r.user_id}:${r.course_id}`);
+    const total = ctx.db.prepare("SELECT COUNT(*) n FROM lessons l JOIN sections s ON s.id = l.section_id WHERE s.course_id = ?").get(r.course_id).n;
+    if (!total) continue;
+    const done = ctx.db.prepare("SELECT COUNT(*) n FROM lesson_progress p JOIN lessons l ON l.id = p.lesson_id JOIN sections s ON s.id = l.section_id WHERE s.course_id = ? AND p.user_id = ?").get(r.course_id, r.user_id).n;
+    const percent = Math.floor((done / total) * 100);
+    for (const m of MILESTONES) {
+      if (percent < m) continue;
+      out.push({ name: `lms.course_progress_${m}`, userId: r.user_id, key: `course_progress:${r.user_id}:${r.course_id}:${m}`, at: stamp(r.created_at), metadata: { courseId: r.course_id, title: r.course_title ?? "", slug: r.slug ?? "", percent: m } });
+    }
+  }
+  return out;
+}
+
 function syncLmsEvents(ctx, { limit = 200 } = {}) {
   const result = { initialized: [], emitted: {}, skipped: {} };
   const base = { ...ctx, userId: null };
@@ -108,7 +129,7 @@ function syncLmsEvents(ctx, { limit = 200 } = {}) {
       let emitted = 0;
       let skipped = 0;
       const list = rows.flatMap((row) => eventsFor(ctx, source, row));
-      if (source === "lesson_progress") list.push(...completedCourses(ctx, rows));
+      if (source === "lesson_progress") list.push(...progressMilestones(ctx, rows), ...completedCourses(ctx, rows));
       for (const ev of list) {
         const contact = contactOf(ctx, ev.userId);
         if (!contact) { skipped++; continue; }

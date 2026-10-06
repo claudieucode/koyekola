@@ -40,9 +40,14 @@ module.exports = ({ db }) => {
         if (contact) visitors.linkVisitor(db, marketing.organizationId, visitorId, contact.id);
       }
       // Contact connu : ses visites de pages et d'étapes de tunnels peuvent déclencher des automatisations
-      if (result.ok && result.pageViews.length) {
+      if (result.ok && (result.pageViews.length || result.signals.length)) {
         const known = db.prepare("SELECT contact_id FROM mk_web_visitors WHERE id = ?").get(visitorId);
-        if (known && known.contact_id) require("../visitors/triggers").emitVisitEvents({ db, organizationId: marketing.organizationId, bus: marketing.bus }, { contactId: known.contact_id, sessionId: result.sessionId, pageViews: result.pageViews });
+        if (known && known.contact_id) {
+          const triggers = require("../visitors/triggers");
+          const tctx = { db, organizationId: marketing.organizationId, bus: marketing.bus };
+          triggers.emitVisitEvents(tctx, { contactId: known.contact_id, sessionId: result.sessionId, pageViews: result.pageViews });
+          triggers.emitCommerceEvents(tctx, { contactId: known.contact_id, sessionId: result.sessionId, signals: result.signals });
+        }
       }
     } catch (error) {
       console.error("[KOLAKISA] Suivi des visiteurs :", error.message); // jamais bloquant pour le visiteur

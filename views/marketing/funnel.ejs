@@ -96,6 +96,13 @@
           <div class="mk-stat"><span class="mk-stat-label">Conversion</span><span class="mk-stat-value"><%= pct(report.conversion) %></span><span class="mk-stat-hint">inscriptions ÷ entrées</span></div>
           <div class="mk-stat"><span class="mk-stat-label">Parcours complet</span><span class="mk-stat-value"><%= mkh.fmt(report.measuredEnd) %></span><span class="mk-stat-hint">sur <%= mkh.fmt(report.measuredStart) %> visiteur<%= report.measuredStart > 1 ? "s" : "" %> mesuré<%= report.measuredStart > 1 ? "s" : "" %> à l'entrée</span></div>
         </div>
+        <% if (report.hasCourse) { %>
+          <div class="mk-stats mk-stats-3">
+            <div class="mk-stat"><span class="mk-stat-label">Inscriptions aux formations</span><span class="mk-stat-value"><%= mkh.fmt(report.sales.enrolled) %></span><span class="mk-stat-hint">par les visiteurs mesurés du tunnel</span></div>
+            <div class="mk-stat"><span class="mk-stat-label">Revenus</span><span class="mk-stat-value"><%= (report.sales.revenueCents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> €</span><span class="mk-stat-hint"><%= mkh.fmt(report.sales.buyers) %> acheteur<%= report.sales.buyers > 1 ? "s" : "" %> (commandes réelles)</span></div>
+            <div class="mk-stat"><span class="mk-stat-label">Valeur par visiteur</span><span class="mk-stat-value"><%= report.revenuePerVisitor === null ? "—" : (report.revenuePerVisitor / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €" %></span><span class="mk-stat-hint">revenus ÷ visiteurs mesurés à l'entrée</span></div>
+          </div>
+        <% } %>
         <% if (advice) { %><p class="mk-callout mk-callout-warn"><span><strong>Étape la plus faible</strong><%= advice %></span></p>
         <% } else if (!report.enough && f.steps.length > 1) { %><p class="mk-callout"><span><strong>Pas encore assez de données pour une conclusion fiable</strong><%= mkh.fmt(report.measuredStart) %> visiteur<%= report.measuredStart > 1 ? "s" : "" %> mesuré<%= report.measuredStart > 1 ? "s" : "" %> à l'entrée, <%= report.minSample %> nécessaires. Les chiffres ci-dessous sont exacts, mais trop peu nombreux pour désigner une étape faible.</span></p><% } %>
         <% if (report.best) { %><p class="field-hint">Meilleur passage : de « <%= report.best.from %> » à « <%= report.best.to %> » (<%= pct(report.best.rate) %>).</p><% } %>
@@ -105,7 +112,7 @@
             <li class="mk-funnel-step">
               <div class="mk-funnel-head"><span class="mk-funnel-label"><%= i + 1 %>. <%= s.name %></span><span class="mk-funnel-num"><%= mkh.fmt(s.journey) %> visiteur<%= s.journey > 1 ? "s" : "" %> · <%= pct(s.fromStart) %></span></div>
               <div class="mk-funnel-track" role="img" aria-label="<%= pct(s.fromStart) %> des visiteurs mesurés à l'entrée"><span class="mk-funnel-bar" style="width: <%= Math.max(0, Math.min(100, s.fromStart || 0)) %>%"></span></div>
-              <span class="mk-sub"><% if (i > 0) { %>Passage depuis l'étape précédente : <%= pct(s.passage) %> · <% } %>Tous visiteurs : <%= s.anonVisitors === null ? "non mesuré pour une formation" : mkh.fmt(s.anonVisitors) %><%= s.signups ? ` · ${mkh.fmt(s.signups)} inscription${s.signups > 1 ? "s" : ""}` : "" %></span>
+              <span class="mk-sub"><% if (i > 0) { %>Passage depuis l'étape précédente : <%= pct(s.passage) %> · <% } %>Tous visiteurs : <%= s.anonVisitors === null ? "non mesuré pour une formation" : mkh.fmt(s.anonVisitors) %><%= s.signups ? ` · ${mkh.fmt(s.signups)} inscription${s.signups > 1 ? "s" : ""}` : "" %><%= s.sales ? ` · ${mkh.fmt(s.sales.enrolled)} inscrit(s) à la formation, ${mkh.fmt(s.sales.buyers)} achat(s)` : "" %></span>
             </li>
           <% }) %>
         </ol>

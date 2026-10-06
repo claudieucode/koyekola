@@ -85,6 +85,9 @@
       if (!el || el.closest("#kw-consent")) return;
       var href = el.getAttribute("href") || "";
       var label = (el.textContent || el.getAttribute("aria-label") || "").replace(/\s+/g, " ").trim().slice(0, 80);
+      // Action repérée par la page elle-même (ex. ajout au panier : « add_to_cart:12 »)
+      var named = el.getAttribute("data-kw-event");
+      if (named && /^[a-z_]{3,30}:\d{1,9}$/.test(named)) { track("button_click", named); flush(); return; }
       if (el.hasAttribute("download") || /\.(pdf|zip|docx?|xlsx?|pptx?)(\?|$)/i.test(href)) track("download", href.split("?")[0] || label);
       else if (el.matches(".btn, .lp-btn, button[type=submit]")) track("button_click", label + (href && href.charAt(0) === "/" ? " → " + href.split("?")[0] : ""));
     }, true);

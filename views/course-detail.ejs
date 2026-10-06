@@ -286,13 +286,13 @@
           <% } else { %>
             <form action="/panier/ajouter/<%= course.id %>" method="post">
               <input type="hidden" name="buyNow" value="1">
-              <button type="submit" class="btn btn-primary btn-block">Acheter maintenant</button>
+              <button type="submit" class="btn btn-primary btn-block" data-kw-event="add_to_cart:<%= course.id %>">Acheter maintenant</button>
             </form>
             <% if (inCart) { %>
               <a href="/panier" class="btn btn-outline btn-block">Déjà dans le panier — voir</a>
             <% } else { %>
               <form action="/panier/ajouter/<%= course.id %>" method="post">
-                <button type="submit" class="btn btn-secondary btn-block">Ajouter au panier</button>
+                <button type="submit" class="btn btn-secondary btn-block" data-kw-event="add_to_cart:<%= course.id %>">Ajouter au panier</button>
               </form>
             <% } %>
           <% } %>

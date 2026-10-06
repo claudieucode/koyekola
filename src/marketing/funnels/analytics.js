@@ -4,7 +4,9 @@
 //    suivre une même personne d'une étape à l'autre.
 //  - Le PARCOURS d'une étape à l'autre : seulement les visiteurs ayant accepté la mesure d'audience (mk_web_events).
 //    Une étape compte les visiteurs qui ont aussi atteint toutes les étapes précédentes.
-// Achats et revenus : avec le paiement (phase 9). Les conclusions ne sont données qu'au-delà d'un échantillon minimal.
+//  - Les VENTES d'une étape « Formation » : inscriptions et achats réels de cette formation (tables du LMS, via le pont)
+//    par les comptes des visiteurs mesurés arrivés jusqu'à l'étape précédente, depuis le début de la période.
+// Les conclusions ne sont données qu'au-delà d'un échantillon minimal.
 const { checkCtx } = require("../audience/shared");
 const { MIN_SAMPLE } = require("../pages/analytics");
 
@@ -17,12 +19,20 @@ function funnelReport(ctx, funnel, { days = 30, now = Date.now() } = {}) {
   const anon = ctx.db.prepare(`SELECT COUNT(DISTINCT CASE WHEN type = 'view' THEN visitor END) visitors, SUM(type = 'signup') signups
     FROM mk_landing_events WHERE page_id = ? AND occurred_at >= ?`);
   const measured = ctx.db.prepare("SELECT DISTINCT visitor_id FROM mk_web_events WHERE organization_id = ? AND type = 'page_view' AND path = ? AND occurred_at >= ?");
+  const userOf = ctx.db.prepare("SELECT c.lms_user_id FROM mk_web_visitors v JOIN mk_contacts c ON c.id = v.contact_id WHERE v.id = ? AND c.lms_user_id IS NOT NULL");
+  const { courseConversions } = require("../bridge/catalog");
   let cohort = null;
   const steps = funnel.steps.map((s) => {
     const a = s.pageId ? anon.get(s.pageId, since) : null;
+    const before = cohort; // visiteurs arrivés jusqu'à l'étape précédente
     const reached = new Set(s.path ? measured.all(ctx.organizationId, s.path, since).map((r) => r.visitor_id) : []);
     cohort = cohort === null ? reached : new Set([...reached].filter((v) => cohort.has(v)));
-    return { id: s.id, name: s.name, typeLabel: s.typeLabel, anonVisitors: a ? a.visitors : null, signups: a ? a.signups || 0 : null, journey: cohort.size };
+    const out = { id: s.id, name: s.name, typeLabel: s.typeLabel, anonVisitors: a ? a.visitors : null, signups: a ? a.signups || 0 : null, journey: cohort.size };
+    if (s.type === "course" && s.courseId) {
+      const users = [...(before || reached)].map((v) => (userOf.get(v) || {}).lms_user_id).filter(Number.isInteger);
+      out.sales = courseConversions(ctx, { courseId: s.courseId, userIds: users, since });
+    }
+    return out;
   });
   steps.forEach((s, i) => {
     s.fromStart = steps.length ? pct(s.journey, steps[0].journey) : null;
@@ -39,10 +49,12 @@ function funnelReport(ctx, funnel, { days = 30, now = Date.now() } = {}) {
   if (worst && best && worst.toIndex === best.toIndex) best = null;
   if (worst && worst.lost === 0) worst = null;
   const entrants = steps.length ? steps[0].anonVisitors : null;
+  const sales = steps.filter((s) => s.sales).reduce((t, s) => ({ enrolled: t.enrolled + s.sales.enrolled, buyers: t.buyers + s.sales.buyers, revenueCents: t.revenueCents + s.sales.revenueCents }), { enrolled: 0, buyers: 0, revenueCents: 0 });
   const leads = steps.reduce((n, s) => n + (s.signups || 0), 0);
   return {
     period: days, steps, minSample: MIN_SAMPLE, worst, best,
-    entrants, leads, conversion: entrants ? pct(leads, entrants) : null,
+    entrants, leads, conversion: entrants ? pct(leads, entrants) : null, hasCourse: steps.some((s) => s.sales), sales,
+    revenuePerVisitor: steps.length && steps[0].journey && steps.some((s) => s.sales) ? Math.round(sales.revenueCents / steps[0].journey) : null,
     measuredStart: steps.length ? steps[0].journey : 0,
     measuredEnd: steps.length ? steps[steps.length - 1].journey : 0,
     enough: steps.length > 1 && steps[0].journey >= MIN_SAMPLE,
