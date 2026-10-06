@@ -90,3 +90,44 @@ function sniffMime(buffer) {
 const EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf" };
 
 module.exports = { OPS, ACCEPT, MAX_FILE_BYTES, EXT, orderedFields, normalizeFieldSettings, normalizeFileField, isVisible, applySettings, sniffMime };
+
+// ---------- Règles d'affichage des pop-ups (toutes combinées par « ET ») ----------
+// pages     : { mode: "all" | "include" | "exclude", paths: ["/blog", "/cours/photo*"] } (« * » final = préfixe)
+// devices   : ["desktop", "mobile"] (vide = tous)
+// minPages  : nombre de pages vues pendant la visite avant d'afficher (1 = dès la première)
+// utmSource, utmCampaign, referrer : la visite doit en provenir (contient, sans tenir compte de la casse)
+// (pages vues et provenance : mémoire de l'onglet en cours seulement, effacée à sa fermeture, jamais envoyée au serveur.
+// « Nouveau / ancien visiteur » demande un marqueur durable : il viendra avec le bandeau de consentement.)
+// hideForStudents : jamais pour une personne connectée à son compte ; hideIfSubscribed : jamais pour un contact abonné
+function normalizePopupRules(input) {
+  const src = input && typeof input === "object" ? input : {};
+  const out = {};
+  const mode = ["include", "exclude"].includes(src.pagesMode) ? src.pagesMode : "all";
+  if (mode !== "all") {
+    const paths = String(Array.isArray(src.paths) ? src.paths.join("\n") : src.paths || "").split(/[\n,]/).map((p) => p.trim()).filter(Boolean);
+    if (!paths.length) throw bad("Pop-up : indiquez au moins une page (ex. /blog ou /cours/photoshop*).");
+    if (paths.length > 20) throw bad("Pop-up : 20 pages au plus.");
+    for (const p of paths) if (!/^\/[^\s<>"'`\\]{0,200}$/.test(p)) throw bad(`Pop-up : « ${p.slice(0, 60)} » n'est pas une page du site (elle commence par « / »).`);
+    out.pages = { mode, paths };
+  }
+  const devices = (Array.isArray(src.devices) ? src.devices : src.devices ? [src.devices] : []).filter((d) => ["desktop", "mobile"].includes(d));
+  if (devices.length === 1) out.devices = devices;
+  const minPages = Number(src.minPages);
+  if (Number.isInteger(minPages) && minPages > 1 && minPages <= 20) out.minPages = minPages;
+  for (const k of ["utmSource", "utmCampaign", "referrer"]) {
+    const v = String(src[k] ?? "").replace(/[\x00-\x1f\x7f<>"'`]/g, "").trim().slice(0, 80);
+    if (v) out[k] = v;
+  }
+  if (src.hideForStudents === true || src.hideForStudents === "1" || src.hideForStudents === "on") out.hideForStudents = true;
+  if (src.hideIfSubscribed === true || src.hideIfSubscribed === "1" || src.hideIfSubscribed === "on") out.hideIfSubscribed = true;
+  return out;
+}
+// Règle de pages, vérifiée par le serveur pour l'adresse demandée
+function pageMatches(rules, pathname) {
+  if (!rules.pages) return true;
+  const hit = rules.pages.paths.some((p) => (p.endsWith("*") ? pathname.startsWith(p.slice(0, -1)) : pathname === p || pathname === `${p}/`));
+  return rules.pages.mode === "include" ? hit : !hit;
+}
+
+module.exports.normalizePopupRules = normalizePopupRules;
+module.exports.pageMatches = pageMatches;

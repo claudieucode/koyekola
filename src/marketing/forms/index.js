@@ -158,7 +158,7 @@ function validateSmsConsentText(value) {
   return text;
 }
 
-function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, popupEnabled, popupTrigger, popupTriggerValue, popupFrequencyDays, propertyFields, tags, redirectUrl, doubleOptin, smsConsentText, fieldSettings, fileField }) {
+function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, popupEnabled, popupTrigger, popupTriggerValue, popupFrequencyDays, propertyFields, tags, redirectUrl, doubleOptin, smsConsentText, fieldSettings, fileField, popupRules }) {
   checkCtx(ctx);
   const current = rowToForm(requireFormRow(ctx, id)); // existe et appartient à l'organisation
   // Réglages absents de l'appel (ancien appelant) : on garde la valeur actuelle plutôt que de l'effacer
@@ -180,16 +180,17 @@ function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, 
   const defs = propertyFieldDefs(ctx.db, ctx.organizationId, { propertyFields: cleanPropertyFields });
   const cleanSettings = fieldRules.normalizeFieldSettings(fieldSettings === undefined ? current.fieldSettings : fieldSettings, { fields: cleanFields }, defs);
   const cleanFile = fileField === undefined ? current.fileField : fieldRules.normalizeFileField(fileField);
+  const cleanRules = popupRules === undefined ? current.popupRules : fieldRules.normalizePopupRules(popupRules);
   if (popupEnabled && cleanFile.enabled) throw new MarketingError("invalid_field", "Un formulaire avec fichier joint ne peut pas s'afficher en pop-up (l'envoi de fichier se fait sur sa page /f/… ou dans une page du site).");
   ctx.db
     .prepare(
       `UPDATE mk_forms SET name = ?, fields = ?, consent_text = ?, list_id = ?, thank_you_text = ?,
          popup_enabled = ?, popup_trigger = ?, popup_trigger_value = ?, popup_frequency_days = ?,
-         property_fields = ?, tags = ?, redirect_url = ?, double_optin = ?, sms_consent_text = ?, field_settings = ?, file_field = ?, updated_at = datetime('now') WHERE id = ?`
+         property_fields = ?, tags = ?, redirect_url = ?, double_optin = ?, sms_consent_text = ?, field_settings = ?, file_field = ?, popup_rules = ?, updated_at = datetime('now') WHERE id = ?`
     )
     .run(cleanName, JSON.stringify(cleanFields), cleanConsent, list, cleanThanks, popupEnabled ? 1 : 0, trigger, triggerValue, frequencyDays,
       JSON.stringify(cleanPropertyFields), JSON.stringify(cleanTags), cleanRedirect, (doubleOptin === undefined ? current.doubleOptin : doubleOptin) ? 1 : 0, cleanSms,
-      JSON.stringify(cleanSettings), JSON.stringify(cleanFile), id);
+      JSON.stringify(cleanSettings), JSON.stringify(cleanFile), JSON.stringify(cleanRules), id);
   audit(ctx, "form.updated", "form", id, { name: cleanName, popupEnabled: Boolean(popupEnabled) });
   return getForm(ctx, id);
 }
@@ -218,6 +219,11 @@ function getActivePopup(db, organizationId) {
   // id en second critère : updated_at (précision à la seconde) peut être identique pour deux mises à jour rapprochées
   const row = db.prepare("SELECT * FROM mk_forms WHERE organization_id = ? AND status = 'published' AND popup_enabled = 1 ORDER BY updated_at DESC, id DESC LIMIT 1").get(organizationId);
   return row ? rowToForm(row) : null;
+}
+
+// Tous les pop-ups actifs, du plus récemment modifié au plus ancien : le premier dont les règles sont remplies s'affiche
+function getActivePopups(db, organizationId) {
+  return db.prepare("SELECT * FROM mk_forms WHERE organization_id = ? AND status = 'published' AND popup_enabled = 1 ORDER BY updated_at DESC, id DESC LIMIT 20").all(organizationId).map(rowToForm);
 }
 
 function getPublishedForm(db, organizationId, slug) {
@@ -424,6 +430,6 @@ function confirmSubscription(ctx, token, { now = Date.now() } = {}) {
 
 module.exports = {
   FIELD_CATALOG, STATUSES, MAX_TAGS, propertyFieldDefs, POPUP_TRIGGERS, POPUP_TRIGGER_RANGE, POPUP_FREQUENCY_RANGE,
-  createForm, listForms, getForm, updateForm, setStatus, deleteForm, getPublishedForm, getActivePopup, recordView, submitForm, slugify,
+  createForm, listForms, getForm, updateForm, setStatus, deleteForm, getPublishedForm, getActivePopup, getActivePopups, recordView, submitForm, slugify,
   findPendingConfirmation, confirmSubscription, CONFIRM_TTL_MS, contactFiles, formFile,
 };

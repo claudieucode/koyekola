@@ -5,6 +5,7 @@ const forms = require("../forms");
 const { createRateLimiter } = require("../../middlewares/security");
 const { sendSubscriptionConfirmation } = require("../../utils/mailer");
 const antispam = require("../forms/antispam");
+const fieldRules = require("../forms/fields");
 const formUpload = require("./formUpload");
 
 const PENDING_TEXT = "Merci ! Un e-mail de confirmation vient de vous être envoyé : cliquez sur le lien qu'il contient pour finaliser votre inscription (pensez aux courriers indésirables).";
@@ -26,21 +27,33 @@ module.exports = ({ db }) => {
   // AVANT /f/:slug (sinon Express prendrait "popup.json" pour une adresse de formulaire).
   router.get("/f/popup.json", (req, res) => {
     res.set("Cache-Control", "no-store");
-    const popup = forms.getActivePopup(db, req.mkForms.organizationId);
-    if (!popup) return res.json({ form: null });
-    res.json({
-      form: {
-        slug: popup.slug, name: popup.name, consentText: popup.consentText,
-        // Accord SMS facultatif : texte de la seconde case ; le numéro est demandé à part si le formulaire n'a pas déjà « Téléphone »
-        smsConsentText: popup.smsConsentText || "", smsPhoneField: Boolean(popup.smsConsentText) && !popup.fields.includes("phone"),
-        fields: [
-          ...popup.fields.map((key) => ({ key, label: forms.FIELD_CATALOG[key] })),
-          ...forms.propertyFieldDefs(db, req.mkForms.organizationId, popup).map((d) => ({ key: d.name, label: d.label, type: d.type, options: d.options })),
-        ],
-        trigger: popup.popupTrigger, triggerValue: popup.popupTriggerValue, frequencyDays: popup.popupFrequencyDays, thankYouText: popup.thankYouText,
-        fieldSettings: popup.fieldSettings, ft: res.locals.formToken,
-      },
+    // Page où le visiteur se trouve (chemin seulement) : sert aux règles « pages » des pop-ups
+    const pathname = typeof req.query.page === "string" && /^\/[^\s<>"'`\\]{0,300}$/.test(req.query.page) ? req.query.page.split("?")[0] : "/";
+    const user = req.session && req.session.user;
+    // Contact déjà abonné (personne connectée dont l'adresse est un contact abonné) : connu du serveur seulement
+    const subscribed = user && db.prepare("SELECT 1 FROM mk_contacts WHERE organization_id = ? AND email = lower(trim(?)) AND status = 'subscribed'").get(req.mkForms.organizationId, user.email);
+    const eligible = forms.getActivePopups(db, req.mkForms.organizationId).filter((p) => {
+      const r = p.popupRules || {};
+      if (!fieldRules.pageMatches(r, pathname)) return false;
+      if (r.hideForStudents && user) return false;
+      if (r.hideIfSubscribed && subscribed) return false;
+      return true;
     });
+    const describe = (popup) => ({
+      slug: popup.slug, name: popup.name, consentText: popup.consentText,
+      // Accord SMS facultatif : texte de la seconde case ; le numéro est demandé à part si le formulaire n'a pas déjà « Téléphone »
+      smsConsentText: popup.smsConsentText || "", smsPhoneField: Boolean(popup.smsConsentText) && !popup.fields.includes("phone"),
+      fields: [
+        ...popup.fields.map((key) => ({ key, label: forms.FIELD_CATALOG[key] })),
+        ...forms.propertyFieldDefs(db, req.mkForms.organizationId, popup).map((d) => ({ key: d.name, label: d.label, type: d.type, options: d.options })),
+      ],
+      trigger: popup.popupTrigger, triggerValue: popup.popupTriggerValue, frequencyDays: popup.popupFrequencyDays, thankYouText: popup.thankYouText,
+      fieldSettings: popup.fieldSettings, ft: res.locals.formToken,
+      // Règles vérifiées dans le navigateur (appareil, pages vues, provenance, déjà inscrit dans ce navigateur)
+      rules: { devices: popup.popupRules.devices || null, minPages: popup.popupRules.minPages || 1, utmSource: popup.popupRules.utmSource || null, utmCampaign: popup.popupRules.utmCampaign || null, referrer: popup.popupRules.referrer || null, hideIfSubscribed: Boolean(popup.popupRules.hideIfSubscribed) },
+    });
+    const list = eligible.map(describe);
+    res.json({ form: list[0] || null, forms: list });
   });
 
   // ---------- Double confirmation : /f/confirmer/:token (AVANT /f/:slug) ----------

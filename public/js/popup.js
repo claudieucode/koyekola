@@ -138,6 +138,7 @@
             return;
           }
           remember(key);
+          try { localStorage.setItem("mk_subscribed_" + popup.slug, "1"); } catch (e2) { /* rien */ }
           overlay.querySelector(".mk-popup-body").innerHTML =
             "<h2>Merci !</h2><p>" + esc(res.data.thankYouText && res.data.thankYouText.trim() ? res.data.thankYouText : "Votre inscription est enregistrée.") + "</p>";
           setTimeout(close, 2500);
@@ -180,15 +181,44 @@
     }
   }
 
+  // Mémoire de l'ONGLET en cours (effacée à sa fermeture, jamais envoyée au serveur) : pages vues pendant la visite et
+  // provenance de la visite (paramètres utm_*, site d'origine), pour les règles d'affichage des pop-ups
+  function visit() {
+    var v = { pages: 1, utmSource: "", utmCampaign: "", referrer: "" };
+    try {
+      var saved = JSON.parse(sessionStorage.getItem("mk_visit") || "null");
+      if (saved) { v = saved; v.pages = (Number(v.pages) || 0) + 1; }
+      else {
+        var q = new URLSearchParams(location.search);
+        v.utmSource = (q.get("utm_source") || "").slice(0, 80);
+        v.utmCampaign = (q.get("utm_campaign") || "").slice(0, 80);
+        try { v.referrer = document.referrer ? new URL(document.referrer).hostname : ""; } catch (e) { v.referrer = ""; }
+      }
+      sessionStorage.setItem("mk_visit", JSON.stringify(v));
+    } catch (e) { /* stockage indisponible : seules les règles du serveur s'appliquent */ }
+    return v;
+  }
+  var contains = function (have, want) { return !want || String(have || "").toLowerCase().indexOf(String(want).toLowerCase()) >= 0; };
+  function eligible(popup, v) {
+    var r = popup.rules || {};
+    var mobile = window.matchMedia ? window.matchMedia("(max-width: 767px)").matches : false;
+    if (r.devices && r.devices.length === 1 && r.devices[0] !== (mobile ? "mobile" : "desktop")) return false;
+    if ((r.minPages || 1) > v.pages) return false;
+    if (!contains(v.utmSource, r.utmSource) || !contains(v.utmCampaign, r.utmCampaign) || !contains(v.referrer, r.referrer)) return false;
+    try { if (r.hideIfSubscribed && localStorage.getItem("mk_subscribed_" + popup.slug)) return false; } catch (e) { /* rien */ }
+    return !alreadyDismissedRecently("mk_popup_" + popup.slug, popup.frequencyDays || 7);
+  }
+
   ready(function () {
-    fetch("/f/popup.json", { headers: { Accept: "application/json" } })
+    var v = visit();
+    fetch("/f/popup.json?page=" + encodeURIComponent(location.pathname), { headers: { Accept: "application/json" }, credentials: "same-origin" })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
-        var popup = data && data.form;
+        var list = (data && data.forms) || (data && data.form ? [data.form] : []);
+        // Le premier pop-up (le plus récemment modifié) dont toutes les règles sont remplies ; un seul à la fois
+        var popup = list.filter(function (p) { return eligible(p, v); })[0];
         if (!popup) return;
-        var key = "mk_popup_" + popup.slug;
-        if (alreadyDismissedRecently(key, popup.frequencyDays || 7)) return;
-        scheduleTrigger(popup, key);
+        scheduleTrigger(popup, "mk_popup_" + popup.slug);
       })
       .catch(function () { /* le pop-up est une amélioration facultative : une panne réseau ne doit rien casser sur la page */ });
   });

@@ -64,6 +64,7 @@ module.exports = ({ db }) => {
         // Options par champ (« fs[<champ>][…] ») et fichier joint (« file[…] ») : absents (ancien envoi) = inchangés
         fieldSettings: req.body.fsShown ? fieldSettingsFromBody(req.body.fs) : undefined,
         fileField: req.body.fileShown ? (req.body.file || {}) : undefined,
+        popupRules: req.body.rulesShown ? (req.body.rules || {}) : undefined,
       });
       req.session.mkFlash = { type: "ok", text: "Formulaire enregistré." };
       res.redirect(`/marketing/formulaires/${id}`);

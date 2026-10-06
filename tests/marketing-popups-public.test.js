@@ -17,7 +17,7 @@ describe("pop-up public", () => {
   test("/f/popup.json : aucun pop-up configuré → { form: null }", async () => {
     const res = await new Client(srv.base).get("/f/popup.json");
     assert.equal(res.status, 200);
-    assert.deepEqual(JSON.parse(res.text), { form: null });
+    assert.deepEqual(JSON.parse(res.text), { form: null, forms: [] });
   });
 
   let slug;
@@ -25,7 +25,7 @@ describe("pop-up public", () => {
     await boss.post("/marketing/formulaires", { name: "Juste une page", consentText: "Oui, je veux." });
     const id = one("SELECT id FROM mk_forms WHERE name = 'Juste une page'").id;
     await boss.post(`/marketing/formulaires/${id}/publier`);
-    assert.deepEqual(JSON.parse((await new Client(srv.base).get("/f/popup.json")).text), { form: null });
+    assert.deepEqual(JSON.parse((await new Client(srv.base).get("/f/popup.json")).text), { form: null, forms: [] });
   });
 
   test("un formulaire publié AVEC le pop-up activé apparaît, avec ses réglages", async () => {
