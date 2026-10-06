@@ -162,11 +162,20 @@ function uniqueName(ctx, table, base) {
 }
 
 // Nouvelle page dans un site (ou isolée) : même création que les pages d'atterrissage, avec sa nature
-function createPage(ctx, { name, siteId = null, kind = "page" } = {}) {
+function createPage(ctx, { name, siteId = null, kind = "page", template = null } = {}) {
   if (!Object.hasOwn(KINDS, kind)) throw bad("Nature de page inconnue.");
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
+  // Gabarit choisi : ses sections (validées par la grammaire commune, comme toute section enregistrée)
+  const fromTemplate = template ? require("./templates").buildTemplate(ctx, template) : null;
+  if (template && !fromTemplate) throw bad("Modèle de page inconnu.");
   const page = landing.createPage(ctx, { name });
   ctx.db.prepare("UPDATE mk_landing_pages SET kind = ?, site_id = ? WHERE id = ?").run(kind, siteId, page.id);
+  if (fromTemplate) {
+    const sections = normalizeSections(ctx, fromTemplate.map((s) => ({ ...s, id: newSectionId() })));
+    ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(sections), page.id);
+    audit(ctx, "page.created_from_template", "landing", page.id, { template });
+    return requirePage(ctx, page.id);
+  }
   // Page de site : un bandeau et un texte (la section d'inscription des pages d'atterrissage demanderait un formulaire
   // avant toute publication)
   if (kind === "page") {

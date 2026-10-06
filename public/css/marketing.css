@@ -1808,3 +1808,12 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-fs-name { margin: 0; overflow-wrap: anywhere; }
 .mk-fs-row .field-group { margin: 0; }
 .mk-fs-cond { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+
+/* Création d'une page : choix du modèle de départ */
+.mk-tpl-choice { border: 0; padding: 0; margin: 12px 0 0; min-width: 0; }
+.mk-tpl-choice legend { font-weight: 700; margin-bottom: 8px; }
+.mk-tpl-choice { display: grid; gap: 6px; max-height: 46vh; overflow-y: auto; }
+.mk-tpl { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--mk-border); border-radius: var(--mk-r-sm, 8px); cursor: pointer; }
+.mk-tpl:has(input:checked) { border-color: var(--accent); background: var(--accent-light); }
+.mk-tpl input { margin-top: 4px; flex: none; }
+.mk-tpl > span { min-width: 0; overflow-wrap: anywhere; }

@@ -53,7 +53,7 @@ module.exports = () => {
     if (!site) return;
     res.render("marketing/site", {
       title: site.name, active: "sites", site, sitePages: pages.listPages(req.mk.ctx, { siteId: site.id }), canWrite: req.mk.can("forms.write"),
-      T: tokens, cssVars: tokens.tokensToCss(site.tokens),
+      T: tokens, cssVars: tokens.tokensToCss(site.tokens), templates: require("../pages/templates").catalog(),
     });
   });
   router.post("/site-web/sites/:id(\\d+)", need("forms.write"), (req, res, next) => {

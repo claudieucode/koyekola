@@ -67,7 +67,7 @@ module.exports = () => {
   router.get("/pages", need("forms.read"), (req, res) => {
     const archived = req.query.vue === "archivees";
     res.render("marketing/landing-list", {
-      title: "Pages", active: "landing", archived, pages: pages.listPages(req.mk.ctx, { archived }), sites: pages.listSites(req.mk.ctx),
+      title: "Pages", active: "landing", archived, pages: pages.listPages(req.mk.ctx, { archived }), sites: pages.listSites(req.mk.ctx), templates: require("../pages/templates").catalog(),
       STATUSES: landing.STATUSES, STATUS_CLASS, KINDS: pages.KINDS,
     });
   });
@@ -75,8 +75,9 @@ module.exports = () => {
     let created = null;
     attempt(req, res, next, () => (created ? `/marketing/pages/${created.id}` : "/marketing/pages"), () => {
       const siteId = intOrNull(req.body.site_id);
-      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId ? "page" : "landing" });
-      return "Page créée (brouillon) : composez-la, puis publiez-la.";
+      const template = typeof req.body.template === "string" && req.body.template ? req.body.template : null;
+      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId ? "page" : "landing", template });
+      return template ? "Page créée à partir du modèle (brouillon) : remplacez les textes entre crochets dans l'éditeur visuel, puis publiez-la." : "Page créée (brouillon) : composez-la, puis publiez-la.";
     });
   });
 
