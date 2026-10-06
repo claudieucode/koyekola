@@ -1817,3 +1817,12 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-tpl:has(input:checked) { border-color: var(--accent); background: var(--accent-light); }
 .mk-tpl input { margin-top: 4px; flex: none; }
 .mk-tpl > span { min-width: 0; overflow-wrap: anywhere; }
+
+/* Analyse d'une page : entonnoir (largeur des barres = part des visiteurs arrivés, valeur calculée côté serveur) */
+.mk-funnel { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.mk-funnel-step { display: grid; gap: 4px; }
+.mk-funnel-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+.mk-funnel-label { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.mk-funnel-num { color: var(--muted); font-variant-numeric: tabular-nums; }
+.mk-funnel-track { height: 12px; border-radius: 999px; background: var(--mk-border); overflow: hidden; }
+.mk-funnel-bar { display: block; height: 100%; border-radius: 999px; background: var(--accent); }

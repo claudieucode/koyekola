@@ -69,6 +69,7 @@
           </dl>
           <% if (report.clicks.length) { %><h3 class="mk-journey-sub">Clics</h3><ul class="mk-journey-emails"><% report.clicks.forEach((c) => { %><li><%= c.target %> : <%= mkh.fmt(c.n) %> (<%= mkh.fmt(c.u) %> visiteur<%= c.u > 1 ? "s" : "" %>)</li><% }) %></ul><% } %>
           <p class="field-hint">Visiteur compté une fois par jour, sans cookie ni adresse IP conservée ; les robots ne sont pas comptés.</p>
+          <p><a class="btn btn-outline btn-sm" href="/marketing/pages/<%= page.id %>/analyse">Analyse détaillée (parcours des visiteurs)</a></p>
         </section>
         <section class="mk-panel mk-lp-preview" aria-labelledby="lp-prev">
           <h2 id="lp-prev">Aperçu</h2>

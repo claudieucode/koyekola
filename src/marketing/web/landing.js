@@ -101,6 +101,15 @@ module.exports = () => {
       publicUrl: `${String(process.env.SITE_URL || "").replace(/\/+$/, "")}/p/${page.slug}`,
     });
   });
+  // Analyse d'une page : entonnoir réel (visiteurs ayant accepté la mesure d'audience), plus forte perte si l'échantillon
+  // le permet
+  router.get("/pages/:id(\\d+)/analyse", need("forms.read"), (req, res) => {
+    const page = load(req, res);
+    if (!page) return;
+    const days = [7, 30, 90].includes(Number(req.query.periode)) ? Number(req.query.periode) : 30;
+    const { ctx } = req.mk;
+    res.render("marketing/page-analysis", { title: `Analyse — ${page.name}`, active: "landing", page, days, funnel: require("../pages/analytics").pageFunnel(ctx, { slug: page.slug, sections: pages.resolveSections(ctx, page.published.sections) }, { days }), report: landing.pageReport(ctx, page.id, { days }) });
+  });
   // Aperçu du BROUILLON (ou de la version en ligne s'il n'y a pas de brouillon) : clics et inscriptions non enregistrés
   const renderPreview = (req, res, page, content, label) => {
     const ctx = req.mk.ctx;

@@ -50,10 +50,39 @@
             <% d.recent.forEach((p) => { %><li><a href="/marketing/pages/<%= p.id %>"><%= p.name %></a><span class="mk-sub"><%= p.status === "published" ? "En ligne" : p.status === "unpublished" ? "Hors ligne" : "Brouillon" %><%= p.has_draft ? " · modifications non publiées" : "" %> · <%= mkh.fdatetime(p.updated_at) %></span></li><% }) %>
           </ul>
         </section>
-        <section class="mk-panel" aria-labelledby="sw-sources">
-          <h2 id="sw-sources">Sources de trafic, nouveaux et visiteurs récurrents</h2>
-          <p>Pas encore mesuré ici. Le bandeau de consentement est en place : ces informations sont recueillies, à partir de maintenant, pour les visiteurs qui acceptent la mesure d'audience, et seront présentées dans les prochaines analyses. Aucun chiffre n'est estimé en attendant.</p>
-        </section>
+
       </div>
     <% } %>
+
+    <section class="mk-panel" aria-labelledby="sw-aud">
+      <h2 id="sw-aud">Audience mesurée</h2>
+      <p class="field-hint">Visiteurs ayant accepté la mesure d'audience (bandeau de consentement) : les autres ne sont pas comptés ici. Comptages réels sur la période, sans extrapolation.</p>
+      <% if (!aud.visitors) { %>
+        <p>Aucun visiteur mesuré sur cette période. Les chiffres apparaîtront dès que des visiteurs auront accepté la mesure d'audience.</p>
+      <% } else { %>
+        <div class="mk-stats mk-stats-4">
+          <div class="mk-stat"><span class="mk-stat-label">Visiteurs mesurés</span><span class="mk-stat-value"><%= mkh.fmt(aud.visitors) %></span><span class="mk-stat-hint"><%= mkh.fmt(aud.sessions) %> visite<%= aud.sessions > 1 ? "s" : "" %> · <%= mkh.fmt(aud.pageViews) %> page<%= aud.pageViews > 1 ? "s" : "" %> vue<%= aud.pageViews > 1 ? "s" : "" %></span></div>
+          <div class="mk-stat"><span class="mk-stat-label">Nouveaux visiteurs</span><span class="mk-stat-value"><%= mkh.fmt(aud.newVisitors) %></span><span class="mk-stat-hint">première visite sur la période</span></div>
+          <div class="mk-stat"><span class="mk-stat-label">Visiteurs récurrents</span><span class="mk-stat-value"><%= mkh.fmt(aud.returningVisitors) %></span><span class="mk-stat-hint">déjà venus avant la période</span></div>
+          <div class="mk-stat"><span class="mk-stat-label">Formulaires envoyés</span><span class="mk-stat-value"><%= mkh.fmt(aud.converted) %></span><span class="mk-stat-hint">visiteurs · conversion <%= pct(aud.conversion) %></span></div>
+        </div>
+        <h3 class="mk-journey-sub">Provenance du trafic</h3>
+        <div class="mk-table-wrap"><table class="mk-table mk-datatable">
+          <caption class="sr-only">Provenance des visites mesurées</caption>
+          <thead><tr><th scope="col">Source</th><th scope="col" class="mk-num">Visites</th><th scope="col" class="mk-num">Visiteurs</th><th scope="col" class="mk-num">Inscrits</th><th scope="col" class="mk-num">Conversion</th></tr></thead>
+          <tbody><% aud.sources.forEach((s) => { %><tr><th scope="row" data-label="Source"><%= s.channel %></th><td class="mk-num" data-label="Visites"><%= mkh.fmt(s.sessions) %></td><td class="mk-num" data-label="Visiteurs"><%= mkh.fmt(s.visitors) %></td><td class="mk-num" data-label="Inscrits"><%= mkh.fmt(s.leads) %></td><td class="mk-num" data-label="Conversion"><%= pct(s.conversion) %></td></tr><% }) %></tbody>
+        </table></div>
+        <p class="field-hint">Source = paramètre utm_source du lien, sinon le site d'où vient la visite, sinon « Accès direct ».</p>
+        <div class="mk-grid-2">
+          <div>
+            <h3 class="mk-journey-sub">Appareils</h3>
+            <ul class="mk-sw-recent"><% aud.devices.forEach((d) => { %><li><strong><%= d.device %></strong><span class="mk-sub"><%= mkh.fmt(d.sessions) %> visite<%= d.sessions > 1 ? "s" : "" %> · <%= pct(d.share) %></span></li><% }) %></ul>
+          </div>
+          <div>
+            <h3 class="mk-journey-sub">Pages les plus vues</h3>
+            <ul class="mk-sw-recent"><% aud.topPages.forEach((p) => { %><li><code><%= p.path %></code><span class="mk-sub"><%= mkh.fmt(p.visitors) %> visiteur<%= p.visitors > 1 ? "s" : "" %> · <%= mkh.fmt(p.views) %> vue<%= p.views > 1 ? "s" : "" %></span></li><% }) %></ul>
+          </div>
+        </div>
+      <% } %>
+    </section>
 <%- include("partials/bottom") %>

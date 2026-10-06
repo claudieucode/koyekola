@@ -1,6 +1,6 @@
 // Tableau de bord « Site Web » : chiffres RÉELS, lus dans le journal des pages (mk_landing_events : visites, clics,
-// inscriptions) et dans les tables du moteur. Ce qui n'est pas encore mesuré (sources de trafic, nouveaux et
-// visiteurs récurrents) est signalé comme tel par `measured` : jamais de valeur inventée.
+// inscriptions) et dans les tables du moteur. Provenance, nouveaux et visiteurs récurrents : voir analytics.js (visiteurs
+// ayant accepté la mesure d'audience seulement) ; jamais de valeur inventée.
 // Visiteur : empreinte quotidienne non réversible (sans cookie) → « visiteurs uniques » = visiteurs distincts par jour,
 // additionnés sur la période.
 const { checkCtx } = require("../audience/shared");
@@ -56,8 +56,6 @@ function dashboard(ctx, { days = 30, now = Date.now() } = {}) {
   return {
     period: { days: period, options: PERIODS },
     counts, views: traffic.views, visitors: traffic.visitors, leads, clicks, conversion, trend, topPages, recent,
-    // Mesures qui demandent le suivi des visiteurs avec consentement (phase 6) : affichées « non mesuré »
-    measured: { sources: false, newVsReturning: false },
   };
 }
 

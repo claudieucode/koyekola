@@ -180,7 +180,8 @@ describe("pages : brouillon, aperçu, publication, versions", () => {
     assert.ok(d.trend[6].count > 0, "les visites du jour sont dans la dernière colonne");
     assert.match(html, /Meilleures pages/);
     assert.match(html, /Offre d&#39;automne/);
-    assert.match(html, /Pas encore mesuré/, "sources de trafic : annoncées non mesurées, jamais estimées");
+    assert.match(html, /Audience mesurée/);
+    assert.match(html, /Aucun visiteur mesuré sur cette période/, "sans visiteur ayant accepté la mesure : rien n'est estimé");
   });
 });
 

@@ -28,7 +28,8 @@ module.exports = () => {
   const router = express.Router();
 
   router.get("/site-web", need("forms.read"), (req, res) => {
-    res.render("marketing/site-web", { title: "Site Web", active: "sitedash", d: stats.dashboard(req.mk.ctx, { days: Number(req.query.periode) || 30 }) });
+    const d = stats.dashboard(req.mk.ctx, { days: Number(req.query.periode) || 30 });
+    res.render("marketing/site-web", { title: "Site Web", active: "sitedash", d, aud: require("../pages/analytics").audience(req.mk.ctx, { days: d.period.days }) });
   });
 
   router.get("/site-web/sites", need("forms.read"), (req, res) => {
