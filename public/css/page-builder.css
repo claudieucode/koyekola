@@ -128,6 +128,17 @@
 .pb-layers-panel { display: flex; flex-direction: column; min-height: 0; }
 .pb-panel-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 8px 6px 12px; border-bottom: 1px solid var(--border); }
 .pb-panel-head h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+/* Unique contrôle de l'en-tête des calques : replier / déplier le panneau */
+.pb-panel-toggle { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-right: 2px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--muted); cursor: pointer; transition: background-color 0.12s ease, color 0.12s ease; }
+.pb-panel-toggle:hover { background: var(--accent-light); color: var(--primary); }
+.pb-panel-toggle:active { background: #dbeaf5; }
+.pb-panel-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pb-right.is-layers-collapsed { grid-template-rows: auto 0 minmax(0, 1fr); }
+.pb-right.is-layers-collapsed .pb-tree, .pb-right.is-layers-collapsed .pb-hsplit { display: none; }
+/* Chaque bloc garde sa rangée (un bloc masqué ne décale pas l'inspecteur dans la rangée de la séparation) */
+.pb-layers-panel { grid-row: 1; }
+.pb-hsplit { grid-row: 2; }
+.pb-inspector { grid-row: 3; }
 .pb-tree { list-style: none; margin: 0; padding: 4px; overflow: auto; flex: 1 1 auto; min-height: 0; }
 .pb-tree-group { list-style: none; margin: 0; padding: 0; }
 .pb-tree-empty { padding: 8px; }

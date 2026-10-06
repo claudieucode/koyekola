@@ -598,8 +598,20 @@
     else if (e.key === "Enter") { e.preventDefault(); select(id); if (INLINE[it.type]) startEdit(id); }
   });
   function focusRow(id) { var r = treeEl.querySelector('.pb-node[data-id="' + id + '"] > .pb-row-item'); if (r) { $$(".pb-row-item", treeEl).forEach(function (x) { x.tabIndex = -1; }); r.tabIndex = 0; r.focus(); } }
-  $("[data-pb-expand-all]").addEventListener("click", function () { collapsed = {}; store.set("collapsed-" + PAGE.id, collapsed); renderTree(); });
-  $("[data-pb-collapse-all]").addEventListener("click", function () { walk(function (it) { if (kidsOf(it) && kidsOf(it).length) collapsed[it.id] = true; }); store.set("collapsed-" + PAGE.id, collapsed); renderTree(); });
+  function expandAll() { collapsed = {}; store.set("collapsed-" + PAGE.id, collapsed); renderTree(); }
+  function collapseAll() { walk(function (it) { if (kidsOf(it) && kidsOf(it).length) collapsed[it.id] = true; }); store.set("collapsed-" + PAGE.id, collapsed); renderTree(); }
+  // Une seule flèche dans l'en-tête : replier / déplier le panneau Calques (l'inspecteur prend alors toute la hauteur)
+  var layersToggle = $("[data-pb-layers-toggle]");
+  function applyLayersPanel() {
+    var open = !panels.layersCollapsed;
+    $("[data-pb-right]").classList.toggle("is-layers-collapsed", !open);
+    layersToggle.setAttribute("aria-expanded", String(open));
+    layersToggle.setAttribute("aria-label", open ? "Replier le panneau Calques" : "Déplier le panneau Calques");
+    layersToggle.setAttribute("data-tip", open ? "Replier le panneau Calques" : "Déplier le panneau Calques");
+    layersToggle.textContent = "";
+    layersToggle.appendChild(icon(open ? "chevronDown" : "chevronRight"));
+  }
+  layersToggle.addEventListener("click", function () { panels.layersCollapsed = !panels.layersCollapsed; store.set("panels", panels); applyLayersPanel(); });
 
   // ---------- Palette d'éléments, outils, blocs, composants ----------
   // Glisser depuis la palette : dragNew = { sample, make(cible) }
@@ -2390,7 +2402,9 @@
       { label: "Guides : afficher / masquer", run: function () { setAid("guides", aids.guides === false); } },
       { label: aids.guidesLocked ? "Guides : déverrouiller" : "Guides : verrouiller", run: function () { setAid("guidesLocked", !aids.guidesLocked); } },
       { label: "Guides : tout supprimer (cet écran)", run: clearGuides, off: !(guidesFor().h.length || guidesFor().v.length) }, { label: "Contours : afficher / masquer", run: function () { setAid("outlines", !aids.outlines); } }, { label: "Règles : afficher / masquer", run: function () { setAid("rulers", !aids.rulers); } },
-      { label: "Panneau des éléments : afficher / masquer", run: function () { togglePanel("left"); } }, { label: "Calques et inspecteur : afficher / masquer", run: function () { togglePanel("right"); } },
+      { label: "Panneau des éléments : afficher / masquer", run: function () { togglePanel("left"); } },
+      { label: "Calques : tout déplier", run: expandAll }, { label: "Calques : tout replier", run: collapseAll },
+      { label: panels.layersCollapsed ? "Calques : déplier le panneau" : "Calques : replier le panneau", run: function () { layersToggle.click(); } }, { label: "Calques et inspecteur : afficher / masquer", run: function () { togglePanel("right"); } },
       { label: "Réglages de la page (SEO, titre)", run: function () { openTab($("#pb-tab-page")); } },
     ]).filter(function (c) { return !c.off; });
   }
@@ -2560,6 +2574,7 @@
   if (aids.rulers) { $("[data-pb-ruler-x]").hidden = false; $("[data-pb-ruler-y]").hidden = false; $("[data-pb-ruler-corner]").hidden = false; $("[data-pb-canvas]").classList.add("has-rulers"); }
   zoomFit = true;
   applyPanels();
+  applyLayersPanel();
   updateStatus();
   renderTools();
   renderElements("");

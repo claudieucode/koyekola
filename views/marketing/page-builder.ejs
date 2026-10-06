@@ -100,11 +100,8 @@
     <aside class="pb-right" aria-label="Calques et réglages" data-pb-right>
       <section class="pb-layers-panel" aria-labelledby="pb-layers-title" data-pb-layers-panel>
         <div class="pb-panel-head"><h2 id="pb-layers-title">Calques</h2>
-          <div class="pb-group-btns">
-            <button type="button" class="pb-icon-btn" data-pb-expand-all data-tip="Tout déplier" aria-label="Tout déplier"><%- icon("chevronDown", { size: 15 }) %></button>
-            <button type="button" class="pb-icon-btn" data-pb-collapse-all data-tip="Tout replier" aria-label="Tout replier"><%- icon("chevronRight", { size: 15 }) %></button>
-          </div></div>
-        <ul class="pb-tree" role="tree" aria-labelledby="pb-layers-title" aria-multiselectable="true" data-pb-layers></ul>
+          <button type="button" class="pb-panel-toggle" data-pb-layers-toggle aria-expanded="true" aria-controls="pb-layers-body" aria-label="Replier le panneau Calques"><%- icon("chevronDown", { size: 16 }) %></button></div>
+        <ul class="pb-tree" id="pb-layers-body" role="tree" aria-labelledby="pb-layers-title" aria-multiselectable="true" data-pb-layers></ul>
       </section>
       <div class="pb-hsplit" data-pb-split role="separator" aria-orientation="horizontal" aria-label="Hauteur des calques (flèches haut et bas)" tabindex="0"></div>
       <section class="pb-inspector" aria-label="Inspecteur" data-pb-inspector></section>
