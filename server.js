@@ -59,6 +59,8 @@ app.use(canonicalHost);
 // Webhooks du fournisseur d'envoi : corps BRUT (la signature porte sur les octets exacts), donc avant l'analyse JSON
 app.use("/webhooks", express.raw({ type: "*/*", limit: "256kb" }), marketingWeb.webhooks);
 app.use(express.urlencoded({ extended: true }));
+// Éditeur visuel des pages : une page complète (30 sections) peut dépasser la limite par défaut de 100 ko
+app.use("/marketing/pages", express.json({ limit: "1mb" }));
 app.use(express.json());
 // API publique /api/v1 : authentification par clé (jamais par cookie), donc montée avant la session et le contrôle d'origine
 app.use("/api/v1", marketingWeb.api);

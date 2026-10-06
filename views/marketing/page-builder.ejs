@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <%# Doublon de l'en-tête HTTP (le CDN de l'hébergeur remplace la politique envoyée par le serveur) %>
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title><%= title %> · Site Web · KOLAKISA</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/page-builder.css') %>">
+</head>
+<body class="pb-body">
+  <a class="skip-link" href="#pb-canvas">Aller au canevas</a>
+  <header class="pb-top">
+    <a class="pb-back" href="/marketing/pages/<%= page.id %>"><%- icon("arrowLeft", { size: 16 }) %><span>Réglages de la page</span></a>
+    <div class="pb-title"><h1><%= page.name %></h1><span class="pb-status" data-pb-status></span></div>
+    <div class="pb-devices" role="radiogroup" aria-label="Aperçu selon l'écran">
+      <button type="button" role="radio" aria-checked="true" data-device="desktop" title="Ordinateur"><%- icon("monitor", { size: 16 }) %><span class="sr-only">Ordinateur</span></button>
+      <button type="button" role="radio" aria-checked="false" data-device="tablet" title="Tablette (820 px)"><%- icon("tablet", { size: 16 }) %><span class="sr-only">Tablette</span></button>
+      <button type="button" role="radio" aria-checked="false" data-device="mobile" title="Mobile (390 px)"><%- icon("smartphone", { size: 16 }) %><span class="sr-only">Mobile</span></button>
+    </div>
+    <div class="pb-actions">
+      <button type="button" class="pb-icon-btn" data-pb-undo title="Annuler (Ctrl/⌘ + Z)" aria-label="Annuler" disabled><%- icon("undo", { size: 16 }) %></button>
+      <button type="button" class="pb-icon-btn" data-pb-redo title="Rétablir (Ctrl/⌘ + Maj + Z)" aria-label="Rétablir" disabled><%- icon("redo", { size: 16 }) %></button>
+      <span class="pb-save" data-pb-save role="status" aria-live="polite"></span>
+      <button type="button" class="pb-icon-btn" data-pb-help aria-haspopup="dialog" title="Raccourcis clavier" aria-label="Raccourcis clavier">?</button>
+      <a class="btn btn-outline btn-sm" href="/marketing/pages/<%= page.id %>/apercu" target="_blank" rel="noopener" data-pb-preview>Aperçu</a>
+      <button type="button" class="btn btn-primary btn-sm" data-pb-publish hidden>Publier</button>
+    </div>
+  </header>
+
+  <div class="pb-main">
+    <aside class="pb-left" aria-label="Structure et ajout">
+      <div class="pb-tabs" role="tablist" aria-label="Panneau de gauche">
+        <button type="button" role="tab" id="pb-tab-layers" aria-controls="pb-pane-layers" aria-selected="true">Calques</button>
+        <button type="button" role="tab" id="pb-tab-add" aria-controls="pb-pane-add" aria-selected="false" tabindex="-1">Ajouter</button>
+        <button type="button" role="tab" id="pb-tab-components" aria-controls="pb-pane-components" aria-selected="false" tabindex="-1">Composants</button>
+      </div>
+      <div class="pb-pane" id="pb-pane-layers" role="tabpanel" aria-labelledby="pb-tab-layers">
+        <p class="pb-hint">Glissez pour réordonner. Maj ou Ctrl/⌘ + clic : sélection multiple. Double-clic : renommer.</p>
+        <ol class="pb-layers" data-pb-layers aria-label="Sections de la page"></ol>
+      </div>
+      <div class="pb-pane" id="pb-pane-add" role="tabpanel" aria-labelledby="pb-tab-add" hidden>
+        <p class="pb-hint">Cliquez pour ajouter après la sélection, ou glissez dans les calques.</p>
+        <ul class="pb-add" data-pb-add></ul>
+        <form class="pb-video-form" data-pb-video-form hidden>
+          <p class="pb-sub">Nouvelle vidéo</p>
+          <label for="pb-video-url">Adresse (YouTube, Vimeo ou fichier https://)</label><input id="pb-video-url" type="url" required>
+          <label for="pb-video-title">Titre de la vidéo</label><input id="pb-video-title" type="text" maxlength="150" required>
+          <div class="pb-row"><button type="submit" class="btn btn-primary btn-sm">Ajouter la vidéo</button><button type="button" class="btn btn-ghost btn-sm" data-pb-video-cancel>Annuler</button></div>
+        </form>
+      </div>
+      <div class="pb-pane" id="pb-pane-components" role="tabpanel" aria-labelledby="pb-tab-components" hidden>
+        <p class="pb-hint">« Synchronisé » : s'affiche toujours dans sa dernière version, partout. « Copie » : section indépendante.</p>
+        <ul class="pb-components" data-pb-components></ul>
+      </div>
+    </aside>
+
+    <main class="pb-canvas" id="pb-canvas" tabindex="-1" aria-label="Aperçu de la page">
+      <p class="pb-error" data-pb-render-error role="alert" hidden></p>
+      <div class="pb-frame-wrap" data-pb-frame-wrap data-device="desktop">
+        <iframe class="pb-frame" data-pb-frame title="Aperçu de la page en cours d'édition"></iframe>
+      </div>
+    </main>
+
+    <aside class="pb-right" aria-label="Réglages de la sélection">
+      <div data-pb-inspector></div>
+    </aside>
+  </div>
+
+  <dialog class="pb-dialog" data-pb-help-dialog aria-labelledby="pb-help-title">
+    <h2 id="pb-help-title">Raccourcis clavier</h2>
+    <dl class="pb-keys">
+      <dt>Ctrl/⌘ + Z</dt><dd>Annuler</dd><dt>Ctrl/⌘ + Maj + Z, Ctrl + Y</dt><dd>Rétablir</dd>
+      <dt>Ctrl/⌘ + C / X / V</dt><dd>Copier, couper, coller les sections sélectionnées</dd>
+      <dt>Ctrl/⌘ + D</dt><dd>Dupliquer</dd><dt>Suppr. ou Retour arrière</dt><dd>Supprimer</dd>
+      <dt>Alt + ↑ / ↓</dt><dd>Monter, descendre</dd><dt>Ctrl/⌘ + A</dt><dd>Tout sélectionner</dd>
+      <dt>Échap</dt><dd>Désélectionner</dd><dt>Ctrl/⌘ + S</dt><dd>Enregistrer maintenant</dd>
+    </dl>
+    <p class="pb-hint">Les raccourcis de section ne s'appliquent pas pendant la saisie dans un champ.</p>
+    <form method="dialog"><button class="btn btn-primary btn-sm">Fermer</button></form>
+  </dialog>
+  <div class="pb-toast" data-pb-toast role="status" aria-live="polite" hidden></div>
+
+  <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown"].forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 15 }) %></template><% }) %>
+  <script type="application/json" id="pb-boot"><%- boot %></script>
+  <script src="<%= asset('/js/page-builder.js') %>" defer></script>
+</body>
+</html>

@@ -50,75 +50,13 @@
           <label class="checkbox-row"><input type="checkbox" name="indexable" value="on"<%= page.indexable ? " checked" : "" %><%= dis %>> Autoriser les moteurs de recherche à indexer la page (et l'ajouter au plan du site)</label>
         </section>
 
-        <section aria-labelledby="lp-sections-title">
-          <h2 id="lp-sections-title" class="mk-h2">Sections</h2>
-          <% c.sections.forEach((s, i) => { const n = `sections[${i}]`; const id = `s${i}`; %>
-            <div class="mk-panel mk-lp-section" id="section-<%= i %>">
-              <div class="mk-lp-section-head"><strong><%= i + 1 %>. <%= SECTION_TYPES[s.type] %></strong>
-                <% if (canWrite && !archived) { %><span class="mk-lp-section-actions">
-                  <button type="submit" name="action" value="up:<%= i %>" class="btn btn-ghost btn-sm"<%= i === 0 ? " disabled" : "" %>>Monter<span class="sr-only"> la section <%= i + 1 %></span></button>
-                  <button type="submit" name="action" value="down:<%= i %>" class="btn btn-ghost btn-sm"<%= i === c.sections.length - 1 ? " disabled" : "" %>>Descendre<span class="sr-only"> la section <%= i + 1 %></span></button>
-                  <button type="submit" name="action" value="remove:<%= i %>" class="btn btn-ghost btn-sm" data-mk-confirm="La section et son contenu seront retirés (les autres modifications sont enregistrées)." data-mk-confirm-title="Supprimer cette section ?" data-mk-confirm-ok="Supprimer">Supprimer<span class="sr-only"> la section <%= i + 1 %></span></button>
-                </span><% } %></div>
-              <input type="hidden" name="<%= n %>[type]" value="<%= s.type %>"><% if (s.id) { %><input type="hidden" name="<%= n %>[id]" value="<%= s.id %>"><% } %>
-              <% if (s.type === "hero") { %>
-                <div class="field-group"><label for="<%= id %>-t">Titre</label><input id="<%= id %>-t" type="text" name="<%= n %>[title]" maxlength="150" required value="<%= s.title %>"<%= dis %>></div>
-                <div class="field-group"><label for="<%= id %>-st">Sous-titre</label><textarea id="<%= id %>-st" name="<%= n %>[subtitle]" rows="2" maxlength="300"<%= dis %>><%= s.subtitle %></textarea></div>
-                <div class="field-row">
-                  <div class="field-group"><label for="<%= id %>-il">Image (médiathèque)</label><select id="<%= id %>-il" name="<%= n %>[imageLib]"<%= dis %>><option value="">Aucune / adresse ci-contre</option><% images.forEach((im) => { %><option value="<%= im.path %>"<%= s.image === im.path ? " selected" : "" %>><%= im.name %></option><% }) %></select></div>
-                  <div class="field-group"><label for="<%= id %>-iu">ou adresse https://</label><input id="<%= id %>-iu" type="url" name="<%= n %>[imageUrl]" value="<%= /^https:/.test(s.image) ? s.image : "" %>"<%= dis %>></div>
-                </div>
-                <div class="field-group"><label for="<%= id %>-ia">Description de l'image</label><input id="<%= id %>-ia" type="text" name="<%= n %>[imageAlt]" maxlength="200" value="<%= s.imageAlt %>"<%= dis %>></div>
-                <div class="field-row">
-                  <div class="field-group"><label for="<%= id %>-bl">Texte du bouton (facultatif)</label><input id="<%= id %>-bl" type="text" name="<%= n %>[buttonLabel]" maxlength="60" value="<%= s.buttonLabel %>"<%= dis %>></div>
-                  <div class="field-group"><label for="<%= id %>-bu">Adresse du bouton</label><input id="<%= id %>-bu" type="text" name="<%= n %>[buttonUrl]" value="<%= s.buttonUrl %>" placeholder="/catalogue ou https://…"<%= dis %>></div>
-                </div>
-              <% } else if (s.type === "text") { %>
-                <div class="field-group"><label for="<%= id %>-md">Texte</label><textarea id="<%= id %>-md" name="<%= n %>[markdown]" rows="6" maxlength="10000"<%= dis %>><%= s.markdown %></textarea>
-                  <span class="field-hint">**gras**, *italique*, ## intertitre, listes avec « - », [lien](https://…).</span></div>
-              <% } else if (s.type === "image") { %>
-                <div class="field-row">
-                  <div class="field-group"><label for="<%= id %>-sl">Image (médiathèque)</label><select id="<%= id %>-sl" name="<%= n %>[srcLib]"<%= dis %>><option value="">Adresse ci-contre</option><% images.forEach((im) => { %><option value="<%= im.path %>"<%= s.src === im.path ? " selected" : "" %>><%= im.name %></option><% }) %></select></div>
-                  <div class="field-group"><label for="<%= id %>-su">ou adresse https://</label><input id="<%= id %>-su" type="url" name="<%= n %>[srcUrl]" value="<%= /^https:/.test(s.src) ? s.src : "" %>"<%= dis %>></div>
-                </div>
-                <div class="field-group"><label for="<%= id %>-alt">Description de l'image (obligatoire)</label><input id="<%= id %>-alt" type="text" name="<%= n %>[alt]" maxlength="200" required value="<%= s.alt %>"<%= dis %>></div>
-                <div class="field-row">
-                  <div class="field-group"><label for="<%= id %>-cap">Légende</label><input id="<%= id %>-cap" type="text" name="<%= n %>[caption]" maxlength="200" value="<%= s.caption %>"<%= dis %>></div>
-                  <div class="field-group"><label for="<%= id %>-lk">Lien au clic (facultatif)</label><input id="<%= id %>-lk" type="text" name="<%= n %>[link]" value="<%= s.link %>"<%= dis %>></div>
-                </div>
-              <% } else if (s.type === "list") { %>
-                <div class="field-group"><label for="<%= id %>-lt">Titre de la liste</label><input id="<%= id %>-lt" type="text" name="<%= n %>[title]" maxlength="150" value="<%= s.title %>"<%= dis %>></div>
-                <div class="field-group"><label for="<%= id %>-li">Points (un par ligne, 20 au plus)</label><textarea id="<%= id %>-li" name="<%= n %>[items]" rows="5"<%= dis %>><%= s.items.join("\n") %></textarea></div>
-              <% } else if (s.type === "course") { %>
-                <div class="field-row">
-                  <div class="field-group"><label for="<%= id %>-c">Formation</label><select id="<%= id %>-c" name="<%= n %>[courseId]"<%= dis %>><% courses.forEach((c) => { %><option value="<%= c.id %>"<%= s.courseId === c.id ? " selected" : "" %>><%= c.title %></option><% }) %></select></div>
-                  <div class="field-group"><label for="<%= id %>-cta">Texte du bouton</label><input id="<%= id %>-cta" type="text" name="<%= n %>[cta]" maxlength="60" value="<%= s.cta %>"<%= dis %>></div>
-                </div>
-                <span class="field-hint">Titre, prix et image sont lus dans le catalogue à chaque affichage (toujours à jour).</span>
-              <% } else if (s.type === "button") { %>
-                <div class="field-row">
-                  <div class="field-group"><label for="<%= id %>-bl">Texte</label><input id="<%= id %>-bl" type="text" name="<%= n %>[label]" maxlength="60" required value="<%= s.label %>"<%= dis %>></div>
-                  <div class="field-group"><label for="<%= id %>-bu">Adresse</label><input id="<%= id %>-bu" type="text" name="<%= n %>[url]" required value="<%= s.url %>" placeholder="/catalogue ou https://…"<%= dis %>></div>
-                </div>
-                <div class="field-group"><label for="<%= id %>-al">Alignement</label><select id="<%= id %>-al" name="<%= n %>[align]"<%= dis %>><option value="center"<%= s.align === "center" ? " selected" : "" %>>Centré</option><option value="left"<%= s.align === "left" ? " selected" : "" %>>À gauche</option></select></div>
-              <% } else if (s.type === "quote") { %>
-                <div class="field-group"><label for="<%= id %>-q">Citation</label><textarea id="<%= id %>-q" name="<%= n %>[text]" rows="3" maxlength="600" required<%= dis %>><%= s.text %></textarea></div>
-                <div class="field-group"><label for="<%= id %>-au">Auteur</label><input id="<%= id %>-au" type="text" name="<%= n %>[author]" maxlength="120" value="<%= s.author %>"<%= dis %>></div>
-              <% } else if (s.type === "form") { %>
-                <div class="field-group"><label for="<%= id %>-h">Titre</label><input id="<%= id %>-h" type="text" name="<%= n %>[heading]" maxlength="150" value="<%= s.heading %>"<%= dis %>></div>
-                <div class="field-group"><label for="<%= id %>-in">Texte d'introduction</label><textarea id="<%= id %>-in" name="<%= n %>[intro]" rows="2" maxlength="400"<%= dis %>><%= s.intro %></textarea></div>
-                <span class="field-hint">Champs, consentement et liste viennent du formulaire choisi dans les réglages.</span>
-              <% } %>
-            </div>
-          <% }) %>
-          <% if (canWrite && !archived) { %>
-            <div class="mk-panel mk-lp-add">
-              <span class="mk-lp-add-label">Ajouter une section :</span>
-              <% Object.entries(SECTION_TYPES).forEach(([k, label]) => { %><button type="submit" name="action" value="add:<%= k %>" class="btn btn-outline btn-sm"><%= label.replace(/ \(.*/, "") %></button><% }) %>
-            </div>
-            <div class="mk-actions mk-lp-save"><button type="submit" name="action" value="save" class="btn btn-primary">Enregistrer le brouillon</button></div>
-          <% } %>
+        <section class="mk-panel mk-lp-content" aria-labelledby="lp-sections-title">
+          <h2 id="lp-sections-title">Contenu de la page</h2>
+          <p><%= c.sections.length %> section<%= c.sections.length > 1 ? "s" : "" %> : <%= c.sections.slice(0, 6).map((s) => (s.name || SECTION_LABELS[s.type] || s.type)).join(" · ") %><%= c.sections.length > 6 ? " …" : "" %></p>
+          <% if (!archived) { %><p><a class="btn btn-primary" href="/marketing/pages/<%= page.id %>/editeur"><%= canWrite ? "Ouvrir l'éditeur visuel" : "Voir dans l'éditeur visuel" %></a></p><% } %>
+          <p class="field-hint">Glisser-déposer, calques, annuler/rétablir, aperçu ordinateur, tablette et mobile ; chaque modification est enregistrée automatiquement en brouillon.</p>
         </section>
+        <% if (canWrite && !archived) { %><div class="mk-actions mk-lp-save"><button type="submit" name="action" value="save" class="btn btn-outline">Enregistrer les réglages</button></div><% } %>
       </form>
 
       <aside class="mk-lp-side" aria-label="Aperçu et statistiques">

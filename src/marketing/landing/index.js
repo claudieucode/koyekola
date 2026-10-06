@@ -146,6 +146,7 @@ function linksOf(page) {
   page.sections.forEach((s, i) => {
     if (s.type === "hero" && s.buttonUrl) out.push({ section: i, label: s.buttonLabel, url: s.buttonUrl });
     if (s.type === "button") out.push({ section: i, label: s.label, url: s.url });
+    if (s.type === "cta") out.push({ section: i, label: s.buttonLabel, url: s.buttonUrl });
     if (s.type === "image" && s.link) out.push({ section: i, label: `Image : ${s.alt}`, url: s.link });
     if (s.type === "course" && s.course) out.push({ section: i, label: `Formation : ${s.course.title}`, url: s.course.url });
   });

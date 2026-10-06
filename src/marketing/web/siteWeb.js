@@ -94,5 +94,38 @@ module.exports = () => {
     if (!site) return;
     attempt(req, res, next, `/marketing/site-web/sites/${site.id}`, () => { pages.restoreSite(req.mk.ctx, site.id); return "Site restauré. Ses pages restent hors ligne : publiez celles qui sont prêtes."; });
   });
+  // ---------- Composants réutilisables (éditeur visuel, JSON) ----------
+  const jsonError = (res, next, error) => {
+    const { MarketingError } = require("../errors");
+    if (!(error instanceof MarketingError)) return next(error);
+    res.status(error.code === "not_found" ? 404 : error.code === "in_use" || error.code === "duplicate" ? 409 : 422).json({ error: { code: error.code, message: error.message } });
+  };
+  const describe = (c) => ({ id: c.id, name: c.name, global: c.global, type: c.section && c.section.type, section: c.section });
+  router.get("/site-web/composants.json", need("forms.read"), (req, res) => {
+    res.set("Cache-Control", "no-store").json({ components: pages.listComponents(req.mk.ctx, { siteId: intOrNull(req.query.site) }).map(describe) });
+  });
+  router.get("/site-web/composants/:id(\\d+).json", need("forms.read"), (req, res) => {
+    const c = pages.getComponent(req.mk.ctx, Number(req.params.id));
+    if (!c) return res.status(404).json({ error: { code: "not_found", message: "Composant introuvable." } });
+    res.json({ component: describe(c) });
+  });
+  router.post("/site-web/composants", need("forms.write"), (req, res, next) => {
+    try {
+      const b = req.body || {};
+      const c = pages.createComponent(req.mk.ctx, { name: b.name, section: b.section, siteId: b.global ? null : intOrNull(b.siteId) });
+      res.status(201).json({ component: describe(c) });
+    } catch (error) { jsonError(res, next, error); }
+  });
+  router.post("/site-web/composants/:id(\\d+)", need("forms.write"), (req, res, next) => {
+    try {
+      res.json({ component: describe(pages.updateComponent(req.mk.ctx, Number(req.params.id), { name: req.body && req.body.name, section: req.body && req.body.section })) });
+    } catch (error) { jsonError(res, next, error); }
+  });
+  router.post("/site-web/composants/:id(\\d+)/supprimer", need("forms.write"), (req, res, next) => {
+    try {
+      pages.deleteComponent(req.mk.ctx, Number(req.params.id));
+      res.json({ ok: true });
+    } catch (error) { jsonError(res, next, error); }
+  });
   return router;
 };

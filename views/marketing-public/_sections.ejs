@@ -1,0 +1,83 @@
+<%#
+  Rendu des sections d'une page (moteur commun Site Web / Tunnels) : utilisé par la page publique /p/<adresse>, l'aperçu
+  et le canevas de l'éditeur visuel (builder = true : chaque section porte son identifiant pour la sélection, les
+  sections masquées restent visibles en transparence). Les styles viennent uniquement de classes (lp-pad-…, lp-bg-…,
+  lp-al-…, lp-w-…, lp-hide-…) : aucune valeur libre n'est insérée dans la page.
+%>
+<% const isBuilder = typeof builder !== "undefined" && builder; let n = 0; const href = (url) => (preview ? url : `/p/${page.slug}/clic/${n++}`);
+   const firstHero = page.sections.findIndex((x) => x.type === "hero"); %>
+<% page.sections.forEach((s, i) => {
+     if (s.hidden && !isBuilder) return;
+     const st = s.style || {};
+     const cls = ["lp-block", `lp-block-${s.type}`, st.padding ? `lp-pad-${st.padding}` : "", st.background && st.background !== "default" ? `lp-bg-${st.background}` : "", st.align ? `lp-al-${st.align}` : "", st.width && st.width !== "normal" ? `lp-w-${st.width}` : "", ...(s.hideOn || []).map((b) => `lp-hide-${b}`), s.hidden ? "is-hidden" : ""].filter(Boolean).join(" ");
+%>
+<div class="<%= cls %>"<% if (isBuilder) { %> data-section-id="<%= s.id || "" %>" data-section-index="<%= i %>"<% } %>>
+  <% if (s.type === "hero") { %>
+    <header class="lp-hero">
+      <% if (s.image) { %><img class="lp-hero-img" src="<%= s.image %>" alt="<%= s.imageAlt %>"<%= i > 0 ? ' loading="lazy"' : ' fetchpriority="high"' %> decoding="async"><% } %>
+      <% const tag = i === firstHero ? "h1" : "h2"; %><<%= tag %>><%= s.title %></<%= tag %>>
+      <% if (s.subtitle) { %><p class="lp-lead"><%= s.subtitle %></p><% } %>
+      <% if (s.buttonUrl) { %><p><a class="lp-btn" href="<%= href(s.buttonUrl) %>"><%= s.buttonLabel %></a></p><% } %>
+    </header>
+  <% } else if (s.type === "text") { %>
+    <section class="lp-section lp-text"><%- renderMarkdown(s.markdown) %></section>
+  <% } else if (s.type === "image") { %>
+    <figure class="lp-section lp-figure">
+      <% if (s.link) { %><a href="<%= href(s.link) %>"><img src="<%= s.src %>" alt="<%= s.alt %>" loading="lazy" decoding="async"></a><% } else { %><img src="<%= s.src %>" alt="<%= s.alt %>" loading="lazy" decoding="async"><% } %>
+      <% if (s.caption) { %><figcaption><%= s.caption %></figcaption><% } %>
+    </figure>
+  <% } else if (s.type === "list") { %>
+    <section class="lp-section"><% if (s.title) { %><h2><%= s.title %></h2><% } %>
+      <ul class="lp-list"><% s.items.forEach((it) => { %><li><%= it %></li><% }) %></ul></section>
+  <% } else if (s.type === "course" && s.course) { %>
+    <section class="lp-section lp-course<%= s.course.image ? "" : " is-text" %>">
+      <% if (s.course.image) { %><img src="<%= s.course.image %>" alt="" loading="lazy" decoding="async"><% } %>
+      <div class="lp-course-body"><h2><%= s.course.title %></h2><% if (s.course.subtitle) { %><p><%= s.course.subtitle %></p><% } %>
+        <p class="lp-price"><%= s.course.priceCents ? (s.course.priceCents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €" : "Gratuit" %></p>
+        <a class="lp-btn" href="<%= href(s.course.url) %>"><%= s.cta %></a></div>
+    </section>
+  <% } else if (s.type === "button") { %>
+    <p class="lp-section lp-button is-<%= s.align === "left" ? "left" : "center" %>"><a class="lp-btn" href="<%= href(s.url) %>"><%= s.label %></a></p>
+  <% } else if (s.type === "quote") { %>
+    <blockquote class="lp-section lp-quote"><p><%= s.text %></p><% if (s.author) { %><footer>— <%= s.author %></footer><% } %></blockquote>
+  <% } else if (s.type === "features") { %>
+    <section class="lp-section lp-features">
+      <% if (s.title) { %><h2><%= s.title %></h2><% } %><% if (s.intro) { %><p class="lp-intro"><%= s.intro %></p><% } %>
+      <ul class="lp-cards <%= `lp-cols-${s.columns}` %>"><% s.items.forEach((it) => { %><li class="lp-card"><% if (it.title) { %><h3><%= it.title %></h3><% } %><% if (it.text) { %><p><%= it.text %></p><% } %></li><% }) %></ul>
+    </section>
+  <% } else if (s.type === "faq") { %>
+    <section class="lp-section lp-faq"><h2><%= s.title %></h2>
+      <% s.items.forEach((it) => { %><details class="lp-faq-item"><summary><%= it.q %></summary><div class="lp-faq-answer"><%- renderMarkdown(it.a) %></div></details><% }) %>
+    </section>
+  <% } else if (s.type === "cta") { %>
+    <section class="lp-section lp-cta"><h2><%= s.title %></h2><% if (s.text) { %><p><%= s.text %></p><% } %><p><a class="lp-btn" href="<%= href(s.buttonUrl) %>"><%= s.buttonLabel %></a></p></section>
+  <% } else if (s.type === "video") { const v = parseVideoUrl(s.url); %>
+    <figure class="lp-section lp-video">
+      <% if (v && v.kind === "file") { %><video src="<%= v.src %>" controls preload="metadata" title="<%= s.title %>"></video>
+      <% } else if (v) { %><div class="lp-video-frame"><iframe src="<%= v.src %>" title="<%= s.title %>" loading="lazy" allow="encrypted-media; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><% } %>
+      <% if (s.caption) { %><figcaption><%= s.caption %></figcaption><% } %>
+    </figure>
+  <% } else if (s.type === "testimonials") { %>
+    <section class="lp-section lp-testimonials"><% if (s.title) { %><h2><%= s.title %></h2><% } %>
+      <div class="lp-cards <%= `lp-cols-${Math.min(3, s.items.length)}` %>"><% s.items.forEach((it) => { %><blockquote class="lp-card lp-testimonial"><p><%= it.text %></p><% if (it.author) { %><footer><strong><%= it.author %></strong><% if (it.role) { %><span><%= it.role %></span><% } %></footer><% } %></blockquote><% }) %></div>
+    </section>
+  <% } else if (s.type === "divider") { %>
+    <div class="lp-divider <%= `lp-divider-${s.size}` %><%= s.line ? " has-line" : "" %>" role="presentation"></div>
+  <% } else if (s.type === "form" && form) { %>
+    <section class="lp-section lp-signup" id="inscription" aria-labelledby="lp-signup-<%= i %>">
+      <h2 id="lp-signup-<%= i %>"><%= s.heading %></h2>
+      <% if (thanks) { %><p class="lp-thanks" role="status"><%= thanks %></p>
+      <% } else { %>
+        <% if (s.intro) { %><p><%= s.intro %></p><% } %>
+        <% if (error) { %><p class="lp-error" role="alert"><%= error %></p><% } %>
+        <form method="post" action="/p/<%= page.slug %>/inscription" novalidate><input type="hidden" name="tz" data-tz>
+          <%- include("_signup-fields", { form, fieldCatalog, propertyDefs, values, prefix: "lp" + i, autofocus: false }) %>
+          <button type="submit" class="lp-btn lp-btn-block"<%= preview ? " disabled" : "" %>>S'inscrire</button>
+        </form>
+      <% } %>
+    </section>
+  <% } else if (s.type === "form" && isBuilder) { %>
+    <section class="lp-section lp-signup lp-placeholder"><h2><%= s.heading %></h2><p>Formulaire d'inscription : choisissez-le dans les réglages de la page.</p></section>
+  <% } %>
+</div>
+<% }) %>

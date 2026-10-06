@@ -5,6 +5,8 @@ const express = require("express");
 const landing = require("../landing");
 const pages = require("../pages");
 const { tokensToCss } = require("../pages/tokens");
+const { blanks } = require("../pages/blanks");
+const { safeJson } = require("./kit");
 const forms = require("../forms");
 const media = require("../media");
 const { listCourses } = require("../bridge/catalog");
@@ -50,11 +52,11 @@ function sectionsFromBody(body) {
 }
 
 // Contenu de travail envoyé par l'éditeur → brouillon du moteur de pages (jamais directement en ligne)
-function contentFromBody(b, sections) {
+function contentFromBody(b, sections, working) {
   return {
     sections, title: b.title, description: b.description,
-    theme: { accent: b.theme_accent, background: b.theme_background, text: b.theme_text },
-    seo: { canonical: b.seo_canonical, ogImage: b.seo_og_image },
+    theme: b.theme_accent === undefined ? working.theme : { accent: b.theme_accent, background: b.theme_background, text: b.theme_text },
+    seo: { ...working.seo, canonical: b.seo_canonical, ogImage: b.seo_og_image },
   };
 }
 
@@ -91,7 +93,7 @@ module.exports = () => {
     if (!page) return;
     const { ctx } = req.mk;
     res.render("marketing/landing", {
-      title: page.name, active: "landing", page, content: page.working, STATUSES: landing.STATUSES, STATUS_CLASS, SECTION_TYPES: landing.SECTION_TYPES,
+      title: page.name, active: "landing", page, content: page.working, STATUSES: landing.STATUSES, STATUS_CLASS, SECTION_LABELS: Object.fromEntries(Object.entries(pages.TYPES).map(([k, t]) => [k, t.label])),
       forms: forms.listForms(ctx), courses: listCourses(ctx), images: media.listMedia(ctx, { kind: "image", limit: 100 }).items,
       sites: pages.listSites(ctx), versions: pages.listVersions(ctx, page.id),
       report: landing.pageReport(ctx, page.id), check: landing.preflight(ctx, { ...page, sections: pages.resolveSections(ctx, page.working.sections) }), canWrite: req.mk.can("forms.write"),
@@ -126,7 +128,9 @@ module.exports = () => {
     const b = req.body;
     let anchor = "";
     attempt(req, res, next, () => `/marketing/pages/${page.id}${anchor}`, () => {
-      const sections = sectionsFromBody(b);
+      // Fiche de la page (réglages et SEO) : les sections ne sont pas envoyées, elles restent celles du brouillon
+      // (elles se modifient dans l'éditeur visuel). Le formulaire par sections reste accepté (API, scripts, tests).
+      const sections = b.sections ? sectionsFromBody(b) : page.working.sections;
       const action = String(b.action || "save");
       let m;
       if ((m = /^(up|down|remove):(\d{1,2})$/.exec(action))) {
@@ -143,11 +147,65 @@ module.exports = () => {
       landing.saveSettings(ctx, page.id, { name: b.name, slug: b.slug, formId: b.form_id, tags: b.tags, indexable: b.indexable === "on" });
       const siteId = intOrNull(b.site_id);
       if (b.site_id !== undefined && siteId !== page.site_id) pages.movePage(ctx, page.id, siteId);
-      pages.saveDraft(ctx, page.id, contentFromBody(b, sections), { revision: Number(b.revision) });
-      const text = action.startsWith("add:") ? "Section ajoutée." : action.startsWith("remove:") ? "Section supprimée." : action.startsWith("up:") || action.startsWith("down:") ? "Section déplacée." : "Brouillon enregistré.";
+      pages.saveDraft(ctx, page.id, contentFromBody(b, sections, page.working), { revision: Number(b.revision) });
+      const text = action.startsWith("add:") ? "Section ajoutée." : action.startsWith("remove:") ? "Section supprimée." : action.startsWith("up:") || action.startsWith("down:") ? "Section déplacée." : b.sections ? "Brouillon enregistré." : "Réglages enregistrés.";
+      if (!b.sections) return page.status === "published" ? "Réglages enregistrés. Adresse, site, formulaire et étiquettes s'appliquent tout de suite ; titre, description et SEO sont dans le brouillon : « Publier les modifications » les met en ligne." : text;
       return page.status === "published" ? `${text} La page en ligne n'a pas changé : cliquez sur « Publier les modifications » pour la mettre à jour.` : text;
     });
   });
+  // ---------- Éditeur visuel ----------
+  // Erreur métier en JSON : conflit (autre onglet) 409, introuvable 404, contenu invalide 422 (message précis)
+  const jsonError = (res, next, error) => {
+    if (!(error instanceof MarketingError)) return next(error);
+    res.status(error.code === "conflict" ? 409 : error.code === "not_found" ? 404 : 422).json({ error: { code: error.code, message: error.message } });
+  };
+  router.get("/pages/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
+    const page = load(req, res);
+    if (!page) return;
+    if (page.archived_at) return res.redirect(`/marketing/pages/${page.id}`);
+    const { ctx } = req.mk;
+    const site = page.site_id ? pages.getSite(ctx, page.site_id) : null;
+    const boot = {
+      page: { id: page.id, name: page.name, slug: page.slug, status: page.status, hasDraft: page.hasDraft, revision: page.revision, siteId: page.site_id, siteName: site ? site.name : null, formId: page.form_id },
+      content: page.working, types: blanks(ctx), canWrite: req.mk.can("forms.write"),
+      courses: listCourses(ctx).map((c) => ({ id: c.id, title: c.title })),
+      images: media.listMedia(ctx, { kind: "image", limit: 200 }).items.map((m) => ({ path: m.path, name: m.name, alt: m.alt || "" })),
+      components: pages.listComponents(ctx, { siteId: page.site_id }).map((c) => ({ id: c.id, name: c.name, global: c.global, type: c.section && c.section.type })),
+    };
+    res.set("Cache-Control", "no-store");
+    res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, page, boot: safeJson(boot) });
+  });
+  // Rendu du canevas : contenu de l'éditeur validé (rien n'est enregistré), même gabarit que la page publiée
+  router.post("/pages/:id(\\d+)/rendu", need("forms.read"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    const ctx = req.mk.ctx;
+    try {
+      const content = pages.normalizeContent(ctx, page, (req.body && req.body.content) || {});
+      const form = page.form_id ? forms.getForm(ctx, page.form_id) : null;
+      res.set("Cache-Control", "no-store");
+      res.render("marketing-public/landing", { page: shown(ctx, page, content), site: page.site_id ? pages.getSite(ctx, page.site_id) : null, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: null, builder: true });
+    } catch (error) { jsonError(res, next, error); }
+  });
+  // Sauvegarde automatique du brouillon (JSON) : jamais d'écrasement silencieux (révision), réponse = nouvelle révision
+  router.put("/pages/:id(\\d+)/brouillon", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    try {
+      const { revision } = pages.saveDraft(req.mk.ctx, page.id, (req.body && req.body.content) || {}, { revision: Number(req.body && req.body.revision) });
+      res.set("Cache-Control", "no-store").json({ revision, savedAt: new Date().toISOString() });
+    } catch (error) { jsonError(res, next, error); }
+  });
+  router.post("/pages/:id(\\d+)/publier.json", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    try {
+      const { version } = pages.publish(req.mk.ctx, page.id);
+      const p = pages.getPage(req.mk.ctx, page.id);
+      res.json({ version, revision: p.revision, url: `/p/${p.slug}` });
+    } catch (error) { jsonError(res, next, error); }
+  });
+
   router.post("/pages/:id(\\d+)/publier", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;

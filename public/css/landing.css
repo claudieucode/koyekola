@@ -22,7 +22,7 @@
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 *, *::before, *::after { box-sizing: border-box; }
-.lp-body { margin: 0; background: var(--lp-bg, #f3f8fc); color: var(--lp-text, #10222f); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; }
+.lp-body { overflow-x: clip; margin: 0; background: var(--lp-bg, #f3f8fc); color: var(--lp-text, #10222f); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; }
 .lp-main { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
 .lp-preview-bar { margin: 0; padding: 8px 16px; background: #fff7e0; color: #5b4300; font-size: 14px; text-align: center; border-bottom: 1px solid #f0d58c; }
 .lp-hero { text-align: center; padding: 24px 0 8px; }
@@ -65,6 +65,83 @@
 .lp-signup .hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .lp-foot { padding: 24px 16px 32px; text-align: center; font-size: 14px; opacity: 0.7; }
 .lp-foot a { color: inherit; }
+/* ---------- Sections du moteur de pages (Site Web) ---------- */
+.lp-block { position: relative; }
+.lp-block > :first-child { margin-top: 0; }
+.lp-block > :last-child { margin-bottom: 0; }
+.lp-block + .lp-block { margin-top: 32px; }
+/* Espacement intérieur (jetons du design system s'il existe) */
+.lp-pad-none { padding-block: 0; }
+.lp-pad-sm { padding-block: var(--kw-space-sm, 8px); }
+.lp-pad-md { padding-block: var(--kw-space-md, 16px); }
+.lp-pad-lg { padding-block: var(--kw-space-lg, 32px); }
+.lp-pad-xl { padding-block: var(--kw-space-xl, 56px); }
+/* Fond : la section s'étend en bandeau, avec une marge intérieure latérale */
+.lp-block[class*="lp-bg-"] { padding-inline: 24px; border-radius: var(--kw-radius-lg, 16px); }
+.lp-block[class*="lp-bg-"]:not([class*="lp-pad-"]) { padding-block: var(--kw-space-lg, 32px); }
+.lp-bg-surface { background: var(--kw-surface, #fff); }
+.lp-bg-primary { background: var(--lp-accent, #0277b6); color: var(--lp-on-accent, #fff); }
+.lp-bg-accent { background: var(--kw-accent, #f59e0b); color: var(--kw-on-accent, #10222f); }
+.lp-bg-dark { background: var(--kw-secondary, #0b2a40); color: #fff; }
+.lp-bg-primary .lp-btn, .lp-bg-dark .lp-btn { background: #fff; color: var(--kw-secondary, #0b2a40); }
+.lp-bg-primary a:not(.lp-btn), .lp-bg-dark a:not(.lp-btn) { color: inherit; }
+.lp-al-left { text-align: left; }
+.lp-al-center { text-align: center; }
+.lp-al-right { text-align: right; }
+.lp-al-center .lp-list, .lp-al-right .lp-list { display: inline-grid; text-align: left; }
+/* Largeur : étroite, large (jusqu'à 1080 px) ou pleine largeur de l'écran */
+.lp-w-narrow { max-width: 560px; margin-inline: auto; }
+.lp-w-wide { margin-inline: calc(50% - min(540px, 50vw - 16px)); }
+.lp-block.lp-w-full { margin-inline: calc(50% - 50vw); border-radius: 0; padding-inline: max(16px, calc(50vw - 380px)); }
+/* Masquer selon l'écran (mêmes seuils que l'aperçu de l'éditeur) */
+@media (min-width: 1024px) { .lp-hide-desktop { display: none; } }
+@media (min-width: 768px) and (max-width: 1023px) { .lp-hide-tablet { display: none; } }
+@media (max-width: 767px) { .lp-hide-mobile { display: none; } }
+.lp-intro { margin: 0 0 16px; opacity: 0.85; }
+.lp-features > h2, .lp-faq > h2, .lp-testimonials > h2 { margin-bottom: 16px; }
+.lp-cols-1 { grid-template-columns: minmax(0, 1fr); }
+.lp-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
+@media (min-width: 768px) {
+  .lp-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lp-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lp-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) { .lp-w-wide .lp-cols-4, .lp-w-full .lp-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.lp-card { margin: 0; padding: 20px; background: var(--kw-surface, #fff); color: var(--kw-text, #10222f); border: 1px solid rgba(16, 34, 47, 0.12); border-radius: var(--kw-radius-card, 12px); box-shadow: var(--kw-shadow-card, none); text-align: left; overflow-wrap: anywhere; }
+.lp-card h3 { margin: 0 0 8px; font-size: 18px; line-height: 1.3; }
+.lp-card p { margin: 0; }
+.lp-testimonial p { margin: 0 0 12px; font-size: 17px; }
+.lp-testimonial footer { display: grid; gap: 2px; font-size: 15px; }
+.lp-testimonial footer span { opacity: 0.7; }
+.lp-faq-item { border-top: 1px solid rgba(16, 34, 47, 0.15); }
+.lp-faq-item:last-child { border-bottom: 1px solid rgba(16, 34, 47, 0.15); }
+.lp-faq-item summary { padding: 14px 0; font-weight: 700; cursor: pointer; list-style-position: inside; }
+.lp-faq-answer { padding: 0 0 14px; }
+.lp-faq-answer > :first-child { margin-top: 0; }
+.lp-faq-answer > :last-child { margin-bottom: 0; }
+.lp-cta { text-align: center; }
+.lp-cta p { margin: 0 0 16px; }
+.lp-video { margin-inline: 0; }
+.lp-video video { display: block; width: 100%; height: auto; border-radius: 12px; background: #000; }
+.lp-video-frame { position: relative; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: #000; }
+.lp-video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.lp-video figcaption { margin-top: 8px; font-size: 14px; opacity: 0.75; text-align: center; }
+.lp-divider { height: var(--lp-div, 32px); }
+.lp-divider-sm { --lp-div: 16px; }
+.lp-divider-md { --lp-div: 32px; }
+.lp-divider-lg { --lp-div: 64px; }
+.lp-divider.has-line { display: flex; align-items: center; }
+.lp-divider.has-line::before { content: ""; flex: 1; border-top: 1px solid rgba(16, 34, 47, 0.18); }
+.lp-site .lp-card h3 { font-family: var(--kw-font-heading); font-size: var(--kw-h3-size); font-weight: var(--kw-h3-weight); }
+.lp-site .lp-block + .lp-block { margin-top: var(--kw-space-lg); }
+/* Canevas de l'éditeur visuel : survol, sélection, section masquée */
+.lp-builder .lp-block { cursor: pointer; outline-offset: 6px; }
+.lp-builder .lp-block:hover { outline: 1px dashed rgba(2, 119, 182, 0.6); }
+.lp-builder .lp-block.is-selected { outline: 2px solid #0277b6; }
+.lp-builder .lp-block.is-hidden { opacity: 0.35; }
+.lp-builder a, .lp-builder button, .lp-builder summary { pointer-events: none; }
+.lp-placeholder { opacity: 0.7; border-style: dashed; }
+
 @media (max-width: 560px) {
   .lp-body { font-size: 16px; }
   .lp-course { grid-template-columns: 1fr; }

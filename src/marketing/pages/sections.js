@@ -7,6 +7,7 @@
 const crypto = require("crypto");
 const { MarketingError } = require("../errors");
 const { getCourse } = require("../bridge/catalog");
+const { parseVideoUrl } = require("../../utils/video");
 
 const MAX_SECTIONS = 30;
 const bad = (message) => new MarketingError("invalid_field", message);
@@ -29,6 +30,10 @@ function imageUrl(v, label) {
   if (/^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(url)) return url;
   throw bad(`${label} : l'image doit venir de la médiathèque ou d'une adresse https://.`);
 }
+
+// Liste d'éléments (cartes, questions, témoignages) : tableau d'objets, borné
+// (au plus 100 lus ; la limite du type s'applique APRÈS le retrait des éléments vides)
+const listOf = (v) => (Array.isArray(v) ? v : []).filter((x) => x && typeof x === "object").slice(0, 100);
 
 const TYPES = {
   hero: {
@@ -96,6 +101,58 @@ const TYPES = {
     label: "Formulaire d'inscription",
     normalize(ctx, raw) {
       return { type: "form", heading: line(raw.heading, 150) || "Inscrivez-vous", intro: clean(raw.intro, 400) };
+    },
+  },
+  features: {
+    label: "Points forts en cartes",
+    normalize(ctx, raw, at) {
+      const items = listOf(raw.items).map((it) => ({ title: line(it && it.title, 80), text: clean(it && it.text, 400) })).filter((it) => it.title || it.text).slice(0, 12);
+      if (!items.length) throw bad(`${at} (points forts) : ajoutez au moins une carte.`);
+      return { type: "features", title: line(raw.title, 150), intro: clean(raw.intro, 400), columns: [2, 3, 4].includes(Number(raw.columns)) ? Number(raw.columns) : 3, items };
+    },
+  },
+  faq: {
+    label: "Questions fréquentes",
+    normalize(ctx, raw, at) {
+      const items = listOf(raw.items).map((it) => ({ q: line(it && it.q, 200), a: clean(it && it.a, 2000) })).filter((it) => it.q || it.a).slice(0, 20);
+      if (!items.length) throw bad(`${at} (questions fréquentes) : ajoutez au moins une question.`);
+      if (items.some((it) => !it.q || !it.a)) throw bad(`${at} (questions fréquentes) : chaque question a besoin d'une réponse.`);
+      return { type: "faq", title: line(raw.title, 150) || "Questions fréquentes", items };
+    },
+  },
+  cta: {
+    label: "Appel à l'action",
+    normalize(ctx, raw, at) {
+      const title = line(raw.title, 150);
+      const buttonLabel = line(raw.buttonLabel, 60), buttonUrl = linkUrl(raw.buttonUrl, `${at} (bouton de l'appel à l'action)`);
+      if (!title) throw bad(`${at} (appel à l'action) : le titre est obligatoire.`);
+      if (!buttonLabel || !buttonUrl) throw bad(`${at} (appel à l'action) : un bouton (texte et adresse) est obligatoire.`);
+      return { type: "cta", title, text: clean(raw.text, 400), buttonLabel, buttonUrl };
+    },
+  },
+  video: {
+    label: "Vidéo",
+    normalize(ctx, raw, at) {
+      const url = line(raw.url, 500);
+      const v = url ? parseVideoUrl(url) : null;
+      if (!v || !["youtube", "vimeo", "file"].includes(v.kind) || !/^https:/i.test(v.src || "")) throw bad(`${at} (vidéo) : une adresse YouTube, Vimeo ou de fichier vidéo en https://.`);
+      const title = line(raw.title, 150);
+      if (!title) throw bad(`${at} (vidéo) : donnez un titre à la vidéo (lu par les lecteurs d'écran).`);
+      return { type: "video", url, title, caption: line(raw.caption, 200) };
+    },
+  },
+  testimonials: {
+    label: "Témoignages",
+    normalize(ctx, raw, at) {
+      const items = listOf(raw.items).map((it) => ({ text: clean(it && it.text, 600), author: line(it && it.author, 120), role: line(it && it.role, 120) })).filter((it) => it.text).slice(0, 12);
+      if (!items.length) throw bad(`${at} (témoignages) : ajoutez au moins un témoignage.`);
+      return { type: "testimonials", title: line(raw.title, 150), items };
+    },
+  },
+  divider: {
+    label: "Séparateur ou espace",
+    normalize(ctx, raw) {
+      return { type: "divider", line: raw.line !== false && raw.line !== "false", size: ["sm", "md", "lg"].includes(raw.size) ? raw.size : "md" };
     },
   },
   // Composant réutilisable inséré « synchronisé » : seule la référence est enregistrée ; l'affichage reprend toujours

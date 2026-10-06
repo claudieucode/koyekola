@@ -60,21 +60,26 @@ function requirePage(ctx, id) {
   return p;
 }
 
-// Enregistrement du BROUILLON (sauvegarde automatique de l'éditeur). `revision` : celle que l'éditeur a chargée ; si la
-// page a été enregistrée entre-temps ailleurs, rien n'est écrasé (erreur « conflict »).
-function saveDraft(ctx, id, input = {}, { revision } = {}) {
-  const page = requirePage(ctx, id);
-  if (page.archived_at) throw bad("Cette page est archivée : restaurez-la pour la modifier.");
-  if (!Number.isInteger(revision)) throw bad("Révision manquante.");
-  // Chaque section reçoit un identifiant stable (sélection, calques, composants, tests A/B à venir)
+// Contenu validé et normalisé (sans rien enregistrer) : sert au brouillon et au rendu du canevas de l'éditeur.
+// Chaque section reçoit un identifiant stable (sélection, calques, composants, tests A/B à venir).
+function normalizeContent(ctx, page, input = {}) {
   const raw = (Array.isArray(input.sections) ? input.sections : []).map((s) => (s && typeof s === "object" && s.id === undefined ? { ...s, id: newSectionId() } : s));
-  const content = {
+  return {
     sections: normalizeSections(ctx, raw),
     theme: normalizeTheme(input.theme),
     title: line(input.title, 120) || page.name,
     description: line(input.description, 300),
     seo: normalizeSeo(input.seo),
   };
+}
+
+// Enregistrement du BROUILLON (sauvegarde automatique de l'éditeur). `revision` : celle que l'éditeur a chargée ; si la
+// page a été enregistrée entre-temps ailleurs, rien n'est écrasé (erreur « conflict »).
+function saveDraft(ctx, id, input = {}, { revision } = {}) {
+  const page = requirePage(ctx, id);
+  if (page.archived_at) throw bad("Cette page est archivée : restaurez-la pour la modifier.");
+  if (!Number.isInteger(revision)) throw bad("Révision manquante.");
+  const content = normalizeContent(ctx, page, input);
   const next = revision + 1;
   const changed = ctx.db.prepare("UPDATE mk_landing_pages SET draft = ?, revision = ?, updated_at = datetime('now') WHERE id = ? AND organization_id = ? AND revision = ?")
     .run(JSON.stringify(content), next, id, ctx.organizationId, revision).changes;
@@ -358,7 +363,7 @@ function resolveSections(ctx, sections) {
 
 module.exports = {
   KINDS, MAX_VERSIONS,
-  getPage, requirePage, listPages, saveDraft, discardDraft, publish, unpublish, listVersions, getVersion, restoreVersion,
+  getPage, requirePage, listPages, normalizeContent, saveDraft, discardDraft, publish, unpublish, listVersions, getVersion, restoreVersion,
   createPage, duplicatePage, archivePage, restorePage,
   getSite, requireSite, listSites, sitePages, createSite, updateSite, setHomePage, movePage, archiveSite, restoreSite, duplicateSite,
   listComponents, getComponent, createComponent, updateComponent, componentUsage, deleteComponent, resolveSections,

@@ -28,7 +28,7 @@ module.exports = ({ db }) => {
   const ctxOf = (req) => ({ db, organizationId: req.mkPages.organizationId, userId: null, bus: req.mkPages.bus, settings: req.mkPages.settings, baseUrl: process.env.SITE_URL });
   const loadForm = (page) => (page.form_id ? forms.getForm({ db, organizationId: page.organization_id }, page.form_id) : null);
   // Page affichée : composants synchronisés résolus, formations relues dans le catalogue
-  const shownPage = (req, page) => landing.viewModel(ctxOf(req), { ...page, sections: pages.resolveSections(ctxOf(req), page.sections) });
+  const shownPage = (req, page) => landing.viewModel(ctxOf(req), { ...page, sections: pages.resolveSections(ctxOf(req), page.sections).filter((s) => !s.hidden) });
   // Design system du site de la page (site actif seulement)
   const siteOf = (req, page) => { const site = page.site_id ? pages.getSite(ctxOf(req), page.site_id) : null; return site && site.status === "active" ? site : null; };
   const show = (req, res, page, { status = 200, error = null, values = {}, thanks = null } = {}) => {
