@@ -85,4 +85,15 @@ function courseConversions(ctx, { courseId, userIds, since }) {
   }
 }
 
-module.exports = { listCourses, getCourse, getCourseBySlug, courseConversions, listPosts, blogCategories };
+// Le compte a-t-il déjà passé une commande ? (personnalisation des pages : « clients »)
+function userHasOrder(ctx, userId) {
+  checkCtx(ctx);
+  if (!Number.isInteger(userId)) return false;
+  try {
+    return Boolean(ctx.db.prepare("SELECT 1 FROM orders WHERE user_id = ? LIMIT 1").get(userId));
+  } catch {
+    return false;
+  }
+}
+
+module.exports = { listCourses, getCourse, getCourseBySlug, courseConversions, userHasOrder, listPosts, blogCategories };

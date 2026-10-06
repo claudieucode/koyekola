@@ -5,7 +5,7 @@
   identifiant (sélection, glisser-déposer, édition directe) et les éléments masqués restent visibles en transparence.
 %>
 <% const p = n.props || {}; const cls = ["kw-node", `kw-${n.type}`, `kw-n-${n.id}`, n.hidden ? "is-hidden" : "", n.locked ? "is-locked" : ""].filter(Boolean).join(" ");
-   const attrs = isBuilder ? ` data-node-id="${n.id}" data-node-type="${n.type}"` : "";
+   const attrs = isBuilder ? ` data-node-id="${n.id}" data-node-type="${n.type}"` + (n.audienceLabel ? ` data-audience-label="${String(n.audienceLabel).replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[c])}"` : "") : "";
    const kids = () => (n.children || []).forEach((c) => { if (c.hidden && !isBuilder) return; %><%- include("_node", { n: c, isBuilder, href, depth: depth + 1 }) %><% }); %>
 <% if (["container", "columns", "column", "grid", "stack", "group"].includes(n.type)) { %>
   <div class="<%= cls %>"<%- attrs %>><% if (isBuilder && !(n.children || []).length) { %><p class="kw-empty">Déposez des éléments ici</p><% } %><% kids() %></div>

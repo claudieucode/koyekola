@@ -218,6 +218,15 @@ function common(raw, at = "Section") {
     for (const [k, allowed] of Object.entries(STYLE)) if (allowed.includes(raw.style[k])) style[k] = raw.style[k];
     if (Object.keys(style).length) out.style = style;
   }
+  // Personnalisation : public d'affichage de la section
+  if (raw.audience) {
+    try {
+      const a = nodes.normalizeAudience(raw.audience, at);
+      if (a) out.audience = a;
+    } catch (error) {
+      throw bad(error.message);
+    }
+  }
   // Styles visuels libres mais validés (Page Builder) : par écran et par état, sur toute section
   if (raw.styles || raw.states) {
     try {

@@ -733,6 +733,7 @@
     cb.addEventListener("change", function () { onChange(cb.checked); });
     return h("label", { class: "pb-check" }, cb, " " + label);
   }
+  document.body.appendChild(h("datalist", { id: "pb-tags" }, (boot.tags || []).map(function (t) { return h("option", { value: t }); })));
   document.body.appendChild(h("datalist", { id: "pb-links" }, boot.links.map(function (l) { return h("option", { value: l.url, label: l.label }); })));
   document.body.appendChild(h("datalist", { id: "pb-scale" }, SPEC.spacingScale.map(function (n) { return h("option", { value: n + "px" }); }).concat(["auto", "100%", "50%"].map(function (v) { return h("option", { value: v }); }))));
 
@@ -1122,6 +1123,7 @@
       box.appendChild(h("div", { class: "pb-row pb-wrap" }, [["flex-start", "Début"], ["center", "Centre"], ["flex-end", "Fin"], ["stretch", "Étirer"]].map(function (a) { return b(a[1], function () { setStyle(selection.slice(), "alignSelf", a[0]); }, { disabled: !canWrite || locked }); }),
         b("Répartir", distribute, { disabled: !canWrite || locked })));
     }
+    if (items.length === 1 && it.type !== "component") box.appendChild(audienceField(it, locked));
     if (items.length === 1 && !isNode(it)) {
       var checks = h("div", { class: "pb-checks" });
       BPS.forEach(function (bp) {
@@ -1149,6 +1151,36 @@
       form.addEventListener("submit", function (e) { e.preventDefault(); saveAsComponent(it, nameInput.value, !PAGE.siteId || global.checked).then(function () { nameInput.value = ""; }); });
       box.appendChild(form);
     }
+  }
+  // Personnalisation : à qui s'affiche cet élément (évalué sur la page publique avec ce que le site sait du visiteur)
+  function audienceField(it, locked) {
+    var wrap = h("div", { class: "pb-field" });
+    var a = it.audience || {};
+    var id = fid();
+    var sel = h("select", { id: id, disabled: locked }, [h("option", { value: "", text: "Tout le monde" })].concat(SPEC.audiences.map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
+    sel.value = a.who || "";
+    var needsValue = function (w) { return w === "tag" || w === "not_tag" || w === "score_min"; };
+    var val = h("input", { type: a.who === "score_min" ? "number" : "text", min: "0", step: "1", maxlength: "60", placeholder: a.who === "score_min" ? "Score minimal" : "Nom de l'étiquette", value: a.value === undefined ? "" : String(a.value), disabled: locked, "aria-label": "Valeur du public d'affichage", list: a.who === "score_min" ? null : "pb-tags" });
+    val.hidden = !needsValue(a.who);
+    var apply = function () {
+      var who = sel.value;
+      val.hidden = !needsValue(who);
+      val.type = who === "score_min" ? "number" : "text";
+      if (needsValue(who) && val.value.trim() === "") { val.focus(); return; }
+      change(function () {
+        var x = byId(it.id);
+        if (!who) delete x.audience;
+        else x.audience = needsValue(who) ? { who: who, value: who === "score_min" ? Number(val.value) : val.value.trim() } : { who: who };
+      });
+    };
+    sel.addEventListener("change", apply);
+    val.addEventListener("change", apply);
+    wrap.appendChild(h("p", { class: "pb-sub", text: "Personnalisation" }));
+    wrap.appendChild(h("label", { for: id, text: "Afficher à" }));
+    wrap.appendChild(sel);
+    wrap.appendChild(val);
+    wrap.appendChild(h("p", { class: "pb-hint", text: "Selon ce que le site sait réellement du visiteur : son compte s'il est connecté, ou le contact relié à son navigateur (cookies acceptés). Un visiteur inconnu ne voit que ce qui s'adresse à tout le monde ou aux inconnus." }));
+    return wrap;
   }
   // Répartir : le parent commun répartit l'espace entre ses enfants (flex, espacés)
   function distribute() {

@@ -140,12 +140,14 @@ function nodeView(ctx, nodes) {
       const c = getCourse(ctx, n.props.courseId);
       return c ? { ...n, props: { ...n.props, course: courseView(c) } } : null; // formation dépubliée : l'élément disparaît
     }
-    if (n.type === "text") return { ...n, props: { ...n.props, html: pageNodes.sanitizeRich(n.props.html) } };
-    return n.children ? { ...n, children: nodeView(ctx, n.children) } : n;
+    const m = n.audience ? { ...n, audienceLabel: pageNodes.audienceLabel(n.audience) } : n;
+    if (n.type === "text") return { ...m, props: { ...n.props, html: pageNodes.sanitizeRich(n.props.html) } };
+    return n.children ? { ...m, children: nodeView(ctx, n.children) } : m;
   }).filter(Boolean);
 }
 function viewModel(ctx, page) {
-  const sections = page.sections.map((s) => {
+  const sections = page.sections.map((s0) => {
+    const s = s0.audience ? { ...s0, audienceLabel: pageNodes.audienceLabel(s0.audience) } : s0;
     if (s.type === "layout") return { ...s, children: nodeView(ctx, s.children) };
     if (s.type !== "course") return s;
     const c = getCourse(ctx, s.courseId);

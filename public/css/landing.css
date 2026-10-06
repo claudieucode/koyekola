@@ -281,3 +281,7 @@ body.pb-outlines .kw-node,body.pb-outlines .lp-block{outline:1px dashed rgba(2,1
 body.pb-hand,body.pb-hand *{cursor:grab}
 .pb-editing{outline:2px solid #ff9f1c;outline-offset:3px;cursor:text}
 .lp-builder .kw-node.is-selected,.lp-builder .lp-block.is-selected{outline:none}
+
+/* Personnalisation (canevas de l'éditeur) : public d'affichage indiqué sur la section ou l'élément */
+.lp-builder [data-audience-label] { position: relative; }
+.lp-builder [data-audience-label]::after { content: "Affiché à : " attr(data-audience-label); position: absolute; top: 4px; right: 4px; z-index: 108; padding: 2px 7px; border-radius: 4px; background: #0f766e; color: #fff; font: 600 11px/1.6 system-ui, sans-serif; pointer-events: none; white-space: nowrap; }

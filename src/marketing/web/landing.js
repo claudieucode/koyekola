@@ -193,6 +193,7 @@ module.exports = () => {
         .concat(funnel ? [{ url: require("../funnels").NEXT_URL, label: `Étape suivante du tunnel « ${funnel.name} »` }] : [])
         .concat(pages.listPages(ctx).filter((p) => p.status === "published" && p.id !== page.id).slice(0, 50).map((p) => ({ url: `/p/${p.slug}`, label: `Page « ${p.name} »` }))),
       siteUrl: String(process.env.SITE_URL || "").replace(/\/+$/, ""),
+      tags: require("../audience/tags").listTags(ctx).map((t) => t.name),
     };
     res.set("Cache-Control", "no-store");
     const { ICONS } = require("../../utils/icons");

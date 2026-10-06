@@ -15,7 +15,8 @@ const formUpload = require("./formUpload");
 const visitorsLib = require("../visitors");
 const { consentedVisitor } = require("./visitorsPublic");
 const funnels = require("../funnels");
-const { visibleTree } = require("../pages/nodes");
+const { visibleTree, audienceMatches } = require("../pages/nodes");
+const { visitorContext } = require("../pages/visitorContext");
 const abtests = require("../pages/abtests");
 
 const PENDING_TEXT = "Merci ! Un e-mail de confirmation vient de vous être envoyé : cliquez sur le lien qu'il contient pour finaliser votre inscription (pensez aux courriers indésirables).";
@@ -36,7 +37,11 @@ module.exports = ({ db }) => {
   const ctxOf = (req) => ({ db, organizationId: req.mkPages.organizationId, userId: null, bus: req.mkPages.bus, settings: req.mkPages.settings, baseUrl: process.env.SITE_URL });
   const loadForm = (page) => (page.form_id ? forms.getForm({ db, organizationId: page.organization_id }, page.form_id) : null);
   // Page affichée : composants synchronisés résolus, formations relues dans le catalogue
-  const shownPage = (req, page) => landing.viewModel(ctxOf(req), { ...page, sections: pages.resolveSections(ctxOf(req), page.sections).filter((s) => !s.hidden).map((s) => (s.type === "layout" ? { ...s, children: visibleTree(s.children) } : s)) });
+  // Personnalisation : sections et éléments filtrés selon ce que le site sait réellement du visiteur
+  const shownPage = (req, page) => {
+    const visitor = visitorContext(db, req.mkPages.organizationId, req);
+    return landing.viewModel(ctxOf(req), { ...page, sections: pages.resolveSections(ctxOf(req), page.sections).filter((s) => !s.hidden && audienceMatches(s.audience, visitor)).map((s) => (s.type === "layout" ? { ...s, children: visibleTree(s.children, visitor) } : s)) });
+  };
   // Design system du site de la page (site actif seulement)
   const siteOf = (req, page) => { const site = page.site_id ? pages.getSite(ctxOf(req), page.site_id) : null; return site && site.status === "active" ? site : null; };
   const show = (req, res, page, { status = 200, error = null, values = {}, thanks = null } = {}) => {

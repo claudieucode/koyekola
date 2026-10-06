@@ -344,7 +344,7 @@ function editorSpec() {
     types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
     categories: CATEGORIES,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
-    groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
+    audiences: Object.entries(AUDIENCES), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     colorTokens: COLOR_TOKENS, spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
     limits: { nodes: MAX_NODES, depth: MAX_DEPTH },
   };
@@ -379,6 +379,53 @@ function sanitizeRich(input) {
   return html.replace(/^(<p>\s*<\/p>)+|(<p>\s*<\/p>)+$/g, "").trim();
 }
 
+// ---------- Personnalisation : à qui s'affiche une section ou un élément ----------
+// Évaluée sur la page publique avec ce que le site sait RÉELLEMENT du visiteur : compte connecté, ou contact relié à
+// son navigateur (mesure d'audience acceptée). Sans information, le visiteur est « inconnu ».
+const AUDIENCES = {
+  known: "Contacts connus", anonymous: "Visiteurs inconnus",
+  subscribed: "Abonnés (consentement e-mail)", not_subscribed: "Non abonnés",
+  customer: "Clients (au moins un achat)", not_customer: "Pas encore clients",
+  student: "Élèves connectés", not_student: "Personnes non connectées",
+  tag: "Contacts avec l'étiquette…", not_tag: "Contacts sans l'étiquette…",
+  score_min: "Score au moins égal à…",
+};
+function normalizeAudience(raw, at) {
+  if (!raw || typeof raw !== "object" || !raw.who) return undefined;
+  if (!Object.hasOwn(AUDIENCES, raw.who)) throw new Error(`${at} : public d'affichage inconnu.`);
+  if (raw.who === "tag" || raw.who === "not_tag") {
+    const tag = line(raw.value, 60);
+    if (!tag) throw new Error(`${at} : indiquez l'étiquette.`);
+    return { who: raw.who, value: tag };
+  }
+  if (raw.who === "score_min") {
+    const n = Number(raw.value);
+    if (!Number.isInteger(n) || n < 0 || n > 100000) throw new Error(`${at} : score minimal invalide (nombre entier positif).`);
+    return { who: raw.who, value: n };
+  }
+  return { who: raw.who };
+}
+// Le visiteur correspond-il ? visitor = { known, student, subscribed, customer, tags: Set, score }
+function audienceMatches(audience, visitor) {
+  if (!audience) return true;
+  const v = visitor || { known: false, student: false, subscribed: false, customer: false, tags: new Set(), score: 0 };
+  switch (audience.who) {
+    case "known": return v.known;
+    case "anonymous": return !v.known;
+    case "subscribed": return v.subscribed;
+    case "not_subscribed": return !v.subscribed;
+    case "customer": return v.customer;
+    case "not_customer": return !v.customer;
+    case "student": return v.student;
+    case "not_student": return !v.student;
+    case "tag": return v.tags.has(String(audience.value).toLowerCase());
+    case "not_tag": return !v.tags.has(String(audience.value).toLowerCase());
+    case "score_min": return v.score >= audience.value;
+    default: return true;
+  }
+}
+const audienceLabel = (a) => (a ? `${AUDIENCES[a.who]}${a.value !== undefined ? ` ${a.value}` : ""}`.replace("… ", " : ") : "");
+
 // ---------- Normalisation d'un arbre ----------
 function normalizeNode(raw, at, h, depth, counter) {
   if (!raw || typeof raw !== "object") throw new Error(`${at} : élément invalide.`);
@@ -396,6 +443,8 @@ function normalizeNode(raw, at, h, depth, counter) {
   if (label) node.name = label;
   if (raw.hidden === true) node.hidden = true;
   if (raw.locked === true) node.locked = true;
+  const audience = normalizeAudience(raw.audience, where);
+  if (audience) node.audience = audience;
   const styles = normalizeStyles(raw.styles, raw.states, where, h);
   if (styles.styles) node.styles = styles.styles;
   if (styles.states) node.states = styles.states;
@@ -429,8 +478,8 @@ function walk(nodes, fn, parent = null) {
     if (n.children) walk(n.children, fn, n);
   }
 }
-// Arbre affiché au public : éléments masqués retirés
-const visibleTree = (nodes) => (nodes || []).filter((n) => !n.hidden).map((n) => (n.children ? { ...n, children: visibleTree(n.children) } : n));
+// Arbre affiché au public : éléments masqués retirés, et ceux dont le public ne correspond pas au visiteur
+const visibleTree = (nodes, visitor) => (nodes || []).filter((n) => !n.hidden && (visitor === undefined || audienceMatches(n.audience, visitor))).map((n) => (n.children ? { ...n, children: visibleTree(n.children, visitor) } : n));
 
 // CSS d'une page : une règle par élément stylé (et par section stylée), par écran et par état. Valeurs déjà validées.
 function pageCss(sections) {
@@ -459,5 +508,5 @@ function pageCss(sections) {
 
 module.exports = {
   NODE_TYPES, CATEGORIES, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
-  normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
+  AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };
