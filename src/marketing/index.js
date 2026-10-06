@@ -40,6 +40,7 @@ function initMarketing({ db, dbFile, dataDir, env = process.env, log = console }
     bus.on("*", automations.eventHandler({ db, settings, env, log })); // événements → passages dans les scénarios actifs
     bus.on("*", webhooksOut.eventHandler({ db, env })); // événements → livraisons de webhooks sortants abonnés
     bus.on("lms.order_completed", revenue.eventHandler({ db, settings })); // commande → attribuée au dernier e-mail cliqué
+    bus.on("*", require("./scoring").eventHandler({ db, bus })); // événements → points du score des contacts
     const worker = createWorker({ db, handlers, log });
     // Lance la lecture périodique du LMS (appelé par server.js quand le worker est actif)
     const startBridge = () => bridgeEvents.startBridge(db, organization.id);

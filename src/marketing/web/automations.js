@@ -24,6 +24,7 @@ function triggerChoices(ctx) {
     funnelSteps: funnels.flatMap((f) => f.steps.map((s, i) => [String(s.id), `${f.name} — étape ${i + 1} : ${s.name}`])),
     forms: require("../forms").listForms(ctx).map((f) => [String(f.id), f.name]),
     courses: require("../bridge/catalog").listCourses(ctx).map((c) => [String(c.id), c.title]),
+    scoreLevels: require("../scoring").levels(ctx).map((l) => [String(l.id), `${l.name} (à partir de ${l.min_score} points)`]),
   };
 }
 

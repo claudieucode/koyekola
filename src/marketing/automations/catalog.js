@@ -16,6 +16,11 @@ const TRIGGERS = {
   "lms.course_viewed": { label: "Un contact consulte la fiche d'une formation", filters: [["courseId", "Formation", "courses"]] },
   "lms.cart_added": { label: "Un contact ajoute une formation au panier", filters: [["courseId", "Formation", "courses"]] },
   "lms.checkout_started": { label: "Un contact ouvre la page de commande", filters: [] },
+  // E-mails (phase 13) : premier clic sur un lien, première ouverture (indicative : certaines messageries ouvrent seules)
+  "email.clicked": { label: "Un contact clique dans un e-mail", filters: [] },
+  "email.opened": { label: "Un contact ouvre un e-mail (indicatif)", filters: [] },
+  // Score des contacts (phase 13) : le contact change de niveau (froid, intéressé, chaud…)
+  "contact.score_level_changed": { label: "Le score d'un contact change de niveau", filters: [["levelId", "Niveau atteint", "scoreLevels"]] },
   "contact.created": { label: "Un contact est créé", filters: [] },
   "contact.subscribed": { label: "Un contact s'abonne (consentement prouvé)", filters: [] },
   "contact.sms_subscribed": { label: "Un contact accepte les SMS (accord SMS prouvé)", filters: [] },

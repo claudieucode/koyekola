@@ -35,7 +35,13 @@
       <div class="mk-stat"><span class="mk-stat-label">E-mails reçus</span><span class="mk-stat-value"><%= mkh.fmt(summary.messages) %></span><span class="mk-stat-hint"><%= mkh.fmt(summary.clicked) %> avec clic</span></div>
       <div class="mk-stat"><span class="mk-stat-label">Scénarios en cours</span><span class="mk-stat-value"><%= mkh.fmt(summary.runningAutomations) %></span></div>
       <div class="mk-stat"><span class="mk-stat-label">Dernière activité</span><span class="mk-stat-value mk-stat-small"><%= summary.lastActivity ? mkh.fdate(summary.lastActivity) : "—" %></span><span class="mk-stat-hint">clic ou ouverture d'un e-mail</span></div>
+      <% if (score) { %><div class="mk-stat"><span class="mk-stat-label">Score</span><span class="mk-stat-value"><%= mkh.fmt(score.score) %></span><span class="mk-stat-hint"><%= score.level %> · <a href="/marketing/score">règles</a></span></div><% } %>
     </div>
+    <% if (score && score.history.length) { %>
+      <details class="mk-panel mk-score-history"><summary>D'où vient ce score ? (20 dernières attributions)</summary>
+        <ul class="mk-sw-recent"><% score.history.forEach((h) => { %><li><strong><%= h.points > 0 ? "+" : "" %><%= h.points %></strong> <%= h.label %><span class="mk-sub"><%= mkh.fdatetime(new Date(h.created_at).toISOString().replace("T", " ").slice(0, 19)) %></span></li><% }) %></ul>
+      </details>
+    <% } %>
 
     <section class="mk-panel mk-timeline-panel" aria-labelledby="tl-title">
       <h2 id="tl-title">Chronologie</h2>

@@ -1841,3 +1841,10 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-flow-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .mk-flow-actions form { margin: 0; }
 .mk-flow-add { border-top: 1px solid var(--mk-border); padding-top: 16px; }
+
+/* Score des contacts (phase 13) */
+.mk-table tr.is-muted > * { opacity: 0.6; }
+.mk-inline-form { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.mk-input-num { width: 84px; min-height: 36px; }
+.mk-score-history > summary { cursor: pointer; font-weight: 700; }
+.mk-score-history[open] > summary { margin-bottom: 8px; }

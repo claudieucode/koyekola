@@ -26,6 +26,7 @@ const EVENT_NAMES = {
   "lms.course_progress_10": true, "lms.course_progress_50": true, "lms.course_progress_90": true,
   "lms.course_viewed": true, "lms.cart_added": true, "lms.checkout_started": false,
   "page.visited": false, "funnel.step_reached": false, "funnel.completed": false,
+  "email.clicked": false, "email.opened": false,
 };
 const DAY_MS = 86400000;
 
@@ -44,6 +45,7 @@ const CMP = {
   boolean: ["is_true", "is_false", "is_empty", "not_empty"],
   event: ["happened", "never", "at_least", "within_days", "not_within_days"],
   spent: ["gt", "gte", "lt", "lte", "between", "is_empty", "not_empty"],
+  score: ["gt", "gte", "lt", "lte", "between"],
 };
 const NEGATIVE = { neq: "eq", not_contains: "contains", not_in: "in", not_has: "has", not_in_list: "in_list", never: "happened", not_within_days: "within_days" };
 const NO_VALUE = new Set(["is_empty", "not_empty", "is_true", "is_false", "happened", "never"]);
@@ -144,6 +146,7 @@ function createCompiler(ctx) {
     else if (Object.hasOwn(DATE_COLUMNS, field)) kind = "date";
     else if (field === "lms_user_id") kind = "lms";
     else if (field === "lms_spent") kind = "spent";
+    else if (field === "score") kind = "score";
     else if (field.startsWith("event:")) {
       if (!Object.hasOwn(EVENT_NAMES, field.slice(6))) throw fail(path, `Événement « ${field.slice(6, 46)} » inconnu (seuls les événements KOLAKISA sont proposés).`);
       kind = "event";
@@ -170,6 +173,16 @@ function createCompiler(ctx) {
     if (kind === "spent") {
       const built = spentCondition(cmp, value, path);
       return { sql: `COALESCE(${built.sql}, 0)`, params: built.params };
+    }
+    // Score des contacts (règles de score) : nombre entier
+    if (kind === "score") {
+      const int = (v) => { const n = checkNumber(v, path); if (!Number.isInteger(n) || n < 0) throw fail(path, "Score invalide : un nombre entier positif est attendu."); return n; };
+      if (cmp === "between") {
+        const pair = Array.isArray(value) && value.length === 2 ? value.map(int) : null;
+        if (!pair || pair[0] > pair[1]) throw fail(path, "Valeur invalide : deux scores [min, max] sont attendus.");
+        return { sql: "c.score BETWEEN ? AND ?", params: pair };
+      }
+      return { sql: `c.score ${{ gt: ">", gte: ">=", lt: "<", lte: "<=" }[cmp]} ?`, params: [int(value)] };
     }
 
     // Propriété : présence de la valeur (vide = pas de ligne), sinon condition sur la colonne de valeur

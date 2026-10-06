@@ -32,6 +32,8 @@ const ITEMS = [
   live("audience", "forms", "Formulaires d'inscription", "/marketing/formulaires", "layout", "forms.read", { label: "Nouveau formulaire", href: "/marketing/formulaires#nouveau", permission: "forms.write" }),
   // Sondages (« Surveys » de Mailchimp) : questions, lien public ou personnel, étiquettes selon les réponses
   live("audience", "surveys", "Sondages", "/marketing/sondages", "listChecks", "forms.read", { label: "Créer un sondage", href: "/marketing/sondages#nouveau", permission: "forms.write" }),
+  // Score des contacts : règles (actions → points), niveaux (froid, chaud…), déclencheur « change de niveau »
+  live("audience", "scoring", "Score des contacts", "/marketing/score", "activity", "contacts.read"),
   live("audience", "import", "Importer des contacts", "/marketing/importer", "upload", "contacts.import", { label: "Nouvel import", href: "/marketing/importer", permission: "contacts.import" }),
 
   live("campaigns", "campaigns", "Toutes les campagnes", "/marketing/campagnes", "send", "campaigns.read", { label: "Créer une campagne", href: "/marketing/campagnes/nouvelle", permission: "campaigns.write" }),

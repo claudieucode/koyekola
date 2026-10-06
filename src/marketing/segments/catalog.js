@@ -23,6 +23,7 @@ const EVENTS = [
   ["lms.lesson_completed", "Leçon terminée", true], ["lms.course_completed", "Formation terminée", true], ["lms.review_posted", "Avis publié", true], ["lms.favorite_added", "Formation mise en favori", true],
   ["lms.course_progress_10", "Formation suivie à 10 %", true], ["lms.course_progress_50", "Formation suivie à 50 %", true], ["lms.course_progress_90", "Formation suivie à 90 %", true],
   ["lms.course_viewed", "Fiche formation consultée", true], ["lms.cart_added", "Formation ajoutée au panier", true], ["lms.checkout_started", "Page de commande ouverte", false],
+  ["email.clicked", "Clic dans un e-mail", false], ["email.opened", "Ouverture d'un e-mail (indicatif)", false],
   ["page.visited", "Page visitée (Site Web, Tunnels)", false], ["funnel.step_reached", "Étape de tunnel atteinte", false], ["funnel.completed", "Tunnel terminé", false],
 ];
 const ACTIVITY_NOTE = "Compté depuis l'activation du pont KOLAKISA : l'activité plus ancienne n'est pas incluse.";
@@ -62,6 +63,7 @@ function fieldCatalog(ctx) {
     fields.push({ field: `event:${name}`, label, group: "Activité KOLAKISA", kind: "event", supportsCourse, courses: supportsCourse ? courses : [], note: ACTIVITY_NOTE, cmps: EVENT });
   }
   fields.push({ field: "lms_spent", label: "Montant dépensé sur KOLAKISA (€)", group: "Achats", kind: "spent", note: ACTIVITY_NOTE, cmps: SPENT });
+  fields.push({ field: "score", label: "Score", group: "Contact", kind: "score", note: "Points des règles de score (Audience → Score des contacts).", cmps: SPENT.filter((c) => !["is_empty", "not_empty"].includes(c.cmp)) });
   for (const p of listProperties(ctx)) {
     const field = `property:${p.key}`;
     const group = "Propriétés";

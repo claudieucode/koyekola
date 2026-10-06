@@ -39,7 +39,8 @@ module.exports = ({ db }) => {
     limiter.hit(req.ip);
     const p = resolve(req, req.params.token, "click");
     if (!p) return notFound(res);
-    const url = tracking.recordClick({ db, organizationId: p.o }, { messageId: p.m, linkId: p.l, userAgent: req.get("user-agent") });
+    const mk = req.app.locals.marketing;
+    const url = tracking.recordClick({ db, organizationId: p.o, bus: mk && mk.bus }, { messageId: p.m, linkId: p.l, userAgent: req.get("user-agent") });
     if (!url) return notFound(res);
     res.redirect(302, url);
   });
@@ -48,7 +49,7 @@ module.exports = ({ db }) => {
     const token = String(req.params.file).replace(/\.gif$/i, "");
     const p = limiter.isLimited(req.ip) ? null : resolve(req, token, "open");
     limiter.hit(req.ip);
-    if (p) tracking.recordOpen({ db, organizationId: p.o }, { messageId: p.m, userAgent: req.get("user-agent") });
+    if (p) tracking.recordOpen({ db, organizationId: p.o, bus: req.app.locals.marketing && req.app.locals.marketing.bus }, { messageId: p.m, userAgent: req.get("user-agent") });
     res.set("Content-Type", "image/gif").send(GIF);
   });
 

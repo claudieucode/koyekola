@@ -147,7 +147,7 @@ module.exports = ({ db }) => {
       title: contact.email, active: "contacts", contact, defs, values: audience.getContactProperties(ctx, contact.id), tags: audience.tagsOf(ctx, contact.id),
       memberOf, allLists: audience.listLists(ctx), history: compliance.consentHistory(ctx, contact.id), preferences: compliance.preferencesOf(ctx, contact.id),
       sendable: compliance.isSendable(ctx, contact.id), smsSendable: sms.isSmsSendable(ctx, contact.id), smsPhoneMasked: sms.maskPhone(contact.sms_phone),
-      summary: audience.contactSummary(ctx, contact.id), timeline: audience.contactTimeline(ctx, contact.id, { limit: 50 }),
+      summary: audience.contactSummary(ctx, contact.id), timeline: audience.contactTimeline(ctx, contact.id, { limit: 50 }), score: require("../scoring").contactScore(ctx, contact.id),
       // Fuseau réellement utilisé pour l'envoi à l'heure locale, et d'où il vient (contact, compte, pays, défaut)
       zone: sendtime.contactZones(ctx, [contact.id])[contact.id], zoneBasis: sendtime.BASIS_LABELS, timeZones: sendtime.timeZoneList(),
       files: require("../forms").contactFiles(ctx, contact.id),
