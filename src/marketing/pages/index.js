@@ -114,6 +114,19 @@ function unpublish(ctx, id) {
   landing.unpublishPage(ctx, id);
 }
 
+// Toutes les pages (Site Web → Pages) : site, brouillon en cours, statistiques réelles cumulées
+function listPages(ctx, { archived = false, siteId } = {}) {
+  checkCtx(ctx);
+  const bySite = siteId === undefined ? "" : siteId === null ? " AND p.site_id IS NULL" : " AND p.site_id = ?";
+  const params = [ctx.organizationId, ...(siteId ? [siteId] : [])];
+  return ctx.db.prepare(`SELECT p.id, p.name, p.slug, p.title, p.status, p.kind, p.site_id, p.published_at, p.updated_at, p.archived_at, p.draft IS NOT NULL AS has_draft,
+      s.name AS site_name,
+      (SELECT COUNT(DISTINCT e.visitor || ':' || (e.occurred_at / 86400000)) FROM mk_landing_events e WHERE e.page_id = p.id AND e.type = 'view') AS visitors,
+      (SELECT COUNT(*) FROM mk_landing_events e WHERE e.page_id = p.id AND e.type = 'signup') AS signups
+    FROM mk_landing_pages p LEFT JOIN mk_sites s ON s.id = p.site_id
+    WHERE p.organization_id = ? AND p.archived_at IS ${archived ? "NOT " : ""}NULL${bySite} ORDER BY p.updated_at DESC, p.id DESC`).all(...params);
+}
+
 // ---------- Versions ----------
 
 function listVersions(ctx, id) {
@@ -149,6 +162,12 @@ function createPage(ctx, { name, siteId = null, kind = "page" } = {}) {
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   const page = landing.createPage(ctx, { name });
   ctx.db.prepare("UPDATE mk_landing_pages SET kind = ?, site_id = ? WHERE id = ?").run(kind, siteId, page.id);
+  // Page de site : un bandeau et un texte (la section d'inscription des pages d'atterrissage demanderait un formulaire
+  // avant toute publication)
+  if (kind === "page") {
+    const start = [{ ...page.sections[0], id: newSectionId() }, { type: "text", markdown: "Présentez ici le contenu de la page.", id: newSectionId() }];
+    ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(start), page.id);
+  }
   return requirePage(ctx, page.id);
 }
 
@@ -339,7 +358,7 @@ function resolveSections(ctx, sections) {
 
 module.exports = {
   KINDS, MAX_VERSIONS,
-  getPage, requirePage, saveDraft, discardDraft, publish, unpublish, listVersions, getVersion, restoreVersion,
+  getPage, requirePage, listPages, saveDraft, discardDraft, publish, unpublish, listVersions, getVersion, restoreVersion,
   createPage, duplicatePage, archivePage, restorePage,
   getSite, requireSite, listSites, sitePages, createSite, updateSite, setHomePage, movePage, archiveSite, restoreSite, duplicateSite,
   listComponents, getComponent, createComponent, updateComponent, componentUsage, deleteComponent, resolveSections,

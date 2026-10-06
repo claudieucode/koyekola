@@ -29,7 +29,7 @@ function requirePage(ctx, id) {
   return p;
 }
 function getPublishedPage(db, slug) {
-  return parse(SLUG.test(String(slug || "")) ? db.prepare("SELECT * FROM mk_landing_pages WHERE slug = ? AND status = 'published'").get(slug) : null);
+  return parse(SLUG.test(String(slug || "")) ? db.prepare("SELECT * FROM mk_landing_pages WHERE slug = ? AND status = 'published' AND archived_at IS NULL").get(slug) : null);
 }
 function listPages(ctx) {
   checkCtx(ctx);
@@ -60,9 +60,10 @@ function createPage(ctx, { name } = {}) {
   return getPage(ctx, id);
 }
 
-// Enregistrement complet (réglages + sections dans l'ordre donné). Une page en ligne est mise à jour immédiatement.
-function savePage(ctx, id, input = {}) {
-  const page = requirePage(ctx, id);
+// Réglages de la page (nom, adresse, formulaire, étiquettes, indexation) : appliqués tout de suite, ils ne font pas
+// partie du contenu publié (le contenu, lui, passe par le brouillon du moteur de pages : src/marketing/pages)
+function saveSettings(ctx, id, input = {}) {
+  requirePage(ctx, id);
   const name = line(input.name, 100);
   if (!name) throw bad("Le nom de la page est obligatoire.");
   const dup = ctx.db.prepare("SELECT id FROM mk_landing_pages WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, name);
@@ -70,11 +71,6 @@ function savePage(ctx, id, input = {}) {
   const slug = line(input.slug, 60).toLowerCase();
   if (!SLUG.test(slug)) throw bad("Adresse de la page : lettres minuscules sans accent, chiffres et tirets (ex. « guide-gratuit »).");
   if (ctx.db.prepare("SELECT 1 FROM mk_landing_pages WHERE slug = ? AND id <> ?").get(slug, id)) throw new MarketingError("duplicate", `L'adresse « /p/${slug} » est déjà utilisée par une autre page.`);
-  const title = line(input.title, 120) || name;
-  const description = line(input.description, 300);
-  const sections = normalizeSections(ctx, input.sections);
-  const theme = {};
-  for (const k of Object.keys(DEFAULT_THEME)) theme[k] = HEX.test(String(input.theme && input.theme[k] || "")) ? input.theme[k].toLowerCase() : DEFAULT_THEME[k];
   let formId = null;
   if (input.formId !== undefined && input.formId !== null && input.formId !== "") {
     formId = Number(input.formId);
@@ -83,8 +79,22 @@ function savePage(ctx, id, input = {}) {
   }
   const tags = [...new Set((Array.isArray(input.tags) ? input.tags : String(input.tags || "").split(",")).map((t) => line(t, 64)).filter(Boolean))];
   if (tags.length > MAX_TAGS) throw bad(`${MAX_TAGS} étiquettes au plus.`);
-  ctx.db.prepare("UPDATE mk_landing_pages SET name = ?, slug = ?, title = ?, description = ?, sections = ?, theme = ?, form_id = ?, tags = ?, indexable = ?, updated_at = datetime('now') WHERE id = ?")
-    .run(name, slug, title, description, JSON.stringify(sections), JSON.stringify(theme), formId, JSON.stringify(tags), input.indexable ? 1 : 0, id);
+  ctx.db.prepare("UPDATE mk_landing_pages SET name = ?, slug = ?, form_id = ?, tags = ?, indexable = ?, updated_at = datetime('now') WHERE id = ?")
+    .run(name, slug, formId, JSON.stringify(tags), input.indexable ? 1 : 0, id);
+  return getPage(ctx, id);
+}
+
+// Enregistrement complet (réglages + contenu EN LIGNE immédiatement). Conservé pour l'API et les scripts ; l'éditeur
+// passe par le brouillon (saveSettings + pages.saveDraft, puis pages.publish).
+function savePage(ctx, id, input = {}) {
+  const page = requirePage(ctx, id);
+  saveSettings(ctx, id, input);
+  const sections = normalizeSections(ctx, input.sections);
+  const theme = {};
+  for (const k of Object.keys(DEFAULT_THEME)) theme[k] = HEX.test(String(input.theme && input.theme[k] || "")) ? input.theme[k].toLowerCase() : DEFAULT_THEME[k];
+  const title = line(input.title, 120) || line(input.name, 100);
+  ctx.db.prepare("UPDATE mk_landing_pages SET title = ?, description = ?, sections = ?, theme = ?, updated_at = datetime('now') WHERE id = ?")
+    .run(title, line(input.description, 300), JSON.stringify(sections), JSON.stringify(theme), id);
   audit(ctx, "landing.saved", "landing", id, { sections: sections.length, published: page.status === "published" });
   return getPage(ctx, id);
 }
@@ -164,6 +174,6 @@ function pageReport(ctx, id, { days = 30, now = Date.now() } = {}) {
 }
 
 module.exports = {
-  createPage, savePage, getPage, requirePage, getPublishedPage, listPages, publishPage, unpublishPage, deletePage, preflight, viewModel, linksOf, freeSlug,
+  createPage, savePage, saveSettings, getPage, requirePage, getPublishedPage, listPages, publishPage, unpublishPage, deletePage, preflight, viewModel, linksOf, freeSlug,
   visitorOf, isBot, record, pageReport, normalizeSection, slugify, SECTION_TYPES, STATUSES, DEFAULT_THEME, MAX_TAGS,
 };

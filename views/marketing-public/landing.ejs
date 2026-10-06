@@ -3,16 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <%
+    const seo = (() => { try { return typeof page.seo === "string" ? JSON.parse(page.seo || "{}") : (page.seo || {}); } catch { return {}; } })();
+    const abs = (u) => (!u ? "" : /^https:\/\//.test(u) ? u : `${String(process.env.SITE_URL || "").replace(/\/+$/, "")}${u}`);
+    const shareImg = seo.ogImage || (page.sections.find((s) => s.type === "hero" && s.image) || {}).image;
+    const canonical = seo.canonical || abs(`/p/${page.slug}`);
+    const indexable = page.indexable && !seo.noindex && !preview;
+    const siteStyle = typeof site !== "undefined" && site ? tokensToCss(site.tokens) : "";
+  %>
   <title><%= page.title || page.name %></title>
   <% if (page.description) { %><meta name="description" content="<%= page.description %>"><meta property="og:description" content="<%= page.description %>"><% } %>
   <meta property="og:title" content="<%= page.title || page.name %>">
-  <% const heroImg = (page.sections.find((s) => s.type === "hero" && s.image) || {}).image; if (heroImg) { %><meta property="og:image" content="<%= heroImg %>"><% } %>
-  <meta name="robots" content="<%= page.indexable && !preview ? "index, follow" : "noindex, nofollow" %>">
+  <meta property="og:type" content="website">
+  <% if (canonical && /^https:/.test(canonical)) { %><link rel="canonical" href="<%= canonical %>"><meta property="og:url" content="<%= canonical %>"><% } %>
+  <% if (shareImg) { %><meta property="og:image" content="<%= abs(shareImg) %>"><meta name="twitter:card" content="summary_large_image"><% } else { %><meta name="twitter:card" content="summary"><% } %>
+  <meta name="robots" content="<%= indexable ? "index, follow" : "noindex, nofollow" %>">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="<%= asset("/css/landing.css") %>">
 </head>
-<body class="lp-body" style="--lp-accent: <%= page.theme.accent %>; --lp-bg: <%= page.theme.background %>; --lp-text: <%= page.theme.text %>">
-  <% if (preview) { %><p class="lp-preview-bar">Aperçu — les clics et inscriptions ne sont pas enregistrés.</p><% } %>
+<% if (siteStyle) { %><body class="lp-body lp-site" style="<%= siteStyle %> --lp-accent: var(--kw-primary); --lp-on-accent: var(--kw-on-primary); --lp-bg: var(--kw-background); --lp-text: var(--kw-text)">
+<% } else { %><body class="lp-body" style="--lp-accent: <%= page.theme.accent %>; --lp-bg: <%= page.theme.background %>; --lp-text: <%= page.theme.text %>"><% } %>
+  <% if (preview) { %><p class="lp-preview-bar"><%= typeof previewLabel !== "undefined" && previewLabel ? previewLabel + " " : "Aperçu — " %>Les clics et inscriptions ne sont pas enregistrés.</p><% } %>
   <main class="lp-main" id="main">
     <% let n = 0; const href = (url) => (preview ? url : `/p/${page.slug}/clic/${n++}`); %>
     <% page.sections.forEach((s, i) => { %>

@@ -1,0 +1,59 @@
+<%- include("partials/top", { title, active }) %>
+<% const canWrite = mk.can("forms.write"); const periodLabel = { 7: "7 derniers jours", 30: "30 derniers jours", 90: "90 derniers jours" }; const pct = (r) => (r === null ? "—" : `${String(r).replace(".", ",")} %`); %>
+    <div class="mk-head"><h1>Site Web</h1><% if (canWrite) { %><div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/site-web/sites#nouveau">Créer un site</a><a class="btn btn-primary btn-sm" href="/marketing/pages#nouvelle">Créer une page</a></div><% } %></div>
+    <p class="mk-lead">Vos sites et pages hébergés par KOLAKISA, et ce qu'ils rapportent en visiteurs et en inscriptions. Tous les chiffres viennent du journal réel des pages ; les robots ne sont pas comptés.</p>
+
+    <nav class="mk-tabs" aria-label="Période">
+      <% d.period.options.forEach((n) => { %><a class="mk-tab" href="/marketing/site-web?periode=<%= n %>"<%- d.period.days === n ? ' aria-current="page"' : "" %>><%= periodLabel[n] %></a><% }) %>
+    </nav>
+
+    <div class="mk-stats mk-stats-4">
+      <div class="mk-stat"><span class="mk-stat-label">Sites</span><span class="mk-stat-value"><%= mkh.fmt(d.counts.sites) %></span><span class="mk-stat-hint">actifs</span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Pages</span><span class="mk-stat-value"><%= mkh.fmt(d.counts.pages) %></span><span class="mk-stat-hint"><%= mkh.fmt(d.counts.published) %> en ligne<%= d.counts.drafts ? ` · ${mkh.fmt(d.counts.drafts)} avec modifications non publiées` : "" %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Visiteurs uniques</span><span class="mk-stat-value"><%= mkh.fmt(d.visitors) %></span><span class="mk-stat-hint"><%= mkh.fmt(d.views) %> visite<%= d.views > 1 ? "s" : "" %> · <%= mkh.fmt(d.clicks) %> clic<%= d.clicks > 1 ? "s" : "" %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Inscriptions (leads)</span><span class="mk-stat-value"><%= mkh.fmt(d.leads) %></span><span class="mk-stat-hint">Taux de conversion : <%= pct(d.conversion) %></span></div>
+    </div>
+
+    <% if (!d.counts.pages) { %>
+      <div class="mk-empty">
+        <%- icon("globe", { size: 32 }) %>
+        <h2>Aucune page pour l'instant</h2>
+        <p>Créez un site pour regrouper vos pages sous un même design, ou une page d'atterrissage isolée pour une offre précise.</p>
+        <% if (canWrite) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/pages#nouvelle">Créer une page</a></div><% } %>
+      </div>
+    <% } else { %>
+      <section class="mk-panel" aria-labelledby="sw-trend">
+        <h2 id="sw-trend">Visiteurs uniques par jour</h2>
+        <% if (!d.visitors) { %><p class="field-hint">Aucune visite sur cette période.</p>
+        <% } else { %><%- mkh.columnChart(d.trend, { title: `Visiteurs uniques (${periodLabel[d.period.days]})`, unit: " visiteur(s)" }) %>
+          <p class="field-hint">Une colonne par jour, la plus récente à droite.</p><% } %>
+      </section>
+
+      <section class="mk-panel" aria-labelledby="sw-top">
+        <h2 id="sw-top">Meilleures pages</h2>
+        <% if (!d.topPages.length) { %><p class="field-hint">Aucune page visitée sur cette période.</p><% } else { %>
+          <div class="mk-table-wrap"><table class="mk-table mk-datatable">
+            <caption class="sr-only">Pages les plus visitées sur la période</caption>
+            <thead><tr><th scope="col">Page</th><th scope="col">Site</th><th scope="col" class="mk-num">Visiteurs uniques</th><th scope="col" class="mk-num">Clics</th><th scope="col" class="mk-num">Inscriptions</th><th scope="col" class="mk-num">Conversion</th></tr></thead>
+            <tbody><% d.topPages.forEach((p) => { %>
+              <tr><th scope="row" data-label="Page"><a href="/marketing/pages/<%= p.id %>"><%= p.name %></a><span class="mk-sub">/p/<%= p.slug %></span></th><td data-label="Site"><%= p.site || "—" %></td>
+                <td class="mk-num" data-label="Visiteurs uniques"><%= mkh.fmt(p.visitors) %></td><td class="mk-num" data-label="Clics"><%= mkh.fmt(p.clicks) %></td><td class="mk-num" data-label="Inscriptions"><%= mkh.fmt(p.leads) %></td><td class="mk-num" data-label="Conversion"><%= pct(p.conversion) %></td></tr>
+            <% }) %></tbody>
+          </table></div>
+        <% } %>
+      </section>
+
+      <div class="mk-grid-2">
+        <section class="mk-panel" aria-labelledby="sw-recent">
+          <h2 id="sw-recent">Pages modifiées récemment</h2>
+          <ul class="mk-sw-recent">
+            <% d.recent.forEach((p) => { %><li><a href="/marketing/pages/<%= p.id %>"><%= p.name %></a><span class="mk-sub"><%= p.status === "published" ? "En ligne" : p.status === "unpublished" ? "Hors ligne" : "Brouillon" %><%= p.has_draft ? " · modifications non publiées" : "" %> · <%= mkh.fdatetime(p.updated_at) %></span></li><% }) %>
+          </ul>
+        </section>
+        <section class="mk-panel" aria-labelledby="sw-sources">
+          <h2 id="sw-sources">Sources de trafic, nouveaux et visiteurs récurrents</h2>
+          <p>Pas encore mesuré. Ces chiffres demandent de reconnaître un visiteur d'une visite à l'autre, donc son accord (bandeau de consentement) : ils arrivent avec le suivi des visiteurs. Aucun chiffre n'est estimé en attendant.</p>
+        </section>
+      </div>
+    <% } %>
+<%- include("partials/bottom") %>

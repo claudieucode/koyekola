@@ -1,0 +1,33 @@
+<%- include("partials/top", { title, active }) %>
+<% const canWrite = mk.can("forms.write"); %>
+    <div class="mk-head"><h1>Sites</h1><% if (canWrite && !archived) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un site</button><% } %></div>
+    <p class="mk-lead">Un site regroupe des pages qui partagent le même design system (couleurs, typographies, espacements). Chaque page reste à l'adresse /p/… ; un domaine personnalisé pourra être relié plus tard.</p>
+    <nav class="mk-tabs" aria-label="Sites actifs ou archivés">
+      <a class="mk-tab" href="/marketing/site-web/sites"<%- archived ? "" : ' aria-current="page"' %>>Sites</a>
+      <a class="mk-tab" href="/marketing/site-web/sites?vue=archives"<%- archived ? ' aria-current="page"' : "" %>>Archivés</a>
+    </nav>
+    <% if (!sites.length) { %>
+      <div class="mk-empty"><%- icon("globe", { size: 32 }) %><h2><%= archived ? "Aucun site archivé" : "Aucun site" %></h2>
+        <p><%= archived ? "Un site archivé a ses pages hors ligne ; rien n'est effacé." : "Créez votre premier site : vous y rattacherez des pages et réglerez son design system." %></p>
+        <% if (canWrite && !archived) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un site</button></div><% } %></div>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable">
+        <caption class="sr-only"><%= archived ? "Sites archivés" : "Sites" %></caption>
+        <thead><tr><th scope="col">Site</th><th scope="col" class="mk-num">Pages</th><th scope="col" class="mk-num">En ligne</th><th scope="col">Modifié le</th></tr></thead>
+        <tbody><% sites.forEach((st) => { %>
+          <tr><th scope="row" data-label="Site"><a href="/marketing/site-web/sites/<%= st.id %>"><%= st.name %></a></th><td class="mk-num" data-label="Pages"><%= mkh.fmt(st.pages) %></td><td class="mk-num" data-label="En ligne"><%= mkh.fmt(st.published) %></td><td data-label="Modifié le"><%= mkh.fdatetime(st.updated_at) %></td></tr>
+        <% }) %></tbody>
+      </table></div>
+    <% } %>
+    <% if (canWrite) { %>
+      <dialog class="mk-dialog mk-modal" id="nouveau" data-mk-modal data-mk-modal-hash="nouveau" aria-labelledby="site-new-title">
+        <form action="/marketing/site-web/sites" method="post">
+          <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="site-new-title">Nouveau site</h2><p class="mk-dialog-desc">Il démarre avec le design system par défaut de KOLAKISA, que vous pourrez modifier.</p></div>
+            <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
+          <div class="mk-dialog-body"><div class="field-group"><label for="site-name">Nom du site *</label><input id="site-name" type="text" name="name" maxlength="100" required placeholder="Académie Photoshop"></div></div>
+          <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button><button type="submit" class="btn btn-primary btn-sm">Créer le site</button></div>
+        </form>
+      </dialog>
+      <%- include("partials/modal-reopen", { id: "nouveau" }) %>
+    <% } %>
+<%- include("partials/bottom") %>

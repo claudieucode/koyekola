@@ -11,11 +11,13 @@ const UA = { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWe
 let srv, boss, db, pageId, slug, formId, course;
 const sql = (q, ...a) => db.prepare(q).all(...a);
 const pageRow = () => db.prepare("SELECT * FROM mk_landing_pages WHERE id = ?").get(pageId);
-const sectionsOf = () => JSON.parse(pageRow().sections);
+// Contenu de travail : le brouillon s'il existe (l'éditeur enregistre en brouillon), sinon la version en ligne
+const workingRaw = () => { const r = pageRow(); return r.draft ? JSON.stringify(JSON.parse(r.draft).sections) : r.sections; };
+const sectionsOf = () => JSON.parse(workingRaw());
 // Formulaire de l'éditeur tel que le navigateur l'enverrait (champs « sections[i][…] »)
 function editorBody(over = {}, sections = sectionsOf()) {
   const p = pageRow();
-  const body = { name: p.name, slug: p.slug, title: p.title, description: p.description, form_id: p.form_id ? String(p.form_id) : "", tags: JSON.parse(p.tags).join(", "), theme_accent: "#0277b6", theme_background: "#f3f8fc", theme_text: "#10222f", action: "save" };
+  const body = { revision: String(p.revision), name: p.name, slug: p.slug, title: p.title, description: p.description, form_id: p.form_id ? String(p.form_id) : "", tags: JSON.parse(p.tags).join(", "), theme_accent: "#0277b6", theme_background: "#f3f8fc", theme_text: "#10222f", action: "save" };
   sections.forEach((s, i) => {
     for (const [k, v] of Object.entries(s)) body[`sections[${i}][${k}]`] = Array.isArray(v) ? v.join("\n") : String(v);
     if (s.type === "hero") body[`sections[${i}][imageUrl]`] = s.image || "";
@@ -68,8 +70,8 @@ describe("création et composition", () => {
   });
 
   test("validation stricte : liens et images sûrs, description d'image, adresse unique, 5 étiquettes", async () => {
-    const before = pageRow().sections;
-    const tryBody = async (mutate, over = {}) => { const s = sectionsOf(); mutate(s); await boss.post(`/marketing/pages/${pageId}`, editorBody(over, s)); return pageRow().sections; };
+    const before = workingRaw();
+    const tryBody = async (mutate, over = {}) => { const s = sectionsOf(); mutate(s); await boss.post(`/marketing/pages/${pageId}`, editorBody(over, s)); return workingRaw(); };
     for (const url of ["javascript:alert(1)", "http://non-securise.fr", "//autre-site.fr", "https://user@evil.fr", "data:text/html,x"]) {
       assert.equal(await tryBody((s) => { s[5].url = url; }), before, `refusé : ${url}`);
     }

@@ -3,6 +3,8 @@
 // qui ne redirige QUE vers un lien enregistré dans la page (jamais une adresse fournie par le visiteur).
 const express = require("express");
 const landing = require("../landing");
+const pages = require("../pages");
+const { tokensToCss } = require("../pages/tokens");
 const forms = require("../forms");
 const { tagContact } = require("../audience/tags");
 const { createRateLimiter } = require("../../middlewares/security");
@@ -25,10 +27,14 @@ module.exports = ({ db }) => {
   });
   const ctxOf = (req) => ({ db, organizationId: req.mkPages.organizationId, userId: null, bus: req.mkPages.bus, settings: req.mkPages.settings, baseUrl: process.env.SITE_URL });
   const loadForm = (page) => (page.form_id ? forms.getForm({ db, organizationId: page.organization_id }, page.form_id) : null);
+  // Page affichée : composants synchronisés résolus, formations relues dans le catalogue
+  const shownPage = (req, page) => landing.viewModel(ctxOf(req), { ...page, sections: pages.resolveSections(ctxOf(req), page.sections) });
+  // Design system du site de la page (site actif seulement)
+  const siteOf = (req, page) => { const site = page.site_id ? pages.getSite(ctxOf(req), page.site_id) : null; return site && site.status === "active" ? site : null; };
   const show = (req, res, page, { status = 200, error = null, values = {}, thanks = null } = {}) => {
     const form = loadForm(page);
     res.status(status).render("marketing-public/landing", {
-      page: landing.viewModel(ctxOf(req), page), form: form && form.status === "published" ? form : null, fieldCatalog: forms.FIELD_CATALOG,
+      page: shownPage(req, page), site: siteOf(req, page), tokensToCss, form: form && form.status === "published" ? form : null, fieldCatalog: forms.FIELD_CATALOG,
       propertyDefs: form ? forms.propertyFieldDefs(db, page.organization_id, form) : [], renderMarkdown, error, values, thanks, preview: false,
     });
   };
@@ -44,7 +50,7 @@ module.exports = ({ db }) => {
   router.get("/p/:slug/clic/:n(\\d{1,3})", (req, res) => {
     const page = landing.getPublishedPage(db, req.params.slug);
     if (!page) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
-    const link = landing.linksOf(landing.viewModel(ctxOf(req), page))[Number(req.params.n)];
+    const link = landing.linksOf(shownPage(req, page))[Number(req.params.n)];
     if (!link) return res.redirect(`/p/${page.slug}`);
     if (!landing.isBot(req)) landing.record(db, page, "click", landing.visitorOf(req, secret()), link.label);
     res.redirect(link.url);

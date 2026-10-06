@@ -1,16 +1,23 @@
 <%- include("partials/top", { title, active }) %>
 <% const canWrite = mk.can("forms.write"); %>
-    <div class="mk-head"><h1>Pages d'atterrissage</h1><% if (canWrite) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une page</button><% } %></div>
-    <p class="mk-lead">Des pages web hébergées par KOLAKISA (adresse /p/…) pour présenter une offre ou une formation et recueillir des inscriptions. En ligne, elles ne sont pas indexées par les moteurs de recherche, sauf si vous le choisissez.</p>
+    <div class="mk-head"><h1>Pages</h1><% if (canWrite && !archived) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une page</button><% } %></div>
+    <p class="mk-lead">Toutes vos pages web hébergées par KOLAKISA (adresse /p/…) : pages de vos sites et pages d'atterrissage. Chaque modification est enregistrée en brouillon ; les visiteurs ne la voient qu'après « Publier ».</p>
+    <nav class="mk-tabs" aria-label="Pages actives ou archivées">
+      <a class="mk-tab" href="/marketing/pages"<%- archived ? "" : ' aria-current="page"' %>>Pages</a>
+      <a class="mk-tab" href="/marketing/pages?vue=archivees"<%- archived ? ' aria-current="page"' : "" %>>Archivées</a>
+    </nav>
     <% if (!pages.length) { %>
-      <div class="mk-empty"><%- icon("layout", { size: 32 }) %><h2>Aucune page</h2><p>Créez une page d'inscription à votre lettre, ou une page de présentation d'une formation.</p>
-        <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une page</button></div><% } %></div>
+      <div class="mk-empty"><%- icon("layout", { size: 32 }) %><h2><%= archived ? "Aucune page archivée" : "Aucune page" %></h2><p><%= archived ? "Une page archivée est hors ligne ; ses statistiques et versions sont gardées." : "Créez une page d'inscription à votre lettre, ou une page de présentation d'une formation." %></p>
+        <% if (canWrite && !archived) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une page</button></div><% } %></div>
     <% } else { %>
-      <div class="mk-table-wrap"><table class="mk-table">
-        <caption class="sr-only">Pages d'atterrissage</caption>
-        <thead><tr><th scope="col">Nom</th><th scope="col">Adresse</th><th scope="col">État</th><th scope="col">Visiteurs uniques</th><th scope="col">Inscriptions</th></tr></thead>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable">
+        <caption class="sr-only"><%= archived ? "Pages archivées" : "Pages" %></caption>
+        <thead><tr><th scope="col">Nom</th><th scope="col">Site</th><th scope="col">Adresse</th><th scope="col">État</th><th scope="col" class="mk-num">Visiteurs uniques</th><th scope="col" class="mk-num">Inscriptions</th></tr></thead>
         <tbody><% pages.forEach((p) => { %>
-          <tr><td><a href="/marketing/pages/<%= p.id %>"><%= p.name %></a></td><td>/p/<%= p.slug %></td><td><span class="mk-status <%= STATUS_CLASS[p.status] %>"><%= STATUSES[p.status] %></span></td><td><%= mkh.fmt(p.visitors) %></td><td><%= mkh.fmt(p.signups) %></td></tr>
+          <tr><th scope="row" data-label="Nom"><a href="/marketing/pages/<%= p.id %>"><%= p.name %></a><% if (p.has_draft) { %><span class="mk-sub">Modifications non publiées</span><% } %></th>
+            <td data-label="Site"><%= p.site_name || "—" %></td><td data-label="Adresse">/p/<%= p.slug %></td>
+            <td data-label="État"><span class="mk-status <%= STATUS_CLASS[p.status] %>"><%= STATUSES[p.status] %></span></td>
+            <td class="mk-num" data-label="Visiteurs uniques"><%= mkh.fmt(p.visitors) %></td><td class="mk-num" data-label="Inscriptions"><%= mkh.fmt(p.signups) %></td></tr>
         <% }) %></tbody>
       </table></div>
     <% } %>
@@ -19,7 +26,8 @@
         <form action="/marketing/pages" method="post">
           <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="lp-new-title">Nouvelle page</h2><p class="mk-dialog-desc">Un nom pour vous retrouver ; vous composerez la page ensuite. Rien n'est mis en ligne avant la publication.</p></div>
             <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
-          <div class="mk-dialog-body"><div class="field-group"><label for="lp-name">Nom de la page *</label><input id="lp-name" type="text" name="name" maxlength="100" required placeholder="Guide gratuit : bien débuter en photo"></div></div>
+          <div class="mk-dialog-body"><div class="field-group"><label for="lp-name">Nom de la page *</label><input id="lp-name" type="text" name="name" maxlength="100" required placeholder="Guide gratuit : bien débuter en photo"></div>
+            <% if (sites.length) { %><div class="field-group"><label for="lp-new-site">Site</label><select id="lp-new-site" name="site_id"><option value="">Aucun (page d'atterrissage isolée)</option><% sites.forEach((st) => { %><option value="<%= st.id %>"><%= st.name %></option><% }) %></select></div><% } %></div>
           <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button><button type="submit" class="btn btn-primary btn-sm">Créer la page</button></div>
         </form>
       </dialog>

@@ -1,8 +1,10 @@
-// Pages d'atterrissage dans Marketing (Campagnes → Pages d'atterrissage) : liste, éditeur par sections, aperçu,
-// publication, rapport. Un seul formulaire par page : déplacer, supprimer ou ajouter une section ENREGISTRE aussi les
+// Pages (Site Web → Pages) : liste, éditeur par sections, brouillon et aperçu, publication, versions, rapport.
+// Le contenu est enregistré dans le BROUILLON du moteur de pages ; « Publier » le met en ligne. Un seul formulaire par page : déplacer, supprimer ou ajouter une section ENREGISTRE aussi les
 // modifications en cours (jamais de saisie perdue). Droits : ceux des formulaires d'inscription.
 const express = require("express");
 const landing = require("../landing");
+const pages = require("../pages");
+const { tokensToCss } = require("../pages/tokens");
 const forms = require("../forms");
 const media = require("../media");
 const { listCourses } = require("../bridge/catalog");
@@ -47,47 +49,77 @@ function sectionsFromBody(body) {
   });
 }
 
+// Contenu de travail envoyé par l'éditeur → brouillon du moteur de pages (jamais directement en ligne)
+function contentFromBody(b, sections) {
+  return {
+    sections, title: b.title, description: b.description,
+    theme: { accent: b.theme_accent, background: b.theme_background, text: b.theme_text },
+    seo: { canonical: b.seo_canonical, ogImage: b.seo_og_image },
+  };
+}
+
 module.exports = () => {
   const router = express.Router();
 
+  // Site Web → Pages : toutes les pages (sites, tunnels, pages d'atterrissage), archivées à part
   router.get("/pages", need("forms.read"), (req, res) => {
-    res.render("marketing/landing-list", { title: "Pages d'atterrissage", active: "landing", pages: landing.listPages(req.mk.ctx), STATUSES: landing.STATUSES, STATUS_CLASS });
+    const archived = req.query.vue === "archivees";
+    res.render("marketing/landing-list", {
+      title: "Pages", active: "landing", archived, pages: pages.listPages(req.mk.ctx, { archived }), sites: pages.listSites(req.mk.ctx),
+      STATUSES: landing.STATUSES, STATUS_CLASS, KINDS: pages.KINDS,
+    });
   });
   router.post("/pages", need("forms.write"), (req, res, next) => {
     let created = null;
     attempt(req, res, next, () => (created ? `/marketing/pages/${created.id}` : "/marketing/pages"), () => {
-      created = landing.createPage(req.mk.ctx, { name: req.body.name });
-      return "Page créée (brouillon) : composez-la, choisissez son formulaire d'inscription, puis publiez-la.";
+      const siteId = intOrNull(req.body.site_id);
+      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId ? "page" : "landing" });
+      return "Page créée (brouillon) : composez-la, puis publiez-la.";
     });
   });
 
   const load = (req, res) => {
-    const p = landing.getPage(req.mk.ctx, intOrNull(req.params.id));
+    const p = pages.getPage(req.mk.ctx, intOrNull(req.params.id));
     if (!p) res.status(404).render("error", { message: "Page introuvable." });
     return p;
   };
+  // Données d'affichage d'un contenu (formations relues dans le catalogue, composants synchronisés résolus)
+  const shown = (ctx, page, content) => landing.viewModel(ctx, { ...page, ...content, sections: pages.resolveSections(ctx, content.sections) });
+
   router.get("/pages/:id(\\d+)", need("forms.read"), (req, res) => {
     const page = load(req, res);
     if (!page) return;
     const { ctx } = req.mk;
     res.render("marketing/landing", {
-      title: page.name, active: "landing", page, STATUSES: landing.STATUSES, STATUS_CLASS, SECTION_TYPES: landing.SECTION_TYPES,
+      title: page.name, active: "landing", page, content: page.working, STATUSES: landing.STATUSES, STATUS_CLASS, SECTION_TYPES: landing.SECTION_TYPES,
       forms: forms.listForms(ctx), courses: listCourses(ctx), images: media.listMedia(ctx, { kind: "image", limit: 100 }).items,
-      report: landing.pageReport(ctx, page.id), check: landing.preflight(ctx, page), canWrite: req.mk.can("forms.write"),
+      sites: pages.listSites(ctx), versions: pages.listVersions(ctx, page.id),
+      report: landing.pageReport(ctx, page.id), check: landing.preflight(ctx, { ...page, sections: pages.resolveSections(ctx, page.working.sections) }), canWrite: req.mk.can("forms.write"),
       publicUrl: `${String(process.env.SITE_URL || "").replace(/\/+$/, "")}/p/${page.slug}`,
     });
   });
-  // Aperçu du brouillon (même rendu que la page publique ; clics et inscriptions non enregistrés)
-  router.get("/pages/:id(\\d+)/apercu", need("forms.read"), (req, res) => {
-    const page = load(req, res);
-    if (!page) return;
+  // Aperçu du BROUILLON (ou de la version en ligne s'il n'y a pas de brouillon) : clics et inscriptions non enregistrés
+  const renderPreview = (req, res, page, content, label) => {
     const ctx = req.mk.ctx;
     const form = page.form_id ? forms.getForm(ctx, page.form_id) : null;
     res.set("Cache-Control", "no-store");
-    res.render("marketing-public/landing", { page: landing.viewModel(ctx, page), form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true });
+    res.render("marketing-public/landing", { page: shown(ctx, page, content), site: page.site_id ? pages.getSite(ctx, page.site_id) : null, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: label });
+  };
+  router.get("/pages/:id(\\d+)/apercu", need("forms.read"), (req, res) => {
+    const page = load(req, res);
+    if (!page) return;
+    renderPreview(req, res, page, page.working, page.hasDraft ? "Aperçu du brouillon — pas encore en ligne." : null);
+  });
+  router.get("/pages/:id(\\d+)/versions/:n(\\d+)/apercu", need("forms.read"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    let v;
+    try { v = pages.getVersion(req.mk.ctx, page.id, Number(req.params.n)); } catch (error) { if (error instanceof MarketingError) return res.status(404).render("error", { message: error.message }); return next(error); }
+    renderPreview(req, res, page, v.content, `Version ${v.number} — consultation seulement.`);
   });
 
-  // Enregistrer (+ éventuellement : monter / descendre / supprimer / ajouter une section)
+  // Enregistrer (+ éventuellement : monter / descendre / supprimer / ajouter une section) : réglages appliqués tout de
+  // suite, contenu enregistré dans le BROUILLON (la version en ligne ne change qu'avec « Publier »)
   router.post("/pages/:id(\\d+)", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
@@ -107,28 +139,61 @@ module.exports = () => {
         sections.push(blankSection(req.mk.ctx, m[1]));
         anchor = `#section-${sections.length - 1}`;
       }
-      landing.savePage(req.mk.ctx, page.id, {
-        name: b.name, slug: b.slug, title: b.title, description: b.description, sections, formId: b.form_id,
-        tags: b.tags, indexable: b.indexable === "on", theme: { accent: b.theme_accent, background: b.theme_background, text: b.theme_text },
-      });
-      const text = action.startsWith("add:") ? "Section ajoutée." : action.startsWith("remove:") ? "Section supprimée." : action.startsWith("up:") || action.startsWith("down:") ? "Section déplacée." : "Page enregistrée.";
-      return page.status === "published" ? `${text} La page en ligne est à jour.` : text;
+      const ctx = req.mk.ctx;
+      landing.saveSettings(ctx, page.id, { name: b.name, slug: b.slug, formId: b.form_id, tags: b.tags, indexable: b.indexable === "on" });
+      const siteId = intOrNull(b.site_id);
+      if (b.site_id !== undefined && siteId !== page.site_id) pages.movePage(ctx, page.id, siteId);
+      pages.saveDraft(ctx, page.id, contentFromBody(b, sections), { revision: Number(b.revision) });
+      const text = action.startsWith("add:") ? "Section ajoutée." : action.startsWith("remove:") ? "Section supprimée." : action.startsWith("up:") || action.startsWith("down:") ? "Section déplacée." : "Brouillon enregistré.";
+      return page.status === "published" ? `${text} La page en ligne n'a pas changé : cliquez sur « Publier les modifications » pour la mettre à jour.` : text;
     });
   });
   router.post("/pages/:id(\\d+)/publier", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
-    attempt(req, res, next, `/marketing/pages/${page.id}`, () => { const p = landing.publishPage(req.mk.ctx, page.id); return `Page en ligne : /p/${p.slug}${p.indexable ? "" : " (non indexée par les moteurs de recherche)"}.`; });
+    attempt(req, res, next, `/marketing/pages/${page.id}`, () => {
+      const { version } = pages.publish(req.mk.ctx, page.id);
+      return `Page en ligne (version ${version}) : /p/${page.slug}${page.indexable ? "" : " (non indexée par les moteurs de recherche)"}.`;
+    });
+  });
+  router.post("/pages/:id(\\d+)/brouillon/abandonner", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    attempt(req, res, next, `/marketing/pages/${page.id}`, () => { pages.discardDraft(req.mk.ctx, page.id); return "Brouillon abandonné : l'éditeur affiche de nouveau la version en ligne."; });
+  });
+  router.post("/pages/:id(\\d+)/versions/:n(\\d+)/restaurer", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    attempt(req, res, next, `/marketing/pages/${page.id}`, () => {
+      pages.restoreVersion(req.mk.ctx, page.id, Number(req.params.n));
+      return `Version ${req.params.n} copiée dans le brouillon. La page en ligne n'a pas changé : vérifiez l'aperçu, puis publiez.`;
+    });
   });
   router.post("/pages/:id(\\d+)/depublier", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
-    attempt(req, res, next, `/marketing/pages/${page.id}`, () => { landing.unpublishPage(req.mk.ctx, page.id); return "Page hors ligne : son adresse affiche « page indisponible »."; });
+    attempt(req, res, next, `/marketing/pages/${page.id}`, () => { pages.unpublish(req.mk.ctx, page.id); return "Page hors ligne : son adresse affiche « page indisponible »."; });
+  });
+  router.post("/pages/:id(\\d+)/dupliquer", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    let copy = null;
+    attempt(req, res, next, () => (copy ? `/marketing/pages/${copy.id}` : `/marketing/pages/${page.id}`), () => { copy = pages.duplicatePage(req.mk.ctx, page.id); return `Copie créée (hors ligne) : « ${copy.name} ».`; });
+  });
+  router.post("/pages/:id(\\d+)/archiver", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    attempt(req, res, next, "/marketing/pages", () => { pages.archivePage(req.mk.ctx, page.id); return `Page « ${page.name} » archivée (hors ligne). Ses statistiques et versions sont gardées.`; });
+  });
+  router.post("/pages/:id(\\d+)/restaurer", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    attempt(req, res, next, `/marketing/pages/${page.id}`, () => { pages.restorePage(req.mk.ctx, page.id); return "Page restaurée (hors ligne) : publiez-la quand elle est prête."; });
   });
   router.post("/pages/:id(\\d+)/supprimer", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
-    attempt(req, res, next, "/marketing/pages", () => { landing.deletePage(req.mk.ctx, page.id); return `Page « ${page.name} » supprimée, avec ses statistiques.`; });
+    attempt(req, res, next, "/marketing/pages", () => { landing.deletePage(req.mk.ctx, page.id); return `Page « ${page.name} » supprimée, avec ses statistiques et ses versions.`; });
   });
   return router;
 };

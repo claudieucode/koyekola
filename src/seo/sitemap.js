@@ -37,6 +37,22 @@ function entries() {
     else if (p.canonical_url) excluded.push({ ...e, reason: `Canonical vers ${p.canonical_url}` });
     else included.push(e);
   }
+  // Pages Site Web / pages d'atterrissage (/p/…) : en ligne, non archivées ; indexées seulement si la page le permet
+  // (case « Autoriser les moteurs de recherche ») et sans canonical vers une autre adresse ni noindex dans son SEO
+  let webPages = [];
+  try {
+    webPages = db.prepare("SELECT slug, name, title, indexable, seo, updated_at FROM mk_landing_pages WHERE status = 'published' AND archived_at IS NULL ORDER BY published_at DESC").all();
+  } catch (error) {
+    if (!/no such (table|column)/.test(error.message)) throw error; // module marketing pas encore migré : aucune page web
+  }
+  for (const p of webPages) {
+    let seo = {};
+    try { seo = JSON.parse(p.seo || "{}"); } catch { seo = {}; }
+    const e = { path: `/p/${p.slug}`, type: "Page web", lastmod: isoDate(p.updated_at), title: p.title || p.name };
+    if (!p.indexable || seo.noindex) excluded.push({ ...e, reason: "Page non indexée (réglage de la page)" });
+    else if (seo.canonical && !seo.canonical.endsWith(e.path)) excluded.push({ ...e, reason: `Canonical vers ${seo.canonical}` });
+    else included.push(e);
+  }
   // Étiquettes et auteurs : seulement si leur indexation est activée dans les Réglages
   const tags = new Map();
   for (const row of db.prepare("SELECT tags FROM posts WHERE published = 1 AND tags <> ''").all()) for (const t of blog.parseTags(row.tags)) tags.set(slugify(t), t);

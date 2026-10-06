@@ -1,0 +1,89 @@
+<%- include("partials/top", { title, active }) %>
+<% const archived = site.status === "archived"; const dis = canWrite && !archived ? "" : " disabled"; const t = site.tokens; const STATUS = { draft: "Brouillon", published: "En ligne", unpublished: "Hors ligne" }; const STATUS_CLASS = { draft: "", published: "mk-status-ok", unpublished: "mk-status-warn" }; %>
+    <p class="mk-back"><a href="/marketing/site-web/sites">← Sites</a></p>
+    <div class="mk-head"><div class="mk-builder-title"><h1><%= site.name %></h1><% if (archived) { %><span class="mk-status mk-status-warn">Archivé</span><% } %></div>
+      <% if (canWrite) { %><div class="mk-actions">
+        <% if (archived) { %><form action="/marketing/site-web/sites/<%= site.id %>/restaurer" method="post"><button type="submit" class="btn btn-primary btn-sm">Restaurer le site</button></form>
+        <% } else { %>
+          <form action="/marketing/site-web/sites/<%= site.id %>/dupliquer" method="post"><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form>
+          <form action="/marketing/site-web/sites/<%= site.id %>/archiver" method="post"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="Les pages en ligne du site passent hors ligne. Rien n'est effacé : vous pourrez restaurer le site, puis republier ses pages." data-mk-confirm-title="Archiver ce site ?" data-mk-confirm-ok="Archiver">Archiver</button></form>
+        <% } %>
+      </div><% } %>
+    </div>
+
+    <div class="mk-grid-2">
+      <section class="mk-panel" aria-labelledby="site-settings">
+        <h2 id="site-settings">Réglages</h2>
+        <form action="/marketing/site-web/sites/<%= site.id %>" method="post" class="mk-form">
+          <div class="field-group"><label for="site-name">Nom du site</label><input id="site-name" type="text" name="name" maxlength="100" required value="<%= site.name %>"<%= dis %>></div>
+          <div class="field-group"><label for="site-home">Page d'accueil</label>
+            <select id="site-home" name="home_page_id"<%= dis %>><option value="">Aucune</option><% sitePages.forEach((p) => { %><option value="<%= p.id %>"<%= site.home_page_id === p.id ? " selected" : "" %>><%= p.name %></option><% }) %></select></div>
+          <p class="field-hint">Adresse des pages : <code>/p/…</code> sur le domaine du site KOLAKISA. Domaine personnalisé : pas encore disponible (il demande une configuration chez l'hébergeur et sera ajouté dans une prochaine étape).</p>
+          <% if (canWrite && !archived) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button></div><% } %>
+        </form>
+      </section>
+
+      <section class="mk-panel" aria-labelledby="site-pages">
+        <h2 id="site-pages">Pages du site</h2>
+        <% if (!sitePages.length) { %><p class="field-hint">Aucune page dans ce site.</p><% } else { %>
+          <ul class="mk-sw-recent">
+            <% sitePages.forEach((p) => { %><li><a href="/marketing/pages/<%= p.id %>"><%= p.name %></a><% if (site.home_page_id === p.id) { %> <span class="mk-status">Accueil</span><% } %>
+              <span class="mk-sub"><span class="mk-status <%= STATUS_CLASS[p.status] %>"><%= STATUS[p.status] %></span> /p/<%= p.slug %><%= p.has_draft ? " · modifications non publiées" : "" %> · <%= mkh.fmt(p.visitors) %> visiteur(s) · <%= mkh.fmt(p.signups) %> inscription(s)</span></li><% }) %>
+          </ul>
+        <% } %>
+        <% if (canWrite && !archived) { %>
+          <form action="/marketing/pages" method="post" class="mk-form mk-sw-newpage">
+            <input type="hidden" name="site_id" value="<%= site.id %>">
+            <div class="field-group"><label for="site-new-page">Nouvelle page dans ce site</label><input id="site-new-page" type="text" name="name" maxlength="100" required placeholder="Accueil, Programme, Contact…"></div>
+            <button type="submit" class="btn btn-outline btn-sm">Créer la page</button>
+          </form>
+          <p class="field-hint">Une page existante se rattache au site depuis ses réglages (champ « Site »).</p>
+        <% } %>
+      </section>
+    </div>
+
+    <section class="mk-panel" id="design" aria-labelledby="site-design">
+      <h2 id="site-design">Design system</h2>
+      <p class="mk-lead">Ces réglages s'appliquent à toutes les pages du site, y compris celles déjà en ligne : modifiez une couleur ici, elle change partout.</p>
+      <form action="/marketing/site-web/sites/<%= site.id %>/design" method="post" class="mk-form">
+        <fieldset class="mk-sd-group"><legend>Couleurs</legend>
+          <div class="mk-sd-colors">
+            <% T.COLOR_KEYS.forEach((k) => { %><div class="field-group"><label for="c-<%= k %>"><%= T.COLOR_LABELS[k] %></label><input id="c-<%= k %>" type="color" name="color_<%= k %>" value="<%= t.colors[k] %>"<%= dis %>></div><% }) %>
+          </div>
+        </fieldset>
+        <fieldset class="mk-sd-group"><legend>Typographies</legend>
+          <div class="field-row">
+            <% [["heading", "Police des titres"], ["body", "Police du texte"]].forEach(([k, label]) => { %><div class="field-group"><label for="f-<%= k %>"><%= label %></label><select id="f-<%= k %>" name="font_<%= k %>"<%= dis %>><% Object.entries(T.FONTS).forEach(([key, f]) => { %><option value="<%= key %>"<%= t.fonts[k] === key ? " selected" : "" %>><%= f.label %></option><% }) %></select></div><% }) %>
+          </div>
+          <div class="mk-table-wrap"><table class="mk-table mk-sd-type">
+            <caption class="sr-only">Taille et graisse de chaque style de texte</caption>
+            <thead><tr><th scope="col">Style</th><th scope="col">Taille (px)</th><th scope="col">Graisse</th></tr></thead>
+            <tbody><% T.TYPE_KEYS.forEach((k) => { %><tr><th scope="row"><%= T.TYPE_LABELS[k] %></th>
+              <td><label class="sr-only" for="ts-<%= k %>">Taille du style <%= T.TYPE_LABELS[k] %></label><input id="ts-<%= k %>" type="number" name="type_<%= k %>_size" min="10" max="96" value="<%= t.type[k].size %>"<%= dis %>></td>
+              <td><label class="sr-only" for="tw-<%= k %>">Graisse du style <%= T.TYPE_LABELS[k] %></label><select id="tw-<%= k %>" name="type_<%= k %>_weight"<%= dis %>><% [400, 500, 600, 700, 800].forEach((w) => { %><option value="<%= w %>"<%= t.type[k].weight === w ? " selected" : "" %>><%= w %></option><% }) %></select></td></tr><% }) %></tbody>
+          </table></div>
+        </fieldset>
+        <fieldset class="mk-sd-group"><legend>Espacements (px)</legend>
+          <div class="mk-sd-colors"><% T.SPACE_KEYS.forEach((k) => { %><div class="field-group"><label for="sp-<%= k %>"><%= k.toUpperCase() %></label><input id="sp-<%= k %>" type="number" name="space_<%= k %>" min="0" max="200" value="<%= t.space[k] %>"<%= dis %>></div><% }) %></div>
+        </fieldset>
+        <fieldset class="mk-sd-group"><legend>Rayons (px) et ombres</legend>
+          <div class="mk-sd-colors">
+            <% [["sm", "Petit"], ["md", "Moyen"], ["lg", "Grand"], ["button", "Boutons"], ["field", "Champs"], ["card", "Cartes"]].forEach(([k, label]) => { %><div class="field-group"><label for="r-<%= k %>"><%= label %></label><input id="r-<%= k %>" type="number" name="radius_<%= k %>" min="0" max="48" value="<%= t.radius[k] %>"<%= dis %>></div><% }) %>
+            <% [["card", "Ombre des cartes"], ["button", "Ombre des boutons"]].forEach(([k, label]) => { %><div class="field-group"><label for="sh-<%= k %>"><%= label %></label><select id="sh-<%= k %>" name="shadow_<%= k %>"<%= dis %>><% [["none", "Aucune"], ["sm", "Légère"], ["md", "Moyenne"], ["lg", "Forte"]].forEach(([v, l]) => { %><option value="<%= v %>"<%= t.shadow[k] === v ? " selected" : "" %>><%= l %></option><% }) %></select></div><% }) %>
+          </div>
+        </fieldset>
+        <% if (canWrite && !archived) { %><div class="mk-actions">
+          <button type="submit" class="btn btn-primary btn-sm">Enregistrer le design system</button>
+          <button type="submit" name="reset" value="1" class="btn btn-ghost btn-sm" data-mk-confirm="Toutes les valeurs reviennent à celles de KOLAKISA, sur toutes les pages du site." data-mk-confirm-title="Revenir aux valeurs par défaut ?" data-mk-confirm-ok="Réinitialiser">Valeurs par défaut</button>
+        </div><% } %>
+      </form>
+
+      <h3 class="mk-journey-sub">Aperçu avec les valeurs enregistrées</h3>
+      <div class="mk-sd-preview" style="<%= cssVars %>">
+        <p class="mk-sd-h1">Titre de page</p>
+        <p class="mk-sd-h2">Intertitre de section</p>
+        <p class="mk-sd-body">Texte courant de vos pages : il utilise la police, la taille et l'interligne choisis ci-dessus.</p>
+        <div class="mk-sd-card"><p class="mk-sd-h3">Carte</p><p class="mk-sd-caption">Légende : rayon, bordure et ombre des cartes.</p><span class="mk-sd-btn">Bouton principal</span></div>
+      </div>
+    </section>
+<%- include("partials/bottom") %>

@@ -76,12 +76,21 @@ function normalizeTokens(input = {}, { strict = false } = {}) {
   return { colors, fonts, type, space, radius, shadow, border, sizes };
 }
 
+// Texte lisible sur une couleur pleine (boutons) : blanc ou texte foncé, celui qui contraste le plus (WCAG)
+function luminance(hex) {
+  const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+const onColor = (hex) => (contrast(hex, "#ffffff") >= contrast(hex, "#10222f") ? "#ffffff" : "#10222f");
+
 // Variables CSS d'un site : la seule traduction des jetons en styles (les feuilles de style des pages ne lisent que ces
 // variables). Valeurs déjà validées par normalizeTokens : aucune injection possible.
 function tokensToCss(tokens) {
   const t = normalizeTokens(tokens);
   const v = [];
   for (const k of COLOR_KEYS) v.push(`--kw-${k}:${t.colors[k]}`);
+  v.push(`--kw-on-primary:${onColor(t.colors.primary)}`, `--kw-on-accent:${onColor(t.colors.accent)}`);
   v.push(`--kw-font-heading:${FONTS[t.fonts.heading].stack}`, `--kw-font-body:${FONTS[t.fonts.body].stack}`);
   for (const k of TYPE_KEYS) v.push(`--kw-${k}-size:${t.type[k].size}px`, `--kw-${k}-weight:${t.type[k].weight}`, `--kw-${k}-lh:${t.type[k].lineHeight}`);
   for (const k of SPACE_KEYS) v.push(`--kw-space-${k}:${t.space[k]}px`);
@@ -92,4 +101,4 @@ function tokensToCss(tokens) {
   return `${v.join(";")};`;
 }
 
-module.exports = { DEFAULT_TOKENS, COLOR_KEYS, COLOR_LABELS, TYPE_KEYS, TYPE_LABELS, SPACE_KEYS, FONTS, SHADOWS, normalizeTokens, tokensToCss };
+module.exports = { DEFAULT_TOKENS, COLOR_KEYS, COLOR_LABELS, TYPE_KEYS, TYPE_LABELS, SPACE_KEYS, FONTS, SHADOWS, normalizeTokens, tokensToCss, onColor, contrast };
