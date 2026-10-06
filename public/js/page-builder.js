@@ -623,14 +623,27 @@
       e.dataTransfer.effectAllowed = "copy"; e.dataTransfer.setData("text/plain", "pb-new");
     });
   }
+  // Bibliothèque d'éléments (gauche = créer). La barre d'outils choisit la catégorie affichée ; la recherche porte sur tout.
+  var elCategory = store.get("el-category", "");
+  function elementGroups() {
+    var groups = Object.keys(SPEC.categories).map(function (k) { return { key: k, label: SPEC.categories[k], items: SPEC.types.filter(function (t) { return t.category === k; }).map(function (t) { return { type: t.type, label: t.label, icon: t.icon, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; }) }; });
+    groups[0].items.unshift({ type: "layout", label: "Section libre", icon: "layout" });
+    var legacy = boot.types.map(function (t) { return { type: t.type, label: t.label, icon: "fileText", disabled: t.unavailable, legacy: true }; });
+    groups.push({ key: "form", label: "Formulaires", items: legacy.filter(function (t) { return t.type === "form"; }) });
+    groups.push({ key: "sections", label: "Sections prêtes", items: legacy.filter(function (t) { return t.type !== "form"; }) });
+    return groups;
+  }
   function renderElements(filter) {
     var box = $("[data-pb-elements]");
     box.textContent = "";
     var f = norm(filter);
-    var groups = Object.keys(SPEC.categories).map(function (k) { return { label: SPEC.categories[k], items: SPEC.types.filter(function (t) { return t.category === k; }).map(function (t) { return { type: t.type, label: t.label, icon: t.icon, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; }) }; });
-    groups[0].items.unshift({ type: "layout", label: "Section libre", icon: "layout" });
-    groups.push({ label: "Sections prêtes", items: boot.types.map(function (t) { return { type: t.type, label: t.label, icon: "fileText", disabled: t.unavailable, legacy: true }; }) });
-    groups.forEach(function (g) {
+    var groups = elementGroups();
+    var shown = f ? groups : elCategory ? groups.filter(function (g) { return g.key === elCategory; }) : groups;
+    if (!f && elCategory) {
+      var g0 = groups.find(function (g) { return g.key === elCategory; });
+      box.appendChild(h("div", { class: "pb-cat-head" }, h("strong", { text: g0 ? g0.label : "" }), h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: function () { setCategory(""); } }, "Tout afficher")));
+    }
+    shown.forEach(function (g) {
       var items = g.items.filter(function (it) { return !f || norm(it.label).indexOf(f) >= 0 || norm(g.label).indexOf(f) >= 0; });
       if (!items.length) return;
       var ul = h("ul", { class: "pb-palette" });
@@ -639,25 +652,36 @@
         if (!it.disabled) draggableSource(btn, it.legacy ? { type: it.type, section: true } : { type: it.type }, function (target) { if (it.legacy) addLegacy(it.type, target); else addElement(it.type, target); });
         ul.appendChild(h("li", {}, btn));
       });
-      box.appendChild(h("section", { class: "pb-pal-group" }, h("h3", { class: "pb-sub", text: g.label }), ul));
+      box.appendChild(h("section", { class: "pb-pal-group" }, elCategory && !f ? null : h("h3", { class: "pb-sub", text: g.label }), ul));
     });
-    if (!box.children.length) box.appendChild(h("p", { class: "pb-hint", text: "Aucun élément ne correspond." }));
+    if (box.querySelectorAll(".pb-pal-group").length === 0) box.appendChild(h("p", { class: "pb-hint", text: "Aucun élément ne correspond." }));
+  }
+  // Choisir une catégorie (barre d'outils) : le panneau de gauche s'ouvre sur la bibliothèque correspondante
+  function setCategory(key) {
+    elCategory = key;
+    store.set("el-category", key);
+    if (key === "blocks" || key === "components") openTab($(key === "blocks" ? "#pb-tab-blocks" : "#pb-tab-components"));
+    else { openTab($("#pb-tab-elements")); $("[data-pb-el-search]").value = ""; renderElements(""); }
+    $$(".pb-tool[data-cat]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.cat === key)); });
   }
   $("[data-pb-el-search]").addEventListener("input", function () { renderElements(this.value); });
 
+  // Barre d'outils (gauche = créer) : modes du canevas, puis catégories de la bibliothèque d'éléments
   var TOOLS = [
     { key: "select", label: "Sélection (V)", icon: "mousePointer", mode: true },
     { key: "hand", label: "Main (H)", tip: "Main : faire défiler la page en la glissant (H)", icon: "arrowRightLeft", mode: true },
     { sep: true },
-    { key: "layout", label: "Section libre" }, { key: "container", label: "Conteneur" }, { key: "columns", label: "Colonnes" }, { key: "grid", label: "Grille" }, { key: "stack", label: "Pile" }, { key: "group", label: "Groupe" },
+    { cat: "structure", label: "Structure", tip: "Structure : section, conteneur, colonnes, grille…", icon: "layout" },
+    { cat: "text", label: "Texte", tip: "Texte : titre, paragraphe, liste, citation, tableau…", icon: "type" },
+    { cat: "media", label: "Média", tip: "Média : image, galerie, vidéo, audio, icône", icon: "image" },
+    { cat: "interaction", label: "Interaction", tip: "Interaction : bouton, lien, accordéon, onglets", icon: "mousePointer" },
+    { cat: "form", label: "Formulaires", tip: "Formulaire d'inscription de la page", icon: "fileText" },
+    { cat: "marketing", label: "Marketing", tip: "Marketing : compte à rebours", icon: "clock" },
+    { cat: "commerce", label: "Formations", tip: "Formations du catalogue", icon: "graduation" },
     { sep: true },
-    { key: "heading", label: "Titre" }, { key: "text", label: "Texte (T)" }, { key: "list", label: "Liste" }, { key: "quote", label: "Citation" }, { key: "table", label: "Tableau" },
-    { sep: true },
-    { key: "image", label: "Image (I)" }, { key: "gallery", label: "Galerie" }, { key: "video", label: "Vidéo" }, { key: "audio", label: "Audio" }, { key: "icon", label: "Icône" },
-    { sep: true },
-    { key: "button", label: "Bouton (B)" }, { key: "link", label: "Lien" }, { key: "accordion", label: "Accordéon / FAQ" }, { key: "tabs", label: "Onglets" },
-    { sep: true },
-    { key: "divider", label: "Séparateur" }, { key: "spacer", label: "Espace" }, { key: "form", label: "Formulaire d'inscription" }, { key: "countdown", label: "Compte à rebours" }, { key: "course", label: "Formation" },
+    { cat: "sections", label: "Sections prêtes", tip: "Sections prêtes : bandeau, points forts, FAQ, appel à l'action…", icon: "listChecks" },
+    { cat: "blocks", label: "Blocs", tip: "Blocs : en-têtes, tarifs, témoignages, colonnes… prêts à l'emploi", icon: "columns" },
+    { cat: "components", label: "Composants", tip: "Composants réutilisables", icon: "copy" },
   ];
   // Barre d'outils : compacte (icônes, nom en infobulle) ou étendue (icône + nom) — préférence d'interface mémorisée
   var toolLabel = function (label) { return label.replace(/\s*\([^)]*\)$/, ""); };
@@ -670,11 +694,9 @@
     nav.appendChild(h("span", { class: "pb-tools-sep", role: "separator" }));
     TOOLS.forEach(function (t) {
       if (t.sep) { nav.appendChild(h("span", { class: "pb-tools-sep", role: "separator" })); return; }
-      var ic = t.mode ? t.icon : t.key === "layout" ? "layout" : t.key === "form" ? "fileText" : NT[t.key] ? NT[t.key].icon : "plus";
-      var unavailable = t.key === "course" && !boot.courses.length ? "publiez d'abord une formation" : t.key === "form" && LEGACY.form && LEGACY.form.unavailable ? LEGACY.form.unavailable : null;
-      var btn = h("button", { type: "button", class: "pb-tool", "aria-label": t.label, "data-tip": unavailable ? t.label + " — " + unavailable : t.tip || t.label, "data-mode": t.mode ? t.key : null, "aria-pressed": t.mode ? String(tool === t.key) : null, disabled: (!t.mode && !canWrite) || Boolean(unavailable),
-        onclick: function () { if (t.mode) setTool(t.key); else addElement(t.key); } }, icon(ic), h("span", { class: "pb-tool-label", text: toolLabel(t.label) }));
-      if (!t.mode && !unavailable) draggableSource(btn, { type: t.key }, function (target) { addElement(t.key, target); });
+      var btn = h("button", { type: "button", class: "pb-tool", "aria-label": t.label, "data-tip": t.tip || t.label, "data-mode": t.mode ? t.key : null, "data-cat": t.cat || null,
+        "aria-pressed": t.mode ? String(tool === t.key) : String(elCategory === t.cat && !panels.leftHidden),
+        onclick: function () { if (t.mode) setTool(t.key); else setCategory(t.cat); } }, icon(t.icon), h("span", { class: "pb-tool-label", text: toolLabel(t.label) }));
       nav.appendChild(btn);
     });
     nav.appendChild(h("span", { class: "pb-tools-grow" }));
@@ -862,6 +884,7 @@
         break;
       case "accordion":
         repeatEditor(box, it, "items", [["q", "Question", 200], ["a", "Réponse (gras, liens…)", 2000, true]], { q: "Nouvelle question ?", a: "La réponse." }, 30, disabled);
+        box.appendChild(checkField("Première question ouverte à l'affichage", p.openFirst, function (v) { setProp(it.id, "openFirst", v); }, { disabled: disabled }));
         box.appendChild(checkField("Données structurées FAQ (moteurs de recherche)", p.faqSchema, function (v) { setProp(it.id, "faqSchema", v); }, { disabled: disabled }));
         break;
       case "tabs":
@@ -948,7 +971,12 @@
     divider: [["line", "checkbox", "Afficher une ligne"], ["size", "select", "Hauteur", [["sm", "Petite"], ["md", "Moyenne"], ["lg", "Grande"]]]],
   };
   function legacyContentFields(s, box, disabled) {
-    if (s.type === "form") box.appendChild(h("p", { class: "pb-note", text: PAGE.formId ? "Formulaire « " + PAGE.formName + " »" + (PAGE.formPublished ? "" : " (pas encore publié : la page ne pourra pas être publiée)") + ". Champs et consentement se règlent dans le formulaire ; il se choisit dans les réglages de la page." : "Aucun formulaire choisi : choisissez-le dans les réglages de la page (sinon la page ne peut pas être publiée)." }));
+    if (s.type === "form") {
+      box.appendChild(h("p", { class: "pb-note" + (PAGE.formId && PAGE.formPublished ? "" : " is-warn"), text: PAGE.formId ? "Formulaire « " + PAGE.formName + " »" + (PAGE.formPublished ? "" : " (pas encore publié : la page ne pourra pas être publiée)") + "." : "Aucun formulaire choisi : la page ne peut pas être publiée." }));
+      box.appendChild(h("div", { class: "pb-row pb-wrap" },
+        PAGE.formId ? h("a", { class: "btn btn-outline btn-sm", href: "/marketing/formulaires/" + PAGE.formId, target: "_blank", rel: "noopener" }, "Champs, consentement, liste, messages") : null,
+        h("a", { class: "btn btn-ghost btn-sm", href: "/marketing/pages/" + PAGE.id }, PAGE.formId ? "Choisir un autre formulaire" : "Choisir le formulaire")));
+    }
     (F[s.type] || []).forEach(function (fd) {
       var key = fd[0], kind = fd[1], label = fd[2], extra = fd[3];
       var set = function (v, light) { setProp(s.id, key, v, { key: s.id + ":" + key, light: light !== false }); };
@@ -979,19 +1007,53 @@
   }
 
   // ---------- Contrôles de style ----------
-  var TYPO_TYPES = ["heading", "text", "list", "quote", "code", "button", "link", "accordion", "tabs", "table", "countdown"];
-  var MEDIA_TYPES = ["image", "gallery", "video"];
-  var GROUP_ORDER = ["layout", "size", "spacing", "typography", "color", "background", "border", "effects", "position", "media"];
-  function relevantGroups(it) {
-    var g = ["size", "spacing", "color", "border", "effects", "position"];
-    var container = !isNode(it) || kidsOf(it);
-    if (container) { g.push("layout"); g.push("background"); g.push("typography"); }
-    if (isNode(it) && TYPO_TYPES.indexOf(it.type) >= 0) g.push("typography");
-    if (isNode(it) && MEDIA_TYPES.indexOf(it.type) >= 0) g.push("media");
-    if (isNode(it) && !kidsOf(it)) g.push("layout");
-    if (isNode(it) && it.type === "button") g.push("background");
-    return GROUP_ORDER.filter(function (k) { return g.indexOf(k) >= 0; });
+  // ---------- Inspecteur : un schéma par type d'élément (registre extensible) ----------
+  // groups : groupes de l'onglet Style et leurs propriétés (null = toutes celles du groupe ; true = contrôle composé) ;
+  // states : styles de survol / focus / clic proposés. Un nouveau type d'élément ajoute ici son schéma.
+  var BOX_LAYOUT = ["display", "flexDirection", "flexWrap", "justifyContent", "alignItems", "gap"];
+  var SIZE_W = ["width", "minWidth", "maxWidth"];
+  var BOX = { layout: BOX_LAYOUT, size: null, spacing: true, color: null, background: true, border: null, effects: null };
+  var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, border: null, effects: ["boxShadow", "opacity"] };
+  var INSPECTORS = {
+    section: { kind: "Section", groups: BOX },
+    container: { kind: "Conteneur", groups: BOX },
+    columns: { kind: "Colonnes", groups: BOX },
+    column: { kind: "Colonne", groups: BOX },
+    stack: { kind: "Pile", groups: BOX },
+    group: { kind: "Groupe", groups: BOX },
+    grid: { kind: "Grille", groups: { layout: ["columns", "gap", "alignItems", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null } },
+    heading: { kind: "Titre", groups: TEXTUAL },
+    text: { kind: "Texte", groups: TEXTUAL },
+    list: { kind: "Liste", groups: TEXTUAL },
+    quote: { kind: "Citation", groups: TEXTUAL },
+    code: { kind: "Code", groups: TEXTUAL },
+    table: { kind: "Tableau", groups: TEXTUAL },
+    tabs: { kind: "Onglets", groups: TEXTUAL },
+    accordion: { kind: "Accordéon / FAQ", groups: TEXTUAL },
+    countdown: { kind: "Compte à rebours", groups: TEXTUAL },
+    image: { kind: "Image", groups: { layout: ["alignSelf"], size: null, media: null, spacing: true, border: null, effects: null }, states: true },
+    gallery: { kind: "Galerie", groups: { layout: ["columns", "gap"], size: SIZE_W, spacing: true, border: null, effects: null } },
+    video: { kind: "Vidéo", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null } },
+    audio: { kind: "Audio", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null } },
+    button: { kind: "Bouton", groups: { layout: ["alignSelf"], typography: null, color: null, background: true, size: SIZE_W, spacing: true, border: null, effects: null }, states: true },
+    link: { kind: "Lien", groups: { layout: ["alignSelf"], typography: null, color: ["color"], spacing: true }, states: true },
+    icon: { kind: "Icône", groups: { layout: ["alignSelf"], color: ["color"], size: ["width", "height"], spacing: true }, states: true },
+    spacer: { kind: "Espace", groups: { size: ["height"], spacing: true } },
+    divider: { kind: "Séparateur", groups: { size: SIZE_W, border: null, spacing: true } },
+    course: { kind: "Formation", groups: { layout: ["alignSelf"], size: SIZE_W, color: ["backgroundColor"], spacing: true, border: null, effects: null }, states: true },
+    form: { kind: "Formulaire", groups: { size: null, spacing: true, color: null, background: true, border: null, effects: null }, presets: true },
+    component: { kind: "Composant", groups: null },
+    legacy: { kind: "Section prête", groups: { size: null, spacing: true, color: null, background: true, border: null, effects: null }, presets: true },
+  };
+  function inspectorFor(it) {
+    if (!it) return null;
+    if (it.type === "layout") return INSPECTORS.section;
+    if (it.type === "component") return INSPECTORS.component;
+    if (isNode(it)) return INSPECTORS[it.type] || { kind: typeLabel(it), groups: { spacing: true, size: null } };
+    if (it.type === "form") return INSPECTORS.form;
+    return Object.assign({}, INSPECTORS.legacy, { kind: LEGACY[it.type] ? LEGACY[it.type].label : INSPECTORS.legacy.kind });
   }
+  var GROUP_ORDER = ["layout", "size", "spacing", "typography", "color", "background", "media", "border", "effects"];
   var optLabel = function (p, v) { var o = (p.options || []).find(function (x) { return String(x[0]) === String(v); }); return o ? o[1] : v; };
   var lockedAny = function (items) { return !canWrite || items.some(function (x) { return lockedDeep(x.id); }); };
   var idsOf = function (items) { return items.map(function (x) { return x.id; }); };
@@ -1095,29 +1157,48 @@
     }
     return out;
   }
+  // Sélecteur d'écran (le même que celui de la barre du haut) : les valeurs affichées sont celles de l'écran actif ;
+  // un point signale les écrans où cet élément a ses propres réglages
+  function breakpointSwitch(items) {
+    var it = items[0];
+    var seg = h("div", { class: "pb-seg pb-bp-seg", role: "radiogroup", "aria-label": "Écran modifié" }, SPEC.breakpoints.map(function (b) {
+      var own = it.styles && it.styles[b.key] && Object.keys(it.styles[b.key]).length;
+      return h("button", { type: "button", role: "radio", "aria-checked": String(device === b.key), class: own ? "has-values" : null, "data-tip": own ? b.label + " : réglages propres à cet écran" : b.label + " : hérite de l'écran plus grand", onclick: function () { setDevice(b.key); } }, b.label);
+    }));
+    return h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "Écran" }), seg);
+  }
   function styleTab(items, box) {
     var it = items[0];
-    box.appendChild(h("p", { class: "pb-note", text: "Écran modifié : " + bpLabel(device) + (device === "desktop" ? " (les autres écrans en héritent ; changez d'écran en haut à droite)." : " (les champs vides héritent de l'écran plus grand).") }));
-    var states = h("div", { class: "pb-seg", role: "radiogroup", "aria-label": "État de l'élément" }, [{ key: "normal", label: "Normal" }].concat(SPEC.states).map(function (s) {
-      return h("button", { type: "button", role: "radio", "aria-checked": String(styleState === s.key), onclick: function () { styleState = s.key; renderInspector(); renderContext(); } }, s.label);
-    }));
-    box.appendChild(states);
-    if (styleState !== "normal") box.appendChild(h("p", { class: "pb-hint", text: "Style appliqué au " + { hover: "survol de la souris", focus: "focus au clavier", active: "moment du clic" }[styleState] + ", sur tous les écrans." }));
-    relevantGroups(it).forEach(function (g) {
-      var keys = SPEC.styleProps.filter(function (p) { return p.group === g && g !== "spacing"; }).map(function (p) { return p.key; });
-      if (g === "layout" && isNode(it) && !kidsOf(it)) keys = ["alignSelf", "display"];
-      var det = h("details", { class: "pb-acc" });
-      if (store.get("open-" + g, ["layout", "spacing", "typography", "color"].indexOf(g) >= 0)) det.open = true;
-      det.addEventListener("toggle", function () { store.set("open-" + g, det.open); });
-      det.appendChild(h("summary", { text: SPEC.groups[g] }));
-      var inner = h("div", { class: "pb-acc-body" });
-      if (g === "spacing") inner.appendChild(spacingBox(items));
-      keys.forEach(function (k) { inner.appendChild(styleControl(items, k)); });
-      composedControls(items, g).forEach(function (x) { inner.appendChild(x); });
-      det.appendChild(inner);
-      box.appendChild(det);
+    var schema = inspectorFor(it);
+    box.appendChild(breakpointSwitch(items));
+    if (device !== "desktop") box.appendChild(h("p", { class: "pb-hint", text: "Champs vides : valeur héritée de l'écran plus grand (indiquée en gris)." }));
+    if (schema.states && items.every(function (x) { return inspectorFor(x).states; })) {
+      box.appendChild(h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "État" }), h("div", { class: "pb-seg", role: "radiogroup", "aria-label": "État de l'élément" }, [{ key: "normal", label: "Normal" }].concat(SPEC.states).map(function (st) {
+        return h("button", { type: "button", role: "radio", "aria-checked": String(styleState === st.key), onclick: function () { styleState = st.key; renderInspector(); renderContext(); } }, st.label);
+      }))));
+      if (styleState !== "normal") box.appendChild(h("p", { class: "pb-hint", text: "Style appliqué au " + { hover: "survol de la souris", focus: "focus au clavier", active: "moment du clic" }[styleState] + ", sur tous les écrans." }));
+    } else if (styleState !== "normal") styleState = "normal";
+    GROUP_ORDER.forEach(function (g) {
+      if (!schema.groups || schema.groups[g] === undefined) return;
+      var spec = schema.groups[g];
+      var keys = g === "spacing" ? [] : Array.isArray(spec) ? spec : SPEC.styleProps.filter(function (p) { return p.group === g; }).map(function (p) { return p.key; });
+      box.appendChild(styleSection(items, g, keys));
     });
-    if (!isNode(it) && LEGACY[it.type]) legacyLayout(items, box);
+    if (schema.presets && !isNode(it)) legacyLayout(items, box);
+  }
+  // Un groupe repliable de l'inspecteur (état ouvert / fermé mémorisé)
+  function styleSection(items, g, keys) {
+    var det = h("details", { class: "pb-acc" });
+    if (store.get("open-" + g, ["layout", "spacing", "typography", "media"].indexOf(g) >= 0)) det.open = true;
+    det.addEventListener("toggle", function () { store.set("open-" + g, det.open); });
+    var set = keys.filter(function (k) { return items.some(function (x) { return ownValue(x, k) !== undefined; }); }).length + (g === "spacing" ? ["marginTop", "marginRight", "marginBottom", "marginLeft", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft"].filter(function (k) { return ownValue(items[0], k) !== undefined; }).length : 0);
+    det.appendChild(h("summary", {}, SPEC.groups[g] || g, set ? h("span", { class: "pb-acc-count", text: String(set) }) : null));
+    var inner = h("div", { class: "pb-acc-body" });
+    if (g === "spacing") inner.appendChild(spacingBox(items));
+    keys.forEach(function (k) { if (SP[k]) inner.appendChild(styleControl(items, k)); });
+    composedControls(items, g).forEach(function (x) { inner.appendChild(x); });
+    det.appendChild(inner);
+    return det;
   }
   // Préréglages des sections prêtes (espacement, fond, largeur, alignement du design system)
   var STYLE = {
@@ -1222,24 +1303,38 @@
   var inspTab = store.get("insp-tab", "content");
   function renderInspector() {
     var box = $("[data-pb-inspector]");
+    var keepScroll = box.dataset.for === selection.join(",") ? box.scrollTop : 0;
     box.textContent = "";
+    box.dataset.for = selection.join(",");
     fieldSeq = 0;
     var items = selectedItems();
+    // Rien de sélectionné : état vide, et seulement quelques actions globales réelles
     if (!items.length) {
-      box.appendChild(h("div", { class: "pb-insp-head" }, h("p", { class: "pb-kind", text: "Page" }), h("h2", { text: PAGE.name }), h("p", { class: "pb-hint", text: "Cliquez un élément dans la page ou dans les calques pour le régler." })));
-      box.appendChild(infoBlock(null));
-      box.appendChild(h("p", { class: "pb-note", text: "Titre, description, SEO et couleurs de la page : onglet « Page » du panneau de gauche." }));
+      box.appendChild(h("div", { class: "pb-insp-empty" },
+        h("h2", { text: "Aucun élément sélectionné" }),
+        h("p", { class: "pb-hint", text: "Sélectionnez un élément dans la page ou dans les calques pour modifier ses propriétés." })));
+      box.appendChild(breakpointSwitch([{}]));
+      box.appendChild(h("div", { class: "pb-row pb-wrap" },
+        h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { openTab($("#pb-tab-page")); } }, "Réglages de la page"),
+        h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !past.length || !canWrite, onclick: undo }, icon("undo"), "Annuler"),
+        h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !future.length || !canWrite, onclick: redo }, icon("redo"), "Rétablir")));
+      var det = infoBlock(null);
+      det.querySelector("summary").textContent = "Informations sur la page";
+      box.appendChild(det);
       return;
     }
     var it = items[0];
     var multi = items.length > 1;
     var locked = lockedAny(items);
+    var schema = inspectorFor(it);
     var l = locate(it.id);
-    var crumbs = multi ? null : h("nav", { class: "pb-crumbs", "aria-label": "Parents de l'élément" }, [h("button", { type: "button", onclick: function () { select(null); }, text: "Page" })].concat(l.ancestors.map(function (a) { return h("button", { type: "button", onclick: function () { select(a.id); }, text: nameOf(a) }); })));
-    box.appendChild(h("div", { class: "pb-insp-head" }, crumbs, h("p", { class: "pb-kind", text: multi ? "Sélection multiple" : (KIND_LABEL[it.type] || typeLabel(it)) }), h("h2", { text: multi ? items.length + " éléments sélectionnés" : nameOf(it) }), h("p", { class: "pb-hint", text: multi ? "Les réglages de style s'appliquent à tous." : typeLabel(it) + (kidsOf(it) ? " · " + kidsOf(it).length + " enfant(s)" : "") })));
-    if (!multi) box.appendChild(infoBlock(it));
-    if (locked && canWrite) box.appendChild(h("p", { class: "pb-note is-warn", text: "Verrouillé : déverrouillez-le (cadenas dans les calques) pour le modifier, le déplacer ou le supprimer." }));
-    var tabs = multi ? [["style", "Style"], ["advanced", "Actions"]] : it.type === "component" ? [["content", "Contenu"], ["advanced", "Avancé"]] : [["content", "Contenu"], ["style", "Style"], ["advanced", "Avancé"]];
+    // En-tête : ce que l'on modifie (nature, nom) et son chemin dans la structure (cliquable)
+    var crumbs = multi || !l.ancestors.length ? null : h("nav", { class: "pb-crumbs", "aria-label": "Parents de l'élément" }, [h("button", { type: "button", onclick: function () { select(null); }, text: "Page" })].concat(l.ancestors.map(function (a) { return h("button", { type: "button", onclick: function () { select(a.id); }, text: nameOf(a) }); })));
+    box.appendChild(h("div", { class: "pb-insp-head" }, crumbs,
+      h("p", { class: "pb-kind", text: multi ? "Sélection multiple" : schema.kind }),
+      h("h2", { text: multi ? items.length + " éléments" : (it.name || preview(it) || schema.kind) })));
+    if (locked && canWrite) box.appendChild(h("p", { class: "pb-note is-warn", text: "Verrouillé : déverrouillez-le (cadenas dans les calques) pour le modifier." }));
+    var tabs = multi ? [["style", "Style"], ["advanced", "Avancé"]] : !schema.groups ? [["content", "Contenu"], ["advanced", "Avancé"]] : [["content", "Contenu"], ["style", "Style"], ["advanced", "Avancé"]];
     if (!tabs.some(function (t) { return t[0] === inspTab; })) inspTab = tabs[0][0];
     var tablist = h("div", { class: "pb-insp-tabs", role: "tablist", "aria-label": "Réglages de la sélection" });
     tabs.forEach(function (t) { tablist.appendChild(h("button", { type: "button", role: "tab", "aria-selected": String(inspTab === t[0]), onclick: function () { inspTab = t[0]; store.set("insp-tab", inspTab); renderInspector(); } }, t[1])); });
@@ -1248,32 +1343,41 @@
     box.appendChild(body);
     if (inspTab === "content") {
       if (it.type === "component") componentInspector(body, it);
+      else if (kidsOf(it)) structureContent(it, body);
       else if (isNode(it)) nodeContentFields(it, body, locked);
-      else if (it.type === "layout") body.appendChild(h("p", { class: "pb-hint", text: "Section libre : " + it.children.length + " élément(s). Ajoutez-y des éléments par glisser-déposer, ou sélectionnez-la puis cliquez un élément de la palette." }));
       else legacyContentFields(it, body, locked);
     } else if (inspTab === "style") styleTab(items, body);
     else advancedTab(items, body, locked);
+    box.scrollTop = keepScroll;
+  }
+  // Contenu d'une section libre ou d'un conteneur : sa structure (enfants cliquables), et comment y ajouter
+  function structureContent(it, box) {
+    var kids = kidsOf(it);
+    box.appendChild(h("p", { class: "pb-sub", text: kids.length ? kids.length + " élément(s) à l'intérieur" : "Vide" }));
+    if (kids.length) {
+      box.appendChild(h("ul", { class: "pb-kids" }, kids.map(function (c) {
+        return h("li", {}, h("button", { type: "button", class: "pb-kid", onclick: function () { select(c.id); } }, icon(isNode(c) ? NT[c.type].icon : "layout"), h("span", { class: "pb-kid-kind", text: (inspectorFor(c) || {}).kind || typeLabel(c) }), h("span", { class: "pb-kid-name", text: c.name || preview(c) })));
+      })));
+    }
+    box.appendChild(h("p", { class: "pb-hint", text: "Pour ajouter un élément ici : gardez ce conteneur sélectionné et choisissez-le à gauche (ou glissez-le dedans)." }));
+    if (it.type === "columns") box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: !canWrite || lockedDeep(it.id) || kids.length >= 6, onclick: function () { addItems([newNode("column")], { parent: it, index: kids.length }); } }, icon("plus"), "Ajouter une colonne"));
   }
   function advancedTab(items, box, locked) {
     var it = items[0];
+    var single = items.length === 1;
     var b = function (label, fn, opts) { return h("button", Object.assign({ type: "button", class: "btn btn-outline btn-sm", onclick: fn }, opts || {}), label); };
-    if (items.length === 1) box.appendChild(textField("Nom du calque", it.name, function (v) { rename(it.id, v); }, { max: 60, placeholder: typeLabel(it), onChange: true, disabled: !canWrite }));
-    box.appendChild(h("div", { class: "pb-row pb-wrap" },
-      b(items.some(function (x) { return x.hidden; }) ? "Afficher" : "Masquer", function () { setFlag(selection.slice(), "hidden", !items.some(function (x) { return x.hidden; })); }, { disabled: !canWrite }),
-      b(items.some(function (x) { return x.locked; }) ? "Déverrouiller" : "Verrouiller", function () { setFlag(selection.slice(), "locked", !items.some(function (x) { return x.locked; })); }, { disabled: !canWrite }),
-      b("Dupliquer", duplicateSelected, { disabled: !canWrite }),
-      b("Copier le style", copyStyle),
-      b("Coller le style", pasteStyle, { disabled: !canWrite || locked }),
-      items.length > 1 ? b("Grouper", groupSelected, { disabled: !canWrite || locked }) : null,
-      items.length === 1 && ["group", "stack", "container"].indexOf(it.type) >= 0 ? b("Dissocier", ungroupSelected, { disabled: !canWrite || locked }) : null,
-      b("Supprimer", removeSelected, { class: "btn btn-danger btn-sm", disabled: !canWrite || locked })));
-    if (items.length > 1) {
-      box.appendChild(h("p", { class: "pb-sub", text: "Aligner (dans leur parent)" }));
-      box.appendChild(h("div", { class: "pb-row pb-wrap" }, [["flex-start", "Début"], ["center", "Centre"], ["flex-end", "Fin"], ["stretch", "Étirer"]].map(function (a) { return b(a[1], function () { setStyle(selection.slice(), "alignSelf", a[0]); }, { disabled: !canWrite || locked }); }),
-        b("Répartir", distribute, { disabled: !canWrite || locked })));
+    if (single) {
+      var info = infoBlock(it);
+      box.appendChild(info);
+      box.appendChild(textField("Nom du calque", it.name, function (v) { rename(it.id, v); }, { max: 60, placeholder: inspectorFor(it).kind, onChange: true, disabled: !canWrite }));
     }
-    if (items.length === 1 && it.type !== "component") box.appendChild(audienceField(it, locked));
-    if (items.length === 1 && !isNode(it)) {
+    // Position et plan (propriétés avancées de placement), pour l'écran actif
+    if (inspectorFor(it).groups) {
+      var pos = styleSection(items, "position", SPEC.styleProps.filter(function (p) { return p.group === "position"; }).map(function (p) { return p.key; }));
+      box.appendChild(pos);
+    }
+    if (single && it.type !== "component") box.appendChild(audienceField(it, locked));
+    if (single && !isNode(it)) {
       var checks = h("div", { class: "pb-checks" });
       BPS.forEach(function (bp) {
         var cb = h("input", { type: "checkbox", disabled: locked });
@@ -1288,7 +1392,22 @@
       box.appendChild(h("p", { class: "pb-sub", text: "Afficher sur" }));
       box.appendChild(checks);
     }
-    if (items.length === 1 && canWrite && it.type !== "component") {
+    if (items.length > 1) {
+      box.appendChild(h("p", { class: "pb-sub", text: "Aligner (dans leur parent)" }));
+      box.appendChild(h("div", { class: "pb-row pb-wrap" }, [["flex-start", "Début"], ["center", "Centre"], ["flex-end", "Fin"], ["stretch", "Étirer"]].map(function (a) { return b(a[1], function () { setStyle(selection.slice(), "alignSelf", a[0]); }, { disabled: !canWrite || locked }); }),
+        b("Répartir", distribute, { disabled: !canWrite || locked })));
+    }
+    box.appendChild(h("p", { class: "pb-sub", text: "Actions" }));
+    box.appendChild(h("div", { class: "pb-row pb-wrap" },
+      b(items.some(function (x) { return x.hidden; }) ? "Afficher" : "Masquer", function () { setFlag(selection.slice(), "hidden", !items.some(function (x) { return x.hidden; })); }, { disabled: !canWrite }),
+      b(items.some(function (x) { return x.locked; }) ? "Déverrouiller" : "Verrouiller", function () { setFlag(selection.slice(), "locked", !items.some(function (x) { return x.locked; })); }, { disabled: !canWrite }),
+      b("Dupliquer", duplicateSelected, { disabled: !canWrite }),
+      b("Copier le style", copyStyle),
+      b("Coller le style", pasteStyle, { disabled: !canWrite || locked }),
+      items.length > 1 ? b("Grouper", groupSelected, { disabled: !canWrite || locked }) : null,
+      single && ["group", "stack", "container"].indexOf(it.type) >= 0 ? b("Dissocier", ungroupSelected, { disabled: !canWrite || locked }) : null,
+      b("Supprimer", removeSelected, { class: "btn btn-danger btn-sm", disabled: !canWrite || locked })));
+    if (single && canWrite && it.type !== "component") {
       var form = h("form", { class: "pb-field" });
       var nameInput = h("input", { type: "text", id: "pb-comp-name", maxlength: "80", required: true, placeholder: "Nom du composant" });
       var global = h("input", { type: "checkbox" });
@@ -1413,7 +1532,7 @@
       bar.appendChild(h("button", { type: "button", class: "pb-ctx-btn", disabled: !canWrite, onclick: distribute }, "Répartir"));
       return;
     }
-    if (same && isNode(it) && TYPO_TYPES.indexOf(it.type) >= 0) {
+    if (same && isNode(it) && inspectorFor(it).groups && inspectorFor(it).groups.typography !== undefined) {
       bar.appendChild(ctxSelect("Police", "fontFamily", items));
       bar.appendChild(ctxLength("Taille", "fontSize", items, 60));
       bar.appendChild(ctxSelect("Graisse", "fontWeight", items));

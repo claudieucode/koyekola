@@ -240,7 +240,7 @@ const NODE_TYPES = {
   accordion: { label: "Accordéon / FAQ", category: "interaction", props: (p, at) => {
     const items = (Array.isArray(p.items) ? p.items : []).map((x) => ({ q: line(x && x.q, 200), a: clean(x && x.a, 2000) })).filter((x) => x.q && x.a).slice(0, 30);
     if (!items.length) throw new Error(`${at} (accordéon) : au moins une question avec sa réponse.`);
-    return { items, faqSchema: p.faqSchema === true };
+    return { items, faqSchema: p.faqSchema === true, openFirst: p.openFirst === true };
   } },
   tabs: { label: "Onglets", category: "interaction", props: (p, at) => {
     const items = (Array.isArray(p.items) ? p.items : []).map((x) => ({ title: line(x && x.title, 60), text: clean(x && x.text, 2000) })).filter((x) => x.title && x.text).slice(0, 8);

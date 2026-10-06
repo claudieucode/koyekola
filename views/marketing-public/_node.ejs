@@ -37,7 +37,7 @@
 <% } else if (n.type === "link") { %>
   <a class="<%= cls %>" href="<%= href(p.url) %>"<%- p.newTab ? ' target="_blank" rel="noopener noreferrer"' : "" %><%- attrs %>><%= p.label %></a>
 <% } else if (n.type === "accordion") { %>
-  <div class="<%= cls %>"<%- attrs %>><% p.items.forEach((it) => { %><details class="lp-faq-item"><summary><%= it.q %></summary><div class="lp-faq-answer"><%- renderMarkdown(it.a) %></div></details><% }) %></div>
+  <div class="<%= cls %>"<%- attrs %>><% p.items.forEach((it, k) => { %><details class="lp-faq-item"<%= p.openFirst && k === 0 ? " open" : "" %>><summary><%= it.q %></summary><div class="lp-faq-answer"><%- renderMarkdown(it.a) %></div></details><% }) %></div>
 <% } else if (n.type === "tabs") { %>
   <div class="<%= cls %>" data-kw-tabs<%- attrs %>>
     <% p.items.forEach((it, k) => { %><section class="kw-tab-panel" data-kw-tab-title="<%= it.title %>"><h3 class="kw-tab-title"><%= it.title %></h3><%- renderMarkdown(it.text) %></section><% }) %>
