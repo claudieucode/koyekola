@@ -51,6 +51,13 @@ async function startServer(extraEnv = {}) {
   return {
     base: `http://localhost:${port}`,
     dir,
+    // Jeton anti-robot des formulaires publics, comme celui de la page affichée à un humain (signé avec la clé du
+    // serveur de test, daté de 5 secondes : voir src/marketing/forms/antispam.js)
+    formToken: () => {
+      const ts = Date.now() - 5000;
+      const secret = env.SESSION_SECRET || env.ENCRYPTION_KEY || "kolakisa-formulaires";
+      return `${ts}.${require("node:crypto").createHmac("sha256", secret).update(`form-time:${ts}`).digest("base64url").slice(0, 22)}`;
+    },
     log: () => log,
     // Lecture/écriture directe dans la base du serveur de test (préparation ou vérification)
     db: () => {

@@ -15,6 +15,7 @@ const EVENTS = {
   "contact.suppressed": "Une adresse est bloquée (rebond, plainte)",
   "tag.added": "Une étiquette est ajoutée",
   "list.member_added": "Un contact est ajouté à une liste",
+  "form.submitted": "Un formulaire est envoyé",
   "contacts.imported": "Un import de contacts est terminé",
   "campaign.sent": "Une campagne est terminée",
 };

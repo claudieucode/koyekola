@@ -9,7 +9,7 @@ describe("pop-up public", () => {
   let srv, boss;
   const run = (query, ...args) => { const db = srv.db(); const r = db.prepare(query).run(...args); db.close(); return r; };
   const one = (query, ...args) => { const db = srv.db(); const r = db.prepare(query).get(...args); db.close(); return r; };
-  const postPopup = (path, body) => new Client(srv.base).request(path, { method: "POST", form: body, headers: { "x-mk-popup": "1" } });
+  const postPopup = (path, body) => new Client(srv.base).request(path, { method: "POST", form: { ft: srv.formToken(), ...body }, headers: { "x-mk-popup": "1" } });
 
   before(async () => { srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" }); boss = await loginInstructor(srv); });
   after(() => srv.stop());
@@ -68,7 +68,7 @@ describe("pop-up public", () => {
   });
 
   test("mode page normale (sans l'en-tête) : toujours une redirection, comportement inchangé", async () => {
-    const res = await new Client(srv.base).post(`/f/${slug}`, { email: "page-normale@ex.fr", consent: "1" });
+    const res = await new Client(srv.base).post(`/f/${slug}`, { ft: srv.formToken(), email: "page-normale@ex.fr", consent: "1" });
     assert.equal(res.status, 302);
   });
 });

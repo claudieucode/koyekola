@@ -139,6 +139,16 @@
       </section>
     </div>
 
+    <% if (files.length) { %>
+    <section class="mk-panel" aria-labelledby="ct-files">
+      <h2 id="ct-files">Fichiers envoyés</h2>
+      <ul class="mk-sw-recent">
+        <% files.forEach((f) => { %><li><a href="/marketing/contacts/<%= contact.id %>/fichiers/<%= f.id %>" download><%= f.original_name %></a>
+          <span class="mk-sub"><%= f.mime === "application/pdf" ? "PDF" : "Image" %> · <%= f.size >= 1048576 ? (f.size / 1048576).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(f.size / 1024)) + " Ko" %> · <%= f.form_name ? `formulaire « ${f.form_name} »` : "formulaire supprimé" %> · <%= mkh.fdatetime(f.created_at) %></span></li><% }) %>
+      </ul>
+    </section>
+    <% } %>
+
     <section class="mk-panel">
       <h2>Consentement et désinscription</h2>
       <% if (!history.length) { %><p class="field-hint">Aucune preuve de consentement enregistrée.</p>

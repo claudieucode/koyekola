@@ -57,13 +57,55 @@
           <% if (!properties.length) { %>
             <p class="field-hint">Aucune propriété définie. Créez-en dans <a href="/marketing/proprietes">Audience → Propriétés</a> (ville, niveau, date de naissance…) pour pouvoir les demander ici.</p>
           <% } else { %>
-            <p class="field-hint">Chacune s'affiche avec le bon type de champ et sa valeur est vérifiée avant l'inscription. Toutes restent facultatives pour le visiteur.</p>
+            <p class="field-hint">Chacune s'affiche avec le bon type de champ et sa valeur est vérifiée avant l'inscription. Facultatives par défaut : rendez-les obligatoires ou conditionnelles dans « Options des champs ».</p>
             <div class="mk-check-grid">
               <% properties.forEach((p) => { %>
                 <label class="checkbox-row"><input type="checkbox" name="propertyFields" value="<%= p.key %>" <%= item.propertyFields.includes(p.key) ? "checked" : "" %>> <span><%= p.label %> <span class="mk-sub"><%= propertyTypeLabel[p.type] || p.type %></span></span></label>
               <% }) %>
             </div>
           <% } %>
+        </fieldset>
+
+        <%
+          const fsAll = [...item.fields.map((k) => ({ key: k, label: fieldCatalog[k], type: "text", standard: true })), ...defs.map((d) => ({ key: d.name, label: d.label, type: d.type, options: d.options }))];
+          const fsv = (k) => item.fieldSettings[k] || {};
+        %>
+        <fieldset class="seo-fieldset">
+          <legend>Options des champs</legend>
+          <input type="hidden" name="fsShown" value="1">
+          <% if (!fsAll.length) { %><p class="field-hint">Seule l'adresse e-mail est demandée (toujours obligatoire). Cochez des champs ci-dessus et enregistrez pour régler leurs options.</p>
+          <% } else { %>
+            <p class="field-hint">L'adresse e-mail est toujours obligatoire. Une condition affiche un champ seulement selon la réponse à un champ placé AVANT ; un champ caché n'est ni exigé ni enregistré (vérifié par le serveur). Champ coché ci-dessus mais absent ici : enregistrez d'abord.</p>
+            <div class="mk-fs-list">
+              <% fsAll.forEach((f, i) => { const v = fsv(f.key); const c = v.showIf || {}; const before = fsAll.slice(0, i); const id = "fs-" + i; %>
+                <div class="mk-fs-row">
+                  <p class="mk-fs-name"><strong><%= f.label %></strong></p>
+                  <label class="checkbox-row"><input type="checkbox" name="fs[<%= f.key %>][required]" value="1"<%= v.required ? " checked" : "" %>> Obligatoire</label>
+                  <% if (f.type === "select") { %><div class="field-group"><label for="<%= id %>-d">Affichage</label><select id="<%= id %>-d" name="fs[<%= f.key %>][display]"><option value="">Liste déroulante</option><option value="radio"<%= v.display === "radio" ? " selected" : "" %>>Boutons radio</option></select></div>
+                  <% } else if (f.type === "text") { %><div class="field-group"><label for="<%= id %>-d">Affichage</label><select id="<%= id %>-d" name="fs[<%= f.key %>][display]"><option value="">Une ligne</option><option value="textarea"<%= v.display === "textarea" ? " selected" : "" %>>Zone de texte (plusieurs lignes)</option></select></div><% } %>
+                  <% if (before.length) { %>
+                    <div class="mk-fs-cond">
+                      <div class="field-group"><label for="<%= id %>-f">Afficher seulement si</label><select id="<%= id %>-f" name="fs[<%= f.key %>][field]"><option value="">Toujours affiché</option><% before.forEach((b) => { %><option value="<%= b.key %>"<%= c.field === b.key ? " selected" : "" %>><%= b.label %></option><% }) %></select></div>
+                      <div class="field-group"><label for="<%= id %>-o">Condition</label><select id="<%= id %>-o" name="fs[<%= f.key %>][op]"><% Object.entries(OPS).forEach(([op, label]) => { %><option value="<%= op %>"<%= c.op === op ? " selected" : "" %>><%= label %></option><% }) %></select></div>
+                      <div class="field-group"><label for="<%= id %>-v">Valeur</label><input id="<%= id %>-v" type="text" name="fs[<%= f.key %>][value]" maxlength="100" value="<%= c.value || "" %>" placeholder="Ex. Oui, Photoshop…"></div>
+                    </div>
+                  <% } %>
+                </div>
+              <% }) %>
+            </div>
+          <% } %>
+        </fieldset>
+
+        <fieldset class="seo-fieldset">
+          <legend>Fichier joint (facultatif)</legend>
+          <input type="hidden" name="fileShown" value="1">
+          <label class="checkbox-row"><input type="checkbox" name="file[enabled]" value="1"<%= item.fileField.enabled ? " checked" : "" %>> Demander un fichier (image ou PDF, 5 Mo au plus)</label>
+          <div class="field-row">
+            <div class="field-group"><label for="ff-file-label">Libellé</label><input id="ff-file-label" type="text" name="file[label]" maxlength="80" value="<%= item.fileField.label || "Fichier joint" %>"></div>
+            <div class="field-group"><label for="ff-file-accept">Types acceptés</label><select id="ff-file-accept" name="file[accept]"><% Object.entries(ACCEPT).forEach(([k, a]) => { %><option value="<%= k %>"<%= (item.fileField.accept || "both") === k ? " selected" : "" %>><%= a.label %></option><% }) %></select></div>
+          </div>
+          <label class="checkbox-row"><input type="checkbox" name="file[required]" value="1"<%= item.fileField.required ? " checked" : "" %>> Fichier obligatoire</label>
+          <p class="field-hint">Le type est vérifié sur le contenu réel du fichier. Les fichiers sont rangés à part (jamais publics) et visibles par l'équipe sur la fiche du contact. Incompatible avec l'affichage en pop-up.</p>
         </fieldset>
 
         <fieldset class="seo-fieldset">

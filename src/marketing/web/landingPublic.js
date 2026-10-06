@@ -10,6 +10,8 @@ const { tagContact } = require("../audience/tags");
 const { createRateLimiter } = require("../../middlewares/security");
 const { sendSubscriptionConfirmation } = require("../../utils/mailer");
 const { renderMarkdown } = require("../../utils/markdown");
+const antispam = require("../forms/antispam");
+const formUpload = require("./formUpload");
 
 const PENDING_TEXT = "Merci ! Un e-mail de confirmation vient de vous être envoyé : cliquez sur le lien qu'il contient pour finaliser votre inscription (pensez aux courriers indésirables).";
 
@@ -23,6 +25,7 @@ module.exports = ({ db }) => {
     const marketing = req.app.locals.marketing;
     if (!marketing || !marketing.ready) return res.status(503).render("error", { message: "Cette page est momentanément indisponible." });
     req.mkPages = { organizationId: marketing.organizationId, bus: marketing.bus, settings: marketing.settings };
+    res.locals.formToken = antispam.issue(); // anti-robot des inscriptions (voir forms/antispam.js)
     next();
   });
   const ctxOf = (req) => ({ db, organizationId: req.mkPages.organizationId, userId: null, bus: req.mkPages.bus, settings: req.mkPages.settings, baseUrl: process.env.SITE_URL });
@@ -56,18 +59,20 @@ module.exports = ({ db }) => {
     res.redirect(link.url);
   });
 
-  router.post("/p/:slug/inscription", (req, res, next) => {
+  router.post("/p/:slug/inscription", formUpload, (req, res, next) => {
     const page = landing.getPublishedPage(db, req.params.slug);
     if (!page) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
     const form = loadForm(page);
     if (!form || form.status !== "published") return show(req, res, page, { status: 400, error: "L'inscription n'est pas disponible pour le moment." });
-    if (String(req.body.website || "").trim()) return res.redirect(`/p/${page.slug}?inscrit=1#inscription`); // robot : faux succès silencieux
+    // Robot (champ piège rempli, jeton absent ou envoi trop rapide) : faux succès silencieux
+    if (String(req.body.website || "").trim() || !antispam.check(req.body.ft)) return res.redirect(`/p/${page.slug}?inscrit=1#inscription`);
+    if (req.uploadError) return show(req, res, page, { status: 400, error: req.uploadError, values: req.body });
     if (limiter.isLimited(req.ip)) return show(req, res, page, { status: 429, error: "Trop de tentatives : réessayez dans un instant.", values: req.body });
     if (!req.body.consent) return show(req, res, page, { status: 400, error: "Cochez la case pour confirmer votre inscription.", values: req.body });
     limiter.hit(req.ip);
     try {
       const ctx = ctxOf(req);
-      const result = forms.submitForm(ctx, form.id, { ...req.body, ip: req.ip });
+      const result = forms.submitForm(ctx, form.id, { ...req.body, ip: req.ip, file: req.file, page: `/p/${page.slug}` });
       if (!result.ok) return show(req, res, page, { status: 400, error: result.reason === "invalid_email" ? "Adresse e-mail invalide." : result.message || "Inscription impossible pour le moment.", values: req.body });
       // Étiquettes propres à la page (en plus de celles du formulaire) : on sait d'où vient l'inscription
       if (result.contact) for (const tag of page.tags) tagContact({ ...ctx, audit: false }, result.contact.id, tag);

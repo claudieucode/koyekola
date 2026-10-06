@@ -1,7 +1,7 @@
 // Formulaires d'inscription publics (jalon M5 — Capture, partie 1) : un formulaire = une adresse /f/:slug, un texte de
 // consentement présenté (preuve enregistrée), des champs facultatifs, une liste optionnelle. Un contact créé par un
 // formulaire suit EXACTEMENT les mêmes règles que partout ailleurs (compliance/consent.js) : aucun raccourci ici.
-const { checkCtx, cleanText, audit, MarketingError } = require("../audience/shared");
+const { checkCtx, cleanText, audit, emit, MarketingError } = require("../audience/shared");
 const { upsertContact, getContact } = require("../audience/contacts");
 const { cleanTimeZone } = require("../sending/sendtime");
 const { addToList } = require("../audience/lists");
@@ -13,11 +13,14 @@ const { truncateIp } = require("../compliance/consent");
 const { recordSmsConsent } = require("../sms/consent");
 const { normalizePhone } = require("../sms/phone");
 const { getSmsConfig } = require("../sms/config");
+const fs = require("fs");
+const path = require("path");
+const fieldRules = require("./fields");
 
 const BLOCKED = new Set(["bounced", "complained", "suppressed"]);
 
 // Champs facultatifs proposables (l'adresse est TOUJOURS demandée, en plus, jamais dans cette liste)
-const FIELD_CATALOG = { first_name: "Prénom", last_name: "Nom", phone: "Téléphone", company: "Société" };
+const FIELD_CATALOG = { first_name: "Prénom", last_name: "Nom", phone: "Téléphone", company: "Société", country: "Pays" };
 const STATUSES = ["draft", "published"];
 const MAX_SLUG = 80;
 // Déclencheurs de pop-up : delay (secondes avant affichage), scroll (% de la page défilé), exit (intention de quitter, souris vers le haut)
@@ -99,6 +102,8 @@ function boundedInt(value, [min, max], fallback) {
   return Number.isInteger(n) && n >= min && n <= max ? n : fallback;
 }
 
+const parseJson = (text, fallback) => { try { return text ? JSON.parse(text) : fallback; } catch { return fallback; } };
+
 function rowToForm(row) {
   return {
     id: row.id, name: row.name, slug: row.slug, status: row.status, fields: JSON.parse(row.fields), consentText: row.consent_text,
@@ -106,6 +111,7 @@ function rowToForm(row) {
     propertyFields: JSON.parse(row.property_fields || "[]"), tags: JSON.parse(row.tags || "[]"), redirectUrl: row.redirect_url || null,
     doubleOptin: Boolean(row.double_optin), smsConsentText: row.sms_consent_text || "",
     popupEnabled: Boolean(row.popup_enabled), popupTrigger: row.popup_trigger, popupTriggerValue: row.popup_trigger_value, popupFrequencyDays: row.popup_frequency_days,
+    fieldSettings: parseJson(row.field_settings, {}), fileField: parseJson(row.file_field, {}), popupRules: parseJson(row.popup_rules, {}),
     createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }
@@ -152,7 +158,7 @@ function validateSmsConsentText(value) {
   return text;
 }
 
-function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, popupEnabled, popupTrigger, popupTriggerValue, popupFrequencyDays, propertyFields, tags, redirectUrl, doubleOptin, smsConsentText }) {
+function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, popupEnabled, popupTrigger, popupTriggerValue, popupFrequencyDays, propertyFields, tags, redirectUrl, doubleOptin, smsConsentText, fieldSettings, fileField }) {
   checkCtx(ctx);
   const current = rowToForm(requireFormRow(ctx, id)); // existe et appartient à l'organisation
   // Réglages absents de l'appel (ancien appelant) : on garde la valeur actuelle plutôt que de l'effacer
@@ -170,14 +176,20 @@ function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, 
   const trigger = POPUP_TRIGGERS.includes(popupTrigger) ? popupTrigger : "delay";
   const triggerValue = boundedInt(popupTriggerValue, POPUP_TRIGGER_RANGE[trigger], trigger === "delay" ? 8 : trigger === "scroll" ? 50 : 0);
   const frequencyDays = boundedInt(popupFrequencyDays, POPUP_FREQUENCY_RANGE, 7);
+  // Réglages par champ et fichier joint (absents de l'appel = inchangés), vérifiés sur les champs ENREGISTRÉS ici
+  const defs = propertyFieldDefs(ctx.db, ctx.organizationId, { propertyFields: cleanPropertyFields });
+  const cleanSettings = fieldRules.normalizeFieldSettings(fieldSettings === undefined ? current.fieldSettings : fieldSettings, { fields: cleanFields }, defs);
+  const cleanFile = fileField === undefined ? current.fileField : fieldRules.normalizeFileField(fileField);
+  if (popupEnabled && cleanFile.enabled) throw new MarketingError("invalid_field", "Un formulaire avec fichier joint ne peut pas s'afficher en pop-up (l'envoi de fichier se fait sur sa page /f/… ou dans une page du site).");
   ctx.db
     .prepare(
       `UPDATE mk_forms SET name = ?, fields = ?, consent_text = ?, list_id = ?, thank_you_text = ?,
          popup_enabled = ?, popup_trigger = ?, popup_trigger_value = ?, popup_frequency_days = ?,
-         property_fields = ?, tags = ?, redirect_url = ?, double_optin = ?, sms_consent_text = ?, updated_at = datetime('now') WHERE id = ?`
+         property_fields = ?, tags = ?, redirect_url = ?, double_optin = ?, sms_consent_text = ?, field_settings = ?, file_field = ?, updated_at = datetime('now') WHERE id = ?`
     )
     .run(cleanName, JSON.stringify(cleanFields), cleanConsent, list, cleanThanks, popupEnabled ? 1 : 0, trigger, triggerValue, frequencyDays,
-      JSON.stringify(cleanPropertyFields), JSON.stringify(cleanTags), cleanRedirect, (doubleOptin === undefined ? current.doubleOptin : doubleOptin) ? 1 : 0, cleanSms, id);
+      JSON.stringify(cleanPropertyFields), JSON.stringify(cleanTags), cleanRedirect, (doubleOptin === undefined ? current.doubleOptin : doubleOptin) ? 1 : 0, cleanSms,
+      JSON.stringify(cleanSettings), JSON.stringify(cleanFile), id);
   audit(ctx, "form.updated", "form", id, { name: cleanName, popupEnabled: Boolean(popupEnabled) });
   return getForm(ctx, id);
 }
@@ -232,12 +244,34 @@ function submitForm(ctx, formId, input = {}) {
   const row = requireFormRow(ctx, formId);
   if (row.status !== "published") return { ok: false, reason: "not_published" };
   const form = rowToForm(row);
+  const defs = propertyFieldDefs(ctx.db, ctx.organizationId, form);
+  // Logique conditionnelle et champs obligatoires, recalculées ICI (jamais confiance au navigateur) : un champ caché
+  // n'est ni exigé ni enregistré
+  const values = {};
+  for (const key of form.fields) values[key] = input[key];
+  for (const d of defs) values[d.name] = input[d.name];
+  const rules = fieldRules.applySettings(form, defs, values, (f) => (f.kind === "standard" ? FIELD_CATALOG[f.key] : f.label));
+  if (!rules.ok) return { ok: false, reason: "required", message: rules.message };
   const fields = {};
-  for (const key of form.fields) if (input[key] !== undefined) fields[key] = input[key];
+  for (const key of form.fields) if (input[key] !== undefined && !rules.hidden.has(key)) fields[key] = input[key];
+  // Fichier joint : type réel lu dans le contenu, taille bornée ; vérifié AVANT de créer quoi que ce soit
+  let upload = null;
+  if (form.fileField.enabled) {
+    const f = input.file;
+    const accept = fieldRules.ACCEPT[form.fileField.accept] || fieldRules.ACCEPT.both;
+    if (!f || !f.buffer || !f.size) {
+      if (form.fileField.required) return { ok: false, reason: "required", message: `« ${form.fileField.label} » est obligatoire.` };
+    } else {
+      const mime = fieldRules.sniffMime(f.buffer);
+      if (f.size > fieldRules.MAX_FILE_BYTES || !mime || !accept.mimes.includes(mime)) return { ok: false, reason: "invalid_file", message: `Fichier refusé : ${accept.label} uniquement, 5 Mo au plus.` };
+      upload = { buffer: f.buffer, mime, size: f.size, name: String(f.originalname || "fichier").replace(/[^\p{L}\p{N} ._()-]/gu, "_").slice(0, 120) || "fichier" };
+    }
+  }
   // Propriétés : vérifiées AVANT de créer quoi que ce soit (une date impossible ne doit laisser ni contact ni
   // consentement à moitié enregistrés). Case à cocher non cochée = rien de dit, donc rien d'enregistré.
   const properties = {};
-  for (const def of propertyFieldDefs(ctx.db, ctx.organizationId, form)) {
+  for (const def of defs) {
+    if (rules.hidden.has(def.name)) continue;
     const raw = input[def.name];
     if (raw === undefined || raw === null || String(raw).trim() === "") continue;
     try {
@@ -266,6 +300,7 @@ function submitForm(ctx, formId, input = {}) {
     if (error instanceof MarketingError) return { ok: false, reason: error.code, message: error.message };
     throw error;
   }
+  if (upload) storeUpload(ctx, form, contact.id, upload);
   // Double confirmation : rien n'est accordé maintenant ; un lien est envoyé (par l'appelant, qui connaît l'adresse du site)
   if (form.doubleOptin && contact.status !== "subscribed") {
     if (BLOCKED.has(contact.status) || ctx.db.prepare("SELECT 1 FROM mk_suppressions WHERE organization_id = ? AND email = ?").get(ctx.organizationId, contact.email)) {
@@ -279,6 +314,7 @@ function submitForm(ctx, formId, input = {}) {
       .run(ctx.organizationId, formId, contact.id, tokenHash(token), form.consentText, truncateIp(input.ip), JSON.stringify({ properties, ...(sms ? { sms } : {}) }), now + CONFIRM_TTL_MS, now);
     ctx.db.prepare("UPDATE mk_forms SET submit_count = submit_count + 1 WHERE id = ?").run(formId);
     audit(ctx, "form.pending_confirmation", "form", formId, {});
+    emitSubmitted(ctx, form, contact, { pending: true, page: input.page });
     return { ok: true, pending: true, token, email: contact.email, contact: getContact(ctx, contact.id) };
   }
   const consent = recordConsent(ctx, contact.id, { source: "form", textShown: form.consentText, ip: input.ip, formId });
@@ -286,8 +322,42 @@ function submitForm(ctx, formId, input = {}) {
   applyFormExtras(ctx, form, contact.id, properties);
   const smsResult = sms ? applySmsConsent(ctx, form, contact.id, sms, input.ip) : null;
   ctx.db.prepare("UPDATE mk_forms SET submit_count = submit_count + 1 WHERE id = ?").run(formId);
+  emitSubmitted(ctx, form, contact, { pending: false, page: input.page });
   // `contact` date d'AVANT recordConsent (qui vient de faire passer son statut à « subscribed ») : on renvoie l'état à jour, pas l'instantané périmé
   return { ok: true, contact: getContact(ctx, contact.id), sms: smsResult };
+}
+
+// Événement « formulaire envoyé » (déclencheur de scénario, journal du contact) : formulaire, page d'origine, confirmation
+// en attente ou non. La page est un chemin du site (jamais une adresse complète venue du navigateur).
+function emitSubmitted(ctx, form, contact, { pending, page }) {
+  const where = typeof page === "string" && /^\/[^\s<>"'`\\]{0,300}$/.test(page) ? page : `/f/${form.slug}`;
+  emit(ctx, "form.submitted", { contact, source: "form", metadata: { formId: String(form.id), formName: form.name, page: where, pending: Boolean(pending) } });
+}
+
+// Fichier joint : rangé hors des dossiers publics (uploads/forms/<organisation>/), nom aléatoire, lisible seulement par
+// l'équipe (route protégée de la fiche du contact)
+function storeUpload(ctx, form, contactId, upload) {
+  const { uploadsRoot } = require("../../config/paths");
+  const dir = path.join(uploadsRoot, "forms", String(ctx.organizationId));
+  fs.mkdirSync(dir, { recursive: true });
+  const file = `${crypto.randomBytes(12).toString("hex")}.${fieldRules.EXT[upload.mime]}`;
+  fs.writeFileSync(path.join(dir, file), upload.buffer, { flag: "wx" });
+  ctx.db.prepare("INSERT INTO mk_form_files (organization_id, form_id, contact_id, path, original_name, mime, size) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .run(ctx.organizationId, form.id, contactId, `/uploads/forms/${ctx.organizationId}/${file}`, upload.name, upload.mime, upload.size);
+}
+
+// Fichiers envoyés par un contact (fiche du contact) et chemin disque d'un fichier (contrôlé : dossier des formulaires)
+function contactFiles(ctx, contactId) {
+  checkCtx(ctx);
+  return ctx.db.prepare("SELECT f.id, f.original_name, f.mime, f.size, f.created_at, m.name AS form_name FROM mk_form_files f LEFT JOIN mk_forms m ON m.id = f.form_id WHERE f.organization_id = ? AND f.contact_id = ? ORDER BY f.id DESC").all(ctx.organizationId, contactId);
+}
+function formFile(ctx, id) {
+  checkCtx(ctx);
+  const row = ctx.db.prepare("SELECT * FROM mk_form_files WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId);
+  if (!row) return null;
+  const { resolveUpload } = require("../../utils/storage");
+  const abs = row.path.startsWith(`/uploads/forms/${ctx.organizationId}/`) ? resolveUpload(row.path) : null;
+  return abs ? { ...row, abs } : null;
 }
 
 // Accord SMS donné dans le formulaire : enregistré avec SA preuve (texte de la case + numéro + IP tronquée + formulaire).
@@ -355,5 +425,5 @@ function confirmSubscription(ctx, token, { now = Date.now() } = {}) {
 module.exports = {
   FIELD_CATALOG, STATUSES, MAX_TAGS, propertyFieldDefs, POPUP_TRIGGERS, POPUP_TRIGGER_RANGE, POPUP_FREQUENCY_RANGE,
   createForm, listForms, getForm, updateForm, setStatus, deleteForm, getPublishedForm, getActivePopup, recordView, submitForm, slugify,
-  findPendingConfirmation, confirmSubscription, CONFIRM_TTL_MS,
+  findPendingConfirmation, confirmSubscription, CONFIRM_TTL_MS, contactFiles, formFile,
 };

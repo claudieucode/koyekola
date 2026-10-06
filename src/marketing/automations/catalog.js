@@ -12,5 +12,6 @@ const TRIGGERS = {
   "contact.sms_subscribed": { label: "Un contact accepte les SMS (accord SMS prouvé)", filters: [] },
   "tag.added": { label: "Une étiquette est ajoutée", filters: [["tag", "Nom de l'étiquette"]] },
   "list.member_added": { label: "Un contact est ajouté à une liste", filters: [["listId", "Identifiant de la liste"]] },
+  "form.submitted": { label: "Un formulaire est envoyé", filters: [["formId", "Identifiant du formulaire"]] },
 };
 module.exports = { TRIGGERS };

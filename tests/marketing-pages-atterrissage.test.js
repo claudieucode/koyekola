@@ -132,9 +132,9 @@ describe("publication, page publique et statistiques", () => {
 
   test("inscription : consentement exigé ; contact abonné, dans la liste, avec les étiquettes du formulaire ET de la page ; conversion", async () => {
     const v = new Client(srv.base);
-    const refused = await v.post(`/p/${slug}/inscription`, { email: "lectrice@ex.fr", first_name: "Awa" }, { headers: UA });
+    const refused = await v.post(`/p/${slug}/inscription`, { ft: srv.formToken(), email: "lectrice@ex.fr", first_name: "Awa" }, { headers: UA });
     assert.equal(refused.status, 400);
-    const ok = await v.post(`/p/${slug}/inscription`, { email: "lectrice@ex.fr", first_name: "Awa", consent: "1", tz: "Africa/Kinshasa" }, { headers: UA });
+    const ok = await v.post(`/p/${slug}/inscription`, { ft: srv.formToken(), email: "lectrice@ex.fr", first_name: "Awa", consent: "1", tz: "Africa/Kinshasa" }, { headers: UA });
     assert.equal(ok.location, `/p/${slug}?inscrit=1#inscription`);
     const c = db.prepare("SELECT * FROM mk_contacts WHERE email = 'lectrice@ex.fr'").get();
     assert.equal(c.status, "subscribed");
@@ -147,7 +147,7 @@ describe("publication, page publique et statistiques", () => {
     assert.equal(r.signups, 1);
     assert.equal(r.conversion, 100, "1 inscription pour 1 visiteur unique (tous les essais viennent du même poste, même navigateur, même jour)");
     // Robot (champ piège) : faux succès, rien d'enregistré
-    await v.post(`/p/${slug}/inscription`, { email: "robot@ex.fr", consent: "1", website: "http://spam" }, { headers: UA });
+    await v.post(`/p/${slug}/inscription`, { ft: srv.formToken(), email: "robot@ex.fr", consent: "1", website: "http://spam" }, { headers: UA });
     assert.equal(db.prepare("SELECT COUNT(*) n FROM mk_contacts WHERE email = 'robot@ex.fr'").get().n, 0);
   });
 

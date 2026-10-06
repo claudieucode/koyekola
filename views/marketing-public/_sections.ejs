@@ -70,7 +70,7 @@
       <% } else { %>
         <% if (s.intro) { %><p><%= s.intro %></p><% } %>
         <% if (error) { %><p class="lp-error" role="alert"><%= error %></p><% } %>
-        <form method="post" action="/p/<%= page.slug %>/inscription" novalidate><input type="hidden" name="tz" data-tz>
+        <form method="post" action="/p/<%= page.slug %>/inscription" novalidate<%- form.fileField && form.fileField.enabled ? ' enctype="multipart/form-data"' : "" %>><input type="hidden" name="tz" data-tz>
           <%- include("_signup-fields", { form, fieldCatalog, propertyDefs, values, prefix: "lp" + i, autofocus: false }) %>
           <button type="submit" class="lp-btn lp-btn-block"<%= preview ? " disabled" : "" %>>S'inscrire</button>
         </form>

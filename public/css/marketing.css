@@ -1801,3 +1801,10 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-sd-caption { font-size: var(--kw-caption-size); line-height: var(--kw-caption-lh); color: var(--kw-muted); }
 .mk-sd-card { max-width: 360px; padding: var(--kw-space-md); background: var(--kw-surface); border: var(--kw-border); border-radius: var(--kw-radius-card); box-shadow: var(--kw-shadow-card); }
 .mk-sd-btn { display: inline-flex; align-items: center; min-height: var(--kw-button-height); padding: 0 var(--kw-space-md); background: var(--kw-primary); color: var(--kw-on-primary); border-radius: var(--kw-radius-button); box-shadow: var(--kw-shadow-button); font-size: var(--kw-button-size); font-weight: var(--kw-button-weight); }
+
+/* Formulaires : options par champ (obligatoire, affichage, condition) */
+.mk-fs-list { display: grid; gap: 12px; }
+.mk-fs-row { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--mk-border); border-radius: var(--mk-r); }
+.mk-fs-name { margin: 0; overflow-wrap: anywhere; }
+.mk-fs-row .field-group { margin: 0; }
+.mk-fs-cond { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }

@@ -185,3 +185,9 @@
 .lp-site .lp-course, .lp-site .lp-signup { border-radius: var(--kw-radius-card); box-shadow: var(--kw-shadow-card); }
 .lp-site .lp-figure img, .lp-site .lp-hero-img { border-radius: var(--kw-radius-lg); }
 .lp-site .lp-figure figcaption { font-size: var(--kw-caption-size); color: var(--kw-muted); opacity: 1; }
+
+/* Formulaires d'inscription : champ conditionnel masqué, marque « obligatoire », groupe de boutons radio */
+[data-show-if][hidden] { display: none; }
+.req-mark { color: #b42318; font-weight: 700; }
+.radio-group { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; }
+.radio-group legend { padding: 0; margin: 0 0 6px; font-weight: 600; }

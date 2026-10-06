@@ -37,7 +37,7 @@ describe("page publique d'un formulaire", () => {
 
   test("soumission sans cocher la case de consentement : refusée (revérifié côté serveur, pas seulement par le navigateur)", async () => {
     const before = one("SELECT COUNT(*) n FROM mk_contacts").n;
-    const res = await new Client(srv.base).post(`/f/${slug}`, { email: "sans-case@ex.fr" });
+    const res = await new Client(srv.base).post(`/f/${slug}`, { ft: srv.formToken(), email: "sans-case@ex.fr" });
     assert.equal(res.status, 400);
     assert.match(res.text, /Cochez la case/);
     assert.equal(one("SELECT COUNT(*) n FROM mk_contacts").n, before, "aucun contact ne doit être créé sans consentement coché");
@@ -45,7 +45,7 @@ describe("page publique d'un formulaire", () => {
 
   test("soumission complète : contact créé, redirection vers la page de remerciement", async () => {
     const c = new Client(srv.base);
-    const res = await c.post(`/f/${slug}`, { email: "visiteur@ex.fr", consent: "1" });
+    const res = await c.post(`/f/${slug}`, { ft: srv.formToken(), email: "visiteur@ex.fr", consent: "1" });
     assert.equal(res.status, 302);
     assert.match(res.location, new RegExp(`/f/${slug}\\?envoye=1`));
     const contact = one("SELECT status FROM mk_contacts WHERE email = 'visiteur@ex.fr'");
@@ -64,7 +64,7 @@ describe("page publique d'un formulaire", () => {
 
   test("champ piège rempli (robot) : faux succès silencieux, aucun contact créé", async () => {
     const before = one("SELECT COUNT(*) n FROM mk_contacts").n;
-    const res = await new Client(srv.base).post(`/f/${slug}`, { email: "robot@spam.io", consent: "1", website: "http://spam.io" });
+    const res = await new Client(srv.base).post(`/f/${slug}`, { ft: srv.formToken(), email: "robot@spam.io", consent: "1", website: "http://spam.io" });
     assert.equal(res.status, 302); // redirige comme un succès, pour ne pas renseigner le robot
     assert.equal(one("SELECT COUNT(*) n FROM mk_contacts").n, before);
   });
@@ -78,7 +78,7 @@ describe("page publique d'un formulaire", () => {
 
   test("plafond : 5 soumissions par heure et par IP, la 6e est refusée", async () => {
     let last;
-    for (let i = 0; i < 6; i++) last = await new Client(srv.base).post(`/f/${slug}`, { email: `plafond${i}@ex.fr`, consent: "1" });
+    for (let i = 0; i < 6; i++) last = await new Client(srv.base).post(`/f/${slug}`, { ft: srv.formToken(), email: `plafond${i}@ex.fr`, consent: "1" });
     assert.equal(last.status, 429);
   });
 });

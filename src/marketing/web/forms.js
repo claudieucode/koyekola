@@ -7,6 +7,16 @@ const { listTags } = require("../audience/tags");
 const { attempt, need, flashError } = require("./kit");
 const { MarketingError } = require("../errors");
 
+// Formulaire de configuration → réglages par champ (la validation complète est faite par forms/fields.js)
+function fieldSettingsFromBody(fs) {
+  const out = {};
+  for (const [key, v] of Object.entries(fs && typeof fs === "object" ? fs : {})) {
+    if (!v || typeof v !== "object") continue;
+    out[key] = { required: v.required === "1", display: v.display || undefined, showIf: v.field ? { field: v.field, op: v.op, value: v.value } : undefined };
+  }
+  return out;
+}
+
 module.exports = ({ db }) => {
   const router = express.Router();
 
@@ -31,6 +41,7 @@ module.exports = ({ db }) => {
       res.render("marketing/form", {
         title: item.name, active: "forms", item, fieldCatalog: forms.FIELD_CATALOG, lists: listListsWithStats(req.mk.ctx), baseUrl: process.env.SITE_URL || "",
         popupTriggers: forms.POPUP_TRIGGERS, properties: listProperties(req.mk.ctx), existingTags: listTags(req.mk.ctx),
+        defs: forms.propertyFieldDefs(req.mk.ctx.db, req.mk.ctx.organizationId, item), OPS: require("../forms/fields").OPS, ACCEPT: require("../forms/fields").ACCEPT,
       });
     } catch (error) {
       if (error instanceof MarketingError) return res.status(404).render("error", { message: error.message });
@@ -50,6 +61,9 @@ module.exports = ({ db }) => {
         propertyFields, tags: req.body.tags ?? "", redirectUrl: req.body.redirectUrl ?? "",
         doubleOptin: req.body.doubleOptinShown ? req.body.doubleOptin === "1" : undefined, // case absente du formulaire envoyé = inchangé
         smsConsentText: req.body.smsConsentText, // absent (ancien envoi) = inchangé
+        // Options par champ (« fs[<champ>][…] ») et fichier joint (« file[…] ») : absents (ancien envoi) = inchangés
+        fieldSettings: req.body.fsShown ? fieldSettingsFromBody(req.body.fs) : undefined,
+        fileField: req.body.fileShown ? (req.body.file || {}) : undefined,
       });
       req.session.mkFlash = { type: "ok", text: "Formulaire enregistré." };
       res.redirect(`/marketing/formulaires/${id}`);

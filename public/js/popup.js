@@ -36,22 +36,43 @@
     return esc(value).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
-  // Champs standard (texte) et propriétés personnalisées (type : text, number, date, boolean, select), comme la page /f/
-  function fieldsHtml(fields) {
+  // Champs standard et propriétés personnalisées (text, number, date, boolean, select), avec les mêmes réglages que la
+  // page /f/ : obligatoire, affichage (boutons radio, zone de texte), condition d'affichage (revérifiée par le serveur)
+  function fieldsHtml(fields, settings) {
+    settings = settings || {};
     return (fields || [])
       .map(function (f) {
         var name = escAttr(f.key);
+        var s = settings[f.key] || {};
+        var req = s.required ? " required" : "";
+        var star = s.required ? ' <span class="req-mark" aria-hidden="true">*</span>' : "";
+        var cond = s.showIf ? ' data-show-if="' + escAttr(JSON.stringify(s.showIf)) + '"' : "";
         if (f.type === "boolean") {
-          return '<label class="checkbox-row"><input type="checkbox" name="' + name + '" value="oui"> ' + esc(f.label) + "</label>";
+          return '<label class="checkbox-row"' + cond + '><input type="checkbox" name="' + name + '" value="oui"' + req + "> " + esc(f.label) + star + "</label>";
+        }
+        if (f.type === "select" && s.display === "radio") {
+          return '<fieldset class="field-group radio-group"' + cond + "><legend>" + esc(f.label) + star + "</legend>" + (f.options || []).map(function (o, k) { return '<label class="checkbox-row"><input type="radio" name="' + name + '" value="' + escAttr(o) + '"' + (k === 0 ? req : "") + "> " + esc(o) + "</label>"; }).join("") + "</fieldset>";
         }
         if (f.type === "select") {
           var options = (f.options || []).map(function (o) { return '<option value="' + escAttr(o) + '">' + esc(o) + "</option>"; }).join("");
-          return '<div class="field-group"><label>' + esc(f.label) + '<select name="' + name + '"><option value="">—</option>' + options + "</select></label></div>";
+          return '<div class="field-group"' + cond + "><label>" + esc(f.label) + star + '<select name="' + name + '"' + req + '><option value="">—</option>' + options + "</select></label></div>";
+        }
+        if (s.display === "textarea") {
+          return '<div class="field-group"' + cond + "><label>" + esc(f.label) + star + '<textarea name="' + name + '" maxlength="500" rows="3"' + req + "></textarea></label></div>";
         }
         var type = f.type === "number" ? "number" : f.type === "date" ? "date" : "text";
-        return '<div class="field-group"><label>' + esc(f.label) + '<input type="' + type + '" name="' + name + '"' + (type === "text" ? ' maxlength="500"' : type === "number" ? ' step="any"' : "") + "></label></div>";
+        return '<div class="field-group"' + cond + "><label>" + esc(f.label) + star + '<input type="' + type + '" name="' + name + '"' + (type === "text" ? ' maxlength="500"' : type === "number" ? ' step="any"' : "") + req + "></label></div>";
       })
       .join("");
+  }
+  // Logique conditionnelle : le script commun des formulaires, chargé seulement si le pop-up en a besoin
+  function withLogic(formEl, needed) {
+    if (!needed) return;
+    if (window.KolakisaFormLogic) { window.KolakisaFormLogic.bind(formEl); return; }
+    var sc = document.createElement("script");
+    sc.src = "/js/form-logic.js";
+    sc.onload = function () { if (window.KolakisaFormLogic) window.KolakisaFormLogic.bind(formEl); };
+    document.head.appendChild(sc);
   }
 
   function show(popup, key) {
@@ -67,9 +88,11 @@
       '<div class="mk-popup-error" hidden></div>' +
       '<form class="mk-popup-form" novalidate>' +
       '<div class="hp-field" aria-hidden="true"><label>Ne pas remplir<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>' +
-      '<input type="hidden" name="tz" value="' + esc(browserTimeZone()) + '">' +
+      '<input type="hidden" name="tz" value="' + escAttr(browserTimeZone()) + '">' +
+      '<input type="hidden" name="ft" value="' + escAttr(popup.ft || "") + '">' +
+      '<input type="hidden" name="page" value="' + escAttr(location.pathname) + '">' +
       '<div class="field-group"><label>Adresse e-mail<input type="email" name="email" required></label></div>' +
-      fieldsHtml(popup.fields) +
+      fieldsHtml(popup.fields, popup.fieldSettings) +
       '<label class="checkbox-row optin-row"><input type="checkbox" name="consent" value="1" required> ' + esc(popup.consentText) + "</label>" +
       (popup.smsConsentText
         ? (popup.smsPhoneField ? '<div class="field-group"><label>Numéro de mobile (pour les SMS)<input type="tel" name="sms_phone" maxlength="40" autocomplete="tel"></label></div>' : "") +
@@ -100,6 +123,7 @@
 
     var formEl = overlay.querySelector(".mk-popup-form");
     var errorEl = overlay.querySelector(".mk-popup-error");
+    withLogic(formEl, Object.keys(popup.fieldSettings || {}).some(function (k) { return popup.fieldSettings[k] && popup.fieldSettings[k].showIf; }));
     formEl.querySelector('input[name="email"]').focus();
     formEl.addEventListener("submit", function (e) {
       e.preventDefault();

@@ -150,7 +150,18 @@ module.exports = ({ db }) => {
       summary: audience.contactSummary(ctx, contact.id), timeline: audience.contactTimeline(ctx, contact.id, { limit: 50 }),
       // Fuseau réellement utilisé pour l'envoi à l'heure locale, et d'où il vient (contact, compte, pays, défaut)
       zone: sendtime.contactZones(ctx, [contact.id])[contact.id], zoneBasis: sendtime.BASIS_LABELS, timeZones: sendtime.timeZoneList(),
+      files: require("../forms").contactFiles(ctx, contact.id),
     });
+  });
+  // Fichier envoyé par un formulaire : uniquement pour l'équipe (droit de lecture des contacts), jamais mis en cache,
+  // téléchargé (jamais affiché dans la page : un fichier envoyé par un inconnu n'est jamais interprété par le navigateur)
+  router.get("/contacts/:id/fichiers/:fileId", need("contacts.read"), (req, res) => {
+    const contact = loadContact(req, res);
+    if (!contact) return;
+    const file = /^\d{1,12}$/.test(req.params.fileId) ? require("../forms").formFile(req.mk.ctx, Number(req.params.fileId)) : null;
+    if (!file || file.contact_id !== contact.id) return res.status(404).render("error", { message: "Fichier introuvable." });
+    res.set({ "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'; sandbox" });
+    res.download(file.abs, file.original_name, (error) => { if (error && !res.headersSent) res.status(404).render("error", { message: "Fichier absent du serveur." }); });
   });
 
   router.post("/contacts/:id", need("contacts.write"), (req, res, next) => {
