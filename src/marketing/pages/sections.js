@@ -8,6 +8,7 @@ const crypto = require("crypto");
 const { MarketingError } = require("../errors");
 const { getCourse } = require("../bridge/catalog");
 const { parseVideoUrl } = require("../../utils/video");
+const nodes = require("./nodes");
 
 const MAX_SECTIONS = 30;
 const bad = (message) => new MarketingError("invalid_field", message);
@@ -22,11 +23,13 @@ function linkUrl(v, label) {
   if (/^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(url)) return url;
   throw bad(`${label} : l'adresse doit commencer par https:// ou être une page du site (« /catalogue »).`);
 }
-// Image : https://… ou fichier de la médiathèque marketing (/uploads/marketing/…)
+// Image : https://…, fichier de la médiathèque marketing (/uploads/marketing/…) ou de la médiathèque du site
+// (/uploads/thumbnails/…, images publiques du blog et du Centre de gestion)
 function imageUrl(v, label) {
   const url = line(v, 2000);
   if (!url) return "";
   if (/^\/uploads\/marketing\/\d+\/[A-Za-z0-9._-]+$/.test(url)) return url;
+  if (/^\/uploads\/thumbnails\/[A-Za-z0-9._-]+$/.test(url)) return url;
   if (/^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(url)) return url;
   throw bad(`${label} : l'image doit venir de la médiathèque ou d'une adresse https://.`);
 }
@@ -157,6 +160,21 @@ const TYPES = {
   },
   // Composant réutilisable inséré « synchronisé » : seule la référence est enregistrée ; l'affichage reprend toujours
   // la dernière version du composant (voir components.js)
+  // Section libre (Page Builder) : un arbre d'éléments imbriqués (conteneurs, colonnes, titres, boutons…), voir nodes.js
+  layout: {
+    label: "Section libre",
+    builderOnly: true, // ajoutée par le Page Builder (palette d'éléments), pas par la liste des types de section
+    normalize(ctx, raw, at, counter) {
+      const h = { ctx, imageUrl, linkUrl, iconNames: nodes.iconNames() };
+      const kids = Array.isArray(raw.children) ? raw.children : [];
+      try {
+        return { type: "layout", children: kids.map((c, i) => nodes.normalizeNode(c, `${at} › élément ${i + 1}`, h, 1, counter || { n: 0, ids: new Set() })) };
+      } catch (error) {
+        if (error instanceof MarketingError) throw error;
+        throw bad(error.message);
+      }
+    },
+  },
   component: {
     label: "Composant réutilisable",
     builderOnly: true,
@@ -181,7 +199,7 @@ const STYLE = {
   align: ["left", "center", "right"],
   width: ["narrow", "normal", "wide", "full"],
 };
-function common(raw) {
+function common(raw, at = "Section") {
   const out = {};
   if (raw.id !== undefined) {
     if (!SECTION_ID.test(String(raw.id))) throw bad("Identifiant de section invalide.");
@@ -200,22 +218,35 @@ function common(raw) {
     for (const [k, allowed] of Object.entries(STYLE)) if (allowed.includes(raw.style[k])) style[k] = raw.style[k];
     if (Object.keys(style).length) out.style = style;
   }
+  // Styles visuels libres mais validés (Page Builder) : par écran et par état, sur toute section
+  if (raw.styles || raw.states) {
+    try {
+      const st = nodes.normalizeStyles(raw.styles, raw.states, at, { imageUrl, linkUrl });
+      if (st.styles) out.styles = st.styles;
+      if (st.states) out.states = st.states;
+    } catch (error) {
+      if (error instanceof MarketingError) throw error;
+      throw bad(error.message);
+    }
+  }
   return out;
 }
 
-function normalizeSection(ctx, raw, i) {
+function normalizeSection(ctx, raw, i, counter) {
   if (!raw || typeof raw !== "object") throw bad(`Section ${i + 1} : invalide.`);
   const def = Object.hasOwn(TYPES, raw.type) ? TYPES[raw.type] : null;
   if (!def) throw bad(`Section ${i + 1} : type inconnu.`);
-  return { ...def.normalize(ctx, raw, `Section ${i + 1}`), ...common(raw) };
+  return { ...def.normalize(ctx, raw, `Section ${i + 1}`, counter), ...common(raw, `Section ${i + 1}`) };
 }
 
 function normalizeSections(ctx, list) {
   const raw = Array.isArray(list) ? list : [];
   if (raw.length > MAX_SECTIONS) throw bad(`Trop de sections (${MAX_SECTIONS} au plus).`);
-  const out = raw.map((s, i) => normalizeSection(ctx, s, i));
+  const counter = { n: 0, ids: new Set() }; // éléments des sections libres : nombre total et identifiants uniques
+  const out = raw.map((s, i) => normalizeSection(ctx, s, i, counter));
   const ids = out.map((s) => s.id).filter(Boolean);
   if (new Set(ids).size !== ids.length) throw bad("Deux sections portent le même identifiant.");
+  if (ids.some((id) => counter.ids.has(id))) throw bad("Une section et un élément portent le même identifiant.");
   return out;
 }
 

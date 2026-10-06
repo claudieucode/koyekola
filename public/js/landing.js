@@ -6,3 +6,61 @@
     Array.prototype.forEach.call(document.querySelectorAll("input[data-tz]"), function (i) { i.value = tz; });
   } catch (e) { /* fuseau inconnu : rien n'est envoyé */ }
 })();
+
+// Sections libres : onglets (sans script, tous les panneaux restent lisibles l'un sous l'autre) et comptes à rebours
+(function () {
+  "use strict";
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-tabs]"), function (box, k) {
+    var panels = box.querySelectorAll(".kw-tab-panel");
+    if (panels.length < 2) return;
+    var list = document.createElement("div");
+    list.className = "kw-tab-list";
+    list.setAttribute("role", "tablist");
+    var buttons = [];
+    var show = function (i, focus) {
+      buttons.forEach(function (b, j) { b.setAttribute("aria-selected", i === j ? "true" : "false"); b.tabIndex = i === j ? 0 : -1; panels[j].hidden = i !== j; });
+      if (focus) buttons[i].focus();
+    };
+    Array.prototype.forEach.call(panels, function (panel, i) {
+      var id = "kw-tabs-" + k + "-" + i;
+      panel.id = id + "-panel";
+      panel.setAttribute("role", "tabpanel");
+      panel.setAttribute("aria-labelledby", id);
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "kw-tab-btn";
+      b.id = id;
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-controls", panel.id);
+      b.textContent = panel.getAttribute("data-kw-tab-title") || "";
+      b.addEventListener("click", function () { show(i); });
+      b.addEventListener("keydown", function (e) {
+        if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); show((i + (e.key === "ArrowRight" ? 1 : -1) + panels.length) % panels.length, true); }
+      });
+      buttons.push(b);
+      list.appendChild(b);
+    });
+    box.insertBefore(list, box.firstChild);
+    box.classList.add("is-enhanced");
+    show(0);
+  });
+  var LABELS = [["jours", 86400], ["heures", 3600], ["minutes", 60], ["secondes", 1]];
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-countdown]"), function (box) {
+    var end = Date.parse(box.getAttribute("data-kw-countdown"));
+    if (!isFinite(end)) return;
+    var render = function () {
+      var left = Math.max(0, Math.floor((end - Date.now()) / 1000));
+      box.textContent = "";
+      if (!left) { var p = document.createElement("p"); p.textContent = box.getAttribute("data-kw-end-text") || ""; box.appendChild(p); return false; }
+      LABELS.forEach(function (l) {
+        var v = Math.floor(left / l[1]); left -= v * l[1];
+        var u = document.createElement("span"); u.className = "kw-countdown-unit";
+        var n = document.createElement("strong"); n.textContent = String(v);
+        u.appendChild(n); u.appendChild(document.createTextNode(l[0])); box.appendChild(u);
+      });
+      return true;
+    };
+    box.setAttribute("role", "timer");
+    if (render()) { var t = setInterval(function () { if (!render()) clearInterval(t); }, 1000); }
+  });
+})();

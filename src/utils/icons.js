@@ -176,4 +176,4 @@ function starRow(rating, size = 16) {
   return out;
 }
 
-module.exports = { icon, starRow };
+module.exports = { icon, starRow, ICONS };

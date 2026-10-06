@@ -1,0 +1,59 @@
+<%#
+  Un élément d'une section libre (Page Builder), rendu de façon récursive. Mêmes règles que _sections.ejs : aucune
+  valeur libre dans la page (le style vient de la classe .kw-n-<id>, générée à partir de valeurs validées), liens comptés
+  par href() dans l'ordre d'affichage (même ordre que landing.linksOf). En mode éditeur, chaque élément porte son
+  identifiant (sélection, glisser-déposer, édition directe) et les éléments masqués restent visibles en transparence.
+%>
+<% const p = n.props || {}; const cls = ["kw-node", `kw-${n.type}`, `kw-n-${n.id}`, n.hidden ? "is-hidden" : "", n.locked ? "is-locked" : ""].filter(Boolean).join(" ");
+   const attrs = isBuilder ? ` data-node-id="${n.id}" data-node-type="${n.type}"` : "";
+   const kids = () => (n.children || []).forEach((c) => { if (c.hidden && !isBuilder) return; %><%- include("_node", { n: c, isBuilder, href, depth: depth + 1 }) %><% }); %>
+<% if (["container", "columns", "column", "grid", "stack", "group"].includes(n.type)) { %>
+  <div class="<%= cls %>"<%- attrs %>><% if (isBuilder && !(n.children || []).length) { %><p class="kw-empty">Déposez des éléments ici</p><% } %><% kids() %></div>
+<% } else if (n.type === "spacer") { %>
+  <div class="<%= cls %> <%= `kw-spacer-${p.size}` %>"<%- attrs %> aria-hidden="true"></div>
+<% } else if (n.type === "divider") { %>
+  <hr class="<%= cls %>"<%- attrs %>>
+<% } else if (n.type === "heading") { %>
+  <h<%= p.level %> class="<%= cls %>"<%- attrs %>><%= p.text %></h<%= p.level %>>
+<% } else if (n.type === "text") { %>
+  <div class="<%= cls %>"<%- attrs %>><%- p.html %></div>
+<% } else if (n.type === "list") { const tag = p.ordered ? "ol" : "ul"; %>
+  <<%= tag %> class="<%= cls %>"<%- attrs %>><% p.items.forEach((it) => { %><li><%= it %></li><% }) %></<%= tag %>>
+<% } else if (n.type === "quote") { %>
+  <blockquote class="<%= cls %>"<%- attrs %>><p><%= p.text %></p><% if (p.author) { %><footer>— <%= p.author %></footer><% } %></blockquote>
+<% } else if (n.type === "code") { %>
+  <pre class="<%= cls %>"<%- attrs %>><code><%= p.text %></code></pre>
+<% } else if (n.type === "image") { %>
+  <figure class="<%= cls %>"<%- attrs %>><% if (p.link) { %><a href="<%= href(p.link) %>"><img src="<%= p.src %>" alt="<%= p.alt %>" loading="lazy" decoding="async"></a><% } else { %><img src="<%= p.src %>" alt="<%= p.alt %>" loading="lazy" decoding="async"><% } %><% if (p.caption) { %><figcaption><%= p.caption %></figcaption><% } %></figure>
+<% } else if (n.type === "gallery") { %>
+  <div class="<%= cls %>"<%- attrs %>><% p.images.forEach((im) => { %><img src="<%= im.src %>" alt="<%= im.alt %>" loading="lazy" decoding="async"><% }) %></div>
+<% } else if (n.type === "video") { const v = parseVideoUrl(p.url); %>
+  <div class="<%= cls %>"<%- attrs %>><% if (v && v.kind === "file") { %><video src="<%= v.src %>" controls preload="metadata" title="<%= p.title %>"></video>
+    <% } else if (v) { %><div class="lp-video-frame"><iframe src="<%= v.src %>" title="<%= p.title %>" loading="lazy" allow="encrypted-media; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><% } %></div>
+<% } else if (n.type === "audio") { %>
+  <figure class="<%= cls %>"<%- attrs %>><% if (p.title) { %><figcaption><%= p.title %></figcaption><% } %><audio src="<%= p.src %>" controls preload="none"></audio></figure>
+<% } else if (n.type === "button") { %>
+  <a class="<%= cls %> <%= `kw-btn-${p.variant}` %>" href="<%= href(p.url) %>"<%- p.newTab ? ' target="_blank" rel="noopener noreferrer"' : "" %><%- attrs %>><%= p.label %></a>
+<% } else if (n.type === "link") { %>
+  <a class="<%= cls %>" href="<%= href(p.url) %>"<%- p.newTab ? ' target="_blank" rel="noopener noreferrer"' : "" %><%- attrs %>><%= p.label %></a>
+<% } else if (n.type === "accordion") { %>
+  <div class="<%= cls %>"<%- attrs %>><% p.items.forEach((it) => { %><details class="lp-faq-item"><summary><%= it.q %></summary><div class="lp-faq-answer"><%- renderMarkdown(it.a) %></div></details><% }) %></div>
+<% } else if (n.type === "tabs") { %>
+  <div class="<%= cls %>" data-kw-tabs<%- attrs %>>
+    <% p.items.forEach((it, k) => { %><section class="kw-tab-panel" data-kw-tab-title="<%= it.title %>"><h3 class="kw-tab-title"><%= it.title %></h3><%- renderMarkdown(it.text) %></section><% }) %>
+  </div>
+<% } else if (n.type === "table") { %>
+  <div class="<%= cls %>"<%- attrs %>><table><% if (p.caption) { %><caption><%= p.caption %></caption><% } %>
+    <% p.rows.forEach((r, k) => { const head = p.header && k === 0; %><% if (head) { %><thead><% } else if (k === (p.header ? 1 : 0)) { %><tbody><% } %><tr><% r.forEach((c) => { %><% if (head) { %><th scope="col"><%= c %></th><% } else { %><td><%= c %></td><% } %><% }) %></tr><% if (head) { %></thead><% } %><% }) %><% if (p.rows.length > (p.header ? 1 : 0)) { %></tbody><% } %></table></div>
+<% } else if (n.type === "countdown") { const end = new Date(p.until); %>
+  <div class="<%= cls %>" data-kw-countdown="<%= p.until %>" data-kw-end-text="<%= p.endText %>"<%- attrs %>><p class="kw-countdown-fallback">Jusqu'au <%= end.toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }) %> (heure de Paris)</p></div>
+<% } else if (n.type === "course" && p.course) { %>
+  <article class="<%= cls %> lp-course<%= p.course.image ? "" : " is-text" %>"<%- attrs %>>
+    <% if (p.course.image) { %><img src="<%= p.course.image %>" alt="" loading="lazy" decoding="async"><% } %>
+    <div class="lp-course-body"><h3><%= p.course.title %></h3><% if (p.course.subtitle) { %><p><%= p.course.subtitle %></p><% } %>
+      <p class="lp-price"><%= p.course.priceCents ? (p.course.priceCents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €" : "Gratuit" %></p>
+      <a class="lp-btn" href="<%= href(p.course.url) %>"><%= p.cta %></a></div>
+  </article>
+<% } else if (n.type === "icon") { %>
+  <span class="<%= cls %>"<% if (p.label) { %> role="img" aria-label="<%= p.label %>"<% } else { %> aria-hidden="true"<% } %><%- attrs %>><%- icon(p.name, { size: Number(p.size) }) %></span>
+<% } %>

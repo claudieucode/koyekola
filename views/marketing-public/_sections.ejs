@@ -9,10 +9,13 @@
 <% page.sections.forEach((s, i) => {
      if (s.hidden && !isBuilder) return;
      const st = s.style || {};
-     const cls = ["lp-block", `lp-block-${s.type}`, st.padding ? `lp-pad-${st.padding}` : "", st.background && st.background !== "default" ? `lp-bg-${st.background}` : "", st.align ? `lp-al-${st.align}` : "", st.width && st.width !== "normal" ? `lp-w-${st.width}` : "", ...(s.hideOn || []).map((b) => `lp-hide-${b}`), s.hidden ? "is-hidden" : ""].filter(Boolean).join(" ");
+     const cls = ["lp-block", `lp-block-${s.type}`, (s.styles || s.states) && s.id ? `kw-n-${s.id}` : "", st.padding ? `lp-pad-${st.padding}` : "", st.background && st.background !== "default" ? `lp-bg-${st.background}` : "", st.align ? `lp-al-${st.align}` : "", st.width && st.width !== "normal" ? `lp-w-${st.width}` : "", ...(s.hideOn || []).map((b) => `lp-hide-${b}`), s.hidden ? "is-hidden" : ""].filter(Boolean).join(" ");
 %>
 <div class="<%= cls %>"<% if (isBuilder) { %> data-section-id="<%= s.id || "" %>" data-section-index="<%= i %>"<% } else if (s.id) { %> data-sid="<%= s.id %>" data-stype="<%= s.type %>"<% } %>>
-  <% if (s.type === "hero") { %>
+  <% if (s.type === "layout") { %>
+    <div class="kw-layout"><% if (isBuilder && !s.children.length) { %><p class="kw-empty">Section libre vide : déposez des éléments ici</p><% } %>
+      <% s.children.forEach((c) => { if (c.hidden && !isBuilder) return; %><%- include("_node", { n: c, isBuilder, href, depth: 1 }) %><% }) %></div>
+  <% } else if (s.type === "hero") { %>
     <header class="lp-hero">
       <% if (s.image) { %><img class="lp-hero-img" src="<%= s.image %>" alt="<%= s.imageAlt %>"<%= i > 0 ? ' loading="lazy"' : ' fetchpriority="high"' %> decoding="async"><% } %>
       <% const tag = i === firstHero ? "h1" : "h2"; %><<%= tag %>><%= s.title %></<%= tag %>>

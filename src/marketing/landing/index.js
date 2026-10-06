@@ -8,6 +8,7 @@ const crypto = require("crypto");
 const { MarketingError } = require("../errors");
 const { checkCtx, audit } = require("../audience/shared");
 const { getCourse } = require("../bridge/catalog");
+const pageNodes = require("../pages/nodes");
 // Grammaire des sections : commune à tout le moteur de pages (Site Web, Tunnels)
 const { SECTION_TYPES, normalizeSection, normalizeSections, bad, line } = require("../pages/sections");
 
@@ -130,15 +131,28 @@ function deletePage(ctx, id) {
   audit(ctx, "landing.deleted", "landing", id, {});
 }
 
-// Données d'affichage : formations relues dans le catalogue (titre, prix, image, adresse à jour)
+// Données d'affichage : formations relues dans le catalogue (titre, prix, image, adresse à jour) ; dans les sections
+// libres, texte riche assaini de nouveau et formations relues de la même façon ; CSS des éléments stylés
+const courseView = (c) => ({ title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "" });
+function nodeView(ctx, nodes) {
+  return (nodes || []).map((n) => {
+    if (n.type === "course") {
+      const c = getCourse(ctx, n.props.courseId);
+      return c ? { ...n, props: { ...n.props, course: courseView(c) } } : null; // formation dépubliée : l'élément disparaît
+    }
+    if (n.type === "text") return { ...n, props: { ...n.props, html: pageNodes.sanitizeRich(n.props.html) } };
+    return n.children ? { ...n, children: nodeView(ctx, n.children) } : n;
+  }).filter(Boolean);
+}
 function viewModel(ctx, page) {
   const sections = page.sections.map((s) => {
+    if (s.type === "layout") return { ...s, children: nodeView(ctx, s.children) };
     if (s.type !== "course") return s;
     const c = getCourse(ctx, s.courseId);
     if (!c) return null; // formation dépubliée depuis : la section disparaît (jamais un lien mort)
-    return { ...s, course: { title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "" } };
+    return { ...s, course: courseView(c) };
   }).filter(Boolean);
-  return { ...page, sections };
+  return { ...page, sections, nodeCss: pageNodes.pageCss(sections) };
 }
 // Liens cliquables d'une page AFFICHÉE (viewModel), dans l'ordre : le même calcul sert au rendu et à /p/<adresse>/clic/<n>
 function linksOf(page) {
@@ -149,6 +163,13 @@ function linksOf(page) {
     if (s.type === "cta") out.push({ section: i, label: s.buttonLabel, url: s.buttonUrl });
     if (s.type === "image" && s.link) out.push({ section: i, label: `Image : ${s.alt}`, url: s.link });
     if (s.type === "course" && s.course) out.push({ section: i, label: `Formation : ${s.course.title}`, url: s.course.url });
+    // Section libre : mêmes liens, dans l'ordre d'affichage des éléments
+    if (s.type === "layout") pageNodes.walk(s.children, (n) => {
+      if (n.type === "button") out.push({ section: i, label: n.props.label, url: n.props.url });
+      if (n.type === "link") out.push({ section: i, label: n.props.label, url: n.props.url });
+      if (n.type === "image" && n.props.link) out.push({ section: i, label: `Image : ${n.props.alt}`, url: n.props.link });
+      if (n.type === "course" && n.props.course) out.push({ section: i, label: `Formation : ${n.props.course.title}`, url: n.props.course.url });
+    });
   });
   return out;
 }
