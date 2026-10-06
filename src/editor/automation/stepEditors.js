@@ -188,7 +188,14 @@ const EDITORS = {
       const options = custom ? [[trig.event, `Événement personnalisé : ${trig.event}`], ...opts] : trig.event ? opts : [["", "Choisir un événement…", true], ...opts];
       box.appendChild(field("Se déclenche quand…", select(options, trig.event, (v) => { trig.event = v; trig.filter = {}; rerender(); }, { disabled: ctx.locked })));
       const filters = catalog[trig.event] ? catalog[trig.event].filters : [];
-      if (filters.length) box.appendChild(field(filters[0][1], text(trig.filter && trig.filter.value, (v) => { trig.filter = v ? { key: filters[0][0], value: v } : {}; }, { disabled: ctx.locked }), "Facultatif : laissez vide pour réagir à tous."));
+      const choices = filters.length && filters[0][2] && ctx.data.choices ? ctx.data.choices[filters[0][2]] : null;
+      if (choices) {
+        // Liste des vraies pages, tunnels, formulaires… (une valeur enregistrée qui n'existe plus reste visible)
+        const cur = trig.filter && trig.filter.value ? String(trig.filter.value) : "";
+        const list = [["", "Tous (aucun filtre)"], ...choices];
+        if (cur && !choices.some((c) => c[0] === cur)) list.push([cur, `Élément supprimé (n° ${cur})`]);
+        box.appendChild(field(filters[0][1], select(list, cur, (v) => { trig.filter = v ? { key: filters[0][0], value: v } : {}; }, { disabled: ctx.locked }), choices.length ? "Facultatif : « Tous » réagit à chacun." : "Aucun élément pour l'instant : le déclencheur réagira à tous."));
+      } else if (filters.length) box.appendChild(field(filters[0][1], text(trig.filter && trig.filter.value, (v) => { trig.filter = v ? { key: filters[0][0], value: v } : {}; }, { disabled: ctx.locked }), "Facultatif : laissez vide pour réagir à tous."));
       const customInput = text("", (v) => { if (v) { trig.event = v.trim(); trig.filter = {}; rerender(); } }, { maxlength: 64, placeholder: "mon_evenement.special", pattern: "[a-z][a-z0-9_.]{1,63}", event: "change", disabled: ctx.locked });
       box.appendChild(field("…ou un événement personnalisé", customInput, "Remplace le choix ci-dessus (par exemple un événement envoyé par l'API). Validé en quittant le champ."));
       if (!ctx.locked && draft.triggers.length > 1) {

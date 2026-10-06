@@ -32,12 +32,17 @@ module.exports = ({ db }) => {
     limiter.hit(req.ip);
     try {
       const body = req.body && typeof req.body === "object" ? req.body : {};
-      visitors.record(db, marketing.organizationId, { visitorId, sessionId: body.s, events: body.e, userAgent: req.get("user-agent") });
+      const result = visitors.record(db, marketing.organizationId, { visitorId, sessionId: body.s, events: body.e, userAgent: req.get("user-agent") });
       // Personne connectée : ses visites sont reliées à son contact (même adresse que son compte)
       const user = req.session && req.session.user;
       if (user) {
         const contact = db.prepare("SELECT id FROM mk_contacts WHERE organization_id = ? AND email = lower(trim(?))").get(marketing.organizationId, user.email);
         if (contact) visitors.linkVisitor(db, marketing.organizationId, visitorId, contact.id);
+      }
+      // Contact connu : ses visites de pages et d'étapes de tunnels peuvent déclencher des automatisations
+      if (result.ok && result.pageViews.length) {
+        const known = db.prepare("SELECT contact_id FROM mk_web_visitors WHERE id = ?").get(visitorId);
+        if (known && known.contact_id) require("../visitors/triggers").emitVisitEvents({ db, organizationId: marketing.organizationId, bus: marketing.bus }, { contactId: known.contact_id, sessionId: result.sessionId, pageViews: result.pageViews });
       }
     } catch (error) {
       console.error("[KOLAKISA] Suivi des visiteurs :", error.message); // jamais bloquant pour le visiteur

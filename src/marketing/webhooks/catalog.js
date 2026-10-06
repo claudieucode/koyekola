@@ -16,6 +16,9 @@ const EVENTS = {
   "tag.added": "Une étiquette est ajoutée",
   "list.member_added": "Un contact est ajouté à une liste",
   "form.submitted": "Un formulaire est envoyé",
+  "page.visited": "Un contact visite une page (Site Web, Tunnels)",
+  "funnel.step_reached": "Un contact atteint une étape d'un tunnel",
+  "funnel.completed": "Un contact atteint la dernière étape d'un tunnel",
   "contacts.imported": "Un import de contacts est terminé",
   "campaign.sent": "Une campagne est terminée",
 };

@@ -43,7 +43,7 @@ module.exports = () => {
     const used = new Set(ctx.db.prepare("SELECT s.page_id FROM mk_funnel_steps s JOIN mk_funnels t ON t.id = s.funnel_id WHERE t.status = 'active' AND s.page_id IS NOT NULL AND t.organization_id = ?").all(ctx.organizationId).map((r) => r.page_id));
     res.render("marketing/funnel", {
       title: f.name, active: "funnels", f, days, report, advice: recommendation(report, f), canWrite: req.mk.can("forms.write"),
-      STEP_TYPES: funnels.STEP_TYPES, NEXT_URL: funnels.NEXT_URL, availablePages: pages.listPages(ctx).filter((p) => !used.has(p.id)), courses: listCourses(ctx),
+      STEP_TYPES: funnels.STEP_TYPES, NEXT_URL: funnels.NEXT_URL, automations: funnels.linkedAutomations(ctx, f), canAutomate: req.mk.can("automations.write"), availablePages: pages.listPages(ctx).filter((p) => !used.has(p.id)), courses: listCourses(ctx),
     });
   });
   router.post("/tunnels/:id(\\d+)", need("forms.write"), (req, res, next) => {

@@ -260,6 +260,24 @@ function publishFunnel(ctx, id) {
   return { published, failed };
 }
 
+// Automatisations déclenchées par ce tunnel (ses étapes, son achèvement) ou par la visite d'une de ses pages
+function linkedAutomations(ctx, funnel) {
+  checkCtx(ctx);
+  const stepIds = new Set(funnel.steps.map((s) => String(s.id)));
+  const pageIds = new Set(funnel.steps.filter((s) => s.pageId).map((s) => String(s.pageId)));
+  return ctx.db.prepare("SELECT id, name, status, triggers FROM mk_automations WHERE organization_id = ? ORDER BY name COLLATE NOCASE").all(ctx.organizationId).filter((a) => {
+    let triggers = [];
+    try { triggers = JSON.parse(a.triggers || "[]"); } catch { triggers = []; }
+    return triggers.some((t) => {
+      const v = t.filter && t.filter.value !== undefined ? String(t.filter.value) : "";
+      if (t.event === "funnel.step_reached") return !v || stepIds.has(v);
+      if (t.event === "funnel.completed") return !v || v === String(funnel.id);
+      if (t.event === "page.visited") return v && pageIds.has(v);
+      return false;
+    });
+  }).map(({ id, name, status }) => ({ id, name, status }));
+}
+
 // Tunnels dont la page est une étape (affiché sur la fiche de la page)
 function funnelsOfPage(ctx, pageId) {
   checkCtx(ctx);
@@ -287,5 +305,5 @@ function nextUrlForPage(db, page) {
 
 module.exports = {
   STEP_TYPES, NEXT_URL, MAX_STEPS, getFunnel, requireFunnel, listFunnels, createFunnel, updateFunnel, archiveFunnel, restoreFunnel, duplicateFunnel,
-  addStep, renameStep, moveStep, removeStep, publishFunnel, nextUrlForPage, funnelsOfPage, stepSections,
+  addStep, renameStep, moveStep, removeStep, publishFunnel, nextUrlForPage, funnelsOfPage, linkedAutomations, stepSections,
 };

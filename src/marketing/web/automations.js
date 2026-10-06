@@ -13,6 +13,19 @@ const journeys = require("../automations/journeys");
 const { MarketingError } = require("../errors");
 const { attempt, need, safeJson } = require("./kit");
 
+// Listes proposées pour filtrer un déclencheur (identifiants en texte : c'est ainsi qu'ils sont comparés)
+function triggerChoices(ctx) {
+  const pagesList = require("../pages").listPages(ctx).map((p) => [String(p.id), `${p.name} (/p/${p.slug})`]);
+  const funnelLib = require("../funnels");
+  const funnels = funnelLib.listFunnels(ctx).map((f) => funnelLib.getFunnel(ctx, f.id));
+  return {
+    pages: pagesList,
+    funnels: funnels.map((f) => [String(f.id), f.name]),
+    funnelSteps: funnels.flatMap((f) => f.steps.map((s, i) => [String(s.id), `${f.name} — étape ${i + 1} : ${s.name}`])),
+    forms: require("../forms").listForms(ctx).map((f) => [String(f.id), f.name]),
+  };
+}
+
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 const STATUS = { draft: ["Brouillon", "badge-muted"], active: ["Actif", "badge-success"], paused: ["En pause", "badge-warning"] };
 const RUN_STATUS = { running: "en cours", completed: "terminé", exited: "sorti", failed: "en échec" };
@@ -109,6 +122,8 @@ module.exports = ({ db }) => {
       // du nœud (src/editor/automation-flow.js), sans devoir d'abord enregistrer un segment séparé.
       segmentCatalog: fieldCatalog(ctx),
       triggers: auto.TRIGGERS,
+      // Choix des filtres de déclencheur : vraies pages, étapes de tunnels, tunnels et formulaires
+      choices: triggerChoices(ctx),
       // Étape « Envoyer un SMS » : expéditeur, limite facturée et heures de silence réels (réglages SMS), pour le compteur
       sms: (({ provider, sender, maxSegments, quietStart, quietEnd }) => ({ provider, sender, maxSegments, quietStart, quietEnd, baseUrl: process.env.SITE_URL || "" }))(getSmsConfig(ctx)),
     };
