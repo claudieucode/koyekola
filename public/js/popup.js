@@ -77,6 +77,9 @@
 
   function show(popup, key) {
     if (document.getElementById("mk-popup-overlay")) return;
+    // Jamais par-dessus le bandeau de consentement : le pop-up attend que la personne ait fait son choix
+    var consentBanner = document.getElementById("kw-consent");
+    if (consentBanner && !consentBanner.hidden) { setTimeout(function () { show(popup, key); }, 1500); return; }
     var overlay = document.createElement("div");
     overlay.id = "mk-popup-overlay";
     overlay.className = "mk-popup-overlay";
@@ -104,6 +107,9 @@
       "</div>";
     document.body.appendChild(overlay);
     document.body.classList.add("modal-open");
+    // Suivi des visiteurs (seulement après leur accord : voir public/js/visitor.js)
+    var trackEvent = function (type) { try { document.dispatchEvent(new CustomEvent("kw:track", { detail: { type: type, target: popup.name } })); } catch (e) { /* navigateur ancien */ } };
+    trackEvent("popup_view");
 
     var closed = false;
     function close() {
@@ -113,6 +119,7 @@
       document.body.classList.remove("modal-open");
       document.removeEventListener("keydown", onKeydown);
       remember(key); // fermer compte comme « vu » : ne pas revenir tout de suite avec le même pop-up
+      trackEvent("popup_close");
     }
     function onKeydown(e) {
       if (e.key === "Escape") close();
@@ -206,6 +213,11 @@
     if ((r.minPages || 1) > v.pages) return false;
     if (!contains(v.utmSource, r.utmSource) || !contains(v.utmCampaign, r.utmCampaign) || !contains(v.referrer, r.referrer)) return false;
     try { if (r.hideIfSubscribed && localStorage.getItem("mk_subscribed_" + popup.slug)) return false; } catch (e) { /* rien */ }
+    // Nouveau / ancien visiteur : connu seulement si la personne a accepté le suivi ; sinon la règle n'est pas remplie
+    if (r.visitors) {
+      var returning = window.KolakisaVisitor ? window.KolakisaVisitor.isReturning() : null;
+      if (returning === null || (r.visitors === "returning") !== returning) return false;
+    }
     return !alreadyDismissedRecently("mk_popup_" + popup.slug, popup.frequencyDays || 7);
   }
 

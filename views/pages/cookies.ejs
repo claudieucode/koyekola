@@ -1,0 +1,19 @@
+<%- include("../partials/header", { title: "Cookies et mesure d'audience" }) %>
+
+  <div class="container page-content">
+    <%- include("../partials/breadcrumb", { crumbs }) %>
+    <h1>Cookies et mesure d'audience</h1>
+    <p>Ce site vous demande votre accord avant toute mesure d'audience. Sans accord, rien n'est suivi : seules des statistiques anonymes du jour sont tenues (nombre de visites d'une page, sans cookie ni adresse IP conservée).</p>
+    <h2>Avec votre accord</h2>
+    <ul>
+      <li>Un identifiant aléatoire est gardé dans votre navigateur (cookie <code>kw_vid</code>, 13 mois au plus) ; votre choix lui-même est gardé 6 mois (cookie <code>kw_consent</code>).</li>
+      <li>Nous enregistrons : les pages consultées (leur chemin, jamais le texte que vous saisissez), les boutons utilisés, les sections lues, les formulaires et fenêtres d'inscription affichés, les vidéos lancées, les fichiers téléchargés, le site d'où vous venez et l'appareil (mobile, tablette, ordinateur).</li>
+      <li>Si vous vous inscrivez ou vous connectez, ces visites sont reliées à votre fiche pour vous proposer des contenus adaptés. Elles sont effacées si vous supprimez votre compte ou demandez l'effacement de vos données, et automatiquement au bout de 13 mois.</li>
+      <li>Ces données ne sont ni vendues ni partagées.</li>
+    </ul>
+    <h2>Changer d'avis</h2>
+    <p>Votre choix est modifiable à tout moment : <a href="/cookies" data-kw-consent-open>ouvrir le bandeau de choix</a>. Un refus efface l'identifiant de votre navigateur.</p>
+    <p class="page-cta">Une question ? <a href="/contact">Contactez-nous</a>.</p>
+  </div>
+
+<%- include("../partials/footer") %>

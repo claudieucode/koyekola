@@ -1202,6 +1202,7 @@ label:has(> input[type=checkbox]) { display: inline-flex; align-items: center; g
 .footer-col a { color: #c3d6e5; display: block; padding: 10px 0; text-decoration: none; transition: color 0.15s ease, transform 0.15s var(--ease); }
 .footer-col a:hover { color: var(--sky); transform: translateX(3px); }
 .footer-bottom { border-top: 1px solid rgba(125, 211, 252, 0.2); padding-block: 20px; font-size: 0.82rem; color: #a9bdcd; }
+.footer-bottom a { color: inherit; margin-left: 14px; }
 
 @media (max-width: 760px) {
   .footer-grid { grid-template-columns: 1fr 1fr; }
@@ -2165,3 +2166,14 @@ a.post-card-category:hover { text-decoration: underline; }
 .req-mark { color: #b42318; font-weight: 700; }
 .radio-group { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; }
 .radio-group legend { padding: 0; margin: 0 0 6px; font-weight: 600; }
+
+/* Bandeau de consentement (mesure d'audience) : en bas de l'écran, « Accepter » et « Refuser » de même poids */
+.kw-consent { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: var(--z-toast); max-width: 640px; margin-inline: auto; padding: 16px 18px; background: #fff; color: #10222f; border: 1px solid rgba(16, 34, 47, 0.15); border-radius: 14px; box-shadow: 0 10px 32px rgba(11, 42, 64, 0.18); font-size: 15px; line-height: 1.5; }
+.kw-consent[hidden] { display: none; }
+.kw-consent-title { margin: 0 0 4px; font-weight: 700; font-size: 16px; }
+.kw-consent-text { margin: 0 0 12px; overflow-wrap: anywhere; }
+.kw-consent-text a { color: inherit; text-decoration: underline; }
+.kw-consent-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.kw-consent-btn { flex: 1 1 140px; min-height: 44px; padding: 10px 16px; border: 1.5px solid #0b2a40; border-radius: 10px; background: #fff; color: #0b2a40; font: inherit; font-weight: 700; cursor: pointer; }
+.kw-consent-btn:hover { background: #eef4f8; }
+.kw-consent-btn:focus-visible { outline: 3px solid #0277b6; outline-offset: 2px; }

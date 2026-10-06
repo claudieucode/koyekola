@@ -7,6 +7,8 @@ const { sendSubscriptionConfirmation } = require("../../utils/mailer");
 const antispam = require("../forms/antispam");
 const fieldRules = require("../forms/fields");
 const formUpload = require("./formUpload");
+const visitorsLib = require("../visitors");
+const { consentedVisitor } = require("./visitorsPublic");
 
 const PENDING_TEXT = "Merci ! Un e-mail de confirmation vient de vous être envoyé : cliquez sur le lien qu'il contient pour finaliser votre inscription (pensez aux courriers indésirables).";
 
@@ -50,7 +52,7 @@ module.exports = ({ db }) => {
       trigger: popup.popupTrigger, triggerValue: popup.popupTriggerValue, frequencyDays: popup.popupFrequencyDays, thankYouText: popup.thankYouText,
       fieldSettings: popup.fieldSettings, ft: res.locals.formToken,
       // Règles vérifiées dans le navigateur (appareil, pages vues, provenance, déjà inscrit dans ce navigateur)
-      rules: { devices: popup.popupRules.devices || null, minPages: popup.popupRules.minPages || 1, utmSource: popup.popupRules.utmSource || null, utmCampaign: popup.popupRules.utmCampaign || null, referrer: popup.popupRules.referrer || null, hideIfSubscribed: Boolean(popup.popupRules.hideIfSubscribed) },
+      rules: { devices: popup.popupRules.devices || null, minPages: popup.popupRules.minPages || 1, utmSource: popup.popupRules.utmSource || null, utmCampaign: popup.popupRules.utmCampaign || null, referrer: popup.popupRules.referrer || null, hideIfSubscribed: Boolean(popup.popupRules.hideIfSubscribed), visitors: popup.popupRules.visitors || null },
     });
     const list = eligible.map(describe);
     res.json({ form: list[0] || null, forms: list });
@@ -113,6 +115,8 @@ module.exports = ({ db }) => {
         const message = result.reason === "invalid_email" ? "Adresse e-mail invalide." : result.message || "Inscription impossible pour le moment.";
         return fail(400, message);
       }
+      // Visiteur suivi (accord donné) : l'envoi rejoint son parcours, ses visites sont reliées au contact
+      if (result.contact && consentedVisitor(req)) visitorsLib.recordFormSubmit(db, req.mkForms.organizationId, { visitorId: consentedVisitor(req), contactId: result.contact.id, path: page, formName: form.name });
       if (result.pending) {
         // Double confirmation : l'adresse publique du site (SITE_URL) sert au lien ; sinon celle de la requête
         const base = String(process.env.SITE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");

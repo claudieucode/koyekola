@@ -55,6 +55,7 @@ function createMarketingRouters({ db }) {
   const publicRoutes = express.Router();
   publicRoutes.use(require("./public")({ db }));
   publicRoutes.use(require("./tracking")({ db }));
+  publicRoutes.use(require("./visitorsPublic")({ db }));
   publicRoutes.use(require("./formsPublic")({ db }));
   publicRoutes.use(require("./landingPublic")({ db }));
   publicRoutes.use(require("./surveysPublic")({ db }));

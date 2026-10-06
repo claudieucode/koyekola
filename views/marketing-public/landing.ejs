@@ -29,7 +29,9 @@
   <main class="lp-main" id="main">
     <%- include("_sections", { page, form, preview, thanks, error, values, fieldCatalog, propertyDefs, builder: typeof builder !== "undefined" && builder }) %>
   </main>
-  <footer class="lp-foot"><a href="/">KOLAKISA</a></footer>
+  <footer class="lp-foot"><a href="/">KOLAKISA</a> · <a href="/cookies" data-kw-consent-open>Cookies</a></footer>
+  <% if (!preview) { %><%- include("../partials/consent-banner") %>
+  <script src="<%= asset("/js/visitor.js") %>" defer></script><% } %>
   <script src="<%= asset("/js/landing.js") %>" defer></script>
 </body>
 </html>

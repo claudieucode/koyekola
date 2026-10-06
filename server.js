@@ -192,6 +192,10 @@ app.listen(PORT, () => {
   outbox.startOutboxTimer(db);
   // Copie automatique quotidienne de la base (Centre de gestion → Sauvegardes) ; SAUVEGARDE_AUTO=0 pour la couper
   require("./src/services/backups").startDailyBackups();
+  // Suivi des visiteurs : effacement automatique au-delà de 13 mois (au démarrage, puis chaque jour)
+  const purgeVisits = () => { try { if (marketing.ready) require("./src/marketing/visitors").purge(db); } catch (error) { console.error("[KOLAKISA] Effacement des anciennes visites :", error.message); } };
+  purgeVisits();
+  setInterval(purgeVisits, 24 * 60 * 60 * 1000).unref();
   // Fichiers envoyés retrouvés dans le dossier du projet ou d'anciennes versions : recopiés dans le dossier conservé
   // Médias : recopie des fichiers restés dans d'anciens builds, puis diagnostic (emplacement, fichiers introuvables)
   require("./src/config/recoverUploads").recoverUploads()

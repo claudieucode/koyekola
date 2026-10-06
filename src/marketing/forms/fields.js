@@ -96,8 +96,8 @@ module.exports = { OPS, ACCEPT, MAX_FILE_BYTES, EXT, orderedFields, normalizeFie
 // devices   : ["desktop", "mobile"] (vide = tous)
 // minPages  : nombre de pages vues pendant la visite avant d'afficher (1 = dès la première)
 // utmSource, utmCampaign, referrer : la visite doit en provenir (contient, sans tenir compte de la casse)
-// (pages vues et provenance : mémoire de l'onglet en cours seulement, effacée à sa fermeture, jamais envoyée au serveur.
-// « Nouveau / ancien visiteur » demande un marqueur durable : il viendra avec le bandeau de consentement.)
+// (pages vues et provenance : mémoire de l'onglet en cours seulement, effacée à sa fermeture, jamais envoyée au serveur)
+// visitors  : "new" | "returning" — connu seulement si le visiteur a accepté le suivi (sinon la règle n'est pas remplie)
 // hideForStudents : jamais pour une personne connectée à son compte ; hideIfSubscribed : jamais pour un contact abonné
 function normalizePopupRules(input) {
   const src = input && typeof input === "object" ? input : {};
@@ -112,6 +112,7 @@ function normalizePopupRules(input) {
   }
   const devices = (Array.isArray(src.devices) ? src.devices : src.devices ? [src.devices] : []).filter((d) => ["desktop", "mobile"].includes(d));
   if (devices.length === 1) out.devices = devices;
+  if (["new", "returning"].includes(src.visitors)) out.visitors = src.visitors;
   const minPages = Number(src.minPages);
   if (Number.isInteger(minPages) && minPages > 1 && minPages <= 20) out.minPages = minPages;
   for (const k of ["utmSource", "utmCampaign", "referrer"]) {

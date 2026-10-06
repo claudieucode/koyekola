@@ -173,9 +173,11 @@
             <div class="field-group"><label for="ff-utm-campaign">Campagne (utm_campaign contient)</label><input id="ff-utm-campaign" type="text" name="rules[utmCampaign]" maxlength="80" value="<%= R.utmCampaign || "" %>" placeholder="rentree-2026"></div>
             <div class="field-group"><label for="ff-referrer">Site d'origine (contient)</label><input id="ff-referrer" type="text" name="rules[referrer]" maxlength="80" value="<%= R.referrer || "" %>" placeholder="google"></div>
           </div>
+          <div class="field-group"><label for="ff-visitors">Visiteurs</label><select id="ff-visitors" name="rules[visitors]"><option value="">Tous</option><option value="new"<%= R.visitors === "new" ? " selected" : "" %>>Nouveaux visiteurs (première visite)</option><option value="returning"<%= R.visitors === "returning" ? " selected" : "" %>>Visiteurs déjà venus</option></select>
+            <p class="field-hint">Connu seulement pour les visiteurs qui ont accepté la mesure d'audience : les autres ne voient pas un pop-up réservé aux nouveaux ou aux anciens visiteurs.</p></div>
           <label class="checkbox-row"><input type="checkbox" name="rules[hideForStudents]" value="1"<%= R.hideForStudents ? " checked" : "" %>> Ne pas afficher aux personnes connectées à leur compte</label>
           <label class="checkbox-row"><input type="checkbox" name="rules[hideIfSubscribed]" value="1"<%= R.hideIfSubscribed ? " checked" : "" %>> Ne pas afficher aux contacts déjà abonnés (compte connecté, ou inscription faite dans ce navigateur)</label>
-          <p class="field-hint">Pages vues et provenance sont gardées dans l'onglet du visiteur le temps de sa visite, jamais envoyées au serveur. La règle « nouveau visiteur / visiteur déjà venu » arrivera avec le bandeau de consentement aux cookies.</p>
+          <p class="field-hint">Pages vues et provenance sont gardées dans l'onglet du visiteur le temps de sa visite, jamais envoyées au serveur.</p>
         </fieldset>
 
         <button type="submit" class="btn btn-primary">Enregistrer</button>

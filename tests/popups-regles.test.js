@@ -49,7 +49,7 @@ describe("pop-ups (vrai serveur)", () => {
     let r = await popupJson(anon, "/cours/photoshop-avance");
     assert.deepEqual(r.forms.map((f) => f.slug), [photo, general]);
     assert.equal(r.form.slug, photo, "compatibilité : « form » = le premier");
-    assert.deepEqual(r.forms[0].rules, { devices: ["mobile"], minPages: 2, utmSource: "facebook", utmCampaign: null, referrer: null, hideIfSubscribed: false }, "règles de l'onglet transmises au navigateur");
+    assert.deepEqual(r.forms[0].rules, { devices: ["mobile"], minPages: 2, utmSource: "facebook", utmCampaign: null, referrer: null, hideIfSubscribed: false, visitors: null }, "règles de l'onglet transmises au navigateur");
     r = await popupJson(anon, "/catalogue");
     assert.deepEqual(r.forms.map((f) => f.slug), [general]);
     r = await popupJson(anon, "/panier");

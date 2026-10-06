@@ -11,7 +11,7 @@
      const st = s.style || {};
      const cls = ["lp-block", `lp-block-${s.type}`, st.padding ? `lp-pad-${st.padding}` : "", st.background && st.background !== "default" ? `lp-bg-${st.background}` : "", st.align ? `lp-al-${st.align}` : "", st.width && st.width !== "normal" ? `lp-w-${st.width}` : "", ...(s.hideOn || []).map((b) => `lp-hide-${b}`), s.hidden ? "is-hidden" : ""].filter(Boolean).join(" ");
 %>
-<div class="<%= cls %>"<% if (isBuilder) { %> data-section-id="<%= s.id || "" %>" data-section-index="<%= i %>"<% } %>>
+<div class="<%= cls %>"<% if (isBuilder) { %> data-section-id="<%= s.id || "" %>" data-section-index="<%= i %>"<% } else if (s.id) { %> data-sid="<%= s.id %>" data-stype="<%= s.type %>"<% } %>>
   <% if (s.type === "hero") { %>
     <header class="lp-hero">
       <% if (s.image) { %><img class="lp-hero-img" src="<%= s.image %>" alt="<%= s.imageAlt %>"<%= i > 0 ? ' loading="lazy"' : ' fetchpriority="high"' %> decoding="async"><% } %>

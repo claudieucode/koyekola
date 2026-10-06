@@ -42,6 +42,7 @@ function exportData(userId, marketing) {
     marketing: contact ? {
       contact: { email: contact.email, prenom: contact.first_name, nom: contact.last_name, telephone: contact.phone, entreprise: contact.company, pays: contact.country, statut: contact.status, cree_le: contact.created_at },
       consentements: rows("SELECT * FROM mk_consents WHERE contact_id = ? ORDER BY id", contact.id).map(({ organization_id, ...c }) => c),
+      visites_du_site: rows("SELECT type, path, target, referrer, utm_source, utm_medium, utm_campaign, device, occurred_at FROM mk_web_events WHERE contact_id = ? ORDER BY occurred_at", contact.id),
     } : null,
   };
 }

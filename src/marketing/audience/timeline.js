@@ -19,6 +19,13 @@ function contactTimeline(ctx, contactId, { limit = 50 } = {}) {
 
   push(fromSql(contact.created_at), "created", "user", `Contact créé (source : ${contact.source}).`);
 
+  // Parcours sur le site (visites suivies avec l'accord de la personne : voir src/marketing/visitors)
+  const VISIT = { session_start: "Début de visite", page_view: "Page vue", button_click: "Clic sur", section_view: "Section lue", form_view: "Formulaire affiché", form_submit: "Formulaire envoyé", popup_view: "Pop-up affiché", popup_close: "Pop-up fermé", video_start: "Vidéo lancée", download: "Téléchargement" };
+  for (const w of db.prepare("SELECT type, path, target, referrer, utm_source, occurred_at FROM mk_web_events WHERE contact_id = ? AND organization_id = ? ORDER BY occurred_at DESC, id DESC LIMIT ?").all(contactId, org, cap)) {
+    const where = w.type === "session_start" ? `${w.path}${w.referrer ? ` (venant de ${w.referrer})` : ""}${w.utm_source ? ` — source « ${w.utm_source} »` : ""}` : w.type === "button_click" || w.type === "download" || w.type === "form_submit" || w.type === "popup_view" ? `« ${w.target} » (${w.path})` : w.path;
+    push(w.occurred_at, "visit", "globe", `${VISIT[w.type] || w.type} : ${where}`);
+  }
+
   for (const k of db.prepare("SELECT action, purpose, source, created_at FROM mk_consents WHERE contact_id = ? AND organization_id = ? ORDER BY id DESC LIMIT ?").all(contactId, org, cap)) {
     push(fromSql(k.created_at), "consent", "shield", k.action === "granted" ? `Consentement donné (${k.source}).` : `Consentement retiré (${k.source}).`);
   }

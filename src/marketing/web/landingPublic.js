@@ -12,6 +12,8 @@ const { sendSubscriptionConfirmation } = require("../../utils/mailer");
 const { renderMarkdown } = require("../../utils/markdown");
 const antispam = require("../forms/antispam");
 const formUpload = require("./formUpload");
+const visitorsLib = require("../visitors");
+const { consentedVisitor } = require("./visitorsPublic");
 
 const PENDING_TEXT = "Merci ! Un e-mail de confirmation vient de vous être envoyé : cliquez sur le lien qu'il contient pour finaliser votre inscription (pensez aux courriers indésirables).";
 
@@ -77,6 +79,7 @@ module.exports = ({ db }) => {
       // Étiquettes propres à la page (en plus de celles du formulaire) : on sait d'où vient l'inscription
       if (result.contact) for (const tag of page.tags) tagContact({ ...ctx, audit: false }, result.contact.id, tag);
       landing.record(db, page, "signup", landing.visitorOf(req, secret()), result.pending ? "en attente de confirmation" : "confirmée");
+      if (result.contact && consentedVisitor(req)) visitorsLib.recordFormSubmit(db, page.organization_id, { visitorId: consentedVisitor(req), contactId: result.contact.id, path: `/p/${page.slug}`, formName: form.name });
       if (result.pending) {
         const base = String(process.env.SITE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
         sendSubscriptionConfirmation(db, { to: result.email, formName: form.name, url: `${base}/f/confirmer/${result.token}` });
