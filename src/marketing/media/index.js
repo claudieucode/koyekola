@@ -101,16 +101,21 @@ function updateMedia(ctx, id, { name, alt } = {}) {
   return getMedia(ctx, id);
 }
 
-// Modèles de l'organisation qui utilisent ce fichier (son chemin apparaît dans leurs blocs)
+// Ce qui utilise ce fichier dans l'organisation : modèles d'e-mails (blocs), pages (en ligne ou brouillon, Site Web et
+// Tunnels) et composants réutilisables — son chemin apparaît dans leur contenu
 function mediaUsage(ctx, media) {
-  return ctx.db.prepare("SELECT id, name FROM mk_templates WHERE organization_id = ? AND blocks LIKE ? ESCAPE '\\'").all(ctx.organizationId, `%${media.path.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
+  const like = `%${media.path.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+  const templates = ctx.db.prepare("SELECT id, name, 'modèle' AS kind FROM mk_templates WHERE organization_id = ? AND blocks LIKE ? ESCAPE '\\'").all(ctx.organizationId, like);
+  const pages = ctx.db.prepare("SELECT id, name, 'page' AS kind FROM mk_landing_pages WHERE organization_id = ? AND (sections LIKE ? ESCAPE '\\' OR draft LIKE ? ESCAPE '\\' OR seo LIKE ? ESCAPE '\\')").all(ctx.organizationId, like, like, like);
+  const components = ctx.db.prepare("SELECT id, name, 'composant' AS kind FROM mk_web_components WHERE organization_id = ? AND section LIKE ? ESCAPE '\\'").all(ctx.organizationId, like);
+  return [...templates, ...pages, ...components];
 }
 
 function deleteMedia(ctx, id) {
   const media = getMedia(ctx, id);
   if (!media) throw new MarketingError("not_found", "Fichier introuvable.");
   const used = mediaUsage(ctx, media);
-  if (used.length) throw new MarketingError("invalid_state", `Ce fichier est utilisé par ${used.length} modèle${used.length > 1 ? "s" : ""} (${used.slice(0, 3).map((t) => `« ${t.name} »`).join(", ")}${used.length > 3 ? "…" : ""}) : retirez-le d'abord de ${used.length > 1 ? "ces modèles" : "ce modèle"}.`);
+  if (used.length) throw new MarketingError("invalid_state", `Ce fichier est utilisé par ${used.length} élément${used.length > 1 ? "s" : ""} (${used.slice(0, 3).map((t) => `${t.kind} « ${t.name} »`).join(", ")}${used.length > 3 ? "…" : ""}) : retirez-le d'abord de ${used.length > 1 ? "ces éléments" : "cet élément"}.`);
   // Les e-mails déjà envoyés pointent vers ce fichier : il n'est retiré du disque que s'il n'a jamais servi dans une campagne lancée
   const sent = ctx.db.prepare("SELECT 1 FROM mk_campaigns WHERE organization_id = ? AND snapshot LIKE ? ESCAPE '\\' LIMIT 1").get(ctx.organizationId, `%${media.path.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
   // Fiche et fichier ensemble : si l'effacement du fichier échoue, la fiche est rétablie (jamais de fichier sans fiche)

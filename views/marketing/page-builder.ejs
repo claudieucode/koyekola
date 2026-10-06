@@ -13,78 +13,150 @@
 </head>
 <body class="pb-body">
   <a class="skip-link" href="#pb-canvas">Aller au canevas</a>
+  <%# ---------- Barre supérieure : actions permanentes + zone contextuelle (selon la sélection) ---------- %>
   <header class="pb-top">
-    <a class="pb-back" href="/marketing/pages/<%= page.id %>"><%- icon("arrowLeft", { size: 16 }) %><span>Réglages de la page</span></a>
-    <div class="pb-title"><h1><%= page.name %></h1><span class="pb-status" data-pb-status></span></div>
-    <div class="pb-devices" role="radiogroup" aria-label="Aperçu selon l'écran">
-      <button type="button" role="radio" aria-checked="true" data-device="desktop" title="Ordinateur"><%- icon("monitor", { size: 16 }) %><span class="sr-only">Ordinateur</span></button>
-      <button type="button" role="radio" aria-checked="false" data-device="tablet" title="Tablette (820 px)"><%- icon("tablet", { size: 16 }) %><span class="sr-only">Tablette</span></button>
-      <button type="button" role="radio" aria-checked="false" data-device="mobile" title="Mobile (390 px)"><%- icon("smartphone", { size: 16 }) %><span class="sr-only">Mobile</span></button>
+    <div class="pb-top-left">
+      <a class="pb-back" href="/marketing/pages/<%= page.id %>" data-tip="Réglages de la page"><%- icon("arrowLeft", { size: 16 }) %><span class="sr-only">Réglages de la page</span></a>
+      <div class="pb-title"><h1><%= page.name %></h1><span class="pb-status" data-pb-status></span></div>
+      <div class="pb-group-btns">
+        <button type="button" class="pb-icon-btn" data-pb-undo data-tip="Annuler (Ctrl/⌘ + Z)" aria-label="Annuler" disabled><%- icon("undo", { size: 16 }) %></button>
+        <button type="button" class="pb-icon-btn" data-pb-redo data-tip="Rétablir (Ctrl/⌘ + Maj + Z)" aria-label="Rétablir" disabled><%- icon("redo", { size: 16 }) %></button>
+      </div>
     </div>
-    <div class="pb-actions">
-      <button type="button" class="pb-icon-btn" data-pb-undo title="Annuler (Ctrl/⌘ + Z)" aria-label="Annuler" disabled><%- icon("undo", { size: 16 }) %></button>
-      <button type="button" class="pb-icon-btn" data-pb-redo title="Rétablir (Ctrl/⌘ + Maj + Z)" aria-label="Rétablir" disabled><%- icon("redo", { size: 16 }) %></button>
+    <div class="pb-context" data-pb-context role="toolbar" aria-label="Réglages rapides de la sélection"></div>
+    <div class="pb-top-right">
+      <div class="pb-devices" role="radiogroup" aria-label="Écran modifié et affiché">
+        <button type="button" role="radio" aria-checked="true" data-device="desktop" data-tip="Ordinateur"><%- icon("monitor", { size: 16 }) %><span class="sr-only">Ordinateur</span></button>
+        <button type="button" role="radio" aria-checked="false" data-device="tablet" data-tip="Tablette (820 px)"><%- icon("tablet", { size: 16 }) %><span class="sr-only">Tablette</span></button>
+        <button type="button" role="radio" aria-checked="false" data-device="mobile" data-tip="Mobile (390 px)"><%- icon("smartphone", { size: 16 }) %><span class="sr-only">Mobile</span></button>
+      </div>
+      <div class="pb-zoom" role="group" aria-label="Zoom du canevas">
+        <button type="button" class="pb-icon-btn" data-pb-zoom="-" data-tip="Zoom arrière (Ctrl/⌘ + -)" aria-label="Zoom arrière"><%- icon("minus", { size: 15 }) %></button>
+        <button type="button" class="pb-zoom-value" data-pb-zoom="100" data-tip="Zoom à 100 % (Ctrl/⌘ + 0)">100 %</button>
+        <button type="button" class="pb-icon-btn" data-pb-zoom="+" data-tip="Zoom avant (Ctrl/⌘ + +)" aria-label="Zoom avant"><%- icon("plus", { size: 15 }) %></button>
+        <button type="button" class="pb-icon-btn" data-pb-zoom="fit" data-tip="Ajuster à l'écran (Maj + 1)" aria-label="Ajuster à l'écran"><%- icon("maximize", { size: 15 }) %></button>
+      </div>
+      <div class="pb-group-btns" role="group" aria-label="Aides visuelles">
+        <button type="button" class="pb-icon-btn" data-pb-toggle="grid" aria-pressed="false" data-tip="Grille de 12 colonnes" aria-label="Grille"><%- icon("columns", { size: 15 }) %></button>
+        <button type="button" class="pb-icon-btn" data-pb-toggle="outlines" aria-pressed="false" data-tip="Contours de tous les éléments" aria-label="Contours des éléments"><%- icon("borderBox", { size: 15 }) %></button>
+        <button type="button" class="pb-icon-btn" data-pb-toggle="rulers" aria-pressed="false" data-tip="Règles en pixels" aria-label="Règles"><%- icon("spacing", { size: 15 }) %></button>
+        <button type="button" class="pb-icon-btn" data-pb-toggle="snap" aria-pressed="true" data-tip="Magnétisme : redimensionner par pas de 8 px" aria-label="Magnétisme"><%- icon("grip", { size: 15 }) %></button>
+      </div>
       <span class="pb-save" data-pb-save role="status" aria-live="polite"></span>
-      <button type="button" class="pb-icon-btn" data-pb-help aria-haspopup="dialog" title="Raccourcis clavier" aria-label="Raccourcis clavier">?</button>
-      <a class="btn btn-outline btn-sm" href="/marketing/pages/<%= page.id %>/apercu" target="_blank" rel="noopener" data-pb-preview>Aperçu</a>
+      <button type="button" class="pb-icon-btn" data-pb-command data-tip="Commandes (Ctrl/⌘ + K)" aria-label="Rechercher une commande"><%- icon("search", { size: 16 }) %></button>
+      <button type="button" class="btn btn-outline btn-sm" data-pb-save-now>Enregistrer</button>
+      <button type="button" class="btn btn-outline btn-sm" data-pb-preview>Aperçu</button>
       <button type="button" class="btn btn-primary btn-sm" data-pb-publish hidden>Publier</button>
     </div>
   </header>
 
-  <div class="pb-main">
-    <aside class="pb-left" aria-label="Structure et ajout">
+  <div class="pb-main" data-pb-main>
+    <%# ---------- Barre d'outils verticale ---------- %>
+    <nav class="pb-tools" aria-label="Outils" data-pb-tools></nav>
+
+    <%# ---------- Panneau gauche : éléments, blocs, composants, page ---------- %>
+    <aside class="pb-left" aria-label="Éléments à ajouter" data-pb-left>
       <div class="pb-tabs" role="tablist" aria-label="Panneau de gauche">
-        <button type="button" role="tab" id="pb-tab-layers" aria-controls="pb-pane-layers" aria-selected="true">Calques</button>
-        <button type="button" role="tab" id="pb-tab-add" aria-controls="pb-pane-add" aria-selected="false" tabindex="-1">Ajouter</button>
+        <button type="button" role="tab" id="pb-tab-elements" aria-controls="pb-pane-elements" aria-selected="true">Éléments</button>
+        <button type="button" role="tab" id="pb-tab-blocks" aria-controls="pb-pane-blocks" aria-selected="false" tabindex="-1">Blocs</button>
         <button type="button" role="tab" id="pb-tab-components" aria-controls="pb-pane-components" aria-selected="false" tabindex="-1">Composants</button>
+        <button type="button" role="tab" id="pb-tab-page" aria-controls="pb-pane-page" aria-selected="false" tabindex="-1">Page</button>
       </div>
-      <div class="pb-pane" id="pb-pane-layers" role="tabpanel" aria-labelledby="pb-tab-layers">
-        <p class="pb-hint">Glissez pour réordonner. Maj ou Ctrl/⌘ + clic : sélection multiple. Double-clic : renommer.</p>
-        <ol class="pb-layers" data-pb-layers aria-label="Sections de la page"></ol>
+      <div class="pb-pane" id="pb-pane-elements" role="tabpanel" aria-labelledby="pb-tab-elements">
+        <label class="sr-only" for="pb-el-search">Rechercher un élément</label>
+        <input class="pb-search" id="pb-el-search" type="search" placeholder="Rechercher un élément…" data-pb-el-search>
+        <p class="pb-hint">Glissez un élément dans la page ou dans les calques ; un clic l'ajoute après la sélection (ou dedans, si c'est un conteneur).</p>
+        <div data-pb-elements></div>
       </div>
-      <div class="pb-pane" id="pb-pane-add" role="tabpanel" aria-labelledby="pb-tab-add" hidden>
-        <p class="pb-hint">Cliquez pour ajouter après la sélection, ou glissez dans les calques.</p>
-        <ul class="pb-add" data-pb-add></ul>
-        <form class="pb-video-form" data-pb-video-form hidden>
-          <p class="pb-sub">Nouvelle vidéo</p>
-          <label for="pb-video-url">Adresse (YouTube, Vimeo ou fichier https://)</label><input id="pb-video-url" type="url" required>
-          <label for="pb-video-title">Titre de la vidéo</label><input id="pb-video-title" type="text" maxlength="150" required>
-          <div class="pb-row"><button type="submit" class="btn btn-primary btn-sm">Ajouter la vidéo</button><button type="button" class="btn btn-ghost btn-sm" data-pb-video-cancel>Annuler</button></div>
-        </form>
+      <div class="pb-pane" id="pb-pane-blocks" role="tabpanel" aria-labelledby="pb-tab-blocks" hidden>
+        <p class="pb-hint">Blocs prêts à l'emploi, faits de vrais éléments entièrement modifiables. Les textes entre crochets sont à remplacer.</p>
+        <div data-pb-blocks></div>
       </div>
       <div class="pb-pane" id="pb-pane-components" role="tabpanel" aria-labelledby="pb-tab-components" hidden>
-        <p class="pb-hint">« Synchronisé » : s'affiche toujours dans sa dernière version, partout. « Copie » : section indépendante.</p>
+        <p class="pb-hint">« Synchronisé » : s'affiche partout dans sa dernière version (modifier la source modifie toutes les pages). « Copie » : indépendante.</p>
         <ul class="pb-components" data-pb-components></ul>
       </div>
+      <div class="pb-pane" id="pb-pane-page" role="tabpanel" aria-labelledby="pb-tab-page" hidden>
+        <div data-pb-page-settings></div>
+      </div>
     </aside>
+    <div class="pb-resizer" data-pb-resize="left" role="separator" aria-orientation="vertical" aria-label="Largeur du panneau des éléments (flèches gauche et droite)" tabindex="0"></div>
 
-    <main class="pb-canvas" id="pb-canvas" tabindex="-1" aria-label="Aperçu de la page">
+    <%# ---------- Canevas ---------- %>
+    <main class="pb-canvas" id="pb-canvas" tabindex="-1" aria-label="Page en cours d'édition" data-pb-canvas>
       <p class="pb-error" data-pb-render-error role="alert" hidden></p>
-      <div class="pb-frame-wrap" data-pb-frame-wrap data-device="desktop">
-        <iframe class="pb-frame" data-pb-frame title="Aperçu de la page en cours d'édition"></iframe>
+      <canvas class="pb-ruler pb-ruler-x" data-pb-ruler-x aria-hidden="true" hidden></canvas>
+      <canvas class="pb-ruler pb-ruler-y" data-pb-ruler-y aria-hidden="true" hidden></canvas>
+      <div class="pb-stage" data-pb-stage>
+        <div class="pb-frame-wrap" data-pb-frame-wrap data-device="desktop">
+          <iframe class="pb-frame" data-pb-frame title="Page en cours d'édition"></iframe>
+        </div>
       </div>
     </main>
+    <div class="pb-resizer" data-pb-resize="right" role="separator" aria-orientation="vertical" aria-label="Largeur du panneau des calques (flèches gauche et droite)" tabindex="0"></div>
 
-    <aside class="pb-right" aria-label="Réglages de la sélection">
-      <div data-pb-inspector></div>
+    <%# ---------- Panneau droit : calques (haut) + inspecteur (bas) ---------- %>
+    <aside class="pb-right" aria-label="Calques et réglages" data-pb-right>
+      <section class="pb-layers-panel" aria-labelledby="pb-layers-title" data-pb-layers-panel>
+        <div class="pb-panel-head"><h2 id="pb-layers-title">Calques</h2>
+          <div class="pb-group-btns">
+            <button type="button" class="pb-icon-btn" data-pb-expand-all data-tip="Tout déplier" aria-label="Tout déplier"><%- icon("chevronDown", { size: 15 }) %></button>
+            <button type="button" class="pb-icon-btn" data-pb-collapse-all data-tip="Tout replier" aria-label="Tout replier"><%- icon("chevronRight", { size: 15 }) %></button>
+          </div></div>
+        <ul class="pb-tree" role="tree" aria-labelledby="pb-layers-title" aria-multiselectable="true" data-pb-layers></ul>
+      </section>
+      <div class="pb-hsplit" data-pb-split role="separator" aria-orientation="horizontal" aria-label="Hauteur des calques (flèches haut et bas)" tabindex="0"></div>
+      <section class="pb-inspector" aria-label="Inspecteur" data-pb-inspector></section>
     </aside>
   </div>
 
-  <dialog class="pb-dialog" data-pb-help-dialog aria-labelledby="pb-help-title">
-    <h2 id="pb-help-title">Raccourcis clavier</h2>
-    <dl class="pb-keys">
-      <dt>Ctrl/⌘ + Z</dt><dd>Annuler</dd><dt>Ctrl/⌘ + Maj + Z, Ctrl + Y</dt><dd>Rétablir</dd>
-      <dt>Ctrl/⌘ + C / X / V</dt><dd>Copier, couper, coller les sections sélectionnées</dd>
-      <dt>Ctrl/⌘ + D</dt><dd>Dupliquer</dd><dt>Suppr. ou Retour arrière</dt><dd>Supprimer</dd>
-      <dt>Alt + ↑ / ↓</dt><dd>Monter, descendre</dd><dt>Ctrl/⌘ + A</dt><dd>Tout sélectionner</dd>
-      <dt>Échap</dt><dd>Désélectionner</dd><dt>Ctrl/⌘ + S</dt><dd>Enregistrer maintenant</dd>
-    </dl>
-    <p class="pb-hint">Les raccourcis de section ne s'appliquent pas pendant la saisie dans un champ.</p>
-    <form method="dialog"><button class="btn btn-primary btn-sm">Fermer</button></form>
+  <%# ---------- Fenêtres : aperçu, médiathèque, commandes, demande de contenu ---------- %>
+  <dialog class="pb-modal pb-preview-modal" data-pb-preview-dialog aria-labelledby="pb-preview-title">
+    <div class="pb-modal-head"><h2 id="pb-preview-title">Aperçu</h2>
+      <div class="pb-devices" role="radiogroup" aria-label="Écran de l'aperçu">
+        <button type="button" role="radio" aria-checked="true" data-preview-device="desktop"><%- icon("monitor", { size: 16 }) %><span class="sr-only">Ordinateur</span></button>
+        <button type="button" role="radio" aria-checked="false" data-preview-device="tablet"><%- icon("tablet", { size: 16 }) %><span class="sr-only">Tablette</span></button>
+        <button type="button" role="radio" aria-checked="false" data-preview-device="mobile"><%- icon("smartphone", { size: 16 }) %><span class="sr-only">Mobile</span></button>
+      </div>
+      <span class="pb-modal-spacer"></span>
+      <a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= page.id %>/apercu" target="_blank" rel="noopener">Ouvrir dans un onglet</a>
+      <button type="button" class="pb-icon-btn" data-pb-close aria-label="Fermer l'aperçu"><%- icon("close", { size: 18 }) %></button></div>
+    <div class="pb-preview-stage"><iframe class="pb-preview-frame" data-pb-preview-frame data-device="desktop" title="Aperçu de la page"></iframe></div>
   </dialog>
+
+  <dialog class="pb-modal pb-media-modal" data-pb-media aria-labelledby="pb-media-title">
+    <div class="pb-modal-head"><h2 id="pb-media-title">Médiathèque</h2><span class="pb-modal-spacer"></span><button type="button" class="pb-icon-btn" data-pb-close aria-label="Fermer la médiathèque"><%- icon("close", { size: 18 }) %></button></div>
+    <div class="pb-media-body">
+      <div class="pb-media-bar">
+        <label class="sr-only" for="pb-media-q">Rechercher une image</label><input class="pb-search" id="pb-media-q" type="search" placeholder="Rechercher (nom, texte de remplacement)…" data-pb-media-q>
+        <label class="sr-only" for="pb-media-src">Bibliothèque</label><select id="pb-media-src" data-pb-media-src><option value="all">Toutes les images</option><option value="marketing">Marketing</option><option value="site">Site (blog, Centre de gestion)</option></select>
+        <label class="btn btn-primary btn-sm pb-upload">Envoyer une image<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-pb-upload class="sr-only"></label>
+      </div>
+      <div class="pb-drop" data-pb-drop>Ou déposez une image ici (JPEG, PNG, GIF ou WebP, 5 Mo au plus)</div>
+      <p class="pb-hint" data-pb-media-status role="status" aria-live="polite"></p>
+      <div class="pb-media-layout">
+        <ul class="pb-media-grid" data-pb-media-grid aria-label="Images"></ul>
+        <div class="pb-media-detail" data-pb-media-detail></div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="pb-modal pb-command" data-pb-command-dialog aria-label="Commandes">
+    <label class="sr-only" for="pb-cmd-q">Rechercher une commande</label>
+    <input class="pb-search" id="pb-cmd-q" type="search" placeholder="Que voulez-vous faire ? (ajouter un titre, grouper, aperçu…)" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="pb-cmd-list" data-pb-cmd-q>
+    <ul class="pb-cmd-list" id="pb-cmd-list" role="listbox" aria-label="Commandes" data-pb-cmd-list></ul>
+  </dialog>
+
+  <dialog class="pb-modal pb-ask" data-pb-ask aria-labelledby="pb-ask-title">
+    <form data-pb-ask-form><h2 id="pb-ask-title" data-pb-ask-title></h2><div data-pb-ask-fields></div>
+      <p class="pb-note is-warn" data-pb-ask-error role="alert" hidden></p>
+      <div class="pb-row"><button type="submit" class="btn btn-primary btn-sm">Valider</button><button type="button" class="btn btn-ghost btn-sm" data-pb-close>Annuler</button></div></form>
+  </dialog>
+
+  <div class="pb-menu" data-pb-menu role="menu" aria-label="Actions" hidden></div>
   <div class="pb-toast" data-pb-toast role="status" aria-live="polite" hidden></div>
 
-  <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown"].forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 15 }) %></template><% }) %>
+  <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone"].concat(spec.types.map((t) => t.icon)).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
   <script type="application/json" id="pb-boot"><%- boot %></script>
   <script src="<%= asset('/js/page-builder.js') %>" defer></script>
 </body>

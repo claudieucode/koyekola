@@ -175,15 +175,25 @@ module.exports = () => {
     if (page.archived_at) return res.redirect(`/marketing/pages/${page.id}`);
     const { ctx } = req.mk;
     const site = page.site_id ? pages.getSite(ctx, page.site_id) : null;
+    const nodesLib = require("../pages/nodes");
+    const form = page.form_id ? forms.getForm(ctx, page.form_id) : null;
+    const funnel = require("../funnels").funnelsOfPage(ctx, page.id).find((f) => f.status === "active") || null;
     const boot = {
-      page: { id: page.id, name: page.name, slug: page.slug, status: page.status, hasDraft: page.hasDraft, revision: page.revision, siteId: page.site_id, siteName: site ? site.name : null, formId: page.form_id },
-      content: page.working, types: blanks(ctx), canWrite: req.mk.can("forms.write"),
+      page: { id: page.id, name: page.name, slug: page.slug, status: page.status, hasDraft: page.hasDraft, revision: page.revision, siteId: page.site_id, siteName: site ? site.name : null,
+        formId: page.form_id, formName: form ? form.name : null, formPublished: Boolean(form && form.status === "published"), indexable: Boolean(page.indexable), funnel: funnel ? { id: funnel.id, name: funnel.name, position: funnel.position } : null },
+      content: page.working, types: blanks(ctx), spec: nodesLib.editorSpec(), canWrite: req.mk.can("forms.write"),
+      blocks: require("../pages/patterns").catalog(ctx),
       courses: listCourses(ctx).map((c) => ({ id: c.id, title: c.title })),
-      images: media.listMedia(ctx, { kind: "image", limit: 200 }).items.map((m) => ({ path: m.path, name: m.name, alt: m.alt || "" })),
       components: pages.listComponents(ctx, { siteId: page.site_id }).map((c) => ({ id: c.id, name: c.name, global: c.global, type: c.section && c.section.type })),
+      // Adresses proposées pour les liens : pages en ligne, pages du site, étape suivante (page d'un tunnel)
+      links: [{ url: "/catalogue", label: "Catalogue des formations" }, { url: "/blog", label: "Blog" }, { url: "/", label: "Accueil du site" }]
+        .concat(funnel ? [{ url: require("../funnels").NEXT_URL, label: `Étape suivante du tunnel « ${funnel.name} »` }] : [])
+        .concat(pages.listPages(ctx).filter((p) => p.status === "published" && p.id !== page.id).slice(0, 50).map((p) => ({ url: `/p/${p.slug}`, label: `Page « ${p.name} »` }))),
+      siteUrl: String(process.env.SITE_URL || "").replace(/\/+$/, ""),
     };
     res.set("Cache-Control", "no-store");
-    res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, page, boot: safeJson(boot) });
+    const { ICONS } = require("../../utils/icons");
+    res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, page, boot: safeJson(boot), spec: boot.spec, iconExists: (n) => Object.hasOwn(ICONS, n) });
   });
   // Rendu du canevas : contenu de l'éditeur validé (rien n'est enregistré), même gabarit que la page publiée
   router.post("/pages/:id(\\d+)/rendu", need("forms.read"), (req, res, next) => {

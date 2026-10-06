@@ -86,7 +86,7 @@ describe("médiathèque", () => {
     assert.equal(saved.status, 200);
     const refused = await boss.postJson(`/marketing/medias/${image.id}/supprimer`, {});
     assert.equal(refused.status, 400);
-    assert.match(json(refused).error, /utilisé par 1 modèle \(« Avec image »\)/);
+    assert.match(json(refused).error, /utilisé par 1 élément \(modèle « Avec image »\)/);
     const pdf = json(await boss.get("/marketing/medias?type=document")).items[0];
     assert.equal((await boss.postJson(`/marketing/medias/${pdf.id}/supprimer`, {})).status, 200);
     assert.ok(!fs.existsSync(path.join(srv.dir, pdf.path.replace(/^\//, ""))));

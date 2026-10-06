@@ -6,6 +6,22 @@ const pages = require("../pages");
 const stats = require("../pages/stats");
 const tokens = require("../pages/tokens");
 const { attempt, need } = require("./kit");
+const multer = require("multer");
+const media = require("../media");
+
+const mediaUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: media.MAX_IMAGE, files: 1 } });
+// Images de la médiathèque du site (blog, Centre de gestion) : utilisables dans les pages, gérées dans le Centre de gestion
+function siteImages(db, { q = "", limit = 60 } = {}) {
+  try {
+    const like = `%${String(q || "").slice(0, 80).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    return db.prepare(`SELECT id, path, alt, title, width, height, size, mime FROM media WHERE kind = 'image' AND path LIKE '/uploads/thumbnails/%'
+        AND (? = '%%' OR alt LIKE ? ESCAPE '\\' OR title LIKE ? ESCAPE '\\' OR path LIKE ? ESCAPE '\\') ORDER BY id DESC LIMIT ?`).all(like, like, like, like, Math.min(Number(limit) || 60, 200))
+      .map((m) => ({ source: "site", id: m.id, path: m.path, name: m.title || m.path.split("/").pop(), alt: m.alt || "", width: m.width, height: m.height, size: m.size, mime: m.mime, editable: false }));
+  } catch (e) {
+    if (/no such table/i.test(e.message)) return [];
+    throw e;
+  }
+}
 
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 
@@ -95,6 +111,44 @@ module.exports = () => {
     if (!site) return;
     attempt(req, res, next, `/marketing/site-web/sites/${site.id}`, () => { pages.restoreSite(req.mk.ctx, site.id); return "Site restauré. Ses pages restent hors ligne : publiez celles qui sont prêtes."; });
   });
+  // ---------- Médiathèque de l'éditeur (JSON) ----------
+  // Une seule bibliothèque d'images pour les pages : la médiathèque Marketing (envoi, texte de remplacement, suppression
+  // contrôlée) et, en lecture, celle du site (blog, Centre de gestion). Aucun fichier n'est recopié.
+  const mediaError = (res, next, error) => {
+    const { MarketingError } = require("../errors");
+    if (!(error instanceof MarketingError)) return next(error);
+    res.status(error.code === "not_found" ? 404 : 422).json({ error: { code: error.code, message: error.message } });
+  };
+  const marketingItem = (m) => ({ source: "marketing", id: m.id, path: m.path, name: m.name, alt: m.alt || "", width: m.width, height: m.height, size: m.size, mime: m.mime, editable: true });
+  router.get("/site-web/medias.json", need("forms.read"), (req, res) => {
+    const src = ["marketing", "site"].includes(req.query.source) ? req.query.source : "all";
+    const q = String(req.query.q || "").slice(0, 80);
+    const mk = src === "site" ? [] : media.listMedia(req.mk.ctx, { kind: "image", q, limit: 100 }).items.map(marketingItem);
+    const site = src === "marketing" ? [] : siteImages(req.mk.ctx.db, { q, limit: 100 });
+    res.set("Cache-Control", "no-store").json({ items: mk.concat(site) });
+  });
+  router.post("/site-web/medias", need("forms.write"), (req, res, next) => {
+    mediaUpload.single("file")(req, res, (uploadError) => {
+      if (uploadError) return res.status(422).json({ error: { code: "invalid_field", message: uploadError.code === "LIMIT_FILE_SIZE" ? `Image trop lourde : ${media.MAX_IMAGE / 1048576} Mo au plus.` : "Envoi du fichier impossible." } });
+      try {
+        const { MarketingError } = require("../errors");
+        if (!req.file) throw new MarketingError("invalid_field", "Aucun fichier reçu.");
+        const utf8 = Buffer.from(req.file.originalname, "latin1").toString("utf8");
+        const originalName = utf8.includes("\uFFFD") ? req.file.originalname : utf8;
+        if (media.sniff(req.file.buffer) && media.sniff(req.file.buffer).kind !== "image") throw new MarketingError("invalid_field", "Une page affiche des images : JPEG, PNG, GIF ou WebP. Un PDF se partage par un lien.");
+        let saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype });
+        if (req.body && typeof req.body.alt === "string" && req.body.alt.trim()) saved = media.updateMedia(req.mk.ctx, saved.id, { alt: req.body.alt });
+        res.status(201).json({ media: marketingItem(saved) });
+      } catch (error) { mediaError(res, next, error); }
+    });
+  });
+  router.post("/site-web/medias/:id(\\d+)", need("forms.write"), (req, res, next) => {
+    try { res.json({ media: marketingItem(media.updateMedia(req.mk.ctx, Number(req.params.id), { name: req.body && req.body.name, alt: req.body && req.body.alt })) }); } catch (error) { mediaError(res, next, error); }
+  });
+  router.post("/site-web/medias/:id(\\d+)/supprimer", need("forms.write"), (req, res, next) => {
+    try { res.json({ ok: media.deleteMedia(req.mk.ctx, Number(req.params.id)) }); } catch (error) { mediaError(res, next, error); }
+  });
+
   // ---------- Composants réutilisables (éditeur visuel, JSON) ----------
   const jsonError = (res, next, error) => {
     const { MarketingError } = require("../errors");

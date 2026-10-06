@@ -26,7 +26,7 @@ function blanks(ctx) {
   };
   // Raison affichée quand un type n'est pas disponible
   const unavailable = {
-    image: image ? null : "Ajoutez d'abord une image à la médiathèque (Modèles d'e-mails → Médias).",
+    image: image ? null : "Ajoutez d'abord une image à la médiathèque (bouton « Image » de l'éditeur).",
     course: course ? null : "Publiez d'abord une formation dans le catalogue.",
   };
   // Vidéo : demande son adresse et son titre à l'ajout (pas de valeur par défaut possible)

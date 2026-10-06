@@ -63,6 +63,7 @@ const STYLE_PROPS = {
   flexWrap: { css: "flex-wrap", check: oneOf("wrap", "nowrap"), group: "layout" },
   justifyContent: { css: "justify-content", check: oneOf("flex-start", "center", "flex-end", "space-between", "space-around", "space-evenly"), group: "layout" },
   alignItems: { css: "align-items", check: oneOf("stretch", "flex-start", "center", "flex-end", "baseline"), group: "layout" },
+  alignSelf: { css: "align-self", check: oneOf("auto", "flex-start", "center", "flex-end", "stretch"), group: "layout" },
   gap: { css: "gap", check: len, group: "layout" },
   columns: { css: "grid-template-columns", check: numberIn(1, 12, { integer: true }), out: (n) => `repeat(${n}, minmax(0, 1fr))`, group: "layout" },
   width: { css: "width", check: lenAuto, group: "size" },
@@ -271,6 +272,84 @@ const NODE_TYPES = {
 };
 const CATEGORIES = { structure: "Structure", text: "Texte", media: "Média", interaction: "Interaction", marketing: "Marketing", commerce: "Formations" };
 
+// Contenu de départ de chaque élément (toujours VALIDE : un élément ajouté s'enregistre tout de suite) et icône de la
+// palette. Les éléments qui demandent une donnée réelle (image, vidéo, formation…) la demandent à l'ajout (`asks`).
+const PALETTE = {
+  container: { icon: "borderBox", blank: () => ({ children: [] }) },
+  columns: { icon: "columns", blank: () => ({ children: [{ type: "column", children: [] }, { type: "column", children: [] }] }) },
+  column: { icon: "moveVertical", blank: () => ({ children: [] }) },
+  grid: { icon: "layout", blank: () => ({ children: [] }) },
+  stack: { icon: "layers", blank: () => ({ children: [] }) },
+  group: { icon: "copy", blank: () => ({ children: [] }) },
+  spacer: { icon: "spacing", blank: () => ({ props: { size: "32" } }) },
+  divider: { icon: "minus", blank: () => ({}) },
+  heading: { icon: "type", blank: () => ({ props: { text: "Un titre clair et précis", level: "2" } }) },
+  text: { icon: "alignLeft", blank: () => ({ props: { html: "<p>Votre texte. Double-cliquez pour l'écrire directement dans la page.</p>" } }) },
+  list: { icon: "list", blank: () => ({ props: { items: ["Premier point", "Deuxième point"], ordered: false } }) },
+  quote: { icon: "quote", blank: () => ({ props: { text: "Une phrase marquante.", author: "" } }) },
+  code: { icon: "braces", blank: () => ({ props: { text: "Texte affiché tel quel" } }) },
+  image: { icon: "image", asks: "image", blank: () => ({ props: {} }) },
+  gallery: { icon: "columns", asks: "images", blank: () => ({ props: {} }) },
+  video: { icon: "video", asks: "video", blank: () => ({ props: {} }) },
+  audio: { icon: "play", asks: "audio", blank: () => ({ props: {} }) },
+  button: { icon: "mousePointer", blank: () => ({ props: { label: "Découvrir", url: "/catalogue", variant: "primary" } }) },
+  link: { icon: "link", blank: () => ({ props: { label: "En savoir plus", url: "/catalogue" } }) },
+  accordion: { icon: "listChecks", blank: () => ({ props: { items: [{ q: "Votre question ?", a: "La réponse, claire et courte." }] } }) },
+  tabs: { icon: "layers", blank: () => ({ props: { items: [{ title: "Onglet 1", text: "Contenu du premier onglet." }, { title: "Onglet 2", text: "Contenu du deuxième onglet." }] } }) },
+  table: { icon: "listOrdered", blank: () => ({ props: { rows: [["Colonne 1", "Colonne 2"], ["Valeur", "Valeur"]], header: true } }) },
+  countdown: { icon: "clock", blank: () => ({ props: { until: new Date(Date.now() + 7 * 86400000).toISOString().replace(/:\d{2}\.\d{3}Z$/, ":00Z"), endText: "C'est terminé." } }) },
+  course: { icon: "graduation", asks: "course", blank: () => ({ props: {} }) },
+  icon: { icon: "star", blank: () => ({ props: { name: "star", size: "32" } }) },
+};
+
+// Libellés et contrôles des propriétés de style (inspecteur) : un contrôle = une propriété réelle de STYLE_PROPS
+const STYLE_UI = {
+  display: ["Affichage", { block: "Bloc", flex: "Flex", grid: "Grille", "inline-block": "En ligne", none: "Caché" }],
+  flexDirection: ["Direction", { row: "En ligne", column: "En colonne", "row-reverse": "Ligne inversée", "column-reverse": "Colonne inversée" }],
+  flexWrap: ["Retour à la ligne", { wrap: "Oui", nowrap: "Non" }],
+  justifyContent: ["Répartition", { "flex-start": "Début", center: "Centre", "flex-end": "Fin", "space-between": "Espacés", "space-around": "Autour", "space-evenly": "Égaux" }],
+  alignItems: ["Alignement des enfants", { stretch: "Étirés", "flex-start": "Début", center: "Centre", "flex-end": "Fin", baseline: "Ligne de base" }],
+  alignSelf: ["Alignement dans le parent", { auto: "Auto", "flex-start": "Début", center: "Centre", "flex-end": "Fin", stretch: "Étiré" }],
+  gap: ["Écart entre enfants"], columns: ["Colonnes (grille)"],
+  width: ["Largeur"], height: ["Hauteur"], minWidth: ["Largeur min."], maxWidth: ["Largeur max."], minHeight: ["Hauteur min."], maxHeight: ["Hauteur max."],
+  marginTop: ["Marge haut"], marginRight: ["Marge droite"], marginBottom: ["Marge bas"], marginLeft: ["Marge gauche"],
+  paddingTop: ["Intérieur haut"], paddingRight: ["Intérieur droite"], paddingBottom: ["Intérieur bas"], paddingLeft: ["Intérieur gauche"],
+  fontFamily: ["Police", { heading: "Titres du site", body: "Texte du site", system: "Système", serif: "Avec empattements", mono: "Chasse fixe" }],
+  fontSize: ["Taille"], fontWeight: ["Graisse", { 300: "Légère", 400: "Normale", 500: "Moyenne", 600: "Demi-grasse", 700: "Grasse", 800: "Extra-grasse", 900: "Noire" }],
+  fontStyle: ["Style", { normal: "Normal", italic: "Italique" }], lineHeight: ["Interligne"], letterSpacing: ["Espacement des lettres"],
+  textTransform: ["Casse", { none: "Normale", uppercase: "MAJUSCULES", lowercase: "minuscules", capitalize: "Première Lettre" }],
+  textAlign: ["Alignement du texte", { left: "Gauche", center: "Centre", right: "Droite", justify: "Justifié" }],
+  textDecoration: ["Décoration", { none: "Aucune", underline: "Soulignée", "line-through": "Barrée" }],
+  color: ["Couleur du texte"], backgroundColor: ["Couleur de fond"],
+  borderWidth: ["Épaisseur de bordure"], borderStyle: ["Style de bordure", { none: "Aucune", solid: "Pleine", dashed: "Tirets", dotted: "Points" }], borderColor: ["Couleur de bordure"], borderRadius: ["Arrondi"],
+  boxShadow: ["Ombre", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", xl: "Très forte" }], opacity: ["Opacité"],
+  overflow: ["Débordement", { visible: "Visible", hidden: "Masqué", auto: "Défilement" }],
+  position: ["Position", { static: "Normale", relative: "Relative", sticky: "Collante" }], top: ["Décalage haut"], left: ["Décalage gauche"], zIndex: ["Plan (z-index)"],
+  objectFit: ["Cadrage", { cover: "Remplir", contain: "Contenir", fill: "Étirer", none: "Taille réelle" }],
+  objectPosition: ["Point focal", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite" }],
+  aspectRatio: ["Proportions", { auto: "Libres", "1/1": "1:1", "4/3": "4:3", "3/2": "3:2", "16/9": "16:9", "21/9": "21:9", "3/4": "3:4" }],
+  backgroundSize: ["Taille du fond", { cover: "Couvrir", contain: "Contenir", auto: "Réelle" }],
+  backgroundPosition: ["Position du fond", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite" }],
+};
+const GROUP_LABELS = { layout: "Mise en page", size: "Dimensions", spacing: "Espacement", typography: "Typographie", color: "Couleurs", background: "Fond", border: "Bordure", effects: "Effets", position: "Position", media: "Image" };
+// Description de l'éditeur (envoyée au navigateur) : types, palette, propriétés de style, écrans, états
+function editorSpec() {
+  const kind = (k) => {
+    const p = STYLE_PROPS[k];
+    if (p.check === color || [ "color", "backgroundColor", "borderColor" ].includes(k)) return "color";
+    if (["columns", "lineHeight", "opacity", "zIndex"].includes(k)) return "number";
+    return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
+  };
+  return {
+    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
+    categories: CATEGORIES,
+    styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
+    groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
+    colorTokens: COLOR_TOKENS, spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
+    limits: { nodes: MAX_NODES, depth: MAX_DEPTH },
+  };
+}
+
 // Icônes disponibles (bibliothèque d'icônes du site, src/utils/icons.js)
 let ICON_NAMES = null;
 const iconNames = () => {
@@ -379,6 +458,6 @@ function pageCss(sections) {
 }
 
 module.exports = {
-  NODE_TYPES, CATEGORIES, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
+  NODE_TYPES, CATEGORIES, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
   normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };
