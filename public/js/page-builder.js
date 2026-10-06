@@ -2097,8 +2097,9 @@
     el.textContent = live ? (hasDraft ? "En ligne · modifications non publiées" : "En ligne") : status === "unpublished" ? "Hors ligne" : "Brouillon";
     el.classList.toggle("is-live", live && !hasDraft);
     var pub = $("[data-pb-publish]");
-    pub.hidden = !canWrite || (live && !hasDraft);
+    pub.hidden = !canWrite || (live && !hasDraft) || Boolean(PAGE.abTest);
     pub.textContent = live ? "Publier les modifications" : "Publier";
+    if (PAGE.abTest) el.textContent = "Version B d'un test A/B";
   }
   $("[data-pb-publish]").addEventListener("click", function () {
     var btn = this;

@@ -1,0 +1,21 @@
+<%- include("partials/top", { title, active }) %>
+<% const pct = (r) => (r === null || r === undefined ? "—" : `${String(r).replace(".", ",")} %`); const STATUS_CLASS = { draft: "", running: "mk-status-ok", stopped: "mk-status-warn", completed: "" }; %>
+    <div class="mk-head"><h1>Tests A/B des pages</h1></div>
+    <p class="mk-lead">Comparez deux versions d'une page (titre, bouton, sections, mise en page, formulaire) : une partie des visiteurs voit la version B. Un gagnant n'est désigné qu'avec assez de données. Pour créer un test, ouvrez une page puis « Test A/B ».</p>
+    <% if (!tests.length) { %>
+      <div class="mk-empty"><%- icon("activity", { size: 32 }) %><h2>Aucun test</h2><p>Ouvrez une page en ligne (Site Web → Pages) et choisissez « Test A/B ».</p>
+        <div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/pages">Voir les pages</a></div></div>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable">
+        <caption class="sr-only">Tests A/B des pages</caption>
+        <thead><tr><th scope="col">Test</th><th scope="col">Page</th><th scope="col">Objectif</th><th scope="col">État</th><th scope="col" class="mk-num">Visiteurs</th><th scope="col" class="mk-num">Conversions</th></tr></thead>
+        <tbody><% tests.forEach((t) => { %>
+          <tr><th scope="row" data-label="Test"><a href="/marketing/pages/<%= t.page_id %>/test-ab?test=<%= t.id %>"><%= t.name %></a><% if (t.winner) { %><span class="mk-sub">Gagnant retenu : version <%= t.winner.toUpperCase() %></span><% } %></th>
+            <td data-label="Page"><%= t.page_name %><span class="mk-sub">/p/<%= t.page_slug %></span></td>
+            <td data-label="Objectif"><%= GOALS[t.goal] %></td>
+            <td data-label="État"><span class="mk-status <%= STATUS_CLASS[t.status] %>"><%= STATUS[t.status] %></span></td>
+            <td class="mk-num" data-label="Visiteurs"><%= mkh.fmt(t.views) %></td><td class="mk-num" data-label="Conversions"><%= mkh.fmt(t.conversions) %></td></tr>
+        <% }) %></tbody>
+      </table></div>
+    <% } %>
+<%- include("partials/bottom") %>

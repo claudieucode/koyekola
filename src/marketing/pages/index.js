@@ -98,6 +98,7 @@ function discardDraft(ctx, id) {
 function publish(ctx, id) {
   const page = requirePage(ctx, id);
   if (page.archived_at) throw bad("Cette page est archivée : restaurez-la avant de la publier.");
+  if (ctx.db.prepare("SELECT 1 FROM mk_page_tests WHERE variant_page_id = ?").get(id)) throw bad("Cette page est la version B d'un test A/B : elle ne se publie pas seule. Démarrez le test depuis la page d'origine.");
   const content = page.working;
   const check = landing.preflight(ctx, { ...page, sections: resolveSections(ctx, content.sections) });
   if (!check.ready) throw new MarketingError("preflight_failed", check.errors.join(" "));
@@ -129,7 +130,9 @@ function listPages(ctx, { archived = false, siteId } = {}) {
       (SELECT COUNT(DISTINCT e.visitor || ':' || (e.occurred_at / 86400000)) FROM mk_landing_events e WHERE e.page_id = p.id AND e.type = 'view') AS visitors,
       (SELECT COUNT(*) FROM mk_landing_events e WHERE e.page_id = p.id AND e.type = 'signup') AS signups
     FROM mk_landing_pages p LEFT JOIN mk_sites s ON s.id = p.site_id
-    WHERE p.organization_id = ? AND p.archived_at IS ${archived ? "NOT " : ""}NULL${bySite} ORDER BY p.updated_at DESC, p.id DESC`).all(...params);
+    WHERE p.organization_id = ? AND p.archived_at IS ${archived ? "NOT " : ""}NULL${bySite}
+      AND p.id NOT IN (SELECT variant_page_id FROM mk_page_tests WHERE variant_page_id IS NOT NULL) -- versions B des tests A/B : gérées dans leur test
+    ORDER BY p.updated_at DESC, p.id DESC`).all(...params);
 }
 
 // ---------- Versions ----------

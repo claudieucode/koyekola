@@ -9,6 +9,8 @@
         <% if (page.status === "published") { %><form action="/marketing/pages/<%= page.id %>/depublier" method="post"><button type="submit" class="btn btn-outline btn-sm">Mettre hors ligne</button></form><% } %>
       </div><% } %>
     </div>
+    <% if (variantOf) { %><p class="mk-callout"><span><strong>Version B d'un test A/B</strong>Cette page est la version B du test de « <%= variantOf.name %> » : elle ne se publie pas seule. <a href="/marketing/pages/<%= variantOf.page_id %>/test-ab?test=<%= variantOf.id %>">Ouvrir le test</a>.</span></p>
+    <% } else { %><p class="field-hint"><a href="/marketing/pages/<%= page.id %>/test-ab"><%= openTest ? `Test A/B « ${openTest.name} » (${openTest.status === "running" ? "en cours" : openTest.status === "stopped" ? "en pause" : "en préparation"})` : "Test A/B : comparer deux versions de cette page" %></a></p><% } %>
     <% if (inFunnels.length) { %><p class="field-hint">Étape de tunnel : <% inFunnels.forEach((t, i) => { %><%= i ? " · " : "" %><a href="/marketing/tunnels/<%= t.id %>#fn-steps"><%= t.name %></a> (étape <%= t.position %>, « <%= t.step %> »<%= t.status === "archived" ? ", tunnel archivé" : "" %>)<% }) %>.</p><% } %>
     <% if (archived) { %><div class="mk-callout"><span><strong>Page archivée</strong> (hors ligne, non modifiable). Restaurez-la pour la modifier ou la republier.</span>
       <% if (canWrite) { %><form action="/marketing/pages/<%= page.id %>/restaurer" method="post"><button type="submit" class="btn btn-outline btn-sm">Restaurer la page</button></form><% } %></div>

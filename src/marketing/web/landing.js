@@ -97,6 +97,8 @@ module.exports = () => {
       title: page.name, active: "landing", page, content: page.working, STATUSES: landing.STATUSES, STATUS_CLASS, SECTION_LABELS: Object.fromEntries(Object.entries(pages.TYPES).map(([k, t]) => [k, t.label])),
       forms: forms.listForms(ctx), courses: listCourses(ctx), images: media.listMedia(ctx, { kind: "image", limit: 100 }).items,
       sites: pages.listSites(ctx), versions: pages.listVersions(ctx, page.id), inFunnels: require("../funnels").funnelsOfPage(ctx, page.id),
+      variantOf: ctx.db.prepare("SELECT t.id, t.page_id, p.name FROM mk_page_tests t JOIN mk_landing_pages p ON p.id = t.page_id WHERE t.variant_page_id = ? AND t.organization_id = ?").get(page.id, ctx.organizationId) || null,
+      openTest: ctx.db.prepare("SELECT id, name, status FROM mk_page_tests WHERE page_id = ? AND organization_id = ? AND status IN ('draft', 'running', 'stopped')").get(page.id, ctx.organizationId) || null,
       report: landing.pageReport(ctx, page.id), check: landing.preflight(ctx, { ...page, sections: pages.resolveSections(ctx, page.working.sections) }), canWrite: req.mk.can("forms.write"),
       publicUrl: `${String(process.env.SITE_URL || "").replace(/\/+$/, "")}/p/${page.slug}`,
     });
@@ -180,7 +182,8 @@ module.exports = () => {
     const funnel = require("../funnels").funnelsOfPage(ctx, page.id).find((f) => f.status === "active") || null;
     const boot = {
       page: { id: page.id, name: page.name, slug: page.slug, status: page.status, hasDraft: page.hasDraft, revision: page.revision, siteId: page.site_id, siteName: site ? site.name : null,
-        formId: page.form_id, formName: form ? form.name : null, formPublished: Boolean(form && form.status === "published"), indexable: Boolean(page.indexable), funnel: funnel ? { id: funnel.id, name: funnel.name, position: funnel.position } : null },
+        formId: page.form_id, formName: form ? form.name : null, formPublished: Boolean(form && form.status === "published"), indexable: Boolean(page.indexable), funnel: funnel ? { id: funnel.id, name: funnel.name, position: funnel.position } : null,
+        abTest: (ctx.db.prepare("SELECT id, page_id FROM mk_page_tests WHERE variant_page_id = ? AND organization_id = ?").get(page.id, ctx.organizationId)) || null },
       content: page.working, types: blanks(ctx), spec: nodesLib.editorSpec(), canWrite: req.mk.can("forms.write"),
       blocks: require("../pages/patterns").catalog(ctx),
       courses: listCourses(ctx).map((c) => ({ id: c.id, title: c.title })),

@@ -55,6 +55,7 @@ const ITEMS = [
   live("site", "sitedash", "Tableau de bord", "/marketing/site-web", "activity", "forms.read"),
   live("site", "sites", "Sites", "/marketing/site-web/sites", "globe", "forms.read", { label: "Créer un site", href: "/marketing/site-web/sites#nouveau", permission: "forms.write" }),
   live("site", "landing", "Pages", "/marketing/pages", "layout", "forms.read", { label: "Créer une page", href: "/marketing/pages#nouvelle", permission: "forms.write" }),
+  live("site", "pagetests", "Tests A/B", "/marketing/site-web/tests-ab", "activity", "forms.read"),
 
   // Tunnels : suites d'étapes faites des pages du même moteur (même éditeur que Site Web) et des formations du catalogue
   live("tunnels", "funnels", "Tunnels", "/marketing/tunnels", "filter", "forms.read", { label: "Créer un tunnel", href: "/marketing/tunnels#nouveau", permission: "forms.write" }),

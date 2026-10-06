@@ -16,6 +16,7 @@ const visitorsLib = require("../visitors");
 const { consentedVisitor } = require("./visitorsPublic");
 const funnels = require("../funnels");
 const { visibleTree } = require("../pages/nodes");
+const abtests = require("../pages/abtests");
 
 const PENDING_TEXT = "Merci ! Un e-mail de confirmation vient de vous être envoyé : cliquez sur le lien qu'il contient pour finaliser votre inscription (pensez aux courriers indésirables).";
 
@@ -46,31 +47,51 @@ module.exports = ({ db }) => {
     });
   };
 
+  // Test A/B en cours : version du visiteur (stable pour la journée, sans cookie) et contenu correspondant
+  const forVisitor = (req, page) => {
+    const test = abtests.runningTestFor(db, page.id);
+    if (!test || !test.variantB) return { page, test: null, visitor: null };
+    const visitor = landing.visitorOf(req, secret());
+    const variant = abtests.variantFor(test, visitor);
+    const shown = variant === "b" ? { ...page, sections: test.variantB.sections, title: test.variantB.title, description: test.variantB.description } : page;
+    return { page: shown, test, visitor, variant };
+  };
+
   router.get("/p/:slug", (req, res) => {
-    const page = landing.getPublishedPage(db, req.params.slug);
+    const published = landing.getPublishedPage(db, req.params.slug);
+    if (!published) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
+    const { page, test, visitor } = forVisitor(req, published);
     if (!page) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
     const thanks = req.query.inscrit === "1" ? (req.query.confirmer === "1" ? PENDING_TEXT : (loadForm(page) || {}).thankYouText || "Merci, votre inscription est enregistrée.") : null;
     // Retour sur la page après sa propre inscription : pas une nouvelle visite. Arrivée sur l'étape suivante d'un tunnel
     // (remerciement…) : c'est bien une visite de cette page.
     const selfReturn = thanks && page.sections.some((s) => s.type === "form");
-    if (!selfReturn && !landing.isBot(req)) landing.record(db, page, "view", landing.visitorOf(req, secret()));
+    if (!selfReturn && !landing.isBot(req)) {
+      landing.record(db, page, "view", landing.visitorOf(req, secret()));
+      if (test) abtests.recordView(db, test, visitor);
+    }
     show(req, res, page, { thanks });
   });
 
   router.get("/p/:slug/clic/:n(\\d{1,3})", (req, res) => {
-    const page = landing.getPublishedPage(db, req.params.slug);
-    if (!page) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
+    const published = landing.getPublishedPage(db, req.params.slug);
+    if (!published) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
+    const { page, test, visitor } = forVisitor(req, published);
     const link = landing.linksOf(shownPage(req, page))[Number(req.params.n)];
     if (!link) return res.redirect(`/p/${page.slug}`);
-    if (!landing.isBot(req)) landing.record(db, page, "click", landing.visitorOf(req, secret()), link.label);
+    if (!landing.isBot(req)) {
+      landing.record(db, page, "click", landing.visitorOf(req, secret()), link.label);
+      if (test) abtests.recordConversion(db, test, visitor, "click");
+    }
     // Bouton « étape suivante » : la prochaine étape en ligne du tunnel de la page (sinon, retour sur la page)
     if (link.url === funnels.NEXT_URL) return res.redirect(funnels.nextUrlForPage(db, page) || `/p/${page.slug}`);
     res.redirect(link.url);
   });
 
   router.post("/p/:slug/inscription", formUpload, (req, res, next) => {
-    const page = landing.getPublishedPage(db, req.params.slug);
-    if (!page) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
+    const published = landing.getPublishedPage(db, req.params.slug);
+    if (!published) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
+    const { page, test, visitor } = forVisitor(req, published);
     const form = loadForm(page);
     if (!form || form.status !== "published") return show(req, res, page, { status: 400, error: "L'inscription n'est pas disponible pour le moment." });
     // Robot (champ piège rempli, jeton absent ou envoi trop rapide) : faux succès silencieux
@@ -86,6 +107,7 @@ module.exports = ({ db }) => {
       // Étiquettes propres à la page (en plus de celles du formulaire) : on sait d'où vient l'inscription
       if (result.contact) for (const tag of page.tags) tagContact({ ...ctx, audit: false }, result.contact.id, tag);
       landing.record(db, page, "signup", landing.visitorOf(req, secret()), result.pending ? "en attente de confirmation" : "confirmée");
+      if (test) abtests.recordConversion(db, test, visitor, "signup");
       if (result.contact && consentedVisitor(req)) visitorsLib.recordFormSubmit(db, page.organization_id, { visitorId: consentedVisitor(req), contactId: result.contact.id, path: `/p/${page.slug}`, formName: form.name });
       // Page d'un tunnel : le visiteur passe à l'étape suivante (une page du tunnel affiche le message de confirmation ;
       // une formation, non : en attente de confirmation, il reste donc ici pour lire la consigne)
