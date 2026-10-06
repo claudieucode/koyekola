@@ -14,6 +14,7 @@ const antispam = require("../forms/antispam");
 const formUpload = require("./formUpload");
 const visitorsLib = require("../visitors");
 const { consentedVisitor } = require("./visitorsPublic");
+const funnels = require("../funnels");
 
 const PENDING_TEXT = "Merci ! Un e-mail de confirmation vient de vous être envoyé : cliquez sur le lien qu'il contient pour finaliser votre inscription (pensez aux courriers indésirables).";
 
@@ -48,7 +49,10 @@ module.exports = ({ db }) => {
     const page = landing.getPublishedPage(db, req.params.slug);
     if (!page) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
     const thanks = req.query.inscrit === "1" ? (req.query.confirmer === "1" ? PENDING_TEXT : (loadForm(page) || {}).thankYouText || "Merci, votre inscription est enregistrée.") : null;
-    if (!thanks && !landing.isBot(req)) landing.record(db, page, "view", landing.visitorOf(req, secret()));
+    // Retour sur la page après sa propre inscription : pas une nouvelle visite. Arrivée sur l'étape suivante d'un tunnel
+    // (remerciement…) : c'est bien une visite de cette page.
+    const selfReturn = thanks && page.sections.some((s) => s.type === "form");
+    if (!selfReturn && !landing.isBot(req)) landing.record(db, page, "view", landing.visitorOf(req, secret()));
     show(req, res, page, { thanks });
   });
 
@@ -58,6 +62,8 @@ module.exports = ({ db }) => {
     const link = landing.linksOf(shownPage(req, page))[Number(req.params.n)];
     if (!link) return res.redirect(`/p/${page.slug}`);
     if (!landing.isBot(req)) landing.record(db, page, "click", landing.visitorOf(req, secret()), link.label);
+    // Bouton « étape suivante » : la prochaine étape en ligne du tunnel de la page (sinon, retour sur la page)
+    if (link.url === funnels.NEXT_URL) return res.redirect(funnels.nextUrlForPage(db, page) || `/p/${page.slug}`);
     res.redirect(link.url);
   });
 
@@ -80,12 +86,16 @@ module.exports = ({ db }) => {
       if (result.contact) for (const tag of page.tags) tagContact({ ...ctx, audit: false }, result.contact.id, tag);
       landing.record(db, page, "signup", landing.visitorOf(req, secret()), result.pending ? "en attente de confirmation" : "confirmée");
       if (result.contact && consentedVisitor(req)) visitorsLib.recordFormSubmit(db, page.organization_id, { visitorId: consentedVisitor(req), contactId: result.contact.id, path: `/p/${page.slug}`, formName: form.name });
+      // Page d'un tunnel : le visiteur passe à l'étape suivante (une page du tunnel affiche le message de confirmation ;
+      // une formation, non : en attente de confirmation, il reste donc ici pour lire la consigne)
+      const next = funnels.nextUrlForPage(db, page);
+      const toNext = next && (next.startsWith("/p/") || !result.pending) ? next : null;
       if (result.pending) {
         const base = String(process.env.SITE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
         sendSubscriptionConfirmation(db, { to: result.email, formName: form.name, url: `${base}/f/confirmer/${result.token}` });
-        return res.redirect(`/p/${page.slug}?inscrit=1&confirmer=1#inscription`);
+        return res.redirect(toNext ? `${toNext}?inscrit=1&confirmer=1` : `/p/${page.slug}?inscrit=1&confirmer=1#inscription`);
       }
-      res.redirect(`/p/${page.slug}?inscrit=1#inscription`);
+      res.redirect(toNext ? (toNext.startsWith("/p/") ? `${toNext}?inscrit=1` : toNext) : `/p/${page.slug}?inscrit=1#inscription`);
     } catch (error) {
       next(error);
     }

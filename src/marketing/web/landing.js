@@ -96,7 +96,7 @@ module.exports = () => {
     res.render("marketing/landing", {
       title: page.name, active: "landing", page, content: page.working, STATUSES: landing.STATUSES, STATUS_CLASS, SECTION_LABELS: Object.fromEntries(Object.entries(pages.TYPES).map(([k, t]) => [k, t.label])),
       forms: forms.listForms(ctx), courses: listCourses(ctx), images: media.listMedia(ctx, { kind: "image", limit: 100 }).items,
-      sites: pages.listSites(ctx), versions: pages.listVersions(ctx, page.id),
+      sites: pages.listSites(ctx), versions: pages.listVersions(ctx, page.id), inFunnels: require("../funnels").funnelsOfPage(ctx, page.id),
       report: landing.pageReport(ctx, page.id), check: landing.preflight(ctx, { ...page, sections: pages.resolveSections(ctx, page.working.sections) }), canWrite: req.mk.can("forms.write"),
       publicUrl: `${String(process.env.SITE_URL || "").replace(/\/+$/, "")}/p/${page.slug}`,
     });

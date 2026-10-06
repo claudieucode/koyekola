@@ -43,6 +43,9 @@ const TEMPLATES = [
     build: () => [hero("Inscrivez-vous", "Une phrase qui dit ce que la personne reçoit."), form("Inscription")] },
   { key: "consultation", category: "Consultation", name: "Prise de rendez-vous", description: "Déroulé de l'échange et demande de rendez-vous.",
     build: () => [hero("Un échange de [durée] pour [objectif]", "Gratuit et sans engagement — précisez si ce n'est pas le cas."), list("Pendant l'échange", ["Nous faisons le point sur votre situation", "Je vous propose un plan d'action", "Vous repartez avec des étapes claires"]), form("Demander un rendez-vous", "Indiquez vos disponibilités dans le formulaire.")] },
+  // Page de remerciement (après une inscription, en particulier dans un tunnel)
+  { key: "merci", category: "Remerciement", name: "Remerciement", description: "Confirmation de l'inscription et prochaine étape.",
+    build: () => [hero("Merci, c'est noté !", "Vérifiez votre boîte de réception (et les courriers indésirables) : [ce qui arrive maintenant].", "", "", { align: "center", padding: "xl" }), text("## Et maintenant ?\n\nDites à la personne ce qu'elle peut faire en attendant : [lire un article, découvrir une formation…].")] },
   { key: "evenement", category: "Événement", name: "Événement", description: "Date, lieu, programme, inscription.",
     build: () => [hero("[Nom de l'événement]", "[Date] · [Lieu ou en ligne]"), text("## Programme\n\n- [Heure] : [séquence]\n- [Heure] : [séquence]"), divider(), faq([["Comment venir ?", "Précisez l'accès ou le lien."], ["Est-ce payant ?", "Indiquez le tarif réel."]]), form("Je m'inscris")] },
 ];

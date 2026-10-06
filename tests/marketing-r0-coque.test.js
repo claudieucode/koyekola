@@ -68,7 +68,7 @@ describe("registre de navigation", () => {
     assert.equal(owner.sections.find((s) => s.key === "audience").flat, false);
     // Site Web : tableau de bord, sites, pages (les pages d'atterrissage y sont rattachées)
     assert.deepEqual(owner.sections.find((s) => s.key === "site").items.map((i) => i.key), ["sitedash", "sites", "landing"]);
-    assert.deepEqual(owner.sections.map((s) => s.key), ["marketing", "campaigns", "sms", "automations", "site", "audience", "analytics", "integrations", "settings"]);
+    assert.deepEqual(owner.sections.map((s) => s.key), ["marketing", "campaigns", "sms", "automations", "site", "tunnels", "audience", "analytics", "integrations", "settings"]);
   });
   test("entrée courante, section ouverte, fil d'Ariane et bouton principal selon la page et le rôle", () => {
     const nav = buildNav({ can: roleCan("editor"), active: "segments" });

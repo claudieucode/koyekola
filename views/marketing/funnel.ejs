@@ -1,0 +1,126 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const archived = f.status === "archived"; const edit = canWrite && !archived;
+  const pct = (r) => (r === null || r === undefined ? "—" : `${String(r).replace(".", ",")} %`);
+  const periodLabel = { 7: "7 derniers jours", 30: "30 derniers jours", 90: "90 derniers jours" };
+  const STATUS = { draft: "Brouillon", published: "En ligne", unpublished: "Hors ligne" }; const STATUS_CLASS = { draft: "", published: "mk-status-ok", unpublished: "mk-status-warn" };
+  const live = f.steps.filter((s) => s.live).length;
+%>
+    <p class="mk-back"><a href="/marketing/tunnels">← Tunnels</a></p>
+    <div class="mk-head"><div class="mk-builder-title"><h1><%= f.name %></h1><% if (archived) { %><span class="mk-status mk-status-warn">Archivé</span><% } %></div>
+      <% if (canWrite) { %><div class="mk-actions">
+        <% if (archived) { %><form action="/marketing/tunnels/<%= f.id %>/restaurer" method="post"><button type="submit" class="btn btn-primary btn-sm">Restaurer le tunnel</button></form>
+        <% } else { %>
+          <form action="/marketing/tunnels/<%= f.id %>/dupliquer" method="post"><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form>
+          <form action="/marketing/tunnels/<%= f.id %>/archiver" method="post"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="Les pages créées pour ce tunnel passent hors ligne ; une page de votre site utilisée comme étape reste en ligne. Rien n'est effacé." data-mk-confirm-title="Archiver ce tunnel ?" data-mk-confirm-ok="Archiver">Archiver</button></form>
+          <% if (f.steps.length) { %><form action="/marketing/tunnels/<%= f.id %>/publier" method="post"><button type="submit" class="btn btn-primary btn-sm">Mettre en ligne les étapes</button></form><% } %>
+        <% } %>
+      </div><% } %>
+    </div>
+    <% if (f.description) { %><p class="mk-lead"><%= f.description %></p><% } %>
+    <p class="mk-lead">Le visiteur avance d'étape en étape : après une inscription, il est conduit à l'étape suivante ; un bouton dont l'adresse est <code><%= NEXT_URL %></code> l'y mène aussi.</p>
+
+    <section class="mk-panel" aria-labelledby="fn-steps">
+      <h2 id="fn-steps">Étapes <span class="mk-sub"><%= f.steps.length %> étape<%= f.steps.length > 1 ? "s" : "" %> · <%= live %> en ligne</span></h2>
+      <% if (!f.steps.length) { %>
+        <p>Ce tunnel n'a pas encore d'étape. Ajoutez la première ci-dessous : une nouvelle page, une page existante de votre site, ou une formation du catalogue.</p>
+      <% } else { %>
+        <ol class="mk-flow">
+          <% f.steps.forEach((s, i) => { %>
+            <li class="mk-flow-step" id="etape-<%= s.id %>">
+              <span class="mk-flow-num" aria-hidden="true"><%= i + 1 %></span>
+              <div class="mk-flow-main">
+                <div class="mk-flow-head">
+                  <% if (edit) { %>
+                    <form class="mk-flow-rename" action="/marketing/tunnels/<%= f.id %>/etapes/<%= s.id %>" method="post">
+                      <label class="sr-only" for="step-name-<%= s.id %>">Nom de l'étape <%= i + 1 %></label>
+                      <input id="step-name-<%= s.id %>" type="text" name="name" maxlength="80" required value="<%= s.name %>">
+                      <button type="submit" class="btn btn-ghost btn-sm">Renommer</button>
+                    </form>
+                  <% } else { %><strong><%= s.name %></strong><% } %>
+                  <span class="mk-sub"><%= s.typeLabel %></span>
+                </div>
+                <p class="mk-flow-meta">
+                  <% if (s.courseTitle) { %>Formation : <a href="<%= s.path %>" target="_blank" rel="noopener"><%= s.courseTitle %></a>
+                  <% } else if (s.pageSlug) { %>Page : <a href="/marketing/pages/<%= s.pageId %>"><%= s.pageName %></a> <span class="mk-status <%= STATUS_CLASS[s.pageStatus] %>"><%= STATUS[s.pageStatus] || s.pageStatus %></span><% if (s.pageHasDraft) { %> <span class="mk-sub">modifications non publiées</span><% } %>
+                  <% } %>
+                </p>
+                <% if (s.problem) { %><p class="mk-callout mk-callout-warn"><span><%= s.problem %></span></p><% } %>
+                <div class="mk-flow-actions">
+                  <% if (s.pageId && edit) { %><a class="btn btn-outline btn-sm" href="/marketing/pages/<%= s.pageId %>/editeur">Modifier la page</a><% } %>
+                  <% if (s.live) { %><a class="btn btn-ghost btn-sm" href="<%= s.path %>" target="_blank" rel="noopener">Voir en ligne</a><% } %>
+                  <% if (edit) { %>
+                    <form action="/marketing/tunnels/<%= f.id %>/etapes/<%= s.id %>/monter" method="post"><button type="submit" class="btn btn-ghost btn-sm"<%= i === 0 ? " disabled" : "" %> aria-label="Monter l'étape « <%= s.name %> »"><%- icon("arrowUp", { size: 16 }) %></button></form>
+                    <form action="/marketing/tunnels/<%= f.id %>/etapes/<%= s.id %>/descendre" method="post"><button type="submit" class="btn btn-ghost btn-sm"<%= i === f.steps.length - 1 ? " disabled" : "" %> aria-label="Descendre l'étape « <%= s.name %> »"><%- icon("arrowDown", { size: 16 }) %></button></form>
+                    <form action="/marketing/tunnels/<%= f.id %>/etapes/<%= s.id %>/retirer" method="post"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="L'étape est retirée du tunnel. Sa page n'est pas effacée : elle reste dans Site Web → Pages." data-mk-confirm-title="Retirer l'étape « <%= s.name %> » ?" data-mk-confirm-ok="Retirer">Retirer</button></form>
+                  <% } %>
+                </div>
+              </div>
+            </li>
+          <% }) %>
+        </ol>
+      <% } %>
+
+      <% if (edit) { %>
+        <form class="mk-form mk-flow-add" id="ajouter" action="/marketing/tunnels/<%= f.id %>/etapes" method="post">
+          <h3 class="mk-journey-sub">Ajouter une étape</h3>
+          <div class="mk-grid-2">
+            <div class="field-group"><label for="step-type">Type d'étape</label>
+              <select id="step-type" name="type"><% Object.entries(STEP_TYPES).forEach(([k, t]) => { if (t.course && !courses.length) return; %><option value="<%= k %>"><%= t.label %></option><% }) %></select></div>
+            <div class="field-group"><label for="step-new-name">Nom de l'étape</label><input id="step-new-name" type="text" name="name" maxlength="80" placeholder="Par défaut : le type d'étape"></div>
+          </div>
+          <fieldset class="mk-tpl-choice"><legend>Page de l'étape</legend>
+            <label class="mk-tpl"><input type="radio" name="source" value="nouvelle" checked><span><strong>Nouvelle page</strong><span class="mk-sub">Créée en brouillon à partir du modèle du type choisi, à compléter dans l'éditeur visuel.</span></span></label>
+            <label class="mk-tpl"><input type="radio" name="source" value="existante"<%= availablePages.length ? "" : " disabled" %>><span><strong>Page existante</strong><span class="mk-sub"><%= availablePages.length ? "Une page de Site Web → Pages, choisie ci-dessous." : "Aucune page disponible (une page n'appartient qu'à un seul tunnel actif)." %></span></span></label>
+          </fieldset>
+          <div class="mk-grid-2">
+            <% if (availablePages.length) { %><div class="field-group"><label for="step-page">Page existante</label><select id="step-page" name="page_id"><% availablePages.forEach((p) => { %><option value="<%= p.id %>"><%= p.name %><%= p.status === "published" ? "" : " (pas en ligne)" %></option><% }) %></select></div><% } %>
+            <% if (courses.length) { %><div class="field-group"><label for="step-course">Formation (étape « Formation »)</label><select id="step-course" name="course_id"><% courses.forEach((c) => { %><option value="<%= c.id %>"><%= c.title %></option><% }) %></select></div><% } %>
+          </div>
+          <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Ajouter l'étape</button></div>
+          <p class="field-hint">Pour qu'un bouton d'une page mène à l'étape suivante, donnez-lui l'adresse <code><%= NEXT_URL %></code> dans l'éditeur. Une étape qui n'est pas en ligne est sautée.</p>
+        </form>
+      <% } %>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="fn-stats">
+      <h2 id="fn-stats">Résultats</h2>
+      <nav class="mk-tabs" aria-label="Période">
+        <% [7, 30, 90].forEach((n) => { %><a class="mk-tab" href="/marketing/tunnels/<%= f.id %>?periode=<%= n %>#fn-stats"<%- days === n ? ' aria-current="page"' : "" %>><%= periodLabel[n] %></a><% }) %>
+      </nav>
+      <% if (!f.steps.length) { %><p class="field-hint">Les résultats apparaîtront dès que le tunnel aura des étapes et des visiteurs.</p>
+      <% } else { %>
+        <div class="mk-stats mk-stats-4">
+          <div class="mk-stat"><span class="mk-stat-label">Entrées</span><span class="mk-stat-value"><%= report.entrants === null ? "—" : mkh.fmt(report.entrants) %></span><span class="mk-stat-hint">visiteurs de la 1re étape (tous)</span></div>
+          <div class="mk-stat"><span class="mk-stat-label">Inscriptions</span><span class="mk-stat-value"><%= mkh.fmt(report.leads) %></span><span class="mk-stat-hint">formulaires envoyés dans le tunnel</span></div>
+          <div class="mk-stat"><span class="mk-stat-label">Conversion</span><span class="mk-stat-value"><%= pct(report.conversion) %></span><span class="mk-stat-hint">inscriptions ÷ entrées</span></div>
+          <div class="mk-stat"><span class="mk-stat-label">Parcours complet</span><span class="mk-stat-value"><%= mkh.fmt(report.measuredEnd) %></span><span class="mk-stat-hint">sur <%= mkh.fmt(report.measuredStart) %> visiteur<%= report.measuredStart > 1 ? "s" : "" %> mesuré<%= report.measuredStart > 1 ? "s" : "" %> à l'entrée</span></div>
+        </div>
+        <% if (advice) { %><p class="mk-callout mk-callout-warn"><span><strong>Étape la plus faible</strong><%= advice %></span></p>
+        <% } else if (!report.enough && f.steps.length > 1) { %><p class="mk-callout"><span><strong>Pas encore assez de données pour une conclusion fiable</strong><%= mkh.fmt(report.measuredStart) %> visiteur<%= report.measuredStart > 1 ? "s" : "" %> mesuré<%= report.measuredStart > 1 ? "s" : "" %> à l'entrée, <%= report.minSample %> nécessaires. Les chiffres ci-dessous sont exacts, mais trop peu nombreux pour désigner une étape faible.</span></p><% } %>
+        <% if (report.best) { %><p class="field-hint">Meilleur passage : de « <%= report.best.from %> » à « <%= report.best.to %> » (<%= pct(report.best.rate) %>).</p><% } %>
+        <h3 class="mk-journey-sub">Parcours mesuré, étape par étape</h3>
+        <ol class="mk-funnel">
+          <% report.steps.forEach((s, i) => { %>
+            <li class="mk-funnel-step">
+              <div class="mk-funnel-head"><span class="mk-funnel-label"><%= i + 1 %>. <%= s.name %></span><span class="mk-funnel-num"><%= mkh.fmt(s.journey) %> visiteur<%= s.journey > 1 ? "s" : "" %> · <%= pct(s.fromStart) %></span></div>
+              <div class="mk-funnel-track" role="img" aria-label="<%= pct(s.fromStart) %> des visiteurs mesurés à l'entrée"><span class="mk-funnel-bar" style="width: <%= Math.max(0, Math.min(100, s.fromStart || 0)) %>%"></span></div>
+              <span class="mk-sub"><% if (i > 0) { %>Passage depuis l'étape précédente : <%= pct(s.passage) %> · <% } %>Tous visiteurs : <%= s.anonVisitors === null ? "non mesuré pour une formation" : mkh.fmt(s.anonVisitors) %><%= s.signups ? ` · ${mkh.fmt(s.signups)} inscription${s.signups > 1 ? "s" : ""}` : "" %></span>
+            </li>
+          <% }) %>
+        </ol>
+        <p class="field-hint">Parcours mesuré : visiteurs ayant accepté la mesure d'audience, comptés à une étape seulement s'ils sont passés par toutes les précédentes. « Tous visiteurs » : chaque page comptée à part, sans cookie (une personne venue deux jours compte deux fois).</p>
+      <% } %>
+    </section>
+
+    <% if (edit) { %>
+      <section class="mk-panel" aria-labelledby="fn-settings">
+        <h2 id="fn-settings">Réglages du tunnel</h2>
+        <form class="mk-form" action="/marketing/tunnels/<%= f.id %>" method="post">
+          <div class="field-group"><label for="fn-edit-name">Nom *</label><input id="fn-edit-name" type="text" name="name" maxlength="100" required value="<%= f.name %>"></div>
+          <div class="field-group"><label for="fn-edit-desc">Description (pour vous)</label><input id="fn-edit-desc" type="text" name="description" maxlength="300" value="<%= f.description %>"></div>
+          <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button></div>
+        </form>
+      </section>
+    <% } %>
+<%- include("partials/bottom") %>

@@ -27,6 +27,7 @@
 <% } else { %><body class="lp-body" style="--lp-accent: <%= page.theme.accent %>; --lp-bg: <%= page.theme.background %>; --lp-text: <%= page.theme.text %>"><% } %>
   <% if (preview && !(typeof builder !== "undefined" && builder)) { %><p class="lp-preview-bar"><%= typeof previewLabel !== "undefined" && previewLabel ? previewLabel + " " : "Aperçu — " %>Les clics et inscriptions ne sont pas enregistrés.</p><% } %>
   <main class="lp-main" id="main">
+    <% if (thanks && !page.sections.some((x) => x.type === "form")) { %><section class="lp-section"><p class="lp-thanks" role="status"><%= thanks %></p></section><% } %>
     <%- include("_sections", { page, form, preview, thanks, error, values, fieldCatalog, propertyDefs, builder: typeof builder !== "undefined" && builder }) %>
   </main>
   <footer class="lp-foot"><a href="/">KOLAKISA</a> · <a href="/cookies" data-kw-consent-open>Cookies</a></footer>

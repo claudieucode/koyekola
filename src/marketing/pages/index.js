@@ -178,7 +178,7 @@ function createPage(ctx, { name, siteId = null, kind = "page", template = null }
   }
   // Page de site : un bandeau et un texte (la section d'inscription des pages d'atterrissage demanderait un formulaire
   // avant toute publication)
-  if (kind === "page") {
+  if (kind === "page" || kind === "step") {
     const start = [{ ...page.sections[0], id: newSectionId() }, { type: "text", markdown: "Présentez ici le contenu de la page.", id: newSectionId() }];
     ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(start), page.id);
   }

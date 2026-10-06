@@ -1826,3 +1826,18 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-funnel-num { color: var(--muted); font-variant-numeric: tabular-nums; }
 .mk-funnel-track { height: 12px; border-radius: 999px; background: var(--mk-border); overflow: hidden; }
 .mk-funnel-bar { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+
+/* Tunnels : étapes en colonne, reliées par un trait (phase 8) */
+.mk-flow { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 0; }
+.mk-flow-step { position: relative; display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; padding-bottom: 18px; }
+.mk-flow-step:not(:last-child)::before { content: ""; position: absolute; left: 17px; top: 36px; bottom: 0; width: 2px; background: var(--mk-border); }
+.mk-flow-num { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mk-flow-main { min-width: 0; border: 1px solid var(--mk-border); border-radius: var(--mk-r); padding: 12px 14px; background: var(--mk-surface); display: grid; gap: 8px; }
+.mk-flow-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.mk-flow-rename { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; flex: 1 1 260px; }
+.mk-flow-rename input { flex: 1 1 160px; min-width: 0; font-weight: 600; }
+.mk-flow-meta { margin: 0; overflow-wrap: anywhere; }
+.mk-flow-main .mk-callout { margin: 0; }
+.mk-flow-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mk-flow-actions form { margin: 0; }
+.mk-flow-add { border-top: 1px solid var(--mk-border); padding-top: 16px; }

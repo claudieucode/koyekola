@@ -9,6 +9,7 @@
         <% if (page.status === "published") { %><form action="/marketing/pages/<%= page.id %>/depublier" method="post"><button type="submit" class="btn btn-outline btn-sm">Mettre hors ligne</button></form><% } %>
       </div><% } %>
     </div>
+    <% if (inFunnels.length) { %><p class="field-hint">Étape de tunnel : <% inFunnels.forEach((t, i) => { %><%= i ? " · " : "" %><a href="/marketing/tunnels/<%= t.id %>#fn-steps"><%= t.name %></a> (étape <%= t.position %>, « <%= t.step %> »<%= t.status === "archived" ? ", tunnel archivé" : "" %>)<% }) %>.</p><% } %>
     <% if (archived) { %><div class="mk-callout"><span><strong>Page archivée</strong> (hors ligne, non modifiable). Restaurez-la pour la modifier ou la republier.</span>
       <% if (canWrite) { %><form action="/marketing/pages/<%= page.id %>/restaurer" method="post"><button type="submit" class="btn btn-outline btn-sm">Restaurer la page</button></form><% } %></div>
     <% } else if (page.hasDraft) { %><div class="mk-callout mk-callout-info" role="status"><span><strong>Modifications non publiées.</strong> <%= page.status === "published" ? "Les visiteurs voient toujours la version en ligne." : "La page n'est pas en ligne." %></span>

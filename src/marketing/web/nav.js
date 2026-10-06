@@ -2,7 +2,7 @@
 // Une entrée « soon » est prévue mais jamais affichée : on n'expose pas une fonctionnalité qui n'existe pas encore.
 // (Elle porte la phase où elle arrive : `since`.) Les clés `key` sont celles passées en `active` par les routes.
 
-// Organisation calquée sur Mailchimp : Accueil, Campagnes, SMS, Automatisations, Site Web, Audience (formulaires
+// Organisation calquée sur Mailchimp : Accueil, Campagnes, SMS, Automatisations, Site Web, Tunnels, Audience (formulaires
 // d'inscription compris), Analytics, Intégrations, puis Paramètres (envoi, conformité) en bas du menu.
 const SECTIONS = [
   { key: "marketing", label: "Accueil", icon: "home" },
@@ -10,6 +10,7 @@ const SECTIONS = [
   { key: "sms", label: "SMS", icon: "smartphone" },
   { key: "automations", label: "Automatisations", icon: "zap" },
   { key: "site", label: "Site Web", icon: "globe" },
+  { key: "tunnels", label: "Tunnels", icon: "filter" },
   { key: "audience", label: "Audience", icon: "users" },
   { key: "analytics", label: "Analytics", icon: "activity" },
   { key: "integrations", label: "Intégrations", icon: "plug" },
@@ -54,6 +55,9 @@ const ITEMS = [
   live("site", "sitedash", "Tableau de bord", "/marketing/site-web", "activity", "forms.read"),
   live("site", "sites", "Sites", "/marketing/site-web/sites", "globe", "forms.read", { label: "Créer un site", href: "/marketing/site-web/sites#nouveau", permission: "forms.write" }),
   live("site", "landing", "Pages", "/marketing/pages", "layout", "forms.read", { label: "Créer une page", href: "/marketing/pages#nouvelle", permission: "forms.write" }),
+
+  // Tunnels : suites d'étapes faites des pages du même moteur (même éditeur que Site Web) et des formations du catalogue
+  live("tunnels", "funnels", "Tunnels", "/marketing/tunnels", "filter", "forms.read", { label: "Créer un tunnel", href: "/marketing/tunnels#nouveau", permission: "forms.write" }),
 
   live("analytics", "analytics", "Analytics", "/marketing/analytics", "activity", "analytics.read"),
   live("analytics", "revenue", "Revenus", "/marketing/revenus", "coin", "analytics.read"),

@@ -7,10 +7,10 @@ const pages = require("../src/marketing/pages");
 const { TEMPLATES, catalog } = require("../src/marketing/pages/templates");
 const { startServer, loginInstructor, createCourse } = require("./helpers");
 
-test("13 catégories ; chaque gabarit donne une page valide, à identifiants de section uniques, sans faux chiffres", () => {
+test("14 catégories ; chaque gabarit donne une page valide, à identifiants de section uniques, sans faux chiffres", () => {
   const { A } = freshMarketing();
-  assert.equal(TEMPLATES.length, 13);
-  assert.deepEqual(catalog().map((t) => t.category), ["Génération de prospects", "Vente", "Webinaire", "Formation", "Produit", "Service", "Newsletter", "Téléchargement", "Lancement", "Bientôt disponible", "Inscription", "Consultation", "Événement"]);
+  assert.equal(TEMPLATES.length, 14);
+  assert.deepEqual(catalog().map((t) => t.category), ["Génération de prospects", "Vente", "Webinaire", "Formation", "Produit", "Service", "Newsletter", "Téléchargement", "Lancement", "Bientôt disponible", "Inscription", "Consultation", "Remerciement", "Événement"]);
   for (const t of TEMPLATES) {
     const p = pages.createPage(A, { name: `Page ${t.key}`, template: t.key });
     const ids = p.working.sections.map((s) => s.id);
