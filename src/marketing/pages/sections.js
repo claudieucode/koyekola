@@ -1,0 +1,167 @@
+// Grammaire des sections de page : UNE seule source pour les pages d'atterrissage, les pages des sites (Site Web) et les
+// étapes des tunnels (Tunnels). Grammaire fermée (aucun HTML libre) : chaque section est validée et normalisée à
+// l'enregistrement ; les liens ne visent qu'une adresse https:// ou une page du site (« /… »), les images qu'une adresse
+// https:// ou un fichier de la médiathèque marketing.
+// Chaque type est déclaré dans le registre TYPES (libellé + normalisation) : un nouveau type s'ajoute ici, sans toucher
+// au reste du moteur.
+const crypto = require("crypto");
+const { MarketingError } = require("../errors");
+const { getCourse } = require("../bridge/catalog");
+
+const MAX_SECTIONS = 30;
+const bad = (message) => new MarketingError("invalid_field", message);
+const clean = (v, max) => (typeof v === "string" ? v.replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "").trim().slice(0, max) : "");
+const line = (v, max) => clean(v, max).replace(/\s+/g, " ");
+
+// Lien : https://… ou chemin du site (« /catalogue ») ; jamais javascript:, data:, http:// en clair ni « //autre-site »
+function linkUrl(v, label) {
+  const url = line(v, 2000);
+  if (!url) return "";
+  if (/^\/(?!\/)[^\s<>"'`\\]*$/.test(url)) return url;
+  if (/^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(url)) return url;
+  throw bad(`${label} : l'adresse doit commencer par https:// ou être une page du site (« /catalogue »).`);
+}
+// Image : https://… ou fichier de la médiathèque marketing (/uploads/marketing/…)
+function imageUrl(v, label) {
+  const url = line(v, 2000);
+  if (!url) return "";
+  if (/^\/uploads\/marketing\/\d+\/[A-Za-z0-9._-]+$/.test(url)) return url;
+  if (/^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(url)) return url;
+  throw bad(`${label} : l'image doit venir de la médiathèque ou d'une adresse https://.`);
+}
+
+const TYPES = {
+  hero: {
+    label: "Bandeau (titre, sous-titre, image, bouton)",
+    normalize(ctx, raw, at) {
+      const title = line(raw.title, 150);
+      if (!title) throw bad(`${at} (bandeau) : le titre est obligatoire.`);
+      const buttonLabel = line(raw.buttonLabel, 60), buttonUrl = linkUrl(raw.buttonUrl, `${at} (bouton du bandeau)`);
+      if (Boolean(buttonLabel) !== Boolean(buttonUrl)) throw bad(`${at} (bandeau) : un bouton a besoin d'un texte ET d'une adresse.`);
+      return { type: "hero", title, subtitle: clean(raw.subtitle, 300), image: imageUrl(raw.image, `${at} (image du bandeau)`), imageAlt: line(raw.imageAlt, 200), buttonLabel, buttonUrl };
+    },
+  },
+  text: {
+    label: "Texte",
+    normalize(ctx, raw, at) {
+      const markdown = clean(raw.markdown, 10000);
+      if (!markdown) throw bad(`${at} (texte) : le texte est vide.`);
+      return { type: "text", markdown };
+    },
+  },
+  image: {
+    label: "Image",
+    normalize(ctx, raw, at) {
+      const src = imageUrl(raw.src, `${at} (image)`);
+      if (!src) throw bad(`${at} (image) : choisissez une image.`);
+      const alt = line(raw.alt, 200);
+      if (!alt) throw bad(`${at} (image) : décrivez l'image (texte alternatif, pour les lecteurs d'écran).`);
+      return { type: "image", src, alt, caption: line(raw.caption, 200), link: linkUrl(raw.link, `${at} (lien de l'image)`) };
+    },
+  },
+  list: {
+    label: "Liste de points forts",
+    normalize(ctx, raw, at) {
+      const items = (Array.isArray(raw.items) ? raw.items : String(raw.items || "").split("\n")).map((x) => line(x, 200)).filter(Boolean).slice(0, 20);
+      if (!items.length) throw bad(`${at} (liste) : ajoutez au moins un point (un par ligne).`);
+      return { type: "list", title: line(raw.title, 150), items };
+    },
+  },
+  course: {
+    label: "Formation du catalogue",
+    normalize(ctx, raw, at) {
+      const courseId = Number(raw.courseId);
+      const course = Number.isInteger(courseId) ? getCourse(ctx, courseId) : null;
+      if (!course) throw bad(`${at} (formation) : choisissez une formation publiée du catalogue.`);
+      return { type: "course", courseId, cta: line(raw.cta, 60) || "Découvrir la formation" };
+    },
+  },
+  button: {
+    label: "Bouton",
+    normalize(ctx, raw, at) {
+      const label = line(raw.label, 60), url = linkUrl(raw.url, `${at} (bouton)`);
+      if (!label || !url) throw bad(`${at} (bouton) : un texte et une adresse sont obligatoires.`);
+      return { type: "button", label, url, align: ["left", "center"].includes(raw.align) ? raw.align : "center" };
+    },
+  },
+  quote: {
+    label: "Citation ou témoignage",
+    normalize(ctx, raw, at) {
+      const text = clean(raw.text, 600);
+      if (!text) throw bad(`${at} (citation) : le texte est vide.`);
+      return { type: "quote", text, author: line(raw.author, 120) };
+    },
+  },
+  form: {
+    label: "Formulaire d'inscription",
+    normalize(ctx, raw) {
+      return { type: "form", heading: line(raw.heading, 150) || "Inscrivez-vous", intro: clean(raw.intro, 400) };
+    },
+  },
+  // Composant réutilisable inséré « synchronisé » : seule la référence est enregistrée ; l'affichage reprend toujours
+  // la dernière version du composant (voir components.js)
+  component: {
+    label: "Composant réutilisable",
+    builderOnly: true,
+    normalize(ctx, raw, at) {
+      const componentId = Number(raw.componentId);
+      const ok = Number.isInteger(componentId) && ctx.db.prepare("SELECT 1 FROM mk_web_components WHERE id = ? AND organization_id = ?").get(componentId, ctx.organizationId);
+      if (!ok) throw bad(`${at} (composant) : composant introuvable.`);
+      return { type: "component", componentId };
+    },
+  },
+};
+// Types proposés dans l'éditeur des pages d'atterrissage actuel (le composant n'y a pas encore d'interface)
+const SECTION_TYPES = Object.fromEntries(Object.entries(TYPES).filter(([, t]) => !t.builderOnly).map(([k, t]) => [k, t.label]));
+
+// ---------- Attributs communs (éditeur visuel) ----------
+// Présents seulement s'ils sont fournis : une section des pages d'atterrissage actuelles reste exactement identique.
+const SECTION_ID = /^[a-z0-9]{6,20}$/;
+const BREAKPOINTS = ["desktop", "tablet", "mobile"];
+const STYLE = {
+  padding: ["none", "sm", "md", "lg", "xl"],            // espacements du design system (tokens.js)
+  background: ["default", "surface", "primary", "accent", "dark"],
+  align: ["left", "center", "right"],
+  width: ["narrow", "normal", "wide", "full"],
+};
+function common(raw) {
+  const out = {};
+  if (raw.id !== undefined) {
+    if (!SECTION_ID.test(String(raw.id))) throw bad("Identifiant de section invalide.");
+    out.id = String(raw.id);
+  }
+  if (raw.name !== undefined && line(raw.name, 60)) out.name = line(raw.name, 60);
+  if (raw.hidden === true) out.hidden = true;
+  if (raw.locked === true) out.locked = true;
+  if (Array.isArray(raw.hideOn)) {
+    const hideOn = [...new Set(raw.hideOn.filter((b) => BREAKPOINTS.includes(b)))];
+    if (hideOn.length === BREAKPOINTS.length) throw bad("Une section ne peut pas être masquée sur tous les écrans (utilisez « Masquer »).");
+    if (hideOn.length) out.hideOn = hideOn;
+  }
+  if (raw.style && typeof raw.style === "object") {
+    const style = {};
+    for (const [k, allowed] of Object.entries(STYLE)) if (allowed.includes(raw.style[k])) style[k] = raw.style[k];
+    if (Object.keys(style).length) out.style = style;
+  }
+  return out;
+}
+
+function normalizeSection(ctx, raw, i) {
+  if (!raw || typeof raw !== "object") throw bad(`Section ${i + 1} : invalide.`);
+  const def = Object.hasOwn(TYPES, raw.type) ? TYPES[raw.type] : null;
+  if (!def) throw bad(`Section ${i + 1} : type inconnu.`);
+  return { ...def.normalize(ctx, raw, `Section ${i + 1}`), ...common(raw) };
+}
+
+function normalizeSections(ctx, list) {
+  const raw = Array.isArray(list) ? list : [];
+  if (raw.length > MAX_SECTIONS) throw bad(`Trop de sections (${MAX_SECTIONS} au plus).`);
+  const out = raw.map((s, i) => normalizeSection(ctx, s, i));
+  const ids = out.map((s) => s.id).filter(Boolean);
+  if (new Set(ids).size !== ids.length) throw bad("Deux sections portent le même identifiant.");
+  return out;
+}
+
+const newSectionId = () => crypto.randomBytes(6).toString("hex");
+
+module.exports = { TYPES, SECTION_TYPES, MAX_SECTIONS, BREAKPOINTS, STYLE, normalizeSection, normalizeSections, newSectionId, linkUrl, imageUrl, clean, line, bad };

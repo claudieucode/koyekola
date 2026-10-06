@@ -8,90 +8,15 @@ const crypto = require("crypto");
 const { MarketingError } = require("../errors");
 const { checkCtx, audit } = require("../audience/shared");
 const { getCourse } = require("../bridge/catalog");
+// Grammaire des sections : commune à tout le moteur de pages (Site Web, Tunnels)
+const { SECTION_TYPES, normalizeSection, normalizeSections, bad, line } = require("../pages/sections");
 
-const MAX_SECTIONS = 30;
 const MAX_TAGS = 5;
 const STATUSES = { draft: "Brouillon", published: "En ligne", unpublished: "Hors ligne" };
-const SECTION_TYPES = {
-  hero: "Bandeau (titre, sous-titre, image, bouton)", text: "Texte", image: "Image", list: "Liste de points forts",
-  course: "Formation du catalogue", button: "Bouton", quote: "Citation ou témoignage", form: "Formulaire d'inscription",
-};
 const DEFAULT_THEME = { accent: "#0277b6", background: "#f3f8fc", text: "#10222f" };
 const HEX = /^#[0-9a-f]{6}$/i;
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$/;
 const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|headless|lighthouse|pingdom|monitor/i;
-
-const bad = (message) => new MarketingError("invalid_field", message);
-const clean = (v, max) => (typeof v === "string" ? v.replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "").trim().slice(0, max) : "");
-const line = (v, max) => clean(v, max).replace(/\s+/g, " ");
-
-// Lien : https://… ou chemin du site (« /catalogue ») ; jamais javascript:, data:, http:// en clair ni « //autre-site »
-function linkUrl(v, label) {
-  const url = line(v, 2000);
-  if (!url) return "";
-  if (/^\/(?!\/)[^\s<>"'`\\]*$/.test(url)) return url;
-  if (/^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(url)) return url;
-  throw bad(`${label} : l'adresse doit commencer par https:// ou être une page du site (« /catalogue »).`);
-}
-// Image : https://… ou fichier de la médiathèque marketing (/uploads/marketing/…)
-function imageUrl(v, label) {
-  const url = line(v, 2000);
-  if (!url) return "";
-  if (/^\/uploads\/marketing\/\d+\/[A-Za-z0-9._-]+$/.test(url)) return url;
-  if (/^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(url)) return url;
-  throw bad(`${label} : l'image doit venir de la médiathèque ou d'une adresse https://.`);
-}
-
-function normalizeSection(ctx, raw, i) {
-  if (!raw || typeof raw !== "object") throw bad(`Section ${i + 1} : invalide.`);
-  const at = `Section ${i + 1}`;
-  switch (raw.type) {
-    case "hero": {
-      const title = line(raw.title, 150);
-      if (!title) throw bad(`${at} (bandeau) : le titre est obligatoire.`);
-      const buttonLabel = line(raw.buttonLabel, 60), buttonUrl = linkUrl(raw.buttonUrl, `${at} (bouton du bandeau)`);
-      if (Boolean(buttonLabel) !== Boolean(buttonUrl)) throw bad(`${at} (bandeau) : un bouton a besoin d'un texte ET d'une adresse.`);
-      return { type: "hero", title, subtitle: clean(raw.subtitle, 300), image: imageUrl(raw.image, `${at} (image du bandeau)`), imageAlt: line(raw.imageAlt, 200), buttonLabel, buttonUrl };
-    }
-    case "text": {
-      const markdown = clean(raw.markdown, 10000);
-      if (!markdown) throw bad(`${at} (texte) : le texte est vide.`);
-      return { type: "text", markdown };
-    }
-    case "image": {
-      const src = imageUrl(raw.src, `${at} (image)`);
-      if (!src) throw bad(`${at} (image) : choisissez une image.`);
-      const alt = line(raw.alt, 200);
-      if (!alt) throw bad(`${at} (image) : décrivez l'image (texte alternatif, pour les lecteurs d'écran).`);
-      return { type: "image", src, alt, caption: line(raw.caption, 200), link: linkUrl(raw.link, `${at} (lien de l'image)`) };
-    }
-    case "list": {
-      const items = (Array.isArray(raw.items) ? raw.items : String(raw.items || "").split("\n")).map((x) => line(x, 200)).filter(Boolean).slice(0, 20);
-      if (!items.length) throw bad(`${at} (liste) : ajoutez au moins un point (un par ligne).`);
-      return { type: "list", title: line(raw.title, 150), items };
-    }
-    case "course": {
-      const courseId = Number(raw.courseId);
-      const course = Number.isInteger(courseId) ? getCourse(ctx, courseId) : null;
-      if (!course) throw bad(`${at} (formation) : choisissez une formation publiée du catalogue.`);
-      return { type: "course", courseId, cta: line(raw.cta, 60) || "Découvrir la formation" };
-    }
-    case "button": {
-      const label = line(raw.label, 60), url = linkUrl(raw.url, `${at} (bouton)`);
-      if (!label || !url) throw bad(`${at} (bouton) : un texte et une adresse sont obligatoires.`);
-      return { type: "button", label, url, align: ["left", "center"].includes(raw.align) ? raw.align : "center" };
-    }
-    case "quote": {
-      const text = clean(raw.text, 600);
-      if (!text) throw bad(`${at} (citation) : le texte est vide.`);
-      return { type: "quote", text, author: line(raw.author, 120) };
-    }
-    case "form":
-      return { type: "form", heading: line(raw.heading, 150) || "Inscrivez-vous", intro: clean(raw.intro, 400) };
-    default:
-      throw bad(`${at} : type inconnu.`);
-  }
-}
 
 const parse = (row) => (row ? { ...row, sections: JSON.parse(row.sections || "[]"), theme: { ...DEFAULT_THEME, ...JSON.parse(row.theme || "{}") }, tags: JSON.parse(row.tags || "[]") } : null);
 function getPage(ctx, id) {
@@ -147,9 +72,7 @@ function savePage(ctx, id, input = {}) {
   if (ctx.db.prepare("SELECT 1 FROM mk_landing_pages WHERE slug = ? AND id <> ?").get(slug, id)) throw new MarketingError("duplicate", `L'adresse « /p/${slug} » est déjà utilisée par une autre page.`);
   const title = line(input.title, 120) || name;
   const description = line(input.description, 300);
-  const rawSections = Array.isArray(input.sections) ? input.sections : [];
-  if (rawSections.length > MAX_SECTIONS) throw bad(`Trop de sections (${MAX_SECTIONS} au plus).`);
-  const sections = rawSections.map((s, i) => normalizeSection(ctx, s, i));
+  const sections = normalizeSections(ctx, input.sections);
   const theme = {};
   for (const k of Object.keys(DEFAULT_THEME)) theme[k] = HEX.test(String(input.theme && input.theme[k] || "")) ? input.theme[k].toLowerCase() : DEFAULT_THEME[k];
   let formId = null;
@@ -241,6 +164,6 @@ function pageReport(ctx, id, { days = 30, now = Date.now() } = {}) {
 }
 
 module.exports = {
-  createPage, savePage, getPage, requirePage, getPublishedPage, listPages, publishPage, unpublishPage, deletePage, preflight, viewModel, linksOf,
+  createPage, savePage, getPage, requirePage, getPublishedPage, listPages, publishPage, unpublishPage, deletePage, preflight, viewModel, linksOf, freeSlug,
   visitorOf, isBot, record, pageReport, normalizeSection, slugify, SECTION_TYPES, STATUSES, DEFAULT_THEME, MAX_TAGS,
 };
