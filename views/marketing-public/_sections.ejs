@@ -57,7 +57,7 @@
   <% } else if (s.type === "video") { const v = parseVideoUrl(s.url); %>
     <figure class="lp-section lp-video">
       <% if (v && v.kind === "file") { %><video src="<%= v.src %>" controls preload="metadata" title="<%= s.title %>"></video>
-      <% } else if (v) { %><div class="lp-video-frame"><iframe src="<%= v.src %>" title="<%= s.title %>" loading="lazy" allow="encrypted-media; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><% } %>
+      <% } else if (v && isBuilder) { %><div class="lp-video-frame lp-video-stand-in" data-embed-src="<%= v.src %>"><span class="lp-video-play" aria-hidden="true"></span><span class="lp-video-meta"><strong><%= s.title %></strong> <%= { youtube: "YouTube", vimeo: "Vimeo" }[v.kind] || "Vidéo" %></span></div><% } else if (v) { %><div class="lp-video-frame"><iframe src="<%= v.src %>" title="<%= s.title %>" loading="lazy" allow="encrypted-media; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div><% } %>
       <% if (s.caption) { %><figcaption><%= s.caption %></figcaption><% } %>
     </figure>
   <% } else if (s.type === "testimonials") { %>

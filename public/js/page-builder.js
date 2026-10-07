@@ -551,17 +551,22 @@
     if (it.styles) { BPS.forEach(function (b) { if (it.styles[b] && !Object.keys(it.styles[b]).length) delete it.styles[b]; }); if (!Object.keys(it.styles).length) delete it.styles; }
     if (it.states) { Object.keys(it.states).forEach(function (k) { if (!Object.keys(it.states[k]).length) delete it.states[k]; }); if (!Object.keys(it.states).length) delete it.states; }
   }
-  function setStyle(ids, key, value, opts) {
+  function setStyle(ids, key, value, opts) { var m = {}; m[key] = value; setStyles(ids, m, opts); }
+  // Plusieurs propriétés en une seule étape d'annulation (côtés liés, retrait du fond…)
+  function setStyles(ids, map, opts) {
     ids = ids || selection;
     if (!ids.length || refuseLocked(ids)) return;
     change(function () {
       ids.forEach(function (id) {
         var it = byId(id);
         if (!it) return;
-        var empty = value === "" || value === null || value === undefined;
-        var set = styleSet(it, device, styleState, !empty);
-        if (!set) return;
-        if (empty) delete set[key]; else set[key] = value;
+        Object.keys(map).forEach(function (key) {
+          var value = map[key];
+          var empty = value === "" || value === null || value === undefined;
+          var set = styleSet(it, device, styleState, !empty);
+          if (!set) return;
+          if (empty) delete set[key]; else set[key] = value;
+        });
         cleanStyles(it);
       });
     }, { key: opts && opts.key ? opts.key + ":" + device + ":" + styleState : null, light: opts && opts.light });
@@ -1132,7 +1137,9 @@
   var BOX_LAYOUT = ["display", "flexDirection", "flexWrap", "justifyContent", "alignItems", "gap"];
   var SIZE_W = ["width", "minWidth", "maxWidth"];
   var BOX = { layout: BOX_LAYOUT, size: null, spacing: true, color: null, background: true, border: null, effects: null };
-  var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, border: null, effects: ["boxShadow", "opacity"] };
+  var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: ["boxShadow", "opacity"] };
+  // Ordre des groupes selon la nature de l'élément (le premier est ouvert par défaut)
+  var TEXT_ORDER = ["typography", "spacing", "size", "layout", "background", "border", "effects"];
   var INSPECTORS = {
     section: { kind: "Section", groups: BOX },
     container: { kind: "Conteneur", groups: BOX },
@@ -1141,25 +1148,25 @@
     stack: { kind: "Pile", groups: BOX },
     group: { kind: "Groupe", groups: BOX },
     grid: { kind: "Grille", groups: { layout: ["columns", "gap", "alignItems", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null } },
-    heading: { kind: "Titre", groups: TEXTUAL },
-    text: { kind: "Texte", groups: TEXTUAL },
-    list: { kind: "Liste", groups: TEXTUAL },
-    quote: { kind: "Citation", groups: TEXTUAL },
-    code: { kind: "Code", groups: TEXTUAL },
-    table: { kind: "Tableau", groups: TEXTUAL },
-    tabs: { kind: "Onglets", groups: TEXTUAL },
-    accordion: { kind: "Accordéon / FAQ", groups: TEXTUAL },
-    countdown: { kind: "Compte à rebours", groups: TEXTUAL },
-    image: { kind: "Image", groups: { layout: ["alignSelf"], size: null, media: null, spacing: true, border: null, effects: null }, states: true },
-    gallery: { kind: "Galerie", groups: { layout: ["columns", "gap"], size: SIZE_W, spacing: true, border: null, effects: null } },
-    video: { kind: "Vidéo", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null } },
+    heading: { kind: "Titre", groups: TEXTUAL, order: TEXT_ORDER },
+    text: { kind: "Texte", groups: TEXTUAL, order: TEXT_ORDER },
+    list: { kind: "Liste", groups: TEXTUAL, order: TEXT_ORDER },
+    quote: { kind: "Citation", groups: TEXTUAL, order: TEXT_ORDER },
+    code: { kind: "Code", groups: TEXTUAL, order: TEXT_ORDER },
+    table: { kind: "Tableau", groups: TEXTUAL, order: TEXT_ORDER },
+    tabs: { kind: "Onglets", groups: TEXTUAL, order: TEXT_ORDER },
+    accordion: { kind: "Accordéon / FAQ", groups: TEXTUAL, order: TEXT_ORDER },
+    countdown: { kind: "Compte à rebours", groups: TEXTUAL, order: TEXT_ORDER },
+    image: { kind: "Image", groups: { layout: ["alignSelf"], size: null, media: null, spacing: true, border: null, effects: null }, states: true, order: ["size", "media", "border", "effects", "spacing", "layout"] },
+    gallery: { kind: "Galerie", groups: { layout: ["columns", "gap"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["layout", "size", "border", "effects", "spacing"] },
+    video: { kind: "Vidéo", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["size", "border", "effects", "spacing", "layout"] },
     audio: { kind: "Audio", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null } },
-    button: { kind: "Bouton", groups: { layout: ["alignSelf"], typography: null, color: null, background: true, size: SIZE_W, spacing: true, border: null, effects: null }, states: true },
-    link: { kind: "Lien", groups: { layout: ["alignSelf"], typography: null, color: ["color"], spacing: true }, states: true },
+    button: { kind: "Bouton", groups: { layout: ["alignSelf"], typography: null, color: null, background: true, size: SIZE_W, spacing: true, border: null, effects: null }, states: true, order: ["typography", "size", "background", "border", "spacing", "effects", "layout"] },
+    link: { kind: "Lien", groups: { layout: ["alignSelf"], typography: null, color: ["color"], spacing: true }, states: true, order: TEXT_ORDER },
     icon: { kind: "Icône", groups: { layout: ["alignSelf"], color: ["color"], size: ["width", "height"], spacing: true }, states: true },
     spacer: { kind: "Espace", groups: { size: ["height"], spacing: true } },
     divider: { kind: "Séparateur", groups: { size: SIZE_W, border: null, spacing: true } },
-    course: { kind: "Formation", groups: { layout: ["alignSelf"], size: SIZE_W, color: ["backgroundColor"], spacing: true, border: null, effects: null }, states: true },
+    course: { kind: "Formation", groups: { layout: ["alignSelf"], size: SIZE_W, background: true, spacing: true, border: null, effects: null }, states: true },
     form: { kind: "Formulaire", groups: { size: null, spacing: true, color: null, background: true, border: null, effects: null }, presets: true },
     component: { kind: "Composant", groups: null },
     legacy: { kind: "Section prête", groups: { size: null, spacing: true, color: null, background: true, border: null, effects: null }, presets: true },
@@ -1176,7 +1183,56 @@
   var optLabel = function (p, v) { var o = (p.options || []).find(function (x) { return String(x[0]) === String(v); }); return o ? o[1] : v; };
   var lockedAny = function (items) { return !canWrite || items.some(function (x) { return lockedDeep(x.id); }); };
   var idsOf = function (items) { return items.map(function (x) { return x.id; }); };
-  function styleControl(items, key) {
+  // ---------- Contrôles de style compacts ----------
+  // Une ligne par propriété : libellé | valeur | effacer. Le point devant le libellé signale une valeur propre à l'écran
+  // modifié ; les petites icônes d'appareil, les écrans plus petits qui ont leur propre valeur pour cette propriété.
+  var UNITS = {
+    width: ["px", "%", "rem", "vw", "auto"], height: ["px", "%", "rem", "vh", "auto"],
+    minWidth: ["px", "%", "rem", "vw"], maxWidth: ["px", "%", "rem", "vw"], minHeight: ["px", "%", "rem", "vh"], maxHeight: ["px", "%", "rem", "vh"],
+    gap: ["px", "rem", "em", "%"], fontSize: ["px", "rem", "em"], letterSpacing: ["px", "em"], borderWidth: ["px"],
+    borderRadius: ["px", "%", "rem"], borderTopLeftRadius: ["px", "%", "rem"], borderTopRightRadius: ["px", "%", "rem"], borderBottomRightRadius: ["px", "%", "rem"], borderBottomLeftRadius: ["px", "%", "rem"],
+    top: ["px", "%", "rem"], left: ["px", "%", "rem"],
+  };
+  ["Top", "Right", "Bottom", "Left"].forEach(function (s) { UNITS["margin" + s] = ["px", "%", "rem", "em", "auto"]; UNITS["padding" + s] = ["px", "%", "rem", "em"]; });
+  var unitsOf = function (key) { return (UNITS[key] || ["px", "%", "rem", "em"]).slice(); };
+  // « 64px » → { num: "64", unit: "px" } ; « auto » → { num: "", unit: "auto" } ; « 0 » → { num: "0", unit: "px" }
+  function splitLen(v) {
+    if (v === undefined || v === null || v === "") return null;
+    var s = String(v);
+    if (s === "auto") return { num: "", unit: "auto" };
+    var m = /^(-?[\d.]+)([a-z%]*)$/.exec(s);
+    return m ? { num: m[1], unit: m[2] || "px" } : null;
+  }
+  var DEVICE_ICON = { desktop: "monitor", tablet: "tablet", smartphone: "smartphone", mobile: "smartphone" };
+  // Flèches ↑ / ↓ : un pas (Maj : 10 pas, Alt : un dixième) ; chaque pas s'applique tout de suite, une seule étape d'annulation
+  function arrowStep(input, step, read, write) {
+    input.addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      e.preventDefault();
+      var d = (e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 10 : e.altKey ? 0.1 : 1) * step;
+      write(Math.round((read() + d) * 1000) / 1000);
+    });
+  }
+  // Libellés courts dans les lignes (le nom complet reste en infobulle et pour les lecteurs d'écran)
+  var SHORT = { alignItems: "Alignement", alignSelf: "Placement", flexWrap: "Retour ligne", justifyContent: "Répartition", gap: "Écart", flexDirection: "Direction", display: "Affichage",
+    minWidth: "Largeur min.", maxWidth: "Largeur max.", minHeight: "Hauteur min.", maxHeight: "Hauteur max.", flexGrow: "Proportion", columns: "Colonnes",
+    fontFamily: "Police", fontWeight: "Graisse", fontSize: "Taille", lineHeight: "Interligne", letterSpacing: "Interlettrage", textTransform: "Casse", textAlign: "Alignement", textDecoration: "Décoration", fontStyle: "Style",
+    zIndex: "Plan", boxShadow: "Ombre", opacity: "Opacité", overflow: "Débordement", objectFit: "Cadrage", objectPosition: "Point focal", aspectRatio: "Proportions", top: "Décalage haut", left: "Décalage gauche" };
+  function propRow(items, key, control, label, id, extra) {
+    label = label || SHORT[key];
+    var it = items[0];
+    var own = ownValue(it, key);
+    var dis = lockedAny(items);
+    var others = styleState === "normal" ? BPS.filter(function (b) { return b !== "desktop" && it.styles && it.styles[b] && it.styles[b][key] !== undefined; }) : [];
+    var marks = others.length ? h("span", { class: "pb-prop-bps" }, others.map(function (b) {
+      return h("span", { class: "pb-prop-bp" + (b === device ? " is-current" : ""), title: "Valeur propre à l'écran « " + bpLabel(b) + " »", role: "img", "aria-label": "Valeur propre : " + bpLabel(b) }, icon(DEVICE_ICON[b]));
+    })) : null;
+    var reset = own !== undefined ? h("button", { type: "button", class: "pb-reset", "data-tip": "Effacer : revenir à la valeur héritée", "aria-label": "Effacer « " + (label || SP[key].label) + " » pour cet écran", disabled: dis, onclick: function () { setStyle(idsOf(items), key, ""); } }, "↺") : h("span", { class: "pb-reset-slot", "aria-hidden": "true" });
+    return h("div", { class: "pb-field pb-style-field pb-prop" + (own !== undefined ? " is-set" : ""), "data-prop": key },
+      h("div", { class: "pb-prop-head" }, h("label", { for: id, class: "pb-prop-label", title: SP[key].label, "aria-label": SP[key].label }, label || SP[key].label), marks),
+      control, extra || null, reset);
+  }
+  function styleControl(items, key, label, extra) {
     var p = SP[key];
     var it = items[0];
     var own = ownValue(it, key);
@@ -1184,83 +1240,330 @@
     var inh = inheritedValue(it, key);
     var dis = lockedAny(items);
     var id = fid();
-    var reset = own !== undefined ? h("button", { type: "button", class: "pb-reset", "data-tip": "Revenir à la valeur héritée", "aria-label": "Effacer « " + p.label + " » pour cet écran", disabled: dis, onclick: function () { setStyle(idsOf(items), key, ""); } }, "↺") : null;
-    var label = h("label", { for: id }, p.label);
     var control;
     if (p.kind === "enum") {
-      control = h("select", { id: id, disabled: dis }, [h("option", { value: "", text: inh !== undefined ? "Hérité : " + optLabel(p, inh) : "Par défaut" })].concat(p.options.map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
+      control = h("select", { id: id, class: "pb-prop-select", disabled: dis }, [h("option", { value: "", text: inh !== undefined ? "Hérité : " + optLabel(p, inh) : "Par défaut" })].concat(p.options.map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
       control.value = mixed || own === undefined ? "" : String(own);
       control.addEventListener("change", function () { setStyle(idsOf(items), key, control.value); });
-    } else if (p.kind === "color") {
-      control = colorInput(id, own, inh, dis, function (v) { setStyle(idsOf(items), key, v); });
-    } else if (p.kind === "number") {
-      control = h("input", { id: id, type: "number", step: key === "columns" || key === "zIndex" ? "1" : "0.05", min: key === "opacity" ? "0" : key === "columns" ? "1" : null, max: key === "opacity" ? "1" : key === "columns" ? "12" : null, placeholder: inh !== undefined ? String(inh) : "", disabled: dis });
-      control.value = mixed || own === undefined ? "" : String(own);
-      control.addEventListener("change", function () { setStyle(idsOf(items), key, control.value === "" ? "" : Number(control.value)); });
-    } else {
-      control = h("input", { id: id, type: "text", inputmode: "decimal", list: "pb-scale", placeholder: inh !== undefined ? String(inh) : "auto", disabled: dis, autocomplete: "off" });
-      control.value = mixed || own === undefined ? "" : String(own);
-      control.addEventListener("change", function () {
-        var v = parseLength(control.value, key);
-        if (v === null) { control.setAttribute("aria-invalid", "true"); toast(p.label + " : valeur invalide (ex. 24px, 50%, 2rem" + (key.indexOf("margin") === 0 || key === "width" || key === "height" ? ", auto" : "") + ").", true); return; }
-        control.removeAttribute("aria-invalid");
-        setStyle(idsOf(items), key, v);
-      });
-    }
-    return h("div", { class: "pb-field pb-style-field" + (own !== undefined ? " is-set" : "") }, h("div", { class: "pb-row" }, label, reset), control);
+    } else if (p.kind === "color") control = colorButton(id, mixed ? undefined : own, inh, dis, function (v, opts) { setStyle(idsOf(items), key, v, opts); }, key);
+    else if (p.kind === "number") control = numberControl(items, key, id, mixed ? undefined : own, inh, dis);
+    else control = lengthControl(items, key, id, mixed ? undefined : own, inh, dis);
+    return propRow(items, key, control, label, id, extra);
   }
+  // Nombres sans unité : bornes et pas de chaque propriété (les mêmes que le serveur)
+  var NUM = { opacity: [0, 1, 0.05], lineHeight: [0.8, 3, 0.1], zIndex: [-10, 100, 1], columns: [1, 12, 1], flexGrow: [0.05, 20, 0.1] };
+  function numberControl(items, key, id, own, inh, dis) {
+    var lim = NUM[key] || [-9999, 9999, 1];
+    var inp = h("input", { id: id, type: "text", inputmode: "decimal", class: "pb-num", placeholder: inh !== undefined ? String(inh) : key === "opacity" ? "1" : "", disabled: dis, autocomplete: "off" });
+    inp.value = own === undefined ? "" : String(own);
+    var clamp = function (n) { n = Math.min(lim[1], Math.max(lim[0], n)); return lim[2] === 1 ? Math.round(n) : Math.round(n * 1000) / 1000; };
+    inp.addEventListener("change", function () {
+      var s = inp.value.trim().replace(",", ".");
+      if (s === "") { setStyle(idsOf(items), key, ""); return; }
+      var n = Number(s);
+      if (!isFinite(n)) { inp.setAttribute("aria-invalid", "true"); toast(SP[key].label + " : nombre attendu.", true); return; }
+      setStyle(idsOf(items), key, clamp(n));
+    });
+    arrowStep(inp, lim[2], function () { var v = Number((inp.value || inp.placeholder || "0").replace(",", ".")); return isFinite(v) ? v : 0; }, function (n) { n = clamp(n); inp.value = String(n); setStyle(idsOf(items), key, n, { key: "step:" + key, light: true }); });
+    return h("div", { class: "pb-len" }, inp, key === "opacity" ? h("span", { class: "pb-len-unit is-static", text: "0 – 1" }) : null);
+  }
+  // Longueurs : valeur + unité (seules les unités utiles à la propriété) ; « 2rem » tapé directement est compris
+  function lengthControl(items, key, id, own, inh, dis) {
+    var units = unitsOf(key);
+    var cur = splitLen(own), base = splitLen(inh);
+    var unit = cur ? cur.unit : base ? base.unit : units[0];
+    if (units.indexOf(unit) < 0) units.push(unit);
+    var num = h("input", { id: id, type: "text", inputmode: "decimal", class: "pb-len-num", value: cur && cur.unit !== "auto" ? cur.num : "", placeholder: base ? (base.unit === "auto" ? "auto" : base.num) : cur && cur.unit === "auto" ? "auto" : "–", disabled: dis || unit === "auto", autocomplete: "off" });
+    var sel = units.length > 1 ? h("select", { class: "pb-len-unit", "aria-label": SP[key].label + " : unité", disabled: dis }, units.map(function (u) { return h("option", { value: u, text: u }); })) : h("span", { class: "pb-len-unit is-static", text: units[0] });
+    if (sel.tagName === "SELECT") sel.value = unit;
+    var unitNow = function () { return sel.tagName === "SELECT" ? sel.value : units[0]; };
+    var commit = function (opts) {
+      var u = unitNow();
+      if (u === "auto") { setStyle(idsOf(items), key, "auto", opts); return; }
+      var raw = num.value.trim().replace(",", ".");
+      if (raw === "") { setStyle(idsOf(items), key, "", opts); return; }
+      var typed = /^(-?\d{1,4}(?:\.\d{1,3})?)\s*(px|%|rem|em|vh|vw)$/i.exec(raw);
+      var v = typed ? typed[1] + typed[2].toLowerCase() : /^-?\d{1,4}(\.\d{1,3})?$/.test(raw) ? (Number(raw) === 0 ? "0" : raw + u) : raw;
+      var ok = parseLength(v, key);
+      if (ok === null) { num.setAttribute("aria-invalid", "true"); toast(SP[key].label + " : valeur invalide (ex. 24, 50 %, 2rem" + (units.indexOf("auto") >= 0 ? ", auto" : "") + ").", true); return; }
+      num.removeAttribute("aria-invalid");
+      setStyle(idsOf(items), key, ok, opts);
+    };
+    num.addEventListener("change", function () { commit(); });
+    if (sel.tagName === "SELECT") sel.addEventListener("change", function () {
+      if (sel.value === "auto" || num.value.trim() !== "") commit();
+      else { num.disabled = false; num.focus(); }
+    });
+    arrowStep(num, 1, function () { var v = parseFloat(num.value || (base && base.unit !== "auto" ? base.num : "0")); return isFinite(v) ? v : 0; }, function (n) {
+      if (n < 0 && !/^(margin|top|left|letterSpacing)/.test(key)) n = 0;
+      if (unitNow() === "auto" && sel.tagName === "SELECT") { sel.value = units[0]; num.disabled = false; }
+      num.value = String(n);
+      commit({ key: "step:" + key, light: true });
+    });
+    return h("div", { class: "pb-len" }, num, sel);
+  }
+
+  // ---------- Couleurs : bouton compact (pastille + code) et sélecteur ----------
   var TOKEN_LABEL = { primary: "Principale", secondary: "Secondaire", accent: "Accent", background: "Fond", surface: "Surface", text: "Texte", muted: "Atténuée", success: "Succès", warning: "Alerte", error: "Erreur", "on-primary": "Sur principale", "on-accent": "Sur accent" };
-  function colorInput(id, own, inh, dis, onSet) {
-    var isToken = own && own.indexOf("token:") === 0;
-    var hex = own && /^#/.test(own) ? own : "#000000";
-    if (hex.length === 4) hex = "#" + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
-    var picker = h("input", { type: "color", value: hex.slice(0, 7), disabled: dis, "aria-label": "Couleur personnalisée" });
-    var tokens = h("select", { id: id, disabled: dis }, [h("option", { value: "", text: inh ? "Héritée" : "Par défaut" }), h("option", { value: "custom", text: "Personnalisée" }), h("option", { value: "transparent", text: "Transparente" })].concat(SPEC.colorTokens.map(function (t) { return h("option", { value: "token:" + t, text: "Site : " + (TOKEN_LABEL[t] || t) }); })));
-    tokens.value = !own ? "" : isToken || own === "transparent" ? own : "custom";
-    var text = h("input", { type: "text", value: own && /^#/.test(own) ? own : "", placeholder: "#rrggbb", maxlength: "9", disabled: dis, "aria-label": "Code couleur" });
-    picker.hidden = tokens.value !== "custom"; text.hidden = tokens.value !== "custom";
-    tokens.addEventListener("change", function () { if (tokens.value === "custom") { picker.hidden = false; text.hidden = false; onSet(picker.value); } else onSet(tokens.value); });
-    picker.addEventListener("change", function () { onSet(picker.value); });
-    text.addEventListener("change", function () { var v = text.value.trim(); if (!/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v)) { toast("Couleur : code #rrggbb attendu.", true); return; } onSet(v.toLowerCase()); });
-    return h("div", { class: "pb-color" }, tokens, picker, text);
+  // Couleur réelle d'une couleur du site (thème appliqué à la page affichée dans le canevas)
+  function tokenColor(t) { try { var d = frame.contentDocument; var c = d && d.body ? getComputedStyle(d.body).getPropertyValue("--kw-" + t).trim() : ""; return c || null; } catch (e) { return null; } }
+  var colorPreview = function (v) { return !v ? null : v === "transparent" ? "transparent" : v.indexOf("token:") === 0 ? tokenColor(v.slice(6)) : v; };
+  var colorText = function (v) { return !v ? "" : v === "transparent" ? "Transparente" : v.indexOf("token:") === 0 ? "Site : " + (TOKEN_LABEL[v.slice(6)] || v.slice(6)) : v.toUpperCase(); };
+  var hex2 = function (n) { return ("0" + Math.max(0, Math.min(255, Math.round(n))).toString(16)).slice(-2); };
+  function normHex(v) { var s = String(v).toLowerCase(); if (s.length === 4) s = "#" + s[1] + s[1] + s[2] + s[2] + s[3] + s[3]; return s; }
+  function hexToRgb(v) { var s = normHex(v); return { r: parseInt(s.slice(1, 3), 16), g: parseInt(s.slice(3, 5), 16), b: parseInt(s.slice(5, 7), 16), a: s.length === 9 ? parseInt(s.slice(7, 9), 16) / 255 : 1 }; }
+  function rgbToHsl(c) {
+    var r = c.r / 255, g = c.g / 255, b = c.b / 255, max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, s = 0, hh = 0, d = max - min;
+    if (d) { s = d / (1 - Math.abs(2 * l - 1)); hh = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4; hh = Math.round(hh * 60); if (hh < 0) hh += 360; }
+    return hh + "°, " + Math.round(s * 100) + " %, " + Math.round(l * 100) + " %";
   }
-  // Boîte d'espacement : marges (extérieur) et marges intérieures, comme le modèle de boîte CSS
+  function hslToHex(hh, s, l) {
+    s /= 100; l /= 100;
+    var k = function (n) { return (n + hh / 30) % 12; }, a = s * Math.min(l, 1 - l);
+    var f = function (n) { return l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))); };
+    return "#" + hex2(f(0) * 255) + hex2(f(8) * 255) + hex2(f(4) * 255);
+  }
+  // Saisie libre : #RGB, #RRGGBB, #RRGGBBAA, rgb(a)(r, g, b[, a]), hsl(a)(t, s %, l %[, a]) → #rrggbb[aa]
+  function parseColor(text) {
+    var s = String(text || "").trim().toLowerCase().replace(/\s+/g, "");
+    if (/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/.test(s)) return normHex(s);
+    if (/^[0-9a-f]{6}$/.test(s)) return "#" + s;
+    var alpha = function (x) { if (x === undefined) return ""; var a = /%$/.test(x) ? parseFloat(x) / 100 : parseFloat(x); return isFinite(a) && a < 1 ? hex2(Math.max(0, a) * 255) : ""; };
+    var m = /^rgba?\((\d{1,3}),(\d{1,3}),(\d{1,3})(?:,([\d.]+%?))?\)$/.exec(s);
+    if (m && [m[1], m[2], m[3]].every(function (x) { return Number(x) <= 255; })) return "#" + hex2(m[1]) + hex2(m[2]) + hex2(m[3]) + alpha(m[4]);
+    m = /^hsla?\((\d{1,3})(?:deg)?,(\d{1,3})%,(\d{1,3})%(?:,([\d.]+%?))?\)$/.exec(s);
+    if (m && Number(m[1]) <= 360 && Number(m[2]) <= 100 && Number(m[3]) <= 100) return hslToHex(Number(m[1]), Number(m[2]), Number(m[3])) + alpha(m[4]);
+    return null;
+  }
+  function paintSwatch(sw, v) {
+    sw.className = "pb-swatch" + (!v ? " is-empty" : v === "transparent" ? " is-transparent" : "");
+    var c = v && v !== "transparent" ? colorPreview(v) : null;
+    sw.style.background = c || "";
+    if (v && v !== "transparent" && !c) sw.classList.add("is-empty");
+  }
+  // opts.noClear : pas de « par défaut » (couleurs d'un dégradé)
+  function colorButton(id, own, inh, dis, onSet, histKey, opts) {
+    opts = opts || {};
+    var sw = h("span", { class: "pb-swatch", "aria-hidden": "true" });
+    paintSwatch(sw, own || inh);
+    var text = h("span", { class: "pb-color-text", text: own ? colorText(own) : inh ? colorText(inh) + " · hérité" : "Par défaut" });
+    var btn = h("button", { type: "button", id: id, class: "pb-color-btn" + (own ? "" : " is-inherited"), disabled: dis, "aria-haspopup": "dialog", "data-color-key": histKey }, sw, text);
+    btn.addEventListener("click", function () { if (!cpop.hidden && cpopFor === btn) { closeColorPop(); return; } openColorPop(btn, own, inh, onSet, opts); });
+    return btn;
+  }
+  var cpop = h("div", { class: "pb-cpop", role: "dialog", "aria-label": "Choisir une couleur", hidden: true });
+  document.body.appendChild(cpop);
+  var cpopFor = null, cpopDirty = false;
+  function closeColorPop(noRender) {
+    if (cpop.hidden) return;
+    cpop.hidden = true;
+    var f = cpopFor; cpopFor = null;
+    if (cpopDirty && !noRender) { cpopDirty = false; renderInspector(); renderContext(); var again = f && f.dataset.colorKey ? $("[data-pb-inspector] [data-color-key='" + f.dataset.colorKey + "']") : null; if (again) again.focus(); }
+    else if (f && document.body.contains(f)) f.focus();
+    cpopDirty = false;
+  }
+  function openColorPop(btn, own, inh, onSet, opts) {
+    closeColorPop(true);
+    cpopFor = btn; cpopDirty = false;
+    cpop.textContent = "";
+    var hk = "color:" + (btn.dataset.colorKey || "x");
+    var cur = own && /^#/.test(own) ? normHex(own) : null;
+    var state = { hex: cur ? cur.slice(0, 7) : "#0277b6", alpha: cur && cur.length === 9 ? parseInt(cur.slice(7), 16) / 255 : 1 };
+    var sw = btn.querySelector(".pb-swatch"), label = btn.querySelector(".pb-color-text");
+    var hexIn = h("input", { type: "text", class: "pb-cpop-hex", value: cur ? cur.toUpperCase() : "", placeholder: "#RRGGBB, rgb(…), hsl(…)", "aria-label": "Code couleur (HEX, RGB ou HSL)", autocomplete: "off", spellcheck: "false" });
+    var native = h("input", { type: "color", value: state.hex, "aria-label": "Nuancier", class: "pb-cpop-native" });
+    var alpha = h("input", { type: "range", min: "0", max: "100", step: "1", value: String(Math.round(state.alpha * 100)), "aria-label": "Opacité de la couleur (en %)" });
+    var alphaOut = h("output", { class: "pb-cpop-alpha", text: Math.round(state.alpha * 100) + " %" });
+    var info = h("p", { class: "pb-cpop-info", "aria-live": "polite" });
+    var show = function (v) {
+      paintSwatch(sw, v);
+      label.textContent = v ? colorText(v) : "Par défaut";
+      btn.classList.toggle("is-inherited", !v);
+      var rgb = v && /^#/.test(v) ? hexToRgb(v) : null;
+      info.textContent = rgb ? "RGB " + rgb.r + ", " + rgb.g + ", " + rgb.b + (rgb.a < 1 ? " · opacité " + Math.round(rgb.a * 100) + " %" : "") + " · HSL " + rgbToHsl(rgb) : v ? colorText(v) : "";
+      $$(".pb-cpop-token", cpop).forEach(function (x) { x.classList.toggle("is-on", v === "token:" + x.dataset.token); });
+    };
+    var set = function (v) { cpopDirty = true; show(v); onSet(v, { key: hk, light: true }); };
+    var applyHex = function () { var v = state.hex + (state.alpha < 0.999 ? hex2(state.alpha * 255) : ""); hexIn.value = v.toUpperCase(); hexIn.removeAttribute("aria-invalid"); set(v); };
+    native.addEventListener("input", function () { state.hex = native.value; applyHex(); });
+    alpha.addEventListener("input", function () { state.alpha = Number(alpha.value) / 100; alphaOut.textContent = alpha.value + " %"; applyHex(); });
+    hexIn.addEventListener("change", function () {
+      var c = parseColor(hexIn.value);
+      if (!c) { hexIn.setAttribute("aria-invalid", "true"); toast("Couleur : #RRGGBB, rgb(r, g, b) ou hsl(t, s %, l %) attendu.", true); return; }
+      state.hex = c.slice(0, 7); state.alpha = c.length === 9 ? parseInt(c.slice(7), 16) / 255 : 1;
+      native.value = state.hex; alpha.value = String(Math.round(state.alpha * 100)); alphaOut.textContent = alpha.value + " %";
+      applyHex();
+    });
+    hexIn.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); hexIn.dispatchEvent(new Event("change")); } });
+    var tokens = h("div", { class: "pb-cpop-tokens", role: "group", "aria-label": "Couleurs du site" }, SPEC.colorTokens.map(function (t) {
+      var c = tokenColor(t);
+      var b = h("button", { type: "button", class: "pb-cpop-token" + (c ? "" : " is-empty"), "data-token": t, "data-tip": "Site : " + (TOKEN_LABEL[t] || t) + (c ? " (" + c + ")" : " — définie par le thème du site"), "aria-label": "Couleur du site : " + (TOKEN_LABEL[t] || t) });
+      if (c) b.style.background = c;
+      b.addEventListener("click", function () { set("token:" + t); });
+      return b;
+    }));
+    cpop.appendChild(h("div", { class: "pb-cpop-row" }, native, hexIn));
+    cpop.appendChild(h("div", { class: "pb-cpop-row" }, h("span", { class: "pb-cpop-label", text: "Opacité" }), alpha, alphaOut));
+    cpop.appendChild(info);
+    cpop.appendChild(h("p", { class: "pb-cpop-label", text: "Couleurs du site" }));
+    if (!SPEC.colorTokens.some(tokenColor)) cpop.appendChild(h("p", { class: "pb-cpop-none", text: "Cette page n'utilise pas de thème de site : ces couleurs n'y ont pas de valeur (reliez la page à un site pour les utiliser)." }));
+    cpop.appendChild(tokens);
+    cpop.appendChild(h("div", { class: "pb-cpop-row pb-cpop-actions" },
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: function () { set("transparent"); } }, "Transparente"),
+      opts.noClear ? null : h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: function () { cpopDirty = true; onSet("", {}); closeColorPop(); } }, inh ? "Hériter" : "Par défaut"),
+      h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { closeColorPop(); } }, "OK")));
+    show(own);
+    if (!own) info.textContent = inh ? "Valeur héritée : " + colorText(inh) : "Aucune couleur réglée pour cet écran.";
+    cpop.hidden = false;
+    var r = btn.getBoundingClientRect(), w = cpop.offsetWidth, hgt = cpop.offsetHeight;
+    var left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8));
+    var top = r.bottom + 4 + hgt > window.innerHeight - 8 ? Math.max(8, r.top - hgt - 4) : r.bottom + 4;
+    cpop.style.left = left + "px"; cpop.style.top = top + "px";
+    hexIn.focus();
+  }
+  document.addEventListener("mousedown", function (e) { if (!cpop.hidden && !cpop.contains(e.target) && !(cpopFor && cpopFor.contains(e.target))) closeColorPop(); });
+  cpop.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeColorPop(); } });
+
+  // ---------- Espacement : modèle de boîte compact (marges autour, intérieur dedans), côtés liables ----------
+  var SIDES = ["Top", "Right", "Bottom", "Left"];
+  var SIDE_LABEL = { Top: "haut", Right: "droite", Bottom: "bas", Left: "gauche" };
+  var linkState = store.get("spacing-link", { margin: false, padding: false });
   function spacingBox(items) {
-    var dis = lockedAny(items);
-    var cell = function (key, cls) {
-      var it = items[0];
+    var it = items[0], dis = lockedAny(items), ids = idsOf(items);
+    var cell = function (kind, side) {
+      var key = kind + side;
       var own = ownValue(it, key), inh = inheritedValue(it, key);
-      var inp = h("input", { type: "text", class: "pb-box-input " + cls, list: "pb-scale", "aria-label": SP[key].label, value: own === undefined ? "" : own, placeholder: inh !== undefined ? String(inh).replace("px", "") : "–", disabled: dis, autocomplete: "off" });
-      inp.addEventListener("change", function () { var v = parseLength(inp.value, key); if (v === null) { toast(SP[key].label + " : valeur invalide.", true); return; } setStyle(idsOf(items), key, v); });
+      var name = (kind === "margin" ? "Marge " : "Intérieur ") + SIDE_LABEL[side];
+      var inp = h("input", { type: "text", inputmode: "decimal", class: "pb-box-input is-" + kind[0] + side[0].toLowerCase() + (own !== undefined ? " is-set" : ""), list: "pb-scale", value: own === undefined ? "" : own, placeholder: inh !== undefined ? String(inh) : "0", "aria-label": name + (linkState[kind] ? " (4 côtés liés)" : ""), "data-tip": name + (inh !== undefined && own === undefined ? " · hérité : " + inh : ""), disabled: dis, autocomplete: "off", "data-prop": key });
+      var commit = function (v, opts) {
+        var map = {};
+        (linkState[kind] ? SIDES : [side]).forEach(function (s) { map[kind + s] = v; });
+        setStyles(ids, map, opts);
+      };
+      inp.addEventListener("change", function () {
+        var v = parseLength(inp.value, key);
+        if (v === null) { inp.setAttribute("aria-invalid", "true"); toast(name + " : valeur invalide (ex. 24, 2rem" + (kind === "margin" ? ", auto" : "") + ").", true); return; }
+        commit(v);
+      });
+      arrowStep(inp, 1, function () { var p = splitLen(inp.value || inp.placeholder); return p && p.unit !== "auto" ? Number(p.num) : 0; }, function (n) {
+        var p = splitLen(inp.value || inp.placeholder) || { unit: "px" };
+        if (n < 0 && kind === "padding") n = 0;
+        var v = n === 0 ? "0" : n + (p.unit === "auto" ? "px" : p.unit);
+        inp.value = v;
+        if (linkState[kind]) $$("[data-pb-inspector] .pb-box-input[data-prop^='" + kind + "']").forEach(function (x) { x.value = v; });
+        commit(v, { key: "step:" + kind, light: true });
+      });
       return inp;
     };
-    return h("div", { class: "pb-boxmodel" }, h("span", { class: "pb-box-label", text: "Marge" }),
-      cell("marginTop", "is-mt"), cell("marginRight", "is-mr"), cell("marginBottom", "is-mb"), cell("marginLeft", "is-ml"),
-      h("div", { class: "pb-box-inner" }, h("span", { class: "pb-box-label", text: "Intérieur" }), cell("paddingTop", "is-pt"), cell("paddingRight", "is-pr"), cell("paddingBottom", "is-pb"), cell("paddingLeft", "is-pl"), h("span", { class: "pb-box-core", "aria-hidden": "true" })));
+    var linkBtn = function (kind, label) {
+      var on = Boolean(linkState[kind]);
+      return h("button", { type: "button", class: "pb-link-btn", "aria-pressed": String(on), "data-link": kind, "aria-label": (on ? "Délier les côtés : " : "Lier les 4 côtés : ") + label, "data-tip": on ? label + " : 4 côtés liés (une valeur pour tous)" : label + " : côtés indépendants — cliquer pour les lier", disabled: dis,
+        onclick: function () {
+          linkState[kind] = !on; store.set("spacing-link", linkState);
+          if (!on) {
+            var vals = SIDES.map(function (s) { return ownValue(it, kind + s); });
+            var first = vals.filter(function (v) { return v !== undefined; })[0];
+            if (first !== undefined && vals.some(function (v) { return v !== first; })) {
+              var map = {}; SIDES.forEach(function (s) { map[kind + s] = first; });
+              setStyles(ids, map);
+              toast(label + " : les 4 côtés valent maintenant " + first + ".");
+              return;
+            }
+          }
+          renderInspector();
+        } }, icon("link"), h("span", { text: label }));
+    };
+    return h("div", { class: "pb-spacing" },
+      h("div", { class: "pb-spacing-head" }, linkBtn("margin", "Marge"), linkBtn("padding", "Intérieur")),
+      h("div", { class: "pb-boxmodel" },
+        h("span", { class: "pb-box-label", text: "Marge", "aria-hidden": "true" }),
+        h("div", { class: "pb-box-pad", "aria-hidden": "true" }, h("span", { class: "pb-box-label", text: "Intérieur" })),
+        cell("margin", "Top"), cell("margin", "Right"), cell("margin", "Bottom"), cell("margin", "Left"),
+        cell("padding", "Top"), cell("padding", "Right"), cell("padding", "Bottom"), cell("padding", "Left"),
+        h("span", { class: "pb-box-core", "aria-hidden": "true" })));
+  }
+
+  // ---------- Bordure : style d'abord ; épaisseur et couleur seulement s'il y a une bordure ; arrondi liable ----------
+  var CORNER_KEYS = [["borderTopLeftRadius", "↖ Haut gauche"], ["borderTopRightRadius", "↗ Haut droit"], ["borderBottomRightRadius", "↘ Bas droit"], ["borderBottomLeftRadius", "↙ Bas gauche"]];
+  var radiusSplit = {};
+  var valueOf = function (it, k) { var o = ownValue(it, k); return o !== undefined ? o : inheritedValue(it, k); };
+  function borderControls(items, inner) {
+    var it = items[0], ids = idsOf(items), dis = lockedAny(items);
+    inner.appendChild(styleControl(items, "borderStyle", "Style"));
+    var style = valueOf(it, "borderStyle");
+    if ((style && style !== "none") || ownValue(it, "borderWidth") !== undefined || ownValue(it, "borderColor") !== undefined) {
+      inner.appendChild(styleControl(items, "borderWidth", "Épaisseur"));
+      inner.appendChild(styleControl(items, "borderColor", "Couleur"));
+    }
+    var split = radiusSplit[it.id] || CORNER_KEYS.some(function (c) { return valueOf(it, c[0]) !== undefined; });
+    var link = h("button", { type: "button", class: "pb-link-btn is-icon", "aria-pressed": String(!split), "data-link": "radius", "aria-label": split ? "Lier les 4 coins (un seul arrondi)" : "Délier : un arrondi par coin", "data-tip": split ? "Coins indépendants — cliquer pour un seul arrondi" : "4 coins liés — cliquer pour régler chaque coin", disabled: dis,
+      onclick: function () {
+        if (split) {
+          var first = CORNER_KEYS.map(function (c) { return ownValue(it, c[0]); }).filter(function (v) { return v !== undefined; })[0];
+          var map = {}; CORNER_KEYS.forEach(function (c) { map[c[0]] = ""; });
+          if (first !== undefined) map.borderRadius = first;
+          delete radiusSplit[it.id];
+          setStyles(ids, map);
+        } else { radiusSplit[it.id] = true; renderInspector(); }
+      } }, icon("link"));
+    if (!split) { inner.appendChild(styleControl(items, "borderRadius", "Arrondi", link)); return; }
+    inner.appendChild(h("div", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Arrondi par coin" }), link));
+    inner.appendChild(styleControl(items, "borderRadius", "Tous les coins"));
+    CORNER_KEYS.forEach(function (c) { inner.appendChild(styleControl(items, c[0], c[1])); });
+  }
+
+  // ---------- Fond : type (aucun, couleur, image, dégradé) puis seulement ses réglages ----------
+  var bgChoice = {};
+  function bgTypeOf(it) { return valueOf(it, "gradient") ? "gradient" : valueOf(it, "backgroundImage") ? "image" : valueOf(it, "backgroundColor") ? "color" : "none"; }
+  function backgroundControls(items, inner) {
+    var it = items[0], ids = idsOf(items), dis = lockedAny(items);
+    var type = bgChoice[it.id] || bgTypeOf(it);
+    var id = fid();
+    var sel = h("select", { id: id, class: "pb-prop-select", disabled: dis }, [["none", "Aucun"], ["color", "Couleur"], ["image", "Image"], ["gradient", "Dégradé"]].map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
+    sel.value = type;
+    sel.addEventListener("change", function () {
+      if (sel.value === "none") { delete bgChoice[it.id]; setStyles(ids, { backgroundColor: "", backgroundImage: "", gradient: "", backgroundSize: "", backgroundPosition: "" }); return; }
+      bgChoice[it.id] = sel.value;
+      if (sel.value === "gradient" && !valueOf(it, "gradient")) { setStyle(ids, "gradient", { from: "#0277b6", to: "#102a3a", angle: 180 }); return; }
+      renderInspector();
+    });
+    inner.appendChild(h("div", { class: "pb-field pb-style-field pb-prop", "data-prop": "backgroundType" }, h("div", { class: "pb-prop-head" }, h("label", { for: id, class: "pb-prop-label" }, "Type")), sel, h("span", { class: "pb-reset-slot", "aria-hidden": "true" })));
+    var has = function (k) { return ownValue(it, k) !== undefined; };
+    if (type === "color" || has("backgroundColor")) inner.appendChild(styleControl(items, "backgroundColor", type === "color" ? "Couleur" : "Couleur dessous"));
+    if (type === "image" || has("backgroundImage")) {
+      var bg = ownValue(it, "backgroundImage");
+      var pid = fid();
+      var pick = h("button", { type: "button", id: pid, class: "pb-img-btn", disabled: dis, onclick: function () { openMedia({ title: "Image de fond", onPick: function (m) { setStyle(ids, "backgroundImage", { src: m.path }); } }); } },
+        bg ? h("img", { src: bg.src, alt: "" }) : h("span", { class: "pb-img-empty", "aria-hidden": "true" }), h("span", { class: "pb-color-text", text: bg ? bg.src.split("/").pop() : "Choisir une image" }));
+      var rm = bg ? h("button", { type: "button", class: "pb-reset", "data-tip": "Retirer l'image de fond", "aria-label": "Retirer l'image de fond", disabled: dis, onclick: function () { setStyle(ids, "backgroundImage", ""); } }, "↺") : h("span", { class: "pb-reset-slot", "aria-hidden": "true" });
+      inner.appendChild(h("div", { class: "pb-field pb-style-field pb-prop" + (bg ? " is-set" : ""), "data-prop": "backgroundImage" }, h("div", { class: "pb-prop-head" }, h("label", { for: pid, class: "pb-prop-label" }, "Image")), pick, rm));
+      if (bg || valueOf(it, "backgroundImage")) { inner.appendChild(styleControl(items, "backgroundSize", "Taille")); inner.appendChild(styleControl(items, "backgroundPosition", "Position")); }
+    }
+    if (type === "gradient" || has("gradient")) {
+      var g = valueOf(it, "gradient");
+      var gset = function (part) { return function (v, opts) { if (!v) return; var cur = Object.assign({ from: "#0277b6", to: "#102a3a", angle: 180 }, valueOf(byId(it.id), "gradient") || {}); cur[part] = v; setStyle(ids, "gradient", cur, opts); }; };
+      var row = function (label, control, cid) { return h("div", { class: "pb-field pb-style-field pb-prop" }, h("div", { class: "pb-prop-head" }, h("label", { for: cid, class: "pb-prop-label" }, label)), control, h("span", { class: "pb-reset-slot", "aria-hidden": "true" })); };
+      var f1 = fid(), f2 = fid(), f3 = fid();
+      inner.appendChild(row("Départ", colorButton(f1, g && g.from, undefined, dis, gset("from"), "gradient-from", { noClear: true }), f1));
+      inner.appendChild(row("Arrivée", colorButton(f2, g && g.to, undefined, dis, gset("to"), "gradient-to", { noClear: true }), f2));
+      var ang = h("input", { id: f3, type: "text", inputmode: "numeric", class: "pb-len-num", value: g ? String(g.angle) : "180", disabled: dis, autocomplete: "off" });
+      var setAngle = function (n, opts) { n = ((Math.round(n) % 360) + 360) % 360; ang.value = String(n); gset("angle")(n, opts); };
+      ang.addEventListener("change", function () { var n = Number(ang.value); if (!isFinite(n)) { toast("Angle : nombre de degrés attendu.", true); return; } setAngle(n); });
+      arrowStep(ang, 1, function () { return Number(ang.value) || 0; }, function (n) { setAngle(n, { key: "step:gradient-angle", light: true }); });
+      inner.appendChild(row("Angle", h("div", { class: "pb-len" }, ang, h("span", { class: "pb-len-unit is-static", text: "°" })), f3));
+      if (has("gradient")) inner.appendChild(h("div", { class: "pb-prop-sub" }, h("span"), h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { if (bgChoice[it.id] === "gradient") delete bgChoice[it.id]; setStyle(ids, "gradient", ""); } }, "Retirer le dégradé")));
+    }
   }
   function composedControls(items, group) {
     var it = items[0];
     var dis = lockedAny(items);
     var ids = idsOf(items);
     var out = [];
-    if (group === "background") {
-      var bg = ownValue(it, "backgroundImage");
-      out.push(h("p", { class: "pb-sub", text: "Image de fond" }), mediaPreview(bg && bg.src, function (m) { setStyle(ids, "backgroundImage", { src: m.path }); }, dis));
-      if (bg) out.push(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { setStyle(ids, "backgroundImage", ""); } }, "Retirer l'image de fond"));
-      var g = ownValue(it, "gradient") || null;
-      out.push(h("p", { class: "pb-sub", text: "Dégradé" }));
-      var from = h("input", { type: "color", value: g && /^#/.test(g.from) ? g.from.slice(0, 7) : "#0277b6", disabled: dis, "aria-label": "Couleur de départ du dégradé" });
-      var to = h("input", { type: "color", value: g && /^#/.test(g.to) ? g.to.slice(0, 7) : "#102a3a", disabled: dis, "aria-label": "Couleur d'arrivée du dégradé" });
-      var angle = h("input", { type: "number", min: "0", max: "360", step: "1", value: g ? g.angle : 180, disabled: dis, "aria-label": "Angle du dégradé (degrés)", class: "pb-ctx-num" });
-      var apply = function () { setStyle(ids, "gradient", { from: from.value, to: to.value, angle: Number(angle.value) || 0 }); };
-      if (g) [from, to, angle].forEach(function (x) { x.addEventListener("change", apply); });
-      out.push(h("div", { class: "pb-row pb-wrap" }, from, to, angle, h("span", { class: "pb-hint", text: "°" }), g ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { setStyle(ids, "gradient", ""); } }, "Retirer") : h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: dis, onclick: apply }, "Appliquer")));
-    }
     if (group === "position") {
       var t = ownValue(it, "transform") || {};
-      var mk = function (k, label) {
+      var mk = function (k, label, unit) {
         var id = fid();
-        var inp = h("input", { id: id, type: "text", value: t[k] === undefined ? "" : t[k], disabled: dis, placeholder: k === "scale" ? "1" : "0" });
+        var inp = h("input", { id: id, type: "text", inputmode: "decimal", class: "pb-len-num", value: t[k] === undefined ? "" : t[k], disabled: dis, placeholder: k === "scale" ? "1" : "0", autocomplete: "off" });
         inp.addEventListener("change", function () {
           var next = Object.assign({}, ownValue(byId(it.id), "transform") || {});
           var v = inp.value.trim();
@@ -1270,51 +1573,71 @@
           else next[k] = Number(v);
           setStyle(ids, "transform", Object.keys(next).length ? next : "");
         });
-        return h("div", { class: "pb-field pb-mini" }, h("label", { for: id, text: label }), inp);
+        return h("div", { class: "pb-field pb-style-field pb-prop" }, h("div", { class: "pb-prop-head" }, h("label", { for: id, class: "pb-prop-label" }, label)), h("div", { class: "pb-len" }, inp, unit ? h("span", { class: "pb-len-unit is-static", text: unit }) : null), h("span", { class: "pb-reset-slot", "aria-hidden": "true" }));
       };
-      out.push(h("p", { class: "pb-sub", text: "Transformation" }), h("div", { class: "pb-grid-2" }, mk("x", "Décalage X"), mk("y", "Décalage Y"), mk("rotate", "Rotation (°)"), mk("scale", "Échelle")));
+      out.push(h("p", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Transformation" })), mk("x", "Décalage X"), mk("y", "Décalage Y"), mk("rotate", "Rotation", "°"), mk("scale", "Échelle", "×"));
     }
     return out;
   }
-  // Sélecteur d'écran (le même que celui de la barre du haut) : les valeurs affichées sont celles de l'écran actif ;
-  // un point signale les écrans où cet élément a ses propres réglages
+  // Sélecteur d'écran : icônes (nom en infobulle) ; un point signale un écran où cet élément a ses propres réglages
   function breakpointSwitch(items) {
     var it = items[0];
     var seg = h("div", { class: "pb-seg pb-bp-seg", role: "radiogroup", "aria-label": "Écran modifié" }, SPEC.breakpoints.map(function (b) {
       var own = it.styles && it.styles[b.key] && Object.keys(it.styles[b.key]).length;
-      return h("button", { type: "button", role: "radio", "aria-checked": String(device === b.key), class: own ? "has-values" : null, "data-tip": own ? b.label + " : réglages propres à cet écran" : b.label + " : hérite de l'écran plus grand", onclick: function () { setDevice(b.key); } }, b.label);
+      return h("button", { type: "button", role: "radio", "aria-checked": String(device === b.key), class: own ? "has-values" : null, "data-tip": own ? b.label + " · réglages propres à cet écran" : b.label + (b.key === "desktop" ? "" : " · hérite de l'écran plus grand"), "data-device": b.key, onclick: function () { setDevice(b.key); } }, icon(DEVICE_ICON[b.key]), h("span", { class: "sr-only", text: b.label }));
     }));
     return h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "Écran" }), seg);
   }
   function styleTab(items, box) {
     var it = items[0];
     var schema = inspectorFor(it);
-    box.appendChild(breakpointSwitch(items));
-    if (device !== "desktop") box.appendChild(h("p", { class: "pb-hint", text: "Champs vides : valeur héritée de l'écran plus grand (indiquée en gris)." }));
+    var bar = breakpointSwitch(items);
     if (schema.states && items.every(function (x) { return inspectorFor(x).states; })) {
-      box.appendChild(h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "État" }), h("div", { class: "pb-seg", role: "radiogroup", "aria-label": "État de l'élément" }, [{ key: "normal", label: "Normal" }].concat(SPEC.states).map(function (st) {
+      bar.appendChild(h("span", { class: "pb-insp-bar-label is-second", text: "État" }));
+      bar.appendChild(h("div", { class: "pb-seg pb-state-seg", role: "radiogroup", "aria-label": "État de l'élément" }, [{ key: "normal", label: "Normal" }].concat(SPEC.states).map(function (st) {
         return h("button", { type: "button", role: "radio", "aria-checked": String(styleState === st.key), onclick: function () { styleState = st.key; renderInspector(); renderContext(); } }, st.label);
-      }))));
-      if (styleState !== "normal") box.appendChild(h("p", { class: "pb-hint", text: "Style appliqué au " + { hover: "survol de la souris", focus: "focus au clavier", active: "moment du clic" }[styleState] + ", sur tous les écrans." }));
+      })));
     } else if (styleState !== "normal") styleState = "normal";
-    GROUP_ORDER.forEach(function (g) {
-      if (!schema.groups || schema.groups[g] === undefined) return;
+    box.appendChild(bar);
+    if (styleState !== "normal") box.appendChild(h("p", { class: "pb-hint pb-insp-note", text: "Style appliqué au " + { hover: "survol de la souris", focus: "focus au clavier", active: "moment du clic" }[styleState] + ", sur tous les écrans." }));
+    else if (device !== "desktop") box.appendChild(h("p", { class: "pb-hint pb-insp-note", text: "Écran « " + bpLabel(device) + " » : un champ vide reprend la valeur de l'écran plus grand (en gris)." }));
+    // Une propriété, une seule place : la couleur du texte va dans la typographie quand elle existe, la couleur de fond
+    // dans « Fond » (avec l'image et le dégradé)
+    var keysOf = function (g) {
       var spec = schema.groups[g];
-      var keys = g === "spacing" ? [] : Array.isArray(spec) ? spec : SPEC.styleProps.filter(function (p) { return p.group === g && (p.key !== "flexGrow" || it.type === "column"); }).map(function (p) { return p.key; });
-      box.appendChild(styleSection(items, g, keys));
+      return Array.isArray(spec) ? spec.slice() : SPEC.styleProps.filter(function (p) { return p.group === g && (p.key !== "flexGrow" || it.type === "column"); }).map(function (p) { return p.key; });
+    };
+    var plan = [];
+    var order = schema.order || GROUP_ORDER;
+    var hasTypo = schema.groups && schema.groups.typography !== undefined;
+    order.forEach(function (g) {
+      if (!schema.groups || schema.groups[g] === undefined) return;
+      var keys = g === "spacing" ? [] : keysOf(g);
+      if (g === "color") {
+        keys = keys.filter(function (k) { return k !== "backgroundColor"; });
+        if (hasTypo || !keys.length) return;
+      }
+      if (g === "typography" && schema.groups.color !== undefined && keysOf("color").indexOf("color") >= 0) keys.splice(Math.min(3, keys.length), 0, "color");
+      if (g === "background") keys = ["backgroundColor", "backgroundImage", "gradient", "backgroundSize", "backgroundPosition"];
+      plan.push([g, keys]);
     });
+    plan.forEach(function (x, i) { box.appendChild(styleSection(items, x[0], x[1], { open: i === 0 })); });
     if (schema.presets && !isNode(it)) legacyLayout(items, box);
   }
-  // Un groupe repliable de l'inspecteur (état ouvert / fermé mémorisé)
-  function styleSection(items, g, keys) {
+  // Un groupe repliable (état ouvert / fermé mémorisé) ; le nombre discret = valeurs propres à l'écran modifié
+  var COLOR_LABEL = { color: "Texte" };
+  function styleSection(items, g, keys, opts) {
     var det = h("details", { class: "pb-acc", "data-group": g });
-    if (store.get("open-" + g, ["layout", "spacing", "typography", "media"].indexOf(g) >= 0)) det.open = true;
+    if (store.get("open-" + g, Boolean(opts && opts.open))) det.open = true;
     det.addEventListener("toggle", function () { store.set("open-" + g, det.open); });
-    var set = keys.filter(function (k) { return items.some(function (x) { return ownValue(x, k) !== undefined; }); }).length + (g === "spacing" ? ["marginTop", "marginRight", "marginBottom", "marginLeft", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft"].filter(function (k) { return ownValue(items[0], k) !== undefined; }).length : 0);
-    det.appendChild(h("summary", {}, SPEC.groups[g] || g, set ? h("span", { class: "pb-acc-count", text: String(set) }) : null));
+    var counted = g === "spacing" ? SIDES.map(function (s) { return "margin" + s; }).concat(SIDES.map(function (s) { return "padding" + s; })) : g === "border" ? keys.concat(CORNER_KEYS.map(function (c) { return c[0]; })) : keys;
+    var set = counted.filter(function (k) { return items.some(function (x) { return ownValue(x, k) !== undefined; }); }).length;
+    det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: SPEC.groups[g] || g }), set ? h("span", { class: "pb-acc-count", title: set + " réglage(s) propre(s) à cet écran", "aria-label": set + " réglage(s) modifié(s)" }, String(set)) : null));
     var inner = h("div", { class: "pb-acc-body" });
     if (g === "spacing") inner.appendChild(spacingBox(items));
-    keys.forEach(function (k) { if (SP[k]) inner.appendChild(styleControl(items, k)); });
+    else if (g === "border") borderControls(items, inner);
+    else if (g === "background") backgroundControls(items, inner);
+    else keys.forEach(function (k) { if (SP[k]) inner.appendChild(styleControl(items, k, g === "typography" && k === "color" ? "Couleur" : g === "color" ? COLOR_LABEL[k] : null)); });
     composedControls(items, g).forEach(function (x) { inner.appendChild(x); });
     det.appendChild(inner);
     return det;
@@ -1421,6 +1744,7 @@
   // ---------- Inspecteur ----------
   var inspTab = store.get("insp-tab", "content");
   function renderInspector() {
+    if (typeof cpop !== "undefined" && cpop && !cpop.hidden) { cpop.hidden = true; cpopFor = null; }
     var box = $("[data-pb-inspector]");
     var keepScroll = box.dataset.for === selection.join(",") ? box.scrollTop : 0;
     box.textContent = "";
@@ -1887,11 +2211,19 @@
         var y = 0;
         try { y = frame.contentWindow.scrollY; } catch (e) { y = 0; }
         frame.onload = function () { setupCanvas(y); };
+        // Le cadre va être remplacé : le clavier passe à la zone du canevas (sinon un raccourci tapé pendant le
+        // rechargement, Ctrl/⌘ + Z par exemple, serait perdu)
+        if (document.activeElement === frame) $("[data-pb-canvas]").focus({ preventScroll: true });
         frame.srcdoc = res.text;
       }, function () { var errBox = $("[data-pb-render-error]"); errBox.textContent = "Aperçu indisponible (connexion au serveur interrompue)."; errBox.hidden = false; });
   }
   function markError() { $$(".pb-row-item.is-error", treeEl).forEach(function (r) { r.classList.remove("is-error"); }); if (errorItemId) { var r = treeEl.querySelector('.pb-node[data-id="' + errorItemId + '"] > .pb-row-item'); if (r) r.classList.add("is-error"); } }
   var ignoreClickUntil = 0;
+  // Le canevas ne prend le clavier que sur une action de la personne (clic dedans, édition directe, touche Tab) : un
+  // chargement ou un contenu de la page ne doit jamais retirer le curseur d'un champ de l'inspecteur
+  var canvasPointerAt = 0, tabAt = 0, parentFocus = null;
+  document.addEventListener("focusin", function (e) { if (e.target !== frame) parentFocus = e.target; });
+  document.addEventListener("keydown", function (e) { if (e.key === "Tab") tabAt = Date.now(); }, true);
   var targetOf = function (e) { return e.target && e.target.closest ? e.target.closest("[data-node-id],[data-section-id]") : null; };
   var idOfEl = function (el) { return el ? el.getAttribute("data-node-id") || el.getAttribute("data-section-id") : null; };
   function setupCanvas(y) {
@@ -1902,6 +2234,13 @@
     doc.body.classList.toggle("pb-hand", tool === "hand");
     if (aids.grid) { var g = doc.createElement("div"); g.className = "pb-grid-overlay"; for (var i = 0; i < 12; i++) g.appendChild(doc.createElement("span")); doc.body.appendChild(g); }
     frame.contentWindow.scrollTo(0, y);
+    doc.addEventListener("mousedown", function () { canvasPointerAt = Date.now(); }, true);
+    doc.addEventListener("keydown", function (e) { if (e.key === "Tab") tabAt = Date.now(); }, true);
+    frame.contentWindow.addEventListener("focus", function () {
+      if (editing || Date.now() - canvasPointerAt < 1500 || Date.now() - tabAt < 500) return;
+      var back = parentFocus && document.body.contains(parentFocus) && !parentFocus.disabled ? parentFocus : $("[data-pb-canvas]");
+      back.focus({ preventScroll: true });
+    });
     doc.addEventListener("click", function (e) {
       if (selectedGuide) { selectedGuide = null; drawGuides(); }
       if (tool === "hand") { e.preventDefault(); return; }

@@ -99,6 +99,11 @@ const STYLE_PROPS = {
   borderStyle: { css: "border-style", check: oneOf("none", "solid", "dashed", "dotted"), group: "border" },
   borderColor: { css: "border-color", check: color, out: colorCss, group: "border" },
   borderRadius: { css: "border-radius", check: len, group: "border" },
+  // Arrondi coin par coin (arrondi « délié ») : toujours écrit après l'arrondi général, qu'il précise
+  borderTopLeftRadius: { css: "border-top-left-radius", check: len, group: "border" },
+  borderTopRightRadius: { css: "border-top-right-radius", check: len, group: "border" },
+  borderBottomRightRadius: { css: "border-bottom-right-radius", check: len, group: "border" },
+  borderBottomLeftRadius: { css: "border-bottom-left-radius", check: len, group: "border" },
   boxShadow: { css: "box-shadow", check: oneOf(...Object.keys(SHADOWS)), out: (v) => SHADOWS[v], group: "effects" },
   opacity: { css: "opacity", check: numberIn(0, 1), group: "effects" },
   overflow: { css: "overflow", check: oneOf("visible", "hidden", "auto"), group: "effects" },
@@ -146,9 +151,12 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
   return out;
 }
 
+const CORNERS = new Set(["borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius"]);
 function declarations(set) {
   const d = [];
-  for (const [k, v] of Object.entries(set)) {
+  const entries = Object.entries(set);
+  // Coins après l'arrondi général (sinon « border-radius » les écraserait)
+  for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k)).concat(entries.filter(([k]) => CORNERS.has(k)))) {
     const p = STYLE_PROPS[k];
     if (p) d.push(`${p.css}:${p.out ? p.out(v) : v}`);
   }
@@ -338,6 +346,7 @@ const STYLE_UI = {
   textDecoration: ["Décoration", { none: "Aucune", underline: "Soulignée", "line-through": "Barrée" }],
   color: ["Couleur du texte"], backgroundColor: ["Couleur de fond"],
   borderWidth: ["Épaisseur de bordure"], borderStyle: ["Style de bordure", { none: "Aucune", solid: "Pleine", dashed: "Tirets", dotted: "Points" }], borderColor: ["Couleur de bordure"], borderRadius: ["Arrondi"],
+  borderTopLeftRadius: ["Arrondi haut gauche"], borderTopRightRadius: ["Arrondi haut droit"], borderBottomRightRadius: ["Arrondi bas droit"], borderBottomLeftRadius: ["Arrondi bas gauche"],
   boxShadow: ["Ombre", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", xl: "Très forte" }], opacity: ["Opacité"],
   overflow: ["Débordement", { visible: "Visible", hidden: "Masqué", auto: "Défilement" }],
   position: ["Position", { static: "Normale", relative: "Relative", sticky: "Collante" }], top: ["Décalage haut"], left: ["Décalage gauche"], zIndex: ["Plan (z-index)"],
