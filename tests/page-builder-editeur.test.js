@@ -28,7 +28,7 @@ describe("contenus de départ (sans serveur)", () => {
     const r = pages.saveDraft(A, p.id, { sections: [{ type: "layout", children }] }, { revision: p.revision });
     assert.equal(r.content.sections[0].children.length, children.length);
     assert.deepEqual(spec.types.filter((t) => t.asks).map((t) => t.type).sort(), ["audio", "carousel", "course", "gallery", "image", "video"]);
-    for (const p0 of spec.styleProps) assert.ok(p0.label && p0.group && ["enum", "color", "number", "length"].includes(p0.kind), p0.key);
+    for (const p0 of spec.styleProps) assert.ok(p0.label && p0.group && ["enum", "color", "number", "length", "text"].includes(p0.kind), p0.key);
   });
 
   test("chaque bloc prêt à l'emploi est fait de vraies sections valides, sans faux chiffre ; « Formations » seulement s'il y en a", () => {

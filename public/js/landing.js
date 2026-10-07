@@ -35,6 +35,8 @@
       b.setAttribute("role", "tab");
       b.setAttribute("aria-controls", panel.id);
       b.textContent = panel.getAttribute("data-kw-tab-title") || "";
+      var ic = panel.querySelector(".kw-tab-icon-src");
+      if (ic) { var sp = document.createElement("span"); sp.className = "kw-tab-icon"; sp.setAttribute("aria-hidden", "true"); sp.innerHTML = ic.innerHTML; b.insertBefore(sp, b.firstChild); }
       b.addEventListener("click", function () { show(i); });
       b.addEventListener("keydown", function (e) {
         var next = vertical ? e.key === "ArrowDown" : e.key === "ArrowRight", prev = vertical ? e.key === "ArrowUp" : e.key === "ArrowLeft";
@@ -60,13 +62,129 @@
       box.appendChild(b);
       return b;
     };
+    var slides = track.querySelectorAll(".kw-carousel-slide");
+    var loop = box.hasAttribute("data-kw-loop");
+    var current = function () { var w = slides[0] ? slides[0].getBoundingClientRect().width + 12 : track.clientWidth; return Math.round(track.scrollLeft / w); };
+    var goTo = function (i) { var s = slides[(i + slides.length) % slides.length]; if (s) track.scrollTo({ left: s.offsetLeft - track.offsetLeft, behavior: "smooth" }); };
     var prev = mk("Image précédente", -1), next = mk("Image suivante", 1);
-    var sync = function () { prev.disabled = track.scrollLeft <= 2; next.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2; };
+    var dots = [];
+    if (box.hasAttribute("data-kw-dots") && slides.length > 1) {
+      var nav = document.createElement("div"); nav.className = "kw-carousel-dots";
+      Array.prototype.forEach.call(slides, function (sl, i) {
+        var d = document.createElement("button"); d.type = "button"; d.className = "kw-carousel-dot"; d.setAttribute("aria-label", "Image " + (i + 1) + " sur " + slides.length);
+        d.addEventListener("click", function () { goTo(i); });
+        nav.appendChild(d); dots.push(d);
+      });
+      box.appendChild(nav);
+    }
+    var sync = function () {
+      var atStart = track.scrollLeft <= 2, atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
+      prev.disabled = !loop && atStart; next.disabled = !loop && atEnd;
+      var c = atEnd ? slides.length - 1 : current();
+      dots.forEach(function (d, i) { d.setAttribute("aria-current", i === c ? "true" : "false"); });
+    };
+    if (loop) {
+      prev.onclick = null; next.onclick = null;
+      prev.replaceWith(prev = prev.cloneNode(true)); next.replaceWith(next = next.cloneNode(true));
+      prev.addEventListener("click", function () { var atStart = track.scrollLeft <= 2; goTo(atStart ? slides.length - 1 : current() - 1); });
+      next.addEventListener("click", function () { var atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2; goTo(atEnd ? 0 : current() + 1); });
+    }
+    // Lecture automatique : jamais si la personne réduit les animations ; arrêt au survol, au focus, ou après un geste
+    var every = Number(box.getAttribute("data-kw-autoplay"));
+    var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (every && !reduceMotion && !document.body.hasAttribute("data-kw-builder")) {
+      var paused = false, stopped = false;
+      ["mouseenter", "focusin"].forEach(function (t) { box.addEventListener(t, function () { paused = true; }); });
+      ["mouseleave", "focusout"].forEach(function (t) { box.addEventListener(t, function () { paused = false; }); });
+      track.addEventListener("pointerdown", function () { stopped = true; });
+      setInterval(function () {
+        if (paused || stopped || document.hidden) return;
+        var atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
+        if (atEnd && !loop) { stopped = true; return; }
+        goTo(atEnd ? 0 : current() + 1);
+      }, every * 1000);
+    }
     track.addEventListener("scroll", sync, { passive: true });
     window.addEventListener("resize", sync);
     box.classList.add("is-enhanced");
     sync();
   });
+  // Animations d'entrée : l'élément apparaît en arrivant à l'écran. Jamais dans l'éditeur (le contenu y reste visible),
+  // jamais si la personne a demandé de réduire les animations, et rien n'est masqué sans ce script.
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var inBuilder = document.body.hasAttribute("data-kw-builder");
+  var animated = document.querySelectorAll("[data-kw-anim]");
+  if (animated.length && !inBuilder && !reduce && "IntersectionObserver" in window) {
+    document.documentElement.classList.add("kw-anim-ready");
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add("is-in"); io.unobserve(en.target); } });
+    }, { threshold: 0.12, rootMargin: "0px 0px -5% 0px" });
+    Array.prototype.forEach.call(animated, function (el) { io.observe(el); });
+  }
+  // Galerie : agrandir une image (visionneuse), flèches et Échap ; sans script, le lien ouvre l'image
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-lightbox]"), function (box) {
+    var links = box.querySelectorAll(".kw-lb-open");
+    if (!links.length || typeof HTMLDialogElement !== "function") return;
+    var dlg = document.createElement("dialog"); dlg.className = "kw-lightbox"; dlg.setAttribute("aria-label", "Image agrandie");
+    var img = document.createElement("img"); var cap = document.createElement("p"); cap.className = "kw-lightbox-cap";
+    var close = document.createElement("button"); close.type = "button"; close.className = "kw-lightbox-close"; close.setAttribute("aria-label", "Fermer"); close.textContent = "×";
+    var pv = document.createElement("button"); pv.type = "button"; pv.className = "kw-lightbox-nav is-prev"; pv.setAttribute("aria-label", "Image précédente"); pv.textContent = "‹";
+    var nx = document.createElement("button"); nx.type = "button"; nx.className = "kw-lightbox-nav is-next"; nx.setAttribute("aria-label", "Image suivante"); nx.textContent = "›";
+    dlg.appendChild(close); dlg.appendChild(pv); dlg.appendChild(img); dlg.appendChild(nx); dlg.appendChild(cap);
+    document.body.appendChild(dlg);
+    var at = 0;
+    var show = function (i) { at = (i + links.length) % links.length; var l = links[at], im = l.querySelector("img"); img.src = l.getAttribute("href"); img.alt = im ? im.alt : ""; var fc = l.parentNode.querySelector("figcaption"); cap.textContent = fc ? fc.textContent : img.alt; };
+    Array.prototype.forEach.call(links, function (l, i) { l.addEventListener("click", function (e) { e.preventDefault(); show(i); dlg.showModal(); }); });
+    close.addEventListener("click", function () { dlg.close(); });
+    pv.addEventListener("click", function () { show(at - 1); }); nx.addEventListener("click", function () { show(at + 1); });
+    dlg.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft") show(at - 1); if (e.key === "ArrowRight") show(at + 1); });
+    dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+    pv.hidden = nx.hidden = links.length < 2;
+  });
+  // Menus : sous-menus (bouton, clavier), et menu mobile replié derrière un bouton
+  Array.prototype.forEach.call(document.querySelectorAll(".kw-sub-toggle"), function (b) {
+    b.addEventListener("click", function () { var open = b.getAttribute("aria-expanded") === "true"; b.setAttribute("aria-expanded", open ? "false" : "true"); });
+    b.parentNode.addEventListener("keydown", function (e) { if (e.key === "Escape") { b.setAttribute("aria-expanded", "false"); b.focus(); } });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-menu-toggle]"), function (nav) {
+    var list = nav.querySelector(".kw-menu-list");
+    var b = document.createElement("button"); b.type = "button"; b.className = "kw-menu-burger"; b.setAttribute("aria-expanded", "false"); b.setAttribute("aria-controls", list.id);
+    b.innerHTML = '<span aria-hidden="true"></span><span class="kw-menu-burger-label">Menu</span>';
+    b.addEventListener("click", function () { var open = b.getAttribute("aria-expanded") === "true"; b.setAttribute("aria-expanded", open ? "false" : "true"); nav.classList.toggle("is-open", !open); });
+    nav.insertBefore(b, list);
+    nav.classList.add("is-enhanced");
+  });
+  // Fenêtres (modales) de la page
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-modal-open]"), function (b) {
+    var dlg = document.getElementById(b.getAttribute("data-kw-modal-open"));
+    if (!dlg || typeof dlg.showModal !== "function" || document.body.hasAttribute("data-kw-builder")) return;
+    b.addEventListener("click", function () { dlg.showModal(); });
+    dlg.querySelector("[data-kw-modal-close]").addEventListener("click", function () { dlg.close(); b.focus(); });
+    dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+  });
+  // Alertes que l'on peut fermer
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-dismiss]"), function (box) {
+    var c = document.createElement("button"); c.type = "button"; c.className = "kw-alert-close"; c.setAttribute("aria-label", "Fermer ce message"); c.textContent = "×";
+    c.addEventListener("click", function () { box.hidden = true; });
+    box.appendChild(c);
+  });
+  // Compteurs et barres de progression animés à l'apparition (la valeur finale est déjà écrite dans la page)
+  var counters = document.querySelectorAll("[data-kw-count]"), bars = document.querySelectorAll(".kw-progress-anim");
+  if ((counters.length || bars.length) && "IntersectionObserver" in window && !document.body.hasAttribute("data-kw-builder") && !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
+    document.documentElement.classList.add("kw-count-ready");
+    var run = function (el) {
+      var target = Number(el.getAttribute("data-kw-count")), dec = Number(el.getAttribute("data-kw-decimals")) || 0, dur = Number(el.getAttribute("data-kw-duration")) || 1500;
+      var out = el.querySelector(".kw-counter-value"), t0 = null;
+      var fmt = function (v) { return v.toLocaleString("fr-FR", { minimumFractionDigits: dec, maximumFractionDigits: dec }); };
+      var step = function (t) { if (t0 === null) t0 = t; var k = Math.min(1, (t - t0) / dur); var e = 1 - Math.pow(1 - k, 3); out.textContent = fmt(target * e); if (k < 1) requestAnimationFrame(step); else out.textContent = fmt(target); };
+      requestAnimationFrame(step);
+    };
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (!en.isIntersecting) return; obs.unobserve(en.target); if (en.target.hasAttribute("data-kw-count")) run(en.target); else en.target.classList.add("is-in"); });
+    }, { threshold: 0.3 });
+    Array.prototype.forEach.call(counters, function (el) { el.querySelector(".kw-counter-value").textContent = (0).toLocaleString("fr-FR"); obs.observe(el); });
+    Array.prototype.forEach.call(bars, function (el) { obs.observe(el); });
+  }
   var LABELS = [["jours", 86400], ["heures", 3600], ["minutes", 60], ["secondes", 1]];
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-countdown]"), function (box) {
     var end = Date.parse(box.getAttribute("data-kw-countdown"));

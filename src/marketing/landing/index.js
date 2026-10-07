@@ -169,13 +169,19 @@ function linksOf(page) {
     if (s.type === "layout") pageNodes.walk(s.children, (n) => {
       if (n.type === "button") out.push({ section: i, label: n.props.label, url: n.props.url });
       if (n.type === "link") out.push({ section: i, label: n.props.label, url: n.props.url });
-      if (n.type === "menu") n.props.items.forEach((m) => out.push({ section: i, label: `Menu : ${m.label}`, url: m.url }));
+      if (n.type === "menu") n.props.items.forEach((m) => { out.push({ section: i, label: `Menu : ${m.label}`, url: m.url }); (m.children || []).forEach((c) => out.push({ section: i, label: `Menu : ${m.label} › ${c.label}`, url: c.url })); });
       if (n.type === "image" && n.props.link) out.push({ section: i, label: `Image : ${n.props.alt}`, url: n.props.link });
+      if (n.type === "icon" && n.props.link) out.push({ section: i, label: `Icône : ${n.props.label}`, url: n.props.link });
+      if (n.type === "gallery") n.props.images.forEach((im) => { if (im.link) out.push({ section: i, label: `Galerie : ${im.alt}`, url: im.link }); });
+      if (n.type === "pricing" && n.props.ctaUrl) out.push({ section: i, label: `Offre ${n.props.title} : ${n.props.ctaLabel}`, url: n.props.ctaUrl });
+      if (n.type === "breadcrumb") n.props.items.forEach((c, k) => { if (c.url && k < n.props.items.length - 1) out.push({ section: i, label: `Fil d'Ariane : ${c.label}`, url: c.url }); });
+      if (n.type === "social") n.props.items.forEach((s2) => out.push({ section: i, label: `Réseau : ${s2.network}`, url: s2.url }));
+      if (n.type === "modal" && n.props.ctaUrl) out.push({ section: i, label: `Fenêtre : ${n.props.ctaLabel}`, url: n.props.ctaUrl });
       if (n.type === "course" && n.props.course) out.push({ section: i, label: `Formation : ${n.props.course.title}`, url: n.props.course.url });
     });
   });
   // Les ancres (#…) sautent dans la page sans passer par le compteur de clics (même règle que href() du rendu)
-  return out.filter((l) => !String(l.url).startsWith("#"));
+  return out.filter((l) => !/^(#|mailto:)/.test(String(l.url)));
 }
 
 // ---------- Statistiques ----------

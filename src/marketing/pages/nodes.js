@@ -55,14 +55,22 @@ const numberIn = (min, max, { integer = false } = {}) => (v) => {
   return Math.round(n * 1000) / 1000;
 };
 const FONT_STACKS = { heading: "var(--kw-font-heading, inherit)", body: "var(--kw-font-body, inherit)", system: "system-ui, -apple-system, 'Segoe UI', sans-serif", serif: "Georgia, 'Times New Roman', serif", mono: "ui-monospace, Menlo, Consolas, monospace" };
+const TEXT_SHADOWS = { none: "none", sm: "0 1px 2px rgba(15,23,42,.25)", md: "0 2px 6px rgba(15,23,42,.35)", lg: "0 4px 16px rgba(15,23,42,.45)", glow: "0 0 12px rgba(255,255,255,.8)" };
 const SHADOWS = { none: "none", sm: "0 1px 3px rgba(15,23,42,.12)", md: "0 6px 16px rgba(15,23,42,.12)", lg: "0 14px 34px rgba(15,23,42,.16)", xl: "0 24px 60px rgba(15,23,42,.2)" };
 
 // Propriétés de style : clé du modèle → propriété CSS et validateur. Chaque contrôle de l'inspecteur correspond à une ligne.
+// Pistes de grille : 1 à 12 valeurs parmi Nfr, Npx, N%, auto (rien d'autre n'atteint la page)
+const gridTrack = (v) => {
+  const s = String(v ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  const parts = s.split(" ");
+  if (!s || parts.length > 12) return null;
+  return parts.every((t) => /^(\d{1,2}(\.\d)?fr|\d{1,4}px|\d{1,3}%|auto)$/.test(t)) ? s : null;
+};
 const len = lengthOf(), lenAuto = lengthOf({ auto: true }), lenNeg = lengthOf({ negative: true }), marginLen = lengthOf({ auto: true, negative: true });
 const STYLE_PROPS = {
   display: { css: "display", check: oneOf("block", "flex", "grid", "inline-block", "none"), group: "layout" },
   flexDirection: { css: "flex-direction", check: oneOf("row", "column", "row-reverse", "column-reverse"), group: "layout" },
-  flexWrap: { css: "flex-wrap", check: oneOf("wrap", "nowrap"), group: "layout" },
+  flexWrap: { css: "flex-wrap", check: oneOf("wrap", "nowrap", "wrap-reverse"), group: "layout" },
   justifyContent: { css: "justify-content", check: oneOf("flex-start", "center", "flex-end", "space-between", "space-around", "space-evenly"), group: "layout" },
   alignItems: { css: "align-items", check: oneOf("stretch", "flex-start", "center", "flex-end", "baseline"), group: "layout" },
   alignSelf: { css: "align-self", check: oneOf("auto", "flex-start", "center", "flex-end", "stretch"), group: "layout" },
@@ -70,6 +78,12 @@ const STYLE_PROPS = {
   rowGap: { css: "row-gap", check: len, group: "layout" },
   columnGap: { css: "column-gap", check: len, group: "layout" },
   columns: { css: "grid-template-columns", check: numberIn(1, 12, { integer: true }), out: (n) => `repeat(${n}, minmax(0, 1fr))`, group: "layout" },
+  // Largeurs des colonnes d'une grille, ex. « 2fr 1fr » ou « 240px 1fr » (remplace le nombre de colonnes égales)
+  gridTemplate: { css: "grid-template-columns", check: gridTrack, out: (v) => v.split(" ").map((t) => (/fr$/.test(t) ? `minmax(0, ${t})` : t)).join(" "), group: "layout" },
+  gridRows: { css: "grid-template-rows", check: numberIn(1, 12, { integer: true }), out: (n) => `repeat(${n}, auto)`, group: "layout" },
+  // Élément enfant d'une grille : nombre de colonnes / lignes occupées
+  gridColumnSpan: { css: "grid-column", check: numberIn(1, 12, { integer: true }), out: (n) => `span ${n}`, group: "layout" },
+  gridRowSpan: { css: "grid-row", check: numberIn(1, 6, { integer: true }), out: (n) => `span ${n}`, group: "layout" },
   width: { css: "width", check: lenAuto, group: "size" },
   height: { css: "height", check: lenAuto, group: "size" },
   minWidth: { css: "min-width", check: len, group: "size" },
@@ -95,6 +109,7 @@ const STYLE_PROPS = {
   textTransform: { css: "text-transform", check: oneOf("none", "uppercase", "lowercase", "capitalize"), group: "typography" },
   textAlign: { css: "text-align", check: oneOf("left", "center", "right", "justify"), group: "typography" },
   textDecoration: { css: "text-decoration", check: oneOf("none", "underline", "line-through"), group: "typography" },
+  textShadow: { css: "text-shadow", check: oneOf(...Object.keys(TEXT_SHADOWS)), out: (v) => TEXT_SHADOWS[v], group: "typography" },
   color: { css: "color", check: color, out: colorCss, group: "color" },
   backgroundColor: { css: "background-color", check: color, out: colorCss, group: "color" },
   borderWidth: { css: "border-width", check: len, group: "border" },
@@ -114,9 +129,15 @@ const STYLE_PROPS = {
   boxShadow: { css: "box-shadow", check: oneOf(...Object.keys(SHADOWS)), out: (v) => SHADOWS[v], group: "effects" },
   opacity: { css: "opacity", check: numberIn(0, 1), group: "effects" },
   overflow: { css: "overflow", check: oneOf("visible", "hidden", "auto"), group: "effects" },
-  position: { css: "position", check: oneOf("static", "relative", "sticky"), group: "position" },
+  // Absolue : placée par rapport au parent positionné (relatif) ; fixe : par rapport à l'écran (bandeau, bouton flottant)
+  position: { css: "position", check: oneOf("static", "relative", "sticky", "absolute", "fixed"), group: "position" },
   top: { css: "top", check: lenNeg, group: "position" },
+  right: { css: "right", check: lenNeg, group: "position" },
+  bottom: { css: "bottom", check: lenNeg, group: "position" },
   left: { css: "left", check: lenNeg, group: "position" },
+  transformOrigin: { css: "transform-origin", check: oneOf("center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"), group: "position" },
+  // Durée des changements au survol / focus / clic (couleurs, ombre, transformation…)
+  transitionDuration: { css: "transition", check: numberIn(0, 2000, { integer: true }), out: (n) => `color ${n}ms ease, background-color ${n}ms ease, border-color ${n}ms ease, box-shadow ${n}ms ease, transform ${n}ms ease, opacity ${n}ms ease`, group: "effects" },
   zIndex: { css: "z-index", check: numberIn(-10, 100, { integer: true }), group: "position" },
   objectFit: { css: "object-fit", check: oneOf("cover", "contain", "fill", "none"), group: "media" },
   objectPosition: { css: "object-position", check: oneOf("center", "top", "bottom", "left", "right"), group: "media" },
@@ -130,7 +151,8 @@ const STYLE_PROPS = {
 const COMPOSED = {
   backgroundImage: { group: "background" },     // { src } : image de la médiathèque ou https://
   gradient: { group: "background" },            // { from, to, angle }
-  overlay: { group: "background" },             // { color } : voile posé sur l'image ou le dégradé (lisibilité du texte)
+  overlay: { group: "background" },
+  shadow: { group: "effects" },                 // { x, y, blur, spread, color } : ombre personnalisée (remplace le préréglage)             // { color } : voile posé sur l'image ou le dégradé (lisibilité du texte)
   transform: { group: "position" },             // { x, y, rotate, scale }
 };
 
@@ -154,17 +176,23 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
     } else if (k === "gradient") {
       const from = color(v && v.from), to = color(v && v.to), angle = numberIn(0, 360, { integer: true })(v && v.angle);
       if (from && to) out.gradient = { from, to, angle: angle === null ? 180 : angle };
+    } else if (k === "shadow") {
+      const c = color(v && v.color);
+      const px = (n, min, max) => { const x = numberIn(min, max, { integer: true })(n); return x === null ? 0 : x; };
+      if (c) out.shadow = { x: px(v.x, -100, 100), y: px(v.y, -100, 100), blur: px(v.blur, 0, 200), spread: px(v.spread, -50, 100), color: c, ...(v.inset === true ? { inset: true } : {}) };
     } else if (k === "transform") {
       const t = {};
       const x = lenNeg(v && v.x), y = lenNeg(v && v.y), r = numberIn(-360, 360, { integer: true })(v && v.rotate), s = numberIn(0.1, 3)(v && v.scale);
+      const kx = numberIn(-60, 60, { integer: true })(v && v.skewX), ky = numberIn(-60, 60, { integer: true })(v && v.skewY);
       if (x) t.x = x; if (y) t.y = y; if (r !== null && r !== 0) t.rotate = r; if (s !== null && s !== 1) t.scale = s;
+      if (kx) t.skewX = kx; if (ky) t.skewY = ky;
       if (Object.keys(t).length) out.transform = t;
     }
   }
   return out;
 }
 
-const CORNERS = new Set(["borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth"]);
+const CORNERS = new Set(["gridTemplate", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth"]);
 function declarations(set) {
   const d = [];
   const entries = Object.entries(set);
@@ -178,11 +206,14 @@ function declarations(set) {
   if (set.gradient) layers.push(`linear-gradient(${set.gradient.angle}deg, ${colorCss(set.gradient.from)}, ${colorCss(set.gradient.to)})`);
   if (set.backgroundImage) layers.push(`url("${set.backgroundImage.src}")`);
   if (layers.length) d.push(`background-image:${layers.join(", ")}`);
+  if (set.shadow) { const h = set.shadow; d.push(`box-shadow:${h.inset ? "inset " : ""}${h.x}px ${h.y}px ${h.blur}px ${h.spread}px ${colorCss(h.color)}`); }
   if (set.transform) {
     const t = set.transform, parts = [];
     if (t.x || t.y) parts.push(`translate(${t.x || "0"}, ${t.y || "0"})`);
     if (t.rotate) parts.push(`rotate(${t.rotate}deg)`);
     if (t.scale) parts.push(`scale(${t.scale})`);
+    if (t.skewX) parts.push(`skewX(${t.skewX}deg)`);
+    if (t.skewY) parts.push(`skewY(${t.skewY}deg)`);
     d.push(`transform:${parts.join(" ")}`);
   }
   return d.join(";");
@@ -198,7 +229,11 @@ const NODE_TYPES = {
   stack: { label: "Pile", category: "structure", container: true, props: () => ({}) },
   group: { label: "Groupe", category: "structure", container: true, props: () => ({}) },
   spacer: { label: "Espace", category: "structure", props: (p) => ({ size: oneOf("8", "16", "24", "32", "48", "64", "80", "96", "128")(String(p.size)) || "32" }) },
-  divider: { label: "Séparateur", category: "structure", props: () => ({}) },
+  divider: { label: "Séparateur", category: "structure", props: (p) => ({
+    lineStyle: oneOf("solid", "dashed", "dotted", "double")(p.lineStyle) || "solid",
+    thickness: numberIn(1, 12, { integer: true })(p.thickness) || 1,
+    ...(color(p.color) ? { color: color(p.color) } : {}),
+  }) },
   heading: { label: "Titre", category: "text", props: (p, at) => {
     // Vide permis dans le brouillon (bloc en cours d'écriture) : jamais affiché sur la page publique
     const text = line(p.text, 200);
@@ -228,17 +263,21 @@ const NODE_TYPES = {
     if (!src) throw new Error(`${at} (image) : choisissez une image.`);
     const alt = line(p.alt, 200);
     if (!alt && p.decorative !== true) throw new Error(`${at} (image) : un texte de remplacement est obligatoire (ou cochez « image décorative »).`);
-    return { src, alt, decorative: p.decorative === true && !alt, link: h.linkUrl(p.link, `${at} (lien de l'image)`), caption: line(p.caption, 200) };
+    const link = h.linkUrl(p.link, `${at} (lien de l'image)`);
+    return { src, alt, decorative: p.decorative === true && !alt, link, caption: line(p.caption, 200), title: line(p.title, 150), newTab: p.newTab === true && link.startsWith("https://") };
   } },
   gallery: { label: "Galerie", category: "media", props: (p, at, h) => {
     const images = (Array.isArray(p.images) ? p.images : []).slice(0, 24).map((im, i) => {
       const src = h.imageUrl(im && im.src, `${at} (image ${i + 1} de la galerie)`);
       const alt = line(im && im.alt, 200);
       if (src && !alt) throw new Error(`${at} (galerie) : texte de remplacement manquant pour l'image ${i + 1}.`);
-      return src ? { src, alt } : null;
+      if (!src) return null;
+      const caption = line(im && im.caption, 200), link = h.linkUrl(im && im.link, `${at} (lien de l'image ${i + 1})`);
+      return { src, alt, ...(caption ? { caption } : {}), ...(link ? { link } : {}) };
     }).filter(Boolean);
     if (!images.length) throw new Error(`${at} (galerie) : au moins une image.`);
-    return { images };
+    // lightbox : clic = image en grand (sauf image avec lien) ; masonry : hauteurs naturelles en colonnes
+    return { images, lightbox: p.lightbox === true, masonry: p.masonry === true };
   } },
   video: { label: "Vidéo", category: "media", props: (p, at, h) => {
     const url = line(p.url, 500);
@@ -262,12 +301,16 @@ const NODE_TYPES = {
   audio: { label: "Audio", category: "media", props: (p, at) => {
     const src = line(p.src, 1000);
     if (!/^https:\/\/[^\s<>"'`\\/@]+\/[^\s<>"'`\\]*\.(mp3|m4a|ogg|wav)(\?[^\s<>"'`\\]*)?$/i.test(src)) throw new Error(`${at} (audio) : adresse https:// d'un fichier .mp3, .m4a, .ogg ou .wav attendue.`);
-    return { src, title: line(p.title, 150) };
+    return { src, title: line(p.title, 150), loop: p.loop === true };
   } },
   button: { label: "Bouton", category: "interaction", props: (p, at, h) => {
     const label = line(p.label, 80), url = h.linkUrl(p.url, `${at} (bouton)`);
     if (!label || !url) throw new Error(`${at} (bouton) : un texte et une adresse sont obligatoires.`);
-    return { label, url, variant: oneOf("primary", "outline", "ghost")(p.variant) || "primary", newTab: p.newTab === true && url.startsWith("https://") };
+    const icon = h.iconNames.includes(String(p.icon || "")) ? String(p.icon) : "";
+    return { label, url, variant: oneOf("primary", "outline", "ghost")(p.variant) || "primary", newTab: p.newTab === true && url.startsWith("https://"),
+      ...(icon ? { icon, iconPos: oneOf("before", "after")(p.iconPos) || "before" } : {}),
+      // Lien payé ou non recommandé (indication aux moteurs de recherche)
+      rel: oneOf("", "nofollow", "sponsored")(String(p.rel || "")) || "" };
   } },
   link: { label: "Lien", category: "interaction", props: (p, at, h) => {
     const label = line(p.label, 120), url = h.linkUrl(p.url, `${at} (lien)`);
@@ -278,10 +321,10 @@ const NODE_TYPES = {
     const items = (Array.isArray(p.items) ? p.items : []).map((x) => ({ q: line(x && x.q, 200), a: clean(x && x.a, 2000) })).filter((x) => x.q && x.a).slice(0, 30);
     if (!items.length) throw new Error(`${at} (accordéon) : au moins une question avec sa réponse.`);
     // single : une seule réponse ouverte à la fois (accordéon exclusif natif du navigateur, sans script)
-    return { items, faqSchema: p.faqSchema === true, openFirst: p.openFirst === true, single: p.single === true };
+    return { items, faqSchema: p.faqSchema === true, openFirst: p.openFirst === true, single: p.single === true, icon: oneOf("chevron", "plus", "none")(p.icon) || "chevron" };
   } },
   tabs: { label: "Onglets", category: "interaction", props: (p, at) => {
-    const items = (Array.isArray(p.items) ? p.items : []).map((x) => ({ title: line(x && x.title, 60), text: clean(x && x.text, 2000) })).filter((x) => x.title && x.text).slice(0, 20);
+    const items = (Array.isArray(p.items) ? p.items : []).map((x) => ({ title: line(x && x.title, 60), text: clean(x && x.text, 2000), ...(iconNames().includes(String(x && x.icon)) ? { icon: String(x.icon) } : {}) })).filter((x) => x.title && x.text).slice(0, 20);
     if (items.length < 2) throw new Error(`${at} (onglets) : au moins deux onglets avec un titre et un texte.`);
     return { items, vertical: p.vertical === true };
   } },
@@ -300,16 +343,23 @@ const NODE_TYPES = {
     const value = numberIn(0, 100, { integer: true })(p.value);
     if (!label) throw new Error(`${at} (barre de progression) : un libellé est obligatoire (lu par les lecteurs d'écran).`);
     if (value === null) throw new Error(`${at} (barre de progression) : valeur entre 0 et 100.`);
-    return { label, value, showValue: p.showValue !== false };
+    return { label, value, showValue: p.showValue !== false, animate: p.animate === true };
   } },
   menu: { label: "Menu de navigation", category: "interaction", props: (p, at, h) => {
-    const items = (Array.isArray(p.items) ? p.items : []).slice(0, 12).map((x, i) => {
+    // Un niveau de sous-menu (liste déroulante) ; sur mobile, le menu peut se replier derrière un bouton
+    const item = (x, where) => {
       const label = line(x && x.label, 60);
-      const url = label ? h.linkUrl(x && x.url, `${at} (menu, lien ${i + 1})`) : "";
+      const url = label ? h.linkUrl(x && x.url, `${at} (menu, ${where})`) : "";
       return label && url ? { label, url } : null;
+    };
+    const items = (Array.isArray(p.items) ? p.items : []).slice(0, 12).map((x, i) => {
+      const it = item(x, `lien ${i + 1}`);
+      if (!it) return null;
+      const children = (Array.isArray(x.children) ? x.children : []).slice(0, 10).map((c, j) => item(c, `lien ${i + 1}.${j + 1}`)).filter(Boolean);
+      return children.length ? { ...it, children } : it;
     }).filter(Boolean);
     if (!items.length) throw new Error(`${at} (menu) : au moins un lien avec un texte et une adresse.`);
-    return { items, label: line(p.label, 60) || "Menu", vertical: p.vertical === true };
+    return { items, label: line(p.label, 60) || "Menu", vertical: p.vertical === true, mobileToggle: p.mobileToggle === true };
   } },
   carousel: { label: "Carrousel", category: "media", props: (p, at, h) => {
     const images = (Array.isArray(p.images) ? p.images : []).slice(0, 24).map((im, i) => {
@@ -319,13 +369,70 @@ const NODE_TYPES = {
       return src ? { src, alt, caption: line(im && im.caption, 200) } : null;
     }).filter(Boolean);
     if (images.length < 2) throw new Error(`${at} (carrousel) : au moins deux images.`);
-    return { images, label: line(p.label, 80) || "Carrousel d'images" };
+    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true };
+  } },
+  toggle: { label: "Bascule", category: "interaction", props: (p, at) => {
+    const title = line(p.title, 150), text = clean(p.text, 4000);
+    if (!title || !text) throw new Error(`${at} (bascule) : un titre et un contenu sont obligatoires.`);
+    return { title, text, open: p.open === true };
+  } },
+  alert: { label: "Alerte", category: "text", props: (p, at) => {
+    const text = clean(p.text, 1000);
+    if (!text) throw new Error(`${at} (alerte) : un message est obligatoire.`);
+    return { tone: oneOf("info", "success", "warning", "error")(p.tone) || "info", title: line(p.title, 120), text, dismissible: p.dismissible === true };
+  } },
+  counter: { label: "Compteur", category: "marketing", props: (p, at) => {
+    const value = numberIn(-1e9, 1e9)(p.value);
+    if (value === null) throw new Error(`${at} (compteur) : un nombre réel est obligatoire.`);
+    const label = line(p.label, 120);
+    if (!label) throw new Error(`${at} (compteur) : dites ce que mesure ce nombre (et sa source).`);
+    return { value, prefix: line(p.prefix, 10), suffix: line(p.suffix, 16), label, decimals: numberIn(0, 2, { integer: true })(p.decimals) || 0, duration: numberIn(0, 5000, { integer: true })(p.duration) ?? 1500 };
+  } },
+  testimonial: { label: "Témoignage", category: "marketing", props: (p, at, h) => {
+    const text = clean(p.text, 1200), name = line(p.name, 80);
+    if (!text || !name) throw new Error(`${at} (témoignage) : le texte et le nom de la personne sont obligatoires (témoignage réel, avec son accord).`);
+    const avatar = p.avatar ? h.imageUrl(p.avatar, `${at} (photo du témoignage)`) : "";
+    return { text, name, role: line(p.role, 120), ...(avatar ? { avatar } : {}), rating: numberIn(0, 5, { integer: true })(p.rating) || 0 };
+  } },
+  pricing: { label: "Offre tarifaire", category: "marketing", props: (p, at, h) => {
+    const title = line(p.title, 80), price = line(p.price, 30);
+    if (!title || !price) throw new Error(`${at} (offre) : un nom et un prix réel sont obligatoires.`);
+    const features = (Array.isArray(p.features) ? p.features : []).map((x) => line(x, 160)).filter(Boolean).slice(0, 20);
+    const ctaUrl = h.linkUrl(p.ctaUrl, `${at} (bouton de l'offre)`), ctaLabel = line(p.ctaLabel, 60);
+    return { title, price, period: line(p.period, 40), description: line(p.description, 300), features, ...(ctaUrl && ctaLabel ? { ctaLabel, ctaUrl } : {}), badge: line(p.badge, 40), highlight: p.highlight === true };
+  } },
+  breadcrumb: { label: "Fil d'Ariane", category: "interaction", props: (p, at, h) => {
+    const items = (Array.isArray(p.items) ? p.items : []).slice(0, 8).map((x, i, all) => {
+      const label = line(x && x.label, 60);
+      if (!label) return null;
+      const url = i < all.length - 1 ? h.linkUrl(x && x.url, `${at} (fil d'Ariane, niveau ${i + 1})`) : ""; // dernier niveau = la page actuelle
+      return url ? { label, url } : { label };
+    }).filter(Boolean);
+    if (items.length < 2) throw new Error(`${at} (fil d'Ariane) : au moins deux niveaux.`);
+    return { items, separator: oneOf("chevron", "slash", "dot")(p.separator) || "chevron" };
+  } },
+  social: { label: "Réseaux sociaux", category: "interaction", props: (p, at, h) => {
+    const items = (Array.isArray(p.items) ? p.items : []).slice(0, 12).map((x, i) => {
+      if (!x || !Object.hasOwn(SOCIAL_NETWORKS, x.network)) return null;
+      const url = x.network === "email" ? (/^mailto:[^\s<>"'`\\@]+@[^\s<>"'`\\@]+$/.test(String(x.url || "").trim()) ? String(x.url).trim() : "") : h.linkUrl(x.url, `${at} (réseau ${i + 1})`);
+      if (!url) throw new Error(`${at} (réseaux sociaux) : adresse manquante pour ${SOCIAL_NETWORKS[x.network]}${x.network === "email" ? " (mailto:adresse@exemple.fr)" : ""}.`);
+      return { network: x.network, url };
+    }).filter(Boolean);
+    if (!items.length) throw new Error(`${at} (réseaux sociaux) : au moins un lien.`);
+    return { items, size: oneOf("24", "32", "40", "48")(String(p.size)) || "32", shape: oneOf("circle", "square", "plain")(p.shape) || "circle", label: line(p.label, 60) || "Nos réseaux" };
+  } },
+  modal: { label: "Fenêtre (modale)", category: "interaction", props: (p, at, h) => {
+    const buttonLabel = line(p.buttonLabel, 60), title = line(p.title, 120), text = clean(p.text, 4000);
+    if (!buttonLabel || !title || !text) throw new Error(`${at} (fenêtre) : le texte du bouton, le titre et le contenu sont obligatoires.`);
+    const ctaUrl = h.linkUrl(p.ctaUrl, `${at} (bouton de la fenêtre)`), ctaLabel = line(p.ctaLabel, 60);
+    return { buttonLabel, variant: oneOf("primary", "outline", "ghost")(p.variant) || "primary", title, text, ...(ctaUrl && ctaLabel ? { ctaLabel, ctaUrl } : {}), size: oneOf("sm", "md", "lg")(p.size) || "md" };
   } },
   table: { label: "Tableau", category: "text", props: (p, at) => {
     const rows = (Array.isArray(p.rows) ? p.rows : []).slice(0, 40).map((r) => (Array.isArray(r) ? r.slice(0, 8).map((c) => line(c, 200)) : [])).filter((r) => r.some(Boolean));
     if (!rows.length) throw new Error(`${at} (tableau) : au moins une ligne.`);
     const width = Math.max(...rows.map((r) => r.length));
-    return { rows: rows.map((r) => r.concat(Array(width - r.length).fill(""))), header: p.header !== false, caption: line(p.caption, 150) };
+    return { rows: rows.map((r) => r.concat(Array(width - r.length).fill(""))), header: p.header !== false, caption: line(p.caption, 150),
+      footer: p.footer === true && rows.length > (p.header !== false ? 2 : 1), striped: p.striped === true, align: oneOf("left", "center", "right")(p.align) || "left" };
   } },
   countdown: { label: "Compte à rebours", category: "marketing", props: (p, at) => {
     const until = String(p.until || "");
@@ -341,7 +448,9 @@ const NODE_TYPES = {
   icon: { label: "Icône", category: "media", props: (p, at, h) => {
     const name = String(p.name || "");
     if (!h.iconNames.includes(name)) throw new Error(`${at} (icône) : icône inconnue.`);
-    return { name, label: line(p.label, 80), size: oneOf("16", "24", "32", "48", "64")(String(p.size)) || "32" };
+    const link = h.linkUrl(p.link, `${at} (lien de l'icône)`);
+    if (link && !line(p.label, 80)) throw new Error(`${at} (icône) : une icône cliquable a besoin d'une description (lue par les lecteurs d'écran).`);
+    return { name, label: line(p.label, 80), size: oneOf("16", "24", "32", "48", "64", "96", "128")(String(p.size)) || "32", link, newTab: p.newTab === true && link.startsWith("https://") };
   } },
 };
 const CATEGORIES = { structure: "Structure", text: "Texte", media: "Média", interaction: "Interaction", marketing: "Marketing", commerce: "Formations" };
@@ -379,16 +488,25 @@ const PALETTE = {
   progress: { icon: "activity", blank: () => ({ props: { label: "Progression", value: 60, showValue: true } }) },
   menu: { icon: "menu", blank: () => ({ props: { label: "Menu de la page", items: [{ label: "Programme", url: "/catalogue" }, { label: "Blog", url: "/blog" }] } }) },
   carousel: { icon: "image", asks: "images", blank: () => ({ props: {} }) },
+  toggle: { icon: "chevronDown", blank: () => ({ props: { title: "Afficher les détails", text: "Le contenu qui apparaît quand on ouvre.", open: false } }) },
+  alert: { icon: "info", blank: () => ({ props: { tone: "info", title: "À savoir", text: "Une information importante pour la personne qui lit." } }) },
+  counter: { icon: "barChart", blank: () => ({ props: { value: 0, label: "[ce que mesure ce nombre, et sa source]", suffix: "", prefix: "", duration: 1500 } }) },
+  testimonial: { icon: "quote", blank: () => ({ props: { text: "[Le témoignage réel, avec l'accord de la personne.]", name: "[Prénom N.]", role: "", rating: 0 } }) },
+  pricing: { icon: "tag", blank: () => ({ props: { title: "[Nom de l'offre]", price: "[prix réel]", period: "", features: ["[Ce qui est inclus]"], ctaLabel: "Choisir", ctaUrl: "/catalogue" } }) },
+  breadcrumb: { icon: "chevronRight", blank: () => ({ props: { items: [{ label: "Accueil", url: "/" }, { label: "Cette page" }], separator: "chevron" } }) },
+  social: { icon: "share2", blank: () => ({ props: { items: [{ network: "website", url: "/" }], size: "32", shape: "circle" } }) },
+  modal: { icon: "layers", blank: () => ({ props: { buttonLabel: "En savoir plus", title: "Plus d'informations", text: "Le contenu de la fenêtre.", variant: "outline", size: "md" } }) },
 };
 
 // Libellés et contrôles des propriétés de style (inspecteur) : un contrôle = une propriété réelle de STYLE_PROPS
 const STYLE_UI = {
   display: ["Affichage", { block: "Bloc", flex: "Flex", grid: "Grille", "inline-block": "En ligne", none: "Caché" }],
   flexDirection: ["Direction", { row: "En ligne", column: "En colonne", "row-reverse": "Ligne inversée", "column-reverse": "Colonne inversée" }],
-  flexWrap: ["Retour à la ligne", { wrap: "Oui", nowrap: "Non" }],
+  flexWrap: ["Retour à la ligne", { wrap: "Oui", nowrap: "Non", "wrap-reverse": "Oui, inversé" }],
   justifyContent: ["Répartition", { "flex-start": "Début", center: "Centre", "flex-end": "Fin", "space-between": "Espacés", "space-around": "Autour", "space-evenly": "Égaux" }],
   alignItems: ["Alignement des enfants", { stretch: "Étirés", "flex-start": "Début", center: "Centre", "flex-end": "Fin", baseline: "Ligne de base" }],
   alignSelf: ["Alignement dans le parent", { auto: "Auto", "flex-start": "Début", center: "Centre", "flex-end": "Fin", stretch: "Étiré" }],
+  gridTemplate: ["Largeurs des colonnes (ex. 2fr 1fr)"], gridRows: ["Lignes (grille)"], gridColumnSpan: ["Colonnes occupées"], gridRowSpan: ["Lignes occupées"],
   gap: ["Écart entre enfants"], rowGap: ["Écart entre lignes"], columnGap: ["Écart entre colonnes"], columns: ["Colonnes (grille)"],
   width: ["Largeur"], height: ["Hauteur"], flexGrow: ["Proportion de la colonne"], minWidth: ["Largeur min."], maxWidth: ["Largeur max."], minHeight: ["Hauteur min."], maxHeight: ["Hauteur max."],
   marginTop: ["Marge haut"], marginRight: ["Marge droite"], marginBottom: ["Marge bas"], marginLeft: ["Marge gauche"],
@@ -398,6 +516,7 @@ const STYLE_UI = {
   fontStyle: ["Style", { normal: "Normal", italic: "Italique" }], lineHeight: ["Interligne"], letterSpacing: ["Espacement des lettres"],
   textTransform: ["Casse", { none: "Normale", uppercase: "MAJUSCULES", lowercase: "minuscules", capitalize: "Première Lettre" }],
   textAlign: ["Alignement du texte", { left: "Gauche", center: "Centre", right: "Droite", justify: "Justifié" }],
+  textShadow: ["Ombre du texte", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", glow: "Halo clair" }],
   textDecoration: ["Décoration", { none: "Aucune", underline: "Soulignée", "line-through": "Barrée" }],
   color: ["Couleur du texte"], backgroundColor: ["Couleur de fond"],
   borderWidth: ["Épaisseur de bordure"], borderStyle: ["Style de bordure", { none: "Aucune", solid: "Pleine", dashed: "Tirets", dotted: "Points" }], borderColor: ["Couleur de bordure"], borderRadius: ["Arrondi"],
@@ -405,7 +524,9 @@ const STYLE_UI = {
   borderTopLeftRadius: ["Arrondi haut gauche"], borderTopRightRadius: ["Arrondi haut droit"], borderBottomRightRadius: ["Arrondi bas droit"], borderBottomLeftRadius: ["Arrondi bas gauche"],
   boxShadow: ["Ombre", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", xl: "Très forte" }], opacity: ["Opacité"],
   overflow: ["Débordement", { visible: "Visible", hidden: "Masqué", auto: "Défilement" }],
-  position: ["Position", { static: "Normale", relative: "Relative", sticky: "Collante" }], top: ["Décalage haut"], left: ["Décalage gauche"], zIndex: ["Plan (z-index)"],
+  position: ["Position", { static: "Normale", relative: "Relative", sticky: "Collante", absolute: "Absolue (dans le parent)", fixed: "Fixe (à l'écran)" }], top: ["Décalage haut"], right: ["Décalage droite"], bottom: ["Décalage bas"], left: ["Décalage gauche"],
+  transformOrigin: ["Origine des transformations", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite", "top left": "Haut gauche", "top right": "Haut droit", "bottom left": "Bas gauche", "bottom right": "Bas droit" }],
+  transitionDuration: ["Durée des transitions (ms)"], zIndex: ["Plan (z-index)"],
   objectFit: ["Cadrage", { cover: "Remplir", contain: "Contenir", fill: "Étirer", none: "Taille réelle" }],
   objectPosition: ["Point focal", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite" }],
   aspectRatio: ["Proportions", { auto: "Libres", "1/1": "1:1", "4/3": "4:3", "3/2": "3:2", "16/9": "16:9", "21/9": "21:9", "3/4": "3:4" }],
@@ -420,14 +541,15 @@ function editorSpec() {
   const kind = (k) => {
     const p = STYLE_PROPS[k];
     if (p.check === color || [ "color", "backgroundColor", "borderColor" ].includes(k)) return "color";
-    if (["columns", "lineHeight", "opacity", "zIndex", "flexGrow"].includes(k)) return "number";
+    if (["columns", "lineHeight", "opacity", "zIndex", "flexGrow", "gridRows", "gridColumnSpan", "gridRowSpan", "transitionDuration"].includes(k)) return "number";
+    if (k === "gridTemplate") return "text";
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
   return {
     types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
     categories: CATEGORIES,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
-    audiences: Object.entries(AUDIENCES), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
+    socialNetworks: Object.entries(SOCIAL_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     colorTokens: COLOR_TOKENS, spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
     limits: { nodes: MAX_NODES, depth: MAX_DEPTH },
   };
@@ -509,6 +631,24 @@ function audienceMatches(audience, visitor) {
 }
 const audienceLabel = (a) => (a ? `${AUDIENCES[a.who]}${a.value !== undefined ? ` ${a.value}` : ""}`.replace("… ", " : ") : "");
 
+// Réseaux sociaux proposés (pictogrammes dessinés pour KOLAKISA, dans views/marketing-public/_social-icon.ejs)
+const SOCIAL_NETWORKS = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn", youtube: "YouTube", x: "X (Twitter)", tiktok: "TikTok", whatsapp: "WhatsApp", email: "E-mail", website: "Site web" };
+
+// ---------- Animations : entrée (à l'apparition à l'écran) et effet au survol ----------
+const ENTRANCES = { fade: "Fondu", "slide-up": "Glisse vers le haut", "slide-down": "Glisse vers le bas", "slide-left": "Glisse depuis la droite", "slide-right": "Glisse depuis la gauche", zoom: "Zoom avant" };
+const HOVERS = { grow: "Grossit", shrink: "Rétrécit", lift: "Se soulève", tilt: "S'incline" };
+function normalizeMotion(raw) {
+  if (!raw || typeof raw !== "object") return undefined;
+  const out = {};
+  if (Object.hasOwn(ENTRANCES, raw.entrance)) {
+    out.entrance = raw.entrance;
+    out.duration = numberIn(100, 3000, { integer: true })(raw.duration) ?? 600;
+    out.delay = numberIn(0, 3000, { integer: true })(raw.delay) ?? 0;
+  }
+  if (Object.hasOwn(HOVERS, raw.hover)) out.hover = raw.hover;
+  return Object.keys(out).length ? out : undefined;
+}
+
 // ---------- Normalisation d'un arbre ----------
 function normalizeNode(raw, at, h, depth, counter) {
   if (!raw || typeof raw !== "object") throw new Error(`${at} : élément invalide.`);
@@ -538,6 +678,14 @@ function normalizeNode(raw, at, h, depth, counter) {
   }
   const audience = normalizeAudience(raw.audience, where);
   if (audience) node.audience = audience;
+  // Visible sur certains écrans seulement (au moins un)
+  if (Array.isArray(raw.hideOn)) {
+    const hideOn = [...new Set(raw.hideOn.filter((b) => BREAKPOINTS.some((x) => x.key === b)))];
+    if (hideOn.length === BREAKPOINTS.length) throw new Error(`${where} : un élément ne peut pas être masqué sur tous les écrans (utilisez « Masquer »).`);
+    if (hideOn.length) node.hideOn = hideOn;
+  }
+  const motion = normalizeMotion(raw.motion);
+  if (motion) node.motion = motion;
   const styles = normalizeStyles(raw.styles, raw.states, where, h);
   if (styles.styles) node.styles = styles.styles;
   if (styles.states) node.states = styles.states;
@@ -594,7 +742,10 @@ function pageCss(sections) {
     add(s.id, s.styles, s.states);
     if (s.type === "layout") walk(s.children, (n) => {
       add(n.id, n.styles, n.states);
+      if (n.motion && n.motion.entrance && NODE_ID.test(String(n.id || ""))) rules.base.push(`.kw-n-${n.id}{--kw-anim-dur:${n.motion.duration}ms;--kw-anim-delay:${n.motion.delay}ms}`);
       // Barre de progression : sa largeur vient de sa valeur (validée 0–100), pas d'un style écrit dans la page
+      if (n.type === "social" && NODE_ID.test(String(n.id || "")) && n.props) rules.base.push(`.kw-n-${n.id}{--kw-soc:${Number(n.props.size) || 32}px}`);
+      if (n.type === "divider" && NODE_ID.test(String(n.id || "")) && n.props && (n.props.lineStyle !== "solid" || n.props.thickness > 1 || n.props.color)) rules.base.push(`.kw-n-${n.id}{border:0;border-top:${n.props.thickness}px ${n.props.lineStyle} ${n.props.color ? colorCss(n.props.color) : "currentColor"}}`);
       if (n.type === "progress" && NODE_ID.test(String(n.id || "")) && Number.isInteger(n.props && n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-progress-bar{width:${n.props.value}%}`);
     });
   }

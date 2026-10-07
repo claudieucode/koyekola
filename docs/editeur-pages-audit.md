@@ -66,3 +66,65 @@ on complète et on améliore dans l'architecture existante.
   pas de deuxième système.
 - **Icônes de réseaux sociaux** : la bibliothèque d'icônes du site ne contient pas les logos des marques ; pas de faux
   logos. Les liens sociaux se font avec des liens ou boutons.
+
+---
+
+# Mission V2 (7 octobre 2026) — inventaire des 70 parties
+
+Légende : **E** existe et fonctionne · **P** partiel (à compléter) · **M** manquant (à construire) · **R** refusé (raison) · **X** existe ailleurs dans KOLAKISA (réutilisé, pas de doublon).
+
+| Partie | État avant | Ce qui est fait dans la V2 |
+|---|---|---|
+| 1 Deux modes, un document | E | — |
+| 2 Bibliothèque : recherche, catégories, composants, blocs | E · favoris / récents **M** | favoris et récents |
+| 3 Structures (section, conteneur, colonnes, grille, pile, groupe, espace, séparateur) | E | — |
+| 4 Flex : direction, répartition, alignement, retour à la ligne, écarts, dimensions, plan | E · retour inversé, positions absolue / fixe **M** | retour inversé ; positions absolue et fixe avec décalages haut / droite / bas / gauche |
+| 5 Grille : colonnes, écarts | E · largeurs de colonnes, lignes, étendue **M** | modèle de colonnes (ex. 2fr 1fr), lignes, étendue d'un enfant sur plusieurs colonnes / lignes |
+| 6 Texte | E · ombre du texte **M** | ombre du texte |
+| 7 Image | E · titre, nouvel onglet **M** | titre, lien dans un nouvel onglet |
+| 8 Galerie | P | visionneuse (agrandissement), légendes, liens, mosaïque |
+| 9 Vidéo | E · proportions **P** | proportions dans le style |
+| 10 Audio | P | lecture en boucle |
+| 11 Bouton | E · icône, rel **M** · désactivé **R** (un bouton de page est un lien) | icône avant / après, lien sponsorisé / nofollow |
+| 12 Icône | E · lien **M** · envoi de SVG **R** (un SVG peut contenir du script) | lien |
+| 13 Icône + texte | E (bloc) | — |
+| 14 Séparateur | P | style, épaisseur, couleur |
+| 15 Espace | E (hauteur par écran) | — |
+| 16 Onglets | E · icône **M** | icône par onglet |
+| 17 Accordéon | E · forme de l'icône **M** | flèche, plus / moins ou aucune |
+| 18 Bascule (toggle) | M | élément « Bascule » |
+| 19 Carrousel | P | points, lecture automatique (intervalle), boucle |
+| 20 Formulaires | X (module Formulaires : champs, obligatoires, conditions, fichier, propriétés) · mot de passe **R** (une page marketing ne collecte pas de mot de passe) | — |
+| 21 Pop-ups | X (module Pop-ups, déclencheurs) · fenêtre dans la page **M** | élément « Fenêtre (modale) » |
+| 22 Alerte | M | élément « Alerte » |
+| 23 Progression | E · animation **M** | animation à l'apparition |
+| 24 Compteur | M | élément « Compteur » animé |
+| 25 Témoignage | E (bloc) · avatar, note **M** | élément « Témoignage » |
+| 26 Tarif | E (bloc) · élément dédié **M** | élément « Offre tarifaire » |
+| 27 FAQ | E | — |
+| 28 Réseaux sociaux | M | élément « Réseaux sociaux » (pictogrammes dessinés pour KOLAKISA) |
+| 29 Fil d'Ariane | M | élément « Fil d'Ariane » (+ données structurées) |
+| 30 Navigation | P | sous-menus, menu mobile (bouton), pages du site en un clic |
+| 31 Tableau | P | pied de tableau, lignes alternées, alignement |
+| 32–34 Conteneur, fond, bordure | E | — |
+| 35 Ombre | P (préréglages) | ombre personnalisée (décalages, flou, étendue, couleur) |
+| 36 États | E (survol, focus, clic) · visité **R** (le navigateur le limite aux couleurs, pour la vie privée) · désactivé **R** | — |
+| 37 Responsive | E | — |
+| 38 Avancé | E · visibilité par écran des éléments **M** · classes / attributs libres **R** (sécurité) | visibilité par écran |
+| 39 Animations | M | animations d'entrée (fondu, glissement, zoom ; durée, délai) ; effets au survol ; transition |
+| 40 Transformations | P | inclinaison, origine |
+| 41–43 Couleurs, typographies, design system | E (site) · titres 5 et 6 **M** | titres 5 et 6 |
+| 44 Composants réutilisables | E | — |
+| 45 Modèles (pages, sections, en-têtes, pieds) | E · en-tête / pied **M** | blocs « En-tête » et « Pied de page » |
+| 46 Blocs (patterns) | E (composants insérables en copie indépendante = blocs enregistrés) | — |
+| 47–52 Copier / coller, annuler, navigateur, palette, versions, médias | E | — |
+| 53 SEO | E (moteur SEO du site) | — |
+| 55–59 Glisser-déposer, édition directe, multi-sélection, guides, duplication | E | — |
+| 60 Réglages de page | E · largeur des sections libres **M** | largeur de section (étroite, normale, large, pleine) |
+| 61–63 Aperçu, enregistrement, performances | E | — |
+
+**État au 7 octobre 2026 (soir)** : tout ce qui figure dans la colonne « Ce qui est fait dans la V2 » est construit,
+rendu sur la page publique et testé (serveur : tests/editeur-v2.test.js ; navigateur : éditeur et page publiée, dont
+mobile et « animations réduites »). Une vérification de plus a mis en évidence et corrigé : la typographie globale du site
+(tailles de titres, texte, boutons) ne s'appliquait pas aux éléments des sections libres ; elle s'y applique désormais,
+le réglage propre d'un élément restant prioritaire.

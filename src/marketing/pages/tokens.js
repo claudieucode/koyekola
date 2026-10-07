@@ -5,8 +5,8 @@ const { bad } = require("./sections");
 
 const COLOR_KEYS = ["primary", "secondary", "accent", "background", "surface", "text", "muted", "success", "warning", "error"];
 const COLOR_LABELS = { primary: "Principale", secondary: "Secondaire", accent: "Accent", background: "Fond", surface: "Surface", text: "Texte", muted: "Texte discret", success: "Succès", warning: "Avertissement", error: "Erreur" };
-const TYPE_KEYS = ["h1", "h2", "h3", "h4", "body", "caption", "button"];
-const TYPE_LABELS = { h1: "Titre 1", h2: "Titre 2", h3: "Titre 3", h4: "Titre 4", body: "Texte courant", caption: "Légende", button: "Bouton" };
+const TYPE_KEYS = ["h1", "h2", "h3", "h4", "h5", "h6", "body", "caption", "button"];
+const TYPE_LABELS = { h1: "Titre 1", h2: "Titre 2", h3: "Titre 3", h4: "Titre 4", h5: "Titre 5", h6: "Titre 6", body: "Texte courant", caption: "Légende", button: "Bouton" };
 const SPACE_KEYS = ["xs", "sm", "md", "lg", "xl", "xxl"];
 // Polices proposées : celles du site (servies localement, aucun service tiers) et des polices système
 const FONTS = {
@@ -23,7 +23,7 @@ const DEFAULT_TOKENS = Object.freeze({
   fonts: { heading: "bricolage", body: "figtree" },
   type: {
     h1: { size: 44, weight: 800, lineHeight: 1.1 }, h2: { size: 32, weight: 800, lineHeight: 1.15 }, h3: { size: 24, weight: 700, lineHeight: 1.2 },
-    h4: { size: 19, weight: 700, lineHeight: 1.3 }, body: { size: 17, weight: 400, lineHeight: 1.6 }, caption: { size: 14, weight: 400, lineHeight: 1.4 },
+    h4: { size: 19, weight: 700, lineHeight: 1.3 }, h5: { size: 17, weight: 700, lineHeight: 1.35 }, h6: { size: 15, weight: 700, lineHeight: 1.4 }, body: { size: 17, weight: 400, lineHeight: 1.6 }, caption: { size: 14, weight: 400, lineHeight: 1.4 },
     button: { size: 16, weight: 700, lineHeight: 1.2 },
   },
   space: { xs: 4, sm: 8, md: 16, lg: 32, xl: 56, xxl: 96 },

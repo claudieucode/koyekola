@@ -107,7 +107,7 @@ describe("vrai serveur", () => {
     assert.equal((await boss.postJson(`/marketing/pages/${id}/publier.json`, {})).status, 200);
     const slug = db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug;
     const html = (await new Client(srv.base).get(`/p/${slug}`, { headers: { "User-Agent": UA } })).text;
-    assert.match(html, /<nav class="kw-node kw-menu kw-n-menu00000001" aria-label="Menu principal"><ul class="kw-menu-list"><li><a class="kw-menu-link" href="#tarifs">Tarifs<\/a><\/li><li><a class="kw-menu-link" href="\/p\/[^"]+\/clic\/0">Blog/);
+    assert.match(html, /<nav class="kw-node kw-menu kw-n-menu00000001" aria-label="Menu principal"><ul class="kw-menu-list" id="kw-menu-menu00000001"><li class="kw-menu-item"><a class="kw-menu-link" href="#tarifs">Tarifs<\/a><\/li><li class="kw-menu-item"><a class="kw-menu-link" href="\/p\/[^"]+\/clic\/0">Blog/);
     assert.match(html, /href="\/p\/[^"]+\/clic\/1"[^>]*>Catalogue/, "le bouton suit le menu dans l'ordre des liens comptés");
     assert.match(html, /<h2 class="kw-node kw-heading kw-n-head00000001" id="tarifs">Tarifs<\/h2>/);
     assert.match(html, /class="kw-node kw-badge kw-n-badg00000001 kw-badge-primary">Nouveau/);

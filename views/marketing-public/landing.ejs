@@ -24,8 +24,8 @@
   <link rel="stylesheet" href="<%= asset("/css/landing.css") %>">
   <% if (page.nodeCss) { %><style><%- page.nodeCss %></style><% } %>
 </head>
-<% if (siteStyle) { %><body class="lp-body lp-site" style="<%= siteStyle %> --lp-accent: var(--kw-primary); --lp-on-accent: var(--kw-on-primary); --lp-bg: var(--kw-background); --lp-text: var(--kw-text)">
-<% } else { %><body class="lp-body" style="--lp-accent: <%= page.theme.accent %>; --lp-bg: <%= page.theme.background %>; --lp-text: <%= page.theme.text %>"><% } %>
+<% const bAttr = typeof builder !== "undefined" && builder ? " data-kw-builder" : ""; %><% if (siteStyle) { %><body class="lp-body lp-site"<%- bAttr %> style="<%= siteStyle %> --lp-accent: var(--kw-primary); --lp-on-accent: var(--kw-on-primary); --lp-bg: var(--kw-background); --lp-text: var(--kw-text)">
+<% } else { %><body class="lp-body"<%- bAttr %> style="--lp-accent: <%= page.theme.accent %>; --lp-bg: <%= page.theme.background %>; --lp-text: <%= page.theme.text %>"><% } %>
   <% if (preview && !(typeof builder !== "undefined" && builder)) { %><p class="lp-preview-bar"><%= typeof previewLabel !== "undefined" && previewLabel ? previewLabel + " " : "Aperçu — " %>Les clics et inscriptions ne sont pas enregistrés.</p><% } %>
   <main class="lp-main" id="main">
     <% if (thanks && !page.sections.some((x) => x.type === "form")) { %><section class="lp-section"><p class="lp-thanks" role="status"><%= thanks %></p></section><% } %>

@@ -123,7 +123,7 @@ describe("design system", () => {
     assert.equal(t.fonts.heading, DEFAULT_TOKENS.fonts.heading);
     assert.throws(() => normalizeTokens({ colors: { text: "rouge" } }, { strict: true }), /Texte/);
     assert.equal(Object.keys(t.colors).length, 10);
-    assert.deepEqual(Object.keys(t.type), ["h1", "h2", "h3", "h4", "body", "caption", "button"]);
+    assert.deepEqual(Object.keys(t.type), ["h1", "h2", "h3", "h4", "h5", "h6", "body", "caption", "button"]);
     assert.deepEqual(Object.keys(t.space), ["xs", "sm", "md", "lg", "xl", "xxl"]);
   });
 

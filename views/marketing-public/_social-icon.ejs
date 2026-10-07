@@ -1,0 +1,13 @@
+<%# Pictogrammes des réseaux sociaux, dessinés pour KOLAKISA (formes simples et reconnaissables, une seule couleur :
+    currentColor). Aucun logo officiel n'est copié. %>
+<% const d = {
+  facebook: '<path d="M13.4 21v-7.6h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.5-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.7v3h2.6V21z" fill="currentColor"/>',
+  instagram: '<rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.3" cy="6.7" r="1.2" fill="currentColor"/>',
+  linkedin: '<rect x="4" y="9.5" width="3.4" height="10.5" fill="currentColor"/><circle cx="5.7" cy="5.7" r="1.9" fill="currentColor"/><path d="M10 9.5h3.2v1.5c.6-1 1.8-1.8 3.5-1.8 2.6 0 3.8 1.6 3.8 4.5V20h-3.4v-5.6c0-1.5-.5-2.4-1.8-2.4-1.4 0-2.1 1-2.1 2.6V20H10z" fill="currentColor"/>',
+  youtube: '<path fill-rule="evenodd" d="M4.5 5.5h15A2.5 2.5 0 0 1 22 8v8a2.5 2.5 0 0 1-2.5 2.5h-15A2.5 2.5 0 0 1 2 16V8a2.5 2.5 0 0 1 2.5-2.5zM10 9v6l5.2-3z" fill="currentColor"/>',
+  x: '<path d="M5 4.5h3.8l10.2 15H15.2z" fill="currentColor"/><path d="M18.6 4.5 5.4 19.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  tiktok: '<path d="M14 3.5v11.2a3.6 3.6 0 1 1-3.6-3.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M14 3.5c.4 2.6 2.2 4.3 5 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+  whatsapp: '<path d="M12 3.5a8.5 8.5 0 0 0-7.3 12.8L3.5 20.5l4.3-1.1A8.5 8.5 0 1 0 12 3.5z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M9.2 8.6c.3-.6.6-.6.9-.6h.6c.2 0 .4.1.5.4l.7 1.7c.1.2 0 .4-.1.6l-.5.6c-.1.1-.2.3 0 .5.5.9 1.4 1.8 2.4 2.3.2.1.4.1.5-.1l.6-.7c.2-.2.4-.2.6-.1l1.6.8c.2.1.3.3.3.5 0 .9-.6 1.7-1.6 1.8-1 .1-2.9-.4-4.6-2.1s-2.4-3.5-2.4-4.4c0-.5.2-.9.5-1.2z" fill="currentColor"/>',
+  email: '<rect x="3" y="5.5" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="m4 7 8 6 8-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  website: '<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M3.5 12h17M12 3.5c2.4 2.5 3.4 5.3 3.4 8.5s-1 6-3.4 8.5c-2.4-2.5-3.4-5.3-3.4-8.5s1-6 3.4-8.5z" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+}; %><svg class="kw-social-svg" viewBox="0 0 24 24" width="<%= size %>" height="<%= size %>" aria-hidden="true" focusable="false"><%- d[network] || d.website %></svg>
