@@ -193,6 +193,15 @@
 .kw-signup .hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .kw-signup .optin-row { line-height: 1.45; }
 .kw-signup .field-hint { margin: 0; font-size: 13px; opacity: 0.75; }
+/* Carte de profil (widget personnalisé « profilecard ») */
+.kw-profilecard { display: flex; flex-direction: column; gap: 6px; padding: 20px; border: 1px solid rgba(16, 34, 47, 0.12); border-radius: 12px; background: #fff; }
+.kw-profilecard.is-center { align-items: center; text-align: center; }
+.kw-profilecard.is-left { align-items: flex-start; text-align: left; }
+.kw-profile-photo { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; margin-bottom: 6px; }
+.kw-profile-name { margin: 0; font-size: 20px; }
+.kw-profile-role { margin: 0; font-weight: 600; color: var(--lp-accent, #0277b6); }
+.kw-profile-bio { margin: 4px 0 0; overflow-wrap: anywhere; }
+.kw-profilecard .kw-button { margin-top: 8px; align-self: inherit; }
 /* Logo, titre du site, copyright */
 .kw-sitelogo { display: inline-flex; flex-direction: column; align-items: flex-start; }
 .kw-sitelogo-link { display: inline-flex; align-items: center; color: inherit; text-decoration: none; }

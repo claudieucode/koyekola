@@ -1302,8 +1302,26 @@
   document.body.appendChild(h("datalist", { id: "pb-scale" }, SPEC.spacingScale.map(function (n) { return h("option", { value: n + "px" }); }).concat(["auto", "100%", "50%"].map(function (v) { return h("option", { value: v }); }))));
 
   // Contenu de chaque élément (onglet « Contenu »)
+  // Widget personnalisé : champs de l'inspecteur générés depuis sa description (src/marketing/pages/widgets)
+  function schemaFields(it, box, disabled) {
+    var p = it.props || (it.props = {});
+    (NT[it.type].schema || []).forEach(function (f) {
+      var set = function (v, light) { setProp(it.id, f.key, v, light ? { key: it.id + ":" + f.key, light: true } : null); };
+      if (f.kind === "text" || f.kind === "textarea" || f.kind === "link") box.appendChild(textField(f.label + (f.required ? "" : ""), p[f.key], function (v) { set(v, true); }, { max: f.max || (f.kind === "textarea" ? 1000 : f.kind === "link" ? 500 : 200), multiline: f.kind === "textarea", list: f.kind === "link" ? "pb-links" : null, placeholder: f.kind === "link" ? "/catalogue, /p/…, #ancre ou https://…" : null, disabled: disabled }));
+      else if (f.kind === "number") box.appendChild(textField(f.label, p[f.key] === undefined ? "" : String(p[f.key]), function (v) { set(Number(v)); }, { type: "number", onChange: true, disabled: disabled, hint: "Entre " + f.min + " et " + f.max + "." }));
+      else if (f.kind === "select") box.appendChild(selectField(f.label, p[f.key], f.options, function (v) { set(v); }, { disabled: disabled }));
+      else if (f.kind === "bool") box.appendChild(checkField(f.label, p[f.key] === true, function (v) { set(v); }, { disabled: disabled }));
+      else if (f.kind === "image") {
+        box.appendChild(h("p", { class: "pb-sub", text: f.label }));
+        box.appendChild(mediaPreview(p[f.key], function (m) { set(m.path); }, disabled));
+        if (p[f.key] && !f.required) box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled, onclick: function () { set(""); } }, "Retirer l'image"));
+      } else if (f.kind === "icon") { box.appendChild(h("p", { class: "pb-sub", text: f.label })); box.appendChild(iconPicker(p[f.key] || "", function (v) { set(v); }, disabled)); }
+      else if (f.kind === "color") { var cid = fid(); box.appendChild(h("div", { class: "pb-field" }, h("label", { for: cid, text: f.label }), colorButton(cid, p[f.key], undefined, disabled, function (v, o) { setProp(it.id, f.key, v || "", o && o.light ? { key: it.id + ":" + f.key, light: true } : null); }, "w-" + it.type + "-" + f.key))); }
+    });
+  }
   function nodeContentFields(it, box, disabled) {
     var p = it.props || (it.props = {});
+    if (NT[it.type] && NT[it.type].schema && !deniedWidget(it.type)) { schemaFields(it, box, disabled); return; }
     if (deniedWidget(it.type)) { box.appendChild(h("p", { class: "pb-note is-warn" }, icon("lock"), h("span", { text: "Widget " + SPEC.widgetPermissions[deniedWidget(it.type)] + " : vous pouvez le déplacer ou le supprimer, pas le modifier." }))); disabled = true; }
     var set = function (k, light) { return function (v) { setProp(it.id, k, v, { key: it.id + ":" + k, light: light !== false }); }; };
     switch (it.type) {
@@ -1943,6 +1961,8 @@
     component: { kind: "Composant", groups: null },
     legacy: { kind: "Section prête", groups: { size: null, spacing: true, color: null, background: true, border: null, effects: null }, presets: true },
   };
+  // Widgets personnalisés : schéma d'inspecteur selon leur nature (texte ou boîte)
+  SPEC.types.forEach(function (t) { if (t.schema && !INSPECTORS[t.type]) INSPECTORS[t.type] = t.style === "box" ? { kind: t.label, groups: BOX } : { kind: t.label, groups: TEXTUAL, order: TEXT_ORDER }; });
   function inspectorFor(it) {
     if (!it) return null;
     if (it.type === "layout") return INSPECTORS.section;
