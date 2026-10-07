@@ -1443,6 +1443,43 @@
         box.appendChild(textField("Lien (facultatif)", p.link, set("link"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue, /p/…, #ancre ou https://…" }));
         box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
         break;
+      case "animatedheading":
+        box.appendChild(textField("Début (fixe)", p.before, set("before"), { max: 80, disabled: disabled }));
+        box.appendChild(textField("Mots qui se succèdent (un par ligne, 2 à 8)", (p.words || []).join("\n"), function (v) { setProp(it.id, "words", v.split("\n").map(function (x) { return x.trim(); }).filter(Boolean)); }, { multiline: true, disabled: disabled }));
+        box.appendChild(textField("Fin (fixe)", p.after, set("after"), { max: 80, disabled: disabled }));
+        box.appendChild(selectField("Niveau", p.level, [["1", "Titre 1 (un seul par page)"], ["2", "Titre 2"], ["3", "Titre 3"], ["4", "Titre 4"]], set("level", false), { disabled: disabled }));
+        box.appendChild(selectField("Effet", p.effect || "fade", [["fade", "Fondu"], ["type", "Machine à écrire"]], function (v) { setProp(it.id, "effect", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Durée par mot", String(p.interval || 2500), [["1500", "1,5 s"], ["2500", "2,5 s"], ["4000", "4 s"], ["6000", "6 s"]], function (v) { setProp(it.id, "interval", Number(v)); }, { disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-hint", text: "L'animation se voit dans l'aperçu et sur la page publiée (jamais si le visiteur a demandé moins d'animations). Les lecteurs d'écran lisent la phrase entière." }));
+        break;
+      case "flipbox":
+        box.appendChild(h("p", { class: "pb-sub", text: "Recto" }));
+        box.appendChild(iconPicker(p.icon || "", function (v) { setProp(it.id, "icon", v); }, disabled));
+        box.appendChild(textField("Titre du recto", p.frontTitle, set("frontTitle"), { max: 80, disabled: disabled }));
+        box.appendChild(textField("Texte du recto", p.frontText, set("frontText"), { multiline: true, max: 300, disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-sub", text: "Verso" }));
+        box.appendChild(textField("Titre du verso", p.backTitle, set("backTitle"), { max: 80, disabled: disabled }));
+        box.appendChild(textField("Texte du verso", p.backText, set("backText"), { multiline: true, max: 400, disabled: disabled }));
+        box.appendChild(textField("Bouton du verso : texte (facultatif)", p.ctaLabel, set("ctaLabel"), { max: 40, disabled: disabled }));
+        box.appendChild(textField("Bouton du verso : adresse", p.ctaUrl, set("ctaUrl"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue, /p/… ou https://…" }));
+        box.appendChild(selectField("Effet", p.effect || "flip", [["flip", "Retournement"], ["fade", "Fondu"]], function (v) { setProp(it.id, "effect", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Hauteur", String(p.height || 280), [["200", "200 px"], ["280", "280 px"], ["360", "360 px"], ["440", "440 px"]].concat([200, 280, 360, 440].indexOf(Number(p.height)) < 0 && p.height ? [[String(p.height), p.height + " px"]] : []), function (v) { setProp(it.id, "height", Number(v)); }, { disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-hint", text: "Le verso s'affiche au survol, au clavier (Tab puis Entrée) ou d'un toucher sur mobile." }));
+        break;
+      case "pricelist":
+        repeatEditor(box, it, "items", [["title", "Prestation", 80], ["price", "Prix réel", 30], ["text", "Description (facultative)", 200], ["link", "Lien (facultatif)", 500]], { title: "[Prestation]", price: "[Prix]", text: "" }, 30, disabled);
+        break;
+      case "toc":
+        box.appendChild(textField("Titre", p.title, set("title"), { max: 80, disabled: disabled }));
+        box.appendChild(selectField("Titres repris", p.depth || "3", [["2", "Titres 2"], ["3", "Titres 2 et 3"], ["4", "Titres 2 à 4"]], function (v) { setProp(it.id, "depth", v); }, { disabled: disabled }));
+        box.appendChild(checkField("Liste numérotée", p.numbered, function (v) { setProp(it.id, "numbered", v); }, { disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-hint", text: "Construite automatiquement à partir des titres de la page : elle se met à jour toute seule." }));
+        break;
+      case "readingprogress":
+        box.appendChild(selectField("Position", p.position || "top", [["top", "En haut de l'écran"], ["bottom", "En bas de l'écran"]], function (v) { setProp(it.id, "position", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Épaisseur", String(p.thickness || 4), ["2", "3", "4", "6", "8", "10"].map(function (n) { return [n, n + " px"]; }), function (v) { setProp(it.id, "thickness", Number(v)); }, { disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-hint", text: "Couleur : onglet Style › Couleurs (couleur du texte). Sur la page publiée, la barre suit la lecture." }));
+        break;
       case "signupform":
         var fl = boot.forms || [], cur = fl.find(function (f) { return f.id === p.formId; });
         box.appendChild(selectField("Formulaire", String(p.formId), fl.map(function (f) { return [String(f.id), f.name + (f.status === "published" ? "" : " (non publié)")]; }).concat(cur ? [] : [[String(p.formId), "Formulaire introuvable"]]), function (v) { setProp(it.id, "formId", Number(v)); }, { disabled: disabled }));
@@ -1803,6 +1840,11 @@
     imagebox: { kind: "Boîte d'image", groups: TEXTUAL, order: TEXT_ORDER },
     iconbox: { kind: "Boîte d'icône", groups: TEXTUAL, order: TEXT_ORDER },
     signupform: { kind: "Formulaire", groups: TEXTUAL, order: TEXT_ORDER },
+    animatedheading: { kind: "Titre animé", groups: TEXTUAL, order: TEXT_ORDER },
+    flipbox: { kind: "Boîte retournable", groups: { layout: ["alignSelf"], typography: null, size: SIZE_W, spacing: true, border: null, effects: ["boxShadow", "opacity"] }, order: ["size", "typography", "spacing", "border", "effects", "layout"] },
+    pricelist: { kind: "Liste de prix", groups: TEXTUAL, order: TEXT_ORDER },
+    toc: { kind: "Table des matières", groups: TEXTUAL, order: TEXT_ORDER },
+    readingprogress: { kind: "Barre de lecture", groups: { color: ["color"] } },
     rating: { kind: "Évaluation", groups: { layout: ["alignSelf"], typography: ["fontSize", "fontWeight"], color: ["color"], spacing: true }, order: ["typography", "spacing", "layout"] },
     menuanchor: { kind: "Ancre de menu", groups: null },
     map: { kind: "Google Maps", groups: { size: SIZE_W, spacing: true, border: null, effects: ["boxShadow", "opacity"] }, order: ["size", "spacing", "border", "effects"] },
@@ -3515,6 +3557,11 @@
       case "icon": return "Icône « " + p.name + " », " + p.size + " px";
       case "map": return "Carte : " + p.address;
       case "imagebox": case "iconbox": return p.title;
+      case "animatedheading": return [p.before, (p.words || []).join(" / "), p.after].filter(Boolean).join(" ");
+      case "flipbox": return p.frontTitle;
+      case "pricelist": return (p.items || []).length + " ligne(s) : " + (p.items || []).map(function (x) { return x.title; }).join(" · ");
+      case "toc": return p.title + " (titres 2 à " + p.depth + ")";
+      case "readingprogress": return "Barre de lecture " + (p.position === "bottom" ? "en bas" : "en haut");
       case "signupform": var sf = (boot.forms || []).find(function (f) { return f.id === p.formId; }); return "Formulaire : " + (sf ? sf.name : "introuvable");
       case "rating": return (p.title ? p.title + " · " : "") + String(p.value).replace(".", ",") + "/" + p.scale;
       case "menuanchor": return "#" + (it.anchor || "");

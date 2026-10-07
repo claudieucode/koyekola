@@ -281,3 +281,15 @@ Le circuit d'envoi est celui de la section existante (`POST /p/:adresse/inscript
 
 - `tests/editeur-structure.test.js` (serveur) : 28 structures enregistrées et relues à l'identique, propriétés validées, CSS, placement, ramenage des cases, « + » du rendu.
 - `tests/editeur-structure-navigateur.test.js` (Chrome piloté par Playwright, vrai serveur) : 21 scénarios — « + », choix, structures, imbrication, sélection dans les deux sens, glisser-déposer des calques, annuler / rétablir, enregistrer / recharger, Grille, responsive (ordinateur / tablette / mobile), docking complet, suppression, propriétés Flexbox et enfant, copier / couper / coller, replier / déplier, erreurs de console. Ignoré avec la raison si Playwright ou Chrome sont absents (`npm i --no-save playwright-core`).
+
+## Lot 5 — Avancé
+
+| Widget | Interface | Fonctionnel | Persistant | Responsive | Testé |
+|---|---|---|---|---|---|
+| Compte à rebours, Offre tarifaire, Fenêtre (modale), Infobulle, Image à points d'intérêt, Contenu intégré, Texte dynamique | oui (existants, rangés dans « Avancé ») | oui | oui | oui | suites existantes |
+| **Titre animé** (nouveau) | oui | mots qui se succèdent (fondu ou machine à écrire, durée réglable) ; phrase entière lue par les lecteurs d'écran ; immobile si le visiteur réduit les animations | oui | oui | unitaire + navigateur |
+| **Boîte retournable** (nouveau) | oui | recto (icône, titre, texte) / verso (titre, texte, bouton compté) ; survol, clavier (Entrée), toucher ; fondu si animations réduites | oui | oui | unitaire + navigateur (ordinateur, mobile tactile) |
+| **Liste de prix** (nouveau) | oui (lignes à répéter) | prestation, prix réel, description, lien compté ; points de conduite | oui | oui | unitaire + navigateur |
+| **Table des matières** (nouveau) | oui | construite à l'affichage depuis les titres de la page (niveaux 2 à 2/3/4), ancres automatiques `kw-h-…` ou ancre choisie ; numérotée ou non | oui | oui | unitaire + navigateur (le lien mène au titre) |
+| **Barre de lecture** (nouveau) | oui | progression du défilement, en haut ou en bas, épaisseur et couleur réglables | oui | oui | unitaire + navigateur |
+| Appel à l'action | — | non dupliqué : existe déjà en section « Appel à l'action » et dans les Blocs | — | — | — |

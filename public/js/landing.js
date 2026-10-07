@@ -224,6 +224,32 @@
   });
   // Vidéo de fond : arrêtée si la personne a demandé à réduire les animations
   if (reduce) Array.prototype.forEach.call(document.querySelectorAll(".kw-bg-video"), function (v) { v.removeAttribute("autoplay"); try { v.pause(); } catch (e) { /* rien */ } });
+  // Titre animé : les mots se succèdent (jamais dans l'éditeur, jamais si la personne réduit les animations)
+  if (!inBuilder && !reduce) Array.prototype.forEach.call(document.querySelectorAll(".kw-rotate[data-kw-words]"), function (el) {
+    var words; try { words = JSON.parse(el.getAttribute("data-kw-words")); } catch (e) { return; }
+    if (!words || words.length < 2) return;
+    var i = 0, every = Number(el.getAttribute("data-kw-interval")) || 2500, typing = el.classList.contains("is-type");
+    setInterval(function () {
+      i = (i + 1) % words.length;
+      if (!typing) { el.classList.add("is-out"); setTimeout(function () { el.textContent = words[i]; el.classList.remove("is-out"); }, 350); return; }
+      var w = words[i], k = 0; el.textContent = "";
+      var t = setInterval(function () { k += 1; el.textContent = w.slice(0, k); if (k >= w.length) clearInterval(t); }, Math.max(30, Math.min(90, (every * 0.4) / w.length)));
+    }, every);
+  });
+  // Boîte retournable : un toucher (ou Entrée / Espace) la retourne ; un lien du verso reste un lien
+  Array.prototype.forEach.call(document.querySelectorAll(".kw-flipbox"), function (box) {
+    box.addEventListener("click", function (e) { if (e.target.closest("a")) return; box.classList.toggle("is-flipped"); });
+    box.addEventListener("keydown", function (e) { if (e.target === box && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); box.classList.toggle("is-flipped"); } });
+  });
+  // Barre de lecture : part de la page déjà défilée
+  var readbars = document.querySelectorAll(".kw-readbar-fill");
+  if (readbars.length && !inBuilder) {
+    var readTick = false;
+    var readUpdate = function () { readTick = false; var d = document.documentElement, max = d.scrollHeight - d.clientHeight; var r = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0; Array.prototype.forEach.call(readbars, function (f) { f.style.transform = "scaleX(" + r + ")"; }); };
+    window.addEventListener("scroll", function () { if (!readTick) { readTick = true; requestAnimationFrame(readUpdate); } }, { passive: true });
+    window.addEventListener("resize", readUpdate);
+    readUpdate();
+  }
   var LABELS = [["jours", 86400], ["heures", 3600], ["minutes", 60], ["secondes", 1]];
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-countdown]"), function (box) {
     var end = Date.parse(box.getAttribute("data-kw-countdown"));

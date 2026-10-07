@@ -200,6 +200,13 @@ function viewModel(ctx, page) {
     if (!c) return null; // formation dépubliée depuis : la section disparaît (jamais un lien mort)
     return { ...s, course: courseView(c) };
   }).filter(Boolean);
+  // Table des matières : titres de la page (dans l'ordre d'affichage), chacun avec son ancre (la sienne, sinon kw-h-<id>)
+  const tocs = [], heads = [];
+  for (const s of sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => { if (n.type === "toc") tocs.push(n); else if (n.type === "heading" && n.props && n.props.text) heads.push(n); });
+  if (tocs.length) {
+    for (const n of heads) n.tocId = n.anchor || `kw-h-${n.id}`;
+    for (const t of tocs) t.props = { ...t.props, items: heads.filter((n) => Number(n.props.level) >= 2 && Number(n.props.level) <= Number(t.props.depth)).map((n) => ({ level: Number(n.props.level), text: n.props.text, href: `#${n.tocId}` })) };
+  }
   // CSS personnalisé de la page (revalidé à chaque affichage ; un CSS devenu invalide n'est simplement pas appliqué)
   let customCss = "";
   try { customCss = page.theme && page.theme.css ? pageNodes.normalizePageCss(page.theme.css) : ""; } catch { customCss = ""; }
@@ -216,6 +223,8 @@ function linksOf(page) {
     if (s.type === "course" && s.course) out.push({ section: i, label: `Formation : ${s.course.title}`, url: s.course.url });
     // Section libre : mêmes liens, dans l'ordre d'affichage des éléments
     if (s.type === "layout") pageNodes.walk(s.children, (n) => {
+      if (n.type === "flipbox" && n.props.ctaUrl) out.push({ section: i, label: `Boîte retournable : ${n.props.ctaLabel}`, url: n.props.ctaUrl });
+      if (n.type === "pricelist") n.props.items.forEach((it) => { if (it.link) out.push({ section: i, label: `Liste de prix : ${it.title}`, url: it.link }); });
       if ((n.type === "imagebox" || n.type === "iconbox") && n.props.link) out.push({ section: i, label: `${n.type === "imagebox" ? "Boîte d'image" : "Boîte d'icône"} : ${n.props.title}`, url: n.props.link });
       if (n.type === "heading" && n.props.link) out.push({ section: i, label: `Titre : ${n.props.text}`, url: n.props.link });
       if (n.type === "button") out.push({ section: i, label: n.props.label, url: n.props.url });

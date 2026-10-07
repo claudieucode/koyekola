@@ -22,7 +22,7 @@
 <% } else if ((n.type === "heading" && !p.text) || (n.type === "text" && !p.html)) { %>
   <% if (isBuilder) { %><div class="<%= cls %> kw-empty-text"<%- attrs %>><p class="kw-empty"><%= n.type === "heading" ? "Titre vide" : "Paragraphe vide" %></p></div><% } %>
 <% } else if (n.type === "heading") { %>
-  <h<%= p.level %> class="<%= cls %>"<%- attrs %>><% if (p.link && !isBuilder) { %><a class="kw-heading-link" href="<%= href(p.link) %>"<%- p.newTab ? ' target="_blank" rel="noopener noreferrer"' : "" %>><%= p.text %></a><% } else { %><%= p.text %><% } %></h<%= p.level %>>
+  <h<%= p.level %> class="<%= cls %>"<%- attrs %><%- !n.anchor && n.tocId ? ` id="${n.tocId}"` : "" %>><% if (p.link && !isBuilder) { %><a class="kw-heading-link" href="<%= href(p.link) %>"<%- p.newTab ? ' target="_blank" rel="noopener noreferrer"' : "" %>><%= p.text %></a><% } else { %><%= p.text %><% } %></h<%= p.level %>>
 <% } else if (n.type === "text") { %>
   <div class="<%= cls %>"<%- attrs %>><%- p.html %></div>
 <% } else if (n.type === "list") { const tag = p.ordered ? "ol" : "ul"; %>
@@ -75,6 +75,19 @@
   <div class="<%= cls %>"<%- attrs %>><% if (p.title) { %><span class="kw-rating-title"><%= p.title %></span><% } %><span class="kw-rating-stars" role="img" aria-label="Note : <%= fr(p.value) %> sur <%= p.scale %>"><span class="kw-rating-bg" aria-hidden="true"><%= "★".repeat(p.scale) %></span><span class="kw-rating-fill" aria-hidden="true"><%= "★".repeat(p.scale) %></span></span><% if (p.showValue) { %><span class="kw-rating-value" aria-hidden="true"><%= fr(p.value) %>/<%= p.scale %></span><% } %></div>
 <% } else if (n.type === "menuanchor") { %>
   <% if (isBuilder) { %><div class="<%= cls %> kw-anchor-mark"<%- attrs %>>⚓ Ancre « #<%= n.anchor || "?" %> »</div><% } else if (n.anchor) { %><div class="<%= cls %>"<%- attrs %>></div><% } %>
+<% } else if (n.type === "animatedheading") { %>
+  <h<%= p.level %> class="<%= cls %>"<%- attrs %>><span class="sr-only"><%= [p.before, p.words.join(", "), p.after].filter(Boolean).join(" ") %></span><span aria-hidden="true"><% if (p.before) { %><%= p.before %> <% } %><span class="kw-rotate <%= p.effect === "type" ? "is-type" : "is-fade" %>" data-kw-words="<%= JSON.stringify(p.words) %>" data-kw-interval="<%= p.interval %>"><%= p.words[0] %></span><% if (p.after) { %> <%= p.after %><% } %></span></h<%= p.level %>>
+<% } else if (n.type === "flipbox") { %>
+  <div class="<%= cls %> <%= p.effect === "fade" ? "is-fade" : "is-flip" %>" tabindex="0" role="group" aria-label="<%= p.frontTitle %>"<%- attrs %>><div class="kw-flip-inner">
+    <div class="kw-flip-face kw-flip-front"><% if (p.icon) { %><span class="kw-flip-icon" aria-hidden="true"><%- icon(p.icon, { size: 40 }) %></span><% } %><h3 class="kw-flip-title"><%= p.frontTitle %></h3><% if (p.frontText) { %><p class="kw-flip-text"><%= p.frontText %></p><% } %></div>
+    <div class="kw-flip-face kw-flip-back"><% if (p.backTitle) { %><h3 class="kw-flip-title"><%= p.backTitle %></h3><% } %><% if (p.backText) { %><p class="kw-flip-text"><%= p.backText %></p><% } %><% if (p.ctaUrl) { %><a class="kw-button kw-btn-primary kw-btn-sm" href="<%= href(p.ctaUrl) %>"><%= p.ctaLabel %></a><% } %></div>
+  </div></div>
+<% } else if (n.type === "pricelist") { %>
+  <ul class="<%= cls %>"<%- attrs %>><% p.items.forEach((it) => { %><li class="kw-pl-item"><div class="kw-pl-head"><% if (it.link) { %><a class="kw-pl-title" href="<%= href(it.link) %>"><%= it.title %></a><% } else { %><span class="kw-pl-title"><%= it.title %></span><% } %><span class="kw-pl-dots" aria-hidden="true"></span><span class="kw-pl-price"><%= it.price %></span></div><% if (it.text) { %><p class="kw-pl-text"><%= it.text %></p><% } %></li><% }) %></ul>
+<% } else if (n.type === "toc") { const tag = p.numbered ? "ol" : "ul"; const items = p.items || []; %>
+  <% if (items.length || isBuilder) { %><nav class="<%= cls %>" aria-label="<%= p.title %>"<%- attrs %>><p class="kw-toc-title"><%= p.title %></p><% if (!items.length) { %><p class="kw-empty">Aucun titre de niveau 2 à <%= p.depth %> dans la page pour l'instant.</p><% } else { %><<%= tag %> class="kw-toc-list"><% items.forEach((it) => { %><li class="<%= it.level === 2 ? "kw-toc-l2" : it.level === 3 ? "kw-toc-l3" : "kw-toc-l4" %>"><a href="<%= it.href %>"><%= it.text %></a></li><% }) %></<%= tag %>><% } %></nav><% } %>
+<% } else if (n.type === "readingprogress") { %>
+  <div class="<%= cls %>"<%- attrs %>><div class="kw-readbar <%= p.position === "bottom" ? "is-bottom" : "is-top" %>" aria-hidden="true"><span class="kw-readbar-fill"></span></div><% if (isBuilder) { %><p class="kw-empty">Barre de lecture (<%= p.position === "bottom" ? "en bas" : "en haut" %> de l'écran sur la page publiée)</p><% } %></div>
 <% } else if (n.type === "signupform") { const ws = typeof widgetForm !== "undefined" && widgetForm && widgetForm.id === n.id ? widgetForm : null; %>
   <div class="<%= cls %>"<%- attrs %>><div class="kw-signup" id="kw-f-<%= n.id %>"><% if (p.heading) { %><h2 class="kw-signup-title"><%= p.heading %></h2><% } %>
     <% if (!p.form) { %><% if (isBuilder) { %><p class="kw-empty">Formulaire « <%= p.formName || "introuvable" %> » non publié : publiez-le (Audience → Formulaires d'inscription) pour qu'il s'affiche.</p><% } %>

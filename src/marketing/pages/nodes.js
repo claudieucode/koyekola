@@ -562,6 +562,36 @@ const NODE_TYPES = {
     if (!getCourse(h.ctx, courseId)) throw new Error(`${at} (formation) : formation introuvable ou non publiée.`);
     return { courseId, cta: line(p.cta, 60) || "Découvrir la formation" };
   } },
+  // Titre animé : début fixe, mots qui se succèdent (2 à 8), fin fixe. Lu en entier par les lecteurs d'écran.
+  animatedheading: { label: "Titre animé", category: "text", props: (p, at) => {
+    const words = (Array.isArray(p.words) ? p.words : []).map((w) => line(w, 40)).filter(Boolean).slice(0, 8);
+    if (words.length < 2) throw new Error(`${at} (titre animé) : au moins deux mots qui se succèdent.`);
+    return { before: line(p.before, 80), words, after: line(p.after, 80), level: oneOf("1", "2", "3", "4", "5", "6")(String(p.level)) || "2", effect: oneOf("fade", "type")(p.effect) || "fade", interval: numberIn(1500, 6000, { integer: true })(p.interval) || 2500 };
+  } },
+  // Boîte retournable : recto (icône, titre, texte) au repos, verso (titre, texte, bouton) au survol, au focus ou au toucher
+  flipbox: { label: "Boîte retournable", category: "interaction", props: (p, at, h) => {
+    const frontTitle = line(p.frontTitle, 80), backTitle = line(p.backTitle, 80);
+    if (!frontTitle) throw new Error(`${at} (boîte retournable) : le titre du recto est obligatoire.`);
+    const icon = h.iconNames.includes(String(p.icon || "")) ? String(p.icon) : "";
+    const ctaUrl = h.linkUrl(p.ctaUrl, `${at} (bouton du verso)`), ctaLabel = line(p.ctaLabel, 40);
+    return { icon, frontTitle, frontText: clean(p.frontText, 300), backTitle, backText: clean(p.backText, 400), ...(ctaUrl && ctaLabel ? { ctaLabel, ctaUrl } : {}), effect: oneOf("flip", "fade")(p.effect) || "flip", height: numberIn(160, 600, { integer: true })(p.height) || 280 };
+  } },
+  // Liste de prix : prestations réelles (nom, prix, description, lien facultatif), points de conduite jusqu'au prix
+  pricelist: { label: "Liste de prix", category: "marketing", props: (p, at, h) => {
+    const items = (Array.isArray(p.items) ? p.items : []).slice(0, 30).map((it, i) => {
+      const title = line(it && it.title, 80), price = line(it && it.price, 30);
+      if (!title && !price) return null;
+      if (!title || !price) throw new Error(`${at} (liste de prix) : ligne ${i + 1} : un nom et un prix réel.`);
+      const link = h.linkUrl(it.link, `${at} (lien de la ligne ${i + 1})`);
+      return { title, price, text: line(it.text, 200), ...(link ? { link } : {}) };
+    }).filter(Boolean);
+    if (!items.length) throw new Error(`${at} (liste de prix) : au moins une ligne.`);
+    return { items };
+  } },
+  // Table des matières : construite à l'affichage à partir des titres de la page (jamais une liste recopiée à la main)
+  toc: { label: "Table des matières", category: "interaction", props: (p) => ({ title: line(p.title, 80) || "Sommaire", depth: oneOf("2", "3", "4")(String(p.depth)) || "3", numbered: p.numbered === true }) },
+  // Barre de lecture : progression du défilement de la page, en haut ou en bas de l'écran
+  readingprogress: { label: "Barre de lecture", category: "interaction", props: (p) => ({ position: oneOf("top", "bottom")(p.position) || "top", thickness: numberIn(2, 10, { integer: true })(p.thickness) || 4 }) },
   // Formulaire : un formulaire du module « Formulaires d'inscription » (champs, consentement, anti-robot, double
   // confirmation, étiquettes : tout vient du formulaire). Plusieurs par page, chacun à son emplacement.
   signupform: { label: "Formulaire", category: "marketing", props: (p, at, h) => {
@@ -638,6 +668,11 @@ const WIDGETS = {
   rating: ["general", "evaluation note etoiles avis notation score"],
   menuanchor: ["general", "ancre de menu lien interne defilement section id"],
   signupform: ["form", "formulaire inscription newsletter email contact champs abonnement"],
+  animatedheading: ["advanced", "titre anime mots defilants rotation machine a ecrire accroche"],
+  flipbox: ["advanced", "boite retournable carte retournee flip recto verso survol"],
+  pricelist: ["advanced", "liste de prix tarifs prestations menu carte"],
+  toc: ["advanced", "table des matieres sommaire plan titres navigation"],
+  readingprogress: ["advanced", "barre de lecture progression defilement scroll article"],
   link: ["basic", "lien url"],
   list: ["basic", "liste puces numerotee"],
   tabs: ["general", "onglets"],
@@ -739,6 +774,11 @@ const PALETTE = {
   rating: { icon: "star", asks: "rating", blank: () => ({ props: {} }) },
   menuanchor: { icon: "link", asks: "anchor", blank: () => ({ props: {} }) },
   signupform: { icon: "fileText", asks: "form", blank: () => ({ props: {} }) },
+  animatedheading: { icon: "type", blank: () => ({ props: { before: "Apprenez", words: ["Photoshop", "Illustrator", "Blender"], after: "à votre rythme", level: "2", effect: "fade", interval: 2500 } }) },
+  flipbox: { icon: "copy", blank: () => ({ props: { icon: "star", frontTitle: "Un atout clair", frontText: "Survolez ou touchez pour en savoir plus.", backTitle: "Le détail", backText: "Expliquez ici ce que la personne y gagne.", effect: "flip", height: 280 } }) },
+  pricelist: { icon: "listOrdered", blank: () => ({ props: { items: [{ title: "[Prestation]", price: "[Prix]", text: "" }] } }) },
+  toc: { icon: "listOrdered", blank: () => ({ props: { title: "Sommaire", depth: "3", numbered: false } }) },
+  readingprogress: { icon: "activity", blank: () => ({ props: { position: "top", thickness: 4 } }) },
   badge: { icon: "tag", blank: () => ({ props: { text: "Nouveau", tone: "primary" } }) },
   timeline: { icon: "history", blank: () => ({ props: { items: [{ date: "Étape 1", title: "Inscription", text: "Ce qui se passe à cette étape." }, { date: "Étape 2", title: "Premier module", text: "Ce qui se passe ensuite." }] } }) },
   progress: { icon: "activity", blank: () => ({ props: { label: "Progression", value: 60, showValue: true } }) },
@@ -1171,6 +1211,8 @@ function pageCss(sections) {
       if (n.type === "iconlist" && NODE_ID.test(String(n.id || "")) && n.props && n.props.iconColor) rules.base.push(`.kw-n-${n.id} .kw-iconlist-icon{color:${colorCss(n.props.iconColor)}}`);
       if (n.type === "social" && NODE_ID.test(String(n.id || "")) && n.props) rules.base.push(`.kw-n-${n.id}{--kw-soc:${Number(n.props.size) || 32}px}`);
       if (n.type === "divider" && NODE_ID.test(String(n.id || "")) && n.props && (n.props.lineStyle !== "solid" || n.props.thickness > 1 || n.props.color)) rules.base.push(`.kw-n-${n.id}${n.props.text ? "::before,.kw-n-" + n.id + "::after" : ""}{${n.props.text ? "" : "border:0;"}border-top:${n.props.thickness}px ${n.props.lineStyle} ${n.props.color ? colorCss(n.props.color) : "currentColor"}}`);
+      if (n.type === "flipbox" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) rules.base.push(`.kw-n-${n.id}{min-height:${n.props.height}px}`);
+      if (n.type === "readingprogress" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.thickness)) rules.base.push(`.kw-n-${n.id} .kw-readbar{height:${n.props.thickness}px}`);
       if (n.type === "rating" && NODE_ID.test(String(n.id || "")) && n.props && Number.isFinite(n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-rating-fill{width:${Math.round((n.props.value / (n.props.scale || 5)) * 1000) / 10}%}`);
       if (n.type === "map" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) rules.base.push(`.kw-n-${n.id} .kw-map-frame{height:${n.props.height}px}`);
       if (n.type === "progress" && NODE_ID.test(String(n.id || "")) && Number.isInteger(n.props && n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-progress-bar{width:${n.props.value}%}`);

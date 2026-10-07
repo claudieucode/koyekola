@@ -327,3 +327,59 @@ describe("lot 4 — Formulaire (module Formulaires d'inscription)", () => {
     assert.ok(!db.prepare("SELECT 1 FROM mk_contacts WHERE email = 'x@ex.fr'").get());
   });
 });
+
+describe("lot 5 — Avancé", () => {
+  let srv, boss, db;
+  before(async () => { srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" }); boss = await loginInstructor(srv); db = srv.db(); });
+  after(() => srv.stop());
+
+  test("validation : titre animé, boîte retournable, liste de prix, table des matières, barre de lecture", () => {
+    const { A } = freshMarketing();
+    const p = pages.createPage(A, { name: "Lot 5", kind: "page" });
+    const save = (kids) => pages.saveDraft(A, p.id, { sections: [{ id: "sect00000001", type: "layout", children: kids }] }, { revision: pages.getPage(A, p.id).revision }).content.sections[0].children;
+    const out = save([
+      { id: "ani000000001", type: "animatedheading", props: { before: "Apprenez", words: ["Photoshop", " ", "Blender"], after: "vite", interval: 99999, effect: "zoom" } },
+      { id: "flp000000001", type: "flipbox", props: { frontTitle: "Recto", backTitle: "Verso", ctaLabel: "Voir", ctaUrl: "/catalogue", height: 9999, effect: "fade" } },
+      { id: "prl000000001", type: "pricelist", props: { items: [{ title: "Coaching", price: "50 €", link: "/connexion" }, { title: "", price: "" }] } },
+      { id: "toc000000001", type: "toc", props: { depth: "9" } },
+      { id: "rdp000000001", type: "readingprogress", props: { position: "bottom", thickness: 99 } },
+    ]);
+    assert.deepEqual(out[0].props, { before: "Apprenez", words: ["Photoshop", "Blender"], after: "vite", level: "2", effect: "fade", interval: 2500 });
+    assert.deepEqual([out[1].props.effect, out[1].props.height, out[1].props.ctaUrl], ["fade", 280, "/catalogue"]);
+    assert.deepEqual(out[2].props.items, [{ title: "Coaching", price: "50 €", text: "", link: "/connexion" }], "ligne vide ignorée");
+    assert.deepEqual(out[3].props, { title: "Sommaire", depth: "3", numbered: false });
+    assert.deepEqual(out[4].props, { position: "bottom", thickness: 4 });
+    assert.throws(() => save([{ id: "ani000000001", type: "animatedheading", props: { words: ["Seul"] } }]), /au moins deux mots/);
+    assert.throws(() => save([{ id: "prl000000001", type: "pricelist", props: { items: [{ title: "Sans prix" }] } }]), /un nom et un prix réel/);
+    assert.throws(() => save([{ id: "flp000000001", type: "flipbox", props: { frontTitle: "" } }]), /titre du recto/);
+    for (const t of ["animatedheading", "flipbox", "pricelist", "toc", "readingprogress"]) assert.equal(nodes.editorSpec().types.find((x) => x.type === t).group, "advanced", t);
+  });
+
+  test("page publiée : sommaire construit depuis les titres (ancres), liens comptés dans l'ordre, titre animé lisible", async () => {
+    const id = Number((await boss.post("/marketing/pages", { name: "Avancé" })).location.match(/(\d+)$/)[1]);
+    const rev = db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(id).revision;
+    const content = { sections: [{ id: "sect00000001", type: "layout", children: [
+      { id: "toc000000001", type: "toc", props: { title: "Au programme", depth: "3", numbered: true } },
+      { id: "rdp000000001", type: "readingprogress", props: { thickness: 6 } },
+      { id: "ani000000001", type: "animatedheading", props: { before: "Apprenez", words: ["Photoshop", "Blender"], level: "1" } },
+      { id: "hed000000001", type: "heading", props: { text: "Les modules", level: "2" } },
+      { id: "hed000000002", type: "heading", anchor: "tarifs", props: { text: "Tarifs <2026>", level: "3" } },
+      { id: "hed000000003", type: "heading", props: { text: "Détail fin", level: "4" } },
+      { id: "flp000000001", type: "flipbox", props: { frontTitle: "Recto", backTitle: "Verso", ctaLabel: "Voir", ctaUrl: "/catalogue" } },
+      { id: "prl000000001", type: "pricelist", props: { items: [{ title: "Coaching", price: "50 €", link: "/connexion" }] } },
+    ] }] };
+    assert.equal((await boss.request(`/marketing/pages/${id}/brouillon`, { method: "PUT", json: { revision: rev, content } })).status, 200);
+    assert.equal((await boss.request(`/marketing/pages/${id}/publier.json`, { method: "POST", json: {} })).status, 200);
+    const slug = db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug;
+    const html = (await boss.get(`/p/${slug}`)).text;
+    assert.match(html, /<nav class="kw-node kw-toc kw-n-toc000000001" aria-label="Au programme"><p class="kw-toc-title">Au programme<\/p><ol class="kw-toc-list"><li class="kw-toc-l2"><a href="#kw-h-hed000000001">Les modules<\/a><\/li><li class="kw-toc-l3"><a href="#tarifs">Tarifs &lt;2026&gt;<\/a><\/li><\/ol><\/nav>/, "titres 2 et 3 seulement, l'ancre choisie est reprise");
+    assert.match(html, /<h2 class="kw-node kw-heading kw-n-hed000000001" id="kw-h-hed000000001">Les modules<\/h2>/);
+    assert.match(html, /<h3 class="kw-node kw-heading kw-n-hed000000002" id="tarifs">/);
+    assert.match(html, /<h1 class="kw-node kw-animatedheading kw-n-ani000000001"><span class="sr-only">Apprenez Photoshop, Blender<\/span><span aria-hidden="true">Apprenez <span class="kw-rotate is-fade" data-kw-words="\[&#34;Photoshop&#34;,&#34;Blender&#34;\]" data-kw-interval="2500">Photoshop<\/span><\/span><\/h1>/);
+    assert.match(html, new RegExp(`<a class="kw-button kw-btn-primary kw-btn-sm" href="/p/${slug}/clic/0">Voir</a>`));
+    assert.match(html, new RegExp(`<a class="kw-pl-title" href="/p/${slug}/clic/1">Coaching</a>`));
+    assert.equal((await boss.get(`/p/${slug}/clic/1`)).location, "/connexion");
+    assert.match(html, /\.kw-n-rdp000000001 \.kw-readbar\{height:6px\}/);
+    assert.match(html, /\.kw-n-flp000000001\{min-height:280px\}/);
+  });
+});
