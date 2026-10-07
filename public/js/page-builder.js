@@ -665,7 +665,7 @@
     if (it.styles) { BPS.forEach(function (b) { if (it.styles[b] && !Object.keys(it.styles[b]).length) delete it.styles[b]; }); if (!Object.keys(it.styles).length) delete it.styles; }
     if (it.states) { Object.keys(it.states).forEach(function (k) { if (!Object.keys(it.states[k]).length) delete it.states[k]; }); if (!Object.keys(it.states).length) delete it.states; }
   }
-  var COMPOSED_LABEL = { filter: "filtres", shadow: "ombre personnalisée", overlay: "voile", gradient: "dégradé", backgroundImage: "image de fond", transform: "transformation" };
+  var COMPOSED_LABEL = { filter: "filtres", shadow: "ombre personnalisée", overlay: "voile", gradient: "dégradé", backgroundImage: "image de fond", transform: "transformation", mask: "masque" };
   function setStyle(ids, key, value, opts) { var m = {}; m[key] = value; setStyles(ids, m, opts); }
   // Plusieurs propriétés en une seule étape d'annulation (côtés liés, retrait du fond…)
   function setStyles(ids, map, opts) {
@@ -2571,24 +2571,7 @@
       out.push(num("x", "Décalage X", -100, 100), num("y", "Décalage Y", -100, 100), num("blur", "Flou", 0, 200), num("spread", "Étendue", -50, 100),
         h("div", { class: "pb-field pb-style-field pb-prop" + (sh ? " is-set" : ""), "data-prop": "shadow" }, h("div", { class: "pb-prop-head" }, h("label", { for: sc, class: "pb-prop-label" }, "Couleur")), colorButton(sc, sh && sh.color, shi && shi.color, dis, function (v, opts) { if (v) put("color", v, opts); }, "shadow", { noClear: true }), h("span", { class: "pb-reset-slot", "aria-hidden": "true" })));
     }
-    if (group === "position") {
-      var t = ownValue(it, "transform") || {};
-      var mk = function (k, label, unit) {
-        var id = fid();
-        var inp = h("input", { id: id, type: "text", inputmode: "decimal", class: "pb-len-num", value: t[k] === undefined ? "" : t[k], disabled: dis, placeholder: k === "scale" ? "1" : "0", autocomplete: "off" });
-        inp.addEventListener("change", function () {
-          var next = Object.assign({}, ownValue(byId(it.id), "transform") || {});
-          var v = inp.value.trim();
-          if (k === "x" || k === "y") { var l = parseLength(v, "top"); if (l === null) { toast(label + " : valeur invalide.", true); return; } if (l) next[k] = l; else delete next[k]; }
-          else if (v === "") delete next[k];
-          else if (isNaN(Number(v))) { toast(label + " : nombre attendu.", true); return; }
-          else next[k] = Number(v);
-          setStyle(ids, "transform", Object.keys(next).length ? next : "");
-        });
-        return h("div", { class: "pb-field pb-style-field pb-prop" }, h("div", { class: "pb-prop-head" }, h("label", { for: id, class: "pb-prop-label" }, label)), h("div", { class: "pb-len" }, inp, unit ? h("span", { class: "pb-len-unit is-static", text: unit }) : null), h("span", { class: "pb-reset-slot", "aria-hidden": "true" }));
-      };
-      out.push(h("p", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Transformation" })), mk("x", "Décalage X"), mk("y", "Décalage Y"), mk("rotate", "Rotation", "°"), mk("scale", "Échelle", "×"), mk("skewX", "Inclinaison X", "°"), mk("skewY", "Inclinaison Y", "°"));
-    }
+    // (la transformation — déplacement, rotation, échelle, inclinaison — est dans la section « Transformer », page-builder-effects.js)
     return out;
   }
   // Sélecteur d'écran : icônes (nom en infobulle) ; un point signale un écran où cet élément a ses propres réglages
@@ -2927,7 +2910,7 @@
     }
     if (single && it.type !== "component") box.appendChild(audienceField(it, locked));
     if (single && it.type !== "component") box.appendChild(screensField(it, locked));
-    if (single && isNode(it)) { box.appendChild(motionField(it, locked)); box.appendChild(interactionField(it, locked)); box.appendChild(codeField(it, locked)); }
+    if (single && isNode(it)) { box.appendChild(motionField(it, locked)); fxSections(it, locked, box); box.appendChild(interactionField(it, locked)); box.appendChild(codeField(it, locked)); }
     if (items.length > 1) {
       box.appendChild(h("p", { class: "pb-sub", text: "Aligner (dans leur parent)" }));
       box.appendChild(h("div", { class: "pb-row pb-wrap" }, [["flex-start", "Début"], ["center", "Centre"], ["flex-end", "Fin"], ["stretch", "Étirer"]].map(function (a) { return b(a[1], function () { setStyle(selection.slice(), "alignSelf", a[0]); }, { disabled: !canWrite || locked }); }),
@@ -3029,6 +3012,7 @@
   }
   function interactionsTab(it, box, locked) {
     box.appendChild(motionField(it, locked));
+    fxSections(it, locked, box);
     box.appendChild(interactionField(it, locked));
     // États : le style au survol / au clic se règle dans l'onglet Style (même moteur que l'état normal) ; raccourcis réels
     var schema = inspectorFor(it), states = Array.isArray(schema.states) ? SPEC.states.filter(function (st) { return schema.states.indexOf(st.key) >= 0; }) : schema.states ? SPEC.states : [];
@@ -3044,6 +3028,11 @@
   function boxStyleExtras(items, box, locked) {
     box.appendChild(styleSection(items, "position", SPEC.styleProps.filter(function (p) { return p.group === "position"; }).map(function (p) { return p.key; })));
     box.appendChild(codeField(items[0], locked, { noAttrs: true }));
+  }
+  // Sections avancées contextuelles (défilement, souris, épinglage, transformer, masque) : voir page-builder-effects.js
+  function fxSections(it, locked, box) {
+    if (!window.pbEffects) return;
+    window.pbEffects.sections(it, locked).forEach(function (el) { box.appendChild(el); });
   }
   // Animation : entrée à l'apparition (durée, délai) et effet au survol ; rejouable dans le canevas
   function motionField(it, locked) {
@@ -5014,6 +5003,12 @@
   // Pont vers le gestionnaire de menu (page-builder-menu.js) : mêmes fonctions que l'inspecteur, donc même document et même historique
   window.pbNav = { h: h, walk: function (fn) { walk(fn); }, byId: byId, topOf: topOf, sectionNumber: function (top) { return top ? sectionIndex(top) + 1 : 0; }, change: change, select: function (id) { select(id); },
     selection: function () { return selection.slice(); }, toast: toast, canWrite: canWrite, links: boot.links, addElement: function (type) { addElement(type); }, subscribe: function (f) { navListeners.push(f); }, open: function () {} };
+  if (window.pbEffects) window.pbEffects.attach({
+    h: h, store: store, toast: toast, SPEC: SPEC, BPS: BPS, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, idsOf: idsOf,
+    accGroup: accGroup, ownValue: ownValue, setStyle: setStyle, setStyles: setStyles, parseLength: parseLength, selectField: selectField, checkField: checkField,
+    openMedia: openMedia, breakpointSwitch: breakpointSwitch, getDevice: function () { return device; }, getState: function () { return styleState; },
+    setState: function (st) { styleState = st; renderInspector(); renderContext(); }, hasStates: function (it) { return Boolean(inspectorFor(it).states); },
+  });
   // Lecture de l'état pour les tests de bout en bout (aucune écriture possible par ce biais)
   window.__pb = { content: function () { return clone(content); }, selection: function () { return selection.slice(); }, device: function () { return device; }, revision: function () { return revision; }, dirty: function () { return dirty || saving; }, mode: function () { return mode; } };
 })();

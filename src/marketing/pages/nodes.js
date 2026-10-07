@@ -174,7 +174,8 @@ const COMPOSED = {
   overlay: { group: "background" },
   shadow: { group: "effects" },
   filter: { group: "effects" },                 // { blur, brightness, contrast, grayscale, saturate, sepia, hueRotate }                 // { x, y, blur, spread, color } : ombre personnalisée (remplace le préréglage)             // { color } : voile posé sur l'image ou le dégradé (lisibilité du texte)
-  transform: { group: "position" },             // { x, y, rotate, scale }
+  transform: { group: "position" },             // { x, y, rotate, scale, skewX, skewY }
+  mask: { group: "mask" },                      // { shape, src, size, position, repeat } : découpe en forme ou masque d'image
 };
 
 // Un jeu de styles (un écran ou un état) : seules les clés connues et valides sont gardées, jamais d'erreur bloquante
@@ -208,6 +209,18 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
       const c = color(v && v.color);
       const px = (n, min, max) => { const x = numberIn(min, max, { integer: true })(n); return x === null ? 0 : x; };
       if (c) out.shadow = { x: px(v.x, -100, 100), y: px(v.y, -100, 100), blur: px(v.blur, 0, 200), spread: px(v.spread, -50, 100), color: c, ...(v.inset === true ? { inset: true } : {}) };
+    } else if (k === "mask") {
+      const m = {};
+      const shape = oneOf(...Object.keys(MASK_SHAPES))(v && v.shape);
+      if (shape) m.shape = shape;
+      const src = imageUrl(v && v.src, `${at} (masque)`);
+      if (src) {
+        m.src = src;
+        m.size = oneOf("contain", "cover", "auto")(v.size) || "contain";
+        m.position = oneOf("center", "top", "bottom", "left", "right")(v.position) || "center";
+        m.repeat = oneOf("no-repeat", "repeat", "space", "round")(v.repeat) || "no-repeat";
+      }
+      if (Object.keys(m).length) out.mask = m;
     } else if (k === "transform") {
       const t = {};
       const x = lenNeg(v && v.x), y = lenNeg(v && v.y), r = numberIn(-360, 360, { integer: true })(v && v.rotate), s = numberIn(0.1, 3)(v && v.scale);
@@ -247,6 +260,11 @@ function declarations(set) {
     d.push(`filter:${Object.entries(f).map(([k, v]) => `${fn[k] || k}(${v}${unit[k] || (k === "blur" ? "px" : "%")})`).join(" ")}`);
   }
   if (set.shadow) { const h = set.shadow; d.push(`box-shadow:${h.inset ? "inset " : ""}${h.x}px ${h.y}px ${h.blur}px ${h.spread}px ${colorCss(h.color)}`); }
+  if (set.mask) {
+    const m = set.mask;
+    if (m.shape) d.push(`clip-path:${MASK_SHAPES[m.shape][1]}`);
+    if (m.src) for (const pre of ["-webkit-", ""]) d.push(`${pre}mask-image:url("${m.src}")`, `${pre}mask-size:${m.size}`, `${pre}mask-position:${m.position}`, `${pre}mask-repeat:${m.repeat}`);
+  }
   if (set.transform) {
     const t = set.transform, parts = [];
     if (t.x || t.y) parts.push(`translate(${t.x || "0"}, ${t.y || "0"})`);
@@ -943,7 +961,7 @@ const STYLE_UI = {
   backgroundAttachment: ["Défilement du fond", { scroll: "Avec la page", fixed: "Fixe (effet parallaxe)" }],
   backgroundPosition: ["Position du fond", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite" }],
 };
-const GROUP_LABELS = { layout: "Mise en page", size: "Dimensions", spacing: "Espacement", typography: "Typographie", color: "Couleurs", background: "Fond", border: "Bordure", effects: "Effets", position: "Position", media: "Image" };
+const GROUP_LABELS = { layout: "Mise en page", size: "Dimensions", spacing: "Espacement", typography: "Typographie", color: "Couleurs", background: "Fond", border: "Bordure", effects: "Effets", position: "Position", media: "Image", mask: "Masque" };
 // Description de l'éditeur (envoyée au navigateur) : types, palette, propriétés de style, écrans, états
 function editorSpec() {
   const kind = (k) => {
@@ -954,8 +972,8 @@ function editorSpec() {
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
   return {
-    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], keywords: WIDGETS[type][1], requires: widgetRequires(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text" } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
-    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
+    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], keywords: WIDGETS[type][1], requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text" } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
+    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
     socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
@@ -1171,10 +1189,56 @@ const scheduleMatches = (s, now = Date.now()) => !s || ((!s.from || Date.parse(s
 // ---------- Animations : entrée (à l'apparition à l'écran) et effet au survol ----------
 const ENTRANCES = { fade: "Fondu", "slide-up": "Glisse vers le haut", "slide-down": "Glisse vers le bas", "slide-left": "Glisse depuis la droite", "slide-right": "Glisse depuis la gauche", zoom: "Zoom avant", bounce: "Rebond", rotate: "Rotation", reveal: "Dévoilement", flip: "Bascule 3D" };
 const EASINGS = { smooth: "cubic-bezier(.2, .7, .2, 1)", linear: "linear", "ease-in": "ease-in", "ease-out": "ease-out", "ease-in-out": "ease-in-out", spring: "cubic-bezier(.34, 1.56, .64, 1)" };
+// Capacités « avancées » d'un élément : elles décident des sections proposées dans l'inspecteur (effets de défilement, de
+// souris, épinglage, transformation, masque, attributs, CSS) et de ce que le serveur accepte d'enregistrer.
+const CAP_BOX = ["container", "grid", "stack", "group", "columns", "column"];
+const CAP_MASK = ["image", "gallery", "video", "imagebox", "hotspot"];
+const CAP_NONE = ["spacer", "modal"];
+const CAP_BASE = ["motion", "scroll", "mouse", "transform", "attrs", "css", "responsive"];
+function capsOf(type) {
+  if (CAP_NONE.includes(type)) return ["attrs", "css", "responsive"];
+  const caps = CAP_BASE.slice();
+  if (CAP_BOX.includes(type)) caps.splice(caps.indexOf("transform"), 0, "sticky");
+  if (CAP_MASK.includes(type)) caps.splice(caps.indexOf("attrs"), 0, "mask");
+  return caps;
+}
+// Formes de découpe (masque) : tracés CSS « clip-path », sans fichier à charger
+const MASK_SHAPES = {
+  circle: ["Cercle", "circle(50% at 50% 50%)"], ellipse: ["Ellipse", "ellipse(50% 38% at 50% 50%)"], triangle: ["Triangle", "polygon(50% 0%, 100% 100%, 0% 100%)"],
+  diamond: ["Losange", "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)"], pentagon: ["Pentagone", "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)"],
+  hexagon: ["Hexagone", "polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%)"],
+  octagon: ["Octogone", "polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)"],
+  star: ["Étoile", "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)"],
+};
 const HOVERS = { grow: "Grossit", shrink: "Rétrécit", lift: "Se soulève", tilt: "S'incline" };
-function normalizeMotion(raw) {
+// Effets au DÉFILEMENT : chaque effet a une amplitude appliquée selon la position de l'élément dans la fenêtre (p = -1 quand
+// il entre par le bas, 0 au centre, +1 quand il sort par le haut). Valeurs entières bornées ; zéro = pas d'effet.
+const SCROLL_FX = {
+  y: { label: "Décalage vertical", min: -200, max: 200, unit: "px" }, x: { label: "Décalage horizontal", min: -200, max: 200, unit: "px" },
+  opacity: { label: "Transparence aux bords", min: 0, max: 100, unit: "%" }, blur: { label: "Flou aux bords", min: 0, max: 20, unit: "px" },
+  scale: { label: "Échelle", min: -50, max: 50, unit: "%" }, rotate: { label: "Rotation", min: -180, max: 180, unit: "°" },
+};
+const MOUSE_MODES = { track: "Suit le curseur", tilt: "Inclinaison 3D" };
+function normalizeMotion(raw, type) {
   if (!raw || typeof raw !== "object") return undefined;
   const out = {};
+  // Défilement et souris : seulement pour les types qui en ont la capacité (voir CAPABILITIES) ; le reste est ignoré sans erreur
+  if (capsOf(type).includes("scroll") && raw.scroll && typeof raw.scroll === "object") {
+    const sc = {};
+    for (const [k, r] of Object.entries(SCROLL_FX)) { const n = numberIn(r.min, r.max, { integer: true })(raw.scroll[k]); if (n) sc[k] = n; }
+    if (Object.keys(sc).length) out.scroll = sc;
+  }
+  if (capsOf(type).includes("mouse") && raw.mouse && typeof raw.mouse === "object" && Object.hasOwn(MOUSE_MODES, raw.mouse.mode)) {
+    const strength = numberIn(1, 100, { integer: true })(raw.mouse.strength);
+    out.mouse = { mode: raw.mouse.mode, strength: strength === null ? 30 : strength, ...(raw.mouse.mode === "track" && raw.mouse.invert === true ? { invert: true } : {}) };
+  }
+  // L'inclinaison à la souris et la rotation au défilement utilisent la même propriété CSS « rotate » : l'inclinaison l'emporte
+  if (out.mouse && out.mouse.mode === "tilt" && out.scroll && out.scroll.rotate) { delete out.scroll.rotate; if (!Object.keys(out.scroll).length) delete out.scroll; }
+  // Écrans où les effets de défilement et de souris sont COUPÉS (indépendant par écran)
+  if ((out.scroll || out.mouse) && Array.isArray(raw.off)) {
+    const off = BREAKPOINTS.map((b) => b.key).filter((k) => raw.off.includes(k));
+    if (off.length && off.length < BREAKPOINTS.length) out.off = off;
+  }
   if (Object.hasOwn(ENTRANCES, raw.entrance)) {
     out.entrance = raw.entrance;
     out.duration = numberIn(100, 3000, { integer: true })(raw.duration) ?? 600;
@@ -1237,7 +1301,7 @@ function normalizeNode(raw, at, h, depth, counter) {
     if (hideOn.length === BREAKPOINTS.length) throw new Error(`${where} : un élément ne peut pas être masqué sur tous les écrans (utilisez « Masquer »).`);
     if (hideOn.length) node.hideOn = hideOn;
   }
-  const motion = normalizeMotion(raw.motion);
+  const motion = normalizeMotion(raw.motion, raw.type);
   if (motion) node.motion = motion;
   // Avancé : CSS propre à l'élément, classes, attributs, interactions, état initial masqué, programmation, vidéo de fond
   if (raw.css) { const css = cssDeclarations(raw.css, `${where} (CSS)`); if (css) node.css = css; }
@@ -1373,5 +1437,5 @@ function pageCss(sections) {
 
 module.exports = {
   NODE_TYPES, CATEGORIES, WIDGET_GROUPS, WIDGETS, CUSTOM_WIDGETS, registerWidget, lockedWidgetChanges, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
-  AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
+  capsOf, MASK_SHAPES, SCROLL_FX, MOUSE_MODES, AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };
