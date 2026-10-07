@@ -46,3 +46,35 @@
 @media (max-width: 640px) { .ss-panel { left: 0; width: 100vw; top: 0; z-index: var(--z-modal, 200); } .ss-color { grid-template-columns: 40px minmax(0, 1fr) 84px; } .ss-color .ss-icon-btn { grid-column: 1 / -1; } }
 @media (prefers-reduced-motion: no-preference) { .ss-panel:not([hidden]) { animation: ss-in 0.16s ease-out; } }
 @keyframes ss-in { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
+
+/* Écrans de réglages (moteur de formulaire) */
+.ss-details { margin: 0 0 8px; border: 1px solid var(--border, #d6e2ec); border-radius: 10px; background: #fff; }
+.ss-details > summary { padding: 10px 12px; font-weight: 700; cursor: pointer; list-style-position: inside; }
+.ss-details > summary:focus-visible { outline: 3px solid var(--accent, #0277b6); outline-offset: 2px; border-radius: 10px; }
+.ss-details-body { padding: 4px 12px 10px; border-top: 1px solid var(--border, #d6e2ec); }
+.ss-field input[type="text"], .ss-field input[type="number"], .ss-field textarea { width: 100%; min-height: 36px; font: inherit; }
+.ss-field textarea { resize: vertical; }
+.ss-field input[type="color"] { width: 56px; height: 36px; padding: 0; border: 1px solid var(--border, #d6e2ec); border-radius: 8px; background: none; cursor: pointer; }
+.ss-field input[type="color"][hidden] { display: none; }
+.ss-toggle { grid-template-columns: auto minmax(0, 1fr); align-items: start; column-gap: 8px; }
+.ss-toggle input { margin-top: 3px; width: 18px; height: 18px; }
+.ss-toggle .ss-hint { grid-column: 2; margin: 0; }
+.ss-unit { font-size: 12px; color: var(--muted, #5b6b78); }
+.ss-code { font: 12.5px/1.5 ui-monospace, Menlo, Consolas, monospace; tab-size: 2; white-space: pre; overflow: auto; }
+.ss-label { font-weight: 600; font-size: 13px; }
+.ss-image { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px; border: 1px dashed var(--border, #d6e2ec); border-radius: 8px; background: #f8fbfd; }
+.ss-image img { width: 48px; height: 48px; object-fit: contain; background: repeating-conic-gradient(#e6ecf1 0 25%, #fff 0 50%) 0 0 / 12px 12px; border-radius: 6px; }
+.ss-image-path { min-width: 0; overflow-wrap: anywhere; font-size: 12px; color: var(--muted, #5b6b78); }
+.ss-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.ss-colorref { grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 8px; }
+.ss-colorref > label, .ss-colorref > .ss-hint { grid-column: 1 / -1; }
+.ss-colorref > select { min-width: 0; }
+
+/* Densité : les champs du panneau sont plus compacts que ceux du reste du site */
+.ss-panel input[type="text"], .ss-panel input[type="number"], .ss-panel select, .ss-panel textarea { min-height: 34px; padding: 5px 10px; font-size: 13.5px; border-radius: 8px; }
+.ss-panel textarea { padding: 8px 10px; }
+.ss-panel input[type="number"] { padding-right: 4px; }
+.ss-field { gap: 4px; margin: 0 0 10px; }
+.ss-field.has-unit { grid-template-columns: minmax(0, 1fr) 28px; align-items: center; column-gap: 6px; }
+.ss-field.has-unit > label, .ss-field.has-unit > .ss-hint { grid-column: 1 / -1; }
+.ss-details-body { padding-top: 10px; }

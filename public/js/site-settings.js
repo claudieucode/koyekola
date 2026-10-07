@@ -55,10 +55,12 @@
   }
 
   // Modification : instantané pour annuler, puis enregistrement automatique avec délai (pas à chaque frappe)
+  function snap() { return { tokens: clone(state.tokens), settings: clone(state.settings), name: state.site.name }; }
+  function restoreSnap(sn) { state.tokens = sn.tokens; state.settings = sn.settings; state.site.name = sn.name; }
   function change(mutator, opts) {
     if (!state.canWrite) return;
-    var snapshot = clone(state.tokens);
-    mutator(state.tokens);
+    var snapshot = snap();
+    mutator(state.tokens, state.settings, state);
     if (!opts || !opts.noHistory) { past.push(snapshot); if (past.length > 80) past.shift(); future = []; }
     dirty = true;
     setStatus("Modifications en attente…", "pending");
@@ -72,12 +74,12 @@
     if (!dirty) return Promise.resolve();
     saving = true;
     setStatus("Enregistrement…", "pending");
-    var sent = clone(state.tokens);
-    return request("PUT", { tokens: sent, revision: state.revision }).then(function (data) {
+    var sent = snap();
+    return request("PUT", { tokens: sent.tokens, settings: sent.settings, name: sent.name, revision: state.revision }).then(function (data) {
       saving = false;
       state.revision = data.revision; state.usage = data.usage; shareCustomColors();
-      dirty = JSON.stringify(state.tokens) !== JSON.stringify(data.tokens);
-      if (!dirty) state.tokens = data.tokens;
+      dirty = JSON.stringify(snap()) !== JSON.stringify({ tokens: data.tokens, settings: data.settings, name: data.site.name });
+      if (!dirty) { state.tokens = data.tokens; state.settings = data.settings; state.site.name = data.site.name; }
       setStatus("Enregistré", "ok");
       bridge.rerender();
       if (dirty) { saveTimer = setTimeout(save, 200); }
@@ -93,8 +95,8 @@
     var box = h("div", { class: "ss-note is-error", role: "alert" }, [h("p", { text: message }), h("button", { type: "button", class: "btn btn-outline btn-sm", text: "Recharger les réglages du site", onclick: function () { dirty = false; load(); } })]);
     bodyEl.insertBefore(box, bodyEl.firstChild);
   }
-  function undo() { if (!past.length) return; future.push(clone(state.tokens)); state.tokens = past.pop(); afterHistory(); }
-  function redo() { if (!future.length) return; past.push(clone(state.tokens)); state.tokens = future.pop(); afterHistory(); }
+  function undo() { if (!past.length) return; future.push(snap()); restoreSnap(past.pop()); afterHistory(); }
+  function redo() { if (!future.length) return; past.push(snap()); restoreSnap(future.pop()); afterHistory(); }
   function afterHistory() { dirty = true; setStatus("Modifications en attente…", "pending"); updateHistoryButtons(); render(); clearTimeout(saveTimer); saveTimer = setTimeout(save, 400); }
   function updateHistoryButtons() { undoBtn.disabled = !past.length || !state.canWrite; redoBtn.disabled = !future.length || !state.canWrite; }
 
@@ -103,8 +105,19 @@
     home: { title: "Réglages du site" },
     colors: { title: "Couleurs globales", parent: "home" },
     fonts: { title: "Polices globales", parent: "home" },
+    typography: { title: "Typographie", parent: "home" },
+    buttons: { title: "Boutons", parent: "home" },
+    images: { title: "Images", parent: "home" },
+    forms: { title: "Champs de formulaire", parent: "home" },
+    identity: { title: "Identité du site", parent: "home" },
+    background: { title: "Arrière-plan", parent: "home" },
+    layout: { title: "Mise en page", parent: "home" },
+    lightbox: { title: "Visionneuse", parent: "home" },
+    transitions: { title: "Transitions de page", parent: "home" },
+    css: { title: "CSS personnalisé", parent: "home" },
+    extras: { title: "Réglages supplémentaires", parent: "home" },
   };
-  function go(name) { view = name; render(); var first = bodyEl.querySelector("button, input, select"); if (first) first.focus({ preventScroll: true }); }
+  function go(name) { view = name; render(); var first = bodyEl.querySelector("button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])"); if (first) first.focus({ preventScroll: true }); }
   function render() {
     if (!state) return;
     var v = VIEWS[view];
@@ -112,32 +125,299 @@
     backBtn.hidden = !v.parent;
     bodyEl.textContent = "";
     bodyEl.scrollTop = 0;
-    ({ home: renderHome, colors: renderColors, fonts: renderFonts })[view]();
+    ({ home: renderHome, colors: renderColors, fonts: renderFonts, typography: renderTypography, buttons: renderButtons, images: renderImages, forms: renderForms,
+       identity: renderIdentity, background: renderBackground, layout: renderLayout, lightbox: renderLightbox, transitions: renderTransitions, css: renderCss, extras: renderExtras })[view]();
     updateHistoryButtons();
   }
 
-  function entry(label, hint, target, soon) {
-    return h("li", {}, [h("button", { type: "button", class: "ss-entry", disabled: soon, "aria-disabled": soon ? "true" : false, onclick: function () { if (!soon) go(target); } }, [
+  function entry(label, hint, target) {
+    return h("li", {}, [h("button", { type: "button", class: "ss-entry", onclick: function () { go(target); } }, [
       h("span", { class: "ss-entry-label", text: label }),
-      h("span", { class: "ss-entry-hint", text: soon ? "Pas encore disponible" : hint }),
+      h("span", { class: "ss-entry-hint", text: hint }),
     ])]);
   }
   function group(title, items) { return h("section", { class: "ss-group" }, [h("h3", { text: title }), h("ul", { class: "ss-list" }, items)]); }
   function renderHome() {
     bodyEl.appendChild(h("p", { class: "ss-site", text: "Site : " + state.site.name }));
-    bodyEl.appendChild(h("p", { class: "ss-hint", text: "Ces réglages s'appliquent à toutes les pages du site, y compris celles déjà en ligne. Un style choisi directement sur un élément reste prioritaire." }));
+    bodyEl.appendChild(h("p", { class: "ss-hint", text: "Ces réglages s'appliquent à toutes les pages du site, y compris celles déjà en ligne. Ordre de priorité, du plus général au plus précis : réglages du site, styles du thème, style de l'élément posé dans l'inspecteur (il l'emporte), puis CSS personnalisé. Un style choisi sur un élément n'est donc jamais écrasé par un réglage global." }));
     bodyEl.appendChild(group("Système de conception", [
       entry("Couleurs globales", "Palette du site et couleurs personnalisées", "colors"),
       entry("Polices globales", "Titres, texte, boutons et liens", "fonts"),
     ]));
     bodyEl.appendChild(group("Styles du thème", [
-      entry("Typographie", "", null, true), entry("Boutons", "", null, true), entry("Images", "", null, true), entry("Champs de formulaire", "", null, true),
+      entry("Typographie", "Titres, texte, liens et listes", "typography"), entry("Boutons", "Couleurs, états, dimensions", "buttons"),
+      entry("Images", "Rayon, bordure, ombre, ajustement", "images"), entry("Champs de formulaire", "Champs, focus, cases à cocher", "forms"),
     ]));
     bodyEl.appendChild(group("Réglages", [
-      entry("Identité du site", "", null, true), entry("Arrière-plan", "", null, true), entry("Mise en page", "", null, true), entry("Visionneuse", "", null, true),
-      entry("Transitions de page", "", null, true), entry("CSS personnalisé", "", null, true), entry("Réglages supplémentaires", "", null, true),
+      entry("Identité du site", "Nom, description, logo, favicon", "identity"), entry("Arrière-plan", "Couleur, dégradé, image", "background"),
+      entry("Mise en page", "Largeurs, marges, points de rupture", "layout"), entry("Visionneuse", "Agrandissement des images de galerie", "lightbox"),
+      entry("Transitions de page", "Effet lors du changement de page", "transitions"), entry("CSS personnalisé", "Règles CSS de tout le site", "css"),
+      entry("Réglages supplémentaires", "Langue, défilement, référencement", "extras"),
     ]));
     bodyEl.appendChild(h("p", { class: "ss-help" }, ["Besoin d'aide ? ", h("a", { href: "/marketing/site-web/sites/" + state.site.id, target: "_blank", rel: "noopener" }, ["Ouvrir la fiche du site"])]));
+  }
+
+  // ---------- Moteur de formulaire : chaque champ lit et écrit un vrai réglage (chemin dans les jetons ou les réglages) ----------
+  function settingsRoot() { return { tokens: state.tokens, settings: state.settings }; }
+  function getPath(path) { return path.split(".").reduce(function (o, k) { return o == null ? o : o[k]; }, settingsRoot()); }
+  function setPath(path, v) { var ks = path.split("."), last = ks.pop(), o = ks.reduce(function (a, k) { return a[k]; }, settingsRoot()); o[last] = v; }
+  var uid = 0;
+  function fieldWrap(spec, control, extra) {
+    var id = "ss-f-" + (++uid);
+    control.id = id;
+    return h("div", { class: "ss-field" + (spec.inline ? " is-inline" : "") }, [h("label", { for: id, text: spec.label }), control, extra, spec.hint ? h("p", { class: "ss-hint", text: spec.hint }) : null]);
+  }
+  function numberField(spec) {
+    var v = getPath(spec.path);
+    var input = h("input", { type: "number", min: spec.min, max: spec.max, step: spec.step || 1, value: v === null || v === undefined ? "" : String(v), placeholder: spec.nullable ? "Par défaut" : null, disabled: !state.canWrite, inputmode: "decimal" });
+    input.addEventListener("input", function () {
+      var raw = input.value.trim();
+      var val = raw === "" ? (spec.nullable ? null : getPath(spec.path)) : Number(raw);
+      if (raw !== "" && !isFinite(val)) return;
+      var cur = getPath(spec.path);
+      if (val === cur) return;
+      change(function () { setPath(spec.path, val); });
+    });
+    var wrap = fieldWrap(spec, input, spec.unit ? h("span", { class: "ss-unit", text: spec.unit }) : null);
+    if (spec.unit) wrap.classList.add("has-unit");
+    return wrap;
+  }
+  function selectField(spec) {
+    var cur = getPath(spec.path);
+    var select = h("select", { disabled: !state.canWrite }, spec.options.map(function (o) { return h("option", { value: String(o[0]), selected: String(cur === null || cur === undefined ? "" : cur) === String(o[0]), text: o[1] }); }));
+    select.addEventListener("change", function () {
+      var raw = select.value, val = spec.numeric ? Number(raw) : raw;
+      change(function () { setPath(spec.path, val); });
+    });
+    return fieldWrap(spec, select);
+  }
+  function toggleField(spec) {
+    var input = h("input", { type: "checkbox", checked: Boolean(getPath(spec.path)), disabled: !state.canWrite });
+    input.addEventListener("change", function () { change(function () { setPath(spec.path, input.checked); }); if (spec.rerender) render(); });
+    var id = "ss-f-" + (++uid);
+    input.id = id;
+    return h("div", { class: "ss-field ss-toggle" }, [input, h("label", { for: id, text: spec.label }), spec.hint ? h("p", { class: "ss-hint", text: spec.hint }) : null]);
+  }
+  function textField(spec) {
+    var area = spec.kind === "textarea";
+    var input = h(area ? "textarea" : "input", Object.assign({ disabled: !state.canWrite, maxlength: spec.max, spellcheck: spec.code ? "false" : null, rows: area ? (spec.rows || 4) : null, class: spec.code ? "ss-code" : null }, area ? {} : { type: "text" }));
+    input.value = getPath(spec.path) || "";
+    input.addEventListener("input", function () { var v = input.value; if (v !== getPath(spec.path)) change(function () { setPath(spec.path, v); }); });
+    return fieldWrap(spec, input);
+  }
+  // Couleur : « par défaut », une couleur du site (système ou personnalisée) ou une couleur libre
+  function colorRefField(spec) {
+    var C = state.catalog, cur = getPath(spec.path) || "";
+    var opts = [["", spec.emptyLabel || "Par défaut"]];
+    C.colorKeys.forEach(function (k) { opts.push(["token:" + k, "Site : " + C.colorLabels[k]]); });
+    state.tokens.customColors.forEach(function (c) { opts.push(["token:" + c.key, "Site : " + c.label]); });
+    if (!spec.siteOnly) opts.push(["#", "Couleur libre…"]);
+    var isHex = /^#[0-9a-f]{6}$/i.test(cur);
+    var select = h("select", { disabled: !state.canWrite }, opts.map(function (o) { return h("option", { value: o[0], selected: isHex ? o[0] === "#" : o[0] === cur, text: o[1] }); }));
+    var picker = h("input", { type: "color", value: isHex ? cur : "#6b1e2e", "aria-label": spec.label + " : couleur libre", hidden: !isHex, disabled: !state.canWrite });
+    select.addEventListener("change", function () {
+      var v = select.value;
+      if (v === "#") { v = picker.value; picker.hidden = false; } else picker.hidden = true;
+      change(function () { setPath(spec.path, v); });
+    });
+    picker.addEventListener("input", function () { var v = picker.value.toLowerCase(); change(function () { setPath(spec.path, v); }); });
+    var wrap = fieldWrap(spec, select, picker);
+    wrap.classList.add("ss-colorref");
+    return wrap;
+  }
+  function imageField(spec) {
+    var cur = getPath(spec.path) || "";
+    var preview = h("div", { class: "ss-image" });
+    function paint() {
+      var v = getPath(spec.path) || "";
+      preview.textContent = "";
+      if (v) preview.appendChild(h("img", { src: v, alt: "", width: "64", height: "64" }));
+      preview.appendChild(h("span", { class: "ss-image-path", text: v || "Aucune image" }));
+    }
+    var pick = h("button", { type: "button", class: "btn btn-outline btn-sm", text: cur ? "Changer l'image" : "Choisir une image", disabled: !state.canWrite, onclick: function () {
+      bridge.pickImage(function (path) { change(function () { setPath(spec.path, path); }); pick.textContent = "Changer l'image"; paint(); });
+    } });
+    var clear = h("button", { type: "button", class: "btn btn-ghost btn-sm", text: "Retirer", disabled: !state.canWrite, onclick: function () { change(function () { setPath(spec.path, ""); }); pick.textContent = "Choisir une image"; paint(); } });
+    paint();
+    return h("div", { class: "ss-field" }, [h("span", { class: "ss-label", text: spec.label }), preview, h("div", { class: "ss-row" }, [pick, clear]), spec.hint ? h("p", { class: "ss-hint", text: spec.hint }) : null]);
+  }
+  // Couleur unie au format #rrggbb (nuancier du navigateur)
+  function hexField(spec) {
+    var input = h("input", { type: "color", value: getPath(spec.path) || "#000000", disabled: !state.canWrite });
+    input.addEventListener("input", function () { var v = input.value.toLowerCase(); change(function () { setPath(spec.path, v); }); });
+    return fieldWrap(spec, input);
+  }
+  var KINDS = { hex: hexField, number: numberField, select: selectField, toggle: toggleField, text: textField, textarea: textField, color: colorRefField, image: imageField };
+  function fields(list) { return list.map(function (spec) { return KINDS[spec.kind](spec); }); }
+  function section(title, list, hint) { return h("section", { class: "ss-group" }, [h("h3", { text: title }), hint ? h("p", { class: "ss-hint", text: hint }) : null].concat(fields(list))); }
+  function details(title, list, open) { return h("details", { class: "ss-details", open: open || null }, [h("summary", { text: title }), h("div", { class: "ss-details-body" }, fields(list))]); }
+
+  var WEIGHTS = [[400, "Normal (400)"], [500, "Moyen (500)"], [600, "Demi-gras (600)"], [700, "Gras (700)"], [800, "Très gras (800)"]];
+  var TRANSFORMS = [["none", "Normale"], ["uppercase", "MAJUSCULES"], ["lowercase", "minuscules"], ["capitalize", "Première Lettre"]];
+
+  function renderTypography() {
+    var C = state.catalog;
+    bodyEl.appendChild(h("p", { class: "ss-hint", text: "Taille, graisse, hauteur de ligne et détails de chaque niveau. Les familles de police se choisissent dans « Polices globales ». Un champ vide garde la valeur d'origine." }));
+    C.typeKeys.forEach(function (k, i) {
+      var base = "tokens.type." + k + ".";
+      bodyEl.appendChild(details(C.typeLabels[k], [
+        { kind: "number", path: base + "size", label: "Taille", min: 10, max: 96, unit: "px" },
+        { kind: "select", path: base + "weight", label: "Graisse", options: WEIGHTS, numeric: true },
+        { kind: "number", path: base + "lineHeight", label: "Hauteur de ligne", min: 1, max: 2, step: 0.05 },
+        { kind: "number", path: base + "letterSpacing", label: "Espacement des lettres", min: -0.1, max: 0.5, step: 0.01, unit: "em" },
+        { kind: "select", path: base + "transform", label: "Casse", options: TRANSFORMS },
+        { kind: "select", path: base + "fontStyle", label: "Style", options: [["normal", "Normal"], ["italic", "Italique"]] },
+        { kind: "color", path: base + "color", label: "Couleur du texte", emptyLabel: "Hérité (d'origine)" },
+      ], i === 0));
+    });
+    bodyEl.appendChild(details("Liens du texte", [
+      { kind: "color", path: "tokens.link.color", label: "Couleur", emptyLabel: "Par défaut (couleur principale)" },
+      { kind: "color", path: "tokens.link.hoverColor", label: "Couleur au survol", emptyLabel: "Identique" },
+      { kind: "select", path: "tokens.link.underline", label: "Soulignement", options: [["", "Par défaut"], ["always", "Toujours"], ["hover", "Au survol seulement"], ["none", "Jamais"]] },
+    ]));
+    bodyEl.appendChild(details("Listes", [
+      { kind: "number", path: "tokens.list.gap", label: "Espace entre les éléments", min: 0, max: 32, unit: "px", nullable: true },
+      { kind: "color", path: "tokens.list.markerColor", label: "Couleur des puces", emptyLabel: "Par défaut" },
+    ]));
+  }
+  function renderButtons() {
+    bodyEl.appendChild(h("p", { class: "ss-hint", text: "Appliqués aux boutons du site. Les couleurs et états concernent les boutons principaux ; les contours (« outline ») et discrets (« ghost ») gardent leur apparence. Un bouton réglé dans l'inspecteur reste prioritaire. Taille et graisse du texte : « Typographie ▸ Bouton »." }));
+    bodyEl.appendChild(section("Dimensions", [
+      { kind: "number", path: "tokens.buttons.paddingY", label: "Marge intérieure verticale", min: 4, max: 32, unit: "px", nullable: true },
+      { kind: "number", path: "tokens.buttons.paddingX", label: "Marge intérieure horizontale", min: 8, max: 64, unit: "px", nullable: true },
+      { kind: "number", path: "tokens.buttons.borderWidth", label: "Épaisseur de la bordure", min: 0, max: 6, unit: "px", nullable: true },
+      { kind: "number", path: "tokens.radius.button", label: "Rayon des coins", min: 0, max: 48, unit: "px" },
+      { kind: "number", path: "tokens.sizes.buttonHeight", label: "Hauteur minimale", min: 32, max: 72, unit: "px" },
+      { kind: "select", path: "tokens.shadow.button", label: "Ombre", options: state.catalog.shadows.map(function (s) { return [s, s === "none" ? "Aucune" : s === "sm" ? "Légère" : s === "md" ? "Moyenne" : "Forte"]; }) },
+    ]));
+    [["normal", "État normal"], ["hover", "Au survol"], ["active", "Au clic"]].forEach(function (st) {
+      bodyEl.appendChild(details(st[1], [
+        { kind: "color", path: "tokens.buttons." + st[0] + ".bg", label: "Fond", emptyLabel: "Par défaut" },
+        { kind: "color", path: "tokens.buttons." + st[0] + ".color", label: "Texte", emptyLabel: "Par défaut" },
+        { kind: "color", path: "tokens.buttons." + st[0] + ".border", label: "Bordure", emptyLabel: "Par défaut" },
+      ]));
+    });
+    bodyEl.appendChild(details("Au focus (navigation au clavier)", [
+      { kind: "color", path: "tokens.buttons.focus.color", label: "Couleur du contour", emptyLabel: "Par défaut" },
+      { kind: "number", path: "tokens.buttons.focus.width", label: "Épaisseur du contour", min: 0, max: 8, unit: "px", nullable: true },
+      { kind: "number", path: "tokens.buttons.focus.offset", label: "Décalage du contour", min: 0, max: 8, unit: "px", nullable: true },
+    ]));
+  }
+  function renderImages() {
+    bodyEl.appendChild(h("p", { class: "ss-hint", text: "Rayon, bordure et ombre s'appliquent aux images, boîtes d'image, galeries et carrousels. Ajustement et position concernent les images à format imposé (galeries, carrousels, cartes d'articles et de formations). Les images s'adaptent déjà à la largeur de l'écran." }));
+    bodyEl.appendChild(section("Apparence", [
+      { kind: "number", path: "tokens.images.radius", label: "Rayon des coins", min: 0, max: 48, unit: "px", nullable: true },
+      { kind: "number", path: "tokens.images.borderWidth", label: "Épaisseur de la bordure", min: 0, max: 8, unit: "px", nullable: true },
+      { kind: "color", path: "tokens.images.borderColor", label: "Couleur de la bordure", emptyLabel: "Par défaut" },
+      { kind: "select", path: "tokens.images.shadow", label: "Ombre", options: [["", "Aucune (d'origine)"]].concat(state.catalog.shadows.filter(function (s) { return s !== "none"; }).map(function (s) { return [s, s === "sm" ? "Légère" : s === "md" ? "Moyenne" : "Forte"]; })) },
+    ]));
+    bodyEl.appendChild(section("Images à format imposé", [
+      { kind: "select", path: "tokens.images.fit", label: "Ajustement", options: [["", "Par défaut"], ["cover", "Remplir (recadrer)"], ["contain", "Contenir (tout voir)"], ["fill", "Étirer"], ["scale-down", "Réduire si besoin"]] },
+      { kind: "select", path: "tokens.images.position", label: "Position", options: [["", "Par défaut"], ["center", "Centre"], ["top", "Haut"], ["bottom", "Bas"], ["left", "Gauche"], ["right", "Droite"]] },
+    ]));
+  }
+  function renderForms() {
+    bodyEl.appendChild(h("p", { class: "ss-hint", text: "Champs des formulaires d'inscription et de recherche du site. Le bouton d'envoi suit les réglages des boutons." }));
+    bodyEl.appendChild(section("Champs de saisie", [
+      { kind: "color", path: "tokens.forms.bg", label: "Fond", emptyLabel: "Par défaut" },
+      { kind: "color", path: "tokens.forms.color", label: "Texte", emptyLabel: "Par défaut" },
+      { kind: "color", path: "tokens.forms.borderColor", label: "Bordure", emptyLabel: "Par défaut" },
+      { kind: "number", path: "tokens.forms.borderWidth", label: "Épaisseur de la bordure", min: 0, max: 4, unit: "px", nullable: true },
+      { kind: "number", path: "tokens.forms.radius", label: "Rayon des coins", min: 0, max: 32, unit: "px", nullable: true },
+      { kind: "number", path: "tokens.forms.paddingY", label: "Marge intérieure verticale", min: 4, max: 24, unit: "px", nullable: true },
+      { kind: "number", path: "tokens.forms.paddingX", label: "Marge intérieure horizontale", min: 6, max: 32, unit: "px", nullable: true },
+    ]));
+    bodyEl.appendChild(section("Focus et aides", [
+      { kind: "color", path: "tokens.forms.focusColor", label: "Couleur au focus", emptyLabel: "Par défaut" },
+      { kind: "color", path: "tokens.forms.placeholderColor", label: "Texte d'aide à la saisie", emptyLabel: "Par défaut" },
+      { kind: "color", path: "tokens.forms.labelColor", label: "Libellés des champs", emptyLabel: "Par défaut" },
+      { kind: "color", path: "tokens.forms.accent", label: "Cases à cocher et boutons radio", emptyLabel: "Par défaut" },
+    ]));
+  }
+  function renderIdentity() {
+    var nameInput = h("input", { type: "text", maxlength: "100", value: state.site.name, disabled: !state.canWrite });
+    nameInput.addEventListener("input", function () { var v = nameInput.value; if (v.trim() && v !== state.site.name) change(function (t, s, st) { st.site.name = v; }); });
+    bodyEl.appendChild(h("p", { class: "ss-hint", text: "Le nom, le logo et le favicon sont utilisés par les pages publiées du site : onglet du navigateur, pied de page, aperçu lors d'un partage. La description sert aux pages qui n'ont pas la leur." }));
+    bodyEl.appendChild(h("section", { class: "ss-group" }, [h("h3", { text: "Informations générales" }), fieldWrap({ label: "Nom du site" }, nameInput)].concat(fields([
+      { kind: "textarea", path: "settings.identity.description", label: "Description du site", max: 300, rows: 3, hint: "300 caractères au plus." },
+    ]))));
+    bodyEl.appendChild(h("section", { class: "ss-group" }, [h("h3", { text: "Logo et favicon" })].concat(fields([
+      { kind: "image", path: "settings.identity.logoUrl", label: "Logo", hint: "Affiché dans le pied de page de chaque page du site, à la place du nom." },
+      { kind: "image", path: "settings.identity.logoMobileUrl", label: "Logo mobile (facultatif)", hint: "Remplace le logo sur les petits écrans." },
+      { kind: "image", path: "settings.identity.faviconUrl", label: "Favicon", hint: "Petite icône de l'onglet (carrée : PNG, SVG, ICO)." },
+    ]))));
+  }
+  function renderBackground() {
+    var g = state.settings.background.gradient.enabled;
+    bodyEl.appendChild(h("p", { class: "ss-hint", text: "Fond de toutes les pages du site. Un fond posé sur une section ou un conteneur reste visible par-dessus." }));
+    bodyEl.appendChild(section("Couleur", [{ kind: "color", path: "settings.background.color", label: "Couleur de fond", emptyLabel: "Couleur « Fond » du site" }]));
+    bodyEl.appendChild(h("section", { class: "ss-group" }, [h("h3", { text: "Dégradé" })].concat(fields([{ kind: "toggle", path: "settings.background.gradient.enabled", label: "Utiliser un dégradé", rerender: true }]).concat(g ? fields([
+      { kind: "color", path: "settings.background.gradient.from", label: "Début", siteOnly: false },
+      { kind: "color", path: "settings.background.gradient.to", label: "Fin", siteOnly: false },
+      { kind: "number", path: "settings.background.gradient.angle", label: "Angle", min: 0, max: 360, unit: "°" },
+    ]) : []))));
+    bodyEl.appendChild(section("Image", [
+      { kind: "image", path: "settings.background.image", label: "Image de fond" },
+      { kind: "select", path: "settings.background.position", label: "Position", options: [["center", "Centre"], ["top", "Haut"], ["bottom", "Bas"], ["left", "Gauche"], ["right", "Droite"]] },
+      { kind: "select", path: "settings.background.size", label: "Taille", options: [["cover", "Couvrir la page"], ["contain", "Contenir"], ["auto", "Taille d'origine"]] },
+      { kind: "select", path: "settings.background.repeat", label: "Répétition", options: [["no-repeat", "Aucune"], ["repeat", "Répéter"], ["repeat-x", "Horizontale"], ["repeat-y", "Verticale"]] },
+      { kind: "toggle", path: "settings.background.fixed", label: "Image fixe au défilement", hint: "Ordinateur seulement ; sur mobile l'image défile avec la page (meilleures performances)." },
+    ]));
+  }
+  function renderLayout() {
+    bodyEl.appendChild(h("p", { class: "ss-hint", text: "Ces valeurs s'appliquent à toutes les pages du site. Les largeurs et marges réglées sur un élément restent prioritaires." }));
+    bodyEl.appendChild(section("Largeurs et marges", [
+      { kind: "toggle", path: "settings.layout.fullWidth", label: "Contenu pleine largeur", hint: "Le contenu des pages occupe toute la largeur de l'écran (les conteneurs gardent leur largeur maximale)." },
+      { kind: "number", path: "settings.layout.contentWidth", label: "Largeur du contenu", min: 480, max: 1600, unit: "px" },
+      { kind: "number", path: "settings.layout.containerWidth", label: "Largeur maximale des conteneurs", min: 480, max: 1600, unit: "px" },
+      { kind: "number", path: "settings.layout.gutter", label: "Marges latérales", min: 0, max: 80, unit: "px" },
+      { kind: "number", path: "tokens.space.lg", label: "Espace entre les sections", min: 0, max: 200, unit: "px" },
+    ]));
+    bodyEl.appendChild(section("Écrans (points de rupture)", [
+      { kind: "number", path: "settings.layout.breakpoints.tablet", label: "Tablette : jusqu'à", min: 820, max: 1279, unit: "px", hint: "Les styles « Tablette » des éléments et « Masquer sur tablette » s'appliquent jusqu'à cette largeur." },
+      { kind: "number", path: "settings.layout.breakpoints.mobile", label: "Mobile : jusqu'à", min: 400, max: 767, unit: "px", hint: "Les styles « Mobile » des éléments et « Masquer sur mobile » s'appliquent jusqu'à cette largeur. Les adaptations internes de chaque élément gardent leurs propres seuils." },
+    ]));
+  }
+  function renderLightbox() {
+    bodyEl.appendChild(h("p", { class: "ss-hint", text: "Agrandissement des images des galeries d'images dont l'option « Agrandir au clic » est cochée." }));
+    bodyEl.appendChild(section("Visionneuse", [
+      { kind: "toggle", path: "settings.lightbox.enabled", label: "Activer la visionneuse", hint: "Désactivée, un clic ouvre simplement l'image dans la page." },
+      { kind: "hex", path: "settings.lightbox.overlay", label: "Couleur du fond" },
+      { kind: "number", path: "settings.lightbox.overlayOpacity", label: "Opacité du fond", min: 20, max: 100, unit: "%" },
+      { kind: "toggle", path: "settings.lightbox.arrows", label: "Flèches précédent / suivant" },
+      { kind: "toggle", path: "settings.lightbox.closeOnOverlay", label: "Fermer en cliquant à côté de l'image" },
+      { kind: "toggle", path: "settings.lightbox.captions", label: "Afficher les légendes" },
+      { kind: "select", path: "settings.lightbox.animation", label: "Animation d'ouverture", options: [["fade", "Fondu"], ["zoom", "Zoom"], ["none", "Aucune"]] },
+    ]));
+  }
+  function renderTransitions() {
+    bodyEl.appendChild(h("p", { class: "ss-hint", text: "Effet au passage d'une page à l'autre du site. Il utilise la fonction de transition de page du navigateur : sur un navigateur qui ne la propose pas, la page change simplement sans effet. Désactivé pour les personnes qui ont demandé moins d'animations." }));
+    bodyEl.appendChild(section("Transition", [
+      { kind: "select", path: "settings.transitions.type", label: "Type", options: [["none", "Aucune"], ["fade", "Fondu"], ["slide", "Glissement"]] },
+      { kind: "number", path: "settings.transitions.duration", label: "Durée", min: 100, max: 1000, step: 50, unit: "ms" },
+    ]));
+  }
+  function renderCss() {
+    var C = state.catalog;
+    bodyEl.appendChild(h("p", { class: "ss-hint", text: "Règles CSS appliquées à tout le site, après les réglages ci-dessus. Écrivez « .ma-classe { color: #0b2a40; } » : chaque sélecteur est automatiquement limité aux pages du site. Pas d'@, de commentaire, d'adresse ni de ressource externe. Le CSS posé ici l'emporte sur les réglages globaux ; un style d'élément n'est dépassé que par un sélecteur plus précis. " + C.maxCss.toLocaleString("fr-FR") + " caractères au plus." }));
+    if (!state.canCode) bodyEl.appendChild(h("p", { class: "ss-note is-error", text: "Réservé aux comptes autorisés à écrire du code (permission « pages.code »). Vous pouvez le lire, pas le modifier." }));
+    var ta = textField({ kind: "textarea", path: "settings.customCss", label: "CSS du site", max: C.maxCss, rows: 14, code: true });
+    var area = ta.querySelector("textarea");
+    area.disabled = !state.canWrite || !state.canCode;
+    var count = h("p", { class: "ss-hint", "aria-live": "polite" });
+    function upd() { count.textContent = area.value.length.toLocaleString("fr-FR") + " / " + C.maxCss.toLocaleString("fr-FR") + " caractères"; }
+    area.addEventListener("input", upd); upd();
+    bodyEl.appendChild(h("section", { class: "ss-group" }, [ta, count]));
+  }
+  function renderExtras() {
+    var langs = Object.keys(state.catalog.languages).map(function (k) { return [k, state.catalog.languages[k]]; });
+    bodyEl.appendChild(section("Langue et accessibilité", [
+      { kind: "select", path: "settings.extras.language", label: "Langue des pages", options: langs, hint: "Déclarée dans chaque page (lecteurs d'écran, traduction, moteurs de recherche)." },
+      { kind: "toggle", path: "settings.extras.smoothScroll", label: "Défilement doux vers les ancres", hint: "Désactivé automatiquement pour les personnes qui ont demandé moins d'animations." },
+    ]));
+    bodyEl.appendChild(section("Référencement", [
+      { kind: "toggle", path: "settings.extras.noindex", label: "Demander aux moteurs de recherche de ne pas indexer ce site", hint: "S'applique à toutes les pages du site, en plus du réglage de chaque page." },
+    ]));
   }
 
   // ---------- Couleurs globales ----------
@@ -252,7 +532,6 @@
     if (!root) build();
     lastFocus = document.activeElement;
     root.hidden = false;
-    document.body.classList.add("ss-open");
     view = "home";
     load().then(function () { var first = bodyEl.querySelector("button:not([disabled])"); if (first) first.focus({ preventScroll: true }); });
   }
@@ -263,7 +542,6 @@
         if (!window.confirm("Des modifications n'ont pas pu être enregistrées. Fermer quand même ?")) return;
       }
       root.hidden = true;
-      document.body.classList.remove("ss-open");
       if (lastFocus && lastFocus.focus) lastFocus.focus();
     });
   }

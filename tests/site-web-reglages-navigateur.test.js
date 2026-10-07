@@ -64,10 +64,8 @@ describe("réglages du site : panneau de l'éditeur (navigateur)", { skip: SKIP 
     assert.equal((await panel().locator("h2").innerText()).trim(), "Réglages du site");
     const entries = await panel().locator(".ss-entry .ss-entry-label").allInnerTexts();
     assert.deepEqual(entries, ["Couleurs globales", "Polices globales", "Typographie", "Boutons", "Images", "Champs de formulaire", "Identité du site", "Arrière-plan", "Mise en page", "Visionneuse", "Transitions de page", "CSS personnalisé", "Réglages supplémentaires"]);
-    // Rien de simulé : seules les entrées réellement disponibles sont actives, les autres le disent
-    const active = await panel().locator(".ss-entry:not([disabled]) .ss-entry-label").allInnerTexts();
-    assert.deepEqual(active, ["Couleurs globales", "Polices globales"]);
-    assert.equal(await panel().locator(".ss-entry[disabled] .ss-entry-hint").first().innerText(), "Pas encore disponible");
+    // Rien de simulé : toutes les entrées ouvrent un vrai écran (aucun bouton inactif)
+    assert.equal(await panel().locator(".ss-entry[disabled]").count(), 0);
   });
 
   test("N2 Couleurs globales : changer la couleur principale l'enregistre et met à jour le canevas", async () => {

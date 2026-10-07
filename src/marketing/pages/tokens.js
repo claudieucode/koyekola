@@ -30,6 +30,22 @@ const DEFAULT_TOKENS = Object.freeze({
     h4: { size: 19, weight: 700, lineHeight: 1.3 }, h5: { size: 17, weight: 700, lineHeight: 1.35 }, h6: { size: 15, weight: 700, lineHeight: 1.4 }, body: { size: 17, weight: 400, lineHeight: 1.6 }, caption: { size: 14, weight: 400, lineHeight: 1.4 },
     button: { size: 16, weight: 700, lineHeight: 1.2 },
   },
+  // Détails typographiques (aucun par défaut : les sites existants gardent leur aspect). color : "" | #hex | token:<clé>
+  typeExtra: { letterSpacing: 0, transform: "none", fontStyle: "normal", color: "" },
+  // Liens du texte : underline "" = réglage d'origine ; sinon always | hover | none
+  link: { color: "", hoverColor: "", underline: "" },
+  // Listes : écart entre les puces (null = d'origine) et couleur des puces
+  list: { gap: null, markerColor: "" },
+  // Boutons : null / "" = valeur d'origine. États : normal / survol / clic (fond, texte, bordure) et focus (contour)
+  buttons: {
+    paddingY: null, paddingX: null, borderWidth: null,
+    normal: { bg: "", color: "", border: "" }, hover: { bg: "", color: "", border: "" }, active: { bg: "", color: "", border: "" },
+    focus: { color: "", width: null, offset: null },
+  },
+  // Images : rayon, bordure, ombre ; ajustement et position pour les images à format imposé (galeries, cartes…)
+  images: { radius: null, borderWidth: null, borderColor: "", shadow: "", fit: "", position: "" },
+  // Champs de formulaire (saisie, liste, zone de texte, cases) ; le bouton d'envoi suit les réglages des boutons
+  forms: { bg: "", color: "", borderColor: "", borderWidth: null, radius: null, paddingY: null, paddingX: null, focusColor: "", placeholderColor: "", labelColor: "", accent: "" },
   space: { xs: 4, sm: 8, md: 16, lg: 32, xl: 56, xxl: 96 },
   radius: { sm: 6, md: 10, lg: 18, button: 10, field: 8, card: 14 },
   shadow: { card: "md", button: "none" },
@@ -41,6 +57,12 @@ const HEX = /^#[0-9a-f]{6}$/i;
 const CUSTOM_KEY = /^c-[a-z0-9]{1,20}$/;
 const MAX_CUSTOM_COLORS = 30;
 const FONT_ROLES = ["heading", "body", "button", "link"];
+const COLOR_REF = /^(#[0-9a-f]{6}|token:(primary|secondary|accent|background|surface|text|muted|success|warning|error|on-primary|on-accent|c-[a-z0-9]{1,20}))$/i;
+const TRANSFORMS = ["none", "uppercase", "lowercase", "capitalize"];
+const FONT_STYLES = ["normal", "italic"];
+const UNDERLINES = ["", "always", "hover", "none"];
+const IMAGE_FITS = ["", "cover", "contain", "fill", "scale-down"];
+const IMAGE_POSITIONS = ["", "center", "top", "bottom", "left", "right"];
 const FONT_LABELS = { heading: "Titres", body: "Texte courant", button: "Boutons", link: "Liens" };
 const intIn = (v, min, max, fallback) => {
   const n = Number(v);
@@ -86,11 +108,63 @@ function normalizeTokens(input = {}, { strict = false } = {}) {
     if (v !== undefined && !Object.hasOwn(FONTS, v) && strict) throw bad("Police inconnue.");
     fonts[k] = Object.hasOwn(FONTS, v) ? v : D.fonts[k];
   }
+  // Valeur « couleur du site » : vide, #rrggbb ou token:<clé> ; invalide = refusée (strict) ou remplacée par vide
+  const ref = (v, label) => {
+    const x = v === undefined || v === null ? "" : String(v).trim();
+    if (x === "") return "";
+    if (COLOR_REF.test(x)) return x.toLowerCase();
+    if (strict) throw bad(`${label} : couleur attendue (code #rrggbb ou couleur du site).`);
+    return "";
+  };
+  const pick = (v, list, label, fallback) => {
+    const x = v === undefined || v === null ? fallback : String(v);
+    if (list.includes(x)) return x;
+    if (strict && v !== undefined) throw bad(`${label} : valeur inconnue.`);
+    return fallback;
+  };
+  // Nombre optionnel : null = valeur d'origine ; hors limites = refusé (strict) ou ignoré
+  const opt = (v, min, max, label, dec = 0) => {
+    if (v === undefined || v === null || v === "") return null;
+    const n = Number(v);
+    if (Number.isFinite(n) && n >= min && n <= max) return dec ? Math.round(n * 10 ** dec) / 10 ** dec : Math.round(n);
+    if (strict) throw bad(`${label} : un nombre entre ${min} et ${max} est attendu.`);
+    return null;
+  };
   const type = {};
   for (const k of TYPE_KEYS) {
     const v = (src.type && src.type[k]) || {};
-    type[k] = { size: intIn(v.size, 10, 96, D.type[k].size), weight: [400, 500, 600, 700, 800].includes(Number(v.weight)) ? Number(v.weight) : D.type[k].weight, lineHeight: numIn(v.lineHeight, 1, 2, D.type[k].lineHeight) };
+    const lbl = TYPE_LABELS[k];
+    type[k] = {
+      size: intIn(v.size, 10, 96, D.type[k].size), weight: [400, 500, 600, 700, 800].includes(Number(v.weight)) ? Number(v.weight) : D.type[k].weight, lineHeight: numIn(v.lineHeight, 1, 2, D.type[k].lineHeight),
+      letterSpacing: opt(v.letterSpacing, -0.1, 0.5, `${lbl} : espacement des lettres`, 2) ?? 0,
+      transform: pick(v.transform, TRANSFORMS, `${lbl} : casse`, "none"),
+      fontStyle: pick(v.fontStyle, FONT_STYLES, `${lbl} : style`, "normal"),
+      color: ref(v.color, `${lbl} : couleur`),
+    };
   }
+  const l = src.link || {};
+  const link = { color: ref(l.color, "Liens : couleur"), hoverColor: ref(l.hoverColor, "Liens : couleur au survol"), underline: pick(l.underline, UNDERLINES, "Liens : soulignement", "") };
+  const li = src.list || {};
+  const list = { gap: opt(li.gap, 0, 32, "Listes : écart entre les éléments"), markerColor: ref(li.markerColor, "Listes : couleur des puces") };
+  const bt = src.buttons || {};
+  const state = (o, label) => ({ bg: ref(o && o.bg, `${label} : fond`), color: ref(o && o.color, `${label} : texte`), border: ref(o && o.border, `${label} : bordure`) });
+  const buttons = {
+    paddingY: opt(bt.paddingY, 4, 32, "Boutons : marge intérieure verticale"), paddingX: opt(bt.paddingX, 8, 64, "Boutons : marge intérieure horizontale"), borderWidth: opt(bt.borderWidth, 0, 6, "Boutons : épaisseur de bordure"),
+    normal: state(bt.normal, "Bouton"), hover: state(bt.hover, "Bouton au survol"), active: state(bt.active, "Bouton au clic"),
+    focus: { color: ref(bt.focus && bt.focus.color, "Focus : couleur du contour"), width: opt(bt.focus && bt.focus.width, 0, 8, "Focus : épaisseur du contour"), offset: opt(bt.focus && bt.focus.offset, 0, 8, "Focus : décalage du contour") },
+  };
+  const im = src.images || {};
+  const images = {
+    radius: opt(im.radius, 0, 48, "Images : rayon"), borderWidth: opt(im.borderWidth, 0, 8, "Images : épaisseur de bordure"), borderColor: ref(im.borderColor, "Images : couleur de bordure"),
+    shadow: im.shadow === "" || im.shadow === undefined || im.shadow === null ? "" : (Object.hasOwn(SHADOWS, im.shadow) ? im.shadow : (strict ? (() => { throw bad("Images : ombre inconnue."); })() : "")),
+    fit: pick(im.fit, IMAGE_FITS, "Images : ajustement", ""), position: pick(im.position, IMAGE_POSITIONS, "Images : position", ""),
+  };
+  const fm = src.forms || {};
+  const forms = {
+    bg: ref(fm.bg, "Champs : fond"), color: ref(fm.color, "Champs : texte"), borderColor: ref(fm.borderColor, "Champs : bordure"), borderWidth: opt(fm.borderWidth, 0, 4, "Champs : épaisseur de bordure"),
+    radius: opt(fm.radius, 0, 32, "Champs : rayon"), paddingY: opt(fm.paddingY, 4, 24, "Champs : marge intérieure verticale"), paddingX: opt(fm.paddingX, 6, 32, "Champs : marge intérieure horizontale"),
+    focusColor: ref(fm.focusColor, "Champs : couleur au focus"), placeholderColor: ref(fm.placeholderColor, "Champs : couleur de l'aide à la saisie"), labelColor: ref(fm.labelColor, "Champs : couleur des libellés"), accent: ref(fm.accent, "Champs : couleur des cases et boutons radio"),
+  };
   const space = {};
   for (const k of SPACE_KEYS) space[k] = intIn(src.space && src.space[k], 0, 200, D.space[k]);
   const radius = {};
@@ -99,7 +173,7 @@ function normalizeTokens(input = {}, { strict = false } = {}) {
   for (const k of Object.keys(D.shadow)) shadow[k] = Object.hasOwn(SHADOWS, src.shadow && src.shadow[k]) ? src.shadow[k] : D.shadow[k];
   const border = { width: intIn(src.border && src.border.width, 0, 4, D.border.width), color: HEX.test(String(src.border && src.border.color || "")) ? src.border.color.toLowerCase() : D.border.color };
   const sizes = { content: intIn(src.sizes && src.sizes.content, 640, 1600, D.sizes.content), narrow: intIn(src.sizes && src.sizes.narrow, 480, 1000, D.sizes.narrow), buttonHeight: intIn(src.sizes && src.sizes.buttonHeight, 32, 72, D.sizes.buttonHeight), fieldHeight: intIn(src.sizes && src.sizes.fieldHeight, 32, 72, D.sizes.fieldHeight) };
-  return { colors, customColors, fonts, type, space, radius, shadow, border, sizes };
+  return { colors, customColors, fonts, type, link, list, buttons, images, forms, space, radius, shadow, border, sizes };
 }
 
 // Texte lisible sur une couleur pleine (boutons) : blanc ou texte foncé, celui qui contraste le plus (WCAG)
@@ -128,4 +202,6 @@ function tokensToCss(tokens) {
   return `${v.join(";")};`;
 }
 
-module.exports = { DEFAULT_TOKENS, CUSTOM_KEY, MAX_CUSTOM_COLORS, FONT_ROLES, FONT_LABELS, COLOR_KEYS, COLOR_LABELS, TYPE_KEYS, TYPE_LABELS, SPACE_KEYS, FONTS, SHADOWS, normalizeTokens, tokensToCss, onColor, contrast };
+// Les jetons de typographie reçoivent les détails par défaut (espacement, casse, style, couleur)
+for (const k of TYPE_KEYS) Object.assign(DEFAULT_TOKENS.type[k], DEFAULT_TOKENS.typeExtra);
+module.exports = { COLOR_REF, TRANSFORMS, FONT_STYLES, UNDERLINES, IMAGE_FITS, IMAGE_POSITIONS, DEFAULT_TOKENS, CUSTOM_KEY, MAX_CUSTOM_COLORS, FONT_ROLES, FONT_LABELS, COLOR_KEYS, COLOR_LABELS, TYPE_KEYS, TYPE_LABELS, SPACE_KEYS, FONTS, SHADOWS, normalizeTokens, tokensToCss, onColor, contrast };

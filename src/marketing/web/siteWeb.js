@@ -99,14 +99,17 @@ module.exports = () => {
   const settingsError = (res, next, error) => {
     const { MarketingError } = require("../errors");
     if (!(error instanceof MarketingError)) return next(error);
-    res.status(error.code === "conflict" ? 409 : error.code === "not_found" ? 404 : 422).json({ error: { code: error.code, message: error.message } });
+    res.status(error.code === "conflict" ? 409 : error.code === "not_found" ? 404 : error.code === "forbidden" ? 403 : 422).json({ error: { code: error.code, message: error.message } });
   };
+  const siteSettings = require("../pages/siteSettings");
   const settingsPayload = (req, site) => ({
-    site: { id: site.id, name: site.name }, revision: site.settings_revision, tokens: site.tokens, canWrite: req.mk.can("forms.write"),
+    site: { id: site.id, name: site.name }, revision: site.settings_revision, tokens: site.tokens, settings: site.settings,
+    canWrite: req.mk.can("forms.write"), canCode: req.mk.can("pages.code"),
     usage: pages.colorUsage(req.mk.ctx, site.id),
     catalog: {
       colorKeys: tokens.COLOR_KEYS, colorLabels: tokens.COLOR_LABELS, maxCustomColors: tokens.MAX_CUSTOM_COLORS,
       fontRoles: tokens.FONT_ROLES, fontLabels: tokens.FONT_LABELS, fonts: Object.fromEntries(Object.entries(tokens.FONTS).map(([k, f]) => [k, { label: f.label, stack: f.stack }])),
+      typeKeys: tokens.TYPE_KEYS, typeLabels: tokens.TYPE_LABELS, shadows: Object.keys(tokens.SHADOWS), languages: siteSettings.LANGUAGES, maxCss: siteSettings.MAX_CSS,
     },
   });
   router.get("/site-web/sites/:id(\\d+)/reglages.json", need("forms.read"), (req, res, next) => {
@@ -117,7 +120,14 @@ module.exports = () => {
   });
   router.put("/site-web/sites/:id(\\d+)/reglages.json", need("forms.write"), (req, res, next) => {
     try {
-      const site = pages.saveSiteDesign(req.mk.ctx, intOrNull(req.params.id), { tokens: req.body && req.body.tokens, revision: req.body && req.body.revision });
+      const body = req.body || {};
+      const current = pages.requireSite(req.mk.ctx, intOrNull(req.params.id));
+      // Le CSS du site est du code : réservé à la permission « pages.code » (comme le widget HTML)
+      if (body.settings && body.settings.customCss !== undefined && String(body.settings.customCss).trim() !== String(current.settings.customCss).trim() && !req.mk.can("pages.code")) {
+        const { MarketingError } = require("../errors");
+        throw new MarketingError("forbidden", "Le CSS personnalisé du site est réservé aux comptes autorisés à écrire du code (permission « pages.code »).");
+      }
+      const site = pages.saveSiteDesign(req.mk.ctx, current.id, { tokens: body.tokens, settings: body.settings, name: body.name, revision: body.revision });
       res.set("Cache-Control", "no-store").json(settingsPayload(req, site));
     } catch (error) { settingsError(res, next, error); }
   });

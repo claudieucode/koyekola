@@ -126,10 +126,13 @@
     Array.prototype.forEach.call(animated, function (el) { io.observe(el); });
   }
   // Galerie : agrandir une image (visionneuse), flèches et Échap ; sans script, le lien ouvre l'image
-  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-lightbox]"), function (box) {
+  // Réglages du site (Visionneuse) : lus sur la page ; désactivée, le lien ouvre simplement l'image
+  var lbSet = document.body.dataset;
+  var lbOff = lbSet.kwLb === "off", lbArrows = lbSet.kwLbArrows !== "0", lbOverlayClose = lbSet.kwLbOverlayClose !== "0", lbAnim = lbSet.kwLbAnim || "fade";
+  Array.prototype.forEach.call(lbOff ? [] : document.querySelectorAll("[data-kw-lightbox]"), function (box) {
     var links = box.querySelectorAll(".kw-lb-open");
     if (!links.length || typeof HTMLDialogElement !== "function") return;
-    var dlg = document.createElement("dialog"); dlg.className = "kw-lightbox"; dlg.setAttribute("aria-label", "Image agrandie");
+    var dlg = document.createElement("dialog"); dlg.className = "kw-lightbox is-anim-" + lbAnim; dlg.setAttribute("aria-label", "Image agrandie");
     var img = document.createElement("img"); var cap = document.createElement("p"); cap.className = "kw-lightbox-cap";
     var close = document.createElement("button"); close.type = "button"; close.className = "kw-lightbox-close"; close.setAttribute("aria-label", "Fermer"); close.textContent = "×";
     var pv = document.createElement("button"); pv.type = "button"; pv.className = "kw-lightbox-nav is-prev"; pv.setAttribute("aria-label", "Image précédente"); pv.textContent = "‹";
@@ -142,8 +145,8 @@
     close.addEventListener("click", function () { dlg.close(); });
     pv.addEventListener("click", function () { show(at - 1); }); nx.addEventListener("click", function () { show(at + 1); });
     dlg.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft") show(at - 1); if (e.key === "ArrowRight") show(at + 1); });
-    dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
-    pv.hidden = nx.hidden = links.length < 2;
+    dlg.addEventListener("click", function (e) { if (lbOverlayClose && e.target === dlg) dlg.close(); });
+    pv.hidden = nx.hidden = links.length < 2 || !lbArrows;
   });
   // Menus : sous-menus (bouton, clavier), et menu mobile replié derrière un bouton
   Array.prototype.forEach.call(document.querySelectorAll(".kw-sub-toggle"), function (b) {

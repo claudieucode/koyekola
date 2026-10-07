@@ -4707,7 +4707,7 @@
   }
   // Pont avec le panneau « Réglages du site » (public/js/site-settings.js) : mêmes notifications, et le canevas est
   // redessiné par le même rendu serveur (donc avec les mêmes réglages que la page publiée) après chaque enregistrement
-  window.KWEditor = { siteId: PAGE.siteId || null, canWrite: canWrite, customColors: PAGE.customColors || [], toast: toast, rerender: function () { renderCanvas(); } };
+  window.KWEditor = { siteId: PAGE.siteId || null, canWrite: canWrite, customColors: PAGE.customColors || [], toast: toast, pickImage: function (cb) { openMedia({ title: "Choisir une image", onPick: function (m) { cb(m.path, m.alt || ""); } }); }, rerender: function () { renderCanvas(); } };
   $("[data-pb-mainmenu]").addEventListener("click", function () {
     var r = this.getBoundingClientRect();
     showMenuEntries([

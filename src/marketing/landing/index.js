@@ -237,7 +237,13 @@ function viewModel(ctx, page) {
   // CSS personnalisé de la page (revalidé à chaque affichage ; un CSS devenu invalide n'est simplement pas appliqué)
   let customCss = "";
   try { customCss = page.theme && page.theme.css ? pageNodes.normalizePageCss(page.theme.css) : ""; } catch { customCss = ""; }
-  return { ...page, sections, nodeCss: pageNodes.pageCss(sections), customCss };
+  // Points de rupture du site de la page (réglages du site) : écrans « Tablette » et « Mobile » de ses éléments
+  let breakpoints;
+  try {
+    const row = page.site_id ? ctx.db.prepare("SELECT settings FROM mk_sites WHERE id = ? AND organization_id = ?").get(page.site_id, ctx.organizationId) : null;
+    breakpoints = row ? require("../pages/siteSettings").breakpointsOf(require("../pages/siteSettings").normalizeSettings(JSON.parse(row.settings || "{}"))) : undefined;
+  } catch { breakpoints = undefined; }
+  return { ...page, sections, nodeCss: pageNodes.pageCss(sections, breakpoints), customCss };
 }
 // Liens cliquables d'une page AFFICHÉE (viewModel), dans l'ordre : le même calcul sert au rendu et à /p/<adresse>/clic/<n>
 function linksOf(page) {

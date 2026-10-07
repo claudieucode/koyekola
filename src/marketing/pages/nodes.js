@@ -1245,7 +1245,10 @@ function walk(nodes, fn, parent = null) {
 const visibleTree = (nodes, visitor, now = Date.now()) => (nodes || []).filter((n) => !n.hidden && scheduleMatches(n.schedule, now) && (visitor === undefined || audienceMatches(n.audience, visitor))).map((n) => (n.children ? { ...n, children: visibleTree(n.children, visitor) } : n));
 
 // CSS d'une page : une règle par élément stylé (et par section stylée), par écran et par état. Valeurs déjà validées.
-function pageCss(sections) {
+// breakpoints : { tablet, mobile } = largeurs maximales (px) des écrans « Tablette » et « Mobile » du site (réglages du site)
+const DEFAULT_BREAKPOINTS = { tablet: 1023, mobile: 767 };
+function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
+  const mediaOf = (bp) => (bp.key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : bp.key === "mobile" ? `(max-width: ${breakpoints.mobile}px)` : bp.media);
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
   const clamps = { tablet: [], mobile: [] }; // cases de grille ramenées au nombre de colonnes de l'écran : écrites après toutes les autres règles
   const add = (id, styles, states) => {
@@ -1314,7 +1317,12 @@ function pageCss(sections) {
   }
   for (const k of Object.keys(clamps)) if (rules.media[k]) rules.media[k].push(...clamps[k]);
   let css = rules.base.join("\n");
-  for (const bp of BREAKPOINTS) if (bp.media && rules.media[bp.key].length) css += `\n@media ${bp.media}{${rules.media[bp.key].join("")}}`;
+  for (const bp of BREAKPOINTS) if (bp.media && rules.media[bp.key].length) css += `\n@media ${mediaOf(bp)}{${rules.media[bp.key].join("")}}`;
+  // « Masquer sur cet écran » : mêmes seuils que les écrans du site (réglages du site)
+  // (écrites seulement si la page masque quelque chose selon l'écran)
+  if (/"hideOn":\["/.test(JSON.stringify(sections))) {
+    css += `\n@media (min-width:${breakpoints.tablet + 1}px){.lp-hide-desktop{display:none}}\n@media (min-width:${breakpoints.mobile + 1}px) and (max-width:${breakpoints.tablet}px){.lp-hide-tablet{display:none}}\n@media (max-width:${breakpoints.mobile}px){.lp-hide-mobile{display:none}}`;
+  }
   // Le CSS personnalisé vient en dernier (il précise les réglages de l'inspecteur), avec une spécificité plus forte
   if (rules.custom.length) css += `\n${rules.custom.join("\n")}`;
   return css.replace(/</g, "");

@@ -65,6 +65,7 @@
 .lp-signup .hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .lp-foot { padding: 24px 16px 32px; text-align: center; font-size: 14px; opacity: 0.7; }
 .lp-foot a { color: inherit; }
+.lp-foot-logo { display: inline-block; height: 32px; width: auto; max-width: 160px; vertical-align: middle; object-fit: contain; }
 /* ---------- Sections du moteur de pages (Site Web) ---------- */
 .lp-block { position: relative; }
 .lp-block > :first-child { margin-top: 0; }
@@ -93,10 +94,7 @@
 .lp-w-narrow { max-width: 560px; margin-inline: auto; }
 .lp-w-wide { margin-inline: calc(50% - min(540px, 50vw - 16px)); }
 .lp-block.lp-w-full { margin-inline: calc(50% - 50vw); border-radius: 0; padding-inline: max(16px, calc(50vw - 380px)); }
-/* Masquer selon l'écran (mêmes seuils que l'aperçu de l'éditeur) */
-@media (min-width: 1024px) { .lp-hide-desktop { display: none; } }
-@media (min-width: 768px) and (max-width: 1023px) { .lp-hide-tablet { display: none; } }
-@media (max-width: 767px) { .lp-hide-mobile { display: none; } }
+/* Masquer selon l'écran : règles émises avec le CSS de la page (pageCss), selon les points de rupture du site */
 .lp-intro { margin: 0 0 16px; opacity: 0.85; }
 .lp-features > h2, .lp-faq > h2, .lp-testimonials > h2 { margin-bottom: 16px; }
 .lp-cols-1 { grid-template-columns: minmax(0, 1fr); }
@@ -532,8 +530,14 @@ a.kw-icon:focus-visible { outline: 3px solid var(--lp-accent, #0277b6); outline-
 .kw-gallery.is-masonry img { height: auto; aspect-ratio: auto; }
 .kw-lb-open { cursor: zoom-in; }
 .kw-lightbox { max-width: min(96vw, 1200px); max-height: 94vh; padding: 12px; border: 0; border-radius: 12px; background: #0b1620; color: #fff; overflow: hidden; }
-.kw-lightbox::backdrop { background: rgba(5, 12, 20, .82); }
+.kw-lightbox::backdrop { background: var(--kw-lb-overlay, rgba(5, 12, 20, .82)); }
+.kw-lightbox.is-anim-fade[open] { animation: kw-lb-fade .22s ease; }
+@keyframes kw-lb-fade { from { opacity: 0; } to { opacity: 1; } }
+.kw-lightbox.is-anim-zoom[open] { animation: kw-lb-zoom .22s ease; }
+@keyframes kw-lb-zoom { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .kw-lightbox[open] { animation: none; } }
 .kw-lightbox img { display: block; max-width: 100%; max-height: calc(94vh - 80px); margin: 0 auto; object-fit: contain; }
+body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 .kw-lightbox-cap { margin: 8px 40px 0; text-align: center; font-size: 14px; }
 .kw-lightbox-close, .kw-lightbox-nav { position: absolute; z-index: 1; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .14); color: #fff; font-size: 26px; line-height: 1; cursor: pointer; }
 .kw-lightbox-close { top: 8px; right: 8px; }
