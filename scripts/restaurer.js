@@ -31,7 +31,7 @@ if (!dbName) {
     if (!list.length) console.log("  (aucune)");
     list.forEach((f) => console.log(`  ${f}  (${mb(path.join(backupDir, f))})`));
   };
-  show(/^KOYEKOLA-\d{4}-.*\.db$/, "Bases :");
+  show(/^KOYEKOLA-(\d{4}|auto-).*\.db$/, "Bases (manuelles et copies automatiques quotidiennes) :");
   show(/^KOYEKOLA-uploads-.*\.tar\.gz$/, "Fichiers envoyés :");
   show(/^AVANT-.*\.db$/, "Copies de sécurité automatiques (avant migration / restauration) :");
   console.log("\nPour restaurer : npm run restaurer -- <base.db> [--fichiers <archive.tar.gz>] --confirmer");

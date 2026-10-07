@@ -1,10 +1,10 @@
 // Aucun prestataire de paiement n'est encore branché : une « commande » inscrit l'élève sans débiter de carte.
-// En production, une commande payante est donc refusée (sinon toute formation payante serait gratuite) ;
-// seules les commandes à 0 € passent (formations gratuites, code promo à 100 %).
-// PAIEMENT_SIMULE=1 rouvre le mode démonstration en production (aucune carte débitée) : jamais avec de vrais clients.
-// Hors production (développement, tests), le mode démonstration reste ouvert.
+// Les commandes payantes sont donc refusées par défaut, quel que soit l'environnement (sinon toute formation payante
+// serait gratuite) ; seules les commandes à 0 € passent (formations gratuites, code promo à 100 %).
+// PAIEMENT_SIMULE=1 ouvre le mode démonstration (commande payante validée SANS paiement) : jamais avec de vrais clients.
+// Les tests automatiques (NODE_ENV=test) gardent le mode démonstration pour vérifier le parcours d'achat.
 function paidCheckoutOpen() {
-  return process.env.NODE_ENV !== "production" || process.env.PAIEMENT_SIMULE === "1";
+  return process.env.PAIEMENT_SIMULE === "1" || process.env.NODE_ENV === "test";
 }
 
 module.exports = { paidCheckoutOpen };

@@ -307,6 +307,7 @@
 .g-back:focus-visible, .g-module:focus-visible, .g-feed-text a:focus-visible { outline: 2px solid var(--dash-accent); outline-offset: 2px; border-radius: 4px; }
 .g-flash { margin: 0 0 var(--s4); padding: var(--s3) var(--s4); border-radius: var(--dash-radius-sm); border: 1px solid color-mix(in srgb, var(--dash-success) 35%, var(--dash-border)); background: color-mix(in srgb, var(--dash-success) 10%, var(--dash-card)); color: var(--dash-text); font-size: 14px; }
 .g-flash.is-error { border-color: color-mix(in srgb, var(--dash-danger) 40%, var(--dash-border)); background: color-mix(in srgb, var(--dash-danger) 10%, var(--dash-card)); }
+.g-flash.is-warning { border-color: color-mix(in srgb, var(--dash-warning) 45%, var(--dash-border)); background: color-mix(in srgb, var(--dash-warning) 10%, var(--dash-card)); }
 .g-state { margin-bottom: var(--s4); }
 .g-state h2 { margin: 0 0 var(--s2); font-size: 18px; color: var(--dash-text); }
 .g-state .btn { margin-top: var(--s3); }

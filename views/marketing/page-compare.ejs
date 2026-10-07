@@ -1,0 +1,24 @@
+<%- include("partials/top", { title, active }) %>
+<% const when = new Date(version.createdAt).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }); %>
+    <p class="mk-back"><a href="/marketing/pages/<%= page.id %>">← <%= page.name %></a></p>
+    <div class="mk-head"><h1>Version <%= version.number %> ↔ état actuel</h1></div>
+    <p class="mk-lead">Ce qui a changé entre la version <%= version.number %> (publiée le <%= when %>) et l'état actuel de la page (<%= page.hasDraft ? "brouillon" : "version en ligne" %>). Chaque section et chaque élément est suivi par son identifiant.</p>
+    <div class="mk-row-actions">
+      <a class="btn btn-outline btn-sm" href="/marketing/pages/<%= page.id %>/versions/<%= version.number %>/apercu" target="_blank" rel="noopener">Voir la version <%= version.number %></a>
+      <a class="btn btn-outline btn-sm" href="/marketing/pages/<%= page.id %>/apercu" target="_blank" rel="noopener">Voir l'état actuel</a>
+      <% if (canWrite) { %><form action="/marketing/pages/<%= page.id %>/versions/<%= version.number %>/restaurer" method="post"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Le contenu de la version <%= version.number %> remplace votre brouillon actuel. La page en ligne ne change pas tant que vous ne publiez pas." data-mk-confirm-title="Restaurer la version <%= version.number %> ?" data-mk-confirm-ok="Restaurer dans le brouillon">Restaurer cette version dans le brouillon</button></form><% } %>
+    </div>
+    <% if (!diff.total) { %>
+      <section class="mk-panel"><p>Aucune différence : l'état actuel est identique à cette version.</p></section>
+    <% } else { %>
+      <div class="mk-stats mk-stats-3">
+        <div class="mk-stat"><span class="mk-stat-label">Ajoutés depuis</span><span class="mk-stat-value"><%= diff.added.length %></span></div>
+        <div class="mk-stat"><span class="mk-stat-label">Retirés depuis</span><span class="mk-stat-value"><%= diff.removed.length %></span></div>
+        <div class="mk-stat"><span class="mk-stat-label">Modifiés</span><span class="mk-stat-value"><%= diff.modified.length + diff.page.length %></span></div>
+      </div>
+      <% if (diff.page.length) { %><section class="mk-panel" aria-labelledby="cmp-page"><h2 id="cmp-page">Réglages de la page</h2><ul><% diff.page.forEach((x) => { %><li><%= x %> modifié</li><% }) %></ul></section><% } %>
+      <% if (diff.added.length) { %><section class="mk-panel" aria-labelledby="cmp-added"><h2 id="cmp-added">Ajoutés depuis la version <%= version.number %></h2><ul><% diff.added.forEach((x) => { %><li><%= x.label %></li><% }) %></ul></section><% } %>
+      <% if (diff.removed.length) { %><section class="mk-panel" aria-labelledby="cmp-removed"><h2 id="cmp-removed">Retirés depuis la version <%= version.number %></h2><ul><% diff.removed.forEach((x) => { %><li><%= x.label %></li><% }) %></ul></section><% } %>
+      <% if (diff.modified.length) { %><section class="mk-panel" aria-labelledby="cmp-modified"><h2 id="cmp-modified">Modifiés</h2><ul><% diff.modified.forEach((x) => { %><li><strong><%= x.label %></strong> : <%= x.what.join(", ") %></li><% }) %></ul></section><% } %>
+    <% } %>
+<%- include("partials/bottom") %>

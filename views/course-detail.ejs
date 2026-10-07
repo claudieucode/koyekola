@@ -278,21 +278,21 @@
             <% } %>
           <% } else if (enrolled) { %>
             <a href="/apprendre/<%= course.slug %>" class="btn btn-success btn-block">Continuer la formation</a>
-          <% } else if (!currentUser) { %>
-            <a href="/connexion?redirect=<%= encodeURIComponent('/cours/' + course.slug) %>" class="btn btn-primary btn-block">Se connecter pour acheter</a>
           <% } else if (course.price_cents > 0 && !paidCheckoutOpen) { %>
             <p class="purchase-soon" role="note">L'achat en ligne ouvre bientôt.</p>
             <a href="/contact" class="btn btn-primary btn-block">Nous contacter pour la suivre</a>
+          <% } else if (!currentUser) { %>
+            <a href="/connexion?redirect=<%= encodeURIComponent('/cours/' + course.slug) %>" class="btn btn-primary btn-block">Se connecter pour acheter</a>
           <% } else { %>
             <form action="/panier/ajouter/<%= course.id %>" method="post">
               <input type="hidden" name="buyNow" value="1">
-              <button type="submit" class="btn btn-primary btn-block">Acheter maintenant</button>
+              <button type="submit" class="btn btn-primary btn-block" data-kw-event="add_to_cart:<%= course.id %>">Acheter maintenant</button>
             </form>
             <% if (inCart) { %>
               <a href="/panier" class="btn btn-outline btn-block">Déjà dans le panier — voir</a>
             <% } else { %>
               <form action="/panier/ajouter/<%= course.id %>" method="post">
-                <button type="submit" class="btn btn-secondary btn-block">Ajouter au panier</button>
+                <button type="submit" class="btn btn-secondary btn-block" data-kw-event="add_to_cart:<%= course.id %>">Ajouter au panier</button>
               </form>
             <% } %>
           <% } %>

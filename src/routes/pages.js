@@ -66,6 +66,11 @@ const listFaqs = (courseId) =>
     ? db.prepare("SELECT * FROM faqs WHERE course_id = ? ORDER BY position, id").all(courseId)
     : db.prepare("SELECT * FROM faqs WHERE course_id IS NULL ORDER BY position, id").all();
 
+// Cookies et mesure d'audience : ce qui est mesuré, avec ou sans accord, et comment changer d'avis
+router.get("/cookies", (req, res) => {
+  res.render("pages/cookies", { crumbs: [{ name: "Accueil", url: "/" }, { name: "Cookies" }] });
+});
+
 router.get("/faq", (req, res) => {
   const faqs = listFaqs(null);
   const crumbs = [{ name: "Accueil", url: "/" }, { name: "Questions fréquentes" }];

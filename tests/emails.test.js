@@ -209,7 +209,7 @@ describe("e-mails du site : pages web", () => {
     assert.equal(f.double_optin, 1); // activée par défaut pour un nouveau formulaire
     await boss.post(`/marketing/formulaires/${f.id}/publier`);
     const v = new Client(srv.base);
-    const res = await v.post(`/f/${f.slug}`, { email: "abonne@exemple.fr", consent: "on" });
+    const res = await v.post(`/f/${f.slug}`, { ft: srv.formToken(), email: "abonne@exemple.fr", consent: "on" });
     assert.equal(res.location, `/f/${f.slug}?envoye=1&confirmer=1`);
     assert.match((await v.get(res.location)).text, /Vérifiez votre boîte e-mail/);
     const mail = await waitFor(() => q("SELECT body FROM mail_outbox WHERE kind = 'newsletter_confirm'"));

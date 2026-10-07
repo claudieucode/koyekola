@@ -14,7 +14,7 @@ const save = (extra = {}) => boss.post(`/marketing/formulaires/${formId}`, pairs
 // Une adresse IP différente par inscription publique (en-tête du mandataire, que le serveur prend en compte) :
 // la limite de 5 inscriptions par heure et par IP reste intacte, mais ne bloque pas une série de tests.
 let ipSeq = 0;
-const publicPost = (form, headers = {}) => new Client(srv.base).request(`/f/${slug}`, { method: "POST", form, headers: { "x-forwarded-for": `10.9.0.${++ipSeq}`, ...headers } });
+const publicPost = (form, headers = {}) => new Client(srv.base).request(`/f/${slug}`, { method: "POST", form: { ft: srv.formToken(), ...form }, headers: { "x-forwarded-for": `10.9.0.${++ipSeq}`, ...headers } });
 const flashOf = async (res) => (await boss.get(res.location)).text;
 const contact = (email) => sql("SELECT * FROM mk_contacts WHERE email = ?", email)[0];
 const propsOf = (email) => Object.fromEntries(sql(

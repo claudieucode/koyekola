@@ -34,7 +34,15 @@ const FROZEN = {
   "022_tests_ab.sql": "d80e9b4c5538975468d01e8490561bfb9e5a22f5749fed0590a96b0b7ff1b1c9",
   "023_revenus.sql": "c4d67399a995ce1a08a0008fc0db55ee5b3a5ac15f655d588b2111470e988b33",
   "024_medias.sql": "c86eb7f59e824b0bc8c3392db747ae71695a8376027e25842ad8b35c83b922db",
-  "034_parcours_bibliotheque.sql": "6a2204704c6e9f80ef75581ef11539e675b2e823948a9ee2475365798c9e6576"
+  "034_parcours_bibliotheque.sql": "6a2204704c6e9f80ef75581ef11539e675b2e823948a9ee2475365798c9e6576",
+  "035_index_cles_etrangeres.sql": "6fece1f4d8780e4ad9946b965956521e6d4929c309482e2b6678c981e71d7c8c",
+  "036_site_web_fondations.sql": "dc1b85df1f1cb0193df9028ebe7ba7003af55105bb76e344ad1e985ed22babcb",
+  "037_formulaires_etendus.sql": "e6bbe9d4bf096899759d57791d16b884d26823e640b62d818fd38a39fe5e69d1",
+  "038_suivi_visiteurs.sql": "3d6f4b64590381762548ea2d55df83edfc7b3bc05b3e5771dd2993184283119d",
+  "039_tunnels.sql": "df9801218cd06b409a7a5d7ec1fd71b38882d14cbabd22c7e7d523bf53dd7e4d",
+  "040_tests_ab_pages.sql": "49d609b80424a0f1bd862ed4b4d5eb565319ab249241c37e0a3878e07a364532",
+  "041_scoring.sql": "ddf9372f5f608465f8c3b3543b90328c5a2550fcdad3e47c77857e0d75f46fd2",
+  "042_modeles_et_parties_de_site.sql": "9210501c1d18327110c5ef22406838e3e45bb59184783fa98cba64ffeddf6ac4"
 };
 
 test("aucune migration marketing publiée n'a été modifiée", () => {

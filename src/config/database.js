@@ -406,6 +406,10 @@ if (!userColumns.includes("avatar_path")) db.exec("ALTER TABLE users ADD COLUMN 
 // Fuseau horaire du navigateur (IANA), relevé à l'inscription et à chaque connexion : sert à l'envoi des e-mails à
 // l'heure locale de l'élève (Marketing → heure d'envoi). Vide = inconnu.
 if (!userColumns.includes("timezone")) db.exec("ALTER TABLE users ADD COLUMN timezone TEXT NOT NULL DEFAULT ''");
+// Compte supprimé à la demande de la personne (RGPD) : la ligne reste, anonymisée, pour l'historique des ventes
+if (!userColumns.includes("deleted_at")) db.exec("ALTER TABLE users ADD COLUMN deleted_at TEXT");
+// Adresse e-mail confirmée (lien reçu à l'inscription) : informative, ne bloque jamais l'accès au compte
+if (!userColumns.includes("email_verified_at")) db.exec("ALTER TABLE users ADD COLUMN email_verified_at TEXT");
 
 // ---------- Centre de gestion ----------
 // Codes promo (appliqués au paiement, aux formations du formateur qui les crée ; une seule formation si course_id)

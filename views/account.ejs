@@ -1,0 +1,53 @@
+<%- include("partials/header", { title: "Mon compte" }) %>
+
+  <div class="container-wide dashboard-header">
+    <h1>Mon compte</h1>
+    <p>Vos informations et vos données personnelles.</p>
+  </div>
+
+  <div class="container-wide section-tight account-page">
+    <% if (error) { %><p class="field-error" role="alert"><%= error %></p><% } %>
+    <% if (notice) { %><p class="account-notice" role="status"><%= notice %></p><% } %>
+
+    <section class="card card-pad account-section" aria-labelledby="acc-info">
+      <h2 id="acc-info">Informations</h2>
+      <dl class="account-facts">
+        <div><dt>Nom d'utilisateur</dt><dd><%= account.username %></dd></div>
+        <div><dt>Adresse e-mail</dt><dd><%= account.email %> <span class="badge <%= account.email_verified_at ? "badge-success" : "badge-warning" %>"><%= account.email_verified_at ? "Confirmée" : "Non confirmée" %></span></dd></div>
+        <div><dt>Compte créé le</dt><dd><%= formatDate(account.created_at) %></dd></div>
+        <div><dt>Formations suivies</dt><dd><%= stats.courses %></dd></div>
+      </dl>
+      <% if (!account.email_verified_at) { %>
+        <form method="post" action="/mon-compte/confirmer-email" class="account-inline-form">
+          <span class="field-hint">Confirmez votre adresse avec le lien reçu à l'inscription.</span>
+          <button type="submit" class="btn btn-outline btn-sm">Recevoir un nouveau lien</button>
+        </form>
+      <% } %>
+      <p class="field-hint">Mot de passe oublié ou à changer ? <a href="/mot-de-passe-oublie">Recevoir un lien de réinitialisation</a>.</p>
+    </section>
+
+    <section class="card card-pad account-section" aria-labelledby="acc-data">
+      <h2 id="acc-data">Mes données</h2>
+      <p>Téléchargez tout ce que le site garde sur vous : compte, formations, commandes, progression, notes, avis, commentaires, favoris, messages envoyés et préférences d'e-mails.</p>
+      <a href="/mon-compte/mes-donnees.json" class="btn btn-outline" download><%- icon("download", { size: 17 }) %> Télécharger mes données (JSON)</a>
+    </section>
+
+    <section class="card card-pad account-section account-danger" aria-labelledby="acc-delete">
+      <h2 id="acc-delete">Supprimer mon compte</h2>
+      <% if (!canDelete) { %>
+        <p>Le compte du formateur porte les formations et les réglages du site : il ne peut pas être supprimé depuis cette page.</p>
+      <% } else { %>
+        <p>La suppression est <strong>définitive</strong> : vous perdez l'accès à vos formations<%= stats.courses ? ` (${stats.courses})` : "" %>, à votre progression et à vos certificats. Vos notes, avis, commentaires et favoris sont effacés, ainsi que votre inscription aux e-mails.<%= stats.orders ? " Vos commandes restent dans notre comptabilité, sans votre nom ni votre adresse e-mail." : "" %></p>
+        <form method="post" action="/mon-compte/supprimer" class="account-delete-form">
+          <div class="field-group">
+            <label for="acc-password">Votre mot de passe</label>
+            <input id="acc-password" type="password" name="password" autocomplete="current-password" required>
+          </div>
+          <label class="checkbox-row"><input type="checkbox" name="confirm" required> Je comprends que la suppression est définitive.</label>
+          <button type="submit" class="btn btn-danger">Supprimer définitivement mon compte</button>
+        </form>
+      <% } %>
+    </section>
+  </div>
+
+<%- include("partials/footer") %>

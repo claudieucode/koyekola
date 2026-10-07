@@ -57,13 +57,55 @@
           <% if (!properties.length) { %>
             <p class="field-hint">Aucune propriété définie. Créez-en dans <a href="/marketing/proprietes">Audience → Propriétés</a> (ville, niveau, date de naissance…) pour pouvoir les demander ici.</p>
           <% } else { %>
-            <p class="field-hint">Chacune s'affiche avec le bon type de champ et sa valeur est vérifiée avant l'inscription. Toutes restent facultatives pour le visiteur.</p>
+            <p class="field-hint">Chacune s'affiche avec le bon type de champ et sa valeur est vérifiée avant l'inscription. Facultatives par défaut : rendez-les obligatoires ou conditionnelles dans « Options des champs ».</p>
             <div class="mk-check-grid">
               <% properties.forEach((p) => { %>
                 <label class="checkbox-row"><input type="checkbox" name="propertyFields" value="<%= p.key %>" <%= item.propertyFields.includes(p.key) ? "checked" : "" %>> <span><%= p.label %> <span class="mk-sub"><%= propertyTypeLabel[p.type] || p.type %></span></span></label>
               <% }) %>
             </div>
           <% } %>
+        </fieldset>
+
+        <%
+          const fsAll = [...item.fields.map((k) => ({ key: k, label: fieldCatalog[k], type: "text", standard: true })), ...defs.map((d) => ({ key: d.name, label: d.label, type: d.type, options: d.options }))];
+          const fsv = (k) => item.fieldSettings[k] || {};
+        %>
+        <fieldset class="seo-fieldset">
+          <legend>Options des champs</legend>
+          <input type="hidden" name="fsShown" value="1">
+          <% if (!fsAll.length) { %><p class="field-hint">Seule l'adresse e-mail est demandée (toujours obligatoire). Cochez des champs ci-dessus et enregistrez pour régler leurs options.</p>
+          <% } else { %>
+            <p class="field-hint">L'adresse e-mail est toujours obligatoire. Une condition affiche un champ seulement selon la réponse à un champ placé AVANT ; un champ caché n'est ni exigé ni enregistré (vérifié par le serveur). Champ coché ci-dessus mais absent ici : enregistrez d'abord.</p>
+            <div class="mk-fs-list">
+              <% fsAll.forEach((f, i) => { const v = fsv(f.key); const c = v.showIf || {}; const before = fsAll.slice(0, i); const id = "fs-" + i; %>
+                <div class="mk-fs-row">
+                  <p class="mk-fs-name"><strong><%= f.label %></strong></p>
+                  <label class="checkbox-row"><input type="checkbox" name="fs[<%= f.key %>][required]" value="1"<%= v.required ? " checked" : "" %>> Obligatoire</label>
+                  <% if (f.type === "select") { %><div class="field-group"><label for="<%= id %>-d">Affichage</label><select id="<%= id %>-d" name="fs[<%= f.key %>][display]"><option value="">Liste déroulante</option><option value="radio"<%= v.display === "radio" ? " selected" : "" %>>Boutons radio</option></select></div>
+                  <% } else if (f.type === "text") { %><div class="field-group"><label for="<%= id %>-d">Affichage</label><select id="<%= id %>-d" name="fs[<%= f.key %>][display]"><option value="">Une ligne</option><option value="textarea"<%= v.display === "textarea" ? " selected" : "" %>>Zone de texte (plusieurs lignes)</option></select></div><% } %>
+                  <% if (before.length) { %>
+                    <div class="mk-fs-cond">
+                      <div class="field-group"><label for="<%= id %>-f">Afficher seulement si</label><select id="<%= id %>-f" name="fs[<%= f.key %>][field]"><option value="">Toujours affiché</option><% before.forEach((b) => { %><option value="<%= b.key %>"<%= c.field === b.key ? " selected" : "" %>><%= b.label %></option><% }) %></select></div>
+                      <div class="field-group"><label for="<%= id %>-o">Condition</label><select id="<%= id %>-o" name="fs[<%= f.key %>][op]"><% Object.entries(OPS).forEach(([op, label]) => { %><option value="<%= op %>"<%= c.op === op ? " selected" : "" %>><%= label %></option><% }) %></select></div>
+                      <div class="field-group"><label for="<%= id %>-v">Valeur</label><input id="<%= id %>-v" type="text" name="fs[<%= f.key %>][value]" maxlength="100" value="<%= c.value || "" %>" placeholder="Ex. Oui, Photoshop…"></div>
+                    </div>
+                  <% } %>
+                </div>
+              <% }) %>
+            </div>
+          <% } %>
+        </fieldset>
+
+        <fieldset class="seo-fieldset">
+          <legend>Fichier joint (facultatif)</legend>
+          <input type="hidden" name="fileShown" value="1">
+          <label class="checkbox-row"><input type="checkbox" name="file[enabled]" value="1"<%= item.fileField.enabled ? " checked" : "" %>> Demander un fichier (image ou PDF, 5 Mo au plus)</label>
+          <div class="field-row">
+            <div class="field-group"><label for="ff-file-label">Libellé</label><input id="ff-file-label" type="text" name="file[label]" maxlength="80" value="<%= item.fileField.label || "Fichier joint" %>"></div>
+            <div class="field-group"><label for="ff-file-accept">Types acceptés</label><select id="ff-file-accept" name="file[accept]"><% Object.entries(ACCEPT).forEach(([k, a]) => { %><option value="<%= k %>"<%= (item.fileField.accept || "both") === k ? " selected" : "" %>><%= a.label %></option><% }) %></select></div>
+          </div>
+          <label class="checkbox-row"><input type="checkbox" name="file[required]" value="1"<%= item.fileField.required ? " checked" : "" %>> Fichier obligatoire</label>
+          <p class="field-hint">Le type est vérifié sur le contenu réel du fichier. Les fichiers sont rangés à part (jamais publics) et visibles par l'équipe sur la fiche du contact. Incompatible avec l'affichage en pop-up.</p>
         </fieldset>
 
         <fieldset class="seo-fieldset">
@@ -111,6 +153,31 @@
               <input id="ff-freq" type="number" name="popupFrequencyDays" min="1" max="90" value="<%= item.popupFrequencyDays %>">
             </div>
           </div>
+        </fieldset>
+
+        <% const R = item.popupRules || {}; %>
+        <fieldset class="seo-fieldset">
+          <legend>Règles d'affichage du pop-up</legend>
+          <input type="hidden" name="rulesShown" value="1">
+          <p class="field-hint">Toutes les règles cochées doivent être remplies en même temps. Plusieurs pop-ups peuvent être actifs : sur une page, le plus récemment modifié dont les règles sont remplies s'affiche (un seul à la fois).</p>
+          <div class="field-row">
+            <div class="field-group"><label for="ff-pages-mode">Pages</label><select id="ff-pages-mode" name="rules[pagesMode]"><option value="all">Toutes les pages</option><option value="include"<%= R.pages && R.pages.mode === "include" ? " selected" : "" %>>Seulement ces pages</option><option value="exclude"<%= R.pages && R.pages.mode === "exclude" ? " selected" : "" %>>Toutes sauf ces pages</option></select></div>
+            <div class="field-group"><label for="ff-pages">Adresses (une par ligne ; « * » final = toutes celles qui commencent ainsi)</label><textarea id="ff-pages" name="rules[paths]" rows="3" placeholder="/blog&#10;/cours/photoshop*"><%= R.pages ? R.pages.paths.join("\n") : "" %></textarea></div>
+          </div>
+          <div class="field-row">
+            <div class="field-group"><label for="ff-device">Appareil</label><select id="ff-device" name="rules[devices]"><option value="">Tous</option><option value="desktop"<%= R.devices && R.devices[0] === "desktop" ? " selected" : "" %>>Ordinateur et tablette</option><option value="mobile"<%= R.devices && R.devices[0] === "mobile" ? " selected" : "" %>>Mobile seulement</option></select></div>
+            <div class="field-group"><label for="ff-minpages">Après combien de pages vues pendant la visite</label><input id="ff-minpages" type="number" name="rules[minPages]" min="1" max="20" value="<%= R.minPages || 1 %>"></div>
+          </div>
+          <div class="field-row">
+            <div class="field-group"><label for="ff-utm-source">Visite venant de la source (utm_source contient)</label><input id="ff-utm-source" type="text" name="rules[utmSource]" maxlength="80" value="<%= R.utmSource || "" %>" placeholder="facebook"></div>
+            <div class="field-group"><label for="ff-utm-campaign">Campagne (utm_campaign contient)</label><input id="ff-utm-campaign" type="text" name="rules[utmCampaign]" maxlength="80" value="<%= R.utmCampaign || "" %>" placeholder="rentree-2026"></div>
+            <div class="field-group"><label for="ff-referrer">Site d'origine (contient)</label><input id="ff-referrer" type="text" name="rules[referrer]" maxlength="80" value="<%= R.referrer || "" %>" placeholder="google"></div>
+          </div>
+          <div class="field-group"><label for="ff-visitors">Visiteurs</label><select id="ff-visitors" name="rules[visitors]"><option value="">Tous</option><option value="new"<%= R.visitors === "new" ? " selected" : "" %>>Nouveaux visiteurs (première visite)</option><option value="returning"<%= R.visitors === "returning" ? " selected" : "" %>>Visiteurs déjà venus</option></select>
+            <p class="field-hint">Connu seulement pour les visiteurs qui ont accepté la mesure d'audience : les autres ne voient pas un pop-up réservé aux nouveaux ou aux anciens visiteurs.</p></div>
+          <label class="checkbox-row"><input type="checkbox" name="rules[hideForStudents]" value="1"<%= R.hideForStudents ? " checked" : "" %>> Ne pas afficher aux personnes connectées à leur compte</label>
+          <label class="checkbox-row"><input type="checkbox" name="rules[hideIfSubscribed]" value="1"<%= R.hideIfSubscribed ? " checked" : "" %>> Ne pas afficher aux contacts déjà abonnés (compte connecté, ou inscription faite dans ce navigateur)</label>
+          <p class="field-hint">Pages vues et provenance sont gardées dans l'onglet du visiteur le temps de sa visite, jamais envoyées au serveur.</p>
         </fieldset>
 
         <button type="submit" class="btn btn-primary">Enregistrer</button>

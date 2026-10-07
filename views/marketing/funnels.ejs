@@ -1,0 +1,45 @@
+<%- include("partials/top", { title, active }) %>
+<% const canWrite = mk.can("forms.write"); const pct = (r) => (r === null || r === undefined ? "—" : `${String(r).replace(".", ",")} %`); %>
+    <div class="mk-head"><h1>Tunnels</h1><% if (canWrite && !archived) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un tunnel</button><% } %></div>
+    <p class="mk-lead">Un tunnel conduit le visiteur d'étape en étape : page d'atterrissage, inscription, remerciement, page de vente, formation… Chaque étape est une vraie page, composée dans le même éditeur visuel que Site Web.</p>
+    <nav class="mk-tabs" aria-label="Tunnels actifs ou archivés">
+      <a class="mk-tab" href="/marketing/tunnels"<%- archived ? "" : ' aria-current="page"' %>>Tunnels</a>
+      <a class="mk-tab" href="/marketing/tunnels?vue=archives"<%- archived ? ' aria-current="page"' : "" %>>Archivés</a>
+    </nav>
+    <% if (!list.length) { %>
+      <div class="mk-empty"><%- icon("filter", { size: 32 }) %><h2><%= archived ? "Aucun tunnel archivé" : "Aucun tunnel" %></h2>
+        <p><%= archived ? "Un tunnel archivé garde ses étapes et ses statistiques ; rien n'est effacé." : "Créez votre premier tunnel, vide ou à partir d'un modèle qui crée les vraies pages de chaque étape." %></p>
+        <% if (canWrite && !archived) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un tunnel</button></div><% } %></div>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable">
+        <caption class="sr-only"><%= archived ? "Tunnels archivés" : "Tunnels" %> — chiffres des 30 derniers jours</caption>
+        <thead><tr><th scope="col">Tunnel</th><th scope="col" class="mk-num">Étapes</th><th scope="col" class="mk-num">Entrées (30 j)</th><th scope="col" class="mk-num">Inscriptions (30 j)</th><th scope="col" class="mk-num">Conversion</th><th scope="col">Modifié le</th></tr></thead>
+        <tbody><% list.forEach((f) => { %>
+          <tr><th scope="row" data-label="Tunnel"><a href="/marketing/tunnels/<%= f.id %>"><%= f.name %></a><% if (f.description) { %><span class="mk-sub"><%= f.description %></span><% } %></th>
+            <td class="mk-num" data-label="Étapes"><%= mkh.fmt(f.steps) %></td>
+            <td class="mk-num" data-label="Entrées (30 j)"><%= f.report.entrants === null ? "—" : mkh.fmt(f.report.entrants) %></td>
+            <td class="mk-num" data-label="Inscriptions (30 j)"><%= mkh.fmt(f.report.leads) %></td>
+            <td class="mk-num" data-label="Conversion"><%= pct(f.report.conversion) %></td>
+            <td data-label="Modifié le"><%= mkh.fdatetime(f.updated_at) %></td></tr>
+        <% }) %></tbody>
+      </table></div>
+      <p class="field-hint">Entrées = visiteurs de la première étape (comptés une fois par jour, sans cookie) ; inscriptions = formulaires envoyés sur les pages du tunnel.</p>
+    <% } %>
+    <% if (canWrite) { %>
+      <dialog class="mk-dialog mk-modal" id="nouveau" data-mk-modal data-mk-modal-hash="nouveau" aria-labelledby="fn-new-title">
+        <form action="/marketing/tunnels" method="post">
+          <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="fn-new-title">Nouveau tunnel</h2><p class="mk-dialog-desc">Un modèle crée les vraies pages de chaque étape, en brouillon : rien n'est mis en ligne avant que vous le décidiez.</p></div>
+            <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
+          <div class="mk-dialog-body">
+            <div class="field-group"><label for="fn-name">Nom du tunnel *</label><input id="fn-name" type="text" name="name" maxlength="100" required placeholder="Guide gratuit Photoshop"></div>
+            <fieldset class="mk-tpl-choice"><legend>Modèle de départ</legend>
+              <label class="mk-tpl"><input type="radio" name="template" value="" checked><span><strong>Tunnel vide</strong><span class="mk-sub">Vous ajoutez les étapes une à une.</span></span></label>
+              <% templates.forEach((t) => { const off = t.requiresCourse && !hasCourse; %><label class="mk-tpl"><input type="radio" name="template" value="<%= t.key %>"<%= off ? " disabled" : "" %>><span><strong><%= t.name %></strong><span class="mk-sub"><%= t.category %> · <%= t.description %> Étapes : <%= t.steps.join(" → ") %>.<%= off ? " Publiez d'abord une formation dans le catalogue." : "" %></span></span></label><% }) %>
+            </fieldset>
+          </div>
+          <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button><button type="submit" class="btn btn-primary btn-sm">Créer le tunnel</button></div>
+        </form>
+      </dialog>
+      <%- include("partials/modal-reopen", { id: "nouveau" }) %>
+    <% } %>
+<%- include("partials/bottom") %>

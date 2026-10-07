@@ -345,10 +345,13 @@
 .wp-popover { position: absolute; z-index: 60; min-width: 220px; max-width: min(360px, calc(100vw - 16px)); padding: 8px; background: var(--ed-surface-2); border: 1px solid var(--border); border-radius: 2px; box-shadow: 0 2px 6px rgba(11, 42, 64, 0.05), 0 8px 24px rgba(11, 42, 64, 0.12); }
 .wp-popover.is-link { width: min(380px, calc(100vw - 16px)); max-width: none; padding: 12px; }
 .wp-menu-list { display: flex; flex-direction: column; }
-.wp-menu-list button { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 6px 8px; border: 0; border-radius: 2px; background: none; color: var(--primary); text-align: left; font-size: 13px; cursor: pointer; }
+.wp-popover:has(.wp-menu-list) { padding: 4px; }
+/* Options compactes : hauteur donnée par le contenu (≈ 33 px pour un libellé), sans hauteur minimale imposée */
+.wp-menu-list button { display: flex; align-items: center; gap: 8px; min-height: 0; padding: 8px 14px; line-height: 1.3; border: 0; border-radius: 2px; background: none; color: var(--primary); text-align: left; font-size: 13px; cursor: pointer; }
 .wp-menu-list button:hover { color: var(--ed-link); }
 .wp-menu-list button.is-danger { color: var(--danger); }
-.wp-menu-list button span { flex: 1; }
+/* Seul le libellé (dernier texte de l'option) prend la place restante : la coche de sélection garde sa colonne étroite */
+.wp-menu-list button > span:last-of-type { flex: 1 1 auto; min-width: 0; }
 .wp-menu-list kbd, .wp-shortcuts kbd { font: 12px ui-monospace, Menlo, monospace; color: var(--muted); background: none; }
 .wp-menu-list hr { border: 0; border-top: 1px solid var(--border); margin: 6px 0; }
 .wp-swatches { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 8px 8px; }
@@ -1750,10 +1753,10 @@
 
 /* Menus du ruban : mêmes popovers que le mode blocs */
 .doc-pop .doc-choice button { gap: 8px; }
-.doc-check { display: inline-block; width: 16px; color: var(--ed-primary-fg); font-weight: 700; text-align: center; }
-.doc-choice .doc-style-h1 span:last-child { font-size: 20px; font-weight: 800; }
-.doc-choice .doc-style-h2 span:last-child { font-size: 18px; font-weight: 800; }
-.doc-choice .doc-style-h3 span:last-child { font-size: 16px; font-weight: 700; }
+.doc-check { display: inline-block; flex: none; width: 16px; color: var(--ed-primary-fg); font-weight: 700; text-align: center; }
+.doc-choice .doc-style-h1 span:last-child { font-size: 20px; font-weight: 800; line-height: 1.15; }
+.doc-choice .doc-style-h2 span:last-child { font-size: 18px; font-weight: 800; line-height: 1.15; }
+.doc-choice .doc-style-h3 span:last-child { font-size: 16px; font-weight: 700; line-height: 1.15; }
 .doc-swatch-pop .wp-menu-label { margin-top: 0; }
 .doc-grid-pop { padding: 4px; }
 .doc-grid { display: grid; grid-template-columns: repeat(6, 24px); gap: 4px; }

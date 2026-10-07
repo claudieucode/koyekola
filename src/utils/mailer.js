@@ -60,14 +60,28 @@ function sendContactAcknowledgement(db, { email }) {
   });
 }
 
-function sendSignupWelcomeEmail(db, { to, username }) {
+function sendSignupWelcomeEmail(db, { to, username, verifyUrl = null }) {
   return queueMail(db, {
     kind: "signup_welcome", to, subject: "Bienvenue sur KOLAKISA !",
     text: [
       `Bonjour ${oneLine(username)},`, "",
       "Votre compte KOLAKISA est créé. Vous pouvez dès maintenant parcourir le catalogue et suivre vos formations :", "",
       `${siteUrl()}/catalogue`, "",
+      ...(verifyUrl ? ["Confirmez votre adresse e-mail en ouvrant ce lien (valable 7 jours) :", "", verifyUrl, ""] : []),
       "Si vous n'êtes pas à l'origine de cette inscription, répondez simplement à cet e-mail.", "", "À très vite !",
+    ].join("\n"),
+  });
+}
+
+// Nouveau lien de confirmation de l'adresse, demandé depuis « Mon compte »
+function sendEmailVerification(db, { to, username, verifyUrl }) {
+  return queueMail(db, {
+    kind: "email_verification", to, subject: "Confirmez votre adresse e-mail KOLAKISA",
+    text: [
+      `Bonjour ${oneLine(username)},`, "",
+      "Confirmez votre adresse e-mail en ouvrant ce lien (valable 7 jours) :", "",
+      verifyUrl, "",
+      "Si vous n'avez rien demandé, ignorez cet e-mail.",
     ].join("\n"),
   });
 }
@@ -100,5 +114,5 @@ function sendSubscriptionConfirmation(db, { to, formName, url }) {
 
 module.exports = {
   TIMEOUTS, buildTransport, fromAddress, siteUrl,
-  sendPurchaseWelcomeEmail, sendContactNotification, sendContactAcknowledgement, sendSignupWelcomeEmail, sendPasswordResetEmail, sendSubscriptionConfirmation,
+  sendPurchaseWelcomeEmail, sendContactNotification, sendContactAcknowledgement, sendSignupWelcomeEmail, sendEmailVerification, sendPasswordResetEmail, sendSubscriptionConfirmation,
 };

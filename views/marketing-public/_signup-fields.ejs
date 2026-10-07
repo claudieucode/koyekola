@@ -1,23 +1,44 @@
-<%# Champs d'inscription d'un formulaire (page du formulaire /f/… et section « inscription » d'une page d'atterrissage) :
-    piège à robots, e-mail, champs du formulaire, propriétés, case de consentement (preuve), accord SMS facultatif. p = préfixe des identifiants. %>
-<% const p = typeof prefix !== "undefined" && prefix ? prefix : "f"; %>
+<%# Champs d'inscription d'un formulaire (page du formulaire /f/… et section « inscription » d'une page du site) :
+    piège à robots, jeton anti-robot, e-mail, champs du formulaire et propriétés (obligatoire, affichage, condition
+    d'affichage : data-show-if, appliquée par public/js/form-logic.js ET revérifiée par le serveur), fichier joint,
+    case de consentement (preuve), accord SMS facultatif. p = préfixe des identifiants. %>
+<% const p = typeof prefix !== "undefined" && prefix ? prefix : "f";
+   const settings = form.fieldSettings || {};
+   const req_ = (name) => Boolean(settings[name] && settings[name].required);
+   const showIf = (name) => (settings[name] && settings[name].showIf ? JSON.stringify(settings[name].showIf) : null);
+   const star = (name) => (req_(name) ? ' <span class="req-mark" aria-hidden="true">*</span>' : "");
+   const AUTO = { first_name: "given-name", last_name: "family-name", phone: "tel", company: "organization", country: "country-name" }; %>
           <div class="hp-field" aria-hidden="true"><label for="<%= p %>-website">Ne pas remplir</label><input id="<%= p %>-website" type="text" name="website" tabindex="-1" autocomplete="off"></div>
-          <div class="field-group"><label for="<%= p %>-email">Adresse e-mail</label><input id="<%= p %>-email" type="email" name="email" value="<%= values.email || '' %>"<%- typeof autofocus === "undefined" || autofocus ? " required autofocus" : " required" %>></div>
-          <% form.fields.forEach((key) => { %>
-            <div class="field-group"><label for="<%= p %>-<%= key %>"><%= fieldCatalog[key] %></label><input id="<%= p %>-<%= key %>" type="text" name="<%= key %>" maxlength="200" value="<%= values[key] || '' %>"></div>
+          <input type="hidden" name="ft" value="<%= typeof formToken !== "undefined" ? formToken : "" %>">
+          <div class="field-group"><label for="<%= p %>-email">Adresse e-mail <span class="req-mark" aria-hidden="true">*</span></label><input id="<%= p %>-email" type="email" name="email" autocomplete="email" value="<%= values.email || '' %>"<%- typeof autofocus === "undefined" || autofocus ? " required autofocus" : " required" %>></div>
+          <% form.fields.forEach((key) => { const id = `${p}-${key}`; const textarea = settings[key] && settings[key].display === "textarea"; %>
+            <div class="field-group"<% if (showIf(key)) { %> data-show-if="<%= showIf(key) %>"<% } %>><label for="<%= id %>"><%= fieldCatalog[key] %><%- star(key) %></label>
+              <% if (textarea) { %><textarea id="<%= id %>" name="<%= key %>" maxlength="200" rows="3"<%= req_(key) ? " required" : "" %>><%= values[key] || '' %></textarea>
+              <% } else { %><input id="<%= id %>" type="<%= key === "phone" ? "tel" : "text" %>" name="<%= key %>" maxlength="200" autocomplete="<%= AUTO[key] || "on" %>" value="<%= values[key] || '' %>"<%= req_(key) ? " required" : "" %>><% } %></div>
           <% }) %>
-          <% (typeof propertyDefs !== "undefined" ? propertyDefs : []).forEach((d) => { const id = p + "-prop-" + d.key; const v = values[d.name] || ""; %>
+          <% (typeof propertyDefs !== "undefined" ? propertyDefs : []).forEach((d) => { const id = p + "-prop-" + d.key; const v = values[d.name] || ""; const cond = showIf(d.name); const display = settings[d.name] && settings[d.name].display; %>
             <% if (d.type === "boolean") { %>
-              <label class="checkbox-row"><input id="<%= id %>" type="checkbox" name="<%= d.name %>" value="oui"<%- v ? " checked" : "" %>> <%= d.label %></label>
+              <label class="checkbox-row"<% if (cond) { %> data-show-if="<%= cond %>"<% } %>><input id="<%= id %>" type="checkbox" name="<%= d.name %>" value="oui"<%- v ? " checked" : "" %><%= req_(d.name) ? " required" : "" %>> <%= d.label %><%- star(d.name) %></label>
+            <% } else if (d.type === "select" && display === "radio") { %>
+              <fieldset class="field-group radio-group"<% if (cond) { %> data-show-if="<%= cond %>"<% } %>><legend><%= d.label %><%- star(d.name) %></legend>
+                <% d.options.forEach((o, k) => { %><label class="checkbox-row"><input type="radio" name="<%= d.name %>" value="<%= o %>"<%- v === o ? " checked" : "" %><%= req_(d.name) && k === 0 ? " required" : "" %>> <%= o %></label><% }) %>
+              </fieldset>
             <% } else if (d.type === "select") { %>
-              <div class="field-group"><label for="<%= id %>"><%= d.label %></label><select id="<%= id %>" name="<%= d.name %>">
+              <div class="field-group"<% if (cond) { %> data-show-if="<%= cond %>"<% } %>><label for="<%= id %>"><%= d.label %><%- star(d.name) %></label><select id="<%= id %>" name="<%= d.name %>"<%= req_(d.name) ? " required" : "" %>>
                 <option value="">—</option>
                 <% d.options.forEach((o) => { %><option value="<%= o %>"<%- v === o ? " selected" : "" %>><%= o %></option><% }) %>
               </select></div>
+            <% } else if (d.type === "text" && display === "textarea") { %>
+              <div class="field-group"<% if (cond) { %> data-show-if="<%= cond %>"<% } %>><label for="<%= id %>"><%= d.label %><%- star(d.name) %></label><textarea id="<%= id %>" name="<%= d.name %>" maxlength="500" rows="4"<%= req_(d.name) ? " required" : "" %>><%= v %></textarea></div>
             <% } else { %>
-              <div class="field-group"><label for="<%= id %>"><%= d.label %></label><input id="<%= id %>" type="<%= d.type === "number" ? "number" : d.type === "date" ? "date" : "text" %>" name="<%= d.name %>" value="<%= v %>"<%- d.type === "text" ? ' maxlength="500"' : d.type === "number" ? ' step="any"' : "" %>></div>
+              <div class="field-group"<% if (cond) { %> data-show-if="<%= cond %>"<% } %>><label for="<%= id %>"><%= d.label %><%- star(d.name) %></label><input id="<%= id %>" type="<%= d.type === "number" ? "number" : d.type === "date" ? "date" : "text" %>" name="<%= d.name %>" value="<%= v %>"<%- d.type === "text" ? ' maxlength="500"' : d.type === "number" ? ' step="any"' : "" %><%= req_(d.name) ? " required" : "" %>></div>
             <% } %>
           <% }) %>
+          <% if (form.fileField && form.fileField.enabled) { const acc = { images: "image/jpeg,image/png,image/webp", pdf: "application/pdf", both: "image/jpeg,image/png,image/webp,application/pdf" }[form.fileField.accept] || "image/jpeg,image/png,image/webp,application/pdf"; %>
+            <div class="field-group"><label for="<%= p %>-file"><%= form.fileField.label %><%- form.fileField.required ? ' <span class="req-mark" aria-hidden="true">*</span>' : "" %></label>
+              <input id="<%= p %>-file" type="file" name="file" accept="<%= acc %>"<%= form.fileField.required ? " required" : "" %> aria-describedby="<%= p %>-file-hint">
+              <p class="field-hint" id="<%= p %>-file-hint"><%= { images: "Image JPEG, PNG ou WebP", pdf: "PDF", both: "Image (JPEG, PNG, WebP) ou PDF" }[form.fileField.accept] || "Image ou PDF" %>, 5 Mo au plus.</p></div>
+          <% } %>
           <label class="checkbox-row optin-row"><input type="checkbox" name="consent" value="1" required> <%= form.consentText %></label>
           <% if (form.smsConsentText) { %>
             <%# Accord SMS : facultatif et SÉPARÉ de l'e-mail (seconde case, jamais pré-cochée) ; numéro demandé à part si le formulaire n'a pas « Téléphone » %>
@@ -26,3 +47,5 @@
             <% } %>
             <label class="checkbox-row optin-row"><input type="checkbox" name="sms_consent" value="1"<%- values.sms_consent ? " checked" : "" %>> <%= form.smsConsentText %></label>
           <% } %>
+          <% if (Object.values(settings).some((x) => x.required) || (form.fileField && form.fileField.required)) { %><p class="field-hint"><span class="req-mark" aria-hidden="true">*</span> Champ obligatoire.</p><% } %>
+          <% if (Object.values(settings).some((x) => x.showIf)) { %><script src="<%= asset("/js/form-logic.js") %>" defer></script><% } %>

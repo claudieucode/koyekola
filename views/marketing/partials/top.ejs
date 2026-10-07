@@ -16,6 +16,8 @@
 <% const theme = typeof mkTheme === "string" && mkTheme !== "clair" ? mkTheme : null; %><html lang="fr"<%- theme ? ` data-mk-theme="${theme}"` : "" %>>
 <head>
   <meta charset="UTF-8">
+  <%# Doublon de l'en-tête HTTP (le CDN de l'hébergeur remplace la politique envoyée par le serveur) %>
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= title %> · Marketing · KOLAKISA</title>
   <meta name="robots" content="noindex, nofollow">

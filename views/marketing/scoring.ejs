@@ -1,0 +1,76 @@
+<%- include("partials/top", { title, active }) %>
+    <div class="mk-head"><h1>Score des contacts</h1>
+      <% if (canWrite) { %><div class="mk-actions"><form action="/marketing/score/recalculer" method="post"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="Les scores sont recalculés en appliquant les règles actuelles à tous les événements déjà reçus. Aucun changement de niveau n'est déclenché pendant le recalcul." data-mk-confirm-title="Recalculer tous les scores ?" data-mk-confirm-ok="Recalculer">Recalculer à partir de l'historique</button></form></div><% } %></div>
+    <p class="mk-lead">Chaque action réelle d'un contact (page visitée, clic dans un e-mail, formulaire, ajout au panier, achat…) lui donne des points selon vos règles. Son niveau (froid, intéressé, chaud…) peut déclencher une automatisation (« Le score d'un contact change de niveau ») et sert dans les segments (champ « Score »).</p>
+
+    <div class="mk-stats mk-stats-4">
+      <% overview.levels.forEach((l) => { %><div class="mk-stat"><span class="mk-stat-label"><%= l.name %></span><span class="mk-stat-value"><%= mkh.fmt(l.contacts) %></span><span class="mk-stat-hint">contacts à partir de <%= l.min_score %> point<%= l.min_score > 1 ? "s" : "" %></span></div><% }) %>
+    </div>
+
+    <section class="mk-panel" id="regles" aria-labelledby="sc-rules">
+      <h2 id="sc-rules">Règles</h2>
+      <% if (!rules.length) { %>
+        <p>Aucune règle : aucun point n'est attribué pour l'instant.</p>
+        <% if (canWrite) { %><form action="/marketing/score/regles/proposees" method="post"><button type="submit" class="btn btn-primary btn-sm">Ajouter les règles proposées</button></form>
+          <p class="field-hint">Page visitée +5, clic dans un e-mail +10, formulaire +20, fiche formation +5 (10 fois au plus), ajout au panier +25, page de commande +40, tunnel terminé +30, achat +100, formation à 50 % +15. Toutes modifiables.</p><% } %>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table">
+          <caption class="sr-only">Règles de score</caption>
+          <thead><tr><th scope="col">Quand…</th><th scope="col" class="mk-num">Points</th><th scope="col" class="mk-num">Au plus</th><th scope="col" class="mk-num">Appliquée</th><% if (canWrite) { %><th scope="col">Actions</th><% } %></tr></thead>
+          <tbody><% rules.forEach((r) => { %>
+            <tr<%- r.active ? "" : ' class="is-muted"' %>><th scope="row" data-label="Quand…"><%= r.eventLabel %><% if (r.filterLabel) { %><span class="mk-sub"><%= r.filterLabel %></span><% } %><% if (!r.active) { %><span class="mk-sub">Désactivée</span><% } %></th>
+              <% if (canWrite) { %>
+                <td class="mk-num" data-label="Points" colspan="2"><form class="mk-inline-form" action="/marketing/score/regles/<%= r.id %>" method="post">
+                  <label class="sr-only" for="pts-<%= r.id %>">Points</label><input id="pts-<%= r.id %>" type="number" name="points" min="-1000" max="1000" step="1" value="<%= r.points %>" class="mk-input-num">
+                  <label class="sr-only" for="max-<%= r.id %>">Au plus (fois par contact)</label><input id="max-<%= r.id %>" type="number" name="max_times" min="1" max="1000" step="1" value="<%= r.max_times ?? "" %>" placeholder="∞" class="mk-input-num">
+                  <button type="submit" class="btn btn-ghost btn-sm">Enregistrer</button></form></td>
+              <% } else { %><td class="mk-num" data-label="Points"><%= r.points > 0 ? "+" : "" %><%= r.points %></td><td class="mk-num" data-label="Au plus"><%= r.max_times ?? "sans limite" %></td><% } %>
+              <td class="mk-num" data-label="Appliquée"><%= mkh.fmt(r.applied) %> fois · <%= mkh.fmt(r.contacts) %> contact(s)</td>
+              <% if (canWrite) { %><td data-label="Actions"><div class="mk-actions">
+                <form action="/marketing/score/regles/<%= r.id %>" method="post"><input type="hidden" name="action" value="<%= r.active ? "desactiver" : "activer" %>"><button type="submit" class="btn btn-ghost btn-sm"><%= r.active ? "Désactiver" : "Activer" %></button></form>
+                <form action="/marketing/score/regles/<%= r.id %>" method="post"><input type="hidden" name="action" value="supprimer"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Les points déjà attribués par cette règle restent jusqu'au prochain recalcul." data-mk-confirm-title="Supprimer cette règle ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form>
+              </div></td><% } %></tr>
+          <% }) %></tbody>
+        </table></div>
+      <% } %>
+      <% if (canWrite) { %>
+        <form class="mk-form" action="/marketing/score/regles" method="post">
+          <h3 class="mk-journey-sub">Nouvelle règle</h3>
+          <div class="mk-grid-2">
+            <div class="field-group"><label for="sc-event">Quand…</label><select id="sc-event" name="event" required><option value="">Choisir une action…</option><% Object.entries(events).forEach(([k, e]) => { %><option value="<%= k %>"><%= e.label %></option><% }) %></select></div>
+            <div class="field-group"><label for="sc-filter">Uniquement pour (facultatif)</label><select id="sc-filter" name="filter_value"><option value="">Tous</option>
+              <% Object.entries(choices).forEach(([group, list]) => { if (!list.length) return; %><optgroup label="<%= { pages: "Pages", funnels: "Tunnels", funnelSteps: "Étapes de tunnels", forms: "Formulaires", courses: "Formations" }[group] %>"><% list.forEach((c) => { %><option value="<%= c[0] %>" data-group="<%= group %>"><%= c[1] %></option><% }) %></optgroup><% }) %></select>
+              <p class="field-hint">Le filtre doit correspondre à l'action choisie (une page pour « page visitée », une formation pour « ajout au panier »…) ; sinon la règle ne s'applique jamais.</p></div>
+          </div>
+          <div class="mk-grid-2">
+            <div class="field-group"><label for="sc-points">Points (négatif pour retirer)</label><input id="sc-points" type="number" name="points" min="-1000" max="1000" step="1" value="10" required></div>
+            <div class="field-group"><label for="sc-max">Au plus (fois par contact)</label><input id="sc-max" type="number" name="max_times" min="1" max="1000" step="1" placeholder="Sans limite"></div>
+          </div>
+          <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Ajouter la règle</button></div>
+        </form>
+      <% } %>
+    </section>
+
+    <section class="mk-panel" id="niveaux" aria-labelledby="sc-levels">
+      <h2 id="sc-levels">Niveaux</h2>
+      <p class="field-hint">Un contact est au niveau dont le seuil est le plus haut atteint. Le premier niveau commence à 0.</p>
+      <form class="mk-form" action="/marketing/score/niveaux" method="post">
+        <div class="mk-table-wrap"><table class="mk-table">
+          <caption class="sr-only">Niveaux de score</caption>
+          <thead><tr><th scope="col">Nom</th><th scope="col">À partir de (points)</th></tr></thead>
+          <tbody><% levels.concat(levels.length < 8 ? [{ id: "", name: "", min_score: "" }] : []).forEach((l, i) => { %>
+            <tr><td data-label="Nom"><input type="hidden" name="levels[<%= i %>][id]" value="<%= l.id %>"><label class="sr-only" for="lv-n-<%= i %>">Nom du niveau <%= i + 1 %></label><input id="lv-n-<%= i %>" type="text" name="levels[<%= i %>][name]" maxlength="40" value="<%= l.name %>" placeholder="<%= l.id ? "" : "Nouveau niveau (facultatif)" %>"<%= canWrite ? "" : " disabled" %>></td>
+              <td data-label="À partir de (points)"><label class="sr-only" for="lv-m-<%= i %>">Seuil du niveau <%= i + 1 %></label><input id="lv-m-<%= i %>" type="number" name="levels[<%= i %>][min]" min="0" step="1" value="<%= l.min_score %>"<%= i === 0 ? " readonly" : "" %><%= canWrite ? "" : " disabled" %>></td></tr>
+          <% }) %></tbody>
+        </table></div>
+        <p class="field-hint">Pour retirer un niveau, videz son nom.</p>
+        <% if (canWrite) { %><div class="mk-actions"><button type="submit" class="btn btn-outline btn-sm">Enregistrer les niveaux</button></div><% } %>
+      </form>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="sc-top">
+      <h2 id="sc-top">Contacts les plus engagés</h2>
+      <% if (!overview.top.length) { %><p>Aucun contact n'a encore de points.</p>
+      <% } else { %><ul class="mk-sw-recent"><% overview.top.forEach((c) => { %><li><a href="/marketing/contacts/<%= c.id %>"><%= [c.first_name, c.last_name].filter(Boolean).join(" ") || c.email %></a><span class="mk-sub"><%= c.score %> points · <%= c.level %></span></li><% }) %></ul><% } %>
+    </section>
+<%- include("partials/bottom") %>

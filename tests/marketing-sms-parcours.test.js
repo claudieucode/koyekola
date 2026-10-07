@@ -318,7 +318,7 @@ describe("SMS dans les parcours et formulaires — pages web", () => {
     const popup = JSON.parse((await boss.get("/f/popup.json")).text);
     assert.equal(popup.form.smsConsentText, "J'accepte les SMS de KOLAKISA (STOP pour arrêter).");
     assert.equal(popup.form.smsPhoneField, true);
-    r = await boss.post(`/f/${slug}`, { email: "web-sms@x.cd", consent: "1", sms_consent: "1", sms_phone: "0812345690" });
+    r = await boss.post(`/f/${slug}`, { ft: srv.formToken(), email: "web-sms@x.cd", consent: "1", sms_consent: "1", sms_phone: "0812345690" });
     assert.equal(r.status, 302, r.text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 3000));
     const row = sql((db) => db.prepare("SELECT c.sms_status, k.text_shown FROM mk_contacts c JOIN mk_consents k ON k.contact_id = c.id AND k.purpose = 'sms' WHERE c.email = 'web-sms@x.cd'").get());
     assert.deepEqual({ ...row }, { sms_status: "subscribed", text_shown: "J'accepte les SMS de KOLAKISA (STOP pour arrêter)." });

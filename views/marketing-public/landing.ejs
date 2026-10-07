@@ -3,64 +3,39 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <%
+    const seo = (() => { try { return typeof page.seo === "string" ? JSON.parse(page.seo || "{}") : (page.seo || {}); } catch { return {}; } })();
+    const abs = (u) => (!u ? "" : /^https:\/\//.test(u) ? u : `${String(process.env.SITE_URL || "").replace(/\/+$/, "")}${u}`);
+    const shareImg = seo.ogImage || (page.sections.find((s) => s.type === "hero" && s.image) || {}).image;
+    const canonical = seo.canonical || abs(`/p/${page.slug}`);
+    const indexable = page.indexable && !seo.noindex && !preview;
+    const siteStyle = typeof site !== "undefined" && site ? tokensToCss(site.tokens) : "";
+  %>
   <title><%= page.title || page.name %></title>
   <% if (page.description) { %><meta name="description" content="<%= page.description %>"><meta property="og:description" content="<%= page.description %>"><% } %>
   <meta property="og:title" content="<%= page.title || page.name %>">
-  <% const heroImg = (page.sections.find((s) => s.type === "hero" && s.image) || {}).image; if (heroImg) { %><meta property="og:image" content="<%= heroImg %>"><% } %>
-  <meta name="robots" content="<%= page.indexable && !preview ? "index, follow" : "noindex, nofollow" %>">
+  <meta property="og:type" content="website">
+  <% if (canonical && /^https:/.test(canonical)) { %><link rel="canonical" href="<%= canonical %>"><meta property="og:url" content="<%= canonical %>"><% } %>
+  <% if (shareImg) { %><meta property="og:image" content="<%= abs(shareImg) %>"><meta name="twitter:card" content="summary_large_image"><% } else { %><meta name="twitter:card" content="summary"><% } %>
+  <meta name="robots" content="<%= indexable ? "index, follow" : "noindex, nofollow" %>">
+  <% const faqs = page.sections.filter((x) => x.type === "faq" && !x.hidden).flatMap((x) => x.items); if (indexable && faqs.length) { %>
+  <script type="application/ld+json"><%- JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) }).replace(/</g, "\\u003c") %></script><% } %>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="<%= asset("/css/landing.css") %>">
+  <% if (page.nodeCss) { %><style><%- page.nodeCss %></style><% } %>
+  <%# CSS personnalisé de la page : vérifié (aucune ressource externe), confiné au contenu de la page %>
+  <% if (page.customCss) { %><style><%- page.customCss %></style><% } %>
 </head>
-<body class="lp-body" style="--lp-accent: <%= page.theme.accent %>; --lp-bg: <%= page.theme.background %>; --lp-text: <%= page.theme.text %>">
-  <% if (preview) { %><p class="lp-preview-bar">Aperçu — les clics et inscriptions ne sont pas enregistrés.</p><% } %>
+<% const bAttr = typeof builder !== "undefined" && builder ? " data-kw-builder" : ""; %><% if (siteStyle) { %><body class="lp-body lp-site"<%- bAttr %> style="<%= siteStyle %> --lp-accent: var(--kw-primary); --lp-on-accent: var(--kw-on-primary); --lp-bg: var(--kw-background); --lp-text: var(--kw-text)">
+<% } else { %><body class="lp-body"<%- bAttr %> style="--lp-accent: <%= page.theme.accent %>; --lp-bg: <%= page.theme.background %>; --lp-text: <%= page.theme.text %>"><% } %>
+  <% if (preview && !(typeof builder !== "undefined" && builder)) { %><p class="lp-preview-bar"><%= typeof previewLabel !== "undefined" && previewLabel ? previewLabel + " " : "Aperçu — " %>Les clics et inscriptions ne sont pas enregistrés.</p><% } %>
   <main class="lp-main" id="main">
-    <% let n = 0; const href = (url) => (preview ? url : `/p/${page.slug}/clic/${n++}`); %>
-    <% page.sections.forEach((s, i) => { %>
-      <% if (s.type === "hero") { %>
-        <header class="lp-hero">
-          <% if (s.image) { %><img class="lp-hero-img" src="<%= s.image %>" alt="<%= s.imageAlt %>"><% } %>
-          <h1><%= s.title %></h1>
-          <% if (s.subtitle) { %><p class="lp-lead"><%= s.subtitle %></p><% } %>
-          <% if (s.buttonUrl) { %><p><a class="lp-btn" href="<%= href(s.buttonUrl) %>"><%= s.buttonLabel %></a></p><% } %>
-        </header>
-      <% } else if (s.type === "text") { %>
-        <section class="lp-section lp-text"><%- renderMarkdown(s.markdown) %></section>
-      <% } else if (s.type === "image") { %>
-        <figure class="lp-section lp-figure">
-          <% if (s.link) { %><a href="<%= href(s.link) %>"><img src="<%= s.src %>" alt="<%= s.alt %>" loading="lazy"></a><% } else { %><img src="<%= s.src %>" alt="<%= s.alt %>" loading="lazy"><% } %>
-          <% if (s.caption) { %><figcaption><%= s.caption %></figcaption><% } %>
-        </figure>
-      <% } else if (s.type === "list") { %>
-        <section class="lp-section"><% if (s.title) { %><h2><%= s.title %></h2><% } %>
-          <ul class="lp-list"><% s.items.forEach((it) => { %><li><%= it %></li><% }) %></ul></section>
-      <% } else if (s.type === "course") { %>
-        <section class="lp-section lp-course<%= s.course.image ? "" : " is-text" %>">
-          <% if (s.course.image) { %><img src="<%= s.course.image %>" alt="" loading="lazy"><% } %>
-          <div class="lp-course-body"><h2><%= s.course.title %></h2><% if (s.course.subtitle) { %><p><%= s.course.subtitle %></p><% } %>
-            <p class="lp-price"><%= s.course.priceCents ? (s.course.priceCents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €" : "Gratuit" %></p>
-            <a class="lp-btn" href="<%= href(s.course.url) %>"><%= s.cta %></a></div>
-        </section>
-      <% } else if (s.type === "button") { %>
-        <p class="lp-section lp-button is-<%= s.align === "left" ? "left" : "center" %>"><a class="lp-btn" href="<%= href(s.url) %>"><%= s.label %></a></p>
-      <% } else if (s.type === "quote") { %>
-        <blockquote class="lp-section lp-quote"><p><%= s.text %></p><% if (s.author) { %><footer>— <%= s.author %></footer><% } %></blockquote>
-      <% } else if (s.type === "form" && form) { %>
-        <section class="lp-section lp-signup" id="inscription" aria-labelledby="lp-signup-<%= i %>">
-          <h2 id="lp-signup-<%= i %>"><%= s.heading %></h2>
-          <% if (thanks) { %><p class="lp-thanks" role="status"><%= thanks %></p>
-          <% } else { %>
-            <% if (s.intro) { %><p><%= s.intro %></p><% } %>
-            <% if (error) { %><p class="lp-error" role="alert"><%= error %></p><% } %>
-            <form method="post" action="/p/<%= page.slug %>/inscription" novalidate><input type="hidden" name="tz" data-tz>
-              <%- include("_signup-fields", { form, fieldCatalog, propertyDefs, values, prefix: "lp" + i, autofocus: false }) %>
-              <button type="submit" class="lp-btn lp-btn-block"<%= preview ? " disabled" : "" %>>S'inscrire</button>
-            </form>
-          <% } %>
-        </section>
-      <% } %>
-    <% }) %>
+    <% if (thanks && !page.sections.some((x) => x.type === "form")) { %><section class="lp-section"><p class="lp-thanks" role="status"><%= thanks %></p></section><% } %>
+    <%- include("_sections", { page, form, preview, thanks, error, values, fieldCatalog, propertyDefs, builder: typeof builder !== "undefined" && builder }) %>
   </main>
-  <footer class="lp-foot"><a href="/">KOLAKISA</a></footer>
+  <footer class="lp-foot"><a href="/">KOLAKISA</a> · <a href="/cookies" data-kw-consent-open>Cookies</a></footer>
+  <% if (!preview) { %><%- include("../partials/consent-banner") %>
+  <script src="<%= asset("/js/visitor.js") %>" defer></script><% } %>
   <script src="<%= asset("/js/landing.js") %>" defer></script>
 </body>
 </html>

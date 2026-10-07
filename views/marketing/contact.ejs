@@ -49,7 +49,13 @@
       <div class="mk-stat"><span class="mk-stat-label">E-mails reçus</span><span class="mk-stat-value"><%= mkh.fmt(summary.messages) %></span><span class="mk-stat-hint"><%= mkh.fmt(summary.clicked) %> avec clic</span></div>
       <div class="mk-stat"><span class="mk-stat-label">Scénarios en cours</span><span class="mk-stat-value"><%= mkh.fmt(summary.runningAutomations) %></span></div>
       <div class="mk-stat"><span class="mk-stat-label">Dernière activité</span><span class="mk-stat-value mk-stat-small"><%= summary.lastActivity ? mkh.fdate(summary.lastActivity) : "—" %></span><span class="mk-stat-hint">clic ou ouverture d'un e-mail</span></div>
+      <% if (score) { %><div class="mk-stat"><span class="mk-stat-label">Score</span><span class="mk-stat-value"><%= mkh.fmt(score.score) %></span><span class="mk-stat-hint"><%= score.level %> · <a href="/marketing/score">règles</a></span></div><% } %>
     </div>
+    <% if (score && score.history.length) { %>
+      <details class="mk-panel mk-score-history"><summary>D'où vient ce score ? (20 dernières attributions)</summary>
+        <ul class="mk-sw-recent"><% score.history.forEach((h) => { %><li><strong><%= h.points > 0 ? "+" : "" %><%= h.points %></strong> <%= h.label %><span class="mk-sub"><%= mkh.fdatetime(new Date(h.created_at).toISOString().replace("T", " ").slice(0, 19)) %></span></li><% }) %></ul>
+      </details>
+    <% } %>
 
     <section class="mk-panel mk-timeline-panel" aria-labelledby="tl-title">
       <h2 id="tl-title">Chronologie</h2>
@@ -152,6 +158,16 @@
         <% } %>
       </section>
     </div>
+
+    <% if (files.length) { %>
+    <section class="mk-panel" aria-labelledby="ct-files">
+      <h2 id="ct-files">Fichiers envoyés</h2>
+      <ul class="mk-sw-recent">
+        <% files.forEach((f) => { %><li><a href="/marketing/contacts/<%= contact.id %>/fichiers/<%= f.id %>" download><%= f.original_name %></a>
+          <span class="mk-sub"><%= f.mime === "application/pdf" ? "PDF" : "Image" %> · <%= f.size >= 1048576 ? (f.size / 1048576).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(f.size / 1024)) + " Ko" %> · <%= f.form_name ? `formulaire « ${f.form_name} »` : "formulaire supprimé" %> · <%= mkh.fdatetime(f.created_at) %></span></li><% }) %>
+      </ul>
+    </section>
+    <% } %>
 
     <section class="mk-panel">
       <h2>Consentement et désinscription</h2>

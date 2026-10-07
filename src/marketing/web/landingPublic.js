@@ -3,11 +3,21 @@
 // qui ne redirige QUE vers un lien enregistré dans la page (jamais une adresse fournie par le visiteur).
 const express = require("express");
 const landing = require("../landing");
+const pages = require("../pages");
+const { tokensToCss } = require("../pages/tokens");
 const forms = require("../forms");
 const { tagContact } = require("../audience/tags");
 const { createRateLimiter } = require("../../middlewares/security");
 const { sendSubscriptionConfirmation } = require("../../utils/mailer");
 const { renderMarkdown } = require("../../utils/markdown");
+const antispam = require("../forms/antispam");
+const formUpload = require("./formUpload");
+const visitorsLib = require("../visitors");
+const { consentedVisitor } = require("./visitorsPublic");
+const funnels = require("../funnels");
+const { visibleTree, audienceMatches, walk } = require("../pages/nodes");
+const { visitorContext } = require("../pages/visitorContext");
+const abtests = require("../pages/abtests");
 
 const PENDING_TEXT = "Merci ! Un e-mail de confirmation vient de vous être envoyé : cliquez sur le lien qu'il contient pour finaliser votre inscription (pensez aux courriers indésirables).";
 
@@ -21,57 +31,115 @@ module.exports = ({ db }) => {
     const marketing = req.app.locals.marketing;
     if (!marketing || !marketing.ready) return res.status(503).render("error", { message: "Cette page est momentanément indisponible." });
     req.mkPages = { organizationId: marketing.organizationId, bus: marketing.bus, settings: marketing.settings };
+    res.locals.formToken = antispam.issue(); // anti-robot des inscriptions (voir forms/antispam.js)
     next();
   });
   const ctxOf = (req) => ({ db, organizationId: req.mkPages.organizationId, userId: null, bus: req.mkPages.bus, settings: req.mkPages.settings, baseUrl: process.env.SITE_URL });
   const loadForm = (page) => (page.form_id ? forms.getForm({ db, organizationId: page.organization_id }, page.form_id) : null);
-  const show = (req, res, page, { status = 200, error = null, values = {}, thanks = null } = {}) => {
+  // Page affichée : composants synchronisés résolus, formations relues dans le catalogue
+  // Personnalisation : sections et éléments filtrés selon ce que le site sait réellement du visiteur
+  const shownPage = (req, page) => {
+    const visitor = visitorContext(db, req.mkPages.organizationId, req);
+    // En-tête et pied de page du site (composants choisis dans le site) autour des sections de la page
+    return landing.viewModel(ctxOf(req), { ...page, visitor, sections: pages.withSiteParts(ctxOf(req), page, pages.resolveSections(ctxOf(req), page.sections)).filter((s) => !s.hidden && audienceMatches(s.audience, visitor)).map((s) => (s.type === "layout" ? { ...s, children: visibleTree(s.children, visitor) } : s)) });
+  };
+  // Design system du site de la page (site actif seulement)
+  const siteOf = (req, page) => { const site = page.site_id ? pages.getSite(ctxOf(req), page.site_id) : null; return site && site.status === "active" ? site : null; };
+  // widget : identifiant du widget « Formulaire » concerné (son message / ses erreurs ne touchent que lui)
+  const show = (req, res, page, { status = 200, error = null, values = {}, thanks = null, widget = null } = {}) => {
     const form = loadForm(page);
     res.status(status).render("marketing-public/landing", {
-      page: landing.viewModel(ctxOf(req), page), form: form && form.status === "published" ? form : null, fieldCatalog: forms.FIELD_CATALOG,
-      propertyDefs: form ? forms.propertyFieldDefs(db, page.organization_id, form) : [], renderMarkdown, error, values, thanks, preview: false,
+      page: shownPage(req, page), site: siteOf(req, page), tokensToCss, form: form && form.status === "published" ? form : null, fieldCatalog: forms.FIELD_CATALOG,
+      propertyDefs: form ? forms.propertyFieldDefs(db, page.organization_id, form) : [], renderMarkdown, preview: false,
+      error: widget ? null : error, values: widget ? {} : values, thanks: widget ? null : thanks, widgetForm: widget ? { id: widget, error, values, thanks } : null,
     });
+  };
+  // Widget « Formulaire » de la page (dans une section libre) : son formulaire, ou null
+  const widgetOf = (page, id) => {
+    if (!/^[a-z0-9]{6,20}$/.test(String(id || ""))) return null;
+    let found = null;
+    for (const s of page.sections) if (s.type === "layout") walk(s.children, (n) => { if (n.id === id && n.type === "signupform" && !n.hidden) found = n; });
+    if (!found) return null;
+    try { return forms.getForm({ db, organizationId: page.organization_id }, Number(found.props.formId)); } catch { return null; }
+  };
+
+  // Test A/B en cours : version du visiteur (stable pour la journée, sans cookie) et contenu correspondant
+  const forVisitor = (req, page) => {
+    const test = abtests.runningTestFor(db, page.id);
+    if (!test || !test.variantB) return { page, test: null, visitor: null };
+    const visitor = landing.visitorOf(req, secret());
+    const variant = abtests.variantFor(test, visitor);
+    const shown = variant === "b" ? { ...page, sections: test.variantB.sections, title: test.variantB.title, description: test.variantB.description } : page;
+    return { page: shown, test, visitor, variant };
   };
 
   router.get("/p/:slug", (req, res) => {
-    const page = landing.getPublishedPage(db, req.params.slug);
+    const published = landing.getPublishedPage(db, req.params.slug);
+    if (!published) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
+    const { page, test, visitor } = forVisitor(req, published);
     if (!page) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
-    const thanks = req.query.inscrit === "1" ? (req.query.confirmer === "1" ? PENDING_TEXT : (loadForm(page) || {}).thankYouText || "Merci, votre inscription est enregistrée.") : null;
-    if (!thanks && !landing.isBot(req)) landing.record(db, page, "view", landing.visitorOf(req, secret()));
-    show(req, res, page, { thanks });
+    const widget = req.query.w && widgetOf(page, req.query.w) ? String(req.query.w) : null;
+    const thanks = req.query.inscrit === "1" ? (req.query.confirmer === "1" ? PENDING_TEXT : ((widget ? widgetOf(page, widget) : loadForm(page)) || {}).thankYouText || "Merci, votre inscription est enregistrée.") : null;
+    // Retour sur la page après sa propre inscription : pas une nouvelle visite. Arrivée sur l'étape suivante d'un tunnel
+    // (remerciement…) : c'est bien une visite de cette page.
+    const selfReturn = thanks && (widget || page.sections.some((s) => s.type === "form"));
+    if (!selfReturn && !landing.isBot(req)) {
+      landing.record(db, page, "view", landing.visitorOf(req, secret()));
+      if (test) abtests.recordView(db, test, visitor);
+    }
+    show(req, res, page, { thanks, widget });
   });
 
   router.get("/p/:slug/clic/:n(\\d{1,3})", (req, res) => {
-    const page = landing.getPublishedPage(db, req.params.slug);
-    if (!page) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
-    const link = landing.linksOf(landing.viewModel(ctxOf(req), page))[Number(req.params.n)];
+    const published = landing.getPublishedPage(db, req.params.slug);
+    if (!published) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
+    const { page, test, visitor } = forVisitor(req, published);
+    const link = landing.linksOf(shownPage(req, page))[Number(req.params.n)];
     if (!link) return res.redirect(`/p/${page.slug}`);
-    if (!landing.isBot(req)) landing.record(db, page, "click", landing.visitorOf(req, secret()), link.label);
+    if (!landing.isBot(req)) {
+      landing.record(db, page, "click", landing.visitorOf(req, secret()), link.label);
+      if (test) abtests.recordConversion(db, test, visitor, "click");
+    }
+    // Bouton « étape suivante » : la prochaine étape en ligne du tunnel de la page (sinon, retour sur la page)
+    if (link.url === funnels.NEXT_URL) return res.redirect(funnels.nextUrlForPage(db, page) || `/p/${page.slug}`);
     res.redirect(link.url);
   });
 
-  router.post("/p/:slug/inscription", (req, res, next) => {
-    const page = landing.getPublishedPage(db, req.params.slug);
-    if (!page) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
-    const form = loadForm(page);
-    if (!form || form.status !== "published") return show(req, res, page, { status: 400, error: "L'inscription n'est pas disponible pour le moment." });
-    if (String(req.body.website || "").trim()) return res.redirect(`/p/${page.slug}?inscrit=1#inscription`); // robot : faux succès silencieux
-    if (limiter.isLimited(req.ip)) return show(req, res, page, { status: 429, error: "Trop de tentatives : réessayez dans un instant.", values: req.body });
-    if (!req.body.consent) return show(req, res, page, { status: 400, error: "Cochez la case pour confirmer votre inscription.", values: req.body });
+  router.post("/p/:slug/inscription", formUpload, (req, res, next) => {
+    const published = landing.getPublishedPage(db, req.params.slug);
+    if (!published) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
+    const { page, test, visitor } = forVisitor(req, published);
+    // Widget « Formulaire » (w = son identifiant) ou section d'inscription de la page : même circuit, même protections
+    const widget = req.body && req.body.w ? String(req.body.w) : null;
+    const form = widget ? widgetOf(page, widget) : loadForm(page);
+    const back = widget ? `w=${widget}#kw-f-${widget}` : "#inscription";
+    const at = (q) => `/p/${page.slug}?${q}${widget ? "&" + back : back}`;
+    if (!form || form.status !== "published") return show(req, res, page, { status: 400, error: "L'inscription n'est pas disponible pour le moment.", widget: form ? widget : null });
+    // Robot (champ piège rempli, jeton absent ou envoi trop rapide) : faux succès silencieux
+    if (String(req.body.website || "").trim() || !antispam.check(req.body.ft)) return res.redirect(at("inscrit=1"));
+    if (req.uploadError) return show(req, res, page, { status: 400, error: req.uploadError, values: req.body, widget });
+    if (limiter.isLimited(req.ip)) return show(req, res, page, { status: 429, error: "Trop de tentatives : réessayez dans un instant.", values: req.body, widget });
+    if (!req.body.consent) return show(req, res, page, { status: 400, error: "Cochez la case pour confirmer votre inscription.", values: req.body, widget });
     limiter.hit(req.ip);
     try {
       const ctx = ctxOf(req);
-      const result = forms.submitForm(ctx, form.id, { ...req.body, ip: req.ip });
-      if (!result.ok) return show(req, res, page, { status: 400, error: result.reason === "invalid_email" ? "Adresse e-mail invalide." : result.message || "Inscription impossible pour le moment.", values: req.body });
+      const result = forms.submitForm(ctx, form.id, { ...req.body, ip: req.ip, file: req.file, page: `/p/${page.slug}` });
+      if (!result.ok) return show(req, res, page, { status: 400, error: result.reason === "invalid_email" ? "Adresse e-mail invalide." : result.message || "Inscription impossible pour le moment.", values: req.body, widget });
       // Étiquettes propres à la page (en plus de celles du formulaire) : on sait d'où vient l'inscription
       if (result.contact) for (const tag of page.tags) tagContact({ ...ctx, audit: false }, result.contact.id, tag);
       landing.record(db, page, "signup", landing.visitorOf(req, secret()), result.pending ? "en attente de confirmation" : "confirmée");
+      if (test) abtests.recordConversion(db, test, visitor, "signup");
+      if (result.contact && consentedVisitor(req)) visitorsLib.recordFormSubmit(db, page.organization_id, { visitorId: consentedVisitor(req), contactId: result.contact.id, path: `/p/${page.slug}`, formName: form.name });
+      // Page d'un tunnel : le visiteur passe à l'étape suivante (une page du tunnel affiche le message de confirmation ;
+      // une formation, non : en attente de confirmation, il reste donc ici pour lire la consigne)
+      const next = funnels.nextUrlForPage(db, page);
+      const toNext = next && (next.startsWith("/p/") || !result.pending) ? next : null;
       if (result.pending) {
         const base = String(process.env.SITE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
         sendSubscriptionConfirmation(db, { to: result.email, formName: form.name, url: `${base}/f/confirmer/${result.token}` });
-        return res.redirect(`/p/${page.slug}?inscrit=1&confirmer=1#inscription`);
+        return res.redirect(toNext ? `${toNext}?inscrit=1&confirmer=1` : at("inscrit=1&confirmer=1"));
       }
-      res.redirect(`/p/${page.slug}?inscrit=1#inscription`);
+      res.redirect(toNext ? (toNext.startsWith("/p/") ? `${toNext}?inscrit=1` : toNext) : at("inscrit=1"));
     } catch (error) {
       next(error);
     }

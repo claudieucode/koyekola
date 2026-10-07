@@ -19,7 +19,7 @@ function createMarketingRouters({ db }) {
     const allowed = (permission) => can(membership.role, permission);
     req.mk = {
       role: membership.role, can: allowed, marketing,
-      ctx: { db, organizationId: marketing.organizationId, userId: user.id, bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL },
+      ctx: { db, organizationId: marketing.organizationId, userId: user.id, can: allowed, bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL },
     };
     res.locals.mk = { role: membership.role, can: allowed };
     res.locals.mkTheme = themeOf(marketing.settings, marketing.organizationId, user.id); // Paramètres → Apparence
@@ -35,6 +35,10 @@ function createMarketingRouters({ db }) {
   admin.use(require("./campaigns")({ db }));
   admin.use(require("./rss")());
   admin.use(require("./landing")());
+  admin.use(require("./siteWeb")());
+  admin.use(require("./funnels")());
+  admin.use(require("./pageTests")());
+  admin.use(require("./scoring")());
   admin.use(require("./surveys")());
   admin.use(require("./ai")());
   admin.use(require("./domains")());
@@ -54,6 +58,7 @@ function createMarketingRouters({ db }) {
   const publicRoutes = express.Router();
   publicRoutes.use(require("./public")({ db }));
   publicRoutes.use(require("./tracking")({ db }));
+  publicRoutes.use(require("./visitorsPublic")({ db }));
   publicRoutes.use(require("./formsPublic")({ db }));
   publicRoutes.use(require("./landingPublic")({ db }));
   publicRoutes.use(require("./surveysPublic")({ db }));

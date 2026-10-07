@@ -29,6 +29,7 @@ const payments = require("../services/payments");
 const analytics = require("../services/gestion/analytics");
 const resources = require("../services/gestion/resources");
 const activity = require("../services/gestion/activity");
+const backups = require("../services/backups");
 
 const router = express.Router();
 router.use("/formateur/gestion", requireInstructor);
@@ -403,5 +404,30 @@ router.post("/formateur/gestion/activite/tout-lu", safely("/formateur/gestion/ac
   flash(req, "ok", "Toutes les notifications sont marquées comme lues.");
   res.redirect("/formateur/gestion/activite?vue=notifications");
 }));
+
+// ---------- Sauvegardes ----------
+// Copies de la base (automatiques chaque jour, ou à la demande) et téléchargement de la base et des fichiers envoyés,
+// pour en garder une copie hors du serveur
+router.get("/formateur/gestion/sauvegardes", page("gestion/sauvegardes", "Sauvegardes", () => ({ list: backups.list(), uploads: backups.uploadsSummary(), autoEnabled: process.env.SAUVEGARDE_AUTO !== "0" })));
+router.post("/formateur/gestion/sauvegardes", safely("/formateur/gestion/sauvegardes", (req, res) => {
+  const { name } = backups.createBackup({ auto: false });
+  flash(req, "ok", `Sauvegarde « ${name} » créée. Téléchargez-la pour en garder une copie hors du serveur.`);
+  res.redirect("/formateur/gestion/sauvegardes");
+}));
+router.get("/formateur/gestion/sauvegardes/fichiers.tar", (req, res, next) => {
+  const stamp = new Date().toISOString().slice(0, 10);
+  res.set({ "Content-Type": "application/x-tar", "Content-Disposition": `attachment; filename="KOYEKOLA-fichiers-${stamp}.tar"`, "Cache-Control": "no-store" });
+  backups.streamUploadsTar(res).then(() => res.end(), (error) => {
+    console.error("[KOLAKISA] Archive des fichiers :", error.message);
+    if (!res.headersSent) return next(error);
+    res.destroy(error); // archive incomplète : le navigateur signale un téléchargement échoué (jamais un fichier tronqué « réussi »)
+  });
+});
+router.get("/formateur/gestion/sauvegardes/:name", (req, res) => {
+  const file = backups.pathOf(req.params.name);
+  if (!file) return res.status(404).render("gestion/erreur", { title: "Introuvable", notFound: true, retry: null, back: backOf("/formateur/gestion/sauvegardes") });
+  res.set("Cache-Control", "no-store");
+  res.download(file, req.params.name);
+});
 
 module.exports = router;

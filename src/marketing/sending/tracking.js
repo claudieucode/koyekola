@@ -7,6 +7,17 @@ const { recordEvent, bump } = require("./events");
 const BOT = /bot|crawl|spider|preview|scan|curl|wget|python|java\/|headless|monitor|check|fetch|http-?client|go-http|okhttp|libwww|postman/i;
 const isBot = (userAgent) => typeof userAgent !== "string" || userAgent.trim() === "" || BOT.test(userAgent);
 
+// Événement sur le bus pour le contact du message (si le module tourne avec son bus ; jamais bloquant)
+function emitMessageEvent(ctx, message, name, key, metadata) {
+  if (!ctx.bus || !message.contact_id) return;
+  try {
+    const contact = ctx.db.prepare("SELECT id, email FROM mk_contacts WHERE id = ? AND organization_id = ?").get(message.contact_id, ctx.organizationId);
+    if (contact) ctx.bus.emit({ organizationId: ctx.organizationId, name, email: contact.email, contactId: contact.id, source: "marketing", metadata, idempotencyKey: key });
+  } catch (error) {
+    console.error("[KOLAKISA] Suivi des e-mails (événement) :", error.message);
+  }
+}
+
 const messageOf = (ctx, id) => (Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_messages WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) : null);
 
 // → adresse de destination (https) ou null si le lien est inconnu
@@ -25,6 +36,8 @@ function recordClick(ctx, { messageId, linkId, userAgent, at = Date.now() }) {
   bump(ctx, message.campaign_id, "click_count");
   if (firstForMessage) bump(ctx, message.campaign_id, "unique_click_count");
   ctx.db.prepare("UPDATE mk_contacts SET last_click_at = datetime('now'), last_activity_at = datetime('now') WHERE id = ? AND organization_id = ?").run(message.contact_id, ctx.organizationId);
+  // Premier clic sur ce lien de ce message : événement (déclencheurs, score des contacts, webhooks)
+  if (firstForLink) emitMessageEvent(ctx, message, "email.clicked", `email.clicked:${message.id}:${link.id}`, { campaignId: message.campaign_id, url: link.url });
   return link.url;
 }
 
@@ -36,7 +49,10 @@ function recordOpen(ctx, { messageId, userAgent, at = Date.now() }) {
   if (bot) return false;
   ctx.db.prepare("UPDATE mk_messages SET open_count = open_count + 1, first_open_at = COALESCE(first_open_at, ?) WHERE id = ?").run(at, message.id);
   bump(ctx, message.campaign_id, "open_count");
-  if (message.first_open_at === null) bump(ctx, message.campaign_id, "unique_open_count");
+  if (message.first_open_at === null) {
+    bump(ctx, message.campaign_id, "unique_open_count");
+    emitMessageEvent(ctx, message, "email.opened", `email.opened:${message.id}`, { campaignId: message.campaign_id });
+  }
   ctx.db.prepare("UPDATE mk_contacts SET last_open_at = datetime('now'), last_activity_at = datetime('now') WHERE id = ? AND organization_id = ?").run(message.contact_id, ctx.organizationId);
   return true;
 }

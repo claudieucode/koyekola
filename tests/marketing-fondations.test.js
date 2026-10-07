@@ -305,8 +305,9 @@ describe("intégration au serveur", () => {
   });
   test("les tables du LMS sont intactes (aucune table existante modifiée)", () => {
     const users = q("PRAGMA table_info(users)").map((c) => c.name);
-    // Colonnes du schéma du LMS lui-même (src/config/database.js) : « timezone » y est ajoutée par le site (fuseau du
-    // navigateur relevé à l'inscription), jamais par le module marketing, qui ne fait que la lire
-    assert.deepEqual(users, ["id", "username", "email", "password_hash", "role", "bio", "created_at", "avatar_path", "timezone"]);
+    // Colonnes du schéma du LMS lui-même (src/config/database.js) : « timezone » (fuseau du navigateur relevé à
+    // l'inscription) et « deleted_at » (compte supprimé à la demande de la personne, RGPD) et « email_verified_at » (adresse confirmée) y sont ajoutées par le site,
+    // jamais par le module marketing, qui ne fait que les lire
+    assert.deepEqual(users, ["id", "username", "email", "password_hash", "role", "bio", "created_at", "avatar_path", "timezone", "deleted_at", "email_verified_at"]);
   });
 });

@@ -8,7 +8,7 @@ const { uploadsRoot, dataDir, dbFile } = require("./src/config/paths");
 const db = require("./src/config/database");
 const { SqliteStore } = require("./src/config/sessionStore");
 const { bootstrapInstructorFromEnv } = require("./src/config/bootstrap");
-const { securityHeaders, sameOriginOnly } = require("./src/middlewares/security");
+const { securityHeaders, canonicalHost, sameOriginOnly } = require("./src/middlewares/security");
 const { injectLocals } = require("./src/middlewares/locals");
 const authRoutes = require("./src/routes/auth");
 const passwordResetRoutes = require("./src/routes/passwordReset");
@@ -25,6 +25,7 @@ const pagesRoutes = require("./src/routes/pages");
 const blogRoutes = require("./src/routes/blog");
 const profileRoutes = require("./src/routes/profile");
 const gestionRoutes = require("./src/routes/gestion");
+const accountRoutes = require("./src/routes/account");
 const marketingWeb = require("./src/marketing/web").createMarketingRouters({ db });
 const { UserError } = require("./src/utils/errors");
 
@@ -57,11 +58,14 @@ app.set("views", path.join(__dirname, "views"));
 
 app.use(compression()); // pages, CSS et JS envoyés compressés (gzip) : environ 4 fois plus légers
 app.use(securityHeaders);
+app.use(canonicalHost);
 // Webhooks du fournisseur d'envoi : corps BRUT (la signature porte sur les octets exacts), donc avant l'analyse JSON
 app.use("/webhooks", express.raw({ type: "*/*", limit: "256kb" }), marketingWeb.webhooks);
 // Webhook de paiement Stripe : même principe (corps brut, signature vérifiée, pas de cookie ni de contrôle d'origine)
 app.use("/stripe", express.raw({ type: "*/*", limit: "256kb" }), require("./src/routes/stripeWebhook"));
 app.use(express.urlencoded({ extended: true }));
+// Éditeur visuel des pages : une page complète (30 sections) peut dépasser la limite par défaut de 100 ko
+app.use("/marketing/pages", express.json({ limit: "1mb" }));
 app.use(express.json());
 // API publique /api/v1 : authentification par clé (jamais par cookie), donc montée avant la session et le contrôle d'origine
 app.use("/api/v1", marketingWeb.api);
@@ -141,6 +145,7 @@ app.use(favoritesRoutes);
 app.use(pagesRoutes);
 app.use(blogRoutes);
 app.use(profileRoutes);
+app.use(accountRoutes); // Mon compte : données personnelles, suppression du compte
 app.use(gestionRoutes); // Centre de gestion (Mon espace)
 app.use(instructorRoutes);
 app.use("/marketing", marketingWeb.admin);
@@ -191,6 +196,12 @@ app.listen(PORT, () => {
   const outbox = require("./src/utils/outbox");
   outbox.processOutbox(db).catch((error) => console.error("[KOLAKISA] File d'envoi :", error.message));
   outbox.startOutboxTimer(db);
+  // Copie automatique quotidienne de la base (Centre de gestion → Sauvegardes) ; SAUVEGARDE_AUTO=0 pour la couper
+  require("./src/services/backups").startDailyBackups();
+  // Suivi des visiteurs : effacement automatique au-delà de 13 mois (au démarrage, puis chaque jour)
+  const purgeVisits = () => { try { if (marketing.ready) require("./src/marketing/visitors").purge(db); } catch (error) { console.error("[KOLAKISA] Effacement des anciennes visites :", error.message); } };
+  purgeVisits();
+  setInterval(purgeVisits, 24 * 60 * 60 * 1000).unref();
   // Fichiers envoyés retrouvés dans le dossier du projet ou d'anciennes versions : recopiés dans le dossier conservé
   // Médias : recopie des fichiers restés dans d'anciens builds, puis diagnostic (emplacement, fichiers introuvables)
   require("./src/config/recoverUploads").recoverUploads()

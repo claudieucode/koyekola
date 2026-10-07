@@ -108,7 +108,12 @@ function deleteContact(ctx, id, { suppress = false } = {}) {
   checkCtx(ctx);
   const contact = getContact(ctx, id);
   if (!contact) return false;
-  return transaction(ctx.db, () => {
+  // Fichiers envoyés par ses formulaires (dossier protégé uploads/forms/<organisation>/) : relevés AVANT, effacés du
+  // disque APRÈS la suppression en base (leurs lignes partent avec le contact, en cascade)
+  const { resolveUpload } = require("../../utils/storage");
+  const files = ctx.db.prepare("SELECT path FROM mk_form_files WHERE organization_id = ? AND contact_id = ?").all(ctx.organizationId, id)
+    .map((f) => (f.path.startsWith(`/uploads/forms/${ctx.organizationId}/`) ? resolveUpload(f.path) : null)).filter(Boolean);
+  const done = transaction(ctx.db, () => {
     if (suppress) {
       ctx.db.prepare("INSERT OR IGNORE INTO mk_suppressions (organization_id, email, reason) VALUES (?, ?, 'erasure')").run(ctx.organizationId, contact.email);
     }
@@ -116,6 +121,8 @@ function deleteContact(ctx, id, { suppress = false } = {}) {
     if (removed) audit(ctx, "contact.deleted", "contact", id, { suppress });
     return removed;
   });
+  if (done) for (const abs of files) require("fs").rmSync(abs, { force: true });
+  return done;
 }
 
 const escapeLike = (text) => text.replace(/[\\%_]/g, (c) => `\\${c}`);

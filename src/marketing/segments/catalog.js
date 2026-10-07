@@ -21,6 +21,10 @@ const SPENT = [C("gt", "est supérieur à", "number"), C("gte", "est supérieur 
 const EVENTS = [
   ["lms.user_registered", "Inscription sur KOLAKISA", false], ["lms.order_completed", "Achat (commande passée)", true], ["lms.course_enrolled", "Inscription à une formation", true],
   ["lms.lesson_completed", "Leçon terminée", true], ["lms.course_completed", "Formation terminée", true], ["lms.review_posted", "Avis publié", true], ["lms.favorite_added", "Formation mise en favori", true],
+  ["lms.course_progress_10", "Formation suivie à 10 %", true], ["lms.course_progress_50", "Formation suivie à 50 %", true], ["lms.course_progress_90", "Formation suivie à 90 %", true],
+  ["lms.course_viewed", "Fiche formation consultée", true], ["lms.cart_added", "Formation ajoutée au panier", true], ["lms.checkout_started", "Page de commande ouverte", false],
+  ["email.clicked", "Clic dans un e-mail", false], ["email.opened", "Ouverture d'un e-mail (indicatif)", false],
+  ["page.visited", "Page visitée (Site Web, Tunnels)", false], ["funnel.step_reached", "Étape de tunnel atteinte", false], ["funnel.completed", "Tunnel terminé", false],
   ["lms.certificate_issued", "Certificat délivré", true],
 ];
 const ACTIVITY_NOTE = "Compté depuis l'activation du pont KOLAKISA : l'activité plus ancienne n'est pas incluse.";
@@ -31,7 +35,7 @@ function knownCourses(ctx) {
   const rows = ctx.db
     .prepare(
       `SELECT CAST(json_extract(metadata, '$.courseId') AS INTEGER) AS id, json_extract(metadata, '$.title') AS title, occurred_at
-       FROM mk_events WHERE organization_id = ? AND name IN ('lms.course_enrolled', 'lms.lesson_completed', 'lms.course_completed', 'lms.review_posted', 'lms.favorite_added', 'lms.certificate_issued') AND json_extract(metadata, '$.courseId') IS NOT NULL
+       FROM mk_events WHERE organization_id = ? AND name IN ('lms.course_enrolled', 'lms.lesson_completed', 'lms.course_completed', 'lms.review_posted', 'lms.favorite_added', 'lms.certificate_issued', 'lms.course_viewed', 'lms.cart_added', 'lms.course_progress_10', 'lms.course_progress_50', 'lms.course_progress_90') AND json_extract(metadata, '$.courseId') IS NOT NULL
        UNION ALL
        SELECT CAST(json_extract(j.value, '$.courseId') AS INTEGER), json_extract(j.value, '$.title'), e.occurred_at
        FROM mk_events e, json_each(e.metadata, '$.items') j WHERE e.organization_id = ? AND e.name = 'lms.order_completed' AND json_extract(j.value, '$.courseId') IS NOT NULL
@@ -60,6 +64,7 @@ function fieldCatalog(ctx) {
     fields.push({ field: `event:${name}`, label, group: "Activité KOLAKISA", kind: "event", supportsCourse, courses: supportsCourse ? courses : [], note: ACTIVITY_NOTE, cmps: EVENT });
   }
   fields.push({ field: "lms_spent", label: "Montant dépensé sur KOLAKISA (€)", group: "Achats", kind: "spent", note: ACTIVITY_NOTE, cmps: SPENT });
+  fields.push({ field: "score", label: "Score", group: "Contact", kind: "score", note: "Points des règles de score (Audience → Score des contacts).", cmps: SPENT.filter((c) => !["is_empty", "not_empty"].includes(c.cmp)) });
   for (const p of listProperties(ctx)) {
     const field = `property:${p.key}`;
     const group = "Propriétés";

@@ -6,4 +6,4 @@
   <% }) %>
   <% if (!found) { %><option value="<%= value %>" selected><%= value %></option><% } %>
 </select>
-<img class="seo-image-preview" data-seo-image-preview alt="" <%- value ? `src="${value}"` : "hidden" %>>
+<% if (value) { %><img class="seo-image-preview" data-seo-image-preview alt="" src="<%= value %>"><% } else { %><img class="seo-image-preview" data-seo-image-preview alt="" hidden><% } %>

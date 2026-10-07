@@ -1,0 +1,38 @@
+<%- include("partials/top", { title, active }) %>
+<% const pct = (r) => (r === null || r === undefined ? "—" : `${String(r).replace(".", ",")} %`); const periodLabel = { 7: "7 derniers jours", 30: "30 derniers jours", 90: "90 derniers jours" }; const f = funnel; %>
+    <p class="mk-back"><a href="/marketing/pages/<%= page.id %>">← <%= page.name %></a></p>
+    <div class="mk-head"><h1>Analyse de la page</h1></div>
+    <p class="mk-lead">Parcours réel des visiteurs sur <code>/p/<%= page.slug %></code> : jusqu'où ils descendent dans la page, puis s'ils s'inscrivent. Seuls les visiteurs ayant accepté la mesure d'audience sont comptés ; aucune extrapolation.</p>
+    <nav class="mk-tabs" aria-label="Période">
+      <% [7, 30, 90].forEach((n) => { %><a class="mk-tab" href="/marketing/pages/<%= page.id %>/analyse?periode=<%= n %>"<%- days === n ? ' aria-current="page"' : "" %>><%= periodLabel[n] %></a><% }) %>
+    </nav>
+
+    <div class="mk-stats mk-stats-3">
+      <div class="mk-stat"><span class="mk-stat-label">Visiteurs (tous, anonymes)</span><span class="mk-stat-value"><%= mkh.fmt(report.visitors) %></span><span class="mk-stat-hint">compte quotidien sans cookie</span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Visiteurs mesurés</span><span class="mk-stat-value"><%= mkh.fmt(f.arrived) %></span><span class="mk-stat-hint">ont accepté la mesure d'audience</span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Inscriptions (toutes)</span><span class="mk-stat-value"><%= mkh.fmt(report.signups) %></span><span class="mk-stat-hint">conversion <%= pct(report.conversion) %></span></div>
+    </div>
+
+    <section class="mk-panel" aria-labelledby="pa-funnel">
+      <h2 id="pa-funnel">Parcours dans la page</h2>
+      <% if (!f.arrived) { %>
+        <p>Aucun visiteur mesuré sur cette période pour cette page.</p>
+      <% } else { %>
+        <% if (f.worst) { %>
+          <p class="mk-callout mk-callout-warn"><span><strong>La plus forte perte se situe entre « <%= f.worst.from %> » et « <%= f.worst.to %> »</strong> : <%= pct(f.worst.rate) %> des visiteurs arrivés à « <%= f.worst.from %> » ne vont pas plus loin (<%= mkh.fmt(f.worst.lost) %> visiteurs). Piste : rendre cette étape plus claire ou plus attrayante, puis le vérifier par un test A/B.</span></p>
+        <% } else if (!f.enough) { %>
+          <p class="mk-callout"><span><strong>Pas encore assez de données pour une conclusion fiable</strong> : <%= mkh.fmt(f.arrived) %> visiteur<%= f.arrived > 1 ? "s" : "" %> mesuré<%= f.arrived > 1 ? "s" : "" %>, <%= f.minSample %> nécessaires au début d'une étape. Les chiffres ci-dessous sont exacts, mais trop peu nombreux pour désigner une étape faible.</span></p>
+        <% } %>
+        <ol class="mk-funnel">
+          <% f.steps.forEach((s, i) => { %>
+            <li class="mk-funnel-step">
+              <div class="mk-funnel-head"><span class="mk-funnel-label"><%= i + 1 %>. <%= s.label %></span><span class="mk-funnel-num"><%= mkh.fmt(s.visitors) %> visiteur<%= s.visitors > 1 ? "s" : "" %> · <%= pct(s.fromStart) %></span></div>
+              <div class="mk-funnel-track" role="img" aria-label="<%= pct(s.fromStart) %> des visiteurs arrivés"><span class="mk-funnel-bar" style="width: <%= Math.max(0, Math.min(100, s.fromStart || 0)) %>%"></span></div>
+              <% if (i > 0) { %><span class="mk-sub">Passage depuis l'étape précédente : <%= pct(s.passage) %></span><% } %>
+            </li>
+          <% }) %>
+        </ol>
+        <p class="field-hint">Une section compte comme atteinte quand au moins 40 % de sa hauteur a été affichée à l'écran. Les sections masquées et les séparateurs ne sont pas des étapes.</p>
+      <% } %>
+    </section>
+<%- include("partials/bottom") %>

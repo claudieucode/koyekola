@@ -134,7 +134,7 @@ router.post("/commande/code-promo", requireAuth, (req, res) => {
 });
 
 // Paiement simulé : aucune carte n'est réellement débitée. Voir le README pour brancher
-// un vrai prestataire de paiement (Stripe, etc.). En production, seules les commandes à 0 € passent (src/services/payment.js).
+// un vrai prestataire de paiement (Stripe, etc.). Sans PAIEMENT_SIMULE=1, seules les commandes à 0 € passent (src/services/payment.js).
 router.post("/commande", requireAuth, async (req, res, next) => {
   // Un gestionnaire async doit intercepter ses erreurs lui-même : Express 4 ne le fait pas,
   // et une erreur non interceptée ferait tomber tout le serveur.

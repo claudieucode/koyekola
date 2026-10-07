@@ -44,6 +44,11 @@ Configuration dans le tableau de bord Stripe : ajouter un point de terminaison w
 
 Sans clé Stripe : en local, le paiement reste une **démonstration** (rien n'est débité) ; **en ligne** (`NODE_ENV=production` ou `SITE_URL` en https), toute commande payante est refusée. Les commandes gratuites (formation à 0 € ou code promo à 100 %) ne passent pas par Stripe. Un paiement encaissé dont le montant ne correspond pas, ou dont la formation a été supprimée, n'ouvre aucun accès et est signalé dans les journaux : à vérifier et rembourser dans Stripe. **`PAIEMENT_SIMULE=1`** rouvre le mode démonstration en production (commande payante validée sans paiement) : à ne jamais utiliser avec de vrais clients ; il est ignoré dès que Stripe est configuré.
 
+Détail (réglages de l'audit de sécurité) :
+- Par défaut, les commandes payantes sont **refusées** : la fiche d'une formation payante affiche « L'achat en ligne ouvre bientôt » et un lien vers le contact. Les commandes à 0 € (formations gratuites, code promo à 100 %) restent possibles.
+- `PAIEMENT_SIMULE=1` ouvre le mode démonstration (commande payante validée sans paiement) : à ne jamais utiliser avec de vrais clients.
+- Les tests automatiques gardent le mode démonstration.
+
 ## Publier le site en ligne
 
 Guide complet pour **Hostinger** : [DEPLOIEMENT-HOSTINGER.md](DEPLOIEMENT-HOSTINGER.md) (GitHub, variables d’environnement, création du compte formateur, test de persistance des données, sauvegardes).
@@ -52,6 +57,8 @@ Commandes utiles :
 
 - `npm run creer-formateur -- email pseudo motdepasse` : crée ou met à jour le compte formateur **sans rien effacer** (contrairement à `npm run seed`, à ne jamais lancer en ligne).
 - `npm run sauvegarde` : sauvegarde de la base dans `data/backups/`.
+- Sauvegarde automatique quotidienne de la base, et téléchargement de la base et des fichiers : Mon espace → Centre de gestion → Sauvegardes.
+- « Mon compte » (lien sur le nom en haut à droite) : confirmation de l'adresse e-mail, export des données personnelles (JSON), suppression du compte (anonymisé : les ventes restent dans la comptabilité).
 - `GET /sante` : page de contrôle (`{"statut":"ok"}`).
 
 Variables d’environnement : voir `.env.example`.

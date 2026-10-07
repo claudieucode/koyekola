@@ -72,11 +72,20 @@ function sqlDate(v) {
 // Ce qui utilise encore un fichier : [{ label, href, blocking }]. « blocking » : supprimer la fiche laisserait ce contenu
 // pointer vers un fichier inexistant SANS possibilité de le réparer depuis la médiathèque → suppression refusée.
 const like = (p) => `%${String(p).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+// Pages (Site Web, Tunnels) et composants réutilisables qui affichent ce fichier (en ligne ou en brouillon)
+function pageDependencies(path) {
+  let rows = [];
+  try {
+    rows = db.prepare("SELECT id, name, 'page' AS kind FROM mk_landing_pages WHERE sections LIKE ? ESCAPE '\\' OR draft LIKE ? ESCAPE '\\' OR seo LIKE ? ESCAPE '\\'").all(like(path), like(path), like(path))
+      .concat(db.prepare("SELECT id, name, 'composant' AS kind FROM mk_web_components WHERE section LIKE ? ESCAPE '\\'").all(like(path)));
+  } catch (e) { if (!/no such table/i.test(e.message)) throw e; }
+  return rows.map((x) => (x.kind === "page" ? { label: `Page « ${x.name} »`, href: `/marketing/pages/${x.id}`, blocking: true } : { label: `Composant « ${x.name} »`, blocking: true }));
+}
 function dependenciesOf(r) {
-  if (r.source === "site") return blog.imageReferences(r.path).map((label) => ({ label, blocking: true }));
+  if (r.source === "site") return blog.imageReferences(r.path).map((label) => ({ label, blocking: true })).concat(pageDependencies(r.path));
   if (r.source === "marketing") {
     const deps = db.prepare("SELECT id, name FROM mk_templates WHERE organization_id = ? AND blocks LIKE ? ESCAPE '\\'").all(r.organizationId, like(r.path))
-      .map((t) => ({ label: `Modèle d'e-mail « ${t.name} »`, href: `/marketing/modeles/${t.id}`, blocking: true }));
+      .map((t) => ({ label: `Modèle d'e-mail « ${t.name} »`, href: `/marketing/modeles/${t.id}`, blocking: true })).concat(pageDependencies(r.path));
     // Campagnes déjà envoyées : leurs e-mails pointent vers ce fichier ; elles n'empêchent pas le nettoyage de la fiche
     // (le module Marketing conserve alors le fichier sur le disque, s'il existe)
     const sent = db.prepare("SELECT id, name FROM mk_campaigns WHERE organization_id = ? AND snapshot LIKE ? ESCAPE '\\'").all(r.organizationId, like(r.path));

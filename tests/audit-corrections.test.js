@@ -7,7 +7,7 @@ const { describe, test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
-const { startServer, loginInstructor, newStudent, createCourse, buy } = require("./helpers");
+const { startServer, Client, loginInstructor, newStudent, createCourse, buy } = require("./helpers");
 
 const G = "/formateur/gestion";
 
@@ -23,6 +23,10 @@ describe("B1 / B5 : production sans paiement réel", () => {
     assert.match(page, /L'achat en ligne ouvre bientôt/);
     assert.match(page, /href="\/contact" class="btn btn-primary btn-block">Nous contacter pour la suivre/);
     assert.doesNotMatch(page, /Acheter maintenant/);
+    // Visiteur non connecté : même message (pas d'invitation à se connecter pour un achat impossible)
+    const visitor = (await new Client(srv.base).get(`/cours/${course.slug}`)).text;
+    assert.match(visitor, /L'achat en ligne ouvre bientôt/);
+    assert.doesNotMatch(visitor, /Se connecter pour acheter/);
   });
 
   test("commande payante forcée (panier puis POST) : refusée, aucune inscription, aucune commande", async () => {
@@ -64,7 +68,29 @@ describe("B1 / B5 : production sans paiement réel", () => {
   });
 });
 
-describe("B5 / M2 / M3 : mode démonstration (hors production)", () => {
+describe("B1 : fermé par défaut, quel que soit l'environnement", () => {
+  for (const env of [{ NODE_ENV: "development" }, { NODE_ENV: "" }, { NODE_ENV: "production", PAIEMENT_SIMULE: "" }]) {
+    test(`NODE_ENV=${JSON.stringify(env.NODE_ENV)} : pas d'achat payant`, async () => {
+      const srv = await startServer(env);
+      try {
+        const prof = await loginInstructor(srv);
+        const course = await createCourse(prof, srv, { title: "Payante défaut", price: 12 });
+        assert.match((await new Client(srv.base).get(`/cours/${course.slug}`)).text, /L'achat en ligne ouvre bientôt/);
+      } finally { await srv.stop(); }
+    });
+  }
+  test("PAIEMENT_SIMULE=1 : mode démonstration ouvert", async () => {
+    const srv = await startServer({ NODE_ENV: "production", PAIEMENT_SIMULE: "1" });
+    try {
+      const prof = await loginInstructor(srv);
+      const course = await createCourse(prof, srv, { title: "Payante démo", price: 12 });
+      const s = await newStudent(srv);
+      assert.match((await s.get(`/cours/${course.slug}`)).text, /Acheter maintenant/);
+    } finally { await srv.stop(); }
+  });
+});
+
+describe("B5 / M2 / M3 : mode démonstration (tests)", () => {
   let srv, prof;
   before(async () => { srv = await startServer(); prof = await loginInstructor(srv); });
   after(() => srv.stop());
@@ -143,5 +169,46 @@ describe("D2 / D3 : base de données", () => {
     }
     db.close();
     assert.deepEqual(missing, []);
+  });
+});
+
+describe("finitions de l'audit", () => {
+  let srv, prof;
+  before(async () => { srv = await startServer({ SITE_URL: "https://kolakisa.test" }); prof = await loginInstructor(srv); });
+  after(() => srv.stop());
+  // Derrière le proxy de l'hébergeur, le domaine demandé arrive dans X-Forwarded-Host (trust proxy)
+  const get = (url, host) => fetch(srv.base + url, { headers: { "x-forwarded-host": host }, redirect: "manual" });
+
+  test("www.<domaine> redirige (301) vers le domaine de SITE_URL, chemin et paramètres gardés ; le domaine lui-même ne redirige pas", async () => {
+    const r = await get("/catalogue?q=excel", "www.kolakisa.test");
+    assert.equal(r.status, 301);
+    assert.equal(r.headers.get("location"), "https://kolakisa.test/catalogue?q=excel");
+    assert.equal((await get("/catalogue", "kolakisa.test")).status, 200);
+    assert.equal((await get("/catalogue", "autre.test")).status, 200);
+  });
+
+  test("catalogue filtré ou trié : non indexé (liens suivis) ; catalogue seul : indexable", async () => {
+    assert.doesNotMatch((await prof.get("/catalogue")).text, /name="robots"/);
+    for (const q of ["?q=excel", "?level=debutant", "?sort=price_asc"]) assert.match((await prof.get("/catalogue" + q)).text, /<meta name="robots" content="noindex, follow">/, q);
+  });
+
+  test("éditeur d'article : un titre de page <h1> (lecteurs d'écran)", async () => {
+    const page = (await prof.get("/formateur/blog/nouveau")).text;
+    assert.equal((page.match(/<h1\b/g) || []).length, 1);
+    assert.match(page, /<h1 class="sr-only">Nouvel article<\/h1>/);
+  });
+
+  test("sélecteur d'image SEO : une valeur hostile est échappée dans l'aperçu", () => {
+    const ejs = require("ejs");
+    const html = ejs.render(fs.readFileSync(path.join(__dirname, "../views/seo/_image-select.ejs"), "utf8"), { id: "i", name: "n", value: '/x.png" onerror="alert(1)', media: [] });
+    assert.doesNotMatch(html, /" onerror="/);
+    assert.match(html, /src="\/x.png&#34; onerror=&#34;alert\(1\)"/);
+  });
+
+  test("S3 : politique de sécurité du contenu (plugins interdits, <base> et cadres étrangers bloqués)", async () => {
+    const r = await prof.get("/catalogue");
+    assert.equal(r.headers.get("content-security-policy"), "object-src 'none'; base-uri 'self'; frame-ancestors 'self'");
+    // Doublon dans la page : le CDN de l'hébergeur remplace l'en-tête HTTP
+    assert.match(r.text, /<meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">/);
   });
 });

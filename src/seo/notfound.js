@@ -38,9 +38,17 @@ function record(req) {
   }
 }
 
+// Panne du journal des 404 : signalée une fois (pas à chaque page introuvable)
+let reported = false;
+function reportOnce(error) {
+  if (reported) return;
+  reported = true;
+  console.error("[KOLAKISA] Journal des pages introuvables (404) indisponible :", error.message);
+}
+
 // Middleware : note les réponses 404 des pages (GET), quelle que soit la route qui les a produites
 function middleware(req, res, next) {
-  if (req.method === "GET") res.on("finish", () => { if (res.statusCode === 404) { try { record(req); } catch { /* le journal ne doit jamais casser une page */ } } });
+  if (req.method === "GET") res.on("finish", () => { if (res.statusCode === 404) { try { record(req); } catch (error) { reportOnce(error); } /* le journal ne doit jamais casser une page */ } });
   next();
 }
 

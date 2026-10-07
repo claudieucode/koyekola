@@ -14,8 +14,10 @@ const SIGNUP_CONSENT_TEXT = "Je souhaite recevoir par e-mail les actualités, le
 // Comptes du LMS sans contact → contacts « unknown ». Idempotent, borné (les gros sites avancent par paquets).
 function syncLmsUsers(ctx, { limit = 5000 } = {}) {
   checkCtx(ctx);
+  // Comptes supprimés à la demande de la personne (RGPD, colonne deleted_at du LMS) : jamais recréés comme contacts
+  const hasDeleted = ctx.db.prepare("SELECT 1 FROM pragma_table_info('users') WHERE name = 'deleted_at'").get();
   const users = ctx.db
-    .prepare("SELECT u.id, u.username, u.email FROM users u WHERE NOT EXISTS (SELECT 1 FROM mk_contacts c WHERE c.organization_id = ? AND c.lms_user_id = u.id AND c.email = lower(trim(u.email))) ORDER BY u.id LIMIT ?")
+    .prepare(`SELECT u.id, u.username, u.email FROM users u WHERE ${hasDeleted ? "u.deleted_at IS NULL AND " : ""}NOT EXISTS (SELECT 1 FROM mk_contacts c WHERE c.organization_id = ? AND c.lms_user_id = u.id AND c.email = lower(trim(u.email))) ORDER BY u.id LIMIT ?`)
     .all(ctx.organizationId, limit);
   const result = { created: 0, linked: 0, skipped: 0 };
   const rowCtx = { ...ctx, audit: false, bus: null };

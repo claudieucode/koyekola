@@ -14,7 +14,7 @@ function createMobileAuthRouter({ db }) {
   const router = express.Router();
   router.use(express.json({ limit: "32kb" }));
 
-  router.post("/login", (req, res) => {
+  router.post("/login", async (req, res) => {
     try {
       const { email, password } = req.body || {};
       if (typeof email !== "string" || !email.trim() || typeof password !== "string" || !password) {
@@ -31,7 +31,7 @@ function createMobileAuthRouter({ db }) {
         .prepare("SELECT id, username, email, role, password_hash FROM users WHERE email = ?")
         .get(email.trim().toLowerCase());
 
-      if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+      if (!user || !(await bcrypt.compare(password, user.password_hash))) {
         recordLoginFailure(req);
         return res.status(401).json({ error: { code: "unauthorized", message: "Email ou mot de passe incorrect." } });
       }

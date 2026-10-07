@@ -2,13 +2,15 @@
 // Une entrée « soon » est prévue mais jamais affichée : on n'expose pas une fonctionnalité qui n'existe pas encore.
 // (Elle porte la phase où elle arrive : `since`.) Les clés `key` sont celles passées en `active` par les routes.
 
-// Organisation calquée sur Mailchimp : Accueil, Campagnes, SMS, Automatisations, Audience (formulaires d'inscription
-// compris), Analytics, Intégrations, puis Paramètres (envoi, conformité) en bas du menu.
+// Organisation calquée sur Mailchimp : Accueil, Campagnes, SMS, Automatisations, Site Web, Tunnels, Audience (formulaires
+// d'inscription compris), Analytics, Intégrations, puis Paramètres (envoi, conformité) en bas du menu.
 const SECTIONS = [
   { key: "marketing", label: "Accueil", icon: "home" },
   { key: "campaigns", label: "Campagnes", icon: "send" },
   { key: "sms", label: "SMS", icon: "smartphone" },
   { key: "automations", label: "Automatisations", icon: "zap" },
+  { key: "site", label: "Site Web", icon: "globe" },
+  { key: "tunnels", label: "Tunnels", icon: "filter" },
   { key: "audience", label: "Audience", icon: "users" },
   { key: "analytics", label: "Analytics", icon: "activity" },
   { key: "integrations", label: "Intégrations", icon: "plug" },
@@ -30,6 +32,8 @@ const ITEMS = [
   live("audience", "forms", "Formulaires d'inscription", "/marketing/formulaires", "layout", "forms.read", { label: "Nouveau formulaire", href: "/marketing/formulaires#nouveau", permission: "forms.write" }),
   // Sondages (« Surveys » de Mailchimp) : questions, lien public ou personnel, étiquettes selon les réponses
   live("audience", "surveys", "Sondages", "/marketing/sondages", "listChecks", "forms.read", { label: "Créer un sondage", href: "/marketing/sondages#nouveau", permission: "forms.write" }),
+  // Score des contacts : règles (actions → points), niveaux (froid, chaud…), déclencheur « change de niveau »
+  live("audience", "scoring", "Score des contacts", "/marketing/score", "activity", "contacts.read"),
   live("audience", "import", "Importer des contacts", "/marketing/importer", "upload", "contacts.import", { label: "Nouvel import", href: "/marketing/importer", permission: "contacts.import" }),
 
   live("campaigns", "campaigns", "Toutes les campagnes", "/marketing/campagnes", "send", "campaigns.read", { label: "Créer une campagne", href: "/marketing/campagnes/nouvelle", permission: "campaigns.write" }),
@@ -37,8 +41,6 @@ const ITEMS = [
   live("campaigns", "ab", "Tests A/B", "/marketing/tests-ab", "activity", "campaigns.read", { label: "Créer un test A/B", href: "/marketing/campagnes/nouvelle?ab=1", permission: "campaigns.write" }),
   // Campagnes RSS (« RSS-to-email » de Mailchimp) : nouveaux articles envoyés automatiquement selon une fréquence
   live("campaigns", "rss", "Campagnes RSS", "/marketing/rss", "layers", "campaigns.read", { label: "Créer une campagne RSS", href: "/marketing/rss/nouvelle", permission: "campaigns.write" }),
-  // Pages d'atterrissage (« Landing pages » de Mailchimp) : pages web hébergées avec inscription et statistiques
-  live("campaigns", "landing", "Pages d'atterrissage", "/marketing/pages", "layout", "forms.read", { label: "Créer une page", href: "/marketing/pages#nouvelle", permission: "forms.write" }),
   live("campaigns", "social", "Réseaux sociaux", "/marketing/reseaux", "send", "campaigns.read", { label: "Créer une publication", href: "/marketing/reseaux#nouvelle", permission: "campaigns.write" }),
 
   // Onglet SMS à part entière, comme chez Mailchimp : campagnes, abonnés, réglages
@@ -49,6 +51,16 @@ const ITEMS = [
   live("automations", "automations", "Tous les scénarios", "/marketing/automatisations", "zap", "automations.read", { label: "Nouveau scénario", href: "/marketing/automatisations#nouveau", permission: "automations.write" }),
   // Parcours tout prêts (« Pre-built journeys » de Mailchimp) : un parcours complet créé en brouillon en un clic
   live("automations", "journeys", "Parcours tout prêts", "/marketing/automatisations/parcours", "layers", "automations.read", { label: "Nouveau scénario", href: "/marketing/automatisations#nouveau", permission: "automations.write" }),
+
+  // Site Web : tableau de bord, sites (design system), pages (les pages d'atterrissage y sont rattachées) — un seul
+  // moteur de pages, partagé avec les Tunnels
+  live("site", "sitedash", "Tableau de bord", "/marketing/site-web", "activity", "forms.read"),
+  live("site", "sites", "Sites", "/marketing/site-web/sites", "globe", "forms.read", { label: "Créer un site", href: "/marketing/site-web/sites#nouveau", permission: "forms.write" }),
+  live("site", "landing", "Pages", "/marketing/pages", "layout", "forms.read", { label: "Créer une page", href: "/marketing/pages#nouvelle", permission: "forms.write" }),
+  live("site", "pagetests", "Tests A/B", "/marketing/site-web/tests-ab", "activity", "forms.read"),
+
+  // Tunnels : suites d'étapes faites des pages du même moteur (même éditeur que Site Web) et des formations du catalogue
+  live("tunnels", "funnels", "Tunnels", "/marketing/tunnels", "filter", "forms.read", { label: "Créer un tunnel", href: "/marketing/tunnels#nouveau", permission: "forms.write" }),
 
   live("analytics", "analytics", "Analytics", "/marketing/analytics", "activity", "analytics.read"),
   live("analytics", "revenue", "Revenus", "/marketing/revenus", "coin", "analytics.read"),

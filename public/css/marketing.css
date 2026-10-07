@@ -205,7 +205,7 @@ a.mk-stat:hover { border-color: var(--accent); }
 .mk-filter-count { color: var(--muted); font-size: 0.9rem; margin-left: auto; }
 
 /* ===== Tableau de données ===== */
-.mk-datatable th a { color: inherit; text-decoration: none; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.mk-datatable th a { color: inherit; text-decoration: none; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; min-height: 24px; }
 /* Indicateur de tri : discret par défaut sur toute colonne triable (fait comprendre qu'elle l'est SANS survol),
    plus marqué et coloré sur la colonne active — jamais un simple caractère seul dans le texte du libellé. */
 .mk-datatable th a::after { content: "⇅"; font-size: 0.76rem; color: var(--mk-border-strong); }
@@ -230,6 +230,10 @@ a.mk-stat:hover { border-color: var(--accent); }
   .mk-datatable tr { border: 1px solid var(--mk-border); border-radius: var(--mk-r); margin: 0 0 12px; background: var(--mk-surface); overflow: hidden; }
   .mk-datatable td { border-top: 0; padding: 6px 12px; display: flex; gap: 12px; justify-content: space-between; }
   .mk-datatable td::before { content: attr(data-label); font-weight: 700; color: var(--muted); font-size: 0.8rem; flex: none; }
+  /* Case de sélection en mode carte : jamais écrasée par la ligne flexible, cible tactile de 24 px (WCAG 2.5.8) */
+  .mk-datatable td > input[type="checkbox"] { flex: none; inline-size: 24px; block-size: 24px; margin: 0; }
+  /* Lien seul dans une cellule (adresse, nom…) : au moins 24 px de haut */
+  .mk-datatable td > a:only-child { display: inline-flex; align-items: center; min-height: 24px; }
   /* Ligne en carte : la cellule a la largeur de la carte, la pastille peut donc revenir à la ligne */
   .mk-datatable td > .mk-status { white-space: normal; overflow-wrap: anywhere; }
   .mk-datatable td.mk-num { text-align: right; }
@@ -414,6 +418,13 @@ html:has(.mk-dialog[open]) { overflow: hidden; } /* la page derrière ne défile
 .mk-grid-2 { align-items: start; }
 .mk-num { white-space: nowrap; }
 @media (min-width: 900px) { .mk-stats-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .mk-stats-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* Site Web : pages modifiées récemment */
+.mk-sw-recent { list-style: none; margin: 0; padding: 0; }
+.mk-sw-recent li { padding: 8px 0; border-top: 1px solid var(--mk-border); overflow-wrap: anywhere; }
+.mk-sw-recent li:first-child { border-top: 0; }
+.mk-sw-newpage { margin-top: 16px; display: grid; gap: 8px; justify-items: start; }
+.mk-sw-newpage .field-group { width: 100%; margin: 0; }
 .mk-readiness { min-width: 0; }
 .mk-activity { margin-top: 0; }
 .mk-breakdown-title { margin: 20px 0 8px; font-size: 1rem; }
@@ -1647,6 +1658,8 @@ input.mk-fx-switch[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed
 .mk-journey-use-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
 .mk-callout-warn { background: var(--warning-bg); }
 .mk-callout-warn .icon { color: var(--warning-text); }
+/* Bandeau d'information (ex. modifications non publiées d'une page) */
+.mk-callout-info { align-items: center; justify-content: space-between; flex-wrap: wrap; background: var(--accent-light, #e0f2fe); }
 .mk-journey-todo, .mk-journey-rules { margin: 4px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: 0.9rem; }
 .mk-journey-code { margin: 8px 0 0; font-size: 0.85rem; }
 .mk-journey-code code { overflow-wrap: anywhere; font-size: 0.8rem; }
@@ -1699,6 +1712,12 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-lp-add-label { font-weight: 700; }
 .mk-lp-save { position: sticky; bottom: 0; padding: 12px 0; background: var(--mk-bg); }
 .mk-lp-side { display: grid; gap: 16px; position: sticky; top: 76px; }
+/* Versions publiées d'une page : date, auteur, voir / restaurer dans le brouillon */
+.mk-lp-versions { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.mk-lp-versions li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 8px 0; border-top: 1px solid var(--mk-border); }
+.mk-lp-versions li:first-child { border-top: 0; }
+.mk-lp-danger { flex-wrap: wrap; justify-content: flex-start; }
+.mk-lp-content p { margin: 0 0 12px; overflow-wrap: anywhere; }
 .mk-lp-preview iframe { width: 100%; height: 560px; border: 1px solid var(--mk-border); border-radius: var(--mk-r-sm); background: #fff; }
 @media (max-width: 1100px) { .mk-lp-layout { grid-template-columns: 1fr; } .mk-lp-side { position: static; } }
 
@@ -1765,3 +1784,68 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 [data-social-later][hidden] { display: none; }
 .mk-soc-url { overflow-wrap: anywhere; word-break: break-all; }
 @media (min-width: 761px) { .mk-soc-table td { white-space: nowrap; } .mk-soc-table td[data-label="Actions"] { white-space: normal; min-width: 96px; } .mk-soc-table th[scope="row"] { min-width: 220px; } }
+
+/* ---------- Site Web : design system d'un site ---------- */
+.mk-sd-group { border: 0; padding: 0; margin: 0 0 20px; min-width: 0; }
+.mk-sd-group legend { font-weight: 700; margin-bottom: 10px; }
+.mk-sd-colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px 16px; }
+.mk-sd-colors .field-group { margin: 0; }
+.mk-sd-type input, .mk-sd-type select { max-width: 120px; }
+/* Aperçu : uniquement les variables du site (--kw-…), les mêmes que sur les pages publiées */
+.mk-sd-preview { padding: var(--kw-space-lg); background: var(--kw-background); color: var(--kw-text); font-family: var(--kw-font-body); border-radius: var(--mk-r); border: 1px solid var(--mk-border); overflow-wrap: anywhere; }
+.mk-sd-preview p { margin: 0 0 var(--kw-space-md); }
+.mk-sd-h1 { font-family: var(--kw-font-heading); font-size: var(--kw-h1-size); font-weight: var(--kw-h1-weight); line-height: var(--kw-h1-lh); color: var(--kw-secondary); }
+.mk-sd-h2 { font-family: var(--kw-font-heading); font-size: var(--kw-h2-size); font-weight: var(--kw-h2-weight); line-height: var(--kw-h2-lh); }
+.mk-sd-h3 { font-family: var(--kw-font-heading); font-size: var(--kw-h3-size); font-weight: var(--kw-h3-weight); line-height: var(--kw-h3-lh); }
+.mk-sd-body { font-size: var(--kw-body-size); font-weight: var(--kw-body-weight); line-height: var(--kw-body-lh); }
+.mk-sd-caption { font-size: var(--kw-caption-size); line-height: var(--kw-caption-lh); color: var(--kw-muted); }
+.mk-sd-card { max-width: 360px; padding: var(--kw-space-md); background: var(--kw-surface); border: var(--kw-border); border-radius: var(--kw-radius-card); box-shadow: var(--kw-shadow-card); }
+.mk-sd-btn { display: inline-flex; align-items: center; min-height: var(--kw-button-height); padding: 0 var(--kw-space-md); background: var(--kw-primary); color: var(--kw-on-primary); border-radius: var(--kw-radius-button); box-shadow: var(--kw-shadow-button); font-size: var(--kw-button-size); font-weight: var(--kw-button-weight); }
+
+/* Formulaires : options par champ (obligatoire, affichage, condition) */
+.mk-fs-list { display: grid; gap: 12px; }
+.mk-fs-row { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--mk-border); border-radius: var(--mk-r); }
+.mk-fs-name { margin: 0; overflow-wrap: anywhere; }
+.mk-fs-row .field-group { margin: 0; }
+.mk-fs-cond { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+
+/* Création d'une page : choix du modèle de départ */
+.mk-tpl-choice { border: 0; padding: 0; margin: 12px 0 0; min-width: 0; }
+.mk-tpl-choice legend { font-weight: 700; margin-bottom: 8px; }
+.mk-tpl-choice { display: grid; gap: 6px; max-height: 46vh; overflow-y: auto; }
+.mk-tpl { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--mk-border); border-radius: var(--mk-r-sm, 8px); cursor: pointer; }
+.mk-tpl:has(input:checked) { border-color: var(--accent); background: var(--accent-light); }
+.mk-tpl input { margin-top: 4px; flex: none; }
+.mk-tpl > span { min-width: 0; overflow-wrap: anywhere; }
+
+/* Analyse d'une page : entonnoir (largeur des barres = part des visiteurs arrivés, valeur calculée côté serveur) */
+.mk-funnel { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.mk-funnel-step { display: grid; gap: 4px; }
+.mk-funnel-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+.mk-funnel-label { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.mk-funnel-num { color: var(--muted); font-variant-numeric: tabular-nums; }
+.mk-funnel-track { height: 12px; border-radius: 999px; background: var(--mk-border); overflow: hidden; }
+.mk-funnel-bar { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+
+/* Tunnels : étapes en colonne, reliées par un trait (phase 8) */
+.mk-flow { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 0; }
+.mk-flow-step { position: relative; display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; padding-bottom: 18px; }
+.mk-flow-step:not(:last-child)::before { content: ""; position: absolute; left: 17px; top: 36px; bottom: 0; width: 2px; background: var(--mk-border); }
+.mk-flow-num { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mk-flow-main { min-width: 0; border: 1px solid var(--mk-border); border-radius: var(--mk-r); padding: 12px 14px; background: var(--mk-surface); display: grid; gap: 8px; }
+.mk-flow-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.mk-flow-rename { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; flex: 1 1 260px; }
+.mk-flow-rename input { flex: 1 1 160px; min-width: 0; font-weight: 600; }
+.mk-flow-meta { margin: 0; overflow-wrap: anywhere; }
+.mk-flow-main .mk-callout { margin: 0; }
+.mk-flow-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mk-flow-actions form { margin: 0; }
+.mk-flow-add { border-top: 1px solid var(--mk-border); padding-top: 16px; }
+
+/* Score des contacts (phase 13) */
+.mk-table tr.is-muted > * { opacity: 0.6; }
+.mk-inline-form { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.mk-input-num { width: 84px; min-height: 36px; }
+.mk-score-history > summary { cursor: pointer; font-weight: 700; }
+.mk-score-history[open] > summary { margin-bottom: 8px; }
+.mk-form-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; } .mk-form-row .field-group { flex: 1 1 220px; min-width: 0; margin: 0; }

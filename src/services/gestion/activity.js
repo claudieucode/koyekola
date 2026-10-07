@@ -126,7 +126,7 @@ function alerts(userId) {
     const { auditMedia } = require("../../config/mediaAudit");
     const a = auditMedia(db);
     if (a.missing.length) out.push({ level: "error", title: `${a.missing.length} référence(s) à des fichiers absents du serveur`, detail: a.missing.slice(0, 3).map((m) => m.where).join(" · "), href: "/formateur/gestion/ressources?etat=a-traiter" });
-  } catch { /* audit indisponible : aucune alerte inventée */ }
+  } catch (error) { console.error("[KOLAKISA] Alertes : contrôle des fichiers indisponible :", error.message); } // aucune alerte inventée
   const soon = db.prepare("SELECT code, expires_at FROM coupons WHERE instructor_id = ? AND active = 1 AND expires_at IS NOT NULL AND expires_at > datetime('now') AND expires_at <= datetime('now', '+7 days')").all(userId);
   for (const c of soon) out.push({ level: "warning", title: `Le code promo ${c.code} expire bientôt`, href: "/formateur/gestion/ventes/coupons" });
   const empty = db.prepare("SELECT c.id, c.title FROM courses c WHERE c.instructor_id = ? AND c.published = 1 AND NOT EXISTS (SELECT 1 FROM lessons l JOIN sections s ON s.id = l.section_id WHERE s.course_id = c.id)").all(userId);

@@ -149,8 +149,9 @@ C'est le point le plus important, et **Hostinger ne le documente pas clairement*
 
 Vous êtes seul responsable de vos données : faites des sauvegardes **avant chaque mise à jour importante** et régulièrement.
 
-- **La base** (comptes, formations, achats, avis) : `npm run sauvegarde` crée une copie datée dans `data/backups/` (14 conservées). Cela suppose un accès terminal (SSH) à l'hébergement. Sans terminal, téléchargez le fichier `data/KOYEKOLA.db` avec le **Gestionnaire de fichiers** de hPanel.
-- **Les vidéos et images** (dossier `uploads/`) ne sont **pas** incluses dans `npm run sauvegarde` : téléchargez-les aussi via le Gestionnaire de fichiers.
+- **Automatique** : le site copie la base chaque jour dans `<DATA_DIR>/backups/` (14 copies gardées ; `SAUVEGARDE_AUTO=0` pour couper). Ces copies sont sur le même disque que le site : elles ne protègent pas contre la perte du serveur.
+- **Copie hors du serveur (à faire régulièrement)** : **Mon espace → Centre de gestion → Sauvegardes**. Bouton « Sauvegarder maintenant », téléchargement de chaque copie de la base, et « Télécharger tous les fichiers » (vidéos, images, pièces jointes, en archive `.tar`). Rangez ces fichiers ailleurs (ordinateur, disque externe, stockage en ligne).
+- En terminal (SSH), `npm run sauvegarde` crée aussi une copie datée de la base dans `data/backups/`.
 - Gardez toujours vos vidéos originales sur votre ordinateur.
 
 ---

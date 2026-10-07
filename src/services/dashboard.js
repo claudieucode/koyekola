@@ -179,6 +179,7 @@ const GESTION_NAV = [
     { key: "g-ressources", label: "Ressources", href: "/formateur/gestion/ressources", icon: "image" },
     { key: "g-support", label: "Support", href: "/formateur/gestion/support", icon: "mail", badge: "support" },
     { key: "g-activite", label: "Activité", href: "/formateur/gestion/activite", icon: "bell", badge: "notifications" },
+    { key: "g-sauvegardes", label: "Sauvegardes", href: "/formateur/gestion/sauvegardes", icon: "shield" },
     { key: "g-journal", label: "Journal", href: "/formateur/gestion/journal", icon: "listChecks" },
   ] },
 ];

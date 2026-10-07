@@ -1,106 +1,65 @@
 <%- include("partials/top", { title, active }) %>
-<% const dis = canWrite ? "" : " disabled"; const v = (x) => (x === undefined || x === null ? "" : x); %>
-    <p class="mk-back"><a href="/marketing/pages">← Pages d'atterrissage</a></p>
+<% const archived = Boolean(page.archived_at); const dis = canWrite && !archived ? "" : " disabled"; const c = content; %>
+    <p class="mk-back"><a href="/marketing/pages">← Pages</a></p>
     <div class="mk-head"><div class="mk-builder-title"><h1><%= page.name %></h1><span class="mk-status <%= STATUS_CLASS[page.status] %>"><%= STATUSES[page.status] %></span></div>
-      <% if (canWrite) { %><div class="mk-actions">
-        <% if (page.status === "published") { %><a class="btn btn-outline btn-sm" href="/p/<%= page.slug %>" target="_blank" rel="noopener">Voir la page en ligne</a>
-          <form action="/marketing/pages/<%= page.id %>/depublier" method="post"><button type="submit" class="btn btn-outline btn-sm">Mettre hors ligne</button></form>
-        <% } else { %><form action="/marketing/pages/<%= page.id %>/publier" method="post"><button type="submit" class="btn btn-primary btn-sm"<%= check.ready ? "" : " disabled" %>>Publier</button></form><% } %>
+      <% if (canWrite && !archived) { %><div class="mk-actions">
+        <% if (page.status === "published") { %><a class="btn btn-outline btn-sm" href="/p/<%= page.slug %>" target="_blank" rel="noopener">Voir la page en ligne</a><% } %>
+        <a class="btn btn-outline btn-sm" href="/marketing/pages/<%= page.id %>/apercu" target="_blank" rel="noopener"><%= page.hasDraft ? "Aperçu du brouillon" : "Aperçu" %></a>
+        <% if (page.status !== "published" || page.hasDraft) { %><form action="/marketing/pages/<%= page.id %>/publier" method="post"><button type="submit" class="btn btn-primary btn-sm"<%= check.ready ? "" : " disabled" %>><%= page.status === "published" ? "Publier les modifications" : "Publier" %></button></form><% } %>
+        <% if (page.status === "published") { %><form action="/marketing/pages/<%= page.id %>/depublier" method="post"><button type="submit" class="btn btn-outline btn-sm">Mettre hors ligne</button></form><% } %>
       </div><% } %>
     </div>
-    <% if (!check.ready && page.status !== "published") { %><div class="mk-callout"><span><strong>Avant de publier :</strong> <%= check.errors.join(" ") %></span></div><% } %>
+    <% if (variantOf) { %><p class="mk-callout"><span><strong>Version B d'un test A/B</strong>Cette page est la version B du test de « <%= variantOf.name %> » : elle ne se publie pas seule. <a href="/marketing/pages/<%= variantOf.page_id %>/test-ab?test=<%= variantOf.id %>">Ouvrir le test</a>.</span></p>
+    <% } else { %><p class="field-hint"><a href="/marketing/pages/<%= page.id %>/test-ab"><%= openTest ? `Test A/B « ${openTest.name} » (${openTest.status === "running" ? "en cours" : openTest.status === "stopped" ? "en pause" : "en préparation"})` : "Test A/B : comparer deux versions de cette page" %></a></p><% } %>
+    <% if (inFunnels.length) { %><p class="field-hint">Étape de tunnel : <% inFunnels.forEach((t, i) => { %><%= i ? " · " : "" %><a href="/marketing/tunnels/<%= t.id %>#fn-steps"><%= t.name %></a> (étape <%= t.position %>, « <%= t.step %> »<%= t.status === "archived" ? ", tunnel archivé" : "" %>)<% }) %>.</p><% } %>
+    <% if (archived) { %><div class="mk-callout"><span><strong>Page archivée</strong> (hors ligne, non modifiable). Restaurez-la pour la modifier ou la republier.</span>
+      <% if (canWrite) { %><form action="/marketing/pages/<%= page.id %>/restaurer" method="post"><button type="submit" class="btn btn-outline btn-sm">Restaurer la page</button></form><% } %></div>
+    <% } else if (page.hasDraft) { %><div class="mk-callout mk-callout-info" role="status"><span><strong>Modifications non publiées.</strong> <%= page.status === "published" ? "Les visiteurs voient toujours la version en ligne." : "La page n'est pas en ligne." %></span>
+      <% if (canWrite) { %><form action="/marketing/pages/<%= page.id %>/brouillon/abandonner" method="post"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Les modifications non publiées seront perdues ; l'éditeur reviendra à la version en ligne." data-mk-confirm-title="Abandonner le brouillon ?" data-mk-confirm-ok="Abandonner">Abandonner le brouillon</button></form><% } %></div><% } %>
+    <% if (!archived && !check.ready && (page.status !== "published" || page.hasDraft)) { %><div class="mk-callout"><span><strong>Avant de publier :</strong> <%= check.errors.join(" ") %></span></div><% } %>
 
     <div class="mk-lp-layout">
       <form action="/marketing/pages/<%= page.id %>" method="post" class="mk-form mk-lp-editor" id="lp-form">
+        <input type="hidden" name="revision" value="<%= page.revision %>">
         <section class="mk-panel" aria-labelledby="lp-settings">
           <h2 id="lp-settings">Réglages</h2>
           <div class="field-row">
             <div class="field-group"><label for="lp-name">Nom (interne)</label><input id="lp-name" type="text" name="name" maxlength="100" required value="<%= page.name %>"<%= dis %>></div>
             <div class="field-group"><label for="lp-slug">Adresse : /p/…</label><input id="lp-slug" type="text" name="slug" maxlength="60" required pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" value="<%= page.slug %>"<%= dis %>></div>
           </div>
-          <div class="field-group"><label for="lp-title">Titre de l'onglet du navigateur</label><input id="lp-title" type="text" name="title" maxlength="120" value="<%= page.title %>"<%= dis %>></div>
-          <div class="field-group"><label for="lp-desc">Description (partage sur les réseaux)</label><textarea id="lp-desc" name="description" rows="2" maxlength="300"<%= dis %>><%= page.description %></textarea></div>
+          <div class="field-group"><label for="lp-site">Site</label>
+            <select id="lp-site" name="site_id"<%= dis %>><option value="">Aucun (page isolée)</option><% sites.forEach((st) => { %><option value="<%= st.id %>"<%= page.site_id === st.id ? " selected" : "" %>><%= st.name %></option><% }) %></select>
+            <span class="field-hint">Une page d'un site prend les couleurs et polices de son design system.</span></div>
           <div class="field-group"><label for="lp-form-id">Formulaire d'inscription (liste, consentement, double confirmation)</label>
             <select id="lp-form-id" name="form_id"<%= dis %>><option value="">Aucun</option><% forms.forEach((f) => { %><option value="<%= f.id %>"<%= page.form_id === f.id ? " selected" : "" %>><%= f.name %><%= f.status === "published" ? "" : " (non publié)" %></option><% }) %></select>
             <span class="field-hint"><a href="/marketing/formulaires">Gérer les formulaires</a></span></div>
           <div class="field-group"><label for="lp-tags">Étiquettes ajoutées aux inscrits de cette page (5 au plus, séparées par des virgules)</label><input id="lp-tags" type="text" name="tags" value="<%= page.tags.join(", ") %>" placeholder="page-guide-photo"<%= dis %>></div>
+          <% if (page.site_id) { %><p class="field-hint">Couleurs et polices : celles du design system du site (Site Web → Sites).</p><% } else { %>
           <div class="mk-lp-colors">
-            <div class="field-group"><label for="lp-c1">Couleur principale</label><input id="lp-c1" type="color" name="theme_accent" value="<%= page.theme.accent %>"<%= dis %>></div>
-            <div class="field-group"><label for="lp-c2">Fond</label><input id="lp-c2" type="color" name="theme_background" value="<%= page.theme.background %>"<%= dis %>></div>
-            <div class="field-group"><label for="lp-c3">Texte</label><input id="lp-c3" type="color" name="theme_text" value="<%= page.theme.text %>"<%= dis %>></div>
-          </div>
-          <label class="checkbox-row"><input type="checkbox" name="indexable" value="on"<%= page.indexable ? " checked" : "" %><%= dis %>> Autoriser les moteurs de recherche à indexer la page</label>
+            <div class="field-group"><label for="lp-c1">Couleur principale</label><input id="lp-c1" type="color" name="theme_accent" value="<%= c.theme.accent %>"<%= dis %>></div>
+            <div class="field-group"><label for="lp-c2">Fond</label><input id="lp-c2" type="color" name="theme_background" value="<%= c.theme.background %>"<%= dis %>></div>
+            <div class="field-group"><label for="lp-c3">Texte</label><input id="lp-c3" type="color" name="theme_text" value="<%= c.theme.text %>"<%= dis %>></div>
+          </div><% } %>
         </section>
 
-        <section aria-labelledby="lp-sections-title">
-          <h2 id="lp-sections-title" class="mk-h2">Sections</h2>
-          <% page.sections.forEach((s, i) => { const n = `sections[${i}]`; const id = `s${i}`; %>
-            <div class="mk-panel mk-lp-section" id="section-<%= i %>">
-              <div class="mk-lp-section-head"><strong><%= i + 1 %>. <%= SECTION_TYPES[s.type] %></strong>
-                <% if (canWrite) { %><span class="mk-lp-section-actions">
-                  <button type="submit" name="action" value="up:<%= i %>" class="btn btn-ghost btn-sm"<%= i === 0 ? " disabled" : "" %>>Monter<span class="sr-only"> la section <%= i + 1 %></span></button>
-                  <button type="submit" name="action" value="down:<%= i %>" class="btn btn-ghost btn-sm"<%= i === page.sections.length - 1 ? " disabled" : "" %>>Descendre<span class="sr-only"> la section <%= i + 1 %></span></button>
-                  <button type="submit" name="action" value="remove:<%= i %>" class="btn btn-ghost btn-sm" data-mk-confirm="La section et son contenu seront retirés (les autres modifications sont enregistrées)." data-mk-confirm-title="Supprimer cette section ?" data-mk-confirm-ok="Supprimer">Supprimer<span class="sr-only"> la section <%= i + 1 %></span></button>
-                </span><% } %></div>
-              <input type="hidden" name="<%= n %>[type]" value="<%= s.type %>">
-              <% if (s.type === "hero") { %>
-                <div class="field-group"><label for="<%= id %>-t">Titre</label><input id="<%= id %>-t" type="text" name="<%= n %>[title]" maxlength="150" required value="<%= s.title %>"<%= dis %>></div>
-                <div class="field-group"><label for="<%= id %>-st">Sous-titre</label><textarea id="<%= id %>-st" name="<%= n %>[subtitle]" rows="2" maxlength="300"<%= dis %>><%= s.subtitle %></textarea></div>
-                <div class="field-row">
-                  <div class="field-group"><label for="<%= id %>-il">Image (médiathèque)</label><select id="<%= id %>-il" name="<%= n %>[imageLib]"<%= dis %>><option value="">Aucune / adresse ci-contre</option><% images.forEach((im) => { %><option value="<%= im.path %>"<%= s.image === im.path ? " selected" : "" %>><%= im.name %></option><% }) %></select></div>
-                  <div class="field-group"><label for="<%= id %>-iu">ou adresse https://</label><input id="<%= id %>-iu" type="url" name="<%= n %>[imageUrl]" value="<%= /^https:/.test(s.image) ? s.image : "" %>"<%= dis %>></div>
-                </div>
-                <div class="field-group"><label for="<%= id %>-ia">Description de l'image</label><input id="<%= id %>-ia" type="text" name="<%= n %>[imageAlt]" maxlength="200" value="<%= s.imageAlt %>"<%= dis %>></div>
-                <div class="field-row">
-                  <div class="field-group"><label for="<%= id %>-bl">Texte du bouton (facultatif)</label><input id="<%= id %>-bl" type="text" name="<%= n %>[buttonLabel]" maxlength="60" value="<%= s.buttonLabel %>"<%= dis %>></div>
-                  <div class="field-group"><label for="<%= id %>-bu">Adresse du bouton</label><input id="<%= id %>-bu" type="text" name="<%= n %>[buttonUrl]" value="<%= s.buttonUrl %>" placeholder="/catalogue ou https://…"<%= dis %>></div>
-                </div>
-              <% } else if (s.type === "text") { %>
-                <div class="field-group"><label for="<%= id %>-md">Texte</label><textarea id="<%= id %>-md" name="<%= n %>[markdown]" rows="6" maxlength="10000"<%= dis %>><%= s.markdown %></textarea>
-                  <span class="field-hint">**gras**, *italique*, ## intertitre, listes avec « - », [lien](https://…).</span></div>
-              <% } else if (s.type === "image") { %>
-                <div class="field-row">
-                  <div class="field-group"><label for="<%= id %>-sl">Image (médiathèque)</label><select id="<%= id %>-sl" name="<%= n %>[srcLib]"<%= dis %>><option value="">Adresse ci-contre</option><% images.forEach((im) => { %><option value="<%= im.path %>"<%= s.src === im.path ? " selected" : "" %>><%= im.name %></option><% }) %></select></div>
-                  <div class="field-group"><label for="<%= id %>-su">ou adresse https://</label><input id="<%= id %>-su" type="url" name="<%= n %>[srcUrl]" value="<%= /^https:/.test(s.src) ? s.src : "" %>"<%= dis %>></div>
-                </div>
-                <div class="field-group"><label for="<%= id %>-alt">Description de l'image (obligatoire)</label><input id="<%= id %>-alt" type="text" name="<%= n %>[alt]" maxlength="200" required value="<%= s.alt %>"<%= dis %>></div>
-                <div class="field-row">
-                  <div class="field-group"><label for="<%= id %>-cap">Légende</label><input id="<%= id %>-cap" type="text" name="<%= n %>[caption]" maxlength="200" value="<%= s.caption %>"<%= dis %>></div>
-                  <div class="field-group"><label for="<%= id %>-lk">Lien au clic (facultatif)</label><input id="<%= id %>-lk" type="text" name="<%= n %>[link]" value="<%= s.link %>"<%= dis %>></div>
-                </div>
-              <% } else if (s.type === "list") { %>
-                <div class="field-group"><label for="<%= id %>-lt">Titre de la liste</label><input id="<%= id %>-lt" type="text" name="<%= n %>[title]" maxlength="150" value="<%= s.title %>"<%= dis %>></div>
-                <div class="field-group"><label for="<%= id %>-li">Points (un par ligne, 20 au plus)</label><textarea id="<%= id %>-li" name="<%= n %>[items]" rows="5"<%= dis %>><%= s.items.join("\n") %></textarea></div>
-              <% } else if (s.type === "course") { %>
-                <div class="field-row">
-                  <div class="field-group"><label for="<%= id %>-c">Formation</label><select id="<%= id %>-c" name="<%= n %>[courseId]"<%= dis %>><% courses.forEach((c) => { %><option value="<%= c.id %>"<%= s.courseId === c.id ? " selected" : "" %>><%= c.title %></option><% }) %></select></div>
-                  <div class="field-group"><label for="<%= id %>-cta">Texte du bouton</label><input id="<%= id %>-cta" type="text" name="<%= n %>[cta]" maxlength="60" value="<%= s.cta %>"<%= dis %>></div>
-                </div>
-                <span class="field-hint">Titre, prix et image sont lus dans le catalogue à chaque affichage (toujours à jour).</span>
-              <% } else if (s.type === "button") { %>
-                <div class="field-row">
-                  <div class="field-group"><label for="<%= id %>-bl">Texte</label><input id="<%= id %>-bl" type="text" name="<%= n %>[label]" maxlength="60" required value="<%= s.label %>"<%= dis %>></div>
-                  <div class="field-group"><label for="<%= id %>-bu">Adresse</label><input id="<%= id %>-bu" type="text" name="<%= n %>[url]" required value="<%= s.url %>" placeholder="/catalogue ou https://…"<%= dis %>></div>
-                </div>
-                <div class="field-group"><label for="<%= id %>-al">Alignement</label><select id="<%= id %>-al" name="<%= n %>[align]"<%= dis %>><option value="center"<%= s.align === "center" ? " selected" : "" %>>Centré</option><option value="left"<%= s.align === "left" ? " selected" : "" %>>À gauche</option></select></div>
-              <% } else if (s.type === "quote") { %>
-                <div class="field-group"><label for="<%= id %>-q">Citation</label><textarea id="<%= id %>-q" name="<%= n %>[text]" rows="3" maxlength="600" required<%= dis %>><%= s.text %></textarea></div>
-                <div class="field-group"><label for="<%= id %>-au">Auteur</label><input id="<%= id %>-au" type="text" name="<%= n %>[author]" maxlength="120" value="<%= s.author %>"<%= dis %>></div>
-              <% } else if (s.type === "form") { %>
-                <div class="field-group"><label for="<%= id %>-h">Titre</label><input id="<%= id %>-h" type="text" name="<%= n %>[heading]" maxlength="150" value="<%= s.heading %>"<%= dis %>></div>
-                <div class="field-group"><label for="<%= id %>-in">Texte d'introduction</label><textarea id="<%= id %>-in" name="<%= n %>[intro]" rows="2" maxlength="400"<%= dis %>><%= s.intro %></textarea></div>
-                <span class="field-hint">Champs, consentement et liste viennent du formulaire choisi dans les réglages.</span>
-              <% } %>
-            </div>
-          <% }) %>
-          <% if (canWrite) { %>
-            <div class="mk-panel mk-lp-add">
-              <span class="mk-lp-add-label">Ajouter une section :</span>
-              <% Object.entries(SECTION_TYPES).forEach(([k, label]) => { %><button type="submit" name="action" value="add:<%= k %>" class="btn btn-outline btn-sm"><%= label.replace(/ \(.*/, "") %></button><% }) %>
-            </div>
-            <div class="mk-actions mk-lp-save"><button type="submit" name="action" value="save" class="btn btn-primary">Enregistrer</button></div>
-          <% } %>
+        <section class="mk-panel" aria-labelledby="lp-seo">
+          <h2 id="lp-seo">Référencement (SEO)</h2>
+          <div class="field-group"><label for="lp-title">Titre (onglet du navigateur et résultats de recherche)</label><input id="lp-title" type="text" name="title" maxlength="120" value="<%= c.title %>"<%= dis %>><span class="field-hint">60 caractères environ s'affichent dans les résultats de recherche.</span></div>
+          <div class="field-group"><label for="lp-desc">Description (résultats de recherche et partage sur les réseaux)</label><textarea id="lp-desc" name="description" rows="2" maxlength="300"<%= dis %>><%= c.description %></textarea></div>
+          <div class="field-row">
+            <div class="field-group"><label for="lp-og">Image de partage (médiathèque)</label><select id="lp-og" name="seo_og_image"<%= dis %>><option value="">Image du bandeau</option><% images.forEach((im) => { %><option value="<%= im.path %>"<%= c.seo.ogImage === im.path ? " selected" : "" %>><%= im.name %></option><% }) %></select></div>
+            <div class="field-group"><label for="lp-canon">Adresse canonique (facultative)</label><input id="lp-canon" type="url" name="seo_canonical" value="<%= c.seo.canonical || "" %>" placeholder="https://…"<%= dis %>></div>
+          </div>
+          <label class="checkbox-row"><input type="checkbox" name="indexable" value="on"<%= page.indexable ? " checked" : "" %><%= dis %>> Autoriser les moteurs de recherche à indexer la page (et l'ajouter au plan du site)</label>
         </section>
+
+        <section class="mk-panel mk-lp-content" aria-labelledby="lp-sections-title">
+          <h2 id="lp-sections-title">Contenu de la page</h2>
+          <p><%= c.sections.length %> section<%= c.sections.length > 1 ? "s" : "" %> : <%= c.sections.slice(0, 6).map((s) => (s.name || SECTION_LABELS[s.type] || s.type)).join(" · ") %><%= c.sections.length > 6 ? " …" : "" %></p>
+          <% if (!archived) { %><p><a class="btn btn-primary" href="/marketing/pages/<%= page.id %>/editeur"><%= canWrite ? "Ouvrir l'éditeur visuel" : "Voir dans l'éditeur visuel" %></a></p><% } %>
+          <p class="field-hint">Glisser-déposer, calques, annuler/rétablir, aperçu ordinateur, tablette et mobile ; chaque modification est enregistrée automatiquement en brouillon.</p>
+        </section>
+        <% if (canWrite && !archived) { %><div class="mk-actions mk-lp-save"><button type="submit" name="action" value="save" class="btn btn-outline">Enregistrer les réglages</button></div><% } %>
       </form>
 
       <aside class="mk-lp-side" aria-label="Aperçu et statistiques">
@@ -113,13 +72,32 @@
           </dl>
           <% if (report.clicks.length) { %><h3 class="mk-journey-sub">Clics</h3><ul class="mk-journey-emails"><% report.clicks.forEach((c) => { %><li><%= c.target %> : <%= mkh.fmt(c.n) %> (<%= mkh.fmt(c.u) %> visiteur<%= c.u > 1 ? "s" : "" %>)</li><% }) %></ul><% } %>
           <p class="field-hint">Visiteur compté une fois par jour, sans cookie ni adresse IP conservée ; les robots ne sont pas comptés.</p>
+          <p><a class="btn btn-outline btn-sm" href="/marketing/pages/<%= page.id %>/analyse">Analyse détaillée (parcours des visiteurs)</a></p>
         </section>
         <section class="mk-panel mk-lp-preview" aria-labelledby="lp-prev">
           <h2 id="lp-prev">Aperçu</h2>
           <% if (page.status === "published") { %><p class="field-hint">En ligne : <a href="/p/<%= page.slug %>" target="_blank" rel="noopener"><%= publicUrl %></a></p><% } %>
           <iframe src="/marketing/pages/<%= page.id %>/apercu" title="Aperçu de la page" loading="lazy"></iframe>
         </section>
-        <% if (canWrite) { %><form action="/marketing/pages/<%= page.id %>/supprimer" method="post"><button type="submit" class="btn btn-danger btn-sm" data-mk-confirm="La page et ses statistiques seront supprimées définitivement ; son adresse ne fonctionnera plus." data-mk-confirm-title="Supprimer cette page ?" data-mk-confirm-ok="Supprimer">Supprimer la page</button></form><% } %>
+        <section class="mk-panel" aria-labelledby="lp-versions">
+          <h2 id="lp-versions">Versions publiées</h2>
+          <% if (!versions.length) { %><p class="field-hint">Aucune version : chaque publication en crée une.</p><% } else { %>
+            <ul class="mk-lp-versions">
+              <% versions.slice(0, 15).forEach((v, k) => { %><li>
+                <span><strong>Version <%= v.number %></strong><% if (k === 0 && page.status === "published") { %> <span class="mk-status mk-status-ok">En ligne</span><% } %><span class="mk-sub"><%= mkh.fdatetime(v.created_at) %><%= v.author ? ` · ${v.author}` : "" %></span></span>
+                <span class="mk-row-actions"><a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= page.id %>/versions/<%= v.number %>/apercu" target="_blank" rel="noopener">Voir<span class="sr-only"> la version <%= v.number %></span></a>
+                <a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= page.id %>/versions/<%= v.number %>/comparer">Comparer<span class="sr-only"> la version <%= v.number %> avec l'état actuel</span></a>
+                <% if (canWrite && !archived) { %><form action="/marketing/pages/<%= page.id %>/versions/<%= v.number %>/restaurer" method="post"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Le contenu de la version <%= v.number %> remplace votre brouillon actuel. La page en ligne ne change pas tant que vous ne publiez pas." data-mk-confirm-title="Restaurer la version <%= v.number %> ?" data-mk-confirm-ok="Restaurer dans le brouillon">Restaurer<span class="sr-only"> la version <%= v.number %></span></button></form><% } %></span>
+              </li><% }) %>
+            </ul>
+            <% if (versions.length > 15) { %><p class="field-hint"><%= versions.length - 15 %> version(s) plus ancienne(s) gardée(s).</p><% } %>
+          <% } %>
+        </section>
+        <% if (canWrite) { %><div class="mk-actions mk-lp-danger">
+          <% if (!archived) { %><form action="/marketing/pages/<%= page.id %>/dupliquer" method="post"><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form>
+          <form action="/marketing/pages/<%= page.id %>/archiver" method="post"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="La page passe hors ligne et quitte la liste ; ses statistiques et versions sont gardées, vous pourrez la restaurer." data-mk-confirm-title="Archiver cette page ?" data-mk-confirm-ok="Archiver">Archiver</button></form><% } %>
+          <form action="/marketing/pages/<%= page.id %>/supprimer" method="post"><button type="submit" class="btn btn-danger btn-sm" data-mk-confirm="La page, ses statistiques et ses versions seront supprimées définitivement ; son adresse ne fonctionnera plus." data-mk-confirm-title="Supprimer cette page ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form>
+        </div><% } %>
       </aside>
     </div>
 <%- include("partials/bottom") %>
