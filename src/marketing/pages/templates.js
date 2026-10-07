@@ -4,6 +4,10 @@
 // données existent ; la section d'inscription demande de choisir un formulaire avant publication (contrôlé à la
 // publication, comme pour toute page).
 const { listCourses } = require("../bridge/catalog");
+const { PATTERNS } = require("./patterns");
+
+// Blocs du Page Builder (sections libres faites d'éléments réels) réutilisés tels quels dans un gabarit
+const block = (key, ctx) => PATTERNS.find((p) => p.key === key).build(ctx);
 
 const hero = (title, subtitle, buttonLabel = "", buttonUrl = "", style) => ({ type: "hero", title, subtitle, image: "", imageAlt: "", buttonLabel, buttonUrl, ...(style ? { style } : {}) });
 const text = (markdown, style) => ({ type: "text", markdown, ...(style ? { style } : {}) });
@@ -48,6 +52,16 @@ const TEMPLATES = [
     build: () => [hero("Merci, c'est noté !", "Vérifiez votre boîte de réception (et les courriers indésirables) : [ce qui arrive maintenant].", "", "", { align: "center", padding: "xl" }), text("## Et maintenant ?\n\nDites à la personne ce qu'elle peut faire en attendant : [lire un article, découvrir une formation…].")] },
   { key: "evenement", category: "Événement", name: "Événement", description: "Date, lieu, programme, inscription.",
     build: () => [hero("[Nom de l'événement]", "[Date] · [Lieu ou en ligne]"), text("## Programme\n\n- [Heure] : [séquence]\n- [Heure] : [séquence]"), divider(), faq([["Comment venir ?", "Précisez l'accès ou le lien."], ["Est-ce payant ?", "Indiquez le tarif réel."]]), form("Je m'inscris")] },
+  { key: "apropos", category: "À propos", name: "À propos", description: "Votre histoire, vos valeurs, l'équipe, un appel à l'action.",
+    build: (ctx) => [hero("[Qui nous sommes]", "[Votre mission en une phrase.]"), text("## Notre histoire\n\nRacontez en quelques lignes pourquoi vous avez commencé, et pour qui."), ...block("iconbox", ctx), ...block("team", ctx), cta("Envie d'en savoir plus ?", "Découvrez ce que nous proposons.", "Voir le catalogue", "/catalogue")] },
+  { key: "contact", category: "Contact", name: "Contact", description: "Comment vous joindre, délai de réponse, formulaire.",
+    build: () => [hero("Contactez-nous", "[Une phrase sur ce que vous pouvez faire pour la personne.]"), features("Avant d'écrire", [["Délai de réponse", "[Délai réel, ex. sous 48 h ouvrées.]"], ["Horaires", "[Vos horaires réels.]"], ["Questions fréquentes", "[Lien ou réponse aux demandes les plus courantes.]"]]), form("Écrivez-nous", "Vos coordonnées servent seulement à vous répondre.")] },
+  { key: "portfolio", category: "Portfolio", name: "Portfolio", description: "Vos réalisations en cartes, des témoignages, un contact.",
+    build: (ctx) => [hero("[Vos réalisations]", "[Le type de projets que vous menez, pour qui.]"), ...block("cards", ctx), testimonials(), cta("Un projet en tête ?", "Parlons-en.", "Me contacter", "/contact")] },
+  { key: "saas", category: "Logiciel (SaaS)", name: "Logiciel en ligne", description: "Bandeau, atouts, tarifs, questions, appel à l'action.",
+    build: (ctx) => [...block("hero-split", ctx), ...block("iconbox", ctx), ...block("pricing", ctx), ...block("faq", ctx), ...block("cta", ctx)] },
+  { key: "entreprise", category: "Entreprise", name: "Entreprise", description: "Ce que fait l'entreprise, ses services, ses chiffres réels, un contact.",
+    build: (ctx) => [hero("[Nom de l'entreprise]", "[Ce que vous faites, pour qui.]"), features("Nos services", [["[Service 1]", "Ce qu'il apporte."], ["[Service 2]", "Ce qu'il apporte."], ["[Service 3]", "Ce qu'il apporte."]]), ...block("stats", ctx), testimonials(), form("Demander un rendez-vous", "Nous revenons vers vous rapidement.")] },
 ];
 
 // Sections d'un gabarit (sections absentes faute de données retirées) ; null si la clé est inconnue

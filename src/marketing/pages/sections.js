@@ -20,8 +20,9 @@ function linkUrl(v, label) {
   const url = line(v, 2000);
   if (!url) return "";
   if (/^\/(?!\/)[^\s<>"'`\\]*$/.test(url)) return url;
+  if (/^#[a-z][a-z0-9-]{0,39}$/.test(url)) return url; // ancre d'un élément de la même page
   if (/^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(url)) return url;
-  throw bad(`${label} : l'adresse doit commencer par https:// ou être une page du site (« /catalogue »).`);
+  throw bad(`${label} : l'adresse doit commencer par https://, être une page du site (« /catalogue ») ou une ancre de la page (« #tarifs »).`);
 }
 // Image : https://…, fichier de la médiathèque marketing (/uploads/marketing/…) ou de la médiathèque du site
 // (/uploads/thumbnails/…, images publiques du blog et du Centre de gestion)

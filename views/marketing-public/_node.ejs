@@ -44,11 +44,21 @@
 <% } else if (n.type === "link") { %>
   <a class="<%= cls %>" href="<%= href(p.url) %>"<%- p.newTab ? ' target="_blank" rel="noopener noreferrer"' : "" %><%- attrs %>><%= p.label %></a>
 <% } else if (n.type === "accordion") { %>
-  <div class="<%= cls %>"<%- attrs %>><% p.items.forEach((it, k) => { %><details class="lp-faq-item"<%= p.openFirst && k === 0 ? " open" : "" %>><summary><%= it.q %></summary><div class="lp-faq-answer"><%- renderMarkdown(it.a) %></div></details><% }) %></div>
+  <div class="<%= cls %>"<%- attrs %>><% p.items.forEach((it, k) => { %><details class="lp-faq-item"<%= p.openFirst && k === 0 ? " open" : "" %><%- p.single ? ` name="kw-acc-${n.id}"` : "" %>><summary><%= it.q %></summary><div class="lp-faq-answer"><%- renderMarkdown(it.a) %></div></details><% }) %></div>
 <% } else if (n.type === "tabs") { %>
-  <div class="<%= cls %>" data-kw-tabs<%- attrs %>>
+  <div class="<%= cls %><%= p.vertical ? " is-vertical" : "" %>" data-kw-tabs<%- attrs %>>
     <% p.items.forEach((it, k) => { %><section class="kw-tab-panel" data-kw-tab-title="<%= it.title %>"><h3 class="kw-tab-title"><%= it.title %></h3><%- renderMarkdown(it.text) %></section><% }) %>
   </div>
+<% } else if (n.type === "badge") { %>
+  <span class="<%= cls %> <%= `kw-badge-${p.tone}` %>"<%- attrs %>><%= p.text %></span>
+<% } else if (n.type === "timeline") { %>
+  <ol class="<%= cls %>"<%- attrs %>><% p.items.forEach((it) => { %><li class="kw-tl-item"><% if (it.date) { %><span class="kw-tl-date"><%= it.date %></span><% } %><strong class="kw-tl-title"><%= it.title %></strong><% if (it.text) { %><p class="kw-tl-text"><%= it.text %></p><% } %></li><% }) %></ol>
+<% } else if (n.type === "progress") { %>
+  <div class="<%= cls %>"<%- attrs %>><div class="kw-progress-head"><span><%= p.label %></span><% if (p.showValue) { %><span><%= p.value %> %</span><% } %></div><div class="kw-progress-track" role="progressbar" aria-label="<%= p.label %>" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= p.value %>"><span class="kw-progress-bar"></span></div></div>
+<% } else if (n.type === "menu") { %>
+  <nav class="<%= cls %><%= p.vertical ? " is-vertical" : "" %>" aria-label="<%= p.label %>"<%- attrs %>><ul class="kw-menu-list"><% p.items.forEach((it) => { %><li><a class="kw-menu-link" href="<%= href(it.url) %>"><%= it.label %></a></li><% }) %></ul></nav>
+<% } else if (n.type === "carousel") { %>
+  <div class="<%= cls %>" role="region" aria-roledescription="carrousel" aria-label="<%= p.label %>" data-kw-carousel<%- attrs %>><div class="kw-carousel-track" tabindex="0"><% p.images.forEach((im, k) => { %><figure class="kw-carousel-slide" aria-label="<%= k + 1 %> sur <%= p.images.length %>"><img src="<%= im.src %>" alt="<%= im.alt %>" loading="lazy" decoding="async"><% if (im.caption) { %><figcaption><%= im.caption %></figcaption><% } %></figure><% }) %></div></div>
 <% } else if (n.type === "table") { %>
   <div class="<%= cls %>"<%- attrs %>><table><% if (p.caption) { %><caption><%= p.caption %></caption><% } %>
     <% p.rows.forEach((r, k) => { const head = p.header && k === 0; %><% if (head) { %><thead><% } else if (k === (p.header ? 1 : 0)) { %><tbody><% } %><tr><% r.forEach((c) => { %><% if (head) { %><th scope="col"><%= c %></th><% } else { %><td><%= c %></td><% } %><% }) %></tr><% if (head) { %></thead><% } %><% }) %><% if (p.rows.length > (p.header ? 1 : 0)) { %></tbody><% } %></table></div>

@@ -545,3 +545,11 @@
 .pb-blk-legacy { display: grid; gap: 6px; }
 .pb-blk-legacy .pb-blk-more { justify-self: start; }
 .pb-blk:focus { outline: none; } .pb-blk:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Choix d'icône */
+.pb-icon-search { width: 100%; height: 30px; min-height: 0; margin: 0 0 6px; font-size: 13px; }
+.pb-icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 4px; max-height: 196px; overflow-y: auto; padding: 2px; }
+.pb-icon-opt { display: inline-grid; place-items: center; height: 34px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--card, #fff); color: var(--primary); cursor: pointer; }
+.pb-icon-opt .icon { width: 18px; height: 18px; }
+.pb-icon-opt:hover:not(:disabled) { border-color: var(--accent); }
+.pb-icon-opt[aria-selected="true"] { border-color: var(--accent); background: var(--accent-light); color: var(--accent-dark); }
+.pb-icon-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

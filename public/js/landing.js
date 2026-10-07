@@ -14,8 +14,10 @@
     var panels = box.querySelectorAll(".kw-tab-panel");
     if (panels.length < 2) return;
     var list = document.createElement("div");
+    var vertical = box.classList.contains("is-vertical");
     list.className = "kw-tab-list";
     list.setAttribute("role", "tablist");
+    if (vertical) list.setAttribute("aria-orientation", "vertical");
     var buttons = [];
     var show = function (i, focus) {
       buttons.forEach(function (b, j) { b.setAttribute("aria-selected", i === j ? "true" : "false"); b.tabIndex = i === j ? 0 : -1; panels[j].hidden = i !== j; });
@@ -35,7 +37,9 @@
       b.textContent = panel.getAttribute("data-kw-tab-title") || "";
       b.addEventListener("click", function () { show(i); });
       b.addEventListener("keydown", function (e) {
-        if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); show((i + (e.key === "ArrowRight" ? 1 : -1) + panels.length) % panels.length, true); }
+        var next = vertical ? e.key === "ArrowDown" : e.key === "ArrowRight", prev = vertical ? e.key === "ArrowUp" : e.key === "ArrowLeft";
+        if (next || prev) { e.preventDefault(); show((i + (next ? 1 : -1) + panels.length) % panels.length, true); }
+        else if (e.key === "Home" || e.key === "End") { e.preventDefault(); show(e.key === "Home" ? 0 : panels.length - 1, true); }
       });
       buttons.push(b);
       list.appendChild(b);
@@ -43,6 +47,25 @@
     box.insertBefore(list, box.firstChild);
     box.classList.add("is-enhanced");
     show(0);
+  });
+  // Carrousel : défilement natif (doigt, molette, clavier), boutons précédent / suivant ajoutés par le script
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-carousel]"), function (box) {
+    var track = box.querySelector(".kw-carousel-track");
+    if (!track || box.classList.contains("is-enhanced")) return;
+    var mk = function (label, dir) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "kw-carousel-btn " + (dir < 0 ? "is-prev" : "is-next"); b.setAttribute("aria-label", label);
+      b.textContent = dir < 0 ? "‹" : "›";
+      b.addEventListener("click", function () { var s = track.querySelector(".kw-carousel-slide"); track.scrollBy({ left: dir * (s ? s.getBoundingClientRect().width + 12 : track.clientWidth), behavior: "smooth" }); });
+      box.appendChild(b);
+      return b;
+    };
+    var prev = mk("Image précédente", -1), next = mk("Image suivante", 1);
+    var sync = function () { prev.disabled = track.scrollLeft <= 2; next.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2; };
+    track.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("resize", sync);
+    box.classList.add("is-enhanced");
+    sync();
   });
   var LABELS = [["jours", 86400], ["heures", 3600], ["minutes", 60], ["secondes", 1]];
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-countdown]"), function (box) {

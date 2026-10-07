@@ -169,11 +169,13 @@ function linksOf(page) {
     if (s.type === "layout") pageNodes.walk(s.children, (n) => {
       if (n.type === "button") out.push({ section: i, label: n.props.label, url: n.props.url });
       if (n.type === "link") out.push({ section: i, label: n.props.label, url: n.props.url });
+      if (n.type === "menu") n.props.items.forEach((m) => out.push({ section: i, label: `Menu : ${m.label}`, url: m.url }));
       if (n.type === "image" && n.props.link) out.push({ section: i, label: `Image : ${n.props.alt}`, url: n.props.link });
       if (n.type === "course" && n.props.course) out.push({ section: i, label: `Formation : ${n.props.course.title}`, url: n.props.course.url });
     });
   });
-  return out;
+  // Les ancres (#…) sautent dans la page sans passer par le compteur de clics (même règle que href() du rendu)
+  return out.filter((l) => !String(l.url).startsWith("#"));
 }
 
 // ---------- Statistiques ----------

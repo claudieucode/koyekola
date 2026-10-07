@@ -39,6 +39,9 @@ const PATTERNS = [
   { key: "bento", category: "Contenu", label: "Mosaïque (bento)", build: () => [section([cols(2, (i) => (i === 0
     ? [card([H("[Point fort principal]", "2"), T("<p>[Explication détaillée.]</p>")], { minHeight: "320px" })]
     : [card([H("[Point fort 2]", "3"), T("<p>[Texte court.]</p>")]), card([H("[Point fort 3]", "3"), T("<p>[Texte court.]</p>")])]))])] },
+  { key: "iconbox", category: "Contenu", label: "Icône + texte (3)", build: () => [section([grid(3, [["zap", "[Rapide]"], ["shield", "[Fiable]"], ["heart", "[Humain]"]].map((x) => card([I(x[0]), H(x[1], "3"), T("<p>[Ce que cela change concrètement.]</p>")])))])] },
+  { key: "team", category: "Preuve", label: "Équipe (3)", build: () => [section([H("[L'équipe]", "2", { textAlign: "center" }), grid(3, [1, 2, 3].map((n) => card([H(`[Prénom Nom ${n}]`, "3"), { type: "badge", props: { text: "[Rôle]", tone: "primary" } }, T("<p>[Parcours en une phrase, vérifiable.]</p>")])))])] },
+  { key: "steps", category: "Contenu", label: "Étapes (chronologie)", build: () => [section([H("[Comment ça se passe]"), { type: "timeline", props: { items: [{ date: "[Étape 1]", title: "[Inscription]", text: "[Ce qui se passe.]" }, { date: "[Étape 2]", title: "[Accès au contenu]", text: "[Ce qui se passe.]" }, { date: "[Étape 3]", title: "[Résultat]", text: "[Ce que la personne obtient.]" }] } }], { maxWidth: "820px" })] },
   { key: "cols-2", category: "Mise en page", label: "2 colonnes", build: () => [section([cols(2, (i) => [H(`[Titre ${i + 1}]`, "3"), T("<p>[Texte.]</p>")])])] },
   { key: "cols-3", category: "Mise en page", label: "3 colonnes", build: () => [section([cols(3, (i) => [H(`[Titre ${i + 1}]`, "3"), T("<p>[Texte.]</p>")])])] },
   { key: "cols-4", category: "Mise en page", label: "4 colonnes", build: () => [section([cols(4, (i) => [H(`[Titre ${i + 1}]`, "3"), T("<p>[Texte.]</p>")])])] },

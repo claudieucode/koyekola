@@ -112,6 +112,15 @@ module.exports = () => {
     const { ctx } = req.mk;
     res.render("marketing/page-analysis", { title: `Analyse — ${page.name}`, active: "landing", page, days, funnel: require("../pages/analytics").pageFunnel(ctx, { slug: page.slug, sections: pages.resolveSections(ctx, page.published.sections) }, { days }), report: landing.pageReport(ctx, page.id, { days }) });
   });
+  // Comparer une version avec l'état actuel de la page (brouillon s'il existe, sinon la version en ligne)
+  router.get("/pages/:id(\\d+)/versions/:n(\\d+)/comparer", need("forms.read"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    let v;
+    try { v = pages.getVersion(req.mk.ctx, page.id, Number(req.params.n)); } catch (error) { if (error instanceof MarketingError) return res.status(404).render("error", { message: error.message }); return next(error); }
+    const diff = require("../pages/compare").compareContents(v.content, page.working);
+    res.render("marketing/page-compare", { title: `Comparer la version ${v.number} — ${page.name}`, active: "landing", page, version: v, diff, canWrite: req.mk.can("forms.write") });
+  });
   // Aperçu du BROUILLON (ou de la version en ligne s'il n'y a pas de brouillon) : clics et inscriptions non enregistrés
   const renderPreview = (req, res, page, content, label) => {
     const ctx = req.mk.ctx;

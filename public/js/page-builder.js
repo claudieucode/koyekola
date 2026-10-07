@@ -263,10 +263,11 @@
     var t = NT[type];
     if (!t) return addLegacy(type, at);
     if (t.asks === "image") return openMedia({ title: "Choisir l'image", onPick: function (m) { addItems([newNode("image", { props: m.alt ? { src: m.path, alt: m.alt } : { src: m.path, alt: "", decorative: true } })], at); if (!m.alt) toast("Image ajoutée comme décorative : ajoutez un texte de remplacement si elle porte une information."); } });
-    if (t.asks === "images") return openMedia({ title: "Images de la galerie (plusieurs possibles)", multiple: true, onPick: function (list) {
+    if (t.asks === "images") return openMedia({ title: type === "carousel" ? "Images du carrousel (au moins deux)" : "Images de la galerie (plusieurs possibles)", multiple: true, onPick: function (list) {
       var missing = list.filter(function (m) { return !m.alt; });
       if (missing.length) { toast("Ajoutez d'abord un texte de remplacement aux images choisies (dans la médiathèque) : " + missing.map(function (m) { return m.name; }).join(", "), true); return; }
-      addItems([newNode("gallery", { props: { images: list.map(function (m) { return { src: m.path, alt: m.alt }; }) } })], at);
+      if (type === "carousel" && list.length < 2) { toast("Un carrousel demande au moins deux images.", true); return; }
+      addItems([newNode(type, { props: { images: list.map(function (m) { return { src: m.path, alt: m.alt }; }) } })], at);
     } });
     if (t.asks === "video") return ask("Nouvelle vidéo", [["url", "url", "Adresse (YouTube, Vimeo ou fichier vidéo https://)"], ["title", "text", "Titre (lu par les lecteurs d'écran)"]], function (v) { addItems([newNode("video", { props: v })], at); });
     if (t.asks === "audio") return ask("Nouveau fichier audio", [["src", "url", "Adresse https:// du fichier (.mp3, .m4a, .ogg, .wav)"], ["title", "text", "Titre (facultatif)", true]], function (v) { addItems([newNode("audio", { props: v })], at); });
@@ -506,6 +507,15 @@
     addItems(items.map(function (it) { var c = reId(clone(it)); if (c.section) { delete c.section; markSection(c); } return c; }));
   }
   // Copier / coller le style (styles par écran et par état ; préréglages des sections)
+  // Réinitialiser le style : tous les écrans et tous les états (le contenu est gardé) ; annulable
+  function resetStyle() {
+    var ids = selection.slice();
+    if (!ids.length || refuseLocked(ids)) return;
+    var any = ids.some(function (id) { var it = byId(id); return it && (it.styles || it.states); });
+    if (!any) { toast("Aucun style propre à réinitialiser."); return; }
+    change(function () { ids.forEach(function (id) { var it = byId(id); if (it) { delete it.styles; delete it.states; } }); });
+    toast("Style réinitialisé (tous les écrans et états). Ctrl/⌘ + Z pour annuler.");
+  }
   function copyStyle() {
     var it = selectedItems()[0];
     if (!it) return;
@@ -767,7 +777,7 @@
     if (box.querySelectorAll(".pb-pal-group").length === 0) box.appendChild(h("p", { class: "pb-hint", text: "Aucun élément ne correspond." }));
   }
   // Mots de recherche supplémentaires (ce que l'on tape naturellement pour trouver un élément)
-  var SEARCH_WORDS = { image: "photo visuel illustration media", gallery: "photos images diaporama media", video: "youtube vimeo film media", audio: "son musique podcast mp3", button: "bouton cta appel action lien", link: "lien url", heading: "titre h1 h2 texte", text: "paragraphe texte riche", accordion: "faq questions reponses accordeon", tabs: "onglets", columns: "colonnes grille mise en page layout", column: "colonne", grid: "grille tableau colonnes lignes", container: "boite bloc conteneur div", stack: "pile empiler", spacer: "espace vide marge", divider: "separateur ligne trait", countdown: "compte a rebours minuteur urgence", course: "formation cours produit vente", form: "formulaire inscription email champs", icon: "icone pictogramme", table: "tableau", quote: "citation temoignage", layout: "section libre bloc" };
+  var SEARCH_WORDS = { image: "photo visuel illustration media", gallery: "photos images diaporama media", video: "youtube vimeo film media", audio: "son musique podcast mp3", button: "bouton cta appel action lien", link: "lien url", heading: "titre h1 h2 texte", text: "paragraphe texte riche", accordion: "faq questions reponses accordeon", tabs: "onglets", columns: "colonnes grille mise en page layout", column: "colonne", grid: "grille tableau colonnes lignes", container: "boite bloc conteneur div", stack: "pile empiler", spacer: "espace vide marge", divider: "separateur ligne trait", countdown: "compte a rebours minuteur urgence", course: "formation cours produit vente", form: "formulaire inscription email champs", icon: "icone pictogramme", table: "tableau", badge: "etiquette label pastille nouveau", timeline: "chronologie etapes histoire parcours programme", progress: "progression barre pourcentage jauge", menu: "menu navigation liens nav", carousel: "carrousel slider diaporama images defilant", quote: "citation temoignage", layout: "section libre bloc" };
   // Choisir une catégorie (barre d'outils) : le panneau de gauche s'ouvre sur la bibliothèque correspondante
   function setCategory(key) {
     elCategory = key;
@@ -1012,9 +1022,38 @@
         repeatEditor(box, it, "items", [["q", "Question", 200], ["a", "Réponse (gras, liens…)", 2000, true]], { q: "Nouvelle question ?", a: "La réponse." }, 30, disabled);
         box.appendChild(checkField("Première question ouverte à l'affichage", p.openFirst, function (v) { setProp(it.id, "openFirst", v); }, { disabled: disabled }));
         box.appendChild(checkField("Données structurées FAQ (moteurs de recherche)", p.faqSchema, function (v) { setProp(it.id, "faqSchema", v); }, { disabled: disabled }));
+        box.appendChild(checkField("Une seule réponse ouverte à la fois", p.single, function (v) { setProp(it.id, "single", v); }, { disabled: disabled, hint: "Ouvrir une question referme les autres (navigateurs récents ; ailleurs, plusieurs restent possibles)." }));
         break;
       case "tabs":
-        repeatEditor(box, it, "items", [["title", "Titre de l'onglet", 60], ["text", "Contenu (gras, liens…)", 2000, true]], { title: "Nouvel onglet", text: "Contenu." }, 8, disabled);
+        repeatEditor(box, it, "items", [["title", "Titre de l'onglet", 60], ["text", "Contenu (gras, liens…)", 2000, true]], { title: "Nouvel onglet", text: "Contenu." }, 20, disabled);
+        box.appendChild(checkField("Onglets à la verticale (à gauche du contenu)", p.vertical, function (v) { setProp(it.id, "vertical", v); }, { disabled: disabled, hint: "Sur mobile, ils repassent à l'horizontale." }));
+        break;
+      case "badge":
+        box.appendChild(textField("Texte", p.text, set("text"), { max: 40, disabled: disabled }));
+        box.appendChild(selectField("Couleur", p.tone, [["primary", "Couleur du site"], ["neutral", "Neutre"], ["success", "Succès"], ["warning", "Attention"], ["error", "Alerte"]], function (v) { setProp(it.id, "tone", v); }, { disabled: disabled }));
+        break;
+      case "timeline":
+        repeatEditor(box, it, "items", [["date", "Date ou repère", 40], ["title", "Titre", 120], ["text", "Texte", 600, true]], { date: "", title: "Nouvelle étape", text: "" }, 30, disabled);
+        break;
+      case "progress":
+        box.appendChild(textField("Libellé", p.label, set("label"), { max: 80, disabled: disabled }));
+        box.appendChild(textField("Valeur (0 à 100)", String(p.value), function (v) { var n = Math.round(Number(v)); if (!isFinite(n) || n < 0 || n > 100) { toast("Valeur entre 0 et 100.", true); return; } setProp(it.id, "value", n, { key: it.id + ":value", light: true }); }, { type: "number", disabled: disabled, hint: "Une donnée réelle (par ex. places réservées) ; ne pas inventer de chiffre." }));
+        box.appendChild(checkField("Afficher la valeur en %", p.showValue !== false, function (v) { setProp(it.id, "showValue", v); }, { disabled: disabled }));
+        break;
+      case "menu":
+        box.appendChild(textField("Nom du menu (lecteurs d'écran)", p.label, set("label"), { max: 60, disabled: disabled }));
+        repeatEditor(box, it, "items", [["label", "Texte du lien", 60], ["url", "Adresse (/page, https://… ou #ancre)", 500]], { label: "Nouveau lien", url: "/" }, 12, disabled);
+        box.appendChild(checkField("Liens les uns sous les autres", p.vertical, function (v) { setProp(it.id, "vertical", v); }, { disabled: disabled }));
+        break;
+      case "carousel":
+        box.appendChild(textField("Nom du carrousel (lecteurs d'écran)", p.label, set("label"), { max: 80, disabled: disabled }));
+        (p.images || []).forEach(function (im, i) {
+          box.appendChild(h("div", { class: "pb-repeat-item" }, h("img", { src: im.src, alt: "", class: "pb-thumb" }),
+            textField("Texte de remplacement " + (i + 1), im.alt, function (v) { change(function () { byId(it.id).props.images[i].alt = v; }, { key: it.id + ":img" + i, light: true }); }, { max: 200, disabled: disabled }),
+            textField("Légende " + (i + 1), im.caption, function (v) { change(function () { byId(it.id).props.images[i].caption = v; }, { key: it.id + ":cap" + i, light: true }); }, { max: 200, disabled: disabled }),
+            h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || p.images.length < 3, onclick: function () { change(function () { byId(it.id).props.images.splice(i, 1); }); } }, "Retirer")));
+        });
+        box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled || (p.images || []).length >= 24, onclick: function () { openMedia({ title: "Ajouter au carrousel", multiple: true, onPick: function (list) { change(function () { var x = byId(it.id); list.forEach(function (m) { x.props.images.push({ src: m.path, alt: m.alt || "" }); }); }); } }); } }, "Ajouter des images"));
         break;
       case "table":
         tableEditor(box, it, disabled);
@@ -1031,7 +1070,7 @@
         box.appendChild(textField("Texte du bouton", p.cta, set("cta"), { max: 60, disabled: disabled }));
         break;
       case "icon":
-        box.appendChild(selectField("Icône", p.name, SPEC.icons.map(function (n) { return [n, n]; }), function (v) { setProp(it.id, "name", v); }, { disabled: disabled }));
+        box.appendChild(iconPicker(p.name, function (v) { setProp(it.id, "name", v); }, disabled));
         box.appendChild(selectField("Taille", p.size, [["16", "16 px"], ["24", "24 px"], ["32", "32 px"], ["48", "48 px"], ["64", "64 px"]], function (v) { setProp(it.id, "size", v); }, { disabled: disabled }));
         box.appendChild(textField("Description (si l'icône porte une information)", p.label, set("label"), { max: 80, disabled: disabled }));
         break;
@@ -1041,6 +1080,22 @@
       default:
         box.appendChild(h("p", { class: "pb-hint", text: kidsOf(it) ? "Conteneur : " + kidsOf(it).length + " élément(s). Sa mise en page (direction, écarts, colonnes, alignement) se règle dans l'onglet Style." : "Aucun contenu à régler : voir l'onglet Style." }));
     }
+  }
+  // Choix d'une icône : grille de la bibliothèque du site, avec recherche (les noms sont en anglais)
+  function iconPicker(current, onPick, disabled) {
+    var q = h("input", { type: "search", class: "pb-icon-search", placeholder: "Rechercher une icône (star, mail, clock…)", "aria-label": "Rechercher une icône", disabled: disabled, autocomplete: "off" });
+    var grid = h("div", { class: "pb-icon-grid", role: "listbox", "aria-label": "Icônes" });
+    var draw = function () {
+      var f = q.value.trim().toLowerCase();
+      grid.textContent = "";
+      SPEC.icons.filter(function (n) { return !f || n.toLowerCase().indexOf(f) >= 0; }).forEach(function (n) {
+        grid.appendChild(h("button", { type: "button", role: "option", class: "pb-icon-opt", "aria-selected": String(n === current), "aria-label": n, "data-tip": n, "data-icon": n, disabled: disabled, onclick: function () { onPick(n); } }, icon(n)));
+      });
+      if (!grid.children.length) grid.appendChild(h("p", { class: "pb-hint", text: "Aucune icône ne correspond." }));
+    };
+    q.addEventListener("input", draw);
+    draw();
+    return h("div", { class: "pb-field" }, h("label", { text: "Icône : " + current }), q, grid);
   }
   function repeatEditor(box, it, key, fields, blank, max, disabled) {
     var list = it.props[key] || [];
@@ -1136,7 +1191,7 @@
   // ---------- Inspecteur : un schéma par type d'élément (registre extensible) ----------
   // groups : groupes de l'onglet Style et leurs propriétés (null = toutes celles du groupe ; true = contrôle composé) ;
   // states : styles de survol / focus / clic proposés. Un nouveau type d'élément ajoute ici son schéma.
-  var BOX_LAYOUT = ["display", "flexDirection", "flexWrap", "justifyContent", "alignItems", "gap"];
+  var BOX_LAYOUT = ["display", "flexDirection", "flexWrap", "justifyContent", "alignItems", "gap", "rowGap", "columnGap"];
   var SIZE_W = ["width", "minWidth", "maxWidth"];
   var BOX = { layout: BOX_LAYOUT, size: null, spacing: true, color: null, background: true, border: null, effects: null };
   var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: ["boxShadow", "opacity"] };
@@ -1149,7 +1204,7 @@
     column: { kind: "Colonne", groups: BOX },
     stack: { kind: "Pile", groups: BOX },
     group: { kind: "Groupe", groups: BOX },
-    grid: { kind: "Grille", groups: { layout: ["columns", "gap", "alignItems", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null } },
+    grid: { kind: "Grille", groups: { layout: ["columns", "gap", "rowGap", "columnGap", "alignItems", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null } },
     heading: { kind: "Titre", groups: TEXTUAL, order: TEXT_ORDER },
     text: { kind: "Texte", groups: TEXTUAL, order: TEXT_ORDER },
     list: { kind: "Liste", groups: TEXTUAL, order: TEXT_ORDER },
@@ -1159,6 +1214,11 @@
     tabs: { kind: "Onglets", groups: TEXTUAL, order: TEXT_ORDER },
     accordion: { kind: "Accordéon / FAQ", groups: TEXTUAL, order: TEXT_ORDER },
     countdown: { kind: "Compte à rebours", groups: TEXTUAL, order: TEXT_ORDER },
+    badge: { kind: "Badge", groups: { layout: ["alignSelf"], typography: ["fontSize", "fontWeight", "textTransform", "letterSpacing"], spacing: true, border: null }, order: ["typography", "border", "spacing", "layout"] },
+    timeline: { kind: "Chronologie", groups: TEXTUAL, order: TEXT_ORDER },
+    progress: { kind: "Barre de progression", groups: { layout: ["alignSelf"], typography: ["fontSize", "fontWeight"], color: ["color"], size: SIZE_W, spacing: true }, order: ["size", "typography", "spacing", "layout"] },
+    menu: { kind: "Menu", groups: TEXTUAL, order: TEXT_ORDER, states: true },
+    carousel: { kind: "Carrousel", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["size", "border", "effects", "spacing", "layout"] },
     image: { kind: "Image", groups: { layout: ["alignSelf"], size: null, media: null, spacing: true, border: null, effects: null }, states: true, order: ["size", "media", "border", "effects", "spacing", "layout"] },
     gallery: { kind: "Galerie", groups: { layout: ["columns", "gap"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["layout", "size", "border", "effects", "spacing"] },
     video: { kind: "Vidéo", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["size", "border", "effects", "spacing", "layout"] },
@@ -1191,7 +1251,7 @@
   var UNITS = {
     width: ["px", "%", "rem", "vw", "auto"], height: ["px", "%", "rem", "vh", "auto"],
     minWidth: ["px", "%", "rem", "vw"], maxWidth: ["px", "%", "rem", "vw"], minHeight: ["px", "%", "rem", "vh"], maxHeight: ["px", "%", "rem", "vh"],
-    gap: ["px", "rem", "em", "%"], fontSize: ["px", "rem", "em"], letterSpacing: ["px", "em"], borderWidth: ["px"],
+    gap: ["px", "rem", "em", "%"], rowGap: ["px", "rem", "em", "%"], columnGap: ["px", "rem", "em", "%"], fontSize: ["px", "rem", "em"], letterSpacing: ["px", "em"], borderWidth: ["px"], borderTopWidth: ["px"], borderRightWidth: ["px"], borderBottomWidth: ["px"], borderLeftWidth: ["px"],
     borderRadius: ["px", "%", "rem"], borderTopLeftRadius: ["px", "%", "rem"], borderTopRightRadius: ["px", "%", "rem"], borderBottomRightRadius: ["px", "%", "rem"], borderBottomLeftRadius: ["px", "%", "rem"],
     top: ["px", "%", "rem"], left: ["px", "%", "rem"],
   };
@@ -1216,7 +1276,7 @@
     });
   }
   // Libellés courts dans les lignes (le nom complet reste en infobulle et pour les lecteurs d'écran)
-  var SHORT = { alignItems: "Alignement", alignSelf: "Placement", flexWrap: "Retour ligne", justifyContent: "Répartition", gap: "Écart", flexDirection: "Direction", display: "Affichage",
+  var SHORT = { alignItems: "Alignement", alignSelf: "Placement", flexWrap: "Retour ligne", justifyContent: "Répartition", gap: "Écart", rowGap: "Écart lignes", columnGap: "Écart colonnes", flexDirection: "Direction", display: "Affichage",
     minWidth: "Largeur min.", maxWidth: "Largeur max.", minHeight: "Hauteur min.", maxHeight: "Hauteur max.", flexGrow: "Proportion", columns: "Colonnes",
     fontFamily: "Police", fontWeight: "Graisse", fontSize: "Taille", lineHeight: "Interligne", letterSpacing: "Interlettrage", textTransform: "Casse", textAlign: "Alignement", textDecoration: "Décoration", fontStyle: "Style",
     zIndex: "Plan", boxShadow: "Ombre", opacity: "Opacité", overflow: "Débordement", objectFit: "Cadrage", objectPosition: "Point focal", aspectRatio: "Proportions", top: "Décalage haut", left: "Décalage gauche" };
@@ -1487,14 +1547,37 @@
 
   // ---------- Bordure : style d'abord ; épaisseur et couleur seulement s'il y a une bordure ; arrondi liable ----------
   var CORNER_KEYS = [["borderTopLeftRadius", "↖ Haut gauche"], ["borderTopRightRadius", "↗ Haut droit"], ["borderBottomRightRadius", "↘ Bas droit"], ["borderBottomLeftRadius", "↙ Bas gauche"]];
-  var radiusSplit = {};
+  var radiusSplit = {}, widthSplit = {};
+  var SIDE_WIDTHS = [["borderTopWidth", "↑ Haut"], ["borderRightWidth", "→ Droite"], ["borderBottomWidth", "↓ Bas"], ["borderLeftWidth", "← Gauche"]];
   var valueOf = function (it, k) { var o = ownValue(it, k); return o !== undefined ? o : inheritedValue(it, k); };
   function borderControls(items, inner) {
     var it = items[0], ids = idsOf(items), dis = lockedAny(items);
     inner.appendChild(styleControl(items, "borderStyle", "Style"));
     var style = valueOf(it, "borderStyle");
-    if ((style && style !== "none") || ownValue(it, "borderWidth") !== undefined || ownValue(it, "borderColor") !== undefined) {
-      inner.appendChild(styleControl(items, "borderWidth", "Épaisseur"));
+    if ((style && style !== "none") || ownValue(it, "borderWidth") !== undefined || ownValue(it, "borderColor") !== undefined || SIDE_WIDTHS.some(function (k) { return ownValue(it, k[0]) !== undefined; })) {
+      // Épaisseur : une valeur (liée) ou une par côté (ex. seulement une ligne en bas)
+      var wsplit = widthSplit[it.id] || SIDE_WIDTHS.some(function (k) { return valueOf(it, k[0]) !== undefined; });
+      var wlink = h("button", { type: "button", class: "pb-link-btn is-icon", "aria-pressed": String(!wsplit), "data-link": "border-width", "aria-label": wsplit ? "Lier les 4 côtés (une épaisseur)" : "Délier : une épaisseur par côté", "data-tip": wsplit ? "Côtés indépendants — cliquer pour une seule épaisseur" : "4 côtés liés — cliquer pour régler chaque côté", disabled: dis,
+        onclick: function () {
+          if (wsplit) {
+            var first = SIDE_WIDTHS.map(function (k) { return ownValue(it, k[0]); }).filter(function (v) { return v !== undefined; })[0];
+            var map = {}; SIDE_WIDTHS.forEach(function (k) { map[k[0]] = ""; });
+            if (first !== undefined) map.borderWidth = first;
+            delete widthSplit[it.id];
+            setStyles(ids, map);
+          } else {
+            widthSplit[it.id] = true;
+            // Sans épaisseur générale, le navigateur mettrait 3 px aux côtés non réglés : on part de 0 (seuls les côtés réglés se voient)
+            if (valueOf(it, "borderWidth") === undefined) { setStyle(ids, "borderWidth", "0"); toast("Épaisseur par côté : les côtés non réglés restent à 0."); }
+            else renderInspector();
+          }
+        } }, icon("link"));
+      if (!wsplit) inner.appendChild(styleControl(items, "borderWidth", "Épaisseur", wlink));
+      else {
+        inner.appendChild(h("div", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Épaisseur par côté" }), wlink));
+        inner.appendChild(styleControl(items, "borderWidth", "Tous les côtés"));
+        SIDE_WIDTHS.forEach(function (k) { inner.appendChild(styleControl(items, k[0], k[1])); });
+      }
       inner.appendChild(styleControl(items, "borderColor", "Couleur"));
     }
     var split = radiusSplit[it.id] || CORNER_KEYS.some(function (c) { return valueOf(it, c[0]) !== undefined; });
@@ -1524,7 +1607,7 @@
     var sel = h("select", { id: id, class: "pb-prop-select", disabled: dis }, [["none", "Aucun"], ["color", "Couleur"], ["image", "Image"], ["gradient", "Dégradé"]].map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
     sel.value = type;
     sel.addEventListener("change", function () {
-      if (sel.value === "none") { delete bgChoice[it.id]; setStyles(ids, { backgroundColor: "", backgroundImage: "", gradient: "", backgroundSize: "", backgroundPosition: "" }); return; }
+      if (sel.value === "none") { delete bgChoice[it.id]; setStyles(ids, { backgroundColor: "", backgroundImage: "", gradient: "", overlay: "", backgroundSize: "", backgroundPosition: "", backgroundRepeat: "", backgroundAttachment: "" }); return; }
       bgChoice[it.id] = sel.value;
       if (sel.value === "gradient" && !valueOf(it, "gradient")) { setStyle(ids, "gradient", { from: "#0277b6", to: "#102a3a", angle: 180 }); return; }
       renderInspector();
@@ -1539,7 +1622,20 @@
         bg ? h("img", { src: bg.src, alt: "" }) : h("span", { class: "pb-img-empty", "aria-hidden": "true" }), h("span", { class: "pb-color-text", text: bg ? bg.src.split("/").pop() : "Choisir une image" }));
       var rm = bg ? h("button", { type: "button", class: "pb-reset", "data-tip": "Retirer l'image de fond", "aria-label": "Retirer l'image de fond", disabled: dis, onclick: function () { setStyle(ids, "backgroundImage", ""); } }, "↺") : h("span", { class: "pb-reset-slot", "aria-hidden": "true" });
       inner.appendChild(h("div", { class: "pb-field pb-style-field pb-prop" + (bg ? " is-set" : ""), "data-prop": "backgroundImage" }, h("div", { class: "pb-prop-head" }, h("label", { for: pid, class: "pb-prop-label" }, "Image")), pick, rm));
-      if (bg || valueOf(it, "backgroundImage")) { inner.appendChild(styleControl(items, "backgroundSize", "Taille")); inner.appendChild(styleControl(items, "backgroundPosition", "Position")); }
+      if (bg || valueOf(it, "backgroundImage")) {
+        inner.appendChild(styleControl(items, "backgroundSize", "Taille"));
+        inner.appendChild(styleControl(items, "backgroundPosition", "Position"));
+        inner.appendChild(styleControl(items, "backgroundRepeat", "Répétition"));
+        inner.appendChild(styleControl(items, "backgroundAttachment", "Défilement"));
+      }
+    }
+    // Voile : une couleur (souvent semi-transparente) posée sur l'image ou le dégradé, pour la lisibilité du texte
+    if (type === "image" || type === "gradient" || has("overlay")) {
+      var ov = ownValue(it, "overlay"), ovi = inheritedValue(it, "overlay");
+      var oid = fid();
+      var ovBtn = colorButton(oid, ov && ov.color, ovi && ovi.color, dis, function (v, opts) { setStyle(ids, "overlay", v ? { color: v } : "", opts); }, "overlay");
+      var ovReset = ov ? h("button", { type: "button", class: "pb-reset", "data-tip": "Retirer le voile", "aria-label": "Retirer le voile", disabled: dis, onclick: function () { setStyle(ids, "overlay", ""); } }, "↺") : h("span", { class: "pb-reset-slot", "aria-hidden": "true" });
+      inner.appendChild(h("div", { class: "pb-field pb-style-field pb-prop" + (ov ? " is-set" : ""), "data-prop": "overlay" }, h("div", { class: "pb-prop-head" }, h("label", { for: oid, class: "pb-prop-label", title: "Voile coloré posé sur le fond (choisir une opacité dans le sélecteur)" }, "Voile")), ovBtn, ovReset));
     }
     if (type === "gradient" || has("gradient")) {
       var g = valueOf(it, "gradient");
@@ -1620,7 +1716,7 @@
         if (hasTypo || !keys.length) return;
       }
       if (g === "typography" && schema.groups.color !== undefined && keysOf("color").indexOf("color") >= 0) keys.splice(Math.min(3, keys.length), 0, "color");
-      if (g === "background") keys = ["backgroundColor", "backgroundImage", "gradient", "backgroundSize", "backgroundPosition"];
+      if (g === "background") keys = ["backgroundColor", "backgroundImage", "gradient", "overlay", "backgroundSize", "backgroundPosition", "backgroundRepeat", "backgroundAttachment"];
       plan.push([g, keys]);
     });
     plan.forEach(function (x, i) { box.appendChild(styleSection(items, x[0], x[1], { open: i === 0 })); });
@@ -1632,8 +1728,8 @@
     var det = h("details", { class: "pb-acc", "data-group": g });
     if (store.get("open-" + g, Boolean(opts && opts.open))) det.open = true;
     det.addEventListener("toggle", function () { store.set("open-" + g, det.open); });
-    var counted = g === "spacing" ? SIDES.map(function (s) { return "margin" + s; }).concat(SIDES.map(function (s) { return "padding" + s; })) : g === "border" ? keys.concat(CORNER_KEYS.map(function (c) { return c[0]; })) : keys;
-    var set = counted.filter(function (k) { return items.some(function (x) { return ownValue(x, k) !== undefined; }); }).length;
+    var counted = g === "spacing" ? SIDES.map(function (s) { return "margin" + s; }).concat(SIDES.map(function (s) { return "padding" + s; })) : keys;
+    var set = counted.filter(function (k, i) { return counted.indexOf(k) === i && items.some(function (x) { return ownValue(x, k) !== undefined; }); }).length;
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: SPEC.groups[g] || g }), set ? h("span", { class: "pb-acc-count", title: set + " réglage(s) propre(s) à cet écran", "aria-label": set + " réglage(s) modifié(s)" }, String(set)) : null));
     var inner = h("div", { class: "pb-acc-body" });
     if (g === "spacing") inner.appendChild(spacingBox(items));
@@ -1896,6 +1992,7 @@
       b("Dupliquer", duplicateSelected, { disabled: !canWrite }),
       b("Copier le style", copyStyle),
       b("Coller le style", pasteStyle, { disabled: !canWrite || locked }),
+      b("Réinitialiser le style", resetStyle, { disabled: !canWrite || locked || !items.some(function (x) { return x.styles || x.states; }) }),
       items.length > 1 ? b("Grouper", groupSelected, { disabled: !canWrite || locked }) : null,
       single && ["group", "stack", "container"].indexOf(it.type) >= 0 ? b("Dissocier", ungroupSelected, { disabled: !canWrite || locked }) : null,
       b("Supprimer", removeSelected, { class: "btn btn-danger btn-sm", disabled: !canWrite || locked })));
@@ -2672,6 +2769,11 @@
       case "spacer": return "Espace de " + p.size + " px";
       case "divider": return "Ligne de séparation";
       case "icon": return "Icône « " + p.name + " », " + p.size + " px";
+      case "badge": return p.text;
+      case "timeline": return (p.items || []).length + " étape(s) : " + (p.items || []).map(function (x) { return x.title; }).join(" · ");
+      case "progress": return p.label + " : " + p.value + " %";
+      case "menu": return (p.items || []).map(function (x) { return x.label; }).join(" · ");
+      case "carousel": return (p.images || []).length + " image(s)";
       case "audio": return p.title || p.src || "";
       case "component": return "Composant synchronisé : le modifier change toutes ses utilisations";
       default: return preview(it) || "";
@@ -3240,7 +3342,10 @@
         inp.addEventListener("change", function () { change(function () { content.theme = Object.assign({}, content.theme); content.theme[c[0]] = inp.value; }); });
         box.appendChild(h("div", { class: "pb-field pb-inline" }, h("label", { for: "pb-theme-" + c[0], text: c[1] }), inp));
       });
-    } else box.appendChild(h("p", { class: "pb-note", text: "Couleurs, polices et espacements viennent du design system du site « " + PAGE.siteName + " » (Site Web → Sites) : les modifier là les applique à toutes ses pages." }));
+    } else {
+      box.appendChild(h("p", { class: "pb-note", text: "Couleurs, polices, tailles de titres, boutons et espacements viennent du design system du site « " + PAGE.siteName + " » : les modifier là les applique à toutes ses pages." }));
+      box.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "#design", target: "_blank", rel: "noopener" }, "Ouvrir les styles globaux du site"));
+    }
     box.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/pages/" + PAGE.id }, "Réglages et versions de la page"));
   }
 
@@ -3395,6 +3500,7 @@
       ["Coller", paste, !canWrite, "Ctrl+V"],
       ["Copier le style", copyStyle, false, "Ctrl+Alt+C"],
       ["Coller le style", pasteStyle, !canWrite || locked, "Ctrl+Alt+V"],
+      ["Réinitialiser le style", resetStyle, !canWrite || locked || !items.some(function (z) { return z.styles || z.states; })],
       "-",
       items.length === 1 ? ["Renommer", function () { var row = treeEl.querySelector('.pb-node[data-id="' + it.id + '"] > .pb-row-item'); if (row) startRename(row, it); }, !canWrite, "F2"] : null,
       [items.some(function (z) { return z.hidden; }) ? "Afficher" : "Masquer", function () { setFlag(selection.slice(), "hidden", !items.some(function (z) { return z.hidden; })); }, !canWrite, "Ctrl+Maj+H"],
@@ -3446,7 +3552,7 @@
       { label: "Grouper", run: groupSelected, off: selection.length < 2 || !canWrite }, { label: "Dissocier", run: ungroupSelected, off: !has || !canWrite },
       { label: "Masquer / afficher", run: function () { setFlag(selection.slice(), "hidden", !selectedItems().some(function (z) { return z.hidden; })); }, off: !has || !canWrite },
       { label: "Verrouiller / déverrouiller", run: function () { setFlag(selection.slice(), "locked", !selectedItems().some(function (z) { return z.locked; })); }, off: !has || !canWrite },
-      { label: "Copier le style", run: copyStyle, off: !has }, { label: "Coller le style", run: pasteStyle, off: !has || !canWrite },
+      { label: "Copier le style", run: copyStyle, off: !has }, { label: "Réinitialiser le style", run: resetStyle, off: !has || !canWrite }, { label: "Coller le style", run: pasteStyle, off: !has || !canWrite },
       { label: "Sélectionner le parent", run: function () { var l = locate(selection[0]); if (l && l.parent) select(l.parent.id); }, off: !has },
       { label: "Écran : ordinateur", run: function () { setDevice("desktop"); } }, { label: "Écran : tablette", run: function () { setDevice("tablet"); } }, { label: "Écran : mobile", run: function () { setDevice("mobile"); } },
       { label: "Zoom : ajuster à l'écran", run: function () { setZoom("fit"); } }, { label: "Zoom : 100 %", run: function () { setZoom(1); } },

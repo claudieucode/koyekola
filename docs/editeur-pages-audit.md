@@ -1,4 +1,4 @@
-# Éditeur de pages KOLAKISA — audit et inventaire (7 octobre 2026)
+# Éditeur de pages KOLAKISA — audit, inventaire et suivi (7 octobre 2026)
 
 Référence de la rénovation « éditeur professionnel ». Rien de ce qui est marqué « conservé » ne doit être remplacé :
 on complète et on améliore dans l'architecture existante.
@@ -26,32 +26,32 @@ on complète et on améliore dans l'architecture existante.
 | Canevas visuel (rendu réel, sélection, édition directe des textes) | oui | oui | — | oui | non | — |
 | Barre d'actions sur l'élément, menu clic droit, palette de commandes (Ctrl+K) | oui | oui | — | oui | non | — |
 | Calques / navigateur (renommer, masquer, verrouiller, glisser, supprimer, dupliquer) | oui | oui | — | oui | non | — |
-| **Mode « Structure » (éditeur de blocs, façon Gutenberg)** | **non** | — | **à créer** | — | — | moyen |
+| Mode « Structure » (éditeur de blocs, façon Gutenberg) | **fait (2a03e7e)** | oui | — | oui | non | — |
 | Inspecteur par type (Contenu / Style / Avancé), propriétés compactes | oui | oui | — | oui | non | — |
 | Responsive par écran + héritage, états (survol, focus, clic) | oui | oui | — | oui | non | — |
-| Mise en page : display, flex, grille (colonnes), alignements, gap, z-index, débordement | oui | oui | **écarts lignes / colonnes séparés** | oui | non | faible |
+| Mise en page : display, flex, grille (colonnes), alignements, gap, z-index, débordement | oui | oui | écarts lignes / colonnes séparés : **fait** | oui | non | — |
 | Marges / intérieurs par côté, liables | oui | oui | — | oui | non | — |
-| Bordure : style, épaisseur, couleur, arrondi (par coin) | oui | oui | **épaisseur par côté** | oui | non | faible |
-| Fond : couleur, image, dégradé, taille, position | oui | oui | **voile (overlay), répétition, fixe** | oui | non | faible |
+| Bordure : style, épaisseur, couleur, arrondi (par coin) | oui | oui | épaisseur par côté (liable) : **fait** | oui | non | — |
+| Fond : couleur, image, dégradé, taille, position | oui | oui | voile, répétition, fond fixe : **fait** | oui | non | — |
 | Typographie complète | oui | oui | — | oui | non | — |
-| Icônes (bibliothèque du site) | oui | partiel | **choix visuel avec recherche** | oui | non | faible |
-| Onglets (fonctionnels, clavier) | oui | oui | **orientation verticale, plus d'onglets** | oui | non | faible |
-| Accordéon | oui | oui | **une seule ouverte à la fois (option)** | oui | non | faible |
-| Styles globaux (design system de site) | oui | oui | **accès depuis l'éditeur** | oui | non | — |
+| Icônes (bibliothèque du site) | oui | oui | choix visuel avec recherche : **fait** | oui | non | — |
+| Onglets (fonctionnels, clavier) | oui | oui | verticaux, jusqu'à 20 : **fait** | oui | non | — |
+| Accordéon | oui | oui | une seule ouverte (option), apparition douce : **fait** | oui | non | — |
+| Styles globaux (design system de site) | oui | oui | accès depuis l'éditeur : **fait** | oui | non | — |
 | Composants réutilisables (instances synchronisées, globaux possibles) | oui | oui | — | oui | non | — |
-| Blocs (patterns) : 18 compositions d'éléments réels | oui | oui | — | oui | non | — |
-| Modèles de pages : 14 (marketing) | oui | oui | **À propos, Contact, Portfolio, SaaS, Entreprise** | oui | non | faible |
-| Copier / coller / dupliquer / copier-coller le style | oui | oui | **réinitialiser le style** | oui | non | — |
+| Blocs (patterns) : 20 compositions d'éléments réels (+ icône + texte, équipe, étapes) | oui | oui | — | oui | non | — |
+| Modèles de pages : 19 (dont À propos, Contact, Portfolio, SaaS, Entreprise) | oui | oui | — | oui | non | — |
+| Copier / coller / dupliquer / copier-coller le style | oui | oui | réinitialiser le style : **fait** | oui | non | — |
 | Annuler / rétablir (150 étapes, frappes regroupées) | oui | oui | — | oui | non | — |
 | Sauvegarde auto (1 s), manuelle (Ctrl+S), copie locale, reprise après erreur réseau, conflit (409), fermeture protégée | oui | oui | — | oui | non | — |
-| Versions : liste, aperçu, restauration | oui | oui | **comparaison de versions** | oui | non | faible |
+| Versions : liste, aperçu, restauration | oui | oui | comparaison élément par élément : **faite** | oui | non | — |
 | Aperçu réel (ordinateur / tablette / mobile) | oui | oui | — | oui | non | — |
 | Publication réelle (validation serveur) | oui | oui | — | oui | non | — |
 | Glisser-déposer (canevas, calques, bibliothèque), zones de dépôt | oui | oui | — | oui | non | — |
 | Règles, guides, grille, zoom | oui | oui | — | oui | non | — |
 | Médiathèque | oui | oui | — | oui | non | — |
 | Personnalisation (public par élément), tests A/B, tunnels | oui | oui | — | oui | non | — |
-| Éléments : badge, barre de progression, chronologie, carrousel, menu de navigation, icône + texte | non | — | **à créer (rendus réels)** | — | — | faible |
+| Éléments : badge, barre de progression, chronologie, carrousel, menu de navigation (liens et ancres #) | **faits** | oui | — | oui | non | — |
 | Éléments déjà couverts par des blocs (cartes, témoignages, tarifs, chiffres clés, FAQ) | oui (blocs) | oui | — | oui | non | — |
 | Formulaire de contact / inscription | oui (section formulaire, module Formulaires) | oui | — | oui | non | — |
 | Pop-ups | oui (module Marketing › Pop-ups) | oui | — | oui | non | — |

@@ -4,7 +4,7 @@
   sections masquées restent visibles en transparence). Les styles viennent uniquement de classes (lp-pad-…, lp-bg-…,
   lp-al-…, lp-w-…, lp-hide-…) : aucune valeur libre n'est insérée dans la page.
 %>
-<% const isBuilder = typeof builder !== "undefined" && builder; let n = 0; const href = (url) => (preview ? url : `/p/${page.slug}/clic/${n++}`);
+<% const isBuilder = typeof builder !== "undefined" && builder; let n = 0; const href = (url) => (preview || String(url).startsWith("#") ? url : `/p/${page.slug}/clic/${n++}`); /* ancre : saut dans la page, non compté */
    const firstHero = page.sections.findIndex((x) => x.type === "hero"); %>
 <% page.sections.forEach((s, i) => {
      if (s.hidden && !isBuilder) return;

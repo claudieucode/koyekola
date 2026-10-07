@@ -67,6 +67,8 @@ const STYLE_PROPS = {
   alignItems: { css: "align-items", check: oneOf("stretch", "flex-start", "center", "flex-end", "baseline"), group: "layout" },
   alignSelf: { css: "align-self", check: oneOf("auto", "flex-start", "center", "flex-end", "stretch"), group: "layout" },
   gap: { css: "gap", check: len, group: "layout" },
+  rowGap: { css: "row-gap", check: len, group: "layout" },
+  columnGap: { css: "column-gap", check: len, group: "layout" },
   columns: { css: "grid-template-columns", check: numberIn(1, 12, { integer: true }), out: (n) => `repeat(${n}, minmax(0, 1fr))`, group: "layout" },
   width: { css: "width", check: lenAuto, group: "size" },
   height: { css: "height", check: lenAuto, group: "size" },
@@ -96,6 +98,11 @@ const STYLE_PROPS = {
   color: { css: "color", check: color, out: colorCss, group: "color" },
   backgroundColor: { css: "background-color", check: color, out: colorCss, group: "color" },
   borderWidth: { css: "border-width", check: len, group: "border" },
+  // Épaisseur côté par côté (bordure « déliée ») : écrite après l'épaisseur générale, qu'elle précise
+  borderTopWidth: { css: "border-top-width", check: len, group: "border" },
+  borderRightWidth: { css: "border-right-width", check: len, group: "border" },
+  borderBottomWidth: { css: "border-bottom-width", check: len, group: "border" },
+  borderLeftWidth: { css: "border-left-width", check: len, group: "border" },
   borderStyle: { css: "border-style", check: oneOf("none", "solid", "dashed", "dotted"), group: "border" },
   borderColor: { css: "border-color", check: color, out: colorCss, group: "border" },
   borderRadius: { css: "border-radius", check: len, group: "border" },
@@ -116,11 +123,14 @@ const STYLE_PROPS = {
   aspectRatio: { css: "aspect-ratio", check: oneOf("auto", "1/1", "4/3", "3/2", "16/9", "21/9", "3/4"), out: (v) => v.replace("/", " / "), group: "media" },
   backgroundSize: { css: "background-size", check: oneOf("cover", "contain", "auto"), group: "background" },
   backgroundPosition: { css: "background-position", check: oneOf("center", "top", "bottom", "left", "right"), group: "background" },
+  backgroundRepeat: { css: "background-repeat", check: oneOf("no-repeat", "repeat", "repeat-x", "repeat-y"), group: "background" },
+  backgroundAttachment: { css: "background-attachment", check: oneOf("scroll", "fixed"), group: "background" },
 };
 // Propriétés composées (plusieurs valeurs → une déclaration)
 const COMPOSED = {
   backgroundImage: { group: "background" },     // { src } : image de la médiathèque ou https://
   gradient: { group: "background" },            // { from, to, angle }
+  overlay: { group: "background" },             // { color } : voile posé sur l'image ou le dégradé (lisibilité du texte)
   transform: { group: "position" },             // { x, y, rotate, scale }
 };
 
@@ -138,6 +148,9 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
     } else if (k === "backgroundImage") {
       const src = imageUrl(v && v.src, `${at} (image de fond)`);
       if (src) out.backgroundImage = { src };
+    } else if (k === "overlay") {
+      const c = color(v && v.color);
+      if (c) out.overlay = { color: c };
     } else if (k === "gradient") {
       const from = color(v && v.from), to = color(v && v.to), angle = numberIn(0, 360, { integer: true })(v && v.angle);
       if (from && to) out.gradient = { from, to, angle: angle === null ? 180 : angle };
@@ -151,7 +164,7 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
   return out;
 }
 
-const CORNERS = new Set(["borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius"]);
+const CORNERS = new Set(["borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth"]);
 function declarations(set) {
   const d = [];
   const entries = Object.entries(set);
@@ -161,6 +174,7 @@ function declarations(set) {
     if (p) d.push(`${p.css}:${p.out ? p.out(v) : v}`);
   }
   const layers = [];
+  if (set.overlay) layers.push(`linear-gradient(${colorCss(set.overlay.color)}, ${colorCss(set.overlay.color)})`);
   if (set.gradient) layers.push(`linear-gradient(${set.gradient.angle}deg, ${colorCss(set.gradient.from)}, ${colorCss(set.gradient.to)})`);
   if (set.backgroundImage) layers.push(`url("${set.backgroundImage.src}")`);
   if (layers.length) d.push(`background-image:${layers.join(", ")}`);
@@ -263,12 +277,49 @@ const NODE_TYPES = {
   accordion: { label: "Accordéon / FAQ", category: "interaction", props: (p, at) => {
     const items = (Array.isArray(p.items) ? p.items : []).map((x) => ({ q: line(x && x.q, 200), a: clean(x && x.a, 2000) })).filter((x) => x.q && x.a).slice(0, 30);
     if (!items.length) throw new Error(`${at} (accordéon) : au moins une question avec sa réponse.`);
-    return { items, faqSchema: p.faqSchema === true, openFirst: p.openFirst === true };
+    // single : une seule réponse ouverte à la fois (accordéon exclusif natif du navigateur, sans script)
+    return { items, faqSchema: p.faqSchema === true, openFirst: p.openFirst === true, single: p.single === true };
   } },
   tabs: { label: "Onglets", category: "interaction", props: (p, at) => {
-    const items = (Array.isArray(p.items) ? p.items : []).map((x) => ({ title: line(x && x.title, 60), text: clean(x && x.text, 2000) })).filter((x) => x.title && x.text).slice(0, 8);
+    const items = (Array.isArray(p.items) ? p.items : []).map((x) => ({ title: line(x && x.title, 60), text: clean(x && x.text, 2000) })).filter((x) => x.title && x.text).slice(0, 20);
     if (items.length < 2) throw new Error(`${at} (onglets) : au moins deux onglets avec un titre et un texte.`);
+    return { items, vertical: p.vertical === true };
+  } },
+  badge: { label: "Badge", category: "text", props: (p, at) => {
+    const text = line(p.text, 40);
+    if (!text) throw new Error(`${at} (badge) : un texte est obligatoire.`);
+    return { text, tone: oneOf("neutral", "primary", "success", "warning", "error")(p.tone) || "primary" };
+  } },
+  timeline: { label: "Chronologie", category: "text", props: (p, at) => {
+    const items = (Array.isArray(p.items) ? p.items : []).map((x) => ({ date: line(x && x.date, 40), title: line(x && x.title, 120), text: clean(x && x.text, 600) })).filter((x) => x.title).slice(0, 30);
+    if (!items.length) throw new Error(`${at} (chronologie) : au moins une étape avec un titre.`);
     return { items };
+  } },
+  progress: { label: "Barre de progression", category: "marketing", props: (p, at) => {
+    const label = line(p.label, 80);
+    const value = numberIn(0, 100, { integer: true })(p.value);
+    if (!label) throw new Error(`${at} (barre de progression) : un libellé est obligatoire (lu par les lecteurs d'écran).`);
+    if (value === null) throw new Error(`${at} (barre de progression) : valeur entre 0 et 100.`);
+    return { label, value, showValue: p.showValue !== false };
+  } },
+  menu: { label: "Menu de navigation", category: "interaction", props: (p, at, h) => {
+    const items = (Array.isArray(p.items) ? p.items : []).slice(0, 12).map((x, i) => {
+      const label = line(x && x.label, 60);
+      const url = label ? h.linkUrl(x && x.url, `${at} (menu, lien ${i + 1})`) : "";
+      return label && url ? { label, url } : null;
+    }).filter(Boolean);
+    if (!items.length) throw new Error(`${at} (menu) : au moins un lien avec un texte et une adresse.`);
+    return { items, label: line(p.label, 60) || "Menu", vertical: p.vertical === true };
+  } },
+  carousel: { label: "Carrousel", category: "media", props: (p, at, h) => {
+    const images = (Array.isArray(p.images) ? p.images : []).slice(0, 24).map((im, i) => {
+      const src = h.imageUrl(im && im.src, `${at} (image ${i + 1} du carrousel)`);
+      const alt = line(im && im.alt, 200);
+      if (src && !alt) throw new Error(`${at} (carrousel) : texte de remplacement manquant pour l'image ${i + 1}.`);
+      return src ? { src, alt, caption: line(im && im.caption, 200) } : null;
+    }).filter(Boolean);
+    if (images.length < 2) throw new Error(`${at} (carrousel) : au moins deux images.`);
+    return { images, label: line(p.label, 80) || "Carrousel d'images" };
   } },
   table: { label: "Tableau", category: "text", props: (p, at) => {
     const rows = (Array.isArray(p.rows) ? p.rows : []).slice(0, 40).map((r) => (Array.isArray(r) ? r.slice(0, 8).map((c) => line(c, 200)) : [])).filter((r) => r.some(Boolean));
@@ -323,6 +374,11 @@ const PALETTE = {
   countdown: { icon: "clock", blank: () => ({ props: { until: new Date(Date.now() + 7 * 86400000).toISOString().replace(/:\d{2}\.\d{3}Z$/, ":00Z"), endText: "C'est terminé." } }) },
   course: { icon: "graduation", asks: "course", blank: () => ({ props: {} }) },
   icon: { icon: "star", blank: () => ({ props: { name: "star", size: "32" } }) },
+  badge: { icon: "tag", blank: () => ({ props: { text: "Nouveau", tone: "primary" } }) },
+  timeline: { icon: "history", blank: () => ({ props: { items: [{ date: "Étape 1", title: "Inscription", text: "Ce qui se passe à cette étape." }, { date: "Étape 2", title: "Premier module", text: "Ce qui se passe ensuite." }] } }) },
+  progress: { icon: "activity", blank: () => ({ props: { label: "Progression", value: 60, showValue: true } }) },
+  menu: { icon: "menu", blank: () => ({ props: { label: "Menu de la page", items: [{ label: "Programme", url: "/catalogue" }, { label: "Blog", url: "/blog" }] } }) },
+  carousel: { icon: "image", asks: "images", blank: () => ({ props: {} }) },
 };
 
 // Libellés et contrôles des propriétés de style (inspecteur) : un contrôle = une propriété réelle de STYLE_PROPS
@@ -333,7 +389,7 @@ const STYLE_UI = {
   justifyContent: ["Répartition", { "flex-start": "Début", center: "Centre", "flex-end": "Fin", "space-between": "Espacés", "space-around": "Autour", "space-evenly": "Égaux" }],
   alignItems: ["Alignement des enfants", { stretch: "Étirés", "flex-start": "Début", center: "Centre", "flex-end": "Fin", baseline: "Ligne de base" }],
   alignSelf: ["Alignement dans le parent", { auto: "Auto", "flex-start": "Début", center: "Centre", "flex-end": "Fin", stretch: "Étiré" }],
-  gap: ["Écart entre enfants"], columns: ["Colonnes (grille)"],
+  gap: ["Écart entre enfants"], rowGap: ["Écart entre lignes"], columnGap: ["Écart entre colonnes"], columns: ["Colonnes (grille)"],
   width: ["Largeur"], height: ["Hauteur"], flexGrow: ["Proportion de la colonne"], minWidth: ["Largeur min."], maxWidth: ["Largeur max."], minHeight: ["Hauteur min."], maxHeight: ["Hauteur max."],
   marginTop: ["Marge haut"], marginRight: ["Marge droite"], marginBottom: ["Marge bas"], marginLeft: ["Marge gauche"],
   paddingTop: ["Intérieur haut"], paddingRight: ["Intérieur droite"], paddingBottom: ["Intérieur bas"], paddingLeft: ["Intérieur gauche"],
@@ -345,6 +401,7 @@ const STYLE_UI = {
   textDecoration: ["Décoration", { none: "Aucune", underline: "Soulignée", "line-through": "Barrée" }],
   color: ["Couleur du texte"], backgroundColor: ["Couleur de fond"],
   borderWidth: ["Épaisseur de bordure"], borderStyle: ["Style de bordure", { none: "Aucune", solid: "Pleine", dashed: "Tirets", dotted: "Points" }], borderColor: ["Couleur de bordure"], borderRadius: ["Arrondi"],
+  borderTopWidth: ["Épaisseur haut"], borderRightWidth: ["Épaisseur droite"], borderBottomWidth: ["Épaisseur bas"], borderLeftWidth: ["Épaisseur gauche"],
   borderTopLeftRadius: ["Arrondi haut gauche"], borderTopRightRadius: ["Arrondi haut droit"], borderBottomRightRadius: ["Arrondi bas droit"], borderBottomLeftRadius: ["Arrondi bas gauche"],
   boxShadow: ["Ombre", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", xl: "Très forte" }], opacity: ["Opacité"],
   overflow: ["Débordement", { visible: "Visible", hidden: "Masqué", auto: "Défilement" }],
@@ -353,6 +410,8 @@ const STYLE_UI = {
   objectPosition: ["Point focal", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite" }],
   aspectRatio: ["Proportions", { auto: "Libres", "1/1": "1:1", "4/3": "4:3", "3/2": "3:2", "16/9": "16:9", "21/9": "21:9", "3/4": "3:4" }],
   backgroundSize: ["Taille du fond", { cover: "Couvrir", contain: "Contenir", auto: "Réelle" }],
+  backgroundRepeat: ["Répétition du fond", { "no-repeat": "Aucune", repeat: "Mosaïque", "repeat-x": "Horizontale", "repeat-y": "Verticale" }],
+  backgroundAttachment: ["Défilement du fond", { scroll: "Avec la page", fixed: "Fixe (effet parallaxe)" }],
   backgroundPosition: ["Position du fond", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite" }],
 };
 const GROUP_LABELS = { layout: "Mise en page", size: "Dimensions", spacing: "Espacement", typography: "Typographie", color: "Couleurs", background: "Fond", border: "Bordure", effects: "Effets", position: "Position", media: "Image" };
@@ -533,7 +592,11 @@ function pageCss(sections) {
   };
   for (const s of sections || []) {
     add(s.id, s.styles, s.states);
-    if (s.type === "layout") walk(s.children, (n) => add(n.id, n.styles, n.states));
+    if (s.type === "layout") walk(s.children, (n) => {
+      add(n.id, n.styles, n.states);
+      // Barre de progression : sa largeur vient de sa valeur (validée 0–100), pas d'un style écrit dans la page
+      if (n.type === "progress" && NODE_ID.test(String(n.id || "")) && Number.isInteger(n.props && n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-progress-bar{width:${n.props.value}%}`);
+    });
   }
   let css = rules.base.join("\n");
   for (const bp of BREAKPOINTS) if (bp.media && rules.media[bp.key].length) css += `\n@media ${bp.media}{${rules.media[bp.key].join("")}}`;
