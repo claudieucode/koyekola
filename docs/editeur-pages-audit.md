@@ -213,3 +213,18 @@ Tests : serveur `tests/editeur-v3.test.js`, `editeur-v2`, `editeur-pro`, `page-b
 | Section libre | oui (existant) | oui | oui | oui | suites existantes |
 
 Non fait dans ce lot : conteneur cliquable en entier (lien sur toute la zone : il faudrait interdire les liens et boutons à l'intérieur), sélecteur de structures prêtes à l'ajout d'un conteneur (les « Blocs » couvrent déjà ce besoin).
+
+## Lot 2 — Basique
+
+| Widget | Interface | Fonctionnel | Persistant | Responsive | Testé |
+|---|---|---|---|---|---|
+| Titre | oui | oui + **lien sur tout le titre** (nouvel onglet), compté dans les clics | oui | oui | unitaire + navigateur + page publiée |
+| Image | oui (existant) | lien, légende, titre, texte de remplacement obligatoire | oui | oui | suites existantes |
+| Éditeur de texte | oui (existant) | texte riche, édition directe dans la page | oui | oui | suites existantes |
+| Vidéo | oui (existant) | YouTube / Vimeo / fichier, lecture auto, boucle, commandes | oui | oui | suites existantes |
+| Bouton | oui | oui + **taille** (petite / normale / grande) ; icône, apparence, nature du lien | oui | oui | unitaire + navigateur |
+| Séparateur | oui | oui + **texte au milieu du trait** (gauche / centre / droite) | oui | oui | unitaire + navigateur |
+| Espaceur | oui (existant) | tailles prêtes + hauteur libre (Style › Dimensions) | oui | oui (par écran) | suites existantes |
+| **Google Maps** (nouveau) | oui (Basique, recherche « maps », « carte », « adresse ») | adresse, zoom, hauteur, titre accessible ; sans clé d'API ; représentée dans le canevas, chargée en aperçu et en ligne | oui | oui (largeur 100 %) | unitaire + navigateur + page publiée 1280 / 390 px |
+| Icône | oui (existant) | icône, taille, lien, description | oui | oui | suites existantes |
+| WPForms | — | **non construit** : aucune intégration WPForms réelle dans KOLAKISA (pas de WordPress). Les formulaires KOLAKISA arrivent au lot 4. | — | — | — |

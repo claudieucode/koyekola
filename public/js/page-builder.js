@@ -300,6 +300,7 @@
       if (!m.alt) { toast("Ajoutez d'abord un texte de remplacement à cette image (dans la médiathèque).", true); return; }
       addItems([newNode("hotspot", { props: { src: m.path, alt: m.alt, spots: [{ x: 50, y: 50, title: "Point d'intérêt", text: "Ce qu'il faut savoir ici." }] } })], at);
     } });
+    if (t.asks === "map") return ask("Google Maps", [["address", "text", "Adresse ou lieu (ex. 12 avenue de la Paix, Brazzaville)"]], function (v) { addItems([newNode("map", { props: { address: v.address, zoom: 14, height: 350 } })], at); });
     if (t.asks === "embed") return ask("Contenu intégré", [["url", "url", "Adresse (YouTube, Vimeo, Google Maps « Intégrer », Calendly, Spotify, SoundCloud, Google Forms, Typeform, Loom, Canva)"], ["title", "text", "Titre (lu par les lecteurs d'écran)"]], function (v) { addItems([newNode("embed", { props: v })], at); });
     if (t.asks === "image") return openMedia({ title: "Choisir l'image", onPick: function (m) { addItems([newNode("image", { props: m.alt ? { src: m.path, alt: m.alt } : { src: m.path, alt: "", decorative: true } })], at); if (!m.alt) toast("Image ajoutée comme décorative : ajoutez un texte de remplacement si elle porte une information."); } });
     if (t.asks === "images") return openMedia({ title: type === "carousel" ? "Images du carrousel (au moins deux)" : "Images de la galerie (plusieurs possibles)", multiple: true, onPick: function (list) {
@@ -1084,6 +1085,8 @@
       case "heading":
         box.appendChild(textField("Texte", p.text, set("text"), { max: 200, disabled: disabled, hint: "Ou double-cliquez sur le titre dans la page." }));
         box.appendChild(selectField("Niveau", p.level, [["1", "Titre 1 (un seul par page)"], ["2", "Titre 2"], ["3", "Titre 3"], ["4", "Titre 4"], ["5", "Titre 5"], ["6", "Titre 6"]], set("level", false), { disabled: disabled }));
+        box.appendChild(textField("Lien (facultatif)", p.link, set("link"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue, /p/…, #ancre ou https://…", hint: "Tout le titre devient cliquable sur la page publiée." }));
+        box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
         break;
       case "text":
         box.appendChild(h("p", { class: "pb-hint", text: "Double-cliquez sur le texte dans la page pour l'écrire directement : gras, italique, liens, listes, couleurs… dans la barre du haut." }));
@@ -1144,6 +1147,7 @@
         box.appendChild(textField("Texte", p.label, set("label"), { max: it.type === "button" ? 80 : 120, disabled: disabled }));
         box.appendChild(textField("Adresse", p.url, set("url"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue, /p/… ou https://…", hint: PAGE.funnel ? "/etape-suivante : l'étape suivante du tunnel « " + PAGE.funnel.name + " »." : null }));
         if (it.type === "button") box.appendChild(selectField("Apparence", p.variant, [["primary", "Plein"], ["outline", "Contour"], ["ghost", "Discret"]], set("variant", false), { disabled: disabled }));
+        if (it.type === "button") box.appendChild(selectField("Taille", p.size || "md", [["sm", "Petite"], ["md", "Normale"], ["lg", "Grande"]], function (v) { setProp(it.id, "size", v); }, { disabled: disabled }));
         box.appendChild(checkField("Ouvrir dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
         if (it.type === "button") {
           box.appendChild(selectField("Nature du lien (moteurs de recherche)", p.rel || "", [["", "Normal"], ["nofollow", "Non recommandé (nofollow)"], ["sponsored", "Sponsorisé / payé"]], function (v) { setProp(it.id, "rel", v); }, { disabled: disabled }));
@@ -1234,7 +1238,16 @@
         box.appendChild(selectField("Épaisseur", String(p.thickness || 1), ["1", "2", "3", "4", "6", "8", "12"].map(function (n) { return [n, n + " px"]; }), function (v) { setProp(it.id, "thickness", Number(v)); }, { disabled: disabled }));
         var dc = fid();
         box.appendChild(h("div", { class: "pb-field" }, h("label", { for: dc, text: "Couleur du trait" }), colorButton(dc, p.color, undefined, disabled, function (v, o) { if (v) setProp(it.id, "color", v, o && o.light ? { key: it.id + ":color", light: true } : null); else change(function () { delete byId(it.id).props.color; }); }, "divider-color")));
+        box.appendChild(textField("Texte au milieu du trait (facultatif)", p.text, set("text"), { max: 60, disabled: disabled, placeholder: "ex. ou" }));
+        box.appendChild(selectField("Position du texte", p.align || "center", [["left", "À gauche"], ["center", "Au centre"], ["right", "À droite"]], function (v) { setProp(it.id, "align", v); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "Largeur : onglet Style › Dimensions ; espace autour : Espacement." }));
+        break;
+      case "map":
+        box.appendChild(textField("Adresse ou lieu", p.address, set("address"), { max: 200, disabled: disabled, placeholder: "ex. 12 avenue de la Paix, Brazzaville" }));
+        box.appendChild(selectField("Zoom", String(p.zoom || 14), [["5", "5 · pays"], ["8", "8 · région"], ["11", "11 · ville"], ["14", "14 · quartier"], ["16", "16 · rue"], ["18", "18 · bâtiment"]].concat([1, 2, 3, 4, 6, 7, 9, 10, 12, 13, 15, 17, 19, 20].indexOf(Number(p.zoom)) >= 0 ? [[String(p.zoom), String(p.zoom)]] : []), function (v) { setProp(it.id, "zoom", Number(v)); }, { disabled: disabled }));
+        box.appendChild(selectField("Hauteur", String(p.height || 350), [["250", "250 px"], ["350", "350 px"], ["450", "450 px"], ["600", "600 px"]].concat([250, 350, 450, 600].indexOf(Number(p.height)) < 0 && p.height ? [[String(p.height), p.height + " px"]] : []), function (v) { setProp(it.id, "height", Number(v)); }, { disabled: disabled }));
+        box.appendChild(textField("Titre (lu par les lecteurs d'écran)", p.title, set("title"), { max: 150, disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-hint", text: "Carte Google Maps sans clé d'API. Dans l'éditeur, elle est représentée ; elle se charge dans l'aperçu et sur la page publiée." }));
         break;
       case "html":
         box.appendChild(textField("HTML", p.html, set("html"), { multiline: true, rows: "10", max: 20000, disabled: disabled, hint: "Nettoyé à l'enregistrement : scripts, styles, formulaires, cadres et événements (onclick…) sont retirés ; liens https://, /page, #ancre ou mailto: seulement. SVG accepté (formes, dégradés)." }));
@@ -1565,7 +1578,8 @@
     link: { kind: "Lien", groups: { layout: ["alignSelf"], typography: null, color: ["color"], spacing: true }, states: true, order: TEXT_ORDER },
     icon: { kind: "Icône", groups: { layout: ["alignSelf"], color: ["color"], size: ["width", "height"], spacing: true }, states: true },
     spacer: { kind: "Espace", groups: { size: ["height"], spacing: true } },
-    divider: { kind: "Séparateur", groups: { size: SIZE_W, border: null, spacing: true } },
+    divider: { kind: "Séparateur", groups: { size: SIZE_W, typography: ["fontSize", "fontWeight", "textTransform", "letterSpacing"], color: ["color"], border: null, spacing: true } },
+    map: { kind: "Google Maps", groups: { size: SIZE_W, spacing: true, border: null, effects: ["boxShadow", "opacity"] }, order: ["size", "spacing", "border", "effects"] },
     course: { kind: "Formation", groups: { layout: ["alignSelf"], size: SIZE_W, background: true, spacing: true, border: null, effects: null }, states: true },
     form: { kind: "Formulaire", groups: { size: null, spacing: true, color: null, background: true, border: null, effects: null }, presets: true },
     component: { kind: "Composant", groups: null },
@@ -3246,6 +3260,7 @@
       case "spacer": return "Espace de " + p.size + " px";
       case "divider": return "Ligne de séparation";
       case "icon": return "Icône « " + p.name + " », " + p.size + " px";
+      case "map": return "Carte : " + p.address;
       case "badge": return p.text;
       case "timeline": return (p.items || []).length + " étape(s) : " + (p.items || []).map(function (x) { return x.title; }).join(" · ");
       case "progress": return p.label + " : " + p.value + " %";

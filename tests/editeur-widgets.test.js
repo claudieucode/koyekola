@@ -136,3 +136,59 @@ describe("vrai serveur", () => {
     assert.match(comp.text, /réservé aux administrateurs/);
   });
 });
+
+describe("lot 2 — Basique", () => {
+  let srv, boss, db;
+  before(async () => { srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" }); boss = await loginInstructor(srv); db = srv.db(); });
+  after(() => srv.stop());
+
+  test("validation : Google Maps (adresse obligatoire, zoom et hauteur bornés), lien du titre, taille du bouton, séparateur avec texte", () => {
+    const { A } = freshMarketing();
+    const p = pages.createPage(A, { name: "Lot 2", kind: "page" });
+    const save = (kids) => pages.saveDraft(A, p.id, { sections: [{ id: "sect00000001", type: "layout", children: kids }] }, { revision: pages.getPage(A, p.id).revision }).content.sections[0].children;
+    const out = save([
+      { id: "map000000001", type: "map", props: { address: " Tour Eiffel, Paris ", zoom: 99, height: 5000 } },
+      { id: "hed000000001", type: "heading", props: { text: "Titre", level: "2", link: "https://k.test/a", newTab: true } },
+      { id: "btn000000001", type: "button", props: { label: "Go", url: "/catalogue", size: "lg" } },
+      { id: "btn000000002", type: "button", props: { label: "Go", url: "/catalogue", size: "xxl" } },
+      { id: "div000000001", type: "divider", props: { text: "ou", align: "nope" } },
+      { id: "div000000002", type: "divider", props: { align: "left" } },
+    ]);
+    assert.deepEqual(out[0].props, { address: "Tour Eiffel, Paris", zoom: 14, height: 350, title: "Carte : Tour Eiffel, Paris" });
+    assert.deepEqual(out[1].props, { text: "Titre", level: "2", link: "https://k.test/a", newTab: true });
+    assert.equal(out[2].props.size, "lg");
+    assert.equal(out[3].props.size, undefined, "taille inconnue = normale (non enregistrée)");
+    assert.deepEqual([out[4].props.text, out[4].props.align], ["ou", "center"]);
+    assert.equal(out[5].props.align, undefined, "position sans texte : rien");
+    assert.throws(() => save([{ id: "map000000001", type: "map", props: { address: "" } }]), /indiquez une adresse/);
+    assert.throws(() => save([{ id: "hed000000001", type: "heading", props: { text: "T", level: "2", link: "javascript:alert(1)" } }]));
+    assert.equal(nodes.editorSpec().types.find((t) => t.type === "map").group, "basic");
+  });
+
+  test("page publiée : carte (adresse encodée), titre cliquable compté, bouton grand, séparateur avec texte ; canevas sans chargement de carte", async () => {
+    const id = Number((await boss.post("/marketing/pages", { name: "Basique" })).location.match(/(\d+)$/)[1]);
+    const rev = db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(id).revision;
+    const content = { sections: [{ id: "sect00000001", type: "layout", children: [
+      { id: "hed000000001", type: "heading", props: { text: "Nos formations", level: "2", link: "/catalogue" } },
+      { id: "btn000000001", type: "button", props: { label: "S'inscrire", url: "/catalogue", size: "lg" } },
+      { id: "div000000001", type: "divider", props: { text: "ou", align: "center", thickness: 2 } },
+      { id: "map000000001", type: "map", props: { address: "Bd Denis Sassou <Nguesso> & co", zoom: 16, height: 450 } },
+    ] }] };
+    assert.equal((await boss.request(`/marketing/pages/${id}/brouillon`, { method: "PUT", json: { revision: rev, content } })).status, 200);
+    const canvas = (await boss.request(`/marketing/pages/${id}/rendu`, { method: "POST", json: { content } })).text;
+    assert.doesNotMatch(canvas, /google\.com\/maps/, "le canevas représente la carte sans la charger");
+    assert.match(canvas, /Bd Denis Sassou &lt;Nguesso&gt; &amp; co/);
+    assert.equal((await boss.request(`/marketing/pages/${id}/publier.json`, { method: "POST", json: {} })).status, 200);
+    const slug = db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug;
+    const html = (await boss.get(`/p/${slug}`)).text;
+    assert.match(html, /<iframe class="kw-map-frame" src="https:\/\/www\.google\.com\/maps\?q=Bd%20Denis%20Sassou%20%3CNguesso%3E%20%26%20co&amp;z=16&amp;output=embed" title="Carte : Bd Denis Sassou &lt;Nguesso&gt; &amp; co"/);
+    assert.match(html, /\.kw-n-map000000001 \.kw-map-frame\{height:450px\}/);
+    assert.match(html, new RegExp(`<h2 class="kw-node kw-heading kw-n-hed000000001"><a class="kw-heading-link" href="/p/${slug}/clic/0">Nos formations</a></h2>`));
+    assert.match(html, new RegExp(`kw-btn-primary kw-btn-lg" href="/p/${slug}/clic/1"`), "le lien du titre décale bien le comptage des liens suivants");
+    assert.match(html, /<div class="kw-node kw-divider kw-n-div000000001 kw-divider-text is-center" role="separator"><span>ou<\/span><\/div>/);
+    assert.match(html, /\.kw-n-div000000001::before,\.kw-n-div000000001::after\{border-top:2px solid currentColor\}/);
+    const click = await boss.get(`/p/${slug}/clic/0`);
+    assert.equal(click.status, 302);
+    assert.equal(click.location, "/catalogue");
+  });
+});

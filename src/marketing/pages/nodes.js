@@ -250,15 +250,22 @@ const NODE_TYPES = {
   stack: { label: "Pile", category: "structure", container: true, props: boxTag },
   group: { label: "Groupe", category: "structure", container: true, props: boxTag },
   spacer: { label: "Espace", category: "structure", props: (p) => ({ size: oneOf("8", "16", "24", "32", "48", "64", "80", "96", "128")(String(p.size)) || "32" }) },
-  divider: { label: "Séparateur", category: "structure", props: (p) => ({
-    lineStyle: oneOf("solid", "dashed", "dotted", "double")(p.lineStyle) || "solid",
-    thickness: numberIn(1, 12, { integer: true })(p.thickness) || 1,
-    ...(color(p.color) ? { color: color(p.color) } : {}),
-  }) },
-  heading: { label: "Titre", category: "text", props: (p, at) => {
+  // Séparateur : trait seul, ou trait avec un court texte (à gauche, au centre ou à droite)
+  divider: { label: "Séparateur", category: "structure", props: (p) => {
+    const text = line(p.text, 60);
+    return {
+      lineStyle: oneOf("solid", "dashed", "dotted", "double")(p.lineStyle) || "solid",
+      thickness: numberIn(1, 12, { integer: true })(p.thickness) || 1,
+      ...(color(p.color) ? { color: color(p.color) } : {}),
+      ...(text ? { text, align: oneOf("left", "center", "right")(p.align) || "center" } : {}),
+    };
+  } },
+  heading: { label: "Titre", category: "text", props: (p, at, h) => {
     // Vide permis dans le brouillon (bloc en cours d'écriture) : jamais affiché sur la page publique
     const text = line(p.text, 200);
-    return { text, level: oneOf("1", "2", "3", "4", "5", "6")(String(p.level)) || "2" };
+    // Lien facultatif sur tout le titre (compté comme les autres liens de la page)
+    const link = h.linkUrl(p.link, `${at} (lien du titre)`);
+    return { text, level: oneOf("1", "2", "3", "4", "5", "6")(String(p.level)) || "2", ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}) };
   } },
   text: { label: "Texte", category: "text", props: (p, at) => {
     const html = sanitizeRich(p.html); // vide permis (paragraphe en cours d'écriture), jamais affiché sur la page publique
@@ -330,6 +337,8 @@ const NODE_TYPES = {
     const icon = h.iconNames.includes(String(p.icon || "")) ? String(p.icon) : "";
     return { label, url, variant: oneOf("primary", "outline", "ghost")(p.variant) || "primary", newTab: p.newTab === true && url.startsWith("https://"),
       ...(icon ? { icon, iconPos: oneOf("before", "after")(p.iconPos) || "before" } : {}),
+      // Taille : petite, normale (par défaut, non enregistrée) ou grande
+      ...(["sm", "lg"].includes(p.size) ? { size: p.size } : {}),
       // Lien payé ou non recommandé (indication aux moteurs de recherche)
       rel: oneOf("", "nofollow", "sponsored")(String(p.rel || "")) || "" };
   } },
@@ -529,6 +538,13 @@ const NODE_TYPES = {
     if (!getCourse(h.ctx, courseId)) throw new Error(`${at} (formation) : formation introuvable ou non publiée.`);
     return { courseId, cta: line(p.cta, 60) || "Découvrir la formation" };
   } },
+  // Google Maps : carte d'une adresse, sans clé d'API (lien d'intégration public de Google, construit ici : l'adresse
+  // est encodée, rien d'autre n'atteint la page)
+  map: { label: "Google Maps", category: "media", props: (p, at) => {
+    const address = line(p.address, 200);
+    if (!address) throw new Error(`${at} (Google Maps) : indiquez une adresse ou un lieu.`);
+    return { address, zoom: numberIn(1, 20, { integer: true })(p.zoom) || 14, height: numberIn(150, 800, { integer: true })(p.height) || 350, title: line(p.title, 150) || `Carte : ${address}` };
+  } },
   icon: { label: "Icône", category: "media", props: (p, at, h) => {
     const name = String(p.name || "");
     if (!h.iconNames.includes(name)) throw new Error(`${at} (icône) : icône inconnue.`);
@@ -557,6 +573,7 @@ const WIDGETS = {
   divider: ["basic", "separateur ligne trait"],
   spacer: ["basic", "espaceur espace vide marge"],
   icon: ["basic", "icone pictogramme symbole"],
+  map: ["basic", "carte google maps plan adresse localisation itineraire lieu"],
   link: ["basic", "lien url"],
   list: ["basic", "liste puces numerotee"],
   tabs: ["general", "onglets"],
@@ -646,6 +663,7 @@ const PALETTE = {
   countdown: { icon: "clock", blank: () => ({ props: { until: new Date(Date.now() + 7 * 86400000).toISOString().replace(/:\d{2}\.\d{3}Z$/, ":00Z"), endText: "C'est terminé." } }) },
   course: { icon: "graduation", asks: "course", blank: () => ({ props: {} }) },
   icon: { icon: "star", blank: () => ({ props: { name: "star", size: "32" } }) },
+  map: { icon: "mapPin", asks: "map", blank: () => ({ props: {} }) },
   badge: { icon: "tag", blank: () => ({ props: { text: "Nouveau", tone: "primary" } }) },
   timeline: { icon: "history", blank: () => ({ props: { items: [{ date: "Étape 1", title: "Inscription", text: "Ce qui se passe à cette étape." }, { date: "Étape 2", title: "Premier module", text: "Ce qui se passe ensuite." }] } }) },
   progress: { icon: "activity", blank: () => ({ props: { label: "Progression", value: 60, showValue: true } }) },
@@ -1069,7 +1087,8 @@ function pageCss(sections) {
       if (n.type === "hotspot" && NODE_ID.test(String(n.id || "")) && n.props) n.props.spots.forEach((sp, k) => rules.base.push(`.kw-n-${n.id}-s${k}{left:${Number(sp.x)}%;top:${Number(sp.y)}%}`));
       if (n.type === "iconlist" && NODE_ID.test(String(n.id || "")) && n.props && n.props.iconColor) rules.base.push(`.kw-n-${n.id} .kw-iconlist-icon{color:${colorCss(n.props.iconColor)}}`);
       if (n.type === "social" && NODE_ID.test(String(n.id || "")) && n.props) rules.base.push(`.kw-n-${n.id}{--kw-soc:${Number(n.props.size) || 32}px}`);
-      if (n.type === "divider" && NODE_ID.test(String(n.id || "")) && n.props && (n.props.lineStyle !== "solid" || n.props.thickness > 1 || n.props.color)) rules.base.push(`.kw-n-${n.id}{border:0;border-top:${n.props.thickness}px ${n.props.lineStyle} ${n.props.color ? colorCss(n.props.color) : "currentColor"}}`);
+      if (n.type === "divider" && NODE_ID.test(String(n.id || "")) && n.props && (n.props.lineStyle !== "solid" || n.props.thickness > 1 || n.props.color)) rules.base.push(`.kw-n-${n.id}${n.props.text ? "::before,.kw-n-" + n.id + "::after" : ""}{${n.props.text ? "" : "border:0;"}border-top:${n.props.thickness}px ${n.props.lineStyle} ${n.props.color ? colorCss(n.props.color) : "currentColor"}}`);
+      if (n.type === "map" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) rules.base.push(`.kw-n-${n.id} .kw-map-frame{height:${n.props.height}px}`);
       if (n.type === "progress" && NODE_ID.test(String(n.id || "")) && Number.isInteger(n.props && n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-progress-bar{width:${n.props.value}%}`);
       // Grille réglée pour l'ordinateur : sur tablette et mobile, elle se resserre d'elle-même (2 colonnes au plus, puis 1)
       // tant qu'aucune valeur propre à l'écran n'est réglée — comme une grille sans réglage

@@ -15,12 +15,14 @@
   <<%= boxTag %> class="<%= cls %><%= p.full ? " kw-full" : "" %>"<%- attrs %>><% if (n.bgVideo) { %><video class="kw-bg-video" src="<%= n.bgVideo.src %>" autoplay muted loop playsinline preload="metadata" aria-hidden="true" tabindex="-1"></video><% } %><% if (isBuilder && !(n.children || []).length) { %><p class="kw-empty">Déposez des éléments ici</p><% } %><% kids() %></<%= boxTag %>>
 <% } else if (n.type === "spacer") { %>
   <div class="<%= cls %> <%= `kw-spacer-${p.size}` %>"<%- attrs %> aria-hidden="true"></div>
+<% } else if (n.type === "divider" && p.text) { %>
+  <div class="<%= cls %> kw-divider-text is-<%= p.align %>" role="separator"<%- attrs %>><span><%= p.text %></span></div>
 <% } else if (n.type === "divider") { %>
   <hr class="<%= cls %>"<%- attrs %>>
 <% } else if ((n.type === "heading" && !p.text) || (n.type === "text" && !p.html)) { %>
   <% if (isBuilder) { %><div class="<%= cls %> kw-empty-text"<%- attrs %>><p class="kw-empty"><%= n.type === "heading" ? "Titre vide" : "Paragraphe vide" %></p></div><% } %>
 <% } else if (n.type === "heading") { %>
-  <h<%= p.level %> class="<%= cls %>"<%- attrs %>><%= p.text %></h<%= p.level %>>
+  <h<%= p.level %> class="<%= cls %>"<%- attrs %>><% if (p.link && !isBuilder) { %><a class="kw-heading-link" href="<%= href(p.link) %>"<%- p.newTab ? ' target="_blank" rel="noopener noreferrer"' : "" %>><%= p.text %></a><% } else { %><%= p.text %><% } %></h<%= p.level %>>
 <% } else if (n.type === "text") { %>
   <div class="<%= cls %>"<%- attrs %>><%- p.html %></div>
 <% } else if (n.type === "list") { const tag = p.ordered ? "ol" : "ul"; %>
@@ -46,7 +48,7 @@
   <figure class="<%= cls %>"<%- attrs %>><% if (p.title) { %><figcaption><%= p.title %></figcaption><% } %><audio src="<%= p.src %>" controls preload="none"<%= p.loop ? " loop" : "" %>></audio></figure>
 <% } else if (n.type === "button") { %>
   <% const rel = [p.newTab ? "noopener noreferrer" : "", p.rel || ""].filter(Boolean).join(" "); const bi = p.icon ? `<span class="kw-btn-icon" aria-hidden="true">${icon(p.icon, { size: 18 })}</span>` : ""; %>
-  <a class="<%= cls %> <%= `kw-btn-${p.variant}` %><%= p.icon ? " has-icon" : "" %>" href="<%= href(p.url) %>"<%- p.newTab ? ' target="_blank"' : "" %><%- rel ? ` rel="${rel}"` : "" %><%- attrs %>><% if (!p.icon) { %><%= p.label %><% } else { %><% if (p.iconPos !== "after") { %><%- bi %><% } %><span><%= p.label %></span><% if (p.iconPos === "after") { %><%- bi %><% } %><% } %></a>
+  <a class="<%= cls %> <%= `kw-btn-${p.variant}` %><%= p.icon ? " has-icon" : "" %><%= p.size ? ` kw-btn-${p.size}` : "" %>" href="<%= href(p.url) %>"<%- p.newTab ? ' target="_blank"' : "" %><%- rel ? ` rel="${rel}"` : "" %><%- attrs %>><% if (!p.icon) { %><%= p.label %><% } else { %><% if (p.iconPos !== "after") { %><%- bi %><% } %><span><%= p.label %></span><% if (p.iconPos === "after") { %><%- bi %><% } %><% } %></a>
 <% } else if (n.type === "link") { %>
   <a class="<%= cls %>" href="<%= href(p.url) %>"<%- p.newTab ? ' target="_blank" rel="noopener noreferrer"' : "" %><%- attrs %>><%= p.label %></a>
 <% } else if (n.type === "accordion") { %>
@@ -67,6 +69,8 @@
   <div class="<%= cls %>" role="region" aria-roledescription="carrousel" aria-label="<%= p.label %>" data-kw-carousel<%- p.dots ? " data-kw-dots" : "" %><%- p.autoplay ? ` data-kw-autoplay="${p.interval}"` : "" %><%- p.loop ? " data-kw-loop" : "" %><%- attrs %>><div class="kw-carousel-track" tabindex="0"><% p.images.forEach((im, k) => { %><figure class="kw-carousel-slide" aria-label="<%= k + 1 %> sur <%= p.images.length %>"><img src="<%= im.src %>" alt="<%= im.alt %>" loading="lazy" decoding="async"><% if (im.caption) { %><figcaption><%= im.caption %></figcaption><% } %></figure><% }) %></div></div>
 <% } else if (n.type === "html") { %>
   <div class="<%= cls %>"<%- attrs %>><%- p.html %></div>
+<% } else if (n.type === "map") { const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(p.address)}&z=${p.zoom}&output=embed`; %>
+  <div class="<%= cls %>"<%- attrs %>><% if (isBuilder) { %><div class="kw-map-frame lp-video-stand-in"><span class="lp-video-meta"><strong><%= p.address %></strong> Google Maps · zoom <%= p.zoom %></span></div><% } else { %><iframe class="kw-map-frame" src="<%= mapSrc %>" title="<%= p.title %>" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe><% } %></div>
 <% } else if (n.type === "embed") { const e = p.embed; const ecls = e ? `kw-embed-${e.ratio.replace("/", "x")}` : ""; %>
   <div class="<%= cls %> <%= ecls %>"<%- attrs %>><% if (e && isBuilder) { %><div class="kw-embed-frame lp-video-stand-in"><span class="lp-video-meta"><strong><%= p.title %></strong> Contenu intégré · <%= e.label %></span></div><% } else if (e) { %><div class="kw-embed-frame"><iframe src="<%= e.src %>" title="<%= p.title %>" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; fullscreen; clipboard-write" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation"></iframe></div><% } %></div>
 <% } else if (n.type === "iconlist") { %>
