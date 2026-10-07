@@ -463,12 +463,12 @@ describe("structure : canevas, Flexbox, Grille, calques et panneau détachable (
     assert.equal(await page.locator("[data-pb-layers] .pb-node").count(), kidsBefore);
   });
 
-  test("raccourci Ctrl/⌘ + Maj + L, et rattachement en déposant le panneau flottant sur le panneau de droite", async () => {
+  test("raccourci Ctrl/⌘ + Maj + Y, et rattachement en déposant le panneau flottant sur le panneau de droite", async () => {
     await openEditor();
     const panel = page.locator("[data-pb-layers-panel]");
-    await page.keyboard.press("Control+Shift+L");
+    await page.keyboard.press("Control+Shift+Y");
     await until(async () => !(await panel.isVisible()), { what: "panneau fermé au clavier" });
-    await page.keyboard.press("Control+Shift+L");
+    await page.keyboard.press("Control+Shift+Y");
     await until(async () => panel.isVisible(), { what: "panneau rouvert au clavier" });
     // détacher, puis déposer l'en-tête sur le panneau de droite : il se rattache
     await page.locator("[data-pb-layers-dock]").click();

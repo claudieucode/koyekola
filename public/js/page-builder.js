@@ -4771,7 +4771,7 @@
     var mod = e.metaKey || e.ctrlKey;
     var k = (e.key || "").toLowerCase();
     if (mod && k === "s") { e.preventDefault(); saveNow(); return; }
-    if (mod && e.shiftKey && k === "l") { e.preventDefault(); setDockMode(dock.mode === "closed" ? dock.last : "closed"); return; }
+    if (mod && e.shiftKey && k === "y") { e.preventDefault(); setDockMode(dock.mode === "closed" ? dock.last : "closed"); return; }
     if (mod && k === "k") { e.preventDefault(); openCommands(""); return; }
     if (mod && e.shiftKey && k === "e") { e.preventDefault(); setMode(mode === "structure" ? "visual" : "structure"); return; }
     if (typing || editing) return;
