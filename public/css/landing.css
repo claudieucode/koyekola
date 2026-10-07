@@ -190,6 +190,15 @@
 .kw-signup .hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .kw-signup .optin-row { line-height: 1.45; }
 .kw-signup .field-hint { margin: 0; font-size: 13px; opacity: 0.75; }
+/* Logo, titre du site, copyright */
+.kw-sitelogo { display: inline-flex; flex-direction: column; align-items: flex-start; }
+.kw-sitelogo-link { display: inline-flex; align-items: center; color: inherit; text-decoration: none; }
+.kw-sitelogo-img { display: block; height: 48px; width: auto; max-width: 100%; }
+.kw-sitelogo-text { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+.kw-sitetitle { margin: 0; font-weight: 800; }
+.kw-sitetitle-link { color: inherit; text-decoration: none; }
+.kw-sitetitle-link:hover, .kw-sitelogo-link:hover .kw-sitelogo-text { text-decoration: underline; }
+.kw-copyright { margin: 0; font-size: 14px; opacity: 0.8; }
 /* Titre animé */
 .kw-rotate { display: inline-block; color: var(--lp-accent, #0277b6); }
 .kw-rotate.is-fade { transition: opacity 0.35s ease, transform 0.35s ease; }

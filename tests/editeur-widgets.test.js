@@ -383,3 +383,63 @@ describe("lot 5 — Avancé", () => {
     assert.match(html, /\.kw-n-flp000000001\{min-height:280px\}/);
   });
 });
+
+describe("lot 6 — Site", () => {
+  let srv, boss, db;
+  before(async () => {
+    srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
+    boss = await loginInstructor(srv); db = srv.db();
+    db.prepare("INSERT OR REPLACE INTO seo_settings (key, value) VALUES ('site_name', ?), ('org_logo', ?)").run(JSON.stringify("Atelier Kola"), JSON.stringify("/uploads/thumbnails/logo-kola.png"));
+  });
+  after(() => srv.stop());
+
+  test("validation : logo, titre du site, copyright (réglages d'affichage seulement) ; raccourci « Titre de la page »", () => {
+    const { A } = freshMarketing();
+    const p = pages.createPage(A, { name: "Lot 6", kind: "page" });
+    const save = (kids) => pages.saveDraft(A, p.id, { sections: [{ id: "sect00000001", type: "layout", children: kids }] }, { revision: pages.getPage(A, p.id).revision }).content.sections[0].children;
+    const out = save([
+      { id: "log000000001", type: "sitelogo", props: { height: 9999, link: false, logo: "javascript:alert(1)" } },
+      { id: "tit000000001", type: "sitetitle", props: { tag: "script" } },
+      { id: "cpy000000001", type: "copyright", props: { owner: "Kola SARL", text: "Tous droits réservés.", year: "1999" } },
+    ]);
+    assert.deepEqual(out[0].props, { height: 48, link: false }, "aucune adresse de logo enregistrée dans la page");
+    assert.deepEqual(out[1].props, { tag: "p", link: true });
+    assert.deepEqual(out[2].props, { owner: "Kola SARL", text: "Tous droits réservés." }, "l'année n'est jamais enregistrée");
+    const spec = nodes.editorSpec();
+    for (const t of ["sitelogo", "sitetitle", "copyright", "menu", "breadcrumb", "search", "account", "posts"]) assert.equal(spec.types.find((x) => x.type === t).group, "site", t);
+    const sc = spec.shortcuts.find((x) => x.key === "pagetitle");
+    assert.deepEqual([sc.type, sc.group, sc.preset.source, sc.pattern], ["dyntext", "site", "pageTitle", null]);
+    assert.equal(save([{ id: "dyn000000001", type: "dyntext", props: sc.preset }])[0].props.source, "pageTitle");
+  });
+
+  test("page publiée : logo et nom réels, lien vers l'accueil du site (compté), copyright de l'année ; page de site : nom du site", async () => {
+    const id = Number((await boss.post("/marketing/pages", { name: "Pied de page" })).location.match(/(\d+)$/)[1]);
+    const content = { sections: [{ id: "sect00000001", type: "layout", children: [
+      { id: "log000000001", type: "sitelogo", props: { height: 64 } },
+      { id: "tit000000001", type: "sitetitle", props: { tag: "h2", link: false } },
+      { id: "cpy000000001", type: "copyright", props: { text: "Tous droits réservés." } },
+      { id: "btn000000001", type: "button", props: { label: "Après", url: "/catalogue" } },
+    ] }] };
+    const put = async (pid) => boss.request(`/marketing/pages/${pid}/brouillon`, { method: "PUT", json: { revision: db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(pid).revision, content } });
+    assert.equal((await put(id)).status, 200);
+    assert.equal((await boss.request(`/marketing/pages/${id}/publier.json`, { method: "POST", json: {} })).status, 200);
+    const slug = db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug;
+    const html = (await boss.get(`/p/${slug}`)).text;
+    assert.match(html, new RegExp(`<a class="kw-sitelogo-link" href="/p/${slug}/clic/0"><img class="kw-sitelogo-img" src="/uploads/thumbnails/logo-kola.png" alt="Atelier Kola"></a>`));
+    assert.match(html, /\.kw-n-log000000001 \.kw-sitelogo-img\{height:64px\}/);
+    assert.match(html, /<h2 class="kw-node kw-sitetitle kw-n-tit000000001">Atelier Kola<\/h2>/);
+    assert.match(html, new RegExp(`<p class="kw-node kw-copyright kw-n-cpy000000001">© ${new Date().getFullYear()} Atelier Kola\\. Tous droits réservés\\.</p>`));
+    assert.match(html, new RegExp(`href="/p/${slug}/clic/1"[^>]*>Après</a>`));
+    assert.equal((await boss.get(`/p/${slug}/clic/0`)).location, "/", "page hors site : accueil de la plateforme");
+    // Page d'un site dont l'accueil est en ligne : nom du site et lien vers son accueil
+    const site = Number(db.prepare("INSERT INTO mk_sites (organization_id, name) VALUES (1, 'Vitrine Kola')").run().lastInsertRowid);
+    const home = Number((await boss.post("/marketing/pages", { name: "Accueil vitrine" })).location.match(/(\d+)$/)[1]);
+    db.prepare("UPDATE mk_landing_pages SET site_id = ?, status = 'published', slug = 'accueil-vitrine' WHERE id = ?").run(site, home);
+    db.prepare("UPDATE mk_sites SET home_page_id = ? WHERE id = ?").run(home, site);
+    db.prepare("UPDATE mk_landing_pages SET site_id = ? WHERE id = ?").run(site, id);
+    const html2 = (await boss.get(`/p/${slug}`)).text;
+    assert.match(html2, /alt="Vitrine Kola"/);
+    assert.match(html2, /© \d{4} Vitrine Kola\./);
+    assert.equal((await boss.get(`/p/${slug}/clic/0`)).location, "/p/accueil-vitrine");
+  });
+});

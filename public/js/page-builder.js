@@ -334,6 +334,7 @@
   // Raccourci de bibliothèque : crée un élément existant préréglé (le serveur le valide comme tout autre)
   function addShortcut(sc, at) {
     if (!canWrite) return;
+    if (sc.preset) { addItems([newNode(sc.type, { props: clone(sc.preset) })], at); return; }
     ask(sc.label, [["url", "url", "Adresse de la page " + sc.label + " (ex. https://soundcloud.com/artiste/titre)"], ["title", "text", "Titre (lu par les lecteurs d'écran)"]], function (v) {
       if (!new RegExp(sc.pattern, "i").test(String(v.url || "").trim())) { toast("Adresse " + sc.label + " attendue (https://soundcloud.com/artiste/titre).", true); return; }
       addItems([newNode(sc.type, { props: { url: String(v.url).trim(), title: v.title } })], at);
@@ -1445,6 +1446,21 @@
         box.appendChild(textField("Lien (facultatif)", p.link, set("link"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue, /p/…, #ancre ou https://…" }));
         box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
         break;
+      case "sitelogo":
+        box.appendChild(selectField("Hauteur", String(p.height || 48), [["32", "32 px"], ["48", "48 px"], ["64", "64 px"], ["96", "96 px"]].concat([32, 48, 64, 96].indexOf(Number(p.height)) < 0 && p.height ? [[String(p.height), p.height + " px"]] : []), function (v) { setProp(it.id, "height", Number(v)); }, { disabled: disabled }));
+        box.appendChild(checkField("Lien vers l'accueil du site", p.link !== false, function (v) { setProp(it.id, "link", v); }, { disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-hint", text: "Le logo vient des réglages SEO (Organisation › Logo) ; sans logo, le nom du site s'affiche. Accueil : la page d'accueil du site si elle est en ligne, sinon l'accueil de KOLAKISA." }));
+        break;
+      case "sitetitle":
+        box.appendChild(selectField("Balise", p.tag || "p", [["p", "Paragraphe"], ["span", "Texte en ligne"], ["h1", "Titre 1"], ["h2", "Titre 2"], ["h3", "Titre 3"]], function (v) { setProp(it.id, "tag", v); }, { disabled: disabled }));
+        box.appendChild(checkField("Lien vers l'accueil du site", p.link !== false, function (v) { setProp(it.id, "link", v); }, { disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-hint", text: "Le nom du site de cette page (sinon le nom du site des réglages SEO), toujours à jour." }));
+        break;
+      case "copyright":
+        box.appendChild(textField("Titulaire (vide = nom du site)", p.owner, set("owner"), { max: 80, disabled: disabled }));
+        box.appendChild(textField("Texte après", p.text, set("text"), { max: 160, disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-hint", text: "L'année se met à jour toute seule." }));
+        break;
       case "animatedheading":
         box.appendChild(textField("Début (fixe)", p.before, set("before"), { max: 80, disabled: disabled }));
         box.appendChild(textField("Mots qui se succèdent (un par ligne, 2 à 8)", (p.words || []).join("\n"), function (v) { setProp(it.id, "words", v.split("\n").map(function (x) { return x.trim(); }).filter(Boolean)); }, { multiline: true, disabled: disabled }));
@@ -1843,6 +1859,9 @@
     iconbox: { kind: "Boîte d'icône", groups: TEXTUAL, order: TEXT_ORDER },
     signupform: { kind: "Formulaire", groups: TEXTUAL, order: TEXT_ORDER },
     animatedheading: { kind: "Titre animé", groups: TEXTUAL, order: TEXT_ORDER },
+    sitelogo: { kind: "Logo du site", groups: { layout: ["alignSelf"], spacing: true, effects: ["opacity"] }, order: ["spacing", "layout", "effects"] },
+    sitetitle: { kind: "Titre du site", groups: TEXTUAL, order: TEXT_ORDER },
+    copyright: { kind: "Copyright", groups: TEXTUAL, order: TEXT_ORDER },
     flipbox: { kind: "Boîte retournable", groups: { layout: ["alignSelf"], typography: null, size: SIZE_W, spacing: true, border: null, effects: ["boxShadow", "opacity"] }, order: ["size", "typography", "spacing", "border", "effects", "layout"] },
     pricelist: { kind: "Liste de prix", groups: TEXTUAL, order: TEXT_ORDER },
     toc: { kind: "Table des matières", groups: TEXTUAL, order: TEXT_ORDER },
@@ -3559,6 +3578,9 @@
       case "icon": return "Icône « " + p.name + " », " + p.size + " px";
       case "map": return "Carte : " + p.address;
       case "imagebox": case "iconbox": return p.title;
+      case "sitelogo": return "Logo du site";
+      case "sitetitle": return "Titre du site";
+      case "copyright": return "© " + (p.owner || "nom du site") + (p.text ? ". " + p.text : "");
       case "animatedheading": return [p.before, (p.words || []).join(" / "), p.after].filter(Boolean).join(" ");
       case "flipbox": return p.frontTitle;
       case "pricelist": return (p.items || []).length + " ligne(s) : " + (p.items || []).map(function (x) { return x.title; }).join(" · ");

@@ -293,3 +293,13 @@ Le circuit d'envoi est celui de la section existante (`POST /p/:adresse/inscript
 | **Table des matières** (nouveau) | oui | construite à l'affichage depuis les titres de la page (niveaux 2 à 2/3/4), ancres automatiques `kw-h-…` ou ancre choisie ; numérotée ou non | oui | oui | unitaire + navigateur (le lien mène au titre) |
 | **Barre de lecture** (nouveau) | oui | progression du défilement, en haut ou en bas, épaisseur et couleur réglables | oui | oui | unitaire + navigateur |
 | Appel à l'action | — | non dupliqué : existe déjà en section « Appel à l'action » et dans les Blocs | — | — | — |
+
+## Lot 6 — Site
+
+| Widget | Interface | Fonctionnel | Persistant | Responsive | Testé |
+|---|---|---|---|---|---|
+| Menu de navigation, Fil d'Ariane, Recherche, Compte du visiteur, Derniers articles | oui (existants, rangés dans « Site ») | oui | oui | oui | suites existantes |
+| **Logo du site** (nouveau) | oui | logo des réglages SEO (Organisation › Logo, adresse vérifiée) ; sans logo : nom du site + explication dans l'éditeur ; lien (compté) vers l'accueil du site s'il est en ligne, sinon l'accueil de KOLAKISA ; hauteur réglable | oui (réglages d'affichage seulement) | oui | unitaire + navigateur + page publiée |
+| **Titre du site** (nouveau) | oui | nom du site de la page (sinon nom du site des réglages SEO), balise et lien réglables | oui | oui | unitaire + navigateur |
+| **Copyright** (nouveau) | oui | « © année titulaire. texte » ; année calculée à l'affichage, titulaire = nom du site par défaut | oui | oui | unitaire + navigateur |
+| **Titre de la page** (raccourci) | oui | texte dynamique « titre de la page » préréglé (pas de second système) | oui | oui | unitaire + navigateur |

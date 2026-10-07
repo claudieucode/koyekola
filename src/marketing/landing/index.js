@@ -143,6 +143,17 @@ function deletePage(ctx, id) {
 const courseView = (c) => ({ title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "" });
 // Contenu dynamique : lu au moment de l'affichage (articles, formations, compteurs, visiteur)
 const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+// Identité du site d'une page : nom (site de la page, sinon nom du site dans les réglages SEO), page d'accueil du site
+// (si elle est en ligne, sinon l'accueil de la plateforme), logo de l'organisation (réglages SEO, adresse vérifiée)
+function siteInfo(ctx, page) {
+  let seo = {};
+  try { seo = require("../../seo/settings").all(); } catch { seo = {}; }
+  const site = page && page.site_id ? ctx.db.prepare("SELECT name, home_page_id FROM mk_sites WHERE id = ? AND organization_id = ?").get(page.site_id, ctx.organizationId) : null;
+  const home = site && site.home_page_id ? ctx.db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ? AND status = 'published'").get(site.home_page_id) : null;
+  const logo = String(seo.org_logo || "");
+  const safeLogo = (/^\/uploads\/[A-Za-z0-9_\/.-]{1,200}\.(png|jpe?g|webp|gif|avif|svg)$/i.test(logo) && !logo.includes("..")) || /^https:\/\/[^\s"'<>]{3,300}$/i.test(logo) ? logo : "";
+  return { name: (site && site.name) || seo.site_name || "KOLAKISA", homeUrl: home ? `/p/${home.slug}` : "/", logo: safeLogo };
+}
 function dynamicProps(ctx, n, visitor, page) {
   const p = n.props;
   if (n.type === "posts") {
@@ -167,6 +178,11 @@ function dynamicProps(ctx, n, visitor, page) {
     return { ...p, value };
   }
   if (n.type === "embed") return { ...p, embed: pageNodes.embedOf(p.url) };
+  if (n.type === "sitelogo" || n.type === "sitetitle" || n.type === "copyright") {
+    const s = siteInfo(ctx, page);
+    if (n.type === "copyright") return { ...p, year: String(new Date().getFullYear()), owner: p.owner || s.name };
+    return { ...p, name: s.name, homeUrl: s.homeUrl, ...(n.type === "sitelogo" ? { logo: s.logo } : {}) };
+  }
   // Formulaire : affiché seulement s'il est publié (sinon rien sur la page publique, un avertissement dans l'éditeur)
   if (n.type === "signupform") {
     const forms = require("../forms");
@@ -223,6 +239,7 @@ function linksOf(page) {
     if (s.type === "course" && s.course) out.push({ section: i, label: `Formation : ${s.course.title}`, url: s.course.url });
     // Section libre : mêmes liens, dans l'ordre d'affichage des éléments
     if (s.type === "layout") pageNodes.walk(s.children, (n) => {
+      if ((n.type === "sitelogo" || n.type === "sitetitle") && n.props.link && n.props.homeUrl) out.push({ section: i, label: n.type === "sitelogo" ? "Logo du site" : "Titre du site", url: n.props.homeUrl });
       if (n.type === "flipbox" && n.props.ctaUrl) out.push({ section: i, label: `Boîte retournable : ${n.props.ctaLabel}`, url: n.props.ctaUrl });
       if (n.type === "pricelist") n.props.items.forEach((it) => { if (it.link) out.push({ section: i, label: `Liste de prix : ${it.title}`, url: it.link }); });
       if ((n.type === "imagebox" || n.type === "iconbox") && n.props.link) out.push({ section: i, label: `${n.type === "imagebox" ? "Boîte d'image" : "Boîte d'icône"} : ${n.props.title}`, url: n.props.link });

@@ -562,6 +562,11 @@ const NODE_TYPES = {
     if (!getCourse(h.ctx, courseId)) throw new Error(`${at} (formation) : formation introuvable ou non publiée.`);
     return { courseId, cta: line(p.cta, 60) || "Découvrir la formation" };
   } },
+  // Logo, titre du site, copyright : contenu lu à l'affichage (logo et nom des réglages SEO, nom du site de la page,
+  // année en cours) ; seuls les réglages d'affichage sont enregistrés
+  sitelogo: { label: "Logo du site", category: "dynamic", props: (p) => ({ height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false }) },
+  sitetitle: { label: "Titre du site", category: "dynamic", props: (p) => ({ tag: oneOf("p", "span", "h1", "h2", "h3")(p.tag) || "p", link: p.link !== false }) },
+  copyright: { label: "Copyright", category: "dynamic", props: (p) => ({ owner: line(p.owner, 80), text: line(p.text, 160) }) },
   // Titre animé : début fixe, mots qui se succèdent (2 à 8), fin fixe. Lu en entier par les lecteurs d'écran.
   animatedheading: { label: "Titre animé", category: "text", props: (p, at) => {
     const words = (Array.isArray(p.words) ? p.words : []).map((w) => line(w, 40)).filter(Boolean).slice(0, 8);
@@ -673,6 +678,9 @@ const WIDGETS = {
   pricelist: ["advanced", "liste de prix tarifs prestations menu carte"],
   toc: ["advanced", "table des matieres sommaire plan titres navigation"],
   readingprogress: ["advanced", "barre de lecture progression defilement scroll article"],
+  sitelogo: ["site", "logo du site marque image accueil en-tete"],
+  sitetitle: ["site", "titre du site nom marque accueil en-tete"],
+  copyright: ["site", "copyright droits reserves annee pied de page mentions"],
   link: ["basic", "lien url"],
   list: ["basic", "liste puces numerotee"],
   tabs: ["general", "onglets"],
@@ -712,6 +720,8 @@ const WIDGETS = {
 // SoundCloud). Le serveur valide l'élément créé comme tout autre.
 const WIDGET_SHORTCUTS = [
   { key: "soundcloud", label: "SoundCloud", group: "general", icon: "play", keywords: "soundcloud son musique podcast audio lecteur", type: "embed", provider: "soundcloud" },
+  // Titre de la page : texte dynamique (source « titre de la page ») préréglé, rien à demander
+  { key: "pagetitle", label: "Titre de la page", group: "site", icon: "type", keywords: "titre de la page nom h1 h2", type: "dyntext", preset: { source: "pageTitle", tag: "h2", before: "", after: "", fallback: "" } },
 ];
 
 // Permissions exigées par des widgets : libellé affiché sur le cadenas
@@ -779,6 +789,9 @@ const PALETTE = {
   pricelist: { icon: "listOrdered", blank: () => ({ props: { items: [{ title: "[Prestation]", price: "[Prix]", text: "" }] } }) },
   toc: { icon: "listOrdered", blank: () => ({ props: { title: "Sommaire", depth: "3", numbered: false } }) },
   readingprogress: { icon: "activity", blank: () => ({ props: { position: "top", thickness: 4 } }) },
+  sitelogo: { icon: "image", blank: () => ({ props: { height: 48, link: true } }) },
+  sitetitle: { icon: "type", blank: () => ({ props: { tag: "p", link: true } }) },
+  copyright: { icon: "fileText", blank: () => ({ props: { owner: "", text: "Tous droits réservés." } }) },
   badge: { icon: "tag", blank: () => ({ props: { text: "Nouveau", tone: "primary" } }) },
   timeline: { icon: "history", blank: () => ({ props: { items: [{ date: "Étape 1", title: "Inscription", text: "Ce qui se passe à cette étape." }, { date: "Étape 2", title: "Premier module", text: "Ce qui se passe ensuite." }] } }) },
   progress: { icon: "activity", blank: () => ({ props: { label: "Progression", value: 60, showValue: true } }) },
@@ -861,7 +874,7 @@ function editorSpec() {
   };
   return {
     types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], keywords: WIDGETS[type][1], requires: widgetRequires(type), version: d.version || 1, container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
-    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
+    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
     socialNetworks: Object.entries(SOCIAL_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
@@ -1211,6 +1224,7 @@ function pageCss(sections) {
       if (n.type === "iconlist" && NODE_ID.test(String(n.id || "")) && n.props && n.props.iconColor) rules.base.push(`.kw-n-${n.id} .kw-iconlist-icon{color:${colorCss(n.props.iconColor)}}`);
       if (n.type === "social" && NODE_ID.test(String(n.id || "")) && n.props) rules.base.push(`.kw-n-${n.id}{--kw-soc:${Number(n.props.size) || 32}px}`);
       if (n.type === "divider" && NODE_ID.test(String(n.id || "")) && n.props && (n.props.lineStyle !== "solid" || n.props.thickness > 1 || n.props.color)) rules.base.push(`.kw-n-${n.id}${n.props.text ? "::before,.kw-n-" + n.id + "::after" : ""}{${n.props.text ? "" : "border:0;"}border-top:${n.props.thickness}px ${n.props.lineStyle} ${n.props.color ? colorCss(n.props.color) : "currentColor"}}`);
+      if (n.type === "sitelogo" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) rules.base.push(`.kw-n-${n.id} .kw-sitelogo-img{height:${n.props.height}px}`);
       if (n.type === "flipbox" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) rules.base.push(`.kw-n-${n.id}{min-height:${n.props.height}px}`);
       if (n.type === "readingprogress" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.thickness)) rules.base.push(`.kw-n-${n.id} .kw-readbar{height:${n.props.thickness}px}`);
       if (n.type === "rating" && NODE_ID.test(String(n.id || "")) && n.props && Number.isFinite(n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-rating-fill{width:${Math.round((n.props.value / (n.props.scale || 5)) * 1000) / 10}%}`);
