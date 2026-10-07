@@ -121,6 +121,22 @@ describe("rendu (vrai serveur)", () => {
   before(async () => { srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" }); boss = await loginInstructor(srv); db = srv.db(); });
   after(() => srv.stop());
 
+  test("titre ou paragraphe vide (bloc en cours d'écriture) : accepté au brouillon, absent de la page publiée, signalé dans l'éditeur", async () => {
+    const id = Number((await boss.post("/marketing/pages", { name: "Blocs vides" })).location.match(/(\d+)$/)[1]);
+    const rev = db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(id).revision;
+    const sections = [layout([{ id: "head00000001", type: "heading", props: { text: "", level: 2 } }, { id: "text00000001", type: "text", props: { html: "<p></p>" } }, { id: "text00000002", type: "text", props: { html: "<p>Écrit</p>" } }])];
+    const put = await boss.request(`/marketing/pages/${id}/brouillon`, { method: "PUT", json: { revision: rev, content: { sections } } });
+    assert.equal(put.status, 200, put.text);
+    const canvas = (await boss.postJson(`/marketing/pages/${id}/rendu`, { content: { sections } })).text;
+    assert.match(canvas, /Titre vide/);
+    assert.match(canvas, /Paragraphe vide/);
+    assert.equal((await boss.postJson(`/marketing/pages/${id}/publier.json`, {})).status, 200);
+    const slug = db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug;
+    const html = (await new Client(srv.base).get(`/p/${slug}`, { headers: { "User-Agent": UA } })).text;
+    assert.doesNotMatch(html, /kw-n-head00000001|kw-n-text00000001|Titre vide|Paragraphe vide/);
+    assert.match(html, /<p>Écrit<\/p>/);
+  });
+
   test("page publiée : éléments imbriqués, CSS de la page, élément masqué absent, bouton imbriqué compté et redirigé", async () => {
     const id = Number((await boss.post("/marketing/pages", { name: "Section libre" })).location.match(/(\d+)$/)[1]);
     const page = db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(id);

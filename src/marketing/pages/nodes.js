@@ -186,13 +186,12 @@ const NODE_TYPES = {
   spacer: { label: "Espace", category: "structure", props: (p) => ({ size: oneOf("8", "16", "24", "32", "48", "64", "80", "96", "128")(String(p.size)) || "32" }) },
   divider: { label: "Séparateur", category: "structure", props: () => ({}) },
   heading: { label: "Titre", category: "text", props: (p, at) => {
+    // Vide permis dans le brouillon (bloc en cours d'écriture) : jamais affiché sur la page publique
     const text = line(p.text, 200);
-    if (!text) throw new Error(`${at} (titre) : le texte est obligatoire.`);
     return { text, level: oneOf("1", "2", "3", "4", "5", "6")(String(p.level)) || "2" };
   } },
   text: { label: "Texte", category: "text", props: (p, at) => {
-    const html = sanitizeRich(p.html);
-    if (!html) throw new Error(`${at} (texte) : le texte est vide.`);
+    const html = sanitizeRich(p.html); // vide permis (paragraphe en cours d'écriture), jamais affiché sur la page publique
     return { html };
   } },
   list: { label: "Liste", category: "text", props: (p, at) => {

@@ -22,6 +22,11 @@
         <button type="button" class="pb-icon-btn" data-pb-undo data-tip="Annuler (Ctrl/⌘ + Z)" aria-label="Annuler" disabled><%- icon("undo", { size: 16 }) %></button>
         <button type="button" class="pb-icon-btn" data-pb-redo data-tip="Rétablir (Ctrl/⌘ + Maj + Z)" aria-label="Rétablir" disabled><%- icon("redo", { size: 16 }) %></button>
       </div>
+      <%# Deux façons de travailler sur le MÊME document : la page telle qu'affichée, ou sa structure en blocs %>
+      <div class="pb-seg pb-mode-seg" role="radiogroup" aria-label="Mode d'édition">
+        <button type="button" role="radio" aria-checked="true" data-pb-mode="visual" data-tip="Visuel : la page telle qu'elle s'affiche (Ctrl/⌘ + Maj + E pour basculer)"><%- icon("monitor", { size: 15 }) %><span>Visuel</span></button>
+        <button type="button" role="radio" aria-checked="false" data-pb-mode="structure" data-tip="Structure : la page en blocs à écrire, déplacer, imbriquer (Ctrl/⌘ + Maj + E pour basculer)"><%- icon("listChecks", { size: 15 }) %><span>Structure</span></button>
+      </div>
     </div>
     <div class="pb-context" data-pb-context role="toolbar" aria-label="Réglages rapides de la sélection"></div>
     <div class="pb-top-right">
@@ -82,6 +87,7 @@
       <div class="pb-ruler-corner" data-pb-ruler-corner hidden title="Unité : pixels. Clic droit : guides">px</div>
       <canvas class="pb-ruler pb-ruler-x" data-pb-ruler-x aria-hidden="true" hidden title="Règle horizontale : tirez vers la page pour créer un guide horizontal"></canvas>
       <canvas class="pb-ruler pb-ruler-y" data-pb-ruler-y aria-hidden="true" hidden title="Règle verticale : tirez vers la page pour créer un guide vertical"></canvas>
+      <div class="pb-doc" data-pb-doc hidden aria-label="Structure de la page (blocs)"></div>
       <div class="pb-stage" data-pb-stage>
         <div class="pb-frame-wrap" data-pb-frame-wrap data-device="desktop">
           <iframe class="pb-frame" data-pb-frame title="Page en cours d'édition"></iframe>

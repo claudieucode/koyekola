@@ -313,3 +313,4 @@ body.pb-hand,body.pb-hand *{cursor:grab}
 .lp-video-play::after{ content:"";position:absolute;left:22px;top:17px;border-style:solid;border-width:11px 0 11px 18px;border-color:transparent transparent transparent #fff}
 .lp-video-meta{ font:500 13px/1.4 system-ui,sans-serif;opacity:.9}
 .lp-video-meta strong{ display:block;font-size:14px;opacity:1}
+.kw-empty-text { min-width: 0; }

@@ -179,6 +179,7 @@
     if (!light) { renderInspector(); renderContext(); renderPageSettings(); }
     updateHistoryButtons();
     placeCanvasBar();
+    if (!light) renderDoc();
     scheduleRender();
     scheduleSave();
   }
@@ -200,6 +201,7 @@
     renderInspector();
     renderContext();
     markCanvasSelection(opts.scroll !== false);
+    markDocSelection(opts.scroll !== false);
   }
   var selectedItems = function () { return selection.map(byId).filter(Boolean); };
   function revealInTree(id) {
@@ -2597,6 +2599,7 @@
   // Position : au-dessus de l'élément (bord droit), en dessous s'il n'y a pas la place ; masquée hors de la zone visible
   function placeCanvasBar() {
     if (!cbar) return; // appel pendant l'initialisation
+    if (mode === "structure") { cbar.hidden = true; return; }
     var items = selectedItems();
     var acts = editing || gesture || tool === "hand" ? [] : canvasActionsFor(items);
     var el = acts.length ? canvasEl(selection[0]) : null;
@@ -2636,6 +2639,258 @@
     var up = function () { doc.removeEventListener("mousemove", move); doc.removeEventListener("mouseup", up); };
     doc.addEventListener("mousemove", move); doc.addEventListener("mouseup", up);
   }
+
+  // ---------- Mode « Structure » : le même document, présenté comme une suite de blocs éditables ----------
+  // Aucun second document : chaque saisie passe par setProp / change (historique, sauvegarde, calques, inspecteur et
+  // canevas suivent). Entrée en fin de titre ou de texte crée un paragraphe après ; Retour arrière dans un bloc de
+  // texte vide le supprime ; « + » entre deux blocs ouvre l'insertion à cet endroit ; la poignée déplace le bloc.
+  var mode = store.get("mode", "visual");
+  var docEl = $("[data-pb-doc]");
+  var docFocus = null; // { id, field, end } : curseur à rendre après un redessin
+  function setMode(m) {
+    if (editing) commitEdit();
+    mode = m === "structure" ? "structure" : "visual";
+    store.set("mode", mode);
+    $$("[data-pb-mode]").forEach(function (b) { b.setAttribute("aria-checked", String(b.dataset.pbMode === mode)); });
+    $("[data-pb-canvas]").classList.toggle("is-structure", mode === "structure");
+    docEl.hidden = mode !== "structure";
+    if (mode === "structure") renderDoc();
+    else { applyZoom(); setTimeout(function () { drawOverlays(); drawRulers(); drawGuides(); }, 30); }
+    placeCanvasBar();
+  }
+  $$("[data-pb-mode]").forEach(function (b) { b.addEventListener("click", function () { setMode(b.dataset.pbMode); }); });
+  var blockIcon = function (it) { return isNode(it) ? NT[it.type].icon : it.type === "layout" ? "layout" : it.type === "component" ? "copy" : "fileText"; };
+  function blockSummary(it) {
+    var p = it.props || {};
+    switch (it.type) {
+      case "gallery": return (p.images || []).length + " image(s)";
+      case "accordion": return (p.items || []).length + " question(s) : " + (p.items || []).map(function (x) { return x.q; }).join(" · ");
+      case "tabs": return (p.items || []).length + " onglet(s) : " + (p.items || []).map(function (x) { return x.title; }).join(" · ");
+      case "table": return (p.rows || []).length + " ligne(s) × " + ((p.rows || [])[0] || []).length + " colonne(s)";
+      case "countdown": return "Jusqu'au " + (p.until ? new Date(p.until).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" }) : "—");
+      case "course": var c = (boot.courses || []).find(function (x) { return x.id === p.courseId; }); return c ? c.title : "Formation";
+      case "spacer": return "Espace de " + p.size + " px";
+      case "divider": return "Ligne de séparation";
+      case "icon": return "Icône « " + p.name + " », " + p.size + " px";
+      case "audio": return p.title || p.src || "";
+      case "component": return "Composant synchronisé : le modifier change toutes ses utilisations";
+      default: return preview(it) || "";
+    }
+  }
+  // Champ éditable du bloc (contenteditable) : chaque frappe = une modification « légère » (une étape d'annulation par champ)
+  function editable(it, field, html, cls, opts) {
+    opts = opts || {};
+    var dis = lockedDeep(it.id) || !canWrite;
+    var el = h("div", { class: "pb-blk-edit " + (cls || ""), contenteditable: dis ? "false" : opts.rich ? "true" : "plaintext-only", role: "textbox", "aria-multiline": opts.rich ? "true" : "false", "aria-label": opts.label || field, "data-field": field, "data-placeholder": opts.placeholder || "", spellcheck: "true" });
+    if (opts.rich) el.innerHTML = html || ""; else el.textContent = html || "";
+    el.addEventListener("input", function () {
+      var v = opts.rich ? el.innerHTML : el.textContent.replace(/\n/g, " ");
+      if (opts.write) opts.write(v); else setProp(it.id, field, v, { key: it.id + ":" + field, light: true });
+    });
+    el.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey && (!opts.rich || atEnd(el))) {
+        if (opts.rich && !atEnd(el)) return;
+        e.preventDefault();
+        if (opts.noSplit) return;
+        newParagraphAfter(it.id);
+      } else if (e.key === "Backspace" && !el.textContent.trim() && opts.removable) {
+        e.preventDefault();
+        var prev = prevEditable(it.id);
+        removeItems([it.id]);
+        if (prev) { docFocus = { id: prev.id, field: prev.field, end: true }; restoreDocFocus(); }
+      }
+    });
+    el.addEventListener("paste", function (e) {
+      if (opts.rich) return; // texte riche : nettoyé par le serveur (liste blanche)
+      e.preventDefault();
+      var t = (e.clipboardData || window.clipboardData).getData("text/plain").replace(/\s+/g, " ");
+      document.execCommand("insertText", false, t);
+    });
+    return el;
+  }
+  function atEnd(el) {
+    var s = window.getSelection();
+    if (!s.rangeCount) return false;
+    var r = s.getRangeAt(0).cloneRange();
+    r.selectNodeContents(el); r.setStart(s.getRangeAt(0).endContainer, s.getRangeAt(0).endOffset);
+    return !r.toString().length;
+  }
+  // Entrée en fin de bloc : un paragraphe vide juste après (dans le même parent), curseur dedans
+  function newParagraphAfter(id) {
+    var l = locate(id);
+    if (!l || !canWrite) return;
+    var n = newNode("text", { props: { html: "" } });
+    var at = l.parent || isNode(l.item) ? { parent: l.parent, index: l.index + 1 } : { parent: null, index: sectionIndex(l.item) + 1 };
+    if (at.parent && lockedDeep(at.parent.id)) return;
+    change(function () { if (!insertInto(at.parent, at.index, [n])) return false; selection = [n.id]; });
+    docFocus = { id: n.id, field: "html" };
+    restoreDocFocus();
+  }
+  // Bloc éditable précédent (ordre de lecture), pour y remettre le curseur
+  function prevEditable(id) {
+    var order = [];
+    walk(function (x) { if (["heading", "text", "quote"].indexOf(x.type) >= 0 && isNode(x)) order.push(x); });
+    var i = order.findIndex(function (x) { return x.id === id; });
+    var p = i > 0 ? order[i - 1] : null;
+    return p ? { id: p.id, field: p.type === "text" ? "html" : "text" } : null;
+  }
+  function restoreDocFocus() {
+    if (!docFocus || mode !== "structure") return;
+    var f = docFocus; docFocus = null;
+    var el = docEl.querySelector('.pb-blk[data-id="' + f.id + '"] [data-field="' + f.field + '"]');
+    if (!el) return;
+    el.focus();
+    if (el.isContentEditable) { var r = document.createRange(); r.selectNodeContents(el); r.collapse(!f.end ? true : false); if (f.end) r.collapse(false); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
+  }
+  function blockInput(it, field, label, value, opts) {
+    opts = opts || {};
+    var id = fid();
+    var inp = h("input", { id: id, type: opts.type || "text", value: value || "", placeholder: opts.placeholder || "", disabled: lockedDeep(it.id) || !canWrite, list: opts.list || null, maxlength: opts.max ? String(opts.max) : null, "data-field": field, autocomplete: "off" });
+    inp.addEventListener("input", function () { if (opts.write) opts.write(inp.value); else setProp(it.id, field, inp.value, { key: it.id + ":" + field, light: true }); });
+    return h("label", { class: "pb-blk-inp", for: id }, h("span", { text: label }), inp);
+  }
+  function blockBody(it) {
+    var p = it.props || {};
+    var dis = lockedDeep(it.id) || !canWrite;
+    if (it.type === "heading" && isNode(it)) return editable(it, "text", p.text, "is-h" + p.level, { label: "Titre", placeholder: "Titre…" });
+    if (it.type === "text" && isNode(it)) return editable(it, "html", p.html, "is-text", { rich: true, label: "Paragraphe", placeholder: "Écrivez… (Entrée en fin de texte : nouveau paragraphe)", removable: true });
+    if (it.type === "quote" && isNode(it)) return h("div", { class: "pb-blk-quote" }, editable(it, "text", p.text, "is-quote", { label: "Citation", placeholder: "Citation…", noSplit: true }), blockInput(it, "author", "Auteur", p.author, { max: 100 }));
+    if ((it.type === "button" || it.type === "link") && isNode(it)) return h("div", { class: "pb-blk-row" }, blockInput(it, "label", "Texte", p.label, { max: 80 }), blockInput(it, "url", "Adresse", p.url, { list: "pb-links", placeholder: "/catalogue ou https://…" }));
+    if (it.type === "video" && isNode(it)) return h("div", { class: "pb-blk-row" }, blockInput(it, "url", "Adresse de la vidéo", p.url, { type: "url" }), blockInput(it, "title", "Titre", p.title, { max: 150 }));
+    if (it.type === "list" && isNode(it)) {
+      var ta = h("textarea", { rows: String(Math.max(2, (p.items || []).length)), disabled: dis, "aria-label": "Points de la liste (un par ligne)", "data-field": "items" });
+      ta.value = (p.items || []).join("\n");
+      ta.addEventListener("input", function () { setProp(it.id, "items", ta.value.split("\n"), { key: it.id + ":items", light: true }); });
+      return h("div", { class: "pb-blk-list" + (p.ordered ? " is-ordered" : "") }, ta);
+    }
+    if (it.type === "code" && isNode(it)) {
+      var code = h("textarea", { rows: "4", class: "is-code", disabled: dis, "aria-label": "Texte affiché tel quel", "data-field": "text" });
+      code.value = p.text || "";
+      code.addEventListener("input", function () { setProp(it.id, "text", code.value, { key: it.id + ":text", light: true }); });
+      return code;
+    }
+    if (it.type === "image" && isNode(it)) {
+      return h("div", { class: "pb-blk-media" }, h("img", { src: p.src, alt: "", class: "pb-blk-img" }),
+        h("div", { class: "pb-blk-media-side" }, blockInput(it, "alt", "Texte de remplacement", p.alt, { max: 200, write: function (v) { change(function () { var x = byId(it.id); x.props.alt = v; if (v) delete x.props.decorative; else x.props.decorative = true; }, { key: it.id + ":alt", light: true }); } }),
+          h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: dis, onclick: function () { openMedia({ title: "Remplacer l'image", onPick: function (m) { change(function () { var x = byId(it.id); x.props.src = m.path; if (m.alt && !x.props.alt) { x.props.alt = m.alt; delete x.props.decorative; } }); } }); } }, "Remplacer l'image")));
+    }
+    // Sections prêtes : leurs textes principaux s'écrivent ici (mêmes champs que l'inspecteur) ; le reste à droite
+    if (!isNode(it) && F[it.type]) {
+      var flds = F[it.type].filter(function (f) { return ["text", "textarea", "markdown", "lines"].indexOf(f[1]) >= 0; }).slice(0, 4);
+      if (flds.length) {
+        var wrap = h("div", { class: "pb-blk-legacy" });
+        flds.forEach(function (f) {
+          var key = f[0];
+          if (f[1] === "text") { wrap.appendChild(blockInput(it, key, f[2], it[key], { max: f[3] })); return; }
+          var lines = f[1] === "lines";
+          var ta = h("textarea", { rows: String(f[1] === "markdown" ? 5 : 3), disabled: dis, "aria-label": f[2], "data-field": key, maxlength: f[3] ? String(f[3]) : null });
+          ta.value = lines ? (it[key] || []).join("\n") : it[key] || "";
+          ta.addEventListener("input", function () { setProp(it.id, key, lines ? ta.value.split("\n") : ta.value, { key: it.id + ":" + key, light: true }); });
+          wrap.appendChild(h("label", { class: "pb-blk-inp" }, h("span", { text: f[2] + (f[1] === "markdown" ? " (gras **…**, liens [texte](adresse))" : "") }), ta));
+        });
+        if (F[it.type].length > flds.length) wrap.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm pb-blk-more", onclick: function (e) { e.stopPropagation(); select(it.id, false, { scroll: false }); openInspector("content"); } }, "Autres réglages (image, bouton, éléments…)"));
+        return wrap;
+      }
+    }
+    // Autres éléments : résumé réel + réglages dans l'inspecteur
+    var summary = isNode(it) || it.type === "component" ? blockSummary(it) : (it.heading || it.title || it.label || preview(it) || "");
+    return h("div", { class: "pb-blk-summary" }, h("span", { text: summary || "—" }), h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: function (e) { e.stopPropagation(); select(it.id, false, { scroll: false }); openInspector("content"); } }, "Modifier"));
+  }
+  function inserter(anchor, label) {
+    return h("div", { class: "pb-ins" }, h("button", { type: "button", class: "pb-ins-btn", disabled: !canWrite, "aria-label": label, "data-tip": label, onclick: function (e) { e.stopPropagation(); openCommands("Ajouter", anchor); } }, icon("plus")));
+  }
+  function docBlock(it) {
+    var kids = kidsOf(it);
+    var l = locate(it.id);
+    var dis = lockedDeep(it.id) || !canWrite;
+    var schema = inspectorFor(it);
+    var tool = function (ic, label, fn, off, cls) { return h("button", { type: "button", class: "pb-blk-tool" + (cls ? " " + cls : ""), "aria-label": label, "data-tip": label, disabled: off || null, onclick: function (e) { e.stopPropagation(); select(it.id, false, { scroll: false }); fn(); } }, icon(ic)); };
+    var level = it.type === "heading" && isNode(it) ? h("select", { class: "pb-blk-level", "aria-label": "Niveau du titre", disabled: dis, onchange: function (e) { setProp(it.id, "level", e.target.value); } }, ["1", "2", "3", "4", "5", "6"].map(function (n) { return h("option", { value: n, text: "H" + n }); })) : null;
+    if (level) level.value = String(it.props.level);
+    var grip = h("span", { class: "pb-blk-grip", draggable: dis ? "false" : "true", "aria-hidden": "true", title: "Glisser pour déplacer" }, icon("grip"));
+    grip.addEventListener("dragstart", function (e) { e.stopPropagation(); dragIds = selection.indexOf(it.id) >= 0 ? selection.slice() : [it.id]; dragNew = null; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "pb-move"); });
+    var head = h("div", { class: "pb-blk-head" }, grip, icon(blockIcon(it)), h("span", { class: "pb-blk-kind", text: schema.kind }), it.name ? h("span", { class: "pb-blk-name", text: it.name }) : null,
+      it.hidden ? h("span", { class: "pb-blk-badge", text: "Masqué" }) : null, it.locked ? h("span", { class: "pb-blk-badge", text: "Verrouillé" }) : null, it.audience ? h("span", { class: "pb-blk-badge is-aud", text: "Public ciblé" }) : null,
+      h("span", { class: "pb-blk-grow" }), level,
+      h("span", { class: "pb-blk-tools" },
+        tool("arrowUp", "Monter (Alt + ↑)", function () { nudge(-1); }, dis || l.index === 0),
+        tool("arrowDown", "Descendre (Alt + ↓)", function () { nudge(1); }, dis || l.index === l.list.length - 1),
+        tool("copy", "Dupliquer (Ctrl/⌘ + D)", function () { duplicateSelected(); }, !canWrite),
+        tool(it.hidden ? "eye" : "eyeOff", it.hidden ? "Afficher" : "Masquer", function () { setFlag([it.id], "hidden", !it.hidden); }, !canWrite),
+        tool("trash", "Supprimer (Ctrl/⌘ + Z pour annuler)", function () { removeItems([it.id]); }, dis, "is-danger"),
+        tool("moreHorizontal", "Plus d'actions", function () { var r = head.getBoundingClientRect(); openMenu(r.right - 220, r.bottom); }, false)));
+    var el = h("div", { class: "pb-blk" + (kids ? " is-box" : "") + (it.hidden ? " is-hidden" : "") + (selection.indexOf(it.id) >= 0 ? " is-selected" : ""), "data-id": it.id, "data-type": it.type, tabindex: "-1" }, head);
+    if (!kids) el.appendChild(h("div", { class: "pb-blk-body" }, blockBody(it)));
+    else {
+      var list = h("div", { class: "pb-blk-kids" });
+      if (!kids.length) list.appendChild(h("button", { type: "button", class: "pb-blk-empty", disabled: dis, "data-drop-inside": it.id, onclick: function (e) { e.stopPropagation(); openCommands("Ajouter", { inside: it.id }); } }, icon("plus"), it.type === "column" ? "Colonne vide : ajouter un élément" : "Vide : ajouter un élément"));
+      kids.forEach(function (c, i) { if (i === 0 && !dis) list.appendChild(inserter({ before: c.id }, "Insérer un élément ici")); list.appendChild(docBlock(c)); if (!dis) list.appendChild(inserter({ after: c.id }, "Insérer un élément ici")); });
+      el.appendChild(list);
+    }
+    return el;
+  }
+  function renderDoc() {
+    if (mode !== "structure") return;
+    var keep = docEl.scrollTop;
+    var active = document.activeElement && docEl.contains(document.activeElement) ? document.activeElement : null;
+    if (active && !docFocus) { var b = active.closest(".pb-blk"); if (b && active.dataset.field) docFocus = { id: b.dataset.id, field: active.dataset.field, end: true }; }
+    docEl.textContent = "";
+    var page = h("div", { class: "pb-doc-page" });
+    page.appendChild(h("div", { class: "pb-doc-head" }, h("p", { class: "pb-kind", text: "Structure de la page" }), h("h2", { text: content.title || PAGE.name }),
+      h("p", { class: "pb-hint", text: content.sections.length + " section(s). Écrivez directement dans les blocs ; « + » insère un élément ; la poignée ⠿ déplace ; les styles se règlent à droite. Même page que le mode Visuel." })));
+    if (!content.sections.length) page.appendChild(h("p", { class: "pb-hint", text: "Page vide." }));
+    content.sections.forEach(function (s, i) { if (i === 0 && canWrite) page.appendChild(inserter({ before: s.id }, "Insérer une section ici")); page.appendChild(docBlock(s)); if (canWrite) page.appendChild(inserter({ after: s.id }, "Insérer une section ici")); });
+    if (canWrite) page.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm pb-doc-add", onclick: function () { openCommands("Ajouter"); } }, icon("plus"), "Ajouter un bloc en fin de page"));
+    docEl.appendChild(page);
+    docEl.scrollTop = keep;
+    restoreDocFocus();
+  }
+  function markDocSelection(scroll) {
+    if (mode !== "structure") return;
+    $$(".pb-blk.is-selected", docEl).forEach(function (b) { b.classList.remove("is-selected"); });
+    selection.forEach(function (id) { var b = docEl.querySelector('.pb-blk[data-id="' + id + '"]'); if (b) b.classList.add("is-selected"); });
+    if (scroll && selection.length) { var f = docEl.querySelector('.pb-blk[data-id="' + selection[0] + '"]'); if (f) f.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+  }
+  // Sélection : un clic sur un bloc (ou dans un de ses champs) le sélectionne — inspecteur et calques suivent
+  docEl.addEventListener("mousedown", function (e) {
+    var b = e.target.closest(".pb-blk");
+    if (!b || e.target.closest(".pb-blk-tool, .pb-ins-btn, .pb-blk-empty")) return;
+    // Clic hors d'un champ : le bloc prend le clavier (Suppr, Ctrl/⌘ + D, Alt + ↑ / ↓… s'appliquent à lui)
+    var onField = e.target.closest("input, textarea, select, [contenteditable='true'], [contenteditable='plaintext-only'], button");
+    if (!onField) setTimeout(function () { var again = docEl.querySelector('.pb-blk[data-id="' + b.dataset.id + '"]'); if (again) again.focus({ preventScroll: true }); }, 0);
+    if (selection.length === 1 && selection[0] === b.dataset.id && !(e.shiftKey || e.metaKey || e.ctrlKey)) return;
+    select(b.dataset.id, e.shiftKey || e.metaKey || e.ctrlKey, { scroll: false });
+  });
+  docEl.addEventListener("focusin", function (e) {
+    var b = e.target.closest(".pb-blk");
+    if (b && selection.indexOf(b.dataset.id) < 0) select(b.dataset.id, false, { scroll: false });
+  });
+  // Glisser-déposer : avant / après un bloc (moitié haute / basse), ou dans un conteneur vide
+  var docDrop = null;
+  function clearDocDrop() { $$(".is-drop-before, .is-drop-after, .is-drop-inside", docEl).forEach(function (x) { x.classList.remove("is-drop-before", "is-drop-after", "is-drop-inside"); }); docDrop = null; }
+  docEl.addEventListener("dragover", function (e) {
+    if (!dragIds && !dragNew) return;
+    clearDocDrop();
+    var empty = e.target.closest("[data-drop-inside]");
+    if (empty) { var box = byId(empty.dataset.dropInside); if (box && !lockedDeep(box.id)) { e.preventDefault(); empty.classList.add("is-drop-inside"); docDrop = { parent: box, index: 0 }; } return; }
+    var b = e.target.closest(".pb-blk");
+    if (!b) return;
+    var l = locate(b.dataset.id);
+    if (!l || (dragIds && dragIds.some(function (id) { return id === l.item.id || l.ancestors.some(function (a) { return a.id === id; }); }))) return;
+    if (l.parent && lockedDeep(l.parent.id)) return;
+    var r = b.getBoundingClientRect();
+    var after = e.clientY > r.top + Math.min(r.height / 2, 40);
+    e.preventDefault();
+    b.classList.add(after ? "is-drop-after" : "is-drop-before");
+    docDrop = { parent: l.parent, index: l.index + (after ? 1 : 0) };
+  });
+  docEl.addEventListener("dragleave", function (e) { if (!docEl.contains(e.relatedTarget)) clearDocDrop(); });
+  docEl.addEventListener("drop", function (e) {
+    if (!docDrop) return;
+    e.preventDefault();
+    var t = docDrop; clearDocDrop();
+    performDrop(t);
+  });
 
   // ---------- Écrans, zoom, aides visuelles ----------
   var WIDTH = { desktop: 1280, tablet: 820, mobile: 390 };
@@ -3203,6 +3458,7 @@
       { label: "Calques : tout déplier", run: expandAll }, { label: "Calques : tout replier", run: collapseAll },
       { label: panels.layersCollapsed ? "Calques : déplier le panneau" : "Calques : replier le panneau", run: function () { layersToggle.click(); } }, { label: "Calques et inspecteur : afficher / masquer", run: function () { togglePanel("right"); } },
       { label: "Réglages de la page (SEO, titre)", run: function () { openTab($("#pb-tab-page")); } },
+      { label: mode === "structure" ? "Mode : Visuel" : "Mode : Structure (blocs)", run: function () { setMode(mode === "structure" ? "visual" : "structure"); } },
     ]).filter(function (c) { return !c.off; });
   }
   function addAt(type, legacy) {
@@ -3325,6 +3581,7 @@
     var k = (e.key || "").toLowerCase();
     if (mod && k === "s") { e.preventDefault(); saveNow(); return; }
     if (mod && k === "k") { e.preventDefault(); openCommands(""); return; }
+    if (mod && e.shiftKey && k === "e") { e.preventDefault(); setMode(mode === "structure" ? "visual" : "structure"); return; }
     if (typing || editing) return;
     if (mod && k === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
     if (mod && k === "y") { e.preventDefault(); redo(); return; }
@@ -3387,6 +3644,7 @@
   updateHistoryButtons();
   applyZoom();
   renderCanvas();
+  setMode(mode);
   // Lecture de l'état pour les tests de bout en bout (aucune écriture possible par ce biais)
-  window.__pb = { content: function () { return clone(content); }, selection: function () { return selection.slice(); }, device: function () { return device; }, revision: function () { return revision; }, dirty: function () { return dirty || saving; } };
+  window.__pb = { content: function () { return clone(content); }, selection: function () { return selection.slice(); }, device: function () { return device; }, revision: function () { return revision; }, dirty: function () { return dirty || saving; }, mode: function () { return mode; } };
 })();

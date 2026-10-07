@@ -13,6 +13,8 @@
   <div class="<%= cls %> <%= `kw-spacer-${p.size}` %>"<%- attrs %> aria-hidden="true"></div>
 <% } else if (n.type === "divider") { %>
   <hr class="<%= cls %>"<%- attrs %>>
+<% } else if ((n.type === "heading" && !p.text) || (n.type === "text" && !p.html)) { %>
+  <% if (isBuilder) { %><div class="<%= cls %> kw-empty-text"<%- attrs %>><p class="kw-empty"><%= n.type === "heading" ? "Titre vide" : "Paragraphe vide" %></p></div><% } %>
 <% } else if (n.type === "heading") { %>
   <h<%= p.level %> class="<%= cls %>"<%- attrs %>><%= p.text %></h<%= p.level %>>
 <% } else if (n.type === "text") { %>
