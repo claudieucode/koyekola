@@ -255,3 +255,75 @@ describe("lot 3 — Général", () => {
     assert.equal((await boss.get(`/p/${slug}/clic/2`)).location, "/connexion");
   });
 });
+
+describe("lot 4 — Formulaire (module Formulaires d'inscription)", () => {
+  let srv, boss, db, formId, draftId;
+  before(async () => {
+    srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
+    boss = await loginInstructor(srv); db = srv.db();
+    formId = Number((await boss.post("/marketing/formulaires", { name: "Lettre atelier", consentText: "J'accepte de recevoir la lettre de l'atelier." })).location.match(/(\d+)$/)[1]);
+    db.prepare("UPDATE mk_forms SET double_optin = 0, thank_you_text = 'Bienvenue dans la lettre !' WHERE id = ?").run(formId);
+    await boss.post(`/marketing/formulaires/${formId}/publier`, {});
+    draftId = Number((await boss.post("/marketing/formulaires", { name: "Brouillon", consentText: "J'accepte." })).location.match(/(\d+)$/)[1]);
+  });
+  after(() => srv.stop());
+  const put = async (id, content) => boss.request(`/marketing/pages/${id}/brouillon`, { method: "PUT", json: { revision: db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(id).revision, content } });
+  const page = (children) => ({ sections: [{ id: "sect00000001", type: "layout", children: [{ id: "cont00000001", type: "container", children }] }] });
+
+  test("validation : formulaire existant obligatoire ; publication refusée si le formulaire n'est pas publié ; bibliothèque « Formulaire »", async () => {
+    const id = Number((await boss.post("/marketing/pages", { name: "Formulaires" })).location.match(/(\d+)$/)[1]);
+    const bad = await put(id, page([{ id: "frm000000001", type: "signupform", props: { formId: 999 } }]));
+    assert.equal(bad.status, 422);
+    assert.match(bad.text, /choisissez un formulaire existant/);
+    assert.equal((await put(id, page([{ id: "frm000000001", type: "signupform", props: { formId: draftId } }]))).status, 200);
+    const pub = await boss.request(`/marketing/pages/${id}/publier.json`, { method: "POST", json: {} });
+    assert.notEqual(pub.status, 200);
+    assert.match(pub.text, /« Brouillon » n'est pas publié/);
+    const boot = JSON.parse((await boss.get(`/marketing/pages/${id}/editeur`)).text.match(/<script type="application\/json" id="pb-boot">([\s\S]*?)<\/script>/)[1]);
+    assert.deepEqual(boot.forms.map((f) => [f.name, f.status]).sort(), [["Brouillon", "draft"], ["Lettre atelier", "published"]]);
+    assert.equal(nodes.editorSpec().types.find((t) => t.type === "signupform").group, "form");
+    // canevas : le formulaire non publié est signalé, jamais affiché comme s'il marchait
+    const canvas = (await boss.request(`/marketing/pages/${id}/rendu`, { method: "POST", json: { content: page([{ id: "frm000000001", type: "signupform", props: { formId: draftId } }]) } })).text;
+    assert.match(canvas, /Formulaire « Brouillon » non publié/);
+  });
+
+  test("page publiée : deux formulaires, chacun son envoi, ses erreurs et son message ; vrai contact créé (consentement prouvé)", async () => {
+    const id = Number((await boss.post("/marketing/pages", { name: "Deux formulaires" })).location.match(/(\d+)$/)[1]);
+    assert.equal((await put(id, page([
+      { id: "frm000000001", type: "signupform", props: { formId, heading: "Recevoir la lettre", button: "Je m'abonne" } },
+      { id: "frm000000002", type: "signupform", props: { formId, heading: "Encore ici" } },
+    ]))).status, 200);
+    assert.equal((await boss.request(`/marketing/pages/${id}/publier.json`, { method: "POST", json: {} })).status, 200);
+    const slug = db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug;
+    const visitor = new (require("./helpers").Client)(srv.base);
+    const html = (await visitor.get(`/p/${slug}`)).text;
+    assert.match(html, /<div class="kw-signup" id="kw-f-frm000000001"><h2 class="kw-signup-title">Recevoir la lettre<\/h2>/);
+    assert.match(html, new RegExp(`<form class="kw-signup-form" method="post" action="/p/${slug}/inscription" novalidate><input type="hidden" name="tz" data-tz><input type="hidden" name="w" value="frm000000001">`));
+    assert.match(html, /id="wfrm000000001-email"/, "identifiants propres à chaque widget");
+    assert.match(html, /id="wfrm000000002-email"/);
+    assert.match(html, /J&#39;accepte de recevoir la lettre de l&#39;atelier\./);
+    assert.match(html, />Je m&#39;abonne<\/button>/);
+    // consentement manquant : erreur sur CE widget seulement, saisie conservée
+    const miss = await visitor.post(`/p/${slug}/inscription`, { w: "frm000000002", ft: srv.formToken(), email: "awa@ex.fr" });
+    assert.equal(miss.status, 400);
+    const kw2 = miss.text.slice(miss.text.indexOf('id="kw-f-frm000000002"'));
+    assert.match(kw2, /role="alert">Cochez la case pour confirmer votre inscription\./);
+    assert.match(kw2, /value="awa@ex\.fr"/);
+    assert.doesNotMatch(miss.text.slice(0, miss.text.indexOf('id="kw-f-frm000000002"')), /role="alert"/, "l'autre formulaire n'affiche pas l'erreur");
+    const ok = await visitor.post(`/p/${slug}/inscription`, { w: "frm000000002", ft: srv.formToken(), email: "awa@ex.fr", consent: "1" });
+    assert.equal(ok.status, 302);
+    assert.equal(ok.location, `/p/${slug}?inscrit=1&w=frm000000002#kw-f-frm000000002`);
+    const back = (await visitor.get(ok.location.replace(/#.*/, ""))).text;
+    assert.match(back.slice(back.indexOf('id="kw-f-frm000000002"')), /^[^]*?role="status">Bienvenue dans la lettre !/);
+    assert.match(back.slice(back.indexOf('id="kw-f-frm000000001"'), back.indexOf('id="kw-f-frm000000002"')), /<form class="kw-signup-form"/, "l'autre widget garde son formulaire");
+    const c = db.prepare("SELECT id, status FROM mk_contacts WHERE email = 'awa@ex.fr'").get();
+    assert.ok(c, "contact créé");
+    assert.equal(c.status, "subscribed", "inscription confirmée (formulaire sans double confirmation)");
+    const proof = db.prepare("SELECT action, text_shown FROM mk_consents WHERE contact_id = ? ORDER BY id DESC").get(c.id);
+    assert.deepEqual([proof.action, proof.text_shown], ["granted", "J'accepte de recevoir la lettre de l'atelier."], "preuve du consentement : le texte exact présenté");
+    // widget inconnu : refusé proprement, rien créé
+    const ghost = await visitor.post(`/p/${slug}/inscription`, { w: "nexistepas01", ft: srv.formToken(), email: "x@ex.fr", consent: "1" });
+    assert.equal(ghost.status, 400);
+    assert.ok(!db.prepare("SELECT 1 FROM mk_contacts WHERE email = 'x@ex.fr'").get());
+  });
+});

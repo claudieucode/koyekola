@@ -211,6 +211,8 @@ module.exports = () => {
       content: page.working, types: blanks(ctx), spec: nodesLib.editorSpec(), canWrite: req.mk.can("forms.write"),
       // Permissions exigées par certains widgets (cadenas de la bibliothèque ; revérifiées à l'enregistrement)
       perms: { "pages.code": req.mk.can("pages.code") },
+      // Formulaires proposés au widget « Formulaire » (état réel : un brouillon ne s'affiche pas sur la page)
+      forms: require("../forms").listForms(ctx).map((f) => ({ id: f.id, name: f.name, status: f.status })),
       blocks: require("../pages/patterns").catalog(ctx),
       courses: listCourses(ctx).map((c) => ({ id: c.id, title: c.title })),
       components: pages.listComponents(ctx, { siteId: page.site_id }).map((c) => ({ id: c.id, name: c.name, global: c.global, type: c.section && c.section.type })),

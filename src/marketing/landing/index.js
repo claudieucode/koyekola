@@ -110,6 +110,13 @@ function preflight(ctx, page) {
     else if (form.status !== "published") errors.push(`Le formulaire « ${form.name} » n'est pas publié : publiez-le d'abord (Audience → Formulaires d'inscription).`);
   }
   for (const s of page.sections) if (s.type === "course" && !getCourse(ctx, s.courseId)) errors.push("Une section « formation » vise une formation qui n'est plus publiée.");
+  // Widgets « Formulaire » : leur formulaire doit exister et être publié
+  for (const s of page.sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => {
+    if (n.type !== "signupform" || n.hidden) return;
+    const f = ctx.db.prepare("SELECT status, name FROM mk_forms WHERE id = ? AND organization_id = ?").get(Number(n.props && n.props.formId), ctx.organizationId);
+    if (!f) errors.push("Un widget « Formulaire » vise un formulaire supprimé : choisissez-en un autre.");
+    else if (f.status !== "published") errors.push(`Le formulaire « ${f.name} » n'est pas publié : publiez-le d'abord (Audience → Formulaires d'inscription).`);
+  });
   return { ready: errors.length === 0, errors };
 }
 function publishPage(ctx, id) {
@@ -160,6 +167,14 @@ function dynamicProps(ctx, n, visitor, page) {
     return { ...p, value };
   }
   if (n.type === "embed") return { ...p, embed: pageNodes.embedOf(p.url) };
+  // Formulaire : affiché seulement s'il est publié (sinon rien sur la page publique, un avertissement dans l'éditeur)
+  if (n.type === "signupform") {
+    const forms = require("../forms");
+    let f = null;
+    try { f = forms.getForm(ctx, p.formId); } catch { f = null; }
+    const live = f && f.status === "published" ? f : null;
+    return { ...p, formName: f ? f.name : "", form: live, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: live ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, live) : [] };
+  }
   if (n.type === "account") return { ...p, loggedIn: Boolean(visitor && visitor.loggedIn), cartCount: visitor ? visitor.cartCount || 0 : 0 };
   return null;
 }

@@ -177,6 +177,19 @@
 .kw-heading-link:hover { text-decoration: underline; }
 .kw-heading-link:focus-visible { outline: 3px solid var(--lp-accent, #0277b6); outline-offset: 3px; }
 .kw-map { width: 100%; }
+/* Widget « Formulaire » (champs : mêmes classes que la page du formulaire) */
+.kw-signupform { width: 100%; }
+.kw-signup { max-width: 560px; }
+.kw-signup-title { margin: 0 0 8px; }
+.kw-signup-intro { margin: 0 0 12px; }
+.kw-signup-form { display: flex; flex-direction: column; gap: 12px; }
+.kw-signup-form .field-group { display: flex; flex-direction: column; gap: 4px; }
+.kw-signup-form input[type="text"], .kw-signup-form input[type="email"], .kw-signup-form input[type="tel"], .kw-signup-form input[type="number"], .kw-signup-form input[type="date"], .kw-signup-form select, .kw-signup-form textarea { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid rgba(16, 34, 47, 0.25); border-radius: 8px; font: inherit; background: #fff; color: inherit; }
+.kw-signup-form .checkbox-row { display: flex; align-items: flex-start; gap: 8px; }
+.kw-signup-submit { align-self: flex-start; }
+.kw-signup .hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.kw-signup .optin-row { line-height: 1.45; }
+.kw-signup .field-hint { margin: 0; font-size: 13px; opacity: 0.75; }
 /* Boîte d'image / boîte d'icône */
 .kw-box { display: flex; gap: 16px; }
 .kw-box.is-top { flex-direction: column; }

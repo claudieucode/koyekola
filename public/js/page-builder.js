@@ -301,6 +301,11 @@
       addItems([newNode("hotspot", { props: { src: m.path, alt: m.alt, spots: [{ x: 50, y: 50, title: "Point d'intérêt", text: "Ce qu'il faut savoir ici." }] } })], at);
     } });
     if (type === "imagebox") return openMedia({ title: "Image de la boîte", onPick: function (m) { addItems([newNode("imagebox", { props: { src: m.path, alt: m.alt || "", title: "Un titre clair", text: "Expliquez en une phrase ce que la personne y gagne." } })], at); } });
+    if (t.asks === "form") {
+      var fl = boot.forms || [];
+      if (!fl.length) { toast("Créez d'abord un formulaire (Audience → Formulaires d'inscription).", true); return; }
+      return ask("Formulaire", [["formId", "select", "Formulaire à afficher", false, fl.map(function (f) { return [f.id, f.name + (f.status === "published" ? "" : " (non publié)")]; })]], function (v) { addItems([newNode("signupform", { props: { formId: Number(v.formId), heading: "", intro: "", button: "S'inscrire" } })], at); });
+    }
     if (t.asks === "rating") return ask("Évaluation (note réelle)", [["value", "text", "Note sur 5 (ex. 4,5)"], ["title", "text", "Libellé (facultatif, ex. Note des élèves)", true]], function (v) { addItems([newNode("rating", { props: { value: Number(String(v.value).replace(",", ".")), scale: 5, title: v.title || "" } })], at); });
     if (t.asks === "anchor") return ask("Ancre de menu", [["name", "text", "Nom de l'ancre (ex. tarifs) : les liens « #tarifs » mènent ici"]], function (v) {
       var a = String(v.name || "").trim().toLowerCase();
@@ -851,7 +856,8 @@
     groups[0].items.unshift({ type: "layout", label: "Section libre", icon: "layout", keywords: "section libre bloc zone" });
     (SPEC.shortcuts || []).forEach(function (sc) { var g = groups.find(function (x) { return x.key === sc.group; }); if (g) g.items.push({ type: sc.type, shortcut: sc, label: sc.label, icon: sc.icon, keywords: sc.keywords }); });
     var legacy = boot.types.map(function (t) { return { type: t.type, label: t.label, icon: "fileText", disabled: t.unavailable, legacy: true, keywords: t.type === "form" ? "formulaire inscription email champs newsletter" : "section prete" }; });
-    groups.find(function (g) { return g.key === "form"; }).items = legacy.filter(function (t) { return t.type === "form"; });
+    var gForm = groups.find(function (g) { return g.key === "form"; });
+    gForm.items = gForm.items.concat(legacy.filter(function (t) { return t.type === "form"; }));
     groups.push({ key: "sections", label: "Sections prêtes", items: legacy.filter(function (t) { return t.type !== "form"; }) });
     return groups;
   }
@@ -1278,6 +1284,16 @@
         box.appendChild(textField("Lien (facultatif)", p.link, set("link"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue, /p/…, #ancre ou https://…" }));
         box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
         break;
+      case "signupform":
+        var fl = boot.forms || [], cur = fl.find(function (f) { return f.id === p.formId; });
+        box.appendChild(selectField("Formulaire", String(p.formId), fl.map(function (f) { return [String(f.id), f.name + (f.status === "published" ? "" : " (non publié)")]; }).concat(cur ? [] : [[String(p.formId), "Formulaire introuvable"]]), function (v) { setProp(it.id, "formId", Number(v)); }, { disabled: disabled }));
+        if (cur && cur.status !== "published") box.appendChild(h("p", { class: "pb-note is-warn", text: "Ce formulaire n'est pas publié : il ne s'affiche pas sur la page, et la page ne peut pas être publiée tant qu'il ne l'est pas." }));
+        box.appendChild(textField("Titre au-dessus (facultatif)", p.heading, set("heading"), { max: 150, disabled: disabled }));
+        box.appendChild(textField("Introduction (facultative)", p.intro, set("intro"), { multiline: true, max: 400, disabled: disabled }));
+        box.appendChild(textField("Texte du bouton", p.button, set("button"), { max: 40, disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-hint", text: "Champs, case de consentement, double confirmation, étiquettes et message de remerciement : réglés dans le formulaire lui-même." }));
+        if (cur) box.appendChild(h("a", { class: "btn btn-ghost btn-sm", href: "/marketing/formulaires/" + cur.id, target: "_blank", rel: "noopener" }, "Modifier le formulaire ↗"));
+        break;
       case "rating":
         box.appendChild(textField("Libellé (facultatif)", p.title, set("title"), { max: 80, disabled: disabled }));
         box.appendChild(selectField("Échelle", String(p.scale || 5), [["5", "Sur 5"], ["10", "Sur 10"]], function (v) { change(function () { var x = byId(it.id).props; x.scale = Number(v); if (x.value > x.scale) x.value = x.scale; }); }, { disabled: disabled }));
@@ -1627,6 +1643,7 @@
     divider: { kind: "Séparateur", groups: { size: SIZE_W, typography: ["fontSize", "fontWeight", "textTransform", "letterSpacing"], color: ["color"], border: null, spacing: true } },
     imagebox: { kind: "Boîte d'image", groups: TEXTUAL, order: TEXT_ORDER },
     iconbox: { kind: "Boîte d'icône", groups: TEXTUAL, order: TEXT_ORDER },
+    signupform: { kind: "Formulaire", groups: TEXTUAL, order: TEXT_ORDER },
     rating: { kind: "Évaluation", groups: { layout: ["alignSelf"], typography: ["fontSize", "fontWeight"], color: ["color"], spacing: true }, order: ["typography", "spacing", "layout"] },
     menuanchor: { kind: "Ancre de menu", groups: null },
     map: { kind: "Google Maps", groups: { size: SIZE_W, spacing: true, border: null, effects: ["boxShadow", "opacity"] }, order: ["size", "spacing", "border", "effects"] },
@@ -3312,6 +3329,7 @@
       case "icon": return "Icône « " + p.name + " », " + p.size + " px";
       case "map": return "Carte : " + p.address;
       case "imagebox": case "iconbox": return p.title;
+      case "signupform": var sf = (boot.forms || []).find(function (f) { return f.id === p.formId; }); return "Formulaire : " + (sf ? sf.name : "introuvable");
       case "rating": return (p.title ? p.title + " · " : "") + String(p.value).replace(".", ",") + "/" + p.scale;
       case "menuanchor": return "#" + (it.anchor || "");
       case "badge": return p.text;
@@ -4033,7 +4051,8 @@
     fields.forEach(function (f, i) {
       var id = "pb-ask-" + i;
       if (f[1] === "checkbox") { box.appendChild(h("label", { class: "pb-check" }, h("input", { type: "checkbox", id: id, name: f[0] }), " " + f[2])); return; }
-      var input = f[1] === "course" ? h("select", { id: id, name: f[0] }, boot.courses.map(function (c) { return h("option", { value: c.id, text: c.title }); }))
+      var input = f[1] === "select" ? h("select", { id: id, name: f[0] }, f[4].map(function (o) { return h("option", { value: o[0], text: o[1] }); }))
+        : f[1] === "course" ? h("select", { id: id, name: f[0] }, boot.courses.map(function (c) { return h("option", { value: c.id, text: c.title }); }))
         : h("input", { id: id, name: f[0], type: f[1] === "link" ? "text" : f[1], list: f[1] === "link" ? "pb-links" : null, required: f[3] ? null : true });
       box.appendChild(h("div", { class: "pb-field" }, h("label", { for: id, text: f[2] }), input));
     });

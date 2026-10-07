@@ -241,3 +241,12 @@ Non fait dans ce lot : conteneur cliquable en entier (lien sur toute la zone : i
 | **SoundCloud** (raccourci) | oui | crée un « Contenu intégré » limité aux adresses SoundCloud (pas de second système) | oui | oui | unitaire + navigateur + page publiée |
 | Code court | — | **non construit** : notion WordPress (shortcode) sans équivalent dans KOLAKISA | — | — | — |
 | Colonne latérale | — | **non construit** : affiche une zone de widgets WordPress ; KOLAKISA n'en a pas | — | — | — |
+
+## Lot 4 — Formulaire (module « Formulaires d'inscription » réutilisé)
+
+| Widget | Interface | Fonctionnel | Persistant | Responsive | Testé |
+|---|---|---|---|---|---|
+| **Formulaire** (nouveau) | oui : choix parmi les vrais formulaires (état publié / non publié indiqué), titre, introduction, texte du bouton, lien « Modifier le formulaire » | le formulaire du module (champs, propriétés, conditions, fichier, consentement prouvé, accord SMS, double confirmation, étiquettes, remerciement, tunnel) ; plusieurs par page, chacun avec ses erreurs et son message ; anti-robot (pot de miel, jeton, limite par IP) ; formulaire non publié : signalé dans l'éditeur, absent de la page publique, publication de la page refusée | oui | oui | unitaire + page publiée + navigateur (vraie inscription à 1280 et 390 px) |
+| Formulaire d'inscription (section existante) | oui | inchangé (formulaire choisi dans les réglages de la page) | oui | oui | suites existantes |
+
+Le circuit d'envoi est celui de la section existante (`POST /p/:adresse/inscription`) : le champ `w` désigne le widget, revérifié côté serveur (il doit exister dans la page publiée, être visible, et viser un formulaire publié).

@@ -538,6 +538,14 @@ const NODE_TYPES = {
     if (!getCourse(h.ctx, courseId)) throw new Error(`${at} (formation) : formation introuvable ou non publiée.`);
     return { courseId, cta: line(p.cta, 60) || "Découvrir la formation" };
   } },
+  // Formulaire : un formulaire du module « Formulaires d'inscription » (champs, consentement, anti-robot, double
+  // confirmation, étiquettes : tout vient du formulaire). Plusieurs par page, chacun à son emplacement.
+  signupform: { label: "Formulaire", category: "marketing", props: (p, at, h) => {
+    const formId = Number(p.formId);
+    const row = Number.isInteger(formId) && h.ctx && h.ctx.db ? h.ctx.db.prepare("SELECT id FROM mk_forms WHERE id = ? AND organization_id = ?").get(formId, h.ctx.organizationId) : null;
+    if (!row) throw new Error(`${at} (formulaire) : choisissez un formulaire existant (Audience → Formulaires d'inscription).`);
+    return { formId, heading: line(p.heading, 150), intro: clean(p.intro, 400), button: line(p.button, 40) || "S'inscrire" };
+  } },
   // Google Maps : carte d'une adresse, sans clé d'API (lien d'intégration public de Google, construit ici : l'adresse
   // est encodée, rien d'autre n'atteint la page)
   map: { label: "Google Maps", category: "media", props: (p, at) => {
@@ -605,6 +613,7 @@ const WIDGETS = {
   iconbox: ["general", "boite d'icone carte icone titre texte avantage fonctionnalite"],
   rating: ["general", "evaluation note etoiles avis notation score"],
   menuanchor: ["general", "ancre de menu lien interne defilement section id"],
+  signupform: ["form", "formulaire inscription newsletter email contact champs abonnement"],
   link: ["basic", "lien url"],
   list: ["basic", "liste puces numerotee"],
   tabs: ["general", "onglets"],
@@ -705,6 +714,7 @@ const PALETTE = {
   iconbox: { icon: "star", blank: () => ({ props: { icon: "star", title: "Un atout clair", text: "Expliquez en une phrase ce que la personne y gagne." } }) },
   rating: { icon: "star", asks: "rating", blank: () => ({ props: {} }) },
   menuanchor: { icon: "link", asks: "anchor", blank: () => ({ props: {} }) },
+  signupform: { icon: "fileText", asks: "form", blank: () => ({ props: {} }) },
   badge: { icon: "tag", blank: () => ({ props: { text: "Nouveau", tone: "primary" } }) },
   timeline: { icon: "history", blank: () => ({ props: { items: [{ date: "Étape 1", title: "Inscription", text: "Ce qui se passe à cette étape." }, { date: "Étape 2", title: "Premier module", text: "Ce qui se passe ensuite." }] } }) },
   progress: { icon: "activity", blank: () => ({ props: { label: "Progression", value: 60, showValue: true } }) },
