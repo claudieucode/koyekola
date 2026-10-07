@@ -43,7 +43,7 @@ const color = (v) => {
   const s = String(v ?? "").trim().toLowerCase();
   if (/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/.test(s)) return s;
   if (s === "transparent") return s;
-  if (s.startsWith("token:") && COLOR_TOKENS.includes(s.slice(6))) return s;
+  if (s.startsWith("token:") && (COLOR_TOKENS.includes(s.slice(6)) || /^c-[a-z0-9]{1,20}$/.test(s.slice(6)))) return s;
   return null;
 };
 const colorCss = (v) => (v.startsWith("token:") ? `var(--kw-${v.slice(6)})` : v);

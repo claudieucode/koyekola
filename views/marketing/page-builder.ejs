@@ -10,6 +10,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/page-builder.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/site-settings.css') %>">
 </head>
 <body class="pb-body">
   <a class="skip-link" href="#pb-canvas">Aller au canevas</a>
@@ -204,5 +205,6 @@
   <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone", "sliders", "moreHorizontal", "listPlus", "listMinus", "undo", "redo"].concat(spec.types.map((t) => t.icon), spec.icons).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
   <script type="application/json" id="pb-boot"><%- boot %></script>
   <script src="<%= asset('/js/page-builder.js') %>" defer></script>
+  <script src="<%= asset('/js/site-settings.js') %>" defer></script>
 </body>
 </html>

@@ -364,6 +364,8 @@
 .lp-site .lp-hero h1 { font-size: clamp(28px, 6vw, var(--kw-h1-size)); font-weight: var(--kw-h1-weight); line-height: var(--kw-h1-lh); color: var(--kw-secondary); }
 .lp-site .lp-section h2 { font-size: var(--kw-h2-size); font-weight: var(--kw-h2-weight); line-height: var(--kw-h2-lh); }
 .lp-site .lp-section { margin: var(--kw-space-lg) 0; }
+.lp-site a { font-family: var(--kw-font-link); }
+.lp-site .lp-btn, .lp-site .kw-btn { font-family: var(--kw-font-button); }
 .lp-site .lp-btn { min-height: var(--kw-button-height); border-radius: var(--kw-radius-button); box-shadow: var(--kw-shadow-button); font-size: var(--kw-button-size); font-weight: var(--kw-button-weight); }
 .lp-site .lp-course, .lp-site .lp-signup { border-radius: var(--kw-radius-card); box-shadow: var(--kw-shadow-card); }
 .lp-site .lp-figure img, .lp-site .lp-hero-img { border-radius: var(--kw-radius-lg); }

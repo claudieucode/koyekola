@@ -2085,10 +2085,14 @@
 
   // ---------- Couleurs : bouton compact (pastille + code) et sélecteur ----------
   var TOKEN_LABEL = { primary: "Principale", secondary: "Secondaire", accent: "Accent", background: "Fond", surface: "Surface", text: "Texte", muted: "Atténuée", success: "Succès", warning: "Alerte", error: "Erreur", "on-primary": "Sur principale", "on-accent": "Sur accent" };
+  // Couleurs personnalisées du site (créées dans « Réglages du site ») : proposées comme celles du système
+  var siteCustomColors = function () { return (window.KWEditor && window.KWEditor.customColors) || PAGE.customColors || []; };
+  var tokenKeys = function () { return SPEC.colorTokens.concat(siteCustomColors().map(function (c) { return c.key; })); };
+  var tokenLabel = function (t) { var c = siteCustomColors().filter(function (x) { return x.key === t; })[0]; return c ? c.label : (TOKEN_LABEL[t] || t); };
   // Couleur réelle d'une couleur du site (thème appliqué à la page affichée dans le canevas)
   function tokenColor(t) { try { var d = frame.contentDocument; var c = d && d.body ? getComputedStyle(d.body).getPropertyValue("--kw-" + t).trim() : ""; return c || null; } catch (e) { return null; } }
   var colorPreview = function (v) { return !v ? null : v === "transparent" ? "transparent" : v.indexOf("token:") === 0 ? tokenColor(v.slice(6)) : v; };
-  var colorText = function (v) { return !v ? "" : v === "transparent" ? "Transparente" : v.indexOf("token:") === 0 ? "Site : " + (TOKEN_LABEL[v.slice(6)] || v.slice(6)) : v.toUpperCase(); };
+  var colorText = function (v) { return !v ? "" : v === "transparent" ? "Transparente" : v.indexOf("token:") === 0 ? "Site : " + tokenLabel(v.slice(6)) : v.toUpperCase(); };
   var hex2 = function (n) { return ("0" + Math.max(0, Math.min(255, Math.round(n))).toString(16)).slice(-2); };
   function normHex(v) { var s = String(v).toLowerCase(); if (s.length === 4) s = "#" + s[1] + s[1] + s[2] + s[2] + s[3] + s[3]; return s; }
   function hexToRgb(v) { var s = normHex(v); return { r: parseInt(s.slice(1, 3), 16), g: parseInt(s.slice(3, 5), 16), b: parseInt(s.slice(5, 7), 16), a: s.length === 9 ? parseInt(s.slice(7, 9), 16) / 255 : 1 }; }
@@ -2175,9 +2179,9 @@
       applyHex();
     });
     hexIn.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); hexIn.dispatchEvent(new Event("change")); } });
-    var tokens = h("div", { class: "pb-cpop-tokens", role: "group", "aria-label": "Couleurs du site" }, SPEC.colorTokens.map(function (t) {
+    var tokens = h("div", { class: "pb-cpop-tokens", role: "group", "aria-label": "Couleurs du site" }, tokenKeys().map(function (t) {
       var c = tokenColor(t);
-      var b = h("button", { type: "button", class: "pb-cpop-token" + (c ? "" : " is-empty"), "data-token": t, "data-tip": "Site : " + (TOKEN_LABEL[t] || t) + (c ? " (" + c + ")" : " — définie par le thème du site"), "aria-label": "Couleur du site : " + (TOKEN_LABEL[t] || t) });
+      var b = h("button", { type: "button", class: "pb-cpop-token" + (c ? "" : " is-empty"), "data-token": t, "data-tip": "Site : " + tokenLabel(t) + (c ? " (" + c + ")" : " — définie par le thème du site"), "aria-label": "Couleur du site : " + tokenLabel(t) });
       if (c) b.style.background = c;
       b.addEventListener("click", function () { set("token:" + t); });
       return b;
@@ -2186,7 +2190,7 @@
     cpop.appendChild(h("div", { class: "pb-cpop-row" }, h("span", { class: "pb-cpop-label", text: "Opacité" }), alpha, alphaOut));
     cpop.appendChild(info);
     cpop.appendChild(h("p", { class: "pb-cpop-label", text: "Couleurs du site" }));
-    if (!SPEC.colorTokens.some(tokenColor)) cpop.appendChild(h("p", { class: "pb-cpop-none", text: "Cette page n'utilise pas de thème de site : ces couleurs n'y ont pas de valeur (reliez la page à un site pour les utiliser)." }));
+    if (!tokenKeys().some(tokenColor)) cpop.appendChild(h("p", { class: "pb-cpop-none", text: "Cette page n'utilise pas de thème de site : ces couleurs n'y ont pas de valeur (reliez la page à un site pour les utiliser)." }));
     cpop.appendChild(tokens);
     cpop.appendChild(h("div", { class: "pb-cpop-row pb-cpop-actions" },
       h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: function () { set("transparent"); } }, "Transparente"),
@@ -4701,9 +4705,15 @@
       }, apiFail);
     });
   }
+  // Pont avec le panneau « Réglages du site » (public/js/site-settings.js) : mêmes notifications, et le canevas est
+  // redessiné par le même rendu serveur (donc avec les mêmes réglages que la page publiée) après chaque enregistrement
+  window.KWEditor = { siteId: PAGE.siteId || null, canWrite: canWrite, customColors: PAGE.customColors || [], toast: toast, rerender: function () { renderCanvas(); } };
   $("[data-pb-mainmenu]").addEventListener("click", function () {
     var r = this.getBoundingClientRect();
     showMenuEntries([
+      { heading: "Site" },
+      [PAGE.siteId ? "Réglages du site (couleurs, polices…)" : "Réglages du site (cette page n'a pas de site)", function () { if (window.KWSiteSettings) window.KWSiteSettings.open(); }, !PAGE.siteId, ""],
+      "-",
       { heading: "Page" },
       ["Réglages de la page (titre, SEO, CSS)", function () { openTab($("#pb-tab-page")); }],
       ["Versions, comparaison et restauration", function () { window.location.href = "/marketing/pages/" + PAGE.id + "#lp-versions"; }],

@@ -10,7 +10,8 @@ const { checkCtx, audit } = require("../audience/shared");
 const { transaction } = require("../db/tx");
 const landing = require("../landing");
 const { TYPES, normalizeSections, normalizeSection, newSectionId, imageUrl, line, bad } = require("./sections");
-const { normalizeTokens, DEFAULT_TOKENS } = require("./tokens");
+const tokensModule = require("./tokens");
+const { normalizeTokens, DEFAULT_TOKENS } = tokensModule;
 
 const MAX_VERSIONS = 100;
 const KINDS = { landing: "Page d'atterrissage", page: "Page de site", step: "Étape de tunnel" };
@@ -281,6 +282,52 @@ function updateSite(ctx, id, { name, tokens } = {}) {
   audit(ctx, "site.updated", "site", site.id, { tokens: tokens !== undefined });
   return getSite(ctx, site.id);
 }
+// Enregistrement des réglages d'un site (couleurs, polices… = jetons). Une seule révision pour l'ensemble des réglages :
+// deux enregistrements concurrents ne s'écrasent jamais en silence.
+function saveSiteDesign(ctx, id, { tokens, revision } = {}) {
+  const site = requireSite(ctx, id, { active: true });
+  if (!Number.isInteger(revision)) throw bad("Révision manquante : rechargez le panneau des réglages.");
+  if (revision !== site.settings_revision) {
+    throw new MarketingError("conflict", "Les réglages de ce site ont été modifiés ailleurs (autre onglet ou autre personne) : rechargez-les avant d'enregistrer, vos modifications n'ont pas été enregistrées.");
+  }
+  const next = normalizeTokens(tokens, { strict: true });
+  // Supprimer une couleur personnalisée encore utilisée casserait des widgets : refusé, avec le détail
+  const removed = site.tokens.customColors.filter((c) => !next.customColors.some((n) => n.key === c.key));
+  if (removed.length) {
+    const usage = colorUsage(ctx, site.id);
+    const busy = removed.filter((c) => usage[c.key] && usage[c.key].pages > 0);
+    if (busy.length) {
+      const first = busy[0];
+      throw bad(`La couleur « ${first.label} » est utilisée dans ${usage[first.key].pages} page(s) du site : remplacez-la dans ces pages avant de la supprimer.`);
+    }
+  }
+  const info = ctx.db.prepare("UPDATE mk_sites SET tokens = ?, settings_revision = settings_revision + 1, updated_at = datetime('now') WHERE id = ? AND settings_revision = ?")
+    .run(JSON.stringify(next), site.id, revision);
+  if (info.changes !== 1) throw new MarketingError("conflict", "Les réglages de ce site ont été modifiés ailleurs : rechargez-les avant d'enregistrer.");
+  audit(ctx, "site.design_saved", "site", site.id, {});
+  return getSite(ctx, site.id);
+}
+
+// Où chaque couleur (jeton) est utilisée : nombre de pages du site, et de références, dans le contenu en ligne, le
+// brouillon et les composants du site. Une référence est la chaîne « token:<clé> » enregistrée dans les styles.
+function colorUsage(ctx, siteId) {
+  const site = requireSite(ctx, siteId);
+  const keys = [...tokensModule.COLOR_KEYS, "on-primary", "on-accent", ...site.tokens.customColors.map((c) => c.key)];
+  const usage = Object.fromEntries(keys.map((k) => [k, { pages: 0, refs: 0 }]));
+  const count = (text, key) => {
+    let n = 0;
+    for (let i = text.indexOf(`token:${key}"`); i !== -1; i = text.indexOf(`token:${key}"`, i + 1)) n++;
+    return n;
+  };
+  const rows = ctx.db.prepare("SELECT sections, theme, draft FROM mk_landing_pages WHERE organization_id = ? AND site_id = ? AND archived_at IS NULL").all(ctx.organizationId, site.id);
+  const comps = ctx.db.prepare("SELECT section FROM mk_web_components WHERE organization_id = ? AND site_id = ?").all(ctx.organizationId, site.id);
+  for (const r of rows) {
+    const text = `${r.sections || ""}${r.theme || ""}${r.draft || ""}`;
+    for (const k of keys) { const n = count(text, k); if (n) { usage[k].pages += 1; usage[k].refs += n; } }
+  }
+  for (const c of comps) for (const k of keys) { const n = count(String(c.section || ""), k); if (n) usage[k].refs += n; }
+  return usage;
+}
 function setHomePage(ctx, siteId, pageId) {
   const site = requireSite(ctx, siteId, { active: true });
   if (pageId !== null) {
@@ -494,7 +541,7 @@ module.exports = {
   KINDS, MAX_VERSIONS,
   getPage, requirePage, listPages, normalizeContent, saveDraft, discardDraft, publish, unpublish, listVersions, getVersion, restoreVersion,
   createPage, duplicatePage, archivePage, restorePage,
-  getSite, requireSite, listSites, sitePages, createSite, updateSite, setHomePage, movePage, archiveSite, restoreSite, duplicateSite,
+  getSite, requireSite, listSites, sitePages, createSite, updateSite, saveSiteDesign, colorUsage, setHomePage, movePage, archiveSite, restoreSite, duplicateSite,
   listComponents, getComponent, createComponent, updateComponent, componentUsage, deleteComponent, resolveSections,
   siteParts, withSiteParts, setSiteParts, listPageTemplates, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
   normalizeSeo, normalizeTheme, TYPES,

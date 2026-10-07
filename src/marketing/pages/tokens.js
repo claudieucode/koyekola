@@ -20,7 +20,11 @@ const SHADOWS = { none: "none", sm: "0 1px 3px rgba(11, 42, 64, 0.08)", md: "0 4
 
 const DEFAULT_TOKENS = Object.freeze({
   colors: { primary: "#0277b6", secondary: "#0b2a40", accent: "#f59e0b", background: "#f3f8fc", surface: "#ffffff", text: "#10222f", muted: "#5b6b78", success: "#1e7e34", warning: "#8a5a00", error: "#c62828" },
-  fonts: { heading: "bricolage", body: "figtree" },
+  // button / link : par défaut la police du texte, pour que les sites existants ne changent pas d'aspect
+  fonts: { heading: "bricolage", body: "figtree", button: "figtree", link: "figtree" },
+  // Couleurs ajoutées par l'équipe : { key: "c-<identifiant>", label, hex }. Utilisables comme les couleurs du système
+  // (référence « token:c-… » dans les styles des widgets).
+  customColors: [],
   type: {
     h1: { size: 44, weight: 800, lineHeight: 1.1 }, h2: { size: 32, weight: 800, lineHeight: 1.15 }, h3: { size: 24, weight: 700, lineHeight: 1.2 },
     h4: { size: 19, weight: 700, lineHeight: 1.3 }, h5: { size: 17, weight: 700, lineHeight: 1.35 }, h6: { size: 15, weight: 700, lineHeight: 1.4 }, body: { size: 17, weight: 400, lineHeight: 1.6 }, caption: { size: 14, weight: 400, lineHeight: 1.4 },
@@ -34,6 +38,10 @@ const DEFAULT_TOKENS = Object.freeze({
 });
 
 const HEX = /^#[0-9a-f]{6}$/i;
+const CUSTOM_KEY = /^c-[a-z0-9]{1,20}$/;
+const MAX_CUSTOM_COLORS = 30;
+const FONT_ROLES = ["heading", "body", "button", "link"];
+const FONT_LABELS = { heading: "Titres", body: "Texte courant", button: "Boutons", link: "Liens" };
 const intIn = (v, min, max, fallback) => {
   const n = Number(v);
   return Number.isFinite(n) && n >= min && n <= max ? Math.round(n) : fallback;
@@ -54,8 +62,26 @@ function normalizeTokens(input = {}, { strict = false } = {}) {
     if (v !== undefined && !HEX.test(String(v))) { if (strict) throw bad(`Couleur « ${COLOR_LABELS[k]} » : code hexadécimal attendu (ex. #0277b6).`); }
     colors[k] = HEX.test(String(v || "")) ? String(v).toLowerCase() : D.colors[k];
   }
+  const customColors = [];
+  const seenKeys = new Set();
+  for (const c of Array.isArray(src.customColors) ? src.customColors : []) {
+    const key = String((c && c.key) || "");
+    const label = String((c && c.label) || "").trim().slice(0, 40);
+    const hex = String((c && c.hex) || "");
+    if (!CUSTOM_KEY.test(key) || seenKeys.has(key) || !HEX.test(hex) || !label) {
+      if (strict) throw bad("Couleur personnalisée invalide : un nom et un code hexadécimal (ex. #0277b6) sont attendus.");
+      continue;
+    }
+    if (customColors.length >= MAX_CUSTOM_COLORS) { if (strict) throw bad(`${MAX_CUSTOM_COLORS} couleurs personnalisées au plus.`); break; }
+    seenKeys.add(key);
+    customColors.push({ key, label, hex: hex.toLowerCase() });
+  }
+  if (strict) {
+    const names = customColors.map((c) => c.label.toLowerCase());
+    if (new Set(names).size !== names.length) throw bad("Deux couleurs personnalisées portent le même nom.");
+  }
   const fonts = {};
-  for (const k of ["heading", "body"]) {
+  for (const k of FONT_ROLES) {
     const v = src.fonts && src.fonts[k];
     if (v !== undefined && !Object.hasOwn(FONTS, v) && strict) throw bad("Police inconnue.");
     fonts[k] = Object.hasOwn(FONTS, v) ? v : D.fonts[k];
@@ -73,7 +99,7 @@ function normalizeTokens(input = {}, { strict = false } = {}) {
   for (const k of Object.keys(D.shadow)) shadow[k] = Object.hasOwn(SHADOWS, src.shadow && src.shadow[k]) ? src.shadow[k] : D.shadow[k];
   const border = { width: intIn(src.border && src.border.width, 0, 4, D.border.width), color: HEX.test(String(src.border && src.border.color || "")) ? src.border.color.toLowerCase() : D.border.color };
   const sizes = { content: intIn(src.sizes && src.sizes.content, 640, 1600, D.sizes.content), narrow: intIn(src.sizes && src.sizes.narrow, 480, 1000, D.sizes.narrow), buttonHeight: intIn(src.sizes && src.sizes.buttonHeight, 32, 72, D.sizes.buttonHeight), fieldHeight: intIn(src.sizes && src.sizes.fieldHeight, 32, 72, D.sizes.fieldHeight) };
-  return { colors, fonts, type, space, radius, shadow, border, sizes };
+  return { colors, customColors, fonts, type, space, radius, shadow, border, sizes };
 }
 
 // Texte lisible sur une couleur pleine (boutons) : blanc ou texte foncé, celui qui contraste le plus (WCAG)
@@ -91,7 +117,8 @@ function tokensToCss(tokens) {
   const v = [];
   for (const k of COLOR_KEYS) v.push(`--kw-${k}:${t.colors[k]}`);
   v.push(`--kw-on-primary:${onColor(t.colors.primary)}`, `--kw-on-accent:${onColor(t.colors.accent)}`);
-  v.push(`--kw-font-heading:${FONTS[t.fonts.heading].stack}`, `--kw-font-body:${FONTS[t.fonts.body].stack}`);
+  for (const c of t.customColors) v.push(`--kw-${c.key}:${c.hex}`);
+  for (const k of FONT_ROLES) v.push(`--kw-font-${k}:${FONTS[t.fonts[k]].stack}`);
   for (const k of TYPE_KEYS) v.push(`--kw-${k}-size:${t.type[k].size}px`, `--kw-${k}-weight:${t.type[k].weight}`, `--kw-${k}-lh:${t.type[k].lineHeight}`);
   for (const k of SPACE_KEYS) v.push(`--kw-space-${k}:${t.space[k]}px`);
   for (const [k, n] of Object.entries(t.radius)) v.push(`--kw-radius-${k}:${n}px`);
@@ -101,4 +128,4 @@ function tokensToCss(tokens) {
   return `${v.join(";")};`;
 }
 
-module.exports = { DEFAULT_TOKENS, COLOR_KEYS, COLOR_LABELS, TYPE_KEYS, TYPE_LABELS, SPACE_KEYS, FONTS, SHADOWS, normalizeTokens, tokensToCss, onColor, contrast };
+module.exports = { DEFAULT_TOKENS, CUSTOM_KEY, MAX_CUSTOM_COLORS, FONT_ROLES, FONT_LABELS, COLOR_KEYS, COLOR_LABELS, TYPE_KEYS, TYPE_LABELS, SPACE_KEYS, FONTS, SHADOWS, normalizeTokens, tokensToCss, onColor, contrast };
