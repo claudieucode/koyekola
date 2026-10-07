@@ -978,8 +978,10 @@
       var start = { x: e.clientX, y: e.clientY, dock: Object.assign({}, dock) };
       frame.style.pointerEvents = "none";
       layersPanel.classList.add("is-moving");
-      var move = function (ev) { onMove(start, ev.clientX - start.x, ev.clientY - start.y); clampDock(); layersPanel.style.left = dock.x + "px"; layersPanel.style.top = dock.y + "px"; layersPanel.style.width = dock.w + "px"; layersPanel.style.height = dock.h + "px"; };
-      var up = function () { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); handle.removeEventListener("pointercancel", up); frame.style.pointerEvents = ""; layersPanel.classList.remove("is-moving"); store.set("layers-dock", dock); };
+      var overRight = function (ev) { var r = rightEl.getBoundingClientRect(); return handle === layersHead && !panels.rightHidden && ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom; };
+      var move = function (ev) { onMove(start, ev.clientX - start.x, ev.clientY - start.y); clampDock(); layersPanel.style.left = dock.x + "px"; layersPanel.style.top = dock.y + "px"; layersPanel.style.width = dock.w + "px"; layersPanel.style.height = dock.h + "px"; rightEl.classList.toggle("is-dock-target", overRight(ev)); };
+      // Relâché au-dessus du panneau de droite : le panneau se rattache (comme déposer une fenêtre sur son emplacement)
+      var up = function (ev) { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); handle.removeEventListener("pointercancel", up); frame.style.pointerEvents = ""; layersPanel.classList.remove("is-moving"); var dropped = ev && ev.type === "pointerup" && overRight(ev); rightEl.classList.remove("is-dock-target"); store.set("layers-dock", dock); if (dropped) setDockMode("docked"); };
       handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", up); handle.addEventListener("pointercancel", up);
     });
   }
@@ -4402,6 +4404,7 @@
       { label: aids.guidesLocked ? "Guides : déverrouiller" : "Guides : verrouiller", run: function () { setAid("guidesLocked", !aids.guidesLocked); } },
       { label: "Guides : tout supprimer (cet écran)", run: clearGuides, off: !(guidesFor().h.length || guidesFor().v.length) }, { label: "Contours : afficher / masquer", run: function () { setAid("outlines", !aids.outlines); } }, { label: "Règles : afficher / masquer", run: function () { setAid("rulers", !aids.rulers); } },
       { label: "Panneau des éléments : afficher / masquer", run: function () { togglePanel("left"); } },
+      { label: "Vider la page : repartir d'un canevas vide (annulable)", run: function () { nextLabel = "Page vidée"; change(function () { if (!content.sections.length) return false; content.sections = []; selection = []; }); }, off: !canWrite || !content.sections.length },
       { label: "Ajouter une structure (Flexbox ou Grille)", run: function () { openStructurePicker(insertionPoint({ type: "container" })); }, off: !canWrite },
       { label: dock.mode === "floating" ? "Structure : rattacher le panneau" : "Structure : détacher le panneau", run: function () { setDockMode(dock.mode === "floating" ? "docked" : "floating"); } },
       { label: dock.mode === "closed" ? "Structure : rouvrir le panneau" : "Structure : fermer le panneau", run: function () { setDockMode(dock.mode === "closed" ? dock.last : "closed"); } },
@@ -4592,6 +4595,7 @@
     var mod = e.metaKey || e.ctrlKey;
     var k = (e.key || "").toLowerCase();
     if (mod && k === "s") { e.preventDefault(); saveNow(); return; }
+    if (mod && e.shiftKey && k === "l") { e.preventDefault(); setDockMode(dock.mode === "closed" ? dock.last : "closed"); return; }
     if (mod && k === "k") { e.preventDefault(); openCommands(""); return; }
     if (mod && e.shiftKey && k === "e") { e.preventDefault(); setMode(mode === "structure" ? "visual" : "structure"); return; }
     if (typing || editing) return;

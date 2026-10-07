@@ -463,6 +463,51 @@ describe("structure : canevas, Flexbox, Grille, calques et panneau détachable (
     assert.equal(await page.locator("[data-pb-layers] .pb-node").count(), kidsBefore);
   });
 
+  test("raccourci Ctrl/⌘ + Maj + L, et rattachement en déposant le panneau flottant sur le panneau de droite", async () => {
+    await openEditor();
+    const panel = page.locator("[data-pb-layers-panel]");
+    await page.keyboard.press("Control+Shift+L");
+    await until(async () => !(await panel.isVisible()), { what: "panneau fermé au clavier" });
+    await page.keyboard.press("Control+Shift+L");
+    await until(async () => panel.isVisible(), { what: "panneau rouvert au clavier" });
+    // détacher, puis déposer l'en-tête sur le panneau de droite : il se rattache
+    await page.locator("[data-pb-layers-dock]").click();
+    await until(async () => panel.evaluate((e) => e.classList.contains("is-floating")), { what: "flottant" });
+    const head = await page.locator("[data-pb-layers-head]").boundingBox();
+    const right = await page.locator("[data-pb-right]").boundingBox();
+    await page.mouse.move(head.x + 60, head.y + head.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(right.x + right.width / 2, right.y + 160, { steps: 8 });
+    assert.equal(await page.locator("[data-pb-right]").evaluate((e) => e.classList.contains("is-dock-target")), true, "zone de dépôt signalée");
+    await page.mouse.up();
+    await until(async () => panel.evaluate((e) => !e.classList.contains("is-floating")), { what: "rattaché par dépôt" });
+    assert.equal(await page.locator("[data-pb-right]").evaluate((e) => e.classList.contains("is-dock-target")), false);
+    // relâché ailleurs : il reste flottant
+    await page.locator("[data-pb-layers-dock]").click();
+    const h2 = await page.locator("[data-pb-layers-head]").boundingBox();
+    await page.mouse.move(h2.x + 60, h2.y + h2.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(400, 400, { steps: 6 });
+    await page.mouse.up();
+    assert.equal(await panel.evaluate((e) => e.classList.contains("is-floating")), true, "reste flottant hors du panneau de droite");
+    await page.locator("[data-pb-layers-dock]").click();
+  });
+
+  test("commande « Vider la page » : canevas vide avec son « + », annulable", async () => {
+    const r = await boss.post("/marketing/pages", { name: `Vider ${++n}` });
+    pageId = Number(r.location.match(/(\d+)$/)[1]);
+    await page.goto(`${srv.base}/marketing/pages/${pageId}/editeur`);
+    await ready();
+    assert.ok(draft().sections.length >= 2, "une page neuve a son bandeau et son formulaire");
+    await page.keyboard.press("Control+k");
+    await page.locator("[data-pb-cmd-q]").fill("vider la page");
+    await page.keyboard.press("Enter");
+    await saved((c) => c.sections.length === 0, "page vidée");
+    await frame().locator("[data-kw-add='root']").waitFor();
+    await page.locator("[data-pb-undo]").click();
+    await saved((c) => c.sections.length >= 2, "page restaurée");
+  });
+
   test("annuler la création d'une structure : la page redevient vide ; rétablir : la structure revient identique", async () => {
     await openEditor();
     await frame().locator("[data-kw-add='root']").click();

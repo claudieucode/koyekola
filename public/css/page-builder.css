@@ -648,6 +648,7 @@
 .pb-layers-panel.is-floating .pb-float-resize { display: block; position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none; background: linear-gradient(135deg, transparent 0 50%, var(--muted, #5a687d) 50% 56%, transparent 56% 66%, var(--muted, #5a687d) 66% 72%, transparent 72%); opacity: 0.6; }
 .pb-layers-panel.is-floating .pb-tree { padding-bottom: 20px; }
 [data-pb-layers-dock][aria-pressed="true"], [data-pb-layers-open][aria-pressed="true"] { color: var(--accent); }
+.pb-right.is-dock-target { outline: 2px dashed var(--accent); outline-offset: -4px; background: var(--accent-light); }
 
 /* Quelle mise en page utiliser ? */
 .pb-layout-dialog { width: min(720px, calc(100vw - 32px)); }
