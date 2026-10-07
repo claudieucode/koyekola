@@ -475,6 +475,13 @@ const NODE_TYPES = {
     if (!items.length) throw new Error(`${at} (réseaux sociaux) : au moins un lien.`);
     return { items, size: oneOf("24", "32", "40", "48")(String(p.size)) || "32", shape: oneOf("circle", "square", "plain")(p.shape) || "circle", label: line(p.label, 60) || "Nos réseaux" };
   } },
+  // Boutons de partage : de vrais liens « partager cette page » (adresse publique de la page, construite à l'affichage par le
+  // serveur : jamais saisie). Réseaux de partage uniquement ; l'adresse de la page n'existe qu'en https (sinon rien n'est affiché).
+  sharebuttons: { label: "Boutons de partage", category: "interaction", props: (p, at) => {
+    const networks = (Array.isArray(p.networks) ? p.networks : []).filter((k, i, a) => Object.hasOwn(SHARE_NETWORKS, k) && a.indexOf(k) === i).slice(0, 6);
+    if (!networks.length) throw new Error(`${at} (partage) : au moins un réseau (${Object.values(SHARE_NETWORKS).join(", ")}).`);
+    return { networks, size: oneOf("24", "32", "40", "48")(String(p.size)) || "32", shape: oneOf("circle", "square", "plain")(p.shape) || "circle", label: line(p.label, 60) || "Partager cette page", message: line(p.message, 120) };
+  } },
   modal: { label: "Fenêtre (modale)", category: "interaction", props: (p, at, h) => {
     const buttonLabel = line(p.buttonLabel, 60), title = line(p.title, 120), text = clean(p.text, 4000);
     if (!buttonLabel || !title || !text) throw new Error(`${at} (fenêtre) : le texte du bouton, le titre et le contenu sont obligatoires.`);
@@ -567,6 +574,20 @@ const NODE_TYPES = {
   sitelogo: { label: "Logo du site", category: "dynamic", props: (p) => ({ height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false }) },
   sitetitle: { label: "Titre du site", category: "dynamic", props: (p) => ({ tag: oneOf("p", "span", "h1", "h2", "h3")(p.tag) || "p", link: p.link !== false }) },
   copyright: { label: "Copyright", category: "dynamic", props: (p) => ({ owner: line(p.owner, 80), text: line(p.text, 160) }) },
+  // Bouton d'achat : ajoute la formation au VRAI panier de KOLAKISA (POST /panier/ajouter/:id), ou mène directement à la commande.
+  // La formation doit exister et être publiée ; le prix affiché vient du catalogue à l'affichage (jamais saisi).
+  addtocart: { label: "Bouton d'achat", category: "commerce", props: (p, at, h) => {
+    const courseId = Number(p.courseId);
+    if (!getCourse(h.ctx, courseId)) throw new Error(`${at} (bouton d'achat) : formation introuvable ou non publiée.`);
+    const mode = oneOf("cart", "buy")(p.mode) || "cart";
+    return { courseId, mode, label: line(p.label, 60) || (mode === "buy" ? "Acheter maintenant" : "Ajouter au panier"), variant: oneOf("primary", "outline", "ghost")(p.variant) || "primary", size: oneOf("sm", "md", "lg")(p.size) || "md", showPrice: p.showPrice === true };
+  } },
+  // Avis de la formation : note moyenne et nombre d'avis RÉELS (table des avis), lus à l'affichage ; sans avis : un texte honnête
+  courserating: { label: "Avis de la formation", category: "commerce", props: (p, at, h) => {
+    const courseId = Number(p.courseId);
+    if (!getCourse(h.ctx, courseId)) throw new Error(`${at} (avis de la formation) : formation introuvable ou non publiée.`);
+    return { courseId, showCount: p.showCount !== false, empty: line(p.empty, 80) || "Pas encore d'avis" };
+  } },
   // Titre animé : début fixe, mots qui se succèdent (2 à 8), fin fixe. Lu en entier par les lecteurs d'écran.
   animatedheading: { label: "Titre animé", category: "text", props: (p, at) => {
     const words = (Array.isArray(p.words) ? p.words : []).map((w) => line(w, 40)).filter(Boolean).slice(0, 8);
@@ -714,7 +735,10 @@ const WIDGETS = {
   posts: ["site", "articles blog actualites derniers dynamique"],
   course: ["commerce", "formation cours produit vente acheter"],
   courselist: ["commerce", "formations catalogue produits cours boutique dynamique"],
+  courserating: ["commerce", "avis note etoiles evaluation formation produit commentaires moyenne"],
+  addtocart: ["commerce", "acheter achat panier ajouter commande boutique bouton prix formation produit"],
   social: ["social", "reseaux sociaux facebook instagram linkedin youtube"],
+  sharebuttons: ["social", "partager partage facebook x twitter linkedin whatsapp email diffuser reseaux sociaux"],
 };
 // Raccourcis : entrée de bibliothèque qui crée un élément existant préréglé (ex. SoundCloud = contenu intégré limité à
 // SoundCloud). Le serveur valide l'élément créé comme tout autre.
@@ -777,6 +801,8 @@ const PALETTE = {
   table: { icon: "listOrdered", blank: () => ({ props: { rows: [["Colonne 1", "Colonne 2"], ["Valeur", "Valeur"]], header: true } }) },
   countdown: { icon: "clock", blank: () => ({ props: { until: new Date(Date.now() + 7 * 86400000).toISOString().replace(/:\d{2}\.\d{3}Z$/, ":00Z"), endText: "C'est terminé." } }) },
   course: { icon: "graduation", asks: "course", blank: () => ({ props: {} }) },
+  addtocart: { icon: "cart", asks: "course", blank: () => ({ props: {} }) },
+  courserating: { icon: "star", asks: "course", blank: () => ({ props: {} }) },
   icon: { icon: "star", blank: () => ({ props: { name: "star", size: "32" } }) },
   map: { icon: "mapPin", asks: "map", blank: () => ({ props: {} }) },
   imagebox: { icon: "image", asks: "image", blank: () => ({ props: {} }) },
@@ -803,6 +829,7 @@ const PALETTE = {
   testimonial: { icon: "quote", blank: () => ({ props: { text: "[Le témoignage réel, avec l'accord de la personne.]", name: "[Prénom N.]", role: "", rating: 0 } }) },
   pricing: { icon: "tag", blank: () => ({ props: { title: "[Nom de l'offre]", price: "[prix réel]", period: "", features: ["[Ce qui est inclus]"], ctaLabel: "Choisir", ctaUrl: "/catalogue" } }) },
   breadcrumb: { icon: "chevronRight", blank: () => ({ props: { items: [{ label: "Accueil", url: "/" }, { label: "Cette page" }], separator: "chevron" } }) },
+  sharebuttons: { icon: "share2", blank: () => ({ props: { networks: ["facebook", "x", "linkedin", "whatsapp"], size: "32", shape: "circle", label: "Partager cette page" } }) },
   social: { icon: "share2", blank: () => ({ props: { items: [{ network: "website", url: "/" }], size: "32", shape: "circle" } }) },
   html: { icon: "braces", blank: () => ({ props: { html: "<p>Votre <strong>HTML</strong> (balises de texte, listes, tableaux, images, SVG ; scripts et styles refusés).</p>" } }) },
   embed: { icon: "externalLink", asks: "embed", blank: () => ({ props: {} }) },
@@ -877,7 +904,7 @@ function editorSpec() {
     categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
-    socialNetworks: Object.entries(SOCIAL_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
+    socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     structureKinds: require("./structures").KINDS, structures: require("./structures").STRUCTURES,
     colorTokens: COLOR_TOKENS, spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
     limits: { nodes: MAX_NODES, depth: MAX_DEPTH },
@@ -1007,6 +1034,7 @@ function embedOf(url) {
 }
 
 // Réseaux sociaux proposés (pictogrammes dessinés pour KOLAKISA, dans views/marketing-public/_social-icon.ejs)
+const SHARE_NETWORKS = { facebook: "Facebook", x: "X (Twitter)", linkedin: "LinkedIn", whatsapp: "WhatsApp", email: "E-mail" };
 const SOCIAL_NETWORKS = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn", youtube: "YouTube", x: "X (Twitter)", tiktok: "TikTok", whatsapp: "WhatsApp", email: "E-mail", website: "Site web" };
 
 // ---------- CSS personnalisé, classes, attributs ----------
@@ -1222,7 +1250,7 @@ function pageCss(sections) {
       // Barre de progression : sa largeur vient de sa valeur (validée 0–100), pas d'un style écrit dans la page
       if (n.type === "hotspot" && NODE_ID.test(String(n.id || "")) && n.props) n.props.spots.forEach((sp, k) => rules.base.push(`.kw-n-${n.id}-s${k}{left:${Number(sp.x)}%;top:${Number(sp.y)}%}`));
       if (n.type === "iconlist" && NODE_ID.test(String(n.id || "")) && n.props && n.props.iconColor) rules.base.push(`.kw-n-${n.id} .kw-iconlist-icon{color:${colorCss(n.props.iconColor)}}`);
-      if (n.type === "social" && NODE_ID.test(String(n.id || "")) && n.props) rules.base.push(`.kw-n-${n.id}{--kw-soc:${Number(n.props.size) || 32}px}`);
+      if ((n.type === "social" || n.type === "sharebuttons") && NODE_ID.test(String(n.id || "")) && n.props) rules.base.push(`.kw-n-${n.id}{--kw-soc:${Number(n.props.size) || 32}px}`);
       if (n.type === "divider" && NODE_ID.test(String(n.id || "")) && n.props && (n.props.lineStyle !== "solid" || n.props.thickness > 1 || n.props.color)) rules.base.push(`.kw-n-${n.id}${n.props.text ? "::before,.kw-n-" + n.id + "::after" : ""}{${n.props.text ? "" : "border:0;"}border-top:${n.props.thickness}px ${n.props.lineStyle} ${n.props.color ? colorCss(n.props.color) : "currentColor"}}`);
       if (n.type === "sitelogo" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) rules.base.push(`.kw-n-${n.id} .kw-sitelogo-img{height:${n.props.height}px}`);
       if (n.type === "flipbox" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) rules.base.push(`.kw-n-${n.id}{min-height:${n.props.height}px}`);

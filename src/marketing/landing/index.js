@@ -191,6 +191,12 @@ function dynamicProps(ctx, n, visitor, page) {
     const live = f && f.status === "published" ? f : null;
     return { ...p, formName: f ? f.name : "", form: live, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: live ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, live) : [] };
   }
+  // Boutons de partage : adresse publique de la page (https seulement : un partage vers une adresse locale n'aurait aucun sens)
+  if (n.type === "sharebuttons") {
+    const base = String(ctx.baseUrl || "").replace(/\/+$/, "");
+    const shareUrl = page && page.slug && /^https:\/\/[^\s"'<>]+$/.test(base) ? `${base}/p/${page.slug}` : "";
+    return { ...p, shareUrl, pageTitle: page ? page.title || page.name || "" : "" };
+  }
   if (n.type === "account") return { ...p, loggedIn: Boolean(visitor && visitor.loggedIn), cartCount: visitor ? visitor.cartCount || 0 : 0 };
   return null;
 }
@@ -198,6 +204,11 @@ function nodeView(ctx, nodes, visitor, page) {
   return (nodes || []).map((n) => {
     const dyn = dynamicProps(ctx, n, visitor, page);
     if (dyn) n = { ...n, props: dyn };
+    if (n.type === "addtocart" || n.type === "courserating") {
+      const c = getCourse(ctx, n.props.courseId);
+      if (c && n.type === "courserating") return { ...n, props: { ...n.props, course: courseView(c), rating: require("../bridge/catalog").courseRating(ctx, c.id) } };
+      return c ? { ...n, props: { ...n.props, course: courseView(c) } } : null; // formation dépubliée : le bouton disparaît (jamais un achat impossible)
+    }
     if (n.type === "course") {
       const c = getCourse(ctx, n.props.courseId);
       return c ? { ...n, props: { ...n.props, course: courseView(c) } } : null; // formation dépubliée : l'élément disparaît

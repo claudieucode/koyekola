@@ -327,7 +327,7 @@
     if (t.asks === "audio") return ask("Nouveau fichier audio", [["src", "url", "Adresse https:// du fichier (.mp3, .m4a, .ogg, .wav)"], ["title", "text", "Titre (facultatif)", true]], function (v) { addItems([newNode("audio", { props: v })], at); });
     if (t.asks === "course") {
       if (!boot.courses.length) { toast("Publiez d'abord une formation dans le catalogue.", true); return; }
-      return ask("Formation à présenter", [["courseId", "course", "Formation"]], function (v) { addItems([newNode("course", { props: { courseId: Number(v.courseId), cta: "Découvrir la formation" } })], at); });
+      return ask(type === "addtocart" ? "Formation à vendre" : type === "courserating" ? "Formation dont afficher les avis" : "Formation à présenter", [["courseId", "course", "Formation"]], function (v) { addItems([newNode(type, { props: type === "addtocart" ? { courseId: Number(v.courseId), mode: "cart", label: "Ajouter au panier" } : type === "courserating" ? { courseId: Number(v.courseId) } : { courseId: Number(v.courseId), cta: "Découvrir la formation" } })], at); });
     }
     addItems([newNode(type)], at);
   }
@@ -1655,6 +1655,20 @@
         box.appendChild(selectField("Taille", String(p.size || 32), [["24", "Petite"], ["32", "Moyenne"], ["40", "Grande"], ["48", "Très grande"]], function (v) { setProp(it.id, "size", v); }, { disabled: disabled }));
         box.appendChild(selectField("Forme", p.shape || "circle", [["circle", "Rond"], ["square", "Carré arrondi"], ["plain", "Icône seule"]], function (v) { setProp(it.id, "shape", v); }, { disabled: disabled }));
         break;
+      case "sharebuttons":
+        box.appendChild(textField("Nom de la liste (lecteurs d'écran)", p.label, set("label"), { max: 60, disabled: disabled }));
+        box.appendChild(textField("Texte proposé au partage (facultatif : sinon le titre de la page)", p.message, set("message"), { max: 120, disabled: disabled }));
+        (SPEC.shareNetworks || []).forEach(function (n) {
+          box.appendChild(checkField(n[1], (p.networks || []).indexOf(n[0]) >= 0, function (on) {
+            var list = (byId(it.id).props.networks || []).slice();
+            if (!on && list.length <= 1) { toast("Gardez au moins un réseau de partage.", true); renderInspector(); return; }
+            change(function () { var cur = byId(it.id).props.networks || []; byId(it.id).props.networks = on ? (cur.indexOf(n[0]) >= 0 ? cur : cur.concat(n[0])) : cur.filter(function (x) { return x !== n[0]; }); });
+          }, { disabled: disabled }));
+        });
+        box.appendChild(selectField("Taille", String(p.size || 32), [["24", "Petite"], ["32", "Moyenne"], ["40", "Grande"], ["48", "Très grande"]], function (v) { setProp(it.id, "size", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Forme", p.shape || "circle", [["circle", "Rond"], ["square", "Carré arrondi"], ["plain", "Icône seule"]], function (v) { setProp(it.id, "shape", v); }, { disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-hint", text: "Le partage envoie l'adresse publique de la page publiée (https). Sur le site publié seulement : dans l'éditeur, les liens ne sont pas actifs." }));
+        break;
       case "modal":
         box.appendChild(textField("Texte du bouton qui ouvre la fenêtre", p.buttonLabel, set("buttonLabel"), { max: 60, disabled: disabled }));
         box.appendChild(selectField("Apparence du bouton", p.variant, [["primary", "Plein"], ["outline", "Contour"], ["ghost", "Discret"]], function (v) { setProp(it.id, "variant", v); }, { disabled: disabled }));
@@ -1675,6 +1689,19 @@
       case "course":
         box.appendChild(selectField("Formation", p.courseId, boot.courses.map(function (c) { return [c.id, c.title]; }), function (v) { setProp(it.id, "courseId", Number(v)); }, { disabled: disabled }));
         box.appendChild(textField("Texte du bouton", p.cta, set("cta"), { max: 60, disabled: disabled }));
+        break;
+      case "courserating":
+        box.appendChild(selectField("Formation", p.courseId, boot.courses.map(function (c) { return [c.id, c.title]; }), function (v) { setProp(it.id, "courseId", Number(v)); }, { disabled: disabled }));
+        box.appendChild(checkField("Afficher le nombre d'avis", p.showCount !== false, function (v) { setProp(it.id, "showCount", v); }, { disabled: disabled, hint: "La note et le nombre d'avis sont ceux des avis réellement publiés sur la formation." }));
+        box.appendChild(textField("Texte quand il n'y a pas encore d'avis", p.empty, set("empty"), { max: 80, disabled: disabled }));
+        break;
+      case "addtocart":
+        box.appendChild(selectField("Formation", p.courseId, boot.courses.map(function (c) { return [c.id, c.title]; }), function (v) { setProp(it.id, "courseId", Number(v)); }, { disabled: disabled }));
+        box.appendChild(selectField("Action", p.mode || "cart", [["cart", "Ajouter au panier"], ["buy", "Acheter maintenant (va à la commande)"]], function (v) { change(function () { var x = byId(it.id).props; x.mode = v; if (x.label === "Ajouter au panier" || x.label === "Acheter maintenant") x.label = v === "buy" ? "Acheter maintenant" : "Ajouter au panier"; }); }, { disabled: disabled }));
+        box.appendChild(textField("Texte du bouton", p.label, set("label"), { max: 60, disabled: disabled }));
+        box.appendChild(selectField("Apparence", p.variant || "primary", [["primary", "Plein"], ["outline", "Contour"], ["ghost", "Discret"]], function (v) { setProp(it.id, "variant", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Taille", p.size || "md", [["sm", "Petit"], ["md", "Normal"], ["lg", "Grand"]], function (v) { setProp(it.id, "size", v); }, { disabled: disabled }));
+        box.appendChild(checkField("Afficher le prix à côté du bouton", p.showPrice === true, function (v) { setProp(it.id, "showPrice", v); }, { disabled: disabled, hint: "Le prix vient du catalogue (« Gratuit » si la formation est gratuite). Le visiteur doit être connecté pour ajouter au panier." }));
         break;
       case "icon":
         box.appendChild(iconPicker(p.name, function (v) { setProp(it.id, "name", v); }, disabled));
@@ -1843,6 +1870,7 @@
     testimonial: { kind: "Témoignage", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: null }, order: ["typography", "background", "border", "effects", "spacing", "size", "layout"], states: true },
     pricing: { kind: "Offre tarifaire", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: null }, order: ["background", "border", "effects", "typography", "spacing", "size", "layout"], states: true },
     breadcrumb: { kind: "Fil d'Ariane", groups: TEXTUAL, order: TEXT_ORDER },
+    sharebuttons: { kind: "Boutons de partage", groups: { layout: ["alignSelf"], color: ["color"], spacing: true, effects: ["opacity"] }, order: ["color", "spacing", "layout", "effects"] },
     social: { kind: "Réseaux sociaux", groups: { layout: ["alignSelf"], color: ["color"], spacing: true, effects: ["opacity"] }, order: ["color", "spacing", "layout", "effects"] },
     modal: { kind: "Fenêtre (modale)", groups: { layout: ["alignSelf"], spacing: true }, order: ["spacing", "layout"] },
     carousel: { kind: "Carrousel", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["size", "border", "effects", "spacing", "layout"] },
@@ -1869,6 +1897,8 @@
     rating: { kind: "Évaluation", groups: { layout: ["alignSelf"], typography: ["fontSize", "fontWeight"], color: ["color"], spacing: true }, order: ["typography", "spacing", "layout"] },
     menuanchor: { kind: "Ancre de menu", groups: null },
     map: { kind: "Google Maps", groups: { size: SIZE_W, spacing: true, border: null, effects: ["boxShadow", "opacity"] }, order: ["size", "spacing", "border", "effects"] },
+    courserating: { kind: "Avis de la formation", groups: TEXTUAL, order: TEXT_ORDER },
+    addtocart: { kind: "Bouton d'achat", groups: { layout: ["alignSelf"], spacing: true, effects: ["opacity"] }, order: ["spacing", "layout", "effects"] },
     course: { kind: "Formation", groups: { layout: ["alignSelf"], size: SIZE_W, background: true, spacing: true, border: null, effects: null }, states: true },
     form: { kind: "Formulaire", groups: { size: null, spacing: true, color: null, background: true, border: null, effects: null }, presets: true },
     component: { kind: "Composant", groups: null },
@@ -3573,6 +3603,8 @@
       case "table": return (p.rows || []).length + " ligne(s) × " + ((p.rows || [])[0] || []).length + " colonne(s)";
       case "countdown": return "Jusqu'au " + (p.until ? new Date(p.until).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" }) : "—");
       case "course": var c = (boot.courses || []).find(function (x) { return x.id === p.courseId; }); return c ? c.title : "Formation";
+      case "courserating": var cr = (boot.courses || []).find(function (x) { return x.id === p.courseId; }); return "Avis · " + (cr ? cr.title : "formation");
+      case "addtocart": var ac = (boot.courses || []).find(function (x) { return x.id === p.courseId; }); return (p.label || "Acheter") + " · " + (ac ? ac.title : "formation");
       case "spacer": return "Espace de " + p.size + " px";
       case "divider": return "Ligne de séparation";
       case "icon": return "Icône « " + p.name + " », " + p.size + " px";
@@ -3601,6 +3633,7 @@
       case "pricing": return p.title + " · " + p.price + (p.period ? " " + p.period : "");
       case "breadcrumb": return (p.items || []).map(function (x) { return x.label; }).join(" › ");
       case "social": return (p.items || []).map(function (x) { return x.network; }).join(" · ");
+      case "sharebuttons": return (p.networks || []).join(" · ");
       case "modal": return "Bouton « " + p.buttonLabel + " » → " + p.title + (p.position && p.position !== "center" ? " (panneau latéral)" : "");
       case "html": return String(p.html || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
       case "embed": return p.title + " · " + p.url;

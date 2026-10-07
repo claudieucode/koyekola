@@ -271,6 +271,12 @@
 .kw-spacer-64 { height: 64px; } .kw-spacer-80 { height: 80px; } .kw-spacer-96 { height: 96px; } .kw-spacer-128 { height: 128px; }
 .kw-button { display: inline-flex; align-items: center; justify-content: center; align-self: flex-start; min-height: 48px; padding: 13px 26px; border: 2px solid transparent; border-radius: 8px; font-weight: 700; text-decoration: none; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease; }
 .kw-btn-primary { background: var(--lp-accent, #0277b6); color: var(--lp-on-accent, #fff); }
+.kw-buy { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0; }
+.kw-courserating { margin: 0; }
+.kw-courserating .kw-stars { margin: 0; }
+.kw-courserating-count, .kw-courserating-none { color: rgba(16, 34, 47, .65); font-size: .95em; }
+.kw-buy-price { font-weight: 700; font-size: 1.15em; color: var(--lp-text, inherit); }
+.lp-builder .kw-buy .kw-button[disabled] { pointer-events: none; opacity: 1; cursor: default; }
 .kw-btn-outline { background: transparent; color: var(--lp-accent, #0277b6); border-color: currentColor; }
 .kw-btn-ghost { background: transparent; color: var(--lp-accent, #0277b6); }
 .kw-button.kw-btn-sm { min-height: 38px; padding: 8px 16px; font-size: 14px; }

@@ -34,6 +34,16 @@ function listCourseCards(ctx, { limit = 3, category = "", sort = "recent" } = {}
     return [];
   }
 }
+// Note moyenne et nombre d'avis RÉELS d'une formation (table des avis du LMS) : jamais de valeur inventée
+function courseRating(ctx, id) {
+  checkCtx(ctx);
+  try {
+    const r = ctx.db.prepare("SELECT COUNT(*) AS n, AVG(rating) AS avg FROM reviews WHERE course_id = ?").get(id);
+    return { count: r.n, average: r.n ? Math.round(r.avg * 10) / 10 : 0 };
+  } catch {
+    return { count: 0, average: 0 };
+  }
+}
 function countPublished(ctx, what) {
   checkCtx(ctx);
   try {
@@ -116,4 +126,4 @@ function userHasOrder(ctx, userId) {
   }
 }
 
-module.exports = { listCourseCards, countPublished, listCourses, getCourse, getCourseBySlug, courseConversions, userHasOrder, listPosts, blogCategories };
+module.exports = { courseRating, listCourseCards, countPublished, listCourses, getCourse, getCourseBySlug, courseConversions, userHasOrder, listPosts, blogCategories };

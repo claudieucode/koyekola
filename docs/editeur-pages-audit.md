@@ -303,3 +303,23 @@ Le circuit d'envoi est celui de la section existante (`POST /p/:adresse/inscript
 | **Titre du site** (nouveau) | oui | nom du site de la page (sinon nom du site des réglages SEO), balise et lien réglables | oui | oui | unitaire + navigateur |
 | **Copyright** (nouveau) | oui | « © année titulaire. texte » ; année calculée à l'affichage, titulaire = nom du site par défaut | oui | oui | unitaire + navigateur |
 | **Titre de la page** (raccourci) | oui | texte dynamique « titre de la page » préréglé (pas de second système) | oui | oui | unitaire + navigateur |
+## Lot 7 — E-commerce (équivalents KOLAKISA natifs, sur le vrai panier)
+
+| Widget | Interface | Fonctionnel | Persistant | Responsive | Testé |
+|---|---|---|---|---|---|
+| Formation, Formations du catalogue | existants | inchangés | oui | oui | suites existantes |
+| **Bouton d'achat** (nouveau) | oui : formation, action (panier ou commande directe), texte, apparence, taille, prix affiché | formulaire vers le VRAI panier (`POST /panier/ajouter/:id`, retour sur la page de vente) ; « Acheter maintenant » mène à la commande ; prix du catalogue (« Gratuit » si gratuit) ; la formation doit exister et être publiée, sinon le bouton disparaît ; inactif dans l'éditeur | oui | oui | unitaire + serveur + navigateur |
+| **Avis de la formation** (nouveau) | oui : formation, nombre d'avis affiché ou non, texte sans avis | note moyenne et nombre d'avis RÉELS lus dans la table des avis ; sans avis : « Pas encore d'avis » (aucune étoile inventée) | oui | oui | unitaire + serveur |
+| Prix de la formation | — | non dupliqué : option « Afficher le prix » du Bouton d'achat et carte « Formation » | — | — | — |
+| Panier, commande, compte | — | non dupliqués : « Compte du visiteur » (avec le nombre d'articles du panier) et les pages /panier et /commande existent déjà | — | — | — |
+
+Non construit (aucune intégration réelle) : coupons dans la page, variations de produit, suivi de commande, liste de souhaits (hors favoris), avis écrits depuis la page.
+
+## Lot 8 — Réseaux sociaux
+
+| Widget | Interface | Fonctionnel | Persistant | Responsive | Testé |
+|---|---|---|---|---|---|
+| Réseaux sociaux (liens vers vos profils) | existant | inchangé | oui | oui | suites existantes |
+| **Boutons de partage** (nouveau) | oui : réseaux (Facebook, X, LinkedIn, WhatsApp, e-mail), taille, forme, texte proposé | de vrais liens de partage vers l'adresse PUBLIQUE de la page (construite et encodée par le serveur, jamais saisie) ; nouvel onglet ; rien n'est affiché sur la page publiée si l'adresse du site n'est pas en https ; dans l'éditeur, boutons dessinés mais inertes | oui | oui | unitaire + serveur + navigateur |
+
+Non construit : intégrations de plateformes (commentaires Facebook, fil de publications, « J'aime » : demanderaient des scripts de tiers et des clés d'API sur des pages servies sur le domaine des comptes) ; bouton « copier le lien » (JavaScript dans `landing.js` pour un seul usage).

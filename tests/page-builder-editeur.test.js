@@ -27,7 +27,7 @@ describe("contenus de départ (sans serveur)", () => {
     const children = spec.types.filter((t) => !t.asks).map((t) => ({ type: t.type, ...t.blank }));
     const r = pages.saveDraft(A, p.id, { sections: [{ type: "layout", children }] }, { revision: p.revision });
     assert.equal(r.content.sections[0].children.length, children.length);
-    assert.deepEqual(spec.types.filter((t) => t.asks).map((t) => t.type).sort(), ["audio", "carousel", "course", "embed", "gallery", "hotspot", "image", "imagebox", "map", "menuanchor", "rating", "signupform", "video"]);
+    assert.deepEqual(spec.types.filter((t) => t.asks).map((t) => t.type).sort(), ["addtocart", "audio", "carousel", "course", "courserating", "embed", "gallery", "hotspot", "image", "imagebox", "map", "menuanchor", "rating", "signupform", "video"]);
     for (const p0 of spec.styleProps) assert.ok(p0.label && p0.group && ["enum", "color", "number", "length", "text"].includes(p0.kind), p0.key);
   });
 

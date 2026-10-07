@@ -6,7 +6,7 @@ const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const { TEST_KEY } = require("./marketing-helpers");
-const { startServer, loginInstructor } = require("./helpers");
+const { startServer, loginInstructor, createCourse } = require("./helpers");
 
 let chromium = null;
 try { chromium = require("playwright-core").chromium; } catch { /* module absent */ }
@@ -538,6 +538,33 @@ describe("structure : canevas, Flexbox, Grille, calques et panneau détachable (
     await page.locator("[data-pb-history]").click();
     assert.match(await page.locator("[data-pb-menu]").innerText(), /Structure : Deux colonnes, deux lignes/);
     await page.keyboard.press("Escape");
+  });
+
+  test("widgets : « Boutons de partage » et « Bouton d'achat » s'ajoutent depuis la bibliothèque et se règlent dans l'inspecteur", async () => {
+    await createCourse(boss, srv, { title: "Formation à vendre", price: 19 });
+    await openEditor();
+    const search = page.locator("[data-pb-el-search]");
+    // Boutons de partage : un clic dans la bibliothèque, quatre réseaux par défaut
+    await search.fill("partage");
+    await page.locator(".pb-pal-item", { hasText: "Boutons de partage" }).first().click();
+    await saved((c) => nodesOf(c.sections).some((x) => x.type === "sharebuttons"), "boutons de partage ajoutés");
+    await frame().locator(".kw-sharebuttons").waitFor();
+    assert.equal(await frame().locator(".kw-sharebuttons .kw-social-link").count(), 4);
+    await page.locator("[data-pb-inspector] [role='tab']", { hasText: "Contenu" }).first().click().catch(() => {});
+    await page.locator("[data-pb-inspector] .pb-check", { hasText: "Facebook" }).locator("input").uncheck();
+    await until(async () => (await frame().locator(".kw-sharebuttons .kw-social-link").count()) === 3, { what: "trois réseaux" });
+    await saved((c) => nodesOf(c.sections).find((x) => x.type === "sharebuttons").props.networks.length === 3, "réseaux enregistrés");
+    // Bouton d'achat : la formation se choisit à l'ajout ; bouton inactif dans l'éditeur
+    await search.fill("achat");
+    await page.locator(".pb-pal-item", { hasText: "Bouton d'achat" }).first().click();
+    await page.locator("[data-pb-ask] select").selectOption({ label: "Formation à vendre" });
+    await page.locator("[data-pb-ask-form] button[type='submit']").click();
+    await saved((c) => nodesOf(c.sections).some((x) => x.type === "addtocart"), "bouton d'achat ajouté");
+    await frame().locator(".kw-buy button").waitFor();
+    assert.equal(await frame().locator(".kw-buy button").isDisabled(), true, "inactif dans l'éditeur");
+    assert.equal((await frame().locator(".kw-buy button").innerText()).trim(), "Ajouter au panier");
+    await page.locator("[data-pb-inspector] select").filter({ hasText: "Acheter maintenant" }).first().selectOption("buy");
+    await until(async () => (await frame().locator(".kw-buy button").innerText()).trim() === "Acheter maintenant", { what: "libellé « Acheter maintenant »" });
   });
 
   test("T20 aucune erreur dans la console du navigateur", async () => {
