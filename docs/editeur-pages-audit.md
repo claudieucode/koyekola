@@ -173,3 +173,43 @@ Tests : serveur `tests/editeur-v3.test.js`, `editeur-v2`, `editeur-pro`, `page-b
 | Lottie, envoi de fichiers SVG, liste de lecture vidéo | NON IMPLÉMENTÉE | — | — | pas de bibliothèque Lottie locale ; un SVG envoyé peut contenir du script (le SVG collé dans l'élément HTML est accepté, nettoyé) |
 | Modèles de thème : article de blog, archives, résultats de recherche, 404 | NON IMPLÉMENTÉE | — | — | ces pages sont rendues par le blog et le site principal, pas par le moteur de pages |
 | États « visité » et « désactivé » | NON IMPLÉMENTÉE | — | — | visité : limité par les navigateurs ; un bouton de page est un lien |
+
+# Étape 1 — bibliothèque de widgets façon Elementor (7 octobre 2026)
+
+## 1A — Audit (avant tout code)
+
+| Point | Où / comment |
+|---|---|
+| Éditeur | `views/marketing/page-builder.ejs` + `public/js/page-builder.js` (JS sans framework) |
+| Panneau de gauche | onglets Éléments / Blocs / Page ; bibliothèque rendue par `elementGroups()` / `renderElements()` |
+| Canevas | iframe `srcdoc` rendue par le serveur (`POST /marketing/pages/:id/rendu`), même gabarit que la page publique |
+| Définition des widgets | `src/marketing/pages/nodes.js` : `NODE_TYPES` (validation), `PALETTE` (icône, contenu de départ), `WIDGETS` (fiche de bibliothèque), `STYLE_PROPS` ; envoyé au navigateur par `editorSpec()` |
+| Rendu | `views/marketing-public/_node.ejs` (éditeur, aperçu, page publique) + comportements `public/js/landing.js` |
+| Données | `mk_landing_pages` : brouillon JSON (`draft`) et version en ligne ; versions `mk_page_versions` |
+| Sauvegarde | automatique (`PUT /brouillon`, 1 s), révision anti-conflit, copie de secours locale |
+| Sélection | `select()` : calques, inspecteur, canevas et mode Structure synchronisés |
+| Glisser-déposer | `draggableSource` / `canvasDropTarget` / `performDrop` / `moveTo` |
+| Responsive | `styles.desktop / tablet / mobile` (héritage de l'écran plus grand), media queries générées |
+| Styles | `pageCss()` : règles `.kw-n-<id>` par écran et par état, valeurs validées |
+| Publication | `POST /publier.json` → version, comparaison, restauration, programmation |
+| Permissions | rôles `viewer / editor / admin / owner` (`organizations.js`), `req.mk.can()` ; l'éditeur demande `forms.write` |
+
+## 1B — Bibliothèque
+
+- Onglet **Éléments** → sous-onglets **Widgets** (bibliothèque), **Composants** (composants de ce site) et **Globales** (composants partagés par tous les sites, `site_id` nul). L'ancien onglet « Composants » du haut est fusionné ici (pas de doublon). Sous-onglet mémorisé.
+- Recherche « Rechercher un widget... » en temps réel : nom, catégorie et mots associés (fiche `WIDGETS`), triés par pertinence.
+- Catégories dans l'ordre d'Elementor (Mise en page, Basique, Général, Formulaire, Avancé, Site, E-commerce, Réseaux sociaux, puis Sections prêtes), repliables, repli mémorisé ; la barre d'outils peut n'en afficher qu'une.
+- **Cadenas réel** : une fiche peut exiger une permission (`requires`). Aujourd'hui : HTML → `pages.code` (rôle administrateur). Sans elle : cadenas et explication dans la bibliothèque, ajout / copie / duplication / détachement refusés dans l'éditeur, contenu non modifiable dans l'inspecteur, et **refus du serveur** (`lockedWidgetChanges`, erreur `forbidden_widget`) à l'enregistrement du brouillon, à la création depuis un modèle et pour les composants. Déplacer ou supprimer un widget réservé existant reste permis.
+- Version du schéma de chaque widget exposée (`version`, 1 pour tous) ; la migration des réglages entre versions est prévue au lot 9 (widgets personnalisés).
+
+## Lot 1 — Mise en page
+
+| Widget | Interface | Fonctionnel | Persistant | Responsive | Testé |
+|---|---|---|---|---|---|
+| Conteneur (flexbox, imbricable) | oui | oui : balise HTML (div, section, header, footer, article, aside, nav), largeur encadrée / pleine largeur, direction, alignements, retour à la ligne, écart | oui | oui (styles par écran) | unitaire + navigateur |
+| Grille | oui | oui : colonnes, largeurs libres, lignes, remplissage (dont « sans trous »), alignement des cases, écarts, balise HTML | oui | oui : 2 colonnes au plus sur tablette et 1 sur mobile d'elles-mêmes, sauf réglage propre à l'écran | unitaire + navigateur + page publiée (1280 / 900 / 390 px) |
+| Colonnes / Colonne | oui (existant) | oui | oui | oui (empilées sur mobile) | suites existantes |
+| Pile / Groupe | oui | oui (+ balise HTML) | oui | oui | unitaire |
+| Section libre | oui (existant) | oui | oui | oui | suites existantes |
+
+Non fait dans ce lot : conteneur cliquable en entier (lien sur toute la zone : il faudrait interdire les liens et boutons à l'intérieur), sélecteur de structures prêtes à l'ajout d'un conteneur (les « Blocs » couvrent déjà ce besoin).

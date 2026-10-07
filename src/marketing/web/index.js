@@ -19,7 +19,7 @@ function createMarketingRouters({ db }) {
     const allowed = (permission) => can(membership.role, permission);
     req.mk = {
       role: membership.role, can: allowed, marketing,
-      ctx: { db, organizationId: marketing.organizationId, userId: user.id, bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL },
+      ctx: { db, organizationId: marketing.organizationId, userId: user.id, can: allowed, bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL },
     };
     res.locals.mk = { role: membership.role, can: allowed };
     res.locals.mkTheme = themeOf(marketing.settings, marketing.organizationId, user.id); // Paramètres → Apparence

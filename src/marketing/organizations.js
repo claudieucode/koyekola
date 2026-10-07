@@ -12,7 +12,7 @@ const PERMISSIONS = Object.freeze({
   "templates.read": "viewer", "templates.write": "editor",
   "campaigns.read": "viewer", "campaigns.write": "editor", "campaigns.send": "admin",
   "automations.read": "viewer", "automations.write": "editor", "automations.activate": "admin",
-  "forms.read": "viewer", "forms.write": "editor",
+  "forms.read": "viewer", "forms.write": "editor", "pages.code": "admin",
   "analytics.read": "viewer",
   "settings.read": "admin", "settings.write": "admin",
   "api_keys.manage": "admin", "webhooks.manage": "admin", "domains.manage": "admin",

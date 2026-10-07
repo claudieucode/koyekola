@@ -209,6 +209,8 @@ module.exports = () => {
         formId: page.form_id, formName: form ? form.name : null, formPublished: Boolean(form && form.status === "published"), indexable: Boolean(page.indexable), funnel: funnel ? { id: funnel.id, name: funnel.name, position: funnel.position } : null,
         abTest: (ctx.db.prepare("SELECT id, page_id FROM mk_page_tests WHERE variant_page_id = ? AND organization_id = ?").get(page.id, ctx.organizationId)) || null },
       content: page.working, types: blanks(ctx), spec: nodesLib.editorSpec(), canWrite: req.mk.can("forms.write"),
+      // Permissions exigées par certains widgets (cadenas de la bibliothèque ; revérifiées à l'enregistrement)
+      perms: { "pages.code": req.mk.can("pages.code") },
       blocks: require("../pages/patterns").catalog(ctx),
       courses: listCourses(ctx).map((c) => ({ id: c.id, title: c.title })),
       components: pages.listComponents(ctx, { siteId: page.site_id }).map((c) => ({ id: c.id, name: c.name, global: c.global, type: c.section && c.section.type })),

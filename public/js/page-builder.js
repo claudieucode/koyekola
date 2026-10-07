@@ -230,10 +230,25 @@
     if (changed) { store.set("collapsed-" + PAGE.id, collapsed); renderTree(); }
   }
 
+  // ---------- Widgets réservés (cadenas de la bibliothèque) ----------
+  // Sans la permission exigée, un widget réservé ne s'ajoute pas (ni par copier-coller, duplication, bloc ou composant) ;
+  // ceux déjà dans la page au chargement restent déplaçables. Le serveur refuse aussi l'enregistrement (même règle).
+  function deniedWidget(type) { var need = NT[type] && NT[type].requires; return need && !(boot.perms || {})[need] ? need : null; }
+  var lockedBaseline = {};
+  walk(function (n) { if (isNode(n) && deniedWidget(n.type)) lockedBaseline[n.id] = JSON.stringify(n.props || {}); });
+  function refusesLockedWidget(items) {
+    var bad = null;
+    var check = function (n) { if (!bad && isNode(n) && deniedWidget(n.type) && lockedBaseline[n.id] !== JSON.stringify(n.props || {})) bad = n; };
+    items.forEach(function (it) { check(it); if (kidsOf(it)) walk(check, kidsOf(it)); });
+    if (bad) toast("« " + NT[bad.type].label + " » : " + SPEC.widgetPermissions[deniedWidget(bad.type)] + ".", true);
+    return Boolean(bad);
+  }
+
   // ---------- Placement (règles de structure) ----------
   // Racine : uniquement des sections. Section libre et conteneurs : uniquement des éléments. Un élément posé à la racine
   // est placé dans une nouvelle section libre (jamais d'élément orphelin).
   function insertInto(parent, index, items) {
+    if (refusesLockedWidget(items)) return null;
     if (parent === null) {
       var sections = [], pending = [];
       items.forEach(function (it) { if (isNode(it)) pending.push(it); else { if (pending.length) { sections.push({ id: newId(), type: "layout", children: pending }); pending = []; } sections.push(it); } });
@@ -342,11 +357,12 @@
     var ids = topLevelSelection();
     if (!ids.length) return;
     if (ids.some(function (id) { return !isNode(byId(id)); }) && content.sections.length + ids.length > 30) { toast("Une page compte au plus 30 sections.", true); return; }
+    var made = ids.map(function (id) { return reId(clone(byId(id))); });
+    if (refusesLockedWidget(made)) return;
     nextLabel = "Duplication";
     change(function () {
-      var copies = [];
-      ids.forEach(function (id) { var l = locate(id); var c = reId(clone(l.item)); l.list.splice(l.index + 1, 0, c); copies.push(c.id); });
-      selection = copies;
+      ids.forEach(function (id, i) { var l = locate(id); l.list.splice(l.index + 1, 0, made[i]); });
+      selection = made.map(function (c) { return c.id; });
     });
   }
   // Ancre d'un élément (lien direct #ancre) : vérifiée ici pour un message immédiat, revérifiée par le serveur
@@ -423,7 +439,8 @@
   }
   // Grille : nombre de colonnes réellement affiché (réglage de l'écran, sinon celui mesuré dans le canevas)
   function gridColumnsOf(it) {
-    for (var j = BPS.indexOf(device); j >= 0; j--) { var s = it.styles && it.styles[BPS[j]]; if (s && s.columns !== undefined) return Number(s.columns); }
+    // Tablette / mobile sans réglage propre : la grille se resserre d'elle-même (voir pageCss) → lue dans le canevas
+    for (var j = BPS.indexOf(device); j >= (device === "desktop" ? 0 : 1); j--) { var s = it.styles && it.styles[BPS[j]]; if (s && s.columns !== undefined) return Number(s.columns); }
     var el = canvasEl(it.id);
     if (el) { var t = frame.contentWindow.getComputedStyle(el).gridTemplateColumns; if (t && t !== "none") return t.split(" ").length; }
     return 3;
@@ -608,6 +625,12 @@
   function inheritedValue(it, key) {
     if (styleState !== "normal") return undefined;
     var i = BPS.indexOf(device);
+    // Grille sans réglage propre à la tablette / au mobile : 2 colonnes au plus sur tablette, 1 sur mobile (voir pageCss)
+    if (it.type === "grid" && (key === "columns" || key === "gridTemplate") && i > 0) {
+      var own = function (b) { var st = it.styles && it.styles[b]; return st && (st.columns !== undefined || st.gridTemplate !== undefined); };
+      var d = (it.styles && it.styles.desktop) || {}, cols = d.gridTemplate ? String(d.gridTemplate).split(" ").length : Number(d.columns) || 0;
+      if (!own("tablet") && (device === "tablet" ? cols > 2 : !own("mobile") && cols > 1)) return key === "columns" ? (device === "tablet" ? 2 : 1) : undefined;
+    }
     for (var j = i - 1; j >= 0; j--) { var s = it.styles && it.styles[BPS[j]]; if (s && s[key] !== undefined) return s[key]; }
     return undefined;
   }
@@ -800,33 +823,39 @@
       e.dataTransfer.effectAllowed = "copy"; e.dataTransfer.setData("text/plain", "pb-new");
     });
   }
-  // Bibliothèque d'éléments (gauche = créer). La barre d'outils choisit la catégorie affichée ; la recherche porte sur tout.
+  // Bibliothèque de widgets (gauche = créer) : catégories dans l'ordre d'Elementor (fiches du registre, nodes.js WIDGETS),
+  // repliables (mémorisé dans ce navigateur). La barre d'outils peut n'afficher qu'une catégorie ; la recherche porte sur tout.
   var elCategory = store.get("el-category", "");
+  var elClosed = store.get("el-closed", []);
   function elementGroups() {
-    var groups = Object.keys(SPEC.categories).map(function (k) { return { key: k, label: SPEC.categories[k], items: SPEC.types.filter(function (t) { return t.category === k; }).map(function (t) { return { type: t.type, label: t.label, icon: t.icon, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; }) }; });
-    groups[0].items.unshift({ type: "layout", label: "Section libre", icon: "layout" });
-    var legacy = boot.types.map(function (t) { return { type: t.type, label: t.label, icon: "fileText", disabled: t.unavailable, legacy: true }; });
-    groups.push({ key: "form", label: "Formulaires", items: legacy.filter(function (t) { return t.type === "form"; }) });
+    var item = function (t) { var need = deniedWidget(t.type); return { type: t.type, label: t.label, icon: t.icon, keywords: t.keywords, locked: need ? "Widget " + SPEC.widgetPermissions[need] + "." : null, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; };
+    var groups = Object.keys(SPEC.widgetGroups).map(function (k) { return { key: k, label: SPEC.widgetGroups[k], items: SPEC.types.filter(function (t) { return t.group === k; }).map(item) }; });
+    groups[0].items.unshift({ type: "layout", label: "Section libre", icon: "layout", keywords: "section libre bloc zone" });
+    var legacy = boot.types.map(function (t) { return { type: t.type, label: t.label, icon: "fileText", disabled: t.unavailable, legacy: true, keywords: t.type === "form" ? "formulaire inscription email champs newsletter" : "section prete" }; });
+    groups.find(function (g) { return g.key === "form"; }).items = legacy.filter(function (t) { return t.type === "form"; });
     groups.push({ key: "sections", label: "Sections prêtes", items: legacy.filter(function (t) { return t.type !== "form"; }) });
     return groups;
   }
+  if (elCategory && !elementGroups().some(function (g) { return g.key === elCategory; })) { elCategory = ""; store.set("el-category", ""); }
   // Favoris et éléments récemment utilisés (préférences d'interface de cette personne, dans ce navigateur)
   var favs = store.get("el-favs", []), recents = store.get("el-recent", []);
   var elKey = function (it) { return (it.legacy ? "s:" : "n:") + it.type; };
   function useElement(it) { recents = [elKey(it)].concat(recents.filter(function (k) { return k !== elKey(it); })).slice(0, 6); store.set("el-recent", recents); }
   function toggleFav(it) { var k = elKey(it); favs = favs.indexOf(k) >= 0 ? favs.filter(function (x) { return x !== k; }) : favs.concat(k); store.set("el-favs", favs); renderElements($("[data-pb-el-search]").value); }
+  function toggleGroup(key) { elClosed = elClosed.indexOf(key) >= 0 ? elClosed.filter(function (k) { return k !== key; }) : elClosed.concat(key); store.set("el-closed", elClosed); renderElements($("[data-pb-el-search]").value); var b = $('[data-pb-group="' + key + '"]'); if (b) b.focus(); }
   function renderElements(filter) {
     var box = $("[data-pb-elements]");
     box.textContent = "";
     var f = norm(filter);
     var groups = elementGroups();
-    // Recherche : une seule liste, triée par pertinence (nom qui commence par le mot, nom qui le contient, mot associé)
+    // Recherche en temps réel : une seule liste, triée par pertinence (nom qui commence par le mot, nom qui le contient,
+    // catégorie, mot associé — « image » trouve aussi Galerie et Carrousel d'images)
     if (f) {
-      var score = function (it, g) { var l = norm(it.label); return l.indexOf(f) === 0 ? 0 : l.indexOf(f) >= 0 ? 1 : norm(g.label).indexOf(f) >= 0 ? 2 : norm(SEARCH_WORDS[it.type] || "").indexOf(f) >= 0 ? 3 : 9; };
+      var score = function (it, g) { var l = norm(it.label); return l.indexOf(f) === 0 ? 0 : l.indexOf(f) >= 0 ? 1 : norm(g.label).indexOf(f) >= 0 ? 2 : norm(it.keywords || "").indexOf(f) >= 0 ? 3 : 9; };
       var found = [];
       groups.forEach(function (g, gi) { g.items.forEach(function (it, ii) { var sc = score(it, g); if (sc < 9) found.push({ it: it, sc: sc, o: gi * 100 + ii }); }); });
       found.sort(function (x, y) { return x.sc - y.sc || x.o - y.o; });
-      groups = found.length ? [{ key: "results", label: found.length + " résultat" + (found.length > 1 ? "s" : ""), items: found.map(function (x) { return x.it; }) }] : [];
+      groups = found.length ? [{ key: "results", label: found.length + " résultat" + (found.length > 1 ? "s" : ""), items: found.map(function (x) { return x.it; }), fixed: true }] : [];
     }
     if (!f && !elCategory) {
       var all = [].concat.apply([], groups.map(function (g) { return g.items; }));
@@ -840,28 +869,35 @@
       box.appendChild(h("div", { class: "pb-cat-head" }, h("strong", { text: g0 ? g0.label : "" }), h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: function () { setCategory(""); } }, "Tout afficher")));
     }
     shown.forEach(function (g) {
-      var items = g.items.filter(function (it) { return !f || norm(it.label).indexOf(f) >= 0 || norm(g.label).indexOf(f) >= 0 || norm(SEARCH_WORDS[it.type] || "").indexOf(f) >= 0; });
-      if (!items.length) return;
-      var ul = h("ul", { class: "pb-palette" });
-      items.forEach(function (it) {
-        var btn = h("button", { type: "button", class: "pb-pal-item", disabled: !canWrite || Boolean(it.disabled), "data-tip": it.disabled || null, onclick: function () { useElement(it); if (it.legacy) addLegacy(it.type); else addElement(it.type); } }, icon(it.icon), h("span", { text: it.label }));
-        if (!it.disabled) draggableSource(btn, it.legacy ? { type: it.type, section: true } : { type: it.type }, function (target) { useElement(it); if (it.legacy) addLegacy(it.type, target); else addElement(it.type, target); });
+      if (!g.items.length) return;
+      var ul = h("ul", { class: "pb-palette", id: "pb-group-" + g.key });
+      g.items.forEach(function (it) {
+        var off = it.disabled || it.locked;
+        var btn = h("button", { type: "button", class: "pb-pal-item" + (it.locked ? " is-locked" : ""), disabled: !canWrite || Boolean(it.disabled), "aria-disabled": it.locked ? "true" : null, "data-tip": off || null, "data-widget": it.type,
+          onclick: function () { if (it.locked) { toast(it.label + " : " + it.locked, true); return; } useElement(it); if (it.legacy) addLegacy(it.type); else addElement(it.type); } },
+          icon(it.icon), h("span", { text: it.label }), f && it.legacy && it.type !== "form" ? h("span", { class: "pb-pal-kind", text: "Section prête" }) : null, it.locked ? h("span", { class: "pb-pal-lock", "aria-label": "Réservé" }, icon("lock")) : null);
+        if (!off) draggableSource(btn, it.legacy ? { type: it.type, section: true } : { type: it.type }, function (target) { useElement(it); if (it.legacy) addLegacy(it.type, target); else addElement(it.type, target); });
         var isFav = favs.indexOf(elKey(it)) >= 0;
         var star = h("button", { type: "button", class: "pb-fav", "aria-pressed": String(isFav), "aria-label": (isFav ? "Retirer des favoris : " : "Ajouter aux favoris : ") + it.label, "data-tip": isFav ? "Retirer des favoris" : "Ajouter aux favoris", onclick: function (e) { e.stopPropagation(); toggleFav(it); } }, isFav ? "★" : "☆");
         ul.appendChild(h("li", { class: "pb-pal-li" }, btn, star));
       });
-      box.appendChild(h("section", { class: "pb-pal-group" }, elCategory && !f ? null : h("h3", { class: "pb-sub", text: g.label }), ul));
+      // Catégorie repliable (sauf résultats de recherche et catégorie choisie dans la barre d'outils)
+      var closed = !f && !elCategory && elClosed.indexOf(g.key) >= 0;
+      var head = f || elCategory ? (f ? h("h3", { class: "pb-sub", text: g.label }) : null)
+        : h("h3", { class: "pb-pal-head" }, h("button", { type: "button", class: "pb-pal-toggle", "aria-expanded": String(!closed), "aria-controls": "pb-group-" + g.key, "data-pb-group": g.key, onclick: function () { toggleGroup(g.key); } },
+          icon(closed ? "chevronRight" : "chevronDown"), h("span", { text: g.label }), h("span", { class: "pb-pal-count", text: String(g.items.length) })));
+      ul.hidden = closed;
+      box.appendChild(h("section", { class: "pb-pal-group", "data-group": g.key }, head, ul));
     });
-    if (box.querySelectorAll(".pb-pal-group").length === 0) box.appendChild(h("p", { class: "pb-hint", text: "Aucun élément ne correspond." }));
+    if (box.querySelectorAll(".pb-pal-group").length === 0) box.appendChild(h("p", { class: "pb-hint", text: "Aucun widget ne correspond." }));
   }
-  // Mots de recherche supplémentaires (ce que l'on tape naturellement pour trouver un élément)
-  var SEARCH_WORDS = { image: "photo visuel illustration media", gallery: "photos images diaporama media", video: "youtube vimeo film media", audio: "son musique podcast mp3", button: "bouton cta appel action lien", link: "lien url", heading: "titre h1 h2 texte", text: "paragraphe texte riche", accordion: "faq questions reponses accordeon", tabs: "onglets", columns: "colonnes grille mise en page layout", column: "colonne", grid: "grille tableau colonnes lignes", container: "boite bloc conteneur div", stack: "pile empiler", spacer: "espace vide marge", divider: "separateur ligne trait", countdown: "compte a rebours minuteur urgence", course: "formation cours produit vente", form: "formulaire inscription email champs", icon: "icone pictogramme", table: "tableau", badge: "etiquette label pastille nouveau", timeline: "chronologie etapes histoire parcours programme", progress: "progression barre pourcentage jauge", toggle: "bascule deplier details afficher plus", alert: "alerte avertissement information notice message", counter: "compteur chiffre statistique nombre", testimonial: "temoignage avis client citation note etoiles", pricing: "tarif prix offre abonnement", breadcrumb: "fil ariane chemin navigation", social: "reseaux sociaux facebook instagram linkedin youtube", modal: "fenetre modale popup pop-up dialogue panneau off-canvas lateral", html: "html code balises svg", embed: "integrer embed iframe carte google maps calendly spotify soundcloud typeform loom canva", iconlist: "liste icones puces avantages", tooltip: "infobulle aide explication survol", hotspot: "points interet image interactive hotspot", posts: "articles blog actualites derniers dynamique", courselist: "formations catalogue produits cours dynamique", search: "recherche rechercher champ", account: "compte connexion panier utilisateur", dyntext: "texte dynamique prenom date personnalise variable", menu: "menu navigation liens nav", carousel: "carrousel slider diaporama images defilant", quote: "citation temoignage", layout: "section libre bloc" };
   // Choisir une catégorie (barre d'outils) : le panneau de gauche s'ouvre sur la bibliothèque correspondante
   function setCategory(key) {
     elCategory = key;
     store.set("el-category", key);
-    if (key === "blocks" || key === "components") openTab($(key === "blocks" ? "#pb-tab-blocks" : "#pb-tab-components"));
-    else { openTab($("#pb-tab-elements")); $("[data-pb-el-search]").value = ""; renderElements(""); }
+    if (key === "blocks") openTab($("#pb-tab-blocks"));
+    else if (key === "components") { openTab($("#pb-tab-elements")); openLibTab($("#pb-lib-components")); }
+    else { openTab($("#pb-tab-elements")); openLibTab($("#pb-lib-widgets")); $("[data-pb-el-search]").value = ""; renderElements(""); }
     $$(".pb-tool[data-cat]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.cat === key)); });
   }
   $("[data-pb-el-search]").addEventListener("input", function () { renderElements(this.value); });
@@ -871,15 +907,14 @@
     { key: "select", label: "Sélection (V)", icon: "mousePointer", mode: true },
     { key: "hand", label: "Main (H)", tip: "Main : faire défiler la page en la glissant (H)", icon: "arrowRightLeft", mode: true },
     { sep: true },
-    { cat: "structure", label: "Structure", tip: "Structure : section, conteneur, colonnes, grille…", icon: "layout" },
-    { cat: "text", label: "Texte", tip: "Texte : titre, paragraphe, liste, citation, tableau, badge, alerte, chronologie…", icon: "type" },
-    { cat: "media", label: "Média", tip: "Média : image, galerie, vidéo, audio, icône", icon: "image" },
-    { cat: "interaction", label: "Interaction", tip: "Interaction : bouton, lien, accordéon, onglets, bascule, menu, fil d'Ariane, réseaux sociaux, fenêtre", icon: "mousePointer" },
-    { cat: "form", label: "Formulaires", tip: "Formulaire d'inscription de la page", icon: "fileText" },
-    { cat: "marketing", label: "Marketing", tip: "Marketing : compte à rebours, compteur, témoignage, offre tarifaire, barre de progression", icon: "clock" },
-    { cat: "commerce", label: "Formations", tip: "Formations du catalogue", icon: "graduation" },
-    { cat: "dynamic", label: "Contenu dynamique", tip: "Contenu dynamique : derniers articles, formations, recherche, compte du visiteur, texte personnalisé", icon: "zap" },
-    { cat: "advanced", label: "Avancé", tip: "Avancé : HTML sécurisé, contenu intégré (carte, agenda, vidéo…)", icon: "braces" },
+    { cat: "layout", label: "Mise en page", tip: "Mise en page : section, conteneur, grille, colonnes, pile, groupe", icon: "layout" },
+    { cat: "basic", label: "Basique", tip: "Basique : titre, image, texte, vidéo, bouton, séparateur, espaceur, icône…", icon: "type" },
+    { cat: "general", label: "Général", tip: "Général : onglets, accordéon, carrousel, galerie, compteur, témoignage, alerte, HTML…", icon: "listChecks" },
+    { cat: "form", label: "Formulaire", tip: "Formulaire d'inscription de la page", icon: "fileText" },
+    { cat: "advanced", label: "Avancé", tip: "Avancé : compte à rebours, offre tarifaire, fenêtre, infobulle, points d'intérêt, contenu intégré, texte dynamique", icon: "zap" },
+    { cat: "site", label: "Site", tip: "Site : menu, fil d'Ariane, recherche, compte du visiteur, derniers articles", icon: "globe" },
+    { cat: "commerce", label: "E-commerce", tip: "E-commerce : formations du catalogue (vrai panier KOLAKISA)", icon: "cart" },
+    { cat: "social", label: "Réseaux sociaux", tip: "Réseaux sociaux : icônes de vos comptes", icon: "share2" },
     { sep: true },
     { cat: "sections", label: "Sections prêtes", tip: "Sections prêtes : bandeau, points forts, FAQ, appel à l'action…", icon: "listChecks" },
     { cat: "blocks", label: "Blocs", tip: "Blocs : en-têtes, tarifs, témoignages, colonnes… prêts à l'emploi", icon: "columns" },
@@ -977,23 +1012,28 @@
     });
   }
   function fetchComponent(id) { return api("GET", "/marketing/site-web/composants/" + id + ".json").then(function (r) { return r.component; }); }
+  // Onglet Éléments › Composants (ceux de ce site) et › Globales (partagés par tous les sites de l'organisation)
   function renderComponents() {
-    var ul = $("[data-pb-components]");
-    ul.textContent = "";
-    if (!components.length) { ul.appendChild(h("li", {}, h("p", { class: "pb-hint", text: "Aucun composant. Sélectionnez un élément ou une section, puis « Enregistrer comme composant » (inspecteur, onglet Avancé)." }))); return; }
-    components.forEach(function (c) {
+    [[$("[data-pb-components]"), false, "Aucun composant de ce site. Sélectionnez un élément ou une section, puis « Enregistrer comme composant » (inspecteur, onglet Avancé)."],
+     [$("[data-pb-globals]"), true, "Aucun élément global. À l'enregistrement d'un composant, cochez « Utilisable par tous les sites (global) » : il apparaît ici, sur toutes les pages de tous vos sites."]].forEach(function (x) {
+      x[0].textContent = "";
+      var list = components.filter(function (c) { return Boolean(c.global) === x[1]; });
+      if (!list.length) x[0].appendChild(h("li", {}, h("p", { class: "pb-hint", text: x[2] })));
+      list.forEach(function (c) { x[0].appendChild(componentRow(c)); });
+    });
+  }
+  function componentRow(c) {
       var insertSync = function (target) { addItems([{ type: "component", componentId: c.id }], { parent: null, index: target && target.parent === null ? target.index : insertionPoint({ type: "component" }).index }); };
       var syncBtn = h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: !canWrite, onclick: function () { insertSync(null); } }, "Synchronisé");
       draggableSource(syncBtn, { type: "component" }, insertSync);
-      ul.appendChild(h("li", { class: "pb-comp" },
+      return h("li", { class: "pb-comp" },
         h("div", {}, h("strong", { text: c.name }), h("span", { class: "pb-hint", text: (c.global ? "Global" : "Ce site") + " · " + (c.type === "layout" ? "Section libre" : LEGACY[c.type] ? LEGACY[c.type].label : c.type) })),
         h("div", { class: "pb-row pb-wrap" }, syncBtn,
           h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () { fetchComponent(c.id).then(function (comp) { var s = markSection(reId(clone(comp.section))); ensureIds([s]); addItems([s], { parent: null, index: insertionPoint({ type: "layout" }).index }); }, apiFail); } }, "Copie"),
           h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () {
             if (!window.confirm("Supprimer le composant « " + c.name + " » ? (Refusé s'il est encore utilisé par une page.)")) return;
             api("POST", "/marketing/site-web/composants/" + c.id + "/supprimer", {}).then(function () { components = components.filter(function (x) { return x.id !== c.id; }); renderComponents(); toast("Composant supprimé."); }, apiFail);
-          } }, "Supprimer"))));
-    });
+          } }, "Supprimer")));
   }
   // Enregistrer un élément ou une section comme composant (un élément est enregistré dans une section libre)
   function saveAsComponent(it, name, global) {
@@ -1001,7 +1041,7 @@
     if (isNode(it)) section = { type: "layout", children: [section] };
     delete section.id; delete section.locked;
     return api("POST", "/marketing/site-web/composants", { name: name, section: section, global: global, siteId: PAGE.siteId }).then(function (r) {
-      components.push(r.component); renderComponents(); toast("Composant « " + r.component.name + " » enregistré (onglet Composants)."); return r.component;
+      components.push(r.component); renderComponents(); toast("Composant « " + r.component.name + " » enregistré (Éléments › " + (r.component.global ? "Globales" : "Composants") + ")."); return r.component;
     }, apiFail);
   }
 
@@ -1038,6 +1078,7 @@
   // Contenu de chaque élément (onglet « Contenu »)
   function nodeContentFields(it, box, disabled) {
     var p = it.props || (it.props = {});
+    if (deniedWidget(it.type)) { box.appendChild(h("p", { class: "pb-note is-warn" }, icon("lock"), h("span", { text: "Widget " + SPEC.widgetPermissions[deniedWidget(it.type)] + " : vous pouvez le déplacer ou le supprimer, pas le modifier." }))); disabled = true; }
     var set = function (k, light) { return function (v) { setProp(it.id, k, v, { key: it.id + ":" + k, light: light !== false }); }; };
     switch (it.type) {
       case "heading":
@@ -1483,7 +1524,7 @@
     column: { kind: "Colonne", groups: BOX },
     stack: { kind: "Pile", groups: BOX },
     group: { kind: "Groupe", groups: BOX },
-    grid: { kind: "Grille", groups: { layout: ["columns", "gridTemplate", "gridRows", "gap", "rowGap", "columnGap", "alignItems", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null } },
+    grid: { kind: "Grille", groups: { layout: ["columns", "gridTemplate", "gridRows", "gridAutoFlow", "gap", "rowGap", "columnGap", "justifyItems", "alignItems", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null } },
     heading: { kind: "Titre", groups: TEXTUAL, order: TEXT_ORDER },
     text: { kind: "Texte", groups: TEXTUAL, order: TEXT_ORDER },
     list: { kind: "Liste", groups: TEXTUAL, order: TEXT_ORDER },
@@ -2241,9 +2282,16 @@
     }
     if (it.type === "columns") columnsContent(it, box);
     else if (it.type === "grid") gridContent(it, box);
+    if (["container", "grid", "stack", "group"].indexOf(it.type) >= 0) {
+      var dis = !canWrite || lockedDeep(it.id), p = it.props || {};
+      if (it.type === "container") box.appendChild(selectField("Largeur du contenu", p.full ? "full" : "boxed", [["boxed", "Encadrée (1100 px, centrée)"], ["full", "Pleine largeur"]], function (v) { setProp(it.id, "full", v === "full"); }, { disabled: dis }));
+      box.appendChild(selectField("Balise HTML", p.tag || "div", SPEC.boxTags.map(function (t) { return [t, BOX_TAG_LABEL[t] || t]; }), function (v) { setProp(it.id, "tag", v); }, { disabled: dis }));
+      box.appendChild(h("p", { class: "pb-hint", text: "La balise donne le sens de la zone aux lecteurs d'écran et aux moteurs de recherche ; l'affichage ne change pas." }));
+    }
     box.appendChild(h("div", { class: "pb-row pb-wrap" }, h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: !canWrite || lockedDeep(it.id) || it.type === "columns", onclick: function () { openCommands("Ajouter", { inside: it.id }); } }, icon("plus"), "Ajouter un élément à l'intérieur")));
     box.appendChild(h("p", { class: "pb-hint", text: it.type === "columns" ? "Chaque colonne reçoit ses propres éléments : sélectionnez une colonne puis ajoutez-y un élément (ou glissez-le dedans)." : "Vous pouvez aussi glisser un élément de la bibliothèque (à gauche) directement dedans." }));
   }
+  var BOX_TAG_LABEL = { div: "div (neutre)", section: "section (partie de la page)", header: "header (en-tête)", footer: "footer (pied)", article: "article (contenu autonome)", aside: "aside (contenu annexe)", nav: "nav (navigation)" };
   // Colonnes : nombre, largeur de chacune (en % de la ligne, pour l'écran modifié), ordre
   function columnsContent(it, box) {
     var kids = kidsOf(it), dis = !canWrite || lockedDeep(it.id);
@@ -2286,7 +2334,8 @@
     var r = stepper("Lignes", rows, "rows", ["Retirer la dernière ligne", function () { gridRemoveRow(it.id); }], ["Ajouter une ligne", function () { gridAddRow(it.id); }], n <= cols, n >= 96);
     r.querySelector("output").setAttribute("data-pb-grid-rows", "");
     box.appendChild(r);
-    box.appendChild(h("p", { class: "pb-hint", text: "Colonnes pour l'écran « " + bpLabel(device) + " » ; une ligne = " + cols + " cellule(s). L'écart se règle dans Style › Mise en page." }));
+    box.appendChild(h("p", { class: "pb-hint", text: "Colonnes pour l'écran « " + bpLabel(device) + " » ; une ligne = " + cols + " cellule(s). L'écart, le remplissage et l'alignement des cases se règlent dans Style › Mise en page." }));
+    if (device === "desktop") box.appendChild(h("p", { class: "pb-hint", text: "Sur tablette, la grille passe d'elle-même à 2 colonnes au plus, et à 1 sur mobile — sauf si vous réglez ces écrans (icônes d'écran en haut)." }));
   }
   function advancedTab(items, box, locked) {
     var it = items[0];
@@ -2494,6 +2543,7 @@
         }, { multiline: fd[1] === "textarea" || fd[1] === "markdown" || fd[1] === "lines", disabled: !canWrite || lockedDeep(s.id) }));
       });
       if (canWrite) holder.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () {
+        if (refusesLockedWidget([reId(clone(sec))])) return;
         change(function () { var l = locate(s.id); var copy = markSection(reId(clone(sec))); copy.id = s.id; ensureIds([copy]); if (s.hideOn) copy.hideOn = s.hideOn; if (s.name) copy.name = s.name; l.list[l.index] = copy; });
         toast("Composant détaché : cette section est maintenant une copie indépendante.");
       } }, "Détacher (copie indépendante)"));
@@ -3745,6 +3795,14 @@
   split.addEventListener("keydown", function (e) { if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); panels.layers = Math.min(80, Math.max(15, panels.layers + (e.key === "ArrowDown" ? 4 : -4))); applyPanels(); } });
 
   // ---------- Onglets du panneau gauche ----------
+  // Bibliothèque (onglet Éléments) : Widgets, Composants, Globales — onglet mémorisé dans ce navigateur
+  var libTabs = $$(".pb-subtabs [role=tab]");
+  function openLibTab(tab) { libTabs.forEach(function (t) { var on = t === tab; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; document.getElementById(t.getAttribute("aria-controls")).hidden = !on; }); store.set("lib-tab", tab.id); }
+  libTabs.forEach(function (t, i) {
+    t.addEventListener("click", function () { openLibTab(t); });
+    t.addEventListener("keydown", function (e) { if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return; var next = libTabs[(i + (e.key === "ArrowRight" ? 1 : libTabs.length - 1)) % libTabs.length]; openLibTab(next); next.focus(); });
+  });
+  if (document.getElementById(store.get("lib-tab", ""))) openLibTab(document.getElementById(store.get("lib-tab", "")));
   var tabs = $$(".pb-tabs [role=tab]");
   function openTab(tab) { if (panels.leftHidden) togglePanel("left"); tabs.forEach(function (t) { var on = t === tab; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; document.getElementById(t.getAttribute("aria-controls")).hidden = !on; }); }
   tabs.forEach(function (t, i) {

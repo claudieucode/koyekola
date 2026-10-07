@@ -79,6 +79,13 @@ function normalizeContent(ctx, page, input = {}) {
   };
 }
 
+// Widgets réservés (HTML…) : vérifiés pour la personne connectée (ctx.can, posé par les routes web). Un appel interne
+// sans ctx.can (script, tâche de fond, tests du moteur) n'est pas limité.
+function checkWidgetRights(ctx, before, after) {
+  if (typeof ctx.can !== "function") return;
+  try { require("./nodes").lockedWidgetChanges(before, after, ctx.can); } catch (e) { throw new MarketingError("forbidden_widget", e.message); }
+}
+
 // Enregistrement du BROUILLON (sauvegarde automatique de l'éditeur). `revision` : celle que l'éditeur a chargée ; si la
 // page a été enregistrée entre-temps ailleurs, rien n'est écrasé (erreur « conflict »).
 function saveDraft(ctx, id, input = {}, { revision } = {}) {
@@ -86,6 +93,7 @@ function saveDraft(ctx, id, input = {}, { revision } = {}) {
   if (page.archived_at) throw bad("Cette page est archivée : restaurez-la pour la modifier.");
   if (!Number.isInteger(revision)) throw bad("Révision manquante.");
   const content = normalizeContent(ctx, page, input);
+  checkWidgetRights(ctx, [...page.working.sections, ...page.published.sections], content.sections);
   const next = revision + 1;
   const changed = ctx.db.prepare("UPDATE mk_landing_pages SET draft = ?, revision = ?, updated_at = datetime('now') WHERE id = ? AND organization_id = ? AND revision = ?")
     .run(JSON.stringify(content), next, id, ctx.organizationId, revision).changes;
@@ -182,6 +190,7 @@ function createPage(ctx, { name, siteId = null, kind = "page", template = null }
   ctx.db.prepare("UPDATE mk_landing_pages SET kind = ?, site_id = ? WHERE id = ?").run(kind, siteId, page.id);
   if (fromTemplate) {
     const sections = normalizeSections(ctx, fromTemplate.map((s) => ({ ...s, id: newSectionId() })));
+    checkWidgetRights(ctx, [], sections);
     ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(sections), page.id);
     if (mine && mine.content.theme) ctx.db.prepare("UPDATE mk_landing_pages SET theme = ? WHERE id = ?").run(JSON.stringify(normalizeTheme(mine.content.theme)), page.id);
     audit(ctx, "page.created_from_template", "landing", page.id, { template });
@@ -338,6 +347,7 @@ function createComponent(ctx, { name, section, siteId = null } = {}) {
   if (!n) throw bad("Le nom du composant est obligatoire.");
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   if (ctx.db.prepare("SELECT 1 FROM mk_web_components WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, n)) throw new MarketingError("duplicate", "Un composant porte déjà ce nom.");
+  checkWidgetRights(ctx, [], [componentSection(ctx, section)]);
   const id = Number(ctx.db.prepare("INSERT INTO mk_web_components (organization_id, site_id, name, section, created_by) VALUES (?, ?, ?, ?, ?)")
     .run(ctx.organizationId, siteId, n, JSON.stringify(componentSection(ctx, section)), ctx.userId ?? null).lastInsertRowid);
   audit(ctx, "component.created", "component", id, {});
@@ -351,6 +361,7 @@ function updateComponent(ctx, id, { name, section } = {}) {
   const dup = ctx.db.prepare("SELECT id FROM mk_web_components WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, n);
   if (dup && dup.id !== c.id) throw new MarketingError("duplicate", "Un composant porte déjà ce nom.");
   const s = section === undefined ? c.section : componentSection(ctx, section);
+  checkWidgetRights(ctx, [c.section], [s]);
   ctx.db.prepare("UPDATE mk_web_components SET name = ?, section = ?, updated_at = datetime('now') WHERE id = ?").run(n, JSON.stringify(s), c.id);
   audit(ctx, "component.updated", "component", c.id, {});
   return getComponent(ctx, c.id);

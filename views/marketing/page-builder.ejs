@@ -60,22 +60,32 @@
       <div class="pb-tabs" role="tablist" aria-label="Panneau de gauche">
         <button type="button" role="tab" id="pb-tab-elements" aria-controls="pb-pane-elements" aria-selected="true">Éléments</button>
         <button type="button" role="tab" id="pb-tab-blocks" aria-controls="pb-pane-blocks" aria-selected="false" tabindex="-1">Blocs</button>
-        <button type="button" role="tab" id="pb-tab-components" aria-controls="pb-pane-components" aria-selected="false" tabindex="-1">Composants</button>
         <button type="button" role="tab" id="pb-tab-page" aria-controls="pb-pane-page" aria-selected="false" tabindex="-1">Page</button>
       </div>
       <div class="pb-pane" id="pb-pane-elements" role="tabpanel" aria-labelledby="pb-tab-elements">
-        <label class="sr-only" for="pb-el-search">Rechercher un élément</label>
-        <input class="pb-search" id="pb-el-search" type="search" placeholder="Rechercher un élément…" data-pb-el-search>
-        <p class="pb-hint">Glissez un élément dans la page ou dans les calques ; un clic l'ajoute après la sélection (ou dedans, si c'est un conteneur).</p>
-        <div data-pb-elements></div>
+        <div class="pb-subtabs" role="tablist" aria-label="Bibliothèque">
+          <button type="button" role="tab" id="pb-lib-widgets" aria-controls="pb-lib-pane-widgets" aria-selected="true">Widgets</button>
+          <button type="button" role="tab" id="pb-lib-components" aria-controls="pb-lib-pane-components" aria-selected="false" tabindex="-1">Composants</button>
+          <button type="button" role="tab" id="pb-lib-globals" aria-controls="pb-lib-pane-globals" aria-selected="false" tabindex="-1">Globales</button>
+        </div>
+        <div id="pb-lib-pane-widgets" role="tabpanel" aria-labelledby="pb-lib-widgets">
+          <label class="sr-only" for="pb-el-search">Rechercher un widget</label>
+          <input class="pb-search" id="pb-el-search" type="search" placeholder="Rechercher un widget..." data-pb-el-search autocomplete="off">
+          <p class="pb-hint">Glissez un widget dans la page ou dans les calques ; un clic l'ajoute après la sélection (ou dedans, si c'est un conteneur).</p>
+          <div data-pb-elements></div>
+        </div>
+        <div id="pb-lib-pane-components" role="tabpanel" aria-labelledby="pb-lib-components" hidden>
+          <p class="pb-hint">Composants de ce site. « Synchronisé » : s'affiche partout dans sa dernière version (modifier la source modifie toutes les pages). « Copie » : indépendante.</p>
+          <ul class="pb-components" data-pb-components></ul>
+        </div>
+        <div id="pb-lib-pane-globals" role="tabpanel" aria-labelledby="pb-lib-globals" hidden>
+          <p class="pb-hint">Éléments globaux : partagés par tous les sites de votre organisation. Insérés « Synchronisé », une modification de la source s'applique partout.</p>
+          <ul class="pb-components" data-pb-globals></ul>
+        </div>
       </div>
       <div class="pb-pane" id="pb-pane-blocks" role="tabpanel" aria-labelledby="pb-tab-blocks" hidden>
         <p class="pb-hint">Blocs prêts à l'emploi, faits de vrais éléments entièrement modifiables. Les textes entre crochets sont à remplacer.</p>
         <div data-pb-blocks></div>
-      </div>
-      <div class="pb-pane" id="pb-pane-components" role="tabpanel" aria-labelledby="pb-tab-components" hidden>
-        <p class="pb-hint">« Synchronisé » : s'affiche partout dans sa dernière version (modifier la source modifie toutes les pages). « Copie » : indépendante.</p>
-        <ul class="pb-components" data-pb-components></ul>
       </div>
       <div class="pb-pane" id="pb-pane-page" role="tabpanel" aria-labelledby="pb-tab-page" hidden>
         <div data-pb-page-settings></div>

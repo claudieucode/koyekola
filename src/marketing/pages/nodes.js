@@ -81,6 +81,8 @@ const STYLE_PROPS = {
   // Largeurs des colonnes d'une grille, ex. « 2fr 1fr » ou « 240px 1fr » (remplace le nombre de colonnes égales)
   gridTemplate: { css: "grid-template-columns", check: gridTrack, out: (v) => v.split(" ").map((t) => (/fr$/.test(t) ? `minmax(0, ${t})` : t)).join(" "), group: "layout" },
   gridRows: { css: "grid-template-rows", check: numberIn(1, 12, { integer: true }), out: (n) => `repeat(${n}, auto)`, group: "layout" },
+  gridAutoFlow: { css: "grid-auto-flow", check: oneOf("row", "column", "row dense", "column dense"), group: "layout" },
+  justifyItems: { css: "justify-items", check: oneOf("stretch", "start", "center", "end"), group: "layout" },
   // Élément enfant d'une grille : nombre de colonnes / lignes occupées
   gridColumnSpan: { css: "grid-column", check: numberIn(1, 12, { integer: true }), out: (n) => `span ${n}`, group: "layout" },
   gridRowSpan: { css: "grid-row", check: numberIn(1, 6, { integer: true }), out: (n) => `span ${n}`, group: "layout" },
@@ -235,13 +237,18 @@ function declarations(set) {
 
 // ---------- Registre des éléments ----------
 // container : accepte des enfants. Les éléments « feuilles » portent leur contenu dans props.
+// Balise HTML d'un conteneur (sens de la zone pour les lecteurs d'écran et les moteurs de recherche) : « div » par défaut,
+// jamais enregistrée. Pas de « main » : la page a déjà sa zone principale.
+const BOX_TAGS = ["div", "section", "header", "footer", "article", "aside", "nav"];
+const boxTag = (p) => { const tag = oneOf(...BOX_TAGS)(p.tag); return tag && tag !== "div" ? { tag } : {}; };
 const NODE_TYPES = {
-  container: { label: "Conteneur", category: "structure", container: true, props: () => ({}) },
+  // Largeur du contenu : encadrée (1100 px centrés, par défaut) ou pleine largeur
+  container: { label: "Conteneur", category: "structure", container: true, props: (p) => ({ ...boxTag(p), ...(p.full === true ? { full: true } : {}) }) },
   columns: { label: "Colonnes", category: "structure", container: true, props: () => ({}) },
   column: { label: "Colonne", category: "structure", container: true, props: () => ({}) },
-  grid: { label: "Grille", category: "structure", container: true, props: () => ({}) },
-  stack: { label: "Pile", category: "structure", container: true, props: () => ({}) },
-  group: { label: "Groupe", category: "structure", container: true, props: () => ({}) },
+  grid: { label: "Grille", category: "structure", container: true, props: boxTag },
+  stack: { label: "Pile", category: "structure", container: true, props: boxTag },
+  group: { label: "Groupe", category: "structure", container: true, props: boxTag },
   spacer: { label: "Espace", category: "structure", props: (p) => ({ size: oneOf("8", "16", "24", "32", "48", "64", "80", "96", "128")(String(p.size)) || "32" }) },
   divider: { label: "Séparateur", category: "structure", props: (p) => ({
     lineStyle: oneOf("solid", "dashed", "dotted", "double")(p.lineStyle) || "solid",
@@ -375,7 +382,7 @@ const NODE_TYPES = {
     if (!items.length) throw new Error(`${at} (menu) : au moins un lien avec un texte et une adresse.`);
     return { items, label: line(p.label, 60) || "Menu", vertical: p.vertical === true, mobileToggle: p.mobileToggle === true };
   } },
-  carousel: { label: "Carrousel", category: "media", props: (p, at, h) => {
+  carousel: { label: "Carrousel d'images", category: "media", props: (p, at, h) => {
     const images = (Array.isArray(p.images) ? p.images : []).slice(0, 24).map((im, i) => {
       const src = h.imageUrl(im && im.src, `${at} (image ${i + 1} du carrousel)`);
       const alt = line(im && im.alt, 200);
@@ -530,6 +537,85 @@ const NODE_TYPES = {
     return { name, label: line(p.label, 80), size: oneOf("16", "24", "32", "48", "64", "96", "128")(String(p.size)) || "32", link, newTab: p.newTab === true && link.startsWith("https://") };
   } },
 };
+// ---------- Bibliothèque de widgets (panneau « Éléments ») ----------
+// Catégories dans l'ordre d'Elementor. Chaque type d'élément y a une fiche : catégorie, mots de recherche (ce que l'on tape
+// naturellement), permission exigée pour l'AJOUTER ou le MODIFIER (le cadenas de la bibliothèque, vérifié aussi à
+// l'enregistrement, voir lockedWidgetChanges) et version du schéma de ses réglages.
+const WIDGET_GROUPS = { layout: "Mise en page", basic: "Basique", general: "Général", form: "Formulaire", advanced: "Avancé", site: "Site", commerce: "E-commerce", social: "Réseaux sociaux" };
+const WIDGETS = {
+  container: ["layout", "boite bloc conteneur div section flexbox flex zone"],
+  grid: ["layout", "grille tableau colonnes lignes cases grid"],
+  columns: ["layout", "colonnes grille mise en page layout cote a cote"],
+  column: ["layout", "colonne"],
+  stack: ["layout", "pile empiler vertical"],
+  group: ["layout", "groupe regrouper ensemble"],
+  heading: ["basic", "titre h1 h2 h3 intertitre texte"],
+  image: ["basic", "photo visuel illustration media image"],
+  text: ["basic", "editeur de texte paragraphe texte riche"],
+  video: ["basic", "youtube vimeo film media"],
+  button: ["basic", "bouton cta appel action lien"],
+  divider: ["basic", "separateur ligne trait"],
+  spacer: ["basic", "espaceur espace vide marge"],
+  icon: ["basic", "icone pictogramme symbole"],
+  link: ["basic", "lien url"],
+  list: ["basic", "liste puces numerotee"],
+  tabs: ["general", "onglets"],
+  accordion: ["general", "faq questions reponses accordeon"],
+  toggle: ["general", "bascule deplier details afficher plus"],
+  carousel: ["general", "carrousel slider diaporama images defilant photos media"],
+  gallery: ["general", "galerie photos images diaporama media basique"],
+  iconlist: ["general", "liste icones puces avantages"],
+  counter: ["general", "compteur chiffre statistique nombre"],
+  progress: ["general", "progression barre pourcentage jauge"],
+  testimonial: ["general", "temoignage avis client citation note etoiles evaluation"],
+  alert: ["general", "alerte avertissement information notice message"],
+  audio: ["general", "son musique podcast mp3 audio"],
+  html: ["general", "html code balises svg", "pages.code"],
+  quote: ["general", "citation temoignage"],
+  badge: ["general", "etiquette label pastille nouveau"],
+  table: ["general", "tableau"],
+  timeline: ["general", "chronologie etapes histoire parcours programme"],
+  code: ["general", "code texte brut preformate"],
+  countdown: ["advanced", "compte a rebours minuteur urgence"],
+  pricing: ["advanced", "tarif prix offre abonnement"],
+  modal: ["advanced", "fenetre modale popup pop-up dialogue panneau off-canvas lateral"],
+  tooltip: ["advanced", "infobulle aide explication survol"],
+  hotspot: ["advanced", "points interet image interactive hotspot"],
+  embed: ["advanced", "integrer embed iframe carte google maps calendly spotify soundcloud typeform loom canva"],
+  dyntext: ["advanced", "texte dynamique prenom date personnalise variable"],
+  menu: ["site", "menu navigation liens nav"],
+  breadcrumb: ["site", "fil ariane chemin navigation"],
+  search: ["site", "recherche rechercher champ"],
+  account: ["site", "compte connexion panier utilisateur"],
+  posts: ["site", "articles blog actualites derniers dynamique"],
+  course: ["commerce", "formation cours produit vente acheter"],
+  courselist: ["commerce", "formations catalogue produits cours boutique dynamique"],
+  social: ["social", "reseaux sociaux facebook instagram linkedin youtube"],
+};
+// Permissions exigées par des widgets : libellé affiché sur le cadenas
+const WIDGET_PERMISSIONS = { "pages.code": "réservé aux administrateurs (le HTML s'affiche sur le même domaine que les comptes des élèves)" };
+for (const type of Object.keys(NODE_TYPES)) if (!WIDGETS[type] || !WIDGET_GROUPS[WIDGETS[type][0]]) throw new Error(`Widget sans fiche de bibliothèque : ${type}`);
+const widgetRequires = (type) => (WIDGETS[type] && WIDGETS[type][2]) || null;
+
+// Widgets réservés : une personne sans la permission peut déplacer ou supprimer ceux qui existent, mais ni en ajouter, ni en
+// modifier les réglages. before / after : listes de sections ; can(permission) → booléen. Lève une erreur sinon.
+function lockedWidgetChanges(before, after, can) {
+  const known = new Map();
+  const collect = (sections, fn) => (sections || []).forEach((s) => { if (s && s.type === "layout") walk(s.children, fn); });
+  collect(before, (n) => { if (widgetRequires(n.type)) known.set(String(n.id), JSON.stringify(n.props || {})); });
+  let refused = null;
+  collect(after, (n) => {
+    const need = widgetRequires(n.type);
+    if (refused || !need || can(need)) return;
+    if (known.get(String(n.id)) !== JSON.stringify(n.props || {})) refused = n;
+  });
+  if (refused) {
+    const err = new Error(`« ${NODE_TYPES[refused.type].label} » : ${WIDGET_PERMISSIONS[widgetRequires(refused.type)]}. Vous pouvez le déplacer ou le supprimer, mais pas l'ajouter ni le modifier.`);
+    err.code = "forbidden_widget";
+    throw err;
+  }
+}
+
 const CATEGORIES = { structure: "Structure", text: "Texte", media: "Média", interaction: "Interaction", marketing: "Marketing", commerce: "Formations", dynamic: "Contenu dynamique", advanced: "Avancé" };
 
 // Contenu de départ de chaque élément (toujours VALIDE : un élément ajouté s'enregistre tout de suite) et icône de la
@@ -612,6 +698,8 @@ const STYLE_UI = {
   backdropBlur: ["Flou de l'arrière-plan (px)"],
   boxShadow: ["Ombre", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", xl: "Très forte" }], opacity: ["Opacité"],
   overflow: ["Débordement", { visible: "Visible", hidden: "Masqué", auto: "Défilement" }],
+  gridAutoFlow: ["Remplissage", { row: "Ligne par ligne", column: "Colonne par colonne", "row dense": "Lignes, sans trous", "column dense": "Colonnes, sans trous" }],
+  justifyItems: ["Alignement horizontal des cases", { stretch: "Étirer", start: "Début", center: "Centre", end: "Fin" }],
   position: ["Position", { static: "Normale", relative: "Relative", sticky: "Collante", absolute: "Absolue (dans le parent)", fixed: "Fixe (à l'écran)" }], top: ["Décalage haut"], right: ["Décalage droite"], bottom: ["Décalage bas"], left: ["Décalage gauche"],
   transformOrigin: ["Origine des transformations", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite", "top left": "Haut gauche", "top right": "Haut droit", "bottom left": "Bas gauche", "bottom right": "Bas droit" }],
   transitionDuration: ["Durée des transitions (ms)"], zIndex: ["Plan (z-index)"],
@@ -634,8 +722,8 @@ function editorSpec() {
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
   return {
-    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
-    categories: CATEGORIES,
+    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], keywords: WIDGETS[type][1], requires: widgetRequires(type), version: d.version || 1, container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
+    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
     socialNetworks: Object.entries(SOCIAL_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
@@ -983,6 +1071,14 @@ function pageCss(sections) {
       if (n.type === "social" && NODE_ID.test(String(n.id || "")) && n.props) rules.base.push(`.kw-n-${n.id}{--kw-soc:${Number(n.props.size) || 32}px}`);
       if (n.type === "divider" && NODE_ID.test(String(n.id || "")) && n.props && (n.props.lineStyle !== "solid" || n.props.thickness > 1 || n.props.color)) rules.base.push(`.kw-n-${n.id}{border:0;border-top:${n.props.thickness}px ${n.props.lineStyle} ${n.props.color ? colorCss(n.props.color) : "currentColor"}}`);
       if (n.type === "progress" && NODE_ID.test(String(n.id || "")) && Number.isInteger(n.props && n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-progress-bar{width:${n.props.value}%}`);
+      // Grille réglée pour l'ordinateur : sur tablette et mobile, elle se resserre d'elle-même (2 colonnes au plus, puis 1)
+      // tant qu'aucune valeur propre à l'écran n'est réglée — comme une grille sans réglage
+      if (n.type === "grid" && NODE_ID.test(String(n.id || ""))) {
+        const st = n.styles || {}, own = (bp) => st[bp] && (st[bp].columns !== undefined || st[bp].gridTemplate !== undefined);
+        const d = st.desktop || {}, cols = d.gridTemplate ? String(d.gridTemplate).split(" ").length : Number(d.columns) || 0;
+        if (cols > 2 && !own("tablet") && rules.media.tablet) rules.media.tablet.push(`.kw-n-${n.id}{grid-template-columns:repeat(2,minmax(0,1fr))}`);
+        if (cols > 1 && !own("tablet") && !own("mobile") && rules.media.mobile) rules.media.mobile.push(`.kw-n-${n.id}{grid-template-columns:minmax(0,1fr)}`);
+      }
     });
   }
   let css = rules.base.join("\n");
@@ -993,6 +1089,6 @@ function pageCss(sections) {
 }
 
 module.exports = {
-  NODE_TYPES, CATEGORIES, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
+  NODE_TYPES, CATEGORIES, WIDGET_GROUPS, WIDGETS, lockedWidgetChanges, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
   AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };
