@@ -359,3 +359,10 @@ body.pb-hand,body.pb-hand *{cursor:grab}
 .kw-carousel-btn.is-prev { left: 8px; } .kw-carousel-btn.is-next { right: 8px; }
 .kw-carousel-btn:disabled { opacity: 0; pointer-events: none; }
 .kw-carousel-btn:focus-visible { outline: 2px solid var(--kw-primary, #0277b6); outline-offset: 2px; }
+/* Anti-débordement : un mot très long (adresse collée, nom technique) passe à la ligne au lieu d'élargir la page ;
+   un élément d'une rangée flexible peut rétrécir sous la largeur de son contenu */
+.lp-main { overflow-wrap: anywhere; }
+.kw-node { min-width: 0; }
+.kw-code { white-space: pre-wrap; overflow-x: auto; }
+.kw-progress-head > span:last-child:not(:first-child) { flex: none; white-space: nowrap; overflow-wrap: normal; }
+.kw-progress-head { align-items: flex-start; }
