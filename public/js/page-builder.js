@@ -4405,6 +4405,7 @@
       { label: "Guides : tout supprimer (cet écran)", run: clearGuides, off: !(guidesFor().h.length || guidesFor().v.length) }, { label: "Contours : afficher / masquer", run: function () { setAid("outlines", !aids.outlines); } }, { label: "Règles : afficher / masquer", run: function () { setAid("rulers", !aids.rulers); } },
       { label: "Panneau des éléments : afficher / masquer", run: function () { togglePanel("left"); } },
       { label: "Vider la page : repartir d'un canevas vide (annulable)", run: function () { nextLabel = "Page vidée"; change(function () { if (!content.sections.length) return false; content.sections = []; selection = []; }); }, off: !canWrite || !content.sections.length },
+      { label: "Vider la page : repartir d'un canevas vide (annulable)", run: function () { nextLabel = "Page vidée"; change(function () { if (!content.sections.length) return false; content.sections = []; selection = []; }); }, off: !canWrite || !content.sections.length },
       { label: "Ajouter une structure (Flexbox ou Grille)", run: function () { openStructurePicker(insertionPoint({ type: "container" })); }, off: !canWrite },
       { label: dock.mode === "floating" ? "Structure : rattacher le panneau" : "Structure : détacher le panneau", run: function () { setDockMode(dock.mode === "floating" ? "docked" : "floating"); } },
       { label: dock.mode === "closed" ? "Structure : rouvrir le panneau" : "Structure : fermer le panneau", run: function () { setDockMode(dock.mode === "closed" ? dock.last : "closed"); } },

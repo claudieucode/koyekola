@@ -508,6 +508,21 @@ describe("structure : canevas, Flexbox, Grille, calques et panneau détachable (
     await saved((c) => c.sections.length >= 2, "page restaurée");
   });
 
+  test("commande « Vider la page » : canevas vide avec son « + », annulable", async () => {
+    const r = await boss.post("/marketing/pages", { name: `Vider ${++n}` });
+    pageId = Number(r.location.match(/(\d+)$/)[1]);
+    await page.goto(`${srv.base}/marketing/pages/${pageId}/editeur`);
+    await ready();
+    assert.ok(draft().sections.length >= 2, "une page neuve a son bandeau et son formulaire");
+    await page.keyboard.press("Control+k");
+    await page.locator("[data-pb-cmd-q]").fill("vider la page");
+    await page.keyboard.press("Enter");
+    await saved((c) => c.sections.length === 0, "page vidée");
+    await frame().locator("[data-kw-add='root']").waitFor();
+    await page.locator("[data-pb-undo]").click();
+    await saved((c) => c.sections.length >= 2, "page restaurée");
+  });
+
   test("annuler la création d'une structure : la page redevient vide ; rétablir : la structure revient identique", async () => {
     await openEditor();
     await frame().locator("[data-kw-add='root']").click();
