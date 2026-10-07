@@ -29,6 +29,7 @@
           <div class="mk-dialog-body"><div class="field-group"><label for="lp-name">Nom de la page *</label><input id="lp-name" type="text" name="name" maxlength="100" required placeholder="Guide gratuit : bien débuter en photo"></div>
             <fieldset class="mk-tpl-choice"><legend>Modèle de départ</legend>
               <label class="mk-tpl"><input type="radio" name="template" value="" checked><span><strong>Page vierge</strong><span class="mk-sub">Point de départ minimal, à composer dans l'éditeur visuel.</span></span></label>
+              <% userTemplates.forEach((t) => { %><label class="mk-tpl"><input type="radio" name="template" value="mine:<%= t.id %>"><span><strong><%= t.name %></strong><span class="mk-sub">Mes modèles · <%= t.category %><%= t.description ? " · " + t.description : "" %></span></span></label><% }) %>
               <% templates.forEach((t) => { %><label class="mk-tpl"><input type="radio" name="template" value="<%= t.key %>"><span><strong><%= t.name %></strong><span class="mk-sub"><%= t.category %> · <%= t.description %></span></span></label><% }) %>
             </fieldset>
             <% if (sites.length) { %><div class="field-group"><label for="lp-new-site">Site</label><select id="lp-new-site" name="site_id"><option value="">Aucun (page d'atterrissage isolée)</option><% sites.forEach((st) => { %><option value="<%= st.id %>"><%= st.name %></option><% }) %></select></div><% } %></div>
@@ -36,5 +37,13 @@
         </form>
       </dialog>
       <%- include("partials/modal-reopen", { id: "nouvelle" }) %>
+    <% } %>
+    <% if (userTemplates.length) { %>
+      <section class="mk-panel" id="mes-modeles" aria-labelledby="lp-mine">
+        <h2 id="lp-mine">Mes modèles de pages</h2>
+        <p class="field-hint">Enregistrés depuis l'éditeur (menu ≡ › « Enregistrer comme modèle »), proposés dans « Nouvelle page ». Supprimer un modèle ne change pas les pages déjà créées avec lui.</p>
+        <ul class="mk-lp-versions"><% userTemplates.forEach((t) => { %><li><span><strong><%= t.name %></strong> <span class="mk-sub"><%= t.category %> · <%= t.content.sections.length %> section(s)</span></span>
+          <% if (canWrite) { %><span class="mk-row-actions"><form action="/marketing/site-web/modeles/<%= t.id %>/supprimer" method="post"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Le modèle « <%= t.name %> » ne sera plus proposé. Les pages déjà créées avec lui ne changent pas." data-mk-confirm-title="Supprimer ce modèle ?" data-mk-confirm-ok="Supprimer">Supprimer<span class="sr-only"> le modèle <%= t.name %></span></button></form></span><% } %></li><% }) %></ul>
+      </section>
     <% } %>
 <%- include("partials/bottom") %>

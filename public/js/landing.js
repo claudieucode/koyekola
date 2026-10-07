@@ -117,7 +117,11 @@
   if (animated.length && !inBuilder && !reduce && "IntersectionObserver" in window) {
     document.documentElement.classList.add("kw-anim-ready");
     var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add("is-in"); io.unobserve(en.target); } });
+      entries.forEach(function (en) {
+        var again = en.target.hasAttribute("data-kw-anim-repeat");
+        if (en.isIntersecting) { en.target.classList.add("is-in"); if (!again) io.unobserve(en.target); }
+        else if (again) en.target.classList.remove("is-in"); // rejouée à la prochaine arrivée à l'écran
+      });
     }, { threshold: 0.12, rootMargin: "0px 0px -5% 0px" });
     Array.prototype.forEach.call(animated, function (el) { io.observe(el); });
   }
@@ -185,6 +189,41 @@
     Array.prototype.forEach.call(counters, function (el) { el.querySelector(".kw-counter-value").textContent = (0).toLocaleString("fr-FR"); obs.observe(el); });
     Array.prototype.forEach.call(bars, function (el) { obs.observe(el); });
   }
+  // Interactions : [déclencheur, action, élément visé] ; l'élément visé est retrouvé par sa classe (.kw-n-<id>)
+  var builder = document.body.hasAttribute("data-kw-builder");
+  var targetOf = function (id) { return /^[a-z0-9]{6,20}$/.test(id) ? document.querySelector(".kw-n-" + id) : null; };
+  var runAction = function (action, el) {
+    if (!el) return;
+    if (action === "show") { el.classList.remove("kw-ix-hidden"); el.classList.add("kw-ix-shown"); }
+    else if (action === "hide") { el.classList.add("kw-ix-hidden"); el.classList.remove("kw-ix-shown"); }
+    else if (action === "toggle") { var hide = !el.classList.contains("kw-ix-hidden"); el.classList.toggle("kw-ix-hidden", hide); el.classList.toggle("kw-ix-shown", !hide); }
+    else if (action === "scroll") el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    else if (action === "open") { var d = el.querySelector("dialog"); if (d && typeof d.showModal === "function" && !d.open) d.showModal(); }
+    else if (action === "animate" && !reduce) { el.classList.remove("is-in", "kw-ix-replay"); void el.offsetWidth; el.classList.add("kw-ix-replay"); }
+  };
+  if (!builder) Array.prototype.forEach.call(document.querySelectorAll("[data-kw-ix]"), function (el) {
+    var list; try { list = JSON.parse(el.getAttribute("data-kw-ix")); } catch (e) { return; }
+    (Array.isArray(list) ? list : []).forEach(function (ix) {
+      var trigger = ix[0], action = ix[1], target = targetOf(ix[2]);
+      if (!target) return;
+      var go = function () { runAction(action, target); };
+      if (trigger === "click") {
+        el.addEventListener("click", function (e) { if (action !== "scroll" || !el.closest("a[href]")) e.preventDefault(); go(); });
+        if (!/^(A|BUTTON|SUMMARY)$/.test(el.tagName) && !el.hasAttribute("tabindex")) { el.setAttribute("tabindex", "0"); el.setAttribute("role", el.getAttribute("role") || "button"); }
+        el.addEventListener("keydown", function (e) { if ((e.key === "Enter" || e.key === " ") && !/^(A|BUTTON|SUMMARY)$/.test(el.tagName)) { e.preventDefault(); go(); } });
+        if (/^(toggle|show|hide)$/.test(action)) el.setAttribute("aria-controls", target.id || (target.id = "kw-ix-" + ix[2]));
+      } else if (trigger === "hover") { el.addEventListener("mouseenter", go); el.addEventListener("focusin", go); }
+      else if (trigger === "viewport" && "IntersectionObserver" in window) { var ob = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { go(); ob.disconnect(); } }, { threshold: 0.3 }); ob.observe(el); }
+      else if (trigger === "load") go();
+    });
+  });
+  // Points d'intérêt d'une image : un bouton ouvre / ferme sa note (clavier compris)
+  Array.prototype.forEach.call(document.querySelectorAll(".kw-spot-dot"), function (b) {
+    b.addEventListener("click", function () { var open = b.getAttribute("aria-expanded") === "true"; Array.prototype.forEach.call(b.closest(".kw-hotspot").querySelectorAll(".kw-spot-dot"), function (x) { x.setAttribute("aria-expanded", "false"); }); b.setAttribute("aria-expanded", open ? "false" : "true"); });
+    b.addEventListener("keydown", function (e) { if (e.key === "Escape") b.setAttribute("aria-expanded", "false"); });
+  });
+  // Vidéo de fond : arrêtée si la personne a demandé à réduire les animations
+  if (reduce) Array.prototype.forEach.call(document.querySelectorAll(".kw-bg-video"), function (v) { v.removeAttribute("autoplay"); try { v.pause(); } catch (e) { /* rien */ } });
   var LABELS = [["jours", 86400], ["heures", 3600], ["minutes", 60], ["secondes", 1]];
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-countdown]"), function (box) {
     var end = Date.parse(box.getAttribute("data-kw-countdown"));

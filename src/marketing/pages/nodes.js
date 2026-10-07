@@ -68,7 +68,7 @@ const gridTrack = (v) => {
 };
 const len = lengthOf(), lenAuto = lengthOf({ auto: true }), lenNeg = lengthOf({ negative: true }), marginLen = lengthOf({ auto: true, negative: true });
 const STYLE_PROPS = {
-  display: { css: "display", check: oneOf("block", "flex", "grid", "inline-block", "none"), group: "layout" },
+  display: { css: "display", check: oneOf("block", "flex", "grid", "inline-block", "inline", "inline-flex", "none"), group: "layout" },
   flexDirection: { css: "flex-direction", check: oneOf("row", "column", "row-reverse", "column-reverse"), group: "layout" },
   flexWrap: { css: "flex-wrap", check: oneOf("wrap", "nowrap", "wrap-reverse"), group: "layout" },
   justifyContent: { css: "justify-content", check: oneOf("flex-start", "center", "flex-end", "space-between", "space-around", "space-evenly"), group: "layout" },
@@ -129,6 +129,8 @@ const STYLE_PROPS = {
   boxShadow: { css: "box-shadow", check: oneOf(...Object.keys(SHADOWS)), out: (v) => SHADOWS[v], group: "effects" },
   opacity: { css: "opacity", check: numberIn(0, 1), group: "effects" },
   overflow: { css: "overflow", check: oneOf("visible", "hidden", "auto"), group: "effects" },
+  // Flou de ce qui est DERRIÈRE l'élément (effet verre dépoli, avec un fond semi-transparent)
+  backdropBlur: { css: "backdrop-filter", check: numberIn(1, 40, { integer: true }), out: (n) => `blur(${n}px)`, group: "effects" },
   // Absolue : placée par rapport au parent positionné (relatif) ; fixe : par rapport à l'écran (bandeau, bouton flottant)
   position: { css: "position", check: oneOf("static", "relative", "sticky", "absolute", "fixed"), group: "position" },
   top: { css: "top", check: lenNeg, group: "position" },
@@ -152,7 +154,8 @@ const COMPOSED = {
   backgroundImage: { group: "background" },     // { src } : image de la médiathèque ou https://
   gradient: { group: "background" },            // { from, to, angle }
   overlay: { group: "background" },
-  shadow: { group: "effects" },                 // { x, y, blur, spread, color } : ombre personnalisée (remplace le préréglage)             // { color } : voile posé sur l'image ou le dégradé (lisibilité du texte)
+  shadow: { group: "effects" },
+  filter: { group: "effects" },                 // { blur, brightness, contrast, grayscale, saturate, sepia, hueRotate }                 // { x, y, blur, spread, color } : ombre personnalisée (remplace le préréglage)             // { color } : voile posé sur l'image ou le dégradé (lisibilité du texte)
   transform: { group: "position" },             // { x, y, rotate, scale }
 };
 
@@ -176,6 +179,13 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
     } else if (k === "gradient") {
       const from = color(v && v.from), to = color(v && v.to), angle = numberIn(0, 360, { integer: true })(v && v.angle);
       if (from && to) out.gradient = { from, to, angle: angle === null ? 180 : angle };
+    } else if (k === "filter") {
+      const f = {};
+      const put = (name, min, max) => { const x = numberIn(min, max, { integer: true })(v && v[name]); if (x !== null) f[name] = x; };
+      put("blur", 0, 40); put("brightness", 0, 300); put("contrast", 0, 300); put("grayscale", 0, 100); put("saturate", 0, 300); put("sepia", 0, 100); put("hueRotate", -360, 360);
+      // Valeurs neutres retirées (100 % de luminosité, 0 de flou…)
+      for (const [name, neutral] of Object.entries({ blur: 0, brightness: 100, contrast: 100, grayscale: 0, saturate: 100, sepia: 0, hueRotate: 0 })) if (f[name] === neutral) delete f[name];
+      if (Object.keys(f).length) out.filter = f;
     } else if (k === "shadow") {
       const c = color(v && v.color);
       const px = (n, min, max) => { const x = numberIn(min, max, { integer: true })(n); return x === null ? 0 : x; };
@@ -206,6 +216,10 @@ function declarations(set) {
   if (set.gradient) layers.push(`linear-gradient(${set.gradient.angle}deg, ${colorCss(set.gradient.from)}, ${colorCss(set.gradient.to)})`);
   if (set.backgroundImage) layers.push(`url("${set.backgroundImage.src}")`);
   if (layers.length) d.push(`background-image:${layers.join(", ")}`);
+  if (set.filter) {
+    const f = set.filter, unit = { blur: "px", hueRotate: "deg" }, fn = { hueRotate: "hue-rotate" };
+    d.push(`filter:${Object.entries(f).map(([k, v]) => `${fn[k] || k}(${v}${unit[k] || (k === "blur" ? "px" : "%")})`).join(" ")}`);
+  }
   if (set.shadow) { const h = set.shadow; d.push(`box-shadow:${h.inset ? "inset " : ""}${h.x}px ${h.y}px ${h.blur}px ${h.spread}px ${colorCss(h.color)}`); }
   if (set.transform) {
     const t = set.transform, parts = [];
@@ -425,7 +439,70 @@ const NODE_TYPES = {
     const buttonLabel = line(p.buttonLabel, 60), title = line(p.title, 120), text = clean(p.text, 4000);
     if (!buttonLabel || !title || !text) throw new Error(`${at} (fenêtre) : le texte du bouton, le titre et le contenu sont obligatoires.`);
     const ctaUrl = h.linkUrl(p.ctaUrl, `${at} (bouton de la fenêtre)`), ctaLabel = line(p.ctaLabel, 60);
-    return { buttonLabel, variant: oneOf("primary", "outline", "ghost")(p.variant) || "primary", title, text, ...(ctaUrl && ctaLabel ? { ctaLabel, ctaUrl } : {}), size: oneOf("sm", "md", "lg")(p.size) || "md" };
+    return { buttonLabel, variant: oneOf("primary", "outline", "ghost")(p.variant) || "primary", title, text, ...(ctaUrl && ctaLabel ? { ctaLabel, ctaUrl } : {}), size: oneOf("sm", "md", "lg")(p.size) || "md",
+      // centre : fenêtre ; gauche / droite : panneau qui glisse depuis le bord (« off-canvas »)
+      position: oneOf("center", "left", "right")(p.position) || "center" };
+  } },
+  html: { label: "HTML (sécurisé)", category: "advanced", props: (p, at) => {
+    const html = sanitizeHtmlBlock(p.html);
+    if (!html) throw new Error(`${at} (HTML) : contenu vide (ou entièrement retiré par la sécurité : scripts, formulaires, styles et cadres sont refusés).`);
+    return { html };
+  } },
+  embed: { label: "Contenu intégré", category: "advanced", props: (p, at) => {
+    const url = line(p.url, 2000), e = embedOf(url);
+    if (!e) throw new Error(`${at} (contenu intégré) : adresse d'un service accepté (${EMBED_PROVIDERS.map((x) => x.key === "maps" ? "Google Maps" : x.label.replace(/ \(.*\)/, "")).join(", ")}).`);
+    const title = line(p.title, 150);
+    if (!title) throw new Error(`${at} (contenu intégré) : un titre est obligatoire (lu par les lecteurs d'écran).`);
+    return { url, title, height: numberIn(150, 1200, { integer: true })(p.height) || null };
+  } },
+  iconlist: { label: "Liste d'icônes", category: "text", props: (p, at, h) => {
+    const items = (Array.isArray(p.items) ? p.items : []).slice(0, 30).map((x, i) => {
+      const text = line(x && x.text, 200);
+      if (!text) return null;
+      const link = h.linkUrl(x && x.link, `${at} (liste d'icônes, ligne ${i + 1})`);
+      return { text, icon: h.iconNames.includes(String(x.icon)) ? String(x.icon) : "check", ...(link ? { link } : {}) };
+    }).filter(Boolean);
+    if (!items.length) throw new Error(`${at} (liste d'icônes) : au moins une ligne.`);
+    return { items, iconColor: color(p.iconColor) || "" };
+  } },
+  tooltip: { label: "Infobulle", category: "interaction", props: (p, at) => {
+    const text = line(p.text, 120), tip = line(p.tip, 300);
+    if (!text || !tip) throw new Error(`${at} (infobulle) : le texte et l'explication sont obligatoires.`);
+    return { text, tip, position: oneOf("top", "bottom")(p.position) || "top" };
+  } },
+  hotspot: { label: "Image à points d'intérêt", category: "media", props: (p, at, h) => {
+    const src = h.imageUrl(p.src, `${at} (image à points)`);
+    if (!src) throw new Error(`${at} (image à points) : choisissez une image.`);
+    const alt = line(p.alt, 200);
+    if (!alt) throw new Error(`${at} (image à points) : un texte de remplacement est obligatoire.`);
+    const spots = (Array.isArray(p.spots) ? p.spots : []).slice(0, 12).map((x) => {
+      const title = line(x && x.title, 80);
+      const xx = numberIn(0, 100)(x && x.x), yy = numberIn(0, 100)(x && x.y);
+      return title && xx !== null && yy !== null ? { x: xx, y: yy, title, text: line(x.text, 300) } : null;
+    }).filter(Boolean);
+    return { src, alt, spots };
+  } },
+  posts: { label: "Derniers articles du blog", category: "dynamic", props: (p) => ({
+    count: numberIn(1, 12, { integer: true })(p.count) || 3, category: line(p.category, 80),
+    layout: oneOf("grid", "list")(p.layout) || "grid", showExcerpt: p.showExcerpt !== false, showDate: p.showDate !== false, showImage: p.showImage !== false,
+    empty: line(p.empty, 160) || "Aucun article publié pour le moment.",
+  }) },
+  courselist: { label: "Formations du catalogue", category: "dynamic", props: (p) => ({
+    count: numberIn(1, 12, { integer: true })(p.count) || 3, category: line(p.category, 80), sort: oneOf("recent", "title", "price")(p.sort) || "recent",
+    showPrice: p.showPrice !== false, cta: line(p.cta, 40) || "Découvrir", empty: line(p.empty, 160) || "Aucune formation publiée pour le moment.",
+  }) },
+  search: { label: "Recherche", category: "dynamic", props: (p) => ({
+    target: oneOf("blog", "catalogue")(p.target) || "catalogue", placeholder: line(p.placeholder, 80) || "Rechercher…", button: line(p.button, 30) || "Rechercher",
+  }) },
+  account: { label: "Compte du visiteur", category: "dynamic", props: (p) => ({
+    login: line(p.login, 40) || "Se connecter", account: line(p.account, 40) || "Mon compte", showCart: p.showCart !== false, cart: line(p.cart, 30) || "Panier",
+  }) },
+  dyntext: { label: "Texte dynamique", category: "dynamic", props: (p, at) => {
+    const source = oneOf("firstName", "today", "year", "pageTitle", "courseCount", "postCount")(p.source);
+    if (!source) throw new Error(`${at} (texte dynamique) : source inconnue.`);
+    // Avant / après : les espaces au bord comptent (« Bonjour » + prénom + « ! »), ils sont gardés
+    const edge = (v, max) => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").slice(0, max);
+    return { source, before: edge(p.before, 120), after: edge(p.after, 120), fallback: line(p.fallback, 80), tag: oneOf("p", "span", "h2", "h3")(p.tag) || "p" };
   } },
   table: { label: "Tableau", category: "text", props: (p, at) => {
     const rows = (Array.isArray(p.rows) ? p.rows : []).slice(0, 40).map((r) => (Array.isArray(r) ? r.slice(0, 8).map((c) => line(c, 200)) : [])).filter((r) => r.some(Boolean));
@@ -453,7 +530,7 @@ const NODE_TYPES = {
     return { name, label: line(p.label, 80), size: oneOf("16", "24", "32", "48", "64", "96", "128")(String(p.size)) || "32", link, newTab: p.newTab === true && link.startsWith("https://") };
   } },
 };
-const CATEGORIES = { structure: "Structure", text: "Texte", media: "Média", interaction: "Interaction", marketing: "Marketing", commerce: "Formations" };
+const CATEGORIES = { structure: "Structure", text: "Texte", media: "Média", interaction: "Interaction", marketing: "Marketing", commerce: "Formations", dynamic: "Contenu dynamique", advanced: "Avancé" };
 
 // Contenu de départ de chaque élément (toujours VALIDE : un élément ajouté s'enregistre tout de suite) et icône de la
 // palette. Les éléments qui demandent une donnée réelle (image, vidéo, formation…) la demandent à l'ajout (`asks`).
@@ -495,12 +572,22 @@ const PALETTE = {
   pricing: { icon: "tag", blank: () => ({ props: { title: "[Nom de l'offre]", price: "[prix réel]", period: "", features: ["[Ce qui est inclus]"], ctaLabel: "Choisir", ctaUrl: "/catalogue" } }) },
   breadcrumb: { icon: "chevronRight", blank: () => ({ props: { items: [{ label: "Accueil", url: "/" }, { label: "Cette page" }], separator: "chevron" } }) },
   social: { icon: "share2", blank: () => ({ props: { items: [{ network: "website", url: "/" }], size: "32", shape: "circle" } }) },
+  html: { icon: "braces", blank: () => ({ props: { html: "<p>Votre <strong>HTML</strong> (balises de texte, listes, tableaux, images, SVG ; scripts et styles refusés).</p>" } }) },
+  embed: { icon: "externalLink", asks: "embed", blank: () => ({ props: {} }) },
+  iconlist: { icon: "listChecks", blank: () => ({ props: { items: [{ text: "Premier avantage", icon: "check" }, { text: "Deuxième avantage", icon: "check" }] } }) },
+  tooltip: { icon: "help", blank: () => ({ props: { text: "Mot à expliquer", tip: "L'explication qui s'affiche au survol ou au focus.", position: "top" } }) },
+  hotspot: { icon: "image", asks: "image", blank: () => ({ props: { spots: [] } }) },
+  posts: { icon: "fileText", blank: () => ({ props: { count: 3, layout: "grid" } }) },
+  courselist: { icon: "graduation", blank: () => ({ props: { count: 3 } }) },
+  search: { icon: "search", blank: () => ({ props: { target: "catalogue" } }) },
+  account: { icon: "user", blank: () => ({ props: { showCart: true } }) },
+  dyntext: { icon: "type", blank: () => ({ props: { source: "firstName", before: "Bonjour ", after: " !", fallback: "à vous", tag: "p" } }) },
   modal: { icon: "layers", blank: () => ({ props: { buttonLabel: "En savoir plus", title: "Plus d'informations", text: "Le contenu de la fenêtre.", variant: "outline", size: "md" } }) },
 };
 
 // Libellés et contrôles des propriétés de style (inspecteur) : un contrôle = une propriété réelle de STYLE_PROPS
 const STYLE_UI = {
-  display: ["Affichage", { block: "Bloc", flex: "Flex", grid: "Grille", "inline-block": "En ligne", none: "Caché" }],
+  display: ["Affichage", { block: "Bloc", flex: "Flex", grid: "Grille", "inline-block": "Bloc en ligne", inline: "En ligne", "inline-flex": "Flex en ligne", none: "Caché" }],
   flexDirection: ["Direction", { row: "En ligne", column: "En colonne", "row-reverse": "Ligne inversée", "column-reverse": "Colonne inversée" }],
   flexWrap: ["Retour à la ligne", { wrap: "Oui", nowrap: "Non", "wrap-reverse": "Oui, inversé" }],
   justifyContent: ["Répartition", { "flex-start": "Début", center: "Centre", "flex-end": "Fin", "space-between": "Espacés", "space-around": "Autour", "space-evenly": "Égaux" }],
@@ -522,6 +609,7 @@ const STYLE_UI = {
   borderWidth: ["Épaisseur de bordure"], borderStyle: ["Style de bordure", { none: "Aucune", solid: "Pleine", dashed: "Tirets", dotted: "Points" }], borderColor: ["Couleur de bordure"], borderRadius: ["Arrondi"],
   borderTopWidth: ["Épaisseur haut"], borderRightWidth: ["Épaisseur droite"], borderBottomWidth: ["Épaisseur bas"], borderLeftWidth: ["Épaisseur gauche"],
   borderTopLeftRadius: ["Arrondi haut gauche"], borderTopRightRadius: ["Arrondi haut droit"], borderBottomRightRadius: ["Arrondi bas droit"], borderBottomLeftRadius: ["Arrondi bas gauche"],
+  backdropBlur: ["Flou de l'arrière-plan (px)"],
   boxShadow: ["Ombre", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", xl: "Très forte" }], opacity: ["Opacité"],
   overflow: ["Débordement", { visible: "Visible", hidden: "Masqué", auto: "Défilement" }],
   position: ["Position", { static: "Normale", relative: "Relative", sticky: "Collante", absolute: "Absolue (dans le parent)", fixed: "Fixe (à l'écran)" }], top: ["Décalage haut"], right: ["Décalage droite"], bottom: ["Décalage bas"], left: ["Décalage gauche"],
@@ -541,7 +629,7 @@ function editorSpec() {
   const kind = (k) => {
     const p = STYLE_PROPS[k];
     if (p.check === color || [ "color", "backgroundColor", "borderColor" ].includes(k)) return "color";
-    if (["columns", "lineHeight", "opacity", "zIndex", "flexGrow", "gridRows", "gridColumnSpan", "gridRowSpan", "transitionDuration"].includes(k)) return "number";
+    if (["columns", "lineHeight", "opacity", "zIndex", "flexGrow", "gridRows", "gridColumnSpan", "gridRowSpan", "transitionDuration", "backdropBlur"].includes(k)) return "number";
     if (k === "gridTemplate") return "text";
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
@@ -549,6 +637,7 @@ function editorSpec() {
     types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
     categories: CATEGORIES,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
+    ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
     socialNetworks: Object.entries(SOCIAL_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     colorTokens: COLOR_TOKENS, spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
     limits: { nodes: MAX_NODES, depth: MAX_DEPTH },
@@ -631,11 +720,135 @@ function audienceMatches(audience, visitor) {
 }
 const audienceLabel = (a) => (a ? `${AUDIENCES[a.who]}${a.value !== undefined ? ` ${a.value}` : ""}`.replace("… ", " : ") : "");
 
+// HTML saisi : liste blanche (aucun script, formulaire, cadre, style ni événement ; liens et images vérifiés). Le SVG
+// est permis dans une forme sûre (formes, dégradés, sans lien ni objet étranger).
+const SVG_TAGS = ["svg", "g", "path", "circle", "rect", "line", "polyline", "polygon", "ellipse", "title", "desc", "defs", "lineargradient", "radialgradient", "stop"];
+const SVG_ATTRS = ["viewbox", "viewBox", "width", "height", "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "d", "cx", "cy", "r", "rx", "ry", "x", "y", "x1", "y1", "x2", "y2", "points", "transform", "opacity", "fill-rule", "clip-rule", "offset", "stop-color", "stop-opacity", "gradientTransform", "gradientUnits", "id", "xmlns", "role", "aria-label", "aria-hidden", "focusable", "preserveAspectRatio"];
+function sanitizeHtmlBlock(input) {
+  const tags = ["div", "span", "p", "br", "hr", "h2", "h3", "h4", "h5", "h6", "strong", "em", "b", "i", "u", "s", "small", "mark", "sub", "sup", "ul", "ol", "li", "dl", "dt", "dd", "blockquote", "q", "cite", "code", "pre", "kbd", "abbr", "figure", "figcaption", "img", "a", "table", "thead", "tbody", "tfoot", "tr", "th", "td", "caption", "details", "summary", "section", "article", "aside", "header", "footer", "address", "time", ...SVG_TAGS];
+  const common = ["class", "title", "role", "lang", "aria-*", "data-*"];
+  const attrs = { "*": common, a: ["href", "target", "rel", ...common], img: ["src", "alt", "width", "height", "loading", ...common], td: ["colspan", "rowspan", ...common], th: ["colspan", "rowspan", "scope", ...common], time: ["datetime", ...common], ol: ["start", "reversed", ...common], details: ["open", ...common] };
+  for (const t of SVG_TAGS) attrs[t] = SVG_ATTRS.concat(common);
+  return sanitizeHtml(String(input || "").slice(0, 20000), {
+    allowedTags: tags, allowedAttributes: attrs, allowedSchemes: ["https", "mailto"], allowedSchemesByTag: { img: ["https"] }, allowProtocolRelative: false,
+    parser: { lowerCaseAttributeNames: false },
+    transformTags: {
+      a: (tag, a) => {
+        const href = String(a.href || "");
+        const ok = /^\/(?!\/)[^\s<>"'`\\]*$/.test(href) || /^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(href) || /^#[a-z][a-z0-9-]{0,39}$/.test(href) || /^mailto:[^\s<>"'`\\]+$/.test(href);
+        const keep = Object.fromEntries(Object.entries(a).filter(([k]) => k !== "href" && k !== "target" && k !== "rel"));
+        return ok ? { tagName: "a", attribs: { ...keep, href, ...(a.target === "_blank" ? { target: "_blank", rel: "noopener noreferrer" } : {}) } } : { tagName: "span", attribs: keep };
+      },
+      img: (tag, a) => {
+        const src = String(a.src || "");
+        const ok = /^https:\/\/[^\s<>"'`\\/@]+\/[^\s<>"'`\\]*$/i.test(src) || /^\/uploads\/[^\s<>"'`\\]+$/.test(src);
+        return ok ? { tagName: "img", attribs: { ...a, src, alt: a.alt || "", loading: "lazy" } } : { tagName: "span", attribs: {} };
+      },
+    },
+  }).trim();
+}
+// Contenus intégrés : uniquement des services connus, dans un cadre isolé (jamais l'adresse saisie telle quelle)
+const EMBED_PROVIDERS = [
+  { key: "youtube", label: "YouTube", re: /^https:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{6,20})/i, src: (m) => `https://www.youtube-nocookie.com/embed/${m[1]}`, ratio: "16/9" },
+  { key: "vimeo", label: "Vimeo", re: /^https:\/\/(?:www\.|player\.)?vimeo\.com\/(?:video\/)?(\d{4,12})/i, src: (m) => `https://player.vimeo.com/video/${m[1]}`, ratio: "16/9" },
+  { key: "maps", label: "Google Maps (lien « Intégrer une carte »)", re: /^https:\/\/www\.google\.com\/maps\/embed\?pb=([\w!.%:-]{10,2000})$/i, src: (m) => `https://www.google.com/maps/embed?pb=${m[1]}`, ratio: "4/3" },
+  { key: "calendly", label: "Calendly", re: /^https:\/\/calendly\.com\/([\w-]{1,60}(?:\/[\w-]{1,80})?)\/?$/i, src: (m) => `https://calendly.com/${m[1]}?embed_type=Inline`, ratio: "3/4" },
+  { key: "spotify", label: "Spotify", re: /^https:\/\/open\.spotify\.com\/(?:embed\/)?(track|album|playlist|episode|show)\/([A-Za-z0-9]{10,40})/i, src: (m) => `https://open.spotify.com/embed/${m[1]}/${m[2]}`, ratio: "spotify" },
+  { key: "soundcloud", label: "SoundCloud", re: /^https:\/\/soundcloud\.com\/([\w-]{1,80}\/[\w-]{1,120})\/?$/i, src: (m) => `https://w.soundcloud.com/player/?url=${encodeURIComponent(`https://soundcloud.com/${m[1]}`)}`, ratio: "soundcloud" },
+  { key: "gforms", label: "Google Forms", re: /^https:\/\/docs\.google\.com\/forms\/d\/e\/([\w-]{20,80})\/viewform/i, src: (m) => `https://docs.google.com/forms/d/e/${m[1]}/viewform?embedded=true`, ratio: "3/4" },
+  { key: "typeform", label: "Typeform", re: /^https:\/\/([\w-]{1,40})\.typeform\.com\/to\/([A-Za-z0-9]{4,20})/i, src: (m) => `https://${m[1]}.typeform.com/to/${m[2]}`, ratio: "3/4" },
+  { key: "loom", label: "Loom", re: /^https:\/\/(?:www\.)?loom\.com\/(?:share|embed)\/([a-f0-9]{20,40})/i, src: (m) => `https://www.loom.com/embed/${m[1]}`, ratio: "16/9" },
+  { key: "canva", label: "Canva (lien « Intégrer »)", re: /^https:\/\/www\.canva\.com\/design\/([\w-]{6,40})\/([\w-]{6,40})\/view/i, src: (m) => `https://www.canva.com/design/${m[1]}/${m[2]}/view?embed`, ratio: "16/9" },
+];
+function embedOf(url) {
+  const u = String(url || "").trim();
+  for (const p of EMBED_PROVIDERS) { const m = p.re.exec(u); if (m) return { provider: p.key, label: p.label, src: p.src(m), ratio: p.ratio }; }
+  return null;
+}
+
 // Réseaux sociaux proposés (pictogrammes dessinés pour KOLAKISA, dans views/marketing-public/_social-icon.ejs)
 const SOCIAL_NETWORKS = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn", youtube: "YouTube", x: "X (Twitter)", tiktok: "TikTok", whatsapp: "WhatsApp", email: "E-mail", website: "Site web" };
 
+// ---------- CSS personnalisé, classes, attributs ----------
+// Sécurité : les pages sont servies sur le domaine des comptes des élèves. Le CSS saisi ne peut charger AUCUNE ressource
+// (pas d'url(), d'@import, d'image-set, de police externe) : il ne peut donc ni faire appel à un autre site, ni lire ce
+// que tape le visiteur. Pas d'échappements (\), pas de chevrons, pas de commentaires. Le CSS d'un élément ne contient que
+// des déclarations, appliquées à cet élément seulement ; celui de la page est confiné au contenu de la page (.lp-main).
+const CSS_BAD = /url\s*\(|image-set|@|\\|<|>|\/\*|\*\/|expression|javascript:|behavior|-moz-binding|[{}]/i;
+function cssDeclarations(text, at, max = 2000) {
+  const src = String(text ?? "").slice(0, max + 1);
+  if (src.length > max) throw new Error(`${at} : CSS trop long (${max} caractères au plus).`);
+  const out = [];
+  for (const part of src.split(";")) {
+    const decl = part.trim();
+    if (!decl) continue;
+    const m = /^(-{0,2}[a-z][a-z0-9-]{0,40})\s*:\s*([^;]{1,300})$/i.exec(decl);
+    if (!m) throw new Error(`${at} : déclaration CSS invalide « ${decl.slice(0, 40)} » (forme attendue : propriété: valeur).`);
+    if (CSS_BAD.test(m[2]) || CSS_BAD.test(m[1])) throw new Error(`${at} : « ${decl.slice(0, 40)} » n'est pas autorisé (aucune ressource externe, aucun @, \\, < ou >).`);
+    out.push(`${m[1].toLowerCase()}:${m[2].trim().replace(/\s+/g, " ")}`);
+  }
+  return out.join(";");
+}
+// CSS de la page : des règles « sélecteurs { déclarations } », chaque sélecteur étant préfixé par .lp-main
+function normalizePageCss(text) {
+  const src = String(text ?? "").trim();
+  if (!src) return "";
+  if (src.length > 8000) throw new Error("CSS de la page : 8 000 caractères au plus.");
+  if (/@|\\|<|>|\/\*/.test(src)) throw new Error("CSS de la page : @, \\, <, > et commentaires ne sont pas autorisés.");
+  const rules = [];
+  const re = /([^{}]+)\{([^{}]*)\}/g;
+  let m, used = 0;
+  while ((m = re.exec(src))) {
+    used += m[0].length;
+    const sels = m[1].split(",").map((x) => x.trim()).filter(Boolean);
+    if (!sels.length || sels.some((x) => !/^[a-z0-9 .#:_>+~*()\[\]="'-]{1,200}$/i.test(x) || /^(html|body|:root)\b/i.test(x))) throw new Error(`CSS de la page : sélecteur non autorisé « ${m[1].trim().slice(0, 50)} ».`);
+    const decl = cssDeclarations(m[2], "CSS de la page");
+    if (decl) rules.push(`${sels.map((x) => `.lp-main ${x}`).join(", ")}{${decl}}`);
+  }
+  if (src.replace(/\s+/g, "").length > 0 && used === 0) throw new Error("CSS de la page : écrivez des règles « .ma-classe { color: #0b2a40; } ».");
+  return rules.join("\n");
+}
+const CLASS_RE = /^[a-z][a-z0-9_-]{0,40}$/i;
+function normalizeClasses(v) {
+  const list = [...new Set(String(v ?? "").trim().split(/\s+/).filter(Boolean))];
+  if (list.length > 8) throw new Error("Classes : 8 au plus.");
+  for (const c of list) if (!CLASS_RE.test(c) || /^(kw|lp|pb|mk)-/i.test(c)) throw new Error(`Classe « ${c} » invalide (lettres, chiffres, - et _ ; les préfixes kw-, lp-, pb-, mk- sont réservés).`);
+  return list.join(" ");
+}
+// Attributs : data-*, aria-*, title, role, lang (jamais d'événement, de style, de lien ou de source)
+const ATTR_RE = /^(data-[a-z0-9-]{1,40}|aria-[a-z]{2,30}|title|role|lang)$/;
+function normalizeAttrs(list) {
+  return (Array.isArray(list) ? list : []).slice(0, 10).map((a) => {
+    const name = String(a && a.name || "").trim().toLowerCase();
+    if (!name) return null;
+    if (!ATTR_RE.test(name)) throw new Error(`Attribut « ${name.slice(0, 40)} » non autorisé (data-…, aria-…, title, role, lang).`);
+    return { name, value: line(a.value, 200) };
+  }).filter(Boolean);
+}
+
+// ---------- Interactions : déclencheur → action sur un élément de la page ----------
+const IX_TRIGGERS = { click: "Au clic", hover: "Au survol", viewport: "En arrivant à l'écran", load: "Au chargement de la page" };
+const IX_ACTIONS = { show: "Afficher l'élément", hide: "Masquer l'élément", toggle: "Afficher / masquer l'élément", scroll: "Faire défiler jusqu'à l'élément", open: "Ouvrir la fenêtre (élément « Fenêtre »)", animate: "Rejouer l'animation de l'élément" };
+function normalizeInteractions(list) {
+  return (Array.isArray(list) ? list : []).slice(0, 6).map((x) => {
+    if (!x || !Object.hasOwn(IX_TRIGGERS, x.trigger) || !Object.hasOwn(IX_ACTIONS, x.action) || !NODE_ID.test(String(x.target || ""))) return null;
+    return { trigger: x.trigger, action: x.action, target: String(x.target) };
+  }).filter(Boolean);
+}
+// Programmation : visible seulement entre deux dates (heure du serveur, évaluée à chaque affichage)
+function normalizeSchedule(raw, at) {
+  if (!raw || typeof raw !== "object") return undefined;
+  const d = (v) => { if (!v) return null; const t = Date.parse(String(v)); return Number.isFinite(t) ? new Date(t).toISOString() : NaN; };
+  const from = d(raw.from), until = d(raw.until);
+  if (Number.isNaN(from) || Number.isNaN(until)) throw new Error(`${at} : date de programmation invalide.`);
+  if (from && until && from >= until) throw new Error(`${at} : la fin de la programmation doit suivre le début.`);
+  return from || until ? { ...(from ? { from } : {}), ...(until ? { until } : {}) } : undefined;
+}
+const scheduleMatches = (s, now = Date.now()) => !s || ((!s.from || Date.parse(s.from) <= now) && (!s.until || Date.parse(s.until) > now));
+
 // ---------- Animations : entrée (à l'apparition à l'écran) et effet au survol ----------
-const ENTRANCES = { fade: "Fondu", "slide-up": "Glisse vers le haut", "slide-down": "Glisse vers le bas", "slide-left": "Glisse depuis la droite", "slide-right": "Glisse depuis la gauche", zoom: "Zoom avant" };
+const ENTRANCES = { fade: "Fondu", "slide-up": "Glisse vers le haut", "slide-down": "Glisse vers le bas", "slide-left": "Glisse depuis la droite", "slide-right": "Glisse depuis la gauche", zoom: "Zoom avant", bounce: "Rebond", rotate: "Rotation", reveal: "Dévoilement", flip: "Bascule 3D" };
+const EASINGS = { smooth: "cubic-bezier(.2, .7, .2, 1)", linear: "linear", "ease-in": "ease-in", "ease-out": "ease-out", "ease-in-out": "ease-in-out", spring: "cubic-bezier(.34, 1.56, .64, 1)" };
 const HOVERS = { grow: "Grossit", shrink: "Rétrécit", lift: "Se soulève", tilt: "S'incline" };
 function normalizeMotion(raw) {
   if (!raw || typeof raw !== "object") return undefined;
@@ -644,6 +857,8 @@ function normalizeMotion(raw) {
     out.entrance = raw.entrance;
     out.duration = numberIn(100, 3000, { integer: true })(raw.duration) ?? 600;
     out.delay = numberIn(0, 3000, { integer: true })(raw.delay) ?? 0;
+    if (Object.hasOwn(EASINGS, raw.easing) && raw.easing !== "smooth") out.easing = raw.easing;
+    if (raw.repeat === true) out.repeat = true; // rejouée à chaque arrivée à l'écran
   }
   if (Object.hasOwn(HOVERS, raw.hover)) out.hover = raw.hover;
   return Object.keys(out).length ? out : undefined;
@@ -686,6 +901,22 @@ function normalizeNode(raw, at, h, depth, counter) {
   }
   const motion = normalizeMotion(raw.motion);
   if (motion) node.motion = motion;
+  // Avancé : CSS propre à l'élément, classes, attributs, interactions, état initial masqué, programmation, vidéo de fond
+  if (raw.css) { const css = cssDeclarations(raw.css, `${where} (CSS)`); if (css) node.css = css; }
+  if (raw.cssHover) { const css = cssDeclarations(raw.cssHover, `${where} (CSS au survol)`); if (css) node.cssHover = css; }
+  if (raw.classes) { const c = normalizeClasses(raw.classes); if (c) node.classes = c; }
+  const attrs = normalizeAttrs(raw.attrs);
+  if (attrs.length) node.attrs = attrs;
+  const ix = normalizeInteractions(raw.interactions);
+  if (ix.length) node.interactions = ix;
+  if (raw.startHidden === true) node.startHidden = true;
+  const schedule = normalizeSchedule(raw.schedule, where);
+  if (schedule) node.schedule = schedule;
+  if (def.container && raw.bgVideo && raw.bgVideo.src) {
+    const src = line(raw.bgVideo.src, 1000);
+    if (!/^(https:\/\/[^\s<>"'`\\/@]+\/[^\s<>"'`\\]*|\/uploads\/[a-z0-9/_.-]+)\.(mp4|webm)(\?[^\s<>"'`\\]*)?$/i.test(src)) throw new Error(`${where} : vidéo de fond : fichier .mp4 ou .webm (https:// ou médiathèque).`);
+    node.bgVideo = { src };
+  }
   const styles = normalizeStyles(raw.styles, raw.states, where, h);
   if (styles.styles) node.styles = styles.styles;
   if (styles.states) node.states = styles.states;
@@ -720,11 +951,11 @@ function walk(nodes, fn, parent = null) {
   }
 }
 // Arbre affiché au public : éléments masqués retirés, et ceux dont le public ne correspond pas au visiteur
-const visibleTree = (nodes, visitor) => (nodes || []).filter((n) => !n.hidden && (visitor === undefined || audienceMatches(n.audience, visitor))).map((n) => (n.children ? { ...n, children: visibleTree(n.children, visitor) } : n));
+const visibleTree = (nodes, visitor, now = Date.now()) => (nodes || []).filter((n) => !n.hidden && scheduleMatches(n.schedule, now) && (visitor === undefined || audienceMatches(n.audience, visitor))).map((n) => (n.children ? { ...n, children: visibleTree(n.children, visitor) } : n));
 
 // CSS d'une page : une règle par élément stylé (et par section stylée), par écran et par état. Valeurs déjà validées.
 function pageCss(sections) {
-  const rules = { base: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
+  const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
   const add = (id, styles, states) => {
     if (!NODE_ID.test(String(id || ""))) return;
     const sel = `.kw-n-${id}`;
@@ -742,8 +973,13 @@ function pageCss(sections) {
     add(s.id, s.styles, s.states);
     if (s.type === "layout") walk(s.children, (n) => {
       add(n.id, n.styles, n.states);
-      if (n.motion && n.motion.entrance && NODE_ID.test(String(n.id || ""))) rules.base.push(`.kw-n-${n.id}{--kw-anim-dur:${n.motion.duration}ms;--kw-anim-delay:${n.motion.delay}ms}`);
+      if (n.motion && n.motion.entrance && NODE_ID.test(String(n.id || ""))) rules.base.push(`.kw-n-${n.id}{--kw-anim-dur:${n.motion.duration}ms;--kw-anim-delay:${n.motion.delay}ms${n.motion.easing ? `;--kw-anim-ease:${EASINGS[n.motion.easing]}` : ""}}`);
+      // CSS personnalisé de l'élément (validé à l'enregistrement, revalidé ici : rien d'autre n'atteint la page)
+      if (n.css && NODE_ID.test(String(n.id || ""))) { try { const c = cssDeclarations(n.css, "CSS"); if (c) rules.custom.push(`.kw-node.kw-n-${n.id}{${c}}`); } catch { /* ignoré */ } }
+      if (n.cssHover && NODE_ID.test(String(n.id || ""))) { try { const c = cssDeclarations(n.cssHover, "CSS"); if (c) rules.custom.push(`.kw-node.kw-n-${n.id}:hover{${c}}`); } catch { /* ignoré */ } }
       // Barre de progression : sa largeur vient de sa valeur (validée 0–100), pas d'un style écrit dans la page
+      if (n.type === "hotspot" && NODE_ID.test(String(n.id || "")) && n.props) n.props.spots.forEach((sp, k) => rules.base.push(`.kw-n-${n.id}-s${k}{left:${Number(sp.x)}%;top:${Number(sp.y)}%}`));
+      if (n.type === "iconlist" && NODE_ID.test(String(n.id || "")) && n.props && n.props.iconColor) rules.base.push(`.kw-n-${n.id} .kw-iconlist-icon{color:${colorCss(n.props.iconColor)}}`);
       if (n.type === "social" && NODE_ID.test(String(n.id || "")) && n.props) rules.base.push(`.kw-n-${n.id}{--kw-soc:${Number(n.props.size) || 32}px}`);
       if (n.type === "divider" && NODE_ID.test(String(n.id || "")) && n.props && (n.props.lineStyle !== "solid" || n.props.thickness > 1 || n.props.color)) rules.base.push(`.kw-n-${n.id}{border:0;border-top:${n.props.thickness}px ${n.props.lineStyle} ${n.props.color ? colorCss(n.props.color) : "currentColor"}}`);
       if (n.type === "progress" && NODE_ID.test(String(n.id || "")) && Number.isInteger(n.props && n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-progress-bar{width:${n.props.value}%}`);
@@ -751,10 +987,12 @@ function pageCss(sections) {
   }
   let css = rules.base.join("\n");
   for (const bp of BREAKPOINTS) if (bp.media && rules.media[bp.key].length) css += `\n@media ${bp.media}{${rules.media[bp.key].join("")}}`;
+  // Le CSS personnalisé vient en dernier (il précise les réglages de l'inspecteur), avec une spécificité plus forte
+  if (rules.custom.length) css += `\n${rules.custom.join("\n")}`;
   return css.replace(/</g, "");
 }
 
 module.exports = {
   NODE_TYPES, CATEGORIES, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
-  AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
+  AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };

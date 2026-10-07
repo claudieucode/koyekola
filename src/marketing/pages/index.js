@@ -24,6 +24,12 @@ const json = (text, fallback) => { try { return text ? JSON.parse(text) : fallba
 function normalizeTheme(input) {
   const theme = {};
   for (const [k, d] of Object.entries(landing.DEFAULT_THEME)) theme[k] = HEX.test(String(input && input[k] || "")) ? input[k].toLowerCase() : d;
+  // CSS personnalisé de la page : le texte saisi est gardé (pour être modifié), après vérification complète
+  const css = String(input && input.css || "").trim();
+  if (css) {
+    try { require("./nodes").normalizePageCss(css); } catch (e) { throw bad(e.message); }
+    theme.css = css.slice(0, 8000);
+  }
   return theme;
 }
 
@@ -169,13 +175,15 @@ function createPage(ctx, { name, siteId = null, kind = "page", template = null }
   if (!Object.hasOwn(KINDS, kind)) throw bad("Nature de page inconnue.");
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   // Gabarit choisi : ses sections (validées par la grammaire commune, comme toute section enregistrée)
-  const fromTemplate = template ? require("./templates").buildTemplate(ctx, template) : null;
+  const mine = typeof template === "string" && /^mine:\d+$/.test(template) ? getPageTemplate(ctx, Number(template.slice(5))) : null;
+  const fromTemplate = mine ? mine.content.sections : template ? require("./templates").buildTemplate(ctx, template) : null;
   if (template && !fromTemplate) throw bad("Modèle de page inconnu.");
   const page = landing.createPage(ctx, { name });
   ctx.db.prepare("UPDATE mk_landing_pages SET kind = ?, site_id = ? WHERE id = ?").run(kind, siteId, page.id);
   if (fromTemplate) {
     const sections = normalizeSections(ctx, fromTemplate.map((s) => ({ ...s, id: newSectionId() })));
     ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(sections), page.id);
+    if (mine && mine.content.theme) ctx.db.prepare("UPDATE mk_landing_pages SET theme = ? WHERE id = ?").run(JSON.stringify(normalizeTheme(mine.content.theme)), page.id);
     audit(ctx, "page.created_from_template", "landing", page.id, { template });
     return requirePage(ctx, page.id);
   }
@@ -363,6 +371,93 @@ function deleteComponent(ctx, id) {
   audit(ctx, "component.deleted", "component", c.id, {});
 }
 // Affichage : chaque composant synchronisé est remplacé par sa dernière version (un composant supprimé disparaît)
+// ---------- Parties globales d'un site (en-tête, pied de page) ----------
+// Un composant réutilisable choisi dans les réglages du site, affiché autour des sections de chacune de ses pages
+function siteParts(ctx, siteId) {
+  const none = { header: null, footer: null };
+  if (!siteId) return none;
+  const site = getSite(ctx, Number(siteId));
+  if (!site || site.status !== "active") return none;
+  const part = (cid, which) => {
+    if (!cid) return null;
+    const c = getComponent(ctx, Number(cid));
+    return c && c.section && c.section.type !== "component" ? { ...c.section, id: c.section.id || `part${which}${c.id}`.slice(0, 20), fromComponent: c.id, sitePart: which } : null;
+  };
+  return { header: part(site.header_component_id, "header"), footer: part(site.footer_component_id, "footer") };
+}
+function withSiteParts(ctx, page, sections) {
+  const p = siteParts(ctx, page && page.site_id);
+  return [p.header, ...sections, p.footer].filter(Boolean);
+}
+function setSiteParts(ctx, siteId, { header = null, footer = null } = {}) {
+  const site = requireSite(ctx, siteId, { active: true });
+  const check = (id, label) => {
+    if (id === null || id === undefined || id === "") return null;
+    const c = getComponent(ctx, Number(id));
+    if (!c || !c.section) throw bad(`${label} : composant introuvable.`);
+    if (c.site_id !== null && c.site_id !== site.id) throw bad(`${label} : ce composant appartient à un autre site.`);
+    return c.id;
+  };
+  const h = check(header, "En-tête"), f = check(footer, "Pied de page");
+  ctx.db.prepare("UPDATE mk_sites SET header_component_id = ?, footer_component_id = ?, updated_at = datetime('now') WHERE id = ?").run(h, f, site.id);
+  audit(ctx, "site.parts_updated", "site", site.id, { header: h, footer: f });
+  return getSite(ctx, site.id);
+}
+
+// ---------- Modèles de pages enregistrés par l'équipe ----------
+const userTemplate = (row) => (row ? { id: row.id, name: row.name, category: row.category, description: row.description, content: json(row.content, { sections: [] }), updatedAt: row.updated_at } : null);
+function listPageTemplates(ctx) {
+  checkCtx(ctx);
+  return ctx.db.prepare("SELECT * FROM mk_page_templates WHERE organization_id = ? ORDER BY category COLLATE NOCASE, name COLLATE NOCASE").all(ctx.organizationId).map(userTemplate);
+}
+function getPageTemplate(ctx, id) {
+  checkCtx(ctx);
+  return userTemplate(Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_page_templates WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) : null);
+}
+// Enregistrer un contenu de page comme modèle (validé comme toute page ; un modèle du même nom est remplacé)
+function savePageTemplate(ctx, { name, category, description, content } = {}) {
+  checkCtx(ctx);
+  const n = line(name, 80);
+  if (!n) throw bad("Le nom du modèle est obligatoire.");
+  const clean = normalizeContent(ctx, { name: n }, content || {});
+  const resolved = { ...clean, sections: resolveSections(ctx, clean.sections).map((sec) => { const { fromComponent: _f, ...rest } = sec; return rest; }) };
+  if (!resolved.sections.length) throw bad("Le modèle est vide.");
+  const cat = line(category, 60) || "Mes modèles", desc = line(description, 200);
+  ctx.db.prepare(`INSERT INTO mk_page_templates (organization_id, name, category, description, content, created_by) VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT (organization_id, name) DO UPDATE SET category = excluded.category, description = excluded.description, content = excluded.content, updated_at = datetime('now')`)
+    .run(ctx.organizationId, n, cat, desc, JSON.stringify(resolved), ctx.userId ?? null);
+  const row = ctx.db.prepare("SELECT * FROM mk_page_templates WHERE organization_id = ? AND name = ?").get(ctx.organizationId, n);
+  audit(ctx, "page_template.saved", "page_template", row.id, { name: n });
+  return userTemplate(row);
+}
+function deletePageTemplate(ctx, id) {
+  const t = getPageTemplate(ctx, Number(id));
+  if (!t) throw new MarketingError("not_found", "Modèle introuvable.");
+  ctx.db.prepare("DELETE FROM mk_page_templates WHERE id = ?").run(t.id);
+  audit(ctx, "page_template.deleted", "page_template", t.id, { name: t.name });
+}
+// Export : le contenu de travail d'une page, dans un format que l'import relit (et valide entièrement)
+const EXPORT_FORMAT = "kolakisa-page@1";
+function exportPage(ctx, id) {
+  const page = requirePage(ctx, id);
+  return { format: EXPORT_FORMAT, name: page.name, kind: page.kind, exportedAt: new Date().toISOString(), content: { ...page.working, sections: resolveSections(ctx, page.working.sections).map((sec) => { const { fromComponent: _f, ...rest } = sec; return rest; }) } };
+}
+// Import : une NOUVELLE page (aucune page existante n'est remplacée), contenu revalidé comme une saisie
+function importPage(ctx, data, { siteId = null } = {}) {
+  if (!data || data.format !== EXPORT_FORMAT || !data.content || !Array.isArray(data.content.sections)) throw bad("Fichier non reconnu : exportez une page depuis l'éditeur KOLAKISA (format kolakisa-page@1).");
+  const name = uniqueName(ctx, "mk_landing_pages", line(data.name, 100) || "Page importée");
+  const kind = Object.hasOwn(KINDS, data.kind) ? data.kind : "page";
+  const page = createPage(ctx, { name, siteId, kind });
+  try {
+    saveDraft(ctx, page.id, data.content, { revision: requirePage(ctx, page.id).revision });
+  } catch (e) {
+    ctx.db.prepare("DELETE FROM mk_landing_pages WHERE id = ?").run(page.id);
+    throw e;
+  }
+  audit(ctx, "page.imported", "landing", page.id, {});
+  return requirePage(ctx, page.id);
+}
+
 function resolveSections(ctx, sections) {
   return sections.map((s) => {
     if (s.type !== "component") return s;
@@ -379,5 +474,6 @@ module.exports = {
   createPage, duplicatePage, archivePage, restorePage,
   getSite, requireSite, listSites, sitePages, createSite, updateSite, setHomePage, movePage, archiveSite, restoreSite, duplicateSite,
   listComponents, getComponent, createComponent, updateComponent, componentUsage, deleteComponent, resolveSections,
+  siteParts, withSiteParts, setSiteParts, listPageTemplates, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
   normalizeSeo, normalizeTheme, TYPES,
 };

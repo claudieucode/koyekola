@@ -27,7 +27,7 @@ describe("contenus de départ (sans serveur)", () => {
     const children = spec.types.filter((t) => !t.asks).map((t) => ({ type: t.type, ...t.blank }));
     const r = pages.saveDraft(A, p.id, { sections: [{ type: "layout", children }] }, { revision: p.revision });
     assert.equal(r.content.sections[0].children.length, children.length);
-    assert.deepEqual(spec.types.filter((t) => t.asks).map((t) => t.type).sort(), ["audio", "carousel", "course", "gallery", "image", "video"]);
+    assert.deepEqual(spec.types.filter((t) => t.asks).map((t) => t.type).sort(), ["audio", "carousel", "course", "embed", "gallery", "hotspot", "image", "video"]);
     for (const p0 of spec.styleProps) assert.ok(p0.label && p0.group && ["enum", "color", "number", "length", "text"].includes(p0.kind), p0.key);
   });
 
@@ -64,13 +64,16 @@ describe("éditeur et médiathèque (vrai serveur)", () => {
     return boss.request("/marketing/site-web/medias", { method: "POST", multipart: fd });
   };
 
-  test("l'écran de l'éditeur : zones, outils, palette décrite par le serveur, aucun outil HTML/CSS/JS libre", async () => {
+  test("l'écran de l'éditeur : zones, outils, palette décrite par le serveur, aucun script ; HTML seulement nettoyé", async () => {
     const html = (await boss.get(`/marketing/pages/${pageId}/editeur`)).text;
     for (const z of ["data-pb-tools", "data-pb-elements", "data-pb-layers", "data-pb-inspector", "data-pb-context", "data-pb-frame", "data-pb-media", "data-pb-command-dialog", "data-pb-preview-dialog"]) assert.match(html, new RegExp(z), z);
     const boot = JSON.parse(html.match(/<script type="application\/json" id="pb-boot">([\s\S]*?)<\/script>/)[1]);
     assert.ok(boot.spec.types.length >= 20);
     assert.ok(boot.blocks.some((b) => b.key === "pricing"));
-    assert.doesNotMatch(JSON.stringify(boot.spec.types.map((t) => t.type)), /html|script|iframe|css/i);
+    // Pas d'élément « script », « iframe » ni « css » libres ; l'élément HTML existe, toujours nettoyé (liste blanche)
+    assert.doesNotMatch(JSON.stringify(boot.spec.types.map((t) => t.type)), /script|iframe|"css"/i);
+    assert.ok(boot.spec.types.some((t) => t.type === "html"));
+    assert.doesNotMatch(require("../src/marketing/pages/nodes").sanitizeHtmlBlock("<script>x</script><img src=x onerror=y>"), /script|onerror/);
   });
 
   test("médiathèque : envoi (avec texte de remplacement), liste des deux bibliothèques, mise à jour, refus d'un PDF", async () => {

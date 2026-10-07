@@ -134,27 +134,61 @@ function deletePage(ctx, id) {
 // Données d'affichage : formations relues dans le catalogue (titre, prix, image, adresse à jour) ; dans les sections
 // libres, texte riche assaini de nouveau et formations relues de la même façon ; CSS des éléments stylés
 const courseView = (c) => ({ title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "" });
-function nodeView(ctx, nodes) {
+// Contenu dynamique : lu au moment de l'affichage (articles, formations, compteurs, visiteur)
+const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+function dynamicProps(ctx, n, visitor, page) {
+  const p = n.props;
+  if (n.type === "posts") {
+    const { listPosts } = require("../bridge/catalog");
+    return { ...p, items: listPosts({ ...ctx, baseUrl: "" }, { limit: p.count, category: p.category }).map((x) => ({ title: x.title, url: x.url, excerpt: x.excerpt || "", image: x.image || "", date: x.date })) };
+  }
+  if (n.type === "courselist") {
+    const { listCourseCards } = require("../bridge/catalog");
+    return { ...p, items: listCourseCards(ctx, { limit: p.count, category: p.category, sort: p.sort }).map(courseView) };
+  }
+  if (n.type === "dyntext") {
+    const { countPublished } = require("../bridge/catalog");
+    const now = new Date();
+    const value = {
+      firstName: visitor && visitor.firstName ? visitor.firstName : "",
+      today: `${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`,
+      year: String(now.getFullYear()),
+      pageTitle: page ? page.title || page.name || "" : "",
+      courseCount: String(countPublished(ctx, "courses")),
+      postCount: String(countPublished(ctx, "posts")),
+    }[p.source];
+    return { ...p, value };
+  }
+  if (n.type === "embed") return { ...p, embed: pageNodes.embedOf(p.url) };
+  if (n.type === "account") return { ...p, loggedIn: Boolean(visitor && visitor.loggedIn), cartCount: visitor ? visitor.cartCount || 0 : 0 };
+  return null;
+}
+function nodeView(ctx, nodes, visitor, page) {
   return (nodes || []).map((n) => {
+    const dyn = dynamicProps(ctx, n, visitor, page);
+    if (dyn) n = { ...n, props: dyn };
     if (n.type === "course") {
       const c = getCourse(ctx, n.props.courseId);
       return c ? { ...n, props: { ...n.props, course: courseView(c) } } : null; // formation dépubliée : l'élément disparaît
     }
     const m = n.audience ? { ...n, audienceLabel: pageNodes.audienceLabel(n.audience) } : n;
     if (n.type === "text") return { ...m, props: { ...n.props, html: pageNodes.sanitizeRich(n.props.html) } };
-    return n.children ? { ...m, children: nodeView(ctx, n.children) } : m;
+    return n.children ? { ...m, children: nodeView(ctx, n.children, visitor, page) } : m;
   }).filter(Boolean);
 }
 function viewModel(ctx, page) {
   const sections = page.sections.map((s0) => {
     const s = s0.audience ? { ...s0, audienceLabel: pageNodes.audienceLabel(s0.audience) } : s0;
-    if (s.type === "layout") return { ...s, children: nodeView(ctx, s.children) };
+    if (s.type === "layout") return { ...s, children: nodeView(ctx, s.children, page.visitor, page) };
     if (s.type !== "course") return s;
     const c = getCourse(ctx, s.courseId);
     if (!c) return null; // formation dépubliée depuis : la section disparaît (jamais un lien mort)
     return { ...s, course: courseView(c) };
   }).filter(Boolean);
-  return { ...page, sections, nodeCss: pageNodes.pageCss(sections) };
+  // CSS personnalisé de la page (revalidé à chaque affichage ; un CSS devenu invalide n'est simplement pas appliqué)
+  let customCss = "";
+  try { customCss = page.theme && page.theme.css ? pageNodes.normalizePageCss(page.theme.css) : ""; } catch { customCss = ""; }
+  return { ...page, sections, nodeCss: pageNodes.pageCss(sections), customCss };
 }
 // Liens cliquables d'une page AFFICHÉE (viewModel), dans l'ordre : le même calcul sert au rendu et à /p/<adresse>/clic/<n>
 function linksOf(page) {
@@ -176,6 +210,10 @@ function linksOf(page) {
       if (n.type === "pricing" && n.props.ctaUrl) out.push({ section: i, label: `Offre ${n.props.title} : ${n.props.ctaLabel}`, url: n.props.ctaUrl });
       if (n.type === "breadcrumb") n.props.items.forEach((c, k) => { if (c.url && k < n.props.items.length - 1) out.push({ section: i, label: `Fil d'Ariane : ${c.label}`, url: c.url }); });
       if (n.type === "social") n.props.items.forEach((s2) => out.push({ section: i, label: `Réseau : ${s2.network}`, url: s2.url }));
+      if (n.type === "iconlist") n.props.items.forEach((it) => { if (it.link) out.push({ section: i, label: `Liste : ${it.text}`, url: it.link }); });
+      if (n.type === "posts") (n.props.items || []).forEach((it) => out.push({ section: i, label: `Article : ${it.title}`, url: it.url }));
+      if (n.type === "courselist") (n.props.items || []).forEach((c) => out.push({ section: i, label: `Formation : ${c.title}`, url: c.url }));
+      if (n.type === "account") { out.push({ section: i, label: n.props.loggedIn ? "Mon compte" : "Se connecter", url: n.props.loggedIn ? "/mon-compte" : "/connexion" }); if (n.props.showCart) out.push({ section: i, label: "Panier", url: "/panier" }); }
       if (n.type === "modal" && n.props.ctaUrl) out.push({ section: i, label: `Fenêtre : ${n.props.ctaLabel}`, url: n.props.ctaUrl });
       if (n.type === "course" && n.props.course) out.push({ section: i, label: `Formation : ${n.props.course.title}`, url: n.props.course.url });
     });

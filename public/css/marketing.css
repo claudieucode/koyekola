@@ -1848,3 +1848,4 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-input-num { width: 84px; min-height: 36px; }
 .mk-score-history > summary { cursor: pointer; font-weight: 700; }
 .mk-score-history[open] > summary { margin-bottom: 8px; }
+.mk-form-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; } .mk-form-row .field-group { flex: 1 1 220px; min-width: 0; margin: 0; }

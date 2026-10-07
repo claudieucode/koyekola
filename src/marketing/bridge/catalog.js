@@ -23,6 +23,26 @@ function getCourse(ctx, id) {
   }
 }
 
+// Formations publiées pour un élément « Formations du catalogue » (les plus récentes, par titre ou par prix)
+function listCourseCards(ctx, { limit = 3, category = "", sort = "recent" } = {}) {
+  checkCtx(ctx);
+  const order = { recent: "created_at DESC, id DESC", title: "title COLLATE NOCASE", price: "price_cents ASC, title COLLATE NOCASE" }[sort] || "created_at DESC, id DESC";
+  try {
+    return ctx.db.prepare(`SELECT id, title, slug, subtitle, price_cents, thumbnail_path FROM courses WHERE published = 1${category ? " AND category = ? COLLATE NOCASE" : ""} ORDER BY ${order} LIMIT ?`)
+      .all(...(category ? [category] : []), Math.min(Math.max(limit, 1), 12));
+  } catch {
+    return [];
+  }
+}
+function countPublished(ctx, what) {
+  checkCtx(ctx);
+  try {
+    if (what === "courses") return ctx.db.prepare("SELECT COUNT(*) n FROM courses WHERE published = 1").get().n;
+    if (what === "posts") return ctx.db.prepare("SELECT COUNT(*) n FROM posts WHERE published_at IS NOT NULL AND published_at <= datetime('now') AND (published = 1 OR status = 'scheduled')").get().n;
+  } catch { /* table absente */ }
+  return 0;
+}
+
 // Articles du blog visibles par le public (publiés, ou programmés dont l'heure est passée), du plus récent au plus ancien.
 // → [{ key: "post:12", title, url, excerpt, image, date (ms) }] ; un LMS sans blog donne une liste vide.
 const SQL_DATE = (v) => { const t = Date.parse(`${String(v).replace(" ", "T")}Z`); return Number.isFinite(t) ? t : null; };
@@ -96,4 +116,4 @@ function userHasOrder(ctx, userId) {
   }
 }
 
-module.exports = { listCourses, getCourse, getCourseBySlug, courseConversions, userHasOrder, listPosts, blogCategories };
+module.exports = { listCourseCards, countPublished, listCourses, getCourse, getCourseBySlug, courseConversions, userHasOrder, listPosts, blogCategories };

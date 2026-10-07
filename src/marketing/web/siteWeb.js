@@ -71,6 +71,7 @@ module.exports = () => {
     res.render("marketing/site", {
       title: site.name, active: "sites", site, sitePages: pages.listPages(req.mk.ctx, { siteId: site.id }), canWrite: req.mk.can("forms.write"),
       T: tokens, cssVars: tokens.tokensToCss(site.tokens), templates: require("../pages/templates").catalog(),
+      components: pages.listComponents(req.mk.ctx, { siteId: site.id }),
     });
   });
   router.post("/site-web/sites/:id(\\d+)", need("forms.write"), (req, res, next) => {
@@ -90,6 +91,15 @@ module.exports = () => {
       pages.updateSite(req.mk.ctx, site.id, { tokens: t });
       const live = pages.listPages(req.mk.ctx, { siteId: site.id }).filter((p) => p.status === "published").length;
       return `Design system enregistré${req.body.reset === "1" ? " (valeurs par défaut)" : ""}.${live ? ` Il s'applique tout de suite aux ${live} page(s) en ligne du site.` : ""}`;
+    });
+  });
+  // En-tête et pied de page du site : un composant affiché autour des sections de chaque page du site
+  router.post("/site-web/sites/:id(\\d+)/parties", need("forms.write"), (req, res, next) => {
+    const site = load(req, res);
+    if (!site) return;
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}#parties`, () => {
+      pages.setSiteParts(req.mk.ctx, site.id, { header: intOrNull(req.body.header), footer: intOrNull(req.body.footer) });
+      return "En-tête et pied de page enregistrés : ils s'affichent sur toutes les pages du site.";
     });
   });
   router.post("/site-web/sites/:id(\\d+)/dupliquer", need("forms.write"), (req, res, next) => {
@@ -175,6 +185,20 @@ module.exports = () => {
     try {
       res.json({ component: describe(pages.updateComponent(req.mk.ctx, Number(req.params.id), { name: req.body && req.body.name, section: req.body && req.body.section })) });
     } catch (error) { jsonError(res, next, error); }
+  });
+  // Modèles de pages de l'équipe (enregistrés depuis l'éditeur ; proposés à la création d'une page)
+  router.get("/site-web/modeles.json", need("forms.read"), (req, res) => {
+    res.set("Cache-Control", "no-store").json({ templates: pages.listPageTemplates(req.mk.ctx).map(({ content, ...t }) => ({ ...t, sections: content.sections.length })) });
+  });
+  router.post("/site-web/modeles", need("forms.write"), (req, res, next) => {
+    try {
+      const b = req.body || {};
+      const t = pages.savePageTemplate(req.mk.ctx, { name: b.name, category: b.category, description: b.description, content: b.content });
+      res.status(201).json({ template: { id: t.id, name: t.name, category: t.category } });
+    } catch (error) { jsonError(res, next, error); }
+  });
+  router.post("/site-web/modeles/:id(\\d+)/supprimer", need("forms.write"), (req, res, next) => {
+    attempt(req, res, next, "/marketing/pages#nouvelle", () => { pages.deletePageTemplate(req.mk.ctx, Number(req.params.id)); return "Modèle supprimé (les pages déjà créées avec lui ne changent pas)."; });
   });
   router.post("/site-web/composants/:id(\\d+)/supprimer", need("forms.write"), (req, res, next) => {
     try {

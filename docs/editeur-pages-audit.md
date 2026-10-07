@@ -128,3 +128,48 @@ rendu sur la page publique et testé (serveur : tests/editeur-v2.test.js ; navig
 mobile et « animations réduites »). Une vérification de plus a mis en évidence et corrigé : la typographie globale du site
 (tailles de titres, texte, boutons) ne s'appliquait pas aux éléments des sections libres ; elle s'y applique désormais,
 le réglage propre d'un élément restant prioritaire.
+
+---
+
+# Mission V3 (7 octobre 2026) — état fonctionnalité par fonctionnalité
+
+États : **IMPLEMENTÉE** (fonctionne de bout en bout, testée) · **PARTIELLE** · **NON IMPLÉMENTÉE** · **À CORRIGER**.
+Tests : serveur `tests/editeur-v3.test.js`, `editeur-v2`, `editeur-pro`, `page-builder-*` ; navigateur : 13 scénarios.
+
+| Fonctionnalité | État | Réellement fonctionnelle ? | Testée ? | Emplacement |
+|---|---|---|---|---|
+| Éditeur visuel / Éditeur en blocs, même document | IMPLEMENTÉE | oui | oui | page-builder.js (setMode, renderDoc) |
+| Barre supérieure sombre, menu principal, menu de publication | IMPLEMENTÉE | oui | oui | page-builder.ejs, page-builder.js (showMenuEntries) |
+| Historique des actions (libellés, retour à un point, rétablir) | IMPLEMENTÉE | oui | oui | page-builder.js (pastLabels, openHistory) |
+| Révisions persistées (versions publiées, aperçu, comparaison, restauration) | IMPLEMENTÉE | oui | oui | pages/index.js, compare.js |
+| Sauvegarde automatique, copie locale, conflits, reprise réseau | IMPLEMENTÉE | oui | oui | page-builder.js (save, backup) |
+| Navigateur (calques) : arbre, glisser, renommer, masquer, verrouiller, dupliquer, supprimer, recherche | IMPLEMENTÉE | oui | oui | page-builder.js (renderTree) |
+| Bibliothèque : recherche par pertinence, catégories, favoris, récents, composants, blocs | IMPLEMENTÉE | oui | oui | page-builder.js (renderElements) |
+| Structures : section, conteneur, flex, grille (modèle de colonnes, étendue), colonnes, groupe, pile | IMPLEMENTÉE | oui | oui | nodes.js |
+| Éléments de base : titre, texte, liste, citation, code, tableau, image, vidéo, audio, bouton, icône, séparateur, espace | IMPLEMENTÉE | oui | oui | nodes.js, _node.ejs |
+| HTML (nettoyé : sans script, style, cadre, formulaire, événement ; SVG sûr) | IMPLEMENTÉE | oui | oui (attaques testées) | nodes.js (sanitizeHtmlBlock) |
+| Contenu intégré (YouTube, Vimeo, Google Maps, Calendly, Spotify, SoundCloud, Google Forms, Typeform, Loom, Canva) | IMPLEMENTÉE | oui | oui | nodes.js (embedOf) |
+| Interactifs : onglets, accordéon, bascule, carrousel, galerie + visionneuse, fenêtre, panneau latéral, menu (sous-menus, mobile), infobulle, image à points, compteur, barre de progression, compte à rebours | IMPLEMENTÉE | oui | oui | nodes.js, landing.js |
+| Contenu : liste d'icônes, témoignage, offre tarifaire, FAQ, chronologie, badge, alerte, fil d'Ariane, réseaux sociaux | IMPLEMENTÉE | oui | oui | nodes.js |
+| Contenu dynamique : derniers articles, formations du catalogue, recherche (blog / catalogue), compte du visiteur + panier, texte dynamique (prénom, date, compteurs) | IMPLEMENTÉE | oui | oui | landing/index.js (dynamicProps), bridge/catalog.js |
+| Styles : affichage (bloc, flex, grille, en ligne), dimensions, débordement, alignements, écarts, marges, typographie, fond (couleur, image, dégradé, voile, répétition, fixe), bordures par côté, arrondis par coin, ombres (préréglage et personnalisée), opacité, transformations (inclinaison, origine), filtres, flou d'arrière-plan, transitions | IMPLEMENTÉE | oui | oui | nodes.js (STYLE_PROPS), inspecteur |
+| Vidéo de fond (conteneurs) | IMPLEMENTÉE | oui | oui (validation, rendu) | nodes.js, _node.ejs |
+| Responsive : ordinateur / tablette / mobile, héritage, visibilité par écran | IMPLEMENTÉE | oui | oui | nodes.js (pageCss), inspecteur |
+| États : survol, focus, clic | IMPLEMENTÉE | oui | oui | nodes.js (STATES) |
+| Interactions : au clic, au survol, à l'arrivée à l'écran, au chargement → afficher, masquer, basculer, défiler, ouvrir une fenêtre, rejouer une animation ; état de départ masqué | IMPLEMENTÉE | oui | oui | nodes.js, landing.js |
+| Animations : fondu, glissements, zoom, rebond, rotation, dévoilement, bascule 3D ; durée, délai, courbe, répétition ; effets au survol | IMPLEMENTÉE | oui | oui | landing.css, landing.js |
+| Conditions d'affichage : public (contacts, clients, étiquettes, score…) et programmation par dates | IMPLEMENTÉE | oui | oui | nodes.js (visibleTree) |
+| CSS de l'élément (+ survol), CSS de la page (confiné), classes, ID (ancre), attributs data- / aria- | IMPLEMENTÉE | oui | oui | nodes.js (cssDeclarations, normalizePageCss) |
+| Styles globaux (couleurs, typographies h1–h6, boutons, espacements) appliqués aux éléments | IMPLEMENTÉE | oui | oui | tokens.js, landing.css |
+| Modèles : de pages (enregistrer, réutiliser, supprimer), blocs (22), composants synchronisés / copies, export / import JSON | IMPLEMENTÉE | oui | oui | pages/index.js, migration 042 |
+| En-tête et pied de page de site (parties globales) | IMPLEMENTÉE | oui | oui | pages/index.js (withSiteParts), site.ejs |
+| Transformer un bloc (titre, paragraphe, citation, liste) | IMPLEMENTÉE | oui | oui | page-builder.js (transformNode) |
+| Aperçu ordinateur / tablette / mobile, publication, mise hors ligne | IMPLEMENTÉE | oui | oui | landing.js (web) |
+| SEO (titre, description, adresse, canonique, partage) : moteur SEO existant réutilisé | IMPLEMENTÉE | oui | oui (existant) | pages/index.js (normalizeSeo) |
+| Formulaires (champs, validation, conditions, fichier, succès) | IMPLEMENTÉE (module Formulaires existant, relié à la page) | oui | oui (existant) | marketing/forms |
+| Champs de formulaire comme éléments séparés dans la page | NON IMPLÉMENTÉE | — | — | doublon du module Formulaires : refusé volontairement |
+| JavaScript libre, attributs d'événement, CSS avec ressources externes, classes kw-/lp- | NON IMPLÉMENTÉE | — | — | refus de sécurité (domaine des comptes élèves) |
+| CSS de page avec @media | NON IMPLÉMENTÉE | — | — | @ refusé ; le responsive se règle par écran dans l'inspecteur |
+| Lottie, envoi de fichiers SVG, liste de lecture vidéo | NON IMPLÉMENTÉE | — | — | pas de bibliothèque Lottie locale ; un SVG envoyé peut contenir du script (le SVG collé dans l'élément HTML est accepté, nettoyé) |
+| Modèles de thème : article de blog, archives, résultats de recherche, 404 | NON IMPLÉMENTÉE | — | — | ces pages sont rendues par le blog et le site principal, pas par le moteur de pages |
+| États « visité » et « désactivé » | NON IMPLÉMENTÉE | — | — | visité : limité par les navigateurs ; un bouton de page est un lien |

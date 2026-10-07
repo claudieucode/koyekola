@@ -23,6 +23,8 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="<%= asset("/css/landing.css") %>">
   <% if (page.nodeCss) { %><style><%- page.nodeCss %></style><% } %>
+  <%# CSS personnalisé de la page : vérifié (aucune ressource externe), confiné au contenu de la page %>
+  <% if (page.customCss) { %><style><%- page.customCss %></style><% } %>
 </head>
 <% const bAttr = typeof builder !== "undefined" && builder ? " data-kw-builder" : ""; %><% if (siteStyle) { %><body class="lp-body lp-site"<%- bAttr %> style="<%= siteStyle %> --lp-accent: var(--kw-primary); --lp-on-accent: var(--kw-on-primary); --lp-bg: var(--kw-background); --lp-text: var(--kw-text)">
 <% } else { %><body class="lp-body"<%- bAttr %> style="--lp-accent: <%= page.theme.accent %>; --lp-bg: <%= page.theme.background %>; --lp-text: <%= page.theme.text %>"><% } %>

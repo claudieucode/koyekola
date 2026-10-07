@@ -68,6 +68,7 @@ module.exports = () => {
     const archived = req.query.vue === "archivees";
     res.render("marketing/landing-list", {
       title: "Pages", active: "landing", archived, pages: pages.listPages(req.mk.ctx, { archived }), sites: pages.listSites(req.mk.ctx), templates: require("../pages/templates").catalog(),
+      userTemplates: pages.listPageTemplates(req.mk.ctx), canWrite: req.mk.can("forms.write"),
       STATUSES: landing.STATUSES, STATUS_CLASS, KINDS: pages.KINDS,
     });
   });
@@ -86,8 +87,22 @@ module.exports = () => {
     if (!p) res.status(404).render("error", { message: "Page introuvable." });
     return p;
   };
+  // Export / import d'une page (fichier JSON au format kolakisa-page@1, entièrement revalidé à l'import)
+  router.get("/pages/:id(\\d+)/exporter", need("forms.read"), (req, res) => {
+    const page = load(req, res);
+    if (!page) return;
+    res.set("Content-Disposition", `attachment; filename="page-${page.slug}.kolakisa.json"`).set("Cache-Control", "no-store").json(pages.exportPage(req.mk.ctx, page.id));
+  });
+  router.post("/pages/importer.json", need("forms.write"), (req, res, next) => {
+    try {
+      const b = req.body || {};
+      const p = pages.importPage(req.mk.ctx, b.data, { siteId: intOrNull(b.siteId) });
+      res.status(201).json({ page: { id: p.id, name: p.name }, url: `/marketing/pages/${p.id}/editeur` });
+    } catch (error) { jsonError(res, next, error); }
+  });
   // Données d'affichage d'un contenu (formations relues dans le catalogue, composants synchronisés résolus)
-  const shown = (ctx, page, content) => landing.viewModel(ctx, { ...page, ...content, sections: pages.resolveSections(ctx, content.sections) });
+  // Aperçu, canevas, versions : vus comme par un visiteur inconnu (personnalisation non appliquée, tout est montré)
+  const shown = (ctx, page, content) => landing.viewModel(ctx, { ...page, ...content, sections: pages.withSiteParts(ctx, page, pages.resolveSections(ctx, content.sections)) });
 
   router.get("/pages/:id(\\d+)", need("forms.read"), (req, res) => {
     const page = load(req, res);
@@ -264,6 +279,11 @@ module.exports = () => {
     const page = load(req, res);
     if (!page) return;
     attempt(req, res, next, `/marketing/pages/${page.id}`, () => { pages.unpublish(req.mk.ctx, page.id); return "Page hors ligne : son adresse affiche « page indisponible »."; });
+  });
+  router.post("/pages/:id(\\d+)/depublier.json", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    try { pages.unpublish(req.mk.ctx, page.id); res.json({ ok: true, revision: pages.getPage(req.mk.ctx, page.id).revision }); } catch (error) { jsonError(res, next, error); }
   });
   router.post("/pages/:id(\\d+)/dupliquer", need("forms.write"), (req, res, next) => {
     const page = load(req, res);

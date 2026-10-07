@@ -11,10 +11,11 @@
      const st = s.style || {};
      const cls = ["lp-block", `lp-block-${s.type}`, (s.styles || s.states) && s.id ? `kw-n-${s.id}` : "", st.padding ? `lp-pad-${st.padding}` : "", st.background && st.background !== "default" ? `lp-bg-${st.background}` : "", st.align ? `lp-al-${st.align}` : "", st.width && st.width !== "normal" ? `lp-w-${st.width}` : "", ...(s.hideOn || []).map((b) => `lp-hide-${b}`), s.hidden ? "is-hidden" : ""].filter(Boolean).join(" ");
 %>
-<div class="<%= cls %>"<% if (isBuilder) { %> data-section-id="<%= s.id || "" %>" data-section-index="<%= i %>"<% if (s.audienceLabel) { %> data-audience-label="<%= s.audienceLabel %>"<% } %><% } else if (s.id) { %> data-sid="<%= s.id %>" data-stype="<%= s.type %>"<% } %>>
+<% const editable = isBuilder && !s.sitePart; /* en-tête / pied du site : affichés, modifiés dans le composant du site */ %>
+<div class="<%= cls %><%= s.sitePart ? ` lp-site-part lp-site-${s.sitePart}` : "" %>"<% if (isBuilder && s.sitePart) { %> data-site-part="<%= s.sitePart === "header" ? "En-tête du site" : "Pied de page du site" %>"<% } %><% if (editable) { %> data-section-id="<%= s.id || "" %>" data-section-index="<%= i %>"<% if (s.audienceLabel) { %> data-audience-label="<%= s.audienceLabel %>"<% } %><% } else if (s.id) { %> data-sid="<%= s.id %>" data-stype="<%= s.type %>"<% } %>>
   <% if (s.type === "layout") { %>
     <div class="kw-layout"><% if (isBuilder && !s.children.length) { %><p class="kw-empty">Section libre vide : déposez des éléments ici</p><% } %>
-      <% s.children.forEach((c) => { if (c.hidden && !isBuilder) return; %><%- include("_node", { n: c, isBuilder, href, depth: 1 }) %><% }) %></div>
+      <% s.children.forEach((c) => { if (c.hidden && !isBuilder) return; %><%- include("_node", { n: c, isBuilder: editable, href, depth: 1 }) %><% }) %></div>
   <% } else if (s.type === "hero") { %>
     <header class="lp-hero">
       <% if (s.image) { %><img class="lp-hero-img" src="<%= s.image %>" alt="<%= s.imageAlt %>"<%= i > 0 ? ' loading="lazy"' : ' fetchpriority="high"' %> decoding="async"><% } %>

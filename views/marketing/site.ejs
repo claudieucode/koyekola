@@ -43,6 +43,17 @@
       </section>
     </div>
 
+    <section class="mk-panel" id="parties" aria-labelledby="site-parts">
+      <h2 id="site-parts">En-tête et pied de page</h2>
+      <p class="field-hint">Un composant réutilisable (enregistré depuis l'éditeur : inspecteur › Avancé › « Enregistrer comme composant ») affiché en haut ou en bas de <strong>toutes</strong> les pages de ce site. Le modifier dans une page qui l'utilise le met à jour partout.</p>
+      <% if (!components.length) { %><p class="field-hint">Aucun composant pour l'instant : créez par exemple une section avec un menu, puis enregistrez-la comme composant.</p><% } else { %>
+      <form action="/marketing/site-web/sites/<%= site.id %>/parties" method="post" class="mk-form-row">
+        <div class="field-group"><label for="site-header">En-tête du site</label><select id="site-header" name="header"<%= canWrite ? "" : " disabled" %>><option value="">Aucun</option><% components.forEach((c) => { %><option value="<%= c.id %>"<%= site.header_component_id === c.id ? " selected" : "" %>><%= c.name %><%= c.global ? " (global)" : "" %></option><% }) %></select></div>
+        <div class="field-group"><label for="site-footer">Pied de page du site</label><select id="site-footer" name="footer"<%= canWrite ? "" : " disabled" %>><option value="">Aucun</option><% components.forEach((c) => { %><option value="<%= c.id %>"<%= site.footer_component_id === c.id ? " selected" : "" %>><%= c.name %><%= c.global ? " (global)" : "" %></option><% }) %></select></div>
+        <% if (canWrite) { %><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button><% } %>
+      </form><% } %>
+    </section>
+
     <section class="mk-panel" id="design" aria-labelledby="site-design">
       <h2 id="site-design">Design system</h2>
       <p class="mk-lead">Ces réglages s'appliquent à toutes les pages du site, y compris celles déjà en ligne : modifiez une couleur ici, elle change partout.</p>
