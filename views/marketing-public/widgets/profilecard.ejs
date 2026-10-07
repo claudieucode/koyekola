@@ -1,0 +1,3 @@
+<%# Carte de profil (widget personnalisé : src/marketing/pages/widgets/profilecard.js). Variables : p (réglages validés),
+    cls / attrs (classes et attributs communs de l'élément), L (liens déjà comptés, par champ). %>
+<article class="<%= cls %> <%= p.align === "left" ? "is-left" : "is-center" %>"<%- attrs %>><% if (p.photo) { %><img class="kw-profile-photo" src="<%= p.photo %>" alt="" loading="lazy" decoding="async"><% } %><h3 class="kw-profile-name"><%= p.name %></h3><% if (p.role) { %><p class="kw-profile-role"><%= p.role %></p><% } %><% if (p.bio) { %><p class="kw-profile-bio"><%= p.bio %></p><% } %><% if (L.link) { %><a class="kw-button kw-btn-outline kw-btn-sm" href="<%= L.link %>"><%= p.linkLabel || "Voir le profil" %></a><% } %></article>

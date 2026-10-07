@@ -756,8 +756,51 @@ const WIDGET_SHORTCUTS = [
   { key: "pagetitle", label: "Titre de la page", group: "site", icon: "type", keywords: "titre de la page nom h1 h2", type: "dyntext", preset: { source: "pageTitle", tag: "h2", before: "", after: "", fallback: "" } },
 ];
 
+// ---------- Widgets personnalisés (src/marketing/pages/widgets/*.js) ----------
+// Chaque description (champs typés) devient un type d'élément ordinaire : validation, fiche de bibliothèque, contenu de
+// départ, champs de l'inspecteur, liens comptés, versions. Voir docs/widgets-personnalises.md.
+const CUSTOM_WIDGETS = {};
+const emptyValue = (v) => v === undefined || v === null || v === "";
+function schemaProps(def) {
+  return (p, at, h) => {
+    const out = {};
+    for (const f of def.schema) {
+      const raw = p[f.key], where = `${at} (${def.label}, ${f.label})`;
+      let v;
+      if (f.kind === "text") v = line(raw === undefined ? f.default : raw, f.max || 200);
+      else if (f.kind === "textarea") v = clean(raw === undefined ? f.default : raw, f.max || 1000);
+      else if (f.kind === "number") { v = numberIn(f.min, f.max, { integer: f.integer === true })(raw); if (v === null) v = numberIn(f.min, f.max)(f.default); }
+      else if (f.kind === "select") v = f.options.some((o) => o[0] === raw) ? raw : f.default !== undefined ? f.default : f.options[0][0];
+      else if (f.kind === "bool") v = typeof raw === "boolean" ? raw : f.default === true;
+      else if (f.kind === "link") v = h.linkUrl(raw, where);
+      else if (f.kind === "image") v = raw ? h.imageUrl(raw, where) : "";
+      else if (f.kind === "icon") v = h.iconNames.includes(String(raw || "")) ? String(raw) : h.iconNames.includes(String(f.default || "")) ? f.default : "";
+      else if (f.kind === "color") v = color(raw) || "";
+      if (f.required && emptyValue(v)) throw new Error(`${where} : obligatoire.`);
+      out[f.key] = v === null ? "" : v;
+    }
+    return out;
+  };
+}
+// Enregistrement (au chargement ; les tests peuvent en enregistrer un à part)
+function registerWidget(def) {
+  require("./widgets").check(def, def && def.type);
+  if (Object.hasOwn(NODE_TYPES, def.type)) throw new Error(`Widget personnalisé « ${def.type} » : ce type existe déjà.`);
+  if (!WIDGET_GROUPS[def.group]) throw new Error(`Widget personnalisé « ${def.type} » : catégorie « ${def.group} » inconnue.`);
+  if (def.requires && !WIDGET_PERMISSIONS[def.requires]) throw new Error(`Widget personnalisé « ${def.type} » : permission « ${def.requires} » inconnue.`);
+  CUSTOM_WIDGETS[def.type] = def;
+  NODE_TYPES[def.type] = { label: def.label, category: "marketing", custom: true, version: def.version, props: schemaProps(def) };
+  WIDGETS[def.type] = [def.group, def.keywords, def.requires || undefined];
+  if (paletteReady) PALETTE[def.type] = paletteEntry(def);
+  return def;
+}
+// Contenu de départ : valeurs par défaut des champs (+ version)
+let paletteReady = false;
+const paletteEntry = (def) => ({ icon: def.icon, blank: () => ({ props: Object.fromEntries(def.schema.filter((f) => f.default !== undefined).map((f) => [f.key, f.default])), ...(def.version > 1 ? { v: def.version } : {}) }) });
 // Permissions exigées par des widgets : libellé affiché sur le cadenas
 const WIDGET_PERMISSIONS = { "pages.code": "réservé aux administrateurs (le HTML s'affiche sur le même domaine que les comptes des élèves)" };
+const LOADED_WIDGETS = require("./widgets").load();
+for (const def of LOADED_WIDGETS) registerWidget(def);
 for (const type of Object.keys(NODE_TYPES)) if (!WIDGETS[type] || !WIDGET_GROUPS[WIDGETS[type][0]]) throw new Error(`Widget sans fiche de bibliothèque : ${type}`);
 const widgetRequires = (type) => (WIDGETS[type] && WIDGETS[type][2]) || null;
 
@@ -851,6 +894,9 @@ const PALETTE = {
   dyntext: { icon: "type", blank: () => ({ props: { source: "firstName", before: "Bonjour ", after: " !", fallback: "à vous", tag: "p" } }) },
   modal: { icon: "layers", blank: () => ({ props: { buttonLabel: "En savoir plus", title: "Plus d'informations", text: "Le contenu de la fenêtre.", variant: "outline", size: "md" } }) },
 };
+// Contenu de départ des widgets personnalisés chargés plus haut (le registre PALETTE n'existait pas encore)
+for (const def of LOADED_WIDGETS) PALETTE[def.type] = paletteEntry(def);
+paletteReady = true;
 
 // Libellés et contrôles des propriétés de style (inspecteur) : un contrôle = une propriété réelle de STYLE_PROPS
 const STYLE_UI = {
@@ -908,7 +954,7 @@ function editorSpec() {
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
   return {
-    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], keywords: WIDGETS[type][1], requires: widgetRequires(type), version: d.version || 1, container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
+    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], keywords: WIDGETS[type][1], requires: widgetRequires(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text" } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
     categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
@@ -1163,7 +1209,12 @@ function normalizeNode(raw, at, h, depth, counter) {
   counter.ids.add(id);
   const label = raw.name && line(raw.name, 60) ? line(raw.name, 60) : null;
   const where = `${at} « ${label || def.label} »`;
-  const node = { id, type: raw.type, props: def.props(raw.props && typeof raw.props === "object" ? raw.props : {}, where, h) };
+  // Widget personnalisé d'une version plus ancienne : ses réglages sont mis à niveau (migrate[v]) avant validation
+  let rawProps = raw.props && typeof raw.props === "object" ? raw.props : {};
+  const cw = def.custom ? CUSTOM_WIDGETS[raw.type] : null;
+  if (cw && cw.version > 1) for (let v = Number.isInteger(raw.v) && raw.v >= 1 ? raw.v : 1; v < cw.version; v++) rawProps = cw.migrate[v + 1]({ ...rawProps });
+  const node = { id, type: raw.type, props: def.props(rawProps, where, h) };
+  if (cw && cw.version > 1) node.v = cw.version;
   if (label) node.name = label;
   if (raw.hidden === true) node.hidden = true;
   if (raw.locked === true) node.locked = true;
@@ -1321,6 +1372,6 @@ function pageCss(sections) {
 }
 
 module.exports = {
-  NODE_TYPES, CATEGORIES, WIDGET_GROUPS, WIDGETS, lockedWidgetChanges, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
+  NODE_TYPES, CATEGORIES, WIDGET_GROUPS, WIDGETS, CUSTOM_WIDGETS, registerWidget, lockedWidgetChanges, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
   AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };

@@ -331,3 +331,21 @@ Non construit : intégrations de plateformes (commentaires Facebook, fil de publ
 | Composants (ce site) / Globales (tous les sites) | oui (Éléments › Composants / Globales) | insertion synchronisée ou en copie (existant) ; **recherche** ; **utilisation** (« utilisé sur N pages ») ; **renommer** (nom unique) ; **rendre global** / **réserver à ce site** (refusé, avec la liste des pages, s'il sert à une page d'un autre site) | oui (serveur) | — (panneau de l'éditeur) | serveur + navigateur |
 | Modèles de l'équipe | oui (onglet Blocs › « Modèles de l'équipe ») | **insertion dans la page en cours** (copie des sections, nouveaux identifiants, annulable ; un seul formulaire d'inscription par page ; widgets réservés vérifiés) ; création d'une page depuis un modèle, enregistrement, export / import (existants) | oui | oui | serveur + navigateur |
 | Blocs prêts à l'emploi (22) | oui (existant) | oui | oui | oui | suites existantes |
+
+## Lot 9 — Widgets personnalisés (architecture)
+
+Mode d'emploi : `docs/widgets-personnalises.md`. Un widget = une description (`src/marketing/pages/widgets/<type>.js`), un gabarit (`views/marketing-public/widgets/<type>.ejs`) et ses styles.
+
+| Élément de l'architecture | Fonctionnel | Testé |
+|---|---|---|
+| Métadonnées (nom, catégorie, icône, mots de recherche, permission) | fiche de bibliothèque, recherche, favoris, cadenas réel | unitaire |
+| Schéma typé (texte, zone de texte, nombre, liste, case, lien, image, icône, couleur) + valeurs par défaut | validation et nettoyage automatiques côté serveur ; contenu de départ toujours valide | unitaire (chaque type, liens / images dangereux refusés) |
+| Contrôles de contenu | onglet Contenu de l'inspecteur généré depuis le schéma | navigateur |
+| Contrôles de style / responsive | onglets Style (texte ou boîte) et Avancé communs : styles par écran et par état, animations, interactions, visibilité | navigateur |
+| Rendu | gabarit EJS du widget, liens comptés (`L.<champ>`) | serveur + page publiée |
+| Validation de la description | erreurs claires au démarrage (type, champ, obligatoire sans défaut, version sans migration…) | unitaire |
+| Persistance | comme tout élément (brouillon, versions de page, composants, modèles) | serveur |
+| Version et mise à niveau | `version` + `migrate[n]` : réglages des anciennes pages mis à niveau, version notée sur l'élément | unitaire |
+| Exemple réel : **Carte de profil** | photo, nom, rôle, présentation, lien, alignement | unitaire + navigateur + page publiée mobile |
+
+Non fait : création de widgets par l'interface (sans code). Un widget personnalisé s'ajoute par un développeur (ou Claude) en suivant le mode d'emploi ; c'est volontaire (aucun code libre exécuté sur le domaine des élèves).

@@ -75,6 +75,8 @@
   <div class="<%= cls %>"<%- attrs %>><% if (p.title) { %><span class="kw-rating-title"><%= p.title %></span><% } %><span class="kw-rating-stars" role="img" aria-label="Note : <%= fr(p.value) %> sur <%= p.scale %>"><span class="kw-rating-bg" aria-hidden="true"><%= "★".repeat(p.scale) %></span><span class="kw-rating-fill" aria-hidden="true"><%= "★".repeat(p.scale) %></span></span><% if (p.showValue) { %><span class="kw-rating-value" aria-hidden="true"><%= fr(p.value) %>/<%= p.scale %></span><% } %></div>
 <% } else if (n.type === "menuanchor") { %>
   <% if (isBuilder) { %><div class="<%= cls %> kw-anchor-mark"<%- attrs %>>⚓ Ancre « #<%= n.anchor || "?" %> »</div><% } else if (n.anchor) { %><div class="<%= cls %>"<%- attrs %>></div><% } %>
+<% } else if (n.customView) { const L = {}; n.customView.links.forEach((k) => { if (p[k]) L[k] = href(p[k]); }); %>
+  <%- include(n.customView.partial, { n, p, cls, attrs, L, isBuilder }) %>
 <% } else if (n.type === "sitelogo") { const inner = p.logo ? `<img class="kw-sitelogo-img" src="${esc(p.logo)}" alt="${esc(p.name)}">` : `<span class="kw-sitelogo-text">${esc(p.name)}</span>`; %>
   <div class="<%= cls %>"<%- attrs %>><% if (p.link && p.homeUrl) { %><a class="kw-sitelogo-link" href="<%= href(p.homeUrl) %>"<%- p.logo ? "" : "" %>><%- inner %></a><% } else { %><%- inner %><% } %><% if (isBuilder && !p.logo) { %><p class="kw-empty">Aucun logo : ajoutez-le dans SEO › Réglages › Organisation (le nom du site s'affiche en attendant).</p><% } %></div>
 <% } else if (n.type === "sitetitle") { const tag = ["span", "h1", "h2", "h3"].includes(p.tag) ? p.tag : "p"; %>

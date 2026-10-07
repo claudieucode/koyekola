@@ -204,6 +204,9 @@ function nodeView(ctx, nodes, visitor, page) {
   return (nodes || []).map((n) => {
     const dyn = dynamicProps(ctx, n, visitor, page);
     if (dyn) n = { ...n, props: dyn };
+    // Widget personnalisé : son gabarit et ses champs « lien » (comptés dans cet ordre, comme dans linksOf)
+    const cw = pageNodes.CUSTOM_WIDGETS[n.type];
+    if (cw) n = { ...n, customView: { partial: `widgets/${n.type}`, links: cw.schema.filter((f) => f.kind === "link").map((f) => f.key) } };
     if (n.type === "addtocart" || n.type === "courserating") {
       const c = getCourse(ctx, n.props.courseId);
       if (c && n.type === "courserating") return { ...n, props: { ...n.props, course: courseView(c), rating: require("../bridge/catalog").courseRating(ctx, c.id) } };
@@ -255,6 +258,8 @@ function linksOf(page) {
       if (n.type === "flipbox" && n.props.ctaUrl) out.push({ section: i, label: `Boîte retournable : ${n.props.ctaLabel}`, url: n.props.ctaUrl });
       if (n.type === "pricelist") n.props.items.forEach((it) => { if (it.link) out.push({ section: i, label: `Liste de prix : ${it.title}`, url: it.link }); });
       if ((n.type === "imagebox" || n.type === "iconbox") && n.props.link) out.push({ section: i, label: `${n.type === "imagebox" ? "Boîte d'image" : "Boîte d'icône"} : ${n.props.title}`, url: n.props.link });
+      const cw = pageNodes.CUSTOM_WIDGETS[n.type];
+      if (cw) cw.schema.forEach((f) => { if (f.kind === "link" && n.props[f.key]) out.push({ section: i, label: `${cw.label} : ${f.label}`, url: n.props[f.key] }); });
       if (n.type === "heading" && n.props.link) out.push({ section: i, label: `Titre : ${n.props.text}`, url: n.props.link });
       if (n.type === "button") out.push({ section: i, label: n.props.label, url: n.props.url });
       if (n.type === "link") out.push({ section: i, label: n.props.label, url: n.props.url });
