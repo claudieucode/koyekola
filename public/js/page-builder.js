@@ -272,11 +272,11 @@
     var top = l ? (l.ancestors[0] || l.item) : null;
     return { parent: null, index: top ? sectionIndex(top) + 1 : content.sections.length };
   }
-  function addItems(items, at) {
+  function addItems(items, at, label) {
     items.forEach(function (it) { ensureIds([it]); });
     var p = at || insertionPoint(items[0]);
     if (p.parent && lockedDeep(p.parent.id)) { toast("Emplacement verrouillé : déverrouillez-le d'abord.", true); return; }
-    nextLabel = "Ajout : " + (items.length === 1 ? typeLabel(items[0]) : items.length + " éléments");
+    nextLabel = label || "Ajout : " + (items.length === 1 ? typeLabel(items[0]) : items.length + " éléments");
     change(function () {
       if (!insertInto(p.parent, p.index, items)) return false;
       selection = items.map(function (it) { return it.id; });
@@ -696,7 +696,7 @@
     var s = String(v || "").trim().toLowerCase().replace(",", ".");
     if (!s) return "";
     if (/^-?\d{1,4}(\.\d{1,3})?$/.test(s)) s = s === "0" ? "0" : s + "px";
-    if (s === "auto") return ["width", "height", "marginTop", "marginRight", "marginBottom", "marginLeft"].indexOf(key) >= 0 ? s : null;
+    if (s === "auto") return ["width", "height", "flexBasis", "marginTop", "marginRight", "marginBottom", "marginLeft"].indexOf(key) >= 0 ? s : null;
     if (s === "0" || LEN.test(s)) {
       if (/^-/.test(s) && !/^(margin|top|left|letterSpacing)/.test(key)) return null;
       return s;
@@ -761,6 +761,8 @@
     treeEl.appendChild(frag);
     var cur = treeEl.querySelector(".pb-row-item.is-selected") || treeEl.querySelector(".pb-row-item");
     if (cur) cur.tabIndex = 0;
+    var info = $("[data-pb-page-count]");
+    if (info) { var total = 0; walk(function () { total++; }); info.textContent = content.sections.length + " section" + (content.sections.length > 1 ? "s" : "") + " · " + (total - content.sections.length) + " élément" + (total - content.sections.length > 1 ? "s" : ""); }
   }
   // Avant / après / dedans selon la hauteur du pointeur dans la ligne ; « dedans » seulement pour un conteneur
   function dropPosition(row, y, it) {
@@ -829,12 +831,169 @@
     var open = !panels.layersCollapsed;
     $("[data-pb-right]").classList.toggle("is-layers-collapsed", !open);
     layersToggle.setAttribute("aria-expanded", String(open));
-    layersToggle.setAttribute("aria-label", open ? "Replier le panneau Calques" : "Déplier le panneau Calques");
-    layersToggle.setAttribute("data-tip", open ? "Replier le panneau Calques" : "Déplier le panneau Calques");
+    layersToggle.setAttribute("aria-label", open ? "Replier le panneau Structure" : "Déplier le panneau Structure");
+    layersToggle.setAttribute("data-tip", open ? "Replier le panneau Structure" : "Déplier le panneau Structure");
     layersToggle.textContent = "";
     layersToggle.appendChild(icon(open ? "chevronDown" : "chevronRight"));
   }
   layersToggle.addEventListener("click", function () { panels.layersCollapsed = !panels.layersCollapsed; store.set("panels", panels); applyLayersPanel(); });
+
+  // ---------- Structures : « + » → « Quelle mise en page utiliser ? » (Flexbox ou Grille) → structure réelle ----------
+  // Chaque structure est un arbre d'éléments réel (conteneurs flex ou grille, avec leurs réglages tablette et mobile) fourni
+  // par le serveur ; l'insérer passe par addItems (historique, calques, enregistrement) comme tout autre ajout.
+  var layoutDialog = $("[data-pb-layout]");
+  var layoutBody = $("[data-pb-layout-body]");
+  var layoutTitle = $("[data-pb-layout-title]");
+  var layoutTarget = null;
+  var STRUCTURES = SPEC.structures || [], STRUCTURE_KINDS = SPEC.structureKinds || [];
+  // Miniature : l'arbre de la structure redessiné en petit avec ses VRAIES valeurs (direction, base de taille, colonnes, étendues)
+  function miniature(node, role) {
+    var d = (node.styles && node.styles.desktop) || {};
+    var kids = node.children || [];
+    var el = h("span", { class: "pb-mini" + (role === "root" ? " is-root" : "") + (kids.length ? "" : " is-leaf"), "aria-hidden": "true" });
+    var st = el.style;
+    if (d.display === "flex") { st.display = "flex"; st.flexDirection = d.flexDirection || "column"; st.gap = "3px"; }
+    else if (d.display === "grid") {
+      st.display = "grid"; st.gap = "3px";
+      st.gridTemplateColumns = d.gridTemplate ? d.gridTemplate.split(" ").map(function (t) { return /fr$/.test(t) ? "minmax(0," + t + ")" : t; }).join(" ") : "repeat(" + (d.columns || 3) + ",minmax(0,1fr))";
+      st.gridTemplateRows = "repeat(" + (d.gridRows || 1) + ",1fr)";
+    }
+    if (role === "cell-flex") { if (d.flexBasis) st.flexBasis = d.flexBasis; if (d.flexGrow !== undefined) st.flexGrow = String(d.flexGrow); if (d.flexShrink !== undefined) st.flexShrink = String(d.flexShrink); st.minWidth = "0"; }
+    if (role === "cell-grid") { if (d.gridColumnSpan) st.gridColumn = "span " + d.gridColumnSpan; if (d.gridRowSpan) st.gridRow = "span " + d.gridRowSpan; }
+    kids.forEach(function (k) { el.appendChild(miniature(k, d.display === "grid" ? "cell-grid" : "cell-flex")); });
+    return el;
+  }
+  function openStructurePicker(target) {
+    if (!canWrite) return;
+    if (editing) commitEdit();
+    layoutTarget = target;
+    if (!layoutDialog.open) layoutDialog.showModal();
+    showLayoutKinds(); // après l'ouverture : le focus va au premier choix (Flexbox), pas à la croix
+  }
+  function showLayoutKinds() {
+    layoutTitle.textContent = "Quelle mise en page utiliser ?";
+    layoutBody.textContent = "";
+    var row = h("div", { class: "pb-layout-kinds", role: "group", "aria-label": "Type de mise en page" });
+    STRUCTURE_KINDS.forEach(function (k) {
+      var sample = STRUCTURES.filter(function (x) { return x.key === (k.key === "flex" ? "flex-3" : "grid-2x2"); })[0] || STRUCTURES.filter(function (x) { return x.kind === k.key; })[0];
+      row.appendChild(h("button", { type: "button", class: "pb-kind", "data-kind": k.key, onclick: function () { showStructures(k.key); } },
+        h("span", { class: "pb-kind-art" }, sample ? miniature(sample.tree, "root") : null), h("strong", { class: "pb-kind-name", text: k.label.toUpperCase() }), h("span", { class: "pb-kind-hint", text: k.hint })));
+    });
+    layoutBody.appendChild(row);
+    var first = row.querySelector("button");
+    if (first) first.focus();
+  }
+  function showStructures(kind) {
+    var k = STRUCTURE_KINDS.filter(function (x) { return x.key === kind; })[0];
+    layoutTitle.textContent = "Choisissez une structure · " + k.label;
+    layoutBody.textContent = "";
+    layoutBody.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm pb-layout-back", onclick: showLayoutKinds }, "← Changer de mise en page"));
+    var grid = h("div", { class: "pb-structures", role: "group", "aria-label": "Structures " + k.label });
+    STRUCTURES.filter(function (x) { return x.kind === kind; }).forEach(function (x) {
+      grid.appendChild(h("button", { type: "button", class: "pb-structure", "data-structure": x.key, title: x.label, "aria-label": x.label, onclick: function () { layoutDialog.close(); addStructure(x, layoutTarget); } },
+        miniature(x.tree, "root"), h("span", { class: "pb-structure-name", text: x.label })));
+    });
+    layoutBody.appendChild(grid);
+    var first = grid.querySelector("button");
+    if (first) first.focus();
+  }
+  function addStructure(x, target) {
+    if (!canWrite || !x) return;
+    var node = clone(x.tree);
+    ensureIds([node]);
+    var at = target || insertionPoint({ type: "container" });
+    if (at.parent && lockedDeep(at.parent.id)) { toast("Emplacement verrouillé : déverrouillez-le d'abord.", true); return; }
+    addItems([node], at, "Structure : " + x.label);
+  }
+  // Clic sur un « + » du canevas : zone vide d'un conteneur, d'une section libre, ou page vide
+  function canvasAdd(btn) {
+    if (!canWrite) return;
+    var root = btn.getAttribute("data-kw-add") === "root";
+    var owner = root ? null : btn.closest("[data-node-id],[data-section-id]");
+    var id = idOfEl(owner);
+    var it = id ? byId(id) : null;
+    if (!root && !it) return;
+    if (it && lockedDeep(it.id)) { toast("Emplacement verrouillé : déverrouillez-le d'abord.", true); return; }
+    if (it) select(it.id, false, { scroll: false });
+    openStructurePicker(root ? { parent: null, index: content.sections.length } : { parent: it, index: (kidsOf(it) || []).length });
+  }
+  $("[data-pb-layers-add]").addEventListener("click", function () { openStructurePicker(insertionPoint({ type: "container" })); });
+  $("[data-pb-expand-all]").addEventListener("click", expandAll);
+  $("[data-pb-collapse-all]").addEventListener("click", collapseAll);
+
+  // ---------- Panneau Structure : attaché, détaché (flottant, déplaçable, redimensionnable), fermé ----------
+  // Le MÊME panneau change de mode (aucune copie) : sa liste, sa sélection, ses niveaux ouverts et son défilement sont conservés.
+  var layersPanel = $("[data-pb-layers-panel]");
+  var layersHead = $("[data-pb-layers-head]");
+  var rightEl = $("[data-pb-right]");
+  var dockBtn = $("[data-pb-layers-dock]");
+  var dockClose = $("[data-pb-layers-close]");
+  var dockOpen = $("[data-pb-layers-open]");
+  var dock = Object.assign({ mode: "docked", last: "docked", x: null, y: null, w: 340, h: 440 }, store.get("layers-dock", {}));
+  if (["docked", "floating", "closed"].indexOf(dock.mode) < 0) dock.mode = "docked";
+  if (dock.last !== "floating") dock.last = "docked";
+  var resizeGrip = h("span", { class: "pb-float-resize", "aria-hidden": "true", "data-tip": "Redimensionner" });
+  layersPanel.appendChild(resizeGrip);
+  function clampDock() {
+    dock.w = Math.min(Math.max(240, Math.round(dock.w)), Math.max(240, window.innerWidth - 16));
+    dock.h = Math.min(Math.max(180, Math.round(dock.h)), Math.max(180, window.innerHeight - 16));
+    dock.x = Math.min(Math.max(0, Math.round(dock.x)), Math.max(0, window.innerWidth - dock.w));
+    dock.y = Math.min(Math.max(0, Math.round(dock.y)), Math.max(0, window.innerHeight - 48));
+  }
+  function applyDock(initial) {
+    var floating = dock.mode === "floating", closed = dock.mode === "closed";
+    if (floating && (dock.x === null || dock.y === null)) { var r = rightEl.getBoundingClientRect(); dock.x = Math.max(8, r.left - dock.w - 12); dock.y = Math.max(56, r.top + 8); }
+    if (floating) clampDock();
+    layersPanel.classList.toggle("is-floating", floating);
+    layersPanel.classList.toggle("is-closed", closed);
+    rightEl.classList.toggle("is-layers-detached", dock.mode !== "docked");
+    if (floating) { layersPanel.style.left = dock.x + "px"; layersPanel.style.top = dock.y + "px"; layersPanel.style.width = dock.w + "px"; layersPanel.style.height = dock.h + "px"; }
+    else ["left", "top", "width", "height"].forEach(function (k) { layersPanel.style[k] = ""; });
+    dockBtn.textContent = ""; dockBtn.appendChild(icon(floating ? "panelLeft" : "externalLink"));
+    var label = floating ? "Rattacher le panneau Structure à l'interface" : "Détacher le panneau Structure (le déplacer et le redimensionner)";
+    dockBtn.setAttribute("aria-label", label); dockBtn.setAttribute("data-tip", label);
+    dockBtn.setAttribute("aria-pressed", String(floating));
+    dockOpen.setAttribute("aria-pressed", String(!closed));
+    layersHead.tabIndex = floating ? 0 : -1;
+    layersHead.setAttribute("aria-label", floating ? "Panneau Structure flottant : flèches pour le déplacer, Maj + flèches pour le redimensionner" : "");
+    store.set("layers-dock", dock);
+    if (!initial) { if (zoomFit) applyZoom(); else drawRulers(); }
+  }
+  function setDockMode(mode) {
+    if (mode !== "closed") dock.last = mode;
+    dock.mode = mode;
+    applyDock();
+    if (mode !== "closed" && selection.length) markTreeSelection();
+  }
+  dockBtn.addEventListener("click", function () { setDockMode(dock.mode === "floating" ? "docked" : "floating"); });
+  dockClose.addEventListener("click", function () { setDockMode("closed"); });
+  dockOpen.addEventListener("click", function () { setDockMode(dock.mode === "closed" ? dock.last : "closed"); });
+  layersHead.addEventListener("dblclick", function (e) { if (!e.target.closest("button")) setDockMode(dock.mode === "floating" ? "docked" : "floating"); });
+  // Déplacer (en-tête) et redimensionner (coin) le panneau flottant
+  function dockGesture(handle, onMove) {
+    handle.addEventListener("pointerdown", function (e) {
+      if (dock.mode !== "floating" || (handle === layersHead && e.target.closest("button"))) return;
+      e.preventDefault();
+      handle.setPointerCapture(e.pointerId);
+      var start = { x: e.clientX, y: e.clientY, dock: Object.assign({}, dock) };
+      frame.style.pointerEvents = "none";
+      layersPanel.classList.add("is-moving");
+      var move = function (ev) { onMove(start, ev.clientX - start.x, ev.clientY - start.y); clampDock(); layersPanel.style.left = dock.x + "px"; layersPanel.style.top = dock.y + "px"; layersPanel.style.width = dock.w + "px"; layersPanel.style.height = dock.h + "px"; };
+      var up = function () { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); handle.removeEventListener("pointercancel", up); frame.style.pointerEvents = ""; layersPanel.classList.remove("is-moving"); store.set("layers-dock", dock); };
+      handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", up); handle.addEventListener("pointercancel", up);
+    });
+  }
+  dockGesture(layersHead, function (s, dx, dy) { dock.x = s.dock.x + dx; dock.y = s.dock.y + dy; });
+  dockGesture(resizeGrip, function (s, dx, dy) { dock.w = s.dock.w + dx; dock.h = s.dock.h + dy; });
+  layersHead.addEventListener("keydown", function (e) {
+    if (dock.mode !== "floating" || e.target !== layersHead || ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].indexOf(e.key) < 0) return;
+    e.preventDefault();
+    var step = 16, dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0, dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+    if (e.shiftKey) { dock.w += dx; dock.h += dy; } else { dock.x += dx; dock.y += dy; }
+    applyDock();
+  });
+  window.addEventListener("resize", function () { if (dock.mode === "floating") applyDock(); });
+  applyDock(true);
 
   // ---------- Palette d'éléments, outils, blocs, composants ----------
   // Glisser depuis la palette : dragNew = { sample, make(cible) }
@@ -1586,7 +1745,7 @@
   // ---------- Inspecteur : un schéma par type d'élément (registre extensible) ----------
   // groups : groupes de l'onglet Style et leurs propriétés (null = toutes celles du groupe ; true = contrôle composé) ;
   // states : styles de survol / focus / clic proposés. Un nouveau type d'élément ajoute ici son schéma.
-  var BOX_LAYOUT = ["display", "flexDirection", "flexWrap", "justifyContent", "alignItems", "gap", "rowGap", "columnGap"];
+  var BOX_LAYOUT = ["display", "flexDirection", "flexWrap", "justifyContent", "alignItems", "alignContent", "gap", "rowGap", "columnGap"];
   var SIZE_W = ["width", "minWidth", "maxWidth"];
   var BOX = { layout: BOX_LAYOUT, size: null, spacing: true, color: null, background: true, border: null, effects: null };
   var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: ["boxShadow", "opacity", "transitionDuration", "backdropBlur"] };
@@ -1599,7 +1758,7 @@
     column: { kind: "Colonne", groups: BOX },
     stack: { kind: "Pile", groups: BOX },
     group: { kind: "Groupe", groups: BOX },
-    grid: { kind: "Grille", groups: { layout: ["columns", "gridTemplate", "gridRows", "gridAutoFlow", "gap", "rowGap", "columnGap", "justifyItems", "alignItems", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null } },
+    grid: { kind: "Grille", groups: { layout: ["columns", "gridTemplate", "gridRows", "gridRowsTemplate", "gridAutoFlow", "gap", "rowGap", "columnGap", "justifyItems", "alignItems", "alignContent", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null } },
     heading: { kind: "Titre", groups: TEXTUAL, order: TEXT_ORDER },
     text: { kind: "Texte", groups: TEXTUAL, order: TEXT_ORDER },
     list: { kind: "Liste", groups: TEXTUAL, order: TEXT_ORDER },
@@ -1668,7 +1827,7 @@
   // Une ligne par propriété : libellé | valeur | effacer. Le point devant le libellé signale une valeur propre à l'écran
   // modifié ; les petites icônes d'appareil, les écrans plus petits qui ont leur propre valeur pour cette propriété.
   var UNITS = {
-    width: ["px", "%", "rem", "vw", "auto"], height: ["px", "%", "rem", "vh", "auto"],
+    width: ["px", "%", "rem", "vw", "auto"], height: ["px", "%", "rem", "vh", "auto"], flexBasis: ["px", "%", "rem", "auto"],
     minWidth: ["px", "%", "rem", "vw"], maxWidth: ["px", "%", "rem", "vw"], minHeight: ["px", "%", "rem", "vh"], maxHeight: ["px", "%", "rem", "vh"],
     gap: ["px", "rem", "em", "%"], rowGap: ["px", "rem", "em", "%"], columnGap: ["px", "rem", "em", "%"], fontSize: ["px", "rem", "em"], letterSpacing: ["px", "em"], borderWidth: ["px"], borderTopWidth: ["px"], borderRightWidth: ["px"], borderBottomWidth: ["px"], borderLeftWidth: ["px"],
     borderRadius: ["px", "%", "rem"], borderTopLeftRadius: ["px", "%", "rem"], borderTopRightRadius: ["px", "%", "rem"], borderBottomRightRadius: ["px", "%", "rem"], borderBottomLeftRadius: ["px", "%", "rem"],
@@ -1740,7 +1899,7 @@
     return propRow(items, key, control, label, id, extra);
   }
   // Nombres sans unité : bornes et pas de chaque propriété (les mêmes que le serveur)
-  var NUM = { backdropBlur: [1, 40, 1], opacity: [0, 1, 0.05], lineHeight: [0.8, 3, 0.1], zIndex: [-10, 100, 1], columns: [1, 12, 1], flexGrow: [0.05, 20, 0.1], gridRows: [1, 12, 1], gridColumnSpan: [1, 12, 1], gridRowSpan: [1, 6, 1], transitionDuration: [0, 2000, 50] };
+  var NUM = { backdropBlur: [1, 40, 1], opacity: [0, 1, 0.05], lineHeight: [0.8, 3, 0.1], zIndex: [-10, 100, 1], columns: [1, 12, 1], flexGrow: [0, 20, 0.1], flexShrink: [0, 20, 0.1], order: [-20, 20, 1], gridRows: [1, 12, 1], gridColumnSpan: [1, 12, 1], gridRowSpan: [1, 6, 1], gridColumnStart: [1, 13, 1], gridColumnEnd: [1, 13, 1], gridRowStart: [1, 13, 1], gridRowEnd: [1, 13, 1], transitionDuration: [0, 2000, 50] };
   function numberControl(items, key, id, own, inh, dis) {
     var lim = NUM[key] || [-9999, 9999, 1];
     var inp = h("input", { id: id, type: "text", inputmode: "decimal", class: "pb-num", placeholder: inh !== undefined ? String(inh) : key === "opacity" ? "1" : "", disabled: dis, autocomplete: "off" });
@@ -2139,6 +2298,29 @@
     }));
     return h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "Écran" }), seg);
   }
+  // Réglages d'un ENFANT selon la mise en page de son parent : flex (croissance, rétrécissement, base, ordre) ou grille (début,
+  // fin, étendue de la colonne et de la ligne, alignement dans la case). Seuls ceux qui s'appliquent réellement sont proposés.
+  var CHILD_FLEX = ["flexGrow", "flexShrink", "flexBasis"];
+  function parentLayout(it) {
+    var l = locate(it.id);
+    if (!l || !l.parent) return "none";
+    var p = l.parent;
+    if (p.type === "layout") return "flow";
+    var d = valueOf(p, "display");
+    if (d === "grid") return "grid";
+    if (d === "block" || d === "inline-block" || d === "inline" || d === "none") return "block";
+    return p.type === "grid" ? "grid" : "flex";
+  }
+  function withChildKeys(it, keys, plan) {
+    var kind = parentLayout(it);
+    var extra = kind === "grid" ? ["alignSelf", "justifySelf", "gridColumnStart", "gridColumnEnd", "gridColumnSpan", "gridRowStart", "gridRowEnd", "gridRowSpan", "order"]
+      : kind === "flex" ? ["alignSelf", "flexGrow", "flexShrink", "flexBasis", "order"] : [];
+    var taken = {};
+    plan.forEach(function (x) { x[1].forEach(function (k) { taken[k] = true; }); });
+    var out = keys.slice();
+    extra.forEach(function (k) { if (out.indexOf(k) < 0 && !taken[k] && SP[k]) out.push(k); });
+    return out;
+  }
   function styleTab(items, box) {
     var it = items[0];
     var schema = inspectorFor(it);
@@ -2156,7 +2338,7 @@
     // dans « Fond » (avec l'image et le dégradé)
     var keysOf = function (g) {
       var spec = schema.groups[g];
-      return Array.isArray(spec) ? spec.slice() : SPEC.styleProps.filter(function (p) { return p.group === g && (p.key !== "flexGrow" || it.type === "column"); }).map(function (p) { return p.key; });
+      return Array.isArray(spec) ? spec.slice() : SPEC.styleProps.filter(function (p) { return p.group === g && (CHILD_FLEX.indexOf(p.key) < 0 || it.type === "column"); }).map(function (p) { return p.key; });
     };
     var plan = [];
     var order = schema.order || GROUP_ORDER;
@@ -2169,10 +2351,12 @@
         if (hasTypo || !keys.length) return;
       }
       if (g === "typography" && schema.groups.color !== undefined && keysOf("color").indexOf("color") >= 0) keys.splice(Math.min(3, keys.length), 0, "color");
-      if (g === "layout") { var lp = locate(it.id); if (lp && lp.parent && lp.parent.type === "grid" && keys.indexOf("gridColumnSpan") < 0) keys = keys.concat(["gridColumnSpan", "gridRowSpan"]); }
+      if (g === "layout") keys = withChildKeys(it, keys, plan);
       if (g === "background") keys = ["backgroundColor", "backgroundImage", "gradient", "overlay", "backgroundSize", "backgroundPosition", "backgroundRepeat", "backgroundAttachment"];
       plan.push([g, keys]);
     });
+    // Un élément sans groupe « Mise en page » (image, bouton…) reçoit tout de même les réglages d'enfant de son parent
+    if (!plan.some(function (x) { return x[0] === "layout"; })) { var ck = withChildKeys(it, [], plan); if (ck.length) plan.push(["layout", ck]); }
     if (it.type === "layout" && items.length === 1) {
       var wid = fid();
       var wsel = h("select", { id: wid, class: "pb-prop-select", disabled: lockedAny(items) }, STYLE.width.map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
@@ -2906,6 +3090,8 @@
       if (editing && editing.el.contains(e.target)) return;
       e.preventDefault();
       if (e.target.closest(".pb-handle")) return;
+      var plus = e.target.closest && e.target.closest("[data-kw-add]");
+      if (plus) { canvasAdd(plus); return; }
       select(idOfEl(targetOf(e)), e.shiftKey || e.metaKey || e.ctrlKey, { scroll: false });
     });
     doc.addEventListener("dblclick", function (e) {
@@ -4169,6 +4355,9 @@
       { label: aids.guidesLocked ? "Guides : déverrouiller" : "Guides : verrouiller", run: function () { setAid("guidesLocked", !aids.guidesLocked); } },
       { label: "Guides : tout supprimer (cet écran)", run: clearGuides, off: !(guidesFor().h.length || guidesFor().v.length) }, { label: "Contours : afficher / masquer", run: function () { setAid("outlines", !aids.outlines); } }, { label: "Règles : afficher / masquer", run: function () { setAid("rulers", !aids.rulers); } },
       { label: "Panneau des éléments : afficher / masquer", run: function () { togglePanel("left"); } },
+      { label: "Ajouter une structure (Flexbox ou Grille)", run: function () { openStructurePicker(insertionPoint({ type: "container" })); }, off: !canWrite },
+      { label: dock.mode === "floating" ? "Structure : rattacher le panneau" : "Structure : détacher le panneau", run: function () { setDockMode(dock.mode === "floating" ? "docked" : "floating"); } },
+      { label: dock.mode === "closed" ? "Structure : rouvrir le panneau" : "Structure : fermer le panneau", run: function () { setDockMode(dock.mode === "closed" ? dock.last : "closed"); } },
       { label: "Calques : tout déplier", run: expandAll }, { label: "Calques : tout replier", run: collapseAll },
       { label: panels.layersCollapsed ? "Calques : déplier le panneau" : "Calques : replier le panneau", run: function () { layersToggle.click(); } }, { label: "Calques et inspecteur : afficher / masquer", run: function () { togglePanel("right"); } },
       { label: "Réglages de la page (SEO, titre)", run: function () { openTab($("#pb-tab-page")); } },

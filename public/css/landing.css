@@ -253,7 +253,16 @@
 .lp-builder .kw-node:hover { outline: 1px dashed rgba(2, 119, 182, 0.55); }
 .lp-builder .kw-node.is-selected { outline: 2px solid #0277b6; }
 .lp-builder .kw-node.is-hidden { opacity: 0.35; }
-.lp-builder .kw-container, .lp-builder .kw-columns, .lp-builder .kw-column, .lp-builder .kw-grid, .lp-builder .kw-stack, .lp-builder .kw-group { min-height: 48px; }
+/* Hauteur de confort des zones vides de l'éditeur : priorité nulle, pour que « Hauteur min. » de l'inspecteur s'applique vraiment */
+:where(.lp-builder) :where(.kw-container, .kw-columns, .kw-column, .kw-grid, .kw-stack, .kw-group) { min-height: 48px; }
+/* Zone vide de l'éditeur : un seul « + » discret (ouvre « Quelle mise en page utiliser ? »). Jamais affiché sur la page publiée. */
+.lp-builder .kw-add { pointer-events: auto; display: grid; place-items: center; width: 40px; height: 40px; margin: auto; padding: 0; border: 1px dashed rgba(2, 119, 182, 0.55); border-radius: 50%; background: rgba(2, 119, 182, 0.06); color: rgb(2, 119, 182); font: 500 24px/1 system-ui, sans-serif; cursor: pointer; transition: background 140ms ease, transform 140ms ease, border-color 140ms ease; }
+.lp-builder .kw-add:hover, .lp-builder .kw-add:focus-visible { background: rgba(2, 119, 182, 0.16); border-style: solid; transform: scale(1.06); outline: none; }
+.lp-builder .kw-empty-page { display: grid; place-items: center; min-height: 60vh; }
+.lp-builder .kw-add-root { width: 64px; height: 64px; font-size: 36px; }
+.kw-add { display: none; }
+/* Un conteneur imbriqué occupe la largeur de son parent (les structures « colonnes » en dépendent) */
+.kw-container .kw-container { max-width: none; margin-left: 0; margin-right: 0; }
 .kw-empty { margin: 0; padding: 12px; border: 1px dashed rgba(2, 119, 182, 0.5); border-radius: 6px; color: rgba(16, 34, 47, 0.6); font-size: 14px; text-align: center; }
 
 @media (max-width: 560px) {

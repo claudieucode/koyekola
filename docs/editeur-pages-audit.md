@@ -250,3 +250,34 @@ Non fait dans ce lot : conteneur cliquable en entier (lien sur toute la zone : i
 | Formulaire d'inscription (section existante) | oui | inchangé (formulaire choisi dans les réglages de la page) | oui | oui | suites existantes |
 
 Le circuit d'envoi est celui de la section existante (`POST /p/:adresse/inscription`) : le champ `w` désigne le widget, revérifié côté serveur (il doit exister dans la page publiée, être visible, et viser un formulaire publié).
+
+# Étape — canevas, structure, Flexbox, Grille, calques dockables (7 octobre 2026)
+
+## Audit (avant tout code)
+
+| Point | Existant | Décision |
+|---|---|---|
+| Canevas | iframe rendue par le serveur (`POST /rendu`), même gabarit que la page publiée | conservé |
+| Document | `content.sections` : sections (`layout`) → arbre d'éléments (`container`, `grid`, `columns`…), identifiants stables, `styles` par écran | conservé (aucun deuxième modèle) |
+| Sélection | un seul état `selection`, synchronisé avec calques, inspecteur, canevas, mode blocs | conservé |
+| Historique | `change()` : instantanés complets du document, 150 étapes, libellés | réutilisé pour toute création de structure |
+| Calques | arbre : glisser-déposer, replier, renommer, masquer, verrouiller, dupliquer, supprimer, copier / couper / coller (menu et clavier) | conservé ; devient « Structure » |
+| Flex / Grille | direction, retour à la ligne, répartition, alignement, écarts, colonnes, lignes, étendues | complété : `align-content`, `flex-shrink`, `flex-basis`, `order`, `justify-self`, placement (début / fin) de colonne et de ligne, hauteurs de lignes (`grid-template-rows`), `flex-grow` à 0 |
+| Page vide / zone vide | texte « Déposez des éléments ici » | remplacé par un seul « + » |
+| Panneau de calques | fixe en haut du panneau droit (repliable) | attachable, détachable, déplaçable, redimensionnable, fermable |
+
+## Ce qui a été construit
+
+- **« + »** : une zone vide (page, section libre, conteneur, grille) n'affiche qu'un « + ». Il n'existe que dans l'éditeur (jamais sur l'aperçu ni la page publiée).
+- **« Quelle mise en page utiliser ? »** : deux choix, FLEXBOX et GRILLE ; 16 structures Flexbox, 12 structures Grille. Chaque structure est un VRAI arbre d'éléments (`src/marketing/pages/structures.js`) avec ses réglages tablette et mobile ; la miniature est redessinée à partir de cet arbre. L'insertion passe par l'historique (annuler / rétablir).
+- **Flexbox** : la case d'une ligne porte `flex-basis`, `flex-grow: 0`, `flex-shrink: 1` ; sur tablette, trois colonnes et plus passent à deux par ligne ; sur mobile, la ligne devient une colonne.
+- **Grille** : colonnes (nombre ou modèle `1fr 2fr`), lignes, écart, cases à étendue ; tablette 2 colonnes au plus, mobile 1.
+- **Cases de grille** : une case ne crée jamais de colonne en trop sur un petit écran (le CSS généré la ramène au nombre de colonnes de l'écran).
+- **Réglages d'un enfant** selon le parent : flex (croissance, rétrécissement, base, ordre, alignement) ou grille (début, fin, étendue, alignement dans la case, ordre).
+- **Panneau Structure** : « Page · N sections · M éléments », ajout de structure, tout déplier / replier ; mode attaché / flottant / fermé (même panneau, rien n'est recréé : sélection, niveaux ouverts et défilement conservés) ; déplacement par l'en-tête (souris ou flèches), redimensionnement par le coin (souris ou Maj + flèches) ; position, taille et mode mémorisés ; réouverture par le bouton de la barre du haut ou la palette de commandes.
+- **Corrigés au passage** (trouvés par le test navigateur) : les boutons de la page étaient inertes dans l'éditeur (le « + » aussi) ; la hauteur de confort de 48 px écrasait « Hauteur min. » dans le canevas.
+
+## Tests
+
+- `tests/editeur-structure.test.js` (serveur) : 28 structures enregistrées et relues à l'identique, propriétés validées, CSS, placement, ramenage des cases, « + » du rendu.
+- `tests/editeur-structure-navigateur.test.js` (Chrome piloté par Playwright, vrai serveur) : 21 scénarios — « + », choix, structures, imbrication, sélection dans les deux sens, glisser-déposer des calques, annuler / rétablir, enregistrer / recharger, Grille, responsive (ordinateur / tablette / mobile), docking complet, suppression, propriétés Flexbox et enfant, copier / couper / coller, replier / déplier, erreurs de console. Ignoré avec la raison si Playwright ou Chrome sont absents (`npm i --no-save playwright-core`).

@@ -47,7 +47,8 @@ describe("modèle (sans serveur)", () => {
     assert.equal(kids[1].anchor, "tarifs", "ancre en minuscules");
     assert.deepEqual(kids[2].props, { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", title: "Démo", autoplay: true, muted: true, loop: true, controls: false }, "lecture automatique : toujours sans le son");
     assert.deepEqual(kids[3].props, { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", title: "Démo", muted: true });
-    assert.throws(() => page([col("cola00000001", { desktop: { flexGrow: 0 } })]), /valeur invalide pour « flexGrow »/);
+    // flex-grow 0 est valide (la case ne grandit pas) ; au-delà de 20, la valeur est refusée
+    assert.throws(() => page([col("cola00000001", { desktop: { flexGrow: 99 } })]), /valeur invalide pour « flexGrow »/);
     // Arrondi par coin : toujours après l'arrondi général dans le CSS (quel que soit l'ordre d'enregistrement)
     const rr = page([{ id: "cont00000001", type: "container", children: [], styles: { desktop: { borderTopLeftRadius: "20px", borderRadius: "8px" } } }]);
     assert.match(nodes.pageCss(rr.content.sections), /\.kw-n-cont00000001\{border-radius:8px;border-top-left-radius:20px\}/);

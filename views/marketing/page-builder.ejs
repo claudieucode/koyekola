@@ -24,7 +24,8 @@
         <button type="button" class="pb-icon-btn" data-pb-redo data-tip="Rétablir (Ctrl/⌘ + Maj + Z)" aria-label="Rétablir" disabled><%- icon("redo", { size: 16 }) %></button>
         <button type="button" class="pb-icon-btn" data-pb-history aria-haspopup="menu" data-tip="Historique des actions" aria-label="Historique des actions"><%- icon("history", { size: 16 }) %></button>
       </div>
-      <%# Deux façons de travailler sur le MÊME document : la page telle qu'affichée, ou sa structure en blocs %>
+      <button type="button" class="pb-icon-btn" data-pb-layers-open aria-pressed="true" data-tip="Panneau Structure : afficher / masquer" aria-label="Afficher ou masquer le panneau Structure"><%- icon("layers", { size: 16 }) %></button>
+            <%# Deux façons de travailler sur le MÊME document : la page telle qu'affichée, ou sa structure en blocs %>
       <div class="pb-seg pb-mode-seg" role="radiogroup" aria-label="Mode d'édition">
         <button type="button" role="radio" aria-checked="true" data-pb-mode="visual" data-tip="Éditeur visuel : la page telle qu'elle s'affiche (Ctrl/⌘ + Maj + E pour basculer)"><%- icon("monitor", { size: 15 }) %><span>Éditeur visuel</span></button>
         <button type="button" role="radio" aria-checked="false" data-pb-mode="structure" data-tip="Éditeur en blocs : la page en blocs à écrire, déplacer, imbriquer (Ctrl/⌘ + Maj + E pour basculer)"><%- icon("listChecks", { size: 15 }) %><span>Éditeur en blocs</span></button>
@@ -120,8 +121,15 @@
     <%# ---------- Panneau droit : calques (haut) + inspecteur (bas) ---------- %>
     <aside class="pb-right" aria-label="Calques et réglages" data-pb-right>
       <section class="pb-layers-panel" aria-labelledby="pb-layers-title" data-pb-layers-panel>
-        <div class="pb-panel-head"><h2 id="pb-layers-title">Calques</h2>
-          <button type="button" class="pb-panel-toggle" data-pb-layers-toggle aria-expanded="true" aria-controls="pb-layers-body" aria-label="Replier le panneau Calques"><%- icon("chevronDown", { size: 16 }) %></button></div>
+        <div class="pb-panel-head" data-pb-layers-head><h2 id="pb-layers-title">Structure</h2>
+          <span class="pb-panel-actions">
+            <button type="button" class="pb-panel-toggle" data-pb-layers-add data-tip="Ajouter une structure (Flexbox ou Grille)" aria-label="Ajouter une structure (Flexbox ou Grille)"><%- icon("plus", { size: 16 }) %></button>
+            <button type="button" class="pb-panel-toggle" data-pb-layers-dock aria-pressed="false" data-tip="Détacher le panneau Structure" aria-label="Détacher le panneau Structure"><%- icon("externalLink", { size: 16 }) %></button>
+            <button type="button" class="pb-panel-toggle" data-pb-layers-close data-tip="Fermer le panneau Structure" aria-label="Fermer le panneau Structure"><%- icon("close", { size: 16 }) %></button>
+            <button type="button" class="pb-panel-toggle" data-pb-layers-toggle aria-expanded="true" aria-controls="pb-layers-body" aria-label="Replier le panneau Structure"><%- icon("chevronDown", { size: 16 }) %></button>
+          </span></div>
+        <div class="pb-page-row" data-pb-page-row><span class="pb-page-name"><%- icon("layout", { size: 14 }) %> Page</span><span class="pb-page-count" data-pb-page-count></span>
+          <span class="pb-panel-actions"><button type="button" class="pb-flag" data-pb-expand-all data-tip="Tout déplier" aria-label="Tout déplier"><%- icon("chevronDown", { size: 14 }) %></button><button type="button" class="pb-flag" data-pb-collapse-all data-tip="Tout replier" aria-label="Tout replier"><%- icon("chevronRight", { size: 14 }) %></button></span></div>
         <div class="pb-layers-search"><label class="sr-only" for="pb-layers-q">Rechercher un calque</label><input id="pb-layers-q" type="search" placeholder="Rechercher un calque…" data-pb-layers-q autocomplete="off"></div>
         <ul class="pb-tree" id="pb-layers-body" role="tree" aria-labelledby="pb-layers-title" aria-multiselectable="true" data-pb-layers></ul>
       </section>
@@ -159,6 +167,11 @@
         <div class="pb-media-detail" data-pb-media-detail></div>
       </div>
     </div>
+  </dialog>
+
+  <dialog class="pb-modal pb-layout-dialog" data-pb-layout aria-labelledby="pb-layout-title">
+    <div class="pb-modal-head"><h2 id="pb-layout-title" data-pb-layout-title>Quelle mise en page utiliser ?</h2><span class="pb-modal-spacer"></span><button type="button" class="pb-icon-btn" data-pb-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></div>
+    <div class="pb-layout-body" data-pb-layout-body></div>
   </dialog>
 
   <dialog class="pb-modal pb-command" data-pb-command-dialog aria-label="Commandes">

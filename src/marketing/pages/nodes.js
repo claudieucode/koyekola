@@ -71,9 +71,15 @@ const STYLE_PROPS = {
   display: { css: "display", check: oneOf("block", "flex", "grid", "inline-block", "inline", "inline-flex", "none"), group: "layout" },
   flexDirection: { css: "flex-direction", check: oneOf("row", "column", "row-reverse", "column-reverse"), group: "layout" },
   flexWrap: { css: "flex-wrap", check: oneOf("wrap", "nowrap", "wrap-reverse"), group: "layout" },
-  justifyContent: { css: "justify-content", check: oneOf("flex-start", "center", "flex-end", "space-between", "space-around", "space-evenly"), group: "layout" },
-  alignItems: { css: "align-items", check: oneOf("stretch", "flex-start", "center", "flex-end", "baseline"), group: "layout" },
-  alignSelf: { css: "align-self", check: oneOf("auto", "flex-start", "center", "flex-end", "stretch"), group: "layout" },
+  justifyContent: { css: "justify-content", check: oneOf("flex-start", "center", "flex-end", "space-between", "space-around", "space-evenly", "start", "end", "stretch"), group: "layout" },
+  alignItems: { css: "align-items", check: oneOf("stretch", "flex-start", "center", "flex-end", "baseline", "start", "end"), group: "layout" },
+  // Répartition des LIGNES (flex avec retour à la ligne) ou des pistes de la grille sur la hauteur du conteneur
+  alignContent: { css: "align-content", check: oneOf("stretch", "flex-start", "center", "flex-end", "space-between", "space-around", "space-evenly", "start", "end"), group: "layout" },
+  alignSelf: { css: "align-self", check: oneOf("auto", "flex-start", "center", "flex-end", "stretch", "start", "end"), group: "layout" },
+  // Alignement d'un enfant de grille sur l'axe horizontal de sa case
+  justifySelf: { css: "justify-self", check: oneOf("auto", "start", "center", "end", "stretch"), group: "layout" },
+  // Ordre d'affichage d'un enfant (flex ou grille), sans changer sa place dans les calques
+  order: { css: "order", check: numberIn(-20, 20, { integer: true }), group: "layout" },
   gap: { css: "gap", check: len, group: "layout" },
   rowGap: { css: "row-gap", check: len, group: "layout" },
   columnGap: { css: "column-gap", check: len, group: "layout" },
@@ -81,11 +87,19 @@ const STYLE_PROPS = {
   // Largeurs des colonnes d'une grille, ex. « 2fr 1fr » ou « 240px 1fr » (remplace le nombre de colonnes égales)
   gridTemplate: { css: "grid-template-columns", check: gridTrack, out: (v) => v.split(" ").map((t) => (/fr$/.test(t) ? `minmax(0, ${t})` : t)).join(" "), group: "layout" },
   gridRows: { css: "grid-template-rows", check: numberIn(1, 12, { integer: true }), out: (n) => `repeat(${n}, auto)`, group: "layout" },
+  // Hauteurs des lignes (ex. « 200px 1fr ») : remplace le nombre de lignes égales (écrit après lui)
+  gridRowsTemplate: { css: "grid-template-rows", check: gridTrack, out: (v) => v.split(" ").map((t) => (/fr$/.test(t) ? `minmax(0, ${t})` : t)).join(" "), group: "layout" },
   gridAutoFlow: { css: "grid-auto-flow", check: oneOf("row", "column", "row dense", "column dense"), group: "layout" },
   justifyItems: { css: "justify-items", check: oneOf("stretch", "start", "center", "end"), group: "layout" },
   // Élément enfant d'une grille : nombre de colonnes / lignes occupées
   gridColumnSpan: { css: "grid-column", check: numberIn(1, 12, { integer: true }), out: (n) => `span ${n}`, group: "layout" },
   gridRowSpan: { css: "grid-row", check: numberIn(1, 6, { integer: true }), out: (n) => `span ${n}`, group: "layout" },
+  // Placement explicite d'un enfant de grille : lignes de la grille (1 = première ligne). Avec « occupées », la fin est « span N »
+  // (écrit en un seul « grid-column: début / fin » : voir declarations()).
+  gridColumnStart: { css: "grid-column-start", check: numberIn(1, 13, { integer: true }), group: "layout" },
+  gridColumnEnd: { css: "grid-column-end", check: numberIn(1, 13, { integer: true }), group: "layout" },
+  gridRowStart: { css: "grid-row-start", check: numberIn(1, 13, { integer: true }), group: "layout" },
+  gridRowEnd: { css: "grid-row-end", check: numberIn(1, 13, { integer: true }), group: "layout" },
   width: { css: "width", check: lenAuto, group: "size" },
   height: { css: "height", check: lenAuto, group: "size" },
   minWidth: { css: "min-width", check: len, group: "size" },
@@ -93,7 +107,9 @@ const STYLE_PROPS = {
   minHeight: { css: "min-height", check: len, group: "size" },
   maxHeight: { css: "max-height", check: len, group: "size" },
   // Part de largeur d'une colonne dans « Colonnes » (proportions : 1 / 1 = moitié-moitié, 2 / 1 = deux tiers - un tiers)
-  flexGrow: { css: "flex-grow", check: numberIn(0.05, 20), group: "size" },
+  flexGrow: { css: "flex-grow", check: numberIn(0, 20), group: "size" },
+  flexShrink: { css: "flex-shrink", check: numberIn(0, 20), group: "size" },
+  flexBasis: { css: "flex-basis", check: lenAuto, group: "size" },
   marginTop: { css: "margin-top", check: marginLen, group: "spacing" },
   marginRight: { css: "margin-right", check: marginLen, group: "spacing" },
   marginBottom: { css: "margin-bottom", check: marginLen, group: "spacing" },
@@ -204,14 +220,22 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
   return out;
 }
 
-const CORNERS = new Set(["gridTemplate", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth"]);
+// Placement dans la grille : écrit en « grid-column: début / fin » (même chose pour les lignes), jamais en déclarations qui
+// s'écrasent : début seul, fin seule, début + occupées (« 2 / span 3 ») ou occupées seules (« span 3 »)
+const PLACEMENT = new Set(["gridColumnStart", "gridColumnEnd", "gridColumnSpan", "gridRowStart", "gridRowEnd", "gridRowSpan"]);
+const CORNERS = new Set(["gridTemplate", "gridRowsTemplate", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth"]);
 function declarations(set) {
   const d = [];
   const entries = Object.entries(set);
   // Coins après l'arrondi général (sinon « border-radius » les écraserait)
-  for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k)).concat(entries.filter(([k]) => CORNERS.has(k)))) {
+  for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k) && !PLACEMENT.has(k)).concat(entries.filter(([k]) => CORNERS.has(k)))) {
     const p = STYLE_PROPS[k];
     if (p) d.push(`${p.css}:${p.out ? p.out(v) : v}`);
+  }
+  for (const [axis, css] of [["Column", "grid-column"], ["Row", "grid-row"]]) {
+    const start = set[`grid${axis}Start`], end = set[`grid${axis}End`], span = set[`grid${axis}Span`];
+    if (start !== undefined || end !== undefined) d.push(`${css}:${start !== undefined ? start : "auto"} / ${end !== undefined ? end : span !== undefined ? `span ${span}` : "auto"}`);
+    else if (span !== undefined) d.push(`${css}:span ${span}`);
   }
   const layers = [];
   if (set.overlay) layers.push(`linear-gradient(${colorCss(set.overlay.color)}, ${colorCss(set.overlay.color)})`);
@@ -745,12 +769,17 @@ const STYLE_UI = {
   display: ["Affichage", { block: "Bloc", flex: "Flex", grid: "Grille", "inline-block": "Bloc en ligne", inline: "En ligne", "inline-flex": "Flex en ligne", none: "Caché" }],
   flexDirection: ["Direction", { row: "En ligne", column: "En colonne", "row-reverse": "Ligne inversée", "column-reverse": "Colonne inversée" }],
   flexWrap: ["Retour à la ligne", { wrap: "Oui", nowrap: "Non", "wrap-reverse": "Oui, inversé" }],
-  justifyContent: ["Répartition", { "flex-start": "Début", center: "Centre", "flex-end": "Fin", "space-between": "Espacés", "space-around": "Autour", "space-evenly": "Égaux" }],
-  alignItems: ["Alignement des enfants", { stretch: "Étirés", "flex-start": "Début", center: "Centre", "flex-end": "Fin", baseline: "Ligne de base" }],
-  alignSelf: ["Alignement dans le parent", { auto: "Auto", "flex-start": "Début", center: "Centre", "flex-end": "Fin", stretch: "Étiré" }],
-  gridTemplate: ["Largeurs des colonnes (ex. 2fr 1fr)"], gridRows: ["Lignes (grille)"], gridColumnSpan: ["Colonnes occupées"], gridRowSpan: ["Lignes occupées"],
+  justifyContent: ["Répartition", { "flex-start": "Début", center: "Centre", "flex-end": "Fin", "space-between": "Espacés", "space-around": "Autour", "space-evenly": "Égaux", start: "Début (grille)", end: "Fin (grille)", stretch: "Étirées (grille)" }],
+  alignItems: ["Alignement des enfants", { stretch: "Étirés", "flex-start": "Début", center: "Centre", "flex-end": "Fin", baseline: "Ligne de base", start: "Début (grille)", end: "Fin (grille)" }],
+  alignContent: ["Répartition des lignes", { stretch: "Étirées", "flex-start": "Début", center: "Centre", "flex-end": "Fin", "space-between": "Espacées", "space-around": "Autour", "space-evenly": "Égales", start: "Début (grille)", end: "Fin (grille)" }],
+  alignSelf: ["Alignement dans le parent", { auto: "Auto", "flex-start": "Début", center: "Centre", "flex-end": "Fin", stretch: "Étiré", start: "Début (grille)", end: "Fin (grille)" }],
+  justifySelf: ["Alignement horizontal dans la case", { auto: "Auto", start: "Début", center: "Centre", end: "Fin", stretch: "Étiré" }],
+  order: ["Ordre d'affichage"],
+  gridColumnStart: ["Colonne : début (ligne)"], gridColumnEnd: ["Colonne : fin (ligne)"], gridRowStart: ["Ligne : début (ligne)"], gridRowEnd: ["Ligne : fin (ligne)"],
+  flexShrink: ["Rétrécissement (flex-shrink)"], flexBasis: ["Base de taille (flex-basis)"],
+  gridTemplate: ["Largeurs des colonnes (ex. 2fr 1fr)"], gridRows: ["Lignes (grille)"], gridRowsTemplate: ["Hauteurs des lignes (ex. 200px 1fr)"], gridColumnSpan: ["Colonnes occupées"], gridRowSpan: ["Lignes occupées"],
   gap: ["Écart entre enfants"], rowGap: ["Écart entre lignes"], columnGap: ["Écart entre colonnes"], columns: ["Colonnes (grille)"],
-  width: ["Largeur"], height: ["Hauteur"], flexGrow: ["Proportion de la colonne"], minWidth: ["Largeur min."], maxWidth: ["Largeur max."], minHeight: ["Hauteur min."], maxHeight: ["Hauteur max."],
+  width: ["Largeur"], height: ["Hauteur"], flexGrow: ["Croissance (flex-grow)"], minWidth: ["Largeur min."], maxWidth: ["Largeur max."], minHeight: ["Hauteur min."], maxHeight: ["Hauteur max."],
   marginTop: ["Marge haut"], marginRight: ["Marge droite"], marginBottom: ["Marge bas"], marginLeft: ["Marge gauche"],
   paddingTop: ["Intérieur haut"], paddingRight: ["Intérieur droite"], paddingBottom: ["Intérieur bas"], paddingLeft: ["Intérieur gauche"],
   fontFamily: ["Police", { heading: "Titres du site", body: "Texte du site", system: "Système", serif: "Avec empattements", mono: "Chasse fixe" }],
@@ -786,8 +815,8 @@ function editorSpec() {
   const kind = (k) => {
     const p = STYLE_PROPS[k];
     if (p.check === color || [ "color", "backgroundColor", "borderColor" ].includes(k)) return "color";
-    if (["columns", "lineHeight", "opacity", "zIndex", "flexGrow", "gridRows", "gridColumnSpan", "gridRowSpan", "transitionDuration", "backdropBlur"].includes(k)) return "number";
-    if (k === "gridTemplate") return "text";
+    if (["columns", "lineHeight", "opacity", "zIndex", "flexGrow", "flexShrink", "order", "gridRows", "gridColumnSpan", "gridRowSpan", "gridColumnStart", "gridColumnEnd", "gridRowStart", "gridRowEnd", "transitionDuration", "backdropBlur"].includes(k)) return "number";
+    if (k === "gridTemplate" || k === "gridRowsTemplate") return "text";
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
   return {
@@ -796,6 +825,7 @@ function editorSpec() {
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
     socialNetworks: Object.entries(SOCIAL_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
+    structureKinds: require("./structures").KINDS, structures: require("./structures").STRUCTURES,
     colorTokens: COLOR_TOKENS, spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
     limits: { nodes: MAX_NODES, depth: MAX_DEPTH },
   };
@@ -1114,6 +1144,7 @@ const visibleTree = (nodes, visitor, now = Date.now()) => (nodes || []).filter((
 // CSS d'une page : une règle par élément stylé (et par section stylée), par écran et par état. Valeurs déjà validées.
 function pageCss(sections) {
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
+  const clamps = { tablet: [], mobile: [] }; // cases de grille ramenées au nombre de colonnes de l'écran : écrites après toutes les autres règles
   const add = (id, styles, states) => {
     if (!NODE_ID.test(String(id || ""))) return;
     const sel = `.kw-n-${id}`;
@@ -1150,9 +1181,32 @@ function pageCss(sections) {
         const d = st.desktop || {}, cols = d.gridTemplate ? String(d.gridTemplate).split(" ").length : Number(d.columns) || 0;
         if (cols > 2 && !own("tablet") && rules.media.tablet) rules.media.tablet.push(`.kw-n-${n.id}{grid-template-columns:repeat(2,minmax(0,1fr))}`);
         if (cols > 1 && !own("tablet") && !own("mobile") && rules.media.mobile) rules.media.mobile.push(`.kw-n-${n.id}{grid-template-columns:minmax(0,1fr)}`);
+        // Colonnes réellement affichées sur chaque écran (valeur propre, sinon celle de l'écran plus grand, sinon le resserrement ci-dessus)
+        const countOf = (set) => (set ? (set.gridTemplate ? String(set.gridTemplate).split(" ").length : Number(set.columns) || 0) : 0);
+        const colsT = countOf(st.tablet) || (cols > 2 ? 2 : cols);
+        const colsM = countOf(st.mobile) || countOf(st.tablet) || (cols > 1 ? 1 : cols);
+        // Une case ne peut pas occuper plus de colonnes que la grille n'en a sur cet écran (sinon elle créerait des colonnes
+        // en trop, par exemple « 2 colonnes » réglées pour l'ordinateur sur une grille à 1 colonne sur mobile) : elle est ramenée
+        for (const c of n.children || []) {
+          if (!NODE_ID.test(String(c.id || "")) || !c.styles) continue;
+          for (const [bpKey, count, chain] of [["tablet", colsT, ["tablet", "desktop"]], ["mobile", colsM, ["mobile", "tablet", "desktop"]]]) {
+            if (!count || !rules.media[bpKey]) continue;
+            const eff = (key) => { for (const k of chain) if (c.styles[k] && c.styles[k][key] !== undefined) return c.styles[k][key]; return undefined; };
+            const span = eff("gridColumnSpan"), start = eff("gridColumnStart"), end = eff("gridColumnEnd");
+            let fit = null;
+            if (start) {
+              if (start > count) fit = "auto";
+              else if (end === undefined && start + (span || 1) - 1 > count) fit = `${start} / span ${count - start + 1}`;
+              else if (end !== undefined && end > count + 1) fit = `${start} / ${count + 1}`;
+            } else if (span && span > count) fit = `span ${count}`;
+            else if (end && end > count + 1) fit = `auto / ${count + 1}`;
+            if (fit) clamps[bpKey].push(`.kw-n-${c.id}{grid-column:${fit}}`);
+          }
+        }
       }
     });
   }
+  for (const k of Object.keys(clamps)) if (rules.media[k]) rules.media[k].push(...clamps[k]);
   let css = rules.base.join("\n");
   for (const bp of BREAKPOINTS) if (bp.media && rules.media[bp.key].length) css += `\n@media ${bp.media}{${rules.media[bp.key].join("")}}`;
   // Le CSS personnalisé vient en dernier (il précise les réglages de l'inspecteur), avec une spécificité plus forte
