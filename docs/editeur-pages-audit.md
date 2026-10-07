@@ -228,3 +228,16 @@ Non fait dans ce lot : conteneur cliquable en entier (lien sur toute la zone : i
 | **Google Maps** (nouveau) | oui (Basique, recherche « maps », « carte », « adresse ») | adresse, zoom, hauteur, titre accessible ; sans clé d'API ; représentée dans le canevas, chargée en aperçu et en ligne | oui | oui (largeur 100 %) | unitaire + navigateur + page publiée 1280 / 390 px |
 | Icône | oui (existant) | icône, taille, lien, description | oui | oui | suites existantes |
 | WPForms | — | **non construit** : aucune intégration WPForms réelle dans KOLAKISA (pas de WordPress). Les formulaires KOLAKISA arrivent au lot 4. | — | — | — |
+
+## Lot 3 — Général
+
+| Widget | Interface | Fonctionnel | Persistant | Responsive | Testé |
+|---|---|---|---|---|---|
+| Onglets, Accordéon, Carrousel d'images, Galerie, Liste d'icônes, Compteur, Barre de progression, Témoignage, Icônes réseaux sociaux, Alerte, HTML | oui (existants, rangés dans « Général » ; réseaux sociaux dans sa catégorie) | oui | oui | oui | suites existantes |
+| **Boîte d'image** (nouveau) | oui (médiathèque à l'ajout) | image, titre (niveau), texte, lien (image + titre = un seul lien compté), visuel en haut / à gauche / à droite | oui | oui (empilé sur mobile) | unitaire + page publiée ; navigateur : ouverture de la médiathèque seulement |
+| **Boîte d'icône** (nouveau) | oui | icône, taille, titre, texte, lien, position | oui | oui (empilé sur mobile) | unitaire + navigateur + page publiée mobile |
+| **Évaluation** (nouveau) | oui (note réelle demandée à l'ajout) | demi-étoiles, sur 5 ou sur 10, libellé, note en chiffres, lisible par les lecteurs d'écran | oui | oui | unitaire + navigateur |
+| **Ancre de menu** (nouveau) | oui (nom demandé, doublon refusé) | point d'arrivée invisible des liens « #nom » | oui | — | unitaire + navigateur (le bouton « #tarifs » fait défiler) |
+| **SoundCloud** (raccourci) | oui | crée un « Contenu intégré » limité aux adresses SoundCloud (pas de second système) | oui | oui | unitaire + navigateur + page publiée |
+| Code court | — | **non construit** : notion WordPress (shortcode) sans équivalent dans KOLAKISA | — | — | — |
+| Colonne latérale | — | **non construit** : affiche une zone de widgets WordPress ; KOLAKISA n'en a pas | — | — | — |

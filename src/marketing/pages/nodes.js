@@ -545,6 +545,33 @@ const NODE_TYPES = {
     if (!address) throw new Error(`${at} (Google Maps) : indiquez une adresse ou un lieu.`);
     return { address, zoom: numberIn(1, 20, { integer: true })(p.zoom) || 14, height: numberIn(150, 800, { integer: true })(p.height) || 350, title: line(p.title, 150) || `Carte : ${address}` };
   } },
+  // Boîte d'image / boîte d'icône : visuel + titre + texte (+ lien sur le titre et le visuel), visuel en haut, à gauche
+  // ou à droite (empilé sur mobile)
+  imagebox: { label: "Boîte d'image", category: "media", props: (p, at, h) => {
+    const src = h.imageUrl(p.src, `${at} (boîte d'image)`);
+    if (!src) throw new Error(`${at} (boîte d'image) : choisissez une image.`);
+    const alt = line(p.alt, 200), title = line(p.title, 120);
+    if (!title) throw new Error(`${at} (boîte d'image) : le titre est obligatoire.`);
+    const link = h.linkUrl(p.link, `${at} (lien de la boîte d'image)`);
+    return { src, alt, title, text: clean(p.text, 600), titleLevel: oneOf("2", "3", "4", "5", "6")(String(p.titleLevel)) || "3", position: oneOf("top", "left", "right")(p.position) || "top", ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}) };
+  } },
+  iconbox: { label: "Boîte d'icône", category: "media", props: (p, at, h) => {
+    const icon = String(p.icon || "");
+    if (!h.iconNames.includes(icon)) throw new Error(`${at} (boîte d'icône) : icône inconnue.`);
+    const title = line(p.title, 120);
+    if (!title) throw new Error(`${at} (boîte d'icône) : le titre est obligatoire.`);
+    const link = h.linkUrl(p.link, `${at} (lien de la boîte d'icône)`);
+    return { icon, title, text: clean(p.text, 600), titleLevel: oneOf("2", "3", "4", "5", "6")(String(p.titleLevel)) || "3", position: oneOf("top", "left", "right")(p.position) || "top", size: oneOf("24", "32", "48", "64")(String(p.size)) || "48", ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}) };
+  } },
+  // Évaluation : note réelle (demandée à l'ajout), demi-étoiles permises, sur 5 ou sur 10
+  rating: { label: "Évaluation", category: "marketing", props: (p, at) => {
+    const scale = oneOf("5", "10")(String(p.scale)) === "10" ? 10 : 5;
+    const value = Math.round(Number(String(p.value).replace(",", ".")) * 2) / 2;
+    if (!Number.isFinite(value) || value < 0 || value > scale) throw new Error(`${at} (évaluation) : une note entre 0 et ${scale}.`);
+    return { value, scale, title: line(p.title, 80), showValue: p.showValue !== false };
+  } },
+  // Ancre de menu : point d'arrivée invisible d'un lien « #nom » (le nom est l'ancre de l'élément, unique dans la page)
+  menuanchor: { label: "Ancre de menu", category: "interaction", props: () => ({}) },
   icon: { label: "Icône", category: "media", props: (p, at, h) => {
     const name = String(p.name || "");
     if (!h.iconNames.includes(name)) throw new Error(`${at} (icône) : icône inconnue.`);
@@ -574,6 +601,10 @@ const WIDGETS = {
   spacer: ["basic", "espaceur espace vide marge"],
   icon: ["basic", "icone pictogramme symbole"],
   map: ["basic", "carte google maps plan adresse localisation itineraire lieu"],
+  imagebox: ["general", "boite d'image carte image titre texte fonctionnalite"],
+  iconbox: ["general", "boite d'icone carte icone titre texte avantage fonctionnalite"],
+  rating: ["general", "evaluation note etoiles avis notation score"],
+  menuanchor: ["general", "ancre de menu lien interne defilement section id"],
   link: ["basic", "lien url"],
   list: ["basic", "liste puces numerotee"],
   tabs: ["general", "onglets"],
@@ -609,6 +640,12 @@ const WIDGETS = {
   courselist: ["commerce", "formations catalogue produits cours boutique dynamique"],
   social: ["social", "reseaux sociaux facebook instagram linkedin youtube"],
 };
+// Raccourcis : entrée de bibliothèque qui crée un élément existant préréglé (ex. SoundCloud = contenu intégré limité à
+// SoundCloud). Le serveur valide l'élément créé comme tout autre.
+const WIDGET_SHORTCUTS = [
+  { key: "soundcloud", label: "SoundCloud", group: "general", icon: "play", keywords: "soundcloud son musique podcast audio lecteur", type: "embed", provider: "soundcloud" },
+];
+
 // Permissions exigées par des widgets : libellé affiché sur le cadenas
 const WIDGET_PERMISSIONS = { "pages.code": "réservé aux administrateurs (le HTML s'affiche sur le même domaine que les comptes des élèves)" };
 for (const type of Object.keys(NODE_TYPES)) if (!WIDGETS[type] || !WIDGET_GROUPS[WIDGETS[type][0]]) throw new Error(`Widget sans fiche de bibliothèque : ${type}`);
@@ -664,6 +701,10 @@ const PALETTE = {
   course: { icon: "graduation", asks: "course", blank: () => ({ props: {} }) },
   icon: { icon: "star", blank: () => ({ props: { name: "star", size: "32" } }) },
   map: { icon: "mapPin", asks: "map", blank: () => ({ props: {} }) },
+  imagebox: { icon: "image", asks: "image", blank: () => ({ props: {} }) },
+  iconbox: { icon: "star", blank: () => ({ props: { icon: "star", title: "Un atout clair", text: "Expliquez en une phrase ce que la personne y gagne." } }) },
+  rating: { icon: "star", asks: "rating", blank: () => ({ props: {} }) },
+  menuanchor: { icon: "link", asks: "anchor", blank: () => ({ props: {} }) },
   badge: { icon: "tag", blank: () => ({ props: { text: "Nouveau", tone: "primary" } }) },
   timeline: { icon: "history", blank: () => ({ props: { items: [{ date: "Étape 1", title: "Inscription", text: "Ce qui se passe à cette étape." }, { date: "Étape 2", title: "Premier module", text: "Ce qui se passe ensuite." }] } }) },
   progress: { icon: "activity", blank: () => ({ props: { label: "Progression", value: 60, showValue: true } }) },
@@ -741,7 +782,7 @@ function editorSpec() {
   };
   return {
     types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], keywords: WIDGETS[type][1], requires: widgetRequires(type), version: d.version || 1, container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
-    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
+    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
     socialNetworks: Object.entries(SOCIAL_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
@@ -997,6 +1038,7 @@ function normalizeNode(raw, at, h, depth, counter) {
     counter.anchors.add(anchor);
     node.anchor = anchor;
   }
+  if (raw.type === "menuanchor" && !node.anchor) throw new Error(`${where} : donnez un nom à l'ancre (ex. tarifs), utilisé dans les liens « #tarifs ».`);
   const audience = normalizeAudience(raw.audience, where);
   if (audience) node.audience = audience;
   // Visible sur certains écrans seulement (au moins un)
@@ -1088,6 +1130,7 @@ function pageCss(sections) {
       if (n.type === "iconlist" && NODE_ID.test(String(n.id || "")) && n.props && n.props.iconColor) rules.base.push(`.kw-n-${n.id} .kw-iconlist-icon{color:${colorCss(n.props.iconColor)}}`);
       if (n.type === "social" && NODE_ID.test(String(n.id || "")) && n.props) rules.base.push(`.kw-n-${n.id}{--kw-soc:${Number(n.props.size) || 32}px}`);
       if (n.type === "divider" && NODE_ID.test(String(n.id || "")) && n.props && (n.props.lineStyle !== "solid" || n.props.thickness > 1 || n.props.color)) rules.base.push(`.kw-n-${n.id}${n.props.text ? "::before,.kw-n-" + n.id + "::after" : ""}{${n.props.text ? "" : "border:0;"}border-top:${n.props.thickness}px ${n.props.lineStyle} ${n.props.color ? colorCss(n.props.color) : "currentColor"}}`);
+      if (n.type === "rating" && NODE_ID.test(String(n.id || "")) && n.props && Number.isFinite(n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-rating-fill{width:${Math.round((n.props.value / (n.props.scale || 5)) * 1000) / 10}%}`);
       if (n.type === "map" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) rules.base.push(`.kw-n-${n.id} .kw-map-frame{height:${n.props.height}px}`);
       if (n.type === "progress" && NODE_ID.test(String(n.id || "")) && Number.isInteger(n.props && n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-progress-bar{width:${n.props.value}%}`);
       // Grille réglée pour l'ordinateur : sur tablette et mobile, elle se resserre d'elle-même (2 colonnes au plus, puis 1)

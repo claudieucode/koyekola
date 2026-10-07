@@ -192,3 +192,66 @@ describe("lot 2 — Basique", () => {
     assert.equal(click.location, "/catalogue");
   });
 });
+
+describe("lot 3 — Général", () => {
+  let srv, boss, db;
+  before(async () => { srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" }); boss = await loginInstructor(srv); db = srv.db(); });
+  after(() => srv.stop());
+
+  test("validation : boîtes d'image et d'icône, évaluation (demi-étoiles, bornes), ancre de menu nommée ; raccourci SoundCloud", () => {
+    const { A } = freshMarketing();
+    const p = pages.createPage(A, { name: "Lot 3", kind: "page" });
+    const save = (kids) => pages.saveDraft(A, p.id, { sections: [{ id: "sect00000001", type: "layout", children: kids }] }, { revision: pages.getPage(A, p.id).revision }).content.sections[0].children;
+    const out = save([
+      { id: "ibx000000001", type: "imagebox", props: { src: "https://k.test/a.png", alt: "Classe", title: "Cours en direct", text: "Chaque semaine.", position: "left", link: "/catalogue", titleLevel: 9 } },
+      { id: "cbx000000001", type: "iconbox", props: { icon: "star", title: "Certificat", position: "nope", size: 7 } },
+      { id: "rat000000001", type: "rating", props: { value: "4,3", title: "Note des élèves" } },
+      { id: "rat000000002", type: "rating", props: { value: 8.5, scale: 10, showValue: false } },
+      { id: "anc000000001", type: "menuanchor", anchor: "tarifs" },
+    ]);
+    assert.deepEqual(out[0].props, { src: "https://k.test/a.png", alt: "Classe", title: "Cours en direct", text: "Chaque semaine.", titleLevel: "3", position: "left", link: "/catalogue", newTab: false });
+    assert.deepEqual([out[1].props.position, out[1].props.size, out[1].props.titleLevel], ["top", "48", "3"]);
+    assert.deepEqual(out[2].props, { value: 4.5, scale: 5, title: "Note des élèves", showValue: true }, "arrondi à la demi-étoile");
+    assert.deepEqual(out[3].props, { value: 8.5, scale: 10, title: "", showValue: false });
+    assert.equal(out[4].anchor, "tarifs");
+    assert.throws(() => save([{ id: "rat000000001", type: "rating", props: { value: 6 } }]), /entre 0 et 5/);
+    assert.throws(() => save([{ id: "rat000000001", type: "rating", props: { value: "beaucoup" } }]));
+    assert.throws(() => save([{ id: "anc000000001", type: "menuanchor" }]), /donnez un nom à l'ancre/);
+    assert.throws(() => save([{ id: "ibx000000001", type: "imagebox", props: { src: "https://k.test/a.png", title: "" } }]), /titre est obligatoire/);
+    assert.throws(() => save([{ id: "cbx000000001", type: "iconbox", props: { icon: "pas-une-icone", title: "x" } }]), /icône inconnue/);
+    const spec = nodes.editorSpec();
+    for (const t of ["imagebox", "iconbox", "rating", "menuanchor"]) assert.equal(spec.types.find((x) => x.type === t).group, "general", t);
+    const sc = spec.shortcuts.find((x) => x.key === "soundcloud");
+    assert.equal(sc.type, "embed");
+    assert.ok(new RegExp(sc.pattern, "i").test("https://soundcloud.com/artiste/titre"));
+    assert.ok(!new RegExp(sc.pattern, "i").test("https://evil.test/soundcloud.com/a/b"));
+    // un SoundCloud créé par le raccourci est un contenu intégré ordinaire, validé par le serveur
+    assert.equal(save([{ id: "emb000000001", type: "embed", props: { url: "https://soundcloud.com/artiste/titre", title: "Podcast" } }])[0].type, "embed");
+  });
+
+  test("page publiée : boîtes avec un seul lien compté chacune, évaluation lisible, ancre ; responsive", async () => {
+    const id = Number((await boss.post("/marketing/pages", { name: "Général" })).location.match(/(\d+)$/)[1]);
+    const rev = db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(id).revision;
+    const content = { sections: [{ id: "sect00000001", type: "layout", children: [
+      { id: "anc000000001", type: "menuanchor", anchor: "tarifs" },
+      { id: "ibx000000001", type: "imagebox", props: { src: "https://k.test/a.png", alt: "Classe", title: "Cours <en> direct", text: "Chaque semaine.", position: "left", link: "/catalogue" } },
+      { id: "cbx000000001", type: "iconbox", props: { icon: "star", title: "Certificat", link: "/blog" } },
+      { id: "btn000000001", type: "button", props: { label: "Après", url: "/connexion" } },
+      { id: "rat000000001", type: "rating", props: { value: 4.5, title: "Note des élèves" } },
+    ] }] };
+    assert.equal((await boss.request(`/marketing/pages/${id}/brouillon`, { method: "PUT", json: { revision: rev, content } })).status, 200);
+    assert.equal((await boss.request(`/marketing/pages/${id}/publier.json`, { method: "POST", json: {} })).status, 200);
+    const slug = db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug;
+    const html = (await boss.get(`/p/${slug}`)).text;
+    assert.match(html, /<div class="kw-node kw-menuanchor kw-n-anc000000001" id="tarifs"><\/div>/);
+    assert.match(html, new RegExp(`kw-imagebox kw-n-ibx000000001 kw-box is-left"><div class="kw-box-media"><a href="/p/${slug}/clic/0" tabindex="-1" aria-hidden="true"><img src="https://k.test/a.png" alt="Classe"`));
+    assert.match(html, new RegExp(`<h3 class="kw-box-title"><a href="/p/${slug}/clic/0">Cours &lt;en&gt; direct</a></h3>`), "même numéro de clic pour l'image et le titre");
+    assert.match(html, new RegExp(`kw-iconbox kw-n-cbx000000001 kw-box is-top"><div class="kw-box-media"><span class="kw-iconbox-icon" aria-hidden="true"><svg`));
+    assert.match(html, new RegExp(`<a href="/p/${slug}/clic/1">Certificat</a>`));
+    assert.match(html, new RegExp(`href="/p/${slug}/clic/2"[^>]*>Après</a>`), "les liens suivants restent bien numérotés");
+    assert.match(html, /role="img" aria-label="Note : 4,5 sur 5"/);
+    assert.match(html, /\.kw-n-rat000000001 \.kw-rating-fill\{width:90%\}/);
+    assert.equal((await boss.get(`/p/${slug}/clic/1`)).location, "/blog");
+    assert.equal((await boss.get(`/p/${slug}/clic/2`)).location, "/connexion");
+  });
+});

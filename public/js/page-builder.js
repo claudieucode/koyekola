@@ -300,6 +300,15 @@
       if (!m.alt) { toast("Ajoutez d'abord un texte de remplacement à cette image (dans la médiathèque).", true); return; }
       addItems([newNode("hotspot", { props: { src: m.path, alt: m.alt, spots: [{ x: 50, y: 50, title: "Point d'intérêt", text: "Ce qu'il faut savoir ici." }] } })], at);
     } });
+    if (type === "imagebox") return openMedia({ title: "Image de la boîte", onPick: function (m) { addItems([newNode("imagebox", { props: { src: m.path, alt: m.alt || "", title: "Un titre clair", text: "Expliquez en une phrase ce que la personne y gagne." } })], at); } });
+    if (t.asks === "rating") return ask("Évaluation (note réelle)", [["value", "text", "Note sur 5 (ex. 4,5)"], ["title", "text", "Libellé (facultatif, ex. Note des élèves)", true]], function (v) { addItems([newNode("rating", { props: { value: Number(String(v.value).replace(",", ".")), scale: 5, title: v.title || "" } })], at); });
+    if (t.asks === "anchor") return ask("Ancre de menu", [["name", "text", "Nom de l'ancre (ex. tarifs) : les liens « #tarifs » mènent ici"]], function (v) {
+      var a = String(v.name || "").trim().toLowerCase();
+      if (!/^[a-z][a-z0-9-]{0,39}$/.test(a)) { toast("Nom invalide : lettres minuscules, chiffres et tirets, en commençant par une lettre.", true); return; }
+      var taken = false; walk(function (x) { if (x.anchor === a) taken = true; });
+      if (taken) { toast("L'ancre « " + a + " » est déjà utilisée sur cette page.", true); return; }
+      addItems([newNode("menuanchor", { anchor: a })], at);
+    });
     if (t.asks === "map") return ask("Google Maps", [["address", "text", "Adresse ou lieu (ex. 12 avenue de la Paix, Brazzaville)"]], function (v) { addItems([newNode("map", { props: { address: v.address, zoom: 14, height: 350 } })], at); });
     if (t.asks === "embed") return ask("Contenu intégré", [["url", "url", "Adresse (YouTube, Vimeo, Google Maps « Intégrer », Calendly, Spotify, SoundCloud, Google Forms, Typeform, Loom, Canva)"], ["title", "text", "Titre (lu par les lecteurs d'écran)"]], function (v) { addItems([newNode("embed", { props: v })], at); });
     if (t.asks === "image") return openMedia({ title: "Choisir l'image", onPick: function (m) { addItems([newNode("image", { props: m.alt ? { src: m.path, alt: m.alt } : { src: m.path, alt: "", decorative: true } })], at); if (!m.alt) toast("Image ajoutée comme décorative : ajoutez un texte de remplacement si elle porte une information."); } });
@@ -316,6 +325,14 @@
       return ask("Formation à présenter", [["courseId", "course", "Formation"]], function (v) { addItems([newNode("course", { props: { courseId: Number(v.courseId), cta: "Découvrir la formation" } })], at); });
     }
     addItems([newNode(type)], at);
+  }
+  // Raccourci de bibliothèque : crée un élément existant préréglé (le serveur le valide comme tout autre)
+  function addShortcut(sc, at) {
+    if (!canWrite) return;
+    ask(sc.label, [["url", "url", "Adresse de la page " + sc.label + " (ex. https://soundcloud.com/artiste/titre)"], ["title", "text", "Titre (lu par les lecteurs d'écran)"]], function (v) {
+      if (!new RegExp(sc.pattern, "i").test(String(v.url || "").trim())) { toast("Adresse " + sc.label + " attendue (https://soundcloud.com/artiste/titre).", true); return; }
+      addItems([newNode(sc.type, { props: { url: String(v.url).trim(), title: v.title } })], at);
+    });
   }
   // Sections existantes (bandeau, formulaire, points forts…) : leur contenu de départ vient du serveur
   function addLegacy(type, at) {
@@ -832,6 +849,7 @@
     var item = function (t) { var need = deniedWidget(t.type); return { type: t.type, label: t.label, icon: t.icon, keywords: t.keywords, locked: need ? "Widget " + SPEC.widgetPermissions[need] + "." : null, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; };
     var groups = Object.keys(SPEC.widgetGroups).map(function (k) { return { key: k, label: SPEC.widgetGroups[k], items: SPEC.types.filter(function (t) { return t.group === k; }).map(item) }; });
     groups[0].items.unshift({ type: "layout", label: "Section libre", icon: "layout", keywords: "section libre bloc zone" });
+    (SPEC.shortcuts || []).forEach(function (sc) { var g = groups.find(function (x) { return x.key === sc.group; }); if (g) g.items.push({ type: sc.type, shortcut: sc, label: sc.label, icon: sc.icon, keywords: sc.keywords }); });
     var legacy = boot.types.map(function (t) { return { type: t.type, label: t.label, icon: "fileText", disabled: t.unavailable, legacy: true, keywords: t.type === "form" ? "formulaire inscription email champs newsletter" : "section prete" }; });
     groups.find(function (g) { return g.key === "form"; }).items = legacy.filter(function (t) { return t.type === "form"; });
     groups.push({ key: "sections", label: "Sections prêtes", items: legacy.filter(function (t) { return t.type !== "form"; }) });
@@ -840,7 +858,7 @@
   if (elCategory && !elementGroups().some(function (g) { return g.key === elCategory; })) { elCategory = ""; store.set("el-category", ""); }
   // Favoris et éléments récemment utilisés (préférences d'interface de cette personne, dans ce navigateur)
   var favs = store.get("el-favs", []), recents = store.get("el-recent", []);
-  var elKey = function (it) { return (it.legacy ? "s:" : "n:") + it.type; };
+  var elKey = function (it) { return it.shortcut ? "x:" + it.shortcut.key : (it.legacy ? "s:" : "n:") + it.type; };
   function useElement(it) { recents = [elKey(it)].concat(recents.filter(function (k) { return k !== elKey(it); })).slice(0, 6); store.set("el-recent", recents); }
   function toggleFav(it) { var k = elKey(it); favs = favs.indexOf(k) >= 0 ? favs.filter(function (x) { return x !== k; }) : favs.concat(k); store.set("el-favs", favs); renderElements($("[data-pb-el-search]").value); }
   function toggleGroup(key) { elClosed = elClosed.indexOf(key) >= 0 ? elClosed.filter(function (k) { return k !== key; }) : elClosed.concat(key); store.set("el-closed", elClosed); renderElements($("[data-pb-el-search]").value); var b = $('[data-pb-group="' + key + '"]'); if (b) b.focus(); }
@@ -874,10 +892,10 @@
       var ul = h("ul", { class: "pb-palette", id: "pb-group-" + g.key });
       g.items.forEach(function (it) {
         var off = it.disabled || it.locked;
-        var btn = h("button", { type: "button", class: "pb-pal-item" + (it.locked ? " is-locked" : ""), disabled: !canWrite || Boolean(it.disabled), "aria-disabled": it.locked ? "true" : null, "data-tip": off || null, "data-widget": it.type,
-          onclick: function () { if (it.locked) { toast(it.label + " : " + it.locked, true); return; } useElement(it); if (it.legacy) addLegacy(it.type); else addElement(it.type); } },
+        var btn = h("button", { type: "button", class: "pb-pal-item" + (it.locked ? " is-locked" : ""), disabled: !canWrite || Boolean(it.disabled), "aria-disabled": it.locked ? "true" : null, "data-tip": off || null, "data-widget": it.shortcut ? it.shortcut.key : it.type,
+          onclick: function () { if (it.locked) { toast(it.label + " : " + it.locked, true); return; } useElement(it); if (it.shortcut) addShortcut(it.shortcut); else if (it.legacy) addLegacy(it.type); else addElement(it.type); } },
           icon(it.icon), h("span", { text: it.label }), f && it.legacy && it.type !== "form" ? h("span", { class: "pb-pal-kind", text: "Section prête" }) : null, it.locked ? h("span", { class: "pb-pal-lock", "aria-label": "Réservé" }, icon("lock")) : null);
-        if (!off) draggableSource(btn, it.legacy ? { type: it.type, section: true } : { type: it.type }, function (target) { useElement(it); if (it.legacy) addLegacy(it.type, target); else addElement(it.type, target); });
+        if (!off) draggableSource(btn, it.legacy ? { type: it.type, section: true } : { type: it.type }, function (target) { useElement(it); if (it.shortcut) addShortcut(it.shortcut, target); else if (it.legacy) addLegacy(it.type, target); else addElement(it.type, target); });
         var isFav = favs.indexOf(elKey(it)) >= 0;
         var star = h("button", { type: "button", class: "pb-fav", "aria-pressed": String(isFav), "aria-label": (isFav ? "Retirer des favoris : " : "Ajouter aux favoris : ") + it.label, "data-tip": isFav ? "Retirer des favoris" : "Ajouter aux favoris", onclick: function (e) { e.stopPropagation(); toggleFav(it); } }, isFav ? "★" : "☆");
         ul.appendChild(h("li", { class: "pb-pal-li" }, btn, star));
@@ -1242,6 +1260,34 @@
         box.appendChild(selectField("Position du texte", p.align || "center", [["left", "À gauche"], ["center", "Au centre"], ["right", "À droite"]], function (v) { setProp(it.id, "align", v); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "Largeur : onglet Style › Dimensions ; espace autour : Espacement." }));
         break;
+      case "imagebox":
+      case "iconbox":
+        if (it.type === "imagebox") {
+          box.appendChild(h("p", { class: "pb-sub", text: "Image" }));
+          box.appendChild(mediaPreview(p.src, function (m) { change(function () { var x = byId(it.id).props; x.src = m.path; if (!x.alt && m.alt) x.alt = m.alt; }); }, disabled));
+          box.appendChild(textField("Texte de remplacement (vide = image décorative)", p.alt, set("alt"), { max: 200, disabled: disabled }));
+        } else {
+          box.appendChild(iconPicker(p.icon || "star", function (v) { setProp(it.id, "icon", v); }, disabled));
+          box.appendChild(selectField("Taille de l'icône", String(p.size || 48), [["24", "24 px"], ["32", "32 px"], ["48", "48 px"], ["64", "64 px"]], function (v) { setProp(it.id, "size", v); }, { disabled: disabled }));
+        }
+        box.appendChild(textField("Titre", p.title, set("title"), { max: 120, disabled: disabled }));
+        box.appendChild(selectField("Niveau du titre", p.titleLevel || "3", [["2", "Titre 2"], ["3", "Titre 3"], ["4", "Titre 4"], ["5", "Titre 5"], ["6", "Titre 6"]], function (v) { setProp(it.id, "titleLevel", v); }, { disabled: disabled }));
+        box.appendChild(textField("Texte", p.text, set("text"), { multiline: true, max: 600, disabled: disabled }));
+        box.appendChild(selectField("Position du visuel", p.position || "top", [["top", "En haut"], ["left", "À gauche"], ["right", "À droite"]], function (v) { setProp(it.id, "position", v); }, { disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-hint", text: "À gauche ou à droite : empilé sur mobile." }));
+        box.appendChild(textField("Lien (facultatif)", p.link, set("link"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue, /p/…, #ancre ou https://…" }));
+        box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
+        break;
+      case "rating":
+        box.appendChild(textField("Libellé (facultatif)", p.title, set("title"), { max: 80, disabled: disabled }));
+        box.appendChild(selectField("Échelle", String(p.scale || 5), [["5", "Sur 5"], ["10", "Sur 10"]], function (v) { change(function () { var x = byId(it.id).props; x.scale = Number(v); if (x.value > x.scale) x.value = x.scale; }); }, { disabled: disabled }));
+        box.appendChild(selectField("Note", String(p.value), (function () { var o = []; for (var v = 0; v <= (p.scale || 5); v += 0.5) o.push([String(v), String(v).replace(".", ",")]); return o; })(), function (v) { setProp(it.id, "value", Number(v)); }, { disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-hint", text: "Une note réelle (par exemple la moyenne de vrais avis)." }));
+        box.appendChild(checkField("Afficher la note en chiffres", p.showValue !== false, function (v) { setProp(it.id, "showValue", v); }, { disabled: disabled }));
+        break;
+      case "menuanchor":
+        box.appendChild(textField("Nom de l'ancre", it.anchor, function (v) { setAnchor(it.id, v); }, { max: 40, onChange: true, disabled: disabled, hint: "Un lien « #" + (it.anchor || "nom") + " » (menu, bouton…) fait défiler la page jusqu'ici. Invisible sur la page publiée." }));
+        break;
       case "map":
         box.appendChild(textField("Adresse ou lieu", p.address, set("address"), { max: 200, disabled: disabled, placeholder: "ex. 12 avenue de la Paix, Brazzaville" }));
         box.appendChild(selectField("Zoom", String(p.zoom || 14), [["5", "5 · pays"], ["8", "8 · région"], ["11", "11 · ville"], ["14", "14 · quartier"], ["16", "16 · rue"], ["18", "18 · bâtiment"]].concat([1, 2, 3, 4, 6, 7, 9, 10, 12, 13, 15, 17, 19, 20].indexOf(Number(p.zoom)) >= 0 ? [[String(p.zoom), String(p.zoom)]] : []), function (v) { setProp(it.id, "zoom", Number(v)); }, { disabled: disabled }));
@@ -1579,6 +1625,10 @@
     icon: { kind: "Icône", groups: { layout: ["alignSelf"], color: ["color"], size: ["width", "height"], spacing: true }, states: true },
     spacer: { kind: "Espace", groups: { size: ["height"], spacing: true } },
     divider: { kind: "Séparateur", groups: { size: SIZE_W, typography: ["fontSize", "fontWeight", "textTransform", "letterSpacing"], color: ["color"], border: null, spacing: true } },
+    imagebox: { kind: "Boîte d'image", groups: TEXTUAL, order: TEXT_ORDER },
+    iconbox: { kind: "Boîte d'icône", groups: TEXTUAL, order: TEXT_ORDER },
+    rating: { kind: "Évaluation", groups: { layout: ["alignSelf"], typography: ["fontSize", "fontWeight"], color: ["color"], spacing: true }, order: ["typography", "spacing", "layout"] },
+    menuanchor: { kind: "Ancre de menu", groups: null },
     map: { kind: "Google Maps", groups: { size: SIZE_W, spacing: true, border: null, effects: ["boxShadow", "opacity"] }, order: ["size", "spacing", "border", "effects"] },
     course: { kind: "Formation", groups: { layout: ["alignSelf"], size: SIZE_W, background: true, spacing: true, border: null, effects: null }, states: true },
     form: { kind: "Formulaire", groups: { size: null, spacing: true, color: null, background: true, border: null, effects: null }, presets: true },
@@ -3261,6 +3311,9 @@
       case "divider": return "Ligne de séparation";
       case "icon": return "Icône « " + p.name + " », " + p.size + " px";
       case "map": return "Carte : " + p.address;
+      case "imagebox": case "iconbox": return p.title;
+      case "rating": return (p.title ? p.title + " · " : "") + String(p.value).replace(".", ",") + "/" + p.scale;
+      case "menuanchor": return "#" + (it.anchor || "");
       case "badge": return p.text;
       case "timeline": return (p.items || []).length + " étape(s) : " + (p.items || []).map(function (x) { return x.title; }).join(" · ");
       case "progress": return p.label + " : " + p.value + " %";
