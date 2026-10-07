@@ -1176,9 +1176,31 @@
     if (doc && doc.body) doc.body.classList.toggle("pb-hand", k === "hand");
     placeCanvasBar();
   }
+  // Modèle de l'équipe inséré dans la page en cours : une copie de ses sections (nouveaux identifiants)
+  function insertTemplate(t, target) {
+    api("GET", "/marketing/site-web/modeles/" + t.id + ".json").then(function (r) {
+      var secs = clone(r.template.sections).map(function (s) { return markSection(reId(s)); });
+      if (secs.some(function (s) { return s.type === "form"; }) && content.sections.some(function (s) { return s.type === "form"; })) { toast("Une page n'a qu'un formulaire d'inscription : ce modèle en contient un.", true); return; }
+      ensureIds(secs);
+      var index = target && target.parent === null ? target.index : insertionPoint({ type: "layout" }).index;
+      nextLabel = "Modèle inséré : « " + t.name + " »";
+      change(function () { if (!insertInto(null, index, secs)) return false; selection = secs.length ? [secs[0].id] : []; });
+      markCanvasSelection(true);
+      toast("Modèle « " + t.name + " » inséré (" + secs.length + " section" + (secs.length > 1 ? "s" : "") + ", copie indépendante).");
+    }, apiFail);
+  }
   function renderBlocks() {
     var box = $("[data-pb-blocks]");
     box.textContent = "";
+    if ((boot.templates || []).length) {
+      var tl = h("ul", { class: "pb-blocks" });
+      boot.templates.forEach(function (t) {
+        var btn = h("button", { type: "button", class: "pb-block-item", "data-template": String(t.id), disabled: !canWrite, onclick: function () { insertTemplate(t, null); } }, h("strong", { text: t.name }), h("span", { class: "pb-hint", text: (t.category ? t.category + " · " : "") + t.sections + " section" + (t.sections > 1 ? "s" : "") }));
+        draggableSource(btn, { type: "layout" }, function (target) { insertTemplate(t, target); });
+        tl.appendChild(h("li", {}, btn));
+      });
+      box.appendChild(h("section", { class: "pb-pal-group" }, h("h3", { class: "pb-sub", text: "Modèles de l'équipe" }), h("p", { class: "pb-hint", text: "Pages enregistrées avec « Enregistrer comme modèle » : leurs sections sont copiées dans cette page." }), tl));
+    }
     var cats = {};
     boot.blocks.forEach(function (b) { (cats[b.category] = cats[b.category] || []).push(b); });
     Object.keys(cats).forEach(function (c) {
@@ -1200,12 +1222,23 @@
   }
   function fetchComponent(id) { return api("GET", "/marketing/site-web/composants/" + id + ".json").then(function (r) { return r.component; }); }
   // Onglet Éléments › Composants (ceux de ce site) et › Globales (partagés par tous les sites de l'organisation)
+  var compQuery = "";
+  $$("[data-pb-comp-q]").forEach(function (q) { q.addEventListener("input", function () { compQuery = norm(q.value); $$("[data-pb-comp-q]").forEach(function (o) { if (o !== q) o.value = q.value; }); renderComponents(); }); });
+  // Modifier un composant (nom, portée) : la réponse du serveur remplace la fiche locale
+  function updateComponentMeta(c, body, done) {
+    api("POST", "/marketing/site-web/composants/" + c.id, body).then(function (r) {
+      components = components.map(function (x) { return x.id === c.id ? Object.assign({}, x, { name: r.component.name, global: r.component.global, uses: r.component.uses }) : x; });
+      renderComponents(); toast(done);
+    }, apiFail);
+  }
   function renderComponents() {
     [[$("[data-pb-components]"), false, "Aucun composant de ce site. Sélectionnez un élément ou une section, puis « Enregistrer comme composant » (inspecteur, onglet Avancé)."],
      [$("[data-pb-globals]"), true, "Aucun élément global. À l'enregistrement d'un composant, cochez « Utilisable par tous les sites (global) » : il apparaît ici, sur toutes les pages de tous vos sites."]].forEach(function (x) {
       x[0].textContent = "";
-      var list = components.filter(function (c) { return Boolean(c.global) === x[1]; });
-      if (!list.length) x[0].appendChild(h("li", {}, h("p", { class: "pb-hint", text: x[2] })));
+      var all = components.filter(function (c) { return Boolean(c.global) === x[1]; });
+      var list = all.filter(function (c) { return !compQuery || norm(c.name).indexOf(compQuery) >= 0; });
+      if (!all.length) x[0].appendChild(h("li", {}, h("p", { class: "pb-hint", text: x[2] })));
+      else if (!list.length) x[0].appendChild(h("li", {}, h("p", { class: "pb-hint", text: "Aucun composant ne correspond à la recherche." })));
       list.forEach(function (c) { x[0].appendChild(componentRow(c)); });
     });
   }
@@ -1214,9 +1247,15 @@
       var syncBtn = h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: !canWrite, onclick: function () { insertSync(null); } }, "Synchronisé");
       draggableSource(syncBtn, { type: "component" }, insertSync);
       return h("li", { class: "pb-comp" },
-        h("div", {}, h("strong", { text: c.name }), h("span", { class: "pb-hint", text: (c.global ? "Global" : "Ce site") + " · " + (c.type === "layout" ? "Section libre" : LEGACY[c.type] ? LEGACY[c.type].label : c.type) })),
+        h("div", {}, h("strong", { text: c.name }), h("span", { class: "pb-hint", text: (c.global ? "Global" : "Ce site") + " · " + (c.type === "layout" ? "Section libre" : LEGACY[c.type] ? LEGACY[c.type].label : c.type) + (typeof c.uses === "number" ? " · " + (c.uses ? "utilisé sur " + c.uses + " page" + (c.uses > 1 ? "s" : "") : "pas encore utilisé") : "") })),
         h("div", { class: "pb-row pb-wrap" }, syncBtn,
           h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () { fetchComponent(c.id).then(function (comp) { var s = markSection(reId(clone(comp.section))); ensureIds([s]); addItems([s], { parent: null, index: insertionPoint({ type: "layout" }).index }); }, apiFail); } }, "Copie"),
+          h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () {
+            ask("Renommer le composant", [["name", "text", "Nouveau nom"]], function (v) { if (v.name && v.name !== c.name) updateComponentMeta(c, { name: v.name }, "Composant renommé : « " + v.name + " »."); });
+            var input = $("[data-pb-ask-fields] input[name='name']"); if (input) { input.value = c.name; input.select(); }
+          } }, "Renommer"),
+          c.global ? (PAGE.siteId ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, "data-tip": "Le réserver au site « " + (PAGE.siteName || "de cette page") + " » (refusé s'il est utilisé par une page d'un autre site)", onclick: function () { updateComponentMeta(c, { global: false, siteId: PAGE.siteId }, "« " + c.name + " » est maintenant réservé à ce site (onglet Composants)."); } }, "Réserver à ce site") : null)
+            : h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, "data-tip": "Le partager avec tous les sites de l'organisation", onclick: function () { updateComponentMeta(c, { global: true }, "« " + c.name + " » est maintenant global (onglet Globales)."); } }, "Rendre global"),
           h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () {
             if (!window.confirm("Supprimer le composant « " + c.name + " » ? (Refusé s'il est encore utilisé par une page.)")) return;
             api("POST", "/marketing/site-web/composants/" + c.id + "/supprimer", {}).then(function () { components = components.filter(function (x) { return x.id !== c.id; }); renderComponents(); toast("Composant supprimé."); }, apiFail);

@@ -323,3 +323,11 @@ Non construit (aucune intégration réelle) : coupons dans la page, variations d
 | **Boutons de partage** (nouveau) | oui : réseaux (Facebook, X, LinkedIn, WhatsApp, e-mail), taille, forme, texte proposé | de vrais liens de partage vers l'adresse PUBLIQUE de la page (construite et encodée par le serveur, jamais saisie) ; nouvel onglet ; rien n'est affiché sur la page publiée si l'adresse du site n'est pas en https ; dans l'éditeur, boutons dessinés mais inertes | oui | oui | unitaire + serveur + navigateur |
 
 Non construit : intégrations de plateformes (commentaires Facebook, fil de publications, « J'aime » : demanderaient des scripts de tiers et des clés d'API sur des pages servies sur le domaine des comptes) ; bouton « copier le lien » (JavaScript dans `landing.js` pour un seul usage).
+
+## Lot 10 — Modèles, composants, globales
+
+| Fonction | Interface | Fonctionnel | Persistant | Responsive | Testé |
+|---|---|---|---|---|---|
+| Composants (ce site) / Globales (tous les sites) | oui (Éléments › Composants / Globales) | insertion synchronisée ou en copie (existant) ; **recherche** ; **utilisation** (« utilisé sur N pages ») ; **renommer** (nom unique) ; **rendre global** / **réserver à ce site** (refusé, avec la liste des pages, s'il sert à une page d'un autre site) | oui (serveur) | — (panneau de l'éditeur) | serveur + navigateur |
+| Modèles de l'équipe | oui (onglet Blocs › « Modèles de l'équipe ») | **insertion dans la page en cours** (copie des sections, nouveaux identifiants, annulable ; un seul formulaire d'inscription par page ; widgets réservés vérifiés) ; création d'une page depuis un modèle, enregistrement, export / import (existants) | oui | oui | serveur + navigateur |
+| Blocs prêts à l'emploi (22) | oui (existant) | oui | oui | oui | suites existantes |

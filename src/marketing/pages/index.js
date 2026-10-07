@@ -353,7 +353,8 @@ function createComponent(ctx, { name, section, siteId = null } = {}) {
   audit(ctx, "component.created", "component", id, {});
   return getComponent(ctx, id);
 }
-function updateComponent(ctx, id, { name, section } = {}) {
+// global : true = partagé par tous les sites ; false = réservé au site siteId (refusé s'il est utilisé ailleurs)
+function updateComponent(ctx, id, { name, section, global, siteId } = {}) {
   const c = getComponent(ctx, id);
   if (!c) throw new MarketingError("not_found", "Composant introuvable.");
   const n = name === undefined ? c.name : line(name, 80);
@@ -362,7 +363,17 @@ function updateComponent(ctx, id, { name, section } = {}) {
   if (dup && dup.id !== c.id) throw new MarketingError("duplicate", "Un composant porte déjà ce nom.");
   const s = section === undefined ? c.section : componentSection(ctx, section);
   checkWidgetRights(ctx, [c.section], [s]);
-  ctx.db.prepare("UPDATE mk_web_components SET name = ?, section = ?, updated_at = datetime('now') WHERE id = ?").run(n, JSON.stringify(s), c.id);
+  let site = c.site_id;
+  if (global === true) site = null;
+  else if (global === false) {
+    const sid = Number(siteId);
+    if (!Number.isInteger(sid)) throw bad("Choisissez le site auquel réserver ce composant.");
+    requireSite(ctx, sid, { active: true });
+    const elsewhere = componentUsage(ctx, c.id).filter((p) => p.site_id !== sid);
+    if (elsewhere.length) throw new MarketingError("in_use", `Ce composant est utilisé par des pages d'un autre site ou hors site (${elsewhere.map((p) => `« ${p.name} »`).join(", ")}) : il doit rester global.`);
+    site = sid;
+  }
+  ctx.db.prepare("UPDATE mk_web_components SET name = ?, section = ?, site_id = ?, updated_at = datetime('now') WHERE id = ?").run(n, JSON.stringify(s), site, c.id);
   audit(ctx, "component.updated", "component", c.id, {});
   return getComponent(ctx, c.id);
 }
@@ -370,7 +381,7 @@ function updateComponent(ctx, id, { name, section } = {}) {
 function componentUsage(ctx, id) {
   const n = Number(id);
   const end = `%"componentId":${n}}%`, mid = `%"componentId":${n},%`;
-  return ctx.db.prepare("SELECT id, name, status FROM mk_landing_pages WHERE organization_id = ? AND (sections LIKE ? OR sections LIKE ? OR draft LIKE ? OR draft LIKE ?) ORDER BY name")
+  return ctx.db.prepare("SELECT id, name, status, site_id FROM mk_landing_pages WHERE organization_id = ? AND (sections LIKE ? OR sections LIKE ? OR draft LIKE ? OR draft LIKE ?) ORDER BY name")
     .all(ctx.organizationId, end, mid, end, mid);
 }
 function deleteComponent(ctx, id) {

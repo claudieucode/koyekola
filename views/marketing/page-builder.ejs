@@ -77,10 +77,12 @@
         </div>
         <div id="pb-lib-pane-components" role="tabpanel" aria-labelledby="pb-lib-components" hidden>
           <p class="pb-hint">Composants de ce site. « Synchronisé » : s'affiche partout dans sa dernière version (modifier la source modifie toutes les pages). « Copie » : indépendante.</p>
+          <label class="sr-only" for="pb-comp-q-site">Rechercher un composant</label><input class="pb-search" id="pb-comp-q-site" type="search" placeholder="Rechercher un composant..." data-pb-comp-q autocomplete="off">
           <ul class="pb-components" data-pb-components></ul>
         </div>
         <div id="pb-lib-pane-globals" role="tabpanel" aria-labelledby="pb-lib-globals" hidden>
           <p class="pb-hint">Éléments globaux : partagés par tous les sites de votre organisation. Insérés « Synchronisé », une modification de la source s'applique partout.</p>
+          <label class="sr-only" for="pb-comp-q-global">Rechercher un élément global</label><input class="pb-search" id="pb-comp-q-global" type="search" placeholder="Rechercher un élément global..." data-pb-comp-q autocomplete="off">
           <ul class="pb-components" data-pb-globals></ul>
         </div>
       </div>

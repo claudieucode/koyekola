@@ -215,7 +215,9 @@ module.exports = () => {
       forms: require("../forms").listForms(ctx).map((f) => ({ id: f.id, name: f.name, status: f.status })),
       blocks: require("../pages/patterns").catalog(ctx),
       courses: listCourses(ctx).map((c) => ({ id: c.id, title: c.title })),
-      components: pages.listComponents(ctx, { siteId: page.site_id }).map((c) => ({ id: c.id, name: c.name, global: c.global, type: c.section && c.section.type })),
+      components: pages.listComponents(ctx, { siteId: page.site_id }).map((c) => ({ id: c.id, name: c.name, global: c.global, type: c.section && c.section.type, uses: pages.componentUsage(ctx, c.id).length })),
+      // Modèles de pages de l'équipe (onglet Blocs : insérables dans la page en cours)
+      templates: pages.listPageTemplates(ctx).map((t) => ({ id: t.id, name: t.name, category: t.category, sections: t.content.sections.length })),
       // Adresses proposées pour les liens : pages en ligne, pages du site, étape suivante (page d'un tunnel)
       links: [{ url: "/catalogue", label: "Catalogue des formations" }, { url: "/blog", label: "Blog" }, { url: "/", label: "Accueil du site" }]
         .concat(funnel ? [{ url: require("../funnels").NEXT_URL, label: `Étape suivante du tunnel « ${funnel.name} »` }] : [])

@@ -443,3 +443,50 @@ describe("lot 6 — Site", () => {
     assert.equal((await boss.get(`/p/${slug}/clic/0`)).location, "/p/accueil-vitrine");
   });
 });
+
+describe("lot 10 — modèles, composants, globales", () => {
+  let srv, boss, db;
+  before(async () => { srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" }); boss = await loginInstructor(srv); db = srv.db(); });
+  after(() => srv.stop());
+  const section = { type: "layout", children: [{ type: "heading", props: { text: "Bandeau partagé", level: "2" } }] };
+  const json = async (r) => JSON.parse(r.text);
+
+  test("composants : utilisation comptée, renommer, rendre global / réserver à un site (refusé s'il sert ailleurs)", async () => {
+    const siteA = Number(db.prepare("INSERT INTO mk_sites (organization_id, name) VALUES (1, 'Site A')").run().lastInsertRowid);
+    const siteB = Number(db.prepare("INSERT INTO mk_sites (organization_id, name) VALUES (1, 'Site B')").run().lastInsertRowid);
+    const comp = (await json(await boss.request("/marketing/site-web/composants", { method: "POST", json: { name: "Bandeau", section, siteId: siteA } }))).component;
+    assert.equal(comp.global, false);
+    const pageA = Number((await boss.post("/marketing/pages", { name: "Page A" })).location.match(/(\d+)$/)[1]);
+    db.prepare("UPDATE mk_landing_pages SET site_id = ?, sections = ? WHERE id = ?").run(siteA, JSON.stringify([{ id: "sect00000001", type: "component", componentId: comp.id }]), pageA);
+    const boot = JSON.parse((await boss.get(`/marketing/pages/${pageA}/editeur`)).text.match(/<script type="application\/json" id="pb-boot">([\s\S]*?)<\/script>/)[1]);
+    assert.equal(boot.components.find((c) => c.id === comp.id).uses, 1);
+    // renommer
+    let r = await json(await boss.request(`/marketing/site-web/composants/${comp.id}`, { method: "POST", json: { name: "Bandeau d'accueil" } }));
+    assert.deepEqual([r.component.name, r.component.global, r.component.uses], ["Bandeau d'accueil", false, 1]);
+    // rendre global, puis l'utiliser sur une page du site B
+    r = await json(await boss.request(`/marketing/site-web/composants/${comp.id}`, { method: "POST", json: { global: true } }));
+    assert.equal(r.component.global, true);
+    const pageB = Number((await boss.post("/marketing/pages", { name: "Page B" })).location.match(/(\d+)$/)[1]);
+    db.prepare("UPDATE mk_landing_pages SET site_id = ?, sections = ? WHERE id = ?").run(siteB, JSON.stringify([{ id: "sect00000002", type: "component", componentId: comp.id }]), pageB);
+    const refused = await boss.request(`/marketing/site-web/composants/${comp.id}`, { method: "POST", json: { global: false, siteId: siteA } });
+    assert.equal(refused.status, 409);
+    assert.match(refused.text, /« Page B ».*il doit rester global/);
+    assert.equal(db.prepare("SELECT site_id FROM mk_web_components WHERE id = ?").get(comp.id).site_id, null, "rien n'a changé");
+    db.prepare("UPDATE mk_landing_pages SET sections = '[]' WHERE id = ?").run(pageB);
+    r = await json(await boss.request(`/marketing/site-web/composants/${comp.id}`, { method: "POST", json: { global: false, siteId: siteA } }));
+    assert.deepEqual([r.component.global, db.prepare("SELECT site_id FROM mk_web_components WHERE id = ?").get(comp.id).site_id], [false, siteA]);
+    // un nom déjà pris est refusé
+    await boss.request("/marketing/site-web/composants", { method: "POST", json: { name: "Autre", section, global: true } });
+    assert.equal((await boss.request(`/marketing/site-web/composants/${comp.id}`, { method: "POST", json: { name: "autre" } })).status, 409);
+  });
+
+  test("modèles de l'équipe : listés dans l'éditeur, contenu servi pour l'insertion, introuvable = 404", async () => {
+    const pid = Number((await boss.post("/marketing/pages", { name: "Source" })).location.match(/(\d+)$/)[1]);
+    const t = (await json(await boss.request("/marketing/site-web/modeles", { method: "POST", json: { name: "Page atelier", category: "Ateliers", content: { sections: [{ id: "sect00000009", type: "layout", children: [{ id: "hed000000009", type: "heading", props: { text: "Atelier", level: "2" } }] }] } } }))).template;
+    const boot = JSON.parse((await boss.get(`/marketing/pages/${pid}/editeur`)).text.match(/<script type="application\/json" id="pb-boot">([\s\S]*?)<\/script>/)[1]);
+    assert.deepEqual(boot.templates.find((x) => x.id === t.id), { id: t.id, name: "Page atelier", category: "Ateliers", sections: 1 });
+    const got = await json(await boss.get(`/marketing/site-web/modeles/${t.id}.json`));
+    assert.equal(got.template.sections[0].children[0].props.text, "Atelier");
+    assert.equal((await boss.get("/marketing/site-web/modeles/99999.json")).status, 404);
+  });
+});

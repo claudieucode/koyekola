@@ -165,7 +165,7 @@ module.exports = () => {
     if (!(error instanceof MarketingError)) return next(error);
     res.status(error.code === "not_found" ? 404 : error.code === "in_use" || error.code === "duplicate" ? 409 : 422).json({ error: { code: error.code, message: error.message } });
   };
-  const describe = (c) => ({ id: c.id, name: c.name, global: c.global, type: c.section && c.section.type, section: c.section });
+  const describe = (c, ctx) => ({ id: c.id, name: c.name, global: c.global, type: c.section && c.section.type, section: c.section, uses: ctx ? pages.componentUsage(ctx, c.id).length : undefined });
   router.get("/site-web/composants.json", need("forms.read"), (req, res) => {
     res.set("Cache-Control", "no-store").json({ components: pages.listComponents(req.mk.ctx, { siteId: intOrNull(req.query.site) }).map(describe) });
   });
@@ -183,12 +183,19 @@ module.exports = () => {
   });
   router.post("/site-web/composants/:id(\\d+)", need("forms.write"), (req, res, next) => {
     try {
-      res.json({ component: describe(pages.updateComponent(req.mk.ctx, Number(req.params.id), { name: req.body && req.body.name, section: req.body && req.body.section })) });
+      const b = req.body || {};
+      res.json({ component: describe(pages.updateComponent(req.mk.ctx, Number(req.params.id), { name: b.name, section: b.section, global: typeof b.global === "boolean" ? b.global : undefined, siteId: b.siteId }), req.mk.ctx) });
     } catch (error) { jsonError(res, next, error); }
   });
   // Modèles de pages de l'équipe (enregistrés depuis l'éditeur ; proposés à la création d'une page)
   router.get("/site-web/modeles.json", need("forms.read"), (req, res) => {
     res.set("Cache-Control", "no-store").json({ templates: pages.listPageTemplates(req.mk.ctx).map(({ content, ...t }) => ({ ...t, sections: content.sections.length })) });
+  });
+  // Contenu d'un modèle de l'équipe (insertion dans la page en cours, depuis l'éditeur)
+  router.get("/site-web/modeles/:id(\\d+).json", need("forms.read"), (req, res) => {
+    const t = pages.getPageTemplate(req.mk.ctx, Number(req.params.id));
+    if (!t) return res.status(404).json({ error: { code: "not_found", message: "Modèle introuvable." } });
+    res.set("Cache-Control", "no-store").json({ template: { id: t.id, name: t.name, category: t.category, sections: t.content.sections } });
   });
   router.post("/site-web/modeles", need("forms.write"), (req, res, next) => {
     try {
