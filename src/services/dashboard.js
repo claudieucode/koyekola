@@ -130,6 +130,7 @@ const NAV = [
   { group: "Communication", items: [
     { key: "messages", label: "Messages", href: "/formateur/messages", icon: "mail", badge: "unread" },
     { key: "blog", label: "Blog", href: "/formateur/blog", icon: "fileText" },
+    { key: "support", label: "Support", href: "/formateur/gestion/support", icon: "help", badge: "support" },
   ] },
   { group: "Croissance", items: [
     { key: "marketing", label: "Marketing", href: "/marketing", icon: "send" },
@@ -137,6 +138,7 @@ const NAV = [
   ] },
   { group: "Gestion", items: [
     { key: "gestion", label: "Centre de gestion", href: "/formateur/gestion", icon: "barChart", badge: "notifications" },
+    { key: "journal", label: "Journal d'activité", href: "/formateur/gestion/journal", icon: "listChecks" },
   ] },
   { group: "Site", items: [
     { key: "faq", label: "FAQ", href: "/formateur/faq", icon: "help" },
