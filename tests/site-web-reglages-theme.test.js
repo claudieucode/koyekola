@@ -159,6 +159,17 @@ describe("réglages du site : effet sur la page publiée (vrai serveur)", () => 
     db.prepare("UPDATE mk_landing_pages SET description = '' WHERE id = ?").run(pageId);
   });
 
+  test("les widgets « Logo du site » et « Titre du site » lisent l'identité du site (même source que le pied de page)", async () => {
+    const pid = idFrom((await boss.post("/marketing/pages", { name: "Pied identité", site_id: String(siteId) })).location);
+    const content = { sections: [layout([{ id: "log000000001", type: "sitelogo", props: { height: 48 } }, { id: "tit000000001", type: "sitetitle", props: { tag: "h2", link: false } }])] };
+    const revision = db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(pid).revision;
+    assert.equal((await boss.request(`/marketing/pages/${pid}/brouillon`, { method: "PUT", json: { revision, content } })).status, 200);
+    assert.equal((await boss.request(`/marketing/pages/${pid}/publier.json`, { method: "POST", json: {} })).status, 200);
+    const html = (await new Client(srv.base).get(`/p/${db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(pid).slug}`, { headers: UA })).text;
+    assert.match(html, /<img class="kw-sitelogo-img" src="\/uploads\/thumbnails\/logo\.png" alt="Atelier Nakewenze">/);
+    assert.match(html, /<h2 class="kw-node kw-sitetitle kw-n-tit000000001">Atelier Nakewenze<\/h2>/);
+  });
+
   test("noms de site : un doublon est refusé", async () => {
     await boss.post("/marketing/site-web/sites", { name: "Autre atelier" });
     const cur = await load();

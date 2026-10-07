@@ -42,7 +42,8 @@ const FROZEN = {
   "039_tunnels.sql": "df9801218cd06b409a7a5d7ec1fd71b38882d14cbabd22c7e7d523bf53dd7e4d",
   "040_tests_ab_pages.sql": "49d609b80424a0f1bd862ed4b4d5eb565319ab249241c37e0a3878e07a364532",
   "041_scoring.sql": "ddf9372f5f608465f8c3b3543b90328c5a2550fcdad3e47c77857e0d75f46fd2",
-  "042_modeles_et_parties_de_site.sql": "9210501c1d18327110c5ef22406838e3e45bb59184783fa98cba64ffeddf6ac4"
+  "042_modeles_et_parties_de_site.sql": "9210501c1d18327110c5ef22406838e3e45bb59184783fa98cba64ffeddf6ac4",
+  "043_reglages_du_site.sql": "813b3a502d8d284a6ec808643afc8ddcb5d35a72556c4c0c44f81bcd4fe6353f"
 };
 
 test("aucune migration marketing publiée n'a été modifiée", () => {
