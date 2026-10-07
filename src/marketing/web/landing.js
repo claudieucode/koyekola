@@ -195,19 +195,19 @@ module.exports = () => {
     if (!(error instanceof MarketingError)) return next(error);
     res.status(error.code === "conflict" ? 409 : error.code === "not_found" ? 404 : 422).json({ error: { code: error.code, message: error.message } });
   };
-  router.get("/pages/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
-    const page = load(req, res);
-    if (!page) return;
-    if (page.archived_at) return res.redirect(`/marketing/pages/${page.id}`);
+  // Éditeur ouvert sur une page (component = null) ou sur la SOURCE d'un composant du site : en-tête, pied de page…
+  const openEditor = (req, res, page, { component = null } = {}) => {
     const { ctx } = req.mk;
     const site = page.site_id ? pages.getSite(ctx, page.site_id) : null;
     const nodesLib = require("../pages/nodes");
     const form = page.form_id ? forms.getForm(ctx, page.form_id) : null;
-    const funnel = require("../funnels").funnelsOfPage(ctx, page.id).find((f) => f.status === "active") || null;
+    const funnel = component ? null : require("../funnels").funnelsOfPage(ctx, page.id).find((f) => f.status === "active") || null;
     const boot = {
       page: { id: page.id, name: page.name, slug: page.slug, status: page.status, hasDraft: page.hasDraft, revision: page.revision, siteId: page.site_id, siteName: site ? site.name : null,
         formId: page.form_id, formName: form ? form.name : null, formPublished: Boolean(form && form.status === "published"), indexable: Boolean(page.indexable), funnel: funnel ? { id: funnel.id, name: funnel.name, position: funnel.position } : null,
-        abTest: (ctx.db.prepare("SELECT id, page_id FROM mk_page_tests WHERE variant_page_id = ? AND organization_id = ?").get(page.id, ctx.organizationId)) || null },
+        abTest: component ? null : (ctx.db.prepare("SELECT id, page_id FROM mk_page_tests WHERE variant_page_id = ? AND organization_id = ?").get(page.id, ctx.organizationId)) || null,
+        // Édition d'un composant : adresses de l'éditeur propres au composant (rendu, enregistrement) et retour à la fiche du site
+        ...(component ? { base: `/marketing/site-web/composants/${component.id}`, component: { id: component.id, name: component.name, role: component.role } } : {}) },
       content: page.working, types: blanks(ctx), spec: nodesLib.editorSpec(), canWrite: req.mk.can("forms.write"),
       // Permissions exigées par certains widgets (cadenas de la bibliothèque ; revérifiées à l'enregistrement)
       perms: { "pages.code": req.mk.can("pages.code") },
@@ -228,6 +228,56 @@ module.exports = () => {
     res.set("Cache-Control", "no-store");
     const { ICONS } = require("../../utils/icons");
     res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, page, boot: safeJson(boot), spec: boot.spec, iconExists: (n) => Object.hasOwn(ICONS, n) });
+  };
+  router.get("/pages/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
+    const page = load(req, res);
+    if (!page) return;
+    if (page.archived_at) return res.redirect(`/marketing/pages/${page.id}`);
+    openEditor(req, res, page);
+  });
+
+  // ---------- Édition de la source d'un composant (en-tête / pied de page du site) dans le même éditeur ----------
+  // Le composant est UNE section ; le modifier met à jour toutes les pages qui l'affichent (composant synchronisé : pas de
+  // brouillon, enregistrement automatique). Mêmes routes que pour une page : rendu du canevas et enregistrement.
+  const loadComponent = (req, res) => {
+    const c = pages.getComponent(req.mk.ctx, Number(req.params.id));
+    if (!c || !c.section) { res.status(404).render("error", { message: "Composant introuvable." }); return null; }
+    return c;
+  };
+  // « page » de travail du composant : mêmes champs qu'une page pour l'éditeur et le rendu (aucune n'est enregistrée)
+  const componentPage = (ctx, c) => {
+    const site = c.site_id ? pages.getSite(ctx, c.site_id) : null;
+    const role = site && site.header_component_id === c.id ? "header" : site && site.footer_component_id === c.id ? "footer" : c.variant_of ? "variant" : "component";
+    return { id: `c${c.id}`, name: c.name, slug: "", title: c.name, description: "", status: "published", kind: "page", hasDraft: false, revision: 0, site_id: c.site_id, form_id: null, indexable: 0, archived_at: null, header_mode: "inherit",
+      back: c.site_id ? `/marketing/site-web/sites/${c.site_id}#entete` : "/marketing/site-web/sites", working: { sections: [c.section], title: c.name, description: "", theme: pages.normalizeTheme({}), seo: {} }, role };
+  };
+  router.get("/site-web/composants/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
+    const c = loadComponent(req, res);
+    if (!c) return;
+    const page = componentPage(req.mk.ctx, c);
+    openEditor(req, res, page, { component: { id: c.id, name: c.name, role: page.role } });
+  });
+  router.post("/site-web/composants/:id(\\d+)/rendu", need("forms.read"), (req, res, next) => {
+    const c = loadComponent(req, res);
+    if (!c) return;
+    const ctx = req.mk.ctx;
+    try {
+      const page = componentPage(ctx, c);
+      const content = pages.normalizeContent(ctx, page, (req.body && req.body.content) || {});
+      res.set("Cache-Control", "no-store");
+      res.render("marketing-public/landing", { page: landing.viewModel(ctx, { ...page, ...content, sections: pages.resolveSections(ctx, content.sections) }), site: c.site_id ? pages.getSite(ctx, c.site_id) : null, tokensToCss, form: null, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: null, builder: true });
+    } catch (error) { jsonError(res, next, error); }
+  });
+  router.put("/site-web/composants/:id(\\d+)/brouillon", need("forms.write"), (req, res, next) => {
+    const c = loadComponent(req, res);
+    if (!c) return;
+    const ctx = req.mk.ctx;
+    try {
+      const content = pages.normalizeContent(ctx, componentPage(ctx, c), (req.body && req.body.content) || {});
+      if (content.sections.length !== 1) throw new MarketingError("invalid", "Ce composant est UNE seule section : gardez une seule section dans l'éditeur (placez tous les éléments dedans).");
+      pages.updateComponent(ctx, c.id, { section: content.sections[0] });
+      res.set("Cache-Control", "no-store").json({ revision: 0, savedAt: new Date().toISOString() });
+    } catch (error) { jsonError(res, next, error); }
   });
   // Rendu du canevas : contenu de l'éditeur validé (rien n'est enregistré), même gabarit que la page publiée
   router.post("/pages/:id(\\d+)/rendu", need("forms.read"), (req, res, next) => {

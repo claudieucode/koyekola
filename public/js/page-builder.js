@@ -10,6 +10,9 @@
   var boot = JSON.parse(document.getElementById("pb-boot").textContent);
   var SPEC = boot.spec;
   var PAGE = boot.page;
+  // Édition de la source d'un composant (en-tête, pied de page…) : mêmes écrans, adresses propres au composant, pas de publication
+  var IS_COMPONENT = Boolean(PAGE.component);
+  var BASE = PAGE.base || "/marketing/pages/" + PAGE.id;
   var canWrite = boot.canWrite;
   var NT = {}; SPEC.types.forEach(function (t) { NT[t.type] = t; });
   var LEGACY = {}; boot.types.forEach(function (t) { LEGACY[t.type] = t; });
@@ -3241,7 +3244,7 @@
   function renderCanvas() {
     if (editing || gesture) { pendingRender = true; return; }
     var seq = ++renderSeq;
-    fetch("/marketing/pages/" + PAGE.id + "/rendu", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: payload() }) })
+    fetch(BASE + "/rendu", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: payload() }) })
       .then(function (r) { return r.text().then(function (text) { return { ok: r.ok, text: text }; }); })
       .then(function (res) {
         if (seq !== renderSeq) return;
@@ -4650,7 +4653,7 @@
     saving = true;
     dirty = false;
     setSave("Enregistrement…");
-    return api("PUT", "/marketing/pages/" + PAGE.id + "/brouillon", { content: payload(), revision: revision }).then(function (r) {
+    return api("PUT", BASE + "/brouillon", { content: payload(), revision: revision }).then(function (r) {
       saving = false; retry = 0; revision = r.revision; hasDraft = true;
       updateStatus();
       if (!dirty) { setSave("Enregistré à " + new Date(r.savedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), "is-ok"); try { localStorage.removeItem("pb-backup-" + PAGE.id); } catch (e) { /* rien */ } }
@@ -4673,6 +4676,13 @@
   // ---------- Statut, publication ----------
   function updateStatus() {
     var el = $("[data-pb-status]");
+    // Composant (en-tête, pied de page…) : pas de brouillon ni de publication, chaque enregistrement s'applique à toutes les pages
+    if (IS_COMPONENT) {
+      el.textContent = "Composant · appliqué à toutes les pages";
+      el.classList.add("is-live");
+      [".pb-publish-group", "[data-pb-preview]", "#pb-tab-page"].forEach(function (sel) { var x = $(sel); if (x) x.style.display = "none"; });
+      return;
+    }
     var live = status === "published";
     el.textContent = live ? (hasDraft ? "En ligne · modifications non publiées" : "En ligne") : status === "unpublished" ? "Hors ligne" : "Brouillon";
     el.classList.toggle("is-live", live && !hasDraft);
@@ -4723,6 +4733,17 @@
   }
   $("[data-pb-mainmenu]").addEventListener("click", function () {
     var r = this.getBoundingClientRect();
+    if (IS_COMPONENT) {
+      showMenuEntries([
+        { heading: "Composant du site" },
+        ["Retour à la fiche du site", function () { saveNow().then(function () { window.location.href = $(".pb-back").getAttribute("href"); }); }],
+        "-",
+        ["Historique des actions", function () { openHistory($("[data-pb-history]")); }],
+        ["Raccourcis clavier", function () { $("[data-pb-shortcuts]").showModal(); }],
+        ["Toutes les commandes…", function () { openCommands(""); }, false, "Ctrl+K"],
+      ], r.left, r.bottom + 4, { wide: true });
+      return;
+    }
     showMenuEntries([
       { heading: "Page" },
       ["Réglages de la page (titre, SEO, CSS)", function () { openTab($("#pb-tab-page")); }],
