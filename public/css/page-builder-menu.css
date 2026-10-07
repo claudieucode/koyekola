@@ -1,0 +1,29 @@
+/* Éditeur de pages — « Réglages du menu » : fenêtre flottante (non modale : le canevas reste visible et se met à jour).
+   Rayons et bordures : ceux de l'éditeur (--pb-radius-*, --pb-border), avec repli. */
+.pb-navmgr { position: fixed; inset: 64px 360px auto auto; margin: 0; width: min(440px, calc(100vw - 24px)); max-height: calc(100vh - 88px); display: flex; flex-direction: column; padding: 0; overflow: hidden; border: 1px solid var(--pb-border, var(--border)); border-radius: var(--pb-radius-lg, 6px); background: #fff; color: var(--text); box-shadow: 0 8px 28px rgba(11, 42, 64, 0.22); z-index: 60; }
+.pb-navmgr:not([open]) { display: none; }
+.pb-navmgr .pb-modal-head { cursor: move; }
+.pb-navmgr-body { padding: 12px; overflow: auto; display: grid; gap: 10px; align-content: start; }
+.pb-nav-head { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.pb-nav-pick { flex: 1 1 140px; min-width: 0; padding: 5px 8px; font: inherit; font-size: 13px; border: 1px solid var(--pb-border, var(--border)); border-radius: var(--pb-radius-md, 4px); background: #fff; }
+.pb-nav-field { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.pb-nav-field input, .pb-nav-label, .pb-nav-url { padding: 5px 8px; font: inherit; font-size: 13px; color: var(--text); border: 1px solid var(--pb-border, var(--border)); border-radius: var(--pb-radius-md, 4px); background: #fff; min-width: 0; }
+.pb-nav-list { display: grid; gap: 4px; }
+.pb-nav-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; grid-template-areas: "grip label actions" ". url url"; gap: 4px 6px; align-items: center; padding: 6px; border: 1px solid var(--pb-border, var(--border)); border-radius: var(--pb-radius-md, 4px); background: #fff; }
+.pb-nav-row.is-sub { margin-left: 22px; background: #f6f9fc; }
+.pb-nav-row.is-dragging { opacity: 0.45; }
+.pb-nav-row.is-drop-before { box-shadow: 0 -2px 0 0 var(--primary, #0277b6); }
+.pb-nav-row.is-drop-after { box-shadow: 0 2px 0 0 var(--primary, #0277b6); }
+.pb-nav-row.is-drop-inside { outline: 2px dashed var(--primary, #0277b6); outline-offset: -2px; }
+.pb-nav-grip { grid-area: grip; cursor: grab; color: var(--muted); user-select: none; text-align: center; }
+.pb-nav-label { grid-area: label; }
+.pb-nav-url { grid-area: url; font-size: 12.5px; color: var(--muted); }
+.pb-nav-actions { grid-area: actions; display: flex; gap: 2px; }
+.pb-nav-btn { min-width: 26px; height: 26px; padding: 0 4px; font: inherit; font-size: 13px; line-height: 1; color: var(--text); border: 1px solid transparent; border-radius: var(--pb-radius-sm, 3px); background: transparent; cursor: pointer; }
+.pb-nav-btn:hover:not(:disabled) { background: #eef3f8; border-color: var(--pb-border, var(--border)); }
+.pb-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.pb-nav-btn.is-danger:hover:not(:disabled) { color: #b42318; }
+.pb-nav-btn-text { padding: 0 10px; border-color: var(--pb-border, var(--border)); }
+.pb-nav-add { display: grid; gap: 6px; margin: 0; padding: 8px 10px 10px; border: 1px solid var(--pb-border, var(--border)); border-radius: var(--pb-radius-md, 4px); }
+.pb-nav-add legend { padding: 0 4px; font-size: 12.5px; font-weight: 600; }
+.pb-nav-screens { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; font-size: 13px; }

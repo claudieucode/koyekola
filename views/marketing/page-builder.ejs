@@ -10,6 +10,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/page-builder.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/page-builder-menu.css') %>">
 </head>
 <body class="pb-body">
   <a class="skip-link" href="#pb-canvas">Aller au canevas</a>
@@ -176,6 +177,12 @@
     <div class="pb-layout-body" data-pb-layout-body></div>
   </dialog>
 
+  <%# Réglages du menu de navigation (menu principal de l'éditeur) : fenêtre flottante, le canevas reste visible et se met à jour %>
+  <dialog class="pb-navmgr" data-pb-navmgr aria-labelledby="pb-navmgr-title">
+    <div class="pb-modal-head" data-pb-navmgr-head><h2 id="pb-navmgr-title">Réglages du menu de navigation</h2><span class="pb-modal-spacer"></span><button type="button" class="pb-icon-btn" data-pb-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></div>
+    <div class="pb-navmgr-body" data-pb-navmgr-body></div>
+  </dialog>
+
   <dialog class="pb-modal pb-command" data-pb-command-dialog aria-label="Commandes">
     <label class="sr-only" for="pb-cmd-q">Rechercher une commande</label>
     <input class="pb-search" id="pb-cmd-q" type="search" placeholder="Que voulez-vous faire ? (ajouter un titre, grouper, aperçu…)" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="pb-cmd-list" data-pb-cmd-q>
@@ -204,5 +211,6 @@
   <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone", "sliders", "moreHorizontal", "listPlus", "listMinus", "undo", "redo"].concat(spec.types.map((t) => t.icon), spec.icons).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
   <script type="application/json" id="pb-boot"><%- boot %></script>
   <script src="<%= asset('/js/page-builder.js') %>" defer></script>
+  <script src="<%= asset('/js/page-builder-menu.js') %>" defer></script>
 </body>
 </html>

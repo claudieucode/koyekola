@@ -132,6 +132,7 @@
 
   // ---------- État de l'éditeur ----------
   var selection = [];
+  var navListeners = [];            // gestionnaire de menu (page-builder-menu.js) : prévenu à chaque modification ou sélection
   var device = "desktop";           // écran affiché ET modifié (styles par écran)
   var styleState = "normal";        // normal | hover | focus | active
   var revision = PAGE.revision, hasDraft = PAGE.hasDraft, status = PAGE.status;
@@ -200,6 +201,7 @@
     if (!light) renderDoc();
     scheduleRender();
     scheduleSave();
+    navListeners.forEach(function (f) { f(); });
   }
   function updateHistoryButtons() {
     $("[data-pb-undo]").disabled = !past.length || !canWrite;
@@ -220,6 +222,7 @@
     renderContext();
     markCanvasSelection(opts.scroll !== false);
     markDocSelection(opts.scroll !== false);
+    navListeners.forEach(function (f) { f(); });
   }
   var selectedItems = function () { return selection.map(byId).filter(Boolean); };
   function revealInTree(id) {
@@ -3323,7 +3326,7 @@
         if ((e.metaKey || e.ctrlKey) && ["b", "i", "u"].indexOf(e.key.toLowerCase()) >= 0 && !editing.rich) e.preventDefault();
         return;
       }
-      if (!menu.hidden || document.querySelector("dialog[open]")) return;
+      if (!menu.hidden || document.querySelector("dialog[open]:not([data-pb-navmgr])")) return;
       onKey(e);
     });
     doc.addEventListener("focusout", function (e) { if (editing && e.target === editing.el && !editing.keep) setTimeout(function () { if (editing && !editing.keep && doc.activeElement !== editing.el) commitEdit(); }, 150); });
@@ -4726,6 +4729,7 @@
     showMenuEntries([
       { heading: "Page" },
       ["Réglages de la page (titre, SEO, CSS)", function () { openTab($("#pb-tab-page")); }],
+      ["Réglages du menu de navigation", function () { window.pbNav.open(); }],
       ["Versions, comparaison et restauration", function () { window.location.href = "/marketing/pages/" + PAGE.id + "#lp-versions"; }],
       ["Historique des actions", function () { openHistory($("[data-pb-history]")); }],
       "-",
@@ -4802,7 +4806,7 @@
       else if (k === "b") addElement("button");
     }
   }
-  document.addEventListener("keydown", function (e) { if (!menu.hidden || document.querySelector("dialog[open]")) return; onKey(e); });
+  document.addEventListener("keydown", function (e) { if (!menu.hidden || document.querySelector("dialog[open]:not([data-pb-navmgr])")) return; onKey(e); });
 
   // ---------- Démarrage ----------
   (function offerBackup() {
@@ -4833,6 +4837,9 @@
   applyZoom();
   renderCanvas();
   setMode(mode);
+  // Pont vers le gestionnaire de menu (page-builder-menu.js) : mêmes fonctions que l'inspecteur, donc même document et même historique
+  window.pbNav = { h: h, walk: function (fn) { walk(fn); }, byId: byId, topOf: topOf, sectionNumber: function (top) { return top ? sectionIndex(top) + 1 : 0; }, change: change, select: function (id) { select(id); },
+    selection: function () { return selection.slice(); }, toast: toast, canWrite: canWrite, links: boot.links, addElement: function (type) { addElement(type); }, subscribe: function (f) { navListeners.push(f); }, open: function () {} };
   // Lecture de l'état pour les tests de bout en bout (aucune écriture possible par ce biais)
   window.__pb = { content: function () { return clone(content); }, selection: function () { return selection.slice(); }, device: function () { return device; }, revision: function () { return revision; }, dirty: function () { return dirty || saving; }, mode: function () { return mode; } };
 })();
