@@ -95,8 +95,10 @@ describe("inspecteur d'un conteneur dans l'éditeur réel (navigateur simulé)",
         assert.ok(l, `champ « ${label} » introuvable (champs : ${ed.labels().join(" ; ")})`);
         return (l.htmlFor && doc.getElementById(l.htmlFor)) || l.querySelector("input,select,textarea");
       },
-      prop(name) { const c = ed.insp.querySelector(`[data-prop="${name}"]`); assert.ok(c, `réglage « ${name} » introuvable`); return c.matches("input,select") ? c : c.querySelector("select,input.pb-len-num,input"); },
+      prop(name) { const c = ed.insp.querySelector(`[data-prop="${name}"]`); assert.ok(c, `réglage « ${name} » introuvable`); return c.matches("input,select") ? c : c.querySelector("select,input.pb-len-num,input,.pb-iseg"); },
       set(el, value) {
+        // Groupe de boutons (icônes) : cliquer la valeur voulue (si elle n'est pas déjà choisie ; recliquer l'effacerait)
+        if (el.classList && el.classList.contains("pb-iseg")) { const b = el.querySelector(`[data-value="${value}"]`); assert.ok(b, `valeur « ${value} » absente du groupe`); if (b.getAttribute("aria-checked") !== "true") ed.click(b); return; }
         if (el.type === "checkbox") el.checked = Boolean(value); else el.value = value;
         el.dispatchEvent(new win.Event("input", { bubbles: true })); el.dispatchEvent(new win.Event("change", { bubbles: true }));
       },
@@ -204,9 +206,9 @@ describe("inspecteur d'un conteneur dans l'éditeur réel (navigateur simulé)",
     const ed = await openEditor(id);
     ed.selectLayer("box000000002");
     ed.tab("Style");
-    assert.deepEqual([...ed.insp.querySelectorAll("summary .pb-acc-title")].map((t) => t.textContent), ["Mise en page", "Dimensions", "Espacement", "Couleurs", "Fond", "Bordure", "Effets", "Position", "CSS personnalisé et classes"]);
+    assert.deepEqual([...ed.insp.querySelectorAll("summary .pb-acc-title")].map((t) => t.textContent), ["Mise en page", "Espacement", "Dimensions", "Couleurs", "Fond", "Bordure", "Effets", "Position", "CSS personnalisé et classes"]);
     ed.section("Mise en page");
-    assert.ok(ed.labels().includes("Répartition des lignes"), "align-content proposé");
+    assert.ok(ed.labels().includes("Aligner lignes"), "align-content proposé");
     ed.set(ed.prop("display"), "flex");
     ed.set(ed.prop("flexDirection"), "column");
     ed.set(ed.prop("alignContent"), "space-between");
@@ -267,7 +269,7 @@ describe("inspecteur d'un conteneur dans l'éditeur réel (navigateur simulé)",
     ed.tab("Style");
     ed.section("Mise en page");
     const labels = ed.labels();
-    assert.ok(labels.includes("Répartition des lignes"));
+    assert.ok(labels.includes("Aligner lignes"));
     assert.ok(labels.some((l) => /Colonnes/.test(l)));
     for (const flexOnly of ["Direction", "Retour ligne"]) assert.ok(!labels.includes(flexOnly), `« ${flexOnly} » (Flexbox) n'est pas proposé pour une grille`);
     ed.set(ed.prop("alignContent"), "center");

@@ -374,7 +374,9 @@ describe("structure : canevas, Flexbox, Grille, calques et panneau détachable (
     // direction, retour à la ligne, répartition, alignement, répartition des lignes
     for (const [key, value, prop, expected] of [["flexDirection", "column", "flexDirection", "column"], ["flexWrap", "wrap", "flexWrap", "wrap"], ["justifyContent", "space-between", "justifyContent", "space-between"], ["alignItems", "center", "alignItems", "center"], ["alignContent", "center", "alignContent", "center"]]) {
       await ctrl(key).waitFor({ timeout: 6000 }).catch(() => { throw new Error(`contrôle absent de l'inspecteur : ${key}`); });
-      await ctrl(key).locator("select").selectOption(value);
+      // contrôle iconographique (un bouton par valeur) ou liste
+      if (await ctrl(key).locator(".pb-iseg").count()) await ctrl(key).locator(`.pb-iseg-btn[data-value="${value}"]`).click();
+      else await ctrl(key).locator("select").selectOption(value);
       await until(async () => (await css(prop)) === expected, { what: `${key} = ${value}` });
     }
     // écarts
@@ -403,12 +405,15 @@ describe("structure : canevas, Flexbox, Grille, calques et panneau détachable (
     await page.locator(`[data-pb-layers] .pb-node[data-id="${cell.id}"] > .pb-row-item`).click();
     await styleTab();
     const el = frame().locator(`[data-node-id="${cell.id}"]`);
+    // Taille flexible et ordre : valeurs libres derrière « personnalisé » (grandir / rétrécir / premier / dernier sinon)
+    await page.locator("[data-pb-inspector] .pb-iseg-btn[aria-label='Taille personnalisée']").click();
+    await page.locator("[data-pb-inspector] .pb-iseg-btn[aria-label='Ordre personnalisé']").click();
     const set = async (key, value) => { const input = page.locator(`[data-pb-inspector] [data-prop='${key}'] input`).first(); await input.waitFor({ timeout: 6000 }).catch(() => { throw new Error(`contrôle absent de l'inspecteur : ${key}`); }); await input.fill(value); await input.press("Tab"); };
     await set("flexGrow", "2"); await until(async () => (await el.evaluate((e) => getComputedStyle(e).flexGrow)) === "2", { what: "flex-grow" });
     await set("flexShrink", "0"); await until(async () => (await el.evaluate((e) => getComputedStyle(e).flexShrink)) === "0", { what: "flex-shrink" });
     await set("flexBasis", "120px"); await until(async () => (await el.evaluate((e) => getComputedStyle(e).flexBasis)) === "120px", { what: "flex-basis" });
     await set("order", "-2"); await until(async () => (await el.evaluate((e) => getComputedStyle(e).order)) === "-2", { what: "order" });
-    await page.locator("[data-pb-inspector] [data-prop='alignSelf'] select").selectOption("flex-end");
+    await page.locator("[data-pb-inspector] [data-prop='alignSelf'] .pb-iseg-btn[data-value='flex-end']").click();
     await until(async () => (await el.evaluate((e) => getComputedStyle(e).alignSelf)) === "flex-end", { what: "align-self" });
     await saved((c) => { const x = nodesOf(c.sections).find((n) => n.id === cell.id); return x.styles.desktop.order === -2 && x.styles.desktop.flexShrink === 0 && x.styles.desktop.flexGrow === 2; }, "réglages enfant enregistrés");
   });

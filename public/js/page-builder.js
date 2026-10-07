@@ -1974,7 +1974,7 @@
     if (it.type === "form") return INSPECTORS.form;
     return Object.assign({}, INSPECTORS.legacy, { kind: LEGACY[it.type] ? LEGACY[it.type].label : INSPECTORS.legacy.kind });
   }
-  var GROUP_ORDER = ["layout", "size", "spacing", "typography", "color", "background", "media", "border", "effects"];
+  var GROUP_ORDER = ["layout", "spacing", "size", "typography", "color", "background", "media", "border", "effects"];
   var optLabel = function (p, v) { var o = (p.options || []).find(function (x) { return String(x[0]) === String(v); }); return o ? o[1] : v; };
   var lockedAny = function (items) { return !canWrite || items.some(function (x) { return lockedDeep(x.id); }); };
   var idsOf = function (items) { return items.map(function (x) { return x.id; }); };
@@ -2009,7 +2009,7 @@
     });
   }
   // Libellés courts dans les lignes (le nom complet reste en infobulle et pour les lecteurs d'écran)
-  var SHORT = { alignItems: "Alignement", alignSelf: "Placement", flexWrap: "Retour ligne", justifyContent: "Répartition", gap: "Écart", rowGap: "Écart lignes", columnGap: "Écart colonnes", flexDirection: "Direction", display: "Affichage",
+  var SHORT = { alignItems: "Aligner", alignSelf: "Alignement", justifySelf: "Justification", justifyItems: "Justifier", alignContent: "Aligner lignes", gridAutoFlow: "Remplissage", flexWrap: "Retour ligne", justifyContent: "Justifier", gap: "Écart", rowGap: "Écart lignes", columnGap: "Écart colonnes", flexDirection: "Direction", display: "Affichage",
     minWidth: "Largeur min.", maxWidth: "Largeur max.", minHeight: "Hauteur min.", maxHeight: "Hauteur max.", flexGrow: "Proportion", columns: "Colonnes",
     fontFamily: "Police", fontWeight: "Graisse", fontSize: "Taille", lineHeight: "Interligne", letterSpacing: "Interlettrage", textTransform: "Casse", textAlign: "Alignement", textDecoration: "Décoration", fontStyle: "Style",
     zIndex: "Plan", boxShadow: "Ombre (préréglage)", gridTemplate: "Largeurs", gridRows: "Lignes", gridColumnSpan: "Colonnes occupées", gridRowSpan: "Lignes occupées", textShadow: "Ombre du texte", transitionDuration: "Transition (ms)", backdropBlur: "Flou arrière (px)", transformOrigin: "Origine", right: "Décalage droite", bottom: "Décalage bas", opacity: "Opacité", overflow: "Débordement", objectFit: "Cadrage", objectPosition: "Point focal", aspectRatio: "Proportions", top: "Décalage haut", left: "Décalage gauche" };
@@ -2027,6 +2027,150 @@
       h("div", { class: "pb-prop-head" }, h("label", { for: id, class: "pb-prop-label", title: SP[key].label, "aria-label": SP[key].label }, label || SP[key].label), marks),
       control, extra || null, reset);
   }
+  // ---------- Contrôles iconographiques : un bouton = une vraie valeur du modèle ----------
+  // [valeur, libellé (infobulle, lecteur d'écran), icône (bibliothèque d'icônes du site) ou « T:texte court », axe du dessin]
+  // L'axe du dessin (h : horizontal, v : vertical) permet de pivoter l'icône quand le conteneur est en colonne.
+  var ISEG_J = [["flex-start", "Début", "justifyStart", "h"], ["center", "Centre", "justifyCenter", "h"], ["flex-end", "Fin", "justifyEnd", "h"], ["space-between", "Espace entre", "justifyBetween", "h"], ["space-around", "Espace autour", "justifyAround", "h"], ["space-evenly", "Espace égal", "justifyEvenly", "h"]];
+  var ISEG_A = [["flex-start", "Début", "alignStart", "v"], ["center", "Centre", "alignMiddle", "v"], ["flex-end", "Fin", "alignEnd", "v"], ["stretch", "Étirer", "alignStretch", "v"]];
+  var ISEG_X = [["start", "Début", "justifyStart", "h"], ["center", "Centre", "justifyCenter", "h"], ["end", "Fin", "justifyEnd", "h"], ["stretch", "Étirer", "stretchX", "h"]];
+  var ICON_ENUMS = {
+    display: { values: [["block", "Bloc", "T:Bloc"], ["flex", "Flex", "T:Flex"], ["grid", "Grille", "T:Grille"], ["inline-block", "En ligne", "T:Ligne"], ["none", "Aucun : masqué", "T:Aucun"]] },
+    flexDirection: { values: [["row", "Direction : ligne", "arrowRight"], ["column", "Direction : colonne", "arrowDown"], ["row-reverse", "Direction : ligne inversée", "arrowLeft"], ["column-reverse", "Direction : colonne inversée", "arrowUp"]] },
+    flexWrap: { values: [["nowrap", "Sans retour à la ligne", "wrapNone"], ["wrap", "Retour à la ligne", "wrapOn"], ["wrap-reverse", "Retour à la ligne inversé", "wrapReverse"]] },
+    justifyContent: { axis: "main", values: ISEG_J },
+    alignItems: { axis: "cross", values: ISEG_A.concat([["baseline", "Ligne de base du texte", "alignBaseline", "v"]]) },
+    alignContent: { axis: "cross", values: ISEG_A.slice(0, 3).concat(ISEG_J.slice(3), [ISEG_A[3]]) },
+    alignSelf: { axis: "cross", child: true, values: [["auto", "Automatique (celui du parent)", "T:Auto"]].concat(ISEG_A) },
+    justifyItems: { axis: "x", values: ISEG_X },
+    justifySelf: { axis: "x", child: true, values: [["auto", "Automatique (celui de la grille)", "T:Auto"]].concat(ISEG_X) },
+    textAlign: { values: [["left", "Aligner à gauche", "alignLeft"], ["center", "Centrer", "alignCenter"], ["right", "Aligner à droite", "alignRight"], ["justify", "Justifier", "alignJustify"]] },
+    fontStyle: { values: [["normal", "Normal", "T:N"], ["italic", "Italique", "T:I"]] },
+    textTransform: { values: [["none", "Casse telle que saisie", "T:—"], ["uppercase", "MAJUSCULES", "T:AB"], ["lowercase", "minuscules", "T:ab"], ["capitalize", "Première Lettre En Majuscule", "T:Ab"]] },
+    textDecoration: { values: [["none", "Aucune décoration", "T:—"], ["underline", "Souligné", "T:U"], ["line-through", "Barré", "T:S"]] },
+    overflow: { values: [["visible", "Débordement visible", "T:Visible"], ["hidden", "Débordement masqué", "T:Masqué"], ["auto", "Défilement si nécessaire", "T:Défiler"]] },
+  };
+  // Axe physique (h / v) réglé par une propriété d'alignement, d'après le rendu réel du canevas (sens du conteneur)
+  function physicalAxis(it, key) {
+    var spec = ICON_ENUMS[key];
+    if (!spec || !spec.axis) return null;
+    if (spec.axis === "x") return "h";
+    var l = spec.child ? locate(it.id) : null;
+    var target = spec.child ? (l && l.parent) : it;
+    if (!target) return null;
+    // Valeur du modèle (écran affiché, héritage compris) d'abord : juste même avant que le canevas soit redessiné ;
+    // sinon le rendu réel (valeur par défaut de chaque conteneur)
+    var disp = valueOf(target, "display"), dir = valueOf(target, "flexDirection");
+    var el = canvasEl(target.id), cs = el && frame.contentWindow ? frame.contentWindow.getComputedStyle(el) : null;
+    if (!disp && cs) disp = cs.display;
+    if (!dir && cs) dir = cs.flexDirection;
+    var col = !/grid/.test(disp || "") && /column/.test(dir || "");
+    return spec.axis === "main" ? (col ? "v" : "h") : (col ? "h" : "v");
+  }
+  // Groupe de boutons (radio) : flèches / Début / Fin pour se déplacer, Entrée ou Espace pour choisir ; recliquer efface
+  var segRefocus = null;
+  function segGroup(opts, groupLabel, focusKey, dis) {
+    var group = h("div", { class: "pb-iseg", role: "radiogroup", "aria-label": groupLabel });
+    var btns = opts.map(function (o) {
+      var text = o.icon.indexOf("T:") === 0 ? o.icon.slice(2) : null;
+      return h("button", { type: "button", role: "radio", class: "pb-iseg-btn" + (text ? " is-text" : "") + (o.inherited ? " is-inherited" : "") + (o.rot ? " " + o.rot : ""), "aria-checked": String(Boolean(o.on)), "aria-label": o.label + (o.inherited ? " (valeur héritée)" : ""), "data-tip": o.label + (o.inherited ? " · valeur héritée" : o.on && o.clears ? " · cliquer à nouveau pour effacer" : ""), "data-value": o.value === undefined ? null : String(o.value), tabindex: "-1", disabled: dis,
+        onclick: function () { segRefocus = focusKey + "|" + (o.value === undefined ? o.label : o.value); o.act(); } }, text ? h("span", { class: "pb-iseg-text", text: text }) : icon(o.icon));
+    });
+    var at = btns.findIndex(function (b) { return b.getAttribute("aria-checked") === "true"; });
+    btns[at < 0 ? 0 : at].tabIndex = 0;
+    group.addEventListener("keydown", function (e) {
+      var i = btns.indexOf(document.activeElement);
+      if (i < 0) return;
+      var n = e.key === "ArrowRight" || e.key === "ArrowDown" ? i + 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? i - 1 : e.key === "Home" ? 0 : e.key === "End" ? btns.length - 1 : null;
+      if (n === null) return;
+      e.preventDefault(); e.stopPropagation(); // les flèches ne déplacent pas l'élément sélectionné dans le canevas
+      n = (n + btns.length) % btns.length;
+      btns[i].tabIndex = -1; btns[n].tabIndex = 0; btns[n].focus();
+    });
+    btns.forEach(function (b) { group.appendChild(b); });
+    // Après un choix, l'inspecteur est redessiné : le focus clavier revient sur le bouton choisi
+    if (segRefocus && segRefocus.indexOf(focusKey + "|") === 0) {
+      var want = segRefocus.slice(focusKey.length + 1); segRefocus = null;
+      var target = btns.find(function (b) { return b.dataset.value === want || b.getAttribute("aria-label") === want; }) || btns[at < 0 ? 0 : at];
+      setTimeout(function () { if (target && document.body.contains(target)) target.focus({ preventScroll: true }); }, 0);
+    }
+    return group;
+  }
+  // Propriété à valeurs connues → groupe d'icônes ; une valeur hors des icônes (ancienne page…) garde la liste classique
+  function iconSeg(items, key) {
+    var spec = ICON_ENUMS[key], it = items[0];
+    var own = ownValue(it, key), inh = inheritedValue(it, key);
+    var mixed = items.some(function (x) { return JSON.stringify(ownValue(x, key)) !== JSON.stringify(own); });
+    var known = function (v) { return v === undefined || spec.values.some(function (o) { return o[0] === String(v); }); };
+    if (!known(own) || !known(inh)) return null;
+    var axis = physicalAxis(it, key), cur = mixed ? undefined : own;
+    return segGroup(spec.values.filter(function (v) { return SP[key].options.some(function (o) { return o[0] === v[0]; }); }).map(function (v) {
+      var on = cur !== undefined && String(cur) === v[0];
+      return { value: v[0], label: v[1], icon: v[2], on: on, clears: true, inherited: cur === undefined && !mixed && inh !== undefined && String(inh) === v[0], rot: v[3] && axis && v[3] !== axis ? (v[3] === "h" ? "rot-cw" : "rot-ccw") : "",
+        act: function () { setStyle(idsOf(items), key, on ? "" : v[0]); } };
+    }), SP[key].label, key, lockedAny(items));
+  }
+  // Ligne de réglage composée (plusieurs propriétés) : même présentation qu'une propriété simple
+  function compoundRow(label, control, isSet, onReset, dis) {
+    return h("div", { class: "pb-field pb-style-field pb-prop" + (isSet ? " is-set" : "") },
+      h("div", { class: "pb-prop-head" }, h("span", { class: "pb-prop-label", text: label })), control,
+      isSet ? h("button", { type: "button", class: "pb-reset", "data-tip": "Effacer : revenir à la valeur héritée", "aria-label": "Effacer « " + label + " » pour cet écran", disabled: dis, onclick: onReset }, "↺") : h("span", { class: "pb-reset-slot", "aria-hidden": "true" }));
+  }
+  // Réglages personnalisés dépliés (affichage seulement, dans ce navigateur)
+  var segMore = {};
+  // Ordre d'un enfant (flex ou grille) : premier, dernier ou valeur personnalisée
+  function orderControl(items) {
+    var it = items[0], own = ownValue(it, "order"), inh = inheritedValue(it, "order"), dis = lockedAny(items);
+    var k = it.id + ":order", cur = own !== undefined ? own : inh;
+    var custom = Boolean(segMore[k]) || (cur !== undefined && cur !== -20 && cur !== 20);
+    var wrap = h("div", { class: "pb-prop-group" }, compoundRow("Ordre", segGroup([
+      { value: -20, label: "Placer en premier", icon: "arrowUp", on: own === -20, clears: true, inherited: own === undefined && inh === -20, act: function () { setStyle(idsOf(items), "order", own === -20 ? "" : -20); } },
+      { value: 20, label: "Placer en dernier", icon: "arrowDown", on: own === 20, clears: true, inherited: own === undefined && inh === 20, act: function () { setStyle(idsOf(items), "order", own === 20 ? "" : 20); } },
+      { label: "Ordre personnalisé", icon: "edit", on: custom, act: function () { segMore[k] = !custom; renderInspector(); } },
+    ], "Ordre", "order", dis), own !== undefined, function () { setStyle(idsOf(items), "order", ""); }, dis));
+    if (custom) wrap.appendChild(styleControl(items, "order", "Position"));
+    return wrap;
+  }
+  // Taille flexible d'un enfant flex : grandir, rétrécir ou valeurs personnalisées (grandir, rétrécir, base)
+  function flexSizeControl(items) {
+    var it = items[0], dis = lockedAny(items), k = it.id + ":flex";
+    var g = ownValue(it, "flexGrow"), sh = ownValue(it, "flexShrink"), b = ownValue(it, "flexBasis");
+    var grow = g === 1 && sh === 0 && b === undefined, shrink = g === 0 && sh === 1 && b === undefined;
+    var any = g !== undefined || sh !== undefined || b !== undefined;
+    var custom = Boolean(segMore[k]) || (any && !grow && !shrink);
+    var clear = { flexGrow: "", flexShrink: "", flexBasis: "" };
+    var wrap = h("div", { class: "pb-prop-group" }, compoundRow("Taille flexible", segGroup([
+      { value: "grow", label: "Grandir : occuper l'espace libre", icon: "growX", on: grow, clears: true, act: function () { setStyles(idsOf(items), grow ? clear : { flexGrow: 1, flexShrink: 0, flexBasis: "" }); } },
+      { value: "shrink", label: "Rétrécir si la place manque", icon: "shrinkX", on: shrink, clears: true, act: function () { setStyles(idsOf(items), shrink ? clear : { flexGrow: 0, flexShrink: 1, flexBasis: "" }); } },
+      { label: "Taille personnalisée", icon: "edit", on: custom, act: function () { segMore[k] = !custom; renderInspector(); } },
+    ], "Taille flexible", "flexsize", dis), any, function () { setStyles(idsOf(items), clear); }, dis));
+    if (custom) ["flexGrow", "flexShrink", "flexBasis"].forEach(function (key) { if (SP[key]) wrap.appendChild(styleControl(items, key, { flexGrow: "Grandir", flexShrink: "Rétrécir", flexBasis: "Base" }[key])); });
+    return wrap;
+  }
+  // Groupe « Mise en page » : réglages du conteneur (écarts colonne / ligne côte à côte), puis « Enfant Flex » / « Enfant de grille »
+  var CHILD_KEYS = ["alignSelf", "justifySelf", "order", "flexGrow", "flexShrink", "flexBasis", "gridColumnStart", "gridColumnEnd", "gridColumnSpan", "gridRowStart", "gridRowEnd", "gridRowSpan"];
+  function layoutControls(items, keys, inner) {
+    var it = items[0], kind = parentLayout(it);
+    var childOf = function (k) { return CHILD_KEYS.indexOf(k) >= 0 && !(it.type === "column" && CHILD_FLEX.indexOf(k) >= 0); };
+    var own = keys.filter(function (k) { return !childOf(k); }), child = keys.filter(childOf);
+    var paired = own.indexOf("rowGap") >= 0 && own.indexOf("columnGap") >= 0;
+    own.forEach(function (k) {
+      if (!SP[k]) return;
+      if (paired && (k === "rowGap" || k === "columnGap")) {
+        if (inner.querySelector(".pb-pair")) return;
+        inner.appendChild(h("div", { class: "pb-pair", role: "group", "aria-label": "Écarts" }, styleControl(items, "columnGap", "Colonnes"), styleControl(items, "rowGap", "Lignes")));
+        return;
+      }
+      inner.appendChild(styleControl(items, k));
+    });
+    if (!child.length) return;
+    inner.appendChild(h("p", { class: "pb-acc-sub", text: kind === "grid" ? "Enfant de grille" : kind === "flex" ? "Enfant Flex" : "Placement dans le parent" }));
+    var flexDone = false;
+    child.forEach(function (k) {
+      if (k === "order") inner.appendChild(orderControl(items));
+      else if (CHILD_FLEX.indexOf(k) >= 0 && kind === "flex") { if (!flexDone) { flexDone = true; inner.appendChild(flexSizeControl(items)); } }
+      else if (SP[k]) inner.appendChild(styleControl(items, k));
+    });
+  }
   function styleControl(items, key, label, extra) {
     var p = SP[key];
     var it = items[0];
@@ -2036,7 +2180,9 @@
     var dis = lockedAny(items);
     var id = fid();
     var control;
-    if (p.kind === "enum") {
+    var seg = p.kind === "enum" && ICON_ENUMS[key] ? iconSeg(items, key) : null;
+    if (seg) control = seg;
+    else if (p.kind === "enum") {
       control = h("select", { id: id, class: "pb-prop-select", disabled: dis }, [h("option", { value: "", text: inh !== undefined ? "Hérité : " + optLabel(p, inh) : "Par défaut" })].concat(p.options.map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
       control.value = mixed || own === undefined ? "" : String(own);
       control.addEventListener("change", function () { setStyle(idsOf(items), key, control.value); });
@@ -2344,16 +2490,17 @@
   function backgroundControls(items, inner) {
     var it = items[0], ids = idsOf(items), dis = lockedAny(items);
     var type = bgChoice[it.id] || bgTypeOf(it);
-    var id = fid();
-    var sel = h("select", { id: id, class: "pb-prop-select", disabled: dis }, [["none", "Aucun"], ["color", "Couleur"], ["image", "Image"], ["gradient", "Dégradé"]].map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
-    sel.value = type;
-    sel.addEventListener("change", function () {
-      if (sel.value === "none") { delete bgChoice[it.id]; setStyles(ids, { backgroundColor: "", backgroundImage: "", gradient: "", overlay: "", backgroundSize: "", backgroundPosition: "", backgroundRepeat: "", backgroundAttachment: "" }); return; }
-      bgChoice[it.id] = sel.value;
-      if (sel.value === "gradient" && !valueOf(it, "gradient")) { setStyle(ids, "gradient", { from: "#0277b6", to: "#102a3a", angle: 180 }); return; }
+    var choose = function (v) {
+      if (v === "none") { delete bgChoice[it.id]; setStyles(ids, { backgroundColor: "", backgroundImage: "", gradient: "", overlay: "", backgroundSize: "", backgroundPosition: "", backgroundRepeat: "", backgroundAttachment: "" }); return; }
+      bgChoice[it.id] = v;
+      if (v === "gradient" && !valueOf(it, "gradient")) { setStyle(ids, "gradient", { from: "#0277b6", to: "#102a3a", angle: 180 }); return; }
       renderInspector();
-    });
-    inner.appendChild(h("div", { class: "pb-field pb-style-field pb-prop", "data-prop": "backgroundType" }, h("div", { class: "pb-prop-head" }, h("label", { for: id, class: "pb-prop-label" }, "Type")), sel, h("span", { class: "pb-reset-slot", "aria-hidden": "true" })));
+    };
+    // Type de fond : groupe de boutons (un type = ses réglages seulement)
+    var typeSeg = segGroup([["none", "Aucun fond", "T:Aucun"], ["color", "Couleur", "T:Couleur"], ["image", "Image", "T:Image"], ["gradient", "Dégradé", "T:Dégradé"]].map(function (o) {
+      return { value: o[0], label: o[1], icon: o[2], on: type === o[0], act: function () { if (type !== o[0]) choose(o[0]); } };
+    }), "Type de fond", "bgtype", dis);
+    inner.appendChild(h("div", { class: "pb-field pb-style-field pb-prop", "data-prop": "backgroundType" }, h("div", { class: "pb-prop-head" }, h("span", { class: "pb-prop-label" }, "Type")), typeSeg, h("span", { class: "pb-reset-slot", "aria-hidden": "true" })));
     var has = function (k) { return ownValue(it, k) !== undefined; };
     if (type === "color" || has("backgroundColor")) inner.appendChild(styleControl(items, "backgroundColor", type === "color" ? "Couleur" : "Couleur dessous"));
     if (type === "image" || has("backgroundImage")) {
@@ -2536,6 +2683,7 @@
     if (g === "spacing") inner.appendChild(spacingBox(items));
     else if (g === "border") borderControls(items, inner);
     else if (g === "background") backgroundControls(items, inner);
+    else if (g === "layout") layoutControls(items, keys, inner);
     else keys.forEach(function (k) { if (SP[k]) inner.appendChild(styleControl(items, k, g === "typography" && k === "color" ? "Couleur" : g === "color" ? COLOR_LABEL[k] : null)); });
     composedControls(items, g).forEach(function (x) { inner.appendChild(x); });
     det.appendChild(inner);
@@ -2844,27 +2992,53 @@
   // enregistrement automatique, écrans, calques et rendu du canevas fonctionnent donc sans rien de plus. Un autre type d'élément
   // adopte ces onglets en déclarant « tabs: "box" » dans INSPECTORS.
   var LINKABLE = ["container", "grid", "stack", "group"];
+  // Groupe repliable de l'inspecteur (état ouvert mémorisé dans ce navigateur) ; count = réglages en place
+  function accGroup(key, title, defOpen, build, count) {
+    var det = h("details", { class: "pb-acc", "data-group": key });
+    if (store.get("open-" + key, Boolean(defOpen))) det.open = true;
+    det.addEventListener("toggle", function () { store.set("open-" + key, det.open); });
+    det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: title }), count ? h("span", { class: "pb-acc-count", "aria-label": count + " réglage(s) en place" }, String(count)) : null));
+    var inner = h("div", { class: "pb-acc-body" });
+    build(inner);
+    det.appendChild(inner);
+    return det;
+  }
+  // Contenu d'un groupe existant (déjà repliable) placé dans un autre groupe : sans double titre
+  var bodyOf = function (det) { var b = det.querySelector(":scope > .pb-acc-body"); return b || det; };
   function generalTab(it, box, locked) {
     var dis = !canWrite || locked;
     var p = it.props || {};
-    box.appendChild(textField("Nom du calque", it.name, function (v) { rename(it.id, v); }, { max: 60, placeholder: inspectorFor(it).kind, onChange: true, disabled: !canWrite }));
-    structureContent(it, box); // éléments à l'intérieur, colonnes ou grille, largeur, balise HTML
-    box.appendChild(h("p", { class: "pb-sub", text: "Réglages" }));
-    if (LINKABLE.indexOf(it.type) >= 0) {
-      box.appendChild(textField("Lien (toute la zone devient cliquable)", p.link, function (v) { setProp(it.id, "link", v.trim()); }, { list: "pb-links", onChange: true, disabled: dis, placeholder: "/catalogue, #ancre ou https://…", hint: "Impossible si la zone contient déjà un bouton ou un lien : un lien ne peut pas en contenir un autre." }));
-      if (p.link) box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: dis }));
-    }
-    box.appendChild(anchorField(it, locked));
-    box.appendChild(codeField(it, locked, { onlyAttrs: true }));
-    box.appendChild(audienceField(it, locked));
-    box.appendChild(screensField(it, locked));
+    box.appendChild(accGroup("g-settings", "Réglages", true, function (b) {
+      b.appendChild(textField("Nom du calque", it.name, function (v) { rename(it.id, v); }, { max: 60, placeholder: inspectorFor(it).kind, onChange: true, disabled: !canWrite }));
+      structureContent(it, b); // éléments à l'intérieur, colonnes ou grille, largeur, balise HTML
+      if (LINKABLE.indexOf(it.type) >= 0) {
+        b.appendChild(textField("Lien (toute la zone devient cliquable)", p.link, function (v) { setProp(it.id, "link", v.trim()); }, { list: "pb-links", onChange: true, disabled: dis, placeholder: "/catalogue, #ancre ou https://…", hint: "Impossible si la zone contient déjà un bouton ou un lien : un lien ne peut pas en contenir un autre." }));
+        if (p.link) b.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: dis }));
+      }
+    }, (it.name ? 1 : 0) + (p.link ? 1 : 0)));
+    box.appendChild(accGroup("g-ident", "Identifiant et attributs", Boolean(it.anchor || (it.attrs || []).length), function (b) {
+      b.appendChild(anchorField(it, locked));
+      b.appendChild(bodyOf(codeField(it, locked, { onlyAttrs: true })));
+    }, (it.anchor ? 1 : 0) + (it.attrs || []).length));
+    box.appendChild(accGroup("g-display", "Conditions d'affichage", Boolean(it.audience || (it.hideOn || []).length), function (b) {
+      b.appendChild(audienceField(it, locked));
+      b.appendChild(screensField(it, locked));
+    }, (it.audience ? 1 : 0) + ((it.hideOn || []).length ? 1 : 0)));
     box.appendChild(infoBlock(it));
-    actionsAndComponent([it], box, locked);
+    box.appendChild(accGroup("g-actions", "Actions", true, function (b) { actionsAndComponent([it], b, locked); }));
   }
   function interactionsTab(it, box, locked) {
     box.appendChild(motionField(it, locked));
     box.appendChild(interactionField(it, locked));
-    box.appendChild(h("p", { class: "pb-hint", text: "Style au survol ou au clic : onglet Style, bouton « État »." }));
+    // États : le style au survol / au clic se règle dans l'onglet Style (même moteur que l'état normal) ; raccourcis réels
+    var schema = inspectorFor(it), states = Array.isArray(schema.states) ? SPEC.states.filter(function (st) { return schema.states.indexOf(st.key) >= 0; }) : schema.states ? SPEC.states : [];
+    if (states.length) box.appendChild(accGroup("i-states", "États (survol, clic…)", Boolean(it.states && Object.keys(it.states).length), function (b) {
+      b.appendChild(h("p", { class: "pb-hint", text: "Couleurs, ombre, transformation… propres à un état : réglées dans l'onglet Style, pour cet état." }));
+      b.appendChild(h("div", { class: "pb-row pb-wrap" }, states.map(function (st) {
+        var n = it.states && it.states[st.key] ? Object.keys(it.states[st.key]).length : 0;
+        return h("button", { type: "button", class: "btn btn-outline btn-sm", "data-state": st.key, onclick: function () { inspTab = "style"; store.set("insp-tab", inspTab); styleState = st.key; renderInspector(); renderContext(); } }, "Régler : " + st.label + (n ? " (" + n + ")" : ""));
+      })));
+    }, it.states ? Object.keys(it.states).length : 0));
   }
   // Position et CSS personnalisé : à la suite des sections de l'onglet Style
   function boxStyleExtras(items, box, locked) {
