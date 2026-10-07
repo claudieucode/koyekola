@@ -173,6 +173,9 @@
 .kw-divider-text.is-center::before, .kw-divider-text.is-center::after { flex: 1 1 0; }
 .kw-divider-text.is-left::before, .kw-divider-text.is-right::after { flex: 0 0 24px; }
 .kw-divider-text span { min-width: 0; overflow-wrap: anywhere; text-align: center; }
+/* Conteneur cliquable : le lien enveloppe la zone sans changer la mise en page (la zone reste l'élément de la grille ou du flex) */
+.kw-box-link { display: contents; color: inherit; text-decoration: none; }
+.kw-box-link:focus-visible > * { outline: 2px solid currentColor; outline-offset: 2px; }
 .kw-heading-link { color: inherit; text-decoration: none; }
 .kw-heading-link:hover { text-decoration: underline; }
 .kw-heading-link:focus-visible { outline: 3px solid var(--lp-accent, #0277b6); outline-offset: 3px; }

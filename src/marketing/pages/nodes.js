@@ -265,14 +265,22 @@ function declarations(set) {
 // jamais enregistrée. Pas de « main » : la page a déjà sa zone principale.
 const BOX_TAGS = ["div", "section", "header", "footer", "article", "aside", "nav"];
 const boxTag = (p) => { const tag = oneOf(...BOX_TAGS)(p.tag); return tag && tag !== "div" ? { tag } : {}; };
+// Lien d'un conteneur : toute la zone devient cliquable (page du site, ancre ou https://). Nouvel onglet seulement pour https://.
+// Voir aussi INTERACTIVE_INSIDE_LINK : un lien ne peut pas en contenir un autre.
+const boxProps = (p, at, h) => {
+  const link = h.linkUrl(p.link, `${at} (lien du conteneur)`);
+  return { ...boxTag(p), ...(link ? { link, ...(p.newTab === true && link.startsWith("https://") ? { newTab: true } : {}) } : {}) };
+};
+// Éléments qui sont eux-mêmes un lien, un bouton ou un champ (ou qui peuvent en contenir) : interdits dans un conteneur cliquable
+const INTERACTIVE_INSIDE_LINK = new Set(["button", "link", "menu", "search", "account", "toggle", "tabs", "accordion", "modal", "carousel", "tooltip", "hotspot", "html", "embed", "social", "breadcrumb", "course", "courselist", "posts", "pricing", "iconlist", "gallery", "table"]);
 const NODE_TYPES = {
   // Largeur du contenu : encadrée (1100 px centrés, par défaut) ou pleine largeur
-  container: { label: "Conteneur", category: "structure", container: true, props: (p) => ({ ...boxTag(p), ...(p.full === true ? { full: true } : {}) }) },
+  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : {}) }) },
   columns: { label: "Colonnes", category: "structure", container: true, props: () => ({}) },
   column: { label: "Colonne", category: "structure", container: true, props: () => ({}) },
-  grid: { label: "Grille", category: "structure", container: true, props: boxTag },
-  stack: { label: "Pile", category: "structure", container: true, props: boxTag },
-  group: { label: "Groupe", category: "structure", container: true, props: boxTag },
+  grid: { label: "Grille", category: "structure", container: true, props: boxProps },
+  stack: { label: "Pile", category: "structure", container: true, props: boxProps },
+  group: { label: "Groupe", category: "structure", container: true, props: boxProps },
   spacer: { label: "Espace", category: "structure", props: (p) => ({ size: oneOf("8", "16", "24", "32", "48", "64", "80", "96", "128")(String(p.size)) || "32" }) },
   // Séparateur : trait seul, ou trait avec un court texte (à gauche, au centre ou à droite)
   divider: { label: "Séparateur", category: "structure", props: (p) => {
@@ -1133,6 +1141,16 @@ function normalizeMotion(raw) {
 }
 
 // ---------- Normalisation d'un arbre ----------
+// Premier élément cliquable (ou pouvant contenir un lien) à l'intérieur de ces enfants, nom lisible ; "" s'il n'y en a pas
+function firstInteractive(children) {
+  for (const c of children || []) {
+    if (!c || !c.type) continue;
+    if (INTERACTIVE_INSIDE_LINK.has(c.type) || (c.props && c.props.link)) return (NODE_TYPES[c.type] && NODE_TYPES[c.type].label) || c.type;
+    const deeper = firstInteractive(c.children);
+    if (deeper) return deeper;
+  }
+  return "";
+}
 function normalizeNode(raw, at, h, depth, counter) {
   if (!raw || typeof raw !== "object") throw new Error(`${at} : élément invalide.`);
   const def = Object.hasOwn(NODE_TYPES, raw.type) ? NODE_TYPES[raw.type] : null;
@@ -1192,6 +1210,10 @@ function normalizeNode(raw, at, h, depth, counter) {
   if (def.container) {
     const kids = Array.isArray(raw.children) ? raw.children : [];
     node.children = kids.map((c, i) => normalizeNode(c, `${where} › élément ${i + 1}`, h, depth + 1, counter));
+    if (node.props && node.props.link) {
+      const found = firstInteractive(node.children);
+      if (found) throw new Error(`${where} : un conteneur cliquable ne peut pas contenir « ${found} » (un lien ne peut pas en contenir un autre). Retirez le lien du conteneur ou cet élément.`);
+    }
   }
   return node;
 }

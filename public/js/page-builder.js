@@ -1835,12 +1835,12 @@
   var TEXT_ORDER = ["typography", "spacing", "size", "layout", "background", "border", "effects"];
   var INSPECTORS = {
     section: { kind: "Section", groups: BOX },
-    container: { kind: "Conteneur", groups: BOX },
-    columns: { kind: "Colonnes", groups: BOX },
-    column: { kind: "Colonne", groups: BOX },
-    stack: { kind: "Pile", groups: BOX },
-    group: { kind: "Groupe", groups: BOX },
-    grid: { kind: "Grille", groups: { layout: ["columns", "gridTemplate", "gridRows", "gridRowsTemplate", "gridAutoFlow", "gap", "rowGap", "columnGap", "justifyItems", "alignItems", "alignContent", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null } },
+    container: { kind: "Conteneur", groups: BOX, tabs: "box", states: ["hover", "active"] },
+    columns: { kind: "Colonnes", groups: BOX, tabs: "box", states: ["hover", "active"] },
+    column: { kind: "Colonne", groups: BOX, tabs: "box", states: ["hover", "active"] },
+    stack: { kind: "Pile", groups: BOX, tabs: "box", states: ["hover", "active"] },
+    group: { kind: "Groupe", groups: BOX, tabs: "box", states: ["hover", "active"] },
+    grid: { kind: "Grille", groups: { layout: ["columns", "gridTemplate", "gridRows", "gridRowsTemplate", "gridAutoFlow", "gap", "rowGap", "columnGap", "justifyItems", "alignItems", "alignContent", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null }, tabs: "box", states: ["hover", "active"] },
     heading: { kind: "Titre", groups: TEXTUAL, order: TEXT_ORDER },
     text: { kind: "Texte", groups: TEXTUAL, order: TEXT_ORDER },
     list: { kind: "Liste", groups: TEXTUAL, order: TEXT_ORDER },
@@ -2420,7 +2420,8 @@
     var bar = breakpointSwitch(items);
     if (schema.states && items.every(function (x) { return inspectorFor(x).states; })) {
       bar.appendChild(h("span", { class: "pb-insp-bar-label is-second", text: "État" }));
-      bar.appendChild(h("div", { class: "pb-seg pb-state-seg", role: "radiogroup", "aria-label": "État de l'élément" }, [{ key: "normal", label: "Normal" }].concat(SPEC.states).map(function (st) {
+      var stateList = Array.isArray(schema.states) ? SPEC.states.filter(function (st) { return schema.states.indexOf(st.key) >= 0; }) : SPEC.states;
+      bar.appendChild(h("div", { class: "pb-seg pb-state-seg", role: "radiogroup", "aria-label": "État de l'élément" }, [{ key: "normal", label: "Normal" }].concat(stateList).map(function (st) {
         return h("button", { type: "button", role: "radio", "aria-checked": String(styleState === st.key), onclick: function () { styleState = st.key; renderInspector(); renderContext(); } }, st.label);
       })));
     } else if (styleState !== "normal") styleState = "normal";
@@ -2585,7 +2586,8 @@
     var keepScroll = box.dataset.for === selection.join(",") ? box.scrollTop : 0;
     box.textContent = "";
     box.dataset.for = selection.join(",");
-    fieldSeq = 0;
+    // fieldSeq n'est JAMAIS remis à zéro : les identifiants (pb-f-N) restent uniques dans toute la page, sinon un libellé de
+    // l'inspecteur désignait un champ d'un autre panneau (réglages de la page…) au clic et pour les lecteurs d'écran
     var items = selectedItems();
     // Rien de sélectionné : état vide, et seulement quelques actions globales réelles
     if (!items.length) {
@@ -2610,22 +2612,25 @@
     // En-tête : ce que l'on modifie (nature, nom) et son chemin dans la structure (cliquable)
     var crumbs = multi || !l.ancestors.length ? null : h("nav", { class: "pb-crumbs", "aria-label": "Parents de l'élément" }, [h("button", { type: "button", onclick: function () { select(null); }, text: "Page" })].concat(l.ancestors.map(function (a) { return h("button", { type: "button", onclick: function () { select(a.id); }, text: nameOf(a) }); })));
     box.appendChild(h("div", { class: "pb-insp-head" }, crumbs,
-      h("p", { class: "pb-kind", text: multi ? "Sélection multiple" : schema.kind }),
+      h("p", { class: "pb-kind", text: multi ? "Sélection multiple" : "Modifier " + schema.kind }),
       h("h2", { text: multi ? items.length + " éléments" : (it.name || preview(it) || schema.kind) })));
     if (locked && canWrite) box.appendChild(h("p", { class: "pb-note is-warn", text: "Verrouillé : déverrouillez-le (cadenas dans les calques) pour le modifier." }));
-    var tabs = multi ? [["style", "Style"], ["advanced", "Avancé"]] : !schema.groups ? [["content", "Contenu"], ["advanced", "Avancé"]] : [["content", "Contenu"], ["style", "Style"], ["advanced", "Avancé"]];
+    var boxTabs = !multi && schema.tabs === "box";
+    var tabs = boxTabs ? [["general", "Général"], ["style", "Style"], ["interactions", "Interactions"]] : multi ? [["style", "Style"], ["advanced", "Avancé"]] : !schema.groups ? [["content", "Contenu"], ["advanced", "Avancé"]] : [["content", "Contenu"], ["style", "Style"], ["advanced", "Avancé"]];
     if (!tabs.some(function (t) { return t[0] === inspTab; })) inspTab = tabs[0][0];
     var tablist = h("div", { class: "pb-insp-tabs", role: "tablist", "aria-label": "Réglages de la sélection" });
     tabs.forEach(function (t) { tablist.appendChild(h("button", { type: "button", role: "tab", "aria-selected": String(inspTab === t[0]), onclick: function () { inspTab = t[0]; store.set("insp-tab", inspTab); renderInspector(); } }, t[1])); });
     box.appendChild(tablist);
     var body = h("div", { class: "pb-insp-body", role: "tabpanel" });
     box.appendChild(body);
-    if (inspTab === "content") {
+    if (inspTab === "general") generalTab(it, body, locked);
+    else if (inspTab === "interactions") interactionsTab(it, body, locked);
+    else if (inspTab === "content") {
       if (it.type === "component") componentInspector(body, it);
       else if (kidsOf(it)) structureContent(it, body);
       else if (isNode(it)) nodeContentFields(it, body, locked);
       else legacyContentFields(it, body, locked);
-    } else if (inspTab === "style") styleTab(items, body);
+    } else if (inspTab === "style") { styleTab(items, body); if (boxTabs) boxStyleExtras(items, body, locked); }
     else advancedTab(items, body, locked);
     box.scrollTop = keepScroll;
   }
@@ -2703,7 +2708,7 @@
       var info = infoBlock(it);
       box.appendChild(info);
       box.appendChild(textField("Nom du calque", it.name, function (v) { rename(it.id, v); }, { max: 60, placeholder: inspectorFor(it).kind, onChange: true, disabled: !canWrite }));
-      if (isNode(it)) box.appendChild(textField("Ancre (identifiant pour un lien #…)", it.anchor, function (v) { setAnchor(it.id, v); }, { max: 40, placeholder: "ex. tarifs", onChange: true, disabled: !canWrite || locked, hint: it.anchor ? "Lien vers cet élément : " + (PAGE.slug ? "/p/" + PAGE.slug : "") + "#" + it.anchor : "Lettres minuscules, chiffres et tirets. Permet un lien direct vers cet élément (menu, bouton « Voir les tarifs »…)." }));
+      if (isNode(it)) box.appendChild(anchorField(it, locked));
     }
     // Position et plan (propriétés avancées de placement), pour l'écran actif
     if (inspectorFor(it).groups) {
@@ -2711,28 +2716,20 @@
       box.appendChild(pos);
     }
     if (single && it.type !== "component") box.appendChild(audienceField(it, locked));
-    if (single && it.type !== "component") {
-      var checks = h("div", { class: "pb-checks" });
-      BPS.forEach(function (bp) {
-        var cb = h("input", { type: "checkbox", disabled: locked });
-        cb.checked = !(it.hideOn || []).includes(bp);
-        cb.addEventListener("change", function () {
-          var next = BPS.filter(function (x) { return x === bp ? !cb.checked : (it.hideOn || []).includes(x); });
-          if (next.length === BPS.length) { cb.checked = true; toast("Il doit rester visible sur au moins un écran (sinon : « Masquer »).", true); return; }
-          nextLabel = "Visibilité par écran";
-          change(function () { var s = byId(it.id); if (next.length) s.hideOn = next; else delete s.hideOn; });
-        });
-        checks.appendChild(h("label", {}, cb, " " + bpLabel(bp)));
-      });
-      box.appendChild(h("p", { class: "pb-sub", text: "Afficher sur" }));
-      box.appendChild(checks);
-    }
+    if (single && it.type !== "component") box.appendChild(screensField(it, locked));
     if (single && isNode(it)) { box.appendChild(motionField(it, locked)); box.appendChild(interactionField(it, locked)); box.appendChild(codeField(it, locked)); }
     if (items.length > 1) {
       box.appendChild(h("p", { class: "pb-sub", text: "Aligner (dans leur parent)" }));
       box.appendChild(h("div", { class: "pb-row pb-wrap" }, [["flex-start", "Début"], ["center", "Centre"], ["flex-end", "Fin"], ["stretch", "Étirer"]].map(function (a) { return b(a[1], function () { setStyle(selection.slice(), "alignSelf", a[0]); }, { disabled: !canWrite || locked }); }),
         b("Répartir", distribute, { disabled: !canWrite || locked })));
     }
+    actionsAndComponent(items, box, locked, b);
+  }
+  // Actions sur l'élément (masquer, verrouiller, dupliquer, style, supprimer) et enregistrement comme composant
+  function actionsAndComponent(items, box, locked, b) {
+    var it = items[0];
+    var single = items.length === 1;
+    b = b || function (label, fn, opts) { return h("button", Object.assign({ type: "button", class: "btn btn-outline btn-sm", onclick: fn }, opts || {}), label); };
     box.appendChild(h("p", { class: "pb-sub", text: "Actions" }));
     box.appendChild(h("div", { class: "pb-row pb-wrap" },
       b(items.some(function (x) { return x.hidden; }) ? "Afficher" : "Masquer", function () { setFlag(selection.slice(), "hidden", !items.some(function (x) { return x.hidden; })); }, { disabled: !canWrite }),
@@ -2756,6 +2753,61 @@
       form.addEventListener("submit", function (e) { e.preventDefault(); saveAsComponent(it, nameInput.value, !PAGE.siteId || global.checked).then(function () { nameInput.value = ""; }); });
       box.appendChild(form);
     }
+  }
+  // « Afficher sur » : écrans sur lesquels l'élément est visible (au moins un doit rester)
+  function screensField(it, locked) {
+    var box = h("div", { class: "pb-field" });
+    var checks = h("div", { class: "pb-checks" });
+    BPS.forEach(function (bp) {
+      var cb = h("input", { type: "checkbox", disabled: locked });
+      cb.checked = !(it.hideOn || []).includes(bp);
+      cb.addEventListener("change", function () {
+        var next = BPS.filter(function (x) { return x === bp ? !cb.checked : (it.hideOn || []).includes(x); });
+        if (next.length === BPS.length) { cb.checked = true; toast("Il doit rester visible sur au moins un écran (sinon : « Masquer »).", true); return; }
+        nextLabel = "Visibilité par écran";
+        change(function () { var s = byId(it.id); if (next.length) s.hideOn = next; else delete s.hideOn; });
+      });
+      checks.appendChild(h("label", {}, cb, " " + bpLabel(bp)));
+    });
+    box.appendChild(h("p", { class: "pb-sub", text: "Afficher sur" }));
+    box.appendChild(checks);
+    return box;
+  }
+  // ID de l'élément (ancre d'un lien #…) : réellement présent dans la page publiée, validé et unique par le serveur
+  function anchorField(it, locked) {
+    return textField("Ancre (identifiant pour un lien #…)", it.anchor, function (v) { setAnchor(it.id, v); }, { max: 40, placeholder: "ex. tarifs", onChange: true, disabled: !canWrite || locked, hint: it.anchor ? "Lien vers cet élément : " + (PAGE.slug ? "/p/" + PAGE.slug : "") + "#" + it.anchor : "Lettres minuscules, chiffres et tirets. Permet un lien direct vers cet élément (menu, bouton « Voir les tarifs »…)." });
+  }
+  // ---------- Inspecteur d'un conteneur (Flexbox, Grille, Pile, Groupe, Colonnes) : Général / Style / Interactions ----------
+  // Chaque champ lit et écrit le MÊME document que le reste de l'éditeur (setProp, rename, setAnchor, change) : annuler / rétablir,
+  // enregistrement automatique, écrans, calques et rendu du canevas fonctionnent donc sans rien de plus. Un autre type d'élément
+  // adopte ces onglets en déclarant « tabs: "box" » dans INSPECTORS.
+  var LINKABLE = ["container", "grid", "stack", "group"];
+  function generalTab(it, box, locked) {
+    var dis = !canWrite || locked;
+    var p = it.props || {};
+    box.appendChild(textField("Nom du calque", it.name, function (v) { rename(it.id, v); }, { max: 60, placeholder: inspectorFor(it).kind, onChange: true, disabled: !canWrite }));
+    structureContent(it, box); // éléments à l'intérieur, colonnes ou grille, largeur, balise HTML
+    box.appendChild(h("p", { class: "pb-sub", text: "Réglages" }));
+    if (LINKABLE.indexOf(it.type) >= 0) {
+      box.appendChild(textField("Lien (toute la zone devient cliquable)", p.link, function (v) { setProp(it.id, "link", v.trim()); }, { list: "pb-links", onChange: true, disabled: dis, placeholder: "/catalogue, #ancre ou https://…", hint: "Impossible si la zone contient déjà un bouton ou un lien : un lien ne peut pas en contenir un autre." }));
+      if (p.link) box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: dis }));
+    }
+    box.appendChild(anchorField(it, locked));
+    box.appendChild(codeField(it, locked, { onlyAttrs: true }));
+    box.appendChild(audienceField(it, locked));
+    box.appendChild(screensField(it, locked));
+    box.appendChild(infoBlock(it));
+    actionsAndComponent([it], box, locked);
+  }
+  function interactionsTab(it, box, locked) {
+    box.appendChild(motionField(it, locked));
+    box.appendChild(interactionField(it, locked));
+    box.appendChild(h("p", { class: "pb-hint", text: "Style au survol ou au clic : onglet Style, bouton « État »." }));
+  }
+  // Position et CSS personnalisé : à la suite des sections de l'onglet Style
+  function boxStyleExtras(items, box, locked) {
+    box.appendChild(styleSection(items, "position", SPEC.styleProps.filter(function (p) { return p.group === "position"; }).map(function (p) { return p.key; })));
+    box.appendChild(codeField(items[0], locked, { noAttrs: true }));
   }
   // Animation : entrée à l'apparition (durée, délai) et effet au survol ; rejouable dans le canevas
   function motionField(it, locked) {
@@ -2819,17 +2871,21 @@
     return det;
   }
   // Code : CSS propre à l'élément, classes et attributs (vérifiés à l'enregistrement : aucune ressource externe)
-  function codeField(it, locked) {
+  function codeField(it, locked, opts) {
+    opts = opts || {};
     var det = h("details", { class: "pb-acc", "data-group": "code" });
-    var n = (it.css ? 1 : 0) + (it.cssHover ? 1 : 0) + (it.classes ? 1 : 0) + (it.attrs ? it.attrs.length : 0);
+    var n = (opts.onlyAttrs ? 0 : (it.css ? 1 : 0) + (it.cssHover ? 1 : 0) + (it.classes ? 1 : 0)) + (opts.noAttrs ? 0 : (it.attrs ? it.attrs.length : 0));
     if (store.get("open-code", Boolean(n))) det.open = true;
     det.addEventListener("toggle", function () { store.set("open-code", det.open); });
-    det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: "CSS, classes et attributs" }), n ? h("span", { class: "pb-acc-count", text: String(n) }) : null));
+    det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: opts.onlyAttrs ? "Attributs HTML" : opts.noAttrs ? "CSS personnalisé et classes" : "CSS, classes et attributs" }), n ? h("span", { class: "pb-acc-count", text: String(n) }) : null));
     var inner = h("div", { class: "pb-acc-body" });
+    if (!opts.onlyAttrs) {
     var put = function (k) { return function (v) { nextLabel = { css: "CSS de l'élément", cssHover: "CSS au survol", classes: "Classes" }[k] || "Code"; change(function () { var x = byId(it.id); if (String(v).trim()) x[k] = String(v).trim(); else delete x[k]; }); }; };
     inner.appendChild(textField("CSS de l'élément (déclarations)", it.css, put("css"), { multiline: true, rows: "4", onChange: true, max: 2000, disabled: locked, placeholder: "letter-spacing: .02em;\nbackground-color: #f3f8fc;", hint: "Appliqué à cet élément seulement, après les réglages de l'inspecteur. Pas d'url(), d'@, de \\ ni de < >." }));
     inner.appendChild(textField("CSS au survol", it.cssHover, put("cssHover"), { multiline: true, rows: "2", onChange: true, max: 2000, disabled: locked, placeholder: "transform: translateY(-2px);" }));
     inner.appendChild(textField("Classes", it.classes, put("classes"), { onChange: true, max: 300, disabled: locked, placeholder: "carte-mise-en-avant", hint: "À cibler dans le CSS de la page (onglet Page). Préfixes kw-, lp-, pb-, mk- réservés." }));
+    }
+    if (!opts.noAttrs) {
     var attrs = it.attrs || [];
     var setAttrs = function (fn) { nextLabel = "Attributs"; change(function () { var x = byId(it.id); var l = (x.attrs || []).slice(); fn(l); if (l.length) x.attrs = l; else delete x.attrs; }); };
     inner.appendChild(h("p", { class: "pb-sub", text: "Attributs (data-…, aria-…, title, role, lang)" }));
@@ -2840,6 +2896,7 @@
         h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked, onclick: function () { setAttrs(function (l) { l.splice(i, 1); }); } }, "Retirer")));
     });
     inner.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: locked || attrs.length >= 10, onclick: function () { setAttrs(function (l) { l.push({ name: "data-suivi", value: "" }); }); } }, "Ajouter un attribut"));
+    }
     det.appendChild(inner);
     return det;
   }

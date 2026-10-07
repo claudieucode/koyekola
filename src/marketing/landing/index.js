@@ -251,6 +251,7 @@ function linksOf(page) {
     // Section libre : mêmes liens, dans l'ordre d'affichage des éléments
     if (s.type === "layout") pageNodes.walk(s.children, (n) => {
       if ((n.type === "sitelogo" || n.type === "sitetitle") && n.props.link && n.props.homeUrl) out.push({ section: i, label: n.type === "sitelogo" ? "Logo du site" : "Titre du site", url: n.props.homeUrl });
+      if (["container", "grid", "stack", "group"].includes(n.type) && (n.props || {}).link) out.push({ section: i, label: `Conteneur : ${n.name || (pageNodes.NODE_TYPES[n.type] || {}).label || n.type}`, url: n.props.link });
       if (n.type === "flipbox" && n.props.ctaUrl) out.push({ section: i, label: `Boîte retournable : ${n.props.ctaLabel}`, url: n.props.ctaUrl });
       if (n.type === "pricelist") n.props.items.forEach((it) => { if (it.link) out.push({ section: i, label: `Liste de prix : ${it.title}`, url: it.link }); });
       if ((n.type === "imagebox" || n.type === "iconbox") && n.props.link) out.push({ section: i, label: `${n.type === "imagebox" ? "Boîte d'image" : "Boîte d'icône"} : ${n.props.title}`, url: n.props.link });
