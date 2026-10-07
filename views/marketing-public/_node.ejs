@@ -16,7 +16,7 @@
 <% } else if (n.type === "spacer") { %>
   <div class="<%= cls %> <%= `kw-spacer-${p.size}` %>"<%- attrs %> aria-hidden="true"></div>
 <% } else if (n.type === "divider" && p.text) { %>
-  <div class="<%= cls %> kw-divider-text is-<%= p.align %>" role="separator"<%- attrs %>><span><%= p.text %></span></div>
+  <div class="<%= cls %> kw-divider-text <%= p.align === "left" ? "is-left" : p.align === "right" ? "is-right" : "is-center" %>" role="separator"<%- attrs %>><span><%= p.text %></span></div>
 <% } else if (n.type === "divider") { %>
   <hr class="<%= cls %>"<%- attrs %>>
 <% } else if ((n.type === "heading" && !p.text) || (n.type === "text" && !p.html)) { %>

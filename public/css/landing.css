@@ -170,6 +170,7 @@
 .kw-divider { width: 100%; margin: 8px 0; border: 0; border-top: 1px solid rgba(16, 34, 47, 0.18); }
 .kw-divider.kw-divider-text { display: flex; align-items: center; gap: 12px; border-top: 0; font-size: 14px; font-weight: 600; color: inherit; }
 .kw-divider-text::before, .kw-divider-text::after { content: ""; flex: 1 1 0; border-top: 1px solid rgba(16, 34, 47, 0.18); }
+.kw-divider-text.is-center::before, .kw-divider-text.is-center::after { flex: 1 1 0; }
 .kw-divider-text.is-left::before, .kw-divider-text.is-right::after { flex: 0 0 24px; }
 .kw-divider-text span { min-width: 0; overflow-wrap: anywhere; text-align: center; }
 .kw-heading-link { color: inherit; text-decoration: none; }
