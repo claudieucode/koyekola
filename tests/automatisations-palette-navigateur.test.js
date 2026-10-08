@@ -150,5 +150,53 @@ describe("palette d'actions des scénarios : disponibilité réelle, filtre, ré
     assert.match(await page.locator(".drawflow-node").filter({ hasText: "Ajouter une note" }).first().innerText(), /Hésitant après trois visites/);
   });
 
+  test("« Attendre une date ou une heure » : champs selon le mode, validation, enregistrement exécutable", async () => {
+    await openEditor();
+    await item("wait_until").click();
+    await page.locator(".drawflow-node").filter({ hasText: "Attendre une date ou une heure" }).first().click();
+    await dialog().waitFor({ timeout: 8000 });
+    const mode = dialog().locator("select").first();
+    // Heures ouvrables : jours cochés par défaut du lundi au vendredi ; aucun jour = refus avec message
+    await mode.selectOption("business_hours");
+    assert.equal(await dialog().locator("input[type=checkbox]:checked").count(), 5);
+    for (let k = 0; k < 7; k += 1) await dialog().locator("input[type=checkbox]").nth(k).setChecked(false);
+    await dialog().locator("[data-step-save]").click();
+    assert.match(await dialog().locator(".mk-step-dialog-error").innerText(), /au moins un jour ouvrable/);
+    // Fermeture avant ouverture : refus
+    await dialog().locator("input[type=checkbox]").nth(1).check();
+    await dialog().locator("input[type=time]").nth(0).fill("18:00");
+    await dialog().locator("input[type=time]").nth(1).fill("09:00");
+    await dialog().locator("[data-step-save]").click();
+    assert.match(await dialog().locator(".mk-step-dialog-error").innerText(), /ouverture doit précéder la fermeture/);
+    // Jour de la semaine : on change de mode, les champs d'un autre mode ne traînent pas
+    await mode.selectOption("weekday");
+    assert.equal(await dialog().locator("input[type=checkbox]").count(), 0, "plus de cases de jours ouvrables");
+    await dialog().locator("select").nth(2).selectOption("3"); // Mercredi (mode, fuseau, jour)
+    await dialog().locator("input[type=time]").fill("10:30");
+    await dialog().locator("[data-step-save]").click();
+    await page.locator("dialog.mk-step-dialog[open]").waitFor({ state: "detached", timeout: 8000 });
+    await connectAndSave("Attendre une date ou une heure");
+    await until(() => { const st = savedSteps(); return st.length === 1 && JSON.stringify(st[0]) === JSON.stringify({ type: "wait_until", mode: "weekday", zone: "contact", weekday: 3, time: "10:30" }); }, "étape « mercredi 10:30 » enregistrée, sans reste d'un autre mode");
+    assert.match(await page.locator(".drawflow-node").filter({ hasText: "Attendre une date ou une heure" }).first().innerText(), /Mercredi à 10:30/);
+  });
+
+  test("« Attendre une date ou une heure », champ date : propriétés de type date proposées, aucune si elles n'existent pas", async () => {
+    await openEditor();
+    await item("wait_until").click();
+    await page.locator(".drawflow-node").filter({ hasText: "Attendre une date ou une heure" }).first().click();
+    await dialog().waitFor({ timeout: 8000 });
+    await dialog().locator("select").first().selectOption("property");
+    assert.match(await dialog().innerText(), /Aucune propriété de type date/);
+    await dialog().locator("[data-step-save]").click();
+    assert.match(await dialog().locator(".mk-step-dialog-error").innerText(), /Choisissez un champ date du contact/);
+    await dialog().getByRole("button", { name: "Annuler" }).click();
+    srv.db().prepare("INSERT INTO mk_property_defs (organization_id, key, label, type, options) VALUES (?, 'rentree', 'Rentrée', 'date', '[]')").run(org);
+    await page.reload(); await page.waitForSelector("#au-palette .mk-pal-item");
+    await page.locator(".drawflow-node").filter({ hasText: "Attendre une date ou une heure" }).first().click();
+    await dialog().waitFor({ timeout: 8000 });
+    await dialog().locator("select").first().selectOption("property");
+    assert.deepEqual(await dialog().locator("select").nth(2).locator("option").allInnerTexts(), ["Choisir un champ…", "Rentrée"]);
+  });
+
   test("aucune erreur de script ni de console", () => { assert.deepEqual(errors, []); });
 });

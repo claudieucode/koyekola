@@ -5,8 +5,8 @@ import { el, field, select, text, number, checkbox, note, hint, nextId } from ".
 import { estimateFor, unknownTags } from "../../marketing/sms/render";
 
 // Mêmes valeurs que steps.js#UNITS / CHECKS / EDITABLE_FIELDS (à tenir synchronisées avec le serveur)
-export const UNITS = [["minutes", "minutes"], ["hours", "heures"], ["days", "jours"]];
-const UNIT_MS = { minutes: 60000, hours: 3600000, days: 86400000 };
+export const UNITS = [["minutes", "minutes"], ["hours", "heures"], ["days", "jours"], ["weeks", "semaines"]];
+const UNIT_MS = { minutes: 60000, hours: 3600000, days: 86400000, weeks: 7 * 86400000 };
 const MAX_WAIT_MS = 365 * 86400000;
 export const CHECKS = [["segment", "correspond à un segment"], ["opened", "a ouvert un e-mail précédent"], ["clicked", "a cliqué un e-mail précédent"]];
 export const FIELD_OPTIONS = [["first_name", "Prénom"], ["last_name", "Nom"], ["phone", "Téléphone"], ["company", "Société"], ["country", "Pays"], ["language", "Langue"], ["source", "Source"]];
@@ -14,6 +14,10 @@ export const FIELD_LABELS = Object.fromEntries(FIELD_OPTIONS);
 const EVENT_NAME = /^[a-z][a-z0-9_.]{1,63}$/;
 const PROPERTY_KEY = /^[a-z][a-z0-9_]{0,39}$/;
 const STATUS_LABELS = { unknown: "Pas de consentement", subscribed: "Abonné", unsubscribed: "Désinscrit", bounced: "Rebond", complained: "Plainte", suppressed: "Bloqué" };
+const WEEKDAY_OPTIONS = [[1, "Lundi"], [2, "Mardi"], [3, "Mercredi"], [4, "Jeudi"], [5, "Vendredi"], [6, "Samedi"], [7, "Dimanche"]];
+const WAIT_UNTIL_MODES = [["time", "Une heure précise"], ["weekday", "Un jour de la semaine"], ["date", "Une date précise"], ["property", "Un champ date du contact"], ["business_hours", "Les heures ouvrables"]];
+const WAIT_UNTIL_DEFAULTS = { time: { time: "09:00" }, weekday: { weekday: 1, time: "09:00" }, date: { date: "", time: "09:00" }, property: { property: "", offsetDays: 0, time: "09:00", onMissing: "continue" }, business_hours: { days: [1, 2, 3, 4, 5], from: "09:00", to: "18:00" } };
+const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const MAX_SMS_BODY = 1600; // même limite que steps.js
 const SCORE_MAX = 100000, MAX_NOTE = 2000; // mêmes limites que scoring.MAX_ADJUST / audience/notes.MAX_NOTE
@@ -280,7 +284,49 @@ const EDITORS = {
     const sentence = el("p", { class: "mk-step-sentence", "aria-live": "polite" });
     const sync = () => { const u = (UNITS.find((x) => x[0] === draft.unit) || [null, ""])[1]; sentence.textContent = Number.isInteger(draft.amount) && draft.amount > 0 ? `Le contact attend ${draft.amount} ${draft.amount === 1 ? u.replace(/s$/, "") : u} avant l'étape suivante.` : "Indiquez une durée."; };
     box.addEventListener("input", sync); box.addEventListener("change", sync); sync();
-    return section("Durée", box, sentence, hint("Un an au plus. Minutes, heures ou jours (unités gérées par le moteur d'exécution)."));
+    return section("Durée", box, sentence, hint("Un an au plus. Minutes, heures, jours ou semaines."));
+  },
+  wait_until(ctx, draft, rerender) {
+    const box = el("div");
+    const dis = ctx.locked;
+    const timeInput = (value, onChange, label) => { const t = el("input", { type: "time", id: nextId(), "aria-label": label, step: "60" }); t.value = value || ""; t.disabled = dis; t.addEventListener("input", () => onChange(t.value)); return t; };
+    box.appendChild(field("Attendre jusqu'à", select(WAIT_UNTIL_MODES, draft.mode, (v) => {
+      // Un changement de mode repart de valeurs par défaut du nouveau mode (jamais de réglages d'un autre mode qui traînent)
+      const zone = draft.zone || "contact";
+      Object.keys(draft).forEach((k) => delete draft[k]);
+      Object.assign(draft, { mode: v, zone }, WAIT_UNTIL_DEFAULTS[v]);
+      rerender();
+    }, { disabled: dis })));
+    box.appendChild(field("Fuseau horaire", select([["contact", "Celui du contact (repli : celui de l'organisation)"], ["organization", "Celui de l'organisation"]], draft.zone || "contact", (v) => { draft.zone = v; }, { disabled: dis }), "Le fuseau du contact vient de sa fiche, de son compte KOLAKISA ou de son pays. Le changement d'heure est pris en compte."));
+    if (draft.mode === "time") box.appendChild(field("Heure", timeInput(draft.time, (v) => { draft.time = v; }, "Heure"), "Le contact attend la prochaine fois qu'il est cette heure-là (aujourd'hui si elle n'est pas passée, sinon demain)."));
+    if (draft.mode === "weekday") {
+      box.appendChild(field("Jour", select(WEEKDAY_OPTIONS, draft.weekday, (v) => { draft.weekday = Number(v); }, { disabled: dis })));
+      box.appendChild(field("Heure", timeInput(draft.time, (v) => { draft.time = v; }, "Heure")));
+    }
+    if (draft.mode === "date") {
+      const d = el("input", { type: "date", id: nextId() }); d.value = draft.date || ""; d.disabled = dis; d.addEventListener("input", () => { draft.date = d.value; });
+      box.appendChild(field("Date", d, "Si la date est déjà passée, le contact continue tout de suite."));
+      box.appendChild(field("Heure", timeInput(draft.time, (v) => { draft.time = v; }, "Heure")));
+    }
+    if (draft.mode === "property") {
+      const props = ctx.data.dateProperties || [];
+      if (!props.length) box.appendChild(note("Aucune propriété de type date : créez-en une dans Audience → Propriétés."));
+      else box.appendChild(field("Champ date du contact", select([["", "Choisir un champ…", true], ...props.map((p) => [p.key, p.label])], props.some((p) => p.key === draft.property) ? draft.property : "", (v) => { draft.property = v; }, { disabled: dis })));
+      box.appendChild(field("Décalage (jours)", number(draft.offsetDays === undefined ? 0 : draft.offsetDays, (v) => { draft.offsetDays = v; }, { min: -365, max: 365, disabled: dis }), "Négatif : avant la date (−3 = trois jours avant) ; positif : après ; 0 : le jour même."));
+      box.appendChild(field("Heure", timeInput(draft.time, (v) => { draft.time = v; }, "Heure")));
+      box.appendChild(field("Si le champ est vide", select([["continue", "Passer l'étape et continuer"], ["exit", "Sortir du scénario"]], draft.onMissing || "continue", (v) => { draft.onMissing = v; }, { disabled: dis })));
+    }
+    if (draft.mode === "business_hours") {
+      const days = el("div", { class: "mk-step-days" });
+      WEEKDAY_OPTIONS.forEach(([n, name]) => days.appendChild(checkbox(name, (draft.days || []).includes(n), (on) => { const set = new Set(draft.days || []); if (on) set.add(n); else set.delete(n); draft.days = [...set].sort((a, b) => a - b); }, { disabled: dis })));
+      box.appendChild(section("Jours ouvrables", days));
+      const row = el("div", { class: "mk-step-row" });
+      row.appendChild(field("Ouverture", timeInput(draft.from, (v) => { draft.from = v; }, "Heure d'ouverture")));
+      row.appendChild(field("Fermeture", timeInput(draft.to, (v) => { draft.to = v; }, "Heure de fermeture")));
+      box.appendChild(row);
+      box.appendChild(hint("Dans la plage, le contact continue tout de suite ; sinon il attend la prochaine ouverture."));
+    }
+    return box;
   },
   wait_for_event(ctx, draft) {
     const box = el("div");
@@ -376,7 +422,7 @@ export const buildEditor = (type, ctx, draft, rerender) => EDITORS[type](ctx, dr
 function waitErrors(d, label) {
   const unit = Object.hasOwn(UNIT_MS, d.unit) ? d.unit : null;
   if (!Number.isInteger(d.amount) || d.amount < 1) return [`${label} : un nombre entier supérieur ou égal à 1.`];
-  if (!unit) return ["Unité invalide (minutes, heures ou jours)."];
+  if (!unit) return ["Unité invalide (minutes, heures, jours ou semaines)."];
   if (d.amount * UNIT_MS[unit] > MAX_WAIT_MS) return [`${label} : un an au plus.`];
   return [];
 }
@@ -399,6 +445,24 @@ export function validate(type, ctx, d) {
     }
     case "wait": return waitErrors(d, "Durée");
     case "wait_for_event": return [...(EVENT_NAME.test(d.event || "") ? [] : ["Nom d'événement invalide (minuscules, chiffres, « _ » et « . », 2 à 64 caractères, commence par une lettre)."]), ...waitErrors(d, "Délai maximal")];
+    case "wait_until": {
+      const errors = [];
+      const hourOk = (v) => typeof v === "string" && TIME_RE.test(v);
+      if (!["time", "weekday", "date", "property", "business_hours"].includes(d.mode)) return ["Choisissez jusqu'à quand attendre."];
+      if (d.mode !== "business_hours" && !hourOk(d.time)) errors.push("Heure invalide (HH:MM).");
+      if (d.mode === "weekday" && !(Number.isInteger(d.weekday) && d.weekday >= 1 && d.weekday <= 7)) errors.push("Choisissez un jour de la semaine.");
+      if (d.mode === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(d.date || "")) errors.push("Choisissez une date.");
+      if (d.mode === "property") {
+        if (!(ctx.data.dateProperties || []).some((p) => p.key === d.property)) errors.push("Choisissez un champ date du contact.");
+        if (!(Number.isInteger(d.offsetDays) && d.offsetDays >= -365 && d.offsetDays <= 365)) errors.push("Décalage : un nombre entier de jours, de −365 à 365.");
+      }
+      if (d.mode === "business_hours") {
+        if (!Array.isArray(d.days) || !d.days.length) errors.push("Choisissez au moins un jour ouvrable.");
+        if (!hourOk(d.from) || !hourOk(d.to)) errors.push("Heures d'ouverture et de fermeture invalides (HH:MM).");
+        else if (d.from >= d.to) errors.push("L'ouverture doit précéder la fermeture.");
+      }
+      return errors;
+    }
     case "split": return Number.isInteger(d.percentage) && d.percentage >= 1 && d.percentage <= 99 ? [] : ["Pourcentage de la branche A : un nombre entier de 1 à 99."];
     case "update_field": {
       const errors = [];

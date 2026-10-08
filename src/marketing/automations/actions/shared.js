@@ -1,7 +1,7 @@
 // Éléments communs aux définitions d'actions (validation des sauts, durées, noms) — déplacés tels quels depuis steps.js.
 const { MarketingError } = require("../../errors");
 
-const UNITS = { minutes: 60000, hours: 3600000, days: 86400000 };
+const UNITS = { minutes: 60000, hours: 3600000, days: 86400000, weeks: 7 * 86400000 };
 const MAX_WAIT_MS = 365 * 86400000;
 // Même motif que celui appliqué par le bus d'événements (events/bus.js#NAME ; dupliqué aussi dans service.js) :
 // « Attendre jusqu'à » doit pouvoir viser n'importe quel événement valide, pas seulement le catalogue TRIGGERS fermé.
