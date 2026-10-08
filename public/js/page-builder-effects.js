@@ -114,25 +114,54 @@
   }
 
   // Épinglage : position « sticky » avec un décalage du haut ou du bas, réglable par écran comme les autres styles
+  // Épinglage (position: sticky réel) : haut ou bas de l'écran, distance du bord, plan (z-index), écran par écran ; « Aucun » sur un écran
+  // coupe l'épinglage hérité de l'écran plus grand (position: static écrite), et les causes qui empêchent un épinglage de fonctionner
+  // (conteneur trop court, débordement masqué) sont CONSTATÉES dans le canevas et signalées
+  function stickyDiagnostics(it) {
+    var el = A.canvasEl(it.id), win = el && el.ownerDocument.defaultView, out = [];
+    if (!el || !win) return out;
+    var parent = el.parentElement;
+    if (parent && parent.getBoundingClientRect().height <= el.getBoundingClientRect().height + 1) {
+      var pd = win.getComputedStyle(parent).display, stretch = /flex|grid/.test(pd) && win.getComputedStyle(el).alignSelf !== "flex-start" && win.getComputedStyle(el).alignSelf !== "start";
+      out.push(stretch ? "Le conteneur étire l'élément sur toute sa hauteur : il n'a donc aucune place pour glisser. Réglez « Alignement dans le parent » (Mise en page) sur « Début »." : "Le conteneur n'est pas plus haut que l'élément : il n'y a aucune place pour qu'il reste épinglé. Donnez plus de hauteur au conteneur.");
+    }
+    for (var p = parent; p && p !== el.ownerDocument.documentElement; p = p.parentElement) {
+      var cs = win.getComputedStyle(p);
+      if (/(hidden|auto|scroll|clip)/.test(cs.overflowY) || /(hidden|auto|scroll|clip)/.test(cs.overflowX)) { out.push("Un conteneur parent a un débordement masqué ou défilant : il bloque l'épinglage (Style › Effets › Débordement : « Visible »)."); break; }
+    }
+    return out;
+  }
   function stickySection(it, locked) {
-    var pos = A.ownValue(it, "position"), top = A.ownValue(it, "top"), bottom = A.ownValue(it, "bottom");
-    var mode = pos === "sticky" ? (bottom !== undefined && top === undefined ? "bottom" : "top") : "";
-    return section("sticky", "Épinglage", mode ? 1 : 0, function (inner) {
+    var own = A.ownValue(it, "position"), inh = A.inheritedValue(it, "position");
+    var eff = own !== undefined ? own : inh;
+    var top = A.ownValue(it, "top"), bottom = A.ownValue(it, "bottom");
+    var etop = top !== undefined ? top : A.inheritedValue(it, "top"), ebottom = bottom !== undefined ? bottom : A.inheritedValue(it, "bottom");
+    var mode = eff === "sticky" ? (ebottom !== undefined && etop === undefined ? "bottom" : "top") : "";
+    return section("sticky", "Épinglage", own === "sticky" ? 1 : 0, function (inner) {
       var h = A.h, ids = A.idsOf([it]);
       var apply = function (next) {
-        if (!next) { if (pos === "sticky") A.setStyles(ids, { position: "", top: "", bottom: "" }, { label: "Épinglage" }); return; }
-        var offset = (next === "top" ? top : bottom) || "0px";
+        if (!next) {
+          // Écran plus petit avec un épinglage hérité : on l'éteint explicitement ; sinon on efface simplement la valeur
+          if (inh === "sticky" && own !== "static") A.setStyles(ids, { position: "static", top: "", bottom: "" }, { label: "Épinglage" });
+          else if (own !== undefined) A.setStyles(ids, { position: "", top: "", bottom: "" }, { label: "Épinglage" });
+          return;
+        }
+        var offset = (next === "top" ? etop : ebottom) || "0px";
         A.setStyles(ids, next === "top" ? { position: "sticky", top: offset, bottom: "" } : { position: "sticky", bottom: offset, top: "" }, { label: "Épinglage" });
       };
       inner.appendChild(A.breakpointSwitch([it]));
       inner.appendChild(A.selectField("Épingler", mode, [["", "Aucun"], ["top", "En haut de l'écran"], ["bottom", "En bas de l'écran"]], apply, { disabled: locked }));
       if (mode) {
-        var cur = mode === "top" ? top : bottom;
+        var cur = mode === "top" ? etop : ebottom;
         inner.appendChild(numRow("Distance du bord", cur === undefined ? undefined : parseInt(cur, 10), 0, 2000, "px", function (v, opts) {
           var px = (v === undefined ? 0 : Math.round(v)) + "px";
           A.setStyles(ids, mode === "top" ? { top: px } : { bottom: px }, { label: "Épinglage", key: opts && opts.key, light: opts && opts.light });
         }, locked, "0", { integer: true, step: 1 }));
-        inner.appendChild(h("p", { class: "pb-hint", text: "L'élément reste visible tant que son conteneur est à l'écran (comportement natif du navigateur). Donnez-lui un « plan » (z-index) dans Position pour qu'il passe au-dessus du reste." }));
+        var z = A.ownValue(it, "zIndex"), zi = A.inheritedValue(it, "zIndex");
+        inner.appendChild(A.numField("Plan (z-index)", { min: -100, max: 9999, step: 1, integer: true, value: z === undefined ? "" : z, placeholder: zi === undefined ? "auto" : zi, base: 10, drag: true, disabled: locked, prop: "sticky-zindex",
+          onCommit: function (raw, u, opts) { A.setStyles(ids, { zIndex: raw === "" ? "" : Number(raw) }, { label: "Plan", key: opts && opts.key, light: opts && opts.light }); } }, z !== undefined, function () { A.setStyles(ids, { zIndex: "" }, { label: "Plan" }); }));
+        stickyDiagnostics(it).forEach(function (msg) { inner.appendChild(h("p", { class: "pb-note is-warn", "data-pb-sticky-warn": "", text: msg })); });
+        inner.appendChild(h("p", { class: "pb-hint", text: "L'élément reste visible tant que son conteneur est à l'écran (comportement natif du navigateur). Donnez-lui un plan (z-index) pour qu'il passe au-dessus du reste. Réglable séparément sur tablette et mobile." }));
       }
     });
   }
@@ -413,12 +442,74 @@
     });
   }
 
+  // ---------- Défilement « de → à » et souris « amplitudes » (moteur de mouvement) ----------
+  // Chaque effet a sa case à cocher : cochée, il reçoit des valeurs de départ et d'arrivée réelles (enregistrées, rendues par kw-effects.js
+  // sur la page publiée et l'aperçu). La plage (début / fin en % du trajet dans la fenêtre), le sens et l'inversion s'appliquent à tous.
+  function scrollFxSection(it, locked) {
+    var h = A.h, m = it.motion || {}, fx = m.scrollFx || {};
+    var keys = A.SPEC.scrollRange;
+    var count = keys.filter(function (r) { return fx[r.key]; }).length;
+    return section("scrollfx", "Défilement : de → à", count, function (inner) {
+      var set = function (fn, opts, label) { setMotion(it, label || "Défilement (de → à)", function (mm) { var n = JSON.parse(JSON.stringify(mm.scrollFx || {})); fn(n); mm.scrollFx = n; }, opts); };
+      inner.appendChild(h("p", { class: "pb-hint", text: "L'élément passe de la valeur de départ à la valeur d'arrivée pendant qu'il traverse la fenêtre. Visible dans l'aperçu et sur la page publiée." }));
+      keys.forEach(function (r) {
+        var cur = fx[r.key], cid = uid();
+        var cb = h("input", { type: "checkbox", id: cid, disabled: locked });
+        cb.checked = Boolean(cur);
+        cb.addEventListener("change", function () { set(function (n) { if (cb.checked) n[r.key] = { from: r.def[0], to: r.def[1] }; else delete n[r.key]; }); });
+        inner.appendChild(h("label", { class: "pb-check", for: cid }, cb, " " + r.label));
+        if (!cur) return;
+        var cfg = function (which, label) {
+          return { min: r.min, max: r.max, step: r.step, precision: r.step < 1 ? 2 : 0, integer: r.step >= 1, staticUnit: r.unit || null, value: cur[which], base: r.def[which === "from" ? 0 : 1], allowEmpty: false, drag: true, disabled: locked, prop: "sfx-" + r.key + "-" + which,
+            onCommit: function (raw, u, opts) { var v = Number(raw); if (!isFinite(v)) return false; set(function (n) { var o = Object.assign({}, n[r.key] || cur); o[which] = v; n[r.key] = o; }, opts); } };
+        };
+        inner.appendChild(h("div", { class: "pb-grid-2" }, A.numField("De", cfg("from"), false), A.numField("À", cfg("to"), false)));
+      });
+      if (count) {
+        inner.appendChild(h("p", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Zone de déclenchement" })));
+        inner.appendChild(h("div", { class: "pb-grid-2" },
+          A.numField("Début (%)", { min: 0, max: 99, step: 1, integer: true, staticUnit: "%", value: fx.start === undefined ? 0 : fx.start, base: 0, allowEmpty: false, drag: true, disabled: locked, prop: "sfx-start", onCommit: function (raw, u, opts) { var v = Number(raw); set(function (n) { if (v === 0) delete n.start; else n.start = v; }, opts); } }, false),
+          A.numField("Fin (%)", { min: 1, max: 100, step: 1, integer: true, staticUnit: "%", value: fx.end === undefined ? 100 : fx.end, base: 100, allowEmpty: false, drag: true, disabled: locked, prop: "sfx-end", onCommit: function (raw, u, opts) { var v = Number(raw); set(function (n) { if (v === 100) delete n.end; else n.end = v; }, opts); } }, false)));
+        if ((fx.start || 0) >= (fx.end || 100)) inner.appendChild(h("p", { class: "pb-hint is-warn", text: "Le début doit être avant la fin : sinon la zone complète est utilisée." }));
+        inner.appendChild(A.selectField("Sens du défilement", fx.dir || "both", A.SPEC.scrollDirs, function (v) { set(function (n) { if (v === "both") delete n.dir; else n.dir = v; }); }, { disabled: locked }));
+        inner.appendChild(A.checkField("Inverser la progression", fx.invert, function (v) { set(function (n) { if (v) n.invert = true; else delete n.invert; }); }, { disabled: locked }));
+        if (fx.rotateX) inner.appendChild(A.numField("Perspective", { min: 200, max: 3000, step: 50, integer: true, staticUnit: "px", value: fx.perspective || 1000, base: 1000, allowEmpty: false, drag: true, disabled: locked, prop: "sfx-perspective", onCommit: function (raw, u, opts) { var v = Number(raw); set(function (n) { if (v === 1000) delete n.perspective; else n.perspective = v; }, opts); } }, false));
+        inner.appendChild(screensRow(it, locked));
+        inner.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked, onclick: function () { set(function (n) { Object.keys(n).forEach(function (k) { delete n[k]; }); }); } }, "Désactiver les effets de défilement"));
+      }
+    });
+  }
+  function mouseFxSection(it, locked) {
+    var h = A.h, m = it.motion || {}, fx = m.mouseFx || {};
+    var keys = A.SPEC.mouseRange;
+    var count = keys.filter(function (r) { return fx[r.key]; }).length;
+    return section("mousefx", "Souris : amplitudes", count, function (inner) {
+      var set = function (fn, opts) { setMotion(it, "Effet de souris (amplitudes)", function (mm) { var n = JSON.parse(JSON.stringify(mm.mouseFx || {})); fn(n); mm.mouseFx = n; }, opts); };
+      inner.appendChild(h("p", { class: "pb-hint", text: "L'amplitude est atteinte quand le curseur est au bord de la fenêtre ; au centre, l'élément est au repos. Uniquement avec une souris (pas sur écran tactile)." }));
+      keys.forEach(function (r) {
+        var cur = fx[r.key], cid = uid();
+        var cb = h("input", { type: "checkbox", id: cid, disabled: locked });
+        cb.checked = Boolean(cur);
+        cb.addEventListener("change", function () { set(function (n) { if (cb.checked) n[r.key] = r.key === "scale" ? 10 : 20; else delete n[r.key]; }); });
+        inner.appendChild(h("label", { class: "pb-check", for: cid }, cb, " " + r.label));
+        if (cur) inner.appendChild(A.numField("Amplitude", { min: r.min, max: r.max, step: r.step, integer: true, staticUnit: r.unit, value: cur, base: 20, allowEmpty: false, drag: true, disabled: locked, prop: "mfx-" + r.key,
+          onCommit: function (raw, u, opts) { var v = Number(raw); if (!isFinite(v)) return false; set(function (n) { if (v === 0) delete n[r.key]; else n[r.key] = v; }, opts); } }, false));
+      });
+      if (count) {
+        if (fx.rotateX || fx.rotateY) inner.appendChild(A.numField("Perspective", { min: 200, max: 3000, step: 50, integer: true, staticUnit: "px", value: fx.perspective || 1000, base: 1000, allowEmpty: false, drag: true, disabled: locked, prop: "mfx-perspective", onCommit: function (raw, u, opts) { var v = Number(raw); set(function (n) { if (v === 1000) delete n.perspective; else n.perspective = v; }, opts); } }, false));
+        inner.appendChild(A.numField("Réactivité", { min: 2, max: 100, step: 1, integer: true, staticUnit: "%", value: fx.speed || 18, base: 18, allowEmpty: false, drag: true, disabled: locked, prop: "mfx-speed", onCommit: function (raw, u, opts) { var v = Number(raw); set(function (n) { if (v === 18) delete n.speed; else n.speed = v; }, opts); } }, false));
+        inner.appendChild(screensRow(it, locked));
+        inner.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked, onclick: function () { set(function (n) { Object.keys(n).forEach(function (k) { delete n[k]; }); }); } }, "Désactiver les effets de souris"));
+      }
+    });
+  }
+
   // Les sections de l'élément, dans l'ordre d'affichage ; vide si l'élément n'a aucune capacité avancée
   function sections(it, locked) {
     if (!A || !it || !A.isNode(it)) return [];
     var caps = capsOf(it), out = [];
-    if (caps.indexOf("scroll") >= 0) out.push(scrollSection(it, locked));
-    if (caps.indexOf("mouse") >= 0) out.push(mouseSection(it, locked));
+    if (caps.indexOf("scroll") >= 0) { out.push(scrollSection(it, locked)); out.push(scrollFxSection(it, locked)); }
+    if (caps.indexOf("mouse") >= 0) { out.push(mouseSection(it, locked)); out.push(mouseFxSection(it, locked)); }
     if (caps.indexOf("sticky") >= 0) out.push(stickySection(it, locked));
     if (caps.indexOf("transform") >= 0) out.push(transformSection(it, locked, caps));
     if (caps.indexOf("mask") >= 0) out.push(maskSection(it, locked));

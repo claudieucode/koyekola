@@ -538,10 +538,10 @@ body.pb-hand,body.pb-hand *{cursor:grab}
 /* Effets au survol */
 .kw-hover-grow, .kw-hover-shrink, .kw-hover-lift, .kw-hover-tilt { transition: transform .2s ease, box-shadow .2s ease; }
 @media (prefers-reduced-motion: reduce) { .kw-hover-grow, .kw-hover-shrink, .kw-hover-lift, .kw-hover-tilt { transition: none; } }
-.kw-hover-grow:hover { transform: scale(1.04); }
-.kw-hover-shrink:hover { transform: scale(.96); }
-.kw-hover-lift:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(15, 23, 42, .16); }
-.kw-hover-tilt:hover { transform: rotate(-1.5deg); }
+.kw-hover-grow:hover { transform: var(--kw-tf,) scale(1.04); }
+.kw-hover-shrink:hover { transform: var(--kw-tf,) scale(.96); }
+.kw-hover-lift:hover { transform: var(--kw-tf,) translateY(-4px); box-shadow: 0 12px 28px rgba(15, 23, 42, .16); }
+.kw-hover-tilt:hover { transform: var(--kw-tf,) rotate(-1.5deg); }
 @keyframes kw-rm-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { [data-kw-anim]:not([data-kw-motion-always]).is-in, [data-kw-anim]:not([data-kw-motion-always]).kw-ix-replay { animation: none; } [data-kw-anim][data-kw-anim-rm="fade"]:not([data-kw-motion-always]).is-in { animation: kw-rm-fade 300ms ease both; } .kw-hover-grow:hover, .kw-hover-shrink:hover, .kw-hover-lift:hover, .kw-hover-tilt:hover { transform: none; } }
 /* Éditeur : rejouer une animation (bouton de l'inspecteur) */

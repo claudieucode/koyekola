@@ -129,3 +129,49 @@ describe("CSS et attributs publiés", () => {
     assert.equal(nodes.motionAttrs({ id: "x" }), "");
   });
 });
+
+describe("défilement « de → à » et souris « amplitudes » : validation et rendu", () => {
+  const fxLib = require("../public/js/kw-effects.js");
+  test("valeurs valides conservées ; effet sans variation, valeur hors bornes ou inconnue : ignorés", () => {
+    const n = node({ scrollFx: { translateY: { from: 0, to: 100 }, translateX: { from: 5, to: 5 }, rotate: { from: -90, to: 90 }, scale: { from: 1, to: 9 }, opacity: { from: 0, to: 1 }, blur: { from: 10, to: 0 }, inconnu: { from: 0, to: 1 }, start: 10, end: 80, dir: "down", invert: true } });
+    assert.deepEqual(n.motion.scrollFx, { translateY: { from: 0, to: 100 }, rotate: { from: -90, to: 90 }, opacity: { from: 0, to: 1 }, blur: { from: 10, to: 0 }, start: 10, end: 80, dir: "down", invert: true });
+    assert.equal(node({ scrollFx: { translateY: { from: 3, to: 3 } } }).motion, undefined, "from = to : aucun effet");
+    assert.equal(node({ scrollFx: { translateY: { from: 0, to: 99999 } } }).motion, undefined);
+    const w = node({ scrollFx: { translateY: { from: 0, to: 10 }, start: 80, end: 20, dir: "sideways", perspective: 99999 } }).motion.scrollFx;
+    assert.deepEqual(w, { translateY: { from: 0, to: 10 } }, "zone inversée, sens et perspective invalides : valeurs par défaut");
+    assert.equal(node({ scrollFx: { rotateX: { from: 45, to: 0 }, perspective: 600 } }).motion.scrollFx.perspective, 600);
+    assert.equal(node({ scrollFx: { translateY: { from: 0, to: 10 }, perspective: 600 } }).motion.scrollFx.perspective, undefined, "perspective seulement avec une rotation 3D");
+  });
+  test("souris : amplitudes bornées, perspective seulement avec une rotation X / Y, réactivité par défaut non écrite", () => {
+    const m = node({ mouseFx: { translateX: 40, translateY: -9999, rotateY: 20, scale: 30, perspective: 800, speed: 18 } }).motion.mouseFx;
+    assert.deepEqual(m, { translateX: 40, rotateY: 20, scale: 30, perspective: 800 });
+    assert.equal(node({ mouseFx: { translateX: 1, speed: 50 } }).motion.mouseFx.speed, 50);
+    assert.equal(node({ mouseFx: {} }).motion, undefined);
+  });
+  test("types sans capacité de défilement ou de souris : ignoré sans erreur", () => {
+    const sp = nodes.normalizeNode({ id: "spac00000001", type: "spacer", props: { size: "32" }, motion: { scrollFx: { translateY: { from: 0, to: 9 } }, mouseFx: { translateX: 3 } } }, "t", H, 1, { n: 0, ids: new Set() });
+    assert.equal(sp.motion, undefined);
+  });
+  test("attributs : data-kw-sfx / data-kw-mfx / écrans coupés", () => {
+    const a = nodes.motionAttrs(node({ scrollFx: { translateY: { from: 0, to: 100 } }, mouseFx: { translateX: 20 }, off: ["mobile"] }));
+    assert.match(a, /data-kw-sfx="\{&quot;translateY&quot;:\{&quot;from&quot;:0,&quot;to&quot;:100\}\}"/);
+    assert.match(a, /data-kw-mfx="\{&quot;translateX&quot;:20\}"/);
+    assert.match(a, /data-kw-fx-off="mobile"/);
+  });
+  test("calculs purs : progression par zone, inversion, valeurs de → à, amplitudes de souris, rotations composées", () => {
+    const vh = 1000, rect = (top) => ({ top, height: 200 });
+    assert.equal(fxLib.fxProgress(rect(1000), vh, {}), 0); assert.equal(fxLib.fxProgress(rect(-200), vh, {}), 1);
+    assert.equal(fxLib.fxProgress(rect(400), vh, {}), 0.5);
+    assert.equal(fxLib.fxProgress(rect(400), vh, { start: 25, end: 75 }), 0.5);
+    assert.equal(fxLib.fxProgress(rect(900), vh, { start: 25, end: 75 }), 0, "avant la zone");
+    assert.equal(fxLib.fxProgress(rect(0), vh, { start: 25, end: 75 }), 1, "après la zone");
+    assert.equal(fxLib.fxProgress(rect(1000), vh, { invert: true }), 1);
+    assert.equal(fxLib.fxProgress({ top: 0, height: 0 }, 0, {}), 0, "fenêtre vide");
+    assert.deepEqual(fxLib.sfxValues({ translateY: { from: 0, to: 100 }, opacity: { from: 0, to: 1 }, scale: { from: 1, to: 2 } }, 0.25), { y: 25, opacity: 0.25, scale: 1.25 });
+    assert.deepEqual(fxLib.mfxValues({ translateX: 40, rotateY: 20, scale: 50 }, 0.5, 0), { x: 20, rotateY: 10, scale: 1.25 });
+    assert.equal(fxLib.composeRotations([[0, 0, 1, 90]]), "0 0 1 90deg");
+    assert.equal(fxLib.composeRotations([[0, 0, 1, 30], [0, 0, 1, 40]]), "0 0 1 70deg", "deux rotations autour du même axe s'additionnent");
+    assert.equal(fxLib.composeRotations([]), "0deg");
+    assert.match(fxLib.composeRotations([[1, 0, 0, 45], [0, 1, 0, 45]]), /^[\d.-]+ [\d.-]+ [\d.-]+ [\d.]+deg$/);
+  });
+});

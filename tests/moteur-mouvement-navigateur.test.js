@@ -179,5 +179,69 @@ describe("effets de mouvement dans l'éditeur réel (navigateur simulé)", { ski
     assert.equal(JSON.stringify(await motionOf(id, "hed000000001")), before, "l'aperçu n'enregistre rien");
   });
 
+  test("défilement de → à : effets cochés avec valeurs de départ et d'arrivée, zone, sens, inversion, perspective ; annuler ; désactiver", async () => {
+    const id = await H.newPage("Mvt — défilement", content());
+    const ed = await H.openEditor(id);
+    ed.selectLayer("hed000000001"); ed.tab("Avancé");
+    const section = () => ed.section("Défilement : de → à");
+    const check = (label) => { const l = [...section().querySelectorAll("label.pb-check")].find((x) => x.textContent.trim() === label); assert.ok(l, label); return l.querySelector("input"); };
+    ed.set(check("Déplacement vertical"), true);
+    await waitMotion(id, "hed000000001", (m) => m.scrollFx && m.scrollFx.translateY && m.scrollFx.translateY.from === 0 && m.scrollFx.translateY.to === 100, "déplacement 0 → 100 px");
+    ed.set(fld(ed, "sfx-translateY-to"), "250"); await waitMotion(id, "hed000000001", (m) => m.scrollFx.translateY.to === 250, "à 250 px");
+    ed.click(ed.insp.querySelector('.pb-prop[data-prop="sfx-translateY-to"] .pb-nstep-btn[data-dir="up"]')); await waitMotion(id, "hed000000001", (m) => m.scrollFx.translateY.to === 251, "▲ : 251");
+    ed.set(check("Opacité"), true); await waitMotion(id, "hed000000001", (m) => m.scrollFx.opacity && m.scrollFx.opacity.to === 1, "opacité 0 → 1");
+    ed.set(check("Échelle"), true); ed.set(check("Rotation 3D (perspective)"), true);
+    await waitMotion(id, "hed000000001", (m) => m.scrollFx.scale && m.scrollFx.rotateX, "combinaison d'effets");
+    ed.set(fld(ed, "sfx-opacity-to"), "2"); assert.match((ed.doc.querySelector("[data-pb-toast]") || {}).textContent, /entre 0 et 1/);
+    ed.set(fld(ed, "sfx-start"), "20"); ed.set(fld(ed, "sfx-end"), "80");
+    await waitMotion(id, "hed000000001", (m) => m.scrollFx.start === 20 && m.scrollFx.end === 80, "zone 20 % → 80 %");
+    ed.set(labelSel(ed, "Sens du défilement"), "down"); await waitMotion(id, "hed000000001", (m) => m.scrollFx.dir === "down", "vers le bas");
+    ed.set([...ed.insp.querySelectorAll("label.pb-check input")].find((c) => /Inverser/.test(c.parentElement.textContent)), true);
+    await waitMotion(id, "hed000000001", (m) => m.scrollFx.invert === true, "inversé");
+    ed.set(fld(ed, "sfx-perspective"), "600"); await waitMotion(id, "hed000000001", (m) => m.scrollFx.perspective === 600, "perspective");
+    ed.undo(); await waitMotion(id, "hed000000001", (m) => m.scrollFx.perspective === undefined, "annuler la perspective");
+    ed.click(ed.button("Désactiver les effets de défilement"));
+    await waitMotion(id, "hed000000001", (m) => m.scrollFx === undefined, "désactivé : plus aucune trace");
+    const html = await H.publish(id);
+    assert.doesNotMatch(html, /data-kw-sfx/);
+  });
+
+  test("souris : amplitudes (déplacement, rotation 3D, échelle), perspective et réactivité enregistrées et supprimables", async () => {
+    const id = await H.newPage("Mvt — souris", content());
+    const ed = await H.openEditor(id);
+    ed.selectLayer("hed000000001"); ed.tab("Avancé");
+    const section = () => ed.section("Souris : amplitudes");
+    const check = (label) => [...section().querySelectorAll("label.pb-check")].find((x) => x.textContent.trim() === label).querySelector("input");
+    ed.set(check("Déplacement horizontal"), true); await waitMotion(id, "hed000000001", (m) => m.mouseFx && m.mouseFx.translateX === 20, "déplacement ±20 px");
+    ed.set(fld(ed, "mfx-translateX"), "45"); await waitMotion(id, "hed000000001", (m) => m.mouseFx.translateX === 45, "±45 px");
+    ed.set(check("Rotation Y"), true); ed.set(check("Échelle"), true);
+    await waitMotion(id, "hed000000001", (m) => m.mouseFx.rotateY === 20 && m.mouseFx.scale === 10, "rotation et échelle");
+    ed.set(fld(ed, "mfx-perspective"), "700"); await waitMotion(id, "hed000000001", (m) => m.mouseFx.perspective === 700, "perspective");
+    ed.set(fld(ed, "mfx-speed"), "40"); await waitMotion(id, "hed000000001", (m) => m.mouseFx.speed === 40, "réactivité");
+    ed.set(fld(ed, "mfx-translateX"), "999"); assert.match((ed.doc.querySelector("[data-pb-toast]") || {}).textContent, /entre -300 et 300/);
+    ed.click(ed.button("Désactiver les effets de souris"));
+    await waitMotion(id, "hed000000001", (m) => m.mouseFx === undefined, "désactivé");
+  });
+
+  test("épinglage par écran : ordinateur épinglé, « Aucun » sur tablette écrit static (coupe l'héritage) ; le plan (z-index) est réglable", async () => {
+    const id = await H.newPage("Mvt — épinglage", content());
+    const ed = await H.openEditor(id);
+    ed.selectLayer("box000000001"); ed.tab("Interactions");
+    const sel = () => labelSel(ed, "Épingler");
+    ed.set(sel(), "top");
+    const styleOf = async (dev) => (((await H.serverNode(id, "box000000001")).styles || {})[dev]) || {};
+    await H.until(async () => (await styleOf("desktop")).position === "sticky", 8000, "épinglé sur ordinateur");
+    ed.set(fld(ed, "sticky-zindex"), "12"); await H.until(async () => (await styleOf("desktop")).zIndex === 12, 8000, "z-index 12");
+    ed.device("Tablette");
+    assert.equal(sel().value, "top", "la tablette hérite de l'épinglage");
+    ed.set(sel(), "");
+    await H.until(async () => (await styleOf("tablet")).position === "static", 8000, "tablette : position static écrite");
+    assert.equal((await styleOf("desktop")).position, "sticky", "l'ordinateur reste épinglé");
+    ed.device("Mobile");
+    assert.equal(sel().value, "", "mobile hérite de la tablette : libre");
+    ed.set(sel(), "bottom");
+    await H.until(async () => (await styleOf("mobile")).position === "sticky" && (await styleOf("mobile")).bottom === "0px", 8000, "mobile : épinglé en bas");
+  });
+
   test("aucune erreur de script ni de console pendant tous ces parcours", () => { assert.deepEqual(H.errors, []); });
 });

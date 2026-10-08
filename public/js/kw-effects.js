@@ -41,6 +41,51 @@
     var sign = mouse.invert ? 1 : -1; // par défaut l'élément s'éloigne du curseur (profondeur)
     return { x: round(sign * nx * s * 0.5, 1), y: round(sign * ny * s * 0.5, 1) };
   }
+  // ---- Défilement « de → à » (scrollFx) : une valeur de départ, une valeur d'arrivée, sur une plage de la fenêtre ----
+  // t brut : 0 quand le haut de l'élément touche le bas de la fenêtre, 1 quand son bas quitte le haut ; la plage start–end (en %) le remet à 0–1
+  function fxProgress(rect, vh, fx) {
+    var span = vh + rect.height;
+    if (span <= 0) return 0;
+    var raw = clamp((vh - rect.top) / span, 0, 1) * 100;
+    var s = fx.start == null ? 0 : fx.start, e = fx.end == null ? 100 : fx.end;
+    if (e <= s) e = s + 1;
+    var t = clamp((raw - s) / (e - s), 0, 1);
+    return fx.invert ? 1 - t : t;
+  }
+  var lerp = function (a, b, t) { return a + (b - a) * t; };
+  // Valeurs d'un jeu « de → à » pour une progression t ∈ [0, 1] (seuls les effets présents sont calculés)
+  function sfxValues(fx, t) {
+    var v = {};
+    if (fx.translateX) v.x = round(lerp(fx.translateX.from, fx.translateX.to, t), 2);
+    if (fx.translateY) v.y = round(lerp(fx.translateY.from, fx.translateY.to, t), 2);
+    if (fx.rotate) v.rotate = round(lerp(fx.rotate.from, fx.rotate.to, t), 2);
+    if (fx.rotateX) v.rotateX = round(lerp(fx.rotateX.from, fx.rotateX.to, t), 2);
+    if (fx.scale) v.scale = round(lerp(fx.scale.from, fx.scale.to, t), 4);
+    if (fx.opacity) v.opacity = round(lerp(fx.opacity.from, fx.opacity.to, t), 3);
+    if (fx.blur) v.blur = round(lerp(fx.blur.from, fx.blur.to, t), 2);
+    return v;
+  }
+  // Effet de souris « amplitudes » (mouseFx) ; nx, ny ∈ [-1, 1]
+  function mfxValues(m, nx, ny) {
+    var v = {}, mag = Math.min(1, Math.hypot(nx, ny));
+    if (m.translateX) v.x = round(nx * m.translateX, 2);
+    if (m.translateY) v.y = round(ny * m.translateY, 2);
+    if (m.rotateX) v.rotateX = round(-ny * m.rotateX, 2);
+    if (m.rotateY) v.rotateY = round(nx * m.rotateY, 2);
+    if (m.rotateZ) v.rotateZ = round(nx * m.rotateZ, 2);
+    if (m.scale) v.scale = round(1 + (m.scale / 100) * mag, 4);
+    return v;
+  }
+  // Rotations composées : plusieurs rotations (axe + angle) deviennent UNE seule propriété CSS « rotate » (quaternions), sans qu'aucune n'en écrase une autre
+  function qAxis(ax, ay, az, deg) { var len = Math.hypot(ax, ay, az) || 1, h = deg * Math.PI / 360, s = Math.sin(h) / len; return [Math.cos(h), ax * s, ay * s, az * s]; }
+  function qMul(a, b) { return [a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3], a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2], a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1], a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0]]; }
+  function composeRotations(list) {
+    var q = [1, 0, 0, 0];
+    list.forEach(function (r) { if (r[3]) q = qMul(q, qAxis(r[0], r[1], r[2], r[3])); });
+    var w = clamp(q[0], -1, 1), ang = 2 * Math.acos(w) * 180 / Math.PI, sn = Math.sqrt(1 - w * w);
+    if (sn < 1e-6 || ang < 1e-3) return "0deg";
+    return round(q[1] / sn, 4) + " " + round(q[2] / sn, 4) + " " + round(q[3] / sn, 4) + " " + round(ang, 2) + "deg";
+  }
   var parse = function (el, name) { try { var v = JSON.parse(el.getAttribute(name)); return v && typeof v === "object" ? v : null; } catch (e) { return null; } };
 
   function create(win) {
@@ -48,11 +93,11 @@
     var mm = function (q) { return win.matchMedia ? win.matchMedia(q) : { matches: false, addEventListener: function () {}, removeEventListener: function () {} }; };
     var reduceQ = mm("(prefers-reduced-motion: reduce)"), hoverQ = mm("(hover: hover) and (pointer: fine)");
     var records = [];
-    var nodes = doc.querySelectorAll("[data-kw-scroll], [data-kw-mouse]");
+    var nodes = doc.querySelectorAll("[data-kw-scroll], [data-kw-mouse], [data-kw-sfx], [data-kw-mfx]");
     for (var i = 0; i < nodes.length; i++) {
       var el = nodes[i];
       records.push({
-        el: el, scroll: parse(el, "data-kw-scroll"), mouse: parse(el, "data-kw-mouse"),
+        el: el, scroll: parse(el, "data-kw-scroll"), mouse: parse(el, "data-kw-mouse"), sfx: parse(el, "data-kw-sfx"), mfx: parse(el, "data-kw-mfx"), t: 0, held: false,
         off: (el.getAttribute("data-kw-fx-off") || "").split(/\s+/).filter(Boolean), always: el.hasAttribute("data-kw-motion-always"),
         visible: !win.IntersectionObserver, p: 0, cur: { x: 0, y: 0 }, base: { filter: el.style.filter, perspective: null }, applied: false,
       });
@@ -71,6 +116,7 @@
     function render(r) {
       // Un élément qui attend son animation d'entrée ne bouge pas encore (sinon il apparaîtrait avant elle)
       if (r.el.hasAttribute("data-kw-anim") && !r.el.classList.contains("is-in")) return;
+      if (r.sfx || r.mfx) { renderFx(r); return; }
       var st = r.el.style, tx = 0, ty = 0, sv = null, mv = null, any = false;
       if (r.scroll && active(r, "scroll")) { sv = scrollValues(r.scroll, r.p); tx += sv.x; ty += sv.y; any = true; }
       if (r.mouse && active(r, "mouse")) { mv = mouseValues(r.mouse, r.cur.x, r.cur.y); if (!mv.tilt) { tx += mv.x; ty += mv.y; } any = true; }
@@ -87,18 +133,45 @@
       st.filter = sv && sv.blur ? (r.base.filter && r.base.filter !== "none" ? r.base.filter + " " : "") + "blur(" + sv.blur + "px)" : r.base.filter;
     }
 
+    // Composition complète (effets « de → à », amplitudes de souris, et les réglages d'origine) : translate = somme, scale = produit,
+    // rotations = quaternions, opacité = produit, flou = somme ; chaque propriété CSS n'est écrite qu'UNE fois par ce calcul central
+    function renderFx(r) {
+      var st = r.el.style, tx = 0, ty = 0, sc = 1, op = null, blur = 0, rots = [], any = false, tilt3d = 0;
+      var live = active(r, "scroll"), liveM = active(r, "mouse");
+      if (r.scroll && live) { var sv = scrollValues(r.scroll, r.p); tx += sv.x; ty += sv.y; if (sv.scale !== undefined) sc *= sv.scale; if (sv.rotate !== undefined) rots.push([0, 0, 1, sv.rotate]); if (sv.opacity !== undefined) op = (op === null ? 1 : op) * sv.opacity; if (sv.blur) blur += sv.blur; any = true; }
+      if (r.sfx && live) { var fv = sfxValues(r.sfx, r.t); if (fv.x) tx += fv.x; if (fv.y) ty += fv.y; if (fv.scale !== undefined) sc *= fv.scale; if (fv.rotate !== undefined) rots.push([0, 0, 1, fv.rotate]); if (fv.rotateX !== undefined) { rots.push([1, 0, 0, fv.rotateX]); tilt3d = Math.max(tilt3d, r.sfx.perspective || 1000); } if (fv.opacity !== undefined) op = (op === null ? 1 : op) * fv.opacity; if (fv.blur) blur += fv.blur; any = true; }
+      if (r.mouse && liveM) { var mv = mouseValues(r.mouse, r.cur.x, r.cur.y); if (mv.tilt) { rots.push([mv.tilt.ax, mv.tilt.ay, 0, mv.tilt.angle]); tilt3d = Math.max(tilt3d, 900); } else { tx += mv.x; ty += mv.y; } any = true; }
+      if (r.mfx && liveM) { var gv = mfxValues(r.mfx, r.cur.x, r.cur.y); if (gv.x) tx += gv.x; if (gv.y) ty += gv.y; if (gv.scale !== undefined) sc *= gv.scale; if (gv.rotateX !== undefined) { rots.push([1, 0, 0, gv.rotateX]); tilt3d = Math.max(tilt3d, r.mfx.perspective || 1000); } if (gv.rotateY !== undefined) { rots.push([0, 1, 0, gv.rotateY]); tilt3d = Math.max(tilt3d, r.mfx.perspective || 1000); } if (gv.rotateZ !== undefined) rots.push([0, 0, 1, gv.rotateZ]); any = true; }
+      if (!any) { clear(r); return; }
+      r.applied = true;
+      if (tx || ty) st.translate = round(tx, 2) + "px " + round(ty, 2) + "px"; else st.removeProperty("translate");
+      if (sc !== 1) st.scale = String(round(sc, 4)); else st.removeProperty("scale");
+      if (rots.some(function (q) { return q[3]; })) st.rotate = composeRotations(rots); else st.removeProperty("rotate");
+      if (tilt3d && r.el.parentElement) { if (r.base.perspective === null) { r.base.perspective = r.el.parentElement.style.perspective; if (!r.base.perspective) r.el.parentElement.style.perspective = tilt3d + "px"; } }
+      if (op !== null) st.opacity = String(round(op, 3)); else st.removeProperty("opacity");
+      st.filter = blur ? (r.base.filter && r.base.filter !== "none" ? r.base.filter + " " : "") + "blur(" + round(blur, 2) + "px)" : r.base.filter;
+    }
+
     // --- défilement : un seul écouteur, un seul rAF par image ---
-    var scrollQueued = false;
+    var scrollQueued = false, lastY = win.pageYOffset || 0;
     function updateScroll() {
       scrollQueued = false;
       if (destroyed) return;
       var vh = win.innerHeight || doc.documentElement.clientHeight || 0;
+      var sy = win.pageYOffset || 0, delta = sy - lastY;
       for (var k = 0; k < records.length; k++) {
         var r = records[k];
-        if (!r.scroll || !r.visible) continue;
-        r.p = progressOf(r.el.getBoundingClientRect(), vh);
+        if ((!r.scroll && !r.sfx) || !r.visible) continue;
+        var rect = r.el.getBoundingClientRect();
+        if (r.scroll) r.p = progressOf(rect, vh);
+        if (r.sfx) {
+          // Sens du défilement : « vers le bas » ou « vers le haut » seulement — dans l'autre sens, la valeur reste où elle est
+          var dir = r.sfx.dir || "both", blocked = r.held && delta && ((dir === "down" && delta < 0) || (dir === "up" && delta > 0));
+          if (!blocked) { r.t = fxProgress(rect, vh, r.sfx); r.held = true; }
+        }
         render(r);
       }
+      lastY = sy;
     }
     var queueScroll = function () { if (!scrollQueued && !destroyed) { scrollQueued = true; win.requestAnimationFrame(updateScroll); } };
 
@@ -109,10 +182,11 @@
       var moving = false;
       for (var k = 0; k < records.length; k++) {
         var r = records[k];
-        if (!r.mouse || !r.visible) continue;
+        if ((!r.mouse && !r.mfx) || !r.visible) continue;
         var live = active(r, "mouse");
         var gx = live ? target.x : 0, gy = live ? target.y : 0;
-        r.cur.x += (gx - r.cur.x) * 0.18; r.cur.y += (gy - r.cur.y) * 0.18;
+        var ease = r.mfx && r.mfx.speed ? clamp(r.mfx.speed / 100, 0.02, 1) : 0.18;
+        r.cur.x += (gx - r.cur.x) * ease; r.cur.y += (gy - r.cur.y) * ease;
         if (Math.abs(gx - r.cur.x) < 0.002 && Math.abs(gy - r.cur.y) < 0.002) { r.cur.x = gx; r.cur.y = gy; } else moving = true;
         render(r);
       }
@@ -127,7 +201,7 @@
     function onLeave() { target.x = 0; target.y = 0; wake(); }
     function onResize() { queueScroll(); wake(); }
 
-    var hasScroll = records.some(function (r) { return r.scroll; }), hasMouse = records.some(function (r) { return r.mouse; });
+    var hasScroll = records.some(function (r) { return r.scroll || r.sfx; }), hasMouse = records.some(function (r) { return r.mouse || r.mfx; });
     if (win.IntersectionObserver && records.length) {
       io = new win.IntersectionObserver(function (entries) {
         entries.forEach(function (en) { var r = records.find(function (x) { return x.el === en.target; }); if (r) { r.visible = en.isIntersecting; if (en.isIntersecting) { queueScroll(); wake(); } } });
@@ -163,12 +237,12 @@
   function autostart(win) {
     var start = function () {
       if (win.document.body && win.document.body.hasAttribute("data-kw-builder")) return;
-      if (!win.document.querySelector("[data-kw-scroll], [data-kw-mouse]")) return;
+      if (!win.document.querySelector("[data-kw-scroll], [data-kw-mouse], [data-kw-sfx], [data-kw-mfx]")) return;
       win.kwEffectsInstance = create(win);
       win.addEventListener("pagehide", function () { if (win.kwEffectsInstance) win.kwEffectsInstance.destroy(); });
     };
     if (win.document.readyState === "loading") win.document.addEventListener("DOMContentLoaded", start); else start();
   }
 
-  return { breakpointOf: breakpointOf, progressOf: progressOf, scrollValues: scrollValues, mouseValues: mouseValues, create: create, autostart: autostart };
+  return { breakpointOf: breakpointOf, progressOf: progressOf, scrollValues: scrollValues, mouseValues: mouseValues, fxProgress: fxProgress, sfxValues: sfxValues, mfxValues: mfxValues, composeRotations: composeRotations, create: create, autostart: autostart };
 });

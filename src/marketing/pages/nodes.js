@@ -274,7 +274,7 @@ function declarations(set) {
     if (t.scale) parts.push(`scale(${t.scale})`);
     if (t.skewX) parts.push(`skewX(${t.skewX}deg)`);
     if (t.skewY) parts.push(`skewY(${t.skewY}deg)`);
-    d.push(`transform:${parts.join(" ")}`);
+    d.push(`transform:${parts.join(" ")}`, `--kw-tf:${parts.join(" ")}`); // --kw-tf : lue par les animations d'entrée pour composer leur mouvement avec cette transformation
   }
   return d.join(";");
 }
@@ -975,7 +975,7 @@ function editorSpec() {
   };
   return {
     types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], keywords: WIDGETS[type][1], requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text" } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
-    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
+    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
     socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
@@ -1223,6 +1223,27 @@ const SCROLL_FX = {
   scale: { label: "Échelle", min: -50, max: 50, unit: "%" }, rotate: { label: "Rotation", min: -180, max: 180, unit: "°" },
 };
 const MOUSE_MODES = { track: "Suit le curseur", tilt: "Inclinaison 3D" };
+// Défilement « de → à » (scrollFx) : chaque effet va d'une valeur de départ à une valeur d'arrivée pendant que l'élément traverse la fenêtre
+// (plage start–end en %, sens, inversion). Bornes : valeurs réelles uniquement, jamais de CSS libre.
+const SCROLL_RANGE = {
+  translateY: { label: "Déplacement vertical", min: -2000, max: 2000, unit: "px", step: 1, def: [0, 100] },
+  translateX: { label: "Déplacement horizontal", min: -2000, max: 2000, unit: "px", step: 1, def: [0, 100] },
+  rotate: { label: "Rotation", min: -360, max: 360, unit: "°", step: 1, def: [0, 45] },
+  rotateX: { label: "Rotation 3D (perspective)", min: -180, max: 180, unit: "°", step: 1, def: [45, 0] },
+  scale: { label: "Échelle", min: 0.1, max: 3, unit: "×", step: 0.01, def: [1, 1.2] },
+  opacity: { label: "Opacité", min: 0, max: 1, unit: "", step: 0.01, def: [0, 1] },
+  blur: { label: "Flou", min: 0, max: 50, unit: "px", step: 0.5, def: [10, 0] },
+};
+const SCROLL_DIRS = { both: "Dans les deux sens", down: "Vers le bas seulement", up: "Vers le haut seulement" };
+// Souris « amplitudes » (mouseFx) : déplacement, rotation 3D, échelle et lissage ; amplitude atteinte quand le curseur est au bord de la fenêtre
+const MOUSE_RANGE = {
+  translateX: { label: "Déplacement horizontal", min: -300, max: 300, unit: "px", step: 1 },
+  translateY: { label: "Déplacement vertical", min: -300, max: 300, unit: "px", step: 1 },
+  rotateX: { label: "Rotation X", min: -60, max: 60, unit: "°", step: 1 },
+  rotateY: { label: "Rotation Y", min: -60, max: 60, unit: "°", step: 1 },
+  rotateZ: { label: "Rotation Z", min: -60, max: 60, unit: "°", step: 1 },
+  scale: { label: "Échelle", min: -50, max: 100, unit: "%", step: 1 },
+};
 function normalizeMotion(raw, type) {
   if (!raw || typeof raw !== "object") return undefined;
   const out = {};
@@ -1238,8 +1259,37 @@ function normalizeMotion(raw, type) {
   }
   // L'inclinaison à la souris et la rotation au défilement utilisent la même propriété CSS « rotate » : l'inclinaison l'emporte
   if (out.mouse && out.mouse.mode === "tilt" && out.scroll && out.scroll.rotate) { delete out.scroll.rotate; if (!Object.keys(out.scroll).length) delete out.scroll; }
+  if (capsOf(type).includes("scroll") && raw.scrollFx && typeof raw.scrollFx === "object") {
+    const sfx = {};
+    for (const [k, r] of Object.entries(SCROLL_RANGE)) {
+      const v = raw.scrollFx[k];
+      if (!v || typeof v !== "object") continue;
+      const from = numberIn(r.min, r.max)(v.from), to = numberIn(r.min, r.max)(v.to);
+      if (from !== null && to !== null && from !== to) sfx[k] = { from, to };
+    }
+    if (Object.keys(sfx).length) {
+      const start = numberIn(0, 99, { integer: true })(raw.scrollFx.start), end = numberIn(1, 100, { integer: true })(raw.scrollFx.end);
+      if (start !== null && end !== null && start < end) { if (start !== 0) sfx.start = start; if (end !== 100) sfx.end = end; }
+      if (Object.hasOwn(SCROLL_DIRS, raw.scrollFx.dir) && raw.scrollFx.dir !== "both") sfx.dir = raw.scrollFx.dir;
+      if (raw.scrollFx.invert === true) sfx.invert = true;
+      const pers = numberIn(200, 3000, { integer: true })(raw.scrollFx.perspective);
+      if (sfx.rotateX && pers !== null && pers !== 1000) sfx.perspective = pers;
+      out.scrollFx = sfx;
+    }
+  }
+  if (capsOf(type).includes("mouse") && raw.mouseFx && typeof raw.mouseFx === "object") {
+    const mfx = {};
+    for (const [k, r] of Object.entries(MOUSE_RANGE)) { const n = numberIn(r.min, r.max)(raw.mouseFx[k]); if (n) mfx[k] = n; }
+    if (Object.keys(mfx).length) {
+      const pers = numberIn(200, 3000, { integer: true })(raw.mouseFx.perspective);
+      if ((mfx.rotateX || mfx.rotateY) && pers !== null && pers !== 1000) mfx.perspective = pers;
+      const speed = numberIn(2, 100, { integer: true })(raw.mouseFx.speed);
+      if (speed !== null && speed !== 18) mfx.speed = speed;
+      out.mouseFx = mfx;
+    }
+  }
   // Écrans où les effets de défilement et de souris sont COUPÉS (indépendant par écran)
-  if ((out.scroll || out.mouse) && Array.isArray(raw.off)) {
+  if ((out.scroll || out.mouse || out.scrollFx || out.mouseFx) && Array.isArray(raw.off)) {
     const off = BREAKPOINTS.map((b) => b.key).filter((k) => raw.off.includes(k));
     if (off.length && off.length < BREAKPOINTS.length) out.off = off;
   }
@@ -1263,7 +1313,7 @@ function normalizeMotion(raw, type) {
     }
   }
   // Mouvement réduit : l'animation s'adapte (ou disparaît) quand le visiteur le demande ; « toujours animer » doit être choisi explicitement
-  if (raw.alwaysMotion === true && (out.entrance || out.scroll || out.mouse)) out.alwaysMotion = true;
+  if (raw.alwaysMotion === true && (out.entrance || out.scroll || out.mouse || out.scrollFx || out.mouseFx)) out.alwaysMotion = true;
   if (Object.hasOwn(HOVERS, raw.hover)) out.hover = raw.hover;
   return Object.keys(out).length ? out : undefined;
 }
@@ -1408,7 +1458,9 @@ function motionAttrs(n) {
   }
   if (m.scroll) a += ` data-kw-scroll="${esc(JSON.stringify(m.scroll))}"`;
   if (m.mouse) a += ` data-kw-mouse="${esc(JSON.stringify(m.mouse))}"`;
-  if (m.off && (m.scroll || m.mouse)) a += ` data-kw-fx-off="${m.off.join(" ")}"`;
+  if (m.scrollFx) a += ` data-kw-sfx="${esc(JSON.stringify(m.scrollFx))}"`;
+  if (m.mouseFx) a += ` data-kw-mfx="${esc(JSON.stringify(m.mouseFx))}"`;
+  if (m.off && (m.scroll || m.mouse || m.scrollFx || m.mouseFx)) a += ` data-kw-fx-off="${m.off.join(" ")}"`;
   if (m.alwaysMotion) a += " data-kw-motion-always";
   return a;
 }
@@ -1501,5 +1553,5 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
 
 module.exports = {
   NODE_TYPES, CATEGORIES, WIDGET_GROUPS, WIDGETS, CUSTOM_WIDGETS, registerWidget, lockedWidgetChanges, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
-  capsOf, MOTION, motionAttrs, MASK_SHAPES, SCROLL_FX, MOUSE_MODES, AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
+  capsOf, MOTION, motionAttrs, MASK_SHAPES, SCROLL_FX, SCROLL_RANGE, MOUSE_RANGE, MOUSE_MODES, AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };

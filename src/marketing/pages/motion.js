@@ -10,8 +10,10 @@
 // Mouvements sur « transform » seulement (et opacity) : propriétés composées par le navigateur, sans recalcul de mise en page.
 "use strict";
 
-const T = (v) => `transform:${v}`;
-const none = "transform:none";
+// Composition : chaque image-clé PART de la transformation propre de l'élément (variable --kw-tf, écrite par le serveur à côté de son
+// « transform ») puis y ajoute son mouvement ; à la fin, l'élément retrouve exactement sa transformation. Rien n'est écrasé.
+const T = (v) => `transform:var(--kw-tf,) ${v}`;
+const none = "transform:var(--kw-tf,none)";
 const slide = (x, y) => `translate3d(${x},${y},0)`;
 // [id, libellé, catégorie, type, images-clés, réduit, durée conseillée (ms), courbe conseillée]
 const DEFS = [

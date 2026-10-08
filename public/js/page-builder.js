@@ -5721,8 +5721,8 @@
     selection: function () { return selection.slice(); }, toast: toast, canWrite: canWrite, links: boot.links, addElement: function (type) { addElement(type); }, subscribe: function (f) { navListeners.push(f); }, open: function () {} };
   if (window.pbEffects) window.pbEffects.attach({
     h: h, store: store, toast: toast, SPEC: SPEC, BPS: BPS, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, idsOf: idsOf,
-    accGroup: accGroup, ownValue: ownValue, setStyle: setStyle, setStyles: setStyles, parseLength: parseLength, numField: numField, numericControl: numericControl, selectField: selectField, checkField: checkField,
-    openMedia: openMedia, canvasEl: canvasEl, breakpointSwitch: breakpointSwitch, getDevice: function () { return device; }, getState: function () { return styleState; },
+    accGroup: accGroup, ownValue: ownValue, inheritedValue: inheritedValue, canvasEl: canvasEl, setStyle: setStyle, setStyles: setStyles, parseLength: parseLength, numField: numField, numericControl: numericControl, selectField: selectField, checkField: checkField,
+    openMedia: openMedia, breakpointSwitch: breakpointSwitch, getDevice: function () { return device; }, getState: function () { return styleState; },
     setState: function (st) { styleState = st; renderInspector(); renderContext(); }, hasStates: function (it) { return Boolean(inspectorFor(it).states); },
   });
   // Lecture de l'état pour les tests de bout en bout (aucune écriture possible par ce biais)
