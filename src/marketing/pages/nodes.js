@@ -311,7 +311,7 @@ const boxProps = (p, at, h) => {
   return { ...boxTag(p), ...(link ? { link, ...(p.newTab === true && link.startsWith("https://") ? { newTab: true } : {}) } : {}) };
 };
 // Éléments qui sont eux-mêmes un lien, un bouton ou un champ (ou qui peuvent en contenir) : interdits dans un conteneur cliquable
-const INTERACTIVE_INSIDE_LINK = new Set(["button", "link", "menu", "search", "account", "toggle", "tabs", "accordion", "modal", "carousel", "tooltip", "hotspot", "html", "embed", "social", "breadcrumb", "course", "courselist", "posts", "pricing", "iconlist", "gallery", "table"]);
+const INTERACTIVE_INSIDE_LINK = new Set(["button", "link", "menu", "search", "account", "toggle", "tabs", "accordion", "modal", "carousel", "tooltip", "hotspot", "html", "embed", "social", "breadcrumb", "course", "courselist", "posts", "pricing", "iconlist", "gallery", "table", "postcontent"]);
 const NODE_TYPES = {
   // Largeur du contenu : encadrée (1100 px centrés, par défaut) ou pleine largeur
   container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : {}) }) },
@@ -620,6 +620,8 @@ const NODE_TYPES = {
   // Logo, titre du site, copyright : contenu lu à l'affichage (logo et nom des réglages SEO, nom du site de la page,
   // année en cours) ; seuls les réglages d'affichage sont enregistrés
   sitelogo: { label: "Logo du site", category: "dynamic", props: (p) => ({ height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false }) },
+  // Corps de l'article du blog affiché par un modèle « Article du blog » (HTML déjà produit et nettoyé par le blog)
+  postcontent: { label: "Contenu de l'article", category: "dynamic", props: () => ({}) },
   sitetitle: { label: "Titre du site", category: "dynamic", props: (p) => ({ tag: oneOf("p", "span", "h1", "h2", "h3")(p.tag) || "p", link: p.link !== false }) },
   copyright: { label: "Copyright", category: "dynamic", props: (p) => ({ owner: line(p.owner, 80), text: line(p.text, 160) }) },
   // Bouton d'achat : ajoute la formation au VRAI panier de KOLAKISA (POST /panier/ajouter/:id), ou mène directement à la commande.
@@ -749,6 +751,7 @@ const WIDGETS = {
   readingprogress: ["advanced", "barre de lecture progression defilement scroll article"],
   sitelogo: ["site", "logo du site marque image accueil en-tete"],
   sitetitle: ["site", "titre du site nom marque accueil en-tete"],
+  postcontent: ["site", "contenu article texte principal corps blog modele theme single post"],
   copyright: ["site", "copyright droits reserves annee pied de page mentions"],
   link: ["basic", "lien url"],
   list: ["basic", "liste puces numerotee"],
@@ -908,6 +911,7 @@ const PALETTE = {
   readingprogress: { icon: "activity", blank: () => ({ props: { position: "top", thickness: 4 } }) },
   sitelogo: { icon: "image", blank: () => ({ props: { height: 48, link: true } }) },
   sitetitle: { icon: "type", blank: () => ({ props: { tag: "p", link: true } }) },
+  postcontent: { icon: "fileText", blank: () => ({ props: {} }) },
   copyright: { icon: "fileText", blank: () => ({ props: { owner: "", text: "Tous droits réservés." } }) },
   badge: { icon: "tag", blank: () => ({ props: { text: "Nouveau", tone: "primary" } }) },
   timeline: { icon: "history", blank: () => ({ props: { items: [{ date: "Étape 1", title: "Inscription", text: "Ce qui se passe à cette étape." }, { date: "Étape 2", title: "Premier module", text: "Ce qui se passe ensuite." }] } }) },

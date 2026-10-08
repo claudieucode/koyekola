@@ -224,6 +224,7 @@ function nodeView(ctx, nodes, visitor, page, scope) {
   return (nodes || []).map((n) => {
     // Étiquettes dynamiques {{post.title}}… résolues à l'affichage ; adresses et images revalidées après résolution
     if (pageNodes.dynamic.nodeIsDynamic(n)) n = { ...n, props: pageNodes.dynamic.resolveProps(n.props, scope, require("../pages/sections")) };
+    if (n.type === "postcontent") return { ...n, props: { ...n.props, html: scope.post && scope.post.contentHtml ? scope.post.contentHtml : "" } };
     // Boucle : la grille répète ses enfants (le modèle) pour chaque résultat ; chaque copie reçoit son propre contexte
     if (n.type === "grid" && n.props && n.props.loop && n.children) {
       const loop = n.props.loop, found = loopQuery(ctx, loop, n.id, visitor);

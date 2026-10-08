@@ -60,6 +60,27 @@ module.exports = () => {
     });
   });
 
+  // ---------- Modèles de thème : une page du Page Builder devient le modèle d'une famille de pages du site ----------
+  const themeTemplates = require("../pages/themeTemplates");
+  router.get("/site-web/modeles-de-theme", need("forms.read"), (req, res) => {
+    const ctx = req.mk.ctx;
+    res.render("marketing/theme-templates", {
+      title: "Modèles de thème", active: "sitedash", types: themeTemplates.TYPES, templates: themeTemplates.list(ctx), canWrite: req.mk.can("forms.write"),
+      pageChoices: pages.listPages(ctx, {}).filter((p) => p.kind !== "step" && !p.archived_at), audiences: require("../pages/nodes").AUDIENCES,
+      categories: (() => { try { return require("../../services/blog").categories().map((c) => c.name); } catch { return []; } })(),
+    });
+  });
+  router.post("/site-web/modeles-de-theme", need("forms.write"), (req, res, next) => {
+    attempt(req, res, next, "/marketing/site-web/modeles-de-theme", () => {
+      const who = String(req.body.audience || "");
+      themeTemplates.add(req.mk.ctx, { type: req.body.type, pageId: intOrNull(req.body.page_id), category: req.body.category, audience: who ? { who, value: req.body.audience_value } : null });
+      return "Modèle enregistré. Il s'applique dès que sa page est en ligne ; sans modèle, le site garde son affichage d'origine.";
+    });
+  });
+  router.post("/site-web/modeles-de-theme/:tid([a-f0-9]{8})/supprimer", need("forms.write"), (req, res, next) => {
+    attempt(req, res, next, "/marketing/site-web/modeles-de-theme", () => { themeTemplates.remove(req.mk.ctx, req.params.tid); return "Modèle retiré : le site reprend son affichage d'origine pour ces pages."; });
+  });
+
   const load = (req, res) => {
     const site = pages.getSite(req.mk.ctx, intOrNull(req.params.id));
     if (!site) res.status(404).render("error", { message: "Site introuvable." });

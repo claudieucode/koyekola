@@ -40,6 +40,8 @@
 
       <%# ---------- Centre : l'article ---------- %>
       <article class="article-main" data-article<% if (typeof lang !== "undefined" && lang) { %> lang="<%= lang %>"<% } %>>
+        <%# Modèle de thème (Page Builder) : remplace l'en-tête, l'image à la une, le sommaire mobile et le texte ; sinon affichage d'origine %>
+        <% if (typeof themeTemplate !== "undefined" && themeTemplate) { %><%- themeTemplate %><% } else { %>
         <header class="article-header">
           <% if (post.category) { %><a class="article-category" href="/blog/categorie/<%= categorySlug %>"><%= post.category %></a><% } %>
           <h1 class="post-title"><%= post.title %></h1>
@@ -69,6 +71,7 @@
         <% } %>
 
         <div class="markdown article-content"><%- article.html %></div>
+        <% } %>
 
         <% if (tags.length) { %>
           <ul class="article-tags" aria-label="Étiquettes">

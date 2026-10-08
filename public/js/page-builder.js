@@ -1602,6 +1602,9 @@
         box.appendChild(checkField("Lien vers l'accueil du site", p.link !== false, function (v) { setProp(it.id, "link", v); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "Le logo vient des réglages SEO (Organisation › Logo) ; sans logo, le nom du site s'affiche. Accueil : la page d'accueil du site si elle est en ligne, sinon l'accueil de KOLAKISA." }));
         break;
+      case "postcontent":
+        box.appendChild(h("p", { class: "pb-hint", text: "Affiche le texte de l'article du blog. À placer dans une page choisie comme modèle « Article du blog » (Site Web › Modèles de thème). Dans l'éditeur, le dernier article publié sert d'exemple." }));
+        break;
       case "sitetitle":
         box.appendChild(selectField("Balise", p.tag || "p", [["p", "Paragraphe"], ["span", "Texte en ligne"], ["h1", "Titre 1"], ["h2", "Titre 2"], ["h3", "Titre 3"]], function (v) { setProp(it.id, "tag", v); }, { disabled: disabled }));
         box.appendChild(checkField("Lien vers l'accueil du site", p.link !== false, function (v) { setProp(it.id, "link", v); }, { disabled: disabled }));
@@ -2040,6 +2043,7 @@
     animatedheading: { kind: "Titre animé", groups: TEXTUAL, order: TEXT_ORDER },
     sitelogo: { kind: "Logo du site", groups: { layout: ["alignSelf"], spacing: true, effects: ["opacity"] }, order: ["spacing", "layout", "effects"] },
     sitetitle: { kind: "Titre du site", groups: TEXTUAL, order: TEXT_ORDER },
+    postcontent: { kind: "Contenu de l'article", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["size", "border", "effects", "spacing", "layout"] },
     copyright: { kind: "Copyright", groups: TEXTUAL, order: TEXT_ORDER },
     flipbox: { kind: "Boîte retournable", groups: { layout: ["alignSelf"], typography: null, size: SIZE_W, spacing: true, border: null, effects: ["boxShadow", "opacity"] }, order: ["size", "typography", "spacing", "border", "effects", "layout"] },
     pricelist: { kind: "Liste de prix", groups: TEXTUAL, order: TEXT_ORDER },
@@ -4331,6 +4335,7 @@
       case "imagebox": case "iconbox": return p.title;
       case "sitelogo": return "Logo du site";
       case "sitetitle": return "Titre du site";
+      case "postcontent": return "Contenu de l'article";
       case "copyright": return "© " + (p.owner || "nom du site") + (p.text ? ". " + p.text : "");
       case "animatedheading": return [p.before, (p.words || []).join(" / "), p.after].filter(Boolean).join(" ");
       case "flipbox": return p.frontTitle;

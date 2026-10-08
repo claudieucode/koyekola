@@ -17,6 +17,7 @@ const { absoluteUrl, breadcrumbLd, isoDate, isoDateTime } = require("../utils/se
 const { sanitizeBlogHtml, markdownToEditorHtml } = require("../utils/blogHtml");
 const { escapeHtml } = require("../utils/markdown");
 const blog = require("../services/blog");
+const themeRender = require("../marketing/web/themeRender");
 const blockTrash = require("../services/blockTrash");
 const blogAi = require("../services/blogAi");
 const editorTheme = require("../services/editorTheme");
@@ -150,10 +151,15 @@ function renderList(req, res, { filter = null } = {}) {
       if (courses) discover = { type: "courses", count: courses };
     }
   }
+  // Modèle de thème « Liste du blog » (Page Builder) : remplace la liste ; la catégorie courante se lit avec {{query.categorie}}
+  const themeQuery = {};
+  if (filter && filter.type === "category") themeQuery.categorie = filter.name;
+  themeRender.renderRegion(req, res, db, "blog_archive", { category: filter && filter.type === "category" ? filter.name : "", query: themeQuery }, (themeTemplate) => {
   res.render("blog/index", {
-    posts, page, pages, crumbs, basePath, heading, filter, q, hub, total, categories, popular, discover,
+    themeTemplate, posts, page, pages, crumbs, basePath, heading, filter, q, hub, total, categories, popular, discover,
     featured: featured && page === 1 ? decorate(featured) : null,
     lead: filter ? filter.lead : "Conseils, idées, ressources et actualités pour apprendre, créer et progresser.", seo,
+  });
   });
 }
 
@@ -250,8 +256,10 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
   }
   const { previous, next } = post.published ? blog.neighbours(post) : { previous: null, next: null };
   const toc = post.toc_enabled === 0 ? [] : article.toc;
+  // Modèle de thème « Article du blog » (Page Builder) : remplace l'en-tête, l'image et le texte ; sans modèle publié, rien ne change
+  themeRender.renderRegion(req, res, db, "single_post", { category: post.category || "", scope: { post: themeRender.postScope(post, { contentHtml: article.html, minutes, author: author ? author.username : "" }) } }, (themeTemplate) => {
   res.render("blog/show", {
-    post, crumbs, author, seo, article: { ...article, toc }, minutes, tags, modified, previous, next, shareUrl: ownUrl, lang: post.language && post.language !== "fr" ? post.language : null,
+    themeTemplate, post, crumbs, author, seo, article: { ...article, toc }, minutes, tags, modified, previous, next, shareUrl: ownUrl, lang: post.language && post.language !== "fr" ? post.language : null,
     tocTitle: post.toc_title || "Sommaire", tocNumbering: post.toc_numbering || "h2", preview,
     categorySlug: post.category ? slugify(post.category) : "",
     sidebar: { popular: blog.popular(4, post.id), recent: blog.recent(4, post.id), categories: blog.categories(), newsletter },
@@ -265,6 +273,7 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
   });
   delete req.session.commentError;
   delete req.session.commentDraft;
+  });
 }
 
 // ---------- Commentaires : réservés aux membres connectés ----------
