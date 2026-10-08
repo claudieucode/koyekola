@@ -3278,6 +3278,7 @@
   }
   // Animation : entrée à l'apparition (durée, délai) et effet au survol ; rejouable dans le canevas
   function motionField(it, locked) {
+    if (window.pbEffects && window.pbEffects.motion) return window.pbEffects.motion(it, locked); // moteur de mouvement (page-builder-effects.js)
     var m = it.motion || {};
     var setM = function (k, v) { nextLabel = "Animation"; change(function () { var x = byId(it.id); var n = Object.assign({}, x.motion); if (v === "" || v === undefined) delete n[k]; else n[k] = v; if (k === "entrance" && !v) { delete n.duration; delete n.delay; } if (k === "entrance" && v) { if (n.duration === undefined) n.duration = 600; if (n.delay === undefined) n.delay = 0; } if (Object.keys(n).length) x.motion = n; else delete x.motion; }); };
     var det = h("details", { class: "pb-acc", "data-group": "motion" });
@@ -5721,7 +5722,7 @@
   if (window.pbEffects) window.pbEffects.attach({
     h: h, store: store, toast: toast, SPEC: SPEC, BPS: BPS, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, idsOf: idsOf,
     accGroup: accGroup, ownValue: ownValue, setStyle: setStyle, setStyles: setStyles, parseLength: parseLength, numField: numField, numericControl: numericControl, selectField: selectField, checkField: checkField,
-    openMedia: openMedia, breakpointSwitch: breakpointSwitch, getDevice: function () { return device; }, getState: function () { return styleState; },
+    openMedia: openMedia, canvasEl: canvasEl, breakpointSwitch: breakpointSwitch, getDevice: function () { return device; }, getState: function () { return styleState; },
     setState: function (st) { styleState = st; renderInspector(); renderContext(); }, hasStates: function (it) { return Boolean(inspectorFor(it).states); },
   });
   // Lecture de l'état pour les tests de bout en bout (aucune écriture possible par ce biais)

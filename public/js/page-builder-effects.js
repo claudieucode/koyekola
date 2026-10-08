@@ -205,6 +205,214 @@
     });
   }
 
+  // ---------- Animation d'entrée, au survol, mouvement réduit, copie / réinitialisation (moteur de mouvement) ----------
+  // Le catalogue (SPEC.animations) vient du registre du serveur : le menu, la recherche, l'aperçu et la validation lisent la même source.
+  var EASE_CSS = { smooth: "cubic-bezier(.2, .7, .2, 1)", linear: "linear", ease: "ease", "ease-in": "ease-in", "ease-out": "ease-out", "ease-in-out": "ease-in-out", spring: "cubic-bezier(.34, 1.56, .64, 1)" };
+  var EASE_LABEL = { smooth: "Douce (par défaut)", ease: "ease", linear: "linear", "ease-in": "ease-in", "ease-out": "ease-out", "ease-in-out": "ease-in-out", spring: "Ressort", custom: "cubic-bezier personnalisé…" };
+  var ENTRANCE_KEYS = ["entrance", "duration", "delay", "easing", "repeat", "iterations", "direction", "trigger", "screens"];
+  var animById = function (id) { return A.SPEC.animations.filter(function (a) { return a.id === id; })[0] || null; };
+  var norm = function (s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); };
+
+  // Aperçu dans le canevas : style posé sur l'élément du canevas SEULEMENT (jamais dans le document, jamais enregistré) ; retiré à la fin
+  var preview = null;
+  function stopPreview() {
+    if (!preview) return;
+    clearTimeout(preview.timer);
+    try { preview.el.style.animation = ""; } catch (e) { /* élément déjà remplacé */ }
+    var btn = preview.button; preview = null;
+    if (btn) btn.textContent = "▶ Prévisualiser";
+  }
+  function playPreview(it, animId, p, button) {
+    var el = A.canvasEl(it.id), a = animById(animId);
+    if (!el || !a) return;
+    stopPreview();
+    var d = el.ownerDocument;
+    if (!d.getElementById("pb-motion-all")) { var st = d.createElement("style"); st.id = "pb-motion-all"; st.textContent = A.SPEC.motionCss; d.head.appendChild(st); }
+    p = p || {};
+    var dur = p.duration || a.defaultDuration, delay = p.delay || 0, iter = p.iterations || 1;
+    var ease = p.easing ? (EASE_CSS[p.easing] || p.easing) : EASE_CSS[a.defaultEasing] || EASE_CSS.smooth;
+    el.style.animation = "none"; void el.offsetWidth;
+    el.style.animation = "kw-a-" + animId + " " + dur + "ms " + ease + " " + delay + "ms " + iter + " " + (p.direction || "normal") + (a.fill === "none" ? "" : " " + a.fill); // « none » (attention) est la valeur par défaut : on ne l'écrit pas (ambigu avec le nom)
+    var total = iter === "infinite" ? 6000 : (dur * iter + delay + 120);
+    preview = { el: el, button: button || null, manual: Boolean(button), timer: setTimeout(function () { stopPreview(); }, total) };
+    if (button) button.textContent = "⏹ Arrêter";
+  }
+
+  // Menu des animations : recherche instantanée, catégories toujours visibles, aperçu au survol (sans enregistrer), choix au clic ou à Entrée
+  var pop = null, popFor = null;
+  function closeMenu() { if (!pop) return; stopPreview(); pop.remove(); pop = null; popFor = null; document.removeEventListener("mousedown", onOutside, true); }
+  function onOutside(e) { if (pop && !pop.contains(e.target) && !(popFor && popFor.contains(e.target))) closeMenu(); }
+  function openMenu(anchor, it, current, onPick) {
+    if (pop) { var same = popFor === anchor; closeMenu(); if (same) return; }
+    var h = A.h, m = it.motion || {};
+    var search = h("input", { type: "search", class: "pb-amenu-search", placeholder: "Rechercher une animation…", "aria-label": "Rechercher une animation", autocomplete: "off" });
+    var list = h("div", { class: "pb-amenu-list", role: "listbox", "aria-label": "Animations" });
+    var items = [];
+    var itemBtn = function (id, label, on) {
+      var b = h("button", { type: "button", role: "option", class: "pb-amenu-item" + (on ? " is-on" : ""), "aria-selected": String(Boolean(on)), "data-anim": id, text: label });
+      b.addEventListener("mouseenter", function () { if (id) playPreview(it, id, { duration: null, delay: 0, iterations: 1 }); else stopPreview(); });
+      b.addEventListener("focus", function () { if (id) playPreview(it, id, { iterations: 1 }); });
+      b.addEventListener("mouseleave", stopPreview);
+      b.addEventListener("click", function () { var chosen = id; closeMenu(); onPick(chosen); });
+      return b;
+    };
+    var draw = function () {
+      list.textContent = ""; items = [];
+      var q = norm(search.value.trim());
+      if (!q) { var none = itemBtn("", "Aucune", !current); items.push(none); list.appendChild(none); }
+      A.SPEC.animationCategories.forEach(function (cat) {
+        var inCat = A.SPEC.animations.filter(function (a) { return a.category === cat && (!q || norm(a.label).indexOf(q) >= 0 || norm(a.id).indexOf(q) >= 0 || norm(cat).indexOf(q) >= 0); });
+        if (!inCat.length) return;
+        list.appendChild(h("div", { class: "pb-amenu-cat", role: "presentation", text: cat }));
+        inCat.forEach(function (a) { var b = itemBtn(a.id, a.label, a.id === current); items.push(b); list.appendChild(b); });
+      });
+      if (!items.length) list.appendChild(h("p", { class: "pb-hint", text: "Aucune animation ne correspond." }));
+    };
+    search.addEventListener("input", draw);
+    pop = h("div", { class: "pb-amenu", role: "dialog", "aria-label": "Choisir une animation" }, search, list);
+    pop.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); var a = anchor; closeMenu(); a.focus(); return; }
+      var i = items.indexOf(document.activeElement);
+      if (e.key === "ArrowDown") { e.preventDefault(); (items[Math.min(items.length - 1, i + 1)] || items[0]).focus(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); if (i <= 0) search.focus(); else items[i - 1].focus(); }
+      else if (e.key === "Enter" && document.activeElement === search) {
+        e.preventDefault();
+        var first = items.filter(function (b) { return b.getAttribute("data-anim"); })[0];
+        if (first) first.click();
+      }
+    });
+    document.body.appendChild(pop);
+    var r = anchor.getBoundingClientRect(), w = Math.max(r.width, 250);
+    pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + "px";
+    pop.style.top = Math.min(r.bottom + 4, window.innerHeight - 340) + "px";
+    pop.style.width = w + "px";
+    popFor = anchor;
+    draw();
+    document.addEventListener("mousedown", onOutside, true);
+    search.focus();
+    var cur = list.querySelector(".is-on"); if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: "nearest" });
+  }
+
+  var animSelect = function (label, value, inherit, onChange, disabled) {
+    var h = A.h, id = uid();
+    var sel = h("select", { id: id, disabled: disabled }, [h("option", { value: "", text: inherit })].concat([h("option", { value: "none", text: "Aucune animation" })], A.SPEC.animationCategories.map(function (cat) {
+      return h("optgroup", { label: cat }, A.SPEC.animations.filter(function (a) { return a.category === cat; }).map(function (a) { return h("option", { value: a.id, text: a.label }); }));
+    })));
+    sel.value = value || "";
+    sel.addEventListener("change", function () { onChange(sel.value); });
+    return h("div", { class: "pb-field" }, h("label", { for: id, text: label }), sel);
+  };
+
+  var clip = null;
+  function motionPanel(it, locked) {
+    var h = A.h, m = it.motion || {};
+    var has = Object.keys(m).length;
+    return section("motion", "Effets de mouvement", has ? Object.keys(m).filter(function (k) { return k !== "off" && k !== "alwaysMotion"; }).length : 0, function (inner) {
+      var a = m.entrance ? animById(m.entrance) : null;
+      var set = function (mutate, opts) { setMotion(it, "Animation d'entrée", mutate, opts); };
+      // --- Animation d'entrée ---
+      inner.appendChild(h("p", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Animation d'entrée" })));
+      var pickId = uid();
+      var pickBtn = h("button", { type: "button", id: pickId, class: "pb-amenu-btn", disabled: locked, "aria-haspopup": "dialog", "data-pb-anim-pick": "" }, h("span", { text: a ? a.label : "Aucune" }), h("span", { class: "pb-amenu-caret", "aria-hidden": "true", text: "▾" }));
+      pickBtn.addEventListener("click", function () {
+        openMenu(pickBtn, it, m.entrance || "", function (id) {
+          if (!id) { set(function (mm) { ENTRANCE_KEYS.forEach(function (k) { delete mm[k]; }); }); return; }
+          var an = animById(id);
+          set(function (mm) {
+            mm.entrance = id;
+            if (mm.duration === undefined) mm.duration = an.defaultDuration;
+            if (mm.delay === undefined) mm.delay = 0;
+          });
+          setTimeout(function () { var cur = A.byId(it.id); playPreview(cur, id, { duration: cur.motion && cur.motion.duration, easing: cur.motion && cur.motion.easing }); }, 520); // après le redessin du canevas (220 ms), sinon l'aperçu serait effacé
+        });
+      });
+      inner.appendChild(h("div", { class: "pb-field" }, h("label", { for: pickId, text: "Animation" }), pickBtn));
+      if (a) {
+        var secs = function (v) { return Math.round(v) / 1000; };
+        inner.appendChild(h("div", { class: "pb-prop-group" },
+          A.numField("Durée", { min: 0.1, max: 10, step: 0.1, precision: 2, staticUnit: "s", value: secs(m.duration), base: 0.6, allowEmpty: false, drag: true, disabled: locked, prop: "motion-duration",
+            onCommit: function (raw, u, opts) { var ms = Math.round(Number(raw) * 1000); if (!isFinite(ms)) return false; set(function (mm) { mm.duration = ms; }, opts); } }, false),
+          A.numField("Délai", { min: 0, max: 10, step: 0.1, precision: 2, staticUnit: "s", value: secs(m.delay || 0), base: 0, allowEmpty: false, drag: true, disabled: locked, prop: "motion-delay",
+            onCommit: function (raw, u, opts) { var ms = Math.round(Number(raw) * 1000); if (!isFinite(ms)) return false; set(function (mm) { mm.delay = ms; }, opts); } }, false)));
+        // Courbe : un nom connu, ou 4 nombres pour un « cubic-bezier » personnalisé
+        var cur = m.easing || "smooth", custom = /^cubic-bezier/.test(cur);
+        var easeId = uid();
+        var easeSel = h("select", { id: easeId, disabled: locked }, Object.keys(EASE_LABEL).map(function (k) { return h("option", { value: k, text: EASE_LABEL[k] }); }));
+        easeSel.value = custom ? "custom" : cur;
+        easeSel.addEventListener("change", function () {
+          if (easeSel.value === "custom") { set(function (mm) { mm.easing = "cubic-bezier(0.25, 0.1, 0.25, 1)"; }); return; }
+          set(function (mm) { if (easeSel.value === "smooth") delete mm.easing; else mm.easing = easeSel.value; });
+        });
+        inner.appendChild(h("div", { class: "pb-field" }, h("label", { for: easeId, text: "Courbe d'accélération" }), easeSel));
+        if (custom) {
+          var bid = uid(), nums = (/\(([^)]*)\)/.exec(cur) || [0, ""])[1];
+          var bez = h("input", { id: bid, type: "text", class: "pb-len-num pb-bezier", value: nums, disabled: locked, "aria-label": "cubic-bezier : x1, y1, x2, y2", placeholder: "0.25, 0.1, 0.25, 1", autocomplete: "off" });
+          bez.addEventListener("change", function () {
+            var p = bez.value.split(",").map(function (x) { return Number(x.trim()); });
+            if (p.length !== 4 || p.some(function (x) { return !isFinite(x); }) || p[0] < 0 || p[0] > 1 || p[2] < 0 || p[2] > 1 || p[1] < -3 || p[1] > 3 || p[3] < -3 || p[3] > 3) { bez.setAttribute("aria-invalid", "true"); A.toast("Courbe : 4 nombres (x1, y1, x2, y2) ; x entre 0 et 1, y entre -3 et 3.", true); return; }
+            bez.removeAttribute("aria-invalid");
+            set(function (mm) { mm.easing = "cubic-bezier(" + p.join(", ") + ")"; });
+          });
+          inner.appendChild(h("div", { class: "pb-field" }, h("label", { for: bid, text: "x1, y1, x2, y2" }), bez));
+        }
+        var itId = uid();
+        var itSel = h("select", { id: itId, disabled: locked }, [["1", "Une fois"], ["2", "2 fois"], ["3", "3 fois"], ["infinite", "Infini"]].map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
+        itSel.value = String(m.iterations || 1);
+        itSel.addEventListener("change", function () { set(function (mm) { if (itSel.value === "1") delete mm.iterations; else mm.iterations = itSel.value === "infinite" ? "infinite" : Number(itSel.value); if (itSel.value === "1" && /^alternate/.test(mm.direction || "")) delete mm.direction; }); });
+        inner.appendChild(h("div", { class: "pb-field" }, h("label", { for: itId, text: "Répétition" }), itSel));
+        if (m.iterations === "infinite") inner.appendChild(h("p", { class: "pb-hint", text: "Animation sans fin : à réserver aux éléments d'attention ; elle est coupée pour les visiteurs qui préfèrent moins de mouvement." }));
+        var dirs = [["normal", "Normal"], ["reverse", "Inverse"]].concat(m.iterations && m.iterations !== 1 ? [["alternate", "Aller-retour"], ["alternate-reverse", "Aller-retour inversé"]] : []);
+        var dId = uid();
+        var dSel = h("select", { id: dId, disabled: locked }, dirs.map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
+        dSel.value = dirs.some(function (o) { return o[0] === (m.direction || "normal"); }) ? (m.direction || "normal") : "normal";
+        dSel.addEventListener("change", function () { set(function (mm) { if (dSel.value === "normal") delete mm.direction; else mm.direction = dSel.value; }); });
+        inner.appendChild(h("div", { class: "pb-field" }, h("label", { for: dId, text: "Direction" }), dSel));
+        var tId = uid();
+        var tSel = h("select", { id: tId, disabled: locked }, A.SPEC.motionTriggers.map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
+        tSel.value = m.trigger || "viewport";
+        tSel.addEventListener("change", function () { set(function (mm) { if (tSel.value === "viewport") delete mm.trigger; else mm.trigger = tSel.value; if (tSel.value !== "viewport") delete mm.repeat; }); });
+        inner.appendChild(h("div", { class: "pb-field" }, h("label", { for: tId, text: "Déclenchement" }), tSel));
+        if (m.trigger === "click" || m.trigger === "hover") inner.appendChild(h("p", { class: "pb-hint", text: "L'élément reste visible tant que l'animation n'est pas déclenchée ; elle se rejoue à chaque " + (m.trigger === "click" ? "clic." : "survol.") }));
+        if (!m.trigger || m.trigger === "viewport") inner.appendChild(A.checkField("Jouer une seule fois", !m.repeat, function (v) { set(function (mm) { if (v) delete mm.repeat; else mm.repeat = true; }); }, { disabled: locked, hint: "Décoché : elle se rejoue à chaque fois que l'élément revient à l'écran." }));
+        // Un autre écran peut remplacer l'animation ou la couper ; vide = hérite de l'écran plus grand
+        var sc = m.screens || {};
+        var setScreen = function (bp, v) { set(function (mm) { var n = Object.assign({}, mm.screens); if (!v) delete n[bp]; else n[bp] = v; mm.screens = n; }); };
+        inner.appendChild(h("p", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Selon l'écran" })));
+        inner.appendChild(animSelect("Tablette", sc.tablet, "Hérite de l'ordinateur", function (v) { setScreen("tablet", v); }, locked));
+        inner.appendChild(animSelect("Mobile", sc.mobile, "Hérite de la tablette", function (v) { setScreen("mobile", v); }, locked));
+        var pbtn = h("button", { type: "button", class: "btn btn-outline btn-sm", "data-pb-anim-preview": "", onclick: function () {
+          if (preview && preview.manual) { stopPreview(); return; } // ⏹ ; un aperçu automatique (juste après un choix) est simplement relancé
+          var cur2 = A.byId(it.id).motion || {};
+          playPreview(it, cur2.entrance, { duration: cur2.duration, delay: cur2.delay, easing: cur2.easing, iterations: cur2.iterations, direction: cur2.direction }, pbtn);
+        } }, "▶ Prévisualiser");
+        inner.appendChild(h("div", { class: "pb-row pb-wrap" }, pbtn,
+          h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked, onclick: function () { stopPreview(); set(function (mm) { ENTRANCE_KEYS.forEach(function (k) { delete mm[k]; }); }); } }, "Supprimer l'animation")));
+      }
+      // --- Au survol ---
+      inner.appendChild(A.selectField("Au survol", m.hover || "", [["", "Aucun effet"]].concat(A.SPEC.hovers), function (v) { setMotion(it, "Effet au survol", function (mm) { if (v) mm.hover = v; else delete mm.hover; }); }, { disabled: locked }));
+      // --- Accessibilité ---
+      inner.appendChild(h("p", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Accessibilité" })));
+      inner.appendChild(A.checkField("Respecter les préférences système de mouvement réduit", !m.alwaysMotion, function (v) { setMotion(it, "Mouvement réduit", function (mm) { if (v) delete mm.alwaysMotion; else mm.alwaysMotion = true; }); }, { disabled: locked, hint: "Activé : pour les visiteurs qui ont demandé moins d'animations, l'entrée devient un fondu court (ou disparaît), le défilement et la souris sont coupés." }));
+      // --- Copier / coller / réinitialiser ---
+      inner.appendChild(h("div", { class: "pb-row pb-wrap" },
+        h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !has, onclick: function () {
+          var cur3 = A.byId(it.id), styles = {};
+          Object.keys(cur3.styles || {}).forEach(function (bp) { ["position", "top", "bottom", "zIndex"].forEach(function (k) { if (cur3.styles[bp] && cur3.styles[bp][k] !== undefined) { styles[bp] = styles[bp] || {}; styles[bp][k] = cur3.styles[bp][k]; } }); });
+          clip = { motion: JSON.parse(JSON.stringify(cur3.motion || {})), styles: styles };
+          A.toast("Effets de mouvement copiés.");
+        } }, "Copier les effets"),
+        h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked, onclick: function () {
+          if (!clip) { A.toast("Copiez d'abord les effets d'un autre élément.", true); return; }
+          A.change(function () {
+            var x = A.byId(it.id);
+            if (Object.keys(clip.motion).length) x.motion = JSON.parse(JSON.stringify(clip.motion)); else delete x.motion;
+            Object.keys(clip.styles).forEach(function (bp) { x.styles = x.styles || {}; x.styles[bp] = Object.assign({}, x.styles[bp], clip.styles[bp]); });
+          }, { label: "Coller les effets de mouvement" });
+        } }, "Coller les effets"),
+        h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked || !has, onclick: function () { stopPreview(); A.change(function () { delete A.byId(it.id).motion; }, { label: "Réinitialiser les effets de mouvement" }); } }, "Réinitialiser")));
+    });
+  }
+
   // Les sections de l'élément, dans l'ordre d'affichage ; vide si l'élément n'a aucune capacité avancée
   function sections(it, locked) {
     if (!A || !it || !A.isNode(it)) return [];
@@ -217,5 +425,5 @@
     return out;
   }
 
-  window.pbEffects = { attach: attach, sections: sections, capsOf: function (it) { return A ? capsOf(it) : []; } };
+  window.pbEffects = { attach: attach, sections: sections, motion: function (it, locked) { return A ? motionPanel(it, locked) : null; }, capsOf: function (it) { return A ? capsOf(it) : []; } };
 })();

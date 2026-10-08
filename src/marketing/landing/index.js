@@ -237,6 +237,8 @@ function viewModel(ctx, page) {
     if (!c) return null; // formation dépubliée depuis : la section disparaît (jamais un lien mort)
     return { ...s, course: courseView(c) };
   }).filter(Boolean);
+  // Attributs de mouvement (entrée, défilement, souris) calculés une seule fois, au même endroit, pour le canevas, l'aperçu et la page publiée
+  for (const s of sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => { n.motionAttr = pageNodes.motionAttrs(n); });
   // Table des matières : titres de la page (dans l'ordre d'affichage), chacun avec son ancre (la sienne, sinon kw-h-<id>)
   const tocs = [], heads = [];
   for (const s of sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => { if (n.type === "toc") tocs.push(n); else if (n.type === "heading" && n.props && n.props.text) heads.push(n); });

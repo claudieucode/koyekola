@@ -53,12 +53,12 @@
       var el = nodes[i];
       records.push({
         el: el, scroll: parse(el, "data-kw-scroll"), mouse: parse(el, "data-kw-mouse"),
-        off: (el.getAttribute("data-kw-fx-off") || "").split(/\s+/).filter(Boolean),
+        off: (el.getAttribute("data-kw-fx-off") || "").split(/\s+/).filter(Boolean), always: el.hasAttribute("data-kw-motion-always"),
         visible: !win.IntersectionObserver, p: 0, cur: { x: 0, y: 0 }, base: { filter: el.style.filter, perspective: null }, applied: false,
       });
     }
     var target = { x: 0, y: 0 }, raf = 0, destroyed = false, io = null, listening = false;
-    var active = function (r, kind) { return !reduceQ.matches && r.off.indexOf(breakpointOf(win.innerWidth)) < 0 && (kind !== "mouse" || hoverQ.matches); };
+    var active = function (r, kind) { return (!reduceQ.matches || r.always) && r.off.indexOf(breakpointOf(win.innerWidth)) < 0 && (kind !== "mouse" || hoverQ.matches); };
 
     function clear(r) {
       if (!r.applied) return;

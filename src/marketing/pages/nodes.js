@@ -978,7 +978,7 @@ function editorSpec() {
     categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
-    socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
+    socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     structureKinds: require("./structures").KINDS, structures: require("./structures").STRUCTURES,
     colorTokens: COLOR_TOKENS, spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
     limits: { nodes: MAX_NODES, depth: MAX_DEPTH },
@@ -1189,8 +1189,10 @@ function normalizeSchedule(raw, at) {
 const scheduleMatches = (s, now = Date.now()) => !s || ((!s.from || Date.parse(s.from) <= now) && (!s.until || Date.parse(s.until) > now));
 
 // ---------- Animations : entrée (à l'apparition à l'écran) et effet au survol ----------
-const ENTRANCES = { fade: "Fondu", "slide-up": "Glisse vers le haut", "slide-down": "Glisse vers le bas", "slide-left": "Glisse depuis la droite", "slide-right": "Glisse depuis la gauche", zoom: "Zoom avant", bounce: "Rebond", rotate: "Rotation", reveal: "Dévoilement", flip: "Bascule 3D" };
-const EASINGS = { smooth: "cubic-bezier(.2, .7, .2, 1)", linear: "linear", "ease-in": "ease-in", "ease-out": "ease-out", "ease-in-out": "ease-in-out", spring: "cubic-bezier(.34, 1.56, .64, 1)" };
+// Registre central des animations : src/marketing/pages/motion.js (une animation = une ligne ; le panneau, la validation, le CSS publié et l'aperçu le lisent)
+const MOTION = require("./motion");
+const { ANIMATIONS, EASINGS } = MOTION;
+const ENTRANCES = Object.fromEntries(Object.values(ANIMATIONS).map((a) => [a.id, a.label]));
 // Capacités « avancées » d'un élément : elles décident des sections proposées dans l'inspecteur (effets de défilement, de
 // souris, épinglage, transformation, masque, attributs, CSS) et de ce que le serveur accepte d'enregistrer.
 const CAP_BOX = ["container", "grid", "stack", "group", "columns", "column"];
@@ -1243,11 +1245,25 @@ function normalizeMotion(raw, type) {
   }
   if (Object.hasOwn(ENTRANCES, raw.entrance)) {
     out.entrance = raw.entrance;
-    out.duration = numberIn(100, 3000, { integer: true })(raw.duration) ?? 600;
-    out.delay = numberIn(0, 3000, { integer: true })(raw.delay) ?? 0;
-    if (Object.hasOwn(EASINGS, raw.easing) && raw.easing !== "smooth") out.easing = raw.easing;
-    if (raw.repeat === true) out.repeat = true; // rejouée à chaque arrivée à l'écran
+    out.duration = numberIn(100, 10000, { integer: true })(raw.duration) ?? 600;
+    out.delay = numberIn(0, 10000, { integer: true })(raw.delay) ?? 0;
+    const ease = raw.easing === undefined || raw.easing === "" ? null : MOTION.normalizeEasing(raw.easing);
+    if (ease && ease !== "smooth") out.easing = ease;
+    if (raw.repeat === true) out.repeat = true; // rejouée à chaque arrivée à l'écran (« Jouer une seule fois » décoché)
+    // Répétition : 1 par défaut (jamais infinie sans demande explicite) ; direction ; déclencheur
+    const it = raw.iterations === "infinite" ? "infinite" : numberIn(1, 3, { integer: true })(raw.iterations);
+    if (it && it !== 1) out.iterations = it;
+    if (MOTION.DIRECTIONS.includes(raw.direction) && raw.direction !== "normal") out.direction = raw.direction;
+    if (Object.hasOwn(MOTION.TRIGGERS, raw.trigger) && raw.trigger !== "viewport") out.trigger = raw.trigger;
+    // Écrans : « none » coupe l'animation, un identifiant la remplace ; vide = hérite de l'écran plus grand
+    if (raw.screens && typeof raw.screens === "object") {
+      const sc = {};
+      for (const bp of ["tablet", "mobile"]) { const v = raw.screens[bp]; if (v === "none" || (typeof v === "string" && Object.hasOwn(ENTRANCES, v))) sc[bp] = v; }
+      if (Object.keys(sc).length) out.screens = sc;
+    }
   }
+  // Mouvement réduit : l'animation s'adapte (ou disparaît) quand le visiteur le demande ; « toujours animer » doit être choisi explicitement
+  if (raw.alwaysMotion === true && (out.entrance || out.scroll || out.mouse)) out.alwaysMotion = true;
   if (Object.hasOwn(HOVERS, raw.hover)) out.hover = raw.hover;
   return Object.keys(out).length ? out : undefined;
 }
@@ -1361,12 +1377,49 @@ function walk(nodes, fn, parent = null) {
 // Arbre affiché au public : éléments masqués retirés, et ceux dont le public ne correspond pas au visiteur
 const visibleTree = (nodes, visitor, now = Date.now()) => (nodes || []).filter((n) => !n.hidden && scheduleMatches(n.schedule, now) && (visitor === undefined || audienceMatches(n.audience, visitor))).map((n) => (n.children ? { ...n, children: visibleTree(n.children, visitor) } : n));
 
+// Animation d'entrée d'un élément : variables (durée, délai, courbe) + nom, répétition, direction et remplissage ; un autre écran peut
+// remplacer l'animation ou la couper (« none ») sans toucher à l'héritage des autres propriétés
+function entranceRules(n, rules, used) {
+  const m = n.motion;
+  if (!m || !m.entrance || !NODE_ID.test(String(n.id || "")) || !Object.hasOwn(ANIMATIONS, m.entrance)) return;
+  const sel = `.kw-n-${n.id}`, on = `${sel}.is-in,${sel}.kw-ix-replay,${sel}.pb-anim-replay`, a = ANIMATIONS[m.entrance];
+  used.add(m.entrance);
+  rules.base.push(`${sel}{--kw-anim-dur:${m.duration}ms;--kw-anim-delay:${m.delay}ms${m.easing ? `;--kw-anim-ease:${MOTION.easingCss(m.easing)}` : ""}}`);
+  rules.base.push(`${on}{animation-name:kw-a-${m.entrance};animation-iteration-count:${m.iterations || 1};animation-direction:${m.direction || "normal"};animation-fill-mode:${a.fill}}`);
+  for (const bp of ["tablet", "mobile"]) {
+    const v = m.screens && m.screens[bp];
+    if (v === undefined || !rules.media[bp]) continue;
+    if (v === "none") rules.media[bp].push(`${sel}.is-in,${sel}.kw-ix-replay{animation:none}.kw-anim-ready ${sel}[data-kw-anim]:not(.is-in){opacity:1}`);
+    else { used.add(v); rules.media[bp].push(`${on}{animation-name:kw-a-${v};animation-fill-mode:${ANIMATIONS[v].fill}}.kw-anim-ready ${sel}[data-kw-anim]:not([data-kw-anim-vis]):not(.is-in){opacity:0}`); }
+  }
+}
+// Attributs de mouvement d'un élément (page publiée, aperçu et canevas) : UNE seule source pour l'entrée, le défilement et la souris
+function motionAttrs(n) {
+  const m = n && n.motion;
+  if (!m) return "";
+  const esc = (v) => String(v).replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[c]);
+  let a = "";
+  if (m.entrance && Object.hasOwn(ANIMATIONS, m.entrance)) {
+    const an = ANIMATIONS[m.entrance], trig = m.trigger || "viewport";
+    a += ` data-kw-anim="${m.entrance}"${m.repeat ? " data-kw-anim-repeat" : ""}`;
+    if (an.kind !== "in" || trig === "click" || trig === "hover") a += " data-kw-anim-vis"; // visible avant son déclenchement
+    if (trig !== "viewport") a += ` data-kw-anim-trigger="${trig}"`;
+    if (an.reducedMotionBehavior === "fade") a += ' data-kw-anim-rm="fade"';
+  }
+  if (m.scroll) a += ` data-kw-scroll="${esc(JSON.stringify(m.scroll))}"`;
+  if (m.mouse) a += ` data-kw-mouse="${esc(JSON.stringify(m.mouse))}"`;
+  if (m.off && (m.scroll || m.mouse)) a += ` data-kw-fx-off="${m.off.join(" ")}"`;
+  if (m.alwaysMotion) a += " data-kw-motion-always";
+  return a;
+}
+
 // CSS d'une page : une règle par élément stylé (et par section stylée), par écran et par état. Valeurs déjà validées.
 // breakpoints : { tablet, mobile } = largeurs maximales (px) des écrans « Tablette » et « Mobile » du site (réglages du site)
 const DEFAULT_BREAKPOINTS = { tablet: 1023, mobile: 767 };
 function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   const mediaOf = (bp) => (bp.key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : bp.key === "mobile" ? `(max-width: ${breakpoints.mobile}px)` : bp.media);
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
+  const usedAnims = new Set(); // animations réellement utilisées : seules leurs images-clés sont écrites dans la page
   const clamps = { tablet: [], mobile: [] }; // cases de grille ramenées au nombre de colonnes de l'écran : écrites après toutes les autres règles
   const add = (id, styles, states) => {
     if (!NODE_ID.test(String(id || ""))) return;
@@ -1385,7 +1438,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
     add(s.id, s.styles, s.states);
     if (s.type === "layout") walk(s.children, (n) => {
       add(n.id, n.styles, n.states);
-      if (n.motion && n.motion.entrance && NODE_ID.test(String(n.id || ""))) rules.base.push(`.kw-n-${n.id}{--kw-anim-dur:${n.motion.duration}ms;--kw-anim-delay:${n.motion.delay}ms${n.motion.easing ? `;--kw-anim-ease:${EASINGS[n.motion.easing]}` : ""}}`);
+      entranceRules(n, rules, usedAnims);
       // CSS personnalisé de l'élément (validé à l'enregistrement, revalidé ici : rien d'autre n'atteint la page)
       if (n.css && NODE_ID.test(String(n.id || ""))) { try { const c = cssDeclarations(n.css, "CSS"); if (c) rules.custom.push(`.kw-node.kw-n-${n.id}{${c}}`); } catch { /* ignoré */ } }
       if (n.cssHover && NODE_ID.test(String(n.id || ""))) { try { const c = cssDeclarations(n.cssHover, "CSS"); if (c) rules.custom.push(`.kw-node.kw-n-${n.id}:hover{${c}}`); } catch { /* ignoré */ } }
@@ -1434,6 +1487,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   }
   for (const k of Object.keys(clamps)) if (rules.media[k]) rules.media[k].push(...clamps[k]);
   let css = rules.base.join("\n");
+  if (usedAnims.size) css = `${MOTION.keyframesCss([...usedAnims])}\n${css}`;
   for (const bp of BREAKPOINTS) if (bp.media && rules.media[bp.key].length) css += `\n@media ${mediaOf(bp)}{${rules.media[bp.key].join("")}}`;
   // « Masquer sur cet écran » : mêmes seuils que les écrans du site (réglages du site)
   // (écrites seulement si la page masque quelque chose selon l'écran)
@@ -1447,5 +1501,5 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
 
 module.exports = {
   NODE_TYPES, CATEGORIES, WIDGET_GROUPS, WIDGETS, CUSTOM_WIDGETS, registerWidget, lockedWidgetChanges, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
-  capsOf, MASK_SHAPES, SCROLL_FX, MOUSE_MODES, AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
+  capsOf, MOTION, motionAttrs, MASK_SHAPES, SCROLL_FX, MOUSE_MODES, AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };

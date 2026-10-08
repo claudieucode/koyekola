@@ -282,11 +282,11 @@ describe("inspecteur d'un conteneur dans l'éditeur réel (navigateur simulé)",
     ed.selectLayer("box000000002");
     ed.tab("Interactions");
     const titles = [...ed.insp.querySelectorAll("summary .pb-acc-title")].map((t) => t.textContent);
-    assert.ok(titles.includes("Animation") && titles.includes("Interactions et conditions"), titles.join(" | "));
-    const entrance = [...ed.insp.querySelectorAll("select")].find((s) => [...s.options].some((o) => /fondu|apparition|fade/i.test(o.textContent)));
-    assert.ok(entrance, "choix d'une animation d'entrée");
-    const choice = [...entrance.options].find((o) => o.value);
-    ed.set(entrance, choice.value);
+    assert.ok(titles.includes("Effets de mouvement") && titles.includes("Interactions et conditions"), titles.join(" | "));
+    // Moteur de mouvement : le menu des animations (recherche, catégories) remplace l'ancienne liste ; le choix est enregistré
+    ed.click(ed.insp.querySelector("[data-pb-anim-pick]"));
+    const choice = { value: "fade-in-up" };
+    ed.click(ed.doc.querySelector(`.pb-amenu [data-anim="${choice.value}"]`));
     await until(async () => ((await serverNode(id, "box000000002")).motion || {}).entrance === choice.value, 8000, "animation enregistrée");
     assert.equal((await boss.request(`/marketing/pages/${id}/publier.json`, { method: "POST", json: {} })).status, 200);
     const html = (await boss.get(`/p/${db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug}`)).text;
