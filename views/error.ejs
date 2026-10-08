@@ -1,10 +1,13 @@
 <%- include("partials/header", { title: "Erreur", seo: { noindex: true } }) %>
 
+  <%# Modèle de thème « Page introuvable (404) » (Page Builder), seulement pour l'erreur 404 générale ; sinon page d'origine %>
+  <% if (typeof themeTemplate !== "undefined" && themeTemplate) { %><div class="container"><%- themeTemplate %></div><% } else { %>
   <div class="container error-page">
     <p class="code">Oups</p>
     <h1>Une erreur est survenue</h1>
     <p style="color:var(--muted);"><%= message %></p>
     <a href="/" class="btn btn-primary" style="margin-top:16px;">Retour à l'accueil</a>
   </div>
+  <% } %>
 
 <%- include("partials/footer") %>

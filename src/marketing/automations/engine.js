@@ -154,6 +154,8 @@ function jobHandlers({ db, bus = null, settings, env = process.env, providerFor,
       const result = await runAutomation(ctx, runId, { provider, smsProvider, now: now() });
       if (!result.done && !result.paused && result.waitMs > 0) enqueueRun(db, { organizationId, runId, runAt: now() + result.waitMs, tag: "wake" });
     },
+    // Notifications à l'équipe (action « Notifier l'équipe ») : e-mail interne envoyé par la file, avec reprises
+    ...require("./notify").jobHandlers({ db, bus, settings, env, providerFor, log }),
   };
 }
 

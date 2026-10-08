@@ -1,0 +1,39 @@
+<%- include("partials/top", { title, active }) %>
+    <div class="mk-head"><h1>Modèles de thème</h1></div>
+    <p class="mk-lead">Choisissez une page du Page Builder comme modèle d'une famille de pages du site : l'article du blog, la liste du blog ou la page introuvable. Vous pouvez limiter un modèle à une catégorie ou à un public. Sans modèle <strong>en ligne</strong>, le site garde son affichage d'origine : un modèle ne peut pas casser le blog.</p>
+    <% if (!templates.length) { %>
+      <div class="mk-empty"><%- icon("layout", { size: 32 }) %><h2>Aucun modèle</h2><p>Le blog et la page introuvable utilisent leur affichage d'origine. Ajoutez un modèle ci-dessous.</p></div>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable">
+        <caption class="sr-only">Modèles de thème</caption>
+        <thead><tr><th scope="col">Famille de pages</th><th scope="col">Page modèle</th><th scope="col">Catégorie</th><th scope="col">Public</th><th scope="col">État</th><% if (canWrite) { %><th scope="col"><span class="sr-only">Actions</span></th><% } %></tr></thead>
+        <tbody><% templates.forEach((t) => { %>
+          <tr>
+            <th scope="row" data-label="Famille"><%= t.typeLabel %></th>
+            <td data-label="Page"><% if (t.pageStatus === "missing") { %><%= t.pageName %><% } else { %><a href="/marketing/pages/<%= t.pageId %>/editeur"><%= t.pageName %></a><% } %></td>
+            <td data-label="Catégorie"><%= t.category || "Toutes" %></td>
+            <td data-label="Public"><%= t.audienceLabel || "Tout le monde" %></td>
+            <td data-label="État"><%= t.pageStatus === "published" ? "Actif (page en ligne)" : t.pageStatus === "missing" ? "Page supprimée" : "Inactif : publiez la page" %></td>
+            <% if (canWrite) { %><td data-label="Actions"><form action="/marketing/site-web/modeles-de-theme/<%= t.id %>/supprimer" method="post"><button type="submit" class="btn btn-ghost btn-sm" aria-label="Retirer ce modèle">Retirer</button></form></td><% } %>
+          </tr>
+        <% }) %></tbody>
+      </table></div>
+    <% } %>
+    <% if (canWrite) { %>
+      <section class="mk-panel" aria-labelledby="tt-add"><h2 id="tt-add">Ajouter un modèle</h2>
+        <form action="/marketing/site-web/modeles-de-theme" method="post" class="mk-form">
+          <label for="tt-type">Famille de pages</label>
+          <select id="tt-type" name="type" required><% Object.entries(types).forEach(([key, t]) => { %><option value="<%= key %>"><%= t.label %></option><% }) %></select>
+          <ul class="mk-cms-list"><% Object.values(types).forEach((t) => { %><li><span><strong><%= t.label %></strong> : <%= t.hint %></span></li><% }) %></ul>
+          <label for="tt-page">Page modèle</label>
+          <select id="tt-page" name="page_id" required><option value="">Choisir une page…</option><% pageChoices.forEach((p) => { %><option value="<%= p.id %>"><%= p.name %><%= p.status === "published" ? "" : " (brouillon : à publier)" %></option><% }) %></select>
+          <label for="tt-cat">Catégorie (facultative, articles seulement)</label>
+          <input id="tt-cat" name="category" maxlength="80" list="tt-cats" placeholder="Toutes les catégories">
+          <datalist id="tt-cats"><% categories.forEach((c) => { %><option value="<%= c %>"><% }) %></datalist>
+          <label for="tt-aud">Public</label>
+          <select id="tt-aud" name="audience"><option value="">Tout le monde</option><% Object.entries(audiences).filter(([k]) => k !== "tag" && k !== "not_tag" && k !== "score_min").forEach(([k, label]) => { %><option value="<%= k %>"><%= label %></option><% }) %></select>
+          <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Ajouter le modèle</button></div>
+        </form>
+      </section>
+    <% } %>
+<%- include("partials/bottom") %>

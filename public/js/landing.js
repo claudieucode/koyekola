@@ -109,21 +109,34 @@
     box.classList.add("is-enhanced");
     sync();
   });
-  // Animations d'entrée : l'élément apparaît en arrivant à l'écran. Jamais dans l'éditeur (le contenu y reste visible),
-  // jamais si la personne a demandé de réduire les animations, et rien n'est masqué sans ce script.
+  // Animations d'entrée (moteur de mouvement) : l'élément joue son animation quand elle est déclenchée — en arrivant à l'écran
+  // (par défaut), au chargement, au clic ou au survol. Jamais dans l'éditeur (le contenu y reste visible), rien n'est masqué sans ce
+  // script, et si la personne a demandé moins de mouvement l'animation est supprimée (ou réduite à un fondu court), sauf choix contraire
+  // explicite de l'auteur (data-kw-motion-always).
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var inBuilder = document.body.hasAttribute("data-kw-builder");
   var animated = document.querySelectorAll("[data-kw-anim]");
-  if (animated.length && !inBuilder && !reduce && "IntersectionObserver" in window) {
-    document.documentElement.classList.add("kw-anim-ready");
-    var io = new IntersectionObserver(function (entries) {
+  if (animated.length && !inBuilder) {
+    var canObserve = "IntersectionObserver" in window;
+    if (canObserve) document.documentElement.classList.add("kw-anim-ready");
+    var io = canObserve ? new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         var again = en.target.hasAttribute("data-kw-anim-repeat");
         if (en.isIntersecting) { en.target.classList.add("is-in"); if (!again) io.unobserve(en.target); }
         else if (again) en.target.classList.remove("is-in"); // rejouée à la prochaine arrivée à l'écran
       });
-    }, { threshold: 0.12, rootMargin: "0px 0px -5% 0px" });
-    Array.prototype.forEach.call(animated, function (el) { io.observe(el); });
+    }, { threshold: 0.12, rootMargin: "0px 0px -5% 0px" }) : null;
+    // Rejouer sur place (clic, survol) : on retire la classe, on force le calcul de style, on la remet
+    var replay = function (el) { el.classList.remove("is-in", "kw-ix-replay"); void el.offsetWidth; el.classList.add("kw-ix-replay"); };
+    Array.prototype.forEach.call(animated, function (el) {
+      var calm = reduce && !el.hasAttribute("data-kw-motion-always");
+      if (calm && el.getAttribute("data-kw-anim-rm") !== "fade") { el.classList.add("is-in"); return; } // visible tout de suite, sans mouvement
+      var trigger = el.getAttribute("data-kw-anim-trigger") || "viewport";
+      if (trigger === "click") el.addEventListener("click", function () { replay(el); });
+      else if (trigger === "hover") el.addEventListener("mouseenter", function () { replay(el); });
+      else if (trigger === "load" || !io) window.requestAnimationFrame(function () { el.classList.add("is-in"); });
+      else io.observe(el);
+    });
   }
   // Galerie : agrandir une image (visionneuse), flèches et Échap ; sans script, le lien ouvre l'image
   // Réglages du site (Visionneuse) : lus sur la page ; désactivée, le lien ouvre simplement l'image

@@ -16,6 +16,7 @@ const PROPERTY_KEY = /^[a-z][a-z0-9_]{0,39}$/;
 const STATUS_LABELS = { unknown: "Pas de consentement", subscribed: "Abonné", unsubscribed: "Désinscrit", bounced: "Rebond", complained: "Plainte", suppressed: "Bloqué" };
 export const TRANSFORM_LABELS = { none: "Aucun nettoyage", trim: "Retirer les espaces en trop", lowercase: "Tout en minuscules", uppercase: "Tout en majuscules", capitalize: "Majuscule à chaque mot", digits: "Garder seulement les chiffres (et +)" };
 const WEBHOOK_VARIABLES = ["email", "prenom", "nom", "telephone", "societe", "pays", "score", "event.course_title", "event.course_url", "event.order_total", "event.order_id", "event.lesson_title", "event.learn_url"]; // mêmes variables que integrations.js
+const NOTIFY_VARIABLES = [...WEBHOOK_VARIABLES, "contact_url", "scenario"]; // mêmes variables que communication.js (notify_team)
 const WEEKDAY_OPTIONS = [[1, "Lundi"], [2, "Mardi"], [3, "Mercredi"], [4, "Jeudi"], [5, "Vendredi"], [6, "Samedi"], [7, "Dimanche"]];
 const WAIT_UNTIL_MODES = [["time", "Une heure précise"], ["weekday", "Un jour de la semaine"], ["date", "Une date précise"], ["property", "Un champ date du contact"], ["business_hours", "Les heures ouvrables"]];
 const WAIT_UNTIL_DEFAULTS = { time: { time: "09:00" }, weekday: { weekday: 1, time: "09:00" }, date: { date: "", time: "09:00" }, property: { property: "", offsetDays: 0, time: "09:00", onMissing: "continue" }, business_hours: { days: [1, 2, 3, 4, 5], from: "09:00", to: "18:00" } };
@@ -174,6 +175,17 @@ const readOnlyRow = (label, value, extra) => {
 };
 const link = (href, text) => el("a", { href, class: "mk-step-link", target: "_blank", rel: "noopener" }, text);
 // Où mènent les deux sorties d'une condition / d'un tirage, d'après les connexions du canevas
+const newCaseId = () => `c${Math.random().toString(36).slice(2, 8)}`;
+// Où mène chaque sortie d'un bloc « Plusieurs chemins » (cas puis « Sinon »), d'après les connexions du canevas. Un cas ajouté
+// ou retiré dans cette fenêtre n'a pas encore sa sortie : il est annoncé comme « à relier » après l'enregistrement.
+function routesSection(ctx, draft) {
+  const known = ctx.routes ? ctx.routes() : { byCase: {}, other: null };
+  const line = (label, target) => { const li = el("li"); li.append(el("strong", {}, `${label} → `), document.createTextNode(target || "aucune étape reliée : le contact sort du scénario")); return li; };
+  const ul = el("ul", { class: "mk-step-branches" });
+  draft.cases.forEach((c, k) => ul.append(line(c.label || `Cas ${k + 1}`, known.byCase[c.id])));
+  ul.append(line("Sinon", known.other));
+  return section("Chemins", ul, hint("Les chemins se relient sur le canevas, depuis les points de sortie du bloc (un par cas, puis « Sinon »)."));
+}
 function branchesSection(ctx, yes, no) {
   const b = ctx.branches ? ctx.branches() : { t: null, f: null };
   const line = (label, target) => { const li = el("li"); li.append(el("strong", {}, `${label} → `), document.createTextNode(target || "aucune étape reliée : le contact sort du scénario")); return li; };
@@ -370,6 +382,30 @@ const EDITORS = {
     box.appendChild(branchesSection(ctx, "Si oui", "Si non"));
     return box;
   },
+  route(ctx, draft, rerender) {
+    const box = el("div");
+    const dis = ctx.locked;
+    if (!Array.isArray(draft.cases)) draft.cases = [];
+    draft.cases.forEach((c, k) => {
+      if (!c.id) c.id = newCaseId();
+      if (!c.definition || !Array.isArray(c.definition.rules)) c.definition = { op: "and", rules: [] };
+      const inner = el("div", { class: "mk-route-case" });
+      const head = el("div", { class: "mk-step-row" });
+      head.appendChild(field("Nom du cas", text(c.label, (v) => { c.label = v; }, { maxlength: 40, placeholder: `Cas ${k + 1}`, disabled: dis })));
+      if (!dis && draft.cases.length > 1) { const rm = el("button", { type: "button", class: "btn btn-ghost btn-sm", "aria-label": `Retirer le cas ${k + 1}` }, "Retirer ce cas"); rm.addEventListener("click", () => { draft.cases.splice(k, 1); rerender(); }); head.appendChild(rm); }
+      inner.appendChild(head);
+      if (!dis && (ctx.data.segments || []).length) {
+        inner.appendChild(field("Partir d'un segment enregistré", select([["", "Copier la définition d'un segment…", true], ...ctx.data.segments.map((sg) => [sg.id, sg.name])], "", (v) => { const sg = ctx.data.segments.find((x) => String(x.id) === v); if (sg) { c.definition = clone(sg.definition); rerender(); } }), "Copie les critères du segment dans ce cas (ensuite modifiables ici)."));
+      }
+      if (!(ctx.data.segmentCatalog || []).length) inner.appendChild(note("Aucun champ disponible."));
+      else inner.appendChild(conditionBuilder(ctx, c, rerender));
+      box.appendChild(section(`Cas ${k + 1}`, inner));
+    });
+    if (!dis && draft.cases.length < 5) { const add = el("button", { type: "button", class: "btn btn-outline btn-sm" }, "Ajouter un cas"); add.addEventListener("click", () => { draft.cases.push({ id: newCaseId(), label: `Cas ${draft.cases.length + 1}`, definition: { op: "and", rules: [] } }); rerender(); }); box.appendChild(add); }
+    box.appendChild(hint("Les cas sont évalués dans l'ordre : le premier qui correspond l'emporte. Tous les autres contacts suivent « Sinon »."));
+    box.appendChild(routesSection(ctx, draft));
+    return box;
+  },
   split(ctx, draft) {
     const box = el("div");
     const rest = el("p", { class: "field-hint", "aria-live": "polite" });
@@ -430,6 +466,23 @@ const EDITORS = {
     box.appendChild(field("Action sur le score", select([["add", "Ajouter des points"], ["subtract", "Retirer des points"], ["set", "Définir le score"]], draft.mode, (v) => { draft.mode = v; rerender(); }, { disabled: ctx.locked })));
     box.appendChild(field(draft.mode === "set" ? "Nouveau score" : "Nombre de points", number(draft.points, (v) => { draft.points = v; }, { min: draft.mode === "set" ? 0 : 1, max: SCORE_MAX, disabled: ctx.locked })));
     box.appendChild(hint("Le score d'un contact ne descend jamais sous 0. Chaque modification est tracée dans l'historique du score, n'est appliquée qu'une fois par passage et reste après un recalcul des règles. Elle ne déclenche pas d'événement de changement de niveau."));
+    return box;
+  },
+  notify_team(ctx, draft) {
+    const box = el("div");
+    const team = ctx.data.team || [];
+    if (!team.length) { box.appendChild(note("Aucun membre de l'équipe avec une adresse e-mail.")); return box; }
+    const dis = ctx.locked;
+    if (!Array.isArray(draft.recipients)) draft.recipients = [];
+    const who = el("div", { class: "mk-step-days" });
+    team.forEach((u) => who.appendChild(checkbox(`${u.name} (${u.email})`, draft.recipients.includes(u.id), (on) => { const set = new Set(draft.recipients); if (on) set.add(u.id); else set.delete(u.id); draft.recipients = [...set]; }, { disabled: dis })));
+    box.appendChild(section("Destinataires (membres de l'équipe, 5 au plus)", who));
+    box.appendChild(field("Objet", text(draft.subject, (v) => { draft.subject = v; }, { maxlength: 150, placeholder: "Nouveau contact chaud : {{prenom}} {{nom}}", disabled: dis })));
+    const ta = el("textarea", { id: nextId(), rows: "6", maxlength: "1500" });
+    ta.value = draft.body || ""; ta.disabled = dis;
+    ta.addEventListener("input", () => { draft.body = ta.value; });
+    box.appendChild(field("Texte", ta, `Variables : ${NOTIFY_VARIABLES.map((v) => `{{${v}}}`).join(", ")}. {{contact_url}} ouvre la fiche du contact.`));
+    box.appendChild(hint("E-mail interne envoyé en arrière-plan, avec reprises automatiques ; jamais à une adresse hors de l'équipe. Le scénario n'attend pas l'envoi."));
     return box;
   },
   webhook_call(ctx, draft, rerender) {
@@ -540,6 +593,19 @@ export function validate(type, ctx, d) {
       }
       return errors;
     }
+    case "route": {
+      const cases = d.cases || [];
+      if (!cases.length) return ["Ajoutez au moins un cas."];
+      const cat = catalogBy(ctx);
+      const errors = [];
+      cases.forEach((c, k) => {
+        const rules = c.definition && Array.isArray(c.definition.rules) ? c.definition.rules : [];
+        if (String(c.label || "").trim().length > 40) errors.push(`Cas ${k + 1} : nom trop long (40 caractères au plus).`);
+        if (!rules.length) errors.push(`Cas ${k + 1} : ajoutez au moins un critère.`);
+        else if (rules.some((r) => !ruleIsComplete(cat, r && r.op === "not" ? r.rule : r))) errors.push(`Cas ${k + 1} : un critère est incomplet, renseignez sa valeur.`);
+      });
+      return errors;
+    }
     case "split": return Number.isInteger(d.percentage) && d.percentage >= 1 && d.percentage <= 99 ? [] : ["Pourcentage de la branche A : un nombre entier de 1 à 99."];
     case "update_field": {
       const errors = [];
@@ -581,6 +647,19 @@ export function validate(type, ctx, d) {
       const b = String(d.body || "").trim();
       if (!b) return ["Écrivez le texte de la note."];
       return b.length > MAX_NOTE ? [`Note trop longue (${MAX_NOTE} caractères au plus).`] : [];
+    }
+    case "notify_team": {
+      const errors = [];
+      const ids = d.recipients || [];
+      if (!ids.length) errors.push("Choisissez au moins un destinataire.");
+      else if (ids.length > 5) errors.push("5 destinataires au plus.");
+      else if (ids.some((id) => !(ctx.data.team || []).some((u) => u.id === id))) errors.push("Un destinataire n'est plus membre de l'équipe.");
+      if (!String(d.subject || "").trim()) errors.push("Écrivez l'objet.");
+      if (!String(d.body || "").trim()) errors.push("Écrivez le texte.");
+      if (String(d.body || "").length > 1500) errors.push("Texte trop long (1500 caractères au plus).");
+      const unknown = [...(String(d.subject || "") + " " + String(d.body || "")).matchAll(/\{\{\s*([a-z_.]+)\s*\}\}/g)].map((m) => m[1]).filter((v) => !NOTIFY_VARIABLES.includes(v));
+      if (unknown.length) errors.push(`Variable inconnue : ${unknown.join(", ")}.`);
+      return errors;
     }
     case "webhook_call": {
       const errors = [];
@@ -625,6 +704,8 @@ export function clean(type, d) {
   delete out._newTag;
   if (type === "add_tag" || type === "remove_tag") out.tag = String(out.tag || "").trim();
   if (type === "trigger") out.name = String(out.name || "").trim();
+  if (type === "route") out.cases = (out.cases || []).map((c, k) => ({ id: c.id || newCaseId(), label: String(c.label || "").replace(/\s+/g, " ").trim() || `Cas ${k + 1}`, definition: c.definition }));
+  if (type === "notify_team") { out.subject = String(out.subject || "").trim(); out.body = String(out.body || "").replace(/\r\n?/g, "\n").trim(); }
   if (type === "webhook_call") out.fields = (out.fields || []).map((f) => ({ key: String(f.key || "").trim(), value: String(f.value || "").trim() }));
   if (type === "sms" || type === "add_note") out.body = String(out.body || "").replace(/\r\n?/g, "\n").trim();
   return out;

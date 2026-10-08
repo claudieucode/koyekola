@@ -1864,3 +1864,11 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-pal-only { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 0.8rem; color: var(--muted); cursor: pointer; }
 .mk-pal-only input { margin: 0; }
 .is-palette-collapsed .mk-pal-only { display: none; }
+
+/* « Plusieurs chemins » : une sortie par cas (nom du cas à côté de sa sortie), puis « Sinon » */
+/* Les noms restent DANS le bloc, à gauche des points de sortie (les noms de cas sont plus longs que « Oui » / « Non ») */
+.mk-flow-card-ports.mk-flow-card-ports--route { right: 16px; top: 54px; height: auto; max-width: 100px; align-items: flex-end; justify-content: flex-start; }
+.mk-flow-card-ports--route .mk-flow-port-label { height: 28px; line-height: 28px; }
+.mk-flow-port-case { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent-dark, #02597f); }
+.mk-flow-card--route .mk-flow-card-sub { padding-right: 104px; }
+.mk-flow-card--route .mk-flow-card-icon { color: var(--star); }

@@ -35,6 +35,8 @@
       </p>
     <% } %>
 
+    <%# Modèle de thème « Liste du blog » (Page Builder) : remplace les articles affichés ; sinon liste d'origine %>
+    <% if (typeof themeTemplate !== "undefined" && themeTemplate) { %><%- themeTemplate %><% } else { %>
     <% if (featured) { %>
       <section class="blog-section" aria-labelledby="blog-featured-title">
         <h2 id="blog-featured-title" class="sr-only">À la une</h2>
@@ -141,6 +143,7 @@
           </section>
         <% } %>
       </div>
+    <% } %>
     <% } %>
   </div>
 

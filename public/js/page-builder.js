@@ -1309,12 +1309,58 @@
   // ---------- Champs de l'inspecteur ----------
   var fieldSeq = 0;
   var fid = function () { return "pb-f-" + (++fieldSeq); };
+  // ---------- Données dynamiques : sélecteur d'étiquettes {{article.titre}}… (moteur : src/marketing/pages/dynamic.js) ----------
+  var dynPop = null;
+  function closeDynPicker() { if (dynPop) { dynPop.remove(); dynPop = null; } }
+  // pick(token) : appelée avec « {{post.title}} » ; kinds : types de sources proposés (texte, adresse, image)
+  function openDynPicker(anchor, pick, kinds) {
+    closeDynPicker();
+    var cat = SPEC.dynamic, q = h("input", { type: "search", class: "pb-dyn-search", placeholder: "Rechercher une donnée…", "aria-label": "Rechercher une donnée dynamique" });
+    var list = h("div", { class: "pb-dyn-list", role: "listbox", "aria-label": "Données dynamiques" });
+    var draw = function () {
+      list.textContent = "";
+      var term = norm(q.value);
+      cat.groups.forEach(function (g) {
+        var items = cat.sources.filter(function (x) { return x.group === g.key && (!kinds || kinds.indexOf(x.kind) >= 0 || x.kind === "text" && kinds.indexOf("text") >= 0) && (!term || norm(x.label + " " + x.key).indexOf(term) >= 0); });
+        if (!items.length) return;
+        list.appendChild(h("p", { class: "pb-dyn-group", text: g.label }));
+        items.forEach(function (x) { list.appendChild(h("button", { type: "button", role: "option", class: "pb-dyn-item", onclick: function () { closeDynPicker(); pick("{{" + x.key + "}}"); } }, h("span", { text: x.label }), h("code", { text: x.key }))); });
+      });
+      if (!list.children.length) list.appendChild(h("p", { class: "pb-hint", text: "Aucune donnée ne correspond." }));
+    };
+    q.addEventListener("input", draw);
+    dynPop = h("div", { class: "pb-dyn-pop", role: "dialog", "aria-label": "Insérer une donnée dynamique" }, q, list,
+      h("p", { class: "pb-hint", text: "La donnée est lue à chaque affichage de la page. Filtres : {{post.title | truncate: 40}}, {{user.first_name | fallback: ami}}." }));
+    document.body.appendChild(dynPop);
+    draw();
+    var r = anchor.getBoundingClientRect();
+    dynPop.style.top = Math.min(r.bottom + 4, window.innerHeight - dynPop.offsetHeight - 8) + "px";
+    dynPop.style.left = Math.max(8, Math.min(r.left - 220, window.innerWidth - dynPop.offsetWidth - 8)) + "px";
+    q.focus();
+    dynPop.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeDynPicker(); anchor.focus(); } });
+    setTimeout(function () { document.addEventListener("mousedown", function away(e) { if (dynPop && !dynPop.contains(e.target) && e.target !== anchor) { closeDynPicker(); } if (!dynPop) document.removeEventListener("mousedown", away); }); }, 0);
+  }
+  // Le contenu d'un élément contient-il une étiquette ? (l'écriture directe l'écraserait : on passe par l'inspecteur)
+  var hasDynamic = function (it) { return /\{\{\s*[a-z]+\.[a-z_]+/i.test(JSON.stringify(it.props || {})); };
+  function dynButton(input, opts) {
+    return h("button", { type: "button", class: "pb-icon-btn pb-dyn-btn", "aria-label": "Insérer une donnée dynamique", "data-tip": "Donnée dynamique : titre, image, adresse… lus à chaque affichage", disabled: opts.disabled || null,
+      onclick: function (e) {
+        var btn = e.currentTarget;
+        openDynPicker(btn, function (token) {
+          var a = input.selectionStart === undefined || input.selectionStart === null ? input.value.length : input.selectionStart, b = input.selectionEnd === undefined || input.selectionEnd === null ? a : input.selectionEnd;
+          input.value = input.value.slice(0, a) + token + input.value.slice(b);
+          input.dispatchEvent(new Event(opts.onChange ? "change" : "input", { bubbles: true }));
+          input.focus();
+        }, opts.dynKinds || ["text"]);
+      } }, icon("braces"));
+  }
   function textField(label, value, onInput, opts) {
     opts = opts || {};
     var id = fid();
     var input = opts.multiline ? h("textarea", { id: id, rows: opts.rows || "4", maxlength: opts.max ? String(opts.max) : null, disabled: opts.disabled }) : h("input", { id: id, type: opts.type || "text", maxlength: opts.max ? String(opts.max) : null, disabled: opts.disabled, list: opts.list || null, placeholder: opts.placeholder || null });
     input.value = value === undefined || value === null ? "" : value;
     input.addEventListener(opts.onChange ? "change" : "input", function () { onInput(input.value); });
+    if (opts.dyn) return h("div", { class: "pb-field pb-field-dyn" }, h("label", { for: id, text: label }), h("div", { class: "pb-dyn-row" }, input, dynButton(input, opts)), opts.hint ? h("p", { class: "pb-hint", text: opts.hint }) : null);
     return h("div", { class: "pb-field" }, h("label", { for: id, text: label }), input, opts.hint ? h("p", { class: "pb-hint", text: opts.hint }) : null);
   }
   // Champ numérique d'un contenu (pas d'un style) : même NumericControl que l'inspecteur de style
@@ -1370,14 +1416,17 @@
     var set = function (k, light) { return function (v) { setProp(it.id, k, v, { key: it.id + ":" + k, light: light !== false }); }; };
     switch (it.type) {
       case "heading":
-        box.appendChild(textField("Texte", p.text, set("text"), { max: 200, disabled: disabled, hint: "Ou double-cliquez sur le titre dans la page." }));
+        box.appendChild(textField("Texte", p.text, set("text"), { max: 200, disabled: disabled, dyn: true, hint: "Ou double-cliquez sur le titre dans la page. { } : insérer une donnée dynamique." }));
         box.appendChild(selectField("Niveau", p.level, [["1", "Titre 1 (un seul par page)"], ["2", "Titre 2"], ["3", "Titre 3"], ["4", "Titre 4"], ["5", "Titre 5"], ["6", "Titre 6"]], set("level", false), { disabled: disabled }));
-        box.appendChild(textField("Lien (facultatif)", p.link, set("link"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue, /p/…, #ancre ou https://…", hint: "Tout le titre devient cliquable sur la page publiée." }));
+        box.appendChild(textField("Lien (facultatif)", p.link, set("link"), { list: "pb-links", disabled: disabled, dyn: true, dynKinds: ["url"], placeholder: "/catalogue, /p/…, #ancre ou https://…", hint: "Tout le titre devient cliquable sur la page publiée." }));
         box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
         break;
       case "text":
         box.appendChild(h("p", { class: "pb-hint", text: "Double-cliquez sur le texte dans la page pour l'écrire directement : gras, italique, liens, listes, couleurs… dans la barre du haut." }));
         box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, onclick: function () { startEdit(it.id); } }, "Écrire dans la page"));
+        box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, "data-tip": "Ajoute à la fin du texte une donnée lue à chaque affichage (titre, prix, date…)",
+          onclick: function (e) { openDynPicker(e.currentTarget, function (token) { change(function () { var x = byId(it.id); x.props.html = (x.props.html || "") + "<p>" + token + "</p>"; }); }, ["text"]); } }, "Insérer une donnée dynamique"));
+        if (hasDynamic(it)) box.appendChild(h("p", { class: "pb-hint", text: "Ce texte contient une donnée dynamique : il se modifie ici (Écrire dans la page est désactivé pour ne pas effacer la donnée)." }));
         break;
       case "list":
         box.appendChild(textField("Points (un par ligne)", (p.items || []).join("\n"), function (v) { setProp(it.id, "items", v.split("\n"), { key: it.id + ":items", light: true }); }, { multiline: true, disabled: disabled }));
@@ -1391,9 +1440,10 @@
         box.appendChild(textField("Texte affiché tel quel", p.text, set("text"), { multiline: true, rows: "8", max: 4000, disabled: disabled, hint: "Affiché comme texte, jamais exécuté." }));
         break;
       case "image":
-        box.appendChild(mediaPreview(p.src, function (m) { change(function () { var x = byId(it.id); x.props.src = m.path; if (m.alt && !x.props.alt) { x.props.alt = m.alt; delete x.props.decorative; } }); }, disabled));
-        box.appendChild(textField("Texte de remplacement", p.alt, function (v) { change(function () { var x = byId(it.id); x.props.alt = v; if (v) delete x.props.decorative; else x.props.decorative = true; }, { key: it.id + ":alt", light: true }); }, { max: 200, disabled: disabled, hint: "Décrit l'image pour les personnes qui ne la voient pas (et pour le référencement). Vide = image décorative." }));
-        box.appendChild(textField("Lien au clic (facultatif)", p.link, set("link"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue ou https://…" }));
+        box.appendChild(mediaPreview(/^\{\{/.test(p.src || "") ? "" : p.src, function (m) { change(function () { var x = byId(it.id); x.props.src = m.path; if (m.alt && !x.props.alt) { x.props.alt = m.alt; delete x.props.decorative; } }); }, disabled));
+        box.appendChild(textField("…ou image dynamique", /^\{\{/.test(p.src || "") ? p.src : "", function (v) { if (/^\s*\{\{[^}]+\}\}\s*$/.test(v)) setProp(it.id, "src", v.trim()); }, { onChange: true, disabled: disabled, dyn: true, dynKinds: ["image"], placeholder: "{{post.image}} ou {{course.image}}", hint: "Remplace l'image choisie ; lue à chaque affichage (utile dans une boucle ou un modèle)." }));
+        box.appendChild(textField("Texte de remplacement", p.alt, function (v) { change(function () { var x = byId(it.id); x.props.alt = v; if (v) delete x.props.decorative; else x.props.decorative = true; }, { key: it.id + ":alt", light: true }); }, { max: 200, disabled: disabled, dyn: true, hint: "Décrit l'image pour les personnes qui ne la voient pas (et pour le référencement). Vide = image décorative." }));
+        box.appendChild(textField("Lien au clic (facultatif)", p.link, set("link"), { list: "pb-links", disabled: disabled, dyn: true, dynKinds: ["url"], placeholder: "/catalogue ou https://…" }));
         if (p.link) box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
         box.appendChild(textField("Légende", p.caption, set("caption"), { max: 200, disabled: disabled }));
         box.appendChild(textField("Titre (infobulle au survol, facultatif)", p.title, set("title"), { max: 150, disabled: disabled }));
@@ -1433,8 +1483,8 @@
         break;
       case "button":
       case "link":
-        box.appendChild(textField("Texte", p.label, set("label"), { max: it.type === "button" ? 80 : 120, disabled: disabled }));
-        box.appendChild(textField("Adresse", p.url, set("url"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue, /p/… ou https://…", hint: PAGE.funnel ? "/etape-suivante : l'étape suivante du tunnel « " + PAGE.funnel.name + " »." : null }));
+        box.appendChild(textField("Texte", p.label, set("label"), { max: it.type === "button" ? 80 : 120, disabled: disabled, dyn: true }));
+        box.appendChild(textField("Adresse", p.url, set("url"), { list: "pb-links", disabled: disabled, dyn: true, dynKinds: ["url"], placeholder: "/catalogue, /p/… ou https://…", hint: PAGE.funnel ? "/etape-suivante : l'étape suivante du tunnel « " + PAGE.funnel.name + " »." : null }));
         box.appendChild(libraryButton("Lier un fichier de la médiathèque (PDF, document…)", { title: "Choisir un document", type: "documents" }, function (m) { change(function () { byId(it.id).props.url = m.path; }); toast("Lien vers « " + m.name + " »."); }, disabled));
         if (it.type === "button") box.appendChild(selectField("Apparence", p.variant, [["primary", "Plein"], ["outline", "Contour"], ["ghost", "Discret"]], set("variant", false), { disabled: disabled }));
         if (it.type === "button") box.appendChild(selectField("Taille", p.size || "md", [["sm", "Petite"], ["md", "Normale"], ["lg", "Grande"]], function (v) { setProp(it.id, "size", v); }, { disabled: disabled }));
@@ -1554,6 +1604,15 @@
         box.appendChild(selectField("Hauteur", String(p.height || 48), [["32", "32 px"], ["48", "48 px"], ["64", "64 px"], ["96", "96 px"]].concat([32, 48, 64, 96].indexOf(Number(p.height)) < 0 && p.height ? [[String(p.height), p.height + " px"]] : []), function (v) { setProp(it.id, "height", Number(v)); }, { disabled: disabled }));
         box.appendChild(checkField("Lien vers l'accueil du site", p.link !== false, function (v) { setProp(it.id, "link", v); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "Le logo vient des réglages SEO (Organisation › Logo) ; sans logo, le nom du site s'affiche. Accueil : la page d'accueil du site si elle est en ligne, sinon l'accueil de KOLAKISA." }));
+        break;
+      case "catfilter":
+        box.appendChild(selectField("Catégories de…", p.source, [["posts", "Articles du blog"], ["courses", "Formations du catalogue"]], function (v) { setProp(it.id, "source", v); }, { disabled: disabled }));
+        box.appendChild(textField("Texte du premier lien", p.allLabel, set("allLabel"), { max: 40, disabled: disabled }));
+        box.appendChild(checkField("Afficher le nombre d'éléments", p.showCount !== false, function (v) { setProp(it.id, "showCount", v); }, { disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-hint", text: "Liens « ?categorie=… » vers cette même page. Dans la grille en boucle, cochez « Filtrer avec l'adresse » : elle ne montre alors que la catégorie choisie." }));
+        break;
+      case "postcontent":
+        box.appendChild(h("p", { class: "pb-hint", text: "Affiche le texte de l'article du blog. À placer dans une page choisie comme modèle « Article du blog » (Site Web › Modèles de thème). Dans l'éditeur, le dernier article publié sert d'exemple." }));
         break;
       case "sitetitle":
         box.appendChild(selectField("Balise", p.tag || "p", [["p", "Paragraphe"], ["span", "Texte en ligne"], ["h1", "Titre 1"], ["h2", "Titre 2"], ["h3", "Titre 3"]], function (v) { setProp(it.id, "tag", v); }, { disabled: disabled }));
@@ -1993,6 +2052,8 @@
     animatedheading: { kind: "Titre animé", groups: TEXTUAL, order: TEXT_ORDER },
     sitelogo: { kind: "Logo du site", groups: { layout: ["alignSelf"], spacing: true, effects: ["opacity"] }, order: ["spacing", "layout", "effects"] },
     sitetitle: { kind: "Titre du site", groups: TEXTUAL, order: TEXT_ORDER },
+    catfilter: { kind: "Filtre par catégorie", groups: TEXTUAL, order: TEXT_ORDER },
+    postcontent: { kind: "Contenu de l'article", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["size", "border", "effects", "spacing", "layout"] },
     copyright: { kind: "Copyright", groups: TEXTUAL, order: TEXT_ORDER },
     flipbox: { kind: "Boîte retournable", groups: { layout: ["alignSelf"], typography: null, size: SIZE_W, spacing: true, border: null, effects: ["boxShadow", "opacity"] }, order: ["size", "typography", "spacing", "border", "effects", "layout"] },
     pricelist: { kind: "Liste de prix", groups: TEXTUAL, order: TEXT_ORDER },
@@ -3135,6 +3196,20 @@
     var r = stepper("Lignes", rows, "rows", ["Retirer la dernière ligne", function () { gridRemoveRow(it.id); }], ["Ajouter une ligne", function () { gridAddRow(it.id); }], n <= cols, n >= 96);
     r.querySelector("output").setAttribute("data-pb-grid-rows", "");
     box.appendChild(r);
+    // Boucle : la grille répète son contenu (le modèle) pour chaque article ou formation, lus à chaque affichage
+    var loop = it.props && it.props.loop;
+    box.appendChild(checkField("Répéter pour chaque article ou formation (boucle)", Boolean(loop), function (v) { change(function () { var x = byId(it.id); if (v) x.props.loop = { source: "posts", count: 6, sort: "recent" }; else delete x.props.loop; }, { label: v ? "Boucle activée" : "Boucle désactivée" }); }, { disabled: dis }));
+    if (loop) {
+      var setLoop = function (k, v) { change(function () { var x = byId(it.id); x.props.loop = Object.assign({}, x.props.loop); if (v === "" || v === false) delete x.props.loop[k]; else x.props.loop[k] = v; if (k === "source") { x.props.loop.sort = "recent"; } }, { key: it.id + ":loop:" + k, light: typeof v === "string" && k !== "source" && k !== "sort" }); };
+      box.appendChild(selectField("Contenu à répéter", loop.source, [["posts", "Articles du blog"], ["courses", "Formations du catalogue"]], function (v) { setLoop("source", v); }, { disabled: dis }));
+      box.appendChild(selectField("Nombre par page", String(loop.count), ["1", "2", "3", "4", "6", "8", "9", "12", "16", "24"].map(function (n) { return [n, n]; }), function (v) { setLoop("count", Number(v)); }, { disabled: dis }));
+      box.appendChild(selectField("Ordre", loop.sort || "recent", loop.source === "courses" ? [["recent", "Les plus récentes"], ["title", "Par titre"], ["price", "Par prix croissant"]] : [["recent", "Les plus récents"], ["old", "Les plus anciens"], ["title", "Par titre"]], function (v) { setLoop("sort", v); }, { disabled: dis }));
+      box.appendChild(textField("Catégorie (facultative, nom exact)", loop.category || "", function (v) { setLoop("category", v); }, { max: 80, disabled: dis, onChange: true }));
+      box.appendChild(checkField("Pagination (liens Précédent / Suivant)", loop.paginate === true, function (v) { setLoop("paginate", v); }, { disabled: dis }));
+      box.appendChild(checkField("Filtrer avec l'adresse (?q=… recherche, ?categorie=…)", loop.urlFilter === true, function (v) { setLoop("urlFilter", v); }, { disabled: dis }));
+      box.appendChild(textField("Message s'il n'y a aucun résultat", loop.empty || "", function (v) { setLoop("empty", v); }, { max: 160, disabled: dis, onChange: true }));
+      box.appendChild(h("p", { class: "pb-hint", text: "Le contenu de cette grille est le MODÈLE d'un résultat : ajoutez-y un titre, une image, un bouton, puis utilisez { } pour y insérer le titre, l'image ou l'adresse du résultat. La page montre un exemplaire par résultat." }));
+    }
     box.appendChild(h("p", { class: "pb-hint", text: "Colonnes pour l'écran « " + bpLabel(device) + " » ; une ligne = " + cols + " cellule(s). L'écart, le remplissage et l'alignement des cases se règlent dans Style › Mise en page." }));
     if (device === "desktop") box.appendChild(h("p", { class: "pb-hint", text: "Sur tablette, la grille passe d'elle-même à 2 colonnes au plus, et à 1 sur mobile — sauf si vous réglez ces écrans (icônes d'écran en haut)." }));
   }
@@ -3281,6 +3356,7 @@
   }
   // Animation : entrée à l'apparition (durée, délai) et effet au survol ; rejouable dans le canevas
   function motionField(it, locked) {
+    if (window.pbEffects && window.pbEffects.motion) return window.pbEffects.motion(it, locked); // moteur de mouvement (page-builder-effects.js)
     var m = it.motion || {};
     var setM = function (k, v) { nextLabel = "Animation"; change(function () { var x = byId(it.id); var n = Object.assign({}, x.motion); if (v === "" || v === undefined) delete n[k]; else n[k] = v; if (k === "entrance" && !v) { delete n.duration; delete n.delay; } if (k === "entrance" && v) { if (n.duration === undefined) n.duration = 600; if (n.delay === undefined) n.delay = 0; } if (Object.keys(n).length) x.motion = n; else delete x.motion; }); };
     var det = h("details", { class: "pb-acc", "data-group": "motion" });
@@ -3340,6 +3416,61 @@
     det.appendChild(inner);
     return det;
   }
+  // ---------- Classes globales du site : styles nommés, appliqués à tout élément qui porte le nom (modifier = tout est mis à jour) ----------
+  var siteClasses = (PAGE.siteClasses || []).slice();
+  function saveSiteClasses(list, done) {
+    if (!PAGE.siteSettingsUrl) return Promise.reject(new Error("Cette page n'appartient à aucun site."));
+    return api("GET", PAGE.siteSettingsUrl).then(function (r) {
+      var next = Object.assign({}, r.settings, { classes: list });
+      return api("PUT", PAGE.siteSettingsUrl, { revision: r.revision, tokens: r.tokens, settings: next });
+    }).then(function (r) {
+      siteClasses = (r.settings && r.settings.classes) || [];
+      if (done) done();
+      renderInspector();
+      scheduleRender();
+    }).catch(function (e) { toast(e.message, true); });
+  }
+  // Styles propres de l'élément (écrans et états), prêts à entrer dans une classe
+  var ownStyles = function (it) { return { styles: clone(it.styles || {}), states: clone(it.states || {}) }; };
+  var classNames = function (it) { return String(it.classes || "").split(/\s+/).filter(Boolean); };
+  function setNodeClasses(it, names, label, clearOwn) {
+    change(function () { var x = byId(it.id); if (names.length) x.classes = names.join(" "); else delete x.classes; if (clearOwn) { delete x.styles; delete x.states; } }, { label: label });
+  }
+  function globalClassesBlock(it, locked) {
+    var box = h("div", { class: "pb-global-classes" });
+    box.appendChild(h("p", { class: "pb-sub", text: "Classes globales du site" }));
+    var names = classNames(it);
+    if (!siteClasses.length) box.appendChild(h("p", { class: "pb-hint", text: "Aucune classe globale. Réglez le style de cet élément, puis créez une classe : les autres éléments pourront la réutiliser, et la modifier mettra tout à jour." }));
+    siteClasses.forEach(function (c) {
+      var on = names.indexOf(c.name) >= 0;
+      var cb = h("input", { type: "checkbox", disabled: locked || null });
+      cb.checked = on;
+      cb.addEventListener("change", function () { setNodeClasses(it, cb.checked ? names.concat([c.name]) : names.filter(function (n) { return n !== c.name; }), cb.checked ? "Classe « " + c.name + " » appliquée" : "Classe « " + c.name + " » retirée", false); });
+      box.appendChild(h("div", { class: "pb-gclass-row" },
+        h("label", { class: "pb-check" }, cb, " ." + c.name),
+        on ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked || !(it.styles || it.states), "data-tip": "Ajoute les réglages propres de cet élément à la classe (tous les éléments de la classe sont mis à jour), puis les retire de l'élément",
+          onclick: function () {
+            var own = ownStyles(it), list = siteClasses.map(function (x) { return clone(x); }), t = list.filter(function (x) { return x.name === c.name; })[0];
+            ["styles", "states"].forEach(function (k) { t[k] = t[k] || {}; Object.keys(own[k]).forEach(function (bp) { t[k][bp] = Object.assign({}, t[k][bp], own[k][bp]); }); });
+            saveSiteClasses(list, function () { setNodeClasses(it, classNames(byId(it.id) || it), "Classe « " + c.name + " » mise à jour", true); toast("Classe « " + c.name + " » mise à jour : tous ses éléments suivent."); });
+          } }, "Mettre à jour la classe") : null,
+        h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked, "aria-label": "Supprimer la classe " + c.name,
+          onclick: function () { if (!window.confirm("Supprimer la classe « " + c.name + " » du site ? Les éléments qui la portent perdent son style.")) return; saveSiteClasses(siteClasses.filter(function (x) { return x.name !== c.name; }), function () { toast("Classe supprimée."); }); } }, "Supprimer")));
+    });
+    var nameIn = h("input", { type: "text", maxlength: "30", placeholder: "nom-de-la-classe", "aria-label": "Nom de la nouvelle classe globale", disabled: locked || null });
+    box.appendChild(h("div", { class: "pb-gclass-new" }, nameIn, h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: locked || !PAGE.siteSettingsUrl, "data-tip": "Crée la classe avec les réglages de style propres de cet élément, et l'applique",
+      onclick: function () {
+        var name = nameIn.value.trim().toLowerCase();
+        if (!/^[a-z][a-z0-9-]{0,29}$/.test(name) || /^(kw|lp|pb|mk)-/.test(name)) { toast("Nom de classe invalide : minuscules, chiffres et tirets, commence par une lettre (préfixes kw-, lp-, pb-, mk- réservés).", true); return; }
+        if (siteClasses.some(function (x) { return x.name === name; })) { toast("Cette classe existe déjà : cochez-la pour l'appliquer.", true); return; }
+        var own = ownStyles(it), def = { name: name };
+        if (Object.keys(own.styles).length) def.styles = own.styles;
+        if (Object.keys(own.states).length) def.states = own.states;
+        saveSiteClasses(siteClasses.concat([def]), function () { setNodeClasses(it, classNames(it).concat([name]), "Classe « " + name + " » créée", true); toast("Classe « " + name + " » créée et appliquée."); });
+      } }, "Créer une classe depuis cet élément")));
+    if (!PAGE.siteSettingsUrl) box.appendChild(h("p", { class: "pb-hint", text: "Les classes globales appartiennent à un site : cette page n'en a pas." }));
+    return box;
+  }
   // Code : CSS propre à l'élément, classes et attributs (vérifiés à l'enregistrement : aucune ressource externe)
   function codeField(it, locked, opts) {
     opts = opts || {};
@@ -3354,6 +3485,7 @@
     inner.appendChild(textField("CSS de l'élément (déclarations)", it.css, put("css"), { multiline: true, rows: "4", onChange: true, max: 2000, disabled: locked, placeholder: "letter-spacing: .02em;\nbackground-color: #f3f8fc;", hint: "Appliqué à cet élément seulement, après les réglages de l'inspecteur. Pas d'url(), d'@, de \\ ni de < >." }));
     inner.appendChild(textField("CSS au survol", it.cssHover, put("cssHover"), { multiline: true, rows: "2", onChange: true, max: 2000, disabled: locked, placeholder: "transform: translateY(-2px);" }));
     inner.appendChild(textField("Classes", it.classes, put("classes"), { onChange: true, max: 300, disabled: locked, placeholder: "carte-mise-en-avant", hint: "À cibler dans le CSS de la page (onglet Page). Préfixes kw-, lp-, pb-, mk- réservés." }));
+    if (PAGE.siteSettingsUrl || siteClasses.length) inner.appendChild(globalClassesBlock(it, locked));
     }
     if (!opts.noAttrs) {
     var attrs = it.attrs || [];
@@ -3377,13 +3509,15 @@
     var id = fid();
     var sel = h("select", { id: id, disabled: locked }, [h("option", { value: "", text: "Tout le monde" })].concat(SPEC.audiences.map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
     sel.value = a.who || "";
-    var needsValue = function (w) { return w === "tag" || w === "not_tag" || w === "score_min"; };
-    var val = h("input", { type: a.who === "score_min" ? "number" : "text", min: "0", step: "1", maxlength: "60", placeholder: a.who === "score_min" ? "Score minimal" : "Nom de l'étiquette", value: a.value === undefined ? "" : String(a.value), disabled: locked, "aria-label": "Valeur du public d'affichage", list: a.who === "score_min" ? null : "pb-tags" });
+    var needsValue = function (w) { return w === "tag" || w === "not_tag" || w === "score_min" || w === "param"; };
+    var holder = function (w) { return w === "score_min" ? "Score minimal" : w === "param" ? "clé ou clé=valeur (ex. campagne=printemps)" : "Nom de l'étiquette"; };
+    var val = h("input", { type: a.who === "score_min" ? "number" : "text", min: "0", step: "1", maxlength: "60", placeholder: a.who === "score_min" ? "Score minimal" : a.who === "param" ? "clé ou clé=valeur (ex. campagne=printemps)" : "Nom de l'étiquette", value: a.value === undefined ? "" : String(a.value), disabled: locked, "aria-label": "Valeur du public d'affichage", list: a.who === "score_min" ? null : "pb-tags" });
     val.hidden = !needsValue(a.who);
     var apply = function () {
       var who = sel.value;
       val.hidden = !needsValue(who);
       val.type = who === "score_min" ? "number" : "text";
+      val.placeholder = holder(who);
       if (needsValue(who) && val.value.trim() === "") { val.focus(); return; }
       change(function () {
         var x = byId(it.id);
@@ -3541,6 +3675,8 @@
     var it = byId(id);
     if (!it || !INLINE[it.type] || !canWrite) return;
     if (lockedDeep(id)) { toast("Élément verrouillé.", true); return; }
+    // Contenu dynamique : la page affiche la VALEUR de la donnée ; écrire dessus effacerait l'étiquette. On passe par l'inspecteur.
+    if (hasDynamic(it)) { toast("Ce contenu est dynamique ({{…}}) : modifiez-le dans le panneau de droite.", false); openInspector("content"); return; }
     var doc = frame.contentDocument;
     var el = doc && doc.querySelector('[data-node-id="' + id + '"]');
     if (!el) return;
@@ -4211,6 +4347,8 @@
       case "imagebox": case "iconbox": return p.title;
       case "sitelogo": return "Logo du site";
       case "sitetitle": return "Titre du site";
+      case "postcontent": return "Contenu de l'article";
+      case "catfilter": return "Filtre : " + (p.source === "courses" ? "formations" : "articles");
       case "copyright": return "© " + (p.owner || "nom du site") + (p.text ? ". " + p.text : "");
       case "animatedheading": return [p.before, (p.words || []).join(" / "), p.after].filter(Boolean).join(" ");
       case "flipbox": return p.frontTitle;
@@ -5734,7 +5872,7 @@
     selection: function () { return selection.slice(); }, toast: toast, canWrite: canWrite, links: boot.links, addElement: function (type) { addElement(type); }, subscribe: function (f) { navListeners.push(f); }, open: function () {} };
   if (window.pbEffects) window.pbEffects.attach({
     h: h, store: store, toast: toast, SPEC: SPEC, BPS: BPS, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, idsOf: idsOf,
-    accGroup: accGroup, ownValue: ownValue, setStyle: setStyle, setStyles: setStyles, parseLength: parseLength, numField: numField, numericControl: numericControl, selectField: selectField, checkField: checkField,
+    accGroup: accGroup, ownValue: ownValue, inheritedValue: inheritedValue, canvasEl: canvasEl, setStyle: setStyle, setStyles: setStyles, parseLength: parseLength, numField: numField, numericControl: numericControl, selectField: selectField, checkField: checkField,
     openMedia: openMedia, breakpointSwitch: breakpointSwitch, getDevice: function () { return device; }, getState: function () { return styleState; },
     setState: function (st) { styleState = st; renderInspector(); renderContext(); }, hasStates: function (it) { return Boolean(inspectorFor(it).states); },
   });

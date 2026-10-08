@@ -13,17 +13,9 @@ const { bad, withNext } = require("./shared");
 const MAX_FIELDS = 20;
 const KEY = /^[a-z][a-z0-9_]{0,39}$/i;
 const MAX_VALUE = 300;
-// Variables des valeurs : le contact et l'événement déclencheur du passage (mêmes données que dans les e-mails du scénario)
-const CONTACT_VARS = { email: "email", prenom: "first_name", nom: "last_name", telephone: "phone", societe: "company", pays: "country", score: "score" };
-const EVENT_VARS = ["course_title", "course_url", "order_total", "order_id", "lesson_title", "learn_url"];
-const VARIABLES = [...Object.keys(CONTACT_VARS), ...EVENT_VARS.map((v) => `event.${v}`)];
-const TOKEN = /\{\{\s*([a-z_.]+)\s*\}\}/g;
+const { BASE_VARIABLES: VARIABLES, valuesFor, render, unknownTokens, listText } = require("./variables");
 
 const endpointOf = (ctx, id) => ctx.db.prepare("SELECT id, name, enabled FROM mk_webhook_endpoints WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId);
-
-function render(template, vars) {
-  return String(template).replace(TOKEN, (m, name) => (Object.hasOwn(vars, name) ? String(vars[name] ?? "") : m));
-}
 
 defineAction({
   type: "webhook_call", category: "integrations", label: STEP_LABELS.webhook_call, description: "Une requête signée vers un de vos webhooks", version: 1, status: "available", requires: ["webhook_endpoint"],
@@ -41,8 +33,8 @@ defineAction({
       seen.add(key.toLowerCase());
       const value = typeof f.value === "string" ? f.value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").trim() : "";
       if (value.length > MAX_VALUE) throw bad(i, `valeur de « ${key} » trop longue (${MAX_VALUE} caractères au plus).`);
-      const unknown = [...value.matchAll(TOKEN)].map((m) => m[1]).filter((v) => !VARIABLES.includes(v));
-      if (unknown.length) throw bad(i, `variable inconnue dans « ${key} » : ${unknown.join(", ")}. Variables : ${VARIABLES.map((v) => `{{${v}}}`).join(", ")}.`);
+      const unknown = unknownTokens(value, VARIABLES);
+      if (unknown.length) throw bad(i, `variable inconnue dans « ${key} » : ${unknown.join(", ")}. Variables : ${listText(VARIABLES)}.`);
       return { key, value };
     });
     return withNext({ type: "webhook_call", endpointId: raw.endpointId, fields }, raw, i, steps);
@@ -53,11 +45,7 @@ defineAction({
     if (!endpoint.enabled) return { next: true, log: ["skipped", `webhook « ${endpoint.name} » en pause : rien envoyé`] };
     if (!ctx.tokenKey) return { next: true, log: ["failed", "clé de chiffrement absente (ENCRYPTION_KEY) : le secret du webhook est illisible, rien envoyé"] };
     const fresh = getContact(ctx, contact.id) || contact;
-    let eventData = {};
-    try { eventData = JSON.parse(run.event_data || "{}"); } catch { eventData = {}; }
-    const vars = {};
-    for (const [name, column] of Object.entries(CONTACT_VARS)) vars[name] = fresh[column];
-    for (const v of EVENT_VARS) vars[`event.${v}`] = eventData[v];
+    const vars = valuesFor({ contact: fresh, run });
     const fields = {};
     for (const f of step.fields) fields[f.key] = render(f.value, vars);
     const metadata = {

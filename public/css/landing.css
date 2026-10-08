@@ -532,32 +532,20 @@ body.pb-hand,body.pb-hand *{cursor:grab}
 .kw-progress-head > span:last-child:not(:first-child) { flex: none; white-space: nowrap; overflow-wrap: normal; }
 .kw-progress-head { align-items: flex-start; }
 /* Animations d'entrée (ajoutées par landing.js seulement : sans script, tout est visible) */
-.kw-anim-ready [data-kw-anim]:not(.is-in) { opacity: 0; }
+/* Moteur de mouvement : l'animation d'une page (images-clés, nom, répétition, direction, écrans) est écrite dans le CSS de CETTE page, pour les seules animations utilisées */
+.kw-anim-ready [data-kw-anim]:not([data-kw-anim-vis]):not(.is-in) { opacity: 0; }
 [data-kw-anim].is-in { animation-duration: var(--kw-anim-dur, 600ms); animation-delay: var(--kw-anim-delay, 0ms); animation-timing-function: cubic-bezier(.2, .7, .2, 1); animation-fill-mode: backwards; }
-[data-kw-anim="fade"].is-in { animation-name: kw-in-fade; }
-[data-kw-anim="slide-up"].is-in { animation-name: kw-in-up; }
-[data-kw-anim="slide-down"].is-in { animation-name: kw-in-down; }
-[data-kw-anim="slide-left"].is-in { animation-name: kw-in-left; }
-[data-kw-anim="slide-right"].is-in { animation-name: kw-in-right; }
-[data-kw-anim="zoom"].is-in { animation-name: kw-in-zoom; }
-@keyframes kw-in-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes kw-in-up { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
-@keyframes kw-in-down { from { opacity: 0; transform: translateY(-28px); } to { opacity: 1; transform: none; } }
-@keyframes kw-in-left { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
-@keyframes kw-in-right { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
-@keyframes kw-in-zoom { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
 /* Effets au survol */
 .kw-hover-grow, .kw-hover-shrink, .kw-hover-lift, .kw-hover-tilt { transition: transform .2s ease, box-shadow .2s ease; }
 @media (prefers-reduced-motion: reduce) { .kw-hover-grow, .kw-hover-shrink, .kw-hover-lift, .kw-hover-tilt { transition: none; } }
-.kw-hover-grow:hover { transform: scale(1.04); }
-.kw-hover-shrink:hover { transform: scale(.96); }
-.kw-hover-lift:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(15, 23, 42, .16); }
-.kw-hover-tilt:hover { transform: rotate(-1.5deg); }
-@media (prefers-reduced-motion: reduce) { [data-kw-anim].is-in { animation: none; } .kw-hover-grow:hover, .kw-hover-shrink:hover, .kw-hover-lift:hover, .kw-hover-tilt:hover { transform: none; } }
+.kw-hover-grow:hover { transform: var(--kw-tf,) scale(1.04); }
+.kw-hover-shrink:hover { transform: var(--kw-tf,) scale(.96); }
+.kw-hover-lift:hover { transform: var(--kw-tf,) translateY(-4px); box-shadow: 0 12px 28px rgba(15, 23, 42, .16); }
+.kw-hover-tilt:hover { transform: var(--kw-tf,) rotate(-1.5deg); }
+@keyframes kw-rm-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { [data-kw-anim]:not([data-kw-motion-always]).is-in, [data-kw-anim]:not([data-kw-motion-always]).kw-ix-replay { animation: none; } [data-kw-anim][data-kw-anim-rm="fade"]:not([data-kw-motion-always]).is-in { animation: kw-rm-fade 300ms ease both; } .kw-hover-grow:hover, .kw-hover-shrink:hover, .kw-hover-lift:hover, .kw-hover-tilt:hover { transform: none; } }
 /* Éditeur : rejouer une animation (bouton de l'inspecteur) */
 .pb-anim-replay[data-kw-anim] { animation-duration: var(--kw-anim-dur, 600ms); animation-delay: 0ms; animation-fill-mode: backwards; }
-.pb-anim-replay[data-kw-anim="fade"] { animation-name: kw-in-fade; } .pb-anim-replay[data-kw-anim="slide-up"] { animation-name: kw-in-up; } .pb-anim-replay[data-kw-anim="slide-down"] { animation-name: kw-in-down; }
-.pb-anim-replay[data-kw-anim="slide-left"] { animation-name: kw-in-left; } .pb-anim-replay[data-kw-anim="slide-right"] { animation-name: kw-in-right; } .pb-anim-replay[data-kw-anim="zoom"] { animation-name: kw-in-zoom; }
 /* Bouton avec icône */
 .kw-button.has-icon { gap: 8px; }
 .kw-btn-icon { display: inline-flex; flex: none; }
@@ -721,18 +709,7 @@ body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 /* ===== Mission V3 ===== */
 /* Animations : courbe choisie, nouvelles entrées, interaction « rejouer » */
 [data-kw-anim].is-in, .kw-ix-replay[data-kw-anim] { animation-timing-function: var(--kw-anim-ease, cubic-bezier(.2, .7, .2, 1)); }
-[data-kw-anim="bounce"].is-in, .kw-ix-replay[data-kw-anim="bounce"] { animation-name: kw-in-bounce; }
-[data-kw-anim="rotate"].is-in, .kw-ix-replay[data-kw-anim="rotate"] { animation-name: kw-in-rotate; }
-[data-kw-anim="reveal"].is-in, .kw-ix-replay[data-kw-anim="reveal"] { animation-name: kw-in-reveal; }
-[data-kw-anim="flip"].is-in, .kw-ix-replay[data-kw-anim="flip"] { animation-name: kw-in-flip; }
 .kw-ix-replay[data-kw-anim] { animation-duration: var(--kw-anim-dur, 600ms); animation-fill-mode: backwards; }
-.kw-ix-replay[data-kw-anim="fade"] { animation-name: kw-in-fade; } .kw-ix-replay[data-kw-anim="slide-up"] { animation-name: kw-in-up; } .kw-ix-replay[data-kw-anim="slide-down"] { animation-name: kw-in-down; }
-.kw-ix-replay[data-kw-anim="slide-left"] { animation-name: kw-in-left; } .kw-ix-replay[data-kw-anim="slide-right"] { animation-name: kw-in-right; } .kw-ix-replay[data-kw-anim="zoom"] { animation-name: kw-in-zoom; }
-.pb-anim-replay[data-kw-anim="bounce"] { animation-name: kw-in-bounce; } .pb-anim-replay[data-kw-anim="rotate"] { animation-name: kw-in-rotate; } .pb-anim-replay[data-kw-anim="reveal"] { animation-name: kw-in-reveal; } .pb-anim-replay[data-kw-anim="flip"] { animation-name: kw-in-flip; }
-@keyframes kw-in-bounce { 0% { opacity: 0; transform: translateY(40px); } 60% { opacity: 1; transform: translateY(-8px); } 80% { transform: translateY(3px); } 100% { opacity: 1; transform: none; } }
-@keyframes kw-in-rotate { from { opacity: 0; transform: rotate(-12deg) scale(.95); } to { opacity: 1; transform: none; } }
-@keyframes kw-in-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-@keyframes kw-in-flip { from { opacity: 0; transform: perspective(600px) rotateX(70deg); } to { opacity: 1; transform: none; } }
 /* Interactions : état masqué (jamais dans l'éditeur, où tout reste visible) */
 body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .lp-builder .kw-ix-hidden { outline: 1px dashed rgba(15, 118, 110, .6); outline-offset: 2px; }
@@ -800,3 +777,20 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .kw-modal.is-left, .kw-modal.is-right { min-width: 0; }
 @media (prefers-reduced-motion: reduce) { .kw-offcanvas[open], .kw-ix-shown { animation: none; } }
 .kw-account-link, .kw-account-cart { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+/* Ouverture des fenêtres et des volets (indépendant du moteur de mouvement) */
+@keyframes kw-in-zoom { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
+@keyframes kw-in-left { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes kw-in-right { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+/* Boucle (grille « répéter pour chaque … ») */
+.kw-loop-item { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.kw-loop-empty { grid-column: 1 / -1; }
+.kw-loop-pages { grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 8px; }
+.kw-loop-pages a { padding: 6px 12px; border: 1px solid currentColor; border-radius: 8px; text-decoration: none; }
+/* Filtre par catégorie */
+.kw-catfilter ul { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.kw-catfilter a { display: inline-block; padding: 6px 14px; border: 1px solid currentColor; border-radius: 999px; text-decoration: none; font-size: .9rem; }
+.kw-catfilter a[aria-current="true"] { background: var(--kw-primary, #0277b6); border-color: var(--kw-primary, #0277b6); color: var(--kw-on-primary, #fff); }
+.kw-catfilter-n { opacity: .7; }
+/* Modèle « Article du blog » : emplacement du texte dans l'éditeur */
+.kw-postcontent-empty { padding: 24px; border: 2px dashed #94a3b8; border-radius: 12px; text-align: center; color: #475569; }
+.kw-theme-template { display: block; }

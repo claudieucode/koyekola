@@ -317,5 +317,72 @@ describe("palette d'actions des scénarios : disponibilité réelle, filtre, ré
     assert.match(await page.locator(".drawflow-node").filter({ hasText: "Envoyer vers un webhook" }).first().innerText(), /« CRM » · 2 champs/);
   });
 
+  test("« Notifier l'équipe » : membres proposés (jamais d'adresse libre), validation, enregistrement exécutable ; « connexion requise » sans fournisseur d'e-mails", async () => {
+    await openEditor();
+    srv.db().prepare("DELETE FROM mk_settings WHERE organization_id = ? AND key LIKE 'email.%'").run(org); // d'autres scénarios ont pu régler le fournisseur : on repart sans
+    await page.reload(); await page.waitForSelector("#au-palette .mk-pal-item");
+    assert.equal(await item("notify_team").locator(".mk-pal-badge").innerText(), "Connexion requise", "il faut un fournisseur d'e-mails");
+    const membre = srv.db().prepare("SELECT m.user_id, u.username, u.email FROM mk_org_members m JOIN users u ON u.id = m.user_id WHERE m.organization_id = ? ORDER BY m.user_id LIMIT 1").get(org);
+    await item("notify_team").click();
+    await page.locator(".drawflow-node").filter({ hasText: "Notifier l'équipe" }).first().click();
+    await dialog().waitFor({ timeout: 8000 });
+    assert.match(await dialog().innerText(), new RegExp(`${membre.username} \\(${membre.email.replace(".", "\\.")}\\)`), "le membre est proposé avec son adresse");
+    assert.equal(await dialog().locator("input[type=email]").count(), 0, "aucun champ pour saisir une adresse libre");
+    await dialog().locator("[data-step-save]").click();
+    const e1 = await dialog().locator(".mk-step-dialog-error").innerText();
+    assert.match(e1, /au moins un destinataire/); assert.match(e1, /Écrivez l'objet/); assert.match(e1, /Écrivez le texte/);
+    await dialog().locator("input[type=checkbox]").first().check();
+    await dialog().locator("input[type=text]").first().fill("Contact chaud : {{prenom}} {{nom}}");
+    await dialog().locator("textarea").fill("Bonjour {{inconnue}}");
+    await dialog().locator("[data-step-save]").click();
+    assert.match(await dialog().locator(".mk-step-dialog-error").innerText(), /Variable inconnue : inconnue/);
+    await dialog().locator("textarea").fill("{{prenom}} ({{email}}) : {{contact_url}}");
+    await dialog().locator("[data-step-save]").click();
+    await page.locator("dialog.mk-step-dialog[open]").waitFor({ state: "detached", timeout: 8000 });
+    await connectAndSave("Notifier l'équipe");
+    await until(() => JSON.stringify(savedSteps()) === JSON.stringify([{ type: "notify_team", recipients: [membre.user_id], subject: "Contact chaud : {{prenom}} {{nom}}", body: "{{prenom}} ({{email}}) : {{contact_url}}" }]), "étape enregistrée et exécutable");
+    assert.match(await page.locator(".drawflow-node").filter({ hasText: "Notifier l'équipe" }).first().innerText(), /1 destinataire · Contact chaud/);
+  });
+
+  test("« Plusieurs chemins » : cas et sorties, connexions qui suivent leur cas, enregistrement exécutable", async () => {
+    await openEditor();
+    const node = (label) => page.locator(".drawflow-node").filter({ hasText: label }).last();
+    const configure = async (type, label, fill) => { await item(type).click(); await node(label).click(); await dialog().waitFor({ timeout: 8000 }); await fill(); await dialog().locator("[data-step-save]").click(); await page.locator("dialog.mk-step-dialog[open]").waitFor({ state: "detached", timeout: 8000 }); };
+    for (const tag of ["chemin-france", "chemin-autre"]) await configure("add_tag", "Ajouter une étiquette", async () => { await dialog().locator("input[type=text]").first().fill(tag); });
+    const critere = async (k, pays) => { await dialog().getByRole("button", { name: "+ Ajouter un critère" }).nth(k).click(); const rule = dialog().locator(".mk-rule").nth(k); await rule.locator("select").nth(0).selectOption("country"); await rule.locator("select").nth(1).selectOption("eq"); await rule.locator("input[type=text]").fill(pays); };
+    await configure("route", "Plusieurs chemins", async () => { await dialog().locator("input[placeholder='Cas 1']").fill("France"); await critere(0, "FR"); });
+    // Une sortie par cas, puis « Sinon » : 2 sorties, libellées
+    const outputs = (label) => node(label).locator(".output").count();
+    assert.equal(await outputs("Plusieurs chemins"), 2);
+    assert.match(await node("Plusieurs chemins").locator(".mk-flow-card-ports").innerText(), /France[\s\S]*Sinon/);
+    // Relier : déclencheur → route ; cas « France » → étiquette france ; « Sinon » → étiquette autre
+    const link = async (from, out, to) => node(from).locator(out).first().dragTo(node(to).locator(".input").first());
+    await link("Déclencheur", ".output", "Plusieurs chemins");
+    await node("Plusieurs chemins").locator(".output_1").dragTo(node("chemin-france").locator(".input").first());
+    await node("Plusieurs chemins").locator(".output_2").dragTo(node("chemin-autre").locator(".input").first());
+    await page.locator("#au-save").click();
+    // Lecture des étapes ENREGISTRÉES : où mène chaque chemin, par le nom de l'étiquette d'arrivée
+    const chemins = () => { const st = savedSteps(); const r = st.find((x) => x.type === "route"); if (!r) return null; const dest = (to) => (to === "exit" || to === "next" ? to : st[to] && st[to].tag); return { cas: r.cases.map((c) => [c.label, c.definition.rules[0].value, dest(c.to)]), sinon: dest(r.otherwise) }; };
+    await until(() => JSON.stringify(chemins()) === JSON.stringify({ cas: [["France", "FR", "chemin-france"]], sinon: "chemin-autre" }), "chemins enregistrés (1 cas + Sinon)");
+    // Ajouter un cas : « Sinon » reste la DERNIÈRE sortie et garde sa connexion ; le nouveau cas n'est pas encore relié
+    await node("Plusieurs chemins").click(); await dialog().waitFor({ timeout: 8000 });
+    await dialog().getByRole("button", { name: "Ajouter un cas" }).click();
+    await dialog().locator("input[placeholder='Cas 2']").fill("Belgique");
+    await critere(1, "BE");
+    await dialog().locator("[data-step-save]").click(); await page.locator("dialog.mk-step-dialog[open]").waitFor({ state: "detached", timeout: 8000 });
+    assert.equal(await outputs("Plusieurs chemins"), 3, "2 cas + Sinon");
+    assert.match(await node("Plusieurs chemins").locator(".mk-flow-card-ports").innerText(), /France[\s\S]*Belgique[\s\S]*Sinon/);
+    await page.locator("#au-save").click();
+    await until(() => JSON.stringify(chemins()) === JSON.stringify({ cas: [["France", "FR", "chemin-france"], ["Belgique", "BE", "exit"]], sinon: "chemin-autre" }), "le cas ajouté sort du scénario tant qu'il n'est pas relié ; les autres chemins n'ont pas bougé");
+    // Relier le nouveau cas, puis retirer le PREMIER cas : les connexions suivent leur cas
+    await node("Plusieurs chemins").locator(".output_2").dragTo(node("chemin-france").locator(".input").first());
+    await node("Plusieurs chemins").click(); await dialog().waitFor({ timeout: 8000 });
+    await dialog().getByRole("button", { name: "Retirer le cas 1" }).click();
+    await dialog().locator("[data-step-save]").click(); await page.locator("dialog.mk-step-dialog[open]").waitFor({ state: "detached", timeout: 8000 });
+    assert.equal(await outputs("Plusieurs chemins"), 2, "1 cas + Sinon");
+    await page.locator("#au-save").click();
+    await until(() => JSON.stringify(chemins()) === JSON.stringify({ cas: [["Belgique", "BE", "chemin-france"]], sinon: "chemin-autre" }), "« Belgique » garde SA connexion (vers chemin-france), « Sinon » la sienne");
+  });
+
   test("aucune erreur de script ni de console", () => { assert.deepEqual(errors, []); });
 });

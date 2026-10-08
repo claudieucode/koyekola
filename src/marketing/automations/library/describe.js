@@ -60,6 +60,7 @@ function describeStep(j, s, emails, texts) {
     case "wait_for_event": return { icon: "clock", kind: "wait", text: `Attendre « ${(TRIGGERS[s.event] || { label: s.event }).label} » (${s.amount} ${UNIT_LABEL[s.unit]} au plus)` };
     case "condition": return { icon: "gitBranch", kind: "condition", text: whenText(s) };
     case "split": return { icon: "gitBranch", kind: "condition", text: `Tirage au sort : ${s.percentage} % vers le chemin A, ${100 - s.percentage} % vers le chemin B` };
+    case "route": return { icon: "gitBranch", kind: "condition", text: `Plusieurs chemins : ${(s.cases || []).map((c) => c.label).join(", ")}, sinon un autre chemin` };
     case "add_tag": return { icon: "tag", kind: "action", text: `Ajouter l'étiquette « ${s.tag} »` };
     case "remove_tag": return { icon: "tag", kind: "action", text: `Retirer l'étiquette « ${s.tag} »` };
     case "add_to_list": return { icon: "list", kind: "action", text: "Ajouter à la liste choisie" };
@@ -69,6 +70,7 @@ function describeStep(j, s, emails, texts) {
     case "copy_field": return { icon: "copy", kind: "action", text: `Copier « ${s.from} » vers « ${s.to} »` };
     case "set_date": return { icon: "calendarClock", kind: "action", text: `Définir le champ date « ${s.property} »` };
     case "calculate": return { icon: "calculator", kind: "action", text: `Calculer le champ « ${s.property} »` };
+    case "notify_team": return { icon: "bell", kind: "action", text: "Notifier des membres de l'équipe par e-mail" };
     case "webhook_call": return { icon: "send", kind: "action", text: "Envoyer une requête signée vers un webhook" };
     case "start_automation": return { icon: "play", kind: "action", text: "Démarrer un autre scénario pour ce contact" };
     case "stop_automation": return { icon: "pause", kind: "action", text: "Arrêter un autre scénario pour ce contact" };

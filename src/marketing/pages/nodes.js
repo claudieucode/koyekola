@@ -9,6 +9,7 @@ const sanitizeHtml = require("sanitize-html");
 const crypto = require("crypto");
 const { getCourse } = require("../bridge/catalog");
 const { parseVideoUrl } = require("../../utils/video");
+const dynamic = require("./dynamic");
 
 // Fichiers vidéo et audio de la médiathèque du CMS : adresse locale permanente (/uploads/marketing/<organisation>/<fichier>)
 const LOCAL_VIDEO = /^\/uploads\/marketing\/\d+\/[A-Za-z0-9._-]+\.(mp4|webm)$/i;
@@ -277,7 +278,7 @@ function declarations(set) {
     if (t.scale) parts.push(`scale(${t.scale})`);
     if (t.skewX) parts.push(`skewX(${t.skewX}deg)`);
     if (t.skewY) parts.push(`skewY(${t.skewY}deg)`);
-    d.push(`transform:${parts.join(" ")}`);
+    d.push(`transform:${parts.join(" ")}`, `--kw-tf:${parts.join(" ")}`); // --kw-tf : lue par les animations d'entrée pour composer leur mouvement avec cette transformation
   }
   return d.join(";");
 }
@@ -290,18 +291,37 @@ const BOX_TAGS = ["div", "section", "header", "footer", "article", "aside", "nav
 const boxTag = (p) => { const tag = oneOf(...BOX_TAGS)(p.tag); return tag && tag !== "div" ? { tag } : {}; };
 // Lien d'un conteneur : toute la zone devient cliquable (page du site, ancre ou https://). Nouvel onglet seulement pour https://.
 // Voir aussi INTERACTIVE_INSIDE_LINK : un lien ne peut pas en contenir un autre.
+// Boucle d'une grille : source, nombre, catégorie, tri, pagination, filtrage par l'adresse (?q=, ?categorie=). Valeurs bornées.
+const loopProps = (p) => {
+  const l = p.loop;
+  if (!l || typeof l !== "object") return {};
+  const source = oneOf("posts", "courses")(l.source) || "posts";
+  const sorts = source === "posts" ? ["recent", "old", "title"] : ["recent", "title", "price"];
+  return { loop: {
+    source, count: numberIn(1, 24, { integer: true })(l.count) || 6, category: line(l.category, 80), sort: oneOf(...sorts)(l.sort) || "recent",
+    ...(l.paginate === true ? { paginate: true } : {}), ...(l.urlFilter === true ? { urlFilter: true } : {}),
+    empty: line(l.empty, 160) || (source === "posts" ? "Aucun article ne correspond." : "Aucune formation ne correspond."),
+  } };
+};
+// Adresse ou image : une étiquette dynamique seule (« {{post.url}} ») est acceptée telle quelle et revalidée à l'affichage
+const dynamicHelpers = (h) => ({
+  ...h,
+  linkUrl: (v, label) => (dynamic.isPureToken(v) ? clean(v, 300) : h.linkUrl(v, label)),
+  imageUrl: (v, label) => (dynamic.isPureToken(v) ? clean(v, 300) : h.imageUrl(v, label)),
+});
 const boxProps = (p, at, h) => {
   const link = h.linkUrl(p.link, `${at} (lien du conteneur)`);
   return { ...boxTag(p), ...(link ? { link, ...(p.newTab === true && link.startsWith("https://") ? { newTab: true } : {}) } : {}) };
 };
 // Éléments qui sont eux-mêmes un lien, un bouton ou un champ (ou qui peuvent en contenir) : interdits dans un conteneur cliquable
-const INTERACTIVE_INSIDE_LINK = new Set(["button", "link", "menu", "search", "account", "toggle", "tabs", "accordion", "modal", "carousel", "tooltip", "hotspot", "html", "embed", "social", "breadcrumb", "course", "courselist", "posts", "pricing", "iconlist", "gallery", "table"]);
+const INTERACTIVE_INSIDE_LINK = new Set(["button", "link", "menu", "search", "account", "toggle", "tabs", "accordion", "modal", "carousel", "tooltip", "hotspot", "html", "embed", "social", "breadcrumb", "course", "courselist", "posts", "pricing", "iconlist", "gallery", "table", "postcontent"]);
 const NODE_TYPES = {
   // Largeur du contenu : encadrée (1100 px centrés, par défaut) ou pleine largeur
   container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : {}) }) },
   columns: { label: "Colonnes", category: "structure", container: true, props: () => ({}) },
   column: { label: "Colonne", category: "structure", container: true, props: () => ({}) },
-  grid: { label: "Grille", category: "structure", container: true, props: boxProps },
+  // Grille : peut devenir une BOUCLE (« Répéter pour chaque article / formation ») : ses enfants sont le modèle d'un élément
+  grid: { label: "Grille", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...loopProps(p) }) },
   stack: { label: "Pile", category: "structure", container: true, props: boxProps },
   group: { label: "Groupe", category: "structure", container: true, props: boxProps },
   spacer: { label: "Espace", category: "structure", props: (p) => ({ size: oneOf("8", "16", "24", "32", "48", "64", "80", "96", "128")(String(p.size)) || "32" }) },
@@ -603,6 +623,10 @@ const NODE_TYPES = {
   // Logo, titre du site, copyright : contenu lu à l'affichage (logo et nom des réglages SEO, nom du site de la page,
   // année en cours) ; seuls les réglages d'affichage sont enregistrés
   sitelogo: { label: "Logo du site", category: "dynamic", props: (p) => ({ height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false }) },
+  // Corps de l'article du blog affiché par un modèle « Article du blog » (HTML déjà produit et nettoyé par le blog)
+  postcontent: { label: "Contenu de l'article", category: "dynamic", props: () => ({}) },
+  // Filtre par catégorie : liens « ?categorie=… » vers la même page (à associer à une grille en boucle « filtrer avec l'adresse »)
+  catfilter: { label: "Filtre par catégorie", category: "dynamic", props: (p) => ({ source: oneOf("posts", "courses")(p.source) || "posts", allLabel: line(p.allLabel, 40) || "Toutes", showCount: p.showCount !== false }) },
   sitetitle: { label: "Titre du site", category: "dynamic", props: (p) => ({ tag: oneOf("p", "span", "h1", "h2", "h3")(p.tag) || "p", link: p.link !== false }) },
   copyright: { label: "Copyright", category: "dynamic", props: (p) => ({ owner: line(p.owner, 80), text: line(p.text, 160) }) },
   // Bouton d'achat : ajoute la formation au VRAI panier de KOLAKISA (POST /panier/ajouter/:id), ou mène directement à la commande.
@@ -732,6 +756,8 @@ const WIDGETS = {
   readingprogress: ["advanced", "barre de lecture progression defilement scroll article"],
   sitelogo: ["site", "logo du site marque image accueil en-tete"],
   sitetitle: ["site", "titre du site nom marque accueil en-tete"],
+  catfilter: ["site", "filtre categorie taxonomie etiquette trier boucle blog catalogue"],
+  postcontent: ["site", "contenu article texte principal corps blog modele theme single post"],
   copyright: ["site", "copyright droits reserves annee pied de page mentions"],
   link: ["basic", "lien url"],
   list: ["basic", "liste puces numerotee"],
@@ -891,6 +917,8 @@ const PALETTE = {
   readingprogress: { icon: "activity", blank: () => ({ props: { position: "top", thickness: 4 } }) },
   sitelogo: { icon: "image", blank: () => ({ props: { height: 48, link: true } }) },
   sitetitle: { icon: "type", blank: () => ({ props: { tag: "p", link: true } }) },
+  postcontent: { icon: "fileText", blank: () => ({ props: {} }) },
+  catfilter: { icon: "listChecks", blank: () => ({ props: { source: "posts", allLabel: "Toutes" } }) },
   copyright: { icon: "fileText", blank: () => ({ props: { owner: "", text: "Tous droits réservés." } }) },
   badge: { icon: "tag", blank: () => ({ props: { text: "Nouveau", tone: "primary" } }) },
   timeline: { icon: "history", blank: () => ({ props: { items: [{ date: "Étape 1", title: "Inscription", text: "Ce qui se passe à cette étape." }, { date: "Étape 2", title: "Premier module", text: "Ce qui se passe ensuite." }] } }) },
@@ -978,13 +1006,13 @@ function editorSpec() {
   };
   return {
     types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], keywords: WIDGETS[type][1], requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text" } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
-    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
+    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
-    socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
+    socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     structureKinds: require("./structures").KINDS, structures: require("./structures").STRUCTURES,
     colorTokens: COLOR_TOKENS, spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
-    limits: { nodes: MAX_NODES, depth: MAX_DEPTH },
+    limits: { nodes: MAX_NODES, depth: MAX_DEPTH }, dynamic: dynamic.catalog(),
   };
 }
 
@@ -1027,14 +1055,39 @@ const AUDIENCES = {
   student: "Élèves connectés", not_student: "Personnes non connectées",
   tag: "Contacts avec l'étiquette…", not_tag: "Contacts sans l'étiquette…",
   score_min: "Score au moins égal à…",
+  has_cart: "Panier non vide", empty_cart: "Panier vide", instructor: "Formateur connecté", param: "Adresse contenant le paramètre…",
 };
+// Extension : une condition d'affichage ajoutée par un module (registerCondition) — libellé, valeur éventuelle (texte ou nombre),
+// validation et test sur le visiteur. Les conditions fournies par KOLAKISA restent dans AUDIENCES / audienceMatches.
+const CUSTOM_CONDITIONS = new Map();
+function registerCondition(key, def) {
+  if (!/^[a-z][a-z0-9_]{1,30}$/.test(key) || Object.hasOwn(AUDIENCES, key)) throw new Error(`Condition « ${key} » : nom invalide ou déjà pris.`);
+  if (!def || !def.label || typeof def.match !== "function") throw new Error(`Condition « ${key} » : libellé et fonction match(valeur, visiteur) obligatoires.`);
+  if (def.value !== undefined && !["text", "number"].includes(def.value)) throw new Error(`Condition « ${key} » : valeur « text » ou « number ».`);
+  CUSTOM_CONDITIONS.set(key, def);
+  AUDIENCES[key] = def.label;
+}
 function normalizeAudience(raw, at) {
   if (!raw || typeof raw !== "object" || !raw.who) return undefined;
   if (!Object.hasOwn(AUDIENCES, raw.who)) throw new Error(`${at} : public d'affichage inconnu.`);
+  if (CUSTOM_CONDITIONS.has(raw.who)) {
+    const def = CUSTOM_CONDITIONS.get(raw.who);
+    if (!def.value) return { who: raw.who };
+    const v = def.value === "number" ? Number(raw.value) : line(raw.value, 100);
+    if (def.value === "number" ? !Number.isFinite(v) : !v) throw new Error(`${at} : valeur de « ${def.label} » invalide.`);
+    if (def.validate && !def.validate(v)) throw new Error(`${at} : valeur de « ${def.label} » refusée.`);
+    return { who: raw.who, value: v };
+  }
   if (raw.who === "tag" || raw.who === "not_tag") {
     const tag = line(raw.value, 60);
     if (!tag) throw new Error(`${at} : indiquez l'étiquette.`);
     return { who: raw.who, value: tag };
+  }
+  // Paramètre d'adresse : « clé » (présente) ou « clé=valeur » (ex. campagne=printemps)
+  if (raw.who === "param") {
+    const v = line(raw.value, 110);
+    if (!/^[a-z0-9_-]{1,40}(=[A-Za-z0-9_.\-]{0,60})?$/i.test(v)) throw new Error(`${at} : paramètre invalide (« clé » ou « clé=valeur », lettres, chiffres, _ - .).`);
+    return { who: raw.who, value: v };
   }
   if (raw.who === "score_min") {
     const n = Number(raw.value);
@@ -1059,7 +1112,19 @@ function audienceMatches(audience, visitor) {
     case "tag": return v.tags.has(String(audience.value).toLowerCase());
     case "not_tag": return !v.tags.has(String(audience.value).toLowerCase());
     case "score_min": return v.score >= audience.value;
-    default: return true;
+    case "has_cart": return (v.cartCount || 0) > 0;
+    case "empty_cart": return !(v.cartCount || 0);
+    case "instructor": return v.role === "formateur";
+    case "param": {
+      const [key, ...rest] = String(audience.value).split("=");
+      const got = v.query && Object.hasOwn(v.query, key) ? v.query[key] : undefined;
+      return got !== undefined && (rest.length === 0 || got === rest.join("="));
+    }
+    default: {
+      const custom = CUSTOM_CONDITIONS.get(audience.who);
+      if (!custom) return true;
+      try { return Boolean(custom.match(audience.value, v)); } catch { return false; } // une condition qui échoue ne montre rien
+    }
   }
 }
 const audienceLabel = (a) => (a ? `${AUDIENCES[a.who]}${a.value !== undefined ? ` ${a.value}` : ""}`.replace("… ", " : ") : "");
@@ -1192,8 +1257,10 @@ function normalizeSchedule(raw, at) {
 const scheduleMatches = (s, now = Date.now()) => !s || ((!s.from || Date.parse(s.from) <= now) && (!s.until || Date.parse(s.until) > now));
 
 // ---------- Animations : entrée (à l'apparition à l'écran) et effet au survol ----------
-const ENTRANCES = { fade: "Fondu", "slide-up": "Glisse vers le haut", "slide-down": "Glisse vers le bas", "slide-left": "Glisse depuis la droite", "slide-right": "Glisse depuis la gauche", zoom: "Zoom avant", bounce: "Rebond", rotate: "Rotation", reveal: "Dévoilement", flip: "Bascule 3D" };
-const EASINGS = { smooth: "cubic-bezier(.2, .7, .2, 1)", linear: "linear", "ease-in": "ease-in", "ease-out": "ease-out", "ease-in-out": "ease-in-out", spring: "cubic-bezier(.34, 1.56, .64, 1)" };
+// Registre central des animations : src/marketing/pages/motion.js (une animation = une ligne ; le panneau, la validation, le CSS publié et l'aperçu le lisent)
+const MOTION = require("./motion");
+const { ANIMATIONS, EASINGS } = MOTION;
+const ENTRANCES = Object.fromEntries(Object.values(ANIMATIONS).map((a) => [a.id, a.label]));
 // Capacités « avancées » d'un élément : elles décident des sections proposées dans l'inspecteur (effets de défilement, de
 // souris, épinglage, transformation, masque, attributs, CSS) et de ce que le serveur accepte d'enregistrer.
 const CAP_BOX = ["container", "grid", "stack", "group", "columns", "column"];
@@ -1224,6 +1291,27 @@ const SCROLL_FX = {
   scale: { label: "Échelle", min: -50, max: 50, unit: "%" }, rotate: { label: "Rotation", min: -180, max: 180, unit: "°" },
 };
 const MOUSE_MODES = { track: "Suit le curseur", tilt: "Inclinaison 3D" };
+// Défilement « de → à » (scrollFx) : chaque effet va d'une valeur de départ à une valeur d'arrivée pendant que l'élément traverse la fenêtre
+// (plage start–end en %, sens, inversion). Bornes : valeurs réelles uniquement, jamais de CSS libre.
+const SCROLL_RANGE = {
+  translateY: { label: "Déplacement vertical", min: -2000, max: 2000, unit: "px", step: 1, def: [0, 100] },
+  translateX: { label: "Déplacement horizontal", min: -2000, max: 2000, unit: "px", step: 1, def: [0, 100] },
+  rotate: { label: "Rotation", min: -360, max: 360, unit: "°", step: 1, def: [0, 45] },
+  rotateX: { label: "Rotation 3D (perspective)", min: -180, max: 180, unit: "°", step: 1, def: [45, 0] },
+  scale: { label: "Échelle", min: 0.1, max: 3, unit: "×", step: 0.01, def: [1, 1.2] },
+  opacity: { label: "Opacité", min: 0, max: 1, unit: "", step: 0.01, def: [0, 1] },
+  blur: { label: "Flou", min: 0, max: 50, unit: "px", step: 0.5, def: [10, 0] },
+};
+const SCROLL_DIRS = { both: "Dans les deux sens", down: "Vers le bas seulement", up: "Vers le haut seulement" };
+// Souris « amplitudes » (mouseFx) : déplacement, rotation 3D, échelle et lissage ; amplitude atteinte quand le curseur est au bord de la fenêtre
+const MOUSE_RANGE = {
+  translateX: { label: "Déplacement horizontal", min: -300, max: 300, unit: "px", step: 1 },
+  translateY: { label: "Déplacement vertical", min: -300, max: 300, unit: "px", step: 1 },
+  rotateX: { label: "Rotation X", min: -60, max: 60, unit: "°", step: 1 },
+  rotateY: { label: "Rotation Y", min: -60, max: 60, unit: "°", step: 1 },
+  rotateZ: { label: "Rotation Z", min: -60, max: 60, unit: "°", step: 1 },
+  scale: { label: "Échelle", min: -50, max: 100, unit: "%", step: 1 },
+};
 function normalizeMotion(raw, type) {
   if (!raw || typeof raw !== "object") return undefined;
   const out = {};
@@ -1239,18 +1327,61 @@ function normalizeMotion(raw, type) {
   }
   // L'inclinaison à la souris et la rotation au défilement utilisent la même propriété CSS « rotate » : l'inclinaison l'emporte
   if (out.mouse && out.mouse.mode === "tilt" && out.scroll && out.scroll.rotate) { delete out.scroll.rotate; if (!Object.keys(out.scroll).length) delete out.scroll; }
+  if (capsOf(type).includes("scroll") && raw.scrollFx && typeof raw.scrollFx === "object") {
+    const sfx = {};
+    for (const [k, r] of Object.entries(SCROLL_RANGE)) {
+      const v = raw.scrollFx[k];
+      if (!v || typeof v !== "object") continue;
+      const from = numberIn(r.min, r.max)(v.from), to = numberIn(r.min, r.max)(v.to);
+      if (from !== null && to !== null && from !== to) sfx[k] = { from, to };
+    }
+    if (Object.keys(sfx).length) {
+      const start = numberIn(0, 99, { integer: true })(raw.scrollFx.start), end = numberIn(1, 100, { integer: true })(raw.scrollFx.end);
+      if (start !== null && end !== null && start < end) { if (start !== 0) sfx.start = start; if (end !== 100) sfx.end = end; }
+      if (Object.hasOwn(SCROLL_DIRS, raw.scrollFx.dir) && raw.scrollFx.dir !== "both") sfx.dir = raw.scrollFx.dir;
+      if (raw.scrollFx.invert === true) sfx.invert = true;
+      const pers = numberIn(200, 3000, { integer: true })(raw.scrollFx.perspective);
+      if (sfx.rotateX && pers !== null && pers !== 1000) sfx.perspective = pers;
+      out.scrollFx = sfx;
+    }
+  }
+  if (capsOf(type).includes("mouse") && raw.mouseFx && typeof raw.mouseFx === "object") {
+    const mfx = {};
+    for (const [k, r] of Object.entries(MOUSE_RANGE)) { const n = numberIn(r.min, r.max)(raw.mouseFx[k]); if (n) mfx[k] = n; }
+    if (Object.keys(mfx).length) {
+      const pers = numberIn(200, 3000, { integer: true })(raw.mouseFx.perspective);
+      if ((mfx.rotateX || mfx.rotateY) && pers !== null && pers !== 1000) mfx.perspective = pers;
+      const speed = numberIn(2, 100, { integer: true })(raw.mouseFx.speed);
+      if (speed !== null && speed !== 18) mfx.speed = speed;
+      out.mouseFx = mfx;
+    }
+  }
   // Écrans où les effets de défilement et de souris sont COUPÉS (indépendant par écran)
-  if ((out.scroll || out.mouse) && Array.isArray(raw.off)) {
+  if ((out.scroll || out.mouse || out.scrollFx || out.mouseFx) && Array.isArray(raw.off)) {
     const off = BREAKPOINTS.map((b) => b.key).filter((k) => raw.off.includes(k));
     if (off.length && off.length < BREAKPOINTS.length) out.off = off;
   }
   if (Object.hasOwn(ENTRANCES, raw.entrance)) {
     out.entrance = raw.entrance;
-    out.duration = numberIn(100, 3000, { integer: true })(raw.duration) ?? 600;
-    out.delay = numberIn(0, 3000, { integer: true })(raw.delay) ?? 0;
-    if (Object.hasOwn(EASINGS, raw.easing) && raw.easing !== "smooth") out.easing = raw.easing;
-    if (raw.repeat === true) out.repeat = true; // rejouée à chaque arrivée à l'écran
+    out.duration = numberIn(100, 10000, { integer: true })(raw.duration) ?? 600;
+    out.delay = numberIn(0, 10000, { integer: true })(raw.delay) ?? 0;
+    const ease = raw.easing === undefined || raw.easing === "" ? null : MOTION.normalizeEasing(raw.easing);
+    if (ease && ease !== "smooth") out.easing = ease;
+    if (raw.repeat === true) out.repeat = true; // rejouée à chaque arrivée à l'écran (« Jouer une seule fois » décoché)
+    // Répétition : 1 par défaut (jamais infinie sans demande explicite) ; direction ; déclencheur
+    const it = raw.iterations === "infinite" ? "infinite" : numberIn(1, 3, { integer: true })(raw.iterations);
+    if (it && it !== 1) out.iterations = it;
+    if (MOTION.DIRECTIONS.includes(raw.direction) && raw.direction !== "normal") out.direction = raw.direction;
+    if (Object.hasOwn(MOTION.TRIGGERS, raw.trigger) && raw.trigger !== "viewport") out.trigger = raw.trigger;
+    // Écrans : « none » coupe l'animation, un identifiant la remplace ; vide = hérite de l'écran plus grand
+    if (raw.screens && typeof raw.screens === "object") {
+      const sc = {};
+      for (const bp of ["tablet", "mobile"]) { const v = raw.screens[bp]; if (v === "none" || (typeof v === "string" && Object.hasOwn(ENTRANCES, v))) sc[bp] = v; }
+      if (Object.keys(sc).length) out.screens = sc;
+    }
   }
+  // Mouvement réduit : l'animation s'adapte (ou disparaît) quand le visiteur le demande ; « toujours animer » doit être choisi explicitement
+  if (raw.alwaysMotion === true && (out.entrance || out.scroll || out.mouse || out.scrollFx || out.mouseFx)) out.alwaysMotion = true;
   if (Object.hasOwn(HOVERS, raw.hover)) out.hover = raw.hover;
   return Object.keys(out).length ? out : undefined;
 }
@@ -1282,7 +1413,7 @@ function normalizeNode(raw, at, h, depth, counter) {
   let rawProps = raw.props && typeof raw.props === "object" ? raw.props : {};
   const cw = def.custom ? CUSTOM_WIDGETS[raw.type] : null;
   if (cw && cw.version > 1) for (let v = Number.isInteger(raw.v) && raw.v >= 1 ? raw.v : 1; v < cw.version; v++) rawProps = cw.migrate[v + 1]({ ...rawProps });
-  const node = { id, type: raw.type, props: def.props(rawProps, where, h) };
+  const node = { id, type: raw.type, props: def.props(rawProps, where, dynamicHelpers(h)) };
   if (cw && cw.version > 1) node.v = cw.version;
   if (label) node.name = label;
   if (raw.hidden === true) node.hidden = true;
@@ -1364,12 +1495,82 @@ function walk(nodes, fn, parent = null) {
 // Arbre affiché au public : éléments masqués retirés, et ceux dont le public ne correspond pas au visiteur
 const visibleTree = (nodes, visitor, now = Date.now()) => (nodes || []).filter((n) => !n.hidden && scheduleMatches(n.schedule, now) && (visitor === undefined || audienceMatches(n.audience, visitor))).map((n) => (n.children ? { ...n, children: visibleTree(n.children, visitor) } : n));
 
+// Animation d'entrée d'un élément : variables (durée, délai, courbe) + nom, répétition, direction et remplissage ; un autre écran peut
+// remplacer l'animation ou la couper (« none ») sans toucher à l'héritage des autres propriétés
+function entranceRules(n, rules, used) {
+  const m = n.motion;
+  if (!m || !m.entrance || !NODE_ID.test(String(n.id || "")) || !Object.hasOwn(ANIMATIONS, m.entrance)) return;
+  const sel = `.kw-n-${n.id}`, on = `${sel}.is-in,${sel}.kw-ix-replay,${sel}.pb-anim-replay`, a = ANIMATIONS[m.entrance];
+  used.add(m.entrance);
+  rules.base.push(`${sel}{--kw-anim-dur:${m.duration}ms;--kw-anim-delay:${m.delay}ms${m.easing ? `;--kw-anim-ease:${MOTION.easingCss(m.easing)}` : ""}}`);
+  rules.base.push(`${on}{animation-name:kw-a-${m.entrance};animation-iteration-count:${m.iterations || 1};animation-direction:${m.direction || "normal"};animation-fill-mode:${a.fill}}`);
+  for (const bp of ["tablet", "mobile"]) {
+    const v = m.screens && m.screens[bp];
+    if (v === undefined || !rules.media[bp]) continue;
+    if (v === "none") rules.media[bp].push(`${sel}.is-in,${sel}.kw-ix-replay{animation:none}.kw-anim-ready ${sel}[data-kw-anim]:not(.is-in){opacity:1}`);
+    else { used.add(v); rules.media[bp].push(`${on}{animation-name:kw-a-${v};animation-fill-mode:${ANIMATIONS[v].fill}}.kw-anim-ready ${sel}[data-kw-anim]:not([data-kw-anim-vis]):not(.is-in){opacity:0}`); }
+  }
+}
+// Attributs de mouvement d'un élément (page publiée, aperçu et canevas) : UNE seule source pour l'entrée, le défilement et la souris
+function motionAttrs(n) {
+  const m = n && n.motion;
+  if (!m) return "";
+  const esc = (v) => String(v).replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[c]);
+  let a = "";
+  if (m.entrance && Object.hasOwn(ANIMATIONS, m.entrance)) {
+    const an = ANIMATIONS[m.entrance], trig = m.trigger || "viewport";
+    a += ` data-kw-anim="${m.entrance}"${m.repeat ? " data-kw-anim-repeat" : ""}`;
+    if (an.kind !== "in" || trig === "click" || trig === "hover") a += " data-kw-anim-vis"; // visible avant son déclenchement
+    if (trig !== "viewport") a += ` data-kw-anim-trigger="${trig}"`;
+    if (an.reducedMotionBehavior === "fade") a += ' data-kw-anim-rm="fade"';
+  }
+  if (m.scroll) a += ` data-kw-scroll="${esc(JSON.stringify(m.scroll))}"`;
+  if (m.mouse) a += ` data-kw-mouse="${esc(JSON.stringify(m.mouse))}"`;
+  if (m.scrollFx) a += ` data-kw-sfx="${esc(JSON.stringify(m.scrollFx))}"`;
+  if (m.mouseFx) a += ` data-kw-mfx="${esc(JSON.stringify(m.mouseFx))}"`;
+  if (m.off && (m.scroll || m.mouse || m.scrollFx || m.mouseFx)) a += ` data-kw-fx-off="${m.off.join(" ")}"`;
+  if (m.alwaysMotion) a += " data-kw-motion-always";
+  return a;
+}
+
 // CSS d'une page : une règle par élément stylé (et par section stylée), par écran et par état. Valeurs déjà validées.
 // breakpoints : { tablet, mobile } = largeurs maximales (px) des écrans « Tablette » et « Mobile » du site (réglages du site)
 const DEFAULT_BREAKPOINTS = { tablet: 1023, mobile: 767 };
+// ---------- Classes globales du site ----------
+// Une classe globale = un nom + des styles (par écran et par état), définis une fois pour le site et appliqués à tout élément
+// qui porte ce nom dans « Classes ». Modifier la classe met à jour tous les éléments. Le style PROPRE d'un élément l'emporte
+// toujours sur celui de la classe (même spécificité, règles de l'élément écrites après).
+const GLOBAL_CLASS_MAX = 40;
+function normalizeClassDefs(raw, h, { strict = false } = {}) {
+  const out = [], seen = new Set();
+  for (const c of Array.isArray(raw) ? raw : []) {
+    try {
+      const name = String(c && c.name || "").trim().toLowerCase();
+      if (!/^[a-z][a-z0-9-]{0,29}$/.test(name) || /^(kw|lp|pb|mk)-/.test(name)) throw new Error(`Classe globale « ${name || "?"} » : nom invalide (minuscules, chiffres et tirets ; préfixes kw-, lp-, pb-, mk- réservés).`);
+      if (seen.has(name)) throw new Error(`Classe globale « ${name} » : nom déjà utilisé.`);
+      if (out.length >= GLOBAL_CLASS_MAX) throw new Error(`${GLOBAL_CLASS_MAX} classes globales au plus.`);
+      const st = normalizeStyles(c.styles, c.states, `Classe « ${name} »`, h);
+      seen.add(name);
+      out.push({ name, ...(line(c.label, 60) ? { label: line(c.label, 60) } : {}), ...(st.styles ? { styles: st.styles } : {}), ...(st.states ? { states: st.states } : {}) });
+    } catch (e) { if (strict) throw e; }
+  }
+  return out;
+}
+function classCss(classes, breakpoints = DEFAULT_BREAKPOINTS) {
+  const base = [], media = { tablet: [], mobile: [] };
+  const mediaOf = (key) => (key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : `(max-width: ${breakpoints.mobile}px)`);
+  for (const c of classes || []) {
+    if (!/^[a-z][a-z0-9-]{0,29}$/.test(c.name)) continue;
+    const sel = `.lp-site :where(.${c.name})`;
+    for (const bp of BREAKPOINTS) { const d = c.styles && c.styles[bp.key] ? declarations(c.styles[bp.key]) : ""; if (d) (bp.media ? media[bp.key] : base).push(`${sel}{${d}}`); }
+    for (const state of STATES) { const d = c.states && c.states[state.key] ? declarations(c.states[state.key]) : ""; if (d) base.push(`${sel}${state.sel}{${d}}`); }
+  }
+  return [...base, ...["tablet", "mobile"].filter((k) => media[k].length).map((k) => `@media ${mediaOf(k)}{${media[k].join("")}}`)].join("\n");
+}
 function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   const mediaOf = (bp) => (bp.key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : bp.key === "mobile" ? `(max-width: ${breakpoints.mobile}px)` : bp.media);
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
+  const usedAnims = new Set(); // animations réellement utilisées : seules leurs images-clés sont écrites dans la page
   const clamps = { tablet: [], mobile: [] }; // cases de grille ramenées au nombre de colonnes de l'écran : écrites après toutes les autres règles
   const add = (id, styles, states) => {
     if (!NODE_ID.test(String(id || ""))) return;
@@ -1384,11 +1585,14 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       if (d) rules.base.push(`${sel}${state.sel}{${d}}`);
     }
   };
+  const seenIds = new Set(); // les copies d'un modèle de boucle partagent leur identifiant : règles écrites une seule fois
   for (const s of sections || []) {
     add(s.id, s.styles, s.states);
     if (s.type === "layout") walk(s.children, (n) => {
+      if (seenIds.has(n.id)) return;
+      seenIds.add(n.id);
       add(n.id, n.styles, n.states);
-      if (n.motion && n.motion.entrance && NODE_ID.test(String(n.id || ""))) rules.base.push(`.kw-n-${n.id}{--kw-anim-dur:${n.motion.duration}ms;--kw-anim-delay:${n.motion.delay}ms${n.motion.easing ? `;--kw-anim-ease:${EASINGS[n.motion.easing]}` : ""}}`);
+      entranceRules(n, rules, usedAnims);
       // CSS personnalisé de l'élément (validé à l'enregistrement, revalidé ici : rien d'autre n'atteint la page)
       if (n.css && NODE_ID.test(String(n.id || ""))) { try { const c = cssDeclarations(n.css, "CSS"); if (c) rules.custom.push(`.kw-node.kw-n-${n.id}{${c}}`); } catch { /* ignoré */ } }
       if (n.cssHover && NODE_ID.test(String(n.id || ""))) { try { const c = cssDeclarations(n.cssHover, "CSS"); if (c) rules.custom.push(`.kw-node.kw-n-${n.id}:hover{${c}}`); } catch { /* ignoré */ } }
@@ -1437,6 +1641,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   }
   for (const k of Object.keys(clamps)) if (rules.media[k]) rules.media[k].push(...clamps[k]);
   let css = rules.base.join("\n");
+  if (usedAnims.size) css = `${MOTION.keyframesCss([...usedAnims])}\n${css}`;
   for (const bp of BREAKPOINTS) if (bp.media && rules.media[bp.key].length) css += `\n@media ${mediaOf(bp)}{${rules.media[bp.key].join("")}}`;
   // « Masquer sur cet écran » : mêmes seuils que les écrans du site (réglages du site)
   // (écrites seulement si la page masque quelque chose selon l'écran)
@@ -1449,6 +1654,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
 }
 
 module.exports = {
+  dynamic, registerCondition, normalizeClassDefs, classCss, GLOBAL_CLASS_MAX,
   NODE_TYPES, CATEGORIES, WIDGET_GROUPS, WIDGETS, CUSTOM_WIDGETS, registerWidget, lockedWidgetChanges, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
-  capsOf, MASK_SHAPES, SCROLL_FX, MOUSE_MODES, AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
+  capsOf, MOTION, motionAttrs, MASK_SHAPES, SCROLL_FX, SCROLL_RANGE, MOUSE_RANGE, MOUSE_MODES, AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };
