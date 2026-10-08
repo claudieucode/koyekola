@@ -26,13 +26,13 @@ module.exports = () => {
   // ----- Liste -----
   const showList = (state) => (req, res) => {
     const filters = {
-      q: String(req.query.q || "").trim().slice(0, 100), auteur: String(req.query.auteur || ""), categorie: String(req.query.categorie || "").trim().slice(0, 60),
+      q: String(req.query.q || "").trim().slice(0, 100), auteur: String(req.query.auteur || ""), categorie: String(req.query.categorie || "").trim().slice(0, 60), etiquette: /^\d{1,9}$/.test(String(req.query.etiquette || "")) ? String(req.query.etiquette) : "",
       periode: Object.hasOwn(articles.PERIODS, req.query.periode) ? String(req.query.periode) : "", tri: Object.hasOwn(articles.SORTS, req.query.tri) ? req.query.tri : "modifie",
     };
-    const result = articles.list({ state, q: filters.q, author: filters.auteur, category: filters.categorie, period: filters.periode, sort: filters.tri, page: req.query.page });
+    const result = articles.list({ state, q: filters.q, author: filters.auteur, category: filters.categorie, tag: filters.etiquette, period: filters.periode, sort: filters.tri, page: req.query.page });
     const active = state === "toutes" ? "articles" : `articles/${state}`;
     res.render("marketing/articles", {
-      title: "Articles", active, state, filters, result, rows: result.rows, authors: articles.authors(), categories: articles.categoryNames(), STATUSES: blog.STATUSES, BLOG_BASE,
+      title: "Articles", active, state, filters, result, rows: result.rows, authors: articles.authors(), categories: articles.categoryTree(), STATUSES: blog.STATUSES, BLOG_BASE,
       canWrite: req.mk.can("articles.write"), canPublish: req.mk.can("articles.publish"), canDelete: req.mk.can("articles.delete"), isCreator: isCreator(req), cmsPagesJs: true,
     });
   };

@@ -3,6 +3,7 @@
 // Images : principale de chaque formation / article, seulement si le fichier existe (extension image:image de Google).
 const db = require("../config/database");
 const blog = require("../services/blog");
+const taxonomy = require("../services/taxonomy");
 const settings = require("./settings");
 const meta = require("./meta");
 const images = require("./images");
@@ -30,7 +31,7 @@ function entries() {
   }
   blog.promoteScheduled();
   add({ path: "/blog", type: "Page" }, metaIndex("page", "blog"));
-  for (const c of blog.categories()) add({ path: `/blog/categorie/${c.slug}`, type: "Catégorie d'articles" }, metaIndex("blog_category", c.slug));
+  for (const t of taxonomy.publicTerms("category")) add({ path: taxonomy.urlOf(t), type: "Catégorie d'articles" }, metaIndex("blog_category", t.slug));
   for (const p of db.prepare("SELECT slug, updated_at, robots_index, canonical_url, cover_path, title FROM posts WHERE published = 1 ORDER BY published_at DESC").all()) {
     const e = { path: `/blog/${p.slug}`, type: "Article", lastmod: isoDate(p.updated_at), images: [p.cover_path].filter(Boolean), title: p.title };
     if (!p.robots_index) excluded.push({ ...e, reason: "Réglé en noindex" });
@@ -54,10 +55,9 @@ function entries() {
     else included.push(e);
   }
   // Étiquettes et auteurs : seulement si leur indexation est activée dans les Réglages
-  const tags = new Map();
-  for (const row of db.prepare("SELECT tags FROM posts WHERE published = 1 AND tags <> ''").all()) for (const t of blog.parseTags(row.tags)) tags.set(slugify(t), t);
+  const tags = new Map(taxonomy.publicTerms("tag").map((t) => [t.slug, t]));
   for (const slug of tags.keys()) {
-    const e = { path: `/blog/etiquette/${slug}`, type: "Étiquette" };
+    const e = { path: taxonomy.urlOf(tags.get(slug)), type: "Étiquette" };
     const rule = metaIndex("blog_tag", slug);
     if (rule.index === 1 || (rule.index === null && st.index_blog_tags)) add(e, rule); else excluded.push({ ...e, reason: "Étiquettes non indexées (Réglages)" });
   }

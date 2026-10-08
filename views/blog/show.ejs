@@ -43,7 +43,7 @@
         <%# Modèle de thème (Page Builder) : remplace l'en-tête, l'image à la une, le sommaire mobile et le texte ; sinon affichage d'origine %>
         <% if (typeof themeTemplate !== "undefined" && themeTemplate) { %><%- themeTemplate %><% } else { %>
         <header class="article-header">
-          <% if (post.category) { %><a class="article-category" href="/blog/categorie/<%= categorySlug %>"><%= post.category %></a><% } %>
+          <% if (postTerms.primary) { %><a class="article-category" href="<%= postTerms.primary.url %>"><%= postTerms.primary.name %></a><% } else if (post.category) { %><a class="article-category" href="/blog/categorie/<%= categorySlug %>"><%= post.category %></a><% } %>
           <h1 class="post-title"><%= post.title %></h1>
           <% if (post.excerpt) { %><p class="article-lead"><%= post.excerpt %></p><% } %>
           <p class="post-meta article-meta">
@@ -75,7 +75,7 @@
 
         <% if (tags.length) { %>
           <ul class="article-tags" aria-label="Étiquettes">
-            <% tags.forEach((t) => { %><li><a href="/blog/etiquette/<%= slugify(t) %>">#<%= t %></a></li><% }) %>
+            <% if (postTerms.tags.length) { postTerms.tags.forEach((t) => { %><li><a href="<%= t.url %>">#<%= t.name %></a></li><% }) } else { tags.forEach((t) => { %><li><a href="/blog/etiquette/<%= slugify(t) %>">#<%= t %></a></li><% }) } %>
           </ul>
         <% } %>
 

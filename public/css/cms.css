@@ -161,3 +161,8 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label { display: none; }
 .mk-ar-thumb.is-empty { display: inline-block; border: 1px dashed var(--mk-border); }
 .mk-ar-table td.mk-row-actions { white-space: nowrap; }
 .mk-ar-new { max-width: 640px; }
+
+/* Catégories / Étiquettes (palier 5) */
+.mk-tx-name { display: flex; flex-direction: column; gap: 2px; font-weight: 600; }
+.mk-tx-name .mk-sub { font-weight: 400; word-break: break-all; }
+.mk-tx-table th[scope="row"] { font-weight: 600; }

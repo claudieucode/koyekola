@@ -359,6 +359,43 @@ for (const [name, definition] of Object.entries(NEW_POST_COLUMNS)) {
 db.exec("CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(published, category)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_posts_cms ON posts(deleted_at, status, updated_at)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(author_id)");
+
+// ---------- Taxonomies (CMS, palier 5) : termes (catégories, étiquettes, futurs types) et leurs relations avec les contenus ----------
+// Générique : une taxonomie (« category », « tag »…) contient des termes ; un contenu (« post » aujourd'hui, pages, produits, cours
+// demain) est relié à des termes. Les colonnes posts.category / subcategory / tags restent comme MIROIR de lecture, tenu à jour
+// par services/taxonomy.js (les anciens lecteurs : sitemap, listes, SEO, pages dynamiques continuent de fonctionner).
+const taxonomyIsNew = !db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'taxonomy_relations'").get();
+db.exec(`
+  CREATE TABLE IF NOT EXISTS taxonomy_terms (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    taxonomy TEXT NOT NULL,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    parent_id INTEGER REFERENCES taxonomy_terms(id) ON DELETE SET NULL,
+    meta TEXT NOT NULL DEFAULT '{}',          -- préparation SEO / réglages futurs (titre, description, canonique, robots…), non utilisé encore
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (taxonomy, slug)
+  );
+  CREATE INDEX IF NOT EXISTS idx_taxonomy_terms_parent_id ON taxonomy_terms(parent_id);
+  CREATE INDEX IF NOT EXISTS idx_taxonomy_terms_parent ON taxonomy_terms(taxonomy, parent_id);
+  CREATE INDEX IF NOT EXISTS idx_taxonomy_terms_name ON taxonomy_terms(taxonomy, name COLLATE NOCASE);
+  CREATE TABLE IF NOT EXISTS taxonomy_relations (
+    content_type TEXT NOT NULL,
+    content_id INTEGER NOT NULL,
+    term_id INTEGER NOT NULL REFERENCES taxonomy_terms(id) ON DELETE CASCADE,
+    is_primary INTEGER NOT NULL DEFAULT 0,    -- catégorie principale du contenu (une au plus par contenu)
+    position INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (content_type, content_id, term_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_taxonomy_relations_term ON taxonomy_relations(term_id, content_type);
+  -- Un article supprimé (corbeille vidée, suppression définitive, ancienne liste) ne laisse jamais de relation orpheline
+  CREATE TRIGGER IF NOT EXISTS trg_posts_taxonomy_delete AFTER DELETE ON posts
+  BEGIN DELETE FROM taxonomy_relations WHERE content_type = 'post' AND content_id = OLD.id; END;
+`);
+// Reprise des catégories / sous-catégories / étiquettes déjà saisies dans les articles (une seule fois, à la création des tables)
+if (taxonomyIsNew) require("../services/taxonomyBackfill")(db);
 // Statut des articles déjà là : publié ou brouillon, d'après l'ancienne colonne (une seule fois : la colonne vient d'être créée)
 if (!postColumns.includes("status")) db.exec("UPDATE posts SET status = CASE WHEN published = 1 THEN 'published' ELSE 'draft' END");
 db.exec(`

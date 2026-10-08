@@ -32,17 +32,9 @@ const instructorLink = (req, href) => (isInstructor(req) ? href : null);
 const SCREENS = {
   // ----- Articles -----
   articles(req, ctx, sub) {
-    // La liste, les états, la création et la corbeille des articles sont dans articles.js ; ici : catégories, étiquettes, auteurs
-    const tabs = tabsOf("articles", sub, [["categories", "Catégories"], ["etiquettes", "Étiquettes"], ["auteurs", "Auteurs"]]);
-    if (sub === "categories" || sub === "etiquettes") {
-      const rows = (sub === "categories" ? data.categories(ctx.db) : data.tags(ctx.db)).map((c) => ({ cells: [{ text: c.name, href: sub === "categories" ? `/blog/categorie/${encodeURIComponent(c.name.toLowerCase().replace(/\s+/g, "-"))}` : null }, String(c.n)] }));
-      const one = sub === "categories" ? "catégorie" : "étiquette";
-      return { title: sub === "categories" ? "Catégories" : "Étiquettes", lead: `Les ${sub === "categories" ? "catégories" : "étiquettes"} sont aujourd'hui saisies dans chaque article ; la gestion centralisée (renommer, fusionner, hiérarchie) arrive dans un prochain palier.`, tabs,
-        actions: [dis(`Ajouter une ${one}`)], search: { enabled: false, placeholder: `Rechercher une ${one}` },
-        table: { caption: sub === "categories" ? "Catégories" : "Étiquettes", columns: [{ label: "Nom" }, { label: "Articles", num: true }], rows, empty: empty("tag", `Aucune ${one}`, `Les ${sub === "categories" ? "catégories" : "étiquettes"} apparaissent dès qu'un article en utilise.`) } };
-    }
+    // Liste, états, création, corbeille : articles.js ; catégories et étiquettes : taxonomies.js ; ici : auteurs (lecture seule)
     const rows = data.authors(ctx.db).map((a) => ({ cells: [{ text: a.username, href: `/blog/auteur/${a.id}` }, String(a.n), String(a.published || 0)] }));
-    return { title: "Auteurs", lead: "Les auteurs des articles du blog.", tabs, actions: [dis("Ajouter un auteur")],
+    return { title: "Auteurs", lead: "Les auteurs des articles du blog.", actions: [dis("Ajouter un auteur")],
       table: { caption: "Auteurs", columns: [{ label: "Auteur" }, { label: "Articles", num: true }, { label: "Publiés", num: true }], rows, empty: empty("user", "Aucun auteur", "Un auteur apparaît dès qu'il a écrit un article.") } };
   },
 

@@ -14,6 +14,7 @@ const { plainText } = require("../utils/seo");
 const { renderArticle } = require("../utils/articleMarkdown");
 const { renderBlogHtml, blogPlainText } = require("../utils/blogHtml");
 const { norm } = require("../utils/seoAnalyzer");
+const taxonomy = require("./taxonomy");
 
 // Libellés de l'éditeur de blocs de WordPress (Gutenberg), en français
 const STATUSES = { draft: "Brouillon", review: "En attente de relecture", scheduled: "Planifié", published: "Publié", archived: "Archivé" };
@@ -44,14 +45,14 @@ function parseTags(text) {
 
 const card = (p) => ({
   id: p.id, slug: p.slug, title: p.title, summary: excerptOf(p), cover_path: p.cover_path, cover_alt: p.cover_alt, published_at: p.published_at,
-  category: p.category, categorySlug: p.category ? slugify(p.category) : "", views: p.views,
+  category: p.category, categorySlug: p.category ? taxonomy.categorySlugOfName(p.category) : "", views: p.views,
 });
 
 function categories() {
   return db
     .prepare("SELECT category, COUNT(*) n FROM posts WHERE published = 1 AND category <> '' GROUP BY category COLLATE NOCASE ORDER BY n DESC, category COLLATE NOCASE")
     .all()
-    .map((r) => ({ name: r.category, slug: slugify(r.category), count: r.n }));
+    .map((r) => ({ name: r.category, slug: taxonomy.categorySlugOfName(r.category), count: r.n }));
 }
 
 // Nom réel d'une catégorie à partir de son adresse (« marketing-digital » → « Marketing digital »)

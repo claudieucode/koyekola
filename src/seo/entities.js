@@ -2,6 +2,7 @@
 // Utilisé par l'administration SEO, l'audit et le plan du site.
 const db = require("../config/database");
 const blog = require("../services/blog");
+const taxonomy = require("../services/taxonomy");
 const meta = require("./meta");
 const { slugify } = require("../utils/format");
 
@@ -15,8 +16,8 @@ function list() {
   }
   for (const r of db.prepare("SELECT DISTINCT category FROM courses WHERE published = 1 AND archived = 0 ORDER BY category").all()) out.push({ type: "course_category", key: slugify(r.category), name: r.category, path: `/categorie/${slugify(r.category)}` });
   for (const p of db.prepare("SELECT id, title, slug, updated_at FROM posts WHERE published = 1 ORDER BY published_at DESC").all()) out.push({ type: "post", key: String(p.id), name: p.title, path: `/blog/${p.slug}`, editUrl: `/formateur/blog/${p.id}/modifier`, updatedAt: p.updated_at });
-  for (const c of blog.categories()) out.push({ type: "blog_category", key: c.slug, name: c.name, path: `/blog/categorie/${c.slug}` });
-  for (const t of publishedTags()) out.push({ type: "blog_tag", key: slugify(t), name: t, path: `/blog/etiquette/${slugify(t)}` });
+  for (const t of taxonomy.publicTerms("category")) out.push({ type: "blog_category", key: t.slug, name: t.name, path: taxonomy.urlOf(t) });
+  for (const t of taxonomy.publicTerms("tag")) out.push({ type: "blog_tag", key: t.slug, name: t.name, path: taxonomy.urlOf(t) });
   for (const a of db.prepare("SELECT DISTINCT u.id, u.username FROM users u JOIN posts p ON (p.author_id = u.id OR (p.author_id IS NULL AND u.id = (SELECT MIN(id) FROM users WHERE role = 'formateur'))) WHERE u.role = 'formateur' AND p.published = 1 ORDER BY u.username").all()) {
     out.push({ type: "author", key: String(a.id), name: a.username, path: `/blog/auteur/${a.id}` });
   }

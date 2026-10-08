@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/blog-editor.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/media-picker.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/taxonomy-picker.css') %>">
 </head>
 <body class="wp-body"<%- editorTheme.key !== "clair" ? ` data-ed-theme="${editorTheme.key}" data-ed-contrast="${editorTheme.contrast}" style="--ed-base: ${editorTheme.color}"` : "" %>>
   <div class="be wp" data-blog-editor>
@@ -211,7 +212,35 @@
               <input type="hidden" name="comments_enabled" value="0"><label class="wp-checkbox"><input type="checkbox" name="comments_enabled" value="1" <%= checked('comments_enabled', 1) %>> Autoriser les commentaires (membres inscrits)</label>
             </div>
 
-            <%- panel("categories", "Catégorie et étiquettes", true) %>
+            <%- panel("categories", "Catégories et étiquettes", true) %>
+              <%# Classement par la taxonomie du CMS (public/js/taxonomy-picker.js) : catégorie principale, catégories, étiquettes avec
+                  recherche et création rapide. Les anciens champs texte restent dans la page (masqués) : l'éditeur les lit encore ; le
+                  sélecteur les tient à jour (miroir) et l'enregistrement utilise les identifiants. %>
+              <div class="tx-picker" data-taxo>
+                <script type="application/json" id="taxo-data"><%- JSON.stringify(taxo).replace(/</g, "\\u003c") %></script>
+                <label class="wp-label" for="tx-primary">Catégorie principale</label>
+                <select id="tx-primary" name="primary_category_id" data-taxo-primary></select>
+                <span class="wp-label" id="tx-cats-label">Catégories</span>
+                <input type="search" class="tx-search" placeholder="Rechercher une catégorie…" aria-label="Rechercher une catégorie" data-taxo-cat-search autocomplete="off">
+                <ul class="tx-cats" aria-labelledby="tx-cats-label" data-taxo-cats></ul>
+                <input type="hidden" name="category_ids" data-taxo-category-ids>
+                <details class="tx-new" data-taxo-new>
+                  <summary>Ajouter une catégorie</summary>
+                  <div class="tx-new-body">
+                    <label class="wp-label" for="tx-new-name">Nom</label><input id="tx-new-name" type="text" maxlength="60" data-taxo-new-name autocomplete="off">
+                    <label class="wp-label" for="tx-new-parent">Catégorie parente</label><select id="tx-new-parent" data-taxo-new-parent></select>
+                    <button type="button" class="wp-btn-secondary" data-taxo-new-add>Créer la catégorie</button>
+                    <p class="wp-help" role="status" aria-live="polite" data-taxo-new-status></p>
+                  </div>
+                </details>
+                <label class="wp-label" for="tx-tag-input">Étiquettes</label>
+                <ul class="tx-tags" data-taxo-tags aria-label="Étiquettes choisies"></ul>
+                <div class="tx-tag-box"><input id="tx-tag-input" type="text" maxlength="40" placeholder="Ajouter une étiquette…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="tx-suggest" aria-autocomplete="list" data-taxo-tag-input>
+                  <ul id="tx-suggest" class="tx-suggest" role="listbox" aria-label="Suggestions d'étiquettes" hidden data-taxo-suggest></ul></div>
+                <input type="hidden" name="tag_ids" data-taxo-tag-ids>
+                <p class="wp-help" role="status" aria-live="polite" data-taxo-status>Entrée pour ajouter ; une étiquette qui n'existe pas est créée.</p>
+              </div>
+              <div hidden data-legacy-taxonomy>
               <label for="post-category" class="wp-label">Catégorie</label>
               <input id="post-category" type="text" name="category" value="<%= v('category') %>" maxlength="60" list="dl-categories" autocomplete="off" placeholder="Rechercher ou créer une catégorie">
               <datalist id="dl-categories"><% categories.forEach((c) => { %><option value="<%= c.name %>"><% }) %><% ["Graphisme", "Vidéo", "Intelligence artificielle", "Marketing digital", "SEO", "E-commerce", "Développement web", "Formation & apprentissage"].forEach((n) => { if (!categories.some((c) => c.name.toLowerCase() === n.toLowerCase())) { %><option value="<%= n %>"><% } }) %></datalist>
@@ -223,7 +252,7 @@
               <div class="wp-tokens" data-tags><ul class="wp-token-list" data-tag-list></ul><input id="post-tags-input" type="text" list="dl-tags" autocomplete="off" placeholder="Ajouter…" data-tag-input></div>
               <datalist id="dl-tags"><% tags.forEach((t) => { %><option value="<%= t %>"><% }) %></datalist>
               <input id="post-tags" type="hidden" name="tags" value="<%= v('tags') %>" data-tags-value>
-              <span class="wp-help">Virgule ou Entrée pour valider une étiquette.</span>
+              <span class="wp-help">Virgule ou Entrée pour valider une étiquette.</span></div>
             </div></div>
 
             <%- panel("checklist", "Avant de publier", false) %>
@@ -390,5 +419,6 @@
   <script src="<%= asset('/js/kwmedia.js') %>" defer></script>
   <script src="<%= asset('/js/media-picker.js') %>" defer></script>
   <script src="<%= asset('/js/blog-editor.js') %>" defer></script>
+  <script src="<%= asset('/js/taxonomy-picker.js') %>" defer></script>
 </body>
 </html>
