@@ -123,6 +123,8 @@ module.exports = ({ db }) => {
       // Autres scénarios : cibles des étapes « Démarrer / Arrêter un autre scénario »
       automations: auto.listAutomations(ctx).filter((x) => x.id !== a.id).map((x) => ({ id: x.id, name: x.name, status: x.status })),
       // Propriétés personnalisées de type date : proposées par l'étape « Attendre une date ou une heure » (champ date du contact)
+      // Toutes les propriétés personnalisées (clé, libellé, type) : étapes « Copier un champ », « Définir une date », « Calculer un nombre »
+      properties: audience.listProperties(ctx).map((p) => ({ key: p.key, label: p.label, type: p.type })),
       dateProperties: audience.listProperties(ctx).filter((p) => p.type === "date").map((p) => ({ key: p.key, label: p.label })),
       // Catalogue des champs/comparateurs : permet de construire une condition ET/OU directement dans le panneau
       // du nœud (src/editor/automation-flow.js), sans devoir d'abord enregistrer un segment séparé.

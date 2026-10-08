@@ -16,7 +16,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 describe("palette d'actions des scénarios : disponibilité réelle, filtre, récentes (navigateur)", { skip: SKIP }, () => {
   let srv, boss, browser, context, page, errors, n = 0, autoId, org;
-  const item = (type) => page.locator(`#au-palette .mk-pal-item[data-step-type="${type}"]`);
+  // « Récemment utilisées » répète une action déjà insérée : on vise toujours la première occurrence
+  const item = (type) => page.locator(`#au-palette .mk-pal-item[data-step-type="${type}"]`).first();
   const visible = (type) => item(type).evaluate((b) => !b.closest("li").hidden && b.offsetParent !== null);
 
   async function openEditor() {
@@ -218,6 +219,55 @@ describe("palette d'actions des scénarios : disponibilité réelle, filtre, ré
     await connectAndSave("Démarrer un autre scénario");
     await until(() => { const st = savedSteps(); return st.length === 1 && st[0].type === "start_automation" && st[0].automationId === cibleId; }, "étape enregistrée et exécutable");
     assert.match(await page.locator(".drawflow-node").filter({ hasText: "Démarrer un autre scénario" }).first().innerText(), /Démarre « Cible visée »/);
+  });
+
+  test("actions sur les données : « Copier un champ », « Définir une date », « Calculer un nombre » — formulaires, validation, enregistrement exécutable", async () => {
+    await openEditor();
+    // Sans propriété du bon type : le formulaire le dit (aucun contrôle sans effet)
+    await item("calculate").click();
+    await page.locator(".drawflow-node").filter({ hasText: "Calculer un nombre" }).first().click();
+    await dialog().waitFor({ timeout: 8000 });
+    assert.match(await dialog().innerText(), /Aucune propriété de type nombre/);
+    await dialog().getByRole("button", { name: "Fermer" }).or(dialog().getByRole("button", { name: "Annuler" })).first().click();
+    for (const [key, label, type] of [["niveau", "Niveau", "text"], ["rentree", "Rentrée", "date"], ["solde", "Solde", "number"]]) srv.db().prepare("INSERT OR IGNORE INTO mk_property_defs (organization_id, key, label, type, options) VALUES (?, ?, ?, ?, '[]')").run(org, key, label, type);
+    await page.reload(); await page.waitForSelector("#au-palette .mk-pal-item");
+    const open = async (label) => { await page.locator(".drawflow-node").filter({ hasText: label }).last().click(); await dialog().waitFor({ timeout: 8000 }); };
+    const save = async () => { await dialog().locator("[data-step-save]").click(); await page.locator("dialog.mk-step-dialog[open]").waitFor({ state: "detached", timeout: 8000 }); };
+    // Copier un champ
+    await item("copy_field").click(); await open("Copier un champ");
+    await dialog().locator("[data-step-save]").click();
+    assert.match(await dialog().locator(".mk-step-dialog-error").innerText(), /Choisissez le champ de départ/);
+    const selects = dialog().locator("select");
+    await selects.nth(0).selectOption("first_name");
+    await selects.nth(1).selectOption("property:niveau");
+    await selects.nth(2).selectOption("capitalize");
+    await save();
+    // Définir une date
+    await item("set_date").click(); await open("Définir une date");
+    await dialog().locator("select").nth(0).selectOption("property:rentree");
+    await dialog().locator("input[type=number]").fill("7");
+    await save();
+    // Calculer un nombre (décimal accepté)
+    await item("calculate").click(); await open("Calculer un nombre");
+    await dialog().locator("select").nth(0).selectOption("property:solde");
+    await dialog().locator("select").nth(1).selectOption("multiply");
+    await dialog().locator("input[type=number]").fill("2.5");
+    await save();
+    // Relier en chaîne : déclencheur → copier → date → calcul
+    const node = (label) => page.locator(".drawflow-node").filter({ hasText: label }).last();
+    await node("Déclencheur").locator(".output").first().dragTo(node("Copier un champ").locator(".input").first());
+    await node("Copier un champ").locator(".output").first().dragTo(node("Définir une date").locator(".input").first());
+    await node("Définir une date").locator(".output").first().dragTo(node("Calculer un nombre").locator(".input").first());
+    await page.locator("#au-save").click();
+    await until(() => JSON.stringify(savedSteps()) === JSON.stringify([
+      { type: "copy_field", from: "first_name", to: "property:niveau", transform: "capitalize" },
+      { type: "set_date", property: "property:rentree", base: "today", offsetDays: 7, zone: "contact" },
+      { type: "calculate", property: "property:solde", op: "multiply", value: 2.5 },
+    ]), "trois étapes enregistrées et exécutables");
+    const text = (label) => node(label).innerText();
+    assert.match(await text("Copier un champ"), /Prénom → Niveau \(majuscule à chaque mot\)/);
+    assert.match(await text("Définir une date"), /Rentrée = aujourd'hui \+ 7 j/);
+    assert.match(await text("Calculer un nombre"), /Solde × 2\.5/);
   });
 
   test("aucune erreur de script ni de console", () => { assert.deepEqual(errors, []); });
