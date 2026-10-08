@@ -47,6 +47,12 @@ const MAX_HTML = 250000;
 const NEWSLETTER_KEY = "blog.newsletter_form";
 const LANGUAGES = { fr: "fr-FR", en: "en", es: "es", pt: "pt", de: "de", it: "it", ln: "ln" };
 const IMG_PATH = /^\/uploads\/thumbnails\/[A-Za-z0-9_.-]{1,200}\.(?:png|jpe?g|webp|gif|avif)$/i;
+// Image de la médiathèque du CMS (palier 3) : /uploads/marketing/<organisation>/<fichier> ; elle doit exister dans mk_media
+const CMS_IMG_PATH = /^\/uploads\/marketing\/\d{1,9}\/[A-Za-z0-9_.-]{1,200}\.(?:png|jpe?g|webp|gif|avif)$/i;
+const cmsMedia = (value) => {
+  if (!CMS_IMG_PATH.test(String(value || ""))) return null;
+  try { return db.prepare("SELECT id, path, alt FROM mk_media WHERE path = ? AND deleted_at IS NULL AND type = 'image'").get(value) || null; } catch { return null; }
+};
 
 // ---------- Pages publiques ----------
 
@@ -401,14 +407,8 @@ function readDate(body, name = "published_at_utc") {
   return new Date(ms).toISOString().slice(0, 19).replace("T", " ");
 }
 
-// Adresse : celle saisie (nettoyée) ou tirée du titre, rendue unique : « titre », « titre-2 », « titre-3 »…
-function uniqueSlug(title, exceptId = 0) {
-  const base = slugify(title).slice(0, 120).replace(/-+$/, "") || "article";
-  let slug = base;
-  const taken = (s) => db.prepare("SELECT 1 FROM posts WHERE slug = ? AND id != ?").get(s, exceptId) || db.prepare("SELECT 1 FROM post_slug_history WHERE old_slug = ? AND post_id != ?").get(s, exceptId);
-  for (let n = 2; taken(slug); n++) slug = `${base}-${n}`;
-  return slug;
-}
+// Adresse : celle saisie (nettoyée) ou tirée du titre, rendue unique (voir services/blog.js)
+const uniqueSlug = blog.uniqueSlug;
 
 // Statut demandé → colonnes published / published_at / status. Les contrôles bloquants sont refaits ici (jamais seulement dans le navigateur).
 function applyStatus(body, current, fields) {
@@ -449,7 +449,7 @@ function withCleanup(handler) {
 }
 
 // Image choisie dans la médiathèque (au lieu d'un nouvel envoi) : seulement une image connue du site
-const libraryImage = (value) => (IMG_PATH.test(String(value || "")) && blog.mediaByPath(value) ? value : null);
+const libraryImage = (value) => ((IMG_PATH.test(String(value || "")) && blog.mediaByPath(value)) || cmsMedia(value) ? value : null);
 // Nouveau fichier envoyé → enregistré aussi dans la médiathèque
 function registerUpload(req, file, alt = "") {
   if (!file) return null;
@@ -612,7 +612,7 @@ router.get("/formateur/blog", (req, res) => {
     };
   }
   blog.promoteScheduled();
-  res.render("instructor/blog-list", { posts: db.prepare("SELECT * FROM posts ORDER BY id DESC").all(), newsletter, saved: req.query.enregistre === "1", statuses: blog.STATUSES });
+  res.render("instructor/blog-list", { posts: db.prepare("SELECT * FROM posts WHERE deleted_at IS NULL ORDER BY id DESC").all(), newsletter, saved: req.query.enregistre === "1", statuses: blog.STATUSES });
 });
 
 // Formulaire d'inscription affiché dans le blog (bloc « newsletter ») : choisi parmi les formulaires publiés du marketing
@@ -642,7 +642,7 @@ router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
   const og = registerUpload(req, fileOf(req, "og_image")) || libraryImage(req.body.og_image_media);
   const tw = registerUpload(req, fileOf(req, "twitter_image")) || libraryImage(req.body.twitter_image_media);
   const slugWanted = oneLine(req.body.slug, 120);
-  const cols = { ...f, slug: uniqueSlug(slugWanted || f.title), cover_path: cover, og_image_path: og, twitter_image_path: tw, author_id: f.author_id ?? req.session.user.id,
+  const cols = { ...f, slug: uniqueSlug(slugWanted || f.title), cover_path: cover, featured_media_id: (cmsMedia(cover) || {}).id || null, og_image_path: og, twitter_image_path: tw, author_id: f.author_id ?? req.session.user.id,
     seo_title: f.seo_title || null, seo_description: f.seo_description || null, og_title: f.og_title || null, og_description: f.og_description || null,
     twitter_title: f.twitter_title || null, twitter_description: f.twitter_description || null, canonical_url: f.canonical_url || null, ...st };
   const names = Object.keys(cols);
@@ -675,10 +675,11 @@ router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, r
     return req.body[remove] === "1" ? null : p[field === "thumbnail" ? "cover_path" : `${field}_path`];
   };
   const cols = {
-    ...f, slug, cover_path: pick("thumbnail", "remove_cover", "cover_media"), og_image_path: pick("og_image", "remove_og_image", "og_image_media"), twitter_image_path: pick("twitter_image", "remove_twitter_image", "twitter_image_media"),
+    ...f, slug, cover_path: pick("thumbnail", "remove_cover", "cover_media"), featured_media_id: null, og_image_path: pick("og_image", "remove_og_image", "og_image_media"), twitter_image_path: pick("twitter_image", "remove_twitter_image", "twitter_image_media"),
     author_id: f.author_id ?? p.author_id, seo_title: f.seo_title || null, seo_description: f.seo_description || null, og_title: f.og_title || null, og_description: f.og_description || null,
     twitter_title: f.twitter_title || null, twitter_description: f.twitter_description || null, canonical_url: f.canonical_url || null, ...st,
   };
+  cols.featured_media_id = (cmsMedia(cols.cover_path) || {}).id || null; // référence stable vers la médiathèque du CMS (null si l'image vient d'ailleurs)
   const names = Object.keys(cols);
   db.prepare(`UPDATE posts SET ${names.map((n) => `${n} = ?`).join(", ")}, updated_at = datetime('now') WHERE id = ?`).run(...names.map((n) => cols[n]), p.id);
   const after = db.prepare("SELECT * FROM posts WHERE id = ?").get(p.id);
@@ -747,7 +748,7 @@ router.get("/formateur/blog/:id/apercu", loadPost, (req, res) => {
     if (d.toc_depth) merged.toc_depth = ["2", "3", "4"].includes(String(d.toc_depth)) ? Number(d.toc_depth) : 3;
     if (["none", "h2", "full"].includes(d.toc_numbering)) merged.toc_numbering = d.toc_numbering;
     if (typeof d.toc_title === "string") merged.toc_title = d.toc_title;
-    if (IMG_PATH.test(d.cover_media || "")) merged.cover_path = d.cover_media;
+    if (IMG_PATH.test(d.cover_media || "") || cmsMedia(d.cover_media)) merged.cover_path = d.cover_media;
   }
   res.set("Cache-Control", "no-store");
   renderPostPage(req, res, merged, { preview: true });

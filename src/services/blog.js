@@ -129,7 +129,17 @@ function renderPost(post, { newsletterHtml = null } = {}) {
 // ---------- Statuts et programmation ----------
 // Un article programmé dont l'heure est passée devient publié (appelé avant chaque lecture publique du blog)
 function promoteScheduled() {
-  db.prepare("UPDATE posts SET status = 'published', published = 1 WHERE status = 'scheduled' AND published_at IS NOT NULL AND published_at <= datetime('now')").run();
+  db.prepare("UPDATE posts SET status = 'published', published = 1 WHERE status = 'scheduled' AND deleted_at IS NULL AND published_at IS NOT NULL AND published_at <= datetime('now')").run();
+}
+
+// Adresse d'un article : tirée du titre (ou saisie), rendue unique : « titre », « titre-2 », « titre-3 »… ; les anciennes adresses
+// (historique des redirections) ne sont jamais réattribuées à un autre article
+function uniqueSlug(title, exceptId = 0) {
+  const base = slugify(title).slice(0, 120).replace(/-+$/, "") || "article";
+  let slug = base;
+  const taken = (s) => db.prepare("SELECT 1 FROM posts WHERE slug = ? AND id != ?").get(s, exceptId) || db.prepare("SELECT 1 FROM post_slug_history WHERE old_slug = ? AND post_id != ?").get(s, exceptId);
+  for (let n = 2; taken(slug); n++) slug = `${base}-${n}`;
+  return slug;
 }
 
 // ---------- Catégories et étiquettes sans doublon ----------
@@ -241,6 +251,8 @@ function imageReferences(p) {
 // Tant qu'une révision, une sauvegarde automatique, un bloc ou un e-mail la cite, elle est gardée.
 function releaseImage(p) {
   if (!p || imageReferences(p).length) return false;
+  // Les fichiers de la médiathèque du CMS lui appartiennent : un article qui change d'image ne les efface jamais
+  if (/^\/uploads\/marketing\//.test(String(p))) return false;
   db.prepare("DELETE FROM media WHERE path = ?").run(p);
   removeUploadedFile(p, "image remplacée ou article supprimé, citée nulle part ailleurs");
   return true;
@@ -412,7 +424,7 @@ module.exports = {
   imageVariants,
   listComments, countComments, addComment, getComment, deleteComment, COMMENT_MAX,
   STATUSES, parseTags, excerptOf, textOf, categories, categoryBySlug, subcategories, allTags, canonicalCategory, canonicalSubcategory, canonicalTags,
-  popular, recent, similar, neighbours, authorOf, instructors, courseCard, renderPost, countView, card, promoteScheduled,
+  popular, recent, similar, neighbours, authorOf, instructors, courseCard, renderPost, countView, card, promoteScheduled, uniqueSlug,
   addRevision, describeChange, revisionKind, revisionFingerprint, listRevisions, countRevisions, getRevision, metaOf, revisionImages, releaseImage, REVISION_META, RESTORED_META, REVISION_KINDS, MAX_REVISIONS, getAutosave, setAutosave, clearAutosave,
   listMedia, addMedia, getMedia, mediaByPath, updateMedia, mediaUsage, imageReferences, searchLinks, suggestLinks, PAGES,
 };

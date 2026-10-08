@@ -32,41 +32,18 @@ const instructorLink = (req, href) => (isInstructor(req) ? href : null);
 const SCREENS = {
   // ----- Articles -----
   articles(req, ctx, sub) {
-    const fixed = { categories: 1, etiquettes: 1, auteurs: 1, ajouter: 1 };
-    const counts = data.postCounts(ctx.db);
-    const tabs = tabsOf("articles", sub, [["", "Tous", counts.all], ["brouillons", "Brouillons", counts.brouillons], ["programmes", "Programmés", counts.programmes], ["publies", "Publiés", counts.publies]]);
-    const newHref = instructorLink(req, "/formateur/blog/nouveau");
-    const add = newHref ? { label: "Ajouter un article", href: newHref, variant: "primary" } : dis("Ajouter un article", "Réservé au compte créateur");
-    if (sub === "ajouter") {
-      return { title: "Ajouter un article", lead: "L'éditeur d'articles de KOLAKISA (éditeur riche, mode Document, SEO, versions, sauvegarde automatique) est déjà en place : il s'ouvrira ici dans un prochain palier.",
-        cards: [{ icon: "edit", title: "Écrire un article", text: "Ouvre l'éditeur d'articles existant.", href: newHref, label: "Ouvrir l'éditeur", disabledText: "Réservé au compte créateur." },
-          { icon: "fileText", title: "Gérer le blog", text: "Liste, brouillons, publication et corbeille de blocs, dans l'espace du blog existant.", href: instructorLink(req, "/formateur/blog"), label: "Ouvrir le blog", disabledText: "Réservé au compte créateur." }] };
-    }
+    // La liste, les états, la création et la corbeille des articles sont dans articles.js ; ici : catégories, étiquettes, auteurs
+    const tabs = tabsOf("articles", sub, [["categories", "Catégories"], ["etiquettes", "Étiquettes"], ["auteurs", "Auteurs"]]);
     if (sub === "categories" || sub === "etiquettes") {
       const rows = (sub === "categories" ? data.categories(ctx.db) : data.tags(ctx.db)).map((c) => ({ cells: [{ text: c.name, href: sub === "categories" ? `/blog/categorie/${encodeURIComponent(c.name.toLowerCase().replace(/\s+/g, "-"))}` : null }, String(c.n)] }));
       const one = sub === "categories" ? "catégorie" : "étiquette";
-      return { title: sub === "categories" ? "Catégories" : "Étiquettes", lead: `Les ${sub === "categories" ? "catégories" : "étiquettes"} sont aujourd'hui saisies dans chaque article ; la gestion centralisée (renommer, fusionner, hiérarchie) arrive dans un prochain palier.`,
+      return { title: sub === "categories" ? "Catégories" : "Étiquettes", lead: `Les ${sub === "categories" ? "catégories" : "étiquettes"} sont aujourd'hui saisies dans chaque article ; la gestion centralisée (renommer, fusionner, hiérarchie) arrive dans un prochain palier.`, tabs,
         actions: [dis(`Ajouter une ${one}`)], search: { enabled: false, placeholder: `Rechercher une ${one}` },
         table: { caption: sub === "categories" ? "Catégories" : "Étiquettes", columns: [{ label: "Nom" }, { label: "Articles", num: true }], rows, empty: empty("tag", `Aucune ${one}`, `Les ${sub === "categories" ? "catégories" : "étiquettes"} apparaissent dès qu'un article en utilise.`) } };
     }
-    if (sub === "auteurs") {
-      const rows = data.authors(ctx.db).map((a) => ({ cells: [{ text: a.username, href: `/blog/auteur/${a.id}` }, String(a.n), String(a.published || 0)] }));
-      return { title: "Auteurs", lead: "Les auteurs des articles du blog.", actions: [dis("Ajouter un auteur")],
-        table: { caption: "Auteurs", columns: [{ label: "Auteur" }, { label: "Articles", num: true }, { label: "Publiés", num: true }], rows, empty: empty("user", "Aucun auteur", "Un auteur apparaît dès qu'il a écrit un article.") } };
-    }
-    const state = fixed[sub] ? null : sub || null;
-    const q = String(req.query.q || "").trim();
-    const posts = data.listPosts(ctx.db, { state, q });
-    const rows = posts.map((p) => {
-      const st = data.POST_STATUS[p.status] || [p.status, "mk-status-off"];
-      return { cells: [{ text: p.title, href: newHref ? `/formateur/blog/${p.id}/modifier` : null, sub: `/blog/${p.slug}` }, { status: { label: st[0], cls: st[1] } }, p.author || "—", p.category || "—", fdate(p.published_at || p.updated_at)],
-        actions: [...(newHref ? [{ label: "Modifier", href: `/formateur/blog/${p.id}/modifier` }] : []), ...(p.status === "published" ? [{ label: "Voir", href: `/blog/${p.slug}` }] : [])] };
-    });
-    const label = { brouillons: "Brouillons", programmes: "Programmés", publies: "Publiés" }[sub] || "Articles";
-    return { title: label === "Articles" ? "Articles" : `Articles · ${label}`, lead: "Les articles du blog KOLAKISA. Cet écran est en lecture seule : la rédaction se fait dans l'éditeur d'articles existant.", actions: [add], tabs,
-      search: { enabled: true, placeholder: "Rechercher un article", q },
-      table: { caption: "Articles", columns: [{ label: "Titre" }, { label: "Statut" }, { label: "Auteur" }, { label: "Catégorie" }, { label: "Date" }], rows,
-        empty: empty("fileText", q ? "Aucun article trouvé" : state ? `Aucun article ${label.toLowerCase()}` : "Aucun article", q ? "Essayez un autre mot." : "Les articles que vous écrivez apparaissent ici.", newHref ? { label: "Créer un article", href: newHref } : null) } };
+    const rows = data.authors(ctx.db).map((a) => ({ cells: [{ text: a.username, href: `/blog/auteur/${a.id}` }, String(a.n), String(a.published || 0)] }));
+    return { title: "Auteurs", lead: "Les auteurs des articles du blog.", tabs, actions: [dis("Ajouter un auteur")],
+      table: { caption: "Auteurs", columns: [{ label: "Auteur" }, { label: "Articles", num: true }, { label: "Publiés", num: true }], rows, empty: empty("user", "Aucun auteur", "Un auteur apparaît dès qu'il a écrit un article.") } };
   },
 
   // ----- Navigation -----

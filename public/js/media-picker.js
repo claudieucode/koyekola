@@ -6,6 +6,7 @@
 //   KWMediaPicker.open({ title: "Choisir une vidéo", type: "video", multiple: false, onPick: function (media) { … } })
 //
 // type : "image" | "video" | "audio" | "documents" (PDF + Office) ; absent = tous les types, avec un filtre dans la fenêtre.
+// extra : { label, onClick } = bouton supplémentaire du pied (ex. « Anciennes images du blog »), qui ferme le sélecteur puis agit.
 // onPick reçoit le média choisi { id, path, url, name, title, alt, type, mime, size, width, height… } (un tableau si multiple).
 (function () {
   var K = window.KWMedia;
@@ -48,7 +49,8 @@
       h("div", { class: "kwmp-tools" }, [search, select]),
       drop, input, queue, status,
       h("div", { class: "kwmp-body" }, [grid, more]),
-      h("footer", { class: "kwmp-foot" }, [h("a", { class: "kwmp-link", href: "/marketing/site-web/mediatheque", target: "_blank", rel: "noopener", text: "Gérer la médiathèque" }), cancel, ok]),
+      h("footer", { class: "kwmp-foot" }, [h("a", { class: "kwmp-link", href: "/marketing/site-web/mediatheque", target: "_blank", rel: "noopener", text: "Gérer la médiathèque" }),
+        opts.extra ? h("button", { type: "button", class: "kwmp-cancel", text: opts.extra.label, onclick: function () { close(); opts.extra.onClick(); } }) : null, cancel, ok]),
     ]);
     document.body.appendChild(dlg);
 

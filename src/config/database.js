@@ -346,11 +346,19 @@ const NEW_POST_COLUMNS = {
   schema_type: "TEXT NOT NULL DEFAULT 'BlogPosting'", // BlogPosting | Article
   reviewed: "INTEGER NOT NULL DEFAULT 0", // case « Article relu » de la liste de contrôle
   comments_enabled: "INTEGER NOT NULL DEFAULT 1", // commentaires des membres inscrits autorisés sous l'article
+  // CMS (palier 4) : image mise en avant choisie dans la médiathèque du CMS (mk_media.id ; cover_path garde l'adresse affichée)
+  // et corbeille (suppression douce : l'article reste en base, hors ligne, restaurable)
+  featured_media_id: "INTEGER",
+  deleted_at: "TEXT",
+  deleted_from_status: "TEXT",
+  deleted_by: "INTEGER",
 };
 for (const [name, definition] of Object.entries(NEW_POST_COLUMNS)) {
   if (!postColumns.includes(name)) db.exec(`ALTER TABLE posts ADD COLUMN ${name} ${definition}`);
 }
 db.exec("CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(published, category)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_posts_cms ON posts(deleted_at, status, updated_at)");
+db.exec("CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(author_id)");
 // Statut des articles déjà là : publié ou brouillon, d'après l'ancienne colonne (une seule fois : la colonne vient d'être créée)
 if (!postColumns.includes("status")) db.exec("UPDATE posts SET status = CASE WHEN published = 1 THEN 'published' ELSE 'draft' END");
 db.exec(`

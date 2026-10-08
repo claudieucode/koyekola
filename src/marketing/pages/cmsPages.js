@@ -111,7 +111,8 @@ const redirectSource = (ctx, slug) => { try { return Boolean(ctx.db.prepare("SEL
 
 // ---------- Actions groupées ----------
 const RUNNERS = { publier: "publish", depublier: "unpublish", corbeille: "archive", restaurer: "restore", supprimer: "remove" };
-const ACTIONS = { publier: "publiée", depublier: "mise hors ligne", corbeille: "mise à la corbeille", restaurer: "restaurée", supprimer: "supprimée définitivement" };
+// Participe passé au singulier et au pluriel (« 1 page publiée », « 3 pages publiées »)
+const ACTIONS = { publier: ["publiée", "publiées"], depublier: ["mise hors ligne", "mises hors ligne"], corbeille: ["mise à la corbeille", "mises à la corbeille"], restaurer: ["restaurée", "restaurées"], supprimer: ["supprimée définitivement", "supprimées définitivement"] };
 // run : { publish, unpublish, archive, restore, remove } fournis par la route (moteur de pages) ; can(action) filtre les droits
 function bulk(ctx, action, ids, run) {
   if (!Object.hasOwn(ACTIONS, action)) throw bad("Action inconnue.");

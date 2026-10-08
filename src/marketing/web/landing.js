@@ -104,7 +104,7 @@ module.exports = () => {
         restore: (id) => pages.restorePage(ctx, id), remove: (id) => landing.deletePage(ctx, id),
       });
       const n = r.done.length;
-      const head = n ? `${n} page${n > 1 ? "s" : ""} ${r.label}${n > 1 && !/s$/.test(r.label) ? "s" : ""}.` : "";
+      const head = n ? `${n} page${n > 1 ? "s" : ""} ${r.label[n > 1 ? 1 : 0]}.` : "";
       const detail = r.failed.map((f) => `« ${f.name} » : ${f.message}`).join(" · ");
       if (!r.failed.length) return flash("ok", head);
       if (!n) return flash("error", "Aucune page n'a pu être traitée.", detail);
