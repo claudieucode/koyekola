@@ -589,14 +589,13 @@ html:has(.mk-dialog[open]) { overflow: hidden; } /* la page derrière ne défile
 .mk-pal-empty { margin: 12px 6px; font-size: 0.86rem; color: var(--muted); text-align: center; }
 .mk-pal-help { margin: 14px 4px 0; padding-top: 12px; border-top: 1px solid var(--mk-border); font-size: 0.75rem; line-height: 1.4; color: var(--muted); }
 /* Palette réduite : icônes seules, infobulles (même rendu que celles du rail « Mon espace ») */
-.is-palette-collapsed .mk-flow-pal { overflow: visible; }
 .is-palette-collapsed .mk-pal-head { flex-direction: column; align-items: center; padding: 12px 0 10px; }
 .is-palette-collapsed .mk-pal-titles, .is-palette-collapsed .mk-pal-search, .is-palette-collapsed .mk-pal-help, .is-palette-collapsed .mk-pal-text, .is-palette-collapsed .mk-pal-empty { display: none; }
-.is-palette-collapsed .mk-pal-body { padding: 8px 0; overflow: visible; }
+.is-palette-collapsed .mk-pal-body { padding: 8px 0; overflow-x: hidden; } /* défilement vertical interne conservé (overflow-y: auto) : les icônes restent dans la barre */
 .is-palette-collapsed .mk-pal-cat { display: none; }
 .is-palette-collapsed .mk-pal-group + .mk-pal-group { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--mk-border); }
 .is-palette-collapsed .mk-pal-item { justify-content: center; width: 44px; min-height: 40px; margin: 0 auto; padding: 4px; }
-.is-palette-collapsed .mk-pal-item:hover::after, .is-palette-collapsed .mk-pal-item:focus-visible::after, .is-palette-collapsed .mk-pal-collapse:hover::after, .is-palette-collapsed .mk-pal-collapse:focus-visible::after { content: attr(data-tip); position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); z-index: 30; padding: 6px 10px; border-radius: 6px; background: #0f1d29; color: #fff; font-family: var(--font-body, inherit); font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; box-shadow: var(--mk-pop); }
+.is-palette-collapsed .mk-pal-item:hover::after, .is-palette-collapsed .mk-pal-item:focus-visible::after, .is-palette-collapsed .mk-pal-collapse:hover::after, .is-palette-collapsed .mk-pal-collapse:focus-visible::after { content: attr(data-tip); position: fixed; left: calc(var(--tip-x, 0px) + 10px); top: var(--tip-y, 0px); transform: translateY(-50%); z-index: 30; padding: 6px 10px; border-radius: 6px; background: #0f1d29; color: #fff; font-family: var(--font-body, inherit); font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; box-shadow: var(--mk-pop); }
 /* Canevas pendant un glisser-déposer depuis la palette */
 .mk-flow-canvas.is-drop-zone { outline: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -6px; }
 .drawflow-node.is-drop-target .mk-flow-card { box-shadow: var(--ring); border-color: var(--accent); }

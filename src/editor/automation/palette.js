@@ -110,6 +110,20 @@ export function buildPalette({ root, workspace, iconHtml, onAdd, onAddTrigger, o
   }
   body.append(...[searchWrap, onlyWrap, groups, empty, help].filter(Boolean));
   root.append(head, body);
+
+  // Infobulles de la palette réduite. La palette garde sa zone de défilement interne (elle ne peut jamais déborder sur les sections
+  // du dessous) ; une infobulle « absolute » serait donc coupée par ce défilement. Elle est « fixed » : seules ses coordonnées sont
+  // lues sur l'icône survolée ou focalisée (bord droit, milieu vertical) — voir .is-palette-collapsed … ::after dans marketing.css.
+  const placeTip = (target) => {
+    const b = target && target.closest ? target.closest(".mk-pal-item, .mk-pal-collapse") : null;
+    if (!b) return;
+    const r = b.getBoundingClientRect();
+    b.style.setProperty("--tip-x", `${r.right}px`);
+    b.style.setProperty("--tip-y", `${r.top + r.height / 2}px`);
+  };
+  root.addEventListener("pointerover", (e) => placeTip(e.target));
+  root.addEventListener("focusin", (e) => placeTip(e.target));
+  body.addEventListener("scroll", () => placeTip(root.querySelector(".mk-pal-item:hover, .mk-pal-item:focus-visible")), { passive: true });
   root.setAttribute("aria-labelledby", "au-pal-title");
 
   // Recherche : filtre les actions (sans accents, synonymes compris) ; les catégories concernées s'ouvrent
