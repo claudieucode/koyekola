@@ -18,6 +18,7 @@ export const ACTIONS = {
   sms: { category: "communication", icon: "smartphone", description: "Aux contacts qui ont accepté les SMS", keywords: "sms texto mobile telephone message", title: "Configurer : Envoyer un SMS", make: () => ({ body: "", trackClicks: true }) },
   wait: { category: "temps", icon: "clock", description: "Une durée fixe avant la suite", keywords: "attente attendre delai pause duree", title: "Configurer : Attendre", make: () => ({ amount: 1, unit: "days" }) },
   wait_for_event: { category: "temps", icon: "calendarClock", description: "Un événement, avec un délai maximal", keywords: "attente attendre evenement delai jusqu", title: "Configurer : Attendre jusqu'à", make: () => ({ event: "", amount: 7, unit: "days" }) },
+  wait_until: { category: "temps", icon: "calendarClock", description: "Une heure, un jour, une date, un champ date, les heures ouvrables", keywords: "attendre jusqua date heure jour semaine fuseau ouvrable creneau champ date anniversaire horaire calendrier", title: "Configurer : Attendre une date ou une heure", make: () => ({ mode: "time", zone: "contact", time: "09:00" }) },
   condition: { category: "logique", icon: "gitBranch", tone: "branch", description: "Deux chemins : oui / non", keywords: "si segment branche ouvert clic critere", title: "Configurer : Condition", make: () => ({ check: "segment", definition: null, _segmentId: null }) },
   split: { category: "logique", icon: "shuffle", tone: "branch", description: "Deux chemins tirés au sort : A / B", keywords: "test ab aleatoire hasard pourcentage branche tirage", title: "Configurer : Tirage aléatoire", make: () => ({ percentage: 50 }) },
   update_field: { category: "contact", icon: "userPen", description: "Prénom, société, propriété…", keywords: "champ modifier propriete contact mettre a jour", title: "Configurer : Mettre à jour un champ", make: () => ({ field: "", value: "" }) },
@@ -39,6 +40,16 @@ export const insertable = () => Object.values(ACTIONS).filter((x) => x.make);
 export const configurable = (type) => type !== "end" && Object.hasOwn(ACTIONS, type);
 
 // Étape réglée ? (mêmes règles que la configuration ; le serveur reste juge à l'enregistrement)
+const WEEKDAYS = ["", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+function waitUntilSummary(d) {
+  const z = d.zone === "organization" ? "fuseau de l'organisation" : "fuseau du contact";
+  if (d.mode === "time") return `Chaque jour à ${d.time} (${z})`;
+  if (d.mode === "weekday") return `${WEEKDAYS[d.weekday].replace(/^./, (c) => c.toUpperCase())} à ${d.time} (${z})`;
+  if (d.mode === "date") return `Le ${d.date} à ${d.time} (${z})`;
+  if (d.mode === "property") return `Date « ${d.property} »${d.offsetDays ? ` ${d.offsetDays > 0 ? "+" : "−"} ${Math.abs(d.offsetDays)} j` : ""} à ${d.time}`;
+  return `Heures ouvrables ${d.days.map((n) => WEEKDAYS[n].slice(0, 3)).join(", ")} ${d.from}–${d.to}`;
+}
+
 export function isConfigured(type, ctx, d) {
   if (!configurable(type)) return true;
   if (type === "trigger") return validate("trigger", ctx, { name: ctx.a.name, triggers: Array.isArray(d.triggers) && d.triggers.length ? d.triggers : [{ event: d.triggerEvent, filter: d.triggerFilter || {} }] }).length === 0;
@@ -60,6 +71,7 @@ export function summary(type, ctx, d) {
     case "email": { const tpl = data.templates.find((x) => x.id === d.templateId); return tpl ? tpl.name : "Modèle introuvable"; }
     case "sms": { const t = String(d.body).replace(/\s+/g, " "); return t.length > 60 ? `${t.slice(0, 57)}…` : t; }
     case "wait": return `${d.amount} ${plural(d.amount, unitLabel(d.unit))}`;
+    case "wait_until": return waitUntilSummary(d);
     case "wait_for_event": return `${d.event} (${d.amount} ${plural(d.amount, unitLabel(d.unit))} au plus)`;
     case "split": return `A ${d.percentage} % · B ${100 - d.percentage} %`;
     case "update_field": {
