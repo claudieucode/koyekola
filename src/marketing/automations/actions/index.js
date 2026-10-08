@@ -5,6 +5,7 @@ require("./logic");
 require("./contact");
 require("./data");
 require("./automation");
+require("./integrations");
 require("./flow");
 
 module.exports = require("./registry");

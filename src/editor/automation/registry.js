@@ -5,7 +5,7 @@
 import { STEP_LABELS } from "../../utils/stepLabels";
 import { UNITS, CHECKS, FIELD_LABELS, TRANSFORM_LABELS, validate } from "./stepEditors";
 
-export const CATEGORIES = [["trigger", "Déclencheur"], ["communication", "Communication"], ["temps", "Temps"], ["logique", "Logique"], ["contact", "Contact"], ["parcours", "Parcours"], ["fin", "Fin"]];
+export const CATEGORIES = [["trigger", "Déclencheur"], ["communication", "Communication"], ["temps", "Temps"], ["logique", "Logique"], ["contact", "Contact"], ["parcours", "Parcours"], ["integrations", "Intégrations"], ["fin", "Fin"]];
 
 const unitLabel = (u) => (UNITS.find((x) => x[0] === u) || [null, u])[1];
 const plural = (n, unit) => (n === 1 && /s$/.test(unit) ? unit.slice(0, -1) : unit); // « 1 jour », « 2 jours »
@@ -33,6 +33,7 @@ export const ACTIONS = {
   add_note: { category: "contact", icon: "stickyNote", description: "Une note sur la fiche du contact", keywords: "note commentaire memo fiche contact suivi", title: "Configurer : Ajouter une note", make: () => ({ body: "" }) },
   start_automation: { category: "parcours", icon: "play", description: "Fait entrer le contact dans un autre scénario actif", keywords: "demarrer lancer scenario automatisation parcours enchainer inscrire autre", title: "Configurer : Démarrer un autre scénario", make: () => ({ automationId: undefined }) },
   stop_automation: { category: "parcours", icon: "pause", description: "Fait sortir le contact d'un autre scénario en cours", keywords: "arreter stopper retirer sortir scenario automatisation parcours autre", title: "Configurer : Arrêter un autre scénario", make: () => ({ automationId: undefined }) },
+  webhook_call: { category: "integrations", icon: "send", description: "Une requête signée vers un de vos webhooks", keywords: "webhook http api requete post json integration zapier make crm envoyer donnees externe", title: "Configurer : Envoyer vers un webhook", make: () => ({ endpointId: undefined, fields: [] }) },
   end: { category: "fin", icon: "stopCircle", tone: "end", description: "Le passage du contact s'arrête", keywords: "fin terminer stop sortie", make: () => ({}) },
 };
 Object.keys(ACTIONS).forEach((type) => { ACTIONS[type].type = type; ACTIONS[type].label = STEP_LABELS[type] || type; });
@@ -102,6 +103,7 @@ export function summary(type, ctx, d) {
     case "copy_field": return `${refLabel(d.from, data)} → ${refLabel(d.to, data)}${d.transform && d.transform !== "none" ? ` (${(TRANSFORM_LABELS[d.transform] || d.transform).toLowerCase()})` : ""}`;
     case "set_date": return `${refLabel(d.property, data)} = ${d.base === "property" ? refLabel(d.baseProperty, data) : "aujourd'hui"}${d.offsetDays ? ` ${d.offsetDays > 0 ? "+" : "−"} ${Math.abs(d.offsetDays)} j` : ""}`;
     case "calculate": return `${refLabel(d.property, data)} ${({ set: "=", add: "+", subtract: "−", multiply: "×" })[d.op] || "?"} ${d.value}`;
+    case "webhook_call": { const w = (data.webhooks || []).find((x) => x.id === d.endpointId); const n = (d.fields || []).length; return w ? `« ${w.name} » · ${n} champ${n > 1 ? "s" : ""}` : "Webhook introuvable"; }
     case "adjust_score": return d.mode === "set" ? `Score = ${d.points}` : `${d.mode === "add" ? "+" : "−"} ${d.points} point${d.points > 1 ? "s" : ""}`;
     case "add_note": { const t = String(d.body).replace(/\s+/g, " "); return t.length > 60 ? `${t.slice(0, 57)}…` : t; }
     case "add_tag": case "remove_tag": return `« ${d.tag} »`;

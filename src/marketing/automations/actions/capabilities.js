@@ -25,6 +25,13 @@ const CAPABILITIES = {
       return { ok: true, detail: "réglé" };
     },
   },
+  webhook_endpoint: {
+    label: "Webhook (point d'accès)", fix: "Intégrations → Webhooks",
+    check(ctx) {
+      const n = ctx.db.prepare("SELECT COUNT(*) n FROM mk_webhook_endpoints WHERE organization_id = ? AND enabled = 1").get(ctx.organizationId).n;
+      return n ? { ok: true, detail: `${n} point${n > 1 ? "s" : ""} d'accès actif${n > 1 ? "s" : ""}` } : { ok: false, detail: "aucun point d'accès actif : créez-en un dans Intégrations → Webhooks" };
+    },
+  },
 };
 
 // Une connexion illisible (réglages absents, base indisponible) compte comme manquante : jamais « réglée » par défaut
