@@ -160,6 +160,13 @@ function automationPreflight(ctx, id, { workerOn = false, smtpAvailable = Boolea
     if (loose.length) errors.push({ code: "orphan", nodes: loose.map((n) => n.id), message: `${loose.length} étape${loose.length > 1 ? "s ne sont reliées" : " n'est reliée"} à aucun chemin d'exécution (${loose.map((n) => STEP_LABELS[n.type] || n.type).join(", ")}) : reliez-${loose.length > 1 ? "les" : "la"} depuis le déclencheur ou supprimez-${loose.length > 1 ? "les" : "la"}.` });
   }
   if (!a.steps.length) errors.push({ code: "no_steps", message: "Le scénario n'a aucune étape." });
+  // Étapes « Démarrer / Arrêter un autre scénario » : un scénario ciblé inactif ne démarrera rien (signalé, pas bloquant)
+  a.steps.forEach((s, step) => {
+    if (s.type !== "start_automation") return;
+    const t = ctx.db.prepare("SELECT name, status FROM mk_automations WHERE id = ? AND organization_id = ?").get(s.automationId, ctx.organizationId);
+    if (!t) errors.push({ code: "target_missing", step, message: `Étape ${step + 1} : le scénario à démarrer n'existe plus.` });
+    else if (t.status !== "active") warnings.push({ code: "target_inactive", step, message: `Étape ${step + 1} : le scénario « ${t.name} » n'est pas actif ; cette étape ne démarrera rien tant qu'il ne l'est pas.` });
+  });
   // « step » (position dans `a.steps`) et « templateId » accompagnent chaque erreur d'e-mail : l'éditeur graphique
   // s'en sert pour sélectionner directement le nœud fautif sur le canevas plutôt que de laisser chercher à l'œil.
   const emailSteps = a.steps.map((s, step) => ({ s, step })).filter(({ s }) => s.type === "email");

@@ -157,6 +157,7 @@ const INCOMPLETE = {
   add_to_list: (d) => blank(d.listId), remove_from_list: (d) => blank(d.listId),
   adjust_score: (d) => blank(d.mode) || blank(d.points),
   add_note: (d) => blank(d.body),
+  start_automation: (d) => blank(d.automationId), stop_automation: (d) => blank(d.automationId),
   wait_until: (d) => blank(d.mode) || (d.mode === "property" && blank(d.property)) || (d.mode === "date" && blank(d.date)) || (d.mode === "business_hours" && (!Array.isArray(d.days) || !d.days.length)),
 };
 function reachableIds(graph) {

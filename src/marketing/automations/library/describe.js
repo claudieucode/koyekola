@@ -66,6 +66,8 @@ function describeStep(j, s, emails, texts) {
     case "remove_from_list": return { icon: "list", kind: "action", text: "Retirer de la liste choisie" };
     case "update_field": return { icon: "edit", kind: "action", text: `Mettre à jour le champ « ${s.field} »` };
     case "adjust_score": return { icon: "trendingUp", kind: "action", text: s.mode === "set" ? `Définir le score à ${s.points}` : `${s.mode === "add" ? "Ajouter" : "Retirer"} ${s.points} point${s.points > 1 ? "s" : ""} de score` };
+    case "start_automation": return { icon: "play", kind: "action", text: "Démarrer un autre scénario pour ce contact" };
+    case "stop_automation": return { icon: "pause", kind: "action", text: "Arrêter un autre scénario pour ce contact" };
     case "add_note": return { icon: "stickyNote", kind: "action", text: "Ajouter une note sur la fiche du contact" };
     case "end": return { icon: "stopCircle", kind: "end", text: "Fin du parcours" };
     default: return { icon: "zap", kind: "action", text: s.type };
