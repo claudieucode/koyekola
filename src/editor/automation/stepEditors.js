@@ -16,6 +16,7 @@ const PROPERTY_KEY = /^[a-z][a-z0-9_]{0,39}$/;
 const STATUS_LABELS = { unknown: "Pas de consentement", subscribed: "Abonné", unsubscribed: "Désinscrit", bounced: "Rebond", complained: "Plainte", suppressed: "Bloqué" };
 export const TRANSFORM_LABELS = { none: "Aucun nettoyage", trim: "Retirer les espaces en trop", lowercase: "Tout en minuscules", uppercase: "Tout en majuscules", capitalize: "Majuscule à chaque mot", digits: "Garder seulement les chiffres (et +)" };
 const WEBHOOK_VARIABLES = ["email", "prenom", "nom", "telephone", "societe", "pays", "score", "event.course_title", "event.course_url", "event.order_total", "event.order_id", "event.lesson_title", "event.learn_url"]; // mêmes variables que integrations.js
+const NOTIFY_VARIABLES = [...WEBHOOK_VARIABLES, "contact_url", "scenario"]; // mêmes variables que communication.js (notify_team)
 const WEEKDAY_OPTIONS = [[1, "Lundi"], [2, "Mardi"], [3, "Mercredi"], [4, "Jeudi"], [5, "Vendredi"], [6, "Samedi"], [7, "Dimanche"]];
 const WAIT_UNTIL_MODES = [["time", "Une heure précise"], ["weekday", "Un jour de la semaine"], ["date", "Une date précise"], ["property", "Un champ date du contact"], ["business_hours", "Les heures ouvrables"]];
 const WAIT_UNTIL_DEFAULTS = { time: { time: "09:00" }, weekday: { weekday: 1, time: "09:00" }, date: { date: "", time: "09:00" }, property: { property: "", offsetDays: 0, time: "09:00", onMissing: "continue" }, business_hours: { days: [1, 2, 3, 4, 5], from: "09:00", to: "18:00" } };
@@ -432,6 +433,23 @@ const EDITORS = {
     box.appendChild(hint("Le score d'un contact ne descend jamais sous 0. Chaque modification est tracée dans l'historique du score, n'est appliquée qu'une fois par passage et reste après un recalcul des règles. Elle ne déclenche pas d'événement de changement de niveau."));
     return box;
   },
+  notify_team(ctx, draft) {
+    const box = el("div");
+    const team = ctx.data.team || [];
+    if (!team.length) { box.appendChild(note("Aucun membre de l'équipe avec une adresse e-mail.")); return box; }
+    const dis = ctx.locked;
+    if (!Array.isArray(draft.recipients)) draft.recipients = [];
+    const who = el("div", { class: "mk-step-days" });
+    team.forEach((u) => who.appendChild(checkbox(`${u.name} (${u.email})`, draft.recipients.includes(u.id), (on) => { const set = new Set(draft.recipients); if (on) set.add(u.id); else set.delete(u.id); draft.recipients = [...set]; }, { disabled: dis })));
+    box.appendChild(section("Destinataires (membres de l'équipe, 5 au plus)", who));
+    box.appendChild(field("Objet", text(draft.subject, (v) => { draft.subject = v; }, { maxlength: 150, placeholder: "Nouveau contact chaud : {{prenom}} {{nom}}", disabled: dis })));
+    const ta = el("textarea", { id: nextId(), rows: "6", maxlength: "1500" });
+    ta.value = draft.body || ""; ta.disabled = dis;
+    ta.addEventListener("input", () => { draft.body = ta.value; });
+    box.appendChild(field("Texte", ta, `Variables : ${NOTIFY_VARIABLES.map((v) => `{{${v}}}`).join(", ")}. {{contact_url}} ouvre la fiche du contact.`));
+    box.appendChild(hint("E-mail interne envoyé en arrière-plan, avec reprises automatiques ; jamais à une adresse hors de l'équipe. Le scénario n'attend pas l'envoi."));
+    return box;
+  },
   webhook_call(ctx, draft, rerender) {
     const box = el("div");
     const hooks = ctx.data.webhooks || [];
@@ -582,6 +600,19 @@ export function validate(type, ctx, d) {
       if (!b) return ["Écrivez le texte de la note."];
       return b.length > MAX_NOTE ? [`Note trop longue (${MAX_NOTE} caractères au plus).`] : [];
     }
+    case "notify_team": {
+      const errors = [];
+      const ids = d.recipients || [];
+      if (!ids.length) errors.push("Choisissez au moins un destinataire.");
+      else if (ids.length > 5) errors.push("5 destinataires au plus.");
+      else if (ids.some((id) => !(ctx.data.team || []).some((u) => u.id === id))) errors.push("Un destinataire n'est plus membre de l'équipe.");
+      if (!String(d.subject || "").trim()) errors.push("Écrivez l'objet.");
+      if (!String(d.body || "").trim()) errors.push("Écrivez le texte.");
+      if (String(d.body || "").length > 1500) errors.push("Texte trop long (1500 caractères au plus).");
+      const unknown = [...(String(d.subject || "") + " " + String(d.body || "")).matchAll(/\{\{\s*([a-z_.]+)\s*\}\}/g)].map((m) => m[1]).filter((v) => !NOTIFY_VARIABLES.includes(v));
+      if (unknown.length) errors.push(`Variable inconnue : ${unknown.join(", ")}.`);
+      return errors;
+    }
     case "webhook_call": {
       const errors = [];
       if (!(ctx.data.webhooks || []).some((w) => w.id === d.endpointId)) errors.push("Choisissez le webhook à appeler.");
@@ -625,6 +656,7 @@ export function clean(type, d) {
   delete out._newTag;
   if (type === "add_tag" || type === "remove_tag") out.tag = String(out.tag || "").trim();
   if (type === "trigger") out.name = String(out.name || "").trim();
+  if (type === "notify_team") { out.subject = String(out.subject || "").trim(); out.body = String(out.body || "").replace(/\r\n?/g, "\n").trim(); }
   if (type === "webhook_call") out.fields = (out.fields || []).map((f) => ({ key: String(f.key || "").trim(), value: String(f.value || "").trim() }));
   if (type === "sms" || type === "add_note") out.body = String(out.body || "").replace(/\r\n?/g, "\n").trim();
   return out;

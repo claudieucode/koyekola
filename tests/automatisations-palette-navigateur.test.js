@@ -317,5 +317,32 @@ describe("palette d'actions des scénarios : disponibilité réelle, filtre, ré
     assert.match(await page.locator(".drawflow-node").filter({ hasText: "Envoyer vers un webhook" }).first().innerText(), /« CRM » · 2 champs/);
   });
 
+  test("« Notifier l'équipe » : membres proposés (jamais d'adresse libre), validation, enregistrement exécutable ; « connexion requise » sans fournisseur d'e-mails", async () => {
+    await openEditor();
+    srv.db().prepare("DELETE FROM mk_settings WHERE organization_id = ? AND key LIKE 'email.%'").run(org); // d'autres scénarios ont pu régler le fournisseur : on repart sans
+    await page.reload(); await page.waitForSelector("#au-palette .mk-pal-item");
+    assert.equal(await item("notify_team").locator(".mk-pal-badge").innerText(), "Connexion requise", "il faut un fournisseur d'e-mails");
+    const membre = srv.db().prepare("SELECT m.user_id, u.username, u.email FROM mk_org_members m JOIN users u ON u.id = m.user_id WHERE m.organization_id = ? ORDER BY m.user_id LIMIT 1").get(org);
+    await item("notify_team").click();
+    await page.locator(".drawflow-node").filter({ hasText: "Notifier l'équipe" }).first().click();
+    await dialog().waitFor({ timeout: 8000 });
+    assert.match(await dialog().innerText(), new RegExp(`${membre.username} \\(${membre.email.replace(".", "\\.")}\\)`), "le membre est proposé avec son adresse");
+    assert.equal(await dialog().locator("input[type=email]").count(), 0, "aucun champ pour saisir une adresse libre");
+    await dialog().locator("[data-step-save]").click();
+    const e1 = await dialog().locator(".mk-step-dialog-error").innerText();
+    assert.match(e1, /au moins un destinataire/); assert.match(e1, /Écrivez l'objet/); assert.match(e1, /Écrivez le texte/);
+    await dialog().locator("input[type=checkbox]").first().check();
+    await dialog().locator("input[type=text]").first().fill("Contact chaud : {{prenom}} {{nom}}");
+    await dialog().locator("textarea").fill("Bonjour {{inconnue}}");
+    await dialog().locator("[data-step-save]").click();
+    assert.match(await dialog().locator(".mk-step-dialog-error").innerText(), /Variable inconnue : inconnue/);
+    await dialog().locator("textarea").fill("{{prenom}} ({{email}}) : {{contact_url}}");
+    await dialog().locator("[data-step-save]").click();
+    await page.locator("dialog.mk-step-dialog[open]").waitFor({ state: "detached", timeout: 8000 });
+    await connectAndSave("Notifier l'équipe");
+    await until(() => JSON.stringify(savedSteps()) === JSON.stringify([{ type: "notify_team", recipients: [membre.user_id], subject: "Contact chaud : {{prenom}} {{nom}}", body: "{{prenom}} ({{email}}) : {{contact_url}}" }]), "étape enregistrée et exécutable");
+    assert.match(await page.locator(".drawflow-node").filter({ hasText: "Notifier l'équipe" }).first().innerText(), /1 destinataire · Contact chaud/);
+  });
+
   test("aucune erreur de script ni de console", () => { assert.deepEqual(errors, []); });
 });
