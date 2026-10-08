@@ -38,16 +38,6 @@ const SCREENS = {
       table: { caption: "Auteurs", columns: [{ label: "Auteur" }, { label: "Articles", num: true }, { label: "Publiés", num: true }], rows, empty: empty("user", "Aucun auteur", "Un auteur apparaît dès qu'il a écrit un article.") } };
   },
 
-  // ----- Navigation -----
-  navigation(req, ctx) {
-    const menus = [["principal", "Menu principal"], ["pied", "Menu du pied de page"], ["mobile", "Menu mobile"], ["secondaire", "Menus secondaires"]];
-    const cur = menus.find(([k]) => k === req.query.menu) ? req.query.menu : "principal";
-    const list = pages.listPages(ctx, {}).slice(0, 30).map((p) => ({ name: p.name, hint: `/p/${p.slug}` }));
-    return { title: "Navigation", lead: "Composez les menus de vos sites. L'ordre se règle par glisser-déposer. Pour l'instant, les menus se construisent dans l'élément « Menu » du Page Builder.", soon: SOON,
-      tabs: menus.map(([k, l]) => ({ label: l, href: `${BASE}/navigation?menu=${k}`, current: cur === k })), actions: [dis("Enregistrer le menu")],
-      tree: { pickerTitle: "Ajouter au menu", pickerHint: "Pages de vos sites (lecture seule)", candidates: list, treeTitle: menus.find(([k]) => k === cur)[1], emptyText: "Ce menu est vide. Les éléments ajoutés apparaîtront ici, réorganisables par glisser-déposer, avec leurs sous-menus." } };
-  },
-
   // ----- Apparence -----
   apparence(req, ctx, sub) {
     const sites = pages.listSites(ctx);
@@ -68,8 +58,6 @@ const SCREENS = {
     if (sub === "styles") return { title: "Styles", lead: "Le design system de chaque site : couleurs, polices, tailles, espacements, boutons. Ouvrez un site pour le modifier.", table: siteTable("Styles par site", "#design", "Modifier les styles") };
     if (sub === "en-tete") return { title: "En-tête", lead: "L'en-tête de chaque site, avec ses variantes par page.", table: siteTable("En-têtes par site", "#entete", "Modifier l'en-tête") };
     if (sub === "pied-de-page") return { title: "Pied de page", lead: "Le pied de page de chaque site.", table: siteTable("Pieds de page par site", "#parties", "Modifier le pied de page") };
-    if (sub === "menus") return { title: "Menus", lead: "Les menus de navigation de vos sites.", soon: SOON, actions: [dis("Ajouter un menu")],
-      cards: [{ icon: "menu", title: "Gérer la navigation", text: "Les emplacements de menus (principal, pied de page, mobile) se composent dans l'écran Navigation.", href: `${BASE}/navigation`, label: "Ouvrir Navigation" }] };
     return { title: "Éditeur du site", lead: "Chaque page de vos sites s'édite dans l'éditeur visuel KOLAKISA (Page Builder). Les réglages communs d'un site se trouvent dans sa fiche.",
       cards: [{ icon: "layout", title: "Éditer une page", text: "Choisissez une page : elle s'ouvre dans l'éditeur visuel.", href: "/marketing/pages", label: "Ouvrir les pages" },
         { icon: "palette", title: "Styles du site", text: "Couleurs, polices, tailles et boutons.", href: `${BASE}/apparence/styles`, label: "Ouvrir les styles" },

@@ -30,7 +30,7 @@ const SECTIONS = [
     ],
   },
   { key: "mediatheque", label: "Médias", icon: "image", items: [leaf("mediatheque", "Médias", `${BASE}/mediatheque`, { permission: "media.read" })] },
-  { key: "navigation", label: "Navigation", icon: "menu", items: [leaf("navigation", "Navigation", `${BASE}/navigation`, { status: "preview" })] },
+  { key: "navigation", label: "Navigation", icon: "menu", items: [leaf("navigation", "Navigation", `${BASE}/navigation`, { permission: "navigation.read" })] },
   {
     key: "apparence", label: "Apparence", icon: "palette", items: [
       leaf("apparence", "Éditeur du site", `${BASE}/apparence`),
@@ -39,7 +39,7 @@ const SECTIONS = [
       leaf("apparence/styles", "Styles", `${BASE}/apparence/styles`),
       leaf("apparence/en-tete", "En-tête", `${BASE}/apparence/en-tete`),
       leaf("apparence/pied-de-page", "Pied de page", `${BASE}/apparence/pied-de-page`),
-      leaf("apparence/menus", "Menus", `${BASE}/apparence/menus`, { status: "preview" }),
+      leaf("apparence/menus", "Menus", `${BASE}/apparence/menus`, { permission: "navigation.read" }),
     ],
   },
   {

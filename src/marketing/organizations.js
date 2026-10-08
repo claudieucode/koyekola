@@ -19,6 +19,8 @@ const PERMISSIONS = Object.freeze({
   "taxonomies.read": "viewer", "taxonomies.write": "editor", "taxonomies.delete": "admin",
   // Commentaires : voir = lecteur ; modérer (approuver, indésirable, corbeille, répondre) = éditeur ; suppression définitive et e-mails des invités = administrateur
   "comments.read": "viewer", "comments.moderate": "editor", "comments.delete": "admin", "comments.email": "admin",
+  // Navigation : voir = lecteur ; créer/modifier menus et éléments = éditeur ; affecter un menu à un emplacement (publier) et supprimer un menu = administrateur
+  "navigation.read": "viewer", "navigation.write": "editor", "navigation.publish": "admin", "navigation.delete": "admin",
   "articles.read": "viewer", "articles.write": "editor", "articles.publish": "editor", "articles.delete": "admin",
   "media.read": "viewer", "media.upload": "editor", "media.write": "editor", "media.delete": "admin",
   "analytics.read": "viewer",
