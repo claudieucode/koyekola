@@ -145,6 +145,17 @@
   var tool = "select";              // select | hand
   var zoom = 1, zoomFit = false;
   var aids = store.get("aids", { grid: false, outlines: false, rulers: false, snap: true });
+  // Règles, grille et magnétisme : réglages d'interface propres à ce navigateur (jamais enregistrés dans le contenu de la page).
+  // Les quatre interrupteurs principaux (règles, guides, grille, magnétisme) restent dans `aids` ; le détail est ici.
+  var KS = window.KWSnap;
+  var snapPrefs = KS.normalize(store.get("snapcfg", null));
+  var saveSnapPrefs = function () { store.set("snapcfg", snapPrefs); };
+  function effPrefs() {
+    var p = Object.assign({}, snapPrefs);
+    p.show = Object.assign({}, snapPrefs.show, { rulers: Boolean(aids.rulers), guides: aids.guides !== false, grid: Boolean(aids.grid) });
+    p.snap = Object.assign({}, snapPrefs.snap, { on: Boolean(aids.snap) });
+    return p;
+  }
   var panels = store.get("panels", { left: 260, right: 340, layers: 46, leftHidden: false, rightHidden: false });
   var frame = $("[data-pb-frame]");
   var stage = $("[data-pb-stage]");
@@ -3455,7 +3466,6 @@
     doc.body.classList.add("lp-builder");
     doc.body.classList.toggle("pb-outlines", aids.outlines);
     doc.body.classList.toggle("pb-hand", tool === "hand");
-    if (aids.grid) { var g = doc.createElement("div"); g.className = "pb-grid-overlay"; for (var i = 0; i < 12; i++) g.appendChild(doc.createElement("span")); doc.body.appendChild(g); }
     frame.contentWindow.scrollTo(0, y);
     doc.addEventListener("mousedown", function () { canvasPointerAt = Date.now(); }, true);
     doc.addEventListener("keydown", function (e) { if (e.key === "Tab") tabAt = Date.now(); }, true);
@@ -3496,7 +3506,7 @@
         if ((e.metaKey || e.ctrlKey) && ["b", "i", "u"].indexOf(e.key.toLowerCase()) >= 0 && !editing.rich) e.preventDefault();
         return;
       }
-      if (!menu.hidden || document.querySelector("dialog[open]:not([data-pb-navmgr])")) return;
+      if (!menu.hidden || document.querySelector("dialog[open]:not([data-pb-navmgr]):not([data-pb-rules])")) return;
       onKey(e);
     });
     doc.addEventListener("focusout", function (e) { if (editing && e.target === editing.el && !editing.keep) setTimeout(function () { if (editing && !editing.keep && doc.activeElement !== editing.el) commitEdit(); }, 150); });
@@ -3543,6 +3553,9 @@
       if (!raf) raf = requestAnimationFrame(function () { raf = 0; drawRulers(); });
     });
     doc.addEventListener("mouseleave", function () { pointerPage = null; drawRulers(); });
+    // Alt + survol : distances entre l'élément sélectionné et celui survolé (rien n'est modifié)
+    doc.addEventListener("mousemove", function (e) { if (e.altKey) measureHover(e); else if (measuring) { measuring = false; smartClear(); } });
+    doc.addEventListener("keyup", function (e) { if (e.key === "Alt" && measuring) { measuring = false; smartClear(); } });
     markCanvasSelection(false);
     drawRulers();
     drawGuides();
@@ -3706,7 +3719,7 @@
       var a = Math.min(pair - min, Math.max(min, a0 + ev.clientX - x0));
       var w = widths.slice(); w[i] = a; w[i + 1] = pair - a;
       shares = w.map(function (x) { return x / total * 100; });
-      if (aids.snap) { // magnétisme : pour cent entiers, et fractions courantes (¼, ⅓, ½…) à 1,5 % près
+      if (aids.snap && !ev.altKey) { // magnétisme (Alt : libre) : pour cent entiers, et fractions courantes (¼, ⅓, ½…) à 1,5 % près
         var near = nice.filter(function (n) { return Math.abs(n - shares[i]) <= 1.5; })[0];
         var target = near !== undefined ? near : Math.round(shares[i]);
         var both = shares[i] + shares[i + 1];
@@ -3729,28 +3742,77 @@
     };
     doc.addEventListener("mousemove", move); doc.addEventListener("mouseup", up);
   }
-  // Redimensionner à la souris : largeur / hauteur en pixels, pour l'écran modifié (par pas de 8 px si magnétisme)
+  // Redimensionner à la souris : largeur / hauteur en pixels, pour l'écran modifié. Le bord qui bouge s'accroche (si le
+  // magnétisme est actif) aux guides, à la grille, aux bords, aux centres, aux autres éléments et à la disposition réelle
+  // du parent (pistes de Grille, écart Flexbox). Alt : mouvement libre. Maj (poignée d'angle) : garder les proportions.
   function resizeStart(e, id, el, dir) {
     e.preventDefault(); e.stopPropagation();
     var doc = frame.contentDocument;
     var start = { x: e.clientX, y: e.clientY, w: el.getBoundingClientRect().width, h: el.getBoundingClientRect().height };
     var dim = doc.createElement("div"); dim.className = "pb-dim"; doc.body.appendChild(dim);
     gesture = true;
-    var snap = function (v) { return aids.snap ? Math.round(v / 8) * 8 : Math.round(v); };
     var cur = { w: null, h: null };
-    // Magnétisme : le bord droit / bas se cale sur un guide proche (6 px), sinon sur le pas de 8 px
-    var origin = pageRect(el);
-    var toGuide = function (edge, list) { if (!aids.snap || aids.guides === false) return null; var best = null; list.forEach(function (g) { if (Math.abs(g - edge) <= 6 && (best === null || Math.abs(g - edge) < Math.abs(best - edge))) best = g; }); return best; };
-    var move = function (ev) {
-      var gl = guidesFor(), onGuide = false;
-      if (dir !== "s") { var w = start.w + ev.clientX - start.x; var gv = toGuide(origin.left + w, gl.v); cur.w = Math.max(16, gv !== null ? Math.round(gv - origin.left) : snap(w)); onGuide = onGuide || gv !== null; el.style.width = cur.w + "px"; }
-      if (dir !== "e") { var hh = start.h + ev.clientY - start.y; var gh = toGuide(origin.top + hh, gl.h); cur.h = Math.max(8, gh !== null ? Math.round(gh - origin.top) : snap(hh)); onGuide = onGuide || gh !== null; el.style.height = cur.h + "px"; }
-      var r = pageRect(el);
-      dim.textContent = Math.round(r.width) + " × " + Math.round(r.height) + (onGuide ? " · calé sur un guide" : "");
+    var origin = pageRect(el), env = snapEnv(el), raf = 0, last = null;
+    // La mise en page décide où tombe le bord quand la taille change (case centrée dans sa piste de Grille, élément centré
+    // dans une ligne Flexbox : le bord ne bouge que de moitié). Une mesure au départ donne ce rapport : le magnétisme vise
+    // la position RÉELLE du bord, jamais une largeur qui le ferait tomber à côté.
+    var slope = function (prop, key, grow) {
+      var before = el.style[prop], b0 = el.getBoundingClientRect(), v0 = key === "w" ? b0.width : b0.height;
+      el.style[prop] = (v0 + 10) + "px";
+      var b1 = el.getBoundingClientRect(), moved = key === "w" ? b1.right - b0.right : b1.bottom - b0.bottom;
+      el.style[prop] = before;
+      return moved >= 1 && moved <= 10.5 ? moved / 10 : 1;
+    };
+    var sx = dir !== "s" ? slope("width", "w") : 1, sy = dir !== "e" ? slope("height", "h") : 1;
+    var right0 = origin.left + origin.width, bottom0 = origin.top + origin.height;
+    var edgeNow = function (axis) { var r = el.getBoundingClientRect(), w = frame.contentWindow; return axis === "x" ? r.right + w.scrollX : r.bottom + w.scrollY; };
+    // Amène le bord EXACTEMENT sur la cible : la mise en page peut réagir autrement que prévu (Flexbox qui rétrécit les
+    // éléments, bornes min / max). Quelques essais corrigés par la mesure réelle ; hors d'atteinte : pas d'accrochage (null)
+    var fit = function (prop, axis, target, w, slope0, min) {
+      var s = slope0, pw = null, pe = null;
+      for (var k = 0; k < 5; k++) {
+        w = Math.max(min, Math.round(w));
+        el.style[prop] = w + "px";
+        var e = edgeNow(axis), err = target - e;
+        if (Math.abs(err) <= 0.6) return w;
+        if (pw !== null && Math.abs(w - pw) > 0.01) { var m = (e - pe) / (w - pw); if (m > 0.05 && m < 1.5) s = m; }
+        pw = w; pe = e;
+        w += err / s;
+      }
+      return Math.abs(target - edgeNow(axis)) <= 1.5 ? w : null;
+    };
+    var step = function (ev) {
+      var notes = [], hx = null, hy = null, w = null, hh = null;
+      var ratio = start.h / Math.max(1, start.w);
+      // La poignée suit le curseur : la taille varie de (déplacement ÷ rapport), pour que le BORD reste sous la souris
+      if (dir !== "s") w = start.w + (ev.clientX - start.x) / sx;
+      if (dir !== "e") hh = start.h + (ev.clientY - start.y) / sy;
+      if (ev.shiftKey && dir === "se") { if (Math.abs(ev.clientX - start.x) >= Math.abs(ev.clientY - start.y)) hh = w * ratio; else w = hh / ratio; }
+      if (w !== null) {
+        hx = snapEdge(env, "x", right0 + sx * (w - start.w), ev);
+        cur.w = Math.max(16, Math.round(w)); el.style.width = cur.w + "px";
+        if (hx) { var fx = fit("width", "x", hx.v, cur.w, sx, 16); if (fx === null) hx = null; else cur.w = fx; }
+        if (hx) notes.push(hx.label);
+      }
+      if (hh !== null) {
+        hy = snapEdge(env, "y", bottom0 + sy * (hh - start.h), ev);
+        cur.h = Math.max(8, Math.round(hh)); el.style.height = cur.h + "px";
+        if (hy) { var fy = fit("height", "y", hy.v, cur.h, sy, 8); if (fy === null) hy = null; else cur.h = fy; }
+        if (hy) notes.push(hy.label);
+      }
+      var r = pageRect(el), box = { left: r.left, top: r.top, right: r.left + r.width, bottom: r.top + r.height };
+      smartClear();
+      if (!ev.altKey || !env.prefs.snap.on) { if (hx) drawSnapHit(env, hx, "x", box); if (hy) drawSnapHit(env, hy, "y", box); }
+      drawDistances(env, box);
+      dim.textContent = Math.round(r.width) + " × " + Math.round(r.height) + (notes.length ? " · calé : " + notes.join(", ") : "");
       dim.style.left = (r.left + r.width + 8) + "px"; dim.style.top = (r.top + r.height + 8) + "px";
     };
-    var up = function () {
+    // Un seul calcul par image affichée : la souris peut envoyer bien plus d'évènements
+    var move = function (ev) { last = { clientX: ev.clientX, clientY: ev.clientY, shiftKey: ev.shiftKey, altKey: ev.altKey }; if (!raf) raf = requestAnimationFrame(function () { raf = 0; if (last) step(last); }); };
+    var up = function (ev) {
       doc.removeEventListener("mousemove", move); doc.removeEventListener("mouseup", up); dim.remove();
+      if (raf) { cancelAnimationFrame(raf); raf = 0; if (last) step(last); }
+      smartClear();
       gesture = false;
       ignoreClickUntil = Date.now() + 250;
       if (cur.w === null && cur.h === null) { endGesture(); return; }
@@ -4168,6 +4230,7 @@
     if (editing) commitEdit();
     selectedGuide = null;
     device = d;
+    notifyRules();
     $$(".pb-top .pb-devices button").forEach(function (b) { b.setAttribute("aria-checked", String(b.dataset.device === d)); });
     wrap.dataset.device = d;
     applyZoom();
@@ -4201,12 +4264,10 @@
     if (k === "rulers") { $("[data-pb-ruler-x]").hidden = !v; $("[data-pb-ruler-y]").hidden = !v; $("[data-pb-ruler-corner]").hidden = !v; $("[data-pb-canvas]").classList.toggle("has-rulers", v); drawRulers(); }
     var doc = frame.contentDocument;
     if (k === "outlines" && doc && doc.body) doc.body.classList.toggle("pb-outlines", v);
-    if (k === "grid" && doc && doc.body) {
-      var g = doc.querySelector(".pb-grid-overlay");
-      if (v && !g) { g = doc.createElement("div"); g.className = "pb-grid-overlay"; for (var i = 0; i < 12; i++) g.appendChild(doc.createElement("span")); doc.body.appendChild(g); }
-      if (!v && g) g.remove();
-    }
+    if (k === "grid") drawGrid();
     if (k === "guides" || k === "guidesLocked") { drawGuides(); drawRulers(); }
+    if (k === "snap" && !v) smartClear();
+    notifyRules();
   }
   $$("[data-pb-toggle]").forEach(function (b) { b.addEventListener("click", function () { setAid(b.dataset.pbToggle, !aids[b.dataset.pbToggle]); }); });
 
@@ -4214,17 +4275,44 @@
   // Coordonnées : celles de la page affichée, en pixels CSS (origine : coin haut gauche de la page ; l'axe vertical
   // suit le défilement de la page). Le zoom ne change que l'échelle d'affichage. Les guides sont une préférence
   // d'interface propre à chaque page et à chaque écran (jamais enregistrés dans le contenu de la page).
-  var RULER_UNIT = { name: "px", perPx: 1 }; // une autre unité : nombre d'unités par pixel CSS
   var RULER = 20;
   var guides = store.get("guides-" + PAGE.id, {});
   var selectedGuide = null;
   var pointerPage = null;
-  var guidesFor = function (d) { var g = guides[d || device]; if (!g) g = guides[d || device] = { h: [], v: [] }; return g; };
-  var saveGuides = function () { store.set("guides-" + PAGE.id, guides); };
-  function rulerStep() {
-    var steps = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000];
-    for (var i = 0; i < steps.length; i++) if (steps[i] * zoom >= 56) return steps[i];
-    return 5000;
+  // Guides de l'écran affiché (ou communs à tous les écrans quand « guides indépendants par écran » est désactivé)
+  var guideKey = function (d) { return snapPrefs.perDevice ? (d || device) : "all"; };
+  var guidesFor = function (d) { var k = guideKey(d), g = guides[k]; if (!g) g = guides[k] = { h: [], v: [] }; return g; };
+  var saveGuides = function () { store.set("guides-" + PAGE.id, guides); notifyRules(); };
+  var rulesListeners = [];
+  function notifyRules() { (rulesListeners || []).forEach(function (f) { try { f(); } catch (e) { /* panneau fermé */ } }); }
+  // Unités : la règle et les guides restent des COORDONNÉES du canevas (pixels CSS de la page) ; une autre unité n'est qu'un
+  // affichage de ces coordonnées (rem, em : tailles de texte de la page / de la sélection ; %, vw, vh : dimensions de la page)
+  function unitCtx(axis) {
+    var c = { vw: WIDTH[device] || 1280, vh: 800, root: 16, font: 16, parent: WIDTH[device] || 1280 };
+    try {
+      var doc = frame.contentDocument, win = frame.contentWindow;
+      c.vw = doc.documentElement.clientWidth || c.vw; c.vh = win.innerHeight || c.vh;
+      c.root = parseFloat(win.getComputedStyle(doc.documentElement).fontSize) || 16; c.font = c.root;
+      var sel = selection.length ? doc.querySelector('[data-node-id="' + selection[0] + '"],[data-section-id="' + selection[0] + '"]') : null;
+      if (sel) c.font = parseFloat(win.getComputedStyle(sel).fontSize) || c.root;
+      c.parent = axis === "h" ? Math.max(doc.documentElement.scrollHeight, c.vh) : c.vw; // % : largeur de la page (x) ou hauteur de la page (y)
+    } catch (e) { /* page pas encore prête */ }
+    return c;
+  }
+  var unitSuffix = function () { return snapPrefs.unit === "px" ? " px" : snapPrefs.unit === "%" ? " %" : " " + snapPrefs.unit; };
+  // Position d'un guide (axe "v" : x, axe "h" : y) dans l'unité choisie
+  function fmtPos(axis, px) { return KS.format(px, snapPrefs.unit, unitCtx(axis)) + unitSuffix(); }
+  function fmtLen(px) { return Math.round(px * 10) / 10 + " px"; }
+  var rulerText = function (v) { return snapPrefs.unit === "px" ? String(Math.round(v)) : String(Math.round(v * 100) / 100).replace(".", ","); };
+  // Étendue (en pixels de page) de la sélection : surlignée sur les règles
+  function selectionBand() {
+    try {
+      if (selection.length !== 1) return null;
+      var doc = frame.contentDocument, el = doc.querySelector('[data-node-id="' + selection[0] + '"],[data-section-id="' + selection[0] + '"]');
+      if (!el) return null;
+      var r = pageRect(el);
+      return { x1: r.left, x2: r.left + r.width, y1: r.top, y2: r.top + r.height };
+    } catch (e) { return null; }
   }
   function drawRulers() {
     if (!aids.rulers) return;
@@ -4232,20 +4320,30 @@
     var cr = $("[data-pb-canvas]").getBoundingClientRect(), fr = frame.getBoundingClientRect();
     var dpr = window.devicePixelRatio || 1;
     var sy = 0, sx = 0; try { sy = frame.contentWindow.scrollY; sx = frame.contentWindow.scrollX; } catch (e) { sy = 0; }
-    var step = rulerStep();
-    var minor = step * zoom >= 120 ? step / 10 : step * zoom >= 60 ? step / 5 : step / 2;
-    var g = guidesFor();
-    var paint = function (cv, len, horizontal, origin, offset, marks, pointer) {
+    var corner = $("[data-pb-ruler-corner]");
+    if (corner) { corner.textContent = snapPrefs.unit; corner.title = "Unité des règles : " + snapPrefs.unit + " (clic : changer). Les coordonnées restent en pixels de la page. Clic droit : guides"; }
+    var g = guidesFor(), band = selectionBand();
+    var paint = function (cv, len, horizontal, origin, offset, marks, pointer, axis, span) {
+      // Échelle en unités : pas lisible choisi selon le zoom, graduations alignées sur des valeurs rondes de l'unité
+      var ppu = KS.toPx(1, snapPrefs.unit, unitCtx(axis)) || 1; // pixels de page par unité
+      var spu = zoom * ppu;                                      // pixels d'écran par unité
+      var step = KS.niceStep(spu), minor = KS.minorStep(step, spu);
       cv.width = Math.max(1, Math.round((horizontal ? len : RULER) * dpr)); cv.height = Math.max(1, Math.round((horizontal ? RULER : len) * dpr));
       cv.style.width = (horizontal ? len : RULER) + "px"; cv.style.height = (horizontal ? RULER : len) + "px";
       var c = cv.getContext("2d"); c.scale(dpr, dpr);
       c.fillStyle = "#f8fafc"; c.fillRect(0, 0, horizontal ? len : RULER, horizontal ? RULER : len);
+      var at = function (px) { return origin + (px - offset) * zoom; };
+      if (span) { // étendue de l'élément sélectionné
+        var a = at(span[0]), b = at(span[1]);
+        c.fillStyle = "rgba(8,145,178,.16)";
+        if (horizontal) c.fillRect(a, 0, Math.max(1, b - a), RULER); else c.fillRect(0, a, RULER, Math.max(1, b - a));
+      }
       c.strokeStyle = "#cbd5e1"; c.beginPath(); if (horizontal) { c.moveTo(0, RULER - 0.5); c.lineTo(len, RULER - 0.5); } else { c.moveTo(RULER - 0.5, 0); c.lineTo(RULER - 0.5, len); } c.stroke();
       c.fillStyle = "#475569"; c.strokeStyle = "#94a3b8"; c.font = "9px system-ui, sans-serif"; c.lineWidth = 1;
-      var from = Math.floor((offset - origin / zoom) / minor) * minor;
-      var to = offset + (len - origin) / zoom;
-      for (var v = from; v <= to; v += minor) {
-        var pos = Math.round(origin + (v - offset) * zoom) + 0.5;
+      var first = Math.floor((offset - origin / zoom) / ppu / minor), last = Math.ceil((offset + (len - origin) / zoom) / ppu / minor);
+      for (var k = first; k <= last && last - first < 4000; k++) {
+        var v = Math.round(k * minor * 1e6) / 1e6;
+        var pos = Math.round(at(v * ppu)) + 0.5;
         if (pos < 0 || pos > len) continue;
         var major = Math.abs(v / step - Math.round(v / step)) < 1e-6;
         var half = !major && Math.abs((v * 2) / step - Math.round((v * 2) / step)) < 1e-6;
@@ -4254,20 +4352,208 @@
         if (horizontal) { c.moveTo(pos, RULER - tick); c.lineTo(pos, RULER); } else { c.moveTo(RULER - tick, pos); c.lineTo(RULER, pos); }
         c.stroke();
         if (major) {
-          var text = String(Math.round(v * RULER_UNIT.perPx));
+          var text = rulerText(v);
           if (horizontal) c.fillText(text, pos + 3, 9);
           else { c.save(); c.translate(9, pos + 3); c.rotate(Math.PI / 2); c.fillText(text, 0, 0); c.restore(); }
         }
       }
       // Guides de cet écran, et position du pointeur dans la page
       c.fillStyle = "#0891b2";
-      marks.forEach(function (m) { var p = origin + (m - offset) * zoom; if (p < 0 || p > len) return; c.beginPath(); if (horizontal) { c.moveTo(p - 4, 0); c.lineTo(p + 4, 0); c.lineTo(p, 6); } else { c.moveTo(0, p - 4); c.lineTo(0, p + 4); c.lineTo(6, p); } c.fill(); });
-      if (pointer !== null) { var pp = Math.round(origin + (pointer - offset) * zoom) + 0.5; if (pp >= 0 && pp <= len) { c.strokeStyle = "#e11d48"; c.beginPath(); if (horizontal) { c.moveTo(pp, 0); c.lineTo(pp, RULER); } else { c.moveTo(0, pp); c.lineTo(RULER, pp); } c.stroke(); } }
+      if (aids.guides !== false) marks.forEach(function (m) { var p = at(m); if (p < 0 || p > len) return; c.beginPath(); if (horizontal) { c.moveTo(p - 4, 0); c.lineTo(p + 4, 0); c.lineTo(p, 6); } else { c.moveTo(0, p - 4); c.lineTo(0, p + 4); c.lineTo(6, p); } c.fill(); });
+      if (pointer !== null) { var pp = Math.round(at(pointer)) + 0.5; if (pp >= 0 && pp <= len) { c.strokeStyle = "#e11d48"; c.beginPath(); if (horizontal) { c.moveTo(pp, 0); c.lineTo(pp, RULER); } else { c.moveTo(0, pp); c.lineTo(RULER, pp); } c.stroke(); } }
     };
-    paint(rx, Math.max(0, cr.width - RULER), true, fr.left - (cr.left + RULER), sx, g.v, pointerPage ? pointerPage.x : null);
-    paint(ry, Math.max(0, cr.height - RULER), false, fr.top - (cr.top + RULER), sy, g.h, pointerPage ? pointerPage.y : null);
+    paint(rx, Math.max(0, cr.width - RULER), true, fr.left - (cr.left + RULER), sx, g.v, pointerPage ? pointerPage.x : null, "v", band && [band.x1, band.x2]);
+    paint(ry, Math.max(0, cr.height - RULER), false, fr.top - (cr.top + RULER), sy, g.h, pointerPage ? pointerPage.y : null, "h", band && [band.y1, band.y2]);
   }
   stage.addEventListener("scroll", drawRulers, { passive: true });
+  // ---------- Grille, marges, conteneur, zone de sécurité (dessinés dans le canevas, jamais dans le contenu) ----------
+  // La grille suit le magnétisme : « libre » = lignes à pas régulier ; « web » = colonnes + gouttières + marges du conteneur.
+  function pageSize() {
+    var doc = frame.contentDocument, win = frame.contentWindow;
+    return { w: doc.documentElement.clientWidth || WIDTH[device], h: Math.max(doc.documentElement.scrollHeight, win.innerHeight || 0) };
+  }
+  function drawGrid() {
+    var doc = frame.contentDocument;
+    if (!doc || !doc.body) return;
+    $$(".pb-grid-overlay, .pb-safe-area", doc).forEach(function (x) { x.remove(); });
+    var p = effPrefs(), s = p.show, cfg = KS.gridFor(p, device), size = pageSize();
+    var web = KS.webGrid(cfg, size.w);
+    var ov = doc.createElement("div");
+    ov.className = "pb-grid-overlay"; ov.setAttribute("aria-hidden", "true");
+    ov.style.width = size.w + "px"; ov.style.height = size.h + "px";
+    var add = function (cls, css, label) { var d = doc.createElement("div"); d.className = cls; d.style.cssText = css; if (label) d.setAttribute("data-label", label); ov.appendChild(d); return d; };
+    var any = false;
+    if (s.grid && p.mode === "free") {
+      var shown = p.step * Math.max(1, Math.ceil(4 / (p.step * zoom))); // jamais plus dense qu'un trait tous les 4 px d'écran
+      ov.style.backgroundImage = "linear-gradient(to right,rgba(236,72,153,.18) 1px,transparent 1px),linear-gradient(to bottom,rgba(236,72,153,.18) 1px,transparent 1px)";
+      ov.style.backgroundSize = shown + "px " + shown + "px";
+      any = true;
+    }
+    if (s.grid && p.mode === "web" && s.columns) {
+      web.columns.forEach(function (c) { add("pb-grid-col", "left:" + c.left + "px;width:" + (c.right - c.left) + "px"); });
+      any = true;
+    }
+    if (s.margins) {
+      add("pb-margin-line", "left:" + web.inner.left + "px", "marge " + cfg.marginL);
+      add("pb-margin-line is-right", "left:" + web.inner.right + "px", "marge " + cfg.marginR);
+      any = true;
+    }
+    if (s.container) {
+      add("pb-container-line", "left:" + web.container.left + "px", "conteneur" + (cfg.maxWidth > 0 ? " · max " + cfg.maxWidth + " px" : ""));
+      add("pb-container-line is-right", "left:" + web.container.right + "px");
+      any = true;
+    }
+    if (any) doc.body.appendChild(ov);
+    if (s.safe) {
+      var sa = doc.createElement("div");
+      sa.className = "pb-safe-area"; sa.setAttribute("aria-hidden", "true");
+      sa.style.cssText = "top:" + p.safe.top + "px;right:" + p.safe.right + "px;bottom:" + p.safe.bottom + "px;left:" + p.safe.left + "px";
+      sa.setAttribute("data-label", "Zone de sécurité");
+      doc.body.appendChild(sa);
+    }
+  }
+
+  // ---------- Magnétisme : repères d'accrochage, repères intelligents, distances ----------
+  // Tout est calculé à partir d'un index pris UNE fois au début du geste (positions des éléments de la page, contexte
+  // du parent) : pendant le déplacement de la souris, seules des comparaisons de nombres sont faites.
+  var pageBox = function (el) { var r = pageRect(el); return { left: r.left, top: r.top, right: r.left + r.width, bottom: r.top + r.height }; };
+  function snapEnv(el) {
+    var doc = frame.contentDocument, win = frame.contentWindow, p = effPrefs(), size = pageSize();
+    var env = { prefs: p, size: size, rects: [], parent: null, layout: "flow", self: el ? pageBox(el) : { left: 0, top: 0, right: 0, bottom: 0 }, el: el, tracks: { x: [], y: [] }, gap: { x: 0, y: 0 }, siblings: [] };
+    var list = doc.querySelectorAll("[data-node-id],[data-section-id]");
+    for (var i = 0; i < list.length && env.rects.length < 500; i++) {
+      var e = list[i];
+      if (el && (e === el || el.contains(e) || e.contains(el))) continue; // ni lui-même, ni ses enfants, ni ses parents (ceux-ci : bords du parent / centre)
+      var b = pageBox(e);
+      if (b.right - b.left < 1 || b.bottom - b.top < 1) continue;
+      env.rects.push(b);
+      if (el && e.parentElement === el.parentElement) env.siblings.push(b);
+    }
+    var pe = el ? el.parentElement : null;
+    if (pe) {
+      var cs = win.getComputedStyle(pe), pb = pageBox(pe);
+      var pl = parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth) || 0, pr = parseFloat(cs.paddingRight) + parseFloat(cs.borderRightWidth) || 0;
+      var pt = parseFloat(cs.paddingTop) + parseFloat(cs.borderTopWidth) || 0, pbm = parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth) || 0;
+      env.parent = { left: pb.left + pl, right: pb.right - pr, top: pb.top + pt, bottom: pb.bottom - pbm };
+      env.gap = { x: parseFloat(cs.columnGap) || 0, y: parseFloat(cs.rowGap) || 0 };
+      if (/grid/.test(cs.display)) {
+        env.layout = "grid";
+        var lines = function (tpl, start, gap) {
+          var out = [], at = start;
+          String(tpl).split(" ").forEach(function (t) { var w = parseFloat(t); if (!isFinite(w)) return; out.push(at, at + w); at += w + gap; });
+          return out;
+        };
+        env.tracks.x = lines(cs.gridTemplateColumns, env.parent.left, env.gap.x);
+        env.tracks.y = lines(cs.gridTemplateRows, env.parent.top, env.gap.y);
+      } else if (/flex/.test(cs.display)) env.layout = /column/.test(cs.flexDirection) ? "flex-column" : "flex-row";
+    }
+    return env;
+  }
+  // Cibles d'accrochage pour un bord qui bouge sur l'axe "x" (position horizontale) ou "y" ; probe : valeur actuelle du bord
+  function snapTargets(env, axis, probe, forGuide) {
+    var p = env.prefs, sn = p.snap, t = [], size = env.size;
+    var x = axis === "x";
+    if (!forGuide && sn.guides && p.show.guides) { var g = guidesFor(); (x ? g.v : g.h).forEach(function (v) { t.push({ v: v, kind: "guide", label: "guide", pri: 0 }); }); }
+    if (!forGuide || p.show.grid) t = t.concat(KS.gridTargets(p, device, size.w, probe, axis));
+    if (sn.edges) {
+      var cfg = KS.gridFor(p, device), web = KS.webGrid(cfg, size.w);
+      if (x) { t.push({ v: 0, kind: "edge", label: "bord de la page", pri: 4 }, { v: size.w, kind: "edge", label: "bord de la page", pri: 4 }); if (p.mode === "web" || p.show.container) t.push({ v: web.container.left, kind: "edge", label: "conteneur", pri: 4 }, { v: web.container.right, kind: "edge", label: "conteneur", pri: 4 }); }
+      else t.push({ v: 0, kind: "edge", label: "haut de la page", pri: 4 });
+      if (env.parent) { if (x) t.push({ v: env.parent.left, kind: "edge", label: "bord du parent", pri: 4 }, { v: env.parent.right, kind: "edge", label: "bord du parent", pri: 4 }); else t.push({ v: env.parent.top, kind: "edge", label: "bord du parent", pri: 4 }, { v: env.parent.bottom, kind: "edge", label: "bord du parent", pri: 4 }); }
+    }
+    if (sn.center) {
+      if (x) t.push({ v: size.w / 2, kind: "center", label: "centre de la page", pri: 2.5 });
+      if (env.parent) t.push({ v: x ? (env.parent.left + env.parent.right) / 2 : (env.parent.top + env.parent.bottom) / 2, kind: "center", label: "centre du parent", pri: 2.5 });
+    }
+    if (sn.elements) {
+      env.rects.forEach(function (r) {
+        if (x) t.push({ v: r.left, kind: "element", label: "bord d'un élément", rect: r, pri: 3 }, { v: r.right, kind: "element", label: "bord d'un élément", rect: r, pri: 3 }, { v: (r.left + r.right) / 2, kind: "element", label: "centre d'un élément", rect: r, pri: 3 });
+        else t.push({ v: r.top, kind: "element", label: "bord d'un élément", rect: r, pri: 3 }, { v: r.bottom, kind: "element", label: "bord d'un élément", rect: r, pri: 3 }, { v: (r.top + r.bottom) / 2, kind: "element", label: "centre d'un élément", rect: r, pri: 3 });
+      });
+    }
+    // Disposition réelle du parent : lignes de piste (Grille), écart (gap) des voisins (Flexbox), écarts déjà présents
+    if (sn.columns && env.layout === "grid") (x ? env.tracks.x : env.tracks.y).forEach(function (v) { t.push({ v: v, kind: "column", label: x ? "colonne de la grille" : "ligne de la grille", pri: 2 }); });
+    if (sn.elements && env.siblings.length) {
+      var gaps = [], flow = env.layout === "flow";
+      var gp = x ? env.gap.x : env.gap.y;
+      if (gp > 0 && (env.layout === "grid" || (x ? env.layout === "flex-row" : env.layout === "flex-column"))) gaps.push(Math.round(gp * 10) / 10);
+      if (flow || !gaps.length) KS.repeatedGaps(env.siblings, x ? "x" : "y").forEach(function (rg) { gaps.push(rg.value); });
+      if (gaps.length) t = t.concat(KS.gapTargets(env.self, env.siblings, gaps, x ? "x" : "y"));
+    }
+    return t;
+  }
+  // Un bord qui se déplace : renvoie la cible retenue (ou null) ; Alt suspend le magnétisme, le mouvement reste libre
+  function snapEdge(env, axis, value, ev) {
+    if (!env.prefs.snap.on || (ev && ev.altKey)) return null;
+    var reach = KS.reach(env.prefs, zoom);
+    var hit = KS.snapAxis([{ v: value, name: "edge" }], snapTargets(env, axis, value), reach);
+    return hit ? hit.target : null;
+  }
+
+  // Repères intelligents et distances : calque temporaire dans le canevas, supprimé à la fin du geste
+  function smartLayer(doc) {
+    var l = doc.querySelector(".pb-smart-layer");
+    if (!l) { l = doc.createElement("div"); l.className = "pb-smart-layer"; l.setAttribute("aria-hidden", "true"); doc.body.appendChild(l); }
+    return l;
+  }
+  function smartClear() { var doc = frame.contentDocument; if (!doc) return; $$(".pb-smart-layer", doc).forEach(function (x) { x.remove(); }); }
+  function smartLine(layer, axis, pos, from, to, kind) {
+    var d = layer.ownerDocument.createElement("div");
+    d.className = "pb-smart pb-smart-" + (axis === "x" ? "v" : "h") + " is-" + kind;
+    if (axis === "x") d.style.cssText = "left:" + pos + "px;top:" + from + "px;height:" + Math.max(1, to - from) + "px";
+    else d.style.cssText = "top:" + pos + "px;left:" + from + "px;width:" + Math.max(1, to - from) + "px";
+    layer.appendChild(d);
+  }
+  function smartTag(layer, x, y, text, kind) {
+    var d = layer.ownerDocument.createElement("div");
+    d.className = "pb-smart-tag is-" + (kind || "snap"); d.textContent = text;
+    d.style.cssText = "left:" + x + "px;top:" + y + "px";
+    layer.appendChild(d);
+  }
+  // Mesure entre deux rectangles : trait + valeur au milieu (« 24 px »)
+  function drawGap(layer, g, kind) {
+    if (g.axis === "x") {
+      var y = (g.y1 + g.y2) / 2;
+      smartLine(layer, "y", y, g.from, g.to, "dist" + (kind ? " is-" + kind : ""));
+      smartTag(layer, (g.from + g.to) / 2, y - 9, fmtLen(g.value), kind || "dist");
+    } else {
+      var x = (g.x1 + g.x2) / 2;
+      smartLine(layer, "x", x, g.from, g.to, "dist" + (kind ? " is-" + kind : ""));
+      smartTag(layer, x + 4, (g.from + g.to) / 2 - 8, fmtLen(g.value), kind || "dist");
+    }
+  }
+  // Distances d'un rectangle à ses voisins ; deux écarts égaux (ou égaux à un écart déjà présent) sont signalés en vert
+  function drawDistances(env, rect, others) {
+    var doc = frame.contentDocument;
+    if (!doc || !env.prefs.snap.distances) return;
+    var layer = smartLayer(doc), nb = KS.neighbours(rect, others || env.rects, 600);
+    var known = KS.repeatedGaps(env.rects, "x").concat(KS.repeatedGaps(env.rects, "y")).map(function (r) { return r.value; });
+    var eq = function (a, b) { return a && b && Math.abs(a.value - b.value) < 0.6; };
+    ["left", "right", "top", "bottom"].forEach(function (side) {
+      var g = nb[side]; if (!g) return;
+      var opposite = nb[{ left: "right", right: "left", top: "bottom", bottom: "top" }[side]];
+      var same = eq(g, opposite) || known.some(function (v) { return Math.abs(v - g.value) < 0.6; });
+      drawGap(layer, g, same ? "equal" : "");
+    });
+  }
+  // Repère d'accrochage : trait le long de la cible atteinte, avec son nom
+  function drawSnapHit(env, hit, axis, rect) {
+    var doc = frame.contentDocument;
+    if (!doc || !hit || !env.prefs.snap.smart) return;
+    var layer = smartLayer(doc);
+    var kind = hit.kind === "guide" ? "guide" : "snap";
+    if (axis === "x") {
+      var top = rect.top, bottom = rect.bottom;
+      if (hit.rect) { top = Math.min(top, hit.rect.top); bottom = Math.max(bottom, hit.rect.bottom); } else { top = 0; bottom = env.size.h; }
+      smartLine(layer, "x", hit.v, top, bottom, kind);
+      smartTag(layer, hit.v + 4, Math.max(0, rect.top - 22), hit.label, "snap");
+    } else {
+      var left = rect.left, right = rect.right;
+      if (hit.rect) { left = Math.min(left, hit.rect.left); right = Math.max(right, hit.rect.right); } else { left = 0; right = env.size.w; }
+      smartLine(layer, "y", hit.v, left, right, kind);
+      smartTag(layer, Math.max(0, rect.left), hit.v + 4, hit.label, "snap");
+    }
+  }
   // Position dans la page (coordonnées CSS) d'un point de l'écran ; inside : au-dessus de la page affichée
   function pageAt(clientX, clientY) {
     var fr = frame.getBoundingClientRect();
@@ -4279,6 +4565,7 @@
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
     $$(".pb-guide", doc).forEach(function (x) { x.remove(); });
+    drawGrid();
     if (aids.guides === false) return;
     var g = guidesFor();
     var H = doc.documentElement.scrollHeight;
@@ -4287,18 +4574,25 @@
         var el = doc.createElement("div");
         el.className = "pb-guide pb-guide-" + axis + (selectedGuide && selectedGuide.axis === axis && selectedGuide.i === i ? " is-selected" : "") + (aids.guidesLocked ? " is-locked" : "");
         if (axis === "h") el.style.top = pos + "px"; else { el.style.left = pos + "px"; el.style.height = H + "px"; }
-        el.setAttribute("title", (axis === "h" ? "Guide horizontal : " : "Guide vertical : ") + pos + " " + RULER_UNIT.name + (aids.guidesLocked ? " (verrouillé)" : " — glisser pour déplacer, hors de la page pour supprimer"));
+        el.setAttribute("title", (axis === "h" ? "Guide horizontal : " : "Guide vertical : ") + fmtPos(axis, pos) + (aids.guidesLocked ? " (verrouillé)" : " — glisser pour déplacer, hors de la page pour supprimer"));
         el.addEventListener("mousedown", function (e) { guideDrag(e, axis, i, el); });
         el.addEventListener("contextmenu", function (e) { e.preventDefault(); e.stopPropagation(); selectedGuide = { axis: axis, i: i }; drawGuides(); var r = frame.getBoundingClientRect(); guideMenu(r.left + e.clientX * zoom, r.top + e.clientY * zoom); });
         el.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); });
+        el.addEventListener("dblclick", function (e) { e.preventDefault(); e.stopPropagation(); selectedGuide = { axis: axis, i: i }; drawGuides(); if (window.pbRules) window.pbRules.open("guides"); });
         doc.body.appendChild(el);
       });
     });
   }
+  // Accrochage d'un guide qu'on place : éléments, centres, bords, colonnes (Alt : libre)
+  function guideSnap(env, axis, v, ev) {
+    if (!env.prefs.snap.on || (ev && ev.altKey)) return null;
+    var hit = KS.snapAxis([{ v: v, name: "guide" }], snapTargets(env, axis === "v" ? "x" : "y", v, true), KS.reach(env.prefs, zoom));
+    return hit ? hit.target : null;
+  }
   function guideLabel(doc, axis, pos) {
     var lab = doc.querySelector(".pb-guide-label") || doc.body.appendChild(Object.assign(doc.createElement("div"), { className: "pb-guide-label" }));
     var win = frame.contentWindow;
-    lab.textContent = pos + " " + RULER_UNIT.name;
+    lab.textContent = fmtPos(axis, pos);
     lab.style.left = (axis === "v" ? pos + 6 : win.scrollX + 6) + "px";
     lab.style.top = (axis === "h" ? pos + 6 : win.scrollY + 6) + "px";
     return lab;
@@ -4312,23 +4606,25 @@
     var doc = frame.contentDocument, win = frame.contentWindow;
     gesture = true;
     var moved = false, out = false, cur = guidesFor()[axis][i];
+    var genv = snapEnv(null);
     el.classList.add("is-selected");
-    var place = function (v, isOut) {
+    var place = function (v, isOut, ev) {
       moved = true;
       out = isOut;
-      cur = Math.max(0, Math.round(v));
+      var hit = isOut ? null : guideSnap(genv, axis, v, ev);
+      cur = Math.max(0, Math.round(hit ? hit.v : v));
       el.style[axis === "h" ? "top" : "left"] = cur + "px";
       el.classList.toggle("is-removing", out);
-      if (out) { var l0 = doc.querySelector(".pb-guide-label"); if (l0) l0.textContent = "Relâcher : supprimer"; } else guideLabel(doc, axis, cur);
+      if (out) { var l0 = doc.querySelector(".pb-guide-label"); if (l0) l0.textContent = "Relâcher : supprimer"; } else { var lb = guideLabel(doc, axis, cur); if (hit) lb.textContent += " · " + hit.label; }
       drawRulers();
     };
     // Dans la page (coordonnées du canevas) ; vers le bord de la page : suppression
-    var move = function (ev) { pointerPage = { x: ev.clientX + win.scrollX, y: ev.clientY + win.scrollY }; place(axis === "h" ? ev.clientY + win.scrollY : ev.clientX + win.scrollX, axis === "h" ? ev.clientY < 4 : ev.clientX < 4); };
+    var move = function (ev) { pointerPage = { x: ev.clientX + win.scrollX, y: ev.clientY + win.scrollY }; place(axis === "h" ? ev.clientY + win.scrollY : ev.clientX + win.scrollX, axis === "h" ? ev.clientY < 4 : ev.clientX < 4, ev); };
     // Hors de la page (règles, panneaux) : le déplacement continue ; relâché du côté de sa règle (au-dessus ou à
     // gauche de la page), le guide est supprimé
     var pmove = function (ev) {
       var fr = frame.getBoundingClientRect(), pp = pageAt(ev.clientX, ev.clientY);
-      place(axis === "h" ? pp.y : pp.x, axis === "h" ? ev.clientY < fr.top : ev.clientX < fr.left);
+      place(axis === "h" ? pp.y : pp.x, axis === "h" ? ev.clientY < fr.top : ev.clientX < fr.left, ev);
     };
     var finished = false;
     var up = function () {
@@ -4360,6 +4656,7 @@
       var doc = frame.contentDocument;
       if (!doc || !doc.body) return;
       gesture = true;
+      var genv = snapEnv(null);
       var temp = doc.createElement("div");
       temp.className = "pb-guide pb-guide-" + axis + " is-temp";
       if (axis === "v") temp.style.height = doc.documentElement.scrollHeight + "px";
@@ -4374,8 +4671,10 @@
         var inBand = axis === "h" ? ev.clientY >= fr.top && ev.clientY <= fr.bottom && ev.clientX >= cv0.left && ev.clientX <= cv0.right
           : ev.clientX >= fr.left && ev.clientX <= fr.right && ev.clientY >= cv0.top && ev.clientY <= cv0.bottom;
         pos = inBand ? Math.max(0, axis === "h" ? p.y : p.x) : null;
+        var hit = pos === null ? null : guideSnap(genv, axis, pos, ev);
+        if (hit) pos = Math.max(0, Math.round(hit.v));
         temp.style.display = pos === null ? "none" : "";
-        if (pos !== null) { temp.style[axis === "h" ? "top" : "left"] = pos + "px"; guideLabel(doc, axis, pos); }
+        if (pos !== null) { temp.style[axis === "h" ? "top" : "left"] = pos + "px"; var lb = guideLabel(doc, axis, pos); if (hit) lb.textContent += " · " + hit.label; }
         pointerPage = p.inside ? { x: p.x, y: p.y } : null;
         drawRulers();
       };
@@ -4388,7 +4687,7 @@
           g[axis].push(pos);
           selectedGuide = { axis: axis, i: g[axis].length - 1 };
           saveGuides();
-          toast((axis === "h" ? "Guide horizontal" : "Guide vertical") + " à " + pos + " " + RULER_UNIT.name + " (écran " + bpLabel(device).toLowerCase() + "). Glissez-le hors de la page pour le supprimer.");
+          toast((axis === "h" ? "Guide horizontal" : "Guide vertical") + " à " + fmtPos(axis, pos) + " (écran " + bpLabel(device).toLowerCase() + "). Glissez-le hors de la page pour le supprimer.");
         }
         drawGuides(); drawRulers();
         endGesture();
@@ -4411,11 +4710,17 @@
   function clearGuides() { guides[device] = { h: [], v: [] }; selectedGuide = null; saveGuides(); drawGuides(); drawRulers(); toast("Guides de l'écran « " + bpLabel(device) + " » supprimés."); }
   function guideMenu(x, y) {
     var entries = [
+      selectedGuide ? ["Position de ce guide…", function () { window.pbRules.open("guides"); }, false] : null,
       selectedGuide ? ["Supprimer ce guide", removeSelectedGuide, false, "Suppr"] : null,
+      ["Ajouter un guide à une position précise…", function () { window.pbRules.open("guides"); }, false],
       [aids.guidesLocked ? "Déverrouiller les guides" : "Verrouiller les guides", function () { setAid("guidesLocked", !aids.guidesLocked); }, false],
       [aids.guides === false ? "Afficher les guides" : "Masquer les guides", function () { setAid("guides", aids.guides === false); }, false],
       ["Supprimer tous les guides de cet écran", clearGuides, !(guidesFor().h.length || guidesFor().v.length)],
+      ["Règles et magnétisme : réglages…", function () { window.pbRules.open(); }, false],
     ].filter(Boolean);
+    showSimpleMenu(entries, x, y);
+  }
+  function showSimpleMenu(entries, x, y) {
     menu.textContent = "";
     entries.forEach(function (en) { menu.appendChild(h("button", { type: "button", role: "menuitem", class: "pb-menu-item", disabled: en[2] || null, tabindex: "-1", onclick: function () { closeMenu(); en[1](); } }, h("span", { text: en[0] }), en[3] ? h("kbd", { text: en[3] }) : null)); });
     menu.hidden = false;
@@ -4424,7 +4729,85 @@
     menu.style.top = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + "px";
     var first = menu.querySelector(".pb-menu-item:not([disabled])"); if (first) first.focus();
   }
+  // Coin des règles : choix de l'unité d'affichage (les coordonnées restent des pixels de la page)
+  function unitMenu(x, y) {
+    showSimpleMenu(KS.UNITS.map(function (u) { return [(u === snapPrefs.unit ? "✓ " : "") + { px: "Pixels (px)", "%": "Pourcentage de la page (%)", rem: "rem : taille de texte de la page", em: "em : taille de texte de la sélection", vw: "vw : largeur de la fenêtre", vh: "vh : hauteur de la fenêtre" }[u], function () { updatePrefs(function (p) { p.unit = u; }); }, false]; }), x, y);
+  }
+  var cornerEl = $("[data-pb-ruler-corner]");
+  cornerEl.setAttribute("role", "button"); cornerEl.setAttribute("tabindex", "0");
+  cornerEl.addEventListener("click", function (e) { var r = cornerEl.getBoundingClientRect(); unitMenu(r.left, r.bottom + 4); });
+  cornerEl.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); var r = cornerEl.getBoundingClientRect(); unitMenu(r.left, r.bottom + 4); } });
+  // Niveaux de zoom usuels
+  var zoomValueEl = $("[data-pb-zoom-value]");
+  function zoomMenu() {
+    var r = zoomValueEl.getBoundingClientRect();
+    showSimpleMenu([["Ajuster à la fenêtre", function () { setZoom("fit"); }, false, "Maj 1"]].concat([0.5, 0.64, 0.75, 1, 1.25, 1.5, 2].map(function (z) { return [(!zoomFit && Math.abs(zoom - z) < 0.005 ? "✓ " : "") + Math.round(z * 100) + " %", function () { setZoom(z); }, false]; })), r.left, r.bottom + 4);
+  }
+  zoomValueEl.setAttribute("role", "button"); zoomValueEl.setAttribute("tabindex", "0"); zoomValueEl.setAttribute("title", "Niveaux de zoom");
+  zoomValueEl.addEventListener("click", zoomMenu);
+  zoomValueEl.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); zoomMenu(); } });
   ["[data-pb-ruler-x]", "[data-pb-ruler-y]", "[data-pb-ruler-corner]"].forEach(function (sel) { $(sel).addEventListener("contextmenu", function (e) { e.preventDefault(); selectedGuide = null; guideMenu(e.clientX, e.clientY); }); });
+
+  // ---------- Mesure au survol (Alt), réglages, passerelle vers le panneau « Règles et magnétisme » ----------
+  var measuring = false;
+  function measureHover(e) {
+    if (!snapPrefs.snap.distances || gesture || editing || selection.length !== 1) { if (measuring) { measuring = false; smartClear(); } return; }
+    var doc = frame.contentDocument, a = canvasEl(selection[0]), b = targetOf(e);
+    smartClear();
+    measuring = true;
+    if (!a || !b || a === b) return;
+    var A = pageBox(a), B = pageBox(b), layer = smartLayer(doc);
+    var box = doc.createElement("div"); box.className = "pb-smart-box"; box.style.cssText = "left:" + B.left + "px;top:" + B.top + "px;width:" + (B.right - B.left) + "px;height:" + (B.bottom - B.top) + "px"; layer.appendChild(box);
+    if (B.left <= A.left && B.right >= A.right && B.top <= A.top && B.bottom >= A.bottom) { // l'élément survolé contient la sélection : marges intérieures
+      var my = (A.top + A.bottom) / 2, mx = (A.left + A.right) / 2;
+      [{ axis: "x", from: B.left, to: A.left, y1: my, y2: my }, { axis: "x", from: A.right, to: B.right, y1: my, y2: my }, { axis: "y", from: B.top, to: A.top, x1: mx, x2: mx }, { axis: "y", from: A.bottom, to: B.bottom, x1: mx, x2: mx }].forEach(function (g) { g.value = g.to - g.from; if (g.value > 0.5) drawGap(layer, g, ""); });
+    } else {
+      var g = KS.gapBetween(A, B);
+      if (g) drawGap(layer, g, ""); else smartTag(layer, B.left, Math.max(0, B.top - 20), "se chevauchent", "dist");
+    }
+  }
+  // Modifier les réglages (un seul chemin pour le panneau, les menus et les raccourcis) : valider, enregistrer, redessiner
+  function updatePrefs(fn) {
+    fn(snapPrefs);
+    snapPrefs = KS.normalize(snapPrefs);
+    saveSnapPrefs();
+    drawGuides(); drawRulers();
+    notifyRules();
+  }
+  function guideParse(axis, text) {
+    var px = KS.parse(text, snapPrefs.unit, unitCtx(axis));
+    return px === null ? null : Math.max(0, Math.round(px));
+  }
+  function addGuideAt(axis, text) {
+    var px = guideParse(axis, text);
+    if (px === null) { toast("Position illisible : écrivez un nombre, par exemple 640 ou 40 %.", true); return false; }
+    if (aids.guides === false) setAid("guides", true);
+    var g = guidesFor();
+    g[axis].push(px);
+    selectedGuide = { axis: axis, i: g[axis].length - 1 };
+    saveGuides(); drawGuides(); drawRulers();
+    return true;
+  }
+  function moveGuideTo(axis, i, text) {
+    var px = guideParse(axis, text), g = guidesFor();
+    if (px === null || g[axis][i] === undefined) { toast("Position illisible : écrivez un nombre, par exemple 640 ou 40 %.", true); return false; }
+    g[axis][i] = px;
+    selectedGuide = { axis: axis, i: i };
+    saveGuides(); drawGuides(); drawRulers();
+    return true;
+  }
+  window.pbRules = {
+    state: function () { return { prefs: snapPrefs, effective: effPrefs(), aids: aids, device: device, deviceLabel: bpLabel(device), width: WIDTH[device], guides: guidesFor(), selected: selectedGuide, zoom: zoom, unitCtx: unitCtx }; },
+    setAid: setAid, update: updatePrefs, add: addGuideAt, move: moveGuideTo,
+    format: function (axis, px) { return KS.format(px, snapPrefs.unit, unitCtx(axis)); },
+    remove: function (axis, i) { selectedGuide = { axis: axis, i: i }; removeSelectedGuide(); },
+    clear: clearGuides,
+    select: function (axis, i) { selectedGuide = axis === null ? null : { axis: axis, i: i }; drawGuides(); notifyRules(); },
+    subscribe: function (fn) { rulesListeners.push(fn); },
+    setZoom: setZoom,
+    open: function () {}, // remplacé par le panneau
+    h: h, toast: toast,
+  };
 
   // ---------- Panneaux redimensionnables ----------
   var main = $("[data-pb-main]");
@@ -4989,6 +5372,10 @@
     if (k === "escape") { if (selectedGuide) { selectedGuide = null; drawGuides(); return; } if (selection.length) select(null); return; }
     if ((k === "delete" || k === "backspace") && selectedGuide) { e.preventDefault(); removeSelectedGuide(); return; }
     if (!mod && !e.altKey && !e.shiftKey && k === "r") { e.preventDefault(); setAid("rulers", !aids.rulers); return; }
+    // Aides de conception : Maj + R guides, Maj + G grille, Maj + M magnétisme (rien d'autre n'utilise ces combinaisons)
+    if (!mod && !e.altKey && e.shiftKey && k === "r") { e.preventDefault(); setAid("guides", aids.guides === false); return; }
+    if (!mod && !e.altKey && e.shiftKey && k === "g") { e.preventDefault(); setAid("grid", !aids.grid); return; }
+    if (!mod && !e.altKey && e.shiftKey && k === "m") { e.preventDefault(); setAid("snap", !aids.snap); toast(aids.snap ? "Magnétisme activé." : "Magnétisme désactivé : mouvement libre."); return; }
     if (!canWrite) return;
     if (mod && k === "x") { e.preventDefault(); copySelected(true); return; }
     if (mod && k === "v") { e.preventDefault(); paste(); return; }
@@ -5007,7 +5394,7 @@
       else if (k === "b") addElement("button");
     }
   }
-  document.addEventListener("keydown", function (e) { if (!menu.hidden || document.querySelector("dialog[open]:not([data-pb-navmgr])")) return; onKey(e); });
+  document.addEventListener("keydown", function (e) { if (!menu.hidden || document.querySelector("dialog[open]:not([data-pb-navmgr]):not([data-pb-rules])")) return; onKey(e); });
 
   // ---------- Démarrage ----------
   (function offerBackup() {
