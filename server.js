@@ -93,7 +93,11 @@ app.use("/uploads/blog", express.static(path.join(uploadsRoot, "blog"), { maxAge
 // Type vérifié à l'envoi (signature du fichier : JPEG, PNG, GIF, WebP, PDF — jamais de HTML ni de SVG) ; nosniff.
 app.use("/uploads/marketing", express.static(path.join(uploadsRoot, "marketing"), {
   maxAge: "30d", immutable: true, index: false,
-  setHeaders: (res) => { res.set("X-Content-Type-Options", "nosniff"); },
+  // Documents Office : toujours téléchargés (jamais ouverts dans le navigateur) ; tout le reste (images, PDF, vidéo, audio) s'affiche
+  setHeaders: (res, filePath) => {
+    res.set("X-Content-Type-Options", "nosniff");
+    if (/\.(docx?|xlsx?|pptx?)$/i.test(filePath)) res.set("Content-Disposition", "attachment");
+  },
 }));
 
 // SEO CORE : redirections gérées (exécutées avant toute page) et journal des erreurs 404

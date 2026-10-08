@@ -69,21 +69,6 @@ const SCREENS = {
         empty: empty("fileText", q ? "Aucun article trouvé" : state ? `Aucun article ${label.toLowerCase()}` : "Aucun article", q ? "Essayez un autre mot." : "Les articles que vous écrivez apparaissent ici.", newHref ? { label: "Créer un article", href: newHref } : null) } };
   },
 
-  // ----- Médias -----
-  mediatheque(req, ctx) {
-    const type = Object.hasOwn(data.MEDIA_TYPES, req.query.type) ? req.query.type : "";
-    const q = String(req.query.q || "").trim();
-    const view = req.query.vue === "liste" ? "liste" : "grille";
-    const m = data.listMedia(ctx, { type, q });
-    const link = (t) => `${BASE}/mediatheque?${new URLSearchParams({ ...(t ? { type: t } : {}), ...(q ? { q } : {}), vue: view })}`;
-    const tabs = [{ label: "Tous", count: m.total, href: link(""), current: !type }, ...Object.entries(data.MEDIA_TYPES).map(([k, l]) => ({ label: l, count: m.counts[k], href: link(k), current: type === k }))];
-    const selected = m.items.find((i) => i.ref === req.query.sel) || null;
-    return { title: "Médias", lead: "Les fichiers de vos deux médiathèques existantes (marketing et site), en lecture seule. L'envoi et la gestion unifiée arrivent dans un prochain palier.",
-      actions: [dis("Ajouter un fichier")], tabs, search: { enabled: true, placeholder: "Rechercher un fichier", q, hidden: { type, vue: view } },
-      media: { items: m.items.slice(0, 120), view, selected, total: m.items.length, size, base: `${BASE}/mediatheque`, keep: { type, q, vue: view }, links: { grille: `${BASE}/mediatheque?${new URLSearchParams({ ...(type ? { type } : {}), ...(q ? { q } : {}), vue: "grille" })}`, liste: `${BASE}/mediatheque?${new URLSearchParams({ ...(type ? { type } : {}), ...(q ? { q } : {}), vue: "liste" })}` },
-        empty: empty("image", q || type ? "Aucun fichier trouvé" : "Aucun fichier", "Les images et documents que vous téléversez dans vos e-mails, pages et articles apparaissent ici.") } };
-  },
-
   // ----- Navigation -----
   navigation(req, ctx) {
     const menus = [["principal", "Menu principal"], ["pied", "Menu du pied de page"], ["mobile", "Menu mobile"], ["secondaire", "Menus secondaires"]];

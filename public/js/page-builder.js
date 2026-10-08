@@ -1412,6 +1412,7 @@
         break;
       case "video":
         box.appendChild(textField("Adresse (YouTube, Vimeo ou fichier https://)", p.url, set("url"), { type: "url", disabled: disabled }));
+        box.appendChild(libraryButton("Choisir dans la médiathèque", { title: "Choisir une vidéo", type: "video" }, function (m) { change(function () { var x = byId(it.id).props; x.url = m.path; if (!x.title) x.title = m.title || m.name; }); toast("Vidéo choisie dans la médiathèque."); }, disabled));
         box.appendChild(textField("Titre (lu par les lecteurs d'écran)", p.title, set("title"), { max: 150, disabled: disabled }));
         box.appendChild(h("p", { class: "pb-sub", text: "Lecture" }));
         box.appendChild(checkField("Lecture automatique (sans le son, exigé par les navigateurs)", p.autoplay, function (v) { change(function () { var x = byId(it.id).props; if (v) { x.autoplay = true; x.muted = true; } else { delete x.autoplay; if (x.controls === false) delete x.controls; } }); }, { disabled: disabled }));
@@ -1426,6 +1427,7 @@
         break;
       case "audio":
         box.appendChild(textField("Adresse https:// du fichier", p.src, set("src"), { type: "url", disabled: disabled }));
+        box.appendChild(libraryButton("Choisir dans la médiathèque", { title: "Choisir un fichier audio", type: "audio" }, function (m) { change(function () { var x = byId(it.id).props; x.src = m.path; if (!x.title) x.title = m.title || m.name; }); toast("Fichier audio choisi dans la médiathèque."); }, disabled));
         box.appendChild(textField("Titre", p.title, set("title"), { max: 150, disabled: disabled }));
         box.appendChild(checkField("Lire en boucle", p.loop, function (v) { setProp(it.id, "loop", v); }, { disabled: disabled, hint: "Pas de lecture automatique : les navigateurs la bloquent pour un son." }));
         break;
@@ -1433,6 +1435,7 @@
       case "link":
         box.appendChild(textField("Texte", p.label, set("label"), { max: it.type === "button" ? 80 : 120, disabled: disabled }));
         box.appendChild(textField("Adresse", p.url, set("url"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue, /p/… ou https://…", hint: PAGE.funnel ? "/etape-suivante : l'étape suivante du tunnel « " + PAGE.funnel.name + " »." : null }));
+        box.appendChild(libraryButton("Lier un fichier de la médiathèque (PDF, document…)", { title: "Choisir un document", type: "documents" }, function (m) { change(function () { byId(it.id).props.url = m.path; }); toast("Lien vers « " + m.name + " »."); }, disabled));
         if (it.type === "button") box.appendChild(selectField("Apparence", p.variant, [["primary", "Plein"], ["outline", "Contour"], ["ghost", "Discret"]], set("variant", false), { disabled: disabled }));
         if (it.type === "button") box.appendChild(selectField("Taille", p.size || "md", [["sm", "Petite"], ["md", "Normale"], ["lg", "Grande"]], function (v) { setProp(it.id, "size", v); }, { disabled: disabled }));
         box.appendChild(checkField("Ouvrir dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
@@ -5203,6 +5206,17 @@
     }, { multiline: true, rows: "7", onChange: true, max: 8000, disabled: !canWrite, placeholder: ".carte-mise-en-avant { border-color: #0277b6; }\n.lp-hero h1 { letter-spacing: -.02em; }", hint: "Chaque règle ne s'applique qu'au contenu de cette page. Utilisez les classes données aux éléments (inspecteur › Avancé). Pas d'url(), d'@, de \\ ni de < >." });
     box.appendChild(cssIn);
     box.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/pages/" + PAGE.id }, "Réglages et versions de la page"));
+  }
+
+  // ---------- Médiathèque du CMS : sélecteur partagé (vidéos, audio, documents) ----------
+  // Les images passent par la fenêtre ci-dessous (même médiathèque) ; le reste par le MediaPicker partagé (KWMediaPicker).
+  function pickFromLibrary(opts, onPick) {
+    if (!window.KWMediaPicker) { toast("La médiathèque n'est pas disponible : rechargez la page.", true); return; }
+    if (editing) commitEdit();
+    window.KWMediaPicker.open({ title: opts.title, type: opts.type, multiple: false, onPick: onPick });
+  }
+  function libraryButton(label, opts, onPick, disabled) {
+    return h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, onclick: function () { pickFromLibrary(opts, onPick); } }, label);
   }
 
   // ---------- Médiathèque ----------

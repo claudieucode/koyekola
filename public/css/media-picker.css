@@ -1,0 +1,37 @@
+/* MediaPicker partagé (public/js/media-picker.js) : fenêtre de choix d'un fichier de la médiathèque du CMS. Autonome (valeurs de
+   repli) pour fonctionner dans l'éditeur de pages comme dans le reste de KOLAKISA. */
+.kwmp { width: min(920px, 96vw); max-height: 92vh; padding: 0; border: 1px solid var(--mk-border, #d8e2ea); border-radius: 8px; background: var(--mk-surface, #fff); color: var(--mk-text, #10222f); display: none; flex-direction: column; box-shadow: 0 20px 60px rgba(15, 40, 60, .3); }
+.kwmp[open] { display: flex; }
+.kwmp::backdrop { background: rgba(15, 30, 45, .5); }
+.kwmp-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--mk-border, #d8e2ea); }
+.kwmp-head h2 { margin: 0; font-size: 1.05rem; }
+.kwmp-x { border: 0; background: transparent; font-size: 1.5rem; line-height: 1; cursor: pointer; color: inherit; min-width: 36px; min-height: 36px; border-radius: 6px; }
+.kwmp-x:hover { background: rgba(15, 40, 60, .08); }
+.kwmp-tools { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px 0; }
+.kwmp-search { flex: 1 1 240px; min-height: 38px; padding: 6px 10px; font: inherit; border: 1px solid var(--mk-border, #c4d3de); border-radius: 6px; }
+.kwmp-type { min-height: 38px; padding: 6px 8px; font: inherit; border: 1px solid var(--mk-border, #c4d3de); border-radius: 6px; }
+.kwmp-drop { margin: 10px 16px 0; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 2px; border: 2px dashed var(--mk-border, #c4d3de); border-radius: 6px; cursor: pointer; text-align: center; font-size: .9rem; }
+.kwmp-drop:hover, .kwmp-drop:focus-visible, .kwmp-drop.is-over { border-color: var(--accent, #0a76b2); background: rgba(10, 118, 178, .06); outline: none; }
+.kwmp-drop[hidden], .kwmp-queue[hidden], .kwmp-more[hidden] { display: none; }
+.kwmp-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.kwmp-queue { list-style: none; margin: 8px 16px 0; padding: 0; display: grid; gap: 4px; font-size: .85rem; }
+.kwmp-queue li { display: grid; grid-template-columns: minmax(0, 1fr) 90px minmax(0, 2fr); gap: 8px; align-items: center; }
+.kwmp-q-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kwmp-q-msg.is-error, .kwmp-status.is-error { color: #a50e18; }
+.kwmp-status { margin: 8px 16px 0; font-size: .85rem; color: var(--muted, #5a687d); min-height: 1.2em; }
+.kwmp-body { overflow: auto; padding: 8px 16px 12px; flex: 1 1 auto; min-height: 160px; }
+.kwmp-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.kwmp-item { width: 100%; display: flex; flex-direction: column; gap: 4px; padding: 5px; border: 2px solid var(--mk-border, #d8e2ea); border-radius: 6px; background: var(--mk-surface, #fff); cursor: pointer; font: inherit; text-align: left; color: inherit; }
+.kwmp-item:hover { border-color: var(--accent, #0a76b2); }
+.kwmp-item.is-chosen { border-color: var(--accent, #0a76b2); box-shadow: 0 0 0 2px rgba(10, 118, 178, .25); }
+.kwmp-item img, .kwmp-badge { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 4px; background: rgba(15, 40, 60, .06); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .8rem; color: var(--muted, #5a687d); }
+.kwmp-name { font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kwmp-flag { font-size: .7rem; color: #92400e; }
+.kwmp-more { display: block; margin: 10px auto 0; padding: 6px 14px; font: inherit; border: 1px solid var(--mk-border, #c4d3de); border-radius: 6px; background: transparent; cursor: pointer; }
+.kwmp-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--mk-border, #d8e2ea); }
+.kwmp-link { margin-right: auto; font-size: .85rem; }
+.kwmp-ok, .kwmp-cancel { min-height: 38px; padding: 6px 16px; font: inherit; font-weight: 600; border-radius: 6px; cursor: pointer; }
+.kwmp-cancel { border: 1px solid var(--mk-border, #c4d3de); background: transparent; color: inherit; }
+.kwmp-ok { border: 1px solid var(--accent, #0a76b2); background: var(--accent, #0a76b2); color: #fff; }
+.kwmp-ok[disabled] { opacity: .5; cursor: not-allowed; }
+@media (max-width: 640px) { .kwmp { width: 100vw; max-height: 100vh; height: 100vh; border-radius: 0; } .kwmp-queue li { grid-template-columns: 1fr; } }

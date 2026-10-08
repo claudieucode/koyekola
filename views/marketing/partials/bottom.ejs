@@ -4,6 +4,7 @@
   <div class="mk-toasts" id="mk-toasts" role="status" aria-live="polite"></div>
   <script src="<%= asset('/js/floating.js') %>" defer></script>
   <script src="<%= asset('/js/mk/shell.js') %>" defer></script>
+  <% if (typeof mediaJs !== "undefined" && mediaJs) { %><script src="<%= asset('/js/kwmedia.js') %>" defer></script><script src="<%= asset('/js/media-library.js') %>" defer></script><% } %>
   <% if (typeof cmsPagesJs !== "undefined" && cmsPagesJs) { %><script src="<%= asset('/js/cms-pages.js') %>" defer></script><% } %>
 </body>
 </html>

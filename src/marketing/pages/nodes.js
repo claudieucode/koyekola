@@ -10,6 +10,9 @@ const crypto = require("crypto");
 const { getCourse } = require("../bridge/catalog");
 const { parseVideoUrl } = require("../../utils/video");
 
+// Fichiers vidéo et audio de la médiathèque du CMS : adresse locale permanente (/uploads/marketing/<organisation>/<fichier>)
+const LOCAL_VIDEO = /^\/uploads\/marketing\/\d+\/[A-Za-z0-9._-]+\.(mp4|webm)$/i;
+const LOCAL_AUDIO = /^\/uploads\/marketing\/\d+\/[A-Za-z0-9._-]+\.(mp3|m4a|ogg|wav)$/i;
 const MAX_NODES = 400;   // éléments d'une page (toutes sections libres confondues)
 const MAX_DEPTH = 8;
 const NODE_ID = /^[a-z0-9]{6,20}$/;
@@ -361,7 +364,7 @@ const NODE_TYPES = {
   } },
   video: { label: "Vidéo", category: "media", props: (p, at, h) => {
     const url = line(p.url, 500);
-    if (!url || !parseVideoUrl(url)) throw new Error(`${at} (vidéo) : adresse YouTube, Vimeo ou fichier vidéo https:// attendue.`);
+    if (!url || !(parseVideoUrl(url) || LOCAL_VIDEO.test(url))) throw new Error(`${at} (vidéo) : adresse YouTube, Vimeo, fichier vidéo https:// ou vidéo de la médiathèque attendue.`);
     const title = line(p.title, 150);
     if (!title) throw new Error(`${at} (vidéo) : un titre est obligatoire (accessibilité).`);
     // Lecture : les navigateurs n'acceptent la lecture automatique que sans le son ; sans commandes, il faut la lecture
@@ -380,7 +383,7 @@ const NODE_TYPES = {
   } },
   audio: { label: "Audio", category: "media", props: (p, at) => {
     const src = line(p.src, 1000);
-    if (!/^https:\/\/[^\s<>"'`\\/@]+\/[^\s<>"'`\\]*\.(mp3|m4a|ogg|wav)(\?[^\s<>"'`\\]*)?$/i.test(src)) throw new Error(`${at} (audio) : adresse https:// d'un fichier .mp3, .m4a, .ogg ou .wav attendue.`);
+    if (!LOCAL_AUDIO.test(src) && !/^https:\/\/[^\s<>"'`\\/@]+\/[^\s<>"'`\\]*\.(mp3|m4a|ogg|wav)(\?[^\s<>"'`\\]*)?$/i.test(src)) throw new Error(`${at} (audio) : adresse https:// d'un fichier .mp3, .m4a, .ogg ou .wav, ou fichier audio de la médiathèque attendu.`);
     return { src, title: line(p.title, 150), loop: p.loop === true };
   } },
   button: { label: "Bouton", category: "interaction", props: (p, at, h) => {
