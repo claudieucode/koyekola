@@ -77,9 +77,10 @@ describe("palette d'actions des scénarios : disponibilité réelle, filtre, ré
     assert.equal(await visible("wait"), false);
   });
 
-  test("une fois les fournisseurs réglés, les badges et le filtre disparaissent (rien de décoratif)", async () => {
+  test("une fois les connexions réglées (e-mail, SMS, webhook), les badges et le filtre disparaissent (rien de décoratif)", async () => {
     await openEditor();
     setting("email.provider", "smtp"); setting("email.from", "KOLAKISA <contact@exemple.fr>");
+    srv.db().prepare("INSERT OR IGNORE INTO mk_webhook_endpoints (organization_id, name, url, secret, events) VALUES (?, 'CRM', 'https://crm.exemple.com/hook', '', '[\"*\"]')").run(org);
     setting("sms.provider", "twilio"); setting("sms.sender", "KOLAKISA"); setting("sms.account_sid", "AC00000000000000000000000000000000"); setting("sms.auth_token", "jeton");
     await page.reload(); await page.waitForSelector("#au-palette .mk-pal-item");
     assert.equal(await page.locator("#au-palette .mk-pal-badge").count(), 0, "plus aucun badge");
@@ -268,6 +269,52 @@ describe("palette d'actions des scénarios : disponibilité réelle, filtre, ré
     assert.match(await text("Copier un champ"), /Prénom → Niveau \(majuscule à chaque mot\)/);
     assert.match(await text("Définir une date"), /Rentrée = aujourd'hui \+ 7 j/);
     assert.match(await text("Calculer un nombre"), /Solde × 2\.5/);
+  });
+
+  test("« Envoyer vers un webhook » : marqué « Connexion requise » sans webhook, puis formulaire, validation et enregistrement exécutable", async () => {
+    await openEditor();
+    srv.db().prepare("DELETE FROM mk_webhook_endpoints").run();
+    await page.reload(); await page.waitForSelector("#au-palette .mk-pal-item");
+    assert.equal(await item("webhook_call").locator(".mk-pal-badge").innerText(), "Connexion requise");
+    assert.match(await item("webhook_call").getAttribute("data-tip"), /Intégrations → Webhooks/);
+    await item("webhook_call").click();
+    await page.locator(".drawflow-node").filter({ hasText: "Envoyer vers un webhook" }).first().click();
+    await dialog().waitFor({ timeout: 8000 });
+    assert.match(await dialog().innerText(), /Aucun webhook : créez-en un dans Intégrations → Webhooks/);
+    await dialog().getByRole("button", { name: "Annuler" }).or(dialog().getByRole("button", { name: "Fermer" })).first().click();
+    srv.db().prepare("INSERT INTO mk_webhook_endpoints (organization_id, name, url, secret, events) VALUES (?, 'CRM', 'https://crm.exemple.com/hook/secret-path', '', '[\"*\"]')").run(org);
+    await page.reload(); await page.waitForSelector("#au-palette .mk-pal-item");
+    assert.equal(await page.locator("#au-palette .mk-pal-badge").count(), 0 + (await page.locator("#au-palette .mk-pal-item.is-needs-connection").count()), "plus de badge pour le webhook");
+    assert.equal(await item("webhook_call").locator(".mk-pal-badge").count(), 0);
+    await page.locator(".drawflow-node").filter({ hasText: "Envoyer vers un webhook" }).first().click();
+    await dialog().waitFor({ timeout: 8000 });
+    await dialog().locator("[data-step-save]").click();
+    assert.match(await dialog().locator(".mk-step-dialog-error").innerText(), /Choisissez le webhook à appeler/);
+    const options = await dialog().locator("select").first().locator("option").allInnerTexts();
+    assert.ok(options.includes("CRM — crm.exemple.com"), "le webhook est proposé avec son domaine seulement (jamais le chemin ni le secret)");
+    assert.ok(!(await dialog().innerText()).includes("secret-path"));
+    await dialog().locator("select").first().selectOption({ label: "CRM — crm.exemple.com" });
+    await dialog().getByRole("button", { name: "Ajouter un champ" }).click();
+    await dialog().locator("input[type=text]").nth(0).fill("1 mauvais nom");
+    await dialog().locator("input[type=text]").nth(1).fill("{{inconnue}}");
+    await dialog().locator("[data-step-save]").click();
+    const erreurs = await dialog().locator(".mk-step-dialog-error").innerText();
+    assert.match(erreurs, /nom invalide/); assert.match(erreurs, /variable inconnue/);
+    await dialog().locator("input[type=text]").nth(0).fill("email_client");
+    await dialog().locator("input[type=text]").nth(1).fill("{{email}}");
+    await dialog().getByRole("button", { name: "Ajouter un champ" }).click();
+    await dialog().locator("input[type=text]").nth(2).fill("source");
+    await dialog().locator("input[type=text]").nth(3).fill("scénario");
+    await dialog().getByRole("button", { name: /Retirer le champ 2/ }).click();
+    await dialog().getByRole("button", { name: "Ajouter un champ" }).click();
+    await dialog().locator("input[type=text]").nth(2).fill("formation");
+    await dialog().locator("input[type=text]").nth(3).fill("{{event.course_title}}");
+    await dialog().locator("[data-step-save]").click();
+    await page.locator("dialog.mk-step-dialog[open]").waitFor({ state: "detached", timeout: 8000 });
+    await connectAndSave("Envoyer vers un webhook");
+    const webhookId = srv.db().prepare("SELECT id FROM mk_webhook_endpoints WHERE name = 'CRM' ORDER BY id DESC").get().id;
+    await until(() => JSON.stringify(savedSteps()) === JSON.stringify([{ type: "webhook_call", endpointId: webhookId, fields: [{ key: "email_client", value: "{{email}}" }, { key: "formation", value: "{{event.course_title}}" }] }]), "étape enregistrée et exécutable");
+    assert.match(await page.locator(".drawflow-node").filter({ hasText: "Envoyer vers un webhook" }).first().innerText(), /« CRM » · 2 champs/);
   });
 
   test("aucune erreur de script ni de console", () => { assert.deepEqual(errors, []); });

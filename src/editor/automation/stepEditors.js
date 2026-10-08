@@ -15,6 +15,7 @@ const EVENT_NAME = /^[a-z][a-z0-9_.]{1,63}$/;
 const PROPERTY_KEY = /^[a-z][a-z0-9_]{0,39}$/;
 const STATUS_LABELS = { unknown: "Pas de consentement", subscribed: "Abonné", unsubscribed: "Désinscrit", bounced: "Rebond", complained: "Plainte", suppressed: "Bloqué" };
 export const TRANSFORM_LABELS = { none: "Aucun nettoyage", trim: "Retirer les espaces en trop", lowercase: "Tout en minuscules", uppercase: "Tout en majuscules", capitalize: "Majuscule à chaque mot", digits: "Garder seulement les chiffres (et +)" };
+const WEBHOOK_VARIABLES = ["email", "prenom", "nom", "telephone", "societe", "pays", "score", "event.course_title", "event.course_url", "event.order_total", "event.order_id", "event.lesson_title", "event.learn_url"]; // mêmes variables que integrations.js
 const WEEKDAY_OPTIONS = [[1, "Lundi"], [2, "Mardi"], [3, "Mercredi"], [4, "Jeudi"], [5, "Vendredi"], [6, "Samedi"], [7, "Dimanche"]];
 const WAIT_UNTIL_MODES = [["time", "Une heure précise"], ["weekday", "Un jour de la semaine"], ["date", "Une date précise"], ["property", "Un champ date du contact"], ["business_hours", "Les heures ouvrables"]];
 const WAIT_UNTIL_DEFAULTS = { time: { time: "09:00" }, weekday: { weekday: 1, time: "09:00" }, date: { date: "", time: "09:00" }, property: { property: "", offsetDays: 0, time: "09:00", onMissing: "continue" }, business_hours: { days: [1, 2, 3, 4, 5], from: "09:00", to: "18:00" } };
@@ -431,6 +432,27 @@ const EDITORS = {
     box.appendChild(hint("Le score d'un contact ne descend jamais sous 0. Chaque modification est tracée dans l'historique du score, n'est appliquée qu'une fois par passage et reste après un recalcul des règles. Elle ne déclenche pas d'événement de changement de niveau."));
     return box;
   },
+  webhook_call(ctx, draft, rerender) {
+    const box = el("div");
+    const hooks = ctx.data.webhooks || [];
+    if (!hooks.length) { box.appendChild(note("Aucun webhook : créez-en un dans Intégrations → Webhooks (l'adresse du destinataire et son secret de signature y sont réglés).")); return box; }
+    const dis = ctx.locked;
+    if (!Array.isArray(draft.fields)) draft.fields = [];
+    box.appendChild(field("Webhook à appeler", select([["", "Choisir un webhook…", true], ...hooks.map((w) => [w.id, `${w.name} — ${w.host}${w.enabled ? "" : " (en pause)"}`])], hooks.some((w) => w.id === draft.endpointId) ? draft.endpointId : "", (v) => { draft.endpointId = parseInt(v, 10); }, { disabled: dis })));
+    const rows = el("div", { class: "mk-kv-rows" });
+    draft.fields.forEach((f, i) => {
+      const row = el("div", { class: "mk-step-row mk-kv-row" });
+      row.appendChild(field("Nom du champ", text(f.key, (v) => { f.key = v; }, { maxlength: 40, placeholder: "email_client", disabled: dis })));
+      row.appendChild(field("Valeur", text(f.value, (v) => { f.value = v; }, { maxlength: 300, placeholder: "{{email}}", disabled: dis })));
+      if (!dis) { const rm = el("button", { type: "button", class: "btn btn-ghost btn-sm", "aria-label": `Retirer le champ ${i + 1}` }, "Retirer"); rm.addEventListener("click", () => { draft.fields.splice(i, 1); rerender(); }); row.appendChild(rm); }
+      rows.appendChild(row);
+    });
+    box.appendChild(section("Données envoyées", rows));
+    if (!dis && draft.fields.length < 20) { const add = el("button", { type: "button", class: "btn btn-outline btn-sm" }, "Ajouter un champ"); add.addEventListener("click", () => { draft.fields.push({ key: "", value: "" }); rerender(); }); box.appendChild(add); }
+    box.appendChild(hint(`Variables : ${WEBHOOK_VARIABLES.map((v) => `{{${v}}}`).join(", ")}. Le destinataire reçoit toujours le contact, le scénario et l'étape, plus ces champs sous « fields ».`));
+    box.appendChild(hint("Requête POST signée (en-tête X-KOYEKOLA-Signature), envoyée en arrière-plan avec reprises automatiques en cas d'erreur. Le résultat de chaque envoi est visible dans Intégrations → Webhooks (Dernières livraisons). Le scénario n'attend pas la réponse."));
+    return box;
+  },
   start_automation: (ctx, draft) => automationTargetEditor(ctx, draft, "Scénario à démarrer", true),
   stop_automation: (ctx, draft) => automationTargetEditor(ctx, draft, "Scénario à arrêter", false),
   add_note(ctx, draft) {
@@ -560,6 +582,22 @@ export function validate(type, ctx, d) {
       if (!b) return ["Écrivez le texte de la note."];
       return b.length > MAX_NOTE ? [`Note trop longue (${MAX_NOTE} caractères au plus).`] : [];
     }
+    case "webhook_call": {
+      const errors = [];
+      if (!(ctx.data.webhooks || []).some((w) => w.id === d.endpointId)) errors.push("Choisissez le webhook à appeler.");
+      const seen = new Set();
+      (d.fields || []).forEach((f, i) => {
+        const key = String(f.key || "").trim();
+        if (!/^[a-z][a-z0-9_]{0,39}$/i.test(key)) errors.push(`Champ ${i + 1} : nom invalide (lettres, chiffres et « _ », commence par une lettre).`);
+        else if (seen.has(key.toLowerCase())) errors.push(`Le champ « ${key} » est présent deux fois.`);
+        seen.add(key.toLowerCase());
+        const value = String(f.value || "");
+        if (value.length > 300) errors.push(`Champ ${i + 1} : valeur trop longue (300 caractères au plus).`);
+        const unknown = [...value.matchAll(/\{\{\s*([a-z_.]+)\s*\}\}/g)].map((m) => m[1]).filter((v) => !WEBHOOK_VARIABLES.includes(v));
+        if (unknown.length) errors.push(`Champ ${i + 1} : variable inconnue ${unknown.join(", ")}.`);
+      });
+      return errors;
+    }
     case "start_automation": case "stop_automation": return (ctx.data.automations || []).some((x) => x.id === d.automationId) ? [] : ["Choisissez un scénario."];
     case "add_tag": case "remove_tag": {
       const t = String(d.tag || "").trim();
@@ -587,6 +625,7 @@ export function clean(type, d) {
   delete out._newTag;
   if (type === "add_tag" || type === "remove_tag") out.tag = String(out.tag || "").trim();
   if (type === "trigger") out.name = String(out.name || "").trim();
+  if (type === "webhook_call") out.fields = (out.fields || []).map((f) => ({ key: String(f.key || "").trim(), value: String(f.value || "").trim() }));
   if (type === "sms" || type === "add_note") out.body = String(out.body || "").replace(/\r\n?/g, "\n").trim();
   return out;
 }

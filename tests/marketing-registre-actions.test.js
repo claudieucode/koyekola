@@ -10,7 +10,7 @@ const { validateSteps } = require("../src/marketing/automations/steps");
 const { STEP_LABELS } = require("../src/utils/stepLabels");
 const { MarketingError } = require("../src/marketing/errors");
 
-const EXPECTED = ["email", "sms", "wait", "wait_for_event", "wait_until", "condition", "split", "update_field", "add_tag", "remove_tag", "add_to_list", "remove_from_list", "adjust_score", "add_note", "copy_field", "set_date", "calculate", "start_automation", "stop_automation", "end"];
+const EXPECTED = ["email", "sms", "wait", "wait_for_event", "wait_until", "condition", "split", "update_field", "add_tag", "remove_tag", "add_to_list", "remove_from_list", "adjust_score", "add_note", "copy_field", "set_date", "calculate", "start_automation", "stop_automation", "webhook_call", "end"];
 
 describe("registre des actions", () => {
   test("les actions sont enregistrées dans l'ordre de la palette (les 12 historiques puis les nouvelles, « fin » en dernier)", () => {
