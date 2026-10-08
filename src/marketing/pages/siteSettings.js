@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   lightbox: { enabled: true, overlay: "#050c14", overlayOpacity: 82, arrows: true, closeOnOverlay: true, captions: true, animation: "fade" },
   transitions: { type: "none", duration: 300 },
   customCss: "",
+  classes: [],
   extras: { language: "fr", smoothScroll: false, noindex: false },
 });
 
@@ -125,9 +126,13 @@ function normalizeSettings(input = {}, { strict = false } = {}) {
   if (rawCss.trim()) {
     try { normalizeSiteCss(rawCss); customCss = rawCss.trim(); } catch (e) { if (strict) throw bad(e.message); customCss = ""; }
   }
+  // Classes globales : styles nommés réutilisables (voir nodes.classCss)
+  const sectionsLib = require("./sections");
+  let classes;
+  try { classes = require("./nodes").normalizeClassDefs(src.classes, { imageUrl: sectionsLib.imageUrl, linkUrl: sectionsLib.linkUrl }, { strict }); } catch (e) { throw bad(e.message); }
   const ex = src.extras || {};
   const extras = { language: oneOf(ex.language, Object.keys(LANGUAGES), "Langue", strict, "fr"), smoothScroll: bool(ex.smoothScroll, false), noindex: bool(ex.noindex, false) };
-  return { identity, background, layout, lightbox, transitions, customCss, extras };
+  return { identity, background, layout, lightbox, transitions, customCss, classes, extras };
 }
 
 // Points de rupture effectifs d'un site (utilisés par le CSS des éléments : pageCss) ; défauts si inconnus
@@ -193,7 +198,7 @@ function siteAssets(tokens, settings, themeCss) {
   let custom = "";
   try { custom = normalizeSiteCss(settings.customCss, { strict: false }); } catch { custom = ""; }
   return {
-    theme: [themeCss(tokens), layoutCss(settings)].filter(Boolean).join("\n").replace(/</g, ""),
+    theme: [themeCss(tokens), layoutCss(settings), require("./nodes").classCss(settings.classes, breakpointsOf(settings))].filter(Boolean).join("\n").replace(/</g, ""),
     custom: custom.replace(/</g, ""),
     transition: transitionCss(settings),
     lightboxVars: lightboxVars(settings),

@@ -3402,6 +3402,61 @@
     det.appendChild(inner);
     return det;
   }
+  // ---------- Classes globales du site : styles nommés, appliqués à tout élément qui porte le nom (modifier = tout est mis à jour) ----------
+  var siteClasses = (PAGE.siteClasses || []).slice();
+  function saveSiteClasses(list, done) {
+    if (!PAGE.siteSettingsUrl) return Promise.reject(new Error("Cette page n'appartient à aucun site."));
+    return api("GET", PAGE.siteSettingsUrl).then(function (r) {
+      var next = Object.assign({}, r.settings, { classes: list });
+      return api("PUT", PAGE.siteSettingsUrl, { revision: r.revision, tokens: r.tokens, settings: next });
+    }).then(function (r) {
+      siteClasses = (r.settings && r.settings.classes) || [];
+      if (done) done();
+      renderInspector();
+      scheduleRender();
+    }).catch(function (e) { toast(e.message, true); });
+  }
+  // Styles propres de l'élément (écrans et états), prêts à entrer dans une classe
+  var ownStyles = function (it) { return { styles: clone(it.styles || {}), states: clone(it.states || {}) }; };
+  var classNames = function (it) { return String(it.classes || "").split(/\s+/).filter(Boolean); };
+  function setNodeClasses(it, names, label, clearOwn) {
+    change(function () { var x = byId(it.id); if (names.length) x.classes = names.join(" "); else delete x.classes; if (clearOwn) { delete x.styles; delete x.states; } }, { label: label });
+  }
+  function globalClassesBlock(it, locked) {
+    var box = h("div", { class: "pb-global-classes" });
+    box.appendChild(h("p", { class: "pb-sub", text: "Classes globales du site" }));
+    var names = classNames(it);
+    if (!siteClasses.length) box.appendChild(h("p", { class: "pb-hint", text: "Aucune classe globale. Réglez le style de cet élément, puis créez une classe : les autres éléments pourront la réutiliser, et la modifier mettra tout à jour." }));
+    siteClasses.forEach(function (c) {
+      var on = names.indexOf(c.name) >= 0;
+      var cb = h("input", { type: "checkbox", disabled: locked || null });
+      cb.checked = on;
+      cb.addEventListener("change", function () { setNodeClasses(it, cb.checked ? names.concat([c.name]) : names.filter(function (n) { return n !== c.name; }), cb.checked ? "Classe « " + c.name + " » appliquée" : "Classe « " + c.name + " » retirée", false); });
+      box.appendChild(h("div", { class: "pb-gclass-row" },
+        h("label", { class: "pb-check" }, cb, " ." + c.name),
+        on ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked || !(it.styles || it.states), "data-tip": "Ajoute les réglages propres de cet élément à la classe (tous les éléments de la classe sont mis à jour), puis les retire de l'élément",
+          onclick: function () {
+            var own = ownStyles(it), list = siteClasses.map(function (x) { return clone(x); }), t = list.filter(function (x) { return x.name === c.name; })[0];
+            ["styles", "states"].forEach(function (k) { t[k] = t[k] || {}; Object.keys(own[k]).forEach(function (bp) { t[k][bp] = Object.assign({}, t[k][bp], own[k][bp]); }); });
+            saveSiteClasses(list, function () { setNodeClasses(it, classNames(byId(it.id) || it), "Classe « " + c.name + " » mise à jour", true); toast("Classe « " + c.name + " » mise à jour : tous ses éléments suivent."); });
+          } }, "Mettre à jour la classe") : null,
+        h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked, "aria-label": "Supprimer la classe " + c.name,
+          onclick: function () { if (!window.confirm("Supprimer la classe « " + c.name + " » du site ? Les éléments qui la portent perdent son style.")) return; saveSiteClasses(siteClasses.filter(function (x) { return x.name !== c.name; }), function () { toast("Classe supprimée."); }); } }, "Supprimer")));
+    });
+    var nameIn = h("input", { type: "text", maxlength: "30", placeholder: "nom-de-la-classe", "aria-label": "Nom de la nouvelle classe globale", disabled: locked || null });
+    box.appendChild(h("div", { class: "pb-gclass-new" }, nameIn, h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: locked || !PAGE.siteSettingsUrl, "data-tip": "Crée la classe avec les réglages de style propres de cet élément, et l'applique",
+      onclick: function () {
+        var name = nameIn.value.trim().toLowerCase();
+        if (!/^[a-z][a-z0-9-]{0,29}$/.test(name) || /^(kw|lp|pb|mk)-/.test(name)) { toast("Nom de classe invalide : minuscules, chiffres et tirets, commence par une lettre (préfixes kw-, lp-, pb-, mk- réservés).", true); return; }
+        if (siteClasses.some(function (x) { return x.name === name; })) { toast("Cette classe existe déjà : cochez-la pour l'appliquer.", true); return; }
+        var own = ownStyles(it), def = { name: name };
+        if (Object.keys(own.styles).length) def.styles = own.styles;
+        if (Object.keys(own.states).length) def.states = own.states;
+        saveSiteClasses(siteClasses.concat([def]), function () { setNodeClasses(it, classNames(it).concat([name]), "Classe « " + name + " » créée", true); toast("Classe « " + name + " » créée et appliquée."); });
+      } }, "Créer une classe depuis cet élément")));
+    if (!PAGE.siteSettingsUrl) box.appendChild(h("p", { class: "pb-hint", text: "Les classes globales appartiennent à un site : cette page n'en a pas." }));
+    return box;
+  }
   // Code : CSS propre à l'élément, classes et attributs (vérifiés à l'enregistrement : aucune ressource externe)
   function codeField(it, locked, opts) {
     opts = opts || {};
@@ -3416,6 +3471,7 @@
     inner.appendChild(textField("CSS de l'élément (déclarations)", it.css, put("css"), { multiline: true, rows: "4", onChange: true, max: 2000, disabled: locked, placeholder: "letter-spacing: .02em;\nbackground-color: #f3f8fc;", hint: "Appliqué à cet élément seulement, après les réglages de l'inspecteur. Pas d'url(), d'@, de \\ ni de < >." }));
     inner.appendChild(textField("CSS au survol", it.cssHover, put("cssHover"), { multiline: true, rows: "2", onChange: true, max: 2000, disabled: locked, placeholder: "transform: translateY(-2px);" }));
     inner.appendChild(textField("Classes", it.classes, put("classes"), { onChange: true, max: 300, disabled: locked, placeholder: "carte-mise-en-avant", hint: "À cibler dans le CSS de la page (onglet Page). Préfixes kw-, lp-, pb-, mk- réservés." }));
+    if (PAGE.siteSettingsUrl || siteClasses.length) inner.appendChild(globalClassesBlock(it, locked));
     }
     if (!opts.noAttrs) {
     var attrs = it.attrs || [];

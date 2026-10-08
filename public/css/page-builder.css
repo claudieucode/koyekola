@@ -901,3 +901,10 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 .pb-dyn-item { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: transparent; text-align: left; font-size: 13px; cursor: pointer; }
 .pb-dyn-item:hover, .pb-dyn-item:focus-visible { background: #e0f2fe; }
 .pb-dyn-item code { font-size: 11px; color: #0369a1; }
+
+/* ---------- Classes globales du site ---------- */
+.pb-global-classes { margin-top: 10px; }
+.pb-gclass-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.pb-gclass-row .pb-check { flex: 1 1 120px; margin: 0; }
+.pb-gclass-new { display: flex; gap: 6px; margin-top: 6px; }
+.pb-gclass-new input { flex: 1 1 auto; min-width: 0; }

@@ -1488,6 +1488,37 @@ function motionAttrs(n) {
 // CSS d'une page : une règle par élément stylé (et par section stylée), par écran et par état. Valeurs déjà validées.
 // breakpoints : { tablet, mobile } = largeurs maximales (px) des écrans « Tablette » et « Mobile » du site (réglages du site)
 const DEFAULT_BREAKPOINTS = { tablet: 1023, mobile: 767 };
+// ---------- Classes globales du site ----------
+// Une classe globale = un nom + des styles (par écran et par état), définis une fois pour le site et appliqués à tout élément
+// qui porte ce nom dans « Classes ». Modifier la classe met à jour tous les éléments. Le style PROPRE d'un élément l'emporte
+// toujours sur celui de la classe (même spécificité, règles de l'élément écrites après).
+const GLOBAL_CLASS_MAX = 40;
+function normalizeClassDefs(raw, h, { strict = false } = {}) {
+  const out = [], seen = new Set();
+  for (const c of Array.isArray(raw) ? raw : []) {
+    try {
+      const name = String(c && c.name || "").trim().toLowerCase();
+      if (!/^[a-z][a-z0-9-]{0,29}$/.test(name) || /^(kw|lp|pb|mk)-/.test(name)) throw new Error(`Classe globale « ${name || "?"} » : nom invalide (minuscules, chiffres et tirets ; préfixes kw-, lp-, pb-, mk- réservés).`);
+      if (seen.has(name)) throw new Error(`Classe globale « ${name} » : nom déjà utilisé.`);
+      if (out.length >= GLOBAL_CLASS_MAX) throw new Error(`${GLOBAL_CLASS_MAX} classes globales au plus.`);
+      const st = normalizeStyles(c.styles, c.states, `Classe « ${name} »`, h);
+      seen.add(name);
+      out.push({ name, ...(line(c.label, 60) ? { label: line(c.label, 60) } : {}), ...(st.styles ? { styles: st.styles } : {}), ...(st.states ? { states: st.states } : {}) });
+    } catch (e) { if (strict) throw e; }
+  }
+  return out;
+}
+function classCss(classes, breakpoints = DEFAULT_BREAKPOINTS) {
+  const base = [], media = { tablet: [], mobile: [] };
+  const mediaOf = (key) => (key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : `(max-width: ${breakpoints.mobile}px)`);
+  for (const c of classes || []) {
+    if (!/^[a-z][a-z0-9-]{0,29}$/.test(c.name)) continue;
+    const sel = `.lp-site :where(.${c.name})`;
+    for (const bp of BREAKPOINTS) { const d = c.styles && c.styles[bp.key] ? declarations(c.styles[bp.key]) : ""; if (d) (bp.media ? media[bp.key] : base).push(`${sel}{${d}}`); }
+    for (const state of STATES) { const d = c.states && c.states[state.key] ? declarations(c.states[state.key]) : ""; if (d) base.push(`${sel}${state.sel}{${d}}`); }
+  }
+  return [...base, ...["tablet", "mobile"].filter((k) => media[k].length).map((k) => `@media ${mediaOf(k)}{${media[k].join("")}}`)].join("\n");
+}
 function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   const mediaOf = (bp) => (bp.key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : bp.key === "mobile" ? `(max-width: ${breakpoints.mobile}px)` : bp.media);
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
@@ -1575,7 +1606,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
 }
 
 module.exports = {
-  dynamic,
+  dynamic, normalizeClassDefs, classCss, GLOBAL_CLASS_MAX,
   NODE_TYPES, CATEGORIES, WIDGET_GROUPS, WIDGETS, CUSTOM_WIDGETS, registerWidget, lockedWidgetChanges, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
   capsOf, MOTION, motionAttrs, MASK_SHAPES, SCROLL_FX, SCROLL_RANGE, MOUSE_RANGE, MOUSE_MODES, AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };
