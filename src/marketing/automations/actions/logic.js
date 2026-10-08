@@ -67,4 +67,36 @@ defineAction({
   },
 });
 
+// Plusieurs chemins : jusqu'à 5 cas, évalués DANS L'ORDRE (le premier qui correspond l'emporte), chacun avec sa condition (même
+// moteur de segments que « Condition », ET / OU) et son chemin ; « Sinon » reçoit tous les autres contacts. Comme partout : on ne
+// va qu'en avant (jamais de boucle), jamais vers une étape qui n'existe pas.
+const MAX_CASES = 5, MAX_LABEL = 40;
+defineAction({
+  type: "route", category: "logique", label: STEP_LABELS.route, description: "Jusqu'à 5 cas, chacun avec son chemin, plus « Sinon »", version: 1, status: "available",
+  validate({ ctx, raw, i, steps }) {
+    if (!Array.isArray(raw.cases) || raw.cases.length < 1 || raw.cases.length > MAX_CASES) throw bad(i, `de 1 à ${MAX_CASES} cas sont attendus.`);
+    const cases = raw.cases.map((c, k) => {
+      if (!c || typeof c !== "object") throw bad(i, `cas ${k + 1} invalide.`);
+      const label = (typeof c.label === "string" ? c.label.replace(/[\u0000-\u001F\u007F]/g, " ").replace(/\s+/g, " ").trim() : "") || `Cas ${k + 1}`;
+      if (label.length > MAX_LABEL) throw bad(i, `nom du cas ${k + 1} trop long (${MAX_LABEL} caractères au plus).`);
+      segments.validateDefinition(ctx, c.definition);
+      return { label, definition: c.definition, to: jumpTarget(c.to, i, steps.length, `Cas ${k + 1}`) };
+    });
+    const otherwise = jumpTarget(raw.otherwise === undefined ? "exit" : raw.otherwise, i, steps.length, "Sinon");
+    return { type: "route", cases, otherwise };
+  },
+  execute({ ctx, step, contact }) {
+    try {
+      for (let k = 0; k < step.cases.length; k++) {
+        const c = step.cases[k];
+        if (segments.matches(ctx, c.definition, contact.id)) return route(c.to, "route", ["route", `« ${c.label} » → ${branchLabel(c.to)}`]);
+      }
+    } catch (error) {
+      if (!(error instanceof MarketingError)) throw error;
+      return { log: ["failed", "condition invalide"], exit: "condition_error" };
+    }
+    return route(step.otherwise, "route", ["route", `aucun cas → Sinon → ${branchLabel(step.otherwise)}`]);
+  },
+});
+
 module.exports = { CHECKS };

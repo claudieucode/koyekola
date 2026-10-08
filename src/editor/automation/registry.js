@@ -22,6 +22,7 @@ export const ACTIONS = {
   wait_until: { category: "temps", icon: "calendarClock", description: "Une heure, un jour, une date, un champ date, les heures ouvrables", keywords: "attendre jusqua date heure jour semaine fuseau ouvrable creneau champ date anniversaire horaire calendrier", title: "Configurer : Attendre une date ou une heure", make: () => ({ mode: "time", zone: "contact", time: "09:00" }) },
   condition: { category: "logique", icon: "gitBranch", tone: "branch", description: "Deux chemins : oui / non", keywords: "si segment branche ouvert clic critere", title: "Configurer : Condition", make: () => ({ check: "segment", definition: null, _segmentId: null }) },
   split: { category: "logique", icon: "shuffle", tone: "branch", description: "Deux chemins tirés au sort : A / B", keywords: "test ab aleatoire hasard pourcentage branche tirage", title: "Configurer : Tirage aléatoire", make: () => ({ percentage: 50 }) },
+  route: { category: "logique", icon: "gitBranch", tone: "branch", description: "Jusqu'à 5 cas, chacun avec son chemin, plus « Sinon »", keywords: "plusieurs chemins routage aiguillage switch branches multiples selon valeur cas sinon segmentation tri", title: "Configurer : Plusieurs chemins", make: () => ({ cases: [{ id: `c${Math.random().toString(36).slice(2, 8)}`, label: "Cas 1", definition: { op: "and", rules: [] } }] }) },
   update_field: { category: "contact", icon: "userPen", description: "Prénom, société, propriété…", keywords: "champ modifier propriete contact mettre a jour", title: "Configurer : Mettre à jour un champ", make: () => ({ field: "", value: "" }) },
   add_tag: { category: "contact", icon: "tagPlus", description: "Étiquette existante ou nouvelle", keywords: "tag etiquette ajouter", title: "Configurer : Ajouter une étiquette", make: () => ({ tag: "" }) },
   remove_tag: { category: "contact", icon: "tagMinus", description: "Retire une étiquette du contact", keywords: "tag etiquette enlever retirer supprimer", title: "Configurer : Retirer une étiquette", make: () => ({ tag: "" }) },
@@ -106,6 +107,7 @@ export function summary(type, ctx, d) {
     case "calculate": return `${refLabel(d.property, data)} ${({ set: "=", add: "+", subtract: "−", multiply: "×" })[d.op] || "?"} ${d.value}`;
     case "notify_team": { const n = (d.recipients || []).length; return `${n} destinataire${n > 1 ? "s" : ""} · ${String(d.subject).length > 40 ? `${String(d.subject).slice(0, 37)}…` : d.subject}`; }
     case "webhook_call": { const w = (data.webhooks || []).find((x) => x.id === d.endpointId); const n = (d.fields || []).length; return w ? `« ${w.name} » · ${n} champ${n > 1 ? "s" : ""}` : "Webhook introuvable"; }
+    case "route": { const names = (d.cases || []).map((c, k) => c.label || `Cas ${k + 1}`).join(", "); return `${names} + Sinon`; }
     case "adjust_score": return d.mode === "set" ? `Score = ${d.points}` : `${d.mode === "add" ? "+" : "−"} ${d.points} point${d.points > 1 ? "s" : ""}`;
     case "add_note": { const t = String(d.body).replace(/\s+/g, " "); return t.length > 60 ? `${t.slice(0, 57)}…` : t; }
     case "add_tag": case "remove_tag": return `« ${d.tag} »`;
