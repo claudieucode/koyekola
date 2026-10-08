@@ -1,6 +1,6 @@
 <%# Liste dynamique (src/marketing/pages/widgets/site.js). Variables : p, cls, attrs, d = { items, reason }. Tout est échappé. %>
-<% const items = (d && d.items) || []; const isTerm = ["categories", "tags"].includes(p.source); const isAuthor = p.source === "authors"; %>
-<section class="<%= cls %> kw-ql-<%= p.layout %>"<%- attrs %>>
+<% const LAYOUTS = { list: "kw-ql-list", cards: "kw-ql-cards", compact: "kw-ql-compact", inline: "kw-ql-inline" }; const items = (d && d.items) || []; const isTerm = ["categories", "tags"].includes(p.source); const isAuthor = p.source === "authors"; %>
+<section class="<%= cls %> <%= LAYOUTS[p.layout] || LAYOUTS.list %>"<%- attrs %>>
   <% if (p.title) { %><h3 class="kw-ql-title"><%= p.title %></h3><% } %>
   <% if (!items.length) { %>
     <% if (isBuilder && d && d.reason === "post") { %><p class="kw-ql-empty">Cette liste dépend de l'article affiché : elle se remplit sur un modèle « Article du blog ».</p>

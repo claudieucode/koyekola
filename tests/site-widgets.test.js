@@ -70,9 +70,9 @@ describe("vrai serveur : widgets du site", () => {
     ])]);
     assert.equal((await assign({ type: "single_post", page_id: String(id) })).status, 302);
     const html = await get("/blog/a-deux");
-    assert.match(html, /kw-pm-category[^>]*>Conseils</, "informations de l'article");
-    assert.match(html, /kw-pt-category" href="\/blog\/categorie\/conseils"/, "catégorie liée");
-    assert.match(html, /kw-pt-tag" href="\/blog\/etiquette\/photo">#photo/, "étiquette liée");
+    assert.match(html, /data-part="category">Conseils</, "informations de l'article");
+    assert.match(html, /class="kw-pt-term" data-kind="category" href="\/blog\/categorie\/conseils"/, "catégorie liée");
+    assert.match(html, /data-kind="tag" href="\/blog\/etiquette\/photo">#photo/, "étiquette liée");
     assert.match(html, /kw-ab-name">/, "boîte auteur"); assert.match(html, /Formatrice &lt;b&gt;passionnée/, "bio échappée");
     assert.match(html, /kw-pn-prev"[^>]*href="\/blog\/a-un"|href="\/blog\/a-un"[^>]*kw-pn-prev/, "article précédent");
     assert.match(html, /kw-pn-next/, "article suivant");

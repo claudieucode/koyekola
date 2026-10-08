@@ -10,7 +10,8 @@
      if (p.showComments && post.commentsCount != null) parts.push({ cls: "comments", text: post.commentsCount + (post.commentsCount > 1 ? " commentaires" : " commentaire") });
      if (p.showViews && post.views) parts.push({ cls: "views", text: post.views + " lectures" });
    } %>
-<div class="<%= cls %> is-<%= p.align %> sep-<%= p.separator %>"<%- attrs %>>
+<% const ALIGN = { left: "is-left", center: "is-center" }, SEP = { dot: "sep-dot", bar: "sep-bar", none: "sep-none" }; %>
+<div class="<%= cls %> <%= ALIGN[p.align] || "is-left" %> <%= SEP[p.separator] || "sep-dot" %>"<%- attrs %>>
   <% if (!post) { %><% if (isBuilder) { %><span class="kw-pm-note">Informations de l'article : visibles sur un modèle « Article du blog ».</span><% } %>
-  <% } else { parts.forEach((x) => { %><span class="kw-pm-item kw-pm-<%= x.cls %>"><% if (x.html) { %><%- x.html %><% } else { %><%= x.text %><% } %></span><% }) } %>
+  <% } else { parts.forEach((x) => { %><span class="kw-pm-item" data-part="<%= x.cls %>"><% if (x.html) { %><%- x.html %><% } else { %><%= x.text %><% } %></span><% }) } %>
 </div>

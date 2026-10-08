@@ -300,9 +300,10 @@
       link.setAttribute("aria-busy", "true");
       fetch(href, { credentials: "same-origin" }).then(function (r) { if (!r.ok) throw new Error(); return r.text(); }).then(function (html) {
         var doc = new DOMParser().parseFromString(html, "text/html");
-        var next = doc.querySelector('nav.kw-loop-pages[data-loop="' + nav.getAttribute("data-loop") + '"]');
+        var id = nav.getAttribute("data-loop");
         var grid = nav.parentElement;
-        var from = next ? next.parentElement : doc.querySelector('[data-loop-grid="' + nav.getAttribute("data-loop") + '"]');
+        var from = doc.querySelector(".kw-n-" + id);
+        var next = from ? from.querySelector('nav.kw-loop-pages[data-loop="' + id + '"]') : null;
         if (from) from.querySelectorAll(":scope > .kw-loop-item").forEach(function (it) { grid.insertBefore(document.importNode(it, true), nav); });
         var more = next && next.querySelector("a.kw-loop-more");
         if (more) { link.setAttribute("href", more.getAttribute("href")); link.removeAttribute("aria-busy"); busy = false; if (nav.getAttribute("data-mode") === "infinite") watch(); }
