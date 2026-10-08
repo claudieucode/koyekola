@@ -292,15 +292,27 @@ const boxTag = (p) => { const tag = oneOf(...BOX_TAGS)(p.tag); return tag && tag
 // Lien d'un conteneur : toute la zone devient cliquable (page du site, ancre ou https://). Nouvel onglet seulement pour https://.
 // Voir aussi INTERACTIVE_INSIDE_LINK : un lien ne peut pas en contenir un autre.
 // Boucle d'une grille : source, nombre, catégorie, tri, pagination, filtrage par l'adresse (?q=, ?categorie=). Valeurs bornées.
+const LEGACY_SORTS = { recent: ["date", "desc"], old: ["date", "asc"], title: ["title", "asc"], price: ["price", "asc"] };
+const EMPTY_LOOP = { posts: "Aucun article ne correspond.", courses: "Aucune formation ne correspond." };
 const loopProps = (p) => {
   const l = p.loop;
   if (!l || typeof l !== "object") return {};
-  const source = oneOf("posts", "courses")(l.source) || "posts";
-  const sorts = source === "posts" ? ["recent", "old", "title"] : ["recent", "title", "price"];
+  const query = require("./query");
+  const source = oneOf(...query.SOURCES.keys())(l.source) || "posts";
+  const sorts = source === "courses" ? ["recent", "title", "price"] : ["recent", "old", "title"];
+  const sort = oneOf(...sorts)(l.sort) || "recent";
+  // Réglages avancés (tri, filtres, pagination) : validés par le moteur de requêtes commun, jamais recopiés tels quels
+  const [orderby, order] = LEGACY_SORTS[sort];
+  const explicit = query.SOURCES.get(source).orderby.includes(l.orderby);
+  const q = query.normalizeQuery({ ...l, source, count: numberIn(1, query.MAX_COUNT, { integer: true })(l.count) || 6, orderby: explicit ? l.orderby : orderby, order: explicit ? l.order : order, categories: l.categories || (l.category ? [l.category] : undefined) });
+  const { source: _s, count: _c, offset, orderby: ob, order: od, pagination, ...filters } = q;
+  const paginate = l.paginate === true || pagination !== "none";
   return { loop: {
-    source, count: numberIn(1, 24, { integer: true })(l.count) || 6, category: line(l.category, 80), sort: oneOf(...sorts)(l.sort) || "recent",
-    ...(l.paginate === true ? { paginate: true } : {}), ...(l.urlFilter === true ? { urlFilter: true } : {}),
-    empty: line(l.empty, 160) || (source === "posts" ? "Aucun article ne correspond." : "Aucune formation ne correspond."),
+    source, count: q.count, category: line(l.category, 80), sort,
+    ...(explicit ? { orderby: ob, order: od } : {}), ...(offset ? { offset } : {}), ...filters,
+    ...(paginate ? { paginate: true, pagination: pagination !== "none" ? pagination : "numbers" } : {}),
+    ...(l.urlFilter === true ? { urlFilter: true } : {}),
+    empty: line(l.empty, 160) || EMPTY_LOOP[source] || "Aucun résultat ne correspond.",
   } };
 };
 // Adresse ou image : une étiquette dynamique seule (« {{post.url}} ») est acceptée telle quelle et revalidée à l'affichage

@@ -19,7 +19,19 @@
      (n.children || []).forEach((c) => { if (c.loopItem !== cur) { if (cur !== -1) { %></div><% } cur = c.loopItem; %><div class="kw-loop-item"><% } kidsOne(c); });
      if (cur !== -1) { %></div><% }
      if (info.empty) { %><p class="kw-dyn-empty kw-loop-empty"><%= info.message %></p><% }
-     if (info.paginate) { const link = (k) => `?${info.base ? info.base + "&" : ""}lp-${n.id}=${k}`; %><nav class="kw-loop-pages" aria-label="Pagination"><% if (info.pageNo > 1) { %><a rel="prev" href="<%= link(info.pageNo - 1) %>">‹ Précédent</a><% } %><span aria-current="page"><%= info.pageNo %> / <%= info.pages %></span><% if (info.pageNo < info.pages) { %><a rel="next" href="<%= link(info.pageNo + 1) %>">Suivant ›</a><% } %></nav><% }
+     if (info.paginate) {
+       const link = (k) => `?${info.base ? info.base + "&" : ""}lp-${n.id}=${k}`;
+       const mode = info.pagination || "numbers";
+       const prev = info.pageNo > 1 ? `<a rel="prev" href="${link(info.pageNo - 1)}">‹ Précédent</a>` : "", next = info.pageNo < info.pages ? `<a rel="next" href="${link(info.pageNo + 1)}">Suivant ›</a>` : "";
+       const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+       let inner = "";
+       if (mode === "prevnext") inner = prev + next;
+       else if (mode === "more" || mode === "infinite") inner = next ? `<a class="kw-loop-more" rel="next" href="${esc(link(info.pageNo + 1))}">Voir plus</a>` : "";
+       else if (mode === "both") { const pages = []; for (let k = 1; k <= info.pages; k++) if (k === 1 || k === info.pages || Math.abs(k - info.pageNo) <= 2) pages.push(k);
+         inner = prev + pages.map((k) => k === info.pageNo ? `<span aria-current="page">${k}</span>` : `<a href="${esc(link(k))}">${k}</a>`).join("") + next; }
+       else inner = prev + `<span aria-current="page">${info.pageNo} / ${info.pages}</span>` + next;
+       if (inner) { %><nav class="kw-loop-pages" aria-label="Pagination" data-loop="<%= n.id %>" data-mode="<%= mode %>"><%- inner %></nav><% }
+     }
    }; %>
 <% if (["container", "columns", "column", "grid", "stack", "group"].includes(n.type)) { const boxTag = ["section", "header", "footer", "article", "aside", "nav"].includes(p.tag) ? p.tag : "div"; const boxLink = p.link && !isBuilder ? p.link : ""; %>
   <% if (boxLink) { %><a class="kw-box-link" href="<%= href(boxLink) %>"<%- p.newTab ? ' target="_blank" rel="noopener noreferrer"' : "" %>><% } %><<%= boxTag %> class="<%= cls %><%= p.full ? " kw-full" : "" %><%= isBuilder && !(n.children || []).length ? " kw-is-empty" : "" %>"<%- attrs %>><% if (n.bgVideo) { %><video class="kw-bg-video" src="<%= n.bgVideo.src %>" autoplay muted loop playsinline preload="metadata" aria-hidden="true" tabindex="-1"></video><% } %><% if (isBuilder && !(n.children || []).length) { %><button type="button" class="kw-add" data-kw-add aria-label="Ajouter une structure ou un élément ici" title="Ajouter une structure ou un élément">+</button><% } %><% kids() %></<%= boxTag %>><% if (boxLink) { %></a><% } %>

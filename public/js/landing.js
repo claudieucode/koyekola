@@ -286,3 +286,36 @@
     if (render()) { var t = setInterval(function () { if (!render()) clearInterval(t); }, 1000); }
   });
 })();
+
+// Boucles : « Voir plus » et défilement infini. Sans JavaScript, le lien reste une vraie page suivante.
+(function () {
+  function bind(nav) {
+    var link = nav.querySelector("a.kw-loop-more");
+    if (!link || nav.getAttribute("data-bound")) return;
+    nav.setAttribute("data-bound", "1");
+    var busy = false;
+    function load() {
+      if (busy) return; busy = true;
+      var href = link.getAttribute("href");
+      link.setAttribute("aria-busy", "true");
+      fetch(href, { credentials: "same-origin" }).then(function (r) { if (!r.ok) throw new Error(); return r.text(); }).then(function (html) {
+        var doc = new DOMParser().parseFromString(html, "text/html");
+        var next = doc.querySelector('nav.kw-loop-pages[data-loop="' + nav.getAttribute("data-loop") + '"]');
+        var grid = nav.parentElement;
+        var from = next ? next.parentElement : doc.querySelector('[data-loop-grid="' + nav.getAttribute("data-loop") + '"]');
+        if (from) from.querySelectorAll(":scope > .kw-loop-item").forEach(function (it) { grid.insertBefore(document.importNode(it, true), nav); });
+        var more = next && next.querySelector("a.kw-loop-more");
+        if (more) { link.setAttribute("href", more.getAttribute("href")); link.removeAttribute("aria-busy"); busy = false; if (nav.getAttribute("data-mode") === "infinite") watch(); }
+        else nav.remove();
+      }).catch(function () { window.location.href = href; });
+    }
+    function watch() {
+      if (!("IntersectionObserver" in window)) return;
+      var io = new IntersectionObserver(function (es) { if (es[0].isIntersecting) { io.disconnect(); load(); } }, { rootMargin: "200px" });
+      io.observe(nav);
+    }
+    link.addEventListener("click", function (e) { e.preventDefault(); load(); });
+    if (nav.getAttribute("data-mode") === "infinite") watch();
+  }
+  document.querySelectorAll("nav.kw-loop-pages[data-mode]").forEach(bind);
+})();

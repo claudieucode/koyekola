@@ -223,14 +223,16 @@ function dynamicProps(ctx, n, visitor, page) {
 // Vue d'une formation pour les étiquettes dynamiques (scope.course) et les boucles
 const courseScope = (c) => ({ title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "", category: c.category || "", description: String(c.description || "").replace(/\s+/g, " ").trim().slice(0, 300) });
 // Éléments d'une boucle (grille « répéter pour chaque ») : une page de résultats, filtrée par l'adresse si demandé
-function loopQuery(ctx, loop, id, visitor) {
+function loopQuery(ctx, loop, id, visitor, scope) {
   const q = (visitor && visitor.query) || {};
   const pageNo = loop.paginate ? Math.max(1, Math.min(parseInt(q[`lp-${id}`], 10) || 1, 500)) : 1;
-  const search = loop.urlFilter && typeof q.q === "string" ? q.q.trim().slice(0, 80) : "";
-  const category = loop.urlFilter && typeof q.categorie === "string" && q.categorie.trim() ? q.categorie.trim().slice(0, 80) : loop.category;
-  const { queryPosts, queryCourses } = require("../bridge/catalog");
-  const r = (loop.source === "courses" ? queryCourses : queryPosts)({ ...ctx, baseUrl: loop.source === "courses" ? ctx.baseUrl : "" }, { limit: loop.count, offset: (pageNo - 1) * loop.count, category, search, sort: loop.sort });
-  return { items: r.items, total: r.total, pageNo, pages: Math.max(1, Math.ceil(r.total / loop.count)) };
+  const query = { ...loop, pagination: loop.paginate ? loop.pagination || "numbers" : "none" };
+  if (loop.urlFilter) {
+    if (typeof q.q === "string" && q.q.trim()) query.search = q.q.trim().slice(0, 80);
+    if (typeof q.categorie === "string" && q.categorie.trim()) query.categories = [q.categorie.trim().slice(0, 80)];
+  }
+  const r = require("../pages/query").runQuery(loop.source === "courses" ? ctx : { ...ctx, baseUrl: "" }, query, { pageNo, scope });
+  return { items: r.items, total: r.total, pageNo: r.pageNo, pages: r.pages };
 }
 function nodeView(ctx, nodes, visitor, page, scope) {
   scope = scope || baseScope(ctx, visitor, page);
@@ -240,13 +242,13 @@ function nodeView(ctx, nodes, visitor, page, scope) {
     if (n.type === "postcontent") return { ...n, props: { ...n.props, html: scope.post && scope.post.contentHtml ? scope.post.contentHtml : "" } };
     // Boucle : la grille répète ses enfants (le modèle) pour chaque résultat ; chaque copie reçoit son propre contexte
     if (n.type === "grid" && n.props && n.props.loop && n.children) {
-      const loop = n.props.loop, found = loopQuery(ctx, loop, n.id, visitor);
+      const loop = n.props.loop, found = loopQuery(ctx, loop, n.id, visitor, scope);
       const children = [];
       found.items.forEach((item, i) => {
-        const itemScope = { ...scope, ...(loop.source === "posts" ? { post: item } : { course: courseScope(item) }) };
+        const itemScope = { ...scope, ...{ [require("../pages/query").SOURCES.get(loop.source).scopeKey]: item } };
         nodeView(ctx, n.children, visitor, page, itemScope).forEach((c) => children.push({ ...c, loopItem: i }));
       });
-      return { ...n, children, loopInfo: { empty: !found.items.length, message: loop.empty, paginate: Boolean(loop.paginate) && found.pages > 1, pageNo: found.pageNo, pages: found.pages,
+      return { ...n, children, loopInfo: { empty: !found.items.length, message: loop.empty, paginate: Boolean(loop.paginate) && found.pages > 1, pagination: loop.pagination || "numbers", pageNo: found.pageNo, pages: found.pages,
         base: Object.entries((visitor && visitor.query) || {}).filter(([k]) => k !== `lp-${n.id}`).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&") } };
     }
     const dyn = dynamicProps(ctx, n, visitor, page);
