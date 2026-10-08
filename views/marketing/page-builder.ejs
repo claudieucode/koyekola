@@ -44,7 +44,8 @@
         <button type="button" class="pb-icon-btn" data-pb-toggle="grid" aria-pressed="false" data-tip="Grille de 12 colonnes" aria-label="Grille"><%- icon("columns", { size: 15 }) %></button>
         <button type="button" class="pb-icon-btn" data-pb-toggle="outlines" aria-pressed="false" data-tip="Contours de tous les éléments" aria-label="Contours des éléments"><%- icon("borderBox", { size: 15 }) %></button>
         <button type="button" class="pb-icon-btn" data-pb-toggle="rulers" aria-pressed="false" data-tip="Règles et guides (R)" aria-label="Règles"><%- icon("spacing", { size: 15 }) %></button>
-        <button type="button" class="pb-icon-btn" data-pb-toggle="snap" aria-pressed="true" data-tip="Magnétisme : redimensionner par pas de 8 px" aria-label="Magnétisme"><%- icon("grip", { size: 15 }) %></button>
+        <button type="button" class="pb-icon-btn" data-pb-toggle="snap" aria-pressed="true" data-tip="Magnétisme (Maj + M) : les tailles s'accrochent aux guides, à la grille et aux autres éléments. Alt : mouvement libre" aria-label="Magnétisme"><%- icon("grip", { size: 15 }) %></button>
+        <button type="button" class="pb-icon-btn" data-pb-rules-menu aria-haspopup="menu" aria-expanded="false" data-tip="Règles, guides et magnétisme : réglages" aria-label="Règles, guides et magnétisme : réglages"><%- icon("sliders", { size: 15 }) %></button>
       </div>
       <span class="pb-save" data-pb-save role="status" aria-live="polite"></span>
       <button type="button" class="pb-icon-btn" data-pb-command data-tip="Commandes (Ctrl/⌘ + K)" aria-label="Rechercher une commande"><%- icon("search", { size: 16 }) %></button>
@@ -178,6 +179,12 @@
     <div class="pb-layout-body" data-pb-layout-body></div>
   </dialog>
 
+  <%# Règles et magnétisme : fenêtre flottante, le canevas reste visible et suit chaque réglage %>
+  <dialog class="pb-navmgr pb-rules" data-pb-rules aria-labelledby="pb-rules-title">
+    <div class="pb-modal-head" data-pb-rules-head><h2 id="pb-rules-title">Règles et magnétisme</h2><span class="pb-modal-spacer"></span><button type="button" class="pb-icon-btn" data-pb-close aria-label="Fermer"><%- icon("close", { size: 16 }) %></button></div>
+    <div class="pb-navmgr-body pb-rules-body" data-pb-rules-body></div>
+  </dialog>
+
   <%# Réglages du menu de navigation (menu principal de l'éditeur) : fenêtre flottante, le canevas reste visible et se met à jour %>
   <dialog class="pb-navmgr" data-pb-navmgr aria-labelledby="pb-navmgr-title">
     <div class="pb-modal-head" data-pb-navmgr-head><h2 id="pb-navmgr-title">Réglages du menu de navigation</h2><span class="pb-modal-spacer"></span><button type="button" class="pb-icon-btn" data-pb-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></div>
@@ -212,8 +219,10 @@
   <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone", "sliders", "moreHorizontal", "listPlus", "listMinus", "undo", "redo", "sun", "moon"].concat(spec.types.map((t) => t.icon), spec.icons).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
   <script type="application/json" id="pb-boot"><%- boot %></script>
   <script src="<%= asset('/js/page-builder-effects.js') %>" defer></script>
+  <script src="<%= asset('/js/page-builder-snap.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-menu.js') %>" defer></script>
+  <script src="<%= asset('/js/page-builder-rules.js') %>" defer></script>
   <script src="<%= asset('/js/site-settings.js') %>" defer></script>
 </body>
 </html>
