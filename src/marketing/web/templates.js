@@ -232,7 +232,7 @@ module.exports = ({ db }) => {
         // multer lit le nom du fichier en latin-1 : « Bannière » arriverait en « BanniÃ¨re » ; on le relit en UTF-8
         const utf8 = Buffer.from(req.file.originalname, "latin1").toString("utf8");
         const originalName = utf8.includes("\uFFFD") ? req.file.originalname : utf8;
-        const saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype });
+        const saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype, allow: ["image", "pdf"] });
         res.status(201).json({ media: saved });
       } catch (error) {
         try { jsonError(res, error); } catch (e) { next(e); }

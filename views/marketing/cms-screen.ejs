@@ -89,40 +89,6 @@
       <% } %>
     <% } %>
 
-    <% if (typeof media !== "undefined" && media) { %>
-      <div class="mk-cms-media<%= media.selected ? ' has-detail' : '' %>">
-        <div>
-          <div class="mk-cms-viewswitch" role="group" aria-label="Affichage">
-            <a class="btn btn-outline btn-sm" href="<%= media.links.grille %>"<%- media.view === "grille" ? ' aria-current="true"' : "" %>>Grille</a>
-            <a class="btn btn-outline btn-sm" href="<%= media.links.liste %>"<%- media.view === "liste" ? ' aria-current="true"' : "" %>>Liste</a>
-          </div>
-          <% if (!media.items.length) { %>
-            <div class="mk-empty"><%- icon("image", { size: 32 }) %><h2><%= media.empty.title %></h2><p><%= media.empty.text %></p></div>
-          <% } else if (media.view === "liste") { %>
-            <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption class="sr-only">Fichiers</caption>
-              <thead><tr><th scope="col">Fichier</th><th scope="col">Type</th><th scope="col" class="mk-num">Taille</th><th scope="col">Source</th></tr></thead>
-              <tbody><% media.items.forEach((m) => { %><tr><th scope="row" data-label="Fichier"><a href="?<%= new URLSearchParams({ ...media.keep, sel: m.ref }) %>"><%= m.name %></a></th><td data-label="Type"><%= m.mime || m.type %></td><td class="mk-num" data-label="Taille"><%= media.size(m.size) %></td><td data-label="Source"><%= m.source %></td></tr><% }) %></tbody></table></div>
-          <% } else { %>
-            <ul class="mk-cms-grid" role="list"><% media.items.forEach((m) => { %>
-              <li><a class="mk-cms-thumb<%= media.selected && media.selected.ref === m.ref ? ' is-selected' : '' %>" href="?<%= new URLSearchParams({ ...media.keep, sel: m.ref }) %>" aria-label="<%= m.name %>">
-                <% if (m.mime && m.mime.indexOf("image/") === 0) { %><img src="<%= m.path %>" alt="<%= m.alt || '' %>" loading="lazy" width="160" height="120"><% } else { %><span class="mk-cms-thumb-file" aria-hidden="true"><%- icon(m.type === "videos" ? "video" : "fileText", { size: 28 }) %></span><% } %>
-                <span class="mk-cms-thumb-name"><%= m.name %></span></a></li>
-            <% }) %></ul>
-          <% } %>
-        </div>
-        <aside class="mk-panel mk-cms-detail" aria-label="Informations sur le fichier">
-          <% if (!media.selected) { %><h2>Informations</h2><p class="field-hint">Choisissez un fichier pour voir ses informations.</p>
-          <% } else { const s = media.selected; %>
-            <h2><%= s.name %></h2>
-            <% if (s.mime && s.mime.indexOf("image/") === 0) { %><img class="mk-cms-detail-img" src="<%= s.path %>" alt="<%= s.alt || '' %>"><% } %>
-            <dl class="mk-cms-dl"><dt>Type</dt><dd><%= s.mime || "—" %></dd><dt>Taille</dt><dd><%= media.size(s.size) %></dd>
-              <% if (s.width) { %><dt>Dimensions</dt><dd><%= s.width %> × <%= s.height %> px</dd><% } %><dt>Source</dt><dd><%= s.source %></dd><dt>Ajouté le</dt><dd><%= String(s.createdAt).slice(0, 10) %></dd><dt>Adresse</dt><dd class="mk-cms-break"><%= s.path %></dd></dl>
-            <a class="btn btn-ghost btn-sm" href="?<%= new URLSearchParams(media.keep) %>">Fermer</a>
-          <% } %>
-        </aside>
-      </div>
-    <% } %>
-
     <% if (typeof tree !== "undefined" && tree) { %>
       <div class="mk-cms-split">
         <section class="mk-panel" aria-labelledby="nav-pick"><h2 id="nav-pick"><%= tree.pickerTitle %></h2><p class="field-hint"><%= tree.pickerHint %></p>

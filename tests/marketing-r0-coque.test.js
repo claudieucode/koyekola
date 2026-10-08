@@ -30,7 +30,9 @@ describe("registre de navigation", () => {
       for (const m of src.matchAll(/active: "([a-z]+)"/g)) used.add(m[1]);
     }
     assert.ok(used.size >= 12, `seulement ${used.size} clés trouvées`);
-    assert.deepEqual([...used].filter((k) => !ITEMS.some((i) => i.key === k)), []);
+    // Les écrans du CMS (Site Web) sont rattachés au registre de navigation du CMS (cmsNav.js), les autres à celui du Marketing
+    const cms = require("../src/marketing/web/cmsNav").ALL;
+    assert.deepEqual([...used].filter((k) => !ITEMS.some((i) => i.key === k) && !cms.some((i) => i.key === k)), []);
   });
   test("les fonctionnalités futures sont prévues au registre mais JAMAIS affichées ; « Domaines » est désormais en service", () => {
     const future = ITEMS.filter((i) => i.status === "soon").map((i) => i.label);

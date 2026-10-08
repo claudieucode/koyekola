@@ -28,7 +28,7 @@ const SECTIONS = [
       leaf("articles/auteurs", "Auteurs", `${BASE}/articles/auteurs`),
     ],
   },
-  { key: "mediatheque", label: "Médias", icon: "image", items: [leaf("mediatheque", "Médias", `${BASE}/mediatheque`)] },
+  { key: "mediatheque", label: "Médias", icon: "image", items: [leaf("mediatheque", "Médias", `${BASE}/mediatheque`, { permission: "media.read" })] },
   { key: "navigation", label: "Navigation", icon: "menu", items: [leaf("navigation", "Navigation", `${BASE}/navigation`, { status: "preview" })] },
   {
     key: "apparence", label: "Apparence", icon: "palette", items: [
@@ -111,7 +111,7 @@ const itemOf = (key) => ALL.find((i) => i.key === key) || null;
 const isCmsKey = (key) => ALL.some((i) => i.key === key);
 
 // Clés servies par le routeur générique des écrans CMS (cmsScreens) : celles dont la route n'existe pas déjà ailleurs.
-const GENERIC_SECTIONS = ["articles", "mediatheque", "navigation", "apparence", "commentaires", "utilisateurs", "seo", "redirections", "outils", "parametres"];
+const GENERIC_SECTIONS = ["articles", "navigation", "apparence", "commentaires", "utilisateurs", "seo", "redirections", "outils", "parametres"];
 
 // Menu affiché pour un rôle : uniquement les entrées permises ; une section à une seule entrée devient un lien direct.
 function buildCmsNav({ can, active }) {

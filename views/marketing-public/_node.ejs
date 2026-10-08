@@ -37,7 +37,7 @@
   <figure class="<%= cls %>"<%- attrs %>><% if (p.link) { %><a href="<%= href(p.link) %>"<%- p.newTab ? ' target="_blank" rel="noopener noreferrer"' : "" %>><%- imgTag %></a><% } else { %><%- imgTag %><% } %><% if (p.caption) { %><figcaption><%= p.caption %></figcaption><% } %></figure>
 <% } else if (n.type === "gallery") { %>
   <div class="<%= cls %><%= p.masonry ? " is-masonry" : "" %>"<% if (p.lightbox) { %> data-kw-lightbox<% } %><%- attrs %>><% p.images.forEach((im) => { const img = `<img src="${esc(im.src)}" alt="${esc(im.alt)}" loading="lazy" decoding="async">`; %><figure class="kw-gallery-item"><% if (im.link) { %><a href="<%= href(im.link) %>"><%- img %></a><% } else if (p.lightbox) { %><a href="<%= im.src %>" class="kw-lb-open" aria-label="Agrandir : <%= im.alt %>"><%- img %></a><% } else { %><%- img %><% } %><% if (im.caption) { %><figcaption><%= im.caption %></figcaption><% } %></figure><% }) %></div>
-<% } else if (n.type === "video") { const v = parseVideoUrl(p.url);
+<% } else if (n.type === "video") { const v = parseVideoUrl(p.url) || (/^\/uploads\/marketing\/\d+\/[A-Za-z0-9._-]+\.(mp4|webm)$/i.test(p.url || "") ? { kind: "file", src: p.url } : null);
      // Options de lecture : attributs pour un fichier, paramètres du lecteur pour YouTube / Vimeo
      const yt = v && v.kind === "youtube", ytId = yt ? (v.src.match(/\/embed\/([^?]+)/) || [])[1] : null;
      const q = [p.autoplay ? "autoplay=1" : "", p.muted ? (yt ? "mute=1" : "muted=1") : "", p.loop ? "loop=1" + (yt ? `&playlist=${ytId}` : "") : "", p.controls === false ? "controls=0" : "", p.autoplay && yt ? "playsinline=1" : ""].filter(Boolean).join("&");

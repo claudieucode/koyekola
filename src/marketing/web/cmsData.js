@@ -57,24 +57,6 @@ function listComments(db, { q, limit = 500 } = {}) {
 }
 const commentCount = (db) => safe(() => db.prepare("SELECT COUNT(*) n FROM blog_comments").get().n, 0);
 
-// ---------- Médias : médiathèque marketing (mk_media) + médiathèque du site (media) ----------
-const MEDIA_TYPES = { images: "Images", videos: "Vidéos", audio: "Audio", documents: "Documents", pdf: "PDF" };
-function listMedia(ctx, { type, q, limit = 600 } = {}) {
-  const db = ctx.db;
-  const items = [];
-  safe(() => db.prepare("SELECT id, kind, path, name, mime, size, width, height, alt, created_at FROM mk_media WHERE organization_id = ? ORDER BY id DESC LIMIT ?").all(ctx.organizationId, limit)
-    .forEach((m) => items.push({ ref: `mk-${m.id}`, source: "Médiathèque marketing", name: m.name, path: m.path, mime: m.mime, size: m.size, width: m.width, height: m.height, alt: m.alt, createdAt: m.created_at, type: m.mime === "application/pdf" ? "pdf" : m.kind === "document" ? "documents" : "images" })), null);
-  safe(() => db.prepare("SELECT id, kind, path, title, mime, size, width, height, alt, created_at FROM media ORDER BY id DESC LIMIT ?").all(limit)
-    .forEach((m) => items.push({ ref: `site-${m.id}`, source: "Médiathèque du site", name: m.title || String(m.path).split("/").pop(), path: m.path, mime: m.mime, size: m.size, width: m.width, height: m.height, alt: m.alt, createdAt: m.created_at, type: m.kind === "video" ? "videos" : m.kind === "audio" ? "audio" : "images" })), null);
-  const counts = Object.fromEntries(Object.keys(MEDIA_TYPES).map((k) => [k, 0]));
-  // « Documents » regroupe tous les fichiers non multimédias, PDF compris
-  items.forEach((m) => { counts[m.type]++; if (m.type === "pdf") counts.documents++; });
-  const needle = String(q || "").toLowerCase();
-  const shown = items.filter((m) => (!type || m.type === type || (type === "documents" && m.type === "pdf")) && (!needle || m.name.toLowerCase().includes(needle)));
-  items.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-  return { items: shown.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))), counts, total: items.length };
-}
-
 // ---------- Utilisateurs de l'équipe (mk_org_members) ----------
 const ROLE_LABEL = { owner: "Propriétaire", admin: "Administrateur", editor: "Éditeur", viewer: "Lecteur" };
 const ROLE_TEXT = {
@@ -132,5 +114,5 @@ function overview(ctx) {
 
 module.exports = {
   POST_STATES, POST_STATUS, postCounts, listPosts, categories, tags, authors, listComments, commentCount,
-  MEDIA_TYPES, listMedia, ROLE_LABEL, ROLE_TEXT, listTeam, roleMatrix, listRedirects, list404, seoCounts, pagesSeo, auditLog, listBackups, overview,
+  ROLE_LABEL, ROLE_TEXT, listTeam, roleMatrix, listRedirects, list404, seoCounts, pagesSeo, auditLog, listBackups, overview,
 };

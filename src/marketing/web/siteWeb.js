@@ -220,7 +220,7 @@ module.exports = () => {
         const utf8 = Buffer.from(req.file.originalname, "latin1").toString("utf8");
         const originalName = utf8.includes("\uFFFD") ? req.file.originalname : utf8;
         if (media.sniff(req.file.buffer) && media.sniff(req.file.buffer).kind !== "image") throw new MarketingError("invalid_field", "Une page affiche des images : JPEG, PNG, GIF ou WebP. Un PDF se partage par un lien.");
-        let saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype });
+        let saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype, allow: ["image"] });
         if (req.body && typeof req.body.alt === "string" && req.body.alt.trim()) saved = media.updateMedia(req.mk.ctx, saved.id, { alt: req.body.alt });
         res.status(201).json({ media: marketingItem(saved) });
       } catch (error) { mediaError(res, next, error); }
