@@ -153,6 +153,8 @@
 .kw-stack { display: flex; flex-direction: column; gap: 12px; }
 .kw-group { display: flex; flex-direction: column; gap: 12px; }
 .kw-node { min-width: 0; }
+/* Contraintes web : un média ne dépasse jamais son parent (priorité minimale : une largeur voulue dans l'inspecteur l'emporte toujours) */
+:where(.kw-node) :is(img, video, canvas, iframe, embed, object) { max-width: 100%; }
 .kw-heading { margin: 0; overflow-wrap: anywhere; }
 .kw-text > :first-child { margin-top: 0; }
 .kw-text > :last-child { margin-bottom: 0; }

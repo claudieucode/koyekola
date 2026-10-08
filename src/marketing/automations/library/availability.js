@@ -7,15 +7,15 @@
 const { TRIGGERS } = require("../catalog");
 const { UNITS, MAX_STEPS } = require("../steps");
 const smsRender = require("../../sms/render");
-const { getSmsConfig } = require("../../sms/config");
+const { checkCapability } = require("../actions/capabilities");
 
 const MAX_WAIT_MS = 365 * 86400000;
 const EVENT_NAME = /^[a-z][a-z0-9_.]{1,63}$/;
 const MAX_SMS_BODY = 1600;
 const LMS_EVENTS = new Set(Object.keys(TRIGGERS).filter((k) => k.startsWith("lms.")));
 const EVENT_CMPS = new Set(["happened", "never", "at_least", "within_days", "not_within_days"]);
-const COURSE_EVENTS = new Set(["lms.course_enrolled", "lms.lesson_completed", "lms.course_completed", "lms.review_posted", "lms.favorite_added"]);
-const STEP_TYPES = new Set(["email", "sms", "wait", "wait_for_event", "condition", "split", "update_field", "add_tag", "remove_tag", "add_to_list", "remove_from_list", "end"]);
+const COURSE_EVENTS = new Set(["lms.course_enrolled", "lms.lesson_completed", "lms.course_completed", "lms.review_posted", "lms.favorite_added", "lms.course_viewed", "lms.cart_added", "lms.course_progress_10", "lms.course_progress_50", "lms.course_progress_90"]);
+const STEP_TYPES = new Set(require("../actions").actionTypes()); // source unique : le registre des actions
 
 // Libellés de statut (interface) : « usable » = peut être créé par « Utiliser ce parcours »
 const STATUSES = {
@@ -150,12 +150,7 @@ function requirements(j, env) {
 
 // Environnement vivant (une fois par page) : fournisseur SMS réglé ?
 function environment(ctx, { workerOn } = {}) {
-  let smsReady = false;
-  try {
-    const cfg = getSmsConfig(ctx);
-    smsReady = cfg.provider !== "console" && Boolean(cfg.sender && cfg.accountSid && cfg.authTokenSet);
-  } catch { smsReady = false; }
-  return { smsReady, workerOn };
+  return { smsReady: checkCapability(ctx, "sms_provider").ok, workerOn };
 }
 
 // → { status, label, usable, problems, missing[], requirements[] }

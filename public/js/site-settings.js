@@ -169,6 +169,22 @@
   }
   function numberField(spec) {
     var v = getPath(spec.path);
+    var N = window.KWNumeric;
+    // Même NumericControl que l'éditeur (saisie, ▲▼, flèches du clavier, bornes) ; repli sur un champ simple s'il manque
+    if (N) {
+      var ctl = N.create({ label: spec.label, min: spec.min, max: spec.max, step: spec.step || 1, precision: spec.precision, value: v === null || v === undefined ? "" : v, placeholder: spec.nullable ? "Par défaut" : "", staticUnit: spec.unit || null, allowEmpty: Boolean(spec.nullable), disabled: !state.canWrite, drag: false, live: true,
+        onCommit: function (raw) {
+          var val = raw === "" ? (spec.nullable ? null : getPath(spec.path)) : Number(raw);
+          if (raw !== "" && !isFinite(val)) return false;
+          if (val === getPath(spec.path)) return;
+          change(function () { setPath(spec.path, val); });
+        } });
+      var nw = fieldWrap(spec, ctl);
+      ctl.removeAttribute("id");
+      ctl.input.id = "ss-n-" + (++uid);
+      nw.querySelector("label").setAttribute("for", ctl.input.id);
+      return nw;
+    }
     var input = h("input", { type: "number", min: spec.min, max: spec.max, step: spec.step || 1, value: v === null || v === undefined ? "" : String(v), placeholder: spec.nullable ? "Par défaut" : null, disabled: !state.canWrite, inputmode: "decimal" });
     input.addEventListener("input", function () {
       var raw = input.value.trim();

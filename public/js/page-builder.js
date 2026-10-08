@@ -177,7 +177,8 @@
   function change(fn, opts) {
     opts = opts || {};
     if (!canWrite) return false;
-    var before = snapshot();
+    // Même clé que la modification précédente (frappes, glissement de curseur) : pas de nouvelle copie du document
+    var before = opts.key && opts.key === lastKey ? null : snapshot();
     var label = opts.label || nextLabel || "Modification";
     nextLabel = null;
     if (fn() === false) return false;
@@ -700,6 +701,22 @@
       });
     }, { key: opts && opts.key ? opts.key + ":" + device + ":" + styleState : null, light: opts && opts.light, label: "Style : " + Object.keys(map).map(function (k) { return SP[k] ? SP[k].label : COMPOSED_LABEL[k] || k; }).slice(0, 2).join(", ") + (device !== "desktop" ? " (" + bpLabel(device) + ")" : "") });
   }
+  // Largeur du contenu d'un conteneur : « full » (propriété) et « maxWidth » (style de l'écran affiché) changent ENSEMBLE, en une seule étape d'annulation
+  function setContainerWidth(id, mode, customValue) {
+    if (lockedDeep(id)) { toast("Élément verrouillé.", true); return; }
+    change(function () {
+      var it = byId(id);
+      if (!it) return false;
+      it.props = it.props || {};
+      var inherited = inheritedValue(it, "maxWidth") !== undefined;
+      if (mode === "full") it.props.full = true; else delete it.props.full;
+      var set = styleSet(it, device, "normal", mode === "custom" || inherited);
+      if (mode === "custom") set.maxWidth = customValue;
+      else if (inherited) set.maxWidth = mode === "full" ? "100%" : "1100px"; // écran plus petit qui hérite d'une largeur personnalisée : on la remplace explicitement
+      else if (set) delete set.maxWidth;
+      cleanStyles(it);
+    }, { label: "Largeur du contenu" });
+  }
   function setProp(id, key, value, opts) {
     if (lockedDeep(id)) { toast("Élément verrouillé.", true); return; }
     change(function () {
@@ -710,13 +727,14 @@
   }
   // Valeurs saisies : « 24 » → « 24px » ; vérification avant envoi (le serveur revérifie)
   var LEN = /^-?\d{1,4}(\.\d{1,3})?(px|%|rem|em|vh|vw)$/;
+  var SIGNED_LEN = /^(margin|top|left|right|bottom|letterSpacing|wordSpacing|textIndent)/;
   function parseLength(v, key) {
     var s = String(v || "").trim().toLowerCase().replace(",", ".");
     if (!s) return "";
     if (/^-?\d{1,4}(\.\d{1,3})?$/.test(s)) s = s === "0" ? "0" : s + "px";
     if (s === "auto") return ["width", "height", "flexBasis", "marginTop", "marginRight", "marginBottom", "marginLeft"].indexOf(key) >= 0 ? s : null;
     if (s === "0" || LEN.test(s)) {
-      if (/^-/.test(s) && !/^(margin|top|left|letterSpacing)/.test(key)) return null;
+      if (/^-/.test(s) && !SIGNED_LEN.test(key)) return null;
       return s;
     }
     return null;
@@ -1299,6 +1317,15 @@
     input.addEventListener(opts.onChange ? "change" : "input", function () { onInput(input.value); });
     return h("div", { class: "pb-field" }, h("label", { for: id, text: label }), input, opts.hint ? h("p", { class: "pb-hint", text: opts.hint }) : null);
   }
+  // Champ numérique d'un contenu (pas d'un style) : même NumericControl que l'inspecteur de style
+  function numberField(label, value, cfg, apply, hint) {
+    var id = fid();
+    var ctl = numericControl(Object.assign({ id: id, label: label, value: value === undefined || value === null ? "" : value, drag: true, placeholder: "" }, cfg, {
+      onCommit: function (raw, u, opts) { if (raw === "") return cfg.allowEmpty === false ? false : apply(null, opts); return apply(Number(raw), opts); } }));
+    var lab = h("label", { for: id, text: label });
+    if (ctl.scrub) ctl.scrub(lab);
+    return h("div", { class: "pb-field" }, lab, ctl, hint ? h("p", { class: "pb-hint", text: hint }) : null);
+  }
   function selectField(label, value, options, onChange, opts) {
     opts = opts || {};
     var id = fid();
@@ -1325,7 +1352,7 @@
     (NT[it.type].schema || []).forEach(function (f) {
       var set = function (v, light) { setProp(it.id, f.key, v, light ? { key: it.id + ":" + f.key, light: true } : null); };
       if (f.kind === "text" || f.kind === "textarea" || f.kind === "link") box.appendChild(textField(f.label + (f.required ? "" : ""), p[f.key], function (v) { set(v, true); }, { max: f.max || (f.kind === "textarea" ? 1000 : f.kind === "link" ? 500 : 200), multiline: f.kind === "textarea", list: f.kind === "link" ? "pb-links" : null, placeholder: f.kind === "link" ? "/catalogue, /p/…, #ancre ou https://…" : null, disabled: disabled }));
-      else if (f.kind === "number") box.appendChild(textField(f.label, p[f.key] === undefined ? "" : String(p[f.key]), function (v) { set(Number(v)); }, { type: "number", onChange: true, disabled: disabled, hint: "Entre " + f.min + " et " + f.max + "." }));
+      else if (f.kind === "number") box.appendChild(numberField(f.label, p[f.key], { min: f.min, max: f.max, step: f.step || 1, integer: f.integer || Number.isInteger(f.min) && Number.isInteger(f.max) && !f.step, disabled: disabled }, function (n, opts) { if (n === null) return false; setProp(it.id, f.key, n, opts && opts.light ? { key: opts.key, light: true } : null); }, "Entre " + f.min + " et " + f.max + "."));
       else if (f.kind === "select") box.appendChild(selectField(f.label, p[f.key], f.options, function (v) { set(v); }, { disabled: disabled }));
       else if (f.kind === "bool") box.appendChild(checkField(f.label, p[f.key] === true, function (v) { set(v); }, { disabled: disabled }));
       else if (f.kind === "image") {
@@ -1442,7 +1469,7 @@
         break;
       case "progress":
         box.appendChild(textField("Libellé", p.label, set("label"), { max: 80, disabled: disabled }));
-        box.appendChild(textField("Valeur (0 à 100)", String(p.value), function (v) { var n = Math.round(Number(v)); if (!isFinite(n) || n < 0 || n > 100) { toast("Valeur entre 0 et 100.", true); return; } setProp(it.id, "value", n, { key: it.id + ":value", light: true }); }, { type: "number", disabled: disabled, hint: "Une donnée réelle (par ex. places réservées) ; ne pas inventer de chiffre." }));
+        box.appendChild(numberField("Valeur (0 à 100)", p.value, { min: 0, max: 100, step: 1, integer: true, slider: [0, 100], allowEmpty: false, staticUnit: "%", disabled: disabled }, function (n, opts) { if (n === null) return false; setProp(it.id, "value", n, opts && opts.light ? { key: opts.key || it.id + ":value", light: true } : null); }, "Une donnée réelle (par ex. places réservées) ; ne pas inventer de chiffre."));
         box.appendChild(checkField("Afficher la valeur en %", p.showValue !== false, function (v) { setProp(it.id, "showValue", v); }, { disabled: disabled }));
         box.appendChild(checkField("Remplir la barre à l'apparition (animation)", p.animate, function (v) { setProp(it.id, "animate", v); }, { disabled: disabled }));
         break;
@@ -1632,8 +1659,8 @@
             textField("Point " + (i + 1) + " : titre", sp.title, function (v) { change(function () { byId(it.id).props.spots[i].title = v; }, { key: it.id + ":spt" + i, light: true }); }, { max: 80, disabled: disabled }),
             textField("Texte", sp.text, function (v) { change(function () { byId(it.id).props.spots[i].text = v; }, { key: it.id + ":spx" + i, light: true }); }, { max: 300, disabled: disabled }),
             h("div", { class: "pb-grid-2" },
-              textField("Position horizontale (%)", String(sp.x), function (v) { var n = Number(v); if (!isFinite(n) || n < 0 || n > 100) return; change(function () { byId(it.id).props.spots[i].x = n; }, { key: it.id + ":spX" + i, light: true }); }, { type: "number", disabled: disabled }),
-              textField("Position verticale (%)", String(sp.y), function (v) { var n = Number(v); if (!isFinite(n) || n < 0 || n > 100) return; change(function () { byId(it.id).props.spots[i].y = n; }, { key: it.id + ":spY" + i, light: true }); }, { type: "number", disabled: disabled })),
+              numberField("Position horizontale (%)", sp.x, { min: 0, max: 100, step: 1, precision: 1, staticUnit: "%", allowEmpty: false, disabled: disabled }, function (n, opts) { if (n === null) return false; change(function () { byId(it.id).props.spots[i].x = n; }, opts && opts.light ? { key: opts.key, light: true } : null); }),
+              numberField("Position verticale (%)", sp.y, { min: 0, max: 100, step: 1, precision: 1, staticUnit: "%", allowEmpty: false, disabled: disabled }, function (n, opts) { if (n === null) return false; change(function () { byId(it.id).props.spots[i].y = n; }, opts && opts.light ? { key: opts.key, light: true } : null); })),
             h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled, onclick: function () { change(function () { byId(it.id).props.spots.splice(i, 1); }); } }, "Retirer ce point")));
         });
         box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled || (p.spots || []).length >= 12, onclick: function () { change(function () { var x = byId(it.id).props; x.spots = (x.spots || []).concat({ x: 50, y: 50, title: "Nouveau point", text: "" }); }); } }, "Ajouter un point"));
@@ -1998,7 +2025,7 @@
   var UNITS = {
     width: ["px", "%", "rem", "vw", "auto"], height: ["px", "%", "rem", "vh", "auto"], flexBasis: ["px", "%", "rem", "auto"],
     minWidth: ["px", "%", "rem", "vw"], maxWidth: ["px", "%", "rem", "vw"], minHeight: ["px", "%", "rem", "vh"], maxHeight: ["px", "%", "rem", "vh"],
-    gap: ["px", "rem", "em", "%"], rowGap: ["px", "rem", "em", "%"], columnGap: ["px", "rem", "em", "%"], fontSize: ["px", "rem", "em"], letterSpacing: ["px", "em"], borderWidth: ["px"], borderTopWidth: ["px"], borderRightWidth: ["px"], borderBottomWidth: ["px"], borderLeftWidth: ["px"],
+    gap: ["px", "rem", "em", "%"], rowGap: ["px", "rem", "em", "%"], columnGap: ["px", "rem", "em", "%"], fontSize: ["px", "em", "rem", "vw"], letterSpacing: ["px", "em", "rem"], wordSpacing: ["px", "em", "rem"], textIndent: ["px", "em", "rem", "%"], borderWidth: ["px"], borderTopWidth: ["px"], borderRightWidth: ["px"], borderBottomWidth: ["px"], borderLeftWidth: ["px"],
     borderRadius: ["px", "%", "rem"], borderTopLeftRadius: ["px", "%", "rem"], borderTopRightRadius: ["px", "%", "rem"], borderBottomRightRadius: ["px", "%", "rem"], borderBottomLeftRadius: ["px", "%", "rem"],
     top: ["px", "%", "rem"], left: ["px", "%", "rem"], right: ["px", "%", "rem"], bottom: ["px", "%", "rem"],
   };
@@ -2022,10 +2049,187 @@
       write(Math.round((read() + d) * 1000) / 1000);
     });
   }
+  // ---------- NumericControl : l'UNIQUE infrastructure des champs numériques de l'éditeur ----------
+  // Chaque champ (taille, marge, opacité, rotation, filtre, ombre…) n'est qu'une CONFIGURATION de cette fonction :
+  //   { id, label, value, placeholder, min, max, step (nombre ou fonction de l'unité), precision, integer,
+  //     units (liste), unit (courante), staticUnit (texte fixe), inlineUnit (l'unité se tape avec le nombre : cases de marge),
+  //     allowEmpty, slider ([min, max] ou fonction de l'unité), drag, disabled, base (valeur de départ si vide),
+  //     onCommit(texteNombre | "", unité, opts) → false si refusé }
+  // Saisie, ▲▼, flèches du clavier, curseur et glissement passent tous par onCommit : un seul chemin vers le modèle, donc vers
+  // l'historique (annuler / rétablir), l'enregistrement et le rendu. Un clic ▲▼ ou une touche = une étape d'annulation ;
+  // un glissement ou un déplacement de curseur = UNE étape (même clé), et le document n'est copié qu'une fois par geste.
+  var ncSeq = 0;
+  function numericControl(c) {
+    var units = c.units && c.units.length ? c.units.slice() : null;
+    var min = c.min === undefined ? -Infinity : c.min, max = c.max === undefined ? Infinity : c.max;
+    var prec = c.precision === undefined ? 3 : c.precision;
+    var unitState = c.unit || (units ? units[0] : "");
+    if (units && unitState && units.indexOf(unitState) < 0) units.push(unitState);
+    var stepOf = function (u) { return typeof c.step === "function" ? c.step(u) : (c.step || 1); };
+    var rnd = function (n) { if (c.integer) return Math.round(n); var f = Math.pow(10, prec); return Math.round(n * f) / f; };
+    var clamp = function (n) { return Math.min(max, Math.max(min, n)); };
+    var shown = function (n, u) { return c.inlineUnit && u && u !== "px" ? n + u : String(n); };
+    var input = h("input", { id: c.id, type: "text", inputmode: "decimal", class: "pb-len-num", value: c.value === undefined || c.value === null ? "" : String(c.value), placeholder: c.placeholder === undefined ? "–" : String(c.placeholder), disabled: c.disabled || unitState === "auto", autocomplete: "off", "data-prop": c.prop || null, "aria-label": c.ariaLabel || null, "data-tip": c.tip || null });
+    if (c.inputClass) input.className = c.inputClass;
+    if (c.list) input.setAttribute("list", c.list);
+    var sel = null;
+    if (units && !c.inlineUnit) {
+      if (units.length > 1) { sel = h("select", { class: "pb-len-unit", "aria-label": (c.label || "Valeur") + " : unité", disabled: c.disabled }, units.map(function (u) { return h("option", { value: u, text: u }); })); sel.value = unitState; }
+    }
+    var unitNow = function () {
+      if (c.inlineUnit) { var m = /(px|%|rem|em|vh|vw|auto)$/i.exec(input.value.trim()); return m ? m[1].toLowerCase() : unitState; }
+      return sel ? sel.value : unitState;
+    };
+    var invalid = function (msg) { input.setAttribute("aria-invalid", "true"); toast((c.label || "Valeur") + " : " + msg, true); return false; };
+    // Nombre affiché (ou valeur héritée en grisé, ou point de départ) ; jamais NaN
+    var read = function () {
+      var v = parseFloat(String(input.value).replace(",", "."));
+      if (!isFinite(v)) v = parseFloat(String(input.placeholder).replace(",", "."));
+      if (!isFinite(v)) v = c.base !== undefined ? c.base : 0;
+      return v;
+    };
+    var stat = c.staticUnit || (units && units.length === 1 && !c.inlineUnit ? units[0] : "");
+    var range = null;
+    var rangeOf = function (u) { var r = typeof c.slider === "function" ? c.slider(u) : c.slider; return r && r.length === 2 ? r : null; };
+    var syncRange = function () {
+      if (!range) return;
+      var r = rangeOf(unitNow());
+      range.hidden = !r;
+      if (!r) return;
+      range.min = String(r[0]); range.max = String(r[1]); range.step = String(stepOf(unitNow()));
+      range.value = String(read());
+    };
+    var mark = function (on) { var row = input.closest ? input.closest(".pb-prop") : null; if (row) row.classList.toggle("is-set", on); };
+    var send = function (n, u, opts) {
+      var ok = c.onCommit(n === "" ? "" : String(n), u, opts);
+      if (ok === false) return false;
+      input.removeAttribute("aria-invalid");
+      mark(n !== "" || u === "auto");
+      return true;
+    };
+    // Saisie validée (Entrée / sortie du champ) : « 32 », « 2rem » (si l'unité existe pour cette propriété), ou vide
+    var commit = function (opts) {
+      var u = unitNow();
+      var raw = input.value.trim().replace(",", ".");
+      if (u === "auto") { input.value = ""; input.placeholder = "auto"; send("", "auto", opts); return true; }
+      if (/^auto$/i.test(raw)) { if (units && units.indexOf("auto") >= 0) { if (sel) sel.value = "auto"; else unitState = "auto"; send("", "auto", opts); return true; } return invalid("« auto » n'est pas possible ici."); }
+      if (raw === "") { if (c.allowEmpty === false) return invalid("une valeur est nécessaire."); send("", u, opts); syncRange(); return true; }
+      var m = (units ? /^(-?\d*\.?\d+)\s*(px|%|rem|em|vh|vw)?$/i : /^(-?\d*\.?\d+)$/).exec(raw);
+      if (!m) return invalid(units ? "nombre attendu (ex. 24, 50 %, 2rem)." : "nombre attendu.");
+      if (m[2]) {
+        var tu = m[2].toLowerCase();
+        if (units.indexOf(tu) < 0) return invalid("l'unité « " + tu + " » n'existe pas pour ce réglage (" + units.filter(function (x) { return x !== "auto"; }).join(", ") + ").");
+        u = tu; if (sel) sel.value = tu; else unitState = tu;
+      }
+      var typed = parseFloat(m[1]);
+      // Saisie hors bornes : refusée avec la plage permise (les flèches, le curseur et le glissement, eux, s'arrêtent aux bornes)
+      if (typed < min || typed > max) return invalid(isFinite(min) && isFinite(max) ? "entre " + min + " et " + max + "." : isFinite(max) ? max + " au plus." : min + " au moins.");
+      var n = rnd(typed);
+      input.value = shown(n, u);
+      if (u === "auto") u = units[0];
+      if (send(n, u, opts) === false) return false;
+      syncRange();
+      return true;
+    };
+    // Un pas (flèches ▲▼, clavier, glissement) : repart de la valeur affichée ou héritée
+    var bump = function (steps, opts) {
+      if (c.disabled) return;
+      var u = unitNow();
+      if (u === "auto") { u = units.filter(function (x) { return x !== "auto"; })[0] || "px"; if (sel) sel.value = u; else unitState = u; input.disabled = false; }
+      var n = rnd(clamp(read() + steps * stepOf(u)));
+      input.value = shown(n, u);
+      input.removeAttribute("aria-invalid");
+      send(n, u, opts);
+      syncRange();
+    };
+    input.addEventListener("change", function () { commit(); });
+    // Mode « direct » (panneau Réglages du site) : chaque frappe valide est appliquée tout de suite, sans message tant que la saisie est incomplète
+    if (c.live) input.addEventListener("input", function () {
+      var raw = input.value.trim().replace(",", ".");
+      if (!/^-?\d*\.?\d+$/.test(raw)) return;
+      var n = parseFloat(raw);
+      if (n < min || n > max) return;
+      send(rnd(n), unitNow(), { light: true });
+    });
+    var burst = 0;
+    input.addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      e.preventDefault(); e.stopPropagation(); // pas de déplacement de l'élément sélectionné dans le canevas
+      if (!e.repeat) burst = ++ncSeq;
+      bump((e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 10 : e.altKey ? 0.1 : 1), { key: e.repeat ? "step:" + c.id + ":" + burst : null, light: true });
+    });
+    if (sel) sel.addEventListener("change", function () {
+      input.disabled = Boolean(c.disabled) || sel.value === "auto";
+      if (sel.value === "auto" || input.value.trim() !== "") commit(); else { input.focus(); syncRange(); }
+    });
+    // ▲▼ : deux vrais boutons compacts (hors de l'ordre de tabulation : le clavier a déjà les flèches)
+    var stepBtn = function (dir, glyph, text) {
+      return h("button", { type: "button", class: "pb-nstep-btn", tabindex: "-1", disabled: c.disabled, "aria-label": text + " : " + (c.label || "valeur"), "data-dir": dir > 0 ? "up" : "down",
+        onmousedown: function (e) { e.preventDefault(); }, // le champ garde le focus
+        onclick: function (e) { e.preventDefault(); bump(dir * (e.shiftKey ? 10 : e.altKey ? 0.1 : 1), { light: true }); } }, glyph);
+    };
+    var stepper = h("span", { class: "pb-nstep", role: "group", "aria-label": (c.label || "Valeur") + " : pas" }, stepBtn(1, "▲", "Augmenter"), stepBtn(-1, "▼", "Diminuer"));
+    var box = h("div", { class: c.inlineUnit ? "pb-boxcell " + (c.cellClass || "") : "pb-len" }, input, c.hideSteps ? null : stepper, sel, !sel && stat ? h("span", { class: "pb-len-unit is-static", text: stat }) : null);
+    // Curseur : seulement quand une plage a du sens ; un déplacement = une étape d'annulation, appliquée en direct
+    var wrap = box;
+    if (c.slider) {
+      range = h("input", { type: "range", class: "pb-nc-range", disabled: c.disabled, "aria-label": (c.label || "Valeur") + " : curseur", tabindex: "0" });
+      var slide = 0;
+      range.addEventListener("pointerdown", function () { slide = ++ncSeq; });
+      range.addEventListener("keydown", function () { slide = ++ncSeq; });
+      range.addEventListener("input", function () {
+        var u = unitNow(); if (u === "auto") { u = units.filter(function (x) { return x !== "auto"; })[0] || "px"; if (sel) sel.value = u; input.disabled = false; }
+        var n = rnd(clamp(Number(range.value)));
+        input.value = shown(n, u);
+        send(n, u, { key: "slide:" + c.id + ":" + (slide || ++ncSeq), light: true });
+      });
+      range.addEventListener("change", function () { renderInspector(); });
+      wrap = h("div", { class: "pb-nc" }, box, range);
+      syncRange();
+    }
+    // Glissement horizontal sur le LIBELLÉ de la ligne (la zone de saisie reste du texte : sélection, copier-coller, clavier intacts)
+    wrap.scrub = function (label) {
+      if (!c.drag || c.disabled || !label) return;
+      label.classList.add("pb-scrub");
+      label.setAttribute("data-tip", "Glisser vers la gauche ou la droite pour modifier la valeur (Maj : ×10, Alt : ÷10)");
+      label.addEventListener("pointerdown", function (e) {
+        if (e.button !== 0) return;
+        var x0 = e.clientX, base = read(), moved = false, key = "drag:" + c.id + ":" + (++ncSeq), pending = null, raf = 0;
+        var flush = function () {
+          raf = 0; if (pending === null) return;
+          var u = unitNow(); if (u === "auto") u = units.filter(function (x) { return x !== "auto"; })[0] || "px";
+          var n = rnd(clamp(pending)); pending = null;
+          input.value = shown(n, u); send(n, u, { key: key, light: true }); syncRange();
+        };
+        var move = function (ev) {
+          var dx = ev.clientX - x0;
+          if (!moved && Math.abs(dx) < 4) return;
+          moved = true; ev.preventDefault(); document.body.classList.add("pb-scrubbing");
+          pending = base + Math.round(dx / 4) * stepOf(unitNow()) * (ev.shiftKey ? 10 : ev.altKey ? 0.1 : 1);
+          if (!raf) raf = requestAnimationFrame(flush);
+        };
+        var up = function () {
+          document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", up); document.removeEventListener("pointercancel", up);
+          document.body.classList.remove("pb-scrubbing");
+          if (raf) { cancelAnimationFrame(raf); raf = 0; }
+          if (moved) {
+            flush();
+            var eat = function (ev) { ev.preventDefault(); ev.stopPropagation(); label.removeEventListener("click", eat, true); };
+            label.addEventListener("click", eat, true); setTimeout(function () { label.removeEventListener("click", eat, true); }, 0);
+            renderInspector();
+          }
+        };
+        document.addEventListener("pointermove", move); document.addEventListener("pointerup", up); document.addEventListener("pointercancel", up);
+      });
+    };
+    wrap.input = input;
+    return wrap;
+  }
+
   // Libellés courts dans les lignes (le nom complet reste en infobulle et pour les lecteurs d'écran)
   var SHORT = { alignItems: "Aligner", alignSelf: "Alignement", justifySelf: "Justification", justifyItems: "Justifier", alignContent: "Aligner lignes", gridAutoFlow: "Remplissage", flexWrap: "Retour ligne", justifyContent: "Justifier", gap: "Écart", rowGap: "Écart lignes", columnGap: "Écart colonnes", flexDirection: "Direction", display: "Affichage",
     minWidth: "Largeur min.", maxWidth: "Largeur max.", minHeight: "Hauteur min.", maxHeight: "Hauteur max.", flexGrow: "Proportion", columns: "Colonnes",
-    fontFamily: "Police", fontWeight: "Graisse", fontSize: "Taille", lineHeight: "Interligne", letterSpacing: "Interlettrage", textTransform: "Casse", textAlign: "Alignement", textDecoration: "Décoration", fontStyle: "Style",
+    fontFamily: "Police", fontWeight: "Graisse", fontSize: "Taille", lineHeight: "Interligne", letterSpacing: "Interlettrage", wordSpacing: "Esp. des mots", textIndent: "Retrait", textTransform: "Casse", textAlign: "Alignement", textDecoration: "Décoration", fontStyle: "Style",
     zIndex: "Plan", boxShadow: "Ombre (préréglage)", gridTemplate: "Largeurs", gridRows: "Lignes", gridColumnSpan: "Colonnes occupées", gridRowSpan: "Lignes occupées", textShadow: "Ombre du texte", transitionDuration: "Transition (ms)", backdropBlur: "Flou arrière (px)", transformOrigin: "Origine", right: "Décalage droite", bottom: "Décalage bas", opacity: "Opacité", overflow: "Débordement", objectFit: "Cadrage", objectPosition: "Point focal", aspectRatio: "Proportions", top: "Décalage haut", left: "Décalage gauche" };
   function propRow(items, key, control, label, id, extra) {
     label = label || SHORT[key];
@@ -2037,8 +2241,10 @@
       return h("span", { class: "pb-prop-bp" + (b === device ? " is-current" : ""), title: "Valeur propre à l'écran « " + bpLabel(b) + " »", role: "img", "aria-label": "Valeur propre : " + bpLabel(b) }, icon(DEVICE_ICON[b]));
     })) : null;
     var reset = own !== undefined ? h("button", { type: "button", class: "pb-reset", "data-tip": "Effacer : revenir à la valeur héritée", "aria-label": "Effacer « " + (label || SP[key].label) + " » pour cet écran", disabled: dis, onclick: function () { setStyle(idsOf(items), key, ""); } }, "↺") : h("span", { class: "pb-reset-slot", "aria-hidden": "true" });
+    var lab = h("label", { for: id, class: "pb-prop-label", title: SP[key].label, "aria-label": SP[key].label }, label || SP[key].label);
+    if (control && control.scrub) control.scrub(lab);
     return h("div", { class: "pb-field pb-style-field pb-prop" + (own !== undefined ? " is-set" : ""), "data-prop": key },
-      h("div", { class: "pb-prop-head" }, h("label", { for: id, class: "pb-prop-label", title: SP[key].label, "aria-label": SP[key].label }, label || SP[key].label), marks),
+      h("div", { class: "pb-prop-head" }, lab, marks),
       control, extra || null, reset);
   }
   // ---------- Contrôles iconographiques : un bouton = une vraie valeur du modèle ----------
@@ -2213,57 +2419,59 @@
     else control = lengthControl(items, key, id, mixed ? undefined : own, inh, dis);
     return propRow(items, key, control, label, id, extra);
   }
-  // Nombres sans unité : bornes et pas de chaque propriété (les mêmes que le serveur)
-  var NUM = { backdropBlur: [1, 40, 1], opacity: [0, 1, 0.05], lineHeight: [0.8, 3, 0.1], zIndex: [-10, 100, 1], columns: [1, 12, 1], flexGrow: [0, 20, 0.1], flexShrink: [0, 20, 0.1], order: [-20, 20, 1], gridRows: [1, 12, 1], gridColumnSpan: [1, 12, 1], gridRowSpan: [1, 6, 1], gridColumnStart: [1, 13, 1], gridColumnEnd: [1, 13, 1], gridRowStart: [1, 13, 1], gridRowEnd: [1, 13, 1], transitionDuration: [0, 2000, 50] };
+  // Configuration de chaque propriété numérique (pas, bornes, précision, curseur, glissement). Les bornes reprennent celles du
+  // serveur (nodes.js) : rien de plus étroit, rien de plus large. Pas : 1 pour px et %, 0,1 pour em / rem / vw / vh.
+  var STEP_REL = function (u) { return u === "px" || u === "%" ? 1 : 0.1; };
+  var SIGNED = /^(margin|top|left|right|bottom|letterSpacing|wordSpacing|textIndent)/;
+  var isSigned = function (key) { return SIGNED.test(key); };
+  var rangeBy = function (map) { return function (u) { return map[u] || null; }; };
+  var LENCFG = {
+    fontSize: { base: 16, slider: rangeBy({ px: [8, 120], em: [0.5, 8], rem: [0.5, 8], vw: [0.5, 12] }), min: 1 },
+    letterSpacing: { min: -100, max: 100, step: function (u) { return u === "px" ? 0.1 : 0.01; }, precision: 2 },
+    wordSpacing: { min: -100, max: 100, step: function (u) { return u === "px" ? 0.1 : 0.01; }, precision: 2 },
+    textIndent: { min: -999, max: 999 },
+    borderRadius: { slider: rangeBy({ px: [0, 100], "%": [0, 50], rem: [0, 6] }) },
+  };
+  // Nombres sans unité : [min, max, pas] + précision, entier, curseur, valeur de départ
+  var NUMCFG = {
+    opacity: { precision: 2, slider: [0, 1], base: 1, staticUnit: "0 – 1" },
+    lineHeight: { precision: 2, slider: [0.8, 3], base: 1.5, staticUnit: "×" },
+    zIndex: { integer: true },
+    backdropBlur: { integer: true, staticUnit: "px" },
+    transitionDuration: { integer: true, staticUnit: "ms" },
+    columns: { integer: true }, flexGrow: { precision: 1 }, flexShrink: { precision: 1 }, order: { integer: true },
+    gridRows: { integer: true }, gridColumnSpan: { integer: true }, gridRowSpan: { integer: true },
+    gridColumnStart: { integer: true }, gridColumnEnd: { integer: true }, gridRowStart: { integer: true }, gridRowEnd: { integer: true },
+  };
+  var NUM = { backdropBlur: [1, 40, 1], opacity: [0, 1, 0.01], lineHeight: [0.8, 3, 0.1], zIndex: [-100, 9999, 1], columns: [1, 12, 1], flexGrow: [0, 20, 0.1], flexShrink: [0, 20, 0.1], order: [-20, 20, 1], gridRows: [1, 12, 1], gridColumnSpan: [1, 12, 1], gridRowSpan: [1, 6, 1], gridColumnStart: [1, 13, 1], gridColumnEnd: [1, 13, 1], gridRowStart: [1, 13, 1], gridRowEnd: [1, 13, 1], transitionDuration: [0, 2000, 50] };
+  // Nombre sans unité d'une propriété de style (opacité, interligne, plan…)
   function numberControl(items, key, id, own, inh, dis) {
-    var lim = NUM[key] || [-9999, 9999, 1];
-    var inp = h("input", { id: id, type: "text", inputmode: "decimal", class: "pb-num", placeholder: inh !== undefined ? String(inh) : key === "opacity" ? "1" : "", disabled: dis, autocomplete: "off" });
-    inp.value = own === undefined ? "" : String(own);
-    var clamp = function (n) { n = Math.min(lim[1], Math.max(lim[0], n)); return lim[2] === 1 ? Math.round(n) : Math.round(n * 1000) / 1000; };
-    inp.addEventListener("change", function () {
-      var s = inp.value.trim().replace(",", ".");
-      if (s === "") { setStyle(idsOf(items), key, ""); return; }
-      var n = Number(s);
-      if (!isFinite(n)) { inp.setAttribute("aria-invalid", "true"); toast(SP[key].label + " : nombre attendu.", true); return; }
-      setStyle(idsOf(items), key, clamp(n));
-    });
-    arrowStep(inp, lim[2], function () { var v = Number((inp.value || inp.placeholder || "0").replace(",", ".")); return isFinite(v) ? v : 0; }, function (n) { n = clamp(n); inp.value = String(n); setStyle(idsOf(items), key, n, { key: "step:" + key, light: true }); });
-    return h("div", { class: "pb-len" }, inp, key === "opacity" ? h("span", { class: "pb-len-unit is-static", text: "0 – 1" }) : null);
+    var lim = NUM[key] || [-9999, 9999, 1], cfg = NUMCFG[key] || {};
+    return numericControl(Object.assign({ id: id, label: SP[key].label, min: lim[0], max: lim[1], step: lim[2], value: own === undefined ? "" : own, placeholder: inh !== undefined ? inh : cfg.base !== undefined ? cfg.base : "", disabled: dis, drag: true }, cfg, {
+      onCommit: function (raw, u, opts) { setStyle(idsOf(items), key, raw === "" ? "" : Number(raw), opts); },
+    }));
   }
-  // Longueurs : valeur + unité (seules les unités utiles à la propriété) ; « 2rem » tapé directement est compris
+  // Longueurs : valeur + unité (seules les unités utiles à la propriété) ; « 2rem » tapé directement est compris ; changer l'unité change le CSS
   function lengthControl(items, key, id, own, inh, dis) {
-    var units = unitsOf(key);
-    var cur = splitLen(own), base = splitLen(inh);
+    var units = unitsOf(key), cur = splitLen(own), base = splitLen(inh), cfg = LENCFG[key] || {};
     var unit = cur ? cur.unit : base ? base.unit : units[0];
-    if (units.indexOf(unit) < 0) units.push(unit);
-    var num = h("input", { id: id, type: "text", inputmode: "decimal", class: "pb-len-num", value: cur && cur.unit !== "auto" ? cur.num : "", placeholder: base ? (base.unit === "auto" ? "auto" : base.num) : cur && cur.unit === "auto" ? "auto" : "–", disabled: dis || unit === "auto", autocomplete: "off" });
-    var sel = units.length > 1 ? h("select", { class: "pb-len-unit", "aria-label": SP[key].label + " : unité", disabled: dis }, units.map(function (u) { return h("option", { value: u, text: u }); })) : h("span", { class: "pb-len-unit is-static", text: units[0] });
-    if (sel.tagName === "SELECT") sel.value = unit;
-    var unitNow = function () { return sel.tagName === "SELECT" ? sel.value : units[0]; };
-    var commit = function (opts) {
-      var u = unitNow();
-      if (u === "auto") { setStyle(idsOf(items), key, "auto", opts); return; }
-      var raw = num.value.trim().replace(",", ".");
-      if (raw === "") { setStyle(idsOf(items), key, "", opts); return; }
-      var typed = /^(-?\d{1,4}(?:\.\d{1,3})?)\s*(px|%|rem|em|vh|vw)$/i.exec(raw);
-      var v = typed ? typed[1] + typed[2].toLowerCase() : /^-?\d{1,4}(\.\d{1,3})?$/.test(raw) ? (Number(raw) === 0 ? "0" : raw + u) : raw;
-      var ok = parseLength(v, key);
-      if (ok === null) { num.setAttribute("aria-invalid", "true"); toast(SP[key].label + " : valeur invalide (ex. 24, 50 %, 2rem" + (units.indexOf("auto") >= 0 ? ", auto" : "") + ").", true); return; }
-      num.removeAttribute("aria-invalid");
-      setStyle(idsOf(items), key, ok, opts);
-    };
-    num.addEventListener("change", function () { commit(); });
-    if (sel.tagName === "SELECT") sel.addEventListener("change", function () {
-      if (sel.value === "auto" || num.value.trim() !== "") commit();
-      else { num.disabled = false; num.focus(); }
-    });
-    arrowStep(num, 1, function () { var v = parseFloat(num.value || (base && base.unit !== "auto" ? base.num : "0")); return isFinite(v) ? v : 0; }, function (n) {
-      if (n < 0 && !/^(margin|top|left|letterSpacing)/.test(key)) n = 0;
-      if (unitNow() === "auto" && sel.tagName === "SELECT") { sel.value = units[0]; num.disabled = false; }
-      num.value = String(n);
-      commit({ key: "step:" + key, light: true });
-    });
-    return h("div", { class: "pb-len" }, num, sel);
+    return numericControl(Object.assign({ id: id, label: SP[key].label, units: units, unit: unit, step: STEP_REL, min: isSigned(key) ? -9999 : 0, max: 9999, base: 0, drag: true, disabled: dis,
+      value: cur && cur.unit !== "auto" ? cur.num : "", placeholder: base ? (base.unit === "auto" ? "auto" : base.num) : cur && cur.unit === "auto" ? "auto" : "–" }, cfg, {
+      onCommit: function (raw, u, opts) {
+        var v = u === "auto" ? "auto" : raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
+        if (parseLength(v, key) === null) { toast(SP[key].label + " : valeur invalide.", true); return false; }
+        setStyle(idsOf(items), key, v, opts);
+      },
+    }));
+  }
+  // Une ligne « libellé | valeur | ↺ » autour d'un NumericControl (filtres, ombre, transformation, angle…)
+  function numField(label, cfg, isSet, onReset) {
+    var id = fid(); cfg.id = id; cfg.label = label;
+    var ctl = numericControl(cfg), lab = h("label", { for: id, class: "pb-prop-label", text: label });
+    if (ctl.scrub) ctl.scrub(lab);
+    return h("div", { class: "pb-field pb-style-field pb-prop" + (isSet ? " is-set" : ""), "data-prop": cfg.prop || null },
+      h("div", { class: "pb-prop-head" }, lab), ctl,
+      isSet && onReset ? h("button", { type: "button", class: "pb-reset", "data-tip": "Effacer : revenir à la valeur par défaut", "aria-label": "Effacer « " + label + " »", disabled: cfg.disabled, onclick: onReset }, "↺") : h("span", { class: "pb-reset-slot", "aria-hidden": "true" }));
   }
 
   // ---------- Couleurs : bouton compact (pastille + code) et sélecteur ----------
@@ -2395,32 +2603,40 @@
   var SIDES = ["Top", "Right", "Bottom", "Left"];
   var SIDE_LABEL = { Top: "haut", Right: "droite", Bottom: "bas", Left: "gauche" };
   var linkState = store.get("spacing-link", { margin: false, padding: false });
+  var spUnit = { margin: "px", padding: "px" };
   function spacingBox(items) {
     var it = items[0], dis = lockedAny(items), ids = idsOf(items);
+    var showLen = function (v) { var p = splitLen(v); return !p ? "" : p.unit === "auto" ? "auto" : p.unit === "px" ? p.num : p.num + p.unit; };
     var cell = function (kind, side) {
       var key = kind + side;
       var own = ownValue(it, key), inh = inheritedValue(it, key);
       var name = (kind === "margin" ? "Marge " : "Intérieur ") + SIDE_LABEL[side];
-      var inp = h("input", { type: "text", inputmode: "decimal", class: "pb-box-input is-" + kind[0] + side[0].toLowerCase() + (own !== undefined ? " is-set" : ""), list: "pb-scale", value: own === undefined ? "" : own, placeholder: inh !== undefined ? String(inh) : "0", "aria-label": name + (linkState[kind] ? " (4 côtés liés)" : ""), "data-tip": name + (inh !== undefined && own === undefined ? " · hérité : " + inh : ""), disabled: dis, autocomplete: "off", "data-prop": key });
-      var commit = function (v, opts) {
+      var cls = "is-" + kind[0] + side[0].toLowerCase();
+      var u0 = (splitLen(own) || splitLen(inh) || { unit: spUnit[kind] }).unit;
+      return numericControl({ prop: key, label: name, inlineUnit: true, hideSteps: false, units: unitsOf(key), unit: u0 === "auto" ? spUnit[kind] : u0, step: STEP_REL, min: isSigned(key) ? -9999 : 0, max: 9999, base: 0, disabled: dis,
+        value: showLen(own), placeholder: inh !== undefined ? showLen(inh) : "0", list: "pb-scale", inputClass: "pb-box-input " + cls + (own !== undefined ? " is-set" : ""), cellClass: cls,
+        ariaLabel: name + (linkState[kind] ? " (4 côtés liés)" : ""), tip: name + (inh !== undefined && own === undefined ? " · hérité : " + inh : ""),
+        onCommit: function (raw, u, opts) {
+          var v = u === "auto" ? "auto" : raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
+          if (parseLength(v, key) === null) { toast(name + " : valeur invalide (ex. 24, 2rem" + (kind === "margin" ? ", auto" : "") + ").", true); return false; }
+          var map = {};
+          (linkState[kind] ? SIDES : [side]).forEach(function (sd) { map[kind + sd] = v; });
+          if (linkState[kind]) $$("[data-pb-inspector] .pb-box-input[data-prop^='" + kind + "']").forEach(function (x) { if (x.getAttribute("data-prop") !== key) x.value = showLen(v); });
+          setStyles(ids, map, opts);
+        } });
+    };
+    // Unité commune des 4 côtés : elle s'applique aux valeurs déjà saisies (le CSS change vraiment) et sert aux prochaines saisies
+    var unitSel = function (kind, label) {
+      var first = SIDES.map(function (sd) { return splitLen(ownValue(it, kind + sd)); }).filter(function (p) { return p && p.unit !== "auto"; })[0];
+      var sel = h("select", { class: "pb-len-unit pb-link-unit", "aria-label": label + " : unité des 4 côtés", "data-tip": label + " : unité des 4 côtés", disabled: dis }, ["px", "%", "rem", "em"].map(function (u) { return h("option", { value: u, text: u }); }));
+      sel.value = first ? first.unit : spUnit[kind];
+      sel.addEventListener("change", function () {
+        spUnit[kind] = sel.value;
         var map = {};
-        (linkState[kind] ? SIDES : [side]).forEach(function (s) { map[kind + s] = v; });
-        setStyles(ids, map, opts);
-      };
-      inp.addEventListener("change", function () {
-        var v = parseLength(inp.value, key);
-        if (v === null) { inp.setAttribute("aria-invalid", "true"); toast(name + " : valeur invalide (ex. 24, 2rem" + (kind === "margin" ? ", auto" : "") + ").", true); return; }
-        commit(v);
+        SIDES.forEach(function (sd) { var p = splitLen(ownValue(it, kind + sd)); if (p && p.unit !== "auto" && p.num !== "") map[kind + sd] = Number(p.num) === 0 ? "0" : p.num + sel.value; });
+        if (Object.keys(map).length) setStyles(ids, map); else renderInspector();
       });
-      arrowStep(inp, 1, function () { var p = splitLen(inp.value || inp.placeholder); return p && p.unit !== "auto" ? Number(p.num) : 0; }, function (n) {
-        var p = splitLen(inp.value || inp.placeholder) || { unit: "px" };
-        if (n < 0 && kind === "padding") n = 0;
-        var v = n === 0 ? "0" : n + (p.unit === "auto" ? "px" : p.unit);
-        inp.value = v;
-        if (linkState[kind]) $$("[data-pb-inspector] .pb-box-input[data-prop^='" + kind + "']").forEach(function (x) { x.value = v; });
-        commit(v, { key: "step:" + kind, light: true });
-      });
-      return inp;
+      return sel;
     };
     var linkBtn = function (kind, label) {
       var on = Boolean(linkState[kind]);
@@ -2441,7 +2657,7 @@
         } }, icon("link"), h("span", { text: label }));
     };
     return h("div", { class: "pb-spacing" },
-      h("div", { class: "pb-spacing-head" }, linkBtn("margin", "Marge"), linkBtn("padding", "Intérieur")),
+      h("div", { class: "pb-spacing-head" }, linkBtn("margin", "Marge"), unitSel("margin", "Marge"), linkBtn("padding", "Intérieur"), unitSel("padding", "Intérieur")),
       h("div", { class: "pb-boxmodel" },
         h("span", { class: "pb-box-label", text: "Marge", "aria-hidden": "true" }),
         h("div", { class: "pb-box-pad", "aria-hidden": "true" }, h("span", { class: "pb-box-label", text: "Intérieur" })),
@@ -2550,11 +2766,9 @@
       var f1 = fid(), f2 = fid(), f3 = fid();
       inner.appendChild(row("Départ", colorButton(f1, g && g.from, undefined, dis, gset("from"), "gradient-from", { noClear: true }), f1));
       inner.appendChild(row("Arrivée", colorButton(f2, g && g.to, undefined, dis, gset("to"), "gradient-to", { noClear: true }), f2));
-      var ang = h("input", { id: f3, type: "text", inputmode: "numeric", class: "pb-len-num", value: g ? String(g.angle) : "180", disabled: dis, autocomplete: "off" });
-      var setAngle = function (n, opts) { n = ((Math.round(n) % 360) + 360) % 360; ang.value = String(n); gset("angle")(n, opts); };
-      ang.addEventListener("change", function () { var n = Number(ang.value); if (!isFinite(n)) { toast("Angle : nombre de degrés attendu.", true); return; } setAngle(n); });
-      arrowStep(ang, 1, function () { return Number(ang.value) || 0; }, function (n) { setAngle(n, { key: "step:gradient-angle", light: true }); });
-      inner.appendChild(row("Angle", h("div", { class: "pb-len" }, ang, h("span", { class: "pb-len-unit is-static", text: "°" })), f3));
+      var angRow = numField("Angle", { min: 0, max: 360, step: 1, integer: true, staticUnit: "°", value: g ? g.angle : 180, placeholder: 180, base: 180, slider: [0, 360], drag: true, disabled: dis, prop: "gradient-angle",
+        onCommit: function (raw, u, opts) { if (raw === "") return false; gset("angle")(Number(raw), opts); } }, false);
+      inner.appendChild(angRow);
       if (has("gradient")) inner.appendChild(h("div", { class: "pb-prop-sub" }, h("span"), h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { if (bgChoice[it.id] === "gradient") delete bgChoice[it.id]; setStyle(ids, "gradient", ""); } }, "Retirer le dégradé")));
     }
   }
@@ -2568,21 +2782,15 @@
       var FILTERS = [["blur", "Flou", 0, 40, "px", 0], ["brightness", "Luminosité", 0, 300, "%", 100], ["contrast", "Contraste", 0, 300, "%", 100], ["grayscale", "Noir et blanc", 0, 100, "%", 0], ["saturate", "Saturation", 0, 300, "%", 100], ["sepia", "Sépia", 0, 100, "%", 0], ["hueRotate", "Teinte", -360, 360, "°", 0]];
       out.push(h("p", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Filtres" }), Object.keys(fl).length ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { setStyle(ids, "filter", ""); } }, "Retirer") : null));
       FILTERS.forEach(function (f) {
-        var id = fid();
-        var inp = h("input", { id: id, type: "text", inputmode: "numeric", class: "pb-len-num", value: fl[f[0]] === undefined ? "" : String(fl[f[0]]), placeholder: String(fli[f[0]] !== undefined ? fli[f[0]] : f[5]), disabled: dis, autocomplete: "off" });
         var putF = function (n, opts) { var next = Object.assign({}, ownValue(byId(it.id), "filter") || {}); if (n === null) delete next[f[0]]; else next[f[0]] = n; setStyle(ids, "filter", Object.keys(next).length ? next : "", opts); };
-        inp.addEventListener("change", function () { if (inp.value.trim() === "") { putF(null); return; } var n = Math.round(Number(inp.value)); if (!isFinite(n) || n < f[2] || n > f[3]) { toast(f[1] + " : entre " + f[2] + " et " + f[3] + ".", true); return; } putF(n); });
-        arrowStep(inp, 1, function () { return Number(inp.value || inp.placeholder) || 0; }, function (n) { n = Math.min(f[3], Math.max(f[2], Math.round(n))); inp.value = String(n); putF(n, { key: "step:filter" + f[0], light: true }); });
-        out.push(h("div", { class: "pb-field pb-style-field pb-prop" + (fl[f[0]] !== undefined ? " is-set" : ""), "data-prop": "filter-" + f[0] }, h("div", { class: "pb-prop-head" }, h("label", { for: id, class: "pb-prop-label" }, f[1])), h("div", { class: "pb-len" }, inp, h("span", { class: "pb-len-unit is-static", text: f[4] })), h("span", { class: "pb-reset-slot", "aria-hidden": "true" })));
+        out.push(numField(f[1], { min: f[2], max: f[3], step: 1, integer: true, staticUnit: f[4], value: fl[f[0]] === undefined ? "" : fl[f[0]], placeholder: fli[f[0]] !== undefined ? fli[f[0]] : f[5], base: f[5], slider: [f[2], f[3]], drag: true, disabled: dis, prop: "filter-" + f[0],
+          onCommit: function (raw, u, opts) { putF(raw === "" ? null : Number(raw), opts); } }, fl[f[0]] !== undefined, function () { putF(null); }));
       });
       var sh = ownValue(it, "shadow"), shi = inheritedValue(it, "shadow"), cur = sh || shi || { x: 0, y: 6, blur: 18, spread: 0, color: "#10222f29" };
       var put = function (k, v, opts) { var next = Object.assign({ x: 0, y: 6, blur: 18, spread: 0, color: "#10222f29" }, ownValue(byId(it.id), "shadow") || shi || {}); next[k] = v; setStyle(ids, "shadow", next, opts); };
       var num = function (k, label, min, max) {
-        var id = fid();
-        var inp = h("input", { id: id, type: "text", inputmode: "numeric", class: "pb-len-num", value: sh ? String(sh[k]) : "", placeholder: String(cur[k]), disabled: dis, autocomplete: "off" });
-        inp.addEventListener("change", function () { var n = Math.round(Number(inp.value)); if (!isFinite(n) || n < min || n > max) { toast(label + " : entre " + min + " et " + max + ".", true); return; } put(k, n); });
-        arrowStep(inp, 1, function () { return Number(inp.value || inp.placeholder) || 0; }, function (n) { n = Math.min(max, Math.max(min, Math.round(n))); inp.value = String(n); put(k, n, { key: "step:shadow" + k, light: true }); });
-        return h("div", { class: "pb-field pb-style-field pb-prop" }, h("div", { class: "pb-prop-head" }, h("label", { for: id, class: "pb-prop-label" }, label)), h("div", { class: "pb-len" }, inp, h("span", { class: "pb-len-unit is-static", text: "px" })), h("span", { class: "pb-reset-slot", "aria-hidden": "true" }));
+        return numField(label, { min: min, max: max, step: 1, integer: true, staticUnit: "px", value: sh ? sh[k] : "", placeholder: cur[k], base: cur[k], drag: true, disabled: dis, prop: "shadow-" + k,
+          onCommit: function (raw, u, opts) { if (raw === "") return false; put(k, Number(raw), opts); } }, false);
       };
       out.push(h("p", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Ombre personnalisée" }), sh ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { setStyle(ids, "shadow", ""); } }, "Retirer") : null));
       var sc = fid();
@@ -2731,7 +2939,7 @@
       add("Statut", $("[data-pb-status]").textContent);
       add("Sections", content.sections.length);
       add("Éléments", count - content.sections.length);
-      add("Écran affiché", bpLabel(device) + " · " + WIDTH[device] + " px de large");
+      add("Écran affiché", bpLabel(device) + " · " + shownWidth + " px de large");
       add("Zoom", Math.round(zoom * 100) + " %");
       add("Enregistrement", $("[data-pb-save]").textContent || "—");
       return rows;
@@ -2858,7 +3066,22 @@
     else if (it.type === "grid") gridContent(it, box);
     if (["container", "grid", "stack", "group"].indexOf(it.type) >= 0) {
       var dis = !canWrite || lockedDeep(it.id), p = it.props || {};
-      if (it.type === "container") box.appendChild(selectField("Largeur du contenu", p.full ? "full" : "boxed", [["boxed", "Encadrée (1100 px, centrée)"], ["full", "Pleine largeur"]], function (v) { setProp(it.id, "full", v === "full"); }, { disabled: dis }));
+      if (it.type === "container") {
+        // Trois modèles de largeur : encadrée (largeur des conteneurs du site, centrée), pleine largeur, personnalisée (largeur max. propre à l'écran affiché)
+        var mw = ownValue(it, "maxWidth"); if (mw === undefined) mw = inheritedValue(it, "maxWidth");
+        var wmode = p.full ? "full" : mw !== undefined && mw !== "" ? "custom" : "boxed";
+        box.appendChild(selectField("Largeur du contenu", wmode, [["boxed", "Encadrée (largeur des conteneurs du site, centrée)"], ["full", "Pleine largeur"], ["custom", "Personnalisée (largeur max.)"]], function (v) { setContainerWidth(it.id, v, mw !== undefined && mw !== "" ? mw : "960px"); }, { disabled: dis }));
+        if (wmode === "custom") {
+          var wid = fid();
+          var winp = h("input", { id: wid, type: "text", value: mw === undefined ? "" : String(mw), placeholder: "960px", disabled: dis, "aria-describedby": wid + "-h" });
+          winp.addEventListener("change", function () {
+            var v = parseLength(winp.value, "maxWidth");
+            if (v === null || v === "") { toast("Largeur max. : valeur invalide (ex. 960px, 80%, 60rem).", true); winp.value = mw === undefined ? "" : String(mw); return; }
+            setStyle([it.id], "maxWidth", v);
+          });
+          box.appendChild(h("div", { class: "pb-field" }, h("label", { for: wid, text: "Largeur max. de ce conteneur" }), winp, h("p", { class: "pb-hint", id: wid + "-h", text: "Propre à l'écran « " + bpLabel(device) + " » ; px, %, rem ou vw. Le conteneur reste centré et ne dépasse jamais son parent." })));
+        }
+      }
       box.appendChild(selectField("Balise HTML", p.tag || "div", SPEC.boxTags.map(function (t) { return [t, BOX_TAG_LABEL[t] || t]; }), function (v) { setProp(it.id, "tag", v); }, { disabled: dis }));
       box.appendChild(h("p", { class: "pb-hint", text: "La balise donne le sens de la zone aux lecteurs d'écran et aux moteurs de recherche ; l'affichage ne change pas." }));
     }
@@ -2879,11 +3102,12 @@
     var list = h("ol", { class: "pb-cols-list" });
     kids.forEach(function (c, i) {
       var id = fid();
-      var input = h("input", { id: id, type: "number", min: "5", max: "95", step: "1", value: String(Math.round(shares[i] * 10) / 10), disabled: dis || device === "mobile" || kids.length < 2, "data-pb-col-share": String(i) });
-      input.addEventListener("change", function () { var v = Number(input.value); if (!isFinite(v)) return; setColumnShare(it.id, i, v); });
+      var shareCtl = numericControl({ id: id, label: "Largeur de la colonne " + (i + 1), min: 5, max: 95, step: 1, precision: 1, value: Math.round(shares[i] * 10) / 10, base: 50, allowEmpty: false, disabled: dis || device === "mobile" || kids.length < 2, ariaLabel: null,
+        onCommit: function (raw) { var v = Number(raw); if (!isFinite(v)) return false; setColumnShare(it.id, i, v); } });
+      shareCtl.input.setAttribute("data-pb-col-share", String(i));
       list.appendChild(h("li", { class: "pb-col-row" },
         h("button", { type: "button", class: "pb-kid", onclick: function () { select(c.id); } }, h("span", { class: "pb-kid-name", text: c.name || "Colonne " + (i + 1) }), h("span", { class: "pb-kid-kind", text: (kidsOf(c) || []).length + " élément(s)" })),
-        h("label", { class: "sr-only", for: id, text: "Largeur de la colonne " + (i + 1) + " en %" }), input, h("span", { class: "pb-unit", text: "%" }),
+        h("label", { class: "sr-only", for: id, text: "Largeur de la colonne " + (i + 1) + " en %" }), shareCtl, h("span", { class: "pb-unit", text: "%" }),
         h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Déplacer la colonne " + (i + 1) + " vers la gauche", "data-tip": "Vers la gauche", disabled: dis || i === 0, onclick: function () { moveColumn(it.id, i, -1); } }, icon("chevronLeft")),
         h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Déplacer la colonne " + (i + 1) + " vers la droite", "data-tip": "Vers la droite", disabled: dis || i === kids.length - 1, onclick: function () { moveColumn(it.id, i, 1); } }, icon("chevronRight")),
         h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Supprimer la colonne " + (i + 1), "data-tip": "Supprimer cette colonne", disabled: dis || kids.length <= 1, onclick: function () { removeColumn(it.id, i); } }, icon("trash"))));
@@ -3217,15 +3441,27 @@
     sel.addEventListener("change", function () { setStyle(idsOf(items), key, key === "columns" && sel.value ? Number(sel.value) : sel.value); });
     return sel;
   }
+  // Case compacte de la barre contextuelle : même NumericControl (flèches ↑↓, unité tapée avec le nombre, bornes du serveur)
   function ctxLength(label, key, items, width) {
-    var own = ownValue(items[0], key), inh = inheritedValue(items[0], key);
-    var inp = h("input", { type: "text", class: "pb-ctx-num", style: "width:" + (width || 64) + "px", "aria-label": label, "data-tip": label, list: "pb-scale", value: own === undefined ? "" : own, placeholder: inh !== undefined ? String(inh) : label, disabled: lockedAny(items) });
-    inp.addEventListener("change", function () {
-      var v = key === "lineHeight" ? (inp.value.trim() === "" ? "" : Number(inp.value.replace(",", "."))) : parseLength(inp.value, key);
-      if (v === null || (key === "lineHeight" && v !== "" && (isNaN(v) || v < 0.8 || v > 3))) { toast(label + " : valeur invalide.", true); return; }
-      setStyle(idsOf(items), key, v);
-    });
-    return inp;
+    var it = items[0], own = ownValue(it, key), inh = inheritedValue(it, key), dis = lockedAny(items);
+    var isNum = SP[key].kind === "number", cfg = (isNum ? NUMCFG[key] : LENCFG[key]) || {};
+    var commonOpts = { label: label, ariaLabel: label, tip: label, list: isNum ? null : "pb-scale", inputClass: "pb-ctx-num", cellClass: "pb-ctx-cell", hideSteps: true, disabled: dis, drag: false, allowEmpty: true };
+    var wrap;
+    if (isNum) {
+      var lim = NUM[key] || [-9999, 9999, 1];
+      wrap = numericControl(Object.assign({ inlineUnit: true, min: lim[0], max: lim[1], step: lim[2], value: own === undefined ? "" : own, placeholder: inh !== undefined ? inh : label, base: cfg.base, onCommit: function (raw, u, opts) { setStyle(idsOf(items), key, raw === "" ? "" : Number(raw), opts); } }, commonOpts, { slider: null, staticUnit: null }));
+    } else {
+      var units = unitsOf(key), cur = splitLen(own), base = splitLen(inh);
+      var disp = function (p) { return !p ? "" : p.unit === "auto" ? "auto" : p.unit === "px" ? p.num : p.num + p.unit; };
+      wrap = numericControl(Object.assign({ inlineUnit: true, units: units, unit: (cur || base || { unit: units[0] }).unit === "auto" ? "px" : (cur || base || { unit: units[0] }).unit, step: STEP_REL, min: isSigned(key) ? -9999 : 0, max: 9999, base: 0, value: disp(cur), placeholder: base ? disp(base) : label,
+        onCommit: function (raw, u, opts) {
+          var v = u === "auto" ? "auto" : raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
+          if (parseLength(v, key) === null) { toast(label + " : valeur invalide.", true); return false; }
+          setStyle(idsOf(items), key, v, opts);
+        } }, cfg, commonOpts, { slider: null }));
+    }
+    wrap.style.width = (width || 64) + "px";
+    return wrap;
   }
   function ctxColor(label, key, items) {
     var own = ownValue(items[0], key);
@@ -3660,7 +3896,9 @@
       }
       if (selection.length === 1 && isNode(it) && canWrite && !lockedDeep(id) && !editing) {
         [["e", r.left + r.width, r.top + r.height / 2, "Largeur"], ["s", r.left + r.width / 2, r.top + r.height, "Hauteur"], ["se", r.left + r.width, r.top + r.height, "Largeur et hauteur"]].forEach(function (hd) {
-          var hEl = doc.createElement("div"); hEl.className = "pb-handle pb-handle-" + hd[0]; hEl.style.left = hd[1] + "px"; hEl.style.top = hd[2] + "px";
+          // Les poignées restent entièrement dans la page, même quand l'élément touche son bord (pleine largeur)
+          var hx = Math.max(7, Math.min(hd[1], doc.documentElement.clientWidth - 7));
+          var hEl = doc.createElement("div"); hEl.className = "pb-handle pb-handle-" + hd[0]; hEl.style.left = hx + "px"; hEl.style.top = hd[2] + "px";
           hEl.setAttribute("title", hd[3]);
           hEl.addEventListener("mousedown", function (e) { resizeStart(e, id, el, hd[0]); });
           doc.body.appendChild(hEl);
@@ -4225,7 +4463,20 @@
   });
 
   // ---------- Écrans, zoom, aides visuelles ----------
-  var WIDTH = { desktop: 1280, tablet: 820, mobile: 390 };
+  // Largeur de la page affichée dans le cadre (px CSS de la page). Tablette et mobile : largeur d'appareil fixe. Ordinateur :
+  // largeur FLUIDE = l'espace réellement disponible dans le canevas (fenêtre − panneaux), jamais sous le point de rupture
+  // « tablette » du site (sinon le cadre afficherait la mise en page tablette) ni au-dessus d'un plafond confortable. Si l'espace
+  // est plus étroit que le minimum, la page garde ce minimum et le zoom « ajuster » la réduit pour qu'elle tienne.
+  var WIDTH = { desktop: 1280, tablet: 820, mobile: 390 }; // largeur nominale : repli, et valeur des appareils
+  var DESKTOP_MAX = 1920;
+  var STAGE_PAD = 48; // 24 px de chaque côté de la surface de travail
+  var shownWidth = WIDTH.desktop;
+  function desktopMin() { var bp = PAGE.breakpoints && PAGE.breakpoints.tablet; return (Number.isInteger(bp) ? bp : 1023) + 1; }
+  function frameWidth(avail) {
+    if (device !== "desktop") return WIDTH[device];
+    var target = zoomFit ? avail : Math.floor(avail / zoom);
+    return Math.min(DESKTOP_MAX, Math.max(desktopMin(), target));
+  }
   function setDevice(d) {
     if (editing) commitEdit();
     selectedGuide = null;
@@ -4239,12 +4490,16 @@
   }
   $$(".pb-top .pb-devices button").forEach(function (b) { b.addEventListener("click", function () { setDevice(b.dataset.device); }); });
   function applyZoom() {
-    var w = WIDTH[device];
-    if (zoomFit) zoom = Math.min(1, Math.max(0.25, Math.floor((stage.clientWidth - 48) / w * 100) / 100));
-    var hgt = Math.max(400, (stage.clientHeight - 48) / zoom);
+    var avail = Math.max(240, stage.clientWidth - STAGE_PAD);
+    var w = frameWidth(avail);
+    shownWidth = w;
+    if (zoomFit) zoom = Math.min(1, Math.max(0.25, Math.floor(avail / w * 100) / 100));
+    var hgt = Math.max(400, (stage.clientHeight - STAGE_PAD) / zoom);
     wrap.style.width = w + "px";
     wrap.style.height = hgt + "px";
     wrap.style.transform = "scale(" + zoom + ")";
+    // La boîte de mise en page garde sa taille d'origine malgré le zoom : on la recentre et on retire l'excédent à droite et en bas
+    wrap.style.marginLeft = Math.max(0, (avail - w * zoom) / 2) + "px";
     wrap.style.marginRight = -((1 - zoom) * w) + "px";
     wrap.style.marginBottom = -((1 - zoom) * hgt) + "px";
     $("[data-pb-zoom-value]").textContent = Math.round(zoom * 100) + " %";
@@ -4809,6 +5064,40 @@
     h: h, toast: toast,
   };
 
+  // ---------- Apparence de la palette (claire / sombre / système) ----------
+  // Préférence PERSONNELLE de l'éditeur, gardée comme les autres réglages d'interface (magasin « pb: » : survit au rechargement,
+  // propre à ce navigateur). Elle ne change que la palette (barre d'outils + panneau de gauche) : jamais la page, le canevas
+  // ni le panneau de droite.
+  var PALETTE_MODES = [["light", "Claire", "sun"], ["dark", "Sombre", "moon"], ["system", "Système", "monitor"]];
+  var paletteMode = store.get("palette-theme", "light");
+  if (!PALETTE_MODES.some(function (m) { return m[0] === paletteMode; })) paletteMode = "light";
+  var paletteMedia = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  function paletteResolved() { return paletteMode === "system" ? (paletteMedia && paletteMedia.matches ? "dark" : "light") : paletteMode; }
+  function applyPalette() {
+    $("[data-pb-main]").dataset.palette = paletteResolved();
+    $$("[data-pal-mode]").forEach(function (b) { var on = b.dataset.palMode === paletteMode; b.setAttribute("aria-checked", String(on)); b.tabIndex = on ? 0 : -1; });
+  }
+  function setPaletteMode(m) { paletteMode = m; store.set("palette-theme", m); applyPalette(); }
+  (function buildPaletteFoot() {
+    var group = h("div", { class: "pb-pal-theme", role: "radiogroup", "aria-label": "Apparence de la palette" }, PALETTE_MODES.map(function (m) {
+      return h("button", { type: "button", role: "radio", "aria-checked": "false", "data-pal-mode": m[0], "data-tip": "Palette " + m[1].toLowerCase(), "aria-label": "Palette " + m[1].toLowerCase(),
+        onclick: function () { setPaletteMode(m[0]); } }, icon(m[2]));
+    }));
+    // Flèches : passer d'un mode à l'autre comme un groupe de boutons radio
+    group.addEventListener("keydown", function (e) {
+      var d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      var i = PALETTE_MODES.findIndex(function (m) { return m[0] === paletteMode; });
+      var next = PALETTE_MODES[(i + d + PALETTE_MODES.length) % PALETTE_MODES.length][0];
+      setPaletteMode(next);
+      var btn = group.querySelector('[data-pal-mode="' + next + '"]'); if (btn) btn.focus();
+    });
+    $("[data-pb-left]").appendChild(h("div", { class: "pb-pal-foot" }, h("span", { class: "pb-pal-foot-label", text: "Palette" }), group));
+    applyPalette();
+  })();
+  if (paletteMedia) { var onScheme = function () { if (paletteMode === "system") applyPalette(); }; if (paletteMedia.addEventListener) paletteMedia.addEventListener("change", onScheme); else if (paletteMedia.addListener) paletteMedia.addListener(onScheme); }
+
   // ---------- Panneaux redimensionnables ----------
   var main = $("[data-pb-main]");
   function applyPanels() {
@@ -5293,6 +5582,7 @@
   }
   // Pont avec le panneau « Réglages du site » (public/js/site-settings.js) : mêmes notifications, et le canevas est
   // redessiné par le même rendu serveur (donc avec les mêmes réglages que la page publiée) après chaque enregistrement
+  window.KWNumeric = { create: numericControl };
   window.KWEditor = { siteId: PAGE.siteId || null, canWrite: canWrite, customColors: PAGE.customColors || [], toast: toast, pickImage: function (cb) { openMedia({ title: "Choisir une image", onPick: function (m) { cb(m.path, m.alt || ""); } }); }, rerender: function () { renderCanvas(); } };
   $("[data-pb-mainmenu]").addEventListener("click", function () {
     var r = this.getBoundingClientRect();
@@ -5430,7 +5720,7 @@
     selection: function () { return selection.slice(); }, toast: toast, canWrite: canWrite, links: boot.links, addElement: function (type) { addElement(type); }, subscribe: function (f) { navListeners.push(f); }, open: function () {} };
   if (window.pbEffects) window.pbEffects.attach({
     h: h, store: store, toast: toast, SPEC: SPEC, BPS: BPS, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, idsOf: idsOf,
-    accGroup: accGroup, ownValue: ownValue, setStyle: setStyle, setStyles: setStyles, parseLength: parseLength, selectField: selectField, checkField: checkField,
+    accGroup: accGroup, ownValue: ownValue, setStyle: setStyle, setStyles: setStyles, parseLength: parseLength, numField: numField, numericControl: numericControl, selectField: selectField, checkField: checkField,
     openMedia: openMedia, breakpointSwitch: breakpointSwitch, getDevice: function () { return device; }, getState: function () { return styleState; },
     setState: function (st) { styleState = st; renderInspector(); renderContext(); }, hasStates: function (it) { return Boolean(inspectorFor(it).states); },
   });

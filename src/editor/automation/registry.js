@@ -25,9 +25,15 @@ export const ACTIONS = {
   remove_tag: { category: "contact", icon: "tagMinus", description: "Retire une étiquette du contact", keywords: "tag etiquette enlever retirer supprimer", title: "Configurer : Retirer une étiquette", make: () => ({ tag: "" }) },
   add_to_list: { category: "contact", icon: "listPlus", description: "Inscrit le contact à une liste", keywords: "liste abonnement ajouter inscrire", title: "Configurer : Ajouter à une liste", make: () => ({ listId: null }) },
   remove_from_list: { category: "contact", icon: "listMinus", description: "Désinscrit le contact d'une liste", keywords: "liste enlever desabonnement retirer", title: "Configurer : Retirer d'une liste", make: () => ({ listId: null }) },
+  adjust_score: { category: "contact", icon: "trendingUp", description: "Ajouter, retirer ou définir des points", keywords: "score points lead scoring notation ajouter retirer definir niveau chaud", title: "Configurer : Modifier le score", make: () => ({ mode: "add", points: 10 }) },
+  add_note: { category: "contact", icon: "stickyNote", description: "Une note sur la fiche du contact", keywords: "note commentaire memo fiche contact suivi", title: "Configurer : Ajouter une note", make: () => ({ body: "" }) },
   end: { category: "fin", icon: "stopCircle", tone: "end", description: "Le passage du contact s'arrête", keywords: "fin terminer stop sortie", make: () => ({}) },
 };
 Object.keys(ACTIONS).forEach((type) => { ACTIONS[type].type = type; ACTIONS[type].label = STEP_LABELS[type] || type; });
+// Disponibilité réelle de chaque action (envoyée par le serveur : connexion requise ou non), rattachée à sa définition
+export function setAvailability(list) {
+  (Array.isArray(list) ? list : []).forEach((a) => { if (a && Object.hasOwn(ACTIONS, a.type) && a.availability) ACTIONS[a.type].availability = a.availability; });
+}
 export const action = (type) => ACTIONS[type] || { type, label: STEP_LABELS[type] || type, icon: "help", category: "contact", description: "" };
 export const insertable = () => Object.values(ACTIONS).filter((x) => x.make);
 export const configurable = (type) => type !== "end" && Object.hasOwn(ACTIONS, type);
@@ -68,6 +74,8 @@ export function summary(type, ctx, d) {
       }
       return `Le contact ${(CHECKS.find((c) => c[0] === d.check) || [null, d.check])[1]}`;
     }
+    case "adjust_score": return d.mode === "set" ? `Score = ${d.points}` : `${d.mode === "add" ? "+" : "−"} ${d.points} point${d.points > 1 ? "s" : ""}`;
+    case "add_note": { const t = String(d.body).replace(/\s+/g, " "); return t.length > 60 ? `${t.slice(0, 57)}…` : t; }
     case "add_tag": case "remove_tag": return `« ${d.tag} »`;
     case "add_to_list": case "remove_from_list": { const l = data.lists.find((x) => x.id === d.listId); return l ? l.name : "Liste introuvable"; }
     default: return "";

@@ -1,16 +1,20 @@
 <%
   const nav = mkh.buildNav({ can: mk.can, active });
+  // Environnement « Site Web » = KOLAKISA CMS : les écrans dont la clé figure dans cmsNav.js prennent la coque CMS
+  // (même coque, mêmes composants et même charte que le Marketing ; seuls le menu latéral et la barre du haut changent)
+  const cms = mkh.buildCmsNav({ can: mk.can, active });
+  const cmsSites = cms ? mkh.cmsSites(mk.ctx) : [];
   const crumbs = nav.breadcrumb || [title];
   // Fil d'Ariane cliquable : Mon espace → Marketing → section → page (le dernier élément n'est pas un lien)
   const trail = [];
   if (currentUser && currentUser.role === "formateur") trail.push({ label: "Mon espace", href: "/formateur" });
   trail.push({ label: "Marketing", href: "/marketing" });
-  nav.trail.forEach((t) => trail.push(t));
+  (cms ? cms.trail : nav.trail).forEach((t) => trail.push(t));
   const lastLabel = trail[trail.length - 1].label;
   // Page plus profonde que la rubrique (fiche, création…) : son titre devient le dernier niveau
   const herePath = appRail ? appRail.path.replace(/\/$/, "") : null;
   const lastHref = trail[trail.length - 1].href;
-  if (title && title !== lastLabel && active !== "dashboard" && (!herePath || herePath !== lastHref)) trail.push({ label: title });
+  if (!cms && title && title !== lastLabel && active !== "dashboard" && (!herePath || herePath !== lastHref)) trail.push({ label: title });
   const mySpace = currentUser && currentUser.role === "formateur" ? { href: "/formateur", label: "Mon espace" } : { href: "/mes-cours", label: "Mes formations" };
 %><!DOCTYPE html>
 <% const theme = typeof mkTheme === "string" && mkTheme !== "clair" ? mkTheme : null; %><html lang="fr"<%- theme ? ` data-mk-theme="${theme}"` : "" %>>
@@ -19,7 +23,7 @@
   <%# Doublon de l'en-tête HTTP (le CDN de l'hébergeur remplace la politique envoyée par le serveur) %>
   <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= title %> · Marketing · KOLAKISA</title>
+  <title><%= title %> · <%= cms ? "CMS" : "Marketing" %> · KOLAKISA</title>
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#ffffff">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -27,17 +31,18 @@
   <% if (typeof compactNav !== "undefined" && compactNav) { %><script>/* outil plein écran (éditeur) : sous 1680 px, menu réduit d'office pour laisser la place au travail (sans changer la préférence mémorisée) */ if (window.innerWidth < 1680) document.documentElement.setAttribute("data-sidebar", "collapsed");</script><% } %>
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/marketing.css') %>">
+  <% if (cms) { %><link rel="stylesheet" href="<%= asset('/css/cms.css') %>"><% } %>
   <% if (appRail) { %><link rel="stylesheet" href="<%= asset('/css/app-rail.css') %>"><% } %>
   <% if (theme) { %><link rel="stylesheet" href="<%= asset('/css/marketing-themes.css') %>"><% } %>
 </head>
-<body class="mk-body">
+<body class="mk-body<%= cms ? ' is-cms' : '' %>">
   <a class="skip-link" href="#main">Aller au contenu principal</a>
 
   <% const appClass = appRail ? "mk-app has-rail" : "mk-app"; %><div class="<%= appClass %>">
     <% if (appRail) { %><%- include("../../partials/app-rail", { railNav: appRail.nav, railActive: appRail.active, railUnread: appRail.unread, railStyle: appRail.style }) %><% } %>
-    <aside class="mk-sidebar" id="mk-sidebar" aria-label="Menu marketing">
+    <aside class="mk-sidebar" id="mk-sidebar" aria-label="<%= cms ? 'Menu du CMS' : 'Menu marketing' %>">
       <div class="mk-sidebar-head">
-        <a class="mk-brand" href="/marketing"><span class="mk-brand-mark" aria-hidden="true">K</span><span class="mk-brand-text">KOLAKISA<small>Marketing</small></span></a>
+        <a class="mk-brand" href="<%= cms ? '/marketing/site-web' : '/marketing' %>"><span class="mk-brand-mark" aria-hidden="true">K</span><span class="mk-brand-text">KOLAKISA<small><%= cms ? "CMS" : "Marketing" %></small></span></a>
         <button type="button" class="mk-collapse-btn" data-mk-sidebar-collapse aria-pressed="false" aria-label="Réduire le menu" title="Réduire le menu"><%- icon("panelLeft", { size: 18 }) %></button>
         <button type="button" class="mk-close-btn" data-mk-sidebar-close aria-label="Fermer le menu"><%- icon("close", { size: 20 }) %></button>
       </div>
@@ -61,7 +66,7 @@
           { href: "/marketing/segments/nouveau", label: "Segment", icon: "filter", permission: "segments.write" },
         ].filter((i) => mk.can(i.permission));
       %>
-      <% if (createItems.length) { %>
+      <% if (!cms && createItems.length) { %>
         <div class="mk-create mk-dropdown" data-mk-dropdown>
           <button type="button" class="mk-create-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-create-menu" title="Créer"><%- icon("plus", { size: 18 }) %><span class="mk-nav-label">Créer</span></button>
           <div class="mk-menu mk-create-menu" id="mk-create-menu" role="menu" hidden>
@@ -70,6 +75,12 @@
           </div>
         </div>
       <% } %>
+      <% if (cms) { %>
+      <nav class="mk-nav-list mk-cms-nav" aria-label="Sections du CMS">
+        <%- include("cms-nav", { cms }) %>
+      </nav>
+      <a class="mk-cms-back" href="/marketing" title="Retour au Marketing"><%- icon("arrowLeft", { size: 16 }) %><span class="mk-nav-label">Retour au Marketing</span></a>
+      <% } else { %>
       <nav class="mk-nav-list" aria-label="Sections du marketing">
         <% nav.sections.forEach((section) => { %>
           <% if (section.flat) { const item = section.items[0]; %>
@@ -85,6 +96,7 @@
           <% } %>
         <% }) %>
       </nav>
+      <% } %>
     </aside>
     <div class="mk-overlay" data-mk-sidebar-close hidden></div>
 
@@ -98,7 +110,8 @@
           </ol>
         </nav>
         <div class="mk-topbar-actions">
-          <% if (nav.primary) { %><a class="btn btn-primary btn-sm mk-primary" href="<%= nav.primary.href %>"><%= nav.primary.label %></a><% } %>
+          <% if (cms) { %><%- include("cms-topbar", { cms, cmsSites }) %><% } %>
+          <% if (!cms && nav.primary) { %><a class="btn btn-primary btn-sm mk-primary" href="<%= nav.primary.href %>"><%= nav.primary.label %></a><% } %>
           <div class="mk-dropdown" data-mk-dropdown>
             <button type="button" class="mk-user" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-user-menu">
               <span class="avatar avatar-sm" aria-hidden="true" style="background:<%= avatarColor(currentUser.username) %>"><%= currentUser.username.slice(0, 1).toUpperCase() %></span>

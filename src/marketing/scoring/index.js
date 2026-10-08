@@ -154,20 +154,45 @@ function applyEvent(ctx, event, { silent = false } = {}) {
   }
   return delta;
 }
+// Ajustement par un SCÉNARIO (action « Modifier le score ») : « add » / « subtract » (points) ou « set » (nouveau score).
+// Le score reste borné à 0 ; la différence réellement appliquée est journalisée (source « automation ») : elle survit à un recalcul
+// des règles. `key` identifie le passage et l'étape : rejouer la même étape ne change rien. Aucun événement de changement de
+// niveau n'est émis (les actions d'un scénario n'en émettent jamais : pas de scénarios qui se déclenchent en boucle).
+const MAX_ADJUST = 100000;
+function adjustScore(ctx, contactId, { mode, points, key } = {}) {
+  checkCtx(ctx);
+  if (!["add", "subtract", "set"].includes(mode)) throw bad("Mode de score invalide (ajouter, retirer, définir).");
+  if (!Number.isInteger(points) || points < 0 || points > MAX_ADJUST || (mode !== "set" && points < 1)) throw bad(`Points invalides (un entier de ${mode === "set" ? 0 : 1} à ${MAX_ADJUST}).`);
+  if (!Number.isInteger(key) || key < 1) throw bad("Référence d'étape invalide.");
+  return transaction(ctx.db, () => {
+    const c = ctx.db.prepare("SELECT id, score FROM mk_contacts WHERE id = ? AND organization_id = ?").get(contactId, ctx.organizationId);
+    if (!c) throw bad("Contact introuvable.");
+    const next = mode === "add" ? c.score + points : mode === "subtract" ? Math.max(0, c.score - points) : points;
+    const delta = next - c.score;
+    const ins = ctx.db.prepare("INSERT OR IGNORE INTO mk_score_log (organization_id, contact_id, rule_id, event_id, event, points, created_at, source) VALUES (?, ?, NULL, ?, 'automation.score', ?, ?, 'automation')")
+      .run(ctx.organizationId, c.id, key, delta, ctx.now ? ctx.now() : Date.now());
+    if (!ins.changes) return { applied: false, delta: 0, score: c.score }; // étape déjà exécutée
+    if (delta) ctx.db.prepare("UPDATE mk_contacts SET score = ? WHERE id = ?").run(next, c.id);
+    return { applied: true, delta, score: next };
+  });
+}
+
 // Recalcul complet à partir des événements reçus (les règles actuelles appliquées à tout l'historique)
 function recompute(ctx) {
   checkCtx(ctx);
   return transaction(ctx.db, () => {
-    ctx.db.prepare("DELETE FROM mk_score_log WHERE organization_id = ?").run(ctx.organizationId);
+    ctx.db.prepare("DELETE FROM mk_score_log WHERE organization_id = ? AND source = 'rule'").run(ctx.organizationId);
     ctx.db.prepare("UPDATE mk_contacts SET score = 0 WHERE organization_id = ? AND score <> 0").run(ctx.organizationId);
     const names = [...new Set(ctx.db.prepare("SELECT event FROM mk_score_rules WHERE organization_id = ? AND active = 1").all(ctx.organizationId).map((r) => r.event))];
-    if (!names.length) return { events: 0, contacts: 0 };
+    const keepAdjustments = () => ctx.db.prepare("UPDATE mk_contacts SET score = MAX(0, score + COALESCE((SELECT SUM(points) FROM mk_score_log WHERE contact_id = mk_contacts.id AND source = 'automation'), 0)) WHERE organization_id = ? AND EXISTS (SELECT 1 FROM mk_score_log WHERE contact_id = mk_contacts.id AND source = 'automation')").run(ctx.organizationId);
+    if (!names.length) { keepAdjustments(); return { events: 0, contacts: ctx.db.prepare("SELECT COUNT(*) n FROM mk_contacts WHERE organization_id = ? AND score > 0").get(ctx.organizationId).n }; }
     const rows = ctx.db.prepare(`SELECT * FROM mk_events WHERE organization_id = ? AND contact_id IS NOT NULL AND name IN (${names.map(() => "?").join(",")}) ORDER BY id`).all(ctx.organizationId, ...names);
     let n = 0;
     for (const row of rows) {
       const ev = { id: row.id, name: row.name, contactId: row.contact_id, occurredAt: row.occurred_at, metadata: JSON.parse(row.metadata || "{}") };
       if (applyEvent(ctx, ev, { silent: true })) n += 1;
     }
+    keepAdjustments();
     audit(ctx, "scoring.recomputed", "organization", ctx.organizationId, { events: n });
     return { events: n, contacts: ctx.db.prepare("SELECT COUNT(*) n FROM mk_contacts WHERE organization_id = ? AND score > 0").get(ctx.organizationId).n };
   });
@@ -195,8 +220,8 @@ function contactScore(ctx, contactId) {
   const c = ctx.db.prepare("SELECT score FROM mk_contacts WHERE id = ? AND organization_id = ?").get(contactId, ctx.organizationId);
   if (!c) return null;
   const lv = levels(ctx);
-  const history = ctx.db.prepare("SELECT event, points, created_at FROM mk_score_log WHERE contact_id = ? AND organization_id = ? ORDER BY created_at DESC, id DESC LIMIT 20").all(contactId, ctx.organizationId);
-  return { score: c.score, level: levelOf(lv, c.score).name, history: history.map((h) => ({ ...h, label: (ruleEvents()[h.event] || {}).label || h.event })) };
+  const history = ctx.db.prepare("SELECT event, points, created_at, source FROM mk_score_log WHERE contact_id = ? AND organization_id = ? ORDER BY created_at DESC, id DESC LIMIT 20").all(contactId, ctx.organizationId);
+  return { score: c.score, level: levelOf(lv, c.score).name, history: history.map((h) => ({ ...h, label: h.source === "automation" ? "Scénario d'automatisation" : (ruleEvents()[h.event] || {}).label || h.event })) };
 }
 
-module.exports = { LEVEL_EVENT, DEFAULT_LEVELS, SUGGESTED, ruleEvents, levels, levelOf, saveLevels, listRules, createRule, updateRule, deleteRule, addSuggested, applyEvent, recompute, eventHandler, overview, contactScore };
+module.exports = { LEVEL_EVENT, DEFAULT_LEVELS, SUGGESTED, ruleEvents, levels, levelOf, saveLevels, listRules, createRule, updateRule, deleteRule, addSuggested, applyEvent, adjustScore, MAX_ADJUST, recompute, eventHandler, overview, contactScore };

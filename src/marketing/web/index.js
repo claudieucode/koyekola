@@ -21,7 +21,7 @@ function createMarketingRouters({ db }) {
       role: membership.role, can: allowed, marketing,
       ctx: { db, organizationId: marketing.organizationId, userId: user.id, can: allowed, bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL },
     };
-    res.locals.mk = { role: membership.role, can: allowed };
+    res.locals.mk = { role: membership.role, can: allowed, ctx: req.mk.ctx };
     res.locals.mkTheme = themeOf(marketing.settings, marketing.organizationId, user.id); // Paramètres → Apparence
     res.locals.mkh = helpers;
     // Message « flash » : affiché une seule fois après une action
@@ -38,6 +38,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./siteWeb")());
   admin.use(require("./funnels")());
   admin.use(require("./pageTests")());
+  admin.use(require("./cmsScreens")()); // écrans de KOLAKISA CMS (lecture seule, tables existantes) : après les routes /site-web déjà en place
   admin.use(require("./scoring")());
   admin.use(require("./surveys")());
   admin.use(require("./ai")());

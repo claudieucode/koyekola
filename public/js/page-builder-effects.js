@@ -32,25 +32,17 @@
     return det;
   }
 
-  // Une ligne « libellé | valeur » avec champ numérique borné ; vide = effet retiré
-  function numRow(label, value, min, max, unit, onSet, disabled, placeholder) {
-    var h = A.h, id = uid();
-    var inp = h("input", { id: id, type: "text", inputmode: "decimal", class: "pb-len-num", value: value === undefined ? "" : String(value), placeholder: placeholder || "0", disabled: disabled, autocomplete: "off" });
-    inp.addEventListener("change", function () {
-      var raw = inp.value.trim().replace(",", ".");
-      if (raw === "") { onSet(undefined); return; }
-      var n = Number(raw);
-      if (!isFinite(n) || n < min || n > max) { inp.setAttribute("aria-invalid", "true"); A.toast(label + " : un nombre entre " + min + " et " + max + ".", true); return; }
-      inp.removeAttribute("aria-invalid");
-      onSet(Math.round(n * 1000) / 1000);
-    });
-    return h("div", { class: "pb-field pb-style-field pb-prop" + (value !== undefined ? " is-set" : "") },
-      h("div", { class: "pb-prop-head" }, h("label", { for: id, class: "pb-prop-label", text: label })),
-      h("div", { class: "pb-len" }, inp, unit ? h("span", { class: "pb-len-unit is-static", text: unit }) : null));
+  // Une ligne « libellé | valeur » : NumericControl de l'éditeur (saisie, ▲▼, flèches clavier, glissement, curseur) ; vide = effet retiré
+  // cfg : step, integer, precision, slider ([min, max]), drag ; le pas par défaut suit l'étendue de la plage
+  function numRow(label, value, min, max, unit, onSet, disabled, placeholder, cfg) {
+    var span = max - min;
+    var c = Object.assign({ min: min, max: max, step: span <= 1 ? 0.01 : span <= 10 ? 0.1 : 1, integer: false, staticUnit: unit, value: value, placeholder: placeholder || "0", base: Number(placeholder) || 0, disabled: disabled, drag: true,
+      onCommit: function (raw, u, opts) { return onSet(raw === "" ? undefined : Number(raw), opts); } }, cfg || {});
+    return A.numField(label, c, value !== undefined, function () { onSet(undefined); });
   }
 
   // Modifie it.motion (même emplacement que l'animation d'entrée) : annulable, enregistré, revalidé par le serveur
-  function setMotion(it, label, mutate) {
+  function setMotion(it, label, mutate, opts) {
     A.change(function () {
       var x = A.byId(it.id), m = Object.assign({}, x.motion);
       mutate(m);
@@ -59,7 +51,7 @@
         if (v === undefined || v === "" || v === null || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v).length) || (Array.isArray(v) && !v.length)) delete m[k];
       });
       if (Object.keys(m).length) x.motion = m; else delete x.motion;
-    }, { label: label });
+    }, { label: label, key: opts && opts.key, light: opts && opts.light });
   }
 
   // « Actif sur » : écrans où les effets de défilement et de souris sont coupés (data-kw-fx-off côté page)
@@ -87,9 +79,9 @@
       var tilt = m.mouse && m.mouse.mode === "tilt";
       A.SPEC.scrollFx.forEach(function (fx) {
         var blocked = fx.key === "rotate" && tilt;
-        inner.appendChild(numRow(fx.label, sc[fx.key], fx.min, fx.max, fx.unit, function (v) {
-          setMotion(it, "Effet de défilement", function (mm) { var n = Object.assign({}, mm.scroll); if (v === undefined || v === 0) delete n[fx.key]; else n[fx.key] = Math.round(v); mm.scroll = n; });
-        }, locked || blocked, "0"));
+        inner.appendChild(numRow(fx.label, sc[fx.key], fx.min, fx.max, fx.unit, function (v, opts) {
+          setMotion(it, "Effet de défilement", function (mm) { var n = Object.assign({}, mm.scroll); if (v === undefined || v === 0) delete n[fx.key]; else n[fx.key] = Math.round(v); mm.scroll = n; }, opts);
+        }, locked || blocked, "0", { integer: true, step: 1 }));
         if (blocked) inner.appendChild(h("p", { class: "pb-hint", text: "Rotation indisponible : l'inclinaison à la souris utilise déjà la rotation de l'élément." }));
       });
       inner.appendChild(h("p", { class: "pb-hint", text: "L'effet suit la position réelle de l'élément dans la fenêtre pendant le défilement (0 au centre de l'écran). Visible dans l'aperçu et sur la page publiée, pas dans le canevas de l'éditeur." }));
@@ -109,9 +101,9 @@
         setMotion(it, "Effet de souris", function (mm) { if (!v) delete mm.mouse; else mm.mouse = { mode: v, strength: (mm.mouse && mm.mouse.strength) || 30 }; });
       }, { disabled: locked }));
       if (mo) {
-        inner.appendChild(numRow("Intensité", mo.strength, 1, 100, mo.mode === "tilt" ? "→ jusqu'à " + Math.round(mo.strength * 0.2) + "°" : "→ jusqu'à " + Math.round(mo.strength * 0.5) + " px", function (v) {
-          setMotion(it, "Effet de souris", function (mm) { mm.mouse = Object.assign({}, mm.mouse, { strength: v === undefined ? 30 : Math.round(v) }); });
-        }, locked, "30"));
+        inner.appendChild(numRow("Intensité", mo.strength, 1, 100, mo.mode === "tilt" ? "→ jusqu'à " + Math.round(mo.strength * 0.2) + "°" : "→ jusqu'à " + Math.round(mo.strength * 0.5) + " px", function (v, opts) {
+          setMotion(it, "Effet de souris", function (mm) { mm.mouse = Object.assign({}, mm.mouse, { strength: v === undefined ? 30 : Math.round(v) }); }, opts);
+        }, locked, "30", { integer: true, step: 1 }));
         if (mo.mode === "track") inner.appendChild(A.checkField("Suivre le curseur (au lieu de s'en éloigner)", mo.invert, function (v) {
           setMotion(it, "Effet de souris", function (mm) { mm.mouse = Object.assign({}, mm.mouse, { invert: v ? true : undefined }); });
         }, { disabled: locked }));
@@ -136,10 +128,10 @@
       inner.appendChild(A.selectField("Épingler", mode, [["", "Aucun"], ["top", "En haut de l'écran"], ["bottom", "En bas de l'écran"]], apply, { disabled: locked }));
       if (mode) {
         var cur = mode === "top" ? top : bottom;
-        inner.appendChild(numRow("Distance du bord", cur === undefined ? undefined : parseInt(cur, 10), 0, 2000, "px", function (v) {
+        inner.appendChild(numRow("Distance du bord", cur === undefined ? undefined : parseInt(cur, 10), 0, 2000, "px", function (v, opts) {
           var px = (v === undefined ? 0 : Math.round(v)) + "px";
-          A.setStyles(ids, mode === "top" ? { top: px } : { bottom: px }, { label: "Épinglage" });
-        }, locked, "0"));
+          A.setStyles(ids, mode === "top" ? { top: px } : { bottom: px }, { label: "Épinglage", key: opts && opts.key, light: opts && opts.light });
+        }, locked, "0", { integer: true, step: 1 }));
         inner.appendChild(h("p", { class: "pb-hint", text: "L'élément reste visible tant que son conteneur est à l'écran (comportement natif du navigateur). Donnez-lui un « plan » (z-index) dans Position pour qu'il passe au-dessus du reste." }));
       }
     });
@@ -162,26 +154,25 @@
         })));
         if (state === "hover") inner.appendChild(h("p", { class: "pb-hint", text: "Transformation au survol de la souris (sur un appareil sans survol elle ne s'applique jamais)." }));
       }
-      var put = function (key, value) {
+      var put = function (key, value, opts) {
         var next = Object.assign({}, A.ownValue(A.byId(it.id), "transform") || {});
         if (value === undefined || value === null || value === "") delete next[key]; else next[key] = value;
-        A.setStyle(ids, "transform", Object.keys(next).length ? next : "", { label: "Transformation" });
+        A.setStyle(ids, "transform", Object.keys(next).length ? next : "", { label: "Transformation", key: opts && opts.key, light: opts && opts.light });
       };
       TRANSFORM_FIELDS.forEach(function (f) {
         var id = uid(), cur = t[f[0]];
         if (f[2] === "len") {
-          var inp = h("input", { id: id, type: "text", inputmode: "decimal", class: "pb-len-num", value: cur === undefined ? "" : cur, disabled: locked, placeholder: "0", autocomplete: "off" });
-          inp.addEventListener("change", function () {
-            var v = inp.value.trim();
-            if (!v) { put(f[0], undefined); return; }
-            var l = A.parseLength(v, "top");
-            if (l === null) { inp.setAttribute("aria-invalid", "true"); A.toast(f[1] + " : une longueur comme 20px, 5% ou 2rem.", true); return; }
-            inp.removeAttribute("aria-invalid");
-            put(f[0], l || undefined);
-          });
-          inner.appendChild(h("div", { class: "pb-field pb-style-field pb-prop" + (cur !== undefined ? " is-set" : "") }, h("div", { class: "pb-prop-head" }, h("label", { for: id, class: "pb-prop-label", text: f[1] })), h("div", { class: "pb-len" }, inp, h("span", { class: "pb-len-unit is-static", text: "px / % / rem" }))));
+          // Déplacement : nombre + unité (px, %, rem) ; changer l'unité change le CSS
+          var cl = /^(-?[\d.]+)(px|%|rem|em|vh|vw)$/.exec(String(cur === undefined ? "" : cur));
+          inner.appendChild(A.numField(f[1], { min: -9999, max: 9999, step: function (u) { return u === "px" || u === "%" ? 1 : 0.1; }, units: ["px", "%", "rem"], unit: cl ? cl[2] : "px", value: cl ? cl[1] : cur === "0" ? "0" : "", placeholder: "0", base: 0, drag: true, disabled: locked, prop: "transform-" + f[0],
+            onCommit: function (raw, u, opts) {
+              var v = raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
+              if (v !== "" && A.parseLength(v, "top") === null) return false;
+              put(f[0], v === "0" || v === "" ? undefined : v, opts);
+            } }, cur !== undefined, function () { put(f[0], undefined); }));
         } else {
-          inner.appendChild(numRow(f[1], cur, f[4], f[5], f[2], function (v) { put(f[0], v === undefined ? undefined : f[0] === "scale" ? v : Math.round(v)); }, locked, f[3]));
+          var cfg = f[0] === "scale" ? { step: 0.01, precision: 2, slider: [f[4], f[5]] } : { step: 1, integer: true, slider: f[0] === "rotate" ? [f[4], f[5]] : null };
+          inner.appendChild(numRow(f[1], cur, f[4], f[5], f[2], function (v, opts) { put(f[0], v === undefined ? undefined : f[0] === "scale" ? v : Math.round(v), opts); }, locked, f[3], cfg));
         }
       });
       inner.appendChild(h("p", { class: "pb-hint", text: "Origine de la transformation et durée de la transition : sections Position et Effets de l'onglet Style." }));

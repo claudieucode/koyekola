@@ -1,0 +1,158 @@
+<%#
+  Gabarit unique des écrans de KOLAKISA CMS (voir src/marketing/web/cmsScreens.js). Il n'affiche que ce que le modèle d'écran
+  fournit : titre, bandeau « prochain palier », onglets, barre d'outils, cartes, tableau, médias, arbre de navigation,
+  formulaire désactivé. Aucune action n'est simulée : une commande sans fonction réelle est désactivée et dit pourquoi.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const soonTitle = "Disponible dans un prochain palier";
+  const rowsAll = typeof table !== "undefined" && table ? table.rows : [];
+  const pageNo = Math.max(1, Math.min(Number(query && query.page) || 1, Math.max(1, Math.ceil(rowsAll.length / PER_PAGE))));
+  const pageRows = rowsAll.slice((pageNo - 1) * PER_PAGE, pageNo * PER_PAGE);
+  const pageCount = Math.max(1, Math.ceil(rowsAll.length / PER_PAGE));
+  const pageHref = (n) => { const p = new URLSearchParams(query || {}); p.set("page", n); return "?" + p; };
+  const cellOf = (c) => (c !== null && typeof c === "object" ? c : { text: String(c ?? "") });
+%>
+    <div class="mk-head">
+      <h1><%= title %></h1>
+      <% if (typeof actions !== "undefined" && actions && actions.length) { %><div class="mk-actions">
+        <% actions.forEach((a) => { %>
+          <% if (a.disabled) { %><button type="button" class="btn btn-outline btn-sm" disabled title="<%= a.title || soonTitle %>"><%= a.label %></button>
+          <% } else { %><a class="btn <%= a.variant === 'primary' ? 'btn-primary' : 'btn-outline' %> btn-sm" href="<%= a.href %>"><%= a.label %></a><% } %>
+        <% }) %></div><% } %>
+    </div>
+    <% if (typeof lead !== "undefined" && lead) { %><p class="mk-lead"><%= lead %></p><% } %>
+
+    <% if (typeof soon !== "undefined" && soon) { %>
+      <div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p><strong>Prochain palier.</strong> <%= soon %></p></div>
+    <% } %>
+
+    <% if (typeof tabs !== "undefined" && tabs && tabs.length) { %>
+      <nav class="mk-tabs mk-cms-tabs" aria-label="Vues de <%= title %>">
+        <% tabs.forEach((t) => { %><a class="mk-tab" href="<%= t.href %>"<%- t.current ? ' aria-current="page"' : "" %>><%= t.label %><% if (t.count !== undefined && t.count !== null) { %> <span class="mk-tab-count"><%= t.count %></span><% } %></a>
+        <% }) %>
+      </nav>
+    <% } %>
+
+    <% if (typeof search !== "undefined" && search) { %>
+      <form class="mk-cms-toolbar" method="get" role="search" aria-label="Rechercher dans <%= title %>">
+        <% Object.entries(search.hidden || {}).forEach(([k, v]) => { if (v) { %><input type="hidden" name="<%= k %>" value="<%= v %>"><% } }) %>
+        <label class="mk-search"><span class="sr-only"><%= search.placeholder %></span><%- icon("search", { size: 16 }) %>
+          <input type="search" name="q" value="<%= search.q || '' %>" placeholder="<%= search.placeholder %>"<%- search.enabled ? "" : " disabled" %>></label>
+        <% if (search.enabled) { %><button type="submit" class="btn btn-outline btn-sm">Rechercher</button><% if (search.q) { %><a class="btn btn-ghost btn-sm" href="?">Effacer</a><% } %><% } %>
+      </form>
+    <% } %>
+
+    <% if (typeof stats !== "undefined" && stats) { %>
+      <div class="mk-stats mk-stats-4"><% stats.forEach((s) => { %>
+        <a class="mk-stat mk-cms-stat" href="<%= s.href %>"><span class="mk-stat-label"><%= s.label %></span><span class="mk-stat-value"><%= mkh.fmt(s.value) %></span></a>
+      <% }) %></div>
+    <% } %>
+
+    <% if (typeof cards !== "undefined" && cards && cards.length) { %>
+      <div class="mk-cms-cards">
+        <% cards.forEach((c) => { %>
+          <article class="mk-cms-card">
+            <span class="mk-cms-card-icon" aria-hidden="true"><%- icon(c.icon, { size: 20 }) %></span>
+            <h2><%= c.title %></h2><p><%= c.text %></p>
+            <% if (c.href) { %><a class="btn btn-outline btn-sm" href="<%= c.href %>"><%= c.label %></a>
+            <% } else { %><button type="button" class="btn btn-outline btn-sm" disabled title="<%= c.disabledText || soonTitle %>"><%= c.label %></button><% } %>
+          </article>
+        <% }) %>
+      </div>
+    <% } %>
+
+    <% if (typeof table !== "undefined" && table) { %>
+      <% if (!rowsAll.length) { %>
+        <div class="mk-empty"><%- icon(table.empty.icon || "inbox", { size: 32 }) %><% if (table.empty.title) { %><h2><%= table.empty.title %></h2><% } %>
+          <% if (table.empty.text) { %><p><%= table.empty.text %></p><% } %>
+          <% if (table.empty.cta) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="<%= table.empty.cta.href %>"><%= table.empty.cta.label %></a></div><% } %></div>
+        <div class="mk-table-wrap mk-cms-ghost" aria-hidden="true"><table class="mk-table"><thead><tr><% table.columns.forEach((c) => { %><th scope="col"<%- c.num ? ' class="mk-num"' : "" %>><%= c.label %></th><% }) %></tr></thead></table></div>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table">
+          <caption class="sr-only"><%= table.caption %></caption>
+          <thead><tr><% table.columns.forEach((c) => { %><th scope="col"<%- c.num ? ' class="mk-num"' : "" %>><%= c.label %></th><% }) %><% if (rowsAll.some((r) => r.actions && r.actions.length)) { %><th scope="col" class="mk-cms-actions-col"><span class="sr-only">Actions</span></th><% } %></tr></thead>
+          <tbody><% pageRows.forEach((r) => { %>
+            <tr><% r.cells.forEach((raw, i) => { const c = cellOf(raw); const col = table.columns[i] || {}; %>
+              <% if (i === 0) { %><th scope="row" data-label="<%= col.label %>"><% if (c.href) { %><a href="<%= c.href %>"><%= c.text %></a><% } else { %><%= c.text %><% } %><% if (c.sub) { %><span class="mk-sub"><%= c.sub %></span><% } %></th>
+              <% } else { %><td<%- col.num ? ' class="mk-num"' : "" %> data-label="<%= col.label %>"><% if (c.status) { %><span class="mk-status <%= c.status.cls %>"><%= c.status.label %></span><% } else if (c.href) { %><a href="<%= c.href %>"><%= c.text %></a><% } else { %><%= c.text %><% } %></td><% } %>
+            <% }) %>
+              <% if (rowsAll.some((x) => x.actions && x.actions.length)) { %><td class="mk-row-actions mk-cms-actions-col"><% (r.actions || []).forEach((a) => { %><a class="btn btn-ghost btn-sm" href="<%= a.href %>"><%= a.label %></a><% }) %></td><% } %></tr>
+          <% }) %></tbody>
+        </table></div>
+        <nav class="mk-cms-pager" aria-label="Pagination">
+          <span><%= rowsAll.length %> élément<%= rowsAll.length > 1 ? "s" : "" %></span>
+          <% if (pageCount > 1) { %><span class="mk-cms-pager-nav">
+            <% if (pageNo > 1) { %><a class="btn btn-ghost btn-sm" href="<%= pageHref(pageNo - 1) %>">Précédent</a><% } %>
+            <span>Page <%= pageNo %> sur <%= pageCount %></span>
+            <% if (pageNo < pageCount) { %><a class="btn btn-ghost btn-sm" href="<%= pageHref(pageNo + 1) %>">Suivant</a><% } %></span><% } %>
+        </nav>
+      <% } %>
+    <% } %>
+
+    <% if (typeof media !== "undefined" && media) { %>
+      <div class="mk-cms-media<%= media.selected ? ' has-detail' : '' %>">
+        <div>
+          <div class="mk-cms-viewswitch" role="group" aria-label="Affichage">
+            <a class="btn btn-outline btn-sm" href="<%= media.links.grille %>"<%- media.view === "grille" ? ' aria-current="true"' : "" %>>Grille</a>
+            <a class="btn btn-outline btn-sm" href="<%= media.links.liste %>"<%- media.view === "liste" ? ' aria-current="true"' : "" %>>Liste</a>
+          </div>
+          <% if (!media.items.length) { %>
+            <div class="mk-empty"><%- icon("image", { size: 32 }) %><h2><%= media.empty.title %></h2><p><%= media.empty.text %></p></div>
+          <% } else if (media.view === "liste") { %>
+            <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption class="sr-only">Fichiers</caption>
+              <thead><tr><th scope="col">Fichier</th><th scope="col">Type</th><th scope="col" class="mk-num">Taille</th><th scope="col">Source</th></tr></thead>
+              <tbody><% media.items.forEach((m) => { %><tr><th scope="row" data-label="Fichier"><a href="?<%= new URLSearchParams({ ...media.keep, sel: m.ref }) %>"><%= m.name %></a></th><td data-label="Type"><%= m.mime || m.type %></td><td class="mk-num" data-label="Taille"><%= media.size(m.size) %></td><td data-label="Source"><%= m.source %></td></tr><% }) %></tbody></table></div>
+          <% } else { %>
+            <ul class="mk-cms-grid" role="list"><% media.items.forEach((m) => { %>
+              <li><a class="mk-cms-thumb<%= media.selected && media.selected.ref === m.ref ? ' is-selected' : '' %>" href="?<%= new URLSearchParams({ ...media.keep, sel: m.ref }) %>" aria-label="<%= m.name %>">
+                <% if (m.mime && m.mime.indexOf("image/") === 0) { %><img src="<%= m.path %>" alt="<%= m.alt || '' %>" loading="lazy" width="160" height="120"><% } else { %><span class="mk-cms-thumb-file" aria-hidden="true"><%- icon(m.type === "videos" ? "video" : "fileText", { size: 28 }) %></span><% } %>
+                <span class="mk-cms-thumb-name"><%= m.name %></span></a></li>
+            <% }) %></ul>
+          <% } %>
+        </div>
+        <aside class="mk-panel mk-cms-detail" aria-label="Informations sur le fichier">
+          <% if (!media.selected) { %><h2>Informations</h2><p class="field-hint">Choisissez un fichier pour voir ses informations.</p>
+          <% } else { const s = media.selected; %>
+            <h2><%= s.name %></h2>
+            <% if (s.mime && s.mime.indexOf("image/") === 0) { %><img class="mk-cms-detail-img" src="<%= s.path %>" alt="<%= s.alt || '' %>"><% } %>
+            <dl class="mk-cms-dl"><dt>Type</dt><dd><%= s.mime || "—" %></dd><dt>Taille</dt><dd><%= media.size(s.size) %></dd>
+              <% if (s.width) { %><dt>Dimensions</dt><dd><%= s.width %> × <%= s.height %> px</dd><% } %><dt>Source</dt><dd><%= s.source %></dd><dt>Ajouté le</dt><dd><%= String(s.createdAt).slice(0, 10) %></dd><dt>Adresse</dt><dd class="mk-cms-break"><%= s.path %></dd></dl>
+            <a class="btn btn-ghost btn-sm" href="?<%= new URLSearchParams(media.keep) %>">Fermer</a>
+          <% } %>
+        </aside>
+      </div>
+    <% } %>
+
+    <% if (typeof tree !== "undefined" && tree) { %>
+      <div class="mk-cms-split">
+        <section class="mk-panel" aria-labelledby="nav-pick"><h2 id="nav-pick"><%= tree.pickerTitle %></h2><p class="field-hint"><%= tree.pickerHint %></p>
+          <% if (!tree.candidates.length) { %><p class="field-hint">Aucune page pour l'instant.</p><% } else { %>
+            <ul class="mk-cms-picklist"><% tree.candidates.forEach((c) => { %><li><label><input type="checkbox" disabled> <span><%= c.name %><span class="mk-sub"><%= c.hint %></span></span></label></li><% }) %></ul><% } %>
+          <button type="button" class="btn btn-outline btn-sm" disabled title="<%= soonTitle %>">Ajouter au menu</button>
+        </section>
+        <section class="mk-panel" aria-labelledby="nav-tree"><h2 id="nav-tree"><%= tree.treeTitle %></h2>
+          <div class="mk-cms-dropzone" aria-hidden="true"><%- icon("menu", { size: 24 }) %><p><%= tree.emptyText %></p></div>
+          <button type="button" class="btn btn-outline btn-sm" disabled title="<%= soonTitle %>">Ajouter un élément</button>
+        </section>
+      </div>
+    <% } %>
+
+    <% if (typeof form !== "undefined" && form) { %>
+      <form class="mk-panel mk-cms-form" onsubmit="return false" aria-label="<%= title %> (aperçu de l'interface)">
+        <fieldset disabled>
+          <% form.fields.forEach((f, i) => { const id = "cmsf-" + i; %>
+            <div class="field-group">
+              <% if (f.type === "checkbox") { %><label class="mk-cms-check"><input id="<%= id %>" type="checkbox"> <%= f.label %></label>
+              <% } else { %><label for="<%= id %>"><%= f.label %></label>
+                <% if (f.type === "textarea") { %><textarea id="<%= id %>" rows="3"><%= f.value || "" %></textarea>
+                <% } else if (f.type === "select") { %><select id="<%= id %>"><% f.options.forEach((o) => { %><option><%= o %></option><% }) %></select>
+                <% } else if (f.type === "file") { %><input id="<%= id %>" type="file">
+                <% } else { %><input id="<%= id %>" type="text" value="<%= f.value || '' %>"><% } %><% } %>
+              <% if (f.hint) { %><p class="field-hint"><%= f.hint %></p><% } %>
+            </div>
+          <% }) %>
+        </fieldset>
+        <div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" disabled title="<%= soonTitle %>"><%= form.submit %></button></div>
+      </form>
+    <% } %>
+<%- include("partials/bottom") %>
