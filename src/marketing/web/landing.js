@@ -204,7 +204,7 @@ module.exports = () => {
     const funnel = component ? null : require("../funnels").funnelsOfPage(ctx, page.id).find((f) => f.status === "active") || null;
     const boot = {
       page: { id: page.id, name: page.name, slug: page.slug, status: page.status, hasDraft: page.hasDraft, revision: page.revision, siteId: page.site_id, siteName: site ? site.name : null,
-        formId: page.form_id, formName: form ? form.name : null, formPublished: Boolean(form && form.status === "published"), indexable: Boolean(page.indexable), funnel: funnel ? { id: funnel.id, name: funnel.name, position: funnel.position } : null,
+        customColors: site ? site.tokens.customColors.map((c) => ({ key: c.key, label: c.label })) : [], formId: page.form_id, formName: form ? form.name : null, formPublished: Boolean(form && form.status === "published"), indexable: Boolean(page.indexable), funnel: funnel ? { id: funnel.id, name: funnel.name, position: funnel.position } : null,
         abTest: component ? null : (ctx.db.prepare("SELECT id, page_id FROM mk_page_tests WHERE variant_page_id = ? AND organization_id = ?").get(page.id, ctx.organizationId)) || null,
         // Édition d'un composant : adresses de l'éditeur propres au composant (rendu, enregistrement) et retour à la fiche du site
         ...(component ? { base: `/marketing/site-web/composants/${component.id}`, component: { id: component.id, name: component.name, role: component.role } } : {}) },

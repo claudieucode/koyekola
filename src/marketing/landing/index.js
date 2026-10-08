@@ -148,11 +148,14 @@ const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet"
 function siteInfo(ctx, page) {
   let seo = {};
   try { seo = require("../../seo/settings").all(); } catch { seo = {}; }
-  const site = page && page.site_id ? ctx.db.prepare("SELECT name, home_page_id FROM mk_sites WHERE id = ? AND organization_id = ?").get(page.site_id, ctx.organizationId) : null;
+  const site = page && page.site_id ? ctx.db.prepare("SELECT name, home_page_id, settings FROM mk_sites WHERE id = ? AND organization_id = ?").get(page.site_id, ctx.organizationId) : null;
+  // Le logo choisi dans « Réglages du site ▸ Identité » passe avant le logo des réglages SEO de l'organisation
+  let siteLogo = "";
+  try { siteLogo = site ? require("../pages/siteSettings").normalizeSettings(JSON.parse(site.settings || "{}")).identity.logoUrl : ""; } catch { siteLogo = ""; }
   const home = site && site.home_page_id ? ctx.db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ? AND status = 'published'").get(site.home_page_id) : null;
   const logo = String(seo.org_logo || "");
   const safeLogo = (/^\/uploads\/[A-Za-z0-9_\/.-]{1,200}\.(png|jpe?g|webp|gif|avif|svg)$/i.test(logo) && !logo.includes("..")) || /^https:\/\/[^\s"'<>]{3,300}$/i.test(logo) ? logo : "";
-  return { name: (site && site.name) || seo.site_name || "KOLAKISA", homeUrl: home ? `/p/${home.slug}` : "/", logo: safeLogo };
+  return { name: (site && site.name) || seo.site_name || "KOLAKISA", homeUrl: home ? `/p/${home.slug}` : "/", logo: siteLogo || safeLogo };
 }
 function dynamicProps(ctx, n, visitor, page) {
   const p = n.props;
@@ -240,7 +243,13 @@ function viewModel(ctx, page) {
   // CSS personnalisé de la page (revalidé à chaque affichage ; un CSS devenu invalide n'est simplement pas appliqué)
   let customCss = "";
   try { customCss = page.theme && page.theme.css ? pageNodes.normalizePageCss(page.theme.css) : ""; } catch { customCss = ""; }
-  return { ...page, sections, nodeCss: pageNodes.pageCss(sections), customCss };
+  // Points de rupture du site de la page (réglages du site) : écrans « Tablette » et « Mobile » de ses éléments
+  let breakpoints;
+  try {
+    const row = page.site_id ? ctx.db.prepare("SELECT settings FROM mk_sites WHERE id = ? AND organization_id = ?").get(page.site_id, ctx.organizationId) : null;
+    breakpoints = row ? require("../pages/siteSettings").breakpointsOf(require("../pages/siteSettings").normalizeSettings(JSON.parse(row.settings || "{}"))) : undefined;
+  } catch { breakpoints = undefined; }
+  return { ...page, sections, nodeCss: pageNodes.pageCss(sections, breakpoints), customCss };
 }
 // Liens cliquables d'une page AFFICHÉE (viewModel), dans l'ordre : le même calcul sert au rendu et à /p/<adresse>/clic/<n>
 function linksOf(page) {

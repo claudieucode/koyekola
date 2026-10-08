@@ -1,18 +1,21 @@
+<%_ const siteX = typeof site !== "undefined" && site ? site : null; const sx = siteX ? siteX.settings : null; _%>
 <!doctype html>
-<html lang="fr">
+<html lang="<%= sx ? sx.extras.language : "fr" %>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <%
     const seo = (() => { try { return typeof page.seo === "string" ? JSON.parse(page.seo || "{}") : (page.seo || {}); } catch { return {}; } })();
     const abs = (u) => (!u ? "" : /^https:\/\//.test(u) ? u : `${String(process.env.SITE_URL || "").replace(/\/+$/, "")}${u}`);
-    const shareImg = seo.ogImage || (page.sections.find((s) => s.type === "hero" && s.image) || {}).image;
+    const shareImg = seo.ogImage || (page.sections.find((s) => s.type === "hero" && s.image) || {}).image || (sx && sx.identity.logoUrl) || "";
     const canonical = seo.canonical || abs(`/p/${page.slug}`);
-    const indexable = page.indexable && !seo.noindex && !preview;
+    const indexable = page.indexable && !seo.noindex && !preview && !(sx && sx.extras.noindex);
     const siteStyle = typeof site !== "undefined" && site ? tokensToCss(site.tokens) : "";
   %>
   <title><%= page.title || page.name %></title>
-  <% if (page.description) { %><meta name="description" content="<%= page.description %>"><meta property="og:description" content="<%= page.description %>"><% } %>
+  <% const metaDescription = page.description || (sx && sx.identity.description) || ""; %>
+  <% if (metaDescription) { %><meta name="description" content="<%= metaDescription %>"><meta property="og:description" content="<%= metaDescription %>"><% } %>
+  <% if (siteX) { %><meta property="og:site_name" content="<%= siteX.name %>"><% } %>
   <meta property="og:title" content="<%= page.title || page.name %>">
   <meta property="og:type" content="website">
   <% if (canonical && /^https:/.test(canonical)) { %><link rel="canonical" href="<%= canonical %>"><meta property="og:url" content="<%= canonical %>"><% } %>
@@ -20,20 +23,26 @@
   <meta name="robots" content="<%= indexable ? "index, follow" : "noindex, nofollow" %>">
   <% const faqs = page.sections.filter((x) => x.type === "faq" && !x.hidden).flatMap((x) => x.items); if (indexable && faqs.length) { %>
   <script type="application/ld+json"><%- JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) }).replace(/</g, "\\u003c") %></script><% } %>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <% if (sx && sx.identity.faviconUrl) { %><link rel="icon" href="<%= sx.identity.faviconUrl %>"<% if (/\.svg(\?|$)/i.test(sx.identity.faviconUrl)) { %> type="image/svg+xml"<% } %>><% } else { %><link rel="icon" href="/favicon.svg" type="image/svg+xml"><% } %>
   <link rel="stylesheet" href="<%= asset("/css/landing.css") %>">
+  <%# Styles du thème et de la mise en page du site : avant les styles des éléments, qui restent prioritaires %>
+  <% if (siteX && siteX.assets.theme) { %><style><%- siteX.assets.theme %></style><% } %>
   <% if (page.nodeCss) { %><style><%- page.nodeCss %></style><% } %>
+  <%# CSS personnalisé du site (réglages du site), puis transition entre les pages (jamais dans l'éditeur) %>
+  <% if (siteX && siteX.assets.custom) { %><style><%- siteX.assets.custom %></style><% } %>
+  <% if (siteX && siteX.assets.transition && !(typeof builder !== "undefined" && builder)) { %><style><%- siteX.assets.transition %></style><% } %>
   <%# CSS personnalisé de la page : vérifié (aucune ressource externe), confiné au contenu de la page %>
   <% if (page.customCss) { %><style><%- page.customCss %></style><% } %>
 </head>
-<% const bAttr = typeof builder !== "undefined" && builder ? " data-kw-builder" : ""; %><% if (siteStyle) { %><body class="lp-body lp-site"<%- bAttr %> style="<%= siteStyle %> --lp-accent: var(--kw-primary); --lp-on-accent: var(--kw-on-primary); --lp-bg: var(--kw-background); --lp-text: var(--kw-text)">
+<% const bAttr = typeof builder !== "undefined" && builder ? " data-kw-builder" : ""; %><% if (siteStyle) { %><body class="lp-body lp-site"<%- bAttr %><%- siteX ? siteX.assets.lightboxAttrs : "" %> style="<%= siteStyle %> --lp-accent: var(--kw-primary); --lp-on-accent: var(--kw-on-primary); --lp-bg: var(--kw-background); --lp-text: var(--kw-text); <%= siteX ? siteX.assets.lightboxVars : "" %>">
 <% } else { %><body class="lp-body"<%- bAttr %> style="--lp-accent: <%= page.theme.accent %>; --lp-bg: <%= page.theme.background %>; --lp-text: <%= page.theme.text %>"><% } %>
   <% if (preview && !(typeof builder !== "undefined" && builder)) { %><p class="lp-preview-bar"><%= typeof previewLabel !== "undefined" && previewLabel ? previewLabel + " " : "Aperçu — " %>Les clics et inscriptions ne sont pas enregistrés.</p><% } %>
   <main class="lp-main" id="main">
     <% if (thanks && !page.sections.some((x) => x.type === "form")) { %><section class="lp-section"><p class="lp-thanks" role="status"><%= thanks %></p></section><% } %>
     <%- include("_sections", { page, form, preview, thanks, error, values, fieldCatalog, propertyDefs, builder: typeof builder !== "undefined" && builder }) %>
   </main>
-  <footer class="lp-foot"><a href="/">KOLAKISA</a> · <a href="/cookies" data-kw-consent-open>Cookies</a></footer>
+  <%# Pied de page : la marque du site (logo et nom des réglages du site) ; sans site, la marque de la plateforme %>
+  <footer class="lp-foot"><a href="/"><% if (sx && sx.identity.logoUrl) { %><picture><% if (sx.identity.logoMobileUrl) { %><source media="(max-width: <%= sx.layout.breakpoints.mobile %>px)" srcset="<%= sx.identity.logoMobileUrl %>"><% } %><img class="lp-foot-logo" src="<%= sx.identity.logoUrl %>" alt="<%= siteX.name %>"></picture><% } else { %><%= siteX ? siteX.name : "KOLAKISA" %><% } %></a> · <a href="/cookies" data-kw-consent-open>Cookies</a></footer>
   <% if (!preview) { %><%- include("../partials/consent-banner") %>
   <script src="<%= asset("/js/visitor.js") %>" defer></script><% } %>
   <script src="<%= asset("/js/landing.js") %>" defer></script>

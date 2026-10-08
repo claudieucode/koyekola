@@ -93,6 +93,44 @@ module.exports = () => {
       return `Design system enregistré${req.body.reset === "1" ? " (valeurs par défaut)" : ""}.${live ? ` Il s'applique tout de suite aux ${live} page(s) en ligne du site.` : ""}`;
     });
   });
+  // ---------- Réglages du site (panneau de l'éditeur de pages, JSON) ----------
+  // Même source de vérité que la page « Design system » du site : mk_sites.tokens. Chaque enregistrement est contrôlé
+  // par une révision (409 si le site a été modifié ailleurs) et s'applique tout de suite aux pages en ligne du site.
+  const settingsError = (res, next, error) => {
+    const { MarketingError } = require("../errors");
+    if (!(error instanceof MarketingError)) return next(error);
+    res.status(error.code === "conflict" ? 409 : error.code === "not_found" ? 404 : error.code === "forbidden" ? 403 : 422).json({ error: { code: error.code, message: error.message } });
+  };
+  const siteSettings = require("../pages/siteSettings");
+  const settingsPayload = (req, site) => ({
+    site: { id: site.id, name: site.name }, revision: site.settings_revision, tokens: site.tokens, settings: site.settings,
+    canWrite: req.mk.can("forms.write"), canCode: req.mk.can("pages.code"),
+    usage: pages.colorUsage(req.mk.ctx, site.id),
+    catalog: {
+      colorKeys: tokens.COLOR_KEYS, colorLabels: tokens.COLOR_LABELS, maxCustomColors: tokens.MAX_CUSTOM_COLORS,
+      fontRoles: tokens.FONT_ROLES, fontLabels: tokens.FONT_LABELS, fonts: Object.fromEntries(Object.entries(tokens.FONTS).map(([k, f]) => [k, { label: f.label, stack: f.stack }])),
+      typeKeys: tokens.TYPE_KEYS, typeLabels: tokens.TYPE_LABELS, shadows: Object.keys(tokens.SHADOWS), languages: siteSettings.LANGUAGES, maxCss: siteSettings.MAX_CSS,
+    },
+  });
+  router.get("/site-web/sites/:id(\\d+)/reglages.json", need("forms.read"), (req, res, next) => {
+    try {
+      const site = pages.requireSite(req.mk.ctx, intOrNull(req.params.id));
+      res.set("Cache-Control", "no-store").json(settingsPayload(req, site));
+    } catch (error) { settingsError(res, next, error); }
+  });
+  router.put("/site-web/sites/:id(\\d+)/reglages.json", need("forms.write"), (req, res, next) => {
+    try {
+      const body = req.body || {};
+      const current = pages.requireSite(req.mk.ctx, intOrNull(req.params.id));
+      // Le CSS du site est du code : réservé à la permission « pages.code » (comme le widget HTML)
+      if (body.settings && body.settings.customCss !== undefined && String(body.settings.customCss).trim() !== String(current.settings.customCss).trim() && !req.mk.can("pages.code")) {
+        const { MarketingError } = require("../errors");
+        throw new MarketingError("forbidden", "Le CSS personnalisé du site est réservé aux comptes autorisés à écrire du code (permission « pages.code »).");
+      }
+      const site = pages.saveSiteDesign(req.mk.ctx, current.id, { tokens: body.tokens, settings: body.settings, name: body.name, revision: body.revision });
+      res.set("Cache-Control", "no-store").json(settingsPayload(req, site));
+    } catch (error) { settingsError(res, next, error); }
+  });
   // En-tête et pied de page du site : un composant affiché autour des sections de chaque page du site
   router.post("/site-web/sites/:id(\\d+)/parties", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
