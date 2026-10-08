@@ -44,11 +44,11 @@ const SECTIONS = [
   },
   {
     key: "commentaires", label: "Commentaires", icon: "inbox", items: [
-      leaf("commentaires", "Tous", `${BASE}/commentaires`),
-      leaf("commentaires/en-attente", "En attente", `${BASE}/commentaires/en-attente`, { status: "preview" }),
-      leaf("commentaires/approuves", "Approuvés", `${BASE}/commentaires/approuves`),
-      leaf("commentaires/indesirables", "Indésirables", `${BASE}/commentaires/indesirables`, { status: "preview" }),
-      leaf("commentaires/corbeille", "Corbeille", `${BASE}/commentaires/corbeille`, { status: "preview" }),
+      leaf("commentaires", "Tous", `${BASE}/commentaires`, { permission: "comments.read" }),
+      leaf("commentaires/en-attente", "En attente", `${BASE}/commentaires/en-attente`, { permission: "comments.read" }),
+      leaf("commentaires/approuves", "Approuvés", `${BASE}/commentaires/approuves`, { permission: "comments.read" }),
+      leaf("commentaires/indesirables", "Indésirables", `${BASE}/commentaires/indesirables`, { permission: "comments.read" }),
+      leaf("commentaires/corbeille", "Corbeille", `${BASE}/commentaires/corbeille`, { permission: "comments.read" }),
     ],
   },
   {
@@ -97,6 +97,7 @@ const SECTIONS = [
       leaf("parametres/seo", "SEO", `${BASE}/parametres/seo`, { permission: "settings.read", status: "preview" }),
       leaf("parametres/performance", "Performance", `${BASE}/parametres/performance`, { permission: "settings.read", status: "preview" }),
       leaf("parametres/securite", "Sécurité", `${BASE}/parametres/securite`, { permission: "settings.read", status: "preview" }),
+      leaf("parametres/commentaires", "Commentaires", `${BASE}/parametres/commentaires`, { permission: "settings.read" }),
       leaf("parametres/confidentialite", "Confidentialité", `${BASE}/parametres/confidentialite`, { permission: "settings.read", status: "preview" }),
       leaf("parametres/cookies", "Cookies", `${BASE}/parametres/cookies`, { permission: "settings.read", status: "preview" }),
       leaf("parametres/scripts", "Scripts", `${BASE}/parametres/scripts`, { permission: "settings.read", status: "preview" }),

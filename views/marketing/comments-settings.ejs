@@ -1,0 +1,31 @@
+<%#
+  KOLAKISA CMS → Paramètres → Commentaires (palier 6). Chaque réglage a un effet réel sur le site (voir src/services/comments.js).
+%><%- include("partials/top", { title, active }) %>
+    <div class="mk-head"><h1>Réglages des commentaires</h1>
+      <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/site-web/commentaires">Modérer les commentaires</a></div></div>
+    <p class="mk-lead">Ces réglages s'appliquent à tous les commentaires du site, à partir du prochain envoi.</p>
+    <form class="mk-form mk-cms-form" method="post" action="/marketing/site-web/parametres/commentaires">
+      <fieldset<%= canWrite ? "" : " disabled" %>>
+        <legend class="sr-only">Commentaires</legend>
+        <div class="field-group"><label class="mk-cms-check"><input type="checkbox" name="enabled_default" value="1"<%= cfg.enabled_default ? " checked" : "" %>> Commentaires ouverts sur les nouveaux articles</label>
+          <span class="field-hint">Chaque article peut ensuite les fermer dans l'éditeur (« Autoriser les commentaires »). Les articles existants ne changent pas.</span></div>
+        <div class="field-group"><label class="mk-cms-check"><input type="checkbox" name="guests_allowed" value="1"<%= cfg.guests_allowed ? " checked" : "" %>> Autoriser les visiteurs sans compte (nom et e-mail)</label>
+          <span class="field-hint">Sinon, seuls les membres connectés peuvent commenter. L'e-mail d'un invité n'est jamais affiché publiquement et ne l'inscrit à aucune liste d'envoi.</span></div>
+        <div class="field-group"><label for="cs-moderation">Modération</label>
+          <select id="cs-moderation" name="moderation">
+            <option value="none"<%= cfg.moderation === "none" ? " selected" : "" %>>Aucune : les commentaires sont publiés tout de suite</option>
+            <option value="first"<%= cfg.moderation === "first" ? " selected" : "" %>>Premier commentaire seulement : relu avant publication, ensuite libre</option>
+            <option value="all"<%= cfg.moderation === "all" ? " selected" : "" %>>Tous les commentaires sont relus avant publication</option>
+          </select>
+          <span class="field-hint">Les commentaires de l'équipe (éditeurs et plus) sont toujours publiés tout de suite. Un commentaire avec <%= maxLinks %> liens ou plus est toujours retenu.</span></div>
+        <div class="field-group"><label class="mk-cms-check"><input type="checkbox" name="replies_allowed" value="1"<%= cfg.replies_allowed ? " checked" : "" %>> Autoriser les réponses aux commentaires</label></div>
+        <div class="field-group"><label for="cs-depth">Profondeur maximale des discussions</label>
+          <select id="cs-depth" name="max_depth"><% [1, 2, 3, 4, 5].forEach((n) => { %><option value="<%= n %>"<%= cfg.max_depth === n ? " selected" : "" %>><%= n %> niveau<%= n > 1 ? "x" : "" %><%= n === 1 ? " (pas de réponses)" : "" %></option><% }) %></select>
+          <span class="field-hint">Au-delà, il n'y a plus de bouton « Répondre » : on répond au commentaire précédent.</span></div>
+        <div class="field-group"><label class="mk-cms-check"><input type="checkbox" name="links_allowed" value="1"<%= cfg.links_allowed ? " checked" : "" %>> Autoriser les liens (adresses http/https, cliquables avec rel « nofollow ugc »)</label>
+          <span class="field-hint">Décoché : un commentaire contenant une adresse web est refusé avec un message.</span></div>
+      </fieldset>
+      <p class="field-hint">Données conservées : l'adresse IP n'est jamais enregistrée en clair, seulement une empreinte non réversible, effacée après <%= retention %> jours ; elle n'est accessible à personne dans l'interface.</p>
+      <% if (canWrite) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button></div><% } else { %><p class="field-hint">Lecture seule : seuls les administrateurs modifient ces réglages.</p><% } %>
+    </form>
+<%- include("partials/bottom") %>

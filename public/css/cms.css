@@ -166,3 +166,13 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label { display: none; }
 .mk-tx-name { display: flex; flex-direction: column; gap: 2px; font-weight: 600; }
 .mk-tx-name .mk-sub { font-weight: 400; word-break: break-all; }
 .mk-tx-table th[scope="row"] { font-weight: 600; }
+
+/* Commentaires (palier 6) */
+.mk-cm-body { white-space: pre-line; overflow-wrap: anywhere; max-width: 46ch; }
+.mk-cm-reply { margin-top: 6px; }
+.mk-cm-reply summary { cursor: pointer; color: var(--mk-primary, #0a76b2); font-size: 0.88rem; }
+.mk-cm-reply form { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; max-width: 46ch; }
+.mk-cm-reply textarea { width: 100%; }
+.mk-cm-form { display: inline; margin: 0; }
+.mk-cms-narrow { width: 140px; }
+.mk-cm-table th[scope="row"] { font-weight: 600; }

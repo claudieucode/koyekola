@@ -39,9 +39,9 @@ const SOURCES = [
     FROM reviews r JOIN users u ON u.id = r.user_id JOIN courses c ON c.id = r.course_id WHERE c.instructor_id = :me
     `],
   ["Commentaires", `
-    SELECT 'comment:' || bc.id AS key, 'comment' AS kind, 'avis' AS type, bc.created_at AS at, 'Nouveau commentaire' AS title, u.username || ' · ' || p.title AS detail,
-      '/blog/' || p.slug || '#commentaires' AS href, 1 AS notif, NULL AS amount
-    FROM blog_comments bc JOIN users u ON u.id = bc.user_id JOIN posts p ON p.id = bc.post_id
+    SELECT 'comment:' || bc.id AS key, 'comment' AS kind, 'avis' AS type, bc.created_at AS at, CASE WHEN bc.status = 'pending' THEN 'Commentaire à modérer' ELSE 'Nouveau commentaire' END AS title, COALESCE(u.username, NULLIF(bc.author_name, ''), 'Anonyme') || ' · ' || p.title AS detail,
+      CASE WHEN bc.status = 'pending' THEN '/marketing/site-web/commentaires/en-attente' ELSE '/blog/' || p.slug || '#commentaires' END AS href, 1 AS notif, NULL AS amount
+    FROM blog_comments bc LEFT JOIN users u ON u.id = bc.user_id JOIN posts p ON p.id = bc.post_id WHERE bc.status IN ('pending', 'approved')
     `],
   ["Articles", `
     SELECT 'post:' || p.id AS key, 'post' AS kind, 'contenu' AS type, p.published_at AS at, 'Article publié' AS title, p.title AS detail, '/blog/' || p.slug AS href, 0 AS notif, NULL AS amount

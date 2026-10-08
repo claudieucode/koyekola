@@ -652,6 +652,57 @@ db.exec(`
 // Les sauvegardes (VACUUM INTO) restent cohérentes dans ce mode.
 db.exec("PRAGMA journal_mode = WAL");
 
+// ---------- Moteur de commentaires (palier 6) ----------
+// Le système de commentaires existant (blog_comments : membres connectés, publication immédiate) est RÉUTILISÉ et étendu, pas doublé :
+// même table, mêmes lignes (toutes conservées, statut « approved »), mais rattachée à un contenu générique (content_type + content_id),
+// avec réponses (parent_id), invités (user_id facultatif + nom/e-mail), statut de modération et empreinte d'adresse IP (jamais l'adresse).
+// post_id est conservé pour les articles : lecteurs historiques et suppression en cascade avec l'article.
+if (!db.prepare("PRAGMA table_info(blog_comments)").all().some((c) => c.name === "status")) {
+  db.exec(`
+    SAVEPOINT comments_engine;
+    ALTER TABLE blog_comments RENAME TO blog_comments_old;
+    CREATE TABLE blog_comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+      content_type TEXT NOT NULL DEFAULT 'post',
+      content_id INTEGER,
+      parent_id INTEGER REFERENCES blog_comments(id) ON DELETE SET NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      author_name TEXT NOT NULL DEFAULT '',
+      author_email TEXT NOT NULL DEFAULT '',
+      ip_hash TEXT NOT NULL DEFAULT '',
+      body TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'approved' CHECK (status IN ('pending', 'approved', 'spam', 'trash')),
+      prev_status TEXT NOT NULL DEFAULT '',
+      approved_at TEXT,
+      approved_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      deleted_at TEXT,
+      metadata TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    INSERT INTO blog_comments (id, post_id, content_type, content_id, user_id, body, status, approved_at, created_at, updated_at)
+      SELECT id, post_id, 'post', post_id, user_id, body, 'approved', created_at, created_at, created_at FROM blog_comments_old;
+    DROP TABLE blog_comments_old;
+    RELEASE comments_engine;
+  `);
+}
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_blog_comments_content ON blog_comments(content_type, content_id, status, created_at);
+  CREATE INDEX IF NOT EXISTS idx_blog_comments_post ON blog_comments(post_id, created_at);
+  CREATE INDEX IF NOT EXISTS idx_blog_comments_parent ON blog_comments(parent_id);
+  CREATE INDEX IF NOT EXISTS idx_blog_comments_status ON blog_comments(status, created_at);
+  CREATE INDEX IF NOT EXISTS idx_blog_comments_user ON blog_comments(user_id);
+  CREATE INDEX IF NOT EXISTS idx_blog_comments_email ON blog_comments(author_email);
+  CREATE INDEX IF NOT EXISTS idx_blog_comments_approver ON blog_comments(approved_by);
+  -- Les écritures historiques (post_id seul) restent valides : le contenu générique en est déduit
+  CREATE TRIGGER IF NOT EXISTS trg_blog_comments_content AFTER INSERT ON blog_comments WHEN NEW.content_id IS NULL AND NEW.post_id IS NOT NULL
+    BEGIN UPDATE blog_comments SET content_id = NEW.post_id WHERE id = NEW.id; END;
+  -- Un commentaire supprimé (compte effacé, suppression définitive) : ses réponses remontent d'un niveau, rien d'autre n'est perdu
+  CREATE TRIGGER IF NOT EXISTS trg_blog_comments_reparent BEFORE DELETE ON blog_comments
+    BEGIN UPDATE blog_comments SET parent_id = OLD.parent_id WHERE parent_id = OLD.id; END;
+`);
+
 // Index des clés étrangères des tables ajoutées (offres, paiements, certificats, support) : suppressions en cascade et jointures
 // sans parcourir toute la table (même règle que les index ci-dessus ; vérifié par tests/audit-corrections.test.js).
 db.exec(`

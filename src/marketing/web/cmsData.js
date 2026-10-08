@@ -49,13 +49,12 @@ function authors(db) {
   return safe(() => db.prepare(`SELECT u.id, u.username, COUNT(p.id) n, SUM(p.status = 'published') published FROM users u JOIN posts p ON p.author_id = u.id AND p.deleted_at IS NULL GROUP BY u.id ORDER BY n DESC, u.username`).all(), []);
 }
 
-// ---------- Commentaires (blog_comments : membres connectés, publication immédiate) ----------
-function listComments(db, { q, limit = 500 } = {}) {
-  return safe(() => db.prepare(`SELECT c.id, c.body, c.created_at, u.username AS author, p.title AS post_title, p.slug AS post_slug
-      FROM blog_comments c JOIN posts p ON p.id = c.post_id JOIN users u ON u.id = c.user_id
-      ${q ? "WHERE c.body LIKE ? ESCAPE '\\' OR u.username LIKE ? ESCAPE '\\' OR p.title LIKE ? ESCAPE '\\'" : ""} ORDER BY c.id DESC LIMIT ?`).all(...(q ? [like(q), like(q), like(q)] : []), limit), []);
+// ---------- Commentaires (tableau de bord) : seuls les commentaires approuvés, publics ----------
+function listComments(db, { limit = 4 } = {}) {
+  return safe(() => db.prepare(`SELECT c.id, c.body, c.created_at, COALESCE(u.username, NULLIF(c.author_name, ''), 'Anonyme') AS author, p.title AS post_title, p.slug AS post_slug
+      FROM blog_comments c JOIN posts p ON c.content_type = 'post' AND p.id = c.content_id LEFT JOIN users u ON u.id = c.user_id WHERE c.status = 'approved' ORDER BY c.id DESC LIMIT ?`).all(limit), []);
 }
-const commentCount = (db) => safe(() => db.prepare("SELECT COUNT(*) n FROM blog_comments").get().n, 0);
+const commentCount = (db) => safe(() => db.prepare("SELECT COUNT(*) n FROM blog_comments WHERE status = 'approved'").get().n, 0);
 
 // ---------- Utilisateurs de l'équipe (mk_org_members) ----------
 const ROLE_LABEL = { owner: "Propriétaire", admin: "Administrateur", editor: "Éditeur", viewer: "Lecteur" };

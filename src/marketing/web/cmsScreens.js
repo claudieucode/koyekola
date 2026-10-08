@@ -77,20 +77,6 @@ const SCREENS = {
       table: siteTable("Sites", "", "Ouvrir le site") };
   },
 
-  // ----- Commentaires -----
-  commentaires(req, ctx, sub) {
-    const total = data.commentCount(ctx.db);
-    const tabs = tabsOf("commentaires", sub, [["", "Tous", total], ["en-attente", "En attente", 0], ["approuves", "Approuvés", total], ["indesirables", "Indésirables", 0], ["corbeille", "Corbeille", 0]]);
-    const q = String(req.query.q || "").trim();
-    const columns = [{ label: "Auteur" }, { label: "Commentaire" }, { label: "Publié sur" }, { label: "Date" }, { label: "Statut" }];
-    const preview = ["en-attente", "indesirables", "corbeille"].includes(sub);
-    const rows = preview ? [] : data.listComments(ctx.db, { q }).map((c) => ({ cells: [c.author, c.body.length > 140 ? `${c.body.slice(0, 140)}…` : c.body, { text: c.post_title, href: `/blog/${c.post_slug}#commentaire-${c.id}` }, fdate(c.created_at), { status: { label: "Approuvé", cls: "mk-status-ok" } }], actions: [{ label: "Voir", href: `/blog/${c.post_slug}#commentaire-${c.id}` }] }));
-    const noun = { "en-attente": "en attente", indesirables: "indésirable", corbeille: "dans la corbeille" }[sub];
-    return { title: "Commentaires", lead: "Les commentaires laissés par les membres sous les articles. Aujourd'hui ils sont publiés immédiatement : la modération (approbation, indésirables, réponses, corbeille) arrive dans un prochain palier.",
-      soon: preview ? SOON : null, tabs, search: { enabled: !preview, placeholder: "Rechercher un commentaire", q },
-      table: { caption: "Commentaires", columns, rows, empty: empty("inbox", preview ? `Aucun commentaire ${noun}` : q ? "Aucun commentaire trouvé" : "Aucun commentaire", preview ? "Cette vue sera alimentée par la modération." : "Les commentaires des membres sous vos articles apparaissent ici.") } };
-  },
-
   // ----- Utilisateurs -----
   utilisateurs(req, ctx, sub) {
     const team = data.listTeam(ctx);

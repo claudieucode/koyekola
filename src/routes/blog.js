@@ -7,6 +7,9 @@ const db = require("../config/database");
 const { requireInstructor } = require("../middlewares/auth");
 const { upload } = require("../middlewares/upload");
 const { createRateLimiter } = require("../middlewares/security");
+const commentsEngine = require("../services/comments");
+const antispam = require("../marketing/forms/antispam"); // jeton d'heure d'affichage déjà utilisé par les formulaires publics
+const { roleAtLeast, membershipsOf } = require("../marketing/organizations");
 const { slugify } = require("../utils/format");
 const { UserError } = require("../utils/errors");
 const { removeUploadedFile } = require("../utils/uploads");
@@ -199,6 +202,17 @@ router.get("/blog/auteur/:id", (req, res) => {
 
 // Page d'un article (aussi utilisée par l'aperçu de l'éditeur : preview = true)
 function renderPostPage(req, res, post, { preview = false } = {}) {
+  const commentThread = commentsEngine.thread("post", post.id, { page: req.query.cpage });
+  // « Répondre » : le formulaire se prépare pour ce commentaire (il doit être approuvé et son fil prolongeable)
+  let replyTarget = null;
+  const wanted = /^\d{1,9}$/.test(String(req.query.repondre || req.session.commentForm?.parent || "")) ? Number(req.query.repondre || req.session.commentForm.parent) : 0;
+  if (wanted && commentThread.repliesAllowed) {
+    const target = commentsEngine.get(wanted);
+    if (target && target.status === "approved" && target.content_type === "post" && target.content_id === post.id && commentsEngine.levelOf(target.id) < commentThread.maxDepth) {
+      const owner = target.user_id ? db.prepare("SELECT username FROM users WHERE id = ?").get(target.user_id) : null;
+      replyTarget = { id: target.id, name: owner ? owner.username : target.author_name || "Anonyme" };
+    }
+  }
   const newsletter = newsletterForm(req);
   const article = blog.renderPost(post, { newsletterHtml: newsletterBlockHtml(newsletter) });
   const minutes = Number.isInteger(post.reading_minutes) && post.reading_minutes > 0 ? post.reading_minutes : article.minutes;
@@ -280,36 +294,53 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
     categorySlug: post.category ? taxonomy.categorySlugOfName(post.category) : "", postTerms,
     sidebar: { popular: blog.popular(4, post.id), recent: blog.recent(4, post.id), categories: blog.categories(), newsletter },
     similar: post.published ? blog.similar(post, 3) : [],
-    comments: post.comments_enabled ? blog.listComments(post.id) : [],
+    comments: commentThread,
+    replyTo: replyTarget,
+    commentHtml: (body) => commentsEngine.html(body, { links: commentsEngine.settings().links_allowed }),
+    commentCfg: commentsEngine.settings(),
+    commentForm: req.session.commentForm || {},
+    commentToken: antispam.issue(),
     commentsOpen: Boolean(post.comments_enabled && post.published && !preview),
     commentMax: blog.COMMENT_MAX,
     commentError: req.session.commentError || null,
     commentDraft: req.session.commentDraft || "",
+    commentNotice: req.session.commentNotice || null,
     me: req.session.user || null,
   });
   delete req.session.commentError;
-  delete req.session.commentDraft;
+  delete req.session.commentDraft; delete req.session.commentForm; delete req.session.commentNotice;
   });
 }
 
-// ---------- Commentaires : réservés aux membres connectés ----------
+// ---------- Commentaires : moteur générique (src/services/comments.js) ----------
 const commentLimiter = createRateLimiter(6, 10 * 60 * 1000); // 6 commentaires par tranche de 10 minutes et par membre
+const guestLimiter = createRateLimiter(3, 10 * 60 * 1000);   // invités : 3 commentaires par tranche de 10 minutes et par adresse
+const burstLimiter = createRateLimiter(1, 5 * 1000);         // jamais deux envois en moins de 5 secondes depuis la même adresse (invités)
+// Un formateur ou un membre de l'équipe (éditeur et plus) est publié tout de suite
+const canModerate = (user) => Boolean(user && (user.role === "formateur" || membershipsOf(db, user.id).some((m) => roleAtLeast(m.role, "editor"))));
 router.post("/blog/:slug/commentaires", (req, res) => {
   const post = db.prepare("SELECT * FROM posts WHERE slug = ? AND published = 1").get(req.params.slug);
   if (!post) return res.status(404).render("error", { message: "Article introuvable." });
   const back = `/blog/${post.slug}`;
-  if (!req.session.user) return res.redirect(`/connexion?redirect=${encodeURIComponent(`${back}#commentaires`)}`);
+  const user = req.session.user || null;
+  const cfg = commentsEngine.settings();
+  if (!user && !cfg.guests_allowed) return res.redirect(`/connexion?redirect=${encodeURIComponent(`${back}#commentaires`)}`);
   if (!post.comments_enabled) return res.redirect(`${back}#commentaires`);
-  const key = `comment:${req.session.user.id}`;
+  const ip = req.ip;
+  const key = user ? `comment:${user.id}` : `guest:${commentsEngine.ipHash(ip)}`;
   try {
-    if (commentLimiter.isLimited(key)) throw new UserError("Vous avez publié beaucoup de commentaires en peu de temps : réessayez dans quelques minutes.");
-    const id = blog.addComment(post.id, req.session.user.id, req.body.body);
-    commentLimiter.hit(key);
-    res.redirect(`${back}#commentaire-${id}`);
+    if (user ? commentLimiter.isLimited(key) : guestLimiter.isLimited(key) || burstLimiter.isLimited(key)) throw new UserError("Vous avez publié beaucoup de commentaires en peu de temps : réessayez dans quelques minutes.");
+    const full = user ? db.prepare("SELECT id, username, email, role FROM users WHERE id = ?").get(user.id) : null;
+    const result = commentsEngine.create({ type: "post", contentId: post.id, parentId: /^\d{1,9}$/.test(String(req.body.parent_id || "")) ? Number(req.body.parent_id) : null, user: full, name: req.body.author_name, email: req.body.author_email, body: req.body.body, ip, honeypot: String(req.body.contact_url || "").trim() ? "honeypot" : (!user && !antispam.check(req.body.form_token) ? "timing" : ""), trusted: canModerate(full) });
+    if (user) commentLimiter.hit(key); else { guestLimiter.hit(key); burstLimiter.hit(key); }
+    if (result.status === "approved") return res.redirect(`${back}#commentaire-${result.id}`);
+    req.session.commentNotice = result.status === "spam" ? "Votre commentaire a bien été reçu." : "Merci ! Votre commentaire est en attente de modération : il apparaîtra dès qu'il sera approuvé.";
+    res.redirect(`${back}#commentaires`);
   } catch (err) {
     if (!(err instanceof UserError)) throw err;
     req.session.commentError = err.message;
     req.session.commentDraft = String(req.body.body || "").slice(0, blog.COMMENT_MAX + 200);
+    req.session.commentForm = { name: String(req.body.author_name || "").slice(0, 80), email: String(req.body.author_email || "").slice(0, 120), parent: String(req.body.parent_id || "").slice(0, 9) };
     res.redirect(`${back}#commentaires`);
   }
 });
@@ -414,7 +445,7 @@ function readFields(body, existing = null) {
     toc_title: oneLine(body.toc_title, 60),
     schema_type: body.schema_type === "Article" ? "Article" : "BlogPosting",
     reviewed: flag(body.reviewed, existing ? existing.reviewed : 0),
-    comments_enabled: flag(body.comments_enabled, existing ? existing.comments_enabled : 1),
+    comments_enabled: flag(body.comments_enabled, existing ? existing.comments_enabled : (commentsEngine.settings().enabled_default ? 1 : 0)),
   };
   if (!fields.title) throw new UserError("Le titre de l'article est obligatoire.");
   if (fields.reading_minutes !== null && !(Number.isInteger(fields.reading_minutes) && fields.reading_minutes >= 1 && fields.reading_minutes <= 120)) throw new UserError("Temps de lecture : un nombre de minutes entre 1 et 120 (ou vide pour le calcul automatique).");

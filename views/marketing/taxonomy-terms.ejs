@@ -36,7 +36,7 @@
         <% if (canWrite && !filtered) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-tx-new>Ajouter <%= key === "tag" ? "une étiquette" : "une catégorie" %></button></div><% } %></div>
     <% } else { %>
       <% if (canDelete) { %>
-      <form id="tx-bulk" class="mk-cms-bulk" action="/marketing/site-web/articles/termes/actions" method="post" data-cms-bulk data-cms-terms data-cms-noun="<%= one %>">
+      <form id="tx-bulk" class="mk-cms-bulk" action="/marketing/site-web/articles/termes/actions" method="post" data-cms-bulk data-cms-delete-text="Aucun article n'est supprimé ; les termes utilisés sont refusés." data-cms-noun="<%= one %>">
         <input type="hidden" name="taxonomy" value="<%= key %>"><input type="hidden" name="retour" value="<%= here %>">
         <label class="sr-only" for="tx-bulk-action">Action groupée</label><select id="tx-bulk-action" name="action" disabled><option value="">Action groupée</option><option value="supprimer">Supprimer</option></select>
         <button type="submit" class="btn btn-outline btn-sm" disabled>Appliquer</button><span class="mk-sub" data-cms-bulk-count aria-live="polite"></span>

@@ -65,6 +65,8 @@ function list({ state = "toutes", q = "", author = "", category = "", tag = "", 
       p.featured_media_id, p.comments_enabled, p.deleted_at, u.username AS author,
       (SELECT t.name FROM taxonomy_relations r JOIN taxonomy_terms t ON t.id = r.term_id WHERE r.content_type = 'post' AND r.content_id = p.id AND r.is_primary = 1 AND t.taxonomy = 'category') AS primary_category
     FROM posts p LEFT JOIN users u ON u.id = p.author_id WHERE ${where.join(" AND ")} ORDER BY ${SORTS[sort] || SORTS.modifie} LIMIT ? OFFSET ?`).all(...args, perPage, (current - 1) * perPage);
+  const cc = require("./comments").countsForPosts(rows.map((r) => r.id));
+  for (const r of rows) Object.assign(r, { comments_approved: (cc.get(r.id) || {}).approved || 0, comments_pending: (cc.get(r.id) || {}).pending || 0 });
   return { rows, total, page: current, pages, perPage, counts: counts() };
 }
 const authors = () => db.prepare("SELECT DISTINCT u.id, u.username FROM posts p JOIN users u ON u.id = p.author_id WHERE p.deleted_at IS NULL ORDER BY u.username COLLATE NOCASE").all();
@@ -76,7 +78,7 @@ const get = (id) => (Number.isInteger(id) ? db.prepare("SELECT * FROM posts WHER
 function createDraft({ title, userId }) {
   const clean = String(title || "").replace(/[\r\n\u2028\u2029]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 150);
   if (!clean) throw new UserError("Le titre de l'article est obligatoire.");
-  const id = Number(db.prepare("INSERT INTO posts (slug, title, content_format, status, author_id) VALUES (?, ?, 'html', 'draft', ?)").run(blog.uniqueSlug(clean), clean, userId ?? null).lastInsertRowid);
+  const id = Number(db.prepare("INSERT INTO posts (slug, title, content_format, status, author_id, comments_enabled) VALUES (?, ?, 'html', 'draft', ?, ?)").run(blog.uniqueSlug(clean), clean, userId ?? null, require("./comments").settings().enabled_default ? 1 : 0).lastInsertRowid);
   blog.addRevision(get(id), userId ?? null, "Création de l'article", "create");
   return get(id);
 }
