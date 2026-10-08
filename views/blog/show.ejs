@@ -102,8 +102,9 @@
           </nav>
         <% } %>
 
-        <% if (post.comments_enabled && !tplHtml.includes("kw-postcomments")) { %>
+        <% if (post.comments_enabled) { %>
           <section class="article-comments" id="commentaires" aria-labelledby="comments-title">
+            <% if (!tplHtml.includes("kw-postcomments")) { /* liste déjà affichée par l'élément « Commentaires » du modèle */ %>
             <h2 id="comments-title">Commentaires <span class="article-comments-count">(<%= comments.total %>)</span></h2>
             <% if (commentNotice) { %><p class="comment-notice" role="status"><%= commentNotice %></p><% } %>
             <% if (comments.roots.length) { %>
@@ -121,6 +122,7 @@
               <p class="comment-empty">Aucun commentaire pour l'instant : soyez le premier à réagir.</p>
             <% } else { %>
               <p class="comment-empty">Aucun commentaire.</p>
+            <% } %>
             <% } %>
             <% if (commentsOpen && (me || commentCfg.guests_allowed)) { %>
               <form method="post" action="/blog/<%= post.slug %>/commentaires" class="comment-form" id="commentaire-form" novalidate>

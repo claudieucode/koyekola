@@ -863,9 +863,9 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .kw-pc-badge { padding: 1px 8px; border-radius: 999px; background: rgba(16, 34, 47, 0.1); font-size: 12px; }
 .kw-pc-body p { margin: 0 0 8px; }
 .kw-pc-empty, .kw-pc-login { margin: 0 0 16px; opacity: 0.8; }
-.kw-pc-form { display: flex; flex-direction: column; gap: 8px; }
-.kw-pc-form textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid rgba(16, 34, 47, 0.25); border-radius: 8px; font: inherit; }
-.kw-pc-form .kw-button { align-self: flex-start; }
+.kw-pc-replies { margin: 12px 0 0 24px; }
+.kw-pc-reply { font-size: 14px; }
+.kw-pc-pager { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .kw-minicart { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: inherit; }
 .kw-mc-icon { flex: none; }
 .kw-mc-label { font-weight: 600; }

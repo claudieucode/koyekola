@@ -86,6 +86,11 @@ const safeImage = (p, base = "") => {
   if (/^\/uploads\/[A-Za-z0-9_\/.-]{1,200}$/.test(s) && !s.includes("..")) return `${base}${s}`;
   return /^https:\/\/[^\s"'<>]{3,400}$/i.test(s) ? s : "";
 };
+// Adresse d'une catégorie / étiquette : celle du moteur de taxonomies (adresses configurables), sinon l'adresse par défaut du blog
+const termUrl = (kind, name, base = "") => {
+  try { const tax = require("../../services/taxonomy"); const t = tax.bySlug(kind, slugify(name)); if (t) return `${base}${tax.urlOf(t)}`; } catch { /* moteur absent : adresse par défaut */ }
+  return `${base}/blog/${kind === "tag" ? "etiquette" : "categorie"}/${slugify(name)}`;
+};
 const csv = (v) => String(v || "").split(",").map((t) => t.trim()).filter(Boolean);
 const authorView = (u, base = "") => (u ? { id: u.id, name: u.username, bio: u.bio || "", avatar: safeImage(u.avatar_path, base), url: `${base}/blog/auteur/${u.id}` } : null);
 
@@ -108,8 +113,10 @@ function postWhere(ctx, q, env) {
   if (q.author) { where.push("p.author_id = ?"); args.push(Number.isInteger(authorId) ? authorId : -1); }
   // Page d'archive (catégorie, étiquette, auteur) : la liste suit l'archive affichée ; hors archive, aucune restriction
   const ar = q.archive ? env.scope.archive : null;
-  if (ar && ar.type === "category") { where.push("p.category = ? COLLATE NOCASE"); args.push(String(ar.name)); }
-  if (ar && ar.type === "tag") { where.push("(',' || REPLACE(LOWER(p.tags), ', ', ',') || ',') LIKE ? ESCAPE '\\'"); args.push(`%,${likeEsc(String(ar.name).toLowerCase())},%`); }
+  const archiveTerms = ar && Array.isArray(ar.termIds) ? ar.termIds.filter(Number.isInteger) : [];
+  if (archiveTerms.length && (ar.type === "category" || ar.type === "tag")) { where.push(`p.id IN (SELECT content_id FROM taxonomy_relations WHERE content_type = 'post' AND term_id IN (${archiveTerms.map(() => "?").join(",")}))`); args.push(...archiveTerms); }
+  else if (ar && ar.type === "category") { where.push("p.category = ? COLLATE NOCASE"); args.push(String(ar.name)); }
+  else if (ar && ar.type === "tag") { where.push("(',' || REPLACE(LOWER(p.tags), ', ', ',') || ',') LIKE ? ESCAPE '\\'"); args.push(`%,${likeEsc(String(ar.name).toLowerCase())},%`); }
   if (ar && ar.type === "author") { where.push("p.author_id = ?"); args.push(Number.isInteger(ar.id) ? ar.id : -1); }
   if (q.dateAfter) { where.push("p.published_at >= ?"); args.push(`${q.dateAfter} 00:00:00`); }
   if (q.dateBefore) { where.push("p.published_at < ?"); args.push(`${q.dateBefore} 23:59:59`); }
@@ -141,7 +148,7 @@ registerQuerySource("posts", {
     return { total, items: rows.map((p) => {
       let author = null; try { author = p.author_id ? authorView(user.get(p.author_id), base) : null; } catch { author = null; }
       return { id: p.id, authorId: p.author_id || null, title: p.title, url: `${base}/blog/${encodeURIComponent(p.slug)}`, slug: p.slug, excerpt: String(p.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 300),
-        image: safeImage(p.cover_path, base), imageAlt: p.cover_alt || p.title, date: ms(p.published_at), modified: ms(p.updated_at), category: p.category || "", categoryUrl: p.category ? `${base}/blog/categorie/${slugify(p.category)}` : "",
+        image: safeImage(p.cover_path, base), imageAlt: p.cover_alt || p.title, date: ms(p.published_at), modified: ms(p.updated_at), category: p.category || "", categoryUrl: p.category ? termUrl("category", p.category, base) : "",
         tags: csv(p.tags), author: author ? author.name : "", authorView: author, minutes: p.reading_minutes || null, views: p.views || 0, commentsCount: p.comments_count || 0, commentsOpen: p.comments_enabled !== 0 };
     }) };
   },
@@ -210,7 +217,7 @@ registerQuerySource("categories", {
     const all = ctx.db.prepare(`SELECT category AS name, COUNT(*) AS n FROM posts WHERE ${where.join(" AND ")} GROUP BY category COLLATE NOCASE`).all(...args);
     const sorted = all.sort((a, b) => (q.orderby === "count" ? a.n - b.n : a.name.localeCompare(b.name, "fr", { sensitivity: "base" })) * (q.order === "asc" ? 1 : -1));
     if (q.orderby === "random") sorted.sort(() => Math.random() - 0.5);
-    return { total: sorted.length, items: sorted.slice(q.offset, q.offset + q.count).map((c) => ({ name: c.name, url: `${env.baseUrl}/blog/categorie/${slugify(c.name)}`, count: c.n, taxonomy: "category" })) };
+    return { total: sorted.length, items: sorted.slice(q.offset, q.offset + q.count).map((c) => ({ name: c.name, url: termUrl("category", c.name, env.baseUrl), count: c.n, taxonomy: "category" })) };
   },
 });
 registerQuerySource("tags", {
@@ -222,7 +229,7 @@ registerQuerySource("tags", {
     if (q.search) all = all.filter((t) => t.name.toLowerCase().includes(q.search.toLowerCase()));
     all.sort((a, b) => (q.orderby === "count" ? a.n - b.n : a.name.localeCompare(b.name, "fr", { sensitivity: "base" })) * (q.order === "asc" ? 1 : -1));
     if (q.orderby === "random") all.sort(() => Math.random() - 0.5);
-    return { total: all.length, items: all.slice(q.offset, q.offset + q.count).map((t) => ({ name: t.name, url: `${env.baseUrl}/blog/etiquette/${slugify(t.name)}`, count: t.n, taxonomy: "tag" })) };
+    return { total: all.length, items: all.slice(q.offset, q.offset + q.count).map((t) => ({ name: t.name, url: termUrl("tag", t.name, env.baseUrl), count: t.n, taxonomy: "tag" })) };
   },
 });
 
@@ -245,4 +252,4 @@ function neighbours(ctx, cur, { sameCategory = false, baseUrl = "" } = {}) {
   try { return { previous: pick("prev"), next: pick("next") }; } catch { return { previous: null, next: null }; }
 }
 
-module.exports = { neighbours, registerQuerySource, normalizeQuery, runQuery, catalog, SOURCES, PAGINATIONS, MAX_COUNT, authorView, safeImage, csv };
+module.exports = { termUrl, neighbours, registerQuerySource, normalizeQuery, runQuery, catalog, SOURCES, PAGINATIONS, MAX_COUNT, authorView, safeImage, csv };

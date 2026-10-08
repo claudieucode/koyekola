@@ -72,10 +72,9 @@ const FAMILY = [
     data(ctx, p, env) {
       const post = env.scope && env.scope.post;
       if (!post || !post.title) return { terms: [] };
-      const base = "";
       const terms = [];
-      if (p.show !== "tags" && post.category) terms.push({ name: post.category, url: post.categoryUrl || `${base}/blog/categorie/${encodeURIComponent(post.category.toLowerCase().replace(/[^a-z0-9]+/g, "-"))}`, kind: "category" });
-      if (p.show !== "category") for (const t of (post.tags || []).slice(0, 20)) terms.push({ name: t, url: `${base}/blog/etiquette/${require("../../../utils/format").slugify(t)}`, kind: "tag" });
+      if (p.show !== "tags" && post.category) terms.push({ name: post.category, url: post.categoryUrl || query.termUrl("category", post.category), kind: "category" });
+      if (p.show !== "category") for (const t of (post.tags || []).slice(0, 20)) terms.push({ name: t, url: query.termUrl("tag", t), kind: "tag" });
       return { terms };
     },
   },
@@ -120,17 +119,17 @@ const FAMILY = [
     keywords: "commentaires article avis discussion repondre formulaire reactions blog",
     schema: [
       { key: "heading", kind: "text", label: "Titre", max: 60, default: "Commentaires" },
-      bool("showForm", "Afficher le formulaire", true),
-      { key: "max", kind: "number", label: "Commentaires affichés", min: 1, max: 100, integer: true, default: 50 },
     ],
+    // Liste lue dans le moteur de commentaires du CMS (approuvés seulement, réponses comprises) ; le formulaire reste celui du blog
     data(ctx, p, env) {
       const post = env.scope && env.scope.post;
       if (!post || !Number.isInteger(post.id) || !post.slug) return { post: null };
-      const blog = require("../../../services/blog");
       const row = ctx.db.prepare("SELECT comments_enabled, published FROM posts WHERE id = ?").get(post.id);
-      if (!row || !row.comments_enabled || !row.published) return { post, open: false, comments: [] };
-      const comments = blog.listComments(post.id).slice(-p.max).map((c) => ({ id: c.id, name: c.username, body: String(c.body || "").slice(0, 3000), at: c.created_at, avatar: query.safeImage(c.avatar_path), author: c.role === "formateur" }));
-      return { post, open: true, comments, max: blog.COMMENT_MAX, loggedIn: Boolean(env.visitor && env.visitor.loggedIn) };
+      if (!row || !row.comments_enabled || !row.published) return { post: null };
+      const page = Math.max(1, parseInt(env.visitor && env.visitor.query && env.visitor.query.cpage, 10) || 1);
+      const t = require("../../../services/blog").listComments(post.id, { page });
+      const clean = (c) => ({ id: c.id, name: c.name, body: String(c.body || "").slice(0, 3000), at: c.created_at, avatar: query.safeImage(c.avatar_path), author: c.role === "formateur", children: (c.children || []).map(clean) });
+      return { post, roots: t.roots.map(clean), total: t.total, page: t.page, pages: t.pages, replies: Boolean(t.repliesAllowed), maxDepth: t.maxDepth, open: Boolean(post.commentsOpen) };
     },
   },
   {

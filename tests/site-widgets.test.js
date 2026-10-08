@@ -39,6 +39,7 @@ describe("vrai serveur : widgets du site", () => {
     ins.run("a-un", "Article un", "Conseils", "photo, lumière", authorId, 5, "-4 days");
     ins.run("a-deux", "Article <i>deux</i>", "Conseils", "photo", authorId, 50, "-3 days");
     ins.run("a-trois", "Article trois", "Actus", "vidéo", null, 20, "-2 days");
+    await get("/blog"); // le blog convertit les catégories / étiquettes écrites en texte en termes du moteur de taxonomies
     db.prepare("INSERT INTO posts (slug, title, published, status) VALUES ('secret', 'Brouillon secret', 0, 'draft')").run();
     db.prepare("INSERT INTO posts (slug, title, category, published, published_at, status, comments_enabled) VALUES ('ferme', 'Commentaires fermés', 'Conseils', 1, datetime('now', '-1 days'), 'published', 0)").run();
   });
@@ -78,8 +79,8 @@ describe("vrai serveur : widgets du site", () => {
     assert.match(html, /kw-pn-next/, "article suivant");
     assert.match(html, /kw-pc-heading/, "commentaires du modèle");
     assert.equal((html.match(/id="commentaires"/g) || []).length, 1, "pas de doublon avec les commentaires du blog");
-    assert.doesNotMatch(html, /class="article-author"|class="article-pager"|class="article-comments"/, "sections d'origine retirées (déjà dans le modèle)");
-    assert.match(html, /Connectez-vous pour laisser un commentaire/);
+    assert.doesNotMatch(html, /class="article-author"|class="article-pager"|id="comments-title"/, "sections d'origine retirées (déjà dans le modèle)");
+    assert.match(html, /comment-login|comment-form/, "le formulaire du blog (membres, invités) reste");
     // liste « articles liés » : même catégorie ou étiquette, jamais l'article courant ni un brouillon
     const list = html.slice(html.indexOf("À lire aussi"));
     assert.match(list, /Article un/); assert.doesNotMatch(list, /Brouillon secret/);
@@ -91,7 +92,7 @@ describe("vrai serveur : widgets du site", () => {
 
   test("commentaires fermés : aucun formulaire ; l'élément reste sage sans article (page ordinaire)", async () => {
     const html = await get("/blog/ferme");
-    assert.doesNotMatch(html, /kw-pc-form/);
+    assert.doesNotMatch(html, /Commentaires <span/);
     const id = await newPage("Page ordinaire", [layout([w("meta00000002", "postmeta"), w("comm00000002", "postcomments"), w("list00000002", "querylist", { mode: "related" }), w("nav000000002", "postnav")])]);
     const slug = db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug;
     const page = await get(`/p/${slug}`);
@@ -133,9 +134,11 @@ describe("vrai serveur : widgets du site", () => {
   test("commentaire publié depuis le widget : route existante du blog, affiché ensuite", async () => {
     const student = await newStudent(srv);
     const form = await get("/blog/a-un", student);
-    assert.match(form, /class="kw-pc-form" method="post" action="\/blog\/a-un\/commentaires"/);
+    assert.match(form, /class="comment-form"[^>]*>|<form method="post" action="\/blog\/a-un\/commentaires"/);
     const r = await student.post("/blog/a-un/commentaires", { body: "Très utile, merci !" });
     assert.equal(r.status, 302);
-    assert.match(await get("/blog/a-un"), /Très utile, merci !/);
+    const after = await get("/blog/a-un");
+    assert.match(after, /class="kw-pc-body"><p>Très utile, merci !/, "commentaire listé par l'élément du modèle");
+    assert.match(after, /kw-pc-reply/, "lien de réponse du moteur de commentaires");
   });
 });

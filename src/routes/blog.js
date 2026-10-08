@@ -165,7 +165,7 @@ function renderList(req, res, { filter = null } = {}) {
   const themeQuery = {};
   if (filter && filter.type === "category") themeQuery.categorie = filter.name;
   // Archive affichée (catégorie, étiquette, auteur) : lue par les éléments « En-tête d'archive » et les listes « suivre l'archive »
-  const archive = { type: filter ? filter.type : q ? "search" : "blog", name: filter ? (filter.name || filter.label) : "", id: filter && filter.type === "author" ? filter.id : null,
+  const archive = { type: filter ? filter.type : q ? "search" : "blog", name: filter ? (filter.name || filter.label) : "", id: filter && filter.type === "author" ? filter.id : null, termIds: filter && filter.termIds ? filter.termIds : [],
     title: filter ? filter.heading : q ? `Résultats pour « ${q} »` : "Blog", description: filter ? filter.lead : "", count: total, url: basePath, search: q || "" };
   themeRender.renderRegion(req, res, db, "blog_archive", { category: filter && filter.type === "category" ? filter.name : "", query: { ...themeQuery, ...(q ? { q } : {}) }, scope: { archive } }, (themeTemplate) => {
   res.render("blog/index", {
