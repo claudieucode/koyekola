@@ -1048,10 +1048,13 @@
   var elCategory = store.get("el-category", "");
   var elClosed = store.get("el-closed", []);
   function elementGroups() {
-    var item = function (t) { var need = deniedWidget(t.type); return { type: t.type, label: t.label, icon: t.icon, keywords: t.keywords, locked: need ? "Widget " + SPEC.widgetPermissions[need] + "." : null, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; };
+    var item = function (t) { var need = deniedWidget(t.type); return { type: t.type, sub: t.sub || null, label: t.label, icon: t.icon, keywords: t.keywords, locked: need ? "Widget " + SPEC.widgetPermissions[need] + "." : null, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; };
     var groups = Object.keys(SPEC.widgetGroups).map(function (k) { return { key: k, label: SPEC.widgetGroups[k], items: SPEC.types.filter(function (t) { return t.group === k; }).map(item) }; });
     groups[0].items.unshift({ type: "layout", label: "Section libre", icon: "layout", keywords: "section libre bloc zone" });
-    (SPEC.shortcuts || []).forEach(function (sc) { var g = groups.find(function (x) { return x.key === sc.group; }); if (g) g.items.push({ type: sc.type, shortcut: sc, label: sc.label, icon: sc.icon, keywords: sc.keywords }); });
+    (SPEC.shortcuts || []).forEach(function (sc) { var g = groups.find(function (x) { return x.key === sc.group; }); if (g) g.items.push({ type: sc.type, sub: sc.sub || null, shortcut: sc, label: sc.label, icon: sc.icon, keywords: sc.keywords }); });
+    // Catégorie « Site » : éléments regroupés par sous-catégorie, dans l'ordre voulu
+    var subs = SPEC.siteSubs || [], gSite = groups.find(function (x) { return x.key === "site"; });
+    if (gSite) gSite.items = gSite.items.map(function (x, i) { return { x: x, i: i }; }).sort(function (a, b) { var ra = a.x.sub ? subs.indexOf(a.x.sub) : subs.length, rb = b.x.sub ? subs.indexOf(b.x.sub) : subs.length; return ra - rb || a.i - b.i; }).map(function (e) { return e.x; });
     var legacy = boot.types.map(function (t) { return { type: t.type, label: t.label, icon: "fileText", disabled: t.unavailable, legacy: true, keywords: t.type === "form" ? "formulaire inscription email champs newsletter" : "section prete" }; });
     var gForm = groups.find(function (g) { return g.key === "form"; });
     gForm.items = gForm.items.concat(legacy.filter(function (t) { return t.type === "form"; }));
@@ -1093,7 +1096,9 @@
     shown.forEach(function (g) {
       if (!g.items.length) return;
       var ul = h("ul", { class: "pb-palette", id: "pb-group-" + g.key });
+      var lastSub = null;
       g.items.forEach(function (it) {
+        if (g.key === "site" && !f && it.sub !== lastSub) { lastSub = it.sub; ul.appendChild(h("li", { class: "pb-pal-subhead", text: it.sub || "Autres" })); }
         var off = it.disabled || it.locked;
         var btn = h("button", { type: "button", class: "pb-pal-item" + (it.locked ? " is-locked" : ""), disabled: !canWrite || Boolean(it.disabled), "aria-disabled": it.locked ? "true" : null, "data-tip": off || null, "data-widget": it.shortcut ? it.shortcut.key : it.type,
           onclick: function () { if (it.locked) { toast(it.label + " : " + it.locked, true); return; } useElement(it); if (it.shortcut) addShortcut(it.shortcut); else if (it.legacy) addLegacy(it.type); else addElement(it.type); } },

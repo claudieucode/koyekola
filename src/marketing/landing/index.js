@@ -255,7 +255,12 @@ function nodeView(ctx, nodes, visitor, page, scope) {
     if (dyn) n = { ...n, props: dyn };
     // Widget personnalisé : son gabarit et ses champs « lien » (comptés dans cet ordre, comme dans linksOf)
     const cw = pageNodes.CUSTOM_WIDGETS[n.type];
-    if (cw) n = { ...n, customView: { partial: `widgets/${n.type}`, links: cw.schema.filter((f) => f.kind === "link").map((f) => f.key) } };
+    if (cw) {
+      // Données dynamiques du widget (requête, article courant, visiteur…) : jamais bloquant, un échec donne un widget vide
+      let data = null;
+      if (cw.data) { try { data = cw.data(ctx, n.props, { scope, visitor, page, runQuery: (q, o) => require("../pages/query").runQuery(ctx, q, { scope, ...o }) }); } catch { data = null; } }
+      n = { ...n, customView: { partial: `widgets/${cw.template || n.type}`, links: cw.schema.filter((f) => f.kind === "link").map((f) => f.key), data } };
+    }
     if (n.type === "addtocart" || n.type === "courserating") {
       const c = getCourse(ctx, n.props.courseId);
       if (c && n.type === "courserating") return { ...n, props: { ...n.props, course: courseView(c), rating: require("../bridge/catalog").courseRating(ctx, c.id) } };

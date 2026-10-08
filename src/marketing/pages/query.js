@@ -57,6 +57,7 @@ function normalizeQuery(raw = {}) {
   if (has("search") && line(r.search, 80)) q.search = line(r.search, 80);
   if (has("related") && ["category", "tags", "both"].includes(r.related)) q.related = r.related;
   if (has("excludeCurrent") && r.excludeCurrent === true) q.excludeCurrent = true;
+  if (has("archive") && r.archive === true) q.archive = true;
   if (q.orderby === "random") q.pagination = "none"; // un ordre aléatoire ne se pagine pas (une page 2 serait incohérente)
   return q;
 }
@@ -105,6 +106,11 @@ function postWhere(ctx, q, env) {
   if (q.tags) { where.push(`(${q.tags.map(() => "(',' || REPLACE(LOWER(p.tags), ', ', ',') || ',') LIKE ? ESCAPE '\\'").join(" OR ")})`); args.push(...q.tags.map((t) => `%,${likeEsc(t.toLowerCase())},%`)); }
   const authorId = q.author === "current" ? ((env.scope.author && env.scope.author.id) || (cur && cur.authorId) || null) : q.author;
   if (q.author) { where.push("p.author_id = ?"); args.push(Number.isInteger(authorId) ? authorId : -1); }
+  // Page d'archive (catégorie, étiquette, auteur) : la liste suit l'archive affichée ; hors archive, aucune restriction
+  const ar = q.archive ? env.scope.archive : null;
+  if (ar && ar.type === "category") { where.push("p.category = ? COLLATE NOCASE"); args.push(String(ar.name)); }
+  if (ar && ar.type === "tag") { where.push("(',' || REPLACE(LOWER(p.tags), ', ', ',') || ',') LIKE ? ESCAPE '\\'"); args.push(`%,${likeEsc(String(ar.name).toLowerCase())},%`); }
+  if (ar && ar.type === "author") { where.push("p.author_id = ?"); args.push(Number.isInteger(ar.id) ? ar.id : -1); }
   if (q.dateAfter) { where.push("p.published_at >= ?"); args.push(`${q.dateAfter} 00:00:00`); }
   if (q.dateBefore) { where.push("p.published_at < ?"); args.push(`${q.dateBefore} 23:59:59`); }
   if (q.withinDays) { where.push("p.published_at >= ?"); args.push(new Date(Date.now() - q.withinDays * 86400000).toISOString().slice(0, 19).replace("T", " ")); }
@@ -122,7 +128,7 @@ function postWhere(ctx, q, env) {
 }
 registerQuerySource("posts", {
   label: "Articles du blog", scopeKey: "post", orderby: ["date", "modified", "title", "author", "views", "comments", "random", "id"],
-  filters: ["include", "exclude", "categories", "tags", "author", "date", "search", "related", "excludeCurrent"],
+  filters: ["include", "exclude", "categories", "tags", "author", "date", "search", "related", "excludeCurrent", "archive"],
   run(ctx, q, env) {
     const { where, args } = postWhere(ctx, q, env);
     const base = env.baseUrl;
@@ -162,7 +168,7 @@ registerQuerySource("courses", {
 
 // ---------- Source : pages du site ----------
 registerQuerySource("pages", {
-  label: "Pages du site", scopeKey: "page", orderby: ["date", "modified", "title", "id"], filters: ["include", "exclude", "search", "excludeCurrent"],
+  label: "Pages du site", scopeKey: "page_item", orderby: ["date", "modified", "title", "id"], filters: ["include", "exclude", "search", "excludeCurrent"],
   run(ctx, q, env) {
     const where = ["status = 'published'", "kind IN ('page', 'landing')", "archived_at IS NULL", "organization_id = ?"], args = [ctx.organizationId];
     const page = env.scope.page || null;
@@ -220,4 +226,23 @@ registerQuerySource("tags", {
   },
 });
 
-module.exports = { registerQuerySource, normalizeQuery, runQuery, catalog, SOURCES, PAGINATIONS, MAX_COUNT, authorView, safeImage, csv };
+
+// Article précédent / suivant (publiés seulement), dans l'ordre de publication, éventuellement dans la même catégorie
+function neighbours(ctx, cur, { sameCategory = false, baseUrl = "" } = {}) {
+  if (!cur || !Number.isInteger(cur.id) || !cur.date) return { previous: null, next: null };
+  const posts = SOURCES.get("posts");
+  const stamp = new Date(cur.date).toISOString().slice(0, 19).replace("T", " ");
+  const pick = (dir) => {
+    const { where, args } = postWhere(ctx, {}, { scope: {} });
+    const cmp = dir === "prev" ? "<" : ">";
+    const extra = [`(p.published_at ${cmp} ? OR (p.published_at = ? AND p.id ${cmp} ?))`], more = [stamp, stamp, cur.id];
+    if (sameCategory && cur.category) { extra.push("p.category = ? COLLATE NOCASE"); more.push(cur.category); }
+    const row = ctx.db.prepare(`SELECT p.id FROM posts p WHERE ${where} AND ${extra.join(" AND ")} ORDER BY p.published_at ${dir === "prev" ? "DESC" : "ASC"}, p.id ${dir === "prev" ? "DESC" : "ASC"} LIMIT 1`).get(...args, ...more);
+    if (!row) return null;
+    const found = posts.run(ctx, { source: "posts", count: 1, offset: 0, orderby: "id", order: "desc", include: [row.id] }, { scope: {}, baseUrl });
+    return found.items[0] || null;
+  };
+  try { return { previous: pick("prev"), next: pick("next") }; } catch { return { previous: null, next: null }; }
+}
+
+module.exports = { neighbours, registerQuerySource, normalizeQuery, runQuery, catalog, SOURCES, PAGINATIONS, MAX_COUNT, authorView, safeImage, csv };

@@ -1,0 +1,7 @@
+<%# En-tête d'archive. d = { archive }. %>
+<% const a = d && d.archive; const title = a ? a.title : p.fallback; %>
+<% if (title || isBuilder) { %><header class="<%= cls %>"<%- attrs %>>
+  <<%= p.tag %> class="kw-ai-title"><%= title || "Titre de l'archive" %></<%= p.tag %>>
+  <% if (a && p.showDescription && a.description) { %><p class="kw-ai-desc"><%= a.description %></p><% } %>
+  <% if (a && p.showCount && a.count != null) { %><p class="kw-ai-count"><%= a.count %> résultat<%= a.count > 1 ? "s" : "" %></p><% } %>
+</header><% } %>

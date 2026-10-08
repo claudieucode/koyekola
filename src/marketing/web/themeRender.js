@@ -16,7 +16,9 @@ const MS = (v) => { const t = Date.parse(`${String(v || "").replace(" ", "T")}Z`
 function postScope(post, { contentHtml = "", minutes = null, author = "" } = {}) {
   const safeImg = (p) => (typeof p === "string" && (/^\/uploads\/thumbnails\/[A-Za-z0-9._-]+$/.test(p) || /^https:\/\/[^\s"'<>]+$/.test(p)) ? p : "");
   return { title: post.title, url: `/blog/${encodeURIComponent(post.slug)}`, excerpt: String(post.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 300), image: safeImg(post.cover_path),
-    date: MS(post.published_at), category: post.category || "", author, minutes: minutes || null, contentHtml };
+    date: MS(post.published_at), category: post.category || "", author, minutes: minutes || null, contentHtml,
+    id: post.id, slug: post.slug, authorId: post.author_id || null, tags: String(post.tags || "").split(",").map((t) => t.trim()).filter(Boolean), modified: MS(post.updated_at),
+    views: post.views || 0, commentsOpen: post.comments_enabled !== 0 };
 }
 
 // done(html | null)

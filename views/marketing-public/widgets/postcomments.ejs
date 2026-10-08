@@ -1,0 +1,26 @@
+<%# Commentaires de l'article (liste + formulaire vers la route existante du blog). d = { post, open, comments, max, loggedIn }. %>
+<% const post = d && d.post; %>
+<% if (!post) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pc-note">Commentaires : visibles sur un modèle « Article du blog ».</p></section><% } %>
+<% } else if (d.open || (d.comments && d.comments.length)) { %>
+<section class="<%= cls %>" id="commentaires"<%- attrs.replace(/ id="[^"]*"/, "") %>>
+  <h2 class="kw-pc-heading"><%= p.heading %> <span class="kw-pc-count">(<%= d.comments.length %>)</span></h2>
+  <% if (d.comments.length) { %><ol class="kw-pc-list">
+    <% d.comments.forEach((c) => { %><li class="kw-pc-item" id="commentaire-<%= c.id %>">
+      <% if (c.avatar) { %><img class="kw-pc-avatar" src="<%= c.avatar %>" alt="" width="40" height="40" loading="lazy"><% } else { %><span class="kw-pc-avatar kw-pc-initial" aria-hidden="true"><%= String(c.name || "?").charAt(0).toUpperCase() %></span><% } %>
+      <div class="kw-pc-main"><p class="kw-pc-meta"><strong><%= c.name %></strong><% if (c.author) { %> <span class="kw-pc-badge">Auteur</span><% } %> · <time datetime="<%= String(c.at).replace(" ", "T") %>Z"><%= new Date(String(c.at).replace(" ", "T") + "Z").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) %></time></p>
+        <div class="kw-pc-body"><% String(c.body).split(/\n{2,}/).forEach((para) => { %><p><%= para %></p><% }) %></div></div>
+    </li><% }) %></ol>
+  <% } else { %><p class="kw-pc-empty">Aucun commentaire pour l'instant : soyez le premier à réagir.</p><% } %>
+  <% if (d.open && p.showForm) { %>
+    <% if (d.loggedIn) { %>
+      <form class="kw-pc-form" method="post" action="/blog/<%= encodeURIComponent(post.slug) %>/commentaires">
+        <label for="kw-pc-body-<%= n.id %>">Votre commentaire</label>
+        <textarea id="kw-pc-body-<%= n.id %>" name="body" rows="4" maxlength="<%= d.max %>" required placeholder="Partagez votre avis, une question, une expérience…"></textarea>
+        <button type="submit" class="kw-button kw-btn-primary">Publier le commentaire</button>
+      </form>
+    <% } else { %>
+      <p class="kw-pc-login">Connectez-vous pour laisser un commentaire. <a href="/connexion?redirect=<%= encodeURIComponent("/blog/" + post.slug + "#commentaires") %>">Se connecter</a> · <a href="/inscription?redirect=<%= encodeURIComponent("/blog/" + post.slug + "#commentaires") %>">Créer un compte</a></p>
+    <% } %>
+  <% } %>
+</section>
+<% } %>

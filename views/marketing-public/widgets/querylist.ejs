@@ -1,0 +1,25 @@
+<%# Liste dynamique (src/marketing/pages/widgets/site.js). Variables : p, cls, attrs, d = { items, reason }. Tout est échappé. %>
+<% const items = (d && d.items) || []; const isTerm = ["categories", "tags"].includes(p.source); const isAuthor = p.source === "authors"; %>
+<section class="<%= cls %> kw-ql-<%= p.layout %>"<%- attrs %>>
+  <% if (p.title) { %><h3 class="kw-ql-title"><%= p.title %></h3><% } %>
+  <% if (!items.length) { %>
+    <% if (isBuilder && d && d.reason === "post") { %><p class="kw-ql-empty">Cette liste dépend de l'article affiché : elle se remplit sur un modèle « Article du blog ».</p>
+    <% } else { %><p class="kw-ql-empty"><%= p.empty %></p><% } %>
+  <% } else { %>
+  <ul class="kw-ql-items">
+    <% items.forEach((it) => { const label = it.title || it.name || ""; const href = it.url || "#"; %>
+      <li class="kw-ql-item">
+        <% if (p.showImage && p.layout !== "inline" && p.layout !== "compact" && (it.image || it.avatar)) { %><a class="kw-ql-thumb" href="<%= href %>" tabindex="-1" aria-hidden="true"><img src="<%= it.image || it.avatar %>" alt="" loading="lazy" decoding="async"></a><% } %>
+        <div class="kw-ql-body">
+          <a class="kw-ql-link" href="<%= href %>"><%= label %></a><% if (p.showCount && (isTerm || isAuthor) && (it.count != null || it.postsCount != null)) { %> <span class="kw-ql-count">(<%= it.count != null ? it.count : it.postsCount %>)</span><% } %>
+          <% if (p.layout !== "inline") { %>
+            <% if (p.showMeta && (it.author || it.category)) { %><p class="kw-ql-meta"><%= [it.author, it.category].filter(Boolean).join(" · ") %></p><% } %>
+            <% if (p.showDate && it.date) { %><p class="kw-ql-date"><time datetime="<%= new Date(it.date).toISOString() %>"><%= new Date(it.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) %></time></p><% } %>
+            <% if (p.showExcerpt && (it.excerpt || it.bio || it.description)) { %><p class="kw-ql-excerpt"><%= String(it.excerpt || it.bio || it.description).slice(0, 200) %></p><% } %>
+          <% } %>
+        </div>
+      </li>
+    <% }) %>
+  </ul>
+  <% } %>
+</section>
