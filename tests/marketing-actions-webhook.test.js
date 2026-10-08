@@ -123,8 +123,9 @@ describe("envoi", () => {
     const b = make([{ type: "webhook_call", endpointId: hook2.id, fields: [] }]);
     auto.activateAutomation(A, b.id, { workerOn: true, smtpAvailable: true });
     auto.onEvent({ ...A, tokenKey: undefined }, event(e));
-    await auto.runAutomation({ ...A, tokenKey: undefined }, runOf(e).id, { provider, now: T0 });
-    assert.ok(logs(runOf(e)).some((l) => l.action === "failed" && /ENCRYPTION_KEY/.test(l.detail)));
+    const runB = m.db.prepare("SELECT * FROM mk_automation_runs WHERE contact_id = ? AND automation_id = ?").get(e.id, b.id); // deux scénarios réagissent à cet événement : on vise le bon
+    await auto.runAutomation({ ...A, tokenKey: undefined }, runB.id, { provider, now: T0 });
+    assert.ok(logs(runB).some((l) => l.action === "failed" && /ENCRYPTION_KEY/.test(l.detail)));
     assert.equal(jobs().length, 0);
   });
 
