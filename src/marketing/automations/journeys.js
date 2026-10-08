@@ -234,7 +234,7 @@ const LEGACY = [
   {
     key: "panier-abandonne", group: "commerce", label: "Panier abandonné",
     objective: "Relancer les visiteurs qui ont ajouté une formation au panier sans acheter.",
-    unavailable: "Le panier de KOLAKISA est gardé dans la session du navigateur, sans être enregistré sur le serveur : aucun événement « ajout au panier » n'existe pour déclencher ce parcours. En attendant, « Relance après un favori » couvre le même besoin à partir des favoris.",
+    unavailable: "KOLAKISA enregistre l'AJOUT au panier (contacts connus ayant accepté la mesure d'audience) mais pas l'ABANDON : il ne sait pas qu'un panier est resté sans suite. Voir « Relance après un ajout au panier (suivi KOLAKISA) », qui attend puis ne relance que si aucun achat n'a suivi.",
   },
   {
     key: "anniversaire", group: "welcome", label: "Anniversaire",

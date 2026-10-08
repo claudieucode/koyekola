@@ -690,6 +690,22 @@
       });
     }, { key: opts && opts.key ? opts.key + ":" + device + ":" + styleState : null, light: opts && opts.light, label: "Style : " + Object.keys(map).map(function (k) { return SP[k] ? SP[k].label : COMPOSED_LABEL[k] || k; }).slice(0, 2).join(", ") + (device !== "desktop" ? " (" + bpLabel(device) + ")" : "") });
   }
+  // Largeur du contenu d'un conteneur : « full » (propriété) et « maxWidth » (style de l'écran affiché) changent ENSEMBLE, en une seule étape d'annulation
+  function setContainerWidth(id, mode, customValue) {
+    if (lockedDeep(id)) { toast("Élément verrouillé.", true); return; }
+    change(function () {
+      var it = byId(id);
+      if (!it) return false;
+      it.props = it.props || {};
+      var inherited = inheritedValue(it, "maxWidth") !== undefined;
+      if (mode === "full") it.props.full = true; else delete it.props.full;
+      var set = styleSet(it, device, "normal", mode === "custom" || inherited);
+      if (mode === "custom") set.maxWidth = customValue;
+      else if (inherited) set.maxWidth = mode === "full" ? "100%" : "1100px"; // écran plus petit qui hérite d'une largeur personnalisée : on la remplace explicitement
+      else if (set) delete set.maxWidth;
+      cleanStyles(it);
+    }, { label: "Largeur du contenu" });
+  }
   function setProp(id, key, value, opts) {
     if (lockedDeep(id)) { toast("Élément verrouillé.", true); return; }
     change(function () {
@@ -2912,7 +2928,7 @@
       add("Statut", $("[data-pb-status]").textContent);
       add("Sections", content.sections.length);
       add("Éléments", count - content.sections.length);
-      add("Écran affiché", bpLabel(device) + " · " + WIDTH[device] + " px de large");
+      add("Écran affiché", bpLabel(device) + " · " + shownWidth + " px de large");
       add("Zoom", Math.round(zoom * 100) + " %");
       add("Enregistrement", $("[data-pb-save]").textContent || "—");
       return rows;
@@ -3039,7 +3055,22 @@
     else if (it.type === "grid") gridContent(it, box);
     if (["container", "grid", "stack", "group"].indexOf(it.type) >= 0) {
       var dis = !canWrite || lockedDeep(it.id), p = it.props || {};
-      if (it.type === "container") box.appendChild(selectField("Largeur du contenu", p.full ? "full" : "boxed", [["boxed", "Encadrée (1100 px, centrée)"], ["full", "Pleine largeur"]], function (v) { setProp(it.id, "full", v === "full"); }, { disabled: dis }));
+      if (it.type === "container") {
+        // Trois modèles de largeur : encadrée (largeur des conteneurs du site, centrée), pleine largeur, personnalisée (largeur max. propre à l'écran affiché)
+        var mw = ownValue(it, "maxWidth"); if (mw === undefined) mw = inheritedValue(it, "maxWidth");
+        var wmode = p.full ? "full" : mw !== undefined && mw !== "" ? "custom" : "boxed";
+        box.appendChild(selectField("Largeur du contenu", wmode, [["boxed", "Encadrée (largeur des conteneurs du site, centrée)"], ["full", "Pleine largeur"], ["custom", "Personnalisée (largeur max.)"]], function (v) { setContainerWidth(it.id, v, mw !== undefined && mw !== "" ? mw : "960px"); }, { disabled: dis }));
+        if (wmode === "custom") {
+          var wid = fid();
+          var winp = h("input", { id: wid, type: "text", value: mw === undefined ? "" : String(mw), placeholder: "960px", disabled: dis, "aria-describedby": wid + "-h" });
+          winp.addEventListener("change", function () {
+            var v = parseLength(winp.value, "maxWidth");
+            if (v === null || v === "") { toast("Largeur max. : valeur invalide (ex. 960px, 80%, 60rem).", true); winp.value = mw === undefined ? "" : String(mw); return; }
+            setStyle([it.id], "maxWidth", v);
+          });
+          box.appendChild(h("div", { class: "pb-field" }, h("label", { for: wid, text: "Largeur max. de ce conteneur" }), winp, h("p", { class: "pb-hint", id: wid + "-h", text: "Propre à l'écran « " + bpLabel(device) + " » ; px, %, rem ou vw. Le conteneur reste centré et ne dépasse jamais son parent." })));
+        }
+      }
       box.appendChild(selectField("Balise HTML", p.tag || "div", SPEC.boxTags.map(function (t) { return [t, BOX_TAG_LABEL[t] || t]; }), function (v) { setProp(it.id, "tag", v); }, { disabled: dis }));
       box.appendChild(h("p", { class: "pb-hint", text: "La balise donne le sens de la zone aux lecteurs d'écran et aux moteurs de recherche ; l'affichage ne change pas." }));
     }
@@ -3852,7 +3883,9 @@
       }
       if (selection.length === 1 && isNode(it) && canWrite && !lockedDeep(id) && !editing) {
         [["e", r.left + r.width, r.top + r.height / 2, "Largeur"], ["s", r.left + r.width / 2, r.top + r.height, "Hauteur"], ["se", r.left + r.width, r.top + r.height, "Largeur et hauteur"]].forEach(function (hd) {
-          var hEl = doc.createElement("div"); hEl.className = "pb-handle pb-handle-" + hd[0]; hEl.style.left = hd[1] + "px"; hEl.style.top = hd[2] + "px";
+          // Les poignées restent entièrement dans la page, même quand l'élément touche son bord (pleine largeur)
+          var hx = Math.max(7, Math.min(hd[1], doc.documentElement.clientWidth - 7));
+          var hEl = doc.createElement("div"); hEl.className = "pb-handle pb-handle-" + hd[0]; hEl.style.left = hx + "px"; hEl.style.top = hd[2] + "px";
           hEl.setAttribute("title", hd[3]);
           hEl.addEventListener("mousedown", function (e) { resizeStart(e, id, el, hd[0]); });
           doc.body.appendChild(hEl);
@@ -4368,7 +4401,20 @@
   });
 
   // ---------- Écrans, zoom, aides visuelles ----------
-  var WIDTH = { desktop: 1280, tablet: 820, mobile: 390 };
+  // Largeur de la page affichée dans le cadre (px CSS de la page). Tablette et mobile : largeur d'appareil fixe. Ordinateur :
+  // largeur FLUIDE = l'espace réellement disponible dans le canevas (fenêtre − panneaux), jamais sous le point de rupture
+  // « tablette » du site (sinon le cadre afficherait la mise en page tablette) ni au-dessus d'un plafond confortable. Si l'espace
+  // est plus étroit que le minimum, la page garde ce minimum et le zoom « ajuster » la réduit pour qu'elle tienne.
+  var WIDTH = { desktop: 1280, tablet: 820, mobile: 390 }; // largeur nominale : repli, et valeur des appareils
+  var DESKTOP_MAX = 1920;
+  var STAGE_PAD = 48; // 24 px de chaque côté de la surface de travail
+  var shownWidth = WIDTH.desktop;
+  function desktopMin() { var bp = PAGE.breakpoints && PAGE.breakpoints.tablet; return (Number.isInteger(bp) ? bp : 1023) + 1; }
+  function frameWidth(avail) {
+    if (device !== "desktop") return WIDTH[device];
+    var target = zoomFit ? avail : Math.floor(avail / zoom);
+    return Math.min(DESKTOP_MAX, Math.max(desktopMin(), target));
+  }
   function setDevice(d) {
     if (editing) commitEdit();
     selectedGuide = null;
@@ -4381,12 +4427,16 @@
   }
   $$(".pb-top .pb-devices button").forEach(function (b) { b.addEventListener("click", function () { setDevice(b.dataset.device); }); });
   function applyZoom() {
-    var w = WIDTH[device];
-    if (zoomFit) zoom = Math.min(1, Math.max(0.25, Math.floor((stage.clientWidth - 48) / w * 100) / 100));
-    var hgt = Math.max(400, (stage.clientHeight - 48) / zoom);
+    var avail = Math.max(240, stage.clientWidth - STAGE_PAD);
+    var w = frameWidth(avail);
+    shownWidth = w;
+    if (zoomFit) zoom = Math.min(1, Math.max(0.25, Math.floor(avail / w * 100) / 100));
+    var hgt = Math.max(400, (stage.clientHeight - STAGE_PAD) / zoom);
     wrap.style.width = w + "px";
     wrap.style.height = hgt + "px";
     wrap.style.transform = "scale(" + zoom + ")";
+    // La boîte de mise en page garde sa taille d'origine malgré le zoom : on la recentre et on retire l'excédent à droite et en bas
+    wrap.style.marginLeft = Math.max(0, (avail - w * zoom) / 2) + "px";
     wrap.style.marginRight = -((1 - zoom) * w) + "px";
     wrap.style.marginBottom = -((1 - zoom) * hgt) + "px";
     $("[data-pb-zoom-value]").textContent = Math.round(zoom * 100) + " %";
@@ -4630,6 +4680,40 @@
     var first = menu.querySelector(".pb-menu-item:not([disabled])"); if (first) first.focus();
   }
   ["[data-pb-ruler-x]", "[data-pb-ruler-y]", "[data-pb-ruler-corner]"].forEach(function (sel) { $(sel).addEventListener("contextmenu", function (e) { e.preventDefault(); selectedGuide = null; guideMenu(e.clientX, e.clientY); }); });
+
+  // ---------- Apparence de la palette (claire / sombre / système) ----------
+  // Préférence PERSONNELLE de l'éditeur, gardée comme les autres réglages d'interface (magasin « pb: » : survit au rechargement,
+  // propre à ce navigateur). Elle ne change que la palette (barre d'outils + panneau de gauche) : jamais la page, le canevas
+  // ni le panneau de droite.
+  var PALETTE_MODES = [["light", "Claire", "sun"], ["dark", "Sombre", "moon"], ["system", "Système", "monitor"]];
+  var paletteMode = store.get("palette-theme", "light");
+  if (!PALETTE_MODES.some(function (m) { return m[0] === paletteMode; })) paletteMode = "light";
+  var paletteMedia = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  function paletteResolved() { return paletteMode === "system" ? (paletteMedia && paletteMedia.matches ? "dark" : "light") : paletteMode; }
+  function applyPalette() {
+    $("[data-pb-main]").dataset.palette = paletteResolved();
+    $$("[data-pal-mode]").forEach(function (b) { var on = b.dataset.palMode === paletteMode; b.setAttribute("aria-checked", String(on)); b.tabIndex = on ? 0 : -1; });
+  }
+  function setPaletteMode(m) { paletteMode = m; store.set("palette-theme", m); applyPalette(); }
+  (function buildPaletteFoot() {
+    var group = h("div", { class: "pb-pal-theme", role: "radiogroup", "aria-label": "Apparence de la palette" }, PALETTE_MODES.map(function (m) {
+      return h("button", { type: "button", role: "radio", "aria-checked": "false", "data-pal-mode": m[0], "data-tip": "Palette " + m[1].toLowerCase(), "aria-label": "Palette " + m[1].toLowerCase(),
+        onclick: function () { setPaletteMode(m[0]); } }, icon(m[2]));
+    }));
+    // Flèches : passer d'un mode à l'autre comme un groupe de boutons radio
+    group.addEventListener("keydown", function (e) {
+      var d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      var i = PALETTE_MODES.findIndex(function (m) { return m[0] === paletteMode; });
+      var next = PALETTE_MODES[(i + d + PALETTE_MODES.length) % PALETTE_MODES.length][0];
+      setPaletteMode(next);
+      var btn = group.querySelector('[data-pal-mode="' + next + '"]'); if (btn) btn.focus();
+    });
+    $("[data-pb-left]").appendChild(h("div", { class: "pb-pal-foot" }, h("span", { class: "pb-pal-foot-label", text: "Palette" }), group));
+    applyPalette();
+  })();
+  if (paletteMedia) { var onScheme = function () { if (paletteMode === "system") applyPalette(); }; if (paletteMedia.addEventListener) paletteMedia.addEventListener("change", onScheme); else if (paletteMedia.addListener) paletteMedia.addListener(onScheme); }
 
   // ---------- Panneaux redimensionnables ----------
   var main = $("[data-pb-main]");

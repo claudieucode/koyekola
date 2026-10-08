@@ -256,7 +256,10 @@ describe("zone d'édition des conteneurs : vide = vraie zone de construction, pl
     }
     assert.equal(seen.desktop.stacked, false, "ordinateur : colonnes côte à côte");
     assert.equal(seen.mobile.stacked, true, "mobile : colonnes empilées (structure responsive d'origine)");
-    assert.ok(seen.desktop.cell > seen.tablet.cell, "la zone suit la largeur de l'écran affiché (plus large = plus haute), bornée");
+    // La page de bureau est FLUIDE (au moins le point de rupture tablette + 1, soit 1024 px) : sur un écran étroit, bureau et tablette
+    // atteignent tous deux le plancher de la zone (« bornée ») ; dès que le bureau est assez large, il est strictement plus haut
+    assert.ok(seen.desktop.cell >= seen.tablet.cell && seen.tablet.cell >= seen.mobile.cell, "la zone suit la largeur de l'écran affiché (plus large = plus haute ou égale), bornée");
+    if (seen.desktop.w >= 1100) assert.ok(seen.desktop.cell > seen.tablet.cell, `bureau large (${seen.desktop.w} px) : zone strictement plus haute que sur tablette`);
     await page.locator('.pb-top [data-device="desktop"]').click();
     await wait(500);
   });

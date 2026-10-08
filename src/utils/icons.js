@@ -175,6 +175,8 @@ const ICONS = {
   barChart: { body: '<line x1="4" y1="20" x2="20" y2="20"></line><rect x="6" y="11" width="3" height="7" rx="0.5"></rect><rect x="11" y="6" width="3" height="12" rx="0.5"></rect><rect x="16" y="13" width="3" height="5" rx="0.5"></rect>' },
   history: { body: '<path d="M3 12a9 9 0 1 0 3-6.7"></path><polyline points="3 3 3 8 8 8"></polyline><polyline points="12 7 12 12 15 14"></polyline>' },
   palette: { body: '<path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"></path><circle cx="7.5" cy="11" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="10" cy="7" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="15" cy="7" r="1.2" fill="currentColor" stroke="none"></circle>' },
+  sun: { body: '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>' },
+  moon: { body: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"></path>' },
 };
 
 function icon(name, opts = {}) {

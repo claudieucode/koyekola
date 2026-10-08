@@ -123,6 +123,8 @@ module.exports = ({ db }) => {
       // Catalogue des champs/comparateurs : permet de construire une condition ET/OU directement dans le panneau
       // du nœud (src/editor/automation-flow.js), sans devoir d'abord enregistrer un segment séparé.
       segmentCatalog: fieldCatalog(ctx),
+      // Actions du registre avec leur disponibilité RÉELLE (connexion requise ?) : la palette l'affiche, jamais une action muette
+      actions: auto.describeActions(ctx),
       triggers: auto.TRIGGERS,
       // Choix des filtres de déclencheur : vraies pages, étapes de tunnels, tunnels et formulaires
       choices: triggerChoices(ctx),

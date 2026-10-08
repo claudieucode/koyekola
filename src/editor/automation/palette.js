@@ -2,15 +2,21 @@
 // infobulles), tiroir sur petit écran, ajout par clic ou par glisser-déposer. Elle ne crée rien elle-même : elle
 // appelle onAdd(type) — l'éditeur (automation-flow.js) crée l'étape avec son propre système de nœuds.
 import { el } from "./ui";
-import { CATEGORIES, insertable } from "./registry";
+import { CATEGORIES, insertable, action as actionOf } from "./registry";
 
 // Catégories et actions : tirées du registre central (registry.js), jamais redéfinies ici
-const groupsFromRegistry = () => CATEGORIES.map(([key, label]) => ({
-  key, label,
-  items: key === "trigger"
-    ? [{ type: "__trigger", label: "Ajouter un déclencheur", description: "Jusqu'à 3 événements qui démarrent le scénario", keywords: "declencheur evenement demarrer", icon: "zap", trigger: true }]
-    : insertable().filter((x) => x.category === key),
-})).filter((g) => g.items.length);
+const groupsFromRegistry = (recent) => {
+  const groups = CATEGORIES.map(([key, label]) => ({
+    key, label,
+    items: key === "trigger"
+      ? [{ type: "__trigger", label: "Ajouter un déclencheur", description: "Jusqu'à 3 événements qui démarrent le scénario", keywords: "declencheur evenement demarrer", icon: "zap", trigger: true }]
+      : insertable().filter((x) => x.category === key),
+  })).filter((g) => g.items.length);
+  // Récemment utilisées : les dernières actions insérées par cette personne (mémorisées dans ce navigateur)
+  const known = insertable();
+  const items = (recent || []).map((t) => known.find((x) => x.type === t)).filter(Boolean);
+  return items.length ? [{ key: "recent", label: "Récemment utilisées", items }].concat(groups) : groups;
+};
 export const DRAG_TYPE = "application/x-kolakisa-step";
 const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
 const store = {
@@ -21,7 +27,7 @@ const store = {
 export function buildPalette({ root, workspace, iconHtml, onAdd, onAddTrigger, openButton }) {
   const prefs = store.get("kolakisa-flow-palette") || {};
   const closed = new Set(prefs.closed || []);
-  const save = () => store.set("kolakisa-flow-palette", { collapsed: workspace.classList.contains("is-palette-collapsed"), closed: [...closed] });
+  const save = () => store.set("kolakisa-flow-palette", { collapsed: workspace.classList.contains("is-palette-collapsed"), closed: [...closed], recent: prefs.recent || [], onlyAvailable: Boolean(prefs.onlyAvailable) });
 
   const head = el("div", { class: "mk-pal-head" });
   const headIcon = el("span", { class: "mk-pal-head-icon", "aria-hidden": "true" }); headIcon.innerHTML = iconHtml("plus", 18);
@@ -43,7 +49,7 @@ export function buildPalette({ root, workspace, iconHtml, onAdd, onAddTrigger, o
   const help = el("p", { class: "mk-pal-help" }, "Cliquez ou glissez une action sur le canevas : elle y est posée sans être reliée. Reliez les étapes en tirant du point de sortie de l'une au point d'entrée de l'autre ; cliquez sur une étape pour la configurer.");
 
   const allButtons = [];
-  const groupEls = groupsFromRegistry().map((cat) => {
+  const groupEls = groupsFromRegistry(prefs.recent).map((cat) => {
     const listId = `au-pal-${cat.key}`;
     const section = el("section", { class: "mk-pal-group", "data-group": cat.key });
     const toggle = el("button", { type: "button", class: "mk-pal-cat", "aria-expanded": String(!closed.has(cat.key)), "aria-controls": listId });
@@ -60,15 +66,20 @@ export function buildPalette({ root, workspace, iconHtml, onAdd, onAddTrigger, o
     });
     const items = cat.items.map((it) => {
       const { type, label, description: desc, keywords = "" } = it;
+      // Disponibilité RÉELLE (serveur) : une action qui dépend d'une connexion non réglée est marquée, jamais présentée comme prête
+      const av = it.trigger ? null : actionOf(type).availability;
+      const needs = Boolean(av && av.state === "connection_required");
+      const why = needs ? av.reasons.filter((r) => !r.ok).map((r) => `${r.label} : ${r.detail}${r.fix ? ` (${r.fix})` : ""}`).join(" ; ") : "";
       const li = el("li");
       const b = it.trigger
         ? el("button", { type: "button", class: "mk-pal-item mk-pal-item--trigger", "data-add-trigger": "", "data-tip": label, "aria-label": "Ajouter un déclencheur (ouvre la configuration du déclencheur)" })
-        : el("button", { type: "button", class: `mk-pal-item mk-pal-item--${type}${it.tone ? ` is-${it.tone}` : ""}`, draggable: "true", "data-step-type": type, "data-tip": label, "aria-label": `Insérer l'étape « ${label} »` });
+        : el("button", { type: "button", class: `mk-pal-item mk-pal-item--${type}${it.tone ? ` is-${it.tone}` : ""}${needs ? " is-needs-connection" : ""}`, draggable: "true", "data-step-type": type, "data-tip": needs ? `${label} — connexion requise. ${why}` : label, "aria-label": `Insérer l'étape « ${label} »${needs ? `. Connexion requise : ${why}` : ""}` });
       const ic = el("span", { class: "mk-pal-icon", "aria-hidden": "true" }); ic.innerHTML = iconHtml(it.icon, 18);
       const txt = el("span", { class: "mk-pal-text" });
       txt.append(el("span", { class: "mk-pal-name" }, label), el("span", { class: "mk-pal-desc" }, desc));
+      if (needs) txt.append(el("span", { class: "mk-pal-badge", title: why }, "Connexion requise"));
       b.append(ic, txt);
-      b.addEventListener("click", () => { if (it.trigger) onAddTrigger(); else onAdd(type); if (workspace.classList.contains("is-palette-open")) setDrawer(false); });
+      b.addEventListener("click", () => { if (it.trigger) onAddTrigger(); else { onAdd(type); remember(type); } if (workspace.classList.contains("is-palette-open")) setDrawer(false); });
       if (!it.trigger) b.addEventListener("dragstart", (e) => {
         e.dataTransfer.setData(DRAG_TYPE, type);
         e.dataTransfer.setData("text/plain", label);
@@ -79,13 +90,25 @@ export function buildPalette({ root, workspace, iconHtml, onAdd, onAddTrigger, o
       li.appendChild(b);
       list.appendChild(li);
       allButtons.push(b);
-      return { li, haystack: norm(`${label} ${desc} ${keywords} ${cat.label}`) };
+      return { li, state: needs ? "connection_required" : "available", haystack: norm(`${label} ${desc} ${keywords} ${cat.label}${needs ? " connexion requise" : ""}`) };
     });
     section.append(toggle, list);
     groups.appendChild(section);
     return { cat, section, toggle, list, items };
   });
-  body.append(searchWrap, groups, empty, help);
+  // Récemment utilisées : les 4 dernières insertions, de la plus récente à la plus ancienne (visibles à la prochaine ouverture)
+  function remember(type) { prefs.recent = [type].concat((prefs.recent || []).filter((t) => t !== type)).slice(0, 4); save(); }
+  // « Seulement les actions disponibles » : proposé UNIQUEMENT s'il existe des actions qui attendent une connexion (jamais un contrôle sans effet)
+  const anyNeeds = groupEls.some((g) => g.items.some((it) => it.state !== "available"));
+  let onlyWrap = null;
+  if (anyNeeds) {
+    const cb = el("input", { type: "checkbox", id: "au-pal-only", "data-pal-only": "" });
+    cb.checked = Boolean(prefs.onlyAvailable);
+    cb.addEventListener("change", () => { prefs.onlyAvailable = cb.checked; save(); filter(); });
+    onlyWrap = el("label", { class: "mk-pal-only", for: "au-pal-only" });
+    onlyWrap.append(cb, "Seulement les actions disponibles");
+  }
+  body.append(...[searchWrap, onlyWrap, groups, empty, help].filter(Boolean));
   root.append(head, body);
   root.setAttribute("aria-labelledby", "au-pal-title");
 
@@ -96,7 +119,7 @@ export function buildPalette({ root, workspace, iconHtml, onAdd, onAddTrigger, o
     let shown = 0;
     groupEls.forEach((g) => {
       let n = 0;
-      g.items.forEach((it) => { const ok = words.every((w) => it.haystack.includes(w)); it.li.hidden = !ok; if (ok) n++; });
+      g.items.forEach((it) => { const ok = (!prefs.onlyAvailable || it.state === "available") && words.every((w) => it.haystack.includes(w)); it.li.hidden = !ok; if (ok) n++; });
       shown += n;
       g.section.hidden = n === 0;
       g.list.hidden = q ? false : closed.has(g.cat.key);
