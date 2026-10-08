@@ -14,6 +14,7 @@ export const FIELD_LABELS = Object.fromEntries(FIELD_OPTIONS);
 const EVENT_NAME = /^[a-z][a-z0-9_.]{1,63}$/;
 const PROPERTY_KEY = /^[a-z][a-z0-9_]{0,39}$/;
 const STATUS_LABELS = { unknown: "Pas de consentement", subscribed: "Abonné", unsubscribed: "Désinscrit", bounced: "Rebond", complained: "Plainte", suppressed: "Bloqué" };
+export const TRANSFORM_LABELS = { none: "Aucun nettoyage", trim: "Retirer les espaces en trop", lowercase: "Tout en minuscules", uppercase: "Tout en majuscules", capitalize: "Majuscule à chaque mot", digits: "Garder seulement les chiffres (et +)" };
 const WEEKDAY_OPTIONS = [[1, "Lundi"], [2, "Mardi"], [3, "Mercredi"], [4, "Jeudi"], [5, "Vendredi"], [6, "Samedi"], [7, "Dimanche"]];
 const WAIT_UNTIL_MODES = [["time", "Une heure précise"], ["weekday", "Un jour de la semaine"], ["date", "Une date précise"], ["property", "Un champ date du contact"], ["business_hours", "Les heures ouvrables"]];
 const WAIT_UNTIL_DEFAULTS = { time: { time: "09:00" }, weekday: { weekday: 1, time: "09:00" }, date: { date: "", time: "09:00" }, property: { property: "", offsetDays: 0, time: "09:00", onMissing: "continue" }, business_hours: { days: [1, 2, 3, 4, 5], from: "09:00", to: "18:00" } };
@@ -388,6 +389,41 @@ const EDITORS = {
     box.appendChild(field("Nouvelle valeur", text(draft.value, (v) => { draft.value = v; }, { maxlength: 300, disabled: ctx.locked }), "Laissez vide pour effacer la valeur."));
     return box;
   },
+  copy_field(ctx, draft) {
+    const box = el("div");
+    const props = ctx.data.properties || [];
+    const options = (fields, withEmpty) => [["", "Choisir un champ…", true], ...fields, ...props.map((p) => [`property:${p.key}`, `Propriété : ${p.label}`])];
+    const readable = [...FIELD_OPTIONS.slice(0, 2), ["email", "E-mail"], ...FIELD_OPTIONS.slice(2)];
+    box.appendChild(field("Copier depuis", select(options(readable), draft.from || "", (v) => { draft.from = v; }, { disabled: ctx.locked })));
+    box.appendChild(field("Vers", select(options(FIELD_OPTIONS), draft.to || "", (v) => { draft.to = v; }, { disabled: ctx.locked }), "L'e-mail ne peut pas être modifié. Une valeur refusée par le type de la propriété est notée au journal et le scénario continue."));
+    box.appendChild(field("Nettoyage", select(Object.keys(TRANSFORM_LABELS).map((k) => [k, TRANSFORM_LABELS[k]]), draft.transform || "none", (v) => { draft.transform = v; }, { disabled: ctx.locked })));
+    box.appendChild(hint("Si le champ de départ est vide, rien n'est copié (la destination n'est jamais effacée par une copie)."));
+    return box;
+  },
+  set_date(ctx, draft, rerender) {
+    const box = el("div");
+    const dates = (ctx.data.properties || []).filter((p) => p.type === "date");
+    if (!dates.length) { box.appendChild(note("Aucune propriété de type date : créez-en une dans Audience → Propriétés.")); return box; }
+    const opts = [["", "Choisir un champ date…", true], ...dates.map((p) => [`property:${p.key}`, p.label])];
+    box.appendChild(field("Champ date à renseigner", select(opts, draft.property || "", (v) => { draft.property = v; }, { disabled: ctx.locked })));
+    box.appendChild(field("Point de départ", select([["today", "Aujourd'hui"], ["property", "Un autre champ date du contact"]], draft.base || "today", (v) => { draft.base = v; if (v === "today") delete draft.baseProperty; rerender(); }, { disabled: ctx.locked })));
+    if (draft.base === "property") box.appendChild(field("Champ date de départ", select(opts, draft.baseProperty || "", (v) => { draft.baseProperty = v; }, { disabled: ctx.locked })));
+    box.appendChild(field("Décalage (jours)", number(draft.offsetDays === undefined ? 0 : draft.offsetDays, (v) => { draft.offsetDays = v; }, { min: -3650, max: 3650, disabled: ctx.locked }), "Négatif : avant ; positif : après ; 0 : la date de départ elle-même."));
+    if (draft.base !== "property") box.appendChild(field("Fuseau horaire", select([["contact", "Celui du contact (repli : celui de l'organisation)"], ["organization", "Celui de l'organisation"]], draft.zone || "contact", (v) => { draft.zone = v; }, { disabled: ctx.locked }), "Détermine ce qu'est « aujourd'hui » pour ce contact."));
+    return box;
+  },
+  calculate(ctx, draft) {
+    const box = el("div");
+    const nums = (ctx.data.properties || []).filter((p) => p.type === "number");
+    if (!nums.length) { box.appendChild(note("Aucune propriété de type nombre : créez-en une dans Audience → Propriétés.")); return box; }
+    box.appendChild(field("Champ nombre", select([["", "Choisir un champ…", true], ...nums.map((p) => [`property:${p.key}`, p.label])], draft.property || "", (v) => { draft.property = v; }, { disabled: ctx.locked })));
+    box.appendChild(field("Opération", select([["add", "Ajouter"], ["subtract", "Retirer"], ["multiply", "Multiplier par"], ["set", "Définir à"]], draft.op || "add", (v) => { draft.op = v; }, { disabled: ctx.locked })));
+    const val = el("input", { type: "number", step: "any", id: nextId(), inputmode: "decimal" });
+    val.value = draft.value === undefined ? "" : String(draft.value); val.disabled = ctx.locked;
+    val.addEventListener("input", () => { draft.value = val.value === "" ? undefined : Number(val.value); });
+    box.appendChild(field("Valeur", val, "Un champ vide compte pour 0. Le résultat est arrondi à 6 décimales."));
+    return box;
+  },
   adjust_score(ctx, draft, rerender) {
     const box = el("div");
     box.appendChild(field("Action sur le score", select([["add", "Ajouter des points"], ["subtract", "Retirer des points"], ["set", "Définir le score"]], draft.mode, (v) => { draft.mode = v; rerender(); }, { disabled: ctx.locked })));
@@ -488,6 +524,30 @@ export function validate(type, ctx, d) {
       if (typeof d.field === "string" && d.field.indexOf("property:") === 0) { if (!PROPERTY_KEY.test(d.field.slice(9))) errors.push("Nom de propriété invalide (minuscules, chiffres et « _ », commence par une lettre, 40 caractères au plus)."); }
       else if (!FIELD_LABELS[d.field]) errors.push("Choisissez le champ à modifier.");
       if (String(d.value || "").length > 300) errors.push("Valeur trop longue (300 caractères au plus).");
+      return errors;
+    }
+    case "copy_field": {
+      const props = (ctx.data.properties || []).map((p) => `property:${p.key}`);
+      const okFrom = (v) => ["first_name", "last_name", "email", "phone", "company", "country", "language", "source"].includes(v) || props.includes(v);
+      const okTo = (v) => ["first_name", "last_name", "phone", "company", "country", "language", "source"].includes(v) || props.includes(v);
+      const errors = [];
+      if (!okFrom(d.from)) errors.push("Choisissez le champ de départ.");
+      if (!okTo(d.to)) errors.push("Choisissez le champ de destination.");
+      if (d.from && d.from === d.to) errors.push("La source et la destination sont identiques.");
+      return errors;
+    }
+    case "set_date": {
+      const dates = (ctx.data.properties || []).filter((p) => p.type === "date").map((p) => `property:${p.key}`);
+      const errors = [];
+      if (!dates.includes(d.property)) errors.push("Choisissez le champ date à renseigner.");
+      if (d.base === "property" && !dates.includes(d.baseProperty)) errors.push("Choisissez le champ date de départ.");
+      if (!(Number.isInteger(d.offsetDays) && d.offsetDays >= -3650 && d.offsetDays <= 3650)) errors.push("Décalage : un nombre entier de jours, de −3650 à 3650.");
+      return errors;
+    }
+    case "calculate": {
+      const errors = [];
+      if (!(ctx.data.properties || []).some((p) => p.type === "number" && `property:${p.key}` === d.property)) errors.push("Choisissez le champ nombre à modifier.");
+      if (typeof d.value !== "number" || !Number.isFinite(d.value) || Math.abs(d.value) > 1e9) errors.push("Valeur : un nombre entre −1 000 000 000 et 1 000 000 000.");
       return errors;
     }
     case "adjust_score": {

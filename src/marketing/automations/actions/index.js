@@ -3,6 +3,7 @@ require("./communication");
 require("./time");
 require("./logic");
 require("./contact");
+require("./data");
 require("./automation");
 require("./flow");
 
