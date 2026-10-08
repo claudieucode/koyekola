@@ -3,12 +3,12 @@
   actions groupées et menu d'actions selon l'état de l'article et les droits. L'écriture se fait dans l'éditeur du blog.
 %><%- include("partials/top", { title, active }) %>
 <%
-  const keep = (over = {}) => { const p = new URLSearchParams(); const f = { q: filters.q, auteur: filters.auteur, categorie: filters.categorie, periode: filters.periode, tri: filters.tri === "modifie" ? "" : filters.tri, ...over }; Object.entries(f).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return t ? "?" + t : ""; };
+  const keep = (over = {}) => { const p = new URLSearchParams(); const f = { q: filters.q, auteur: filters.auteur, categorie: filters.categorie, etiquette: filters.etiquette, periode: filters.periode, tri: filters.tri === "modifie" ? "" : filters.tri, ...over }; Object.entries(f).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return t ? "?" + t : ""; };
   const tabs = [["toutes", "Tous", "/marketing/site-web/articles"], ["publies", "Publiés", "/marketing/site-web/articles/publies"], ["programmes", "Programmés", "/marketing/site-web/articles/programmes"], ["brouillons", "Brouillons", "/marketing/site-web/articles/brouillons"], ["corbeille", "Corbeille", "/marketing/site-web/articles/corbeille"]];
   const here = tabs.find((t) => t[0] === state)[2];
   const fd = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
   const fdt = (v) => (v ? fd(v) + " à " + String(v).slice(11, 16) + " UTC" : "—");
-  const filtered = Boolean(filters.q || filters.auteur || filters.categorie || filters.periode);
+  const filtered = Boolean(filters.q || filters.auteur || filters.categorie || filters.etiquette || filters.periode);
   const inTrash = state === "corbeille";
   const badge = { published: "mk-status-ok", scheduled: "mk-status-info", draft: "mk-status-off", review: "mk-status-warn", archived: "mk-status-off" };
 %>
@@ -27,7 +27,8 @@
       <% if (authors.length > 1) { %><label class="sr-only" for="ar-auteur">Auteur</label>
       <select id="ar-auteur" name="auteur"><option value="">Tous les auteurs</option><% authors.forEach((u) => { %><option value="<%= u.id %>"<%= String(u.id) === filters.auteur ? " selected" : "" %>><%= u.username %></option><% }) %></select><% } %>
       <% if (categories.length) { %><label class="sr-only" for="ar-cat">Catégorie</label>
-      <select id="ar-cat" name="categorie"><option value="">Toutes les catégories</option><% categories.forEach((c) => { %><option value="<%= c.name %>"<%= c.name.toLowerCase() === filters.categorie.toLowerCase() ? " selected" : "" %>><%= c.name %> (<%= c.n %>)</option><% }) %></select><% } %>
+      <select id="ar-cat" name="categorie"><option value="">Toutes les catégories</option><% categories.forEach((c) => { %><option value="<%= c.id %>"<%= String(c.id) === filters.categorie ? " selected" : "" %>><%= "— ".repeat(c.depth) %><%= c.name %> (<%= c.n %>)</option><% }) %></select><% } %>
+      <% if (filters.etiquette) { %><input type="hidden" name="etiquette" value="<%= filters.etiquette %>"><% } %>
       <label class="sr-only" for="ar-periode">Période</label>
       <select id="ar-periode" name="periode"><option value="">Toutes les dates</option><option value="7"<%= filters.periode === "7" ? " selected" : "" %>>7 derniers jours</option><option value="30"<%= filters.periode === "30" ? " selected" : "" %>>30 derniers jours</option><option value="90"<%= filters.periode === "90" ? " selected" : "" %>>90 derniers jours</option><option value="annee"<%= filters.periode === "annee" ? " selected" : "" %>>Cette année</option></select>
       <label class="sr-only" for="ar-tri">Trier par</label>
@@ -53,13 +54,14 @@
       <% } %>
       <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table mk-ar-table">
         <caption class="sr-only"><%= inTrash ? "Articles dans la corbeille" : "Articles" %></caption>
-        <thead><tr><% if (canWrite) { %><th scope="col" class="mk-cms-check-col"><input type="checkbox" data-cms-select-all aria-label="Tout sélectionner"></th><% } %><th scope="col">Article</th><th scope="col">État</th><th scope="col">Auteur</th><th scope="col">Catégorie</th><th scope="col">Date</th><th scope="col">Modifié</th><th scope="col" class="mk-cms-actions-col"><span class="sr-only">Actions</span></th></tr></thead>
+        <thead><tr><% if (canWrite) { %><th scope="col" class="mk-cms-check-col"><input type="checkbox" data-cms-select-all aria-label="Tout sélectionner"></th><% } %><th scope="col">Article</th><th scope="col">État</th><th scope="col">Auteur</th><th scope="col">Catégorie</th><th scope="col" class="mk-num">Commentaires</th><th scope="col">Date</th><th scope="col">Modifié</th><th scope="col" class="mk-cms-actions-col"><span class="sr-only">Actions</span></th></tr></thead>
         <tbody><% rows.forEach((p) => { const menuId = "ar-menu-" + p.id; const stClass = inTrash ? "mk-status-off" : (badge[p.status] || "mk-status-off"); %>
           <tr><% if (canWrite) { %><td class="mk-cms-check-col" data-label="Sélection"><input type="checkbox" name="ids" value="<%= p.id %>" form="pages-bulk" data-cms-row aria-label="Sélectionner « <%= p.title %> »"></td><% } %>
             <th scope="row" data-label="Article"><span class="mk-ar-cell"><% if (p.cover_path) { %><img class="mk-ar-thumb" src="<%= p.cover_path %>" alt="" loading="lazy" width="48" height="36"><% } else { %><span class="mk-ar-thumb is-empty" aria-hidden="true"></span><% } %>
               <span><% if (isCreator) { %><a href="/formateur/blog/<%= p.id %>/modifier"><%= p.title %></a><% } else { %><%= p.title %><% } %><span class="mk-sub"><%= BLOG_BASE %>/<%= p.slug %></span></span></span></th>
             <td data-label="État"><span class="mk-status <%= stClass %>"><%= inTrash ? "Corbeille" : STATUSES[p.status] || p.status %></span><% if (!inTrash && p.status === "scheduled") { %><span class="mk-sub"><%= fdt(p.published_at) %></span><% } %></td>
-            <td data-label="Auteur"><%= p.author || "—" %></td><td data-label="Catégorie"><%= p.category || "—" %></td>
+            <td data-label="Auteur"><%= p.author || "—" %></td><td data-label="Catégorie"><%= p.primary_category || p.category || "—" %></td>
+            <td class="mk-num" data-label="Commentaires"><% if (p.comments_approved || p.comments_pending) { %><a href="/marketing/site-web/commentaires?contenu=post:<%= p.id %>"><%= p.comments_approved %></a><% if (p.comments_pending) { %><span class="mk-sub"><%= p.comments_pending %> en attente</span><% } %><% } else { %><%= p.comments_enabled ? "0" : "Fermés" %><% } %></td>
             <td data-label="Date"><%= p.status === "published" ? fd(p.published_at) : fd(p.created_at) %></td><td data-label="Modifié"><%= fd(p.updated_at) %></td>
             <td class="mk-row-actions mk-cms-actions-col"><div class="mk-cms-rowbtns">
               <% if (canWrite && isCreator && !inTrash) { %><a class="btn btn-outline btn-sm" href="/formateur/blog/<%= p.id %>/modifier">Modifier</a><% } %>

@@ -1,0 +1,21 @@
+<%# Un commentaire et, dessous, ses réponses approuvées (récursif). Aucune donnée privée : ni e-mail, ni adresse. %>
+<% const initials = (name) => String(name || "?").trim().slice(0, 1).toUpperCase(); %>
+<li class="comment" id="commentaire-<%= c.id %>" data-level="<%= level %>">
+  <% if (c.avatar_path) { %><img class="comment-avatar" src="<%= c.avatar_path %>" alt="" width="40" height="40" loading="lazy">
+  <% } else { %><span class="comment-avatar comment-initials" style="background:<%= avatarColor(c.name) %>" aria-hidden="true"><%= initials(c.name) %></span><% } %>
+  <div class="comment-main">
+    <p class="comment-meta"><strong><%= c.name %></strong><% if (c.role === "formateur") { %> <span class="comment-badge">Auteur</span><% } %> · <time datetime="<%= c.created_at.replace(' ', 'T') %>Z"><%= formatDateTime(c.created_at) %></time></p>
+    <div class="comment-body"><%- commentHtml(c.body) %></div>
+    <div class="comment-actions">
+      <% if (commentsOpen && comments.repliesAllowed && level < comments.maxDepth && (me || commentCfg.guests_allowed)) { %><a class="btn-link" href="/blog/<%= post.slug %>?repondre=<%= c.id %>#commentaire-form" aria-label="Répondre à <%= c.name %>">Répondre</a><% } %>
+      <% if (me && (me.id === c.user_id || me.role === "formateur")) { %>
+        <form method="post" action="/blog/commentaires/<%= c.id %>/supprimer" class="comment-delete" data-confirm="Supprimer ce commentaire ?"><button type="submit" class="btn-link">Supprimer</button></form>
+      <% } %>
+    </div>
+  </div>
+  <% if (c.children.length) { %>
+    <ol class="comment-list comment-replies">
+      <% c.children.forEach((r) => { %><%- include("_comment", { c: r, level: level + 1 }) %><% }) %>
+    </ol>
+  <% } %>
+</li>

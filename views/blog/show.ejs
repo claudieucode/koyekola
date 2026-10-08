@@ -43,7 +43,7 @@
         <%# Modèle de thème (Page Builder) : remplace l'en-tête, l'image à la une, le sommaire mobile et le texte ; sinon affichage d'origine %>
         <% if (typeof themeTemplate !== "undefined" && themeTemplate) { %><%- themeTemplate %><% } else { %>
         <header class="article-header">
-          <% if (post.category) { %><a class="article-category" href="/blog/categorie/<%= categorySlug %>"><%= post.category %></a><% } %>
+          <% if (postTerms.primary) { %><a class="article-category" href="<%= postTerms.primary.url %>"><%= postTerms.primary.name %></a><% } else if (post.category) { %><a class="article-category" href="/blog/categorie/<%= categorySlug %>"><%= post.category %></a><% } %>
           <h1 class="post-title"><%= post.title %></h1>
           <% if (post.excerpt) { %><p class="article-lead"><%= post.excerpt %></p><% } %>
           <p class="post-meta article-meta">
@@ -75,7 +75,7 @@
 
         <% if (tags.length) { %>
           <ul class="article-tags" aria-label="Étiquettes">
-            <% tags.forEach((t) => { %><li><a href="/blog/etiquette/<%= slugify(t) %>">#<%= t %></a></li><% }) %>
+            <% if (postTerms.tags.length) { postTerms.tags.forEach((t) => { %><li><a href="<%= t.url %>">#<%= t.name %></a></li><% }) } else { tags.forEach((t) => { %><li><a href="/blog/etiquette/<%= slugify(t) %>">#<%= t %></a></li><% }) } %>
           </ul>
         <% } %>
 
@@ -104,32 +104,42 @@
 
         <% if (post.comments_enabled && !tplHtml.includes("kw-postcomments")) { %>
           <section class="article-comments" id="commentaires" aria-labelledby="comments-title">
-            <h2 id="comments-title">Commentaires <span class="article-comments-count">(<%= comments.length %>)</span></h2>
-            <% if (comments.length) { %>
+            <h2 id="comments-title">Commentaires <span class="article-comments-count">(<%= comments.total %>)</span></h2>
+            <% if (commentNotice) { %><p class="comment-notice" role="status"><%= commentNotice %></p><% } %>
+            <% if (comments.roots.length) { %>
               <ol class="comment-list">
-                <% comments.forEach((c) => { %>
-                  <li class="comment" id="commentaire-<%= c.id %>">
-                    <% if (c.avatar_path) { %><img class="comment-avatar" src="<%= c.avatar_path %>" alt="" width="40" height="40" loading="lazy">
-                    <% } else { %><span class="comment-avatar comment-initials" style="background:<%= avatarColor(c.username) %>" aria-hidden="true"><%= initials(c.username) %></span><% } %>
-                    <div class="comment-main">
-                      <p class="comment-meta"><strong><%= c.username %></strong><% if (c.role === "formateur") { %> <span class="comment-badge">Auteur</span><% } %> · <time datetime="<%= c.created_at.replace(' ', 'T') %>Z"><%= formatDateTime(c.created_at) %></time></p>
-                      <div class="comment-body"><% c.body.split(/\n{2,}/).forEach((para) => { %><p><% para.split("\n").forEach((line, i) => { %><% if (i) { %><br><% } %><%= line %><% }) %></p><% }) %></div>
-                      <% if (me && (me.id === c.user_id || me.role === "formateur")) { %>
-                        <form method="post" action="/blog/commentaires/<%= c.id %>/supprimer" class="comment-delete" data-confirm="Supprimer ce commentaire ?"><button type="submit" class="btn-link">Supprimer</button></form>
-                      <% } %>
-                    </div>
-                  </li>
-                <% }) %>
+                <% comments.roots.forEach((c) => { %><%- include("_comment", { c, level: 1 }) %><% }) %>
               </ol>
+              <% if (comments.pages > 1) { %>
+                <nav class="comment-pager" aria-label="Pages de commentaires">
+                  <% if (comments.page > 1) { %><a class="btn btn-outline btn-sm" href="?cpage=<%= comments.page - 1 %>#commentaires">Commentaires précédents</a><% } %>
+                  <span>Page <%= comments.page %> sur <%= comments.pages %></span>
+                  <% if (comments.page < comments.pages) { %><a class="btn btn-outline btn-sm" href="?cpage=<%= comments.page + 1 %>#commentaires">Commentaires suivants</a><% } %>
+                </nav>
+              <% } %>
             <% } else if (commentsOpen) { %>
               <p class="comment-empty">Aucun commentaire pour l'instant : soyez le premier à réagir.</p>
+            <% } else { %>
+              <p class="comment-empty">Aucun commentaire.</p>
             <% } %>
-            <% if (commentsOpen && me) { %>
-              <form method="post" action="/blog/<%= post.slug %>/commentaires" class="comment-form">
-                <label for="comment-body">Votre commentaire</label>
-                <% if (commentError) { %><p class="form-error" role="alert"><%= commentError %></p><% } %>
-                <textarea id="comment-body" name="body" rows="4" maxlength="<%= commentMax %>" required placeholder="Partagez votre avis, une question, une expérience…"><%= commentDraft %></textarea>
-                <div class="comment-form-foot"><span class="field-hint">Publié sous le nom <strong><%= me.username %></strong>. Texte seul, <%= commentMax %> caractères au plus.</span><button type="submit" class="btn btn-primary">Publier le commentaire</button></div>
+            <% if (commentsOpen && (me || commentCfg.guests_allowed)) { %>
+              <form method="post" action="/blog/<%= post.slug %>/commentaires" class="comment-form" id="commentaire-form" novalidate>
+                <% if (replyTo) { %>
+                  <input type="hidden" name="parent_id" value="<%= replyTo.id %>">
+                  <p class="comment-replying" role="status">Réponse à <strong><%= replyTo.name %></strong> · <a href="/blog/<%= post.slug %>#commentaires">Annuler</a></p>
+                <% } %>
+                <% if (commentError) { %><p class="form-error" role="alert" id="comment-error"><%= commentError %></p><% } %>
+                <% if (!me) { %>
+                  <div class="comment-form-row">
+                    <div><label for="comment-name">Nom *</label><input id="comment-name" type="text" name="author_name" maxlength="60" required autocomplete="name" value="<%= commentForm.name || '' %>"></div>
+                    <div><label for="comment-email">E-mail * <span class="field-hint">(jamais affiché)</span></label><input id="comment-email" type="email" name="author_email" maxlength="120" required autocomplete="email" value="<%= commentForm.email || '' %>"></div>
+                  </div>
+                <% } %>
+                <label for="comment-body"><%= replyTo ? "Votre réponse" : "Votre commentaire" %></label>
+                <textarea id="comment-body" name="body" rows="4" maxlength="<%= commentMax %>" required<%- commentError ? ' aria-describedby="comment-error"' : '' %> placeholder="Partagez votre avis, une question, une expérience…"><%= commentDraft %></textarea>
+                <% if (!me) { %><input type="hidden" name="form_token" value="<%= commentToken %>"><% } %>
+                <div class="comment-hp" aria-hidden="true"><label>Ne pas remplir <input type="text" name="contact_url" tabindex="-1" autocomplete="off"></label></div>
+                <div class="comment-form-foot"><span class="field-hint"><% if (me) { %>Publié sous le nom <strong><%= me.username %></strong>. <% } %>Texte seul, <%= commentMax %> caractères au plus.<%= commentCfg.moderation === "all" || (commentCfg.moderation === "first" && !me) ? " Les commentaires sont relus avant d'apparaître." : "" %></span><button type="submit" class="btn btn-primary"><%= replyTo ? "Publier la réponse" : "Publier le commentaire" %></button></div>
               </form>
             <% } else if (commentsOpen) { %>
               <div class="comment-login">

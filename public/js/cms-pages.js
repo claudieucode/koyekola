@@ -28,6 +28,8 @@
       corbeille: { title: "Mettre à la corbeille ?", text: many + " " + plural + " " + (many > 1 ? "passeront" : "passera") + " hors ligne ; vous pourrez " + (many > 1 ? "les" : "le") + " restaurer.", ok: "Mettre à la corbeille" },
       supprimer: { title: "Supprimer définitivement ?", text: many + " " + plural + " " + (many > 1 ? "seront supprimés" : "sera supprimé") + " pour de bon, avec " + (many > 1 ? "leurs" : "ses") + " statistiques et versions. Cette action est irréversible.", ok: "Supprimer" },
     }[select.value];
+    var note = form.getAttribute("data-cms-delete-text"); // texte propre à la liste (commentaires, termes) quand « statistiques et versions » ne convient pas
+    if (texts && note && select.value === "supprimer") texts = { title: "Supprimer définitivement ?", text: many + " " + plural + " " + (many > 1 ? "seront supprimés" : "sera supprimé") + ". " + note, ok: "Supprimer" };
     if (!texts) return;
     e.preventDefault();
     var go = function () { confirmed = true; form.submit(); };

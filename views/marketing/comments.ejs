@@ -1,0 +1,77 @@
+<%#
+  KOLAKISA CMS → Commentaires (palier 6). Liste de modération : onglets par statut (effectifs réels), recherche, filtres (contenu, auteur,
+  date), tri, pagination, actions groupées et par ligne. Les e-mails des invités ne s'affichent qu'avec le droit comments.email.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const keep = (over = {}) => { const p = new URLSearchParams(); const o = { q: f.q, contenu: f.contenu, auteur: f.auteur, periode: f.periode, tri: f.tri === "recent" ? "" : f.tri, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return t ? "?" + t : ""; };
+  const tabHref = (s) => BASE + (s ? "/" + s : "");
+  const here = tabHref(sub) + keep({ page: result.page > 1 ? result.page : "" });
+  const filtered = Boolean(f.q || f.contenu || f.auteur || f.periode);
+  const fdt = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") + " à " + String(v).slice(11, 16) + " UTC" : "—");
+  const badge = { pending: "mk-status-warn", approved: "mk-status-ok", spam: "mk-status-err", trash: "mk-status-off" };
+  const bulk = { "": [["approuver", "Approuver"], ["indesirable", "Marquer indésirable"], ["corbeille", "Mettre à la corbeille"]], pending: [["approuver", "Approuver"], ["indesirable", "Marquer indésirable"], ["corbeille", "Mettre à la corbeille"]], approved: [["indesirable", "Marquer indésirable"], ["corbeille", "Mettre à la corbeille"]], spam: [["restaurer", "Restaurer"], ["approuver", "Approuver"], ["corbeille", "Mettre à la corbeille"]], trash: [["restaurer", "Restaurer"]].concat(canDelete ? [["supprimer", "Supprimer définitivement"]] : []) }[status];
+  const empties = { "": "Aucun commentaire.", pending: "Aucun commentaire en attente.", approved: "Aucun commentaire approuvé.", spam: "Aucun commentaire indésirable.", trash: "La corbeille est vide." };
+%>
+    <div class="mk-head"><h1>Commentaires</h1>
+      <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/site-web/parametres/commentaires">Réglages</a></div></div>
+    <p class="mk-lead">Les commentaires de votre site, sous les articles. Chaque action change réellement l'état du commentaire : un commentaire approuvé est public, les autres restent invisibles pour les visiteurs.</p>
+    <% if (focus) { %><p class="mk-sub">Commentaires de <a href="<%= focus.url %>" target="_blank" rel="noopener">« <%= focus.title %> »</a> · <a href="<%= tabHref(sub) + keep({ contenu: "" }) %>">Voir tous les contenus</a></p><% } %>
+
+    <nav class="mk-tabs mk-cms-tabs" aria-label="Filtrer les commentaires par statut">
+      <% tabs.forEach(([k, name, ck]) => { %><a class="mk-tab" href="<%= tabHref(k) + keep() %>"<%- sub === k ? ' aria-current="page"' : "" %>><%= name %> <span class="mk-tab-count"><%= counts[ck] %></span></a>
+      <% }) %>
+    </nav>
+
+    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= tabHref(sub) %>" role="search" aria-label="Rechercher et filtrer les commentaires">
+      <label class="mk-search"><span class="sr-only">Rechercher (texte, auteur, contenu<%= canEmail ? ", e-mail" : "" %>)</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" placeholder="Rechercher un commentaire"></label>
+      <% if (contents.length) { %><label class="sr-only" for="cm-contenu">Contenu</label>
+      <select id="cm-contenu" name="contenu"><option value="">Tous les contenus</option><% contents.forEach((c) => { %><option value="<%= c.value %>"<%= c.value === f.contenu ? " selected" : "" %>><%= c.label %></option><% }) %></select><% } %>
+      <label class="sr-only" for="cm-auteur">Auteur</label><input id="cm-auteur" type="text" name="auteur" value="<%= f.auteur %>" placeholder="Auteur" maxlength="60" class="mk-cms-narrow">
+      <label class="sr-only" for="cm-periode">Période</label>
+      <select id="cm-periode" name="periode"><option value="">Toutes les dates</option><% [["7", "7 derniers jours"], ["30", "30 derniers jours"], ["90", "90 derniers jours"], ["365", "12 derniers mois"]].forEach(([k, name]) => { %><option value="<%= k %>"<%= f.periode === k ? " selected" : "" %>><%= name %></option><% }) %></select>
+      <label class="sr-only" for="cm-tri">Trier par</label>
+      <select id="cm-tri" name="tri"><% [["recent", "Plus récents"], ["ancien", "Plus anciens"], ["auteur", "Auteur A → Z"], ["contenu", "Contenu A → Z"]].forEach(([k, name]) => { %><option value="<%= k %>"<%= f.tri === k ? " selected" : "" %>><%= name %></option><% }) %></select>
+      <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (filtered || f.tri !== "recent") { %><a class="btn btn-ghost btn-sm" href="<%= tabHref(sub) %>">Réinitialiser</a><% } %>
+    </form>
+
+    <% if (!rows.length) { %>
+      <div class="mk-empty"><%- icon("inbox", { size: 32 }) %><h2><%= filtered ? "Aucun commentaire trouvé" : empties[status] %></h2>
+        <p><%= filtered ? "Aucun commentaire ne correspond à ces critères." : status === "" ? "Les commentaires laissés sous vos articles apparaîtront ici." : "" %></p></div>
+    <% } else { %>
+      <% if (canModerate) { %>
+      <form id="cm-bulk" class="mk-cms-bulk" action="<%= BASE %>/actions" method="post" data-cms-bulk data-cms-noun="commentaire" data-cms-delete-text="Cette action est irréversible.">
+        <input type="hidden" name="retour" value="<%= here %>">
+        <label class="sr-only" for="cm-bulk-action">Action groupée</label>
+        <select id="cm-bulk-action" name="action" disabled><option value="">Action groupée</option><% bulk.forEach(([k, name]) => { %><option value="<%= k %>"><%= name %></option><% }) %></select>
+        <button type="submit" class="btn btn-outline btn-sm" disabled>Appliquer</button><span class="mk-sub" data-cms-bulk-count aria-live="polite"></span>
+      </form>
+      <% } %>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table mk-cm-table">
+        <caption class="sr-only">Commentaires</caption>
+        <thead><tr><% if (canModerate) { %><th scope="col" class="mk-cms-check-col"><input type="checkbox" data-cms-select-all aria-label="Tout sélectionner"></th><% } %><th scope="col">Auteur</th><th scope="col">Commentaire</th><th scope="col">Publié sur</th><th scope="col">Statut</th><th scope="col">Date</th><th scope="col" class="mk-cms-actions-col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody><% rows.forEach((c) => { const btn = (path, label, cls) => `<form method="post" action="${BASE}/${c.id}/${path}" class="mk-cm-form"><input type="hidden" name="retour" value="${here}"><button type="submit" class="btn ${cls || "btn-outline"} btn-sm">${label}</button></form>`; %>
+          <tr id="cm-<%= c.id %>"><% if (canModerate) { %><td class="mk-cms-check-col" data-label="Sélection"><input type="checkbox" name="ids" value="<%= c.id %>" form="cm-bulk" data-cms-row aria-label="Sélectionner le commentaire de <%= c.author %>"></td><% } %>
+            <th scope="row" data-label="Auteur"><span class="mk-tx-name"><%= c.author %><span class="mk-sub"><%= c.user_id ? "Membre" : "Invité" %><%= c.parent_id ? " · réponse" : "" %></span><% if (canEmail && c.email) { %><span class="mk-sub"><%= c.email %></span><% } %></span></th>
+            <td data-label="Commentaire"><div class="mk-cm-body"><%= c.body.length > 220 ? c.body.slice(0, 220) + "…" : c.body %></div>
+              <% if (canModerate && c.status !== "trash") { %><details class="mk-cm-reply"><summary>Répondre</summary>
+                <form method="post" action="<%= BASE %>/<%= c.id %>/repondre"><input type="hidden" name="retour" value="<%= here %>"><label class="sr-only" for="cm-r-<%= c.id %>">Votre réponse</label><textarea id="cm-r-<%= c.id %>" name="body" rows="3" maxlength="2000" required></textarea><button type="submit" class="btn btn-primary btn-sm">Publier la réponse</button><span class="field-hint">Publiée tout de suite sous votre nom<%= c.status !== "approved" ? " ; ce commentaire est approuvé en même temps" : "" %>.</span></form></details><% } %></td>
+            <td data-label="Publié sur"><% if (c.content_title) { %><a href="/blog/<%= c.content_slug %>#commentaire-<%= c.id %>" target="_blank" rel="noopener"><%= c.content_title %></a><span class="mk-sub"><a href="<%= tabHref(sub) + keep({ contenu: c.content_type + ":" + c.content_id, page: "" }) %>">Commentaires de ce contenu</a></span><% } else { %>—<% } %></td>
+            <td data-label="Statut"><span class="mk-status <%= badge[c.status] %>"><%= STATUS_LABELS[c.status] %></span></td>
+            <td data-label="Date"><%= fdt(c.created_at) %><% if (c.status === "approved" && c.approver) { %><span class="mk-sub">Approuvé par <%= c.approver %></span><% } %></td>
+            <td class="mk-row-actions mk-cms-actions-col"><% if (canModerate) { %><div class="mk-cms-rowbtns">
+              <% if (c.status === "pending") { %><%- btn("approuver", "Approuver", "btn-primary") %><%- btn("indesirable", "Indésirable") %><%- btn("corbeille", "Corbeille", "btn-ghost") %>
+              <% } else if (c.status === "approved") { %><%- btn("indesirable", "Indésirable") %><%- btn("corbeille", "Corbeille", "btn-ghost") %>
+              <% } else if (c.status === "spam") { %><%- btn("approuver", "Approuver", "btn-primary") %><%- btn("restaurer", "Restaurer") %><%- btn("corbeille", "Corbeille", "btn-ghost") %>
+              <% } else { %><%- btn("restaurer", "Restaurer", "btn-primary") %><% if (canDelete) { %><%- btn("supprimer", "Supprimer", "btn-danger") %><% } %><% } %>
+            </div><% } %></td></tr>
+        <% }) %></tbody>
+      </table></div>
+      <nav class="mk-cms-pager" aria-label="Pagination">
+        <span><%= result.total %> commentaire<%= result.total > 1 ? "s" : "" %></span>
+        <% if (result.pages > 1) { %><span class="mk-cms-pager-nav">
+          <% if (result.page > 1) { %><a class="btn btn-ghost btn-sm" href="<%= tabHref(sub) + keep({ page: result.page - 1 }) %>">Précédent</a><% } %>
+          <span>Page <%= result.page %> sur <%= result.pages %></span>
+          <% if (result.page < result.pages) { %><a class="btn btn-ghost btn-sm" href="<%= tabHref(sub) + keep({ page: result.page + 1 }) %>">Suivant</a><% } %></span><% } %>
+      </nav>
+    <% } %>
+<%- include("partials/bottom") %>

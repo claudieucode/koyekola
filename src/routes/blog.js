@@ -7,6 +7,9 @@ const db = require("../config/database");
 const { requireInstructor } = require("../middlewares/auth");
 const { upload } = require("../middlewares/upload");
 const { createRateLimiter } = require("../middlewares/security");
+const commentsEngine = require("../services/comments");
+const antispam = require("../marketing/forms/antispam"); // jeton d'heure d'affichage déjà utilisé par les formulaires publics
+const { roleAtLeast, membershipsOf } = require("../marketing/organizations");
 const { slugify } = require("../utils/format");
 const { UserError } = require("../utils/errors");
 const { removeUploadedFile } = require("../utils/uploads");
@@ -17,6 +20,7 @@ const { absoluteUrl, breadcrumbLd, isoDate, isoDateTime } = require("../utils/se
 const { sanitizeBlogHtml, markdownToEditorHtml } = require("../utils/blogHtml");
 const { escapeHtml } = require("../utils/markdown");
 const blog = require("../services/blog");
+const taxonomy = require("../services/taxonomy");
 const themeRender = require("../marketing/web/themeRender");
 const blockTrash = require("../services/blockTrash");
 const blogAi = require("../services/blogAi");
@@ -105,10 +109,10 @@ function readingMinutes(p) {
 function renderList(req, res, { filter = null } = {}) {
   const where = ["published = 1"];
   const params = [];
-  if (filter && filter.type === "category") { where.push("category = ? COLLATE NOCASE"); params.push(filter.name); }
+  // Catégorie ou étiquette : relations de la taxonomie (une catégorie montre aussi les articles de ses sous-catégories)
+  if (filter && (filter.type === "category" || filter.type === "tag")) { const f = taxonomy.contentFilter("post", filter.termIds); where.push(f.sql); params.push(...f.args); }
   if (filter && filter.type === "author") { where.push("(author_id = ? OR (author_id IS NULL AND ? = (SELECT MIN(id) FROM users WHERE role = 'formateur')))"); params.push(filter.id, filter.id); }
   let rows = db.prepare(`SELECT * FROM posts WHERE ${where.join(" AND ")} ORDER BY published_at DESC, id DESC`).all(...params);
-  if (filter && filter.type === "tag") rows = rows.filter((p) => blog.parseTags(p.tags).some((t) => slugify(t) === filter.slug));
   // Recherche : titre, extrait, catégorie, sous-catégorie, étiquettes et texte de l'article ; tous les mots doivent figurer
   const q = String(req.query.q || "").replace(/\s+/g, " ").trim().slice(0, 100);
   if (q) {
@@ -131,14 +135,14 @@ function renderList(req, res, { filter = null } = {}) {
   const page = Number.isInteger(asked) && asked >= 1 && asked <= pages ? asked : 1;
   // Couverture : uniquement si le fichier existe vraiment (sinon visuel neutre du thème, jamais d'image cassée)
   const decorate = (p) => ({
-    ...p, summary: excerptOf(p), categorySlug: p.category ? slugify(p.category) : "", minutes: readingMinutes(p),
+    ...p, summary: excerptOf(p), categorySlug: p.category ? taxonomy.categorySlugOfName(p.category) : "", minutes: readingMinutes(p),
     cover: p.cover_path && fileExists(uploadsRoot, p.cover_path) ? p.cover_path : null,
     theme: themeFor({ name: p.category || "", slug: p.category ? slugify(p.category) : "" }),
   });
   const posts = rows.slice((page - 1) * PER_PAGE, page * PER_PAGE).map(decorate);
   const basePath = filter ? filter.path : "/blog";
   const heading = filter ? filter.heading : "Blog";
-  const crumbs = filter ? [{ name: "Accueil", url: "/" }, { name: "Blog", url: "/blog" }, { name: filter.label }] : [{ name: "Accueil", url: "/" }, { name: "Blog" }];
+  const crumbs = filter ? [{ name: "Accueil", url: "/" }, { name: "Blog", url: "/blog" }, ...(filter.ancestors || []), { name: filter.label }] : [{ name: "Accueil", url: "/" }, { name: "Blog" }];
   // Données structurées : l'article à la une fait partie de la liste (en tête), comme les autres articles de la page
   const listed = featured && page === 1 ? [featured, ...posts] : posts;
   const seo = seoPages.blogList(req, { filter, page, basePath, heading, crumbs, posts: listed });
@@ -172,19 +176,25 @@ function renderList(req, res, { filter = null } = {}) {
   });
 }
 
+// Articles venus d'une autre voie que l'éditeur : leurs anciens textes deviennent des relations avant toute page publique du blog
+router.use(/^\/blog(\/|$)/, (req, res, next) => { if (req.method === "GET") taxonomy.reconcile(); next(); });
 router.get("/blog", (req, res) => renderList(req, res));
 
-router.get("/blog/categorie/:slug", (req, res) => {
-  const category = blog.categoryBySlug(req.params.slug);
-  if (!category) return res.status(404).render("error", { message: "Catégorie introuvable." });
-  renderList(req, res, { filter: { type: "category", name: category.name, path: `/blog/categorie/${category.slug}`, label: category.name, heading: category.name, lead: `Nos articles « ${category.name} » : conseils, méthodes et ressources.` } });
+// Archives : adresses configurables (taxonomy.baseOf) ; un terme inexistant est une vraie 404 (jamais une archive « vide » inventée)
+const categoryBase = taxonomy.baseOf("category");
+const tagBase = taxonomy.baseOf("tag");
+router.get(`${categoryBase}/:slug`, (req, res) => {
+  const term = taxonomy.bySlug("category", req.params.slug);
+  if (!term) return res.status(404).render("error", { message: "Catégorie introuvable." });
+  const lineage = taxonomy.ancestors(term.id);
+  renderList(req, res, { filter: { type: "category", termIds: taxonomy.subtreeIds(term.id), name: term.name, path: taxonomy.urlOf(term), label: term.name, heading: term.name, ancestors: lineage.map((a) => ({ name: a.name, url: taxonomy.urlOf(a) })),
+    lead: term.description || `Nos articles « ${term.name} » : conseils, méthodes et ressources.` } });
 });
 
-router.get("/blog/etiquette/:slug", (req, res) => {
-  const all = db.prepare("SELECT tags FROM posts WHERE published = 1 AND tags <> ''").all().flatMap((p) => blog.parseTags(p.tags));
-  const tag = all.find((t) => slugify(t) === req.params.slug);
-  if (!tag) return res.status(404).render("error", { message: "Étiquette introuvable." });
-  renderList(req, res, { filter: { type: "tag", name: tag, slug: req.params.slug, path: `/blog/etiquette/${req.params.slug}`, label: `#${tag}`, heading: `Articles : ${tag}`, lead: `Tous nos articles sur « ${tag} ».` } });
+router.get(`${tagBase}/:slug`, (req, res) => {
+  const term = taxonomy.bySlug("tag", req.params.slug);
+  if (!term) return res.status(404).render("error", { message: "Étiquette introuvable." });
+  renderList(req, res, { filter: { type: "tag", termIds: [term.id], name: term.name, slug: term.slug, path: taxonomy.urlOf(term), label: `#${term.name}`, heading: `Articles : ${term.name}`, lead: term.description || `Tous nos articles sur « ${term.name} ».` } });
 });
 
 router.get("/blog/auteur/:id", (req, res) => {
@@ -195,6 +205,17 @@ router.get("/blog/auteur/:id", (req, res) => {
 
 // Page d'un article (aussi utilisée par l'aperçu de l'éditeur : preview = true)
 function renderPostPage(req, res, post, { preview = false } = {}) {
+  const commentThread = commentsEngine.thread("post", post.id, { page: req.query.cpage });
+  // « Répondre » : le formulaire se prépare pour ce commentaire (il doit être approuvé et son fil prolongeable)
+  let replyTarget = null;
+  const wanted = /^\d{1,9}$/.test(String(req.query.repondre || req.session.commentForm?.parent || "")) ? Number(req.query.repondre || req.session.commentForm.parent) : 0;
+  if (wanted && commentThread.repliesAllowed) {
+    const target = commentsEngine.get(wanted);
+    if (target && target.status === "approved" && target.content_type === "post" && target.content_id === post.id && commentsEngine.levelOf(target.id) < commentThread.maxDepth) {
+      const owner = target.user_id ? db.prepare("SELECT username FROM users WHERE id = ?").get(target.user_id) : null;
+      replyTarget = { id: target.id, name: owner ? owner.username : target.author_name || "Anonyme" };
+    }
+  }
   const newsletter = newsletterForm(req);
   const article = blog.renderPost(post, { newsletterHtml: newsletterBlockHtml(newsletter) });
   const minutes = Number.isInteger(post.reading_minutes) && post.reading_minutes > 0 ? post.reading_minutes : article.minutes;
@@ -202,7 +223,10 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
   const description = post.seo_description || excerptOf(post);
   const title = post.seo_title || post.title;
   const crumbs = [{ name: "Accueil", url: "/" }, { name: "Blog", url: "/blog" }];
-  if (post.category) crumbs.push({ name: post.category, url: `/blog/categorie/${slugify(post.category)}` });
+  // Fil d'Ariane : la catégorie principale et ses ancêtres (Marketing › SEO › article) ; sans relation, repli sur le texte historique
+  const postTerms = taxonomy.termsOf("post", post.id);
+  if (postTerms.primary) { const root = taxonomy.ancestors(postTerms.primary.id)[0]; crumbs.push(root ? { name: root.name, url: taxonomy.urlOf(root) } : { name: postTerms.primary.name, url: postTerms.primary.url }); } // fil d'Ariane : catégorie racine, comme avant
+  else if (post.category) crumbs.push({ name: post.category, url: `${taxonomy.baseOf("category")}/${taxonomy.categorySlugOfName(post.category)}` });
   crumbs.push({ name: post.title });
   const ownUrl = absoluteUrl(req, `/blog/${post.slug}`);
   const canonical = post.canonical_url && /^https:\/\//i.test(post.canonical_url) ? post.canonical_url : ownUrl;
@@ -270,39 +294,56 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
   res.render("blog/show", {
     themeTemplate, post, crumbs, author, seo, article: { ...article, toc }, minutes, tags, modified, previous, next, shareUrl: ownUrl, lang: post.language && post.language !== "fr" ? post.language : null,
     tocTitle: post.toc_title || "Sommaire", tocNumbering: post.toc_numbering || "h2", preview,
-    categorySlug: post.category ? slugify(post.category) : "",
+    categorySlug: post.category ? taxonomy.categorySlugOfName(post.category) : "", postTerms,
     sidebar: { popular: blog.popular(4, post.id), recent: blog.recent(4, post.id), categories: blog.categories(), newsletter },
     similar: post.published ? blog.similar(post, 3) : [],
-    comments: post.comments_enabled ? blog.listComments(post.id) : [],
+    comments: commentThread,
+    replyTo: replyTarget,
+    commentHtml: (body) => commentsEngine.html(body, { links: commentsEngine.settings().links_allowed }),
+    commentCfg: commentsEngine.settings(),
+    commentForm: req.session.commentForm || {},
+    commentToken: antispam.issue(),
     commentsOpen: Boolean(post.comments_enabled && post.published && !preview),
     commentMax: blog.COMMENT_MAX,
     commentError: req.session.commentError || null,
     commentDraft: req.session.commentDraft || "",
+    commentNotice: req.session.commentNotice || null,
     me: req.session.user || null,
   });
   delete req.session.commentError;
-  delete req.session.commentDraft;
+  delete req.session.commentDraft; delete req.session.commentForm; delete req.session.commentNotice;
   });
 }
 
-// ---------- Commentaires : réservés aux membres connectés ----------
+// ---------- Commentaires : moteur générique (src/services/comments.js) ----------
 const commentLimiter = createRateLimiter(6, 10 * 60 * 1000); // 6 commentaires par tranche de 10 minutes et par membre
+const guestLimiter = createRateLimiter(3, 10 * 60 * 1000);   // invités : 3 commentaires par tranche de 10 minutes et par adresse
+const burstLimiter = createRateLimiter(1, 5 * 1000);         // jamais deux envois en moins de 5 secondes depuis la même adresse (invités)
+// Un formateur ou un membre de l'équipe (éditeur et plus) est publié tout de suite
+const canModerate = (user) => Boolean(user && (user.role === "formateur" || membershipsOf(db, user.id).some((m) => roleAtLeast(m.role, "editor"))));
 router.post("/blog/:slug/commentaires", (req, res) => {
   const post = db.prepare("SELECT * FROM posts WHERE slug = ? AND published = 1").get(req.params.slug);
   if (!post) return res.status(404).render("error", { message: "Article introuvable." });
   const back = `/blog/${post.slug}`;
-  if (!req.session.user) return res.redirect(`/connexion?redirect=${encodeURIComponent(`${back}#commentaires`)}`);
+  const user = req.session.user || null;
+  const cfg = commentsEngine.settings();
+  if (!user && !cfg.guests_allowed) return res.redirect(`/connexion?redirect=${encodeURIComponent(`${back}#commentaires`)}`);
   if (!post.comments_enabled) return res.redirect(`${back}#commentaires`);
-  const key = `comment:${req.session.user.id}`;
+  const ip = req.ip;
+  const key = user ? `comment:${user.id}` : `guest:${commentsEngine.ipHash(ip)}`;
   try {
-    if (commentLimiter.isLimited(key)) throw new UserError("Vous avez publié beaucoup de commentaires en peu de temps : réessayez dans quelques minutes.");
-    const id = blog.addComment(post.id, req.session.user.id, req.body.body);
-    commentLimiter.hit(key);
-    res.redirect(`${back}#commentaire-${id}`);
+    if (user ? commentLimiter.isLimited(key) : guestLimiter.isLimited(key) || burstLimiter.isLimited(key)) throw new UserError("Vous avez publié beaucoup de commentaires en peu de temps : réessayez dans quelques minutes.");
+    const full = user ? db.prepare("SELECT id, username, email, role FROM users WHERE id = ?").get(user.id) : null;
+    const result = commentsEngine.create({ type: "post", contentId: post.id, parentId: /^\d{1,9}$/.test(String(req.body.parent_id || "")) ? Number(req.body.parent_id) : null, user: full, name: req.body.author_name, email: req.body.author_email, body: req.body.body, ip, honeypot: String(req.body.contact_url || "").trim() ? "honeypot" : (!user && !antispam.check(req.body.form_token) ? "timing" : ""), trusted: canModerate(full) });
+    if (user) commentLimiter.hit(key); else { guestLimiter.hit(key); burstLimiter.hit(key); }
+    if (result.status === "approved") return res.redirect(`${back}#commentaire-${result.id}`);
+    req.session.commentNotice = result.status === "spam" ? "Votre commentaire a bien été reçu." : "Merci ! Votre commentaire est en attente de modération : il apparaîtra dès qu'il sera approuvé.";
+    res.redirect(`${back}#commentaires`);
   } catch (err) {
     if (!(err instanceof UserError)) throw err;
     req.session.commentError = err.message;
     req.session.commentDraft = String(req.body.body || "").slice(0, blog.COMMENT_MAX + 200);
+    req.session.commentForm = { name: String(req.body.author_name || "").slice(0, 80), email: String(req.body.author_email || "").slice(0, 120), parent: String(req.body.parent_id || "").slice(0, 9) };
     res.redirect(`${back}#commentaires`);
   }
 });
@@ -334,7 +375,7 @@ router.sitemapEntries = () => {
   blog.promoteScheduled();
   return [
     { path: "/blog" },
-    ...blog.categories().map((c) => ({ path: `/blog/categorie/${c.slug}` })),
+    ...taxonomy.publicTerms("category").map((t) => ({ path: taxonomy.urlOf(t) })),
     ...db
       .prepare("SELECT slug, updated_at FROM posts WHERE published = 1 AND robots_index = 1 AND (canonical_url IS NULL OR canonical_url = '') ORDER BY published_at DESC")
       .all()
@@ -352,6 +393,21 @@ const oneLine = (value, max) => String(value || "").replace(/[\r\n\u2028\u2029]+
 const lastOf = (v) => (Array.isArray(v) ? v[v.length - 1] : v);
 const flag = (v, fallback) => { const x = lastOf(v); return x === undefined ? fallback : x === "1" || x === "on" || x === "true" || x === true ? 1 : 0; };
 const wantsJson = (req) => req.get("x-blog-editor") === "1";
+
+// Classement d'un article : par identifiants (sélecteur de l'éditeur : category_ids, primary_category_id, tag_ids) ou, sans eux,
+// par l'ancienne saisie texte (category / subcategory / tags) ; les relations de la taxonomie sont la source, le texte en est le miroir
+function applyTaxonomy(postId, body) {
+  const has = (k) => Object.hasOwn(body, k);
+  if (has("category_ids") || has("primary_category_id") || has("tag_ids")) {
+    taxonomy.setTerms("post", postId, {
+      categoryIds: has("category_ids") ? body.category_ids : undefined,
+      primaryId: has("primary_category_id") ? Number(lastOf(body.primary_category_id)) || null : undefined,
+      tagIds: has("tag_ids") ? body.tag_ids : undefined,
+    });
+  } else if (has("category") || has("subcategory") || has("tags")) {
+    taxonomy.assignByNames("post", postId, { category: lastOf(body.category), subcategory: lastOf(body.subcategory), tags: lastOf(body.tags) });
+  }
+}
 
 function readFields(body, existing = null) {
   const minutes = String(body.reading_minutes || "").trim();
@@ -392,7 +448,7 @@ function readFields(body, existing = null) {
     toc_title: oneLine(body.toc_title, 60),
     schema_type: body.schema_type === "Article" ? "Article" : "BlogPosting",
     reviewed: flag(body.reviewed, existing ? existing.reviewed : 0),
-    comments_enabled: flag(body.comments_enabled, existing ? existing.comments_enabled : 1),
+    comments_enabled: flag(body.comments_enabled, existing ? existing.comments_enabled : (commentsEngine.settings().enabled_default ? 1 : 0)),
   };
   if (!fields.title) throw new UserError("Le titre de l'article est obligatoire.");
   if (fields.reading_minutes !== null && !(Number.isInteger(fields.reading_minutes) && fields.reading_minutes >= 1 && fields.reading_minutes <= 120)) throw new UserError("Temps de lecture : un nombre de minutes entre 1 et 120 (ou vide pour le calcul automatique).");
@@ -482,6 +538,7 @@ function editorData(req, post) {
     autosave: autosave && post && autosave.saved_at > post.updated_at ? autosave : null,
     revisions: post ? blog.listRevisions(post.id) : [], revisionTotal: post ? blog.countRevisions(post.id) : 0,
     instructors: blog.instructors(), categories: blog.categories(), subcategories: blog.subcategories(), tags: blog.allTags(),
+    taxo: { categories: taxonomy.tree("category").map(termJson), selected: post ? taxonomy.termsOf("post", post.id) : { categories: [], tags: [], primary: null } },
     courses: db.prepare("SELECT slug, title FROM courses WHERE published = 1 AND archived = 0 ORDER BY title COLLATE NOCASE").all(),
     statuses: blog.STATUSES, languages: Object.keys(LANGUAGES), currentUserId: req.session.user.id,
     aiConfigured: blogAi.isConfigured(), siteUrl: absoluteUrl(req, "/").replace(/\/$/, ""),
@@ -649,8 +706,14 @@ router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
     seo_title: f.seo_title || null, seo_description: f.seo_description || null, og_title: f.og_title || null, og_description: f.og_description || null,
     twitter_title: f.twitter_title || null, twitter_description: f.twitter_description || null, canonical_url: f.canonical_url || null, ...st };
   const names = Object.keys(cols);
-  const info = db.prepare(`INSERT INTO posts (${names.join(", ")}) VALUES (${names.map(() => "?").join(", ")})`).run(...names.map((n) => cols[n]));
-  const post = db.prepare("SELECT * FROM posts WHERE id = ?").get(Number(info.lastInsertRowid));
+  // Article et classement (catégories, étiquettes) enregistrés ensemble : tout ou rien
+  const newId = transaction(db, () => {
+    const info = db.prepare(`INSERT INTO posts (${names.join(", ")}) VALUES (${names.map(() => "?").join(", ")})`).run(...names.map((n) => cols[n]));
+    const id = Number(info.lastInsertRowid);
+    applyTaxonomy(id, req.body);
+    return id;
+  });
+  const post = db.prepare("SELECT * FROM posts WHERE id = ?").get(newId);
   blog.addRevision(post, req.session.user.id, "Création de l'article", "create");
   if (wantsJson(req)) return res.json({ ok: true, id: post.id, slug: post.slug, status: post.status, published: post.published, publishedAt: post.published_at, editUrl: `/formateur/blog/${post.id}/modifier`, updatedAt: post.updated_at, coverPath: post.cover_path, ogImagePath: post.og_image_path, twitterImagePath: post.twitter_image_path, revisions: blog.listRevisions(post.id).slice(0, 20) });
   res.redirect(`/formateur/blog/${post.id}/modifier?enregistre=1`);
@@ -684,7 +747,10 @@ router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, r
   };
   cols.featured_media_id = (cmsMedia(cols.cover_path) || {}).id || null; // référence stable vers la médiathèque du CMS (null si l'image vient d'ailleurs)
   const names = Object.keys(cols);
-  db.prepare(`UPDATE posts SET ${names.map((n) => `${n} = ?`).join(", ")}, updated_at = datetime('now') WHERE id = ?`).run(...names.map((n) => cols[n]), p.id);
+  transaction(db, () => {
+    db.prepare(`UPDATE posts SET ${names.map((n) => `${n} = ?`).join(", ")}, updated_at = datetime('now') WHERE id = ?`).run(...names.map((n) => cols[n]), p.id);
+    applyTaxonomy(p.id, req.body); // classement : relations de la taxonomie, puis miroir texte de l'article
+  });
   const after = db.prepare("SELECT * FROM posts WHERE id = ?").get(p.id);
   blog.addRevision(after, req.session.user.id, blog.describeChange(p, after), blog.revisionKind(p, after));
   blockTrash.settle(p.id, after.content); // blocs de nouveau dans l'article (restaurés ou « Annuler ») : retirés de la corbeille
@@ -891,6 +957,25 @@ router.post("/formateur/blog/api/medias/:mid/supprimer", (req, res) => {
   removeUploadedFile(m.path, "supprimée à la main depuis la médiathèque");
   for (const v of blog.imageVariants(m.path)) removeUploadedFile(v.src, "version réduite d'une image supprimée");
   res.json({ ok: true });
+});
+
+// ---------- Classement : catégories et étiquettes (sélecteur de l'éditeur, création rapide) ----------
+// GET : catégories en arbre (sans recherche) ou termes qui correspondent (étiquettes : saisie semi-automatique) ; POST : création réelle
+const termJson = (t) => ({ id: t.id, name: t.name, slug: t.slug, taxonomy: t.taxonomy, parent_id: t.parent_id, depth: t.depth || 0, count: t.n ?? t.total ?? 0 });
+router.get("/formateur/blog/api/termes", (req, res) => {
+  const key = req.query.taxonomy === "tag" ? "tag" : "category";
+  const q = String(req.query.q || "").trim().slice(0, 60);
+  if (key === "category" && !q) return res.json({ terms: taxonomy.tree("category").map(termJson) });
+  const found = taxonomy.list({ taxonomy: key, q, sort: q ? "nom" : "utilisation", perPage: Math.min(Number(req.query.limite) || 12, 50) });
+  res.json({ terms: found.rows.map(termJson) });
+});
+router.post("/formateur/blog/api/termes", express.json({ limit: "4kb" }), (req, res) => {
+  const b = req.body || {};
+  try {
+    const key = b.taxonomy === "tag" ? "tag" : "category";
+    const term = key === "tag" ? taxonomy.findOrCreateTag(b.name) : taxonomy.create({ taxonomy: "category", name: b.name, parentId: b.parent_id ? Number(b.parent_id) : null });
+    res.status(201).json({ term: termJson({ ...term, depth: key === "category" && term.parent_id ? taxonomy.ancestors(term.id).length : 0 }) });
+  } catch (e) { if (e instanceof UserError) return res.status(400).json({ error: e.message }); throw e; }
 });
 
 // ---------- Liens internes ----------

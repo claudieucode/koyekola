@@ -14,6 +14,7 @@ const { plainText } = require("../utils/seo");
 const { renderArticle } = require("../utils/articleMarkdown");
 const { renderBlogHtml, blogPlainText } = require("../utils/blogHtml");
 const { norm } = require("../utils/seoAnalyzer");
+const taxonomy = require("./taxonomy");
 
 // Libellés de l'éditeur de blocs de WordPress (Gutenberg), en français
 const STATUSES = { draft: "Brouillon", review: "En attente de relecture", scheduled: "Planifié", published: "Publié", archived: "Archivé" };
@@ -44,14 +45,14 @@ function parseTags(text) {
 
 const card = (p) => ({
   id: p.id, slug: p.slug, title: p.title, summary: excerptOf(p), cover_path: p.cover_path, cover_alt: p.cover_alt, published_at: p.published_at,
-  category: p.category, categorySlug: p.category ? slugify(p.category) : "", views: p.views,
+  category: p.category, categorySlug: p.category ? taxonomy.categorySlugOfName(p.category) : "", views: p.views,
 });
 
 function categories() {
   return db
     .prepare("SELECT category, COUNT(*) n FROM posts WHERE published = 1 AND category <> '' GROUP BY category COLLATE NOCASE ORDER BY n DESC, category COLLATE NOCASE")
     .all()
-    .map((r) => ({ name: r.category, slug: slugify(r.category), count: r.n }));
+    .map((r) => ({ name: r.category, slug: taxonomy.categorySlugOfName(r.category), count: r.n }));
 }
 
 // Nom réel d'une catégorie à partir de son adresse (« marketing-digital » → « Marketing digital »)
@@ -384,28 +385,13 @@ function countView(post, req) {
   db.prepare("UPDATE posts SET views = views + 1 WHERE id = ?").run(post.id);
 }
 
-// ---------- Commentaires (membres connectés, texte brut) ----------
-const COMMENT_MAX = 2000;
-function listComments(postId) {
-  return db.prepare(`SELECT c.id, c.body, c.created_at, c.user_id, u.username, u.avatar_path, u.role
-    FROM blog_comments c JOIN users u ON u.id = c.user_id WHERE c.post_id = ? ORDER BY c.created_at, c.id`).all(postId);
-}
-function countComments(postId) { return db.prepare("SELECT COUNT(*) n FROM blog_comments WHERE post_id = ?").get(postId).n; }
-// Texte nettoyé : espaces superflus retirés, 3 sauts de ligne au plus d'affilée, longueur bornée
-function cleanComment(text) {
-  return String(text || "").replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-}
-function addComment(postId, userId, text) {
-  const body = cleanComment(text);
-  if (body.length < 2) throw new UserError("Votre commentaire est vide.");
-  if (body.length > COMMENT_MAX) throw new UserError(`Votre commentaire dépasse ${COMMENT_MAX} caractères.`);
-  // Même texte déjà publié par la même personne sur cet article : pas de doublon (double clic, rechargement)
-  const twin = db.prepare("SELECT id FROM blog_comments WHERE post_id = ? AND user_id = ? AND body = ?").get(postId, userId, body);
-  if (twin) return twin.id;
-  return Number(db.prepare("INSERT INTO blog_comments (post_id, user_id, body) VALUES (?, ?, ?)").run(postId, userId, body).lastInsertRowid);
-}
-function getComment(id) { return db.prepare("SELECT * FROM blog_comments WHERE id = ?").get(id); }
-function deleteComment(id) { db.prepare("DELETE FROM blog_comments WHERE id = ?").run(id); }
+// ---------- Commentaires : moteur générique (src/services/comments.js) ; ces fonctions gardent l'API historique ----------
+const comments = require("./comments");
+const COMMENT_MAX = comments.COMMENT_MAX;
+const listComments = (postId, opts) => comments.thread("post", postId, opts);
+const countComments = (postId) => comments.count("post", postId);
+const getComment = (id) => comments.get(id);
+const deleteComment = (id) => comments.purge(id);
 
 // Versions réduites (WebP) réellement présentes sur le disque pour une image du site : [{ src, w }]
 const variantCache = new Map();
@@ -422,7 +408,7 @@ function imageVariants(src) {
 
 module.exports = {
   imageVariants,
-  listComments, countComments, addComment, getComment, deleteComment, COMMENT_MAX,
+  listComments, countComments, getComment, deleteComment, COMMENT_MAX,
   STATUSES, parseTags, excerptOf, textOf, categories, categoryBySlug, subcategories, allTags, canonicalCategory, canonicalSubcategory, canonicalTags,
   popular, recent, similar, neighbours, authorOf, instructors, courseCard, renderPost, countView, card, promoteScheduled, uniqueSlug,
   addRevision, describeChange, revisionKind, revisionFingerprint, listRevisions, countRevisions, getRevision, metaOf, revisionImages, releaseImage, REVISION_META, RESTORED_META, REVISION_KINDS, MAX_REVISIONS, getAutosave, setAutosave, clearAutosave,

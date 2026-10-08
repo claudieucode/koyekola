@@ -5,6 +5,7 @@
 // il n'est effacé (avec ses versions) qu'à la suppression définitive. Une restauration ne republie jamais d'office.
 const db = require("../config/database");
 const blog = require("./blog");
+const taxonomy = require("./taxonomy");
 const seoGuard = require("../seo/guard");
 const { UserError } = require("../utils/errors");
 
@@ -40,7 +41,8 @@ function counts() {
 }
 
 // Liste filtrée, triée et paginée DANS la base ; le contenu complet n'est jamais chargé (seule la recherche le parcourt)
-function list({ state = "toutes", q = "", author = "", category = "", period = "", sort = "modifie", page = 1, perPage = PER_PAGE } = {}) {
+function list({ state = "toutes", q = "", author = "", category = "", tag = "", period = "", sort = "modifie", page = 1, perPage = PER_PAGE } = {}) {
+  taxonomy.reconcile();
   blog.promoteScheduled(); // un article programmé dont l'heure est passée devient publié avant toute lecture
   if (!STATES.includes(state)) state = "toutes";
   const where = [stateSql[state]];
@@ -48,7 +50,10 @@ function list({ state = "toutes", q = "", author = "", category = "", period = "
   const needle = String(q || "").trim().slice(0, 100);
   if (needle) { where.push("(p.title LIKE ? ESCAPE '\\' OR p.slug LIKE ? ESCAPE '\\' OR p.excerpt LIKE ? ESCAPE '\\' OR p.content LIKE ? ESCAPE '\\')"); args.push(like(needle), like(needle), like(needle), like(needle)); }
   if (/^\d{1,9}$/.test(String(author))) { where.push("p.author_id = ?"); args.push(Number(author)); }
-  if (String(category).trim()) { where.push("p.category = ? COLLATE NOCASE"); args.push(String(category).trim()); }
+  // Catégorie : identifiant de terme (ses sous-catégories comprises, catégories secondaires comprises) ; un nom reste accepté (ancienne saisie)
+  if (/^\d{1,9}$/.test(String(category))) { const f = taxonomy.contentFilter("post", taxonomy.subtreeIds(Number(category))); where.push(f.sql.replace(/^id /, "p.id ")); args.push(...f.args); }
+  else if (String(category).trim()) { where.push("p.category = ? COLLATE NOCASE"); args.push(String(category).trim()); }
+  if (/^\d{1,9}$/.test(String(tag))) { const f = taxonomy.contentFilter("post", [Number(tag)]); where.push(f.sql.replace(/^id /, "p.id ")); args.push(...f.args); }
   if (Object.hasOwn(PERIODS, period)) {
     const since = period === "annee" ? `${new Date().getUTCFullYear()}-01-01 00:00:00` : new Date(Date.now() - PERIODS[period] * 864e5).toISOString().slice(0, 19).replace("T", " ");
     where.push("COALESCE(p.published_at, p.created_at) >= ?"); args.push(since);
@@ -57,19 +62,23 @@ function list({ state = "toutes", q = "", author = "", category = "", period = "
   const pages = Math.max(1, Math.ceil(total / perPage));
   const current = Math.min(Math.max(1, Number(page) || 1), pages);
   const rows = db.prepare(`SELECT p.id, p.slug, p.title, p.excerpt, p.status, p.published, p.published_at, p.created_at, p.updated_at, p.category, p.author_id, p.cover_path, p.cover_alt,
-      p.featured_media_id, p.comments_enabled, p.deleted_at, u.username AS author
+      p.featured_media_id, p.comments_enabled, p.deleted_at, u.username AS author,
+      (SELECT t.name FROM taxonomy_relations r JOIN taxonomy_terms t ON t.id = r.term_id WHERE r.content_type = 'post' AND r.content_id = p.id AND r.is_primary = 1 AND t.taxonomy = 'category') AS primary_category
     FROM posts p LEFT JOIN users u ON u.id = p.author_id WHERE ${where.join(" AND ")} ORDER BY ${SORTS[sort] || SORTS.modifie} LIMIT ? OFFSET ?`).all(...args, perPage, (current - 1) * perPage);
+  const cc = require("./comments").countsForPosts(rows.map((r) => r.id));
+  for (const r of rows) Object.assign(r, { comments_approved: (cc.get(r.id) || {}).approved || 0, comments_pending: (cc.get(r.id) || {}).pending || 0 });
   return { rows, total, page: current, pages, perPage, counts: counts() };
 }
 const authors = () => db.prepare("SELECT DISTINCT u.id, u.username FROM posts p JOIN users u ON u.id = p.author_id WHERE p.deleted_at IS NULL ORDER BY u.username COLLATE NOCASE").all();
-const categoryNames = () => db.prepare("SELECT category AS name, COUNT(*) n FROM posts WHERE deleted_at IS NULL AND category <> '' GROUP BY category COLLATE NOCASE ORDER BY name COLLATE NOCASE").all();
+const categoryTree = () => taxonomy.tree("category"); // catégories en arbre (profondeur) pour le filtre
+
 const get = (id) => (Number.isInteger(id) ? db.prepare("SELECT * FROM posts WHERE id = ?").get(id) : null);
 
 // Titre → article en brouillon (identifiant réel), prêt à s'ouvrir dans l'éditeur
 function createDraft({ title, userId }) {
   const clean = String(title || "").replace(/[\r\n\u2028\u2029]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 150);
   if (!clean) throw new UserError("Le titre de l'article est obligatoire.");
-  const id = Number(db.prepare("INSERT INTO posts (slug, title, content_format, status, author_id) VALUES (?, ?, 'html', 'draft', ?)").run(blog.uniqueSlug(clean), clean, userId ?? null).lastInsertRowid);
+  const id = Number(db.prepare("INSERT INTO posts (slug, title, content_format, status, author_id, comments_enabled) VALUES (?, ?, 'html', 'draft', ?, ?)").run(blog.uniqueSlug(clean), clean, userId ?? null, require("./comments").settings().enabled_default ? 1 : 0).lastInsertRowid);
   blog.addRevision(get(id), userId ?? null, "Création de l'article", "create");
   return get(id);
 }
@@ -87,6 +96,8 @@ function duplicate(id, userId) {
   for (const k of COPIED) cols[k] = src[k];
   const names = Object.keys(cols);
   const copy = Number(db.prepare(`INSERT INTO posts (${names.join(", ")}) VALUES (${names.map(() => "?").join(", ")})`).run(...names.map((n) => cols[n])).lastInsertRowid);
+  const t = taxonomy.termsOf("post", id); // mêmes catégories (dont la principale) et mêmes étiquettes
+  taxonomy.setTerms("post", copy, { categoryIds: t.categories.map((c) => c.id), primaryId: t.primary ? t.primary.id : null, tagIds: t.tags.map((x) => x.id) });
   blog.addRevision(get(copy), userId ?? null, `Copie de « ${src.title} »`, "create");
   return get(copy);
 }
@@ -166,4 +177,4 @@ function bulk(action, ids, userId, req) {
   return { done, failed, label: ACTIONS[action] };
 }
 
-module.exports = { STATES, SORTS, PERIODS, PER_PAGE, counts, list, authors, categoryNames, get, createDraft, duplicate, trash, restore, purge, publish, unpublish, bulk, ACTIONS };
+module.exports = { STATES, SORTS, PERIODS, PER_PAGE, counts, list, authors, categoryTree, get, createDraft, duplicate, trash, restore, purge, publish, unpublish, bulk, ACTIONS };

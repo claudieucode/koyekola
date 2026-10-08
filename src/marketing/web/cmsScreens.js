@@ -32,17 +32,9 @@ const instructorLink = (req, href) => (isInstructor(req) ? href : null);
 const SCREENS = {
   // ----- Articles -----
   articles(req, ctx, sub) {
-    // La liste, les états, la création et la corbeille des articles sont dans articles.js ; ici : catégories, étiquettes, auteurs
-    const tabs = tabsOf("articles", sub, [["categories", "Catégories"], ["etiquettes", "Étiquettes"], ["auteurs", "Auteurs"]]);
-    if (sub === "categories" || sub === "etiquettes") {
-      const rows = (sub === "categories" ? data.categories(ctx.db) : data.tags(ctx.db)).map((c) => ({ cells: [{ text: c.name, href: sub === "categories" ? `/blog/categorie/${encodeURIComponent(c.name.toLowerCase().replace(/\s+/g, "-"))}` : null }, String(c.n)] }));
-      const one = sub === "categories" ? "catégorie" : "étiquette";
-      return { title: sub === "categories" ? "Catégories" : "Étiquettes", lead: `Les ${sub === "categories" ? "catégories" : "étiquettes"} sont aujourd'hui saisies dans chaque article ; la gestion centralisée (renommer, fusionner, hiérarchie) arrive dans un prochain palier.`, tabs,
-        actions: [dis(`Ajouter une ${one}`)], search: { enabled: false, placeholder: `Rechercher une ${one}` },
-        table: { caption: sub === "categories" ? "Catégories" : "Étiquettes", columns: [{ label: "Nom" }, { label: "Articles", num: true }], rows, empty: empty("tag", `Aucune ${one}`, `Les ${sub === "categories" ? "catégories" : "étiquettes"} apparaissent dès qu'un article en utilise.`) } };
-    }
+    // Liste, états, création, corbeille : articles.js ; catégories et étiquettes : taxonomies.js ; ici : auteurs (lecture seule)
     const rows = data.authors(ctx.db).map((a) => ({ cells: [{ text: a.username, href: `/blog/auteur/${a.id}` }, String(a.n), String(a.published || 0)] }));
-    return { title: "Auteurs", lead: "Les auteurs des articles du blog.", tabs, actions: [dis("Ajouter un auteur")],
+    return { title: "Auteurs", lead: "Les auteurs des articles du blog.", actions: [dis("Ajouter un auteur")],
       table: { caption: "Auteurs", columns: [{ label: "Auteur" }, { label: "Articles", num: true }, { label: "Publiés", num: true }], rows, empty: empty("user", "Aucun auteur", "Un auteur apparaît dès qu'il a écrit un article.") } };
   },
 
@@ -83,20 +75,6 @@ const SCREENS = {
         { icon: "palette", title: "Styles du site", text: "Couleurs, polices, tailles et boutons.", href: `${BASE}/apparence/styles`, label: "Ouvrir les styles" },
         { icon: "layers", title: "En-tête et pied de page", text: "Composants affichés en haut et en bas de chaque page du site.", href: `${BASE}/apparence/en-tete`, label: "Ouvrir l'en-tête" }],
       table: siteTable("Sites", "", "Ouvrir le site") };
-  },
-
-  // ----- Commentaires -----
-  commentaires(req, ctx, sub) {
-    const total = data.commentCount(ctx.db);
-    const tabs = tabsOf("commentaires", sub, [["", "Tous", total], ["en-attente", "En attente", 0], ["approuves", "Approuvés", total], ["indesirables", "Indésirables", 0], ["corbeille", "Corbeille", 0]]);
-    const q = String(req.query.q || "").trim();
-    const columns = [{ label: "Auteur" }, { label: "Commentaire" }, { label: "Publié sur" }, { label: "Date" }, { label: "Statut" }];
-    const preview = ["en-attente", "indesirables", "corbeille"].includes(sub);
-    const rows = preview ? [] : data.listComments(ctx.db, { q }).map((c) => ({ cells: [c.author, c.body.length > 140 ? `${c.body.slice(0, 140)}…` : c.body, { text: c.post_title, href: `/blog/${c.post_slug}#commentaire-${c.id}` }, fdate(c.created_at), { status: { label: "Approuvé", cls: "mk-status-ok" } }], actions: [{ label: "Voir", href: `/blog/${c.post_slug}#commentaire-${c.id}` }] }));
-    const noun = { "en-attente": "en attente", indesirables: "indésirable", corbeille: "dans la corbeille" }[sub];
-    return { title: "Commentaires", lead: "Les commentaires laissés par les membres sous les articles. Aujourd'hui ils sont publiés immédiatement : la modération (approbation, indésirables, réponses, corbeille) arrive dans un prochain palier.",
-      soon: preview ? SOON : null, tabs, search: { enabled: !preview, placeholder: "Rechercher un commentaire", q },
-      table: { caption: "Commentaires", columns, rows, empty: empty("inbox", preview ? `Aucun commentaire ${noun}` : q ? "Aucun commentaire trouvé" : "Aucun commentaire", preview ? "Cette vue sera alimentée par la modération." : "Les commentaires des membres sous vos articles apparaissent ici.") } };
   },
 
   // ----- Utilisateurs -----
