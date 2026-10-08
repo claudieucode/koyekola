@@ -21,7 +21,7 @@
 //   { pause: "message" }         mettre le scénario en pause (configuration cassée)
 //   + facultatif : log: [action, détail] écrit au journal du passage avant la suite
 const { checkCapability } = require("./capabilities");
-const CATEGORIES = ["communication", "temps", "logique", "contact", "parcours", "fin"];
+const CATEGORIES = ["communication", "temps", "logique", "contact", "parcours", "integrations", "fin"];
 const STATUSES = ["available", "future"];
 const TYPE = /^[a-z][a-z_]{1,30}$/;
 

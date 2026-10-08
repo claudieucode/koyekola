@@ -69,6 +69,7 @@ function describeStep(j, s, emails, texts) {
     case "copy_field": return { icon: "copy", kind: "action", text: `Copier « ${s.from} » vers « ${s.to} »` };
     case "set_date": return { icon: "calendarClock", kind: "action", text: `Définir le champ date « ${s.property} »` };
     case "calculate": return { icon: "calculator", kind: "action", text: `Calculer le champ « ${s.property} »` };
+    case "webhook_call": return { icon: "send", kind: "action", text: "Envoyer une requête signée vers un webhook" };
     case "start_automation": return { icon: "play", kind: "action", text: "Démarrer un autre scénario pour ce contact" };
     case "stop_automation": return { icon: "pause", kind: "action", text: "Arrêter un autre scénario pour ce contact" };
     case "add_note": return { icon: "stickyNote", kind: "action", text: "Ajouter une note sur la fiche du contact" };

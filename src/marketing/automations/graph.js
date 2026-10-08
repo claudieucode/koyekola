@@ -160,6 +160,7 @@ const INCOMPLETE = {
   copy_field: (d) => blank(d.from) || blank(d.to),
   set_date: (d) => blank(d.property) || (d.base === "property" && blank(d.baseProperty)),
   calculate: (d) => blank(d.property) || blank(d.op) || blank(d.value),
+  webhook_call: (d) => blank(d.endpointId),
   start_automation: (d) => blank(d.automationId), stop_automation: (d) => blank(d.automationId),
   wait_until: (d) => blank(d.mode) || (d.mode === "property" && blank(d.property)) || (d.mode === "date" && blank(d.date)) || (d.mode === "business_hours" && (!Array.isArray(d.days) || !d.days.length)),
 };

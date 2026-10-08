@@ -120,6 +120,8 @@ module.exports = ({ db }) => {
       // Étiquettes existantes : proposées dans « Ajouter / Retirer une étiquette » (une nouvelle reste possible à l'ajout)
       tags: listTags(ctx).map((t) => t.name),
       segments: segments.listSegments(ctx).map((s) => ({ id: s.id, name: s.name, definition: s.definition })),
+      // Webhooks configurés (adresse réduite à son domaine : jamais le secret ni le chemin complet) : cibles de l'étape « Envoyer vers un webhook »
+      webhooks: require("../webhooks/endpoints").listEndpoints(ctx).map((w) => { let host = ""; try { host = new URL(w.url).host; } catch { host = ""; } return { id: w.id, name: w.name, host, enabled: w.enabled }; }),
       // Autres scénarios : cibles des étapes « Démarrer / Arrêter un autre scénario »
       automations: auto.listAutomations(ctx).filter((x) => x.id !== a.id).map((x) => ({ id: x.id, name: x.name, status: x.status })),
       // Propriétés personnalisées de type date : proposées par l'étape « Attendre une date ou une heure » (champ date du contact)
