@@ -2,6 +2,7 @@
 // Le contenu est enregistré dans le BROUILLON du moteur de pages ; « Publier » le met en ligne. Un seul formulaire par page : déplacer, supprimer ou ajouter une section ENREGISTRE aussi les
 // modifications en cours (jamais de saisie perdue). Droits : ceux des formulaires d'inscription.
 const express = require("express");
+const cmsPages = require("../pages/cmsPages");
 const landing = require("../landing");
 const pages = require("../pages");
 const { tokensToCss } = require("../pages/tokens");
@@ -65,33 +66,53 @@ module.exports = () => {
 
   // Site Web → Pages : toutes les pages (sites, tunnels, pages d'atterrissage), archivées à part
   router.get("/pages", need("forms.read"), (req, res) => {
-    const archived = req.query.vue === "archivees";
-    // Onglets du CMS (Toutes / Publiées / Brouillons / Programmées / Privées / Corbeille) : de simples FILTRES de lecture sur les
-    // mêmes pages. « Programmées » et « Privées » n'existent pas encore dans le moteur de pages : 0, annoncé comme tel.
-    const etat = ["publiees", "brouillons", "programmees", "privees"].includes(req.query.etat) && !archived ? req.query.etat : "";
-    const q = String(req.query.q || "").trim().toLowerCase().slice(0, 80);
-    const active = pages.listPages(req.mk.ctx, { archived: false });
-    const trashCount = req.mk.ctx.db.prepare("SELECT COUNT(*) n FROM mk_landing_pages WHERE organization_id = ? AND archived_at IS NOT NULL").get(req.mk.ctx.organizationId).n;
-    const counts = { all: active.length, publiees: active.filter((p) => p.status === "published").length, brouillons: active.filter((p) => p.status === "draft").length, programmees: 0, privees: 0, corbeille: trashCount };
-    const byState = { publiees: (p) => p.status === "published", brouillons: (p) => p.status === "draft", programmees: () => false, privees: () => false };
-    let list = archived ? pages.listPages(req.mk.ctx, { archived: true }) : active;
-    if (etat) list = list.filter(byState[etat]);
-    if (q) list = list.filter((p) => `${p.name} ${p.slug}`.toLowerCase().includes(q));
-    const authors = Object.fromEntries(req.mk.ctx.db.prepare("SELECT p.id, u.username FROM mk_landing_pages p LEFT JOIN users u ON u.id = p.created_by WHERE p.organization_id = ?").all(req.mk.ctx.organizationId).map((r) => [r.id, r.username]));
+    const ctx = req.mk.ctx;
+    // Ancien lien « ?vue=archivees » conservé : c'est la corbeille
+    const state = req.query.vue === "archivees" ? "corbeille" : cmsPages.STATES.includes(req.query.etat) ? req.query.etat : "toutes";
+    const filters = { q: String(req.query.q || "").trim().slice(0, 80), site: String(req.query.site || ""), auteur: String(req.query.auteur || ""), tri: Object.hasOwn(cmsPages.SORTS, req.query.tri) ? req.query.tri : "modifiee", ordre: req.query.ordre === "asc" || (req.query.tri === "titre" && req.query.ordre !== "desc") ? "asc" : "desc" };
+    const result = cmsPages.queryPages(ctx, { state, q: filters.q, siteId: filters.site, authorId: filters.auteur, sort: filters.tri, dir: filters.ordre, page: req.query.page });
     res.render("marketing/landing-list", {
-      title: "Pages", active: "landing", archived, etat, q, counts, authors, pages: list, sites: pages.listSites(req.mk.ctx), templates: require("../pages/templates").catalog(),
-      userTemplates: pages.listPageTemplates(req.mk.ctx), canWrite: req.mk.can("forms.write"),
+      title: "Pages", active: "landing", state, filters, result, pages: result.rows, authors: cmsPages.authorsOfPages(ctx), sites: pages.listSites(ctx), templates: require("../pages/templates").catalog(),
+      userTemplates: pages.listPageTemplates(ctx), canWrite: req.mk.can("forms.write"), canPublish: req.mk.can("pages.publish"), canDelete: req.mk.can("pages.delete"), cmsPagesJs: true,
       STATUSES: landing.STATUSES, STATUS_CLASS, KINDS: pages.KINDS,
     });
   });
   router.post("/pages", need("forms.write"), (req, res, next) => {
     let created = null;
-    attempt(req, res, next, () => (created ? `/marketing/pages/${created.id}` : "/marketing/pages"), () => {
+    // « Nouvelle page » du CMS : la page est créée en base (identifiant réel), puis l'éditeur visuel s'ouvre dessus
+    const toBuilder = req.body.ouvrir === "editeur";
+    attempt(req, res, next, () => (created ? `/marketing/pages/${created.id}${toBuilder ? "/editeur?retour=pages" : ""}` : "/marketing/pages"), () => {
       const siteId = intOrNull(req.body.site_id);
       const template = typeof req.body.template === "string" && req.body.template ? req.body.template : null;
-      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId ? "page" : "landing", template });
+      // Nouvelle page du CMS : une page de site (bandeau + texte, publiable tout de suite) ; sans « ouvrir », comportement historique (page d'atterrissage)
+      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId || toBuilder ? "page" : "landing", template });
       return template ? "Page créée à partir du modèle (brouillon) : remplacez les textes entre crochets dans l'éditeur visuel, puis publiez-la." : "Page créée (brouillon) : composez-la, puis publiez-la.";
     });
+  });
+  // Actions groupées de la liste (publier, mettre hors ligne, corbeille, restaurer, supprimer définitivement) : droits vérifiés par action
+  router.post("/pages/actions", need("forms.write"), (req, res, next) => {
+    const ctx = req.mk.ctx;
+    const action = String(req.body.action || "");
+    const needs = { publier: "pages.publish", depublier: "pages.publish", corbeille: "forms.write", restaurer: "forms.write", supprimer: "pages.delete" }[action];
+    if (!needs || !req.mk.can(needs)) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
+    const back = (/^\/marketing\/pages(\?[^#\s]*)?$/.test(String(req.body.retour || "")) ? req.body.retour : "/marketing/pages");
+    // Message propre aux actions groupées : une erreur ici ne rouvre pas la fenêtre « Nouvelle page » (noReopen)
+    const flash = (type, text, detail) => { req.session.mkFlash = { type, text, ...(detail ? { detail } : {}), noReopen: true }; res.redirect(back); };
+    try {
+      const r = cmsPages.bulk(ctx, action, req.body.ids, {
+        publish: (id) => pages.publish(ctx, id), unpublish: (id) => landing.unpublishPage(ctx, id), archive: (id) => pages.archivePage(ctx, id),
+        restore: (id) => pages.restorePage(ctx, id), remove: (id) => landing.deletePage(ctx, id),
+      });
+      const n = r.done.length;
+      const head = n ? `${n} page${n > 1 ? "s" : ""} ${r.label}${n > 1 && !/s$/.test(r.label) ? "s" : ""}.` : "";
+      const detail = r.failed.map((f) => `« ${f.name} » : ${f.message}`).join(" · ");
+      if (!r.failed.length) return flash("ok", head);
+      if (!n) return flash("error", "Aucune page n'a pu être traitée.", detail);
+      flash("ok", `${head} ${r.failed.length} refusée${r.failed.length > 1 ? "s" : ""}.`, detail);
+    } catch (error) {
+      if (!(error instanceof MarketingError)) return next(error);
+      flash("error", error.message);
+    }
   });
 
   const load = (req, res) => {
@@ -128,6 +149,7 @@ module.exports = () => {
       openTest: ctx.db.prepare("SELECT id, name, status FROM mk_page_tests WHERE page_id = ? AND organization_id = ? AND status IN ('draft', 'running', 'stopped')").get(page.id, ctx.organizationId) || null,
       report: landing.pageReport(ctx, page.id), check: landing.preflight(ctx, { ...page, sections: pages.resolveSections(ctx, page.working.sections) }), canWrite: req.mk.can("forms.write"),
       publicUrl: `${String(process.env.SITE_URL || "").replace(/\/+$/, "")}/p/${page.slug}`,
+      parents: cmsPages.parentChoices(ctx, page), canDelete: req.mk.can("pages.delete"),
     });
   });
   // Analyse d'une page : entonnoir réel (visiteurs ayant accepté la mesure d'audience), plus forte perte si l'échantillon
@@ -195,6 +217,9 @@ module.exports = () => {
       landing.saveSettings(ctx, page.id, { name: b.name, slug: b.slug, formId: b.form_id, tags: b.tags, indexable: b.indexable === "on" });
       const siteId = intOrNull(b.site_id);
       if (b.site_id !== undefined && siteId !== page.site_id) pages.movePage(ctx, page.id, siteId);
+      // Page parente (hiérarchie préparée) : un changement de site retire d'abord le lien avec l'ancien parent
+      if (b.site_id !== undefined && siteId !== page.site_id) cmsPages.setParent(ctx, page.id, null);
+      if (b.parent_id !== undefined) cmsPages.setParent(ctx, page.id, intOrNull(b.parent_id));
       pages.saveDraft(ctx, page.id, contentFromBody(b, sections, page.working), { revision: Number(b.revision) });
       const text = action.startsWith("add:") ? "Section ajoutée." : action.startsWith("remove:") ? "Section supprimée." : action.startsWith("up:") || action.startsWith("down:") ? "Section déplacée." : b.sections ? "Brouillon enregistré." : "Réglages enregistrés.";
       if (!b.sections) return page.status === "published" ? "Réglages enregistrés. Adresse, site, formulaire et étiquettes s'appliquent tout de suite ; titre, description et SEO sont dans le brouillon : « Publier les modifications » les met en ligne." : text;
@@ -239,7 +264,7 @@ module.exports = () => {
     };
     res.set("Cache-Control", "no-store");
     const { ICONS } = require("../../utils/icons");
-    res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, page, boot: safeJson(boot), spec: boot.spec, iconExists: (n) => Object.hasOwn(ICONS, n) });
+    res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, page, backTo: !component && req.query.retour === "pages" ? "/marketing/pages" : null, boot: safeJson(boot), spec: boot.spec, iconExists: (n) => Object.hasOwn(ICONS, n) });
   };
   router.get("/pages/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
     const page = load(req, res);
@@ -312,7 +337,7 @@ module.exports = () => {
       res.set("Cache-Control", "no-store").json({ revision, savedAt: new Date().toISOString() });
     } catch (error) { jsonError(res, next, error); }
   });
-  router.post("/pages/:id(\\d+)/publier.json", need("forms.write"), (req, res, next) => {
+  router.post("/pages/:id(\\d+)/publier.json", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
     try {
@@ -322,7 +347,7 @@ module.exports = () => {
     } catch (error) { jsonError(res, next, error); }
   });
 
-  router.post("/pages/:id(\\d+)/publier", need("forms.write"), (req, res, next) => {
+  router.post("/pages/:id(\\d+)/publier", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
     attempt(req, res, next, `/marketing/pages/${page.id}`, () => {
@@ -343,12 +368,12 @@ module.exports = () => {
       return `Version ${req.params.n} copiée dans le brouillon. La page en ligne n'a pas changé : vérifiez l'aperçu, puis publiez.`;
     });
   });
-  router.post("/pages/:id(\\d+)/depublier", need("forms.write"), (req, res, next) => {
+  router.post("/pages/:id(\\d+)/depublier", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
     attempt(req, res, next, `/marketing/pages/${page.id}`, () => { pages.unpublish(req.mk.ctx, page.id); return "Page hors ligne : son adresse affiche « page indisponible »."; });
   });
-  router.post("/pages/:id(\\d+)/depublier.json", need("forms.write"), (req, res, next) => {
+  router.post("/pages/:id(\\d+)/depublier.json", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
     try { pages.unpublish(req.mk.ctx, page.id); res.json({ ok: true, revision: pages.getPage(req.mk.ctx, page.id).revision }); } catch (error) { jsonError(res, next, error); }
@@ -369,9 +394,11 @@ module.exports = () => {
     if (!page) return;
     attempt(req, res, next, `/marketing/pages/${page.id}`, () => { pages.restorePage(req.mk.ctx, page.id); return "Page restaurée (hors ligne) : publiez-la quand elle est prête."; });
   });
-  router.post("/pages/:id(\\d+)/supprimer", need("forms.write"), (req, res, next) => {
+  // Suppression DÉFINITIVE : administrateur seulement, et seulement depuis la corbeille (une page n'est jamais effacée d'un seul clic)
+  router.post("/pages/:id(\\d+)/supprimer", need("pages.delete"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
+    if (!page.archived_at) { req.session.mkFlash = { type: "error", text: "Mettez d'abord la page à la corbeille : elle ne peut être supprimée définitivement que depuis la corbeille." }; return res.redirect(`/marketing/pages/${page.id}`); }
     attempt(req, res, next, "/marketing/pages", () => { landing.deletePage(req.mk.ctx, page.id); return `Page « ${page.name} » supprimée, avec ses statistiques et ses versions.`; });
   });
   return router;

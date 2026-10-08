@@ -45,7 +45,9 @@ function slugify(text) {
 }
 function freeSlug(ctx, base, exceptId = null) {
   let slug = base, n = 2;
-  while (ctx.db.prepare("SELECT 1 FROM mk_landing_pages WHERE slug = ? AND id IS NOT ?").get(slug, exceptId)) slug = `${base.slice(0, 55)}-${n++}`;
+  // Une adresse qui sert de redirection (ancienne adresse d'une page renommée) n'est pas attribuée d'office : elle masquerait la nouvelle page
+  const cms = require("../pages/cmsPages");
+  while (ctx.db.prepare("SELECT 1 FROM mk_landing_pages WHERE slug = ? AND id IS NOT ?").get(slug, exceptId) || cms.redirectSource(ctx, slug)) slug = `${base.slice(0, 55)}-${n++}`;
   return slug;
 }
 
@@ -64,7 +66,7 @@ function createPage(ctx, { name } = {}) {
 // Réglages de la page (nom, adresse, formulaire, étiquettes, indexation) : appliqués tout de suite, ils ne font pas
 // partie du contenu publié (le contenu, lui, passe par le brouillon du moteur de pages : src/marketing/pages)
 function saveSettings(ctx, id, input = {}) {
-  requirePage(ctx, id);
+  const before = requirePage(ctx, id);
   const name = line(input.name, 100);
   if (!name) throw bad("Le nom de la page est obligatoire.");
   const dup = ctx.db.prepare("SELECT id FROM mk_landing_pages WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, name);
@@ -82,6 +84,8 @@ function saveSettings(ctx, id, input = {}) {
   if (tags.length > MAX_TAGS) throw bad(`${MAX_TAGS} étiquettes au plus.`);
   ctx.db.prepare("UPDATE mk_landing_pages SET name = ?, slug = ?, form_id = ?, tags = ?, indexable = ?, updated_at = datetime('now') WHERE id = ?")
     .run(name, slug, formId, JSON.stringify(tags), input.indexable ? 1 : 0, id);
+  // Page en ligne dont l'adresse change : l'ancien lien redirige vers le nouveau (CMS, palier 2)
+  require("../pages/cmsPages").slugChanged(ctx, { oldSlug: before.slug, newSlug: slug, status: before.status });
   return getPage(ctx, id);
 }
 

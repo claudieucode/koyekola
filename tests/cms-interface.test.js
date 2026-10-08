@@ -101,7 +101,7 @@ describe("existant conservé", () => {
     const list = (await boss.get("/marketing/pages")).text;
     assert.match(list, /is-cms/);
     assert.match(list, /Ma page CMS/);
-    for (const tab of ["Toutes", "Publiées", "Brouillons", "Programmées", "Privées", "Corbeille"]) assert.match(list, new RegExp(`${tab} <span class="mk-tab-count">`));
+    for (const tab of ["Toutes", "Publiées", "Brouillons", "Corbeille"]) assert.match(list, new RegExp(`${tab} <span class="mk-tab-count">`));
     assert.match((await boss.get("/marketing/pages?etat=brouillons")).text, /Ma page CMS/);
     assert.doesNotMatch((await boss.get("/marketing/pages?etat=publiees")).text, /Ma page CMS/);
     assert.match((await boss.get("/marketing/pages?q=cms")).text, /Ma page CMS/);
