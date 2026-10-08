@@ -99,3 +99,17 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label { display: none; }
 .is-cms .mk-breadcrumb { min-width: 0; overflow: hidden; }
 .mk-cms-site { position: relative; }
 .mk-cms-nav { padding-top: 6px; }
+
+/* ----- Liste des pages (palier 2) ----- */
+.mk-cms-filters select { width: auto; min-height: 36px; max-width: 210px; }
+.mk-cms-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; }
+.mk-cms-bulk select { width: auto; min-width: 210px; min-height: 34px; }
+.mk-cms-check-col { width: 36px; text-align: center; }
+.mk-cms-more { padding-left: 6px; padding-right: 6px; }
+.mk-cms-table tbody th a::after { content: none; }
+.mk-cms-table tbody th[scope="row"] { font-size: 0.95rem; }
+.mk-cms-table tbody th[scope="row"] a { font-weight: 600; }
+.mk-cms-table td.mk-row-actions { white-space: nowrap; }
+.mk-cms-rowbtns { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.mk-cms-rowbtns .mk-inline { display: inline-block; margin: 0; }
+@media (max-width: 1700px) { .mk-cms-topsearch { display: none; } }

@@ -13,6 +13,8 @@ const PERMISSIONS = Object.freeze({
   "campaigns.read": "viewer", "campaigns.write": "editor", "campaigns.send": "admin",
   "automations.read": "viewer", "automations.write": "editor", "automations.activate": "admin",
   "forms.read": "viewer", "forms.write": "editor", "pages.code": "admin",
+  // Pages du CMS : publier = éditeur (comme avant) ; suppression DÉFINITIVE (depuis la corbeille) = administrateur
+  "pages.publish": "editor", "pages.delete": "admin",
   "analytics.read": "viewer",
   "settings.read": "admin", "settings.write": "admin",
   "api_keys.manage": "admin", "webhooks.manage": "admin", "domains.manage": "admin",

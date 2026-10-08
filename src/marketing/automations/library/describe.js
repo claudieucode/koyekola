@@ -3,7 +3,7 @@
 const { TRIGGERS } = require("../catalog");
 const { UNITS } = require("../steps");
 
-const UNIT_LABEL = { minutes: "minute(s)", hours: "heure(s)", days: "jour(s)" };
+const UNIT_LABEL = { minutes: "minute(s)", hours: "heure(s)", days: "jour(s)", weeks: "semaine(s)" };
 const NOUN = {
   "lms.user_registered": "création de compte", "lms.order_completed": "commande", "lms.course_enrolled": "inscription à une formation",
   "lms.lesson_completed": "leçon terminée", "lms.course_completed": "formation terminée", "lms.review_posted": "avis publié", "lms.favorite_added": "formation mise en favori",
@@ -40,11 +40,23 @@ function whenText(s) {
   return `${t.charAt(0).toUpperCase()}${t.slice(1)} ?`;
 }
 
+// « Attendre jusqu'à… » : phrase lisible (mêmes mots que l'éditeur)
+function waitUntilText(s) {
+  const zone = s.zone === "organization" ? "fuseau de l'organisation" : "fuseau du contact";
+  const DAYS = ["", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+  if (s.mode === "time") return `Attendre jusqu'à ${s.time} (${zone})`;
+  if (s.mode === "weekday") return `Attendre jusqu'à ${DAYS[s.weekday]} ${s.time} (${zone})`;
+  if (s.mode === "date") return `Attendre jusqu'au ${s.date} à ${s.time} (${zone})`;
+  if (s.mode === "property") return `Attendre la date du champ « ${s.property} »${s.offsetDays ? ` ${s.offsetDays > 0 ? "+" : "−"} ${Math.abs(s.offsetDays)} jour(s)` : ""} à ${s.time} (${zone})`;
+  return `Attendre les heures ouvrables (${s.days.map((d) => DAYS[d]).join(", ")}, ${s.from}–${s.to}, ${zone})`;
+}
+
 function describeStep(j, s, emails, texts) {
   switch (s.type) {
     case "email": return { icon: "mail", kind: "email", text: `Envoyer l'e-mail « ${clean(emails[s.email].subject)} »` };
     case "sms": return { icon: "smartphone", kind: "sms", text: `Envoyer le SMS « ${texts[s.sms].name} »` };
     case "wait": return { icon: "clock", kind: "wait", text: `Attendre ${s.amount} ${UNIT_LABEL[s.unit]}` };
+    case "wait_until": return { icon: "calendarClock", kind: "wait", text: waitUntilText(s) };
     case "wait_for_event": return { icon: "clock", kind: "wait", text: `Attendre « ${(TRIGGERS[s.event] || { label: s.event }).label} » (${s.amount} ${UNIT_LABEL[s.unit]} au plus)` };
     case "condition": return { icon: "gitBranch", kind: "condition", text: whenText(s) };
     case "split": return { icon: "gitBranch", kind: "condition", text: `Tirage au sort : ${s.percentage} % vers le chemin A, ${100 - s.percentage} % vers le chemin B` };
@@ -54,6 +66,8 @@ function describeStep(j, s, emails, texts) {
     case "remove_from_list": return { icon: "list", kind: "action", text: "Retirer de la liste choisie" };
     case "update_field": return { icon: "edit", kind: "action", text: `Mettre à jour le champ « ${s.field} »` };
     case "adjust_score": return { icon: "trendingUp", kind: "action", text: s.mode === "set" ? `Définir le score à ${s.points}` : `${s.mode === "add" ? "Ajouter" : "Retirer"} ${s.points} point${s.points > 1 ? "s" : ""} de score` };
+    case "start_automation": return { icon: "play", kind: "action", text: "Démarrer un autre scénario pour ce contact" };
+    case "stop_automation": return { icon: "pause", kind: "action", text: "Arrêter un autre scénario pour ce contact" };
     case "add_note": return { icon: "stickyNote", kind: "action", text: "Ajouter une note sur la fiche du contact" };
     case "end": return { icon: "stopCircle", kind: "end", text: "Fin du parcours" };
     default: return { icon: "zap", kind: "action", text: s.type };

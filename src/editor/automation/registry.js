@@ -5,7 +5,7 @@
 import { STEP_LABELS } from "../../utils/stepLabels";
 import { UNITS, CHECKS, FIELD_LABELS, validate } from "./stepEditors";
 
-export const CATEGORIES = [["trigger", "Déclencheur"], ["communication", "Communication"], ["temps", "Temps"], ["logique", "Logique"], ["contact", "Contact"], ["fin", "Fin"]];
+export const CATEGORIES = [["trigger", "Déclencheur"], ["communication", "Communication"], ["temps", "Temps"], ["logique", "Logique"], ["contact", "Contact"], ["parcours", "Parcours"], ["fin", "Fin"]];
 
 const unitLabel = (u) => (UNITS.find((x) => x[0] === u) || [null, u])[1];
 const plural = (n, unit) => (n === 1 && /s$/.test(unit) ? unit.slice(0, -1) : unit); // « 1 jour », « 2 jours »
@@ -18,6 +18,7 @@ export const ACTIONS = {
   sms: { category: "communication", icon: "smartphone", description: "Aux contacts qui ont accepté les SMS", keywords: "sms texto mobile telephone message", title: "Configurer : Envoyer un SMS", make: () => ({ body: "", trackClicks: true }) },
   wait: { category: "temps", icon: "clock", description: "Une durée fixe avant la suite", keywords: "attente attendre delai pause duree", title: "Configurer : Attendre", make: () => ({ amount: 1, unit: "days" }) },
   wait_for_event: { category: "temps", icon: "calendarClock", description: "Un événement, avec un délai maximal", keywords: "attente attendre evenement delai jusqu", title: "Configurer : Attendre jusqu'à", make: () => ({ event: "", amount: 7, unit: "days" }) },
+  wait_until: { category: "temps", icon: "calendarClock", description: "Une heure, un jour, une date, un champ date, les heures ouvrables", keywords: "attendre jusqua date heure jour semaine fuseau ouvrable creneau champ date anniversaire horaire calendrier", title: "Configurer : Attendre une date ou une heure", make: () => ({ mode: "time", zone: "contact", time: "09:00" }) },
   condition: { category: "logique", icon: "gitBranch", tone: "branch", description: "Deux chemins : oui / non", keywords: "si segment branche ouvert clic critere", title: "Configurer : Condition", make: () => ({ check: "segment", definition: null, _segmentId: null }) },
   split: { category: "logique", icon: "shuffle", tone: "branch", description: "Deux chemins tirés au sort : A / B", keywords: "test ab aleatoire hasard pourcentage branche tirage", title: "Configurer : Tirage aléatoire", make: () => ({ percentage: 50 }) },
   update_field: { category: "contact", icon: "userPen", description: "Prénom, société, propriété…", keywords: "champ modifier propriete contact mettre a jour", title: "Configurer : Mettre à jour un champ", make: () => ({ field: "", value: "" }) },
@@ -27,6 +28,8 @@ export const ACTIONS = {
   remove_from_list: { category: "contact", icon: "listMinus", description: "Désinscrit le contact d'une liste", keywords: "liste enlever desabonnement retirer", title: "Configurer : Retirer d'une liste", make: () => ({ listId: null }) },
   adjust_score: { category: "contact", icon: "trendingUp", description: "Ajouter, retirer ou définir des points", keywords: "score points lead scoring notation ajouter retirer definir niveau chaud", title: "Configurer : Modifier le score", make: () => ({ mode: "add", points: 10 }) },
   add_note: { category: "contact", icon: "stickyNote", description: "Une note sur la fiche du contact", keywords: "note commentaire memo fiche contact suivi", title: "Configurer : Ajouter une note", make: () => ({ body: "" }) },
+  start_automation: { category: "parcours", icon: "play", description: "Fait entrer le contact dans un autre scénario actif", keywords: "demarrer lancer scenario automatisation parcours enchainer inscrire autre", title: "Configurer : Démarrer un autre scénario", make: () => ({ automationId: undefined }) },
+  stop_automation: { category: "parcours", icon: "pause", description: "Fait sortir le contact d'un autre scénario en cours", keywords: "arreter stopper retirer sortir scenario automatisation parcours autre", title: "Configurer : Arrêter un autre scénario", make: () => ({ automationId: undefined }) },
   end: { category: "fin", icon: "stopCircle", tone: "end", description: "Le passage du contact s'arrête", keywords: "fin terminer stop sortie", make: () => ({}) },
 };
 Object.keys(ACTIONS).forEach((type) => { ACTIONS[type].type = type; ACTIONS[type].label = STEP_LABELS[type] || type; });
@@ -39,6 +42,16 @@ export const insertable = () => Object.values(ACTIONS).filter((x) => x.make);
 export const configurable = (type) => type !== "end" && Object.hasOwn(ACTIONS, type);
 
 // Étape réglée ? (mêmes règles que la configuration ; le serveur reste juge à l'enregistrement)
+const WEEKDAYS = ["", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+function waitUntilSummary(d) {
+  const z = d.zone === "organization" ? "fuseau de l'organisation" : "fuseau du contact";
+  if (d.mode === "time") return `Chaque jour à ${d.time} (${z})`;
+  if (d.mode === "weekday") return `${WEEKDAYS[d.weekday].replace(/^./, (c) => c.toUpperCase())} à ${d.time} (${z})`;
+  if (d.mode === "date") return `Le ${d.date} à ${d.time} (${z})`;
+  if (d.mode === "property") return `Date « ${d.property} »${d.offsetDays ? ` ${d.offsetDays > 0 ? "+" : "−"} ${Math.abs(d.offsetDays)} j` : ""} à ${d.time}`;
+  return `Heures ouvrables ${d.days.map((n) => WEEKDAYS[n].slice(0, 3)).join(", ")} ${d.from}–${d.to}`;
+}
+
 export function isConfigured(type, ctx, d) {
   if (!configurable(type)) return true;
   if (type === "trigger") return validate("trigger", ctx, { name: ctx.a.name, triggers: Array.isArray(d.triggers) && d.triggers.length ? d.triggers : [{ event: d.triggerEvent, filter: d.triggerFilter || {} }] }).length === 0;
@@ -60,6 +73,7 @@ export function summary(type, ctx, d) {
     case "email": { const tpl = data.templates.find((x) => x.id === d.templateId); return tpl ? tpl.name : "Modèle introuvable"; }
     case "sms": { const t = String(d.body).replace(/\s+/g, " "); return t.length > 60 ? `${t.slice(0, 57)}…` : t; }
     case "wait": return `${d.amount} ${plural(d.amount, unitLabel(d.unit))}`;
+    case "wait_until": return waitUntilSummary(d);
     case "wait_for_event": return `${d.event} (${d.amount} ${plural(d.amount, unitLabel(d.unit))} au plus)`;
     case "split": return `A ${d.percentage} % · B ${100 - d.percentage} %`;
     case "update_field": {
@@ -74,6 +88,7 @@ export function summary(type, ctx, d) {
       }
       return `Le contact ${(CHECKS.find((c) => c[0] === d.check) || [null, d.check])[1]}`;
     }
+    case "start_automation": case "stop_automation": { const t = (data.automations || []).find((x) => x.id === d.automationId); return t ? `${type === "start_automation" ? "Démarre" : "Arrête"} « ${t.name} »` : "Scénario introuvable"; }
     case "adjust_score": return d.mode === "set" ? `Score = ${d.points}` : `${d.mode === "add" ? "+" : "−"} ${d.points} point${d.points > 1 ? "s" : ""}`;
     case "add_note": { const t = String(d.body).replace(/\s+/g, " "); return t.length > 60 ? `${t.slice(0, 57)}…` : t; }
     case "add_tag": case "remove_tag": return `« ${d.tag} »`;

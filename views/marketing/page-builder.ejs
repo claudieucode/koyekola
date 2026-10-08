@@ -19,7 +19,7 @@
   <header class="pb-top">
     <div class="pb-top-left">
       <button type="button" class="pb-icon-btn pb-mainmenu-btn" data-pb-mainmenu aria-haspopup="menu" aria-expanded="false" data-tip="Menu principal" aria-label="Menu principal"><%- icon("menu", { size: 18 }) %></button>
-      <a class="pb-back" href="<%= page.back || `/marketing/pages/${page.id}` %>" data-tip="<%= page.back ? "Retour à la fiche du site" : "Réglages de la page" %>"><%- icon("arrowLeft", { size: 16 }) %><span class="sr-only"><%= page.back ? "Retour à la fiche du site" : "Réglages de la page" %></span></a>
+      <% const cmsBack = typeof backTo !== "undefined" && backTo; const backText = cmsBack ? "Retour aux pages" : page.back ? "Retour à la fiche du site" : "Réglages de la page"; %><a class="pb-back" href="<%= cmsBack || page.back || `/marketing/pages/${page.id}` %>" data-tip="<%= backText %>"><%- icon("arrowLeft", { size: 16 }) %><span class="sr-only"><%= backText %></span></a>
       <div class="pb-title"><h1><%= page.name %></h1><span class="pb-status" data-pb-status></span></div>
       <div class="pb-group-btns">
         <button type="button" class="pb-icon-btn" data-pb-undo data-tip="Annuler (Ctrl/⌘ + Z)" aria-label="Annuler" disabled><%- icon("undo", { size: 16 }) %></button>
