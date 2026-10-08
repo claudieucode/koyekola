@@ -1,25 +1,22 @@
-// Parcours courants chez Mailchimp que KOLAKISA ne peut PAS faire aujourd'hui : affichés (« Non disponibles »), avec la
-// raison exacte, jamais créés ni activables. Chaque raison est vérifiée dans le code (événements émis par le pont LMS,
-// schéma des inscriptions, étapes du moteur). Quand la donnée manquante existera, le parcours sera écrit comme les autres.
+// Parcours courants chez Mailchimp que KOLAKISA ne propose PAS tels quels aujourd'hui : affichés (« Non disponibles »), avec la
+// raison exacte, jamais créés ni activables. Chaque raison est vérifiée dans le code (événements émis par le pont LMS et par
+// le suivi des visiteurs, schéma des inscriptions, étapes du moteur). Quand la donnée manquante existera, le parcours sera écrit
+// comme les autres (voir behavior.js pour ceux qui le sont déjà).
 //   blocked : « tracking » (nécessite un suivi comportemental qui n'existe pas) ou « unavailable » (autre manque)
 const TRACK = "tracking";
 const OFF = "unavailable";
 
 module.exports = [
   // ---- Comportement sur le site : aucun suivi des visiteurs n'existe ----
-  { key: "visite-page-site", group: "site", blocked: TRACK, audience: "prospects", goal: "convertir", label: "Visite d'une page du site",
+  { key: "visite-page-site", group: "site", blocked: OFF, audience: "prospects", goal: "convertir", label: "Visite d'une page du site",
     objective: "Réagir quand un visiteur connu consulte une page précise.",
-    unavailable: "KOLAKISA n'enregistre pas les pages vues par les visiteurs : aucun événement de visite n'existe. Si votre site envoie lui-même cet événement à l'API, voir « Relance après la consultation d'une formation ».",
+    unavailable: "L'événement existe (« Un contact visite une page », Site Web et Tunnels : contacts connus ayant accepté la mesure d'audience), mais aucun parcours prêt à l'emploi n'est écrit : la page à surveiller se choisit à la main. Créez un scénario depuis zéro et choisissez ce déclencheur avec la page voulue. Pour une fiche formation, voir « Relance après la consultation d'une formation (suivi KOLAKISA) ».",
     keywords: ["visite", "page vue", "comportement", "site"] },
-  { key: "visites-repetees-site", group: "site", blocked: TRACK, audience: "prospects", goal: "convertir", label: "Visites répétées du site",
+  { key: "visites-repetees-site", group: "site", blocked: OFF, audience: "prospects", goal: "convertir", label: "Visites répétées du site",
     objective: "Relancer un visiteur qui revient régulièrement sans acheter.",
-    unavailable: "Aucun suivi des visites n'est enregistré par KOLAKISA. Si votre site envoie l'événement, voir « Aider un visiteur qui revient sur une formation ».",
+    unavailable: "Les visites sont enregistrées pour les contacts connus ayant accepté la mesure d'audience, et les segments savent compter « Page visitée » ou « Fiche formation consultée » au moins N fois ; mais aucun parcours prêt à l'emploi n'est écrit (le seuil et la page sont à choisir). Créez un scénario depuis zéro avec une condition « au moins N fois ».",
     keywords: ["visites répétées", "retour", "comportement", "visite sans conversion"] },
-  { key: "ajout-au-panier", group: "site", blocked: TRACK, audience: "prospects", goal: "convertir", label: "Ajout d'une formation au panier",
-    objective: "Réagir dès qu'une formation est ajoutée au panier.",
-    unavailable: "Le panier de KOLAKISA est gardé dans la session du navigateur, sans être enregistré sur le serveur : aucun événement « ajout au panier » n'existe. Pour relancer un panier abandonné, voir la version à configurer qui s'appuie sur un événement envoyé par votre site.",
-    keywords: ["panier", "ajout au panier", "e-commerce"] },
-  { key: "recherche-effectuee-site", group: "site", blocked: TRACK, audience: "prospects", goal: "convertir", label: "Recherche effectuée sur le site",
+{ key: "recherche-effectuee-site", group: "site", blocked: TRACK, audience: "prospects", goal: "convertir", label: "Recherche effectuée sur le site",
     objective: "Relancer un visiteur selon ce qu'il a recherché dans le catalogue.",
     unavailable: "Les recherches des visiteurs ne sont pas enregistrées : aucun événement de recherche n'existe.",
     keywords: ["recherche", "comportement", "catalogue"] },
@@ -27,7 +24,7 @@ module.exports = [
   // ---- Progression, dates, offres : événements ou données absents ----
   { key: "progression-paliers", group: "nurture", blocked: OFF, audience: "eleves", goal: "activer", label: "Félicitations à 25 %, 50 % et 75 % de progression",
     objective: "Encourager l'élève à chaque palier de sa formation, jusqu'à la dernière ligne droite.",
-    unavailable: "KOLAKISA n'émet que « leçon terminée » et « formation terminée » : aucun événement de progression en pourcentage n'existe, ni de condition pour la mesurer. Pour l'instant, « Félicitations après la première leçon » et « Félicitations et avis » couvrent le début et la fin.",
+    unavailable: "KOLAKISA émet les paliers 10 %, 50 % et 90 % de progression (pas 25 % ni 75 %) : voir « Féliciter un élève à mi-parcours (50 %) » et « Encourager un élève dans la dernière ligne droite (90 %) ». Les paliers 25 % et 75 % n'existent pas.",
     keywords: ["progression", "25 %", "50 %", "75 %", "élève proche de terminer", "module terminé"] },
   { key: "quiz-termine", group: "nurture", blocked: OFF, audience: "eleves", goal: "activer", label: "Quiz réussi ou raté",
     objective: "Féliciter un élève qui réussit un quiz, ou l'aider quand il le rate.",

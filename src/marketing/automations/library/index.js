@@ -25,7 +25,7 @@ const GOALS = {
 };
 const CHANNELS = { email: "E-mail", sms: "SMS", email_sms: "E-mail + SMS" };
 
-const FAMILIES = [require("./welcome"), require("./courses"), require("./formation"), require("./commerce"), require("./reengage"), require("./leads"), require("./sms"), require("./site"), require("./unavailable")];
+const FAMILIES = [require("./welcome"), require("./courses"), require("./formation"), require("./commerce"), require("./reengage"), require("./leads"), require("./sms"), require("./site"), require("./behavior"), require("./unavailable")];
 
 function deepFreeze(value) {
   if (value && typeof value === "object" && !Object.isFrozen(value)) { Object.freeze(value); for (const v of Object.values(value)) deepFreeze(v); }
@@ -65,7 +65,7 @@ const LEGACY_META = {
   "relance-favori": { audience: "eleves", goal: "convertir", keywords: ["favori", "relance", "intérêt"] },
   "reconquete": { audience: "abonnes", goal: "reengager", keywords: ["inactif", "réengagement", "réactivation", "win-back", "aucun clic"] },
   "bienvenue-sms": { audience: "abonnes", goal: "accueillir", group: "sms", keywords: ["sms", "bienvenue"] },
-  "panier-abandonne": { audience: "prospects", goal: "convertir", blocked: "tracking", group: "site", keywords: ["panier", "abandon", "e-commerce"] },
+  "panier-abandonne": { audience: "prospects", goal: "convertir", blocked: "unavailable", group: "site", keywords: ["panier", "abandon", "e-commerce"] },
   "anniversaire": { audience: "contacts", goal: "fideliser", blocked: "unavailable", group: "dates", keywords: ["anniversaire", "date de naissance", "date"] },
 };
 

@@ -10,7 +10,7 @@ import { icon } from "../utils/icons";
 import { STEP_LABELS } from "../utils/stepLabels";
 import { openStepDialog, openStepMenu, closeStepMenu, confirmAction } from "./automation/ui";
 import { buildEditor, validate, clean } from "./automation/stepEditors";
-import { action, configurable, isConfigured, summary } from "./automation/registry";
+import { action, configurable, isConfigured, summary, setAvailability } from "./automation/registry";
 import { buildPalette, DRAG_TYPE } from "./automation/palette";
 
 (function () {
@@ -18,6 +18,7 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
   var node = document.getElementById("mk-automation-data");
   if (!node) return;
   var data = JSON.parse(node.textContent);
+  setAvailability(data.actions);
   var locked = !!data.readOnly;
   var a = data.automation;
   var TRIGGER_ID = "trigger";
