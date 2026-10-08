@@ -11,7 +11,7 @@ const { sendEmailStep, sendSmsStep } = require("./send");
 const MAX_SMS_BODY = 1600; // même limite que sms/campaigns.js#MAX_BODY (le coût réel se contrôle avant activation)
 
 defineAction({
-  type: "email", category: "communication", label: STEP_LABELS.email, description: "Un modèle de votre bibliothèque", version: 1, status: "available",
+  type: "email", category: "communication", label: STEP_LABELS.email, description: "Un modèle de votre bibliothèque", version: 1, status: "available", requires: ["email_provider"],
   validate({ ctx, raw, i, steps, kind }) {
     const template = Number.isInteger(raw.templateId) ? templates.getTemplate(ctx, raw.templateId) : null;
     if (!template) throw new MarketingError("not_found", `Étape ${i + 1} : modèle introuvable.`);

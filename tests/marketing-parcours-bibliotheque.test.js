@@ -115,8 +115,9 @@ describe("bibliothèque : disponibilité (jamais déclarée, toujours calculée)
     assert.equal(v["bienvenue-creation-compte"].status, "transactional");
     assert.equal(v["bienvenue-apres-formulaire"].status, "config", "liste à choisir");
     assert.equal(v["panier-abandonne-api"].status, "config", "événement à envoyer par le site");
-    assert.equal(v["panier-abandonne"].status, "tracking");
-    assert.equal(v["visite-page-site"].status, "tracking");
+    assert.equal(v["panier-abandonne"].status, "unavailable", "l'ajout au panier est suivi, pas l'abandon : voir le parcours natif");
+    assert.equal(v["panier-ajoute-sans-achat-natif"].status, "ready", "événement natif : aucun envoi par le site");
+    assert.equal(v["visite-page-site"].status, "unavailable", "la visite est suivie mais aucun parcours prêt n'est écrit");
     assert.equal(v["progression-paliers"].status, "unavailable");
     for (const j of journeys.JOURNEYS.filter((x) => x.unavailable)) {
       assert.equal(v[j.key].usable, false, `${j.key} : jamais utilisable`);
@@ -146,7 +147,7 @@ describe("bibliothèque : disponibilité (jamais déclarée, toujours calculée)
     const by = {};
     for (const x of Object.values(v)) by[x.status] = (by[x.status] || 0) + 1;
     assert.equal(Object.values(by).reduce((a, b) => a + b, 0), journeys.JOURNEYS.length);
-    assert.ok(by.ready >= 30 && by.transactional >= 8 && by.config >= 10 && by.tracking >= 4 && by.unavailable >= 8, JSON.stringify(by));
+    assert.ok(by.ready >= 30 && by.transactional >= 8 && by.config >= 10 && by.tracking >= 1 && by.unavailable >= 8, JSON.stringify(by));
   });
 });
 
@@ -534,7 +535,7 @@ describe("bibliothèque : pages et droits", () => {
   test("recherche et filtres par l'adresse (sans JavaScript) ; valeurs hostiles ignorées", async () => {
     const r = await boss.get(`${base}?q=panier&statut=tous`);
     assert.match(r.text, /Relance après un panier abandonné/);
-    assert.match(r.text, /Ajout d&#39;une formation au panier|Ajout d'une formation au panier/);
+    assert.match(r.text, /Relance après un ajout au panier/);
     const sms = await boss.get(`${base}?canal=sms`);
     assert.match(sms.text, /SMS de remerciement après un achat/);
     assert.doesNotMatch(sms.text, /Série de bienvenue en 3 e-mails/);
@@ -561,7 +562,8 @@ describe("bibliothèque : pages et droits", () => {
     assert.match(off.text, /Pas encore disponible/);
     assert.doesNotMatch(off.text, /action="\/marketing\/automatisations\/parcours\/progression-paliers"/, "aucun bouton");
     const track = await boss.get(`${base}/visite-page-site`);
-    assert.match(track.text, /Nécessite le suivi des visiteurs/);
+    assert.match(track.text, /Pas encore disponible/);
+    assert.match(track.text, /Un contact visite une page/, "la raison cite le déclencheur qui existe");
     assert.equal((await boss.post(`${base}/progression-paliers`, {})).status, 302);
     assert.equal(rows().prepare("SELECT COUNT(*) n FROM mk_automations").get().n, 0, "POST sur un parcours impossible : rien créé");
   });

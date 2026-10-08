@@ -28,6 +28,10 @@ export const ACTIONS = {
   end: { category: "fin", icon: "stopCircle", tone: "end", description: "Le passage du contact s'arrête", keywords: "fin terminer stop sortie", make: () => ({}) },
 };
 Object.keys(ACTIONS).forEach((type) => { ACTIONS[type].type = type; ACTIONS[type].label = STEP_LABELS[type] || type; });
+// Disponibilité réelle de chaque action (envoyée par le serveur : connexion requise ou non), rattachée à sa définition
+export function setAvailability(list) {
+  (Array.isArray(list) ? list : []).forEach((a) => { if (a && Object.hasOwn(ACTIONS, a.type) && a.availability) ACTIONS[a.type].availability = a.availability; });
+}
 export const action = (type) => ACTIONS[type] || { type, label: STEP_LABELS[type] || type, icon: "help", category: "contact", description: "" };
 export const insertable = () => Object.values(ACTIONS).filter((x) => x.make);
 export const configurable = (type) => type !== "end" && Object.hasOwn(ACTIONS, type);

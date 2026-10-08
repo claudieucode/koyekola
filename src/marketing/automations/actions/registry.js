@@ -20,6 +20,7 @@
 //   { exit: "raison" }           sortir du scénario      { complete: true } terminer normalement
 //   { pause: "message" }         mettre le scénario en pause (configuration cassée)
 //   + facultatif : log: [action, détail] écrit au journal du passage avant la suite
+const { checkCapability } = require("./capabilities");
 const CATEGORIES = ["communication", "temps", "logique", "contact", "fin"];
 const STATUSES = ["available", "future"];
 const TYPE = /^[a-z][a-z_]{1,30}$/;
@@ -44,7 +45,21 @@ const getAction = (type) => (typeof type === "string" ? actions.get(type) : unde
 const listActions = () => [...actions.values()];
 const actionTypes = () => [...actions.keys()];
 
-// Version sérialisable (sans fonctions) : de quoi construire une palette depuis le serveur
-const describeActions = () => listActions().map(({ type, category, label, description, version, status, requires }) => ({ type, category, label, description, version, status, requires }));
+// Disponibilité d'une action pour une organisation, CALCULÉE sur l'état réel (jamais déclarée) :
+//   « available »            exécutable de bout en bout maintenant
+//   « connection_required »  exécutable une fois la connexion réglée (fournisseur d'e-mails, SMS…) : la raison est donnée
+//   « future »               pas encore construite : jamais proposée à l'insertion
+function availabilityOf(def, ctx) {
+  if (def.status === "future") return { state: "future", reasons: [] };
+  const reasons = ctx ? def.requires.map((key) => checkCapability(ctx, key)) : [];
+  return { state: reasons.some((r) => !r.ok) ? "connection_required" : "available", reasons };
+}
 
-module.exports = { CATEGORIES, defineAction, getAction, listActions, actionTypes, describeActions };
+// Version sérialisable (sans fonctions) : de quoi construire la palette depuis le serveur. Avec `ctx` : disponibilité réelle
+// de chaque action ; sans : seulement leur identité.
+const describeActions = (ctx) => listActions().map((def) => {
+  const { type, category, label, description, version, status, requires } = def;
+  return { type, category, label, description, version, status, requires, ...(ctx ? { availability: availabilityOf(def, ctx) } : {}) };
+});
+
+module.exports = { CATEGORIES, defineAction, getAction, listActions, actionTypes, describeActions, availabilityOf };

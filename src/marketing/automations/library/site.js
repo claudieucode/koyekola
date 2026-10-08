@@ -1,9 +1,9 @@
 // Famille « Événements de votre site » (site) : parcours déclenchés par un événement PERSONNALISÉ que VOTRE site (ou votre
-// outil de support) envoie à l'API : POST /api/v1/events (clé d'API, portée « write »). KOLAKISA n'enregistre pas ces
-// comportements lui-même (panier côté navigateur, pages vues, tickets) : ces parcours restent donc « à configurer » tant
-// que votre système n'envoie pas l'événement — aucune donnée n'est simulée. Le contact doit déjà exister dans l'audience
-// (même e-mail). Les conditions n'utilisent que les achats KOLAKISA (les événements personnalisés ne sont pas encore
-// disponibles dans les segments).
+// outil de support) envoie à l'API : POST /api/v1/events (clé d'API, portée « write »). Pour les comportements que KOLAKISA
+// suit LUI-MÊME (fiche formation consultée, ajout au panier, page de commande), voir behavior.js : aucun événement à envoyer.
+// Ces parcours-ci restent « à configurer » tant que votre système n'envoie pas l'événement — aucune donnée n'est simulée. Le
+// contact doit déjà exister dans l'audience (même e-mail). Les conditions n'utilisent que les achats KOLAKISA (les événements
+// personnalisés ne sont pas encore disponibles dans les segments).
 const { mail, step: S, flow, happened } = require("./dsl");
 
 const ORDER = "lms.order_completed";
