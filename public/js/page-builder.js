@@ -3827,10 +3827,17 @@
     if (bottom < sr.top + 8 || top > sr.bottom - 8 || !r.width) { cbar.hidden = true; return; }
     cbar.hidden = false;
     var bw = cbar.offsetWidth, bh = cbar.offsetHeight;
-    // Au-dessus si possible ; sinon dans le coin haut de l'élément s'il est assez grand (on ne cache pas son voisin) ;
-    // sinon en dessous
+    // Au-dessus si possible. Sinon : un conteneur qui a des enfants reçoit la barre EN DESSOUS (elle ne recouvre jamais ses
+    // enfants) ; un élément vide ou sans enfants, assez grand, la reçoit dans son coin haut (on ne cache pas son voisin) ;
+    // sinon en dessous ; en dernier recours en haut de la zone visible
     var y = top - bh - 6;
-    if (y < sr.top + 4) y = bottom - top >= bh * 2.5 ? Math.max(top, sr.top) + 4 : bottom + 6 + bh < sr.bottom ? bottom + 6 : sr.top + 4;
+    if (y < sr.top + 4) {
+      var hasKids = (kidsOf(items[0]) || []).length > 0;
+      var fitsBelow = bottom + 6 + bh < sr.bottom;
+      if (hasKids && fitsBelow) y = bottom + 6;
+      else if (bottom - top >= bh * 2.5) y = Math.max(top, sr.top) + 4;
+      else y = fitsBelow ? bottom + 6 : sr.top + 4;
+    }
     var x = Math.min(Math.max(right - bw, sr.left + 4), sr.right - bw - 4);
     cbar.style.left = Math.round(x) + "px"; cbar.style.top = Math.round(y) + "px";
   }
