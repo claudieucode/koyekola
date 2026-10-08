@@ -62,6 +62,9 @@ function maskEmail(email) {
 const fullName = (c) => [c.first_name, c.last_name].filter(Boolean).join(" ");
 
 const { buildNav } = require("./nav");
+const { buildCmsNav } = require("./cmsNav");
+// Sites réels du CMS (sélecteur de la barre du haut) ; liste vide si le moteur de pages est indisponible
+const cmsSites = (ctx) => { try { return ctx ? require("../pages").listSites(ctx) : []; } catch { return []; } };
 const { barChart, columnChart } = require("./charts");
 
 // Taux en pourcentage à la française ; « — » quand il n'y a rien à mesurer (jamais un faux « 0 % »)
@@ -77,4 +80,4 @@ const campaignStatus = (status) => CAMPAIGN_STATUS[status] ?? { label: String(st
 
 const { WORKER_DETAIL, workerHuman } = require("../workerNotice");
 
-module.exports = { WORKER_DETAIL, workerHuman, buildNav, barChart, columnChart, rate, campaignStatus, contactStatus, esc, statusLabel, statusClass, reasonLabel, sourceLabel, fdate, fdatetime, eventLabel, eventSourceLabel, fmt, euros, maskEmail, fullName, STATUS };
+module.exports = { WORKER_DETAIL, workerHuman, buildNav, buildCmsNav, cmsSites, barChart, columnChart, rate, campaignStatus, contactStatus, esc, statusLabel, statusClass, reasonLabel, sourceLabel, fdate, fdatetime, eventLabel, eventSourceLabel, fmt, euros, maskEmail, fullName, STATUS };

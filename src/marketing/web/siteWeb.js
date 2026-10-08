@@ -45,7 +45,7 @@ module.exports = () => {
 
   router.get("/site-web", need("forms.read"), (req, res) => {
     const d = stats.dashboard(req.mk.ctx, { days: Number(req.query.periode) || 30 });
-    res.render("marketing/site-web", { title: "Site Web", active: "sitedash", d, aud: require("../pages/analytics").audience(req.mk.ctx, { days: d.period.days }) });
+    res.render("marketing/site-web", { title: "Site Web", active: "sitedash", d, cmsOv: require("./cmsData").overview(req.mk.ctx), aud: require("../pages/analytics").audience(req.mk.ctx, { days: d.period.days }) });
   });
 
   router.get("/site-web/sites", need("forms.read"), (req, res) => {

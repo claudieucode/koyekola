@@ -3,6 +3,48 @@
     <div class="mk-head"><h1>Site Web</h1><% if (canWrite) { %><div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/site-web/sites#nouveau">Créer un site</a><a class="btn btn-primary btn-sm" href="/marketing/pages#nouvelle">Créer une page</a></div><% } %></div>
     <p class="mk-lead">Vos sites et pages hébergés par KOLAKISA, et ce qu'ils rapportent en visiteurs et en inscriptions. Tous les chiffres viennent du journal réel des pages ; les robots ne sont pas comptés.</p>
 
+    <%# KOLAKISA CMS : aperçu RÉEL du site (pages, articles, commentaires, journal). Rien n'est inventé : un état vide est dit tel quel. %>
+    <% const isFormateur = currentUser && currentUser.role === "formateur"; const fd = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—"); %>
+    <div class="mk-cms-shortcuts" aria-label="Raccourcis">
+      <% if (isFormateur) { %><a class="btn btn-outline btn-sm" href="/formateur/blog/nouveau"><%- icon("edit", { size: 16 }) %>Écrire un article</a><% } %>
+      <a class="btn btn-outline btn-sm" href="/marketing/site-web/mediatheque"><%- icon("image", { size: 16 }) %>Médias</a>
+      <a class="btn btn-outline btn-sm" href="/marketing/site-web/apparence"><%- icon("palette", { size: 16 }) %>Apparence</a>
+      <a class="btn btn-outline btn-sm" href="/marketing/site-web/seo"><%- icon("searchCheck", { size: 16 }) %>SEO</a>
+      <a class="btn btn-outline btn-sm" href="/" target="_blank" rel="noopener"><%- icon("externalLink", { size: 16 }) %>Voir le site</a>
+    </div>
+    <div class="mk-cms-dash">
+      <section class="mk-panel" aria-labelledby="cd-state"><h2 id="cd-state">État du site</h2>
+        <ul class="mk-cms-list">
+          <li><span>Sites actifs</span><strong><%= mkh.fmt(d.counts.sites) %></strong></li>
+          <li><span>Pages en ligne</span><strong><%= mkh.fmt(d.counts.published) %> / <%= mkh.fmt(d.counts.pages) %></strong></li>
+          <li><span>Articles publiés</span><strong><%= mkh.fmt(cmsOv.postCounts.publies) %> / <%= mkh.fmt(cmsOv.postCounts.all) %></strong></li>
+          <li><span>Commentaires</span><strong><%= mkh.fmt(cmsOv.commentCount) %></strong></li>
+          <li><span>Redirections actives</span><strong><%= mkh.fmt(cmsOv.seo.redirects) %></strong></li>
+          <li><span>Erreurs 404 relevées</span><strong><%= mkh.fmt(cmsOv.seo.errors404) %></strong></li>
+        </ul>
+      </section>
+      <section class="mk-panel" aria-labelledby="cd-drafts"><h2 id="cd-drafts">Brouillons de pages</h2>
+        <% if (!cmsOv.drafts.length) { %><p class="field-hint">Aucun brouillon en cours.</p><% } else { %>
+          <ul class="mk-cms-list"><% cmsOv.drafts.forEach((p) => { %><li><a href="/marketing/pages/<%= p.id %>"><%= p.name %></a><span class="mk-sub"><%= fd(p.updated_at) %></span></li><% }) %></ul><% } %>
+      </section>
+      <section class="mk-panel" aria-labelledby="cd-posts"><h2 id="cd-posts">Articles récents</h2>
+        <% if (!cmsOv.recentPosts.length) { %><p class="field-hint">Aucun article pour l'instant.</p><% } else { %>
+          <ul class="mk-cms-list"><% cmsOv.recentPosts.forEach((p) => { %><li><% if (isFormateur) { %><a href="/formateur/blog/<%= p.id %>/modifier"><%= p.title %></a><% } else { %><span><%= p.title %></span><% } %><span class="mk-sub"><%= fd(p.updated_at) %></span></li><% }) %></ul><% } %>
+        <a class="btn btn-ghost btn-sm" href="/marketing/site-web/articles">Tous les articles</a>
+      </section>
+      <section class="mk-panel" aria-labelledby="cd-comments"><h2 id="cd-comments">Derniers commentaires</h2>
+        <% if (!cmsOv.recentComments.length) { %><p class="field-hint">Aucun commentaire pour l'instant.</p><% } else { %>
+          <ul class="mk-cms-list"><% cmsOv.recentComments.forEach((c) => { %><li><span><strong><%= c.author %></strong> sur <a href="/blog/<%= c.post_slug %>#commentaire-<%= c.id %>"><%= c.post_title %></a></span><span class="mk-sub"><%= fd(c.created_at) %></span></li><% }) %></ul><% } %>
+      </section>
+      <section class="mk-panel" aria-labelledby="cd-activity"><h2 id="cd-activity">Activité récente</h2>
+        <% if (!cmsOv.activity.length) { %><p class="field-hint">Aucune activité enregistrée.</p><% } else { %>
+          <ul class="mk-cms-list"><% cmsOv.activity.forEach((l) => { %><li><span><%= l.action %><span class="mk-sub"> · <%= l.username || "Système" %></span></span><span class="mk-sub"><%= fd(l.created_at) %></span></li><% }) %></ul><% } %>
+      </section>
+      <section class="mk-panel" aria-labelledby="cd-notif"><h2 id="cd-notif">Notifications</h2>
+        <p class="field-hint">Le centre de notifications du CMS arrive dans un prochain palier.</p>
+      </section>
+    </div>
+
     <nav class="mk-tabs" aria-label="Période">
       <% d.period.options.forEach((n) => { %><a class="mk-tab" href="/marketing/site-web?periode=<%= n %>"<%- d.period.days === n ? ' aria-current="page"' : "" %>><%= periodLabel[n] %></a><% }) %>
     </nav>
