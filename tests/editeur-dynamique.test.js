@@ -165,4 +165,30 @@ describe("vrai serveur : boucle et page publiée", () => {
     const row = db.prepare("SELECT draft, sections FROM mk_landing_pages WHERE id = ?").get(id), draft = row.draft || row.sections;
     assert.match(draft, /\{\{user\.first_name \| fallback: cher visiteur\}\}/, "l'étiquette est conservée dans le document");
   });
+
+  test("filtre par catégorie + boucle filtrée par l'adresse ; conditions d'affichage : paramètre d'adresse, panier, formateur", async () => {
+    db.prepare("INSERT INTO posts (slug, title, category, published, published_at, status) VALUES ('f-a', 'Filtre A', 'Alpha', 1, datetime('now', '-1 hour'), 'published'), ('f-b', 'Filtre B', 'Beta', 1, datetime('now', '-2 hour'), 'published')").run();
+    const id = await newPage("Filtre");
+    const sections = [layout([
+      { id: "cat000000001", type: "catfilter", props: { source: "posts", allLabel: "Tous les articles" } },
+      { id: "grid00000003", type: "grid", props: { loop: { source: "posts", count: 12, urlFilter: true } }, children: [{ id: "fcard0000001", type: "container", children: [{ id: "fhead0000001", type: "heading", props: { text: "» {{post.title}}", level: 3 } }] }] },
+      { id: "head00000021", type: "heading", audience: { who: "param", value: "campagne=printemps" }, props: { text: "OFFRE PRINTEMPS", level: 2 } },
+      { id: "head00000022", type: "heading", audience: { who: "has_cart" }, props: { text: "VOTRE PANIER", level: 2 } },
+      { id: "head00000023", type: "heading", audience: { who: "instructor" }, props: { text: "VUE FORMATEUR", level: 2 } },
+    ])];
+    assert.equal((await put(id, { sections })).status, 200);
+    assert.equal((await put(id, { sections: [layout([{ id: "head00000024", type: "heading", audience: { who: "param", value: "pas un paramètre" }, props: { text: "X", level: 2 } }])] })).status, 422, "paramètre invalide refusé");
+    assert.equal((await put(id, { sections })).status, 200);
+    const get = await publish(id);
+    const all = await get();
+    assert.match(all, /Tous les articles/); assert.match(all, /href="\?categorie=Alpha"/); assert.match(all, /Alpha <span class="kw-catfilter-n">\(1\)<\/span>/);
+    assert.match(all, /» Filtre A/); assert.match(all, /» Filtre B/);
+    const alpha = await get("?categorie=Alpha");
+    assert.match(alpha, /» Filtre A/); assert.doesNotMatch(alpha, /» Filtre B/, "boucle filtrée par la catégorie de l'adresse");
+    assert.match(alpha, /aria-current="true">Alpha/);
+    assert.doesNotMatch(all, /OFFRE PRINTEMPS/); assert.doesNotMatch(all, /VOTRE PANIER/); assert.doesNotMatch(all, /VUE FORMATEUR/);
+    assert.match(await get("?campagne=printemps"), /OFFRE PRINTEMPS/);
+    assert.doesNotMatch(await get("?campagne=ete"), /OFFRE PRINTEMPS/);
+    assert.match(await (async () => (await boss.get(`/p/${db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug}`, { headers: { "User-Agent": UA } })).text)(), /VUE FORMATEUR/, "formateur connecté");
+  });
 });

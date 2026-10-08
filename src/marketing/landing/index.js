@@ -171,6 +171,19 @@ function dynamicProps(ctx, n, visitor, page) {
     const { listCourseCards } = require("../bridge/catalog");
     return { ...p, items: listCourseCards(ctx, { limit: p.count, category: p.category, sort: p.sort }).map(courseView) };
   }
+  if (n.type === "catfilter") {
+    const q = (visitor && visitor.query) || {};
+    const keep = Object.entries(q).filter(([k]) => k !== "categorie" && !k.startsWith("lp-"));
+    const href = (name) => { const sp = new URLSearchParams(keep); if (name) sp.set("categorie", name); const t = sp.toString(); return t ? `?${t}` : "?"; };
+    let rows = [];
+    try {
+      rows = p.source === "courses"
+        ? ctx.db.prepare("SELECT category AS name, COUNT(*) AS n FROM courses WHERE published = 1 AND category != '' GROUP BY category ORDER BY category COLLATE NOCASE").all()
+        : ctx.db.prepare("SELECT category AS name, COUNT(*) AS n FROM posts WHERE published = 1 AND category IS NOT NULL AND category != '' GROUP BY category ORDER BY category COLLATE NOCASE").all();
+    } catch { rows = []; }
+    const current = typeof q.categorie === "string" ? q.categorie.toLowerCase() : "";
+    return { ...p, items: [{ name: p.allLabel, href: href(""), current: !current, count: null }, ...rows.slice(0, 40).map((r) => ({ name: r.name, href: href(r.name), current: r.name.toLowerCase() === current, count: p.showCount ? r.n : null }))] };
+  }
   if (n.type === "dyntext") {
     const { countPublished } = require("../bridge/catalog");
     const now = new Date();

@@ -1602,6 +1602,12 @@
         box.appendChild(checkField("Lien vers l'accueil du site", p.link !== false, function (v) { setProp(it.id, "link", v); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "Le logo vient des réglages SEO (Organisation › Logo) ; sans logo, le nom du site s'affiche. Accueil : la page d'accueil du site si elle est en ligne, sinon l'accueil de KOLAKISA." }));
         break;
+      case "catfilter":
+        box.appendChild(selectField("Catégories de…", p.source, [["posts", "Articles du blog"], ["courses", "Formations du catalogue"]], function (v) { setProp(it.id, "source", v); }, { disabled: disabled }));
+        box.appendChild(textField("Texte du premier lien", p.allLabel, set("allLabel"), { max: 40, disabled: disabled }));
+        box.appendChild(checkField("Afficher le nombre d'éléments", p.showCount !== false, function (v) { setProp(it.id, "showCount", v); }, { disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-hint", text: "Liens « ?categorie=… » vers cette même page. Dans la grille en boucle, cochez « Filtrer avec l'adresse » : elle ne montre alors que la catégorie choisie." }));
+        break;
       case "postcontent":
         box.appendChild(h("p", { class: "pb-hint", text: "Affiche le texte de l'article du blog. À placer dans une page choisie comme modèle « Article du blog » (Site Web › Modèles de thème). Dans l'éditeur, le dernier article publié sert d'exemple." }));
         break;
@@ -2043,6 +2049,7 @@
     animatedheading: { kind: "Titre animé", groups: TEXTUAL, order: TEXT_ORDER },
     sitelogo: { kind: "Logo du site", groups: { layout: ["alignSelf"], spacing: true, effects: ["opacity"] }, order: ["spacing", "layout", "effects"] },
     sitetitle: { kind: "Titre du site", groups: TEXTUAL, order: TEXT_ORDER },
+    catfilter: { kind: "Filtre par catégorie", groups: TEXTUAL, order: TEXT_ORDER },
     postcontent: { kind: "Contenu de l'article", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["size", "border", "effects", "spacing", "layout"] },
     copyright: { kind: "Copyright", groups: TEXTUAL, order: TEXT_ORDER },
     flipbox: { kind: "Boîte retournable", groups: { layout: ["alignSelf"], typography: null, size: SIZE_W, spacing: true, border: null, effects: ["boxShadow", "opacity"] }, order: ["size", "typography", "spacing", "border", "effects", "layout"] },
@@ -3499,13 +3506,15 @@
     var id = fid();
     var sel = h("select", { id: id, disabled: locked }, [h("option", { value: "", text: "Tout le monde" })].concat(SPEC.audiences.map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
     sel.value = a.who || "";
-    var needsValue = function (w) { return w === "tag" || w === "not_tag" || w === "score_min"; };
-    var val = h("input", { type: a.who === "score_min" ? "number" : "text", min: "0", step: "1", maxlength: "60", placeholder: a.who === "score_min" ? "Score minimal" : "Nom de l'étiquette", value: a.value === undefined ? "" : String(a.value), disabled: locked, "aria-label": "Valeur du public d'affichage", list: a.who === "score_min" ? null : "pb-tags" });
+    var needsValue = function (w) { return w === "tag" || w === "not_tag" || w === "score_min" || w === "param"; };
+    var holder = function (w) { return w === "score_min" ? "Score minimal" : w === "param" ? "clé ou clé=valeur (ex. campagne=printemps)" : "Nom de l'étiquette"; };
+    var val = h("input", { type: a.who === "score_min" ? "number" : "text", min: "0", step: "1", maxlength: "60", placeholder: a.who === "score_min" ? "Score minimal" : a.who === "param" ? "clé ou clé=valeur (ex. campagne=printemps)" : "Nom de l'étiquette", value: a.value === undefined ? "" : String(a.value), disabled: locked, "aria-label": "Valeur du public d'affichage", list: a.who === "score_min" ? null : "pb-tags" });
     val.hidden = !needsValue(a.who);
     var apply = function () {
       var who = sel.value;
       val.hidden = !needsValue(who);
       val.type = who === "score_min" ? "number" : "text";
+      val.placeholder = holder(who);
       if (needsValue(who) && val.value.trim() === "") { val.focus(); return; }
       change(function () {
         var x = byId(it.id);
@@ -4336,6 +4345,7 @@
       case "sitelogo": return "Logo du site";
       case "sitetitle": return "Titre du site";
       case "postcontent": return "Contenu de l'article";
+      case "catfilter": return "Filtre : " + (p.source === "courses" ? "formations" : "articles");
       case "copyright": return "© " + (p.owner || "nom du site") + (p.text ? ". " + p.text : "");
       case "animatedheading": return [p.before, (p.words || []).join(" / "), p.after].filter(Boolean).join(" ");
       case "flipbox": return p.frontTitle;

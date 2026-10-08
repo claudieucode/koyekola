@@ -622,6 +622,8 @@ const NODE_TYPES = {
   sitelogo: { label: "Logo du site", category: "dynamic", props: (p) => ({ height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false }) },
   // Corps de l'article du blog affiché par un modèle « Article du blog » (HTML déjà produit et nettoyé par le blog)
   postcontent: { label: "Contenu de l'article", category: "dynamic", props: () => ({}) },
+  // Filtre par catégorie : liens « ?categorie=… » vers la même page (à associer à une grille en boucle « filtrer avec l'adresse »)
+  catfilter: { label: "Filtre par catégorie", category: "dynamic", props: (p) => ({ source: oneOf("posts", "courses")(p.source) || "posts", allLabel: line(p.allLabel, 40) || "Toutes", showCount: p.showCount !== false }) },
   sitetitle: { label: "Titre du site", category: "dynamic", props: (p) => ({ tag: oneOf("p", "span", "h1", "h2", "h3")(p.tag) || "p", link: p.link !== false }) },
   copyright: { label: "Copyright", category: "dynamic", props: (p) => ({ owner: line(p.owner, 80), text: line(p.text, 160) }) },
   // Bouton d'achat : ajoute la formation au VRAI panier de KOLAKISA (POST /panier/ajouter/:id), ou mène directement à la commande.
@@ -751,6 +753,7 @@ const WIDGETS = {
   readingprogress: ["advanced", "barre de lecture progression defilement scroll article"],
   sitelogo: ["site", "logo du site marque image accueil en-tete"],
   sitetitle: ["site", "titre du site nom marque accueil en-tete"],
+  catfilter: ["site", "filtre categorie taxonomie etiquette trier boucle blog catalogue"],
   postcontent: ["site", "contenu article texte principal corps blog modele theme single post"],
   copyright: ["site", "copyright droits reserves annee pied de page mentions"],
   link: ["basic", "lien url"],
@@ -912,6 +915,7 @@ const PALETTE = {
   sitelogo: { icon: "image", blank: () => ({ props: { height: 48, link: true } }) },
   sitetitle: { icon: "type", blank: () => ({ props: { tag: "p", link: true } }) },
   postcontent: { icon: "fileText", blank: () => ({ props: {} }) },
+  catfilter: { icon: "listChecks", blank: () => ({ props: { source: "posts", allLabel: "Toutes" } }) },
   copyright: { icon: "fileText", blank: () => ({ props: { owner: "", text: "Tous droits réservés." } }) },
   badge: { icon: "tag", blank: () => ({ props: { text: "Nouveau", tone: "primary" } }) },
   timeline: { icon: "history", blank: () => ({ props: { items: [{ date: "Étape 1", title: "Inscription", text: "Ce qui se passe à cette étape." }, { date: "Étape 2", title: "Premier module", text: "Ce qui se passe ensuite." }] } }) },
@@ -1048,6 +1052,7 @@ const AUDIENCES = {
   student: "Élèves connectés", not_student: "Personnes non connectées",
   tag: "Contacts avec l'étiquette…", not_tag: "Contacts sans l'étiquette…",
   score_min: "Score au moins égal à…",
+  has_cart: "Panier non vide", empty_cart: "Panier vide", instructor: "Formateur connecté", param: "Adresse contenant le paramètre…",
 };
 function normalizeAudience(raw, at) {
   if (!raw || typeof raw !== "object" || !raw.who) return undefined;
@@ -1056,6 +1061,12 @@ function normalizeAudience(raw, at) {
     const tag = line(raw.value, 60);
     if (!tag) throw new Error(`${at} : indiquez l'étiquette.`);
     return { who: raw.who, value: tag };
+  }
+  // Paramètre d'adresse : « clé » (présente) ou « clé=valeur » (ex. campagne=printemps)
+  if (raw.who === "param") {
+    const v = line(raw.value, 110);
+    if (!/^[a-z0-9_-]{1,40}(=[A-Za-z0-9_.\-]{0,60})?$/i.test(v)) throw new Error(`${at} : paramètre invalide (« clé » ou « clé=valeur », lettres, chiffres, _ - .).`);
+    return { who: raw.who, value: v };
   }
   if (raw.who === "score_min") {
     const n = Number(raw.value);
@@ -1080,6 +1091,14 @@ function audienceMatches(audience, visitor) {
     case "tag": return v.tags.has(String(audience.value).toLowerCase());
     case "not_tag": return !v.tags.has(String(audience.value).toLowerCase());
     case "score_min": return v.score >= audience.value;
+    case "has_cart": return (v.cartCount || 0) > 0;
+    case "empty_cart": return !(v.cartCount || 0);
+    case "instructor": return v.role === "formateur";
+    case "param": {
+      const [key, ...rest] = String(audience.value).split("=");
+      const got = v.query && Object.hasOwn(v.query, key) ? v.query[key] : undefined;
+      return got !== undefined && (rest.length === 0 || got === rest.join("="));
+    }
     default: return true;
   }
 }

@@ -786,3 +786,8 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .kw-loop-empty { grid-column: 1 / -1; }
 .kw-loop-pages { grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 8px; }
 .kw-loop-pages a { padding: 6px 12px; border: 1px solid currentColor; border-radius: 8px; text-decoration: none; }
+/* Filtre par catégorie */
+.kw-catfilter ul { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.kw-catfilter a { display: inline-block; padding: 6px 14px; border: 1px solid currentColor; border-radius: 999px; text-decoration: none; font-size: .9rem; }
+.kw-catfilter a[aria-current="true"] { background: var(--kw-primary, #0277b6); border-color: var(--kw-primary, #0277b6); color: var(--kw-on-primary, #fff); }
+.kw-catfilter-n { opacity: .7; }
