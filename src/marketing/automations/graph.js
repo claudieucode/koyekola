@@ -20,6 +20,7 @@ const BRANCH_FIELDS = {
 const stepData = (step) => {
   const data = { ...step };
   delete data.type; delete data.onTrue; delete data.onFalse; delete data.onA; delete data.onB; delete data.next;
+  if (step.type === "route") { delete data.otherwise; data.cases = (step.cases || []).map(({ label, definition }) => ({ label, definition })); }
   return data;
 };
 
@@ -45,6 +46,15 @@ function stepsToGraph(automation) {
   steps.forEach((step, i) => {
     if (step.type === "end") return; // aucune arête sortante : terminus
     const bf = BRANCH_FIELDS[step.type];
+    if (step.type === "route") {
+      // Une arête par cas (poignée « caseN », libellé du cas) puis « Sinon » (poignée « other ») : mêmes règles que les autres embranchements
+      const targetOf = (branch) => (branch === "exit" ? EXIT_ID : branch === "next" ? (i + 1 < steps.length ? idOf(i + 1) : null) : idOf(branch));
+      (step.cases || []).forEach((c, k) => { if (c.to === "exit") needExit = true; const t = targetOf(c.to); if (t) addEdge(idOf(i), t, { sourceHandle: `case${k + 1}`, label: c.label }); });
+      if (step.otherwise === "exit") needExit = true;
+      const o = targetOf(step.otherwise);
+      if (o) addEdge(idOf(i), o, { sourceHandle: "other", label: "Sinon" });
+      return;
+    }
     if (bf) {
       const targetOf = (branch) => (branch === "exit" ? EXIT_ID : branch === "next" ? (i + 1 < steps.length ? idOf(i + 1) : null) : idOf(branch));
       const t = targetOf(step[bf.t]), f = targetOf(step[bf.f]);
@@ -129,6 +139,11 @@ function graphToSteps(graph) {
       }
       return step;
     }
+    if (node.type === "route") {
+      const handleTarget = (handle) => { const e = outs.find((x) => x.sourceHandle === handle); return e ? resolve(e.target) ?? "exit" : "exit"; };
+      const cases = (node.data && Array.isArray(node.data.cases) ? node.data.cases : []).map((c, k) => ({ label: c && c.label, definition: c && c.definition, to: handleTarget(`case${k + 1}`) }));
+      return { type: "route", cases, otherwise: handleTarget("other") };
+    }
     if (node.type === "end") return { type: "end" };
     const step = { type: node.type, ...(node.data || {}) };
     const target = outs[0] ? outs[0].target : undefined;
@@ -157,6 +172,7 @@ const INCOMPLETE = {
   add_to_list: (d) => blank(d.listId), remove_from_list: (d) => blank(d.listId),
   adjust_score: (d) => blank(d.mode) || blank(d.points),
   add_note: (d) => blank(d.body),
+  route: (d) => !Array.isArray(d.cases) || !d.cases.length || d.cases.some((c) => !c || !c.definition || !Array.isArray(c.definition.rules) || !c.definition.rules.length),
   copy_field: (d) => blank(d.from) || blank(d.to),
   set_date: (d) => blank(d.property) || (d.base === "property" && blank(d.baseProperty)),
   calculate: (d) => blank(d.property) || blank(d.op) || blank(d.value),

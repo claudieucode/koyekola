@@ -29,6 +29,24 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
   // Types d'étape à DEUX sorties — mêmes noms de handle que graph.js#BRANCH_FIELDS côté serveur (tHandle/fHandle) :
   // s'ils divergent, une condition/un split se traduit vers la mauvaise branche sans qu'aucune erreur ne le signale.
   var BRANCH = { condition: { t: "onTrue", f: "onFalse", tHandle: "true", fHandle: "false", tLabel: "Oui", fLabel: "Non" }, split: { t: "onA", f: "onB", tHandle: "a", fHandle: "b", tLabel: "A", fLabel: "B" } };
+  // « Plusieurs chemins » : UNE SORTIE PAR CAS puis « Sinon » (sorties variables). Poignées d'arête : « case1 »…« case5 » puis « other »
+  // — mêmes noms que graph.js côté serveur. La dernière sortie est toujours « Sinon ».
+  var routeCount = function (d) { return Math.max(1, d && Array.isArray(d.cases) ? d.cases.length : 1); };
+  var routeOutputs = function (d) { return routeCount(d) + 1; };
+  var outKeyFor = function (type, handle, d) {
+    if (BRANCH[type]) return handle === "false" || handle === "b" ? "output_2" : "output_1";
+    if (type === "route") {
+      var m = /^case(\d+)$/.exec(handle || "");
+      if (m && Number(m[1]) <= routeCount(d)) return "output_" + m[1];
+      if (handle === "other") return "output_" + routeOutputs(d);
+    }
+    return "output_1";
+  };
+  var routeHandle = function (outKey, d) {
+    var idx = Number(String(outKey).replace("output_", ""));
+    if (idx <= routeCount(d)) { var c = (d.cases || [])[idx - 1] || {}; return { sourceHandle: "case" + idx, label: c.label || "Cas " + idx }; }
+    return { sourceHandle: "other", label: "Sinon" };
+  };
   var hasEditor = configurable;
   var iconOf = function (type) { return action(type).icon; }; // icône du registre (design system du site, jamais d'emoji)
 
@@ -83,13 +101,14 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
       "</div>" +
       '<div class="mk-flow-card-sub"></div>' +
       (type === "trigger" ? "" : '<span class="mk-flow-card-orphan" title="Aucune connexion ne mène à cette étape depuis le déclencheur">Non reliée au scénario</span>') +
+      (type === "route" ? '<div class="mk-flow-card-ports mk-flow-card-ports--route"></div>' : "") +
       (BRANCH[type] ? '<div class="mk-flow-card-ports"><span class="mk-flow-port-label mk-flow-port-yes">' + BRANCH[type].tLabel + '</span><span class="mk-flow-port-label mk-flow-port-no">' + BRANCH[type].fLabel + "</span></div>" : "") +
       "</div>"
     );
   }
 
   // Contexte des règles du registre pour un nœud (une condition « a ouvert » vise un AUTRE e-mail du canevas)
-  function ctxFor(myId) { return { data: data, a: a, locked: locked, emailNodes: function () { return emailNodesExcept(myId); }, branches: function () { return branchesOf(myId); } }; }
+  function ctxFor(myId) { return { data: data, a: a, locked: locked, emailNodes: function () { return emailNodesExcept(myId); }, branches: function () { return branchesOf(myId); }, routes: function () { return routesOf(myId); } }; }
   function subtitleFor(type, d, myId) { return summary(type, ctxFor(myId), d); }
   var serverTodo = {}; // nœuds signalés « à configurer » par le serveur au dernier enregistrement
 
@@ -103,15 +122,33 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
     if (title) title.textContent = LABELS[type] || type;
     if (sub) sub.textContent = ok ? subtitleFor(type, d, myId) : "Non configuré";
     wrap.classList.toggle("is-unconfigured", !ok);
+    if (type === "route") syncRoutePorts(dfNodeId, d || {});
     var more = wrap.querySelector(".mk-flow-more");
     if (more) more.setAttribute("aria-label", "Actions de l'étape « " + (LABELS[type] || type) + " » : " + (ok ? subtitleFor(type, d, myId) : "non configurée"));
   }
+  // Libellés des sorties (un par cas, puis « Sinon ») et leur place le long du bloc : hauteur proportionnelle au nombre de sorties
+  function syncRoutePorts(dfNodeId, d) {
+    var wrap = document.getElementById("node-" + dfNodeId);
+    if (!wrap) return;
+    var n = routeOutputs(d);
+    var ports = wrap.querySelector(".mk-flow-card-ports--route");
+    if (ports) {
+      ports.textContent = "";
+      (d.cases || []).forEach(function (c, k) { var sp = document.createElement("span"); sp.className = "mk-flow-port-label mk-flow-port-case"; sp.textContent = c.label || "Cas " + (k + 1); sp.title = sp.textContent; ports.appendChild(sp); });
+      if (!(d.cases || []).length) { var one = document.createElement("span"); one.className = "mk-flow-port-label mk-flow-port-case"; one.textContent = "Cas 1"; ports.appendChild(one); }
+      var other = document.createElement("span"); other.className = "mk-flow-port-label mk-flow-port-no"; other.textContent = "Sinon"; ports.appendChild(other);
+    }
+    // En-tête (icône, titre) au-dessus ; sous lui, une ligne de 28 px par sortie, avec le point de sortie au milieu de sa ligne
+    var tall = (54 + n * 28 + 12) + "px", card = wrap.querySelector(".mk-flow-card");
+    wrap.style.minHeight = tall; if (card) card.style.minHeight = tall; // le cadre visible grandit avec le nombre de sorties
+    for (var k = 1; k <= n; k++) { var o = wrap.querySelector(".output_" + k); if (o) o.style.top = (54 + (k - 0.5) * 28) + "px"; }
+  }
   function repaintAll() { Object.keys(dfId).forEach(function (k) { var n = nodeOf(k); if (n) paint(dfId[k], n.name, n.data); }); }
 
-  function ioFor(type) { return type === "trigger" ? [0, 1] : BRANCH[type] ? [1, 2] : type === "end" ? [1, 0] : [1, 1]; }
+  function ioFor(type, d) { return type === "trigger" ? [0, 1] : BRANCH[type] ? [1, 2] : type === "route" ? [1, routeOutputs(d)] : type === "end" ? [1, 0] : [1, 1]; }
 
   function addNode(myId, type, d, pos) {
-    var io = ioFor(type);
+    var io = ioFor(type, d);
     var full = Object.assign({}, d, { _id: myId });
     var id = editor.addNode(type, io[0], io[1], pos.x, pos.y, "mk-flow-node", full, nodeHtml(type));
     dfId[myId] = id;
@@ -123,9 +160,13 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
   // ---------- Chargement du canevas initial ----------
   var graph = data.canvas && Array.isArray(data.canvas.nodes) ? data.canvas : { nodes: [], edges: [] };
   graph.nodes.forEach(function (n) { addNode(n.id, n.type, n.data || {}, n.position || { x: 40, y: 40 }); });
+  var nodeById = {};
+  graph.nodes.forEach(function (n) { nodeById[n.id] = n; });
   graph.edges.forEach(function (e) {
-    // "false"/"b" (condition/split) → 2e sortie ; tout le reste (non défini, "true", "a", étape à une seule sortie) → 1re.
-    var out = (e.sourceHandle === "false" || e.sourceHandle === "b") ? "output_2" : "output_1";
+    // "false"/"b" (condition/split) → 2e sortie ; « caseN » / « other » (plusieurs chemins) → la sortie du cas / la dernière ;
+    // tout le reste (non défini, "true", "a", étape à une seule sortie) → 1re.
+    var sn = nodeById[e.source];
+    var out = sn ? outKeyFor(sn.type, e.sourceHandle, sn.data || {}) : "output_1";
     var srcId = dfId[e.source], tgtId = dfId[e.target];
     if (srcId != null && tgtId != null) editor.addConnection(srcId, tgtId, out, "input_1");
   });
@@ -155,6 +196,48 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
     return Object.keys(dfId).filter(function (k) { return k !== myId; }).map(function (k) { return { id: k, n: nodeOf(k) }; })
       .filter(function (x) { return x.n && x.n.name === "email"; })
       .map(function (x) { return { id: x.id, label: subtitleFor("email", x.n.data) }; });
+  }
+
+  // Où mènent les sorties d'un « Plusieurs chemins » : par identité de cas, puis « Sinon »
+  function routesOf(myId) {
+    var r = dfId[myId] != null ? editor.drawflow.drawflow[editor.module].data[dfId[myId]] : null;
+    var cases = (r && r.data && r.data.cases) || [];
+    var name = function (out) {
+      var c = r && r.outputs[out] && r.outputs[out].connections[0];
+      var t = c && myIdOfDf(c.node), tn = t && nodeOf(t);
+      return tn ? (LABELS[tn.name] || tn.name) + (tn.name === "end" ? "" : " — " + subtitleFor(tn.name, tn.data, t)) : null;
+    };
+    var byCase = {};
+    cases.forEach(function (c, k) { byCase[c.id] = name("output_" + (k + 1)); });
+    return { byCase: byCase, other: name("output_" + (cases.length + 1)) };
+  }
+  // Après un changement des cas (ajout, retrait) : le bloc a autant de sorties que de cas + « Sinon ». Chaque connexion SUIT SON CAS
+  // (par identité), « Sinon » reste la dernière sortie ; les connexions d'un cas retiré disparaissent.
+  function resyncRouteOutputs(myId, beforeData, afterData) {
+    var id = dfId[myId];
+    var raw = id != null ? editor.drawflow.drawflow[editor.module].data[id] : null;
+    if (!raw) return;
+    var oldCases = beforeData.cases || [], newCases = afterData.cases || [];
+    var oldN = routeOutputs(beforeData), newN = routeOutputs(afterData);
+    var targets = {}, links = [];
+    for (var k = 1; k <= oldN; k++) {
+      var conns = (raw.outputs["output_" + k] || { connections: [] }).connections;
+      if (!conns.length) continue;
+      links.push({ out: "output_" + k, node: conns[0].node });
+      targets[k === oldN ? "other" : (oldCases[k - 1] || {}).id] = conns[0].node;
+    }
+    if (oldN === newN && oldCases.every(function (c, i) { return c.id === (newCases[i] || {}).id; })) { syncRoutePorts(id, afterData); return; }
+    undoingConnection = true;
+    try {
+      links.forEach(function (l) { editor.removeSingleConnection(id, l.node, l.out, "input_1"); });
+      var have = Object.keys(editor.drawflow.drawflow[editor.module].data[id].outputs).length;
+      while (have < newN) { editor.addNodeOutput(id); have += 1; }
+      while (have > newN) { editor.removeNodeOutput(id, "output_" + have); have -= 1; }
+      newCases.forEach(function (c, i) { if (targets[c.id]) editor.addConnection(id, targets[c.id], "output_" + (i + 1), "input_1"); });
+      if (targets.other) editor.addConnection(id, targets.other, "output_" + newN, "input_1");
+    } finally { undoingConnection = false; }
+    syncRoutePorts(id, afterData);
+    markOrphans();
   }
 
   // Où mènent les deux sorties d'une condition / d'un tirage (connexions actuelles du canevas)
@@ -203,7 +286,7 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
         if (type === "trigger") {
           a.name = final.name;
           setNodeData(TRIGGER_ID, { triggers: final.triggers, triggerEvent: final.triggers[0].event, triggerFilter: final.triggers[0].filter });
-        } else setNodeData(myId, final);
+        } else { setNodeData(myId, final); if (type === "route") resyncRouteOutputs(myId, before, final); }
         changed();
         // Enregistrement immédiat du scénario ; en cas d'échec, l'étape reprend ses réglages enregistrés et la
         // fenêtre reste ouverte avec la saisie, pour réessayer (rien n'est perdu, rien n'est faussement « enregistré »)
@@ -217,6 +300,7 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
           }
           a.name = nameBefore;
           setNodeData(myId, withoutId(before));
+          if (type === "route") resyncRouteOutputs(myId, final, withoutId(before));
           return { errors: ["Impossible d'enregistrer les modifications. " + (r.error || "Vérifiez votre connexion puis réessayez.")] };
         });
       },
@@ -566,7 +650,8 @@ import { buildPalette, DRAG_TYPE } from "./automation/palette";
       Object.keys(n.outputs || {}).forEach(function (outKey) {
         (n.outputs[outKey].connections || []).forEach(function (c) {
           var extra = {};
-          if (BRANCH[n.name]) extra = outKey === "output_1" ? { sourceHandle: BRANCH[n.name].tHandle, label: BRANCH[n.name].tLabel } : { sourceHandle: BRANCH[n.name].fHandle, label: BRANCH[n.name].fLabel };
+          if (n.name === "route") extra = routeHandle(outKey, n.data || {});
+          else if (BRANCH[n.name]) extra = outKey === "output_1" ? { sourceHandle: BRANCH[n.name].tHandle, label: BRANCH[n.name].tLabel } : { sourceHandle: BRANCH[n.name].fHandle, label: BRANCH[n.name].fLabel };
           edges.push(Object.assign({ id: "e" + (++eseq), source: n.data._id, target: dfToMy[c.node] }, extra));
         });
       });
