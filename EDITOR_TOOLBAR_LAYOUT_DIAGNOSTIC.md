@@ -57,7 +57,7 @@ Ce qui change est ce qu'il advient du contenu qui dépasse.
   Un enfant de 1097 px dans un parent de 545 px, sans aucun ancêtre qui coupe : c'est le débordement, mesuré.
 * Aucun `position:absolute/fixed/sticky` ne porte sur les icônes : seules les `::after` (pastille de connexion, infobulle) sont `absolute`. Les 24 boutons sont `position: relative` (ligne 579, nécessaire à leur pastille et à leur infobulle), dans un flux `flex-direction: column`. Ce n'est donc **pas** un problème de coordonnées : les icônes sont à leur place **dans le flux** ; c'est le flux qui est plus haut que la barre.
 * Ni Grid, ni flex ne compressent quoi que ce soit : `flex-shrink` n'agit pas (le corps a `min-height: 0`), la cellule de grille fait 640 px parce que la barre l'impose.
-* Transition : la seule (`.mk-flow-pal` en petit écran, `transform`) est limitée au tiroir mobile ; le bug apparaît à l'état stable, pas pendant une animation.
+* Transition : mesurée, aucune sur la barre, son corps, le workspace ni `main` (`all 0s`, `animation: none`) ; les icônes n'animent que `background-color` et `border-color` (0,12 s), jamais une taille ou une position. La transition `transform` de `.mk-flow-pal` n'existe qu'en petit écran (tiroir). Le bug apparaît à l'état stable, pas pendant une animation.
 * JS : `src/editor/automation/palette.js` `setCollapsed()` ne fait que basculer la classe `is-palette-collapsed` sur `#au-workspace` et émettre `resize`. Aucun calcul de position.
 
 ## 11. Pourquoi les icônes passent AU-DESSUS des cartes
@@ -75,7 +75,9 @@ Mesuré avec `document.elementFromPoint()` au centre de chaque icône fautive, p
 
 Les icônes sont `position: relative` (positionnées) ; les cartes `section.mk-panel` sont `position: static`. Dans un même contexte d'empilement, un élément
 positionné se peint **au-dessus** d'un élément non positionné, quel que soit l'ordre du document. Le z-index n'est pas en cause (`z-index: auto`) ; il n'y a pas non plus de contexte d'empilement
-qui les isole : rien ne les arrête, car plus aucun ancêtre ne coupe (`overflow: visible` sur le corps, la barre, le workspace, le canevas et `main`).
+qui les isole : rien ne les arrête, car plus aucun ancêtre ne coupe. Mesuré à l'état replié, avant correction : `overflow: visible` sur `#au-pal-body`, `#au-palette`,
+`#au-workspace`, `main#main`, `body` et `html` ; `.mk-flow-shell` est `position: relative` en `overflow: visible`. (`#au-flow`, le canevas, est en `overflow: hidden`, mais c'est un
+voisin de la barre et non son ancêtre : il ne la concerne pas.)
 
 ## 12. Cause racine
 
