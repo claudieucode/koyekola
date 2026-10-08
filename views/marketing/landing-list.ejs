@@ -2,24 +2,44 @@
 <% const canWrite = mk.can("forms.write"); %>
     <div class="mk-head"><h1>Pages</h1><% if (canWrite && !archived) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une page</button><% } %></div>
     <p class="mk-lead">Toutes vos pages web hébergées par KOLAKISA (adresse /p/…) : pages de vos sites et pages d'atterrissage. Chaque modification est enregistrée en brouillon ; les visiteurs ne la voient qu'après « Publier ».</p>
-    <nav class="mk-tabs" aria-label="Pages actives ou archivées">
-      <a class="mk-tab" href="/marketing/pages"<%- archived ? "" : ' aria-current="page"' %>>Pages</a>
-      <a class="mk-tab" href="/marketing/pages?vue=archivees"<%- archived ? ' aria-current="page"' : "" %>>Archivées</a>
+    <% const tabLink = (e) => "/marketing/pages" + (e ? "?etat=" + e : ""); %>
+    <nav class="mk-tabs mk-cms-tabs" aria-label="Filtrer les pages par état">
+      <a class="mk-tab" href="<%= tabLink("") %>"<%- !archived && !etat ? ' aria-current="page"' : "" %>>Toutes <span class="mk-tab-count"><%= counts.all %></span></a>
+      <a class="mk-tab" href="<%= tabLink("publiees") %>"<%- etat === "publiees" ? ' aria-current="page"' : "" %>>Publiées <span class="mk-tab-count"><%= counts.publiees %></span></a>
+      <a class="mk-tab" href="<%= tabLink("brouillons") %>"<%- etat === "brouillons" ? ' aria-current="page"' : "" %>>Brouillons <span class="mk-tab-count"><%= counts.brouillons %></span></a>
+      <a class="mk-tab" href="<%= tabLink("programmees") %>"<%- etat === "programmees" ? ' aria-current="page"' : "" %>>Programmées <span class="mk-tab-count"><%= counts.programmees %></span></a>
+      <a class="mk-tab" href="<%= tabLink("privees") %>"<%- etat === "privees" ? ' aria-current="page"' : "" %>>Privées <span class="mk-tab-count"><%= counts.privees %></span></a>
+      <a class="mk-tab" href="/marketing/pages?vue=archivees"<%- archived ? ' aria-current="page"' : "" %>>Corbeille <span class="mk-tab-count"><%= counts.corbeille %></span></a>
     </nav>
+    <% if (etat === "programmees" || etat === "privees") { %><div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p><strong>Prochain palier.</strong> Les pages <%= etat === "programmees" ? "programmées" : "privées" %> n'existent pas encore dans le moteur de pages : aucune page n'a cet état.</p></div><% } %>
+    <% if (archived) { %><p class="field-hint">La corbeille contient les pages archivées : hors ligne, avec leurs statistiques et versions. « Restaurer » les remet dans la liste.</p><% } %>
+    <form class="mk-cms-toolbar" method="get" role="search" aria-label="Rechercher une page">
+      <% if (archived) { %><input type="hidden" name="vue" value="archivees"><% } else if (etat) { %><input type="hidden" name="etat" value="<%= etat %>"><% } %>
+      <label class="mk-search"><span class="sr-only">Rechercher une page</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= q %>" placeholder="Rechercher une page"></label>
+      <button type="submit" class="btn btn-outline btn-sm">Rechercher</button><% if (q) { %><a class="btn btn-ghost btn-sm" href="?<%= archived ? 'vue=archivees' : etat ? 'etat=' + etat : '' %>">Effacer</a><% } %>
+    </form>
     <% if (!pages.length) { %>
-      <div class="mk-empty"><%- icon("layout", { size: 32 }) %><h2><%= archived ? "Aucune page archivée" : "Aucune page" %></h2><p><%= archived ? "Une page archivée est hors ligne ; ses statistiques et versions sont gardées." : "Créez une page d'inscription à votre lettre, ou une page de présentation d'une formation." %></p>
-        <% if (canWrite && !archived) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une page</button></div><% } %></div>
+      <div class="mk-empty"><%- icon("layout", { size: 32 }) %><h2><%= q ? "Aucune page trouvée" : archived ? "La corbeille est vide" : etat ? "Aucune page dans cet état" : "Aucune page" %></h2><p><%= q ? "Essayez un autre mot." : archived ? "Une page archivée est hors ligne ; ses statistiques et versions sont gardées." : "Créez une page d'inscription à l'une de vos offres, ou une page pour l'un de vos sites : vous la composerez dans l'éditeur visuel, puis la publierez." %></p>
+        <% if (canWrite && !archived && !q && !etat) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Ajouter une page</button></div><% } %></div>
     <% } else { %>
-      <div class="mk-table-wrap"><table class="mk-table mk-datatable">
-        <caption class="sr-only"><%= archived ? "Pages archivées" : "Pages" %></caption>
-        <thead><tr><th scope="col">Nom</th><th scope="col">Site</th><th scope="col">Adresse</th><th scope="col">État</th><th scope="col" class="mk-num">Visiteurs uniques</th><th scope="col" class="mk-num">Inscriptions</th></tr></thead>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table">
+        <caption class="sr-only"><%= archived ? "Pages dans la corbeille" : "Pages" %></caption>
+        <thead><tr><th scope="col">Nom</th><th scope="col">Site</th><th scope="col">Adresse</th><th scope="col">État</th><th scope="col">Auteur</th><th scope="col">Modifiée</th><th scope="col" class="mk-num">Visiteurs uniques</th><th scope="col" class="mk-num">Inscriptions</th><% if (canWrite) { %><th scope="col" class="mk-cms-actions-col"><span class="sr-only">Actions</span></th><% } %></tr></thead>
         <tbody><% pages.forEach((p) => { %>
           <tr><th scope="row" data-label="Nom"><a href="/marketing/pages/<%= p.id %>"><%= p.name %></a><% if (p.has_draft) { %><span class="mk-sub">Modifications non publiées</span><% } %></th>
             <td data-label="Site"><%= p.site_name || "—" %></td><td data-label="Adresse">/p/<%= p.slug %></td>
             <td data-label="État"><span class="mk-status <%= STATUS_CLASS[p.status] %>"><%= STATUSES[p.status] %></span></td>
-            <td class="mk-num" data-label="Visiteurs uniques"><%= mkh.fmt(p.visitors) %></td><td class="mk-num" data-label="Inscriptions"><%= mkh.fmt(p.signups) %></td></tr>
+            <td data-label="Auteur"><%= authors[p.id] || "—" %></td><td data-label="Modifiée"><%= String(p.updated_at || "").slice(0, 10).split("-").reverse().join("/") %></td>
+            <td class="mk-num" data-label="Visiteurs uniques"><%= mkh.fmt(p.visitors) %></td><td class="mk-num" data-label="Inscriptions"><%= mkh.fmt(p.signups) %></td>
+            <% if (canWrite) { %><td class="mk-row-actions mk-cms-actions-col">
+              <% if (archived) { %><form class="mk-inline" action="/marketing/pages/<%= p.id %>/restaurer" method="post"><button type="submit" class="btn btn-ghost btn-sm">Restaurer</button></form>
+              <% } else { %><a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= p.id %>">Modifier</a><a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= p.id %>/apercu" target="_blank" rel="noopener">Aperçu</a>
+                <form class="mk-inline" action="/marketing/pages/<%= p.id %>/dupliquer" method="post"><button type="submit" class="btn btn-ghost btn-sm">Dupliquer</button></form>
+                <form class="mk-inline" action="/marketing/pages/<%= p.id %>/archiver" method="post"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="La page « <%= p.name %> » ira dans la corbeille : elle sera hors ligne, mais vous pourrez la restaurer.">Corbeille</button></form><% } %>
+            </td><% } %></tr>
         <% }) %></tbody>
       </table></div>
+      <p class="mk-cms-pager"><span><%= pages.length %> page<%= pages.length > 1 ? "s" : "" %></span></p>
     <% } %>
     <% if (canWrite) { %>
       <dialog class="mk-dialog mk-modal" id="nouvelle" data-mk-modal data-mk-modal-hash="nouvelle" aria-labelledby="lp-new-title">

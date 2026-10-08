@@ -33,7 +33,9 @@ describe("navigation et tableau de bord", () => {
     const html = (await boss.get("/marketing/site-web")).text;
     assert.match(html, />Site Web</);
     for (const href of ["/marketing/site-web", "/marketing/site-web/sites", "/marketing/pages"]) assert.match(html, new RegExp(`href="${href}"`));
-    assert.match(html, /href="\/marketing\/tunnels"/, "section Tunnels (phase 8)");
+    // Depuis le palier 1, Site Web est l'environnement KOLAKISA CMS : « Tunnels » reste une section du Marketing, atteinte par « Retour au Marketing »
+    assert.match(html, /class="mk-cms-back" href="\/marketing"/, "retour au Marketing depuis le CMS");
+    assert.match((await boss.get("/marketing")).text, /href="\/marketing\/tunnels"/, "section Tunnels (phase 8), dans le menu Marketing");
     assert.doesNotMatch(html, /Funnels|Kolakisa Web/, "noms imposés : « Site Web » et « Tunnels »");
     assert.doesNotMatch(html, /Pages d'atterrissage</, "les pages d'atterrissage sont rattachées à Site Web → Pages");
   });
