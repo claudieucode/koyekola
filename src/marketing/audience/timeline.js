@@ -38,6 +38,11 @@ function contactTimeline(ctx, contactId, { limit = 50 } = {}) {
   for (const t of db.prepare("SELECT t.name, ct.created_at FROM mk_contact_tags ct JOIN mk_tags t ON t.id = ct.tag_id WHERE ct.contact_id = ? AND ct.organization_id = ? ORDER BY ct.id DESC LIMIT ?").all(contactId, org, cap)) {
     push(fromSql(t.created_at), "tag", "tag", `Étiquette « ${t.name} » ajoutée.`);
   }
+  // Notes (écrites par un scénario d'automatisation : action « Ajouter une note »)
+  for (const n of db.prepare("SELECT n.body, n.source, n.created_at, n.automation_id, a.name AS automation FROM mk_contact_notes n LEFT JOIN mk_automations a ON a.id = n.automation_id WHERE n.contact_id = ? AND n.organization_id = ? ORDER BY n.id DESC LIMIT ?").all(contactId, org, cap)) {
+    const body = n.body.length > 300 ? `${n.body.slice(0, 297)}…` : n.body;
+    push(fromSql(n.created_at), "note", "stickyNote", `Note${n.source === "automation" && n.automation ? ` (scénario « ${n.automation} »)` : ""} : ${body}`, n.automation_id ? `/marketing/automatisations/${n.automation_id}` : null, n.automation_id ? "automations.read" : "contacts.read");
+  }
   for (const m of db
     .prepare("SELECT m.campaign_id, m.subject, m.sent_at, m.first_open_at, m.first_click_at, m.bounced_at, m.complained_at, c.name AS campaign FROM mk_messages m JOIN mk_campaigns c ON c.id = m.campaign_id WHERE m.contact_id = ? AND m.organization_id = ? ORDER BY m.id DESC LIMIT ?")
     .all(contactId, org, cap)) {

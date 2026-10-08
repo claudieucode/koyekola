@@ -100,5 +100,55 @@ describe("palette d'actions des scénarios : disponibilité réelle, filtre, ré
     assert.equal(await page.locator(".drawflow-node").count(), before + 1, "l'action récente est insérée");
   });
 
+  // Étapes enregistrées du scénario ouvert (relues en base : ce que le moteur exécutera réellement)
+  const savedSteps = () => JSON.parse(srv.db().prepare("SELECT steps FROM mk_automations WHERE id = ?").get(autoId).steps || "[]");
+  const dialog = () => page.locator("dialog.mk-step-dialog[open]");
+  // Relie la sortie du déclencheur à l'entrée de l'étape (sans liaison, une étape n'est pas exécutée) puis enregistre le scénario
+  async function connectAndSave(label) {
+    const out = page.locator(".drawflow-node").filter({ hasText: "Déclencheur" }).first().locator(".output").first();
+    const inp = page.locator(".drawflow-node").filter({ hasText: label }).first().locator(".input").first();
+    await out.dragTo(inp);
+    await page.locator("#au-save").click();
+  }
+  const until = async (check, what) => { const end = Date.now() + 8000; for (;;) { let v = null; try { v = await check(); } catch { /* nouvel essai */ } if (v) return v; if (Date.now() > end) throw new Error(`Délai dépassé : ${what}`); await wait(120); } };
+
+  test("« Modifier le score » : insertion, réglages réels, validation, résumé sur le bloc, enregistrement", async () => {
+    await openEditor();
+    await item("adjust_score").click();
+    await page.locator(".drawflow-node").filter({ hasText: "Modifier le score" }).first().click(); // clic sur une étape = la configurer
+    await dialog().waitFor({ timeout: 8000 });
+    assert.match(await dialog().innerText(), /Modifier le score/);
+    // Mode « définir » : le libellé du champ suit le mode
+    await dialog().locator("select").selectOption("set");
+    assert.match(await dialog().innerText(), /Nouveau score/);
+    await dialog().locator("select").selectOption("subtract");
+    assert.match(await dialog().innerText(), /Nombre de points/);
+    // Validation : 0 point est refusé, la fenêtre reste ouverte avec le message
+    await dialog().locator("input[type=number]").fill("0");
+    await dialog().locator("[data-step-save]").click();
+    assert.match(await dialog().locator(".mk-step-dialog-error").innerText(), /Points : un nombre entier de 1 à 100000/);
+    await dialog().locator("input[type=number]").fill("7");
+    await dialog().locator("[data-step-save]").click();
+    await page.locator("dialog.mk-step-dialog[open]").waitFor({ state: "detached", timeout: 8000 });
+    await connectAndSave("Modifier le score");
+    await until(() => { const st = savedSteps(); return st.length === 1 && st[0].type === "adjust_score" && st[0].mode === "subtract" && st[0].points === 7; }, "étape enregistrée et exécutable (retirer 7 points)");
+    assert.match(await page.locator(".drawflow-node").filter({ hasText: "Modifier le score" }).first().innerText(), /−\s*7 points/);
+  });
+
+  test("« Ajouter une note » : texte obligatoire, enregistré tel quel, résumé sur le bloc", async () => {
+    await openEditor();
+    await item("add_note").click();
+    await page.locator(".drawflow-node").filter({ hasText: "Ajouter une note" }).first().click();
+    await dialog().waitFor({ timeout: 8000 });
+    await dialog().locator("[data-step-save]").click();
+    assert.match(await dialog().locator(".mk-step-dialog-error").innerText(), /Écrivez le texte de la note/);
+    await dialog().locator("textarea").fill("Hésitant après trois visites");
+    await dialog().locator("[data-step-save]").click();
+    await page.locator("dialog.mk-step-dialog[open]").waitFor({ state: "detached", timeout: 8000 });
+    await connectAndSave("Ajouter une note");
+    await until(() => { const st = savedSteps(); return st.length === 1 && st[0].type === "add_note" && st[0].body === "Hésitant après trois visites"; }, "note enregistrée et exécutable");
+    assert.match(await page.locator(".drawflow-node").filter({ hasText: "Ajouter une note" }).first().innerText(), /Hésitant après trois visites/);
+  });
+
   test("aucune erreur de script ni de console", () => { assert.deepEqual(errors, []); });
 });

@@ -1,7 +1,7 @@
 // Réglages de chaque type d'étape, affichés dans la boîte de dialogue « Modifier ». Chaque éditeur modifie un
 // BROUILLON (copie des données du nœud) ; validate() reprend les règles du serveur (src/marketing/automations/steps.js,
 // qui reste seul juge à l'enregistrement) pour signaler une erreur avant d'envoyer quoi que ce soit.
-import { el, field, select, text, number, checkbox, note, hint } from "./ui";
+import { el, field, select, text, number, checkbox, note, hint, nextId } from "./ui";
 import { estimateFor, unknownTags } from "../../marketing/sms/render";
 
 // Mêmes valeurs que steps.js#UNITS / CHECKS / EDITABLE_FIELDS (à tenir synchronisées avec le serveur)
@@ -16,6 +16,7 @@ const PROPERTY_KEY = /^[a-z][a-z0-9_]{0,39}$/;
 const STATUS_LABELS = { unknown: "Pas de consentement", subscribed: "Abonné", unsubscribed: "Désinscrit", bounced: "Rebond", complained: "Plainte", suppressed: "Bloqué" };
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const MAX_SMS_BODY = 1600; // même limite que steps.js
+const SCORE_MAX = 100000, MAX_NOTE = 2000; // mêmes limites que scoring.MAX_ADJUST / audience/notes.MAX_NOTE
 
 // ---------- Condition construite sur place (ET/OU) : même format que le moteur de segments ----------
 // { op: "and"|"or", rules: [...] }, volontairement plat (comme le constructeur simple de la page Segments).
@@ -341,6 +342,21 @@ const EDITORS = {
     box.appendChild(field("Nouvelle valeur", text(draft.value, (v) => { draft.value = v; }, { maxlength: 300, disabled: ctx.locked }), "Laissez vide pour effacer la valeur."));
     return box;
   },
+  adjust_score(ctx, draft, rerender) {
+    const box = el("div");
+    box.appendChild(field("Action sur le score", select([["add", "Ajouter des points"], ["subtract", "Retirer des points"], ["set", "Définir le score"]], draft.mode, (v) => { draft.mode = v; rerender(); }, { disabled: ctx.locked })));
+    box.appendChild(field(draft.mode === "set" ? "Nouveau score" : "Nombre de points", number(draft.points, (v) => { draft.points = v; }, { min: draft.mode === "set" ? 0 : 1, max: SCORE_MAX, disabled: ctx.locked })));
+    box.appendChild(hint("Le score d'un contact ne descend jamais sous 0. Chaque modification est tracée dans l'historique du score, n'est appliquée qu'une fois par passage et reste après un recalcul des règles. Elle ne déclenche pas d'événement de changement de niveau."));
+    return box;
+  },
+  add_note(ctx, draft) {
+    const box = el("div");
+    const ta = el("textarea", { id: nextId(), rows: "5", maxlength: String(MAX_NOTE) });
+    ta.value = draft.body || ""; ta.disabled = ctx.locked;
+    ta.addEventListener("input", () => { draft.body = ta.value; });
+    box.appendChild(field("Texte de la note", ta, `Texte simple (${MAX_NOTE} caractères au plus), visible dans la chronologie du contact. Aucun e-mail n'est envoyé.`));
+    return box;
+  },
   add_tag: (ctx, draft, rerender) => tagEditor(ctx, draft, rerender, false),
   remove_tag: (ctx, draft, rerender) => tagEditor(ctx, draft, rerender, true),
   add_to_list: (ctx, draft) => listEditor(ctx, draft, "Ajouter à la liste"),
@@ -391,6 +407,16 @@ export function validate(type, ctx, d) {
       if (String(d.value || "").length > 300) errors.push("Valeur trop longue (300 caractères au plus).");
       return errors;
     }
+    case "adjust_score": {
+      if (!["add", "subtract", "set"].includes(d.mode)) return ["Choisissez l'action sur le score."];
+      const min = d.mode === "set" ? 0 : 1;
+      return Number.isInteger(d.points) && d.points >= min && d.points <= SCORE_MAX ? [] : [`Points : un nombre entier de ${min} à ${SCORE_MAX}.`];
+    }
+    case "add_note": {
+      const b = String(d.body || "").trim();
+      if (!b) return ["Écrivez le texte de la note."];
+      return b.length > MAX_NOTE ? [`Note trop longue (${MAX_NOTE} caractères au plus).`] : [];
+    }
     case "add_tag": case "remove_tag": {
       const t = String(d.tag || "").trim();
       if (!t) return ["Choisissez une étiquette."];
@@ -417,6 +443,6 @@ export function clean(type, d) {
   delete out._newTag;
   if (type === "add_tag" || type === "remove_tag") out.tag = String(out.tag || "").trim();
   if (type === "trigger") out.name = String(out.name || "").trim();
-  if (type === "sms") out.body = String(out.body || "").replace(/\r\n?/g, "\n").trim();
+  if (type === "sms" || type === "add_note") out.body = String(out.body || "").replace(/\r\n?/g, "\n").trim();
   return out;
 }

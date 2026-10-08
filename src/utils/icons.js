@@ -177,6 +177,8 @@ const ICONS = {
   palette: { body: '<path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"></path><circle cx="7.5" cy="11" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="10" cy="7" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="15" cy="7" r="1.2" fill="currentColor" stroke="none"></circle>' },
   sun: { body: '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>' },
   moon: { body: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"></path>' },
+  trendingUp: { body: '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline>' },
+  stickyNote: { body: '<path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"></path><path d="M15 3v6h6"></path>' },
 };
 
 function icon(name, opts = {}) {

@@ -71,3 +71,51 @@ defineAction({
   validate: listStep("remove_from_list"),
   execute: ({ ctx, step, contact }) => attempt({ action: "remove_from_list", detail: step.listId }, () => removeFromList(ctx, step.listId, [contact.id])),
 });
+
+// ---------- Score et notes ----------
+const scoring = require("../../scoring");
+const notes = require("../../audience/notes");
+const SCORE_MODES = ["add", "subtract", "set"];
+const MODE_TEXT = { add: "ajouter", subtract: "retirer", set: "définir" };
+
+// Modifier le score du contact (points de score : voir Audience → Score des contacts). Journalisé, jamais deux fois pour la même étape,
+// conservé par un recalcul des règles, borné à 0. N'émet aucun événement de niveau (anti-boucle).
+defineAction({
+  type: "adjust_score", category: "contact", label: STEP_LABELS.adjust_score, description: "Ajouter, retirer ou définir des points", version: 1, status: "available",
+  validate({ raw, i, steps }) {
+    if (!SCORE_MODES.includes(raw.mode)) throw bad(i, "mode de score invalide (ajouter, retirer ou définir).");
+    const min = raw.mode === "set" ? 0 : 1;
+    if (!Number.isInteger(raw.points) || raw.points < min || raw.points > scoring.MAX_ADJUST) throw bad(i, `points invalides (un nombre entier de ${min} à ${scoring.MAX_ADJUST}).`);
+    return withNext({ type: "adjust_score", mode: raw.mode, points: raw.points }, raw, i, steps);
+  },
+  execute({ ctx, run, index, step, contact }) {
+    try {
+      const r = scoring.adjustScore(ctx, contact.id, { mode: step.mode, points: step.points, key: run.id * 100 + index });
+      if (!r.applied) return { next: true, log: ["already_done", "score déjà modifié par cette étape"] };
+      return { next: true, log: ["adjust_score", `${MODE_TEXT[step.mode]} ${step.points} → ${r.delta >= 0 ? "+" : ""}${r.delta} (score ${r.score})`] };
+    } catch (error) {
+      if (!(error instanceof MarketingError)) throw error;
+      return { next: true, log: ["failed", error.message] };
+    }
+  },
+});
+
+// Ajouter une note à la fiche du contact (visible dans sa chronologie). Texte simple : aucune balise, aucun envoi.
+defineAction({
+  type: "add_note", category: "contact", label: STEP_LABELS.add_note, description: "Une note sur la fiche du contact", version: 1, status: "available",
+  validate({ raw, i, steps }) {
+    const body = typeof raw.body === "string" ? raw.body.replace(/\r\n?/g, "\n").trim() : "";
+    if (!body) throw bad(i, "le texte de la note est vide.");
+    if (body.length > notes.MAX_NOTE) throw bad(i, `note trop longue (${notes.MAX_NOTE} caractères au plus).`);
+    return withNext({ type: "add_note", body }, raw, i, steps);
+  },
+  execute({ ctx, run, automation, index, step, contact }) {
+    try {
+      const r = notes.addNote(ctx, contact.id, { body: step.body, source: "automation", automationId: automation.id, runId: run.id, stepIndex: index });
+      return { next: true, log: r.created ? ["add_note", "note ajoutée"] : ["already_done", "note déjà ajoutée par cette étape"] };
+    } catch (error) {
+      if (!(error instanceof MarketingError)) throw error;
+      return { next: true, log: ["failed", error.message] };
+    }
+  },
+});
