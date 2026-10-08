@@ -256,7 +256,7 @@ function listSites(ctx, { archived = false } = {}) {
 }
 function sitePages(ctx, siteId, { archived = false } = {}) {
   requireSite(ctx, siteId);
-  return ctx.db.prepare(`SELECT id, name, slug, title, status, kind, published_at, updated_at, draft IS NOT NULL AS has_draft, archived_at FROM mk_landing_pages
+  return ctx.db.prepare(`SELECT id, name, slug, title, status, kind, published_at, updated_at, draft IS NOT NULL AS has_draft, archived_at, header_mode, header_component_id FROM mk_landing_pages
     WHERE organization_id = ? AND site_id = ? AND archived_at IS ${archived ? "NOT " : ""}NULL ORDER BY name COLLATE NOCASE`).all(ctx.organizationId, siteId);
 }
 
@@ -387,6 +387,10 @@ function componentUsage(ctx, id) {
 function deleteComponent(ctx, id) {
   const c = getComponent(ctx, id);
   if (!c) throw new MarketingError("not_found", "Composant introuvable.");
+  const asPart = ctx.db.prepare("SELECT name FROM mk_sites WHERE organization_id = ? AND (header_component_id = ? OR footer_component_id = ?)").all(ctx.organizationId, c.id, c.id);
+  if (asPart.length) throw new MarketingError("in_use", `Ce composant est l'en-tête ou le pied de page du site ${asPart.map((x) => `« ${x.name} »`).join(", ")} : choisissez-en un autre d'abord.`);
+  const asVariant = ctx.db.prepare("SELECT name FROM mk_landing_pages WHERE organization_id = ? AND header_component_id = ?").all(ctx.organizationId, c.id);
+  if (asVariant.length) throw new MarketingError("in_use", `Cette variante est l'en-tête de ${asVariant.length} page(s) : ${asVariant.map((x) => `« ${x.name} »`).join(", ")}. Remettez-les sur l'en-tête du site d'abord.`);
   const used = componentUsage(ctx, c.id);
   if (used.length) throw new MarketingError("in_use", `Ce composant est utilisé par ${used.length} page(s) : ${used.map((p) => `« ${p.name} »`).join(", ")}. Retirez-le de ces pages d'abord.`);
   ctx.db.prepare("DELETE FROM mk_web_components WHERE id = ?").run(c.id);
@@ -395,21 +399,27 @@ function deleteComponent(ctx, id) {
 // Affichage : chaque composant synchronisé est remplacé par sa dernière version (un composant supprimé disparaît)
 // ---------- Parties globales d'un site (en-tête, pied de page) ----------
 // Un composant réutilisable choisi dans les réglages du site, affiché autour des sections de chacune de ses pages
+function partOf(ctx, cid, which) {
+  if (!cid) return null;
+  const c = getComponent(ctx, Number(cid));
+  return c && c.section && c.section.type !== "component" ? { ...c.section, id: c.section.id || `part${which}${c.id}`.slice(0, 20), fromComponent: c.id, sitePart: which } : null;
+}
 function siteParts(ctx, siteId) {
   const none = { header: null, footer: null };
   if (!siteId) return none;
   const site = getSite(ctx, Number(siteId));
   if (!site || site.status !== "active") return none;
-  const part = (cid, which) => {
-    if (!cid) return null;
-    const c = getComponent(ctx, Number(cid));
-    return c && c.section && c.section.type !== "component" ? { ...c.section, id: c.section.id || `part${which}${c.id}`.slice(0, 20), fromComponent: c.id, sitePart: which } : null;
-  };
-  return { header: part(site.header_component_id, "header"), footer: part(site.footer_component_id, "footer") };
+  return { header: partOf(ctx, site.header_component_id, "header"), footer: partOf(ctx, site.footer_component_id, "footer") };
 }
+// Affichage : l'en-tête d'une page est celui du site (par défaut), aucun (exception) ou une variante (exception)
 function withSiteParts(ctx, page, sections) {
   const p = siteParts(ctx, page && page.site_id);
-  return [p.header, ...sections, p.footer].filter(Boolean);
+  let header = p.header;
+  if (page && page.site_id && header) {
+    if (page.header_mode === "none") header = null;
+    else if (page.header_mode === "variant") header = partOf(ctx, page.header_component_id, "header") || p.header;
+  }
+  return [header, ...sections, p.footer].filter(Boolean);
 }
 function setSiteParts(ctx, siteId, { header = null, footer = null } = {}) {
   const site = requireSite(ctx, siteId, { active: true });
@@ -424,6 +434,64 @@ function setSiteParts(ctx, siteId, { header = null, footer = null } = {}) {
   ctx.db.prepare("UPDATE mk_sites SET header_component_id = ?, footer_component_id = ?, updated_at = datetime('now') WHERE id = ?").run(h, f, site.id);
   audit(ctx, "site.parts_updated", "site", site.id, { header: h, footer: f });
   return getSite(ctx, site.id);
+}
+
+// ---------- En-tête du site : exceptions par page, variantes, vue d'ensemble ----------
+const HEADER_MODES = ["inherit", "none", "variant"];
+// Choix de l'en-tête d'UNE page : celui du site (inherit), aucun (none) ou une variante (variant + composant du site)
+function setPageHeader(ctx, pageId, { mode, componentId } = {}) {
+  const page = requirePage(ctx, pageId);
+  if (!page.site_id) throw bad("Cette page n'appartient à aucun site : rattachez-la à un site pour lui choisir un en-tête.");
+  if (!HEADER_MODES.includes(mode)) throw bad("Choix d'en-tête inconnu.");
+  const site = requireSite(ctx, page.site_id, { active: true });
+  let cid = null;
+  if (mode === "variant") {
+    const c = getComponent(ctx, Number(componentId));
+    if (!c || !c.section) throw bad("Variante introuvable.");
+    if (c.site_id !== null && c.site_id !== site.id) throw bad("Cette variante appartient à un autre site.");
+    if (c.id === site.header_component_id) throw bad("C'est déjà l'en-tête du site : choisissez « En-tête du site » pour cette page.");
+    cid = c.id;
+  }
+  ctx.db.prepare("UPDATE mk_landing_pages SET header_mode = ?, header_component_id = ?, updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(mode, cid, page.id, ctx.organizationId);
+  audit(ctx, "page.header_set", "landing", page.id, { mode, componentId: cid });
+  return getPage(ctx, page.id);
+}
+// Variante : copie de l'en-tête du site, enregistrée comme composant du site, liée à sa source
+function createHeaderVariant(ctx, siteId, { name } = {}) {
+  const site = requireSite(ctx, siteId, { active: true });
+  const source = site.header_component_id ? getComponent(ctx, site.header_component_id) : null;
+  if (!source || !source.section) throw bad("Ce site n'a pas encore d'en-tête : choisissez-en un d'abord.");
+  let label = line(name, 80);
+  if (!label) {
+    let n = 1;
+    do { label = `${source.name} — variante ${n}`.slice(0, 80); n += 1; } while (ctx.db.prepare("SELECT 1 FROM mk_web_components WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, label));
+  }
+  const copy = createComponent(ctx, { name: label, section: source.section, siteId: site.id });
+  ctx.db.prepare("UPDATE mk_web_components SET variant_of = ? WHERE id = ?").run(source.id, copy.id);
+  audit(ctx, "site.header_variant_created", "site", site.id, { source: source.id, variant: copy.id });
+  return getComponent(ctx, copy.id);
+}
+// Vue d'ensemble de l'en-tête d'un site : données réelles (pages qui l'utilisent, exceptions, variantes)
+function headerOverview(ctx, siteId) {
+  const site = requireSite(ctx, siteId);
+  const header = site.header_component_id ? getComponent(ctx, site.header_component_id) : null;
+  const all = sitePages(ctx, site.id);
+  const comps = new Map(listComponents(ctx, { siteId: site.id }).map((c) => [c.id, c]));
+  const brief = (p) => ({ id: p.id, name: p.name, status: p.status, kind: p.kind });
+  const using = [], exceptions = [];
+  for (const p of all) {
+    if (p.header_mode === "none") exceptions.push({ ...brief(p), mode: "none", variant: null });
+    else if (p.header_mode === "variant" && comps.get(p.header_component_id)) exceptions.push({ ...brief(p), mode: "variant", variant: { id: p.header_component_id, name: comps.get(p.header_component_id).name } });
+    else using.push(brief(p));
+  }
+  const variants = header ? [...comps.values()].filter((c) => c.variant_of === header.id).map((c) => ({ id: c.id, name: c.name, pages: exceptions.filter((e) => e.variant && e.variant.id === c.id).length })) : [];
+  const usable = [...comps.values()].filter((c) => c.section && c.section.type !== "component").map((c) => ({ id: c.id, name: c.name, global: c.global }));
+  return {
+    header: header ? { id: header.id, name: header.name, global: header.global } : null,
+    // « Publié » : l'en-tête est choisi et s'affiche sur les pages du site (composant synchronisé : toujours sa dernière version)
+    status: header ? "published" : "none", type: "global",
+    using, exceptions, variants, usable, total: all.length,
+  };
 }
 
 // ---------- Modèles de pages enregistrés par l'équipe ----------
@@ -496,6 +564,6 @@ module.exports = {
   createPage, duplicatePage, archivePage, restorePage,
   getSite, requireSite, listSites, sitePages, createSite, updateSite, setHomePage, movePage, archiveSite, restoreSite, duplicateSite,
   listComponents, getComponent, createComponent, updateComponent, componentUsage, deleteComponent, resolveSections,
-  siteParts, withSiteParts, setSiteParts, listPageTemplates, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
+  siteParts, withSiteParts, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
   normalizeSeo, normalizeTheme, TYPES,
 };

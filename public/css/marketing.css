@@ -1849,3 +1849,10 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-score-history > summary { cursor: pointer; font-weight: 700; }
 .mk-score-history[open] > summary { margin-bottom: 8px; }
 .mk-form-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; } .mk-form-row .field-group { flex: 1 1 220px; min-width: 0; margin: 0; }
+
+/* Fiche d'un site : faits clés de l'en-tête (statut, type, pages concernées) */
+.mk-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px 24px; margin: 12px 0; }
+.mk-facts > div { display: grid; gap: 2px; min-width: 0; }
+.mk-facts dt { font-size: 0.85rem; color: var(--muted); }
+.mk-facts dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+.mk-list { margin: 8px 0 16px; padding-left: 20px; display: grid; gap: 4px; }
