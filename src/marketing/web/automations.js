@@ -122,6 +122,8 @@ module.exports = ({ db }) => {
       segments: segments.listSegments(ctx).map((s) => ({ id: s.id, name: s.name, definition: s.definition })),
       // Webhooks configurés (adresse réduite à son domaine : jamais le secret ni le chemin complet) : cibles de l'étape « Envoyer vers un webhook »
       webhooks: require("../webhooks/endpoints").listEndpoints(ctx).map((w) => { let host = ""; try { host = new URL(w.url).host; } catch { host = ""; } return { id: w.id, name: w.name, host, enabled: w.enabled }; }),
+      // Membres de l'équipe (destinataires de l'étape « Notifier l'équipe ») : jamais une adresse saisie librement
+      team: ctx.db.prepare("SELECT u.id, u.username, u.email FROM mk_org_members m JOIN users u ON u.id = m.user_id WHERE m.organization_id = ? AND u.email IS NOT NULL AND u.email <> '' ORDER BY u.username").all(ctx.organizationId).map((u) => ({ id: u.id, name: u.username, email: u.email })),
       // Autres scénarios : cibles des étapes « Démarrer / Arrêter un autre scénario »
       automations: auto.listAutomations(ctx).filter((x) => x.id !== a.id).map((x) => ({ id: x.id, name: x.name, status: x.status })),
       // Propriétés personnalisées de type date : proposées par l'étape « Attendre une date ou une heure » (champ date du contact)
