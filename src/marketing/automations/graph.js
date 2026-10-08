@@ -161,6 +161,7 @@ const INCOMPLETE = {
   set_date: (d) => blank(d.property) || (d.base === "property" && blank(d.baseProperty)),
   calculate: (d) => blank(d.property) || blank(d.op) || blank(d.value),
   webhook_call: (d) => blank(d.endpointId),
+  notify_team: (d) => !Array.isArray(d.recipients) || !d.recipients.length || blank(d.subject) || blank(d.body),
   start_automation: (d) => blank(d.automationId), stop_automation: (d) => blank(d.automationId),
   wait_until: (d) => blank(d.mode) || (d.mode === "property" && blank(d.property)) || (d.mode === "date" && blank(d.date)) || (d.mode === "business_hours" && (!Array.isArray(d.days) || !d.days.length)),
 };

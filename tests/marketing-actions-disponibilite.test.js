@@ -17,11 +17,11 @@ describe("connexions requises par les actions", () => {
   test("par défaut (fournisseurs « console », aucun webhook) : e-mail, SMS et webhook demandent une connexion, avec la raison ; le reste est disponible", () => {
     const all = registry.describeActions(A);
     const needing = all.filter((a) => a.availability.state === "connection_required").map((a) => a.type).sort();
-    assert.deepEqual(needing, ["email", "sms", "webhook_call"]);
+    assert.deepEqual(needing, ["email", "notify_team", "sms", "webhook_call"]);
     assert.match(state("email").reasons[0].detail, /console|aucun fournisseur/);
     assert.equal(state("email").reasons[0].fix, "Réglages d'envoi");
     assert.equal(state("sms").reasons[0].fix, "SMS → Réglages");
-    for (const a of all.filter((x) => !["email", "sms", "webhook_call"].includes(x.type))) assert.equal(a.availability.state, "available", `${a.type} : aucune connexion requise`);
+    for (const a of all.filter((x) => !["email", "sms", "notify_team", "webhook_call"].includes(x.type))) assert.equal(a.availability.state, "available", `${a.type} : aucune connexion requise`);
   });
 
   test("e-mail : fournisseur choisi mais expéditeur manquant → toujours « connexion requise », puis disponible une fois l'expéditeur réglé", () => {
