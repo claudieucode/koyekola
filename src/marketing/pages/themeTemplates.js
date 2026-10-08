@@ -12,6 +12,13 @@ const TYPES = {
   blog_archive: { label: "Liste du blog", hint: "Remplace la liste des articles (accueil du blog et catégories). Utilisez une grille en boucle (articles) ; la catégorie courante se lit avec {{query.categorie}}." },
   not_found: { label: "Page introuvable (404)", hint: "S'affiche quand une adresse n'existe pas." },
 };
+// Extension : un module peut déclarer une nouvelle famille de pages (le rendu reste à brancher dans la route concernée,
+// avec renderRegion de web/themeRender.js ; sans cela le modèle n'a aucun effet et l'écran l'indique).
+function registerTemplateType(key, { label, hint }) {
+  if (!/^[a-z][a-z_]{1,30}$/.test(key) || Object.hasOwn(TYPES, key)) throw new Error(`Type de modèle « ${key} » : nom invalide ou déjà pris.`);
+  if (!label || !hint) throw new Error(`Type de modèle « ${key} » : libellé et aide obligatoires.`);
+  TYPES[key] = { label, hint };
+}
 const newId = () => require("crypto").randomBytes(4).toString("hex");
 const line = (v, max) => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, max);
 
@@ -65,4 +72,4 @@ function pick(ctx, type, { category = "", visitor } = {}) {
 // Type d'affectation d'une page (pour montrer des données d'exemple pendant qu'on la dessine)
 const typesOfPage = (ctx, pageId) => read(ctx).filter((t) => t.pageId === pageId).map((t) => t.type);
 
-module.exports = { TYPES, KEY, MAX_TEMPLATES, list, add, remove, pick, typesOfPage, read };
+module.exports = { registerTemplateType, TYPES, KEY, MAX_TEMPLATES, list, add, remove, pick, typesOfPage, read };

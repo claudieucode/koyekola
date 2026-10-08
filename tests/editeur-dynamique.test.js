@@ -87,6 +87,31 @@ describe("moteur d'étiquettes (sans serveur)", () => {
   });
 });
 
+describe("points d'extension (sans serveur)", () => {
+  test("registerDynamicSource, registerCondition, registerTemplateType : validés, utilisables, sans effet de bord sur l'existant", () => {
+    dyn.registerDynamicSource("demo.salut", { label: "Salutation de démonstration", resolve: (s) => (s.demo ? "salut" : null) });
+    assert.equal(dyn.resolveString("{{demo.salut | fallback: rien}}", { demo: true }), "salut");
+    assert.equal(dyn.resolveString("{{demo.salut | fallback: rien}}", {}), "rien");
+    assert.ok(dyn.catalog().sources.some((s) => s.key === "demo.salut"));
+    assert.throws(() => dyn.registerDynamicSource("mauvais", { label: "x", resolve: () => "" }), /groupe\.nom/);
+    dyn.registerDynamicSource("demo.casse", { label: "Source qui échoue", resolve: () => { throw new Error("boom"); } });
+    assert.equal(dyn.resolveString("[{{demo.casse}}]", {}), "[]", "une source qui échoue donne une valeur vide, jamais une erreur");
+    nodes.registerCondition("demo_matin", { label: "Le matin (démonstration)", match: (_v, visitor) => visitor.hour < 12 });
+    assert.equal(nodes.audienceMatches({ who: "demo_matin" }, { hour: 9 }), true);
+    assert.equal(nodes.audienceMatches({ who: "demo_matin" }, { hour: 15 }), false);
+    assert.deepEqual(nodes.normalizeAudience({ who: "demo_matin" }, "x"), { who: "demo_matin" });
+    assert.ok(nodes.editorSpec().audiences.some(([k]) => k === "demo_matin"), "proposée dans l'éditeur");
+    nodes.registerCondition("demo_min", { label: "Au moins N (démonstration)", value: "number", validate: (n) => n >= 0, match: (n, v) => v.n >= n });
+    assert.deepEqual(nodes.normalizeAudience({ who: "demo_min", value: "3" }, "x"), { who: "demo_min", value: 3 });
+    assert.throws(() => nodes.normalizeAudience({ who: "demo_min", value: "x" }, "x"), /invalide/);
+    assert.throws(() => nodes.registerCondition("student", { label: "x", match: () => true }), /déjà pris/);
+    const tt = require("../src/marketing/pages/themeTemplates");
+    tt.registerTemplateType("demo_famille", { label: "Famille de démonstration", hint: "Aide." });
+    assert.ok(tt.TYPES.demo_famille);
+    assert.throws(() => tt.registerTemplateType("single_post", { label: "x", hint: "y" }), /déjà pris/);
+  });
+});
+
 describe("vrai serveur : boucle et page publiée", () => {
   let srv, boss, db;
   before(async () => { srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "", PAIEMENT_SIMULE: "1" }); boss = await loginInstructor(srv); db = srv.db(); });

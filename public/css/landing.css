@@ -791,3 +791,6 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .kw-catfilter a { display: inline-block; padding: 6px 14px; border: 1px solid currentColor; border-radius: 999px; text-decoration: none; font-size: .9rem; }
 .kw-catfilter a[aria-current="true"] { background: var(--kw-primary, #0277b6); border-color: var(--kw-primary, #0277b6); color: var(--kw-on-primary, #fff); }
 .kw-catfilter-n { opacity: .7; }
+/* Modèle « Article du blog » : emplacement du texte dans l'éditeur */
+.kw-postcontent-empty { padding: 24px; border: 2px dashed #94a3b8; border-radius: 12px; text-align: center; color: #475569; }
+.kw-theme-template { display: block; }

@@ -1054,9 +1054,27 @@ const AUDIENCES = {
   score_min: "Score au moins égal à…",
   has_cart: "Panier non vide", empty_cart: "Panier vide", instructor: "Formateur connecté", param: "Adresse contenant le paramètre…",
 };
+// Extension : une condition d'affichage ajoutée par un module (registerCondition) — libellé, valeur éventuelle (texte ou nombre),
+// validation et test sur le visiteur. Les conditions fournies par KOLAKISA restent dans AUDIENCES / audienceMatches.
+const CUSTOM_CONDITIONS = new Map();
+function registerCondition(key, def) {
+  if (!/^[a-z][a-z0-9_]{1,30}$/.test(key) || Object.hasOwn(AUDIENCES, key)) throw new Error(`Condition « ${key} » : nom invalide ou déjà pris.`);
+  if (!def || !def.label || typeof def.match !== "function") throw new Error(`Condition « ${key} » : libellé et fonction match(valeur, visiteur) obligatoires.`);
+  if (def.value !== undefined && !["text", "number"].includes(def.value)) throw new Error(`Condition « ${key} » : valeur « text » ou « number ».`);
+  CUSTOM_CONDITIONS.set(key, def);
+  AUDIENCES[key] = def.label;
+}
 function normalizeAudience(raw, at) {
   if (!raw || typeof raw !== "object" || !raw.who) return undefined;
   if (!Object.hasOwn(AUDIENCES, raw.who)) throw new Error(`${at} : public d'affichage inconnu.`);
+  if (CUSTOM_CONDITIONS.has(raw.who)) {
+    const def = CUSTOM_CONDITIONS.get(raw.who);
+    if (!def.value) return { who: raw.who };
+    const v = def.value === "number" ? Number(raw.value) : line(raw.value, 100);
+    if (def.value === "number" ? !Number.isFinite(v) : !v) throw new Error(`${at} : valeur de « ${def.label} » invalide.`);
+    if (def.validate && !def.validate(v)) throw new Error(`${at} : valeur de « ${def.label} » refusée.`);
+    return { who: raw.who, value: v };
+  }
   if (raw.who === "tag" || raw.who === "not_tag") {
     const tag = line(raw.value, 60);
     if (!tag) throw new Error(`${at} : indiquez l'étiquette.`);
@@ -1099,7 +1117,11 @@ function audienceMatches(audience, visitor) {
       const got = v.query && Object.hasOwn(v.query, key) ? v.query[key] : undefined;
       return got !== undefined && (rest.length === 0 || got === rest.join("="));
     }
-    default: return true;
+    default: {
+      const custom = CUSTOM_CONDITIONS.get(audience.who);
+      if (!custom) return true;
+      try { return Boolean(custom.match(audience.value, v)); } catch { return false; } // une condition qui échoue ne montre rien
+    }
   }
 }
 const audienceLabel = (a) => (a ? `${AUDIENCES[a.who]}${a.value !== undefined ? ` ${a.value}` : ""}`.replace("… ", " : ") : "");
@@ -1629,7 +1651,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
 }
 
 module.exports = {
-  dynamic, normalizeClassDefs, classCss, GLOBAL_CLASS_MAX,
+  dynamic, registerCondition, normalizeClassDefs, classCss, GLOBAL_CLASS_MAX,
   NODE_TYPES, CATEGORIES, WIDGET_GROUPS, WIDGETS, CUSTOM_WIDGETS, registerWidget, lockedWidgetChanges, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
   capsOf, MOTION, motionAttrs, MASK_SHAPES, SCROLL_FX, SCROLL_RANGE, MOUSE_RANGE, MOUSE_MODES, AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };
