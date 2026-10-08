@@ -88,7 +88,7 @@ describe("honnêteté : rien n'est simulé", () => {
   });
 
   test("écrans en lecture seule : aucune écriture n'est possible par ces adresses", async () => {
-    const res = await boss.post("/marketing/site-web/articles", { title: "x" });
+    const res = await boss.post("/marketing/site-web/navigation", { title: "x" }); // écran encore en lecture seule : aucune écriture possible
     assert.equal(res.status, 404);
   });
 });

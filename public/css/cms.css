@@ -154,3 +154,10 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label { display: none; }
 }
 .mk-ml-main { min-width: 0; }
 .mk-ml-table td.mk-row-actions { white-space: nowrap; }
+
+/* ----- Articles (palier 4) ----- */
+.mk-ar-cell { display: flex; align-items: center; gap: 10px; }
+.mk-ar-thumb { flex: none; width: 48px; height: 36px; object-fit: cover; border-radius: 4px; background: var(--mk-hover); }
+.mk-ar-thumb.is-empty { display: inline-block; border: 1px dashed var(--mk-border); }
+.mk-ar-table td.mk-row-actions { white-space: nowrap; }
+.mk-ar-new { max-width: 640px; }

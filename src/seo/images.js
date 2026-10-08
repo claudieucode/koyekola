@@ -9,7 +9,10 @@ const cache = new Map();
 // /uploads/thumbnails/x.webp → chemin sur le disque (null si l'adresse n'est pas une image publique du site)
 function fileOf(publicPath) {
   const m = /^\/uploads\/(thumbnails|blog)\/([A-Za-z0-9_.-]{1,200})$/.exec(String(publicPath || ""));
-  return m ? path.join(uploadsRoot, m[1], m[2]) : null;
+  if (m) return path.join(uploadsRoot, m[1], m[2]);
+  // Médiathèque du CMS : /uploads/marketing/<organisation>/<fichier>
+  const cms = /^\/uploads\/marketing\/(\d{1,9})\/([A-Za-z0-9_.-]{1,200})$/.exec(String(publicPath || ""));
+  return cms ? path.join(uploadsRoot, "marketing", cms[1], cms[2]) : null;
 }
 
 function readDimensions(buf) {

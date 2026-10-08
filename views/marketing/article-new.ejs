@@ -1,0 +1,13 @@
+<%- include("partials/top", { title, active }) %>
+    <div class="mk-head"><h1>Nouvel article</h1></div>
+    <p class="mk-lead">Donnez un titre à votre article : il est créé en brouillon (identifiant réel, adresse déduite du titre, modifiable), puis l'éditeur d'articles s'ouvre. Rien n'est en ligne avant la publication.</p>
+    <% if (!isCreator) { %>
+      <div class="mk-callout"><span><strong>Rédaction réservée au compte créateur.</strong> L'éditeur d'articles du blog est réservé au compte créateur ; vous pouvez en revanche retrouver, publier, copier ou mettre à la corbeille les articles existants.</span></div>
+      <p><a class="btn btn-outline btn-sm" href="<%= BASE %>">Voir les articles</a></p>
+    <% } else { %>
+      <form class="mk-panel mk-ar-new" action="/marketing/site-web/articles" method="post">
+        <div class="field-group"><label for="ar-title">Titre de l'article *</label><input id="ar-title" type="text" name="title" maxlength="150" required autofocus placeholder="Comment réussir son référencement naturel"></div>
+        <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Créer et ouvrir l’éditeur</button><a class="btn btn-ghost btn-sm" href="<%= BASE %>">Annuler</a></div>
+      </form>
+    <% } %>
+<%- include("partials/bottom") %>

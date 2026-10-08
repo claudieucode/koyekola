@@ -19,14 +19,14 @@ const POST_STATUS = { draft: ["Brouillon", "mk-status-off"], review: ["À relire
 
 function postCounts(db) {
   return safe(() => {
-    const by = Object.fromEntries(db.prepare("SELECT status, COUNT(*) n FROM posts GROUP BY status").all().map((r) => [r.status, r.n]));
+    const by = Object.fromEntries(db.prepare("SELECT status, COUNT(*) n FROM posts WHERE deleted_at IS NULL GROUP BY status").all().map((r) => [r.status, r.n]));
     const n = (...k) => k.reduce((s, x) => s + (by[x] || 0), 0);
     return { all: n(...Object.keys(by)), brouillons: n("draft", "review"), programmes: n("scheduled"), publies: n("published") };
   }, { all: 0, brouillons: 0, programmes: 0, publies: 0 });
 }
 function listPosts(db, { state, q, limit = 500 } = {}) {
   return safe(() => {
-    const where = []; const args = [];
+    const where = ["p.deleted_at IS NULL"]; const args = [];
     if (state && POST_STATES[state]) { where.push(`p.status IN (${POST_STATES[state].map(() => "?").join(",")})`); args.push(...POST_STATES[state]); }
     if (q) { where.push("p.title LIKE ? ESCAPE '\\'"); args.push(like(q)); }
     return db.prepare(`SELECT p.id, p.slug, p.title, p.status, p.category, p.published_at, p.updated_at, u.username AS author
@@ -34,19 +34,19 @@ function listPosts(db, { state, q, limit = 500 } = {}) {
   }, []);
 }
 function categories(db) {
-  return safe(() => db.prepare("SELECT category AS name, COUNT(*) n FROM posts WHERE category <> '' GROUP BY category ORDER BY n DESC, category").all(), []);
+  return safe(() => db.prepare("SELECT category AS name, COUNT(*) n FROM posts WHERE deleted_at IS NULL AND category <> '' GROUP BY category ORDER BY n DESC, category").all(), []);
 }
 function tags(db) {
   return safe(() => {
     const count = new Map();
-    for (const r of db.prepare("SELECT tags FROM posts WHERE tags <> ''").all()) {
+    for (const r of db.prepare("SELECT tags FROM posts WHERE deleted_at IS NULL AND tags <> ''").all()) {
       for (const raw of String(r.tags).split(",")) { const t = raw.replace(/\s+/g, " ").trim(); if (t) count.set(t, (count.get(t) || 0) + 1); }
     }
     return [...count].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, "fr"));
   }, []);
 }
 function authors(db) {
-  return safe(() => db.prepare(`SELECT u.id, u.username, COUNT(p.id) n, SUM(p.status = 'published') published FROM users u JOIN posts p ON p.author_id = u.id GROUP BY u.id ORDER BY n DESC, u.username`).all(), []);
+  return safe(() => db.prepare(`SELECT u.id, u.username, COUNT(p.id) n, SUM(p.status = 'published') published FROM users u JOIN posts p ON p.author_id = u.id AND p.deleted_at IS NULL GROUP BY u.id ORDER BY n DESC, u.username`).all(), []);
 }
 
 // ---------- Commentaires (blog_comments : membres connectés, publication immédiate) ----------

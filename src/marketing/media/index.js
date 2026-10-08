@@ -193,9 +193,11 @@ function mediaUsage(ctx, media) {
   const components = db.prepare("SELECT id, name, 'composant' AS kind FROM mk_web_components WHERE organization_id = ? AND section LIKE ? ESCAPE '\\'").all(org, like);
   const pageTemplates = safe(() => db.prepare("SELECT id, name, 'modèle de page' AS kind FROM mk_page_templates WHERE organization_id = ? AND content LIKE ? ESCAPE '\\'").all(org, like));
   const sites = safe(() => db.prepare("SELECT id, name, 'site' AS kind FROM mk_sites WHERE organization_id = ? AND (tokens LIKE ? ESCAPE '\\' OR settings LIKE ? ESCAPE '\\')").all(org, like, like));
-  return [...templates, ...pages, ...components, ...pageTemplates, ...sites];
+  // Articles (image mise en avant, images de partage, images dans le texte) : le texte cite l'adresse du fichier
+  const articles = safe(() => db.prepare("SELECT id, title AS name, 'article' AS kind FROM posts WHERE featured_media_id = ? OR cover_path = ? OR og_image_path = ? OR twitter_image_path = ? OR content LIKE ? ESCAPE '\\'").all(media.id, media.path, media.path, media.path, like));
+  return [...templates, ...pages, ...components, ...pageTemplates, ...sites, ...articles];
 }
-const usageHref = (u) => ({ page: `/marketing/pages/${u.id}`, composant: `/marketing/site-web/composants/${u.id}/editeur`, site: `/marketing/site-web/sites/${u.id}`, modèle: `/marketing/modeles/${u.id}` }[u.kind] || null);
+const usageHref = (u) => ({ page: `/marketing/pages/${u.id}`, composant: `/marketing/site-web/composants/${u.id}/editeur`, site: `/marketing/site-web/sites/${u.id}`, modèle: `/marketing/modeles/${u.id}`, article: `/formateur/blog/${u.id}/modifier` }[u.kind] || null);
 
 // Suppression définitive : refusée si un contenu utilise le fichier ; le fichier n'est retiré du disque que s'il n'a
 // jamais servi dans une campagne lancée (les e-mails déjà envoyés pointent vers lui)

@@ -1517,7 +1517,25 @@ function start() {
 
   // ---------- Médiathèque (fenêtre « Médiathèque » de WordPress) ----------
   // onSelect(media, { alt, caption, credit }) ; multiple : onSelectMany(liste)
-  function openMediaModal({ kind = "image", onSelect = null, onSelectMany = null, multiple = false } = {}) {
+  // Images : la médiathèque du CMS (sélecteur partagé KWMediaPicker, envoi compris) ; les anciennes images du blog restent
+  // atteignables par « Anciennes images du blog » (même fenêtre que celle d'avant, pour les vidéos et fichiers audio aussi)
+  function openCmsLibrary({ onSelect, onSelectMany, multiple }) {
+    window.KWMediaPicker.open({
+      title: multiple ? "Choisir des images pour la galerie" : "Choisir une image", type: "image", multiple,
+      extra: { label: "Anciennes images du blog", onClick: () => openMediaModal({ kind: "image", onSelect, onSelectMany, multiple, legacy: true }) },
+      onPick: (res) => {
+        const list = multiple ? res : [res];
+        if (multiple && onSelectMany) { if (list.length < 2) return toast("Une galerie contient au moins 2 images.", "error"); return onSelectMany(list); }
+        if (onSelect && list[0]) onSelect(list[0], { alt: list[0].alt || "", caption: list[0].caption || "", credit: "" });
+      },
+    });
+  }
+  function openMediaModal({ kind = "image", onSelect = null, onSelectMany = null, multiple = false, legacy = false } = {}) {
+    if (kind === "image" && !legacy && window.KWMediaPicker) {
+      // Bouton « Médiathèque » de la barre d'outils (aucune insertion demandée) : la médiathèque complète du CMS, dans un nouvel onglet
+      if (!onSelect && !onSelectMany) { window.open("/marketing/site-web/mediatheque", "_blank", "noopener"); return; }
+      return openCmsLibrary({ onSelect, onSelectMany, multiple });
+    }
     const chosen = new Map();
     const grid = h("ul", { class: "wp-attachments", role: "listbox", "aria-multiselectable": String(multiple) });
     const details = h("div", { class: "wp-attachment-details" }, h("p", { class: "wp-help" }, "Sélectionnez un fichier pour voir ses détails."));
@@ -1646,6 +1664,8 @@ function start() {
   }
   const blockEndAt = (pos) => { const $p = editor.state.doc.resolve(Math.max(0, Math.min(pos, editor.state.doc.content.size))); return $p.depth ? $p.after(1) : $p.pos; };
   async function uploadMedia(file, kind) {
+    // Images déposées ou collées dans l'article, recadrage : elles rejoignent la médiathèque du CMS (un seul système d'envoi)
+    if (kind === "image" && window.KWMedia) return window.KWMedia.upload(file).promise;
     const body = new FormData();
     body.append(kind === "image" ? "article_image" : kind === "video" ? "article_video" : "article_audio", file);
     if (kind === "image") {
