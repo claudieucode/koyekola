@@ -343,14 +343,17 @@ describe("règles, guides, grille et magnétisme (navigateur)", { skip: SKIP }, 
   test("T8 magnétisme aux guides : la poignée s'accroche (596 → 600), Alt et l'interrupteur le suppriment réellement", async () => {
     await openEditor({ prefs: NO_GRID });
     const a = await rectOf("boxa00000001");
+    const guide = Math.round(a.left + 231);
     await panelOpen();
-    await page.locator("[data-pb-rules] .pb-rules-add input[type=text]").fill(String(Math.round(a.left + 231)));
+    await page.locator("[data-pb-rules] .pb-rules-add input[type=text]").fill(String(guide));
     await page.locator("[data-pb-rules] .pb-rules-add button").click();
     await panelClose();
-    // largeur brute 200 + 27 = 227 → le bord droit est à 4 px du guide (231) : il s'y cale
+    // largeur brute 200 + 27 = 227 → le bord droit est à ~4 px du guide : il s'y cale (le bord, pas seulement la largeur)
     await dragHandle("boxa00000001", "e", 27, 0);
-    assert.equal(await widthOf("boxa00000001"), 231, "calé sur le guide");
-    const d1 = await saved((d) => nodesOf(d.sections).find((x) => x.id === "boxa00000001").styles.desktop.width === "231px", "largeur 231 px");
+    const snapped = await rectOf("boxa00000001");
+    assert.ok(Math.abs(snapped.right - guide) <= 0.6, `bord droit ${snapped.right} calé sur le guide ${guide}`);
+    const wA = Math.round(snapped.width);
+    const d1 = await saved((d) => nodesOf(d.sections).find((x) => x.id === "boxa00000001").styles.desktop.width === `${wA}px`, `largeur ${wA} px`);
     assert.ok(d1);
     // Alt : libre
     await dragHandle("boxb00000001", "e", 27, 0, { alt: true });
@@ -459,21 +462,23 @@ describe("règles, guides, grille et magnétisme (navigateur)", { skip: SKIP }, 
   test("T14 annuler / rétablir un redimensionnement accroché ; le contenu enregistré ne contient que la dimension", async () => {
     await openEditor({ prefs: NO_GRID });
     const a = await rectOf("boxa00000001");
+    const guide = Math.round(a.left + 260);
     await panelOpen();
-    await page.locator("[data-pb-rules] .pb-rules-add input[type=text]").fill(String(Math.round(a.left + 260)));
+    await page.locator("[data-pb-rules] .pb-rules-add input[type=text]").fill(String(guide));
     await page.locator("[data-pb-rules] .pb-rules-add button").click(); await panelClose();
     await dragHandle("boxa00000001", "e", 57, 0);
-    assert.equal(await widthOf("boxa00000001"), 260);
+    const snapped = await rectOf("boxa00000001"), w = Math.round(snapped.width);
+    assert.ok(Math.abs(snapped.right - guide) <= 0.6, `bord droit calé sur le guide (${snapped.right} / ${guide})`);
     await until(() => page.locator("[data-pb-undo]").isEnabled(), { what: "annuler disponible" });
     await page.locator("#pb-canvas").focus(); // le clavier va au canevas, pas à un champ
     await page.keyboard.press("Control+z");
     await until(async () => (await widthOf("boxa00000001")) === 200, { what: "largeur annulée à 200 px" });
     await until(() => page.locator("[data-pb-redo]").isEnabled(), { what: "rétablir disponible" });
     await page.keyboard.press("Control+Shift+z");
-    await until(async () => (await widthOf("boxa00000001")) === 260, { what: "largeur rétablie à 260 px" });
+    await until(async () => (await widthOf("boxa00000001")) === w, { what: `largeur rétablie à ${w} px` });
     await page.locator("[data-pb-save-now]").click();
-    const d = await saved((x) => nodesOf(x.sections).find((n) => n.id === "boxa00000001").styles.desktop.width === "260px", "260 px enregistré");
-    assert.equal(JSON.stringify(nodesOf(d.sections).find((n) => n.id === "boxa00000001").styles), `{"desktop":{"width":"260px","height":"${H}px"}}`);
+    const d = await saved((x) => nodesOf(x.sections).find((n) => n.id === "boxa00000001").styles.desktop.width === `${w}px`, `${w} px enregistré`);
+    assert.equal(JSON.stringify(nodesOf(d.sections).find((n) => n.id === "boxa00000001").styles), `{"desktop":{"width":"${w}px","height":"${H}px"}}`);
   });
 
   test("T15 défilement : règles et guides restent synchronisés (vertical et horizontal)", async () => {
