@@ -1,0 +1,135 @@
+// Étiquettes dynamiques du Page Builder : `{{post.title}}`, `{{course.price}}`, `{{user.first_name | fallback: ami}}`…
+// Un MOTEUR de sources (registerDynamicSource) : chaque source sait lire une valeur dans le contexte d'affichage (« scope » :
+// article, formation, visiteur, page, site, date). Les étiquettes sont stockées telles quelles dans le document et résolues
+// AU MOMENT DE L'AFFICHAGE (canevas, aperçu, page publiée) : le contenu est toujours celui du moment.
+//
+// Sécurité (les pages sont servies sur le même domaine que les comptes des élèves) :
+//  - une étiquette ne produit jamais de HTML : la valeur est du texte, échappé par le rendu (ou par escapeHtml() dans un texte riche) ;
+//  - dans un champ d'adresse ou d'image, la valeur résolue est REVALIDÉE par le validateur d'origine (https://, page du site…),
+//    sinon le champ reste vide : une donnée du CMS ne peut pas injecter « javascript: » ;
+//  - seules les sources déclarées existent ; une étiquette inconnue donne le repli (ou rien).
+const TOKEN = /\{\{\s*([a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+)\s*((?:\|[^{}|]*)*)\}\}/gi;
+const PURE = /^\s*\{\{\s*[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+\s*(?:\|[^{}|]*)*\}\}\s*$/i;
+const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+const SOURCES = new Map();
+// key : « groupe.nom » ; def : { label, group, kind: "text" | "url" | "image" | "number", resolve(scope) → valeur | null }
+function registerDynamicSource(key, def) {
+  if (!/^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/.test(key)) throw new Error(`Source dynamique « ${key} » : forme « groupe.nom » attendue.`);
+  if (!def || typeof def.resolve !== "function" || !def.label) throw new Error(`Source dynamique « ${key} » : libellé et fonction resolve obligatoires.`);
+  SOURCES.set(key, { key, kind: "text", group: key.split(".")[0], ...def });
+}
+const money = (cents) => (Number(cents) ? (Number(cents) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €" : "Gratuit");
+const longDate = (ms) => { const d = new Date(Number(ms)); return Number.isFinite(d.getTime()) ? `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}` : ""; };
+const shortDate = (ms) => { const d = new Date(Number(ms)); return Number.isFinite(d.getTime()) ? d.toLocaleDateString("fr-FR") : ""; };
+
+// ---- Sources fournies ----
+// Article : scope.post = { title, url, excerpt, image, date (ms), author, category, minutes }
+const P = (k) => (s) => (s.post && s.post[k] != null && s.post[k] !== "" ? s.post[k] : null);
+registerDynamicSource("post.title", { label: "Titre de l'article", resolve: P("title") });
+registerDynamicSource("post.excerpt", { label: "Résumé de l'article", resolve: P("excerpt") });
+registerDynamicSource("post.url", { label: "Adresse de l'article", kind: "url", resolve: P("url") });
+registerDynamicSource("post.image", { label: "Image à la une", kind: "image", resolve: P("image") });
+registerDynamicSource("post.date", { label: "Date de publication", resolve: (s) => (s.post && s.post.date ? longDate(s.post.date) : null) });
+registerDynamicSource("post.author", { label: "Auteur de l'article", resolve: P("author") });
+registerDynamicSource("post.category", { label: "Catégorie de l'article", resolve: P("category") });
+registerDynamicSource("post.reading_time", { label: "Temps de lecture", resolve: (s) => (s.post && s.post.minutes ? `${s.post.minutes} min` : null) });
+// Formation (« produit » : même source, deux noms) : scope.course = { title, subtitle, priceCents, url, image, category, instructor, description }
+for (const group of ["course", "product"]) {
+  const C = (k) => (s) => (s.course && s.course[k] != null && s.course[k] !== "" ? s.course[k] : null);
+  registerDynamicSource(`${group}.title`, { label: "Titre de la formation", resolve: C("title") });
+  registerDynamicSource(`${group}.subtitle`, { label: "Sous-titre de la formation", resolve: C("subtitle") });
+  registerDynamicSource(`${group}.description`, { label: "Description de la formation", resolve: C("description") });
+  registerDynamicSource(`${group}.price`, { label: "Prix de la formation", resolve: (s) => (s.course ? money(s.course.priceCents) : null) });
+  registerDynamicSource(`${group}.url`, { label: "Adresse de la formation", kind: "url", resolve: C("url") });
+  registerDynamicSource(`${group}.image`, { label: "Image de la formation", kind: "image", resolve: C("image") });
+  registerDynamicSource(`${group}.category`, { label: "Catégorie de la formation", resolve: C("category") });
+  registerDynamicSource(`${group}.instructor`, { label: "Formateur", resolve: C("instructor") });
+}
+// Visiteur, page, site, date
+registerDynamicSource("user.first_name", { label: "Prénom du visiteur", resolve: (s) => (s.visitor && s.visitor.firstName) || null });
+registerDynamicSource("user.logged_in", { label: "Visiteur connecté (oui / non)", resolve: (s) => (s.visitor && s.visitor.loggedIn ? "oui" : "non") });
+registerDynamicSource("user.cart_count", { label: "Articles dans le panier", resolve: (s) => String((s.visitor && s.visitor.cartCount) || 0) });
+registerDynamicSource("page.title", { label: "Titre de la page", resolve: (s) => (s.page && (s.page.title || s.page.name)) || null });
+registerDynamicSource("site.name", { label: "Nom du site", resolve: (s) => (s.site && s.site.name) || null });
+registerDynamicSource("site.url", { label: "Adresse de l'accueil du site", kind: "url", resolve: (s) => (s.site && s.site.homeUrl) || null });
+registerDynamicSource("date.today", { label: "Date du jour", resolve: (s) => longDate((s.now || new Date()).getTime()) });
+registerDynamicSource("date.year", { label: "Année en cours", resolve: (s) => String((s.now || new Date()).getFullYear()) });
+// Adresse : paramètre d'URL (?q=…) — texte seulement, borné
+registerDynamicSource("query.q", { label: "Recherche saisie (?q=)", resolve: (s) => (s.query && typeof s.query.q === "string" && s.query.q.trim() ? s.query.q.trim().slice(0, 80) : null) });
+registerDynamicSource("query.categorie", { label: "Catégorie demandée (?categorie=)", resolve: (s) => (s.query && typeof s.query.categorie === "string" && s.query.categorie.trim() ? s.query.categorie.trim().slice(0, 60) : null) });
+
+// ---- Filtres (« | nom: valeur ») ----
+const FILTERS = {
+  fallback: (v, arg) => (v === null || v === "" ? arg : v),
+  upper: (v) => String(v).toUpperCase(),
+  lower: (v) => String(v).toLowerCase(),
+  capitalize: (v) => { const s = String(v); return s.charAt(0).toUpperCase() + s.slice(1); },
+  truncate: (v, arg) => { const n = Math.min(Math.max(parseInt(arg, 10) || 100, 1), 1000), s = String(v); return s.length > n ? `${s.slice(0, n).trimEnd()}…` : s; },
+  prefix: (v, arg) => (v === "" ? v : `${arg}${v}`),
+  suffix: (v, arg) => (v === "" ? v : `${v}${arg}`),
+};
+// Argument d'un filtre : « texte » (espaces autour retirés) ou « "texte avec espaces " » entre guillemets doubles (gardés tels quels)
+const filterArg = (v) => { const t = v.trim(); const m = t.match(/^"(.*)"$/); return m ? m[1] : t; };
+const parseFilters = (raw) => String(raw || "").split("|").map((x) => x.trim()).filter(Boolean).map((x) => { const i = x.indexOf(":"); return i < 0 ? [x.toLowerCase(), ""] : [x.slice(0, i).trim().toLowerCase(), filterArg(x.slice(i + 1))]; }).filter(([name]) => Object.hasOwn(FILTERS, name)).slice(0, 4);
+
+const hasToken = (v) => typeof v === "string" && v.includes("{{") && new RegExp(TOKEN.source, "i").test(v);
+const isPureToken = (v) => typeof v === "string" && PURE.test(v);
+const escapeHtml = (v) => String(v).replace(/[&"<>']/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;", "'": "&#39;" })[c]);
+
+// Valeur d'UNE étiquette (« post.title | fallback: Sans titre ») → texte (jamais null)
+function valueOf(key, rawFilters, scope) {
+  const src = SOURCES.get(String(key).toLowerCase());
+  let value = null;
+  if (src) { try { value = src.resolve(scope || {}); } catch { value = null; } }
+  value = value === null || value === undefined ? "" : String(value);
+  const filters = parseFilters(rawFilters);
+  // Le repli s'applique d'abord (une valeur vide prend le repli, puis les autres filtres s'appliquent)
+  for (const [name, arg] of filters.filter(([n]) => n === "fallback")) value = FILTERS[name](value, arg);
+  for (const [name, arg] of filters.filter(([n]) => n !== "fallback")) value = FILTERS[name](value, arg);
+  return value;
+}
+// Texte avec étiquettes → texte résolu. html : la valeur est échappée (texte riche). Une chaîne sans étiquette est rendue telle quelle.
+function resolveString(str, scope, { html = false } = {}) {
+  if (!hasToken(str)) return str;
+  return str.replace(TOKEN, (_, key, filters) => { const v = valueOf(key, filters, scope); return html ? escapeHtml(v) : v; });
+}
+// Champs dont la valeur est une ADRESSE ou une IMAGE : revalidés par le validateur d'origine après résolution
+const URL_KEYS = new Set(["url", "link", "ctaUrl", "href", "poster"]);
+const IMAGE_KEYS = new Set(["src", "image", "avatar", "thumbnail"]);
+function resolveProps(props, scope, validators = {}) {
+  const walk = (value, key) => {
+    if (typeof value === "string") {
+      if (!hasToken(value)) return value;
+      const out = resolveString(value, scope, { html: key === "html" });
+      if (URL_KEYS.has(key) || IMAGE_KEYS.has(key)) {
+        const check = IMAGE_KEYS.has(key) ? validators.imageUrl : validators.linkUrl;
+        if (!check) return "";
+        try { return check(out, key) || ""; } catch { return ""; }
+      }
+      return out;
+    }
+    if (Array.isArray(value)) return value.map((x) => walk(x, key));
+    if (value && typeof value === "object") { const o = {}; for (const [k, v] of Object.entries(value)) o[k] = walk(v, k); return o; }
+    return value;
+  };
+  return walk(props, "");
+}
+// Le texte d'un nœud contient-il une étiquette ? (l'édition directe est alors refusée dans le canevas : elle écraserait l'étiquette)
+function nodeIsDynamic(node) {
+  let found = false;
+  const look = (v) => { if (found) return; if (typeof v === "string") { if (hasToken(v)) found = true; } else if (Array.isArray(v)) v.forEach(look); else if (v && typeof v === "object") Object.values(v).forEach(look); };
+  look(node && node.props);
+  return found;
+}
+// Catalogue des sources pour l'éditeur (sélecteur d'étiquettes)
+const GROUP_LABELS = { post: "Article du blog", course: "Formation", product: "Produit (formation)", user: "Visiteur", page: "Page", site: "Site", date: "Date", query: "Adresse (?…)" };
+function catalog() {
+  return {
+    groups: Object.entries(GROUP_LABELS).map(([key, label]) => ({ key, label })),
+    sources: [...SOURCES.values()].map((s) => ({ key: s.key, label: s.label, group: s.group, kind: s.kind })),
+    filters: Object.keys(FILTERS),
+  };
+}
+
+module.exports = { registerDynamicSource, resolveString, resolveProps, hasToken, isPureToken, valueOf, nodeIsDynamic, catalog, escapeHtml, money, SOURCES, FILTERS, TOKEN };

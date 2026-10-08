@@ -9,6 +9,7 @@ const sanitizeHtml = require("sanitize-html");
 const crypto = require("crypto");
 const { getCourse } = require("../bridge/catalog");
 const { parseVideoUrl } = require("../../utils/video");
+const dynamic = require("./dynamic");
 
 const MAX_NODES = 400;   // éléments d'une page (toutes sections libres confondues)
 const MAX_DEPTH = 8;
@@ -287,6 +288,24 @@ const BOX_TAGS = ["div", "section", "header", "footer", "article", "aside", "nav
 const boxTag = (p) => { const tag = oneOf(...BOX_TAGS)(p.tag); return tag && tag !== "div" ? { tag } : {}; };
 // Lien d'un conteneur : toute la zone devient cliquable (page du site, ancre ou https://). Nouvel onglet seulement pour https://.
 // Voir aussi INTERACTIVE_INSIDE_LINK : un lien ne peut pas en contenir un autre.
+// Boucle d'une grille : source, nombre, catégorie, tri, pagination, filtrage par l'adresse (?q=, ?categorie=). Valeurs bornées.
+const loopProps = (p) => {
+  const l = p.loop;
+  if (!l || typeof l !== "object") return {};
+  const source = oneOf("posts", "courses")(l.source) || "posts";
+  const sorts = source === "posts" ? ["recent", "old", "title"] : ["recent", "title", "price"];
+  return { loop: {
+    source, count: numberIn(1, 24, { integer: true })(l.count) || 6, category: line(l.category, 80), sort: oneOf(...sorts)(l.sort) || "recent",
+    ...(l.paginate === true ? { paginate: true } : {}), ...(l.urlFilter === true ? { urlFilter: true } : {}),
+    empty: line(l.empty, 160) || (source === "posts" ? "Aucun article ne correspond." : "Aucune formation ne correspond."),
+  } };
+};
+// Adresse ou image : une étiquette dynamique seule (« {{post.url}} ») est acceptée telle quelle et revalidée à l'affichage
+const dynamicHelpers = (h) => ({
+  ...h,
+  linkUrl: (v, label) => (dynamic.isPureToken(v) ? clean(v, 300) : h.linkUrl(v, label)),
+  imageUrl: (v, label) => (dynamic.isPureToken(v) ? clean(v, 300) : h.imageUrl(v, label)),
+});
 const boxProps = (p, at, h) => {
   const link = h.linkUrl(p.link, `${at} (lien du conteneur)`);
   return { ...boxTag(p), ...(link ? { link, ...(p.newTab === true && link.startsWith("https://") ? { newTab: true } : {}) } : {}) };
@@ -298,7 +317,8 @@ const NODE_TYPES = {
   container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : {}) }) },
   columns: { label: "Colonnes", category: "structure", container: true, props: () => ({}) },
   column: { label: "Colonne", category: "structure", container: true, props: () => ({}) },
-  grid: { label: "Grille", category: "structure", container: true, props: boxProps },
+  // Grille : peut devenir une BOUCLE (« Répéter pour chaque article / formation ») : ses enfants sont le modèle d'un élément
+  grid: { label: "Grille", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...loopProps(p) }) },
   stack: { label: "Pile", category: "structure", container: true, props: boxProps },
   group: { label: "Groupe", category: "structure", container: true, props: boxProps },
   spacer: { label: "Espace", category: "structure", props: (p) => ({ size: oneOf("8", "16", "24", "32", "48", "64", "80", "96", "128")(String(p.size)) || "32" }) },
@@ -981,7 +1001,7 @@ function editorSpec() {
     socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     structureKinds: require("./structures").KINDS, structures: require("./structures").STRUCTURES,
     colorTokens: COLOR_TOKENS, spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
-    limits: { nodes: MAX_NODES, depth: MAX_DEPTH },
+    limits: { nodes: MAX_NODES, depth: MAX_DEPTH }, dynamic: dynamic.catalog(),
   };
 }
 
@@ -1345,7 +1365,7 @@ function normalizeNode(raw, at, h, depth, counter) {
   let rawProps = raw.props && typeof raw.props === "object" ? raw.props : {};
   const cw = def.custom ? CUSTOM_WIDGETS[raw.type] : null;
   if (cw && cw.version > 1) for (let v = Number.isInteger(raw.v) && raw.v >= 1 ? raw.v : 1; v < cw.version; v++) rawProps = cw.migrate[v + 1]({ ...rawProps });
-  const node = { id, type: raw.type, props: def.props(rawProps, where, h) };
+  const node = { id, type: raw.type, props: def.props(rawProps, where, dynamicHelpers(h)) };
   if (cw && cw.version > 1) node.v = cw.version;
   if (label) node.name = label;
   if (raw.hidden === true) node.hidden = true;
@@ -1486,9 +1506,12 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       if (d) rules.base.push(`${sel}${state.sel}{${d}}`);
     }
   };
+  const seenIds = new Set(); // les copies d'un modèle de boucle partagent leur identifiant : règles écrites une seule fois
   for (const s of sections || []) {
     add(s.id, s.styles, s.states);
     if (s.type === "layout") walk(s.children, (n) => {
+      if (seenIds.has(n.id)) return;
+      seenIds.add(n.id);
       add(n.id, n.styles, n.states);
       entranceRules(n, rules, usedAnims);
       // CSS personnalisé de l'élément (validé à l'enregistrement, revalidé ici : rien d'autre n'atteint la page)
@@ -1552,6 +1575,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
 }
 
 module.exports = {
+  dynamic,
   NODE_TYPES, CATEGORIES, WIDGET_GROUPS, WIDGETS, CUSTOM_WIDGETS, registerWidget, lockedWidgetChanges, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
   capsOf, MOTION, motionAttrs, MASK_SHAPES, SCROLL_FX, SCROLL_RANGE, MOUSE_RANGE, MOUSE_MODES, AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };

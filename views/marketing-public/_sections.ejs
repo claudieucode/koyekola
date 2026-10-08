@@ -4,7 +4,8 @@
   sections masquées restent visibles en transparence). Les styles viennent uniquement de classes (lp-pad-…, lp-bg-…,
   lp-al-…, lp-w-…, lp-hide-…) : aucune valeur libre n'est insérée dans la page.
 %>
-<% const isBuilder = typeof builder !== "undefined" && builder; let n = 0; const href = (url) => (preview || /^(#|mailto:)/.test(String(url)) ? url : `/p/${page.slug}/clic/${n++}`); /* ancre ou e-mail : non compté (même règle que linksOf) */
+<% const isBuilder = typeof builder !== "undefined" && builder; let n = 0; const clicQs = page.visitor && page.visitor.query && Object.keys(page.visitor.query).length ? "?" + new URLSearchParams(page.visitor.query).toString() : ""; /* les boucles dépendent de l'adresse (?lp-…, ?q=) : le lien compté la reprend pour retrouver le même lien */
+   const href = (url) => (preview || /^(#|mailto:)/.test(String(url)) ? url : `/p/${page.slug}/clic/${n++}${clicQs}`); /* ancre ou e-mail : non compté (même règle que linksOf) */
    const firstHero = page.sections.findIndex((x) => x.type === "hero"); %>
 <% page.sections.forEach((s, i) => {
      if (s.hidden && !isBuilder) return;

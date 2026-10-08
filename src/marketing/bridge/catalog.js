@@ -133,4 +133,49 @@ function userHasOrder(ctx, userId) {
   }
 }
 
-module.exports = { courseRating, listCourseCards, countPublished, listCourses, getCourse, getCourseBySlug, courseConversions, userHasOrder, listPosts, blogCategories };
+
+// ---------- Requêtes de boucle (Page Builder : grille « répéter pour chaque … ») ----------
+// Articles ou formations PUBLIÉS, avec recherche, catégorie, tri et pagination ; renvoie { items, total }.
+// Les valeurs de recherche et de catégorie ne sont jamais concaténées au SQL (paramètres liés).
+const likeEsc = (v) => String(v).replace(/[\\%_]/g, (c) => `\\${c}`);
+function queryPosts(ctx, { limit = 6, offset = 0, category = "", search = "", sort = "recent" } = {}) {
+  checkCtx(ctx);
+  const base = String(ctx.baseUrl || "").replace(/\/+$/, "");
+  const now = new Date(typeof ctx.now === "function" ? ctx.now() : Date.now()).toISOString().slice(0, 19).replace("T", " ");
+  const where = ["published_at IS NOT NULL", "published_at <= ?", "(published = 1 OR status = 'scheduled')"];
+  const args = [now];
+  if (category) { where.push("category = ? COLLATE NOCASE"); args.push(category); }
+  if (search) { where.push("(title LIKE ? ESCAPE '\\' OR excerpt LIKE ? ESCAPE '\\')"); args.push(`%${likeEsc(search)}%`, `%${likeEsc(search)}%`); }
+  const order = { recent: "published_at DESC, id DESC", old: "published_at ASC, id ASC", title: "title COLLATE NOCASE" }[sort] || "published_at DESC, id DESC";
+  const lim = Math.min(Math.max(Number(limit) || 6, 1), 24), off = Math.max(Number(offset) || 0, 0);
+  try {
+    const total = ctx.db.prepare(`SELECT COUNT(*) n FROM posts WHERE ${where.join(" AND ")}`).get(...args).n;
+    const rows = ctx.db.prepare(`SELECT id, slug, title, excerpt, cover_path, published_at, category, author_id, reading_minutes FROM posts WHERE ${where.join(" AND ")} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...args, lim, off);
+    const author = (id) => { try { const u = ctx.db.prepare("SELECT username FROM users WHERE id = ?").get(id); return u ? u.username : ""; } catch { return ""; } };
+    return { total, items: rows.map((p) => ({
+      title: p.title, url: `${base}/blog/${encodeURIComponent(p.slug)}`, excerpt: String(p.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 300),
+      image: p.cover_path ? (/^https?:\/\//i.test(p.cover_path) ? p.cover_path : `${base}${p.cover_path.startsWith("/") ? "" : "/"}${p.cover_path}`) : "",
+      date: SQL_DATE(p.published_at), category: p.category || "", author: p.author_id ? author(p.author_id) : "", minutes: p.reading_minutes || null,
+    })) };
+  } catch {
+    return { total: 0, items: [] };
+  }
+}
+function queryCourses(ctx, { limit = 6, offset = 0, category = "", search = "", sort = "recent" } = {}) {
+  checkCtx(ctx);
+  const where = ["published = 1"];
+  const args = [];
+  if (category) { where.push("category = ? COLLATE NOCASE"); args.push(category); }
+  if (search) { where.push("(title LIKE ? ESCAPE '\\' OR subtitle LIKE ? ESCAPE '\\')"); args.push(`%${likeEsc(search)}%`, `%${likeEsc(search)}%`); }
+  const order = { recent: "created_at DESC, id DESC", title: "title COLLATE NOCASE", price: "price_cents ASC, title COLLATE NOCASE" }[sort] || "created_at DESC, id DESC";
+  const lim = Math.min(Math.max(Number(limit) || 6, 1), 24), off = Math.max(Number(offset) || 0, 0);
+  try {
+    const total = ctx.db.prepare(`SELECT COUNT(*) n FROM courses WHERE ${where.join(" AND ")}`).get(...args).n;
+    const rows = ctx.db.prepare(`SELECT id, title, slug, subtitle, price_cents, thumbnail_path, category, description FROM courses WHERE ${where.join(" AND ")} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...args, lim, off);
+    return { total, items: rows };
+  } catch {
+    return { total: 0, items: [] };
+  }
+}
+
+module.exports = { queryPosts, queryCourses, courseRating, listCourseCards, countPublished, listCourses, getCourse, getCourseBySlug, courseConversions, userHasOrder, listPosts, blogCategories };

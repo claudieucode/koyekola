@@ -207,8 +207,34 @@ function dynamicProps(ctx, n, visitor, page) {
   if (n.type === "account") return { ...p, loggedIn: Boolean(visitor && visitor.loggedIn), cartCount: visitor ? visitor.cartCount || 0 : 0 };
   return null;
 }
-function nodeView(ctx, nodes, visitor, page) {
+// Vue d'une formation pour les étiquettes dynamiques (scope.course) et les boucles
+const courseScope = (c) => ({ title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "", category: c.category || "", description: String(c.description || "").replace(/\s+/g, " ").trim().slice(0, 300) });
+// Éléments d'une boucle (grille « répéter pour chaque ») : une page de résultats, filtrée par l'adresse si demandé
+function loopQuery(ctx, loop, id, visitor) {
+  const q = (visitor && visitor.query) || {};
+  const pageNo = loop.paginate ? Math.max(1, Math.min(parseInt(q[`lp-${id}`], 10) || 1, 500)) : 1;
+  const search = loop.urlFilter && typeof q.q === "string" ? q.q.trim().slice(0, 80) : "";
+  const category = loop.urlFilter && typeof q.categorie === "string" && q.categorie.trim() ? q.categorie.trim().slice(0, 80) : loop.category;
+  const { queryPosts, queryCourses } = require("../bridge/catalog");
+  const r = (loop.source === "courses" ? queryCourses : queryPosts)({ ...ctx, baseUrl: loop.source === "courses" ? ctx.baseUrl : "" }, { limit: loop.count, offset: (pageNo - 1) * loop.count, category, search, sort: loop.sort });
+  return { items: r.items, total: r.total, pageNo, pages: Math.max(1, Math.ceil(r.total / loop.count)) };
+}
+function nodeView(ctx, nodes, visitor, page, scope) {
+  scope = scope || baseScope(ctx, visitor, page);
   return (nodes || []).map((n) => {
+    // Étiquettes dynamiques {{post.title}}… résolues à l'affichage ; adresses et images revalidées après résolution
+    if (pageNodes.dynamic.nodeIsDynamic(n)) n = { ...n, props: pageNodes.dynamic.resolveProps(n.props, scope, require("../pages/sections")) };
+    // Boucle : la grille répète ses enfants (le modèle) pour chaque résultat ; chaque copie reçoit son propre contexte
+    if (n.type === "grid" && n.props && n.props.loop && n.children) {
+      const loop = n.props.loop, found = loopQuery(ctx, loop, n.id, visitor);
+      const children = [];
+      found.items.forEach((item, i) => {
+        const itemScope = { ...scope, ...(loop.source === "posts" ? { post: item } : { course: courseScope(item) }) };
+        nodeView(ctx, n.children, visitor, page, itemScope).forEach((c) => children.push({ ...c, loopItem: i }));
+      });
+      return { ...n, children, loopInfo: { empty: !found.items.length, message: loop.empty, paginate: Boolean(loop.paginate) && found.pages > 1, pageNo: found.pageNo, pages: found.pages,
+        base: Object.entries((visitor && visitor.query) || {}).filter(([k]) => k !== `lp-${n.id}`).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&") } };
+    }
     const dyn = dynamicProps(ctx, n, visitor, page);
     if (dyn) n = { ...n, props: dyn };
     // Widget personnalisé : son gabarit et ses champs « lien » (comptés dans cet ordre, comme dans linksOf)
@@ -225,13 +251,18 @@ function nodeView(ctx, nodes, visitor, page) {
     }
     const m = n.audience ? { ...n, audienceLabel: pageNodes.audienceLabel(n.audience) } : n;
     if (n.type === "text") return { ...m, props: { ...n.props, html: pageNodes.sanitizeRich(n.props.html) } };
-    return n.children ? { ...m, children: nodeView(ctx, n.children, visitor, page) } : m;
+    return n.children ? { ...m, children: nodeView(ctx, n.children, visitor, page, scope) } : m;
   }).filter(Boolean);
 }
+// Contexte des étiquettes dynamiques d'une page : visiteur, page, site, date, adresse (+ article ou formation d'un modèle de thème)
+function baseScope(ctx, visitor, page) {
+  return { visitor, page, site: siteInfo(ctx, page), now: new Date(), query: (visitor && visitor.query) || {}, ...((page && page.scope) || {}) };
+}
 function viewModel(ctx, page) {
+  const scope = baseScope(ctx, page.visitor, page);
   const sections = page.sections.map((s0) => {
     const s = s0.audience ? { ...s0, audienceLabel: pageNodes.audienceLabel(s0.audience) } : s0;
-    if (s.type === "layout") return { ...s, children: nodeView(ctx, s.children, page.visitor, page) };
+    if (s.type === "layout") return { ...s, children: nodeView(ctx, s.children, page.visitor, page, scope) };
     if (s.type !== "course") return s;
     const c = getCourse(ctx, s.courseId);
     if (!c) return null; // formation dépubliée depuis : la section disparaît (jamais un lien mort)
