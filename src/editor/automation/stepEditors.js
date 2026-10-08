@@ -395,6 +395,8 @@ const EDITORS = {
     box.appendChild(hint("Le score d'un contact ne descend jamais sous 0. Chaque modification est tracée dans l'historique du score, n'est appliquée qu'une fois par passage et reste après un recalcul des règles. Elle ne déclenche pas d'événement de changement de niveau."));
     return box;
   },
+  start_automation: (ctx, draft) => automationTargetEditor(ctx, draft, "Scénario à démarrer", true),
+  stop_automation: (ctx, draft) => automationTargetEditor(ctx, draft, "Scénario à arrêter", false),
   add_note(ctx, draft) {
     const box = el("div");
     const ta = el("textarea", { id: nextId(), rows: "5", maxlength: String(MAX_NOTE) });
@@ -408,6 +410,23 @@ const EDITORS = {
   add_to_list: (ctx, draft) => listEditor(ctx, draft, "Ajouter à la liste"),
   remove_from_list: (ctx, draft) => listEditor(ctx, draft, "Retirer de la liste"),
 };
+const STATUS_TEXT = { draft: "brouillon", active: "actif", paused: "en pause" };
+function automationTargetEditor(ctx, draft, label, starting) {
+  const box = el("div");
+  const list = ctx.data.automations || [];
+  if (!list.length) { box.appendChild(note("Aucun autre scénario : créez-en un dans Automatisations.")); return box; }
+  const warn = el("p", { class: "field-hint", "aria-live": "polite" });
+  const sync = () => {
+    const t = list.find((x) => x.id === draft.automationId);
+    warn.textContent = starting && t && t.status !== "active" ? `« ${t.name} » n'est pas actif : cette étape ne démarrera rien tant qu'il ne l'est pas.` : "";
+  };
+  box.appendChild(field(label, select([["", "Choisir un scénario…", true], ...list.map((x) => [x.id, `${x.name} (${STATUS_TEXT[x.status] || x.status})`])], list.some((x) => x.id === draft.automationId) ? draft.automationId : "", (v) => { draft.automationId = parseInt(v, 10); sync(); }, { disabled: ctx.locked })));
+  box.appendChild(warn); sync();
+  box.appendChild(hint(starting
+    ? "Le contact entre dans ce scénario comme s'il avait déclenché son déclencheur : une seule fois (jamais deux fois dans le même scénario, ce qui évite les boucles), avec ses règles de consentement. Il continue ensuite ICI sans attendre."
+    : "Si le contact est en cours dans ce scénario, il en sort tout de suite ; sinon rien ne se passe. Il reste dans celui-ci."));
+  return box;
+}
 function listEditor(ctx, draft, label) {
   const box = el("div");
   if (!ctx.data.lists.length) box.appendChild(note("Aucune liste : créez-en une dans Listes."));
@@ -481,6 +500,7 @@ export function validate(type, ctx, d) {
       if (!b) return ["Écrivez le texte de la note."];
       return b.length > MAX_NOTE ? [`Note trop longue (${MAX_NOTE} caractères au plus).`] : [];
     }
+    case "start_automation": case "stop_automation": return (ctx.data.automations || []).some((x) => x.id === d.automationId) ? [] : ["Choisissez un scénario."];
     case "add_tag": case "remove_tag": {
       const t = String(d.tag || "").trim();
       if (!t) return ["Choisissez une étiquette."];

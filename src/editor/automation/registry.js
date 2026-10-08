@@ -5,7 +5,7 @@
 import { STEP_LABELS } from "../../utils/stepLabels";
 import { UNITS, CHECKS, FIELD_LABELS, validate } from "./stepEditors";
 
-export const CATEGORIES = [["trigger", "Déclencheur"], ["communication", "Communication"], ["temps", "Temps"], ["logique", "Logique"], ["contact", "Contact"], ["fin", "Fin"]];
+export const CATEGORIES = [["trigger", "Déclencheur"], ["communication", "Communication"], ["temps", "Temps"], ["logique", "Logique"], ["contact", "Contact"], ["parcours", "Parcours"], ["fin", "Fin"]];
 
 const unitLabel = (u) => (UNITS.find((x) => x[0] === u) || [null, u])[1];
 const plural = (n, unit) => (n === 1 && /s$/.test(unit) ? unit.slice(0, -1) : unit); // « 1 jour », « 2 jours »
@@ -28,6 +28,8 @@ export const ACTIONS = {
   remove_from_list: { category: "contact", icon: "listMinus", description: "Désinscrit le contact d'une liste", keywords: "liste enlever desabonnement retirer", title: "Configurer : Retirer d'une liste", make: () => ({ listId: null }) },
   adjust_score: { category: "contact", icon: "trendingUp", description: "Ajouter, retirer ou définir des points", keywords: "score points lead scoring notation ajouter retirer definir niveau chaud", title: "Configurer : Modifier le score", make: () => ({ mode: "add", points: 10 }) },
   add_note: { category: "contact", icon: "stickyNote", description: "Une note sur la fiche du contact", keywords: "note commentaire memo fiche contact suivi", title: "Configurer : Ajouter une note", make: () => ({ body: "" }) },
+  start_automation: { category: "parcours", icon: "play", description: "Fait entrer le contact dans un autre scénario actif", keywords: "demarrer lancer scenario automatisation parcours enchainer inscrire autre", title: "Configurer : Démarrer un autre scénario", make: () => ({ automationId: undefined }) },
+  stop_automation: { category: "parcours", icon: "pause", description: "Fait sortir le contact d'un autre scénario en cours", keywords: "arreter stopper retirer sortir scenario automatisation parcours autre", title: "Configurer : Arrêter un autre scénario", make: () => ({ automationId: undefined }) },
   end: { category: "fin", icon: "stopCircle", tone: "end", description: "Le passage du contact s'arrête", keywords: "fin terminer stop sortie", make: () => ({}) },
 };
 Object.keys(ACTIONS).forEach((type) => { ACTIONS[type].type = type; ACTIONS[type].label = STEP_LABELS[type] || type; });
@@ -86,6 +88,7 @@ export function summary(type, ctx, d) {
       }
       return `Le contact ${(CHECKS.find((c) => c[0] === d.check) || [null, d.check])[1]}`;
     }
+    case "start_automation": case "stop_automation": { const t = (data.automations || []).find((x) => x.id === d.automationId); return t ? `${type === "start_automation" ? "Démarre" : "Arrête"} « ${t.name} »` : "Scénario introuvable"; }
     case "adjust_score": return d.mode === "set" ? `Score = ${d.points}` : `${d.mode === "add" ? "+" : "−"} ${d.points} point${d.points > 1 ? "s" : ""}`;
     case "add_note": { const t = String(d.body).replace(/\s+/g, " "); return t.length > 60 ? `${t.slice(0, 57)}…` : t; }
     case "add_tag": case "remove_tag": return `« ${d.tag} »`;

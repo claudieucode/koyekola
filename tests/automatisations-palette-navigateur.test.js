@@ -198,5 +198,27 @@ describe("palette d'actions des scénarios : disponibilité réelle, filtre, ré
     assert.deepEqual(await dialog().locator("select").nth(2).locator("option").allInnerTexts(), ["Choisir un champ…", "Rentrée"]);
   });
 
+  test("« Démarrer / Arrêter un autre scénario » : cibles proposées, avertissement si inactif, enregistrement exécutable", async () => {
+    await openEditor();
+    const cible = await boss.post("/marketing/automatisations", { name: "Cible visée", kind: "marketing", trigger_event: "lms.course_enrolled" });
+    const cibleId = Number(String(cible.location).match(/(\d+)$/)[1]);
+    await page.reload(); await page.waitForSelector("#au-palette .mk-pal-item");
+    await item("start_automation").click();
+    await page.locator(".drawflow-node").filter({ hasText: "Démarrer un autre scénario" }).first().click();
+    await dialog().waitFor({ timeout: 8000 });
+    await dialog().locator("[data-step-save]").click();
+    assert.match(await dialog().locator(".mk-step-dialog-error").innerText(), /Choisissez un scénario/);
+    const choix = dialog().locator("select").first();
+    assert.ok((await choix.locator("option").allInnerTexts()).includes("Cible visée (brouillon)"), "les autres scénarios sont proposés, avec leur état");
+    assert.ok(!(await choix.locator("option").allInnerTexts()).some((o) => o.startsWith(`Palette ${n} `)), "le scénario en cours n'est pas proposé");
+    await choix.selectOption(String(cibleId));
+    assert.match(await dialog().innerText(), /n'est pas actif : cette étape ne démarrera rien/, "avertissement réel : la cible n'est pas active");
+    await dialog().locator("[data-step-save]").click();
+    await page.locator("dialog.mk-step-dialog[open]").waitFor({ state: "detached", timeout: 8000 });
+    await connectAndSave("Démarrer un autre scénario");
+    await until(() => { const st = savedSteps(); return st.length === 1 && st[0].type === "start_automation" && st[0].automationId === cibleId; }, "étape enregistrée et exécutable");
+    assert.match(await page.locator(".drawflow-node").filter({ hasText: "Démarrer un autre scénario" }).first().innerText(), /Démarre « Cible visée »/);
+  });
+
   test("aucune erreur de script ni de console", () => { assert.deepEqual(errors, []); });
 });
