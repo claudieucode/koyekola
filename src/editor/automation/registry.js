@@ -3,7 +3,7 @@
 // d'insertion, contrôle). Les types sont ceux du moteur (src/marketing/automations/steps.js) ; libellés partagés avec
 // le serveur via utils/stepLabels.js. Ajouter une étape = l'ajouter ici + son éditeur dans stepEditors.js + le moteur.
 import { STEP_LABELS } from "../../utils/stepLabels";
-import { UNITS, CHECKS, FIELD_LABELS, validate } from "./stepEditors";
+import { UNITS, CHECKS, FIELD_LABELS, TRANSFORM_LABELS, validate } from "./stepEditors";
 
 export const CATEGORIES = [["trigger", "Déclencheur"], ["communication", "Communication"], ["temps", "Temps"], ["logique", "Logique"], ["contact", "Contact"], ["parcours", "Parcours"], ["fin", "Fin"]];
 
@@ -26,6 +26,9 @@ export const ACTIONS = {
   remove_tag: { category: "contact", icon: "tagMinus", description: "Retire une étiquette du contact", keywords: "tag etiquette enlever retirer supprimer", title: "Configurer : Retirer une étiquette", make: () => ({ tag: "" }) },
   add_to_list: { category: "contact", icon: "listPlus", description: "Inscrit le contact à une liste", keywords: "liste abonnement ajouter inscrire", title: "Configurer : Ajouter à une liste", make: () => ({ listId: null }) },
   remove_from_list: { category: "contact", icon: "listMinus", description: "Désinscrit le contact d'une liste", keywords: "liste enlever desabonnement retirer", title: "Configurer : Retirer d'une liste", make: () => ({ listId: null }) },
+  copy_field: { category: "contact", icon: "copy", description: "Copie un champ vers un autre, avec nettoyage", keywords: "copier champ propriete donnee nettoyer majuscule minuscule telephone chiffres formater texte", title: "Configurer : Copier un champ", make: () => ({ from: "", to: "", transform: "none" }) },
+  set_date: { category: "contact", icon: "calendarClock", description: "Date du jour ou d'un champ date, avec décalage", keywords: "definir date jour aujourdhui ajouter jours retirer decalage propriete calendrier relance", title: "Configurer : Définir une date", make: () => ({ property: "", base: "today", offsetDays: 0, zone: "contact" }) },
+  calculate: { category: "contact", icon: "calculator", description: "Ajoute, retire, multiplie ou définit un nombre", keywords: "calculer nombre ajouter retirer multiplier definir total compteur propriete montant", title: "Configurer : Calculer un nombre", make: () => ({ property: "", op: "add", value: 1 }) },
   adjust_score: { category: "contact", icon: "trendingUp", description: "Ajouter, retirer ou définir des points", keywords: "score points lead scoring notation ajouter retirer definir niveau chaud", title: "Configurer : Modifier le score", make: () => ({ mode: "add", points: 10 }) },
   add_note: { category: "contact", icon: "stickyNote", description: "Une note sur la fiche du contact", keywords: "note commentaire memo fiche contact suivi", title: "Configurer : Ajouter une note", make: () => ({ body: "" }) },
   start_automation: { category: "parcours", icon: "play", description: "Fait entrer le contact dans un autre scénario actif", keywords: "demarrer lancer scenario automatisation parcours enchainer inscrire autre", title: "Configurer : Démarrer un autre scénario", make: () => ({ automationId: undefined }) },
@@ -50,6 +53,13 @@ function waitUntilSummary(d) {
   if (d.mode === "date") return `Le ${d.date} à ${d.time} (${z})`;
   if (d.mode === "property") return `Date « ${d.property} »${d.offsetDays ? ` ${d.offsetDays > 0 ? "+" : "−"} ${Math.abs(d.offsetDays)} j` : ""} à ${d.time}`;
   return `Heures ouvrables ${d.days.map((n) => WEEKDAYS[n].slice(0, 3)).join(", ")} ${d.from}–${d.to}`;
+}
+
+// Libellé lisible d'une référence de champ (« first_name » → « Prénom », « property:niveau » → « Niveau »)
+function refLabel(ref, data) {
+  if (typeof ref !== "string" || !ref) return "…";
+  if (ref.indexOf("property:") === 0) { const p = (data.properties || []).find((x) => x.key === ref.slice(9)); return p ? p.label : ref.slice(9); }
+  return FIELD_LABELS[ref] || (ref === "email" ? "E-mail" : ref);
 }
 
 export function isConfigured(type, ctx, d) {
@@ -89,6 +99,9 @@ export function summary(type, ctx, d) {
       return `Le contact ${(CHECKS.find((c) => c[0] === d.check) || [null, d.check])[1]}`;
     }
     case "start_automation": case "stop_automation": { const t = (data.automations || []).find((x) => x.id === d.automationId); return t ? `${type === "start_automation" ? "Démarre" : "Arrête"} « ${t.name} »` : "Scénario introuvable"; }
+    case "copy_field": return `${refLabel(d.from, data)} → ${refLabel(d.to, data)}${d.transform && d.transform !== "none" ? ` (${(TRANSFORM_LABELS[d.transform] || d.transform).toLowerCase()})` : ""}`;
+    case "set_date": return `${refLabel(d.property, data)} = ${d.base === "property" ? refLabel(d.baseProperty, data) : "aujourd'hui"}${d.offsetDays ? ` ${d.offsetDays > 0 ? "+" : "−"} ${Math.abs(d.offsetDays)} j` : ""}`;
+    case "calculate": return `${refLabel(d.property, data)} ${({ set: "=", add: "+", subtract: "−", multiply: "×" })[d.op] || "?"} ${d.value}`;
     case "adjust_score": return d.mode === "set" ? `Score = ${d.points}` : `${d.mode === "add" ? "+" : "−"} ${d.points} point${d.points > 1 ? "s" : ""}`;
     case "add_note": { const t = String(d.body).replace(/\s+/g, " "); return t.length > 60 ? `${t.slice(0, 57)}…` : t; }
     case "add_tag": case "remove_tag": return `« ${d.tag} »`;

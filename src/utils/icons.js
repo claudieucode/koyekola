@@ -179,6 +179,7 @@ const ICONS = {
   moon: { body: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"></path>' },
   trendingUp: { body: '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline>' },
   stickyNote: { body: '<path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"></path><path d="M15 3v6h6"></path>' },
+  calculator: { body: '<rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><path d="M16 14v4M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M8 18h.01M12 18h.01"></path>' },
 };
 
 function icon(name, opts = {}) {
