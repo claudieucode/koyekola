@@ -60,6 +60,7 @@ function describeStep(j, s, emails, texts) {
     case "wait_for_event": return { icon: "clock", kind: "wait", text: `Attendre « ${(TRIGGERS[s.event] || { label: s.event }).label} » (${s.amount} ${UNIT_LABEL[s.unit]} au plus)` };
     case "condition": return { icon: "gitBranch", kind: "condition", text: whenText(s) };
     case "split": return { icon: "gitBranch", kind: "condition", text: `Tirage au sort : ${s.percentage} % vers le chemin A, ${100 - s.percentage} % vers le chemin B` };
+    case "route": return { icon: "gitBranch", kind: "condition", text: `Plusieurs chemins : ${(s.cases || []).map((c) => c.label).join(", ")}, sinon un autre chemin` };
     case "add_tag": return { icon: "tag", kind: "action", text: `Ajouter l'étiquette « ${s.tag} »` };
     case "remove_tag": return { icon: "tag", kind: "action", text: `Retirer l'étiquette « ${s.tag} »` };
     case "add_to_list": return { icon: "list", kind: "action", text: "Ajouter à la liste choisie" };

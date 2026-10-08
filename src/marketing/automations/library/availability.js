@@ -44,6 +44,7 @@ function successors(steps, i) {
   if (s.type === "end") return [];
   if (s.type === "condition") return [...next(s.onTrue), ...next(s.onFalse)];
   if (s.type === "split") return [...next(s.onA), ...next(s.onB)];
+  if (s.type === "route") return [...(s.cases || []).flatMap((c) => next(c.to)), ...next(s.otherwise)];
   return next(s.next);
 }
 
