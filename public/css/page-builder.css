@@ -1242,3 +1242,8 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 
 /* Changement de thème : aucune transition pendant l'application des jetons (classe posée puis retirée dans la même tâche par applyPalette) */
 .pb-body.pb-theme-switching, .pb-body.pb-theme-switching *, .pb-body.pb-theme-switching *::before, .pb-body.pb-theme-switching *::after { transition: none !important; }
+
+/* Stabilité : la rangée contextuelle de la barre du haut garde TOUJOURS la même hauteur (celle de son état le plus haut : champs d'un texte,
+   d'un bouton…). Avant, sa hauteur suivait l'élément sélectionné (38 / 43 / 47 px) et tout l'éditeur — panneaux et canevas — se décalait
+   de 5 à 9 px à chaque sélection. */
+.pb-top .pb-context { min-height: 47px; box-sizing: border-box; }

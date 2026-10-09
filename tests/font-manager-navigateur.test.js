@@ -81,13 +81,14 @@ describe("Font Manager (navigateur)", { skip: SKIP }, () => {
     await ctx.click();
     const panel = page.locator(".kf-panel");
     await panel.waitFor();
-    await until(async () => (await panel.locator(".kf-row").count()) >= 40, { what: "liste affichée" });
+    // liste virtualisée : une fenêtre de lignes seulement, jamais la bibliothèque entière
+    await until(async () => { const n = await panel.locator(".kf-row").count(); return n >= 8 && n <= 40; }, { what: "liste affichée (fenêtre de lignes)" });
     assert.match(await panel.locator(".kf-foot").textContent(), /sur \d+ dans la bibliothèque/);
     // recherche instantanée : nom, puis mot de catégorie
     await panel.locator(".kf-search").fill("mont");
     await until(async () => (await panel.locator(".kf-name").allTextContents()).some((t) => t === "Montserrat"), { what: "Montserrat trouvé" });
     await panel.locator(".kf-search").fill("script");
-    await until(async () => { const n = await panel.locator(".kf-row").count(); return n > 5 && n < 120; }, { what: "cursives trouvées" });
+    await until(async () => { const n = Number(((await panel.locator(".kf-foot").textContent()).match(/^(\d+) police/) || [])[1]); return n > 5 && n < 800; }, { what: "cursives trouvées" });
     await panel.locator(".kf-search").fill("monospace");
     await until(async () => (await panel.locator(".kf-name").allTextContents()).includes("Roboto Mono"), { what: "monospace" });
     // l'aperçu d'une ligne utilise sa propre famille (chargée à la demande)
