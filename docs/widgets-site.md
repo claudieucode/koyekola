@@ -50,4 +50,5 @@ courant », « suivre l'archive » — pagination : aucune, page x/y, précéden
 - **Widgets SEO (titre/description SEO en widget)** : le moteur SEO existe mais n'est pas exposé en widget ; le fil d'Ariane existant est conservé.
 - **Boîte de connexion / déconnexion en widget séparé** : couverte par « Compte du visiteur ».
 - **Commentaires imbriqués (réponses), modération depuis la page** : non (le blog n'en a pas).
+- **Menu de navigation du Page Builder ↔ moteur de navigation du CMS (palier 7)** : le widget « Menu de navigation » garde ses liens saisis à la main ; il n'est pas encore alimenté par les menus du CMS (chantier d'une autre session).
 - **Carrousel de boucle** : la grille existante et les cartes ; pas de diaporama de résultats.
