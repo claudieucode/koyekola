@@ -3872,7 +3872,7 @@
     doc.body.classList.toggle("pb-outlines", aids.outlines);
     doc.body.classList.toggle("pb-hand", tool === "hand");
     frame.contentWindow.scrollTo(0, y);
-    doc.addEventListener("mousedown", function () { canvasPointerAt = Date.now(); }, true);
+    doc.addEventListener("mousedown", function () { canvasPointerAt = Date.now(); closeMenu(); }, true); // le canevas est un iframe : ses clics n'atteignent pas l'écouteur du document parent
     doc.addEventListener("keydown", function (e) { if (e.key === "Tab") tabAt = Date.now(); }, true);
     frame.contentWindow.addEventListener("focus", function () {
       if (editing || Date.now() - canvasPointerAt < 1500 || Date.now() - tabAt < 500) return;
@@ -5588,7 +5588,7 @@
     menu.style.top = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + "px";
     var first = menu.querySelector(".pb-menu-item:not([disabled])"); if (first) first.focus();
   }
-  function closeMenu() { menu.hidden = true; }
+  function closeMenu() { menu.hidden = true; var mb = $("[data-pb-mainmenu]"); if (mb) mb.setAttribute("aria-expanded", "false"); }
   menu.addEventListener("keydown", function (e) {
     var list = $$(".pb-menu-item:not([disabled])", menu);
     var i = list.indexOf(document.activeElement);
@@ -5596,7 +5596,10 @@
     else if (e.key === "ArrowUp") { e.preventDefault(); (list[i - 1] || list[list.length - 1]).focus(); }
     else if (e.key === "Escape" || e.key === "Tab") { e.preventDefault(); closeMenu(); }
   });
-  document.addEventListener("mousedown", function (e) { if (!menu.hidden && !menu.contains(e.target)) closeMenu(); });
+  var menuWasOpenAtPress = false;
+  document.addEventListener("mousedown", function (e) { menuWasOpenAtPress = !menu.hidden && Boolean(e.target.closest && e.target.closest("[data-pb-mainmenu]")); if (!menu.hidden && !menu.contains(e.target)) closeMenu(); }, true);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !menu.hidden) closeMenu(); }); // Échap ferme aussi quand le focus n'est plus dans le menu
+  window.addEventListener("blur", closeMenu); // clic dans l'iframe ou hors de la fenêtre
 
   // ---------- Palette de commandes (Ctrl/⌘ + K) ----------
   var cmdDialog = $("[data-pb-command-dialog]");
@@ -5781,6 +5784,8 @@
   window.KWNumeric = { create: numericControl };
   window.KWEditor = { siteId: PAGE.siteId || null, canWrite: canWrite, customColors: PAGE.customColors || [], toast: toast, pickImage: function (cb) { openMedia({ title: "Choisir une image", onPick: function (m) { cb(m.path, m.alt || ""); } }); }, rerender: function () { renderCanvas(); } };
   $("[data-pb-mainmenu]").addEventListener("click", function () {
+    if (menuWasOpenAtPress) { menuWasOpenAtPress = false; return; } // bascule : le menu était ouvert, le mousedown vient de le fermer
+    this.setAttribute("aria-expanded", "true");
     var r = this.getBoundingClientRect();
     if (IS_COMPONENT) {
       showMenuEntries([
