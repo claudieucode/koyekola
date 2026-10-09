@@ -24,8 +24,9 @@
       </div>
       <div class="mk-ap-actions">
         <a class="btn btn-outline btn-sm" href="<%= BASE %>?url=<%= encodeURIComponent("/") %>#apercu">Aperçu</a>
+        <% if (mk.can("revisions.view")) { %><a class="btn btn-outline btn-sm" href="/marketing/site-web/historique/appearance/0">Historique</a><% } %>
         <% if (canStyles && st.hasDraft) { %><form method="post" action="<%= BASE %>/brouillon/annuler" class="mk-cm-form"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Les modifications non publiées seront perdues. La version en ligne ne change pas." data-mk-confirm-title="Annuler le brouillon ?" data-mk-confirm-ok="Annuler le brouillon">Annuler le brouillon</button></form><% } %>
-        <% if (canPublish) { %><form method="post" action="<%= BASE %>/publier" class="mk-cm-form"><button type="submit" class="btn btn-primary btn-sm"<%= st.hasDraft ? "" : " disabled" %>>Publier sur le site</button></form><% } else { %><span class="mk-sub">Seuls les administrateurs publient l'apparence.</span><% } %>
+        <% if (canPublish) { %><form method="post" action="<%= BASE %>/publier" class="mk-cm-form"><input type="hidden" name="base" value="<%= st.draftRev %>"><button type="submit" class="btn btn-primary btn-sm"<%= st.hasDraft ? "" : " disabled" %>>Publier sur le site</button></form><% } else { %><span class="mk-sub">Seuls les administrateurs publient l'apparence.</span><% } %>
       </div>
     </section>
 
@@ -80,7 +81,7 @@
 <% } else if (section === "styles") { %>
     <p class="mk-lead">Les styles globaux du site public. Une valeur laissée à l'origine ne change rien ; chaque réglage modifié s'applique à tout le site après publication.</p>
     <% if (warnings.length) { %><div class="mk-ap-warn" role="status"><strong>Lisibilité à vérifier</strong><ul><% warnings.forEach((w) => { %><li><%= w %></li><% }) %></ul></div><% } %>
-    <form method="post" action="<%= BASE %>/styles" class="mk-form mk-ap-form">
+    <form method="post" action="<%= BASE %>/styles" class="mk-form mk-ap-form"><input type="hidden" name="base" value="<%= st.draftRev %>">
       <fieldset<%= canStyles ? "" : " disabled" %>>
         <legend>Couleurs</legend>
         <div class="mk-ap-colors"><%- ["primary", "secondary", "accent", "background", "surface", "text", "muted", "success", "warning", "error"].map((k) => col(k, colorLabels[k])).join("") %></div>
@@ -121,7 +122,7 @@
     <div class="mk-ap-card"><strong>Menu de l'en-tête :</strong>
       <%= menus.header ? "un menu est affecté à l'emplacement « En-tête »" : "aucun menu affecté : les liens d'origine (Catégories, Catalogue, Blog) s'affichent" %> · <a href="/marketing/site-web/navigation">Gérer les menus et emplacements</a>
       <% if (menus.mobile) { %> · un menu mobile distinct est affecté au tiroir<% } %></div>
-    <form method="post" action="<%= BASE %>/en-tete" class="mk-form mk-ap-form" data-ap-form>
+    <form method="post" action="<%= BASE %>/en-tete" class="mk-form mk-ap-form" data-ap-form><input type="hidden" name="base" value="<%= st.draftRev %>">
       <fieldset<%= canParts ? "" : " disabled" %>>
         <legend>Logo</legend>
         <div class="field-group"><label for="h-lmode">Type de logo</label><select id="h-lmode" name="logo_mode" data-ap-logo-mode><option value="text"<%= H.logo.mode === "text" ? " selected" : "" %>>Texte</option><option value="image"<%= H.logo.mode === "image" ? " selected" : "" %>>Image de la médiathèque</option></select></div>
@@ -153,7 +154,7 @@
 <% } else if (section === "pied-de-page") { %>
     <p class="mk-lead">Le pied de page du site public. Ses colonnes de liens viennent de <a href="/marketing/site-web/navigation">Navigation</a> (emplacement « Pied de page »).</p>
     <div class="mk-ap-card"><strong>Menu du pied de page :</strong> <%= menus.footer ? "un menu est affecté : il remplace les colonnes d'origine" : "aucun menu affecté : les colonnes d'origine s'affichent" %> · <a href="/marketing/site-web/navigation">Gérer les menus et emplacements</a></div>
-    <form method="post" action="<%= BASE %>/pied-de-page" class="mk-form mk-ap-form" data-ap-form>
+    <form method="post" action="<%= BASE %>/pied-de-page" class="mk-form mk-ap-form" data-ap-form><input type="hidden" name="base" value="<%= st.draftRev %>">
       <fieldset<%= canParts ? "" : " disabled" %>>
         <legend>Marque</legend>
         <div class="field-group"><label for="f-bmode">Logo du pied de page</label><select id="f-bmode" name="brand_mode" data-ap-logo-mode><option value="text"<%= F.brand.mode === "text" ? " selected" : "" %>>Texte</option><option value="header"<%= F.brand.mode === "header" ? " selected" : "" %>>Le même que l'en-tête</option><option value="image"<%= F.brand.mode === "image" ? " selected" : "" %>>Image de la médiathèque</option></select></div>
@@ -181,7 +182,7 @@
         <thead><tr><th scope="col">Famille de pages</th><th scope="col">Page modèle</th><th scope="col">Conditions</th><th scope="col">État</th><% if (canTemplates) { %><th scope="col"><span class="sr-only">Actions</span></th><% } %></tr></thead>
         <tbody><% templates.forEach((t) => { %><tr>
           <th scope="row" data-label="Famille"><%= t.typeLabel %></th>
-          <td data-label="Page"><% if (t.pageStatus === "missing") { %><%= t.pageName %><% } else { %><a href="/marketing/pages/<%= t.pageId %>/editeur"><%= t.pageName %></a><% } %></td>
+          <td data-label="Page"><% if (t.pageStatus === "missing") { %><%= t.pageName %><% } else { %><a href="/marketing/pages/<%= t.pageId %>/editeur"><%= t.pageName %></a><% if (mk.can("revisions.view")) { %> · <a href="/marketing/site-web/historique/page/<%= t.pageId %>">Historique</a><% } %><% } %></td>
           <td data-label="Conditions"><%= [t.postId ? "Article n° " + t.postId : "", t.category ? "Catégorie « " + t.category + " »" : "", t.tag ? "Étiquette « " + t.tag + " »" : "", t.audienceLabel || ""].filter(Boolean).join(" · ") || "Toutes" %></td>
           <td data-label="État"><%= t.pageStatus === "published" ? "Actif (page en ligne)" : t.pageStatus === "missing" ? "Page supprimée" : "Inactif : publiez la page" %></td>
           <% if (canTemplates) { %><td class="mk-row-actions"><form action="<%= BASE %>/templates/<%= t.id %>/supprimer" method="post" class="mk-cm-form"><button type="submit" class="btn btn-ghost btn-sm" aria-label="Retirer ce template">Retirer</button></form></td><% } %>
@@ -213,7 +214,7 @@
       <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table"><caption class="sr-only">Mes patterns</caption>
         <thead><tr><th scope="col">Pattern</th><th scope="col">Mode</th><th scope="col" class="mk-num">Sections</th><th scope="col">Créé le</th><% if (canPatterns) { %><th scope="col"><span class="sr-only">Actions</span></th><% } %></tr></thead>
         <tbody><% userPatterns.forEach((p) => { %><tr><th scope="row" data-label="Pattern"><%= p.name %><% if (p.description) { %><span class="mk-sub"><%= p.description %></span><% } %></th><td data-label="Mode">Statique (copie)</td><td class="mk-num" data-label="Sections"><%= p.count %></td><td data-label="Créé le"><%= fdt(p.created_at) %></td>
-          <% if (canPatterns) { %><td class="mk-row-actions"><form action="<%= BASE %>/patterns/<%= p.id %>/supprimer" method="post" class="mk-cm-form"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Le pattern « <%= p.name %> » sera supprimé. Les pages qui l'ont déjà inséré ne changent pas." data-mk-confirm-title="Supprimer ce pattern ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form></td><% } %></tr><% }) %></tbody></table></div>
+          <% if (canPatterns) { %><td class="mk-row-actions"><% if (mk.can("revisions.view")) { %><a class="btn btn-ghost btn-sm" href="/marketing/site-web/historique/pattern/<%= p.id %>">Historique</a><% } %><form action="<%= BASE %>/patterns/<%= p.id %>/supprimer" method="post" class="mk-cm-form"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Le pattern « <%= p.name %> » ira à la corbeille (restaurable). Les pages qui l'ont déjà inséré ne changent pas." data-mk-confirm-title="Mettre ce pattern à la corbeille ?" data-mk-confirm-ok="Mettre à la corbeille">Corbeille</button></form></td><% } %></tr><% }) %></tbody></table></div>
     <% } %>
     <% if (canPatterns) { %>
     <section class="mk-ap-card" aria-labelledby="pt-new"><h2 id="pt-new">Créer un pattern à partir d'une section</h2>

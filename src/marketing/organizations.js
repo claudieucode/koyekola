@@ -27,6 +27,8 @@ const PERMISSIONS = Object.freeze({
   "users.view": "editor", "users.create": "admin", "users.edit": "admin", "users.delete": "admin", "users.manage_roles": "admin", "roles.manage": "admin",
   // Gérer ses propres articles (rôles Auteur / Contributeur) ; « articles.write » reste le droit sur TOUS les articles
   "articles.edit_own": "editor",
+  // Historique, restauration et corbeille (palier 10) : voir l'historique et restaurer une ancienne version = éditeur ; supprimer des versions de l'historique = administrateur
+  "revisions.view": "editor", "revisions.restore": "editor", "revisions.delete": "admin",
   "articles.read": "viewer", "articles.write": "editor", "articles.publish": "editor", "articles.delete": "admin",
   "media.read": "viewer", "media.upload": "editor", "media.write": "editor", "media.delete": "admin",
   "analytics.read": "viewer",

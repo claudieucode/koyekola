@@ -182,6 +182,15 @@ module.exports = () => {
     if (!page) return;
     renderPreview(req, res, page, page.working, page.hasDraft ? "Aperçu du brouillon — pas encore en ligne." : null);
   });
+  // Aperçu d'un état d'historique du brouillon (palier 10) : consultation seulement, la page n'est pas modifiée
+  router.get("/pages/:id(\\d+)/revisions/:rid(\\d+)/apercu", need("forms.read"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    if (!req.mk.can("revisions.view")) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
+    let content;
+    try { content = require("../../services/revisions").adapter("page").content(req.mk.ctx, page.id, `r:${req.params.rid}`); } catch (error) { return res.status(404).render("error", { message: error.message }); }
+    renderPreview(req, res, page, content, "État d'historique du brouillon — consultation seulement.");
+  });
   router.get("/pages/:id(\\d+)/versions/:n(\\d+)/apercu", need("forms.read"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;

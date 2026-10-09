@@ -1,0 +1,81 @@
+<%#
+  KOLAKISA CMS → Historique (palier 10). Modes : list (points d'historique réels, groupés par jour, paginés), version (contenu d'un point), compare (différences réelles).
+  Restaurer ne détruit rien : l'état actuel est conservé et la restauration est un nouveau point d'historique.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const hhmm = (v) => (v ? String(v).slice(11, 16) + " UTC" : "—");
+  const full = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") + " à " + String(v).slice(11, 16) + " UTC" : "—");
+  const noun = c.type === "page" ? "la page" : c.type === "post" ? "l'article" : c.type === "appearance" ? "l'apparence du site" : "le pattern";
+%>
+<% if (mode === "list") { %>
+    <div class="mk-head"><h1>Historique</h1><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= editUrl %>">← <%= c.info.title %></a></div></div>
+    <p class="mk-lead">Les modifications de <%= noun %> « <%= c.info.title %> » : chaque point est une vraie sauvegarde, que l'on peut consulter, comparer et restaurer. Restaurer ne supprime rien : l'état actuel est d'abord conservé dans l'historique.</p>
+    <% if (c.info.trashed) { %><div class="mk-ap-warn" role="status">Ce contenu est dans la corbeille : restaurez-le d'abord pour restaurer une ancienne version.</div><% } %>
+    <% if (c.type === "page" && c.info.hasDraft) { %><div class="mk-ap-card"><strong>Brouillon non publié.</strong> Dernière sauvegarde le <%= full(c.info.updatedAt) %>. La version en ligne ne change que si vous publiez.
+      <a href="/marketing/pages/<%= c.id %>/apercu" target="_blank" rel="noopener">Prévisualiser le brouillon</a> · <a href="<%= BASE %>/page/<%= c.id %>/comparer?a=live&b=draft">Comparer avec la version en ligne</a></div><% } %>
+    <% if (c.type === "appearance") { %><div class="mk-ap-card"><a href="<%= BASE %>/appearance/0/comparer?a=live&b=draft">Comparer le brouillon avec la version en ligne</a></div><% } %>
+    <% if (c.type !== "post" && !restorable) { %><% } %>
+    <form method="get" action="<%= BASE %>/<%= c.type %>/<%= c.id %>" class="mk-cms-toolbar" aria-label="Filtrer l'historique">
+      <label for="hi-type">Type</label>
+      <select id="hi-type" name="type"><option value="">Tous les points</option><% h.kinds.forEach((k) => { %><option value="<%= k %>"<%= kind === k ? " selected" : "" %>><%= KINDS[k] || k %></option><% }) %></select>
+      <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (kind) { %><a class="btn btn-ghost btn-sm" href="<%= BASE %>/<%= c.type %>/<%= c.id %>">Tout voir</a><% } %>
+    </form>
+    <% if (!h.rows.length) { %>
+      <div class="mk-empty"><%- icon("clock", { size: 32 }) %><h2>Aucun point d'historique.</h2><p>Les modifications apparaîtront ici dès qu'elles seront enregistrées.</p></div>
+    <% } else { %>
+    <form method="get" action="<%= BASE %>/<%= c.type %>/<%= c.id %>/comparer" data-hi-compare>
+      <% groups.forEach((g) => { %>
+      <h2 class="mk-hi-day"><%= g.day %></h2>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table mk-hi-table"><caption class="sr-only">Modifications du <%= g.day %></caption>
+        <thead><tr><th scope="col">Heure</th><th scope="col">Qui</th><th scope="col">Modification</th><th scope="col"><span class="sr-only">Comparer</span></th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody><% g.rows.forEach((r) => { %>
+          <tr><th scope="row" data-label="Heure"><%= hhmm(r.at) %></th><td data-label="Qui"><%= r.by || "—" %></td>
+            <td data-label="Modification"><span class="mk-status <%= badge[r.kind] || "mk-status-off" %>"><%= KINDS[r.kind] || r.kind %></span> <%= r.label %></td>
+            <td data-label="Comparer"><label class="mk-cms-check"><input type="checkbox" name="pick" value="<%= r.ref %>" data-hi-pick aria-label="Comparer cette version"> Comparer</label></td>
+            <td class="mk-row-actions"><div class="mk-cms-rowbtns">
+              <a class="btn btn-outline btn-sm" href="<%= BASE %>/<%= c.type %>/<%= c.id %>/version?ref=<%= encodeURIComponent(r.ref) %>">Voir</a>
+              <% if (canRestore && restorable && r.kind !== "autosave") { %><button type="submit" form="hi-restore-<%= r.ref.replace(/[^a-z0-9]/gi, "-") %>" class="btn btn-outline btn-sm" data-mk-confirm="Le contenu de cette version devient le <%= c.type === "post" ? "contenu" : "brouillon" %> de <%= noun %>. L'état actuel est conservé dans l'historique : vous pourrez y revenir." data-mk-confirm-title="Restaurer cette version ?" data-mk-confirm-ok="Restaurer">Restaurer</button><% } %>
+              <% if (c.type === "post" && isCreator && r.ref.startsWith("r:")) { %><button type="submit" form="hi-restore-<%= r.ref.replace(/[^a-z0-9]/gi, "-") %>" class="btn btn-outline btn-sm" data-mk-confirm="Le contenu de cette version devient celui de l'article. L'état actuel est conservé dans l'historique." data-mk-confirm-title="Restaurer cette version ?" data-mk-confirm-ok="Restaurer">Restaurer</button><% } %>
+              <% if (canDelete && r.deletable) { %><button type="submit" form="hi-del-<%= r.ref.replace(/[^a-z0-9]/gi, "-") %>" class="btn btn-ghost btn-sm" data-mk-confirm="Ce point de brouillon sera supprimé de l'historique. Les publications et restaurations ne se suppriment jamais." data-mk-confirm-title="Supprimer ce point ?" data-mk-confirm-ok="Supprimer">Supprimer</button><% } %>
+            </div></td></tr>
+        <% }) %></tbody></table></div>
+      <% }) %>
+      <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm" data-hi-go disabled>Comparer les deux versions cochées</button><span class="mk-sub" data-hi-hint aria-live="polite">Cochez deux versions (ou une seule : elle est comparée à l'état actuel).</span></div>
+    </form>
+    <% h.rows.forEach((r) => { const id = r.ref.replace(/[^a-z0-9]/gi, "-"); %>
+      <% if (c.type === "post") { %><form id="hi-restore-<%= id %>" method="post" action="/formateur/blog/<%= c.id %>/versions/<%= r.ref.replace("r:", "") %>/restaurer"></form>
+      <% } else { %><form id="hi-restore-<%= id %>" method="post" action="<%= BASE %>/<%= c.type %>/<%= c.id %>/restaurer"><input type="hidden" name="ref" value="<%= r.ref %>"></form><% } %>
+      <form id="hi-del-<%= id %>" method="post" action="<%= BASE %>/<%= c.type %>/<%= c.id %>/supprimer-version"><input type="hidden" name="ref" value="<%= r.ref %>"></form>
+    <% }) %>
+    <nav class="mk-cms-pager" aria-label="Pagination"><span><%= h.total %> point<%= h.total > 1 ? "s" : "" %></span>
+      <% if (h.pages > 1) { %><span class="mk-cms-pager-nav">
+        <% if (h.page > 1) { %><a class="btn btn-ghost btn-sm" href="?page=<%= h.page - 1 %><%= kind ? "&type=" + kind : "" %>">Plus récent</a><% } %>
+        <span>Page <%= h.page %> sur <%= h.pages %></span>
+        <% if (h.page < h.pages) { %><a class="btn btn-ghost btn-sm" href="?page=<%= h.page + 1 %><%= kind ? "&type=" + kind : "" %>">Plus ancien</a><% } %></span><% } %></nav>
+    <% } %>
+
+<% } else if (mode === "version") { %>
+    <div class="mk-head"><h1>Version du <%= full(v.at) %></h1><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>/<%= c.type %>/<%= c.id %>">← Historique</a></div></div>
+    <p class="mk-lead"><span class="mk-status mk-status-info"><%= KINDS[v.kind] || v.kind %></span> <%= v.label %><%= v.by ? " · par " + v.by : "" %>. Consultation seulement : rien n'est modifié.</p>
+    <section class="mk-ap-card" aria-labelledby="hv-sum"><h2 id="hv-sum">Contenu de cette version</h2>
+      <dl class="mk-us-dl"><% v.summary.forEach(([k, val]) => { %><dt><%= k %></dt><dd><%= val === undefined || val === null || val === "" ? "—" : val %></dd><% }) %></dl></section>
+    <div class="mk-actions">
+      <% if (previewUrl) { %><a class="btn btn-outline btn-sm" href="<%= previewUrl %>" target="_blank" rel="noopener">Prévisualiser le rendu</a><% } %>
+      <a class="btn btn-outline btn-sm" href="<%= BASE %>/<%= c.type %>/<%= c.id %>/comparer?a=<%= encodeURIComponent(v.ref) %>">Comparer avec l'état actuel</a>
+      <% if (c.type === "post" && isCreator && restoreUrl) { %><form method="post" action="<%= restoreUrl %>" class="mk-cm-form"><button type="submit" class="btn btn-primary btn-sm" data-mk-confirm="L'état actuel est conservé dans l'historique." data-mk-confirm-title="Restaurer cette version ?" data-mk-confirm-ok="Restaurer">Restaurer cette version</button></form>
+      <% } else if (c.type !== "post" && canRestore) { %><form method="post" action="<%= BASE %>/<%= c.type %>/<%= c.id %>/restaurer" class="mk-cm-form"><input type="hidden" name="ref" value="<%= v.ref %>"><button type="submit" class="btn btn-primary btn-sm" data-mk-confirm="L'état actuel est conservé dans l'historique : vous pourrez y revenir." data-mk-confirm-title="Restaurer cette version ?" data-mk-confirm-ok="Restaurer">Restaurer cette version</button></form><% } %>
+    </div>
+
+<% } else if (mode === "compare") { %>
+    <div class="mk-head"><h1>Comparer</h1><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>/<%= c.type %>/<%= c.id %>">← Historique</a></div></div>
+    <p class="mk-lead">Différences réelles entre <strong><%= labels[a] || a %></strong> et <strong><%= labels[b] || b %></strong> (la seconde est la plus récente).</p>
+    <% if (!diff.total) { %><section class="mk-ap-card"><p>Aucune différence : ces deux versions sont identiques.</p></section>
+    <% } else { %>
+      <p class="mk-sub"><%= diff.total %> différence<%= diff.total > 1 ? "s" : "" %></p>
+      <% diff.groups.forEach((g) => { %><section class="mk-ap-card" aria-labelledby="df-<%= g.title.replace(/[^a-z]/gi, "") %>"><h2 id="df-<%= g.title.replace(/[^a-z]/gi, "") %>"><%= g.title %></h2>
+        <% if (g.lines) { %><div class="mk-hi-diff" role="group" aria-label="Texte"><% g.lines.forEach((l) => { %><div class="mk-hi-line<%= l.op === "+" ? " is-add" : l.op === "-" ? " is-del" : "" %>"><span class="mk-hi-mark" aria-hidden="true"><%= l.op === "=" ? " " : l.op %></span><span class="sr-only"><%= l.op === "+" ? "Ajouté : " : l.op === "-" ? "Supprimé : " : "" %></span><%= l.text %></div><% }) %></div>
+        <% } else { %><ul class="mk-cms-list"><% g.items.forEach((it) => { %><li><span><strong><%= it.label %></strong><%= it.what ? " : " + it.what : "" %><%= it.before !== undefined ? " — avant : " + it.before + " → après : " + it.after : "" %></span></li><% }) %></ul><% } %>
+      </section><% }) %>
+    <% } %>
+<% } %>
+<%- include("partials/bottom") %>

@@ -348,10 +348,11 @@ describe("patterns", () => {
     await boss.post(`${AP}/patterns`, { page_id: "999999", section_index: "0", name: "Autre" });
     assert.equal(q("SELECT * FROM appearance_patterns").length, 1);
   });
-  test("supprimer un pattern : disparaît des blocs de l'éditeur", async () => {
+  test("supprimer un pattern (corbeille) : disparaît des blocs de l'éditeur, restaurable depuis la corbeille", async () => {
     const p = one("SELECT id FROM appearance_patterns");
     await boss.post(`${AP}/patterns/${p.id}/supprimer`, {});
-    assert.equal(q("SELECT * FROM appearance_patterns").length, 0);
+    assert.equal(q("SELECT * FROM appearance_patterns WHERE deleted_at IS NULL").length, 0);
+    assert.equal(q("SELECT * FROM appearance_patterns").length, 1, "mis de côté, pas effacé");
     assert.doesNotMatch((await boss.get(`/marketing/pages/${sourceId}/editeur`)).text, /CTA principal v2/);
     assert.match((await boss.get(`${AP}/patterns`)).text, /Aucun pattern\./);
   });

@@ -28,6 +28,7 @@ const GROUPS = [
   { key: "articles", label: "Articles", perms: [
     ["articles.read", "Voir les articles", "view"], ["articles.edit_own", "Gérer ses propres articles", "edit"], ["articles.write", "Gérer tous les articles", "edit"],
     ["articles.publish", "Publier", "publish"], ["articles.delete", "Supprimer définitivement", "delete"]] },
+  { key: "revisions", label: "Historique et corbeille", perms: [["revisions.view", "Voir l'historique des modifications", "view"], ["revisions.restore", "Restaurer une ancienne version", "edit"], ["revisions.delete", "Supprimer des versions de l'historique", "delete"]] },
   { key: "taxonomies", label: "Catégories et étiquettes", perms: [["taxonomies.read", "Voir", "view"], ["taxonomies.write", "Créer et modifier", "edit"], ["taxonomies.delete", "Supprimer et fusionner", "delete"]] },
   { key: "media", label: "Médias", perms: [["media.read", "Voir", "view"], ["media.upload", "Ajouter", "create"], ["media.write", "Modifier", "edit"], ["media.delete", "Supprimer définitivement", "delete"]] },
   { key: "comments", label: "Commentaires", perms: [["comments.read", "Voir", "view"], ["comments.moderate", "Modérer", "publish"], ["comments.delete", "Supprimer définitivement", "delete"], ["comments.email", "Voir les e-mails des invités", "view"]] },
@@ -57,7 +58,7 @@ const SYSTEM_ROLES = [
   { key: "owner", name: "Super administrateur", description: "Tous les droits, y compris la gestion de l'équipe et de l'organisation. Protégé : le dernier ne peut pas être retiré.", rank: 4, permissions: byMin("owner") },
   { key: "admin", name: "Administrateur", description: "Gère le site, le contenu, l'apparence et l'équipe (sans toucher aux Super administrateurs).", rank: 3, permissions: byMin("admin") },
   { key: "editor", name: "Éditeur", description: "Crée, modifie et publie tous les contenus ; modère les commentaires ; ne gère ni l'équipe ni les réglages.", rank: 2, permissions: byMin("editor") },
-  { key: "author", name: "Auteur", description: "Voit le site, gère ses propres articles et ajoute des médias ; ne publie pas.", rank: 1.6, permissions: [...VIEWER_KEYS.filter((k) => !NOT_FOR_AUTHORS.includes(k)), "articles.edit_own", "media.upload"] },
+  { key: "author", name: "Auteur", description: "Voit le site, gère ses propres articles et ajoute des médias ; ne publie pas.", rank: 1.6, permissions: [...VIEWER_KEYS.filter((k) => !NOT_FOR_AUTHORS.includes(k)), "articles.edit_own", "media.upload", "revisions.view", "revisions.restore"] },
   { key: "contributor", name: "Contributeur", description: "Voit les contenus et gère ses propres articles ; n'ajoute pas de médias et ne publie pas.", rank: 1.4, permissions: ["articles.read", "articles.edit_own", "taxonomies.read", "comments.read", "media.read", "navigation.read", "forms.read"] },
   { key: "viewer", name: "Lecteur", description: "Consulte tout en lecture seule.", rank: 1, permissions: VIEWER_KEYS.filter((k) => k !== "users.view") },
 ];

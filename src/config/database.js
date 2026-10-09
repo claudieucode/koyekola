@@ -707,6 +707,37 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_appearance_patterns_by ON appearance_patterns(created_by);
 `);
 
+// ---------- Révisions communes (palier 10) ----------
+// Couche commune d'historique, SANS remplacer les historiques qui fonctionnent : les articles gardent post_revisions, les versions publiées des
+// pages gardent mk_page_versions, les versions publiées de l'apparence gardent appearance_revisions. cms_revisions ajoute ce qui manquait :
+// les états de BROUILLON des pages et de l'apparence, les états « avant restauration », l'historique des patterns. La corbeille des patterns
+// (deleted_at) complète celle des pages, articles, médias et commentaires.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS cms_revisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    content_type TEXT NOT NULL,
+    content_id INTEGER NOT NULL,
+    site_id INTEGER,
+    kind TEXT NOT NULL,
+    label TEXT NOT NULL DEFAULT '',
+    data TEXT NOT NULL,
+    fingerprint TEXT NOT NULL DEFAULT '',
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_cms_revisions_item ON cms_revisions(content_type, content_id, id);
+  CREATE INDEX IF NOT EXISTS idx_cms_revisions_by ON cms_revisions(created_by);
+  CREATE INDEX IF NOT EXISTS idx_cms_revisions_site ON cms_revisions(site_id);
+`);
+const appearanceColumns = db.prepare("PRAGMA table_info(appearance_configs)").all().map((c) => c.name);
+if (!appearanceColumns.includes("draft_rev")) db.exec("ALTER TABLE appearance_configs ADD COLUMN draft_rev INTEGER NOT NULL DEFAULT 0");
+const patternColumns = db.prepare("PRAGMA table_info(appearance_patterns)").all().map((c) => c.name);
+if (!patternColumns.includes("deleted_at")) db.exec("ALTER TABLE appearance_patterns ADD COLUMN deleted_at TEXT");
+// Un pattern à la corbeille ne bloque pas le nom d'un nouveau : l'unicité ne concerne que les patterns vivants
+db.exec("DROP INDEX IF EXISTS idx_appearance_patterns_name; CREATE UNIQUE INDEX IF NOT EXISTS idx_appearance_patterns_live_name ON appearance_patterns(COALESCE(site_id, 0), name COLLATE NOCASE) WHERE deleted_at IS NULL;");
+if (!patternColumns.includes("deleted_by")) db.exec("ALTER TABLE appearance_patterns ADD COLUMN deleted_by INTEGER");
+
 // ---------- Moteur de navigation (palier 7) ----------
 // Menus, éléments de menu (hiérarchie, ordre) et emplacements (header, footer, mobile). Un élément qui pointe vers une ressource KOLAKISA
 // (page, article, catégorie, étiquette) garde sa RÉFÉRENCE (type + object_id), jamais une copie de son adresse : si le slug change,

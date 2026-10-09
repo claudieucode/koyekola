@@ -89,7 +89,7 @@ function checkWidgetRights(ctx, before, after) {
 
 // Enregistrement du BROUILLON (sauvegarde automatique de l'éditeur). `revision` : celle que l'éditeur a chargée ; si la
 // page a été enregistrée entre-temps ailleurs, rien n'est écrasé (erreur « conflict »).
-function saveDraft(ctx, id, input = {}, { revision } = {}) {
+function saveDraft(ctx, id, input = {}, { revision, record = true } = {}) {
   const page = requirePage(ctx, id);
   if (page.archived_at) throw bad("Cette page est archivée : restaurez-la pour la modifier.");
   if (!Number.isInteger(revision)) throw bad("Révision manquante.");
@@ -99,6 +99,8 @@ function saveDraft(ctx, id, input = {}, { revision } = {}) {
   const changed = ctx.db.prepare("UPDATE mk_landing_pages SET draft = ?, revision = ?, updated_at = datetime('now') WHERE id = ? AND organization_id = ? AND revision = ?")
     .run(JSON.stringify(content), next, id, ctx.organizationId, revision).changes;
   if (!changed) throw conflict();
+  // Historique commun (palier 10) : l'état du brouillon est conservé comme point d'historique (jamais bloquant)
+  if (record) require("../../services/revisions").hooks.pageDraft(ctx, page, content);
   return { revision: next, content };
 }
 
@@ -162,12 +164,12 @@ function getVersion(ctx, id, number) {
   if (!row) throw new MarketingError("not_found", "Version introuvable.");
   return { number: row.number, createdAt: row.created_at, content: json(row.content, {}) };
 }
-// Restaurer = copier la version dans le BROUILLON. La version en ligne ne change pas tant qu'on ne publie pas.
+// Restaurer = copier la version dans le BROUILLON (la version en ligne ne change pas tant qu'on ne publie pas). Palier 10 : l'état actuel du
+// brouillon est d'abord sauvegardé dans l'historique, le contenu est revalidé comme une saisie, et la restauration est elle-même un point d'historique.
 function restoreVersion(ctx, id, number) {
-  const v = getVersion(ctx, id, number);
-  ctx.db.prepare("UPDATE mk_landing_pages SET draft = ?, revision = revision + 1, updated_at = datetime('now') WHERE id = ? AND organization_id = ?")
-    .run(JSON.stringify(v.content), id, ctx.organizationId);
-  audit(ctx, "page.version_restored", "landing", id, { version: v.number });
+  getVersion(ctx, id, number); // 404 propre si la version n'existe pas
+  require("../../services/revisions").adapter("page").restore(ctx, id, `v:${Number(number)}`);
+  audit(ctx, "page.version_restored", "landing", id, { version: Number(number) });
   return requirePage(ctx, id);
 }
 

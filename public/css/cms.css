@@ -259,3 +259,13 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label { display: none; }
 .mk-us-group { border: 1px solid var(--mk-border, #e2e8f0); border-radius: 12px; padding: 12px 16px; margin: 0 0 12px; min-width: 0; }
 .mk-us-group legend { font-weight: 700; padding: 0 6px; }
 .mk-us-perms { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px 16px; margin-top: 8px; }
+
+/* Historique et corbeille (palier 10) */
+.mk-hi-day { font-size: 0.95rem; margin: 18px 0 8px; color: var(--mk-muted, #5a687d); }
+.mk-hi-table th[scope="row"] { font-weight: 600; white-space: nowrap; }
+.mk-hi-diff { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.86rem; border: 1px solid var(--mk-border, #e2e8f0); border-radius: 8px; overflow-x: auto; }
+.mk-hi-line { display: flex; gap: 8px; padding: 2px 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mk-hi-line.is-add { background: #e6f4ea; }
+.mk-hi-line.is-del { background: #fbe7e8; text-decoration: line-through; text-decoration-color: rgba(176, 20, 30, 0.45); }
+.mk-hi-mark { flex: none; width: 1ch; font-weight: 700; }
+.mk-tr-table th[scope="row"] { font-weight: 600; overflow-wrap: anywhere; }

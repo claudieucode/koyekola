@@ -18,6 +18,8 @@ function createMarketingRouters({ db }) {
     if (m) { const r = db.prepare("SELECT site_id FROM mk_landing_pages WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
     m = /^\/site-web\/sites\/(\d+)(?:\/|$)/.exec(p);
     if (m) return { siteId: Number(m[1]) };
+    m = /^\/site-web\/historique\/page\/(\d+)(?:\/|$)/.exec(p);
+    if (m) { const r = db.prepare("SELECT site_id FROM mk_landing_pages WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
     m = /^\/site-web\/composants\/(\d+)/.exec(p);
     if (m) { const r = db.prepare("SELECT site_id FROM mk_web_components WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
     if (req.method === "POST" && (p === "/pages" || p === "/site-web/composants") && req.body && /^\d+$/.test(String(req.body.site_id || ""))) return { siteId: Number(req.body.site_id) };
@@ -67,6 +69,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./taxonomies")()); // Catégories et étiquettes (palier 5)
   admin.use(require("./comments")()); // Commentaires : modération et réglages (palier 6)
   admin.use(require("./navigation")()); // Navigation : menus, éléments, emplacements (palier 7)
+  admin.use(require("./history")()); // Historique des modifications et corbeille commune (palier 10)
   admin.use(require("./users")()); // Utilisateurs, rôles, permissions, invitations (palier 9)
   admin.use(require("./appearanceEditor")()); // Apparence : éditeur du site, styles, en-tête, pied de page, templates, patterns (palier 8)
   admin.use(require("./mediaLibrary")()); // KOLAKISA CMS → Médias (palier 3) : page et API de la médiathèque

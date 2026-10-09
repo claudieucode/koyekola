@@ -2587,6 +2587,9 @@ function start() {
     codeEditor.value = editor.getHTML();
     field("published_at_utc").value = dateUtc();
     const data = new FormData(form);
+    // Détection de conflit (palier 10) : version de l'article que cet onglet a chargée ou enregistrée en dernier ; si l'article a changé depuis
+    // (autre onglet, action de la liste), le serveur refuse d'écraser en silence
+    if (postId && DATA.updatedAt) data.set("base_updated_at", DATA.updatedAt);
     if (!withFiles) for (const name of ["thumbnail", "og_image", "twitter_image"]) data.delete(name);
     return data;
   }

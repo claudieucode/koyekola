@@ -61,6 +61,7 @@
                 <button type="button" class="btn btn-ghost btn-sm mk-cms-more" aria-haspopup="menu" aria-expanded="false" aria-controls="<%= menuId %>" aria-label="Plus d'actions pour « <%= p.name %> »"><%- icon("moreHorizontal", { size: 18 }) %></button>
                 <div class="mk-menu" id="<%= menuId %>" role="menu" hidden>
                   <a role="menuitem" href="/marketing/pages/<%= p.id %>">Modifier les réglages</a>
+                  <% if (mk.can("revisions.view")) { %><a role="menuitem" href="/marketing/site-web/historique/page/<%= p.id %>">Historique</a><% } %>
                   <% if (!inTrash) { %><a role="menuitem" href="/marketing/pages/<%= p.id %>/apercu" target="_blank" rel="noopener">Prévisualiser</a><% } %>
                   <% if (!inTrash && p.status === "published") { %><a role="menuitem" href="/p/<%= p.slug %>" target="_blank" rel="noopener">Voir la page en ligne</a><% } %>
                   <% if (canWrite && !inTrash) { %>

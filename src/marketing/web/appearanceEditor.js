@@ -123,7 +123,7 @@ module.exports = () => {
   router.post("/site-web/apparence/styles", need("appearance.styles"), (req, res, next) => {
     guard(req, res, next, `${BASE}/styles`, () => {
       const patch = coerce(unflatten(req.body, ["colors", "fonts", "type", "buttons", "link", "radius", "shadow", "border", "sizes", "space"]));
-      appearance.saveDraft(null, "tokens", patch, req.session.user.id);
+      appearance.saveDraft(null, "tokens", patch, req.session.user.id, { baseRev: req.body.base });
       return "Styles enregistrés dans le brouillon. Prévisualisez, puis publiez pour les voir sur le site.";
     });
   });
@@ -140,7 +140,7 @@ module.exports = () => {
         brand: { mode: b.brand_mode, text: b.brand_text, mediaId: b.brand_media || null, alt: b.brand_alt },
         tagline: b.tagline, copyright: b.copyright, cookies: b.cookies === "1",
       };
-      appearance.saveDraft(null, section, data, req.session.user.id);
+      appearance.saveDraft(null, section, data, req.session.user.id, { baseRev: b.base });
       return `${section === "header" ? "En-tête" : "Pied de page"} enregistré dans le brouillon.`;
     });
   });
@@ -148,7 +148,7 @@ module.exports = () => {
 
   // ----- Publication, annulation, historique -----
   router.post("/site-web/apparence/publier", need("appearance.publish"), (req, res, next) => {
-    guard(req, res, next, BASE, () => { appearance.publish(null, req.session.user.id, req.body.note); return "Apparence publiée : le site public utilise maintenant ces réglages."; });
+    guard(req, res, next, BASE, () => { appearance.publish(null, req.session.user.id, req.body.note, { baseRev: req.body.base }); return "Apparence publiée : le site public utilise maintenant ces réglages."; });
   });
   router.post("/site-web/apparence/brouillon/annuler", need("appearance.styles"), (req, res, next) => {
     guard(req, res, next, BASE, () => { appearance.discardDraft(null); return "Brouillon annulé : retour à la version en ligne."; });
@@ -191,10 +191,10 @@ module.exports = () => {
     });
   });
   router.post("/site-web/apparence/patterns/:id(\\d+)", need("appearance.patterns"), (req, res, next) => {
-    guard(req, res, next, `${BASE}/patterns`, () => { appearance.renamePattern(Number(req.params.id), { name: req.body.name, description: req.body.description }); return "Pattern renommé."; });
+    guard(req, res, next, `${BASE}/patterns`, () => { appearance.renamePattern(Number(req.params.id), { name: req.body.name, description: req.body.description }, req.session.user.id); return "Pattern renommé."; });
   });
   router.post("/site-web/apparence/patterns/:id(\\d+)/supprimer", need("appearance.patterns"), (req, res, next) => {
-    guard(req, res, next, `${BASE}/patterns`, () => { const p = appearance.deletePattern(Number(req.params.id)); return `Pattern « ${p.name} » supprimé (les pages qui l'ont déjà inséré ne changent pas).`; });
+    guard(req, res, next, `${BASE}/patterns`, () => { const p = appearance.deletePattern(Number(req.params.id), req.session.user.id); return `Pattern « ${p.name} » mis à la corbeille (restaurable depuis CMS → Corbeille ; les pages qui l'ont déjà inséré ne changent pas).`; });
   });
   return router;
 };

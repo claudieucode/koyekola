@@ -1,0 +1,49 @@
+<%#
+  KOLAKISA CMS → Corbeille commune (palier 10). Pages, articles, médias, commentaires et patterns supprimés : restaurables, ou supprimés définitivement
+  (action irréversible, confirmée, réservée à qui a le droit de supprimer ce type de contenu). Données réelles, jamais simulées.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const fdt = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") + " à " + String(v).slice(11, 16) + " UTC" : "—");
+  const keep = (over = {}) => { const p = new URLSearchParams(); const o = { type, q, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return TRASH + (t ? "?" + t : ""); };
+  const here = keep({ page: result.page > 1 ? result.page : "" });
+  const total = Object.values(counts).reduce((n, v) => n + v, 0);
+  const canRestoreAny = Object.keys(types).some((t) => can(t, "write")), canDeleteAny = Object.keys(types).some((t) => can(t, "del"));
+%>
+    <div class="mk-head"><h1>Corbeille</h1></div>
+    <p class="mk-lead">Les contenus supprimés restent ici, intacts, jusqu'à leur suppression définitive. Restaurer un contenu le remet <strong>hors ligne</strong> (jamais republié d'office) ; si une dépendance a disparu entre-temps, le problème est signalé clairement.</p>
+    <nav class="mk-tabs mk-cms-tabs" aria-label="Filtrer par type">
+      <a class="mk-tab" href="<%= keep({ type: "", page: "" }) %>"<%- !type ? ' aria-current="page"' : "" %>>Tout <span class="mk-tab-count"><%= total %></span></a>
+      <% Object.entries(types).forEach(([k, t]) => { %><a class="mk-tab" href="<%= keep({ type: k, page: "" }) %>"<%- type === k ? ' aria-current="page"' : "" %>><%= t.label %>s <span class="mk-tab-count"><%= counts[k] %></span></a><% }) %>
+    </nav>
+    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= TRASH %>" role="search" aria-label="Rechercher dans la corbeille">
+      <input type="hidden" name="type" value="<%= type %>">
+      <label class="mk-search"><span class="sr-only">Rechercher dans la corbeille</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= q %>" placeholder="Rechercher"></label>
+      <button type="submit" class="btn btn-outline btn-sm">Rechercher</button><% if (q) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ q: "" }) %>">Réinitialiser</a><% } %>
+    </form>
+    <% if (!rows.length) { %>
+      <div class="mk-empty"><%- icon("trash", { size: 32 }) %><h2><%= q ? "Aucun résultat." : "La corbeille est vide." %></h2><p><%= q ? "Aucun élément supprimé ne correspond." : "Les éléments que vous supprimez apparaissent ici." %></p></div>
+    <% } else { %>
+      <form id="tr-bulk" class="mk-cms-bulk" action="<%= TRASH %>/actions" method="post" data-cms-bulk data-cms-noun="élément" data-cms-delete-text="Cette action est irréversible : ils ne pourront pas être récupérés.">
+        <input type="hidden" name="retour" value="<%= here %>">
+        <label class="sr-only" for="tr-action">Action groupée</label>
+        <select id="tr-action" name="action" disabled><option value="">Action groupée</option><% if (canRestoreAny) { %><option value="restaurer">Restaurer</option><% } %><% if (canDeleteAny) { %><option value="supprimer">Supprimer définitivement</option><% } %></select>
+        <button type="submit" class="btn btn-outline btn-sm" disabled>Appliquer</button><span class="mk-sub" data-cms-bulk-count aria-live="polite"></span>
+      </form>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table mk-tr-table">
+        <caption class="sr-only">Éléments supprimés</caption>
+        <thead><tr><th scope="col" class="mk-cms-check-col"><input type="checkbox" data-cms-select-all aria-label="Tout sélectionner"></th><th scope="col">Élément</th><th scope="col">Type</th><th scope="col">Détail</th><th scope="col">Supprimé le</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody><% rows.forEach((r) => { const key = r.type + ":" + r.id; %>
+          <tr><td class="mk-cms-check-col" data-label="Sélection"><input type="checkbox" name="items" value="<%= key %>" form="tr-bulk" data-cms-row aria-label="Sélectionner « <%= r.title %> »"></td>
+            <th scope="row" data-label="Élément"><%= r.title || "(sans titre)" %></th><td data-label="Type"><%= r.typeLabel %></td><td data-label="Détail"><%= r.detail || "—" %></td><td data-label="Supprimé le"><%= fdt(r.deleted_at) %></td>
+            <td class="mk-row-actions"><div class="mk-cms-rowbtns">
+              <% if (can(r.type, "write")) { %><form method="post" action="<%= TRASH %>/actions" class="mk-cm-form"><input type="hidden" name="action" value="restaurer"><input type="hidden" name="items" value="<%= key %>"><input type="hidden" name="retour" value="<%= here %>"><button type="submit" class="btn btn-outline btn-sm" aria-label="Restaurer « <%= r.title %> »">Restaurer</button></form><% } %>
+              <% if (can(r.type, "del")) { %><form method="post" action="<%= TRASH %>/actions" class="mk-cm-form"><input type="hidden" name="action" value="supprimer"><input type="hidden" name="items" value="<%= key %>"><input type="hidden" name="retour" value="<%= here %>"><button type="submit" class="btn btn-outline btn-sm mk-btn-danger-outline" data-mk-confirm="« <%= r.title %> » sera supprimé définitivement. Cette action est irréversible." data-mk-confirm-title="Supprimer définitivement ?" data-mk-confirm-ok="Supprimer définitivement" aria-label="Supprimer définitivement « <%= r.title %> »">Supprimer définitivement</button></form><% } %>
+            </div></td></tr>
+        <% }) %></tbody></table></div>
+      <nav class="mk-cms-pager" aria-label="Pagination"><span><%= result.total %> élément<%= result.total > 1 ? "s" : "" %></span>
+        <% if (result.pages > 1) { %><span class="mk-cms-pager-nav">
+          <% if (result.page > 1) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: result.page - 1 }) %>">Précédent</a><% } %>
+          <span>Page <%= result.page %> sur <%= result.pages %></span>
+          <% if (result.page < result.pages) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: result.page + 1 }) %>">Suivant</a><% } %></span><% } %></nav>
+    <% } %>
+<%- include("partials/bottom") %>

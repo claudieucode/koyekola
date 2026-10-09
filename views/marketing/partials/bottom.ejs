@@ -6,6 +6,7 @@
   <script src="<%= asset('/js/mk/shell.js') %>" defer></script>
   <% if (typeof mediaJs !== "undefined" && mediaJs) { %><script src="<%= asset('/js/kwmedia.js') %>" defer></script><script src="<%= asset('/js/media-library.js') %>" defer></script><% } %>
   <% if (typeof appearanceJs !== "undefined" && appearanceJs) { %><script src="<%= asset('/js/kwmedia.js') %>" defer></script><script src="<%= asset('/js/media-picker.js') %>" defer></script><script src="<%= asset('/js/cms-appearance.js') %>" defer></script><% } %>
+  <% if (typeof historyJs !== "undefined" && historyJs) { %><script src="<%= asset('/js/cms-history.js') %>" defer></script><% } %>
   <% if (typeof usersJs !== "undefined" && usersJs) { %><script src="<%= asset('/js/cms-users.js') %>" defer></script><% } %>
   <% if (typeof navJs !== "undefined" && navJs) { %><script src="<%= asset('/js/cms-navigation.js') %>" defer></script><% } %>
   <% if (typeof taxoJs !== "undefined" && taxoJs) { %><script src="<%= asset('/js/cms-pages.js') %>" defer></script><script src="<%= asset('/js/cms-taxonomy.js') %>" defer></script><% } %>

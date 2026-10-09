@@ -78,6 +78,7 @@ const SECTIONS = [
   {
     key: "outils", label: "Outils", icon: "sliders", items: [
       leaf("outils", "Santé du site", `${BASE}/outils`, { status: "preview" }),
+      leaf("corbeille", "Corbeille", `${BASE}/corbeille`, { permission: "revisions.view" }),
       leaf("outils/importer", "Importer", `${BASE}/outils/importer`),
       leaf("outils/exporter", "Exporter", `${BASE}/outils/exporter`),
       leaf("outils/sauvegardes", "Sauvegardes", `${BASE}/outils/sauvegardes`),

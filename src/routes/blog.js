@@ -730,6 +730,12 @@ router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
 // Enregistrement (formulaire classique ou éditeur)
 router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, res) => {
   const p = req.post;
+  // Conflit d'enregistrement (palier 10) : l'article a été modifié depuis la version que cet écran a chargée → rien n'est écrasé
+  const base = String(req.body.base_updated_at || "").trim();
+  if (base && base !== p.updated_at) {
+    const message = "Cet article a été modifié depuis votre dernière sauvegarde (dans un autre onglet ou depuis la liste des articles). Rien n'a été écrasé : votre texte reste dans l'éditeur et dans ce navigateur. Rechargez la page pour voir la version la plus récente, puis reportez vos changements.";
+    return wantsJson(req) ? res.status(409).json({ error: message, conflict: true, currentUpdatedAt: p.updated_at }) : res.status(409).render("error", { message });
+  }
   const f = readFields(req.body, p);
   const st = applyStatus(req.body, p, f);
   guardPublication(f, st.status, req, { slug: req.body.slug || p.slug, cover_path: libraryImage(req.body.cover_media) || (req.body.remove_cover === "1" ? null : p.cover_path) });

@@ -70,6 +70,7 @@
               <div class="mk-dropdown" data-mk-dropdown>
                 <button type="button" class="btn btn-ghost btn-sm mk-cms-more" aria-haspopup="menu" aria-expanded="false" aria-controls="<%= menuId %>" aria-label="Plus d'actions pour « <%= p.title %> »"><%- icon("moreHorizontal", { size: 18 }) %></button>
                 <div class="mk-menu" id="<%= menuId %>" role="menu" hidden>
+                  <% if (mk.can("revisions.view") && mine(p)) { %><a role="menuitem" href="/marketing/site-web/historique/post/<%= p.id %>">Historique</a><% } %>
                   <% if (isCreator) { %><a role="menuitem" href="/formateur/blog/<%= p.id %>/modifier">Ouvrir dans l'éditeur</a><% if (!inTrash) { %><a role="menuitem" href="/formateur/blog/<%= p.id %>/apercu" target="_blank" rel="noopener">Prévisualiser</a><% } %><% } %>
                   <% if (!inTrash && p.status === "published") { %><a role="menuitem" href="<%= BLOG_BASE %>/<%= p.slug %>" target="_blank" rel="noopener">Voir l'article en ligne</a><% } %>
                   <% if (!inTrash && canWrite && mine(p)) { %>
