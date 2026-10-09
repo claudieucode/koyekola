@@ -49,8 +49,11 @@
     }
     return el;
   }
+  // Les modèles d'icônes ne changent pas : on les retrouve une seule fois (le calque est reconstruit à chaque modification, une recherche
+  // dans le document par icône y coûtait l'essentiel du temps)
+  var iconTemplates = {};
   function icon(name) {
-    var t = document.querySelector('template[data-pb-icon="' + name + '"]');
+    var t = iconTemplates[name] || (iconTemplates[name] = document.querySelector('template[data-pb-icon="' + name + '"]'));
     return t ? t.content.firstElementChild.cloneNode(true) : h("span", { "aria-hidden": "true" });
   }
   var toastTimer = null;
@@ -208,12 +211,14 @@
     showMenuEntries(entries.slice(0, 60), r.left, r.bottom + 4, { wide: true });
   }
   // light : saisie dans un champ de l'inspecteur (il n'est pas redessiné, sinon le curseur serait perdu)
+  // Saisie (light) : les calques sont redessinés au plus une fois par pause de frappe ; le reste suit tout de suite
+  var treeTimer = null;
+  function scheduleTree() { clearTimeout(treeTimer); treeTimer = setTimeout(renderTree, 120); }
   function afterChange(light) {
-    renderTree();
+    if (light) scheduleTree(); else { clearTimeout(treeTimer); renderTree(); }
     if (!light) { renderInspector(); renderContext(); renderPageSettings(); }
     updateHistoryButtons();
-    placeCanvasBar();
-    if (!light) renderDoc();
+    if (!light) { placeCanvasBar(); renderDoc(); } // saisie : la barre est replacée avec les repères, juste après le rendu du canevas
     scheduleRender();
     scheduleSave();
     navListeners.forEach(function (f) { f(); });
@@ -3816,7 +3821,7 @@
   // Pas de nouveau rendu pendant une édition directe ou un geste dans le canevas (guide, poignée) : le document serait
   // remplacé sous la souris ; le rendu attend la fin du geste
   var gesture = false;
-  function scheduleRender() { if (editing || gesture) { pendingRender = true; return; } clearTimeout(renderTimer); renderTimer = setTimeout(renderCanvas, 220); }
+  function scheduleRender() { if (editing || gesture) { pendingRender = true; return; } clearTimeout(renderTimer); renderTimer = setTimeout(renderCanvas, 150); }
   function endGesture() { gesture = false; if (pendingRender && !editing) { pendingRender = false; scheduleRender(); } }
   var errorItemId = null;
   // « Section 3 › élément 2 « Titre » : … » → identifiant de l'élément en cause (mis en évidence dans les calques)
@@ -3826,6 +3831,62 @@
     var it = content.sections[Number(m[1]) - 1];
     (m[2].match(/élément (\d+)/g) || []).forEach(function (part) { var k = it && kidsOf(it); it = k ? k[Number(part.replace(/\D/g, "")) - 1] : null; });
     return it ? it.id : null;
+  }
+  // Mise à jour du canevas EN PLACE : le rendu serveur est comparé au précédent, section par section, et seules les sections
+  // modifiées sont remplacées (feuilles de style comprises). Le document du cadre, ses écouteurs, ses images déjà chargées et le
+  // défilement restent en place : plus de rechargement complet à chaque modification. Tout ce qui sortirait de ce cadre simple
+  // (en-tête ou pied changé, scripts, sections interactives : onglets, carrousel, animations, formulaires…) recharge le cadre
+  // en entier, comme avant.
+  var lastRender = null;
+  var INTERACTIVE = /\sdata-kw-(?!add\b)[a-z-]+|<script|<iframe|<video|<audio|<form|<input|<details|<style/i;
+  function renderSignature(text) {
+    var d = new DOMParser().parseFromString(text, "text/html");
+    var main = d.getElementById("main");
+    var sig = { doc: d, main: main, head: "", styles: [], bodyClass: d.body ? d.body.className : "", bodyStyle: d.body ? d.body.getAttribute("style") || "" : "", rest: "", items: [] };
+    if (!main || !d.body) return null;
+    Array.prototype.forEach.call(d.head.children, function (el) { if (el.tagName === "STYLE") sig.styles.push(el.textContent); else sig.head += el.outerHTML; });
+    var clone = d.body.cloneNode(true);
+    clone.querySelector("#main").textContent = "";
+    clone.removeAttribute("style");
+    sig.rest = clone.outerHTML;
+    var other = 0;
+    Array.prototype.forEach.call(main.children, function (el) { sig.items.push({ key: el.getAttribute("data-section-id") || "~" + other++, html: el.outerHTML, el: el }); });
+    return sig;
+  }
+  function patchCanvas(text) {
+    var next = renderSignature(text), prev = lastRender;
+    lastRender = next;
+    if (!next || !prev) return false;
+    var doc = frame.contentDocument;
+    var main = doc && doc.body && doc.readyState === "complete" ? doc.getElementById("main") : null;
+    if (!main || !doc.body.classList.contains("lp-builder")) return false;
+    if (next.head !== prev.head || next.rest !== prev.rest || next.bodyClass !== prev.bodyClass) return false;
+    var liveStyles = Array.prototype.filter.call(doc.head.children, function (el) { return el.tagName === "STYLE"; });
+    if (liveStyles.length !== next.styles.length || next.styles.length !== prev.styles.length) return false;
+    var prevHtml = {};
+    prev.items.forEach(function (i) { prevHtml[i.key] = i.html; });
+    var liveByKey = {}, liveOther = [];
+    Array.prototype.forEach.call(main.children, function (el) { var k = el.getAttribute("data-section-id"); if (k) liveByKey[k] = el; else liveOther.push(el); });
+    var want = [], other = 0, replaced = 0;
+    for (var n = 0; n < next.items.length; n++) {
+      var it = next.items[n], live = it.key.charAt(0) === "~" ? liveOther[Number(it.key.slice(1))] : liveByKey[it.key];
+      if (live && prevHtml[it.key] === it.html) { want.push(live); continue; }
+      if (INTERACTIVE.test(it.html) || (live && INTERACTIVE.test(prevHtml[it.key] || ""))) return false;
+      want.push(doc.importNode(it.el, true)); replaced++;
+    }
+    // Tout est vérifié : on applique (aucun retour en arrière possible après ce point)
+    liveStyles.forEach(function (el, i) { if (el.textContent !== next.styles[i]) el.textContent = next.styles[i]; });
+    if (next.bodyStyle !== prev.bodyStyle) doc.body.setAttribute("style", next.bodyStyle);
+    var ref = main.firstChild;
+    want.forEach(function (el) { if (el === ref) ref = ref.nextSibling; else main.insertBefore(el, ref); });
+    Array.prototype.slice.call(main.children).forEach(function (el) { if (want.indexOf(el) < 0) el.remove(); });
+    inlineTouched.forEach(function (el) { el.style.width = ""; el.style.height = ""; });
+    inlineTouched = [];
+    markCanvasSelection(false);
+    drawRulers();
+    drawGuides();
+    refreshInfo();
+    return true;
   }
   function renderCanvas() {
     if (editing || gesture) { pendingRender = true; return; }
@@ -3847,8 +3908,10 @@
         errBox.hidden = true;
         if (errorItemId) { errorItemId = null; markError(); }
         if (editing || gesture) { pendingRender = true; return; }
+        if (patchCanvas(res.text)) return;
         var y = 0;
         try { y = frame.contentWindow.scrollY; } catch (e) { y = 0; }
+        inlineTouched = [];
         frame.onload = function () { setupCanvas(y); };
         // Le cadre va être remplacé : le clavier passe à la zone du canevas (sinon un raccourci tapé pendant le
         // rechargement, Ctrl/⌘ + Z par exemple, serait perdu)
@@ -4153,7 +4216,11 @@
   // Redimensionner à la souris : largeur / hauteur en pixels, pour l'écran modifié. Le bord qui bouge s'accroche (si le
   // magnétisme est actif) aux guides, à la grille, aux bords, aux centres, aux autres éléments et à la disposition réelle
   // du parent (pistes de Grille, écart Flexbox). Alt : mouvement libre. Maj (poignée d'angle) : garder les proportions.
+  // Éléments dont un geste a posé une taille en ligne (aperçu pendant le glissement) : la taille enregistrée vient ensuite du rendu,
+  // et la mise à jour en place retire ces tailles provisoires (sinon elles masqueraient, par exemple, une annulation)
+  var inlineTouched = [];
   function resizeStart(e, id, el, dir) {
+    if (inlineTouched.indexOf(el) < 0) inlineTouched.push(el);
     e.preventDefault(); e.stopPropagation();
     var doc = frame.contentDocument;
     var start = { x: e.clientX, y: e.clientY, w: el.getBoundingClientRect().width, h: el.getBoundingClientRect().height };

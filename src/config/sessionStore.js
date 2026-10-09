@@ -13,6 +13,8 @@ db.exec(`
 `);
 
 const DEFAULT_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const TOUCH_EVERY_MS = 60 * 1000;
+const touchedAt = new Map(); // sid → dernier repoussage de l'expiration (mémoire du processus)
 
 function expiryOf(sess) {
   const expires = sess && sess.cookie && sess.cookie.expires ? new Date(sess.cookie.expires).getTime() : NaN;
@@ -42,8 +44,14 @@ class SqliteStore extends session.Store {
     }
   }
 
-  // Appelé quand la session n'a pas changé : on repousse seulement sa date d'expiration
+  // Appelé quand la session n'a pas changé : on repousse seulement sa date d'expiration. Sur une session valable 30 jours, la réécrire à
+  // CHAQUE requête n'apporte rien et coûte une écriture synchrone en base (l'éditeur envoie un rendu et un enregistrement à chaque
+  // modification) : au plus une fois par minute et par session.
   touch(sid, sess, cb) {
+    const now = Date.now();
+    if (now - (touchedAt.get(sid) || 0) < TOUCH_EVERY_MS) { if (cb) cb(null); return; }
+    if (touchedAt.size > 5000) touchedAt.clear();
+    touchedAt.set(sid, now);
     try {
       db.prepare("UPDATE sessions SET expires_at = ? WHERE sid = ?").run(expiryOf(sess), sid);
       if (cb) cb(null);
@@ -53,6 +61,7 @@ class SqliteStore extends session.Store {
   }
 
   destroy(sid, cb) {
+    touchedAt.delete(sid);
     try {
       db.prepare("DELETE FROM sessions WHERE sid = ?").run(sid);
       if (cb) cb(null);
