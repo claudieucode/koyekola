@@ -31,9 +31,9 @@ async function startServer(extraEnv = {}) {
   child.stderr.on("data", (d) => (log += d));
 
   await new Promise((resolve, reject) => {
-    // Machine lente ou chargée : 30 s. En cas d'échec, le serveur et la surveillance sont arrêtés (sinon la suite
+    // Machine lente ou chargée : 120 s (le démarrage dépasse 30 s quand d'autres programmes occupent le processeur). En cas d'échec, le serveur et la surveillance sont arrêtés (sinon la suite
     // de tests attendrait indéfiniment un processus orphelin)
-    const timer = setTimeout(() => { clearInterval(poll); child.kill("SIGKILL"); reject(new Error("Le serveur de test n'a pas démarré :\n" + log)); }, 30000);
+    const timer = setTimeout(() => { clearInterval(poll); child.kill("SIGKILL"); reject(new Error("Le serveur de test n'a pas démarré :\n" + log)); }, 120000);
     const poll = setInterval(() => {
       if (log.includes("disponible sur")) {
         clearTimeout(timer);

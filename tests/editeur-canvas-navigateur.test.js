@@ -243,7 +243,7 @@ describe("canvas, largeur de page, contraintes web et palette (navigateur)", { s
     await expectWidth((v) => v === 700, "annuler : retour à 700 px en une seule étape");
   });
 
-  test("palette : claire par défaut, sombre et système réellement appliqués, sans toucher la page ni le panneau de droite", async () => {
+  test("apparence : claire par défaut, sombre et système réellement appliqués à la palette ET au panneau de droite, sans toucher la page", async () => {
     await openEditor(STRESS);
     const look = () => page.evaluate(() => {
       const bg = (el) => getComputedStyle(el).backgroundColor, rgb = (s) => s.match(/\d+/g).slice(0, 3).map(Number);
@@ -263,7 +263,7 @@ describe("canvas, largeur de page, contraintes web et palette (navigateur)", { s
     assert.equal(sombre.mode, "dark"); assert.deepEqual(sombre.checked, ["dark"]);
     assert.ok(sombre.left.every((v) => v < 40) && sombre.tools.every((v) => v < 40) && sombre.card.every((v) => v < 50), `palette sombre : fonds sombres (${sombre.left} / ${sombre.tools} / ${sombre.card})`);
     assert.ok(sombre.contrasteCarte >= 7, `texte des cartes lisible en sombre (contraste ${sombre.contrasteCarte.toFixed(1)})`);
-    assert.deepEqual(sombre.droite, clair.droite, "le panneau de droite ne change pas");
+    assert.ok(sombre.droite.every((v) => v < 40) && clair.droite.every((v) => v > 240), `le panneau de droite suit l'apparence (${clair.droite} → ${sombre.droite})`);
     assert.equal(sombre.pageFond, clair.pageFond, "la page ne change pas");
     assert.ok(clair.contrasteCarte >= 7, `texte des cartes lisible en clair (contraste ${clair.contrasteCarte.toFixed(1)})`);
     // Système : suit la préférence du navigateur, en direct

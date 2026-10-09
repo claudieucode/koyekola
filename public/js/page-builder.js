@@ -761,6 +761,8 @@
           h("span", { class: "pb-node-flags" },
             h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it.hidden ? " is-on" : ""), "aria-pressed": String(Boolean(it.hidden)), "aria-label": (it.hidden ? "Afficher « " : "Masquer « ") + nameOf(it) + " »", "data-tip": it.hidden ? "Afficher" : "Masquer", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([it.id], "hidden", !it.hidden); } }, icon(it.hidden ? "eyeOff" : "eye")),
             h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it.locked ? " is-on" : ""), "aria-pressed": String(Boolean(it.locked)), "aria-label": (it.locked ? "Déverrouiller « " : "Verrouiller « ") + nameOf(it) + " »", "data-tip": it.locked ? "Déverrouiller" : "Verrouiller", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([it.id], "locked", !it.locked); } }, icon("lock")),
+            h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-more", "aria-haspopup": "menu", "aria-label": "Actions de « " + nameOf(it) + " »", "data-tip": "Actions (dupliquer, copier, renommer, déplacer…)",
+              onclick: function (e) { e.stopPropagation(); if (selection.indexOf(it.id) < 0) select(it.id); var r = e.currentTarget.getBoundingClientRect(); openMenu(r.right - 4, r.bottom + 4); } }, icon("moreVertical")),
             h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-delete", "aria-label": "Supprimer « " + nameOf(it) + " »" + (kids && kids.length ? " et ses " + countDeep(it) + " élément(s)" : ""), "data-tip": kids && kids.length ? "Supprimer (avec ses " + countDeep(it) + " élément(s))" : "Supprimer", disabled: !canWrite || lockedDeep(it.id), onclick: function (e) { e.stopPropagation(); removeItems([it.id]); } }, icon("trash"))));
         row.addEventListener("click", function (e) { select(it.id, e.shiftKey || e.metaKey || e.ctrlKey); });
         row.addEventListener("dblclick", function (e) { if (canWrite && !e.target.closest("button")) startRename(row, it); });
@@ -3068,6 +3070,7 @@
 
   // ---------- Inspecteur ----------
   var inspTab = store.get("insp-tab", "content");
+  var headObserver = null;
   function renderInspector() {
     if (typeof cpop !== "undefined" && cpop && !cpop.hidden) { cpop.hidden = true; cpopFor = null; }
     var box = $("[data-pb-inspector]");
@@ -3080,13 +3083,16 @@
     // Rien de sélectionné : état vide, et seulement quelques actions globales réelles
     if (!items.length) {
       box.appendChild(h("div", { class: "pb-insp-empty" },
+        h("span", { class: "pb-insp-empty-icon", "aria-hidden": "true" }, icon("sliders")),
         h("h2", { text: "Aucun élément sélectionné" }),
         h("p", { class: "pb-hint", text: "Sélectionnez un élément sur le canevas ou dans les calques pour modifier ses propriétés." })));
-      box.appendChild(breakpointSwitch([{}]));
-      box.appendChild(h("div", { class: "pb-row pb-wrap" },
-        h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { openTab($("#pb-tab-page")); } }, "Réglages de la page"),
-        h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !past.length || !canWrite, onclick: undo }, icon("undo"), "Annuler"),
-        h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !future.length || !canWrite, onclick: redo }, icon("redo"), "Rétablir")));
+      // Actions réelles de la page : écran modifié, réglages de la page (onglet « Page »), annuler / rétablir (même historique que la barre du haut)
+      box.appendChild(h("div", { class: "pb-insp-section" },
+        breakpointSwitch([{}]),
+        h("button", { type: "button", class: "btn btn-outline btn-sm pb-pagebtn", "data-tip": "Titre, description, SEO, couleurs, CSS de la page", onclick: function () { openTab($("#pb-tab-page")); } }, icon("layout"), "Réglages de la page"),
+        h("div", { class: "pb-hist-row", role: "group", "aria-label": "Historique" },
+          h("button", { type: "button", class: "pb-hist-btn", disabled: !past.length || !canWrite, "data-tip": "Annuler (Ctrl/⌘ + Z)", onclick: undo }, icon("undo"), "Annuler"),
+          h("button", { type: "button", class: "pb-hist-btn", disabled: !future.length || !canWrite, "data-tip": "Rétablir (Ctrl/⌘ + Maj + Z)", onclick: redo }, icon("redo"), "Rétablir"))));
       var det = infoBlock(null);
       det.querySelector("summary").textContent = "Informations sur la page";
       box.appendChild(det);
@@ -3099,9 +3105,21 @@
     var l = locate(it.id);
     // En-tête : ce que l'on modifie (nature, nom) et son chemin dans la structure (cliquable)
     var crumbs = multi || !l.ancestors.length ? null : h("nav", { class: "pb-crumbs", "aria-label": "Parents de l'élément" }, [h("button", { type: "button", onclick: function () { select(null); }, text: "Page" })].concat(l.ancestors.map(function (a) { return h("button", { type: "button", onclick: function () { select(a.id); }, text: nameOf(a) }); })));
-    box.appendChild(h("div", { class: "pb-insp-head" }, crumbs,
-      h("p", { class: "pb-kind", text: multi ? "Sélection multiple" : "Modifier " + schema.kind }),
-      h("h2", { text: multi ? items.length + " éléments" : (it.name || preview(it) || schema.kind) })));
+    var kindIcon = multi ? "layers" : isNode(it) && NT[it.type] ? NT[it.type].icon : it.type === "layout" ? "layout" : "fileText";
+    var head = h("div", { class: "pb-insp-head" }, crumbs,
+      h("div", { class: "pb-insp-title" },
+        h("span", { class: "pb-insp-icon", "aria-hidden": "true" }, icon(kindIcon)),
+        h("div", { class: "pb-insp-titles" },
+          h("p", { class: "pb-kind", text: multi ? "Sélection multiple" : "Modifier " + schema.kind }),
+          h("h2", { text: multi ? items.length + " éléments" : (it.name || preview(it) || schema.kind) })),
+        h("span", { class: "pb-insp-head-actions" },
+          h("button", { type: "button", class: "pb-panel-toggle", "aria-haspopup": "menu", "data-tip": "Actions : dupliquer, copier, renommer, déplacer, supprimer…", "aria-label": "Actions de la sélection", onclick: function (e) { var r = e.currentTarget.getBoundingClientRect(); openMenu(r.right - 4, r.bottom + 4); } }, icon("moreVertical")),
+          h("button", { type: "button", class: "pb-panel-toggle", "data-tip": "Désélectionner", "aria-label": "Désélectionner", onclick: function () { select(null); } }, icon("close")))));
+    box.appendChild(head);
+    // L'onglet qui suit reste collé sous l'en-tête quand on fait défiler : on lui donne la hauteur réelle de l'en-tête
+    if (headObserver) headObserver.disconnect();
+    if (window.ResizeObserver) { headObserver = new ResizeObserver(function () { box.style.setProperty("--pb-insp-head-h", head.offsetHeight + "px"); }); headObserver.observe(head); }
+    box.style.setProperty("--pb-insp-head-h", head.offsetHeight + "px");
     if (locked && canWrite) box.appendChild(h("p", { class: "pb-note is-warn", text: "Verrouillé : déverrouillez-le (cadenas dans les calques) pour le modifier." }));
     var boxTabs = !multi && schema.tabs === "box";
     var tabs = boxTabs ? [["general", "Général"], ["style", "Style"], ["interactions", "Interactions"]] : multi ? [["style", "Style"], ["advanced", "Avancé"]] : !schema.groups ? [["content", "Contenu"], ["advanced", "Avancé"]] : [["content", "Contenu"], ["style", "Style"], ["advanced", "Avancé"]];
@@ -5216,23 +5234,33 @@
     h: h, toast: toast,
   };
 
-  // ---------- Apparence de la palette (claire / sombre / système) ----------
+  // ---------- Apparence de l'éditeur (claire / sombre / système) ----------
   // Préférence PERSONNELLE de l'éditeur, gardée comme les autres réglages d'interface (magasin « pb: » : survit au rechargement,
-  // propre à ce navigateur). Elle ne change que la palette (barre d'outils + panneau de gauche) : jamais la page, le canevas
-  // ni le panneau de droite.
+  // propre à ce navigateur). Elle change l'interface de l'éditeur : barre d'outils, panneau de gauche et panneau de droite (calques,
+  // inspecteur), par les jetons --editor-* de page-builder.css ; jamais la page ni le canevas. L'attribut data-palette est posé sur
+  // <main> et sur <body> (les menus et sélecteurs ouverts hors des panneaux suivent le même thème).
   var PALETTE_MODES = [["light", "Claire", "sun"], ["dark", "Sombre", "moon"], ["system", "Système", "monitor"]];
   var paletteMode = store.get("palette-theme", "light");
   if (!PALETTE_MODES.some(function (m) { return m[0] === paletteMode; })) paletteMode = "light";
   var paletteMedia = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
   function paletteResolved() { return paletteMode === "system" ? (paletteMedia && paletteMedia.matches ? "dark" : "light") : paletteMode; }
   function applyPalette() {
-    $("[data-pb-main]").dataset.palette = paletteResolved();
+    var resolved = paletteResolved();
+    $("[data-pb-main]").dataset.palette = resolved;
+    document.body.dataset.palette = resolved;
+    // Bascule rapide clair / sombre du panneau de droite : l'icône montre le mode vers lequel on bascule
+    $$("[data-pb-theme-toggle]").forEach(function (b) {
+      var dark = resolved === "dark";
+      b.setAttribute("aria-pressed", String(dark));
+      b.setAttribute("data-tip", dark ? "Passer en mode clair" : "Passer en mode sombre");
+      b.setAttribute("aria-label", dark ? "Passer en mode clair" : "Passer en mode sombre");
+    });
     $$("[data-pal-mode]").forEach(function (b) { var on = b.dataset.palMode === paletteMode; b.setAttribute("aria-checked", String(on)); b.tabIndex = on ? 0 : -1; });
   }
   function setPaletteMode(m) { paletteMode = m; store.set("palette-theme", m); applyPalette(); }
   (function buildPaletteFoot() {
-    var group = h("div", { class: "pb-pal-theme", role: "radiogroup", "aria-label": "Apparence de la palette" }, PALETTE_MODES.map(function (m) {
-      return h("button", { type: "button", role: "radio", "aria-checked": "false", "data-pal-mode": m[0], "data-tip": "Palette " + m[1].toLowerCase(), "aria-label": "Palette " + m[1].toLowerCase(),
+    var group = h("div", { class: "pb-pal-theme", role: "radiogroup", "aria-label": "Apparence de l'éditeur" }, PALETTE_MODES.map(function (m) {
+      return h("button", { type: "button", role: "radio", "aria-checked": "false", "data-pal-mode": m[0], "data-tip": "Apparence " + m[1].toLowerCase(), "aria-label": "Apparence " + m[1].toLowerCase(),
         onclick: function () { setPaletteMode(m[0]); } }, icon(m[2]));
     }));
     // Flèches : passer d'un mode à l'autre comme un groupe de boutons radio
@@ -5245,14 +5273,17 @@
       setPaletteMode(next);
       var btn = group.querySelector('[data-pal-mode="' + next + '"]'); if (btn) btn.focus();
     });
-    $("[data-pb-left]").appendChild(h("div", { class: "pb-pal-foot" }, h("span", { class: "pb-pal-foot-label", text: "Palette" }), group));
+    $("[data-pb-left]").appendChild(h("div", { class: "pb-pal-foot" }, h("span", { class: "pb-pal-foot-label", text: "Apparence" }), group));
+    $$("[data-pb-theme-toggle]").forEach(function (b) { b.addEventListener("click", function () { setPaletteMode(paletteResolved() === "dark" ? "light" : "dark"); }); });
     applyPalette();
   })();
   if (paletteMedia) { var onScheme = function () { if (paletteMode === "system") applyPalette(); }; if (paletteMedia.addEventListener) paletteMedia.addEventListener("change", onScheme); else if (paletteMedia.addListener) paletteMedia.addListener(onScheme); }
 
   // ---------- Panneaux redimensionnables ----------
   var main = $("[data-pb-main]");
+  var PANEL_MIN_RIGHT = 280;
   function applyPanels() {
+    if (panels.right < PANEL_MIN_RIGHT) panels.right = PANEL_MIN_RIGHT; // largeur enregistrée avant ce minimum
     main.style.setProperty("--pb-tools-w", panels.toolsExpanded ? "176px" : panels.toolsDense ? "136px" : "48px");
     main.classList.toggle("is-tools-expanded", Boolean(panels.toolsExpanded));
     main.classList.toggle("is-tools-dense", Boolean(panels.toolsDense) && !panels.toolsExpanded);
@@ -5267,7 +5298,8 @@
   function togglePanel(side) { panels[side + "Hidden"] = !panels[side + "Hidden"]; applyPanels(); renderTools(); }
   $$("[data-pb-resize]").forEach(function (handle) {
     var side = handle.dataset.pbResize;
-    var setW = function (w) { panels[side] = Math.min(560, Math.max(200, Math.round(w))); panels[side + "Hidden"] = false; applyPanels(); };
+    // Largeur : jamais assez étroite pour rendre les contrôles illisibles (droite : 280 px au moins), ni plus de la moitié de la fenêtre
+    var setW = function (w) { var min = side === "right" ? PANEL_MIN_RIGHT : 200; panels[side] = Math.min(560, Math.max(min, Math.min(Math.round(w), Math.round(window.innerWidth * 0.5)))); panels[side + "Hidden"] = false; applyPanels(); };
     handle.addEventListener("pointerdown", function (e) {
       e.preventDefault(); handle.setPointerCapture(e.pointerId);
       var sx = e.clientX, sw = panels[side];
