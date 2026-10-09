@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="<%= asset("/css/landing.css") %>">
   <%# Styles du thème et de la mise en page du site : avant les styles des éléments, qui restent prioritaires %>
   <% if (siteX && siteX.assets.theme) { %><style><%- siteX.assets.theme %></style><% } %>
+  <% if (siteStyle && typeof fontFacesFor === "function") { const ff = fontFacesFor(siteStyle); if (ff) { %><style><%- ff %></style><% } } %>
   <% if (page.nodeCss) { %><style><%- page.nodeCss %></style><% } %>
   <%# CSS personnalisé du site (réglages du site), puis transition entre les pages (jamais dans l'éditeur) %>
   <% if (siteX && siteX.assets.custom) { %><style><%- siteX.assets.custom %></style><% } %>

@@ -590,7 +590,7 @@
     rerender: function () { renderProps(); },
     theme: function () { var t = {}; Object.keys(THEME_DEFAULTS).forEach(function (k) { t[k] = state.theme && state.theme[k] != null ? state.theme[k] : THEME_DEFAULTS[k]; }); return t; },
     fonts: function () { return (data.fonts || Object.keys(FONT_LABELS)).map(function (k) { return [k, FONT_LABELS[k] || k]; }); },
-    fontLabel: function (k) { return FONT_LABELS[k] || k; },
+    fontLabel: function (k) { var f = window.KFonts && window.KFonts.byId(k); return FONT_LABELS[k] || (f ? f.family : String(k).replace(/^font\./, "").replace(/-/g, " ")); },
   });
   function th(k) { return state.theme && state.theme[k] != null ? state.theme[k] : THEME_DEFAULTS[k]; }
   var SPACING_PX = { compact: 4, normal: 8, large: 16 };
@@ -1292,6 +1292,14 @@
   bind("t-subject", function () { return state.subject || ""; }, function (v) { state.subject = v; });
   bind("t-preheader", function () { return state.preheader || ""; }, function (v) { state.preheader = v; });
   bind("t-footer", function () { return state.footer.text || ""; }, function (v) { state.footer.text = v; });
+  // Police principale du message : bibliothèque centrale (Font Manager) ; les polices sûres pour l'e-mail restent proposées en tête
+  (function () {
+    var sel = $("t-font");
+    if (!sel || !window.KFonts) return;
+    var legacy = [].map.call(sel.options, function (o) { return [o.value, o.textContent]; });
+    var picker = window.KFonts.picker({ value: sel.value, legacy: legacy, legacyStacks: function () { return FONT_STACKS; }, mode: "email", label: "Police principale", disabled: readOnly });
+    picker.id = "t-font"; sel.parentNode.replaceChild(picker, sel);
+  })();
   [["t-bg", "background"], ["t-cbg", "contentBackground"], ["t-text", "textColor"], ["t-accent", "accent"], ["t-secondary", "secondary"], ["t-font", "fontFamily"], ["t-spacing", "spacing"]].forEach(function (pair) {
     bind(pair[0], function () { return state.theme[pair[1]] || THEME_DEFAULTS[pair[1]]; }, function (v) { state.theme[pair[1]] = v; });
   });
@@ -1982,7 +1990,9 @@
   }
   function applyInlineStyle() {
     var b = blockById(inline.id), st = inline.box.style;
-    st.fontFamily = FONT_STACKS[b.font || themeValue("fontFamily")] || "";
+    var fk = b.font || themeValue("fontFamily"), fl = window.KFonts && window.KFonts.byId(fk);
+    if (fl && window.KFonts) window.KFonts.ensure([fl.id]);
+    st.fontFamily = fl ? fl.stack + ", Arial, sans-serif" : FONT_STACKS[fk] || "";
     st.fontSize = (b.fontSize || 16) + "px";
     st.lineHeight = String(b.lineHeight || 1.6);
     st.color = b.color || themeValue("textColor");

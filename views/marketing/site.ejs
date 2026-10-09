@@ -116,7 +116,7 @@
         </fieldset>
         <fieldset class="mk-sd-group"><legend>Typographies</legend>
           <div class="field-row">
-            <% [["heading", "Police des titres"], ["body", "Police du texte"]].forEach(([k, label]) => { %><div class="field-group"><label for="f-<%= k %>"><%= label %></label><select id="f-<%= k %>" name="font_<%= k %>"<%= dis %>><% Object.entries(T.FONTS).forEach(([key, f]) => { %><option value="<%= key %>"<%= t.fonts[k] === key ? " selected" : "" %>><%= f.label %></option><% }) %></select></div><% }) %>
+            <% [["heading", "Police des titres"], ["body", "Police du texte"]].forEach(([k, label]) => { %><div class="field-group"><label for="f-<%= k %>"><%= label %></label><select id="f-<%= k %>" name="font_<%= k %>"<%= dis %>><% Object.entries(T.FONTS).forEach(([key, f]) => { %><option value="<%= key %>"<%= t.fonts[k] === key ? " selected" : "" %>><%= f.label %></option><% }) %><% if (!Object.hasOwn(T.FONTS, t.fonts[k])) { %><option value="<%= t.fonts[k] %>" selected><%= String(t.fonts[k]).replace(/^font\./, "").replace(/-/g, " ") %></option><% } %></select></div><% }) %>
           </div>
           <div class="mk-table-wrap"><table class="mk-table mk-sd-type">
             <caption class="sr-only">Taille et graisse de chaque style de texte</caption>
@@ -149,4 +149,6 @@
         <div class="mk-sd-card"><p class="mk-sd-h3">Carte</p><p class="mk-sd-caption">Légende : rayon, bordure et ombre des cartes.</p><span class="mk-sd-btn">Bouton principal</span></div>
       </div>
     </section>
+<script src="<%= asset('/js/font-manager.js') %>"></script>
+<script>(function () { ["f-heading", "f-body"].forEach(function (id) { var s = document.getElementById(id); if (s && window.KFonts) window.KFonts.enhance(s, { label: "Police" }); }); })();</script>
 <%- include("partials/bottom") %>
