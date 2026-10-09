@@ -5246,8 +5246,26 @@
   if (!PALETTE_MODES.some(function (m) { return m[0] === paletteMode; })) paletteMode = "light";
   var paletteMedia = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
   function paletteResolved() { return paletteMode === "system" ? (paletteMedia && paletteMedia.matches ? "dark" : "light") : paletteMode; }
+  // Thème de l'éditeur (ajouté au mode clair / sombre) : « classic » = l'interface d'origine, « custom » = couleurs choisies puis
+  // dérivées par KWTheme (contrastes vérifiés), « navy » = Navy Premium. Même magasin « pb: » que le mode ; jamais la page ni le canevas.
+  var SKINS = ["classic", "custom", "navy"];
+  var skin = store.get("editor-skin", "classic");
+  if (SKINS.indexOf(skin) < 0) skin = "classic";
+  var customTheme = store.get("editor-custom", { accent: "#0277b6" });
+  if (!customTheme || typeof customTheme !== "object" || !window.KWTheme.parseHex(customTheme.accent)) customTheme = { accent: "#0277b6" };
+  var customKeys = [];
+  var customResult = null;
+  function applyCustomTokens() {
+    customKeys.forEach(function (k) { document.body.style.removeProperty(k); });
+    customKeys = [];
+    customResult = window.KWTheme.derive(customTheme);
+    if (skin !== "custom") return;
+    Object.keys(customResult.tokens).forEach(function (k) { document.body.style.setProperty(k, customResult.tokens[k]); customKeys.push(k); });
+  }
   function applyPalette() {
-    var resolved = paletteResolved();
+    applyCustomTokens();
+    var resolved = skin === "navy" ? "dark" : skin === "custom" ? customResult.scheme : paletteResolved();
+    document.body.dataset.skin = skin;
     $("[data-pb-main]").dataset.palette = resolved;
     document.body.dataset.palette = resolved;
     // Bascule rapide clair / sombre du panneau de droite : l'icône montre le mode vers lequel on bascule
@@ -5257,9 +5275,11 @@
       b.setAttribute("data-tip", dark ? "Passer en mode clair" : "Passer en mode sombre");
       b.setAttribute("aria-label", dark ? "Passer en mode clair" : "Passer en mode sombre");
     });
-    $$("[data-pal-mode]").forEach(function (b) { var on = b.dataset.palMode === paletteMode; b.setAttribute("aria-checked", String(on)); b.tabIndex = on ? 0 : -1; });
+    $$("[data-pal-mode]").forEach(function (b) { var cur = b.dataset.palMode === paletteMode, on = cur && skin === "classic"; b.setAttribute("aria-checked", String(on)); b.tabIndex = cur ? 0 : -1; });
   }
-  function setPaletteMode(m) { paletteMode = m; store.set("palette-theme", m); applyPalette(); }
+  function setPaletteMode(m) { paletteMode = m; store.set("palette-theme", m); setSkin("classic"); }
+  function setSkin(k) { skin = k; store.set("editor-skin", k); applyPalette(); if (window.pbThemeDialogRefresh) window.pbThemeDialogRefresh(); }
+  function setCustom(t) { customTheme = t; store.set("editor-custom", t); if (skin !== "custom") { skin = "custom"; store.set("editor-skin", "custom"); } applyPalette(); if (window.pbThemeDialogRefresh) window.pbThemeDialogRefresh(); }
   (function buildPaletteFoot() {
     var group = h("div", { class: "pb-pal-theme", role: "radiogroup", "aria-label": "Apparence de l'éditeur" }, PALETTE_MODES.map(function (m) {
       return h("button", { type: "button", role: "radio", "aria-checked": "false", "data-pal-mode": m[0], "data-tip": "Apparence " + m[1].toLowerCase(), "aria-label": "Apparence " + m[1].toLowerCase(),
@@ -5275,10 +5295,79 @@
       setPaletteMode(next);
       var btn = group.querySelector('[data-pal-mode="' + next + '"]'); if (btn) btn.focus();
     });
-    $("[data-pb-left]").appendChild(h("div", { class: "pb-pal-foot" }, h("span", { class: "pb-pal-foot-label", text: "Apparence" }), group));
-    $$("[data-pb-theme-toggle]").forEach(function (b) { b.addEventListener("click", function () { setPaletteMode(paletteResolved() === "dark" ? "light" : "dark"); }); });
+    var themesBtn = h("button", { type: "button", class: "pb-panel-toggle", "data-pb-themes": "", "data-tip": "Thèmes de l'éditeur : Classique, Personnalisé, Navy Premium", "aria-label": "Thèmes de l'éditeur", "aria-haspopup": "dialog", onclick: openThemeDialog }, icon("palette"));
+    $("[data-pb-left]").appendChild(h("div", { class: "pb-pal-foot" }, h("span", { class: "pb-pal-foot-label", text: "Apparence" }), themesBtn, group));
+    $$("[data-pb-theme-toggle]").forEach(function (b) { b.addEventListener("click", function () { var dark = skin === "classic" ? paletteResolved() === "dark" : $("[data-pb-main]").dataset.palette === "dark"; setPaletteMode(dark ? "light" : "dark"); }); });
     applyPalette();
   })();
+  // ---------- Fenêtre « Thèmes de l'éditeur » : aperçus réels, sélecteur de couleurs, présets ----------
+  var CARD_PREVIEWS = {
+    classic: function () { var dark = paletteResolved() === "dark"; return dark ? { top: "#0b2a40", panel: "#151515", border: "#2a2a2a", canvas: "#e9eff5", accent: "#6cb8e6" } : { top: "#0b2a40", panel: "#ffffff", border: "#dfe6ec", canvas: "#e9eff5", accent: "#0277b6" }; },
+    custom: function () { var t = window.KWTheme.derive(customTheme).tokens; return { top: t["--editor-top"], panel: t["--editor-panel"], border: t["--editor-border"], canvas: "#e9eff5", accent: t["--editor-accent"] }; },
+    navy: function () { return { top: "#0b2a40", panel: "#0a2438", border: "#17405d", canvas: "#e9eff5", accent: "#2b9ae0" }; },
+  };
+  var CARD_LABELS = { classic: ["Classique", "L'interface d'origine"], custom: ["Personnalisé", "Vos couleurs, contrastes calculés"], navy: ["Navy Premium", "Bleu nuit, canevas clair"] };
+  var CUSTOM_FIELDS = [["accent", "Couleur d'accent", false], ["panel", "Panneaux", true], ["bg", "Fond de l'éditeur", true], ["top", "Barre supérieure", true], ["text", "Texte principal", true]];
+  function openThemeDialog() {
+    var dlg = $("[data-pb-theme-dialog]");
+    if (!dlg) {
+      dlg = h("dialog", { class: "pb-modal pb-theme-dialog", "data-pb-theme-dialog": "", "aria-labelledby": "pb-theme-title" });
+      document.body.appendChild(dlg);
+      dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+    }
+    dlg.textContent = "";
+    var cards = h("div", { class: "pb-theme-cards", role: "radiogroup", "aria-label": "Thème de l'éditeur" });
+    SKINS.forEach(function (k) {
+      var pv = CARD_PREVIEWS[k]();
+      var pvEl = h("span", { class: "pb-tp", "aria-hidden": "true" }, h("span", { class: "pb-tp-top" }), h("span", { class: "pb-tp-row" }, h("span", { class: "pb-tp-side" }), h("span", { class: "pb-tp-canvas" }, h("i")), h("span", { class: "pb-tp-side" })));
+      pvEl.style.cssText = "--tp-top:" + pv.top + ";--tp-panel:" + pv.panel + ";--tp-border:" + pv.border + ";--tp-canvas:" + pv.canvas + ";--tp-accent:" + pv.accent;
+      cards.appendChild(h("button", { type: "button", class: "pb-theme-card", role: "radio", "aria-checked": String(skin === k), "data-skin-choice": k, onclick: function () { setSkin(k); } },
+        pvEl, h("span", {}, CARD_LABELS[k][0], h("small", { text: CARD_LABELS[k][1] }))));
+    });
+    var custom = h("section", { class: "pb-theme-custom", "data-pb-theme-custom": "", "aria-label": "Couleurs personnalisées" });
+    custom.hidden = skin !== "custom";
+    var presets = h("div", { class: "pb-theme-presets", role: "group", "aria-label": "Présets" });
+    window.KWTheme.PRESETS.forEach(function (p) {
+      presets.appendChild(h("button", { type: "button", class: "pb-theme-preset", "data-preset": p.key, onclick: function () { setCustom({ accent: p.accent, panel: p.panel, bg: p.bg, top: p.top }); } }, h("i", { style: "--sw:" + p.accent }), p.name));
+    });
+    var fields = h("div", { class: "pb-theme-fields" });
+    CUSTOM_FIELDS.forEach(function (f) {
+      var key = f[0];
+      var id = "pb-theme-" + key;
+      var picker = h("input", { type: "color", id: id, "data-theme-color": key, "aria-label": f[1] });
+      var hex = h("input", { type: "text", "data-theme-hex": key, maxlength: "7", placeholder: f[2] ? "auto" : "#0277b6", "aria-label": f[1] + " (valeur hexadécimale)", spellcheck: "false", autocomplete: "off" });
+      var commit = function (v) {
+        var t = Object.assign({}, customTheme);
+        if (v === "" && f[2]) delete t[key]; else if (window.KWTheme.parseHex(v)) t[key] = window.KWTheme.toHex(window.KWTheme.parseHex(v)); else return;
+        setCustom(t);
+      };
+      picker.addEventListener("input", function () { commit(picker.value); });
+      hex.addEventListener("change", function () { commit(hex.value.trim()); });
+      fields.appendChild(h("label", { class: "pb-theme-field", for: id }, f[1], h("span", { class: "pb-theme-inputs" }, picker, hex)));
+    });
+    var note = h("p", { class: "pb-theme-note", "data-pb-theme-note": "", role: "status" });
+    custom.appendChild(presets); custom.appendChild(fields); custom.appendChild(note);
+    custom.appendChild(h("div", { class: "pb-theme-actions" }, h("button", { type: "button", class: "btn btn-outline btn-sm", "data-theme-reset": "", onclick: function () { setCustom({ accent: "#0277b6" }); } }, "Réinitialiser")));
+    var close = h("button", { type: "button", class: "pb-panel-toggle", "aria-label": "Fermer", "data-tip": "Fermer", onclick: function () { dlg.close(); } }, icon("close"));
+    dlg.appendChild(h("div", { class: "pb-modal-head" }, h("h2", { id: "pb-theme-title", text: "Thèmes de l'éditeur" }), h("span", { class: "pb-modal-spacer" }), close));
+    dlg.appendChild(h("div", { class: "pb-theme-body" }, h("p", { class: "pb-theme-note", text: "Un thème change seulement les couleurs et les effets de l'interface : jamais la page, le canevas ni les fonctions." }), cards, custom));
+    window.pbThemeDialogRefresh = function () {
+      if (!dlg.open) return;
+      $$("[data-skin-choice]", dlg).forEach(function (c) { c.setAttribute("aria-checked", String(c.dataset.skinChoice === skin)); var pv = CARD_PREVIEWS[c.dataset.skinChoice](); var el = c.querySelector(".pb-tp"); el.style.cssText = "--tp-top:" + pv.top + ";--tp-panel:" + pv.panel + ";--tp-border:" + pv.border + ";--tp-canvas:" + pv.canvas + ";--tp-accent:" + pv.accent; });
+      custom.hidden = skin !== "custom";
+      var derived = window.KWTheme.derive(customTheme);
+      var tk = derived.tokens, shown = { accent: customTheme.accent, panel: tk["--editor-panel"], bg: tk["--editor-bg"], top: tk["--editor-top"], text: tk["--editor-text"] };
+      CUSTOM_FIELDS.forEach(function (f) {
+        var picker = dlg.querySelector('[data-theme-color="' + f[0] + '"]'), hex = dlg.querySelector('[data-theme-hex="' + f[0] + '"]');
+        picker.value = shown[f[0]]; if (document.activeElement !== hex) hex.value = customTheme[f[0]] ? customTheme[f[0]].toUpperCase() : "";
+      });
+      var r = derived.report;
+      note.textContent = "Contraste du texte : " + r.text.toFixed(1) + ":1 · de l'accent : " + r.accentText.toFixed(1) + ":1" + (r.accentAdjusted ? " · l'accent a été légèrement ajusté pour rester visible." : ".");
+    };
+    dlg.showModal();
+    window.pbThemeDialogRefresh();
+    var cur = dlg.querySelector('.pb-theme-card[aria-checked="true"]'); if (cur) cur.focus();
+  }
   if (paletteMedia) { var onScheme = function () { if (paletteMode === "system") applyPalette(); }; if (paletteMedia.addEventListener) paletteMedia.addEventListener("change", onScheme); else if (paletteMedia.addListener) paletteMedia.addListener(onScheme); }
 
   // ---------- Panneaux redimensionnables ----------
