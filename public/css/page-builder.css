@@ -589,13 +589,13 @@
 .pb-prop-text { width: 100%; min-width: 0; height: 28px; min-height: 0 !important; padding: 0 8px !important; font-size: 13px !important; font-weight: 600; }
 
 /* ===== Mission V3 : barre supérieure sombre (bleu nuit KOLAKISA), menus, recherche des calques ===== */
-.pb-top { background: #0b2a40; border-bottom-color: #06192a; color: #e8f2f9; }
+.pb-top { background: var(--editor-top, #0b2a40); border-bottom-color: var(--editor-top-border, #06192a); color: #e8f2f9; }
 .pb-top .pb-title h1 { color: #fff; }
 .pb-top .pb-back, .pb-top-left .pb-icon-btn, .pb-top-right .pb-icon-btn, .pb-top .pb-devices button { color: #cfe3f2; }
 .pb-top .pb-back:hover, .pb-top-left .pb-icon-btn:hover:not(:disabled), .pb-top-right .pb-icon-btn:hover:not(:disabled), .pb-top .pb-devices button:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
 .pb-top-left .pb-icon-btn[aria-pressed="true"], .pb-top-right .pb-icon-btn[aria-pressed="true"] { background: rgba(125, 211, 252, 0.22); color: #fff; }
 .pb-top .pb-devices, .pb-top .pb-mode-seg { background: rgba(255, 255, 255, 0.08); }
-.pb-top .pb-devices button[aria-checked="true"], .pb-top .pb-mode-seg button[aria-checked="true"] { background: #fff; color: #0b2a40; box-shadow: none; }
+.pb-top .pb-devices button[aria-checked="true"], .pb-top .pb-mode-seg button[aria-checked="true"] { background: #fff; color: var(--editor-top, #0b2a40); box-shadow: none; }
 .pb-top .pb-mode-seg button { color: #cfe3f2; }
 .pb-top .pb-mode-seg button:hover { color: #fff; }
 .pb-top .pb-status { background: rgba(255, 255, 255, 0.14); color: #e8f2f9; }
@@ -926,7 +926,7 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 .pb-gclass-new input { flex: 1 1 auto; min-width: 0; }
 .pb-pal-subhead { grid-column: 1 / -1; list-style: none; margin: 10px 0 2px; padding: 0 2px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.7; }
 
-/* ==========================================================================================================================
+/* ===================================================================================================================
    PARTIE DROITE : STRUCTURE (calques) + INSPECTEUR — même langage visuel que la palette de gauche, thème clair / sombre.
    Tout lit les jetons --editor-* (voir plus haut). Les jetons du site (--border, --card, --text…) sont ramenés aux jetons de
    l'éditeur DANS ces panneaux seulement : les composants existants (champs, segments, accordéons, longueurs, couleurs…) suivent
@@ -1178,3 +1178,65 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 .pb-seo-check.is-good { border-left-color: #1f9d55; }
 .pb-seo-check.is-improve { border-left-color: #d98a00; background: var(--warning-bg); color: var(--warning-text); }
 .pb-seo-check.is-problem { border-left-color: #c0392b; background: #fdecec; color: #8a1c1c; }
+=======
+/* ==========================================================================================================================
+   THÈMES DE L'ÉDITEUR : « Classique » (les jetons ci-dessus, inchangés), « Personnalisé » (jetons calculés par page-builder-theme.js et
+   posés en ligne sur <body>) et « Navy Premium » (ci-dessous). Un thème ne fournit que des valeurs de jetons --editor-* : aucune règle
+   ne touche aux fonctions, à la structure, au canevas ni à la page. La barre du haut lit --editor-top (repli : son bleu d'origine).
+   ========================================================================================================================== */
+.pb-body[data-skin="navy"], .pb-body[data-skin="navy"][data-palette] {
+  --editor-top: #0b2a40; --editor-top-border: #06192a;
+  --editor-bg: #071c2c; --editor-panel: #0a2438; --editor-panel-secondary: #08202f; --editor-card: #0f3049; --editor-input: #0c2a40;
+  --editor-border: #17405d; --editor-border-strong: #265a7e; --editor-guide: #1c4766;
+  --editor-text: #e8f1f8; --editor-text-secondary: #bdd3e3; --editor-muted: #8fadc2;
+  --editor-hover: #123a57; --editor-active: #174d73; --editor-accent: #2b9ae0; --editor-accent-text: #7cc4f2; --editor-on-accent: #04182a;
+  --editor-danger: #ff8a80; --editor-danger-bg: #3a1c24; --editor-success: #6fd48a; --editor-success-bg: #123a2b;
+  --editor-shadow: 0 10px 28px rgba(2, 12, 22, 0.55); --editor-focus: 0 0 0 2px rgba(124, 196, 242, 0.5); --editor-scheme: dark;
+  --editor-select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238fadc2' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --editor-search-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238fadc2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+}
+/* Le bouton « actif » de l'apparence et les boutons pleins lisent la couleur de texte prévue pour l'accent */
+.pb-pal-theme button[aria-checked="true"] { color: var(--editor-on-accent, #fff); }
+/* Micro-animations des éléments cliquables (thèmes Navy et Personnalisé seulement) : 140 ms, presque imperceptibles, jamais de mesure modifiée */
+.pb-body:is([data-skin="navy"], [data-skin="custom"]) :is(.pb-tool, .pb-panel-toggle, .pb-pal-theme button, .pb-menu-item, .pb-icon-btn, .pb-tab, .btn, .pb-row-item, .pb-flag, .pb-theme-card) {
+  transition: background-color 0.14s ease, color 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease, opacity 0.14s ease;
+}
+.pb-body:is([data-skin="navy"], [data-skin="custom"]) :is(.btn, .pb-theme-card):hover:not(:disabled) { transform: translateY(-1px); }
+.pb-body:is([data-skin="navy"], [data-skin="custom"]) :is(.btn, .pb-theme-card):active:not(:disabled) { transform: translateY(0); }
+/* Reflet « glossy » très discret au survol des boutons importants : un voile de lumière en haut, rien de plus */
+.pb-body:is([data-skin="navy"], [data-skin="custom"]) :is(.btn-primary, .btn-outline):hover:not(:disabled) { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 55%); box-shadow: 0 2px 6px rgba(2, 12, 22, 0.22); }
+.pb-body:is([data-skin="navy"], [data-skin="custom"]) .btn-primary:active:not(:disabled) { box-shadow: inset 0 1px 2px rgba(2, 12, 22, 0.3); }
+@media (prefers-reduced-motion: reduce) { .pb-body :is(.btn, .pb-theme-card):hover:not(:disabled) { transform: none; } }
+
+/* ---------- Fenêtre « Thèmes de l'éditeur » ---------- */
+.pb-theme-dialog { width: min(640px, calc(100vw - 32px)); }
+.pb-theme-body { display: grid; gap: 14px; padding: 14px 16px 16px; max-height: calc(100vh - 140px); overflow-y: auto; color: var(--editor-text); background: var(--editor-panel); }
+.pb-theme-dialog { background: var(--editor-panel); border-color: var(--editor-border-strong); color: var(--editor-text); }
+.pb-theme-dialog .pb-modal-head { border-bottom-color: var(--editor-border); }
+.pb-theme-dialog h2, .pb-theme-dialog h3 { color: var(--editor-text); }
+.pb-theme-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.pb-theme-card { display: grid; gap: 8px; padding: 8px; border: 1px solid var(--editor-border); border-radius: var(--pb-radius-md); background: var(--editor-card); color: var(--editor-text); font: inherit; font-size: 13px; font-weight: 600; text-align: left; cursor: pointer; }
+.pb-theme-card:hover { border-color: var(--editor-border-strong); }
+.pb-theme-card[aria-checked="true"] { border-color: var(--editor-accent); box-shadow: var(--editor-focus); }
+.pb-theme-card:focus-visible, .pb-theme-preset:focus-visible { outline: 2px solid var(--editor-accent); outline-offset: 2px; }
+.pb-theme-card small { display: block; font-size: 12px; font-weight: 400; color: var(--editor-muted); }
+.pb-tp { display: grid; grid-template-rows: 10px 1fr; height: 64px; overflow: hidden; border: 1px solid rgba(128, 128, 128, 0.35); border-radius: var(--pb-radius-sm); }
+.pb-tp-top { background: var(--tp-top); }
+.pb-tp-row { display: grid; grid-template-columns: 22% 1fr 22%; }
+.pb-tp-side { background: var(--tp-panel); border-inline: 1px solid var(--tp-border); }
+.pb-tp-canvas { background: var(--tp-canvas); display: grid; place-items: center; }
+.pb-tp-canvas i { display: block; width: 46%; height: 8px; border-radius: 3px; background: var(--tp-accent); }
+.pb-theme-custom { display: grid; gap: 12px; padding: 12px; border: 1px solid var(--editor-border); border-radius: var(--pb-radius-md); background: var(--editor-panel-secondary); }
+.pb-theme-custom[hidden] { display: none; }
+.pb-theme-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.pb-theme-preset { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border: 1px solid var(--editor-border); border-radius: 999px; background: var(--editor-card); color: var(--editor-text); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.pb-theme-preset:hover { background: var(--editor-hover); }
+.pb-theme-preset i { width: 14px; height: 14px; border-radius: 50%; background: var(--sw); border: 1px solid rgba(128, 128, 128, 0.4); }
+.pb-theme-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.pb-theme-field { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--editor-text-secondary); }
+.pb-theme-field span.pb-theme-inputs { display: flex; align-items: center; gap: 6px; }
+.pb-theme-field input[type="color"] { width: 36px; height: 30px; padding: 2px; border: 1px solid var(--editor-border-strong); border-radius: var(--pb-radius-sm); background: var(--editor-input); cursor: pointer; }
+.pb-theme-field input[type="text"] { width: 100%; min-width: 0; height: 30px; padding: 0 8px; border: 1px solid var(--editor-border-strong); border-radius: var(--pb-radius-sm); background: var(--editor-input); color: var(--editor-text); font: inherit; font-size: 13px; text-transform: uppercase; }
+.pb-theme-field input[type="text"]:focus-visible { outline: 2px solid var(--editor-accent); outline-offset: 1px; }
+.pb-theme-note { margin: 0; font-size: 12px; color: var(--editor-muted); }
+.pb-theme-actions { display: flex; justify-content: flex-end; gap: 8px; }
