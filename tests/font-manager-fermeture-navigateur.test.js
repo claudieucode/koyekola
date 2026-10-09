@@ -100,7 +100,7 @@ describe("fermeture du sélecteur de police (navigateur)", { skip: SKIP }, () =>
     await open().locator(".kf-chip", { hasText: "Serif" }).first().click();
     assert.equal(await isOpen(), true, "une catégorie sert de filtre : le sélecteur reste ouvert");
     await open().locator(".kf-search").fill("");
-    await until(async () => (await open().locator(".kf-row").count()) >= 20, { what: "liste" });
+    await until(async () => (await open().locator(".kf-row").count()) >= 8, { what: "liste (fenêtre de lignes virtualisée)" });
     await open().locator(".kf-list").evaluate((l) => { l.scrollTop = 600; });
     await open().locator(".kf-list").hover();
     await page.mouse.wheel(0, 400);
