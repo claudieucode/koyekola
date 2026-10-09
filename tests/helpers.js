@@ -20,6 +20,7 @@ async function startServer(extraEnv = {}) {
     SESSION_SECRET: "secret-de-test-assez-long-1234567890",
     NODE_ENV: "test",
     SITE_URL: "",
+    ALLOW_INDEXING: "1", // les serveurs de test simulent un site public ; un test d'environnement local passe ALLOW_INDEXING: "auto"
     FORMATEUR_EMAIL: INSTRUCTOR.email,
     FORMATEUR_USERNAME: INSTRUCTOR.username,
     FORMATEUR_PASSWORD: INSTRUCTOR.password,

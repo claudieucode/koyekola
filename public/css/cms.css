@@ -269,3 +269,12 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label { display: none; }
 .mk-hi-line.is-del { background: #fbe7e8; text-decoration: line-through; text-decoration-color: rgba(176, 20, 30, 0.45); }
 .mk-hi-mark { flex: none; width: 1ch; font-weight: 700; }
 .mk-tr-table th[scope="row"] { font-weight: 600; overflow-wrap: anywhere; }
+
+/* Adresses et redirections (palier 12) */
+.mk-ur-trace { margin: 8px 0 0; overflow-wrap: anywhere; }
+.mk-ur-steps { margin: 8px 0; padding-left: 20px; display: grid; gap: 6px; }
+.mk-ur-step { overflow-wrap: anywhere; }
+.mk-ur-ok { color: var(--success-dark); font-weight: 600; }
+.mk-ur-bad { color: #a12622; font-weight: 600; }
+.mk-status-bad { background: #fdecea; color: #a12622; }
+.mk-ur-list { margin: 0; padding-left: 20px; display: grid; gap: 8px; }

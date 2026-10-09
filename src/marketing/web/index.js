@@ -72,6 +72,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./history")()); // Historique des modifications et corbeille commune (palier 10)
   admin.use(require("./users")()); // Utilisateurs, rôles, permissions, invitations (palier 9)
   admin.use(require("./appearanceEditor")()); // Apparence : éditeur du site, styles, en-tête, pied de page, templates, patterns (palier 8)
+  admin.use(require("./urls")()); // Redirections, liens cassés, permaliens et adresses (palier 12)
   admin.use(require("./mediaLibrary")()); // KOLAKISA CMS → Médias (palier 3) : page et API de la médiathèque
   admin.use(require("./cmsScreens")()); // écrans de KOLAKISA CMS (lecture seule, tables existantes) : après les routes /site-web déjà en place
   admin.use(require("./scoring")());

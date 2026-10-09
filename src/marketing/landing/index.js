@@ -73,6 +73,8 @@ function saveSettings(ctx, id, input = {}) {
   if (dup && dup.id !== id) throw new MarketingError("duplicate", "Une page porte déjà ce nom.");
   const slug = line(input.slug, 60).toLowerCase();
   if (!SLUG.test(slug)) throw bad("Adresse de la page : lettres minuscules sans accent, chiffres et tirets (ex. « guide-gratuit »).");
+  // Page d'un site : elle peut être servie à la racine du domaine du site, une adresse réservée à une route du site est donc refusée (palier 12)
+  if (slug !== before.slug && before.site_id && require("../../services/urls").isReserved(slug)) throw bad(`« ${slug} » est réservée à une route du site : choisissez une autre adresse.`);
   if (ctx.db.prepare("SELECT 1 FROM mk_landing_pages WHERE slug = ? AND id <> ?").get(slug, id)) throw new MarketingError("duplicate", `L'adresse « /p/${slug} » est déjà utilisée par une autre page.`);
   let formId = null;
   if (input.formId !== undefined && input.formId !== null && input.formId !== "") {
@@ -85,7 +87,7 @@ function saveSettings(ctx, id, input = {}) {
   ctx.db.prepare("UPDATE mk_landing_pages SET name = ?, slug = ?, form_id = ?, tags = ?, indexable = ?, updated_at = datetime('now') WHERE id = ?")
     .run(name, slug, formId, JSON.stringify(tags), input.indexable ? 1 : 0, id);
   // Page en ligne dont l'adresse change : l'ancien lien redirige vers le nouveau (CMS, palier 2)
-  require("../pages/cmsPages").slugChanged(ctx, { oldSlug: before.slug, newSlug: slug, status: before.status });
+  require("../pages/cmsPages").slugChanged(ctx, { id, oldSlug: before.slug, newSlug: slug, status: before.status, publishedAt: before.published_at, siteId: before.site_id });
   return getPage(ctx, id);
 }
 

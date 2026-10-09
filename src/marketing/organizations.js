@@ -31,6 +31,8 @@ const PERMISSIONS = Object.freeze({
   "revisions.view": "editor", "revisions.restore": "editor", "revisions.delete": "admin",
   // Référencement (palier 11) : voir l'analyse et l'aperçu SEO = éditeur ; modifier les réglages SEO (page, site) = éditeur (retirable à un rôle personnalisé)
   "seo.view": "editor", "seo.edit": "editor",
+  // Adresses et redirections (palier 12) : voir, créer et modifier une redirection vers une adresse du site = éditeur ; supprimer et rediriger vers un site extérieur = administrateur
+  "redirects.view": "editor", "redirects.create": "editor", "redirects.edit": "editor", "redirects.delete": "admin", "redirects.external": "admin",
   "articles.read": "viewer", "articles.write": "editor", "articles.publish": "editor", "articles.delete": "admin",
   "media.read": "viewer", "media.upload": "editor", "media.write": "editor", "media.delete": "admin",
   "analytics.read": "viewer",

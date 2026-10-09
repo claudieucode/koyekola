@@ -29,13 +29,13 @@ const TYPES = {
   home: { label: "Accueil", needsObject: false },
   page: {
     label: "Page", needsObject: true,
-    search: (q, limit) => db.prepare(`SELECT id, COALESCE(NULLIF(title, ''), name) AS title, slug AS detail FROM mk_landing_pages WHERE archived_at IS NULL AND kind <> 'step' AND (name LIKE ? ESCAPE '\\' OR title LIKE ? ESCAPE '\\' OR slug LIKE ? ESCAPE '\\') ORDER BY updated_at DESC LIMIT ?`).all(like(q), like(q), like(q), limit).map((r) => ({ ...r, detail: `/p/${r.detail}` })),
-    resolve: (ids) => fetchMap(ids, "SELECT id, COALESCE(NULLIF(title, ''), name) AS title, slug, status, archived_at FROM mk_landing_pages", (r) => ({ title: r.title, url: `/p/${r.slug}`, state: r.archived_at ? "trashed" : r.status === "published" ? "ok" : "unpublished" })),
+    search: (q, limit) => db.prepare(`SELECT id, COALESCE(NULLIF(title, ''), name) AS title, slug AS detail FROM mk_landing_pages WHERE archived_at IS NULL AND kind <> 'step' AND (name LIKE ? ESCAPE '\\' OR title LIKE ? ESCAPE '\\' OR slug LIKE ? ESCAPE '\\') ORDER BY updated_at DESC LIMIT ?`).all(like(q), like(q), like(q), limit).map((r) => ({ ...r, detail: urlsLib().publicPath("page", { slug: r.detail }, { hostSite: null }) })),
+    resolve: (ids) => fetchMap(ids, "SELECT id, COALESCE(NULLIF(title, ''), name) AS title, slug, status, archived_at FROM mk_landing_pages", (r) => ({ title: r.title, url: urlsLib().publicPath("page", r, { hostSite: null }), state: r.archived_at ? "trashed" : r.status === "published" ? "ok" : "unpublished" })),
   },
   article: {
     label: "Article", needsObject: true,
-    search: (q, limit) => db.prepare(`SELECT id, title, slug AS detail FROM posts WHERE deleted_at IS NULL AND (title LIKE ? ESCAPE '\\' OR slug LIKE ? ESCAPE '\\') ORDER BY COALESCE(published_at, created_at) DESC LIMIT ?`).all(like(q), like(q), limit).map((r) => ({ ...r, detail: `/blog/${r.detail}` })),
-    resolve: (ids) => fetchMap(ids, "SELECT id, title, slug, published, deleted_at FROM posts", (r) => ({ title: r.title, url: `/blog/${r.slug}`, state: r.deleted_at ? "trashed" : r.published ? "ok" : "unpublished" })),
+    search: (q, limit) => db.prepare(`SELECT id, title, slug AS detail FROM posts WHERE deleted_at IS NULL AND (title LIKE ? ESCAPE '\\' OR slug LIKE ? ESCAPE '\\') ORDER BY COALESCE(published_at, created_at) DESC LIMIT ?`).all(like(q), like(q), limit).map((r) => ({ ...r, detail: urlsLib().publicPath("post", { slug: r.detail }) })),
+    resolve: (ids) => fetchMap(ids, "SELECT id, title, slug, published, deleted_at FROM posts", (r) => ({ title: r.title, url: urlsLib().publicPath("post", r), state: r.deleted_at ? "trashed" : r.published ? "ok" : "unpublished" })),
   },
   category: {
     label: "Catégorie", needsObject: true,
@@ -50,6 +50,8 @@ const TYPES = {
   custom: { label: "Lien personnalisé", needsObject: false },
 };
 const registerType = (key, def) => { TYPES[key] = def; };
+// Adresses publiques : toujours calculées par le moteur d'URLs central (une référence d'objet suit l'adresse courante de la ressource)
+const urlsLib = () => require("./urls");
 const like = (s) => `%${String(s || "").replace(/[\\%_]/g, "\\$&")}%`;
 function fetchMap(ids, sql, shape) {
   const out = new Map();

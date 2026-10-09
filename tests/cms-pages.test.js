@@ -160,14 +160,14 @@ describe("prévisualiser et publier", () => {
     assert.equal(old.status, 301);
     assert.equal(old.location, "/p/offre-2026");
     assert.equal((await anon.get("/p/offre-2026")).status, 200);
-    assert.ok(db.prepare("SELECT 1 FROM seo_redirects WHERE source_path = ? AND target = ?").get(`/p/${slug}`, "/p/offre-2026"), "redirection enregistrée (gestionnaire de redirections existant)");
+    assert.ok(db.prepare("SELECT 1 FROM cms_url_history WHERE resource_type = 'page' AND old_slug = ? AND resource_id = ?").get(slug, id), "ancienne adresse conservée dans l'historique des adresses (palier 12)");
   });
   test("une page qui reprend l'ancienne adresse la récupère : la redirection ne la masque pas", async () => {
     const other = await create("Page qui reprend");
     assert.equal(row(other).slug === slug, false, "l'adresse d'une redirection n'est pas attribuée d'office");
     await boss.post(`/marketing/pages/${other}`, settings(other, { slug }));
     assert.equal(row(other).slug, slug);
-    assert.equal(db.prepare("SELECT COUNT(*) n FROM seo_redirects WHERE source_path = ?").get(`/p/${slug}`).n, 0);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM cms_url_history WHERE resource_type = 'page' AND old_slug = ?").get(slug).n, 0, "l'adresse reprise sort de l'historique");
     await saveDraft(boss, other, [textSection("Page qui reprend l'adresse")]);
     assert.equal((await boss.post(`/marketing/pages/${other}/publier.json`, {})).status, 200);
     assert.equal((await anon.get(`/p/${slug}`)).status, 200);

@@ -1,0 +1,43 @@
+<%#
+  KOLAKISA CMS → Liens cassés (palier 12). Seuls les liens CONNUS du système sont vérifiés (menus, pages en ligne, articles publiés), un par un,
+  auprès du vrai serveur : aucun robot d'exploration, aucun résultat inventé. Le dernier rapport est conservé en base.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const fdate = (v) => (v ? new Date(v).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }) : "");
+  const issues = report ? report.issues : [];
+  const broken = issues.filter((i) => i.status === "broken");
+  const moved = issues.filter((i) => i.status === "redirected");
+%>
+    <div class="mk-head"><h1>Liens cassés</h1>
+      <div class="mk-actions"><form method="post" action="/marketing/site-web/liens-casses/analyser" data-ur-scan><button type="submit" class="btn btn-primary btn-sm"><%- icon("search", { size: 16 }) %> <%= report ? "Relancer l'analyse" : "Analyser les liens" %></button></form></div></div>
+    <p class="mk-lead">Vérifie les liens internes connus : éléments de menus, boutons et liens des pages en ligne, liens des articles publiés. Un lien cassé mène à une page introuvable, à la corbeille ou à une ressource non publiée ; un lien redirigé fonctionne mais gagne à être mis à jour.</p>
+
+    <nav class="mk-tabs mk-cms-tabs" aria-label="Adresses">
+      <a class="mk-tab" href="/marketing/site-web/redirections">Redirections</a>
+      <a class="mk-tab" href="/marketing/site-web/liens-casses" aria-current="page">Liens cassés</a>
+      <a class="mk-tab" href="/marketing/site-web/permaliens">Permaliens et adresses</a>
+    </nav>
+
+    <% if (!report) { %>
+      <div class="mk-empty"><%- icon("search", { size: 32 }) %><h2>Aucune analyse pour l'instant</h2><p>Lancez l'analyse : elle vérifie chaque lien interne connu auprès du serveur et affiche ce qu'il faut corriger.</p></div>
+    <% } else { %>
+      <p class="mk-sub" role="status">Dernière analyse : <%= fdate(report.at) %> — <%= report.links %> lien<%= report.links > 1 ? "s" : "" %> examiné<%= report.links > 1 ? "s" : "" %> (<%= report.checked %> adresse<%= report.checked > 1 ? "s" : "" %> vérifiée<%= report.checked > 1 ? "s" : "" %>).
+        <strong><%= broken.length %> cassé<%= broken.length > 1 ? "s" : "" %></strong>, <strong><%= moved.length %> redirigé<%= moved.length > 1 ? "s" : "" %></strong>.<% if (report.truncated) { %> Liste limitée aux 500 premiers.<% } %></p>
+      <% if (!issues.length) { %>
+        <div class="mk-empty"><%- icon("checkCircle", { size: 32 }) %><h2>Aucun lien à corriger</h2><p>Tous les liens internes connus répondent normalement.</p></div>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table">
+          <caption class="sr-only">Liens à corriger</caption>
+          <thead><tr><th scope="col">Lien</th><th scope="col">Problème</th><th scope="col">Où il se trouve</th><th scope="col"><span class="sr-only">Corriger</span></th></tr></thead>
+          <tbody><% issues.forEach((i) => { %>
+            <tr>
+              <th scope="row" data-label="Lien"><code><%= i.path || "(ressource supprimée)" %></code></th>
+              <td data-label="Problème"><span class="mk-status <%= i.status === "broken" ? "mk-status-bad" : "mk-status-warn" %>"><%= i.status === "broken" ? "Cassé" : "Redirigé" %></span><span class="mk-sub"><%= i.detail %></span></td>
+              <td data-label="Où il se trouve"><%= i.source.where %> — <%= i.source.title %></td>
+              <td class="mk-row-actions"><a class="btn btn-outline btn-sm" href="<%= i.source.editUrl %>">Corriger<span class="sr-only"> le lien dans « <%= i.source.title %> »</span></a></td>
+            </tr>
+          <% }) %></tbody>
+        </table></div>
+      <% } %>
+    <% } %>
+<%- include("partials/bottom") %>

@@ -10,6 +10,7 @@ const { finalize } = require("./resolver");
 const { render } = require("./templates");
 const { absoluteUrl, plainText } = require("../utils/seo");
 const analyzer = require("../utils/seoAnalyzer");
+const urls = require("../services/urls");
 
 const LOCALES = { fr: "fr_FR", en: "en_US", es: "es_ES", pt: "pt_PT", de: "de_DE", it: "it_IT", ar: "ar_AR", sw: "sw_KE" };
 const LANGS = { fr: "fr-FR", en: "en", es: "es", pt: "pt", de: "de", it: "it", ar: "ar", sw: "sw" };
@@ -24,8 +25,8 @@ const siteConf = (site) => (site && site.settings ? site.settings : null);
 function homeOf(site) {
   if (!site || !site.home_page_id) return null;
   try {
-    const row = db.prepare("SELECT slug, name FROM mk_landing_pages WHERE id = ? AND status = 'published' AND archived_at IS NULL").get(site.home_page_id);
-    return row ? { id: site.home_page_id, path: `/p/${row.slug}`, name: row.name } : null;
+    const row = db.prepare("SELECT id, slug, name, site_id FROM mk_landing_pages WHERE id = ? AND status = 'published' AND archived_at IS NULL").get(site.home_page_id);
+    return row ? { id: row.id, path: urls.pageCanonicalPath(row), name: row.name } : null;
   } catch { return null; }
 }
 
@@ -64,7 +65,7 @@ function inputs(req, { page, site = null, preview = false }) {
   if (siteSeo.publicUrl) req.seoBase = siteSeo.publicUrl;
   const siteLabel = siteSeo.title || (site && site.name) || st.site_name;
   const pageTitle = page.title || page.name;
-  const own = `/p/${page.slug}`;
+  const own = urls.pageCanonicalPath(page); // adresse de référence de la page (racine du domaine du site, sinon /p/<adresse>)
   const ix = indexing(page, site, { preview });
   const s = { siteName: siteLabel, locale: LOCALES[(sx && sx.extras && sx.extras.language) || "fr"] || st.og_locale };
   // Titre : SEO personnalisé (complet) → titre de la page + nom du site
@@ -100,7 +101,7 @@ function inputs(req, { page, site = null, preview = false }) {
 // Balises finales (title, description, robots, canonical, Open Graph, X, JSON-LD) d'une page du CMS
 function head(req, { page, site = null, preview = false }) {
   const { s, ix } = inputs(req, { page, site, preview });
-  const h = finalize(req, `/p/${page.slug}`, s, null);
+  const h = finalize(req, urls.pageCanonicalPath(page), s, null);
   // Pas de données structurées sur une page que les moteurs ne doivent pas indexer
   if (ix.blockAll || (parseSeo(page).noindex)) h.jsonLd = [];
   return h;
@@ -111,7 +112,7 @@ function head(req, { page, site = null, preview = false }) {
 function analyze(req, { page, site = null, html = "" }) {
   const { s, ix } = inputs(req, { page, site, preview: false });
   const seo = parseSeo(page);
-  const h = finalize(req, `/p/${page.slug}`, { ...s, noindex: false }, null);
+  const h = finalize(req, urls.pageCanonicalPath(page), { ...s, noindex: false }, null);
   const x = analyzer.extract(html);
   const checks = [];
   const add = (group, id, status, label, advice = "") => checks.push({ group, id, status, label, advice });
@@ -135,7 +136,7 @@ function analyze(req, { page, site = null, html = "" }) {
   else add("seo", "description", "good", `Description (${description.length} caractères)`);
   // Canonical
   if (!seo.canonical) add("seo", "canonical", "good", "Adresse canonique : celle de la page");
-  else if (h.canonical && !h.canonical.endsWith(`/p/${page.slug}`)) add("seo", "canonical", "improve", "Adresse canonique vers une autre adresse", "Vous indiquez aux moteurs que l'original est ailleurs : cette page ne sera pas mise en avant.");
+  else if (h.canonical && !h.canonical.endsWith(urls.pageCanonicalPath(page) === "/" ? "/" : urls.pageCanonicalPath(page))) add("seo", "canonical", "improve", "Adresse canonique vers une autre adresse", "Vous indiquez aux moteurs que l'original est ailleurs : cette page ne sera pas mise en avant.");
   else add("seo", "canonical", "good", "Adresse canonique personnalisée");
   // Partage
   add("social", "og-image", h.image ? "good" : "improve", h.image ? "Image de partage trouvée" : "Pas d'image de partage", h.image ? "" : "Ajoutez une image (idéalement 1200 × 630) : les liens partagés sur les réseaux sont bien plus attrayants avec une image.");
