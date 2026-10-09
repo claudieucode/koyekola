@@ -1,0 +1,22 @@
+<%# Un niveau d'un menu de navigation du CMS (récursif). Accessibilité : un lien + un bouton « sous-menu » (aria-expanded/controls), jamais de lien mort. %>
+<%
+  const uid = (typeof prefix !== "undefined" ? prefix : "nm");
+  const isCurrent = (it) => navIsCurrent(it.href);
+  const itemClass = (it, sub) => ["nav-item", sub ? "has-sub" : "", hasCurrent(it) && !isCurrent(it) ? "is-current-parent" : ""].join(" ").trim();
+  const hasCurrent = (it) => isCurrent(it) || it.children.some(hasCurrent);
+  const listClass = ["nav-menu", typeof menuClass !== "undefined" ? menuClass : ""].join(" ").trim();
+  const listLabel = typeof menuLabel !== "undefined" && level === 1 ? menuLabel : "";
+%>
+<ul class="<%= listClass %>"<%- listLabel ? ` aria-label="${listLabel}"` : "" %> data-level="<%= level %>">
+  <% items.forEach((it) => { const sub = it.children.length > 0; const sid = `${uid}-${it.id}`; %>
+    <li class="<%= itemClass(it, sub) %>">
+      <% if (it.href) { %>
+        <a href="<%= it.href %>"<%- it.newTab ? ' target="_blank"' : "" %><%- it.rel ? ` rel="${it.rel}"` : "" %><%- isCurrent(it) ? ' aria-current="page"' : "" %>><%- it.icon ? icon(it.icon, { size: 16 }) + " " : "" %><%= it.label %><% if (it.newTab) { %><span class="sr-only"> (s'ouvre dans un nouvel onglet)</span><% } %></a>
+        <% if (sub) { %><button type="button" class="nav-sub-toggle" aria-expanded="false" aria-controls="<%= sid %>" aria-label="Sous-menu de <%= it.label %>"><%- icon("chevronDown", { size: 14 }) %></button><% } %>
+      <% } else { %>
+        <button type="button" class="nav-group-toggle" aria-expanded="false" aria-controls="<%= sid %>"><%= it.label %> <%- icon("chevronDown", { size: 14 }) %></button>
+      <% } %>
+      <% if (sub) { %><div class="nav-sub" id="<%= sid %>"><%- include("nav-menu", { items: it.children, level: level + 1, prefix: uid, menuClass: "nav-menu--sub" }) %></div><% } %>
+    </li>
+  <% }) %>
+</ul>

@@ -1,0 +1,55 @@
+<%# Un élément de menu et, dessous, ses sous-éléments (récursif). Boutons = vrais formulaires (fonctionnent sans JavaScript) ; le glisser-déposer les complète. %>
+<%
+  const n = node;
+  const resourceType = ["page", "article", "category", "tag"].includes(n.type);
+  const bad = resourceType && n.resource.state !== "ok";
+  const itemClass = ["mk-nav-item", bad ? "is-broken" : "", n.status === "hidden" ? "is-hidden" : ""].join(" ").trim();
+  const move = (dir, label, icon) => `<form method="post" action="${BASE}/elements/${n.id}/deplacer" class="mk-nav-mini"><input type="hidden" name="direction" value="${dir}"><button type="submit" class="btn btn-ghost btn-sm" aria-label="${label} : ${n.displayLabel.replace(/"/g, "&quot;")}" title="${label}">${icon}</button></form>`;
+%>
+<li class="<%= itemClass %>" data-id="<%= n.id %>" data-depth="<%= depth %>">
+  <div class="mk-nav-row">
+    <% if (canWrite) { %><span class="mk-nav-handle" draggable="true" data-nav-handle title="Glisser pour déplacer" aria-hidden="true"><%- icon("menu", { size: 16 }) %></span><% } %>
+    <div class="mk-nav-main">
+      <strong class="mk-nav-label"><%= n.displayLabel %></strong>
+      <span class="mk-nav-meta"><span class="mk-nav-type"><%= types[n.type].label %></span>
+        <% if (n.type === "custom") { %><span class="mk-nav-url"><%= n.url %></span><% } else if (resourceType && !bad) { %><span class="mk-nav-url"><%= n.resource.url %></span><% } %>
+        <% if (n.label && n.resource.title && n.label !== n.resource.title && resourceType) { %><span class="mk-nav-orig">Ressource : <%= n.resource.title %></span><% } %>
+        <% if (n.status === "hidden") { %><span class="mk-status mk-status-off">Masqué</span><% } %>
+        <% if (n.visibility !== "all") { %><span class="mk-status mk-status-info"><%= n.visibility === "members" ? "Membres connectés" : "Visiteurs déconnectés" %></span><% } %>
+        <% if (bad) { %><span class="mk-status mk-status-err" role="status"><%= n.stateLabel %></span><% } %></span>
+    </div>
+    <% if (canWrite) { %>
+    <div class="mk-nav-actions">
+      <%- move("up", "Monter", "↑") %><%- move("down", "Descendre", "↓") %><%- move("in", "Imbriquer sous l'élément précédent", "→") %><%- move("out", "Remonter d'un niveau", "←") %>
+      <button type="button" class="btn btn-outline btn-sm" data-nav-edit aria-expanded="false" aria-controls="nav-edit-<%= n.id %>"><%= bad ? "Réparer" : "Modifier" %></button>
+    </div>
+    <% } %>
+  </div>
+  <% if (canWrite) { %>
+  <div class="mk-nav-edit" id="nav-edit-<%= n.id %>" hidden>
+    <form method="post" action="<%= BASE %>/elements/<%= n.id %>" class="mk-form mk-nav-form">
+      <div class="field-group"><label for="nl-<%= n.id %>">Texte affiché dans le menu</label><input id="nl-<%= n.id %>" type="text" name="label" maxlength="80" value="<%= n.label %>"<%= n.type === "custom" ? " required" : "" %> placeholder="<%= n.resource.title %>">
+        <% if (resourceType) { %><span class="field-hint">Laissez vide pour reprendre le titre de la ressource. Changer ce texte ne modifie jamais la ressource.</span><% } %></div>
+      <% if (n.type === "custom") { %><div class="field-group"><label for="nu-<%= n.id %>">Adresse</label><input id="nu-<%= n.id %>" type="text" name="url" maxlength="500" value="<%= n.url %>" required><span class="field-hint">/page, https://exemple.org ou une ancre (#tarifs, /page#tarifs).</span></div><% } %>
+      <% if (resourceType) { %><div class="field-group mk-nav-replace" data-nav-replace data-type="<%= n.type %>"><label for="nr-<%= n.id %>">Remplacer la destination</label>
+        <input id="nr-<%= n.id %>" type="search" placeholder="Rechercher <%= types[n.type].label.toLowerCase() %>…" autocomplete="off" data-nav-replace-search>
+        <input type="hidden" name="object_id" value="" data-nav-replace-id><ul class="mk-nav-results" data-nav-replace-results></ul></div><% } %>
+      <div class="mk-nav-opts">
+        <label class="mk-cms-check"><input type="checkbox" name="new_tab" value="1"<%= n.new_tab ? " checked" : "" %>> Ouvrir dans un nouvel onglet</label>
+        <label class="mk-cms-check"><input type="checkbox" name="status" value="hidden"<%= n.status === "hidden" ? " checked" : "" %>> Masquer cet élément</label>
+      </div>
+      <div class="field-group"><label for="nv-<%= n.id %>">Visible pour</label>
+        <select id="nv-<%= n.id %>" name="visibility"><option value="all"<%= n.visibility === "all" ? " selected" : "" %>>Tout le monde</option><option value="members"<%= n.visibility === "members" ? " selected" : "" %>>Membres connectés</option><option value="guests"<%= n.visibility === "guests" ? " selected" : "" %>>Visiteurs non connectés</option></select></div>
+      <fieldset class="mk-nav-rel"><legend>Attributs du lien (rel)</legend>
+        <% const rels = n.rel.split(" "); REL.filter((r) => !["noopener", "external"].includes(r)).forEach((r) => { %><label class="mk-cms-check"><input type="checkbox" name="rel" value="<%= r %>"<%= rels.includes(r) ? " checked" : "" %>> <%= r %></label><% }) %>
+        <span class="field-hint">« noopener noreferrer » est ajouté automatiquement aux liens externes et aux nouveaux onglets.</span></fieldset>
+      <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+        <button type="submit" form="nav-del-<%= n.id %>" class="btn btn-outline btn-sm mk-btn-danger-outline" data-mk-confirm="« <%= n.displayLabel %> » sera retiré du menu<%= n.children.length ? " ; ses sous-éléments remontent d'un niveau" : "" %>. La ressource qu'il montrait n'est pas supprimée." data-mk-confirm-title="Retirer cet élément ?" data-mk-confirm-ok="Retirer">Retirer du menu</button></div>
+    </form>
+    <form id="nav-del-<%= n.id %>" method="post" action="<%= BASE %>/elements/<%= n.id %>/supprimer"></form>
+  </div>
+  <% } %>
+  <% if (n.children.length || canWrite) { %>
+  <ol class="mk-nav-children" data-nav-list><% n.children.forEach((c) => { %><%- include("nav-item", { node: c, depth: depth + 1, BASE, types, canWrite, REL }) %><% }) %></ol>
+  <% } %>
+</li>

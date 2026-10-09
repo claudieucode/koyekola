@@ -9,6 +9,7 @@ const { absoluteUrl, plainText, jsonLdTags } = require("../utils/seo");
 const { slugify } = require("../utils/format");
 const seoResolver = require("../seo/resolver");
 const { paidCheckoutOpen } = require("../services/payment");
+const navigation = require("../services/navigation");
 
 // Espaces privés et pages sans intérêt pour les moteurs de recherche
 const NOINDEX_PREFIXES = ["/formateur", "/mes-cours", "/panier", "/commande", "/apprendre", "/certificat", "/favoris", "/support", "/notifications", "/connexion", "/inscription", "/deconnexion", "/mon-compte"];
@@ -26,6 +27,15 @@ function injectLocals(req, res, next) {
   res.locals.parseVideoUrl = parseVideoUrl;
   res.locals.renderMarkdown = renderMarkdown;
   res.locals.asset = asset;
+  // Menus de navigation du CMS par emplacement (header, footer, mobile) : null = aucun menu affecté, la page garde son affichage d'origine.
+  // Calculés à la demande (seulement par l'en-tête et le pied de page publics) et une seule fois par requête, toujours à jour.
+  const menus = new Map();
+  res.locals.navMenu = (location) => {
+    if (!menus.has(location)) menus.set(location, navigation.forLocation(location, { user: req.session && req.session.user ? req.session.user : null }));
+    return menus.get(location);
+  };
+  // Élément « courant » : son adresse (sans paramètres ni ancre) est celle de la page affichée
+  res.locals.navIsCurrent = (href) => Boolean(href) && href.startsWith("/") && href.split(/[?#]/)[0].replace(/\/+$/, "") === String(req.path).replace(/\/+$/, "") && !(href === "/" && req.path !== "/");
   // Catégories des formations publiées, pour le menu « Catégories » de l'en-tête
   res.locals.navCategories = db
     .prepare("SELECT DISTINCT category FROM courses WHERE published = 1 ORDER BY category")

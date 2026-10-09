@@ -56,14 +56,20 @@
         <input type="text" id="header-q" name="q" placeholder="Rechercher une formation…" value="<%= typeof filters !== 'undefined' ? filters.q : '' %>">
       </form>
 
-      <nav class="header-nav" id="headerNav" aria-label="Navigation principale">
+      <%
+  const headerMenu = typeof navMenu === "function" ? navMenu("header") : null, mobileMenu = typeof navMenu === "function" ? navMenu("mobile") : null;
+  const navClass = mobileMenu ? "header-nav has-mobile-menu" : "header-nav";
+%>
+      <nav class="<%= navClass %>" id="headerNav" aria-label="Navigation principale">
         <form action="/catalogue" method="get" class="drawer-search" role="search">
           <label for="drawer-q" class="sr-only">Rechercher une formation</label>
           <input type="search" id="drawer-q" name="q" placeholder="Rechercher une formation…" value="<%= typeof filters !== 'undefined' ? filters.q : '' %>">
           <button type="submit" aria-label="Lancer la recherche"><%- icon('search', { size: 18 }) %></button>
         </form>
+        <%# Navigation du CMS : si un menu est affecté à l'en-tête, il remplace les liens d'origine (Catégories, Catalogue, Blog) ; sinon rien ne change %>
+        <% if (headerMenu) { %><%- include("nav-menu", { items: headerMenu.items, level: 1, prefix: "hm", menuClass: "nav-menu--header", menuLabel: "Menu principal" }) %><% } else { %>
         <% if (navCategories.length) { %>
-          <div class="nav-dropdown">
+          <div class="nav-dropdown nav-legacy">
             <button type="button" class="nav-dropdown-toggle" aria-haspopup="true">
               Catégories <%- icon('chevronDown', { size: 14 }) %>
             </button>
@@ -74,8 +80,10 @@
             </div>
           </div>
         <% } %>
-        <a href="/catalogue"<%- currentPath === "/catalogue" ? ' aria-current="page"' : "" %>>Catalogue</a>
-        <a href="/blog"<%- currentPath === "/blog" || currentPath.startsWith("/blog/") ? ' aria-current="page"' : "" %>>Blog</a>
+        <a class="nav-legacy" href="/catalogue"<%- currentPath === "/catalogue" ? ' aria-current="page"' : "" %>>Catalogue</a>
+        <a class="nav-legacy" href="/blog"<%- currentPath === "/blog" || currentPath.startsWith("/blog/") ? ' aria-current="page"' : "" %>>Blog</a>
+        <% } %>
+        <% if (mobileMenu) { %><%- include("nav-menu", { items: mobileMenu.items, level: 1, prefix: "mm", menuClass: "nav-menu--mobile", menuLabel: "Menu mobile" }) %><% } %>
         <% if (currentUser && currentUser.role === "formateur") { %>
           <a href="/formateur">Mon espace</a>
         <% } else if (currentUser) { %>

@@ -652,6 +652,64 @@ db.exec(`
 // Les sauvegardes (VACUUM INTO) restent cohérentes dans ce mode.
 db.exec("PRAGMA journal_mode = WAL");
 
+// ---------- Moteur de navigation (palier 7) ----------
+// Menus, éléments de menu (hiérarchie, ordre) et emplacements (header, footer, mobile). Un élément qui pointe vers une ressource KOLAKISA
+// (page, article, catégorie, étiquette) garde sa RÉFÉRENCE (type + object_id), jamais une copie de son adresse : si le slug change,
+// le lien suit. site_id vide = le site public principal (en-tête et pied de page du site) ; sinon un site du Page Builder (mk_sites).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS nav_menus (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'published' CHECK (status IN ('published', 'draft')),
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_nav_menus_slug ON nav_menus(COALESCE(site_id, 0), slug);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_nav_menus_name ON nav_menus(COALESCE(site_id, 0), name COLLATE NOCASE);
+  CREATE INDEX IF NOT EXISTS idx_nav_menus_creator ON nav_menus(created_by);
+
+  CREATE TABLE IF NOT EXISTS nav_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    menu_id INTEGER NOT NULL REFERENCES nav_menus(id) ON DELETE CASCADE,
+    parent_id INTEGER REFERENCES nav_items(id) ON DELETE SET NULL,
+    position INTEGER NOT NULL DEFAULT 0,
+    type TEXT NOT NULL CHECK (type IN ('page', 'article', 'category', 'tag', 'home', 'custom')),
+    object_id INTEGER,
+    url TEXT NOT NULL DEFAULT '',
+    label TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'published' CHECK (status IN ('published', 'hidden')),
+    new_tab INTEGER NOT NULL DEFAULT 0,
+    rel TEXT NOT NULL DEFAULT '',
+    icon TEXT NOT NULL DEFAULT '',
+    visibility TEXT NOT NULL DEFAULT 'all' CHECK (visibility IN ('all', 'guests', 'members')),
+    description TEXT NOT NULL DEFAULT '',
+    media_id INTEGER,
+    meta TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_nav_items_menu ON nav_items(menu_id, parent_id, position);
+  CREATE INDEX IF NOT EXISTS idx_nav_items_parent ON nav_items(parent_id);
+  CREATE INDEX IF NOT EXISTS idx_nav_items_target ON nav_items(type, object_id);
+  -- Supprimer un élément ne perd pas ses sous-éléments : ils remontent d'un niveau
+  CREATE TRIGGER IF NOT EXISTS trg_nav_items_reparent BEFORE DELETE ON nav_items
+    BEGIN UPDATE nav_items SET parent_id = OLD.parent_id WHERE parent_id = OLD.id; END;
+
+  CREATE TABLE IF NOT EXISTS nav_locations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER,
+    location TEXT NOT NULL,
+    menu_id INTEGER NOT NULL REFERENCES nav_menus(id) ON DELETE CASCADE,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_nav_locations_slot ON nav_locations(COALESCE(site_id, 0), location);
+  CREATE INDEX IF NOT EXISTS idx_nav_locations_menu ON nav_locations(menu_id);
+`);
+
 // ---------- Moteur de commentaires (palier 6) ----------
 // Le système de commentaires existant (blog_comments : membres connectés, publication immédiate) est RÉUTILISÉ et étendu, pas doublé :
 // même table, mêmes lignes (toutes conservées, statut « approved »), mais rattachée à un contenu générique (content_type + content_id),

@@ -2,11 +2,31 @@
   </main>
 
   <footer class="site-footer">
-    <div class="container-wide footer-grid">
+    <% const footerGridClass = (typeof navMenu === "function" && navMenu("footer") && navMenu("footer").items.length > 0) ? "container-wide footer-grid footer-grid--menu" : "container-wide footer-grid"; %>
+    <div class="<%= footerGridClass %>">
       <div class="footer-brand">
         <p class="logo">KOLAKISA</p>
         <p class="footer-tagline">Mes formations en ligne : apprenez à votre rythme, où que vous soyez.</p>
       </div>
+      <%# Navigation du CMS : un menu affecté au pied de page remplace les colonnes de liens d'origine (même structure : titre + liens) ; sinon rien ne change %>
+      <% const footerMenu = typeof navMenu === "function" ? navMenu("footer") : null; %>
+      <% if (footerMenu && footerMenu.items.length) {
+           // Chaque élément ayant des sous-éléments devient une colonne ; les éléments seuls sont regroupés dans une colonne « Liens »
+           const cols = []; let loose = null;
+           footerMenu.items.forEach((it) => { if (it.children.length) { cols.push({ head: it, links: it.children }); } else { if (!loose) { loose = { head: null, links: [] }; cols.push(loose); } loose.links.push(it); } });
+      %>
+        <nav class="footer-menu" aria-label="Liens du pied de page">
+        <% cols.forEach((col, ci) => { %>
+          <div class="footer-col">
+            <% if (col.head) { %><h4><% if (col.head.href) { %><a href="<%= col.head.href %>"<%- col.head.newTab ? ' target="_blank"' : "" %><%- col.head.rel ? ` rel="${col.head.rel}"` : "" %>><%= col.head.label %></a><% } else { %><%= col.head.label %><% } %></h4><% } else { %><h4>Liens</h4><% } %>
+            <% col.links.forEach((l) => { %>
+              <% if (l.href) { %><a href="<%= l.href %>"<%- l.newTab ? ' target="_blank"' : "" %><%- l.rel ? ` rel="${l.rel}"` : "" %>><%= l.label %></a><% } else { %><span class="footer-group"><%= l.label %></span><% } %>
+              <% l.children.forEach((c) => { if (c.href) { %><a class="footer-sublink" href="<%= c.href %>"<%- c.newTab ? ' target="_blank"' : "" %><%- c.rel ? ` rel="${c.rel}"` : "" %>><%= c.label %></a><% } }) %>
+            <% }) %>
+          </div>
+        <% }) %>
+        </nav>
+      <% } else { %>
       <div class="footer-col">
         <h4>Découvrir</h4>
         <a href="/catalogue">Toutes les formations</a>
@@ -23,6 +43,7 @@
         <a href="/faq">Questions fréquentes</a>
         <a href="/contact">Contact</a>
       </div>
+      <% } %>
     </div>
     <div class="container-wide footer-bottom">
       <span>KOLAKISA &copy; 2026 — projet pédagogique, aucun paiement réel n'est traité.</span>
@@ -36,6 +57,7 @@
 
   <script src="<%= asset('/js/floating.js') %>" defer></script>
   <script src="<%= asset('/js/main.js') %>" defer></script>
+  <% if (typeof navMenu === "function" && (navMenu("header") || navMenu("mobile"))) { %><script src="<%= asset('/js/site-nav.js') %>" defer></script><% } %>
   <% if (!(typeof dash !== "undefined" && dash)) { %><script src="<%= asset('/js/visitor.js') %>" defer></script><% } %>
   <script src="<%= asset('/js/popup.js') %>" defer></script>
   <% if (typeof dash !== "undefined" && dash) { %><script src="<%= asset('/js/dashboard.js') %>" defer></script><% } %>
