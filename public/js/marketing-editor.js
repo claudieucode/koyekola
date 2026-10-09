@@ -947,6 +947,8 @@
     bar.appendChild(iconBtn("trash", "Supprimer le bloc", function () { remove(block.id); }, { "class": "mk-b-icon is-danger mk-b-blocktools-del" }));
     return bar;
   }
+  // Volets du panneau gauche (Styles, Message, Assistant…) : sections repliables, la première ouverte
+  if (window.MKSections) [].forEach.call(document.querySelectorAll(".mk-b-pane"), function (p) { MKSections.pane(p, p.id); });
   var builder = $("mk-editor");
   var propsTab = "content";
   // Réglages du bloc : reconstruits à chaque changement de structure des champs. Pour le MÊME bloc et le MÊME onglet, le défilement du
@@ -1017,13 +1019,18 @@
       tabs.appendChild(b);
     });
     props.appendChild(tabs);
+    // Sections repliables : la première est ouverte, les autres fermées (l'état choisi est mémorisé, jamais enregistré dans le message)
+    var shownSections = 0, collapsible = 0;
     tabSections(block, propsTab).forEach(function (sct) {
       if (!sct.nodes.length) return;
       var box = el("section", { "class": "mk-b-section" + (sct.cls ? " " + sct.cls : "") });
       if (sct.title) box.appendChild(el("h3", { "class": "mk-b-section-title" }, sct.title));
       sct.nodes.forEach(function (n) { box.appendChild(n); });
       panel.appendChild(box);
+      if (window.MKSections && sct.title && MKSections.enhance(box, { key: "props:" + propsTab + ":" + sct.title, open: collapsible === 0 })) collapsible++;
+      shownSections++;
     });
+    if (window.MKSections && collapsible > 1) panel.insertBefore(MKSections.tools(panel), panel.firstChild);
     props.appendChild(panel);
     if (toolbar) toolbar.render();
   }

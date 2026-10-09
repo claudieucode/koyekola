@@ -87,8 +87,8 @@
       document.body.appendChild(panel);
       // La fenêtre vit sur <body> (jamais coupée par un panneau) : elle reprend les jetons du thème de l'éditeur qui l'ouvre
       var cs = getComputedStyle(btn);
-      [["--kf-bg", ["--editor-panel", "--card", "--surface"]], ["--kf-text", ["--editor-text", "--text"]], ["--kf-muted", ["--editor-muted", "--muted"]], ["--kf-border", ["--editor-border", "--border"]],
-        ["--kf-hover", ["--editor-hover", "--surface-alt"]], ["--kf-accent", ["--editor-accent", "--accent"]], ["--kf-active", ["--editor-active", "--accent-light"]], ["--kf-accent-text", ["--editor-accent-text", "--accent-dark"]]].forEach(function (m) {
+      [["--kf-bg", ["--editor-panel", "--mk-surface", "--card", "--surface"]], ["--kf-text", ["--editor-text", "--mk-text", "--text"]], ["--kf-muted", ["--editor-muted", "--muted"]], ["--kf-border", ["--editor-border", "--mk-border", "--border"]],
+        ["--kf-hover", ["--editor-hover", "--mk-hover", "--surface-alt"]], ["--kf-accent", ["--editor-accent", "--accent"]], ["--kf-active", ["--editor-active", "--mk-selected", "--accent-light"]], ["--kf-accent-text", ["--editor-accent-text", "--accent-dark"]]].forEach(function (m) {
         for (var i = 0; i < m[1].length; i++) { var v = cs.getPropertyValue(m[1][i]).trim(); if (v) { panel.style.setProperty(m[0], v); break; } }
       });
       function place() {
