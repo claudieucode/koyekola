@@ -8,7 +8,7 @@ const nodes = require("./nodes");
 const KEY = "theme.templates";
 const MAX_TEMPLATES = 30;
 const TYPES = {
-  single_post: { label: "Article du blog", hint: "Remplace l'en-tête, l'image et le texte de l'article (le sommaire, l'auteur, la navigation et les commentaires du blog restent). Utilisez l'élément « Contenu de l'article » et les données {{post.…}}." },
+  single_post: { label: "Article du blog", hint: "Remplace l'en-tête, l'image et le texte de l'article (le sommaire, l'auteur, la navigation et les commentaires du blog restent, sauf si le modèle contient lui-même la boîte auteur, l'article précédent / suivant ou les commentaires). Utilisez l'élément « Contenu de l'article » et les données {{post.…}}." },
   blog_archive: { label: "Liste du blog", hint: "Remplace la liste des articles (accueil du blog et catégories). Utilisez une grille en boucle (articles) ; la catégorie courante se lit avec {{query.categorie}}." },
   not_found: { label: "Page introuvable (404)", hint: "S'affiche quand une adresse n'existe pas." },
 };

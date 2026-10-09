@@ -1048,10 +1048,13 @@
   var elCategory = store.get("el-category", "");
   var elClosed = store.get("el-closed", []);
   function elementGroups() {
-    var item = function (t) { var need = deniedWidget(t.type); return { type: t.type, label: t.label, icon: t.icon, keywords: t.keywords, locked: need ? "Widget " + SPEC.widgetPermissions[need] + "." : null, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; };
+    var item = function (t) { var need = deniedWidget(t.type); return { type: t.type, sub: t.sub || null, label: t.label, icon: t.icon, keywords: t.keywords, locked: need ? "Widget " + SPEC.widgetPermissions[need] + "." : null, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; };
     var groups = Object.keys(SPEC.widgetGroups).map(function (k) { return { key: k, label: SPEC.widgetGroups[k], items: SPEC.types.filter(function (t) { return t.group === k; }).map(item) }; });
     groups[0].items.unshift({ type: "layout", label: "Section libre", icon: "layout", keywords: "section libre bloc zone" });
-    (SPEC.shortcuts || []).forEach(function (sc) { var g = groups.find(function (x) { return x.key === sc.group; }); if (g) g.items.push({ type: sc.type, shortcut: sc, label: sc.label, icon: sc.icon, keywords: sc.keywords }); });
+    (SPEC.shortcuts || []).forEach(function (sc) { var g = groups.find(function (x) { return x.key === sc.group; }); if (g) g.items.push({ type: sc.type, sub: sc.sub || null, shortcut: sc, label: sc.label, icon: sc.icon, keywords: sc.keywords }); });
+    // Catégorie « Site » : éléments regroupés par sous-catégorie, dans l'ordre voulu
+    var subs = SPEC.siteSubs || [], gSite = groups.find(function (x) { return x.key === "site"; });
+    if (gSite) gSite.items = gSite.items.map(function (x, i) { return { x: x, i: i }; }).sort(function (a, b) { var ra = a.x.sub ? subs.indexOf(a.x.sub) : subs.length, rb = b.x.sub ? subs.indexOf(b.x.sub) : subs.length; return ra - rb || a.i - b.i; }).map(function (e) { return e.x; });
     var legacy = boot.types.map(function (t) { return { type: t.type, label: t.label, icon: "fileText", disabled: t.unavailable, legacy: true, keywords: t.type === "form" ? "formulaire inscription email champs newsletter" : "section prete" }; });
     var gForm = groups.find(function (g) { return g.key === "form"; });
     gForm.items = gForm.items.concat(legacy.filter(function (t) { return t.type === "form"; }));
@@ -1093,7 +1096,9 @@
     shown.forEach(function (g) {
       if (!g.items.length) return;
       var ul = h("ul", { class: "pb-palette", id: "pb-group-" + g.key });
+      var lastSub = null;
       g.items.forEach(function (it) {
+        if (g.key === "site" && !f && it.sub !== lastSub) { lastSub = it.sub; ul.appendChild(h("li", { class: "pb-pal-subhead", text: it.sub || "Autres" })); }
         var off = it.disabled || it.locked;
         var btn = h("button", { type: "button", class: "pb-pal-item" + (it.locked ? " is-locked" : ""), disabled: !canWrite || Boolean(it.disabled), "aria-disabled": it.locked ? "true" : null, "data-tip": off || null, "data-widget": it.shortcut ? it.shortcut.key : it.type,
           onclick: function () { if (it.locked) { toast(it.label + " : " + it.locked, true); return; } useElement(it); if (it.shortcut) addShortcut(it.shortcut); else if (it.legacy) addLegacy(it.type); else addElement(it.type); } },
@@ -3201,11 +3206,17 @@
     box.appendChild(checkField("Répéter pour chaque article ou formation (boucle)", Boolean(loop), function (v) { change(function () { var x = byId(it.id); if (v) x.props.loop = { source: "posts", count: 6, sort: "recent" }; else delete x.props.loop; }, { label: v ? "Boucle activée" : "Boucle désactivée" }); }, { disabled: dis }));
     if (loop) {
       var setLoop = function (k, v) { change(function () { var x = byId(it.id); x.props.loop = Object.assign({}, x.props.loop); if (v === "" || v === false) delete x.props.loop[k]; else x.props.loop[k] = v; if (k === "source") { x.props.loop.sort = "recent"; } }, { key: it.id + ":loop:" + k, light: typeof v === "string" && k !== "source" && k !== "sort" }); };
-      box.appendChild(selectField("Contenu à répéter", loop.source, [["posts", "Articles du blog"], ["courses", "Formations du catalogue"]], function (v) { setLoop("source", v); }, { disabled: dis }));
-      box.appendChild(selectField("Nombre par page", String(loop.count), ["1", "2", "3", "4", "6", "8", "9", "12", "16", "24"].map(function (n) { return [n, n]; }), function (v) { setLoop("count", Number(v)); }, { disabled: dis }));
+      box.appendChild(selectField("Contenu à répéter", loop.source, [["posts", "Articles du blog"], ["courses", "Formations du catalogue"], ["pages", "Pages du site"], ["authors", "Auteurs"], ["categories", "Catégories d'articles"], ["tags", "Étiquettes d'articles"]], function (v) { setLoop("source", v); }, { disabled: dis }));
+      box.appendChild(selectField("Nombre par page", String(loop.count), ["1", "2", "3", "4", "6", "8", "9", "12", "16", "24", "32", "48"].map(function (n) { return [n, n]; }), function (v) { setLoop("count", Number(v)); }, { disabled: dis }));
       box.appendChild(selectField("Ordre", loop.sort || "recent", loop.source === "courses" ? [["recent", "Les plus récentes"], ["title", "Par titre"], ["price", "Par prix croissant"]] : [["recent", "Les plus récents"], ["old", "Les plus anciens"], ["title", "Par titre"]], function (v) { setLoop("sort", v); }, { disabled: dis }));
       box.appendChild(textField("Catégorie (facultative, nom exact)", loop.category || "", function (v) { setLoop("category", v); }, { max: 80, disabled: dis, onChange: true }));
-      box.appendChild(checkField("Pagination (liens Précédent / Suivant)", loop.paginate === true, function (v) { setLoop("paginate", v); }, { disabled: dis }));
+      if (loop.source === "posts") {
+        box.appendChild(textField("Étiquettes (séparées par des virgules, facultatif)", (loop.tags || []).join(", "), function (v) { change(function () { var x = byId(it.id); x.props.loop = Object.assign({}, x.props.loop); var t = v.split(",").map(function (a) { return a.trim(); }).filter(Boolean); if (t.length) x.props.loop.tags = t; else delete x.props.loop.tags; }, { key: it.id + ":loop:tags", light: true }); }, { max: 200, disabled: dis, onChange: true }));
+      }
+      if (loop.source === "posts" || loop.source === "courses" || loop.source === "pages") {
+        box.appendChild(checkField("Exclure l'élément affiché sur la page (articles liés, suggestions)", loop.excludeCurrent === true, function (v) { setLoop("excludeCurrent", v); }, { disabled: dis }));
+      }
+      box.appendChild(selectField("Pagination", loop.paginate ? (loop.pagination || "numbers") : "none", [["none", "Aucune"], ["numbers", "Page x / y"], ["prevnext", "Précédent / Suivant"], ["both", "Numéros de pages"], ["more", "Bouton « Voir plus »"], ["infinite", "Défilement infini"]], function (v) { change(function () { var x = byId(it.id); x.props.loop = Object.assign({}, x.props.loop); if (v === "none") { delete x.props.loop.paginate; delete x.props.loop.pagination; } else { x.props.loop.paginate = true; x.props.loop.pagination = v; } }, { label: "Pagination" }); }, { disabled: dis }));
       box.appendChild(checkField("Filtrer avec l'adresse (?q=… recherche, ?categorie=…)", loop.urlFilter === true, function (v) { setLoop("urlFilter", v); }, { disabled: dis }));
       box.appendChild(textField("Message s'il n'y a aucun résultat", loop.empty || "", function (v) { setLoop("empty", v); }, { max: 160, disabled: dis, onChange: true }));
       box.appendChild(h("p", { class: "pb-hint", text: "Le contenu de cette grille est le MODÈLE d'un résultat : ajoutez-y un titre, une image, un bouton, puis utilisez { } pour y insérer le titre, l'image ou l'adresse du résultat. La page montre un exemplaire par résultat." }));

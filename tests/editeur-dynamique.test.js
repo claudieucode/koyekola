@@ -85,6 +85,19 @@ describe("moteur d'étiquettes (sans serveur)", () => {
     assert.equal(save({ loop: { source: "posts", sort: "price" } }).props.loop.sort, "recent", "tri inconnu pour la source : récents");
     assert.ok(nodes.editorSpec().dynamic.sources.some((s) => s.key === "post.title"));
   });
+
+  test("boucle étendue : nouvelles sources, filtres et modes de pagination validés", () => {
+    const { A } = freshMarketing();
+    const p = pages.createPage(A, { name: "Boucle étendue", kind: "page" });
+    const save = (props) => pages.saveDraft(A, p.id, { sections: [layout([{ id: "grid00000002", type: "grid", props, children: [] }])] }, { revision: pages.getPage(A, p.id).revision }).content.sections[0].children[0].children[0].props;
+    const l = save({ loop: { source: "authors", count: 48, pagination: "infinite", orderby: "posts" } }).loop;
+    assert.deepEqual([l.source, l.count, l.paginate, l.pagination, l.orderby], ["authors", 48, true, "infinite", "posts"]);
+    const t = save({ loop: { source: "posts", tags: ["php", "<b>x</b>"], excludeCurrent: true, pagination: "nimporte", orderby: "DROP TABLE" } }).loop;
+    assert.deepEqual(t.tags, ["php", "<b>x</b>"], "texte conservé tel quel (échappé à l'affichage)");
+    assert.equal(t.excludeCurrent, true);
+    assert.equal(t.paginate, undefined, "mode inconnu : pas de pagination");
+    assert.equal(t.orderby, undefined, "tri hors liste : ignoré");
+  });
 });
 
 describe("points d'extension (sans serveur)", () => {

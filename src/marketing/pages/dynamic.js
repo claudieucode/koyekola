@@ -34,6 +34,36 @@ registerDynamicSource("post.date", { label: "Date de publication", resolve: (s) 
 registerDynamicSource("post.author", { label: "Auteur de l'article", resolve: P("author") });
 registerDynamicSource("post.category", { label: "Catégorie de l'article", resolve: P("category") });
 registerDynamicSource("post.reading_time", { label: "Temps de lecture", resolve: (s) => (s.post && s.post.minutes ? `${s.post.minutes} min` : null) });
+registerDynamicSource("post.tags", { label: "Étiquettes de l'article", resolve: (s) => (s.post && Array.isArray(s.post.tags) && s.post.tags.length ? s.post.tags.join(", ") : null) });
+registerDynamicSource("post.comments", { label: "Nombre de commentaires", resolve: (s) => (s.post && s.post.commentsCount != null ? String(s.post.commentsCount) : null) });
+registerDynamicSource("post.views", { label: "Nombre de lectures", resolve: (s) => (s.post && s.post.views ? String(s.post.views) : null) });
+registerDynamicSource("post.modified", { label: "Date de mise à jour", resolve: (s) => (s.post && s.post.modified ? longDate(s.post.modified) : null) });
+registerDynamicSource("post.category_url", { label: "Adresse de la catégorie", kind: "url", resolve: P("categoryUrl") });
+registerDynamicSource("post.author_url", { label: "Adresse de la page de l'auteur", kind: "url", resolve: (s) => (s.post && s.post.authorView ? s.post.authorView.url : null) });
+registerDynamicSource("post.author_avatar", { label: "Photo de l'auteur", kind: "image", resolve: (s) => (s.post && s.post.authorView ? s.post.authorView.avatar || null : null) });
+registerDynamicSource("post.author_bio", { label: "Présentation de l'auteur", resolve: (s) => (s.post && s.post.authorView ? s.post.authorView.bio || null : null) });
+// Auteur (boucle sur les auteurs, ou page d'auteur) : scope.author = { name, bio, avatar, url, postsCount }
+const A = (k) => (s) => (s.author && s.author[k] != null && s.author[k] !== "" ? s.author[k] : null);
+registerDynamicSource("author.name", { label: "Nom de l'auteur", resolve: A("name") });
+registerDynamicSource("author.bio", { label: "Présentation de l'auteur", resolve: A("bio") });
+registerDynamicSource("author.avatar", { label: "Photo de l'auteur", kind: "image", resolve: A("avatar") });
+registerDynamicSource("author.url", { label: "Page de l'auteur", kind: "url", resolve: A("url") });
+registerDynamicSource("author.posts", { label: "Nombre d'articles de l'auteur", resolve: A("postsCount") });
+// Catégorie ou étiquette (boucle sur les catégories / étiquettes) : scope.term = { name, url, count }
+const T = (k) => (s) => (s.term && s.term[k] != null && s.term[k] !== "" ? s.term[k] : null);
+registerDynamicSource("term.name", { label: "Nom de la catégorie ou de l'étiquette", resolve: T("name") });
+registerDynamicSource("term.url", { label: "Adresse de la catégorie ou de l'étiquette", kind: "url", resolve: T("url") });
+registerDynamicSource("term.count", { label: "Nombre d'articles", resolve: (s) => (s.term && s.term.count != null ? String(s.term.count) : null) });
+// Page du site (boucle sur les pages)
+registerDynamicSource("page_item.title", { label: "Titre de la page listée", resolve: (s) => (s.page_item && s.page_item.title) || null });
+registerDynamicSource("page_item.url", { label: "Adresse de la page listée", kind: "url", resolve: (s) => (s.page_item && s.page_item.url) || null });
+// Archive du blog (catégorie, étiquette, auteur, recherche) : scope.archive
+const R = (k) => (s) => (s.archive && s.archive[k] != null && s.archive[k] !== "" ? s.archive[k] : null);
+registerDynamicSource("archive.title", { label: "Titre de l'archive", resolve: R("title") });
+registerDynamicSource("archive.description", { label: "Description de l'archive", resolve: R("description") });
+registerDynamicSource("archive.count", { label: "Nombre de résultats", resolve: (s) => (s.archive && s.archive.count != null ? String(s.archive.count) : null) });
+registerDynamicSource("archive.search", { label: "Recherche de l'archive", resolve: R("search") });
+registerDynamicSource("archive.url", { label: "Adresse de l'archive", kind: "url", resolve: R("url") });
 // Formation (« produit » : même source, deux noms) : scope.course = { title, subtitle, priceCents, url, image, category, instructor, description }
 for (const group of ["course", "product"]) {
   const C = (k) => (s) => (s.course && s.course[k] != null && s.course[k] !== "" ? s.course[k] : null);

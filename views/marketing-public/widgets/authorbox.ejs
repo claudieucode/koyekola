@@ -1,0 +1,14 @@
+<%# Boîte auteur. d = { author }. %>
+<% const a = d && d.author; %>
+<% if (a || isBuilder) { %><aside class="<%= cls %>"<%- attrs %>>
+  <% if (!a) { %><p class="kw-ab-note">Boîte auteur : visible sur un modèle « Article du blog » ou une page d'auteur.</p>
+  <% } else { %>
+  <% if (p.heading) { %><h3 class="kw-ab-heading"><%= p.heading %></h3><% } %>
+  <div class="kw-ab-row">
+    <% if (p.showAvatar && a.avatar) { %><img class="kw-ab-avatar" src="<%= a.avatar %>" alt="" width="64" height="64" loading="lazy" decoding="async"><% } %>
+    <div class="kw-ab-text"><p class="kw-ab-name"><%= a.name %></p>
+      <% if (p.showBio && a.bio) { %><p class="kw-ab-bio"><%= a.bio %></p><% } %>
+      <% if (p.showLink) { %><a class="kw-ab-link" href="<%= a.url %>"><%= p.linkLabel %></a><% } %></div>
+  </div>
+  <% } %>
+</aside><% } %>

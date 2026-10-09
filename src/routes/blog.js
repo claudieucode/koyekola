@@ -164,7 +164,10 @@ function renderList(req, res, { filter = null } = {}) {
   // Modèle de thème « Liste du blog » (Page Builder) : remplace la liste ; la catégorie courante se lit avec {{query.categorie}}
   const themeQuery = {};
   if (filter && filter.type === "category") themeQuery.categorie = filter.name;
-  themeRender.renderRegion(req, res, db, "blog_archive", { category: filter && filter.type === "category" ? filter.name : "", query: themeQuery }, (themeTemplate) => {
+  // Archive affichée (catégorie, étiquette, auteur) : lue par les éléments « En-tête d'archive » et les listes « suivre l'archive »
+  const archive = { type: filter ? filter.type : q ? "search" : "blog", name: filter ? (filter.name || filter.label) : "", id: filter && filter.type === "author" ? filter.id : null, termIds: filter && filter.termIds ? filter.termIds : [],
+    title: filter ? filter.heading : q ? `Résultats pour « ${q} »` : "Blog", description: filter ? filter.lead : "", count: total, url: basePath, search: q || "" };
+  themeRender.renderRegion(req, res, db, "blog_archive", { category: filter && filter.type === "category" ? filter.name : "", query: { ...themeQuery, ...(q ? { q } : {}) }, scope: { archive } }, (themeTemplate) => {
   res.render("blog/index", {
     themeTemplate, posts, page, pages, crumbs, basePath, heading, filter, q, hub, total, categories, popular, discover,
     featured: featured && page === 1 ? decorate(featured) : null,

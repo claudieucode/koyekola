@@ -1,0 +1,7 @@
+<%# Catégorie et étiquettes. d = { terms }. %>
+<% const terms = (d && d.terms) || []; %>
+<% if (terms.length || isBuilder) { %><div class="<%= cls %> <%= p.look === "text" ? "look-text" : "look-pills" %>"<%- attrs %>>
+  <% if (p.label && terms.length) { %><span class="kw-pt-label"><%= p.label %></span><% } %>
+  <% terms.forEach((t) => { %><a class="kw-pt-term" data-kind="<%= t.kind %>" href="<%= t.url %>"><%= t.kind === "tag" ? "#" : "" %><%= t.name %></a><% }) %>
+  <% if (!terms.length) { %><span class="kw-pt-note">Catégorie et étiquettes : visibles sur un modèle « Article du blog ».</span><% } %>
+</div><% } %>

@@ -292,15 +292,27 @@ const boxTag = (p) => { const tag = oneOf(...BOX_TAGS)(p.tag); return tag && tag
 // Lien d'un conteneur : toute la zone devient cliquable (page du site, ancre ou https://). Nouvel onglet seulement pour https://.
 // Voir aussi INTERACTIVE_INSIDE_LINK : un lien ne peut pas en contenir un autre.
 // Boucle d'une grille : source, nombre, catégorie, tri, pagination, filtrage par l'adresse (?q=, ?categorie=). Valeurs bornées.
+const LEGACY_SORTS = { recent: ["date", "desc"], old: ["date", "asc"], title: ["title", "asc"], price: ["price", "asc"] };
+const EMPTY_LOOP = { posts: "Aucun article ne correspond.", courses: "Aucune formation ne correspond." };
 const loopProps = (p) => {
   const l = p.loop;
   if (!l || typeof l !== "object") return {};
-  const source = oneOf("posts", "courses")(l.source) || "posts";
-  const sorts = source === "posts" ? ["recent", "old", "title"] : ["recent", "title", "price"];
+  const query = require("./query");
+  const source = oneOf(...query.SOURCES.keys())(l.source) || "posts";
+  const sorts = source === "courses" ? ["recent", "title", "price"] : ["recent", "old", "title"];
+  const sort = oneOf(...sorts)(l.sort) || "recent";
+  // Réglages avancés (tri, filtres, pagination) : validés par le moteur de requêtes commun, jamais recopiés tels quels
+  const [orderby, order] = LEGACY_SORTS[sort];
+  const explicit = query.SOURCES.get(source).orderby.includes(l.orderby);
+  const q = query.normalizeQuery({ ...l, source, count: numberIn(1, query.MAX_COUNT, { integer: true })(l.count) || 6, orderby: explicit ? l.orderby : orderby, order: explicit ? l.order : order, categories: l.categories || (l.category ? [l.category] : undefined) });
+  const { source: _s, count: _c, offset, orderby: ob, order: od, pagination, ...filters } = q;
+  const paginate = l.paginate === true || pagination !== "none";
   return { loop: {
-    source, count: numberIn(1, 24, { integer: true })(l.count) || 6, category: line(l.category, 80), sort: oneOf(...sorts)(l.sort) || "recent",
-    ...(l.paginate === true ? { paginate: true } : {}), ...(l.urlFilter === true ? { urlFilter: true } : {}),
-    empty: line(l.empty, 160) || (source === "posts" ? "Aucun article ne correspond." : "Aucune formation ne correspond."),
+    source, count: q.count, category: line(l.category, 80), sort,
+    ...(explicit ? { orderby: ob, order: od } : {}), ...(offset ? { offset } : {}), ...filters,
+    ...(paginate ? { paginate: true, pagination: pagination !== "none" ? pagination : "numbers" } : {}),
+    ...(l.urlFilter === true ? { urlFilter: true } : {}),
+    empty: line(l.empty, 160) || EMPTY_LOOP[source] || "Aucun résultat ne correspond.",
   } };
 };
 // Adresse ou image : une étiquette dynamique seule (« {{post.url}} ») est acceptée telle quelle et revalidée à l'affichage
@@ -799,10 +811,45 @@ const WIDGETS = {
 };
 // Raccourcis : entrée de bibliothèque qui crée un élément existant préréglé (ex. SoundCloud = contenu intégré limité à
 // SoundCloud). Le serveur valide l'élément créé comme tout autre.
+// Sous-catégories de la catégorie « Site » (ordre d'affichage) et rattachement des éléments qui ne sont pas des raccourcis
+const SITE_SUBS = ["Navigation et identité", "Contenu de l'article", "Archives et recherche", "Listes dynamiques", "Compte et panier"];
+const SITE_SUB = { sitelogo: SITE_SUBS[0], sitetitle: SITE_SUBS[0], menu: SITE_SUBS[0], breadcrumb: SITE_SUBS[0], search: SITE_SUBS[0], copyright: SITE_SUBS[0], postnav: SITE_SUBS[0],
+  postcontent: SITE_SUBS[1], postmeta: SITE_SUBS[1], postterms: SITE_SUBS[1], authorbox: SITE_SUBS[1], postcomments: SITE_SUBS[1], toc: SITE_SUBS[1],
+  archiveinfo: SITE_SUBS[2], catfilter: SITE_SUBS[2], querylist: SITE_SUBS[3], posts: SITE_SUBS[3], account: SITE_SUBS[4], minicart: SITE_SUBS[4] };
 const WIDGET_SHORTCUTS = [
   { key: "soundcloud", label: "SoundCloud", group: "general", icon: "play", keywords: "soundcloud son musique podcast audio lecteur", type: "embed", provider: "soundcloud" },
   // Titre de la page : texte dynamique (source « titre de la page ») préréglé, rien à demander
-  { key: "pagetitle", label: "Titre de la page", group: "site", icon: "type", keywords: "titre de la page nom h1 h2", type: "dyntext", preset: { source: "pageTitle", tag: "h2", before: "", after: "", fallback: "" } },
+  { key: "pagetitle", label: "Titre de la page", group: "site", sub: SITE_SUBS[0], icon: "type", keywords: "titre de la page nom h1 h2", type: "dyntext", preset: { source: "pageTitle", tag: "h2", before: "", after: "", fallback: "" } },
+  { key: "posttitle", label: "Titre de l'article", group: "site", sub: "Contenu de l'article", icon: "type", keywords: "titre article billet h1 post title", type: "heading", preset: {"text": "{{post.title | fallback: Titre de l'article}}", "level": "1"} },
+  { key: "postexcerpt", label: "Résumé de l'article", group: "site", sub: "Contenu de l'article", icon: "alignLeft", keywords: "extrait resume chapeau article", type: "text", preset: {"html": "<p>{{post.excerpt}}</p>"} },
+  { key: "postimage", label: "Image à la une", group: "site", sub: "Contenu de l'article", icon: "image", keywords: "image a la une couverture article vignette", type: "image", preset: {"src": "{{post.image}}", "alt": "{{post.title}}"} },
+  { key: "postdate", label: "Date de publication", group: "site", sub: "Contenu de l'article", icon: "clock", keywords: "date publication article publie le", type: "text", preset: {"html": "<p>{{post.date}}</p>"} },
+  { key: "postupdated", label: "Date de mise à jour", group: "site", sub: "Contenu de l'article", icon: "clock", keywords: "mise a jour modifie article date", type: "text", preset: {"html": "<p>Mis à jour le {{post.modified}}</p>"} },
+  { key: "postauthor", label: "Nom de l'auteur", group: "site", sub: "Contenu de l'article", icon: "user", keywords: "auteur nom ecrit par article", type: "text", preset: {"html": "<p>Par {{post.author}}</p>"} },
+  { key: "postauthorimg", label: "Photo de l'auteur", group: "site", sub: "Contenu de l'article", icon: "user", keywords: "avatar photo auteur article", type: "image", preset: {"src": "{{post.author_avatar}}", "alt": "{{post.author}}"} },
+  { key: "postcategory", label: "Catégorie de l'article", group: "site", sub: "Contenu de l'article", icon: "tag", keywords: "categorie article rubrique", type: "text", preset: {"html": "<p>{{post.category}}</p>"} },
+  { key: "posttags", label: "Étiquettes de l'article (texte)", group: "site", sub: "Contenu de l'article", icon: "tag", keywords: "etiquettes tags article mots cles", type: "text", preset: {"html": "<p>{{post.tags}}</p>"} },
+  { key: "postreading", label: "Temps de lecture", group: "site", sub: "Contenu de l'article", icon: "clock", keywords: "temps de lecture minutes article", type: "text", preset: {"html": "<p>{{post.reading_time}}</p>"} },
+  { key: "postcommentcount", label: "Nombre de commentaires", group: "site", sub: "Contenu de l'article", icon: "quote", keywords: "nombre commentaires article", type: "text", preset: {"html": "<p>{{post.comments}} commentaire(s)</p>"} },
+  { key: "postviews", label: "Nombre de lectures", group: "site", sub: "Contenu de l'article", icon: "eye", keywords: "vues lectures compteur article", type: "text", preset: {"html": "<p>{{post.views}} lectures</p>"} },
+  { key: "postreadmore", label: "Bouton « Lire la suite »", group: "site", sub: "Contenu de l'article", icon: "mousePointer", keywords: "lire la suite lien article bouton", type: "button", preset: {"label": "Lire la suite", "url": "{{post.url}}", "variant": "primary"} },
+  { key: "postbacklink", label: "Lien « Retour au blog »", group: "site", sub: "Contenu de l'article", icon: "arrowRight", keywords: "retour blog liste articles lien", type: "link", preset: {"label": "‹ Retour au blog", "url": "/blog"} },
+  { key: "archivetitle", label: "Titre de l'archive", group: "site", sub: "Archives et recherche", icon: "type", keywords: "titre archive categorie etiquette auteur recherche", type: "heading", preset: {"text": "{{archive.title | fallback: Blog}}", "level": "1"} },
+  { key: "archivedesc", label: "Description de l'archive", group: "site", sub: "Archives et recherche", icon: "alignLeft", keywords: "description archive categorie texte intro", type: "text", preset: {"html": "<p>{{archive.description}}</p>"} },
+  { key: "archivecount", label: "Nombre de résultats", group: "site", sub: "Archives et recherche", icon: "list", keywords: "nombre resultats archive recherche total", type: "text", preset: {"html": "<p>{{archive.count}} résultat(s)</p>"} },
+  { key: "searchtitle", label: "Titre des résultats de recherche", group: "site", sub: "Archives et recherche", icon: "search", keywords: "resultats recherche titre vous avez cherche", type: "heading", preset: {"text": "Résultats pour « {{query.q | fallback: votre recherche}} »", "level": "1"} },
+  { key: "recentposts", label: "Articles récents", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "articles recents derniers blog liste", type: "querylist", preset: {"title": "Articles récents", "source": "posts", "mode": "recent", "count": 5} },
+  { key: "popularposts", label: "Articles populaires", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "articles populaires plus lus vues liste", type: "querylist", preset: {"title": "Les plus lus", "source": "posts", "mode": "popular", "count": 5} },
+  { key: "commentedposts", label: "Articles les plus commentés", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "articles commentes discutes liste", type: "querylist", preset: {"title": "Les plus commentés", "source": "posts", "mode": "commented", "count": 5} },
+  { key: "relatedposts", label: "Articles liés", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "articles lies similaires suggestions meme categorie", type: "querylist", preset: {"title": "À lire aussi", "source": "posts", "mode": "related", "count": 3, "layout": "cards"} },
+  { key: "authorposts", label: "Autres articles de l'auteur", group: "site", sub: "Listes dynamiques", icon: "user", keywords: "articles meme auteur autres liste", type: "querylist", preset: {"title": "Du même auteur", "source": "posts", "mode": "sameauthor", "count": 3} },
+  { key: "archiveposts", label: "Articles de l'archive", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "articles archive categorie etiquette auteur liste suivre", type: "querylist", preset: {"source": "posts", "mode": "archive", "count": 9, "layout": "cards", "showExcerpt": true} },
+  { key: "randomposts", label: "Articles au hasard", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "articles hasard aleatoire decouvrir", type: "querylist", preset: {"title": "À découvrir", "source": "posts", "mode": "random", "count": 3} },
+  { key: "categorylist", label: "Liste des catégories", group: "site", sub: "Listes dynamiques", icon: "tag", keywords: "categories liste blog menu rubriques", type: "querylist", preset: {"title": "Catégories", "source": "categories", "mode": "recent", "count": 12, "layout": "compact"} },
+  { key: "tagcloud", label: "Nuage d'étiquettes", group: "site", sub: "Listes dynamiques", icon: "tag", keywords: "etiquettes tags nuage mots cles", type: "querylist", preset: {"title": "Étiquettes", "source": "tags", "mode": "popular", "count": 24, "layout": "inline"} },
+  { key: "authorlist", label: "Liste des auteurs", group: "site", sub: "Listes dynamiques", icon: "users", keywords: "auteurs equipe redacteurs liste", type: "querylist", preset: {"title": "Nos auteurs", "source": "authors", "mode": "popular", "count": 8, "showExcerpt": true} },
+  { key: "pagelist", label: "Liste des pages du site", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "pages du site menu plan navigation liste", type: "querylist", preset: {"title": "Pages", "source": "pages", "mode": "recent", "count": 12, "layout": "compact", "showImage": false, "showDate": false} },
+  { key: "courselist2", label: "Formations (liste dynamique)", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "formations cours catalogue liste dynamique recents", type: "querylist", preset: {"title": "Nos formations", "source": "courses", "mode": "recent", "count": 6, "layout": "cards", "showDate": false} },
 ];
 
 // ---------- Widgets personnalisés (src/marketing/pages/widgets/*.js) ----------
@@ -1005,8 +1052,8 @@ function editorSpec() {
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
   return {
-    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], keywords: WIDGETS[type][1], requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text" } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
-    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
+    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], ...(SITE_SUB[type] ? { sub: SITE_SUB[type] } : {}), keywords: WIDGETS[type][1], requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text" } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
+    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, siteSubs: SITE_SUBS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
     socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),

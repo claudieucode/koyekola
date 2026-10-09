@@ -1,0 +1,7 @@
+<%# Article précédent / suivant. d = { previous, next }. %>
+<% const prev = d && d.previous, next = d && d.next; %>
+<% if (prev || next || isBuilder) { %><nav class="<%= cls %>" aria-label="Autres articles"<%- attrs %>>
+  <% if (prev) { %><a class="kw-pn-link kw-pn-prev" rel="prev" href="<%= prev.url %>"><% if (p.showImage && prev.image) { %><img src="<%= prev.image %>" alt="" loading="lazy" decoding="async"><% } %><span class="kw-pn-dir">‹ <%= p.prevLabel %></span><span class="kw-pn-title"><%= prev.title %></span></a><% } else { %><span></span><% } %>
+  <% if (next) { %><a class="kw-pn-link kw-pn-next" rel="next" href="<%= next.url %>"><% if (p.showImage && next.image) { %><img src="<%= next.image %>" alt="" loading="lazy" decoding="async"><% } %><span class="kw-pn-dir"><%= p.nextLabel %> ›</span><span class="kw-pn-title"><%= next.title %></span></a><% } %>
+  <% if (!prev && !next && isBuilder) { %><span class="kw-pn-note">Article précédent / suivant : visibles sur un modèle « Article du blog ».</span><% } %>
+</nav><% } %>
