@@ -164,6 +164,9 @@ describe("bibliothèque de blocs de l'éditeur d'e-mails (navigateur)", { skip: 
     await page.reload(); await page.waitForSelector("#mk-palette .mk-palette-btn");
     await until(async () => (await count()) > 0, "e-mail affiché");
     await page.frameLocator("#mk-frame").locator("[data-mk-block]").first().click();
+    // Le bouton est une icône seule : son icône doit être réellement dessinée (visible, non vide) et le bouton sur la même ligne que les autres actions
+    const bar = await page.evaluate(() => { const b = document.querySelector("#mk-props .mk-b-blocktools"); const save = b.querySelector('[aria-label="Enregistrer"], [data-tip="Enregistrer"], .mk-b-textbtn-icon'); const sr = save.getBoundingClientRect(); const svg = save.querySelector("svg"); const tops = [].map.call(b.querySelectorAll("button"), (x) => Math.round(x.getBoundingClientRect().top)); return { svg: !!svg && svg.getBoundingClientRect().width > 8, w: Math.round(sr.width), oneLine: new Set(tops).size === 1, n: tops.length }; });
+    assert.deepEqual(bar, { svg: true, w: 32, oneLine: true, n: 6 }, JSON.stringify(bar));
     await page.click('#mk-props .mk-b-blocktools button:has-text("Enregistrer")');
     assert.equal(await page.isVisible("#mk-save-block"), true);
     await page.fill("#mk-save-block-name", "Mon titre maison");
