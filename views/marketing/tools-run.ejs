@@ -1,0 +1,86 @@
+<%#
+  Suivi d'une opération d'export ou d'import (palier 13) : progression réelle, rapport d'analyse (simulation), confirmation, rapport final et annulation.
+%><%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: mode === "export" ? "Export" : "Import", intro: "", tab, TABS, BASE, sites, siteId: run.site_id, q: run.site_id ? "?site=" + run.site_id : "", siteOnly, noSite: true }) %>
+<%
+  const back = BASE + "/" + (mode === "export" ? "exporter" : "importer") + "/" + run.id + (run.site_id ? "?site=" + run.site_id : "");
+  const active_ = ["queued", "running"].includes(run.status);
+  const rep = run.report || {};
+  const an = rep.analysis;
+  const TL = { pages: "Pages", taxonomies: "Catégories et étiquettes", articles: "Articles", menus: "Menus", redirects: "Redirections", media: "Médias (métadonnées)", seo: "Référencement", site: "Réglages du site", comments: "Commentaires" };
+  const ACT = { create: "Créés", update: "Mis à jour", duplicate: "Copies", skip: "Ignorés", conflict: "Conflits", error: "Erreurs" };
+%>
+<section class="mk-panel" aria-labelledby="tl-r-h">
+  <h2 id="tl-r-h"><%= mode === "export" ? "Export" : run.phase === "apply" ? "Import" : "Analyse du fichier" %> — <%= { queued: "en attente", running: "en cours", awaiting: "en attente de votre confirmation", done: "terminé", failed: "échec", cancelled: "annulé" }[run.status] %></h2>
+  <%- include("partials/tools-progress", { run: run_pub, BASE, q: run.site_id ? "?site=" + run.site_id : "" }) %>
+  <% if (active_) { %>
+    <form method="post" action="<%= BASE %>/operations/<%= run.id %>/annuler<%= run.site_id ? "?site=" + run.site_id : "" %>"><input type="hidden" name="retour" value="<%= back %>"><button type="submit" class="btn btn-outline btn-sm">Annuler l'opération</button></form>
+    <p class="mk-sub">L'annulation prend effet à la fin du lot en cours : rien n'est laissé à moitié écrit.</p>
+  <% } %>
+  <% if (run.status === "failed") { %><p class="mk-ur-bad" role="alert"><%= run.message %></p><% } %>
+  <% if (run.status === "cancelled") { %><p class="mk-sub"><%= run.message %></p><% } %>
+</section>
+
+<% if (mode === "export" && run.status === "done") { %>
+<section class="mk-panel" aria-labelledby="tl-x-done">
+  <h2 id="tl-x-done">Fichier prêt</h2>
+  <% if (rep.counts) { %><ul class="mk-tl-list"><% Object.entries(rep.counts).forEach(([k, n]) => { %><li><%= TL[k] || k %> : <strong><%= n %></strong></li><% }) %></ul><% } %>
+  <% if (run.hasResult) { %><p><a class="btn btn-primary btn-sm" href="<%= BASE %>/exporter/<%= run.id %>/fichier<%= run.site_id ? "?site=" + run.site_id : "" %>"><%- icon("download", { size: 16 }) %> Télécharger le fichier (<%= Math.round((rep.bytes || 0) / 1024) %> Ko)</a></p><p class="mk-sub">Conservé 24 heures. Les médias ne sont pas inclus (chemins et métadonnées seulement).</p>
+  <% } else { %><p class="mk-sub">Le fichier a expiré (24 heures) : relancez l'export.</p><% } %>
+</section>
+<% } %>
+
+<% if (mode === "import" && an) { %>
+<section class="mk-panel" aria-labelledby="tl-a-h">
+  <h2 id="tl-a-h">Rapport d'analyse <span class="mk-sub">(simulation : rien n'a été modifié)</span></h2>
+  <% if (rep.source && (rep.source.siteName || rep.source.exportedAt)) { %><p class="mk-sub">Fichier exporté depuis « <%= rep.source.siteName || "?" %> »<%= rep.source.exportedAt ? " le " + String(rep.source.exportedAt).slice(0, 10) : "" %>.</p><% } %>
+  <div class="mk-table-wrap"><table class="mk-table mk-datatable">
+    <caption class="sr-only">Ressources détectées par type</caption>
+    <thead><tr><th scope="col">Type</th><th scope="col" class="mk-num">Détectés</th><% Object.entries(ACT).forEach(([k, l]) => { %><th scope="col" class="mk-num"><%= l %></th><% }) %></tr></thead>
+    <tbody><% Object.entries(an.counts).forEach(([type, c]) => { %><tr><th scope="row"><%= TL[type] || type %></th><td class="mk-num"><%= c.total %></td><% Object.keys(ACT).forEach((k) => { %><td class="mk-num"><%= c[k] || 0 %></td><% }) %></tr><% }) %></tbody>
+  </table></div>
+  <% if (an.skippedTypes && an.skippedTypes.length) { %><p class="mk-sub">Types présents dans le fichier mais non sélectionnés : <%= an.skippedTypes.map((t) => TL[t] || t).join(", ") %>.</p><% } %>
+  <% const problems = (run.plan ? run.plan.items : []).filter((i) => i.action === "error" || (i.warnings && i.warnings.length) || i.action === "skip" || i.action === "update" || i.action === "duplicate"); %>
+  <% if (problems.length) { %>
+    <h3>Détails à vérifier</h3>
+    <ul class="mk-tl-list">
+      <% problems.slice(0, 60).forEach((i) => { %><li><span class="mk-status <%= i.action === 'error' ? 'mk-status-bad' : i.action === 'create' ? 'mk-status-ok' : 'mk-status-warn' %>"><%= { error: "Erreur", skip: "Ignoré", update: "Mise à jour", duplicate: "Copie", create: "Création" }[i.action] || i.action %></span> <%= TL[i.type] || i.type %> — <strong><%= i.label %></strong>
+        <% [...(i.issues || []), i.reason, ...(i.warnings || [])].filter(Boolean).forEach((m) => { %><br><span class="mk-sub"><%= m %></span><% }) %></li><% }) %>
+    </ul>
+    <% if (problems.length > 60) { %><p class="mk-sub">… et <%= problems.length - 60 %> autre(s).</p><% } %>
+  <% } %>
+  <% if (an.blocked) { %><p class="mk-ur-bad" role="alert">Des conflits existent et la stratégie choisie est « tout arrêter » : relancez l'analyse avec une autre stratégie.</p>
+  <% } else if (run.status === "awaiting") { %>
+    <form method="post" action="<%= BASE %>/importer/<%= run.id %>/confirmer<%= run.site_id ? "?site=" + run.site_id : "" %>" class="mk-tl-form">
+      <div class="mk-tl-option"><input type="checkbox" id="tl-confirm" name="confirm" value="1" required><label for="tl-confirm">J'ai lu le rapport : je confirme l'import (stratégie : <%= STRATEGIES[(run.options || {}).onConflict] %>). Les pages et articles seront créés en brouillon.</label></div>
+      <button type="submit" class="btn btn-primary btn-sm">Lancer l'import</button>
+    </form>
+  <% } %>
+</section>
+<% } %>
+
+<% if (mode === "import" && run.phase === "apply" && ["done", "cancelled"].includes(run.status) && rep.per) { %>
+<section class="mk-panel" aria-labelledby="tl-f-h">
+  <h2 id="tl-f-h">Résultat de l'import</h2>
+  <div class="mk-table-wrap"><table class="mk-table mk-datatable">
+    <caption class="sr-only">Résultat par type</caption>
+    <thead><tr><th scope="col">Type</th><th scope="col" class="mk-num">Importés</th><th scope="col" class="mk-num">Mis à jour</th><th scope="col" class="mk-num">Ignorés</th><th scope="col" class="mk-num">Échecs</th></tr></thead>
+    <tbody><% Object.entries(rep.per).forEach(([type, c]) => { %><tr><th scope="row"><%= TL[type] || type %></th><td class="mk-num"><%= c.created %></td><td class="mk-num"><%= c.updated %></td><td class="mk-num"><%= c.skipped %></td><td class="mk-num"><%= c.failed %></td></tr><% }) %></tbody>
+  </table></div>
+  <% const fails = (rep.results || []).filter((r) => r.result === "failed"); if (fails.length) { %>
+    <h3>Échecs</h3><ul class="mk-tl-list"><% fails.slice(0, 40).forEach((r) => { %><li><%= TL[r.type] || r.type %> — <strong><%= r.label %></strong> : <%= r.message %></li><% }) %></ul>
+  <% } %>
+  <details><summary>Détail de chaque élément (<%= (rep.results || []).length %>)</summary>
+    <ul class="mk-tl-list"><% (rep.results || []).slice(0, 200).forEach((r) => { %><li><%= TL[r.type] || r.type %> — <%= r.label %> : <%= { created: "créé", updated: "mis à jour", skipped: "ignoré", failed: "échec" }[r.result] || r.result %><%= r.message ? " (" + r.message + ")" : "" %></li><% }) %></ul></details>
+  <% if (!undone && rep.created && (rep.created.pages.length || rep.created.articles.length || rep.created.menus.length || rep.created.redirects.length || rep.created.taxonomies.length)) { %>
+    <form method="post" action="<%= BASE %>/importer/<%= run.id %>/defaire<%= run.site_id ? "?site=" + run.site_id : "" %>" class="mk-tl-form">
+      <h3>Annuler cet import</h3>
+      <p class="mk-sub">Met à la corbeille les pages et articles créés, supprime les menus, redirections et termes créés. Ce qui existait avant n'est jamais touché ; les mises à jour d'éléments existants se retrouvent dans l'Historique.</p>
+      <div class="mk-tl-option"><input type="checkbox" id="tl-undo" name="confirm" value="1" required><label for="tl-undo">Je confirme l'annulation de cet import.</label></div>
+      <button type="submit" class="btn btn-outline btn-sm">Annuler l'import</button>
+    </form>
+  <% } else if (undone) { %><p class="mk-sub">Cet import a été annulé.</p><% } %>
+</section>
+<% } %>
+<% if (mode === "import" && run.kind === "import" && run.status === "done" && run.phase === "analyse") { %><% } %>
+<%- include("partials/bottom") %>

@@ -1,0 +1,31 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Importer", intro: "Envoyez un export KOLAKISA : le fichier est d'abord ANALYSÉ (rien n'est écrit), vous lisez le rapport (conflits, erreurs, éléments valides), puis vous confirmez. Les pages et articles arrivent toujours en brouillon ; rien n'est jamais supprimé.", tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
+<%
+  const fdate = (v) => (v ? new Date(String(v).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" }) : "");
+%>
+<section class="mk-panel" aria-labelledby="tl-i">
+  <h2 id="tl-i">Fichier à importer</h2>
+  <form method="post" action="<%= BASE %>/importer<%= q %>" enctype="multipart/form-data" class="mk-tl-form">
+    <div class="field-group"><label for="tl-file">Fichier d'export (.json, <%= maxMb %> Mo au plus) *</label><input id="tl-file" type="file" name="file" accept=".json,application/json" required></div>
+    <fieldset class="mk-tl-fieldset"><legend>Ressources à importer dans ce site</legend>
+      <% types.forEach((t) => { %>
+        <div class="mk-tl-option">
+          <input type="checkbox" id="tl-t-<%= t.key %>" name="types" value="<%= t.key %>"<%= t.allowed ? " checked" : " disabled" %>>
+          <label for="tl-t-<%= t.key %>"><%= t.label %><% if (!t.allowed) { %> <span class="mk-sub">— indisponible pour ce site ou pour votre rôle</span><% } %></label>
+        </div>
+      <% }) %>
+    </fieldset>
+    <div class="field-group"><label for="tl-strategy">Si un élément existe déjà</label>
+      <select id="tl-strategy" name="on_conflict">
+        <% Object.entries(STRATEGIES).forEach(([k, label]) => { %><option value="<%= k %>"<%= k === "update" && !canOverwrite ? " disabled" : "" %>><%= label %><%= k === "update" && !canOverwrite ? " (permission « tools.overwrite » requise)" : "" %></option><% }) %>
+      </select>
+      <span class="field-hint">« Mettre à jour » ne touche jamais un article en ligne ni un menu ; il modifie le brouillon d'une page ou d'un article hors ligne, avec l'ancien état gardé dans l'historique. Rien n'est écrasé avant votre confirmation.</span></div>
+    <button type="submit" class="btn btn-primary btn-sm"><%- icon("upload", { size: 16 }) %> Analyser le fichier</button>
+  </form>
+</section>
+<% if (recent.length) { %>
+<section class="mk-panel" aria-labelledby="tl-ir"><h2 id="tl-ir">Imports récents</h2>
+  <ul class="mk-tl-list"><% recent.forEach((r) => { %><li><a href="<%= BASE %>/importer/<%= r.id %><%= r.site_id ? "?site=" + r.site_id : "" %>">Import du <%= fdate(r.created_at) %></a> — <%= { queued: "en attente", running: r.phase === "apply" ? "import en cours" : "analyse en cours", awaiting: "analysé, attend votre confirmation", done: r.phase === "apply" ? "terminé" : "analysé", failed: "échec", cancelled: "annulé" }[r.status] %></li><% }) %></ul>
+</section>
+<% } %>
+<%- include("partials/bottom") %>

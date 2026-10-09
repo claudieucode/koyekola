@@ -88,6 +88,10 @@ app.use((req, res, next) => {
   next();
 });
 // Photos du site (diaporama de l'accueil) : 30 jours
+// Bibliothèque typographique (Font Manager) : fichiers WOFF2 versionnés avec l'application, cache long
+app.use("/fonts/library", express.static(path.join(__dirname, "public", "fonts", "library"), { maxAge: "30d", immutable: true, index: false }));
+app.use(require("./src/routes/fonts"));
+app.locals.fontFacesFor = (css) => require("./src/utils/fontLibrary").faceCssFor(css); // @font-face des familles citées dans un texte CSS
 app.use("/img", express.static(path.join(__dirname, "public", "img"), { maxAge: "30d" }));
 app.use(express.static(path.join(__dirname, "public"), { maxAge: "1h" }));
 // Miniatures publiques (noms de fichiers uniques, donc mise en cache longue sans risque).
@@ -133,6 +137,7 @@ app.use(require("./src/middlewares/sessionUser").refreshSessionUser);
 app.use(injectLocals);
 // Après injectLocals : la page d'erreur affichée en cas de refus a besoin de ses variables
 app.use(sameOriginOnly);
+app.use(require("./src/services/tools/maintenance").middleware); // mode maintenance (par site ; l'équipe n'est jamais bloquée)
 
 // Les navigateurs demandent /favicon.ico : on les renvoie vers l'icône SVG
 app.get("/favicon.ico", (req, res) => res.redirect(301, "/favicon.svg"));

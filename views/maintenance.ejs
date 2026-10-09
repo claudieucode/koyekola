@@ -1,0 +1,10 @@
+<%- include("partials/header", { title: "Maintenance en cours", seo: { noindex: true, rawTitle: "Maintenance en cours · KOLAKISA" } }) %>
+
+  <div class="container error-page" role="main" id="main-maintenance">
+    <p class="code">Maintenance</p>
+    <h1>Nous revenons très vite</h1>
+    <p style="color:var(--muted);"><%= message %></p>
+    <% if (since) { %><p style="color:var(--muted);font-size:0.9rem;">Depuis le <%= new Date(since.replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }) %>.</p><% } %>
+  </div>
+
+<%- include("partials/footer") %>

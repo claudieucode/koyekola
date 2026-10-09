@@ -41,10 +41,13 @@ function initMarketing({ db, dbFile, dataDir, env = process.env, log = console }
     bus.on("*", webhooksOut.eventHandler({ db, env })); // événements → livraisons de webhooks sortants abonnés
     bus.on("lms.order_completed", revenue.eventHandler({ db, settings })); // commande → attribuée au dernier e-mail cliqué
     bus.on("*", require("./scoring").eventHandler({ db, bus })); // événements → points du score des contacts
+    // Outils du CMS (palier 13) : import, export, santé… exécutés par la même file de travaux
+    const tools = require("../services/tools/runner").init({ organizationId: organization.id, bus, settings, env, log });
+    Object.assign(handlers, tools.handlers());
     const worker = createWorker({ db, handlers, log });
     // Lance la lecture périodique du LMS (appelé par server.js quand le worker est actif)
     const startBridge = () => bridgeEvents.startBridge(db, organization.id);
-    return { ready: true, organizationId: organization.id, settings, bus, worker, migrations, startBridge };
+    return { ready: true, organizationId: organization.id, settings, bus, worker, migrations, startBridge, tools };
   } catch (error) {
     log.error("[KOLAKISA] Module marketing INDISPONIBLE (le reste du site fonctionne normalement) :", error.message);
     return { ready: false, error: error.message };

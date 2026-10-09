@@ -81,15 +81,17 @@ const SECTIONS = [
   { key: "tests", label: "Tests A/B", icon: "shuffle", items: [leaf("pagetests", "Tests A/B", `${BASE}/tests-ab`)] },
   {
     key: "outils", label: "Outils", icon: "sliders", items: [
-      leaf("outils", "Santé du site", `${BASE}/outils`, { status: "preview" }),
+      leaf("outils", "Santé du site", `${BASE}/outils`, { permission: "tools.view" }),
       leaf("corbeille", "Corbeille", `${BASE}/corbeille`, { permission: "revisions.view" }),
-      leaf("outils/importer", "Importer", `${BASE}/outils/importer`),
-      leaf("outils/exporter", "Exporter", `${BASE}/outils/exporter`),
-      leaf("outils/sauvegardes", "Sauvegardes", `${BASE}/outils/sauvegardes`),
-      leaf("outils/diagnostic", "Diagnostic", `${BASE}/outils/diagnostic`, { status: "preview" }),
-      leaf("outils/logs", "Logs", `${BASE}/outils/logs`),
-      leaf("outils/cache", "Cache", `${BASE}/outils/cache`, { status: "preview" }),
-      leaf("outils/remplacer", "Recherche / remplacement", `${BASE}/outils/remplacer`, { status: "preview" }),
+      leaf("outils/importer", "Importer", `${BASE}/outils/importer`, { permission: "tools.import" }),
+      leaf("outils/exporter", "Exporter", `${BASE}/outils/exporter`, { permission: "tools.export" }),
+      leaf("outils/sauvegardes", "Sauvegardes", `${BASE}/outils/sauvegardes`, { permission: "tools.view" }),
+      leaf("outils/diagnostic", "Diagnostic", `${BASE}/outils/diagnostic`, { permission: "tools.view" }),
+      leaf("outils/systeme", "Informations système", `${BASE}/outils/systeme`, { permission: "tools.view" }),
+      leaf("outils/maintenance", "Maintenance", `${BASE}/outils/maintenance`, { permission: "tools.maintenance" }),
+      leaf("outils/cache", "Caches", `${BASE}/outils/cache`, { permission: "tools.cache" }),
+      leaf("outils/contenu", "Outils de contenu", `${BASE}/outils/contenu`, { permission: "tools.content" }),
+      leaf("outils/logs", "Journal d'activité", `${BASE}/outils/logs`, { permission: "tools.view" }),
     ],
   },
   {
@@ -105,7 +107,6 @@ const SECTIONS = [
       leaf("parametres/cookies", "Cookies", `${BASE}/parametres/cookies`, { permission: "settings.read", status: "preview" }),
       leaf("parametres/scripts", "Scripts", `${BASE}/parametres/scripts`, { permission: "settings.read", status: "preview" }),
       leaf("parametres/code", "Code personnalisé", `${BASE}/parametres/code`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/maintenance", "Maintenance", `${BASE}/parametres/maintenance`, { permission: "settings.read", status: "preview" }),
     ],
   },
 ];

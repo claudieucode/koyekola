@@ -1,0 +1,6 @@
+<%# Barre de progression RÉELLE d'une opération (palier 13) : mise à jour par public/js/cms-tools.js depuis le serveur. Paramètres : run (publicRun), BASE, q. %>
+<div class="mk-tl-progress" data-tools-run="<%= run.id %>" data-tools-url="<%= BASE %>/operations/<%= run.id %>.json<%= q %>" data-tools-state="<%= run.finished || run.awaiting ? "final" : "active" %>">
+  <div class="mk-tl-meter" role="progressbar" aria-label="Progression" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= run.percent %>"><span class="mk-tl-bar" data-tools-bar style="width:<%= run.percent %>%"></span></div>
+  <p class="mk-tl-counts"><strong data-tools-percent><%= run.percent %> %</strong> — <span data-tools-done><%= run.done %></span> traité(s)<% if (run.total) { %> sur <span data-tools-total><%= run.total %></span><% } %>, <span data-tools-failed><%= run.failed %></span> en échec, <span data-tools-skipped><%= run.skipped %></span> ignoré(s)</p>
+  <p class="mk-sub" data-tools-message role="status" aria-live="polite"><%= run.message || (run.status === "queued" ? "En attente de démarrage…" : "") %></p>
+</div>

@@ -1,0 +1,10 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Informations système", intro: "Des faits lus sur ce serveur, à l'instant. Aucun mot de passe, aucune clé ni aucun jeton n'est jamais affiché : seule la présence d'une configuration est indiquée.", tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
+<% info.sections.forEach((s, i) => { %>
+<section class="mk-panel" aria-labelledby="tl-s-<%= i %>">
+  <h2 id="tl-s-<%= i %>"><%= s.title %></h2>
+  <dl class="mk-tl-dl"><% s.rows.forEach(([k, v]) => { %><div><dt><%= k %></dt><dd><%= v === null ? "Non mesuré" : v %></dd></div><% }) %></dl>
+</section>
+<% }) %>
+<p class="mk-sub">Relevé effectué le <%= new Date(info.at).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "medium", timeZone: "Europe/Paris" }) %>.</p>
+<%- include("partials/bottom") %>

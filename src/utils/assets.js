@@ -27,4 +27,6 @@ function asset(url) {
   return `${url}?v=${known.version}`;
 }
 
-module.exports = { asset };
+const cacheInfo = () => ({ entries: cache.size, loaded: cache.size > 0 });
+const resetCache = () => cache.clear();
+module.exports = { asset, cacheInfo, resetCache };

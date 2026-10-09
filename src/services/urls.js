@@ -88,6 +88,7 @@ function loadSites() {
   return sitesCache;
 }
 const invalidateSites = () => { sitesCache = null; };
+const cacheInfo = () => ({ entries: sitesCache ? sitesCache.byId.size : 0, loaded: sitesCache !== null });
 const normHost = (h) => String(h || "").toLowerCase().replace(/:\d+$/, "").replace(/\.$/, "");
 // Site dont l'adresse publique a cet hôte (null si aucun : l'hôte n'est alors pas un site)
 const siteForHost = (host) => loadSites().byHost.get(normHost(host)) || null;
@@ -266,7 +267,7 @@ wireTaxonomyEvents();
 
 module.exports = {
   RESERVED, isReserved, normalizeSlug, checkSlug, uniqueSlug, isTaken,
-  siteForHost, siteInfo, invalidateSites, mainHost, normHost,
+  siteForHost, siteInfo, invalidateSites, cacheInfo, mainHost, normHost,
   pagePath, pageCanonicalPath, baseOfPage, publicPath, publicUrl,
   resolve, cleanPath, movedLocation, movedTarget,
   slugChanged, slugMovedTo, historyOf, purgeHistory,

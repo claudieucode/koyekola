@@ -27,6 +27,11 @@ const FONTS = {
   arial: "Arial,Helvetica,sans-serif", verdana: "Verdana,Geneva,sans-serif", trebuchet: "'Trebuchet MS',Helvetica,sans-serif",
   tahoma: "Tahoma,Verdana,sans-serif", times: "'Times New Roman',Times,serif", courier: "'Courier New',Courier,monospace",
 };
+// Police d'un message : réglage historique (piles sûres) OU famille de la bibliothèque (Font Manager) avec repli renforcé ;
+// beaucoup de clients de messagerie ignorent les polices web : le repli est toujours appliqué (voir fontLibrary.emailStack)
+const fontLib = require("../../utils/fontLibrary");
+const isFont = (k) => (typeof k === "string" && Object.hasOwn(FONTS, k)) || fontLib.isId(k);
+const fontStack = (k) => (Object.hasOwn(FONTS, k) ? FONTS[k] : fontLib.isId(k) ? fontLib.emailStack(fontLib.byId(k)) : undefined);
 const SPACING = { compact: 4, normal: 8, large: 16 };
 const DEFAULT_THEME = { background: "#f3f8fc", contentBackground: "#ffffff", textColor: "#10222f", accent: "#0277b6", fontFamily: "system", secondary: "#d5e3ee", maxWidth: 600, radius: 4, spacing: "normal" };
 const TYPES = ["heading", "text", "image", "button", "divider", "spacer", "columns", "quote", "list", "social", "video", "course", "link", "coupon", "posts", "survey"];
@@ -78,7 +83,7 @@ function normalizeTheme(input = {}) {
     theme[key] = input[key].toLowerCase();
   }
   if (input.fontFamily !== undefined) {
-    if (!Object.hasOwn(FONTS, input.fontFamily)) throw fail(`Police inconnue (${Object.keys(FONTS).join(", ")}).`);
+    if (!isFont(input.fontFamily)) throw fail(`Police inconnue (${Object.keys(FONTS).join(", ")}).`);
     theme.fontFamily = input.fontFamily;
   }
   if (input.maxWidth !== undefined) theme.maxWidth = intIn(input.maxWidth, 480, 720, "Largeur maximale du message (480 à 720 px)");
@@ -104,7 +109,7 @@ const optBool = (value) => value === true;
 // Typographie propre à un bloc (titre, texte) : police, taille, interligne, couleur — sinon celles du thème
 function typography(block, { sizeMin = 12, sizeMax = 28 } = {}) {
   const out = {};
-  if (block.font !== undefined && block.font !== "") { if (!Object.hasOwn(FONTS, block.font)) throw fail("Police inconnue."); out.font = block.font; }
+  if (block.font !== undefined && block.font !== "") { if (!isFont(block.font)) throw fail("Police inconnue."); out.font = block.font; }
   if (block.fontSize !== undefined && block.fontSize !== null) out.fontSize = intIn(block.fontSize, sizeMin, sizeMax, `Taille du texte (${sizeMin} à ${sizeMax} px)`);
   if (block.lineHeight !== undefined && block.lineHeight !== null) {
     if (typeof block.lineHeight !== "number" || !(block.lineHeight >= 1 && block.lineHeight <= 2.4)) throw fail("Interligne invalide (1 à 2,4).");
@@ -124,7 +129,7 @@ function emphasis(block) {
   return out;
 }
 const emphasisCss = (t) => [t.weight ? `font-weight:${WEIGHTS[t.weight]}` : "", t.italic ? "font-style:italic" : "", t.letterSpacing ? `letter-spacing:${t.letterSpacing}px` : ""].filter(Boolean).join(";");
-const typoCss = (t) => [t.font ? `font-family:${FONTS[t.font]}` : "", t.fontSize ? `font-size:${t.fontSize}px` : "", t.lineHeight ? `line-height:${t.lineHeight}` : "", t.color ? `color:${t.color}` : "", emphasisCss(t), t.align ? `text-align:${t.align}` : ""].filter(Boolean).join(";");
+const typoCss = (t) => [t.font ? `font-family:${fontStack(t.font)}` : "", t.fontSize ? `font-size:${t.fontSize}px` : "", t.lineHeight ? `line-height:${t.lineHeight}` : "", t.color ? `color:${t.color}` : "", emphasisCss(t), t.align ? `text-align:${t.align}` : ""].filter(Boolean).join(";");
 // Réglages communs à tout bloc : marges intérieures haut/bas, fond, affichage par appareil
 function boxOf(block) {
   if (block.box === undefined || block.box === null) return null;
@@ -321,7 +326,7 @@ function buildBlock(block, env, meta, k = {}) {
       const newTab = Boolean(href) && optBool(block.newTab);
       meta.hasText = true;
       const color = typo.color || theme.textColor;
-      const css = `margin:0;font-size:${typo.fontSize || { 1: 28, 2: 22, 3: 18 }[level]}px;line-height:${typo.lineHeight || 1.25};font-weight:${typo.weight ? WEIGHTS[typo.weight] : 800};color:${color};text-align:${align}${typo.font ? `;font-family:${FONTS[typo.font]}` : ""}${typo.italic ? ";font-style:italic" : ""}${typo.letterSpacing ? `;letter-spacing:${typo.letterSpacing}px` : ""}`;
+      const css = `margin:0;font-size:${typo.fontSize || { 1: 28, 2: 22, 3: 18 }[level]}px;line-height:${typo.lineHeight || 1.25};font-weight:${typo.weight ? WEIGHTS[typo.weight] : 800};color:${color};text-align:${align}${typo.font ? `;font-family:${fontStack(typo.font)}` : ""}${typo.italic ? ";font-style:italic" : ""}${typo.letterSpacing ? `;letter-spacing:${typo.letterSpacing}px` : ""}`;
       const inner = href ? [T('<a href="'), ...href, T(`"${newTab ? ' target="_blank"' : ""} style="color:${color};text-decoration:none">`), ...text, T("</a>")] : text;
       return { normalized: { text: block.text.trim(), level, align, ...typo, ...(href ? { href: block.href.trim() } : {}), ...(newTab ? { newTab } : {}) }, nodes: [T(`<h${level}${cls("f")} style="${css}">`), ...inner, T(`</h${level}>`)] };
     }
@@ -441,7 +446,7 @@ function buildBlock(block, env, meta, k = {}) {
       const typo = typography(block, { sizeMin: 12, sizeMax: 32 });
       const align = block.align === undefined || block.align === null || block.align === "" ? null : alignOf(block.align);
       const qcss = `border-left:4px solid ${theme.accent};padding:8px 0 8px 16px;font-size:${typo.fontSize || 18}px;line-height:${typo.lineHeight || 1.5};font-style:${block.italic === false ? "normal" : "italic"};color:${typo.color || theme.textColor}`
-        + `${typo.font ? `;font-family:${FONTS[typo.font]}` : ""}${typo.weight ? `;font-weight:${WEIGHTS[typo.weight]}` : ""}${typo.letterSpacing ? `;letter-spacing:${typo.letterSpacing}px` : ""}${align ? `;text-align:${align}` : ""}`;
+        + `${typo.font ? `;font-family:${fontStack(typo.font)}` : ""}${typo.weight ? `;font-weight:${WEIGHTS[typo.weight]}` : ""}${typo.letterSpacing ? `;letter-spacing:${typo.letterSpacing}px` : ""}${align ? `;text-align:${align}` : ""}`;
       return {
         normalized: { text: block.text.trim(), ...(author ? { author: block.author.trim() } : {}), ...typo, ...(block.italic === false ? { italic: false } : {}), ...(align ? { align } : {}) }, // citation : italique par défaut
         nodes: [
@@ -621,7 +626,7 @@ function buildBlock(block, env, meta, k = {}) {
       const align = alignOf(block.align);
       const newTab = optBool(block.newTab);
       const typo = typography(block, { sizeMin: 12, sizeMax: 28 });
-      const pcss = [typo.font ? `font-family:${FONTS[typo.font]}` : "", typo.fontSize ? `font-size:${typo.fontSize}px` : "", typo.lineHeight ? `line-height:${typo.lineHeight}` : ""].filter(Boolean).map((x) => `;${x}`).join("");
+      const pcss = [typo.font ? `font-family:${fontStack(typo.font)}` : "", typo.fontSize ? `font-size:${typo.fontSize}px` : "", typo.lineHeight ? `line-height:${typo.lineHeight}` : ""].filter(Boolean).map((x) => `;${x}`).join("");
       const acss = `color:${typo.color || theme.accent};font-weight:${typo.weight ? WEIGHTS[typo.weight] : 700}${typo.italic ? ";font-style:italic" : ""}${typo.letterSpacing ? `;letter-spacing:${typo.letterSpacing}px` : ""};text-decoration:underline`;
       return {
         normalized: { label: block.label.trim(), url: block.url.trim(), align, ...(newTab ? { newTab } : {}), ...typo },
@@ -745,12 +750,19 @@ function compileTemplate(template, { allowed = () => false, annotate = false, to
     }
   });
 
-  const font = FONTS[theme.fontFamily];
+  const font = fontStack(theme.fontFamily);
+  // Polices de la bibliothèque utilisées par le message : règles @font-face à adresse absolue (inutiles sans adresse publique) ;
+  // les clients qui les ignorent (Gmail, Outlook Windows…) affichent le repli de la pile
+  const siteUrl = String(process.env.SITE_URL || "").trim().replace(/\/+$/, "");
+  const usedFonts = [...new Set(JSON.stringify([theme, normalizedBlocks]).match(/font\.[a-z0-9-]{1,60}/g) || [])].map((id) => fontLib.byId(id)).filter(Boolean);
+  // Aperçu de l'éditeur (annotate) : adresses relatives (le navigateur de l'auteur les charge) ; envoi : adresse publique https seulement
+  const emailFaces = annotate ? usedFonts.map((f) => fontLib.faceCss(f)).join("") : /^https:\/\//.test(siteUrl) ? usedFonts.map((f) => fontLib.faceCss(f, { base: siteUrl })).join("") : "";
+  meta.webFonts = usedFonts.map((f) => f.family);
   const padding = "&zwnj;&nbsp;".repeat(40);
   const ast = [
     T('<!DOCTYPE html>\n<html lang="fr" xmlns="http://www.w3.org/1999/xhtml">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<meta name="x-apple-disable-message-reformatting">\n<meta name="color-scheme" content="light">\n<title>'),
     ...escapeAst(subjectAst),
-    T(`</title>\n<style>@media only screen and (max-width:${theme.maxWidth + 24}px){.mk-container{width:100%!important}.mk-col{display:block!important;width:100%!important;padding:0 0 16px 0!important}.mk-hide-m{display:none!important}.mk-hide-d{display:table-row!important;max-height:none!important;overflow:visible!important}${mobileRules.join("")}}</style>\n</head>\n<body style="margin:0;padding:0;background:${theme.background}">\n`),
+    T(`</title>\n<style>${emailFaces}@media only screen and (max-width:${theme.maxWidth + 24}px){.mk-container{width:100%!important}.mk-col{display:block!important;width:100%!important;padding:0 0 16px 0!important}.mk-hide-m{display:none!important}.mk-hide-d{display:table-row!important;max-height:none!important;overflow:visible!important}${mobileRules.join("")}}</style>\n</head>\n<body style="margin:0;padding:0;background:${theme.background}">\n`),
     ...(preheaderSource ? [T(`<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:${theme.background}">`), ...preheaderNodes, T(`${padding}</div>\n`)] : []),
     T(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${theme.background}"><tr><td align="center" style="padding:24px 12px">\n`),
     // Largeur fixe des colonnes (table-layout) + coupure des mots et adresses trop longs : le contenu ne peut jamais

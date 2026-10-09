@@ -31,6 +31,7 @@
   <% if (typeof compactNav !== "undefined" && compactNav) { %><script>/* outil plein écran (éditeur) : sous 1680 px, menu réduit d'office pour laisser la place au travail (sans changer la préférence mémorisée) */ if (window.innerWidth < 1680) document.documentElement.setAttribute("data-sidebar", "collapsed");</script><% } %>
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/marketing.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/font-manager.css') %>">
   <% if (cms) { %><link rel="stylesheet" href="<%= asset('/css/cms.css') %>"><% } %>
   <% if (appRail) { %><link rel="stylesheet" href="<%= asset('/css/app-rail.css') %>"><% } %>
   <% if (typeof appearanceJs !== "undefined" && appearanceJs) { %><link rel="stylesheet" href="<%= asset('/css/media-picker.css') %>"><% } %>

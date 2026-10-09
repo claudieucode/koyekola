@@ -52,6 +52,7 @@ function map() {
   return cache;
 }
 const invalidate = () => { cache = null; };
+const cacheInfo = () => ({ entries: cache ? cache.size : 0, loaded: cache !== null });
 
 // Toutes les redirections connues : manuelles + changements d'adresse automatiques (formations, articles)
 function graph() {
@@ -247,4 +248,4 @@ function exportCsv() {
   return ["source,destination,type,note,active,utilisations,derniere_utilisation", ...rows.map((r) => [r.source_path, r.target, r.status, r.note, r.enabled ? "oui" : "non", r.hits, r.last_hit_at || ""].map(csvCell).join(","))].join("\n") + "\n";
 }
 
-module.exports = { query, SORTS, isExternal, STATUSES, list, get, create, update, remove, chains, fixChain, middleware, importCsv, exportCsv, normalizePath, graph, follow, validate, invalidate };
+module.exports = { cacheInfo, query, SORTS, isExternal, STATUSES, list, get, create, update, remove, chains, fixChain, middleware, importCsv, exportCsv, normalizePath, graph, follow, validate, invalidate };

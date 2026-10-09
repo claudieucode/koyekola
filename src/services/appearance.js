@@ -218,8 +218,8 @@ function buildCss(cfg) {
   if (col("error")) v("--danger", t.colors.error);
   if (t.border.color !== D.border.color) v("--border", t.border.color);
   // Typographie
-  if (t.fonts.body !== D.fonts.body) v("--font-body", tokensLib.FONTS[t.fonts.body].stack);
-  if (t.fonts.heading !== D.fonts.heading) v("--font-display", tokensLib.FONTS[t.fonts.heading].stack);
+  if (t.fonts.body !== D.fonts.body) v("--font-body", tokensLib.fontStackOf(t.fonts.body));
+  if (t.fonts.heading !== D.fonts.heading) v("--font-display", tokensLib.fontStackOf(t.fonts.heading));
   // Rayons, ombres
   if (t.radius.md !== D.radius.md) v("--radius", `${t.radius.md}px`);
   if (t.radius.lg !== D.radius.lg) v("--radius-lg", `${t.radius.lg}px`);
@@ -250,7 +250,9 @@ function buildCss(cfg) {
   rule(":where(main) a:where(:not([class])):hover", [l.hoverColor ? `color:${colorOf(l.hoverColor)}` : "", l.underline === "hover" ? "text-decoration:underline" : ""]);
   const decl = root.length ? `:root{${root.join(";")}}` : "";
   const hasAny = decl || rules.length;
-  return hasAny ? `${decl}:root{${kw}}${rules.join("")}` : "";
+  // Polices de la bibliothèque choisies pour le site : leurs règles @font-face sont livrées avec la feuille
+  const faces = hasAny ? require("../utils/fontLibrary").faceCssFor(`${decl}:root{${kw}}`) : "";
+  return hasAny ? `${faces}${decl}:root{${kw}}${rules.join("")}` : "";
 }
 
 // ---------- Rendu public : une requête = au plus une lecture, mémorisée jusqu'à la prochaine publication ----------

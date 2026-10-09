@@ -108,10 +108,8 @@ const SCREENS = {
 
   // ----- Outils -----
   outils(req, ctx, sub) {
-    const tabs = tabsOf("outils", sub, [["", "Santé du site"], ["importer", "Importer"], ["exporter", "Exporter"], ["sauvegardes", "Sauvegardes"], ["diagnostic", "Diagnostic"], ["logs", "Logs"], ["cache", "Cache"], ["remplacer", "Recherche / remplacement"]]);
+    const tabs = tabsOf("outils", sub, [["", "Santé du site"], ["importer", "Importer"], ["exporter", "Exporter"], ["sauvegardes", "Sauvegardes"], ["diagnostic", "Diagnostic"], ["systeme", "Informations système"], ["maintenance", "Maintenance"], ["cache", "Caches"], ["contenu", "Outils de contenu"], ["logs", "Journal d'activité"]]);
     switch (sub) {
-      case "importer": return { title: "Importer", lead: "Importer une page enregistrée au format KOLAKISA.", tabs, cards: [{ icon: "upload", title: "Importer une page", text: "L'import d'une page (fichier .json) se fait depuis la liste des pages.", href: "/marketing/pages", label: "Ouvrir les pages" }, { icon: "users", title: "Importer des contacts", text: "Import de contacts par fichier CSV.", href: "/marketing/importer", label: "Ouvrir l'import" }] };
-      case "exporter": return { title: "Exporter", lead: "Chaque page s'exporte depuis sa fiche (fichier .json). L'export complet du site arrive dans un prochain palier.", tabs, cards: [{ icon: "download", title: "Exporter une page", text: "Ouvrez une page puis « Exporter ».", href: "/marketing/pages", label: "Ouvrir les pages" }] };
       case "sauvegardes": {
         const kind = { auto: "Automatique", manuelle: "Manuelle", migration: "Avant migration" };
         return { title: "Sauvegardes", lead: "Les copies de la base de données, faites chaque jour automatiquement (lecture seule).", tabs,
@@ -121,17 +119,13 @@ const SCREENS = {
         const rows = data.auditLog(ctx, 100).map((l) => ({ cells: [fdate(l.created_at), l.username || "Système", l.action, `${l.resource_type}${l.resource_id ? " #" + l.resource_id : ""}`] }));
         return { title: "Logs", lead: "Le journal d'audit des actions du marketing et des pages (lecture seule, non modifiable).", tabs, table: { caption: "Journal d'audit", columns: [{ label: "Date" }, { label: "Qui" }, { label: "Action" }, { label: "Élément" }], rows, empty: empty("history", "Aucune entrée", "Les actions apparaissent ici.") } };
       }
-      case "diagnostic": return { title: "Diagnostic", lead: "Contrôles techniques du site.", soon: SOON, tabs, actions: [dis("Lancer le diagnostic")], table: { caption: "Résultats", columns: [{ label: "Contrôle" }, { label: "Résultat" }, { label: "Détail" }], rows: [], empty: empty("activity", "Aucun diagnostic lancé", "Les résultats s'afficheront ici.") } };
-      case "cache": return { title: "Cache", lead: "Gestion du cache des pages.", soon: SOON, tabs, actions: [dis("Vider le cache")], table: { caption: "Cache", columns: [{ label: "Zone" }, { label: "Taille", num: true }, { label: "Dernier vidage" }], rows: [], empty: empty("zap", "Rien à afficher", "Le cache sera géré ici.") } };
-      case "remplacer": return { title: "Recherche / remplacement", lead: "Remplacer un texte dans tout le contenu du site.", soon: SOON, tabs, form: { fields: [{ label: "Rechercher", type: "text" }, { label: "Remplacer par", type: "text" }, { label: "Dans", type: "select", options: ["Pages", "Articles", "Pages et articles"] }], submit: "Remplacer" } };
-      default: return { title: "Santé du site", lead: "Vue d'ensemble de l'état technique du site.", soon: SOON, tabs, actions: [dis("Analyser le site")],
-        cards: [{ icon: "download", title: "Sauvegardes", text: "Vérifiez les sauvegardes automatiques.", href: `${BASE}/outils/sauvegardes`, label: "Ouvrir" }, { icon: "history", title: "Logs", text: "Consultez le journal d'audit.", href: `${BASE}/outils/logs`, label: "Ouvrir" }, { icon: "searchCheck", title: "Erreurs 404", text: "Adresses introuvables relevées.", href: `${BASE}/seo/404`, label: "Ouvrir" }] };
+      default: return null; // santé, import, export, diagnostic, système, maintenance, caches et outils de contenu : routes de tools.js (palier 13)
     }
   },
 
   // ----- Paramètres (interface seulement : champs désactivés) -----
   parametres(req, ctx, sub) {
-    const tabs = tabsOf("parametres", sub, [["", "Général"], ["identite", "Identité"], ["domaine", "Domaine"], ["urls", "URLs"], ["permaliens", "Permaliens"], ["seo", "SEO"], ["performance", "Performance"], ["securite", "Sécurité"], ["confidentialite", "Confidentialité"], ["cookies", "Cookies"], ["scripts", "Scripts"], ["code", "Code personnalisé"], ["maintenance", "Maintenance"]]);
+    const tabs = tabsOf("parametres", sub, [["", "Général"], ["identite", "Identité"], ["domaine", "Domaine"], ["urls", "URLs"], ["permaliens", "Permaliens"], ["seo", "SEO"], ["performance", "Performance"], ["securite", "Sécurité"], ["confidentialite", "Confidentialité"], ["cookies", "Cookies"], ["scripts", "Scripts"], ["code", "Code personnalisé"]]);
     const siteUrl = process.env.SITE_URL || "";
     const F = (label, type, extra = {}) => ({ label, type, ...extra });
     const SECTIONS = {
@@ -147,7 +141,6 @@ const SCREENS = {
       cookies: ["Cookies", "Bandeau de consentement.", [F("Afficher le bandeau", "checkbox"), F("Texte du bandeau", "textarea")]],
       scripts: ["Scripts", "Scripts de mesure et d'intégration.", [F("Scripts de l'en-tête", "textarea"), F("Scripts du pied de page", "textarea")]],
       code: ["Code personnalisé", "CSS global du site.", [F("CSS personnalisé", "textarea")]],
-      maintenance: ["Maintenance", "Mettre le site hors ligne temporairement.", [F("Activer le mode maintenance", "checkbox"), F("Message affiché aux visiteurs", "textarea")]],
     };
     const [title, lead, fields] = SECTIONS[sub || ""];
     return { title: `Paramètres · ${title}`, lead, soon: SOON, tabs, form: { fields, submit: "Enregistrer les modifications" } };
