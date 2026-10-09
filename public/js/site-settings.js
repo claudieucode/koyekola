@@ -531,13 +531,16 @@
     C.fontRoles.forEach(function (role) {
       var id = "ss-font-" + role;
       var sample = h("p", { class: "ss-sample", text: role === "heading" ? "Des objets pensés pour durer" : role === "button" ? "Je commence" : role === "link" ? "Découvrir notre histoire" : "Chaque pièce est choisie pour la qualité de sa fabrication." });
-      sample.style.fontFamily = C.fonts[T.fonts[role]].stack;
-      var select = h("select", { id: id, disabled: !state.canWrite }, Object.keys(C.fonts).map(function (k) { return h("option", { value: k, selected: T.fonts[role] === k, text: C.fonts[k].label }); }));
-      select.addEventListener("change", function () {
-        var v = select.value;
-        change(function (t) { t.fonts[role] = v; });
-        sample.style.fontFamily = C.fonts[v].stack;
-      });
+      var stackOf = function (k) { var lib = window.KFonts && window.KFonts.byId(k); if (lib) { window.KFonts.ensure([lib.id]); return lib.stack; } return C.fonts[k] ? C.fonts[k].stack : "inherit"; };
+      sample.style.fontFamily = stackOf(T.fonts[role]);
+      // Police : bibliothèque centrale (Font Manager) ; les polices historiques du site restent proposées en tête
+      var select = window.KFonts
+        ? window.KFonts.picker({ value: T.fonts[role], legacy: Object.keys(C.fonts).map(function (k) { return [k, C.fonts[k].label]; }), legacyStacks: function () { var m = {}; Object.keys(C.fonts).forEach(function (k) { m[k] = C.fonts[k].stack; }); return m; }, disabled: !state.canWrite, label: C.fontLabels[role],
+          onChange: function (v) { change(function (t) { t.fonts[role] = v; }); setTimeout(function () { sample.style.fontFamily = stackOf(v); }, 60); } })
+        : h("select", { id: id, disabled: !state.canWrite }, Object.keys(C.fonts).map(function (k) { return h("option", { value: k, selected: T.fonts[role] === k, text: C.fonts[k].label }); }));
+      if (!window.KFonts) select.addEventListener("change", function () { var v = select.value; change(function (t) { t.fonts[role] = v; }); sample.style.fontFamily = C.fonts[v].stack; });
+      select.id = id;
+      if (window.KFonts && !window.KFonts.ready()) window.KFonts.load().then(function () { sample.style.fontFamily = stackOf(T.fonts[role]); }).catch(function () {});
       sec.appendChild(h("div", { class: "ss-field" }, [h("label", { for: id, text: C.fontLabels[role] }), select, sample]));
     });
     bodyEl.appendChild(sec);

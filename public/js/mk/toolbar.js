@@ -53,6 +53,14 @@
       });
       return s;
     }
+    // Police : bibliothèque centrale (Font Manager) ; repli sur la liste historique si le gestionnaire n'est pas chargé
+    function fontPicker(o) {
+      if (!window.KFonts) return select({ label: o.label, cls: "is-font", options: (o.emptyLabel ? [["", o.emptyLabel]] : []).concat(o.legacy), value: o.value, set: o.set });
+      var p = window.KFonts.picker({ value: o.value(), legacy: o.legacy, emptyLabel: o.emptyLabel, mode: "email", label: o.label, onChange: function (v) { o.set(v); sync(); } });
+      p.classList.add("kf-ctx"); tip(p, o.label);
+      syncers.push(function () { var v = o.value(); v = v == null ? "" : String(v); if (p.value !== v) p.value = v; });
+      return p;
+    }
     function number(o) {
       var wrap = el("label", { "class": "mk-tb-num", title: o.label });
       wrap.appendChild(el("span", { "class": "mk-tb-num-label", "aria-hidden": "true" }, o.short));
@@ -147,7 +155,7 @@
       return row;
     }
     function errorLine() { return el("p", { "class": "mk-tb-error", role: "alert" }); }
-    var C = { button: button, select: select, number: number, color: color, popover: popover, field: field, textInput: textInput, numInput: numInput, intOrU: intOrU, check: check, actions: actions, errorLine: errorLine, keepSelection: keepSelection };
+    var C = { button: button, select: select, fontPicker: fontPicker, number: number, color: color, popover: popover, field: field, textInput: textInput, numInput: numInput, intOrU: intOrU, check: check, actions: actions, errorLine: errorLine, keepSelection: keepSelection };
 
     // ---------- Rendu ----------
     function group(def) {
@@ -277,7 +285,7 @@
     return ctx.C.button({ icon: "settings", text: "Réglages", label: "Tous les réglages du bloc (panneau de droite)", run: function () { ctx.api.openProps("styles"); } });
   }
   function fontSelect(ctx, key, label, emptyLabel) {
-    return ctx.C.select({ label: label, cls: "is-font", options: [["", emptyLabel]].concat(ctx.api.fonts()), value: getter(ctx, key, ""), set: setter(ctx, key) });
+    return ctx.C.fontPicker({ label: label, emptyLabel: emptyLabel, legacy: ctx.api.fonts(), value: getter(ctx, key, ""), set: setter(ctx, key) });
   }
 
   // ---------- Aucun bloc sélectionné : réglages généraux du message (styles globaux) ----------
@@ -295,7 +303,7 @@
         });
         p.appendChild(list);
       } })] },
-      { name: "Police du message", priority: 1, items: [C.select({ label: "Police du message", cls: "is-font", options: api.fonts(), value: theme("fontFamily"), set: setTheme("fontFamily") })] },
+      { name: "Police du message", priority: 1, items: [C.fontPicker({ label: "Police du message", legacy: api.fonts(), value: theme("fontFamily"), set: setTheme("fontFamily") })] },
       { name: "Couleurs du message", priority: 2, items: [
         C.color({ glyph: "A", label: "Couleur du texte du message", value: theme("textColor"), set: setTheme("textColor") }),
         C.color({ icon: "palette", label: "Couleur principale (boutons, liens)", value: theme("accent"), set: setTheme("accent") }),

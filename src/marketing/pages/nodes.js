@@ -51,6 +51,7 @@ const color = (v) => {
   return null;
 };
 const colorCss = (v) => (v.startsWith("token:") ? `var(--kw-${v.slice(6)})` : v);
+const fontLib = require("../../utils/fontLibrary");
 const oneOf = (...list) => (v) => (list.includes(v) ? v : null);
 const numberIn = (min, max, { integer = false } = {}) => (v) => {
   const n = Number(v);
@@ -122,7 +123,8 @@ const STYLE_PROPS = {
   paddingRight: { css: "padding-right", check: len, group: "spacing" },
   paddingBottom: { css: "padding-bottom", check: len, group: "spacing" },
   paddingLeft: { css: "padding-left", check: len, group: "spacing" },
-  fontFamily: { css: "font-family", check: oneOf(...Object.keys(FONT_STACKS)), out: (v) => FONT_STACKS[v], group: "typography" },
+  // Police : un des cinq réglages historiques du site OU une famille de la bibliothèque (Font Manager, identifiant « font.inter »)
+  fontFamily: { css: "font-family", check: (v) => (Object.hasOwn(FONT_STACKS, v) || fontLib.isId(v) ? v : null), out: (v) => FONT_STACKS[v] || fontLib.stackOf(v), group: "typography" },
   fontSize: { css: "font-size", check: len, group: "typography" },
   fontWeight: { css: "font-weight", check: oneOf("300", "400", "500", "600", "700", "800", "900"), group: "typography" },
   fontStyle: { css: "font-style", check: oneOf("normal", "italic"), group: "typography" },

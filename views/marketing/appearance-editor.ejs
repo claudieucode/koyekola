@@ -12,6 +12,8 @@
   const num = (id, name, label, value, attrs = "") => `<div class="field-group mk-ap-num"><label for="${id}">${label}</label><input id="${id}" type="number" name="${name}" value="${value === null || value === undefined ? "" : value}" ${attrs}></div>`;
   const sel = (id, name, label, options, current) => `<div class="field-group"><label for="${id}">${label}</label><select id="${id}" name="${name}">${options.map(([v, l]) => `<option value="${v}"${String(v) === String(current) ? " selected" : ""}>${l}</option>`).join("")}</select></div>`;
   const fontOptions = Object.entries(FONTS).map(([k, f]) => [k, f.label]);
+  // Police de la bibliothèque déjà choisie : proposée comme option courante (le sélecteur central l'affiche par son nom)
+  const withCurrent = (current) => (Object.hasOwn(FONTS, current) ? fontOptions : fontOptions.concat([[current, String(current).replace(/^font\./, "").replace(/-/g, " ")]]));
   const colorRef = (id, name, label, value) => `<div class="field-group"><label for="${id}">${label}</label><input id="${id}" type="text" name="${name}" value="${value || ""}" maxlength="24" placeholder="origine (#rrggbb)" pattern="(#[0-9a-fA-F]{6})?"></div>`;
 %>
     <div class="mk-head"><h1>Apparence · <%= title %></h1></div>
@@ -89,7 +91,7 @@
       </fieldset>
       <fieldset<%= canStyles ? "" : " disabled" %>>
         <legend>Typographie</legend>
-        <div class="mk-ap-grid"><%- sel("f-heading", "fonts.heading", "Police des titres", fontOptions, T.fonts.heading) %><%- sel("f-body", "fonts.body", "Police du texte", fontOptions, T.fonts.body) %></div>
+        <div class="mk-ap-grid"><%- sel("f-heading", "fonts.heading", "Police des titres", withCurrent(T.fonts.heading), T.fonts.heading) %><%- sel("f-body", "fonts.body", "Police du texte", withCurrent(T.fonts.body), T.fonts.body) %></div>
         <div class="mk-ap-grid">
           <% ["h1", "h2", "h3"].forEach((k) => { %><%- num("t-" + k, "type." + k + ".size", "Taille " + k.toUpperCase() + " (px)", T.type[k].size, 'min="12" max="120"') %><%- sel("w-" + k, "type." + k + ".weight", "Graisse " + k.toUpperCase(), [[400, "Normale"], [500, "Moyenne"], [600, "Semi-grasse"], [700, "Grasse"], [800, "Très grasse"]], T.type[k].weight) %><% }) %>
           <%- num("t-body", "type.body.size", "Taille du texte (px)", T.type.body.size, 'min="12" max="28"') %><%- num("t-bodylh", "type.body.lineHeight", "Interligne du texte", T.type.body.lineHeight, 'min="1" max="2.5" step="0.05"') %>
@@ -237,4 +239,6 @@
     <% if (!components.length) { %><p class="field-hint">Aucun composant. Dans le Page Builder, enregistrez une section comme composant pour la réutiliser en mode synchronisé.</p>
     <% } else { %><ul class="mk-cms-list"><% components.forEach((c) => { %><li><span><strong><%= c.name %></strong> · <%= c.global ? "tous les sites" : "un site" %> · utilisé dans <%= c.uses %> page<%= c.uses > 1 ? "s" : "" %></span></li><% }) %></ul><% } %>
 <% } %>
+<script src="<%= asset('/js/font-manager.js') %>"></script>
+<script>(function () { ["f-heading", "f-body"].forEach(function (id) { var s = document.getElementById(id); if (s && window.KFonts) window.KFonts.enhance(s, { label: "Police" }); }); })();</script>
 <%- include("partials/bottom") %>

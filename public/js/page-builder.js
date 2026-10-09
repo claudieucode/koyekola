@@ -2462,6 +2462,16 @@
       else if (SP[k]) inner.appendChild(styleControl(items, k));
     });
   }
+  // Graisses : avec une police de la bibliothèque, seules les graisses réellement fournies par la famille sont proposées
+  // (la valeur déjà enregistrée reste affichée, jamais effacée)
+  function availableOptions(items, key, p) {
+    if (key !== "fontWeight" || !window.KFonts) return p.options;
+    var fam = ownValue(items[0], "fontFamily"); if (fam === undefined) fam = inheritedValue(items[0], "fontFamily");
+    var w = /^font\./.test(String(fam || "")) ? window.KFonts.weightsFor(fam) : null;
+    if (!w) return p.options;
+    var own = ownValue(items[0], key);
+    return p.options.filter(function (o) { var n = Number(o[0]); return String(o[0]) === String(own) || (w.variable ? n >= w.weights[0] && n <= w.weights[w.weights.length - 1] : w.weights.indexOf(n) >= 0); });
+  }
   function styleControl(items, key, label, extra) {
     var p = SP[key];
     var it = items[0];
@@ -2473,8 +2483,14 @@
     var control;
     var seg = p.kind === "enum" && ICON_ENUMS[key] ? iconSeg(items, key) : null;
     if (seg) control = seg;
+    else if (key === "fontFamily" && window.KFonts) {
+      // Police : bibliothèque centrale (Font Manager), les cinq réglages du site restent proposés en tête
+      control = window.KFonts.picker({ value: mixed || own === undefined ? "" : String(own), legacy: p.options.map(function (o) { return [o[0], o[1]]; }), emptyLabel: inh !== undefined ? "Hérité : " + (/^font\./.test(inh) ? String(inh).replace(/^font\./, "").replace(/-/g, " ") : optLabel(p, inh)) : "Par défaut", disabled: dis, label: "Police",
+        onChange: function (v) { setStyle(idsOf(items), key, v); } });
+      control.id = id;
+    }
     else if (p.kind === "enum") {
-      control = h("select", { id: id, class: "pb-prop-select", disabled: dis }, [h("option", { value: "", text: inh !== undefined ? "Hérité : " + optLabel(p, inh) : "Par défaut" })].concat(p.options.map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
+      control = h("select", { id: id, class: "pb-prop-select", disabled: dis }, [h("option", { value: "", text: inh !== undefined ? "Hérité : " + optLabel(p, inh) : "Par défaut" })].concat(availableOptions(items, key, p).map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
       control.value = mixed || own === undefined ? "" : String(own);
       control.addEventListener("change", function () { setStyle(idsOf(items), key, control.value); });
     } else if (p.kind === "color") control = colorButton(id, mixed ? undefined : own, inh, dis, function (v, opts) { setStyle(idsOf(items), key, v, opts); }, key);
@@ -3603,6 +3619,11 @@
   function ctxSelect(label, key, items, options) {
     var p = SP[key];
     var own = ownValue(items[0], key);
+    if (key === "fontFamily" && window.KFonts) {
+      var kf = window.KFonts.picker({ value: own === undefined ? "" : String(own), legacy: p.options.map(function (o) { return [o[0], o[1]]; }), emptyLabel: "Police par défaut", disabled: lockedAny(items), label: label || "Police", onChange: function (v) { setStyle(idsOf(items), key, v); } });
+      kf.classList.add("kf-ctx"); kf.setAttribute("data-tip", label || p.label);
+      return kf;
+    }
     var sel = h("select", { "aria-label": label || p.label, "data-tip": label || p.label, disabled: lockedAny(items) }, [h("option", { value: "", text: (label || p.label) + "…" })].concat((options || p.options).map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
     sel.value = own === undefined ? "" : String(own);
     sel.addEventListener("change", function () { setStyle(idsOf(items), key, key === "columns" && sel.value ? Number(sel.value) : sel.value); });

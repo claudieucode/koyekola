@@ -309,7 +309,10 @@ function viewModel(ctx, page) {
     const row = page.site_id ? ctx.db.prepare("SELECT settings FROM mk_sites WHERE id = ? AND organization_id = ?").get(page.site_id, ctx.organizationId) : null;
     breakpoints = row ? require("../pages/siteSettings").breakpointsOf(require("../pages/siteSettings").normalizeSettings(JSON.parse(row.settings || "{}"))) : undefined;
   } catch { breakpoints = undefined; }
-  return { ...page, sections, nodeCss: pageNodes.pageCss(sections, breakpoints), customCss };
+  // Polices de la bibliothèque utilisées par la page : leurs règles @font-face sont livrées avec elle (aucune autre n'est chargée)
+  const nodeCss = pageNodes.pageCss(sections, breakpoints);
+  const faces = require("../../utils/fontLibrary").faceCssFor(nodeCss);
+  return { ...page, sections, nodeCss: faces ? `${faces}\n${nodeCss}` : nodeCss, customCss };
 }
 // Liens cliquables d'une page AFFICHÉE (viewModel), dans l'ordre : le même calcul sert au rendu et à /p/<adresse>/clic/<n>
 function linksOf(page) {

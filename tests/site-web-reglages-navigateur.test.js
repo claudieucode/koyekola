@@ -138,8 +138,9 @@ describe("réglages du site : panneau de l'éditeur (navigateur)", { skip: SKIP 
   test("N5 Polices globales : la police des titres est enregistrée, relue après réouverture, et appliquée au canevas", async () => {
     await openPanel();
     await panel().locator(".ss-entry", { hasText: "Polices globales" }).click();
-    assert.equal(await panel().locator(".ss-field select").count(), 4, "titres, texte, boutons, liens");
-    await panel().locator("#ss-font-heading").selectOption("georgia");
+    assert.equal(await panel().locator(".ss-field .kf-btn").count(), 4, "titres, texte, boutons, liens : sélecteur de la bibliothèque (Font Manager)");
+    await panel().locator("#ss-font-heading").click();
+    await page.locator(".kf-panel .kf-pick", { hasText: "Georgia (serif)" }).first().click();
     await until(async () => tokens().fonts.heading === "georgia", { what: "police enregistrée" });
     await saved();
     await until(async () => /Georgia/.test(await canvasVar("--kw-font-heading")), { what: "canevas mis à jour avec la police" });
@@ -149,7 +150,7 @@ describe("réglages du site : panneau de l'éditeur (navigateur)", { skip: SKIP 
     await ready();
     await openPanel();
     await panel().locator(".ss-entry", { hasText: "Polices globales" }).click();
-    assert.equal(await panel().locator("#ss-font-heading").inputValue(), "georgia");
+    await until(async () => (await panel().locator("#ss-font-heading .kf-btn-name").textContent()) === "Georgia (serif)", { what: "police relue après réouverture" });
     await panel().locator("[aria-label='Retour aux réglages du site']").click();
     await panel().locator(".ss-entry", { hasText: "Couleurs globales" }).click();
     assert.equal(await panel().locator("input[aria-label='Code hexadécimal de « Principale »']").inputValue(), "#6b1e2e");

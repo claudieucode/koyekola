@@ -9,6 +9,7 @@ const TYPE_KEYS = ["h1", "h2", "h3", "h4", "h5", "h6", "body", "caption", "butto
 const TYPE_LABELS = { h1: "Titre 1", h2: "Titre 2", h3: "Titre 3", h4: "Titre 4", h5: "Titre 5", h6: "Titre 6", body: "Texte courant", caption: "Légende", button: "Bouton" };
 const SPACE_KEYS = ["xs", "sm", "md", "lg", "xl", "xxl"];
 // Polices proposées : celles du site (servies localement, aucun service tiers) et des polices système
+const fontLib = require("../../utils/fontLibrary");
 const FONTS = {
   figtree: { label: "Figtree", stack: "Figtree, system-ui, sans-serif" },
   bricolage: { label: "Bricolage Grotesque", stack: "'Bricolage Grotesque', system-ui, sans-serif" },
@@ -105,8 +106,9 @@ function normalizeTokens(input = {}, { strict = false } = {}) {
   const fonts = {};
   for (const k of FONT_ROLES) {
     const v = src.fonts && src.fonts[k];
-    if (v !== undefined && !Object.hasOwn(FONTS, v) && strict) throw bad("Police inconnue.");
-    fonts[k] = Object.hasOwn(FONTS, v) ? v : D.fonts[k];
+    const known = Object.hasOwn(FONTS, v) || fontLib.isId(v);
+    if (v !== undefined && !known && strict) throw bad("Police inconnue.");
+    fonts[k] = known ? v : D.fonts[k];
   }
   // Valeur « couleur du site » : vide, #rrggbb ou token:<clé> ; invalide = refusée (strict) ou remplacée par vide
   const ref = (v, label) => {
@@ -192,7 +194,7 @@ function tokensToCss(tokens) {
   for (const k of COLOR_KEYS) v.push(`--kw-${k}:${t.colors[k]}`);
   v.push(`--kw-on-primary:${onColor(t.colors.primary)}`, `--kw-on-accent:${onColor(t.colors.accent)}`);
   for (const c of t.customColors) v.push(`--kw-${c.key}:${c.hex}`);
-  for (const k of FONT_ROLES) v.push(`--kw-font-${k}:${FONTS[t.fonts[k]].stack}`);
+  for (const k of FONT_ROLES) v.push(`--kw-font-${k}:${Object.hasOwn(FONTS, t.fonts[k]) ? FONTS[t.fonts[k]].stack : fontLib.stackOf(t.fonts[k])}`);
   for (const k of TYPE_KEYS) v.push(`--kw-${k}-size:${t.type[k].size}px`, `--kw-${k}-weight:${t.type[k].weight}`, `--kw-${k}-lh:${t.type[k].lineHeight}`);
   for (const k of SPACE_KEYS) v.push(`--kw-space-${k}:${t.space[k]}px`);
   for (const [k, n] of Object.entries(t.radius)) v.push(`--kw-radius-${k}:${n}px`);
@@ -204,4 +206,6 @@ function tokensToCss(tokens) {
 
 // Les jetons de typographie reçoivent les détails par défaut (espacement, casse, style, couleur)
 for (const k of TYPE_KEYS) Object.assign(DEFAULT_TOKENS.type[k], DEFAULT_TOKENS.typeExtra);
-module.exports = { COLOR_REF, TRANSFORMS, FONT_STYLES, UNDERLINES, IMAGE_FITS, IMAGE_POSITIONS, DEFAULT_TOKENS, CUSTOM_KEY, MAX_CUSTOM_COLORS, FONT_ROLES, FONT_LABELS, COLOR_KEYS, COLOR_LABELS, TYPE_KEYS, TYPE_LABELS, SPACE_KEYS, FONTS, SHADOWS, normalizeTokens, tokensToCss, onColor, contrast };
+// Pile CSS d'une police du site : réglage historique ou famille de la bibliothèque (Font Manager)
+const fontStackOf = (key) => (Object.hasOwn(FONTS, key) ? FONTS[key].stack : fontLib.stackOf(key));
+module.exports = { fontStackOf, COLOR_REF, TRANSFORMS, FONT_STYLES, UNDERLINES, IMAGE_FITS, IMAGE_POSITIONS, DEFAULT_TOKENS, CUSTOM_KEY, MAX_CUSTOM_COLORS, FONT_ROLES, FONT_LABELS, COLOR_KEYS, COLOR_LABELS, TYPE_KEYS, TYPE_LABELS, SPACE_KEYS, FONTS, SHADOWS, normalizeTokens, tokensToCss, onColor, contrast };
