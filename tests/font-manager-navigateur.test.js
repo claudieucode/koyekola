@@ -114,6 +114,16 @@ describe("Font Manager (navigateur)", { skip: SKIP }, () => {
     await page.locator(`[data-pb-layers] .pb-node[data-id="head00000001"] > .pb-row-item`).click();
     await until(async () => (await page.locator("[data-pb-context] .kf-btn .kf-btn-name").textContent()) === "Montserrat", { what: "Montserrat toujours sélectionné après F5" });
     assert.equal(find(draft().sections, "head00000001").styles.desktop.fontFamily, "font.montserrat");
+    // clic extérieur : le canevas est une iframe (ses clics ne remontent pas au document), le panneau de gauche et le reste ferment aussi
+    for (const where of ["canvas", "left", "empty"]) {
+      await page.locator("[data-pb-context] .kf-btn").click();
+      await page.locator(".kf-panel").waitFor();
+      const f = await page.locator("[data-pb-frame]").boundingBox();
+      if (where === "canvas") await page.mouse.click(f.x + f.width - 12, f.y + f.height - 12);
+      else if (where === "left") await page.mouse.click(30, 500);
+      else await page.mouse.click(2, 300);
+      await until(async () => (await page.locator(".kf-panel").count()) === 0, { what: `fermeture au clic extérieur (${where})` });
+    }
     assert.deepEqual(errors, []);
   });
 

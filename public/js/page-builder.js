@@ -4435,15 +4435,24 @@
   var mode = store.get("mode", "visual");
   var docEl = $("[data-pb-doc]");
   var docFocus = null; // { id, field, end } : curseur à rendre après un redessin
+  // Passer en « Structure » masque le canevas (display:none) : le navigateur oublie alors son défilement. On retient la vue en quittant
+  // le mode Visuel et on la rétablit au retour (sinon la page repartait toujours tout en haut).
+  var visualView = null;
   function setMode(m) {
     if (editing) commitEdit();
-    mode = m === "structure" ? "structure" : "visual";
+    var next = m === "structure" ? "structure" : "visual";
+    if (mode === "visual" && next === "structure") { try { visualView = { y: frame.contentWindow.scrollY, sl: stage.scrollLeft, st: stage.scrollTop }; } catch (e) { visualView = null; } }
+    mode = next;
     store.set("mode", mode);
     $$("[data-pb-mode]").forEach(function (b) { b.setAttribute("aria-checked", String(b.dataset.pbMode === mode)); });
     $("[data-pb-canvas]").classList.toggle("is-structure", mode === "structure");
     docEl.hidden = mode !== "structure";
     if (mode === "structure") renderDoc();
-    else { applyZoom(); setTimeout(function () { drawOverlays(); drawRulers(); drawGuides(); }, 30); }
+    else {
+      applyZoom();
+      if (visualView) { try { frame.contentWindow.scrollTo(0, visualView.y); stage.scrollLeft = visualView.sl; stage.scrollTop = visualView.st; } catch (e) { /* cadre pas encore prêt : il se positionnera à son chargement */ } visualView = null; }
+      setTimeout(function () { drawOverlays(); drawRulers(); drawGuides(); }, 30);
+    }
     placeCanvasBar();
   }
   $$("[data-pb-mode]").forEach(function (b) { b.addEventListener("click", function () { setMode(b.dataset.pbMode); }); });
