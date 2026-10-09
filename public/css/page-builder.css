@@ -1184,13 +1184,13 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 /* Survol : un peu plus de lumière, reflet à peine perceptible, 1 px d'élévation */
 .pb-tool:hover:not(:disabled) > .icon {
   background-color: var(--pt-bg-hover); background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0) 55%);
-  border-color: var(--pt-line-hover); transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 6px rgba(0, 0, 0, 0.22);
+  border-color: var(--pt-line-hover); transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 6px rgba(11, 42, 64, 0.28);
 }
 .pb-tool:hover:not(:disabled) { color: var(--pp-text); }
 /* Actif : le bleu Kolakisa devient l'accent, icône blanche */
 .pb-tool[aria-pressed="true"] > .icon, .pb-tool[aria-pressed="true"]:hover:not(:disabled) > .icon {
   background-color: var(--pp-accent); background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 55%);
-  border-color: color-mix(in srgb, var(--pp-accent) 70%, #000); color: var(--editor-on-accent, #fff); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  border-color: color-mix(in srgb, var(--pp-accent) 70%, #000); color: var(--editor-on-accent, #fff); box-shadow: 0 1px 3px rgba(11, 42, 64, 0.35);
 }
 .pb-tool[aria-pressed="true"], .pb-tool[aria-pressed="true"]:hover:not(:disabled) { color: var(--pp-text); }
 .pb-tool:active:not(:disabled) { transform: none; }
@@ -1212,6 +1212,6 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 /* Infobulle de la barre : largeur adaptée, retour à la ligne, jamais coupée (placée au-dessus de l'interface par le script) */
 .pb-tip.is-side {
   width: max-content; max-width: min(280px, calc(100vw - 80px)); white-space: normal; overflow-wrap: anywhere; padding: 6px 10px; border: 1px solid rgba(255, 255, 255, 0.08);
-  background: #1b2a36; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
+  background: #1b2a36; box-shadow: 0 6px 18px rgba(11, 42, 64, 0.32);
 }
 @media (prefers-reduced-motion: reduce) { .pb-tool > .icon, .pb-tip.is-side { transition: none; animation: none; } .pb-tool:hover:not(:disabled) > .icon { transform: none; } }
