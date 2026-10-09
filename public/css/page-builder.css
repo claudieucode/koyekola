@@ -1239,3 +1239,6 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 .pb-theme-field input[type="text"]:focus-visible { outline: 2px solid var(--editor-accent); outline-offset: 1px; }
 .pb-theme-note { margin: 0; font-size: 12px; color: var(--editor-muted); }
 .pb-theme-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Changement de thème : aucune transition pendant l'application des jetons (classe posée puis retirée dans la même tâche par applyPalette) */
+.pb-body.pb-theme-switching, .pb-body.pb-theme-switching *, .pb-body.pb-theme-switching *::before, .pb-body.pb-theme-switching *::after { transition: none !important; }
