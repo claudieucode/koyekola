@@ -10,6 +10,7 @@
   <% if (typeof usersJs !== "undefined" && usersJs) { %><script src="<%= asset('/js/cms-users.js') %>" defer></script><% } %>
   <% if (typeof navJs !== "undefined" && navJs) { %><script src="<%= asset('/js/cms-navigation.js') %>" defer></script><% } %>
   <% if (typeof taxoJs !== "undefined" && taxoJs) { %><script src="<%= asset('/js/cms-pages.js') %>" defer></script><script src="<%= asset('/js/cms-taxonomy.js') %>" defer></script><% } %>
+  <% if (typeof urlsJs !== "undefined" && urlsJs) { %><script src="<%= asset('/js/cms-urls.js') %>" defer></script><% } %>
   <% if (typeof cmsPagesJs !== "undefined" && cmsPagesJs) { %><script src="<%= asset('/js/cms-pages.js') %>" defer></script><% } %>
 </body>
 </html>

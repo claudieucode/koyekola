@@ -94,20 +94,22 @@ function parentChoices(ctx, page) {
 // ---------- Changement d'adresse : l'ancien lien d'une page EN LIGNE continue de fonctionner ----------
 // Passe par le gestionnaire de redirections existant (seo_redirects) : l'ancien /p/<adresse> renvoie (301) vers le nouveau.
 // Une adresse reprise par une page retire la redirection qui la masquerait ; les chaînes A → B → C sont raccourcies.
-function slugChanged(ctx, { oldSlug, newSlug, status }) {
+function slugChanged(ctx, { id = null, oldSlug, newSlug, status, publishedAt = null, siteId = null }) {
   if (oldSlug === newSlug) return;
   try {
     const db = ctx.db;
+    // Une redirection manuelle qui masquerait la nouvelle adresse est retirée ; celles qui visaient l'ancienne visent la nouvelle (pas de chaîne)
     db.prepare("DELETE FROM seo_redirects WHERE source_path = ?").run(`/p/${newSlug}`);
-    if (status === "published") {
-      db.prepare("UPDATE seo_redirects SET target = ?, updated_at = datetime('now') WHERE target = ?").run(`/p/${newSlug}`, `/p/${oldSlug}`);
-      db.prepare(`INSERT INTO seo_redirects (source_path, target, status, note, created_by) VALUES (?, ?, 301, ?, ?)
-        ON CONFLICT(source_path) DO UPDATE SET target = excluded.target, enabled = 1, updated_at = datetime('now')`).run(`/p/${oldSlug}`, `/p/${newSlug}`, "Changement d'adresse d'une page", ctx.userId ?? null);
-    }
+    db.prepare("UPDATE seo_redirects SET target = ?, updated_at = datetime('now') WHERE target = ?").run(`/p/${newSlug}`, `/p/${oldSlug}`);
+    // Historique des adresses (palier 12) : l'ancienne adresse redirige (301) vers l'adresse COURANTE de la page, tant que la page a été en ligne
+    if (id) require("../../services/urls").slugChanged("page", id, { oldSlug, newSlug, siteId, wasLive: status === "published" || Boolean(publishedAt), userId: ctx.userId ?? null });
     try { require("../../seo/redirects").invalidate(); } catch { /* module SEO indisponible : le cache se renouvelle au redémarrage */ }
   } catch (e) { if (!/no such table/i.test(e.message)) throw e; }
 }
-const redirectSource = (ctx, slug) => { try { return Boolean(ctx.db.prepare("SELECT 1 FROM seo_redirects WHERE source_path = ?").get(`/p/${slug}`)); } catch { return false; } };
+// Adresse qui sert déjà de redirection (ancienne adresse d'une page : manuelle ou historique) : jamais attribuée d'office à une nouvelle page
+const redirectSource = (ctx, slug) => {
+  try { return Boolean(ctx.db.prepare("SELECT 1 FROM seo_redirects WHERE source_path = ?").get(`/p/${slug}`) || ctx.db.prepare("SELECT 1 FROM cms_url_history WHERE resource_type = 'page' AND old_slug = ?").get(slug)); } catch { return false; }
+};
 
 // ---------- Actions groupées ----------
 const RUNNERS = { publier: "publish", depublier: "unpublish", corbeille: "archive", restaurer: "restore", supprimer: "remove" };

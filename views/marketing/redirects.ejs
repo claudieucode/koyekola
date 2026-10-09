@@ -1,0 +1,113 @@
+<%#
+  KOLAKISA CMS → Redirections (palier 12). Liste, recherche, filtres, tri et pagination calculés dans la base ; création, modification, activation,
+  suppression et test passent par de vrais formulaires / de vraies requêtes. Le test interroge le serveur réel (aucun résultat simulé).
+%><%- include("partials/top", { title, active }) %>
+<%
+  const keep = (over = {}) => { const p = new URLSearchParams(); const o = { q: f.q, type: f.type, etat: f.etat, site: f.site, tri: f.tri === "recent" ? "" : f.tri, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return "/marketing/site-web/redirections" + (t ? "?" + t : ""); };
+  const filtered = Boolean(f.q || f.type || f.etat || f.site);
+  const here = keep({ page: page > 1 ? page : "" });
+  const fdate = (v) => (v ? new Date(String(v).replace(" ", "T") + "Z").toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—");
+%>
+    <div class="mk-head"><h1>Redirections</h1>
+      <div class="mk-actions"><% if (can.create) { %><button type="button" class="btn btn-primary btn-sm" data-ur-new>Ajouter une redirection</button><% } %></div></div>
+    <p class="mk-lead">Une redirection envoie les visiteurs et les moteurs de recherche d'une ancienne adresse vers la nouvelle. Les changements d'adresse d'une page, d'un article ou d'une catégorie créent déjà leur redirection automatiquement : ici, vous gérez les autres.</p>
+
+    <nav class="mk-tabs mk-cms-tabs" aria-label="Adresses">
+      <a class="mk-tab" href="/marketing/site-web/redirections" aria-current="page">Redirections</a>
+      <a class="mk-tab" href="/marketing/site-web/liens-casses">Liens cassés</a>
+      <a class="mk-tab" href="/marketing/site-web/permaliens">Permaliens et adresses</a>
+    </nav>
+
+    <% if (chains > 0) { %><p class="mk-note" role="status"><%= chains %> redirection<%= chains > 1 ? "s font" : " fait" %> passer par plusieurs étapes (A → B → C) ou boucle<%= chains > 1 ? "nt" : "" %>. Une redirection directe est plus rapide et mieux comprise par les moteurs : <a href="/formateur/seo/redirections">voir les chaînes</a>.</p><% } %>
+
+    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="/marketing/site-web/redirections" role="search" aria-label="Rechercher parmi les redirections">
+      <label class="mk-search"><span class="sr-only">Rechercher (adresse, destination, note)</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" placeholder="Rechercher une adresse"></label>
+      <label class="sr-only" for="ur-f-type">Type</label>
+      <select id="ur-f-type" name="type"><option value="">Tous les types</option><option value="301"<%= f.type === "301" ? " selected" : "" %>>301 — définitive</option><option value="302"<%= f.type === "302" ? " selected" : "" %>>302 — temporaire</option></select>
+      <label class="sr-only" for="ur-f-etat">État</label>
+      <select id="ur-f-etat" name="etat"><option value="">Tous les états</option><option value="active"<%= f.etat === "active" ? " selected" : "" %>>Actives</option><option value="inactive"<%= f.etat === "inactive" ? " selected" : "" %>>Désactivées</option></select>
+      <% if (sites.length) { %><label class="sr-only" for="ur-f-site">Site</label>
+      <select id="ur-f-site" name="site"><option value="">Tous les sites</option><option value="none"<%= f.site === "none" ? " selected" : "" %>>Tous les sites (règle générale)</option><% sites.forEach((s) => { %><option value="<%= s.id %>"<%= String(s.id) === f.site ? " selected" : "" %>><%= s.name %></option><% }) %></select><% } %>
+      <label class="sr-only" for="ur-f-tri">Trier par</label>
+      <select id="ur-f-tri" name="tri"><% [["recent", "Plus récentes"], ["source", "Adresse A → Z"], ["visites", "Plus utilisées"], ["derniere", "Utilisées récemment"]].forEach(([k, name]) => { %><option value="<%= k %>"<%= f.tri === k ? " selected" : "" %>><%= name %></option><% }) %></select>
+      <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (filtered || f.tri !== "recent") { %><a class="btn btn-ghost btn-sm" href="/marketing/site-web/redirections">Réinitialiser</a><% } %>
+    </form>
+
+    <% if (!rows.length) { %>
+      <div class="mk-empty"><%- icon("arrowRightLeft", { size: 32 }) %><h2><%= filtered ? "Aucun résultat" : "Aucune redirection" %></h2>
+        <p><%= filtered ? "Aucune redirection ne correspond à ces critères." : "Aucune redirection pour l'instant : elles apparaissent ici dès que vous en ajoutez une." %></p>
+        <% if (can.create && !filtered) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-ur-new>Ajouter une redirection</button></div><% } %></div>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table">
+        <caption class="sr-only">Redirections</caption>
+        <thead><tr><th scope="col">Ancienne adresse</th><th scope="col">Nouvelle adresse</th><th scope="col">Type</th><th scope="col">Site</th><th scope="col">État</th><th scope="col" class="mk-num">Visites</th><th scope="col">Créée le</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody><% rows.forEach((r) => { const data = { id: r.id, source: r.source_path, target: r.target, status: r.status, site_id: r.site_id || "", note: r.note || "", enabled: Boolean(r.enabled), external: /^https:/i.test(r.target) }; const locked = data.external && !can.external; %>
+          <tr>
+            <th scope="row" data-label="Ancienne adresse"><code><%= r.source_path %></code></th>
+            <td data-label="Nouvelle adresse"><code><%= r.target %></code><% if (data.external) { %> <span class="mk-sub">site extérieur</span><% } %></td>
+            <td data-label="Type"><%= r.status %><span class="mk-sub"><%= r.status === 301 ? "définitive" : "temporaire" %></span></td>
+            <td data-label="Site"><%= r.site_name || "Tous" %></td>
+            <td data-label="État"><span class="mk-status <%= r.enabled ? "mk-status-ok" : "mk-status-off" %>"><%= r.enabled ? "Active" : "Désactivée" %></span></td>
+            <td class="mk-num" data-label="Visites"><%= r.hits %><% if (r.last_hit_at) { %><span class="mk-sub">dernière : <%= fdate(r.last_hit_at) %></span><% } %></td>
+            <td data-label="Créée le"><%= fdate(r.created_at) %><% if (r.username) { %><span class="mk-sub"><%= r.username %></span><% } %></td>
+            <td class="mk-row-actions mk-cms-actions-col"><div class="mk-cms-rowbtns">
+              <button type="button" class="btn btn-outline btn-sm" data-ur-test="<%= JSON.stringify(data) %>">Tester</button>
+              <% if (can.edit || can.del) { %><div class="mk-dropdown" data-mk-dropdown>
+                <button type="button" class="btn btn-ghost btn-sm mk-cms-more" aria-haspopup="menu" aria-expanded="false" aria-controls="ur-menu-<%= r.id %>" aria-label="Plus d'actions pour la redirection de « <%= r.source_path %> »"><%- icon("moreHorizontal", { size: 18 }) %></button>
+                <div class="mk-menu" id="ur-menu-<%= r.id %>" role="menu" hidden>
+                  <% if (can.edit && !locked) { %><button type="button" role="menuitem" data-ur-edit="<%= JSON.stringify(data) %>">Modifier…</button>
+                  <form method="post" action="/marketing/site-web/redirections/<%= r.id %>/etat"><input type="hidden" name="retour" value="<%= here %>"><input type="hidden" name="enabled" value="<%= r.enabled ? "0" : "1" %>"><button type="submit" role="menuitem"><%= r.enabled ? "Désactiver" : "Activer" %></button></form><% } %>
+                  <% if (can.del) { %><button type="button" role="menuitem" data-ur-delete="<%= JSON.stringify(data) %>">Supprimer…</button><% } %>
+                </div></div><% } %>
+            </div></td></tr>
+        <% }) %></tbody>
+      </table></div>
+      <nav class="mk-cms-pager" aria-label="Pagination">
+        <span><%= total %> redirection<%= total > 1 ? "s" : "" %></span>
+        <% if (pages > 1) { %><span class="mk-cms-pager-nav">
+          <% if (page > 1) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: page - 1 }) %>">Précédent</a><% } %>
+          <span>Page <%= page %> sur <%= pages %></span>
+          <% if (page < pages) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: page + 1 }) %>">Suivant</a><% } %></span><% } %>
+      </nav>
+    <% } %>
+
+    <% if (can.create || can.edit) { %>
+      <dialog class="mk-dialog mk-modal" id="ur-form" aria-labelledby="ur-form-title">
+        <form method="post" action="/marketing/site-web/redirections" data-ur-form>
+          <input type="hidden" name="retour" value="<%= here %>">
+          <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="ur-form-title">Ajouter une redirection</h2></div><button type="button" class="mk-dialog-close" data-ur-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
+          <div class="mk-dialog-body">
+            <div class="field-group"><label for="ur-source">Ancienne adresse *</label><input id="ur-source" type="text" name="source" maxlength="300" required autocomplete="off" placeholder="/ancienne-page"><span class="field-hint">Un chemin de ce site. Les espaces techniques (administration, connexion, fichiers) ne peuvent pas être redirigés.</span></div>
+            <div class="field-group"><label for="ur-target">Nouvelle adresse *</label><input id="ur-target" type="text" name="target" maxlength="500" required autocomplete="off" placeholder="/nouvelle-page"><span class="field-hint">Un chemin de ce site<%= can.external ? " ou une adresse complète en https://" : " (une adresse extérieure est réservée aux administrateurs)" %>.</span></div>
+            <div class="field-group"><label for="ur-status">Type</label>
+              <select id="ur-status" name="status"><option value="301">301 — définitive (conseillé : transmet le référencement)</option><option value="302">302 — temporaire (la page reviendra)</option></select></div>
+            <% if (sites.length) { %><div class="field-group"><label for="ur-site">Site</label>
+              <select id="ur-site" name="site_id"><option value="">Tous les sites</option><% sites.forEach((s) => { %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select>
+              <span class="field-hint">Une redirection propre à un site s'applique seulement sur son domaine.</span></div><% } %>
+            <div class="field-group"><label for="ur-note">Note (facultative)</label><input id="ur-note" type="text" name="note" maxlength="200" autocomplete="off"></div>
+          </div>
+          <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-ur-close>Annuler</button><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button></div>
+        </form>
+      </dialog>
+    <% } %>
+    <% if (can.del) { %>
+      <dialog class="mk-dialog mk-modal" id="ur-delete" aria-labelledby="ur-delete-title">
+        <form method="post" action="" data-ur-delete-form>
+          <input type="hidden" name="retour" value="<%= here %>">
+          <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="ur-delete-title">Supprimer la redirection</h2></div><button type="button" class="mk-dialog-close" data-ur-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
+          <div class="mk-dialog-body"><p data-ur-delete-text></p><p class="field-hint">L'ancienne adresse redeviendra une page introuvable (404) si rien d'autre n'y répond.</p></div>
+          <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-ur-close>Annuler</button><button type="submit" class="btn btn-danger btn-sm">Supprimer</button></div>
+        </form>
+      </dialog>
+    <% } %>
+    <dialog class="mk-dialog mk-modal" id="ur-test" aria-labelledby="ur-test-title">
+      <div>
+        <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="ur-test-title">Tester une redirection</h2></div><button type="button" class="mk-dialog-close" data-ur-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
+        <div class="mk-dialog-body">
+          <p class="field-hint">Le serveur est réellement interrogé : vous voyez ce que verrait un visiteur, étape par étape.</p>
+          <div class="mk-ur-trace" data-ur-trace role="status" aria-live="polite"></div>
+        </div>
+        <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-ur-close>Fermer</button></div>
+      </div>
+    </dialog>
+<%- include("partials/bottom") %>

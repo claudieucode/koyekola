@@ -1,0 +1,71 @@
+<%#
+  KOLAKISA CMS → Permaliens et adresses (palier 12). Tout est lu dans le système : structure réelle des adresses, domaines réellement enregistrés des sites,
+  et, pour une adresse saisie, ce que le moteur d'URLs en sait ET la réponse réelle du serveur (étapes de redirection, code HTTP).
+%><%- include("partials/top", { title, active }) %>
+    <div class="mk-head"><h1>Permaliens et adresses</h1></div>
+    <p class="mk-lead">Les adresses publiques de vos contenus. Elles ne changent pas toutes seules : quand une adresse change, l'ancienne redirige (301) vers la nouvelle, et les menus qui pointent vers la ressource suivent son adresse actuelle.</p>
+
+    <nav class="mk-tabs mk-cms-tabs" aria-label="Adresses">
+      <a class="mk-tab" href="/marketing/site-web/redirections">Redirections</a>
+      <a class="mk-tab" href="/marketing/site-web/liens-casses">Liens cassés</a>
+      <a class="mk-tab" href="/marketing/site-web/permaliens" aria-current="page">Permaliens et adresses</a>
+    </nav>
+
+    <section class="mk-panel" aria-labelledby="ur-s-check">
+      <h2 id="ur-s-check">Que se passe-t-il à cette adresse ?</h2>
+      <form class="mk-cms-toolbar" method="get" action="/marketing/site-web/permaliens" role="search">
+        <label class="mk-search"><span class="sr-only">Adresse à vérifier</span><%- icon("search", { size: 16 }) %><input type="text" name="adresse" value="<%= query.adresse %>" placeholder="/blog/mon-article" autocomplete="off" maxlength="300"></label>
+        <% const withHost = sites.filter((s) => s.host); if (withHost.length) { %><label class="sr-only" for="ur-c-site">Domaine</label>
+        <select id="ur-c-site" name="site"><option value="">Site principal</option><% withHost.forEach((s) => { %><option value="<%= s.id %>"<%= String(s.id) === query.site ? " selected" : "" %>><%= s.host %> (<%= s.name %>)</option><% }) %></select><% } %>
+        <button type="submit" class="btn btn-outline btn-sm">Vérifier</button>
+      </form>
+      <% if (check) { %>
+        <% if (check.error) { %><p class="mk-ur-bad"><%= check.error %></p><% } else { %>
+          <div class="mk-ur-trace" role="status">
+            <p><strong><code><%= check.path %></code></strong><% if (check.host) { %> sur <%= check.host %><% } %></p>
+            <p>Ressource : <%= check.known.type ? ({ page: "page", post: "article", course: "formation" }[check.known.type] || "terme « " + check.known.type + " »") : "aucune connue du moteur d'URLs" %>
+              <% if (check.known.title) { %> — « <%= check.known.title %> »<% } %> — état : <strong><%= ({ live: "en ligne", draft: "non publiée", trashed: "à la corbeille", moved: "ancienne adresse (redirigée)", foreign: "appartient à un autre site", none: "inconnue" })[check.known.state] || check.known.state %></strong>.</p>
+            <ol class="mk-ur-steps"><% check.steps.forEach((s) => { %><li class="mk-ur-step"><code><%= s.url %></code> <span class="<%= s.status >= 400 || s.status === 0 ? "mk-ur-bad" : "mk-ur-ok" %>"><%= s.error ? s.error : "HTTP " + s.status %></span><% if (s.location) { %> <span class="mk-sub">→ <%= s.location %></span><% } %></li><% }) %></ol>
+          </div>
+        <% } %>
+      <% } %>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="ur-s-struct">
+      <h2 id="ur-s-struct">Structure des adresses</h2>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table">
+        <caption class="sr-only">Structure des adresses publiques</caption>
+        <thead><tr><th scope="col">Contenu</th><th scope="col">Forme</th><th scope="col">Exemple</th><th scope="col">Remarque</th></tr></thead>
+        <tbody><% structure.forEach((s) => { %><tr><th scope="row" data-label="Contenu"><%= s.label %></th><td data-label="Forme"><code><%= s.pattern %></code></td><td data-label="Exemple"><code><%= s.example %></code></td><td data-label="Remarque"><%= s.note %></td></tr><% }) %></tbody>
+      </table></div>
+      <p class="mk-sub">La structure actuelle est conservée : changer la forme des adresses casserait les liens déjà partagés. Les adresses sont toujours en minuscules, sans barre finale ; <code>/Blog/</code> redirige (301) vers <code>/blog</code>. Les paramètres (<code>?tri=…</code>, <code>?page=2</code>) ne changent jamais l'adresse canonique.</p>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="ur-s-sites">
+      <h2 id="ur-s-sites">Sites et domaines</h2>
+      <% if (!sites.length) { %><p>Aucun site pour l'instant.</p><% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table">
+        <caption class="sr-only">Domaines des sites</caption>
+        <thead><tr><th scope="col">Site</th><th scope="col">Domaine</th><th scope="col">Accueil</th><th scope="col">Plan du site</th></tr></thead>
+        <tbody><% sites.forEach((s) => { %><tr>
+          <th scope="row" data-label="Site"><%= s.name %></th>
+          <td data-label="Domaine"><% if (s.host) { %><code><%= s.host %></code><% if (s.noindex) { %> <span class="mk-sub">non indexé</span><% } %><% } else { %><span class="mk-sub">Aucun domaine propre : pages sous <code>/p/…</code> du site principal</span><% } %></td>
+          <td data-label="Accueil"><%= s.host ? (s.home ? "/ → page « " + s.home + " »" : "Aucune page d'accueil choisie") : "—" %></td>
+          <td data-label="Plan du site"><% if (s.base) { %><a href="<%= s.base %>/sitemap.xml" target="_blank" rel="noopener"><%= s.base %>/sitemap.xml</a><% } else { %>—<% } %></td>
+        </tr><% }) %></tbody>
+      </table></div>
+      <p class="mk-sub">Le domaine d'un site se règle dans « Réglages du site → Référencement (SEO) → Adresse publique ». Seuls les domaines enregistrés ici sont reconnus : un domaine inconnu n'ouvre jamais un site.</p>
+      <% } %>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="ur-s-index">
+      <h2 id="ur-s-index">Indexation</h2>
+      <ul class="mk-ur-list">
+        <li>Plan du site : <a href="/sitemap.xml" target="_blank" rel="noopener">/sitemap.xml</a> — uniquement les contenus publiés et indexables (jamais brouillon, corbeille, noindex, adresse redirigée).</li>
+        <li>robots.txt : <a href="/robots.txt" target="_blank" rel="noopener">/robots.txt</a> — généré pour chaque site.</li>
+        <li>Anciennes adresses mémorisées : <%= history %>.</li>
+        <li>Environnement : <strong><%= indexing ? "public — les moteurs de recherche peuvent indexer" : "non public — les moteurs de recherche sont tenus à l'écart (noindex, robots.txt fermé)" %></strong> (<%= base %>).</li>
+        <li>Erreurs 404 : <a href="/marketing/site-web/seo/404">journal des adresses introuvables</a> ; l'apparence de la page 404 se règle dans Apparence → Templates.</li>
+      </ul>
+    </section>
+<%- include("partials/bottom") %>

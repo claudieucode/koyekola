@@ -24,7 +24,8 @@ const NOISE = /^\/(wp-|xmlrpc|\.env|\.git|apple-touch-icon|favicon|ads\.txt|\.we
 let writes = 0;
 
 function record(req) {
-  const path = String(req.path || "").slice(0, 300);
+  if (require("./probe").isProbe(req)) return; // sonde interne (test de redirection, liens cassés) : jamais comptée
+  const path = String(req.originalUrl || req.url || "").split("?")[0].slice(0, 300); // adresse demandée (avant toute réécriture interne)
   if (!path.startsWith("/") || NOISE.test(path)) return;
   const ua = String(req.get("user-agent") || "").slice(0, 300);
   const ref = String(req.get("referer") || "").slice(0, 300) || null;

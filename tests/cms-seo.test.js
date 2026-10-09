@@ -188,12 +188,13 @@ describe("multi-site : chaque site garde son adresse, son nom et ses règles", (
     const sa = await publish(pa), sb = await publish(pb);
     const a = (await anon.get(`/p/${sa}`)).text, b = (await anon.get(`/p/${sb}`)).text;
     assert.equal(titleOf(a), "Page Alpha · Alpha Académie");
-    assert.equal(linkOf(a, "canonical"), `https://www.alpha.example/p/${sa}`);
-    assert.equal(metaOf(a, "og:url"), `https://www.alpha.example/p/${sa}`);
+    // Palier 12 : une page d'un site à domaine propre a son adresse à la racine de ce domaine
+    assert.equal(linkOf(a, "canonical"), `https://www.alpha.example/${sa}`);
+    assert.equal(metaOf(a, "og:url"), `https://www.alpha.example/${sa}`);
     assert.equal(metaOf(a, "og:site_name"), "Alpha Académie");
     assert.equal(metaOf(a, "description"), "La description du site Alpha.");
     const ga = JSON.stringify(ldOf(a));
-    assert.match(ga, /https:\/\/www\.alpha\.example\/p\//);
+    assert.match(ga, /https:\/\/www\.alpha\.example\//);
     assert.doesNotMatch(ga, /k\.test/, "aucun domaine d'un autre site dans les données structurées du site A");
     assert.equal(titleOf(b), "Page Bêta · Site Bêta");
     assert.equal(linkOf(b, "canonical"), `https://k.test/p/${sb}`);
@@ -216,10 +217,11 @@ describe("multi-site : chaque site garde son adresse, son nom et ses règles", (
     const html = (await anon.get(`/p/${row(pa).slug}`)).text;
     assert.equal(metaOf(html, "robots"), "noindex, nofollow");
     const sitemap = (await anon.get("/sitemap.xml")).text;
-    assert.doesNotMatch(sitemap, new RegExp(`/p/${row(pa).slug}<`));
+    assert.doesNotMatch(sitemap, new RegExp(`/${row(pa).slug}<`));
+    assert.doesNotMatch((await anon.get("/sitemap.xml", { headers: { "x-forwarded-host": "www.alpha.example" } })).text, new RegExp(`/${row(pa).slug}<`), "ni dans le plan de son propre domaine");
     assert.match(sitemap, new RegExp(`https://k\\.test/p/${row(pb).slug}<`));
     await putSite(boss, siteA, { extras: { ...cur.settings.extras, noindex: false } });
-    assert.match((await anon.get("/sitemap.xml")).text, new RegExp(`https://www\\.alpha\\.example/p/${row(pa).slug}<`), "le plan du site utilise l'adresse publique du site");
+    assert.match((await anon.get("/sitemap.xml", { headers: { "x-forwarded-host": "www.alpha.example" } })).text, new RegExp(`https://www\\.alpha\\.example/${row(pa).slug}<`), "le plan du site de ce domaine utilise l'adresse publique du site");
   });
   test("site sans nofollow : « Autoriser les liens » décoché → nofollow sur toutes les pages du site", async () => {
     await putSite(boss, siteB, { seo: { title: "", ogImage: "", publicUrl: "", follow: false } });

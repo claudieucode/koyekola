@@ -73,7 +73,11 @@ const SECTIONS = [
       leaf("seo/404", "Erreurs 404", `${BASE}/seo/404`),
     ],
   },
-  { key: "redirections", label: "Redirections", icon: "arrowRightLeft", items: [leaf("redirections", "Redirections", `${BASE}/redirections`)] },
+  { key: "redirections", label: "Redirections", icon: "arrowRightLeft", items: [
+    leaf("redirections", "Redirections", `${BASE}/redirections`, { permission: "redirects.view" }),
+    leaf("redirections/liens-casses", "Liens cassés", `${BASE}/liens-casses`, { permission: "redirects.view" }),
+    leaf("redirections/permaliens", "Permaliens et adresses", `${BASE}/permaliens`, { permission: "redirects.view" }),
+  ] },
   { key: "tests", label: "Tests A/B", icon: "shuffle", items: [leaf("pagetests", "Tests A/B", `${BASE}/tests-ab`)] },
   {
     key: "outils", label: "Outils", icon: "sliders", items: [
@@ -93,8 +97,6 @@ const SECTIONS = [
       leaf("parametres", "Général", `${BASE}/parametres`, { permission: "settings.read", status: "preview" }),
       leaf("parametres/identite", "Identité du site", `${BASE}/parametres/identite`, { permission: "settings.read", status: "preview" }),
       leaf("parametres/domaine", "Domaine", `${BASE}/parametres/domaine`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/urls", "URLs", `${BASE}/parametres/urls`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/permaliens", "Permaliens", `${BASE}/parametres/permaliens`, { permission: "settings.read", status: "preview" }),
       leaf("parametres/seo", "SEO", `${BASE}/parametres/seo`, { permission: "settings.read", status: "preview" }),
       leaf("parametres/performance", "Performance", `${BASE}/parametres/performance`, { permission: "settings.read", status: "preview" }),
       leaf("parametres/securite", "Sécurité", `${BASE}/parametres/securite`, { permission: "settings.read", status: "preview" }),

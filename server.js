@@ -60,6 +60,11 @@ app.set("views", path.join(__dirname, "views"));
 app.use(compression()); // pages, CSS et JS envoyés compressés (gzip) : environ 4 fois plus légers
 app.use(securityHeaders);
 app.use(canonicalHost);
+// Palier 12 : site d'après l'hôte (domaines enregistrés seulement), casse / barre finale des adresses de contenu, environnement non public jamais indexé
+const siteHost = require("./src/middlewares/siteHost");
+app.use(siteHost.attachSite);
+app.use(siteHost.indexingGuard);
+app.use(siteHost.normalizePaths);
 // Webhooks du fournisseur d'envoi : corps BRUT (la signature porte sur les octets exacts), donc avant l'analyse JSON
 app.use("/webhooks", express.raw({ type: "*/*", limit: "256kb" }), marketingWeb.webhooks);
 // Webhook de paiement Stripe : même principe (corps brut, signature vérifiée, pas de cookie ni de contrôle d'origine)
@@ -104,6 +109,8 @@ app.use("/uploads/marketing", express.static(path.join(uploadsRoot, "marketing")
 // SEO CORE : redirections gérées (exécutées avant toute page) et journal des erreurs 404
 app.use(require("./src/seo/notfound").middleware);
 app.use(require("./src/seo/redirects").middleware);
+app.use(siteHost.siteRouting); // domaine d'un site : accueil et pages à la racine
+app.use(siteHost.movedFallback); // ancienne adresse d'une page ou d'un terme → 301 vers l'adresse courante (avant les routes, qui répondraient 404 elles-mêmes)
 
 // Toutes les pages générées par le site sont personnalisées (connexion, panier) : jamais gardées en cache
 app.use((req, res, next) => {

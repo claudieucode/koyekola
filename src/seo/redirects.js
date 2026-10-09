@@ -20,8 +20,12 @@ db.exec(`
   );
 `);
 
+// Palier 12 : une redirection peut être propre à un site (domaine propre) ; NULL = tous les sites. Colonne ajoutée sans toucher aux lignes existantes.
+try { db.exec("ALTER TABLE seo_redirects ADD COLUMN site_id INTEGER"); } catch (e) { if (!/duplicate column/i.test(e.message)) throw e; }
+db.exec("CREATE INDEX IF NOT EXISTS idx_seo_redirects_site ON seo_redirects(site_id)");
+
 // Espaces techniques ou privés : jamais redirigeables (sécurité, connexion, administration, fichiers)
-const PROTECTED = ["/formateur", "/marketing", "/connexion", "/inscription", "/deconnexion", "/api", "/uploads", "/css", "/js", "/img", "/fonts", "/webhooks", "/t/", "/u/", "/preferences", "/sante", "/robots.txt", "/sitemap"];
+const PROTECTED = ["/__introuvable__", "/formateur", "/marketing", "/connexion", "/inscription", "/deconnexion", "/api", "/uploads", "/css", "/js", "/img", "/fonts", "/webhooks", "/t/", "/u/", "/preferences", "/sante", "/robots.txt", "/sitemap"];
 const STATUSES = [301, 302];
 
 // « /Ancienne-Page/?x=1#y » → « /Ancienne-Page » (chemin seul, sans barre finale, décodé)
@@ -44,7 +48,7 @@ const isProtected = (p) => PROTECTED.some((x) => p === x || p.startsWith(x.endsW
 let cache = null;
 function map() {
   if (cache) return cache;
-  cache = new Map(db.prepare("SELECT id, source_path, target, status FROM seo_redirects WHERE enabled = 1").all().map((r) => [r.source_path, r]));
+  cache = new Map(db.prepare("SELECT id, source_path, target, status, site_id FROM seo_redirects WHERE enabled = 1").all().map((r) => [r.source_path, r]));
   return cache;
 }
 const invalidate = () => { cache = null; };
@@ -55,6 +59,16 @@ function graph() {
   for (const r of db.prepare("SELECT source_path, target, id FROM seo_redirects WHERE enabled = 1").all()) edges.set(r.source_path, { target: r.target, id: r.id, kind: "manual" });
   for (const r of db.prepare("SELECT h.old_slug, c.slug FROM course_slug_history h JOIN courses c ON c.id = h.course_id").all()) if (!edges.has(`/cours/${r.old_slug}`)) edges.set(`/cours/${r.old_slug}`, { target: `/cours/${r.slug}`, kind: "course" });
   for (const r of db.prepare("SELECT h.old_slug, p.slug FROM post_slug_history h JOIN posts p ON p.id = h.post_id").all()) if (!edges.has(`/blog/${r.old_slug}`)) edges.set(`/blog/${r.old_slug}`, { target: `/blog/${r.slug}`, kind: "post" });
+  // Anciennes adresses de pages et de termes (palier 12) : elles mènent à l'adresse courante de la ressource
+  try {
+    const urls = require("../services/urls");
+    for (const r of db.prepare("SELECT h.old_slug, h.resource_type, h.resource_id FROM cms_url_history h").all()) {
+      const loc = r.resource_type === "page" ? (() => { const row = db.prepare("SELECT id, slug, site_id FROM mk_landing_pages WHERE id = ?").get(r.resource_id); return row ? urls.pagePath(row, { hostSite: null }) : null; })()
+        : (() => { const tx = require("../services/taxonomy"); const t = tx.get(r.resource_id); return t ? tx.urlOf(t) : null; })();
+      const from = r.resource_type === "page" ? `/p/${r.old_slug}` : `${require("../services/taxonomy").baseOf(r.resource_type)}/${r.old_slug}`;
+      if (loc && loc !== from && !edges.has(from)) edges.set(from, { target: loc, kind: "history" });
+    }
+  } catch (e) { if (!/no such table/i.test(e.message)) throw e; }
   return edges;
 }
 
@@ -73,7 +87,7 @@ function follow(start, edges = graph(), extra = null) {
   return { path: pathSeen, loop: true };
 }
 
-function validate({ source, target, status }, { exceptId = null } = {}) {
+function validate({ source, target, status, siteId }, { exceptId = null } = {}) {
   const errors = [];
   const src = normalizePath(source);
   const dst = normalizeTarget(target);
@@ -94,7 +108,12 @@ function validate({ source, target, status }, { exceptId = null } = {}) {
     const f = follow(src, edges, { source: src, target: dst });
     if (f.loop) errors.push(`Boucle de redirection : ${f.path.join(" → ")}. Elle rendrait ces pages inaccessibles.`);
   }
-  return { errors, value: { source_path: src, target: dst, status: st } };
+  let site = null;
+  if (siteId !== undefined && siteId !== null && siteId !== "") {
+    site = Number(siteId);
+    if (!Number.isInteger(site) || !db.prepare("SELECT 1 FROM mk_sites WHERE id = ?").get(site)) { errors.push("Site introuvable."); site = null; }
+  }
+  return { errors, value: { source_path: src, target: dst, status: st, site_id: site } };
 }
 
 function list({ q = "" } = {}) {
@@ -103,11 +122,34 @@ function list({ q = "" } = {}) {
 }
 const get = (id) => db.prepare("SELECT * FROM seo_redirects WHERE id = ?").get(id);
 
+// Liste du gestionnaire du CMS : recherche, filtres (type, état, site), tri et pagination dans la base
+const SORTS = { recent: "r.id DESC", source: "r.source_path COLLATE NOCASE ASC", visites: "r.hits DESC, r.id DESC", derniere: "COALESCE(r.last_hit_at, '') DESC, r.id DESC" };
+function query({ q = "", status = "", state = "", site = "", sort = "recent", page = 1, perPage = 25, siteIds = null } = {}) {
+  const where = [];
+  const args = [];
+  const needle = String(q).trim().slice(0, 100);
+  if (needle) { const like = `%${needle.replace(/[\\%_]/g, (c) => `\\${c}`)}%`; where.push("(r.source_path LIKE ? ESCAPE '\\' OR r.target LIKE ? ESCAPE '\\' OR r.note LIKE ? ESCAPE '\\')"); args.push(like, like, like); }
+  if (STATUSES.includes(Number(status))) { where.push("r.status = ?"); args.push(Number(status)); }
+  if (state === "active") where.push("r.enabled = 1"); else if (state === "inactive") where.push("r.enabled = 0");
+  if (site === "none") where.push("r.site_id IS NULL"); else if (/^\d+$/.test(String(site))) { where.push("r.site_id = ?"); args.push(Number(site)); }
+  // Un compte limité à certains sites ne voit que les redirections de ces sites et celles de tous les sites
+  if (siteIds) where.push(`(r.site_id IS NULL OR r.site_id IN (${siteIds.length ? siteIds.map(() => "?").join(",") : "NULL"}))`), args.push(...siteIds);
+  const W = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const total = db.prepare(`SELECT COUNT(*) n FROM seo_redirects r ${W}`).get(...args).n;
+  const pages = Math.max(1, Math.ceil(total / perPage));
+  const pg = Math.min(Math.max(1, Number(page) || 1), pages);
+  const sel = (join) => `SELECT r.*, u.username, ${join ? "s.name" : "NULL"} AS site_name FROM seo_redirects r LEFT JOIN users u ON u.id = r.created_by ${join ? "LEFT JOIN mk_sites s ON s.id = r.site_id" : ""} ${W} ORDER BY ${SORTS[sort] || SORTS.recent} LIMIT ? OFFSET ?`;
+  let rows;
+  try { rows = db.prepare(sel(true)).all(...args, perPage, (pg - 1) * perPage); } catch (e) { if (!/no such table/i.test(e.message)) throw e; rows = db.prepare(sel(false)).all(...args, perPage, (pg - 1) * perPage); }
+  return { rows, total, page: pg, pages };
+}
+const isExternal = (target) => /^https:\/\//i.test(String(target || ""));
+
 function create(input, userId, { source = "admin" } = {}) {
   const { errors, value } = validate(input);
   if (errors.length) return { ok: false, errors };
-  const info = db.prepare("INSERT INTO seo_redirects (source_path, target, status, note, created_by) VALUES (?, ?, ?, ?, ?)")
-    .run(value.source_path, value.target, value.status, String(input.note || "").slice(0, 200), userId ?? null);
+  const info = db.prepare("INSERT INTO seo_redirects (source_path, target, status, note, created_by, site_id) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(value.source_path, value.target, value.status, String(input.note || "").slice(0, 200), userId ?? null, value.site_id);
   logChange({ entityType: "redirect", entityKey: String(info.lastInsertRowid), field: "redirect", before: null, after: `${value.source_path} → ${value.target} (${value.status})`, userId, source });
   invalidate();
   return { ok: true, id: Number(info.lastInsertRowid) };
@@ -116,11 +158,12 @@ function create(input, userId, { source = "admin" } = {}) {
 function update(id, input, userId) {
   const before = get(id);
   if (!before) return { ok: false, errors: ["Redirection introuvable."] };
-  const { errors, value } = validate(input, { exceptId: before.id });
+  const { errors, value } = validate(input.siteId === undefined ? { ...input, siteId: before.site_id } : input, { exceptId: before.id });
   if (errors.length) return { ok: false, errors };
   const enabled = input.enabled === undefined ? before.enabled : (input.enabled === "1" || input.enabled === true ? 1 : 0);
-  db.prepare("UPDATE seo_redirects SET source_path = ?, target = ?, status = ?, enabled = ?, note = ?, updated_at = datetime('now') WHERE id = ?")
-    .run(value.source_path, value.target, value.status, enabled, String(input.note ?? before.note).slice(0, 200), id);
+  const siteId = input.siteId === undefined ? before.site_id : value.site_id;
+  db.prepare("UPDATE seo_redirects SET source_path = ?, target = ?, status = ?, enabled = ?, note = ?, site_id = ?, updated_at = datetime('now') WHERE id = ?")
+    .run(value.source_path, value.target, value.status, enabled, String(input.note ?? before.note).slice(0, 200), siteId, id);
   logChange({ entityType: "redirect", entityKey: String(id), field: "redirect", before: `${before.source_path} → ${before.target} (${before.status})${before.enabled ? "" : " [désactivée]"}`, after: `${value.source_path} → ${value.target} (${value.status})${enabled ? "" : " [désactivée]"}`, userId });
   invalidate();
   return { ok: true };
@@ -162,7 +205,9 @@ function middleware(req, res, next) {
   const p = normalizePath(req.path);
   const r = p && m.get(p);
   if (!r) return next();
-  db.prepare("UPDATE seo_redirects SET hits = hits + 1, last_hit_at = datetime('now') WHERE id = ?").run(r.id);
+  // Redirection propre à un site : appliquée seulement sur le domaine de ce site
+  if (r.site_id && !(req.kwSite && req.kwSite.id === r.site_id)) return next();
+  if (!require("./probe").isProbe(req)) db.prepare("UPDATE seo_redirects SET hits = hits + 1, last_hit_at = datetime('now') WHERE id = ?").run(r.id);
   const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
   const target = /^https:\/\//i.test(r.target) || r.target.includes("?") ? r.target : `${encodeURI(r.target)}${query}`;
   res.redirect(r.status, target);
@@ -202,4 +247,4 @@ function exportCsv() {
   return ["source,destination,type,note,active,utilisations,derniere_utilisation", ...rows.map((r) => [r.source_path, r.target, r.status, r.note, r.enabled ? "oui" : "non", r.hits, r.last_hit_at || ""].map(csvCell).join(","))].join("\n") + "\n";
 }
 
-module.exports = { list, get, create, update, remove, chains, fixChain, middleware, importCsv, exportCsv, normalizePath, graph, follow, validate, invalidate };
+module.exports = { query, SORTS, isExternal, STATUSES, list, get, create, update, remove, chains, fixChain, middleware, importCsv, exportCsv, normalizePath, graph, follow, validate, invalidate };

@@ -247,6 +247,7 @@ function restorePage(ctx, id) {
 // ---------- Sites ----------
 
 const siteSettingsLib = require("./siteSettings");
+const invalidateSites = () => require("../../services/urls").invalidateSites();
 const { themeCss } = require("./themeCss");
 // Un site lu : jetons et réglages toujours complets et valides, et tout ce que la page publique en affiche (CSS du thème,
 // du CSS du site, transitions, visionneuse) calculé une fois — canevas, aperçu et page publiée lisent exactement la même chose
@@ -326,9 +327,17 @@ function saveSiteDesign(ctx, id, { tokens, settings, name, revision } = {}) {
       throw bad(`La couleur « ${first.label} » est utilisée dans ${usage[first.key].pages} page(s) du site : remplacez-la dans ces pages avant de la supprimer.`);
     }
   }
+  // Un domaine n'appartient qu'à un seul site (sinon la même adresse servirait deux sites)
+  const publicUrl = nextSettings.seo && nextSettings.seo.publicUrl;
+  if (publicUrl) {
+    const host = new URL(publicUrl).hostname.toLowerCase();
+    const clash = ctx.db.prepare("SELECT id, name, settings FROM mk_sites WHERE id <> ? AND status = 'active'").all(site.id).find((o) => { try { const u = JSON.parse(o.settings || "{}").seo; return u && u.publicUrl && new URL(u.publicUrl).hostname.toLowerCase() === host; } catch { return false; } });
+    if (clash) throw new MarketingError("duplicate", `Cette adresse publique est déjà celle du site « ${clash.name} » : un domaine ne peut servir qu'un seul site.`);
+  }
   const info = ctx.db.prepare("UPDATE mk_sites SET name = ?, tokens = ?, settings = ?, settings_revision = settings_revision + 1, updated_at = datetime('now') WHERE id = ? AND settings_revision = ?")
     .run(nextName, JSON.stringify(nextTokens), JSON.stringify(nextSettings), site.id, revision);
   if (info.changes !== 1) throw new MarketingError("conflict", "Les réglages de ce site ont été modifiés ailleurs : rechargez-les avant d'enregistrer.");
+  invalidateSites();
   audit(ctx, "site.design_saved", "site", site.id, {});
   return getSite(ctx, site.id);
 }
@@ -360,11 +369,13 @@ function setHomePage(ctx, siteId, pageId) {
     if (page.site_id !== site.id || page.archived_at) throw bad("La page d'accueil doit être une page de ce site.");
   }
   ctx.db.prepare("UPDATE mk_sites SET home_page_id = ?, updated_at = datetime('now') WHERE id = ?").run(pageId, site.id);
+  invalidateSites();
 }
 function movePage(ctx, pageId, siteId) {
   requirePage(ctx, pageId);
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   ctx.db.prepare("UPDATE mk_sites SET home_page_id = NULL WHERE home_page_id = ? AND organization_id = ? AND id IS NOT ?").run(pageId, ctx.organizationId, siteId);
+  invalidateSites();
   ctx.db.prepare("UPDATE mk_landing_pages SET site_id = ?, updated_at = datetime('now') WHERE id = ?").run(siteId, pageId);
   audit(ctx, "page.moved", "landing", pageId, { siteId });
 }
@@ -374,12 +385,21 @@ function archiveSite(ctx, id) {
   transaction(ctx.db, () => {
     ctx.db.prepare("UPDATE mk_landing_pages SET status = 'unpublished', updated_at = datetime('now') WHERE site_id = ? AND status = 'published'").run(site.id);
     ctx.db.prepare("UPDATE mk_sites SET status = 'archived', archived_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(site.id);
+    invalidateSites();
   });
   audit(ctx, "site.archived", "site", site.id, {});
 }
 function restoreSite(ctx, id) {
   const site = requireSite(ctx, id);
+  // Le domaine d'un site archivé a pu être repris par un autre site : il n'est pas rendu en silence (le site restauré retrouve ses réglages sans domaine)
+  const restoredUrl = site.settings.seo && site.settings.seo.publicUrl;
+  if (restoredUrl) {
+    const host = new URL(restoredUrl).hostname.toLowerCase();
+    const taken = ctx.db.prepare("SELECT settings FROM mk_sites WHERE id <> ? AND status = 'active'").all(site.id).some((o) => { try { const u = JSON.parse(o.settings || "{}").seo; return u && u.publicUrl && new URL(u.publicUrl).hostname.toLowerCase() === host; } catch { return false; } });
+    if (taken) { const next = { ...site.settings, seo: { ...site.settings.seo, publicUrl: "" } }; ctx.db.prepare("UPDATE mk_sites SET settings = ? WHERE id = ?").run(JSON.stringify(next), site.id); }
+  }
   ctx.db.prepare("UPDATE mk_sites SET status = 'active', archived_at = NULL, updated_at = datetime('now') WHERE id = ?").run(site.id);
+  invalidateSites();
   audit(ctx, "site.restored", "site", site.id, {});
 }
 // Dupliquer un site : design system et pages (en brouillon, hors ligne, nouvelles adresses)
@@ -387,7 +407,8 @@ function duplicateSite(ctx, id) {
   const site = requireSite(ctx, id);
   return transaction(ctx.db, () => {
     const copy = createSite(ctx, { name: uniqueName(ctx, "mk_sites", `${site.name} (copie)`), tokens: site.tokens });
-    ctx.db.prepare("UPDATE mk_sites SET settings = ? WHERE id = ?").run(JSON.stringify(site.settings), copy.id);
+    // Une copie n'hérite jamais du domaine de l'original (un domaine ne sert qu'un seul site)
+    ctx.db.prepare("UPDATE mk_sites SET settings = ? WHERE id = ?").run(JSON.stringify({ ...site.settings, seo: { ...site.settings.seo, publicUrl: "" } }), copy.id);
     const map = new Map();
     for (const p of sitePages(ctx, site.id)) map.set(p.id, duplicatePage(ctx, p.id, { siteId: copy.id }).id);
     if (site.home_page_id && map.has(site.home_page_id)) setHomePage(ctx, copy.id, map.get(site.home_page_id));
