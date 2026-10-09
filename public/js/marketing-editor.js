@@ -943,7 +943,7 @@
     bar.appendChild(order);
     bar.appendChild(textBtn("copy", "Dupliquer", "Dupliquer le bloc", function () { duplicate(block.id); }));
     bar.appendChild(textBtn(block.hidden ? "eye" : "eyeOff", block.hidden ? "Afficher" : "Masquer", block.hidden ? "Afficher le bloc" : "Masquer le bloc (non envoyé)", function () { toggleHidden(block.id); }));
-    if (!readOnly) bar.appendChild(textBtn("listPlus", "Enregistrer", "Enregistrer ce bloc dans « Mes blocs »", function () { openSaveBlock(block.id); }));
+    if (!readOnly) bar.appendChild(textBtn("listPlus", "Enregistrer", "Enregistrer ce bloc dans « Mes blocs »", function () { openSaveBlock(block.id); }, "mk-b-textbtn-icon"));
     bar.appendChild(iconBtn("trash", "Supprimer le bloc", function () { remove(block.id); }, { "class": "mk-b-icon is-danger mk-b-blocktools-del" }));
     return bar;
   }
