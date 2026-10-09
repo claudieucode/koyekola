@@ -112,7 +112,20 @@ function sendSubscriptionConfirmation(db, { to, formName, url }) {
   });
 }
 
+// Invitation à rejoindre l'équipe du site (CMS → Utilisateurs). Le lien est à usage unique : l'e-mail est « sensible » (texte effacé après envoi).
+function sendInvitationEmail(db, { to, inviter, roleName, siteName, url, days }) {
+  return queueMail(db, {
+    kind: "team_invitation", to, subject: "Invitation à rejoindre l'équipe KOLAKISA", sensitive: true,
+    text: [
+      "Bonjour,", "",
+      `${oneLine(inviter)} vous invite à rejoindre l'équipe KOLAKISA avec le rôle « ${oneLine(roleName)} »${siteName ? ` sur le site « ${oneLine(siteName)} »` : ""}.`, "",
+      `Pour créer votre compte et accepter l'invitation (lien personnel, valable ${days} jours, utilisable une seule fois) :`, "", url, "",
+      "Si vous n'attendiez pas cette invitation, ignorez cet e-mail : aucun compte ne sera créé.",
+    ].join("\n"),
+  });
+}
+
 module.exports = {
-  TIMEOUTS, buildTransport, fromAddress, siteUrl,
+  sendInvitationEmail, TIMEOUTS, buildTransport, fromAddress, siteUrl,
   sendPurchaseWelcomeEmail, sendContactNotification, sendContactAcknowledgement, sendSignupWelcomeEmail, sendEmailVerification, sendPasswordResetEmail, sendSubscriptionConfirmation,
 };

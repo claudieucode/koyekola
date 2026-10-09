@@ -448,6 +448,10 @@ for (const [name, definition] of Object.entries({ meta: "TEXT NOT NULL DEFAULT '
 // Photo du formateur (chemin d'un fichier envoyé) : colonne ajoutée aux bases déjà existantes
 const userColumns = db.prepare("PRAGMA table_info(users)").all().map((col) => col.name);
 if (!userColumns.includes("avatar_path")) db.exec("ALTER TABLE users ADD COLUMN avatar_path TEXT");
+// Utilisateurs / rôles (palier 9) : état du compte (active | suspended | disabled) et activité. Colonnes additives : tous les comptes existants restent actifs.
+if (!userColumns.includes("status")) db.exec("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'");
+if (!userColumns.includes("last_login_at")) db.exec("ALTER TABLE users ADD COLUMN last_login_at TEXT");
+if (!userColumns.includes("last_seen_at")) db.exec("ALTER TABLE users ADD COLUMN last_seen_at TEXT");
 // Fuseau horaire du navigateur (IANA), relevé à l'inscription et à chaque connexion : sert à l'envoi des e-mails à
 // l'heure locale de l'élève (Marketing → heure d'envoi). Vide = inconnu.
 if (!userColumns.includes("timezone")) db.exec("ALTER TABLE users ADD COLUMN timezone TEXT NOT NULL DEFAULT ''");

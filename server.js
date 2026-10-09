@@ -12,6 +12,7 @@ const { securityHeaders, canonicalHost, sameOriginOnly } = require("./src/middle
 const { injectLocals } = require("./src/middlewares/locals");
 const authRoutes = require("./src/routes/auth");
 const passwordResetRoutes = require("./src/routes/passwordReset");
+const invitationRoutes = require("./src/routes/invitations");
 const courseRoutes = require("./src/routes/courses");
 const cartRoutes = require("./src/routes/cart");
 const orderRoutes = require("./src/routes/orders");
@@ -140,6 +141,7 @@ app.use(require("./src/seo/web").router);
 app.use(mediaRoutes);
 app.use(authRoutes);
 app.use(passwordResetRoutes);
+app.use(invitationRoutes); // invitation à rejoindre l'équipe (CMS → Utilisateurs)
 app.use(courseRoutes);
 app.use(cartRoutes);
 app.use(orderRoutes);

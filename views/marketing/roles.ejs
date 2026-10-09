@@ -1,0 +1,62 @@
+<%#
+  KOLAKISA CMS → Rôles et permissions (palier 9). Modes : list (rôles du système et personnalisés, effectifs réels), matrix (domaine × action,
+  alimentée par les permissions réelles du rôle), edit (détails, permissions par groupe, personnes). Rôles du système : fixes. Personnalisés : modifiables.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const tabs = [["", "Rôles", "roles"], ["permissions", "Permissions", "permissions"]];
+  const subnav = () => `<nav class="mk-tabs mk-cms-tabs" aria-label="Rôles et permissions"><a class="mk-tab" href="${BASE}">Utilisateurs</a><a class="mk-tab" href="${BASE}/roles"${mode === "list" || mode === "edit" ? ' aria-current="page"' : ""}>Rôles</a><a class="mk-tab" href="${BASE}/permissions"${mode === "matrix" ? ' aria-current="page"' : ""}>Permissions</a></nav>`;
+%>
+<% if (mode === "list") { %>
+    <div class="mk-head"><h1>Rôles</h1><div class="mk-actions"><% if (canManage) { %><a class="btn btn-primary btn-sm" href="<%= BASE %>/roles/nouveau">Créer un rôle</a><% } %></div></div>
+    <%- subnav() %>
+    <p class="mk-lead">Un rôle est un ensemble de permissions. Les rôles du système sont fixes ; vous pouvez créer vos propres rôles (par exemple « Gestionnaire du blog ») avec exactement les droits voulus.</p>
+    <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table"><caption class="sr-only">Rôles</caption>
+      <thead><tr><th scope="col">Rôle</th><th scope="col">Type</th><th scope="col" class="mk-num">Permissions</th><th scope="col" class="mk-num">Personnes</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+      <tbody><% roles.forEach((r) => { %><tr><th scope="row" data-label="Rôle"><span class="mk-tx-name"><a href="<%= BASE %>/roles/<%= r.key %>"><%= r.name %></a><span class="mk-sub"><%= r.description %></span></span></th>
+        <td data-label="Type"><%= r.system ? "Système (fixe)" : "Personnalisé" %></td><td class="mk-num" data-label="Permissions"><%= r.count %></td><td class="mk-num" data-label="Personnes"><%= r.members %></td>
+        <td class="mk-row-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>/roles/<%= r.key %>"><%= r.system || !canManage ? "Voir" : "Modifier" %></a></td></tr><% }) %></tbody></table></div>
+
+<% } else if (mode === "matrix") { %>
+    <div class="mk-head"><h1>Permissions</h1></div>
+    <%- subnav() %>
+    <p class="mk-lead">Ce que chaque rôle peut faire, par domaine et par action. Chaque case reflète les permissions réellement attribuées au rôle.</p>
+    <form method="get" action="<%= BASE %>/permissions" class="mk-cms-toolbar"><label for="mx-role">Rôle</label>
+      <select id="mx-role" name="role" data-us-autosubmit><% roles.forEach((r) => { %><option value="<%= r.key %>"<%= r.key === roleKey ? " selected" : "" %>><%= r.name %></option><% }) %></select><button type="submit" class="btn btn-outline btn-sm">Afficher</button></form>
+    <div class="mk-table-wrap mk-us-matrix"><table class="mk-table mk-cms-table"><caption>Permissions du rôle « <%= role.name %> » (<%= role.permissions.size %> au total)</caption>
+      <thead><tr><th scope="col">Domaine</th><% actions.forEach(([a, label]) => { %><th scope="col"><%= label %></th><% }) %></tr></thead>
+      <tbody><% matrix.forEach((row) => { %><tr><th scope="row"><%= row.label %></th><% actions.forEach(([a]) => { const c = row.cells[a]; %><td><% if (!c) { %><span class="sr-only">Sans objet</span><span aria-hidden="true">·</span><% } else if (c.all) { %><span class="mk-us-yes" title="Oui"><span class="sr-only">Oui</span><span aria-hidden="true">✓</span></span><% } else if (c.has) { %><span class="mk-us-part" title="Une partie des droits de cette colonne"><span class="sr-only">En partie</span><span aria-hidden="true">◐</span></span><% } else { %><span class="mk-us-no" title="Non"><span class="sr-only">Non</span><span aria-hidden="true">—</span></span><% } %></td><% }) %></tr><% }) %></tbody></table></div>
+    <p class="field-hint">✓ tous les droits de la colonne · ◐ une partie · — aucun. Le détail permission par permission se voit dans la fiche du rôle.</p>
+
+<% } else if (mode === "edit") { %>
+    <div class="mk-head"><h1><%= role ? role.name : "Nouveau rôle" %></h1><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>/roles">← Rôles</a>
+      <% if (role && canManage) { %><form method="post" action="<%= BASE %>/roles/<%= role.key %>/dupliquer" class="mk-cm-form"><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form><% } %></div></div>
+    <%- subnav() %>
+    <% if (role && role.system) { %><p class="mk-lead"><strong>Rôle du système</strong> : fixe, il ne peut pas être modifié. <%= role.description %> Dupliquez-le pour en faire une variante personnalisée.</p>
+    <% } else { %><p class="mk-lead">Cochez les permissions du rôle. Vous ne pouvez donner que des droits que vous possédez vous-même ; ceux que vous n'avez pas sont grisés.</p><% } %>
+    <% const form = editable && canManage; %>
+    <form method="post" action="<%= role ? BASE + "/roles/" + role.key : BASE + "/roles" %>" class="mk-form mk-us-form" data-us-roleform>
+      <fieldset<%= form ? "" : " disabled" %>>
+        <div class="field-group"><label for="ro-name">Nom du rôle</label><input id="ro-name" type="text" name="name" value="<%= role ? role.name : "" %>" maxlength="60" required></div>
+        <div class="field-group"><label for="ro-desc">Description</label><input id="ro-desc" type="text" name="description" value="<%= role ? role.description : "" %>" maxlength="200"></div>
+      </fieldset>
+      <div class="mk-us-bulk" role="group" aria-label="Sélection globale"><% if (form) { %><button type="button" class="btn btn-outline btn-sm" data-us-all="1">Sélectionner tout</button><button type="button" class="btn btn-outline btn-sm" data-us-all="0">Tout désélectionner</button><% } %><span class="mk-sub" data-us-count aria-live="polite"></span></div>
+      <% groups.forEach((g) => { %>
+      <fieldset class="mk-us-group" data-us-group<%= form ? "" : " disabled" %>><legend><%= g.label %></legend>
+        <% if (form) { %><button type="button" class="btn btn-ghost btn-sm" data-us-group-all="1">Tout cocher</button><button type="button" class="btn btn-ghost btn-sm" data-us-group-all="0">Tout décocher</button><% } %>
+        <div class="mk-us-perms"><% g.perms.forEach(([key, label]) => { const have = role && role.permissions.has(key); const can = mine.has(key); %>
+          <label class="mk-cms-check"><input type="checkbox" name="perm" value="<%= key %>"<%= have ? " checked" : "" %><%= form && !can && !have ? " disabled" : "" %> data-us-perm> <%= label %><%= form && !can && !have ? " (vous ne l'avez pas)" : "" %></label>
+        <% }) %></div></fieldset>
+      <% }) %>
+      <% if (form) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm"><%= role ? "Enregistrer" : "Créer le rôle" %></button></div><% } %>
+    </form>
+    <% if (role && !role.system && canManage) { %>
+      <form method="post" action="<%= BASE %>/roles/<%= role.key %>/supprimer" class="mk-cm-form"><button type="submit" class="btn btn-outline btn-sm mk-btn-danger-outline" data-mk-confirm="Le rôle « <%= role.name %> » sera supprimé. Impossible s'il est encore attribué." data-mk-confirm-title="Supprimer ce rôle ?" data-mk-confirm-ok="Supprimer">Supprimer ce rôle</button></form>
+    <% } %>
+    <% if (role) { %>
+    <section class="mk-ap-card" aria-labelledby="ro-people"><h2 id="ro-people">Personnes ayant ce rôle</h2>
+      <% if (!members.length) { %><p class="field-hint">Personne n'a ce rôle pour l'instant.</p>
+      <% } else { %><ul class="mk-cms-list"><% members.forEach((m) => { %><li><span><a href="<%= BASE %>/<%= m.id %>"><%= m.username %></a> · <%= m.scope === "site" ? "site « " + m.site + " »" : "toute l'équipe" %></span></li><% }) %></ul><% } %>
+    </section>
+    <% } %>
+<% } %>
+<%- include("partials/bottom") %>

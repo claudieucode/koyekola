@@ -53,11 +53,11 @@ const SECTIONS = [
   },
   {
     key: "utilisateurs", label: "Utilisateurs", icon: "users", items: [
-      leaf("utilisateurs", "Tous les utilisateurs", `${BASE}/utilisateurs`),
-      leaf("utilisateurs/ajouter", "Ajouter", `${BASE}/utilisateurs/ajouter`, { status: "preview" }),
-      leaf("utilisateurs/roles", "Rôles", `${BASE}/utilisateurs/roles`),
-      leaf("utilisateurs/permissions", "Permissions", `${BASE}/utilisateurs/permissions`),
-      leaf("utilisateurs/invitations", "Invitations", `${BASE}/utilisateurs/invitations`, { status: "preview" }),
+      leaf("utilisateurs", "Tous les utilisateurs", `${BASE}/utilisateurs`, { permission: "users.view" }),
+      leaf("utilisateurs/ajouter", "Inviter", `${BASE}/utilisateurs/ajouter`, { permission: "users.create" }),
+      leaf("utilisateurs/roles", "Rôles", `${BASE}/utilisateurs/roles`, { permission: "users.view" }),
+      leaf("utilisateurs/permissions", "Permissions", `${BASE}/utilisateurs/permissions`, { permission: "users.view" }),
+      leaf("utilisateurs/invitations", "Invitations", `${BASE}/utilisateurs/invitations`, { permission: "users.view" }),
     ],
   },
   {

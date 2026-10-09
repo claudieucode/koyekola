@@ -64,7 +64,16 @@ const fullName = (c) => [c.first_name, c.last_name].filter(Boolean).join(" ");
 const { buildNav } = require("./nav");
 const { buildCmsNav } = require("./cmsNav");
 // Sites réels du CMS (sélecteur de la barre du haut) ; liste vide si le moteur de pages est indisponible
-const cmsSites = (ctx) => { try { return ctx ? require("../pages").listSites(ctx) : []; } catch { return []; } };
+// Sites proposés dans le menu : tous pour l'équipe ; seulement les siens pour une personne qui n'a accès qu'à certains sites (aucune fuite de noms)
+const cmsSites = (ctx) => {
+  try {
+    if (!ctx) return [];
+    const all = require("../pages").listSites(ctx);
+    if (ctx.db.prepare("SELECT 1 FROM mk_org_members WHERE organization_id = ? AND user_id = ?").get(ctx.organizationId, ctx.userId)) return all;
+    const mine = new Set(ctx.db.prepare("SELECT site_id FROM mk_site_members WHERE user_id = ?").all(ctx.userId).map((r) => r.site_id));
+    return all.filter((s) => mine.has(s.id));
+  } catch { return []; }
+};
 const { barChart, columnChart } = require("./charts");
 
 // Taux en pourcentage à la française ; « — » quand il n'y a rien à mesurer (jamais un faux « 0 % »)

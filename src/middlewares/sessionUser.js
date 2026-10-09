@@ -18,6 +18,7 @@ function openSession(req, user, done) {
     if (error) return done(error);
     req.session.user = { id: user.id, username: user.username, email: user.email, role: user.role };
     req.session.pwStamp = passwordStamp(user.password_hash);
+    db.prepare("UPDATE users SET last_login_at = datetime('now'), last_seen_at = datetime('now') WHERE id = ?").run(user.id);
     done();
   });
 }
@@ -25,9 +26,10 @@ function openSession(req, user, done) {
 function refreshSessionUser(req, res, next) {
   const current = req.session && req.session.user;
   if (!current) return next();
-  const row = db.prepare("SELECT id, username, email, role, password_hash FROM users WHERE id = ?").get(current.id);
+  const row = db.prepare("SELECT id, username, email, role, password_hash, status, last_seen_at FROM users WHERE id = ?").get(current.id);
   const stamp = row && passwordStamp(row.password_hash);
-  if (!row || (req.session.pwStamp && req.session.pwStamp !== stamp)) {
+  // Compte suspendu ou désactivé (CMS → Utilisateurs) : la session est fermée à la requête suivante, sans attendre son expiration
+  if (!row || (row.status && row.status !== "active") || (req.session.pwStamp && req.session.pwStamp !== stamp)) {
     // Session périmée : remplacée par une session vide (la personne est déconnectée)
     return req.session.regenerate((error) => next(error));
   }
@@ -37,6 +39,8 @@ function refreshSessionUser(req, res, next) {
   if (current.username !== row.username || current.email !== row.email || current.role !== row.role) {
     req.session.user = { id: row.id, username: row.username, email: row.email, role: row.role };
   }
+  // Dernière activité (CMS → Utilisateurs) : écrite au plus toutes les 5 minutes, jamais à chaque page
+  if (!row.last_seen_at || Date.now() - Date.parse(`${String(row.last_seen_at).replace(" ", "T")}Z`) > 5 * 60 * 1000) db.prepare("UPDATE users SET last_seen_at = datetime('now') WHERE id = ?").run(row.id);
   next();
 }
 

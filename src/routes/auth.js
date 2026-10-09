@@ -75,6 +75,10 @@ router.post("/connexion", async (req, res, next) => {
       return res.status(400).render("login", { error: "Email ou mot de passe incorrect.", redirect: redirect || "" });
     }
 
+    // Compte suspendu ou désactivé par l'équipe : connexion refusée (message volontairement sobre)
+    if (user.status && user.status !== "active") {
+      return res.status(403).render("login", { error: "Ce compte est suspendu. Contactez l'administrateur du site.", redirect: redirect || "" });
+    }
     clearLoginFailures(req);
     // Fuseau du navigateur mis à jour à chaque connexion (un élève qui déménage ou voyage reçoit à son heure actuelle)
     const tz = cleanTimeZone(req.body.tz);

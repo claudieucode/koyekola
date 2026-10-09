@@ -65,33 +65,6 @@ const SCREENS = {
       table: siteTable("Sites", "", "Ouvrir le site") };
   },
 
-  // ----- Utilisateurs -----
-  utilisateurs(req, ctx, sub) {
-    const team = data.listTeam(ctx);
-    const tabs = tabsOf("utilisateurs", sub, [["", "Tous", team.length], ["ajouter", "Ajouter"], ["roles", "Rôles"], ["permissions", "Permissions"], ["invitations", "Invitations"]]).map((t) => ({ ...t, count: t.count }));
-    if (sub === "roles") {
-      const matrix = data.roleMatrix();
-      const n = Object.fromEntries(matrix.roles.map((r) => [r, team.filter((u) => u.role === r).length]));
-      return { title: "Rôles", lead: "Les quatre rôles de l'équipe, du plus restreint au plus complet. La création de rôles personnalisés arrive dans un prochain palier.", tabs, actions: [dis("Ajouter un rôle")],
-        table: { caption: "Rôles", columns: [{ label: "Rôle" }, { label: "Droits" }, { label: "Membres", num: true }], rows: matrix.roles.slice().reverse().map((r) => ({ cells: [data.ROLE_LABEL[r], data.ROLE_TEXT[r], String(n[r])] })), empty: empty("shield", "", "") } };
-    }
-    if (sub === "permissions") {
-      const matrix = data.roleMatrix();
-      return { title: "Permissions", lead: "Qui peut faire quoi, aujourd'hui (lecture seule). Les permissions fines par contenu arrivent dans un prochain palier.", tabs,
-        table: { caption: "Permissions par rôle", columns: [{ label: "Permission" }, ...matrix.roles.map((r) => ({ label: data.ROLE_LABEL[r] }))], rows: matrix.permissions.map((p) => ({ cells: [p.key, ...matrix.roles.map((r) => (p.byRole[r] ? "Oui" : "—"))] })), empty: empty("shield", "", "") } };
-    }
-    if (sub === "ajouter" || sub === "invitations") {
-      return { title: sub === "ajouter" ? "Ajouter un utilisateur" : "Invitations", lead: sub === "ajouter" ? "Ajout d'un membre à l'équipe du site." : "Invitations envoyées par e-mail pour rejoindre l'équipe.", soon: SOON, tabs,
-        actions: [dis(sub === "ajouter" ? "Ajouter un utilisateur" : "Inviter quelqu'un")],
-        table: { caption: "Invitations", columns: [{ label: "E-mail" }, { label: "Rôle" }, { label: "Envoyée le" }, { label: "Statut" }], rows: [], empty: empty("mail", "Aucune invitation", "Les invitations en attente apparaîtront ici.") } };
-    }
-    const q = String(req.query.q || "").trim();
-    const list = data.listTeam(ctx, { q });
-    return { title: "Utilisateurs", lead: "L'équipe qui gère le site et le marketing. Les rôles sont fixes pour l'instant : la gestion complète des utilisateurs arrive dans un prochain palier.", tabs, actions: [dis("Ajouter un utilisateur")],
-      search: { enabled: true, placeholder: "Rechercher un utilisateur", q },
-      table: { caption: "Équipe", columns: [{ label: "Utilisateur" }, { label: "E-mail" }, { label: "Rôle" }, { label: "Membre depuis" }], rows: list.map((u) => ({ cells: [u.username, u.email, { status: { label: data.ROLE_LABEL[u.role] || u.role, cls: u.role === "owner" ? "mk-status-info" : "mk-status-off" } }, fdate(u.created_at)] })), empty: empty("users", q ? "Aucun utilisateur trouvé" : "Aucun utilisateur", "") } };
-  },
-
   // ----- SEO (le moteur SEO existant reste la seule source) -----
   seo(req, ctx, sub) {
     const seoTool = (path) => instructorLink(req, `/formateur/seo${path}`);

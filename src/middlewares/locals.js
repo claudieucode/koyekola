@@ -11,7 +11,7 @@ const seoResolver = require("../seo/resolver");
 const { paidCheckoutOpen } = require("../services/payment");
 const navigation = require("../services/navigation");
 const appearance = require("../services/appearance");
-const { roleAtLeast, membershipsOf } = require("../marketing/organizations");
+const cmsAccess = require("../services/cmsAccess");
 
 // Espaces privés et pages sans intérêt pour les moteurs de recherche
 const NOINDEX_PREFIXES = ["/formateur", "/mes-cours", "/panier", "/commande", "/apprendre", "/certificat", "/favoris", "/support", "/notifications", "/connexion", "/inscription", "/deconnexion", "/mon-compte"];
@@ -37,7 +37,7 @@ function injectLocals(req, res, next) {
       let preview = false;
       if (req.query && req.query.kwpreview === "1" && req.session && req.session.user) {
         const u = req.session.user;
-        try { preview = u.role === "formateur" || membershipsOf(db, u.id).some((m) => roleAtLeast(m.role, "editor")); } catch { preview = false; }
+        try { const org = (db.prepare("SELECT id FROM mk_organizations ORDER BY id LIMIT 1").get() || {}).id; preview = u.role === "formateur" || Boolean(org && cmsAccess.can(u.id, "appearance.styles", { organizationId: org })); } catch { preview = false; }
       }
       try { apCache = appearance.parts({ preview }); } catch { apCache = appearance.parts({ preview: false }); }
     }

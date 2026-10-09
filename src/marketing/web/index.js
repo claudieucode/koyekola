@@ -8,21 +8,46 @@ const { themeOf } = appearance;
 function createMarketingRouters({ db }) {
   const admin = express.Router();
 
-  // Accès : connecté, module disponible, MEMBRE de l'organisation (rôle relu à chaque requête : un retrait est immédiat)
+  // Accès : connecté, module disponible, MEMBRE de l'équipe (organisation) OU titulaire d'un accès à un site. Les droits sont relus à chaque
+  // requête (un retrait ou une suspension est immédiat) et calculés par UNE seule fonction : cmsAccess.effectivePermissions(utilisateur, site).
+  // Quand l'adresse vise un site (page, fiche de site, composant), les droits sont ceux de CE site : rôle d'équipe + rôle sur ce site.
+  const access = require("../../services/cmsAccess");
+  const siteOfRequest = (req) => {
+    const p = req.path;
+    let m = /^\/pages\/(\d+)(?:\/|$)/.exec(p);
+    if (m) { const r = db.prepare("SELECT site_id FROM mk_landing_pages WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
+    m = /^\/site-web\/sites\/(\d+)(?:\/|$)/.exec(p);
+    if (m) return { siteId: Number(m[1]) };
+    m = /^\/site-web\/composants\/(\d+)/.exec(p);
+    if (m) { const r = db.prepare("SELECT site_id FROM mk_web_components WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
+    if (req.method === "POST" && (p === "/pages" || p === "/site-web/composants") && req.body && /^\d+$/.test(String(req.body.site_id || ""))) return { siteId: Number(req.body.site_id) };
+    return null;
+  };
   admin.use((req, res, next) => {
     const user = req.session.user;
     if (!user) return res.redirect(`/connexion?redirect=${encodeURIComponent(req.originalUrl)}`);
     const marketing = req.app.locals.marketing;
     if (!marketing || !marketing.ready) return res.status(503).render("error", { message: "Le module marketing est indisponible. Consultez le journal du serveur." });
-    const membership = membershipsOf(db, user.id).find((m) => m.organization_id === marketing.organizationId);
-    if (!membership) return res.status(403).render("error", { message: "Accès réservé à l'équipe marketing." });
-    const allowed = (permission) => can(membership.role, permission);
+    const orgId = marketing.organizationId;
+    const membership = membershipsOf(db, user.id).find((m) => m.organization_id === orgId) || null;
+    const mySites = membership ? [] : access.siteMemberships(user.id);
+    if (!membership && !mySites.length) return res.status(403).render("error", { message: "Accès réservé à l'équipe." });
+    const scope = siteOfRequest(req);
+    const siteId = scope && Number.isInteger(scope.siteId) ? scope.siteId : null;
+    // Personne qui n'a accès qu'à certains sites : seules les adresses d'un de SES sites (et son écran « Mes sites ») sont ouvertes
+    if (!membership) {
+      const allowedHere = req.path === "/site-web/mes-sites" || (siteId !== null && mySites.some((s) => s.site_id === siteId));
+      if (!allowedHere) return (scope || req.method !== "GET") ? res.status(403).render("error", { message: "Vous n'avez pas accès à cette ressource." }) : res.redirect("/marketing/site-web/mes-sites");
+    }
+    const perms = access.effectivePermissions(user.id, { organizationId: orgId, siteId });
+    const allowed = (permission) => perms.has(permission);
+    const role = membership ? membership.role : "site";
     req.mk = {
-      role: membership.role, can: allowed, marketing,
-      ctx: { db, organizationId: marketing.organizationId, userId: user.id, can: allowed, bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL },
+      role, can: allowed, perms, siteId, marketing, siteOnly: !membership,
+      ctx: { db, organizationId: orgId, userId: user.id, can: allowed, bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL },
     };
-    res.locals.mk = { role: membership.role, can: allowed, ctx: req.mk.ctx };
-    res.locals.mkTheme = themeOf(marketing.settings, marketing.organizationId, user.id); // Paramètres → Apparence
+    res.locals.mk = { role, can: allowed, ctx: req.mk.ctx };
+    res.locals.mkTheme = themeOf(marketing.settings, orgId, user.id); // Paramètres → Apparence
     res.locals.mkh = helpers;
     // Message « flash » : affiché une seule fois après une action
     res.locals.flash = req.session.mkFlash ?? null;
@@ -42,6 +67,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./taxonomies")()); // Catégories et étiquettes (palier 5)
   admin.use(require("./comments")()); // Commentaires : modération et réglages (palier 6)
   admin.use(require("./navigation")()); // Navigation : menus, éléments, emplacements (palier 7)
+  admin.use(require("./users")()); // Utilisateurs, rôles, permissions, invitations (palier 9)
   admin.use(require("./appearanceEditor")()); // Apparence : éditeur du site, styles, en-tête, pied de page, templates, patterns (palier 8)
   admin.use(require("./mediaLibrary")()); // KOLAKISA CMS → Médias (palier 3) : page et API de la médiathèque
   admin.use(require("./cmsScreens")()); // écrans de KOLAKISA CMS (lecture seule, tables existantes) : après les routes /site-web déjà en place

@@ -11,6 +11,10 @@ const { need } = require("./kit");
 
 const BASE = "/marketing/site-web/articles";
 const SUBS = { brouillons: "brouillons", programmes: "programmes", publies: "publies", corbeille: "corbeille" };
+// Propriété (palier 9) : « articles.write » = tous les articles ; « articles.edit_own » = seulement les siens (author_id). Les actions plus
+// sensibles (publier, supprimer définitivement) gardent leur droit propre, sans variante « les siens ».
+const ownerOf = (id) => (require("../../config/database").prepare("SELECT author_id FROM posts WHERE id = ?").get(id) || {}).author_id;
+const mayManage = (req, id) => req.mk.can("articles.write") || (req.mk.can("articles.edit_own") && ownerOf(id) === req.session.user.id);
 const isCreator = (req) => Boolean(req.session.user && req.session.user.role === "formateur");
 const BLOG_BASE = "/blog"; // adresse publique des articles (une seule constante : le préfixe pourra devenir un réglage)
 
@@ -33,7 +37,7 @@ module.exports = () => {
     const active = state === "toutes" ? "articles" : `articles/${state}`;
     res.render("marketing/articles", {
       title: "Articles", active, state, filters, result, rows: result.rows, authors: articles.authors(), categories: articles.categoryTree(), STATUSES: blog.STATUSES, BLOG_BASE,
-      canWrite: req.mk.can("articles.write"), canPublish: req.mk.can("articles.publish"), canDelete: req.mk.can("articles.delete"), isCreator: isCreator(req), cmsPagesJs: true,
+      canWrite: req.mk.can("articles.write") || req.mk.can("articles.edit_own"), canWriteAll: req.mk.can("articles.write"), me: req.session.user.id, canPublish: req.mk.can("articles.publish"), canDelete: req.mk.can("articles.delete"), isCreator: isCreator(req), cmsPagesJs: true,
     });
   };
   router.get(BASE.replace("/marketing", ""), need("articles.read"), showList("toutes"));
@@ -52,12 +56,20 @@ module.exports = () => {
   });
 
   // ----- Actions groupées et par article -----
-  router.post("/site-web/articles/actions", need("articles.write"), (req, res, next) => {
+  router.post("/site-web/articles/actions", (req, res, next) => (req.mk.can("articles.write") || req.mk.can("articles.edit_own") ? next() : res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." })), (req, res, next) => {
     const action = String(req.body.action || "");
     const needs = { publier: "articles.publish", depublier: "articles.publish", corbeille: "articles.write", restaurer: "articles.write", supprimer: "articles.delete" }[action];
-    if (!needs || !req.mk.can(needs)) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
+    const mayDo = ["corbeille", "restaurer"].includes(action) ? req.mk.can("articles.write") || req.mk.can("articles.edit_own") : needs && req.mk.can(needs);
+    if (!mayDo) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
     try {
-      const r = articles.bulk(action, req.body.ids, req.session.user.id, req);
+      // Sans le droit sur TOUS les articles, seules les actions « corbeille » / « restaurer » sur SES articles passent
+      let ids = req.body.ids, refused = 0;
+      if (["corbeille", "restaurer"].includes(action) && !req.mk.can("articles.write")) {
+        const all = [...new Set([].concat(ids || []).flatMap((x) => String(x).split(",")).map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+        ids = all.filter((id) => mayManage(req, id)); refused = all.length - ids.length;
+        if (!ids.length) throw new UserError("Vous ne pouvez gérer que vos propres articles.");
+      }
+      const r = articles.bulk(action, ids, req.session.user.id, req);
       const n = r.done.length;
       const head = n ? `${n} article${n > 1 ? "s" : ""} ${r.label[n > 1 ? 1 : 0]}.` : "";
       const detail = r.failed.map((f) => `« ${f.title} » : ${f.message}`).join(" · ");
@@ -67,16 +79,20 @@ module.exports = () => {
       res.redirect(back(req));
     } catch (error) { fail(req, res, next, back(req), error); }
   });
-  const single = (path, perm, run, okText) => router.post(`/site-web/articles/:id(\\d+)/${path}`, need(perm), (req, res, next) => {
+  const single = (path, perm, run, okText, own = false) => router.post(`/site-web/articles/:id(\\d+)/${path}`, (req, res, next) => {
+    const ok = own ? mayManage(req, Number(req.params.id)) : req.mk.can(perm);
+    if (!ok) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
+    next();
+  }, (req, res, next) => {
     try {
       const p = run(Number(req.params.id), req.session.user.id, req);
       flash(req, "ok", typeof okText === "function" ? okText(p) : okText);
       res.redirect(back(req));
     } catch (error) { fail(req, res, next, back(req), error); }
   });
-  single("dupliquer", "articles.write", articles.duplicate, (p) => `Copie créée en brouillon : « ${p.title} ».`);
-  single("corbeille", "articles.write", articles.trash, "Article mis à la corbeille.");
-  single("restaurer", "articles.write", articles.restore, "Article restauré en brouillon.");
+  single("dupliquer", "articles.write", articles.duplicate, (p) => `Copie créée en brouillon : « ${p.title} ».`, true);
+  single("corbeille", "articles.write", articles.trash, "Article mis à la corbeille.", true);
+  single("restaurer", "articles.write", articles.restore, "Article restauré en brouillon.", true);
   single("supprimer", "articles.delete", (id) => articles.purge(id), "Article supprimé définitivement.");
   single("publier", "articles.publish", articles.publish, "Article publié.");
   single("depublier", "articles.publish", articles.unpublish, "Article remis en brouillon.");

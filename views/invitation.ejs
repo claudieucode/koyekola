@@ -1,0 +1,26 @@
+<%- include("partials/header", { title: "Invitation" }) %>
+
+  <div class="auth-page">
+    <div class="auth-card">
+      <h1>Rejoindre l'équipe</h1>
+      <p class="subtitle">Vous êtes invité(e) avec le rôle <strong><%= roleName %></strong><%= siteName ? " sur le site « " + siteName + " »" : "" %>. L'adresse de l'invitation est <strong><%= email %></strong>.</p>
+      <% if (error) { %><p class="form-error" role="alert"><%= error %></p><% } %>
+      <% if (existing) { %>
+        <p>Un compte existe déjà avec cette adresse. <a href="/connexion">Connectez-vous</a> : l'administrateur peut vous ajouter directement à l'équipe.</p>
+      <% } else { %>
+      <form action="/invitation/<%= token %>" method="post">
+        <div class="field-group">
+          <label for="inv-user">Nom d'utilisateur</label>
+          <input id="inv-user" type="text" name="username" value="<%= values.username || '' %>" required minlength="3" maxlength="30" autocomplete="username">
+        </div>
+        <div class="field-group">
+          <label for="inv-pass">Mot de passe <span class="field-hint">(8 caractères minimum)</span></label>
+          <input id="inv-pass" type="password" name="password" required minlength="8" autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Créer mon compte et rejoindre l'équipe</button>
+      </form>
+      <% } %>
+    </div>
+  </div>
+
+<%- include("partials/footer") %>

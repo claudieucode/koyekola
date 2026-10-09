@@ -10,6 +10,7 @@
   const fdt = (v) => (v ? fd(v) + " à " + String(v).slice(11, 16) + " UTC" : "—");
   const filtered = Boolean(filters.q || filters.auteur || filters.categorie || filters.etiquette || filters.periode);
   const inTrash = state === "corbeille";
+  const mine = (p) => canWriteAll || p.author_id === me; // « articles.write » = tous ; sinon seulement les siens (articles.edit_own)
   const badge = { published: "mk-status-ok", scheduled: "mk-status-info", draft: "mk-status-off", review: "mk-status-warn", archived: "mk-status-off" };
 %>
     <div class="mk-head"><h1>Articles</h1>
@@ -56,7 +57,7 @@
         <caption class="sr-only"><%= inTrash ? "Articles dans la corbeille" : "Articles" %></caption>
         <thead><tr><% if (canWrite) { %><th scope="col" class="mk-cms-check-col"><input type="checkbox" data-cms-select-all aria-label="Tout sélectionner"></th><% } %><th scope="col">Article</th><th scope="col">État</th><th scope="col">Auteur</th><th scope="col">Catégorie</th><th scope="col" class="mk-num">Commentaires</th><th scope="col">Date</th><th scope="col">Modifié</th><th scope="col" class="mk-cms-actions-col"><span class="sr-only">Actions</span></th></tr></thead>
         <tbody><% rows.forEach((p) => { const menuId = "ar-menu-" + p.id; const stClass = inTrash ? "mk-status-off" : (badge[p.status] || "mk-status-off"); %>
-          <tr><% if (canWrite) { %><td class="mk-cms-check-col" data-label="Sélection"><input type="checkbox" name="ids" value="<%= p.id %>" form="pages-bulk" data-cms-row aria-label="Sélectionner « <%= p.title %> »"></td><% } %>
+          <tr><% if (canWrite && mine(p)) { %><td class="mk-cms-check-col" data-label="Sélection"><input type="checkbox" name="ids" value="<%= p.id %>" form="pages-bulk" data-cms-row aria-label="Sélectionner « <%= p.title %> »"></td><% } %>
             <th scope="row" data-label="Article"><span class="mk-ar-cell"><% if (p.cover_path) { %><img class="mk-ar-thumb" src="<%= p.cover_path %>" alt="" loading="lazy" width="48" height="36"><% } else { %><span class="mk-ar-thumb is-empty" aria-hidden="true"></span><% } %>
               <span><% if (isCreator) { %><a href="/formateur/blog/<%= p.id %>/modifier"><%= p.title %></a><% } else { %><%= p.title %><% } %><span class="mk-sub"><%= BLOG_BASE %>/<%= p.slug %></span></span></span></th>
             <td data-label="État"><span class="mk-status <%= stClass %>"><%= inTrash ? "Corbeille" : STATUSES[p.status] || p.status %></span><% if (!inTrash && p.status === "scheduled") { %><span class="mk-sub"><%= fdt(p.published_at) %></span><% } %></td>
@@ -64,14 +65,14 @@
             <td class="mk-num" data-label="Commentaires"><% if (p.comments_approved || p.comments_pending) { %><a href="/marketing/site-web/commentaires?contenu=post:<%= p.id %>"><%= p.comments_approved %></a><% if (p.comments_pending) { %><span class="mk-sub"><%= p.comments_pending %> en attente</span><% } %><% } else { %><%= p.comments_enabled ? "0" : "Fermés" %><% } %></td>
             <td data-label="Date"><%= p.status === "published" ? fd(p.published_at) : fd(p.created_at) %></td><td data-label="Modifié"><%= fd(p.updated_at) %></td>
             <td class="mk-row-actions mk-cms-actions-col"><div class="mk-cms-rowbtns">
-              <% if (canWrite && isCreator && !inTrash) { %><a class="btn btn-outline btn-sm" href="/formateur/blog/<%= p.id %>/modifier">Modifier</a><% } %>
-              <% if (canWrite && inTrash) { %><form class="mk-inline" action="/marketing/site-web/articles/<%= p.id %>/restaurer" method="post"><input type="hidden" name="retour" value="<%= here %>"><button type="submit" class="btn btn-outline btn-sm">Restaurer</button></form><% } %>
+              <% if (canWrite && mine(p) && isCreator && !inTrash) { %><a class="btn btn-outline btn-sm" href="/formateur/blog/<%= p.id %>/modifier">Modifier</a><% } %>
+              <% if (canWrite && mine(p) && inTrash) { %><form class="mk-inline" action="/marketing/site-web/articles/<%= p.id %>/restaurer" method="post"><input type="hidden" name="retour" value="<%= here %>"><button type="submit" class="btn btn-outline btn-sm">Restaurer</button></form><% } %>
               <div class="mk-dropdown" data-mk-dropdown>
                 <button type="button" class="btn btn-ghost btn-sm mk-cms-more" aria-haspopup="menu" aria-expanded="false" aria-controls="<%= menuId %>" aria-label="Plus d'actions pour « <%= p.title %> »"><%- icon("moreHorizontal", { size: 18 }) %></button>
                 <div class="mk-menu" id="<%= menuId %>" role="menu" hidden>
                   <% if (isCreator) { %><a role="menuitem" href="/formateur/blog/<%= p.id %>/modifier">Ouvrir dans l'éditeur</a><% if (!inTrash) { %><a role="menuitem" href="/formateur/blog/<%= p.id %>/apercu" target="_blank" rel="noopener">Prévisualiser</a><% } %><% } %>
                   <% if (!inTrash && p.status === "published") { %><a role="menuitem" href="<%= BLOG_BASE %>/<%= p.slug %>" target="_blank" rel="noopener">Voir l'article en ligne</a><% } %>
-                  <% if (!inTrash && canWrite) { %>
+                  <% if (!inTrash && canWrite && mine(p)) { %>
                     <% if (canPublish && p.status !== "published") { %><form action="/marketing/site-web/articles/<%= p.id %>/publier" method="post" role="none"><input type="hidden" name="retour" value="<%= here %>"><button type="submit" role="menuitem">Publier maintenant</button></form><% } %>
                     <% if (canPublish && (p.status === "published" || p.status === "scheduled")) { %><form action="/marketing/site-web/articles/<%= p.id %>/depublier" method="post" role="none"><input type="hidden" name="retour" value="<%= here %>"><button type="submit" role="menuitem">Remettre en brouillon</button></form><% } %>
                     <form action="/marketing/site-web/articles/<%= p.id %>/dupliquer" method="post" role="none"><input type="hidden" name="retour" value="<%= here %>"><button type="submit" role="menuitem">Dupliquer</button></form>

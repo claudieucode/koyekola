@@ -23,6 +23,10 @@ const PERMISSIONS = Object.freeze({
   "navigation.read": "viewer", "navigation.write": "editor", "navigation.publish": "admin", "navigation.delete": "admin",
   // Apparence : voir = lecteur ; styles, en-tête/pied de page, modèles, patterns = éditeur ; publier l'apparence sur le site = administrateur
   "appearance.read": "viewer", "appearance.styles": "editor", "appearance.parts": "editor", "appearance.templates": "editor", "appearance.patterns": "editor", "appearance.publish": "admin",
+  // Utilisateurs et rôles (palier 9) : voir l'équipe = éditeur ; inviter, modifier, retirer, attribuer des rôles, créer des rôles = administrateur (garde-fous : jamais plus de droits que soi)
+  "users.view": "editor", "users.create": "admin", "users.edit": "admin", "users.delete": "admin", "users.manage_roles": "admin", "roles.manage": "admin",
+  // Gérer ses propres articles (rôles Auteur / Contributeur) ; « articles.write » reste le droit sur TOUS les articles
+  "articles.edit_own": "editor",
   "articles.read": "viewer", "articles.write": "editor", "articles.publish": "editor", "articles.delete": "admin",
   "media.read": "viewer", "media.upload": "editor", "media.write": "editor", "media.delete": "admin",
   "analytics.read": "viewer",

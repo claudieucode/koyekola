@@ -1,0 +1,60 @@
+<%#
+  KOLAKISA CMS → fiche d'une personne de l'équipe (palier 9) : identité (sans donnée sensible), statut, rôle d'équipe, accès par site,
+  permissions effectives (calculées par cmsAccess.effectivePermissions), activité du journal d'audit.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const fdt = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") + " à " + String(v).slice(11, 16) + " UTC" : "—");
+  const stLabel = { active: "Actif", suspended: "Suspendu", disabled: "Désactivé" };
+  const stClass = { active: "mk-status-ok", suspended: "mk-status-warn", disabled: "mk-status-off" };
+  const self = u.id === me;
+  const labels = { "user.invited": "Invitation", "user.role_changed": "Rôle modifié", "user.status_changed": "Statut modifié", "user.removed": "Retiré de l'équipe", "site_access.granted": "Accès à un site accordé", "site_access.revoked": "Accès à un site retiré", "invitation.accepted": "Invitation acceptée" };
+%>
+    <div class="mk-head"><h1><%= u.username %></h1><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>">← Utilisateurs</a></div></div>
+    <p class="mk-lead"><span class="mk-status <%= stClass[u.status] || "mk-status-off" %>"><%= stLabel[u.status] || u.status %></span> <%= u.email %><%= self ? " · c'est vous" : "" %></p>
+
+    <div class="mk-us-grid">
+      <section class="mk-ap-card" aria-labelledby="us-id"><h2 id="us-id">Compte</h2>
+        <dl class="mk-us-dl"><dt>Inscription</dt><dd><%= fdt(u.created_at) %></dd><dt>Dernière connexion</dt><dd><%= u.last_login_at ? fdt(u.last_login_at) : "Jamais" %></dd><dt>Dernière activité</dt><dd><%= u.last_seen_at ? fdt(u.last_seen_at) : "Jamais" %></dd>
+          <dt>Type de compte</dt><dd><%= u.account_role === "formateur" ? "Compte créateur du site" : "Compte ordinaire" %></dd></dl>
+      </section>
+
+      <section class="mk-ap-card" aria-labelledby="us-role"><h2 id="us-role">Rôle dans l'équipe</h2>
+        <% if (canRoles && !self) { %>
+        <form method="post" action="<%= BASE %>/<%= u.id %>/role" class="mk-form"><div class="field-group"><label for="us-r">Rôle (tous les sites)</label>
+          <select id="us-r" name="role"><% if (!u.org_role) { %><option value="" selected disabled>Aucun accès global</option><% } %><% roles.forEach((r) => { %><option value="<%= r.key %>"<%= u.org_role === r.key ? " selected" : "" %><%= r.ok ? "" : " disabled" %>><%= r.name %><%= r.ok ? "" : " (droits supérieurs aux vôtres)" %></option><% }) %></select></div>
+          <button type="submit" class="btn btn-primary btn-sm">Enregistrer le rôle</button></form>
+        <% } else { %><p><strong><%= u.org_role ? roleName(u.org_role) : "Aucun accès global" %></strong><%= self ? " — vous ne pouvez pas modifier votre propre rôle." : "" %></p><% } %>
+      </section>
+
+      <section class="mk-ap-card" aria-labelledby="us-sites"><h2 id="us-sites">Accès par site</h2>
+        <% if (!u.sites.length) { %><p class="field-hint">Aucun accès propre à un site.</p><% } else { %>
+        <ul class="mk-cms-list"><% u.sites.forEach((s) => { %><li><span><strong><%= s.site_name %></strong> · <%= roleName(s.role) %></span>
+          <% if (canRoles && !self) { %><form method="post" action="<%= BASE %>/<%= u.id %>/sites/<%= s.site_id %>/retirer" class="mk-cm-form"><button type="submit" class="btn btn-ghost btn-sm" aria-label="Retirer l'accès au site <%= s.site_name %>">Retirer</button></form><% } %></li><% }) %></ul><% } %>
+        <% if (canRoles && !self && sites.length) { %>
+        <form method="post" action="<%= BASE %>/<%= u.id %>/sites" class="mk-form"><div class="mk-ap-grid">
+          <div class="field-group"><label for="us-s">Site</label><select id="us-s" name="site_id" required><% sites.forEach((s) => { %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select></div>
+          <div class="field-group"><label for="us-sr">Rôle sur ce site</label><select id="us-sr" name="role" required><% roles.filter((r) => r.key !== "owner").forEach((r) => { %><option value="<%= r.key %>"<%= r.ok ? "" : " disabled" %>><%= r.name %></option><% }) %></select></div></div>
+          <button type="submit" class="btn btn-outline btn-sm">Donner l'accès à ce site</button></form><% } %>
+      </section>
+
+      <section class="mk-ap-card" aria-labelledby="us-state"><h2 id="us-state">Statut du compte</h2>
+        <% if (canEdit && !self) { %>
+        <div class="mk-actions">
+          <% if (u.status !== "active") { %><form method="post" action="<%= BASE %>/<%= u.id %>/statut" class="mk-cm-form"><input type="hidden" name="status" value="active"><button type="submit" class="btn btn-primary btn-sm">Réactiver</button></form><% } %>
+          <% if (u.status === "active") { %><form method="post" action="<%= BASE %>/<%= u.id %>/statut" class="mk-cm-form"><input type="hidden" name="status" value="suspended"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="La personne sera déconnectée et ne pourra plus se connecter tant que vous ne la réactivez pas." data-mk-confirm-title="Suspendre ce compte ?" data-mk-confirm-ok="Suspendre">Suspendre</button></form><% } %>
+          <% if (u.status !== "disabled") { %><form method="post" action="<%= BASE %>/<%= u.id %>/statut" class="mk-cm-form"><input type="hidden" name="status" value="disabled"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="Le compte est désactivé : connexion impossible. Vous pouvez le réactiver plus tard." data-mk-confirm-title="Désactiver ce compte ?" data-mk-confirm-ok="Désactiver">Désactiver</button></form><% } %>
+          <% if (canDelete) { %><form method="post" action="<%= BASE %>/<%= u.id %>/retirer" class="mk-cm-form"><button type="submit" class="btn btn-outline btn-sm mk-btn-danger-outline" data-mk-confirm="La personne perd tout accès au CMS (rôle d'équipe et accès par site). Son compte du site reste." data-mk-confirm-title="Retirer de l'équipe ?" data-mk-confirm-ok="Retirer">Retirer de l'équipe</button></form><% } %>
+        </div>
+        <% } else { %><p class="field-hint"><%= self ? "Vous ne pouvez pas modifier votre propre statut." : "Vous n'avez pas le droit de modifier les comptes." %></p><% } %>
+      </section>
+    </div>
+
+    <section class="mk-ap-card" aria-labelledby="us-perms"><h2 id="us-perms">Permissions effectives (équipe, tous les sites)</h2>
+      <% if (!groups.length) { %><p class="field-hint">Aucune permission.</p><% } else { %>
+      <ul class="mk-cms-list"><% groups.forEach((g) => { %><li><span><strong><%= g.label %></strong> : <%= g.have.map((p) => p[1]).join(" · ") %></span></li><% }) %></ul><% } %>
+    </section>
+    <section class="mk-ap-card" aria-labelledby="us-act"><h2 id="us-act">Activité</h2>
+      <% if (!activity.length) { %><p class="field-hint">Aucun changement enregistré pour cette personne.</p><% } else { %>
+      <ul class="mk-cms-list"><% activity.forEach((a) => { %><li><span><%= fdt(a.created_at) %> · <%= labels[a.action] || a.action %><%= a.metadata && a.metadata.to ? " → " + roleName(a.metadata.to) : "" %><%= a.metadata && a.metadata.role && !a.metadata.to ? " (" + roleName(a.metadata.role) + ")" : "" %></span></li><% }) %></ul><% } %>
+    </section>
+<%- include("partials/bottom") %>

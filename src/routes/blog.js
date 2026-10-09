@@ -9,7 +9,8 @@ const { upload } = require("../middlewares/upload");
 const { createRateLimiter } = require("../middlewares/security");
 const commentsEngine = require("../services/comments");
 const antispam = require("../marketing/forms/antispam"); // jeton d'heure d'affichage déjà utilisé par les formulaires publics
-const { roleAtLeast, membershipsOf } = require("../marketing/organizations");
+const cmsAccess = require("../services/cmsAccess");
+const marketingOrgId = () => (db.prepare("SELECT id FROM mk_organizations ORDER BY id LIMIT 1").get() || {}).id || null;
 const { slugify } = require("../utils/format");
 const { UserError } = require("../utils/errors");
 const { removeUploadedFile } = require("../utils/uploads");
@@ -327,7 +328,7 @@ const commentLimiter = createRateLimiter(6, 10 * 60 * 1000); // 6 commentaires p
 const guestLimiter = createRateLimiter(3, 10 * 60 * 1000);   // invités : 3 commentaires par tranche de 10 minutes et par adresse
 const burstLimiter = createRateLimiter(1, 5 * 1000);         // jamais deux envois en moins de 5 secondes depuis la même adresse (invités)
 // Un formateur ou un membre de l'équipe (éditeur et plus) est publié tout de suite
-const canModerate = (user) => Boolean(user && (user.role === "formateur" || membershipsOf(db, user.id).some((m) => roleAtLeast(m.role, "editor"))));
+const canModerate = (user) => Boolean(user && (user.role === "formateur" || (marketingOrgId() && cmsAccess.can(user.id, "comments.moderate", { organizationId: marketingOrgId() }))));
 router.post("/blog/:slug/commentaires", (req, res) => {
   const post = db.prepare("SELECT * FROM posts WHERE slug = ? AND published = 1").get(req.params.slug);
   if (!post) return res.status(404).render("error", { message: "Article introuvable." });
