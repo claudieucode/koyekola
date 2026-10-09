@@ -1908,3 +1908,7 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-palette-saveform input { min-height: 34px; padding: 4px 8px; border: 1px solid var(--mk-border); border-radius: var(--b-r, 6px); font: inherit; background: var(--mk-surface); color: var(--mk-text); }
 .mk-palette-saveform-actions { display: flex; gap: 6px; }
 .mk-palette-saveform[hidden], .mk-palette-mine-empty[hidden] { display: none; }
+
+/* Stabilité du canevas : la barre de défilement réserve toujours sa place, sinon son apparition (contenu qui grandit) rétrécit la zone,
+   change le zoom d'ajustement et fait « bouger » l'e-mail */
+.mk-b-canvas { scrollbar-gutter: stable; }

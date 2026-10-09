@@ -949,8 +949,25 @@
   }
   var builder = $("mk-editor");
   var propsTab = "content";
+  // Réglages du bloc : reconstruits à chaque changement de structure des champs. Pour le MÊME bloc et le MÊME onglet, le défilement du
+  // panneau et le champ en cours de saisie (focus, curseur) sont conservés : modifier une propriété ne déplace jamais l'inspecteur.
+  var propsShown = { id: null, tab: null };
   function renderProps() {
     if (!props) return;
+    var same = !!selectedId && propsShown.id === selectedId && propsShown.tab === propsTab;
+    var top = props.scrollTop, a = document.activeElement;
+    var keep = same && a && props.contains(a) && a !== props ? { id: a.id, tag: a.tagName, name: a.getAttribute("aria-label") || a.textContent, s: a.selectionStart, e: a.selectionEnd } : null;
+    renderPropsNow();
+    propsShown = { id: selectedId, tab: propsTab };
+    if (!same) return;
+    props.scrollTop = top;
+    if (keep) {
+      var n = keep.id ? document.getElementById(keep.id) : [].filter.call(props.querySelectorAll(keep.tag), function (x) { return (x.getAttribute("aria-label") || x.textContent) === keep.name; })[0]; // champ sans id (bouton) : retrouvé par son nom
+      if (n && n !== document.activeElement) { n.focus({ preventScroll: true }); try { if (keep.s != null) n.setSelectionRange(keep.s, keep.e); } catch (err) { /* champ sans sélection (case, liste…) */ } }
+    }
+    props.scrollTop = top;
+  }
+  function renderPropsNow() {
     props.textContent = "";
     var block = selectedId ? blockById(selectedId) : null;
     builder.classList.toggle("has-selection", !!block); // écran moyen / mobile : les réglages s'ouvrent en panneau
@@ -1430,6 +1447,7 @@
         if (!r.ok) { showError(r.j.error || "Aperçu impossible."); previewDone(); return; }
         showError("");
         frame.style.minHeight = frame.offsetHeight + "px"; // pas de saut de défilement pendant le rechargement
+        captureAnchor();
         frame.srcdoc = r.j.html;
         $("mk-subject").textContent = r.j.subject;
         $("mk-text").textContent = r.j.text;
@@ -1441,6 +1459,25 @@
       .catch(function (e) { if (seq === previewSeq) { console.error("[éditeur] aperçu", e); showError("Aperçu impossible pour le moment : vérifiez votre connexion."); previewDone(); } });
   }
   function frameDoc() { try { return frame.contentDocument; } catch (e) { return null; } }
+  // Ancre de défilement : le canevas est rechargé à chaque modification (rendu serveur). On retient le défilement et la position du bloc
+  // sélectionné, puis on les rétablit au chargement (et quand une image ou une police finit de charger), pour que la vue ne saute pas.
+  // Un défilement fait par l'auteur annule l'ancre.
+  var anchor = null, anchorTimer = null;
+  function captureAnchor() {
+    var top = canvas.scrollTop, box = selectedId ? blockBox(selectedId) : null;
+    var vis = !!box && box.bottom > top && box.top < top + canvas.clientHeight;
+    anchor = { top: top, left: canvas.scrollLeft, id: vis ? selectedId : null, off: vis ? box.top - top : 0 };
+  }
+  function restoreAnchor() {
+    if (!anchor) return;
+    var t = anchor.top;
+    if (anchor.id) { var nb = blockBox(anchor.id); if (nb) t = nb.top - anchor.off; }
+    t = Math.max(0, Math.round(t));
+    if (Math.abs(canvas.scrollTop - t) > 1) canvas.scrollTop = t;
+    if (Math.abs(canvas.scrollLeft - anchor.left) > 1) canvas.scrollLeft = anchor.left;
+    clearTimeout(anchorTimer); anchorTimer = setTimeout(function () { anchor = null; }, 1500); // le temps que images et polices se posent
+  }
+  ["wheel", "touchstart", "mousedown", "keydown"].forEach(function (n) { canvas.addEventListener(n, function () { anchor = null; }, { passive: true }); });
   function rows() { var d = frameDoc(); return d ? [].slice.call(d.querySelectorAll("[data-mk-block]")) : []; }
   function fitFrame() { var d = frameDoc(); if (!d || !d.documentElement) return; frame.style.height = Math.max(400, d.documentElement.scrollHeight) + "px"; frame.style.minHeight = ""; placeBlockbar(); }
   // Coordonnées d'un bloc du rendu dans le canevas (le rendu peut être réduit : coordonnées internes × zoom)
@@ -1476,6 +1513,11 @@
     d.body.style.position = "relative";
     fitFrame();
     markSelection();
+    restoreAnchor();
+    // Images et polices qui finissent de charger après coup : la hauteur du rendu est recalculée et la vue reste ancrée
+    var settle = function () { var dd = frameDoc(); if (dd !== d) return; fitFrame(); restoreAnchor(); };
+    [].forEach.call(d.images || [], function (img) { if (!img.complete) { img.addEventListener("load", settle); img.addEventListener("error", settle); } });
+    if (d.fonts && d.fonts.ready) d.fonts.ready.then(settle);
     setTimeout(previewDone, 0);
     d.addEventListener("click", function (e) {
       e.preventDefault(); // un lien de l'e-mail ne s'ouvre jamais dans l'éditeur
