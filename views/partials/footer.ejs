@@ -5,8 +5,10 @@
     <% const footerGridClass = (typeof navMenu === "function" && navMenu("footer") && navMenu("footer").items.length > 0) ? "container-wide footer-grid footer-grid--menu" : "container-wide footer-grid"; %>
     <div class="<%= footerGridClass %>">
       <div class="footer-brand">
-        <p class="logo">KOLAKISA</p>
-        <p class="footer-tagline">Mes formations en ligne : apprenez à votre rythme, où que vous soyez.</p>
+        <% const apF = (typeof appearance === "function" && appearance()) ? appearance().footer : null; %>
+        <% if (apF && apF.brandResolved.mode === "image" && apF.brandResolved.image) { %><p class="logo footer-logo-img"><img src="<%= apF.brandResolved.image.src %>" alt="<%= apF.brandResolved.alt || apF.brandResolved.text %>"></p>
+        <% } else { %><p class="logo"><%= apF ? apF.brandResolved.text : "KOLAKISA" %></p><% } %>
+        <% if (!apF || apF.tagline) { %><p class="footer-tagline"><%= apF ? apF.tagline : "Mes formations en ligne : apprenez à votre rythme, où que vous soyez." %></p><% } %>
       </div>
       <%# Navigation du CMS : un menu affecté au pied de page remplace les colonnes de liens d'origine (même structure : titre + liens) ; sinon rien ne change %>
       <% const footerMenu = typeof navMenu === "function" ? navMenu("footer") : null; %>
@@ -46,8 +48,8 @@
       <% } %>
     </div>
     <div class="container-wide footer-bottom">
-      <span>KOLAKISA &copy; 2026 — projet pédagogique, aucun paiement réel n'est traité.</span>
-      <a href="/cookies" data-kw-consent-open>Cookies</a>
+      <span><%- apF ? "" : "KOLAKISA &copy; 2026 — projet pédagogique, aucun paiement réel n'est traité." %><%= apF ? apF.copyrightText : "" %></span>
+      <% if (!apF || apF.cookies) { %><a href="/cookies" data-kw-consent-open>Cookies</a><% } %>
     </div>
   </footer>
 

@@ -652,6 +652,57 @@ db.exec(`
 // Les sauvegardes (VACUUM INTO) restent cohérentes dans ce mode.
 db.exec("PRAGMA journal_mode = WAL");
 
+// ---------- Moteur d'apparence (palier 8) ----------
+// Configuration d'apparence du site public : jetons de design (la source de vérité des styles, même schéma que le design system des
+// sites du Page Builder : src/marketing/pages/tokens.js), en-tête et pied de page. Brouillon et version publiée séparés ; chaque
+// publication est conservée (historique). site_id vide = le site public principal ; les sites du Page Builder gardent leurs jetons
+// dans mk_sites.tokens (même validation). Patterns enregistrés par l'équipe : sections du Page Builder réutilisables.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS appearance_configs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER,
+    draft TEXT,
+    published TEXT,
+    published_css TEXT NOT NULL DEFAULT '',
+    revision INTEGER NOT NULL DEFAULT 0,
+    draft_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    draft_at TEXT,
+    published_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    published_at TEXT,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_appearance_configs_site ON appearance_configs(COALESCE(site_id, 0));
+  CREATE INDEX IF NOT EXISTS idx_appearance_configs_draft_by ON appearance_configs(draft_by);
+  CREATE INDEX IF NOT EXISTS idx_appearance_configs_published_by ON appearance_configs(published_by);
+
+  CREATE TABLE IF NOT EXISTS appearance_revisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER,
+    config TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_appearance_revisions_site ON appearance_revisions(COALESCE(site_id, 0), id);
+  CREATE INDEX IF NOT EXISTS idx_appearance_revisions_by ON appearance_revisions(created_by);
+
+  CREATE TABLE IF NOT EXISTS appearance_patterns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'Mes patterns',
+    description TEXT NOT NULL DEFAULT '',
+    mode TEXT NOT NULL DEFAULT 'static' CHECK (mode IN ('static')),
+    sections TEXT NOT NULL,
+    source_page_id INTEGER,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_appearance_patterns_name ON appearance_patterns(COALESCE(site_id, 0), name COLLATE NOCASE);
+  CREATE INDEX IF NOT EXISTS idx_appearance_patterns_by ON appearance_patterns(created_by);
+`);
+
 // ---------- Moteur de navigation (palier 7) ----------
 // Menus, éléments de menu (hiérarchie, ordre) et emplacements (header, footer, mobile). Un élément qui pointe vers une ressource KOLAKISA
 // (page, article, catégorie, étiquette) garde sa RÉFÉRENCE (type + object_id), jamais une copie de son adresse : si le slug change,

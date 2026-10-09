@@ -2239,3 +2239,13 @@ a.post-card-category:hover { text-decoration: underline; }
 }
 @media (min-width: 921px) { .header-nav .nav-menu--mobile { display: none !important; } }
 .footer-menu { display: contents; }
+
+/* Apparence du site (palier 8) : annonce, bouton d'en-tête, logo image, barre d'aperçu */
+.site-announcement { background: var(--primary); color: #fff; text-align: center; font-size: 0.9rem; font-weight: 600; padding: 8px 16px; }
+.site-announcement a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.header-cta { white-space: nowrap; }
+.header-cta-mobile { display: none; }
+.logo-img img { display: block; max-height: 40px; width: auto; height: auto; max-width: 180px; }
+.footer-logo-img img { display: block; max-height: 48px; width: auto; max-width: 200px; }
+.kw-preview-bar { background: #fff8e1; color: #6a4e00; border-bottom: 1px solid #f0d98a; text-align: center; font-size: 0.88rem; font-weight: 600; padding: 6px 12px; position: sticky; top: 0; z-index: 90; }
+@media (max-width: 920px) { .header-cta { display: none; } .header-cta-mobile { display: flex; } }

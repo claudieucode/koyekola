@@ -33,9 +33,14 @@ router.get("/a-propos", (req, res) => {
   const about = loadAbout();
   const creator = db.prepare("SELECT username, bio FROM users WHERE role = 'formateur' ORDER BY id LIMIT 1").get();
   const crumbs = [{ name: "Accueil", url: "/" }, { name: "À propos" }];
-  res.render("pages/about", {
-    about, creator, crumbs,
-    seo: seoPages.staticPage(req, "a-propos", { title: "À propos", description: about.description || ABOUT_DESCRIPTION, type: "AboutPage", crumbs }),
+  // Modèle de thème « Page du site » (Page Builder, Apparence → Templates) : remplace le texte de la page ; sans modèle en ligne, rien ne change
+  let contentHtml = "";
+  try { contentHtml = require("../utils/markdown").renderMarkdown(about.content); } catch { contentHtml = ""; }
+  require("../marketing/web/themeRender").renderRegion(req, res, db, "static_page", { scope: { post: { title: "À propos", url: "/a-propos", excerpt: about.description || "", image: "", date: null, category: "", author: "", minutes: null, contentHtml } } }, (themeTemplate) => {
+    res.render("pages/about", {
+      about, creator, crumbs, themeTemplate,
+      seo: seoPages.staticPage(req, "a-propos", { title: "À propos", description: about.description || ABOUT_DESCRIPTION, type: "AboutPage", crumbs }),
+    });
   });
 });
 

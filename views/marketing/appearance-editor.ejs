@@ -1,0 +1,239 @@
+<%#
+  KOLAKISA CMS → Apparence (palier 8). Une seule expérience pour : Éditeur du site (aperçu + publication), Styles, En-tête, Pied de page,
+  Templates, Patterns. Chaque réglage est enregistré dans un BROUILLON réel ; « Publier » le met sur le site. Le Page Builder reste le
+  moteur visuel (modèles = pages du Page Builder, patterns = sections du Page Builder).
+%><%- include("partials/top", { title, active }) %>
+<%
+  const fdt = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") + " à " + String(v).slice(11, 16) + " UTC" : "");
+  const T = st.draft.tokens, H = st.draft.header, F = st.draft.footer;
+  const tabs = [["", "Éditeur du site"], ["styles", "Styles"], ["en-tete", "En-tête"], ["pied-de-page", "Pied de page"], ["templates", "Templates"], ["patterns", "Patterns"]];
+  const colorLabels = tokens.COLOR_LABELS;
+  const col = (key, label) => `<div class="mk-ap-color"><label for="c-${key}">${label}</label><input id="c-${key}" type="color" name="colors.${key}" value="${T.colors[key]}"></div>`;
+  const num = (id, name, label, value, attrs = "") => `<div class="field-group mk-ap-num"><label for="${id}">${label}</label><input id="${id}" type="number" name="${name}" value="${value === null || value === undefined ? "" : value}" ${attrs}></div>`;
+  const sel = (id, name, label, options, current) => `<div class="field-group"><label for="${id}">${label}</label><select id="${id}" name="${name}">${options.map(([v, l]) => `<option value="${v}"${String(v) === String(current) ? " selected" : ""}>${l}</option>`).join("")}</select></div>`;
+  const fontOptions = Object.entries(FONTS).map(([k, f]) => [k, f.label]);
+  const colorRef = (id, name, label, value) => `<div class="field-group"><label for="${id}">${label}</label><input id="${id}" type="text" name="${name}" value="${value || ""}" maxlength="24" placeholder="origine (#rrggbb)" pattern="(#[0-9a-fA-F]{6})?"></div>`;
+%>
+    <div class="mk-head"><h1>Apparence · <%= title %></h1></div>
+
+    <section class="mk-ap-bar" aria-label="État de l'apparence">
+      <div class="mk-ap-state">
+        <span class="mk-status <%= st.hasPublished ? "mk-status-ok" : "mk-status-off" %>"><%= st.hasPublished ? "Publiée" : "Apparence d'origine" %></span>
+        <span class="mk-sub"><%= st.hasPublished ? "En ligne depuis le " + fdt(st.publishedAt) : "Le site utilise son apparence d'origine. Enregistrez puis publiez vos réglages pour les voir sur le site." %></span>
+        <% if (st.hasDraft) { %><span class="mk-status mk-status-warn">Brouillon modifié</span><span class="mk-sub">dernière modification le <%= fdt(st.draftAt) %></span><% } else { %><span class="mk-sub">Aucun brouillon : tout est publié.</span><% } %>
+      </div>
+      <div class="mk-ap-actions">
+        <a class="btn btn-outline btn-sm" href="<%= BASE %>?url=<%= encodeURIComponent("/") %>#apercu">Aperçu</a>
+        <% if (canStyles && st.hasDraft) { %><form method="post" action="<%= BASE %>/brouillon/annuler" class="mk-cm-form"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Les modifications non publiées seront perdues. La version en ligne ne change pas." data-mk-confirm-title="Annuler le brouillon ?" data-mk-confirm-ok="Annuler le brouillon">Annuler le brouillon</button></form><% } %>
+        <% if (canPublish) { %><form method="post" action="<%= BASE %>/publier" class="mk-cm-form"><button type="submit" class="btn btn-primary btn-sm"<%= st.hasDraft ? "" : " disabled" %>>Publier sur le site</button></form><% } else { %><span class="mk-sub">Seuls les administrateurs publient l'apparence.</span><% } %>
+      </div>
+    </section>
+
+    <nav class="mk-tabs mk-cms-tabs" aria-label="Sections de l'apparence">
+      <% tabs.forEach(([k, name]) => { %><a class="mk-tab" href="<%= BASE + (k ? "/" + k : "") %>"<%- section === k ? ' aria-current="page"' : "" %>><%= name %></a><% }) %>
+    </nav>
+
+<% if (section === "") { %>
+    <p class="mk-lead">Le site public (accueil, blog, catalogue, pages) se règle ici : styles globaux, en-tête, pied de page, modèles de pages et patterns. Le Page Builder reste l'éditeur visuel : les modèles et les patterns sont des pages et des sections que vous y dessinez.</p>
+    <section class="mk-ap-card" id="apercu" aria-labelledby="ap-prev">
+      <h2 id="ap-prev">Aperçu du brouillon</h2>
+      <form method="get" action="<%= BASE %>#apercu" class="mk-cms-toolbar" data-ap-preview-form>
+        <label class="sr-only" for="ap-url">Page à prévisualiser</label>
+        <select id="ap-url" name="url"><% previews.forEach((p) => { %><option value="<%= p.url %>"<%= deviceTarget === p.url ? " selected" : "" %>><%= p.label %></option><% }) %></select>
+        <button type="submit" class="btn btn-outline btn-sm">Afficher</button>
+        <span class="mk-ap-devices" role="group" aria-label="Taille de l'écran">
+          <button type="button" class="btn btn-ghost btn-sm" data-ap-device="1280">Ordinateur</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-ap-device="820">Tablette</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-ap-device="375">Mobile</button>
+        </span>
+      </form>
+      <% if (deviceTarget && /^\/(?!\/)/.test(deviceTarget)) { %>
+        <div class="mk-ap-frame-wrap"><iframe class="mk-ap-frame" title="Aperçu du site avec le brouillon" src="<%= deviceTarget %><%= deviceTarget.includes("?") ? "&" : "?" %>kwpreview=1" data-ap-frame></iframe></div>
+      <% } else { %><p class="field-hint">Choisissez une page puis « Afficher » : c'est le vrai site avec votre brouillon (visible seulement par l'équipe).</p><% } %>
+    </section>
+
+    <section class="mk-ap-card" aria-labelledby="ap-truth"><h2 id="ap-truth">Qui commande quoi</h2>
+      <ul class="mk-cms-list">
+        <li><span><strong>Styles</strong> (couleurs, polices, boutons, liens, conteneurs) : <a href="<%= BASE %>/styles">Apparence → Styles</a>. Source unique : les jetons de design, la même base que le Page Builder (ses modèles de thème sont habillés par ces styles dès que vous les publiez).</span></li>
+        <li><span><strong>Menus</strong> de l'en-tête, du pied de page et du mobile : <a href="/marketing/site-web/navigation">Navigation</a>. L'en-tête et le pied de page les affichent, ils ne les recréent pas.</span></li>
+        <li><span><strong>Images</strong> (logo…) : la <a href="/marketing/site-web/mediatheque">médiathèque</a>.</span></li>
+        <li><span><strong>Modèles</strong> d'articles, d'archives, de 404… : <a href="<%= BASE %>/templates">Templates</a> (pages du Page Builder).</span></li>
+      </ul>
+    </section>
+
+    <section class="mk-ap-card" aria-labelledby="ap-hist"><h2 id="ap-hist">Versions publiées</h2>
+      <% if (!history.length) { %><p class="field-hint">Aucune version publiée pour l'instant.</p><% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table"><caption class="sr-only">Versions publiées</caption>
+        <thead><tr><th scope="col">Publiée le</th><th scope="col">Par</th><th scope="col">Note</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody><% history.forEach((r, i) => { %><tr><th scope="row" data-label="Publiée le"><%= fdt(r.created_at) %><%= i === 0 && st.hasPublished ? " (en ligne)" : "" %></th><td data-label="Par"><%= r.by || "—" %></td><td data-label="Note"><%= r.note || "—" %></td>
+          <td class="mk-row-actions"><% if (canStyles) { %><form method="post" action="<%= BASE %>/versions/<%= r.id %>/restaurer" class="mk-cm-form"><button type="submit" class="btn btn-outline btn-sm">Reprendre dans le brouillon</button></form><% } %></td></tr><% }) %></tbody></table></div>
+      <% } %>
+      <% if (canPublish && st.hasPublished) { %><form method="post" action="<%= BASE %>/retirer" class="mk-cm-form"><button type="submit" class="btn btn-outline btn-sm mk-btn-danger-outline" data-mk-confirm="Le site reprendra son apparence d'origine. L'historique est conservé." data-mk-confirm-title="Retirer l'apparence publiée ?" data-mk-confirm-ok="Retirer">Revenir à l'apparence d'origine</button></form><% } %>
+    </section>
+
+    <section class="mk-ap-card" aria-labelledby="ap-sites"><h2 id="ap-sites">Sites du Page Builder</h2>
+      <% if (!sites.length) { %><p class="field-hint">Aucun autre site. Les sites du Page Builder ont chacun leurs styles, leur en-tête et leur pied de page (aucun partage entre eux).</p><% } else { %>
+      <ul class="mk-cms-list"><% sites.forEach((s) => { %><li><span><a href="/marketing/site-web/sites/<%= s.id %>"><%= s.name %></a> : design system, en-tête et pied de page propres à ce site.</span></li><% }) %></ul>
+      <% } %>
+    </section>
+
+<% } else if (section === "styles") { %>
+    <p class="mk-lead">Les styles globaux du site public. Une valeur laissée à l'origine ne change rien ; chaque réglage modifié s'applique à tout le site après publication.</p>
+    <% if (warnings.length) { %><div class="mk-ap-warn" role="status"><strong>Lisibilité à vérifier</strong><ul><% warnings.forEach((w) => { %><li><%= w %></li><% }) %></ul></div><% } %>
+    <form method="post" action="<%= BASE %>/styles" class="mk-form mk-ap-form">
+      <fieldset<%= canStyles ? "" : " disabled" %>>
+        <legend>Couleurs</legend>
+        <div class="mk-ap-colors"><%- ["primary", "secondary", "accent", "background", "surface", "text", "muted", "success", "warning", "error"].map((k) => col(k, colorLabels[k])).join("") %></div>
+        <p class="field-hint">« Principale » est la couleur d'action du site (boutons, liens, coches) ; « Secondaire », le bleu nuit des titres et du pied de page. L'accent et l'avertissement sont réservés au Page Builder.</p>
+      </fieldset>
+      <fieldset<%= canStyles ? "" : " disabled" %>>
+        <legend>Typographie</legend>
+        <div class="mk-ap-grid"><%- sel("f-heading", "fonts.heading", "Police des titres", fontOptions, T.fonts.heading) %><%- sel("f-body", "fonts.body", "Police du texte", fontOptions, T.fonts.body) %></div>
+        <div class="mk-ap-grid">
+          <% ["h1", "h2", "h3"].forEach((k) => { %><%- num("t-" + k, "type." + k + ".size", "Taille " + k.toUpperCase() + " (px)", T.type[k].size, 'min="12" max="120"') %><%- sel("w-" + k, "type." + k + ".weight", "Graisse " + k.toUpperCase(), [[400, "Normale"], [500, "Moyenne"], [600, "Semi-grasse"], [700, "Grasse"], [800, "Très grasse"]], T.type[k].weight) %><% }) %>
+          <%- num("t-body", "type.body.size", "Taille du texte (px)", T.type.body.size, 'min="12" max="28"') %><%- num("t-bodylh", "type.body.lineHeight", "Interligne du texte", T.type.body.lineHeight, 'min="1" max="2.5" step="0.05"') %>
+        </div>
+      </fieldset>
+      <fieldset<%= canStyles ? "" : " disabled" %>>
+        <legend>Boutons</legend>
+        <div class="mk-ap-grid"><%- num("b-radius", "radius.button", "Arrondi (px)", T.radius.button, 'min="0" max="60"') %><%- num("b-py", "buttons.paddingY", "Marge verticale (px)", T.buttons.paddingY, 'min="0" max="40" placeholder="origine"') %><%- num("b-px", "buttons.paddingX", "Marge horizontale (px)", T.buttons.paddingX, 'min="0" max="80" placeholder="origine"') %></div>
+        <div class="mk-ap-grid"><%- colorRef("b-bg", "buttons.normal.bg", "Fond du bouton principal", T.buttons.normal.bg) %><%- colorRef("b-fg", "buttons.normal.color", "Texte du bouton principal", T.buttons.normal.color) %><%- colorRef("b-hbg", "buttons.hover.bg", "Fond au survol", T.buttons.hover.bg) %><%- colorRef("b-hfg", "buttons.hover.color", "Texte au survol", T.buttons.hover.color) %><%- colorRef("b-focus", "buttons.focus.color", "Contour au clavier (focus)", T.buttons.focus.color) %></div>
+        <p class="field-hint">Un code #rrggbb, ou « token:primary », « token:secondary »… pour suivre une couleur du site. Vide = valeur d'origine.</p>
+      </fieldset>
+      <fieldset<%= canStyles ? "" : " disabled" %>>
+        <legend>Liens du texte</legend>
+        <div class="mk-ap-grid"><%- colorRef("l-color", "link.color", "Couleur", T.link.color) %><%- colorRef("l-hover", "link.hoverColor", "Couleur au survol", T.link.hoverColor) %><%- sel("l-under", "link.underline", "Soulignement", [["", "Origine"], ["always", "Toujours"], ["hover", "Au survol"], ["none", "Jamais"]], T.link.underline) %></div>
+      </fieldset>
+      <fieldset<%= canStyles ? "" : " disabled" %>>
+        <legend>Conteneurs, arrondis, ombres</legend>
+        <div class="mk-ap-grid"><%- num("s-content", "sizes.content", "Largeur maximale du site (px)", T.sizes.content, 'min="640" max="1920"') %><%- num("s-narrow", "sizes.narrow", "Largeur des pages de lecture (px)", T.sizes.narrow, 'min="480" max="1200"') %>
+          <%- num("r-md", "radius.md", "Arrondi des champs (px)", T.radius.md, 'min="0" max="40"') %><%- num("r-lg", "radius.lg", "Arrondi des cartes (px)", T.radius.lg, 'min="0" max="60"') %><%- sel("sh-card", "shadow.card", "Ombre des cartes", [["none", "Aucune"], ["sm", "Légère"], ["md", "Moyenne"], ["lg", "Forte"]], T.shadow.card) %><%- colorRef("bd-color", "border.color", "Couleur des filets", T.border.color) %></div>
+      </fieldset>
+      <fieldset<%= canStyles ? "" : " disabled" %>>
+        <legend>Espacements (pour le Page Builder)</legend>
+        <div class="mk-ap-grid"><% ["xs", "sm", "md", "lg", "xl", "xxl"].forEach((k) => { %><%- num("sp-" + k, "space." + k, k.toUpperCase() + " (px)", T.space[k], 'min="0" max="240"') %><% }) %></div>
+      </fieldset>
+      <% if (canStyles) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer dans le brouillon</button></div><% } else { %><p class="field-hint">Lecture seule.</p><% } %>
+    </form>
+
+<% } else if (section === "en-tete") { %>
+    <p class="mk-lead">L'en-tête du site public. Les liens du menu viennent de <a href="/marketing/site-web/navigation">Navigation</a> : ici on choisit ce que l'en-tête affiche autour.</p>
+    <div class="mk-ap-card"><strong>Menu de l'en-tête :</strong>
+      <%= menus.header ? "un menu est affecté à l'emplacement « En-tête »" : "aucun menu affecté : les liens d'origine (Catégories, Catalogue, Blog) s'affichent" %> · <a href="/marketing/site-web/navigation">Gérer les menus et emplacements</a>
+      <% if (menus.mobile) { %> · un menu mobile distinct est affecté au tiroir<% } %></div>
+    <form method="post" action="<%= BASE %>/en-tete" class="mk-form mk-ap-form" data-ap-form>
+      <fieldset<%= canParts ? "" : " disabled" %>>
+        <legend>Logo</legend>
+        <div class="field-group"><label for="h-lmode">Type de logo</label><select id="h-lmode" name="logo_mode" data-ap-logo-mode><option value="text"<%= H.logo.mode === "text" ? " selected" : "" %>>Texte</option><option value="image"<%= H.logo.mode === "image" ? " selected" : "" %>>Image de la médiathèque</option></select></div>
+        <div class="field-group"><label for="h-ltext">Texte du logo</label><input id="h-ltext" type="text" name="logo_text" maxlength="40" value="<%= H.logo.text %>"></div>
+        <div class="field-group" data-ap-media-field><label for="h-lalt">Texte alternatif de l'image</label><input id="h-lalt" type="text" name="logo_alt" maxlength="120" value="<%= H.logo.alt %>">
+          <input type="hidden" name="logo_media" value="<%= H.logo.mediaId || "" %>" data-ap-media-id><button type="button" class="btn btn-outline btn-sm" data-ap-media-pick>Choisir dans la médiathèque</button> <span class="mk-sub" data-ap-media-name><%= H.logo.mediaId ? "Image n° " + H.logo.mediaId : "Aucune image choisie" %></span></div>
+      </fieldset>
+      <fieldset<%= canParts ? "" : " disabled" %>>
+        <legend>Éléments de l'en-tête</legend>
+        <label class="mk-cms-check"><input type="checkbox" name="search" value="1"<%= H.search ? " checked" : "" %>> Recherche de formations</label>
+        <label class="mk-cms-check"><input type="checkbox" name="cart" value="1"<%= H.cart ? " checked" : "" %>> Panier</label>
+        <label class="mk-cms-check"><input type="checkbox" name="account" value="1"<%= H.account ? " checked" : "" %>> Compte (connexion, inscription, notifications)</label>
+      </fieldset>
+      <fieldset<%= canParts ? "" : " disabled" %>>
+        <legend>Bouton d'action</legend>
+        <label class="mk-cms-check"><input type="checkbox" name="cta_enabled" value="1"<%= H.cta.enabled ? " checked" : "" %>> Afficher un bouton dans l'en-tête</label>
+        <div class="mk-ap-grid"><div class="field-group"><label for="h-clabel">Texte</label><input id="h-clabel" type="text" name="cta_label" maxlength="30" value="<%= H.cta.label %>"></div><div class="field-group"><label for="h-curl">Adresse</label><input id="h-curl" type="text" name="cta_url" maxlength="500" value="<%= H.cta.url %>" placeholder="/catalogue"></div>
+          <%- sel("h-cstyle", "cta_style", "Style", [["primary", "Principal"], ["secondary", "Secondaire"], ["outline", "Contour"]], H.cta.style) %></div>
+        <label class="mk-cms-check"><input type="checkbox" name="mobile_cta" value="1"<%= H.mobile.showCta ? " checked" : "" %>> Aussi dans le menu mobile (tiroir)</label>
+      </fieldset>
+      <fieldset<%= canParts ? "" : " disabled" %>>
+        <legend>Barre d'annonce</legend>
+        <label class="mk-cms-check"><input type="checkbox" name="ann_enabled" value="1"<%= H.announcement.enabled ? " checked" : "" %>> Afficher une annonce au-dessus de l'en-tête</label>
+        <div class="mk-ap-grid"><div class="field-group"><label for="h-atext">Texte</label><input id="h-atext" type="text" name="ann_text" maxlength="160" value="<%= H.announcement.text %>"></div><div class="field-group"><label for="h-aurl">Adresse (facultative)</label><input id="h-aurl" type="text" name="ann_url" maxlength="500" value="<%= H.announcement.url %>"></div></div>
+      </fieldset>
+      <% if (canParts) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer dans le brouillon</button></div><% } else { %><p class="field-hint">Lecture seule.</p><% } %>
+    </form>
+
+<% } else if (section === "pied-de-page") { %>
+    <p class="mk-lead">Le pied de page du site public. Ses colonnes de liens viennent de <a href="/marketing/site-web/navigation">Navigation</a> (emplacement « Pied de page »).</p>
+    <div class="mk-ap-card"><strong>Menu du pied de page :</strong> <%= menus.footer ? "un menu est affecté : il remplace les colonnes d'origine" : "aucun menu affecté : les colonnes d'origine s'affichent" %> · <a href="/marketing/site-web/navigation">Gérer les menus et emplacements</a></div>
+    <form method="post" action="<%= BASE %>/pied-de-page" class="mk-form mk-ap-form" data-ap-form>
+      <fieldset<%= canParts ? "" : " disabled" %>>
+        <legend>Marque</legend>
+        <div class="field-group"><label for="f-bmode">Logo du pied de page</label><select id="f-bmode" name="brand_mode" data-ap-logo-mode><option value="text"<%= F.brand.mode === "text" ? " selected" : "" %>>Texte</option><option value="header"<%= F.brand.mode === "header" ? " selected" : "" %>>Le même que l'en-tête</option><option value="image"<%= F.brand.mode === "image" ? " selected" : "" %>>Image de la médiathèque</option></select></div>
+        <div class="field-group"><label for="f-btext">Texte de la marque</label><input id="f-btext" type="text" name="brand_text" maxlength="40" value="<%= F.brand.text %>"></div>
+        <div class="field-group" data-ap-media-field><label for="f-balt">Texte alternatif de l'image</label><input id="f-balt" type="text" name="brand_alt" maxlength="120" value="<%= F.brand.alt %>">
+          <input type="hidden" name="brand_media" value="<%= F.brand.mediaId || "" %>" data-ap-media-id><button type="button" class="btn btn-outline btn-sm" data-ap-media-pick>Choisir dans la médiathèque</button> <span class="mk-sub" data-ap-media-name><%= F.brand.mediaId ? "Image n° " + F.brand.mediaId : "Aucune image choisie" %></span></div>
+      </fieldset>
+      <fieldset<%= canParts ? "" : " disabled" %>>
+        <legend>Textes</legend>
+        <div class="field-group"><label for="f-tag">Phrase de présentation</label><input id="f-tag" type="text" name="tagline" maxlength="200" value="<%= F.tagline %>"></div>
+        <div class="field-group"><label for="f-copy">Mention de bas de page</label><input id="f-copy" type="text" name="copyright" maxlength="200" value="<%= F.copyright %>"><span class="field-hint">« {année} » est remplacé par l'année en cours.</span></div>
+        <label class="mk-cms-check"><input type="checkbox" name="cookies" value="1"<%= F.cookies ? " checked" : "" %>> Lien « Cookies » (réglage du consentement)</label>
+      </fieldset>
+      <% if (canParts) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer dans le brouillon</button></div><% } else { %><p class="field-hint">Lecture seule.</p><% } %>
+    </form>
+
+<% } else if (section === "templates") { %>
+    <p class="mk-lead">Un template est une page du Page Builder qui remplace l'affichage d'une famille de pages : article, liste du blog, archive de catégorie, archive d'étiquette, recherche, page « À propos », page introuvable. Le contenu réel (article, liste, texte) est injecté dans la page ; le template ne le copie jamais.</p>
+    <div class="mk-ap-card"><h2>Quel template s'applique ?</h2>
+      <p>Si plusieurs conviennent, le plus précis gagne : <strong>article précis</strong> › <strong>catégorie</strong> (celle de l'article avant ses catégories parentes) › <strong>étiquette</strong> › <strong>public</strong> › template général. À précision égale, le plus ancien. Un template n'agit que si sa page est <em>en ligne</em> ; sans template, le site utilise son affichage par défaut. L'en-tête et le pied de page sont communs à tous les templates : modifier l'en-tête les change partout.</p></div>
+    <% if (!templates.length) { %>
+      <div class="mk-empty"><%- icon("layout", { size: 32 }) %><h2>Utiliser le template par défaut</h2><p>Aucun template personnalisé : le blog, les archives, la page « À propos » et la page introuvable utilisent leur affichage d'origine.</p></div>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table"><caption class="sr-only">Templates affectés</caption>
+        <thead><tr><th scope="col">Famille de pages</th><th scope="col">Page modèle</th><th scope="col">Conditions</th><th scope="col">État</th><% if (canTemplates) { %><th scope="col"><span class="sr-only">Actions</span></th><% } %></tr></thead>
+        <tbody><% templates.forEach((t) => { %><tr>
+          <th scope="row" data-label="Famille"><%= t.typeLabel %></th>
+          <td data-label="Page"><% if (t.pageStatus === "missing") { %><%= t.pageName %><% } else { %><a href="/marketing/pages/<%= t.pageId %>/editeur"><%= t.pageName %></a><% } %></td>
+          <td data-label="Conditions"><%= [t.postId ? "Article n° " + t.postId : "", t.category ? "Catégorie « " + t.category + " »" : "", t.tag ? "Étiquette « " + t.tag + " »" : "", t.audienceLabel || ""].filter(Boolean).join(" · ") || "Toutes" %></td>
+          <td data-label="État"><%= t.pageStatus === "published" ? "Actif (page en ligne)" : t.pageStatus === "missing" ? "Page supprimée" : "Inactif : publiez la page" %></td>
+          <% if (canTemplates) { %><td class="mk-row-actions"><form action="<%= BASE %>/templates/<%= t.id %>/supprimer" method="post" class="mk-cm-form"><button type="submit" class="btn btn-ghost btn-sm" aria-label="Retirer ce template">Retirer</button></form></td><% } %>
+        </tr><% }) %></tbody></table></div>
+    <% } %>
+    <% if (canTemplates) { %>
+    <section class="mk-ap-card" aria-labelledby="tt-add"><h2 id="tt-add">Affecter un template</h2>
+      <form action="<%= BASE %>/templates" method="post" class="mk-form mk-ap-form" data-ap-template-form data-conditions="<%= JSON.stringify(conditions) %>">
+        <div class="field-group"><label for="tt-type">Famille de pages</label><select id="tt-type" name="type" required><% Object.entries(types).forEach(([key, t]) => { %><option value="<%= key %>"><%= t.label %></option><% }) %></select><span class="field-hint" data-ap-hint></span></div>
+        <div class="field-group"><label for="tt-page">Page modèle (créée dans le Page Builder)</label><select id="tt-page" name="page_id" required><option value="">Choisir une page…</option><% pageChoices.forEach((p) => { %><option value="<%= p.id %>"><%= p.name %><%= p.status === "published" ? "" : " (brouillon : à publier)" %></option><% }) %></select>
+          <span class="field-hint">Pas encore de page ? <a href="/marketing/pages#nouvelle">Créez-la dans le Page Builder</a>, puis revenez ici.</span></div>
+        <div class="field-group" data-ap-cond="category"><label for="tt-cat">Catégorie (facultative)</label><select id="tt-cat" name="category"><option value="">Toutes les catégories</option><% categories.forEach((c) => { %><option value="<%= c.name %>"><%= "— ".repeat(c.depth) %><%= c.name %></option><% }) %></select></div>
+        <div class="field-group" data-ap-cond="tag"><label for="tt-tag">Étiquette (facultative)</label><select id="tt-tag" name="tag"><option value="">Toutes les étiquettes</option><% tags.forEach((t) => { %><option value="<%= t.name %>"><%= t.name %></option><% }) %></select></div>
+        <div class="field-group" data-ap-cond="postId"><label for="tt-post">Article précis (facultatif)</label><select id="tt-post" name="post_id"><option value="">Tous les articles</option><% posts.forEach((p) => { %><option value="<%= p.id %>"><%= p.title %></option><% }) %></select></div>
+        <div class="field-group"><label for="tt-aud">Public</label><select id="tt-aud" name="audience"><option value="">Tout le monde</option><% Object.entries(audiences).filter(([k]) => k !== "tag" && k !== "not_tag" && k !== "score_min").forEach(([k, label]) => { %><option value="<%= k %>"><%= label %></option><% }) %></select></div>
+        <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Affecter le template</button></div>
+        <ul class="mk-cms-list" data-ap-types><% Object.entries(types).forEach(([key, t]) => { %><li data-type="<%= key %>"><span><strong><%= t.label %></strong> : <%= t.hint %></span></li><% }) %></ul>
+      </form>
+    </section>
+    <% } %>
+
+<% } else if (section === "patterns") { %>
+    <p class="mk-lead">Un pattern est un ensemble d'éléments du Page Builder prêt à être réutilisé. Enregistrez une section d'une page comme pattern : elle apparaît dans « Ajouter » → Blocs de l'éditeur de pages, comme les <%= builtin %> blocs intégrés.</p>
+    <div class="mk-ap-card"><strong>Mode statique :</strong> à l'insertion, le pattern est <em>copié</em> dans la page : la copie est indépendante, modifier le pattern ne change pas les pages déjà construites.
+      <strong>Mode synchronisé :</strong> utilisez un <em>composant</em> du Page Builder (section enregistrée comme composant) : toutes ses instances suivent ses modifications. Les composants du site sont listés plus bas.</div>
+    <h2>Mes patterns</h2>
+    <% if (!userPatterns.length) { %><div class="mk-empty"><%- icon("layers", { size: 32 }) %><h2>Aucun pattern.</h2><p>Enregistrez une section d'une page ci-dessous pour créer le premier.</p></div>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table"><caption class="sr-only">Mes patterns</caption>
+        <thead><tr><th scope="col">Pattern</th><th scope="col">Mode</th><th scope="col" class="mk-num">Sections</th><th scope="col">Créé le</th><% if (canPatterns) { %><th scope="col"><span class="sr-only">Actions</span></th><% } %></tr></thead>
+        <tbody><% userPatterns.forEach((p) => { %><tr><th scope="row" data-label="Pattern"><%= p.name %><% if (p.description) { %><span class="mk-sub"><%= p.description %></span><% } %></th><td data-label="Mode">Statique (copie)</td><td class="mk-num" data-label="Sections"><%= p.count %></td><td data-label="Créé le"><%= fdt(p.created_at) %></td>
+          <% if (canPatterns) { %><td class="mk-row-actions"><form action="<%= BASE %>/patterns/<%= p.id %>/supprimer" method="post" class="mk-cm-form"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Le pattern « <%= p.name %> » sera supprimé. Les pages qui l'ont déjà inséré ne changent pas." data-mk-confirm-title="Supprimer ce pattern ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form></td><% } %></tr><% }) %></tbody></table></div>
+    <% } %>
+    <% if (canPatterns) { %>
+    <section class="mk-ap-card" aria-labelledby="pt-new"><h2 id="pt-new">Créer un pattern à partir d'une section</h2>
+      <form method="get" action="<%= BASE %>/patterns" class="mk-cms-toolbar"><label class="sr-only" for="pt-page">Page source</label>
+        <select id="pt-page" name="page"><option value="">Choisir une page…</option><% pageChoices.forEach((p) => { %><option value="<%= p.id %>"<%= sourcePage && sourcePage.id === p.id ? " selected" : "" %>><%= p.name %></option><% }) %></select><button type="submit" class="btn btn-outline btn-sm">Voir ses sections</button></form>
+      <% if (sourcePage) { %>
+        <% if (!sourcePage.sections.length) { %><p class="field-hint">Cette page ne contient aucune section.</p><% } else { %>
+        <form method="post" action="<%= BASE %>/patterns" class="mk-form">
+          <input type="hidden" name="page_id" value="<%= sourcePage.id %>">
+          <fieldset><legend>Section de « <%= sourcePage.name %> »</legend>
+            <% sourcePage.sections.forEach((s) => { %><label class="mk-cms-check"><input type="radio" name="section_index" value="<%= s.index %>" required> <%= s.index + 1 %>. <%= s.label %></label><% }) %></fieldset>
+          <div class="field-group"><label for="pt-name">Nom du pattern *</label><input id="pt-name" type="text" name="name" maxlength="60" required placeholder="CTA principal"></div>
+          <div class="field-group"><label for="pt-desc">Description</label><input id="pt-desc" type="text" name="description" maxlength="200"></div>
+          <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer comme pattern</button></div>
+        </form><% } %>
+      <% } %>
+    </section>
+    <% } %>
+    <h2>Composants synchronisés</h2>
+    <% if (!components.length) { %><p class="field-hint">Aucun composant. Dans le Page Builder, enregistrez une section comme composant pour la réutiliser en mode synchronisé.</p>
+    <% } else { %><ul class="mk-cms-list"><% components.forEach((c) => { %><li><span><strong><%= c.name %></strong> · <%= c.global ? "tous les sites" : "un site" %> · utilisé dans <%= c.uses %> page<%= c.uses > 1 ? "s" : "" %></span></li><% }) %></ul><% } %>
+<% } %>
+<%- include("partials/bottom") %>

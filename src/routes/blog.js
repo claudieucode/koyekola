@@ -164,21 +164,21 @@ function renderList(req, res, { filter = null } = {}) {
   // Modèle de thème « Liste du blog » (Page Builder) : remplace la liste ; la catégorie courante se lit avec {{query.categorie}}
   const themeQuery = {};
   if (filter && filter.type === "category") themeQuery.categorie = filter.name;
+  // Famille de modèle : recherche, archive de catégorie, archive d'étiquette, sinon liste du blog (la première qui a un modèle en ligne gagne)
+  const isCat = Boolean(filter && filter.type === "category"), isTag = Boolean(filter && filter.type === "tag");
+  if (isTag) themeQuery.etiquette = filter.name;
+  const isAuthor = Boolean(filter && filter.type === "author");
+  const families = q ? ["search_results", "blog_archive"] : isAuthor ? ["author_archive", "blog_archive"] : isCat ? ["category_archive", "blog_archive"] : isTag ? ["tag_archive", "blog_archive"] : "blog_archive";
   // Archive affichée (catégorie, étiquette, auteur) : lue par les éléments « En-tête d'archive » et les listes « suivre l'archive »
   const archive = { type: filter ? filter.type : q ? "search" : "blog", name: filter ? (filter.name || filter.label) : "", id: filter && filter.type === "author" ? filter.id : null, termIds: filter && filter.termIds ? filter.termIds : [],
     title: filter ? filter.heading : q ? `Résultats pour « ${q} »` : "Blog", description: filter ? filter.lead : "", count: total, url: basePath, search: q || "" };
-  const regionArgs = { category: filter && filter.type === "category" ? filter.name : "", query: { ...themeQuery, ...(q ? { q } : {}) }, scope: { archive } };
-  const finish = (themeTemplate) => {
-    res.render("blog/index", {
-      themeTemplate, posts, page, pages, crumbs, basePath, heading, filter, q, hub, total, categories, popular, discover,
-      featured: featured && page === 1 ? decorate(featured) : null,
-      lead: filter ? filter.lead : "Conseils, idées, ressources et actualités pour apprendre, créer et progresser.", seo,
-    });
-  };
-  // Modèle dédié (page d'auteur, résultats de recherche) s'il existe, sinon le modèle « Liste du blog »
-  const specific = filter && filter.type === "author" ? "author_archive" : q ? "search_results" : null;
-  if (!specific) return themeRender.renderRegion(req, res, db, "blog_archive", regionArgs, finish);
-  themeRender.renderRegion(req, res, db, specific, regionArgs, (own) => (own ? finish(own) : themeRender.renderRegion(req, res, db, "blog_archive", regionArgs, finish)));
+  themeRender.renderRegion(req, res, db, families, { category: isCat ? filter.name : "", categories: isCat ? (filter.ancestors || []).map((a) => a.name).reverse() : [], tag: isTag ? filter.name : "", query: { ...themeQuery, ...(q ? { q } : {}) }, scope: { archive } }, (themeTemplate) => {
+  res.render("blog/index", {
+    themeTemplate, posts, page, pages, crumbs, basePath, heading, filter, q, hub, total, categories, popular, discover,
+    featured: featured && page === 1 ? decorate(featured) : null,
+    lead: filter ? filter.lead : "Conseils, idées, ressources et actualités pour apprendre, créer et progresser.", seo,
+  });
+  });
 }
 
 // Articles venus d'une autre voie que l'éditeur : leurs anciens textes deviennent des relations avant toute page publique du blog
@@ -295,7 +295,10 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
   const { previous, next } = post.published ? blog.neighbours(post) : { previous: null, next: null };
   const toc = post.toc_enabled === 0 ? [] : article.toc;
   // Modèle de thème « Article du blog » (Page Builder) : remplace l'en-tête, l'image et le texte ; sans modèle publié, rien ne change
-  themeRender.renderRegion(req, res, db, "single_post", { category: post.category || "", scope: { post: themeRender.postScope(post, { contentHtml: article.html, minutes, author: author ? author.username : "" }) } }, (themeTemplate) => {
+  const postTaxo = taxonomy.termsOf("post", post.id);
+  const primaryTerm = postTaxo.primary;
+  const nearestCats = primaryTerm ? [primaryTerm.name, ...taxonomy.ancestors(primaryTerm.id).map((a) => a.name).reverse()] : [];
+  themeRender.renderRegion(req, res, db, "single_post", { category: nearestCats[0] || post.category || "", categories: nearestCats.slice(1), tags: (postTaxo.tags || []).map((t) => t.name), postId: post.id, scope: { post: themeRender.postScope(post, { contentHtml: article.html, minutes, author: author ? author.username : "" }) } }, (themeTemplate) => {
   res.render("blog/show", {
     themeTemplate, post, crumbs, author, seo, article: { ...article, toc }, minutes, tags, modified, previous, next, shareUrl: ownUrl, lang: post.language && post.language !== "fr" ? post.language : null,
     tocTitle: post.toc_title || "Sommaire", tocNumbering: post.toc_numbering || "h2", preview,
