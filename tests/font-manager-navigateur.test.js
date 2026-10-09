@@ -133,6 +133,9 @@ describe("Font Manager (navigateur)", { skip: SKIP }, () => {
     // l'onglet « Styles » contient le champ : on l'ouvre comme l'auteur
     const tab = page.locator('[data-mk-tab="styles"], #mk-tab-styles, button:has-text("Styles")').first();
     if (await tab.count()) await tab.click().catch(() => {});
+    // La section « Typographie » du volet Styles est repliée par défaut : on l'ouvre comme l'auteur
+    const typo = page.locator("#pane-styles .mk-sec-btn", { hasText: "Typographie" });
+    if (await typo.count() && (await typo.getAttribute("aria-expanded")) === "false") await typo.click();
     const btn = page.locator("#t-font");
     await btn.scrollIntoViewIfNeeded().catch(() => {});
     await btn.click({ force: true });

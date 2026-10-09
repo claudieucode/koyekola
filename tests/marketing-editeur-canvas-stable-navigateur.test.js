@@ -89,6 +89,8 @@ describe("éditeur d'e-mails : stabilité du canevas et de l'inspecteur (navigat
     await page.click('[data-add="button"]');
     await until(() => page.evaluate(() => document.querySelectorAll("#mk-props .mk-ptab").length === 4), "réglages du bouton");
     await openTab(1);
+    // Sections repliables : par défaut seule la première est ouverte ; l'auteur qui veut tout voir utilise « Tout développer »
+    await page.click('#mk-props .mk-sec-all:has-text("Tout développer")');
     const scrollable = await page.evaluate(() => { const p = document.getElementById("mk-props"); return p.scrollHeight - p.clientHeight; });
     assert.ok(scrollable > 300, "l'inspecteur défile");
     await page.evaluate(() => { document.getElementById("mk-props").scrollTop = 450; });

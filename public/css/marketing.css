@@ -1933,7 +1933,7 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 
 /* ---------- Apparence des panneaux (mk/panel-theme.js) : jetons posés sur le rail et les deux panneaux seulement ---------- */
 [data-mk-themed] { background: var(--mk-surface); color: var(--mk-text); }
-[data-mk-themed] :is(input:not([type="color"]):not([type="checkbox"]):not([type="radio"]), select, textarea) { background: var(--mk-card, var(--mk-surface)); color: var(--mk-text); border-color: var(--mk-border-strong); }
+[data-mk-themed] :is(input:not([type="color"]):not([type="checkbox"]):not([type="radio"]), select, textarea) { background-color: var(--mk-card, var(--mk-surface)); color: var(--mk-text); border-color: var(--mk-border-strong); }
 [data-mk-themed] :is(.btn-outline, .mk-tools-btn, .mk-b-icon) { background: transparent; color: var(--mk-text); border-color: var(--mk-border-strong); }
 [data-mk-themed] :is(.btn-outline, .mk-tools-btn, .mk-b-icon):hover { background: var(--mk-hover); }
 [data-mk-themed] svg { color: inherit; }
