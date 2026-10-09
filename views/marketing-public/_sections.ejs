@@ -86,4 +86,6 @@
   <% } %>
 </div>
 <% }) %>
+<%# Éditeur seulement : après le dernier élément de la page, un bouton pour continuer à ajouter des containers (même fenêtre « Quelle mise en page utiliser ? », insertion en fin de page) %>
+<% if (isBuilder && page.sections.length) { %><div class="kw-add-end"><button type="button" class="kw-add kw-add-root kw-add-end-btn" data-kw-add="root" aria-label="Ajouter un container à la fin de la page" title="Ajouter un container à la fin de la page"><span aria-hidden="true">+</span> Ajouter un container</button></div><% } %>
 <% if (isBuilder && !page.sections.length) { %><div class="kw-empty-page"><button type="button" class="kw-add kw-add-root" data-kw-add="root" aria-label="Ajouter une structure à la page" title="Ajouter une structure">+</button></div><% } %>

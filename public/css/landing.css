@@ -341,6 +341,10 @@
 .lp-builder .kw-add:hover, .lp-builder .kw-add:focus-visible { background: rgba(2, 119, 182, 0.16); border-style: solid; transform: scale(1.06); outline: none; }
 .lp-builder .kw-empty-page { display: grid; place-items: center; min-height: 60vh; }
 .lp-builder .kw-add-root { width: 64px; height: 64px; font-size: 36px; }
+/* Fin de page (éditeur) : « + Ajouter un container », même fenêtre que le « + » de la page vide ; ne prend de la place que dans l'éditeur */
+.lp-builder .kw-add-end { display: flex; justify-content: center; padding: 28px 16px 44px; }
+.lp-builder .kw-add-end .kw-add-end-btn { display: inline-flex; align-items: center; gap: 10px; width: auto; height: 44px; margin: 0; padding: 0 22px; border-radius: 999px; font: 600 14px/1 system-ui, sans-serif; }
+.lp-builder .kw-add-end .kw-add-end-btn span { font-size: 22px; font-weight: 500; line-height: 1; }
 .kw-add { display: none; }
 /* Un conteneur imbriqué occupe la largeur de son parent (les structures « colonnes » en dépendent) */
 .kw-container .kw-container { max-width: none; margin-left: 0; margin-right: 0; }

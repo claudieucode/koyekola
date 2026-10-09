@@ -144,9 +144,12 @@ describe("« + » du canevas et éditeur (vrai serveur)", () => {
     assert.match(empty, /data-kw-add="root"/);
     assert.doesNotMatch(empty, /Déposez des éléments|Section libre vide/, "plus de texte décoratif");
     const section = await render(id, [{ id: "sect00000001", type: "layout", children: [] }]);
-    assert.equal((section.match(/data-kw-add/g) || []).length, 1, "section libre vide");
+    // page non vide : un « + » par zone vide, plus UN bouton « Ajouter un container » en fin de page (éditeur seulement)
+    assert.equal((section.match(/data-kw-add/g) || []).length, 2, "section libre vide : son « + » + le bouton de fin de page");
+    assert.equal((section.match(/class="kw-add-end"/g) || []).length, 1, "un seul bouton de fin de page");
+    assert.doesNotMatch(empty, /kw-add-end/, "page vide : pas de bouton de fin de page (le grand « + » suffit)");
     const boxes = await render(id, [{ id: "sect00000001", type: "layout", children: [{ id: "cont00000001", type: "container", children: [{ id: "cont00000002", type: "container", children: [] }, { id: "cont00000003", type: "grid", children: [] }] }] }]);
-    assert.equal((boxes.match(/data-kw-add/g) || []).length, 2, "un « + » par zone vide (le conteneur qui contient quelque chose n'en a pas)");
+    assert.equal((boxes.match(/data-kw-add/g) || []).length, 3, "un « + » par zone vide (le conteneur qui contient quelque chose n'en a pas) + le bouton de fin de page");
     // aperçu : jamais de « + »
     const preview = (await boss.get(`/marketing/pages/${id}/apercu`)).text;
     assert.doesNotMatch(preview, /data-kw-add|kw-empty-page/);
