@@ -100,11 +100,26 @@
       }
       place();
       btn.setAttribute("aria-expanded", "true");
+      // Fermeture par interaction EXTÉRIEURE. « Intérieur » = le champ et la fenêtre du sélecteur (la fenêtre vit sur <body>, pas
+      // à côté du champ : on teste donc l'appartenance, pas la parenté). Les événements d'une iframe (canevas de l'éditeur d'e-mails)
+      // ne remontent jamais au document parent : on écoute aussi chaque iframe de même origine, et le passage du focus à une iframe
+      // (le parent perd le focus) ferme aussi, même si cette iframe a été reconstruite depuis l'ouverture.
+      var watched = [];
       var onDocDown = function (e) { if (!panel.contains(e.target) && !btn.contains(e.target)) closePanel(); };
       var onKey = function (e) { if (e.key === "Escape") { e.stopPropagation(); closePanel(); btn.focus(); } };
       var onResize = function () { place(); };
-      document.addEventListener("mousedown", onDocDown, true); document.addEventListener("keydown", onKey, true); window.addEventListener("resize", onResize);
-      openPanel = { owner: btn, close: function () { document.removeEventListener("mousedown", onDocDown, true); document.removeEventListener("keydown", onKey, true); window.removeEventListener("resize", onResize); if (io) io.disconnect(); panel.remove(); btn.setAttribute("aria-expanded", "false"); } };
+      var onBlur = function () { var a = document.activeElement; if (a && a.tagName === "IFRAME") closePanel(); };
+      var watchFrames = function () {
+        [].forEach.call(document.querySelectorAll("iframe"), function (f) {
+          try { var d = f.contentDocument; if (d && watched.indexOf(d) < 0) { d.addEventListener("pointerdown", onDocDown, true); d.addEventListener("keydown", onKey, true); watched.push(d); } } catch (err) { /* iframe d'une autre origine : le blur la couvre */ }
+        });
+      };
+      document.addEventListener("pointerdown", onDocDown, true); document.addEventListener("keydown", onKey, true); window.addEventListener("resize", onResize); window.addEventListener("blur", onBlur);
+      watchFrames();
+      openPanel = { owner: btn, close: function () {
+        document.removeEventListener("pointerdown", onDocDown, true); document.removeEventListener("keydown", onKey, true); window.removeEventListener("resize", onResize); window.removeEventListener("blur", onBlur);
+        watched.forEach(function (d) { try { d.removeEventListener("pointerdown", onDocDown, true); d.removeEventListener("keydown", onKey, true); } catch (err) { /* document détruit */ } });
+        if (io) io.disconnect(); panel.remove(); btn.setAttribute("aria-expanded", "false"); } };
 
       function choose(v) {
         if (/^font\./.test(v)) { recent = [v].concat(recent.filter(function (x) { return x !== v; })).slice(0, 12); save("recent", recent); }
