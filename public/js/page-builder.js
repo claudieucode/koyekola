@@ -5262,7 +5262,18 @@
     if (skin !== "custom") return;
     Object.keys(customResult.tokens).forEach(function (k) { document.body.style.setProperty(k, customResult.tokens[k]); customKeys.push(k); });
   }
-  function applyPalette() {
+  // Changement de thème ATOMIQUE : toutes les valeurs (jetons personnalisés, data-skin, data-palette) sont posées dans la même tâche, pendant
+  // que les transitions sont coupées (classe pb-theme-switching). Un recalcul de style forcé fige alors les couleurs finales avant que la
+  // classe ne soit retirée : aucune image intermédiaire (ancien fond + nouveau texte…) n'est jamais affichée, et les transitions normales
+  // (survol, ouverture des panneaux…) restent intactes ensuite.
+  function withThemeSwitch(fn) {
+    var root = document.body, nested = root.classList.contains("pb-theme-switching");
+    if (nested) return fn();
+    root.classList.add("pb-theme-switching");
+    try { fn(); void root.offsetHeight; } finally { root.classList.remove("pb-theme-switching"); }
+  }
+  function applyPalette() { withThemeSwitch(paintPalette); }
+  function paintPalette() {
     applyCustomTokens();
     var resolved = skin === "navy" ? "dark" : skin === "custom" ? customResult.scheme : paletteResolved();
     document.body.dataset.skin = skin;
@@ -5278,8 +5289,8 @@
     $$("[data-pal-mode]").forEach(function (b) { var cur = b.dataset.palMode === paletteMode, on = cur && skin === "classic"; b.setAttribute("aria-checked", String(on)); b.tabIndex = cur ? 0 : -1; });
   }
   function setPaletteMode(m) { paletteMode = m; store.set("palette-theme", m); setSkin("classic"); }
-  function setSkin(k) { skin = k; store.set("editor-skin", k); applyPalette(); if (window.pbThemeDialogRefresh) window.pbThemeDialogRefresh(); }
-  function setCustom(t) { customTheme = t; store.set("editor-custom", t); if (skin !== "custom") { skin = "custom"; store.set("editor-skin", "custom"); } applyPalette(); if (window.pbThemeDialogRefresh) window.pbThemeDialogRefresh(); }
+  function setSkin(k) { skin = k; store.set("editor-skin", k); withThemeSwitch(function () { applyPalette(); if (window.pbThemeDialogRefresh) window.pbThemeDialogRefresh(); }); }
+  function setCustom(t) { customTheme = t; store.set("editor-custom", t); if (skin !== "custom") { skin = "custom"; store.set("editor-skin", "custom"); } withThemeSwitch(function () { applyPalette(); if (window.pbThemeDialogRefresh) window.pbThemeDialogRefresh(); }); }
   (function buildPaletteFoot() {
     var group = h("div", { class: "pb-pal-theme", role: "radiogroup", "aria-label": "Apparence de l'éditeur" }, PALETTE_MODES.map(function (m) {
       return h("button", { type: "button", role: "radio", "aria-checked": "false", "data-pal-mode": m[0], "data-tip": "Apparence " + m[1].toLowerCase(), "aria-label": "Apparence " + m[1].toLowerCase(),
