@@ -1178,7 +1178,6 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 .pb-seo-check.is-good { border-left-color: #1f9d55; }
 .pb-seo-check.is-improve { border-left-color: #d98a00; background: var(--warning-bg); color: var(--warning-text); }
 .pb-seo-check.is-problem { border-left-color: #c0392b; background: #fdecec; color: #8a1c1c; }
-=======
 /* ==========================================================================================================================
    THÈMES DE L'ÉDITEUR : « Classique » (les jetons ci-dessus, inchangés), « Personnalisé » (jetons calculés par page-builder-theme.js et
    posés en ligne sur <body>) et « Navy Premium » (ci-dessous). Un thème ne fournit que des valeurs de jetons --editor-* : aucune règle
