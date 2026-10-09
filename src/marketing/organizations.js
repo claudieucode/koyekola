@@ -38,7 +38,8 @@ const PERMISSIONS = Object.freeze({
   "articles.read": "viewer", "articles.write": "editor", "articles.publish": "editor", "articles.delete": "admin",
   "media.read": "viewer", "media.upload": "editor", "media.write": "editor", "media.delete": "admin",
   "analytics.read": "viewer",
-  "settings.read": "admin", "settings.write": "admin",
+  "settings.read": "admin", "settings.write": "admin", "settings.sensitive": "admin", // réglages sensibles (domaine, indexation, page d'accueil, adresses) : retirables à un rôle personnalisé
+ 
   "api_keys.manage": "admin", "webhooks.manage": "admin", "domains.manage": "admin",
   "audit.read": "admin", "queue.manage": "admin",
   "members.manage": "owner", "organization.delete": "owner",

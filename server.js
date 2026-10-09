@@ -113,6 +113,7 @@ app.use("/uploads/marketing", express.static(path.join(uploadsRoot, "marketing")
 // SEO CORE : redirections gérées (exécutées avant toute page) et journal des erreurs 404
 app.use(require("./src/seo/notfound").middleware);
 app.use(require("./src/seo/redirects").middleware);
+app.use(siteHost.homeRouting); // page d'accueil choisie dans les réglages (site principal)
 app.use(siteHost.siteRouting); // domaine d'un site : accueil et pages à la racine
 app.use(siteHost.movedFallback); // ancienne adresse d'une page ou d'un terme → 301 vers l'adresse courante (avant les routes, qui répondraient 404 elles-mêmes)
 

@@ -28,12 +28,30 @@ function formatAmount(cents) {
   return ((cents || 0) / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
 }
 
-function formatDate(iso) {
-  return new Date(`${iso}Z`).toLocaleDateString("fr-FR", { dateStyle: "long" });
+// Réglages d'affichage des dates (langue, fuseau, formats) : fournis par le moteur de réglages, rechargés à chaque modification.
+// Les dates enregistrées restent en temps universel (UTC) : seule leur AFFICHAGE change. Sans réglage : français, fuseau de Paris.
+const FALLBACK = { locale: "fr-FR", timeZone: "Europe/Paris", dateFormat: "long", timeFormat: "24h" };
+// Lu à chaque appel (le moteur de réglages mémorise le résultat : aucune requête en base par date affichée)
+function current() {
+  try {
+    const m = require("../services/settings").main();
+    return { locale: m.locale.replace("_", "-"), timeZone: m.timezone, dateFormat: m.dateFormat, timeFormat: m.timeFormat };
+  } catch { return FALLBACK; }
 }
-
+const refresh = () => {};
+const optsFor = (cfg, withTime) => ({ dateStyle: withTime && cfg.dateFormat === "long" ? "medium" : cfg.dateFormat, ...(withTime ? { timeStyle: "short", hour12: cfg.timeFormat === "12h" } : {}), timeZone: cfg.timeZone });
+// Date d'un instant (millisecondes ou texte UTC) selon la configuration d'un site (ou du site principal)
+function formatInstant(value, cfg = null, { withTime = false } = {}) {
+  const c = cfg || current();
+  const date = typeof value === "number" ? new Date(value) : new Date(String(value).replace(" ", "T").replace(/Z?$/, "Z"));
+  if (Number.isNaN(date.getTime())) return "";
+  try { return date.toLocaleString(c.locale, optsFor(c, withTime)); } catch { return date.toLocaleString("fr-FR", optsFor(FALLBACK, withTime)); }
+}
+function formatDate(iso) {
+  return formatInstant(`${iso}`, null, { withTime: false }).replace(/ à /, " ");
+}
 function formatDateTime(iso) {
-  return new Date(`${iso}Z`).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+  return formatInstant(`${iso}`, null, { withTime: true });
 }
 
 // 135 -> "2 h 15", 45 -> "45 min", 120 -> "2 h" ; renvoie "" si la durée est inconnue
@@ -71,4 +89,4 @@ function levelLabel(level) {
   return LEVEL_LABELS[level] || level;
 }
 
-module.exports = { LANGUAGES, cleanLanguage, languageLabel, avatarColor, slugify, formatPrice, formatAmount, formatDate, formatDateTime, formatDuration, formatClock, isNewCourse, levelLabel };
+module.exports = { refresh, formatInstant, LANGUAGES, cleanLanguage, languageLabel, avatarColor, slugify, formatPrice, formatAmount, formatDate, formatDateTime, formatDuration, formatClock, isNewCourse, levelLabel };

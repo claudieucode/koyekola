@@ -388,8 +388,10 @@ describe("lot 6 — Site", () => {
   let srv, boss, db;
   before(async () => {
     srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
-    boss = await loginInstructor(srv); db = srv.db();
+    db = srv.db();
+    // Écrit avant toute requête : le serveur (processus séparé) garde les réglages SEO en cache dès la première page servie.
     db.prepare("INSERT OR REPLACE INTO seo_settings (key, value) VALUES ('site_name', ?), ('org_logo', ?)").run(JSON.stringify("Atelier Kola"), JSON.stringify("/uploads/thumbnails/logo-kola.png"));
+    boss = await loginInstructor(srv);
   });
   after(() => srv.stop());
 

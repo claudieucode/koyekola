@@ -46,7 +46,8 @@ function guardPublication(fields, status, req, extra = {}) {
 }
 
 const router = express.Router();
-const PER_PAGE = 10;
+// Articles par page : réglage « Lecture » (Paramètres), 10 par défaut
+const perPage = () => require("../services/settings").main().postsPerPage;
 const MAX_MARKDOWN = 50000;
 const MAX_HTML = 250000;
 const NEWSLETTER_KEY = "blog.newsletter_form";
@@ -131,6 +132,7 @@ function renderList(req, res, { filter = null } = {}) {
     rows = rows.filter((p) => p.id !== featured.id);
   }
   const total = rows.length;
+  const PER_PAGE = perPage();
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const asked = Number.parseInt(req.query.page, 10);
   const page = Number.isInteger(asked) && asked >= 1 && asked <= pages ? asked : 1;

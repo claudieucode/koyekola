@@ -73,16 +73,7 @@ module.exports = () => {
     }
   });
 
-  // ----- Réglages -----
-  const SETTINGS = "/marketing/site-web/parametres/commentaires";
-  router.get("/site-web/parametres/commentaires", need("settings.read"), (req, res) => {
-    res.render("marketing/comments-settings", { title: "Réglages des commentaires", active: "parametres/commentaires", cfg: comments.settings(), canWrite: req.mk.can("settings.write"), retention: comments.IP_RETENTION_DAYS, maxLinks: comments.MAX_LINKS });
-  });
-  router.post("/site-web/parametres/commentaires", need("settings.write"), (req, res) => {
-    const b = req.body || {};
-    comments.saveSettings({ enabled_default: b.enabled_default === "1", guests_allowed: b.guests_allowed === "1", moderation: b.moderation, replies_allowed: b.replies_allowed === "1", max_depth: b.max_depth, links_allowed: b.links_allowed === "1" });
-    flash(req, "ok", "Réglages des commentaires enregistrés.");
-    res.redirect(SETTINGS);
-  });
+  // Les réglages des commentaires se trouvent dans Paramètres → Commentaires (moteur de réglages, palier 14) : même adresse, même service
+
   return router;
 };

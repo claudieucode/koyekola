@@ -1,0 +1,17 @@
+<%# En-tête commun des Paramètres (palier 14) : titre, onglets des groupes disponibles pour ce périmètre, choix du site. %>
+<div class="mk-head"><h1><%= heading %></h1></div>
+<% if (typeof intro !== "undefined" && intro) { %><p class="mk-lead"><%= intro %></p><% } %>
+<nav class="mk-tabs mk-cms-tabs mk-st-tabs" aria-label="Groupes de paramètres">
+  <% groups.forEach((g) => { %><a class="mk-tab" href="<%= BASE %><%= g.key === "general" ? "" : "/" + g.slug %><%= q %>"<%- tabKey === g.key ? ' aria-current="page"' : "" %>><%= g.label %></a><% }) %>
+  <a class="mk-tab" href="<%= BASE %>/avance<%= q %>"<%- tabKey === "advanced" ? ' aria-current="page"' : "" %>>Avancé</a>
+</nav>
+<% if (sites.length || !siteOnly) { %>
+<form class="mk-cms-toolbar mk-tl-site" method="get" action="<%= BASE %><%= tabPath %>" aria-label="Choisir le périmètre">
+  <label for="st-site">Réglages de</label>
+  <select id="st-site" name="site" data-tools-site>
+    <% if (!siteOnly) { %><option value="">Site principal</option><% } %>
+    <% sites.forEach((s) => { %><option value="<%= s.id %>"<%= scope.siteId === s.id ? " selected" : "" %>><%= s.name %></option><% }) %>
+  </select>
+  <button type="submit" class="btn btn-outline btn-sm">Afficher</button>
+</form>
+<% } %>

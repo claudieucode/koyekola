@@ -64,6 +64,50 @@ check("email", "integrations", "Envoi d'e-mails", async () => {
   return smtp ? R("good", "Un serveur d'envoi (SMTP) est configuré (identifiants non affichés).") : R("info", "Aucun serveur d'envoi (SMTP) configuré sur ce serveur.", { impact: "Pas d'e-mails (confirmation, mot de passe oublié, invitations).", recommendation: "Renseigner SMTP_HOST et ses variables si des e-mails sont attendus." });
 }, { site: false });
 
+// ---------- Réglages (palier 14) : cohérence de la configuration ----------
+const settingsScope = (c) => ({ siteId: c.siteId });
+check("settings_homepage", "configuration", "Page d'accueil choisie", async (c) => {
+  const engine = require("../settings");
+  const scope = settingsScope(c);
+  const ctx = { organizationId: c.organizationId, can: () => true, orgLevel: true };
+  const id = engine.readAll(scope, ctx).homepage_page.value;
+  if (!id) return R("info", c.siteId ? "Aucune page d'accueil choisie pour ce site." : "L'accueil standard de KOLAKISA est affiché (aucune page choisie dans Paramètres → Lecture).");
+  const p = db.prepare("SELECT status, archived_at, site_id, name FROM mk_landing_pages WHERE id = ?").get(Number(id));
+  if (!p || p.archived_at) return R("critical", `La page d'accueil choisie (n° ${id}) n'existe plus ou est à la corbeille.`, { impact: c.siteId ? "L'accueil du site est introuvable." : "L'accueil standard est affiché à la place.", recommendation: "Choisir une autre page dans Paramètres → Lecture.", action: { label: "Ouvrir les paramètres", href: `/marketing/site-web/parametres/lecture${c.siteId ? `?site=${c.siteId}` : ""}` } });
+  if (p.status !== "published") return R("warning", `La page d'accueil choisie « ${p.name} » n'est pas publiée.`, { impact: c.siteId ? "L'accueil du site est introuvable." : "L'accueil standard est affiché à la place.", recommendation: "Publier la page ou en choisir une autre.", action: { label: "Ouvrir les paramètres", href: `/marketing/site-web/parametres/lecture${c.siteId ? `?site=${c.siteId}` : ""}` } });
+  if ((p.site_id ?? null) !== (c.siteId ?? null)) return R("critical", "La page d'accueil choisie appartient à un autre site.", { recommendation: "Choisir une page de ce site." });
+  return R("good", `Page d'accueil : « ${p.name} » (publiée).`);
+});
+check("settings_locale", "configuration", "Langue et fuseau horaire", async (c) => {
+  const engine = require("../settings");
+  const ctx = { organizationId: c.organizationId, can: () => true, orgLevel: true };
+  const v = engine.readAll(settingsScope(c), ctx);
+  if (!engine.validTimezone(String(v.timezone.value))) return R("critical", `Fuseau horaire inconnu : ${String(v.timezone.value).slice(0, 40)}.`, { impact: "Les dates sont affichées avec le fuseau de Paris par défaut.", recommendation: "Choisir un fuseau reconnu dans Paramètres → Général." });
+  return R("good", `Langue « ${v.language.value} », fuseau « ${v.timezone.value} », date ${v.date_format.value}, heure ${v.time_format.value}.`);
+});
+check("settings_visibility", "configuration", "Visibilité pour les moteurs de recherche", async (c) => {
+  const engine = require("../settings");
+  const ctx = { organizationId: c.organizationId, can: () => true, orgLevel: true };
+  const closed = engine.readAll(settingsScope(c), ctx).search_visibility.value === "closed";
+  const production = process.env.NODE_ENV === "production";
+  if (closed) return R(production ? "critical" : "warning", "Le site est masqué aux moteurs de recherche (Paramètres → Indexation).", { impact: "Aucune page n'apparaît dans les résultats de recherche.", recommendation: "Si ce n'est pas voulu, rendre le site visible.", action: { label: "Ouvrir les paramètres", href: `/marketing/site-web/parametres/indexation${c.siteId ? `?site=${c.siteId}` : ""}` } });
+  return R("good", "Le site est visible pour les moteurs de recherche.");
+});
+check("settings_admin_email", "configuration", "E-mail administratif", async (c) => {
+  if (c.siteId !== null) return R("info", "L'e-mail administratif est un réglage du site principal.");
+  const engine = require("../settings");
+  const e = engine.main().adminEmail;
+  return e ? R("good", "Un e-mail administratif est défini (les messages du formulaire de contact lui sont envoyés).") : R("info", "Aucun e-mail administratif défini : l'adresse de l'hébergeur est utilisée.", { recommendation: "Renseigner Paramètres → Général → E-mail administratif.", action: { label: "Ouvrir les paramètres", href: "/marketing/site-web/parametres" } });
+}, { site: true });
+check("settings_privacy_page", "configuration", "Page de confidentialité", async (c) => {
+  const engine = require("../settings");
+  const ctx = { organizationId: c.organizationId, can: () => true, orgLevel: true };
+  const id = engine.readAll(settingsScope(c), ctx).privacy_page.value;
+  if (!id) return R("info", "Aucune page de confidentialité choisie.", { recommendation: "Si le site collecte des données, choisir la page qui présente votre politique (Paramètres → Confidentialité)." });
+  const p = db.prepare("SELECT status, archived_at, name FROM mk_landing_pages WHERE id = ?").get(Number(id));
+  return !p || p.archived_at || p.status !== "published" ? R("warning", "La page de confidentialité choisie n'est plus publiée : aucun lien n'est affiché.", { recommendation: "Publier la page ou en choisir une autre." }) : R("good", `Page de confidentialité : « ${p.name} ».`);
+});
+
 // ---------- Sécurité ----------
 check("admin_protected", "security", "Administration protégée", async (c) => {
   const r = await probe.request(c.port, "/marketing", { host: c.host });

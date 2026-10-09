@@ -23,7 +23,7 @@ function createMarketingRouters({ db }) {
     m = /^\/site-web\/composants\/(\d+)/.exec(p);
     if (m) { const r = db.prepare("SELECT site_id FROM mk_web_components WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
     // Outils (palier 13) : le site choisi (?site=) fixe le contexte des droits ; sans lui, l'organisation / le site principal
-    if (/^\/site-web\/outils(?:\/|$)/.test(p)) {
+    if (/^\/site-web\/(?:outils|parametres)(?:\/|$)/.test(p)) {
       const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
       if (/^\d{1,12}$/.test(String(raw ?? ""))) return { siteId: Number(raw) };
       return null;
@@ -73,6 +73,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./pageTests")());
   admin.use(require("./articles")()); // KOLAKISA CMS → Articles (palier 4) : gestion des articles du blog
   admin.use(require("./taxonomies")()); // Catégories et étiquettes (palier 5)
+  admin.use(require("./settings")()); // Paramètres : moteur de réglages (palier 14) — avant les modules qui avaient leur propre écran
   admin.use(require("./comments")()); // Commentaires : modération et réglages (palier 6)
   admin.use(require("./navigation")()); // Navigation : menus, éléments, emplacements (palier 7)
   admin.use(require("./history")()); // Historique des modifications et corbeille commune (palier 10)

@@ -114,7 +114,9 @@ function saveUpload(ctx, { buffer, originalName, declaredType, allow = null }) {
   if (!info) throw new MarketingError("invalid_field", refuse(originalName, declaredType));
   if (allow && info.type === "video" && !allow.includes("video")) throw new MarketingError("invalid_field", "Un e-mail ne peut pas lire de vidéo. Publiez-la (YouTube, Vimeo…) puis utilisez le bloc « Vidéo » avec son adresse : le message affichera une miniature cliquable.");
   if (allow && !allow.includes(info.type)) throw new MarketingError("invalid_field", `Ce fichier est ${LIMIT_WORDS[info.type]} : ici, seuls ${allow.map((t) => TYPE_LABELS[t].toLowerCase()).join(" et ")} sont acceptés. Les autres fichiers s'envoient dans Site Web → Médias.`);
-  const max = LIMITS[info.type];
+  // Limite choisie dans Paramètres → Médias (jamais au-delà du plafond du serveur)
+  let max = LIMITS[info.type];
+  try { const m = require("../../services/settings").main().mediaLimits; const k = info.type === "pdf" ? "document" : info.type; if (m[k]) max = Math.min(max, m[k]); } catch { /* réglages indisponibles : plafond du serveur */ }
   if (buffer.length > max) throw new MarketingError("invalid_field", `Fichier trop lourd (${(buffer.length / 1048576).toFixed(1)} Mo) : ${max / 1048576} Mo au plus pour ${LIMIT_WORDS[info.type]}.`);
   if (info.type === "image" && info.mime !== "image/avif" && (!info.width || !info.height)) throw new MarketingError("invalid_field", "Image illisible : ses dimensions n'ont pas pu être lues.");
   const dir = path.join(uploadsRoot, "marketing", String(ctx.organizationId));

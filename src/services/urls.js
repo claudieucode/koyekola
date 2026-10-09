@@ -100,6 +100,8 @@ function mainHost() { try { return new URL(process.env.SITE_URL).hostname.toLowe
 const taxonomy = () => require("./taxonomy");
 // Page : « /p/<adresse> » ; page d'un site à domaine propre : racine (« / » pour son accueil, « /<adresse> » sinon)
 function pagePath(page, { hostSite = undefined } = {}) {
+  // Page d'accueil du site principal (Paramètres → Lecture) : son adresse est « / »
+  if (page && page.id && (page.site_id === null || page.site_id === undefined) && (page.status === undefined || page.status === "published") && !page.archived_at) { try { if (require("./settings").main().homepagePage === page.id) return "/"; } catch { /* réglages indisponibles */ } }
   const site = siteInfo(page.site_id);
   const own = site && site.base ? site : null;
   // hostSite : site de la requête (domaine propre). Une page n'est servie à la racine que sur le domaine de SON site.

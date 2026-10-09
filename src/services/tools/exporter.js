@@ -10,6 +10,7 @@ const MAX_PER_TYPE = 5000;
 // Types : portée (site = lié à un site ou au site principal ; org = contenu de l'organisation), droit de lecture requis
 const TYPES = {
   site: { label: "Réglages du site", scope: "site", read: "forms.read", write: "forms.write", needsSite: true },
+  settings: { label: "Paramètres du site", scope: "site", read: "settings.read", write: "settings.write", mainOk: true },
   pages: { label: "Pages", scope: "site", read: "forms.read", write: "forms.write" },
   menus: { label: "Menus de navigation", scope: "site", read: "navigation.read", write: "navigation.write" },
   redirects: { label: "Redirections", scope: "site", read: "redirects.view", write: "redirects.create" },
@@ -19,7 +20,7 @@ const TYPES = {
   seo: { label: "Référencement (SEO)", scope: "org", read: "seo.view", write: "seo.edit" },
   comments: { label: "Commentaires", scope: "org", read: "comments.read", write: null },
 };
-const ORDER = ["site", "taxonomies", "pages", "articles", "menus", "redirects", "media", "seo", "comments"];
+const ORDER = ["site", "settings", "taxonomies", "pages", "articles", "menus", "redirects", "media", "seo", "comments"];
 
 // Types qu'une personne peut exporter / importer pour CE site : droit « tools.* » + droit de la ressource + portée
 function allowedTypes(ctx, { siteId = null, mode = "export" } = {}) {
@@ -29,6 +30,7 @@ function allowedTypes(ctx, { siteId = null, mode = "export" } = {}) {
     const m = TYPES[t];
     if (m.needsSite && siteId === null) return false;
     if (mode === "import" && !m.write) return false;
+    if (m.mainOk && siteId === null && !ctx.orgLevel) return false; // réglages du site principal : équipe de l'organisation seulement
     if (m.scope === "org" && !ctx.orgLevel) return false; // un accès limité à un site ne touche jamais au contenu de l'organisation
     return ctx.can(mode === "export" ? m.read : m.write);
   });
@@ -53,6 +55,7 @@ function count(ctx, type, siteId) {
   const org = ctx.organizationId;
   switch (type) {
     case "site": return siteId === null ? 0 : 1;
+    case "settings": return 1;
     case "pages": return db.prepare("SELECT COUNT(*) n FROM mk_landing_pages WHERE organization_id = ? AND site_id IS ? AND archived_at IS NULL").get(org, siteId).n;
     case "menus": return db.prepare("SELECT COUNT(*) n FROM nav_menus WHERE site_id IS ?").get(siteId).n;
     case "redirects": return db.prepare("SELECT COUNT(*) n FROM seo_redirects WHERE site_id IS ?").get(siteId).n;
@@ -75,6 +78,15 @@ const EXPORTERS = {
     // Réglages non sensibles : pas d'adresse publique (propre au domaine d'origine, réattribuée par l'administrateur du site de destination)
     const { seo = {}, ...rest } = s;
     return { ref: refOf("s", site.id), name: site.name, tokens: site.tokens, settings: { ...rest, seo: { title: seo.title || "", ogImage: seo.ogImage || "", follow: seo.follow !== false } }, homePageRef: site.home_page_id ? refOf("p", site.home_page_id) : null };
+  },
+
+  // Valeurs des réglages du périmètre (aucun secret : le moteur de réglages n'en contient pas) ; l'import ne rejoue jamais les réglages sensibles
+  async settings(ctx, api, siteId) {
+    const engine = require("../settings");
+    const scope = { siteId };
+    const values = engine.readAll(scope, ctx);
+    api.advance({ done: 1 });
+    return { scope: siteId ? "site" : "main", values: Object.fromEntries(engine.defsFor(scope).map((d) => [d.key, { value: values[d.key].value, type: d.type, sensitive: Boolean(d.sensitive) }])) };
   },
 
   async pages(ctx, api, siteId) {

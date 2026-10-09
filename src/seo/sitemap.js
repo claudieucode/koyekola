@@ -83,6 +83,10 @@ function entries({ hostSite = null } = {}) {
   const final = [];
   for (const e of included) (redirected.has(e.path) ? excluded.push({ ...e, reason: "Adresse redirigée" }) : final.push(e));
   let kept = final;
+  // Visibilité masquée (Paramètres → Indexation) : aucune adresse du site principal n'est proposée aux moteurs
+  if (!hostSite && require("../middlewares/siteHost").closedBySetting()) { for (const e of final) excluded.push({ ...e, reason: "Site masqué aux moteurs de recherche (Paramètres → Indexation)" }); final.length = 0; }
+  // Page d'accueil choisie dans les réglages : une seule entrée pour « / »
+  { const seen = new Set(); for (let i = 0; i < final.length; i++) { const key = `${final[i].base || ""}${final[i].path}`; if (seen.has(key)) final.splice(i--, 1); else seen.add(key); } }
   if (hostSite) {
     for (const e of excluded.splice(0)) if (e.siteId === hostSite.id) excluded.push(e);
     kept = final.filter((e) => e.siteId === hostSite.id);
