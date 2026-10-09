@@ -310,7 +310,8 @@ const loopProps = (p) => {
   return { loop: {
     source, count: q.count, category: line(l.category, 80), sort,
     ...(explicit ? { orderby: ob, order: od } : {}), ...(offset ? { offset } : {}), ...filters,
-    ...(paginate ? { paginate: true, pagination: pagination !== "none" ? pagination : "numbers" } : {}),
+    // Défilement horizontal (carrousel) : pas de pagination (les éléments défilent, ils ne se tournent pas en pages)
+    ...(l.slider === true ? { slider: true } : paginate ? { paginate: true, pagination: pagination !== "none" ? pagination : "numbers" } : {}),
     ...(l.urlFilter === true ? { urlFilter: true } : {}),
     empty: line(l.empty, 160) || EMPTY_LOOP[source] || "Aucun résultat ne correspond.",
   } };
@@ -813,7 +814,7 @@ const WIDGETS = {
 // SoundCloud). Le serveur valide l'élément créé comme tout autre.
 // Sous-catégories de la catégorie « Site » (ordre d'affichage) et rattachement des éléments qui ne sont pas des raccourcis
 const SITE_SUBS = ["Navigation et identité", "Contenu de l'article", "Archives et recherche", "Listes dynamiques", "Compte et panier"];
-const SITE_SUB = { sitelogo: SITE_SUBS[0], sitetitle: SITE_SUBS[0], menu: SITE_SUBS[0], breadcrumb: SITE_SUBS[0], search: SITE_SUBS[0], copyright: SITE_SUBS[0], postnav: SITE_SUBS[0],
+const SITE_SUB = { cmsmenu: SITE_SUBS[0], sitelogo: SITE_SUBS[0], sitetitle: SITE_SUBS[0], menu: SITE_SUBS[0], breadcrumb: SITE_SUBS[0], search: SITE_SUBS[0], copyright: SITE_SUBS[0], postnav: SITE_SUBS[0],
   postcontent: SITE_SUBS[1], postmeta: SITE_SUBS[1], postterms: SITE_SUBS[1], authorbox: SITE_SUBS[1], postcomments: SITE_SUBS[1], toc: SITE_SUBS[1],
   archiveinfo: SITE_SUBS[2], catfilter: SITE_SUBS[2], querylist: SITE_SUBS[3], posts: SITE_SUBS[3], account: SITE_SUBS[4], minicart: SITE_SUBS[4] };
 const WIDGET_SHORTCUTS = [

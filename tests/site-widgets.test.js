@@ -5,7 +5,7 @@ const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { TEST_KEY } = require("./marketing-helpers");
 const nodes = require("../src/marketing/pages/nodes");
-const { startServer, Client, loginInstructor, newStudent } = require("./helpers");
+const { startServer, Client, loginInstructor, newStudent, createCourse } = require("./helpers");
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) Chrome/120";
 const layout = (children) => ({ id: "sect00000001", type: "layout", children: [{ id: "cont00000001", type: "container", children }] });
@@ -140,5 +140,57 @@ describe("vrai serveur : widgets du site", () => {
     const after = await get("/blog/a-un");
     assert.match(after, /class="kw-pc-body"><p>Très utile, merci !/, "commentaire listé par l'élément du modèle");
     assert.match(after, /kw-pc-reply/, "lien de réponse du moteur de commentaires");
+  });
+
+  test("menu du CMS : emplacement, menu précis, visibilité membres, sous-menu ; rien d'inventé sans menu", async () => {
+    const m = db.prepare("INSERT INTO nav_menus (name, slug) VALUES ('Principal', 'principal')").run().lastInsertRowid;
+    const ins = db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, url, label, visibility) VALUES (?, ?, ?, 'custom', ?, ?, ?)");
+    const root = ins.run(m, null, 0, "/catalogue", "Catalogue <b>", "all").lastInsertRowid;
+    ins.run(m, root, 1, "/blog", "Le blog", "all");
+    ins.run(m, null, 2, "/mon-compte", "Espace membre", "members");
+    db.prepare("INSERT INTO nav_locations (location, menu_id) VALUES ('footer', ?)").run(m);
+    const id = await newPage("Menus CMS", [layout([w("menu00000001", "cmsmenu", { location: "footer", label: "Pied" }), w("menu00000002", "cmsmenu", { location: "name", menuName: "principal", vertical: true }), w("menu00000003", "cmsmenu", { location: "header" })])]);
+    const page = await get(`/p/${db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug}`);
+    assert.equal((page.match(/class="kw-menu-link" href="\/catalogue"/g) || []).length, 2, "emplacement pied de page + menu précis");
+    assert.match(page, /Catalogue &lt;b&gt;/, "libellé échappé");
+    assert.match(page, /has-sub[\s\S]*kw-submenu[\s\S]*href="\/blog"/, "sous-menu");
+    assert.doesNotMatch(page, /Espace membre/, "entrée réservée aux membres cachée au visiteur");
+    assert.match(page, /is-vertical/);
+  });
+
+  test("modèles d'auteur, de recherche et de formation ; SEO de l'article", async () => {
+    const author = await newPage("Modèle auteur", [layout([w("aarc00000001", "archiveinfo"), w("alis00000001", "querylist", { mode: "archive", title: "AUTEUR-LISTE", showImage: false })])]);
+    assert.equal((await assign({ type: "author_archive", page_id: String(author) })).status, 302);
+    const page = await get(`/blog/auteur/${authorId}`);
+    assert.match(page, /kw-ai-title/); assert.match(page, /AUTEUR-LISTE/);
+    assert.doesNotMatch(page.slice(page.indexOf("AUTEUR-LISTE")), /Article trois/, "seulement les articles de cet auteur");
+    const search = await newPage("Modèle recherche", [layout([w("shead0000001", "heading", { text: "RECHERCHE : {{archive.search}}", level: 1 }), w("slis00000001", "querylist", { mode: "archive", title: "RESULTATS", showImage: false })])]);
+    assert.equal((await assign({ type: "search_results", page_id: String(search) })).status, 302);
+    const found = await get("/blog?q=trois");
+    assert.match(found, /RECHERCHE : trois/); const res = found.slice(found.indexOf("RESULTATS")); assert.match(res, /Article trois/); assert.doesNotMatch(res, /Article un/);
+    assert.doesNotMatch(await get("/blog"), /RECHERCHE :/, "sans recherche : le modèle de recherche ne s'applique pas");
+    // formation : le modèle remplace l'en-tête, le reste de la fiche demeure
+    const course = await createCourse(boss, srv, { title: "Retouche pro", price: 39 });
+    const slug = db.prepare("SELECT slug FROM courses WHERE title = 'Retouche pro'").get().slug;
+    db.prepare("UPDATE courses SET published = 1 WHERE slug = ?").run(slug);
+    const cp = await newPage("Modèle formation", [layout([w("cour00000001", "heading", { text: "FICHE : {{course.title}} — {{course.price}}", level: 1 })])]);
+    assert.equal((await assign({ type: "single_course", page_id: String(cp) })).status, 302);
+    const fiche = await get(`/cours/${slug}`);
+    assert.match(fiche, /FICHE : Retouche pro — 39,00/); assert.doesNotMatch(fiche, /class="course-hero"/); assert.match(fiche, /course-summary/, "le reste de la fiche demeure");
+    // SEO de l'article
+    db.prepare("UPDATE posts SET seo_title = 'Titre SEO un', seo_description = 'Description SEO un.' WHERE slug = 'a-un'").run();
+    const seo = await newPage("Modèle SEO", [layout([w("seo000000001", "heading", { text: "{{post.seo_title}}", level: 2 }), w("seo000000002", "text", { html: "<p>{{post.seo_description}}</p>" })])]);
+    assert.equal((await assign({ type: "single_post", page_id: String(seo) })).status, 302);
+    const art = await get("/blog/a-un");
+    assert.match(art, /Titre SEO un/); assert.match(art, /Description SEO un\./);
+  });
+
+  test("carrousel de boucle : la grille et la liste dynamique portent le défilement horizontal", async () => {
+    const id = await newPage("Carrousels", [layout([
+      { id: "grid00000009", type: "grid", props: { loop: { source: "posts", count: 3, slider: true, paginate: true } }, children: [w("sh0000000009", "heading", { text: "{{post.title}}", level: 3 })] },
+      w("qls000000009", "querylist", { layout: "slider", count: 3 })])]);
+    const page = await get(`/p/${db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug}`);
+    assert.match(page, /kw-loop-slider[^>]*data-kw-slider/); assert.match(page, /kw-ql-slider[^>]*data-kw-slider/);
+    assert.doesNotMatch(page, /kw-loop-pages/, "pas de pagination en carrousel");
   });
 });

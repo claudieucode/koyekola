@@ -118,6 +118,8 @@ function postWhere(ctx, q, env) {
   else if (ar && ar.type === "category") { where.push("p.category = ? COLLATE NOCASE"); args.push(String(ar.name)); }
   else if (ar && ar.type === "tag") { where.push("(',' || REPLACE(LOWER(p.tags), ', ', ',') || ',') LIKE ? ESCAPE '\\'"); args.push(`%,${likeEsc(String(ar.name).toLowerCase())},%`); }
   if (ar && ar.type === "author") { where.push("p.author_id = ?"); args.push(Number.isInteger(ar.id) ? ar.id : -1); }
+  // Recherche saisie sur la page de l'archive (?q=…) : la liste « suit l'archive » la respecte aussi
+  if (ar && ar.search && !q.search) { const like = `%${likeEsc(String(ar.search).slice(0, 100))}%`; where.push("(p.title LIKE ? ESCAPE '\\' OR p.excerpt LIKE ? ESCAPE '\\' OR p.content LIKE ? ESCAPE '\\')"); args.push(like, like, like); }
   if (q.dateAfter) { where.push("p.published_at >= ?"); args.push(`${q.dateAfter} 00:00:00`); }
   if (q.dateBefore) { where.push("p.published_at < ?"); args.push(`${q.dateBefore} 23:59:59`); }
   if (q.withinDays) { where.push("p.published_at >= ?"); args.push(new Date(Date.now() - q.withinDays * 86400000).toISOString().slice(0, 19).replace("T", " ")); }

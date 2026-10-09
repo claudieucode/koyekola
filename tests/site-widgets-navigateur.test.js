@@ -76,4 +76,24 @@ describe("widgets du site (navigateur)", { skip: SKIP }, () => {
     }, { what: "liste dynamique enregistrée dans le brouillon", timeout: 12000 });
     assert.deepEqual(errors, []);
   });
+
+  test("carrousel de boucle : flèches ajoutées, le clic fait défiler, « Précédent » désactivé au début", async () => {
+    const id = Number((await boss.post("/marketing/pages", { name: "Carrousel" })).location.match(/(\d+)$/)[1]);
+    const rev = db().prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(id).revision;
+    const content = { sections: [{ id: "sect00000002", type: "layout", children: [{ id: "cont00000002", type: "container", children: [
+      { id: "grid00000002", type: "grid", props: { loop: { source: "posts", count: 5, slider: true } }, children: [
+        { id: "card00000002", type: "container", styles: { desktop: { width: "300px" } }, children: [{ id: "head00000002", type: "heading", props: { text: "{{post.title}}", level: 3 } }] }] }] }] }] };
+    assert.equal((await boss.request(`/marketing/pages/${id}/brouillon`, { method: "PUT", json: { revision: rev, content }, headers: { Origin: srv.base } })).status, 200);
+    assert.equal((await boss.postJson(`/marketing/pages/${id}/publier.json`, {})).status, 200);
+    const slug = db().prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug;
+    const pub = await context.newPage();
+    await pub.setViewportSize({ width: 600, height: 800 });
+    await pub.goto(`${srv.base}/p/${slug}`);
+    await pub.locator(".kw-slider-next").waitFor();
+    assert.equal(await pub.locator(".kw-slider-prev").isDisabled(), true, "début : précédent désactivé");
+    await pub.locator(".kw-slider-next").click();
+    await until(async () => (await pub.evaluate(() => document.querySelector(".kw-loop-slider").scrollLeft)) > 50, { what: "le carrousel a défilé" });
+    assert.equal(await pub.locator(".kw-slider-prev").isDisabled(), false);
+    await pub.close();
+  });
 });

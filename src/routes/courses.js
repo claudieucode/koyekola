@@ -5,6 +5,7 @@ const { lessonAccess } = require("../services/access");
 const { parseVideoUrl } = require("../utils/video");
 const { slugify, cleanLanguage } = require("../utils/format");
 const { absoluteUrl, plainText } = require("../utils/seo");
+const themeRender = require("../marketing/web/themeRender");
 const { currentSlugFor } = require("../services/slugs");
 const { buildProgramPdf } = require("../services/programPdf");
 const { courseTexts, htmlText } = require("../utils/richText");
@@ -240,8 +241,12 @@ router.get("/cours/:slug", (req, res) => {
     { name: course.title },
   ];
 
-  res.render("course-detail", {
-    course, sections, totalMinutes, lessonCount, enrolled, inCart, isOwner, reviews, myReview, crumbs, faqs, texts,
+  // Modèle de thème « Formation » (Page Builder) : remplace l'en-tête de la fiche ; le programme, l'achat et les avis restent
+  const courseScope = { title: course.title, subtitle: course.subtitle || "", priceCents: course.price_cents || 0, url: `/cours/${encodeURIComponent(course.slug)}`,
+    image: /^\/uploads\/thumbnails\/[A-Za-z0-9._-]+$/.test(course.thumbnail_path || "") || /^https:\/\/[^\s"'<>]+$/.test(course.thumbnail_path || "") ? course.thumbnail_path : "",
+    category: course.category || "", instructor: course.instructor_name || "", description: plainText(course.description || "").slice(0, 400) };
+  themeRender.renderRegion(req, res, db, "single_course", { category: course.category || "", scope: { course: courseScope } }, (themeTemplate) => res.render("course-detail", {
+    themeTemplate, course, sections, totalMinutes, lessonCount, enrolled, inCart, isOwner, reviews, myReview, crumbs, faqs, texts,
     completedIds, progress, promise, instructor, similar, ratingRows, moreReviewsUrl,
     seo: seoPages.course(req, course, { description, crumbs, faqs, timeRequired: isoDuration(totalMinutes), language: cleanLanguage(course.language) }),
     objectives: texts.objectives,
@@ -250,7 +255,7 @@ router.get("/cours/:slug", (req, res) => {
     skills: texts.skills,
     introVideo: parseVideoUrl(course.intro_video),
     isFavorite: currentUserId ? Boolean(db.prepare("SELECT 1 FROM favorites WHERE user_id = ? AND course_id = ?").get(currentUserId, course.id)) : false,
-  });
+  }));
 });
 
 // Chapitres et leçons d'une formation, dans l'ordre enregistré (source unique pour le plan et le PDF)
