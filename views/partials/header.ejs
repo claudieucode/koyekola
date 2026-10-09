@@ -7,33 +7,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <% /* Balises SEO : calculées par le SEO CORE (src/seo/resolver.js), une seule source pour toute la page */
    const h = seoHead((typeof seo !== "undefined" && seo) || {}, typeof title !== "undefined" ? title : null); %>
-  <title><%= h.title %></title>
-  <meta name="description" content="<%= h.description %>">
+  <%- include("seo-head-tags", { h }) %>
   <meta name="theme-color" content="#0277b6">
-  <% if (h.noindex) { %><meta name="robots" content="noindex, nofollow">
-  <% } else { %><% if (h.robots) { %><meta name="robots" content="<%= h.robots %>">
-  <% } %><link rel="canonical" href="<%= h.canonical %>">
-  <meta property="og:site_name" content="<%= h.siteName %>">
-  <meta property="og:locale" content="<%= h.locale %>">
-  <meta property="og:type" content="<%= h.ogType %>">
-  <meta property="og:title" content="<%= h.ogTitle %>">
-  <meta property="og:description" content="<%= h.ogDescription %>">
-  <meta property="og:url" content="<%= h.ogUrl %>">
-  <% if (h.publishedTime) { %><meta property="article:published_time" content="<%= h.publishedTime %>">
-  <% } %><% if (h.modifiedTime) { %><meta property="article:modified_time" content="<%= h.modifiedTime %>">
-  <% } %><% if (h.section) { %><meta property="article:section" content="<%= h.section %>">
-  <% } %><% h.tags.forEach((t) => { %><meta property="article:tag" content="<%= t %>">
-  <% }) %>  <% if (h.image) { %><meta property="og:image" content="<%= h.image %>">
-  <% if (h.imageWidth && h.imageHeight) { %><meta property="og:image:width" content="<%= h.imageWidth %>">
-  <meta property="og:image:height" content="<%= h.imageHeight %>">
-  <% } %><% if (h.imageAlt) { %><meta property="og:image:alt" content="<%= h.imageAlt %>">
-  <% } } %><% if (h.twitterImage) { %><meta name="twitter:image" content="<%= h.twitterImage %>">
-  <% if (h.imageAlt) { %><meta name="twitter:image:alt" content="<%= h.imageAlt %>">
-  <% } } %><meta name="twitter:card" content="<%= h.twitterCard %>">
-  <meta name="twitter:title" content="<%= h.twitterTitle %>">
-  <meta name="twitter:description" content="<%= h.twitterDescription %>">
-  <% if (h.jsonLd && h.jsonLd.length) { %><%- jsonLdTags(h.jsonLd) %>
-  <% } %><% } %>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/fonts/figtree-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin>

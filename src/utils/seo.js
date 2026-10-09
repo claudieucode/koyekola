@@ -3,7 +3,8 @@
 // Adresse publique du site : SITE_URL si elle est définie (indispensable en ligne, derrière un proxy),
 // sinon celle de la requête en cours (pratique en local).
 function siteBase(req) {
-  const configured = (process.env.SITE_URL || "").trim().replace(/\/+$/, "");
+  // Adresse propre à un site du CMS (réglages SEO du site), posée sur la requête par le moteur SEO ; sinon SITE_URL
+  const configured = String((req && req.seoBase) || process.env.SITE_URL || "").trim().replace(/\/+$/, "");
   return configured || `${req.protocol}://${req.get("host")}`;
 }
 

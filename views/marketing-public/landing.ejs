@@ -4,25 +4,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <%
-    const seo = (() => { try { return typeof page.seo === "string" ? JSON.parse(page.seo || "{}") : (page.seo || {}); } catch { return {}; } })();
-    const abs = (u) => (!u ? "" : /^https:\/\//.test(u) ? u : `${String(process.env.SITE_URL || "").replace(/\/+$/, "")}${u}`);
-    const shareImg = seo.ogImage || (page.sections.find((s) => s.type === "hero" && s.image) || {}).image || (sx && sx.identity.logoUrl) || "";
-    const canonical = seo.canonical || abs(`/p/${page.slug}`);
-    const indexable = page.indexable && !seo.noindex && !preview && !(sx && sx.extras.noindex);
-    const siteStyle = typeof site !== "undefined" && site ? tokensToCss(site.tokens) : "";
-  %>
-  <title><%= page.title || page.name %></title>
-  <% const metaDescription = page.description || (sx && sx.identity.description) || ""; %>
-  <% if (metaDescription) { %><meta name="description" content="<%= metaDescription %>"><meta property="og:description" content="<%= metaDescription %>"><% } %>
-  <% if (siteX) { %><meta property="og:site_name" content="<%= siteX.name %>"><% } %>
-  <meta property="og:title" content="<%= page.title || page.name %>">
-  <meta property="og:type" content="website">
-  <% if (canonical && /^https:/.test(canonical)) { %><link rel="canonical" href="<%= canonical %>"><meta property="og:url" content="<%= canonical %>"><% } %>
-  <% if (shareImg) { %><meta property="og:image" content="<%= abs(shareImg) %>"><meta name="twitter:card" content="summary_large_image"><% } else { %><meta name="twitter:card" content="summary"><% } %>
-  <meta name="robots" content="<%= indexable ? "index, follow" : "noindex, nofollow" %>">
-  <% const faqs = page.sections.filter((x) => x.type === "faq" && !x.hidden).flatMap((x) => x.items); if (indexable && faqs.length) { %>
-  <script type="application/ld+json"><%- JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) }).replace(/</g, "\\u003c") %></script><% } %>
+  <%# Balises SEO : calculées par le SEO CORE (src/seo/webPages.js) — une seule source pour l'aperçu, le canevas et la page publique %>
+  <% const h = webPageSeo(page, siteX, preview || (typeof builder !== "undefined" && builder)); const siteStyle = siteX ? tokensToCss(siteX.tokens) : ""; %>
+  <%- include("../partials/seo-head-tags", { h }) %>
   <% if (sx && sx.identity.faviconUrl) { %><link rel="icon" href="<%= sx.identity.faviconUrl %>"<% if (/\.svg(\?|$)/i.test(sx.identity.faviconUrl)) { %> type="image/svg+xml"<% } %>><% } else { %><link rel="icon" href="/favicon.svg" type="image/svg+xml"><% } %>
   <link rel="stylesheet" href="<%= asset("/css/landing.css") %>">
   <%# Styles du thème et de la mise en page du site : avant les styles des éléments, qui restent prioritaires %>

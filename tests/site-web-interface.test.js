@@ -144,7 +144,7 @@ describe("pages : brouillon, aperçu, publication, versions", () => {
     await boss.post(`/marketing/pages/${id}`, editorBody(id, { title: "Offre d'automne : -30 %", description: "Toutes les formations photo à -30 %.", indexable: "on" }));
     await boss.post(`/marketing/pages/${id}/publier`, {});
     const pub = (await anon.get(`/p/${slug}`, { headers: UA })).text;
-    assert.match(pub, /<title>Offre d&#39;automne : -30 %<\/title>/);
+    assert.match(pub, /<title>Offre d&#39;automne : -30 % · KOLAKISA<\/title>/);
     assert.match(pub, /<meta name="robots" content="index, follow">/);
     assert.match(pub, new RegExp(`<link rel="canonical" href="https://k.test/p/${slug}">`));
     assert.match((await anon.get("/sitemap.xml")).text, new RegExp(`https://k.test/p/${slug}<`));

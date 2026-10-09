@@ -125,7 +125,7 @@ module.exports = () => {
   const siteSettings = require("../pages/siteSettings");
   const settingsPayload = (req, site) => ({
     site: { id: site.id, name: site.name }, revision: site.settings_revision, tokens: site.tokens, settings: site.settings,
-    canWrite: req.mk.can("forms.write"), canCode: req.mk.can("pages.code"),
+    canWrite: req.mk.can("forms.write"), canCode: req.mk.can("pages.code"), canSeo: req.mk.can("seo.edit"),
     usage: pages.colorUsage(req.mk.ctx, site.id),
     catalog: {
       colorKeys: tokens.COLOR_KEYS, colorLabels: tokens.COLOR_LABELS, maxCustomColors: tokens.MAX_CUSTOM_COLORS,
@@ -147,6 +147,17 @@ module.exports = () => {
       if (body.settings && body.settings.customCss !== undefined && String(body.settings.customCss).trim() !== String(current.settings.customCss).trim() && !req.mk.can("pages.code")) {
         const { MarketingError } = require("../errors");
         throw new MarketingError("forbidden", "Le CSS personnalisé du site est réservé aux comptes autorisés à écrire du code (permission « pages.code »).");
+      }
+      // Référencement du site : réglage SEO réservé à la permission « seo.edit » (la description du site et noindex en font partie)
+      if (body.settings && !req.mk.can("seo.edit")) {
+        const sx = require("../pages/siteSettings");
+        const norm = (st) => JSON.stringify({ seo: st.seo, description: st.identity && st.identity.description, noindex: st.extras && st.extras.noindex });
+        let next = null;
+        try { next = sx.normalizeSettings(body.settings); } catch { next = null; }
+        if (next && norm(next) !== norm(current.settings)) {
+          const { MarketingError } = require("../errors");
+          throw new MarketingError("forbidden", "Vous n'avez pas la permission de modifier les réglages SEO du site (permission « seo.edit »).");
+        }
       }
       const site = pages.saveSiteDesign(req.mk.ctx, current.id, { tokens: body.tokens, settings: body.settings, name: body.name, revision: body.revision });
       res.set("Cache-Control", "no-store").json(settingsPayload(req, site));

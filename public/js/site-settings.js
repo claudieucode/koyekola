@@ -116,6 +116,7 @@
     transitions: { title: "Transitions de page", parent: "home" },
     css: { title: "CSS personnalisé", parent: "home" },
     extras: { title: "Réglages supplémentaires", parent: "home" },
+    seo: { title: "Référencement (SEO)", parent: "home" },
   };
   function go(name) { view = name; render(); var first = bodyEl.querySelector("button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])"); if (first) first.focus({ preventScroll: true }); }
   function render() {
@@ -126,7 +127,7 @@
     bodyEl.textContent = "";
     bodyEl.scrollTop = 0;
     ({ home: renderHome, colors: renderColors, fonts: renderFonts, typography: renderTypography, buttons: renderButtons, images: renderImages, forms: renderForms,
-       identity: renderIdentity, background: renderBackground, layout: renderLayout, lightbox: renderLightbox, transitions: renderTransitions, css: renderCss, extras: renderExtras })[view]();
+       identity: renderIdentity, background: renderBackground, layout: renderLayout, lightbox: renderLightbox, transitions: renderTransitions, css: renderCss, extras: renderExtras, seo: renderSeo })[view]();
     updateHistoryButtons();
   }
 
@@ -153,6 +154,7 @@
       entry("Mise en page", "Largeurs, marges, points de rupture", "layout"), entry("Visionneuse", "Agrandissement des images de galerie", "lightbox"),
       entry("Transitions de page", "Effet lors du changement de page", "transitions"), entry("CSS personnalisé", "Règles CSS de tout le site", "css"),
       entry("Réglages supplémentaires", "Langue, défilement, référencement", "extras"),
+      entry("Référencement (SEO)", "Titre, description, image de partage, indexation", "seo"),
     ]));
     bodyEl.appendChild(h("p", { class: "ss-help" }, ["Besoin d'aide ? ", h("a", { href: "/marketing/site-web/sites/" + state.site.id, target: "_blank", rel: "noopener" }, ["Ouvrir la fiche du site"])]));
   }
@@ -434,6 +436,27 @@
     bodyEl.appendChild(section("Référencement", [
       { kind: "toggle", path: "settings.extras.noindex", label: "Demander aux moteurs de recherche de ne pas indexer ce site", hint: "S'applique à toutes les pages du site, en plus du réglage de chaque page." },
     ]));
+  }
+
+  // Référencement du site : valeurs par défaut des pages du site (une page peut toujours avoir les siennes, dans son panneau SEO)
+  function renderSeo() {
+    bodyEl.appendChild(h("p", { class: "ss-hint", text: "Valeurs par défaut des pages du site. Ordre de priorité : le réglage SEO de la page l'emporte, puis son titre et sa description, puis ces réglages du site, puis ceux de KOLAKISA (Réglages SEO)." }));
+    if (!state.canSeo) bodyEl.appendChild(h("p", { class: "ss-note is-error", text: "Vous pouvez lire ces réglages, pas les modifier (permission « seo.edit »)." }));
+    var wrap = h("div", { class: "ss-seo" }, []);
+    wrap.appendChild(section("Titre et description", [
+      { kind: "text", path: "settings.seo.title", label: "Nom du site dans les résultats", max: 70, hint: "Ajouté après le titre de chaque page (« Titre · Nom »). Vide : le nom du site." },
+      { kind: "textarea", path: "settings.identity.description", label: "Description du site", max: 300, rows: 3, hint: "Utilisée par les pages qui n'ont pas leur propre description." },
+    ]));
+    wrap.appendChild(section("Partage sur les réseaux", [
+      { kind: "image", path: "settings.seo.ogImage", label: "Image de partage par défaut", hint: "Pour les pages sans image de partage ni bandeau. Idéalement 1200 × 630. Choisie dans la médiathèque." },
+    ]));
+    wrap.appendChild(section("Indexation et adresse", [
+      { kind: "toggle", path: "settings.extras.noindex", label: "Demander aux moteurs de ne pas indexer ce site", hint: "Toutes les pages du site sont alors en noindex (et absentes du plan du site)." },
+      { kind: "toggle", path: "settings.seo.follow", label: "Autoriser les moteurs à suivre les liens des pages", hint: "Décoché : toutes les pages du site sont publiées en nofollow." },
+      { kind: "text", path: "settings.seo.publicUrl", label: "Adresse publique du site (facultative)", max: 200, hint: "Ex. https://www.monsite.com — sans chemin. Utilisée pour les adresses canoniques, le partage et les données structurées. Vide : l'adresse de KOLAKISA." },
+    ]));
+    if (!state.canSeo) wrap.querySelectorAll("input, select, textarea, button").forEach(function (el) { el.disabled = true; });
+    bodyEl.appendChild(wrap);
   }
 
   // ---------- Couleurs globales ----------

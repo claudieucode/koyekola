@@ -117,7 +117,8 @@ describe("éditeur visuel (vrai serveur)", () => {
     assert.match(html, /lp-block lp-block-text lp-hide-mobile lp-hide-tablet/);
     assert.match(html, /lp-block lp-block-hero lp-bg-dark lp-w-full/);
     assert.match(html, /lp-block lp-block-cta lp-pad-xl lp-al-center/);
-    const ld = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
+    // Palier 11 : un graphe unique (Organisation, site, page, FAQ) relié par des identifiants
+    const ld = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1])["@graph"].find((n) => n["@type"] === "FAQPage");
     assert.equal(ld["@type"], "FAQPage");
     assert.equal(ld.mainEntity[0].name, "Combien de temps ?");
     const link = html.match(/href="(\/p\/[^"]+\/clic\/\d+)">Je commence/)[1];

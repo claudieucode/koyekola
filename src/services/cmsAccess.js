@@ -29,6 +29,7 @@ const GROUPS = [
     ["articles.read", "Voir les articles", "view"], ["articles.edit_own", "Gérer ses propres articles", "edit"], ["articles.write", "Gérer tous les articles", "edit"],
     ["articles.publish", "Publier", "publish"], ["articles.delete", "Supprimer définitivement", "delete"]] },
   { key: "revisions", label: "Historique et corbeille", perms: [["revisions.view", "Voir l'historique des modifications", "view"], ["revisions.restore", "Restaurer une ancienne version", "edit"], ["revisions.delete", "Supprimer des versions de l'historique", "delete"]] },
+  { key: "seo", label: "Référencement (SEO)", perms: [["seo.view", "Voir l'analyse et l'aperçu SEO", "view"], ["seo.edit", "Modifier les réglages SEO (pages, site)", "edit"]] },
   { key: "taxonomies", label: "Catégories et étiquettes", perms: [["taxonomies.read", "Voir", "view"], ["taxonomies.write", "Créer et modifier", "edit"], ["taxonomies.delete", "Supprimer et fusionner", "delete"]] },
   { key: "media", label: "Médias", perms: [["media.read", "Voir", "view"], ["media.upload", "Ajouter", "create"], ["media.write", "Modifier", "edit"], ["media.delete", "Supprimer définitivement", "delete"]] },
   { key: "comments", label: "Commentaires", perms: [["comments.read", "Voir", "view"], ["comments.moderate", "Modérer", "publish"], ["comments.delete", "Supprimer définitivement", "delete"], ["comments.email", "Voir les e-mails des invités", "view"]] },

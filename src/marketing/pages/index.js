@@ -44,6 +44,13 @@ function normalizeSeo(input = {}) {
   if (line(src.description, 160)) seo.description = line(src.description, 160);
   if (canonical) seo.canonical = canonical;
   if (src.noindex === true) seo.noindex = true;
+  // Directives robots (palier 11) : suivi des liens et directives avancées, seulement si elles sont activées
+  for (const flag of ["nofollow", "noarchive", "nosnippet", "noimageindex"]) if (src[flag] === true) seo[flag] = true;
+  // Partage social et mot-clé principal : valeurs propres à la page (sinon repli automatique du moteur SEO)
+  if (line(src.ogTitle, 95)) seo.ogTitle = line(src.ogTitle, 95);
+  if (line(src.ogDescription, 200)) seo.ogDescription = line(src.ogDescription, 200);
+  if (src.twitterCard === "summary" || src.twitterCard === "summary_large_image") seo.twitterCard = src.twitterCard;
+  if (line(src.focusKeyword, 80)) seo.focusKeyword = line(src.focusKeyword, 80);
   const ogImage = imageUrl(src.ogImage, "Image de partage");
   if (ogImage) seo.ogImage = ogImage;
   return seo;

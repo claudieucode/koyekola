@@ -145,6 +145,10 @@ describe("réglages du site : effet sur la page publiée (vrai serveur)", () => 
       b.settings.identity = { description: "Mode et art de vivre, choisis pour durer.", logoUrl: "/uploads/thumbnails/logo.png", logoMobileUrl: "/uploads/thumbnails/logo-mobile.png", faviconUrl: "/uploads/thumbnails/fav.png" };
       b.settings.extras.language = "en";
     });
+    // Palier 11 : une image de partage n'est publiée que si le fichier existe vraiment (aucun lien cassé)
+    const up = require("node:path").join(srv.dir, "uploads", "thumbnails");
+    require("node:fs").mkdirSync(up, { recursive: true });
+    require("node:fs").writeFileSync(require("node:path").join(up, "logo.png"), Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAX+XDSwAAAABJRU5ErkJggg==", "base64"));
     const html = await publicHtml();
     assert.match(html, /<html lang="en">/);
     assert.match(html, /<meta name="description" content="Mode et art de vivre, choisis pour durer\.">/);

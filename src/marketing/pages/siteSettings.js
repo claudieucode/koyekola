@@ -23,6 +23,9 @@ const DEFAULT_SETTINGS = Object.freeze({
   customCss: "",
   classes: [],
   extras: { language: "fr", smoothScroll: false, noindex: false },
+  // Référencement du site (palier 11) : valeurs par défaut des pages du site. La description du site est identity.description,
+  // l'interdiction d'indexer tout le site est extras.noindex : une seule source pour chaque valeur.
+  seo: { title: "", ogImage: "", publicUrl: "", follow: true },
 });
 
 const clean = (v, max) => (typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, max) : "");
@@ -132,7 +135,11 @@ function normalizeSettings(input = {}, { strict = false } = {}) {
   try { classes = require("./nodes").normalizeClassDefs(src.classes, { imageUrl: sectionsLib.imageUrl, linkUrl: sectionsLib.linkUrl }, { strict }); } catch (e) { throw bad(e.message); }
   const ex = src.extras || {};
   const extras = { language: oneOf(ex.language, Object.keys(LANGUAGES), "Langue", strict, "fr"), smoothScroll: bool(ex.smoothScroll, false), noindex: bool(ex.noindex, false) };
-  return { identity, background, layout, lightbox, transitions, customCss, classes, extras };
+  const sx = src.seo || {};
+  let publicUrl = clean(sx.publicUrl, 200).replace(/\/+$/, "");
+  if (publicUrl && !/^https:\/\/[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d{2,5})?$/i.test(publicUrl)) { if (strict) throw bad("Adresse publique du site : une adresse https:// sans chemin (ex. https://www.monsite.com)."); publicUrl = ""; }
+  const seo = { title: clean(sx.title, 70).replace(/\s+/g, " "), ogImage: mediaUrl(sx.ogImage, "Image de partage du site", strict), publicUrl, follow: bool(sx.follow, true) };
+  return { identity, background, layout, lightbox, transitions, customCss, classes, extras, seo };
 }
 
 // Points de rupture effectifs d'un site (utilisés par le CSS des éléments : pageCss) ; défauts si inconnus

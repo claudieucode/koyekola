@@ -16,6 +16,14 @@ const { renderMarkdown } = require("../../utils/markdown");
 const { attempt, need } = require("./kit");
 
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
+// Réglages SEO : modifiés seulement avec la permission « seo.edit » (vérifiée ici, pas seulement masquée dans l'interface)
+const sortedJson = (o) => JSON.stringify(Object.fromEntries(Object.entries(o || {}).sort(([a], [b]) => (a < b ? -1 : 1))));
+function sameSeo(before, after) {
+  try { return sortedJson(pages.normalizeSeo(before)) === sortedJson(pages.normalizeSeo(after)); } catch { return false; }
+}
+function guardSeo(req, before, after) {
+  if (!req.mk.can("seo.edit") && !sameSeo(before, after)) throw new MarketingError("forbidden", "Vous n'avez pas la permission de modifier les réglages SEO (permission « seo.edit »).");
+}
 const STATUS_CLASS = { draft: "", published: "mk-status-ok", unpublished: "mk-status-warn" };
 
 // Section vide mais VALIDE pour chaque type (une section ajoutée s'enregistre tout de suite)
@@ -182,6 +190,36 @@ module.exports = () => {
     if (!page) return;
     renderPreview(req, res, page, page.working, page.hasDraft ? "Aperçu du brouillon — pas encore en ligne." : null);
   });
+  // SEO de la page (palier 11) : aperçu dans les résultats de recherche et analyse. Même moteur que la page publique
+  // (seo/webPages.js) ; les champs envoyés par l'éditeur (non enregistrés) remplacent ceux du brouillon pour l'aperçu.
+  // `analyse: true` rend en plus le brouillon ENREGISTRÉ pour lire ses titres, images et liens réels.
+  router.post("/pages/:id(\\d+)/seo/analyse", need("forms.read"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    if (!req.mk.can("seo.view")) return res.status(403).json({ error: { code: "forbidden", message: "Vous n'avez pas la permission de voir l'analyse SEO (permission « seo.view »)." } });
+    try {
+      const ctx = req.mk.ctx;
+      const body = req.body || {};
+      const site = page.site_id ? pages.getSite(ctx, page.site_id) : null;
+      const seo = body.seo ? pages.normalizeSeo(body.seo) : page.working.seo;
+      const title = typeof body.title === "string" ? body.title.slice(0, 200) : page.working.title;
+      const description = typeof body.description === "string" ? body.description.slice(0, 400) : page.working.description;
+      const working = { ...page, title, description, seo: JSON.stringify(seo), sections: page.working.sections };
+      const seoWeb = require("../../seo/webPages");
+      const done = (html) => {
+        const result = seoWeb.analyze(req, { page: working, site, html });
+        res.set("Cache-Control", "no-store").json(result);
+      };
+      if (body.analyse !== true) return done("");
+      // Rendu réel du brouillon (sans l'enregistrer ni compter de visite) : la même page que l'aperçu
+      const form = page.form_id ? forms.getForm(ctx, page.form_id) : null;
+      res.render("marketing-public/landing", { page: shown(ctx, page, { ...page.working, title, description, seo }), site, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: null }, (error, html) => {
+        if (error) return next(error);
+        const main = (html.match(/<main[\s\S]*?<\/main>/i) || [html])[0];
+        done(main);
+      });
+    } catch (error) { jsonError(res, next, error); }
+  });
   // Aperçu d'un état d'historique du brouillon (palier 10) : consultation seulement, la page n'est pas modifiée
   router.get("/pages/:id(\\d+)/revisions/:rid(\\d+)/apercu", need("forms.read"), (req, res, next) => {
     const page = load(req, res);
@@ -229,7 +267,9 @@ module.exports = () => {
       // Page parente (hiérarchie préparée) : un changement de site retire d'abord le lien avec l'ancien parent
       if (b.site_id !== undefined && siteId !== page.site_id) cmsPages.setParent(ctx, page.id, null);
       if (b.parent_id !== undefined) cmsPages.setParent(ctx, page.id, intOrNull(b.parent_id));
-      pages.saveDraft(ctx, page.id, contentFromBody(b, sections, page.working), { revision: Number(b.revision) });
+      const nextContent = contentFromBody(b, sections, page.working);
+      guardSeo(req, page.working.seo, nextContent.seo);
+      pages.saveDraft(ctx, page.id, nextContent, { revision: Number(b.revision) });
       const text = action.startsWith("add:") ? "Section ajoutée." : action.startsWith("remove:") ? "Section supprimée." : action.startsWith("up:") || action.startsWith("down:") ? "Section déplacée." : b.sections ? "Brouillon enregistré." : "Réglages enregistrés.";
       if (!b.sections) return page.status === "published" ? "Réglages enregistrés. Adresse, site, formulaire et étiquettes s'appliquent tout de suite ; titre, description et SEO sont dans le brouillon : « Publier les modifications » les met en ligne." : text;
       return page.status === "published" ? `${text} La page en ligne n'a pas changé : cliquez sur « Publier les modifications » pour la mettre à jour.` : text;
@@ -239,7 +279,7 @@ module.exports = () => {
   // Erreur métier en JSON : conflit (autre onglet) 409, introuvable 404, contenu invalide 422 (message précis)
   const jsonError = (res, next, error) => {
     if (!(error instanceof MarketingError)) return next(error);
-    res.status(error.code === "conflict" ? 409 : error.code === "not_found" ? 404 : 422).json({ error: { code: error.code, message: error.message } });
+    res.status(error.code === "conflict" ? 409 : error.code === "not_found" ? 404 : error.code === "forbidden" ? 403 : 422).json({ error: { code: error.code, message: error.message } });
   };
   // Éditeur ouvert sur une page (component = null) ou sur la SOURCE d'un composant du site : en-tête, pied de page…
   const openEditor = (req, res, page, { component = null } = {}) => {
@@ -268,7 +308,9 @@ module.exports = () => {
       links: [{ url: "/catalogue", label: "Catalogue des formations" }, { url: "/blog", label: "Blog" }, { url: "/", label: "Accueil du site" }]
         .concat(funnel ? [{ url: require("../funnels").NEXT_URL, label: `Étape suivante du tunnel « ${funnel.name} »` }] : [])
         .concat(pages.listPages(ctx).filter((p) => p.status === "published" && p.id !== page.id).slice(0, 50).map((p) => ({ url: `/p/${p.slug}`, label: `Page « ${p.name} »` }))),
-      siteUrl: String(process.env.SITE_URL || "").replace(/\/+$/, ""),
+      siteUrl: String((site && site.settings && site.settings.seo && site.settings.seo.publicUrl) || process.env.SITE_URL || "").replace(/\/+$/, ""),
+      // SEO (palier 11) : droits réels (revérifiés à l'enregistrement) et adresses du service SEO
+      seo: { canView: req.mk.can("seo.view"), canEdit: req.mk.can("seo.edit"), url: component ? null : `/marketing/pages/${page.id}/seo/analyse` },
       tags: require("../audience/tags").listTags(ctx).map((t) => t.name),
     };
     res.set("Cache-Control", "no-store");
@@ -342,7 +384,9 @@ module.exports = () => {
     const page = load(req, res);
     if (!page) return;
     try {
-      const { revision } = pages.saveDraft(req.mk.ctx, page.id, (req.body && req.body.content) || {}, { revision: Number(req.body && req.body.revision) });
+      const content = (req.body && req.body.content) || {};
+      guardSeo(req, page.working.seo, content.seo);
+      const { revision } = pages.saveDraft(req.mk.ctx, page.id, content, { revision: Number(req.body && req.body.revision) });
       res.set("Cache-Control", "no-store").json({ revision, savedAt: new Date().toISOString() });
     } catch (error) { jsonError(res, next, error); }
   });

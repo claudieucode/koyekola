@@ -5349,14 +5349,78 @@
     box.appendChild(h("p", { class: "pb-sub", text: "Page" }));
     box.appendChild(textField("Titre de la page (onglet du navigateur)", content.title, setC("title"), { max: 120, disabled: !canWrite }));
     box.appendChild(textField("Description (aperçu de partage)", content.description, setC("description"), { multiline: true, max: 300, disabled: !canWrite }));
-    box.appendChild(h("p", { class: "pb-sub", text: "Référencement (moteur SEO du site)" }));
-    box.appendChild(textField("Titre SEO (60 caractères conseillés)", seo.title, setS("title"), { max: 70, disabled: !canWrite, placeholder: content.title }));
-    box.appendChild(textField("Méta-description (150 caractères conseillés)", seo.description, setS("description"), { multiline: true, max: 160, disabled: !canWrite }));
-    box.appendChild(textField("Adresse canonique (facultative)", seo.canonical, setS("canonical"), { type: "url", disabled: !canWrite, placeholder: (boot.siteUrl || "https://…") + "/p/" + PAGE.slug }));
-    box.appendChild(h("p", { class: "pb-sub", text: "Image de partage (Open Graph, X)" }));
-    box.appendChild(mediaPreview(seo.ogImage, function (m) { change(function () { content.seo = Object.assign({}, content.seo, { ogImage: m.path }); }); }, !canWrite));
-    if (seo.ogImage) box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () { change(function () { content.seo = Object.assign({}, content.seo); delete content.seo.ogImage; }); } }, "Retirer"));
-    box.appendChild(checkField("Ne pas indexer cette page (noindex)", seo.noindex, function (v) { change(function () { content.seo = Object.assign({}, content.seo); if (v) content.seo.noindex = true; else delete content.seo.noindex; }); }, { disabled: !canWrite }));
+    // ----- Référencement (palier 11) : mêmes données que la page publique, aperçu et analyse calculés par le moteur SEO du serveur -----
+    var seoCfg = boot.seo || {};
+    var seoCan = canWrite && seoCfg.canEdit;
+    var scheduleSerp = function () { clearTimeout(serpTimer); serpTimer = setTimeout(refreshSerp, 450); };
+    var serpTimer = null;
+    var seoInput = function (k) { var f = setS(k); return function (v) { f(v); scheduleSerp(); }; };
+    var seoFlag = function (k, label, hint) { return checkField(label, seo[k], function (v) { change(function () { content.seo = Object.assign({}, content.seo); if (v) content.seo[k] = true; else delete content.seo[k]; }); scheduleSerp(); }, { disabled: !seoCan, hint: hint }); };
+    var counted = function (field, max, wording) {
+      var input = field.querySelector("input, textarea");
+      var note = h("p", { class: "pb-hint pb-count" });
+      var paint = function () { var n = input.value.length; note.textContent = n + " caractères" + (n ? " — " + wording : ""); note.classList.toggle("is-warn", n > max); };
+      input.addEventListener("input", paint); paint();
+      field.appendChild(note);
+      return field;
+    };
+    box.appendChild(h("p", { class: "pb-sub", text: "Référencement (SEO)" }));
+    if (!seoCan) box.appendChild(h("p", { class: "pb-note is-warn", text: canWrite ? "Les réglages SEO sont en lecture seule : la permission « seo.edit » est nécessaire pour les modifier." : "Lecture seule." }));
+    box.appendChild(h("p", { class: "pb-hint", text: "Ordre de priorité : réglage SEO de la page → titre et description de la page → réglages SEO du site → réglages de KOLAKISA. Les longueurs affichées sont des repères : les moteurs tronquent différemment selon l'appareil." }));
+    var serp = h("div", { class: "pb-serp", "data-pb-serp": "", "aria-live": "polite" });
+    box.appendChild(h("p", { class: "pb-sub", text: "Aperçu dans les résultats de recherche" }));
+    box.appendChild(serp);
+    box.appendChild(h("p", { class: "pb-hint", text: "Approximation visuelle : chaque moteur affiche les résultats à sa façon." }));
+    box.appendChild(counted(textField("Titre SEO", seo.title, seoInput("title"), { max: 70, disabled: !seoCan, placeholder: content.title }), 60, "environ 60 caractères sont généralement visibles"));
+    box.appendChild(counted(textField("Méta-description", seo.description, seoInput("description"), { multiline: true, rows: "3", max: 160, disabled: !seoCan }), 160, "environ 150 à 160 caractères sont généralement visibles"));
+    box.appendChild(textField("Adresse canonique (facultative)", seo.canonical, seoInput("canonical"), { type: "url", disabled: !seoCan, placeholder: (boot.siteUrl || "https://…") + "/p/" + PAGE.slug, hint: "Vide : l'adresse de cette page. Une autre adresse indique aux moteurs que l'original est ailleurs." }));
+    box.appendChild(textField("Mot-clé principal (facultatif)", seo.focusKeyword, seoInput("focusKeyword"), { max: 80, disabled: !seoCan, hint: "Sert uniquement à l'analyse. Il n'est jamais publié dans la page." }));
+    box.appendChild(h("p", { class: "pb-sub", text: "Partage sur les réseaux (Open Graph, X)" }));
+    box.appendChild(textField("Titre de partage", seo.ogTitle, seoInput("ogTitle"), { max: 95, disabled: !seoCan, placeholder: "Titre SEO" }));
+    box.appendChild(textField("Description de partage", seo.ogDescription, seoInput("ogDescription"), { multiline: true, rows: "2", max: 200, disabled: !seoCan, placeholder: "Méta-description" }));
+    box.appendChild(selectField("Carte X (Twitter)", seo.twitterCard || "", [["", "Automatique"], ["summary", "Petite image (summary)"], ["summary_large_image", "Grande image (summary_large_image)"]], function (v) { change(function () { content.seo = Object.assign({}, content.seo); if (v) content.seo.twitterCard = v; else delete content.seo.twitterCard; }); scheduleSerp(); }, { disabled: !seoCan }));
+    box.appendChild(h("p", { class: "pb-hint", text: "Image de partage (médiathèque ; sinon l'image du bandeau, puis celle du site) :" }));
+    box.appendChild(mediaPreview(seo.ogImage, function (m) { change(function () { content.seo = Object.assign({}, content.seo, { ogImage: m.path }); }); scheduleSerp(); }, !seoCan));
+    if (seo.ogImage) box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !seoCan, onclick: function () { change(function () { content.seo = Object.assign({}, content.seo); delete content.seo.ogImage; }); scheduleSerp(); } }, "Retirer"));
+    box.appendChild(h("p", { class: "pb-sub", text: "Indexation" }));
+    box.appendChild(seoFlag("noindex", "Ne pas indexer cette page (noindex)", "La page reste accessible mais n'apparaîtra pas dans les résultats ni dans le plan du site."));
+    box.appendChild(seoFlag("nofollow", "Ne pas suivre les liens de la page (nofollow)"));
+    box.appendChild(seoFlag("noarchive", "Interdire la copie en cache (noarchive)"));
+    box.appendChild(seoFlag("nosnippet", "Interdire les extraits (nosnippet)"));
+    box.appendChild(seoFlag("noimageindex", "Ne pas indexer les images (noimageindex)"));
+    // Analyse du brouillon enregistré (indications, jamais une promesse de classement)
+    var result = h("div", { class: "pb-seo-result", "data-pb-seo-result": "", "aria-live": "polite" });
+    var runBtn = h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: !seoCfg.canView || !seoCfg.url }, "Analyser la page");
+    runBtn.addEventListener("click", function () {
+      runBtn.disabled = true; result.textContent = "Analyse en cours…";
+      var run = function () { api("POST", seoCfg.url, { analyse: true, title: content.title, description: content.description, seo: content.seo || {} }).then(function (r) { paintAnalysis(result, r); }).catch(function (e) { result.textContent = e.message; }).then(function () { runBtn.disabled = false; }); };
+      // L'analyse lit le brouillon ENREGISTRÉ : on l'enregistre d'abord si besoin
+      Promise.resolve(saveNow()).then(run, run);
+    });
+    box.appendChild(h("p", { class: "pb-sub", text: "Analyse SEO" }));
+    box.appendChild(h("p", { class: "pb-hint", text: seoCfg.canView ? "Contrôles sur le brouillon enregistré : titre, description, structure des titres, images, liens, partage. Ce sont des indications, pas un classement." : "La permission « seo.view » est nécessaire pour l'analyse." }));
+    box.appendChild(runBtn);
+    box.appendChild(result);
+    function refreshSerp() {
+      if (!seoCfg.canView || !seoCfg.url) { serp.textContent = ""; return; }
+      api("POST", seoCfg.url, { title: content.title, description: content.description, seo: content.seo || {} }).then(function (r) {
+        serp.textContent = "";
+        serp.appendChild(h("p", { class: "pb-serp-url", text: r.serp.url }));
+        serp.appendChild(h("p", { class: "pb-serp-title", text: r.serp.title }));
+        serp.appendChild(h("p", { class: "pb-serp-desc", text: r.serp.description }));
+        if (!r.resolved.indexable) serp.appendChild(h("p", { class: "pb-note is-warn", text: "Cette page ne sera pas indexée (" + r.resolved.reasons.join(" ; ") + ")." }));
+      }).catch(function (e) { serp.textContent = ""; serp.appendChild(h("p", { class: "pb-note is-warn", text: e.message })); });
+    }
+    function paintAnalysis(into, r) {
+      into.textContent = "";
+      into.appendChild(h("p", { class: "pb-seo-score", text: "Repère interne : " + r.score + " / 100 — " + r.summary.good + " bon(s), " + r.summary.improve + " à améliorer, " + r.summary.problem + " problème(s)." }));
+      into.appendChild(h("p", { class: "pb-hint", text: r.scoreNote }));
+      var labels = { good: "Bon", improve: "À améliorer", problem: "Problème" };
+      r.checks.forEach(function (c) {
+        into.appendChild(h("div", { class: "pb-note pb-seo-check is-" + c.status }, h("strong", { text: labels[c.status] + " · " }), c.label, c.advice ? h("span", { class: "pb-seo-advice", text: " — " + c.advice }) : null));
+      });
+    }
+    refreshSerp();
     box.appendChild(h("p", { class: "pb-hint", text: "Adresse (/p/" + PAGE.slug + "), formulaire, étiquettes et indexation générale : dans les réglages de la page. " + (PAGE.indexable ? "Page indexable." : "Page non indexable (voir ses réglages).") }));
     // Vérifications réelles du contenu (titre principal, textes de remplacement)
     var h1 = 0, noAlt = 0;

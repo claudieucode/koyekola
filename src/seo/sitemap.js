@@ -42,15 +42,19 @@ function entries() {
   // (case « Autoriser les moteurs de recherche ») et sans canonical vers une autre adresse ni noindex dans son SEO
   let webPages = [];
   try {
-    webPages = db.prepare("SELECT slug, name, title, indexable, seo, updated_at FROM mk_landing_pages WHERE status = 'published' AND archived_at IS NULL ORDER BY published_at DESC").all();
+    webPages = db.prepare("SELECT p.slug, p.name, p.title, p.indexable, p.seo, p.updated_at, s.settings AS site_settings FROM mk_landing_pages p LEFT JOIN mk_sites s ON s.id = p.site_id AND s.status = 'active' WHERE p.status = 'published' AND p.archived_at IS NULL ORDER BY p.published_at DESC").all();
   } catch (error) {
     if (!/no such (table|column)/.test(error.message)) throw error; // module marketing pas encore migré : aucune page web
   }
   for (const p of webPages) {
     let seo = {};
     try { seo = JSON.parse(p.seo || "{}"); } catch { seo = {}; }
-    const e = { path: `/p/${p.slug}`, type: "Page web", lastmod: isoDate(p.updated_at), title: p.title || p.name };
-    if (!p.indexable || seo.noindex) excluded.push({ ...e, reason: "Page non indexée (réglage de la page)" });
+    let siteConf = {};
+    try { siteConf = JSON.parse(p.site_settings || "{}"); } catch { siteConf = {}; }
+    // Adresse publique propre au site (réglages SEO du site) : l'adresse du plan du site est celle de la page canonique
+    const e = { path: `/p/${p.slug}`, type: "Page web", lastmod: isoDate(p.updated_at), title: p.title || p.name, base: (siteConf.seo && siteConf.seo.publicUrl) || undefined };
+    if (siteConf.extras && siteConf.extras.noindex) excluded.push({ ...e, reason: "Site réglé en noindex (réglages SEO du site)" });
+    else if (!p.indexable || seo.noindex) excluded.push({ ...e, reason: "Page non indexée (réglage de la page)" });
     else if (seo.canonical && !seo.canonical.endsWith(e.path)) excluded.push({ ...e, reason: `Canonical vers ${seo.canonical}` });
     else included.push(e);
   }
@@ -79,7 +83,7 @@ function xml(req) {
   const out = ['<?xml version="1.0" encoding="UTF-8"?>', `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"${withImages ? ' xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"' : ""}>`];
   for (const e of included) {
     const imgs = (e.images || []).filter((p) => images.probe(p).exists);
-    out.push(`  <url><loc>${escapeXml(absoluteUrl(req, e.path))}</loc>${e.lastmod ? `<lastmod>${e.lastmod}</lastmod>` : ""}${imgs.map((p) => `<image:image><image:loc>${escapeXml(absoluteUrl(req, p))}</image:loc></image:image>`).join("")}</url>`);
+    out.push(`  <url><loc>${escapeXml(e.base ? `${e.base.replace(/\/+$/, "")}${e.path}` : absoluteUrl(req, e.path))}</loc>${e.lastmod ? `<lastmod>${e.lastmod}</lastmod>` : ""}${imgs.map((p) => `<image:image><image:loc>${escapeXml(absoluteUrl(req, p))}</image:loc></image:image>`).join("")}</url>`);
   }
   out.push("</urlset>", "");
   return out.join("\n");

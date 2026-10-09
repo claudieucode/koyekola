@@ -78,3 +78,5 @@
 .ss-field.has-unit { grid-template-columns: minmax(0, 1fr) 28px; align-items: center; column-gap: 6px; }
 .ss-field.has-unit > label, .ss-field.has-unit > .ss-hint { grid-column: 1 / -1; }
 .ss-details-body { padding-top: 10px; }
+
+.ss-seo { display: block; }

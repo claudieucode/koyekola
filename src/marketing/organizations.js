@@ -29,6 +29,8 @@ const PERMISSIONS = Object.freeze({
   "articles.edit_own": "editor",
   // Historique, restauration et corbeille (palier 10) : voir l'historique et restaurer une ancienne version = éditeur ; supprimer des versions de l'historique = administrateur
   "revisions.view": "editor", "revisions.restore": "editor", "revisions.delete": "admin",
+  // Référencement (palier 11) : voir l'analyse et l'aperçu SEO = éditeur ; modifier les réglages SEO (page, site) = éditeur (retirable à un rôle personnalisé)
+  "seo.view": "editor", "seo.edit": "editor",
   "articles.read": "viewer", "articles.write": "editor", "articles.publish": "editor", "articles.delete": "admin",
   "media.read": "viewer", "media.upload": "editor", "media.write": "editor", "media.delete": "admin",
   "analytics.read": "viewer",

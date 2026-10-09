@@ -63,7 +63,7 @@ describe("réglages du site : panneau de l'éditeur (navigateur)", { skip: SKIP 
     await openPanel();
     assert.equal((await panel().locator("h2").innerText()).trim(), "Réglages du site");
     const entries = await panel().locator(".ss-entry .ss-entry-label").allInnerTexts();
-    assert.deepEqual(entries, ["Couleurs globales", "Polices globales", "Typographie", "Boutons", "Images", "Champs de formulaire", "Identité du site", "Arrière-plan", "Mise en page", "Visionneuse", "Transitions de page", "CSS personnalisé", "Réglages supplémentaires"]);
+    assert.deepEqual(entries, ["Couleurs globales", "Polices globales", "Typographie", "Boutons", "Images", "Champs de formulaire", "Identité du site", "Arrière-plan", "Mise en page", "Visionneuse", "Transitions de page", "CSS personnalisé", "Réglages supplémentaires", "Référencement (SEO)"]);
     // Rien de simulé : toutes les entrées ouvrent un vrai écran (aucun bouton inactif)
     assert.equal(await panel().locator(".ss-entry[disabled]").count(), 0);
   });

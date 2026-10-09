@@ -42,7 +42,7 @@ function finalize(req, currentPath, s = {}, viewTitle = null) {
   const title = s.rawTitle || (pageTitle ? render(st.title_template, { title: pageTitle, sep: st.title_separator, site_name: st.site_name }) : `${st.site_name} — Mes formations en ligne`);
   const description = s.description || st.default_description;
   const canonical = s.canonical || absoluteUrl(req, currentPath);
-  const head = { title, description, noindex: Boolean(s.noindex), robots: s.robots || null, canonical, siteName: st.site_name, locale: s.locale || st.og_locale };
+  const head = { title, description, noindex: Boolean(s.noindex), robots: s.robots || null, canonical, siteName: s.siteName || st.site_name, locale: s.locale || st.og_locale };
   if (head.noindex) return head;
   // Image de partage : celle de la page, sinon l'image par défaut du site ; publiée seulement si le fichier existe vraiment
   const imageSource = s.imagePath || s.image || (st.default_social_image || null);

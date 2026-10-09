@@ -26,7 +26,7 @@ async function until(check, { timeout = 15000, every = 150, what = "condition" }
   }
 }
 
-const VIEWS = ["Couleurs globales", "Polices globales", "Typographie", "Boutons", "Images", "Champs de formulaire", "Identité du site", "Arrière-plan", "Mise en page", "Visionneuse", "Transitions de page", "CSS personnalisé", "Réglages supplémentaires"];
+const VIEWS = ["Couleurs globales", "Polices globales", "Typographie", "Boutons", "Images", "Champs de formulaire", "Identité du site", "Arrière-plan", "Mise en page", "Visionneuse", "Transitions de page", "CSS personnalisé", "Réglages supplémentaires", "Référencement (SEO)"];
 
 describe("réglages du site : tous les écrans du panneau (navigateur)", { skip: SKIP }, () => {
   let srv, boss, browser, context, page, errors, siteId, pageId;
@@ -41,7 +41,7 @@ describe("réglages du site : tous les écrans du panneau (navigateur)", { skip:
   const style = (selector, prop, hover = false) => page.evaluate(({ selector, prop }) => { const d = document.querySelector("[data-pb-frame]").contentDocument; const el = d.querySelector(selector); return el ? getComputedStyle(el)[prop] : null; }, { selector, prop });
   const saved = () => until(async () => /Enregistré|À jour/.test(await status().innerText()), { what: "« Enregistré »" });
   const goHome = async () => { if (await panel().locator("[aria-label='Retour aux réglages du site']").isVisible()) await panel().locator("[aria-label='Retour aux réglages du site']").click(); };
-  const open = async (name) => { await goHome(); await panel().locator(".ss-entry", { has: page.locator(".ss-entry-label", { hasText: new RegExp(`^${name}$`) }) }).click(); assert.equal((await panel().locator("h2").innerText()).trim(), name); };
+  const open = async (name) => { await goHome(); await panel().locator(".ss-entry", { has: page.locator(".ss-entry-label", { hasText: new RegExp(`^${name.replace(/[()]/g, "\\$&")}$`) }) }).click(); assert.equal((await panel().locator("h2").innerText()).trim(), name); };
   const field = (label, within) => (within || panel()).locator(".ss-field", { hasText: label }).first();
   const group = async (title) => { const d = panel().locator("details", { hasText: title }).first(); if (!(await d.evaluate((el) => el.open))) await d.locator("summary").click(); return d; };
   async function openPanel() {
@@ -76,7 +76,7 @@ describe("réglages du site : tous les écrans du panneau (navigateur)", { skip:
   });
   after(async () => { if (browser) await browser.close(); if (srv) await srv.stop(); });
 
-  test("E1 les 13 écrans s'ouvrent depuis l'accueil du panneau, chacun avec son titre et un bouton Retour ; aucune entrée inactive", async () => {
+  test("E1 les 14 écrans s'ouvrent depuis l'accueil du panneau, chacun avec son titre et un bouton Retour ; aucune entrée inactive", async () => {
     await openPanel();
     const labels = await panel().locator(".ss-entry .ss-entry-label").allInnerTexts();
     assert.deepEqual(labels, VIEWS);

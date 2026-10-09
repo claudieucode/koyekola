@@ -23,6 +23,8 @@ function injectLocals(req, res, next) {
   res.locals.slugify = slugify;
   res.locals.jsonLdTags = jsonLdTags;
   res.locals.seoHead = (seo, title) => seoResolver.finalize(req, req.path, seo, title);
+  // Balises SEO d'une page du CMS (/p/…) : même moteur, avec les réglages de la page et du site
+  res.locals.webPageSeo = (page, site, preview) => require("../seo/webPages").head(req, { page, site, preview: Boolean(preview) });
   // Réglages de référencement de la page (les routes publiques les précisent en passant `seo` à la vue)
   res.locals.seo = NOINDEX_PREFIXES.some((p) => req.path === p || req.path.startsWith(p + "/")) ? { noindex: true } : {};
   res.locals.signedBunnyUrl = signedBunnyUrl;
