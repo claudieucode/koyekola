@@ -34,6 +34,8 @@ registerDynamicSource("post.date", { label: "Date de publication", resolve: (s) 
 registerDynamicSource("post.author", { label: "Auteur de l'article", resolve: P("author") });
 registerDynamicSource("post.category", { label: "Catégorie de l'article", resolve: P("category") });
 registerDynamicSource("post.reading_time", { label: "Temps de lecture", resolve: (s) => (s.post && s.post.minutes ? `${s.post.minutes} min` : null) });
+registerDynamicSource("post.seo_title", { label: "Titre SEO de l'article", resolve: (s) => (s.post ? s.post.seoTitle || s.post.title || null : null) });
+registerDynamicSource("post.seo_description", { label: "Description SEO de l'article", resolve: (s) => (s.post ? s.post.seoDescription || s.post.excerpt || null : null) });
 registerDynamicSource("post.tags", { label: "Étiquettes de l'article", resolve: (s) => (s.post && Array.isArray(s.post.tags) && s.post.tags.length ? s.post.tags.join(", ") : null) });
 registerDynamicSource("post.comments", { label: "Nombre de commentaires", resolve: (s) => (s.post && s.post.commentsCount != null ? String(s.post.commentsCount) : null) });
 registerDynamicSource("post.views", { label: "Nombre de lectures", resolve: (s) => (s.post && s.post.views ? String(s.post.views) : null) });

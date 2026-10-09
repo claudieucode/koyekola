@@ -168,7 +168,8 @@ function renderList(req, res, { filter = null } = {}) {
   // Famille de modèle : recherche, archive de catégorie, archive d'étiquette, sinon liste du blog (la première qui a un modèle en ligne gagne)
   const isCat = Boolean(filter && filter.type === "category"), isTag = Boolean(filter && filter.type === "tag");
   if (isTag) themeQuery.etiquette = filter.name;
-  const families = q ? ["search_results", "blog_archive"] : isCat ? ["category_archive", "blog_archive"] : isTag ? ["tag_archive", "blog_archive"] : "blog_archive";
+  const isAuthor = Boolean(filter && filter.type === "author");
+  const families = q ? ["search_results", "blog_archive"] : isAuthor ? ["author_archive", "blog_archive"] : isCat ? ["category_archive", "blog_archive"] : isTag ? ["tag_archive", "blog_archive"] : "blog_archive";
   // Archive affichée (catégorie, étiquette, auteur) : lue par les éléments « En-tête d'archive » et les listes « suivre l'archive »
   const archive = { type: filter ? filter.type : q ? "search" : "blog", name: filter ? (filter.name || filter.label) : "", id: filter && filter.type === "author" ? filter.id : null, termIds: filter && filter.termIds ? filter.termIds : [],
     title: filter ? filter.heading : q ? `Résultats pour « ${q} »` : "Blog", description: filter ? filter.lead : "", count: total, url: basePath, search: q || "" };

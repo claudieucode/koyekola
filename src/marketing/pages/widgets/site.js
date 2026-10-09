@@ -35,7 +35,7 @@ const FAMILY = [
       { key: "source", kind: "select", label: "Contenu", options: SOURCES, default: "posts" },
       { key: "mode", kind: "select", label: "Sélection (articles) / tri (autres contenus)", options: MODES, default: "recent" },
       { key: "count", kind: "number", label: "Nombre d'éléments", min: 1, max: 24, integer: true, default: 5 },
-      { key: "layout", kind: "select", label: "Présentation", options: [["list", "Liste"], ["cards", "Cartes"], ["compact", "Compacte (titres)"], ["inline", "Étiquettes en ligne"]], default: "list" },
+      { key: "layout", kind: "select", label: "Présentation", options: [["list", "Liste"], ["cards", "Cartes"], ["compact", "Compacte (titres)"], ["inline", "Étiquettes en ligne"], ["slider", "Carrousel (défilement horizontal)"]], default: "list" },
       bool("showImage", "Afficher l'image", true), bool("showExcerpt", "Afficher le résumé", false), bool("showDate", "Afficher la date", true), bool("showMeta", "Afficher l'auteur et la catégorie", false),
       bool("showCount", "Afficher le nombre d'articles (catégories, étiquettes, auteurs)", true),
       { key: "category", kind: "text", label: "Catégorie (facultative, nom exact)", max: 80, default: "" },
@@ -130,6 +130,28 @@ const FAMILY = [
       const t = require("../../../services/blog").listComments(post.id, { page });
       const clean = (c) => ({ id: c.id, name: c.name, body: String(c.body || "").slice(0, 3000), at: c.created_at, avatar: query.safeImage(c.avatar_path), author: c.role === "formateur", children: (c.children || []).map(clean) });
       return { post, roots: t.roots.map(clean), total: t.total, page: t.page, pages: t.pages, replies: Boolean(t.repliesAllowed), maxDepth: t.maxDepth, open: Boolean(post.commentsOpen) };
+    },
+  },
+  {
+    type: "cmsmenu", label: "Menu du CMS", group: "site", icon: "list", version: 1, style: "text",
+    keywords: "menu cms navigation en-tete pied de page mobile liens gestion menus emplacement",
+    schema: [
+      { key: "location", kind: "select", label: "Emplacement du CMS", options: [["header", "Menu de l'en-tête"], ["footer", "Menu du pied de page"], ["mobile", "Menu mobile"], ["name", "Un menu précis (nom ci-dessous)"]], default: "header" },
+      { key: "menuName", kind: "text", label: "Nom du menu (si « Un menu précis »)", max: 80, default: "" },
+      { key: "label", kind: "text", label: "Nom accessible du menu", max: 60, default: "Menu" },
+      bool("vertical", "Disposition verticale", false),
+    ],
+    // Menus gérés dans le CMS (Navigation) : liens, hiérarchie, visibilité membres / visiteurs et adresses vérifiées par le moteur
+    data(ctx, p, env) {
+      const nav = require("../../../services/navigation");
+      const user = env.visitor && env.visitor.loggedIn ? {} : null;
+      let found = null;
+      if (p.location === "name") {
+        const wanted = String(p.menuName || "").trim().toLowerCase();
+        const menu = wanted ? nav.listMenus().find((m) => String(m.name).toLowerCase() === wanted) : null;
+        found = menu ? nav.forMenu(menu.id, { user }) : null;
+      } else found = nav.forLocation(p.location, { user });
+      return { menu: found };
     },
   },
   {

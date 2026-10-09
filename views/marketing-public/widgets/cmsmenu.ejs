@@ -1,0 +1,10 @@
+<%# Menu du CMS (moteur de navigation). d = { menu: { items: [{ label, href, newTab, rel, children }] } }. Adresses déjà validées par le moteur. %>
+<% const menu = d && d.menu; const items = (menu && menu.items) || []; %>
+<% const entry = (it) => { %>
+  <li class="kw-menu-item<%= it.children.length ? " has-sub" : "" %>"><a class="kw-menu-link" href="<%= it.href || "#" %>"<%- it.newTab ? ' target="_blank"' : "" %><%- it.rel ? ` rel="${it.rel.replace(/[^a-z ]/g, "")}"` : "" %>><%= it.label %></a>
+    <% if (it.children.length) { %><ul class="kw-submenu"><% it.children.forEach((c) => { %><li><a class="kw-menu-link" href="<%= c.href || "#" %>"<%- c.newTab ? ' target="_blank"' : "" %><%- c.rel ? ` rel="${c.rel.replace(/[^a-z ]/g, "")}"` : "" %>><%= c.label %></a></li><% }) %></ul><% } %></li>
+<% }; %>
+<% if (items.length || isBuilder) { %><nav class="<%= cls %> kw-menu<%= p.vertical ? " is-vertical" : "" %>" aria-label="<%= p.label %>"<%- attrs %>>
+  <% if (items.length) { %><ul class="kw-menu-list"><% items.forEach(entry) %></ul>
+  <% } else { %><p class="kw-pm-note">Menu du CMS : aucun menu publié à cet emplacement (Navigation › Menus).</p><% } %>
+</nav><% } %>

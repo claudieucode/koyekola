@@ -13,12 +13,24 @@ const ctxOf = (db, marketing) => ({ db, organizationId: marketing.organizationId
 const MS = (v) => { const t = Date.parse(`${String(v || "").replace(" ", "T")}Z`); return Number.isFinite(t) ? t : null; };
 
 // Données d'un article pour les étiquettes {{post.…}} ; contentHtml : corps déjà produit (et nettoyé) par le blog
+// Compléments lus dans la base (nombre de commentaires, auteur, adresse de la catégorie) ; jamais bloquants
+function extras(post) {
+  const out = {};
+  try { out.commentsCount = require("../../services/blog").countComments(post.id); } catch { /* ignoré */ }
+  try {
+    const query = require("../pages/query");
+    if (post.category) out.categoryUrl = query.termUrl("category", post.category);
+    if (post.author_id) out.authorView = query.authorView(require("../../config/database").prepare("SELECT id, username, bio, avatar_path FROM users WHERE id = ?").get(post.author_id));
+  } catch { /* ignoré */ }
+  return out;
+}
 function postScope(post, { contentHtml = "", minutes = null, author = "" } = {}) {
   const safeImg = (p) => (typeof p === "string" && (/^\/uploads\/thumbnails\/[A-Za-z0-9._-]+$/.test(p) || /^https:\/\/[^\s"'<>]+$/.test(p)) ? p : "");
   return { title: post.title, url: `/blog/${encodeURIComponent(post.slug)}`, excerpt: String(post.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 300), image: safeImg(post.cover_path),
     date: MS(post.published_at), category: post.category || "", author, minutes: minutes || null, contentHtml,
     id: post.id, slug: post.slug, authorId: post.author_id || null, tags: String(post.tags || "").split(",").map((t) => t.trim()).filter(Boolean), modified: MS(post.updated_at),
-    views: post.views || 0, commentsOpen: post.comments_enabled !== 0 };
+    ...extras(post), views: post.views || 0, commentsOpen: post.comments_enabled !== 0,
+    seoTitle: String(post.seo_title || "").slice(0, 160), seoDescription: String(post.seo_description || "").replace(/\s+/g, " ").trim().slice(0, 320) };
 }
 
 // done(html | null)
@@ -54,13 +66,24 @@ function renderRegion(req, res, db, type, { category = "", categories = [], tag 
 // Pendant qu'on dessine un modèle d'article : données du dernier article publié (aperçu réaliste)
 function previewScope(db, ctx, page) {
   try {
-    if (!themeTemplates.typesOfPage(ctx, page.id).includes("single_post")) return {};
+    const types = themeTemplates.typesOfPage(ctx, page.id);
+    if (types.includes("single_course")) {
+      const c = db.prepare("SELECT * FROM courses WHERE published = 1 ORDER BY created_at DESC, id DESC LIMIT 1").get();
+      if (!c) return {};
+      return { course: { title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "", category: c.category || "", instructor: "", description: String(c.description || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 400) } };
+    }
+    if (types.some((t) => ["blog_archive", "author_archive", "search_results"].includes(t)) && !types.includes("single_post")) {
+      const total = db.prepare("SELECT COUNT(*) n FROM posts WHERE published = 1 AND deleted_at IS NULL").get().n;
+      return { archive: { type: "blog", name: "", id: null, termIds: [], title: "Titre de l'archive (exemple)", description: "Description de l'archive : elle viendra de la catégorie, de l'étiquette ou de l'auteur affiché.", count: total, url: "/blog", search: "" } };
+    }
+    if (!types.includes("single_post")) return {};
     const post = db.prepare("SELECT * FROM posts WHERE published = 1 ORDER BY published_at DESC, id DESC LIMIT 1").get();
     if (!post) return {};
     const blog = require("../../services/blog");
     let html = "";
     try { html = blog.renderPost(post, {}).html; } catch { html = ""; }
-    return { post: postScope(post, { contentHtml: html }) };
+    const author = post.author_id ? db.prepare("SELECT username FROM users WHERE id = ?").get(post.author_id) : null;
+    return { post: postScope(post, { contentHtml: html, author: author ? author.username : "" }) };
   } catch { return {}; }
 }
 

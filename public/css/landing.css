@@ -341,6 +341,10 @@
 .lp-builder .kw-add:hover, .lp-builder .kw-add:focus-visible { background: rgba(2, 119, 182, 0.16); border-style: solid; transform: scale(1.06); outline: none; }
 .lp-builder .kw-empty-page { display: grid; place-items: center; min-height: 60vh; }
 .lp-builder .kw-add-root { width: 64px; height: 64px; font-size: 36px; }
+/* Fin de page (éditeur) : « + Ajouter un container », même fenêtre que le « + » de la page vide ; ne prend de la place que dans l'éditeur */
+.lp-builder .kw-add-end { display: flex; justify-content: center; padding: 28px 16px 44px; }
+.lp-builder .kw-add-end .kw-add-end-btn { display: inline-flex; align-items: center; gap: 10px; width: auto; height: 44px; margin: 0; padding: 0 22px; border-radius: 999px; font: 600 14px/1 system-ui, sans-serif; }
+.lp-builder .kw-add-end .kw-add-end-btn span { font-size: 22px; font-weight: 500; line-height: 1; }
 .kw-add { display: none; }
 /* Un conteneur imbriqué occupe la largeur de son parent (les structures « colonnes » en dépendent) */
 .kw-container .kw-container { max-width: none; margin-left: 0; margin-right: 0; }
@@ -871,3 +875,17 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .kw-mc-label { font-weight: 600; }
 .kw-mc-count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--lp-accent, #0277b6); color: #fff; font-size: 12px; font-weight: 700; text-align: center; line-height: 20px; }
 @media (max-width: 640px) { .kw-postnav { flex-direction: column; } .kw-pn-link { max-width: 100%; } .kw-ab-row { flex-direction: column; } }
+
+/* Carrousel de résultats (boucle de grille ou liste dynamique) : défilement horizontal calé, flèches ajoutées par le script */
+.kw-loop-slider { display: flex !important; flex-wrap: nowrap !important; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; gap: 16px; padding-bottom: 8px; }
+.kw-loop-slider > .kw-loop-item { flex: 0 0 min(320px, 85%); scroll-snap-align: start; min-width: 0; }
+.kw-ql-slider .kw-ql-items { display: flex; flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; gap: 16px; padding-bottom: 8px; }
+.kw-ql-slider .kw-ql-item { flex: 0 0 min(260px, 80%); scroll-snap-align: start; flex-direction: column; padding: 12px; border: 1px solid rgba(16, 34, 47, 0.12); border-radius: 12px; }
+.kw-ql-slider .kw-ql-thumb { flex: none; width: 100%; }
+.kw-ql-slider .kw-ql-thumb img { width: 100%; height: 150px; }
+.kw-slider-wrap { position: relative; }
+.kw-slider-btn { position: absolute; top: 50%; z-index: 2; width: 40px; height: 40px; margin-top: -20px; border: 1px solid rgba(16, 34, 47, 0.2); border-radius: 50%; background: #fff; color: #10222f; font-size: 20px; line-height: 1; cursor: pointer; }
+.kw-slider-prev { left: 4px; }
+.kw-slider-next { right: 4px; }
+.kw-slider-btn:disabled { opacity: 0.35; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .kw-loop-slider, .kw-ql-slider .kw-ql-items { scroll-behavior: auto; } }

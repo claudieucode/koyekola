@@ -12,7 +12,7 @@ const layout = (children) => ({ id: "sect00000001", type: "layout", children: [{
 
 describe("modèles de thème (sans serveur)", () => {
   test("types connus, textes d'aide, aucune dépendance cachée", () => {
-    assert.deepEqual(Object.keys(themeTemplates.TYPES), ["single_post", "blog_archive", "category_archive", "tag_archive", "search_results", "static_page", "not_found"]);
+    assert.deepEqual(Object.keys(themeTemplates.TYPES), ["single_post", "blog_archive", "author_archive", "single_course", "category_archive", "tag_archive", "search_results", "static_page", "not_found"]);
     for (const t of Object.values(themeTemplates.TYPES)) assert.ok(t.label && t.hint);
   });
 });

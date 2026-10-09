@@ -1,6 +1,7 @@
 <%- include("partials/header", { title: course.title }) %>
 <% const hasPlan = sections.some((s) => s.lessons.length); %>
 
+  <% if (typeof themeTemplate !== "undefined" && themeTemplate) { %><%- themeTemplate %><% } else { %>
   <section class="course-hero">
     <div class="container-wide">
       <%- include("partials/breadcrumb", { crumbs, dark: true }) %>
@@ -25,6 +26,7 @@
       </div>
     </div>
   </section>
+  <% } %>
 
   <div class="container-wide course-detail-layout">
     <div class="course-main">

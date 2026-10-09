@@ -320,3 +320,25 @@
   }
   document.querySelectorAll("nav.kw-loop-pages[data-mode]").forEach(bind);
 })();
+
+// Carrousels de résultats : flèches Précédent / Suivant (le glissement et le clavier fonctionnent déjà sans elles)
+(function () {
+  document.querySelectorAll("[data-kw-slider]").forEach(function (box) {
+    if (box.getAttribute("data-bound")) return;
+    var track = box.classList.contains("kw-loop-slider") ? box : box.querySelector(".kw-ql-items");
+    if (!track || !track.parentNode) return;
+    box.setAttribute("data-bound", "1");
+    var wrap = document.createElement("div"); wrap.className = "kw-slider-wrap";
+    track.parentNode.insertBefore(wrap, track); wrap.appendChild(track);
+    track.setAttribute("tabindex", "0"); track.setAttribute("role", "region");
+    if (!track.getAttribute("aria-label")) track.setAttribute("aria-label", "Résultats défilants");
+    function btn(cls, label, dir) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "kw-slider-btn " + cls; b.setAttribute("aria-label", label); b.textContent = dir < 0 ? "‹" : "›";
+      b.addEventListener("click", function () { track.scrollBy({ left: dir * Math.max(track.clientWidth * 0.8, 200), behavior: "smooth" }); });
+      wrap.appendChild(b); return b;
+    }
+    var prev = btn("kw-slider-prev", "Précédent", -1), next = btn("kw-slider-next", "Suivant", 1);
+    function sync() { prev.disabled = track.scrollLeft <= 2; next.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2; }
+    track.addEventListener("scroll", sync, { passive: true }); window.addEventListener("resize", sync); sync();
+  });
+})();
