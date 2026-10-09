@@ -38,34 +38,40 @@
   <link rel="preload" href="/fonts/figtree-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
+  <% const ap = typeof appearance === "function" ? appearance() : null; %><% if (ap && ap.css) { %><style id="kw-appearance"><%- ap.css %></style><% } %>
+  <% if (ap && ap.preview) { %><meta name="robots" content="noindex, nofollow"><% } %>
   <% if (typeof dash !== "undefined" && dash) { %><link rel="stylesheet" href="<%= asset('/css/dashboard.css') %>"><% if (dash.module) { %><link rel="stylesheet" href="<%= asset('/css/app-rail.css') %>"><% } %><% if (dash.seo) { %><link rel="stylesheet" href="<%= asset('/css/seo-workspace.css') %>"><% } %><% } %>
 </head>
 <body<%- typeof dash !== "undefined" && dash ? ' class="dash-body"' : "" %>>
   <a class="skip-link" href="#main">Aller au contenu principal</a>
 <% if (typeof dash !== "undefined" && dash) { %><%- include("dash-open") %><% } else { %>
 
+  <% const apH = ap ? ap.header : { logo: { mode: "text", text: "KOLAKISA" }, search: true, cart: true, account: true, announcement: { enabled: false }, cta: { enabled: false }, mobile: { showCta: true } }; %>
+  <% if (ap && ap.preview) { %><div class="kw-preview-bar" role="status">Aperçu du brouillon de l'apparence : visible seulement par l'équipe, pas encore publié.</div><% } %>
+  <% if (apH.announcement.enabled) { %><div class="site-announcement" role="region" aria-label="Annonce"><% if (apH.announcement.url) { %><a href="<%= apH.announcement.url %>"<%- /^https?:/.test(apH.announcement.url) ? ' rel="noopener noreferrer" target="_blank"' : "" %>><%= apH.announcement.text %></a><% } else { %><span><%= apH.announcement.text %></span><% } %></div><% } %>
   <header class="site-header">
     <div class="header-inner container-wide">
       <button class="icon-btn only-mobile" id="openMenuBtn" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="headerNav"><%- icon('menu') %></button>
 
-      <a href="/" class="logo">KOLAKISA</a>
+      <% if (apH.logo.mode === "image" && apH.logoImage) { %><a href="/" class="logo logo-img" aria-label="<%= apH.logo.alt || apH.logo.text %> — accueil"><img src="<%= apH.logoImage.src %>" alt="<%= apH.logo.alt %>"<%- apH.logoImage.width ? ` width="${apH.logoImage.width}"` : "" %><%- apH.logoImage.height ? ` height="${apH.logoImage.height}"` : "" %>></a>
+      <% } else { %><a href="/" class="logo"><%= apH.logo.text %></a><% } %>
 
-      <form action="/catalogue" method="get" class="header-search" role="search">
+      <% if (apH.search) { %><form action="/catalogue" method="get" class="header-search" role="search">
         <span class="search-icon" aria-hidden="true"><%- icon('search', { size: 16 }) %></span>
         <label for="header-q" class="sr-only">Rechercher une formation</label>
         <input type="text" id="header-q" name="q" placeholder="Rechercher une formation…" value="<%= typeof filters !== 'undefined' ? filters.q : '' %>">
-      </form>
+      </form> <% } %>
 
       <%
   const headerMenu = typeof navMenu === "function" ? navMenu("header") : null, mobileMenu = typeof navMenu === "function" ? navMenu("mobile") : null;
   const navClass = mobileMenu ? "header-nav has-mobile-menu" : "header-nav";
 %>
       <nav class="<%= navClass %>" id="headerNav" aria-label="Navigation principale">
-        <form action="/catalogue" method="get" class="drawer-search" role="search">
+        <% if (apH.search) { %><form action="/catalogue" method="get" class="drawer-search" role="search">
           <label for="drawer-q" class="sr-only">Rechercher une formation</label>
           <input type="search" id="drawer-q" name="q" placeholder="Rechercher une formation…" value="<%= typeof filters !== 'undefined' ? filters.q : '' %>">
           <button type="submit" aria-label="Lancer la recherche"><%- icon('search', { size: 18 }) %></button>
-        </form>
+        </form><% } %>
         <%# Navigation du CMS : si un menu est affecté à l'en-tête, il remplace les liens d'origine (Catégories, Catalogue, Blog) ; sinon rien ne change %>
         <% if (headerMenu) { %><%- include("nav-menu", { items: headerMenu.items, level: 1, prefix: "hm", menuClass: "nav-menu--header", menuLabel: "Menu principal" }) %><% } else { %>
         <% if (navCategories.length) { %>
@@ -90,7 +96,8 @@
           <a href="/mes-cours">Mes formations</a>
           <a href="/support">Aide</a>
         <% } %>
-        <div class="mobile-auth-links">
+        <% if (apH.cta.enabled && apH.mobile.showCta) { %><a class="btn btn-<%= apH.cta.style === "secondary" ? "secondary" : apH.cta.style === "outline" ? "outline" : "primary" %> btn-block header-cta-mobile" href="<%= apH.cta.url %>"><%= apH.cta.label %></a><% } %>
+        <% if (apH.account) { %><div class="mobile-auth-links">
           <% if (currentUser) { %>
             <a href="/mon-compte" class="btn btn-ghost btn-block">Mon compte</a>
             <form action="/deconnexion" method="post"><button type="submit" class="btn btn-outline btn-block">Déconnexion</button></form>
@@ -98,21 +105,22 @@
             <a href="/connexion" class="btn btn-outline btn-block">Connexion</a>
             <a href="/inscription" class="btn btn-primary btn-block">Commencer</a>
           <% } %>
-        </div>
+        </div><% } %>
       </nav>
 
       <div class="header-actions">
+        <% if (apH.cta.enabled) { %><a class="btn btn-<%= apH.cta.style === "secondary" ? "secondary" : apH.cta.style === "outline" ? "outline" : "primary" %> btn-sm header-cta" href="<%= apH.cta.url %>"><%= apH.cta.label %></a><% } %>
         <% if (currentUser && currentUser.role !== "formateur") { %>
         <a href="/notifications" class="cart-link" aria-label="Notifications<%= notifCount > 0 ? ' (' + notifCount + ' non lue' + (notifCount > 1 ? 's' : '') + ')' : '' %>">
           <%- icon('bell') %>
           <% if (notifCount > 0) { %><span class="cart-badge" aria-hidden="true"><%= notifCount > 99 ? "99+" : notifCount %></span><% } %>
         </a>
         <% } %>
-        <a href="/panier" class="cart-link" aria-label="Panier<%= cartCount > 0 ? ' (' + cartCount + ')' : '' %>">
+        <% if (apH.cart) { %>        <a href="/panier" class="cart-link" aria-label="Panier<%= cartCount > 0 ? ' (' + cartCount + ')' : '' %>">
           <%- icon('cart') %>
           <% if (cartCount > 0) { %><span class="cart-badge" aria-hidden="true"><%= cartCount %></span><% } %>
-        </a>
-        <div class="header-auth-actions">
+        </a><% } %>
+        <% if (apH.account) { %><div class="header-auth-actions">
           <% if (currentUser) { %>
             <a class="user-chip" href="/mon-compte" title="Mon compte">
               <span class="avatar avatar-sm" aria-hidden="true" style="background:<%= avatarColor(currentUser.username) %>"><%= currentUser.username.slice(0,1).toUpperCase() %></span>
@@ -126,7 +134,7 @@
             <a href="/connexion" class="btn btn-ghost btn-sm">Connexion</a>
             <a href="/inscription" class="btn btn-primary btn-sm">Commencer</a>
           <% } %>
-        </div>
+        </div><% } %>
       </div>
     </div>
   </header>

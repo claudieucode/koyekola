@@ -33,12 +33,12 @@ const SECTIONS = [
   { key: "navigation", label: "Navigation", icon: "menu", items: [leaf("navigation", "Navigation", `${BASE}/navigation`, { permission: "navigation.read" })] },
   {
     key: "apparence", label: "Apparence", icon: "palette", items: [
-      leaf("apparence", "Éditeur du site", `${BASE}/apparence`),
-      leaf("apparence/templates", "Templates", `${BASE}/apparence/templates`, { status: "preview" }),
-      leaf("apparence/patterns", "Patterns", `${BASE}/apparence/patterns`, { status: "preview" }),
-      leaf("apparence/styles", "Styles", `${BASE}/apparence/styles`),
-      leaf("apparence/en-tete", "En-tête", `${BASE}/apparence/en-tete`),
-      leaf("apparence/pied-de-page", "Pied de page", `${BASE}/apparence/pied-de-page`),
+      leaf("apparence", "Éditeur du site", `${BASE}/apparence`, { permission: "appearance.read" }),
+      leaf("apparence/templates", "Templates", `${BASE}/apparence/templates`, { permission: "appearance.read" }),
+      leaf("apparence/patterns", "Patterns", `${BASE}/apparence/patterns`, { permission: "appearance.read" }),
+      leaf("apparence/styles", "Styles", `${BASE}/apparence/styles`, { permission: "appearance.read" }),
+      leaf("apparence/en-tete", "En-tête", `${BASE}/apparence/en-tete`, { permission: "appearance.read" }),
+      leaf("apparence/pied-de-page", "Pied de page", `${BASE}/apparence/pied-de-page`, { permission: "appearance.read" }),
       leaf("apparence/menus", "Menus", `${BASE}/apparence/menus`, { permission: "navigation.read" }),
     ],
   },

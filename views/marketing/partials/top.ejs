@@ -33,6 +33,7 @@
   <link rel="stylesheet" href="<%= asset('/css/marketing.css') %>">
   <% if (cms) { %><link rel="stylesheet" href="<%= asset('/css/cms.css') %>"><% } %>
   <% if (appRail) { %><link rel="stylesheet" href="<%= asset('/css/app-rail.css') %>"><% } %>
+  <% if (typeof appearanceJs !== "undefined" && appearanceJs) { %><link rel="stylesheet" href="<%= asset('/css/media-picker.css') %>"><% } %>
   <% if (theme) { %><link rel="stylesheet" href="<%= asset('/css/marketing-themes.css') %>"><% } %>
 </head>
 <body class="mk-body<%= cms ? ' is-cms' : '' %>">

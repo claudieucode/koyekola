@@ -2,8 +2,10 @@
 
   <div class="container page-content">
     <%- include("../partials/breadcrumb", { crumbs }) %>
+    <% if (typeof themeTemplate !== "undefined" && themeTemplate) { %><%- themeTemplate %><% } else { %>
     <h1>À propos</h1>
     <div class="markdown"><%- renderMarkdown(about.content) %></div>
+    <% } %>
     <% if (creator && creator.bio) { %>
       <section class="creator-card">
         <h2><%= creator.username %></h2>

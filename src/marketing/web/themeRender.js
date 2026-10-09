@@ -20,7 +20,8 @@ function postScope(post, { contentHtml = "", minutes = null, author = "" } = {})
 }
 
 // done(html | null)
-function renderRegion(req, res, db, type, { category = "", scope = {}, query = {} } = {}, done) {
+// type : une famille ou une liste ordonnée (la première qui a un modèle en ligne gagne : ex. archive de catégorie, puis liste du blog)
+function renderRegion(req, res, db, type, { category = "", categories = [], tag = "", tags = [], postId = null, scope = {}, query = {} } = {}, done) {
   let finished = false;
   const end = (html) => { if (!finished) { finished = true; done(html); } };
   try {
@@ -28,7 +29,8 @@ function renderRegion(req, res, db, type, { category = "", scope = {}, query = {
     if (!marketing || !marketing.ready) return end(null);
     const ctx = ctxOf(db, marketing);
     const visitor = visitorContext(db, marketing.organizationId, req);
-    const row = themeTemplates.pick(ctx, type, { category, visitor });
+    let row = null;
+    for (const t of [].concat(type)) { row = themeTemplates.pick(ctx, t, { category, categories, tag, tags, postId, visitor }); if (row) break; }
     if (!row) return end(null);
     const page = landing.getPublishedPage(db, row.slug);
     if (!page) return end(null);
@@ -38,9 +40,11 @@ function renderRegion(req, res, db, type, { category = "", scope = {}, query = {
     const siteOk = site && site.status === "active" ? site : null;
     res.render("marketing-public/_sections", { page: vm, form: null, preview: true, thanks: null, error: null, values: {}, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], builder: false }, (err, body) => {
       if (err) return end(null);
-      const css = [siteOk && siteOk.assets.theme, vm.nodeCss, siteOk && siteOk.assets.custom, vm.customCss].filter(Boolean).join("\n").replace(/</g, "");
-      const style = siteOk ? ` style="${tokens.tokensToCss(siteOk.tokens).replace(/"/g, "&quot;")} --lp-accent: var(--kw-primary)"` : "";
-      end(`<div class="kw-theme-template${siteOk ? " lp-site" : ""}"${style}><link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/landing.css") : "/css/landing.css"}"><style>${css}</style><div class="lp-main">${body}</div></div>`);
+      // Source de vérité unique : si l'apparence du site (Apparence → Styles) est publiée, ses jetons habillent aussi les modèles de thème
+      const main = require("../../services/appearance").publishedTokens();
+      const css = [main ? require("../pages/themeCss").themeCss(main) : siteOk && siteOk.assets.theme, vm.nodeCss, siteOk && siteOk.assets.custom, vm.customCss].filter(Boolean).join("\n").replace(/</g, "");
+      const style = siteOk || main ? ` style="${tokens.tokensToCss(main || siteOk.tokens).replace(/"/g, "&quot;")} --lp-accent: var(--kw-primary)"` : "";
+      end(`<div class="kw-theme-template${siteOk || main ? " lp-site" : ""}"${style}><link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/landing.css") : "/css/landing.css"}"><style>${css}</style><div class="lp-main">${body}</div></div>`);
     });
   } catch (error) { end(null); }
 }

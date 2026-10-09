@@ -10,6 +10,8 @@ const { slugify } = require("../utils/format");
 const seoResolver = require("../seo/resolver");
 const { paidCheckoutOpen } = require("../services/payment");
 const navigation = require("../services/navigation");
+const appearance = require("../services/appearance");
+const { roleAtLeast, membershipsOf } = require("../marketing/organizations");
 
 // Espaces privés et pages sans intérêt pour les moteurs de recherche
 const NOINDEX_PREFIXES = ["/formateur", "/mes-cours", "/panier", "/commande", "/apprendre", "/certificat", "/favoris", "/support", "/notifications", "/connexion", "/inscription", "/deconnexion", "/mon-compte"];
@@ -27,6 +29,20 @@ function injectLocals(req, res, next) {
   res.locals.parseVideoUrl = parseVideoUrl;
   res.locals.renderMarkdown = renderMarkdown;
   res.locals.asset = asset;
+  // Apparence du site (CMS → Apparence) : styles, en-tête, pied de page. Version publiée ; en aperçu (?kwpreview=1, équipe seulement) le brouillon.
+  // Une configuration absente = l'affichage d'origine, intact. Une seule lecture par requête.
+  let apCache = null;
+  res.locals.appearance = () => {
+    if (!apCache) {
+      let preview = false;
+      if (req.query && req.query.kwpreview === "1" && req.session && req.session.user) {
+        const u = req.session.user;
+        try { preview = u.role === "formateur" || membershipsOf(db, u.id).some((m) => roleAtLeast(m.role, "editor")); } catch { preview = false; }
+      }
+      try { apCache = appearance.parts({ preview }); } catch { apCache = appearance.parts({ preview: false }); }
+    }
+    return apCache;
+  };
   // Menus de navigation du CMS par emplacement (header, footer, mobile) : null = aucun menu affecté, la page garde son affichage d'origine.
   // Calculés à la demande (seulement par l'en-tête et le pied de page publics) et une seule fois par requête, toujours à jour.
   const menus = new Map();

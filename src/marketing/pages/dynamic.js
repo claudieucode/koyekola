@@ -58,6 +58,7 @@ registerDynamicSource("date.year", { label: "Année en cours", resolve: (s) => S
 // Adresse : paramètre d'URL (?q=…) — texte seulement, borné
 registerDynamicSource("query.q", { label: "Recherche saisie (?q=)", resolve: (s) => (s.query && typeof s.query.q === "string" && s.query.q.trim() ? s.query.q.trim().slice(0, 80) : null) });
 registerDynamicSource("query.categorie", { label: "Catégorie demandée (?categorie=)", resolve: (s) => (s.query && typeof s.query.categorie === "string" && s.query.categorie.trim() ? s.query.categorie.trim().slice(0, 60) : null) });
+registerDynamicSource("query.etiquette", { label: "Étiquette demandée (archive d'étiquette)", resolve: (s) => (s.query && typeof s.query.etiquette === "string" && s.query.etiquette.trim() ? s.query.etiquette.trim().slice(0, 60) : null) });
 
 // ---- Filtres (« | nom: valeur ») ----
 const FILTERS = {
