@@ -41,14 +41,21 @@ courant », « suivre l'archive » — pagination : aucune, page x/y, précéden
 | 12 raccourcis « listes dynamiques » | non | **oui** | oui | `query.js` | `querylist.ejs` | oui | oui | site-widgets |
 | Contenu de l'article, sommaire (table des matières) | oui | – | oui | oui | oui | oui | oui | existants |
 
+## Ajouts de la seconde passe
+
+| Élément | Détail |
+|---|---|
+| Menu du CMS (widget) | lit les menus du moteur de navigation (emplacement En-tête / Pied / Mobile, ou un menu par son nom) : sous-menus, entrées réservées aux membres ou aux visiteurs, adresses vérifiées par le moteur |
+| Modèle « Page d'un auteur » | remplace la liste d'un auteur ; sans lui, « Liste du blog » s'applique |
+| Modèle « Résultats de recherche du blog » | s'applique quand `?q=` est présent ; `{{archive.search}}` donne le texte cherché ; une liste « suit l'archive » respecte la recherche |
+| Modèle « Fiche d'une formation » | remplace l'en-tête de la fiche ; programme, achat, avis et formateur restent |
+| SEO de l'article | `{{post.seo_title}}` et `{{post.seo_description}}` (repli : titre et résumé) lisent les champs SEO déjà enregistrés par l'éditeur du blog |
+| Carrousel de résultats | case « Défilement horizontal » sur la boucle de la grille et présentation « Carrousel » de la liste dynamique : glissement calé, flèches, clavier ; sans pagination |
+| Aperçu des modèles | pendant qu'on dessine un modèle (article, formation, archive), le canevas montre de vraies données |
+
 ## Ce qui n'existe PAS (faute de moteur) — dit franchement
 
-- **Champs personnalisés (type ACF) et métadonnées libres** : le projet n'a pas ce moteur ; aucun widget « champ personnalisé ».
-- **Produits / panier détaillé / paiement dans un widget** : seuls les formations et le compteur du panier existent ; pas de liste du panier en widget.
-- **Modèles de page « Auteur », « Résultats de recherche », « Formation »** : l'archive (catégorie, étiquette, auteur) et la recherche passent par
-  le modèle « Liste du blog » existant (le scope `archive` indique laquelle) ; pas de modèle séparé.
-- **Widgets SEO (titre/description SEO en widget)** : le moteur SEO existe mais n'est pas exposé en widget ; le fil d'Ariane existant est conservé.
-- **Boîte de connexion / déconnexion en widget séparé** : couverte par « Compte du visiteur ».
-- **Commentaires imbriqués (réponses), modération depuis la page** : non (le blog n'en a pas).
-- **Menu de navigation du Page Builder ↔ moteur de navigation du CMS (palier 7)** : le widget « Menu de navigation » garde ses liens saisis à la main ; il n'est pas encore alimenté par les menus du CMS (chantier d'une autre session).
-- **Carrousel de boucle** : la grille existante et les cartes ; pas de diaporama de résultats.
+- **Champs personnalisés (type ACF)** : le projet n'a pas ce moteur (déclaration de champs, saisie, stockage) ; aucun widget « champ personnalisé ». C'est un chantier à part.
+- **Titre / description SEO en widget autonome et données structurées par widget** : le moteur SEO écrit déjà les balises de chaque page ; seules les valeurs sont exposées en étiquettes dynamiques.
+- **Liste détaillée du panier ou paiement dans un widget** : seuls le compteur et le lien existent.
+- **Commentaires : formulaire dans le widget** : la liste est dans le widget, le formulaire reste celui du blog.

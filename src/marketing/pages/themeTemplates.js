@@ -10,6 +10,9 @@ const MAX_TEMPLATES = 30;
 const TYPES = {
   single_post: { label: "Article du blog", hint: "Remplace l'en-tête, l'image et le texte de l'article (le sommaire, l'auteur, la navigation et les commentaires du blog restent, sauf si le modèle contient lui-même la boîte auteur, l'article précédent / suivant ou les commentaires). Utilisez l'élément « Contenu de l'article » et les données {{post.…}}." },
   blog_archive: { label: "Liste du blog", hint: "Remplace la liste des articles (accueil du blog et catégories). Utilisez une grille en boucle (articles) ; la catégorie courante se lit avec {{query.categorie}}." },
+  author_archive: { label: "Page d'un auteur", hint: "Remplace la liste des articles d'un auteur (/blog/auteur/…). Sans ce modèle, le modèle « Liste du blog » s'applique. Utilisez l'en-tête d'archive, la boîte auteur et une liste dynamique « suit l'archive »." },
+  search_results: { label: "Résultats de recherche du blog", hint: "Remplace la liste quand une recherche est faite sur le blog (?q=…). Sans ce modèle, le modèle « Liste du blog » s'applique. Le texte cherché se lit avec {{archive.search}} ; une liste dynamique « suit l'archive » respecte la recherche." },
+  single_course: { label: "Fiche d'une formation", hint: "Remplace l'en-tête de la fiche d'une formation (titre, sous-titre, note). Le programme, l'achat, les avis et le formateur restent. Utilisez les étiquettes {{course.title}}, {{course.price}}, {{course.image}}, {{course.instructor}}…" },
   not_found: { label: "Page introuvable (404)", hint: "S'affiche quand une adresse n'existe pas." },
 };
 // Extension : un module peut déclarer une nouvelle famille de pages (le rendu reste à brancher dans la route concernée,

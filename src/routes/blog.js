@@ -167,13 +167,18 @@ function renderList(req, res, { filter = null } = {}) {
   // Archive affichée (catégorie, étiquette, auteur) : lue par les éléments « En-tête d'archive » et les listes « suivre l'archive »
   const archive = { type: filter ? filter.type : q ? "search" : "blog", name: filter ? (filter.name || filter.label) : "", id: filter && filter.type === "author" ? filter.id : null, termIds: filter && filter.termIds ? filter.termIds : [],
     title: filter ? filter.heading : q ? `Résultats pour « ${q} »` : "Blog", description: filter ? filter.lead : "", count: total, url: basePath, search: q || "" };
-  themeRender.renderRegion(req, res, db, "blog_archive", { category: filter && filter.type === "category" ? filter.name : "", query: { ...themeQuery, ...(q ? { q } : {}) }, scope: { archive } }, (themeTemplate) => {
-  res.render("blog/index", {
-    themeTemplate, posts, page, pages, crumbs, basePath, heading, filter, q, hub, total, categories, popular, discover,
-    featured: featured && page === 1 ? decorate(featured) : null,
-    lead: filter ? filter.lead : "Conseils, idées, ressources et actualités pour apprendre, créer et progresser.", seo,
-  });
-  });
+  const regionArgs = { category: filter && filter.type === "category" ? filter.name : "", query: { ...themeQuery, ...(q ? { q } : {}) }, scope: { archive } };
+  const finish = (themeTemplate) => {
+    res.render("blog/index", {
+      themeTemplate, posts, page, pages, crumbs, basePath, heading, filter, q, hub, total, categories, popular, discover,
+      featured: featured && page === 1 ? decorate(featured) : null,
+      lead: filter ? filter.lead : "Conseils, idées, ressources et actualités pour apprendre, créer et progresser.", seo,
+    });
+  };
+  // Modèle dédié (page d'auteur, résultats de recherche) s'il existe, sinon le modèle « Liste du blog »
+  const specific = filter && filter.type === "author" ? "author_archive" : q ? "search_results" : null;
+  if (!specific) return themeRender.renderRegion(req, res, db, "blog_archive", regionArgs, finish);
+  themeRender.renderRegion(req, res, db, specific, regionArgs, (own) => (own ? finish(own) : themeRender.renderRegion(req, res, db, "blog_archive", regionArgs, finish)));
 }
 
 // Articles venus d'une autre voie que l'éditeur : leurs anciens textes deviennent des relations avant toute page publique du blog
