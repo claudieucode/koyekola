@@ -8,7 +8,7 @@ const nodes = require("./nodes");
 const KEY = "theme.templates";
 const MAX_TEMPLATES = 30;
 const TYPES = {
-  single_post: { label: "Article du blog", hint: "Remplace l'en-tête, l'image et le texte de l'article (le sommaire, l'auteur, la navigation et les commentaires du blog restent). Utilisez l'élément « Contenu de l'article » et les données {{post.…}}." },
+  single_post: { label: "Article du blog", hint: "Remplace l'en-tête, l'image et le texte de l'article (le sommaire, l'auteur, la navigation et les commentaires du blog restent, sauf si le modèle contient lui-même la boîte auteur, l'article précédent / suivant ou les commentaires). Utilisez l'élément « Contenu de l'article » et les données {{post.…}}." },
   blog_archive: { label: "Liste du blog", hint: "Remplace la liste des articles (accueil du blog et catégories). Utilisez une grille en boucle (articles) ; la catégorie courante se lit avec {{query.categorie}}." },
   category_archive: { label: "Archive de catégorie", hint: "Remplace la liste des articles d'UNE catégorie (adresse /blog/categorie/…). Limitez-le à une catégorie, ou laissez « toutes » ; sans modèle de ce type, le modèle « Liste du blog » est utilisé. La catégorie courante se lit avec {{query.categorie}}." },
   tag_archive: { label: "Archive d'étiquette", hint: "Remplace la liste des articles d'UNE étiquette (adresse /blog/etiquette/…). Limitez-le à une étiquette, ou laissez « toutes » ; sans modèle de ce type, le modèle « Liste du blog » est utilisé. L'étiquette courante se lit avec {{query.etiquette}}." },

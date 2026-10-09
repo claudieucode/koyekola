@@ -908,3 +908,4 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 .pb-gclass-row .pb-check { flex: 1 1 120px; margin: 0; }
 .pb-gclass-new { display: flex; gap: 6px; margin-top: 6px; }
 .pb-gclass-new input { flex: 1 1 auto; min-width: 0; }
+.pb-pal-subhead { grid-column: 1 / -1; list-style: none; margin: 10px 0 2px; padding: 0 2px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.7; }

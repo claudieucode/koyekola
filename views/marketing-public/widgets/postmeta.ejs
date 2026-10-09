@@ -1,0 +1,17 @@
+<%# Informations de l'article. d = { post }. %>
+<% const post = d && d.post; const parts = [];
+   if (post) {
+     const day = (ms) => new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+     if (p.showAuthor && post.author) parts.push({ cls: "author", html: post.authorView && post.authorView.url ? `<a href="${post.authorView.url.replace(/"/g, "&quot;")}">${post.author.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c])}</a>` : null, text: post.author });
+     if (p.showDate && post.date) parts.push({ cls: "date", text: day(post.date) });
+     if (p.showUpdated && post.modified && post.date && Math.abs(post.modified - post.date) > 86400000) parts.push({ cls: "updated", text: "Mis à jour le " + day(post.modified) });
+     if (p.showCategory && post.category) parts.push({ cls: "category", text: post.category });
+     if (p.showReading && post.minutes) parts.push({ cls: "reading", text: post.minutes + " min de lecture" });
+     if (p.showComments && post.commentsCount != null) parts.push({ cls: "comments", text: post.commentsCount + (post.commentsCount > 1 ? " commentaires" : " commentaire") });
+     if (p.showViews && post.views) parts.push({ cls: "views", text: post.views + " lectures" });
+   } %>
+<% const ALIGN = { left: "is-left", center: "is-center" }, SEP = { dot: "sep-dot", bar: "sep-bar", none: "sep-none" }; %>
+<div class="<%= cls %> <%= ALIGN[p.align] || "is-left" %> <%= SEP[p.separator] || "sep-dot" %>"<%- attrs %>>
+  <% if (!post) { %><% if (isBuilder) { %><span class="kw-pm-note">Informations de l'article : visibles sur un modèle « Article du blog ».</span><% } %>
+  <% } else { parts.forEach((x) => { %><span class="kw-pm-item" data-part="<%= x.cls %>"><% if (x.html) { %><%- x.html %><% } else { %><%= x.text %><% } %></span><% }) } %>
+</div>

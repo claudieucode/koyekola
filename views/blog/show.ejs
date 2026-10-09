@@ -81,7 +81,8 @@
 
         <%- include("partials/share", { variant: "end", label: "Cet article vous a été utile ? Partagez-le :" }) %>
 
-        <% if (author) { %>
+        <% const tplHtml = typeof themeTemplate !== "undefined" && themeTemplate ? String(themeTemplate) : ""; /* éléments déjà présents dans le modèle de thème : pas de doublon */ %>
+        <% if (author && !tplHtml.includes("kw-authorbox")) { %>
           <section class="article-author" aria-labelledby="author-title">
             <% if (author.avatar_path) { %><img class="article-author-avatar" src="<%= author.avatar_path %>" alt="" width="72" height="72" loading="lazy">
             <% } else { %><span class="article-author-avatar article-author-initials" style="background:<%= avatarColor(author.username) %>" aria-hidden="true"><%= initials(author.username) %></span><% } %>
@@ -94,7 +95,7 @@
           </section>
         <% } %>
 
-        <% if (previous || next) { %>
+        <% if ((previous || next) && !tplHtml.includes("kw-postnav")) { %>
           <nav class="article-pager" aria-label="Articles précédent et suivant">
             <% if (previous) { %><a class="article-pager-link" href="/blog/<%= previous.slug %>" rel="prev"><span class="article-pager-dir"><%- icon("arrowLeft", { size: 14 }) %> Article précédent</span><span class="article-pager-title"><%= previous.title %></span></a><% } else { %><span></span><% } %>
             <% if (next) { %><a class="article-pager-link article-pager-next" href="/blog/<%= next.slug %>" rel="next"><span class="article-pager-dir">Article suivant <%- icon("arrowRight", { size: 14 }) %></span><span class="article-pager-title"><%= next.title %></span></a><% } %>
@@ -103,6 +104,7 @@
 
         <% if (post.comments_enabled) { %>
           <section class="article-comments" id="commentaires" aria-labelledby="comments-title">
+            <% if (!tplHtml.includes("kw-postcomments")) { /* liste déjà affichée par l'élément « Commentaires » du modèle */ %>
             <h2 id="comments-title">Commentaires <span class="article-comments-count">(<%= comments.total %>)</span></h2>
             <% if (commentNotice) { %><p class="comment-notice" role="status"><%= commentNotice %></p><% } %>
             <% if (comments.roots.length) { %>
@@ -120,6 +122,7 @@
               <p class="comment-empty">Aucun commentaire pour l'instant : soyez le premier à réagir.</p>
             <% } else { %>
               <p class="comment-empty">Aucun commentaire.</p>
+            <% } %>
             <% } %>
             <% if (commentsOpen && (me || commentCfg.guests_allowed)) { %>
               <form method="post" action="/blog/<%= post.slug %>/commentaires" class="comment-form" id="commentaire-form" novalidate>

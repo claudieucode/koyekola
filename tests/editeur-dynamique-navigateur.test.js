@@ -71,7 +71,7 @@ describe("données dynamiques et boucles (navigateur)", { skip: SKIP }, () => {
     await saved((d) => find("grid00000001").props.loop && find("grid00000001").props.loop.source === "posts", "boucle activée");
     await page.getByLabel("Nombre par page").selectOption("2");
     await saved(() => find("grid00000001").props.loop.count === 2, "2 par page");
-    await page.getByLabel("Pagination (liens Précédent / Suivant)").check();
+    await page.getByLabel("Pagination", { exact: true }).selectOption("prevnext");
     await saved(() => find("grid00000001").props.loop.paginate === true, "pagination");
     await until(async () => (await frame().locator(".kw-loop-item").count()) === 2, { what: "2 exemplaires dans le canevas" });
     assert.equal(await frame().locator(".kw-loop-pages").count(), 1, "pagination affichée (3 articles, 2 par page)");

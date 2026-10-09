@@ -18,6 +18,8 @@ function check(def, where = "widget") {
   if (!TYPE.test(String(def.type || ""))) bad("« type » : lettres minuscules et chiffres (3 à 31), commence par une lettre.");
   for (const k of ["label", "group", "icon", "keywords"]) if (typeof def[k] !== "string" || !def[k].trim()) bad(`« ${k} » obligatoire.`);
   if (!Number.isInteger(def.version) || def.version < 1) bad("« version » : entier, 1 ou plus.");
+  if (def.data !== undefined && typeof def.data !== "function") bad("« data » : fonction (ctx, réglages, env) → données pour le gabarit.");
+  if (def.template !== undefined && !TYPE.test(String(def.template))) bad("« template » : nom de gabarit invalide.");
   if (def.style !== undefined && !["text", "box"].includes(def.style)) bad("« style » : text ou box.");
   if (!Array.isArray(def.schema) || !def.schema.length) bad("« schema » : au moins un champ.");
   const keys = new Set();
@@ -38,11 +40,18 @@ function check(def, where = "widget") {
 
 // Widgets du dossier (ordre alphabétique des fichiers) ; chacun doit avoir son gabarit d'affichage
 function load() {
-  return fs.readdirSync(__dirname).filter((f) => f.endsWith(".js") && f !== "index.js").sort().map((f) => {
-    const def = check(require(path.join(__dirname, f)), f);
-    if (!fs.existsSync(path.join(__dirname, "../../../../views/marketing-public/widgets", `${def.type}.ejs`))) throw new Error(`Widget personnalisé (${f}) : gabarit views/marketing-public/widgets/${def.type}.ejs introuvable.`);
-    return def;
-  });
+  const out = [];
+  for (const f of fs.readdirSync(__dirname).filter((x) => x.endsWith(".js") && x !== "index.js").sort()) {
+    const mod = require(path.join(__dirname, f));
+    // Un fichier peut déclarer plusieurs widgets d'une même famille (liste de descriptions)
+    for (const raw of Array.isArray(mod) ? mod : [mod]) {
+      const def = check(raw, f);
+      const tpl = def.template || def.type;
+      if (!fs.existsSync(path.join(__dirname, "../../../../views/marketing-public/widgets", `${tpl}.ejs`))) throw new Error(`Widget personnalisé (${f}) : gabarit views/marketing-public/widgets/${tpl}.ejs introuvable.`);
+      out.push(def);
+    }
+  }
+  return out;
 }
 
 module.exports = { KINDS, check, load };

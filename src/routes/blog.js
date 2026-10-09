@@ -167,9 +167,11 @@ function renderList(req, res, { filter = null } = {}) {
   // Famille de modèle : recherche, archive de catégorie, archive d'étiquette, sinon liste du blog (la première qui a un modèle en ligne gagne)
   const isCat = Boolean(filter && filter.type === "category"), isTag = Boolean(filter && filter.type === "tag");
   if (isTag) themeQuery.etiquette = filter.name;
-  if (q) themeQuery.q = q;
   const families = q ? ["search_results", "blog_archive"] : isCat ? ["category_archive", "blog_archive"] : isTag ? ["tag_archive", "blog_archive"] : "blog_archive";
-  themeRender.renderRegion(req, res, db, families, { category: isCat ? filter.name : "", categories: isCat ? (filter.ancestors || []).map((a) => a.name).reverse() : [], tag: isTag ? filter.name : "", query: themeQuery }, (themeTemplate) => {
+  // Archive affichée (catégorie, étiquette, auteur) : lue par les éléments « En-tête d'archive » et les listes « suivre l'archive »
+  const archive = { type: filter ? filter.type : q ? "search" : "blog", name: filter ? (filter.name || filter.label) : "", id: filter && filter.type === "author" ? filter.id : null, termIds: filter && filter.termIds ? filter.termIds : [],
+    title: filter ? filter.heading : q ? `Résultats pour « ${q} »` : "Blog", description: filter ? filter.lead : "", count: total, url: basePath, search: q || "" };
+  themeRender.renderRegion(req, res, db, families, { category: isCat ? filter.name : "", categories: isCat ? (filter.ancestors || []).map((a) => a.name).reverse() : [], tag: isTag ? filter.name : "", query: { ...themeQuery, ...(q ? { q } : {}) }, scope: { archive } }, (themeTemplate) => {
   res.render("blog/index", {
     themeTemplate, posts, page, pages, crumbs, basePath, heading, filter, q, hub, total, categories, popular, discover,
     featured: featured && page === 1 ? decorate(featured) : null,
