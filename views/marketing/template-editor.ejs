@@ -58,16 +58,39 @@
               <h2 class="mk-b-pane-title">Blocs</h2>
               <p class="mk-b-pane-hint">Cliquez pour ajouter après le bloc sélectionné, ou glissez dans l'e-mail.</p>
             </div>
+            <div class="mk-palette-tools">
+              <div class="mk-palette-search">
+                <span class="mk-palette-search-icon" aria-hidden="true"><%- icon("search", { size: 16 }) %></span>
+                <input type="search" id="mk-palette-search" placeholder="Rechercher un bloc (photo, achat, vente, social…)" aria-label="Rechercher un bloc" autocomplete="off" spellcheck="false">
+              </div>
+              <div class="mk-palette-filters" id="mk-palette-filters" role="group" aria-label="Filtrer les blocs">
+                <% filters.forEach(([key, label], i) => { %><button type="button" class="mk-palette-chip" data-filter="<%= key %>" aria-pressed="<%= i === 0 ? "true" : "false" %>"><%= label %></button><% }) %>
+              </div>
+            </div>
             <nav class="mk-palette" id="mk-palette" aria-label="Ajouter un bloc">
-              <% palette.forEach((g) => { %>
-                <div class="mk-palette-group">
-                  <h3 class="mk-palette-title"><%= g.title %></h3>
-                  <div class="mk-palette-list">
-                    <% g.blocks.forEach(([type, label]) => { const b = blockInfo[type]; %><button type="button" class="mk-palette-btn" data-add="<%= type %>" draggable="true" aria-label="Ajouter un bloc « <%= label %> » : <%= b[2] %>" title="<%= b[2] %>"><span class="mk-palette-icon" aria-hidden="true"><%- icon(b[1], { size: 18 }) %></span><span class="mk-palette-label"><%= label %></span></button><% }) %>
-                    <% (g.presets || []).forEach(([key, label]) => { const b = presetInfo[key]; %><button type="button" class="mk-palette-btn" data-add-preset="<%= key %>" draggable="true" aria-label="Ajouter « <%= label %> » : <%= b[2] %>" title="<%= b[2] %>"><span class="mk-palette-icon" aria-hidden="true"><%- icon(b[1], { size: 18 }) %></span><span class="mk-palette-label"><%= label %></span></button><% }) %>
+              <div class="mk-palette-group" data-cat="recent" id="mk-palette-recent" hidden>
+                <h3 class="mk-palette-title"><button type="button" class="mk-palette-toggle" aria-expanded="true"><span class="mk-palette-title-text">Récemment utilisés</span><span class="mk-palette-caret" aria-hidden="true"><%- icon("chevronDown", { size: 14 }) %></span></button></h3>
+                <div class="mk-palette-list" id="mk-palette-recent-list"></div>
+              </div>
+              <div class="mk-palette-group" data-cat="mine" id="mk-palette-mine">
+                <h3 class="mk-palette-title"><button type="button" class="mk-palette-toggle" aria-expanded="true"><span class="mk-palette-title-text">Mes blocs</span><span class="mk-palette-count" id="mk-palette-mine-count">0</span><span class="mk-palette-caret" aria-hidden="true"><%- icon("chevronDown", { size: 14 }) %></span></button></h3>
+                <form class="mk-palette-saveform" id="mk-save-block" hidden>
+                  <label for="mk-save-block-name">Nom du bloc enregistré</label>
+                  <input type="text" id="mk-save-block-name" maxlength="80" autocomplete="off" required>
+                  <div class="mk-palette-saveform-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button><button type="button" class="btn btn-outline btn-sm" id="mk-save-block-cancel">Annuler</button></div>
+                </form>
+                <div class="mk-palette-list" id="mk-palette-mine-list"></div>
+                <p class="mk-palette-mine-empty" id="mk-palette-mine-empty">Aucun bloc enregistré. Sélectionnez un bloc dans l'e-mail, puis « Enregistrer » dans ses actions.</p>
+              </div>
+              <% palette.forEach((g) => { const open = ["text", "media", "actions", "layout", "marketing"].includes(g.key); %>
+                <div class="mk-palette-group" data-cat="<%= g.key %>">
+                  <h3 class="mk-palette-title"><button type="button" class="mk-palette-toggle" aria-expanded="<%= open ? "true" : "false" %>"><span class="mk-palette-title-text"><%= g.title %></span><span class="mk-palette-count"><%= g.entries.length %></span><span class="mk-palette-caret" aria-hidden="true"><%- icon("chevronDown", { size: 14 }) %></span></button></h3>
+                  <div class="mk-palette-list"<%= open ? "" : " hidden" %>>
+                    <% g.entries.forEach((e) => { %><button type="button" class="mk-palette-btn" <%= e.kind === "preset" ? "data-add-preset" : "data-add" %>="<%= e.key %>" data-id="<%= e.id %>" data-search="<%= e.search %>" data-flags="<%= ["essential", "ecommerce", "dynamic", "advanced"].filter((f) => e[f]).concat(g.key).join(" ") %>" draggable="true" aria-label="Ajouter <%= e.kind === "preset" ? "" : "un bloc " %>« <%= e.name %> » : <%= e.description %>" title="<%= e.description %>"><span class="mk-palette-icon" aria-hidden="true"><%- e.svg %></span><span class="mk-palette-label"><%= e.name %></span></button><% }) %>
                   </div>
                 </div>
               <% }) %>
+              <p class="mk-palette-empty" id="mk-palette-empty" hidden>Aucun bloc ne correspond. Essayez « image », « bouton » ou « promo ».</p>
             </nav>
             <p class="mk-b-pane-foot">Astuce : glissez aussi une image ou un PDF de votre ordinateur directement dans l'e-mail.</p>
           </div>

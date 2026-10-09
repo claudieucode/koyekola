@@ -204,8 +204,8 @@ describe("éditeur : barre d'outils, onglets, canevas, réglages", () => {
     assert.match(html, /<aside class="mk-b-props" id="mk-props" aria-label="Réglages du bloc sélectionné">/);
   });
   test("la palette propose CHAQUE type de bloc, en groupes, avec icône et description, sans « HTML libre »", () => {
-    for (const type of TYPES) assert.match(html, new RegExp(`<button type="button" class="mk-palette-btn" data-add="${type}" draggable="true" aria-label="Ajouter un bloc « [^»]+ » : [^"]+"`), type);
-    for (const group of ["Texte", "Médias", "Actions", "Mise en page"]) assert.match(html, new RegExp(`<h3 class="mk-palette-title">${group}</h3>`), group);
+    for (const type of TYPES) assert.match(html, new RegExp(`<button type="button" class="mk-palette-btn" data-add="${type}"[^>]* draggable="true" aria-label="Ajouter un bloc « [^»]+ » : [^"]+"`), type);
+    for (const group of ["Texte", "Médias", "Actions", "Mise en page"]) assert.match(html, new RegExp(`<span class="mk-palette-title-text">${group}</span>`), group);
     assert.doesNotMatch(html, /data-add="(html|code|embed|iframe|script)"/);
   });
   test("annuler / rétablir : boutons nommés, désactivés au départ, raccourcis annoncés", () => {

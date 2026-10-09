@@ -12,6 +12,8 @@ const { missingImages } = require("../templates/lint");
 const { getSendingConfig } = require("../sending/config");
 const { markdownToRich } = require("../templates/richtext");
 const { FONTS } = require("../templates/blocks");
+const CATALOG = require("../templates/catalog");
+const saved = require("../templates/saved");
 // Ouverture dans l'éditeur : un texte (ou des colonnes) encore en Markdown est présenté en texte riche. Rien n'est
 // modifié en base tant que l'auteur n'enregistre pas (le rendu Markdown reste valable jusque-là).
 function forEditor(blocks) {
@@ -42,18 +44,13 @@ const BLOCKS = {
   posts: ["Articles", "fileText", "Les derniers articles du blog (rempli à chaque envoi d'une campagne RSS)"],
   survey: ["Sondage", "listChecks", "Un bouton (et la 1re question) vers un sondage, avec le lien personnel de chaque destinataire"],
 };
-// Ajouts en un clic (pas des types de blocs) : préréglages et ensembles prêts à l'emploi, construits avec les blocs ci-dessus
-const PRESETS = { gif: ["GIF animé", "image", "Une image animée (GIF) de la médiathèque"], cta: ["Appel à l'action", "zap", "Titre, texte et bouton"], offer: ["Offre", "coin", "Titre, coupon et bouton"] };
 // Icônes utilisées par le script de l'éditeur (SVG du registre fixe, jamais de texte saisi)
 const EDITOR_ICONS = ["listChecks", "grip", "zap", "coin", "tag", "list", "copy", "eye", "eyeOff", "trash", "arrowUp", "arrowDown", "edit", "grip", "upload", "plus", "search", "alertTriangle", "checkCircle", "close", "image", "fileText", "link", "maximize", "monitor", "tablet", "smartphone", "layers", "palette", "braces", "settings", "undo", "redo", "moreHorizontal", "alertCircle", "chevronRight", "info", "externalLink", "alignLeft", "alignCenter", "alignRight", "alignJustify", "listOrdered", "indentMore", "indentLess", "highlighter", "clearFormat", "borderBox", "spacing", "chevronDown", "type", "video"];
-// Palette de l'éditeur : groupes et blocs (libellés français)
-const PALETTE = [
-  { title: "Texte", blocks: [["heading", "Titre"], ["text", "Texte"], ["quote", "Citation"], ["list", "Liste"]] },
-  { title: "Médias", blocks: [["image", "Image"], ["video", "Vidéo"]], presets: [["gif", "GIF animé"]] },
-  { title: "Actions", blocks: [["button", "Bouton"], ["link", "Lien"], ["social", "Réseaux sociaux"]] },
-  { title: "Mise en page", blocks: [["columns", "Deux colonnes"], ["divider", "Séparateur"], ["spacer", "Espace"]] },
-  { title: "Contenu", blocks: [["course", "Formation"], ["posts", "Articles"], ["survey", "Sondage"], ["coupon", "Coupon"]], presets: [["cta", "Appel à l'action"], ["offer", "Offre"]] },
-];
+// Palette de l'éditeur : générée depuis le registre (templates/catalog.js), groupée par catégorie (les catégories vides sont omises)
+function buildPalette() {
+  const groups = CATALOG.CATEGORIES.map(([key, title]) => ({ key, title, entries: CATALOG.ENTRIES.filter((e) => e.category === key).map((e) => ({ ...e, svg: icon(e.icon, { size: 18 }), search: CATALOG.normalize(`${e.name} ${title} ${e.description} ${e.keywords}`) })) }));
+  return groups.filter((g) => g.entries.length);
+}
 const KIND_LABEL = { marketing: "Marketing", transactional: "Transactionnel" };
 const TABS_ALL = "";
 
@@ -192,14 +189,26 @@ module.exports = ({ db }) => {
       versions: templates.listVersions(ctx, template.id),
       blocks: Object.fromEntries(Object.entries(BLOCKS).map(([type, [label, ic, description]]) => [type, { label, icon: icon(ic, { size: 18 }), description }])),
       fonts: Object.keys(FONTS),
+      savedBlocks: saved.listSavedBlocks(ctx),
+      presets: Object.fromEntries(Object.entries(CATALOG.PRESETS).map(([k, f]) => [k, f()])),
+      catalog: CATALOG.ENTRIES.map((e) => ({ id: e.id, kind: e.kind, key: e.key, name: e.name })),
       icons: Object.fromEntries(EDITOR_ICONS.map((n) => [n, icon(n, { size: 16 })])),
       contacts: db.prepare("SELECT id, email FROM mk_contacts WHERE organization_id = ? ORDER BY id DESC LIMIT 20").all(ctx.organizationId),
       ai: { configured: require("../../services/aiCore").isConfigured() }, // onglet « IA » (point 10)
     };
     res.render("marketing/template-editor", {
-      title: template.name, active: "templates", template, data: safeJson(data), readOnly: data.readOnly, versions: data.versions, palette: PALETTE, blockInfo: BLOCKS, presetInfo: PRESETS, categories: CATEGORIES,
+      title: template.name, active: "templates", template, data: safeJson(data), readOnly: data.readOnly, versions: data.versions, palette: buildPalette(), filters: CATALOG.FILTERS, categories: CATEGORIES,
       recipients: teamRecipients(ctx), currentEmail: String(req.session.user.email || "").toLowerCase(), contacts: data.contacts,
     });
+  });
+
+  // ---------- Blocs enregistrés (« Mes blocs ») : déclarés avant « /modeles/:id » ----------
+  router.post("/modeles/blocs-enregistres", need("templates.write"), (req, res, next) => {
+    try { res.status(201).json({ ok: true, block: saved.createSavedBlock(req.mk.ctx, req.body) }); } catch (error) { try { jsonError(res, error); } catch (e) { next(e); } }
+  });
+  router.post("/modeles/blocs-enregistres/:id/supprimer", need("templates.write"), (req, res) => {
+    const ok = saved.deleteSavedBlock(req.mk.ctx, intOrNull(req.params.id));
+    res.status(ok ? 200 : 404).json(ok ? { ok: true } : { error: "Bloc enregistré introuvable." });
   });
 
   router.post("/modeles/:id", need("templates.write"), (req, res, next) => {

@@ -866,8 +866,22 @@
     changed(true); renderProps();
     announce(added.length + " bloc" + (added.length > 1 ? "s" : "") + " ajouté" + (added.length > 1 ? "s" : "") + " en position " + (index + 1) + ".");
   }
+  // Bloc enregistré (« Mes blocs ») : copie indépendante, avec de nouveaux identifiants
+  var savedBlocks = (data.savedBlocks || []).slice();
+  var openSaveBlock = function () {};
+  function addSaved(savedId, at) {
+    var saved = savedBlocks.filter(function (b) { return b.id === savedId; })[0];
+    if (!saved || readOnly) return;
+    var index = at == null ? insertIndex() : Math.max(0, Math.min(at, state.blocks.length));
+    var added = JSON.parse(JSON.stringify(saved.blocks)).map(function (b) { b.id = genId(); return b; });
+    Array.prototype.splice.apply(state.blocks, [index, 0].concat(added));
+    selectedId = added[0].id;
+    changed(true); renderProps();
+    announce("Bloc enregistré « " + saved.name + " » ajouté en position " + (index + 1) + ".");
+  }
   function addBlock(type, at, preset) {
     if (typeof type === "string" && type.indexOf("preset:") === 0) { addPreset(type.slice(7), at); return null; }
+    if (typeof type === "string" && type.indexOf("saved:") === 0) { addSaved(Number(type.slice(6)), at); return null; }
     if (!TYPES[type] || readOnly) return null;
     var block = Object.assign(TYPES[type](), preset || {}); block.id = genId();
     var index = at == null ? insertIndex() : Math.max(0, Math.min(at, state.blocks.length));
@@ -929,6 +943,7 @@
     bar.appendChild(order);
     bar.appendChild(textBtn("copy", "Dupliquer", "Dupliquer le bloc", function () { duplicate(block.id); }));
     bar.appendChild(textBtn(block.hidden ? "eye" : "eyeOff", block.hidden ? "Afficher" : "Masquer", block.hidden ? "Afficher le bloc" : "Masquer le bloc (non envoyé)", function () { toggleHidden(block.id); }));
+    if (!readOnly) bar.appendChild(textBtn("listPlus", "Enregistrer", "Enregistrer ce bloc dans « Mes blocs »", function () { openSaveBlock(block.id); }));
     bar.appendChild(iconBtn("trash", "Supprimer le bloc", function () { remove(block.id); }, { "class": "mk-b-icon is-danger mk-b-blocktools-del" }));
     return bar;
   }
@@ -1114,18 +1129,126 @@
   function isDrag(e, type) { return !!(e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], type) !== -1); }
   function isFileDrag(e) { return isDrag(e, "Files"); }
 
-  // ---------- Palette (onglet « Blocs ») ----------
+  // ---------- Palette (onglet « Blocs ») : registre serveur, recherche, filtres, accordéons, récents ----------
+  // Les ensembles viennent du registre serveur (src/marketing/templates/catalog.js) : une seule définition
+  Object.keys(data.presets || {}).forEach(function (key) {
+    PRESETS[key] = function () { return JSON.parse(JSON.stringify(data.presets[key])); };
+  });
   if (!readOnly) {
-    [].forEach.call(document.querySelectorAll("[data-add]"), function (btn) {
-      var type = btn.getAttribute("data-add");
-      btn.addEventListener("click", function () { addBlock(type); scrollToBlock(selectedId); });
-      btn.addEventListener("dragstart", function (e) { e.dataTransfer.effectAllowed = "copy"; e.dataTransfer.setData(BLOCK_DRAG, type); e.dataTransfer.setData("text/plain", type); });
+    var palette = $("mk-palette"), searchInput = $("mk-palette-search"), recentGroup = $("mk-palette-recent"), recentList = $("mk-palette-recent-list"), emptyMsg = $("mk-palette-empty");
+    var filterBtns = [].slice.call(document.querySelectorAll("[data-filter]"));
+    var RECENT_KEY = "mk:recent-blocks", RECENT_MAX = 8, activeFilter = "all", dragged = null;
+    var norm = function (t) { return String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); };
+    var addButtons = function () { return [].slice.call(palette.querySelectorAll(".mk-palette-group:not(#mk-palette-recent) .mk-palette-btn")); };
+    var readRecent = function () { try { var v = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]"); return Array.isArray(v) ? v.filter(function (x) { return typeof x === "string"; }) : []; } catch (e) { return []; } };
+    var writeRecent = function (ids) { try { localStorage.setItem(RECENT_KEY, JSON.stringify(ids)); } catch (e) { /* stockage indisponible : les récents sont facultatifs */ } };
+    function renderRecent() {
+      recentList.textContent = "";
+      var byId = {}; addButtons().forEach(function (b) { byId[b.getAttribute("data-id")] = b; });
+      readRecent().forEach(function (id) { if (byId[id]) { var c = byId[id].cloneNode(true); c.setAttribute("data-recent", ""); recentList.appendChild(c); } });
+      applyFilter();
+    }
+    function rememberRecent(btn) {
+      var id = btn.getAttribute("data-id"); if (!id) return;
+      writeRecent([id].concat(readRecent().filter(function (x) { return x !== id; })).slice(0, RECENT_MAX));
+      renderRecent();
+    }
+    function matchesFilter(btn) {
+      if (activeFilter === "all" || activeFilter === "recent") return true;
+      return (" " + btn.getAttribute("data-flags") + " ").indexOf(" " + activeFilter + " ") !== -1;
+    }
+    function applyFilter() {
+      var words = norm(searchInput.value).split(/\s+/).filter(Boolean), searching = words.length > 0 || activeFilter !== "all", shown = 0;
+      [].forEach.call(palette.querySelectorAll(".mk-palette-group"), function (g) {
+        var isRecent = g.id === "mk-palette-recent", n = 0;
+        [].forEach.call(g.querySelectorAll(".mk-palette-btn"), function (b) {
+          var hay = norm(b.getAttribute("data-search") || ""), ok = words.every(function (w) { return hay.indexOf(w) !== -1; }) && matchesFilter(b);
+          b.hidden = !ok; if (ok) n++;
+        });
+        var list = g.querySelector(".mk-palette-list"), toggle = g.querySelector(".mk-palette-toggle");
+        if (isRecent) g.hidden = !recentList.children.length || (activeFilter !== "all" && activeFilter !== "recent") || words.length > 0 && !n;
+        else g.hidden = (searching && !n) || activeFilter === "recent";
+        if (g.id === "mk-palette-mine" && activeFilter === "mine" && !words.length) { g.hidden = false; shown += 1; } // « Mes blocs » vide : on affiche la consigne plutôt qu'« aucun résultat »
+        if (!g.hidden && !isRecent) shown += n;
+        // Recherche ou filtre actif : les catégories qui correspondent s'ouvrent ; sinon l'état choisi par l'auteur est conservé
+        list.hidden = searching ? false : toggle.getAttribute("aria-expanded") !== "true";
+      });
+      if (activeFilter === "recent") shown = recentList.children.length;
+      emptyMsg.hidden = shown > 0;
+    }
+    palette.addEventListener("click", function (e) {
+      var toggle = e.target.closest(".mk-palette-toggle");
+      if (toggle) { toggle.setAttribute("aria-expanded", toggle.getAttribute("aria-expanded") === "true" ? "false" : "true"); applyFilter(); return; }
+      var btn = e.target.closest(".mk-palette-btn"); if (!btn) return;
+      if (btn.hasAttribute("data-add")) addBlock(btn.getAttribute("data-add")); else if (btn.hasAttribute("data-add-saved")) addSaved(Number(btn.getAttribute("data-add-saved"))); else addPreset(btn.getAttribute("data-add-preset"));
+      scrollToBlock(selectedId); rememberRecent(btn);
     });
-    [].forEach.call(document.querySelectorAll("[data-add-preset]"), function (btn) {
-      var key = btn.getAttribute("data-add-preset");
-      btn.addEventListener("click", function () { addPreset(key); scrollToBlock(selectedId); });
-      btn.addEventListener("dragstart", function (e) { e.dataTransfer.effectAllowed = "copy"; e.dataTransfer.setData(BLOCK_DRAG, "preset:" + key); e.dataTransfer.setData("text/plain", key); });
+    palette.addEventListener("dragstart", function (e) {
+      var btn = e.target.closest && e.target.closest(".mk-palette-btn"); if (!btn) return;
+      var preset = btn.hasAttribute("data-add-preset"), isSaved = btn.hasAttribute("data-add-saved"), key = btn.getAttribute(preset ? "data-add-preset" : isSaved ? "data-add-saved" : "data-add");
+      e.dataTransfer.effectAllowed = "copy"; e.dataTransfer.setData(BLOCK_DRAG, preset ? "preset:" + key : isSaved ? "saved:" + key : key); e.dataTransfer.setData("text/plain", key);
+      dragged = btn;
     });
+    // Récents mis à jour à la fin du glisser (retirer le bouton source pendant le glisser l'annulerait)
+    palette.addEventListener("dragend", function () { if (dragged) { var b = dragged; dragged = null; rememberRecent(b); } });
+    searchInput.addEventListener("input", applyFilter);
+    searchInput.addEventListener("keydown", function (e) { if (e.key === "Escape" && searchInput.value) { searchInput.value = ""; applyFilter(); e.stopPropagation(); } });
+    filterBtns.forEach(function (c) {
+      c.addEventListener("click", function () {
+        activeFilter = c.getAttribute("data-filter");
+        filterBtns.forEach(function (o) { o.setAttribute("aria-pressed", o === c ? "true" : "false"); });
+        applyFilter();
+      });
+    });
+    // ----- Mes blocs : blocs enregistrés sur le serveur, partagés par tous les modèles de l'organisation -----
+    var mineList = $("mk-palette-mine-list"), mineEmpty = $("mk-palette-mine-empty"), mineCount = $("mk-palette-mine-count"), saveForm = $("mk-save-block"), saveName = $("mk-save-block-name"), toSave = null;
+    function renderMine() {
+      mineList.textContent = "";
+      savedBlocks.forEach(function (sb) {
+        var wrap = el("div", { "class": "mk-palette-saved" });
+        var btn = el("button", { type: "button", "class": "mk-palette-btn", "data-add-saved": String(sb.id), "data-id": "saved." + sb.id, "data-flags": "mine", "data-search": norm(sb.name + " mes blocs enregistre"), draggable: "true", "aria-label": "Ajouter le bloc enregistré « " + sb.name + " »", title: sb.blocks.length + " bloc" + (sb.blocks.length > 1 ? "s" : "") });
+        btn.appendChild(iconSpan("layers", "mk-palette-icon"));
+        btn.appendChild(el("span", { "class": "mk-palette-label" }, sb.name));
+        var del = el("button", { type: "button", "class": "mk-palette-saved-del", "aria-label": "Supprimer le bloc enregistré « " + sb.name + " »", "data-del-saved": String(sb.id) });
+        del.appendChild(iconSpan("close"));
+        wrap.appendChild(btn); wrap.appendChild(del); mineList.appendChild(wrap);
+      });
+      mineEmpty.hidden = savedBlocks.length > 0; mineCount.textContent = String(savedBlocks.length);
+      applyFilter();
+    }
+    openSaveBlock = function (blockId) {
+      var b = blockById(blockId); if (!b) return;
+      toSave = JSON.parse(JSON.stringify(b)); showPane("blocks");
+      var group = $("mk-palette-mine"); group.hidden = false;
+      var t = group.querySelector(".mk-palette-toggle"); t.setAttribute("aria-expanded", "true");
+      searchInput.value = ""; activeFilter = "all"; filterBtns.forEach(function (o) { o.setAttribute("aria-pressed", o.getAttribute("data-filter") === "all" ? "true" : "false"); }); applyFilter();
+      saveForm.hidden = false; saveName.value = label(b); saveName.focus(); saveName.select();
+    };
+    $("mk-save-block-cancel").addEventListener("click", function () { saveForm.hidden = true; toSave = null; });
+    saveName.addEventListener("keydown", function (e) { if (e.key === "Escape") { saveForm.hidden = true; toSave = null; e.stopPropagation(); } });
+    saveForm.addEventListener("submit", function (e) {
+      e.preventDefault(); if (!toSave) return;
+      fetch("/marketing/modeles/blocs-enregistres", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: saveName.value, blocks: [toSave] }) })
+        .then(function (res) { return res.json().catch(function () { return {}; }).then(function (j) { return { ok: res.ok, j: j }; }); })
+        .then(function (r) {
+          if (!r.ok) { toast((r.j && r.j.error) || "Enregistrement du bloc impossible.", "error"); return; }
+          savedBlocks.push(r.j.block); savedBlocks.sort(function (a, b) { return a.name.localeCompare(b.name, "fr", { sensitivity: "base" }); });
+          saveForm.hidden = true; toSave = null; renderMine(); toast("Bloc enregistré dans « Mes blocs ».", "success");
+        })
+        .catch(function () { toast("Enregistrement du bloc impossible (réseau).", "error"); });
+    });
+    mineList.addEventListener("click", function (e) {
+      var del = e.target.closest("[data-del-saved]"); if (!del) return;
+      var sid = Number(del.getAttribute("data-del-saved")), sb = savedBlocks.filter(function (b) { return b.id === sid; })[0]; if (!sb) return;
+      var go = function () {
+        fetch("/marketing/modeles/blocs-enregistres/" + sid + "/supprimer", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: "{}" })
+          .then(function (res) { if (!res.ok) throw new Error(); savedBlocks = savedBlocks.filter(function (b) { return b.id !== sid; }); renderMine(); renderRecent(); toast("Bloc enregistré supprimé.", "success"); })
+          .catch(function () { toast("Suppression impossible.", "error"); });
+      };
+      if (typeof window.mkConfirm === "function") window.mkConfirm({ title: "Supprimer ce bloc enregistré ?", text: "« " + sb.name + " » ne sera plus proposé. Les e-mails qui l'ont déjà utilisé ne changent pas.", ok: "Supprimer" }, go); else go();
+    });
+    renderMine();
+    renderRecent();
   }
 
   // ---------- Onglets de gauche ----------
