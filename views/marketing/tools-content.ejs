@@ -1,0 +1,58 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Outils de contenu", intro: "Des actions précises, chacune avec sa SIMULATION (rien n'est modifié) puis sa confirmation. Aucun bouton « réparer » aux effets inconnus.", tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
+<%
+  const running = last && ["queued", "running"].includes(last.status);
+  const rep = last && last.report;
+  const fdate = (v) => (v ? new Date(String(v).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" }) : "");
+%>
+<section class="mk-panel" aria-labelledby="tl-r">
+  <h2 id="tl-r">Rechercher et remplacer un texte</h2>
+  <p class="mk-sub">Seuls les <strong>textes</strong> sont remplacés (titres, paragraphes, libellés) — jamais les adresses, identifiants, classes ni le code. Pages : dans le <strong>brouillon</strong> (la version en ligne ne change qu'à la publication) ; l'ancien brouillon reste dans l'historique.</p>
+  <form method="post" action="<%= BASE %>/contenu/simuler<%= q %>" class="mk-tl-form">
+    <div class="field-group"><label for="tl-search">Rechercher *</label><input id="tl-search" type="text" name="search" maxlength="200" required autocomplete="off"></div>
+    <div class="field-group"><label for="tl-replace">Remplacer par</label><input id="tl-replace" type="text" name="replace" maxlength="200" autocomplete="off"><span class="field-hint">Vide : le texte trouvé est retiré.</span></div>
+    <fieldset class="mk-tl-fieldset"><legend>Où chercher</legend>
+      <div class="mk-tl-option"><input type="checkbox" id="tl-w-pages" name="pages" value="1" checked><label for="tl-w-pages">Pages de ce site</label></div>
+      <% if (canArticles) { %><div class="mk-tl-option"><input type="checkbox" id="tl-w-art" name="articles" value="1"><label for="tl-w-art">Articles</label></div>
+      <div class="mk-tl-option"><input type="checkbox" id="tl-w-live" name="live" value="1"><label for="tl-w-live">Inclure les articles EN LIGNE (leur texte changerait tout de suite pour les visiteurs)</label></div><% } %>
+    </fieldset>
+    <div class="mk-tl-option"><input type="checkbox" id="tl-case" name="case" value="1"><label for="tl-case">Respecter les majuscules</label></div>
+    <div class="mk-tl-option"><input type="checkbox" id="tl-word" name="word" value="1"><label for="tl-word">Mot entier seulement</label></div>
+    <button type="submit" class="btn btn-primary btn-sm"><%- icon("search", { size: 16 }) %> Simuler</button>
+  </form>
+  <% if (running) { %><%- include("partials/tools-progress", { run: { id: last.id, percent: 0, done: last.done, failed: last.failed, skipped: last.skipped, total: last.total, message: last.message, status: last.status, finished: false, awaiting: false }, BASE, q }) %><% } %>
+  <% if (last && !running && rep) { %>
+    <h3>Dernière simulation (<%= fdate(last.created_at) %>)</h3>
+    <% if (last.status === "awaiting" || rep.plan) { %>
+      <p><strong><%= rep.occurrences || 0 %></strong> occurrence(s) dans <strong><%= rep.resources || 0 %></strong> ressource(s) — <em>rien n'a été modifié</em>.</p>
+      <ul class="mk-tl-list"><% (rep.plan || []).slice(0, 40).forEach((f) => { %><li><a href="<%= f.href %>"><%= f.type === "page" ? "Page" : "Article" %> « <%= f.label %> »</a> — <%= f.count %> occurrence(s)<%= f.live ? " (EN LIGNE)" : "" %><% (f.samples || []).forEach((s) => { %><br><span class="mk-sub"><%= s %></span><% }) %></li><% }) %></ul>
+      <% if (last.status === "awaiting" && rep.resources) { %>
+        <form method="post" action="<%= BASE %>/contenu/remplacer/<%= last.id %><%= q %>" class="mk-tl-form">
+          <div class="mk-tl-option"><input type="checkbox" id="tl-r-ok" name="confirm" value="1" required><label for="tl-r-ok">Je confirme le remplacement de « <%= (last.options || {}).search %> » par « <%= (last.options || {}).replacement %> » dans ces <%= rep.resources %> ressource(s).</label></div>
+          <button type="submit" class="btn btn-primary btn-sm">Appliquer le remplacement</button>
+        </form>
+      <% } %>
+    <% } else if (rep.done) { %>
+      <p>Remplacement <%= last.status === "cancelled" ? "annulé" : "terminé" %> : <%= rep.done.filter((d) => d.result === "remplacé").length %> ressource(s) modifiée(s), <%= rep.done.filter((d) => d.result === "échec").length %> échec(s).</p>
+    <% } %>
+  <% } %>
+</section>
+
+<% [["regeneration", "Régénérations"], ["cleanup", "Nettoyages"]].forEach(([grp, heading]) => { const list = actions.filter((a) => a.group === grp); %>
+<section class="mk-panel" aria-labelledby="tl-g-<%= grp %>">
+  <h2 id="tl-g-<%= grp %>"><%= heading %></h2>
+  <% list.forEach((a) => { %>
+    <div class="mk-tl-group">
+      <h3><%= a.label %></h3>
+      <p class="mk-sub"><%= a.description %></p>
+      <p><%= a.dry ? "Maintenant : " + a.dry.detail + "." : "État non mesurable." %></p>
+      <form method="post" action="<%= BASE %>/contenu/action<%= q %>" class="mk-tl-form">
+        <input type="hidden" name="key" value="<%= a.key %>">
+        <div class="mk-tl-option"><input type="checkbox" id="tl-a-<%= a.key %>" name="confirm" value="1"><label for="tl-a-<%= a.key %>">Je confirme (sans cette case : simulation seulement).</label></div>
+        <button type="submit" class="btn btn-outline btn-sm">Simuler / appliquer</button>
+      </form>
+    </div>
+  <% }) %>
+</section>
+<% }) %>
+<%- include("partials/bottom") %>

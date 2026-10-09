@@ -102,6 +102,35 @@ function duplicate(id, userId) {
   return get(copy);
 }
 
+// Import (palier 13) : écrit les champs d'un article importé, VALIDÉS et assainis ; jamais de publication, d'auteur ni de date importés.
+// Liste blanche de colonnes ; le contenu passe par l'assainisseur du blog ; une révision « Import » garde l'état précédent.
+const IMPORT_TEXT = { excerpt: 500, cover_alt: 200, seo_title: 120, seo_description: 300, focus_keyword: 80, secondary_keywords: 400, og_title: 120, og_description: 300, twitter_title: 120, twitter_description: 300, toc_title: 80 };
+const IMPORT_IMG = /^\/uploads\/(?:thumbnails|blog|marketing\/\d{1,9})\/[A-Za-z0-9_.-]{1,200}$/;
+function applyImported(id, f, userId) {
+  const cur = get(id);
+  if (!cur) throw new UserError("Article introuvable.");
+  const { sanitizeBlogHtml, markdownToEditorHtml } = require("../utils/blogHtml");
+  const cols = {};
+  const text = (v, n) => String(v ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").slice(0, n);
+  if (typeof f.title === "string" && f.title.trim()) cols.title = text(f.title, 150).replace(/\s+/g, " ").trim();
+  if (typeof f.content === "string") { cols.content = sanitizeBlogHtml(f.content_format === "markdown" ? markdownToEditorHtml(f.content) : f.content).slice(0, 250000); cols.content_format = "html"; }
+  const NOT_NULL_TEXT = new Set(["excerpt", "cover_alt", "focus_keyword", "secondary_keywords", "toc_title"]);
+  for (const [k, n] of Object.entries(IMPORT_TEXT)) if (Object.hasOwn(f, k)) cols[k] = text(f[k], n) || (NOT_NULL_TEXT.has(k) ? "" : null);
+  for (const k of ["cover_path", "og_image_path", "twitter_image_path"]) if (Object.hasOwn(f, k)) cols[k] = typeof f[k] === "string" && IMPORT_IMG.test(f[k]) ? f[k] : null;
+  if (Object.hasOwn(f, "canonical_url")) cols.canonical_url = typeof f.canonical_url === "string" && /^https:\/\/[^\s"'<>]{3,300}$/i.test(f.canonical_url) ? f.canonical_url : null;
+  if (["summary", "summary_large_image"].includes(f.twitter_card)) cols.twitter_card = f.twitter_card;
+  if (typeof f.language === "string" && /^[a-z]{2}$/.test(f.language)) cols.language = f.language;
+  if (typeof f.schema_type === "string" && /^[A-Za-z]{1,40}$/.test(f.schema_type)) cols.schema_type = f.schema_type;
+  for (const k of ["robots_index", "robots_follow", "toc_enabled", "comments_enabled"]) if (f[k] === 0 || f[k] === 1) cols[k] = f[k];
+  if (typeof f.toc_numbering === "string" && /^[a-z0-9]{1,10}$/.test(f.toc_numbering)) cols.toc_numbering = f.toc_numbering;
+  for (const [k, max] of [["toc_depth", 4], ["reading_minutes", 600]]) if (Number.isInteger(f[k]) && f[k] >= 0 && f[k] <= max) cols[k] = f[k];
+  const names = Object.keys(cols);
+  if (!names.length) return cur;
+  db.prepare(`UPDATE posts SET ${names.map((n) => `${n} = ?`).join(", ")}, updated_at = datetime('now') WHERE id = ?`).run(...names.map((n) => cols[n]), id);
+  blog.addRevision(get(id), userId ?? null, "Import de contenu", "save");
+  return get(id);
+}
+
 function trash(id, userId) {
   const p = get(id);
   if (!p) throw new UserError("Article introuvable.");
@@ -177,4 +206,4 @@ function bulk(action, ids, userId, req) {
   return { done, failed, label: ACTIONS[action] };
 }
 
-module.exports = { STATES, SORTS, PERIODS, PER_PAGE, counts, list, authors, categoryTree, get, createDraft, duplicate, trash, restore, purge, publish, unpublish, bulk, ACTIONS };
+module.exports = { STATES, SORTS, PERIODS, PER_PAGE, counts, list, authors, categoryTree, get, createDraft, applyImported, duplicate, trash, restore, purge, publish, unpublish, bulk, ACTIONS };

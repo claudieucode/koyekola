@@ -1,0 +1,22 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Maintenance", intro: "Met UN site en maintenance : ses visiteurs voient une page d'attente (HTTP 503, non indexée). Les autres sites restent en ligne, et l'équipe connectée n'est jamais bloquée.", tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
+<%
+  const on = Boolean(state.enabled);
+  const fdate = (v) => (v ? new Date(String(v).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }) : "");
+%>
+<section class="mk-panel" aria-labelledby="tl-m">
+  <h2 id="tl-m">État : <span class="mk-status <%= on ? 'mk-status-warn' : 'mk-status-ok' %>"><%= on ? "Maintenance activée" : "En ligne" %></span></h2>
+  <% if (on) { %><p class="mk-sub">Depuis le <%= fdate(state.since) %>.</p><% } %>
+  <form method="post" action="<%= BASE %>/maintenance<%= q %>" class="mk-tl-form">
+    <div class="field-group"><label for="tl-msg">Message affiché aux visiteurs</label><textarea id="tl-msg" name="message" rows="3" maxlength="<%= MAX %>" placeholder="<%= DEFAULT_MESSAGE %>"><%= state.message %></textarea><span class="field-hint">Texte simple, <%= MAX %> caractères au plus. Vide : le message par défaut.</span></div>
+    <input type="hidden" name="enabled" value="<%= on ? "0" : "1" %>">
+    <% if (!on) { %><div class="mk-tl-option"><input type="checkbox" id="tl-m-ok" name="confirm" value="1" required><label for="tl-m-ok">Je confirme : les visiteurs de ce site verront la page de maintenance (les membres connectés de l'équipe continuent d'accéder au site).</label></div><% } %>
+    <button type="submit" class="btn <%= on ? 'btn-primary' : 'btn-outline' %> btn-sm"><%= on ? "Désactiver la maintenance" : "Activer la maintenance" %></button>
+  </form>
+</section>
+<% if (others.length) { %>
+<section class="mk-panel" aria-labelledby="tl-mo"><h2 id="tl-mo">Autres sites en maintenance</h2>
+  <ul class="mk-tl-list"><% others.forEach((o) => { %><li><%= o.scope === "main" ? "Site principal" : "Site n° " + o.scope.replace("site:", "") %> — depuis le <%= fdate(o.since) %></li><% }) %></ul>
+</section>
+<% } %>
+<%- include("partials/bottom") %>

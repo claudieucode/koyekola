@@ -1,0 +1,51 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Santé du site", intro: "Des contrôles réels (le serveur interroge ses propres pages, la base et les fichiers) : rien n'est « OK » sans avoir été vérifié, et rien n'est corrigé automatiquement.", tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
+<%
+  const running = last && ["queued", "running"].includes(last.status);
+  const rep = last && last.report;
+  const results = rep && rep.results ? rep.results : [];
+  const order = { critical: 0, warning: 1, info: 2, good: 3 };
+  const statusClass = { good: "mk-status-ok", warning: "mk-status-warn", critical: "mk-status-bad", info: "" };
+  const fdate = (v) => (v ? new Date(String(v).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }) : "");
+%>
+<section class="mk-panel" aria-labelledby="tl-h-run">
+  <h2 id="tl-h-run">Analyse</h2>
+  <% if (canRun) { %><form method="post" action="<%= BASE %>/sante<%= q %>" class="mk-tl-actions"><button type="submit" class="btn btn-primary btn-sm"<%= running ? " disabled" : "" %>><%- icon("activity", { size: 16 }) %> Analyser maintenant</button></form><% } else { %><p class="mk-sub">Lancer une analyse demande la permission « tools.health ».</p><% } %>
+  <% if (running) { %>
+    <%- include("partials/tools-progress", { run: { id: last.id, percent: last.total ? Math.min(99, Math.round(100 * (last.done + last.failed) / last.total)) : 0, done: last.done, failed: last.failed, skipped: last.skipped, total: last.total, message: last.message, status: last.status, finished: false, awaiting: false }, BASE, q }) %>
+    <p class="mk-sub">Analyse en cours… la page se met à jour toute seule.</p>
+  <% } else if (last) { %>
+    <p class="mk-sub">Dernière analyse : <%= fdate(last.finished_at || last.created_at) %><%= last.status === "failed" ? " — échec : " + (last.message || "") : last.status === "cancelled" ? " — annulée" : "" %>.</p>
+  <% } else { %>
+    <p class="mk-sub">Aucune analyse pour l'instant : lancez-la pour voir l'état réel du site.</p>
+  <% } %>
+</section>
+
+<% if (rep && rep.summary) { %>
+<section class="mk-panel" aria-labelledby="tl-h-sum">
+  <h2 id="tl-h-sum">Résultat : <span class="mk-status <%= statusClass[rep.summary.overall] %>"><%= { good: "Bon", warning: "À surveiller", critical: "Critique" }[rep.summary.overall] %></span></h2>
+  <ul class="mk-tl-tally">
+    <li><span class="mk-status mk-status-bad">Critique</span> <%= rep.summary.critical %></li>
+    <li><span class="mk-status mk-status-warn">À surveiller</span> <%= rep.summary.warning %></li>
+    <li><span class="mk-status mk-status-ok">Bon</span> <%= rep.summary.good %></li>
+    <li><span class="mk-status">Information</span> <%= rep.summary.info %></li>
+  </ul>
+</section>
+<% Object.keys(CATEGORIES).forEach((cat) => { const list = results.filter((r) => r.category === cat).sort((a, b) => order[a.status] - order[b.status]); if (!list.length) return; %>
+<section class="mk-panel" aria-labelledby="tl-c-<%= cat %>">
+  <h2 id="tl-c-<%= cat %>"><%= CATEGORIES[cat] %></h2>
+  <ul class="mk-tl-checks">
+    <% list.forEach((r) => { %>
+      <li class="mk-tl-check">
+        <div class="mk-tl-check-head"><span class="mk-status <%= statusClass[r.status] %>"><%= STATUS[r.status] %></span> <strong><%= r.title %></strong></div>
+        <p><%= r.detail %></p>
+        <% if (r.impact) { %><p class="mk-sub"><strong>Impact :</strong> <%= r.impact %></p><% } %>
+        <% if (r.recommendation) { %><p class="mk-sub"><strong>Recommandation :</strong> <%= r.recommendation %></p><% } %>
+        <% if (r.action) { %><p><a class="btn btn-outline btn-sm" href="<%= r.action.href %>"><%= r.action.label %></a></p><% } %>
+      </li>
+    <% }) %>
+  </ul>
+</section>
+<% }) %>
+<% } %>
+<%- include("partials/bottom") %>

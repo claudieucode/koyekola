@@ -133,6 +133,7 @@ app.use(require("./src/middlewares/sessionUser").refreshSessionUser);
 app.use(injectLocals);
 // Après injectLocals : la page d'erreur affichée en cas de refus a besoin de ses variables
 app.use(sameOriginOnly);
+app.use(require("./src/services/tools/maintenance").middleware); // mode maintenance (par site ; l'équipe n'est jamais bloquée)
 
 // Les navigateurs demandent /favicon.ico : on les renvoie vers l'icône SVG
 app.get("/favicon.ico", (req, res) => res.redirect(301, "/favicon.svg"));

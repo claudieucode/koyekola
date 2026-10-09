@@ -57,7 +57,7 @@ describe("registre et menu", () => {
 
 describe("honnêteté : rien n'est simulé", () => {
   test("un écran « bientôt » le dit, désactive ses commandes et n'invente aucune donnée", async () => {
-    for (const href of ["/marketing/site-web/parametres", "/marketing/site-web/outils/cache"]) {
+    for (const href of ["/marketing/site-web/parametres", "/marketing/site-web/parametres/performance"]) {
       const html = (await boss.get(href)).text;
       assert.match(html, /Prochain palier\./, href);
       assert.match(html, /disabled/, href);

@@ -123,4 +123,5 @@ function save(input, userId) {
 
 const resetCache = () => { cache = null; };
 
-module.exports = { FIELDS, GROUPS, all, get, validate, save, resetCache, SAFE_PATH, HTTPS_URL };
+const cacheInfo = () => ({ entries: cache ? Object.keys(cache).length : 0, loaded: cache !== null });
+module.exports = { FIELDS, GROUPS, all, get, validate, save, resetCache, cacheInfo, SAFE_PATH, HTTPS_URL };

@@ -1,0 +1,50 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Diagnostic", intro: "Contrôle d'intégrité des données (références brisées, éléments orphelins) et état de la file de travaux. Ces outils LISENT : rien n'est supprimé sans votre confirmation, et seules trois corrections précises sont proposées.", tab, TABS, BASE, sites, siteId, q, siteOnly, noSite: true }) %>
+<%
+  const running = last && ["queued", "running"].includes(last.status);
+  const rep = last && last.status === "done" ? last.report : null;
+  const fdate = (v) => (v ? new Date(String(v).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }) : "");
+%>
+<section class="mk-panel" aria-labelledby="tl-d-i">
+  <h2 id="tl-d-i">Intégrité des données</h2>
+  <% if (canRun && !siteOnly) { %><form method="post" action="<%= BASE %>/diagnostic/integrite<%= q %>"><button type="submit" class="btn btn-primary btn-sm"<%= running ? " disabled" : "" %>><%- icon("searchCheck", { size: 16 }) %> Lancer le contrôle</button></form><% } else { %><p class="mk-sub">Réservé à l'équipe de l'organisation, avec la permission « tools.health ».</p><% } %>
+  <% if (running) { %>
+    <%- include("partials/tools-progress", { run: { id: last.id, percent: 0, done: last.done, failed: last.failed, skipped: last.skipped, total: last.total, message: last.message, status: last.status, finished: false, awaiting: false }, BASE, q }) %>
+  <% } else if (last) { %>
+    <p class="mk-sub">Dernier contrôle : <%= fdate(last.finished_at || last.created_at) %><%= last.status === "failed" ? " — échec : " + last.message : "" %>.</p>
+  <% } %>
+</section>
+<% if (rep) { %>
+<section class="mk-panel" aria-labelledby="tl-d-r">
+  <h2 id="tl-d-r"><%= rep.total ? rep.total + " anomalie(s) de référence" : "Aucune anomalie de référence" %><% if (rep.potential) { %> <span class="mk-sub">· <%= rep.potential %> élément(s) potentiellement inutilisé(s)</span><% } %></h2>
+  <% rep.groups.forEach((g) => { %>
+    <div class="mk-tl-group">
+      <h3><span class="mk-status <%= g.count ? (g.info ? '' : 'mk-status-warn') : 'mk-status-ok' %>"><%= g.count %></span> <%= g.label %></h3>
+      <% if (g.count) { %>
+        <p class="mk-sub"><%= g.help %></p>
+        <ul class="mk-tl-list"><% g.examples.forEach((e) => { %><li><% if (e.href) { %><a href="<%= e.href %>"><%= e.title %></a><% } else { %><%= e.title %><% } %></li><% }) %></ul>
+        <% if (g.count > g.examples.length) { %><p class="mk-sub">… et <%= g.count - g.examples.length %> autre(s).</p><% } %>
+        <% if (g.fix && canFix) { %>
+          <form method="post" action="<%= BASE %>/diagnostic/corriger<%= q %>" class="mk-tl-form">
+            <input type="hidden" name="key" value="<%= g.fix %>">
+            <div class="mk-tl-option"><input type="checkbox" id="tl-fix-<%= g.fix %>" name="confirm" value="1"><label for="tl-fix-<%= g.fix %>">Je confirme la suppression de ces <%= FIXES[g.fix].label %> (sans cette case, seule une simulation est faite).</label></div>
+            <button type="submit" class="btn btn-outline btn-sm">Simuler / appliquer</button>
+          </form>
+        <% } %>
+      <% } %>
+    </div>
+  <% }) %>
+</section>
+<% } %>
+<section class="mk-panel" aria-labelledby="tl-d-j">
+  <h2 id="tl-d-j">File de travaux</h2>
+  <ul class="mk-tl-tally">
+    <% [["pending", "En attente"], ["running", "En cours"], ["done", "Terminés"], ["dead", "Abandonnés"]].forEach(([k, l]) => { %><li><span class="mk-status <%= k === 'dead' && jobs.states[k] ? 'mk-status-bad' : '' %>"><%= l %></span> <%= jobs.states[k] || 0 %></li><% }) %>
+  </ul>
+  <% if (jobs.dead.length) { %>
+    <h3>Derniers échecs</h3>
+    <ul class="mk-tl-list"><% jobs.dead.forEach((j) => { %><li><code><%= j.type %></code> — <%= j.attempts %>/<%= j.max_attempts %> tentatives : <%= j.last_error || "sans message" %></li><% }) %></ul>
+  <% } %>
+  <% if (jobs.pendingTypes.length) { %><p class="mk-sub">En attente par type : <%= jobs.pendingTypes.map((t) => t.type + " (" + t.n + ")").join(", ") %>.</p><% } %>
+</section>
+<%- include("partials/bottom") %>

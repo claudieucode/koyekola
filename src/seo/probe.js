@@ -8,13 +8,18 @@ const crypto = require("node:crypto");
 const TOKEN = crypto.randomBytes(16).toString("hex");
 const isProbe = (req) => req.get("x-kw-probe") === TOKEN;
 
-function request(port, path, { host = null } = {}) {
+// body : lit jusqu'à `maxBody` octets de la réponse (par défaut aucun) ; timing : durée réelle de la réponse en ms
+function request(port, path, { host = null, body = false, maxBody = 300000 } = {}) {
   return new Promise((resolve) => {
+    const t0 = process.hrtime.bigint();
     const headers = { "x-kw-probe": TOKEN, "user-agent": "KOLAKISA-sonde (bot)", accept: "text/html" };
     if (host) headers["x-forwarded-host"] = host;
     const req = http.request({ host: "127.0.0.1", port, path, method: "GET", headers, timeout: 8000 }, (res) => {
-      res.resume();
-      resolve({ status: res.statusCode, location: res.headers.location || null });
+      const chunks = [];
+      let size = 0;
+      res.on("data", (c) => { if (body && size < maxBody) { chunks.push(c); size += c.length; } });
+      res.on("end", () => resolve({ status: res.statusCode, location: res.headers.location || null, headers: res.headers, ms: Number((process.hrtime.bigint() - t0) / 1000000n), text: body ? Buffer.concat(chunks).toString("utf8") : null }));
+      res.on("error", () => resolve({ status: 0, location: null, error: "lecture interrompue" }));
     });
     req.on("timeout", () => { req.destroy(); resolve({ status: 0, location: null, error: "délai dépassé" }); });
     req.on("error", (e) => resolve({ status: 0, location: null, error: e.message }));

@@ -22,6 +22,12 @@ function createMarketingRouters({ db }) {
     if (m) { const r = db.prepare("SELECT site_id FROM mk_landing_pages WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
     m = /^\/site-web\/composants\/(\d+)/.exec(p);
     if (m) { const r = db.prepare("SELECT site_id FROM mk_web_components WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
+    // Outils (palier 13) : le site choisi (?site=) fixe le contexte des droits ; sans lui, l'organisation / le site principal
+    if (/^\/site-web\/outils(?:\/|$)/.test(p)) {
+      const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
+      if (/^\d{1,12}$/.test(String(raw ?? ""))) return { siteId: Number(raw) };
+      return null;
+    }
     if (req.method === "POST" && (p === "/pages" || p === "/site-web/composants") && req.body && /^\d+$/.test(String(req.body.site_id || ""))) return { siteId: Number(req.body.site_id) };
     return null;
   };
@@ -72,6 +78,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./history")()); // Historique des modifications et corbeille commune (palier 10)
   admin.use(require("./users")()); // Utilisateurs, rôles, permissions, invitations (palier 9)
   admin.use(require("./appearanceEditor")()); // Apparence : éditeur du site, styles, en-tête, pied de page, templates, patterns (palier 8)
+  admin.use(require("./tools")()); // Outils : santé, import, export, diagnostic, maintenance (palier 13)
   admin.use(require("./urls")()); // Redirections, liens cassés, permaliens et adresses (palier 12)
   admin.use(require("./mediaLibrary")()); // KOLAKISA CMS → Médias (palier 3) : page et API de la médiathèque
   admin.use(require("./cmsScreens")()); // écrans de KOLAKISA CMS (lecture seule, tables existantes) : après les routes /site-web déjà en place

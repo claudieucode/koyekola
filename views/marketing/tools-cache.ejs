@@ -1,0 +1,23 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Caches", intro: "Les caches qui existent vraiment dans ce serveur (en mémoire, rechargés à la demande). Invalider un cache est sans risque pour les données : il est simplement relu à la prochaine demande.", tab, TABS, BASE, sites, siteId, q, siteOnly, noSite: true }) %>
+<section class="mk-panel" aria-labelledby="tl-c">
+  <h2 id="tl-c">Caches du CMS</h2>
+  <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table">
+    <caption class="sr-only">Caches du CMS</caption>
+    <thead><tr><th scope="col">Cache</th><th scope="col">Rôle</th><th scope="col">État</th><th scope="col" class="mk-num">Entrées</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+    <tbody><% list.forEach((c) => { %><tr>
+      <th scope="row" data-label="Cache"><%= c.label %></th>
+      <td data-label="Rôle"><%= c.detail %></td>
+      <td data-label="État"><span class="mk-status <%= c.loaded ? 'mk-status-ok' : '' %>"><%= c.loaded ? "Chargé" : "Vide" %></span></td>
+      <td class="mk-num" data-label="Entrées"><%= c.entries === null || c.entries === undefined ? "—" : c.entries %></td>
+      <td class="mk-row-actions"><form method="post" action="<%= BASE %>/cache<%= q %>"><input type="hidden" name="key" value="<%= c.key %>"><button type="submit" class="btn btn-outline btn-sm">Invalider<span class="sr-only"> le cache « <%= c.label %> »</span></button></form></td>
+    </tr><% }) %></tbody>
+  </table></div>
+  <form method="post" action="<%= BASE %>/cache<%= q %>" class="mk-tl-form">
+    <input type="hidden" name="key" value="all">
+    <div class="mk-tl-option"><input type="checkbox" id="tl-c-all" name="confirm" value="1"><label for="tl-c-all">Je confirme : invalider tous les caches ci-dessus (aucune donnée n'est supprimée ; le prochain affichage peut être un peu plus lent).</label></div>
+    <button type="submit" class="btn btn-outline btn-sm">Tout invalider</button>
+  </form>
+  <p class="mk-sub">Les pages publiques ne sont pas mises en cache par KOLAKISA : une publication, une redirection ou un changement d'adresse prennent effet tout de suite. Le plan du site et robots.txt sont conservés 5 minutes par les moteurs et navigateurs.</p>
+</section>
+<%- include("partials/bottom") %>
