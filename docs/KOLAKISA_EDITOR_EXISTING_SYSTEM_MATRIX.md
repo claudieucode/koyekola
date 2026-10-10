@@ -19,7 +19,7 @@ Documents voisins (pas de doublon créé) : `KOLAKISA_EDITOR_PARITY_MATRIX.md` (
 | 2 | Sélection (simple, multiple, parent, Ctrl+A) | `select()` | FONCTIONNEL | depuis canevas et calques ; sans remontage | focus et défilement conservés | — | moyen | `editeur-structure-navigateur` (rejoué) |
 | 3 | Structure / calques | `renderTree` | FONCTIONNEL | arbre différentiel, renommer, masquer, verrouiller, dupliquer, glisser-déposer, recherche | identifiants stables | — | moyen | `editeur-droite-navigateur`, `editeur-structure-navigateur` (rejoués) |
 | 4 | Inspecteur (Général / Style / Interactions) | `renderInspector`, `INSPECTORS` | FONCTIONNEL | fiches par type ; les widgets personnalisés reçoivent à l'exécution une fiche « boîte » ou « texte » complète (**correction** : une première version de ce document les croyait sans fiche) | accordéons, disposition | états pour davantage de types | faible | contraste, droite (rejoués) |
-| 5 | Contrôles numériques | `numericControl`, `numField`, `numberControl` | FONCTIONNEL | un composant : saisie, ▲▼ visibles, unité, curseur, glissement sur le libellé, aucune liste au focus | contrat « un clic = saisir » | — | moyen | 6 fichiers rejoués ; **1 échec préexistant** (glissement sur le libellé, `controles-numeriques-chrome`, échoue aussi sans mes modifications) |
+| 5 | Contrôles numériques | `numericControl`, `numField`, `numberControl` | FONCTIONNEL | un composant : saisie, ▲▼ visibles, unité, curseur, glissement sur le libellé, aucune liste au focus | contrat « un clic = saisir » | — | moyen | 6 fichiers rejoués ; le **défaut de glissement sur le libellé a été corrigé** le 10/10 (cause : enveloppe « valeur du site ») |
 | 6 | Espacement (marge / intérieur) | `spacingBox` | FONCTIONNEL | deux blocs, liaison indépendante, unités, valeurs globales | séparation marge / intérieur | — | moyen | `editeur-espacement-navigateur` (8/8 rejoué) |
 | 7 | Curseurs | `.pb-nc-range`, `paintRange` | FONCTIONNEL | aspect unifié, jetons `--pb-slider-*` | valeurs et bornes | — | faible | `editeur-curseurs-apparence`, `editeur-ecart-curseur` (rejoués) |
 | 8 | Styles (modèle, par écran, par état) | `STYLE_PROPS` (86), `normalizeStyles`, `setStyles` | FONCTIONNEL | héritage ordinateur → tablette → mobile ; valeur propre vs héritée affichée | format d'enregistrement | voir PROPERTY_AUDIT § 6 | élevé (format) | `editeur-canvas-proprietes-effectives` (rejoué) |
@@ -45,7 +45,7 @@ Documents voisins (pas de doublon créé) : `KOLAKISA_EDITOR_PARITY_MATRIX.md` (
 | 28 | Thèmes de l'éditeur (clair / sombre) | jetons `--editor-*` | FONCTIONNEL | tous panneaux et menus ; accent suivi | contrastes ≥ 4,5:1 | — | faible | `editeur-contraste`, `editeur-theme-atomique` (rejoués) |
 | 29 | Sélecteur de mode (visuel / blocs) | `setMode` | FONCTIONNEL | un seul contrôle segmenté | raccourci Ctrl/⌘ + Maj + E | — | faible | `editeur-mode-switch` (9/9 rejoué) |
 | 30 | Widgets (86 types) | `NODE_TYPES`, `WIDGETS`, `widgets/*.js` | FONCTIONNEL | 79 opérationnels + 7 contextuels ; contrat de conformité | contrat de widget | états pour les widgets personnalisés | moyen | `widgets-contrat` (6/6 rejoué) |
-| 31 | Accessibilité du rendu | `_node.ejs` | FONCTIONNEL MAIS LIMITÉ | balise sémantique, `aria-…`, `role`, `lang`, texte alternatif exigé à la publication | — | audit page par page non fait | faible | d'après tests existants |
+| 31 | Accessibilité du rendu | `_node.ejs` | FONCTIONNEL | balise sémantique, `aria-…`, `role`, `lang`, texte alternatif exigé à la publication ; **audité le 10/10 sur les 86 widgets publiés ensemble : aucun défaut sur les règles automatisables** | — | contraste et parcours clavier complet : non mesurés | faible | `rendu-accessibilite-navigateur` (6/6) |
 | 32 | Sécurité du contenu | `sanitizeRich`, `sanitizeHtmlBlock`, `cssDeclarations`, permissions | FONCTIONNEL | HTML sécurisé réservé à `pages.code` ; CSS filtré | — | — | élevé si modifié | d'après tests existants |
 
 ## 3. Duplications et incohérences repérées
@@ -90,5 +90,7 @@ Avant chaque lot : rejouer les tests de la ligne concernée, annoncer les fichie
 | Dimensions intrinsèques | **Fait** : `fit-content`, `min-content`, `max-content` pour largeur, hauteur, min/max ; liste fermée côté serveur ; `clamp()` / `calc()` **volontairement refusés**. |
 | Masquage par écran | **Clarifié** (pas de changement de code). |
 | Documentation périmée | **Corrigée**. |
-| Non fait (hors besoin démontré) | choix des propriétés de transition, écrans personnalisés, audit d'accessibilité page par page. |
+| Glissement sur le libellé | **Défaut réel corrigé** (champs à « valeur du site »). |
+| Accessibilité du rendu publié | **Auditée et verrouillée par un test** (86 widgets, aucun défaut). |
+| Non fait (hors besoin démontré) | choix des propriétés de transition, écrans personnalisés, mesure de contraste du rendu publié. |
 Tests : voir `KOLAKISA_EDITOR_REGRESSION_REPORT.md`.

@@ -69,6 +69,8 @@ describe("zone d'édition des conteneurs : vide = vraie zone de construction, pl
     await dlg.locator(`.pb-structure[data-structure="${key}"]`).click();
     await until(async () => !(await dlg.evaluate((d) => d.open)), { what: "fenêtre fermée" });
     await until(async () => (await boxes()).length > 0, { what: "structure affichée" });
+    // la nouveauté apparaît avec une micro-animation (zoom léger, ~150 ms) : on mesure une fois posée
+    await until(() => page.evaluate(() => !document.querySelector("[data-pb-frame]").contentDocument.querySelector("[class*='kol-in-']")), { what: "apparition terminée" });
   }
   const addWidget = async (label) => { await page.locator(".pb-pal-item", { hasText: new RegExp(`^${label}$`) }).first().click(); };
   const rowOf = (id) => page.locator(`[data-pb-layers] .pb-node[data-id="${id}"] > .pb-row-item`);

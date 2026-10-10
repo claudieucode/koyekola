@@ -215,12 +215,40 @@
   </dialog>
 
   <%# Raccourcis clavier (menu principal) : la liste réelle de ce que gère l'éditeur %>
-  <dialog class="pb-modal pb-shortcuts" data-pb-shortcuts aria-labelledby="pb-sc-title">
-    <h2 id="pb-sc-title">Raccourcis clavier</h2>
-    <dl class="pb-sc-list">
-      <% [["Ctrl/⌘ + S", "Enregistrer"], ["Ctrl/⌘ + Z / Maj + Z", "Annuler / rétablir"], ["Ctrl/⌘ + K", "Commandes et recherche"], ["Ctrl/⌘ + Maj + Y", "Afficher / masquer le panneau Structure"], ["Ctrl/⌘ + Maj + E", "Éditeur visuel / Éditeur en blocs"], ["Ctrl/⌘ + C / X / V", "Copier, couper, coller"], ["Ctrl/⌘ + Alt + C / V", "Copier / coller le style"], ["Ctrl/⌘ + Maj + V", "Coller le style (fusion : les autres réglages de la cible sont conservés)"], ["Ctrl/⌘ + D", "Dupliquer"], ["Suppr", "Supprimer"], ["Ctrl/⌘ + G / Maj + G", "Grouper / dissocier"], ["Ctrl/⌘ + Maj + H / L", "Masquer / verrouiller"], ["Alt + ↑ / ↓", "Monter / descendre"], ["Entrée", "Écrire dans le texte sélectionné"], ["Échap", "Désélectionner"], ["Ctrl/⌘ + + / − / 0", "Zoom"], ["Maj + 1", "Ajuster à l'écran"], ["R", "Règles"], ["V / H", "Sélection / main"], ["T / I / B", "Ajouter un texte, une image, un bouton"]].forEach((k) => { %><dt><kbd><%= k[0] %></kbd></dt><dd><%= k[1] %></dd><% }) %>
-    </dl>
-    <form method="dialog"><button class="btn btn-outline btn-sm">Fermer</button></form>
+  <dialog class="pb-modal pb-shortcuts" data-pb-shortcuts role="dialog" aria-modal="true" aria-labelledby="pb-sc-title" aria-describedby="pb-sc-sub">
+    <%# Liste réelle des raccourcis gérés par l'éditeur : données INCHANGÉES (même ordre), seulement regroupées et présentées en touches %>
+    <%
+      const SC_ALL = [["Ctrl/⌘ + S", "Enregistrer"], ["Ctrl/⌘ + Z / Maj + Z", "Annuler / rétablir"], ["Ctrl/⌘ + K", "Commandes et recherche"], ["Ctrl/⌘ + Maj + Y", "Afficher / masquer le panneau Structure"], ["Ctrl/⌘ + Maj + E", "Éditeur visuel / Éditeur en blocs"], ["Ctrl/⌘ + C / X / V", "Copier, couper, coller"], ["Ctrl/⌘ + Alt + C / V", "Copier / coller le style"], ["Ctrl/⌘ + Maj + V", "Coller le style (fusion : les autres réglages de la cible sont conservés)"], ["Ctrl/⌘ + D", "Dupliquer"], ["Suppr", "Supprimer"], ["Ctrl/⌘ + G / Maj + G", "Grouper / dissocier"], ["Ctrl/⌘ + Maj + H / L", "Masquer / verrouiller"], ["Alt + ↑ / ↓", "Monter / descendre"], ["Entrée", "Écrire dans le texte sélectionné"], ["Échap", "Désélectionner"], ["Ctrl/⌘ + + / − / 0", "Zoom"], ["Maj + 1", "Ajuster à l'écran"], ["R", "Règles"], ["V / H", "Sélection / main"], ["T / I / B", "Ajouter un texte, une image, un bouton"]];
+      const SC_GROUPS = [["Général", 0, 3], ["Panneaux et modes", 3, 5], ["Édition", 5, 15], ["Affichage", 15, 18], ["Outils et ajout", 18, 20]];
+      // « Ctrl/⌘ + Maj + Y », « Alt + ↑ / ↓ », « Ctrl/⌘ + + / − / 0 » : chaque touche devient une pastille ; « + » et « / » entre deux touches sont des séparateurs
+      const scTokens = (s) => { const out = []; let prevSep = true; s.split(" ").forEach((t) => { const sep = (t === "+" || t === "/") && !prevSep; out.push({ t, sep }); prevSep = sep; }); return out; };
+    %>
+    <header class="pb-sc-head">
+      <span class="pb-sc-icon" aria-hidden="true"><%- icon("keyboard", { size: 18 }) %></span>
+      <div class="pb-sc-titles"><h2 id="pb-sc-title">Raccourcis clavier</h2><p id="pb-sc-sub">Commandes disponibles dans l’éditeur</p></div>
+      <form method="dialog"><button class="pb-icon-btn pb-sc-close" aria-label="Fermer les raccourcis clavier" data-tip="Fermer (Échap)"><%- icon("close", { size: 16 }) %></button></form>
+    </header>
+    <div class="pb-sc-searchbar">
+      <span class="pb-sc-search-icon" aria-hidden="true"><%- icon("search", { size: 15 }) %></span>
+      <input type="text" class="pb-sc-search" data-sc-search inputmode="search" autocomplete="off" spellcheck="false" autofocus placeholder="Rechercher un raccourci…" aria-label="Rechercher un raccourci (action ou touche)">
+      <span class="pb-sc-sr" data-sc-status role="status" aria-live="polite"></span>
+    </div>
+    <div class="pb-sc-body" tabindex="0" role="region" aria-label="Liste des raccourcis">
+      <div class="pb-sc-cols" aria-hidden="true"><span>Raccourci</span><span>Action</span></div>
+      <% SC_GROUPS.forEach((g) => { %>
+      <section class="pb-sc-group" aria-label="<%= g[0] %>">
+        <h3><%= g[0] %></h3>
+        <dl class="pb-sc-list">
+          <% SC_ALL.slice(g[1], g[2]).forEach((k) => { %><dt><% scTokens(k[0]).forEach((x) => { %><% if (x.sep) { %><span class="pb-sc-sep" aria-hidden="true"><%= x.t %></span><% } else { %><kbd class="pb-key" data-k="<%= x.t %>"><%= x.t %></kbd><% } %><% }) %></dt><dd><%= k[1] %></dd><% }) %>
+        </dl>
+      </section>
+      <% }) %>
+      <div class="pb-sc-empty" data-sc-empty hidden><span aria-hidden="true"><%- icon("search", { size: 22 }) %></span><p><strong>Aucun raccourci trouvé</strong></p><p>Essayez un autre terme.</p></div>
+    </div>
+    <footer class="pb-sc-foot">
+      <span class="pb-sc-hint">Appuyez sur <kbd class="pb-key">Échap</kbd> pour fermer</span>
+      <form method="dialog"><button class="btn btn-outline btn-sm">Fermer</button></form>
+    </footer>
   </dialog>
   <input type="file" accept="application/json,.json" hidden data-pb-import-file>
 
@@ -242,8 +270,10 @@
   <script src="<%= asset('/js/kwmedia.js') %>" defer></script>
   <script src="<%= asset('/js/media-picker.js') %>" defer></script>
   <script src="<%= asset('/js/font-manager.js') %>" defer></script>
+  <script src="<%= asset('/js/accordion-engine.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-menu.js') %>" defer></script>
+  <script src="<%= asset('/js/page-builder-shortcuts.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-rules.js') %>" defer></script>
   <script src="<%= asset('/js/site-settings.js') %>" defer></script>
 </body>

@@ -31,6 +31,8 @@
     get: function (k, d) { try { var v = localStorage.getItem("pb:" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
     set: function (k, v) { try { localStorage.setItem("pb:" + k, JSON.stringify(v)); } catch (e) { /* stockage indisponible */ } },
   };
+  // Comportement des accordéons : réglage d'interface (mémorisé dans ce navigateur, jamais dans le document de la page)
+  if (window.KWAccordion) window.KWAccordion.configure({ get: function () { return store.get("acc-mode", "many"); }, set: function (v) { store.set("acc-mode", v); } });
   function h(tag, attrs) {
     var el = document.createElement(tag);
     Object.keys(attrs || {}).forEach(function (k) {
@@ -2752,7 +2754,10 @@
     };
     var btn = h("button", { type: "button", class: "pb-tokbtn" + (isTok ? " is-on" : ""), disabled: dis, "aria-haspopup": "menu", "aria-label": "Valeur du site pour « " + SP[key].label + " »", "data-tip": isTok ? "Lié au site : " + lenTokenLabel(own.slice(6)) + " (cliquer pour changer)" : "Utiliser une valeur du site (suit les réglages du site)", onclick: function () { pick(btn); } }, icon("link"));
     if (isTok) return h("div", { class: "pb-lenwrap is-token" }, h("span", { class: "pb-tokchip", text: "Site : " + lenTokenLabel(own.slice(6)) }), btn);
-    return h("div", { class: "pb-lenwrap" }, numeric, btn);
+    var wrapNum = h("div", { class: "pb-lenwrap" }, numeric, btn);
+    wrapNum.scrub = numeric.scrub; // le glissement sur le libellé vient du champ numérique : l'enveloppe « valeur du site » doit le transmettre
+    wrapNum.input = numeric.input;
+    return wrapNum;
   }
   function lengthControlPlain(items, key, id, own, inh, dis) {
     var units = unitsOf(key), cur = splitLen(own), base = splitLen(inh), cfg = LENCFG[key] || {};
@@ -3230,9 +3235,7 @@
   // Un groupe repliable (état ouvert / fermé mémorisé) ; le nombre discret = valeurs propres à l'écran modifié
   var COLOR_LABEL = { color: "Texte" };
   function styleSection(items, g, keys, opts) {
-    var det = h("details", { class: "pb-acc", "data-group": g });
-    if (store.get("open-" + g, Boolean(opts && opts.open))) det.open = true;
-    det.addEventListener("toggle", function () { store.set("open-" + g, det.open); });
+    var det = accShell(g, opts && opts.open);
     var counted = g === "spacing" ? SIDES.map(function (s) { return "margin" + s; }).concat(SIDES.map(function (s) { return "padding" + s; })) : keys;
     var set = counted.filter(function (k, i) { return counted.indexOf(k) === i && items.some(function (x) { return ownValue(x, k) !== undefined; }); }).length;
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: SPEC.groups[g] || g }), set ? h("span", { class: "pb-acc-count", title: set + " réglage(s) propre(s) à cet écran", "aria-label": set + " réglage(s) modifié(s)" }, String(set)) : null));
@@ -3349,6 +3352,17 @@
   var inspTab = store.get("insp-tab", "content");
   var headObserver = null, inspHeadH = 0, inspScroll = 0;
   (function () { var b = $("[data-pb-inspector]"); if (b) b.addEventListener("scroll", function () { inspScroll = b.scrollTop; }, { passive: true }); })();
+  var pendingReveal = null;
+  // Réglage « Comportement des accordéons » (menu principal et commandes) : une entrée par mode, le mode actif est coché
+  function accEntry(m) {
+    var K = window.KWAccordion, on = K && K.getMode() === m;
+    return [(on ? "● " : "○ ") + K.LABELS[m][0], function () { accSetMode(m); }, !K, K.LABELS[m][1]];
+  }
+  function accSetMode(m) {
+    var K = window.KWAccordion; if (!K) return;
+    var closed = K.setMode(m, document.querySelector("[data-pb-inspector]"));
+    toast("Accordéons : « " + K.LABELS[m][0] + " »." + (closed ? " " + closed + " section" + (closed > 1 ? "s" : "") + " refermée" + (closed > 1 ? "s" : "") + " (la dernière ouverte reste ouverte)." : ""));
+  }
   function renderInspector() {
     if (typeof cpop !== "undefined" && cpop && !cpop.hidden) { cpop.hidden = true; cpopFor = null; }
     var box = $("[data-pb-inspector]");
@@ -3420,6 +3434,7 @@
       else legacyContentFields(it, body, locked);
     } else if (inspTab === "style") { styleTab(items, body); if (boxTabs) boxStyleExtras(items, body, locked); }
     else advancedTab(items, body, locked);
+    if (window.KWAccordion) window.KWAccordion.normalizeIn(box, pendingReveal); pendingReveal = null; // règle du mode choisi (ex. « un seul ouvert ») appliquée au rendu
     if (keepScroll || inspScroll) { box.scrollTop = keepScroll; inspScroll = keepScroll; } // écrire le défilement impose une mise en page : seulement s'il y a quelque chose à restaurer
   }
   // Contenu d'une section libre ou d'un conteneur : sa structure (enfants cliquables), et comment y ajouter
@@ -3621,11 +3636,18 @@
   // enregistrement automatique, écrans, calques et rendu du canevas fonctionnent donc sans rien de plus. Un autre type d'élément
   // adopte ces onglets en déclarant « tabs: "box" » dans INSPECTORS.
   var LINKABLE = ["container", "grid", "stack", "group"];
-  // Groupe repliable de l'inspecteur (état ouvert mémorisé dans ce navigateur) ; count = réglages en place
-  function accGroup(key, title, defOpen, build, count) {
+  // Coque commune de TOUS les accordéons de l'inspecteur : un <details class="pb-acc"> dont l'état ouvert / fermé est mémorisé dans ce navigateur
+  // (« open-<clé> »). Le comportement à l'ouverture (un seul ouvert, plusieurs, fermer en dessous) est donné par le moteur commun
+  // (accordion-engine.js), qui agit sur tout <details class="pb-acc"> : rien à écrire ici pour un nouvel accordéon.
+  function accShell(key, defOpen) {
     var det = h("details", { class: "pb-acc", "data-group": key });
     if (store.get("open-" + key, Boolean(defOpen))) det.open = true;
     det.addEventListener("toggle", function () { store.set("open-" + key, det.open); });
+    return det;
+  }
+  // Groupe repliable de l'inspecteur (état ouvert mémorisé dans ce navigateur) ; count = réglages en place
+  function accGroup(key, title, defOpen, build, count) {
+    var det = accShell(key, defOpen);
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: title }), count ? h("span", { class: "pb-acc-count", "aria-label": count + " réglage(s) en place" }, String(count)) : null));
     var inner = h("div", { class: "pb-acc-body" });
     build(inner);
@@ -3685,9 +3707,7 @@
     if (window.pbEffects && window.pbEffects.motion) return window.pbEffects.motion(it, locked); // moteur de mouvement (page-builder-effects.js)
     var m = it.motion || {};
     var setM = function (k, v) { nextLabel = "Animation"; change(function () { var x = byId(it.id); var n = Object.assign({}, x.motion); if (v === "" || v === undefined) delete n[k]; else n[k] = v; if (k === "entrance" && !v) { delete n.duration; delete n.delay; } if (k === "entrance" && v) { if (n.duration === undefined) n.duration = 600; if (n.delay === undefined) n.delay = 0; } if (Object.keys(n).length) x.motion = n; else delete x.motion; }); };
-    var det = h("details", { class: "pb-acc", "data-group": "motion" });
-    if (store.get("open-motion", Boolean(m.entrance || m.hover))) det.open = true;
-    det.addEventListener("toggle", function () { store.set("open-motion", det.open); });
+    var det = accShell("motion", Boolean(m.entrance || m.hover));
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: "Animation" }), m.entrance || m.hover ? h("span", { class: "pb-acc-count", text: String((m.entrance ? 1 : 0) + (m.hover ? 1 : 0)) }) : null));
     var inner = h("div", { class: "pb-acc-body" });
     inner.appendChild(selectField("À l'apparition", m.entrance || "", [["", "Aucune"]].concat(SPEC.entrances), function (v) { setM("entrance", v); }, { disabled: locked }));
@@ -3707,9 +3727,7 @@
   // Interactions : déclencheur sur cet élément → action sur un élément de la page ; état de départ ; programmation
   function interactionField(it, locked) {
     var list = it.interactions || [];
-    var det = h("details", { class: "pb-acc", "data-group": "interactions" });
-    if (store.get("open-interactions", Boolean(list.length || it.startHidden || it.schedule))) det.open = true;
-    det.addEventListener("toggle", function () { store.set("open-interactions", det.open); });
+    var det = accShell("interactions", Boolean(list.length || it.startHidden || it.schedule));
     var n = list.length + (it.startHidden ? 1 : 0) + (it.schedule ? 1 : 0);
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: "Interactions et conditions" }), n ? h("span", { class: "pb-acc-count", text: String(n) }) : null));
     var inner = h("div", { class: "pb-acc-body" });
@@ -3800,10 +3818,9 @@
   // Code : CSS propre à l'élément, classes et attributs (vérifiés à l'enregistrement : aucune ressource externe)
   function codeField(it, locked, opts) {
     opts = opts || {};
-    var det = h("details", { class: "pb-acc", "data-group": "code" });
+    var det = null;
     var n = (opts.onlyAttrs ? 0 : (it.css ? 1 : 0) + (it.cssHover ? 1 : 0) + (it.classes ? 1 : 0)) + (opts.noAttrs ? 0 : (it.attrs ? it.attrs.length : 0));
-    if (store.get("open-code", Boolean(n))) det.open = true;
-    det.addEventListener("toggle", function () { store.set("open-code", det.open); });
+    det = accShell("code", Boolean(n));
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: opts.onlyAttrs ? "Attributs HTML" : opts.noAttrs ? "CSS personnalisé et classes" : "CSS, classes et attributs" }), n ? h("span", { class: "pb-acc-count", text: String(n) }) : null));
     var inner = h("div", { class: "pb-acc-body" });
     if (!opts.onlyAttrs) {
@@ -4161,7 +4178,8 @@
     if (!main || !doc.body.classList.contains("lp-builder")) return false;
     if (next.head !== prev.head || next.rest !== prev.rest || next.bodyClass !== prev.bodyClass) return false;
     var liveStyles = Array.prototype.filter.call(doc.head.children, function (el) { return el.tagName === "STYLE"; });
-    if (liveStyles.length !== next.styles.length || next.styles.length !== prev.styles.length) return false;
+    // Le nombre de feuilles peut changer (la première règle d'un élément en crée une) : elles sont réconciliées plus bas, sans recharger le cadre
+    if (liveStyles.length !== prev.styles.length) return false;
     var prevHtml = {};
     prev.items.forEach(function (i) { prevHtml[i.key] = i.html; });
     var liveByKey = {}, liveOther = [];
@@ -4176,7 +4194,7 @@
     var knownIds = {};
     Array.prototype.forEach.call(doc.querySelectorAll("[data-node-id],[data-section-id]"), function (e) { knownIds[idOfEl(e)] = 1; });
     // Tout est vérifié : on applique (aucun retour en arrière possible après ce point)
-    liveStyles.forEach(function (el, i) { if (el.textContent !== next.styles[i]) el.textContent = next.styles[i]; });
+    syncStyles(doc, liveStyles, next.styles);
     if (next.bodyStyle !== prev.bodyStyle) doc.body.setAttribute("style", next.bodyStyle);
     var ref = main.firstChild;
     want.forEach(function (el) { if (el === ref) ref = ref.nextSibling; else main.insertBefore(el, ref); });
@@ -4194,6 +4212,47 @@
     drawGuides();
     refreshInfo();
     return true;
+  }
+  // Feuilles <style> du cadre alignées sur le nouveau rendu, en place : réutilisées si identiques, créées ou retirées sinon (ordre conservé)
+  function syncStyles(doc, live, wanted) {
+    var cur = 0, surplus = wanted.length - live.length, last = null;
+    wanted.forEach(function (text) {
+      var l = live[cur];
+      while (surplus < 0 && l && l.textContent !== text) { l.remove(); cur++; surplus++; l = live[cur]; }
+      if (surplus > 0 && (!l || l.textContent !== text)) {
+        var made = doc.createElement("style"); made.textContent = text;
+        if (l) l.parentNode.insertBefore(made, l); else if (last) last.parentNode.insertBefore(made, last.nextSibling); else doc.head.appendChild(made);
+        surplus--; last = made; return;
+      }
+      if (l) { if (l.textContent !== text) l.textContent = text; cur++; last = l; }
+    });
+    for (; cur < live.length; cur++) live[cur].remove();
+  }
+  // Rechargement COMPLET du cadre (sections interactives : onglets, accordéons, compteurs, formulaires…, dont les scripts ne
+  // s'initialisent qu'une fois). Double tampon : le nouveau cadre se charge masqué par-dessus l'ancien, qui reste affiché et actif
+  // jusqu'à ce que le nouveau soit prêt ; l'échange est alors immédiat (aucun blanc, défilement et sélection restitués par setupCanvas).
+  var swapping = null, canvasReady = false;
+  function reloadCanvas(text, y) {
+    if (!canvasReady) { frame.onload = function () { setupCanvas(y); }; frame.srcdoc = text; return; } // tout premier affichage
+    var old = frame, nu = old.cloneNode(false);
+    nu.removeAttribute("data-pb-frame"); nu.removeAttribute("srcdoc");
+    nu.style.position = "absolute"; nu.style.inset = "0"; nu.style.visibility = "hidden";
+    swapping = nu;
+    nu.onload = function () {
+      // Un iframe inséré déclenche d'abord un `load` pour son document vide initial : on n'échange que sur le vrai contenu
+      var nd = nu.contentDocument;
+      if (swapping !== nu || !nd || nd.URL !== "about:srcdoc" || !nd.body) return;
+      swapping = null;
+      // Une édition directe ou un geste a commencé entre-temps : on ne remplace rien sous la main de la personne
+      if (editing || gesture) { nu.remove(); lastRender = null; pendingRender = true; return; }
+      // Le clavier passe à la zone du canevas (sinon un raccourci tapé pendant l'échange, Ctrl/⌘ + Z par exemple, serait perdu)
+      if (document.activeElement === old) $("[data-pb-canvas]").focus({ preventScroll: true });
+      nu.setAttribute("data-pb-frame", ""); nu.style.position = ""; nu.style.inset = ""; nu.style.visibility = "";
+      frame = nu; old.remove();
+      setupCanvas(y);
+    };
+    nu.srcdoc = text; // avant l'insertion : le document chargé est directement le bon
+    old.parentNode.appendChild(nu);
   }
   function renderCanvas() {
     if (editing || gesture) { pendingRender = true; return; }
@@ -4216,15 +4275,13 @@
         errBox.hidden = true;
         if (errorItemId) { errorItemId = null; markError(); }
         if (editing || gesture) { pendingRender = true; return; }
+        // Un rechargement précédent n'a pas fini : son contenu est dépassé, on le jette et on recharge avec ce rendu-ci
+        if (swapping) { swapping.remove(); swapping = null; lastRender = null; }
         if (patchCanvas(res.text)) return;
         var y = 0;
         try { y = frame.contentWindow.scrollY; } catch (e) { y = 0; }
         inlineTouched = [];
-        frame.onload = function () { setupCanvas(y); };
-        // Le cadre va être remplacé : le clavier passe à la zone du canevas (sinon un raccourci tapé pendant le
-        // rechargement, Ctrl/⌘ + Z par exemple, serait perdu)
-        if (document.activeElement === frame) $("[data-pb-canvas]").focus({ preventScroll: true });
-        frame.srcdoc = res.text;
+        reloadCanvas(res.text, y);
       }, function () { var errBox = $("[data-pb-render-error]"); errBox.textContent = "Aperçu indisponible (connexion au serveur interrompue)."; errBox.hidden = false; });
   }
   function markError() { $$(".pb-row-item.is-error", treeEl).forEach(function (r) { r.classList.remove("is-error"); }); if (errorItemId) { var r = treeEl.querySelector('.pb-node[data-id="' + errorItemId + '"] > .pb-row-item'); if (r) r.classList.add("is-error"); } }
@@ -4239,6 +4296,7 @@
   function setupCanvas(y) {
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
+    canvasReady = true;
     doc.body.classList.add("lp-builder");
     doc.body.classList.toggle("pb-outlines", aids.outlines);
     doc.body.classList.toggle("pb-hand", tool === "hand");
@@ -4703,7 +4761,7 @@
   function openInspector(tab, group) {
     if (panels.rightHidden) togglePanel("right");
     inspTab = tab; store.set("insp-tab", tab);
-    if (group) store.set("open-" + group, true);
+    if (group) { store.set("open-" + group, true); pendingReveal = group; }
     renderInspector();
     var target = group ? $("[data-pb-inspector] details[data-group='" + group + "']") : $("[data-pb-inspector] .pb-insp-body");
     if (target) { target.scrollIntoView({ block: "nearest" }); var f = target.querySelector("input, select, textarea, button"); if (f) f.focus({ preventScroll: true }); }
@@ -6290,6 +6348,7 @@
       { label: "Ouvrir la médiathèque", run: function () { openMedia({ title: "Médiathèque" }); } },
       { label: "Aperçu", run: openPreview }, { label: "Enregistrer maintenant", run: saveNow, off: !canWrite }, { label: "Publier", run: function () { $("[data-pb-publish]").click(); }, off: !canWrite || $("[data-pb-publish]").hidden },
       { label: "Annuler", run: undo, off: !past.length }, { label: "Rétablir", run: redo, off: !future.length },
+      { label: "Accordéons : un seul ouvert", run: function () { accSetMode("one"); } }, { label: "Accordéons : plusieurs ouverts", run: function () { accSetMode("many"); } }, { label: "Accordéons : fermer ceux situés en dessous", run: function () { accSetMode("below"); } },
       { label: "Dupliquer la sélection", run: duplicateSelected, off: !has || !canWrite }, { label: "Supprimer la sélection", run: removeSelected, off: !has || !canWrite },
       { label: "Grouper", run: groupSelected, off: selection.length < 2 || !canWrite }, { label: "Dissocier", run: ungroupSelected, off: !has || !canWrite },
       { label: "Masquer / afficher", run: function () { setFlag(selection.slice(), "hidden", !selectedItems().some(function (z) { return z.hidden; })); }, off: !has || !canWrite },
@@ -6541,6 +6600,9 @@
       ["Réglages du menu de navigation", function () { window.pbNav.open(); }],
       ["Versions, comparaison et restauration", function () { window.location.href = "/marketing/pages/" + PAGE.id + "#lp-versions"; }],
       ["Historique des actions", function () { openHistory($("[data-pb-history]")); }],
+      "-",
+      { heading: "Comportement des accordéons" },
+      accEntry("one"), accEntry("many"), accEntry("below"),
       "-",
       { heading: "Modèles et fichiers" },
       ["Enregistrer comme modèle de page…", saveAsTemplate, !canWrite],
