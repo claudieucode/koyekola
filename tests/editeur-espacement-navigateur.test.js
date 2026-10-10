@@ -38,7 +38,7 @@ describe("espacement : marge + intérieur (navigateur)", { skip: SKIP }, () => {
   const link = (kind) => page.locator(`[data-pb-inspector] .pb-link-btn[data-link="${kind}"]`).first();
   const linked = async (kind) => (await link(kind).getAttribute("aria-pressed")) === "true";
   const setLink = async (kind, want) => { if ((await linked(kind)) !== want) { await link(kind).click(); await wait(200); } };
-  const unitSel = (kind) => page.locator(`[data-pb-inspector] .pb-spacing-head select[aria-label^="${kind === "margin" ? "Marge" : "Intérieur"}"]`).first();
+  const unitSel = (kind) => page.locator(`[data-pb-inspector] .pb-sp-group[data-kind="${kind}"] select.pb-sp-unit`).first();
   const pick = async (id) => {
     await row(id).click(); await wait(300);
     const tab = page.locator("[data-pb-inspector]").getByRole("tab", { name: "Style" }); if (await tab.count()) await tab.click();
@@ -66,15 +66,16 @@ describe("espacement : marge + intérieur (navigateur)", { skip: SKIP }, () => {
   });
   after(async () => { if (browser) await browser.close(); if (srv) await srv.stop(); });
 
-  test("schéma : deux barres (liaison + unité) en haut, trois zones, 8 valeurs, pas de débordement", async () => {
+  test("présentation : deux blocs « Marge externe » / « Marge interne » (liaison, grille 2 × 2, icône de côté, unité), 8 valeurs, pas de débordement", async () => {
     await pick("head00000001");
-    for (const k of ["margin", "padding"]) { assert.equal(await link(k).count(), 1); assert.equal(await unitSel(k).count(), 1); }
+    for (const k of ["margin", "padding"]) { assert.equal(await link(k).count(), 1); assert.equal(await page.locator(`[data-pb-inspector] .pb-sp-group[data-kind="${k}"] select.pb-sp-unit`).count(), 4, "une unité (la même) dans chacun des 4 champs"); assert.equal(await page.locator(`[data-pb-inspector] .pb-sp-group[data-kind="${k}"] .pb-sp-edge`).count(), 4, "icône de côté"); }
     for (const k of ["margin", "padding"]) for (const s of Object.keys(SIDE)) assert.equal(await cell(k, s).count(), 1, `${k} ${s}`);
     const dims = await page.evaluate(() => { const b = document.querySelector("[data-pb-inspector] .pb-spacing"); const i = document.querySelector("[data-pb-inspector]"); return { w: b.scrollWidth, cw: b.clientWidth, h: b.getBoundingClientRect().height, iw: i.clientWidth }; });
     assert.ok(dims.w <= dims.cw + 1, `pas de débordement horizontal (${dims.w} > ${dims.cw})`);
-    assert.ok(dims.h < 200, `hauteur compacte (${dims.h} px)`);
-    assert.equal(await page.locator("[data-pb-inspector] .pb-boxmodel .pb-box-pad").count(), 1, "zone intérieure");
-    assert.equal(await page.locator("[data-pb-inspector] .pb-boxmodel .pb-box-core").count(), 1, "zone contenu");
+    assert.ok(dims.h < 420, `hauteur raisonnable (${dims.h} px)`);
+    assert.deepEqual(await page.locator("[data-pb-inspector] .pb-sp-title").allTextContents(), ["Marge externe", "Marge interne"]);
+    assert.deepEqual(await page.locator('[data-pb-inspector] .pb-sp-group[data-kind="margin"] .pb-sp-side').allTextContents(), ["Haut", "Droite", "Bas", "Gauche"]);
+    assert.equal(await page.locator("[data-pb-inspector] .pb-boxmodel").count(), 0, "l'ancien schéma n'existe plus");
   });
 
   test("marges déliées : 4 valeurs indépendantes → schéma, canevas, sauvegarde ; les paddings restent intacts", async () => {
