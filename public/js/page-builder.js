@@ -5912,36 +5912,60 @@
 
   // ---------- Médiathèque ----------
   var mediaDialog = $("[data-pb-media]");
-  var mediaOpts = {}, mediaItems = [], mediaChosen = [];
+  var mediaOpts = {}, mediaItems = [], mediaChosen = [], mediaSavedFlash = null, mediaLoadedOnce = false;
   function openMedia(opts) {
     if (editing) commitEdit();
     mediaOpts = opts || {};
     mediaChosen = [];
     $("#pb-media-title").textContent = mediaOpts.title || "Médiathèque";
     mediaDialog.showModal();
+    $("[data-pb-media-q]").focus();
     loadMedia();
   }
   var mediaTimer = null;
+  var mediaCount = function (n) { return n + (n > 1 ? " images" : " image"); };
   function loadMedia(keep) {
     var q = $("[data-pb-media-q]").value, src = $("[data-pb-media-src]").value;
-    $("[data-pb-media-status]").textContent = "Chargement…";
-    return api("GET", "/marketing/site-web/medias.json?source=" + encodeURIComponent(src) + "&q=" + encodeURIComponent(q)).then(function (r) {
-      mediaItems = r.items;
-      if (keep) mediaChosen = mediaChosen.map(function (c) { return mediaItems.find(function (m) { return m.source === c.source && m.id === c.id; }) || c; });
-      $("[data-pb-media-status]").textContent = r.items.length ? r.items.length + " image(s)." : "Aucune image" + (q ? " pour cette recherche." : " : envoyez-en une.");
-      renderMediaGrid();
-    }, function (err) { $("[data-pb-media-status]").textContent = err.message; });
-  }
-  $("[data-pb-media-q]").addEventListener("input", function () { clearTimeout(mediaTimer); mediaTimer = setTimeout(loadMedia, 250); });
-  $("[data-pb-media-src]").addEventListener("change", function () { loadMedia(); });
-  var mediaKey = function (m) { return m.source + ":" + m.id; };
-  function renderMediaGrid() {
     var grid = $("[data-pb-media-grid]");
+    $("[data-pb-media-status]").textContent = "Chargement…";
+    if (!mediaItems.length && !mediaLoadedOnce) { // premier affichage : emplacements neutres plutôt qu'une zone vide
+      grid.setAttribute("aria-busy", "true"); grid.textContent = "";
+      for (var i = 0; i < 8; i++) grid.appendChild(h("li", { class: "pb-media-skel", "aria-hidden": "true" }));
+    }
+    return api("GET", "/marketing/site-web/medias.json?source=" + encodeURIComponent(src) + "&q=" + encodeURIComponent(q)).then(function (r) {
+      mediaItems = r.items; mediaLoadedOnce = true;
+      if (keep) mediaChosen = mediaChosen.map(function (c) { return mediaItems.find(function (m) { return m.source === c.source && m.id === c.id; }) || c; });
+      $("[data-pb-media-status]").textContent = r.items.length ? mediaCount(r.items.length) + (q ? " trouvée" + (r.items.length > 1 ? "s" : "") : "") : "";
+      grid.setAttribute("aria-busy", "false");
+      renderMediaGrid();
+    }, function (err) { grid.setAttribute("aria-busy", "false"); grid.textContent = ""; $("[data-pb-media-status]").textContent = err.message; });
+  }
+  $("[data-pb-media-q]").addEventListener("input", function () { clearTimeout(mediaTimer); mediaTimer = setTimeout(loadMedia, 180); });
+  $("[data-pb-media-src]").addEventListener("change", function () { loadMedia(); });
+  $("[data-pb-media-sort]").addEventListener("change", function () { renderMediaGrid(); });
+  var mediaKey = function (m) { return m.source + ":" + m.id; };
+  function sortedMedia() {
+    var mode = $("[data-pb-media-sort]").value, list = mediaItems.slice();
+    if (mode === "az" || mode === "za") list.sort(function (a, b) { return (mode === "az" ? 1 : -1) * String(a.name).localeCompare(String(b.name), "fr", { sensitivity: "base", numeric: true }); });
+    return list;
+  }
+  function renderMediaGrid() {
+    var grid = $("[data-pb-media-grid]"), empty = $("[data-pb-media-empty]");
     grid.textContent = "";
-    mediaItems.forEach(function (m) {
+    var list = sortedMedia(), q = $("[data-pb-media-q]").value.trim();
+    empty.hidden = list.length > 0;
+    if (!list.length) {
+      empty.textContent = "";
+      empty.appendChild(h("span", { class: "pb-media-empty-ico", "aria-hidden": "true" }, icon("image")));
+      empty.appendChild(h("strong", { text: q ? "Aucune image trouvée" : "Aucune image" }));
+      empty.appendChild(h("span", { text: q ? "Essayez un autre terme ou une autre bibliothèque." : "Importez votre première image pour commencer." }));
+      if (!q && canWrite) empty.appendChild(h("button", { type: "button", class: "btn btn-primary btn-sm", onclick: function () { $("[data-pb-upload]").click(); } }, icon("plus"), "Importer une image"));
+    }
+    list.forEach(function (m) {
       var chosen = mediaChosen.some(function (x) { return mediaKey(x) === mediaKey(m); });
-      var btn = h("button", { type: "button", class: "pb-media-item" + (chosen ? " is-chosen" : ""), "aria-pressed": String(chosen), "aria-label": (m.alt || m.name) + (m.width ? " (" + m.width + " × " + m.height + ")" : ""), onclick: function () { chooseMedia(m); }, ondblclick: function () { chooseMedia(m, true); } },
-        h("img", { src: m.path, alt: "", loading: "lazy" }), h("span", { class: "pb-media-name", text: m.name }), m.alt ? null : h("span", { class: "pb-media-flag", text: "Sans texte alt." }));
+      var btn = h("button", { type: "button", class: "pb-media-item" + (chosen ? " is-chosen" : ""), "aria-pressed": String(chosen), title: m.name, "aria-label": (m.alt || m.name) + (m.width ? " (" + m.width + " × " + m.height + ")" : "") + (m.alt ? "" : " — texte alternatif manquant"), onclick: function () { chooseMedia(m); }, ondblclick: function () { chooseMedia(m, true); } },
+        h("span", { class: "pb-media-thumb" }, h("img", { src: m.path, alt: "", loading: "lazy", decoding: "async" }), h("span", { class: "pb-media-check", "aria-hidden": "true" }, icon("check")), m.alt ? null : h("span", { class: "pb-media-flag", text: "Alt manquant" })),
+        h("span", { class: "pb-media-name", text: m.name }));
       grid.appendChild(h("li", {}, btn));
     });
     renderMediaDetail();
@@ -5960,28 +5984,89 @@
     mediaDialog.close();
     pick(multiple ? chosen : chosen[0]);
   }
+  var fmtSize = function (b) { return !b ? "—" : b >= 1048576 ? (b / 1048576).toFixed(2).replace(".", ",") + " Mo" : Math.max(1, Math.round(b / 1024)) + " Ko"; };
+  var shortPath = function (p) { return p.length > 38 ? p.slice(0, 20) + "…" + p.slice(-16) : p; };
+  function mediaInfoRow(label, value, full) { return h("div", { class: "pb-media-row" }, h("dt", { text: label }), h("dd", { title: full || null }, value)); }
   function renderMediaDetail() {
     var box = $("[data-pb-media-detail]");
     box.textContent = "";
     var m = mediaChosen[mediaChosen.length - 1];
-    if (!m) { box.appendChild(h("p", { class: "pb-hint", text: mediaOpts.onPick ? "Choisissez une image (double-clic pour l'insérer directement)." : "Cliquez une image pour voir ses informations." })); return; }
-    box.appendChild(h("img", { src: m.path, alt: "", class: "pb-media-big" }));
-    box.appendChild(h("dl", { class: "pb-meta" }, h("dt", { text: "Nom" }), h("dd", { text: m.name }), h("dt", { text: "Dimensions" }), h("dd", { text: m.width ? m.width + " × " + m.height + " px" : "inconnues" }),
-      h("dt", { text: "Poids" }), h("dd", { text: m.size ? Math.round(m.size / 1024) + " Ko" : "—" }), h("dt", { text: "Type" }), h("dd", { text: m.mime || "image" }), h("dt", { text: "Adresse" }), h("dd", {}, h("code", { text: m.path })), h("dt", { text: "Bibliothèque" }), h("dd", { text: m.source === "marketing" ? "Marketing" : "Site (gérée dans le Centre de gestion)" })));
+    if (!m) {
+      box.appendChild(h("div", { class: "pb-media-nosel" }, h("span", { class: "pb-media-empty-ico", "aria-hidden": "true" }, icon("image")), h("strong", { text: "Sélectionnez une image" }),
+        h("span", { text: mediaOpts.onPick ? "Choisissez une ressource pour afficher ses détails (double-clic pour l'insérer directement)." : "Choisissez une ressource pour afficher ses détails." })));
+      return;
+    }
+    // Aperçu (damier discret : les transparences restent visibles) ; en cas d'échec de chargement, message et « Réessayer »
+    var prev = h("div", { class: "pb-media-preview" });
+    var showImg = function (bust) {
+      prev.textContent = "";
+      var img = h("img", { src: m.path + (bust ? (m.path.indexOf("?") < 0 ? "?" : "&") + "r=" + Date.now() : ""), alt: m.alt || "" });
+      img.addEventListener("error", function () { prev.textContent = ""; prev.appendChild(h("div", { class: "pb-media-fail", role: "alert" }, h("span", { text: "Impossible de charger cette image." }), h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { showImg(true); } }, "Réessayer"))); });
+      prev.appendChild(img);
+    };
+    showImg(false);
+    box.appendChild(prev);
+    var pathBtn = h("button", { type: "button", class: "pb-media-copy", "data-tip": "Copier l'adresse", "aria-label": "Copier l'adresse de l'image", onclick: function () {
+      var done = function () { toast("Adresse copiée."); }, fail = function () { toast("Copie impossible : sélectionnez l'adresse à la main.", true); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(location.origin + m.path).then(done, fail); else fail();
+    } }, icon("copy"));
+    box.appendChild(h("dl", { class: "pb-media-info" },
+      mediaInfoRow("Nom", h("span", { class: "pb-media-ell", text: m.name }), m.name),
+      mediaInfoRow("Dimensions", m.width ? m.width + " × " + m.height + " px" : "inconnues"),
+      mediaInfoRow("Poids", fmtSize(m.size)),
+      mediaInfoRow("Type", m.mime || "image"),
+      mediaInfoRow("Bibliothèque", m.source === "marketing" ? "Marketing" : "Site (Centre de gestion)"),
+      mediaInfoRow("Adresse", h("span", { class: "pb-media-pathrow" }, h("code", { class: "pb-media-ell", text: shortPath(m.path) }), pathBtn), m.path)));
+    var usageBox = h("div", { class: "pb-media-usage", "aria-live": "polite" });
+    var usageList = null; // null = inconnu, [] = non utilisée
+    box.appendChild(usageBox);
+    if (m.source === "marketing") {
+      api("GET", "/marketing/site-web/medias/" + m.id + "/usage.json").then(function (r) {
+        if (mediaChosen[mediaChosen.length - 1] !== m && !usageBox.isConnected) return;
+        usageList = r.items;
+        if (!r.items.length) return;
+        usageBox.appendChild(h("p", { class: "pb-media-usage-title", text: "Utilisée dans " + r.items.length + (r.items.length > 1 ? " contenus" : " contenu") }));
+        var ul = h("ul", {});
+        r.items.slice(0, 6).forEach(function (u) { ul.appendChild(h("li", {}, u.href ? h("a", { href: u.href, target: "_blank", rel: "noopener", text: u.name }) : h("span", { text: u.name }), h("small", { text: " " + u.kind }))); });
+        if (r.items.length > 6) ul.appendChild(h("li", {}, h("small", { text: "… et " + (r.items.length - 6) + " autre(s)" })));
+        usageBox.appendChild(ul);
+      }, function () { /* information facultative : la suppression reste protégée côté serveur */ });
+    }
+    var actions = h("div", { class: "pb-media-actions" });
     if (m.editable && canWrite) {
       var name = textField("Nom", m.name, function () {}, { max: 120 });
-      var alt = textField("Texte de remplacement", m.alt, function () {}, { max: 200 });
-      box.appendChild(name); box.appendChild(alt);
-      box.appendChild(h("div", { class: "pb-row pb-wrap" },
-        h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () {
-          api("POST", "/marketing/site-web/medias/" + m.id, { alt: alt.querySelector("input").value, name: name.querySelector("input").value }).then(function (r) { Object.assign(m, r.media); toast("Image mise à jour."); loadMedia(true); }, apiFail);
-        } }, "Enregistrer"),
-        h("button", { type: "button", class: "btn btn-danger btn-sm", onclick: function () {
-          if (!window.confirm("Supprimer définitivement « " + m.name + " » ? (Refusé si une page, un composant ou un modèle d'e-mail l'utilise.)")) return;
-          api("POST", "/marketing/site-web/medias/" + m.id + "/supprimer", {}).then(function () { mediaChosen = []; toast("Image supprimée."); loadMedia(); }, apiFail);
-        } }, "Supprimer")));
-    } else if (!m.editable) box.appendChild(h("p", { class: "pb-hint", text: "Texte de remplacement et suppression : Centre de gestion → Ressources." }));
-    if (mediaOpts.onPick) box.appendChild(h("button", { type: "button", class: "btn btn-primary btn-sm", onclick: finishMedia }, mediaOpts.multiple ? "Insérer " + mediaChosen.length + " image(s)" : "Insérer cette image"));
+      var alt = textField("Texte alternatif", m.alt, function () {}, { max: 200 });
+      alt.appendChild(h("p", { class: "pb-media-help", text: m.alt ? "Lu par les lecteurs d'écran ; affiché si l'image ne charge pas." : "Manquant : décrivez l'image pour améliorer l'accessibilité." }));
+      var meta = h("div", { class: "pb-media-meta" }, h("h3", { text: "Métadonnées" }), name, alt);
+      box.appendChild(meta);
+      var save = h("button", { type: "button", class: "btn btn-primary btn-sm", disabled: true }, "Enregistrer");
+      var flashed = mediaSavedFlash === mediaKey(m); mediaSavedFlash = null;
+      if (flashed) { save.textContent = "Enregistré"; setTimeout(function () { if (save.isConnected && save.textContent === "Enregistré") save.textContent = "Enregistrer"; }, 1600); }
+      var nameIn = name.querySelector("input"), altIn = alt.querySelector("input");
+      var dirty = function () { save.disabled = nameIn.value === m.name && altIn.value === (m.alt || ""); if (!save.disabled && save.textContent === "Enregistré") save.textContent = "Enregistrer"; };
+      nameIn.addEventListener("input", dirty); altIn.addEventListener("input", dirty);
+      save.addEventListener("click", function () {
+        save.disabled = true; save.textContent = "Enregistrement…";
+        api("POST", "/marketing/site-web/medias/" + m.id, { alt: altIn.value, name: nameIn.value }).then(function (r) { Object.assign(m, r.media); mediaSavedFlash = mediaKey(m); toast("Modifications enregistrées."); loadMedia(true); }, function (err) { save.textContent = "Enregistrer"; save.disabled = false; apiFail(err); });
+      });
+      var del = h("button", { type: "button", class: "btn btn-sm pb-media-del" }, icon("trash"), "Supprimer");
+      del.addEventListener("click", function () { // confirmation sur place ; si le fichier est utilisé, la suppression est refusée (liste ci-dessus)
+        actions.textContent = "";
+        var inUse = usageList && usageList.length;
+        actions.appendChild(h("div", { class: "pb-media-confirm", role: "alertdialog", "aria-label": "Confirmer la suppression" },
+          h("strong", { text: "Supprimer cette image ?" }),
+          h("span", { text: inUse ? "Cette image est actuellement utilisée : retirez-la d'abord des contenus listés ci-dessus." : "Cette action ne peut pas être annulée." }),
+          h("div", { class: "pb-row pb-wrap" },
+            h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { renderMediaDetail(); } }, "Annuler"),
+            h("button", { type: "button", class: "btn btn-sm pb-media-del is-solid", disabled: Boolean(inUse), onclick: function () {
+              api("POST", "/marketing/site-web/medias/" + m.id + "/supprimer", {}).then(function () { mediaChosen = []; toast("Image supprimée."); loadMedia(); }, function (err) { apiFail(err); renderMediaDetail(); });
+            } }, "Supprimer définitivement"))));
+        actions.querySelector(".btn-outline").focus();
+      });
+      actions.appendChild(save); actions.appendChild(del);
+    } else if (!m.editable) box.appendChild(h("p", { class: "pb-media-help", text: "Texte alternatif et suppression : Centre de gestion → Ressources." }));
+    if (mediaOpts.onPick) box.insertBefore(h("button", { type: "button", class: "btn btn-primary pb-media-insert", onclick: finishMedia }, mediaOpts.multiple ? "Insérer " + mediaChosen.length + " image(s)" : "Insérer cette image"), box.children[1]);
+    if (actions.children.length) box.appendChild(actions);
   }
   function uploadFile(file) {
     if (!file) return;
@@ -5990,7 +6075,7 @@
     var fd = new FormData(); fd.append("file", file);
     $("[data-pb-media-status]").textContent = "Envoi de « " + file.name + " »…";
     api("POST", "/marketing/site-web/medias", fd, true).then(function (r) {
-      toast("Image envoyée : ajoutez son texte de remplacement à droite.");
+      toast("Image envoyée : ajoutez son texte alternatif à droite.");
       $("[data-pb-media-src]").value = "all"; $("[data-pb-media-q]").value = "";
       mediaChosen = mediaOpts.multiple ? mediaChosen.concat(r.media) : [r.media];
       loadMedia(true);
@@ -5998,9 +6083,11 @@
   }
   $("[data-pb-upload]").addEventListener("change", function () { uploadFile(this.files[0]); this.value = ""; });
   var drop = $("[data-pb-drop]");
-  ["dragenter", "dragover"].forEach(function (ev) { drop.addEventListener(ev, function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, "Files") >= 0) { e.preventDefault(); drop.classList.add("is-over"); } }); });
-  drop.addEventListener("dragleave", function () { drop.classList.remove("is-over"); });
-  drop.addEventListener("drop", function (e) { e.preventDefault(); drop.classList.remove("is-over"); if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); });
+  drop.addEventListener("click", function () { $("[data-pb-upload]").click(); });
+  drop.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("[data-pb-upload]").click(); } });
+  ["dragenter", "dragover"].forEach(function (ev) { mediaDialog.addEventListener(ev, function (e) { if (canWrite && e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, "Files") >= 0) { e.preventDefault(); drop.classList.add("is-over"); } }); });
+  mediaDialog.addEventListener("dragleave", function (e) { if (!mediaDialog.contains(e.relatedTarget)) drop.classList.remove("is-over"); });
+  mediaDialog.addEventListener("drop", function (e) { drop.classList.remove("is-over"); if (!canWrite) return; e.preventDefault(); if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); });
   if (!canWrite) { $(".pb-upload").hidden = true; drop.hidden = true; }
 
   // ---------- Fenêtre « demande de contenu » ----------

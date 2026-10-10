@@ -161,20 +161,26 @@
     <div class="pb-preview-stage"><iframe class="pb-preview-frame" data-pb-preview-frame data-device="desktop" title="Aperçu de la page"></iframe></div>
   </dialog>
 
-  <dialog class="pb-modal pb-media-modal" data-pb-media aria-labelledby="pb-media-title">
-    <div class="pb-modal-head"><h2 id="pb-media-title">Médiathèque</h2><span class="pb-modal-spacer"></span><button type="button" class="pb-icon-btn" data-pb-close aria-label="Fermer la médiathèque"><%- icon("close", { size: 18 }) %></button></div>
-    <div class="pb-media-body">
-      <div class="pb-media-bar">
-        <label class="sr-only" for="pb-media-q">Rechercher une image</label><input class="pb-search" id="pb-media-q" type="search" placeholder="Rechercher (nom, texte de remplacement)…" data-pb-media-q>
-        <label class="sr-only" for="pb-media-src">Bibliothèque</label><select id="pb-media-src" data-pb-media-src><option value="all">Toutes les images</option><option value="marketing">Marketing</option><option value="site">Site (blog, Centre de gestion)</option></select>
-        <label class="btn btn-primary btn-sm pb-upload">Envoyer une image<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-pb-upload class="sr-only"></label>
+  <dialog class="pb-modal pb-media-modal" data-pb-media aria-labelledby="pb-media-title" aria-describedby="pb-media-sub">
+    <div class="pb-media-head">
+      <span class="pb-media-head-ico" aria-hidden="true"><%- icon("image", { size: 18 }) %></span>
+      <div class="pb-media-titles"><h2 id="pb-media-title">Médiathèque</h2><p id="pb-media-sub">Les images utilisées dans votre site</p></div>
+      <button type="button" class="pb-icon-btn" data-pb-close data-tip="Fermer (Échap)" aria-label="Fermer la médiathèque"><%- icon("close", { size: 18 }) %></button>
+    </div>
+    <div class="pb-media-toolbar">
+      <div class="pb-media-search"><span aria-hidden="true"><%- icon("search", { size: 15 }) %></span><label class="sr-only" for="pb-media-q">Rechercher une image</label><input id="pb-media-q" type="search" placeholder="Rechercher une image…" autocomplete="off" data-pb-media-q></div>
+      <label class="sr-only" for="pb-media-src">Bibliothèque</label><select id="pb-media-src" data-pb-media-src><option value="all">Toutes les images</option><option value="marketing">Marketing</option><option value="site">Site (blog, Centre de gestion)</option></select>
+      <label class="sr-only" for="pb-media-sort">Tri</label><select id="pb-media-sort" data-pb-media-sort><option value="recent">Plus récentes</option><option value="az">Nom A → Z</option><option value="za">Nom Z → A</option></select>
+      <label class="btn btn-primary btn-sm pb-upload"><%- icon("plus", { size: 14 }) %><span>Importer</span><input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-pb-upload class="sr-only" aria-label="Importer une image"></label>
+    </div>
+    <div class="pb-media-main">
+      <div class="pb-media-left">
+        <div class="pb-drop" data-pb-drop role="button" tabindex="0"><%- icon("upload", { size: 15 }) %><span>Glissez-déposez une image ici, ou cliquez pour importer</span><small>JPEG, PNG, GIF ou WebP · 5 Mo au plus</small></div>
+        <p class="pb-media-status" data-pb-media-status role="status" aria-live="polite"></p>
+        <ul class="pb-media-grid" data-pb-media-grid aria-label="Images" aria-busy="false"></ul>
+        <div class="pb-media-empty" data-pb-media-empty hidden></div>
       </div>
-      <div class="pb-drop" data-pb-drop>Ou déposez une image ici (JPEG, PNG, GIF ou WebP, 5 Mo au plus)</div>
-      <p class="pb-hint" data-pb-media-status role="status" aria-live="polite"></p>
-      <div class="pb-media-layout">
-        <ul class="pb-media-grid" data-pb-media-grid aria-label="Images"></ul>
-        <div class="pb-media-detail" data-pb-media-detail></div>
-      </div>
+      <aside class="pb-media-detail" data-pb-media-detail aria-label="Détails de l'image"></aside>
     </div>
   </dialog>
 
