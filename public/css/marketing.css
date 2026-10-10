@@ -1138,6 +1138,11 @@ details.mk-cl-item[open] > .mk-cl-summary .mk-cl-edit { visibility: hidden; }
 .mk-structure-actions .mk-b-icon.is-danger { margin-left: auto; }
 .mk-structure-item.is-selected .mk-structure-actions, .mk-structure-item:hover .mk-structure-actions, .mk-structure-item:focus-within .mk-structure-actions { display: flex; }
 @media (hover: none) { .mk-structure-actions { display: flex; } }
+/* Stabilité : au survol (ou au clavier) d'une carte NON sélectionnée, la zone d'actions FLOTTE sous la carte au lieu d'entrer dans le flux.
+   Avant, la carte grandissait de ~42 px au survol et rétrécissait en le quittant : les cartes suivantes glissaient sous la souris, le survol
+   changeait de carte en boucle (tremblement). La carte sélectionnée, elle, garde ses actions dans le flux (choix de l'utilisateur, une seule fois). */
+.mk-structure:not(.is-sorting) .mk-structure-item:not(.is-selected):is(:hover, :focus-within) .mk-structure-actions { position: absolute; top: 100%; left: -1px; right: -1px; z-index: 4; margin-top: -1px; border: 1px solid var(--mk-border-strong); border-top: 0; border-radius: 0 0 var(--b-r-lg) var(--b-r-lg); background: var(--mk-surface); box-shadow: 0 6px 12px -6px rgba(11, 42, 64, 0.2); }
+@media (hover: none) { .mk-structure:not(.is-sorting) .mk-structure-item:not(.is-selected) .mk-structure-actions { position: static; margin-top: 0; border: 0; border-radius: 0; box-shadow: none; } }
 
 /* ---------- Médiathèque ---------- */
 .mk-media-drop { display: grid; justify-items: center; gap: var(--b-1); padding: var(--b-4) var(--b-3); border: 2px dashed var(--mk-border-strong); border-radius: var(--b-r-lg); background: var(--surface-alt); text-align: center; transition: border-color var(--b-ease), background var(--b-ease); }

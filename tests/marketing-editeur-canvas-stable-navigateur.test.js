@@ -54,7 +54,7 @@ describe("éditeur d'e-mails : stabilité du canevas et de l'inspecteur (navigat
     await open(0, "heading", { width: 1500, height: 1100 });
     const before = await canvasState();
     assert.equal(await page.evaluate(() => { const c = document.getElementById("mk-canvas"); return c.scrollHeight > c.clientHeight; }), false, "départ : pas de barre de défilement");
-    for (let i = 0; i < 8; i++) { await page.click('[data-add="heading"]'); await wait(150); }
+    for (let i = 0; i < 16; i++) { await page.click('[data-add="heading"]'); await wait(150); } // assez pour dépasser la hauteur de la fenêtre avec certitude
     await until(() => page.evaluate(() => { const c = document.getElementById("mk-canvas"); return c.scrollHeight > c.clientHeight; }), "la barre de défilement apparaît");
     await wait(900);
     const after = await canvasState();

@@ -1067,9 +1067,32 @@
     if (opts.disabled) b.disabled = true;
     return b;
   }
+  // La liste n'est reconstruite que si son contenu a vraiment changé (noms, résumés, étiquettes, ordre, boutons grisés). Avant, CHAQUE modification
+  // (et chaque réponse d'aperçu) la détruisait et la recréait en entier : la carte survolée perdait son survol, ses actions apparaissaient /
+  // disparaissaient et toutes les cartes se repeignaient. La sélection, elle, se met à jour sur place (markSelection) : elle n'entre pas dans la comparaison.
+  var structureSigs = null;
+  var normStructure = function (li) { return li.outerHTML.replace(/ is-selected/g, "").replace(/ aria-current="true"/g, ""); };
   function renderStructure() {
     if (!structure) return;
-    structure.textContent = "";
+    var live = structure, scratch = document.createElement("ol");
+    structure = scratch; // les écouteurs créés ci-dessous lisent « structure » à l'appel : elle est rétablie juste après la construction
+    try { buildStructure(); } finally { structure = live; }
+    var fresh = [].slice.call(scratch.children), sigs = fresh.map(normStructure);
+    if (structureSigs && structureSigs.length === sigs.length && live.children.length === sigs.length) {
+      // Même nombre de cartes : seules celles dont le contenu a changé sont remplacées, les autres ne sont pas touchées
+      sigs.forEach(function (sg, i) { if (sg !== structureSigs[i]) live.replaceChild(fresh[i], live.children[i]); });
+      [].forEach.call(live.querySelectorAll(".mk-structure-item"), function (li) { // la sélection est remise d'aplomb sur place
+        var on = li.getAttribute("data-id") === selectedId, b = li.querySelector(".mk-structure-btn");
+        li.classList.toggle("is-selected", on);
+        if (b) { if (on) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current"); }
+      });
+    } else {
+      live.textContent = "";
+      fresh.forEach(function (li) { live.appendChild(li); });
+    }
+    structureSigs = sigs;
+  }
+  function buildStructure() {
     var count = $("mk-structure-count"); if (count) count.textContent = state.blocks.length ? String(state.blocks.length) : "";
     if (!state.blocks.length) structure.appendChild(el("li", { "class": "mk-structure-empty" }, readOnly ? "Aucun bloc." : "Aucun bloc : ajoutez-en depuis l'onglet « Blocs »."));
     state.blocks.forEach(function (b, index) {
