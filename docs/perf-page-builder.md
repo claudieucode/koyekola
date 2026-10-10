@@ -122,3 +122,41 @@ n'est pas un problème mesurable aujourd'hui (≈ 50 Ko × 150 = 7 Mo) ; il le d
   disponibles ; ne jamais lire de mise en page (`getBoundingClientRect`…) pendant un traitement d'événement sans nécessité.
 - Toute donnée dynamique passe par `data()` (serveur) ; éviter les requêtes lourdes dans cette fonction (elle s'exécute à chaque rendu d'aperçu).
 - Lancer le banc (`--sizes=100,400`) avant et après l'ajout d'un widget qui touche au rendu ou aux calques.
+
+## Référence du 2026-10-10 (LOT 2 du programme « Editor Excellence »)
+
+Mesure fraîche, protocole inchangé : `node scripts/perf/bench-page-builder.js --sizes=100,400 --json=…`. Machine : Intel i5-6500 ×4, Chrome 150.0.7871.125,
+Darwin 21.6.0, **charge 6,1 / 12,3 / 19,2** (encore élevée : valeurs pessimistes, bruit possible de ±30 %). Une seule exécution par taille : ce sont des valeurs
+de référence, pas des médianes de plusieurs séries. Médianes en ms, « image » = jusqu'à l'image suivante.
+
+| Mesure | 100 éléments | 400 éléments |
+|---|---|---|
+| Chargement de l'éditeur | 1081 | 760 |
+| Nœuds DOM (fenêtre / canevas) | 5 920 / 275 | 15 619 / 964 |
+| Mémoire JS (début → fin) Mo | 5,4 → 6,0 | 6,1 → 6,9 |
+| Sélection d'un calque (médiane / max) | 25,8 / 40,2 | 40,6 / 74,7 |
+| Frappe dans l'inspecteur (médiane) | 20,1 | 24,3 |
+| Frappe → canevas à jour | 182 | 196 |
+| Dupliquer : JS / image | 5,6 / 23,9 | 20,9 / 56,1 |
+| Annuler : JS / image | 4,6 / 19,9 | 17,7 / 48,7 |
+| Rétablir : JS / image | 3,8 / 17,3 | 15,3 / 42,2 |
+| Supprimer : JS / image | 3,6 / 16,6 | 13,9 / 38,0 |
+| Glisser un calque : médiane / pire image / tâches longues | 16,7 / 24,5 / 0 | 16,7 / 55,3 / 1 |
+| Glisser depuis la bibliothèque : médiane / pire / tâches longues | 16,7 / 49 / 0 | 16,7 / 83,3 / 2 |
+| Défilement du canevas (images/s) | 61 | 61 |
+| Taille du document envoyé (Ko) | 256 | 294 |
+
+Lecture : aucune régression visible par rapport à la table « après » ci-dessus (mêmes ordres de grandeur ; ce n'est pas une comparaison statistique). À 400 éléments,
+dupliquer dépasse légèrement 50 ms jusqu'à l'image (56,1) ; les autres actions restent sous 50 ms. Le glisser depuis la bibliothèque y montre 2 tâches longues : point à
+surveiller, non corrigé (cause non profilée). Non mesuré : latence de rendu **par section** (le canevas ne rend pas une section isolée ; voir `patchCanvas`), 500 éléments
+(au-delà de la limite produit), appareils tactiles.
+
+### Garde-fous automatiques existants (pas de doublon créé)
+
+`tests/page-builder-performance-navigateur.test.js` vérifie déjà : calques non reconstruits pour une modification de style, reconstruction différentielle
+(< 120 mutations), sélection incrémentale, et rendu serveur de 400 éléments (< 1 400 ms, gabarits compilés une fois). Ces seuils sont larges exprès (la machine est partagée).
+
+### Garde-fou proposé (non construit)
+
+Un test de seuils larges sur 400 éléments (action → image suivante < 250 ms, soit ≈ 4–5 × la référence ci-dessus) attraperait une régression grossière sans casser sous charge.
+Il n'est pas écrit : sans plusieurs séries de mesures à machine calme, un seuil serré serait instable et un seuil large attraperait peu. À décider après une série de 5 exécutions.

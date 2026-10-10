@@ -22,6 +22,13 @@ const TRIGGERS = {
   "email.opened": { label: "Un contact ouvre un e-mail (indicatif)", filters: [] },
   // Score des contacts (phase 13) : le contact change de niveau (froid, intéressé, chaud…)
   "contact.score_level_changed": { label: "Le score d'un contact change de niveau", filters: [["levelId", "Niveau atteint", "scoreLevels"]] },
+  // Contact Core (palier 15) et Email Engine (palier 16) : événements réellement émis, avec un contact identifié
+  "user.registered": { label: "Un compte est créé (immédiat, Contact Core)", filters: [] },
+  "contact.lifecycle_changed": { label: "Le cycle de vie d'un contact change", filters: [["to", "Étape atteinte (client, membre…)"]] },
+  "email.delivered": { label: "Un e-mail est livré", filters: [] },
+  "email.bounced": { label: "Un e-mail rebondit", filters: [] },
+  "email.complained": { label: "Un contact signale un e-mail comme indésirable", filters: [] },
+  "comment.approved": { label: "Un commentaire d'un contact connu est publié", filters: [] },
   "contact.created": { label: "Un contact est créé", filters: [] },
   "contact.subscribed": { label: "Un contact s'abonne (consentement prouvé)", filters: [] },
   "contact.sms_subscribed": { label: "Un contact accepte les SMS (accord SMS prouvé)", filters: [] },
