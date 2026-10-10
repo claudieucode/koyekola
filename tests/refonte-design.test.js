@@ -100,8 +100,10 @@ describe("chaque classe utilisée par les pages a un style", () => {
     ["views", path.join("public", "js"), path.join("src", "editor")].forEach((d) => walk(path.join(ROOT, d)));
     const defined = new Set([...CSS.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]));
     // Classes volontairement sans règle : marqueurs de structure
-    const markers = new Set(["post", "course-main", "rich-field", "small", "lesson-resources", "plan-lesson-title", "hero-text"]);
-    const orphans = [...used].filter((c) => !defined.has(c) && !markers.has(c));
+    // kw-tcar-slide / kw-mcar-slide : accroches de structure des carrousels (le style est porté par kw-carousel-slide)
+    const markers = new Set(["post", "course-main", "rich-field", "small", "lesson-resources", "plan-lesson-title", "hero-text", "kw-tcar-slide", "kw-mcar-slide"]);
+    // Un nom qui finit par « - » est le début d'un nom complété par une valeur (« language-<%= langue %> », « is-<%= état %> ») : il ne peut pas avoir de règle à lui seul
+    const orphans = [...used].filter((c) => !c.endsWith("-") && !defined.has(c) && !markers.has(c));
     assert.deepEqual(orphans, []);
   });
 });

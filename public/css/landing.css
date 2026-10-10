@@ -613,7 +613,7 @@ body.pb-hand,body.pb-hand *{cursor:grab}
 .kw-node { min-width: 0; }
 .kw-code { white-space: pre-wrap; overflow-x: auto; }
 /* Coloration du code (src/marketing/pages/highlight.js) */
-.kw-tok-com { color: #5b7083; font-style: italic; } .kw-tok-str { color: #0a7a4a; } .kw-tok-num { color: #b45309; } .kw-tok-kw { color: #7c3aed; font-weight: 600; } .kw-tok-fn { color: #0277b6; }
+.kw-tok-com { color: #5b7083; font-style: italic; } .kw-tok-str { color: #0a7a4a; } .kw-tok-num { color: #b45309; } .kw-tok-kw { color: #1d4ed8; font-weight: 600; } .kw-tok-fn { color: #0277b6; }
 .kw-tok-tag { color: #b4235b; } .kw-tok-attr { color: #b45309; }
 .kw-progress-head > span:last-child:not(:first-child) { flex: none; white-space: nowrap; overflow-wrap: normal; }
 .kw-progress-head { align-items: flex-start; }
