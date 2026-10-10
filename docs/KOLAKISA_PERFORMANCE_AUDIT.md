@@ -28,7 +28,7 @@ Date : 2026-10-10. **Aucun code de production n'a été modifié.** Preuves : le
 5. **Reconstruction complète de l'inspecteur** à chaque modification non « légère » (`afterChange` → `renderInspector`, 31 appels dans le fichier) : ≈ 24 ms par action mesurée dans le banc existant. Acceptable, mais c'est le plus gros poste de chaque ▲▼ ou validation de champ.
 6. **Coût par insertion qui croît avec la page** : script de 5,6 ms (20 éléments) → 7,5 → 15,7 → 22,1 ms (300 → 400).
 7. **Dupliquer à 400 éléments : 56 ms jusqu'à l'image** (cible 50) — seule opération structurelle au-dessus du budget.
-8. **`drawOverlays` reconstruit toute la couche d'aides** (suppression puis recréation des boîtes de sélection, badges, poignées) à chaque appel : 7 sites d'appel, **et à chaque événement de défilement** du canevas (`scroll` → `drawOverlays` + `drawRulers`). Coût isolé non mesuré.
+8. **`drawOverlays` reconstruit toute la couche d'aides** (suppression puis recréation des boîtes de sélection, badges, poignées) à chaque appel : 7 occurrences dans le fichier, **dont l'écouteur de défilement : elle est rappelée à chaque événement de défilement** du canevas (`scroll` → `drawOverlays` + `drawRulers`). Coût isolé non mesuré.
 9. **Script monolithique de 582 Ko** : analyse et compilation au démarrage (chargement 760–1 100 ms selon la taille de page). Aucune découpe à la demande des panneaux secondaires.
 10. **Pointes de 100–400 ms** (défilement, sélection, Structure) vues sous forte charge de la machine mais **non reproduites à charge modérée** : à ne pas traiter comme des défauts avant d'avoir une machine calme (voir la base de référence).
 
@@ -58,7 +58,7 @@ Mesuré : **1 requête de rendu et 1 enregistrement par rafale** (un changement 
 
 ## 9. Canevas
 
-Mise à jour par section (`patchCanvas`), double iframe seulement en secours, aucun saut mesuré (tests de stabilité). Limites : tout document est rendu côté serveur ; une section modifiée est réinjectée entière (`importNode`) ; les widgets interactifs imposent un rechargement de section (`INTERACTIVE`). Le coût de `renderSignature` (analyse du HTML complet) est **l'inconnue principale** du goulot 1.
+Mise à jour par section (`patchCanvas`), double iframe seulement en secours, aucun saut mesuré (tests de stabilité). Limites : tout document est rendu côté serveur ; une section modifiée est réinjectée entière (`importNode`) ; un widget interactif (`INTERACTIVE`) oblige à remplacer tout le document (double tampon) au lieu de ne patcher qu'une section. Le coût de `renderSignature` (analyse du HTML complet) est **l'inconnue principale** du goulot 1.
 
 ## 10. Inspecteur
 
