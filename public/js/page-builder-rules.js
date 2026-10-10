@@ -87,7 +87,7 @@
   function addGuide() { if (R.add(addAxis.querySelector("select").value, addInput.value)) { addInput.value = ""; sync(); } }
   addInput.addEventListener("keydown", function (e) { e.stopPropagation(); if (e.key === "Enter") { e.preventDefault(); addGuide(); } });
   sectionGuides.appendChild(h("div", { class: "pb-rules-add" }, addAxis, h("div", { class: "pb-field" }, h("label", { text: "Position" }), addInput), addBtn));
-  sectionGuides.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", "data-rules-clear": "", text: "Supprimer tous les guides de cet écran", onclick: function () { R.clear(); } }));
+  sectionGuides.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm pb-rules-danger", "data-rules-clear": "", text: "Supprimer tous les guides de cet écran", onclick: function () { R.clear(); } }));
 
   var sectionGrid = section("Grille");
   var modeSel = selectField("Type de grille", [["free", "Libre : lignes à pas régulier"], ["web", "Web : colonnes, gouttières et marges"]], function () { return P().mode; }, function (v) { upd(function (p) { p.mode = v; }); });
@@ -106,7 +106,7 @@
     numberField("Marge droite (px)", function () { return gridCfg().marginR; }, function (v) { gridSet("marginR", v); }, { min: 0, max: 400 })));
   sectionGrid.appendChild(freeBox); sectionGrid.appendChild(webBox);
   sectionGrid.appendChild(h("p", { class: "pb-hint", text: "La grille n'est qu'un repère de conception : elle n'impose rien au rendu final et n'apparaît jamais sur le site publié." }));
-  sectionGrid.appendChild(h("p", { class: "pb-subtitle", text: "Zone de sécurité (px)" }));
+  sectionGrid.appendChild(h("h4", { class: "pb-rules-subhead", text: "Zone de sécurité (px)" }));
   sectionGrid.appendChild(h("div", { class: "pb-grid-2" },
     numberField("Haut", function () { return P().safe.top; }, function (v) { upd(function (p) { p.safe.top = v; }); }, { min: 0, max: 400 }),
     numberField("Bas", function () { return P().safe.bottom; }, function (v) { upd(function (p) { p.safe.bottom = v; }); }, { min: 0, max: 400 })));
@@ -143,7 +143,7 @@
         input.addEventListener("keydown", function (e) { e.stopPropagation(); if (e.key === "Enter") { e.preventDefault(); commit(); } });
         guideList.appendChild(h("div", { class: "pb-guide-row" + (sel ? " is-selected" : "") },
           h("span", { class: "pb-guide-kind", text: grp[1] }), input, h("span", { class: "pb-guide-unit", text: P().unit }),
-          h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Supprimer ce guide", "data-tip": "Supprimer ce guide", text: "×", onclick: function () { R.remove(grp[0], i); } })));
+          h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Supprimer ce guide", "data-tip": "Supprimer ce guide", onclick: function () { R.remove(grp[0], i); } }, R.icon("close"))));
       });
     });
     if (!any) guideList.appendChild(h("p", { class: "pb-hint", text: "Aucun guide sur cet écran. Tirez-en un depuis une règle, ou ajoutez-en un ci-dessous." }));
@@ -152,7 +152,10 @@
   // ---------- Synchronisation ----------
   function sync() {
     var s = st();
-    screenLine.textContent = "Écran actif : " + s.deviceLabel + " · " + s.width + " px" + (s.prefs.perDevice ? "" : " (guides communs à tous les écrans)");
+    screenLine.textContent = "";
+    screenLine.appendChild(h("span", { class: "pb-rules-screen-label", text: "Écran actif : " }));
+    screenLine.appendChild(h("span", { class: "pb-rules-screen-value", text: s.deviceLabel + " · " + s.width + " px" }));
+    if (!s.prefs.perDevice) screenLine.appendChild(h("span", { class: "pb-rules-screen-label", text: " (guides communs à tous les écrans)" }));
     controls.forEach(function (c) {
       if (document.activeElement === c.el && c.el.tagName === "INPUT" && c.el.type !== "checkbox") return;
       var v = c.read();
