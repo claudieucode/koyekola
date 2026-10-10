@@ -66,3 +66,19 @@ Date : 2026-10-10. **Aucun code de production n'a été modifié.** Deux scripts
 | Insertion, dupliquer, annuler, rétablir, supprimer | ≤ 50 ms jusqu'à l'image | dupliquer 56 ms ; les autres ≤ 49 ms |
 | Enregistrement | jamais bloquant ; 1 requête par rafale | **atteint** (1 rendu + 1 enregistrement par rafale) |
 | Mémoire | pas de croissance des écouteurs / nœuds | **atteint** ; tas +1 Ko par cycle (à surveiller) |
+
+## E. Après les lots 3, 7 et 9 (même jour)
+
+| Mesure | Avant | Après |
+|---|---|---|
+| Frappe → canevas à jour, 100 éléments | 86 ms | **30 ms** |
+| Frappe → canevas à jour, 400 éléments | 117–162 ms | **60–64 ms** |
+| Valeur unique → canevas, 100 / 400 éléments | 82 / 129–141 ms | 65–76 / 102–105 ms |
+| Répartition à 400 éléments avant : attente avant l'envoi 77 · requête 56 (serveur 54) · application 27 | 153 ms | attente 8 · requête 33 · application 20 = 60 ms |
+| Panneau Structure : recalcul de style par basculement, 400 éléments | 28,8 ms | **3,1 ms** |
+| Panneau Structure : tâches longues à 400 éléments (6 cycles) | 3 (jusqu'à 95 ms) | **0** |
+| Sélection par clic : mises en page par action (20 / 100 / 300 / 400) | 8,3 / 8,4 / 8,9 / 8,8 | **4,6 / 4,5 / 5,3 / 5,2** |
+| Sélection + Échap : mises en page par cycle | 13,2 / 37,5 / 41,3 / 27,7 | **9,7 / 20,5 / 22,2 / 14,2** |
+| Dupliquer / annuler / rétablir / supprimer à 400 éléments, jusqu'à l'image | 56 / 49 / 42 / 38 ms | 42 / 37 / 30 / 29 ms (série du jour ; machine plus calme, à lire avec prudence) |
+
+Les compteurs de mises en page sont déterministes ; les durées et les « pires images » de la série après (charge 13–17) restent bruitées (ex. sélection + Échap à 300 éléments : une pointe de 550 ms non reproduite ailleurs).

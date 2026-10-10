@@ -1,6 +1,6 @@
 # KOLAKISA — Garde-fous et journal de régression de performance (LOT 0–2)
 
-**Aucune optimisation n'a été appliquée à ce stade** (lots 0 à 2 : audit, profilage, base de référence). Ce document fixe la méthode, les garde-fous existants et le journal à remplir lot par lot.
+**Lots 0 à 2 (audit, profilage, base de référence) : lecture seule. Lots 3, 7 et 9 : trois optimisations appliquées et mesurées (journal ci-dessous).** Ce document fixe la méthode, les garde-fous et le journal.
 
 ## Règle de conservation d'une optimisation
 
@@ -39,7 +39,11 @@ Un test lisant `bench-interactions.js` à 100 et 400 éléments et échouant si,
 
 | Lot | Optimisation | Problème mesuré | Avant | Après | Décision | Risque | Test |
 |---|---|---|---|---|---|---|---|
-| — | *(aucune : lots 0–2 en lecture seule)* | | | | | | |
+| 3 (canevas) | `scheduleRender` : le **premier** changement après une pause (400 ms) est envoyé tout de suite, la fenêtre de regroupement ne retarde que les suivants | délai frappe → canevas : 77 ms d'attente volontaire avant l'envoi (sur 153 ms à 400 éléments) | 100 éléments : **86 ms** ; 400 éléments : **117–162 ms** ; valeur unique → canevas 82 / 129–141 ms ; rafale de 8 frappes : 8 requêtes | 100 : **30 ms** ; 400 : **60–64 ms** ; valeur unique 65–76 / 102–105 ms ; rafale : 7–8 requêtes (inchangé) | **gardée** (−65 % / −45 à −60 %) | une requête de plus par rafale au plus (mesuré : aucune) | `scripts/perf/mesure-latence-canevas.js` ; `page-builder-performance-navigateur`, `editeur-stabilite`, `editeur-rendu-en-place` (rejoués : 33/33) |
+| 9 (Structure) | `.pb-tree .pb-node { content-visibility: auto; contain-intrinsic-size: auto 30px }` : lignes hors zone visible non stylées | ouverture du panneau : recalcul de style proportionnel au nombre d'éléments, 3 tâches longues de 68–95 ms à 300–400 éléments | 400 éléments : recalcul **28,8 ms**, tâche 82 ms, 3 tâches longues (95 ms max) ; 100 éléments : 9,1 ms | 400 : **3,1 ms**, tâche 30 ms, **0 tâche longue** ; 100 : 3,2 ms | **gardée** (−89 %) | barre de défilement de l'arbre (hauteur estimée des parents) ; sélection d'une ligne hors zone | `editeur-structure-grande-page-navigateur` (4/4) ; arbre, panneau de droite, stabilité rejoués |
+| 7 (mise en page) | `select()` lit la géométrie du canevas **avant** toute écriture (`readOverlayGeo`) ; `drawOverlays` en lectures puis écritures ; taille de la barre d'actions mémorisée | ≈ 8,5 mises en page et 15 recalculs de style par sélection | sélection : **8,3 / 8,4 / 8,9 / 8,8** mises en page (20 / 100 / 300 / 400) ; sélection + Échap : **13,2 / 37,5 / 41,3 / 27,7** | sélection : **4,6 / 4,5 / 5,3 / 5,2** (−40 %) ; sélection + Échap : **9,7 / 20,5 / 22,2 / 14,2** (−35 à −50 %) ; plus de tâche longue à 100 et 400 éléments | **gardée** (compteurs déterministes ; durées dans le bruit) | contours ou poignées périmés si la mise en page change entre la lecture et le dessin (redessin déjà prévu par l'observateur de taille) | `editeur-canvas-*`, `editeur-regles-magnetisme`, `editeur-zone-conteneurs`, `editeur-droite` (152 tests : 2 échecs d'instabilité préexistants, voir ci-dessous) |
+| 6, 13 | *(non appliqués)* | écouteur de défilement, attentes de 30–60 ms | aucune mesure ne montre un défaut (défilement et zoom à 60 images/s) | — | **non retenus** | — | — |
+| 10 | *(non appliqué)* `locate` (recherche linéaire d'un élément) ≈ 4 ms par opération à 400 éléments | un index mis en cache risquerait de devenir périmé | — | — | **non retenu** : gain ≈ 10 % pour un risque de régression élevé | — | — |
 
 ## Hypothèses déjà réfutées par la mesure (ne pas « optimiser » pour rien)
 
@@ -48,3 +52,7 @@ Un test lisant `bench-interactions.js` à 100 et 400 éléments et échouant si,
 - **Requêtes réseau en rafale** : 30 événements de curseur → 1 rendu + 1 enregistrement ; les rafales sont déjà regroupées.
 - **Fuite d'écouteurs ou de nœuds DOM** : nombres stables sur 160 cycles → pas de fuite mesurable.
 - **Survol, zoom, déplacement, défilement, redimensionnement, glisser** : déjà à 60 images/s à 400 éléments.
+
+## Instabilité préexistante constatée (ne vient pas de ces lots)
+
+`editeur-regles-magnetisme-navigateur` et `editeur-canvas-moteur-navigateur` échouent parfois sur un test de glisser de poignée (un test différent à chaque passe : T8, T12, T13, T14, T10). Cause relevée : *« `<span class="pb-dm-name">` from `<div class="pb-dm-layer">` subtree intercepts pointer events »* — un calque `pb-dm-layer` (autre fonction de l'éditeur, présente dans `main`) intercepte parfois le clic de la page de test. **Le même fichier échoue aussi avec le code d'avant mes modifications** (T8 : 1 passe sur 2). À traiter à part (calque ou test), non corrigé ici.

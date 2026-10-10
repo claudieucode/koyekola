@@ -1,4 +1,4 @@
-# KOLAKISA — Audit de performance de l'éditeur (LOT 0 et LOT 1, lecture seule)
+# KOLAKISA — Audit de performance de l'éditeur (LOT 0 et LOT 1, lecture seule ; suivi des lots 3, 7 et 9 en fin de document)
 
 Date : 2026-10-10. **Aucun code de production n'a été modifié.** Preuves : lecture du code (fichier et fonction cités), mesures réelles du jour (`KOLAKISA_PERFORMANCE_BASELINE.md`) et scripts reproductibles. Ce qui est une **hypothèse** est écrit comme tel.
 
@@ -96,3 +96,14 @@ Polices : manifeste (227 Ko, ~420 familles) chargé à la première ouverture du
 ## 16. Limites de cet audit
 
 Affichage 60 Hz seulement (120 Hz non mesurable) ; une seule machine (4 cœurs, partagée) ; Chrome seulement (Safari et Firefox non testés) ; pages synthétiques ; **500 éléments impossible** (limite du produit : 400) ; décodage d'images et chargement de polices non chronométrés ; pointes sous charge exclues de la base de référence ; une anomalie à 400 éléments (§ 12) laissée ouverte.
+
+## 17. Suivi après les lots appliqués (2026-10-10)
+
+| Goulot de l'audit | Suite |
+|---|---|
+| 1 — aller-retour du document complet | **mesuré** (attente volontaire 77 ms + requête 56 + application 27 à 400 éléments) puis **corrigé pour le poste « attente »** : frappe → canevas 86 → 30 ms (100 éléments), 117–162 → 60–64 ms (400). Le rendu serveur (≈ 33–54 ms à 400) n'a pas été touché |
+| 2 — coût d'affichage du panneau Structure | **corrigé** (`content-visibility`) : 28,8 → 3,1 ms, plus de tâche longue |
+| 3, 4 — mises en page de la sélection | **corrigé en partie** : −40 % (sélection), −35 à −50 % (sélection + Échap) ; la mise en page forcée restante vient du dessin lui-même après modification du canevas |
+| 5, 6, 7 — inspecteur, insertion, dupliquer | **non touchés** (≈ 4 ms de recherche linéaire par opération : gain faible, risque d'index périmé) |
+| 8 — couche d'aides | lectures groupées ajoutées ; la recréation de la couche n'est pas modifiée (aucune mesure ne la montre fautive) |
+| 9, 10 | inchangés |
