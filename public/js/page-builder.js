@@ -4154,7 +4154,16 @@
   // Saisie continue : 150 ms de regroupement ; action isolée (dupliquer, supprimer, annuler, couleur choisie…) : rendu presque tout de suite
   // Délai de regroupement de la saisie : proportionnel au coût du dernier rendu (petite page : réponse rapide ; grande page : on ne multiplie pas les requêtes)
   var lastRenderMs = 100;
-  function scheduleRender(quick) { if (editing || gesture) { pendingRender = true; return; } clearTimeout(renderTimer); renderTimer = setTimeout(renderCanvas, quick ? 30 : Math.max(50, Math.min(150, Math.round(lastRenderMs * 1.2)))); }
+  // Regroupement des rendus : le PREMIER changement après une pause (400 ms sans changement) est envoyé tout de suite — l'attente d'une fenêtre de regroupement
+  // n'aurait servi qu'à retarder l'affichage —, les suivants (frappes, séries) attendent la fenêtre habituelle pour ne pas multiplier les requêtes.
+  var lastScheduleAt = -1e9;
+  function scheduleRender(quick) {
+    if (editing || gesture) { pendingRender = true; return; }
+    clearTimeout(renderTimer);
+    var now = performance.now(), first = now - lastScheduleAt > 400;
+    lastScheduleAt = now;
+    renderTimer = setTimeout(renderCanvas, first ? 0 : quick ? 30 : Math.max(50, Math.min(150, Math.round(lastRenderMs * 1.2))));
+  }
   function endGesture() { gesture = false; if (pendingRender && !editing) { pendingRender = false; scheduleRender(); } }
   var errorItemId = null;
   // « Section 3 › élément 2 « Titre » : … » → identifiant de l'élément en cause (mis en évidence dans les calques)
