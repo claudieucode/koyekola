@@ -265,7 +265,7 @@ describe("partie droite de l'éditeur : thème, structure, inspecteur (navigateu
       const undo = ins.locator(".pb-hist-btn", { hasText: "Annuler" }), redo = ins.locator(".pb-hist-btn", { hasText: "Rétablir" });
       assert.equal(await undo.isDisabled(), true, `${theme} : Annuler désactivé sans historique`); assert.equal(await redo.isDisabled(), true);
       assert.match(await undo.getAttribute("data-tip"), /Ctrl/); assert.match(await redo.getAttribute("data-tip"), /Maj/);
-      assert.ok(Number(await undo.evaluate((b) => getComputedStyle(b).opacity)) < 0.6, "état désactivé visible");
+      const dimmed = Number(await undo.evaluate((b) => getComputedStyle(b).opacity)); assert.ok(dimmed < 0.7 && dimmed >= 0.5, `état désactivé atténué mais lisible (opacité ${dimmed})`);
       // une vraie modification : dupliquer un élément, puis annuler / rétablir depuis l'inspecteur
       const n0 = count(); await pick("txt000000001");
       await page.keyboard.press("Control+d"); await until(() => count() === n0 + 1, "dupliqué");
