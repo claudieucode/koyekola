@@ -203,6 +203,24 @@
       </section>
     </div>
 
+    <% if (autoRuns) { %>
+    <section class="mk-panel" id="scenarios" aria-labelledby="sc-title">
+      <h2 id="sc-title">Scénarios d'automatisation</h2>
+      <% if (!autoRuns.length) { %><p class="field-hint">Ce contact n'est entré dans aucun scénario.</p>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Scénarios de ce contact</caption>
+          <thead><tr><th scope="col">Scénario</th><th scope="col">État</th><th scope="col">Prochaine étape</th><th scope="col">Prochaine exécution</th><th scope="col">Erreur</th></tr></thead>
+          <tbody><% autoRuns.forEach((r) => { %><tr>
+            <td><a href="/marketing/automatisations/<%= r.automationId %>/passages/<%= r.id %>"><%= r.automation %></a> <span class="field-hint">v<%= r.version || 1 %></span></td>
+            <td><%= r.state === "waiting" ? "En attente" : r.state === "due" ? "À exécuter" : r.statusLabel %></td>
+            <td><%= r.nextStep || "—" %></td>
+            <td><%= r.nextAt && r.state !== "completed" ? mkh.fdatetime(new Date(r.nextAt).toISOString().replace("T", " ").slice(0, 19)) : "—" %></td>
+            <td><%= r.error || "—" %></td></tr><% }) %></tbody>
+        </table></div>
+      <% } %>
+    </section>
+    <% } %>
+
     <% if (files.length) { %>
     <section class="mk-panel" aria-labelledby="ct-files">
       <h2 id="ct-files">Fichiers envoyés</h2>

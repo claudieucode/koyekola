@@ -10,6 +10,7 @@ const { parseKey } = require("../security/crypto");
 const { attempt, need, flashError, siteChoices } = require("./kit");
 const sendtime = require("../sending/sendtime");
 const core = require("../contactcore");
+const automationsLib = require("../automations");
 
 const PROFILE_FIELDS = ["first_name", "last_name", "phone", "company", "country", "language", "timezone"];
 const pick = (body, keys) => Object.fromEntries(keys.filter((k) => typeof body[k] === "string").map((k) => [k, body[k]]));
@@ -170,6 +171,7 @@ module.exports = ({ db }) => {
     const aliases = db.prepare("SELECT email, created_at FROM mk_contact_aliases WHERE organization_id = ? AND contact_id = ? ORDER BY id").all(ctx.organizationId, contact.id).map((a) => (sensitiveOk ? a : { ...a, email: core.maskEmail(a.email) }));
     const mergedInto = contact.merged_into_id ? audience.getContact(ctx, contact.merged_into_id) : null;
     res.render("marketing/contact", {
+      autoRuns: req.mk.can("automations.read") ? automationsLib.contactRuns(ctx, contact.id) : null,
       sensitiveOk, eventsPage, absorbed, aliases, mergedInto: mergedInto ? { id: mergedInto.id, email: sensitiveOk ? mergedInto.email : core.maskEmail(mergedInto.email) } : null,
       lifecycles: core.lifecycleStages(ctx), recordLabels: core.RECORD_STATUS_LABELS, originSite: contact.origin_site_id ? db.prepare("SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?").get(contact.origin_site_id, ctx.organizationId) : null,
       absorbedProofs: absorbed.length && sensitiveOk ? core.consentProofs(ctx, contact.id, { limit: 50 }).filter((k) => k.contact_id !== contact.id) : [],

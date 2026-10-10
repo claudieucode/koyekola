@@ -76,7 +76,7 @@ function createEventBus(db, { log = console, now = Date.now } = {}) {
     if (row.processed_at) return;
     const event = {
       id: row.id, organizationId: row.organization_id, name: row.name, email: row.email, contactId: row.contact_id,
-      source: row.source, occurredAt: row.occurred_at, metadata: JSON.parse(row.metadata),
+      source: row.source, occurredAt: row.occurred_at, metadata: JSON.parse(row.metadata), siteId: row.site_id ?? null,
     };
     for (const handler of [...(handlers.get(row.name) || []), ...(handlers.get("*") || [])]) await handler(event, { db, log });
     db.prepare("UPDATE mk_events SET processed_at = ? WHERE id = ? AND processed_at IS NULL").run(now(), row.id);

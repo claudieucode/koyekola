@@ -136,6 +136,31 @@ describe("performance du Page Builder : exactitude (navigateur)", { skip: SKIP }
     assert.deepEqual(errors, []);
   });
 
+  test("garde-fou de performance (page de 300 éléments) : sélection, suppression et annulation restent dans un budget large (≈ 6 fois les mesures de référence)", async () => {
+    const id = Number((await boss.post("/marketing/pages", { name: "Budget 300" })).location.match(/(\d+)$/)[1]);
+    const rev = db().prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(id).revision;
+    assert.equal((await boss.request(`/marketing/pages/${id}/brouillon`, { method: "PUT", json: { revision: rev, content: content(300) }, headers: { Origin: srv.base } })).status, 200);
+    const p = await context.newPage();
+    await p.goto(`${srv.base}/marketing/pages/${id}/editeur`);
+    await p.waitForFunction(() => { const f = document.querySelector("[data-pb-frame]"); return f && f.contentDocument && f.contentDocument.body && f.contentDocument.body.classList.contains("lp-builder") && f.contentDocument.querySelector("[data-node-id]"); });
+    await wait(600);
+    const frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const med = (xs) => xs.sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+    const sel = [], del = [], undo = [];
+    for (let i = 0; i < 7; i++) {
+      sel.push(await p.evaluate(async (k) => { const rows = [...document.querySelectorAll("[data-pb-layers] .pb-node[data-id^='tx'] > .pb-row-item")]; const t = performance.now(); rows[k * 3 + 2].click(); await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); return performance.now() - t; }, i));
+      await wait(120);
+      del.push(await p.evaluate(async () => { const b = document.querySelector("[data-pb-layers] .pb-node.is-selected .pb-flag-delete, [data-pb-layers] .pb-row-item.is-selected .pb-flag-delete"); if (!b) return -1; const t = performance.now(); b.click(); await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); return performance.now() - t; }));
+      await wait(200);
+      undo.push(await p.evaluate(async () => { const b = document.querySelector("[data-pb-undo]"); const t = performance.now(); b.click(); await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); return performance.now() - t; }));
+      await wait(200);
+    }
+    await p.close();
+    const m = { selection: med(sel), supprimer: med(del), annuler: med(undo) };
+    // Références mesurées à 300 éléments : sélection ≈ 40 ms, supprimer ≈ 30 ms, annuler ≈ 36 ms. Budget : 250 ms (machine chargée, CI) — détecte une régression d'ordre de grandeur.
+    assert.ok(m.selection < 250 && m.supprimer >= 0 && m.supprimer < 250 && m.annuler < 250, `médianes (ms) : ${JSON.stringify(m)}`);
+  });
+
   test("grande page (400 éléments, limite du produit) : le rendu serveur reste dans le budget (gabarits compilés une seule fois)", async () => {
     const id = Number((await boss.post("/marketing/pages", { name: "Perf 400" })).location.match(/(\d+)$/)[1]);
     const c = content(400);

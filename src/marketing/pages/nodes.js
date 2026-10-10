@@ -42,6 +42,29 @@ const lengthOf = ({ auto = false, negative = false } = {}) => (v) => {
   if (!negative && Number(m[1]) < 0) return null;
   return `${Number(m[1])}${m[2]}`;
 };
+// Valeurs GLOBALES du site référençables par un élément (comme les couleurs) : espacements, rayons, tailles de texte. L'élément enregistre « token:space-md » ;
+// le rendu écrit var(--kw-space-md, <valeur par défaut>) : changer le jeton dans les réglages du site met à jour tous les éléments qui le référencent, une valeur propre
+// reste intacte. Le repli sert aux pages hors site (jetons non posés).
+// (construit à la première utilisation : tokens.js et nodes.js se référencent mutuellement au chargement)
+let LEN_TOKENS_CACHE = null;
+const lenTokens = () => {
+  if (LEN_TOKENS_CACHE) return LEN_TOKENS_CACHE;
+  const siteTokens = require("./tokens");
+  LEN_TOKENS_CACHE = {
+    space: Object.fromEntries(siteTokens.SPACE_KEYS.map((k) => [`space-${k}`, `${siteTokens.DEFAULT_TOKENS.space[k]}px`])),
+    radius: Object.fromEntries(Object.keys(siteTokens.DEFAULT_TOKENS.radius).map((k) => [`radius-${k}`, `${siteTokens.DEFAULT_TOKENS.radius[k]}px`])),
+    type: Object.fromEntries(siteTokens.TYPE_KEYS.map((k) => [`${k}-size`, `${siteTokens.DEFAULT_TOKENS.type[k].size}px`])),
+  };
+  return LEN_TOKENS_CACHE;
+};
+const lenTokenValue = (name) => { const t = lenTokens(); return t.space[name] || t.radius[name] || t.type[name] || null; };
+// check : accepte « token:<famille> » en plus de la longueur ; out : le convertit en var() avec repli
+const withLenToken = (family, check) => (v) => {
+  const s = String(v ?? "").trim().toLowerCase();
+  if (s.startsWith("token:")) return Object.hasOwn(lenTokens()[family], s.slice(6)) ? s : null;
+  return check(v);
+};
+const lenTokenOut = (v) => (String(v).startsWith("token:") ? `var(--kw-${v.slice(6)}, ${lenTokenValue(v.slice(6))})` : v);
 const COLOR_TOKENS = ["primary", "secondary", "accent", "background", "surface", "text", "muted", "success", "warning", "error", "on-primary", "on-accent"];
 const color = (v) => {
   const s = String(v ?? "").trim().toLowerCase();
@@ -85,9 +108,9 @@ const STYLE_PROPS = {
   justifySelf: { css: "justify-self", check: oneOf("auto", "start", "center", "end", "stretch"), group: "layout" },
   // Ordre d'affichage d'un enfant (flex ou grille), sans changer sa place dans les calques
   order: { css: "order", check: numberIn(-20, 20, { integer: true }), group: "layout" },
-  gap: { css: "gap", check: len, group: "layout" },
-  rowGap: { css: "row-gap", check: len, group: "layout" },
-  columnGap: { css: "column-gap", check: len, group: "layout" },
+  gap: { css: "gap", check: withLenToken("space", len), out: lenTokenOut, group: "layout" },
+  rowGap: { css: "row-gap", check: withLenToken("space", len), out: lenTokenOut, group: "layout" },
+  columnGap: { css: "column-gap", check: withLenToken("space", len), out: lenTokenOut, group: "layout" },
   columns: { css: "grid-template-columns", check: numberIn(1, 12, { integer: true }), out: (n) => `repeat(${n}, minmax(0, 1fr))`, group: "layout" },
   // Largeurs des colonnes d'une grille, ex. « 2fr 1fr » ou « 240px 1fr » (remplace le nombre de colonnes égales)
   gridTemplate: { css: "grid-template-columns", check: gridTrack, out: (v) => v.split(" ").map((t) => (/fr$/.test(t) ? `minmax(0, ${t})` : t)).join(" "), group: "layout" },
@@ -115,17 +138,17 @@ const STYLE_PROPS = {
   flexGrow: { css: "flex-grow", check: numberIn(0, 20), group: "size" },
   flexShrink: { css: "flex-shrink", check: numberIn(0, 20), group: "size" },
   flexBasis: { css: "flex-basis", check: lenAuto, group: "size" },
-  marginTop: { css: "margin-top", check: marginLen, group: "spacing" },
-  marginRight: { css: "margin-right", check: marginLen, group: "spacing" },
-  marginBottom: { css: "margin-bottom", check: marginLen, group: "spacing" },
-  marginLeft: { css: "margin-left", check: marginLen, group: "spacing" },
-  paddingTop: { css: "padding-top", check: len, group: "spacing" },
-  paddingRight: { css: "padding-right", check: len, group: "spacing" },
-  paddingBottom: { css: "padding-bottom", check: len, group: "spacing" },
-  paddingLeft: { css: "padding-left", check: len, group: "spacing" },
+  marginTop: { css: "margin-top", check: withLenToken("space", marginLen), out: lenTokenOut, group: "spacing" },
+  marginRight: { css: "margin-right", check: withLenToken("space", marginLen), out: lenTokenOut, group: "spacing" },
+  marginBottom: { css: "margin-bottom", check: withLenToken("space", marginLen), out: lenTokenOut, group: "spacing" },
+  marginLeft: { css: "margin-left", check: withLenToken("space", marginLen), out: lenTokenOut, group: "spacing" },
+  paddingTop: { css: "padding-top", check: withLenToken("space", len), out: lenTokenOut, group: "spacing" },
+  paddingRight: { css: "padding-right", check: withLenToken("space", len), out: lenTokenOut, group: "spacing" },
+  paddingBottom: { css: "padding-bottom", check: withLenToken("space", len), out: lenTokenOut, group: "spacing" },
+  paddingLeft: { css: "padding-left", check: withLenToken("space", len), out: lenTokenOut, group: "spacing" },
   // Police : un des cinq réglages historiques du site OU une famille de la bibliothèque (Font Manager, identifiant « font.inter »)
   fontFamily: { css: "font-family", check: (v) => (Object.hasOwn(FONT_STACKS, v) || fontLib.isId(v) ? v : null), out: (v) => FONT_STACKS[v] || fontLib.stackOf(v), group: "typography" },
-  fontSize: { css: "font-size", check: len, group: "typography" },
+  fontSize: { css: "font-size", check: withLenToken("type", len), out: lenTokenOut, group: "typography" },
   fontWeight: { css: "font-weight", check: oneOf("300", "400", "500", "600", "700", "800", "900"), group: "typography" },
   fontStyle: { css: "font-style", check: oneOf("normal", "italic"), group: "typography" },
   lineHeight: { css: "line-height", check: numberIn(0.8, 3), group: "typography" },
@@ -146,7 +169,7 @@ const STYLE_PROPS = {
   borderLeftWidth: { css: "border-left-width", check: len, group: "border" },
   borderStyle: { css: "border-style", check: oneOf("none", "solid", "dashed", "dotted"), group: "border" },
   borderColor: { css: "border-color", check: color, out: colorCss, group: "border" },
-  borderRadius: { css: "border-radius", check: len, group: "border" },
+  borderRadius: { css: "border-radius", check: withLenToken("radius", len), out: lenTokenOut, group: "border" },
   // Arrondi coin par coin (arrondi « délié ») : toujours écrit après l'arrondi général, qu'il précise
   borderTopLeftRadius: { css: "border-top-left-radius", check: len, group: "border" },
   borderTopRightRadius: { css: "border-top-right-radius", check: len, group: "border" },
@@ -253,7 +276,7 @@ function declarations(set, band = false) {
   // Coins après l'arrondi général (sinon « border-radius » les écraserait)
   for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k) && !PLACEMENT.has(k)).concat(entries.filter(([k]) => CORNERS.has(k)))) {
     const p = STYLE_PROPS[k];
-    if (p) d.push(band && (k === "paddingLeft" || k === "paddingRight") ? `--kw-p${k === "paddingLeft" ? "l" : "r"}:${v}` : `${p.css}:${p.out ? p.out(v) : v}`);
+    if (p) d.push(band && (k === "paddingLeft" || k === "paddingRight") ? `--kw-p${k === "paddingLeft" ? "l" : "r"}:${p.out ? p.out(v) : v}` : `${p.css}:${p.out ? p.out(v) : v}`);
   }
   for (const [axis, css] of [["Column", "grid-column"], ["Row", "grid-row"]]) {
     const start = set[`grid${axis}Start`], end = set[`grid${axis}End`], span = set[`grid${axis}Span`];
@@ -890,7 +913,7 @@ const WIDGET_DESCRIPTIONS = {
   posts: "Les derniers articles du blog", courselist: "Les formations du catalogue", search: "Un champ de recherche dans le site", account: "Connexion ou compte du visiteur", dyntext: "Un texte rempli avec une donnée (prénom, page, site…)", table: "Un tableau de données", countdown: "Un compte à rebours jusqu'à une date",
   course: "Une formation du catalogue en carte", sitelogo: "Le logo du site", postcontent: "Le contenu de l'article affiché", catfilter: "Un filtre par catégorie", sitetitle: "Le nom du site", copyright: "La ligne de copyright avec l'année", addtocart: "Un bouton pour acheter ou ajouter une formation au panier", courserating: "Les avis et la note d'une formation",
   animatedheading: "Un titre dont un mot change ou s'écrit", flipbox: "Une boîte qui se retourne au survol", pricelist: "Une liste de prix avec descriptions", toc: "Une table des matières construite depuis les titres", readingprogress: "Une barre qui montre l'avancée de la lecture", signupform: "Un formulaire d'inscription du module Formulaires",
-  map: "Une carte Google Maps à partir d'une adresse", imagebox: "Une image avec un titre et un texte", iconbox: "Une icône avec un titre et un texte", rating: "Une note en étoiles", menuanchor: "Une ancre pour les liens internes (#nom)", icon: "Une icône", profilecard: "La fiche d'une personne (photo, nom, rôle)",
+  map: "Une carte Google Maps à partir d'une adresse", imagebox: "Une image avec un titre et un texte", iconbox: "Une icône avec un titre et un texte", rating: "Une note en étoiles", menuanchor: "Une ancre pour les liens internes (#nom)", icon: "Une icône du site, seule, avec sa taille, sa couleur et un lien possible", profilecard: "La fiche d'une personne (photo, nom, rôle)",
   querylist: "Une liste dynamique de contenus (articles, pages, formations…)", postmeta: "Auteur, date, catégorie et lecture de l'article", postterms: "Les catégories et étiquettes de l'article", postnav: "Les liens vers l'article précédent et suivant", authorbox: "La présentation de l'auteur de l'article", archiveinfo: "Le titre et la description d'une archive", postcomments: "Les commentaires de l'article et leur formulaire",
   cmsmenu: "Un menu géré dans le CMS", minicart: "Une icône de panier avec le nombre d'articles",
 };
@@ -1113,7 +1136,7 @@ function editorSpec() {
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
     socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     structureKinds: require("./structures").KINDS, structures: require("./structures").STRUCTURES,
-    colorTokens: COLOR_TOKENS, spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
+    colorTokens: COLOR_TOKENS, lengthTokens: Object.fromEntries(Object.entries(lenTokens()).map(([f, m]) => [f, Object.entries(m).map(([k, v]) => ({ key: k, value: v }))])), spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
     limits: { nodes: MAX_NODES, depth: MAX_DEPTH }, dynamic: dynamic.catalog(),
   };
 }

@@ -3,7 +3,7 @@
 const { createRepository } = require("../db/repository");
 const { transaction } = require("../db/tx");
 const { MarketingError } = require("../errors");
-const { checkCtx, cleanText, audit } = require("../audience/shared");
+const { checkCtx, cleanText, audit, resolveSite, siteSql } = require("../audience/shared");
 const templates = require("../templates");
 const { compileTemplate } = require("../templates/blocks");
 const { allowedFor, getOrgProfile } = require("../templates/context");
@@ -26,7 +26,7 @@ const LOCAL_HTTP = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/i;
 // déclencheur — sinon l'API permettrait d'émettre un événement qu'aucun scénario ne pourrait jamais écouter.
 const EVENT_NAME = /^[a-z][a-z0-9_.]{1,63}$/;
 const MAX_TRIGGERS = 3; // même limite que les flux d'automatisation Mailchimp (offre Standard+)
-const table = (ctx) => createRepository(ctx.db, ctx.organizationId).table("mk_automations");
+const table = (ctx) => createRepository(ctx.db, ctx.organizationId, { siteScope: ctx.siteScope }).table("mk_automations");
 // `triggers` (JSON, 1 à 3 entrées) est la source de vérité complète depuis la migration 017 ; `trigger_event`/
 // `trigger_filter` restent en miroir du PREMIER déclencheur (toujours réécrites en même temps que `triggers`,
 // jamais indépendamment) pour tout code qui les lit encore directement — jamais vide après cette migration, mais
@@ -69,6 +69,27 @@ function validateTriggers(triggers) {
   });
 }
 
+// Un scénario d'un SITE n'agit que sur les ressources de ce site : audiences du même site, modèles du site ou sans site, scénarios du même site.
+// (Un scénario d'organisation, sans site, n'est pas restreint.)
+function checkStepsSite(ctx, steps, siteId) {
+  if (siteId === null || siteId === undefined) return;
+  steps.forEach((s, i) => {
+    const at = `Étape ${i + 1}`;
+    if (s.type === "email" && Number.isInteger(s.templateId)) {
+      const t = ctx.db.prepare("SELECT site_id FROM mk_templates WHERE id = ? AND organization_id = ?").get(s.templateId, ctx.organizationId);
+      if (t && t.site_id !== null && t.site_id !== siteId) throw new MarketingError("invalid_automation", `${at} : ce modèle appartient à un autre site.`);
+    }
+    if ((s.type === "add_to_list" || s.type === "remove_from_list") && Number.isInteger(s.listId)) {
+      const l = ctx.db.prepare("SELECT site_id FROM mk_lists WHERE id = ? AND organization_id = ?").get(s.listId, ctx.organizationId);
+      if (l && l.site_id !== siteId) throw new MarketingError("invalid_automation", `${at} : cette audience n'appartient pas au site du scénario.`);
+    }
+    if ((s.type === "start_automation" || s.type === "stop_automation") && Number.isInteger(s.automationId)) {
+      const a = ctx.db.prepare("SELECT site_id FROM mk_automations WHERE id = ? AND organization_id = ?").get(s.automationId, ctx.organizationId);
+      if (a && a.site_id !== siteId) throw new MarketingError("invalid_automation", `${at} : ce scénario appartient à un autre site.`);
+    }
+  });
+}
+
 function createAutomation(ctx, input = {}) {
   checkCtx(ctx);
   const name = cleanName(input.name);
@@ -76,10 +97,12 @@ function createAutomation(ctx, input = {}) {
   if (!KINDS.includes(kind)) throw new MarketingError("invalid_automation", "Type de scénario invalide (marketing ou transactional).");
   const triggers = validateTriggers(input.triggers !== undefined ? input.triggers : [{ event: input.triggerEvent, filter: input.triggerFilter }]);
   const steps = validateSteps(ctx, input.steps ?? [], kind);
+  const siteId = resolveSite(ctx, input.siteId);
+  checkStepsSite(ctx, steps, siteId);
   const repo = table(ctx);
   if (repo.count({ name }) > 0) throw new MarketingError("duplicate", "Un scénario porte déjà ce nom.");
   const row = repo.insert({
-    name, kind, trigger_event: triggers[0].event, trigger_filter: JSON.stringify(triggers[0].filter), triggers: JSON.stringify(triggers),
+    name, kind, site_id: siteId, trigger_event: triggers[0].event, trigger_filter: JSON.stringify(triggers[0].filter), triggers: JSON.stringify(triggers),
     steps: JSON.stringify(steps), created_by: ctx.userId ?? null,
   });
   audit(ctx, "automation.created", "automation", row.id, { kind, steps: steps.length, triggers: triggers.length });
@@ -96,14 +119,15 @@ function requireAutomation(ctx, id) {
 
 function listAutomations(ctx) {
   checkCtx(ctx);
+  const site = siteSql(ctx, "a");
   return ctx.db
     .prepare(
-      `SELECT a.id, a.name, a.kind, a.status, a.trigger_event, a.triggers, a.steps, a.updated_at,
+      `SELECT a.id, a.site_id, a.name, a.kind, a.status, a.version, a.trigger_event, a.triggers, a.steps, a.updated_at,
               (SELECT COUNT(*) FROM mk_automation_runs r WHERE r.automation_id = a.id) AS run_count,
               (SELECT COUNT(*) FROM mk_automation_runs r WHERE r.automation_id = a.id AND r.status = 'running') AS running_count
-       FROM mk_automations a WHERE a.organization_id = ? ORDER BY a.id DESC`
+       FROM mk_automations a WHERE a.organization_id = ? AND ${site.sql} ORDER BY a.id DESC`
     )
-    .all(ctx.organizationId)
+    .all(ctx.organizationId, ...site.params)
     .map(({ steps, triggers, ...rest }) => ({ ...rest, stepCount: JSON.parse(steps).length, triggerCount: JSON.parse(triggers || "[]").length || 1 }));
 }
 
@@ -132,7 +156,11 @@ function updateAutomation(ctx, id, patch = {}) {
     fields.trigger_event = triggers[0].event;
     fields.trigger_filter = JSON.stringify(triggers[0].filter);
   }
-  if (patch.steps !== undefined) fields.steps = JSON.stringify(validateSteps(ctx, patch.steps, a.kind));
+  if (patch.steps !== undefined) {
+    const checked = validateSteps(ctx, patch.steps, a.kind);
+    checkStepsSite(ctx, checked, a.site_id ?? null);
+    fields.steps = JSON.stringify(checked);
+  }
   // Le canevas n'est qu'une vue d'ÉDITION (positions, arêtes) : jamais exécuté tel quel, jamais validé comme `steps`.
   // Enregistré uniquement pour que la disposition dessinée par la personne survive à un rechargement.
   if (patch.canvas !== undefined) {
@@ -262,9 +290,12 @@ function activateAutomation(ctx, id, opts = {}) {
   const check = automationPreflight(ctx, id, opts);
   if (!check.ready) throw new MarketingError("preflight_failed", check.errors.map((e) => e.message).join(" "));
   return transaction(ctx.db, () => {
+    const fresh = !a.active_steps; // contenu modifié depuis la dernière publication : nouvelle version
     const frozen = a.active_steps ? JSON.parse(a.active_steps) : freeze(ctx, a);
-    ctx.db.prepare("UPDATE mk_automations SET status = 'active', active_steps = ?, error = '', updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(JSON.stringify(frozen), id, ctx.organizationId);
-    audit(ctx, "automation.activated", "automation", id, { steps: frozen.length });
+    const version = fresh || !a.version ? (a.version || 0) + 1 : a.version;
+    ctx.db.prepare("UPDATE mk_automations SET status = 'active', active_steps = ?, version = ?, error = '', updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(JSON.stringify(frozen), version, id, ctx.organizationId);
+    if (fresh || !a.version) ctx.db.prepare("INSERT OR IGNORE INTO mk_automation_versions (organization_id, automation_id, version, triggers, steps, published_by) VALUES (?, ?, ?, ?, ?, ?)").run(ctx.organizationId, id, version, JSON.stringify(a.triggers), JSON.stringify(frozen), ctx.userId ?? null);
+    audit(ctx, "automation.activated", "automation", id, { steps: frozen.length, version });
     return getAutomation(ctx, id);
   });
 }
@@ -311,7 +342,7 @@ function duplicateAutomation(ctx, id) {
   let name = `${a.name} (copie)`.slice(0, 100);
   for (let n = 2; repo.count({ name }) > 0 && n < 100; n++) name = `${a.name} (copie ${n})`.slice(0, 100);
   const row = repo.insert({
-    name, kind: a.kind, trigger_event: a.trigger_event, trigger_filter: a.trigger_filter,
+    name, kind: a.kind, site_id: a.site_id ?? null, trigger_event: a.trigger_event, trigger_filter: a.trigger_filter,
     steps: JSON.stringify(a.steps), canvas: a.canvas ? JSON.stringify(a.canvas) : "", created_by: ctx.userId ?? null,
   });
   audit(ctx, "automation.duplicated", "automation", row.id, { from: id });
