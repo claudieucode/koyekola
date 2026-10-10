@@ -86,7 +86,10 @@
         hoverTag.appendChild(b);
       });
     }
-    hoverTag.style.left = (r.left + 2) + "px"; hoverTag.style.top = (r.top + 2) + "px"; hoverTag.hidden = false;
+    // Au-dessus de l'élément, collée à son bord (aucun vide à traverser : pas de clignotement) ; dans le coin haut gauche seulement s'il n'y a pas de place au-dessus.
+    // La barre elle-même ne capte pas la souris : seules ses trois petites icônes le font (le texte du nom laisse passer les clics).
+    var above = r.top >= 24;
+    hoverTag.style.left = (r.left) + "px"; hoverTag.style.top = (above ? r.top - 22 : r.top + 2) + "px"; hoverTag.hidden = false;
   }
 
   // ---------- Contrôle « écart » (gap, rowGap, columnGap) ----------

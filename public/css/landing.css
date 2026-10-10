@@ -1011,7 +1011,7 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 /* Manipulation directe sur le canevas (page-builder-direct.js) : couche hors flux, au-dessus de la sélection, sous les repères intelligents */
 .pb-dm-layer{ position:absolute;top:0;left:0;width:0;height:0;z-index:112;pointer-events:none}
 .pb-dm-hover{ position:absolute;border:1px solid rgba(2,119,182,.75);background:rgba(2,119,182,.04);box-sizing:border-box;pointer-events:none}
-.pb-dm-tag{ position:absolute;display:flex;align-items:center;gap:1px;height:22px;padding:0 2px 0 7px;border-radius:4px;background:#0277b6;color:#fff;font:600 11px/22px system-ui,sans-serif;white-space:nowrap;pointer-events:auto;z-index:113}
+.pb-dm-tag{ position:absolute;display:flex;align-items:center;gap:1px;height:22px;padding:0 2px 0 7px;border-radius:4px;background:#0277b6;color:#fff;font:600 11px/22px system-ui,sans-serif;white-space:nowrap;pointer-events:none;z-index:113}
 .pb-dm-tag[hidden],.pb-dm-hover[hidden],.pb-dm-tip[hidden]{display:none}
 .pb-dm-name{ max-width:150px;overflow:hidden;text-overflow:ellipsis;margin-right:2px}
 .lp-builder .pb-dm-tag .pb-dm-act{ pointer-events:auto;display:inline-grid;place-items:center;width:22px;height:22px;margin:0;padding:0;border:0;border-radius:3px;background:transparent;color:#fff;cursor:pointer}

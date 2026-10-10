@@ -29,6 +29,12 @@ const CASES = [
   ["text", "lineClamp", 2, "-webkit-line-clamp", "2"], ["text", "lineHeight", 2, "line-height", "40px", { fontSize: "20px" }], ["text", "letterSpacing", "3px", "letter-spacing", "3px"], ["text", "wordSpacing", "5px", "word-spacing", "5px"],
   ["text", "textIndent", "20px", "text-indent", "20px"], ["text", "textTransform", "uppercase", "text-transform", "uppercase"], ["text", "textAlign", "center", "text-align", "center"],
   ["text", "textDecoration", "underline", "text-decoration-line", "underline"], ["text", "textShadow", "md", "text-shadow", /rgba?\(15, 23, 42/],
+  // Propriétés ajoutées (retour à la ligne, curseur, fusion, contour, débordement par axe, pistes de grille automatiques)
+  ["text", "whiteSpace", "nowrap", "white-space", "nowrap"], ["text", "textWrap", "balance", "text-wrap-style", "balance"], ["text", "overflowWrap", "anywhere", "overflow-wrap", "anywhere"], ["text", "textOverflow", "ellipsis", "text-overflow", "ellipsis"],
+  ["text", "visibility", "hidden", "visibility", "hidden"], ["text", "cursor", "pointer", "cursor", "pointer"], ["text", "pointerEvents", "none", "pointer-events", "none"], ["text", "mixBlendMode", "multiply", "mix-blend-mode", "multiply"],
+  ["container", "overflowX", "auto", "overflow-x", "auto"], ["container", "overflowY", "hidden", "overflow-y", "hidden"],
+  ["text", "outlineStyle", "dashed", "outline-style", "dashed"], ["text", "outlineWidth", "2px", "outline-width", "2px", { outlineStyle: "solid" }], ["text", "outlineColor", "#336699", "outline-color", "rgb(51, 102, 153)", { outlineStyle: "solid" }], ["text", "outlineOffset", "4px", "outline-offset", "4px"],
+  ["container", "gridAutoRows", "120px", "grid-auto-rows", "120px", { display: "grid" }], ["container", "gridAutoColumns", "1fr", "grid-auto-columns", /1fr|\d+px/, { display: "grid" }],
   ["container", "borderTopWidth", "4px", "border-top-width", "4px", { borderStyle: "solid" }], ["container", "borderRightWidth", "5px", "border-right-width", "5px", { borderStyle: "solid" }],
   ["container", "borderBottomWidth", "6px", "border-bottom-width", "6px", { borderStyle: "solid" }], ["container", "borderLeftWidth", "7px", "border-left-width", "7px", { borderStyle: "solid" }],
   ["container", "borderColor", "#ff0000", "border-top-color", "rgb(255, 0, 0)", { borderStyle: "solid", borderWidth: "2px" }],
