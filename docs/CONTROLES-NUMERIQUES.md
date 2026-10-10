@@ -104,3 +104,11 @@ Un seul composant (`numericControl`), deux dispositions : `.pb-len` (champ + ▲
 dans le champ, entre la valeur et l'unité (avant : dans les cases d'espacement, elles n'apparaissaient qu'au survol ou au focus, en superposition de la valeur). La barre contextuelle sur le canevas n'a
 volontairement pas de flèches (`hideSteps`). Jetons : `--pb-stepper-width` (14 px), `-color`, `-bg`, `-hover-bg`, `-hover-color`, `-active-bg`, `-divider` (dérivés des jetons `--editor-*`). Flèches dessinées en CSS
 (même rendu partout), zone cliquable élargie par un pseudo-élément. Test : `tests/editeur-fleches-numeriques-navigateur.test.js`.
+
+## Contrat d'un champ numérique (NumericInput) : « un clic = je veux saisir »
+
+* **Focus** : le champ prend le focus et rien d'autre ne s'ouvre (pas de liste de valeurs, pas de menu, pas d'infobulle, pas de panneau flottant). L'autocomplétion du navigateur est coupée (`autocomplete="off"`).
+* **Pas de `list` / `datalist`** : `numericControl` ne pose volontairement jamais l'attribut `list` (cause de l'ancien popup « 0px, 4px, 8px… » et de son triangle natif, qui venaient du `datalist` `pb-scale` branché sur les cases d'espacement et la barre contextuelle ; supprimé). Garde-fou CSS : `::-webkit-calendar-picker-indicator { display: none }`.
+* **Actions explicites seulement** : ▲ / ▼ = pas ; clavier = saisie, flèches, Maj ×10, Alt ÷10 ; « PX ▾ » = menu des unités. Des préréglages éventuels devraient avoir leur propre bouton, jamais le simple focus.
+* **Infobulles** : autorisées au survol AVANT toute interaction ; masquées dès le focus, le clic, la saisie, et tant que le champ est actif (`isEditing`, `focusin`, `keydown` dans `page-builder.js`).
+* Test de référence : `tests/editeur-champ-numerique-contrat-navigateur.test.js`.
