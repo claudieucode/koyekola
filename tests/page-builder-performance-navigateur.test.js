@@ -93,13 +93,19 @@ describe("performance du Page Builder : exactitude (navigateur)", { skip: SKIP }
     const dup = page.locator("button[aria-label*='Dupliquer'], button[data-tip*='Dupliquer']").filter({ visible: true }).first();
     if ((await rowCount()) === rows0) await dup.click();
     await until(async () => (await rowCount()) === rows0 + 1, { what: "ligne ajoutée par la duplication" });
-    assert.equal(await page.evaluate(() => window.__row.isConnected), false, "structure modifiée : calques reconstruits");
+    assert.equal(await page.evaluate(() => window.__row.isConnected), true, "la ligne inchangée est réutilisée (reconstruction différentielle), seules les lignes nouvelles sont créées");
     await page.locator("[data-pb-undo]").click();
     await until(async () => (await rowCount()) === rows0, { what: "annulation" });
     await page.locator("[data-pb-redo]").click();
     await until(async () => (await rowCount()) === rows0 + 1, { what: "rétablissement" });
     await page.locator("[data-pb-undo]").click();
     await until(async () => (await rowCount()) === rows0, { what: "annulation 2" });
+    // après annuler / rétablir (tous les objets du document sont remplacés), une ligne réutilisée agit sur l'élément COURANT : masquer puis réafficher
+    await clickRow(ids.hd[0]);
+    await page.locator(`[data-pb-layers] .pb-node[data-id="${ids.hd[0]}"] .pb-flag[aria-pressed]`).first().click();
+    await until(() => page.evaluate((id) => document.querySelector(`[data-pb-layers] .pb-node[data-id="${id}"]`).classList.contains("is-hidden"), ids.hd[0]), { what: "élément masqué par sa ligne réutilisée" });
+    await page.locator(`[data-pb-layers] .pb-node[data-id="${ids.hd[0]}"] .pb-flag[aria-pressed]`).first().click();
+    await until(() => page.evaluate((id) => !document.querySelector(`[data-pb-layers] .pb-node[data-id="${id}"]`).classList.contains("is-hidden"), ids.hd[0]), { what: "élément réaffiché" });
     // nom : renommer un calque (double-clic) → le calque affiche le nouveau nom ; Échap rend le calque comme avant (reconstruction forcée)
     const row = page.locator(`[data-pb-layers] .pb-node[data-id="${ids.hd[0]}"] > .pb-row-item`);
     const label0 = await row.locator(".pb-node-name").textContent();
