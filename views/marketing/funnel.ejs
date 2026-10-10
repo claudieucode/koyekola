@@ -51,6 +51,7 @@
                     <% if (canEditPages) { %><a class="btn btn-outline btn-sm" href="/marketing/pages/<%= s.pageId %>/editeur">Modifier la page dans KOLAKISA CMS</a>
                     <% } else { %><button type="button" class="btn btn-outline btn-sm" disabled aria-describedby="noedit-<%= s.id %>">Modifier la page</button><span class="field-hint" id="noedit-<%= s.id %>">Vous pouvez gérer le tunnel, pas modifier ses pages (droit « modifier les pages » requis).</span><% } %>
                     <a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= s.pageId %>/apercu" target="_blank" rel="noopener">Prévisualiser</a>
+                    <% if (canEditPages) { %><a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= s.pageId %>/test-ab">Tester en A/B</a><% } %>
                   <% } %>
                   <% if (s.live) { %><a class="btn btn-ghost btn-sm" href="<%= s.path %>" target="_blank" rel="noopener">Voir en ligne</a><% } %>
                   <% if (edit && !s.courseTitle) { %>

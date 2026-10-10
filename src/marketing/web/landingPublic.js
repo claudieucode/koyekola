@@ -66,31 +66,35 @@ module.exports = ({ db }) => {
     try { return forms.getForm({ db, organizationId: page.organization_id }, Number(found.props.formId)); } catch { return null; }
   };
 
-  // Test A/B en cours : version du visiteur (stable pour la journée, sans cookie) et contenu correspondant
+  // Test A/B en cours : version du visiteur (collante s'il a accepté le suivi, sinon stable pour la journée, sans cookie) et contenu correspondant
   const forVisitor = (req, page) => {
     const test = abtests.runningTestFor(db, page.id);
     if (!test || !test.variantB) return { page, test: null, visitor: null };
-    const visitor = landing.visitorOf(req, secret());
-    const variant = abtests.variantFor(test, visitor);
+    const { visitor, variant, consent } = abtests.assignment(db, test, { vid: consentedVisitor(req), fingerprint: landing.visitorOf(req, secret()) });
     const shown = variant === "b" ? { ...page, sections: test.variantB.sections, title: test.variantB.title, description: test.variantB.description } : page;
-    return { page: shown, test, visitor, variant };
+    return { page: shown, test, visitor, variant, consent };
   };
 
   router.get("/p/:slug", (req, res) => {
     const published = landing.getPublishedPage(db, req.params.slug);
     if (!published) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
-    const { page, test, visitor } = forVisitor(req, published);
+    const { page, test, visitor, consent } = forVisitor(req, published);
     if (!page) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
     const widget = req.query.w && widgetOf(page, req.query.w) ? String(req.query.w) : null;
     const thanks = req.query.inscrit === "1" ? (req.query.confirmer === "1" ? PENDING_TEXT : ((widget ? widgetOf(page, widget) : loadForm(page)) || {}).thankYouText || "Merci, votre inscription est enregistrée.") : null;
     // Retour sur la page après sa propre inscription : pas une nouvelle visite. Arrivée sur l'étape suivante d'un tunnel
     // (remerciement…) : c'est bien une visite de cette page.
     const selfReturn = thanks && (widget || page.sections.some((s) => s.type === "form"));
+    const exposure = Boolean(test) && !selfReturn && !landing.isBot(req);
     if (!selfReturn && !landing.isBot(req)) {
       landing.record(db, page, "view", landing.visitorOf(req, secret()));
-      if (test) abtests.recordView(db, test, visitor);
     }
     show(req, res, page, { thanks, widget });
+    // Exposition : seulement si la page a réellement été servie (réponse 200) — une erreur de rendu n'expose personne
+    if (exposure) {
+      const record = () => { if (res.statusCode === 200) { try { abtests.recordView(db, test, visitor, Date.now(), { consent }); } catch (error) { console.error("[KOLAKISA] Exposition A/B :", error.message); } } };
+      if (res.writableEnded || res.headersSent) record(); else res.once("finish", record);
+    }
   });
 
   router.get("/p/:slug/clic/:n(\\d{1,3})", (req, res) => {
