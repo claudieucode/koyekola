@@ -39,10 +39,10 @@ Sources trouvées mais **non lues en entier** (donc non utilisées pour un statu
 
 | ID | Catégorie | Comportement documenté (réf.) | État KOLAKISA | Fichier | Preuve | Statut | Écart / impact | Priorité | Critère d'acceptation |
 |---|---|---|---|---|---|---|---|---|---|
-| P-01 | Raccourcis | Annuler / rétablir au clavier (S1) | Ctrl/Cmd+Z, Maj+Z, Ctrl+Y | `public/js/page-builder.js` `onKey` | C + T indirect (`editeur-stabilite-navigateur`, test Ctrl+Z cité dans l'historique du projet) | À VÉRIFIER | Confirmer par un test dédié | P2 | Test navigateur : modifier, Ctrl+Z, Ctrl+Maj+Z |
-| P-02 | Raccourcis | Copier / coller / dupliquer / supprimer (S1) | Ctrl+C, X, V, D, Suppr présents (écriture seule) | `page-builder.js` `onKey` | C | À VÉRIFIER | Pas de test des raccourcis eux-mêmes | P2 | Test navigateur par raccourci |
+| P-01 | Raccourcis | Annuler / rétablir au clavier (S1) | Ctrl/Cmd+Z, Maj+Z, Ctrl+Y | `public/js/page-builder.js` `onKey` | T (`editeur-raccourcis-navigateur`, vrai Chrome, 2026-10-10) | CONFORME | Confirmer par un test dédié | P2 | Test navigateur : modifier, Ctrl+Z, Ctrl+Maj+Z |
+| P-02 | Raccourcis | Copier / coller / dupliquer / supprimer (S1) | Ctrl+C, X, V, D, Suppr présents (écriture seule) | `page-builder.js` `onKey` | T (`editeur-raccourcis-navigateur`, vrai Chrome, 2026-10-10) | CONFORME | Pas de test des raccourcis eux-mêmes | P2 | Test navigateur par raccourci |
 | P-03 | Raccourcis | Copier / coller le **style** (S10) | Ctrl+Alt+C / Ctrl+Alt+V (`copyStyle`, `pasteStyle`) | `page-builder.js` | C | À VÉRIFIER | | P2 | Copier le style d'un bouton, le coller sur un autre |
-| P-04 | Raccourcis | Enregistrer au clavier (S1) | Ctrl/Cmd+S → `saveNow` | `page-builder.js` | C | À VÉRIFIER | | P3 | Test : Ctrl+S déclenche l'enregistrement |
+| P-04 | Raccourcis | Enregistrer au clavier (S1) | Ctrl/Cmd+S → `saveNow` | `page-builder.js` | T (`editeur-raccourcis-navigateur`, vrai Chrome, 2026-10-10) | CONFORME | | P3 | Test : Ctrl+S déclenche l'enregistrement |
 | P-05 | Raccourcis | Recherche rapide d'actions (« Finder », Ctrl+E, S11) | Palette de commandes Ctrl/Cmd+K (`openCommands`) ; recherche d'**actions de l'éditeur**, pas de pages | `page-builder.js` | C | PARTIELLEMENT CONFORME (équivalent, autre touche) | Ne cherche pas les pages/modèles du site : à vérifier | P3 | Cahier : lister ce que la palette trouve |
 | P-06 | Raccourcis | Plan de l'éditeur : ouvrir/fermer le Navigator (S1, S2) | Ctrl+Maj+E bascule Structure/Visuel ; Ctrl+Maj+Y le dock | `page-builder.js` | C | À VÉRIFIER | Touches différentes d'Elementor (assumé) | P3 | — |
 | P-07 | Raccourcis | Zoom / vue d'ensemble | Ctrl +/-/0, Maj+1 ajuster | `page-builder.js` | C | NON APPLICABLE (Elementor : pas de zoom canevas documenté dans S1) | Fonction propre à KOLAKISA | — | — |
@@ -64,21 +64,21 @@ Sources trouvées mais **non lues en entier** (donc non utilisées pour un statu
 | W-01 | Widgets | Panneau de widgets par catégories avec recherche (S14) | Palette par catégories + recherche ; 86 types (79 opérationnels + 7 contextuels) | `docs/WIDGETS-INVENTAIRE.md` | T (`widgets-*`, `editeur-widgets.test.js`) | CONFORME | Les widgets Elementor Pro/WordPress n'existent pas tous (voir inventaire) | — | — |
 | W-02 | Widgets | Widgets enregistrés/globaux (S14) | Blocs/composants réutilisables | `editeur-blocs-reutilisables.test.js` | T | À VÉRIFIER | « Global » = modifier une fois, appliquer partout : à confirmer | P2 | Test : modifier le global, vérifier toutes les copies |
 | W-03 | Widgets | Pas de balisage pour un contenu vide (S15) | Non vérifié | `views/marketing-public/widgets/*.ejs` | — | À VÉRIFIER | Dépend widget par widget ; mesurable par un test de rendu | P2 | Test de rendu d'un widget vide |
-| D-01 | Copier/coller | Copier un élément vers une autre page (S10) | Copier/coller via presse-papiers interne (`copySelected`, `paste`) | `page-builder.js` | C | À VÉRIFIER | Entre pages : non confirmé | P2 | Test : copier page A, coller page B |
+| D-01 | Copier/coller | Copier un élément vers une autre page (S10) | Copier/coller via presse-papiers interne (`copySelected`, `paste`) | `page-builder.js` | T (`editeur-raccourcis-navigateur`, vrai Chrome, 2026-10-10) | CONFORME | Entre pages : non confirmé | P2 | Test : copier page A, coller page B |
 | D-02 | Copier/coller | Entre **sites** (S10) | — | — | — | NON APPLICABLE | Spécifique à WordPress multi-sites | — | — |
 | X-01 | Conditions | Conditions d'affichage ET/OU par élément (S12) | Conditions du moteur d'e-mails ; pour les pages : à confirmer | — | — | À VÉRIFIER | | P2 | — |
 | F-01 | Performance | Moins de DOM, chargement différé (S15) | Mesures ≠ faites ; bench `scripts/perf/bench-page-builder.js` existe | `docs/perf-page-builder.md` | T (`page-builder-performance-navigateur`) | À VÉRIFIER | **Aucune mesure fraîche** (machine chargée) ; LOT 2 | P1 | Mesure sur machine au calme |
-| A-01 | Documentation | `editeur-pages-audit.md` | Contient une affirmation périmée (HTML libre « refusé » alors qu'un widget HTML existe) | `docs/editeur-pages-audit.md` | lecture | IMPLÉMENTÉ MAIS DÉFECTUEUX (la doc, pas le produit) | Risque de désinformation | P1 | Corriger au LOT de consolidation |
+| A-01 | Documentation | `editeur-pages-audit.md` | Contient une affirmation périmée (HTML libre « refusé » alors qu'un widget HTML existe) | `docs/editeur-pages-audit.md` | lecture | IMPLÉMENTÉ MAIS DÉFECTUEUX (la doc, pas le produit) → **corrigé le 2026-10-10** | Risque de désinformation levé | — | Vérifié contre `nodes.js` (widget `html`, permission `pages.code`) |
 
 ## Ce que cette matrice ne prouve pas
 
-* 19 lignes sur 30 sont **À VÉRIFIER** ou PARTIELLEMENT CONFORME : c'est le résultat honnête, pas un défaut de la matrice.
+* 15 lignes sur 30 sont **À VÉRIFIER** ou PARTIELLEMENT CONFORME : c'est le résultat honnête, pas un défaut de la matrice.
 * Les listes de contrôles d'Elementor (Layout, Advanced, Motion Effects, etc.) sont longues ; seuls les comportements structurants ont été relevés. Une comparaison **champ par champ** reste à faire (P2).
 * Elementor change vite (éditeur V4 « atomique » en alpha/bêta selon la documentation consultée) ; la référence peut bouger.
 
 ## Suites proposées (LOT 2 et après)
 
-1. Lancer les lignes À VÉRIFIER qui coûtent un test court (P-01…P-04, H-03, D-01, R-02) : un seul fichier de tests navigateur « raccourcis et presse-papiers ».
+1. FAIT le 2026-10-10 : `tests/editeur-raccourcis-navigateur.test.js` (4/4) a converti P-01, P-02, P-04, D-01 en CONFORME. Restent P-03 (style), H-03, R-02.
 2. Vérifier H-02 (historique/révisions de pages) et C-04 (grille) dans le code avant de décider d'un chantier.
 3. LOT 2 : mesurer F-01 sur machine calme, étendre `docs/perf-page-builder.md` (pas de nouveau document).
 4. Corriger A-01.
