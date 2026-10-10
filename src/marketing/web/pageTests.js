@@ -72,7 +72,7 @@ module.exports = () => {
   testAction("/demarrer", (req, t) => { abtests.startTest(req.mk.ctx, t.id); return t.status === "stopped" ? "Test repris." : "Test démarré : les visiteurs de la page voient désormais la version A ou la version B."; });
   testAction("/pause", (req, t) => { abtests.stopTest(req.mk.ctx, t.id); return "Test en pause : tous les visiteurs voient de nouveau la version A."; });
   testAction("/terminer", (req, t) => {
-    const winner = req.body.winner === "b" ? "b" : "a";
+    const winner = req.body.winner;
     abtests.decideTest(req.mk.ctx, t.id, winner);
     return winner === "b" ? "Test terminé : la version B a été copiée dans le brouillon de la page. Vérifiez-la puis publiez-la." : "Test terminé : la page garde la version A.";
   });

@@ -190,4 +190,17 @@
         <p class="field-hint">Ce tableau résume les passages (le détail de chaque exécution reste dans le journal du scénario). Un passage « terminé » n'est pas une conversion : voir les conversions ci-dessus.</p>
       <% } %>
     </section>
+    <% const X = S.experiments; if (X) { %>
+    <section class="mk-panel" aria-labelledby="an-ab">
+      <h2 id="an-ab">Tests A/B</h2>
+      <% if (X.error) { %><p class="mk-callout mk-callout-warn"><span><%= X.error %></span></p>
+      <% } else if (X.noData) { %><p class="field-hint">Aucune expérience A/B pour l'instant. <a href="/marketing/site-web/tests-ab">Tests A/B</a></p>
+      <% } else { %>
+        <p class="field-hint"><%= mkh.fmt(X.running) %> en cours · <%= mkh.fmt(X.paused) %> en pause · <%= mkh.fmt(X.endedInPeriod) %> terminé(s) sur la période. Les résultats et le verdict viennent du moteur d'A/B ; ici, simple lecture.</p>
+        <% if (X.rows.length) { %><div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption class="sr-only">Expériences A/B</caption>
+          <thead><tr><th scope="col">Test</th><th scope="col">État</th><th scope="col" class="mk-num">Expositions</th><th scope="col" class="mk-num">Taux A</th><th scope="col" class="mk-num">Taux B</th><th scope="col">Statut statistique</th></tr></thead>
+          <tbody><% const VL = { insufficient: "Données insuffisantes", inconclusive: "Non concluant", significant: "Significatif (pas encore de gagnant)", winner: "Gagnant" }; X.rows.forEach((r) => { %><tr><td data-label="Test"><a href="/marketing/pages/<%= r.pageId %>/test-ab?test=<%= r.id %>"><%= r.name %></a></td><td data-label="État"><%= r.status === "running" ? "En cours" : r.status === "stopped" ? "En pause" : "Terminé" %></td><td class="mk-num" data-label="Expositions"><%= mkh.fmt(r.exposures) %></td><td class="mk-num" data-label="Taux A"><%= mkh.rate(r.rateA) %></td><td class="mk-num" data-label="Taux B"><%= mkh.rate(r.rateB) %></td><td data-label="Statut"><%= VL[r.verdict] %><%= r.leader && r.verdict !== "inconclusive" ? ` — ${r.leader.toUpperCase()}` : "" %><%= r.anomalies ? " · anomalie" : "" %></td></tr><% }) %></tbody></table></div><% } %>
+      <% } %>
+    </section>
+    <% } %>
 <%- include("partials/bottom") %>
