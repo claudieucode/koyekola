@@ -194,10 +194,17 @@
     <div class="pb-navmgr-body" data-pb-navmgr-body></div>
   </dialog>
 
-  <dialog class="pb-modal pb-command" data-pb-command-dialog aria-label="Commandes">
-    <label class="sr-only" for="pb-cmd-q">Rechercher une commande</label>
-    <input class="pb-search" id="pb-cmd-q" type="search" placeholder="Que voulez-vous faire ? (ajouter un titre, grouper, aperçu…)" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="pb-cmd-list" data-pb-cmd-q>
-    <ul class="pb-cmd-list" id="pb-cmd-list" role="listbox" aria-label="Commandes" data-pb-cmd-list></ul>
+  <dialog class="pb-modal pb-command" data-pb-command-dialog aria-labelledby="pb-cmd-title">
+    <div class="pb-cmd-box">
+      <div class="pb-cmd-head"><h2 id="pb-cmd-title">Commandes</h2><span class="pb-modal-spacer"></span><button type="button" class="pb-icon-btn" data-pb-close data-tip="Fermer (Échap)" aria-label="Fermer la palette de commandes"><%- icon("close", { size: 16 }) %></button></div>
+      <div class="pb-cmd-field">
+        <span class="pb-cmd-search-ico" aria-hidden="true"><%- icon("search", { size: 16 }) %></span>
+        <label class="sr-only" for="pb-cmd-q">Rechercher une commande</label>
+        <input class="pb-cmd-input" id="pb-cmd-q" type="search" placeholder="Que voulez-vous faire ? (ajouter un titre, grouper, aperçu…)" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="pb-cmd-list" data-pb-cmd-q>
+      </div>
+      <ul class="pb-cmd-list" id="pb-cmd-list" role="listbox" aria-label="Commandes" data-pb-cmd-list></ul>
+      <div class="pb-cmd-foot" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> naviguer</span><span><kbd>⏎</kbd> exécuter</span><span><kbd>Échap</kbd> fermer</span></div>
+    </div>
   </dialog>
 
   <%# Raccourcis clavier (menu principal) : la liste réelle de ce que gère l'éditeur %>

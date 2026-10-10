@@ -6117,8 +6117,8 @@
   var cmdAnchor = null, cmdIndex = 0, cmdShown = [];
   function commandList() {
     var has = selection.length > 0;
-    var adds = [{ type: "layout", label: "Section libre" }].concat(SPEC.types.map(function (t) { return { type: t.type, label: t.label }; })).concat(boot.types.map(function (t) { return { type: t.type, label: t.label + " (section prête)", legacy: true }; }));
-    var list = canWrite ? adds.map(function (a) { return { label: "Ajouter : " + a.label, run: function () { addAt(a.type, a.legacy); } }; }) : [];
+    var adds = [{ type: "layout", label: "Section libre", icon: "layout" }].concat(SPEC.types.map(function (t) { return { type: t.type, label: t.label, icon: t.icon }; })).concat(boot.types.map(function (t) { return { type: t.type, label: t.label + " (section prête)", legacy: true }; }));
+    var list = canWrite ? adds.map(function (a) { return { label: "Ajouter : " + a.label, icon: a.icon, run: function () { addAt(a.type, a.legacy); } }; }) : [];
     if (canWrite) boot.blocks.forEach(function (b) { list.push({ label: "Ajouter le bloc : " + b.label, run: function () { var btn = $(".pb-block-item[data-block='" + b.key + "']"); if (btn) btn.click(); } }); });
     return list.concat([
       { label: "Ouvrir la médiathèque", run: function () { openMedia({ title: "Médiathèque" }); } },
@@ -6163,34 +6163,89 @@
     }
     if (legacy) addLegacy(type, at); else addElement(type, at);
   }
+  // Catégories (déduites du début du libellé, sans rien renommer), icônes, raccourcis et synonymes : de simples tables à côté de la liste
+  var CMD_CATS = ["Créer", "Édition", "Page", "Affichage", "Interface"];
+  function cmdCategory(l) {
+    if (/^Ajouter/.test(l)) return "Créer";
+    if (/^(Dupliquer|Supprimer|Grouper|Dissocier|Masquer|Verrouiller|Copier|Coller|Réinitialiser|Sélectionner|Annuler|Rétablir|Vider)/.test(l)) return "Édition";
+    if (/^(Écran|Zoom|Grille|Guides|Contours|Règles)/.test(l)) return "Affichage";
+    if (/^(Structure|Calques|Panneau|Mode)/.test(l)) return "Interface";
+    return "Page";
+  }
+  var CMD_ICONS = [[/^Ouvrir la médiathèque/, "image"], [/^Aperçu/, "eye"], [/^Enregistrer/, "check"], [/^Publier/, "upload"], [/^Annuler/, "undo"], [/^Rétablir/, "redo"], [/^Dupliquer/, "copy"], [/^(Supprimer|Vider)/, "trash"], [/^(Grouper|Dissocier)/, "layers"], [/^Masquer/, "eyeOff"], [/^Verrouiller/, "lock"], [/style/, "palette"], [/^Sélectionner le parent/, "arrowUp"], [/^Écran : ordinateur/, "monitor"], [/^Écran : tablette/, "tablet"], [/^Écran : mobile/, "smartphone"], [/^Zoom/, "maximize"], [/^(Grille|Guides|Contours|Règles)/, "borderBox"], [/^(Structure|Calques|Panneau)/, "layers"], [/^Réglages/, "sliders"], [/^Mode/, "edit"], [/^Ajouter une structure/, "layout"], [/^Ajouter le bloc/, "listPlus"]];
+  var CMD_KEYS = [[/^Enregistrer/, "Ctrl+S"], [/^Annuler$/, "Ctrl+Z"], [/^Rétablir$/, "Ctrl+Maj+Z"], [/^Dupliquer/, "Ctrl+D"], [/^Supprimer la sélection/, "Suppr"], [/^Grouper$/, "Ctrl+G"], [/^Dissocier$/, "Ctrl+Maj+G"], [/^Masquer/, "Ctrl+Maj+H"], [/^Verrouiller/, "Ctrl+Maj+L"], [/^Copier le style/, "Ctrl+Alt+C"], [/^Coller le style$/, "Ctrl+Alt+V"], [/^Zoom : ajuster/, "Maj+1"], [/^Structure : (rouvrir|fermer)/, "Ctrl+Maj+Y"], [/^Mode :/, "Ctrl+Maj+E"]];
+  var CMD_ALIASES = [[/^Ajouter : Conteneur/, "container"], [/^Ajouter : Section/, "section"], [/^Ajouter : Colonne/, "columns column"], [/^Ajouter : Titre/, "heading title"], [/^Ajouter : Texte/, "text paragraph"], [/^Ajouter : Image/, "picture photo"], [/^Ajouter : Bouton/, "button"], [/^Ajouter : Vid/, "video"], [/^Supprimer/, "delete remove"], [/^Dupliquer/, "duplicate copy clone"], [/^Masquer/, "hide show"], [/^Verrouiller/, "lock unlock"], [/^Aperçu/, "preview"], [/^Enregistrer/, "save"], [/^Publier/, "publish"], [/^Annuler/, "undo"], [/^Rétablir/, "redo"], [/^Écran/, "responsive device"], [/^Zoom/, "scale"], [/^Grouper/, "group"]];
+  var cmdMac = /Mac|iPhone|iPad/.test(navigator.platform || "");
+  var CMD_MAX = 80, CMD_RECENT = 4;
+  function cmdLookup(table, label) { for (var i = 0; i < table.length; i++) if (table[i][0].test(label)) return table[i][1]; return ""; }
+  function cmdKbd(label) {
+    var k = cmdLookup(CMD_KEYS, label);
+    return k && cmdMac ? k.replace(/Ctrl\+?/, "⌘").replace(/Alt\+?/, "⌥").replace(/Maj\+?/, "⇧").replace(/Suppr/, "⌫") : k;
+  }
+  var cmdRows = [];
   function openCommands(prefill, anchor) {
     if (editing) commitEdit();
     cmdAnchor = anchor || null;
     var q = $("[data-pb-cmd-q]");
     q.value = prefill || "";
     cmdIndex = 0;
-    cmdDialog.showModal();
+    if (!cmdDialog.open) cmdDialog.showModal();
     renderCommands();
     q.focus();
   }
+  function cmdRow(c, i) {
+    var kbd = cmdKbd(c.label);
+    return h("li", { role: "option", id: "pb-cmd-" + i, "aria-selected": "false", class: "pb-cmd-item", onclick: function () { runCommand(i); } },
+      h("span", { class: "pb-cmd-ico", "aria-hidden": "true" }, c.icon || cmdLookup(CMD_ICONS, c.label) ? icon(c.icon || cmdLookup(CMD_ICONS, c.label)) : null),
+      h("span", { class: "pb-cmd-label", text: c.label }), kbd ? h("kbd", { class: "pb-cmd-kbd", text: kbd }) : null);
+  }
+  // Reconstruit la liste (frappe seulement) : favoris et récentes en tête quand la recherche est vide, puis les catégories
   function renderCommands() {
     var words = norm($("[data-pb-cmd-q]").value).split(/\s+/).filter(Boolean);
-    cmdShown = commandList().filter(function (c) { var t = norm(c.label); return words.every(function (w) { return t.indexOf(w) >= 0; }); }).slice(0, 80);
-    cmdIndex = Math.min(cmdIndex, Math.max(0, cmdShown.length - 1));
+    var pool = commandList().filter(function (c) { var t = norm(c.label + " " + cmdLookup(CMD_ALIASES, c.label)); return words.every(function (w) { return t.indexOf(w) >= 0; }); });
+    if (words.length) pool = pool.slice(0, CMD_MAX); // sans recherche, tout est listé par catégorie (les 80 premiers seraient tous des « Ajouter »)
+    var groups = [], favs = store.get("cmd-fav", []);
+    function take(title, list) { if (!list.length) return; groups.push([title, list]); pool = pool.filter(function (c) { return list.indexOf(c) < 0; }); }
+    take("Favoris", pool.filter(function (c) { return favs.indexOf(c.label) >= 0; }));
+    if (!words.length) take("Récentes", store.get("cmd-recent", []).map(function (l) { return pool.filter(function (c) { return c.label === l; })[0]; }).filter(Boolean));
+    CMD_CATS.forEach(function (cat) { take(cat, pool.filter(function (c) { return cmdCategory(c.label) === cat; })); });
     var ul = $("[data-pb-cmd-list]");
     ul.textContent = "";
-    cmdShown.forEach(function (c, i) { ul.appendChild(h("li", { role: "option", id: "pb-cmd-" + i, "aria-selected": String(i === cmdIndex), class: i === cmdIndex ? "is-active" : null, onclick: function () { runCommand(i); }, text: c.label })); });
-    if (!cmdShown.length) ul.appendChild(h("li", { class: "pb-hint", role: "none", text: "Aucune commande." }));
-    $("[data-pb-cmd-q]").setAttribute("aria-activedescendant", cmdShown.length ? "pb-cmd-" + cmdIndex : "");
+    cmdShown = []; cmdRows = [];
+    groups.forEach(function (g) {
+      ul.appendChild(h("li", { class: "pb-cmd-cat", role: "presentation", text: g[0] }));
+      g[1].forEach(function (c) { var li = cmdRow(c, cmdShown.length); cmdShown.push(c); cmdRows.push(li); ul.appendChild(li); });
+    });
+    if (!cmdShown.length) ul.appendChild(h("li", { class: "pb-cmd-empty", role: "presentation" }, h("strong", { text: "Aucune commande trouvée" }), h("span", { text: "Essayez un autre terme." })));
+    cmdIndex = Math.min(cmdIndex, Math.max(0, cmdShown.length - 1));
+    setCmdActive(cmdIndex, true);
   }
-  function runCommand(i) { var c = cmdShown[i]; if (!c) return; var anchor = cmdAnchor; cmdDialog.close(); cmdAnchor = anchor; c.run(); cmdAnchor = null; }
+  // Déplacer la sélection ne touche que deux lignes (pas de reconstruction, donc pas de scintillement)
+  function setCmdActive(i, top) {
+    var prev = $(".pb-cmd-list .is-active"); if (prev) { prev.classList.remove("is-active"); prev.setAttribute("aria-selected", "false"); }
+    cmdIndex = i;
+    var el = cmdRows[i], q = $("[data-pb-cmd-q]");
+    q.setAttribute("aria-activedescendant", el ? el.id : "");
+    if (!el) return;
+    el.classList.add("is-active"); el.setAttribute("aria-selected", "true");
+    if (top && i === 0) $("[data-pb-cmd-list]").scrollTop = 0; else el.scrollIntoView({ block: "nearest" });
+  }
+  function runCommand(i) {
+    var c = cmdShown[i]; if (!c) return;
+    store.set("cmd-recent", [c.label].concat(store.get("cmd-recent", []).filter(function (l) { return l !== c.label; })).slice(0, CMD_RECENT));
+    var anchor = cmdAnchor; cmdDialog.close(); cmdAnchor = anchor; c.run(); cmdAnchor = null;
+  }
   $("[data-pb-cmd-q]").addEventListener("input", function () { cmdIndex = 0; renderCommands(); });
   $("[data-pb-cmd-q]").addEventListener("keydown", function (e) {
-    if (e.key === "ArrowDown") { e.preventDefault(); cmdIndex = Math.min(cmdShown.length - 1, cmdIndex + 1); renderCommands(); scrollCmd(); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); cmdIndex = Math.max(0, cmdIndex - 1); renderCommands(); scrollCmd(); }
+    if (e.key === "ArrowDown") { e.preventDefault(); if (cmdShown.length) setCmdActive((cmdIndex + 1) % cmdShown.length); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); if (cmdShown.length) setCmdActive((cmdIndex - 1 + cmdShown.length) % cmdShown.length); }
     else if (e.key === "Enter") { e.preventDefault(); runCommand(cmdIndex); }
+    else if ((e.ctrlKey || e.metaKey) && (e.key || "").toLowerCase() === "k") { e.preventDefault(); e.stopPropagation(); cmdDialog.close(); } // le raccourci d'ouverture ferme aussi (l'écouteur global se tait quand une fenêtre est ouverte)
   });
-  function scrollCmd() { var a = $(".pb-cmd-list .is-active"); if (a) a.scrollIntoView({ block: "nearest" }); }
+  // Clic sur le fond : la cible est le <dialog> lui-même (son contenu le remplit entièrement) ; on exige aussi que l'appui ait commencé sur le fond
+  var cmdPressedBackdrop = false;
+  cmdDialog.addEventListener("mousedown", function (e) { cmdPressedBackdrop = e.target === cmdDialog; });
+  cmdDialog.addEventListener("click", function (e) { if (e.target === cmdDialog && cmdPressedBackdrop) cmdDialog.close(); cmdPressedBackdrop = false; });
   $("[data-pb-command]").addEventListener("click", function () { openCommands(""); });
 
   // ---------- Sauvegarde automatique ----------
@@ -6360,7 +6415,7 @@
     var k = (e.key || "").toLowerCase();
     if (mod && k === "s") { e.preventDefault(); saveNow(); return; }
     if (mod && e.shiftKey && k === "y") { e.preventDefault(); setDockMode(dock.mode === "closed" ? dock.last : "closed"); return; }
-    if (mod && k === "k") { e.preventDefault(); openCommands(""); return; }
+    if (mod && k === "k") { e.preventDefault(); if (cmdDialog.open) cmdDialog.close(); else openCommands(""); return; }
     if (mod && e.shiftKey && k === "e") { e.preventDefault(); setMode(mode === "structure" ? "visual" : "structure"); return; }
     if (typing || editing) return;
     if (mod && k === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
