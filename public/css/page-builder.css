@@ -62,7 +62,7 @@
 .pb-context input[type="color"], .pb-ctx-color input { width: 30px; height: 26px; padding: 0; border: 0; background: none; cursor: pointer; }
 
 /* ---------- Corps : outils | éléments | canevas | calques + inspecteur ---------- */
-.pb-main { --pb-tools-w: 48px; --pb-left-w: 260px; --pb-right-w: 340px; display: grid; grid-template-columns: var(--pb-tools-w) var(--pb-left-w) 6px minmax(0, 1fr) 6px var(--pb-right-w); min-height: 0; transition: grid-template-columns 0.18s ease; }
+.pb-main { --pb-tools-w: 48px; --pb-left-w: 260px; --pb-right-w: 340px; display: grid; grid-template-columns: var(--pb-tools-w) var(--pb-left-w) 6px minmax(0, 1fr) 6px var(--pb-right-w); min-height: 0; }
 .pb-main.is-left-hidden { grid-template-columns: var(--pb-tools-w) 0 0 minmax(0, 1fr) 6px var(--pb-right-w); }
 .pb-main.is-right-hidden { grid-template-columns: var(--pb-tools-w) var(--pb-left-w) 6px minmax(0, 1fr) 0 0; }
 .pb-main.is-left-hidden.is-right-hidden { grid-template-columns: var(--pb-tools-w) 0 0 minmax(0, 1fr) 0 0; }

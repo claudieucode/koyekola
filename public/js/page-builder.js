@@ -4977,11 +4977,15 @@
     refreshInfo();
     placeCanvasBar();
   }
+  // Recalcul de la zone du canevas (largeur du cadre, zoom, règles, barre d'actions) : au plus UN par image, quel que soit le nombre de causes
+  // (glisser d'une poignée de panneau, observateur de taille, redimensionnement de la fenêtre)
+  var zoomQueued = false;
+  function queueZoom() { if (zoomQueued) return; zoomQueued = true; requestAnimationFrame(function () { zoomQueued = false; if (zoomFit) applyZoom(); else drawRulers(); }); }
   function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(2, Math.max(0.25, z)); applyZoom(); setTimeout(function () { drawOverlays(); drawGuides(); }, 30); }
   $$("[data-pb-zoom]").forEach(function (b) { b.addEventListener("click", function () { var v = b.dataset.pbZoom; setZoom(v === "fit" ? "fit" : v === "100" ? 1 : v === "+" ? Math.round((zoom + 0.1) * 10) / 10 : Math.round((zoom - 0.1) * 10) / 10); }); });
-  window.addEventListener("resize", function () { if (zoomFit) applyZoom(); else drawRulers(); });
+  window.addEventListener("resize", queueZoom);
   // La zone du canevas change de taille (panneaux, fenêtre, mise en page initiale) : le cadre suit
-  if (window.ResizeObserver) new ResizeObserver(function () { applyZoom(); }).observe(stage);
+  if (window.ResizeObserver) new ResizeObserver(function () { queueZoom(); }).observe(stage);
   function setAid(k, v) {
     aids[k] = v; store.set("aids", aids);
     $$("[data-pb-toggle='" + k + "'], [data-aid='" + k + "']").forEach(function (b) { b.setAttribute("aria-pressed", String(k === "guides" ? v !== false : Boolean(v))); });
@@ -5681,7 +5685,8 @@
   // ---------- Panneaux redimensionnables ----------
   var main = $("[data-pb-main]");
   var PANEL_MIN_RIGHT = 280;
-  function applyPanels() {
+  // live : glissement d'une poignée en cours — les préférences ne sont écrites qu'au relâchement (une écriture, pas une par pixel)
+  function applyPanels(live) {
     if (panels.right < PANEL_MIN_RIGHT) panels.right = PANEL_MIN_RIGHT; // largeur enregistrée avant ce minimum
     main.style.setProperty("--pb-tools-w", panels.toolsExpanded ? "176px" : panels.toolsDense ? "136px" : "48px");
     main.classList.toggle("is-tools-expanded", Boolean(panels.toolsExpanded));
@@ -5691,20 +5696,20 @@
     main.classList.toggle("is-left-hidden", panels.leftHidden);
     main.classList.toggle("is-right-hidden", panels.rightHidden);
     $("[data-pb-right]").style.setProperty("--pb-layers-h", panels.layers + "%");
-    store.set("panels", panels);
-    if (zoomFit) applyZoom(); else drawRulers();
+    if (!live) store.set("panels", panels);
+    queueZoom();
   }
   function togglePanel(side) { panels[side + "Hidden"] = !panels[side + "Hidden"]; applyPanels(); renderTools(); }
   $$("[data-pb-resize]").forEach(function (handle) {
     var side = handle.dataset.pbResize;
     // Largeur : jamais assez étroite pour rendre les contrôles illisibles (droite : 280 px au moins), ni plus de la moitié de la fenêtre
-    var setW = function (w) { var min = side === "right" ? PANEL_MIN_RIGHT : 200; panels[side] = Math.min(560, Math.max(min, Math.min(Math.round(w), Math.round(window.innerWidth * 0.5)))); panels[side + "Hidden"] = false; applyPanels(); };
+    var setW = function (w, live) { var min = side === "right" ? PANEL_MIN_RIGHT : 200; panels[side] = Math.min(560, Math.max(min, Math.min(Math.round(w), Math.round(window.innerWidth * 0.5)))); panels[side + "Hidden"] = false; applyPanels(live); };
     handle.addEventListener("pointerdown", function (e) {
       e.preventDefault(); handle.setPointerCapture(e.pointerId);
       var sx = e.clientX, sw = panels[side];
       frame.style.pointerEvents = "none";
-      var move = function (ev) { setW(side === "left" ? sw + ev.clientX - sx : sw - (ev.clientX - sx)); };
-      var up = function () { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); frame.style.pointerEvents = ""; renderTools(); };
+      var move = function (ev) { setW(side === "left" ? sw + ev.clientX - sx : sw - (ev.clientX - sx), true); };
+      var up = function () { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); frame.style.pointerEvents = ""; store.set("panels", panels); renderTools(); };
       handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", up);
     });
     handle.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); setW(panels[side] + ((e.key === "ArrowRight") === (side === "left") ? 16 : -16)); } });
