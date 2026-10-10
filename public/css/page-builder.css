@@ -1247,3 +1247,12 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
    d'un bouton…). Avant, sa hauteur suivait l'élément sélectionné (38 / 43 / 47 px) et tout l'éditeur — panneaux et canevas — se décalait
    de 5 à 9 px à chaque sélection. */
 .pb-top .pb-context { min-height: 47px; box-sizing: border-box; }
+
+/* Calques : la mise en page de la liste (jusqu'à plusieurs milliers de nœuds) reste à l'intérieur de son panneau : reconstruire ou défiler les calques ne recalcule plus le reste de l'éditeur */
+.pb-tree { contain: layout style; }
+
+/* Widgets personnalisés : liste d'éléments répétés (diapositives, liens, témoignages…) dans l'inspecteur */
+.pb-items { display: grid; gap: 10px; }
+.pb-items-item { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: var(--pb-radius-md); background: var(--card, #fff); }
+.pb-items-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pb-items-tools { display: inline-flex; gap: 2px; }

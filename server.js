@@ -47,6 +47,8 @@ const marketing = require("./src/marketing").initMarketing({ db, dbFile, dataDir
 
 const app = express();
 app.locals.marketing = marketing;
+// Contact Core (palier 15) : les commentaires alimentent le journal d'événements des contacts (jamais d'abonnement marketing)
+try { require("./src/marketing/contactcore/hooks").install({ marketing, db, comments: require("./src/services/comments") }); } catch (error) { console.error("[KOLAKISA] Contact Core : branchement des commentaires impossible :", error.message); }
 // Pont CRM (fiche élève ↔ fiche contact) : mis à disposition du module marketing sans qu'il importe la base du LMS
 app.locals.crm = require("./src/services/gestion/crm");
 
@@ -56,6 +58,11 @@ app.set("trust proxy", 1);
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
+// Gabarits compilés UNE fois : sans « view cache » (réservé par Express à NODE_ENV=production), EJS recompile le gabarit à chaque
+// include(), donc chaque élément d'une page du Page Builder (~4 ms par élément : 1,6 s pour 400 éléments, mesuré). Hors production,
+// le cache est vidé dès qu'un fichier de views/ change : les gabarits restent modifiables à chaud.
+app.enable("view cache");
+if (!isProduction) { try { require("fs").watch(path.join(__dirname, "views"), { recursive: true, persistent: false }, () => require("ejs").clearCache()); } catch { /* surveillance indisponible : redémarrer pour voir un gabarit modifié */ } }
 
 app.use(compression()); // pages, CSS et JS envoyés compressés (gzip) : environ 4 fois plus légers
 app.use(securityHeaders);

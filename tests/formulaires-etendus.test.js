@@ -161,7 +161,7 @@ describe("formulaire étendu (vrai serveur)", () => {
   });
 
   test("événement « formulaire envoyé » (formulaire, page d'origine) ; pop-up refusé pour un formulaire avec fichier", async () => {
-    const ev = db.prepare("SELECT metadata FROM mk_events WHERE name = 'form.submitted' ORDER BY id DESC LIMIT 1").get();
+    const ev = db.prepare("SELECT metadata FROM mk_events WHERE name = 'form.submitted' AND metadata <> '{}' ORDER BY id DESC LIMIT 1").get();
     const meta = JSON.parse(ev.metadata);
     assert.equal(meta.formId, String(formId));
     assert.equal(meta.page, `/f/${slug}`);

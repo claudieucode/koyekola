@@ -10,8 +10,8 @@
     <fieldset class="mk-tl-fieldset"><legend>Ressources</legend>
       <% types.forEach((t) => { %>
         <div class="mk-tl-option">
-          <input type="checkbox" id="tl-t-<%= t.key %>" name="types" value="<%= t.key %>"<%= t.allowed ? " checked" : " disabled" %>>
-          <label for="tl-t-<%= t.key %>"><%= t.label %><% if (t.allowed) { %> <span class="mk-sub">(<%= t.count %> · <%= scopeLabel[t.scope] %>)</span><% } else { %> <span class="mk-sub">— indisponible pour ce site ou pour votre rôle</span><% } %></label>
+          <input type="checkbox" id="tl-t-<%= t.key %>" name="types" value="<%= t.key %>"<%= t.allowed ? (t.sensitive ? "" : " checked") : " disabled" %>>
+          <label for="tl-t-<%= t.key %>"><%= t.label %><% if (t.allowed) { %> <span class="mk-sub">(<%= t.count %> · <%= scopeLabel[t.scope] %><%= t.sensitive ? " · à cocher volontairement : contient adresses e-mail et numéros" : "" %>)</span><% } else { %> <span class="mk-sub">— indisponible pour ce site ou pour votre rôle</span><% } %></label>
         </div>
       <% }) %>
     </fieldset>

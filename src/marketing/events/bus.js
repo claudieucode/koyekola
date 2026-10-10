@@ -10,6 +10,7 @@ const { UnrecoverableError } = require("../queue/worker");
 const NAME = /^[a-z][a-z0-9_.]{1,63}$/;
 const SOURCE = /^[a-z][a-z0-9_.-]{0,40}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const OBJECT_TYPE = /^[a-z][a-z0-9_.]{0,39}$/;
 const MAX_METADATA = 16384;
 
 const badName = () => new Error("Nom d'événement invalide (minuscules, chiffres, « _ » et « . » ; 2 à 64 caractères, commence par une lettre).");
@@ -24,7 +25,7 @@ function createEventBus(db, { log = console, now = Date.now } = {}) {
     handlers.get(name).push(handler);
   }
 
-  function emit({ organizationId, name, email, contactId = null, source = "api", metadata = {}, idempotencyKey = null, occurredAt } = {}) {
+  function emit({ organizationId, name, email, contactId = null, source = "api", metadata = {}, idempotencyKey = null, occurredAt, siteId = null, objectType = null, objectId = null, actorUserId = null } = {}) {
     if (!Number.isInteger(organizationId) || organizationId < 1) throw new Error("Identifiant d'organisation invalide.");
     if (typeof name !== "string" || !NAME.test(name)) throw badName();
     let address = null;
@@ -38,15 +39,20 @@ function createEventBus(db, { log = console, now = Date.now } = {}) {
     if (json.length > MAX_METADATA) throw new Error("Métadonnées trop volumineuses (16 Ko au plus).");
     if (idempotencyKey !== null && (typeof idempotencyKey !== "string" || !idempotencyKey || idempotencyKey.length > 200)) throw new Error("Clé d'idempotence invalide (1 à 200 caractères).");
 
+    // Palier 15 : site, objet concerné et auteur (facultatifs) — les appelants existants ne les passent pas
+    for (const [label, value] of [["site", siteId], ["auteur", actorUserId]]) if (value !== null && (!Number.isInteger(value) || value < 1)) throw new Error(`Identifiant de ${label} invalide.`);
+    if (objectType !== null && !OBJECT_TYPE.test(String(objectType))) throw new Error("Type d'objet invalide.");
+    if (objectId !== null && (typeof objectId !== "string" && !Number.isInteger(objectId) || String(objectId).length > 100 || /[\x00-\x1f]/.test(String(objectId)))) throw new Error("Identifiant d'objet invalide.");
+
     const at = now();
     db.exec("SAVEPOINT mk_emit");
     try {
       const info = db
         .prepare(
-          `INSERT OR IGNORE INTO mk_events (organization_id, name, email, contact_id, source, occurred_at, metadata, idempotency_key, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT OR IGNORE INTO mk_events (organization_id, name, email, contact_id, source, occurred_at, metadata, idempotency_key, created_at, site_id, object_type, object_id, actor_user_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(organizationId, name, address, contactId, source, occurredAt ?? at, json, idempotencyKey, at);
+        .run(organizationId, name, address, contactId, source, occurredAt ?? at, json, idempotencyKey, at, siteId, objectType, objectId === null ? null : String(objectId), actorUserId);
       if (info.changes === 0) {
         const existing = db.prepare("SELECT id FROM mk_events WHERE organization_id = ? AND idempotency_key = ?").get(organizationId, idempotencyKey);
         db.exec("RELEASE mk_emit");

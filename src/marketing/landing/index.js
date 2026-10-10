@@ -123,6 +123,13 @@ function preflight(ctx, page) {
     if (!f) errors.push("Un widget « Formulaire » vise un formulaire supprimé : choisissez-en un autre.");
     else if (f.status !== "published") errors.push(`Le formulaire « ${f.name} » n'est pas publié : publiez-le d'abord (Audience → Formulaires d'inscription).`);
   });
+  // Widgets personnalisés incomplets (ex. un média sans image) : le brouillon s'enregistre, mais la page ne peut pas être publiée ainsi
+  for (const s of page.sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => {
+    const cw = pageNodes.CUSTOM_WIDGETS[n.type];
+    if (!cw || !cw.complete || n.hidden) return;
+    const msg = cw.complete(n.props);
+    if (msg) errors.push(`${cw.label} : ${msg}`);
+  });
   return { ready: errors.length === 0, errors };
 }
 function publishPage(ctx, id) {
@@ -255,13 +262,15 @@ function nodeView(ctx, nodes, visitor, page, scope) {
     }
     const dyn = dynamicProps(ctx, n, visitor, page);
     if (dyn) n = { ...n, props: dyn };
+    // Code : coloration calculée à l'affichage (texte échappé + <span class="kw-tok-…"> générés par highlight.js) ; jamais enregistrée
+    if (n.type === "code" && n.props.language) n = { ...n, props: { ...n.props, html: require("../pages/highlight").highlight(n.props.text, n.props.language) } };
     // Widget personnalisé : son gabarit et ses champs « lien » (comptés dans cet ordre, comme dans linksOf)
     const cw = pageNodes.CUSTOM_WIDGETS[n.type];
     if (cw) {
       // Données dynamiques du widget (requête, article courant, visiteur…) : jamais bloquant, un échec donne un widget vide
       let data = null;
       if (cw.data) { try { data = cw.data(ctx, n.props, { scope, visitor, page, runQuery: (q, o) => require("../pages/query").runQuery(ctx, q, { scope, ...o }) }); } catch { data = null; } }
-      n = { ...n, customView: { partial: `widgets/${cw.template || n.type}`, links: cw.schema.filter((f) => f.kind === "link").map((f) => f.key), data } };
+      n = { ...n, customView: { partial: `widgets/${cw.template || n.type}`, links: cw.schema.filter((f) => f.kind === "link").map((f) => f.key), fields: cw.schema.map((f) => ({ key: f.key, kind: f.kind, subs: f.kind === "items" ? f.fields.map((x) => ({ key: x.key, kind: x.kind })) : undefined })), data } };
     }
     if (n.type === "addtocart" || n.type === "courserating") {
       const c = getCourse(ctx, n.props.courseId);
@@ -331,7 +340,11 @@ function linksOf(page) {
       if (n.type === "pricelist") n.props.items.forEach((it) => { if (it.link) out.push({ section: i, label: `Liste de prix : ${it.title}`, url: it.link }); });
       if ((n.type === "imagebox" || n.type === "iconbox") && n.props.link) out.push({ section: i, label: `${n.type === "imagebox" ? "Boîte d'image" : "Boîte d'icône"} : ${n.props.title}`, url: n.props.link });
       const cw = pageNodes.CUSTOM_WIDGETS[n.type];
-      if (cw) cw.schema.forEach((f) => { if (f.kind === "link" && n.props[f.key]) out.push({ section: i, label: `${cw.label} : ${f.label}`, url: n.props[f.key] }); });
+      // Même ordre que l'affichage (_node.ejs) : champs dans l'ordre du schéma ; pour une liste, élément par élément puis sous-champ par sous-champ
+      if (cw) cw.schema.forEach((f) => {
+        if (f.kind === "link" && n.props[f.key]) out.push({ section: i, label: `${cw.label} : ${f.label}`, url: n.props[f.key] });
+        else if (f.kind === "items") (n.props[f.key] || []).forEach((it, k) => f.fields.forEach((sf) => { if (sf.kind === "link" && it[sf.key]) out.push({ section: i, label: `${cw.label} : ${f.label} ${k + 1} (${sf.label})`, url: it[sf.key] }); }));
+      });
       if (n.type === "heading" && n.props.link) out.push({ section: i, label: `Titre : ${n.props.text}`, url: n.props.link });
       if (n.type === "button") out.push({ section: i, label: n.props.label, url: n.props.url });
       if (n.type === "link") out.push({ section: i, label: n.props.label, url: n.props.url });

@@ -86,6 +86,7 @@ function isSmsSendable(ctx, contactId) {
   checkCtx(ctx);
   const contact = getContact(ctx, contactId);
   if (!contact) return { ok: false, reason: "not_found" };
+  if (contact.record_status !== "active") return { ok: false, reason: "inactive_record" };
   if (contact.sms_status === "unsubscribed") return { ok: false, reason: "unsubscribed" };
   if (contact.sms_status !== "subscribed") return { ok: false, reason: "not_subscribed" };
   if (!E164.test(contact.sms_phone)) return { ok: false, reason: "no_phone" };
@@ -102,6 +103,7 @@ function smsSendableSql(alias = "c") {
   const a = alias;
   return {
     sql: [
+      `${a}.record_status = 'active'`,
       `${a}.sms_status = 'subscribed'`,
       `${a}.sms_phone GLOB '+[1-9]*' AND length(${a}.sms_phone) BETWEEN 9 AND 16 AND substr(${a}.sms_phone, 2) NOT GLOB '*[^0-9]*'`,
       `NOT EXISTS (SELECT 1 FROM mk_sms_suppressions s WHERE s.organization_id = ${a}.organization_id AND s.phone = ${a}.sms_phone)`,

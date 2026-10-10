@@ -111,6 +111,7 @@ function isSendable(ctx, contactId, { listId, category } = {}) {
   checkCtx(ctx);
   const contact = getContact(ctx, contactId);
   if (!contact) return { ok: false, reason: "not_found" };
+  if (contact.record_status !== "active") return { ok: false, reason: "inactive_record" };
   if (BLOCKED.has(contact.status) || isSuppressedEmail(ctx, contact.email)) return { ok: false, reason: "suppressed" };
   if (contact.status === "unsubscribed") return { ok: false, reason: "unsubscribed" };
   if (contact.status !== "subscribed") return { ok: false, reason: "not_subscribed" };

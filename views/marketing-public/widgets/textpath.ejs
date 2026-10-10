@@ -1,0 +1,7 @@
+<%# Texte sur un tracé (widget personnalisé : src/marketing/pages/widgets/textpath.js). Variables : p, n, cls, attrs, L. %>
+<% const PATHS = { wave: "M 20,110 C 120,10 220,210 320,110 S 520,10 580,110", arc: "M 30,170 A 270,150 0 0 1 570,170", circle: "M 300,20 A 140,140 0 1 1 299.9,20", slope: "M 20,170 L 580,30", line: "M 20,100 L 580,100" };
+   const pid = "kw-tp-" + n.id; %>
+<div class="<%= cls %>"<%- attrs %>>
+<% if (L.link) { %><a class="kw-textpath-link" href="<%= L.link %>">
+<% } %><svg class="kw-textpath-svg" viewBox="0 0 600 200" role="img" aria-label="<%= p.text %>" focusable="false"><path id="<%= pid %>" class="kw-textpath-line" d="<%= PATHS[p.shape] || PATHS.wave %>" fill="none"<% if (p.showPath) { %> stroke="currentColor" stroke-width="1" stroke-opacity=".35"<% } else { %> stroke="none"<% } %>></path><text class="kw-textpath-text" font-size="<%= p.fontSize %>" font-weight="<%= p.weight %>" fill="<%= p.color || "currentColor" %>" text-anchor="middle"><textPath href="#<%= pid %>" startOffset="50%"><%= p.text %></textPath></text></svg><% if (L.link) { %></a><% } %>
+</div>

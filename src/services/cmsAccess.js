@@ -44,6 +44,8 @@ const GROUPS = [
   { key: "settings", label: "Réglages du site", perms: [["settings.read", "Voir", "view"], ["settings.write", "Modifier", "edit"], ["settings.sensitive", "Modifier les réglages sensibles (domaine, indexation, page d'accueil, adresses)", "edit"], ["domains.manage", "Domaines", "edit"], ["api_keys.manage", "Clés d'API", "edit"], ["webhooks.manage", "Webhooks", "edit"], ["queue.manage", "File d'envoi", "edit"]] },
   { key: "marketing", label: "Marketing (contacts, listes, campagnes, automatisations)", perms: [
     ["contacts.read", "Contacts : voir", "view"], ["contacts.write", "Contacts : modifier", "edit"], ["contacts.delete", "Contacts : supprimer", "delete"], ["contacts.import", "Contacts : importer", "create"], ["contacts.export", "Contacts : exporter", "view"],
+    ["contacts.archive", "Contacts : archiver et rétablir", "edit"], ["contacts.merge", "Contacts : fusionner deux fiches", "edit"], ["contacts.manage_fields", "Contacts : gérer les champs personnalisés", "edit"],
+    ["contacts.view_sensitive", "Contacts : voir téléphone, e-mail complet et preuves de consentement", "view"], ["events.view", "Journal d'événements des contacts : voir", "view"],
     ["compliance.read", "Conformité : voir", "view"], ["compliance.manage", "Conformité : gérer", "edit"], ["lists.read", "Listes : voir", "view"], ["lists.write", "Listes : modifier", "edit"],
     ["segments.read", "Segments : voir", "view"], ["segments.write", "Segments : modifier", "edit"], ["templates.read", "Modèles d'e-mail : voir", "view"], ["templates.write", "Modèles d'e-mail : modifier", "edit"],
     ["campaigns.read", "Campagnes : voir", "view"], ["campaigns.write", "Campagnes : modifier", "edit"], ["campaigns.send", "Campagnes : envoyer", "publish"],
@@ -59,7 +61,7 @@ const ACTIONS = [["view", "Voir"], ["create", "Créer"], ["edit", "Modifier"], [
 const ALL_KEYS = Object.keys(orgs.PERMISSIONS);
 const byMin = (min) => ALL_KEYS.filter((k) => orgs.roleAtLeast(min, orgs.PERMISSIONS[k]));
 const VIEWER_KEYS = byMin("viewer");
-const NOT_FOR_AUTHORS = ["contacts.read", "compliance.read", "lists.read", "segments.read", "templates.read", "campaigns.read", "automations.read", "analytics.read", "settings.read", "audit.read"];
+const NOT_FOR_AUTHORS = ["contacts.read", "contacts.view_sensitive", "events.view", "compliance.read", "lists.read", "segments.read", "templates.read", "campaigns.read", "automations.read", "analytics.read", "settings.read", "audit.read"];
 const SYSTEM_ROLES = [
   { key: "owner", name: "Super administrateur", description: "Tous les droits, y compris la gestion de l'équipe et de l'organisation. Protégé : le dernier ne peut pas être retiré.", rank: 4, permissions: byMin("owner") },
   { key: "admin", name: "Administrateur", description: "Gère le site, le contenu, l'apparence et l'équipe (sans toucher aux Super administrateurs).", rank: 3, permissions: byMin("admin") },

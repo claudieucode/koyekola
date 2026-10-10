@@ -6,6 +6,8 @@ const ROLE_ORDER = { viewer: 1, editor: 2, admin: 3, owner: 4 };
 // Permission → rôle minimal. Une permission absente de cette liste est REFUSÉE à tout le monde.
 const PERMISSIONS = Object.freeze({
   "contacts.read": "viewer", "contacts.write": "editor", "contacts.delete": "admin", "contacts.import": "editor", "contacts.export": "admin",
+  // Contact Core (palier 15) : archiver = éditeur ; fusionner deux fiches = administrateur ; gérer les champs personnalisés = éditeur ; voir téléphone, e-mail complet et preuves = lecteur (retirable à un rôle personnalisé) ; journal d'événements = lecteur
+  "contacts.archive": "editor", "contacts.merge": "admin", "contacts.manage_fields": "editor", "contacts.view_sensitive": "viewer", "events.view": "viewer",
   "compliance.read": "viewer", "compliance.manage": "admin",
   "lists.read": "viewer", "lists.write": "editor",
   "segments.read": "viewer", "segments.write": "editor",
