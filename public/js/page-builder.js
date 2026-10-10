@@ -6038,14 +6038,42 @@
 
   // ---------- Aperçu (fenêtre dans la page, jamais un nouvel onglet d'office) ----------
   var previewDialog = $("[data-pb-preview-dialog]");
+  var previewFrame = $("[data-pb-preview-frame]"), previewVeil = $("[data-pb-preview-veil]"), previewError = $("[data-pb-preview-error]"), previewFullBtn = $("[data-pb-preview-full]");
+  var previewVeilTimer = null;
+  // L'aperçu est toujours rechargé à l'ouverture : il montre aussi le thème du site, les formulaires et les réglages, qui ne figurent pas dans la
+  // révision de la page (réutiliser l'ancien cadre pourrait montrer un rendu périmé). Le cadre est vidé à la fermeture (vidéos et scripts arrêtés).
+  function loadPreview() {
+    clearTimeout(previewVeilTimer);
+    previewError.hidden = true; previewVeil.hidden = true;
+    previewVeilTimer = setTimeout(function () { previewVeil.hidden = false; }, 250); // le voile n'apparaît que si le rendu prend vraiment du temps
+    previewFrame.src = "/marketing/pages/" + PAGE.id + "/apercu?t=" + Date.now();
+  }
+  previewFrame.addEventListener("load", function () {
+    if (!previewFrame.getAttribute("src") || /^about:blank/.test(previewFrame.getAttribute("src"))) return;
+    clearTimeout(previewVeilTimer); previewVeil.hidden = true;
+    var ok = false;
+    try { var d = previewFrame.contentDocument; ok = Boolean(d && d.body && d.body.children.length); } catch (e) { ok = false; } // page d'erreur du navigateur : document inaccessible
+    previewError.hidden = ok;
+  });
+  function setPreviewFull(on) {
+    previewDialog.classList.toggle("is-full", on);
+    previewFullBtn.setAttribute("aria-pressed", String(on));
+    var label = on ? "Quitter le plein écran" : "Plein écran";
+    previewFullBtn.setAttribute("aria-label", label); previewFullBtn.setAttribute("data-tip", label);
+    store.set("preview-full", on);
+  }
   function openPreview() {
     if (editing) commitEdit();
-    var go = function () { $("[data-pb-preview-frame]").src = "/marketing/pages/" + PAGE.id + "/apercu?t=" + Date.now(); previewDialog.showModal(); };
+    var go = function () { setPreviewFull(Boolean(store.get("preview-full", false))); loadPreview(); previewDialog.showModal(); };
     if (dirty && !blocked) { clearTimeout(saveTimer); save().then(go); } else go();
   }
   $("[data-pb-preview]").addEventListener("click", openPreview);
-  $$("[data-preview-device]").forEach(function (b) { b.addEventListener("click", function () { $$("[data-preview-device]").forEach(function (x) { x.setAttribute("aria-checked", String(x === b)); }); $("[data-pb-preview-frame]").dataset.device = b.dataset.previewDevice; }); });
-  previewDialog.addEventListener("close", function () { $("[data-pb-preview-frame]").src = "about:blank"; });
+  $$("[data-preview-device]").forEach(function (b) { b.addEventListener("click", function () { $$("[data-preview-device]").forEach(function (x) { x.setAttribute("aria-checked", String(x === b)); }); previewFrame.dataset.device = b.dataset.previewDevice; }); });
+  previewFullBtn.addEventListener("click", function () { setPreviewFull(!previewDialog.classList.contains("is-full")); });
+  $("[data-pb-preview-retry]").addEventListener("click", loadPreview);
+  // Échap quitte d'abord le plein écran, puis (second appui) ferme l'aperçu
+  previewDialog.addEventListener("keydown", function (e) { if (e.key === "Escape" && previewDialog.classList.contains("is-full")) { e.preventDefault(); setPreviewFull(false); } });
+  previewDialog.addEventListener("close", function () { clearTimeout(previewVeilTimer); previewVeil.hidden = true; previewError.hidden = true; previewFrame.src = "about:blank"; });
 
   // ---------- Menu contextuel (clic droit) ----------
   var menu = $("[data-pb-menu]");

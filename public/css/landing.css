@@ -24,7 +24,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 .lp-body { overflow-x: clip; margin: 0; background: var(--lp-bg, #f3f8fc); color: var(--lp-text, #10222f); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.6; }
 .lp-main { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
-.lp-preview-bar { margin: 0; padding: 8px 16px; background: #fff7e0; color: #5b4300; font-size: 14px; text-align: center; border-bottom: 1px solid #f0d58c; }
+.lp-preview-bar { margin: 0; padding: 4px 12px; background: #fff7e0; color: #5b4300; font-size: 12.5px; line-height: 1.35; text-align: center; border-bottom: 1px solid #f0d58c; }
 .lp-hero { text-align: center; padding: 24px 0 8px; }
 .lp-hero-img { display: block; width: 100%; max-height: 420px; object-fit: cover; border-radius: 12px; margin: 0 0 24px; }
 .lp-hero h1 { margin: 0 0 12px; font-size: clamp(28px, 6vw, 44px); line-height: 1.15; letter-spacing: -0.01em; }
