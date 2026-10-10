@@ -4418,9 +4418,6 @@
     } else if (it.type === "grid") {
       plus("is-row", r.left + r.width / 2, r.top + r.height, "Ajouter une ligne", function () { gridAddRow(it.id); });
       plus("is-col", r.left + r.width, r.top + r.height / 2, "Ajouter une colonne", function () { gridSetColumns(it.id, gridColumnsOf(it) + 1); });
-    } else if (kidsOf(it) && !kidsOf(it).length) {
-      // À CÔTÉ du « + » de la zone vide (44 px, centré : « créer une structure »), jamais par-dessus : sinon il le recouvrait et la création d'un container devenait inaccessible au centre
-      plus("is-inside", Math.min(r.left + r.width / 2 + 46, r.left + r.width - 14), r.top + r.height / 2, "Ajouter un élément ici", function () { openCommands("Ajouter", { inside: it.id }); });
     }
   }
   // Tirer la séparation entre deux colonnes : les deux voisines se partagent leur largeur commune
