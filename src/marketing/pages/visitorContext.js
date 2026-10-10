@@ -18,9 +18,11 @@ function visitorContext(db, organizationId, req) {
   const customer = Boolean((contact && db.prepare("SELECT 1 FROM mk_events WHERE organization_id = ? AND contact_id = ? AND name = 'lms.order_completed' LIMIT 1").get(organizationId, contact.id))
     || (user && require("../bridge/catalog").userHasOrder({ db, organizationId }, user.id)));
   // Prénom (contact connu), connexion et panier : pour les éléments « Texte dynamique » et « Compte du visiteur »
-  const cart = req.session && req.session.cart && typeof req.session.cart === "object" ? Object.keys(req.session.cart).length : 0;
+  const cartKeys = req.session && req.session.cart && typeof req.session.cart === "object" ? Object.keys(req.session.cart) : [];
+  const cart = cartKeys.length;
+  const cartIds = cartKeys.filter((k) => /^\d{1,9}$/.test(k)).slice(0, 20).map(Number); // lignes du panier (identifiants de formations) pour le widget « Panier »
   req._kwVisitor = { known: Boolean(contact || user), student: Boolean(user), subscribed: Boolean(contact && contact.status === "subscribed"), customer, tags, score: contact ? contact.score : 0,
-    firstName: contact && contact.first_name ? String(contact.first_name).trim().slice(0, 60) : "", loggedIn: Boolean(user), cartCount: cart,
+    firstName: contact && contact.first_name ? String(contact.first_name).trim().slice(0, 60) : "", loggedIn: Boolean(user), cartCount: cart, cartIds,
     // Adresse demandée (boucles filtrées par ?q= / ?categorie=, pagination) : textes courts seulement
     query: Object.fromEntries(Object.entries(req.query || {}).filter(([k, v]) => /^[a-z0-9_-]{1,40}$/i.test(k) && typeof v === "string").slice(0, 20).map(([k, v]) => [k, v.slice(0, 120)])), role: user && user.role ? String(user.role) : "" };
   return req._kwVisitor;

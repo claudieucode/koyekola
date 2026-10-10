@@ -47,6 +47,36 @@ Variables : `p` (réglages validés), `cls` et `attrs` (classes et attributs com
 (liens déjà comptés, par clé de champ `link` : utiliser `L.<clé>`, **jamais** l'adresse brute, sinon le comptage des clics
 est faux), `isBuilder` (vrai dans le canevas de l'éditeur). Toujours `<%= %>` (échappé) pour le texte.
 
+## Liste d'éléments répétés (`kind: "items"`)
+
+Pour des diapositives, des liens, des témoignages… : un champ `items` contient une **liste** dont chaque élément a les mêmes sous-champs.
+
+```js
+{ key: "links", kind: "items", label: "Liens", min: 1, max: 12,
+  default: [{ label: "Mon site", url: "/" }],            // contenu de départ (au moins `min` éléments)
+  fields: [                                              // sous-champs : mêmes types que ci-dessus, sauf « items » (pas de liste dans une liste)
+    { key: "label", kind: "text", label: "Texte", max: 60, required: true, default: "Mon lien" },
+    { key: "url", kind: "link", label: "Adresse", required: true, default: "/" } ] }
+```
+
+- `max` (1 à 24) est obligatoire ; `min` (0 à `max`) aussi borné ; un `min` de 1 ou plus exige un `default` d'au moins `min` éléments.
+- Le serveur valide chaque sous-champ de chaque élément (liens et images sûrs, bornes, obligatoires) et refuse trop ou trop peu d'éléments.
+- L'inspecteur affiche chaque élément avec ses champs et les actions **monter / descendre / supprimer** (le minimum est protégé) et « Ajouter un élément » (le maximum est protégé).
+- Gabarit : `p.<champ>` est le tableau ; les liens d'un sous-champ `link` sont comptés élément par élément : `L.<champ>[i].<sous-champ>` (**jamais** l'adresse brute).
+
+## Réglages d'ensemble et fiche de bibliothèque
+
+| Clé | Rôle |
+|---|---|
+| `validate(réglages, lieu)` | (facultatif) règle qui porte sur l'ensemble des réglages déjà validés ; lève une `Error` claire (ex. « un bouton demande une adresse »). Évitez d'importer `../nodes` en tête de fichier (dépendance circulaire) : faites-le dans la fonction. |
+| `description` | (facultatif, 160 caractères) phrase affichée en infobulle dans la bibliothèque. |
+| `status` | (facultatif) `operational`, `partial` ou `dependency` : état réel du widget. |
+| `dependencies` | (facultatif) liste de ce qui est exigé (service, clé, formation…), à documenter pour l'équipe. |
+| `data(ctx, réglages, env)` | (facultatif) données calculées à l'affichage pour le gabarit (`d`), jamais bloquant. |
+
+Exemples complets : `widgets/linkinbio.js` (liste de liens), `widgets/carrousels.js` (diaporama, témoignages, médias : carrousel du site réutilisé),
+`widgets/readmore.js` (déplier natif, sans script), `widgets/textpath.js` (SVG).
+
 ## Ce que le moteur fait seul
 
 - validation et nettoyage des réglages (côté serveur, à chaque enregistrement) ;

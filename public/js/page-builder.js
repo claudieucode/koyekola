@@ -1078,7 +1078,7 @@
   var elCategory = store.get("el-category", "");
   var elClosed = store.get("el-closed", []);
   function elementGroups() {
-    var item = function (t) { var need = deniedWidget(t.type); return { type: t.type, sub: t.sub || null, label: t.label, icon: t.icon, keywords: t.keywords, locked: need ? "Widget " + SPEC.widgetPermissions[need] + "." : null, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; };
+    var item = function (t) { var need = deniedWidget(t.type); return { type: t.type, sub: t.sub || null, label: t.label, desc: t.description || null, icon: t.icon, keywords: t.keywords, locked: need ? "Widget " + SPEC.widgetPermissions[need] + "." : null, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; };
     var groups = Object.keys(SPEC.widgetGroups).map(function (k) { return { key: k, label: SPEC.widgetGroups[k], items: SPEC.types.filter(function (t) { return t.group === k; }).map(item) }; });
     groups[0].items.unshift({ type: "layout", label: "Section libre", icon: "layout", keywords: "section libre bloc zone" });
     (SPEC.shortcuts || []).forEach(function (sc) { var g = groups.find(function (x) { return x.key === sc.group; }); if (g) g.items.push({ type: sc.type, sub: sc.sub || null, shortcut: sc, label: sc.label, icon: sc.icon, keywords: sc.keywords }); });
@@ -1130,7 +1130,7 @@
       g.items.forEach(function (it) {
         if (g.key === "site" && !f && it.sub !== lastSub) { lastSub = it.sub; ul.appendChild(h("li", { class: "pb-pal-subhead", text: it.sub || "Autres" })); }
         var off = it.disabled || it.locked;
-        var btn = h("button", { type: "button", class: "pb-pal-item" + (it.locked ? " is-locked" : ""), disabled: !canWrite || Boolean(it.disabled), "aria-disabled": it.locked ? "true" : null, "data-tip": off || null, "data-widget": it.shortcut ? it.shortcut.key : it.type,
+        var btn = h("button", { type: "button", class: "pb-pal-item" + (it.locked ? " is-locked" : ""), disabled: !canWrite || Boolean(it.disabled), "aria-disabled": it.locked ? "true" : null, "data-tip": off || it.desc || null, "data-widget": it.shortcut ? it.shortcut.key : it.type,
           onclick: function () { if (it.locked) { toast(it.label + " : " + it.locked, true); return; } useElement(it); if (it.shortcut) addShortcut(it.shortcut); else if (it.legacy) addLegacy(it.type); else addElement(it.type); } },
           icon(it.icon), h("span", { text: it.label }), f && it.legacy && it.type !== "form" ? h("span", { class: "pb-pal-kind", text: "Section prête" }) : null, it.locked ? h("span", { class: "pb-pal-lock", "aria-label": "Réservé" }, icon("lock")) : null);
         if (!off) draggableSource(btn, it.legacy ? { type: it.type, section: true } : { type: it.type }, function (target) { useElement(it); if (it.shortcut) addShortcut(it.shortcut, target); else if (it.legacy) addLegacy(it.type, target); else addElement(it.type, target); });
@@ -1428,20 +1428,57 @@
 
   // Contenu de chaque élément (onglet « Contenu »)
   // Widget personnalisé : champs de l'inspecteur générés depuis sa description (src/marketing/pages/widgets)
+  // Un champ simple d'un widget personnalisé ; set(valeur, léger, clé) l'enregistre (léger = saisie au clavier : une seule étape d'annulation par rafale)
+  function schemaScalar(f, val, set, disabled, widgetType) {
+    var frag = document.createDocumentFragment();
+    if (f.kind === "text" || f.kind === "textarea" || f.kind === "link") frag.appendChild(textField(f.label, val, function (v) { set(v, true); }, { max: f.max || (f.kind === "textarea" ? 1000 : f.kind === "link" ? 500 : 200), multiline: f.kind === "textarea", list: f.kind === "link" ? "pb-links" : null, placeholder: f.kind === "link" ? "/catalogue, /p/…, #ancre ou https://…" : null, disabled: disabled }));
+    else if (f.kind === "number") frag.appendChild(numberField(f.label, val, { min: f.min, max: f.max, step: f.step || 1, integer: f.integer || Number.isInteger(f.min) && Number.isInteger(f.max) && !f.step, disabled: disabled }, function (n, opts) { if (n === null) return false; set(n, opts && opts.light, opts && opts.key); }, "Entre " + f.min + " et " + f.max + "."));
+    else if (f.kind === "select") frag.appendChild(selectField(f.label, val, f.options, function (v) { set(v); }, { disabled: disabled }));
+    else if (f.kind === "bool") frag.appendChild(checkField(f.label, val === true, function (v) { set(v); }, { disabled: disabled }));
+    else if (f.kind === "image") {
+      frag.appendChild(h("p", { class: "pb-sub", text: f.label }));
+      frag.appendChild(mediaPreview(val, function (m) { set(m.path); }, disabled));
+      if (val && !f.required) frag.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled, onclick: function () { set(""); } }, "Retirer l'image"));
+    } else if (f.kind === "icon") { frag.appendChild(h("p", { class: "pb-sub", text: f.label })); frag.appendChild(iconPicker(val || "", function (v) { set(v); }, disabled)); }
+    else if (f.kind === "color") { var cid = fid(); frag.appendChild(h("div", { class: "pb-field" }, h("label", { for: cid, text: f.label }), colorButton(cid, val, undefined, disabled, function (v, o) { set(v || "", o && o.light); }, "w-" + widgetType + "-" + f.key))); }
+    return frag;
+  }
+  // Valeur de départ d'un nouvel élément d'une liste : défaut du sous-champ, sinon vide / 1re option / minimum
+  function blankItem(f) {
+    var o = {};
+    f.fields.forEach(function (sf) { o[sf.key] = sf.default !== undefined ? sf.default : sf.kind === "bool" ? false : sf.kind === "number" ? sf.min : sf.kind === "select" ? sf.options[0][0] : ""; });
+    return o;
+  }
+  // Liste d'éléments répétés (diapositives, liens, témoignages…) : ajouter, supprimer, réordonner, et chaque sous-champ modifie le rendu réel
+  function itemsEditor(it, f, disabled) {
+    var list = (it.props && it.props[f.key]) || [], min = f.min || 0;
+    // Les actions relisent TOUJOURS la liste courante de l'élément (une saisie « légère » ne reconstruit pas l'inspecteur : la liste capturée à l'affichage serait périmée)
+    var live = function () { var n = byId(it.id); return (n && n.props && n.props[f.key]) || []; };
+    var wrap = h("div", { class: "pb-items", role: "group", "aria-label": f.label });
+    wrap.appendChild(h("p", { class: "pb-sub", text: f.label + " (" + list.length + (f.max ? " sur " + f.max : "") + ")" }));
+    var commit = function (next, light, key) { setProp(it.id, f.key, next, light ? { key: key, light: true } : null); };
+    list.forEach(function (item, i) {
+      var move = function (d) { var cur = live(), next = cur.slice(), t = next[i]; next[i] = next[i + d]; next[i + d] = t; commit(next); };
+      var head = h("div", { class: "pb-items-head" }, h("strong", { text: "Élément " + (i + 1) }), h("span", { class: "pb-items-tools" },
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Monter l'élément " + (i + 1), "data-tip": "Monter", disabled: disabled || i === 0, onclick: function () { move(-1); } }, icon("arrowUp")),
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Descendre l'élément " + (i + 1), "data-tip": "Descendre", disabled: disabled || i === list.length - 1, onclick: function () { move(1); } }, icon("arrowDown")),
+        h("button", { type: "button", class: "pb-icon-btn is-danger", "aria-label": "Supprimer l'élément " + (i + 1), "data-tip": "Supprimer", disabled: disabled || list.length <= min, onclick: function () { commit(live().filter(function (_, k) { return k !== i; })); } }, icon("trash"))));
+      var card = h("div", { class: "pb-items-item" }, head);
+      f.fields.forEach(function (sf) {
+        var set = function (v, light, key) { var next = live().map(function (x) { return Object.assign({}, x); }); if (!next[i]) return; next[i][sf.key] = v; commit(next, light, key || it.id + ":" + f.key + ":" + i + ":" + sf.key); };
+        card.appendChild(schemaScalar(sf, item[sf.key], set, disabled, it.type));
+      });
+      wrap.appendChild(card);
+    });
+    wrap.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled || list.length >= f.max, onclick: function () { commit(live().concat([blankItem(f)])); } }, icon("plus"), "Ajouter un élément"));
+    return wrap;
+  }
   function schemaFields(it, box, disabled) {
     var p = it.props || (it.props = {});
     (NT[it.type].schema || []).forEach(function (f) {
-      var set = function (v, light) { setProp(it.id, f.key, v, light ? { key: it.id + ":" + f.key, light: true } : null); };
-      if (f.kind === "text" || f.kind === "textarea" || f.kind === "link") box.appendChild(textField(f.label + (f.required ? "" : ""), p[f.key], function (v) { set(v, true); }, { max: f.max || (f.kind === "textarea" ? 1000 : f.kind === "link" ? 500 : 200), multiline: f.kind === "textarea", list: f.kind === "link" ? "pb-links" : null, placeholder: f.kind === "link" ? "/catalogue, /p/…, #ancre ou https://…" : null, disabled: disabled }));
-      else if (f.kind === "number") box.appendChild(numberField(f.label, p[f.key], { min: f.min, max: f.max, step: f.step || 1, integer: f.integer || Number.isInteger(f.min) && Number.isInteger(f.max) && !f.step, disabled: disabled }, function (n, opts) { if (n === null) return false; setProp(it.id, f.key, n, opts && opts.light ? { key: opts.key, light: true } : null); }, "Entre " + f.min + " et " + f.max + "."));
-      else if (f.kind === "select") box.appendChild(selectField(f.label, p[f.key], f.options, function (v) { set(v); }, { disabled: disabled }));
-      else if (f.kind === "bool") box.appendChild(checkField(f.label, p[f.key] === true, function (v) { set(v); }, { disabled: disabled }));
-      else if (f.kind === "image") {
-        box.appendChild(h("p", { class: "pb-sub", text: f.label }));
-        box.appendChild(mediaPreview(p[f.key], function (m) { set(m.path); }, disabled));
-        if (p[f.key] && !f.required) box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled, onclick: function () { set(""); } }, "Retirer l'image"));
-      } else if (f.kind === "icon") { box.appendChild(h("p", { class: "pb-sub", text: f.label })); box.appendChild(iconPicker(p[f.key] || "", function (v) { set(v); }, disabled)); }
-      else if (f.kind === "color") { var cid = fid(); box.appendChild(h("div", { class: "pb-field" }, h("label", { for: cid, text: f.label }), colorButton(cid, p[f.key], undefined, disabled, function (v, o) { setProp(it.id, f.key, v || "", o && o.light ? { key: it.id + ":" + f.key, light: true } : null); }, "w-" + it.type + "-" + f.key))); }
+      if (f.kind === "items") { box.appendChild(itemsEditor(it, f, disabled)); return; }
+      var set = function (v, light, key) { setProp(it.id, f.key, v, light ? { key: key || it.id + ":" + f.key, light: true } : null); };
+      box.appendChild(schemaScalar(f, p[f.key], set, disabled, it.type));
     });
   }
   function nodeContentFields(it, box, disabled) {
@@ -1473,6 +1510,7 @@
         break;
       case "code":
         box.appendChild(textField("Texte affiché tel quel", p.text, set("text"), { multiline: true, rows: "8", max: 4000, disabled: disabled, hint: "Affiché comme texte, jamais exécuté." }));
+        box.appendChild(selectField("Coloration du code", p.language || "text", SPEC.codeLanguages, function (v) { change(function () { var x = byId(it.id); if (v === "text") delete x.props.language; else x.props.language = v; }); }, { disabled: disabled }));
         break;
       case "image":
         box.appendChild(mediaPreview(/^\{\{/.test(p.src || "") ? "" : p.src, function (m) { change(function () { var x = byId(it.id); x.props.src = m.path; if (m.alt && !x.props.alt) { x.props.alt = m.alt; delete x.props.decorative; } }); }, disabled));

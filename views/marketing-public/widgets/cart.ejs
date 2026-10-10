@@ -1,0 +1,10 @@
+<%# Panier (widgets/cart.js). Variables : p, cls, attrs, d = { items, totalCents }. Routes du site : /panier, /commande. %>
+<% const money = (c) => c ? (c / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €" : "Gratuit"; const items = (d && d.items) || []; %>
+<section class="<%= cls %>"<%- attrs %>>
+  <% if (p.title) { %><h3 class="kw-cart-title"><%= p.title %></h3><% } %>
+  <% if (!items.length) { %><p class="kw-cart-empty"><%= p.empty %></p><% } else { %>
+    <ul class="kw-cart-lines"><% items.forEach((c) => { %><li class="kw-cart-line"><% if (p.showImage && c.image) { %><img class="kw-cart-img" src="<%= c.image %>" alt="" loading="lazy" decoding="async"><% } %><a class="kw-cart-name" href="<%= c.url %>"><%= c.title %></a><span class="kw-cart-price"><%= money(c.priceCents) %></span></li><% }) %></ul>
+    <% if (p.showTotal) { %><p class="kw-cart-total"><span>Total</span><strong><%= money(d.totalCents) %></strong></p><% } %>
+    <div class="kw-cart-actions"><a class="kw-button" href="/commande"><%= p.checkoutLabel %></a><% if (p.cartLabel) { %><a class="kw-cart-edit" href="/panier"><%= p.cartLabel %></a><% } %></div>
+  <% } %>
+</section>

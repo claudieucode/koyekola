@@ -52,7 +52,7 @@
 <% } else if (n.type === "quote") { %>
   <blockquote class="<%= cls %>"<%- attrs %>><p><%= p.text %></p><% if (p.author) { %><footer>— <%= p.author %></footer><% } %></blockquote>
 <% } else if (n.type === "code") { %>
-  <pre class="<%= cls %>"<%- attrs %>><code><%= p.text %></code></pre>
+  <pre class="<%= cls %>"<%- attrs %>><% if (p.html !== undefined) { %><code class="language-<%= p.language %>"><%- p.html %></code><% } else { %><code><%= p.text %></code><% } %></pre>
 <% } else if (n.type === "image") { %>
   <% const imgTag = `<img src="${esc(p.src)}" alt="${esc(p.alt)}"${p.title ? ` title="${esc(p.title)}"` : ""} loading="lazy" decoding="async">`; %>
   <figure class="<%= cls %>"<%- attrs %>><% if (p.link) { %><a href="<%= href(p.link) %>"<%- p.newTab ? ' target="_blank" rel="noopener noreferrer"' : "" %>><%- imgTag %></a><% } else { %><%- imgTag %><% } %><% if (p.caption) { %><figcaption><%= p.caption %></figcaption><% } %></figure>
@@ -97,7 +97,9 @@
   <div class="<%= cls %>"<%- attrs %>><% if (p.title) { %><span class="kw-rating-title"><%= p.title %></span><% } %><span class="kw-rating-stars" role="img" aria-label="Note : <%= fr(p.value) %> sur <%= p.scale %>"><span class="kw-rating-bg" aria-hidden="true"><%= "★".repeat(p.scale) %></span><span class="kw-rating-fill" aria-hidden="true"><%= "★".repeat(p.scale) %></span></span><% if (p.showValue) { %><span class="kw-rating-value" aria-hidden="true"><%= fr(p.value) %>/<%= p.scale %></span><% } %></div>
 <% } else if (n.type === "menuanchor") { %>
   <% if (isBuilder) { %><div class="<%= cls %> kw-anchor-mark"<%- attrs %>>⚓ Ancre « #<%= n.anchor || "?" %> »</div><% } else if (n.anchor) { %><div class="<%= cls %>"<%- attrs %>></div><% } %>
-<% } else if (n.customView) { const L = {}; n.customView.links.forEach((k) => { if (p[k]) L[k] = href(p[k]); }); %>
+<% } else if (n.customView) { const L = {};
+  // Liens comptés dans l'ordre du schéma ; une liste donne un tableau d'objets (L.<champ>[i].<sous-champ>), élément par élément (même ordre que linksOf)
+  n.customView.fields.forEach((f) => { if (f.kind === "link") { if (p[f.key]) L[f.key] = href(p[f.key]); } else if (f.kind === "items") { L[f.key] = (p[f.key] || []).map((it) => { const o = {}; f.subs.forEach((sf) => { if (sf.kind === "link" && it[sf.key]) o[sf.key] = href(it[sf.key]); }); return o; }); } }); %>
   <%- include(n.customView.partial, { n, p, cls, attrs, L, isBuilder, d: n.customView.data }) %>
 <% } else if (n.type === "sitelogo") { const inner = p.logo ? `<img class="kw-sitelogo-img" src="${esc(p.logo)}" alt="${esc(p.name)}">` : `<span class="kw-sitelogo-text">${esc(p.name)}</span>`; %>
   <div class="<%= cls %>"<%- attrs %>><% if (p.link && p.homeUrl) { %><a class="kw-sitelogo-link" href="<%= href(p.homeUrl) %>"<%- p.logo ? "" : "" %>><%- inner %></a><% } else { %><%- inner %><% } %><% if (isBuilder && !p.logo) { %><p class="kw-empty">Aucun logo : ajoutez-le dans SEO › Réglages › Organisation (le nom du site s'affiche en attendant).</p><% } %></div>
