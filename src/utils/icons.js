@@ -145,6 +145,7 @@ const ICONS = {
   mail: { body: '<rect x="3" y="5" width="18" height="14" rx="2"></rect><polyline points="3 7 12 13 21 7"></polyline>' },
   send: { body: '<line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>' },
   layout: { body: '<rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="9" x2="9" y2="21"></line>' },
+  keyboard: { body: '<rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 8h.01"></path><path d="M10 8h.01"></path><path d="M14 8h.01"></path><path d="M18 8h.01"></path><path d="M8 12h.01"></path><path d="M12 12h.01"></path><path d="M16 12h.01"></path><path d="M7 16h10"></path>' },
   zap: { body: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>' },
   activity: { body: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>' },
   shield: { body: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path><polyline points="9 12 11 14 15 10"></polyline>' },

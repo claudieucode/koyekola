@@ -31,6 +31,8 @@
     get: function (k, d) { try { var v = localStorage.getItem("pb:" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
     set: function (k, v) { try { localStorage.setItem("pb:" + k, JSON.stringify(v)); } catch (e) { /* stockage indisponible */ } },
   };
+  // Comportement des accordéons : réglage d'interface (mémorisé dans ce navigateur, jamais dans le document de la page)
+  if (window.KWAccordion) window.KWAccordion.configure({ get: function () { return store.get("acc-mode", "many"); }, set: function (v) { store.set("acc-mode", v); } });
   function h(tag, attrs) {
     var el = document.createElement(tag);
     Object.keys(attrs || {}).forEach(function (k) {
@@ -628,15 +630,15 @@
   function resetStyle() {
     var ids = selection.slice();
     if (!ids.length || refuseLocked(ids)) return;
-    var any = ids.some(function (id) { var it = byId(id); return it && (it.styles || it.states); });
+    var any = ids.some(function (id) { var it = byId(id); return it && (it.styles || it.states || it.parts); });
     if (!any) { toast("Aucun style propre à réinitialiser."); return; }
-    change(function () { ids.forEach(function (id) { var it = byId(id); if (it) { delete it.styles; delete it.states; } }); });
+    change(function () { ids.forEach(function (id) { var it = byId(id); if (it) { delete it.styles; delete it.states; delete it.parts; } }); });
     toast("Style réinitialisé (tous les écrans et états). Ctrl/⌘ + Z pour annuler.");
   }
   function copyStyle() {
     var it = selectedItems()[0];
     if (!it) return;
-    styleClipboard = { styles: clone(it.styles || {}), states: clone(it.states || {}), style: clone(it.style || null) };
+    styleClipboard = { styles: clone(it.styles || {}), states: clone(it.states || {}), style: clone(it.style || null), type: it.type, parts: clone(it.parts || {}) };
     store.set("style-clipboard", styleClipboard);
     toast("Style copié depuis « " + nameOf(it) + " ».");
   }
@@ -678,6 +680,22 @@
             it.states[state][key] = clone(st.states[state][key]); applied++;
           });
         });
+        // Parties (carte, titre…) : reprises seulement entre widgets du MÊME type, partie par partie, et seulement les réglages que la partie accepte
+        if (st.type && st.type === it.type) Object.keys(st.parts || {}).forEach(function (pk) {
+          var def = partDef(it, pk), src = st.parts[pk];
+          if (!def) return;
+          var okKey = function (key) { var g = SP[key] && SP[key].group; if (key === "backgroundColor") g = "background"; var spec = g && def.groups[g]; return spec === true || (Array.isArray(spec) && spec.indexOf(key) >= 0); };
+          [["styles", Object.keys(src.styles || {})], ["states", Object.keys(src.states || {})]].forEach(function (kind) {
+            kind[1].forEach(function (slot) {
+              Object.keys(src[kind[0]][slot] || {}).forEach(function (key) {
+                if (!wanted(key)) return;
+                if (!okKey(key)) { skipped++; return; }
+                it.parts = it.parts || {}; it.parts[pk] = it.parts[pk] || {}; it.parts[pk][kind[0]] = it.parts[pk][kind[0]] || {}; it.parts[pk][kind[0]][slot] = it.parts[pk][kind[0]][slot] || {};
+                it.parts[pk][kind[0]][slot][key] = clone(src[kind[0]][slot][key]); applied++;
+              });
+            });
+          });
+        });
       });
       if (!applied) return false;
     }, { label: only ? "Coller le style (" + only.map(function (g) { return (STYLE_GROUPS.filter(function (x) { return x[0] === g; })[0] || [0, g])[1].toLowerCase(); }).join(", ") + ")" : "Coller le style" });
@@ -687,15 +705,26 @@
 
   // ---------- Styles (par écran et par état) ----------
   // Écran modifié = écran affiché. Une valeur absente est héritée de l'écran plus grand.
+  // Cible des réglages : null = le widget lui-même ; sinon une de ses PARTIES (carte, image, titre…, déclarées par le registre). Les parties ont la même forme
+  // que le widget ({ styles: { écran }, states: { état } }) : tous les contrôles, l'historique et l'enregistrement fonctionnent donc sans changement.
+  var styleTarget = null;
+  function holderOf(it, create) {
+    if (!styleTarget || !partDef(it, styleTarget)) return it;
+    if (!it.parts || !it.parts[styleTarget]) { if (!create) return null; it.parts = it.parts || {}; it.parts[styleTarget] = {}; }
+    return it.parts[styleTarget];
+  }
+  function partDef(it, key) { var d = it && isNode(it) && NT[it.type] && NT[it.type].parts; return d ? d.filter(function (x) { return x.key === key; })[0] || null : null; }
   function styleSet(it, bp, state, create) {
+    var o = holderOf(it, create);
+    if (!o) return null;
     if (state && state !== "normal") {
-      if (!it.states) { if (!create) return null; it.states = {}; }
-      if (!it.states[state]) { if (!create) return null; it.states[state] = {}; }
-      return it.states[state];
+      if (!o.states) { if (!create) return null; o.states = {}; }
+      if (!o.states[state]) { if (!create) return null; o.states[state] = {}; }
+      return o.states[state];
     }
-    if (!it.styles) { if (!create) return null; it.styles = {}; }
-    if (!it.styles[bp]) { if (!create) return null; it.styles[bp] = {}; }
-    return it.styles[bp];
+    if (!o.styles) { if (!create) return null; o.styles = {}; }
+    if (!o.styles[bp]) { if (!create) return null; o.styles[bp] = {}; }
+    return o.styles[bp];
   }
   function ownValue(it, key) { var s = styleSet(it, device, styleState, false); return s && s[key] !== undefined ? s[key] : undefined; }
   // Valeur héritée (écrans plus grands) : affichée en indication grise
@@ -703,17 +732,22 @@
     if (styleState !== "normal") return undefined;
     var i = BPS.indexOf(device);
     // Grille sans réglage propre à la tablette / au mobile : 2 colonnes au plus sur tablette, 1 sur mobile (voir pageCss)
-    if (it.type === "grid" && (key === "columns" || key === "gridTemplate") && i > 0) {
+    if (!styleTarget && it.type === "grid" && (key === "columns" || key === "gridTemplate") && i > 0) {
       var own = function (b) { var st = it.styles && it.styles[b]; return st && (st.columns !== undefined || st.gridTemplate !== undefined); };
       var d = (it.styles && it.styles.desktop) || {}, cols = d.gridTemplate ? String(d.gridTemplate).split(" ").length : Number(d.columns) || 0;
       if (!own("tablet") && (device === "tablet" ? cols > 2 : !own("mobile") && cols > 1)) return key === "columns" ? (device === "tablet" ? 2 : 1) : undefined;
     }
-    for (var j = i - 1; j >= 0; j--) { var s = it.styles && it.styles[BPS[j]]; if (s && s[key] !== undefined) return s[key]; }
+    var ho = holderOf(it, false);
+    for (var j = i - 1; j >= 0; j--) { var s = ho && ho.styles && ho.styles[BPS[j]]; if (s && s[key] !== undefined) return s[key]; }
     return undefined;
   }
+  function cleanSet(o) {
+    if (o.styles) { BPS.forEach(function (b) { if (o.styles[b] && !Object.keys(o.styles[b]).length) delete o.styles[b]; }); if (!Object.keys(o.styles).length) delete o.styles; }
+    if (o.states) { Object.keys(o.states).forEach(function (k) { if (!Object.keys(o.states[k]).length) delete o.states[k]; }); if (!Object.keys(o.states).length) delete o.states; }
+  }
   function cleanStyles(it) {
-    if (it.styles) { BPS.forEach(function (b) { if (it.styles[b] && !Object.keys(it.styles[b]).length) delete it.styles[b]; }); if (!Object.keys(it.styles).length) delete it.styles; }
-    if (it.states) { Object.keys(it.states).forEach(function (k) { if (!Object.keys(it.states[k]).length) delete it.states[k]; }); if (!Object.keys(it.states).length) delete it.states; }
+    cleanSet(it);
+    if (it.parts) { Object.keys(it.parts).forEach(function (k) { cleanSet(it.parts[k]); if (!Object.keys(it.parts[k]).length) delete it.parts[k]; }); if (!Object.keys(it.parts).length) delete it.parts; }
   }
   var COMPOSED_LABEL = { filter: "filtres", shadow: "ombre personnalisée", overlay: "voile", gradient: "dégradé", backgroundImage: "image de fond", transform: "transformation", mask: "masque" };
   function setStyle(ids, key, value, opts) { var m = {}; m[key] = value; setStyles(ids, m, opts); }
@@ -2463,7 +2497,8 @@
     var it = items[0];
     var own = ownValue(it, key);
     var dis = lockedAny(items);
-    var others = styleState === "normal" ? BPS.filter(function (b) { return b !== "desktop" && it.styles && it.styles[b] && it.styles[b][key] !== undefined; }) : [];
+    var oh = holderOf(it, false);
+    var others = styleState === "normal" ? BPS.filter(function (b) { return b !== "desktop" && oh && oh.styles && oh.styles[b] && oh.styles[b][key] !== undefined; }) : [];
     var marks = others.length ? h("span", { class: "pb-prop-bps" }, others.map(function (b) {
       return h("span", { class: "pb-prop-bp" + (b === device ? " is-current" : ""), title: "Valeur propre à l'écran « " + bpLabel(b) + " »", role: "img", "aria-label": "Valeur propre : " + bpLabel(b) }, icon(DEVICE_ICON[b]));
     })) : null;
@@ -2719,7 +2754,10 @@
     };
     var btn = h("button", { type: "button", class: "pb-tokbtn" + (isTok ? " is-on" : ""), disabled: dis, "aria-haspopup": "menu", "aria-label": "Valeur du site pour « " + SP[key].label + " »", "data-tip": isTok ? "Lié au site : " + lenTokenLabel(own.slice(6)) + " (cliquer pour changer)" : "Utiliser une valeur du site (suit les réglages du site)", onclick: function () { pick(btn); } }, icon("link"));
     if (isTok) return h("div", { class: "pb-lenwrap is-token" }, h("span", { class: "pb-tokchip", text: "Site : " + lenTokenLabel(own.slice(6)) }), btn);
-    return h("div", { class: "pb-lenwrap" }, numeric, btn);
+    var wrapNum = h("div", { class: "pb-lenwrap" }, numeric, btn);
+    wrapNum.scrub = numeric.scrub; // le glissement sur le libellé vient du champ numérique : l'enveloppe « valeur du site » doit le transmettre
+    wrapNum.input = numeric.input;
+    return wrapNum;
   }
   function lengthControlPlain(items, key, id, own, inh, dis) {
     var units = unitsOf(key), cur = splitLen(own), base = splitLen(inh), cfg = LENCFG[key] || {};
@@ -3096,7 +3134,7 @@
   function breakpointSwitch(items) {
     var it = items[0];
     var seg = h("div", { class: "pb-seg pb-bp-seg", role: "radiogroup", "aria-label": "Écran modifié" }, SPEC.breakpoints.map(function (b) {
-      var own = it.styles && it.styles[b.key] && Object.keys(it.styles[b.key]).length;
+      var bh = holderOf(it, false), own = bh && bh.styles && bh.styles[b.key] && Object.keys(bh.styles[b.key]).length;
       return h("button", { type: "button", role: "radio", "aria-checked": String(device === b.key), class: own ? "has-values" : null, "data-tip": own ? b.label + " · réglages propres à cet écran" : b.label + (b.key === "desktop" ? "" : " · hérite de l'écran plus grand"), "data-device": b.key, onclick: function () { setDevice(b.key); } }, icon(DEVICE_ICON[b.key]), h("span", { class: "sr-only", text: b.label }));
     }));
     return h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "Écran" }), seg);
@@ -3124,11 +3162,34 @@
     extra.forEach(function (k) { if (out.indexOf(k) < 0 && !taken[k] && SP[k]) out.push(k); });
     return out;
   }
+  // Sélecteur de PARTIE (widgets qui en déclarent) : « Widget · Carte · Image · Titre… » ; un point signale une partie déjà personnalisée
+  function partsRow(items, box) {
+    var it = items[0], defs = items.length === 1 && isNode(it) && NT[it.type] && NT[it.type].parts;
+    if (!defs) return;
+    var pick = function (key) { styleTarget = key; renderInspector(); };
+    var chip = function (key, label) {
+      var own = key ? Boolean(it.parts && it.parts[key]) : Boolean(it.styles || it.states);
+      return h("button", { type: "button", class: "pb-part" + (styleTarget === key ? " is-on" : "") + (own ? " has-own" : ""), "aria-pressed": String(styleTarget === key), "data-part": key || "", "data-tip": own ? label + " · réglages propres" : label, onclick: function () { pick(key); } }, label);
+    };
+    var row = h("div", { class: "pb-parts", role: "group", "aria-label": "Partie du widget à modifier" }, chip(null, "Widget"));
+    defs.forEach(function (d) { row.appendChild(chip(d.key, d.label)); });
+    var wrap = h("div", { class: "pb-parts-wrap" }, h("span", { class: "pb-insp-bar-label", text: "Partie" }), row);
+    if (styleTarget && it.parts && it.parts[styleTarget]) wrap.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm pb-part-reset", disabled: lockedAny(items), "data-tip": "Revient aux valeurs par défaut du thème pour cette partie (tous les écrans et états)", onclick: function () {
+      var key = styleTarget;
+      change(function () { var x = byId(it.id); if (x && x.parts) { delete x.parts[key]; cleanStyles(x); } }, { label: "Réinitialiser la partie" });
+      toast("Partie réinitialisée. Ctrl/⌘ + Z pour annuler.");
+    } }, "Réinitialiser la partie"));
+    box.appendChild(wrap);
+  }
   function styleTab(items, box) {
     var it = items[0];
-    var schema = inspectorFor(it);
+    var pdef = styleTarget ? partDef(it, styleTarget) : null;
+    // Partie choisie : ses groupes et ses états (déclarés par le registre) remplacent ceux du widget
+    var schema = pdef ? { kind: pdef.label, groups: pdef.groups, states: pdef.states.length ? pdef.states : null } : inspectorFor(it);
+    partsRow(items, box);
     var bar = breakpointSwitch(items);
-    if (schema.states && items.every(function (x) { return inspectorFor(x).states; })) {
+    if (pdef && styleState !== "normal" && pdef.states.indexOf(styleState) < 0) styleState = "normal";
+    if (schema.states && (pdef || items.every(function (x) { return inspectorFor(x).states; }))) {
       bar.appendChild(h("span", { class: "pb-insp-bar-label is-second", text: "État" }));
       var stateList = Array.isArray(schema.states) ? SPEC.states.filter(function (st) { return schema.states.indexOf(st.key) >= 0; }) : SPEC.states;
       bar.appendChild(h("div", { class: "pb-seg pb-state-seg", role: "radiogroup", "aria-label": "État de l'élément" }, [{ key: "normal", label: "Normal" }].concat(stateList).map(function (st) {
@@ -3142,7 +3203,7 @@
     // dans « Fond » (avec l'image et le dégradé)
     var keysOf = function (g) {
       var spec = schema.groups[g];
-      return Array.isArray(spec) ? spec.slice() : SPEC.styleProps.filter(function (p) { return p.group === g && (CHILD_FLEX.indexOf(p.key) < 0 || it.type === "column"); }).map(function (p) { return p.key; });
+      return Array.isArray(spec) ? spec.slice() : SPEC.styleProps.filter(function (p) { return p.group === g && (CHILD_FLEX.indexOf(p.key) < 0 || it.type === "column") && (p.key !== "lineClamp" || styleTarget); }).map(function (p) { return p.key; });
     };
     var plan = [];
     var order = schema.order || GROUP_ORDER;
@@ -3174,9 +3235,7 @@
   // Un groupe repliable (état ouvert / fermé mémorisé) ; le nombre discret = valeurs propres à l'écran modifié
   var COLOR_LABEL = { color: "Texte" };
   function styleSection(items, g, keys, opts) {
-    var det = h("details", { class: "pb-acc", "data-group": g });
-    if (store.get("open-" + g, Boolean(opts && opts.open))) det.open = true;
-    det.addEventListener("toggle", function () { store.set("open-" + g, det.open); });
+    var det = accShell(g, opts && opts.open);
     var counted = g === "spacing" ? SIDES.map(function (s) { return "margin" + s; }).concat(SIDES.map(function (s) { return "padding" + s; })) : keys;
     var set = counted.filter(function (k, i) { return counted.indexOf(k) === i && items.some(function (x) { return ownValue(x, k) !== undefined; }); }).length;
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: SPEC.groups[g] || g }), set ? h("span", { class: "pb-acc-count", title: set + " réglage(s) propre(s) à cet écran", "aria-label": set + " réglage(s) modifié(s)" }, String(set)) : null));
@@ -3293,15 +3352,28 @@
   var inspTab = store.get("insp-tab", "content");
   var headObserver = null, inspHeadH = 0, inspScroll = 0;
   (function () { var b = $("[data-pb-inspector]"); if (b) b.addEventListener("scroll", function () { inspScroll = b.scrollTop; }, { passive: true }); })();
+  var pendingReveal = null;
+  // Réglage « Comportement des accordéons » (menu principal et commandes) : une entrée par mode, le mode actif est coché
+  function accEntry(m) {
+    var K = window.KWAccordion, on = K && K.getMode() === m;
+    return [(on ? "● " : "○ ") + K.LABELS[m][0], function () { accSetMode(m); }, !K, K.LABELS[m][1]];
+  }
+  function accSetMode(m) {
+    var K = window.KWAccordion; if (!K) return;
+    var closed = K.setMode(m, document.querySelector("[data-pb-inspector]"));
+    toast("Accordéons : « " + K.LABELS[m][0] + " »." + (closed ? " " + closed + " section" + (closed > 1 ? "s" : "") + " refermée" + (closed > 1 ? "s" : "") + " (la dernière ouverte reste ouverte)." : ""));
+  }
   function renderInspector() {
     if (typeof cpop !== "undefined" && cpop && !cpop.hidden) { cpop.hidden = true; cpopFor = null; }
     var box = $("[data-pb-inspector]");
+    if (box.dataset.for !== selection.join(",")) styleTarget = null; // un autre élément : on repart du widget lui-même
     var keepScroll = box.dataset.for === selection.join(",") ? inspScroll : 0;
     box.textContent = "";
     box.dataset.for = selection.join(",");
     // fieldSeq n'est JAMAIS remis à zéro : les identifiants (pb-f-N) restent uniques dans toute la page, sinon un libellé de
     // l'inspecteur désignait un champ d'un autre panneau (réglages de la page…) au clic et pour les lecteurs d'écran
     var items = selectedItems();
+    if (styleTarget && !(items.length === 1 && partDef(items[0], styleTarget))) styleTarget = null;
     // Rien de sélectionné : état vide, et seulement quelques actions globales réelles
     if (!items.length) {
       box.appendChild(h("div", { class: "pb-insp-empty" },
@@ -3352,6 +3424,7 @@
     box.appendChild(tablist);
     var body = h("div", { class: "pb-insp-body", role: "tabpanel" });
     box.appendChild(body);
+    if (inspTab !== "style") styleTarget = null; // les parties ne se règlent que dans l'onglet Style
     if (inspTab === "general") generalTab(it, body, locked);
     else if (inspTab === "interactions") interactionsTab(it, body, locked);
     else if (inspTab === "content") {
@@ -3361,6 +3434,7 @@
       else legacyContentFields(it, body, locked);
     } else if (inspTab === "style") { styleTab(items, body); if (boxTabs) boxStyleExtras(items, body, locked); }
     else advancedTab(items, body, locked);
+    if (window.KWAccordion) window.KWAccordion.normalizeIn(box, pendingReveal); pendingReveal = null; // règle du mode choisi (ex. « un seul ouvert ») appliquée au rendu
     if (keepScroll || inspScroll) { box.scrollTop = keepScroll; inspScroll = keepScroll; } // écrire le défilement impose une mise en page : seulement s'il y a quelque chose à restaurer
   }
   // Contenu d'une section libre ou d'un conteneur : sa structure (enfants cliquables), et comment y ajouter
@@ -3517,7 +3591,7 @@
       b("Dupliquer", duplicateSelected, { disabled: !canWrite }),
       b("Copier le style", copyStyle),
       b("Coller le style", function () { pasteStyle(); }, { disabled: !canWrite || locked }),
-      b("Réinitialiser le style", resetStyle, { disabled: !canWrite || locked || !items.some(function (x) { return x.styles || x.states; }) }),
+      b("Réinitialiser le style", resetStyle, { disabled: !canWrite || locked || !items.some(function (x) { return x.styles || x.states || x.parts; }) }),
       items.length > 1 ? b("Grouper", groupSelected, { disabled: !canWrite || locked }) : null,
       single && ["group", "stack", "container"].indexOf(it.type) >= 0 ? b("Dissocier", ungroupSelected, { disabled: !canWrite || locked }) : null,
       b("Supprimer", removeSelected, { class: "btn btn-danger btn-sm", disabled: !canWrite || locked })));
@@ -3562,11 +3636,18 @@
   // enregistrement automatique, écrans, calques et rendu du canevas fonctionnent donc sans rien de plus. Un autre type d'élément
   // adopte ces onglets en déclarant « tabs: "box" » dans INSPECTORS.
   var LINKABLE = ["container", "grid", "stack", "group"];
-  // Groupe repliable de l'inspecteur (état ouvert mémorisé dans ce navigateur) ; count = réglages en place
-  function accGroup(key, title, defOpen, build, count) {
+  // Coque commune de TOUS les accordéons de l'inspecteur : un <details class="pb-acc"> dont l'état ouvert / fermé est mémorisé dans ce navigateur
+  // (« open-<clé> »). Le comportement à l'ouverture (un seul ouvert, plusieurs, fermer en dessous) est donné par le moteur commun
+  // (accordion-engine.js), qui agit sur tout <details class="pb-acc"> : rien à écrire ici pour un nouvel accordéon.
+  function accShell(key, defOpen) {
     var det = h("details", { class: "pb-acc", "data-group": key });
     if (store.get("open-" + key, Boolean(defOpen))) det.open = true;
     det.addEventListener("toggle", function () { store.set("open-" + key, det.open); });
+    return det;
+  }
+  // Groupe repliable de l'inspecteur (état ouvert mémorisé dans ce navigateur) ; count = réglages en place
+  function accGroup(key, title, defOpen, build, count) {
+    var det = accShell(key, defOpen);
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: title }), count ? h("span", { class: "pb-acc-count", "aria-label": count + " réglage(s) en place" }, String(count)) : null));
     var inner = h("div", { class: "pb-acc-body" });
     build(inner);
@@ -3626,9 +3707,7 @@
     if (window.pbEffects && window.pbEffects.motion) return window.pbEffects.motion(it, locked); // moteur de mouvement (page-builder-effects.js)
     var m = it.motion || {};
     var setM = function (k, v) { nextLabel = "Animation"; change(function () { var x = byId(it.id); var n = Object.assign({}, x.motion); if (v === "" || v === undefined) delete n[k]; else n[k] = v; if (k === "entrance" && !v) { delete n.duration; delete n.delay; } if (k === "entrance" && v) { if (n.duration === undefined) n.duration = 600; if (n.delay === undefined) n.delay = 0; } if (Object.keys(n).length) x.motion = n; else delete x.motion; }); };
-    var det = h("details", { class: "pb-acc", "data-group": "motion" });
-    if (store.get("open-motion", Boolean(m.entrance || m.hover))) det.open = true;
-    det.addEventListener("toggle", function () { store.set("open-motion", det.open); });
+    var det = accShell("motion", Boolean(m.entrance || m.hover));
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: "Animation" }), m.entrance || m.hover ? h("span", { class: "pb-acc-count", text: String((m.entrance ? 1 : 0) + (m.hover ? 1 : 0)) }) : null));
     var inner = h("div", { class: "pb-acc-body" });
     inner.appendChild(selectField("À l'apparition", m.entrance || "", [["", "Aucune"]].concat(SPEC.entrances), function (v) { setM("entrance", v); }, { disabled: locked }));
@@ -3648,9 +3727,7 @@
   // Interactions : déclencheur sur cet élément → action sur un élément de la page ; état de départ ; programmation
   function interactionField(it, locked) {
     var list = it.interactions || [];
-    var det = h("details", { class: "pb-acc", "data-group": "interactions" });
-    if (store.get("open-interactions", Boolean(list.length || it.startHidden || it.schedule))) det.open = true;
-    det.addEventListener("toggle", function () { store.set("open-interactions", det.open); });
+    var det = accShell("interactions", Boolean(list.length || it.startHidden || it.schedule));
     var n = list.length + (it.startHidden ? 1 : 0) + (it.schedule ? 1 : 0);
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: "Interactions et conditions" }), n ? h("span", { class: "pb-acc-count", text: String(n) }) : null));
     var inner = h("div", { class: "pb-acc-body" });
@@ -3741,10 +3818,9 @@
   // Code : CSS propre à l'élément, classes et attributs (vérifiés à l'enregistrement : aucune ressource externe)
   function codeField(it, locked, opts) {
     opts = opts || {};
-    var det = h("details", { class: "pb-acc", "data-group": "code" });
+    var det = null;
     var n = (opts.onlyAttrs ? 0 : (it.css ? 1 : 0) + (it.cssHover ? 1 : 0) + (it.classes ? 1 : 0)) + (opts.noAttrs ? 0 : (it.attrs ? it.attrs.length : 0));
-    if (store.get("open-code", Boolean(n))) det.open = true;
-    det.addEventListener("toggle", function () { store.set("open-code", det.open); });
+    det = accShell("code", Boolean(n));
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: opts.onlyAttrs ? "Attributs HTML" : opts.noAttrs ? "CSS personnalisé et classes" : "CSS, classes et attributs" }), n ? h("span", { class: "pb-acc-count", text: String(n) }) : null));
     var inner = h("div", { class: "pb-acc-body" });
     if (!opts.onlyAttrs) {
@@ -4102,7 +4178,8 @@
     if (!main || !doc.body.classList.contains("lp-builder")) return false;
     if (next.head !== prev.head || next.rest !== prev.rest || next.bodyClass !== prev.bodyClass) return false;
     var liveStyles = Array.prototype.filter.call(doc.head.children, function (el) { return el.tagName === "STYLE"; });
-    if (liveStyles.length !== next.styles.length || next.styles.length !== prev.styles.length) return false;
+    // Le nombre de feuilles peut changer (la première règle d'un élément en crée une) : elles sont réconciliées plus bas, sans recharger le cadre
+    if (liveStyles.length !== prev.styles.length) return false;
     var prevHtml = {};
     prev.items.forEach(function (i) { prevHtml[i.key] = i.html; });
     var liveByKey = {}, liveOther = [];
@@ -4117,7 +4194,7 @@
     var knownIds = {};
     Array.prototype.forEach.call(doc.querySelectorAll("[data-node-id],[data-section-id]"), function (e) { knownIds[idOfEl(e)] = 1; });
     // Tout est vérifié : on applique (aucun retour en arrière possible après ce point)
-    liveStyles.forEach(function (el, i) { if (el.textContent !== next.styles[i]) el.textContent = next.styles[i]; });
+    syncStyles(doc, liveStyles, next.styles);
     if (next.bodyStyle !== prev.bodyStyle) doc.body.setAttribute("style", next.bodyStyle);
     var ref = main.firstChild;
     want.forEach(function (el) { if (el === ref) ref = ref.nextSibling; else main.insertBefore(el, ref); });
@@ -4135,6 +4212,47 @@
     drawGuides();
     refreshInfo();
     return true;
+  }
+  // Feuilles <style> du cadre alignées sur le nouveau rendu, en place : réutilisées si identiques, créées ou retirées sinon (ordre conservé)
+  function syncStyles(doc, live, wanted) {
+    var cur = 0, surplus = wanted.length - live.length, last = null;
+    wanted.forEach(function (text) {
+      var l = live[cur];
+      while (surplus < 0 && l && l.textContent !== text) { l.remove(); cur++; surplus++; l = live[cur]; }
+      if (surplus > 0 && (!l || l.textContent !== text)) {
+        var made = doc.createElement("style"); made.textContent = text;
+        if (l) l.parentNode.insertBefore(made, l); else if (last) last.parentNode.insertBefore(made, last.nextSibling); else doc.head.appendChild(made);
+        surplus--; last = made; return;
+      }
+      if (l) { if (l.textContent !== text) l.textContent = text; cur++; last = l; }
+    });
+    for (; cur < live.length; cur++) live[cur].remove();
+  }
+  // Rechargement COMPLET du cadre (sections interactives : onglets, accordéons, compteurs, formulaires…, dont les scripts ne
+  // s'initialisent qu'une fois). Double tampon : le nouveau cadre se charge masqué par-dessus l'ancien, qui reste affiché et actif
+  // jusqu'à ce que le nouveau soit prêt ; l'échange est alors immédiat (aucun blanc, défilement et sélection restitués par setupCanvas).
+  var swapping = null, canvasReady = false;
+  function reloadCanvas(text, y) {
+    if (!canvasReady) { frame.onload = function () { setupCanvas(y); }; frame.srcdoc = text; return; } // tout premier affichage
+    var old = frame, nu = old.cloneNode(false);
+    nu.removeAttribute("data-pb-frame"); nu.removeAttribute("srcdoc");
+    nu.style.position = "absolute"; nu.style.inset = "0"; nu.style.visibility = "hidden";
+    swapping = nu;
+    nu.onload = function () {
+      // Un iframe inséré déclenche d'abord un `load` pour son document vide initial : on n'échange que sur le vrai contenu
+      var nd = nu.contentDocument;
+      if (swapping !== nu || !nd || nd.URL !== "about:srcdoc" || !nd.body) return;
+      swapping = null;
+      // Une édition directe ou un geste a commencé entre-temps : on ne remplace rien sous la main de la personne
+      if (editing || gesture) { nu.remove(); lastRender = null; pendingRender = true; return; }
+      // Le clavier passe à la zone du canevas (sinon un raccourci tapé pendant l'échange, Ctrl/⌘ + Z par exemple, serait perdu)
+      if (document.activeElement === old) $("[data-pb-canvas]").focus({ preventScroll: true });
+      nu.setAttribute("data-pb-frame", ""); nu.style.position = ""; nu.style.inset = ""; nu.style.visibility = "";
+      frame = nu; old.remove();
+      setupCanvas(y);
+    };
+    nu.srcdoc = text; // avant l'insertion : le document chargé est directement le bon
+    old.parentNode.appendChild(nu);
   }
   function renderCanvas() {
     if (editing || gesture) { pendingRender = true; return; }
@@ -4157,15 +4275,13 @@
         errBox.hidden = true;
         if (errorItemId) { errorItemId = null; markError(); }
         if (editing || gesture) { pendingRender = true; return; }
+        // Un rechargement précédent n'a pas fini : son contenu est dépassé, on le jette et on recharge avec ce rendu-ci
+        if (swapping) { swapping.remove(); swapping = null; lastRender = null; }
         if (patchCanvas(res.text)) return;
         var y = 0;
         try { y = frame.contentWindow.scrollY; } catch (e) { y = 0; }
         inlineTouched = [];
-        frame.onload = function () { setupCanvas(y); };
-        // Le cadre va être remplacé : le clavier passe à la zone du canevas (sinon un raccourci tapé pendant le
-        // rechargement, Ctrl/⌘ + Z par exemple, serait perdu)
-        if (document.activeElement === frame) $("[data-pb-canvas]").focus({ preventScroll: true });
-        frame.srcdoc = res.text;
+        reloadCanvas(res.text, y);
       }, function () { var errBox = $("[data-pb-render-error]"); errBox.textContent = "Aperçu indisponible (connexion au serveur interrompue)."; errBox.hidden = false; });
   }
   function markError() { $$(".pb-row-item.is-error", treeEl).forEach(function (r) { r.classList.remove("is-error"); }); if (errorItemId) { var r = treeEl.querySelector('.pb-node[data-id="' + errorItemId + '"] > .pb-row-item'); if (r) r.classList.add("is-error"); } }
@@ -4180,11 +4296,12 @@
   function setupCanvas(y) {
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
+    canvasReady = true;
     doc.body.classList.add("lp-builder");
     doc.body.classList.toggle("pb-outlines", aids.outlines);
     doc.body.classList.toggle("pb-hand", tool === "hand");
     frame.contentWindow.scrollTo(0, y);
-    doc.addEventListener("mousedown", function () { canvasPointerAt = Date.now(); closeMenu(); }, true); // le canevas est un iframe : ses clics n'atteignent pas l'écouteur du document parent
+    doc.addEventListener("mousedown", function (e) { canvasPointerAt = Date.now(); closeMenu(); releasePart(e); }, true); // le canevas est un iframe : ses clics n'atteignent pas l'écouteur du document parent
     doc.addEventListener("keydown", function (e) { if (e.key === "Tab") tabAt = Date.now(); }, true);
     frame.contentWindow.addEventListener("focus", function () {
       if (editing || Date.now() - canvasPointerAt < 1500 || Date.now() - tabAt < 500) return;
@@ -4644,7 +4761,7 @@
   function openInspector(tab, group) {
     if (panels.rightHidden) togglePanel("right");
     inspTab = tab; store.set("insp-tab", tab);
-    if (group) store.set("open-" + group, true);
+    if (group) { store.set("open-" + group, true); pendingReveal = group; }
     renderInspector();
     var target = group ? $("[data-pb-inspector] details[data-group='" + group + "']") : $("[data-pb-inspector] .pb-insp-body");
     if (target) { target.scrollIntoView({ block: "nearest" }); var f = target.querySelector("input, select, textarea, button"); if (f) f.focus({ preventScroll: true }); }
@@ -6166,7 +6283,7 @@
       ["Coller", paste, !canWrite, "Ctrl+V"],
       ["Copier le style", copyStyle, false, "Ctrl+Alt+C"],
       ["Coller le style", function () { pasteStyle(); }, !canWrite || locked, "Ctrl+Maj+V"],
-      ["Réinitialiser le style", resetStyle, !canWrite || locked || !items.some(function (z) { return z.styles || z.states; })],
+      ["Réinitialiser le style", resetStyle, !canWrite || locked || !items.some(function (z) { return z.styles || z.states || z.parts; })],
       "-",
       items.length === 1 ? ["Renommer", function () { var row = treeEl.querySelector('.pb-node[data-id="' + it.id + '"] > .pb-row-item'); if (row) startRename(row, it); }, !canWrite, "F2"] : null,
       [items.some(function (z) { return z.hidden; }) ? "Afficher" : "Masquer", function () { setFlag(selection.slice(), "hidden", !items.some(function (z) { return z.hidden; })); }, !canWrite, "Ctrl+Maj+H"],
@@ -6210,6 +6327,10 @@
     else if (e.key === "ArrowUp") { e.preventDefault(); (list[i - 1] || list[list.length - 1]).focus(); }
     else if (e.key === "Escape" || e.key === "Tab") { e.preventDefault(); closeMenu(); }
   });
+  // Un geste hors de l'inspecteur (poignée, glisser, barre contextuelle, menu…) agit toujours sur le widget lui-même : la partie choisie est lâchée avant
+  var inInspectorFlow = ".pb-right, [data-pb-inspector], .pb-cpop, .pb-amenu, .pb-dyn-pop, .kf-panel, .pb-menu, .pb-tip, .pb-toast";
+  var releasePart = function (e) { if (styleTarget && !(e.target.closest && e.target.closest(inInspectorFlow))) { styleTarget = null; renderInspector(); } };
+  document.addEventListener("mousedown", releasePart, true);
   var menuWasOpenAtPress = false;
   document.addEventListener("mousedown", function (e) { menuWasOpenAtPress = !menu.hidden && Boolean(e.target.closest && e.target.closest("[data-pb-mainmenu]")); if (!menu.hidden && !menu.contains(e.target)) closeMenu(); }, true);
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !menu.hidden) closeMenu(); }); // Échap ferme aussi quand le focus n'est plus dans le menu
@@ -6227,6 +6348,7 @@
       { label: "Ouvrir la médiathèque", run: function () { openMedia({ title: "Médiathèque" }); } },
       { label: "Aperçu", run: openPreview }, { label: "Enregistrer maintenant", run: saveNow, off: !canWrite }, { label: "Publier", run: function () { $("[data-pb-publish]").click(); }, off: !canWrite || $("[data-pb-publish]").hidden },
       { label: "Annuler", run: undo, off: !past.length }, { label: "Rétablir", run: redo, off: !future.length },
+      { label: "Accordéons : un seul ouvert", run: function () { accSetMode("one"); } }, { label: "Accordéons : plusieurs ouverts", run: function () { accSetMode("many"); } }, { label: "Accordéons : fermer ceux situés en dessous", run: function () { accSetMode("below"); } },
       { label: "Dupliquer la sélection", run: duplicateSelected, off: !has || !canWrite }, { label: "Supprimer la sélection", run: removeSelected, off: !has || !canWrite },
       { label: "Grouper", run: groupSelected, off: selection.length < 2 || !canWrite }, { label: "Dissocier", run: ungroupSelected, off: !has || !canWrite },
       { label: "Masquer / afficher", run: function () { setFlag(selection.slice(), "hidden", !selectedItems().some(function (z) { return z.hidden; })); }, off: !has || !canWrite },
@@ -6479,6 +6601,9 @@
       ["Versions, comparaison et restauration", function () { window.location.href = "/marketing/pages/" + PAGE.id + "#lp-versions"; }],
       ["Historique des actions", function () { openHistory($("[data-pb-history]")); }],
       "-",
+      { heading: "Comportement des accordéons" },
+      accEntry("one"), accEntry("many"), accEntry("below"),
+      "-",
       { heading: "Modèles et fichiers" },
       ["Enregistrer comme modèle de page…", saveAsTemplate, !canWrite],
       ["Exporter la page (fichier JSON)", exportPage],
@@ -6516,6 +6641,7 @@
     var typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
     var mod = e.metaKey || e.ctrlKey;
     var k = (e.key || "").toLowerCase();
+    if (!typing && styleTarget) styleTarget = null; // touches de l'éditeur (déplacements…) : sur le widget, jamais sur une partie
     if (mod && k === "s") { e.preventDefault(); saveNow(); return; }
     if (mod && e.shiftKey && k === "y") { e.preventDefault(); setDockMode(dock.mode === "closed" ? dock.last : "closed"); return; }
     if (mod && k === "k") { e.preventDefault(); if (cmdDialog.open) cmdDialog.close(); else openCommands(""); return; }

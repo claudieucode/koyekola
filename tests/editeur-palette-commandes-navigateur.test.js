@@ -139,7 +139,7 @@ describe("palette de commandes de l'éditeur (navigateur)", { skip: SKIP }, () =
     await page.evaluate(() => { document.querySelector(".pb-cmd-list").scrollTop = 400; });
     assert.equal(await page.evaluate(() => Math.round(document.querySelector(".pb-cmd-field").getBoundingClientRect().top)), Math.round(geo.fieldTop), "le champ ne bouge pas quand la liste défile");
     await page.keyboard.press("Escape");
-    for (let i = 0; i < 8; i++) { await page.keyboard.press("Control+k"); await page.keyboard.press("Escape"); }
+    for (let i = 0; i < 8; i++) { await page.keyboard.press("Control+k"); await wait(40); await page.keyboard.press("Escape"); await wait(40); }
     await page.keyboard.press("Control+k"); await wait(200);
     assert.ok(await isOpen(page));
     await page.keyboard.press("Escape");
