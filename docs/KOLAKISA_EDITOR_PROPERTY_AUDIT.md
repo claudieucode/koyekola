@@ -176,3 +176,19 @@ Mesures disponibles (voir `docs/perf-page-builder.md` et `KOLAKISA_CANVAS_INTERA
 
 ## 11. Statut de validation
 Aucune amélioration n'est implémentée à ce stade. Toute valeur de ce document marquée « mesuré » a été produite par les scripts décrits au §1 ; le reste est une lecture de code signalée comme telle.
+
+
+## 12. Suite réalisée (2026-10-10, après validation du plan) — état des lacunes
+| # | Lacune | Résultat | Preuve |
+|---|---|---|---|
+| L1 | États (survol) limités à 15 types | **Corrigé** : l'état « Survol » est ouvert à tous les widgets qui ont un aspect réglable (hors espace, progression de lecture, modale, infobulle, contenus intégrés, médias lus, carrousel / galerie, logo, composant, formulaire, section libre) ; réglé dans l'état (le style normal reste intact), publié (`:hover`), relu au rechargement | `tests/editeur-etats-typographie-navigateur.test.js` (titre, liste, badge ; espace = aucun état) |
+| L3 | Typographie absente des conteneurs | **Corrigé** : section Typographie sur section libre, conteneur, colonnes, colonne, pile, groupe ; les enfants héritent (vérifié sur le canevas, enregistré, publié) | même test |
+| L5 | 16 propriétés CSS absentes | **Ajoutées** : `white-space`, `text-wrap`, `overflow-wrap`, `text-overflow`, `visibility`, `cursor`, `pointer-events`, `mix-blend-mode`, `overflow-x`, `overflow-y`, contour (style, épaisseur, couleur, décalage), `grid-auto-rows`, `grid-auto-columns` → registre : **104 propriétés** ; contrôle dans l'inspecteur (typographie, effets, bordure, grille), canevas, enregistrement, rechargement, publication ordinateur / tablette / mobile / survol | `tests/proprietes-style-completes.test.js` (5 tests serveur) + test navigateur (retour à la ligne, curseur, fusion, contour) |
+| L7 | Unités du rendu non offertes | **Partiellement corrigé** : `em` ajouté aux dimensions (largeur, hauteur, minimum, maximum) | lecture du code + tests existants |
+| L8 | Validation permissive (`%` sur une épaisseur) | **Corrigé** : refusé pour les 5 épaisseurs de bordure et le contour (px, rem, em, 0 acceptés) | test serveur |
+| L2 | Texte : aucun contrôle de contenu dans l'inspecteur | **Non modifié** : édition dans la page (voulu) | — |
+| L4 | 9 petits widgets sans dimensions | **Non modifié** : à étudier au cas par cas (la modale en particulier) | — |
+| L6 | Écrans fixes (3) | **Non fait** : demande un chantier (modèle de données, rendu, aperçu) | — |
+| L9 | Panneaux denses (Avancé) | **Non fait** : aucune restructuration ; attention : ce lot ajoute quelques contrôles (typographie des conteneurs, 6 effets, contour) | — |
+
+Limites connues : le contour de **sélection** de l'éditeur utilise aussi `outline` : le contour réglé par l'auteur est invisible dans le canevas tant que l'élément est sélectionné (il apparaît dès qu'on le désélectionne et il est publié) ; `text-overflow: ellipsis` demande « Jamais » (retour à la ligne) et « Masqué » (débordement) pour agir — indiqué dans le libellé.
