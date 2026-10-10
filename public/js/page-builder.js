@@ -715,9 +715,10 @@
       it.props = it.props || {};
       var inherited = inheritedValue(it, "maxWidth") !== undefined;
       if (mode === "full") it.props.full = true; else delete it.props.full;
+      if (mode === "band") it.props.band = true; else delete it.props.band;
       var set = styleSet(it, device, "normal", mode === "custom" || inherited);
       if (mode === "custom") set.maxWidth = customValue;
-      else if (inherited) set.maxWidth = mode === "full" ? "100%" : "1100px"; // écran plus petit qui hérite d'une largeur personnalisée : on la remplace explicitement
+      else if (inherited) set.maxWidth = mode === "full" || mode === "band" ? "100%" : "1100px"; // écran plus petit qui hérite d'une largeur personnalisée : on la remplace explicitement
       else if (set) delete set.maxWidth;
       cleanStyles(it);
     }, { label: "Largeur du contenu" });
@@ -3260,8 +3261,8 @@
       if (it.type === "container") {
         // Trois modèles de largeur : encadrée (largeur des conteneurs du site, centrée), pleine largeur, personnalisée (largeur max. propre à l'écran affiché)
         var mw = ownValue(it, "maxWidth"); if (mw === undefined) mw = inheritedValue(it, "maxWidth");
-        var wmode = p.full ? "full" : mw !== undefined && mw !== "" ? "custom" : "boxed";
-        box.appendChild(selectField("Largeur du contenu", wmode, [["boxed", "Encadrée (largeur des conteneurs du site, centrée)"], ["full", "Pleine largeur"], ["custom", "Personnalisée (largeur max.)"]], function (v) { setContainerWidth(it.id, v, mw !== undefined && mw !== "" ? mw : "960px"); }, { disabled: dis }));
+        var wmode = p.full ? "full" : p.band && (mw === undefined || mw === "") ? "band" : mw !== undefined && mw !== "" ? "custom" : "boxed";
+        box.appendChild(selectField("Largeur du contenu", wmode, [["boxed", "Encadrée (largeur des conteneurs du site, centrée)"], ["band", "Fond pleine largeur, contenu encadré"], ["full", "Pleine largeur"], ["custom", "Personnalisée (largeur max.)"]], function (v) { setContainerWidth(it.id, v, mw !== undefined && mw !== "" ? mw : "960px"); }, { disabled: dis }));
         if (wmode === "custom") {
           var wid = fid();
           var winp = h("input", { id: wid, type: "text", value: mw === undefined ? "" : String(mw), placeholder: "960px", disabled: dis, "aria-describedby": wid + "-h" });

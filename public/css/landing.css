@@ -150,6 +150,10 @@
    .kw-n-<id>, l'emporte toujours, y compris sur un conteneur en pleine largeur ou imbriqué (sinon le réglage serait sans effet) */
 :where(.kw-container) { max-width: 1100px; margin-left: auto; margin-right: auto; }
 :where(.kw-container.kw-full) { max-width: none; }
+/* « Fond pleine largeur, contenu encadré » : le conteneur (donc son fond) occupe toute la largeur de son parent, et ses intérieurs gauche / droite
+   centrent le contenu à la largeur des conteneurs du site (--kw-band-w) ; l'intérieur choisi par l'auteur (--kw-pl / --kw-pr) reste un minimum */
+:where(.kw-container.kw-band) { max-width: none; }
+.kw-container.kw-band { padding-left: max(var(--kw-pl, 0px), calc((100% - var(--kw-band-w, 1100px)) / 2)); padding-right: max(var(--kw-pr, 0px), calc((100% - var(--kw-band-w, 1100px)) / 2)); }
 .kw-columns { display: flex; flex-wrap: wrap; gap: 24px; }
 .kw-column { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 .kw-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }

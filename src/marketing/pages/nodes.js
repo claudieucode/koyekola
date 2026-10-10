@@ -245,13 +245,15 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
 // s'écrasent : début seul, fin seule, début + occupées (« 2 / span 3 ») ou occupées seules (« span 3 »)
 const PLACEMENT = new Set(["gridColumnStart", "gridColumnEnd", "gridColumnSpan", "gridRowStart", "gridRowEnd", "gridRowSpan"]);
 const CORNERS = new Set(["gridTemplate", "gridRowsTemplate", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth"]);
-function declarations(set) {
+// band : conteneur « fond pleine largeur, contenu encadré » : ses intérieurs gauche / droite sont écrits dans des variables (--kw-pl, --kw-pr) que
+// la règle .kw-band de landing.css combine avec le retrait qui centre le contenu à la largeur du site : le réglage de l'auteur reste effectif
+function declarations(set, band = false) {
   const d = [];
   const entries = Object.entries(set);
   // Coins après l'arrondi général (sinon « border-radius » les écraserait)
   for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k) && !PLACEMENT.has(k)).concat(entries.filter(([k]) => CORNERS.has(k)))) {
     const p = STYLE_PROPS[k];
-    if (p) d.push(`${p.css}:${p.out ? p.out(v) : v}`);
+    if (p) d.push(band && (k === "paddingLeft" || k === "paddingRight") ? `--kw-p${k === "paddingLeft" ? "l" : "r"}:${v}` : `${p.css}:${p.out ? p.out(v) : v}`);
   }
   for (const [axis, css] of [["Column", "grid-column"], ["Row", "grid-row"]]) {
     const start = set[`grid${axis}Start`], end = set[`grid${axis}End`], span = set[`grid${axis}Span`];
@@ -332,7 +334,7 @@ const boxProps = (p, at, h) => {
 const INTERACTIVE_INSIDE_LINK = new Set(["button", "link", "menu", "search", "account", "toggle", "tabs", "accordion", "modal", "carousel", "tooltip", "hotspot", "html", "embed", "social", "breadcrumb", "course", "courselist", "posts", "pricing", "iconlist", "gallery", "table", "postcontent"]);
 const NODE_TYPES = {
   // Largeur du contenu : encadrée (1100 px centrés, par défaut) ou pleine largeur
-  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : {}) }) },
+  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : p.band === true ? { band: true } : {}) }) },
   columns: { label: "Colonnes", category: "structure", container: true, props: () => ({}) },
   column: { label: "Colonne", category: "structure", container: true, props: () => ({}) },
   // Grille : peut devenir une BOUCLE (« Répéter pour chaque article / formation ») : ses enfants sont le modèle d'un élément
@@ -961,7 +963,8 @@ const CATEGORIES = { structure: "Structure", text: "Texte", media: "Média", int
 // Contenu de départ de chaque élément (toujours VALIDE : un élément ajouté s'enregistre tout de suite) et icône de la
 // palette. Les éléments qui demandent une donnée réelle (image, vidéo, formation…) la demandent à l'ajout (`asks`).
 const PALETTE = {
-  container: { icon: "borderBox", blank: () => ({ children: [] }) },
+  // Un conteneur ajouté naît avec un écart de 20 px entre ses enfants (valeur courante des constructeurs de pages) ; les conteneurs existants gardent le leur
+  container: { icon: "borderBox", blank: () => ({ children: [], styles: { desktop: { gap: "20px" } } }) },
   columns: { icon: "columns", blank: () => ({ children: [{ type: "column", children: [] }, { type: "column", children: [] }] }) },
   column: { icon: "moveVertical", blank: () => ({ children: [] }) },
   grid: { icon: "layout", blank: () => ({ children: [] }) },
@@ -1662,16 +1665,16 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
   const usedAnims = new Set(); // animations réellement utilisées : seules leurs images-clés sont écrites dans la page
   const clamps = { tablet: [], mobile: [] }; // cases de grille ramenées au nombre de colonnes de l'écran : écrites après toutes les autres règles
-  const add = (id, styles, states) => {
+  const add = (id, styles, states, band = false) => {
     if (!NODE_ID.test(String(id || ""))) return;
     const sel = `.kw-n-${id}`;
     for (const bp of BREAKPOINTS) {
-      const d = styles && styles[bp.key] ? declarations(styles[bp.key]) : "";
+      const d = styles && styles[bp.key] ? declarations(styles[bp.key], band) : "";
       if (!d) continue;
       (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
     }
     for (const state of STATES) {
-      const d = states && states[state.key] ? declarations(states[state.key]) : "";
+      const d = states && states[state.key] ? declarations(states[state.key], band) : "";
       if (d) rules.base.push(`${sel}${state.sel}{${d}}`);
     }
   };
@@ -1681,7 +1684,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
     if (s.type === "layout") walk(s.children, (n) => {
       if (seenIds.has(n.id)) return;
       seenIds.add(n.id);
-      add(n.id, n.styles, n.states);
+      add(n.id, n.styles, n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full));
       entranceRules(n, rules, usedAnims);
       // CSS personnalisé de l'élément (validé à l'enregistrement, revalidé ici : rien d'autre n'atteint la page)
       if (n.css && NODE_ID.test(String(n.id || ""))) { try { const c = cssDeclarations(n.css, "CSS"); if (c) rules.custom.push(`.kw-node.kw-n-${n.id}{${c}}`); } catch { /* ignoré */ } }
