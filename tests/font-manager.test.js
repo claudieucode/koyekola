@@ -13,12 +13,12 @@ const { startServer, Client, loginInstructor } = require("./helpers");
 
 const LIB = path.join(__dirname, "../public/fonts/library");
 const CATS = ["sans-serif", "serif", "display", "cursive", "monospace"];
-const OPEN = new Set(["OFL-1.1", "Apache-2.0", "Ubuntu-font-1.0", "UFL-1.0"]);
+const OPEN = new Set(["OFL-1.1", "Apache-2.0", "Ubuntu-font-1.0", "UFL-1.0", "CC0-1.0", "MIT", "Unlicense"]);
 
 describe("bibliothèque (manifeste et fichiers)", () => {
   const list = fonts.list();
   test("au moins 360 familles, identifiants uniques et stables, aucune valeur codée en dur dans le code", () => {
-    assert.ok(list.length >= 360, `${list.length} familles`);
+    assert.ok(list.length >= 1500, `${list.length} familles`);
     assert.equal(new Set(list.map((f) => f.id)).size, list.length, "identifiants uniques");
     assert.equal(new Set(list.map((f) => f.family.toLowerCase())).size, list.length, "pas de doublon de nom");
     for (const f of list) assert.match(f.id, /^font\.[a-z0-9-]+$/);
@@ -29,7 +29,8 @@ describe("bibliothèque (manifeste et fichiers)", () => {
       assert.ok(f.categories.includes(f.category));
       assert.equal(f.fallback, { "sans-serif": "sans-serif", serif: "serif", display: "sans-serif", cursive: "cursive", monospace: "monospace" }[f.category], `${f.family} : repli`);
       assert.ok(OPEN.has(f.license), `${f.family} : licence ${f.license}`);
-      assert.match(f.sourceUrl, /^https:\/\/fonts\.google\.com\//);
+      assert.match(f.sourceUrl, f.source === "google-fonts" ? /^https:\/\/fonts\.google\.com\// : /^https:\/\/fontsource\.org\/fonts\//, `${f.family} : page source`);
+      assert.ok(["google-fonts", "fontsource"].includes(f.source), `${f.family} : source`);
       assert.ok(f.weights.length >= 1 && f.weights.every((w) => w >= 100 && w <= 900), `${f.family} : graisses`);
       assert.ok(f.styles.includes("normal"));
       assert.equal(f.styles.includes("italic"), f.italicWeights.length > 0, `${f.family} : italique déclaré = italique présent`);
@@ -122,7 +123,8 @@ describe("vrai serveur : routes, pages publiées", () => {
     assert.equal(m.count, fonts.list().length); assert.ok(m.count >= 360);
     const inter = m.families.find((f) => f.id === "font.inter");
     assert.ok(inter.stack === "'Inter', sans-serif" && inter.variable && inter.weights.length === 9);
-    assert.ok(JSON.stringify(m).length < 400000, "manifeste léger");
+    assert.ok(JSON.stringify(m).length < 450000, "manifeste léger (1 700+ familles : environ 40 Ko compressé)");
+    for (const f of m.families.slice(0, 50)) assert.deepEqual(Object.keys(f).sort(), ["categories", "category", "family", "id", "popularity", "stack", "styles", "variable", "weights"], "seulement les champs utiles au sélecteur");
     const css = await anon().get("/polices.css?f=font.inter,font.lobster,font.nope,<script>");
     assert.match(css.headers.get("content-type"), /text\/css/); assert.match(css.headers.get("cache-control"), /max-age=86400/);
     const text = css.text; assert.match(text, /font-family:'Inter'/); assert.match(text, /font-family:'Lobster'/); assert.doesNotMatch(text, /nope|script/);

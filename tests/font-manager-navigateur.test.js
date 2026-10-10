@@ -81,13 +81,14 @@ describe("Font Manager (navigateur)", { skip: SKIP }, () => {
     await ctx.click();
     const panel = page.locator(".kf-panel");
     await panel.waitFor();
-    await until(async () => (await panel.locator(".kf-row").count()) >= 40, { what: "liste affichée" });
+    // liste virtualisée : une fenêtre de lignes seulement, jamais la bibliothèque entière
+    await until(async () => { const n = await panel.locator(".kf-row").count(); return n >= 8 && n <= 40; }, { what: "liste affichée (fenêtre de lignes)" });
     assert.match(await panel.locator(".kf-foot").textContent(), /sur \d+ dans la bibliothèque/);
     // recherche instantanée : nom, puis mot de catégorie
     await panel.locator(".kf-search").fill("mont");
     await until(async () => (await panel.locator(".kf-name").allTextContents()).some((t) => t === "Montserrat"), { what: "Montserrat trouvé" });
     await panel.locator(".kf-search").fill("script");
-    await until(async () => { const n = await panel.locator(".kf-row").count(); return n > 5 && n < 120; }, { what: "cursives trouvées" });
+    await until(async () => { const n = Number(((await panel.locator(".kf-foot").textContent()).match(/^(\d+) police/) || [])[1]); return n > 5 && n < 800; }, { what: "cursives trouvées" });
     await panel.locator(".kf-search").fill("monospace");
     await until(async () => (await panel.locator(".kf-name").allTextContents()).includes("Roboto Mono"), { what: "monospace" });
     // l'aperçu d'une ligne utilise sa propre famille (chargée à la demande)
@@ -113,6 +114,16 @@ describe("Font Manager (navigateur)", { skip: SKIP }, () => {
     await page.locator(`[data-pb-layers] .pb-node[data-id="head00000001"] > .pb-row-item`).click();
     await until(async () => (await page.locator("[data-pb-context] .kf-btn .kf-btn-name").textContent()) === "Montserrat", { what: "Montserrat toujours sélectionné après F5" });
     assert.equal(find(draft().sections, "head00000001").styles.desktop.fontFamily, "font.montserrat");
+    // clic extérieur : le canevas est une iframe (ses clics ne remontent pas au document), le panneau de gauche et le reste ferment aussi
+    for (const where of ["canvas", "left", "empty"]) {
+      await page.locator("[data-pb-context] .kf-btn").click();
+      await page.locator(".kf-panel").waitFor();
+      const f = await page.locator("[data-pb-frame]").boundingBox();
+      if (where === "canvas") await page.mouse.click(f.x + f.width - 12, f.y + f.height - 12);
+      else if (where === "left") await page.mouse.click(30, 500);
+      else await page.mouse.click(2, 300);
+      await until(async () => (await page.locator(".kf-panel").count()) === 0, { what: `fermeture au clic extérieur (${where})` });
+    }
     assert.deepEqual(errors, []);
   });
 
@@ -122,6 +133,9 @@ describe("Font Manager (navigateur)", { skip: SKIP }, () => {
     // l'onglet « Styles » contient le champ : on l'ouvre comme l'auteur
     const tab = page.locator('[data-mk-tab="styles"], #mk-tab-styles, button:has-text("Styles")').first();
     if (await tab.count()) await tab.click().catch(() => {});
+    // La section « Typographie » du volet Styles est repliée par défaut : on l'ouvre comme l'auteur
+    const typo = page.locator("#pane-styles .mk-sec-btn", { hasText: "Typographie" });
+    if (await typo.count() && (await typo.getAttribute("aria-expanded")) === "false") await typo.click();
     const btn = page.locator("#t-font");
     await btn.scrollIntoViewIfNeeded().catch(() => {});
     await btn.click({ force: true });
