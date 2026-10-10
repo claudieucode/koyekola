@@ -58,6 +58,11 @@ app.set("trust proxy", 1);
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
+// Gabarits compilés UNE fois : sans « view cache » (réservé par Express à NODE_ENV=production), EJS recompile le gabarit à chaque
+// include(), donc chaque élément d'une page du Page Builder (~4 ms par élément : 1,6 s pour 400 éléments, mesuré). Hors production,
+// le cache est vidé dès qu'un fichier de views/ change : les gabarits restent modifiables à chaud.
+app.enable("view cache");
+if (!isProduction) { try { require("fs").watch(path.join(__dirname, "views"), { recursive: true, persistent: false }, () => require("ejs").clearCache()); } catch { /* surveillance indisponible : redémarrer pour voir un gabarit modifié */ } }
 
 app.use(compression()); // pages, CSS et JS envoyés compressés (gzip) : environ 4 fois plus légers
 app.use(securityHeaders);
