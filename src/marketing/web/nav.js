@@ -24,10 +24,11 @@ const ITEMS = [
   live("marketing", "dashboard", "Accueil", "/marketing", "home", "contacts.read"),
 
   live("audience", "contacts", "Tous les contacts", "/marketing/contacts", "user", "contacts.read", { label: "Ajouter un contact", href: "/marketing/contacts/nouveau", permission: "contacts.write" }),
+  live("audience", "contactdupes", "Doublons", "/marketing/contacts/doublons", "users", "contacts.merge"),
   live("audience", "lists", "Listes", "/marketing/listes", "list", "lists.read", { label: "Nouvelle liste", href: "/marketing/listes#nouvelle", permission: "lists.write" }),
   live("audience", "segments", "Segments", "/marketing/segments", "filter", "segments.read", { label: "Nouveau segment", href: "/marketing/segments/nouveau", permission: "segments.write" }),
   live("audience", "tags", "Étiquettes", "/marketing/etiquettes", "tag", "lists.read", { label: "Nouvelle étiquette", href: "/marketing/etiquettes#nouvelle", permission: "lists.write" }),
-  live("audience", "properties", "Propriétés", "/marketing/proprietes", "sliders", "contacts.read", { label: "Nouvelle propriété", href: "/marketing/proprietes#nouvelle", permission: "contacts.write" }),
+  live("audience", "properties", "Propriétés", "/marketing/proprietes", "sliders", "contacts.read", { label: "Nouvelle propriété", href: "/marketing/proprietes#nouvelle", permission: "contacts.manage_fields" }),
   // Formulaires d'inscription : dans Audience, comme chez Mailchimp (« Signup forms »). Pop-ups : un réglage d'un formulaire.
   live("audience", "forms", "Formulaires d'inscription", "/marketing/formulaires", "layout", "forms.read", { label: "Nouveau formulaire", href: "/marketing/formulaires#nouveau", permission: "forms.write" }),
   // Sondages (« Surveys » de Mailchimp) : questions, lien public ou personnel, étiquettes selon les réponses

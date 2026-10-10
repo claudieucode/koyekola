@@ -20,9 +20,9 @@ function audit(ctx, action, resourceType, resourceId, metadata) {
   recordAudit(ctx.db, { organizationId: ctx.organizationId, userId: ctx.userId, action, resourceType, resourceId, metadata });
 }
 
-function emit(ctx, name, { contact, metadata = {}, idempotencyKey = null, source = "marketing" }) {
+function emit(ctx, name, { contact, metadata = {}, idempotencyKey = null, source = "marketing", siteId = null, objectType = null, objectId = null, actorUserId = null }) {
   if (!ctx.bus) return;
-  ctx.bus.emit({ organizationId: ctx.organizationId, name, email: contact.email, contactId: contact.id, source, metadata, idempotencyKey });
+  ctx.bus.emit({ organizationId: ctx.organizationId, name, email: contact.email, contactId: contact.id, source, metadata, idempotencyKey, siteId, objectType, objectId, actorUserId });
 }
 
 module.exports = { checkCtx, cleanText, audit, emit, MarketingError };

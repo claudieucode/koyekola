@@ -28,6 +28,8 @@ function createMarketingRouters({ db }) {
       if (/^\d{1,12}$/.test(String(raw ?? ""))) return { siteId: Number(raw) };
       return null;
     }
+    // Contact Core (palier 15) : lecture des contacts d'UN site (?site=) — c'est ce qui ouvre l'écran aux personnes qui n'ont accès qu'à ce site
+    if (req.method === "GET" && /^\/contacts(?:\/\d+(?:\/evenements\.json)?)?$/.test(p) && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
     if (req.method === "POST" && (p === "/pages" || p === "/site-web/composants") && req.body && /^\d+$/.test(String(req.body.site_id || ""))) return { siteId: Number(req.body.site_id) };
     return null;
   };
@@ -63,6 +65,7 @@ function createMarketingRouters({ db }) {
     next();
   });
 
+  admin.use(require("./contactCore")()); // Contact Core (palier 15) : doublons, fusion, cycle de vie, état, journal — avant admin.js (« /contacts/:id »)
   admin.use(require("./segments")({ db }));
   admin.use(require("./templates")({ db }));
   admin.use(require("./campaigns")({ db }));

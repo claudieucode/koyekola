@@ -62,7 +62,7 @@ function contactTimeline(ctx, contactId, { limit = 50 } = {}) {
     if (r.finished_at) push(r.finished_at, "automation", "zap", r.status === "completed" ? `Parcours terminé : scénario « ${r.name} ».` : r.status === "failed" ? `Échec dans le scénario « ${r.name} ».` : `Sorti du scénario « ${r.name} ».`, href, "automations.read");
   }
   for (const e of db
-    .prepare(`SELECT name, occurred_at FROM mk_events WHERE contact_id = ? AND organization_id = ? AND name NOT IN (${COVERED_EVENTS.map(() => "?").join(",")}) ORDER BY occurred_at DESC, id DESC LIMIT ?`)
+    .prepare(`SELECT name, occurred_at FROM mk_events WHERE contact_id = ? AND organization_id = ? AND name NOT IN (${COVERED_EVENTS.map(() => "?").join(",")}) AND NOT (name = 'user.registered' AND EXISTS (SELECT 1 FROM mk_events x WHERE x.contact_id = mk_events.contact_id AND x.name = 'lms.user_registered')) ORDER BY occurred_at DESC, id DESC LIMIT ?`)
     .all(contactId, org, ...COVERED_EVENTS, cap)) {
     push(e.occurred_at, "event", "book", `${TRIGGERS[e.name] ? TRIGGERS[e.name].label : e.name}.`);
   }
