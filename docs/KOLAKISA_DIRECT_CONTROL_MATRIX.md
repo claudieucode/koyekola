@@ -39,3 +39,18 @@ Source : `INSPECTORS` (71 entrées explicites sur 86 types) lu dans `page-builde
 3. Poignées de redimensionnement manquantes (n, w) : mêmes 10 types.
 4. Barre d'actions au survol : tous les types (réutilise le registre).
 5. Alignement : conteneurs flex, via le moteur d'accrochage existant.
+
+
+## État après implémentation (2026-10-10)
+| Contrôle | État | Détail |
+|---|---|---|
+| Gap (écart) direct | **Livré** | 8 types ; vertical et horizontal ; `gap` lié ou `rowGap` / `columnGap` séparés selon le réglage existant |
+| Marge intérieure directe | **Livré** | 7 types conteneurs (section libre, container, columns, column, grid, stack, group) ; Maj = quatre côtés |
+| Barre d'actions au survol | **Livré** | Sélectionner, Style (ouvre l'inspecteur), Dupliquer : actions existantes |
+| Main temporaire (Espace) + icône près du zoom | **Livré** | gardes : champs, boutons, menus, fenêtres, édition |
+| Zoom 300 % et 400 % | **Livré** | limite 400 % |
+| Marge extérieure directe | Non fait | interfère avec la mise en page du parent |
+| Redimensionnement n / w | Non fait | changerait la position du bord dans un flux |
+| Recadrage direct d'image | Non fait | n'existe pas dans le modèle (bouton « Recadrer » = inspecteur) |
+| Alignement direct | Non fait | le magnétisme et les repères intelligents existants couvrent le redimensionnement ; pas de geste d'alignement ajouté |
+| Tactile | Partiel | poignées visibles dès la sélection, zone d'appui 28 px, `pointer` + `touch-action: none` ; les gestes existants (redimensionnement…) restent à la souris |

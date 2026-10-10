@@ -32,3 +32,13 @@ Limites de ces chiffres : la résolution du minuteur de Chrome est de 0,1 ms (do
 - Réaction au survol : moins d'une image (16 ms) sur 380 éléments ; mesure actuelle du test de position : < 0,2 ms.
 - Geste de poignée (gap, padding, redimensionnement) : aucune image > 33 ms jusqu'à 380 éléments (valeur déjà obtenue pour les gestes existants).
 - Zéro écriture réseau pendant un geste ; une seule étape d'historique par geste.
+
+
+## Mesuré après implémentation (test `editeur-manipulation-directe-navigateur`, page de 300 éléments, même machine chargée)
+| Mesure | Résultat |
+|---|---|
+| Geste de poignée d'écart (déplacement + survol rapide) : image médiane | 16,7 ms (cadence de l'écran) |
+| Images > 50 ms pendant le geste | 0 à 1 sur 122 à 131 images (pire image observée : 33 à 83 ms selon la charge de la machine) |
+| Test de survol (`elementFromPoint` + `closest` + `getBoundingClientRect`) sur 300 éléments | 0,015 à 0,021 ms par essai |
+| Écriture / réseau pendant un geste | aucune (le document enregistré est identique pendant le geste) |
+Ces valeurs viennent de l'exécution du test ; elles dépendent de la charge de la machine (±30 %) et du mode sans affichage. Le zoom jusqu'à 400 % et le panoramique n'ont pas été chronométrés (seulement vérifiés fonctionnellement).

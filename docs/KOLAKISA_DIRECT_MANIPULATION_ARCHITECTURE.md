@@ -1,6 +1,6 @@
-# KOLAKISA — Manipulation directe : architecture proposée (LOT 1, NON implémentée)
+# KOLAKISA — Manipulation directe : architecture (LOT 1) — IMPLÉMENTÉE le 2026-10-10
 
-Proposition à valider avant tout code. Principe directeur : **ne rien dupliquer**. Chaque brique ci-dessous réutilise un système déjà présent (voir `KOLAKISA_DIRECT_MANIPULATION_AUDIT.md`).
+État : implémentée dans `public/js/page-builder-direct.js` (+ pont dans `page-builder.js`, styles dans `landing.css`). Écarts par rapport à la proposition : la couche de survol est persistante, mais les poignées d'écart / de marge intérieure sont recréées à chaque rafraîchissement de la sélection (≤ 16 petits éléments, coût mesuré < 0,2 ms) ; les poignées existantes (`mousedown`) n'ont pas été migrées vers `pointer`. Principe directeur : **ne rien dupliquer**. Chaque brique ci-dessous réutilise un système déjà présent (voir `KOLAKISA_DIRECT_MANIPULATION_AUDIT.md`).
 
 ## 1. Principe : une seule écriture, deux interfaces
 ```
@@ -48,3 +48,14 @@ Ordre proposé, **dans le document de l'iframe** : contenu de la page < contour 
 
 ## 7. Ce que cette architecture ne fait PAS
 Elle ne remplace ni l'inspecteur, ni `drawOverlays()` pour la sélection, ni le glisser-déposer natif, ni le redimensionnement actuel ; elle n'ajoute aucune donnée au document ni aucune propriété serveur.
+
+
+## 8. Réalisé (résumé)
+- `pbDirect.register({ id, appliesTo(item, caps), handles(ctx) })` : deux contrôles livrés, `gap` (écart : `gap`, `rowGap`, `columnGap` ; 8 types) et `padding` (marge intérieure des 7 types conteneurs).
+- Écriture unique : style inline pendant le geste, puis un seul `change()` avec clé unique par geste et libellé « Écart vertical : 24px → 32px » ; écran affiché uniquement ; valeur héritée annoncée.
+- Unités : px, rem, em conservées (conversion fiable) ; %, vw, vh et valeurs du site → px (annoncé : « Unité : px »).
+- Aimantation douce sur le pas de grille des réglages (± 3 px), désactivée par Alt ; Maj sur une poignée de marge = quatre côtés ; Échap annule ; flèches sur une poignée focalisée (±1, Maj ±10).
+- Survol : une seule cible (la plus profonde), contour + petite barre à l'intérieur du coin haut gauche (Sélectionner, Style, Dupliquer : fonctions existantes). Le contour pointillé natif de tous les parents est supprimé.
+- Main temporaire : Espace maintenu (ignoré dans les champs, boutons, menus, fenêtres, édition de texte), icône « Main » près du zoom, panoramique aussi depuis la zone grise ; curseur `grab` / `grabbing`.
+- Zoom : limite portée de 200 % à 400 % (niveaux 300 % et 400 % ajoutés au menu).
+- NON réalisé volontairement : marge extérieure directe (chevauche la mise en page du parent), poignées de redimensionnement haut / gauche (changeraient la position du bord dans un flux flex/grille), recadrage direct d'image, mini-barre typographique : voir `KOLAKISA_DIRECT_CONTROL_MATRIX.md`.
