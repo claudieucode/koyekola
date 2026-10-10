@@ -88,3 +88,12 @@ registres `LENCFG` (longueurs), `NUMCFG` (nombres), `NUM` (bornes), `UNITS` (uni
   rechargement, valeurs négatives / décimales / vides / très grandes, accessibilité.
 * `tests/controles-numeriques-chrome.test.js` (vrai Chrome, Playwright) : vraie souris et vrai clavier (tout sélectionner, taper, Entrée, Maj + flèche,
   Retour arrière / Suppr dans le champ sans effacer l'élément), rendu réel (taille calculée = 2 rem), glissement à la souris, curseur.
+
+## Apparence des curseurs
+
+Un seul langage visuel pour tous les curseurs de l'éditeur de pages : `.pb-nc-range` (tous les contrôles numériques) et `.pb-cpop-range` (opacité d'une couleur),
+dans `public/css/page-builder.css` (bloc « Curseurs »). Jetons : `--pb-slider-hit` (zone cliquable 16 px), `--pb-slider-track-height` (4 px), `--pb-slider-thumb-size` (12 px),
+`--pb-slider-track-color` (= `--editor-border`), `--pb-slider-progress-color` et `--pb-slider-thumb-color` (= `--editor-accent`), `--pb-slider-thumb-ring` (= `--editor-panel`),
+`--pb-slider-focus` (= `--editor-focus`) : ils suivent les thèmes clair et sombre. La partie parcourue est dessinée par `--pb-fill` (posée par `paintRange`, purement visuelle).
+Survol : poignée ×1,15 ; appui : ×1,25 (transform seulement, 90 ms, supprimé avec « réduire les animations »).
+Test : `tests/editeur-curseurs-apparence-navigateur.test.js` (jetons et règles ; Chrome ne lit pas le style calculé des pseudo-éléments internes d'un curseur).
