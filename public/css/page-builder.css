@@ -827,8 +827,6 @@ button.pb-kind:hover, button.pb-kind:focus-visible { border-color: var(--accent)
 body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-select: none !important; }
 .pb-len-unit.pb-link-unit { height: 24px; padding: 0 14px 0 5px !important; border: 1px solid var(--border) !important; border-radius: var(--pb-radius-md); background-position: right 3px center !important; }
 .pb-boxcell { position: relative; display: block; min-width: 0; }
-.pb-boxcell .pb-nstep { position: absolute; top: 1px; right: 1px; bottom: 1px; z-index: 3; display: none; border-left: 0; border-radius: var(--pb-radius-sm); overflow: hidden; }
-.pb-boxcell:hover .pb-nstep, .pb-boxcell:focus-within .pb-nstep { display: flex; }
 .pb-boxcell .pb-nstep-btn { background: #fff; }
 .pb-ctx-cell { display: inline-block; flex: none; }
 .pb-ctx-cell .pb-ctx-num { width: 100%; }
@@ -1383,3 +1381,30 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 .pb-tip { padding: 6px 10px; border: 1px solid rgba(255, 255, 255, 0.08); animation-duration: 0.14s; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
 @keyframes pb-tip-in { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: none; } }
 .pb-tip-key { display: block; margin-top: 2px; font-size: 11px; font-weight: 500; color: #a9c3d6; letter-spacing: 0.01em; }
+
+
+/* Flèches ▲▼ des champs numériques : toujours visibles, dans le champ, jamais en superposition (un seul composant : numericControl).
+   Jetons communs aux deux variantes (.pb-len : champ avec unité ; .pb-boxcell : cases d'espacement) ; flèches dessinées en CSS (même rendu partout),
+   zone cliquable élargie par un pseudo-élément sans changer la taille visible. */
+.pb-body {
+  --pb-stepper-width: 14px; --pb-stepper-color: var(--editor-muted); --pb-stepper-bg: var(--editor-panel-secondary);
+  --pb-stepper-hover-bg: var(--editor-active); --pb-stepper-hover-color: var(--editor-accent-text);
+  --pb-stepper-active-bg: var(--editor-border-strong); --pb-stepper-divider: var(--editor-border);
+}
+.pb-nstep { width: var(--pb-stepper-width); border-left-color: var(--pb-stepper-divider); }
+.pb-nstep-btn { position: relative; font-size: 0; background: var(--pb-stepper-bg); color: var(--pb-stepper-color); transition: background-color 0.1s ease-out, color 0.1s ease-out; }
+.pb-nstep-btn::before { content: ""; display: block; width: 0; height: 0; border-left: 3.5px solid transparent; border-right: 3.5px solid transparent; }
+.pb-nstep-btn[data-dir="up"]::before { border-bottom: 4px solid currentColor; }
+.pb-nstep-btn[data-dir="down"]::before { border-top: 4px solid currentColor; }
+.pb-nstep-btn::after { content: ""; position: absolute; inset: -1px -3px; }
+.pb-nstep-btn:hover:not(:disabled) { background: var(--pb-stepper-hover-bg); color: var(--pb-stepper-hover-color); }
+.pb-nstep-btn:active:not(:disabled) { background: var(--pb-stepper-active-bg); }
+.pb-nstep-btn + .pb-nstep-btn { border-top-color: var(--pb-stepper-divider) !important; }
+/* cases d'espacement : le groupe ▲▼ fait partie du champ, entre la valeur et l'unité */
+.pb-sp-box .pb-boxcell { display: flex; align-items: center; }
+.pb-sp-box .pb-boxcell .pb-box-input { flex: 1 1 auto; min-width: 0; }
+.pb-sp-box .pb-boxcell .pb-nstep { position: static; display: flex; flex: none; height: 22px; border-left: 0; border-radius: var(--pb-radius-sm); overflow: hidden; }
+.pb-sp-box .pb-boxcell .pb-nstep-btn { background: transparent; }
+.pb-sp-box .pb-boxcell .pb-nstep-btn:hover:not(:disabled) { background: var(--pb-stepper-hover-bg); }
+.pb-sp-box .pb-boxcell .pb-nstep-btn:active:not(:disabled) { background: var(--pb-stepper-active-bg); }
+@media (prefers-reduced-motion: reduce) { .pb-nstep-btn { transition: none; } }

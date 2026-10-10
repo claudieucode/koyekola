@@ -97,3 +97,10 @@ dans `public/css/page-builder.css` (bloc « Curseurs »). Jetons : `--pb-slider-
 `--pb-slider-focus` (= `--editor-focus`) : ils suivent les thèmes clair et sombre. La partie parcourue est dessinée par `--pb-fill` (posée par `paintRange`, purement visuelle).
 Survol : poignée ×1,15 ; appui : ×1,25 (transform seulement, 90 ms, supprimé avec « réduire les animations »).
 Test : `tests/editeur-curseurs-apparence-navigateur.test.js` (jetons et règles ; Chrome ne lit pas le style calculé des pseudo-éléments internes d'un curseur).
+
+## Flèches ▲▼ (toujours visibles)
+
+Un seul composant (`numericControl`), deux dispositions : `.pb-len` (champ + ▲▼ + unité, presque tous les champs) et `.pb-boxcell` (cases d'espacement). Les ▲▼ sont **toujours visibles**,
+dans le champ, entre la valeur et l'unité (avant : dans les cases d'espacement, elles n'apparaissaient qu'au survol ou au focus, en superposition de la valeur). La barre contextuelle sur le canevas n'a
+volontairement pas de flèches (`hideSteps`). Jetons : `--pb-stepper-width` (14 px), `-color`, `-bg`, `-hover-bg`, `-hover-color`, `-active-bg`, `-divider` (dérivés des jetons `--editor-*`). Flèches dessinées en CSS
+(même rendu partout), zone cliquable élargie par un pseudo-élément. Test : `tests/editeur-fleches-numeriques-navigateur.test.js`.
