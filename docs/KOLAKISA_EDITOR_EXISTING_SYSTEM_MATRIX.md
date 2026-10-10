@@ -23,12 +23,12 @@ Documents voisins (pas de doublon créé) : `KOLAKISA_EDITOR_PARITY_MATRIX.md` (
 | 6 | Espacement (marge / intérieur) | `spacingBox` | FONCTIONNEL | deux blocs, liaison indépendante, unités, valeurs globales | séparation marge / intérieur | — | moyen | `editeur-espacement-navigateur` (8/8 rejoué) |
 | 7 | Curseurs | `.pb-nc-range`, `paintRange` | FONCTIONNEL | aspect unifié, jetons `--pb-slider-*` | valeurs et bornes | — | faible | `editeur-curseurs-apparence`, `editeur-ecart-curseur` (rejoués) |
 | 8 | Styles (modèle, par écran, par état) | `STYLE_PROPS` (86), `normalizeStyles`, `setStyles` | FONCTIONNEL | héritage ordinateur → tablette → mobile ; valeur propre vs héritée affichée | format d'enregistrement | voir PROPERTY_AUDIT § 6 | élevé (format) | `editeur-canvas-proprietes-effectives` (rejoué) |
-| 9 | États (survol / focus / clic) | `states` des fiches | PARTIEL | 15 types sur 86 ; conteneur : survol + clic | existant | étendre à d'autres types | moyen | d'après tests existants |
+| 9 | États (survol / focus / clic) | `states` des fiches | FONCTIONNEL MAIS LIMITÉ | **mis à jour** : survol pour 18 types de contenu + tous les widgets personnalisés ; boutons, liens, images, menus : survol / focus / clic ; conteneur : survol + clic | existant | focus et clic pour d'autres types : seulement s'ils sont interactifs | moyen | `editeur-controles-complets-navigateur` (rejoué) |
 | 10 | Responsive | `BREAKPOINTS` (3), `hideOn`, styles par écran | FONCTIONNEL | tablette ≤ 1023 px, mobile ≤ 767 px ; masquage par écran | seuils | écrans personnalisés : **ABSENT** | moyen | `site-web-reglages-ecrans` (existant) ; espacement (rejoué) |
 | 11 | Mise en page des conteneurs | fiches `container`, `grid`… | FONCTIONNEL | flex, grille, ordre, grow/shrink/basis, écarts | — | mots-clés de dimension (`fit-content`…) **ABSENT** | moyen | `editeur-canvas-containers` (rejoué) |
-| 12 | Dimensions | `lengthOf` (serveur) | FONCTIONNEL MAIS LIMITÉ | nombre + unité (px % em rem vw vh), `auto` | validation stricte (sécurité) | `fit-content` / `min-content` / `max-content` / `clamp()` | moyen (validateur + CSS) | — |
+| 12 | Dimensions | `lengthOf` (serveur), liste d'unités du client | FONCTIONNEL | **mis à jour** : nombre + unité, `auto`, `fit-content`, `min-content`, `max-content` (liste fermée) ; `clamp()` / `calc()` refusés volontairement | validation stricte (sécurité) | — | moyen (validateur + CSS) | `editeur-controles-complets-navigateur` (rejoué) |
 | 13 | Position | `position`, `zIndex`, `top…left` | FONCTIONNEL | static, relative, sticky, absolute, fixed ; plan | — | doc `editeur-pages-audit.md` périmée | faible | `editeur-canvas-proprietes-effectives` (rejoué) |
-| 14 | Transitions | `transitionDuration` | FONCTIONNEL MAIS LIMITÉ | durée unique, propriétés fixes | — | choix d'accélération et de propriétés | faible | — |
+| 14 | Transitions | `transitionDuration`, `transitionEasing` | FONCTIONNEL | **mis à jour** : durée + accélération (5 choix) ; propriétés animées fixes | — | choix des propriétés : non fait | faible | `editeur-controles-complets-navigateur` (rejoué) |
 | 15 | Animations, défilement, souris, sticky, transformations | `normalizeMotion`, `kol-motion.js` | FONCTIONNEL | moteur de mouvement (63 animations) ; 84/86 types ; sticky 6/86 | — | — | moyen | d'après `MOTION-ENGINE.md` |
 | 16 | Interactions (déclencheur → action) | `normalizeInteractions` | FONCTIONNEL | clic, survol, entrée à l'écran, chargement ; 6 par élément ; cible = autre élément | — | — | moyen | d'après tests existants |
 | 17 | Historique | `change`, `undo`, `redo` | FONCTIONNEL | 150 instantanés JSON, regroupement par clé, libellés | un geste = une étape | — | élevé | raccourcis et curseurs (rejoués) |
@@ -50,9 +50,9 @@ Documents voisins (pas de doublon créé) : `KOLAKISA_EDITOR_PARITY_MATRIX.md` (
 
 ## 3. Duplications et incohérences repérées
 
-1. **Deux façons de masquer par écran** : `hideOn` (case par écran) et `display: none` dans les styles d'un écran. À INVESTIGUER : lequel prime et si l'inspecteur le dit clairement.
+1. **Deux façons de masquer par écran** : `hideOn` (case par écran, classes `lp-hide-*` en `display:none` dans une requête média, écrites **après** les styles) et `display: none` dans les styles d'un écran. **Clarifié** : les deux se cumulent (l'élément est masqué si l'un OU l'autre masque) ; `hideOn` l'emporte sur un `display` réglé pour le même écran. Aucune correction nécessaire.
 2. **Deux documents de matrice voisins** (`PARITY` et `EXCELLENCE`) : complémentaires (comparaison Elementor / acquis) mais à relier ; aucun contenu contradictoire relevé.
-3. **Documentation périmée** : `editeur-pages-audit.md` (position absolue « refusée »).
+3. ~~Documentation périmée~~ — **corrigée** : `editeur-pages-audit.md` (position absolue).
 4. **Plusieurs raccourcis pour la même action** : coller le style en Alt + Ctrl/⌘ + V et Ctrl/⌘ + Maj + V (voulu, à documenter une fois).
 
 ## 4. Performance (base du 2026-10-10, une série, machine chargée — `perf-page-builder.md`)
@@ -80,4 +80,15 @@ Documents voisins (pas de doublon créé) : `KOLAKISA_EDITOR_PARITY_MATRIX.md` (
 Lot 5 (conteneurs : dimensions intrinsèques) → lot 7/11 (états et transitions) → lot 10 (masquage par écran) → lot 16 (accessibilité : audit page par page) ; lots 3 (moteur de propriétés), 6, 8, 9, 13, 14, 15, 17, 19 : **déjà couverts par l'existant** (voir § 2), donc à ne lancer que sur un manque démontré.
 Avant chaque lot : rejouer les tests de la ligne concernée, annoncer les fichiers touchés.
 
-**ARRÊT après l'audit, comme demandé : aucun lot de développement n'est commencé.**
+## 8. Lots exécutés après validation (2026-10-10)
+
+| Lot | Résultat |
+|---|---|
+| Fiches d'inspecteur des 19 types | **Abandonné : erreur d'audit** (ces widgets ont déjà une fiche complète générée à l'exécution). Documents corrigés. |
+| États (survol) | **Fait** : 18 types de contenu + tous les widgets personnalisés ; vérifié de bout en bout (inspecteur → enregistrement → rechargement → page publiée `:hover`). |
+| Transitions | **Fait pour l'accélération** (`transitionEasing`, écrite après la durée) ; propriétés animées fixes. |
+| Dimensions intrinsèques | **Fait** : `fit-content`, `min-content`, `max-content` pour largeur, hauteur, min/max ; liste fermée côté serveur ; `clamp()` / `calc()` **volontairement refusés**. |
+| Masquage par écran | **Clarifié** (pas de changement de code). |
+| Documentation périmée | **Corrigée**. |
+| Non fait (hors besoin démontré) | choix des propriétés de transition, écrans personnalisés, audit d'accessibilité page par page. |
+Tests : voir `KOLAKISA_EDITOR_REGRESSION_REPORT.md`.

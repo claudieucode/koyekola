@@ -1,12 +1,14 @@
-# KOLAKISA — Audit des propriétés de l'éditeur (LOT 0, lecture seule)
+# KOLAKISA — Audit des propriétés de l'éditeur (LOT 0, puis lots exécutés le 2026-10-10)
 
-Date : 2026-10-10. **Aucun code n'a été modifié pour établir ce document.** Source : exécution de `src/marketing/pages/nodes.js` (registre des 86 types, 86 propriétés de style) et lecture des fiches d'inspecteur de `public/js/page-builder.js` (`INSPECTORS`). Les contrôles réellement affichés se vérifient aussi dans les tests existants (voir la matrice du système existant) ; cette page ne rejoue pas ces tests.
+> **Mise à jour après les lots du 2026-10-10** : (1) l'accélération des transitions est ajoutée (`transitionEasing`, 87e propriété) ; (2) les dimensions acceptent `fit-content`, `min-content`, `max-content` (liste fermée) ; (3) l'état « survol » est proposé pour 18 types de contenu et tous les widgets personnalisés. Les tableaux ci-dessous décrivent l'état au moment de l'audit ; les sections 4 et 6 indiquent ce qui a changé.
+
+Date : 2026-10-10. **Aucun code n'a été modifié pour établir ce document.** Source : exécution de `src/marketing/pages/nodes.js` (registre des 86 types, 87 propriétés de style) et lecture des fiches d'inspecteur de `public/js/page-builder.js` (`INSPECTORS`). Les contrôles réellement affichés se vérifient aussi dans les tests existants (voir la matrice du système existant) ; cette page ne rejoue pas ces tests.
 Légende des colonnes : ● groupe complet de contrôles · ≈N sous-ensemble de N propriétés · – absent de la fiche · ▢ élément conteneur.
 
 ## 1. Chaîne complète d'une propriété (vérifiée pour le modèle commun)
 
 `contrôle (inspecteur)` → `setStyle / setStyles` (écran actif) → `change()` (historique, regroupement par clé) → arbre JSON (`styles.<écran>.<propriété>`, états `hover / focus / active`) → rendu serveur `POST …/rendu` + `patchCanvas` → enregistrement `PUT …/brouillon` (révision, détection de conflit) → rechargement (même arbre) → publication (CSS généré côté serveur, sans interface d'éditeur).
-Une propriété n'existe que si le **serveur** la valide (`STYLE_PROPS`, `check`) : les 86 propriétés de style passent toutes par ce même chemin, donc la chaîne est la même pour toutes. Les **fiches** d'inspecteur décident seulement lesquelles sont proposées pour un type.
+Une propriété n'existe que si le **serveur** la valide (`STYLE_PROPS`, `check`) : les 87 propriétés de style passent toutes par ce même chemin, donc la chaîne est la même pour toutes. Les **fiches** d'inspecteur décident seulement lesquelles sont proposées pour un type.
 
 ## 2. Propriétés de style connues du moteur (86)
 
@@ -128,12 +130,12 @@ Nombre de types dont la fiche expose chaque groupe (sur 86) : Mise en page 81 ·
 | Flex : grow / shrink / basis | **FONCTIONNEL** | dans le groupe Dimensions (flexGrow, flexShrink, flexBasis) |
 | Ordre personnalisé | **FONCTIONNEL** | contrôle « Ordre » (premier / dernier / valeur) pour un enfant de conteneur flex ou grille |
 | Grille | **FONCTIONNEL** | colonnes, lignes, gabarit, remplissage, placement par case |
-| Dimensions width / min / max / height | **FONCTIONNEL MAIS LIMITÉ** | nombre + unité (px, %, em, rem, vw, vh) et « auto » ; **pas de `fit-content`, `min-content`, `max-content`, `clamp()` ni `calc()`** (le validateur `lengthOf` n'accepte que nombre + unité) |
+| Dimensions width / min / max / height | **FONCTIONNEL** (mis à jour) | nombre + unité (px, %, rem, vw, vh), « auto », et **`fit-content`, `min-content`, `max-content`** (liste fermée, côté serveur et dans la liste d'unités) ; `clamp()` et `calc()` restent **volontairement refusés** (CSS libre = risque de sécurité) |
 | Marges / intérieur | **FONCTIONNEL** | blocs « Marge externe / interne », liaison indépendante, unités, négatif pour les marges, valeurs globales |
 | Position, z-index | **FONCTIONNEL** | static / relative / sticky / absolute / fixed ; haut, droite, bas, gauche ; plan |
 | Fond, bordure, rayon, ombre, opacité, débordement | **FONCTIONNEL** | groupes complets sur le conteneur |
-| Transformations, transitions | **FONCTIONNEL MAIS LIMITÉ** | transformations : oui ; transitions : **une durée seule**, propriétés fixes (couleur, fond, bordure), **pas de choix d'accélération ni de propriété** |
-| États | **PARTIEL** | survol et clic seulement pour le conteneur (`states: ["hover","active"]`) ; pas de focus |
+| Transformations, transitions | **FONCTIONNEL** (mis à jour) | transformations : oui ; transitions : durée **et accélération** (douce, linéaire, départ lent, arrivée lente, les deux) ; les propriétés animées restent fixes (couleur, fond, bordure, ombre, transformation, opacité) |
+| États | **FONCTIONNEL MAIS LIMITÉ** (mis à jour) | conteneur : survol + clic ; 18 types de contenu et tous les widgets personnalisés : survol (le focus et le clic n'ont de sens que pour les éléments interactifs : boutons, liens, images, menus, formulaires) |
 | Responsive | **FONCTIONNEL** | toute propriété par écran ; héritage affiché en grisé ; masquage par écran |
 | HTML sémantique / accessibilité | **FONCTIONNEL** | balise (section, header, footer, article, aside, nav), attributs HTML autorisés : `data-…`, `aria-…`, `title`, `role`, `lang` (10 au plus par élément) |
 | Écrans personnalisés | **ABSENT** | 3 écrans fixes |
@@ -151,8 +153,8 @@ Nombre de types dont la fiche expose chaque groupe (sur 86) : Mise en page 81 ·
 ## 6. Écarts constatés (ne sont PAS des corrections faites)
 
 1. ~~19 types sans fiche propre~~ — **retiré** : erreur d'audit corrigée (voir § 3).
-2. **États** : 15 types sur 86 ; focus seulement sur certains.
-3. **Transitions** : durée unique, ni propriété ni accélération (le moteur d'animation, lui, a ses accélérations).
-4. **Dimensions** : pas de mots-clés intrinsèques ni de `clamp()` / `calc()`.
+2. ~~**États** : 15 types sur 86~~ — **traité** : survol ajouté pour 18 types de contenu + tous les widgets personnalisés (test `editeur-controles-complets-navigateur`).
+3. ~~**Transitions** : durée unique~~ — **traité pour l'accélération** ; le choix des propriétés animées n'est **pas** fait (non demandé par un besoin démontré).
+4. ~~**Dimensions** : pas de mots-clés intrinsèques~~ — **traité** (`fit-content`, `min-content`, `max-content`) ; `clamp()` / `calc()` **non faits, volontairement** (sécurité : le serveur n'accepte que des valeurs d'une liste fermée).
 5. **Écrans** : 3 écrans fixes (ni point de rupture ajoutable, ni mode grand écran).
-6. **Documentation périmée** : `docs/editeur-pages-audit.md` dit encore que la position absolue est « refusée » ; le code l'accepte (absolue et fixe).
+6. ~~**Documentation périmée**~~ — **corrigée** : `docs/editeur-pages-audit.md` ne dit plus que la position absolue est refusée.

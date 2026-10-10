@@ -769,6 +769,7 @@
     if (!s) return "";
     if (/^-?\d{1,4}(\.\d{1,3})?$/.test(s)) s = s === "0" ? "0" : s + "px";
     if (s === "auto") return ["width", "height", "flexBasis", "marginTop", "marginRight", "marginBottom", "marginLeft"].indexOf(key) >= 0 ? s : null;
+    if (s === "fit-content" || s === "min-content" || s === "max-content") return ["width", "height", "minWidth", "maxWidth", "minHeight", "maxHeight"].indexOf(key) >= 0 ? s : null;
     if (s === "0" || LEN.test(s)) {
       if (/^-/.test(s) && !SIGNED_LEN.test(key)) return null;
       return s;
@@ -2142,7 +2143,7 @@
   var BOX_LAYOUT = ["display", "flexDirection", "flexWrap", "justifyContent", "alignItems", "alignContent", "gap", "rowGap", "columnGap"];
   var SIZE_W = ["width", "minWidth", "maxWidth"];
   var BOX = { layout: BOX_LAYOUT, size: null, spacing: true, color: null, background: true, border: null, effects: null };
-  var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: ["boxShadow", "opacity", "transitionDuration", "backdropBlur"] };
+  var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: ["boxShadow", "opacity", "transitionDuration", "transitionEasing", "backdropBlur"] };
   // Ordre des groupes selon la nature de l'élément (le premier est ouvert par défaut)
   var TEXT_ORDER = ["typography", "spacing", "size", "layout", "background", "border", "effects"];
   var INSPECTORS = {
@@ -2178,7 +2179,7 @@
     account: { kind: "Compte du visiteur", groups: TEXTUAL, order: TEXT_ORDER, states: true },
     dyntext: { kind: "Texte dynamique", groups: TEXTUAL, order: TEXT_ORDER },
     alert: { kind: "Alerte", groups: TEXTUAL, order: TEXT_ORDER },
-    counter: { kind: "Compteur", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, effects: ["opacity", "transitionDuration"] }, order: ["typography", "spacing", "size", "layout", "effects"] },
+    counter: { kind: "Compteur", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, effects: ["opacity", "transitionDuration", "transitionEasing"] }, order: ["typography", "spacing", "size", "layout", "effects"] },
     testimonial: { kind: "Témoignage", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: null }, order: ["typography", "background", "border", "effects", "spacing", "size", "layout"], states: true },
     pricing: { kind: "Offre tarifaire", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: null }, order: ["background", "border", "effects", "typography", "spacing", "size", "layout"], states: true },
     breadcrumb: { kind: "Fil d'Ariane", groups: TEXTUAL, order: TEXT_ORDER },
@@ -2220,6 +2221,9 @@
   };
   // Widgets personnalisés : schéma d'inspecteur selon leur nature (texte ou boîte)
   SPEC.types.forEach(function (t) { if (t.schema && !INSPECTORS[t.type]) INSPECTORS[t.type] = t.style === "box" ? { kind: t.label, groups: BOX } : { kind: t.label, groups: TEXTUAL, order: TEXT_ORDER }; });
+  // États : le serveur accepte survol / focus / clic pour tout type ; seules les fiches ne les proposaient pas. Survol pour les éléments de contenu et les widgets personnalisés.
+  ["heading", "text", "list", "quote", "badge", "iconlist", "rating", "counter", "progress", "gallery", "video", "carousel", "social", "sharebuttons", "iconbox", "imagebox", "map", "hotspot"].forEach(function (t) { if (INSPECTORS[t] && !INSPECTORS[t].states) INSPECTORS[t].states = ["hover"]; });
+  SPEC.types.forEach(function (t) { if (t.schema && INSPECTORS[t.type] && !INSPECTORS[t.type].states) INSPECTORS[t.type].states = ["hover"]; });
   function inspectorFor(it) {
     if (!it) return null;
     if (it.type === "layout") return INSPECTORS.section;
@@ -2235,9 +2239,12 @@
   // ---------- Contrôles de style compacts ----------
   // Une ligne par propriété : libellé | valeur | effacer. Le point devant le libellé signale une valeur propre à l'écran
   // modifié ; les petites icônes d'appareil, les écrans plus petits qui ont leur propre valeur pour cette propriété.
+  // Mots-clés de dimension : valeur sans nombre (comme « auto ») ; liste fermée, la même que celle du serveur
+  var KW = ["auto", "fit-content", "min-content", "max-content"];
+  var isKw = function (u) { return KW.indexOf(u) >= 0; };
   var UNITS = {
-    width: ["px", "%", "rem", "vw", "auto"], height: ["px", "%", "rem", "vh", "auto"], flexBasis: ["px", "%", "rem", "auto"],
-    minWidth: ["px", "%", "rem", "vw"], maxWidth: ["px", "%", "rem", "vw"], minHeight: ["px", "%", "rem", "vh"], maxHeight: ["px", "%", "rem", "vh"],
+    width: ["px", "%", "rem", "vw", "auto", "fit-content", "min-content", "max-content"], height: ["px", "%", "rem", "vh", "auto", "fit-content", "min-content", "max-content"], flexBasis: ["px", "%", "rem", "auto"],
+    minWidth: ["px", "%", "rem", "vw", "fit-content", "min-content", "max-content"], maxWidth: ["px", "%", "rem", "vw", "fit-content", "min-content", "max-content"], minHeight: ["px", "%", "rem", "vh", "fit-content", "min-content", "max-content"], maxHeight: ["px", "%", "rem", "vh", "fit-content", "min-content", "max-content"],
     gap: ["px", "rem", "em", "%"], rowGap: ["px", "rem", "em", "%"], columnGap: ["px", "rem", "em", "%"], fontSize: ["px", "em", "rem", "vw"], letterSpacing: ["px", "em", "rem"], wordSpacing: ["px", "em", "rem"], textIndent: ["px", "em", "rem", "%"], borderWidth: ["px"], borderTopWidth: ["px"], borderRightWidth: ["px"], borderBottomWidth: ["px"], borderLeftWidth: ["px"],
     borderRadius: ["px", "%", "rem"], borderTopLeftRadius: ["px", "%", "rem"], borderTopRightRadius: ["px", "%", "rem"], borderBottomRightRadius: ["px", "%", "rem"], borderBottomLeftRadius: ["px", "%", "rem"],
     top: ["px", "%", "rem"], left: ["px", "%", "rem"], right: ["px", "%", "rem"], bottom: ["px", "%", "rem"],
@@ -2248,7 +2255,7 @@
   function splitLen(v) {
     if (v === undefined || v === null || v === "") return null;
     var s = String(v);
-    if (s === "auto") return { num: "", unit: "auto" };
+    if (isKw(s)) return { num: "", unit: s };
     var m = /^(-?[\d.]+)([a-z%]*)$/.exec(s);
     return m ? { num: m[1], unit: m[2] || "px" } : null;
   }
@@ -2287,7 +2294,7 @@
     var rnd = function (n) { if (c.integer) return Math.round(n); var f = Math.pow(10, prec); return Math.round(n * f) / f; };
     var clamp = function (n) { return Math.min(max, Math.max(min, n)); };
     var shown = function (n, u) { return c.inlineUnit && u && u !== "px" ? n + u : String(n); };
-    var input = h("input", { id: c.id, type: "text", inputmode: "decimal", class: "pb-len-num", value: c.value === undefined || c.value === null ? "" : String(c.value), placeholder: c.placeholder === undefined ? "–" : String(c.placeholder), disabled: c.disabled || unitState === "auto", autocomplete: "off", "data-prop": c.prop || null, "aria-label": c.ariaLabel || null, "data-tip": c.tip || null });
+    var input = h("input", { id: c.id, type: "text", inputmode: "decimal", class: "pb-len-num", value: c.value === undefined || c.value === null ? "" : String(c.value), placeholder: c.placeholder === undefined ? "–" : String(c.placeholder), disabled: c.disabled || isKw(unitState), autocomplete: "off", "data-prop": c.prop || null, "aria-label": c.ariaLabel || null, "data-tip": c.tip || null });
     if (c.inputClass) input.className = c.inputClass;
     // Contrat : un champ numérique n'ouvre JAMAIS de liste au focus (ni datalist, ni autocomplétion) ; l'attribut « list » n'est volontairement pas pris en charge ici.
     var sel = null;
@@ -2323,21 +2330,21 @@
       var ok = c.onCommit(n === "" ? "" : String(n), u, opts);
       if (ok === false) return false;
       input.removeAttribute("aria-invalid");
-      mark(n !== "" || u === "auto");
+      mark(n !== "" || isKw(u));
       return true;
     };
     // Saisie validée (Entrée / sortie du champ) : « 32 », « 2rem » (si l'unité existe pour cette propriété), ou vide
     var commit = function (opts) {
       var u = unitNow();
       var raw = input.value.trim().replace(",", ".");
-      if (u === "auto") { input.value = ""; input.placeholder = "auto"; send("", "auto", opts); return true; }
-      if (/^auto$/i.test(raw)) { if (units && units.indexOf("auto") >= 0) { if (sel) sel.value = "auto"; else unitState = "auto"; send("", "auto", opts); return true; } return invalid("« auto » n'est pas possible ici."); }
+      if (isKw(u)) { input.value = ""; input.placeholder = u; send("", u, opts); return true; }
+      var kwTyped = KW.filter(function (k) { return k === raw.toLowerCase(); })[0]; if (kwTyped) { if (units && units.indexOf(kwTyped) >= 0) { if (sel) sel.value = kwTyped; else unitState = kwTyped; send("", kwTyped, opts); return true; } return invalid("« " + kwTyped + " » n'est pas possible ici."); }
       if (raw === "") { if (c.allowEmpty === false) return invalid("une valeur est nécessaire."); send("", u, opts); syncRange(); return true; }
       var m = (units ? /^(-?\d*\.?\d+)\s*(px|%|rem|em|vh|vw)?$/i : /^(-?\d*\.?\d+)$/).exec(raw);
       if (!m) return invalid(units ? "nombre attendu (ex. 24, 50 %, 2rem)." : "nombre attendu.");
       if (m[2]) {
         var tu = m[2].toLowerCase();
-        if (units.indexOf(tu) < 0) return invalid("l'unité « " + tu + " » n'existe pas pour ce réglage (" + units.filter(function (x) { return x !== "auto"; }).join(", ") + ").");
+        if (units.indexOf(tu) < 0) return invalid("l'unité « " + tu + " » n'existe pas pour ce réglage (" + units.filter(function (x) { return !isKw(x); }).join(", ") + ").");
         u = tu; if (sel) sel.value = tu; else unitState = tu;
       }
       var typed = parseFloat(m[1]);
@@ -2345,7 +2352,7 @@
       if (typed < min || typed > max) return invalid(isFinite(min) && isFinite(max) ? "entre " + min + " et " + max + "." : isFinite(max) ? max + " au plus." : min + " au moins.");
       var n = rnd(typed);
       input.value = shown(n, u);
-      if (u === "auto") u = units[0];
+      if (isKw(u)) u = units[0];
       if (send(n, u, opts) === false) return false;
       syncRange();
       return true;
@@ -2354,7 +2361,7 @@
     var bump = function (steps, opts) {
       if (c.disabled) return;
       var u = unitNow();
-      if (u === "auto") { u = units.filter(function (x) { return x !== "auto"; })[0] || "px"; if (sel) sel.value = u; else unitState = u; input.disabled = false; }
+      if (isKw(u)) { u = units.filter(function (x) { return !isKw(x); })[0] || "px"; if (sel) sel.value = u; else unitState = u; input.disabled = false; }
       var n = rnd(clamp(read() + steps * stepOf(u)));
       input.value = shown(n, u);
       input.removeAttribute("aria-invalid");
@@ -2378,8 +2385,8 @@
       bump((e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 10 : e.altKey ? 0.1 : 1), { key: e.repeat ? "step:" + c.id + ":" + burst : null, light: true });
     });
     if (sel) sel.addEventListener("change", function () {
-      input.disabled = Boolean(c.disabled) || sel.value === "auto";
-      if (sel.value === "auto" || input.value.trim() !== "") commit(); else { input.focus(); syncRange(); }
+      input.disabled = Boolean(c.disabled) || isKw(sel.value);
+      if (isKw(sel.value) || input.value.trim() !== "") commit(); else { input.focus(); syncRange(); }
     });
     // ▲▼ : deux vrais boutons compacts (hors de l'ordre de tabulation : le clavier a déjà les flèches)
     var stepBtn = function (dir, glyph, text) {
@@ -2397,7 +2404,7 @@
       range.addEventListener("pointerdown", function () { slide = ++ncSeq; });
       range.addEventListener("keydown", function () { slide = ++ncSeq; });
       range.addEventListener("input", function () {
-        var u = unitNow(); if (u === "auto") { u = units.filter(function (x) { return x !== "auto"; })[0] || "px"; if (sel) sel.value = u; input.disabled = false; }
+        var u = unitNow(); if (isKw(u)) { u = units.filter(function (x) { return !isKw(x); })[0] || "px"; if (sel) sel.value = u; input.disabled = false; }
         paintRange(range);
         var n = rnd(clamp(Number(range.value)));
         input.value = shown(n, u);
@@ -2417,7 +2424,7 @@
         var x0 = e.clientX, base = read(), moved = false, key = "drag:" + c.id + ":" + (++ncSeq), pending = null, raf = 0;
         var flush = function () {
           raf = 0; if (pending === null) return;
-          var u = unitNow(); if (u === "auto") u = units.filter(function (x) { return x !== "auto"; })[0] || "px";
+          var u = unitNow(); if (isKw(u)) u = units.filter(function (x) { return !isKw(x); })[0] || "px";
           var n = rnd(clamp(pending)); pending = null;
           input.value = shown(n, u); send(n, u, { key: key, light: true }); syncRange();
         };
@@ -2718,9 +2725,9 @@
     var units = unitsOf(key), cur = splitLen(own), base = splitLen(inh), cfg = LENCFG[key] || {};
     var unit = cur ? cur.unit : base ? base.unit : units[0];
     return numericControl(Object.assign({ id: id, label: SP[key].label, units: units, unit: unit, step: STEP_REL, min: isSigned(key) ? -9999 : 0, max: 9999, base: 0, drag: true, disabled: dis,
-      value: cur && cur.unit !== "auto" ? cur.num : "", placeholder: base ? (base.unit === "auto" ? "auto" : base.num) : cur && cur.unit === "auto" ? "auto" : "–" }, cfg, {
+      value: cur && !isKw(cur.unit) ? cur.num : "", placeholder: base ? (isKw(base.unit) ? base.unit : base.num) : cur && isKw(cur.unit) ? cur.unit : "–" }, cfg, {
       onCommit: function (raw, u, opts) {
-        var v = u === "auto" ? "auto" : raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
+        var v = isKw(u) ? u : raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
         if (parseLength(v, key) === null) { toast(SP[key].label + " : valeur invalide.", true); return false; }
         setStyle(idsOf(items), key, v, opts);
       },
