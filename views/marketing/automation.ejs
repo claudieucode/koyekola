@@ -56,7 +56,7 @@
       <% if (mk.can("automations.write")) { %>
       <form action="/marketing/automatisations/<%= a.id %>/objectif" method="post" class="mk-inline-form">
         <label for="goal-event" class="sr-only">Événement objectif</label>
-        <select id="goal-event" name="objectif" class="mk-select">
+        <select id="goal-event" name="objectif">
           <option value="">Aucun objectif</option>
           <% GOAL_EVENTS.forEach((g) => { %><option value="<%= g.value %>" <%= a.goal_event === g.value ? "selected" : "" %>><%= g.label %></option><% }) %>
         </select>

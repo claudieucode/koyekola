@@ -181,7 +181,7 @@ describe("variables « événement » dans les modèles", () => {
     const { contact } = audience.upsertContact(A, { email: "a@ex.fr" });
     const ctx = templates.buildContext(A, contact, { event: { course_title: "<b>FCP</b>", course_url: "javascript:alert(1)", learn_url: "https://k.test/mes-cours", order_total: "49,00 €", order_id: 12 } });
     assert.deepEqual([ctx.event.course_title, ctx.event.course_url, ctx.event.learn_url, ctx.event.order_total, ctx.event.order_id, ctx.event.lesson_title], ["<b>FCP</b>", "", "https://k.test/mes-cours", "49,00 €", "12", ""]);
-    assert.deepEqual(Object.keys(templates.buildContext(A, contact, {}).event).sort(), ["course_title", "course_url", "learn_url", "lesson_title", "order_id", "order_total"]);
+    assert.deepEqual(Object.keys(templates.buildContext(A, contact, {}).event).sort(), ["course_title", "course_url", "funnel_name", "funnel_step", "learn_url", "lesson_title", "order_id", "order_total"]);
   });
   test("un modèle peut afficher ces variables et un bouton vers le lien de la formation", () => {
     const t = templates.createTemplate(A, { name: "Bienvenue formation", kind: "transactional", subject: "Bienvenue dans {{event.course_title | default:\"votre formation\"}}", blocks: [{ type: "text", markdown: "Commande {{event.order_id}} : {{event.order_total}}" }, { type: "button", label: "Commencer", url: "{{event.course_url}}" }, { type: "text", markdown: "[Mes cours]({{event.learn_url}})" }] });

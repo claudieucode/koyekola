@@ -223,9 +223,10 @@ describe("navigation et événements", () => {
     const c = core.identify(A, { email: "visiteur@x.fr", siteId: 1 }).contact;
     emitVisitEvents(A, { contactId: c.id, sessionId: "s1", pageViews: [{ pageId: p1.id }, { pageId: p2.id }] });
     const ev = db.prepare("SELECT name, object_type, object_id, site_id FROM mk_events WHERE contact_id = ? AND name LIKE 'funnel.%' ORDER BY id").all(c.id);
-    assert.deepEqual(ev.map((e) => e.name), ["funnel.step_reached", "funnel.step_reached", "funnel.completed"]);
-    assert.deepEqual(ev.map((e) => e.object_type), ["funnel_step", "funnel_step", "funnel"]);
-    assert.equal(ev[1].object_id, String(last.id)); assert.ok(ev.every((e) => e.site_id === 1));
+    // palier 19 : entrée dans le tunnel et étape précédente terminée s'ajoutent aux événements d'étape
+    assert.deepEqual(ev.map((e) => e.name), ["funnel.entered", "funnel.step_reached", "funnel.step_reached", "funnel.step.completed", "funnel.completed"]);
+    assert.deepEqual(ev.map((e) => e.object_type), ["funnel", "funnel_step", "funnel_step", "funnel_step", "funnel"]);
+    assert.equal(ev[2].object_id, String(last.id)); assert.ok(ev.every((e) => e.site_id === 1));
     emitVisitEvents(A, { contactId: c.id, sessionId: "s1", pageViews: [{ pageId: p1.id }] }); // même session rejouée
     assert.equal(count("SELECT COUNT(*) n FROM mk_events WHERE contact_id = ? AND name = 'funnel.step_reached'", c.id), 2, "idempotent : pas de double comptage");
   });
