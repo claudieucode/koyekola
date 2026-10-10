@@ -99,6 +99,21 @@
       <% } else { %><p class="field-hint">Aucun passage pour l'instant.</p><% } %>
     </section>
 
+    <section class="mk-panel" id="versions" aria-labelledby="ver-h">
+      <h2 id="ver-h">Versions publiées</h2>
+      <% if (!versions.length) { %><p class="field-hint">Ce scénario n'a pas encore été publié. À chaque activation d'un contenu modifié, une nouvelle version est enregistrée ; les contacts déjà entrés gardent les étapes de leur version.</p>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Versions publiées</caption>
+          <thead><tr><th scope="col">Version</th><th scope="col">Publiée le</th><th scope="col">Étapes</th><th scope="col">Passages</th></tr></thead>
+          <tbody><% versions.forEach((v) => { %><tr><td>v<%= v.version %><%= v.version === a.version ? " (en cours)" : "" %></td><td><%= mkh.fdate(v.publishedAt) %></td><td><%= v.stepCount %></td><td><%= mkh.fmt(v.runs) %></td></tr><% }) %></tbody>
+        </table></div>
+      <% } %>
+      <div class="mk-actions">
+        <a class="btn btn-outline btn-sm" href="/marketing/automatisations/historique?scenario=<%= a.id %>">Historique des passages</a>
+        <% if (canSimulate) { %><a class="btn btn-outline btn-sm" href="/marketing/automatisations/<%= a.id %>/simulation">Simuler sur un contact</a><% } %>
+      </div>
+    </section>
+
     <script type="application/json" id="mk-automation-data"><%- data %></script>
     <script src="<%= asset('/js/automation-flow.js') %>" defer></script>
 <%- include("partials/bottom") %>

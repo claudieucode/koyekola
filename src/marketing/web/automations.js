@@ -55,9 +55,22 @@ module.exports = ({ db }) => {
     // le menu reste rempli même quand on tape un événement personnalisé, pas besoin de JavaScript pour les distinguer.
     const customEvent = String(req.body.trigger_event_custom || "").trim();
     attempt(req, res, next, () => (created ? `/marketing/automatisations/${created.id}` : "/marketing/automatisations"), () => {
-      created = auto.createAutomation(req.mk.ctx, { name: req.body.name, kind: req.body.kind, triggerEvent: customEvent || req.body.trigger_event });
+      created = auto.createAutomation(req.mk.ctx, { name: req.body.name, kind: req.body.kind, triggerEvent: customEvent || req.body.trigger_event, siteId: req.body.site });
       return "Scénario créé : ajoutez ses étapes puis activez-le.";
     });
+  });
+
+  // ---------- Historique de tous les passages (palier 17) ----------
+  // Avant « /automatisations/:id » : « historique » n'est pas un identifiant.
+  router.get("/automatisations/historique", need("automations.read"), (req, res) => {
+    const { ctx } = req.mk;
+    const text = (v, n) => (typeof v === "string" ? v.trim().slice(0, n) : "");
+    const f = { automation: intOrNull(req.query.scenario), status: auto.STATUSES.includes(req.query.etat) ? req.query.etat : "", q: text(req.query.q, 100), from: text(req.query.du, 10), to: text(req.query.au, 10), onlyErrors: req.query.erreurs === "1" };
+    const result = auto.runHistory(ctx, { automationId: f.automation ?? undefined, status: f.status, q: f.q, from: f.from, to: f.to, onlyErrors: f.onlyErrors, page: req.query.page });
+    const sensitiveOk = req.mk.can("contacts.view_sensitive");
+    if (!sensitiveOk) result.rows = result.rows.map((r) => ({ ...r, contact: { ...r.contact, email: require("../contactcore").maskEmail(r.contact.email) } }));
+    const qs = (over = {}) => { const m = { scenario: f.automation, etat: f.status, q: f.q, du: f.from, au: f.to, erreurs: f.onlyErrors ? "1" : "", ...over }; const p = new URLSearchParams(Object.entries(m).filter(([, v]) => v !== null && v !== undefined && v !== "").map(([k, v]) => [k, String(v)])).toString(); return `/marketing/automatisations/historique${p ? `?${p}` : ""}`; };
+    res.render("marketing/automations-history", { title: "Historique des passages", active: "automations", result, rows: result.rows, f, qs, STATUS_LABELS: auto.STATUS_LABELS, automations: auto.listAutomations(ctx).map((a) => ({ id: a.id, name: a.name })), sensitiveOk });
   });
 
   // ---------- Parcours tout prêts (comme les « Pre-built journeys » de Mailchimp) ----------
@@ -87,7 +100,7 @@ module.exports = ({ db }) => {
     attempt(req, res, next, () => (created ? `/marketing/automatisations/${created.id}` : `/marketing/automatisations/parcours/${encodeURIComponent(req.params.key)}`), () => {
       const courseId = intOrNull(req.body.formation);
       if (courseId && !db.prepare("SELECT 1 FROM courses WHERE id = ?").get(courseId)) throw new MarketingError("not_found", "Formation introuvable.");
-      created = journeys.createJourney(req.mk.ctx, req.params.key, { listId: req.body.liste, courseId });
+      created = journeys.createJourney(req.mk.ctx, req.params.key, { listId: req.body.liste, courseId, siteId: req.body.site });
       const n = created.steps.filter((s) => s.type === "email").length;
       const k = created.steps.filter((s) => s.type === "sms").length;
       if (!n) return `Parcours créé en brouillon avec ${k} SMS. Relisez chaque SMS (cliquez sur l'étape), ajustez les délais si besoin, puis activez-le : rien n'est envoyé avant.`;
@@ -144,8 +157,30 @@ module.exports = ({ db }) => {
     res.render("marketing/automation", {
       title: a.name, active: "automations", a, STATUS, RUN_STATUS, STEP_LABELS: auto.STEP_LABELS, data: safeJson(payload), locked,
       check: a.status === "active" ? null : auto.automationPreflight(ctx, a.id, { workerOn: workerOn(), smtpAvailable: Boolean(process.env.SMTP_HOST) }),
-      stats: auto.automationStats(ctx, a.id), revenue: require("../revenue").automationRevenue(ctx, a.id), runs: auto.listRuns(ctx, a.id, { limit: 50 }),
+      versions: auto.listVersions(ctx, a.id), canSimulate: req.mk.can("automations.write") && req.mk.can("contacts.read"),
+      stats: auto.automationStats(ctx, a.id), revenue: require("../revenue").automationRevenue(ctx, a.id), runs: auto.listRuns(ctx, a.id, { limit: 50 }).map((r) => (req.mk.can("contacts.view_sensitive") ? r : { ...r, email: require("../contactcore").maskEmail(r.email) })),
     });
+  });
+
+  // Simulation sur un contact réel : lecture seule, rien n'est envoyé ni modifié (palier 17). Réservée à qui peut modifier le scénario et voir les contacts.
+  router.get("/automatisations/:id/simulation", need("automations.write"), async (req, res, next) => {
+    const a = load(req, res);
+    if (!a) return;
+    if (!req.mk.can("contacts.read")) return res.status(403).render("error", { message: "La simulation lit les données d'un contact : le droit « voir les contacts » est nécessaire." });
+    const { ctx } = req.mk;
+    const raw = typeof req.query.contact === "string" ? req.query.contact.trim().slice(0, 254) : "";
+    let report = null, error = null, contact = null;
+    try {
+      if (raw) {
+        contact = /^\d{1,12}$/.test(raw) ? audience.getContact(ctx, Number(raw)) : audience.findByEmail(ctx, raw);
+        // accès limité à un site : seulement un contact de CE site
+        if (contact && Number.isInteger(ctx.siteScope) && !(contact.origin_site_id === ctx.siteScope || db.prepare("SELECT 1 FROM mk_events WHERE organization_id = ? AND contact_id = ? AND site_id = ? LIMIT 1").get(ctx.organizationId, contact.id, ctx.siteScope))) contact = null;
+        if (!contact) error = "Aucun contact ne correspond (adresse e-mail exacte ou numéro de fiche).";
+        else report = await auto.dryRun(ctx, a, contact.id);
+      }
+    } catch (e) { if (!(e instanceof MarketingError)) return next(e); error = e.message; }
+    const sensitiveOk = req.mk.can("contacts.view_sensitive");
+    res.render("marketing/automation-simulation", { title: `Simulation — ${a.name}`, active: "automations", a, STATUS, report, error, raw: sensitiveOk ? raw : "", contact: contact ? { id: contact.id, email: sensitiveOk ? contact.email : require("../contactcore").maskEmail(contact.email) } : null });
   });
 
   // Détail d'un passage (journal pas à pas — mk_automation_log, déjà alimenté par le moteur mais jusqu'ici jamais affiché)

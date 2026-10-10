@@ -26,6 +26,13 @@ function eventData(ctx, event) {
   };
 }
 
+// Un scénario d'un SITE n'accueille que les contacts de ce site : l'événement vient de ce site, ou le contact y a son origine / une activité enregistrée
+function belongsToSite(ctx, contact, event, siteId) {
+  if (Number.isInteger(event.siteId) && event.siteId === siteId) return true;
+  if (contact.origin_site_id === siteId) return true;
+  return Boolean(ctx.db.prepare("SELECT 1 FROM mk_events WHERE organization_id = ? AND contact_id = ? AND site_id = ? LIMIT 1").get(ctx.organizationId, contact.id, siteId));
+}
+
 // ---------- Entrée d'un contact dans un scénario ----------
 function onEvent(ctx, event) {
   if (!event || !Number.isInteger(event.contactId) || typeof event.name !== "string") return 0;
@@ -47,11 +54,12 @@ function onEvent(ctx, event) {
     const matched = JSON.parse(a.triggers || "[]").find((t) => t.event === event.name);
     const filter = matched ? matched.filter : {};
     if (filter.key && String(event.metadata && event.metadata[filter.key]) !== String(filter.value)) continue;
+    if (Number.isInteger(a.site_id) && !belongsToSite(ctx, contact, event, a.site_id)) continue;
     const steps = JSON.parse(a.active_steps);
     if (!steps.length) continue;
     const info = ctx.db
-      .prepare("INSERT OR IGNORE INTO mk_automation_runs (organization_id, automation_id, contact_id, trigger_event_id, steps, event_data, wake_at, entered_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(ctx.organizationId, a.id, contact.id, event.id ?? null, a.active_steps, JSON.stringify(eventData(ctx, event)), now, now);
+      .prepare("INSERT OR IGNORE INTO mk_automation_runs (organization_id, automation_id, contact_id, trigger_event_id, steps, event_data, wake_at, entered_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(ctx.organizationId, a.id, contact.id, event.id ?? null, a.active_steps, JSON.stringify(eventData(ctx, event)), now, now, a.version || 0);
     if (info.changes === 0) continue; // déjà passé dans ce scénario
     enqueueRun(ctx.db, { organizationId: ctx.organizationId, runId: Number(info.lastInsertRowid), runAt: now, tag: "start" });
     entered++;
