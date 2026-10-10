@@ -302,4 +302,29 @@ function spec(type) {
   return defs ? Object.entries(defs).map(([key, d]) => ({ key, label: d.label, groups: d.groups, states: d.states })) : null;
 }
 
-module.exports = { PARTS, allows, spec };
+// Contrôle de compatibilité d'un document ENREGISTRÉ (sections déjà normalisées ou brutes) : réglages de parties que la partie n'accepte pas.
+// Lecture seule ; sert au script de contrôle des données existantes et aux tests.
+function scan(sections, groupOf) {
+  const out = [];
+  const visit = (list) => {
+    for (const n of list || []) {
+      if (!n || typeof n !== "object") continue;
+      const defs = PARTS[n.type];
+      if (defs && n.parts && typeof n.parts === "object") {
+        for (const [key, val] of Object.entries(n.parts)) {
+          const def = defs[key];
+          if (!def) { out.push({ id: n.id, type: n.type, part: key, problem: "partie inconnue" }); continue; }
+          for (const [scope, set] of [...Object.entries((val && val.styles) || {}), ...Object.entries((val && val.states) || {})]) {
+            if ((val.states || {})[scope] && !def.states.includes(scope)) out.push({ id: n.id, type: n.type, part: key, problem: `état « ${scope} » non proposé` });
+            for (const k of Object.keys(set || {})) if (!allows(def, k, groupOf)) out.push({ id: n.id, type: n.type, part: key, prop: k, scope, problem: "réglage non proposé pour cette partie" });
+          }
+        }
+      }
+      visit(n.children);
+    }
+  };
+  visit(sections);
+  return out;
+}
+
+module.exports = { PARTS, allows, spec, scan };

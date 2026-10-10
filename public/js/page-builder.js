@@ -714,14 +714,24 @@
   // Cible des réglages : null = le widget lui-même ; sinon une de ses PARTIES (carte, image, titre…, déclarées par le registre). Les parties ont la même forme
   // que le widget ({ styles: { écran }, states: { état } }) : tous les contrôles, l'historique et l'enregistrement fonctionnent donc sans changement.
   var styleTarget = null;
-  function holderOf(it, create) {
-    if (!styleTarget || !partDef(it, styleTarget)) return it;
+  // Un réglage n'est écrit dans une PARTIE que si le registre des parties (parts.js, même source que le serveur) l'accepte pour cette partie ; sinon il
+  // revient au widget lui-même (ex. « Aligner dans le parent » de la barre contextuelle alors qu'une partie est choisie dans l'inspecteur).
+  var GROUP_OF = null;
+  function groupOfKey(k) { if (!GROUP_OF) { GROUP_OF = {}; SPEC.styleProps.forEach(function (p) { GROUP_OF[p.key] = p.group; }); } return k === "backgroundColor" ? "background" : GROUP_OF[k]; }
+  function partAllowsKey(it, key) {
+    var pd = styleTarget && partDef(it, styleTarget), g = pd && groupOfKey(key);
+    if (!pd || !g) return true; // pas de partie, ou réglage composé (fond, filtre, ombre…) géré par les contrôles de son groupe
+    var spec = pd.groups[g];
+    return spec === true || (Array.isArray(spec) && spec.indexOf(key) >= 0);
+  }
+  function holderOf(it, create, key) {
+    if (!styleTarget || !partDef(it, styleTarget) || (key !== undefined && !partAllowsKey(it, key))) return it;
     if (!it.parts || !it.parts[styleTarget]) { if (!create) return null; it.parts = it.parts || {}; it.parts[styleTarget] = {}; }
     return it.parts[styleTarget];
   }
   function partDef(it, key) { var d = it && isNode(it) && NT[it.type] && NT[it.type].parts; return d ? d.filter(function (x) { return x.key === key; })[0] || null : null; }
-  function styleSet(it, bp, state, create) {
-    var o = holderOf(it, create);
+  function styleSet(it, bp, state, create, key) {
+    var o = holderOf(it, create, key);
     if (!o) return null;
     if (state && state !== "normal") {
       if (!o.states) { if (!create) return null; o.states = {}; }
@@ -732,7 +742,7 @@
     if (!o.styles[bp]) { if (!create) return null; o.styles[bp] = {}; }
     return o.styles[bp];
   }
-  function ownValue(it, key) { var s = styleSet(it, device, styleState, false); return s && s[key] !== undefined ? s[key] : undefined; }
+  function ownValue(it, key) { var s = styleSet(it, device, styleState, false, key); return s && s[key] !== undefined ? s[key] : undefined; }
   // Valeur héritée (écrans plus grands) : affichée en indication grise
   function inheritedValue(it, key) {
     if (styleState !== "normal") return undefined;
@@ -743,7 +753,7 @@
       var d = (it.styles && it.styles.desktop) || {}, cols = d.gridTemplate ? String(d.gridTemplate).split(" ").length : Number(d.columns) || 0;
       if (!own("tablet") && (device === "tablet" ? cols > 2 : !own("mobile") && cols > 1)) return key === "columns" ? (device === "tablet" ? 2 : 1) : undefined;
     }
-    var ho = holderOf(it, false);
+    var ho = holderOf(it, false, key);
     for (var j = i - 1; j >= 0; j--) { var s = ho && ho.styles && ho.styles[BPS[j]]; if (s && s[key] !== undefined) return s[key]; }
     return undefined;
   }
@@ -769,7 +779,7 @@
         Object.keys(map).forEach(function (key) {
           var value = map[key];
           var empty = value === "" || value === null || value === undefined;
-          var set = styleSet(it, device, styleState, !empty);
+          var set = styleSet(it, device, styleState, !empty, key);
           if (!set) return;
           if (empty) delete set[key]; else set[key] = value;
         });
@@ -3274,12 +3284,12 @@
         if (hasTypo || !keys.length) return;
       }
       if (g === "typography" && schema.groups.color !== undefined && keysOf("color").indexOf("color") >= 0) keys.splice(Math.min(3, keys.length), 0, "color");
-      if (g === "layout") keys = withChildKeys(it, keys, plan);
+      if (g === "layout" && !pdef) keys = withChildKeys(it, keys, plan); // le placement dans le parent concerne le WIDGET, jamais une de ses parties
       if (g === "background") keys = ["backgroundColor", "backgroundImage", "gradient", "overlay", "backgroundSize", "backgroundPosition", "backgroundRepeat", "backgroundAttachment"];
       plan.push([g, keys]);
     });
     // Un élément sans groupe « Mise en page » (image, bouton…) reçoit tout de même les réglages d'enfant de son parent
-    if (!plan.some(function (x) { return x[0] === "layout"; })) { var ck = withChildKeys(it, [], plan); if (ck.length) plan.push(["layout", ck]); }
+    if (!pdef && !plan.some(function (x) { return x[0] === "layout"; })) { var ck = withChildKeys(it, [], plan); if (ck.length) plan.push(["layout", ck]); }
     if (it.type === "layout" && items.length === 1) {
       var wid = fid();
       var wsel = h("select", { id: wid, class: "pb-prop-select", disabled: lockedAny(items) }, STYLE.width.map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
@@ -6657,6 +6667,23 @@
     saveTimer = setTimeout(save, 1000);
     backup();
   }
+  // Réglages que le serveur a écartés (inapplicables à une partie) : l'éditeur les retire de SON document, sans nouvelle étape d'historique, et prévient une fois
+  function healIgnored(list) {
+    var seen = {};
+    list.forEach(function (w) {
+      var it = w.nodeId && byId(w.nodeId), p = it && it.parts && it.parts[w.part];
+      if (p) {
+        if (w.kind === "part_prop") { var bag = (p.styles && p.styles[w.scope]) || (p.states && p.states[w.scope]); if (bag) delete bag[w.prop]; }
+        if (w.kind === "part_state" && p.states) delete p.states[w.state];
+        cleanStyles(it);
+        if (!Object.keys(p).length) delete it.parts[w.part];
+      }
+      seen[w.message] = true;
+    });
+    var msgs = Object.keys(seen);
+    toast(msgs[0] + (msgs.length > 1 ? " (+" + (msgs.length - 1) + " autre" + (msgs.length > 2 ? "s" : "") + ")" : ""), false);
+    renderInspector(); scheduleRender(true);
+  }
   function backup() { try { localStorage.setItem("pb-backup-" + PAGE.id, JSON.stringify({ at: Date.now(), revision: revision, content: payload() })); } catch (e) { /* stockage indisponible */ } }
   var aiHold = false; // aperçu d'une proposition de l'IA : rien n'est enregistré tant qu'elle n'est pas appliquée
   function save() {
@@ -6667,6 +6694,7 @@
     setSave("Enregistrement…");
     return api("PUT", BASE + "/brouillon", { content: payload(), revision: revision }).then(function (r) {
       saving = false; retry = 0; revision = r.revision; hasDraft = true;
+      if (r.warnings && r.warnings.length) healIgnored(r.warnings);
       updateStatus();
       if (!dirty) { setSave("Enregistré à " + new Date(r.savedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), "is-ok"); try { localStorage.removeItem("pb-backup-" + PAGE.id); } catch (e) { /* rien */ } }
     }, function (err) {

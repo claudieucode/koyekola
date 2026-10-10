@@ -1629,7 +1629,7 @@ function normalizeNode(raw, at, h, depth, counter) {
   const styles = normalizeStyles(raw.styles, raw.states, where, h);
   if (styles.styles) node.styles = styles.styles;
   if (styles.states) node.states = styles.states;
-  const parts = normalizeParts(raw.type, raw.parts, where, h);
+  const parts = normalizeParts(raw.type, raw.parts, where, h, raw.id);
   if (parts) node.parts = parts;
   if (def.container) {
     const kids = Array.isArray(raw.children) ? raw.children : [];
@@ -1643,7 +1643,9 @@ function normalizeNode(raw, at, h, depth, counter) {
 }
 // Parties stylables d'un widget (voir parts.js) : chaque partie reçoit le jeu de styles COMPLET validé comme celui de la racine, restreint aux groupes
 // et aux états que le registre autorise pour elle. Une partie inconnue ou une propriété hors de ses groupes est refusée (jamais ignorée en silence).
-function normalizeParts(type, raw, at, h) {
+// Diagnostics non bloquants collectés pendant la validation (lus par l'enregistrement du brouillon : ctx.__warnings)
+function ignored(h, w) { if (h && h.ctx && Array.isArray(h.ctx.__warnings) && h.ctx.__warnings.length < 50) h.ctx.__warnings.push(w); }
+function normalizeParts(type, raw, at, h, nodeId) {
   if (raw === undefined || raw === null) return null;
   if (typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${at} : parties invalides.`);
   const defs = partsLib.PARTS[type];
@@ -1653,10 +1655,17 @@ function normalizeParts(type, raw, at, h) {
     const def = defs && Object.hasOwn(defs, key) ? defs[key] : null;
     if (!def) throw new Error(`${at} : « ${key} » n'est pas une partie stylable de cet élément.`);
     const st = normalizeStyles(val && val.styles, val && val.states, `${at} › ${def.label}`, h);
-    for (const set of [...Object.values(st.styles || {}), ...Object.values(st.states || {})]) {
-      for (const k of Object.keys(set)) if (!partsLib.allows(def, k, groupOf)) throw new Error(`${at} › ${def.label} : le réglage « ${k} » n'est pas disponible pour cette partie.`);
+    // Réglage valide dans la grammaire mais que cette partie n'accepte pas (ex. « alignement dans le parent » sur « Question + réponse ») : il n'a aucun effet
+    // légitime ici. Il est écarté, le reste est enregistré, et la personne est prévenue (diagnostic non bloquant, jamais une erreur qui bloque la page).
+    const drop = (set, scope) => { for (const k of Object.keys(set)) if (!partsLib.allows(def, k, groupOf)) { delete set[k]; ignored(h, { kind: "part_prop", nodeId, part: key, partLabel: def.label, prop: k, scope, message: `Le réglage « ${(STYLE_UI[k] || [k])[0]} » n'existe pas pour la partie « ${def.label} » : il n'a pas été appliqué (le reste est enregistré).` }); } };
+    for (const [bp, set] of Object.entries(st.styles || {})) drop(set, bp);
+    for (const [state, set] of Object.entries(st.states || {})) {
+      if (!def.states.includes(state)) { delete st.states[state]; ignored(h, { kind: "part_state", nodeId, part: key, partLabel: def.label, state, message: `L'état « ${state} » n'existe pas pour la partie « ${def.label} » : il n'a pas été appliqué.` }); continue; }
+      drop(set, state);
     }
-    for (const state of Object.keys(st.states || {})) if (!def.states.includes(state)) throw new Error(`${at} › ${def.label} : l'état « ${state} » n'est pas disponible pour cette partie.`);
+    for (const bag of [st.styles, st.states]) if (bag) for (const [k, set] of Object.entries(bag)) if (!Object.keys(set).length) delete bag[k];
+    if (st.styles && !Object.keys(st.styles).length) delete st.styles;
+    if (st.states && !Object.keys(st.states).length) delete st.states;
     if (st.styles || st.states) out[key] = st;
   }
   return Object.keys(out).length ? out : null;
