@@ -28,9 +28,8 @@ Capacités transversales (`capsOf`) : animations d'apparition (motion) 84/86, ef
 
 ## 3. Couverture des groupes de contrôles par type d'élément (86 types)
 
-Nombre de types dont la fiche expose chaque groupe : Mise en page 62 · Typographie 41 · Couleurs 49 · Dimensions 76 · Espacement 85 · Fond 40 · Bordure 52 · Effets 55 · Média 1 (sur 86). **15 types** proposent les états survol / focus / clic.
-**19 types n'ont pas de fiche propre** : ils reçoivent la fiche par défaut (Espacement + Dimensions seulement) : `slides, testimonialcarousel, mediacarousel, cart, facebookbutton, linkinbio, lottie, profilecard, readmore, querylist, postmeta, postterms, postnav, authorbox, archiveinfo, postcomments, cmsmenu, minicart, textpath`.
-Le moteur accepte pourtant tous les styles pour ces types (validation et rendu génériques) : l'écart est dans la **fiche** d'inspecteur, pas dans le modèle.
+Nombre de types dont la fiche expose chaque groupe (sur 86) : Mise en page 81 · Typographie 51 · Couleurs 68 · Dimensions 76 · Espacement 85 · Fond 59 · Bordure 71 · Effets 74 · Média 1. **15 types** proposent les états survol / focus / clic (les widgets personnalisés n'en ont pas).
+**Correction du 2026-10-10 (même jour que la première version de ce document)** : les 19 widgets `slides, testimonialcarousel, mediacarousel, cart, facebookbutton, linkinbio, lottie, profilecard, readmore, querylist, postmeta, postterms, postnav, authorbox, archiveinfo, postcomments, cmsmenu, minicart, textpath` sont des **widgets personnalisés** : l'inspecteur leur génère à l'exécution une fiche complète (`page-builder.js`, « Widgets personnalisés : schéma d'inspecteur selon leur nature ») — **boîte** (mise en page, dimensions, espacement, couleurs, fond, bordure, effets) ou **texte** (typographie, couleurs, dimensions, espacement, fond, bordure, effets). Une première version de cet audit les avait comptés à tort comme « sans fiche » (lecture de la seule table statique `INSPECTORS`). Il n'y a donc **pas d'écart de fiche** ; seuls les **états** manquent à ces widgets.
 
 | Type | Nom | Catégorie | Mise en page | Typographie | Couleurs | Dimensions | Espacement | Fond | Bordure | Effets | Média | États | Fiche |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -64,33 +63,33 @@ Le moteur accepte pourtant tous les styles pour ces types (validation et rendu g
 | `toc` | Table des matières | Interaction | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
 | `toggle` | Bascule | Interaction | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
 | `tooltip` | Infobulle | Interaction | ≈1 | ● | ● | – | ● | – | – | – | – | – | propre |
-| `archiveinfo` | En-tête d'archive | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
-| `authorbox` | Boîte auteur | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
-| `cart` | Panier | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
-| `cmsmenu` | Menu du CMS | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
+| `archiveinfo` | En-tête d'archive | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
+| `authorbox` | Boîte auteur | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
+| `cart` | Panier | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
+| `cmsmenu` | Menu du CMS | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
 | `countdown` | Compte à rebours | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
 | `counter` | Compteur | Marketing | ≈1 | ● | ● | ≈3 | ● | – | – | ≈2 | – | – | propre |
-| `facebookbutton` | Bouton Facebook | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
-| `linkinbio` | Lien en bio | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
-| `lottie` | Animation Lottie | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
-| `mediacarousel` | Carrousel média | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
-| `minicart` | Mini-panier | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
-| `postcomments` | Commentaires de l'article | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
-| `postmeta` | Informations de l'article | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
-| `postnav` | Article précédent / suivant | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
-| `postterms` | Catégorie et étiquettes | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
+| `facebookbutton` | Bouton Facebook | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
+| `linkinbio` | Lien en bio | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
+| `lottie` | Animation Lottie | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
+| `mediacarousel` | Carrousel média | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
+| `minicart` | Mini-panier | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
+| `postcomments` | Commentaires de l'article | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
+| `postmeta` | Informations de l'article | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
+| `postnav` | Article précédent / suivant | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
+| `postterms` | Catégorie et étiquettes | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
 | `pricelist` | Liste de prix | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
 | `pricing` | Offre tarifaire | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ● | – | ● | propre |
-| `profilecard` | Carte de profil | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
+| `profilecard` | Carte de profil | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
 | `progress` | Barre de progression | Marketing | ≈1 | ≈2 | ≈1 | ≈3 | ● | – | – | – | – | – | propre |
-| `querylist` | Liste dynamique | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
+| `querylist` | Liste dynamique | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
 | `rating` | Évaluation | Marketing | ≈1 | ≈2 | ≈1 | – | ● | – | – | – | – | – | propre |
-| `readmore` | Lire la suite | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
+| `readmore` | Lire la suite | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
 | `signupform` | Formulaire | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `slides` | Diaporama | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
+| `slides` | Diaporama | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
 | `testimonial` | Témoignage | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ● | – | ● | propre |
-| `testimonialcarousel` | Carrousel de témoignages | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
-| `textpath` | Texte sur un tracé | Marketing | – | – | – | ● | ● | – | – | – | – | – | **défaut** (Espacement + Dimensions) |
+| `testimonialcarousel` | Carrousel de témoignages | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
+| `textpath` | Texte sur un tracé | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
 | `audio` | Audio | Média | ≈1 | – | – | ≈3 | ● | – | ● | ● | – | – | propre |
 | `carousel` | Carrousel d'images | Média | ≈1 | – | – | ≈3 | ● | – | ● | ● | – | – | propre |
 | `gallery` | Galerie | Média | ≈2 | – | – | ≈3 | ● | – | ● | ● | – | – | propre |
@@ -151,7 +150,7 @@ Le moteur accepte pourtant tous les styles pour ces types (validation et rendu g
 
 ## 6. Écarts constatés (ne sont PAS des corrections faites)
 
-1. **19 types sans fiche propre** (liste § 3) : pas de bordure, fond, effets ni typographie proposés, alors que le moteur les accepterait.
+1. ~~19 types sans fiche propre~~ — **retiré** : erreur d'audit corrigée (voir § 3).
 2. **États** : 15 types sur 86 ; focus seulement sur certains.
 3. **Transitions** : durée unique, ni propriété ni accélération (le moteur d'animation, lui, a ses accélérations).
 4. **Dimensions** : pas de mots-clés intrinsèques ni de `clamp()` / `calc()`.

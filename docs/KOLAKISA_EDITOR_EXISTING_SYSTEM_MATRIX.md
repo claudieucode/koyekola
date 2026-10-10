@@ -18,7 +18,7 @@ Documents voisins (pas de doublon créé) : `KOLAKISA_EDITOR_PARITY_MATRIX.md` (
 | 1 | Canevas (iframe, rendu, zoom, défilement) | `renderCanvas`, `patchCanvas`, `applyZoom`, `setZoom` | FONCTIONNEL | rendu serveur identique au public ; mise à jour par section ; zoom 0,25–2 et « ajuster » | stabilité du défilement, pas de remontage | aucune urgente | élevé (cœur) | `editeur-stabilite`, `editeur-canvas-*` (stabilité rejouée) |
 | 2 | Sélection (simple, multiple, parent, Ctrl+A) | `select()` | FONCTIONNEL | depuis canevas et calques ; sans remontage | focus et défilement conservés | — | moyen | `editeur-structure-navigateur` (rejoué) |
 | 3 | Structure / calques | `renderTree` | FONCTIONNEL | arbre différentiel, renommer, masquer, verrouiller, dupliquer, glisser-déposer, recherche | identifiants stables | — | moyen | `editeur-droite-navigateur`, `editeur-structure-navigateur` (rejoués) |
-| 4 | Inspecteur (Général / Style / Interactions) | `renderInspector`, `INSPECTORS` | FONCTIONNEL MAIS LIMITÉ | fiches par type ; 19 types sur la fiche par défaut (Espacement + Dimensions) | accordéons, disposition | fiches complètes pour les 19 types | faible (configuration) | contraste, droite (rejoués) |
+| 4 | Inspecteur (Général / Style / Interactions) | `renderInspector`, `INSPECTORS` | FONCTIONNEL | fiches par type ; les widgets personnalisés reçoivent à l'exécution une fiche « boîte » ou « texte » complète (**correction** : une première version de ce document les croyait sans fiche) | accordéons, disposition | états pour davantage de types | faible | contraste, droite (rejoués) |
 | 5 | Contrôles numériques | `numericControl`, `numField`, `numberControl` | FONCTIONNEL | un composant : saisie, ▲▼ visibles, unité, curseur, glissement sur le libellé, aucune liste au focus | contrat « un clic = saisir » | — | moyen | 6 fichiers rejoués ; **1 échec préexistant** (glissement sur le libellé, `controles-numeriques-chrome`, échoue aussi sans mes modifications) |
 | 6 | Espacement (marge / intérieur) | `spacingBox` | FONCTIONNEL | deux blocs, liaison indépendante, unités, valeurs globales | séparation marge / intérieur | — | moyen | `editeur-espacement-navigateur` (8/8 rejoué) |
 | 7 | Curseurs | `.pb-nc-range`, `paintRange` | FONCTIONNEL | aspect unifié, jetons `--pb-slider-*` | valeurs et bornes | — | faible | `editeur-curseurs-apparence`, `editeur-ecart-curseur` (rejoués) |
@@ -44,7 +44,7 @@ Documents voisins (pas de doublon créé) : `KOLAKISA_EDITOR_PARITY_MATRIX.md` (
 | 27 | Barre d'actions contextuelle | `placeCanvasBar` | FONCTIONNEL | actions sur l'élément sélectionné (le « + » rond redondant a été retiré) | — | audit détaillé non fait | faible | `editeur-canvas-containers` (rejoué) |
 | 28 | Thèmes de l'éditeur (clair / sombre) | jetons `--editor-*` | FONCTIONNEL | tous panneaux et menus ; accent suivi | contrastes ≥ 4,5:1 | — | faible | `editeur-contraste`, `editeur-theme-atomique` (rejoués) |
 | 29 | Sélecteur de mode (visuel / blocs) | `setMode` | FONCTIONNEL | un seul contrôle segmenté | raccourci Ctrl/⌘ + Maj + E | — | faible | `editeur-mode-switch` (9/9 rejoué) |
-| 30 | Widgets (86 types) | `NODE_TYPES`, `WIDGETS`, `widgets/*.js` | FONCTIONNEL | 79 opérationnels + 7 contextuels ; contrat de conformité | contrat de widget | fiches des 19 types | moyen | `widgets-contrat` (6/6 rejoué) |
+| 30 | Widgets (86 types) | `NODE_TYPES`, `WIDGETS`, `widgets/*.js` | FONCTIONNEL | 79 opérationnels + 7 contextuels ; contrat de conformité | contrat de widget | états pour les widgets personnalisés | moyen | `widgets-contrat` (6/6 rejoué) |
 | 31 | Accessibilité du rendu | `_node.ejs` | FONCTIONNEL MAIS LIMITÉ | balise sémantique, `aria-…`, `role`, `lang`, texte alternatif exigé à la publication | — | audit page par page non fait | faible | d'après tests existants |
 | 32 | Sécurité du contenu | `sanitizeRich`, `sanitizeHtmlBlock`, `cssDeclarations`, permissions | FONCTIONNEL | HTML sécurisé réservé à `pages.code` ; CSS filtré | — | — | élevé si modifié | d'après tests existants |
 
@@ -69,7 +69,7 @@ Documents voisins (pas de doublon créé) : `KOLAKISA_EDITOR_PARITY_MATRIX.md` (
 
 ## 6. Cinq améliorations prioritaires proposées (à valider ; aucune n'est commencée)
 
-1. **Fiches d'inspecteur des 19 types sans fiche propre** (bordure, fond, effets, typographie là où ça a un sens) — écart de configuration, faible risque, forte valeur (« chaque élément m'appartient »).
+1. ~~Fiches d'inspecteur des 19 types~~ — **retiré : erreur d'audit** (ces widgets ont déjà une fiche complète générée à l'exécution).
 2. **États survol / focus / clic pour davantage de types** (titres, textes, listes, icônes, formulaires…) — élargit une capacité existante sans changer le format.
 3. **Transitions complètes** : choix de l'accélération et des propriétés (durée seule aujourd'hui) — réutilise la liste d'accélérations du moteur de mouvement.
 4. **Dimensions intrinsèques** : `fit-content`, `min-content`, `max-content`, puis `clamp()` — extension contrôlée du validateur.
@@ -77,7 +77,7 @@ Documents voisins (pas de doublon créé) : `KOLAKISA_EDITOR_PARITY_MATRIX.md` (
 
 ## 7. Ordre recommandé des prochains lots
 
-Lot 4 (fiches des widgets) → lot 5 (conteneurs : dimensions intrinsèques) → lot 7/11 (états et transitions) → lot 10 (masquage par écran) → lot 16 (accessibilité : audit page par page) ; lots 3 (moteur de propriétés), 6, 8, 9, 13, 14, 15, 17, 19 : **déjà couverts par l'existant** (voir § 2), donc à ne lancer que sur un manque démontré.
+Lot 5 (conteneurs : dimensions intrinsèques) → lot 7/11 (états et transitions) → lot 10 (masquage par écran) → lot 16 (accessibilité : audit page par page) ; lots 3 (moteur de propriétés), 6, 8, 9, 13, 14, 15, 17, 19 : **déjà couverts par l'existant** (voir § 2), donc à ne lancer que sur un manque démontré.
 Avant chaque lot : rejouer les tests de la ligne concernée, annoncer les fichiers touchés.
 
 **ARRÊT après l'audit, comme demandé : aucun lot de développement n'est commencé.**
