@@ -75,8 +75,8 @@ Légende — *Profil* : BOX (boîte), TEXTUAL (typographie + couleurs), « sur m
 | `grid` | Grille | layout | sur mesure | hover, active | — | — | **COMPLET** |
 | `stack` | Pile | layout | BOX | hover, active | — | — | **COMPLET** |
 | `group` | Groupe | layout | BOX | hover, active | — | — | **COMPLET** |
-| `spacer` | Espace | basic | sur mesure | — | divider-text, spacer | — | **LIMITÉ** |
-| `divider` | Séparateur | basic | sur mesure | — | empty-text | épaisseur / couleur / style du trait | **PARTIEL** |
+| `spacer` | Espace | basic | sur mesure | — | divider-text, spacer | — | **COMPLET** (racine = élément visible) |
+| `divider` | Séparateur | basic | sur mesure | — | empty-text | épaisseur / couleur / style du trait | **COMPLET** (racine = élément visible) |
 | `heading` | Titre | basic | TEXTUAL | — | heading-link | — | **COMPLET** |
 | `text` | Texte | basic | TEXTUAL | — | — | — | **COMPLET** |
 | `list` | Liste | basic | TEXTUAL | — | — | — | **COMPLET** |
@@ -86,38 +86,38 @@ Légende — *Profil* : BOX (boîte), TEXTUAL (typographie + couleurs), « sur m
 | `gallery` | Galerie | general | sur mesure | — | gallery-item | Parties stylables : Vignette, Image, Légende | **COMPLET (parties)** |
 | `video` | Vidéo | basic | sur mesure | — | — | — | **COMPLET** |
 | `audio` | Audio | general | sur mesure | — | — | — | **COMPLET** |
-| `button` | Bouton | basic | sur mesure | tous | btn-icon | variante (primaire / contour) et icône | **PARTIEL** |
+| `button` | Bouton | basic | sur mesure | tous | btn-icon | variante (primaire / contour) et icône | **COMPLET** (racine = élément visible) |
 | `link` | Lien | basic | sur mesure | tous | — | — | **COMPLET** |
 | `accordion` | Accordéon / FAQ | general | TEXTUAL | — | acc | Parties stylables : Question + réponse, Question, Réponse | **COMPLET (parties)** |
-| `tabs` | Onglets | general | TEXTUAL | — | tab-icon-src, tab-panel, tab-title, tabs | — | **LIMITÉ** |
+| `tabs` | Onglets | general | TEXTUAL | — | tab-icon-src, tab-panel, tab-title, tabs | Parties stylables : Barre d'onglets, Onglet, Contenu d'un onglet | **COMPLET (parties)** |
 | `badge` | Badge | general | sur mesure | — | badge | — | **COMPLET** |
 | `timeline` | Chronologie | general | TEXTUAL | — | tl-date, tl-item, tl-text, tl-title | Parties stylables : Étape, Date, Titre, Texte | **COMPLET (parties)** |
 | `progress` | Barre de progression | general | sur mesure | — | progress-bar, progress-head, progress-track | Parties stylables : Libellé et valeur, Piste, Barre | **COMPLET (parties)** |
-| `menu` | Menu de navigation | site | TEXTUAL | tous | menu-item, menu-link, menu-list, menu-toggle, sub-toggle, submenu | — | **LIMITÉ** |
-| `carousel` | Carrousel d'images | general | sur mesure | — | carousel, carousel-slide, carousel-track, dots | — | **LIMITÉ** |
+| `menu` | Menu de navigation | site | TEXTUAL | tous | menu-item, menu-link, menu-list, menu-toggle, sub-toggle, submenu | Parties stylables : Liste, Lien, Bouton mobile | **COMPLET (parties)** |
+| `carousel` | Carrousel d'images | general | sur mesure | — | carousel, carousel-slide, carousel-track, dots | Parties stylables : Diapositive, Image, Flèches, Points | **COMPLET (parties)** |
 | `toggle` | Bascule | general | TEXTUAL | — | toggle-body, toggle-title | Parties stylables : Titre, Contenu | **COMPLET (parties)** |
 | `alert` | Alerte | general | TEXTUAL | — | alert, alert-body, alert-icon, alert-title, dismiss | Parties stylables : Icône, Titre, Texte | **COMPLET (parties)** |
 | `counter` | Compteur | general | sur mesure | — | counter-label, counter-num, counter-value | Parties stylables : Nombre, Libellé | **COMPLET (parties)** |
 | `testimonial` | Témoignage | general | sur mesure | tous | avatar, stars, testimonial-role, testimonial-text, testimonial-who | Parties stylables : Étoiles, Citation, Auteur, Fonction, Photo | **COMPLET (parties)** |
 | `pricing` | Offre tarifaire | advanced | sur mesure | tous | pricing-badge, pricing-cta, pricing-desc, pricing-features, pricing-price, pricing-title | Parties stylables : Étiquette, Nom de l'offre, Prix, Description, Liste des avantages, Bouton | **COMPLET (parties)** |
 | `breadcrumb` | Fil d'Ariane | site | TEXTUAL | — | crumbs | — | **COMPLET** |
-| `social` | Réseaux sociaux | social | sur mesure | — | social-link | taille des icônes | **PARTIEL** |
-| `sharebuttons` | Boutons de partage | social | sur mesure | — | social-link | taille des icônes | **PARTIEL** |
-| `modal` | Fenêtre (modale) | advanced | sur mesure | — | modal-body, modal-close, modal-foot, modal-head, modal-open, modal-title | — | **LIMITÉ** |
-| `html` | HTML (sécurisé) | general | TEXTUAL | — | box-body, box-media, box-text, box-title, iconbox-icon | — | **LIMITÉ** |
+| `social` | Réseaux sociaux | social | sur mesure | — | social-link | Parties stylables : Icône | **COMPLET (parties)** |
+| `sharebuttons` | Boutons de partage | social | sur mesure | — | social-link | Parties stylables : Bouton | **COMPLET (parties)** |
+| `modal` | Fenêtre (modale) | advanced | sur mesure | — | modal-body, modal-close, modal-foot, modal-head, modal-open, modal-title | Parties stylables : Bouton d'ouverture, En-tête, Titre, Contenu, Pied, Bouton fermer | **COMPLET (parties)** |
+| `html` | HTML (sécurisé) | general | TEXTUAL | — | box-body, box-media, box-text, box-title, iconbox-icon | — | **COMPLET** (racine = élément visible) |
 | `embed` | Contenu intégré | advanced | sur mesure | — | embed-frame | — | **COMPLET** |
-| `iconlist` | Liste d'icônes | general | TEXTUAL | — | iconlist-icon | couleur des icônes | **PARTIEL** |
-| `tooltip` | Infobulle | advanced | sur mesure | — | tip-bubble, tip-trigger | — | **LIMITÉ** |
-| `hotspot` | Image à points d'intérêt | advanced | sur mesure | — | hotspot-stage, spot-card, spot-dot | position des points | **PARTIEL** |
+| `iconlist` | Liste d'icônes | general | TEXTUAL | — | iconlist-icon | Parties stylables : Icône, Ligne, Lien | **COMPLET (parties)** |
+| `tooltip` | Infobulle | advanced | sur mesure | — | tip-bubble, tip-trigger | Parties stylables : Déclencheur, Infobulle | **COMPLET (parties)** |
+| `hotspot` | Image à points d'intérêt | advanced | sur mesure | — | hotspot-stage, spot-card, spot-dot | Parties stylables : Point, Carte | **COMPLET (parties)** |
 | `posts` | Derniers articles du blog | site | TEXTUAL | — | post-body, post-card, post-date, post-excerpt, post-title, posts | Parties stylables : Carte, Image, Corps de la carte, Date, Titre, Extrait | **COMPLET (parties)** |
 | `courselist` | Formations du catalogue | commerce | TEXTUAL | — | course-card, course-price, post-body, post-excerpt, post-title | Parties stylables : Carte, Image, Corps de la carte, Titre, Sous-titre, Prix, Bouton | **COMPLET (parties)** |
 | `search` | Recherche | site | sur mesure | — | — | — | **COMPLET** |
-| `account` | Compte du visiteur | site | TEXTUAL | tous | account-cart, account-link | — | **LIMITÉ** |
+| `account` | Compte du visiteur | site | TEXTUAL | tous | account-cart, account-link | Parties stylables : Lien du compte, Lien du panier, Pastille du panier | **COMPLET (parties)** |
 | `dyntext` | Texte dynamique | advanced | TEXTUAL | — | — | — | **COMPLET** |
 | `table` | Tableau | general | TEXTUAL | — | — | — | **COMPLET** |
-| `countdown` | Compte à rebours | advanced | TEXTUAL | — | buy-price, countdown, courserating, stars | — | **LIMITÉ** |
+| `countdown` | Compte à rebours | advanced | TEXTUAL | — | buy-price, countdown, courserating, stars | Parties stylables : Bloc de temps | **COMPLET (parties)** |
 | `course` | Formation | commerce | sur mesure | tous | — | — | **COMPLET** |
-| `sitelogo` | Logo du site | site | sur mesure | — | sitelogo-img, sitelogo-link, sitelogo-text | hauteur de l'image | **PARTIEL** |
+| `sitelogo` | Logo du site | site | sur mesure | — | sitelogo-img, sitelogo-link, sitelogo-text | Parties stylables : Image, Texte | **COMPLET (parties)** |
 | `postcontent` | Contenu de l'article | site | sur mesure | — | — | — | **COMPLET** |
 | `catfilter` | Filtre par catégorie | site | TEXTUAL | — | catfilter-n | — | **COMPLET** |
 | `sitetitle` | Titre du site | site | TEXTUAL | — | sitetitle-link | — | **COMPLET** |
@@ -127,38 +127,38 @@ Légende — *Profil* : BOX (boîte), TEXTUAL (typographie + couleurs), « sur m
 | `animatedheading` | Titre animé | advanced | TEXTUAL | — | words | — | **COMPLET** |
 | `flipbox` | Boîte retournable | advanced | sur mesure | — | flip-back, flip-face, flip-front, flip-icon, flip-inner, flip-text, flip-title | Parties stylables : Face avant, Face arrière, Titres, Textes | **COMPLET (parties)** |
 | `pricelist` | Liste de prix | advanced | TEXTUAL | — | pl-dots, pl-head, pl-item, pl-price, pl-text, pl-title | Parties stylables : Ligne, Intitulé, Prix, Description | **COMPLET (parties)** |
-| `toc` | Table des matières | advanced | TEXTUAL | — | toc-list, toc-title | — | **LIMITÉ** |
-| `readingprogress` | Barre de lecture | advanced | sur mesure | — | readbar, readbar-fill | — | **LIMITÉ** |
+| `toc` | Table des matières | advanced | TEXTUAL | — | toc-list, toc-title | Parties stylables : Titre, Liste, Lien | **COMPLET (parties)** |
+| `readingprogress` | Barre de lecture | advanced | sur mesure | — | readbar, readbar-fill | Parties stylables : Barre, Remplissage | **COMPLET (parties)** |
 | `signupform` | Formulaire | form | TEXTUAL | — | signup, signup-form, signup-intro, signup-submit, signup-title | Parties stylables : Titre, Introduction, Bouton d'envoi | **COMPLET (parties)** |
 | `map` | Google Maps | basic | sur mesure | — | map-frame | — | **COMPLET** |
 | `imagebox` | Boîte d'image | general | TEXTUAL | — | — | Parties stylables : Image, Titre, Texte | **COMPLET (parties)** |
 | `iconbox` | Boîte d'icône | general | TEXTUAL | — | — | Parties stylables : Icône, Titre, Texte | **COMPLET (parties)** |
-| `rating` | Évaluation | general | sur mesure | — | rating-bg, rating-fill, rating-stars, rating-title, rating-value | — | **LIMITÉ** |
+| `rating` | Évaluation | general | sur mesure | — | rating-bg, rating-fill, rating-stars, rating-title, rating-value | Parties stylables : Titre, Étoiles, Étoiles vides, Étoiles pleines, Valeur | **COMPLET (parties)** |
 | `menuanchor` | Ancre de menu | general | TEXTUAL | — | anchor-mark | — | **COMPLET** |
 | `icon` | Icône | basic | sur mesure | tous | — | — | **COMPLET** |
-| `slides` * | Diaporama | general | BOX | — | carousel, carousel-slide, carousel-track, dots, slide, slide-body, slide-img, slide-text … | — | **LIMITÉ** |
-| `testimonialcarousel` * | Carrousel de témoignages | general | BOX | — | carousel, carousel-slide, carousel-track, dots, tcar-name, tcar-photo, tcar-quote, tcar-role … | — | **LIMITÉ** |
-| `mediacarousel` * | Carrousel média | general | BOX | — | carousel, carousel-slide, carousel-track, dots, mcar-img, mcar-slide, mcar-video | — | **LIMITÉ** |
-| `cart` * | Panier | commerce | BOX | — | cart-actions, cart-edit, cart-empty, cart-img, cart-line, cart-lines, cart-name, cart-price … | — | **LIMITÉ** |
+| `slides` * | Diaporama | general | BOX | — | carousel, carousel-slide, carousel-track, dots, slide, slide-body, slide-img, slide-text … | Parties stylables : Image, Voile, Bloc de texte, Titre, Texte, Bouton, Flèches, Points | **COMPLET (parties)** |
+| `testimonialcarousel` * | Carrousel de témoignages | general | BOX | — | carousel, carousel-slide, carousel-track, dots, tcar-name, tcar-photo, tcar-quote, tcar-role … | Parties stylables : Diapositive, Étoiles, Citation, Nom, Fonction, Photo, Flèches, Points | **COMPLET (parties)** |
+| `mediacarousel` * | Carrousel média | general | BOX | — | carousel, carousel-slide, carousel-track, dots, mcar-img, mcar-slide, mcar-video | Parties stylables : Image, Légende, Flèches, Points | **COMPLET (parties)** |
+| `cart` * | Panier | commerce | BOX | — | cart-actions, cart-edit, cart-empty, cart-img, cart-line, cart-lines, cart-name, cart-price … | Parties stylables : Titre, Panier vide, Ligne, Image, Nom, Prix, Total, Bouton de commande, Lien « modifier » | **COMPLET (parties)** |
 | `facebookbutton` * | Bouton Facebook | social | BOX | — | fbbtn-frame | — | **COMPLET** |
-| `linkinbio` * | Lien en bio | social | BOX | — | lib-avatar, lib-bio, lib-icon, lib-link, lib-links, lib-name | — | **LIMITÉ** |
-| `lottie` * | Animation Lottie | advanced | BOX | — | lottie, lottie-placeholder, lottie-stage, speed, trigger | — | **LIMITÉ** |
-| `profilecard` * | Carte de profil | general | TEXTUAL | — | profile-bio, profile-name, profile-photo, profile-role | — | **LIMITÉ** |
-| `readmore` * | Lire la suite | basic | TEXTUAL | — | readmore-body, readmore-close, readmore-intro, readmore-more, readmore-open, readmore-toggle | — | **LIMITÉ** |
-| `querylist` * | Liste dynamique | site | TEXTUAL | — | ql-body, ql-cards, ql-compact, ql-count, ql-date, ql-empty, ql-excerpt, ql-inline … | — | **LIMITÉ** |
-| `postmeta` * | Informations de l'article | site | TEXTUAL | — | pm-item, pm-note | — | **LIMITÉ** |
-| `postterms` * | Catégorie et étiquettes | site | TEXTUAL | — | pt-label, pt-note, pt-term | — | **LIMITÉ** |
-| `postnav` * | Article précédent / suivant | site | TEXTUAL | — | pn-dir, pn-link, pn-next, pn-note, pn-prev, pn-title | — | **LIMITÉ** |
-| `authorbox` * | Boîte auteur | site | BOX | — | ab-avatar, ab-bio, ab-heading, ab-link, ab-name, ab-note, ab-row, ab-text | — | **LIMITÉ** |
-| `archiveinfo` * | En-tête d'archive | site | TEXTUAL | — | ai-count, ai-desc, ai-title | — | **LIMITÉ** |
-| `postcomments` * | Commentaires de l'article | site | BOX | — | pc-avatar, pc-badge, pc-body, pc-count, pc-empty, pc-heading, pc-initial, pc-item … | — | **LIMITÉ** |
-| `cmsmenu` * | Menu du CMS | site | TEXTUAL | — | menu-item, menu-link, menu-list, pm-note, submenu | — | **LIMITÉ** |
-| `minicart` * | Mini-panier | site | TEXTUAL | — | mc-count, mc-icon, mc-label | — | **LIMITÉ** |
-| `textpath` * | Texte sur un tracé | advanced | TEXTUAL | — | textpath-line, textpath-link, textpath-svg, textpath-text, tp | — | **LIMITÉ** |
+| `linkinbio` * | Lien en bio | social | BOX | — | lib-avatar, lib-bio, lib-icon, lib-link, lib-links, lib-name | Parties stylables : Photo, Nom, Texte, Lien, Icône du lien | **COMPLET (parties)** |
+| `lottie` * | Animation Lottie | advanced | BOX | — | lottie, lottie-placeholder, lottie-stage, speed, trigger | — | **COMPLET** (racine = élément visible) |
+| `profilecard` * | Carte de profil | general | TEXTUAL | — | profile-bio, profile-name, profile-photo, profile-role | Parties stylables : Photo, Nom, Fonction, Texte | **COMPLET (parties)** |
+| `readmore` * | Lire la suite | basic | TEXTUAL | — | readmore-body, readmore-close, readmore-intro, readmore-more, readmore-open, readmore-toggle | Parties stylables : Début du texte, Suite du texte, Lien « lire la suite » | **COMPLET (parties)** |
+| `querylist` * | Liste dynamique | site | TEXTUAL | — | ql-body, ql-cards, ql-compact, ql-count, ql-date, ql-empty, ql-excerpt, ql-inline … | Parties stylables : Élément, Image, Titre de la liste, Titre d'un élément, Informations, Date, Extrait, Compteur | **COMPLET (parties)** |
+| `postmeta` * | Informations de l'article | site | TEXTUAL | — | pm-item, pm-note | Parties stylables : Information | **COMPLET (parties)** |
+| `postterms` * | Catégorie et étiquettes | site | TEXTUAL | — | pt-label, pt-note, pt-term | Parties stylables : Libellé, Catégorie / étiquette | **COMPLET (parties)** |
+| `postnav` * | Article précédent / suivant | site | TEXTUAL | — | pn-dir, pn-link, pn-next, pn-note, pn-prev, pn-title | Parties stylables : Lien, Sens (précédent / suivant), Titre, Image | **COMPLET (parties)** |
+| `authorbox` * | Boîte auteur | site | BOX | — | ab-avatar, ab-bio, ab-heading, ab-link, ab-name, ab-note, ab-row, ab-text | Parties stylables : Titre, Photo, Nom, Texte, Lien | **COMPLET (parties)** |
+| `archiveinfo` * | En-tête d'archive | site | TEXTUAL | — | ai-count, ai-desc, ai-title | Parties stylables : Titre, Description, Nombre de résultats | **COMPLET (parties)** |
+| `postcomments` * | Commentaires de l'article | site | BOX | — | pc-avatar, pc-badge, pc-body, pc-count, pc-empty, pc-heading, pc-initial, pc-item … | Parties stylables : Titre, Commentaire, Avatar, Auteur et date, Texte | **COMPLET (parties)** |
+| `cmsmenu` * | Menu du CMS | site | TEXTUAL | — | menu-item, menu-link, menu-list, pm-note, submenu | Parties stylables : Liste, Lien | **COMPLET (parties)** |
+| `minicart` * | Mini-panier | site | TEXTUAL | — | mc-count, mc-icon, mc-label | Parties stylables : Icône, Libellé, Pastille | **COMPLET (parties)** |
+| `textpath` * | Texte sur un tracé | advanced | TEXTUAL | — | textpath-line, textpath-link, textpath-svg, textpath-text, tp | — | **COMPLET** (racine = élément visible) |
 
 Totaux d'origine (audit) : COMPLET 37 · LIMITÉ 42 · PARTIEL 7 · DÉFECTUEUX 0 · ABSENT 0.
 
-**Mise à jour après les lots 4 à 7 : 16 widgets sont passés en « COMPLET (parties) »** (liste ci-dessous, lignes marquées) ; il reste des widgets LIMITÉS à traiter par familles (voir § 8).
+**Mise à jour finale : 47 widgets sont en « COMPLET (parties) »** (lignes marquées) et 6 autres, dont la racine est l'élément visible (ex. spacer, divider, button, html, lottie, textpath…), sont COMPLET sans parties. **Plus aucun widget LIMITÉ.**
 
 ## 6. À investiguer (non tranché par l'audit)
 
@@ -183,7 +183,7 @@ Totaux d'origine (audit) : COMPLET 37 · LIMITÉ 42 · PARTIEL 7 · DÉFECTUEUX 
 | 4b Moteur de parties | `src/marketing/pages/parts.js` (registre), `normalizeParts` (validation par la grammaire fermée + groupes de la partie), `pageCss` (règles `.kw-node.kw-n-<id> <sélecteur>` par écran et par état), `editorSpec` (parties sans sélecteur) |
 | 5 Derniers articles | 6 parties : carte, image, corps, date, titre, extrait ; réglages vérifiés dans un vrai Chrome : Inspector → modèle → rendu → enregistrement → rechargement → annuler / rétablir → écrans → survol → aperçu → page publiée |
 | 6 Validation | page témoin sans partie : balisage identique et rendu d'origine ; aucune écriture de partie par un geste du canevas |
-| 7 Extension | 16 widgets déclarent leurs parties (voir tableau) ; `tests/widgets-parties-rendu-navigateur.test.js` applique un réglage-test à chaque partie et le relit dans la page rendue |
+| 7 Extension | 47 widgets déclarent leurs parties (voir tableau) ; `tests/widgets-parties-rendu-navigateur.test.js` applique un réglage-test à chaque partie et le relit dans la page rendue |
 | 8–9 Écrans / états | mêmes écrans que la racine ; survol / focus / clic proposés seulement aux parties interactives ; (états toujours sans déclinaison par écran, comme pour la racine) |
 | 10–11 Copier / coller | « Copier le style » conserve aussi les parties ; « Coller le style » les reprend entre widgets du même type, partie par partie, dans les limites de chaque partie |
 | 12 Accessibilité | le balisage ne change pas ; aucun contrôle sur l'`outline` ; les cases de contenu (afficher date / extrait / image) restent les seuls moyens de masquer |
