@@ -238,12 +238,13 @@
     if (!id) selection = [];
     else if (additive) selection = selection.indexOf(id) >= 0 ? selection.filter(function (x) { return x !== id; }) : selection.concat(id);
     else selection = [id];
+    var geo = mode === "structure" ? null : readOverlayGeo(); // lectures AVANT toute écriture (arbre, inspecteur, classes du canevas)
     if (id && !additive) revealInTree(id);
     styleState = "normal";
     markTreeSelection();
     renderInspector();
     renderContext();
-    markCanvasSelection(opts.scroll !== false);
+    markCanvasSelection(opts.scroll !== false, geo);
     markDocSelection(opts.scroll !== false);
     navListeners.forEach(function (f) { f(); });
   }
@@ -4496,40 +4497,59 @@
     $$(".pb-drop-line, .pb-drop-box, .pb-drop-label", doc).forEach(function (x) { x.remove(); });
   }
   // Sélection dans le canevas : cadre, nom, dimensions, parent en pointillés, poignées de redimensionnement
-  function markCanvasSelection(scroll) {
+  function markCanvasSelection(scroll, pre) {
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
     $$(".is-selected", doc).forEach(function (el) { el.classList.remove("is-selected"); });
     selection.forEach(function (id) { var el = doc.querySelector('[data-node-id="' + id + '"],[data-section-id="' + id + '"]'); if (el) el.classList.add("is-selected"); });
-    drawOverlays();
+    drawOverlays(pre);
     if (scroll && selection.length) {
       var first = doc.querySelector('[data-node-id="' + selection[0] + '"],[data-section-id="' + selection[0] + '"]');
-      if (first) { var r = first.getBoundingClientRect(); if (r.top < 0 || r.top > frame.contentWindow.innerHeight - 40) first.scrollIntoView({ block: "center", behavior: "smooth" }); }
+      if (first) { var r = pre && pre.items[0] && pre.items[0].client ? pre.items[0].client : first.getBoundingClientRect(); if (r.top < 0 || r.top > frame.contentWindow.innerHeight - 40) first.scrollIntoView({ block: "center", behavior: "smooth" }); }
     }
   }
-  function drawOverlays() {
+  // Géométrie nécessaire aux aides de sélection (cadres, parent, poignées, barre d'actions) : LUE EN BLOC, avant toute écriture dans la page, l'arbre ou l'inspecteur.
+  // La mise en page du canevas ne dépend pas de la sélection (simple contour) : lire avant ou après donne les mêmes valeurs, mais lire avant évite une mise en page forcée.
+  function readOverlayGeo() {
+    var doc = frame.contentDocument;
+    if (!doc || !doc.body) return null;
+    var geo = { pageW: doc.documentElement.clientWidth };
+    geo.items = selection.map(function (id, n) {
+      var el = doc.querySelector('[data-node-id="' + id + '"],[data-section-id="' + id + '"]');
+      if (!el) return null;
+      var rd = { el: el, r: pageRect(el) };
+      if (n === 0) { rd.l = locate(id); var pe = rd.l && rd.l.parent ? doc.querySelector('[data-node-id="' + rd.l.parent.id + '"],[data-section-id="' + rd.l.parent.id + '"]') : null; rd.pr = pe ? pageRect(pe) : null; rd.client = el.getBoundingClientRect(); }
+      return rd;
+    });
+    geo.bar = barGeo();
+    return geo;
+  }
+  function barGeo() {
+    var el = selection.length ? canvasEl(selection[0]) : null;
+    return { fr: frame.getBoundingClientRect(), sr: stage.getBoundingClientRect(), r: el ? el.getBoundingClientRect() : null };
+  }
+  function drawOverlays(pre) {
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
+    var geo = pre || readOverlayGeo();
+    if (!geo) return;
+    var pageW = geo.pageW, reads = geo.items;
     $$(".pb-sel-box, .pb-sel-badge, .pb-parent-box, .pb-handle, .pb-dim, .pb-col-split, .pb-struct-add", doc).forEach(function (x) { x.remove(); });
-    placeCanvasBar();
+    placeCanvasBar(geo.bar);
     selection.forEach(function (id, n) {
-      var el = doc.querySelector('[data-node-id="' + id + '"],[data-section-id="' + id + '"]');
-      if (!el) return;
-      var r = pageRect(el);
+      var rd = reads[n];
+      if (!rd) return;
+      var el = rd.el, r = rd.r;
       var box = doc.createElement("div"); box.className = "pb-sel-box"; box.style.cssText = "left:" + r.left + "px;top:" + r.top + "px;width:" + r.width + "px;height:" + r.height + "px"; doc.body.appendChild(box);
       if (n !== 0) return;
       var it = byId(id);
       var badge = doc.createElement("div"); badge.className = "pb-sel-badge"; badge.textContent = nameOf(it) + " · " + Math.round(r.width) + " × " + Math.round(r.height);
       badge.style.left = r.left + "px"; badge.style.top = Math.max(18, r.top) + "px"; doc.body.appendChild(badge);
-      var l = locate(id);
-      if (l && l.parent) {
-        var pe = doc.querySelector('[data-node-id="' + l.parent.id + '"],[data-section-id="' + l.parent.id + '"]');
-        if (pe) { var pr = pageRect(pe); var pb = doc.createElement("div"); pb.className = "pb-parent-box"; pb.style.cssText = "left:" + pr.left + "px;top:" + pr.top + "px;width:" + pr.width + "px;height:" + pr.height + "px"; doc.body.appendChild(pb); }
-      }
+      if (rd.pr) { var pr = rd.pr; var pb = doc.createElement("div"); pb.className = "pb-parent-box"; pb.style.cssText = "left:" + pr.left + "px;top:" + pr.top + "px;width:" + pr.width + "px;height:" + pr.height + "px"; doc.body.appendChild(pb); }
       if (selection.length === 1 && isNode(it) && canWrite && !lockedDeep(id) && !editing) {
         [["e", r.left + r.width, r.top + r.height / 2, "Largeur"], ["s", r.left + r.width / 2, r.top + r.height, "Hauteur"], ["se", r.left + r.width, r.top + r.height, "Largeur et hauteur"]].forEach(function (hd) {
           // Les poignées restent entièrement dans la page, même quand l'élément touche son bord (pleine largeur)
-          var hx = Math.max(7, Math.min(hd[1], doc.documentElement.clientWidth - 7));
+          var hx = Math.max(7, Math.min(hd[1], pageW - 7));
           var hEl = doc.createElement("div"); hEl.className = "pb-handle pb-handle-" + hd[0]; hEl.style.left = hx + "px"; hEl.style.top = hd[2] + "px";
           hEl.setAttribute("title", hd[3]);
           hEl.addEventListener("mousedown", function (e) { resizeStart(e, id, el, hd[0]); });
@@ -4755,7 +4775,8 @@
     });
   }
   // Position : au-dessus de l'élément (bord droit), en dessous s'il n'y a pas la place ; masquée hors de la zone visible
-  function placeCanvasBar() {
+  var barSizes = {};
+  function placeCanvasBar(pre) {
     if (!cbar) return; // appel pendant l'initialisation
     if (mode === "structure") { cbar.hidden = true; return; }
     var items = selectedItems();
@@ -4764,11 +4785,14 @@
     if (!el) { cbar.hidden = true; return; }
     var key = selection.join(",") + "|" + acts.join(",") + "|" + items.map(function (x) { return (x.hidden ? "h" : "") + (x.locked ? "l" : "") + ((kidsOf(x) || []).length); }).join(",") + "|" + device;
     if (cbar.dataset.key !== key) { buildCanvasBar(acts, items[0]); cbar.dataset.key = key; }
-    var fr = frame.getBoundingClientRect(), sr = stage.getBoundingClientRect(), r = el.getBoundingClientRect();
+    var g = pre && pre.r ? pre : null, fr = g ? g.fr : frame.getBoundingClientRect(), sr = g ? g.sr : stage.getBoundingClientRect(), r = g ? g.r : el.getBoundingClientRect();
     var top = fr.top + r.top * zoom, bottom = fr.top + r.bottom * zoom, right = fr.left + r.right * zoom;
     if (bottom < sr.top + 8 || top > sr.bottom - 8 || !r.width) { cbar.hidden = true; return; }
+    // Taille de la barre : ne dépend que de son jeu d'actions ; mesurée une fois (affichée), puis relue dans le cache (pas de mise en page forcée à chaque sélection)
+    var sizeKey = acts.join(",") + "|" + device, size = barSizes[sizeKey];
     cbar.hidden = false;
-    var bw = cbar.offsetWidth, bh = cbar.offsetHeight;
+    if (!size) size = barSizes[sizeKey] = [cbar.offsetWidth, cbar.offsetHeight];
+    var bw = size[0], bh = size[1];
     // Au-dessus si possible. Sinon : un conteneur qui a des enfants reçoit la barre EN DESSOUS (elle ne recouvre jamais ses
     // enfants) ; un élément vide ou sans enfants, assez grand, la reçoit dans son coin haut (on ne cache pas son voisin) ;
     // sinon en dessous ; en dernier recours en haut de la zone visible
@@ -4784,7 +4808,7 @@
     cbar.style.left = Math.round(x) + "px"; cbar.style.top = Math.round(y) + "px";
   }
   stage.addEventListener("scroll", placeCanvasBar, { passive: true });
-  window.addEventListener("resize", placeCanvasBar);
+  window.addEventListener("resize", function () { barSizes = {}; placeCanvasBar(); });
   // Ouvrir l'inspecteur sur un onglet (et un groupe de réglages déplié)
   function openInspector(tab, group) {
     if (panels.rightHidden) togglePanel("right");
