@@ -26,4 +26,13 @@ const flashOk = (req, text) => { req.session.mkFlash = { type: "ok", text }; };
 // aucune valeur (nom de modèle, libellé…) ne peut donc fermer la balise ni injecter du HTML.
 const safeJson = (value) => JSON.stringify(value).replace(/</g, "\\u003c").replace(new RegExp("\\u2028", "g"), "\\u2028").replace(new RegExp("\\u2029", "g"), "\\u2029");
 
-module.exports = { attempt, need, flashError, flashOk, safeJson };
+// Email Engine (palier 16) : sites proposés (équipe de l'organisation) ou site imposé (accès limité à un site)
+const siteChoices = (req) => {
+  const { db, organizationId } = req.mk.ctx;
+  const rows = req.mk.siteOnly
+    ? db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? AND id = ?").all(organizationId, req.mk.siteId ?? 0)
+    : db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? ORDER BY name").all(organizationId);
+  return { sitesList: req.mk.siteOnly ? [] : rows, siteFixed: req.mk.siteOnly ? req.mk.siteId : null, siteFilter: req.mk.ctx.siteFilter ?? "", siteNames: Object.fromEntries(rows.map((r) => [r.id, r.name])) };
+};
+
+module.exports = { attempt, need, flashError, flashOk, safeJson, siteChoices };

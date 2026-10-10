@@ -12,7 +12,9 @@ function emitMessageEvent(ctx, message, name, key, metadata) {
   if (!ctx.bus || !message.contact_id) return;
   try {
     const contact = ctx.db.prepare("SELECT id, email FROM mk_contacts WHERE id = ? AND organization_id = ?").get(message.contact_id, ctx.organizationId);
-    if (contact) ctx.bus.emit({ organizationId: ctx.organizationId, name, email: contact.email, contactId: contact.id, source: "marketing", metadata, idempotencyKey: key });
+    // Contact Core (palier 16) : l'événement porte la campagne (objet) et le site de la campagne — lisible dans le journal du contact
+    const site = ctx.db.prepare("SELECT site_id FROM mk_campaigns WHERE id = ? AND organization_id = ?").get(message.campaign_id, ctx.organizationId);
+    if (contact) ctx.bus.emit({ organizationId: ctx.organizationId, name, email: contact.email, contactId: contact.id, source: "marketing", metadata, idempotencyKey: key, objectType: "campaign", objectId: message.campaign_id, siteId: site ? site.site_id : null });
   } catch (error) {
     console.error("[KOLAKISA] Suivi des e-mails (événement) :", error.message);
   }
@@ -67,4 +69,4 @@ function recordUnsubscribe(ctx, { messageId, contactId, at = Date.now() }) {
   return true;
 }
 
-module.exports = { isBot, recordClick, recordOpen, recordUnsubscribe };
+module.exports = { isBot, recordClick, recordOpen, recordUnsubscribe, emitMessageEvent };

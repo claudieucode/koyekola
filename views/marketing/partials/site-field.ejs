@@ -1,0 +1,5 @@
+<%# Email Engine (palier 16) : site de la ressource à créer — imposé (accès limité à un site) ou choisi par l'équipe de l'organisation %>
+<% if (siteFixed) { %><input type="hidden" name="site" value="<%= siteFixed %>">
+<% } else if (sitesList.length) { %><div class="field-group"><label for="<%= id %>">Site</label>
+  <select id="<%= id %>" name="site" aria-describedby="<%= id %>-h"><option value="">Site principal (toute l'organisation)</option><% sitesList.forEach((x) => { %><option value="<%= x.id %>"><%= x.name %></option><% }) %></select>
+  <span class="field-hint" id="<%= id %>-h">Une ressource d'un site n'est visible que de ce site (et de l'équipe de l'organisation).</span></div><% } %>

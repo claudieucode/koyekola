@@ -12,6 +12,7 @@
   const canWrite = mk.can("campaigns.write");
 %>
     <div class="mk-head"><h1>Campagnes <span class="mk-count"><%= mkh.fmt(counts.all) %></span></h1></div>
+    <%- include("partials/site-filter", { action: "/marketing/campagnes" }) %>
     <p class="mk-lead">Envoyez un modèle à une liste ou à un segment. Chaque message est revérifié (consentement, désinscription, blocage) au moment de partir.</p>
     <% if (provider === "console") { %><p class="mk-note">Fournisseur « console » : rien n'est réellement envoyé. Choisissez SMTP ou Resend dans <a href="/marketing/envoi">Envoi</a>.</p><% } %>
     <%- include("partials/worker-note", { workerOn, consequence: "aucune campagne ne partira tant qu'il n'est pas rétabli" }) %>

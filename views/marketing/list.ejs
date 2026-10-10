@@ -23,19 +23,31 @@
       </section>
     <% } %>
 
+    <section class="mk-panel" aria-labelledby="ls-states">
+      <h2 id="ls-states">Abonnements à cette audience</h2>
+      <p class="field-hint">Un contact peut être abonné à une audience et désabonné d'une autre : l'état se calcule pour chaque audience, à partir du consentement, des désinscriptions et de la liste de protection.</p>
+      <nav class="mk-pager-links" aria-label="Filtrer par état">
+        <% if (etat) { %><a href="/marketing/listes/<%= list.id %>">Tous (<%= stateCounts.total %>)</a><% } else { %><span aria-current="page">Tous (<%= stateCounts.total %>)</span><% } %>
+        <% Object.entries(STATES).forEach(([k, label]) => { %>
+          <% if (etat === k) { %><span aria-current="page"><%= label %> (<%= stateCounts[k] %>)</span><% } else { %><a href="/marketing/listes/<%= list.id %>?etat=<%= k %>"><%= label %> (<%= stateCounts[k] %>)</a><% } %>
+        <% }) %>
+      </nav>
+    </section>
+
     <% if (!rows.length) { %>
-      <div class="mk-empty"><%- icon("users", { size: 32 }) %><h2>Liste vide</h2><p>Aucun contact n'est dans cette liste.</p></div>
+      <div class="mk-empty"><%- icon("users", { size: 32 }) %><h2><%= etat ? "Aucun contact dans cet état" : "Liste vide" %></h2><p><%= etat ? "Aucun membre de cette audience n'est dans cet état." : "Aucun contact n'est dans cette liste." %></p></div>
     <% } else { %>
       <div class="mk-table-wrap">
         <table class="mk-table mk-datatable">
           <caption class="sr-only">Membres de la liste</caption>
-          <thead><tr><th scope="col">E-mail</th><th scope="col">Nom</th><th scope="col">Statut</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+          <thead><tr><th scope="col">E-mail</th><th scope="col">Nom</th><th scope="col">Statut</th><th scope="col">État dans l'audience</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
           <tbody>
             <% rows.forEach((c) => { %>
               <tr>
                 <td class="mk-cell-email" data-label="E-mail"><a href="/marketing/contacts/<%= c.id %>"><%= c.email %></a></td>
                 <td data-label="Nom"><%= mkh.fullName(c) %></td>
                 <td data-label="Statut"><span class="mk-status <%= mkh.contactStatus(c.status).cls %>"><%= mkh.statusLabel(c.status) %></span></td>
+                <td data-label="État dans l'audience"><%= STATES[c.subscription_state] %></td>
                 <td data-label="Action"><% if (mk.can("lists.write")) { %><form action="/marketing/listes/<%= list.id %>/retirer" method="post" class="mk-inline"><input type="hidden" name="contact_id" value="<%= c.id %>"><button type="submit" class="btn btn-outline btn-sm" aria-label="Retirer <%= c.email %> de la liste">Retirer</button></form><% } %></td>
               </tr>
             <% }) %>

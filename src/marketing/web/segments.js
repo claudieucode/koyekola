@@ -66,7 +66,7 @@ module.exports = () => {
         const definition = parseDefinition(req.body.definition);
         saved = id
           ? segments.updateSegment(req.mk.ctx, id, { name: req.body.name, description: req.body.description, definition })
-          : segments.createSegment(req.mk.ctx, { name: req.body.name, description: req.body.description, definition });
+          : segments.createSegment(req.mk.ctx, { name: req.body.name, description: req.body.description, definition, siteId: req.body.site });
         return "Segment enregistré.";
       } catch (error) {
         req.session.mkDraft = { name: String(req.body.name ?? ""), description: String(req.body.description ?? ""), definition: String(req.body.definition ?? "") };

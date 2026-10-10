@@ -21,6 +21,7 @@ const GROUPS = {
   seo: { label: "SEO", intro: "Valeurs par défaut du référencement (le moteur SEO reste la référence)." },
   privacy: { label: "Confidentialité", intro: "Page de politique de confidentialité, liée depuis le bandeau et le pied de page." },
   indexation: { label: "Indexation", intro: "Visibilité du site pour les moteurs de recherche." },
+  email: { label: "Emailing", intro: "Identité d'expédition des e-mails marketing. Le fournisseur, ses clés secrètes et les limites d'envoi se règlent dans Marketing → Envoi (jamais ici)." },
 };
 const TIMEZONES = (() => { try { return Intl.supportedValuesOf("timeZone"); } catch { return ["Europe/Paris", "UTC"]; } })();
 const validTimezone = (tz) => typeof tz === "string" && tz.length <= 60 && (TIMEZONES.includes(tz) || tz === "UTC") ;
@@ -147,6 +148,37 @@ def({ key: "search_visibility", group: "indexation", label: "Visibilité pour le
 
 // ---------- Validation (jamais de confiance envers le navigateur) ----------
 const EMAIL = /^[^\s@<>"',;:\\()[\]]{1,64}@[A-Za-z0-9][A-Za-z0-9.-]{0,251}\.[A-Za-z]{2,}$/;
+// --- Emailing (palier 16) : identité d'expédition ---
+// Source de vérité : la configuration d'envoi du module Marketing (site principal) et mk_settings « email.site_<id>.* » (un site). Aucun secret ici :
+// le fournisseur et ses clés restent dans Marketing → Envoi.
+const sending = () => require("../../marketing/sending/config");
+const parseFrom = (ctx) => { const c = sending().getSendingConfig(ctx); return c.from ? require("../../marketing/sending/providers").parseSender(c.from) : null; };
+const siteKey = (siteId, f) => `email.site_${siteId}.${f}`;
+const siteGet = (ctx, siteId, f) => ctx.settings.get(ctx.organizationId, siteKey(siteId, f), "") || "";
+const siteSet = (ctx, siteId, f, v) => (v ? ctx.settings.set(ctx.organizationId, siteKey(siteId, f), v) : ctx.settings.remove(ctx.organizationId, siteKey(siteId, f)));
+// Un site n'envoie que depuis un domaine déjà déclaré dans Marketing → Domaines (ou celui de l'expéditeur de l'organisation) et jamais depuis une messagerie gratuite
+function authorizedSenderDomain(value, scope, ctx) {
+  if (!value || !scope.siteId) return null;
+  const domain = String(value).split("@").pop().toLowerCase();
+  const domains = require("../../marketing/domains");
+  if (domains.FREE_MAIL.has(domain)) return { error: `${domain} est une messagerie gratuite : utilisez une adresse de votre propre domaine.` };
+  const org = parseFrom(ctx);
+  const own = org && org.email.split("@").pop().toLowerCase() === domain;
+  if (!own && !db.prepare("SELECT 1 FROM mk_sending_domains WHERE organization_id = ? AND domain = ?").get(ctx.organizationId, domain)) return { error: `le domaine ${domain} n'est pas déclaré dans Marketing → Domaines.` };
+  return null;
+}
+def({ key: "email_from_name", group: "email", label: "Nom de l'expéditeur", type: "string", max: 100, help: "Nom affiché dans la boîte de réception. Vide sur un site : celui de l'organisation.",
+  readMain: (ctx) => (parseFrom(ctx) || {}).name || "", defaultMain: "",
+  writeMain: (v, ctx) => { const cur = parseFrom(ctx); if (!cur) throw new UserError("Renseignez d'abord l'adresse d'expédition."); sending().saveSendingConfig(ctx, { from: v ? `${v} <${cur.email}>` : cur.email }); },
+  readSite: (s, ctx) => siteGet(ctx, s.id, "from_name"), writeSite: (v, ctx, siteId) => siteSet(ctx, siteId, "from_name", v), defaultSite: "" });
+def({ key: "email_from_address", group: "email", label: "Adresse d'expédition", type: "email", help: "Adresse « De : » des e-mails marketing. Utilisez une adresse d'un domaine authentifié (SPF, DKIM, DMARC). Vide sur un site : celle de l'organisation.",
+  readMain: (ctx) => (parseFrom(ctx) || {}).email || "", defaultMain: "", contextValidate: authorizedSenderDomain,
+  writeMain: (v, ctx) => { const cur = parseFrom(ctx); sending().saveSendingConfig(ctx, { from: v ? (cur && cur.name ? `${cur.name} <${v}>` : v) : "" }); },
+  readSite: (s, ctx) => siteGet(ctx, s.id, "from_address"), writeSite: (v, ctx, siteId) => siteSet(ctx, siteId, "from_address", v), defaultSite: "" });
+def({ key: "email_reply_to", group: "email", label: "Adresse de réponse", type: "email", help: "Où arrivent les réponses des destinataires. Vide : on répond à l'adresse d'expédition.",
+  readMain: (ctx) => sending().getSendingConfig(ctx).replyTo || "", defaultMain: "", writeMain: (v, ctx) => sending().saveSendingConfig(ctx, { replyTo: v }),
+  readSite: (s, ctx) => siteGet(ctx, s.id, "reply_to"), writeSite: (v, ctx, siteId) => siteSet(ctx, siteId, "reply_to", v), defaultSite: "" });
+
 function validate(d, raw, scope, ctx) {
   const label = d.label;
   if (raw !== null && typeof raw === "object") return { ok: false, error: `${label} : valeur invalide.` }; // tableaux et objets refusés (injection de structure)
@@ -208,7 +240,10 @@ function validate(d, raw, scope, ctx) {
 // Validation propre au moteur propriétaire (modèles de titre, adresses d'images SEO…) : exécutée avant toute écriture
 function validateFull(d, raw, scope, ctx) {
   const v = validate(d, raw, scope, ctx);
-  if (!v.ok || !d.adapterValidate || scope.siteId) return v;
+  if (!v.ok) return v;
+  // Contrôle qui dépend du contexte (ex. domaine d'expédition autorisé) : site ou site principal
+  if (d.contextValidate) { const c = d.contextValidate(v.value, scope, ctx); if (c && c.error) return { ok: false, error: `${d.label} : ${c.error}` }; }
+  if (!d.adapterValidate || scope.siteId) return v;
   const a = d.adapterValidate(v.value);
   return a && a.error ? { ok: false, error: a.error } : v;
 }
@@ -231,7 +266,7 @@ function readAll(scope, ctx) {
   const site = scope.siteId ? siteOf(ctx, scope.siteId) : null;
   for (const d of defsFor(scope)) {
     let value;
-    try { value = coerce(d, scope.siteId ? d.readSite(site) : d.readMain()); } catch { value = undefined; }
+    try { value = coerce(d, scope.siteId ? d.readSite(site, ctx) : d.readMain(ctx)); } catch { value = undefined; }
     if (value === null || value === undefined || (value === "" && d.type === "integer")) value = defaultOf(d, scope);
     if (value === null || value === undefined) value = d.type === "boolean" ? false : "";
     out[d.key] = { value, default: defaultOf(d, scope) };

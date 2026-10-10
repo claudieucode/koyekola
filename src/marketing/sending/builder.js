@@ -6,6 +6,7 @@ const { unsubscribeToken, preferencesToken } = require("../compliance/consent");
 const { signToken } = require("../security/tokens");
 const { respondentToken } = require("../surveys");
 const { webUrl } = require("../social/webVersion");
+const { parseSender } = require("./providers");
 
 const FALLBACK_FROM = "KOLAKISA <no-reply@exemple.invalid>"; // fournisseur console uniquement (rien n'est envoyé)
 const trimBase = (url) => String(url || "").replace(/\/+$/, "");
@@ -35,10 +36,12 @@ function buildMessage(ctx, { campaign, compiled, contact, message, config, linkM
     const pixel = `<img src="${base}/t/o/${signToken({ o: ctx.organizationId, m: message.id, k: "open" }, ctx.tokenKey)}.gif" width="1" height="1" alt="" style="display:block;border:0">`;
     html = html.includes("</body>") ? html.replace("</body>", `${pixel}\n</body>`) : html + pixel;
   }
+  // Identité d'expédition du SITE de la campagne (Paramètres → Emailing), sinon celle de l'organisation
+  const identity = siteIdentity(ctx, campaign, config);
   return {
-    from: config.from || FALLBACK_FROM,
+    from: identity.from || FALLBACK_FROM,
     to: contact.email,
-    replyTo: config.replyTo || undefined,
+    replyTo: identity.replyTo || undefined,
     subject: rendered.subject,
     html,
     text: rendered.text,
@@ -49,4 +52,22 @@ function buildMessage(ctx, { campaign, compiled, contact, message, config, linkM
   };
 }
 
-module.exports = { buildMessage };
+// Nom / adresse / réponse du site de la campagne ; chaque champ vide retombe sur la configuration de l'organisation. L'adresse du site n'est reprise
+// que si son domaine est encore autorisé (domaine déclaré ou domaine de l'organisation) : une modification de domaines ne laisse jamais partir un envoi usurpé.
+function siteIdentity(ctx, campaign, config) {
+  const base = { from: config.from, replyTo: config.replyTo };
+  if (!Number.isInteger(campaign.site_id) || !ctx.settings) return base;
+  const get = (f) => ctx.settings.get(ctx.organizationId, `email.site_${campaign.site_id}.${f}`, "") || "";
+  const address = get("from_address"), name = get("from_name"), reply = get("reply_to");
+  const org = config.from ? parseSender(config.from) : null;
+  let from = config.from;
+  if (address || name) {
+    const email = address || (org && org.email) || "";
+    const domain = email.split("@").pop().toLowerCase();
+    const allowed = email && ((org && org.email.split("@").pop().toLowerCase() === domain) || ctx.db.prepare("SELECT 1 FROM mk_sending_domains WHERE organization_id = ? AND domain = ?").get(ctx.organizationId, domain));
+    if (allowed) from = `${(name || (org && org.name) || "").replace(/[<>"\r\n]/g, "")} <${email}>`.trim().replace(/^<(.+)>$/, "$1");
+  }
+  return { from, replyTo: reply || base.replyTo };
+}
+
+module.exports = { buildMessage, siteIdentity };

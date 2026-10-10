@@ -187,7 +187,7 @@
         <ul class="mk-status-list">
           <% if (!memberOf.length) { %><li class="field-hint">Dans aucune liste.</li><% } %>
           <% memberOf.forEach((l) => { %>
-            <li><a href="/marketing/listes/<%= l.id %>"><%= l.name %></a>
+            <li><a href="/marketing/listes/<%= l.id %>"><%= l.name %></a> <span class="field-hint">— <%= l.stateLabel %></span>
               <% if (mk.can("contacts.write")) { %><form action="/marketing/contacts/<%= contact.id %>/listes/retirer" method="post" class="mk-inline"><input type="hidden" name="list_id" value="<%= l.id %>"><button type="submit" class="btn btn-outline btn-sm">Retirer</button></form><% } %>
             </li>
           <% }) %>

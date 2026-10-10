@@ -7,7 +7,7 @@ const sms = require("../sms");
 const { getOverview } = require("../overview");
 const segmentsService = require("../segments");
 const { parseKey } = require("../security/crypto");
-const { attempt, need, flashError } = require("./kit");
+const { attempt, need, flashError, siteChoices } = require("./kit");
 const sendtime = require("../sending/sendtime");
 const core = require("../contactcore");
 
@@ -160,9 +160,8 @@ module.exports = ({ db }) => {
     if (!contact) return;
     const { ctx } = req.mk;
     const defs = audience.listProperties(ctx);
-    const memberOf = db
-      .prepare("SELECT l.id, l.name FROM mk_list_members m JOIN mk_lists l ON l.id = m.list_id WHERE m.contact_id = ? AND m.organization_id = ? ORDER BY l.name")
-      .all(contact.id, ctx.organizationId);
+    // Chaque audience avec l'état d'abonnement du contact DANS cette audience (palier 16)
+    const memberOf = audience.subscriptionsOf(ctx, contact.id).map((x) => ({ id: x.list_id, name: x.name, state: x.state, stateLabel: audience.STATES[x.state] }));
     // Contact Core (palier 15) : sans le droit « données sensibles », adresse et numéro sont masqués et les preuves détaillées ne sont pas montrées
     const sensitiveOk = req.mk.can("contacts.view_sensitive");
     const siteLimit = req.mk.siteOnly ? req.mk.siteId : null;
@@ -310,12 +309,12 @@ module.exports = ({ db }) => {
       const text = qs.toString();
       return `/marketing/listes${text ? `?${text}` : ""}`;
     };
-    res.render("marketing/lists", { title: "Listes", active: "lists", lists, q, sort, dir, url, hasQuery: Boolean(q) });
+    res.render("marketing/lists", { title: "Listes", active: "lists", lists, q, sort, dir, url, hasQuery: Boolean(q), ...siteChoices(req) });
   });
 
   router.post("/listes", need("lists.write"), (req, res, next) =>
     attempt(req, res, next, "/marketing/listes", () => {
-      audience.createList(req.mk.ctx, { name: req.body.name, description: req.body.description });
+      audience.createList(req.mk.ctx, { name: req.body.name, description: req.body.description, siteId: req.body.site });
       return "Liste créée.";
     }));
 
@@ -329,11 +328,14 @@ module.exports = ({ db }) => {
   router.get("/listes/:id", need("lists.read"), (req, res) => {
     const list = loadList(req, res);
     if (!list) return;
-    const page = audience.listMembers(req.mk.ctx, list.id, { limit: 50, afterId: intOrNull(req.query.apres) ?? undefined });
+    const etat = Object.hasOwn(audience.STATES, req.query.etat) ? req.query.etat : "";
+    const page = audience.listSubscribers(req.mk.ctx, list.id, { state: etat || undefined, limit: 50, afterId: intOrNull(req.query.apres) ?? undefined });
     const stats = audience.listListsWithStats(req.mk.ctx).find((l) => l.id === list.id);
+    const sensitiveOk = req.mk.can("contacts.view_sensitive");
     res.render("marketing/list", {
-      title: list.name, active: "lists", list, rows: page.rows, nextUrl: page.nextAfterId ? `/marketing/listes/${list.id}?apres=${page.nextAfterId}` : null,
-      count: stats.member_count, sendableCount: stats.sendable_count,
+      title: list.name, active: "lists", list, rows: sensitiveOk ? page.rows : page.rows.map((r) => ({ ...require("../contactcore").maskContact(r), subscription_state: r.subscription_state })),
+      nextUrl: page.nextAfterId ? `/marketing/listes/${list.id}?${etat ? `etat=${etat}&` : ""}apres=${page.nextAfterId}` : null,
+      count: stats.member_count, sendableCount: stats.sendable_count, etat, stateCounts: audience.stateCounts(req.mk.ctx, list.id), STATES: audience.STATES,
     });
   });
 

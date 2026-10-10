@@ -111,7 +111,7 @@ module.exports = ({ db }) => {
       const starter = library.starterOf(req.body.starter);
       if (!starter) throw new MarketingError("invalid_field", "Modèle de départ inconnu.");
       const kind = starter.template.kind === "transactional" || req.body.kind === "transactional" ? "transactional" : "marketing";
-      created = templates.createTemplate(req.mk.ctx, { ...starter.template, name: req.body.name, kind, category: starter.category });
+      created = templates.createTemplate(req.mk.ctx, { ...starter.template, name: req.body.name, kind, category: starter.category, siteId: req.body.site });
       return "Modèle créé : personnalisez-le puis enregistrez.";
     });
   });

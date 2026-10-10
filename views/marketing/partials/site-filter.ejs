@@ -1,0 +1,8 @@
+<%# Email Engine (palier 16) : filtre d'affichage par site (équipe de l'organisation seulement) %>
+<% if (sitesList.length) { %>
+<form class="mk-filterbar" method="get" action="<%= action %>" role="search" aria-label="Filtrer par site">
+  <div class="field-group"><label for="sf-site">Site</label>
+    <select id="sf-site" name="site"><option value="">Tous les sites</option><option value="principal" <%= siteFilter === "principal" ? "selected" : "" %>>Site principal</option><% sitesList.forEach((x) => { %><option value="<%= x.id %>" <%= siteFilter === x.id ? "selected" : "" %>><%= x.name %></option><% }) %></select></div>
+  <button type="submit" class="btn btn-outline btn-sm">Afficher</button>
+</form>
+<% } %>

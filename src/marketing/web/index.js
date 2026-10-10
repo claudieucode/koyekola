@@ -28,6 +28,19 @@ function createMarketingRouters({ db }) {
       if (/^\d{1,12}$/.test(String(raw ?? ""))) return { siteId: Number(raw) };
       return null;
     }
+    // Email Engine (palier 16) : audiences, segments, modèles et campagnes d'UN site. Par identifiant : le site est celui de la ressource ;
+    // pour les pages sans identifiant (liste, création), c'est « ?site= » ou le champ « site » envoyé — la personne limitée à un site n'ouvre que le sien.
+    m = /^\/(campagnes|listes|segments|modeles)\/(\d{1,12})(?:\/|$)/.exec(p);
+    if (m) {
+      const tbl = { campagnes: "mk_campaigns", listes: "mk_lists", segments: "mk_segments", modeles: "mk_templates" }[m[1]];
+      const r = db.prepare(`SELECT site_id FROM ${tbl} WHERE id = ?`).get(Number(m[2]));
+      return r ? { siteId: r.site_id } : { siteId: null, missing: true };
+    }
+    if (/^\/(?:campagnes|listes|segments|modeles)(?:\/(?:nouvelle|nouveau|apercu|apercu-cible|bibliotheque(?:\/.*)?))?$/.test(p)) {
+      const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
+      if (/^\d{1,12}$/.test(String(raw ?? ""))) return { siteId: Number(raw) };
+      return null;
+    }
     // Contact Core (palier 15) : lecture des contacts d'UN site (?site=) — c'est ce qui ouvre l'écran aux personnes qui n'ont accès qu'à ce site
     if (req.method === "GET" && /^\/contacts(?:\/\d+(?:\/evenements\.json)?)?$/.test(p) && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
     if (req.method === "POST" && (p === "/pages" || p === "/site-web/composants") && req.body && /^\d+$/.test(String(req.body.site_id || ""))) return { siteId: Number(req.body.site_id) };
@@ -54,9 +67,13 @@ function createMarketingRouters({ db }) {
     const role = membership ? membership.role : "site";
     req.mk = {
       role, can: allowed, perms, siteId, marketing, siteOnly: !membership,
-      ctx: { db, organizationId: orgId, userId: user.id, can: allowed, bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL },
+      // Email Engine (palier 16) : accès limité à un site → siteScope impose ce site à tout le moteur (jamais lu dans l'adresse) ; équipe de l'organisation → simple filtre d'affichage
+      ctx: { db, organizationId: orgId, userId: user.id, can: allowed, bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL,
+        ...(membership ? { siteFilter: /^\d{1,12}$/.test(String(req.query.site ?? "")) ? Number(req.query.site) : req.query.site === "principal" ? "principal" : undefined } : { siteScope: Number.isInteger(siteId) ? siteId : -1 }) },
     };
     res.locals.mk = { role, can: allowed, ctx: req.mk.ctx };
+    // Email Engine (palier 16) : sites proposés / site imposé, disponibles pour les écrans des audiences, segments, modèles et campagnes
+    if (/^\/(?:campagnes|listes|segments|modeles)(?:\/|$)/.test(req.path)) Object.assign(res.locals, require("./kit").siteChoices(req));
     res.locals.mkTheme = themeOf(marketing.settings, orgId, user.id); // Paramètres → Apparence
     res.locals.mkh = helpers;
     // Message « flash » : affiché une seule fois après une action

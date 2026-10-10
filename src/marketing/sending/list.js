@@ -1,6 +1,6 @@
 // Liste des campagnes pour l'interface : onglets par statut, recherche par nom, tri (liste blanche), pages numérotées.
 // Les campagnes « système » des scénarios (kind = automation) n'en font jamais partie.
-const { checkCtx } = require("../audience/shared");
+const { checkCtx, siteSql } = require("../audience/shared");
 
 // Onglets → statuts réels
 const STATUS_GROUPS = {
@@ -21,8 +21,9 @@ const pct = (n, d) => (d > 0 ? Math.round((n / d) * 10000) / 100 : null);
 
 function searchCampaigns(ctx, { status, q, abOnly = false } = {}, { sort, dir, page, pageSize } = {}) {
   checkCtx(ctx);
-  const where = ["c.organization_id = ?", "c.kind = 'campaign'"];
-  const params = [ctx.organizationId];
+  const site = siteSql(ctx, "c");
+  const where = ["c.organization_id = ?", "c.kind = 'campaign'", site.sql];
+  const params = [ctx.organizationId, ...site.params];
   if (abOnly) where.push("c.ab_variants <> ''");
   if (typeof status === "string" && Object.hasOwn(STATUS_GROUPS, status)) {
     where.push(`c.status IN (${STATUS_GROUPS[status].map(() => "?").join(", ")})`);
@@ -41,7 +42,7 @@ function searchCampaigns(ctx, { status, q, abOnly = false } = {}, { sort, dir, p
   const current = Math.min(Math.max(wanted, 1), pages);
   const rows = ctx.db
     .prepare(
-      `SELECT c.id, c.name, c.status, c.ab_variants <> '' AS is_ab, c.ab_winner, c.ab_decide_at, c.total_recipients, c.sent_count, c.unique_click_count, c.unique_open_count, c.track_opens, c.created_at, c.updated_at, c.started_at, c.scheduled_at, c.finished_at, c.target_type, c.target_id,
+      `SELECT c.id, c.site_id, c.name, c.status, c.ab_variants <> '' AS is_ab, c.ab_winner, c.ab_decide_at, c.total_recipients, c.sent_count, c.unique_click_count, c.unique_open_count, c.track_opens, c.created_at, c.updated_at, c.started_at, c.scheduled_at, c.finished_at, c.target_type, c.target_id,
               (SELECT t.name FROM mk_templates t WHERE t.id = c.template_id AND t.organization_id = c.organization_id) AS template_name,
               CASE c.target_type
                 WHEN 'list' THEN (SELECT l.name FROM mk_lists l WHERE l.id = c.target_id AND l.organization_id = c.organization_id)
@@ -56,7 +57,8 @@ function searchCampaigns(ctx, { status, q, abOnly = false } = {}, { sort, dir, p
 // Effectif de chaque onglet
 function campaignStatusCounts(ctx) {
   checkCtx(ctx);
-  const by = Object.fromEntries(ctx.db.prepare("SELECT status, COUNT(*) n FROM mk_campaigns WHERE organization_id = ? AND kind = 'campaign' GROUP BY status").all(ctx.organizationId).map((r) => [r.status, r.n]));
+  const site = siteSql(ctx, "mk_campaigns");
+  const by = Object.fromEntries(ctx.db.prepare(`SELECT status, COUNT(*) n FROM mk_campaigns WHERE organization_id = ? AND kind = 'campaign' AND ${site.sql} GROUP BY status`).all(ctx.organizationId, ...site.params).map((r) => [r.status, r.n]));
   const counts = { all: Object.values(by).reduce((a, b) => a + b, 0) };
   for (const [tab, statuses] of Object.entries(STATUS_GROUPS)) counts[tab] = statuses.reduce((sum, s) => sum + (by[s] || 0), 0);
   return counts;
