@@ -4992,8 +4992,19 @@
   }
   // Recalcul de la zone du canevas (largeur du cadre, zoom, règles, barre d'actions) : au plus UN par image, quel que soit le nombre de causes
   // (glisser d'une poignée de panneau, observateur de taille, redimensionnement de la fenêtre)
-  var zoomQueued = false;
-  function queueZoom() { if (zoomQueued) return; zoomQueued = true; requestAnimationFrame(function () { zoomQueued = false; if (zoomFit) applyZoom(); else drawRulers(); }); }
+  // Pendant le glissement d'une poignée de panneau, le recalcul (qui refait la mise en page de toute la page du cadre à chaque nouvelle largeur) est limité
+  // à ~11 par seconde : le bord du panneau suit la main à chaque image, le canevas se met à jour en continu mais pas à chaque pixel ; au relâchement,
+  // un dernier recalcul exact est fait.
+  var zoomQueued = false, panelDragging = false, lastZoomAt = 0;
+  function queueZoom() {
+    if (zoomQueued) return;
+    zoomQueued = true;
+    requestAnimationFrame(function run() {
+      if (panelDragging && performance.now() - lastZoomAt < 90) { requestAnimationFrame(run); return; }
+      zoomQueued = false; lastZoomAt = performance.now();
+      if (zoomFit) applyZoom(); else drawRulers();
+    });
+  }
   function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(2, Math.max(0.25, z)); applyZoom(); setTimeout(function () { drawOverlays(); drawGuides(); }, 30); }
   $$("[data-pb-zoom]").forEach(function (b) { b.addEventListener("click", function () { var v = b.dataset.pbZoom; setZoom(v === "fit" ? "fit" : v === "100" ? 1 : v === "+" ? Math.round((zoom + 0.1) * 10) / 10 : Math.round((zoom - 0.1) * 10) / 10); }); });
   window.addEventListener("resize", queueZoom);
@@ -5724,11 +5735,11 @@
     // Largeur : jamais assez étroite pour rendre les contrôles illisibles (droite : 280 px au moins), ni plus de la moitié de la fenêtre
     var setW = function (w, live) { var min = side === "right" ? PANEL_MIN_RIGHT : 200; panels[side] = Math.min(560, Math.max(min, Math.min(Math.round(w), Math.round(window.innerWidth * 0.5)))); panels[side + "Hidden"] = false; applyPanels(live); };
     handle.addEventListener("pointerdown", function (e) {
-      e.preventDefault(); handle.setPointerCapture(e.pointerId);
+      e.preventDefault(); handle.setPointerCapture(e.pointerId); panelDragging = true;
       var sx = e.clientX, sw = panels[side];
       frame.style.pointerEvents = "none";
       var move = function (ev) { setW(side === "left" ? sw + ev.clientX - sx : sw - (ev.clientX - sx), true); };
-      var up = function () { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); frame.style.pointerEvents = ""; store.set("panels", panels); renderTools(); };
+      var up = function () { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); frame.style.pointerEvents = ""; panelDragging = false; store.set("panels", panels); queueZoom(); renderTools(); };
       handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", up);
     });
     handle.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); setW(panels[side] + ((e.key === "ArrowRight") === (side === "left") ? 16 : -16)); } });
