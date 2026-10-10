@@ -14,6 +14,9 @@ const { listCourses } = require("../bridge/catalog");
 const { MarketingError } = require("../errors");
 const { renderMarkdown } = require("../../utils/markdown");
 const { attempt, need } = require("./kit");
+const ai = require("../ai");
+const studio = require("../ai/studio");
+const { AiError } = require("../../services/aiCore");
 
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 // Réglages SEO : modifiés seulement avec la permission « seo.edit » (vérifiée ici, pas seulement masquée dans l'interface)
@@ -317,6 +320,26 @@ module.exports = () => {
     const { ICONS } = require("../../utils/icons");
     res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, page, backTo: !component && req.query.retour === "pages" ? "/marketing/pages" : null, boot: safeJson(boot), spec: boot.spec, iconExists: (n) => Object.hasOwn(ICONS, n) });
   };
+  // ---------- IA Kolakisa : l'IA PROPOSE, l'éditeur applique (une étape d'historique) — rien n'est enregistré ici ----------
+  const IA_STATUS = { not_configured: 503, quota: 429, rate: 429, conflict: 409, busy: 429 };
+  const iaError = (res, next, error) => {
+    if (error instanceof AiError || error instanceof MarketingError) return res.status(IA_STATUS[error.code] || 400).set("Cache-Control", "no-store").json({ ok: false, error: error.message, code: error.code });
+    next(error);
+  };
+  router.get("/pages/:id(\\d+)/ia/etat", need("forms.read"), (req, res) => {
+    res.set("Cache-Control", "no-store").json({ configured: ai.getAiSettings(req.mk.ctx).configured, canWrite: req.mk.can("forms.write") });
+  });
+  router.post("/pages/:id(\\d+)/ia/proposer", need("forms.write"), async (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    try { res.set("Cache-Control", "no-store").json(await studio.propose(req.mk.ctx, page.id, req.body || {})); } catch (error) { iaError(res, next, error); }
+  });
+  // Analyse responsive : le navigateur mesure le rendu réel ; les corrections sont calculées par des règles (aucune clé IA nécessaire)
+  router.post("/pages/:id(\\d+)/ia/responsive", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    try { res.set("Cache-Control", "no-store").json(studio.responsiveFixes(req.mk.ctx, page.id, req.body || {})); } catch (error) { iaError(res, next, error); }
+  });
   router.get("/pages/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
     const page = load(req, res);
     if (!page) return;

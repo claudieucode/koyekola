@@ -6509,8 +6509,9 @@
     backup();
   }
   function backup() { try { localStorage.setItem("pb-backup-" + PAGE.id, JSON.stringify({ at: Date.now(), revision: revision, content: payload() })); } catch (e) { /* stockage indisponible */ } }
+  var aiHold = false; // aperçu d'une proposition de l'IA : rien n'est enregistré tant qu'elle n'est pas appliquée
   function save() {
-    if (!dirty || blocked) return Promise.resolve();
+    if (!dirty || blocked || aiHold) return Promise.resolve();
     if (saving) { clearTimeout(saveTimer); saveTimer = setTimeout(save, 500); return Promise.resolve(); }
     saving = true;
     dirty = false;
@@ -6747,6 +6748,27 @@
     gesture: function (on) { if (on === undefined) return gesture; if (on) gesture = true; else endGesture(); }, ignoreClick: function (ms) { ignoreClickUntil = Date.now() + ms; },
     ownValue: ownValue, inheritedValue: inheritedValue, splitLen: splitLen, styleSet: styleSet, cleanStyles: cleanStyles, change: change,
     caps: function (it) { var ins = inspectorFor(it), g = (ins && ins.groups) || {}; return { gap: Array.isArray(g.layout) && g.layout.indexOf("gap") >= 0, spacing: Boolean(g.spacing), size: g.size !== undefined && g.size !== false }; }
+  });
+  // Pont vers IA Kolakisa (page-builder-ai.js) : l'IA propose, l'éditeur applique en UNE étape d'historique
+  if (window.pbAi) window.pbAi.attach({
+    base: BASE, api: api, store: store, icon: icon, toast: toast, canWrite: function () { return canWrite; },
+    saveNow: function () { return saveNow(); }, revision: function () { return revision; },
+    snapshotKey: function () { return JSON.stringify([content.sections, content.title, content.description]); },
+    sections: function () { return content.sections; },
+    frame: function () { return frame; }, device: function () { return device; }, setDevice: setDevice,
+    byId: byId, canvasEl: canvasEl, pageRect: pageRect, selection: function () { return selection.slice(); },
+    applyContent: function (next, label, hold) {
+      if (hold) aiHold = true;
+      change(function () {
+        content.sections = clone(next.sections);
+        if (next.title !== undefined) content.title = next.title;
+        if (next.description !== undefined) content.description = next.description;
+        selection = selection.filter(function (id) { return byId(id); });
+      }, { label: label || "IA Kolakisa" });
+      if (!hold) { aiHold = false; scheduleSave(); }
+    },
+    keepPreview: function () { aiHold = false; scheduleSave(); },
+    discardPreview: function () { undo(); future.pop(); futureLabels.pop(); updateHistoryButtons(); aiHold = false; scheduleSave(); },
   });
   if (window.pbEffects) window.pbEffects.attach({
     h: h, store: store, toast: toast, SPEC: SPEC, BPS: BPS, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, idsOf: idsOf,

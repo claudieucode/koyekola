@@ -49,6 +49,7 @@
         <button type="button" class="pb-icon-btn" data-pb-toggle="snap" aria-pressed="true" data-tip="Magnétisme (Maj + M) : les tailles s'accrochent aux guides, à la grille et aux autres éléments. Alt : mouvement libre" aria-label="Magnétisme"><%- icon("grip", { size: 15 }) %></button>
         <button type="button" class="pb-icon-btn" data-pb-rules-menu aria-haspopup="menu" aria-expanded="false" data-tip="Règles et magnétisme" aria-label="Règles, guides et magnétisme : réglages"><%- icon("sliders", { size: 15 }) %></button>
       </div>
+      <button type="button" class="pb-ai-btn" data-pb-ai aria-haspopup="dialog" aria-expanded="false" data-tip="IA Kolakisa : créer, adapter, corriger"><%- icon("sparkles", { size: 15 }) %><span>IA Kolakisa</span></button>
       <span class="pb-save" data-pb-save role="status" aria-live="polite"></span>
       <button type="button" class="pb-icon-btn" data-pb-command data-tip="Commandes (Ctrl/⌘ + K)" aria-label="Rechercher une commande"><%- icon("search", { size: 16 }) %></button>
       <button type="button" class="btn btn-outline btn-sm" data-pb-save-now>Enregistrer</button>
@@ -262,10 +263,11 @@
   <div class="pb-menu" data-pb-menu role="menu" aria-label="Actions" hidden></div>
   <div class="pb-toast" data-pb-toast role="status" aria-live="polite" hidden></div>
 
-  <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone", "sliders", "moreHorizontal", "listPlus", "listMinus", "undo", "redo", "sun", "moon", "palette"].concat(spec.types.map((t) => t.icon), spec.icons).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
+  <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone", "sliders", "moreHorizontal", "listPlus", "listMinus", "undo", "redo", "sun", "moon", "palette", "sparkles", "eraser", "annotArrow", "annotCircle", "annotRect", "send"].concat(spec.types.map((t) => t.icon), spec.icons).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
   <script type="application/json" id="pb-boot"><%- boot %></script>
   <script src="<%= asset('/js/page-builder-effects.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-direct.js') %>" defer></script>
+  <script src="<%= asset('/js/page-builder-ai.js') %>" defer></script>
   <script src="<%= asset('/js/kol-motion.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-snap.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-theme.js') %>" defer></script>

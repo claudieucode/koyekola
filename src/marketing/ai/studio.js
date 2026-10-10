@@ -272,7 +272,7 @@ async function propose(ctx, pageId, input = {}) {
   const bp = BPS.includes(input.bp) ? input.bp : "desktop";
   const history = (Array.isArray(input.history) ? input.history : []).slice(-6).map((h) => `${h.role === "ai" ? "Assistant" : "Personne"} : ${clip(h.text, 400)}`).join("\n");
   const annotations = (Array.isArray(input.annotations) ? input.annotations : []).slice(0, MAX_ANNOTATIONS).map((a) => ({ kind: clip(a.kind, 12), text: clip(a.text, 300), elements: (Array.isArray(a.elements) ? a.elements : []).slice(0, 6).map(String) }));
-  const measures = (Array.isArray(input.measures) ? input.measures : []).slice(0, 40).map((m) => `${clip(m.id, 16)} ${clip(m.type, 20)} ${clip(m.rect, 60)} ${clip(m.computed, 220)}`);
+  const measures = (Array.isArray(input.measures) ? input.measures : []).slice(0, 40).map((m) => `${clip(m.id, 16)} ${clip(m.type, 20)} ${clip(m.rect, 60)} ${clip(m.computed, 600)}`);
   const prompt = [
     `Écran affiché dans l'éditeur : ${bp}.`,
     selection ? `Élément sélectionné : ${selection}.` : "Aucun élément sélectionné.",
