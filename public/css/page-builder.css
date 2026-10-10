@@ -1717,7 +1717,9 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-ai-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(2, 119, 182, .6); }
 .pb-ai-btn.is-active { box-shadow: 0 0 0 2px rgba(255, 255, 255, .85); }
 .pb-ai-btn:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.4); }
-@media (max-width: 1280px) { .pb-ai-btn span { display: none; } .pb-ai-btn { padding: 0 9px; } }
+/* icône seule (le nom « IA Kolakisa » est dans l'infobulle et pour les lecteurs d'écran) : l'en-tête ne doit jamais passer sur deux lignes */
+.pb-ai-btn { padding: 0; width: 32px; justify-content: center; }
+.pb-ai-btn span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .pb-ai { --ai-bg: var(--editor-panel, #fff); --ai-bg2: var(--editor-panel-secondary, #f3f6f9); --ai-text: var(--editor-text, #10222f); --ai-muted: var(--editor-muted, #566a7a); --ai-border: var(--editor-border, #dfe6ec); --ai-accent: var(--editor-accent, #0277b6); --ai-danger: var(--editor-danger, #c0121d);
   padding: 0; border: 1px solid var(--editor-border-strong, #c3cfda); border-radius: 14px; background: var(--ai-bg); color: var(--ai-text); box-shadow: var(--editor-shadow, 0 12px 36px rgba(11, 42, 64, .22)); overflow: hidden; flex-direction: column; font-size: 13px; }
