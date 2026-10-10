@@ -61,9 +61,10 @@
     var t = $("[data-pb-toast]");
     t.textContent = text;
     t.classList.toggle("is-error", Boolean(isError));
+    if (window.KolMotion) window.KolMotion.cancelLeave(t);
     t.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.hidden = true; }, isError ? 6500 : 3200);
+    toastTimer = setTimeout(function () { if (window.KolMotion) window.KolMotion.leave(t, "fade"); t.hidden = true; }, isError ? 6500 : 3200);
   }
   function api(method, url, body, isForm) {
     var opts = { method: method, credentials: "same-origin", headers: { Accept: "application/json" } };
@@ -780,7 +781,7 @@
   var dragIds = null, dragNew = null;
   // Les calques ne sont reconstruits que si ce qu'ils affichent a changé (identifiants, noms, drapeaux, hiérarchie, repli, filtre) : une
   // modification de style, de couleur ou de dimension ne touche à aucun calque (mesuré : la reconstruction coûte ~ 15 000 nœuds DOM à 400 éléments)
-  var treeSig = null, treeMarked = null, treeTab = null, treeNames = {}, treeLi = {};
+  var treeRendered = false, treeSig = null, treeMarked = null, treeTab = null, treeNames = {}, treeLi = {};
   function treeSignature() {
     var out = [];
     treeNames = {};
@@ -855,8 +856,9 @@
         var kids = kidsOf(it), has = Boolean(kids && kids.length), open = has && (treeQuery ? true : !collapsed[it.id]);
         // Signature de la LIGNE (sans ses enfants) : tout ce qu'elle affiche
         var rsig = [level, it.type, nm(it), it.hidden ? 1 : 0, it.locked ? 1 : 0, has ? (open ? "o" : "c") : "-", it.id === errorItemId ? 1 : 0, canWrite ? 1 : 0].join("|");
-        var ent = treeLi[it.id];
+        var ent = treeLi[it.id], brandNew = treeRendered && !treeQuery && !ent;
         if (!ent || ent.sig !== rsig) ent = { li: makeRow(it, level, kids, open), sig: rsig };
+        if (brandNew) freshRows.push(ent.li);
         else syncDelete(ent.li, it, has);
         nextLi[it.id] = ent;
         var li = ent.li, ul = li.lastElementChild && li.lastElementChild.tagName === "UL" ? li.lastElementChild : null;
@@ -871,8 +873,11 @@
       seq.forEach(function (li) { if (at === li) at = at.nextElementSibling; else into.insertBefore(li, at); });
     };
     $$(".pb-tree-empty", treeEl).forEach(function (e) { e.remove(); });
+    var freshRows = []; // lignes réellement nouvelles (identifiant jamais vu) : apparition très courte ; pas pour un filtre ni pour un afflux (chargement, gros annuler)
     reconcile(content.sections, 1, treeEl);
     treeLi = nextLi;
+    if (window.KolMotion && freshRows.length && freshRows.length <= 12) freshRows.forEach(function (li) { window.KolMotion.appear(li, "fade"); });
+    treeRendered = true;
     var anyRow = treeEl.firstElementChild;
     if (treeQuery && !anyRow) treeEl.appendChild(h("li", { class: "pb-tree-empty", role: "none" }, h("p", { class: "pb-hint", text: "Aucun calque ne correspond." })));
     if (!content.sections.length) treeEl.appendChild(h("li", { class: "pb-tree-empty", role: "none" }, h("p", { class: "pb-hint", text: "Page vide : glissez un élément ou un bloc ici, ou dans la page." })));
@@ -4087,6 +4092,8 @@
       if (INTERACTIVE.test(it.html) || (live && INTERACTIVE.test(prevHtml[it.key] || ""))) return false;
       want.push(doc.importNode(it.el, true)); replaced++;
     }
+    var knownIds = {};
+    Array.prototype.forEach.call(doc.querySelectorAll("[data-node-id],[data-section-id]"), function (e) { knownIds[idOfEl(e)] = 1; });
     // Tout est vérifié : on applique (aucun retour en arrière possible après ce point)
     liveStyles.forEach(function (el, i) { if (el.textContent !== next.styles[i]) el.textContent = next.styles[i]; });
     if (next.bodyStyle !== prev.bodyStyle) doc.body.setAttribute("style", next.bodyStyle);
@@ -4095,6 +4102,12 @@
     Array.prototype.slice.call(main.children).forEach(function (el) { if (want.indexOf(el) < 0) el.remove(); });
     inlineTouched.forEach(function (el) { el.style.width = ""; el.style.height = ""; });
     inlineTouched = [];
+    // Éléments créés : apparition très courte (opacité + micro-zoom, sans toucher à la mise en page). Seuls les plus hauts d'un lot sont animés (au plus 6)
+    if (window.KolMotion) {
+      var fresh = Array.prototype.filter.call(doc.querySelectorAll("[data-node-id],[data-section-id]"), function (e) { return !knownIds[idOfEl(e)]; });
+      var top = fresh.filter(function (e) { var up = e.parentElement && e.parentElement.closest("[data-node-id],[data-section-id]"); return !up || knownIds[idOfEl(up)]; });
+      if (top.length && top.length <= 6) top.forEach(function (e) { window.KolMotion.appear(e, "appear"); });
+    }
     markCanvasSelection(false);
     drawRulers();
     drawGuides();
@@ -5451,6 +5464,7 @@
   function showSimpleMenu(entries, x, y) {
     menu.textContent = "";
     entries.forEach(function (en) { menu.appendChild(h("button", { type: "button", role: "menuitem", class: "pb-menu-item", disabled: en[2] || null, tabindex: "-1", onclick: function () { closeMenu(); en[1](); } }, h("span", { text: en[0] }), en[3] ? h("kbd", { text: en[3] }) : null)); });
+    if (window.KolMotion) window.KolMotion.cancelLeave(menu);
     menu.hidden = false;
     var r = menu.getBoundingClientRect();
     menu.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + "px";
@@ -5682,6 +5696,11 @@
   }
   if (paletteMedia) { var onScheme = function () { if (paletteMode === "system") applyPalette(); }; if (paletteMedia.addEventListener) paletteMedia.addEventListener("change", onScheme); else if (paletteMedia.addListener) paletteMedia.addListener(onScheme); }
 
+  // Sections repliables de l'Inspecteur : le contenu apparaît en douceur quand l'AUTEUR ouvre (jamais quand l'Inspecteur est reconstruit avec des sections déjà ouvertes)
+  var accUser = 0;
+  ["pointerdown", "keydown"].forEach(function (ev) { document.addEventListener(ev, function (e) { if (e.target.closest && e.target.closest("summary")) accUser = Date.now(); }, true); });
+  document.addEventListener("toggle", function (e) { var d = e.target; if (window.KolMotion && d.open && d.matches && d.matches("details.pb-acc, details.pb-info") && Date.now() - accUser < 500) window.KolMotion.appear(d.querySelector(":scope > .pb-acc-body, :scope > .pb-meta"), "rise"); }, true);
+
   // ---------- Panneaux redimensionnables ----------
   var main = $("[data-pb-main]");
   var PANEL_MIN_RIGHT = 280;
@@ -5699,7 +5718,7 @@
     if (!live) store.set("panels", panels);
     queueZoom();
   }
-  function togglePanel(side) { panels[side + "Hidden"] = !panels[side + "Hidden"]; applyPanels(); renderTools(); }
+  function togglePanel(side) { panels[side + "Hidden"] = !panels[side + "Hidden"]; applyPanels(); renderTools(); if (!panels[side + "Hidden"] && window.KolMotion) window.KolMotion.appear($(side === "left" ? "[data-pb-left]" : "[data-pb-right]"), "panel-" + side); }
   $$("[data-pb-resize]").forEach(function (handle) {
     var side = handle.dataset.pbResize;
     // Largeur : jamais assez étroite pour rendre les contrôles illisibles (droite : 280 px au moins), ni plus de la moitié de la fenêtre
@@ -6049,13 +6068,14 @@
       if (typeof e === "object" && e.heading) { menu.appendChild(h("p", { class: "pb-menu-heading", text: e.heading })); return; }
       menu.appendChild(h("button", { type: "button", role: "menuitem", class: "pb-menu-item" + (e[0] === "Supprimer" ? " is-danger" : "") + (e[4] ? " " + e[4] : ""), disabled: e[2] || null, tabindex: "-1", onclick: function () { closeMenu(); e[1](); } }, h("span", { text: e[0] }), e[3] ? h("kbd", { text: e[3] }) : null));
     });
+    if (window.KolMotion) window.KolMotion.cancelLeave(menu);
     menu.hidden = false;
     var r = menu.getBoundingClientRect();
     menu.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + "px";
     menu.style.top = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + "px";
     var first = menu.querySelector(".pb-menu-item:not([disabled])"); if (first) first.focus();
   }
-  function closeMenu() { menu.hidden = true; var mb = $("[data-pb-mainmenu]"); if (mb) mb.setAttribute("aria-expanded", "false"); }
+  function closeMenu() { if (window.KolMotion && !menu.hidden) window.KolMotion.leave(menu); menu.hidden = true; var mb = $("[data-pb-mainmenu]"); if (mb) mb.setAttribute("aria-expanded", "false"); }
   menu.addEventListener("keydown", function (e) {
     var list = $$(".pb-menu-item:not([disabled])", menu);
     var i = list.indexOf(document.activeElement);
