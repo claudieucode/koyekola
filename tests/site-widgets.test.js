@@ -185,6 +185,37 @@ describe("vrai serveur : widgets du site", () => {
     assert.match(art, /Titre SEO un/); assert.match(art, /Description SEO un\./);
   });
 
+  test("produits (formations) : les raccourcis Titre, Prix, Image, Description, Informations et Apparentés s'affichent avec les vraies données de la fiche", async () => {
+    const nodes = require("../src/marketing/pages/nodes");
+    const sc = (key) => nodes.editorSpec().shortcuts.find((x) => x.key === key);
+    const keys = ["producttitle", "productprice", "productshort", "productmeta", "productrelated"];
+    for (const k of keys) assert.ok(sc(k) && sc(k).group === "commerce", `raccourci ${k}`);
+    await createCourse(boss, srv, { title: "Étalonnage avancé", price: 59 });
+    await createCourse(boss, srv, { title: "Montage express", price: 19 });
+    db.prepare("UPDATE courses SET published = 1, subtitle = 'Maîtrisez la couleur' WHERE title IN ('Étalonnage avancé', 'Montage express')").run();
+    const slug = db.prepare("SELECT slug FROM courses WHERE title = 'Étalonnage avancé'").get().slug;
+    const sections = [layout(keys.map((k, i) => w(`prod0000000${i}`.slice(0, 12), sc(k).type, sc(k).preset)))];
+    // Un seul modèle « fiche d'une formation » s'applique : si un test précédent en a déjà assigné un, on republie SA page avec nos éléments
+    const existing = db.prepare("SELECT id FROM mk_landing_pages WHERE name = 'Modèle formation'").get();
+    if (existing) {
+      const rev = db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(existing.id).revision;
+      assert.equal((await boss.request(`/marketing/pages/${existing.id}/brouillon`, { method: "PUT", json: { revision: rev, content: { sections } } })).status, 200);
+      assert.equal((await boss.postJson(`/marketing/pages/${existing.id}/publier.json`, {})).status, 200);
+    } else {
+      const page = await newPage("Modèle formation", sections);
+      assert.equal((await assign({ type: "single_course", page_id: String(page) })).status, 302);
+    }
+    const fiche = await get(`/cours/${slug}`);
+    assert.match(fiche, /<h1[^>]*>Étalonnage avancé<\/h1>/, `titre du produit : ${(fiche.match(/<h1[^>]*>[^<]*<\/h1>/g) || []).join(" | ")}`);
+    assert.match(fiche, /<strong>59,00/, "prix réel");
+    assert.match(fiche, /Maîtrisez la couleur/, "description");
+    assert.match(fiche, /Catégorie : [^<]*· Formateur : /, "informations");
+    const related = fiche.slice(fiche.indexOf("Vous aimerez aussi"));
+    const list = (related.match(/<ul class="kw-ql-items">[\s\S]*?<\/ul>/) || [""])[0];
+    assert.match(list, /Montage express/, "produit apparenté");
+    assert.doesNotMatch(list, /Étalonnage avancé/, "le produit affiché n'est pas proposé comme apparenté");
+  });
+
   test("carrousel de boucle : la grille et la liste dynamique portent le défilement horizontal", async () => {
     const id = await newPage("Carrousels", [layout([
       { id: "grid00000009", type: "grid", props: { loop: { source: "posts", count: 3, slider: true, paginate: true } }, children: [w("sh0000000009", "heading", { text: "{{post.title}}", level: 3 })] },

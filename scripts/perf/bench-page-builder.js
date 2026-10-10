@@ -141,12 +141,37 @@ async function main() {
     }, find);
     const med = (xs) => { const v = xs.filter((x) => x != null).sort((a, b) => a - b); return v.length ? +v[Math.floor(v.length / 2)].toFixed(1) : -1; };
     const acc = { dupliquer: [], annuler: [], retablir: [], supprimer: [] };
+    const m0 = cdp ? await (async () => { await cdp.send("Performance.enable"); return Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map((m) => [m.name, m.value])); })() : null;
     await prof("structure", async () => {
       for (let i = 0; i < 5; i++) {
         for (const [k, rx] of [["dupliquer", "^Dupliquer"], ["annuler", "Annuler"], ["retablir", "Rétablir"], ["supprimer", "^Supprimer"]]) { const r = await op(rx); acc[k].push(r); await sleep(450); }
       }
     });
+    if (cdp) { const m1 = Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map((m) => [m.name, m.value])); const d = (k) => +((m1[k] - m0[k]) * 1000 / 20).toFixed(1); res.metriquesParOperation = { scriptMs: d("ScriptDuration"), miseEnPageMs: d("LayoutDuration"), styleMs: d("RecalcStyleDuration"), tacheMs: d("TaskDuration") }; }
     for (const k of Object.keys(acc)) res[k] = { synchro: med(acc[k].map((x) => x && x.sync)), image: med(acc[k].map((x) => x && x.image)) };
+    // --trace : trace de rendu (CDP) d'un cycle dupliquer / annuler / rétablir : durée cumulée par type d'événement du moteur du navigateur
+    if (process.argv.includes("--trace") && cdp) {
+      const events = [];
+      cdp.on("Tracing.dataCollected", (e) => events.push(...e.value));
+      await cdp.send("Tracing.start", { traceConfig: { includedCategories: ["devtools.timeline", "disabled-by-default-devtools.timeline", "disabled-by-default-devtools.timeline.invalidationTracking"] }, transferMode: "ReportEvents" });
+      for (const rx of ["^Dupliquer", "Annuler", "Rétablir"]) { await op(rx); await sleep(500); }
+      const done = new Promise((r) => cdp.once("Tracing.tracingComplete", r)); await cdp.send("Tracing.end"); await done;
+      const by = {}; events.filter((e) => e.ph === "X" && e.dur).forEach((e) => { by[e.name] = (by[e.name] || 0) + e.dur; });
+      // Qui invalide le style ? (raison + élément + fonction appelante), classés par fréquence
+      const inv = {};
+      events.filter((e) => /StyleRecalcInvalidationTracking|StyleInvalidatorInvalidationTracking/.test(e.name)).forEach((e) => { const d = e.args && e.args.data || {}; const f = (d.stackTrace || [])[0]; const k = `${d.reason || e.name} <${d.nodeName || "?"}> ${f ? (f.functionName || "(anonyme)") + ":" + f.lineNumber : ""}`; inv[k] = (inv[k] || 0) + 1; });
+      res.invalidations = Object.entries(inv).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, v]) => `${v}× ${k}`);
+      const recalc = events.filter((e) => e.name === "UpdateLayoutTree" && e.dur).map((e) => `${(e.dur / 1000).toFixed(0)} ms / ${(e.args && e.args.elementCount) || "?"} éléments`);
+      res.recalculs = recalc.slice(0, 12);
+      res.recalculsGrands = events.filter((e) => e.name === "UpdateLayoutTree" && e.dur > 20000).map((e) => `${(e.dur / 1000).toFixed(0)} ms / ${(e.args && e.args.elementCount) || "?"} él. — forcé par : ${((e.args && e.args.beginData && e.args.beginData.stackTrace) || []).slice(0, 3).map((f) => (f.functionName || "(anonyme)") + ":" + f.lineNumber).join(" < ") || "(rendu normal, pas de JS)"}`);
+      // invalidations de masse : la source la plus fréquente parmi celles qui touchent un élément englobant
+      const reasons = {}; events.filter((e) => /InvalidationTracking/.test(e.name)).forEach((e) => { const d = e.args && e.args.data || {}; const k = `${e.name.replace("Tracking", "")} | ${d.reason || ""} | ${d.nodeName || ""}${d.changedClass ? " ." + d.changedClass : ""}${d.changedAttribute ? " [" + d.changedAttribute + "]" : ""}${d.changedId ? " #" + d.changedId : ""}`; reasons[k] = (reasons[k] || 0) + 1; });
+      res.raisonsInvalidation = Object.entries(reasons).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([k, v]) => `${v}× ${k}`);
+      const who = {}; events.filter((e) => e.name === "LayoutInvalidationTracking" && e.args && e.args.data && /pb-flag/.test(e.args.data.nodeName || "")).forEach((e) => { const st = (e.args.data.stackTrace || []).slice(0, 4).map((f) => `${f.functionName || "(anonyme)"}:${f.lineNumber}`).join(" < ") || "(sans pile JS : rendu du navigateur)"; who[st] = (who[st] || 0) + 1; });
+      res.quiRetireLesLignes = Object.entries(who).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${v}× ${k}`);
+      res.invalidationsGrosses = events.filter((e) => /StyleRecalcInvalidationTracking/.test(e.name) && e.args && e.args.data && /^(HTML|BODY|MAIN|SECTION|ASIDE|NAV|HEADER)$/.test(e.args.data.nodeName || "")).slice(0, 10).map((e) => { const d = e.args.data; const f = (d.stackTrace || [])[0]; return `${d.reason} <${d.nodeName} ${d.selectorPart || d.changedAttribute || ""}> ${f ? (f.functionName || "(anonyme)") + ":" + f.lineNumber : ""}`; });
+      res.trace = Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([k, v]) => `${k} ${(v / 1000).toFixed(0)} ms`);
+    }
     // Glisser-déposer d'un calque (HTML5, souris réelle) : cadence et plus long intervalle entre deux images pendant 40 déplacements, puis dépôt
     res.glisser = await prof("glisser", async () => {
       if ((await page.locator("[data-pb-layers] .pb-node[data-id] > .pb-row-item").count()) < 8) return null;

@@ -47,7 +47,15 @@ const out = process.argv[2] || path.join(__dirname, "..", "tmp-audit-widgets.jso
   // Étape 2 (serveur) : CHAQUE type du registre sur sa propre page — enregistrement, publication, page publiée, rendu du canevas.
   // Les widgets qui demandent un contenu réel à l'insertion (média, adresse, formation…) reçoivent un exemple valide.
   const reg = require("../src/marketing/pages/nodes");
-  const courseId = (db.prepare("SELECT id FROM courses ORDER BY id LIMIT 1").get() || {}).id;
+  // Données réelles pour les widgets qui en exigent : une formation publiée et un formulaire d'inscription publié (créés dans la base de test)
+  let courseId = (db.prepare("SELECT id FROM courses ORDER BY id LIMIT 1").get() || {}).id;
+  if (!courseId) {
+    const teacher = db.prepare("SELECT id FROM users WHERE role = 'formateur' LIMIT 1").get().id;
+    courseId = Number(db.prepare("INSERT INTO courses (title, slug, published, subtitle, price_cents, instructor_id) VALUES ('Formation du banc d''essai', 'formation-banc-essai', 1, '', 4900, ?)").run(teacher).lastInsertRowid);
+  }
+  const formId = Number((await boss.post("/marketing/formulaires", { name: "Formulaire du banc d'essai", consentText: "J'accepte de recevoir des messages." })).location.match(/(\d+)$/)[1]);
+  db.prepare("UPDATE mk_forms SET double_optin = 0 WHERE id = ?").run(formId);
+  await boss.post(`/marketing/formulaires/${formId}/publier`, {});
   const IMG = (n) => ({ src: `https://exemple.fr/photo-${n}.jpg`, alt: `Photo ${n}` });
   const SAMPLES = {
     video: { props: { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", title: "Vidéo de démonstration" } },
@@ -60,10 +68,12 @@ const out = process.argv[2] || path.join(__dirname, "..", "tmp-audit-widgets.jso
     hotspot: { props: { src: IMG(1).src, alt: "Photo", spots: [{ x: 50, y: 50, title: "Point", text: "Ce qu'il faut savoir." }] } },
     rating: { props: { value: 4.5, title: "Note des élèves" } },
     menuanchor: { anchor: "tarifs" },
+    lottie: { props: { src: "https://anim.exemple.test/a.json", alt: "Animation", trigger: "viewport", loop: true, speed: 1, height: 200, align: "center" } },
+    mediacarousel: { props: { label: "Médias", items: [{ kind: "image", image: "https://exemple.fr/a.jpg", alt: "Photo", caption: "", video: "" }], dots: true, loop: false, autoplay: false, interval: 5 } },
     course: courseId ? { props: { courseId } } : null,
     addtocart: courseId ? { props: { courseId, mode: "cart", label: "Ajouter au panier" } } : null,
     courserating: courseId ? { props: { courseId } } : null,
-    signupform: null, // demande un formulaire d'inscription publié : voir « dépendances »
+    signupform: { props: { formId } },
   };
   const firstOf = {}; const collect = (n) => { if (!n || typeof n !== "object") return; if (n.type && !firstOf[n.type]) firstOf[n.type] = n; (n.children || []).forEach(collect); };
   if (draft) (draft.sections || []).forEach(collect);
@@ -75,7 +85,7 @@ const out = process.argv[2] || path.join(__dirname, "..", "tmp-audit-widgets.jso
     if (Object.prototype.hasOwnProperty.call(SAMPLES, type)) { node = SAMPLES[type] ? { type, ...SAMPLES[type] } : null; row.source = node ? "exemple valide" : "dépendance manquante"; }
     else if (firstOf[type]) { node = JSON.parse(JSON.stringify(firstOf[type])); row.source = "insertion réelle"; }
     if (!node) { row.error = "aucun contenu de départ (dépendance)"; perType.push(row); continue; }
-    node.id = "aud000000001"; if (reg.NODE_TYPES[type].container) node.children = node.children && node.children.length ? node.children : [];
+    node.id = "aud000000001"; if (reg.NODE_TYPES[type].container) node.children = []; // un conteneur est testé seul (ses enfants sont d'autres widgets, testés à part)
     const content = { sections: [{ id: "sect00000001", type: "layout", children: [reg.NODE_TYPES[type].container || type === "layout" ? node : { id: "box000000001", type: "container", props: {}, children: [node] }] }] };
     const pid = Number((await boss.post("/marketing/pages", { name: `Audit ${type}` })).location.match(/(\d+)$/)[1]);
     const put = await putPage(pid, content); row.put = put.status;
@@ -91,7 +101,11 @@ const out = process.argv[2] || path.join(__dirname, "..", "tmp-audit-widgets.jso
   const html = "", pub = { status: 0 }, published = {};
   fs.writeFileSync(out, JSON.stringify({ items: results, draftTypes: types, perType }, null, 1));
   console.log(`types du registre : ${perType.length} · enregistrés : ${perType.filter((r) => r.put === 200).length} · canevas OK : ${perType.filter((r) => r.canvas === "ok").length} · publiés et rendus : ${perType.filter((r) => r.published).length}`);
-  for (const r of perType.filter((x) => !(x.put === 200 && x.canvas === "ok" && x.published))) console.log("  ✖", r.type.padEnd(14), `put=${r.put} canevas=${r.canvas} publication=${r.publish} rendu=${r.published}`, r.error || "");
+  // Widgets qui n'ont rien à afficher hors de leur contexte (article, modèle) : enregistrés, publiés, mais vides sur une page ordinaire (voir docs/WIDGETS-INVENTAIRE.md)
+  const CONTEXT_ONLY = new Set(["postcontent", "toc", "postterms", "postnav", "authorbox", "postcomments", "cmsmenu"]);
+  for (const r of perType) r.verdict = r.put === 200 && r.canvas === "ok" && r.published ? "OPÉRATIONNEL" : r.put === 200 && r.canvas === "ok" && r.publish === 200 && CONTEXT_ONLY.has(r.type) ? "OPÉRATIONNEL DANS SON CONTEXTE (vide sur une page ordinaire)" : "À CORRIGER";
+  console.log(`bilan : ${perType.filter((r) => r.verdict === "OPÉRATIONNEL").length} opérationnels · ${perType.filter((r) => r.verdict.startsWith("OPÉRATIONNEL DANS")).length} dans leur contexte · ${perType.filter((r) => r.verdict === "À CORRIGER").length} à corriger`);
+  for (const r of perType.filter((x) => x.verdict === "À CORRIGER")) console.log("  ✖", r.type.padEnd(14), `put=${r.put} canevas=${r.canvas} publication=${r.publish} rendu=${r.published}`, r.error || "");
   console.log("→", out);
   await browser.close(); await srv.stop(); return;
 })().catch((e) => { console.error("ERREUR :", e.message.slice(0, 500)); process.exit(1); });

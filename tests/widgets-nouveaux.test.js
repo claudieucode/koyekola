@@ -277,3 +277,73 @@ describe("serveur : publication d'un carrousel média incomplet", () => {
     assert.match((await boss.get(`/p/${db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug}`)).text, /<img class="kw-mcar-img" src="https:\/\/exemple\.fr\/a\.jpg" alt="Une photo"/);
   });
 });
+
+const LOTTIE = { v: "5.5.7", fr: 30, ip: 0, op: 60, w: 100, h: 100, nm: "t", ddd: 0, assets: [], layers: [{ ddd: 0, ind: 1, ty: 4, nm: "s", sr: 1, ks: { o: { a: 0, k: 100 }, r: { a: 1, k: [{ t: 0, s: [0], e: [360], i: { x: [0.5], y: [1] }, o: { x: [0.5], y: [0] } }, { t: 60, s: [360] }] }, p: { a: 0, k: [50, 50, 0] }, a: { a: 0, k: [0, 0, 0] }, s: { a: 0, k: [100, 100, 100] } }, ao: 0, shapes: [{ ty: "gr", it: [{ ty: "rc", d: 1, s: { a: 0, k: [40, 40] }, p: { a: 0, k: [0, 0] }, r: { a: 0, k: 0 } }, { ty: "fl", c: { a: 0, k: [1, 0, 0, 1] }, o: { a: 0, k: 100 } }, { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } }] }], ip: 0, op: 60, st: 0, bounds: { l: 0, t: 0, b: 100, r: 100 } }] };
+describe("Animation Lottie", () => {
+  const { A } = freshMarketing();
+  let n = 0;
+  const save = (props) => { const p = pages.createPage(A, { name: `Lottie ${++n}`, kind: "page" }); return pages.saveDraft(A, p.id, wrap({ id: "lot000000001", type: "lottie", props }), { revision: pages.getPage(A, p.id).revision }).content.sections[0].children[0].children[0].props; };
+  test("validation : contenu de départ valide (brouillon), adresse .json exigée si saisie, vitesse et hauteur bornées", () => {
+    const blank = nodes.editorSpec().types.find((x) => x.type === "lottie").blank.props;
+    assert.doesNotThrow(() => save(blank));
+    assert.equal(save({ ...blank, src: "https://assets.exemple.com/a.json?v=2", speed: 99 }).speed, 1, "vitesse hors bornes ramenée au défaut");
+    for (const bad of ["https://exemple.fr/page.html", "https://exemple.fr/a.json.exe", "javascript:alert(1)"]) assert.throws(() => save({ ...blank, src: bad }), bad);
+    assert.match(nodes.CUSTOM_WIDGETS.lottie.complete({ src: "" }), /adresse du fichier/);
+    assert.equal(nodes.CUSTOM_WIDGETS.lottie.complete({ src: "https://exemple.fr/a.json" }), "");
+  });
+  test("la bibliothèque est hébergée avec le site, avec sa licence, et ne contient pas d'expressions", () => {
+    const fs = require("fs"), path = require("path");
+    const js = fs.readFileSync(path.join(__dirname, "../public/js/vendor/lottie_light.min.js"), "utf8");
+    assert.ok(js.length > 100000 && js.includes("loadAnimation"));
+    assert.match(fs.readFileSync(path.join(__dirname, "../public/js/vendor/LICENSE-lottie-web.md"), "utf8"), /MIT License/);
+  });
+});
+
+describe("sécurité : aucun contenu saisi dans un nouveau widget ne devient du code", () => {
+  let srv, boss, db;
+  before(async () => { srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" }); boss = await loginInstructor(srv); db = srv.db(); });
+  after(() => srv.stop());
+  const PAYLOAD = `"><img src=x onerror=alert(1)><script>alert(2)</script>'&`;
+  const LINKS = ["javascript:alert(1)", "data:text/html,<script>alert(1)</script>", "vbscript:x", "//evil.test/x", "https://user:pass@evil.test/"];
+  const TYPES = ["readmore", "textpath", "linkinbio", "slides", "testimonialcarousel", "mediacarousel", "facebookbutton", "cart", "lottie"];
+  const spec = (t) => nodes.editorSpec().types.find((x) => x.type === t);
+  // Remplace chaque texte (et chaque texte d'un élément de liste) par la charge d'attaque ; garde le reste du contenu de départ
+  const hostile = (schema, props) => { const out = JSON.parse(JSON.stringify(props)); for (const f of schema) { if (f.kind === "text" || f.kind === "textarea") out[f.key] = PAYLOAD.slice(0, f.max || 200); else if (f.kind === "items") out[f.key] = (out[f.key] || []).map((it) => { const o = { ...it }; for (const sf of f.fields) if (sf.kind === "text" || sf.kind === "textarea") o[sf.key] = PAYLOAD.slice(0, sf.max || 200); return o; }); } return out; };
+  const attempt = async (type, props) => {
+    const id = Number((await boss.post("/marketing/pages", { name: `Sécurité ${type} ${Math.random()}` })).location.match(/(\d+)$/)[1]);
+    const rev = db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(id).revision;
+    const put = await boss.request(`/marketing/pages/${id}/brouillon`, { method: "PUT", json: { revision: rev, content: wrap({ id: "sec000000001", type, props }) }, headers: { Origin: srv.base } });
+    if (put.status !== 200) return { status: put.status, html: "" };
+    const canvas = (await boss.request(`/marketing/pages/${id}/rendu`, { method: "POST", json: { content: wrap({ id: "sec000000001", type, props }) }, headers: { Origin: srv.base } })).text;
+    const pub = await boss.request(`/marketing/pages/${id}/publier.json`, { method: "POST", json: {}, headers: { Origin: srv.base } });
+    const html = pub.status === 200 ? (await boss.get(`/p/${db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug}`)).text : "";
+    return { status: put.status, html, canvas };
+  };
+  // Charge active = balise réellement ouverte (« < » non échappé) : le texte « onerror=alert(1) » échappé en &lt;…&gt; est inoffensif
+  const dangerous = (html) => String(html).match(/<img src=x|<script>alert\(2\)/);
+  for (const type of TYPES) {
+    test(`${type} : textes hostiles échappés (page publiée et canevas) ; adresses dangereuses refusées`, async () => {
+      const s = spec(type);
+      const props = hostile(s.schema, s.blank.props);
+      // contenus obligatoires pour que la page soit publiable (le texte hostile ne les remplace pas toujours)
+      if (type === "mediacarousel") props.items = [{ kind: "image", image: "https://exemple.fr/a.jpg", alt: PAYLOAD.slice(0, 160), caption: PAYLOAD.slice(0, 160), video: "" }];
+      if (type === "lottie") props.src = "https://exemple.fr/a.json";
+      if (type === "facebookbutton") props.url = "https://exemple.fr/p?x=" + encodeURIComponent(PAYLOAD);
+      const r = await attempt(type, props);
+      if (r.status === 200) { assert.equal(dangerous(r.html || ""), null, `${type} : charge active dans la page publiée : ${((r.html || "").match(/.{60}(?:<img src=x|<script>alert\(2\)).{60}/s) || [""])[0]}`); assert.equal(dangerous(r.canvas || ""), null, `${type} : charge active dans le canevas`); }
+      else assert.ok([400, 422].includes(r.status), `${type} : refus propre (${r.status})`);
+      // adresses : chaque champ « lien » refuse les schémas dangereux
+      const linkFields = s.schema.filter((f) => f.kind === "link"), listLinks = s.schema.filter((f) => f.kind === "items").flatMap((f) => f.fields.filter((x) => x.kind === "link").map((x) => [f.key, x.key]));
+      for (const bad of LINKS) {
+        for (const f of linkFields) assert.notEqual((await attempt(type, { ...s.blank.props, [f.key]: bad })).status, 200, `${type}.${f.key} accepte ${bad}`);
+        for (const [list, sub] of listLinks) assert.notEqual((await attempt(type, { ...s.blank.props, [list]: (s.blank.props[list] || [{}]).map((it) => ({ ...it, [sub]: bad })) })).status, 200, `${type}.${list}[].${sub} accepte ${bad}`);
+      }
+    });
+  }
+  test("code coloré, Lire la suite et intégrations : même garantie sur la page publiée", async () => {
+    const r = await attempt("readmore", { intro: PAYLOAD, more: PAYLOAD, openLabel: "Ouvrir", closeLabel: "Fermer", open: false });
+    assert.equal(dangerous(r.html), null);
+    const embed = await attempt("embed", { url: "https://www.facebook.com/page\"onload=alert(1)", title: PAYLOAD });
+    assert.notEqual(embed.status, 200, "adresse d'intégration piégée refusée");
+  });
+});
