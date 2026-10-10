@@ -73,9 +73,10 @@
     var toward = dark ? [255, 255, 255] : [0, 0, 0];
     var secondary = mix(panel, toward, dark ? 0.03 : 0.025);
     var card = dark ? mix(panel, [255, 255, 255], 0.04) : mix(panel, [255, 255, 255], 0.6);
-    var input_ = card;
-    var border = mix(panel, toward, dark ? 0.12 : 0.1);
-    var borderStrong = mix(panel, toward, dark ? 0.24 : 0.22);
+    // Champs : en thème sombre, un cran plus clairs que la carte pour ne pas se fondre dans le panneau ; bordures perceptibles mais discrètes
+    var input_ = dark ? mix(panel, [255, 255, 255], 0.08) : card;
+    var border = mix(panel, toward, dark ? 0.17 : 0.12);
+    var borderStrong = mix(panel, toward, dark ? 0.32 : 0.26);
     var surfaces = [panel, secondary, card];
     var text = ensureContrast(parseHex(input.text) || (dark ? hslToRgb([hue, 0.12, 0.92]) : hslToRgb([hue, 0.35, 0.11])), surfaces, 7);
     var textSecondary = ensureContrast(mix(text, panel, 0.2), surfaces, 5.5);
@@ -94,7 +95,7 @@
     var danger = dark ? [255, 138, 128] : [192, 18, 29], success = dark ? [111, 212, 138] : [30, 122, 52];
     var dangerBg = mix(panel, danger, dark ? 0.16 : 0.1), successBg = mix(panel, success, dark ? 0.16 : 0.1);
     var tokens = {
-      "--editor-bg": css(bg), "--editor-panel": css(panel), "--editor-panel-secondary": css(secondary), "--editor-card": css(card), "--editor-input": css(input_),
+      "--editor-bg": css(bg), "--editor-panel": css(panel), "--editor-panel-secondary": css(secondary), "--editor-card": css(card), "--editor-input": css(input_), "--editor-card-soft": css(card), "--editor-disabled-opacity": dark ? "0.6" : "0.65",
       "--editor-border": css(border), "--editor-border-strong": css(borderStrong), "--editor-guide": css(mix(panel, toward, dark ? 0.16 : 0.15)),
       "--editor-text": css(text), "--editor-text-secondary": css(textSecondary), "--editor-muted": css(muted),
       "--editor-hover": css(hover), "--editor-active": css(active), "--editor-accent": css(accent), "--editor-accent-text": css(accentText), "--editor-on-accent": css(onAccent),
