@@ -3,7 +3,7 @@
 // à partir des vraies données, pour ne jamais demander un identifiant à saisir à la main.
 const TRIGGERS = {
   "lms.user_registered": { label: "Un compte est créé sur KOLAKISA", filters: [] },
-  "lms.order_completed": { label: "Une commande est passée", filters: [] },
+  "lms.order_completed": { label: "Une commande est passée", filters: [["courseId", "Formation achetée", "courses"]] },
   "lms.course_enrolled": { label: "Un élève s'inscrit à une formation", filters: [["courseId", "Formation", "courses"]] },
   "lms.lesson_completed": { label: "Un élève termine une leçon", filters: [["courseId", "Formation", "courses"]] },
   "lms.course_progress_10": { label: "Un élève atteint 10 % d'une formation", filters: [["courseId", "Formation", "courses"]] },
@@ -45,17 +45,30 @@ const TRIGGERS = {
   "funnel.abandoned": { label: "Un contact abandonne un tunnel (délai sans activité, réglable)", filters: [["funnelId", "Tunnel", "funnels"]] },
   // Commande (palier 19) : dérivés d'événements réels de la boutique ; la commande reste la source de vérité du paiement
   "checkout.abandoned": { label: "Un contact abandonne sa commande (page ouverte, aucune commande après le délai)", filters: [] },
-  "purchase.completed": { label: "Un achat est terminé (commande payée)", filters: [] },
+  "purchase.completed": { label: "Un achat est terminé (commande payée)", filters: [["courseId", "Formation achetée", "courses"]] },
+  // Commerce (palier 20)
+  "cart.abandoned": { label: "Un contact abandonne son panier (formation ajoutée, aucune commande après le délai)", filters: [["courseId", "Formation", "courses"]] },
+  "payment.failed": { label: "Un paiement échoue", filters: [] },
+  "refund.completed": { label: "Un remboursement est effectué (Stripe)", filters: [] },
+  "order.refunded": { label: "Une commande est remboursée en totalité", filters: [] },
+  "order.partially_refunded": { label: "Une commande est remboursée en partie", filters: [] },
 };
 // D'où vient le déclencheur : affiché dans le scénario (le tunnel produit, le Contact Core conserve, l'automatisation décide)
 const SOURCE_LABELS = { cms: "CMS", funnel: "Tunnel", email: "E-mail", commerce: "Boutique", contact: "Contact Core", lms: "KOLAKISA (formations)", site: "Site Web" };
 function sourceOf(event) {
   if (/^funnel\./.test(event)) return "funnel";
   if (/^(email|sms)\./.test(event)) return "email";
-  if (/^(checkout|purchase)\./.test(event) || event === "lms.order_completed" || event === "lms.cart_added" || event === "lms.checkout_started") return "commerce";
+  if (/^(checkout|purchase|cart|payment|refund|order)\./.test(event) || event === "lms.order_completed" || event === "lms.cart_added" || event === "lms.checkout_started") return "commerce";
   if (/^(contact|tag|list|user|comment)\./.test(event) || event === "form.submitted") return "contact";
   if (/^(page)\./.test(event)) return "site";
   if (/^lms\./.test(event)) return "lms";
   return "contact";
 }
-module.exports = { TRIGGERS, SOURCE_LABELS, sourceOf };
+// Un filtre de déclencheur correspond-il aux données de l'événement ? « courseId » vaut aussi pour une commande de plusieurs formations (liste « courseIds »)
+function filterMatches(md, filter) {
+  if (!filter || !filter.key) return true;
+  const data = md && typeof md === "object" ? md : {};
+  if (String(data[filter.key]) === String(filter.value)) return true;
+  return filter.key === "courseId" && Array.isArray(data.courseIds) && data.courseIds.map(String).includes(String(filter.value));
+}
+module.exports = { TRIGGERS, SOURCE_LABELS, sourceOf, filterMatches };

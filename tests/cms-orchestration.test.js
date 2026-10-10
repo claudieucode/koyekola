@@ -72,7 +72,7 @@ describe("abandon (délai réel, jamais immédiat)", () => {
     const f = funnel("A1"), c = contact(), done = contact("b@x.fr");
     events.emitJourney(A, c, [f.steps[0]], { sessionId: "s1", at: T0 });
     events.emitJourney(A, done, [f.steps[2]], { sessionId: "s2", at: T0 });
-    assert.deepEqual(abandon.sweep(A, { now: T0 + 2 * HOUR, funnelHours: 24 }), { funnels: 0, checkouts: 0 });
+    assert.deepEqual(abandon.sweep(A, { now: T0 + 2 * HOUR, funnelHours: 24 }), { funnels: 0, checkouts: 0, carts: 0 });
     assert.equal(abandon.sweep(A, { now: T0 + 25 * HOUR, funnelHours: 24 }).funnels, 1);
     assert.equal(abandon.sweep(A, { now: T0 + 30 * HOUR, funnelHours: 24 }).funnels, 0);
     const e = one("SELECT * FROM mk_events WHERE name = 'funnel.abandoned'");
