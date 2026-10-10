@@ -59,3 +59,9 @@ Le déplacement d'un élément (glisser-déposer) réordonne la structure : il n
 - `public/js/page-builder-rules.js` — fenêtre de réglages et menu rapide.
 - `public/css/landing.css` (calques dans le canevas), `public/css/page-builder.css` (fenêtre).
 - Tests : `tests/editeur-regles-magnetisme.test.js` (moteur), `tests/editeur-regles-magnetisme-navigateur.test.js` (Chrome réel).
+
+## Menu rapide (design, 2026-10-10)
+
+Le menu rapide de la barre du haut (`.pb-rules-pop`, construit dans `public/js/page-builder-rules.js`, styles dans le bloc « Menu rapide » de `page-builder.css`) est un petit panneau en deux groupes — **Affichage** (Règles, Guides, Grille) et **Alignement** (Magnétisme, Guides intelligents) — suivi de « Paramètres… » (icône + chevron, icônes du projet). Chaque ligne entière est cliquable ; les réglages et leur synchronisation sont inchangés.
+Couleurs : uniquement des jetons de l'éditeur (`--editor-panel`, `-border-strong`, `-text`, `-muted`, `-hover`, `-accent`, `-input`, `-shadow`, `-focus`) regroupés en `--pop-*` ; la surface était auparavant le `--card` blanc du site (le menu n'était pas dans la liste des surfaces de l'éditeur), d'où une boîte blanche en thème sombre. L'accent ne sert qu'à l'état actif (case, fond très léger, focus) ; la coche prend une couleur claire ou sombre selon la luminosité de l'accent (couleur relative `oklch(from …)`, repli blanc si le navigateur ne la gère pas). L'infobulle du bouton ne s'affiche plus menu ouvert.
+Test : `tests/editeur-menu-regles-navigateur.test.js`.
