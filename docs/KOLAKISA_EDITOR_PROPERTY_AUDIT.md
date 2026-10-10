@@ -1,160 +1,178 @@
-# KOLAKISA — Audit des propriétés de l'éditeur (LOT 0, puis lots exécutés le 2026-10-10)
+# KOLAKISA — Audit des propriétés de l'éditeur (LOT 0 + LOT 1)
 
-> **Mise à jour après les lots du 2026-10-10** : (1) l'accélération des transitions est ajoutée (`transitionEasing`, 87e propriété) ; (2) les dimensions acceptent `fit-content`, `min-content`, `max-content` (liste fermée) ; (3) l'état « survol » est proposé pour 18 types de contenu et tous les widgets personnalisés. Les tableaux ci-dessous décrivent l'état au moment de l'audit ; les sections 4 et 6 indiquent ce qui a changé.
+Date : 2026-10-10 · Dépôt : `main` (commit `b30f35f` + audit). **Aucun code de l'éditeur n'a été modifié pour cet audit** ; seuls des scripts de mesure (hors dépôt) et ce document.
 
-Date : 2026-10-10. **Aucun code n'a été modifié pour établir ce document.** Source : exécution de `src/marketing/pages/nodes.js` (registre des 86 types, 87 propriétés de style) et lecture des fiches d'inspecteur de `public/js/page-builder.js` (`INSPECTORS`). Les contrôles réellement affichés se vérifient aussi dans les tests existants (voir la matrice du système existant) ; cette page ne rejoue pas ces tests.
-Légende des colonnes : ● groupe complet de contrôles · ≈N sous-ensemble de N propriétés · – absent de la fiche · ▢ élément conteneur.
+## 1. Ce qui a réellement été exécuté (preuves)
+| # | Vérification | Méthode | Résultat |
+|---|---|---|---|
+| 1 | Validation, enregistrement, relecture et **publication** des **88 propriétés de style** (`STYLE_PROPS`) | Script Node + vrai serveur : un conteneur reçoit les 88 valeurs sur 4 contextes (ordinateur, tablette, mobile, survol) ; `PUT` du brouillon, relecture en base, publication, lecture de la page `/p/<slug>` | 88 / 88 acceptées ; **0 perdue** à l'enregistrement ; **0 absente** de la page publiée ; règles `@media` tablette et mobile et `:hover` présentes |
+| 2 | Chaîne canevas ↔ publication | Lecture du code : `pageNodes.pageCss` n'a qu'un seul point d'appel (`src/marketing/landing/index.js:324`) | Le canevas et la page publiée utilisent **le même générateur de CSS** (conclusion tirée du code ; non comparée pixel à pixel) |
+| 3 | Panneaux réels de **78 des 86 widgets** | Chrome réel : un exemplaire de chaque widget inséré, sélectionné, onglets Contenu / Style / Avancé ouverts, contrôles comptés (accordéons ouverts) | voir §4 |
+| 4 | Capacités déclarées par type | Lecture de `INSPECTORS` (71 entrées explicites) et du registre serveur (`editorSpec`, `PARTS`) | voir §4 |
+| 5 | Unités acceptées par le serveur ou proposées par l'interface | Script (`STYLE_PROPS[k].check`) + lecture de `UNITS` | voir §5 |
+| 6 | États (survol / focus / actif) pour un titre | Script (`normalizeNode` + `pageCss`) | acceptés et publiés pour **tout** widget (`:hover{color:…}` généré) |
 
-## 1. Chaîne complète d'une propriété (vérifiée pour le modèle commun)
+**Non exécuté** : insertion à vide de 8 widgets qui exigent un contenu existant (`video`, `audio`, `embed`, `course`, `addtocart`, `courserating`, `signupform`, `menuanchor`) → leur panneau n'a pas été compté (colonnes « — »). Annuler / rétablir et rechargement n'ont **pas** été rejoués pour les 88 propriétés : ils reposent sur `change()` générique (instantané JSON), couvert par les tests existants (329 fichiers de tests, dont `editeur-conformite-widgets`, `page-builder-modele`, `controles-numeriques-navigateur`, `editeur-styles-globaux-navigateur`).
 
-`contrôle (inspecteur)` → `setStyle / setStyles` (écran actif) → `change()` (historique, regroupement par clé) → arbre JSON (`styles.<écran>.<propriété>`, états `hover / focus / active`) → rendu serveur `POST …/rendu` + `patchCanvas` → enregistrement `PUT …/brouillon` (révision, détection de conflit) → rechargement (même arbre) → publication (CSS généré côté serveur, sans interface d'éditeur).
-Une propriété n'existe que si le **serveur** la valide (`STYLE_PROPS`, `check`) : les 87 propriétés de style passent toutes par ce même chemin, donc la chaîne est la même pour toutes. Les **fiches** d'inspecteur décident seulement lesquelles sont proposées pour un type.
+## 2. Cartographie (A)
+86 types de widgets (serveur `NODE_TYPES`) : structure 8, texte 11, média 10, interaction 15, marketing 27, contenu dynamique 10, formations 3, avancé 2. 47 types exposent des **parties** stylables (`parts.js`) ; tous déclarent la capacité `responsive`.
+Modèle : `node = { id, type, props, styles: { desktop, tablet, mobile }, states: { hover, focus, active }, parts, classes, css, attrs, motion, … }`.
+88 propriétés de style (groupes : mise en page 24, dimensions 9, espacements 8, typographie 13, couleur 2, bordure 12, effets 6, position 7, média 3, fond 4) **plus** des propriétés composées : dégradé, image de fond, voile, filtre (flou, luminosité, contraste, niveaux de gris, saturation, sépia, teinte), ombre personnalisée (avec « interne »), masque, transformation.
 
-## 2. Propriétés de style connues du moteur (86)
-
-| Groupe | Nb | Propriétés |
+## 3. Mécanismes déjà fonctionnels à préserver (B / C)
+| Domaine | État | Remarque |
 |---|---|---|
-| Mise en page | 24 | display, flexDirection, flexWrap, justifyContent, alignItems, alignContent, alignSelf, justifySelf, order, gap, rowGap, columnGap, columns, gridTemplate, gridRows, gridRowsTemplate, gridAutoFlow, justifyItems, gridColumnSpan, gridRowSpan, gridColumnStart, gridColumnEnd, gridRowStart, gridRowEnd |
-| Dimensions | 9 | width, height, minWidth, maxWidth, minHeight, maxHeight, flexGrow, flexShrink, flexBasis |
-| Espacement | 8 | margin et padding × 4 côtés (marges négatives et « auto » autorisées, intérieur ≥ 0) |
-| Typographie | 12 | fontFamily, fontSize, fontWeight, fontStyle, lineHeight, letterSpacing, wordSpacing, textIndent, textTransform, textAlign, textDecoration, textShadow |
-| Couleurs | 2 | color, backgroundColor (références globales `token:…` possibles) |
-| Fond | 4 | backgroundSize / Position / Repeat / Attachment (+ type Aucun / Couleur / Image / Dégradé dans l'inspecteur) |
-| Bordure | 12 | épaisseur (globale + 4 côtés), style, couleur, rayon (global + 4 coins) |
-| Effets | 5 | boxShadow, opacity, overflow, backdropBlur, transitionDuration (+ filtres et ombre détaillée dans l'inspecteur) |
-| Position | 7 | position (normale, relative, collante, **absolue**, **fixe**), top/right/bottom/left, transformOrigin, zIndex |
-| Média | 3 | objectFit, objectPosition, aspectRatio |
+| Modèle de propriétés partagé (`STYLE_PROPS`, `check` / `out`) | **B** | un seul registre, validation et sortie CSS côté serveur |
+| Écriture unique (`setStyles` → `change` → `styleSet(écran, état)`) | **B** | l'inspecteur et les poignées du canevas passent par là |
+| Responsive : 3 écrans, héritage ordinateur → tablette → mobile | **B** | vérifié sur 88 propriétés (publication) |
+| Valeurs du site (`token:…`) : couleurs, espacements, rayons, tailles de texte | **B** | références conservées |
+| Styles globaux (classes), copier / coller le style (fusion), couleurs globales | **B** | |
+| Polices : gestionnaire unique, 1 775 familles, chargement à la demande | **B** | |
+| Contrôles numériques unifiés (saisie, ▲▼, glisser, curseur, unités) | **B** | |
+| Moteur d'accordéons, historique par transactions, sauvegarde différée 1 s | **B** | |
+| Manipulation directe (écart, marge intérieure, survol, main, zoom 400 %) | **B** (nouveau) | |
 
-Capacités transversales (`capsOf`) : animations d'apparition (motion) 84/86, effets au défilement 84/86, effets à la souris 84/86, transformations 84/86, **position collante 6/86**, masques 5/86, attributs HTML et CSS personnalisé 86/86, réglages par écran 86/86. Masquage par écran (`hideOn`) et audience par élément : modèle commun.
-Écrans : ordinateur (base), tablette (≤ 1023 px), mobile (≤ 767 px) — 3 écrans, non extensibles. États : survol, focus, clic.
+## 4. Matrice par widget (LOT 1) — mesurée dans l'interface
+Colonnes : nombre de contrôles dans l'onglet Contenu (ou Général) / Style / Avancé (ou Interactions), accordéons ouverts ; groupes de l'onglet Style (Mise = mise en page, Dim = dimensions, Esp = espacements, Typo, Coul, Fond, Bord, Eff = effets, Pos = position, CSS) ; états de survol disponibles **dans l'interface** ; nombre de parties stylables ; gap.
 
-## 3. Couverture des groupes de contrôles par type d'élément (86 types)
+| Widget | Catégorie | Contenu | Style | Avancé | Groupes Style | États UI | Parties | Gap | Mesuré en UI | Remarques automatiques |
+|---|---|---|---|---|---|---|---|---|---|---|
+| container | Structure | 12 | 67 | 35 | Fond Bord CSS Coul Eff Mise Pos Dim Esp | oui | 0 | oui | oui |  |
+| columns | Structure | 10 | 67 | 35 | Fond Bord CSS Coul Eff Mise Pos Dim Esp | oui | 0 | oui | oui |  |
+| column | Structure | 8 | 71 | 35 | Fond Bord CSS Coul Eff Mise Pos Dim Esp | oui | 0 | oui | oui |  |
+| grid | Structure | 11 | 72 | 35 | Fond Bord CSS Coul Eff Mise Pos Dim Esp | oui | 0 | oui | oui |  |
+| stack | Structure | 10 | 67 | 35 | Fond Bord CSS Coul Eff Mise Pos Dim Esp | oui | 0 | oui | oui |  |
+| group | Structure | 10 | 67 | 35 | Fond Bord CSS Coul Eff Mise Pos Dim Esp | oui | 0 | oui | oui |  |
+| spacer | Structure | 1 | 18 | 27 | Dim Esp | non | 0 | — | oui |  |
+| divider | Structure | 4 | 30 | 55 | Bord Dim Esp Typo | non | 0 | — | oui |  |
+| heading | Texte | 4 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 0 | — | oui |  |
+| text | Texte | 0 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 0 | — | oui | contenu édité dans la page seulement |
+| list | Texte | 2 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 0 | — | oui |  |
+| quote | Texte | 2 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 0 | — | oui |  |
+| code | Texte | 2 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 0 | — | oui |  |
+| image | Média | 5 | 50 | 56 | Bord Eff Mise Média Dim Esp | oui | 0 | — | oui |  |
+| gallery | Média | 8 | 44 | 56 | Bord Eff Mise Dim Esp | non | 3 | oui | oui |  |
+| video | Média | — | — | — | Mise Dim Esp Bord Eff | non | 0 | — | non (prérequis) |  |
+| audio | Média | — | — | — | Mise Dim Esp Bord Eff | non | 0 | — | non (prérequis) |  |
+| button | Interaction | 7 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | oui | 0 | — | oui |  |
+| link | Interaction | 3 | 27 | 55 | Mise Esp Typo | oui | 0 | — | oui | sans dimensions |
+| accordion | Interaction | 6 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 3 | — | oui |  |
+| tabs | Interaction | 7 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 3 | — | oui |  |
+| badge | Texte | 2 | 24 | 55 | Bord Mise Esp Typo | non | 0 | — | oui | sans dimensions |
+| timeline | Texte | 6 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 4 | — | oui |  |
+| progress | Marketing | 4 | 25 | 55 | Mise Dim Esp Typo | non | 3 | — | oui |  |
+| menu | Interaction | 7 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | oui | 3 | — | oui |  |
+| carousel | Média | 8 | 41 | 55 | Bord Eff Mise Dim Esp | non | 4 | — | oui |  |
+| toggle | Interaction | 3 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 2 | — | oui |  |
+| alert | Texte | 4 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 3 | — | oui |  |
+| counter | Marketing | 6 | 47 | 55 | Eff Mise Dim Esp Typo | non | 2 | — | oui |  |
+| testimonial | Marketing | 4 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | oui | 5 | — | oui |  |
+| pricing | Marketing | 9 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | oui | 6 | — | oui |  |
+| breadcrumb | Interaction | 5 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 0 | — | oui |  |
+| social | Interaction | 5 | 28 | 55 | Coul Eff Mise Esp | non | 1 | — | oui | sans dimensions |
+| sharebuttons | Interaction | 9 | 28 | 55 | Coul Eff Mise Esp | non | 1 | — | oui | sans dimensions |
+| modal | Interaction | 8 | 16 | 27 | Mise Esp | non | 6 | — | oui | sans dimensions |
+| html | Avancé | 1 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 0 | — | oui |  |
+| embed | Avancé | — | — | — | Mise Dim Esp Bord Eff | non | 0 | — | non (prérequis) |  |
+| iconlist | Texte | 6 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 3 | — | oui |  |
+| tooltip | Interaction | 3 | 27 | 55 | Mise Esp Typo | non | 2 | — | oui | sans dimensions |
+| hotspot | Média | 5 | 41 | 56 | Bord Eff Mise Dim Esp | non | 2 | — | oui |  |
+| posts | Contenu dynamique | 7 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 6 | — | oui |  |
+| courselist | Contenu dynamique | 6 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 7 | — | oui |  |
+| search | Contenu dynamique | 3 | 22 | 55 | Mise Dim Esp | non | 0 | — | oui |  |
+| account | Contenu dynamique | 4 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | oui | 3 | — | oui |  |
+| dyntext | Contenu dynamique | 5 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 0 | — | oui |  |
+| table | Texte | 9 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 0 | — | oui |  |
+| countdown | Marketing | 2 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 1 | — | oui |  |
+| course | Formations | — | — | — | Mise Dim Fond Esp Bord Eff | oui | 0 | — | non (prérequis) |  |
+| sitelogo | Contenu dynamique | 2 | 28 | 55 | Eff Mise Esp | non | 2 | — | oui | sans dimensions |
+| postcontent | Contenu dynamique | 0 | 41 | 55 | Bord Eff Mise Dim Esp | non | 0 | — | oui | contenu édité dans la page seulement |
+| catfilter | Contenu dynamique | 3 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 0 | — | oui |  |
+| sitetitle | Contenu dynamique | 2 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 0 | — | oui |  |
+| copyright | Contenu dynamique | 2 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 0 | — | oui |  |
+| addtocart | Formations | — | — | — | Mise Esp Eff | non | 0 | — | non (prérequis) |  |
+| courserating | Formations | — | — | — | Mise Typo Coul Dim Esp Fond Bord Eff | non | 0 | — | non (prérequis) |  |
+| animatedheading | Texte | 6 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 0 | — | oui |  |
+| flipbox | Interaction | 9 | 49 | 55 | Bord Eff Mise Dim Esp Typo | non | 4 | — | oui |  |
+| pricelist | Marketing | 4 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 4 | — | oui |  |
+| toc | Interaction | 3 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 3 | — | oui |  |
+| readingprogress | Interaction | 2 | 0 | 55 | Coul | non | 2 | — | oui | sans dimensions, sans espacement |
+| signupform | Marketing | — | — | — | Mise Typo Coul Dim Esp Fond Bord Eff | non | 3 | — | non (prérequis) |  |
+| map | Média | 4 | 38 | 55 | Bord Eff Dim Esp | non | 0 | — | oui |  |
+| imagebox | Média | 7 | 52 | 56 | Fond Bord Eff Mise Dim Esp Typo | non | 3 | — | oui |  |
+| iconbox | Média | 8 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 3 | — | oui |  |
+| rating | Marketing | 4 | 19 | 55 | Mise Esp Typo | non | 5 | — | oui | sans dimensions |
+| menuanchor | Interaction | — | — | — | défaut | non | 0 | — | non (prérequis) |  |
+| icon | Média | 4 | 20 | 55 | Coul Mise Dim Esp | oui | 0 | — | oui |  |
+| slides | Marketing | 17 | 53 | 55 | Fond Bord Coul Eff Mise Dim Esp | non | 8 | — | oui |  |
+| testimonialcarousel | Marketing | 13 | 53 | 55 | Fond Bord Coul Eff Mise Dim Esp | non | 8 | — | oui |  |
+| mediacarousel | Marketing | 9 | 53 | 55 | Fond Bord Coul Eff Mise Dim Esp | non | 4 | — | oui |  |
+| cart | Marketing | 6 | 53 | 55 | Fond Bord Coul Eff Mise Dim Esp | non | 9 | — | oui |  |
+| facebookbutton | Marketing | 6 | 53 | 55 | Fond Bord Coul Eff Mise Dim Esp | non | 0 | — | oui |  |
+| linkinbio | Marketing | 11 | 53 | 55 | Fond Bord Coul Eff Mise Dim Esp | non | 5 | — | oui |  |
+| lottie | Marketing | 7 | 53 | 55 | Fond Bord Coul Eff Mise Dim Esp | non | 0 | — | oui |  |
+| profilecard | Marketing | 6 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 4 | — | oui |  |
+| readmore | Marketing | 5 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 3 | — | oui |  |
+| querylist | Marketing | 14 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 8 | — | oui |  |
+| postmeta | Marketing | 9 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 1 | — | oui |  |
+| postterms | Marketing | 3 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 2 | — | oui |  |
+| postnav | Marketing | 4 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 4 | — | oui |  |
+| authorbox | Marketing | 5 | 53 | 55 | Fond Bord Coul Eff Mise Dim Esp | non | 5 | — | oui |  |
+| archiveinfo | Marketing | 4 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 3 | — | oui |  |
+| postcomments | Marketing | 1 | 53 | 55 | Fond Bord Coul Eff Mise Dim Esp | non | 5 | — | oui |  |
+| cmsmenu | Marketing | 4 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 2 | — | oui |  |
+| minicart | Marketing | 3 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 3 | — | oui |  |
+| textpath | Marketing | 6 | 52 | 55 | Fond Bord Eff Mise Dim Esp Typo | non | 0 | — | oui |  |
 
-Nombre de types dont la fiche expose chaque groupe (sur 86) : Mise en page 81 · Typographie 51 · Couleurs 68 · Dimensions 76 · Espacement 85 · Fond 59 · Bordure 71 · Effets 74 · Média 1. **15 types** proposent les états survol / focus / clic (les widgets personnalisés n'en ont pas).
-**Correction du 2026-10-10 (même jour que la première version de ce document)** : les 19 widgets `slides, testimonialcarousel, mediacarousel, cart, facebookbutton, linkinbio, lottie, profilecard, readmore, querylist, postmeta, postterms, postnav, authorbox, archiveinfo, postcomments, cmsmenu, minicart, textpath` sont des **widgets personnalisés** : l'inspecteur leur génère à l'exécution une fiche complète (`page-builder.js`, « Widgets personnalisés : schéma d'inspecteur selon leur nature ») — **boîte** (mise en page, dimensions, espacement, couleurs, fond, bordure, effets) ou **texte** (typographie, couleurs, dimensions, espacement, fond, bordure, effets). Une première version de cet audit les avait comptés à tort comme « sans fiche » (lecture de la seule table statique `INSPECTORS`). Il n'y a donc **pas d'écart de fiche** ; seuls les **états** manquent à ces widgets.
+Moyenne mesurée (78 widgets) : **5,6** contrôles de contenu, **47,2** dans Style, **52,8** dans Avancé (tous accordéons ouverts) — voir risque d'encombrement au §7.
 
-| Type | Nom | Catégorie | Mise en page | Typographie | Couleurs | Dimensions | Espacement | Fond | Bordure | Effets | Média | États | Fiche |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `embed` | Contenu intégré | Avancé | ≈1 | – | – | ≈3 | ● | – | ● | ● | – | – | propre |
-| `html` | HTML (sécurisé) | Avancé | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `addtocart` | Bouton d'achat | Commerce | ≈1 | – | – | – | ● | – | – | ≈1 | – | – | propre |
-| `course` | Formation | Commerce | ≈1 | – | – | ≈3 | ● | ● | ● | ● | – | ● | propre |
-| `courserating` | Avis de la formation | Commerce | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `account` | Compte du visiteur | Dynamique | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | ● | propre |
-| `catfilter` | Filtre par catégorie | Dynamique | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `copyright` | Copyright | Dynamique | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `courselist` | Formations du catalogue | Dynamique | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `dyntext` | Texte dynamique | Dynamique | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `postcontent` | Contenu de l'article | Dynamique | ≈1 | – | – | ≈3 | ● | – | ● | ● | – | – | propre |
-| `posts` | Derniers articles du blog | Dynamique | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `search` | Recherche | Dynamique | ≈1 | – | – | ≈3 | ● | – | – | – | – | – | propre |
-| `sitelogo` | Logo du site | Dynamique | ≈1 | – | – | – | ● | – | – | ≈1 | – | – | propre |
-| `sitetitle` | Titre du site | Dynamique | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `accordion` | Accordéon / FAQ | Interaction | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `breadcrumb` | Fil d'Ariane | Interaction | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `button` | Bouton | Interaction | ≈1 | ● | ● | ≈3 | ● | ● | ● | ● | – | ● | propre |
-| `flipbox` | Boîte retournable | Interaction | ≈1 | ● | – | ≈3 | ● | – | ● | ≈2 | – | – | propre |
-| `link` | Lien | Interaction | ≈1 | ● | ≈1 | – | ● | – | – | – | – | ● | propre |
-| `menu` | Menu de navigation | Interaction | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | ● | propre |
-| `menuanchor` | Ancre de menu | Interaction | – | – | – | ● | ● | – | – | – | – | – | propre |
-| `modal` | Fenêtre (modale) | Interaction | ≈1 | – | – | – | ● | – | – | – | – | – | propre |
-| `readingprogress` | Barre de lecture | Interaction | – | – | ≈1 | – | – | – | – | – | – | – | propre |
-| `sharebuttons` | Boutons de partage | Interaction | ≈1 | – | ≈1 | – | ● | – | – | ≈1 | – | – | propre |
-| `social` | Réseaux sociaux | Interaction | ≈1 | – | ≈1 | – | ● | – | – | ≈1 | – | – | propre |
-| `tabs` | Onglets | Interaction | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `toc` | Table des matières | Interaction | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `toggle` | Bascule | Interaction | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `tooltip` | Infobulle | Interaction | ≈1 | ● | ● | – | ● | – | – | – | – | – | propre |
-| `archiveinfo` | En-tête d'archive | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
-| `authorbox` | Boîte auteur | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
-| `cart` | Panier | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
-| `cmsmenu` | Menu du CMS | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
-| `countdown` | Compte à rebours | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `counter` | Compteur | Marketing | ≈1 | ● | ● | ≈3 | ● | – | – | ≈2 | – | – | propre |
-| `facebookbutton` | Bouton Facebook | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
-| `linkinbio` | Lien en bio | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
-| `lottie` | Animation Lottie | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
-| `mediacarousel` | Carrousel média | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
-| `minicart` | Mini-panier | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
-| `postcomments` | Commentaires de l'article | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
-| `postmeta` | Informations de l'article | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
-| `postnav` | Article précédent / suivant | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
-| `postterms` | Catégorie et étiquettes | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
-| `pricelist` | Liste de prix | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `pricing` | Offre tarifaire | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ● | – | ● | propre |
-| `profilecard` | Carte de profil | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
-| `progress` | Barre de progression | Marketing | ≈1 | ≈2 | ≈1 | ≈3 | ● | – | – | – | – | – | propre |
-| `querylist` | Liste dynamique | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
-| `rating` | Évaluation | Marketing | ≈1 | ≈2 | ≈1 | – | ● | – | – | – | – | – | propre |
-| `readmore` | Lire la suite | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
-| `signupform` | Formulaire | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `slides` | Diaporama | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
-| `testimonial` | Témoignage | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ● | – | ● | propre |
-| `testimonialcarousel` | Carrousel de témoignages | Marketing | ≈9 | – | ● | ● | ● | ● | ● | ● | – | – | générée (widget personnalisé : boîte) |
-| `textpath` | Texte sur un tracé | Marketing | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | générée (widget personnalisé : texte) |
-| `audio` | Audio | Média | ≈1 | – | – | ≈3 | ● | – | ● | ● | – | – | propre |
-| `carousel` | Carrousel d'images | Média | ≈1 | – | – | ≈3 | ● | – | ● | ● | – | – | propre |
-| `gallery` | Galerie | Média | ≈2 | – | – | ≈3 | ● | – | ● | ● | – | – | propre |
-| `hotspot` | Image à points d'intérêt | Média | ≈1 | – | – | ≈3 | ● | – | ● | ● | – | – | propre |
-| `icon` | Icône | Média | ≈1 | – | ≈1 | ≈2 | ● | – | – | – | – | ● | propre |
-| `iconbox` | Boîte d'icône | Média | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `image` | Image | Média | ≈1 | – | – | ● | ● | – | ● | ● | ● | ● | propre |
-| `imagebox` | Boîte d'image | Média | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `map` | Google Maps | Média | – | – | – | ≈3 | ● | – | ● | ≈2 | – | – | propre |
-| `video` | Vidéo | Média | ≈1 | – | – | ≈3 | ● | – | ● | ● | – | – | propre |
-| `column` ▢ | Colonne | Structure | ≈9 | – | ● | ● | ● | ● | ● | ● | – | ● | propre |
-| `columns` ▢ | Colonnes | Structure | ≈9 | – | ● | ● | ● | ● | ● | ● | – | ● | propre |
-| `container` ▢ | Conteneur | Structure | ≈9 | – | ● | ● | ● | ● | ● | ● | – | ● | propre |
-| `divider` | Séparateur | Structure | – | ≈4 | ≈1 | ≈3 | ● | – | ● | – | – | – | propre |
-| `grid` ▢ | Grille | Structure | ≈12 | – | ● | ● | ● | ● | ● | ● | – | ● | propre |
-| `group` ▢ | Groupe | Structure | ≈9 | – | ● | ● | ● | ● | ● | ● | – | ● | propre |
-| `spacer` | Espace | Structure | – | – | – | ≈1 | ● | – | – | – | – | – | propre |
-| `stack` ▢ | Pile | Structure | ≈9 | – | ● | ● | ● | ● | ● | ● | – | ● | propre |
-| `alert` | Alerte | Texte | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `animatedheading` | Titre animé | Texte | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `badge` | Badge | Texte | ≈1 | ≈4 | – | – | ● | – | ● | – | – | – | propre |
-| `code` | Code (texte) | Texte | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `heading` | Titre | Texte | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `iconlist` | Liste d'icônes | Texte | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `list` | Liste | Texte | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `quote` | Citation | Texte | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `table` | Tableau | Texte | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `text` | Texte | Texte | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
-| `timeline` | Chronologie | Texte | ≈1 | ● | ● | ≈3 | ● | ● | ● | ≈4 | – | – | propre |
+## 5. Unités
+Le serveur (`len`) accepte **px, %, rem, em, vw, vh** pour **toutes** les propriétés de longueur (largeur, hauteur, minimum, maximum, écart, marges, rayon, bordure, décalages…). L'interface en propose moins, par choix :
+- `width` : px % rem vw + mots-clés (pas `em`, `vh`) ; `height` : px % rem vh + mots-clés (pas `em`, `vw`) ; `minHeight` / `maxHeight` : sans `em` ; `gap`, `rowGap`, `columnGap` : px rem em % (pas `vw`, `vh`) ; `padding*` : px % rem em ; `margin*` : px % rem em auto ; `borderWidth` : px seulement ; `borderRadius` : px % rem.
+- **Défaut de validation (D, mineur)** : le serveur accepte `%` pour une épaisseur de bordure (`border-width:10%` est un CSS invalide, ignoré par le navigateur). Seul un document écrit à la main ou via l'API peut le produire (l'interface ne l'offre pas).
 
-## 4. Conteneurs (`container`, `columns`, `column`, `grid`, `stack`, `group`)
+## 6. Lacunes confirmées (D / C / E)
+| # | Lacune | Preuve | Classe |
+|---|---|---|---|
+| L1 | **États survol / focus / clic : disponibles dans l'interface pour 15 types seulement** (conteneurs, colonnes, grille, menu, compte, témoignage, offre, image, bouton, lien, icône, formation), alors que le serveur les accepte et les publie pour **tous** les widgets | `INSPECTORS[type].states` = 15 ; `normalizeNode` + `pageCss` pour un titre → `:hover{color:#00ff00}` | **C** (le moteur sait, l'interface ne l'offre pas) |
+| L2 | Widget **Texte** : 0 contrôle de contenu dans l'inspecteur (le texte se modifie dans la page) | comptage UI | **F** à étudier (peut être voulu) |
+| L3 | **Typographie absente de 29 widgets** de l'interface, dont les conteneurs : impossible de poser une taille / police héritée par les enfants depuis un conteneur | liste §4 (colonne Style, sans « Typo ») ; le serveur accepte ces propriétés sur tout nœud | **C** |
+| L4 | **Dimensions absentes** de 9 petits widgets (lien, badge, réseaux, partage, fenêtre modale, infobulle, logo du site, progression de lecture, évaluation) ; **espacements absents** de la progression de lecture | comptage UI | **F** (la fenêtre modale en particulier : largeur du panneau) |
+| L5 | **Propriétés CSS sans équivalent** dans le registre : `white-space`, `overflow-wrap` / `word-break`, `text-overflow`, `visibility`, `cursor`, `pointer-events`, `outline`, `mix-blend-mode`, `overflow-x` / `overflow-y` séparés, `grid-auto-rows` / `grid-auto-columns`, couleur et style de bordure par côté, `inset` | absence dans les clés de `STYLE_PROPS` (88) et des formes composées | **A** (absentes) — certaines sont atteignables par la capacité « CSS personnalisé » |
+| L6 | **Écrans : 3 fixes** (ordinateur, tablette, mobile). Les seuils (px) se règlent par site mais on ne peut pas ajouter d'écran (portable, grand écran) | `BREAKPOINTS` (3 entrées) ; commentaire du code : « la liste peut s'allonger » | **C** |
+| L7 | Unités du serveur plus riches que celles de l'interface (§5) | script | **C** |
+| L8 | Validation permissive (`%` sur une épaisseur de bordure) | script | **D** (mineur) |
+| L9 | **Panneaux denses** : en moyenne 47 contrôles dans Style et 53 dans Avancé (accordéons ouverts) | comptage UI | **E** |
+| L10 | Zoom limité à 200 % (corrigé : 400 %) | code | résolu |
+| L11 | 8 widgets non insérables à vide (prérequis) : audit UI incomplet | §1 | limite de l'audit |
 
-| Famille demandée | État | Constat (fait vérifié) |
+## 7. Performance (E)
+Mesures disponibles (voir `docs/perf-page-builder.md` et `KOLAKISA_CANVAS_INTERACTION_PERFORMANCE.md`) : sélection (inspecteur compris) 29-43 ms de 20 à 400 éléments ; frappe → canevas 80-576 ms (goulot : rendu serveur) ; gestes (curseur, glisser, redimensionner, poignées) : image médiane 16,7 ms, 0 à 1 image > 50 ms ; défilement 61 images/s. **Non mesuré aujourd'hui** : temps d'affichage de l'onglet Style d'un conteneur (79 contrôles) — à mesurer au LOT 8 avant toute action.
+
+## 8. Risques de régression (F)
+- Toute nouvelle propriété touche `STYLE_PROPS` (serveur) **et** `UNITS` / `INSPECTORS` (client) : les deux doivent évoluer ensemble, sinon contrôle sans effet ou effet sans contrôle (la conformité des widgets est testée, pas celle de chaque propriété).
+- Ouvrir les états à tous les widgets multiplie le CSS publié et le nombre de contrôles (encombrement, L9).
+- Ajouter des propriétés à `STYLE_PROPS` change la validation de pages existantes (rien ne doit devenir invalide).
+- Le panneau Avancé est déjà long : tout ajout doit passer par un regroupement, pas par plus de lignes.
+
+## 9. Cinq améliorations prioritaires
+1. **Offrir les états (survol, focus, clic) à tous les widgets qui ont du sens** (texte, titre, image, bouton déjà fait…) : le moteur est prêt, il manque l'interface (L1). Impact élevé, risque faible.
+2. **Typographie héritée sur les conteneurs et sections** (taille, police, couleur du texte) (L3).
+3. **Compléter le registre CSS par lots sûrs** : `white-space`, `overflow-wrap`, `text-overflow`, `visibility`, `cursor`, `outline`, `mix-blend-mode`, `overflow-x/y`, `grid-auto-*` — avec validation, sortie CSS, contrôle, test de publication (L5).
+4. **Aligner les unités de l'interface sur celles du rendu** là où c'est utile (largeur / hauteur en `em`, `vh`, `vw` selon la propriété) et durcir la validation des unités invalides (L7, L8).
+5. **Écrans configurables** (ajouter « portable » / « grand écran ») et **réduire l'encombrement du panneau Avancé** (L6, L9).
+
+## 10. Plan par lots (H) et tests (I)
+| Lot | Contenu | Tests à écrire / exécuter |
 |---|---|---|
-| Direction, retour inversé, justification, alignements, retour à la ligne, gap / rowGap / columnGap | **FONCTIONNEL** | fiche « Conteneur » : 9 propriétés de mise en page ; curseur d'écart ajouté aujourd'hui |
-| Flex : grow / shrink / basis | **FONCTIONNEL** | dans le groupe Dimensions (flexGrow, flexShrink, flexBasis) |
-| Ordre personnalisé | **FONCTIONNEL** | contrôle « Ordre » (premier / dernier / valeur) pour un enfant de conteneur flex ou grille |
-| Grille | **FONCTIONNEL** | colonnes, lignes, gabarit, remplissage, placement par case |
-| Dimensions width / min / max / height | **FONCTIONNEL** (mis à jour) | nombre + unité (px, %, rem, vw, vh), « auto », et **`fit-content`, `min-content`, `max-content`** (liste fermée, côté serveur et dans la liste d'unités) ; `clamp()` et `calc()` restent **volontairement refusés** (CSS libre = risque de sécurité) |
-| Marges / intérieur | **FONCTIONNEL** | blocs « Marge externe / interne », liaison indépendante, unités, négatif pour les marges, valeurs globales |
-| Position, z-index | **FONCTIONNEL** | static / relative / sticky / absolute / fixed ; haut, droite, bas, gauche ; plan |
-| Fond, bordure, rayon, ombre, opacité, débordement | **FONCTIONNEL** | groupes complets sur le conteneur |
-| Transformations, transitions | **FONCTIONNEL** (mis à jour) | transformations : oui ; transitions : durée **et accélération** (douce, linéaire, départ lent, arrivée lente, les deux) ; les propriétés animées restent fixes (couleur, fond, bordure, ombre, transformation, opacité) |
-| États | **FONCTIONNEL MAIS LIMITÉ** (mis à jour) | conteneur : survol + clic ; 18 types de contenu et tous les widgets personnalisés : survol (le focus et le clic n'ont de sens que pour les éléments interactifs : boutons, liens, images, menus, formulaires) |
-| Responsive | **FONCTIONNEL** | toute propriété par écran ; héritage affiché en grisé ; masquage par écran |
-| HTML sémantique / accessibilité | **FONCTIONNEL** | balise (section, header, footer, article, aside, nav), attributs HTML autorisés : `data-…`, `aria-…`, `title`, `role`, `lang` (10 au plus par élément) |
-| Écrans personnalisés | **ABSENT** | 3 écrans fixes |
+| 2 | Architecture : définir pour chaque propriété **une seule déclaration** (serveur) dont l'interface déduit le contrôle, l'unité et les widgets concernés ; compatibilité : aucune migration, propriétés ajoutées en option | test de cohérence serveur ↔ interface (toute clé de `STYLE_PROPS` a un contrôle ou une raison documentée) |
+| 3 | Fondations : validation des unités, propriétés manquantes du registre | pour chaque nouvelle propriété : valeurs limites, enregistrement, rechargement, publication (modèle du script §1) |
+| 4 | États pour tous les widgets pertinents | Chrome : réglage, canevas, enregistrement, rechargement, annuler / rétablir, publication (survol) |
+| 5 | Conteneurs : typographie héritée, hiérarchie parent / enfant | interactions entre propriétés (gap + direction, largeur + largeur maximale) |
+| 6 | Styles et états globaux (références conservées) | test des références `token:` après modification du site |
+| 7 | Ergonomie du panneau Avancé | mesure du temps d'affichage avant / après, comptage de contrôles |
+| 8 | Performance : mesurer d'abord l'onglet Style des conteneurs | bancs existants + nouvelle mesure |
+| 9 | Validation finale + mise à jour de ce document | passe complète, publication, responsive |
 
-## 5. Sections / blocs
-
-| Famille | État | Constat |
-|---|---|---|
-| Section libre (`section`) | **FONCTIONNEL** | mise en page (9 propriétés), dimensions, espacement, couleurs, fond, bordure, effets ; contient des éléments et conteneurs |
-| Section prête (`legacy`), Formulaire (`form`), Composant (`component`) | **FONCTIONNEL MAIS LIMITÉ** | pas de mise en page ni de typographie dans la fiche (par conception : contenu préfabriqué) ; espacement, dimensions, couleurs, fond, bordure, effets présents ; le composant s'insère comme copie indépendante |
-| Position / z-index d'une section | **FONCTIONNEL** | groupe « Position » commun à tous |
-| Visibilité par écran | **FONCTIONNEL** | `hideOn` |
-| Min / max hauteur | **FONCTIONNEL** | via Dimensions |
-
-## 6. Écarts constatés (ne sont PAS des corrections faites)
-
-1. ~~19 types sans fiche propre~~ — **retiré** : erreur d'audit corrigée (voir § 3).
-2. ~~**États** : 15 types sur 86~~ — **traité** : survol ajouté pour 18 types de contenu + tous les widgets personnalisés (test `editeur-controles-complets-navigateur`).
-3. ~~**Transitions** : durée unique~~ — **traité pour l'accélération** ; le choix des propriétés animées n'est **pas** fait (non demandé par un besoin démontré).
-4. ~~**Dimensions** : pas de mots-clés intrinsèques~~ — **traité** (`fit-content`, `min-content`, `max-content`) ; `clamp()` / `calc()` **non faits, volontairement** (sécurité : le serveur n'accepte que des valeurs d'une liste fermée).
-5. **Écrans** : 3 écrans fixes (ni point de rupture ajoutable, ni mode grand écran).
-6. ~~**Documentation périmée**~~ — **corrigée** : `docs/editeur-pages-audit.md` ne dit plus que la position absolue est refusée.
+## 11. Statut de validation
+Aucune amélioration n'est implémentée à ce stade. Toute valeur de ce document marquée « mesuré » a été produite par les scripts décrits au §1 ; le reste est une lecture de code signalée comme telle.
