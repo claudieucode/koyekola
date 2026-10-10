@@ -639,20 +639,49 @@
     store.set("style-clipboard", styleClipboard);
     toast("Style copié depuis « " + nameOf(it) + " ».");
   }
-  function pasteStyle() {
+  // Groupes de réglages collables séparément (même découpage que l'onglet Style de l'inspecteur)
+  var STYLE_GROUPS = [["typography", "Typographie"], ["color", "Couleurs"], ["background", "Fond"], ["border", "Bordure"], ["spacing", "Espacement"], ["size", "Dimensions"], ["effects", "Effets"], ["layout", "Mise en page"], ["position", "Position"]];
+  // Un réglage s'applique à un élément seulement si l'inspecteur de CET élément propose son groupe (et ce réglage dans ce groupe)
+  function acceptsStyle(it, key) {
+    var p = SP[key], g = isNode(it) ? inspectorFor(it).groups : null;
+    if (!p || !g || g[p.group] === undefined) return false;
+    return Array.isArray(g[p.group]) ? g[p.group].indexOf(key) >= 0 : true;
+  }
+  // Coller le style : FUSION (les réglages propres de la cible qui ne sont pas dans le style copié restent), seulement les réglages applicables à la cible,
+  // éventuellement limités à des groupes (« Coller le style : couleurs »). Le contenu n'est jamais touché. Une seule étape d'annulation.
+  function pasteStyle(only) {
     var st = styleClipboard || store.get("style-clipboard", null);
     if (!st) { toast("Aucun style copié.", true); return; }
     var ids = selection.slice();
     if (!ids.length || refuseLocked(ids)) return;
-    change(function () {
+    var applied = 0, skipped = 0;
+    var wanted = function (key) { return !only || (SP[key] && only.indexOf(SP[key].group) >= 0); };
+    var done = change(function () {
       ids.forEach(function (id) {
         var it = byId(id);
-        if (Object.keys(st.styles).length) it.styles = clone(st.styles); else delete it.styles;
-        if (Object.keys(st.states).length) it.states = clone(st.states); else delete it.states;
-        if (!isNode(it) && st.style) it.style = clone(st.style);
+        if (!it) return;
+        if (!isNode(it)) { if (st.style && !only) { it.style = Object.assign({}, it.style || {}, clone(st.style)); applied++; } return; }
+        Object.keys(st.styles || {}).forEach(function (bp) {
+          Object.keys(st.styles[bp] || {}).forEach(function (key) {
+            if (!wanted(key)) return;
+            if (!acceptsStyle(it, key)) { skipped++; return; }
+            it.styles = it.styles || {}; it.styles[bp] = it.styles[bp] || {};
+            it.styles[bp][key] = clone(st.styles[bp][key]); applied++;
+          });
+        });
+        Object.keys(st.states || {}).forEach(function (state) {
+          Object.keys(st.states[state] || {}).forEach(function (key) {
+            if (!wanted(key)) return;
+            if (!acceptsStyle(it, key)) { skipped++; return; }
+            it.states = it.states || {}; it.states[state] = it.states[state] || {};
+            it.states[state][key] = clone(st.states[state][key]); applied++;
+          });
+        });
       });
-    });
-    toast("Style collé sur " + ids.length + " élément" + (ids.length > 1 ? "s" : "") + ".");
+      if (!applied) return false;
+    }, { label: only ? "Coller le style (" + only.map(function (g) { return (STYLE_GROUPS.filter(function (x) { return x[0] === g; })[0] || [0, g])[1].toLowerCase(); }).join(", ") + ")" : "Coller le style" });
+    if (!done) { toast(skipped ? "Aucun réglage du style copié ne s'applique à cet élément." : "Rien à coller" + (only ? " pour ce groupe." : "."), true); return; }
+    toast("Style collé sur " + ids.length + " élément" + (ids.length > 1 ? "s" : "") + " : " + applied + " réglage" + (applied > 1 ? "s" : "") + (skipped ? " (" + skipped + " inapplicable" + (skipped > 1 ? "s" : "") + " ignoré" + (skipped > 1 ? "s" : "") + ")" : "") + ". Les autres réglages de la cible sont conservés.");
   }
 
   // ---------- Styles (par écran et par état) ----------
@@ -2639,7 +2668,29 @@
     }));
   }
   // Longueurs : valeur + unité (seules les unités utiles à la propriété) ; « 2rem » tapé directement est compris ; changer l'unité change le CSS
+  // Valeurs globales du site (espacements, rayons, tailles de texte) : un élément peut les RÉFÉRENCER (« token:space-md ») au lieu de copier un nombre ;
+  // changer le jeton dans les réglages du site met alors à jour tous les éléments qui le référencent.
+  var LEN_FAMILY = { gap: "space", rowGap: "space", columnGap: "space", marginTop: "space", marginRight: "space", marginBottom: "space", marginLeft: "space", paddingTop: "space", paddingRight: "space", paddingBottom: "space", paddingLeft: "space", borderRadius: "radius", fontSize: "type" };
+  var LEN_LABEL = { "space-xs": "Espacement XS", "space-sm": "Espacement S", "space-md": "Espacement M", "space-lg": "Espacement L", "space-xl": "Espacement XL", "space-xxl": "Espacement XXL",
+    "radius-sm": "Rayon S", "radius-md": "Rayon M", "radius-lg": "Rayon L", "radius-button": "Rayon des boutons", "radius-field": "Rayon des champs", "radius-card": "Rayon des cartes",
+    "h1-size": "Taille H1", "h2-size": "Taille H2", "h3-size": "Taille H3", "h4-size": "Taille H4", "h5-size": "Taille H5", "h6-size": "Taille H6", "body-size": "Taille du texte", "caption-size": "Taille de légende", "button-size": "Taille des boutons" };
+  var lenTokenLabel = function (t) { return LEN_LABEL[t] || t; };
   function lengthControl(items, key, id, own, inh, dis) {
+    var fam = LEN_FAMILY[key], list = fam && SPEC.lengthTokens && SPEC.lengthTokens[fam];
+    var numeric = lengthControlPlain(items, key, id, own, inh, dis);
+    if (!list || !list.length) return numeric;
+    var isTok = typeof own === "string" && own.indexOf("token:") === 0;
+    var pick = function (btn) {
+      var r = btn.getBoundingClientRect();
+      var entries = [{ heading: "Valeurs du site" }].concat(list.map(function (t) { return [(("token:" + t.key) === own ? "● " : "") + lenTokenLabel(t.key), function () { setStyle(idsOf(items), key, "token:" + t.key); }, dis, "défaut " + t.value.replace("px", " px")]; }));
+      entries.push([isTok ? "Revenir à une valeur propre" : "Valeur propre (nombre)", function () { if (isTok) setStyle(idsOf(items), key, ""); }, dis || !isTok]);
+      showMenuEntries(entries, r.left, r.bottom + 4, { wide: true });
+    };
+    var btn = h("button", { type: "button", class: "pb-tokbtn" + (isTok ? " is-on" : ""), disabled: dis, "aria-haspopup": "menu", "aria-label": "Valeur du site pour « " + SP[key].label + " »", "data-tip": isTok ? "Lié au site : " + lenTokenLabel(own.slice(6)) + " (cliquer pour changer)" : "Utiliser une valeur du site (suit les réglages du site)", onclick: function () { pick(btn); } }, icon("link"));
+    if (isTok) return h("div", { class: "pb-lenwrap is-token" }, h("span", { class: "pb-tokchip", text: "Site : " + lenTokenLabel(own.slice(6)) }), btn);
+    return h("div", { class: "pb-lenwrap" }, numeric, btn);
+  }
+  function lengthControlPlain(items, key, id, own, inh, dis) {
     var units = unitsOf(key), cur = splitLen(own), base = splitLen(inh), cfg = LENCFG[key] || {};
     var unit = cur ? cur.unit : base ? base.unit : units[0];
     return numericControl(Object.assign({ id: id, label: SP[key].label, units: units, unit: unit, step: STEP_REL, min: isSigned(key) ? -9999 : 0, max: 9999, base: 0, drag: true, disabled: dis,
@@ -2799,9 +2850,10 @@
       var own = ownValue(it, key), inh = inheritedValue(it, key);
       var name = (kind === "margin" ? "Marge " : "Intérieur ") + SIDE_LABEL[side];
       var cls = "is-" + kind[0] + side[0].toLowerCase();
+      var isTok = typeof own === "string" && own.indexOf("token:") === 0;
       var u0 = (splitLen(own) || splitLen(inh) || { unit: spUnit[kind] }).unit;
       return numericControl({ prop: key, label: name, inlineUnit: true, hideSteps: false, units: unitsOf(key), unit: u0 === "auto" ? spUnit[kind] : u0, step: STEP_REL, min: isSigned(key) ? -9999 : 0, max: 9999, base: 0, disabled: dis,
-        value: showLen(own), placeholder: inh !== undefined ? showLen(inh) : "0", list: "pb-scale", inputClass: "pb-box-input " + cls + (own !== undefined ? " is-set" : ""), cellClass: cls,
+        value: isTok ? "" : showLen(own), placeholder: isTok ? lenTokenLabel(own.slice(6)).replace("Espacement ", "") : inh !== undefined ? showLen(inh) : "0", list: "pb-scale", inputClass: "pb-box-input " + cls + (own !== undefined ? " is-set" : "") + (isTok ? " is-token" : ""), cellClass: cls,
         ariaLabel: name + (linkState[kind] ? " (4 côtés liés)" : ""), tip: name + (inh !== undefined && own === undefined ? " · hérité : " + inh : ""),
         onCommit: function (raw, u, opts) {
           var v = u === "auto" ? "auto" : raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
@@ -2843,8 +2895,22 @@
           renderInspector();
         } }, icon("link"), h("span", { text: label }));
     };
+    // Valeur du site (espacement XS … XXL) pour les 4 côtés d'une boîte : une RÉFÉRENCE (« token:space-md »), pas une copie du nombre
+    var tokBtn = function (kind, label) {
+      var list = SPEC.lengthTokens && SPEC.lengthTokens.space;
+      if (!list || !list.length) return null;
+      var allTok = SIDES.every(function (sd) { var v = ownValue(it, kind + sd); return typeof v === "string" && v.indexOf("token:") === 0; });
+      var btn = h("button", { type: "button", class: "pb-tokbtn" + (allTok ? " is-on" : ""), disabled: dis, "aria-haspopup": "menu", "aria-label": label + " : valeur du site (4 côtés)", "data-tip": label + " : utiliser une valeur du site (suit les réglages du site)",
+        onclick: function () {
+          var r = btn.getBoundingClientRect();
+          var entries = [{ heading: label + " : valeurs du site" }].concat(list.map(function (t) { return [lenTokenLabel(t.key), function () { var map = {}; SIDES.forEach(function (sd) { map[kind + sd] = "token:" + t.key; }); setStyles(ids, map); }, dis, "défaut " + t.value.replace("px", " px")]; }));
+          entries.push(["Revenir à des valeurs propres", function () { var map = {}; SIDES.forEach(function (sd) { var v = ownValue(it, kind + sd); if (typeof v === "string" && v.indexOf("token:") === 0) map[kind + sd] = ""; }); if (Object.keys(map).length) setStyles(ids, map); }, dis || !SIDES.some(function (sd) { var v = ownValue(it, kind + sd); return typeof v === "string" && v.indexOf("token:") === 0; })]);
+          showMenuEntries(entries, r.left, r.bottom + 4, { wide: true });
+        } }, icon("palette"));
+      return btn;
+    };
     return h("div", { class: "pb-spacing" },
-      h("div", { class: "pb-spacing-head" }, linkBtn("margin", "Marge"), unitSel("margin", "Marge"), linkBtn("padding", "Intérieur"), unitSel("padding", "Intérieur")),
+      h("div", { class: "pb-spacing-head" }, linkBtn("margin", "Marge"), unitSel("margin", "Marge"), tokBtn("margin", "Marge"), linkBtn("padding", "Intérieur"), unitSel("padding", "Intérieur"), tokBtn("padding", "Intérieur")),
       h("div", { class: "pb-boxmodel" },
         h("span", { class: "pb-box-label", text: "Marge", "aria-hidden": "true" }),
         h("div", { class: "pb-box-pad", "aria-hidden": "true" }, h("span", { class: "pb-box-label", text: "Intérieur" })),
@@ -3411,7 +3477,7 @@
       b(items.some(function (x) { return x.locked; }) ? "Déverrouiller" : "Verrouiller", function () { setFlag(selection.slice(), "locked", !items.some(function (x) { return x.locked; })); }, { disabled: !canWrite }),
       b("Dupliquer", duplicateSelected, { disabled: !canWrite }),
       b("Copier le style", copyStyle),
-      b("Coller le style", pasteStyle, { disabled: !canWrite || locked }),
+      b("Coller le style", function () { pasteStyle(); }, { disabled: !canWrite || locked }),
       b("Réinitialiser le style", resetStyle, { disabled: !canWrite || locked || !items.some(function (x) { return x.styles || x.states; }) }),
       items.length > 1 ? b("Grouper", groupSelected, { disabled: !canWrite || locked }) : null,
       single && ["group", "stack", "container"].indexOf(it.type) >= 0 ? b("Dissocier", ungroupSelected, { disabled: !canWrite || locked }) : null,
@@ -5936,7 +6002,7 @@
       ["Couper", function () { copySelected(true); }, !canWrite || locked, "Ctrl+X"],
       ["Coller", paste, !canWrite, "Ctrl+V"],
       ["Copier le style", copyStyle, false, "Ctrl+Alt+C"],
-      ["Coller le style", pasteStyle, !canWrite || locked, "Ctrl+Alt+V"],
+      ["Coller le style", function () { pasteStyle(); }, !canWrite || locked, "Ctrl+Maj+V"],
       ["Réinitialiser le style", resetStyle, !canWrite || locked || !items.some(function (z) { return z.styles || z.states; })],
       "-",
       items.length === 1 ? ["Renommer", function () { var row = treeEl.querySelector('.pb-node[data-id="' + it.id + '"] > .pb-row-item'); if (row) startRename(row, it); }, !canWrite, "F2"] : null,
@@ -6001,7 +6067,8 @@
       { label: "Grouper", run: groupSelected, off: selection.length < 2 || !canWrite }, { label: "Dissocier", run: ungroupSelected, off: !has || !canWrite },
       { label: "Masquer / afficher", run: function () { setFlag(selection.slice(), "hidden", !selectedItems().some(function (z) { return z.hidden; })); }, off: !has || !canWrite },
       { label: "Verrouiller / déverrouiller", run: function () { setFlag(selection.slice(), "locked", !selectedItems().some(function (z) { return z.locked; })); }, off: !has || !canWrite },
-      { label: "Copier le style", run: copyStyle, off: !has }, { label: "Réinitialiser le style", run: resetStyle, off: !has || !canWrite }, { label: "Coller le style", run: pasteStyle, off: !has || !canWrite },
+      { label: "Copier le style", run: copyStyle, off: !has }, { label: "Réinitialiser le style", run: resetStyle, off: !has || !canWrite }, { label: "Coller le style", run: function () { pasteStyle(); }, off: !has || !canWrite },
+      ].concat(STYLE_GROUPS.map(function (g) { return { label: "Coller le style : " + g[1].toLowerCase() + " seulement", run: function () { pasteStyle([g[0]]); }, off: !has || !canWrite || !(styleClipboard || store.get("style-clipboard", null)) }; })).concat([
       { label: "Sélectionner le parent", run: function () { var l = locate(selection[0]); if (l && l.parent) select(l.parent.id); }, off: !has },
       { label: "Écran : ordinateur", run: function () { setDevice("desktop"); } }, { label: "Écran : tablette", run: function () { setDevice("tablet"); } }, { label: "Écran : mobile", run: function () { setDevice("mobile"); } },
       { label: "Zoom : ajuster à l'écran", run: function () { setZoom("fit"); } }, { label: "Zoom : 100 %", run: function () { setZoom(1); } },
@@ -6011,7 +6078,6 @@
       { label: "Guides : tout supprimer (cet écran)", run: clearGuides, off: !(guidesFor().h.length || guidesFor().v.length) }, { label: "Contours : afficher / masquer", run: function () { setAid("outlines", !aids.outlines); } }, { label: "Règles : afficher / masquer", run: function () { setAid("rulers", !aids.rulers); } },
       { label: "Panneau des éléments : afficher / masquer", run: function () { togglePanel("left"); } },
       { label: "Vider la page : repartir d'un canevas vide (annulable)", run: function () { nextLabel = "Page vidée"; change(function () { if (!content.sections.length) return false; content.sections = []; selection = []; }); }, off: !canWrite || !content.sections.length },
-      { label: "Vider la page : repartir d'un canevas vide (annulable)", run: function () { nextLabel = "Page vidée"; change(function () { if (!content.sections.length) return false; content.sections = []; selection = []; }); }, off: !canWrite || !content.sections.length },
       { label: "Ajouter une structure (Flexbox ou Grille)", run: function () { openStructurePicker(insertionPoint({ type: "container" })); }, off: !canWrite },
       { label: dock.mode === "floating" ? "Structure : rattacher le panneau" : "Structure : détacher le panneau", run: function () { setDockMode(dock.mode === "floating" ? "docked" : "floating"); } },
       { label: dock.mode === "closed" ? "Structure : rouvrir le panneau" : "Structure : fermer le panneau", run: function () { setDockMode(dock.mode === "closed" ? dock.last : "closed"); } },
@@ -6019,7 +6085,7 @@
       { label: panels.layersCollapsed ? "Calques : déplier le panneau" : "Calques : replier le panneau", run: function () { layersToggle.click(); } }, { label: "Calques et inspecteur : afficher / masquer", run: function () { togglePanel("right"); } },
       { label: "Réglages de la page (SEO, titre)", run: function () { openTab($("#pb-tab-page")); } },
       { label: mode === "structure" ? "Mode : Visuel" : "Mode : Structure (blocs)", run: function () { setMode(mode === "structure" ? "visual" : "structure"); } },
-    ]).filter(function (c) { return !c.off; });
+    ])).filter(function (c) { return !c.off; });
   }
   function addAt(type, legacy) {
     var anchor = cmdAnchor; cmdAnchor = null;
@@ -6255,6 +6321,7 @@
     if (!mod && !e.altKey && e.shiftKey && k === "m") { e.preventDefault(); setAid("snap", !aids.snap); toast(aids.snap ? "Magnétisme activé." : "Magnétisme désactivé : mouvement libre."); return; }
     if (!canWrite) return;
     if (mod && k === "x") { e.preventDefault(); copySelected(true); return; }
+    if (mod && e.shiftKey && !e.altKey && k === "v") { e.preventDefault(); pasteStyle(); return; } // coller le style (même raccourci qu'Elementor, documenté)
     if (mod && k === "v") { e.preventDefault(); paste(); return; }
     if (mod && k === "d") { e.preventDefault(); duplicateSelected(); return; }
     if (mod && k === "g") { e.preventDefault(); if (e.shiftKey) ungroupSelected(); else groupSelected(); return; }
