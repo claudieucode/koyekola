@@ -192,11 +192,11 @@
       future = []; futureLabels = [];
     } else if (pastLabels.length) pastLabels[pastLabels.length - 1].at = Date.now();
     lastKey = opts.key || null;
-    afterChange(opts.light);
+    afterChange(opts.light, !opts.key && !opts.light);
     return true;
   }
-  function undo() { if (!past.length) return; future.push(snapshot()); futureLabels.push(pastLabels.pop()); restore(past.pop()); lastKey = null; afterChange(false); }
-  function redo() { if (!future.length) return; past.push(snapshot()); pastLabels.push(futureLabels.pop()); restore(future.pop()); lastKey = null; afterChange(false); }
+  function undo() { if (!past.length) return; future.push(snapshot()); futureLabels.push(pastLabels.pop()); restore(past.pop()); lastKey = null; afterChange(false, true); }
+  function redo() { if (!future.length) return; past.push(snapshot()); pastLabels.push(futureLabels.pop()); restore(future.pop()); lastKey = null; afterChange(false, true); }
   // Revenir à un point de l'historique (n étapes en arrière ou en avant)
   function travel(steps) { var n = Math.abs(steps); for (var i = 0; i < n; i++) { if (steps < 0) undo(); else redo(); } }
   function openHistory(anchor) {
@@ -214,12 +214,12 @@
   // Saisie (light) : les calques sont redessinés au plus une fois par pause de frappe ; le reste suit tout de suite
   var treeTimer = null;
   function scheduleTree() { clearTimeout(treeTimer); treeTimer = setTimeout(renderTree, 120); }
-  function afterChange(light) {
+  function afterChange(light, quick) {
     if (light) scheduleTree(); else { clearTimeout(treeTimer); renderTree(); }
     if (!light) { renderInspector(); renderContext(); renderPageSettings(); }
     updateHistoryButtons();
     if (!light) { placeCanvasBar(); renderDoc(); } // saisie : la barre est replacée avec les repères, juste après le rendu du canevas
-    scheduleRender();
+    scheduleRender(quick);
     scheduleSave();
     navListeners.forEach(function (f) { f(); });
   }
@@ -748,9 +748,21 @@
   // ---------- Calques (arbre) ----------
   var treeEl = $("[data-pb-layers]");
   var dragIds = null, dragNew = null;
+  // Les calques ne sont reconstruits que si ce qu'ils affichent a changé (identifiants, noms, drapeaux, hiérarchie, repli, filtre) : une
+  // modification de style, de couleur ou de dimension ne touche à aucun calque (mesuré : la reconstruction coûte ~ 15 000 nœuds DOM à 400 éléments)
+  var treeSig = null, treeMarked = null, treeTab = null, treeNames = {};
+  function treeSignature() {
+    var out = [];
+    treeNames = {};
+    (function w(list, lvl) { list.forEach(function (it) { var k = kidsOf(it); var nm = treeNames[it.id] = nameOf(it); out.push(it.id + "|" + lvl + "|" + it.type + "|" + nm + "|" + (it.hidden ? 1 : 0) + (it.locked ? 1 : 0) + (collapsed[it.id] ? 1 : 0) + "|" + (k ? k.length : -1)); if (k) w(k, lvl + 1); }); })(content.sections, 1);
+    return out.join("\n") + "#" + treeQuery + "#" + errorItemId + "#" + canWrite;
+  }
   function renderTree() {
+    var sig = treeSignature();
+    if (sig === treeSig && treeEl.firstChild) { markTreeSelection(); return; }
+    treeSig = sig;
     var frag = document.createDocumentFragment();
-    var matches = function (it) { return norm(nameOf(it)).indexOf(treeQuery) >= 0 || norm(typeLabel(it)).indexOf(treeQuery) >= 0; };
+    var matches = function (it) { return norm((treeNames[it.id] !== undefined ? treeNames[it.id] : nameOf(it))).indexOf(treeQuery) >= 0 || norm(typeLabel(it)).indexOf(treeQuery) >= 0; };
     var hasMatch = function (it) { return matches(it) || (kidsOf(it) || []).some(hasMatch); };
     var build = function (list, level, into) {
       list.forEach(function (it) {
@@ -762,13 +774,13 @@
         var row = h("div", { class: "pb-row-item" + (on ? " is-selected" : "") + (it.id === errorItemId ? " is-error" : ""), draggable: canWrite ? "true" : null, style: "--level:" + (level - 1), tabindex: "-1" },
           kids && kids.length ? h("button", { type: "button", class: "pb-twist", tabindex: "-1", "aria-label": open ? "Replier" : "Déplier", onclick: function (e) { e.stopPropagation(); toggleCollapse(it.id); } }, icon(open ? "chevronDown" : "chevronRight")) : h("span", { class: "pb-twist-gap", "aria-hidden": "true" }),
           h("span", { class: "pb-node-icon", "aria-hidden": "true" }, icon(isNode(it) ? NT[it.type].icon : it.type === "layout" ? "layout" : "fileText")),
-          h("span", { class: "pb-node-name", text: nameOf(it) }),
+          h("span", { class: "pb-node-name", text: (treeNames[it.id] !== undefined ? treeNames[it.id] : nameOf(it)) }),
           h("span", { class: "pb-node-flags" },
-            h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it.hidden ? " is-on" : ""), "aria-pressed": String(Boolean(it.hidden)), "aria-label": (it.hidden ? "Afficher « " : "Masquer « ") + nameOf(it) + " »", "data-tip": it.hidden ? "Afficher" : "Masquer", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([it.id], "hidden", !it.hidden); } }, icon(it.hidden ? "eyeOff" : "eye")),
-            h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it.locked ? " is-on" : ""), "aria-pressed": String(Boolean(it.locked)), "aria-label": (it.locked ? "Déverrouiller « " : "Verrouiller « ") + nameOf(it) + " »", "data-tip": it.locked ? "Déverrouiller" : "Verrouiller", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([it.id], "locked", !it.locked); } }, icon("lock")),
-            h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-more", "aria-haspopup": "menu", "aria-label": "Actions de « " + nameOf(it) + " »", "data-tip": "Actions (dupliquer, copier, renommer, déplacer…)",
+            h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it.hidden ? " is-on" : ""), "aria-pressed": String(Boolean(it.hidden)), "aria-label": (it.hidden ? "Afficher « " : "Masquer « ") + (treeNames[it.id] !== undefined ? treeNames[it.id] : nameOf(it)) + " »", "data-tip": it.hidden ? "Afficher" : "Masquer", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([it.id], "hidden", !it.hidden); } }, icon(it.hidden ? "eyeOff" : "eye")),
+            h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it.locked ? " is-on" : ""), "aria-pressed": String(Boolean(it.locked)), "aria-label": (it.locked ? "Déverrouiller « " : "Verrouiller « ") + (treeNames[it.id] !== undefined ? treeNames[it.id] : nameOf(it)) + " »", "data-tip": it.locked ? "Déverrouiller" : "Verrouiller", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([it.id], "locked", !it.locked); } }, icon("lock")),
+            h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-more", "aria-haspopup": "menu", "aria-label": "Actions de « " + (treeNames[it.id] !== undefined ? treeNames[it.id] : nameOf(it)) + " »", "data-tip": "Actions (dupliquer, copier, renommer, déplacer…)",
               onclick: function (e) { e.stopPropagation(); if (selection.indexOf(it.id) < 0) select(it.id); var r = e.currentTarget.getBoundingClientRect(); openMenu(r.right - 4, r.bottom + 4); } }, icon("moreVertical")),
-            h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-delete", "aria-label": "Supprimer « " + nameOf(it) + " »" + (kids && kids.length ? " et ses " + countDeep(it) + " élément(s)" : ""), "data-tip": kids && kids.length ? "Supprimer (avec ses " + countDeep(it) + " élément(s))" : "Supprimer", disabled: !canWrite || lockedDeep(it.id), onclick: function (e) { e.stopPropagation(); removeItems([it.id]); } }, icon("trash"))));
+            h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-delete", "aria-label": "Supprimer « " + (treeNames[it.id] !== undefined ? treeNames[it.id] : nameOf(it)) + " »" + (kids && kids.length ? " et ses " + countDeep(it) + " élément(s)" : ""), "data-tip": kids && kids.length ? "Supprimer (avec ses " + countDeep(it) + " élément(s))" : "Supprimer", disabled: !canWrite || lockedDeep(it.id), onclick: function (e) { e.stopPropagation(); removeItems([it.id]); } }, icon("trash"))));
         row.addEventListener("click", function (e) { select(it.id, e.shiftKey || e.metaKey || e.ctrlKey); });
         row.addEventListener("dblclick", function (e) { if (canWrite && !e.target.closest("button")) startRename(row, it); });
         row.addEventListener("contextmenu", function (e) { e.preventDefault(); if (selection.indexOf(it.id) < 0) select(it.id); openMenu(e.clientX, e.clientY); });
@@ -804,6 +816,7 @@
     treeEl.appendChild(frag);
     var cur = treeEl.querySelector(".pb-row-item.is-selected") || treeEl.querySelector(".pb-row-item");
     if (cur) cur.tabIndex = 0;
+    treeTab = cur; treeMarked = selection.slice();
     var info = $("[data-pb-page-count]");
     if (info) { var total = 0; walk(function () { total++; }); info.textContent = content.sections.length + " section" + (content.sections.length > 1 ? "s" : "") + " · " + (total - content.sections.length) + " élément" + (total - content.sections.length > 1 ? "s" : ""); }
   }
@@ -823,14 +836,24 @@
     if (dragNew) { var make = dragNew.make; dragNew = null; make(target); }
     else if (dragIds) { var ids = dragIds; dragIds = null; moveTo(ids, target.parent, target.index); }
   }
+  // Sélection dans les calques : seules les lignes dont l'état change sont touchées (avant : les 400 lignes, à chaque sélection)
   function markTreeSelection() {
-    $$(".pb-node", treeEl).forEach(function (li) {
-      var on = selection.indexOf(li.dataset.id) >= 0;
-      li.setAttribute("aria-selected", String(on));
-      li.firstElementChild.classList.toggle("is-selected", on);
-    });
+    var mark = function (li, on) { if (!li) return; li.setAttribute("aria-selected", String(on)); if (li.firstElementChild) li.firstElementChild.classList.toggle("is-selected", on); };
+    var liOf = function (id) { return treeEl.querySelector('.pb-node[data-id="' + id + '"]'); };
+    if (!treeMarked) {
+      $$(".pb-node", treeEl).forEach(function (li) { mark(li, selection.indexOf(li.dataset.id) >= 0); });
+    } else {
+      treeMarked.forEach(function (id) { if (selection.indexOf(id) < 0) mark(liOf(id), false); });
+      selection.forEach(function (id) { if (treeMarked.indexOf(id) < 0) mark(liOf(id), true); });
+    }
+    treeMarked = selection.slice();
     var cur = selection.length ? treeEl.querySelector('.pb-node[data-id="' + selection[selection.length - 1] + '"] > .pb-row-item') : null;
-    if (cur) { $$(".pb-row-item", treeEl).forEach(function (r) { r.tabIndex = -1; }); cur.tabIndex = 0; cur.scrollIntoView({ block: "nearest" }); }
+    if (cur) {
+      if (treeTab && treeTab.isConnected) treeTab.tabIndex = -1; else $$(".pb-row-item", treeEl).forEach(function (r) { r.tabIndex = -1; });
+      cur.tabIndex = 0; treeTab = cur;
+      // Faire apparaître la ligne : au prochain affichage (le défilement impose une mise en page, inutile en plein traitement du clic)
+      requestAnimationFrame(function () { if (cur.isConnected) cur.scrollIntoView({ block: "nearest" }); });
+    }
   }
   function toggleCollapse(id, value) {
     if (value === undefined) value = !collapsed[id];
@@ -844,7 +867,7 @@
     nameEl.replaceWith(input);
     input.focus(); input.select();
     var done = false;
-    var finish = function (save) { if (done) return; done = true; if (save) rename(it.id, input.value); renderTree(); };
+    var finish = function (save) { if (done) return; done = true; if (save) rename(it.id, input.value); treeSig = null; renderTree(); }; // le champ de saisie a remplacé le nom dans le calque : reconstruction forcée même si rien n'a changé
     input.addEventListener("keydown", function (e) { e.stopPropagation(); if (e.key === "Enter") finish(true); if (e.key === "Escape") finish(false); });
     input.addEventListener("blur", function () { finish(true); });
     input.addEventListener("click", function (e) { e.stopPropagation(); });
@@ -3091,11 +3114,12 @@
 
   // ---------- Inspecteur ----------
   var inspTab = store.get("insp-tab", "content");
-  var headObserver = null;
+  var headObserver = null, inspHeadH = 0, inspScroll = 0;
+  (function () { var b = $("[data-pb-inspector]"); if (b) b.addEventListener("scroll", function () { inspScroll = b.scrollTop; }, { passive: true }); })();
   function renderInspector() {
     if (typeof cpop !== "undefined" && cpop && !cpop.hidden) { cpop.hidden = true; cpopFor = null; }
     var box = $("[data-pb-inspector]");
-    var keepScroll = box.dataset.for === selection.join(",") ? box.scrollTop : 0;
+    var keepScroll = box.dataset.for === selection.join(",") ? inspScroll : 0;
     box.textContent = "";
     box.dataset.for = selection.join(",");
     // fieldSeq n'est JAMAIS remis à zéro : les identifiants (pb-f-N) restent uniques dans toute la page, sinon un libellé de
@@ -3139,8 +3163,9 @@
     box.appendChild(head);
     // L'onglet qui suit reste collé sous l'en-tête quand on fait défiler : on lui donne la hauteur réelle de l'en-tête
     if (headObserver) headObserver.disconnect();
-    if (window.ResizeObserver) { headObserver = new ResizeObserver(function () { box.style.setProperty("--pb-insp-head-h", head.offsetHeight + "px"); }); headObserver.observe(head); }
-    box.style.setProperty("--pb-insp-head-h", head.offsetHeight + "px");
+    // Hauteur de l'en-tête : valeur connue d'avant, corrigée par l'observateur avant l'affichage (lire offsetHeight ici imposait une mise en page complète)
+    if (window.ResizeObserver) { headObserver = new ResizeObserver(function () { inspHeadH = head.offsetHeight; box.style.setProperty("--pb-insp-head-h", inspHeadH + "px"); }); headObserver.observe(head); }
+    box.style.setProperty("--pb-insp-head-h", (inspHeadH || 96) + "px");
     if (locked && canWrite) box.appendChild(h("p", { class: "pb-note is-warn", text: "Verrouillé : déverrouillez-le (cadenas dans les calques) pour le modifier." }));
     var boxTabs = !multi && schema.tabs === "box";
     var tabs = boxTabs ? [["general", "Général"], ["style", "Style"], ["interactions", "Interactions"]] : multi ? [["style", "Style"], ["advanced", "Avancé"]] : !schema.groups ? [["content", "Contenu"], ["advanced", "Avancé"]] : [["content", "Contenu"], ["style", "Style"], ["advanced", "Avancé"]];
@@ -3159,7 +3184,7 @@
       else legacyContentFields(it, body, locked);
     } else if (inspTab === "style") { styleTab(items, body); if (boxTabs) boxStyleExtras(items, body, locked); }
     else advancedTab(items, body, locked);
-    box.scrollTop = keepScroll;
+    if (keepScroll || inspScroll) { box.scrollTop = keepScroll; inspScroll = keepScroll; } // écrire le défilement impose une mise en page : seulement s'il y a quelque chose à restaurer
   }
   // Contenu d'une section libre ou d'un conteneur : sa structure (enfants cliquables), et comment y ajouter
   function structureContent(it, box) {
@@ -3842,7 +3867,8 @@
   // Pas de nouveau rendu pendant une édition directe ou un geste dans le canevas (guide, poignée) : le document serait
   // remplacé sous la souris ; le rendu attend la fin du geste
   var gesture = false;
-  function scheduleRender() { if (editing || gesture) { pendingRender = true; return; } clearTimeout(renderTimer); renderTimer = setTimeout(renderCanvas, 150); }
+  // Saisie continue : 150 ms de regroupement ; action isolée (dupliquer, supprimer, annuler, couleur choisie…) : rendu presque tout de suite
+  function scheduleRender(quick) { if (editing || gesture) { pendingRender = true; return; } clearTimeout(renderTimer); renderTimer = setTimeout(renderCanvas, quick ? 30 : 150); }
   function endGesture() { gesture = false; if (pendingRender && !editing) { pendingRender = false; scheduleRender(); } }
   var errorItemId = null;
   // « Section 3 › élément 2 « Titre » : … » → identifiant de l'élément en cause (mis en évidence dans les calques)
