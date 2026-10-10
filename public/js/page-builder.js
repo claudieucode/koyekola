@@ -1304,7 +1304,7 @@
   var isEditing = function (el) { var ae = document.activeElement; return Boolean(ae && ae.matches && ae.matches("input, textarea, select, [contenteditable]") && (el === ae || el.contains(ae))); };
   function armTip(el) {
     if (tipFor === el) return;
-    if (isEditing(el)) { hideTip(); return; }
+    if (isEditing(el) || el.getAttribute("aria-expanded") === "true") { hideTip(); return; }
     var warm = Date.now() - tipHidAt < 250 || !tipEl.hidden;
     hideTip();
     tipFor = el;
@@ -5571,7 +5571,7 @@
     subscribe: function (fn) { rulesListeners.push(fn); },
     setZoom: setZoom,
     open: function () {}, // remplacé par le panneau
-    h: h, toast: toast,
+    h: h, toast: toast, icon: icon,
   };
 
   // ---------- Apparence de l'éditeur (claire / sombre / système) ----------

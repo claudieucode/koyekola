@@ -173,18 +173,25 @@
   var quickBtn = document.querySelector("[data-pb-rules-menu]");
   var pop = h("div", { class: "pb-rules-pop", role: "menu", "aria-label": "Règles, guides et magnétisme", hidden: true });
   var quickChecks = [];
-  [["Règles", function () { return st().aids.rulers; }, function (v) { R.setAid("rulers", v); }],
-    ["Guides", function () { return st().aids.guides !== false; }, function (v) { R.setAid("guides", v); }],
-    ["Grille", function () { return st().aids.grid; }, function (v) { R.setAid("grid", v); }],
-    ["Magnétisme", function () { return st().aids.snap; }, function (v) { R.setAid("snap", v); }],
-    ["Guides intelligents", function () { return P().snap.smart; }, function (v) { upd(function (p) { p.snap.smart = v; }); }],
-  ].forEach(function (c) {
-    var input = h("input", { type: "checkbox", role: "menuitemcheckbox" });
-    input.addEventListener("change", function () { c[2](input.checked); });
-    quickChecks.push({ el: input, read: c[1] });
-    pop.appendChild(h("label", { class: "pb-check" }, input, " " + c[0]));
+  // Deux groupes (Affichage / Alignement) ; chaque ligne entière est cliquable (le libellé est dans le <label>) ; mêmes réglages qu'avant
+  var QUICK = [
+    ["Affichage", [["Règles", function () { return st().aids.rulers; }, function (v) { R.setAid("rulers", v); }],
+      ["Guides", function () { return st().aids.guides !== false; }, function (v) { R.setAid("guides", v); }],
+      ["Grille", function () { return st().aids.grid; }, function (v) { R.setAid("grid", v); }]]],
+    ["Alignement", [["Magnétisme", function () { return st().aids.snap; }, function (v) { R.setAid("snap", v); }],
+      ["Guides intelligents", function () { return P().snap.smart; }, function (v) { upd(function (p) { p.snap.smart = v; }); }]]],
+  ];
+  QUICK.forEach(function (g) {
+    var group = h("div", { class: "pb-pop-group", role: "group", "aria-label": g[0] }, h("span", { class: "pb-pop-title", "aria-hidden": "true", text: g[0] }));
+    g[1].forEach(function (c) {
+      var input = h("input", { type: "checkbox", role: "menuitemcheckbox" });
+      input.addEventListener("change", function () { c[2](input.checked); });
+      quickChecks.push({ el: input, read: c[1] });
+      group.appendChild(h("label", { class: "pb-check pb-pop-row" }, input, h("span", { text: c[0] })));
+    });
+    pop.appendChild(group);
   });
-  pop.appendChild(h("button", { type: "button", class: "pb-menu-item", role: "menuitem", text: "⚙ Paramètres…", onclick: function () { closePop(); open(); } }));
+  pop.appendChild(h("button", { type: "button", class: "pb-menu-item pb-pop-more", role: "menuitem", onclick: function () { closePop(); open(); } }, R.icon("sliders"), h("span", { text: "Paramètres…" }), R.icon("chevronRight")));
   document.body.appendChild(pop);
   function syncQuick() { quickChecks.forEach(function (c) { c.el.checked = Boolean(c.read()); }); }
   function closePop() { pop.hidden = true; if (quickBtn) quickBtn.setAttribute("aria-expanded", "false"); }
@@ -193,7 +200,8 @@
     syncQuick();
     var r = quickBtn.getBoundingClientRect();
     pop.hidden = false;
-    pop.style.top = (r.bottom + 6) + "px";
+    var below = r.bottom + 6, fits = below + pop.offsetHeight <= window.innerHeight - 8;
+    pop.style.top = Math.max(8, fits ? below : r.top - 6 - pop.offsetHeight) + "px";
     pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - pop.offsetWidth - 8)) + "px";
     quickBtn.setAttribute("aria-expanded", "true");
     var f = pop.querySelector("input"); if (f) f.focus();

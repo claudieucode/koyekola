@@ -799,10 +799,6 @@ button.pb-kind:hover, button.pb-kind:focus-visible { border-color: var(--accent)
 .pb-rules-keys { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0; font-size: 12.5px; }
 .pb-rules-keys dt, .pb-rules-keys dd { margin: 0; }
 .pb-subtitle { margin: 8px 0 4px; font-size: 12.5px; font-weight: 600; }
-.pb-rules-pop { position: fixed; z-index: 70; min-width: 210px; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--pb-radius-lg); background: var(--card, #fff); box-shadow: 0 8px 28px rgba(11, 42, 64, 0.22); }
-.pb-rules-pop[hidden] { display: none; }
-.pb-rules-pop .pb-check { margin: 0; padding: 4px 2px; align-items: center; }
-.pb-rules-pop .pb-menu-item { width: 100%; margin-top: 4px; border-top: 1px solid var(--border); border-radius: 0; padding-top: 8px; }
 .pb-ruler-corner[role="button"] { cursor: pointer; }
 .pb-zoom-value[role="button"] { cursor: pointer; }
 
@@ -1438,3 +1434,38 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 
 /* Garde-fou : jamais d'indicateur de liste (triangle natif d'un datalist) dans un champ numérique */
 .pb-len-num::-webkit-calendar-picker-indicator, .pb-box-input::-webkit-calendar-picker-indicator, .pb-ctx-num::-webkit-calendar-picker-indicator { display: none !important; }
+
+
+/* Menu rapide « Règles, guides et magnétisme » : petit panneau flottant piloté par les jetons de l'éditeur (--editor-*), donc clair / sombre / accent
+   suivent le thème sans aucune couleur écrite en dur. L'accent n'est utilisé que pour l'état actif et le focus ; le reste est neutre.
+   Le texte posé sur l'accent est choisi selon sa luminosité (couleur relative) : lisible même avec un accent très clair ou très foncé. */
+.pb-rules-pop {
+  --pop-bg: var(--editor-panel); --pop-border: var(--editor-border-strong); --pop-text: var(--editor-text); --pop-muted: var(--editor-muted);
+  --pop-hover: var(--editor-hover); --pop-accent: var(--editor-accent); --pop-on-accent: var(--editor-on-accent);
+  --pop-active: color-mix(in srgb, var(--editor-accent) 12%, var(--editor-panel)); --pop-divider: var(--editor-border);
+  position: fixed; z-index: 70; box-sizing: border-box; width: 236px; max-width: calc(100vw - 16px); padding: 6px; border: 1px solid var(--pop-border); border-radius: var(--pb-radius-lg);
+  background: var(--pop-bg); color: var(--pop-text); box-shadow: var(--editor-shadow); transform-origin: top left; animation: pb-pop-in 0.13s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@supports (color: oklch(from red l c h)) { .pb-rules-pop { --pop-on-accent: oklch(from var(--editor-accent) clamp(0, (0.65 - l) * 1000, 1) 0 0); } }
+@keyframes pb-pop-in { from { opacity: 0; transform: translateY(-3px) scale(0.98); } to { opacity: 1; transform: none; } }
+.pb-rules-pop[hidden] { display: none; }
+.pb-pop-group { display: grid; gap: 1px; padding: 2px 0 4px; }
+.pb-pop-group + .pb-pop-group { padding-top: 6px; border-top: 1px solid var(--pop-divider); }
+.pb-pop-title { padding: 2px 8px 3px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pop-muted); }
+.pb-rules-pop .pb-pop-row { position: relative; display: flex; align-items: center; gap: 9px; min-height: 30px; margin: 0; padding: 0 8px; border-radius: var(--pb-radius-md); font-size: 13px; font-weight: 500; line-height: 1.2; color: var(--pop-text); cursor: pointer; transition: background-color 0.1s ease-out; }
+.pb-rules-pop .pb-pop-row:hover { background: var(--pop-hover); }
+.pb-rules-pop .pb-pop-row:has(input:checked) { background: var(--pop-active); }
+.pb-rules-pop .pb-pop-row:has(input:checked):hover { background: color-mix(in srgb, var(--editor-accent) 18%, var(--editor-panel)); }
+.pb-rules-pop .pb-pop-row input { -webkit-appearance: none; appearance: none; flex: none; position: relative; width: 16px; height: 16px; margin: 0; border: 1.5px solid var(--editor-border-strong); border-radius: 4px; background: var(--editor-input); cursor: pointer; transition: background-color 0.1s ease-out, border-color 0.1s ease-out; }
+.pb-rules-pop .pb-pop-row:hover input:not(:checked) { border-color: var(--pop-muted); }
+.pb-rules-pop .pb-pop-row input:checked { background: var(--pop-accent); border-color: color-mix(in srgb, var(--pop-accent) 55%, var(--editor-text)); }
+.pb-rules-pop .pb-pop-row input:checked::after { content: ""; position: absolute; left: 4.5px; top: 1px; width: 4px; height: 8px; border: solid var(--pop-on-accent); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.pb-rules-pop .pb-pop-row input:focus-visible { outline: none; box-shadow: var(--editor-focus); }
+.pb-rules-pop .pb-pop-more { width: 100%; justify-content: flex-start; gap: 9px; min-height: 32px; margin-top: 2px; padding: 0 8px; border-top: 1px solid var(--pop-divider); border-radius: 0 0 var(--pb-radius-md) var(--pb-radius-md); font-weight: 600; color: var(--pop-text); }
+.pb-rules-pop .pb-pop-more > span { flex: 1 1 auto; text-align: left; }
+.pb-rules-pop .pb-pop-more .icon { width: 15px; height: 15px; flex: none; color: var(--pop-muted); }
+.pb-rules-pop .pb-pop-more > .icon:last-child { width: 14px; height: 14px; }
+.pb-rules-pop .pb-pop-more:hover:not(:disabled) { background: var(--pop-hover); }
+.pb-rules-pop .pb-pop-more:hover .icon { color: var(--pop-text); }
+.pb-rules-pop .pb-pop-more:focus-visible { outline: none; background: var(--pop-hover); box-shadow: inset 0 0 0 2px var(--editor-accent); }
+@media (prefers-reduced-motion: reduce) { .pb-rules-pop { animation: none; } .pb-rules-pop .pb-pop-row, .pb-rules-pop .pb-pop-row input { transition: none; } }
