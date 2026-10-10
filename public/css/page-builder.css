@@ -1433,3 +1433,6 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 .pb-sp-box .pb-boxcell .pb-nstep-btn:hover:not(:disabled) { background: var(--pb-stepper-hover-bg); }
 .pb-sp-box .pb-boxcell .pb-nstep-btn:active:not(:disabled) { background: var(--pb-stepper-active-bg); }
 @media (prefers-reduced-motion: reduce) { .pb-nstep-btn { transition: none; } }
+
+/* Garde-fou : jamais d'indicateur de liste (triangle natif d'un datalist) dans un champ numérique */
+.pb-len-num::-webkit-calendar-picker-indicator, .pb-box-input::-webkit-calendar-picker-indicator, .pb-ctx-num::-webkit-calendar-picker-indicator { display: none !important; }

@@ -1300,8 +1300,11 @@
     el.setAttribute("aria-describedby", "pb-tip");
     tipFor = el;
   }
+  // Champ de saisie actif (focus ou saisie en cours) : aucune infobulle ne doit venir le recouvrir
+  var isEditing = function (el) { var ae = document.activeElement; return Boolean(ae && ae.matches && ae.matches("input, textarea, select, [contenteditable]") && (el === ae || el.contains(ae))); };
   function armTip(el) {
     if (tipFor === el) return;
+    if (isEditing(el)) { hideTip(); return; }
     var warm = Date.now() - tipHidAt < 250 || !tipEl.hidden;
     hideTip();
     tipFor = el;
@@ -1309,10 +1312,10 @@
   }
   document.addEventListener("mouseover", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el) armTip(el); else if (tipFor) hideTip(); });
   document.addEventListener("mouseout", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && !el.contains(e.relatedTarget)) hideTip(); });
-  document.addEventListener("focusin", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && el.matches(":focus-visible")) armTip(el); });
+  document.addEventListener("focusin", function (e) { if (e.target.matches && e.target.matches("input, textarea, select")) { hideTip(); return; } var el = e.target.closest && e.target.closest("[data-tip]"); if (el && el.matches(":focus-visible")) armTip(el); });
   document.addEventListener("focusout", hideTip);
   document.addEventListener("mousedown", hideTip, true);
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") hideTip(); }, true);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" || (e.target.matches && e.target.matches("input, textarea, select"))) hideTip(); }, true); // Échap, ou saisie dans un champ : l'infobulle disparaît
   function setTool(k) {
     tool = k;
     $$(".pb-tool[data-mode]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.mode === k)); });
@@ -1498,7 +1501,6 @@
   }
   document.body.appendChild(h("datalist", { id: "pb-tags" }, (boot.tags || []).map(function (t) { return h("option", { value: t }); })));
   document.body.appendChild(h("datalist", { id: "pb-links" }, boot.links.map(function (l) { return h("option", { value: l.url, label: l.label }); })));
-  document.body.appendChild(h("datalist", { id: "pb-scale" }, SPEC.spacingScale.map(function (n) { return h("option", { value: n + "px" }); }).concat(["auto", "100%", "50%"].map(function (v) { return h("option", { value: v }); }))));
 
   // Contenu de chaque élément (onglet « Contenu »)
   // Widget personnalisé : champs de l'inspecteur générés depuis sa description (src/marketing/pages/widgets)
@@ -2287,7 +2289,7 @@
     var shown = function (n, u) { return c.inlineUnit && u && u !== "px" ? n + u : String(n); };
     var input = h("input", { id: c.id, type: "text", inputmode: "decimal", class: "pb-len-num", value: c.value === undefined || c.value === null ? "" : String(c.value), placeholder: c.placeholder === undefined ? "–" : String(c.placeholder), disabled: c.disabled || unitState === "auto", autocomplete: "off", "data-prop": c.prop || null, "aria-label": c.ariaLabel || null, "data-tip": c.tip || null });
     if (c.inputClass) input.className = c.inputClass;
-    if (c.list) input.setAttribute("list", c.list);
+    // Contrat : un champ numérique n'ouvre JAMAIS de liste au focus (ni datalist, ni autocomplétion) ; l'attribut « list » n'est volontairement pas pris en charge ici.
     var sel = null;
     if (units && !c.inlineUnit) {
       if (units.length > 1) { sel = h("select", { class: "pb-len-unit", "aria-label": (c.label || "Valeur") + " : unité", disabled: c.disabled }, units.map(function (u) { return h("option", { value: u, text: u }); })); sel.value = unitState; }
@@ -2876,7 +2878,7 @@
       var isTok = typeof own === "string" && own.indexOf("token:") === 0;
       var u0 = (splitLen(own) || splitLen(inh) || { unit: spUnit[kind] }).unit;
       return numericControl({ prop: key, label: name, inlineUnit: true, hideSteps: false, units: unitsOf(key), unit: u0 === "auto" ? spUnit[kind] : u0, step: STEP_REL, min: isSigned(key) ? -9999 : 0, max: 9999, base: 0, disabled: dis,
-        value: isTok ? "" : showLen(own), placeholder: isTok ? lenTokenLabel(own.slice(6)).replace("Espacement ", "") : inh !== undefined ? showLen(inh) : "0", list: "pb-scale", inputClass: "pb-box-input " + cls + (own !== undefined ? " is-set" : "") + (isTok ? " is-token" : ""), cellClass: cls,
+        value: isTok ? "" : showLen(own), placeholder: isTok ? lenTokenLabel(own.slice(6)).replace("Espacement ", "") : inh !== undefined ? showLen(inh) : "0", inputClass: "pb-box-input " + cls + (own !== undefined ? " is-set" : "") + (isTok ? " is-token" : ""), cellClass: cls,
         ariaLabel: name + (linkState[kind] ? " (4 côtés liés)" : ""), tip: name + (inh !== undefined && own === undefined ? " · hérité : " + inh : ""),
         onCommit: function (raw, u, opts) {
           var v = u === "auto" ? "auto" : raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
@@ -3845,7 +3847,7 @@
   function ctxLength(label, key, items, width) {
     var it = items[0], own = ownValue(it, key), inh = inheritedValue(it, key), dis = lockedAny(items);
     var isNum = SP[key].kind === "number", cfg = (isNum ? NUMCFG[key] : LENCFG[key]) || {};
-    var commonOpts = { label: label, ariaLabel: label, tip: label, list: isNum ? null : "pb-scale", inputClass: "pb-ctx-num", cellClass: "pb-ctx-cell", hideSteps: true, disabled: dis, drag: false, allowEmpty: true };
+    var commonOpts = { label: label, ariaLabel: label, tip: label, inputClass: "pb-ctx-num", cellClass: "pb-ctx-cell", hideSteps: true, disabled: dis, drag: false, allowEmpty: true };
     var wrap;
     if (isNum) {
       var lim = NUM[key] || [-9999, 9999, 1];
