@@ -1256,3 +1256,12 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 .pb-items-item { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: var(--pb-radius-md); background: var(--card, #fff); }
 .pb-items-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .pb-items-tools { display: inline-flex; gap: 2px; }
+
+/* Valeur du site pour une longueur (espacement, rayon, taille de texte) : bouton « lien » à côté du nombre, pastille quand la valeur est liée */
+.pb-lenwrap { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.pb-lenwrap > :first-child { flex: 1 1 auto; min-width: 0; }
+.pb-tokbtn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--editor-border, var(--border)); border-radius: var(--pb-radius-sm, 6px); background: transparent; color: var(--editor-muted, var(--muted)); cursor: pointer; }
+.pb-tokbtn:hover:not(:disabled) { background: var(--editor-hover, var(--accent-light)); color: var(--editor-text, var(--text)); }
+.pb-tokbtn.is-on { background: var(--editor-active, var(--accent-light)); color: var(--editor-accent-text, var(--accent-dark)); border-color: var(--editor-accent, var(--accent)); }
+.pb-tokbtn:focus-visible { outline: 2px solid var(--editor-accent, var(--accent)); outline-offset: 1px; }
+.pb-tokchip { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 8px; border-radius: var(--pb-radius-sm, 6px); background: var(--editor-active, var(--accent-light)); color: var(--editor-accent-text, var(--accent-dark)); font-size: 12px; font-weight: 600; }
