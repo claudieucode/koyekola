@@ -217,7 +217,9 @@
   // Saisie (light) : les calques sont redessinés au plus une fois par pause de frappe ; le reste suit tout de suite
   var treeTimer = null;
   function scheduleTree() { clearTimeout(treeTimer); treeTimer = setTimeout(renderTree, 120); }
+  var docVersion = 0; // compteur de modifications du document (résultats de l'inspecteur de qualité : actuels ou obsolètes)
   function afterChange(light, quick) {
+    docVersion++;
     if (light) scheduleTree(); else { clearTimeout(treeTimer); renderTree(); }
     if (!light) { renderInspector(); renderContext(); renderPageSettings(); }
     updateHistoryButtons();
@@ -6657,6 +6659,7 @@
   }
   $("[data-pb-publish]").addEventListener("click", function () {
     var btn = this;
+    if (window.pbQuality) window.pbQuality.beforePublish();
     if (editing) commitEdit();
     btn.disabled = true;
     clearTimeout(saveTimer);
@@ -6849,6 +6852,21 @@
     gesture: function (on) { if (on === undefined) return gesture; if (on) gesture = true; else endGesture(); }, ignoreClick: function (ms) { ignoreClickUntil = Date.now() + ms; },
     ownValue: ownValue, inheritedValue: inheritedValue, splitLen: splitLen, styleSet: styleSet, cleanStyles: cleanStyles, change: change,
     caps: function (it) { var ins = inspectorFor(it), g = (ins && ins.groups) || {}; return { gap: Array.isArray(g.layout) && g.layout.indexOf("gap") >= 0, spacing: Boolean(g.spacing), size: g.size !== undefined && g.size !== false }; }
+  });
+  // Pont vers l'inspecteur de qualité (page-builder-quality.js) : lecture du rendu réel, corrections natives annulables
+  if (window.pbQuality) window.pbQuality.attach({
+    api: api, store: store, icon: icon, toast: toast, canWrite: function () { return canWrite; }, pageId: function () { return PAGE.id; },
+    saveNow: function () { return saveNow(); }, subscribe: function (f) { navListeners.push(f); }, version: function () { return docVersion; },
+    busy: function () { return gesture || Boolean(editing); }, content: function () { return content; }, sections: function () { return content.sections; },
+    walk: function (fn) { walk(fn); }, byId: byId, nameOf: nameOf, frame: function () { return frame; }, canvasReady: function () { return canvasReady; }, canvasEl: canvasEl,
+    device: function () { return device; }, setDevice: setDevice, select: function (id) { select(id); }, openInspector: function () { openInspector(); },
+    seoUrl: function () { return (boot.seo || {}).canView ? boot.seo.url : null; },
+    applyStyles: function (id, bp, map, label) {
+      var it = byId(id);
+      if (!it || !canWrite || refuseLocked([id]) || refuseFormat([id], Object.keys(map))) return false;
+      change(function () { Object.keys(map).forEach(function (k) { styleSet(it, bp, "normal", true)[k] = map[k]; }); cleanStyles(it); }, { label: label || "Qualité" });
+      return true;
+    },
   });
   // Pont vers IA Kolakisa (page-builder-ai.js) : l'IA propose, l'éditeur applique en UNE étape d'historique
   if (window.pbAi) window.pbAi.attach({

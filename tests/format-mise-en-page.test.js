@@ -123,6 +123,17 @@ describe("verrouillage du format", () => {
     assert.equal(r.changes.length, 1);
   });
 
+  test("le prompt de l'IA mentionne le format et les propriétés protégées (verrouillé) ou la liberté (libre)", async () => {
+    const seen = [];
+    aiCore.setClientForTests({ beta: { messages: { create: async (r) => { seen.push(r.messages[0].content); return { stop_reason: "end_turn", model: "x", usage: { output_tokens: 1 }, content: [{ type: "text", text: JSON.stringify({ summary: "", question: "?", operations: [] }) }] }; } } } });
+    const locked = guidedPage(true);
+    await studio.propose(A, locked, { instruction: "x", revision: rev(locked) });
+    assert.match(seen[0], /VERROUILLÉ[\s\S]*width, minWidth, maxWidth[\s\S]*JAMAIS/);
+    const free = pages.createPage(A, { name: "Libre IA" });
+    await studio.propose(A, free.id, { instruction: "x", revision: rev(free.id) });
+    assert.match(seen[1], /Conception libre/);
+  });
+
   test("le responsive par règles propose une largeur sur un élément de premier niveau verrouillé : refusé, pas écrit", () => {
     const id = guidedPage(true);
     const top = draft(id).sections[0].children[0].id;

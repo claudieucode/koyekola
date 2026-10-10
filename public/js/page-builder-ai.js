@@ -475,5 +475,14 @@
     if (!B.canWrite()) { el.btn.disabled = true; el.btn.setAttribute("data-tip", "IA Kolakisa : réservée aux personnes qui peuvent modifier la page"); return; }
     el.btn.addEventListener("click", function () { if (el.dlg.open) el.dlg.close(); else open(); });
   }
-  window.pbAi = { attach: function (bridge) { B = bridge; init(); }, state: S };
+  // Préremplit une demande (depuis l'inspecteur de qualité) : rien n'est envoyé sans clic sur « Envoyer »
+  function prefill(o) {
+    if (!el.dlg) return;
+    if (o.selection && B.byId(o.selection)) B.select(o.selection);
+    if (!el.dlg.open) open();
+    setTab(o.tab || "create");
+    if (o.scope && o.selection) el.scope.value = o.scope;
+    el.ask.value = o.instruction || ""; el.ask.focus();
+  }
+  window.pbAi = { attach: function (bridge) { B = bridge; init(); }, state: S, prefill: prefill };
 })();
