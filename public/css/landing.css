@@ -145,8 +145,11 @@
 /* Sections libres (Page Builder) : styles de base des éléments ; les réglages de chaque élément viennent de sa classe
    .kw-n-<id> (CSS généré après cette feuille, donc prioritaire à spécificité égale). */
 .kw-layout { display: flex; flex-direction: column; gap: 16px; }
-.kw-container { width: 100%; max-width: 1100px; margin-left: auto; margin-right: auto; display: flex; flex-direction: column; gap: 16px; }
-.kw-container.kw-full { max-width: none; }
+.kw-container { width: 100%; display: flex; flex-direction: column; gap: 16px; }
+/* Largeur max. et centrage PAR DÉFAUT, à spécificité nulle (:where) : le réglage « Largeur max. » (ou « Marge ») d'un conteneur, posé sous
+   .kw-n-<id>, l'emporte toujours, y compris sur un conteneur en pleine largeur ou imbriqué (sinon le réglage serait sans effet) */
+:where(.kw-container) { max-width: 1100px; margin-left: auto; margin-right: auto; }
+:where(.kw-container.kw-full) { max-width: none; }
 .kw-columns { display: flex; flex-wrap: wrap; gap: 24px; }
 .kw-column { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 .kw-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
@@ -347,7 +350,7 @@
 .lp-builder .kw-add-end .kw-add-end-btn span { font-size: 22px; font-weight: 500; line-height: 1; }
 .kw-add { display: none; }
 /* Un conteneur imbriqué occupe la largeur de son parent (les structures « colonnes » en dépendent) */
-.kw-container .kw-container { max-width: none; margin-left: 0; margin-right: 0; }
+:where(.kw-container .kw-container) { max-width: none; margin-left: 0; margin-right: 0; }
 .kw-empty { margin: 0; padding: 12px; border: 1px dashed rgba(2, 119, 182, 0.5); border-radius: 6px; color: rgba(16, 34, 47, 0.6); font-size: 14px; text-align: center; }
 
 @media (max-width: 560px) {

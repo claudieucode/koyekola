@@ -191,7 +191,7 @@ describe("réglages du site : effet sur la page publiée (vrai serveur)", () => 
     assert.match(html, /\.lp-site\.lp-body\{background-color:var\(--kw-surface\);background-image:linear-gradient\(90deg, var\(--kw-primary\), #112233\),url\("\/uploads\/thumbnails\/fond\.jpg"\);background-position:top;background-size:cover;background-repeat:no-repeat\}/);
     assert.match(html, /@media \(min-width:1025px\)\{\.lp-site\.lp-body\{background-attachment:fixed\}\}/);
     assert.match(html, /\.lp-site \.lp-main\{max-width:900px;padding-left:32px;padding-right:32px\}/);
-    assert.match(html, /:where\(\.kw-container:not\(\.kw-full\)\)\{max-width:1200px\}/);
+    assert.match(html, /:where\(\.kw-container:not\(\.kw-full\):not\(\.kw-container \.kw-container\)\)\{max-width:1200px\}/);
     await apply((b) => { b.settings.layout.fullWidth = true; });
     assert.match(await publicHtml(), /\.lp-site \.lp-main\{max-width:none;padding-left:32px;padding-right:32px\}/);
   });
