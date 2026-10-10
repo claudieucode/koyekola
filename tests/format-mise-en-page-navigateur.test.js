@@ -119,7 +119,8 @@ describe("formats de mise en page (navigateur)", { skip: SKIP }, () => {
     await until(() => layout() && layout().format === "large" && layout().maxWidth === 1440, { what: "nouveau format enregistré" });
     await wait(500);
     const w = await width("cont00000001");
-    assert.ok(w > 960 && w <= 1440, `largeur ${w} : plafond du nouveau format (> compact, ≤ 1440)`);
+    assert.ok(w >= 960 && w <= 1440, `largeur ${w}`);
+    assert.ok(await page.evaluate(() => [...document.querySelector("[data-pb-frame]").contentDocument.querySelectorAll("style")].some((x) => x.textContent.includes("1440px"))), "le canevas applique le plafond du nouveau format");
   });
 
   test("retour à la conception libre : le format disparaît, la page reste intacte", async () => {
