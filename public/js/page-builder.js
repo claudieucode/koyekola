@@ -2177,8 +2177,8 @@
   // states : styles de survol / focus / clic proposés. Un nouveau type d'élément ajoute ici son schéma.
   var BOX_LAYOUT = ["display", "flexDirection", "flexWrap", "justifyContent", "alignItems", "alignContent", "gap", "rowGap", "columnGap"];
   var SIZE_W = ["width", "minWidth", "maxWidth"];
-  var BOX = { layout: BOX_LAYOUT, size: null, spacing: true, color: null, background: true, border: null, effects: null };
-  var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: ["boxShadow", "opacity", "transitionDuration", "transitionEasing", "backdropBlur"] };
+  var BOX = { layout: BOX_LAYOUT, size: null, spacing: true, typography: null, color: null, background: true, border: null, effects: null }; // la typographie d'un conteneur est héritée par ses enfants
+  var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: ["boxShadow", "opacity", "transitionDuration", "transitionEasing", "backdropBlur", "visibility", "cursor", "mixBlendMode"] };
   // Ordre des groupes selon la nature de l'élément (le premier est ouvert par défaut)
   var TEXT_ORDER = ["typography", "spacing", "size", "layout", "background", "border", "effects"];
   var INSPECTORS = {
@@ -2188,7 +2188,7 @@
     column: { kind: "Colonne", groups: BOX, tabs: "box", states: ["hover", "active"] },
     stack: { kind: "Pile", groups: BOX, tabs: "box", states: ["hover", "active"] },
     group: { kind: "Groupe", groups: BOX, tabs: "box", states: ["hover", "active"] },
-    grid: { kind: "Grille", groups: { layout: ["columns", "gridTemplate", "gridRows", "gridRowsTemplate", "gridAutoFlow", "gap", "rowGap", "columnGap", "justifyItems", "alignItems", "alignContent", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null }, tabs: "box", states: ["hover", "active"] },
+    grid: { kind: "Grille", groups: { layout: ["columns", "gridTemplate", "gridRows", "gridRowsTemplate", "gridAutoFlow", "gridAutoRows", "gridAutoColumns", "gap", "rowGap", "columnGap", "justifyItems", "alignItems", "alignContent", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null }, tabs: "box", states: ["hover", "active"] },
     heading: { kind: "Titre", groups: TEXTUAL, order: TEXT_ORDER },
     text: { kind: "Texte", groups: TEXTUAL, order: TEXT_ORDER },
     list: { kind: "Liste", groups: TEXTUAL, order: TEXT_ORDER },
@@ -2267,6 +2267,14 @@
     if (it.type === "form") return INSPECTORS.form;
     return Object.assign({}, INSPECTORS.legacy, { kind: LEGACY[it.type] ? LEGACY[it.type].label : INSPECTORS.legacy.kind });
   }
+  // États (survol) : le serveur les accepte et les publie pour TOUT élément ; l'interface les offrait pour 15 types seulement. On les ouvre (survol) aux
+  // autres types qui ont un aspect réglable ; pas aux éléments sans apparence propre (espace, progression de lecture, contenus intégrés, médias lus…).
+  var NO_STATES = ["spacer", "readingprogress", "modal", "tooltip", "embed", "html", "map", "video", "audio", "lottie", "component", "form", "legacy", "section", "sitelogo", "hotspot", "carousel", "gallery"];
+  Object.keys(INSPECTORS).forEach(function (k) {
+    var d = INSPECTORS[k], g = d.groups || {};
+    if (d.states || NO_STATES.indexOf(k) >= 0) return;
+    if (["typography", "color", "background", "border", "effects"].some(function (x) { return g[x] !== undefined; })) d.states = ["hover"];
+  });
   var GROUP_ORDER = ["layout", "spacing", "size", "typography", "color", "background", "media", "border", "effects"];
   var optLabel = function (p, v) { var o = (p.options || []).find(function (x) { return String(x[0]) === String(v); }); return o ? o[1] : v; };
   var lockedAny = function (items) { return !canWrite || items.some(function (x) { return lockedDeep(x.id); }); };
@@ -2278,8 +2286,8 @@
   var KW = ["auto", "fit-content", "min-content", "max-content"];
   var isKw = function (u) { return KW.indexOf(u) >= 0; };
   var UNITS = {
-    width: ["px", "%", "rem", "vw", "auto", "fit-content", "min-content", "max-content"], height: ["px", "%", "rem", "vh", "auto", "fit-content", "min-content", "max-content"], flexBasis: ["px", "%", "rem", "auto"],
-    minWidth: ["px", "%", "rem", "vw", "fit-content", "min-content", "max-content"], maxWidth: ["px", "%", "rem", "vw", "fit-content", "min-content", "max-content"], minHeight: ["px", "%", "rem", "vh", "fit-content", "min-content", "max-content"], maxHeight: ["px", "%", "rem", "vh", "fit-content", "min-content", "max-content"],
+    width: ["px", "%", "rem", "em", "vw", "auto", "fit-content", "min-content", "max-content"], height: ["px", "%", "rem", "em", "vh", "auto", "fit-content", "min-content", "max-content"], outlineWidth: ["px"], outlineOffset: ["px", "rem"], flexBasis: ["px", "%", "rem", "auto"],
+    minWidth: ["px", "%", "rem", "em", "vw", "fit-content", "min-content", "max-content"], maxWidth: ["px", "%", "rem", "em", "vw", "fit-content", "min-content", "max-content"], minHeight: ["px", "%", "rem", "em", "vh", "fit-content", "min-content", "max-content"], maxHeight: ["px", "%", "rem", "em", "vh", "fit-content", "min-content", "max-content"],
     gap: ["px", "rem", "em", "%"], rowGap: ["px", "rem", "em", "%"], columnGap: ["px", "rem", "em", "%"], fontSize: ["px", "em", "rem", "vw"], letterSpacing: ["px", "em", "rem"], wordSpacing: ["px", "em", "rem"], textIndent: ["px", "em", "rem", "%"], borderWidth: ["px"], borderTopWidth: ["px"], borderRightWidth: ["px"], borderBottomWidth: ["px"], borderLeftWidth: ["px"],
     borderRadius: ["px", "%", "rem"], borderTopLeftRadius: ["px", "%", "rem"], borderTopRightRadius: ["px", "%", "rem"], borderBottomRightRadius: ["px", "%", "rem"], borderBottomLeftRadius: ["px", "%", "rem"],
     top: ["px", "%", "rem"], left: ["px", "%", "rem"], right: ["px", "%", "rem"], bottom: ["px", "%", "rem"],
@@ -3031,6 +3039,14 @@
         SIDE_WIDTHS.forEach(function (k) { inner.appendChild(styleControl(items, k[0], k[1])); });
       }
       inner.appendChild(styleControl(items, "borderColor", "Couleur"));
+    }
+    // Contour (hors de la bordure : ne change pas la taille ; utile au focus et aux repères) : les réglages détaillés n'apparaissent qu'une fois un style choisi
+    inner.appendChild(styleControl(items, "outlineStyle", "Contour : style"));
+    var ostyle = valueOf(it, "outlineStyle");
+    if ((ostyle && ostyle !== "none") || ownValue(it, "outlineWidth") !== undefined || ownValue(it, "outlineColor") !== undefined || ownValue(it, "outlineOffset") !== undefined) {
+      inner.appendChild(styleControl(items, "outlineWidth", "Contour : épaisseur"));
+      inner.appendChild(styleControl(items, "outlineColor", "Contour : couleur"));
+      inner.appendChild(styleControl(items, "outlineOffset", "Contour : décalage"));
     }
     var split = radiusSplit[it.id] || CORNER_KEYS.some(function (c) { return valueOf(it, c[0]) !== undefined; });
     var link = h("button", { type: "button", class: "pb-link-btn is-icon", "aria-pressed": String(!split), "data-link": "radius", "aria-label": split ? "Lier les 4 coins (un seul arrondi)" : "Délier : un arrondi par coin", "data-tip": split ? "Coins indépendants — cliquer pour un seul arrondi" : "4 coins liés — cliquer pour régler chaque coin", disabled: dis,
