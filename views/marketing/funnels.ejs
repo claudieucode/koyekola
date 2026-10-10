@@ -1,6 +1,7 @@
 <%- include("partials/top", { title, active }) %>
-<% const canWrite = mk.can("forms.write"); const pct = (r) => (r === null || r === undefined ? "—" : `${String(r).replace(".", ",")} %`); %>
+<% const canWrite = mk.can("funnels.write"); const pct = (r) => (r === null || r === undefined ? "—" : `${String(r).replace(".", ",")} %`); %>
     <div class="mk-head"><h1>Tunnels</h1><% if (canWrite && !archived) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un tunnel</button><% } %></div>
+    <%- include("partials/site-filter", { action: "/marketing/tunnels" }) %>
     <p class="mk-lead">Un tunnel conduit le visiteur d'étape en étape : page d'atterrissage, inscription, remerciement, page de vente, formation… Chaque étape est une vraie page, composée dans le même éditeur visuel que Site Web.</p>
     <nav class="mk-tabs" aria-label="Tunnels actifs ou archivés">
       <a class="mk-tab" href="/marketing/tunnels"<%- archived ? "" : ' aria-current="page"' %>>Tunnels</a>
@@ -31,6 +32,7 @@
           <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="fn-new-title">Nouveau tunnel</h2><p class="mk-dialog-desc">Un modèle crée les vraies pages de chaque étape, en brouillon : rien n'est mis en ligne avant que vous le décidiez.</p></div>
             <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
           <div class="mk-dialog-body">
+            <%- include("partials/site-field", { id: "fn-site" }) %>
             <div class="field-group"><label for="fn-name">Nom du tunnel *</label><input id="fn-name" type="text" name="name" maxlength="100" required placeholder="Guide gratuit Photoshop"></div>
             <fieldset class="mk-tpl-choice"><legend>Modèle de départ</legend>
               <label class="mk-tpl"><input type="radio" name="template" value="" checked><span><strong>Tunnel vide</strong><span class="mk-sub">Vous ajoutez les étapes une à une.</span></span></label>

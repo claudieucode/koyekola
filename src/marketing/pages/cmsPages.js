@@ -59,7 +59,10 @@ function queryPages(ctx, { state = "toutes", q = "", siteId = "", authorId = "",
     const marks = ids.map(() => "?").join(",");
     const stat = (type) => Object.fromEntries(ctx.db.prepare(`SELECT page_id, COUNT(DISTINCT visitor || ':' || (occurred_at / 86400000)) n FROM mk_landing_events WHERE page_id IN (${marks}) AND type = ? GROUP BY page_id`).all(...ids, type).map((r) => [r.page_id, r.n]));
     const views = stat("view"); const signups = Object.fromEntries(ctx.db.prepare(`SELECT page_id, COUNT(*) n FROM mk_landing_events WHERE page_id IN (${marks}) AND type = 'signup' GROUP BY page_id`).all(...ids).map((r) => [r.page_id, r.n]));
-    for (const r of rows) { r.visitors = views[r.id] || 0; r.signups = signups[r.id] || 0; }
+    // Palier 18 : tunnels (actifs) qui utilisent chaque page — une page utilisée est identifiable, et protégée contre la suppression silencieuse
+    const inFunnels = {};
+    for (const u of ctx.db.prepare(`SELECT s.page_id, f.name FROM mk_funnel_steps s JOIN mk_funnels f ON f.id = s.funnel_id WHERE s.page_id IN (${marks}) AND f.status = 'active' AND f.organization_id = ? ORDER BY f.name`).all(...ids, ctx.organizationId)) (inFunnels[u.page_id] ||= []).push(u.name);
+    for (const r of rows) { r.visitors = views[r.id] || 0; r.signups = signups[r.id] || 0; r.funnels = inFunnels[r.id] || []; }
   }
   return { rows, total, page: current, pages, perPage, counts: counts(ctx) };
 }

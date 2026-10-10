@@ -24,18 +24,18 @@ function emitVisitEvents(ctx, { contactId, sessionId, pageViews }) {
 
 // Étapes de tunnels actifs correspondant à une page (ou à une formation, pour une étape « Formation »)
 function stepsWhere(ctx, condition, value) {
-  return ctx.db.prepare(`SELECT s.id, s.name, s.position, f.id AS funnel_id, f.name AS funnel_name,
+  return ctx.db.prepare(`SELECT s.id, s.name, s.position, f.id AS funnel_id, f.name AS funnel_name, f.site_id AS site_id,
       (SELECT MAX(x.position) FROM mk_funnel_steps x WHERE x.funnel_id = f.id) AS last_position
     FROM mk_funnel_steps s JOIN mk_funnels f ON f.id = s.funnel_id WHERE ${condition} AND f.status = 'active' AND f.organization_id = ?`).all(value, ctx.organizationId);
 }
 function emitStepEvents(ctx, contact, steps, sessionId) {
   let n = 0;
   for (const s of steps) {
-    emit(ctx, "funnel.step_reached", { contact, source: "site", idempotencyKey: `funnel.step_reached:${contact.id}:${s.id}:${sessionId}`,
+    emit(ctx, "funnel.step_reached", { contact, source: "site", objectType: "funnel_step", objectId: s.id, siteId: s.site_id, idempotencyKey: `funnel.step_reached:${contact.id}:${s.id}:${sessionId}`,
       metadata: { funnelId: String(s.funnel_id), funnelName: s.funnel_name, stepId: String(s.id), stepName: s.name, step: s.position } });
     n += 1;
     if (s.position === s.last_position) {
-      emit(ctx, "funnel.completed", { contact, source: "site", idempotencyKey: `funnel.completed:${contact.id}:${s.funnel_id}`, metadata: { funnelId: String(s.funnel_id), funnelName: s.funnel_name } });
+      emit(ctx, "funnel.completed", { contact, source: "site", objectType: "funnel", objectId: s.funnel_id, siteId: s.site_id, idempotencyKey: `funnel.completed:${contact.id}:${s.funnel_id}`, metadata: { funnelId: String(s.funnel_id), funnelName: s.funnel_name } });
       n += 1;
     }
   }

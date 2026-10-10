@@ -2885,6 +2885,7 @@
     var unitSel = function (kind, label) {
       var first = SIDES.map(function (sd) { return splitLen(ownValue(it, kind + sd)); }).filter(function (p) { return p && p.unit !== "auto"; })[0];
       var sel = h("select", { class: "pb-len-unit pb-link-unit", "aria-label": label + " : unité des 4 côtés", "data-tip": label + " : unité des 4 côtés (les nombres sont conservés, sans conversion)", disabled: dis }, ["px", "%", "rem", "em"].map(function (u) { return h("option", { value: u, text: u }); }));
+      sel.classList.add("pb-sp-unit");
       sel.value = first ? first.unit : spUnit[kind];
       sel.addEventListener("change", function () {
         spUnit[kind] = sel.value;
@@ -2896,7 +2897,7 @@
     };
     var linkBtn = function (kind, label) {
       var on = Boolean(linkState[kind]);
-      return h("button", { type: "button", class: "pb-link-btn", "aria-pressed": String(on), "data-link": kind, "aria-label": (on ? "Délier les côtés : " : "Lier les 4 côtés : ") + label, "data-tip": on ? label + " : 4 côtés liés (une valeur pour tous)" : label + " : côtés indépendants — cliquer pour les lier", disabled: dis,
+      return h("button", { type: "button", class: "pb-link-btn is-icon", "aria-pressed": String(on), "data-link": kind, "aria-label": (on ? "Délier les côtés : " : "Lier les 4 côtés : ") + label, "data-tip": on ? label + " : 4 côtés liés (une valeur pour tous)" : label + " : côtés indépendants — cliquer pour les lier", disabled: dis,
         onclick: function () {
           linkState[kind] = !on; store.set("spacing-link", linkState);
           if (!on) {
@@ -2910,7 +2911,7 @@
             }
           }
           renderInspector();
-        } }, icon("link"), h("span", { text: label }));
+        } }, icon("link"));
     };
     // Valeur du site (espacement XS … XXL) pour les 4 côtés d'une boîte : une RÉFÉRENCE (« token:space-md »), pas une copie du nombre
     var tokBtn = function (kind, label) {
@@ -2926,14 +2927,20 @@
         } }, icon("palette"));
       return btn;
     };
-    return h("div", { class: "pb-spacing" },
-      h("div", { class: "pb-spacing-head" }, linkBtn("margin", "Marge"), unitSel("margin", "Marge"), tokBtn("margin", "Marge"), linkBtn("padding", "Intérieur"), unitSel("padding", "Intérieur"), tokBtn("padding", "Intérieur")),
-      h("div", { class: "pb-boxmodel" },
-        h("span", { class: "pb-box-label", text: "Marge", "aria-hidden": "true" }),
-        h("div", { class: "pb-box-pad", "aria-hidden": "true" }, h("span", { class: "pb-box-label", text: "Intérieur" })),
-        cell("margin", "Top"), cell("margin", "Right"), cell("margin", "Bottom"), cell("margin", "Left"),
-        cell("padding", "Top"), cell("padding", "Right"), cell("padding", "Bottom"), cell("padding", "Left"),
-        h("span", { class: "pb-box-core", "aria-hidden": "true" })));
+    // Présentation : deux blocs « Marge externe » / « Marge interne » (titre, valeur du site, liaison), grille 2 × 2 Haut / Droite / Bas / Gauche ;
+    // chaque champ porte l'icône de son côté et l'unité du groupe (vrai sélecteur, le même pour les 4 côtés). Mêmes données, même liaison que partout.
+    var ORDER = ["Top", "Right", "Bottom", "Left"], SIDE_NAME = { Top: "Haut", Right: "Droite", Bottom: "Bas", Left: "Gauche" };
+    var group = function (kind, title, label) {
+      var fields = ORDER.map(function (sd) {
+        return h("div", { class: "pb-sp-field" },
+          h("span", { class: "pb-sp-side", text: SIDE_NAME[sd] }),
+          h("div", { class: "pb-sp-box" }, h("span", { class: "pb-sp-edge is-" + sd.toLowerCase(), "aria-hidden": "true" }), cell(kind, sd), unitSel(kind, label)));
+      });
+      return h("div", { class: "pb-sp-group", "data-kind": kind },
+        h("div", { class: "pb-sp-head" }, h("span", { class: "pb-sp-title", text: title }), tokBtn(kind, label), linkBtn(kind, label)),
+        h("div", { class: "pb-sp-grid" }, fields));
+    };
+    return h("div", { class: "pb-spacing" }, group("margin", "Marge externe", "Marge"), group("padding", "Marge interne", "Intérieur"));
   }
 
   // ---------- Bordure : style d'abord ; épaisseur et couleur seulement s'il y a une bordure ; arrondi liable ----------

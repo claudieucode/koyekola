@@ -24,6 +24,7 @@ const GROUPS = [
     ["users.delete", "Retirer de l'équipe", "delete"], ["users.manage_roles", "Attribuer des rôles", "edit"], ["roles.manage", "Créer et modifier les rôles", "edit"], ["audit.read", "Lire le journal d'activité", "view"]] },
   { key: "pages", label: "Pages, sites et formulaires", perms: [
     ["forms.read", "Voir les pages, sites et formulaires", "view"], ["forms.write", "Créer et modifier pages, sites, formulaires", "edit"], ["pages.publish", "Publier une page", "publish"],
+    ["funnels.read", "Tunnels : voir", "view"], ["funnels.write", "Tunnels : construire (étapes, pages associées, réglages)", "edit"],
     ["pages.delete", "Supprimer définitivement une page", "delete"], ["pages.code", "Code personnalisé dans les pages", "edit"]] },
   { key: "articles", label: "Articles", perms: [
     ["articles.read", "Voir les articles", "view"], ["articles.edit_own", "Gérer ses propres articles", "edit"], ["articles.write", "Gérer tous les articles", "edit"],
