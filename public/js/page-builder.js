@@ -628,15 +628,15 @@
   function resetStyle() {
     var ids = selection.slice();
     if (!ids.length || refuseLocked(ids)) return;
-    var any = ids.some(function (id) { var it = byId(id); return it && (it.styles || it.states); });
+    var any = ids.some(function (id) { var it = byId(id); return it && (it.styles || it.states || it.parts); });
     if (!any) { toast("Aucun style propre à réinitialiser."); return; }
-    change(function () { ids.forEach(function (id) { var it = byId(id); if (it) { delete it.styles; delete it.states; } }); });
+    change(function () { ids.forEach(function (id) { var it = byId(id); if (it) { delete it.styles; delete it.states; delete it.parts; } }); });
     toast("Style réinitialisé (tous les écrans et états). Ctrl/⌘ + Z pour annuler.");
   }
   function copyStyle() {
     var it = selectedItems()[0];
     if (!it) return;
-    styleClipboard = { styles: clone(it.styles || {}), states: clone(it.states || {}), style: clone(it.style || null) };
+    styleClipboard = { styles: clone(it.styles || {}), states: clone(it.states || {}), style: clone(it.style || null), type: it.type, parts: clone(it.parts || {}) };
     store.set("style-clipboard", styleClipboard);
     toast("Style copié depuis « " + nameOf(it) + " ».");
   }
@@ -678,6 +678,22 @@
             it.states[state][key] = clone(st.states[state][key]); applied++;
           });
         });
+        // Parties (carte, titre…) : reprises seulement entre widgets du MÊME type, partie par partie, et seulement les réglages que la partie accepte
+        if (st.type && st.type === it.type) Object.keys(st.parts || {}).forEach(function (pk) {
+          var def = partDef(it, pk), src = st.parts[pk];
+          if (!def) return;
+          var okKey = function (key) { var g = SP[key] && SP[key].group; if (key === "backgroundColor") g = "background"; var spec = g && def.groups[g]; return spec === true || (Array.isArray(spec) && spec.indexOf(key) >= 0); };
+          [["styles", Object.keys(src.styles || {})], ["states", Object.keys(src.states || {})]].forEach(function (kind) {
+            kind[1].forEach(function (slot) {
+              Object.keys(src[kind[0]][slot] || {}).forEach(function (key) {
+                if (!wanted(key)) return;
+                if (!okKey(key)) { skipped++; return; }
+                it.parts = it.parts || {}; it.parts[pk] = it.parts[pk] || {}; it.parts[pk][kind[0]] = it.parts[pk][kind[0]] || {}; it.parts[pk][kind[0]][slot] = it.parts[pk][kind[0]][slot] || {};
+                it.parts[pk][kind[0]][slot][key] = clone(src[kind[0]][slot][key]); applied++;
+              });
+            });
+          });
+        });
       });
       if (!applied) return false;
     }, { label: only ? "Coller le style (" + only.map(function (g) { return (STYLE_GROUPS.filter(function (x) { return x[0] === g; })[0] || [0, g])[1].toLowerCase(); }).join(", ") + ")" : "Coller le style" });
@@ -687,15 +703,26 @@
 
   // ---------- Styles (par écran et par état) ----------
   // Écran modifié = écran affiché. Une valeur absente est héritée de l'écran plus grand.
+  // Cible des réglages : null = le widget lui-même ; sinon une de ses PARTIES (carte, image, titre…, déclarées par le registre). Les parties ont la même forme
+  // que le widget ({ styles: { écran }, states: { état } }) : tous les contrôles, l'historique et l'enregistrement fonctionnent donc sans changement.
+  var styleTarget = null;
+  function holderOf(it, create) {
+    if (!styleTarget || !partDef(it, styleTarget)) return it;
+    if (!it.parts || !it.parts[styleTarget]) { if (!create) return null; it.parts = it.parts || {}; it.parts[styleTarget] = {}; }
+    return it.parts[styleTarget];
+  }
+  function partDef(it, key) { var d = it && isNode(it) && NT[it.type] && NT[it.type].parts; return d ? d.filter(function (x) { return x.key === key; })[0] || null : null; }
   function styleSet(it, bp, state, create) {
+    var o = holderOf(it, create);
+    if (!o) return null;
     if (state && state !== "normal") {
-      if (!it.states) { if (!create) return null; it.states = {}; }
-      if (!it.states[state]) { if (!create) return null; it.states[state] = {}; }
-      return it.states[state];
+      if (!o.states) { if (!create) return null; o.states = {}; }
+      if (!o.states[state]) { if (!create) return null; o.states[state] = {}; }
+      return o.states[state];
     }
-    if (!it.styles) { if (!create) return null; it.styles = {}; }
-    if (!it.styles[bp]) { if (!create) return null; it.styles[bp] = {}; }
-    return it.styles[bp];
+    if (!o.styles) { if (!create) return null; o.styles = {}; }
+    if (!o.styles[bp]) { if (!create) return null; o.styles[bp] = {}; }
+    return o.styles[bp];
   }
   function ownValue(it, key) { var s = styleSet(it, device, styleState, false); return s && s[key] !== undefined ? s[key] : undefined; }
   // Valeur héritée (écrans plus grands) : affichée en indication grise
@@ -703,17 +730,22 @@
     if (styleState !== "normal") return undefined;
     var i = BPS.indexOf(device);
     // Grille sans réglage propre à la tablette / au mobile : 2 colonnes au plus sur tablette, 1 sur mobile (voir pageCss)
-    if (it.type === "grid" && (key === "columns" || key === "gridTemplate") && i > 0) {
+    if (!styleTarget && it.type === "grid" && (key === "columns" || key === "gridTemplate") && i > 0) {
       var own = function (b) { var st = it.styles && it.styles[b]; return st && (st.columns !== undefined || st.gridTemplate !== undefined); };
       var d = (it.styles && it.styles.desktop) || {}, cols = d.gridTemplate ? String(d.gridTemplate).split(" ").length : Number(d.columns) || 0;
       if (!own("tablet") && (device === "tablet" ? cols > 2 : !own("mobile") && cols > 1)) return key === "columns" ? (device === "tablet" ? 2 : 1) : undefined;
     }
-    for (var j = i - 1; j >= 0; j--) { var s = it.styles && it.styles[BPS[j]]; if (s && s[key] !== undefined) return s[key]; }
+    var ho = holderOf(it, false);
+    for (var j = i - 1; j >= 0; j--) { var s = ho && ho.styles && ho.styles[BPS[j]]; if (s && s[key] !== undefined) return s[key]; }
     return undefined;
   }
+  function cleanSet(o) {
+    if (o.styles) { BPS.forEach(function (b) { if (o.styles[b] && !Object.keys(o.styles[b]).length) delete o.styles[b]; }); if (!Object.keys(o.styles).length) delete o.styles; }
+    if (o.states) { Object.keys(o.states).forEach(function (k) { if (!Object.keys(o.states[k]).length) delete o.states[k]; }); if (!Object.keys(o.states).length) delete o.states; }
+  }
   function cleanStyles(it) {
-    if (it.styles) { BPS.forEach(function (b) { if (it.styles[b] && !Object.keys(it.styles[b]).length) delete it.styles[b]; }); if (!Object.keys(it.styles).length) delete it.styles; }
-    if (it.states) { Object.keys(it.states).forEach(function (k) { if (!Object.keys(it.states[k]).length) delete it.states[k]; }); if (!Object.keys(it.states).length) delete it.states; }
+    cleanSet(it);
+    if (it.parts) { Object.keys(it.parts).forEach(function (k) { cleanSet(it.parts[k]); if (!Object.keys(it.parts[k]).length) delete it.parts[k]; }); if (!Object.keys(it.parts).length) delete it.parts; }
   }
   var COMPOSED_LABEL = { filter: "filtres", shadow: "ombre personnalisée", overlay: "voile", gradient: "dégradé", backgroundImage: "image de fond", transform: "transformation", mask: "masque" };
   function setStyle(ids, key, value, opts) { var m = {}; m[key] = value; setStyles(ids, m, opts); }
@@ -2463,7 +2495,8 @@
     var it = items[0];
     var own = ownValue(it, key);
     var dis = lockedAny(items);
-    var others = styleState === "normal" ? BPS.filter(function (b) { return b !== "desktop" && it.styles && it.styles[b] && it.styles[b][key] !== undefined; }) : [];
+    var oh = holderOf(it, false);
+    var others = styleState === "normal" ? BPS.filter(function (b) { return b !== "desktop" && oh && oh.styles && oh.styles[b] && oh.styles[b][key] !== undefined; }) : [];
     var marks = others.length ? h("span", { class: "pb-prop-bps" }, others.map(function (b) {
       return h("span", { class: "pb-prop-bp" + (b === device ? " is-current" : ""), title: "Valeur propre à l'écran « " + bpLabel(b) + " »", role: "img", "aria-label": "Valeur propre : " + bpLabel(b) }, icon(DEVICE_ICON[b]));
     })) : null;
@@ -3096,7 +3129,7 @@
   function breakpointSwitch(items) {
     var it = items[0];
     var seg = h("div", { class: "pb-seg pb-bp-seg", role: "radiogroup", "aria-label": "Écran modifié" }, SPEC.breakpoints.map(function (b) {
-      var own = it.styles && it.styles[b.key] && Object.keys(it.styles[b.key]).length;
+      var bh = holderOf(it, false), own = bh && bh.styles && bh.styles[b.key] && Object.keys(bh.styles[b.key]).length;
       return h("button", { type: "button", role: "radio", "aria-checked": String(device === b.key), class: own ? "has-values" : null, "data-tip": own ? b.label + " · réglages propres à cet écran" : b.label + (b.key === "desktop" ? "" : " · hérite de l'écran plus grand"), "data-device": b.key, onclick: function () { setDevice(b.key); } }, icon(DEVICE_ICON[b.key]), h("span", { class: "sr-only", text: b.label }));
     }));
     return h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "Écran" }), seg);
@@ -3124,11 +3157,34 @@
     extra.forEach(function (k) { if (out.indexOf(k) < 0 && !taken[k] && SP[k]) out.push(k); });
     return out;
   }
+  // Sélecteur de PARTIE (widgets qui en déclarent) : « Widget · Carte · Image · Titre… » ; un point signale une partie déjà personnalisée
+  function partsRow(items, box) {
+    var it = items[0], defs = items.length === 1 && isNode(it) && NT[it.type] && NT[it.type].parts;
+    if (!defs) return;
+    var pick = function (key) { styleTarget = key; renderInspector(); };
+    var chip = function (key, label) {
+      var own = key ? Boolean(it.parts && it.parts[key]) : Boolean(it.styles || it.states);
+      return h("button", { type: "button", class: "pb-part" + (styleTarget === key ? " is-on" : "") + (own ? " has-own" : ""), "aria-pressed": String(styleTarget === key), "data-part": key || "", "data-tip": own ? label + " · réglages propres" : label, onclick: function () { pick(key); } }, label);
+    };
+    var row = h("div", { class: "pb-parts", role: "group", "aria-label": "Partie du widget à modifier" }, chip(null, "Widget"));
+    defs.forEach(function (d) { row.appendChild(chip(d.key, d.label)); });
+    var wrap = h("div", { class: "pb-parts-wrap" }, h("span", { class: "pb-insp-bar-label", text: "Partie" }), row);
+    if (styleTarget && it.parts && it.parts[styleTarget]) wrap.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm pb-part-reset", disabled: lockedAny(items), "data-tip": "Revient aux valeurs par défaut du thème pour cette partie (tous les écrans et états)", onclick: function () {
+      var key = styleTarget;
+      change(function () { var x = byId(it.id); if (x && x.parts) { delete x.parts[key]; cleanStyles(x); } }, { label: "Réinitialiser la partie" });
+      toast("Partie réinitialisée. Ctrl/⌘ + Z pour annuler.");
+    } }, "Réinitialiser la partie"));
+    box.appendChild(wrap);
+  }
   function styleTab(items, box) {
     var it = items[0];
-    var schema = inspectorFor(it);
+    var pdef = styleTarget ? partDef(it, styleTarget) : null;
+    // Partie choisie : ses groupes et ses états (déclarés par le registre) remplacent ceux du widget
+    var schema = pdef ? { kind: pdef.label, groups: pdef.groups, states: pdef.states.length ? pdef.states : null } : inspectorFor(it);
+    partsRow(items, box);
     var bar = breakpointSwitch(items);
-    if (schema.states && items.every(function (x) { return inspectorFor(x).states; })) {
+    if (pdef && styleState !== "normal" && pdef.states.indexOf(styleState) < 0) styleState = "normal";
+    if (schema.states && (pdef || items.every(function (x) { return inspectorFor(x).states; }))) {
       bar.appendChild(h("span", { class: "pb-insp-bar-label is-second", text: "État" }));
       var stateList = Array.isArray(schema.states) ? SPEC.states.filter(function (st) { return schema.states.indexOf(st.key) >= 0; }) : SPEC.states;
       bar.appendChild(h("div", { class: "pb-seg pb-state-seg", role: "radiogroup", "aria-label": "État de l'élément" }, [{ key: "normal", label: "Normal" }].concat(stateList).map(function (st) {
@@ -3142,7 +3198,7 @@
     // dans « Fond » (avec l'image et le dégradé)
     var keysOf = function (g) {
       var spec = schema.groups[g];
-      return Array.isArray(spec) ? spec.slice() : SPEC.styleProps.filter(function (p) { return p.group === g && (CHILD_FLEX.indexOf(p.key) < 0 || it.type === "column"); }).map(function (p) { return p.key; });
+      return Array.isArray(spec) ? spec.slice() : SPEC.styleProps.filter(function (p) { return p.group === g && (CHILD_FLEX.indexOf(p.key) < 0 || it.type === "column") && (p.key !== "lineClamp" || styleTarget); }).map(function (p) { return p.key; });
     };
     var plan = [];
     var order = schema.order || GROUP_ORDER;
@@ -3296,12 +3352,14 @@
   function renderInspector() {
     if (typeof cpop !== "undefined" && cpop && !cpop.hidden) { cpop.hidden = true; cpopFor = null; }
     var box = $("[data-pb-inspector]");
+    if (box.dataset.for !== selection.join(",")) styleTarget = null; // un autre élément : on repart du widget lui-même
     var keepScroll = box.dataset.for === selection.join(",") ? inspScroll : 0;
     box.textContent = "";
     box.dataset.for = selection.join(",");
     // fieldSeq n'est JAMAIS remis à zéro : les identifiants (pb-f-N) restent uniques dans toute la page, sinon un libellé de
     // l'inspecteur désignait un champ d'un autre panneau (réglages de la page…) au clic et pour les lecteurs d'écran
     var items = selectedItems();
+    if (styleTarget && !(items.length === 1 && partDef(items[0], styleTarget))) styleTarget = null;
     // Rien de sélectionné : état vide, et seulement quelques actions globales réelles
     if (!items.length) {
       box.appendChild(h("div", { class: "pb-insp-empty" },
@@ -3352,6 +3410,7 @@
     box.appendChild(tablist);
     var body = h("div", { class: "pb-insp-body", role: "tabpanel" });
     box.appendChild(body);
+    if (inspTab !== "style") styleTarget = null; // les parties ne se règlent que dans l'onglet Style
     if (inspTab === "general") generalTab(it, body, locked);
     else if (inspTab === "interactions") interactionsTab(it, body, locked);
     else if (inspTab === "content") {
@@ -3517,7 +3576,7 @@
       b("Dupliquer", duplicateSelected, { disabled: !canWrite }),
       b("Copier le style", copyStyle),
       b("Coller le style", function () { pasteStyle(); }, { disabled: !canWrite || locked }),
-      b("Réinitialiser le style", resetStyle, { disabled: !canWrite || locked || !items.some(function (x) { return x.styles || x.states; }) }),
+      b("Réinitialiser le style", resetStyle, { disabled: !canWrite || locked || !items.some(function (x) { return x.styles || x.states || x.parts; }) }),
       items.length > 1 ? b("Grouper", groupSelected, { disabled: !canWrite || locked }) : null,
       single && ["group", "stack", "container"].indexOf(it.type) >= 0 ? b("Dissocier", ungroupSelected, { disabled: !canWrite || locked }) : null,
       b("Supprimer", removeSelected, { class: "btn btn-danger btn-sm", disabled: !canWrite || locked })));
@@ -4184,7 +4243,7 @@
     doc.body.classList.toggle("pb-outlines", aids.outlines);
     doc.body.classList.toggle("pb-hand", tool === "hand");
     frame.contentWindow.scrollTo(0, y);
-    doc.addEventListener("mousedown", function () { canvasPointerAt = Date.now(); closeMenu(); }, true); // le canevas est un iframe : ses clics n'atteignent pas l'écouteur du document parent
+    doc.addEventListener("mousedown", function (e) { canvasPointerAt = Date.now(); closeMenu(); releasePart(e); }, true); // le canevas est un iframe : ses clics n'atteignent pas l'écouteur du document parent
     doc.addEventListener("keydown", function (e) { if (e.key === "Tab") tabAt = Date.now(); }, true);
     frame.contentWindow.addEventListener("focus", function () {
       if (editing || Date.now() - canvasPointerAt < 1500 || Date.now() - tabAt < 500) return;
@@ -6166,7 +6225,7 @@
       ["Coller", paste, !canWrite, "Ctrl+V"],
       ["Copier le style", copyStyle, false, "Ctrl+Alt+C"],
       ["Coller le style", function () { pasteStyle(); }, !canWrite || locked, "Ctrl+Maj+V"],
-      ["Réinitialiser le style", resetStyle, !canWrite || locked || !items.some(function (z) { return z.styles || z.states; })],
+      ["Réinitialiser le style", resetStyle, !canWrite || locked || !items.some(function (z) { return z.styles || z.states || z.parts; })],
       "-",
       items.length === 1 ? ["Renommer", function () { var row = treeEl.querySelector('.pb-node[data-id="' + it.id + '"] > .pb-row-item'); if (row) startRename(row, it); }, !canWrite, "F2"] : null,
       [items.some(function (z) { return z.hidden; }) ? "Afficher" : "Masquer", function () { setFlag(selection.slice(), "hidden", !items.some(function (z) { return z.hidden; })); }, !canWrite, "Ctrl+Maj+H"],
@@ -6210,6 +6269,10 @@
     else if (e.key === "ArrowUp") { e.preventDefault(); (list[i - 1] || list[list.length - 1]).focus(); }
     else if (e.key === "Escape" || e.key === "Tab") { e.preventDefault(); closeMenu(); }
   });
+  // Un geste hors de l'inspecteur (poignée, glisser, barre contextuelle, menu…) agit toujours sur le widget lui-même : la partie choisie est lâchée avant
+  var inInspectorFlow = ".pb-right, [data-pb-inspector], .pb-cpop, .pb-amenu, .pb-dyn-pop, .kf-panel, .pb-menu, .pb-tip, .pb-toast";
+  var releasePart = function (e) { if (styleTarget && !(e.target.closest && e.target.closest(inInspectorFlow))) { styleTarget = null; renderInspector(); } };
+  document.addEventListener("mousedown", releasePart, true);
   var menuWasOpenAtPress = false;
   document.addEventListener("mousedown", function (e) { menuWasOpenAtPress = !menu.hidden && Boolean(e.target.closest && e.target.closest("[data-pb-mainmenu]")); if (!menu.hidden && !menu.contains(e.target)) closeMenu(); }, true);
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !menu.hidden) closeMenu(); }); // Échap ferme aussi quand le focus n'est plus dans le menu
@@ -6516,6 +6579,7 @@
     var typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
     var mod = e.metaKey || e.ctrlKey;
     var k = (e.key || "").toLowerCase();
+    if (!typing && styleTarget) styleTarget = null; // touches de l'éditeur (déplacements…) : sur le widget, jamais sur une partie
     if (mod && k === "s") { e.preventDefault(); saveNow(); return; }
     if (mod && e.shiftKey && k === "y") { e.preventDefault(); setDockMode(dock.mode === "closed" ? dock.last : "closed"); return; }
     if (mod && k === "k") { e.preventDefault(); if (cmdDialog.open) cmdDialog.close(); else openCommands(""); return; }

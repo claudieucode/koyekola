@@ -97,6 +97,7 @@ const gridTrack = (v) => {
   return parts.every((t) => /^(\d{1,2}(\.\d)?fr|\d{1,4}px|\d{1,3}%|auto)$/.test(t)) ? s : null;
 };
 const len = lengthOf(), lenAuto = lengthOf({ auto: true }), lenSize = lengthOf({ intrinsic: true }), lenSizeAuto = lengthOf({ auto: true, intrinsic: true }), lenNeg = lengthOf({ negative: true }), marginLen = lengthOf({ auto: true, negative: true });
+const partsLib = require("./parts");
 const STYLE_PROPS = {
   display: { css: "display", check: oneOf("block", "flex", "grid", "inline-block", "inline", "inline-flex", "none"), group: "layout" },
   flexDirection: { css: "flex-direction", check: oneOf("row", "column", "row-reverse", "column-reverse"), group: "layout" },
@@ -154,6 +155,7 @@ const STYLE_PROPS = {
   fontWeight: { css: "font-weight", check: oneOf("300", "400", "500", "600", "700", "800", "900"), group: "typography" },
   fontStyle: { css: "font-style", check: oneOf("normal", "italic"), group: "typography" },
   lineHeight: { css: "line-height", check: numberIn(0.8, 3), group: "typography" },
+  lineClamp: { css: "-webkit-line-clamp", check: numberIn(1, 10, { integer: true }), group: "typography" }, // nombre de lignes maximum (le reste est coupé) : voir declarations()
   letterSpacing: { css: "letter-spacing", check: lenNeg, group: "typography" },
   wordSpacing: { css: "word-spacing", check: lenNeg, group: "typography" },
   textIndent: { css: "text-indent", check: lenNeg, group: "typography" },
@@ -282,6 +284,7 @@ function declarations(set, band = false) {
     const p = STYLE_PROPS[k];
     if (p) d.push(band && (k === "paddingLeft" || k === "paddingRight") ? `--kw-p${k === "paddingLeft" ? "l" : "r"}:${p.out ? p.out(v) : v}` : `${p.css}:${p.out ? p.out(v) : v}`);
   }
+  if (set.lineClamp !== undefined) d.push("display:-webkit-box", "-webkit-box-orient:vertical", "overflow:hidden");
   for (const [axis, css] of [["Column", "grid-column"], ["Row", "grid-row"]]) {
     const start = set[`grid${axis}Start`], end = set[`grid${axis}End`], span = set[`grid${axis}Span`];
     if (start !== undefined || end !== undefined) d.push(`${css}:${start !== undefined ? start : "auto"} / ${end !== undefined ? end : span !== undefined ? `span ${span}` : "auto"}`);
@@ -1098,7 +1101,7 @@ const STYLE_UI = {
   paddingTop: ["Intérieur haut"], paddingRight: ["Intérieur droite"], paddingBottom: ["Intérieur bas"], paddingLeft: ["Intérieur gauche"],
   fontFamily: ["Police", { heading: "Titres du site", body: "Texte du site", system: "Système", serif: "Avec empattements", mono: "Chasse fixe" }],
   fontSize: ["Taille"], fontWeight: ["Graisse", { 300: "Légère", 400: "Normale", 500: "Moyenne", 600: "Demi-grasse", 700: "Grasse", 800: "Extra-grasse", 900: "Noire" }],
-  fontStyle: ["Style", { normal: "Normal", italic: "Italique" }], lineHeight: ["Interligne"], letterSpacing: ["Espacement des lettres"], wordSpacing: ["Espacement des mots"], textIndent: ["Retrait de première ligne"],
+  fontStyle: ["Style", { normal: "Normal", italic: "Italique" }], lineHeight: ["Interligne"], lineClamp: ["Lignes maximum"], letterSpacing: ["Espacement des lettres"], wordSpacing: ["Espacement des mots"], textIndent: ["Retrait de première ligne"],
   textTransform: ["Casse", { none: "Normale", uppercase: "MAJUSCULES", lowercase: "minuscules", capitalize: "Première Lettre" }],
   textAlign: ["Alignement du texte", { left: "Gauche", center: "Centre", right: "Droite", justify: "Justifié" }],
   textShadow: ["Ombre du texte", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", glow: "Halo clair" }],
@@ -1129,12 +1132,12 @@ function editorSpec() {
   const kind = (k) => {
     const p = STYLE_PROPS[k];
     if (p.check === color || [ "color", "backgroundColor", "borderColor" ].includes(k)) return "color";
-    if (["columns", "lineHeight", "opacity", "zIndex", "flexGrow", "flexShrink", "order", "gridRows", "gridColumnSpan", "gridRowSpan", "gridColumnStart", "gridColumnEnd", "gridRowStart", "gridRowEnd", "transitionDuration", "backdropBlur"].includes(k)) return "number";
+    if (["columns", "lineHeight", "lineClamp", "opacity", "zIndex", "flexGrow", "flexShrink", "order", "gridRows", "gridColumnSpan", "gridRowSpan", "gridColumnStart", "gridColumnEnd", "gridRowStart", "gridRowEnd", "transitionDuration", "backdropBlur"].includes(k)) return "number";
     if (k === "gridTemplate" || k === "gridRowsTemplate") return "text";
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
   return {
-    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], ...(SITE_SUB[type] ? { sub: SITE_SUB[type] } : {}), keywords: WIDGETS[type][1], description: (CUSTOM_WIDGETS[type] && CUSTOM_WIDGETS[type].description) || WIDGET_DESCRIPTIONS[type] || "", requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text", ...(CUSTOM_WIDGETS[type].status ? { status: CUSTOM_WIDGETS[type].status } : {}), ...(CUSTOM_WIDGETS[type].dependencies ? { dependencies: CUSTOM_WIDGETS[type].dependencies } : {}) } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
+    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], ...(partsLib.PARTS[type] ? { parts: partsLib.spec(type) } : {}), ...(SITE_SUB[type] ? { sub: SITE_SUB[type] } : {}), keywords: WIDGETS[type][1], description: (CUSTOM_WIDGETS[type] && CUSTOM_WIDGETS[type].description) || WIDGET_DESCRIPTIONS[type] || "", requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text", ...(CUSTOM_WIDGETS[type].status ? { status: CUSTOM_WIDGETS[type].status } : {}), ...(CUSTOM_WIDGETS[type].dependencies ? { dependencies: CUSTOM_WIDGETS[type].dependencies } : {}) } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
     codeLanguages: Object.entries(require("./highlight").LABELS), categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, siteSubs: SITE_SUBS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
@@ -1593,6 +1596,8 @@ function normalizeNode(raw, at, h, depth, counter) {
   const styles = normalizeStyles(raw.styles, raw.states, where, h);
   if (styles.styles) node.styles = styles.styles;
   if (styles.states) node.states = styles.states;
+  const parts = normalizeParts(raw.type, raw.parts, where, h);
+  if (parts) node.parts = parts;
   if (def.container) {
     const kids = Array.isArray(raw.children) ? raw.children : [];
     node.children = kids.map((c, i) => normalizeNode(c, `${where} › élément ${i + 1}`, h, depth + 1, counter));
@@ -1602,6 +1607,26 @@ function normalizeNode(raw, at, h, depth, counter) {
     }
   }
   return node;
+}
+// Parties stylables d'un widget (voir parts.js) : chaque partie reçoit le jeu de styles COMPLET validé comme celui de la racine, restreint aux groupes
+// et aux états que le registre autorise pour elle. Une partie inconnue ou une propriété hors de ses groupes est refusée (jamais ignorée en silence).
+function normalizeParts(type, raw, at, h) {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${at} : parties invalides.`);
+  const defs = partsLib.PARTS[type];
+  const groupOf = (k) => (k === "backgroundColor" ? "background" : (STYLE_PROPS[k] || COMPOSED[k] || {}).group); // la couleur de fond est réglée dans « Fond » (comme dans l'Inspector)
+  const out = {};
+  for (const [key, val] of Object.entries(raw)) {
+    const def = defs && Object.hasOwn(defs, key) ? defs[key] : null;
+    if (!def) throw new Error(`${at} : « ${key} » n'est pas une partie stylable de cet élément.`);
+    const st = normalizeStyles(val && val.styles, val && val.states, `${at} › ${def.label}`, h);
+    for (const set of [...Object.values(st.styles || {}), ...Object.values(st.states || {})]) {
+      for (const k of Object.keys(set)) if (!partsLib.allows(def, k, groupOf)) throw new Error(`${at} › ${def.label} : le réglage « ${k} » n'est pas disponible pour cette partie.`);
+    }
+    for (const state of Object.keys(st.states || {})) if (!def.states.includes(state)) throw new Error(`${at} › ${def.label} : l'état « ${state} » n'est pas disponible pour cette partie.`);
+    if (st.styles || st.states) out[key] = st;
+  }
+  return Object.keys(out).length ? out : null;
 }
 function normalizeStyles(styles, states, at, h) {
   const out = {};
@@ -1707,6 +1732,25 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
   const usedAnims = new Set(); // animations réellement utilisées : seules leurs images-clés sont écrites dans la page
   const clamps = { tablet: [], mobile: [] }; // cases de grille ramenées au nombre de colonnes de l'écran : écrites après toutes les autres règles
+  // Parties d'un widget : mêmes écrans et mêmes états que la racine, sélecteur fixé par le registre (parts.js). `.kw-node.kw-n-<id>` donne à la règle une
+  // spécificité supérieure aux styles par défaut du site pour ces zones : le réglage de l'auteur l'emporte sans « !important ».
+  const addParts = (n) => {
+    const defs = partsLib.PARTS[n.type];
+    if (!defs || !n.parts || !NODE_ID.test(String(n.id || ""))) return;
+    for (const [key, set] of Object.entries(n.parts)) {
+      const def = defs[key];
+      if (!def) continue;
+      const sel = `.kw-node.kw-n-${n.id} ${def.select}`;
+      for (const bp of BREAKPOINTS) {
+        const d = set.styles && set.styles[bp.key] ? declarations(set.styles[bp.key]) : "";
+        if (d) (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
+      }
+      for (const state of STATES) {
+        const d = set.states && set.states[state.key] ? declarations(set.states[state.key]) : "";
+        if (d) rules.base.push(`${sel}${state.sel}{${d}}`);
+      }
+    }
+  };
   const add = (id, styles, states, band = false) => {
     if (!NODE_ID.test(String(id || ""))) return;
     const sel = `.kw-n-${id}`;
@@ -1747,6 +1791,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       if (seenIds.has(n.id)) return;
       seenIds.add(n.id);
       add(n.id, n.styles, n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full));
+    addParts(n);
       if (n.children && n.children.length) rowMarginRules(n.id, n.type, n.styles, n.children, false);
       // Image : « Hauteur » et « Proportions » de l'élément s'appliquent à la boîte (<figure>) ; l'image doit la REMPLIR pour que « Cadrage » et « Point focal »
       // aient un effet (sans cela l'image garde sa hauteur naturelle et la boîte reste vide en dessous). Seulement pour un écran qui fixe l'une de ces valeurs :

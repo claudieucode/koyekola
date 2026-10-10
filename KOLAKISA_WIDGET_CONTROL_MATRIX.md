@@ -83,23 +83,23 @@ Légende — *Profil* : BOX (boîte), TEXTUAL (typographie + couleurs), « sur m
 | `quote` | Citation | general | TEXTUAL | — | — | — | **COMPLET** |
 | `code` | Code (texte) | general | TEXTUAL | — | — | — | **COMPLET** |
 | `image` | Image | basic | sur mesure | tous | — | — | **COMPLET** |
-| `gallery` | Galerie | general | sur mesure | — | gallery-item | — | **COMPLET** |
+| `gallery` | Galerie | general | sur mesure | — | gallery-item | Parties stylables : Vignette, Image, Légende | **COMPLET (parties)** |
 | `video` | Vidéo | basic | sur mesure | — | — | — | **COMPLET** |
 | `audio` | Audio | general | sur mesure | — | — | — | **COMPLET** |
 | `button` | Bouton | basic | sur mesure | tous | btn-icon | variante (primaire / contour) et icône | **PARTIEL** |
 | `link` | Lien | basic | sur mesure | tous | — | — | **COMPLET** |
-| `accordion` | Accordéon / FAQ | general | TEXTUAL | — | acc | — | **COMPLET** |
+| `accordion` | Accordéon / FAQ | general | TEXTUAL | — | acc | Parties stylables : Question + réponse, Question, Réponse | **COMPLET (parties)** |
 | `tabs` | Onglets | general | TEXTUAL | — | tab-icon-src, tab-panel, tab-title, tabs | — | **LIMITÉ** |
 | `badge` | Badge | general | sur mesure | — | badge | — | **COMPLET** |
-| `timeline` | Chronologie | general | TEXTUAL | — | tl-date, tl-item, tl-text, tl-title | — | **LIMITÉ** |
-| `progress` | Barre de progression | general | sur mesure | — | progress-bar, progress-head, progress-track | — | **LIMITÉ** |
+| `timeline` | Chronologie | general | TEXTUAL | — | tl-date, tl-item, tl-text, tl-title | Parties stylables : Étape, Date, Titre, Texte | **COMPLET (parties)** |
+| `progress` | Barre de progression | general | sur mesure | — | progress-bar, progress-head, progress-track | Parties stylables : Libellé et valeur, Piste, Barre | **COMPLET (parties)** |
 | `menu` | Menu de navigation | site | TEXTUAL | tous | menu-item, menu-link, menu-list, menu-toggle, sub-toggle, submenu | — | **LIMITÉ** |
 | `carousel` | Carrousel d'images | general | sur mesure | — | carousel, carousel-slide, carousel-track, dots | — | **LIMITÉ** |
-| `toggle` | Bascule | general | TEXTUAL | — | toggle-body, toggle-title | — | **LIMITÉ** |
-| `alert` | Alerte | general | TEXTUAL | — | alert, alert-body, alert-icon, alert-title, dismiss | — | **LIMITÉ** |
-| `counter` | Compteur | general | sur mesure | — | counter-label, counter-num, counter-value | — | **LIMITÉ** |
-| `testimonial` | Témoignage | general | sur mesure | tous | avatar, stars, testimonial-role, testimonial-text, testimonial-who | — | **LIMITÉ** |
-| `pricing` | Offre tarifaire | advanced | sur mesure | tous | pricing-badge, pricing-cta, pricing-desc, pricing-features, pricing-price, pricing-title | — | **LIMITÉ** |
+| `toggle` | Bascule | general | TEXTUAL | — | toggle-body, toggle-title | Parties stylables : Titre, Contenu | **COMPLET (parties)** |
+| `alert` | Alerte | general | TEXTUAL | — | alert, alert-body, alert-icon, alert-title, dismiss | Parties stylables : Icône, Titre, Texte | **COMPLET (parties)** |
+| `counter` | Compteur | general | sur mesure | — | counter-label, counter-num, counter-value | Parties stylables : Nombre, Libellé | **COMPLET (parties)** |
+| `testimonial` | Témoignage | general | sur mesure | tous | avatar, stars, testimonial-role, testimonial-text, testimonial-who | Parties stylables : Étoiles, Citation, Auteur, Fonction, Photo | **COMPLET (parties)** |
+| `pricing` | Offre tarifaire | advanced | sur mesure | tous | pricing-badge, pricing-cta, pricing-desc, pricing-features, pricing-price, pricing-title | Parties stylables : Étiquette, Nom de l'offre, Prix, Description, Liste des avantages, Bouton | **COMPLET (parties)** |
 | `breadcrumb` | Fil d'Ariane | site | TEXTUAL | — | crumbs | — | **COMPLET** |
 | `social` | Réseaux sociaux | social | sur mesure | — | social-link | taille des icônes | **PARTIEL** |
 | `sharebuttons` | Boutons de partage | social | sur mesure | — | social-link | taille des icônes | **PARTIEL** |
@@ -109,8 +109,8 @@ Légende — *Profil* : BOX (boîte), TEXTUAL (typographie + couleurs), « sur m
 | `iconlist` | Liste d'icônes | general | TEXTUAL | — | iconlist-icon | couleur des icônes | **PARTIEL** |
 | `tooltip` | Infobulle | advanced | sur mesure | — | tip-bubble, tip-trigger | — | **LIMITÉ** |
 | `hotspot` | Image à points d'intérêt | advanced | sur mesure | — | hotspot-stage, spot-card, spot-dot | position des points | **PARTIEL** |
-| `posts` | Derniers articles du blog | site | TEXTUAL | — | post-body, post-card, post-date, post-excerpt, post-title, posts | — | **LIMITÉ** |
-| `courselist` | Formations du catalogue | commerce | TEXTUAL | — | course-card, course-price, post-body, post-excerpt, post-title | — | **LIMITÉ** |
+| `posts` | Derniers articles du blog | site | TEXTUAL | — | post-body, post-card, post-date, post-excerpt, post-title, posts | Parties stylables : Carte, Image, Corps de la carte, Date, Titre, Extrait | **COMPLET (parties)** |
+| `courselist` | Formations du catalogue | commerce | TEXTUAL | — | course-card, course-price, post-body, post-excerpt, post-title | Parties stylables : Carte, Image, Corps de la carte, Titre, Sous-titre, Prix, Bouton | **COMPLET (parties)** |
 | `search` | Recherche | site | sur mesure | — | — | — | **COMPLET** |
 | `account` | Compte du visiteur | site | TEXTUAL | tous | account-cart, account-link | — | **LIMITÉ** |
 | `dyntext` | Texte dynamique | advanced | TEXTUAL | — | — | — | **COMPLET** |
@@ -125,14 +125,14 @@ Légende — *Profil* : BOX (boîte), TEXTUAL (typographie + couleurs), « sur m
 | `addtocart` | Bouton d'achat | commerce | sur mesure | — | — | — | **COMPLET** |
 | `courserating` | Avis de la formation | commerce | TEXTUAL | — | — | — | **COMPLET** |
 | `animatedheading` | Titre animé | advanced | TEXTUAL | — | words | — | **COMPLET** |
-| `flipbox` | Boîte retournable | advanced | sur mesure | — | flip-back, flip-face, flip-front, flip-icon, flip-inner, flip-text, flip-title | — | **LIMITÉ** |
-| `pricelist` | Liste de prix | advanced | TEXTUAL | — | pl-dots, pl-head, pl-item, pl-price, pl-text, pl-title | — | **LIMITÉ** |
+| `flipbox` | Boîte retournable | advanced | sur mesure | — | flip-back, flip-face, flip-front, flip-icon, flip-inner, flip-text, flip-title | Parties stylables : Face avant, Face arrière, Titres, Textes | **COMPLET (parties)** |
+| `pricelist` | Liste de prix | advanced | TEXTUAL | — | pl-dots, pl-head, pl-item, pl-price, pl-text, pl-title | Parties stylables : Ligne, Intitulé, Prix, Description | **COMPLET (parties)** |
 | `toc` | Table des matières | advanced | TEXTUAL | — | toc-list, toc-title | — | **LIMITÉ** |
 | `readingprogress` | Barre de lecture | advanced | sur mesure | — | readbar, readbar-fill | — | **LIMITÉ** |
-| `signupform` | Formulaire | form | TEXTUAL | — | signup, signup-form, signup-intro, signup-submit, signup-title | — | **LIMITÉ** |
+| `signupform` | Formulaire | form | TEXTUAL | — | signup, signup-form, signup-intro, signup-submit, signup-title | Parties stylables : Titre, Introduction, Bouton d'envoi | **COMPLET (parties)** |
 | `map` | Google Maps | basic | sur mesure | — | map-frame | — | **COMPLET** |
-| `imagebox` | Boîte d'image | general | TEXTUAL | — | — | — | **COMPLET** |
-| `iconbox` | Boîte d'icône | general | TEXTUAL | — | — | — | **COMPLET** |
+| `imagebox` | Boîte d'image | general | TEXTUAL | — | — | Parties stylables : Image, Titre, Texte | **COMPLET (parties)** |
+| `iconbox` | Boîte d'icône | general | TEXTUAL | — | — | Parties stylables : Icône, Titre, Texte | **COMPLET (parties)** |
 | `rating` | Évaluation | general | sur mesure | — | rating-bg, rating-fill, rating-stars, rating-title, rating-value | — | **LIMITÉ** |
 | `menuanchor` | Ancre de menu | general | TEXTUAL | — | anchor-mark | — | **COMPLET** |
 | `icon` | Icône | basic | sur mesure | tous | — | — | **COMPLET** |
@@ -156,7 +156,9 @@ Légende — *Profil* : BOX (boîte), TEXTUAL (typographie + couleurs), « sur m
 | `minicart` * | Mini-panier | site | TEXTUAL | — | mc-count, mc-icon, mc-label | — | **LIMITÉ** |
 | `textpath` * | Texte sur un tracé | advanced | TEXTUAL | — | textpath-line, textpath-link, textpath-svg, textpath-text, tp | — | **LIMITÉ** |
 
-Totaux : COMPLET 37 · LIMITÉ 42 · PARTIEL 7 · DÉFECTUEUX 0 · ABSENT 0 · À INVESTIGUER : voir § 6.
+Totaux d'origine (audit) : COMPLET 37 · LIMITÉ 42 · PARTIEL 7 · DÉFECTUEUX 0 · ABSENT 0.
+
+**Mise à jour après les lots 4 à 7 : 16 widgets sont passés en « COMPLET (parties) »** (liste ci-dessous, lignes marquées) ; il reste des widgets LIMITÉS à traiter par familles (voir § 8).
 
 ## 6. À investiguer (non tranché par l'audit)
 
@@ -172,3 +174,20 @@ Totaux : COMPLET 37 · LIMITÉ 42 · PARTIEL 7 · DÉFECTUEUX 0 · ABSENT 0 · �
 * **Valeurs en dur** (`landing.css` l. 849–860) : colonnes `repeat(auto-fit, minmax(min(100%,220px),1fr))`, écart 18 px, carte (bordure `rgba(16,34,47,.12)`, rayon 12 px, fond), image 16/9 `cover`, corps (espace 6 px, marges 14/16 px), date 13 px, titre 18 px / 1,3, extrait 15 px ; liste = image 160 px à gauche, repli en colonne sous 560 px.
 * **Manques** par rapport à la mission : tout le § 14 sauf le conteneur global (dimensions, marges, fond, bordure de la racine existent) ; en particulier carte (fond, bordure, rayon, ombre, survol), image (ratio libre, hauteur, rayon, ajustement), date, titre (survol), extrait (lignes maximum), lien.
 * **Voie rapide existante** : grille à boucle + éléments dynamiques (§ 2, point 2), à conserver comme alternative « sur mesure ».
+
+## 8. Avancement (lots réalisés)
+
+| Lot | Résultat |
+|---|---|
+| 4a Filet de sécurité | `tests/widgets-parts-regression.test.js` + `tests/fixtures/widgets-regression.json` : JSON normalisé et CSS de chacun des 86 types, comparés à la référence d'avant : **identiques à l'octet** |
+| 4b Moteur de parties | `src/marketing/pages/parts.js` (registre), `normalizeParts` (validation par la grammaire fermée + groupes de la partie), `pageCss` (règles `.kw-node.kw-n-<id> <sélecteur>` par écran et par état), `editorSpec` (parties sans sélecteur) |
+| 5 Derniers articles | 6 parties : carte, image, corps, date, titre, extrait ; réglages vérifiés dans un vrai Chrome : Inspector → modèle → rendu → enregistrement → rechargement → annuler / rétablir → écrans → survol → aperçu → page publiée |
+| 6 Validation | page témoin sans partie : balisage identique et rendu d'origine ; aucune écriture de partie par un geste du canevas |
+| 7 Extension | 16 widgets déclarent leurs parties (voir tableau) ; `tests/widgets-parties-rendu-navigateur.test.js` applique un réglage-test à chaque partie et le relit dans la page rendue |
+| 8–9 Écrans / états | mêmes écrans que la racine ; survol / focus / clic proposés seulement aux parties interactives ; (états toujours sans déclinaison par écran, comme pour la racine) |
+| 10–11 Copier / coller | « Copier le style » conserve aussi les parties ; « Coller le style » les reprend entre widgets du même type, partie par partie, dans les limites de chaque partie |
+| 12 Accessibilité | le balisage ne change pas ; aucun contrôle sur l'`outline` ; les cases de contenu (afficher date / extrait / image) restent les seuls moyens de masquer |
+| 13 Performance | voir `KOLAKISA_WIDGET_REGRESSION_PLAN.md` § 10 |
+| Propriété ajoutée | « Lignes maximum » (`lineClamp`) pour les textes des parties (extrait…) : coupe proprement le texte |
+
+Non fait volontairement : classes globales portant des parties (LOT 10 de l'architecture) — le champ `parts` est facultatif et compatible, l'extension reste possible sans migration.

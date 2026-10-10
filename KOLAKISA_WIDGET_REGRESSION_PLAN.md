@@ -88,3 +88,12 @@ Remarque de fiabilité : sous forte charge de la machine, certains tests navigat
 ## 9. Critère de fin de chaque lot
 
 Un lot est terminé quand : (a) l'instantané « sortie identique » est vert, (b) les tests du lot sont verts en Chrome réel, (c) le banc de performance est dans les seuils, (d) la matrice (`KOLAKISA_WIDGET_CONTROL_MATRIX.md`) est mise à jour avec le nouveau statut, (e) la mise en ligne a été vérifiée.
+
+## 10. Résultats d'exécution (2026-10-10, lots 4 à 7)
+
+* **Sortie identique** : `tests/widgets-parts-regression.test.js` (JSON normalisé + CSS des 86 types, référence figée AVANT le moteur) vert après tous les lots.
+* **Moteur** : `tests/widgets-parts.test.js` (validation, refus, injection, CSS par écran / état, contrat gabarits / registre / spec éditeur) — 10 tests verts.
+* **Application réelle** : `tests/widgets-parties-rendu-navigateur.test.js` — chaque partie déclarée est stylée puis relue dans la page rendue ; seules sont exclues explicitement les widgets qui exigent un contenu réel (galerie, boîte d'image, formulaire) et les formations/images sans fichier.
+* **Parcours complet « Derniers articles »** : `tests/editeur-widgets-parties-navigateur.test.js` — Inspector → modèle → rendu → enregistrement → rechargement → annuler / rétablir → écrans → survol → aperçu → page publiée ; balisage identique avec et sans parties ; page témoin non modifiée.
+* **Suites existantes** (widgets, éditeur, canevas, mouvement, page-builder, site-widgets, bibliothèque de blocs, inspecteur) : 596 tests, tous verts sauf `refonte-design` « ombres teintées » (échec antérieur à ces lots, dû à des ombres noires ajoutées par une autre modification) ; le garde-fou « toute propriété de style a un test d'effet » a été complété pour `lineClamp`.
+* **Performance** (`scripts/perf/bench-page-builder.js`, même machine, avant / après) : 100 éléments — sélection 30,8 → 26,9 ms, saisie 24 → 24 ms, annuler 20,8 → 21,1 ms ; 400 éléments — sélection 43,1 → 42,8 ms, saisie 23 → 23,4 ms, dupliquer 50,8 → 47,7 ms, annuler 46,6 → 43,3 ms, glisser médiane 16,7 → 16,7 ms. Aucune différence au-delà du bruit de mesure ; poids du document inchangé (306 → 307 Ko à 400 éléments).
