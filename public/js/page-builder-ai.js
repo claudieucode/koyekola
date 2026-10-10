@@ -240,34 +240,39 @@
   function nodeIdOf(n) { return n.dataset.nodeId || n.dataset.sectionId || ""; }
   // Mesure le rendu de l'écran affiché (le cadre du canevas a la largeur de l'écran)
   function measure(bp) {
-    var doc = B.frame().contentDocument, win = doc.defaultView, vw = BP_W[bp], out = [], flagged = {};
-    var parentFlagged = function (n) { for (var p = n.parentElement; p; p = p.parentElement) if (flagged[nodeIdOf(p)]) return true; return false; };
-    $$("[data-node-id],[data-section-id]", doc).forEach(function (n) {
+    var doc = B.frame().contentDocument, win = doc.defaultView, vw = BP_W[bp], out = [], flagged = {}, over = {};
+    var nodes = $$("[data-node-id],[data-section-id]", doc);
+    var hasOverAbove = function (n) { for (var p = n.parentElement; p; p = p.parentElement) if (over[nodeIdOf(p)]) return true; return false; };
+    var hasOverBelow = function (n) { return Object.keys(over).some(function (id) { var d = B.canvasEl(id); return d && d !== n && n.contains(d); }); };
+    var add = function (id, kind, detail, value) { out.push({ id: id, kind: kind, bp: bp, detail: detail, value: value }); flagged[id] = true; };
+    // 1) débordements : seul l'élément le plus haut qui dépasse est signalé (ses enfants en sont la conséquence)
+    nodes.forEach(function (n) {
       var id = nodeIdOf(n), it = B.byId(id); if (!it) return;
       var r = n.getBoundingClientRect(), cs = win.getComputedStyle(n);
-      if (cs.display === "none" || r.width === 0) return;
-      var add = function (kind, detail, value) { out.push({ id: id, kind: kind, bp: bp, detail: detail, value: value }); flagged[id] = true; };
-      var fixed = cs.position === "fixed";
+      if (cs.display === "none" || r.width === 0 || cs.position === "fixed" || r.right <= vw + 2) return;
+      over[id] = true;
+      if (hasOverAbove(n)) { delete over[id]; over[id] = true; return; }
       var own = (it.styles && it.styles[bp]) || {}, base = (it.styles && it.styles.desktop) || {};
-      var wPx = pxOf(own.width || base.width);
-      if (!fixed && r.right > vw + 2 && !parentFlagged(n)) {
-        add(it.type === "image" ? "image" : wPx > vw ? "fixedWidth" : "overflow", "dépasse de " + Math.round(r.right - vw) + " px à droite de l'écran");
-        return;
-      }
-      var isText = ["heading", "text", "button", "quote"].indexOf(it.type) >= 0;
-      var fs = pxOf(cs.fontSize);
-      if (isText && fs && fs < 12) add("smallText", "texte de " + fs + " px", cs.fontSize);
-      else if (it.type === "heading" && fs > (bp === "mobile" ? 40 : 56)) add("bigText", "titre de " + Math.round(fs) + " px", cs.fontSize);
-      if ((it.type === "button" || (it.props && it.props.link)) && r.height < 40 && !flagged[id]) add("tapTarget", "zone de " + Math.round(r.height) + " px de haut", "");
+      add(id, it.type === "image" ? "image" : pxOf(own.width || base.width) > vw ? "fixedWidth" : "overflow", "dépasse de " + Math.round(r.right - vw) + " px à droite de l'écran");
+    });
+    // 2) lisibilité, zones tactiles, colonnes, marges
+    nodes.forEach(function (n) {
+      var id = nodeIdOf(n), it = B.byId(id); if (!it || flagged[id]) return;
+      var r = n.getBoundingClientRect(), cs = win.getComputedStyle(n);
+      if (cs.display === "none" || r.width === 0) return;
+      var isText = ["heading", "text", "button", "quote"].indexOf(it.type) >= 0, fs = pxOf(cs.fontSize);
+      if (isText && fs && fs < 12) { add(id, "smallText", "texte de " + fs + " px", cs.fontSize); return; }
+      if (it.type === "heading" && fs > (bp === "mobile" ? 40 : 56)) { add(id, "bigText", "titre de " + Math.round(fs) + " px", cs.fontSize); return; }
+      if ((it.type === "button" || (it.props && it.props.link)) && r.height < 40) { add(id, "tapTarget", "zone de " + Math.round(r.height) + " px de haut", ""); return; }
       if (cs.display === "grid") {
         var cols = cs.gridTemplateColumns.split(" ").filter(Boolean).length;
-        if (cols > (bp === "mobile" ? 1 : 3) && !flagged[id]) add("columns", cols + " colonnes sur " + vw + " px", String(cols));
-      } else if (cs.display === "flex" && cs.flexDirection.indexOf("row") === 0 && n.children.length >= 3 && bp === "mobile" && !flagged[id]) {
+        if (cols > (bp === "mobile" ? 1 : 3)) { add(id, "columns", cols + " colonnes sur " + vw + " px", String(cols)); return; }
+      } else if (cs.display === "flex" && cs.flexDirection.indexOf("row") === 0 && n.children.length >= 3 && bp === "mobile") {
         var narrow = $$(":scope > *", n).filter(function (c) { return c.getBoundingClientRect().width < 110; }).length;
-        if (narrow >= 2) add("columns", n.children.length + " blocs côte à côte sur " + vw + " px", "");
+        if (narrow >= 2) { add(id, "columns", n.children.length + " blocs côte à côte sur " + vw + " px", ""); return; }
       }
-      if (cs.display === "flex" && cs.flexWrap === "nowrap" && n.scrollWidth > n.clientWidth + 2 && !flagged[id]) add("noWrap", "contenu plus large que son bloc", "");
-      if (pxOf(cs.paddingLeft) + pxOf(cs.paddingRight) > vw * 0.2 && !flagged[id] && it.type !== "layout") add("bigPadding", "marges intérieures de " + Math.round(pxOf(cs.paddingLeft) + pxOf(cs.paddingRight)) + " px au total", "");
+      if (cs.display === "flex" && cs.flexWrap === "nowrap" && n.scrollWidth > n.clientWidth + 2 && !hasOverBelow(n)) { add(id, "noWrap", "contenu plus large que son bloc", ""); return; }
+      if (it.type !== "layout" && pxOf(cs.paddingLeft) + pxOf(cs.paddingRight) > vw * 0.2) add(id, "bigPadding", "marges intérieures de " + Math.round(pxOf(cs.paddingLeft) + pxOf(cs.paddingRight)) + " px au total", "");
     });
     return out;
   }
@@ -388,7 +393,8 @@
     var old = $(".pb-ai-textbox"); if (old) old.remove();
     var inp = h("input", { type: "text", class: "pb-ai-textbox", maxlength: 120, placeholder: "Texte puis Entrée", "aria-label": "Texte de l'annotation" });
     inp.style.left = e.clientX + "px"; inp.style.top = e.clientY + "px";
-    var done = function (ok) { var v = inp.value.trim(); inp.remove(); if (ok && v && S.annot) { S.annot.shapes.push({ kind: "text", pts: [p], text: v }); drawAnnot(); } };
+    var over = false;
+    var done = function (ok) { if (over) return; over = true; var v = inp.value.trim(); if (inp.parentNode) inp.remove(); if (ok && v && S.annot) { S.annot.shapes.push({ kind: "text", pts: [p], text: v }); drawAnnot(); } };
     inp.addEventListener("keydown", function (k) { if (k.key === "Enter") { k.preventDefault(); done(true); } else if (k.key === "Escape") { k.stopPropagation(); done(false); } });
     inp.addEventListener("blur", function () { done(true); });
     document.body.appendChild(inp); setTimeout(function () { inp.focus(); }, 0);

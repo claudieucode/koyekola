@@ -46,6 +46,7 @@ const labelOf = (n) => {
   const t = p.text || p.label || p.title || p.name || p.html || "";
   const txt = String(t).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 50);
   const def = nodes.NODE_TYPES[n && n.type];
+  if (n && n.type === "layout") return `Section${txt ? ` « ${txt} »` : ""}`;
   return `${(def && def.label) || (n && n.type) || "Élément"}${txt ? ` « ${txt} »` : ""}`;
 };
 
