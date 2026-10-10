@@ -3,7 +3,9 @@ const { createRepository } = require("../db/repository");
 const { transaction } = require("../db/tx");
 const { checkCtx, cleanText, audit, MarketingError } = require("./shared");
 
-const TYPES = ["text", "number", "date", "boolean", "select"];
+const TYPES = ["text", "number", "date", "boolean", "select", "multiselect", "url", "email", "phone"];
+// Types « étendus » (palier 15) : stockés comme « text » + format, ou « select » + choix multiple (la contrainte de la table ne change pas)
+const FORMATS = new Set(["url", "email", "phone"]);
 const RESERVED = new Set(["id", "email", "status", "first_name", "last_name", "phone", "company", "country", "language", "source", "lms_user_id", "tags", "lists", "created_at", "updated_at", "organization_id"]);
 const KEY = /^[a-z][a-z0-9_]{0,39}$/;
 const TRUE = new Set(["true", "1", "oui", "yes", "vrai", "o", "y"]);
@@ -18,14 +20,17 @@ function defineProperty(ctx, { key, label, type, options = [] } = {}) {
   const cleanLabel = cleanText(label, { max: 100, field: "label" });
   if (!cleanLabel) throw new MarketingError("invalid_property", "Le libellé est obligatoire.");
   let json = "[]";
-  if (type === "select") {
+  const format = FORMATS.has(type) ? type : "";
+  const multiple = type === "multiselect" ? 1 : 0;
+  const storedType = format ? "text" : multiple ? "select" : type;
+  if (storedType === "select") {
     const list = Array.isArray(options) ? [...new Set(options.map((o) => cleanText(o, { max: 100, field: "option" })).filter(Boolean))] : [];
     if (!list.length || list.length > 50) throw new MarketingError("invalid_property", "Un choix multiple demande de 1 à 50 options.");
     json = JSON.stringify(list);
   }
   const repo = createRepository(ctx.db, ctx.organizationId).table("mk_property_defs");
   if (repo.count({ key }) > 0) throw new MarketingError("duplicate", "Une propriété avec cette clé existe déjà.");
-  const row = repo.insert({ key, label: cleanLabel, type, options: json });
+  const row = repo.insert({ key, label: cleanLabel, type: storedType, options: json, format, multiple });
   audit(ctx, "property.created", "property", row.id, { key, type });
   return row;
 }
@@ -61,13 +66,37 @@ function coerce(def, raw) {
     if (FALSE.has(text)) return { ...blank, value_boolean: 0 };
     throw bad("oui/non attendu.");
   }
+  if (def.type === "select" && def.multiple === 1) {
+    const list = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(",") : null;
+    if (!list || list.some((v) => typeof v !== "string")) throw bad("une liste de valeurs est attendue.");
+    const allowed = JSON.parse(def.options);
+    const picked = [...new Set(list.map((v) => cleanText(v, { max: 100, field: def.key })).filter(Boolean))];
+    if (!picked.length || picked.some((v) => !allowed.includes(v))) throw bad("valeur hors de la liste autorisée.");
+    return { ...blank, value_text: JSON.stringify(picked) };
+  }
   if (typeof raw !== "string") throw bad("un texte est attendu.");
   const text = cleanText(raw, { max: 500, field: def.key });
   if (def.type === "select" && !JSON.parse(def.options).includes(text)) throw bad("valeur hors de la liste autorisée.");
+  if (def.format === "url") {
+    let url;
+    try { url = new URL(text); } catch { throw bad("une adresse web complète (https://…) est attendue."); }
+    if (!["http:", "https:"].includes(url.protocol)) throw bad("seules les adresses http(s) sont acceptées.");
+    return { ...blank, value_text: url.href.slice(0, 500) };
+  }
+  if (def.format === "email") {
+    const check = require("./email").validateEmail(text);
+    if (!check.ok) throw bad(check.reason);
+    return { ...blank, value_text: check.email };
+  }
+  if (def.format === "phone") {
+    const r = require("../sms/phone").normalizePhone(text);
+    if (!r.ok) throw bad(r.reason);
+    return { ...blank, value_text: r.e164 };
+  }
   return { ...blank, value_text: text };
 }
 
-const isEmpty = (v) => v === null || v === undefined || (typeof v === "string" && v.trim() === "");
+const isEmpty = (v) => v === null || v === undefined || (typeof v === "string" && v.trim() === "") || (Array.isArray(v) && v.length === 0);
 
 // Écrit plusieurs valeurs d'un coup, ATOMIQUEMENT. Une valeur vide retire la propriété (sauf { skipEmpty } : on ignore).
 function setContactProperties(ctx, contactId, values, { skipEmpty = false } = {}) {
@@ -108,13 +137,13 @@ function getContactProperties(ctx, contactId) {
   checkCtx(ctx);
   const rows = ctx.db
     .prepare(
-      `SELECT d.key, d.type, v.value_text, v.value_number, v.value_date, v.value_boolean FROM mk_contact_property_values v
+      `SELECT d.key, d.type, d.multiple, v.value_text, v.value_number, v.value_date, v.value_boolean FROM mk_contact_property_values v
        JOIN mk_property_defs d ON d.id = v.property_id
        WHERE v.contact_id = ? AND v.organization_id = ? ORDER BY d.key`
     )
     .all(contactId, ctx.organizationId);
   const out = {};
-  for (const r of rows) out[r.key] = r.type === "number" ? r.value_number : r.type === "date" ? r.value_date : r.type === "boolean" ? r.value_boolean === 1 : r.value_text;
+  for (const r of rows) out[r.key] = r.type === "number" ? r.value_number : r.type === "date" ? r.value_date : r.type === "boolean" ? r.value_boolean === 1 : r.multiple === 1 ? JSON.parse(r.value_text || "[]") : r.value_text;
   return out;
 }
 

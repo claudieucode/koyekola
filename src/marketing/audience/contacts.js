@@ -39,7 +39,10 @@ function findByEmail(ctx, email) {
   checkCtx(ctx);
   const normalized = normalizeEmail(email);
   if (!normalized) return null;
-  return ctx.db.prepare("SELECT * FROM mk_contacts WHERE organization_id = ? AND email = ?").get(ctx.organizationId, normalized) ?? null;
+  const direct = ctx.db.prepare("SELECT * FROM mk_contacts WHERE organization_id = ? AND email = ?").get(ctx.organizationId, normalized);
+  if (direct) return direct;
+  // Autre adresse d'un contact fusionné (palier 15) : on retrouve la fiche maître
+  return ctx.db.prepare("SELECT c.* FROM mk_contact_aliases a JOIN mk_contacts c ON c.id = a.contact_id WHERE a.organization_id = ? AND a.email = ?").get(ctx.organizationId, normalized) ?? null;
 }
 
 function getContact(ctx, id) {
@@ -111,11 +114,26 @@ function deleteContact(ctx, id, { suppress = false } = {}) {
   // Fichiers envoyés par ses formulaires (dossier protégé uploads/forms/<organisation>/) : relevés AVANT, effacés du
   // disque APRÈS la suppression en base (leurs lignes partent avec le contact, en cascade)
   const { resolveUpload } = require("../../utils/storage");
-  const files = ctx.db.prepare("SELECT path FROM mk_form_files WHERE organization_id = ? AND contact_id = ?").all(ctx.organizationId, id)
+  const family = [id, ...ctx.db.prepare("SELECT id FROM mk_contacts WHERE organization_id = ? AND merged_into_id = ?").all(ctx.organizationId, id).map((r) => r.id)];
+  const files = family.flatMap((cid) => ctx.db.prepare("SELECT path FROM mk_form_files WHERE organization_id = ? AND contact_id = ?").all(ctx.organizationId, cid))
     .map((f) => (f.path.startsWith(`/uploads/forms/${ctx.organizationId}/`) ? resolveUpload(f.path) : null)).filter(Boolean);
   const done = transaction(ctx.db, () => {
+    // Contact Core : une fiche maître emporte avec elle les fiches qu'elle avait absorbées (données de la même personne) ;
+    // les événements restent dans le journal mais sans identité (contact, e-mail et données associées retirés)
+    ctx.db.prepare("DELETE FROM mk_contact_merges WHERE organization_id = ? AND (master_id = ? OR source_id = ?)").run(ctx.organizationId, id, id);
+    const absorbed = ctx.db.prepare("SELECT id, email FROM mk_contacts WHERE organization_id = ? AND merged_into_id = ?").all(ctx.organizationId, id);
+    for (const old of absorbed) {
+      ctx.db.prepare("UPDATE mk_events SET contact_id = NULL, email = NULL, metadata = '{}' WHERE organization_id = ? AND contact_id = ?").run(ctx.organizationId, old.id);
+      createRepository(ctx.db, ctx.organizationId).table("mk_contacts").remove(old.id);
+    }
+    ctx.db.prepare("UPDATE mk_events SET contact_id = NULL, email = NULL, metadata = '{}' WHERE organization_id = ? AND contact_id = ?").run(ctx.organizationId, id);
+    // Événements rattachés à l'adresse seule (ex. commentaires d'un invité) : l'adresse et les données associées sont retirées aussi
+    for (const address of [contact.email, ...ctx.db.prepare("SELECT email FROM mk_contact_aliases WHERE organization_id = ? AND contact_id = ?").all(ctx.organizationId, id).map((r) => r.email)]) {
+      ctx.db.prepare("UPDATE mk_events SET email = NULL, metadata = '{}' WHERE organization_id = ? AND email = ?").run(ctx.organizationId, address);
+    }
     if (suppress) {
-      ctx.db.prepare("INSERT OR IGNORE INTO mk_suppressions (organization_id, email, reason) VALUES (?, ?, 'erasure')").run(ctx.organizationId, contact.email);
+      const emails = [contact.email, ...ctx.db.prepare("SELECT email FROM mk_contact_aliases WHERE organization_id = ? AND contact_id = ?").all(ctx.organizationId, id).map((r) => r.email)];
+      for (const address of emails) ctx.db.prepare("INSERT OR IGNORE INTO mk_suppressions (organization_id, email, reason) VALUES (?, ?, 'erasure')").run(ctx.organizationId, address);
     }
     const removed = createRepository(ctx.db, ctx.organizationId).table("mk_contacts").remove(id);
     if (removed) audit(ctx, "contact.deleted", "contact", id, { suppress });
@@ -131,7 +149,11 @@ const DAY_MS = 86_400_000;
 const sqlDate = (ms) => new Date(ms).toISOString().slice(0, 19).replace("T", " ");
 
 // « custom » : fragment SQL déjà construit PAR LE SERVEUR (ex. un segment enregistré) — jamais issu d'une entrée utilisateur
-function filters(ctx, { status, q, listId, tagId, source, sendable, sinceDays, custom } = {}) {
+const RECORD_STATUSES = ["active", "inactive", "archived", "merged"];
+const CONSENT_FILTERS = ["granted", "withdrawn", "none"];
+const ymd = (v) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+
+function filters(ctx, { status, q, listId, tagId, source, sendable, sinceDays, custom, noSensitiveSearch, lifecycle, recordStatus, siteId, consent, createdFrom, createdTo, activeSinceDays, inactiveDays, userLinked } = {}) {
   const where = ["c.organization_id = ?"];
   const params = [ctx.organizationId];
   if (status !== undefined) {
@@ -141,8 +163,14 @@ function filters(ctx, { status, q, listId, tagId, source, sendable, sinceDays, c
   }
   if (typeof q === "string" && q.trim()) {
     const like = `%${escapeLike(q.trim().slice(0, 100))}%`;
-    where.push("(c.email LIKE ? ESCAPE '\\' OR c.first_name LIKE ? ESCAPE '\\' OR c.last_name LIKE ? ESCAPE '\\' OR c.company LIKE ? ESCAPE '\\')");
-    params.push(like, like, like, like);
+    // Sans le droit « données sensibles » : on ne cherche que dans les noms (sinon la recherche révélerait adresses et numéros)
+    if (noSensitiveSearch) { where.push("(c.first_name LIKE ? ESCAPE '\\' OR c.last_name LIKE ? ESCAPE '\\' OR c.company LIKE ? ESCAPE '\\')"); params.push(like, like, like); }
+    else {
+    const digits = q.replace(/[^\d+]/g, "");
+    const phoneLike = digits.replace(/\D/g, "").length >= 4 ? `%${escapeLike(digits.replace(/^\+/, ""))}%` : null;
+    where.push(`(c.email LIKE ? ESCAPE '\\' OR c.first_name LIKE ? ESCAPE '\\' OR c.last_name LIKE ? ESCAPE '\\' OR c.company LIKE ? ESCAPE '\\'${phoneLike ? " OR c.normalized_phone LIKE ? ESCAPE '\\' OR c.phone LIKE ? ESCAPE '\\'" : ""})`);
+    params.push(like, like, like, like, ...(phoneLike ? [phoneLike, `%${escapeLike(q.trim().slice(0, 100))}%`] : []));
+    }
   }
   if (listId !== undefined) {
     where.push("EXISTS (SELECT 1 FROM mk_list_members m WHERE m.contact_id = c.id AND m.list_id = ? AND m.organization_id = c.organization_id)");
@@ -167,6 +195,32 @@ function filters(ctx, { status, q, listId, tagId, source, sendable, sinceDays, c
     where.push("c.created_at >= ?");
     params.push(sqlDate(now - days * DAY_MS));
   }
+  // ----- Contact Core (palier 15) -----
+  if (typeof lifecycle === "string" && lifecycle) { where.push("c.lifecycle_stage = ?"); params.push(lifecycle.slice(0, 31)); }
+  // « live » = fiches actives ou inactives (le défaut de l'interface) ; sans ce critère, toutes les fiches (compatibilité)
+  if (recordStatus === "live") where.push("c.record_status IN ('active', 'inactive')");
+  else if (recordStatus !== undefined && recordStatus !== "all") {
+    if (!RECORD_STATUSES.includes(recordStatus)) throw new MarketingError("invalid_field", "État de fiche inconnu.");
+    where.push("c.record_status = ?"); params.push(recordStatus);
+  }
+  if (siteId !== undefined && siteId !== null) {
+    if (!Number.isInteger(Number(siteId)) || Number(siteId) < 1) throw new MarketingError("invalid_field", "Site invalide.");
+    where.push("(c.origin_site_id = ? OR EXISTS (SELECT 1 FROM mk_events e WHERE e.contact_id = c.id AND e.organization_id = c.organization_id AND e.site_id = ?))");
+    params.push(Number(siteId), Number(siteId));
+  }
+  if (consent !== undefined && consent !== "") {
+    if (!CONSENT_FILTERS.includes(consent)) throw new MarketingError("invalid_field", "Filtre de consentement inconnu.");
+    const last = "(SELECT k.action FROM mk_consents k WHERE k.contact_id = c.id AND k.organization_id = c.organization_id AND k.purpose = 'marketing' ORDER BY k.id DESC LIMIT 1)";
+    where.push(consent === "none" ? `${last} IS NULL` : `${last} = ?`);
+    if (consent !== "none") params.push(consent);
+  }
+  if (ymd(createdFrom)) { where.push("c.created_at >= ?"); params.push(`${createdFrom} 00:00:00`); }
+  if (ymd(createdTo)) { where.push("c.created_at <= ?"); params.push(`${createdTo} 23:59:59`); }
+  const act = Number(activeSinceDays);
+  if (Number.isInteger(act) && act > 0 && act <= 3650) { where.push("c.last_activity_at >= ?"); params.push(sqlDate((typeof ctx.now === "function" ? ctx.now() : Date.now()) - act * DAY_MS)); }
+  const idle = Number(inactiveDays);
+  if (Number.isInteger(idle) && idle > 0 && idle <= 3650) { where.push("(c.last_activity_at IS NULL OR c.last_activity_at < ?)"); params.push(sqlDate((typeof ctx.now === "function" ? ctx.now() : Date.now()) - idle * DAY_MS)); }
+  if (userLinked === true) where.push("c.lms_user_id IS NOT NULL");
   if (custom && typeof custom.sql === "string" && Array.isArray(custom.params)) {
     where.push(`(${custom.sql})`);
     params.push(...custom.params);
@@ -219,4 +273,4 @@ function searchContacts(ctx, criteria = {}, { sort, dir, page, pageSize } = {}) 
   return { rows, total, page: current, pages, pageSize: size, sort: key, dir: direction };
 }
 
-module.exports = { SORTS, PAGE_SIZES, filters, searchContacts, STATUSES, upsertContact, createContact, updateContact, deleteContact, getContact, requireContact, findByEmail, listContacts, countContacts };
+module.exports = { RECORD_STATUSES, CONSENT_FILTERS, SORTS, PAGE_SIZES, filters, searchContacts, STATUSES, upsertContact, createContact, updateContact, deleteContact, getContact, requireContact, findByEmail, listContacts, countContacts };

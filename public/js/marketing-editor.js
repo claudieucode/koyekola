@@ -1067,9 +1067,32 @@
     if (opts.disabled) b.disabled = true;
     return b;
   }
+  // La liste n'est reconstruite que si son contenu a vraiment changé (noms, résumés, étiquettes, ordre, boutons grisés). Avant, CHAQUE modification
+  // (et chaque réponse d'aperçu) la détruisait et la recréait en entier : la carte survolée perdait son survol, ses actions apparaissaient /
+  // disparaissaient et toutes les cartes se repeignaient. La sélection, elle, se met à jour sur place (markSelection) : elle n'entre pas dans la comparaison.
+  var structureSigs = null;
+  var normStructure = function (li) { return li.outerHTML.replace(/ is-selected/g, "").replace(/ aria-current="true"/g, ""); };
   function renderStructure() {
     if (!structure) return;
-    structure.textContent = "";
+    var live = structure, scratch = document.createElement("ol");
+    structure = scratch; // les écouteurs créés ci-dessous lisent « structure » à l'appel : elle est rétablie juste après la construction
+    try { buildStructure(); } finally { structure = live; }
+    var fresh = [].slice.call(scratch.children), sigs = fresh.map(normStructure);
+    if (structureSigs && structureSigs.length === sigs.length && live.children.length === sigs.length) {
+      // Même nombre de cartes : seules celles dont le contenu a changé sont remplacées, les autres ne sont pas touchées
+      sigs.forEach(function (sg, i) { if (sg !== structureSigs[i]) live.replaceChild(fresh[i], live.children[i]); });
+      [].forEach.call(live.querySelectorAll(".mk-structure-item"), function (li) { // la sélection est remise d'aplomb sur place
+        var on = li.getAttribute("data-id") === selectedId, b = li.querySelector(".mk-structure-btn");
+        li.classList.toggle("is-selected", on);
+        if (b) { if (on) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current"); }
+      });
+    } else {
+      live.textContent = "";
+      fresh.forEach(function (li) { live.appendChild(li); });
+    }
+    structureSigs = sigs;
+  }
+  function buildStructure() {
     var count = $("mk-structure-count"); if (count) count.textContent = state.blocks.length ? String(state.blocks.length) : "";
     if (!state.blocks.length) structure.appendChild(el("li", { "class": "mk-structure-empty" }, readOnly ? "Aucun bloc." : "Aucun bloc : ajoutez-en depuis l'onglet « Blocs »."));
     state.blocks.forEach(function (b, index) {
@@ -1453,9 +1476,13 @@
         if (seq !== previewSeq) return; // réponse périmée
         if (!r.ok) { showError(r.j.error || "Aperçu impossible."); previewDone(); return; }
         showError("");
-        frame.style.minHeight = frame.offsetHeight + "px"; // pas de saut de défilement pendant le rechargement
         captureAnchor();
-        frame.srcdoc = r.j.html;
+        // Mise à jour EN PLACE du document déjà affiché (aucune navigation : pas d'image blanche entre deux rendus, défilement et écouteurs
+        // conservés). Le rechargement complet (srcdoc) ne sert plus qu'au premier affichage ou si le cadre n'est pas dans l'état attendu.
+        if (!patchFrame(r.j.html)) {
+          frame.style.minHeight = frame.offsetHeight + "px"; // pas de saut de défilement pendant le rechargement
+          frame.srcdoc = r.j.html;
+        }
         $("mk-subject").textContent = r.j.subject;
         $("mk-text").textContent = r.j.text;
         blockErrors = r.j.blockErrors || [];
@@ -1512,19 +1539,48 @@
     "[data-mk-block][data-mk-selected]>td{background-image:linear-gradient(rgba(2,119,182,.04),rgba(2,119,182,.04))}" +
     "[data-mk-block][data-mk-dragging]>td{opacity:.35}" +
     "#mk-insert::after{content:'Déposer ici';position:absolute;left:50%;top:-11px;transform:translateX(-50%);padding:0 10px;border-radius:10px;background:#0277b6;color:#fff;font:600 12px/20px -apple-system,Segoe UI,Roboto,Arial,sans-serif;white-space:nowrap}";
+  // Remplace le contenu du document du canevas par un nouveau rendu SANS le recharger : la tête (styles du message) est renouvelée en gardant le
+  // style d'édition injecté, le corps est reconstruit dans la même tâche (aucune image intermédiaire n'est peinte). Retourne false si le cadre
+  // n'est pas prêt : l'appelant recharge alors le document de façon classique.
+  function patchFrame(html) {
+    var d = frameDoc();
+    if (!d || !d.body || !d.head) return false;
+    var injected = d.head.querySelector("style[data-mk-injected]");
+    if (!injected) return false;
+    var next;
+    try { next = new DOMParser().parseFromString(html, "text/html"); } catch (e) { return false; }
+    if (!next.body || !next.head) return false;
+    [].slice.call(d.head.children).forEach(function (n) { if (n !== injected) d.head.removeChild(n); });
+    [].slice.call(next.head.children).forEach(function (n) { d.head.insertBefore(d.importNode(n, true), injected); });
+    [].slice.call(d.body.attributes).forEach(function (a) { d.body.removeAttribute(a.name); });
+    [].slice.call(next.body.attributes).forEach(function (a) { d.body.setAttribute(a.name, a.value); });
+    d.body.style.position = "relative";
+    while (d.body.firstChild) d.body.removeChild(d.body.firstChild);
+    [].slice.call(next.body.childNodes).forEach(function (n) { d.body.appendChild(d.importNode(n, true)); });
+    if (next.documentElement.lang) d.documentElement.lang = next.documentElement.lang;
+    fitFrame();
+    markSelection();
+    restoreAnchor();
+    watchLate(d);
+    setTimeout(previewDone, 0);
+    return true;
+  }
+  // Images et polices qui finissent de charger après coup : la hauteur du rendu est recalculée et la vue reste ancrée
+  function watchLate(d) {
+    var settle = function () { if (frameDoc() !== d) return; fitFrame(); restoreAnchor(); };
+    [].forEach.call(d.images || [], function (img) { if (!img.complete) { img.addEventListener("load", settle); img.addEventListener("error", settle); } });
+    if (d.fonts && d.fonts.ready) d.fonts.ready.then(settle);
+  }
   frame.addEventListener("load", decorateFrame);
   function decorateFrame() {
     var d = frameDoc();
     if (!d || !d.body) return;
-    var st = d.createElement("style"); st.textContent = EDIT_CSS; d.head.appendChild(st);
+    var st = d.createElement("style"); st.setAttribute("data-mk-injected", ""); st.textContent = EDIT_CSS; d.head.appendChild(st);
     d.body.style.position = "relative";
     fitFrame();
     markSelection();
     restoreAnchor();
-    // Images et polices qui finissent de charger après coup : la hauteur du rendu est recalculée et la vue reste ancrée
-    var settle = function () { var dd = frameDoc(); if (dd !== d) return; fitFrame(); restoreAnchor(); };
-    [].forEach.call(d.images || [], function (img) { if (!img.complete) { img.addEventListener("load", settle); img.addEventListener("error", settle); } });
-    if (d.fonts && d.fonts.ready) d.fonts.ready.then(settle);
+    watchLate(d);
     setTimeout(previewDone, 0);
     d.addEventListener("click", function (e) {
       e.preventDefault(); // un lien de l'e-mail ne s'ouvre jamais dans l'éditeur

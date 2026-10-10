@@ -85,14 +85,14 @@ function createApiRouter({ db }) {
     try {
       const body = req.body || {};
       const idempotencyKey = req.get("idempotency-key") || body.idempotency_key || null;
-      let contactId = Number.isInteger(body.contact_id) ? body.contact_id : null;
-      if (!contactId && body.email) contactId = audience.findByEmail(req.mkCtx, body.email)?.id ?? null;
-      const result = req.mkCtx.bus.emit({
-        organizationId: req.mkApi.organizationId, name: body.name, email: body.email, contactId,
-        source: "api", metadata: body.metadata || {}, idempotencyKey,
+      // Contact Core (palier 15) : le journal n'est écrit que par recordEvent — contact, site et objet sont vérifiés (aucun identifiant d'une autre organisation)
+      const result = require("../contactcore").recordEvent(req.mkCtx, {
+        type: body.name, contactId: Number.isInteger(body.contact_id) ? body.contact_id : null, email: body.email || null, siteId: Number.isInteger(body.site_id) ? body.site_id : null,
+        source: "api", objectType: body.object_type ?? null, objectId: body.object_id ?? null, metadata: body.metadata || {}, idempotencyKey,
       });
       res.status(result.duplicate ? 200 : 201).json({ data: { id: result.id, duplicate: result.duplicate } });
     } catch (error) {
+      if (error instanceof MarketingError) return fail(res, STATUS_OF[error.code] || 400, error.code, error.message);
       res.status(400).json({ error: { code: "invalid_field", message: error.message } });
     }
   });

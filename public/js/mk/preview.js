@@ -15,7 +15,7 @@
     var $ = function (id) { return document.getElementById(id); };
     var dlg = $("mk-preview-dialog"), frame = $("mk-preview-frame"), device = $("mk-pv-device"), stage = $("mk-pv-stage");
     var widthSel = $("mk-pv-width"), contactSel = $("mk-pv-contact"), scaleNote = $("mk-pv-scale");
-    var state = { device: "desktop", width: DEVICES.desktop.def, data: null, seq: 0, measured: null };
+    var state = { device: "desktop", width: DEVICES.desktop.def, data: null, seq: 0, measured: null, key: null };
     var el = api.el;
 
     // ---------- Appareil et largeur ----------
@@ -49,24 +49,31 @@
     }
 
     // ---------- Chargement du rendu réel ----------
-    function load() {
-      var seq = ++state.seq;
-      setBusy(true);
+    // Le cadre n'est montré qu'une fois le rendu PRÊT (taille réelle, images chargées, vérifications faites) : on ne voit jamais le cadre vide à sa
+    // taille par défaut, ni son agrandissement en plusieurs temps, ni l'ancien contenu remplacé sous les yeux (data-ready dans le CSS).
+    function setReady(on) { dlg.setAttribute("data-ready", on ? "true" : "false"); }
+    // Même contenu et même contact que le rendu déjà affiché : il reste valable, rien n'est rechargé (force = demande explicite d'actualiser)
+    function load(force) {
       var body = { template: api.payload(), mode: "preview" };
       if (contactSel.value) body.contactId = parseInt(contactSel.value, 10);
+      var key = JSON.stringify(body);
+      if (force !== true && state.data && state.key === key) { setReady(true); setBusy(false); applyWidth(); return false; }
+      var seq = ++state.seq;
+      state.measured = {};
+      setBusy(true); setReady(false);
       api.postJson("/marketing/modeles/apercu", body).then(function (j) {
         if (seq !== state.seq) return;
-        state.data = j;
-        frame.onload = function () { fitHeight(); applyWidth(); waitImages().then(function () { if (seq === state.seq) { fitHeight(); applyWidth(); runChecks(); setBusy(false); } }); };
+        state.data = j; state.key = key;
+        frame.onload = function () { fitHeight(); applyWidth(); waitImages().then(function () { if (seq === state.seq) { fitHeight(); applyWidth(); runChecks(); setBusy(false); setReady(true); } }); };
         frame.srcdoc = j.html;
         renderInfo(j);
         $("mk-text").textContent = j.text;
       }).catch(function (e) {
         if (seq !== state.seq) return;
-        state.data = null; frame.srcdoc = "";
+        state.data = null; state.key = null; frame.srcdoc = "";
         renderInfo(null, e.message);
         renderChecks([{ key: "html", label: "HTML", status: "error", summary: "Rendu impossible : " + e.message }]);
-        setBusy(false);
+        setBusy(false); setReady(true);
       });
     }
     function setBusy(on) { dlg.setAttribute("aria-busy", on ? "true" : "false"); $("mk-pv-status").textContent = on ? "Génération de l'aperçu…" : ""; }
@@ -237,19 +244,19 @@
     // ---------- Branchements ----------
     [].forEach.call(dlg.querySelectorAll("[data-pdevice]"), function (b) { b.addEventListener("click", function () { setDevice(b.getAttribute("data-pdevice")); }); });
     widthSel.addEventListener("change", function () { state.width = parseInt(widthSel.value, 10); applyWidth(); });
-    contactSel.addEventListener("change", function () { api.setContact(contactSel.value); load(); });
+    contactSel.addEventListener("change", function () { api.setContact(contactSel.value); load(true); });
     $("mk-pv-browser").addEventListener("click", openInBrowser);
     if ($("mk-pv-test-send")) $("mk-pv-test-send").addEventListener("click", sendTest);
-    $("mk-pv-refresh").addEventListener("click", load);
+    $("mk-pv-refresh").addEventListener("click", function () { load(true); });
     window.addEventListener("resize", function () { if (dlg.open) applyWidth(); });
 
     function open() {
       contactSel.value = api.contact();
       api.openDialog("mk-preview-dialog");
-      state.measured = {};
-      fillWidths(); load();
+      fillWidths();
+      load(false); // rendu déjà affiché et à jour : réutilisé tel quel (aucun rechargement)
     }
-    return { open: open, reload: load };
+    return { open: open, reload: function () { return load(true); } };
   }
   window.MkPreview = { create: create, DEVICES: DEVICES, CHECK_WIDTHS: CHECK_WIDTHS };
 })();

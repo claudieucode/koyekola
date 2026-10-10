@@ -47,6 +47,8 @@ const marketing = require("./src/marketing").initMarketing({ db, dbFile, dataDir
 
 const app = express();
 app.locals.marketing = marketing;
+// Contact Core (palier 15) : les commentaires alimentent le journal d'événements des contacts (jamais d'abonnement marketing)
+try { require("./src/marketing/contactcore/hooks").install({ marketing, db, comments: require("./src/services/comments") }); } catch (error) { console.error("[KOLAKISA] Contact Core : branchement des commentaires impossible :", error.message); }
 // Pont CRM (fiche élève ↔ fiche contact) : mis à disposition du module marketing sans qu'il importe la base du LMS
 app.locals.crm = require("./src/services/gestion/crm");
 

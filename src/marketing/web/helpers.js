@@ -14,6 +14,7 @@ const REASONS = {
   unsubscribed: "Désinscrit : aucun envoi marketing.",
   not_subscribed: "Pas de consentement enregistré : aucun envoi marketing possible.",
   no_consent: "Statut « abonné » sans preuve de consentement : envoi refusé par sécurité.",
+  inactive_record: "Fiche archivée, désactivée ou fusionnée : aucun envoi.",
   list_unsubscribed: "Désinscrit de cette liste.",
   category_opted_out: "A refusé cette catégorie de messages.",
 };
