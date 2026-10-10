@@ -1353,6 +1353,7 @@
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" || (e.target.matches && e.target.matches("input, textarea, select"))) hideTip(); }, true); // Échap, ou saisie dans un champ : l'infobulle disparaît
   function setTool(k) {
     tool = k;
+    document.dispatchEvent(new CustomEvent("pb:tool", { detail: k }));
     $$(".pb-tool[data-mode]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.mode === k)); });
     var doc = frame.contentDocument;
     if (doc && doc.body) doc.body.classList.toggle("pb-hand", k === "hand");
@@ -2176,8 +2177,8 @@
   // states : styles de survol / focus / clic proposés. Un nouveau type d'élément ajoute ici son schéma.
   var BOX_LAYOUT = ["display", "flexDirection", "flexWrap", "justifyContent", "alignItems", "alignContent", "gap", "rowGap", "columnGap"];
   var SIZE_W = ["width", "minWidth", "maxWidth"];
-  var BOX = { layout: BOX_LAYOUT, size: null, spacing: true, color: null, background: true, border: null, effects: null };
-  var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: ["boxShadow", "opacity", "transitionDuration", "transitionEasing", "backdropBlur"] };
+  var BOX = { layout: BOX_LAYOUT, size: null, spacing: true, typography: null, color: null, background: true, border: null, effects: null }; // la typographie d'un conteneur est héritée par ses enfants
+  var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: ["boxShadow", "opacity", "transitionDuration", "transitionEasing", "backdropBlur", "visibility", "cursor", "mixBlendMode"] };
   // Ordre des groupes selon la nature de l'élément (le premier est ouvert par défaut)
   var TEXT_ORDER = ["typography", "spacing", "size", "layout", "background", "border", "effects"];
   var INSPECTORS = {
@@ -2187,7 +2188,7 @@
     column: { kind: "Colonne", groups: BOX, tabs: "box", states: ["hover", "active"] },
     stack: { kind: "Pile", groups: BOX, tabs: "box", states: ["hover", "active"] },
     group: { kind: "Groupe", groups: BOX, tabs: "box", states: ["hover", "active"] },
-    grid: { kind: "Grille", groups: { layout: ["columns", "gridTemplate", "gridRows", "gridRowsTemplate", "gridAutoFlow", "gap", "rowGap", "columnGap", "justifyItems", "alignItems", "alignContent", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null }, tabs: "box", states: ["hover", "active"] },
+    grid: { kind: "Grille", groups: { layout: ["columns", "gridTemplate", "gridRows", "gridRowsTemplate", "gridAutoFlow", "gridAutoRows", "gridAutoColumns", "gap", "rowGap", "columnGap", "justifyItems", "alignItems", "alignContent", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null }, tabs: "box", states: ["hover", "active"] },
     heading: { kind: "Titre", groups: TEXTUAL, order: TEXT_ORDER },
     text: { kind: "Texte", groups: TEXTUAL, order: TEXT_ORDER },
     list: { kind: "Liste", groups: TEXTUAL, order: TEXT_ORDER },
@@ -2266,6 +2267,14 @@
     if (it.type === "form") return INSPECTORS.form;
     return Object.assign({}, INSPECTORS.legacy, { kind: LEGACY[it.type] ? LEGACY[it.type].label : INSPECTORS.legacy.kind });
   }
+  // États (survol) : le serveur les accepte et les publie pour TOUT élément ; l'interface les offrait pour 15 types seulement. On les ouvre (survol) aux
+  // autres types qui ont un aspect réglable ; pas aux éléments sans apparence propre (espace, progression de lecture, contenus intégrés, médias lus…).
+  var NO_STATES = ["spacer", "readingprogress", "modal", "tooltip", "embed", "html", "map", "video", "audio", "lottie", "component", "form", "legacy", "section", "sitelogo", "hotspot", "carousel", "gallery"];
+  Object.keys(INSPECTORS).forEach(function (k) {
+    var d = INSPECTORS[k], g = d.groups || {};
+    if (d.states || NO_STATES.indexOf(k) >= 0) return;
+    if (["typography", "color", "background", "border", "effects"].some(function (x) { return g[x] !== undefined; })) d.states = ["hover"];
+  });
   var GROUP_ORDER = ["layout", "spacing", "size", "typography", "color", "background", "media", "border", "effects"];
   var optLabel = function (p, v) { var o = (p.options || []).find(function (x) { return String(x[0]) === String(v); }); return o ? o[1] : v; };
   var lockedAny = function (items) { return !canWrite || items.some(function (x) { return lockedDeep(x.id); }); };
@@ -2277,8 +2286,8 @@
   var KW = ["auto", "fit-content", "min-content", "max-content"];
   var isKw = function (u) { return KW.indexOf(u) >= 0; };
   var UNITS = {
-    width: ["px", "%", "rem", "vw", "auto", "fit-content", "min-content", "max-content"], height: ["px", "%", "rem", "vh", "auto", "fit-content", "min-content", "max-content"], flexBasis: ["px", "%", "rem", "auto"],
-    minWidth: ["px", "%", "rem", "vw", "fit-content", "min-content", "max-content"], maxWidth: ["px", "%", "rem", "vw", "fit-content", "min-content", "max-content"], minHeight: ["px", "%", "rem", "vh", "fit-content", "min-content", "max-content"], maxHeight: ["px", "%", "rem", "vh", "fit-content", "min-content", "max-content"],
+    width: ["px", "%", "rem", "em", "vw", "auto", "fit-content", "min-content", "max-content"], height: ["px", "%", "rem", "em", "vh", "auto", "fit-content", "min-content", "max-content"], outlineWidth: ["px"], outlineOffset: ["px", "rem"], flexBasis: ["px", "%", "rem", "auto"],
+    minWidth: ["px", "%", "rem", "em", "vw", "fit-content", "min-content", "max-content"], maxWidth: ["px", "%", "rem", "em", "vw", "fit-content", "min-content", "max-content"], minHeight: ["px", "%", "rem", "em", "vh", "fit-content", "min-content", "max-content"], maxHeight: ["px", "%", "rem", "em", "vh", "fit-content", "min-content", "max-content"],
     gap: ["px", "rem", "em", "%"], rowGap: ["px", "rem", "em", "%"], columnGap: ["px", "rem", "em", "%"], fontSize: ["px", "em", "rem", "vw"], letterSpacing: ["px", "em", "rem"], wordSpacing: ["px", "em", "rem"], textIndent: ["px", "em", "rem", "%"], borderWidth: ["px"], borderTopWidth: ["px"], borderRightWidth: ["px"], borderBottomWidth: ["px"], borderLeftWidth: ["px"],
     borderRadius: ["px", "%", "rem"], borderTopLeftRadius: ["px", "%", "rem"], borderTopRightRadius: ["px", "%", "rem"], borderBottomRightRadius: ["px", "%", "rem"], borderBottomLeftRadius: ["px", "%", "rem"],
     top: ["px", "%", "rem"], left: ["px", "%", "rem"], right: ["px", "%", "rem"], bottom: ["px", "%", "rem"],
@@ -3030,6 +3039,14 @@
         SIDE_WIDTHS.forEach(function (k) { inner.appendChild(styleControl(items, k[0], k[1])); });
       }
       inner.appendChild(styleControl(items, "borderColor", "Couleur"));
+    }
+    // Contour (hors de la bordure : ne change pas la taille ; utile au focus et aux repères) : les réglages détaillés n'apparaissent qu'une fois un style choisi
+    inner.appendChild(styleControl(items, "outlineStyle", "Contour : style"));
+    var ostyle = valueOf(it, "outlineStyle");
+    if ((ostyle && ostyle !== "none") || ownValue(it, "outlineWidth") !== undefined || ownValue(it, "outlineColor") !== undefined || ownValue(it, "outlineOffset") !== undefined) {
+      inner.appendChild(styleControl(items, "outlineWidth", "Contour : épaisseur"));
+      inner.appendChild(styleControl(items, "outlineColor", "Contour : couleur"));
+      inner.appendChild(styleControl(items, "outlineOffset", "Contour : décalage"));
     }
     var split = radiusSplit[it.id] || CORNER_KEYS.some(function (c) { return valueOf(it, c[0]) !== undefined; });
     var link = h("button", { type: "button", class: "pb-link-btn is-icon", "aria-pressed": String(!split), "data-link": "radius", "aria-label": split ? "Lier les 4 coins (un seul arrondi)" : "Délier : un arrondi par coin", "data-tip": split ? "Coins indépendants — cliquer pour un seul arrondi" : "4 coins liés — cliquer pour régler chaque coin", disabled: dis,
@@ -4298,6 +4315,7 @@
     if (!doc || !doc.body) return;
     canvasReady = true;
     doc.body.classList.add("lp-builder");
+    if (window.pbDirect) window.pbDirect.canvas(doc); // manipulation directe : couche de survol et poignées de ce document
     doc.body.classList.toggle("pb-outlines", aids.outlines);
     doc.body.classList.toggle("pb-hand", tool === "hand");
     frame.contentWindow.scrollTo(0, y);
@@ -4511,6 +4529,7 @@
       }
       if (selection.length === 1 && canWrite && !lockedDeep(id) && !editing) structureOverlays(it, el, r);
     });
+    if (window.pbDirect) window.pbDirect.refresh();
   }
   // Colonnes et grille sélectionnées : séparations à tirer (largeurs) et bouton « + » au bord (colonne, ligne)
   function structureOverlays(it, el, r) {
@@ -4773,7 +4792,8 @@
     var win = frame.contentWindow, doc = frame.contentDocument;
     var sx = e.clientX, sy = e.clientY, oy = win.scrollY, sl = stage.scrollLeft;
     var move = function (ev) { win.scrollTo(0, oy - (ev.clientY - sy)); stage.scrollLeft = sl - (ev.clientX - sx) * zoom; };
-    var up = function () { doc.removeEventListener("mousemove", move); doc.removeEventListener("mouseup", up); };
+    var up = function () { doc.removeEventListener("mousemove", move); doc.removeEventListener("mouseup", up); doc.body.classList.remove("is-panning"); };
+    doc.body.classList.add("is-panning"); // curseur « main fermée » pendant le déplacement
     doc.addEventListener("mousemove", move); doc.addEventListener("mouseup", up);
   }
 
@@ -5107,6 +5127,7 @@
     setTimeout(function () { drawOverlays(); drawGuides(); drawRulers(); refreshInfo(); }, 60);
   }
   $$(".pb-top .pb-devices button").forEach(function (b) { b.addEventListener("click", function () { setDevice(b.dataset.device); }); });
+  var MAX_ZOOM = 4; // 400 %
   function applyZoom() {
     var avail = Math.max(240, stage.clientWidth - STAGE_PAD);
     var w = frameWidth(avail);
@@ -5121,7 +5142,7 @@
     wrap.style.marginRight = -((1 - zoom) * w) + "px";
     wrap.style.marginBottom = -((1 - zoom) * hgt) + "px";
     $("[data-pb-zoom-value]").textContent = Math.round(zoom * 100) + " %";
-    $$("[data-pb-zoom]").forEach(function (b) { var v = b.dataset.pbZoom; b.disabled = (v === "-" && zoom <= 0.25) || (v === "+" && zoom >= 2); });
+    $$("[data-pb-zoom]").forEach(function (b) { var v = b.dataset.pbZoom; b.disabled = (v === "-" && zoom <= 0.25) || (v === "+" && zoom >= MAX_ZOOM); });
     drawRulers();
     refreshInfo();
     placeCanvasBar();
@@ -5141,7 +5162,7 @@
       if (zoomFit) applyZoom(); else drawRulers();
     });
   }
-  function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(2, Math.max(0.25, z)); applyZoom(); setTimeout(function () { drawOverlays(); drawGuides(); }, 30); }
+  function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(MAX_ZOOM, Math.max(0.25, z)); applyZoom(); setTimeout(function () { drawOverlays(); drawGuides(); }, 30); }
   $$("[data-pb-zoom]").forEach(function (b) { b.addEventListener("click", function () { var v = b.dataset.pbZoom; setZoom(v === "fit" ? "fit" : v === "100" ? 1 : v === "+" ? Math.round((zoom + 0.1) * 10) / 10 : Math.round((zoom - 0.1) * 10) / 10); }); });
   window.addEventListener("resize", queueZoom);
   // La zone du canevas change de taille (panneaux, fenêtre, mise en page initiale) : le cadre suit
@@ -5630,7 +5651,7 @@
   var zoomValueEl = $("[data-pb-zoom-value]");
   function zoomMenu() {
     var r = zoomValueEl.getBoundingClientRect();
-    showSimpleMenu([["Ajuster à la fenêtre", function () { setZoom("fit"); }, false, "Maj 1"]].concat([0.5, 0.64, 0.75, 1, 1.25, 1.5, 2].map(function (z) { return [(!zoomFit && Math.abs(zoom - z) < 0.005 ? "✓ " : "") + Math.round(z * 100) + " %", function () { setZoom(z); }, false]; })), r.left, r.bottom + 4);
+    showSimpleMenu([["Ajuster à la fenêtre", function () { setZoom("fit"); }, false, "Maj 1"]].concat([0.5, 0.64, 0.75, 1, 1.25, 1.5, 2, 3, 4].map(function (z) { return [(!zoomFit && Math.abs(zoom - z) < 0.005 ? "✓ " : "") + Math.round(z * 100) + " %", function () { setZoom(z); }, false]; })), r.left, r.bottom + 4);
   }
   zoomValueEl.setAttribute("role", "button"); zoomValueEl.setAttribute("tabindex", "0"); zoomValueEl.setAttribute("title", "Niveaux de zoom");
   zoomValueEl.addEventListener("click", zoomMenu);
@@ -6717,6 +6738,16 @@
   // Pont vers le gestionnaire de menu (page-builder-menu.js) : mêmes fonctions que l'inspecteur, donc même document et même historique
   window.pbNav = { h: h, walk: function (fn) { walk(fn); }, byId: byId, topOf: topOf, sectionNumber: function (top) { return top ? sectionIndex(top) + 1 : 0; }, change: change, select: function (id) { select(id); },
     selection: function () { return selection.slice(); }, toast: toast, canWrite: canWrite, links: boot.links, addElement: function (type) { addElement(type); }, subscribe: function (f) { navListeners.push(f); }, open: function () {} };
+  // Pont vers la manipulation directe (page-builder-direct.js) : mêmes propriétés que l'inspecteur, mêmes fonctions d'écriture et d'historique
+  if (window.pbDirect) window.pbDirect.attach({
+    frame: function () { return frame; }, stage: function () { return stage; }, canWrite: function () { return canWrite; }, selection: function () { return selection.slice(); },
+    byId: byId, isNode: isNode, kidsOf: kidsOf, lockedDeep: lockedDeep, nameOf: nameOf, canvasEl: canvasEl, pageRect: pageRect, select: function (id) { select(id); },
+    openInspector: openInspector, duplicateSelected: duplicateSelected, icon: icon, toast: toast, bpLabel: bpLabel,
+    device: function () { return device; }, tool: function () { return tool; }, setTool: setTool, zoom: function () { return zoom; }, editing: function () { return Boolean(editing); },
+    gesture: function (on) { if (on === undefined) return gesture; if (on) gesture = true; else endGesture(); }, ignoreClick: function (ms) { ignoreClickUntil = Date.now() + ms; },
+    ownValue: ownValue, inheritedValue: inheritedValue, splitLen: splitLen, styleSet: styleSet, cleanStyles: cleanStyles, change: change,
+    caps: function (it) { var ins = inspectorFor(it), g = (ins && ins.groups) || {}; return { gap: Array.isArray(g.layout) && g.layout.indexOf("gap") >= 0, spacing: Boolean(g.spacing), size: g.size !== undefined && g.size !== false }; }
+  });
   if (window.pbEffects) window.pbEffects.attach({
     h: h, store: store, toast: toast, SPEC: SPEC, BPS: BPS, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, idsOf: idsOf,
     accGroup: accGroup, ownValue: ownValue, inheritedValue: inheritedValue, canvasEl: canvasEl, setStyle: setStyle, setStyles: setStyles, parseLength: parseLength, numField: numField, numericControl: numericControl, selectField: selectField, checkField: checkField,

@@ -402,7 +402,7 @@
 @media (max-width: 767px) { .kw-box.is-left, .kw-box.is-right { flex-direction: column; } .kw-imagebox.is-left .kw-box-media, .kw-imagebox.is-right .kw-box-media { width: 100%; } }
 /* Canevas de l'éditeur : éléments repérables, éléments vides, élément masqué */
 .lp-builder .kw-node { outline-offset: 2px; }
-.lp-builder .kw-node:hover { outline: 1px dashed rgba(2, 119, 182, 0.55); }
+.lp-builder:not(.pb-dm-on) .kw-node:hover { outline: 1px dashed rgba(2, 119, 182, 0.55); } /* avec la manipulation directe, UNE seule cible est signalée (la plus profonde) : plus de contours sur tous les parents */
 .lp-builder .kw-node.is-selected { outline: 2px solid #0277b6; }
 .lp-builder .kw-node.is-hidden { opacity: 0.35; }
 /* Zone d'édition d'un conteneur VIDE (éditeur seulement). L'état « vide » est celui du document : le rendu pose
@@ -538,6 +538,7 @@
 .pb-smart-box{ position:absolute;outline:1px solid #e11d48;background:rgba(225,29,72,.06)}
 body.pb-outlines .kw-node,body.pb-outlines .lp-block{outline:1px dashed rgba(2,119,182,.35);outline-offset:-1px}
 body.pb-hand,body.pb-hand *{cursor:grab}
+body.pb-hand.is-panning,body.pb-hand.is-panning *{cursor:grabbing}
 .pb-editing{outline:2px solid #ff9f1c;outline-offset:3px;cursor:text}
 .lp-builder .kw-node.is-selected,.lp-builder .lp-block.is-selected{outline:none}
 
@@ -1006,3 +1007,27 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .kw-lottie-stage { width: 100%; max-width: 100%; min-height: 40px; }
 .kw-lottie-stage svg { display: block; width: 100%; height: 100%; }
 .kw-lottie-placeholder { align-items: center; justify-content: center; border: 2px dashed rgba(16, 34, 47, 0.25); border-radius: 12px; color: rgba(16, 34, 47, 0.7); font: 600 14px/1.4 system-ui, sans-serif; }
+
+/* Manipulation directe sur le canevas (page-builder-direct.js) : couche hors flux, au-dessus de la sélection, sous les repères intelligents */
+.pb-dm-layer{ position:absolute;top:0;left:0;width:0;height:0;z-index:112;pointer-events:none}
+.pb-dm-hover{ position:absolute;border:1px solid rgba(2,119,182,.75);background:rgba(2,119,182,.04);box-sizing:border-box;pointer-events:none}
+.pb-dm-tag{ position:absolute;display:flex;align-items:center;gap:1px;height:22px;padding:0 2px 0 7px;border-radius:4px;background:#0277b6;color:#fff;font:600 11px/22px system-ui,sans-serif;white-space:nowrap;pointer-events:none;z-index:113}
+.pb-dm-tag[hidden],.pb-dm-hover[hidden],.pb-dm-tip[hidden]{display:none}
+.pb-dm-name{ max-width:150px;overflow:hidden;text-overflow:ellipsis;margin-right:2px}
+.lp-builder .pb-dm-tag .pb-dm-act{ pointer-events:auto;display:inline-grid;place-items:center;width:22px;height:22px;margin:0;padding:0;border:0;border-radius:3px;background:transparent;color:#fff;cursor:pointer}
+.lp-builder .pb-dm-act:hover,.lp-builder .pb-dm-act:focus-visible{ background:rgba(255,255,255,.22);outline:none}
+.pb-dm-act svg{ width:13px;height:13px}
+.pb-dm-h{ position:absolute;z-index:114;display:grid;place-items:center;width:28px;height:28px;margin:-14px 0 0 -14px;opacity:0;pointer-events:none;touch-action:none;outline:none}
+.pb-dm-layer.is-near .pb-dm-h,.pb-dm-layer.is-dragging .pb-dm-h.is-active{ opacity:1;pointer-events:auto}
+.pb-dm-h::before{ content:"";box-sizing:border-box;background:#fff;border:2px solid #0891b2}
+.pb-dm-gap.is-y{ cursor:ns-resize}.pb-dm-gap.is-y::before{ width:26px;height:8px;border-radius:4px}
+.pb-dm-gap.is-x{ cursor:ew-resize}.pb-dm-gap.is-x::before{ width:8px;height:26px;border-radius:4px}
+.pb-dm-pad{ cursor:grab}.pb-dm-pad.is-active{ cursor:grabbing}
+.pb-dm-pad::before{ width:11px;height:11px;border-radius:50%;border-color:#d97706}
+.pb-dm-pad.is-top,.pb-dm-pad.is-bottom{ cursor:ns-resize}.pb-dm-pad.is-left,.pb-dm-pad.is-right{ cursor:ew-resize}
+.pb-dm-h:hover::before,.pb-dm-h.is-active::before{ background:#e0f2f7}
+.pb-dm-pad:hover::before,.pb-dm-pad.is-active::before{ background:#fff3e0}
+.pb-dm-h:focus-visible::before{ box-shadow:0 0 0 3px rgba(2,119,182,.4)}
+.pb-dm-gaprect{ position:absolute;z-index:111;background:rgba(8,145,178,.16);pointer-events:none;opacity:0}
+.pb-dm-layer.is-near .pb-dm-gaprect{ opacity:.55}.pb-dm-gaprect.is-on{ opacity:1}
+.pb-dm-tip{ position:absolute;z-index:115;padding:1px 6px;border-radius:4px;background:#102a3a;color:#fff;font:600 11px/1.6 system-ui,sans-serif;white-space:nowrap;pointer-events:none}

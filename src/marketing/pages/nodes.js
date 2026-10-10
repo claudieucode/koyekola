@@ -98,6 +98,8 @@ const gridTrack = (v) => {
 };
 const len = lengthOf(), lenAuto = lengthOf({ auto: true }), lenSize = lengthOf({ intrinsic: true }), lenSizeAuto = lengthOf({ auto: true, intrinsic: true }), lenNeg = lengthOf({ negative: true }), marginLen = lengthOf({ auto: true, negative: true });
 const partsLib = require("./parts");
+// Épaisseurs (bordure, contour) : le pourcentage n'a pas de sens en CSS (il serait ignoré par le navigateur) : refusé ici plutôt que publié en silence
+const lenNoPercent = (v) => (/%\s*$/.test(String(v)) ? null : len(v));
 const STYLE_PROPS = {
   display: { css: "display", check: oneOf("block", "flex", "grid", "inline-block", "inline", "inline-flex", "none"), group: "layout" },
   flexDirection: { css: "flex-direction", check: oneOf("row", "column", "row-reverse", "column-reverse"), group: "layout" },
@@ -120,6 +122,9 @@ const STYLE_PROPS = {
   gridRows: { css: "grid-template-rows", check: numberIn(1, 12, { integer: true }), out: (n) => `repeat(${n}, auto)`, group: "layout" },
   // Hauteurs des lignes (ex. « 200px 1fr ») : remplace le nombre de lignes égales (écrit après lui)
   gridRowsTemplate: { css: "grid-template-rows", check: gridTrack, out: (v) => v.split(" ").map((t) => (/fr$/.test(t) ? `minmax(0, ${t})` : t)).join(" "), group: "layout" },
+  // Pistes créées automatiquement quand il y a plus d'éléments que de cases (ex. « minmax(120px, auto) »)
+  gridAutoRows: { css: "grid-auto-rows", check: gridTrack, group: "layout" },
+  gridAutoColumns: { css: "grid-auto-columns", check: gridTrack, group: "layout" },
   gridAutoFlow: { css: "grid-auto-flow", check: oneOf("row", "column", "row dense", "column dense"), group: "layout" },
   justifyItems: { css: "justify-items", check: oneOf("stretch", "start", "center", "end"), group: "layout" },
   // Élément enfant d'une grille : nombre de colonnes / lignes occupées
@@ -163,14 +168,19 @@ const STYLE_PROPS = {
   textAlign: { css: "text-align", check: oneOf("left", "center", "right", "justify"), group: "typography" },
   textDecoration: { css: "text-decoration", check: oneOf("none", "underline", "line-through"), group: "typography" },
   textShadow: { css: "text-shadow", check: oneOf(...Object.keys(TEXT_SHADOWS)), out: (v) => TEXT_SHADOWS[v], group: "typography" },
+  // Retours à la ligne et débordement du texte (les points de suspension demandent « sans retour » + débordement masqué)
+  whiteSpace: { css: "white-space", check: oneOf("normal", "nowrap", "pre", "pre-wrap", "pre-line"), group: "typography" },
+  textWrap: { css: "text-wrap", check: oneOf("wrap", "nowrap", "balance", "pretty"), group: "typography" },
+  overflowWrap: { css: "overflow-wrap", check: oneOf("normal", "break-word", "anywhere"), group: "typography" },
+  textOverflow: { css: "text-overflow", check: oneOf("clip", "ellipsis"), group: "typography" },
   color: { css: "color", check: color, out: colorCss, group: "color" },
   backgroundColor: { css: "background-color", check: color, out: colorCss, group: "color" },
-  borderWidth: { css: "border-width", check: len, group: "border" },
+  borderWidth: { css: "border-width", check: lenNoPercent, group: "border" },
   // Épaisseur côté par côté (bordure « déliée ») : écrite après l'épaisseur générale, qu'elle précise
-  borderTopWidth: { css: "border-top-width", check: len, group: "border" },
-  borderRightWidth: { css: "border-right-width", check: len, group: "border" },
-  borderBottomWidth: { css: "border-bottom-width", check: len, group: "border" },
-  borderLeftWidth: { css: "border-left-width", check: len, group: "border" },
+  borderTopWidth: { css: "border-top-width", check: lenNoPercent, group: "border" },
+  borderRightWidth: { css: "border-right-width", check: lenNoPercent, group: "border" },
+  borderBottomWidth: { css: "border-bottom-width", check: lenNoPercent, group: "border" },
+  borderLeftWidth: { css: "border-left-width", check: lenNoPercent, group: "border" },
   borderStyle: { css: "border-style", check: oneOf("none", "solid", "dashed", "dotted"), group: "border" },
   borderColor: { css: "border-color", check: color, out: colorCss, group: "border" },
   borderRadius: { css: "border-radius", check: withLenToken("radius", len), out: lenTokenOut, group: "border" },
@@ -184,6 +194,18 @@ const STYLE_PROPS = {
   overflow: { css: "overflow", check: oneOf("visible", "hidden", "auto"), group: "effects" },
   // Flou de ce qui est DERRIÈRE l'élément (effet verre dépoli, avec un fond semi-transparent)
   backdropBlur: { css: "backdrop-filter", check: numberIn(1, 40, { integer: true }), out: (n) => `blur(${n}px)`, group: "effects" },
+  // Visibilité sans toucher à la mise en page (l'élément garde sa place), souris, curseur, fusion avec ce qui est derrière, débordement par axe
+  visibility: { css: "visibility", check: oneOf("visible", "hidden"), group: "effects" },
+  cursor: { css: "cursor", check: oneOf("auto", "default", "pointer", "text", "move", "grab", "not-allowed", "help", "zoom-in", "zoom-out"), group: "effects" },
+  pointerEvents: { css: "pointer-events", check: oneOf("auto", "none"), group: "effects" },
+  mixBlendMode: { css: "mix-blend-mode", check: oneOf("normal", "multiply", "screen", "overlay", "darken", "lighten", "color-dodge", "color-burn", "soft-light", "hard-light", "difference", "exclusion"), group: "effects" },
+  overflowX: { css: "overflow-x", check: oneOf("visible", "hidden", "auto", "scroll", "clip"), group: "effects" },
+  overflowY: { css: "overflow-y", check: oneOf("visible", "hidden", "auto", "scroll", "clip"), group: "effects" },
+  // Contour (hors de la bordure, ne change pas la taille) : accessibilité du focus, repères visuels
+  outlineWidth: { css: "outline-width", check: lenNoPercent, group: "border" },
+  outlineStyle: { css: "outline-style", check: oneOf("none", "solid", "dashed", "dotted"), group: "border" },
+  outlineColor: { css: "outline-color", check: color, out: colorCss, group: "border" },
+  outlineOffset: { css: "outline-offset", check: lenNeg, group: "border" },
   // Absolue : placée par rapport au parent positionné (relatif) ; fixe : par rapport à l'écran (bandeau, bouton flottant)
   position: { css: "position", check: oneOf("static", "relative", "sticky", "absolute", "fixed"), group: "position" },
   top: { css: "top", check: lenNeg, group: "position" },
@@ -273,7 +295,7 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
 // Placement dans la grille : écrit en « grid-column: début / fin » (même chose pour les lignes), jamais en déclarations qui
 // s'écrasent : début seul, fin seule, début + occupées (« 2 / span 3 ») ou occupées seules (« span 3 »)
 const PLACEMENT = new Set(["gridColumnStart", "gridColumnEnd", "gridColumnSpan", "gridRowStart", "gridRowEnd", "gridRowSpan"]);
-const CORNERS = new Set(["gridTemplate", "gridRowsTemplate", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth"]);
+const CORNERS = new Set(["overflowX", "overflowY", "gridTemplate", "gridRowsTemplate", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth"]);
 // band : conteneur « fond pleine largeur, contenu encadré » : ses intérieurs gauche / droite sont écrits dans des variables (--kw-pl, --kw-pr) que
 // la règle .kw-band de landing.css combine avec le retrait qui centre le contenu à la largeur du site : le réglage de l'auteur reste effectif
 function declarations(set, band = false) {
@@ -1113,6 +1135,17 @@ const STYLE_UI = {
   backdropBlur: ["Flou de l'arrière-plan (px)"],
   boxShadow: ["Ombre", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", xl: "Très forte" }], opacity: ["Opacité"],
   overflow: ["Débordement", { visible: "Visible", hidden: "Masqué", auto: "Défilement" }],
+  overflowX: ["Débordement horizontal", { visible: "Visible", hidden: "Masqué", auto: "Auto", scroll: "Défilement", clip: "Coupé" }], overflowY: ["Débordement vertical", { visible: "Visible", hidden: "Masqué", auto: "Auto", scroll: "Défilement", clip: "Coupé" }],
+  visibility: ["Visibilité (garde sa place)", { visible: "Visible", hidden: "Invisible" }],
+  cursor: ["Curseur de la souris", { auto: "Automatique", default: "Flèche", pointer: "Main", text: "Texte", move: "Déplacer", grab: "Attraper", "not-allowed": "Interdit", help: "Aide", "zoom-in": "Zoom +", "zoom-out": "Zoom −" }],
+  pointerEvents: ["Réaction à la souris", { auto: "Normale", none: "Aucune (traversée)" }],
+  mixBlendMode: ["Fusion avec l'arrière-plan", { normal: "Normale", multiply: "Produit", screen: "Écran", overlay: "Incrustation", darken: "Assombrir", lighten: "Éclaircir", "color-dodge": "Densité couleur −", "color-burn": "Densité couleur +", "soft-light": "Lumière tamisée", "hard-light": "Lumière crue", difference: "Différence", exclusion: "Exclusion" }],
+  whiteSpace: ["Retour à la ligne", { normal: "Normal", nowrap: "Jamais", pre: "Conserver les espaces", "pre-wrap": "Conserver + retour", "pre-line": "Conserver les sauts" }],
+  textWrap: ["Équilibrage du texte", { wrap: "Normal", nowrap: "Sans retour", balance: "Équilibré (titres)", pretty: "Soigné (paragraphes)" }],
+  overflowWrap: ["Mots trop longs", { normal: "Normal", "break-word": "Couper si besoin", anywhere: "Couper partout" }],
+  textOverflow: ["Texte coupé (avec « Masqué » et « Jamais »)", { clip: "Net", ellipsis: "Points de suspension" }],
+  outlineWidth: ["Contour : épaisseur"], outlineStyle: ["Contour : style", { none: "Aucun", solid: "Plein", dashed: "Tirets", dotted: "Points" }], outlineColor: ["Contour : couleur"], outlineOffset: ["Contour : décalage"],
+  gridAutoRows: ["Lignes automatiques (ex. minmax(120px, auto))"], gridAutoColumns: ["Colonnes automatiques (ex. 1fr)"],
   gridAutoFlow: ["Remplissage", { row: "Ligne par ligne", column: "Colonne par colonne", "row dense": "Lignes, sans trous", "column dense": "Colonnes, sans trous" }],
   justifyItems: ["Alignement horizontal des cases", { stretch: "Étirer", start: "Début", center: "Centre", end: "Fin" }],
   position: ["Position", { static: "Normale", relative: "Relative", sticky: "Collante", absolute: "Absolue (dans le parent)", fixed: "Fixe (à l'écran)" }], top: ["Décalage haut"], right: ["Décalage droite"], bottom: ["Décalage bas"], left: ["Décalage gauche"],
@@ -1133,7 +1166,7 @@ function editorSpec() {
     const p = STYLE_PROPS[k];
     if (p.check === color || [ "color", "backgroundColor", "borderColor" ].includes(k)) return "color";
     if (["columns", "lineHeight", "lineClamp", "opacity", "zIndex", "flexGrow", "flexShrink", "order", "gridRows", "gridColumnSpan", "gridRowSpan", "gridColumnStart", "gridColumnEnd", "gridRowStart", "gridRowEnd", "transitionDuration", "backdropBlur"].includes(k)) return "number";
-    if (k === "gridTemplate" || k === "gridRowsTemplate") return "text";
+    if (k === "gridTemplate" || k === "gridRowsTemplate" || k === "gridAutoRows" || k === "gridAutoColumns") return "text";
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
   return {

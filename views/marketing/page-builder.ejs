@@ -120,6 +120,7 @@
         <button type="button" class="pb-icon-btn" data-pb-zoom="+" data-tip="Zoom avant (Ctrl/⌘ + +)" aria-label="Zoom avant"><%- icon("plus", { size: 15 }) %></button>
         <span class="pb-gizmo-sep" aria-hidden="true"></span>
         <button type="button" class="pb-gizmo-btn" data-pb-zoom="100" data-tip="Taille réelle : 100 % (Ctrl/⌘ + 0)" aria-label="Zoom à 100 %">1:1</button>
+        <button type="button" class="pb-icon-btn" data-pb-pan aria-pressed="false" data-tip="Main : déplacer le canevas (maintenir Espace, ou touche H)" aria-label="Main : déplacer le canevas"><%- icon("arrowRightLeft", { size: 15 }) %></button>
         <button type="button" class="pb-icon-btn" data-pb-zoom="fit" data-tip="Ajuster à l'écran : toute la largeur de la page visible (Maj + 1)" aria-label="Ajuster à l'écran"><%- icon("maximize", { size: 15 }) %></button>
       </div>
     </main>
@@ -264,6 +265,7 @@
   <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone", "sliders", "moreHorizontal", "listPlus", "listMinus", "undo", "redo", "sun", "moon", "palette"].concat(spec.types.map((t) => t.icon), spec.icons).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
   <script type="application/json" id="pb-boot"><%- boot %></script>
   <script src="<%= asset('/js/page-builder-effects.js') %>" defer></script>
+  <script src="<%= asset('/js/page-builder-direct.js') %>" defer></script>
   <script src="<%= asset('/js/kol-motion.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-snap.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-theme.js') %>" defer></script>
