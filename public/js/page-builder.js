@@ -98,6 +98,10 @@
   }
   function reId(it) { it.id = newId(); delete it.locked; delete it.anchor; var k = kidsOf(it); if (k) k.forEach(reId); return it; }
   ensureIds(content.sections);
+  // Dernière version ENREGISTRÉE de la page (voir « Réinitialisation » plus bas) : référence des icônes de réinitialisation
+  var KR = window.KWReset;
+  var saved = new KR.Baseline();
+  saved.set(content.sections);
   // Recherche d'un élément : { item, list, index, parent (null = racine), depth, ancestors }
   function locate(id, list, parent, depth, ancestors) {
     list = list || content.sections; depth = depth || 0; ancestors = ancestors || [];
@@ -176,7 +180,7 @@
   // identique) forment UNE seule étape d'annulation.
   function change(fn, opts) {
     opts = opts || {};
-    if (!canWrite) return false;
+    if (!canWrite || probing) return false;
     // Même clé que la modification précédente (frappes, glissement de curseur) : pas de nouvelle copie du document
     var before = opts.key && opts.key === lastKey ? null : snapshot();
     var label = opts.label || nextLabel || "Modification";
@@ -209,6 +213,7 @@
   }
   // light : saisie dans un champ de l'inspecteur (il n'est pas redessiné, sinon le curseur serait perdu)
   function afterChange(light) {
+    resetMemo = {};
     renderTree();
     if (!light) { renderInspector(); renderContext(); renderPageSettings(); }
     updateHistoryButtons();
@@ -217,10 +222,132 @@
     scheduleRender();
     scheduleSave();
     navListeners.forEach(function (f) { f(); });
+    refreshResets();
   }
   function updateHistoryButtons() {
     $("[data-pb-undo]").disabled = !past.length || !canWrite;
     $("[data-pb-redo]").disabled = !future.length || !canWrite;
+  }
+
+  // ---------- Réinitialisation : revenir à la dernière version ENREGISTRÉE ----------
+  // Référence (« saved ») : la page telle qu'elle était à l'ouverture, puis telle qu'elle est après chaque enregistrement
+  // demandé (bouton Enregistrer, Ctrl/⌘ + S, publication). L'enregistrement automatique protège le travail mais ne déplace
+  // pas la référence. Un élément est modifié quand la valeur actuelle de l'un de ses réglages diffère de la référence
+  // (après normalisation : « #F00 » = « rgb(255,0,0) »). Un élément créé depuis n'a pas de référence : pas d'icône.
+  // Trois sortes de retour, distinctes : cette réinitialisation (dernière valeur enregistrée), l'icône ↺ des champs de style
+  // (retirer la valeur propre à l'écran pour retrouver l'héritage) et les valeurs par défaut du widget.
+  var probing = null;               // lecture à blanc d'un champ pour savoir quel réglage il écrit (rien n'est modifié)
+  var resetMemo = {};               // réglages modifiés par élément, recalculés à chaque modification
+  var resetBtns = [];               // icônes affichées dans l'inspecteur (leur visibilité suit l'état réel)
+  var inspItem = null;              // élément dont l'inspecteur est en cours de dessin
+  var stylePath = function (key) { return (styleState === "normal" ? "s:" + device : "t:" + styleState) + ":" + key; };
+  function commitSaved(json) {
+    if (json === undefined) saved.set(content.sections); else saved.setJson(json);
+    resetMemo = {};
+    refreshResets(); placeCanvasBar();
+  }
+  function changedPaths(it) {
+    if (!it || !canWrite) return [];
+    var m = resetMemo[it.id];
+    if (m) return m;
+    var base = saved.get(it.id);
+    return (resetMemo[it.id] = base ? KR.diff(it, base, isNode(it)) : []);
+  }
+  // Réglages modifiés des descendants : { total, kids, list: [{ id, paths }] }
+  function subtreeChanges(it) {
+    var memo = resetMemo["deep:" + it.id];
+    if (memo) return memo;
+    var out = resetMemo["deep:" + it.id] = { total: 0, kids: 0, list: [] };
+    (kidsOf(it) || []).forEach(function (c) {
+      var ps = changedPaths(c);
+      if (ps.length) { out.total += ps.length; out.kids++; out.list.push({ id: c.id, paths: ps }); }
+      var d = subtreeChanges(c);
+      out.total += d.total; out.kids += d.kids; out.list = out.list.concat(d.list);
+    });
+    return out;
+  }
+  var plural = function (n, one, many) { return n + " " + (n > 1 ? many : one); };
+  function restorePaths(list, label) {
+    list = list.filter(function (x) { return x.paths.length; });
+    if (!list.length) return;
+    if (list.some(function (x) { return lockedDeep(x.id); })) { toast("Élément verrouillé : déverrouillez-le d'abord.", true); return; }
+    change(function () {
+      var any = false;
+      list.forEach(function (x) { var it = byId(x.id), base = saved.get(x.id); if (it && base) { KR.restore(it, base, x.paths, isNode(it)); any = true; } });
+      if (!any) return false;
+    }, { label: label });
+  }
+  function paintRestore(b, ch) {
+    var ps = b._scope(ch);
+    b.classList.toggle("is-on", ps.length > 0);
+    if (ps.length) { var tip = b._tip(ps); b.setAttribute("aria-label", tip); b.setAttribute("data-tip", tip); b.tabIndex = 0; } else b.tabIndex = -1;
+  }
+  function refreshResets() {
+    if (!resetBtns.length) return;
+    resetBtns = resetBtns.filter(function (b) { return b.isConnected; });
+    var it = selection.length === 1 ? byId(selection[0]) : null;
+    var ch = it ? changedPaths(it) : [];
+    resetBtns.forEach(function (b) { paintRestore(b, ch); });
+  }
+  // Icône de réinitialisation : présente dans le DOM mais invisible (donc sans décalage) tant que son réglage n'a pas changé
+  function restoreButton(it, scope, tip, onClick, cls) {
+    if (!canWrite || selection.length !== 1 || !saved.has(it.id)) return null;
+    var b = h("button", { type: "button", class: "pb-restore" + (cls ? " " + cls : "") }, icon("undo"));
+    b._scope = scope; b._tip = typeof tip === "function" ? tip : function () { return tip; };
+    b.addEventListener("click", function (e) {
+      e.preventDefault(); e.stopPropagation(); hideTip();
+      var cur = byId(it.id);
+      if (onClick) onClick(cur, b); else restorePaths([{ id: it.id, paths: scope(changedPaths(cur)) }], "Restaurer la dernière valeur enregistrée");
+    });
+    resetBtns.push(b);
+    paintRestore(b, changedPaths(it));
+    return b;
+  }
+  // Un réglage de style de l'écran (et de l'état) affiché
+  function styleRestore(it, key) {
+    var path = stylePath(key), where = device !== "desktop" || styleState !== "normal" ? " (" + (device !== "desktop" ? bpLabel(device) : "") + (device !== "desktop" && styleState !== "normal" ? ", " : "") + (styleState !== "normal" ? styleState : "") + ")" : "";
+    return restoreButton(it, function (ch) { return ch.indexOf(path) >= 0 ? [path] : []; }, "Restaurer la dernière valeur enregistrée" + where);
+  }
+  // Un groupe de réglages de style (écran et état affichés) : seuls ses réglages modifiés sont restaurés
+  function groupRestore(it, group, keys) {
+    var kind = styleState === "normal" ? "s" : "t", scopeName = styleState === "normal" ? device : styleState;
+    var all = keys.concat(Object.keys(SP).filter(function (k) { return SP[k].group === group; }));
+    return restoreButton(it, function (ch) {
+      return ch.filter(function (p) { var q = KR.parsePath(p); return q.kind === kind && q.scope === scopeName && all.indexOf(q.key) >= 0; });
+    }, function (ps) { return "Restaurer les " + plural(ps.length, "réglage modifié", "réglages modifiés") + " de ce groupe"; }, null, "pb-restore-group");
+  }
+  // Un champ de contenu : on lit à blanc ce que son rappel écrirait pour savoir de quel réglage il s'agit
+  function withRestore(el, probe) {
+    var it = inspItem;
+    if (!it || !el || !saved.has(it.id) || selection.length !== 1 || !canWrite) return el;
+    var rec = [];
+    probing = rec;
+    try { probe(); } catch (e) { /* champ sans réglage propre */ }
+    probing = null;
+    if (!rec.length) return el;
+    var b = restoreButton(it, function (ch) { return ch.filter(function (p) { return rec.indexOf(p) >= 0; }); }, "Restaurer la dernière valeur enregistrée");
+    if (b) { el.classList.add("pb-has-restore"); el.appendChild(b); }
+    return el;
+  }
+  // Tout l'élément : ses seuls réglages, ou aussi ceux de ses enfants (choix explicite, périmètre annoncé)
+  function resetElement(it, btn) {
+    var own = changedPaths(it), deep = subtreeChanges(it);
+    var label = "Réinitialiser « " + nameOf(it) + " »";
+    if (!own.length && !deep.total) return;
+    if (!deep.total) { restorePaths([{ id: it.id, paths: own }], label); return; }
+    var r = btn.getBoundingClientRect();
+    var entries = [{ heading: "Réinitialiser les modifications non enregistrées" }];
+    if (own.length) entries.push(["Cet élément seulement (" + plural(own.length, "réglage", "réglages") + ")", function () { restorePaths([{ id: it.id, paths: own }], label); }]);
+    entries.push([(own.length ? "Cet élément et " : "") + "ses enfants modifiés : " + plural(deep.kids, "enfant", "enfants") + ", " + plural(own.length + deep.total, "réglage", "réglages"),
+      function () { restorePaths([{ id: it.id, paths: own }].concat(deep.list), label + " et ses enfants"); }]);
+    showMenuEntries(entries, r.left, r.bottom + 4, { wide: true });
+  }
+  var elementResetCount = function (it) { var d = subtreeChanges(it); return changedPaths(it).length + d.total; };
+  function elementRestore(it, cls) {
+    return restoreButton(it, function (ch) { var d = subtreeChanges(it); return ch.length || d.total ? [1] : []; }, function () {
+      var own = changedPaths(it).length, d = subtreeChanges(it);
+      return "Réinitialiser les modifications non enregistrées" + (own ? " (" + plural(own, "réglage", "réglages") + (d.total ? " et celles de ses enfants" : "") + ")" : " de ses enfants");
+    }, resetElement, cls);
   }
 
   // ---------- Sélection ----------
@@ -684,6 +811,7 @@
   function setStyle(ids, key, value, opts) { var m = {}; m[key] = value; setStyles(ids, m, opts); }
   // Plusieurs propriétés en une seule étape d'annulation (côtés liés, retrait du fond…)
   function setStyles(ids, map, opts) {
+    if (probing) { Object.keys(map).forEach(function (k) { probing.push(stylePath(k)); }); return; }
     ids = ids || selection;
     if (!ids.length || refuseLocked(ids)) return;
     change(function () {
@@ -718,6 +846,7 @@
     }, { label: "Largeur du contenu" });
   }
   function setProp(id, key, value, opts) {
+    if (probing) { probing.push((isNode(byId(id)) ? "p:" : "f:") + key); return; }
     if (lockedDeep(id)) { toast("Élément verrouillé.", true); return; }
     change(function () {
       var it = byId(id);
@@ -1367,8 +1496,9 @@
     var input = opts.multiline ? h("textarea", { id: id, rows: opts.rows || "4", maxlength: opts.max ? String(opts.max) : null, disabled: opts.disabled }) : h("input", { id: id, type: opts.type || "text", maxlength: opts.max ? String(opts.max) : null, disabled: opts.disabled, list: opts.list || null, placeholder: opts.placeholder || null });
     input.value = value === undefined || value === null ? "" : value;
     input.addEventListener(opts.onChange ? "change" : "input", function () { onInput(input.value); });
-    if (opts.dyn) return h("div", { class: "pb-field pb-field-dyn" }, h("label", { for: id, text: label }), h("div", { class: "pb-dyn-row" }, input, dynButton(input, opts)), opts.hint ? h("p", { class: "pb-hint", text: opts.hint }) : null);
-    return h("div", { class: "pb-field" }, h("label", { for: id, text: label }), input, opts.hint ? h("p", { class: "pb-hint", text: opts.hint }) : null);
+    var probe = function () { onInput(input.value); };
+    if (opts.dyn) return withRestore(h("div", { class: "pb-field pb-field-dyn" }, h("label", { for: id, text: label }), h("div", { class: "pb-dyn-row" }, input, dynButton(input, opts)), opts.hint ? h("p", { class: "pb-hint", text: opts.hint }) : null), probe);
+    return withRestore(h("div", { class: "pb-field" }, h("label", { for: id, text: label }), input, opts.hint ? h("p", { class: "pb-hint", text: opts.hint }) : null), probe);
   }
   // Champ numérique d'un contenu (pas d'un style) : même NumericControl que l'inspecteur de style
   function numberField(label, value, cfg, apply, hint) {
@@ -1377,7 +1507,7 @@
       onCommit: function (raw, u, opts) { if (raw === "") return cfg.allowEmpty === false ? false : apply(null, opts); return apply(Number(raw), opts); } }));
     var lab = h("label", { for: id, text: label });
     if (ctl.scrub) ctl.scrub(lab);
-    return h("div", { class: "pb-field" }, lab, ctl, hint ? h("p", { class: "pb-hint", text: hint }) : null);
+    return withRestore(h("div", { class: "pb-field" }, lab, ctl, hint ? h("p", { class: "pb-hint", text: hint }) : null), function () { apply(Number(value) || 0, {}); });
   }
   function selectField(label, value, options, onChange, opts) {
     opts = opts || {};
@@ -1385,13 +1515,13 @@
     var sel = h("select", { id: id, disabled: opts.disabled }, options.map(function (o) { return h("option", { value: String(o[0]), text: o[1] }); }));
     sel.value = value === undefined || value === null ? String(options[0][0]) : String(value);
     sel.addEventListener("change", function () { onChange(sel.value); });
-    return h("div", { class: "pb-field" }, h("label", { for: id, text: label }), sel);
+    return withRestore(h("div", { class: "pb-field" }, h("label", { for: id, text: label }), sel), function () { onChange(sel.value); });
   }
   function checkField(label, value, onChange, opts) {
     var cb = h("input", { type: "checkbox", disabled: opts && opts.disabled });
     cb.checked = Boolean(value);
     cb.addEventListener("change", function () { onChange(cb.checked); });
-    var lab = h("label", { class: "pb-check" }, cb, " " + label);
+    var lab = withRestore(h("label", { class: "pb-check" }, cb, " " + label), function () { onChange(cb.checked); });
     return opts && opts.hint ? h("div", {}, lab, h("p", { class: "pb-hint", text: opts.hint })) : lab;
   }
   document.body.appendChild(h("datalist", { id: "pb-tags" }, (boot.tags || []).map(function (t) { return h("option", { value: t }); })));
@@ -2315,7 +2445,7 @@
     var lab = h("label", { for: id, class: "pb-prop-label", title: SP[key].label, "aria-label": SP[key].label }, label || SP[key].label);
     if (control && control.scrub) control.scrub(lab);
     return h("div", { class: "pb-field pb-style-field pb-prop" + (own !== undefined ? " is-set" : ""), "data-prop": key },
-      h("div", { class: "pb-prop-head" }, lab, marks),
+      h("div", { class: "pb-prop-head" }, lab, marks, items.length === 1 ? styleRestore(it, key) : null),
       control, extra || null, reset);
   }
   // ---------- Contrôles iconographiques : un bouton = une vraie valeur du modèle ----------
@@ -2958,7 +3088,7 @@
     det.addEventListener("toggle", function () { store.set("open-" + g, det.open); });
     var counted = g === "spacing" ? SIDES.map(function (s) { return "margin" + s; }).concat(SIDES.map(function (s) { return "padding" + s; })) : keys;
     var set = counted.filter(function (k, i) { return counted.indexOf(k) === i && items.some(function (x) { return ownValue(x, k) !== undefined; }); }).length;
-    det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: SPEC.groups[g] || g }), set ? h("span", { class: "pb-acc-count", title: set + " réglage(s) propre(s) à cet écran", "aria-label": set + " réglage(s) modifié(s)" }, String(set)) : null));
+    det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: SPEC.groups[g] || g }), items.length === 1 ? groupRestore(items[0], g, counted) : null, set ? h("span", { class: "pb-acc-count", title: set + " réglage(s) propre(s) à cet écran", "aria-label": set + " réglage(s) modifié(s)" }, String(set)) : null));
     var inner = h("div", { class: "pb-acc-body" });
     if (g === "spacing") inner.appendChild(spacingBox(items));
     else if (g === "border") borderControls(items, inner);
@@ -3076,6 +3206,7 @@
     var box = $("[data-pb-inspector]");
     var keepScroll = box.dataset.for === selection.join(",") ? box.scrollTop : 0;
     box.textContent = "";
+    resetBtns = []; inspItem = null;
     box.dataset.for = selection.join(",");
     // fieldSeq n'est JAMAIS remis à zéro : les identifiants (pb-f-N) restent uniques dans toute la page, sinon un libellé de
     // l'inspecteur désignait un champ d'un autre panneau (réglages de la page…) au clic et pour les lecteurs d'écran
@@ -3101,6 +3232,7 @@
     var it = items[0];
     var multi = items.length > 1;
     var locked = lockedAny(items);
+    inspItem = multi || locked ? null : it;
     var schema = inspectorFor(it);
     var l = locate(it.id);
     // En-tête : ce que l'on modifie (nature, nom) et son chemin dans la structure (cliquable)
@@ -3112,7 +3244,7 @@
         h("div", { class: "pb-insp-titles" },
           h("p", { class: "pb-kind", text: multi ? "Sélection multiple" : "Modifier " + schema.kind }),
           h("h2", { text: multi ? items.length + " éléments" : (it.name || preview(it) || schema.kind) })),
-        h("span", { class: "pb-insp-head-actions" },
+        h("span", { class: "pb-insp-head-actions" }, multi ? null : elementRestore(it),
           h("button", { type: "button", class: "pb-panel-toggle", "aria-haspopup": "menu", "data-tip": "Actions : dupliquer, copier, renommer, déplacer, supprimer…", "aria-label": "Actions de la sélection", onclick: function (e) { var r = e.currentTarget.getBoundingClientRect(); openMenu(r.right - 4, r.bottom + 4); } }, icon("moreVertical")),
           h("button", { type: "button", class: "pb-panel-toggle", "data-tip": "Désélectionner", "aria-label": "Désélectionner", onclick: function () { select(null); } }, icon("close")))));
     box.appendChild(head);
@@ -3138,6 +3270,7 @@
       else legacyContentFields(it, body, locked);
     } else if (inspTab === "style") { styleTab(items, body); if (boxTabs) boxStyleExtras(items, body, locked); }
     else advancedTab(items, body, locked);
+    inspItem = null;
     box.scrollTop = keepScroll;
   }
   // Contenu d'une section libre ou d'un conteneur : sa structure (enfants cliquables), et comment y ajouter
@@ -4254,6 +4387,7 @@
     gridRowDel: { icon: "listMinus", label: "Retirer la dernière ligne", off: function (it) { return kidsOf(it).length <= gridColumnsOf(it); }, run: function (it) { gridRemoveRow(it.id); } },
     addInside: { icon: "plus", label: "Ajouter un élément à l'intérieur", run: function (it) { openCommands("Ajouter", { inside: it.id }); } },
     addSection: { icon: "listPlus", label: "Ajouter une section en dessous", run: function (it) { openCommands("Ajouter", { after: topOf(it.id).id }); } },
+    restore: { icon: "undo", label: function () { var it = selectedItems()[0]; var n = it ? elementResetCount(it) : 0; return "Réinitialiser les modifications non enregistrées (" + plural(n, "réglage", "réglages") + ")"; }, run: function (it, btn) { resetElement(it, btn); } },
     duplicate: { icon: "copy", label: "Dupliquer (Ctrl/⌘ + D)", run: function () { duplicateSelected(); } },
     hide: { icon: function () { return anyFlag("hidden") ? "eye" : "eyeOff"; }, label: function () { return anyFlag("hidden") ? "Afficher (Ctrl/⌘ + Maj + H)" : "Masquer : reste dans la page et les calques (Ctrl/⌘ + Maj + H)"; }, pressed: function () { return anyFlag("hidden"); }, run: function () { setFlag(selection.slice(), "hidden", !anyFlag("hidden")); } },
     lock: { icon: "lock", label: function () { return anyFlag("locked") ? "Déverrouiller (Ctrl/⌘ + Maj + L)" : "Verrouiller : ni déplacé, ni modifié, ni supprimé (Ctrl/⌘ + Maj + L)"; }, pressed: function () { return anyFlag("locked"); }, run: function () { setFlag(selection.slice(), "locked", !anyFlag("locked")); } },
@@ -4271,7 +4405,7 @@
     if (it.locked) return ["lock", "more"];
     if (lockedDeep(it.id)) return l.parent ? ["parent", "more"] : ["more"];
     var key = isNode(it) ? it.type : it.type === "layout" || it.type === "component" || it.type === "form" ? it.type : "legacy";
-    var list = (l.parent ? ["parent"] : []).concat(isNode(it) ? ["move"] : []).concat(TYPE_ACTIONS[key] || []).concat(["duplicate", "hide"]);
+    var list = (l.parent ? ["parent"] : []).concat(isNode(it) ? ["move"] : []).concat(TYPE_ACTIONS[key] || []).concat(elementResetCount(it) ? ["restore"] : []).concat(["duplicate", "hide"]);
     if (STRUCTURAL.indexOf(it.type) >= 0 || !isNode(it)) list.push("lock");
     return list.concat(["remove", "more"]);
   }
@@ -5860,14 +5994,20 @@
     backup();
   }
   function backup() { try { localStorage.setItem("pb-backup-" + PAGE.id, JSON.stringify({ at: Date.now(), revision: revision, content: payload() })); } catch (e) { /* stockage indisponible */ } }
-  function save() {
+  // explicit : enregistrement demandé (bouton, Ctrl/⌘ + S, publication, changement de page) ; l'enregistrement automatique
+  // ne déplace pas la référence des icônes de réinitialisation, sinon elles disparaîtraient après une seconde
+  function save(explicit) {
+    explicit = explicit === true;
     if (!dirty || blocked) return Promise.resolve();
     if (saving) { clearTimeout(saveTimer); saveTimer = setTimeout(save, 500); return Promise.resolve(); }
     saving = true;
     dirty = false;
     setSave("Enregistrement…");
+    // Ce qui part au serveur : c'est CET état (et pas celui, plus récent, de l'écran à l'arrivée de la réponse) qui devient la référence
+    var sentJson = explicit ? JSON.stringify(content.sections) : null;
     return api("PUT", BASE + "/brouillon", { content: payload(), revision: revision }).then(function (r) {
       saving = false; retry = 0; revision = r.revision; hasDraft = true;
+      if (sentJson !== null) commitSaved(sentJson);
       updateStatus();
       if (!dirty) { setSave("Enregistré à " + new Date(r.savedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), "is-ok"); try { localStorage.removeItem("pb-backup-" + PAGE.id); } catch (e) { /* rien */ } }
     }, function (err) {
@@ -5881,7 +6021,7 @@
       saveTimer = setTimeout(save, retry * 5000);
     });
   }
-  function saveNow() { if (editing) commitEdit(); clearTimeout(saveTimer); if (!dirty) { setSave("Tout est enregistré", "is-ok"); return Promise.resolve(); } return save(); }
+  function saveNow() { if (editing) commitEdit(); clearTimeout(saveTimer); if (!dirty) { setSave("Tout est enregistré", "is-ok"); if (!saving && !blocked) commitSaved(); return Promise.resolve(); } return save(true); }
   $("[data-pb-save-now]").addEventListener("click", saveNow);
   if (!canWrite) $("[data-pb-save-now]").hidden = true;
   window.addEventListener("beforeunload", function (e) { if (editing) commitEdit(); if (dirty || saving) { backup(); e.preventDefault(); e.returnValue = ""; } });
@@ -5909,10 +6049,11 @@
     if (editing) commitEdit();
     btn.disabled = true;
     clearTimeout(saveTimer);
-    (dirty ? save() : Promise.resolve()).then(function () {
+    (dirty ? save(true) : Promise.resolve()).then(function () {
       if (dirty || blocked) { btn.disabled = false; toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
       return api("POST", "/marketing/pages/" + PAGE.id + "/publier.json", {}).then(function (r) {
         status = "published"; hasDraft = false; revision = r.revision;
+        if (!saving) commitSaved();
         updateStatus();
         toast("Page en ligne (version " + r.version + ") : " + r.url);
       }, apiFail);
