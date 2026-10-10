@@ -66,7 +66,12 @@ describe("parties stylables : CSS généré", () => {
 describe("parties stylables : contrat avec les gabarits et l'éditeur", () => {
   const tpl = fs.readFileSync(path.join(__dirname, "..", "views", "marketing-public", "_node.ejs"), "utf8");
   const widgetsDir = path.join(__dirname, "..", "views", "marketing-public", "widgets");
-  const all = tpl + fs.readdirSync(widgetsDir).map((f) => fs.readFileSync(path.join(widgetsDir, f), "utf8")).join("\n");
+  const base = tpl + fs.readdirSync(widgetsDir).map((f) => fs.readFileSync(path.join(widgetsDir, f), "utf8")).join("\n");
+
+  // classes ajoutées à l'exécution par les scripts de la page publiée (onglets, carrousels, menu mobile…)
+  const jsDir = path.join(__dirname, "..", "public", "js");
+  const runtime = fs.readdirSync(jsDir).filter((f) => /^kw-|^landing|^site/.test(f)).map((f) => fs.readFileSync(path.join(jsDir, f), "utf8")).join("\n");
+  const all = base + runtime;
   test("chaque sélecteur déclaré correspond à des classes / balises présentes dans le gabarit du widget", () => {
     for (const [type, defs] of Object.entries(PARTS)) {
       assert.ok(n.NODE_TYPES[type], `type inconnu : ${type}`);
