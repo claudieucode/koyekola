@@ -35,7 +35,7 @@ const CASES = [
   ["container", "borderTopLeftRadius", "11px", "border-top-left-radius", "11px"], ["container", "borderTopRightRadius", "12px", "border-top-right-radius", "12px"],
   ["container", "borderBottomRightRadius", "13px", "border-bottom-right-radius", "13px"], ["container", "borderBottomLeftRadius", "14px", "border-bottom-left-radius", "14px"],
   ["container", "boxShadow", "lg", "box-shadow", (v) => v !== "none"], ["container", "backdropBlur", 8, "backdrop-filter", "blur(8px)"],
-  ["container", "transformOrigin", "top left", "transform-origin", "0px 0px"], ["container", "transitionDuration", 300, "transition", /0\.3s/],
+  ["container", "transformOrigin", "top left", "transform-origin", "0px 0px"], ["container", "transitionDuration", 300, "transition", /0\.3s/], ["container", "transitionEasing", "linear", "transition-timing-function", /linear/],
   ["container", "top", "12px", "top", "12px", { position: "relative" }], ["container", "right", "13px", "right", "13px", { position: "relative" }],
   ["container", "bottom", "14px", "bottom", "14px", { position: "relative" }], ["container", "left", "15px", "left", "15px", { position: "relative" }],
   ["container", "aspectRatio", "16/9", "aspect-ratio", "16 / 9"],

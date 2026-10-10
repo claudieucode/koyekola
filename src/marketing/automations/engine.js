@@ -10,6 +10,7 @@ const { audit } = require("../audience/shared");
 const { getContact } = require("../audience/contacts");
 const { createProviderFor } = require("../sending/config");
 const { getAction } = require("./actions");
+const { filterMatches } = require("./catalog");
 const { enqueueRun } = require("./jobs");
 
 const nowOf = (ctx) => (typeof ctx.now === "function" ? ctx.now() : Date.now());
@@ -24,7 +25,7 @@ function eventData(ctx, event) {
     course_title: md.courseTitle || md.title || "", order_total: md.orderTotal || "", order_id: md.orderId ?? "", lesson_title: md.lessonTitle || "",
     course_url: base && slug ? `${base}/cours/${encodeURIComponent(String(slug))}` : "", learn_url: base ? `${base}/mes-cours` : "",
     // Tunnel d'origine (palier 19) : variables {{event.funnel_name}} et {{event.funnel_step}} ; les identifiants servent au suivi des e-mails
-    funnel_name: md.funnelName || "", funnel_step: md.stepName || md.lastStepName || "", funnel_id: md.funnelId || "", funnel_step_id: md.stepId || md.lastStepId || "",
+    refund_amount: md.refundAmount || "", funnel_name: md.funnelName || "", funnel_step: md.stepName || md.lastStepName || "", funnel_id: md.funnelId || "", funnel_step_id: md.stepId || md.lastStepId || "",
   };
 }
 
@@ -62,7 +63,7 @@ function onEvent(ctx, event) {
     // Le déclencheur qui a fait correspondre CE scénario (pas forcément le premier) porte le filtre à appliquer.
     const matched = JSON.parse(a.triggers || "[]").find((t) => t.event === event.name);
     const filter = matched ? matched.filter : {};
-    if (filter.key && String(event.metadata && event.metadata[filter.key]) !== String(filter.value)) continue;
+    if (!filterMatches(event.metadata, filter)) continue;
     if (Number.isInteger(a.site_id) && !belongsToSite(ctx, contact, event, a.site_id)) continue;
     const steps = JSON.parse(a.active_steps);
     if (!steps.length) continue;

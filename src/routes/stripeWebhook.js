@@ -1,7 +1,7 @@
 // Webhook Stripe : POST /stripe/webhook. Monté dans server.js avec le corps BRUT (la signature porte sur les octets exacts)
 // et avant le contrôle d'origine (Stripe n'est pas un navigateur). Configurez dans Stripe l'adresse
 // <SITE_URL>/stripe/webhook et les événements : checkout.session.completed, checkout.session.async_payment_succeeded,
-// checkout.session.async_payment_failed, checkout.session.expired ; copiez le « secret de signature » dans STRIPE_WEBHOOK_SECRET.
+// checkout.session.async_payment_failed, checkout.session.expired, charge.refunded ; copiez le « secret de signature » dans STRIPE_WEBHOOK_SECRET.
 const express = require("express");
 const db = require("../config/database");
 const payments = require("../services/payments");
@@ -36,6 +36,12 @@ router.post("/webhook", (req, res) => {
       case "checkout.session.async_payment_failed":
         payments.markCheckoutEnded(db, session || {}, "failed");
         break;
+      case "charge.refunded": {
+        // Remboursement fait dans Stripe : tracé (commande + montant) pour le Contact Core et les scénarios ; accès et commande ne changent pas
+        const r = payments.recordRefunds(db, session || {});
+        if (r.status === "unknown") console.warn(`[KOLAKISA] Webhook Stripe : remboursement d'un paiement inconnu (${event.id}), ignoré.`);
+        break;
+      }
       default:
         break; // autres événements : accusés de réception sans action
     }

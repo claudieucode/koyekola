@@ -527,6 +527,20 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_checkout_sessions_user ON checkout_sessions(user_id, status);
 `);
 
+// Remboursements (palier 20) : la vérité financière reste chez Stripe ; ici seulement la trace de ce que Stripe annonce (webhook signé « charge.refunded »),
+// rattachée à la commande payée par ce paiement. UNIQUE sur l'identifiant du remboursement Stripe : un webhook rejoué n'enregistre rien de plus.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS order_refunds (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    stripe_refund_id TEXT NOT NULL UNIQUE,
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    currency TEXT NOT NULL DEFAULT 'eur',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_order_refunds_order ON order_refunds(order_id);
+`);
+
 // Offres : prix spécial d'une formation (lancement, soldes) pendant une période. Le prix standard reste courses.price_cents ;
 // une offre ne peut que le BAISSER (voir src/services/pricing.js). instructor_id = propriétaire (comme courses et coupons).
 db.exec(`

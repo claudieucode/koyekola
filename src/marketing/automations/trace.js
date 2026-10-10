@@ -3,6 +3,7 @@
 const { MarketingError } = require("../errors");
 const { siteSql } = require("../audience/shared");
 const { maskEmail } = require("../contactcore");
+const { filterMatches } = require("./catalog");
 
 const SECRET = /pass|token|secret|key|card|cvv|iban|authorization/i;
 const safeMetadata = (raw) => {
@@ -28,7 +29,7 @@ function verdicts(ctx, row, md) {
     const filter = matched && matched.filter ? matched.filter : {};
     let verdict = "démarrerait", reason = "";
     if (!row.contact_id) { verdict = "ignoré"; reason = "événement sans contact"; }
-    else if (filter.key && String(md[filter.key]) !== String(filter.value)) { verdict = "ignoré"; reason = `filtre du déclencheur non satisfait (${filter.key})`; }
+    else if (!filterMatches(md, filter)) { verdict = "ignoré"; reason = `filtre du déclencheur non satisfait (${filter.key})`; }
     else if (Number.isInteger(a.site_id) && a.site_id !== row.site_id
       && !ctx.db.prepare("SELECT 1 FROM mk_contacts WHERE id = ? AND organization_id = ? AND origin_site_id = ?").get(row.contact_id, ctx.organizationId, a.site_id)
       && !ctx.db.prepare("SELECT 1 FROM mk_events WHERE organization_id = ? AND contact_id = ? AND site_id = ? LIMIT 1").get(ctx.organizationId, row.contact_id, a.site_id)) { verdict = "ignoré"; reason = "le contact n'appartient pas au site de ce scénario"; }

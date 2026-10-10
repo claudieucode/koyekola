@@ -282,7 +282,7 @@ module.exports = ({ db }) => {
   router.post("/evenements/abandons", need("queue.manage"), (req, res, next) =>
     attempt(req, res, next, "/marketing/evenements", () => {
       const r = abandon.sweep(req.mk.ctx);
-      return `Détection terminée : ${r.funnels} abandon${r.funnels > 1 ? "s" : ""} de tunnel, ${r.checkouts} commande${r.checkouts > 1 ? "s" : ""} abandonnée${r.checkouts > 1 ? "s" : ""}.`;
+      return `Détection terminée : ${r.funnels} abandon${r.funnels > 1 ? "s" : ""} de tunnel, ${r.checkouts} commande${r.checkouts > 1 ? "s" : ""} abandonnée${r.checkouts > 1 ? "s" : ""}, ${r.carts} panier${r.carts > 1 ? "s" : ""} abandonné${r.carts > 1 ? "s" : ""}.`;
     }));
 
   router.post("/evenements/synchroniser", need("queue.manage"), (req, res, next) =>

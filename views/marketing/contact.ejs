@@ -203,6 +203,25 @@
       </section>
     </div>
 
+    <% if (commerce) { %>
+    <section class="mk-panel" id="commerce" aria-labelledby="cm-title">
+      <h2 id="cm-title">Commerce</h2>
+      <% if (!commerce.count) { %><p class="field-hint">Ce contact n'a passé aucune commande.<%= commerce.abandoned ? ` ${commerce.abandoned} panier(s) ou commande(s) abandonné(s).` : "" %></p>
+      <% } else { %>
+        <p><strong><%= commerce.count %></strong> commande(s) · <strong><%= mkh.euros(commerce.netCents) %></strong> dépensés<%= commerce.refundedCents ? ` (dont ${mkh.euros(commerce.refundedCents)} remboursés)` : "" %> · première le <%= mkh.fdate(commerce.first) %>, dernière le <%= mkh.fdate(commerce.last) %><%= commerce.abandoned ? ` · ${commerce.abandoned} abandon(s)` : "" %></p>
+        <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Commandes de ce contact</caption>
+          <thead><tr><th scope="col">Commande</th><th scope="col">Date</th><th scope="col">Formations</th><th scope="col">Montant</th><th scope="col">Remboursé</th></tr></thead>
+          <tbody><% commerce.recent.forEach((o) => { %><tr>
+            <td><a href="/formateur/gestion/ventes/commandes/<%= o.id %>">n° <%= o.id %></a></td>
+            <td><%= mkh.fdate(o.created_at) %></td>
+            <td><%= o.products.map((p) => p.title).join(", ") || "—" %></td>
+            <td><%= mkh.euros(o.total_cents) %><%= o.coupon_code ? ` (code ${o.coupon_code})` : "" %></td>
+            <td><%= o.refunded_cents ? mkh.euros(o.refunded_cents) : "—" %></td></tr><% }) %></tbody>
+        </table></div>
+      <% } %>
+    </section>
+    <% } %>
+
     <% if (journeys) { %>
     <section class="mk-panel" id="tunnels" aria-labelledby="tn-title">
       <h2 id="tn-title">Tunnels</h2>

@@ -33,10 +33,12 @@ const line = (v, max) => clean(v, max).replace(/\s+/g, " ");
 
 // ---------- Valeurs de style (validées une à une) ----------
 const LEN = /^(-?\d{1,4}(?:\.\d{1,3})?)(px|%|rem|em|vh|vw)$/;
-const lengthOf = ({ auto = false, negative = false } = {}) => (v) => {
+const INTRINSIC = new Set(["fit-content", "min-content", "max-content"]); // dimensions intrinsèques : liste fermée, jamais de CSS libre
+const lengthOf = ({ auto = false, negative = false, intrinsic = false } = {}) => (v) => {
   const s = String(v ?? "").trim().toLowerCase();
   if (s === "0") return "0";
   if (auto && s === "auto") return "auto";
+  if (intrinsic && INTRINSIC.has(s)) return s;
   const m = s.match(LEN);
   if (!m) return null;
   if (!negative && Number(m[1]) < 0) return null;
@@ -94,7 +96,7 @@ const gridTrack = (v) => {
   if (!s || parts.length > 12) return null;
   return parts.every((t) => /^(\d{1,2}(\.\d)?fr|\d{1,4}px|\d{1,3}%|auto)$/.test(t)) ? s : null;
 };
-const len = lengthOf(), lenAuto = lengthOf({ auto: true }), lenNeg = lengthOf({ negative: true }), marginLen = lengthOf({ auto: true, negative: true });
+const len = lengthOf(), lenAuto = lengthOf({ auto: true }), lenSize = lengthOf({ intrinsic: true }), lenSizeAuto = lengthOf({ auto: true, intrinsic: true }), lenNeg = lengthOf({ negative: true }), marginLen = lengthOf({ auto: true, negative: true });
 const STYLE_PROPS = {
   display: { css: "display", check: oneOf("block", "flex", "grid", "inline-block", "inline", "inline-flex", "none"), group: "layout" },
   flexDirection: { css: "flex-direction", check: oneOf("row", "column", "row-reverse", "column-reverse"), group: "layout" },
@@ -128,12 +130,12 @@ const STYLE_PROPS = {
   gridColumnEnd: { css: "grid-column-end", check: numberIn(1, 13, { integer: true }), group: "layout" },
   gridRowStart: { css: "grid-row-start", check: numberIn(1, 13, { integer: true }), group: "layout" },
   gridRowEnd: { css: "grid-row-end", check: numberIn(1, 13, { integer: true }), group: "layout" },
-  width: { css: "width", check: lenAuto, group: "size" },
-  height: { css: "height", check: lenAuto, group: "size" },
-  minWidth: { css: "min-width", check: len, group: "size" },
-  maxWidth: { css: "max-width", check: len, group: "size" },
-  minHeight: { css: "min-height", check: len, group: "size" },
-  maxHeight: { css: "max-height", check: len, group: "size" },
+  width: { css: "width", check: lenSizeAuto, group: "size" },
+  height: { css: "height", check: lenSizeAuto, group: "size" },
+  minWidth: { css: "min-width", check: lenSize, group: "size" },
+  maxWidth: { css: "max-width", check: lenSize, group: "size" },
+  minHeight: { css: "min-height", check: lenSize, group: "size" },
+  maxHeight: { css: "max-height", check: lenSize, group: "size" },
   // Part de largeur d'une colonne dans « Colonnes » (proportions : 1 / 1 = moitié-moitié, 2 / 1 = deux tiers - un tiers)
   flexGrow: { css: "flex-grow", check: numberIn(0, 20), group: "size" },
   flexShrink: { css: "flex-shrink", check: numberIn(0, 20), group: "size" },
@@ -189,6 +191,8 @@ const STYLE_PROPS = {
   transformOrigin: { css: "transform-origin", check: oneOf("center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"), group: "position" },
   // Durée des changements au survol / focus / clic (couleurs, ombre, transformation…)
   transitionDuration: { css: "transition", check: numberIn(0, 2000, { integer: true }), out: (n) => `color ${n}ms ease, background-color ${n}ms ease, border-color ${n}ms ease, box-shadow ${n}ms ease, transform ${n}ms ease, opacity ${n}ms ease`, group: "effects" },
+  // Accélération des transitions (écrite APRÈS « transition » : la propriété détaillée remplace l'accélération par défaut de la durée)
+  transitionEasing: { css: "transition-timing-function", check: oneOf("ease", "linear", "ease-in", "ease-out", "ease-in-out"), group: "effects" },
   zIndex: { css: "z-index", check: numberIn(-100, 9999, { integer: true }), group: "position" },
   objectFit: { css: "object-fit", check: oneOf("cover", "contain", "fill", "none"), group: "media" },
   objectPosition: { css: "object-position", check: oneOf("center", "top", "bottom", "left", "right"), group: "media" },
@@ -274,7 +278,7 @@ function declarations(set, band = false) {
   const d = [];
   const entries = Object.entries(set);
   // Coins après l'arrondi général (sinon « border-radius » les écraserait)
-  for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k) && !PLACEMENT.has(k)).concat(entries.filter(([k]) => CORNERS.has(k)))) {
+  for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k) && !PLACEMENT.has(k) && k !== "transitionEasing").concat(entries.filter(([k]) => CORNERS.has(k) || k === "transitionEasing"))) {
     const p = STYLE_PROPS[k];
     if (p) d.push(band && (k === "paddingLeft" || k === "paddingRight") ? `--kw-p${k === "paddingLeft" ? "l" : "r"}:${p.out ? p.out(v) : v}` : `${p.css}:${p.out ? p.out(v) : v}`);
   }
@@ -1110,7 +1114,7 @@ const STYLE_UI = {
   justifyItems: ["Alignement horizontal des cases", { stretch: "Étirer", start: "Début", center: "Centre", end: "Fin" }],
   position: ["Position", { static: "Normale", relative: "Relative", sticky: "Collante", absolute: "Absolue (dans le parent)", fixed: "Fixe (à l'écran)" }], top: ["Décalage haut"], right: ["Décalage droite"], bottom: ["Décalage bas"], left: ["Décalage gauche"],
   transformOrigin: ["Origine des transformations", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite", "top left": "Haut gauche", "top right": "Haut droit", "bottom left": "Bas gauche", "bottom right": "Bas droit" }],
-  transitionDuration: ["Durée des transitions (ms)"], zIndex: ["Plan (z-index)"],
+  transitionDuration: ["Durée des transitions (ms)"], transitionEasing: ["Accélération des transitions", { ease: "Douce", linear: "Linéaire", "ease-in": "Départ lent", "ease-out": "Arrivée lente", "ease-in-out": "Départ et arrivée lents" }], zIndex: ["Plan (z-index)"],
   objectFit: ["Cadrage", { cover: "Remplir", contain: "Contenir", fill: "Étirer", none: "Taille réelle" }],
   objectPosition: ["Point focal", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite" }],
   aspectRatio: ["Proportions", { auto: "Libres", "1/1": "1:1", "4/3": "4:3", "3/2": "3:2", "16/9": "16:9", "21/9": "21:9", "3/4": "3:4" }],

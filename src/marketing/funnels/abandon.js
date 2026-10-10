@@ -6,7 +6,7 @@
 const { emit } = require("../audience/shared");
 
 const HOUR = 3600000;
-const DEFAULTS = { funnel: 24, checkout: 1 };
+const DEFAULTS = { funnel: 24, checkout: 1, cart: 24 };
 function hoursSetting(ctx, key, fallback) {
   try {
     const row = ctx.db.prepare("SELECT value FROM mk_settings WHERE organization_id = ? AND key = ?").get(ctx.organizationId, `cms.${key}`);
@@ -15,12 +15,13 @@ function hoursSetting(ctx, key, fallback) {
   } catch { return fallback; }
 }
 
-function sweep(ctx, { now = Date.now(), funnelHours, checkoutHours, limit = 500 } = {}) {
-  if (!ctx.bus) return { funnels: 0, checkouts: 0 };
+function sweep(ctx, { now = Date.now(), funnelHours, checkoutHours, cartHours, limit = 500 } = {}) {
+  if (!ctx.bus) return { funnels: 0, checkouts: 0, carts: 0 };
   const fh = funnelHours ?? hoursSetting(ctx, "funnel_abandon_hours", DEFAULTS.funnel);
   const ch = checkoutHours ?? hoursSetting(ctx, "checkout_abandon_hours", DEFAULTS.checkout);
+  const ph = cartHours ?? hoursSetting(ctx, "cart_abandon_hours", DEFAULTS.cart);
   const org = ctx.organizationId;
-  const out = { funnels: 0, checkouts: 0 };
+  const out = { funnels: 0, checkouts: 0, carts: 0 };
 
   // --- Tunnels ---
   const funnels = ctx.db.prepare("SELECT id, name, site_id FROM mk_funnels WHERE organization_id = ? AND status = 'active'").all(org);
@@ -54,6 +55,22 @@ function sweep(ctx, { now = Date.now(), funnelHours, checkoutHours, limit = 500 
     if (!contact) continue;
     emit(ctx, "checkout.abandoned", { contact, source: "commerce", idempotencyKey: `checkout.abandoned:${contact.id}:${e.id}`, occurredAt: now, metadata: { startedEventId: e.id, startedAt: e.occurred_at, abandonAfterHours: ch } });
     out.checkouts += 1;
+  }
+
+  // --- Panier (palier 20) : formation ajoutée (suivi consenti, contact connu), puis ni page de commande ni commande après le délai ---
+  const carts = ctx.db.prepare(`SELECT e.id, e.contact_id, e.occurred_at, e.metadata FROM mk_events e
+    WHERE e.organization_id = ? AND e.name = 'lms.cart_added' AND e.contact_id IS NOT NULL AND e.occurred_at < ? AND e.occurred_at >= ?
+      AND NOT EXISTS (SELECT 1 FROM mk_events o WHERE o.organization_id = e.organization_id AND o.contact_id = e.contact_id AND o.name IN ('lms.checkout_started', 'lms.order_completed', 'purchase.completed') AND o.occurred_at >= e.occurred_at)
+      AND NOT EXISTS (SELECT 1 FROM mk_events a WHERE a.organization_id = e.organization_id AND a.contact_id = e.contact_id AND a.name = 'cart.abandoned' AND json_extract(a.metadata, '$.addedEventId') = e.id)
+    ORDER BY e.id LIMIT ?`).all(org, now - ph * HOUR, now - 30 * 86400000, limit);
+  for (const e of carts) {
+    const contact = ctx.db.prepare("SELECT id, email FROM mk_contacts WHERE id = ? AND organization_id = ? AND record_status = 'active'").get(e.contact_id, org);
+    if (!contact) continue;
+    let md = {};
+    try { md = JSON.parse(e.metadata); } catch { md = {}; }
+    emit(ctx, "cart.abandoned", { contact, source: "commerce", idempotencyKey: `cart.abandoned:${contact.id}:${e.id}`, occurredAt: now,
+      metadata: { addedEventId: e.id, addedAt: e.occurred_at, abandonAfterHours: ph, ...(md.courseId ? { courseId: md.courseId, title: md.title || "", slug: md.slug || "" } : {}) } });
+    out.carts += 1;
   }
   return out;
 }
