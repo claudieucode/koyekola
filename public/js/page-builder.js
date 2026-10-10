@@ -2259,6 +2259,11 @@
   // l'historique (annuler / rétablir), l'enregistrement et le rendu. Un clic ▲▼ ou une touche = une étape d'annulation ;
   // un glissement ou un déplacement de curseur = UNE étape (même clé), et le document n'est copié qu'une fois par geste.
   var ncSeq = 0;
+  // Curseurs : part de la piste parcourue (variable CSS --pb-fill, 0–100 %) pour dessiner la partie active ; purement visuel, ne touche ni la valeur ni les bornes
+  function paintRange(r) {
+    var lo = Number(r.min || 0), hi = Number(r.max || 100), v = Number(r.value);
+    r.style.setProperty("--pb-fill", (hi > lo ? Math.max(0, Math.min(100, (v - lo) / (hi - lo) * 100)) : 0) + "%");
+  }
   function numericControl(c) {
     var units = c.units && c.units.length ? c.units.slice() : null;
     var min = c.min === undefined ? -Infinity : c.min, max = c.max === undefined ? Infinity : c.max;
@@ -2298,6 +2303,7 @@
       if (!r) return;
       range.min = String(r[0]); range.max = String(r[1]); range.step = String(stepOf(unitNow()));
       range.value = String(read());
+      paintRange(range);
     };
     var mark = function (on) { var row = input.closest ? input.closest(".pb-prop") : null; if (row) row.classList.toggle("is-set", on); };
     var send = function (n, u, opts) {
@@ -2379,6 +2385,7 @@
       range.addEventListener("keydown", function () { slide = ++ncSeq; });
       range.addEventListener("input", function () {
         var u = unitNow(); if (u === "auto") { u = units.filter(function (x) { return x !== "auto"; })[0] || "px"; if (sel) sel.value = u; input.disabled = false; }
+        paintRange(range);
         var n = rnd(clamp(Number(range.value)));
         input.value = shown(n, u);
         send(n, u, { key: "slide:" + c.id + ":" + (slide || ++ncSeq), light: true });
@@ -2789,7 +2796,8 @@
     var sw = btn.querySelector(".pb-swatch"), label = btn.querySelector(".pb-color-text");
     var hexIn = h("input", { type: "text", class: "pb-cpop-hex", value: cur ? cur.toUpperCase() : "", placeholder: "#RRGGBB, rgb(…), hsl(…)", "aria-label": "Code couleur (HEX, RGB ou HSL)", autocomplete: "off", spellcheck: "false" });
     var native = h("input", { type: "color", value: state.hex, "aria-label": "Nuancier", class: "pb-cpop-native" });
-    var alpha = h("input", { type: "range", min: "0", max: "100", step: "1", value: String(Math.round(state.alpha * 100)), "aria-label": "Opacité de la couleur (en %)" });
+    var alpha = h("input", { type: "range", min: "0", max: "100", step: "1", value: String(Math.round(state.alpha * 100)), "aria-label": "Opacité de la couleur (en %)", class: "pb-cpop-range" });
+    paintRange(alpha);
     var alphaOut = h("output", { class: "pb-cpop-alpha", text: Math.round(state.alpha * 100) + " %" });
     var info = h("p", { class: "pb-cpop-info", "aria-live": "polite" });
     var show = function (v) {
@@ -2803,12 +2811,12 @@
     var set = function (v) { cpopDirty = true; show(v); onSet(v, { key: hk, light: true }); };
     var applyHex = function () { var v = state.hex + (state.alpha < 0.999 ? hex2(state.alpha * 255) : ""); hexIn.value = v.toUpperCase(); hexIn.removeAttribute("aria-invalid"); set(v); };
     native.addEventListener("input", function () { state.hex = native.value; applyHex(); });
-    alpha.addEventListener("input", function () { state.alpha = Number(alpha.value) / 100; alphaOut.textContent = alpha.value + " %"; applyHex(); });
+    alpha.addEventListener("input", function () { state.alpha = Number(alpha.value) / 100; alphaOut.textContent = alpha.value + " %"; paintRange(alpha); applyHex(); });
     hexIn.addEventListener("change", function () {
       var c = parseColor(hexIn.value);
       if (!c) { hexIn.setAttribute("aria-invalid", "true"); toast("Couleur : #RRGGBB, rgb(r, g, b) ou hsl(t, s %, l %) attendu.", true); return; }
       state.hex = c.slice(0, 7); state.alpha = c.length === 9 ? parseInt(c.slice(7), 16) / 255 : 1;
-      native.value = state.hex; alpha.value = String(Math.round(state.alpha * 100)); alphaOut.textContent = alpha.value + " %";
+      native.value = state.hex; alpha.value = String(Math.round(state.alpha * 100)); paintRange(alpha); alphaOut.textContent = alpha.value + " %";
       applyHex();
     });
     hexIn.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); hexIn.dispatchEvent(new Event("change")); } });
