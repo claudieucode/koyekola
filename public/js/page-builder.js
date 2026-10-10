@@ -5973,11 +5973,13 @@
   // ---------- Sauvegarde automatique ----------
   var retry = 0;
   var saveEl = $("[data-pb-save]");
-  function setSave(text, cls) { saveEl.textContent = text; saveEl.className = "pb-save" + (cls ? " " + cls : ""); }
+  // Texte court : la largeur de l'en-tête ne doit pas dépendre de l'état d'enregistrement (un texte plus long que « Enregistré à 14:03 » faisait passer
+  // l'en-tête sur une ligne de plus à certaines largeurs : tout le canevas descendait de 46 px à chaque modification, puis remontait)
+  function setSave(text, cls, full) { saveEl.textContent = text; saveEl.title = full || text; saveEl.className = "pb-save" + (cls ? " " + cls : ""); }
   function scheduleSave() {
     if (!canWrite) return;
     dirty = true;
-    if (!blocked) setSave("Modifications non enregistrées", "is-dirty");
+    if (!blocked) setSave("Non enregistré", "is-dirty", "Modifications non enregistrées");
     clearTimeout(saveTimer);
     saveTimer = setTimeout(save, 1000);
     backup();

@@ -72,6 +72,11 @@ Mesures non réalisées : consommation mémoire fine (seul `performance.memory` 
 5. *Constaté, non corrigé* : historique par copies JSON complètes (150 × document), reconstruction complète des calques lors d'une modification de structure, envoi du
    document complet à chaque rendu et chaque enregistrement (50 Ko à 400 éléments : l'enregistrement mesuré reste ~20–30 ms ; ce n'est PAS un goulot).
 
+6. **Saut de 46 px de tout le canevas à chaque modification** (instabilité, pas lenteur) : la largeur de l'en-tête dépendait du texte d'état d'enregistrement
+   (« Modifications non enregistrées » est plus long que « Enregistré à 14:03 ») ; à certaines largeurs (1 366 px mesuré, ou un titre de page long) l'en-tête passait
+   sur une ligne de plus pendant la seconde qui précède l'enregistrement automatique, puis redescendait. Le test `editeur-stabilite-navigateur` l'a révélé dès que le rendu
+   est devenu plus rapide (il mesurait avant la fin de cette seconde). **Correction** : texte court « Non enregistré » (le texte complet reste en infobulle).
+
 Ce qui n'était pas un goulot (mesuré) : enregistrement automatique (20–30 ms côté serveur à 400 éléments), défilement du canevas (62 images/s partout), sélection
 (≈ 40 ms à 400 éléments, dont ~22 ms de plancher d'affichage), mémoire (< 10 Mo de tas JS mesuré).
 
