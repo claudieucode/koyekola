@@ -13,8 +13,19 @@ function emitMessageEvent(ctx, message, name, key, metadata) {
   try {
     const contact = ctx.db.prepare("SELECT id, email FROM mk_contacts WHERE id = ? AND organization_id = ?").get(message.contact_id, ctx.organizationId);
     // Contact Core (palier 16) : l'événement porte la campagne (objet) et le site de la campagne — lisible dans le journal du contact
-    const site = ctx.db.prepare("SELECT site_id FROM mk_campaigns WHERE id = ? AND organization_id = ?").get(message.campaign_id, ctx.organizationId);
-    if (contact) ctx.bus.emit({ organizationId: ctx.organizationId, name, email: contact.email, contactId: contact.id, source: "marketing", metadata, idempotencyKey: key, objectType: "campaign", objectId: message.campaign_id, siteId: site ? site.site_id : null });
+    const site = ctx.db.prepare("SELECT site_id, automation_id FROM mk_campaigns WHERE id = ? AND organization_id = ?").get(message.campaign_id, ctx.organizationId);
+    // Orchestration (palier 19) : un e-mail envoyé par un scénario porte le scénario et, si ce scénario est parti d'un tunnel, le tunnel et l'étape — jamais de donnée personnelle
+    let context = {};
+    if (site && Number.isInteger(site.automation_id)) {
+      context = { automationId: site.automation_id };
+      const run = ctx.db.prepare("SELECT event_data FROM mk_automation_runs WHERE organization_id = ? AND automation_id = ? AND contact_id = ?").get(ctx.organizationId, site.automation_id, message.contact_id);
+      try {
+        const d = run ? JSON.parse(run.event_data) : {};
+        if (d.funnel_id) context.funnelId = String(d.funnel_id);
+        if (d.funnel_step_id) context.funnelStepId = String(d.funnel_step_id);
+      } catch { /* données du passage illisibles : on garde le scénario seul */ }
+    }
+    if (contact) ctx.bus.emit({ organizationId: ctx.organizationId, name, email: contact.email, contactId: contact.id, source: "marketing", metadata: { ...metadata, ...context }, idempotencyKey: key, objectType: "campaign", objectId: message.campaign_id, siteId: site ? site.site_id : null });
   } catch (error) {
     console.error("[KOLAKISA] Suivi des e-mails (événement) :", error.message);
   }

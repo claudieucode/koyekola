@@ -9,6 +9,7 @@ const { listTags } = require("../audience/tags");
 const sendingConfig = require("../sending/config");
 const { getSmsConfig } = require("../sms/config");
 const bridge = require("../bridge/events");
+const abandon = require("../funnels/abandon");
 const journeys = require("../automations/journeys");
 const { MarketingError } = require("../errors");
 const { attempt, need, safeJson } = require("./kit");
@@ -155,7 +156,9 @@ module.exports = ({ db }) => {
       sms: (({ provider, sender, maxSegments, quietStart, quietEnd }) => ({ provider, sender, maxSegments, quietStart, quietEnd, baseUrl: process.env.SITE_URL || "" }))(getSmsConfig(ctx)),
     };
     res.render("marketing/automation", {
-      title: a.name, active: "automations", a, STATUS, RUN_STATUS, STEP_LABELS: auto.STEP_LABELS, data: safeJson(payload), locked,
+      title: a.name, active: "automations", a, SOURCE_LABELS: auto.SOURCE_LABELS, sourceOf: auto.sourceOf,
+      TRIGGER_NAMES: Object.fromEntries(Object.entries(auto.TRIGGERS).map(([k, v]) => [k, v.label])),
+      GOAL_EVENTS: ["purchase.completed", "lms.order_completed", "funnel.completed", "contact.subscribed", "email.clicked"].filter((k) => auto.TRIGGERS[k]).map((k) => ({ value: k, label: auto.TRIGGERS[k].label })), STATUS, RUN_STATUS, STEP_LABELS: auto.STEP_LABELS, data: safeJson(payload), locked,
       check: a.status === "active" ? null : auto.automationPreflight(ctx, a.id, { workerOn: workerOn(), smtpAvailable: Boolean(process.env.SMTP_HOST) }),
       versions: auto.listVersions(ctx, a.id), canSimulate: req.mk.can("automations.write") && req.mk.can("contacts.read"),
       stats: auto.automationStats(ctx, a.id), revenue: require("../revenue").automationRevenue(ctx, a.id), runs: auto.listRuns(ctx, a.id, { limit: 50 }).map((r) => (req.mk.can("contacts.view_sensitive") ? r : { ...r, email: require("../contactcore").maskEmail(r.email) })),
@@ -238,6 +241,16 @@ module.exports = ({ db }) => {
       if (!a) return;
       attempt(req, res, next, path === "supprimer" ? () => "/marketing/automatisations" : `/marketing/automatisations/${a.id}`, () => { fn(req.mk.ctx, a.id); return message; });
     });
+  router.post("/automatisations/:id/objectif", need("automations.write"), (req, res, next) => {
+    const a = load(req, res);
+    if (!a) return;
+    attempt(req, res, next, `/marketing/automatisations/${a.id}`, () => {
+      const goal = String(req.body.objectif || "");
+      if (goal && !auto.TRIGGERS[goal]) throw new MarketingError("invalid_automation", "Objectif inconnu.");
+      auto.setGoalEvent(req.mk.ctx, a.id, goal);
+      return goal ? "Objectif enregistré : les contacts qui l'atteignent sortent du parcours." : "Objectif retiré.";
+    });
+  });
   control("activer", "automations.activate", (ctx, id) => auto.activateAutomation(ctx, id, { workerOn: workerOn(), smtpAvailable: Boolean(process.env.SMTP_HOST) }), "Scénario activé : les prochains événements correspondants le déclencheront (l'historique n'est jamais rejoué).");
   control("pause", "automations.activate", auto.pauseAutomation, "Scénario mis en pause : les passages en cours attendent, aucun nouveau contact n'y entre.");
   control("reprendre", "automations.activate", auto.resumeAutomation, "Scénario repris.");
@@ -248,11 +261,29 @@ module.exports = ({ db }) => {
     const org = req.mk.ctx.organizationId;
     res.render("marketing/events", {
       title: "Événements", active: "events",
-      cursors: db.prepare("SELECT source, last_id, initialized_at, updated_at FROM mk_bridge_cursors WHERE organization_id = ? ORDER BY source").all(org),
+      cursors: db.prepare("SELECT source, last_id, initialized_at, updated_at FROM mk_bridge_cursors WHERE organization_id = ? AND source <> 'funnel_sweep' ORDER BY source").all(org),
       events: db.prepare("SELECT id, name, email, source, occurred_at, processed_at FROM mk_events WHERE organization_id = ? ORDER BY id DESC LIMIT 100").all(org),
       workerOn: workerOn(), canSync: req.mk.can("queue.manage"),
     });
   });
+
+  // Diagnostic d'un événement : scénarios qui l'écoutent, passages nés, e-mails partis (lecture seule, site de l'équipe respecté)
+  router.get("/evenements/:id(\\d+)", need("contacts.read"), (req, res, next) => {
+    try {
+      const t = auto.traceEvent(req.mk.ctx, Number(req.params.id));
+      res.render("marketing/event-trace", { title: "Diagnostic d'un événement", active: "events", t });
+    } catch (error) {
+      if (error instanceof MarketingError) return res.status(404).render("error", { message: "Événement introuvable." });
+      next(error);
+    }
+  });
+
+  // Détection des abandons à la demande (en plus de la tâche récurrente)
+  router.post("/evenements/abandons", need("queue.manage"), (req, res, next) =>
+    attempt(req, res, next, "/marketing/evenements", () => {
+      const r = abandon.sweep(req.mk.ctx);
+      return `Détection terminée : ${r.funnels} abandon${r.funnels > 1 ? "s" : ""} de tunnel, ${r.checkouts} commande${r.checkouts > 1 ? "s" : ""} abandonnée${r.checkouts > 1 ? "s" : ""}.`;
+    }));
 
   router.post("/evenements/synchroniser", need("queue.manage"), (req, res, next) =>
     attempt(req, res, next, "/marketing/evenements", () => {

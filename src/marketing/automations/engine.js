@@ -23,6 +23,8 @@ function eventData(ctx, event) {
   return {
     course_title: md.courseTitle || md.title || "", order_total: md.orderTotal || "", order_id: md.orderId ?? "", lesson_title: md.lessonTitle || "",
     course_url: base && slug ? `${base}/cours/${encodeURIComponent(String(slug))}` : "", learn_url: base ? `${base}/mes-cours` : "",
+    // Tunnel d'origine (palier 19) : variables {{event.funnel_name}} et {{event.funnel_step}} ; les identifiants servent au suivi des e-mails
+    funnel_name: md.funnelName || "", funnel_step: md.stepName || md.lastStepName || "", funnel_id: md.funnelId || "", funnel_step_id: md.stepId || md.lastStepId || "",
   };
 }
 
@@ -49,6 +51,13 @@ function onEvent(ctx, event) {
     .all(ctx.organizationId, event.name);
   let entered = 0;
   const now = nowOf(ctx);
+  // Objectif atteint (palier 19) : les passages EN COURS de ce contact dans un scénario dont l'objectif est cet événement se terminent — aucun e-mail de plus ne part
+  for (const g of ctx.db.prepare("SELECT a.id, a.name FROM mk_automations a WHERE a.organization_id = ? AND a.goal_event = ? AND a.status IN ('active', 'paused')").all(ctx.organizationId, event.name)) {
+    for (const run of ctx.db.prepare("SELECT id, step_index FROM mk_automation_runs WHERE organization_id = ? AND automation_id = ? AND contact_id = ? AND status = 'running'").all(ctx.organizationId, g.id, contact.id)) {
+      ctx.db.prepare("INSERT INTO mk_automation_log (organization_id, run_id, step_index, action, detail, at) VALUES (?, ?, ?, 'goal', ?, ?)").run(ctx.organizationId, run.id, run.step_index, `objectif atteint : ${event.name}`, now);
+      ctx.db.prepare("UPDATE mk_automation_runs SET status = 'completed', last_error = '', finished_at = ? WHERE id = ?").run(now, run.id);
+    }
+  }
   for (const a of autos) {
     // Le déclencheur qui a fait correspondre CE scénario (pas forcément le premier) porte le filtre à appliquer.
     const matched = JSON.parse(a.triggers || "[]").find((t) => t.event === event.name);

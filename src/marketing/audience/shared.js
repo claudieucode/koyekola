@@ -20,9 +20,9 @@ function audit(ctx, action, resourceType, resourceId, metadata) {
   recordAudit(ctx.db, { organizationId: ctx.organizationId, userId: ctx.userId, action, resourceType, resourceId, metadata });
 }
 
-function emit(ctx, name, { contact, metadata = {}, idempotencyKey = null, source = "marketing", siteId = null, objectType = null, objectId = null, actorUserId = null }) {
+function emit(ctx, name, { contact, metadata = {}, idempotencyKey = null, source = "marketing", siteId = null, objectType = null, objectId = null, actorUserId = null, occurredAt }) {
   if (!ctx.bus) return;
-  ctx.bus.emit({ organizationId: ctx.organizationId, name, email: contact.email, contactId: contact.id, source, metadata, idempotencyKey, siteId, objectType, objectId, actorUserId });
+  ctx.bus.emit({ organizationId: ctx.organizationId, name, email: contact.email, contactId: contact.id, source, metadata, idempotencyKey, siteId, objectType, objectId, actorUserId, occurredAt });
 }
 
 // ---------- Contexte de site (palier 16) ----------

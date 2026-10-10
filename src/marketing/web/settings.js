@@ -9,7 +9,7 @@ const { need } = require("./kit");
 
 const BASE = "/marketing/site-web/parametres";
 // Adresses des groupes (français) → clés du moteur
-const SLUGS = { general: "general", lecture: "reading", commentaires: "comments", medias: "media", permaliens: "permalinks", seo: "seo", confidentialite: "privacy", indexation: "indexation", emailing: "email" };
+const SLUGS = { general: "general", lecture: "reading", commentaires: "comments", medias: "media", permaliens: "permalinks", seo: "seo", confidentialite: "privacy", indexation: "indexation", emailing: "email", tunnels: "tunnels" };
 const SLUG_OF = Object.fromEntries(Object.entries(SLUGS).map(([s, g]) => [g, s]));
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 // Anciens noms de champs du formulaire des commentaires (palier 6) : toujours acceptés

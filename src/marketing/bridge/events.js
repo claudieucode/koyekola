@@ -141,6 +141,15 @@ function syncLmsEvents(ctx, { limit = 200 } = {}) {
         if (!contact) { skipped++; continue; }
         ctx.bus.emit({ organizationId: ctx.organizationId, name: ev.name, email: contact.email, contactId: contact.id, source: "lms", metadata: ev.metadata, idempotencyKey: ev.key, occurredAt: ev.at });
         emitted++;
+        // Palier 19 : un achat réel (commande terminée dans le LMS, source de vérité du paiement) devient aussi « purchase.completed » pour le Contact Core et les
+        // automatisations, avec le DERNIER tunnel touché avant l'achat (attribution « dernier contact », indicative — pas une preuve de causalité)
+        if (ev.name === "lms.order_completed") {
+          const touch = ctx.db.prepare("SELECT metadata FROM mk_events WHERE organization_id = ? AND contact_id = ? AND name = 'funnel.step_reached' AND occurred_at <= ? AND occurred_at >= ? ORDER BY occurred_at DESC, id DESC LIMIT 1").get(ctx.organizationId, contact.id, ev.at, ev.at - 30 * 86400000);
+          let t = {};
+          try { t = touch ? JSON.parse(touch.metadata) : {}; } catch { t = {}; }
+          ctx.bus.emit({ organizationId: ctx.organizationId, name: "purchase.completed", email: contact.email, contactId: contact.id, source: "commerce", objectType: "order", objectId: ev.metadata.orderId, idempotencyKey: `purchase.completed:${ev.key}`, occurredAt: ev.at,
+            metadata: { orderId: ev.metadata.orderId, totalCents: ev.metadata.totalCents, orderTotal: ev.metadata.orderTotal, items: ev.metadata.items, ...(t.funnelId ? { funnelId: t.funnelId, funnelName: t.funnelName, funnelStepId: t.stepId, funnelStepName: t.stepName, attribution: "last_funnel_step_30d" } : {}) } });
+        }
       }
       // une ligne sans événement (formateur, compte sans contact) compte comme « ignorée » pour le rapport
       if (source !== "lesson_progress") skipped = Math.max(0, rows.length - emitted) ;
@@ -164,6 +173,13 @@ function jobHandlers({ db, bus, now = Date.now, log = console }) {
     "bridge.sync": async ({ organizationId }) => {
       try {
         syncLmsEvents({ db, organizationId, userId: null, bus, log }, { limit: 200 });
+        // Palier 19 : détection des abandons (tunnel, commande) toutes les 5 minutes au plus, par la MÊME tâche récurrente (aucune seconde planification)
+        const nowMs = now();
+        const last = db.prepare("SELECT value FROM mk_settings WHERE organization_id = ? AND key = 'internal.funnel_sweep_at'").get(organizationId);
+        if (!last || nowMs - Number(last.value) >= 5 * 60000) {
+          db.prepare("INSERT INTO mk_settings (organization_id, key, value) VALUES (?, 'internal.funnel_sweep_at', ?) ON CONFLICT (organization_id, key) DO UPDATE SET value = excluded.value").run(organizationId, String(nowMs));
+          require("../funnels/abandon").sweep({ db, organizationId, userId: null, bus, audit: false }, { now: nowMs });
+        }
       } finally {
         // Toujours reprogrammer, même après une erreur : le pont ne doit jamais s'arrêter en silence
         const next = now() + INTERVAL_MS;

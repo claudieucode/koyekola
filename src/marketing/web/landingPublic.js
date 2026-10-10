@@ -15,6 +15,7 @@ const formUpload = require("./formUpload");
 const visitorsLib = require("../visitors");
 const { consentedVisitor } = require("./visitorsPublic");
 const funnels = require("../funnels");
+const funnelEvents = require("../funnels/events");
 const { visibleTree, audienceMatches, walk } = require("../pages/nodes");
 const { visitorContext } = require("../pages/visitorContext");
 const abtests = require("../pages/abtests");
@@ -102,6 +103,17 @@ module.exports = ({ db }) => {
       landing.record(db, page, "click", landing.visitorOf(req, secret()), link.label);
       if (test) abtests.recordConversion(db, test, visitor, "click");
     }
+    // Palier 19 : un contact connu (visiteur ayant accepté la mesure) qui clique un bouton d'une étape de tunnel produit « funnel.cta.clicked » (le tunnel produit, l'automatisation décide)
+    try {
+      const vid = consentedVisitor(req);
+      const known = vid ? db.prepare("SELECT contact_id FROM mk_web_visitors WHERE id = ?").get(vid) : null;
+      if (known && known.contact_id && !landing.isBot(req)) {
+        const cctx = { ...ctxOf({ mkPages: { organizationId: page.organization_id, bus: req.app.locals.marketing && req.app.locals.marketing.bus, settings: null } }), audit: false };
+        const contact = db.prepare("SELECT id, email FROM mk_contacts WHERE id = ? AND organization_id = ?").get(known.contact_id, page.organization_id);
+        const dest = link.url === funnels.NEXT_URL ? "next_step" : /^\/etape\/\d+$/.test(link.url) ? "step" : /^https?:\/\//i.test(link.url) ? "external" : "internal";
+        if (contact) funnelEvents.emitCta(cctx, contact, funnelEvents.stepsWhere(cctx, "s.page_id = ?", page.id), { label: link.label, index: Number(req.params.n), destination: dest });
+      }
+    } catch (error) { console.error("[KOLAKISA] Événements du tunnel (bouton) :", error.message); }
     // Bouton « étape suivante » : la prochaine étape en ligne du tunnel de la page (sinon, retour sur la page)
     if (link.url === funnels.NEXT_URL) return res.redirect(funnels.nextUrlForPage(db, page) || `/p/${page.slug}`);
     // Bouton « étape précise du tunnel » (/etape/<identifiant>) : seulement une étape du MÊME tunnel, atteignable ; sinon retour sur la page (jamais d'adresse inventée)
@@ -135,6 +147,15 @@ module.exports = ({ db }) => {
       landing.record(db, page, "signup", landing.visitorOf(req, secret()), result.pending ? "en attente de confirmation" : "confirmée");
       if (test) abtests.recordConversion(db, test, visitor, "signup");
       if (result.contact && consentedVisitor(req)) visitorsLib.recordFormSubmit(db, page.organization_id, { visitorId: consentedVisitor(req), contactId: result.contact.id, path: `/p/${page.slug}`, formName: form.name });
+      // Palier 19 : le formulaire d'une étape de tunnel TERMINE cette étape (fait établi côté serveur) ; le parcours déjà suivi de ce visiteur rejoint son contact, daté de son vrai moment
+      if (result.contact) {
+        try {
+          const fctx = { ...ctx, userId: null, audit: false };
+          const contactRow = { id: result.contact.id, email: result.contact.email };
+          if (consentedVisitor(req)) funnelEvents.replayVisitor(fctx, consentedVisitor(req), result.contact.id);
+          funnelEvents.emitFormCompletion(fctx, contactRow, funnelEvents.stepsWhere(fctx, "s.page_id = ?", page.id));
+        } catch (error) { console.error("[KOLAKISA] Événements du tunnel (formulaire) :", error.message); }
+      }
       // Page d'un tunnel : le visiteur passe à l'étape suivante (une page du tunnel affiche le message de confirmation ;
       // une formation, non : en attente de confirmation, il reste donc ici pour lire la consigne)
       const next = funnels.nextUrlForPage(db, page);

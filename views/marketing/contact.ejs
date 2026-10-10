@@ -203,6 +203,24 @@
       </section>
     </div>
 
+    <% if (journeys) { %>
+    <section class="mk-panel" id="tunnels" aria-labelledby="tn-title">
+      <h2 id="tn-title">Tunnels</h2>
+      <% if (!journeys.length) { %><p class="field-hint">Ce contact n'a encore aucun parcours enregistré dans un tunnel.</p>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Parcours de ce contact dans les tunnels</caption>
+          <thead><tr><th scope="col">Tunnel</th><th scope="col">État</th><th scope="col">Étapes atteintes</th><th scope="col">Provenance</th><th scope="col">Dernière activité</th></tr></thead>
+          <tbody><% journeys.forEach((j) => { %><tr>
+            <td><a href="/marketing/tunnels/<%= j.funnelId %>"><%= j.name %></a></td>
+            <td><%= j.state === "completed" ? "Terminé" : j.state === "abandoned" ? "Abandonné" : "En cours" %></td>
+            <td><%= j.reached.length ? j.reached.join(" → ") : "—" %></td>
+            <td><%= j.attribution ? j.attribution.source + (j.attribution.campaign ? " · " + j.attribution.campaign : "") : "—" %></td>
+            <td><%= mkh.fdatetime(new Date(j.lastAt).toISOString().replace("T", " ").slice(0, 19)) %></td></tr><% }) %></tbody>
+        </table></div>
+      <% } %>
+    </section>
+    <% } %>
+
     <% if (autoRuns) { %>
     <section class="mk-panel" id="scenarios" aria-labelledby="sc-title">
       <h2 id="sc-title">Scénarios d'automatisation</h2>
