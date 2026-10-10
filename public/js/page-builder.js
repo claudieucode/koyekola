@@ -715,9 +715,10 @@
       it.props = it.props || {};
       var inherited = inheritedValue(it, "maxWidth") !== undefined;
       if (mode === "full") it.props.full = true; else delete it.props.full;
+      if (mode === "band") it.props.band = true; else delete it.props.band;
       var set = styleSet(it, device, "normal", mode === "custom" || inherited);
       if (mode === "custom") set.maxWidth = customValue;
-      else if (inherited) set.maxWidth = mode === "full" ? "100%" : "1100px"; // écran plus petit qui hérite d'une largeur personnalisée : on la remplace explicitement
+      else if (inherited) set.maxWidth = mode === "full" || mode === "band" ? "100%" : "1100px"; // écran plus petit qui hérite d'une largeur personnalisée : on la remplace explicitement
       else if (set) delete set.maxWidth;
       cleanStyles(it);
     }, { label: "Largeur du contenu" });
@@ -807,6 +808,16 @@
       li.appendChild(row);
       return li;
     };
+    // Bouton « Supprimer » d'une ligne réutilisée : son libellé dépend du nombre d'éléments qu'elle contient et d'un verrou hérité. Il est mis à jour EN PLACE
+    // (recréer la ligne d'un conteneur obligeait à déplacer tous ses descendants dans le DOM : mesuré, c'était l'essentiel de la mise en page après une opération)
+    var syncDelete = function (li, it, has) {
+      var b = li.firstElementChild && li.firstElementChild.querySelector(".pb-flag-delete");
+      if (!b) return;
+      var label = nm(it), n = has ? countDeep(it) : 0;
+      var aria = "Supprimer « " + label + " »" + (has ? " et ses " + n + " élément(s)" : ""), tip = has ? "Supprimer (avec ses " + n + " élément(s))" : "Supprimer", off = !canWrite || lockedDeep(it.id);
+      if (b.getAttribute("aria-label") !== aria) { b.setAttribute("aria-label", aria); b.setAttribute("data-tip", tip); }
+      if (b.disabled !== off) b.disabled = off;
+    };
     var nextLi = {};
     var reconcile = function (list, level, into) {
       var seq = [];
@@ -814,18 +825,21 @@
         if (treeQuery && !hasMatch(it)) return;
         var kids = kidsOf(it), has = Boolean(kids && kids.length), open = has && (treeQuery ? true : !collapsed[it.id]);
         // Signature de la LIGNE (sans ses enfants) : tout ce qu'elle affiche
-        var rsig = [level, it.type, nm(it), it.hidden ? 1 : 0, it.locked ? 1 : 0, has ? (open ? "o" : "c") : "-", it.id === errorItemId ? 1 : 0, canWrite ? 1 : 0, has ? countDeep(it) : 0, lockedDeep(it.id) ? 1 : 0].join("|");
+        var rsig = [level, it.type, nm(it), it.hidden ? 1 : 0, it.locked ? 1 : 0, has ? (open ? "o" : "c") : "-", it.id === errorItemId ? 1 : 0, canWrite ? 1 : 0].join("|");
         var ent = treeLi[it.id];
         if (!ent || ent.sig !== rsig) ent = { li: makeRow(it, level, kids, open), sig: rsig };
+        else syncDelete(ent.li, it, has);
         nextLi[it.id] = ent;
         var li = ent.li, ul = li.lastElementChild && li.lastElementChild.tagName === "UL" ? li.lastElementChild : null;
         if (open) { if (!ul) { ul = h("ul", { role: "group", class: "pb-tree-group" }); li.appendChild(ul); } reconcile(kids, level + 1, ul); } else if (ul) ul.remove();
         seq.push(li);
       });
       // Ordre : on ne déplace que les lignes qui ne sont pas déjà à leur place
-      var at = into.firstElementChild;
+      // D'abord retirer les lignes disparues (sinon la ligne suivante serait « déplacée » devant elle, avec tous ses descendants), puis insérer les manquantes
+      var keep = new Set(seq), at = into.firstElementChild;
+      while (at) { var nx = at.nextElementSibling; if (!keep.has(at)) at.remove(); at = nx; }
+      at = into.firstElementChild;
       seq.forEach(function (li) { if (at === li) at = at.nextElementSibling; else into.insertBefore(li, at); });
-      while (at) { var nx = at.nextElementSibling; at.remove(); at = nx; }
     };
     $$(".pb-tree-empty", treeEl).forEach(function (e) { e.remove(); });
     reconcile(content.sections, 1, treeEl);
@@ -3258,10 +3272,24 @@
     if (["container", "grid", "stack", "group"].indexOf(it.type) >= 0) {
       var dis = !canWrite || lockedDeep(it.id), p = it.props || {};
       if (it.type === "container") {
+        // Mode d'affichage des enfants : ordinaire, onglets (titre = nom de l'enfant) ou carrousel
+        box.appendChild(selectField("Affichage des éléments à l'intérieur", p.mode || "", [["", "Normal (les uns sous les autres)"], ["tabs", "Onglets (un conteneur enfant par onglet)"], ["carousel", "Carrousel (un conteneur enfant par diapositive)"]], function (v) { change(function () { var x = byId(it.id); if (v) { x.props.mode = v; } else { ["mode", "tabsLook", "tabsStart", "dots", "loop", "autoplay", "interval"].forEach(function (k) { delete x.props[k]; }); } }); }, { disabled: dis }));
+        var setNested = function (k) { return function (v) { setProp(it.id, k, v); }; };
+        if (p.mode === "tabs") {
+          box.appendChild(h("p", { class: "pb-hint", text: "Le nom de chaque conteneur enfant (menu ⋮ → Renommer, ou panneau Structure) devient le titre de son onglet ; sans nom : « Onglet 1 », « Onglet 2 »…" }));
+          box.appendChild(selectField("Style des onglets", p.tabsLook || "line", [["line", "Soulignés"], ["pills", "Boutons arrondis"]], setNested("tabsLook"), { disabled: dis }));
+          box.appendChild(numberField("Onglet ouvert au départ", p.tabsStart || 1, { min: 1, max: 12, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setProp(it.id, "tabsStart", n); }, "De 1 à 12."));
+        } else if (p.mode === "carousel") {
+          box.appendChild(h("p", { class: "pb-hint", text: "Chaque conteneur enfant est une diapositive (images, textes, boutons… à l'intérieur). Boutons précédent / suivant et défilement au doigt inclus." }));
+          box.appendChild(checkField("Points de navigation", p.dots !== false, setNested("dots"), { disabled: dis }));
+          box.appendChild(checkField("Reboucler", p.loop === true, setNested("loop"), { disabled: dis }));
+          box.appendChild(checkField("Lecture automatique", p.autoplay === true, setNested("autoplay"), { disabled: dis }));
+          if (p.autoplay) box.appendChild(numberField("Secondes entre deux diapositives", p.interval || 5, { min: 2, max: 20, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setProp(it.id, "interval", n); }, "De 2 à 20."));
+        }
         // Trois modèles de largeur : encadrée (largeur des conteneurs du site, centrée), pleine largeur, personnalisée (largeur max. propre à l'écran affiché)
         var mw = ownValue(it, "maxWidth"); if (mw === undefined) mw = inheritedValue(it, "maxWidth");
-        var wmode = p.full ? "full" : mw !== undefined && mw !== "" ? "custom" : "boxed";
-        box.appendChild(selectField("Largeur du contenu", wmode, [["boxed", "Encadrée (largeur des conteneurs du site, centrée)"], ["full", "Pleine largeur"], ["custom", "Personnalisée (largeur max.)"]], function (v) { setContainerWidth(it.id, v, mw !== undefined && mw !== "" ? mw : "960px"); }, { disabled: dis }));
+        var wmode = p.full ? "full" : p.band && (mw === undefined || mw === "") ? "band" : mw !== undefined && mw !== "" ? "custom" : "boxed";
+        box.appendChild(selectField("Largeur du contenu", wmode, [["boxed", "Encadrée (largeur des conteneurs du site, centrée)"], ["band", "Fond pleine largeur, contenu encadré"], ["full", "Pleine largeur"], ["custom", "Personnalisée (largeur max.)"]], function (v) { setContainerWidth(it.id, v, mw !== undefined && mw !== "" ? mw : "960px"); }, { disabled: dis }));
         if (wmode === "custom") {
           var wid = fid();
           var winp = h("input", { id: wid, type: "text", value: mw === undefined ? "" : String(mw), placeholder: "960px", disabled: dis, "aria-describedby": wid + "-h" });
@@ -3926,7 +3954,9 @@
   // remplacé sous la souris ; le rendu attend la fin du geste
   var gesture = false;
   // Saisie continue : 150 ms de regroupement ; action isolée (dupliquer, supprimer, annuler, couleur choisie…) : rendu presque tout de suite
-  function scheduleRender(quick) { if (editing || gesture) { pendingRender = true; return; } clearTimeout(renderTimer); renderTimer = setTimeout(renderCanvas, quick ? 30 : 150); }
+  // Délai de regroupement de la saisie : proportionnel au coût du dernier rendu (petite page : réponse rapide ; grande page : on ne multiplie pas les requêtes)
+  var lastRenderMs = 100;
+  function scheduleRender(quick) { if (editing || gesture) { pendingRender = true; return; } clearTimeout(renderTimer); renderTimer = setTimeout(renderCanvas, quick ? 30 : Math.max(50, Math.min(150, Math.round(lastRenderMs * 1.2)))); }
   function endGesture() { gesture = false; if (pendingRender && !editing) { pendingRender = false; scheduleRender(); } }
   var errorItemId = null;
   // « Section 3 › élément 2 « Titre » : … » → identifiant de l'élément en cause (mis en évidence dans les calques)
@@ -3995,11 +4025,12 @@
   }
   function renderCanvas() {
     if (editing || gesture) { pendingRender = true; return; }
-    var seq = ++renderSeq;
+    var seq = ++renderSeq, t0 = performance.now();
     fetch(BASE + "/rendu", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: payload() }) })
       .then(function (r) { return r.text().then(function (text) { return { ok: r.ok, text: text }; }); })
       .then(function (res) {
         if (seq !== renderSeq) return;
+        lastRenderMs = performance.now() - t0;
         var errBox = $("[data-pb-render-error]");
         if (!res.ok) {
           var msg = "Aperçu non mis à jour.";
@@ -4135,6 +4166,13 @@
     refreshInfo();
   }
   // Cible de dépôt dans le canevas : avant / après un élément (selon l'axe de son parent) ou dans un conteneur
+  // Élément qui met réellement en page les enfants de `el` : le conteneur parent ; pour un enfant direct d'une Section libre, la section elle-même
+  // (l'enveloppe .kw-layout est transparente : display: contents, ses enfants sont ceux de la section)
+  function layoutParentEl(el) {
+    var p = el ? el.parentElement : null;
+    while (p && p.classList && p.classList.contains("kw-layout")) p = p.parentElement;
+    return p;
+  }
   function canvasDropTarget(e) {
     var doc = frame.contentDocument;
     var el = targetOf(e);
@@ -4146,7 +4184,7 @@
     var r = el.getBoundingClientRect();
     var it = l.item;
     var horizontal = false;
-    if (l.parent && el.parentElement) { var cs = doc.defaultView.getComputedStyle(el.parentElement); horizontal = (cs.display.indexOf("flex") >= 0 && cs.flexDirection.indexOf("row") === 0) || (cs.display.indexOf("grid") >= 0 && cs.gridTemplateColumns.split(" ").length > 1); }
+    var lpe = layoutParentEl(el); if (l.parent && lpe) { var cs = doc.defaultView.getComputedStyle(lpe); horizontal = (cs.display.indexOf("flex") >= 0 && cs.flexDirection.indexOf("row") === 0) || (cs.display.indexOf("grid") >= 0 && cs.gridTemplateColumns.split(" ").length > 1); }
     var rel = horizontal ? (e.clientX - r.left) / r.width : (e.clientY - r.top) / r.height;
     var accepts = kidsOf(it) && placingNode && !lockedDeep(it.id) && !(dragIds && dragIds.indexOf(it.id) >= 0);
     if (accepts && ((rel > 0.2 && rel < 0.8) || !kidsOf(it).length)) return { target: { parent: it, index: kidsOf(it).length }, el: el, pos: "inside", horizontal: horizontal };
@@ -5037,7 +5075,7 @@
       env.rects.push(b);
       if (el && e.parentElement === el.parentElement) env.siblings.push(b);
     }
-    var pe = el ? el.parentElement : null;
+    var pe = el ? layoutParentEl(el) : null;
     if (pe) {
       var cs = win.getComputedStyle(pe), pb = pageBox(pe);
       var pl = parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth) || 0, pr = parseFloat(cs.paddingRight) + parseFloat(cs.borderRightWidth) || 0;

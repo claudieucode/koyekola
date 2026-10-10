@@ -58,8 +58,10 @@ on complète et on améliore dans l'architecture existante.
 
 ## Écarts volontaires (non construits, avec la raison)
 
-- **HTML / CSS / JS libres, attributs personnalisés, classes CSS** : refusés. Les pages sont servies sur le même
+- **JS libre, attributs d'événement, CSS avec ressources externes** : refusés. Les pages sont servies sur le même
   domaine que les comptes des élèves ; du code libre permettrait de voler leurs sessions.
+  **Mise à jour 2026-10-10** : un widget « HTML (sécurisé) » existe (balises de texte, listes, tableaux, images, SVG ; scripts et styles
+  refusés), réservé à la permission `pages.code` (administrateurs). Le HTML entièrement libre reste refusé.
 - **Position absolue libre** : refusée (mise en page en flux, responsive garanti) ; positions relative et collante
   disponibles, décalages et transformations aussi.
 - **Fenêtre modale / pop-up dans la page** : déjà fournie par le module Pop-ups (déclencheurs, ciblage, mesure) ;

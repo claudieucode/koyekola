@@ -387,7 +387,7 @@
     bodyEl.appendChild(section("Largeurs et marges", [
       { kind: "toggle", path: "settings.layout.fullWidth", label: "Contenu pleine largeur", hint: "Le contenu des pages occupe toute la largeur de l'écran (les conteneurs gardent leur largeur maximale)." },
       { kind: "number", path: "settings.layout.contentWidth", label: "Largeur du contenu", min: 480, max: 1600, unit: "px" },
-      { kind: "number", path: "settings.layout.containerWidth", label: "Largeur maximale des conteneurs", min: 480, max: 1600, unit: "px" },
+      { kind: "number", path: "settings.layout.containerWidth", label: "Largeur maximale des conteneurs", min: 480, max: 1600, unit: "px", hint: "1 100 px par défaut. 1 140 px est la valeur courante des constructeurs de pages ; la valeur choisie s'applique aux conteneurs « encadrés » et au contenu des conteneurs « fond pleine largeur, contenu encadré »." },
       { kind: "number", path: "settings.layout.gutter", label: "Marges latérales", min: 0, max: 80, unit: "px" },
       { kind: "number", path: "tokens.space.lg", label: "Espace entre les sections", min: 0, max: 200, unit: "px" },
     ]));

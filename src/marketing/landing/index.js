@@ -230,7 +230,7 @@ function dynamicProps(ctx, n, visitor, page) {
   return null;
 }
 // Vue d'une formation pour les étiquettes dynamiques (scope.course) et les boucles
-const courseScope = (c) => ({ title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "", category: c.category || "", description: String(c.description || "").replace(/\s+/g, " ").trim().slice(0, 300) });
+const courseScope = (c) => ({ id: c.id, instructor: c.instructor_name || c.instructor || "", title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "", category: c.category || "", description: String(c.description || "").replace(/\s+/g, " ").trim().slice(0, 300) });
 // Éléments d'une boucle (grille « répéter pour chaque ») : une page de résultats, filtrée par l'adresse si demandé
 function loopQuery(ctx, loop, id, visitor, scope) {
   const q = (visitor && visitor.query) || {};

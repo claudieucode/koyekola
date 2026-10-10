@@ -14,6 +14,12 @@
    // Boucle (grille « répéter pour chaque … ») : chaque résultat dans son enveloppe, message si aucun résultat, pagination par l'adresse
    const kids = () => {
      const info = n.loopInfo;
+     // Conteneur en mode « onglets » ou « carrousel » (page publiée seulement : le canevas garde des conteneurs ordinaires, modifiables)
+     if (!info && n.type === "container" && p.mode && !isBuilder) {
+       const shown = (n.children || []).filter((c) => !c.hidden);
+       if (p.mode === "tabs") { shown.forEach((c, i) => { %><div class="kw-ntab-panel" data-kw-title="<%= c.name || "Onglet " + (i + 1) %>"><% kidsOne(c); %></div><% }); return; }
+       %><div class="kw-carousel-track"><% shown.forEach((c, i) => { %><div class="kw-carousel-slide kw-ncar-slide" aria-roledescription="diapositive" aria-label="<%= i + 1 %> sur <%= shown.length %>"><% kidsOne(c); %></div><% }); %></div><% return;
+     }
      if (!info) { (n.children || []).forEach(kidsOne); return; }
      let cur = -1;
      (n.children || []).forEach((c) => { if (c.loopItem !== cur) { if (cur !== -1) { %></div><% } cur = c.loopItem; %><div class="kw-loop-item"><% } kidsOne(c); });
@@ -34,7 +40,7 @@
      }
    }; %>
 <% if (["container", "columns", "column", "grid", "stack", "group"].includes(n.type)) { const boxTag = ["section", "header", "footer", "article", "aside", "nav"].includes(p.tag) ? p.tag : "div"; const boxLink = p.link && !isBuilder ? p.link : ""; %>
-  <% if (boxLink) { %><a class="kw-box-link" href="<%= href(boxLink) %>"<%- p.newTab ? ' target="_blank" rel="noopener noreferrer"' : "" %>><% } %><<%= boxTag %> class="<%= cls %><%= p.full ? " kw-full" : "" %><%= p.loop && p.loop.slider ? " kw-loop-slider" : "" %><%= isBuilder && !(n.children || []).length ? " kw-is-empty" : "" %>"<%- attrs %><%- p.loop && p.loop.slider ? " data-kw-slider" : "" %>><% if (n.bgVideo) { %><video class="kw-bg-video" src="<%= n.bgVideo.src %>" autoplay muted loop playsinline preload="metadata" aria-hidden="true" tabindex="-1"></video><% } %><% if (isBuilder && !(n.children || []).length) { %><button type="button" class="kw-add" data-kw-add aria-label="Ajouter une structure ou un élément ici" title="Ajouter une structure ou un élément">+</button><% } %><% kids() %></<%= boxTag %>><% if (boxLink) { %></a><% } %>
+  <% if (boxLink) { %><a class="kw-box-link" href="<%= href(boxLink) %>"<%- p.newTab ? ' target="_blank" rel="noopener noreferrer"' : "" %>><% } %><<%= boxTag %> class="<%= cls %><%= p.full ? " kw-full" : "" %><%= p.band && !p.full ? " kw-band" : "" %><%= n.type === "container" && p.mode && !isBuilder ? (p.mode === "tabs" ? ` kw-ntabs is-${p.tabsLook}` : " kw-ncarousel") : "" %><%= p.loop && p.loop.slider ? " kw-loop-slider" : "" %><%= isBuilder && !(n.children || []).length ? " kw-is-empty" : "" %>"<%- attrs %><%- p.loop && p.loop.slider ? " data-kw-slider" : "" %><%- n.type === "container" && p.mode ? (isBuilder ? ` data-kw-mode="${p.mode}"` : p.mode === "tabs" ? ` data-kw-ntabs data-kw-tabs-look="${p.tabsLook}" data-kw-tabs-start="${p.tabsStart}"` : ` role="region" aria-roledescription="carrousel" aria-label="${esc(n.name || "Carrousel")}" data-kw-carousel${p.dots ? " data-kw-dots" : ""}${p.autoplay ? ` data-kw-autoplay="${p.interval}"` : ""}${p.loop ? " data-kw-loop" : ""}`) : "" %>><% if (n.bgVideo) { %><video class="kw-bg-video" src="<%= n.bgVideo.src %>" autoplay muted loop playsinline preload="metadata" aria-hidden="true" tabindex="-1"></video><% } %><% if (isBuilder && !(n.children || []).length) { %><button type="button" class="kw-add" data-kw-add aria-label="Ajouter une structure ou un élément ici" title="Ajouter une structure ou un élément">+</button><% } %><% kids() %></<%= boxTag %>><% if (boxLink) { %></a><% } %>
 <% } else if (n.type === "spacer") { %>
   <div class="<%= cls %> <%= `kw-spacer-${p.size}` %>"<%- attrs %> aria-hidden="true"></div>
 <% } else if (n.type === "divider" && p.text) { %>

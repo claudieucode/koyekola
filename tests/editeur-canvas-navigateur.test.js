@@ -104,7 +104,8 @@ describe("canvas, largeur de page, contraintes web et palette (navigateur)", { s
     const mainEl = d.querySelector(".lp-main"), mr = mainEl.getBoundingClientRect();
     for (const el of d.querySelectorAll(".lp-main *")) {
       if (/^(SCRIPT|STYLE)$/.test(el.tagName) || el.closest(".pb-sel-box,.pb-handle,.pb-sel-badge,.pb-parent-box,.kw-add")) continue;
-      const b = el.getBoundingClientRect(), p = el.parentElement.getBoundingClientRect(), cs = d.defaultView.getComputedStyle(el);
+      let pe = el.parentElement; while (pe && d.defaultView.getComputedStyle(pe).display === "contents") pe = pe.parentElement; // enveloppe transparente (.kw-layout) : le vrai parent est la section
+      const b = el.getBoundingClientRect(), p = pe.getBoundingClientRect(), cs = d.defaultView.getComputedStyle(el);
       if (b.width > 0 && (b.right > p.right + 1 || b.left < p.left - 1) && cs.position !== "absolute" && cs.position !== "fixed") bad.push(`${el.className || el.tagName} sort de son parent`);
       if (b.width > 0 && b.right > mr.right + 1 && cs.position !== "absolute" && cs.position !== "fixed") bad.push(`${el.className || el.tagName} sort de la page`);
       if (el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1 && !/auto|scroll/.test(cs.overflowX) && cs.display !== "inline" && el.tagName.toLowerCase() !== "svg") bad.push(`${el.className || el.tagName} : contenu ${el.scrollWidth} > boîte ${el.clientWidth}`);
@@ -200,7 +201,7 @@ describe("canvas, largeur de page, contraintes web et palette (navigateur)", { s
     }
     // Les médias et le bouton restent dans leur parent
     await setDevice("desktop");
-    const rects = await frameDoc((d) => ["imag00000001", "vide00000001", "butn00000001", "tabl00000001"].map((id) => { const el = d.querySelector(`[data-node-id='${id}']`), b = el.getBoundingClientRect(), p = el.parentElement.getBoundingClientRect(); return { id, dentro: b.right <= p.right + 1 && b.left >= p.left - 1 }; }));
+    const rects = await frameDoc((d) => ["imag00000001", "vide00000001", "butn00000001", "tabl00000001"].map((id) => { const el = d.querySelector(`[data-node-id='${id}']`), b = el.getBoundingClientRect(); let pe = el.parentElement; while (pe && d.defaultView.getComputedStyle(pe).display === "contents") pe = pe.parentElement; const p = pe.getBoundingClientRect(); return { id, dentro: b.right <= p.right + 1 && b.left >= p.left - 1 }; }));
     for (const r of rects) assert.ok(r.dentro, `${r.id} reste dans son parent`);
   });
 

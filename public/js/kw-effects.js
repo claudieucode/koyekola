@@ -105,12 +105,14 @@
     var target = { x: 0, y: 0 }, raf = 0, destroyed = false, io = null, listening = false;
     var active = function (r, kind) { return (!reduceQ.matches || r.always) && r.off.indexOf(breakpointOf(win.innerWidth)) < 0 && (kind !== "mouse" || hoverQ.matches); };
 
+    // Parent qui possède une boîte : l'enveloppe .kw-layout d'une Section libre est transparente (display: contents) et ne peut porter ni perspective ni dimensions
+    function boxParent(el) { var p = el.parentElement; while (p && el.ownerDocument.defaultView.getComputedStyle(p).display === "contents") p = p.parentElement; return p; }
     function clear(r) {
       if (!r.applied) return;
       var st = r.el.style;
       ["translate", "scale", "rotate", "opacity"].forEach(function (k) { st.removeProperty(k); });
       st.filter = r.base.filter;
-      if (r.base.perspective !== null && r.el.parentElement) r.el.parentElement.style.perspective = r.base.perspective;
+      if (r.base.perspective !== null && boxParent(r.el)) boxParent(r.el).style.perspective = r.base.perspective;
       r.applied = false;
     }
     function render(r) {
@@ -126,7 +128,7 @@
       if (sv && sv.scale !== undefined) st.scale = String(sv.scale); else st.removeProperty("scale");
       if (mv && mv.tilt) {
         var t = mv.tilt;
-        if (r.base.perspective === null && r.el.parentElement) { r.base.perspective = r.el.parentElement.style.perspective; if (!r.base.perspective) r.el.parentElement.style.perspective = "900px"; }
+        if (r.base.perspective === null && boxParent(r.el)) { var bp0 = boxParent(r.el); r.base.perspective = bp0.style.perspective; if (!r.base.perspective) bp0.style.perspective = "900px"; }
         st.rotate = t.angle ? t.ax + " " + t.ay + " 0 " + t.angle + "deg" : "0deg";
       } else if (sv && sv.rotate !== undefined) st.rotate = sv.rotate + "deg"; else st.removeProperty("rotate");
       if (sv && sv.opacity !== undefined) st.opacity = String(sv.opacity); else st.removeProperty("opacity");
@@ -147,7 +149,7 @@
       if (tx || ty) st.translate = round(tx, 2) + "px " + round(ty, 2) + "px"; else st.removeProperty("translate");
       if (sc !== 1) st.scale = String(round(sc, 4)); else st.removeProperty("scale");
       if (rots.some(function (q) { return q[3]; })) st.rotate = composeRotations(rots); else st.removeProperty("rotate");
-      if (tilt3d && r.el.parentElement) { if (r.base.perspective === null) { r.base.perspective = r.el.parentElement.style.perspective; if (!r.base.perspective) r.el.parentElement.style.perspective = tilt3d + "px"; } }
+      if (tilt3d && boxParent(r.el)) { if (r.base.perspective === null) { var bp1 = boxParent(r.el); r.base.perspective = bp1.style.perspective; if (!r.base.perspective) bp1.style.perspective = tilt3d + "px"; } }
       if (op !== null) st.opacity = String(round(op, 3)); else st.removeProperty("opacity");
       st.filter = blur ? (r.base.filter && r.base.filter !== "none" ? r.base.filter + " " : "") + "blur(" + round(blur, 2) + "px)" : r.base.filter;
     }

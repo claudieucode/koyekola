@@ -245,13 +245,15 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
 // s'écrasent : début seul, fin seule, début + occupées (« 2 / span 3 ») ou occupées seules (« span 3 »)
 const PLACEMENT = new Set(["gridColumnStart", "gridColumnEnd", "gridColumnSpan", "gridRowStart", "gridRowEnd", "gridRowSpan"]);
 const CORNERS = new Set(["gridTemplate", "gridRowsTemplate", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth"]);
-function declarations(set) {
+// band : conteneur « fond pleine largeur, contenu encadré » : ses intérieurs gauche / droite sont écrits dans des variables (--kw-pl, --kw-pr) que
+// la règle .kw-band de landing.css combine avec le retrait qui centre le contenu à la largeur du site : le réglage de l'auteur reste effectif
+function declarations(set, band = false) {
   const d = [];
   const entries = Object.entries(set);
   // Coins après l'arrondi général (sinon « border-radius » les écraserait)
   for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k) && !PLACEMENT.has(k)).concat(entries.filter(([k]) => CORNERS.has(k)))) {
     const p = STYLE_PROPS[k];
-    if (p) d.push(`${p.css}:${p.out ? p.out(v) : v}`);
+    if (p) d.push(band && (k === "paddingLeft" || k === "paddingRight") ? `--kw-p${k === "paddingLeft" ? "l" : "r"}:${v}` : `${p.css}:${p.out ? p.out(v) : v}`);
   }
   for (const [axis, css] of [["Column", "grid-column"], ["Row", "grid-row"]]) {
     const start = set[`grid${axis}Start`], end = set[`grid${axis}End`], span = set[`grid${axis}Span`];
@@ -330,9 +332,17 @@ const boxProps = (p, at, h) => {
 };
 // Éléments qui sont eux-mêmes un lien, un bouton ou un champ (ou qui peuvent en contenir) : interdits dans un conteneur cliquable
 const INTERACTIVE_INSIDE_LINK = new Set(["button", "link", "menu", "search", "account", "toggle", "tabs", "accordion", "modal", "carousel", "tooltip", "hotspot", "html", "embed", "social", "breadcrumb", "course", "courselist", "posts", "pricing", "iconlist", "gallery", "table", "postcontent"]);
+const nestedProps = (p) => {
+  const mode = oneOf("tabs", "carousel")(p.mode);
+  if (!mode) return {};
+  if (mode === "tabs") return { mode, tabsLook: oneOf("line", "pills")(p.tabsLook) || "line", tabsStart: numberIn(1, 12, { integer: true })(p.tabsStart) || 1 };
+  return { mode, dots: p.dots !== false, loop: p.loop === true, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5 };
+};
 const NODE_TYPES = {
   // Largeur du contenu : encadrée (1100 px centrés, par défaut) ou pleine largeur
-  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : {}) }) },
+  // Mode d'affichage des enfants (facultatif ; absent = conteneur ordinaire, comme avant) : « onglets » (un enfant = un onglet, titre = son nom) ou
+  // « carrousel » (un enfant = une diapositive, avec le carrousel du site). Les enfants restent de vrais conteneurs, modifiables dans le canevas.
+  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : p.band === true ? { band: true } : {}), ...nestedProps(p) }) },
   columns: { label: "Colonnes", category: "structure", container: true, props: () => ({}) },
   column: { label: "Colonne", category: "structure", container: true, props: () => ({}) },
   // Grille : peut devenir une BOUCLE (« Répéter pour chaque article / formation ») : ses enfants sont le modèle d'un élément
@@ -859,6 +869,13 @@ const WIDGET_SHORTCUTS = [
   { key: "tagcloud", label: "Nuage d'étiquettes", group: "site", sub: "Listes dynamiques", icon: "tag", keywords: "etiquettes tags nuage mots cles", type: "querylist", preset: {"title": "Étiquettes", "source": "tags", "mode": "popular", "count": 24, "layout": "inline"} },
   { key: "authorlist", label: "Liste des auteurs", group: "site", sub: "Listes dynamiques", icon: "users", keywords: "auteurs equipe redacteurs liste", type: "querylist", preset: {"title": "Nos auteurs", "source": "authors", "mode": "popular", "count": 8, "showExcerpt": true} },
   { key: "pagelist", label: "Liste des pages du site", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "pages du site menu plan navigation liste", type: "querylist", preset: {"title": "Pages", "source": "pages", "mode": "recent", "count": 12, "layout": "compact", "showImage": false, "showDate": false} },
+  // Produit = formation : mêmes données que la fiche d'une formation (modèle « Fiche d'une formation » du thème) ; l'élément se remplit à l'affichage
+  { key: "producttitle", label: "Titre du produit", group: "commerce", icon: "type", keywords: "produit titre formation nom product title", type: "heading", preset: {"text": "{{product.title | fallback: Titre de la formation}}", "level": "1"} },
+  { key: "productprice", label: "Prix du produit", group: "commerce", icon: "coin", keywords: "produit prix tarif formation product price", type: "text", preset: {"html": "<p><strong>{{product.price}}</strong></p>"} },
+  { key: "productimage", label: "Image du produit", group: "commerce", icon: "image", keywords: "produit image vignette couverture formation product images", type: "image", preset: {"src": "{{product.image}}", "alt": "{{product.title}}"} },
+  { key: "productshort", label: "Description du produit", group: "commerce", icon: "alignLeft", keywords: "produit description courte resume formation short description", type: "text", preset: {"html": "<p>{{product.subtitle}}</p><p>{{product.description}}</p>"} },
+  { key: "productmeta", label: "Informations du produit", group: "commerce", icon: "info", keywords: "produit meta categorie formateur informations product meta", type: "text", preset: {"html": "<p>Catégorie : {{product.category}} · Formateur : {{product.instructor}}</p>"} },
+  { key: "productrelated", label: "Produits apparentés", group: "commerce", icon: "list", keywords: "produits apparentes lies similaires formations related upsells", type: "querylist", preset: {"title": "Vous aimerez aussi", "source": "courses", "mode": "recent", "count": 3, "layout": "cards", "showDate": false, "excludeCurrent": true} },
   { key: "courselist2", label: "Formations (liste dynamique)", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "formations cours catalogue liste dynamique recents", type: "querylist", preset: {"title": "Nos formations", "source": "courses", "mode": "recent", "count": 6, "layout": "cards", "showDate": false} },
 ];
 
@@ -869,7 +886,7 @@ const WIDGET_DESCRIPTIONS = {
   image: "Une image avec son texte de remplacement et un lien possible", gallery: "Plusieurs images en grille, avec agrandissement", video: "Une vidéo YouTube, Vimeo ou un fichier", audio: "Un lecteur pour un fichier audio", button: "Un bouton d'appel à l'action", link: "Un lien texte",
   accordion: "Des questions qui se déplient (FAQ)", tabs: "Des onglets pour organiser un contenu", badge: "Une petite étiquette (nouveau, promo…)", timeline: "Des étapes sur une ligne du temps", progress: "Une barre de progression", menu: "Le menu de navigation du site", carousel: "Des images qui défilent", toggle: "Un titre qui déplie son contenu",
   alert: "Un message d'information, d'alerte ou de succès", counter: "Un nombre qui s'incrémente en arrivant à l'écran", testimonial: "Un témoignage avec son auteur", pricing: "Une offre tarifaire avec ses avantages et son bouton", breadcrumb: "Le fil d'Ariane de la page", social: "Des liens vers vos réseaux sociaux", sharebuttons: "Des boutons pour partager la page",
-  modal: "Une fenêtre qui s'ouvre au clic", html: "Du HTML sécurisé (réservé aux administrateurs)", embed: "Un contenu d'un service accepté (YouTube, Facebook, Spotify…)", iconlist: "Une liste d'éléments avec des icônes", tooltip: "Une infobulle au survol", hotspot: "Une image avec des points d'intérêt cliquables",
+  modal: "Une fenêtre qui s'ouvre au clic, ou un panneau latéral (off-canvas) à gauche ou à droite", html: "Du HTML sécurisé (réservé aux administrateurs)", embed: "Un contenu d'un service accepté (YouTube, Facebook, Spotify…)", iconlist: "Une liste d'éléments avec des icônes", tooltip: "Une infobulle au survol", hotspot: "Une image avec des points d'intérêt cliquables",
   posts: "Les derniers articles du blog", courselist: "Les formations du catalogue", search: "Un champ de recherche dans le site", account: "Connexion ou compte du visiteur", dyntext: "Un texte rempli avec une donnée (prénom, page, site…)", table: "Un tableau de données", countdown: "Un compte à rebours jusqu'à une date",
   course: "Une formation du catalogue en carte", sitelogo: "Le logo du site", postcontent: "Le contenu de l'article affiché", catfilter: "Un filtre par catégorie", sitetitle: "Le nom du site", copyright: "La ligne de copyright avec l'année", addtocart: "Un bouton pour acheter ou ajouter une formation au panier", courserating: "Les avis et la note d'une formation",
   animatedheading: "Un titre dont un mot change ou s'écrit", flipbox: "Une boîte qui se retourne au survol", pricelist: "Une liste de prix avec descriptions", toc: "Une table des matières construite depuis les titres", readingprogress: "Une barre qui montre l'avancée de la lecture", signupform: "Un formulaire d'inscription du module Formulaires",
@@ -961,7 +978,8 @@ const CATEGORIES = { structure: "Structure", text: "Texte", media: "Média", int
 // Contenu de départ de chaque élément (toujours VALIDE : un élément ajouté s'enregistre tout de suite) et icône de la
 // palette. Les éléments qui demandent une donnée réelle (image, vidéo, formation…) la demandent à l'ajout (`asks`).
 const PALETTE = {
-  container: { icon: "borderBox", blank: () => ({ children: [] }) },
+  // Un conteneur ajouté naît avec un écart de 20 px entre ses enfants (valeur courante des constructeurs de pages) ; les conteneurs existants gardent le leur
+  container: { icon: "borderBox", blank: () => ({ children: [], styles: { desktop: { gap: "20px" } } }) },
   columns: { icon: "columns", blank: () => ({ children: [{ type: "column", children: [] }, { type: "column", children: [] }] }) },
   column: { icon: "moveVertical", blank: () => ({ children: [] }) },
   grid: { icon: "layout", blank: () => ({ children: [] }) },
@@ -1662,26 +1680,54 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
   const usedAnims = new Set(); // animations réellement utilisées : seules leurs images-clés sont écrites dans la page
   const clamps = { tablet: [], mobile: [] }; // cases de grille ramenées au nombre de colonnes de l'écran : écrites après toutes les autres règles
-  const add = (id, styles, states) => {
+  const add = (id, styles, states, band = false) => {
     if (!NODE_ID.test(String(id || ""))) return;
     const sel = `.kw-n-${id}`;
     for (const bp of BREAKPOINTS) {
-      const d = styles && styles[bp.key] ? declarations(styles[bp.key]) : "";
+      const d = styles && styles[bp.key] ? declarations(styles[bp.key], band) : "";
       if (!d) continue;
       (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
     }
     for (const state of STATES) {
-      const d = states && states[state.key] ? declarations(states[state.key]) : "";
+      const d = states && states[state.key] ? declarations(states[state.key], band) : "";
       if (d) rules.base.push(`${sel}${state.sel}{${d}}`);
+    }
+  };
+  // Un conteneur centre sa propre largeur par des marges automatiques (landing.css : :where(.kw-container)). Dans une disposition EN LIGNE ou EN GRILLE
+  // d'un parent, ces marges se partageraient l'espace libre et prendraient le pas sur « Répartition » et « Écart » : c'est le PARENT qui doit répartir
+  // ses enfants. Pour chaque parent, on écrit donc (par écran, avec l'héritage ordinateur → tablette → mobile) une règle à spécificité nulle qui retire
+  // ces marges quand le parent est en ligne / en grille, et les rend quand un écran plus étroit repasse en colonne. Les marges choisies par l'auteur
+  // sur l'enfant (.kw-n-<id>) l'emportent toujours.
+  const DEFAULT_LAYOUT = { layout: ["flex", "column"], columns: ["flex", "row"], grid: ["grid", "row"] };
+  const rowMarginRules = (id, type, styles, kids, wrapper) => {
+    if (!NODE_ID.test(String(id || "")) || !(kids || []).some((k) => k && k.type === "container")) return;
+    const sel = `:where(.kw-n-${id} > ${wrapper ? ".kw-layout > " : ""}.kw-container)`;
+    let [display, dir] = DEFAULT_LAYOUT[type] || ["flex", "column"], prev = null;
+    for (const bp of BREAKPOINTS) {
+      const st = (styles && styles[bp.key]) || {};
+      if (st.display) display = st.display;
+      if (st.flexDirection) dir = st.flexDirection;
+      const row = display === "grid" || display === "inline-grid" || (/flex/.test(display) && /^row/.test(dir));
+      if (row !== prev && !(prev === null && !row)) (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{margin-left:${row ? "0" : "auto"};margin-right:${row ? "0" : "auto"}}`);
+      prev = row;
     }
   };
   const seenIds = new Set(); // les copies d'un modèle de boucle partagent leur identifiant : règles écrites une seule fois
   for (const s of sections || []) {
     add(s.id, s.styles, s.states);
+    if (s.type === "layout") rowMarginRules(s.id, "layout", s.styles, s.children, true);
     if (s.type === "layout") walk(s.children, (n) => {
       if (seenIds.has(n.id)) return;
       seenIds.add(n.id);
-      add(n.id, n.styles, n.states);
+      add(n.id, n.styles, n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full));
+      if (n.children && n.children.length) rowMarginRules(n.id, n.type, n.styles, n.children, false);
+      // Image : « Hauteur » et « Proportions » de l'élément s'appliquent à la boîte (<figure>) ; l'image doit la REMPLIR pour que « Cadrage » et « Point focal »
+      // aient un effet (sans cela l'image garde sa hauteur naturelle et la boîte reste vide en dessous). Seulement pour un écran qui fixe l'une de ces valeurs :
+      // une image sans hauteur ni proportions garde sa taille naturelle.
+      if (n.type === "image" && NODE_ID.test(String(n.id || ""))) for (const bp of BREAKPOINTS) {
+        const st = n.styles && n.styles[bp.key];
+        if (st && ((st.height && st.height !== "auto") || (st.aspectRatio && st.aspectRatio !== "auto"))) (bp.media ? rules.media[bp.key] : rules.base).push(`.kw-n-${n.id} img{width:100%;height:100%}`);
+      }
       entranceRules(n, rules, usedAnims);
       // CSS personnalisé de l'élément (validé à l'enregistrement, revalidé ici : rien d'autre n'atteint la page)
       if (n.css && NODE_ID.test(String(n.id || ""))) { try { const c = cssDeclarations(n.css, "CSS"); if (c) rules.custom.push(`.kw-node.kw-n-${n.id}{${c}}`); } catch { /* ignoré */ } }

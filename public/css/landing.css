@@ -144,12 +144,20 @@
 
 /* Sections libres (Page Builder) : styles de base des éléments ; les réglages de chaque élément viennent de sa classe
    .kw-n-<id> (CSS généré après cette feuille, donc prioritaire à spécificité égale). */
-.kw-layout { display: flex; flex-direction: column; gap: 16px; }
+/* Section libre : c'est la SECTION qui met en page ses enfants (Affichage, Direction, Répartition, Écarts… de l'Inspecteur s'écrivent sur elle).
+   L'enveloppe .kw-layout est transparente (display: contents) : ses enfants sont les éléments Flexbox / Grille de la section. La mise en page par
+   défaut (colonne, écart de 16 px) est portée par la section à spécificité nulle : tout réglage de l'auteur l'emporte. */
+:where(.lp-block-layout) { display: flex; flex-direction: column; gap: 16px; }
+.kw-layout { display: contents; }
 .kw-container { width: 100%; display: flex; flex-direction: column; gap: 16px; }
 /* Largeur max. et centrage PAR DÉFAUT, à spécificité nulle (:where) : le réglage « Largeur max. » (ou « Marge ») d'un conteneur, posé sous
    .kw-n-<id>, l'emporte toujours, y compris sur un conteneur en pleine largeur ou imbriqué (sinon le réglage serait sans effet) */
 :where(.kw-container) { max-width: 1100px; margin-left: auto; margin-right: auto; }
 :where(.kw-container.kw-full) { max-width: none; }
+/* « Fond pleine largeur, contenu encadré » : le conteneur (donc son fond) occupe toute la largeur de son parent, et ses intérieurs gauche / droite
+   centrent le contenu à la largeur des conteneurs du site (--kw-band-w) ; l'intérieur choisi par l'auteur (--kw-pl / --kw-pr) reste un minimum */
+:where(.kw-container.kw-band) { max-width: none; }
+.kw-container.kw-band { padding-left: max(var(--kw-pl, 0px), calc((100% - var(--kw-band-w, 1100px)) / 2)); padding-right: max(var(--kw-pr, 0px), calc((100% - var(--kw-band-w, 1100px)) / 2)); }
 .kw-columns { display: flex; flex-wrap: wrap; gap: 24px; }
 .kw-column { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 .kw-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
@@ -165,7 +173,7 @@
 .kw-quote { padding-left: 16px; border-left: 4px solid var(--lp-accent, #0277b6); font-size: 1.1em; }
 .kw-quote footer { margin-top: 6px; opacity: 0.75; font-size: 0.9em; }
 .kw-code { padding: 14px 16px; border-radius: 8px; background: rgba(16, 34, 47, 0.06); overflow-x: auto; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; white-space: pre-wrap; }
-.kw-image img { display: block; max-width: 100%; height: auto; border-radius: inherit; }
+.kw-image img { display: block; max-width: 100%; height: auto; border-radius: inherit; object-fit: inherit; object-position: inherit; }
 .kw-image figcaption { margin-top: 8px; font-size: 14px; opacity: 0.75; }
 .kw-gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .kw-gallery img { display: block; width: 100%; height: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 8px; }
@@ -609,7 +617,7 @@ body.pb-hand,body.pb-hand *{cursor:grab}
 .kw-node { min-width: 0; }
 .kw-code { white-space: pre-wrap; overflow-x: auto; }
 /* Coloration du code (src/marketing/pages/highlight.js) */
-.kw-tok-com { color: #5b7083; font-style: italic; } .kw-tok-str { color: #0a7a4a; } .kw-tok-num { color: #b45309; } .kw-tok-kw { color: #7c3aed; font-weight: 600; } .kw-tok-fn { color: #0277b6; }
+.kw-tok-com { color: #5b7083; font-style: italic; } .kw-tok-str { color: #0a7a4a; } .kw-tok-num { color: #b45309; } .kw-tok-kw { color: #1d4ed8; font-weight: 600; } .kw-tok-fn { color: #0277b6; }
 .kw-tok-tag { color: #b4235b; } .kw-tok-attr { color: #b45309; }
 .kw-progress-head > span:last-child:not(:first-child) { flex: none; white-space: nowrap; overflow-wrap: normal; }
 .kw-progress-head { align-items: flex-start; }
@@ -968,3 +976,28 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .kw-slider-next { right: 4px; }
 .kw-slider-btn:disabled { opacity: 0.35; cursor: default; }
 @media (prefers-reduced-motion: reduce) { .kw-loop-slider, .kw-ql-slider .kw-ql-items { scroll-behavior: auto; } }
+
+/* Conteneur en mode « onglets » (un enfant = un onglet) et « carrousel » (un enfant = une diapositive) */
+.kw-ntabs:not(.is-enhanced) > .kw-ntab-panel::before { content: attr(data-kw-title); display: block; margin: 16px 0 6px; font-weight: 700; font-size: 18px; }
+.kw-ntab-list { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 16px; border-bottom: 2px solid rgba(16, 34, 47, 0.12); }
+.kw-ntab { padding: 10px 16px; border: 0; border-bottom: 3px solid transparent; margin-bottom: -2px; background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer; opacity: 0.75; }
+.kw-ntab:hover { opacity: 1; }
+.kw-ntab[aria-selected="true"] { opacity: 1; border-bottom-color: var(--lp-accent, #0277b6); color: var(--lp-accent, #0277b6); }
+.kw-ntab:focus-visible { outline: 2px solid var(--lp-accent, #0277b6); outline-offset: 2px; border-radius: 4px; }
+.kw-ntabs.is-pills .kw-ntab-list { border-bottom: 0; gap: 8px; }
+.kw-ntabs.is-pills .kw-ntab { margin: 0; border: 2px solid transparent; border-radius: 999px; }
+.kw-ntabs.is-pills .kw-ntab[aria-selected="true"] { background: var(--lp-accent, #0277b6); color: #fff; }
+.kw-ntab-panel[hidden] { display: none; }
+.kw-ncarousel { position: relative; min-width: 0; }
+.kw-ncar-slide { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; }
+/* Dans l'éditeur, un conteneur en mode onglets / carrousel reste un conteneur ordinaire, avec un repère */
+.lp-builder [data-kw-mode]::before { display: block; margin: 0 0 6px; padding: 2px 8px; width: fit-content; border-radius: 999px; background: rgba(2, 119, 182, 0.12); color: #0277b6; font: 600 12px/1.6 system-ui, sans-serif; }
+.lp-builder [data-kw-mode="tabs"]::before { content: "Onglets : chaque conteneur enfant devient un onglet (titre = son nom)"; }
+.lp-builder [data-kw-mode="carousel"]::before { content: "Carrousel : chaque conteneur enfant devient une diapositive"; }
+
+/* Animation Lottie (widget « lottie ») */
+.kw-lottie { display: flex; max-width: 100%; }
+.kw-lottie.is-center { justify-content: center; } .kw-lottie.is-left { justify-content: flex-start; } .kw-lottie.is-right { justify-content: flex-end; }
+.kw-lottie-stage { width: 100%; max-width: 100%; min-height: 40px; }
+.kw-lottie-stage svg { display: block; width: 100%; height: 100%; }
+.kw-lottie-placeholder { align-items: center; justify-content: center; border: 2px dashed rgba(16, 34, 47, 0.25); border-radius: 12px; color: rgba(16, 34, 47, 0.7); font: 600 14px/1.4 system-ui, sans-serif; }
