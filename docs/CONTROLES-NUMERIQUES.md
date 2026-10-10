@@ -52,7 +52,7 @@ registres `LENCFG` (longueurs), `NUMCFG` (nombres), `NUM` (bornes), `UNITS` (uni
 | wordSpacing, textIndent (**nouveaux**) | — | NumericControl | 0,1 px · 1 | −100…100 · −999…999 | px em rem (+ %) | non | oui |
 | width, height, min/max-width/height | `lengthControl` | NumericControl | 1 · 0,1 | 0 / 9999 | px % rem vw/vh auto | non | oui |
 | margin ×4, padding ×4 | cases + flèches | NumericControl compact (`inlineUnit`) + unité commune + liaison 4 côtés | 1 · 0,1 | marge −9999 / 9999 ; intérieur 0 / 9999 | px % rem em (+ auto pour la marge) | non | non (cases trop petites : saisie, ▲▼ au survol, flèches) |
-| gap, rowGap, columnGap | `lengthControl` | NumericControl | 1 · 0,1 | 0 / 9999 | px rem em % | non | oui |
+| gap, rowGap, columnGap | `lengthControl` | NumericControl | 1 · 0,1 | 0 / 9999 | px rem em % | oui : 0–100 px · 0–6 rem/em · 0–20 % (la saisie reste libre jusqu'à 9999 ; une valeur enregistrée hors plage n'est jamais ramenée dans la plage) | oui |
 | borderWidth (+ 4 côtés), borderRadius (+ 4 coins) | `lengthControl` | NumericControl | 1 | 0 / 9999 | px (rayon : px % rem) | rayon : 0–100 px | oui |
 | top / right / bottom / left | `lengthControl` | NumericControl | 1 · 0,1 | −9999 / 9999 | px % rem | non | oui |
 | zIndex | `numberControl` | NumericControl | 1 | −100 / 9999 (élargi) | — | non | oui |

@@ -2647,6 +2647,10 @@
     wordSpacing: { min: -100, max: 100, step: function (u) { return u === "px" ? 0.1 : 0.01; }, precision: 2 },
     textIndent: { min: -999, max: 999 },
     borderRadius: { slider: rangeBy({ px: [0, 100], "%": [0, 50], rem: [0, 6] }) },
+    // Écarts : curseur de confort (la saisie accepte toujours jusqu'à 9999 ; une valeur enregistrée hors plage n'est jamais ramenée dans la plage)
+    gap: { slider: rangeBy({ px: [0, 100], rem: [0, 6], em: [0, 6], "%": [0, 20] }) },
+    rowGap: { slider: rangeBy({ px: [0, 100], rem: [0, 6], em: [0, 6], "%": [0, 20] }) },
+    columnGap: { slider: rangeBy({ px: [0, 100], rem: [0, 6], em: [0, 6], "%": [0, 20] }) },
   };
   // Nombres sans unité : [min, max, pas] + précision, entier, curseur, valeur de départ
   var NUMCFG = {
