@@ -47,7 +47,7 @@ describe("Structure sur une grande page (navigateur)", { skip: SKIP }, () => {
 
   test("un élément sélectionné dans le canevas, très bas dans la page, devient visible et sélectionné dans l'arbre", async () => {
     const id = `hd${pad(300, 10)}`;
-    await page.frameLocator("[data-pb-frame]").locator(`[data-node-id="${id}"]`).click({ position: { x: 6, y: 4 } }); // Playwright tient compte du zoom de la page
+    await page.frameLocator("[data-pb-frame]").locator(`[data-node-id="${id}"]`).click(); // au centre (l'étiquette de manipulation directe occupe le coin haut-gauche au survol) ; Playwright tient compte du zoom de la page
     await until(async () => (await page.locator(`[data-pb-layers] .pb-node[data-id="${id}"]`).getAttribute("aria-selected")) === "true", "ligne sélectionnée");
     await until(() => visibleInTree(id), "ligne visible dans la zone de l'arbre");
   });
