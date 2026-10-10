@@ -151,7 +151,7 @@
       <h2 id="fn-auto">Automatisations</h2>
       <p class="field-hint">Un contact connu (inscrit, ou connecté) qui atteint une étape ou termine ce tunnel peut entrer dans un scénario : e-mail de relance, étiquette, liste… Déclencheurs : « Un contact atteint une étape d'un tunnel », « … la dernière étape d'un tunnel », « Un contact visite une page ».</p>
       <% if (automations.length) { %>
-        <ul class="mk-sw-recent"><% automations.forEach((a) => { %><li><a href="/marketing/automatisations/<%= a.id %>"><%= a.name %></a><span class="mk-sub"><%= a.status === "active" ? "Actif" : a.status === "paused" ? "En pause" : "Brouillon" %></span></li><% }) %></ul>
+        <ul class="mk-sw-recent"><% automations.forEach((a) => { %><li><a href="/marketing/automatisations/<%= a.id %>"><%= a.name %></a><span class="mk-sub"><%= a.status === "active" ? "Actif" : a.status === "paused" ? "En pause" : "Brouillon" %> · <%= (a.events || []).map((e) => ({ "funnel.entered": "à l'entrée", "funnel.step_reached": "à une étape atteinte", "funnel.step.completed": "à une étape terminée", "funnel.completed": "à la fin", "funnel.abandoned": "à l'abandon", "funnel.cta.clicked": "au clic d'un bouton", "page.visited": "à la visite d'une page" }[e] || e)).join(", ") %></span></li><% }) %></ul>
       <% } else { %><p>Aucun scénario lié à ce tunnel pour l'instant.</p><% } %>
       <% if (canAutomate) { %><div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/automatisations#nouveau">Créer un scénario</a></div><% } %>
     </section>

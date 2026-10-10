@@ -50,6 +50,22 @@
     <% } %>
 
     <section class="mk-panel">
+      <h2>Déclencheur et objectif</h2>
+      <p>Ce scénario démarre sur : <% (a.triggers || []).forEach((t, i) => { const src = SOURCE_LABELS[sourceOf(t.event)]; %><%= i ? ", " : "" %><strong><%= (TRIGGER_NAMES[t.event] || t.event) %></strong> <span class="mk-sub">(source : <%= src %>)</span><% }) %>.</p>
+      <p class="field-hint">Objectif : quand cet événement arrive pour un contact en cours de parcours, le parcours s'arrête là (aucun e-mail de plus). Vide = aucun objectif.</p>
+      <% if (mk.can("automations.write")) { %>
+      <form action="/marketing/automatisations/<%= a.id %>/objectif" method="post" class="mk-inline-form">
+        <label for="goal-event" class="sr-only">Événement objectif</label>
+        <select id="goal-event" name="objectif" class="mk-select">
+          <option value="">Aucun objectif</option>
+          <% GOAL_EVENTS.forEach((g) => { %><option value="<%= g.value %>" <%= a.goal_event === g.value ? "selected" : "" %>><%= g.label %></option><% }) %>
+        </select>
+        <button type="submit" class="btn btn-outline btn-sm">Enregistrer l'objectif</button>
+      </form>
+      <% } else { %><p>Objectif : <strong><%= a.goal_event ? (TRIGGER_NAMES[a.goal_event] || a.goal_event) : "aucun" %></strong></p><% } %>
+    </section>
+
+    <section class="mk-panel">
       <h2>Actions</h2>
       <div class="mk-actions">
         <% if (mk.can("automations.activate")) { %>

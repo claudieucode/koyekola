@@ -354,12 +354,16 @@ function linkedAutomations(ctx, funnel) {
     try { triggers = JSON.parse(a.triggers || "[]"); } catch { triggers = []; }
     return triggers.some((t) => {
       const v = t.filter && t.filter.value !== undefined ? String(t.filter.value) : "";
-      if (t.event === "funnel.step_reached") return !v || stepIds.has(v);
-      if (t.event === "funnel.completed") return !v || v === String(funnel.id);
+      if (t.event === "funnel.step_reached" || t.event === "funnel.step.completed" || t.event === "funnel.cta.clicked") return !v || stepIds.has(v);
+      if (t.event === "funnel.completed" || t.event === "funnel.entered" || t.event === "funnel.abandoned") return !v || v === String(funnel.id);
       if (t.event === "page.visited") return v && pageIds.has(v);
       return false;
     });
-  }).map(({ id, name, status }) => ({ id, name, status }));
+  }).map(({ id, name, status, triggers }) => {
+    let list = [];
+    try { list = JSON.parse(triggers || "[]"); } catch { list = []; }
+    return { id, name, status, events: [...new Set(list.map((t) => t.event).filter((e) => /^funnel\./.test(e) || e === "page.visited"))] };
+  });
 }
 
 // Tunnels dont la page est une étape (affiché sur la fiche de la page)

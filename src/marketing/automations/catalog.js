@@ -37,7 +37,25 @@ const TRIGGERS = {
   "form.submitted": { label: "Un formulaire est envoyé", filters: [["formId", "Formulaire", "forms"]] },
   // Site Web et Tunnels (phase 10) : visites des contacts connus ayant accepté la mesure d'audience
   "page.visited": { label: "Un contact visite une page (Site Web, Tunnels)", filters: [["pageId", "Page", "pages"]] },
+  "funnel.entered": { label: "Un contact entre dans un tunnel", filters: [["funnelId", "Tunnel", "funnels"]] },
   "funnel.step_reached": { label: "Un contact atteint une étape d'un tunnel", filters: [["stepId", "Étape", "funnelSteps"]] },
+  "funnel.step.completed": { label: "Un contact termine une étape d'un tunnel", filters: [["stepId", "Étape", "funnelSteps"]] },
   "funnel.completed": { label: "Un contact atteint la dernière étape d'un tunnel", filters: [["funnelId", "Tunnel", "funnels"]] },
+  "funnel.cta.clicked": { label: "Un contact clique un bouton d'une étape de tunnel", filters: [["stepId", "Étape", "funnelSteps"]] },
+  "funnel.abandoned": { label: "Un contact abandonne un tunnel (délai sans activité, réglable)", filters: [["funnelId", "Tunnel", "funnels"]] },
+  // Commande (palier 19) : dérivés d'événements réels de la boutique ; la commande reste la source de vérité du paiement
+  "checkout.abandoned": { label: "Un contact abandonne sa commande (page ouverte, aucune commande après le délai)", filters: [] },
+  "purchase.completed": { label: "Un achat est terminé (commande payée)", filters: [] },
 };
-module.exports = { TRIGGERS };
+// D'où vient le déclencheur : affiché dans le scénario (le tunnel produit, le Contact Core conserve, l'automatisation décide)
+const SOURCE_LABELS = { cms: "CMS", funnel: "Tunnel", email: "E-mail", commerce: "Boutique", contact: "Contact Core", lms: "KOLAKISA (formations)", site: "Site Web" };
+function sourceOf(event) {
+  if (/^funnel\./.test(event)) return "funnel";
+  if (/^(email|sms)\./.test(event)) return "email";
+  if (/^(checkout|purchase)\./.test(event) || event === "lms.order_completed" || event === "lms.cart_added" || event === "lms.checkout_started") return "commerce";
+  if (/^(contact|tag|list|user|comment)\./.test(event) || event === "form.submitted") return "contact";
+  if (/^(page)\./.test(event)) return "site";
+  if (/^lms\./.test(event)) return "lms";
+  return "contact";
+}
+module.exports = { TRIGGERS, SOURCE_LABELS, sourceOf };

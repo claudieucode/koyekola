@@ -21,6 +21,7 @@ const GROUPS = {
   seo: { label: "SEO", intro: "Valeurs par défaut du référencement (le moteur SEO reste la référence)." },
   privacy: { label: "Confidentialité", intro: "Page de politique de confidentialité, liée depuis le bandeau et le pied de page." },
   indexation: { label: "Indexation", intro: "Visibilité du site pour les moteurs de recherche." },
+  tunnels: { label: "Tunnels", intro: "Quand considère-t-on qu'un parcours est abandonné ? Un abandon n'est jamais déduit d'une simple absence immédiate : il faut un délai sans aucune activité." },
   email: { label: "Emailing", intro: "Identité d'expédition des e-mails marketing. Le fournisseur, ses clés secrètes et les limites d'envoi se règlent dans Marketing → Envoi (jamais ici)." },
 };
 const TIMEZONES = (() => { try { return Intl.supportedValuesOf("timeZone"); } catch { return ["Europe/Paris", "UTC"]; } })();
@@ -148,6 +149,12 @@ def({ key: "search_visibility", group: "indexation", label: "Visibilité pour le
 
 // ---------- Validation (jamais de confiance envers le navigateur) ----------
 const EMAIL = /^[^\s@<>"',;:\\()[\]]{1,64}@[A-Za-z0-9][A-Za-z0-9.-]{0,251}\.[A-Za-z]{2,}$/;
+// --- Tunnels (palier 19) : délais d'abandon (lus par la détection des abandons, funnels/abandon.js) ---
+def({ key: "funnel_abandon_hours", group: "tunnels", label: "Abandon d'un tunnel après (heures sans activité)", type: "integer", min: 1, max: 720, scopes: ["main"],
+  help: "Un contact qui a atteint une étape d'un tunnel, sans le terminer ni revenir pendant ce délai, produit « funnel.abandoned ». Par défaut 24 h.", ...mainKv("funnel_abandon_hours", 24) });
+def({ key: "checkout_abandon_hours", group: "tunnels", label: "Abandon de commande après (heures)", type: "integer", min: 1, max: 168, scopes: ["main"],
+  help: "Un contact qui a ouvert la page de commande sans commande terminée après ce délai produit « checkout.abandoned ». Par défaut 1 h.", ...mainKv("checkout_abandon_hours", 1) });
+
 // --- Emailing (palier 16) : identité d'expédition ---
 // Source de vérité : la configuration d'envoi du module Marketing (site principal) et mk_settings « email.site_<id>.* » (un site). Aucun secret ici :
 // le fournisseur et ses clés restent dans Marketing → Envoi.

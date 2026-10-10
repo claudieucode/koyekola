@@ -300,6 +300,16 @@ function activateAutomation(ctx, id, opts = {}) {
   });
 }
 
+// Objectif du scénario : événement après lequel les passages en cours se terminent (vide = aucun). Lu au moment de l'événement : pas figé avec les étapes.
+function setGoalEvent(ctx, id, eventName) {
+  const a = requireAutomation(ctx, id);
+  const value = eventName === undefined || eventName === null ? "" : String(eventName).trim();
+  if (value && !EVENT_NAME.test(value)) throw new MarketingError("invalid_automation", "Événement d'objectif invalide (minuscules, chiffres, « _ » et « . »).");
+  table(ctx).update(id, { goal_event: value, updated_at: new Date().toISOString().slice(0, 19).replace("T", " ") });
+  audit(ctx, "automation.goal", "automation", id, { goal: value });
+  return getAutomation(ctx, a.id);
+}
+
 function pauseAutomation(ctx, id) {
   const a = requireAutomation(ctx, id);
   if (a.status !== "active") throw new MarketingError("invalid_state", "Seul un scénario actif peut être mis en pause.");
@@ -411,4 +421,4 @@ function runDetail(ctx, automationId, runId) {
   return { run, steps, log };
 }
 
-module.exports = { createAutomation, getAutomation, requireAutomation, listAutomations, updateAutomation, automationPreflight, activateAutomation, pauseAutomation, resumeAutomation, deleteAutomation, duplicateAutomation, automationStats, listRuns, runDetail };
+module.exports = { setGoalEvent, createAutomation, getAutomation, requireAutomation, listAutomations, updateAutomation, automationPreflight, activateAutomation, pauseAutomation, resumeAutomation, deleteAutomation, duplicateAutomation, automationStats, listRuns, runDetail };

@@ -36,6 +36,12 @@ function createMarketingRouters({ db }) {
       const r = db.prepare(`SELECT site_id FROM ${tbl} WHERE id = ?`).get(Number(m[2]));
       return r ? { siteId: r.site_id } : { siteId: null, missing: true };
     }
+    // Diagnostic d'un événement (palier 19) : le site est celui de l'événement
+    m = /^\/evenements\/(\d{1,12})$/.exec(p);
+    if (m) {
+      const r = db.prepare("SELECT site_id FROM mk_events WHERE id = ?").get(Number(m[1]));
+      return r ? { siteId: r.site_id } : { siteId: null, missing: true };
+    }
     if (/^\/(?:campagnes|listes|segments|modeles|automatisations|tunnels)(?:\/(?:nouvelle|nouveau|apercu|apercu-cible|historique|parcours(?:\/.*)?|bibliotheque(?:\/.*)?))?$/.test(p)) {
       const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
       if (/^\d{1,12}$/.test(String(raw ?? ""))) return { siteId: Number(raw) };

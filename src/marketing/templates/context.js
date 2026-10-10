@@ -10,8 +10,8 @@ const CORE = [
 ];
 const SYSTEM = [["unsubscribe_url", "Lien de désinscription"], ["preferences_url", "Lien du centre de préférences"], ["view_url", "Lien « voir dans le navigateur »"], ["event.course_url", "Lien de la formation (automatisation)"], ["event.learn_url", "Lien « Mes formations » (automatisation)"]];
 // Données de l'événement qui a déclenché une automatisation (vides dans une campagne)
-const EVENT_FIELDS = [["event.course_title", "Titre de la formation", "Final Cut Pro"], ["event.order_total", "Montant de la commande", "49,00 €"], ["event.order_id", "Numéro de commande", "1024"], ["event.lesson_title", "Titre de la leçon", "Interface"]];
-const EVENT_KEYS = ["course_title", "course_url", "learn_url", "lesson_title", "order_id", "order_total"];
+const EVENT_FIELDS = [["event.course_title", "Titre de la formation", "Final Cut Pro"], ["event.order_total", "Montant de la commande", "49,00 €"], ["event.order_id", "Numéro de commande", "1024"], ["event.lesson_title", "Titre de la leçon", "Interface"], ["event.funnel_name", "Nom du tunnel", "Lancement"], ["event.funnel_step", "Étape du tunnel", "Inscription"]];
+const EVENT_KEYS = ["course_title", "course_url", "learn_url", "lesson_title", "order_id", "order_total", "funnel_name", "funnel_step"];
 const SAMPLE_URLS = { unsubscribe_url: "https://exemple.invalid/desinscription", preferences_url: "https://exemple.invalid/preferences", view_url: "https://exemple.invalid/voir" };
 // https, ou http vers la machine locale (développement avec le fournisseur « console ») : jamais d'autre http
 const SAFE_URL = /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?\/)[^\s<>"'`\\]{1,2000}$/i;
@@ -87,7 +87,7 @@ function sampleContext(ctx) {
   return {
     contact: { first_name: "Awa", last_name: "Koffi", full_name: "Awa Koffi", email: "awa@exemple.fr", company: "Acme", country: "TG", language: "fr", phone: "+228 90 00 00 00", job_title: "Directrice", props },
     org: { name: org.name, address: org.address },
-    event: { course_title: "Final Cut Pro", course_url: "https://exemple.invalid/formation", learn_url: "https://exemple.invalid/mes-cours", lesson_title: "Interface", order_id: "1024", order_total: "49,00 €" },
+    event: { course_title: "Final Cut Pro", course_url: "https://exemple.invalid/formation", learn_url: "https://exemple.invalid/mes-cours", lesson_title: "Interface", order_id: "1024", order_total: "49,00 €", funnel_name: "Lancement", funnel_step: "Inscription" },
     ...SAMPLE_URLS,
     survey_token: "", // aperçu : lien anonyme (le vrai jeton personnel est ajouté à l'envoi)
   };
