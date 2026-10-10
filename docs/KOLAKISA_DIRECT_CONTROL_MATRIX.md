@@ -6,7 +6,7 @@ Source : `INSPECTORS` (71 entrées explicites sur 86 types) lu dans `page-builde
 | Capacité | Types concernés | Nombre |
 |---|---|---|
 | **Gap / écart** (`gap`, `rowGap`, `columnGap`) | section, container, columns, column, stack, group, grid, gallery | **8** |
-| Padding / marge (groupe « spacing ») | quasiment tous | 69 sur 71 |
+| Padding / marge (groupe « spacing ») | presque tous | 68 sur 71 |
 | Dimensions complètes (largeur, hauteur, min, max) | section, container, columns, column, stack, group, grid, image, form, legacy | 10 |
 | Largeur seulement (`width / minWidth / maxWidth`) | texte, titre, bouton, vidéo, etc. | 49 |
 | Aucune dimension | badge, infobulle, boutons de partage, réseaux, modale, lien, logo du site, progression de lecture, notation, ancre de menu, ajout au panier, composant | 12 |
