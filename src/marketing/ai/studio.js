@@ -193,6 +193,8 @@ function applyOperations(content, ops, { scope = null } = {}) {
 // Validation finale : le moteur de pages valide le document entier (types, valeurs, limites) ; droits sur les widgets réservés.
 function validate(ctx, page, before, after) {
   const normalized = pages.normalizeContent(ctx, page, { ...page.working, ...after });
+  // Format verrouillé : l'IA ne contourne jamais le verrou (ni ne le lève en silence)
+  try { require("../pages/layoutFormat").checkLocked({ ...before, theme: page.working.theme }, normalized); } catch (e) { throw new MarketingError(e.code || "format_locked", `${e.message} L'IA ne déverrouille jamais le format : déverrouillez-le vous-même, ou demandez une modification qui ne touche pas à ces réglages.`); }
   if (typeof ctx.can === "function") {
     try { nodes.lockedWidgetChanges(before.sections || [], normalized.sections || [], ctx.can); } catch (e) { throw new MarketingError("forbidden_widget", e.message); }
   }
@@ -252,6 +254,16 @@ const SCHEMA = {
 
 // Une page est modifiée par UNE demande à la fois (évite deux propositions concurrentes sur le même brouillon)
 const busy = new Set();
+// Format de mise en page de la page : l'IA le connaît et ne contourne jamais le verrou
+function formatNote(content) {
+  const lf = require("../pages/layoutFormat");
+  const l = content.theme && content.theme.layout;
+  if (!lf.guided(l)) return "Conception libre : aucun format de mise en page imposé.";
+  const head = `FORMAT DE MISE EN PAGE : « ${lf.FORMATS[l.format].label} » (largeur maximale ${l.maxWidth || "aucune"} px, marges ${l.gutter} px), ${l.locked ? "VERROUILLÉ" : "déverrouillé"}.`;
+  return l.locked
+    ? `${head} Propriétés protégées sur les éléments de premier niveau de chaque section : ${lf.PROTECTED.join(", ")}. Ne les modifie JAMAIS, ne tente pas de déverrouiller le format. Si la demande l'exige, renvoie une liste vide et explique le conflit dans « question ».`
+    : `${head} Respecte ce format : ne définis pas de largeur fixe sur les éléments de premier niveau sans raison.`;
+}
 
 // mode : "create" | "modify" | "fix". selection : identifiant de l'élément choisi ; scope : "page" | "selection".
 async function propose(ctx, pageId, input = {}) {
@@ -278,6 +290,7 @@ async function propose(ctx, pageId, input = {}) {
     `Écran affiché dans l'éditeur : ${bp}.`,
     selection ? `Élément sélectionné : ${selection}.` : "Aucun élément sélectionné.",
     scope ? `PÉRIMÈTRE AUTORISÉ : uniquement l'élément ${selection} et ses descendants.` : "Périmètre : toute la page.",
+    formatNote(content),
     mode === "fix" ? "Mode correction visuelle : la personne a annoté la page. Détermine la CAUSE dans les propriétés du document (marge, intérieur, largeur, alignement, parent, disposition…) et corrige-la ; ne déplace pas l'élément « à l'œil »." : "",
     annotations.length ? "ANNOTATIONS (éléments recouverts, du plus probable au moins probable) :\n" + annotations.map((a, i) => `${i + 1}. ${a.kind}${a.text ? ` « ${a.text} »` : ""} → ${a.elements.join(", ") || "aucun élément"}`).join("\n") : "",
     measures.length ? "MESURES RÉELLES DE L'ÉCRAN (id type rectangle styles calculés) :\n" + measures.join("\n") : "",

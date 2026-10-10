@@ -1717,7 +1717,9 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-ai-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; box-shadow: 0 0 0 4px rgba(2, 119, 182, .6); }
 .pb-ai-btn.is-active { box-shadow: 0 0 0 2px rgba(255, 255, 255, .85); }
 .pb-ai-btn:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.4); }
-@media (max-width: 1280px) { .pb-ai-btn span { display: none; } .pb-ai-btn { padding: 0 9px; } }
+/* icône seule (le nom « IA Kolakisa » est dans l'infobulle et pour les lecteurs d'écran) : l'en-tête ne doit jamais passer sur deux lignes */
+.pb-ai-btn { padding: 0; width: 32px; justify-content: center; }
+.pb-ai-btn span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .pb-ai { --ai-bg: var(--editor-panel, #fff); --ai-bg2: var(--editor-panel-secondary, #f3f6f9); --ai-text: var(--editor-text, #10222f); --ai-muted: var(--editor-muted, #566a7a); --ai-border: var(--editor-border, #dfe6ec); --ai-accent: var(--editor-accent, #0277b6); --ai-danger: var(--editor-danger, #c0121d);
   padding: 0; border: 1px solid var(--editor-border-strong, #c3cfda); border-radius: 14px; background: var(--ai-bg); color: var(--ai-text); box-shadow: var(--editor-shadow, 0 12px 36px rgba(11, 42, 64, .22)); overflow: hidden; flex-direction: column; font-size: 13px; }
@@ -1781,3 +1783,46 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 /* Structure : les lignes hors de la zone visible ne sont ni stylées ni mises en page (hauteur estimée d'une ligne : 30 px, mesurée). Mesuré à 400 éléments :
    recalcul de style par ouverture du panneau 28,8 → 3,1 ms, tâche complète 82 → 30 ms. Le canevas n'est PAS concerné (jamais de content-visibility sur la page). */
 .pb-tree .pb-node { content-visibility: auto; contain-intrinsic-size: auto 30px; }
+
+/* ---------- Inspecteur de qualité web : indicateur discret + rapport à la demande ---------- */
+.pb-q-btn { position: relative; }
+.pb-q-badge { position: absolute; top: -4px; right: -4px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; font: 700 10px/15px inherit; text-align: center; color: #fff; background: #5b6b79; box-sizing: border-box; }
+.pb-q-badge:empty { display: none; }
+.pb-q-btn[data-state="ok"] .pb-q-badge { background: #1e7a34; }
+.pb-q-btn[data-state="warn"] .pb-q-badge { background: #b7791f; }
+.pb-q-btn[data-state="critical"] .pb-q-badge { background: #c0121d; }
+.pb-q-btn[data-state="stale"] .pb-q-badge { background: #5b6b79; opacity: .7; }
+.pb-q-btn[data-state="running"] svg { animation: pb-ai-spin 1.2s linear infinite; }
+.pb-quality { --q-bg: var(--editor-panel, #fff); --q-text: var(--editor-text, #10222f); --q-muted: var(--editor-muted, #566a7a); --q-border: var(--editor-border, #dfe6ec);
+  position: fixed; inset: 56px 12px 12px auto; margin: 0; width: min(430px, calc(100vw - 24px)); max-height: calc(100vh - 68px); padding: 0; z-index: 58; display: none; flex-direction: column;
+  border: 1px solid var(--editor-border-strong, #c3cfda); border-radius: 12px; background: var(--q-bg); color: var(--q-text); box-shadow: var(--editor-shadow, 0 12px 36px rgba(11, 42, 64, .22)); overflow: hidden; font-size: 13px; }
+.pb-quality[open] { display: flex; }
+.pb-q-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--q-border); background: var(--editor-panel-secondary, #f3f6f9); }
+.pb-q-head h2 { margin: 0; font-size: 14px; }
+.pb-q-body { overflow: auto; padding: 12px; display: grid; gap: 10px; align-content: start; }
+.pb-q-status { margin: 0; font-weight: 700; }
+.pb-q-status[data-state="critical"] { color: var(--editor-danger, #c0121d); }
+.pb-q-status[data-state="ok"] { color: var(--editor-success, #1e7a34); }
+.pb-q-meta, .pb-q-note, .pb-q-where { margin: 0; color: var(--q-muted); font-size: 12px; }
+.pb-q-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.pb-q-cont { margin-left: auto; font-size: 12px; }
+.pb-q-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.pb-q-chip { padding: 4px 9px; border: 1px solid var(--q-border); border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 12px; cursor: pointer; }
+.pb-q-chip.is-on { background: var(--editor-accent, #0277b6); color: #fff; border-color: transparent; }
+.pb-q-list { display: grid; gap: 8px; }
+.pb-q-cat { margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--q-muted); }
+.pb-q-card { border: 1px solid var(--q-border); border-left-width: 4px; border-radius: 8px; padding: 9px 10px; display: grid; gap: 4px; background: var(--editor-card, #fff); }
+.pb-q-card.is-critical, .pb-q-card.is-blocking { border-left-color: var(--editor-danger, #c0121d); }
+.pb-q-card.is-important { border-left-color: #d97706; }
+.pb-q-card.is-minor { border-left-color: #2b9ae0; }
+.pb-q-card.is-tip { border-left-color: var(--q-border); }
+.pb-q-card.is-dismissed { opacity: .55; }
+.pb-q-card header { display: flex; gap: 8px; align-items: baseline; }
+.pb-q-sev { flex: none; padding: 1px 6px; border-radius: 5px; background: var(--editor-panel-secondary, #f3f6f9); font-size: 11px; font-weight: 700; }
+.pb-q-cause, .pb-q-fix { margin: 0; line-height: 1.4; }
+.pb-q-fix { color: var(--q-muted); }
+.pb-q-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.pb-q-empty { margin: 0; padding: 10px; color: var(--q-muted); }
+.pb-q-manual summary { cursor: pointer; font-weight: 600; }
+.pb-q-manual ul { margin: 6px 0 0; padding-left: 18px; color: var(--q-muted); }
+@media (max-width: 1280px) { .pb-quality { inset: 56px 8px 8px auto; } }
