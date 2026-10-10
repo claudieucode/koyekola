@@ -108,6 +108,20 @@ check("settings_privacy_page", "configuration", "Page de confidentialité", asyn
   return !p || p.archived_at || p.status !== "published" ? R("warning", "La page de confidentialité choisie n'est plus publiée : aucun lien n'est affiché.", { recommendation: "Publier la page ou en choisir une autre." }) : R("good", `Page de confidentialité : « ${p.name} ».`);
 });
 
+// Tunnels (palier 18) : chaque étape active doit désigner une vraie page CMS, du même site, non archivée et en ligne
+check("funnel_references", "content", "Étapes de tunnels", async (c) => {
+  const funnels = require("../../marketing/funnels");
+  const ctx = { db, organizationId: c.organizationId };
+  const siteWhere = c.siteId ? "AND site_id = ?" : "AND site_id IS NULL";
+  const rows = db.prepare(`SELECT id FROM mk_funnels WHERE organization_id = ? AND status = 'active' ${siteWhere}`).all(c.organizationId, ...(c.siteId ? [c.siteId] : []));
+  if (!rows.length) return R("info", "Aucun tunnel actif.");
+  const broken = [];
+  for (const r of rows) { const f = funnels.getFunnel(ctx, r.id); for (const s of f.steps) if (s.problem) broken.push(`« ${f.name} » — étape « ${s.name} » : ${s.problem}`); }
+  return broken.length
+    ? R("warning", `${plural(broken.length, "étape de tunnel a un problème", "étapes de tunnels ont un problème")} : ${broken.slice(0, 3).join(" ; ")}${broken.length > 3 ? " …" : ""}`, { impact: "Les visiteurs d'un tunnel peuvent tomber sur une étape sans page ou hors ligne.", recommendation: "Ouvrir le tunnel et associer, republier ou remplacer la page de l'étape.", action: { label: "Voir les tunnels", href: "/marketing/tunnels" } })
+    : R("good", `${plural(rows.length, "tunnel actif", "tunnels actifs")} : toutes les étapes pointent vers une page en ligne.`);
+});
+
 // ---------- Sécurité ----------
 check("admin_protected", "security", "Administration protégée", async (c) => {
   const r = await probe.request(c.port, "/marketing", { host: c.host });

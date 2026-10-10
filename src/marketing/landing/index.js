@@ -145,8 +145,10 @@ function unpublishPage(ctx, id) {
   ctx.db.prepare("UPDATE mk_landing_pages SET status = 'unpublished', updated_at = datetime('now') WHERE id = ?").run(id);
   audit(ctx, "landing.unpublished", "landing", id, {});
 }
-function deletePage(ctx, id) {
+function deletePage(ctx, id, { detach = false } = {}) {
   requirePage(ctx, id);
+  // Palier 18 : une page utilisée par un tunnel actif n'est pas supprimée en silence (refus listant les tunnels, ou détachement explicite)
+  require("../funnels").guardPageRemoval(ctx, id, { detach, action: "supprimée" });
   ctx.db.prepare("DELETE FROM mk_landing_pages WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
   audit(ctx, "landing.deleted", "landing", id, {});
 }

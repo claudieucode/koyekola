@@ -50,7 +50,7 @@ function entries({ hostSite = null } = {}) {
   // (case « Autoriser les moteurs de recherche ») et sans canonical vers une autre adresse ni noindex dans son SEO
   let webPages = [];
   try {
-    webPages = db.prepare("SELECT p.id, p.slug, p.name, p.title, p.indexable, p.seo, p.updated_at, p.site_id, s.settings AS site_settings FROM mk_landing_pages p LEFT JOIN mk_sites s ON s.id = p.site_id AND s.status = 'active' WHERE p.status = 'published' AND p.archived_at IS NULL ORDER BY p.published_at DESC").all();
+    webPages = db.prepare("SELECT p.id, p.slug, p.name, p.title, p.indexable, p.seo, (SELECT 1 FROM mk_funnel_steps st JOIN mk_funnels f ON f.id = st.funnel_id WHERE st.page_id = p.id AND f.status = 'active' AND json_extract(st.settings, '$.noindex') = 1 LIMIT 1) AS funnel_noindex, p.updated_at, p.site_id, s.settings AS site_settings FROM mk_landing_pages p LEFT JOIN mk_sites s ON s.id = p.site_id AND s.status = 'active' WHERE p.status = 'published' AND p.archived_at IS NULL ORDER BY p.published_at DESC").all();
   } catch (error) {
     if (!/no such (table|column)/.test(error.message)) throw error; // module marketing pas encore migré : aucune page web
   }
@@ -63,6 +63,7 @@ function entries({ hostSite = null } = {}) {
     const e = { path: urls.pageCanonicalPath(p), type: "Page web", lastmod: isoDate(p.updated_at), title: p.title || p.name, base: (siteConf.seo && siteConf.seo.publicUrl) || undefined, siteId: p.site_id || null };
     if (siteConf.extras && siteConf.extras.noindex) excluded.push({ ...e, reason: "Site réglé en noindex (réglages SEO du site)" });
     else if (!p.indexable || seo.noindex) excluded.push({ ...e, reason: "Page non indexée (réglage de la page)" });
+    else if (p.funnel_noindex) excluded.push({ ...e, reason: "Étape de tunnel non proposée aux moteurs de recherche (réglage de l'étape)" });
     else if (seo.canonical && !seo.canonical.endsWith(e.path === "/" ? "/" : e.path)) excluded.push({ ...e, reason: `Canonical vers ${seo.canonical}` });
     else included.push(e);
   }

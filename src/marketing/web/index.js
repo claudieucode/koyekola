@@ -30,13 +30,13 @@ function createMarketingRouters({ db }) {
     }
     // Email Engine (palier 16) : audiences, segments, modèles et campagnes d'UN site. Par identifiant : le site est celui de la ressource ;
     // pour les pages sans identifiant (liste, création), c'est « ?site= » ou le champ « site » envoyé — la personne limitée à un site n'ouvre que le sien.
-    m = /^\/(campagnes|listes|segments|modeles|automatisations)\/(\d{1,12})(?:\/|$)/.exec(p);
+    m = /^\/(campagnes|listes|segments|modeles|automatisations|tunnels)\/(\d{1,12})(?:\/|$)/.exec(p);
     if (m) {
-      const tbl = { campagnes: "mk_campaigns", listes: "mk_lists", segments: "mk_segments", modeles: "mk_templates", automatisations: "mk_automations" }[m[1]];
+      const tbl = { campagnes: "mk_campaigns", listes: "mk_lists", segments: "mk_segments", modeles: "mk_templates", automatisations: "mk_automations", tunnels: "mk_funnels" }[m[1]];
       const r = db.prepare(`SELECT site_id FROM ${tbl} WHERE id = ?`).get(Number(m[2]));
       return r ? { siteId: r.site_id } : { siteId: null, missing: true };
     }
-    if (/^\/(?:campagnes|listes|segments|modeles|automatisations)(?:\/(?:nouvelle|nouveau|apercu|apercu-cible|historique|parcours(?:\/.*)?|bibliotheque(?:\/.*)?))?$/.test(p)) {
+    if (/^\/(?:campagnes|listes|segments|modeles|automatisations|tunnels)(?:\/(?:nouvelle|nouveau|apercu|apercu-cible|historique|parcours(?:\/.*)?|bibliotheque(?:\/.*)?))?$/.test(p)) {
       const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
       if (/^\d{1,12}$/.test(String(raw ?? ""))) return { siteId: Number(raw) };
       return null;
@@ -73,7 +73,7 @@ function createMarketingRouters({ db }) {
     };
     res.locals.mk = { role, can: allowed, ctx: req.mk.ctx };
     // Email Engine (palier 16) : sites proposés / site imposé, disponibles pour les écrans des audiences, segments, modèles et campagnes
-    if (/^\/(?:campagnes|listes|segments|modeles|automatisations)(?:\/|$)/.test(req.path)) Object.assign(res.locals, require("./kit").siteChoices(req));
+    if (/^\/(?:campagnes|listes|segments|modeles|automatisations|tunnels)(?:\/|$)/.test(req.path)) Object.assign(res.locals, require("./kit").siteChoices(req));
     res.locals.mkTheme = themeOf(marketing.settings, orgId, user.id); // Paramètres → Apparence
     res.locals.mkh = helpers;
     // Message « flash » : affiché une seule fois après une action

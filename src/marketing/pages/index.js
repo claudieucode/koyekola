@@ -231,8 +231,10 @@ function duplicatePage(ctx, id, { siteId } = {}) {
 }
 
 // Archiver : la page est retirée du site (hors ligne) et des listes ; rien n'est effacé (statistiques, versions)
-function archivePage(ctx, id) {
+function archivePage(ctx, id, { detach = false } = {}) {
   requirePage(ctx, id);
+  // Palier 18 : une page utilisée par un tunnel actif ne part pas à la corbeille en silence (refus listant les tunnels, ou détachement explicite)
+  require("../funnels").guardPageRemoval(ctx, id, { detach, action: "mise à la corbeille" });
   ctx.db.prepare("UPDATE mk_landing_pages SET archived_at = datetime('now'), status = CASE status WHEN 'published' THEN 'unpublished' ELSE status END, revision = revision + 1, updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
   ctx.db.prepare("UPDATE mk_sites SET home_page_id = NULL WHERE home_page_id = ? AND organization_id = ?").run(id, ctx.organizationId);
   audit(ctx, "page.archived", "landing", id, {});

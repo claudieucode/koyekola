@@ -50,7 +50,7 @@
         <tbody><% pages.forEach((p) => { const menuId = "pg-menu-" + p.id; const stClass = inTrash ? "mk-status-off" : STATUS_CLASS[p.status]; %>
           <tr><% if (canWrite) { %><td class="mk-cms-check-col" data-label="Sélection"><input type="checkbox" name="ids" value="<%= p.id %>" form="pages-bulk" data-cms-row aria-label="Sélectionner « <%= p.name %> »"></td><% } %>
             <th scope="row" data-label="Titre"><a href="/marketing/pages/<%= p.id %>"><%= p.name %></a>
-              <span class="mk-sub">/p/<%= p.slug %><% if (p.parent_name) { %> · sous-page de « <%= p.parent_name %> »<% } %><% if (p.has_draft && !inTrash) { %> · modifications non publiées<% } %></span></th>
+              <span class="mk-sub">/p/<%= p.slug %><% if (p.parent_name) { %> · sous-page de « <%= p.parent_name %> »<% } %><% if (p.has_draft && !inTrash) { %> · modifications non publiées<% } %><% if (p.funnels && p.funnels.length) { %> · utilisée dans <%= p.funnels.length > 1 ? "les tunnels" : "le tunnel" %> « <%= p.funnels.join(" », « ") %> »<% } %></span></th>
             <td data-label="État"><span class="mk-status <%= stClass %>"><%= inTrash ? "Corbeille" : STATUSES[p.status] %></span></td>
             <td data-label="Auteur"><%= p.author || "—" %></td><td data-label="Site"><%= p.site_name || "—" %></td>
             <td data-label="Modifiée"><%= fmt(p.updated_at) %></td><td data-label="Publiée"><%= fmt(p.published_at) %></td>

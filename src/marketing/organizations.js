@@ -14,7 +14,9 @@ const PERMISSIONS = Object.freeze({
   "templates.read": "viewer", "templates.write": "editor",
   "campaigns.read": "viewer", "campaigns.write": "editor", "campaigns.send": "admin",
   "automations.read": "viewer", "automations.write": "editor", "automations.activate": "admin",
-  "forms.read": "viewer", "forms.write": "editor", "pages.code": "admin",
+  "forms.read": "viewer", "forms.write": "editor",
+  // Tunnels (palier 18) : voir = lecteur ; construire (étapes, pages associées, réglages) = éditeur. Modifier le CONTENU d'une page reste « forms.write », mettre en ligne « pages.publish » : on peut gérer un tunnel sans pouvoir éditer ses pages, et inversement.
+  "funnels.read": "viewer", "funnels.write": "editor", "pages.code": "admin",
   // Pages du CMS : publier = éditeur (comme avant) ; suppression DÉFINITIVE (depuis la corbeille) = administrateur
   "pages.publish": "editor", "pages.delete": "admin",
   // Médias du CMS : voir = lecteur ; envoyer, modifier, mettre à la corbeille = éditeur ; supprimer définitivement = administrateur

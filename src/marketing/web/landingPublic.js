@@ -48,8 +48,10 @@ module.exports = ({ db }) => {
   // widget : identifiant du widget « Formulaire » concerné (son message / ses erreurs ne touchent que lui)
   const show = (req, res, page, { status = 200, error = null, values = {}, thanks = null, widget = null } = {}) => {
     const form = loadForm(page);
+    // Palier 18 : une page servie dans un tunnel actif reçoit les réglages de CONTEXTE de son étape (noindex, pied de page masqué) — la page CMS reste une seule ressource
+    const funnelContext = funnels.contextForPage(db, page);
     res.status(status).render("marketing-public/landing", {
-      page: shownPage(req, page), site: siteOf(req, page), tokensToCss, form: form && form.status === "published" ? form : null, fieldCatalog: forms.FIELD_CATALOG,
+      funnelContext, page: { ...shownPage(req, page), funnelNoindex: Boolean(funnelContext && funnelContext.noindex) }, site: siteOf(req, page), tokensToCss, form: form && form.status === "published" ? form : null, fieldCatalog: forms.FIELD_CATALOG,
       propertyDefs: form ? forms.propertyFieldDefs(db, page.organization_id, form) : [], renderMarkdown, preview: false,
       error: widget ? null : error, values: widget ? {} : values, thanks: widget ? null : thanks, widgetForm: widget ? { id: widget, error, values, thanks } : null,
     });
@@ -102,6 +104,9 @@ module.exports = ({ db }) => {
     }
     // Bouton « étape suivante » : la prochaine étape en ligne du tunnel de la page (sinon, retour sur la page)
     if (link.url === funnels.NEXT_URL) return res.redirect(funnels.nextUrlForPage(db, page) || `/p/${page.slug}`);
+    // Bouton « étape précise du tunnel » (/etape/<identifiant>) : seulement une étape du MÊME tunnel, atteignable ; sinon retour sur la page (jamais d'adresse inventée)
+    const specific = /^\/etape\/(\d{1,9})$/.exec(link.url);
+    if (specific) return res.redirect(funnels.stepUrlForPage(db, page, Number(specific[1])) || `/p/${page.slug}`);
     res.redirect(link.url);
   });
 

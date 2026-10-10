@@ -306,7 +306,7 @@ module.exports = () => {
       templates: pages.listPageTemplates(ctx).map((t) => ({ id: t.id, name: t.name, category: t.category, sections: t.content.sections.length })),
       // Adresses proposées pour les liens : pages en ligne, pages du site, étape suivante (page d'un tunnel)
       links: [{ url: "/catalogue", label: "Catalogue des formations" }, { url: "/blog", label: "Blog" }, { url: "/", label: "Accueil du site" }]
-        .concat(funnel ? [{ url: require("../funnels").NEXT_URL, label: `Étape suivante du tunnel « ${funnel.name} »` }] : [])
+        .concat(funnel ? [{ url: require("../funnels").NEXT_URL, label: `Étape suivante du tunnel « ${funnel.name} »` }, ...require("../funnels").getFunnel(ctx, funnel.id).steps.filter((x) => x.pageId !== page.id).map((x) => ({ url: `/etape/${x.id}`, label: `Étape « ${x.name} » du tunnel « ${funnel.name} »` }))] : [])
         .concat(pages.listPages(ctx).filter((p) => p.status === "published" && p.id !== page.id).slice(0, 50).map((p) => ({ url: `/p/${p.slug}`, label: `Page « ${p.name} »` }))),
       siteUrl: String((site && site.settings && site.settings.seo && site.settings.seo.publicUrl) || process.env.SITE_URL || "").replace(/\/+$/, ""),
       // SEO (palier 11) : droits réels (revérifiés à l'enregistrement) et adresses du service SEO
@@ -440,7 +440,7 @@ module.exports = () => {
   router.post("/pages/:id(\\d+)/archiver", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
-    attempt(req, res, next, "/marketing/pages", () => { pages.archivePage(req.mk.ctx, page.id); return `Page « ${page.name} » archivée (hors ligne). Ses statistiques et versions sont gardées.`; });
+    attempt(req, res, next, "/marketing/pages", () => { pages.archivePage(req.mk.ctx, page.id, { detach: req.body.detacher === "on" }); return `Page « ${page.name} » archivée (hors ligne). Ses statistiques et versions sont gardées.`; });
   });
   router.post("/pages/:id(\\d+)/restaurer", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
@@ -452,7 +452,7 @@ module.exports = () => {
     const page = load(req, res);
     if (!page) return;
     if (!page.archived_at) { req.session.mkFlash = { type: "error", text: "Mettez d'abord la page à la corbeille : elle ne peut être supprimée définitivement que depuis la corbeille." }; return res.redirect(`/marketing/pages/${page.id}`); }
-    attempt(req, res, next, "/marketing/pages", () => { landing.deletePage(req.mk.ctx, page.id); return `Page « ${page.name} » supprimée, avec ses statistiques et ses versions.`; });
+    attempt(req, res, next, "/marketing/pages", () => { landing.deletePage(req.mk.ctx, page.id, { detach: req.body.detacher === "on" }); return `Page « ${page.name} » supprimée, avec ses statistiques et ses versions.`; });
   });
   return router;
 };
