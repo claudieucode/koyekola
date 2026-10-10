@@ -193,6 +193,8 @@ function applyOperations(content, ops, { scope = null } = {}) {
 // Validation finale : le moteur de pages valide le document entier (types, valeurs, limites) ; droits sur les widgets réservés.
 function validate(ctx, page, before, after) {
   const normalized = pages.normalizeContent(ctx, page, { ...page.working, ...after });
+  // Format verrouillé : l'IA ne contourne jamais le verrou (ni ne le lève en silence)
+  try { require("../pages/layoutFormat").checkLocked({ ...before, theme: page.working.theme }, normalized); } catch (e) { throw new MarketingError(e.code || "format_locked", `${e.message} L'IA ne déverrouille jamais le format : déverrouillez-le vous-même, ou demandez une modification qui ne touche pas à ces réglages.`); }
   if (typeof ctx.can === "function") {
     try { nodes.lockedWidgetChanges(before.sections || [], normalized.sections || [], ctx.can); } catch (e) { throw new MarketingError("forbidden_widget", e.message); }
   }

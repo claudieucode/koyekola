@@ -82,7 +82,7 @@ module.exports = () => {
     const state = req.query.vue === "archivees" ? "corbeille" : cmsPages.STATES.includes(req.query.etat) ? req.query.etat : "toutes";
     const filters = { q: String(req.query.q || "").trim().slice(0, 80), site: String(req.query.site || ""), auteur: String(req.query.auteur || ""), tri: Object.hasOwn(cmsPages.SORTS, req.query.tri) ? req.query.tri : "modifiee", ordre: req.query.ordre === "asc" || (req.query.tri === "titre" && req.query.ordre !== "desc") ? "asc" : "desc" };
     const result = cmsPages.queryPages(ctx, { state, q: filters.q, siteId: filters.site, authorId: filters.auteur, sort: filters.tri, dir: filters.ordre, page: req.query.page });
-    res.render("marketing/landing-list", {
+    res.render("marketing/landing-list", { layoutFormats: require("../pages/layoutFormat").FORMATS,
       title: "Pages", active: "landing", state, filters, result, pages: result.rows, authors: cmsPages.authorsOfPages(ctx), sites: pages.listSites(ctx), templates: require("../pages/templates").catalog(),
       userTemplates: pages.listPageTemplates(ctx), canWrite: req.mk.can("forms.write"), canPublish: req.mk.can("pages.publish"), canDelete: req.mk.can("pages.delete"), cmsPagesJs: true,
       STATUSES: landing.STATUSES, STATUS_CLASS, KINDS: pages.KINDS,
@@ -96,7 +96,8 @@ module.exports = () => {
       const siteId = intOrNull(req.body.site_id);
       const template = typeof req.body.template === "string" && req.body.template ? req.body.template : null;
       // Nouvelle page du CMS : une page de site (bandeau + texte, publiable tout de suite) ; sans « ouvrir », comportement historique (page d'atterrissage)
-      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId || toBuilder ? "page" : "landing", template });
+      const layout = req.body.layoutMode === "guided" ? { mode: "guided", format: req.body.layoutFormat, maxWidth: req.body.layoutMax, gutter: req.body.layoutGutter, locked: req.body.layoutLocked === "1" } : null;
+      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId || toBuilder ? "page" : "landing", template, layout });
       return template ? "Page créée à partir du modèle (brouillon) : remplacez les textes entre crochets dans l'éditeur visuel, puis publiez-la." : "Page créée (brouillon) : composez-la, puis publiez-la.";
     });
   });
