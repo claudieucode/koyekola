@@ -1678,13 +1678,41 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       if (d) rules.base.push(`${sel}${state.sel}{${d}}`);
     }
   };
+  // Un conteneur centre sa propre largeur par des marges automatiques (landing.css : :where(.kw-container)). Dans une disposition EN LIGNE ou EN GRILLE
+  // d'un parent, ces marges se partageraient l'espace libre et prendraient le pas sur « Répartition » et « Écart » : c'est le PARENT qui doit répartir
+  // ses enfants. Pour chaque parent, on écrit donc (par écran, avec l'héritage ordinateur → tablette → mobile) une règle à spécificité nulle qui retire
+  // ces marges quand le parent est en ligne / en grille, et les rend quand un écran plus étroit repasse en colonne. Les marges choisies par l'auteur
+  // sur l'enfant (.kw-n-<id>) l'emportent toujours.
+  const DEFAULT_LAYOUT = { layout: ["flex", "column"], columns: ["flex", "row"], grid: ["grid", "row"] };
+  const rowMarginRules = (id, type, styles, kids, wrapper) => {
+    if (!NODE_ID.test(String(id || "")) || !(kids || []).some((k) => k && k.type === "container")) return;
+    const sel = `:where(.kw-n-${id} > ${wrapper ? ".kw-layout > " : ""}.kw-container)`;
+    let [display, dir] = DEFAULT_LAYOUT[type] || ["flex", "column"], prev = null;
+    for (const bp of BREAKPOINTS) {
+      const st = (styles && styles[bp.key]) || {};
+      if (st.display) display = st.display;
+      if (st.flexDirection) dir = st.flexDirection;
+      const row = display === "grid" || display === "inline-grid" || (/flex/.test(display) && /^row/.test(dir));
+      if (row !== prev && !(prev === null && !row)) (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{margin-left:${row ? "0" : "auto"};margin-right:${row ? "0" : "auto"}}`);
+      prev = row;
+    }
+  };
   const seenIds = new Set(); // les copies d'un modèle de boucle partagent leur identifiant : règles écrites une seule fois
   for (const s of sections || []) {
     add(s.id, s.styles, s.states);
+    if (s.type === "layout") rowMarginRules(s.id, "layout", s.styles, s.children, true);
     if (s.type === "layout") walk(s.children, (n) => {
       if (seenIds.has(n.id)) return;
       seenIds.add(n.id);
       add(n.id, n.styles, n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full));
+      if (n.children && n.children.length) rowMarginRules(n.id, n.type, n.styles, n.children, false);
+      // Image : « Hauteur » et « Proportions » de l'élément s'appliquent à la boîte (<figure>) ; l'image doit la REMPLIR pour que « Cadrage » et « Point focal »
+      // aient un effet (sans cela l'image garde sa hauteur naturelle et la boîte reste vide en dessous). Seulement pour un écran qui fixe l'une de ces valeurs :
+      // une image sans hauteur ni proportions garde sa taille naturelle.
+      if (n.type === "image" && NODE_ID.test(String(n.id || ""))) for (const bp of BREAKPOINTS) {
+        const st = n.styles && n.styles[bp.key];
+        if (st && ((st.height && st.height !== "auto") || (st.aspectRatio && st.aspectRatio !== "auto"))) (bp.media ? rules.media[bp.key] : rules.base).push(`.kw-n-${n.id} img{width:100%;height:100%}`);
+      }
       entranceRules(n, rules, usedAnims);
       // CSS personnalisé de l'élément (validé à l'enregistrement, revalidé ici : rien d'autre n'atteint la page)
       if (n.css && NODE_ID.test(String(n.id || ""))) { try { const c = cssDeclarations(n.css, "CSS"); if (c) rules.custom.push(`.kw-node.kw-n-${n.id}{${c}}`); } catch { /* ignoré */ } }

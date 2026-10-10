@@ -144,7 +144,11 @@
 
 /* Sections libres (Page Builder) : styles de base des éléments ; les réglages de chaque élément viennent de sa classe
    .kw-n-<id> (CSS généré après cette feuille, donc prioritaire à spécificité égale). */
-.kw-layout { display: flex; flex-direction: column; gap: 16px; }
+/* Section libre : c'est la SECTION qui met en page ses enfants (Affichage, Direction, Répartition, Écarts… de l'Inspecteur s'écrivent sur elle).
+   L'enveloppe .kw-layout est transparente (display: contents) : ses enfants sont les éléments Flexbox / Grille de la section. La mise en page par
+   défaut (colonne, écart de 16 px) est portée par la section à spécificité nulle : tout réglage de l'auteur l'emporte. */
+:where(.lp-block-layout) { display: flex; flex-direction: column; gap: 16px; }
+.kw-layout { display: contents; }
 .kw-container { width: 100%; display: flex; flex-direction: column; gap: 16px; }
 /* Largeur max. et centrage PAR DÉFAUT, à spécificité nulle (:where) : le réglage « Largeur max. » (ou « Marge ») d'un conteneur, posé sous
    .kw-n-<id>, l'emporte toujours, y compris sur un conteneur en pleine largeur ou imbriqué (sinon le réglage serait sans effet) */
@@ -169,7 +173,7 @@
 .kw-quote { padding-left: 16px; border-left: 4px solid var(--lp-accent, #0277b6); font-size: 1.1em; }
 .kw-quote footer { margin-top: 6px; opacity: 0.75; font-size: 0.9em; }
 .kw-code { padding: 14px 16px; border-radius: 8px; background: rgba(16, 34, 47, 0.06); overflow-x: auto; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; white-space: pre-wrap; }
-.kw-image img { display: block; max-width: 100%; height: auto; border-radius: inherit; }
+.kw-image img { display: block; max-width: 100%; height: auto; border-radius: inherit; object-fit: inherit; object-position: inherit; }
 .kw-image figcaption { margin-top: 8px; font-size: 14px; opacity: 0.75; }
 .kw-gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .kw-gallery img { display: block; width: 100%; height: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 8px; }

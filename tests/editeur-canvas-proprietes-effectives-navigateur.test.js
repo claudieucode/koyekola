@@ -72,7 +72,7 @@ describe("réglages de conteneur effectifs (navigateur)", { skip: SKIP }, () => 
         const id = `c${ci}${String(i).padStart(2, "0")}x`.padEnd(12, "0");
         const e = document.querySelector(`.kw-n-${id}`); if (!e) return null;
         const c = getComputedStyle(e); const out = c.getPropertyValue(cs[2]);
-        return { out, parentW: e.parentElement.getBoundingClientRect().width, w: e.getBoundingClientRect().width };
+        return { out, parentW: (() => { let q = e.parentElement; while (q && q.classList.contains("kw-layout")) q = q.parentElement; return q.getBoundingClientRect().width; })(), w: e.getBoundingClientRect().width };
       }), [ci, CASES]);
       await page.close();
       const bad = [];
@@ -94,7 +94,7 @@ describe("réglages de conteneur effectifs (navigateur)", { skip: SKIP }, () => 
       const got = await page.evaluate(([wi, cases]) => cases.map((cs, i) => {
         const id = `w${wi}${String(i).padStart(2, "0")}x`.padEnd(12, "0");
         const e = document.querySelector(`.kw-n-${id}`); if (!e) return null;
-        return { out: getComputedStyle(e).getPropertyValue(cs[2]), parentW: e.parentElement.getBoundingClientRect().width, w: e.getBoundingClientRect().width };
+        return { out: getComputedStyle(e).getPropertyValue(cs[2]), parentW: (() => { let q = e.parentElement; while (q && q.classList.contains("kw-layout")) q = q.parentElement; return q.getBoundingClientRect().width; })(), w: e.getBoundingClientRect().width };
       }), [wi, list]);
       await page.close();
       const bad = [];

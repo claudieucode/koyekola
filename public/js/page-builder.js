@@ -4136,6 +4136,13 @@
     refreshInfo();
   }
   // Cible de dépôt dans le canevas : avant / après un élément (selon l'axe de son parent) ou dans un conteneur
+  // Élément qui met réellement en page les enfants de `el` : le conteneur parent ; pour un enfant direct d'une Section libre, la section elle-même
+  // (l'enveloppe .kw-layout est transparente : display: contents, ses enfants sont ceux de la section)
+  function layoutParentEl(el) {
+    var p = el ? el.parentElement : null;
+    while (p && p.classList && p.classList.contains("kw-layout")) p = p.parentElement;
+    return p;
+  }
   function canvasDropTarget(e) {
     var doc = frame.contentDocument;
     var el = targetOf(e);
@@ -4147,7 +4154,7 @@
     var r = el.getBoundingClientRect();
     var it = l.item;
     var horizontal = false;
-    if (l.parent && el.parentElement) { var cs = doc.defaultView.getComputedStyle(el.parentElement); horizontal = (cs.display.indexOf("flex") >= 0 && cs.flexDirection.indexOf("row") === 0) || (cs.display.indexOf("grid") >= 0 && cs.gridTemplateColumns.split(" ").length > 1); }
+    var lpe = layoutParentEl(el); if (l.parent && lpe) { var cs = doc.defaultView.getComputedStyle(lpe); horizontal = (cs.display.indexOf("flex") >= 0 && cs.flexDirection.indexOf("row") === 0) || (cs.display.indexOf("grid") >= 0 && cs.gridTemplateColumns.split(" ").length > 1); }
     var rel = horizontal ? (e.clientX - r.left) / r.width : (e.clientY - r.top) / r.height;
     var accepts = kidsOf(it) && placingNode && !lockedDeep(it.id) && !(dragIds && dragIds.indexOf(it.id) >= 0);
     if (accepts && ((rel > 0.2 && rel < 0.8) || !kidsOf(it).length)) return { target: { parent: it, index: kidsOf(it).length }, el: el, pos: "inside", horizontal: horizontal };
@@ -5038,7 +5045,7 @@
       env.rects.push(b);
       if (el && e.parentElement === el.parentElement) env.siblings.push(b);
     }
-    var pe = el ? el.parentElement : null;
+    var pe = el ? layoutParentEl(el) : null;
     if (pe) {
       var cs = win.getComputedStyle(pe), pb = pageBox(pe);
       var pl = parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth) || 0, pr = parseFloat(cs.paddingRight) + parseFloat(cs.borderRightWidth) || 0;

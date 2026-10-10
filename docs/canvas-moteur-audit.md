@@ -69,3 +69,42 @@ donc pas servi de référence.
 - `tests/editeur-canvas-dimensions-navigateur.test.js` — largeurs (auto / fixe / % / vw / min / max), hauteurs, modèle de boîte, marges, wrap, nowrap, imbrication, contenu long, débordement horizontal à 4 largeurs, unités acceptées / refusées, parité canevas / publié.
 - `tests/editeur-canvas-fond-pleine-largeur-navigateur.test.js` — mode « fond pleine largeur, contenu encadré » : fond, alignement exact du texte sur un conteneur encadré, intérieur minimum, choix dans l'Inspecteur, écart de 20 px des nouveaux conteneurs.
 - `tests/editeur-canvas-proprietes-effectives-navigateur.test.js` — 43 réglages × 3 contextes de conteneur + 3 types de widget : chaque valeur enregistrée produit le CSS calculé attendu.
+
+## 6. Contrat de mise en page « le parent met en page ses enfants » (10 octobre 2026)
+
+**Symptôme.** Section libre > deux conteneurs, Affichage = Flex, Direction = ligne : le bouton se coche, les conteneurs restent empilés.
+
+**Reproduction (vrai Chrome, page publiée).** Section en Flex avec les 4 directions : « ligne », « ligne inversée », « colonne », « colonne inversée » donnaient
+le **même** résultat (conteneur 1 au-dessus du conteneur 2) ; le style de la section était bien écrit (`flex-direction: row`…) mais sur le mauvais élément.
+
+**Cause exacte (preuve : styles calculés).** Cas C / J de la liste de causes : la valeur est stockée, rendue et appliquée, mais **à l'enveloppe, pas au parent réel des enfants**.
+Une Section libre est rendue `.lp-block.kw-n-<id>` (porte les réglages de l'Inspecteur) › `.kw-layout` (flex colonne, écart 16 px, fixe) › enfants. Les enfants étaient donc
+les éléments Flexbox de `.kw-layout`, jamais de la section. Les autres causes (bouton visuel seul, mauvais nom de propriété, écrasement par une règle plus spécifique, canevas ≠ publié, responsive) ont été écartées par mesure.
+Le même schéma existait, plus discret, pour les **marges automatiques** : un conteneur centre sa largeur par `margin-inline: auto` ; dans un parent en ligne ou en grille, ces marges
+se partagent l'espace libre et **neutralisent « Répartition » et « Écart »** (constaté pour les enfants conteneurs d'une Section libre, d'un Groupe ou d'une Pile).
+
+**Flux avant.** Inspecteur › `styles.<écran>.display / flexDirection…` de la section › `.kw-n-<id>{…}` sur `.lp-block` › sans effet sur les enfants (enveloppe `.kw-layout` fixe).
+
+**Flux après.** Idem, mais `.kw-layout` est transparente (`display: contents`) : les enfants directs sont les éléments Flexbox / Grille de la section. La mise en page par défaut (colonne, 16 px)
+est portée par la section à spécificité nulle (`:where(.lp-block-layout)`) : tout réglage de l'auteur l'emporte. Pour les marges automatiques, le serveur écrit, pour chaque parent contenant des conteneurs,
+une règle par écran (héritage ordinateur › tablette › mobile) qui retire ces marges quand le parent est en ligne / en grille et les rend quand un écran plus étroit repasse en colonne
+(`rowMarginRules` dans `nodes.js`) ; les marges de l'enfant lui-même l'emportent toujours. L'éditeur lit le style du **vrai** parent (`layoutParentEl`) pour l'axe de l'indication de dépôt et l'accrochage.
+
+**Contrat commun.** Tout élément qui peut contenir des enfants (`container: true` dans le registre : Section libre, Conteneur, imbriqué, Groupe, Pile, Colonnes, Grille) utilise le même moteur : mêmes propriétés
+(`STYLE_PROPS`, groupe « layout »), mêmes règles CSS, mêmes réglages par écran. Un futur type d'élément qui déclare `container: true` hérite du contrat ; les tests ci-dessous échouent s'il ne le respecte pas.
+
+**Tests (vrai Chrome).**
+- `editeur-layout-contrat-navigateur.test.js` : 6 types de parents × 15 scénarios (4 directions, wrap, répartition centre / espacé, alignement, écart, grille 3 et 2 colonnes, valeurs par écran R/C/C, C/R/C, R/R/C) mesurés à 1 280, 900 et 390 px. Sans les correctifs : Section libre, Groupe et Pile échouent.
+- `editeur-layout-section-navigateur.test.js` : critère d'acceptation par l'interface (Affichage = Flex, Direction ligne / colonne / ligne inversée / colonne inversée), répartition, enregistrement, rechargement, annuler / rétablir (cadre non rechargé), aperçu, page publiée, mobile en colonne.
+- `editeur-canvas-proprietes-restantes-navigateur.test.js` : toutes les propriétés de `STYLE_PROPS` non couvertes par le premier fichier + réglages composés, **avec garde-fou** : une propriété ajoutée sans test d'effet réel fait échouer la suite.
+
+**Autre contrôle décoratif trouvé et corrigé.** Image : « Hauteur » et « Proportions » de l'élément s'appliquaient à la boîte mais l'image gardait sa hauteur naturelle (boîte vide en dessous), et « Cadrage » / « Point focal » n'avaient aucun effet
+(`object-fit` posé sur la boîte, pas sur l'image). Mesuré avec une vraie image 400 × 100 dans une boîte 300 × 300 : image 300 × 75, `object-fit: fill`. Corrigé : l'image remplit sa boîte quand une hauteur ou des proportions sont définies pour l'écran ;
+cadrage et point focal sont hérités. Une image sans réglage garde sa taille naturelle (mesuré).
+
+**Contrôles vérifiés et conformes.** Les 43 réglages de conteneur et 3 types de widget (premier fichier), puis typographie, couleurs, bordures par côté et par coin, ombres, filtres, transformation, masque, dégradé, voile, image de fond, position, grille et placement d'un enfant de grille : chaque valeur produit le CSS calculé attendu.
+
+**Effet sur les pages existantes (à savoir).** Une Section libre où quelqu'un a déjà coché Direction, Écart, Répartition ou Grille voyait ce réglage ignoré : il s'applique maintenant. Je n'ai pas pu compter ces cas en production (la base locale ne contient aucune page).
+Une image dont l'élément avait une hauteur ou des proportions enregistrées est maintenant remplie et recadrée comme demandé.
+
+**Risques restants.** Un widget de type image dans une boîte à hauteur fixe est recadré (voulu) ; `min-height` seul ne force pas le remplissage ; un conteneur du mode « Fond pleine largeur, contenu encadré » doit garder une largeur automatique.
