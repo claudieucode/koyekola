@@ -217,14 +217,17 @@
   // Saisie (light) : les calques sont redessinés au plus une fois par pause de frappe ; le reste suit tout de suite
   var treeTimer = null;
   function scheduleTree() { clearTimeout(treeTimer); treeTimer = setTimeout(renderTree, 120); }
+  // Un rendu secondaire (calques, inspecteur, réglages…) qui échoue ne doit JAMAIS empêcher le rendu du canevas ni l'enregistrement
+  // d'une modification déjà appliquée au document : chaque étape est isolée, l'erreur est signalée dans la console.
+  function guarded(fn) { try { fn(); } catch (err) { if (window.console) console.error("[KOLAKISA] rendu de l'éditeur :", err); } }
   function afterChange(light, quick) {
-    if (light) scheduleTree(); else { clearTimeout(treeTimer); renderTree(); }
-    if (!light) { renderInspector(); renderContext(); renderPageSettings(); }
-    updateHistoryButtons();
-    if (!light) { placeCanvasBar(); renderDoc(); } // saisie : la barre est replacée avec les repères, juste après le rendu du canevas
+    guarded(function () { if (light) scheduleTree(); else { clearTimeout(treeTimer); renderTree(); } });
+    if (!light) { guarded(renderInspector); guarded(renderContext); guarded(refreshPageSettings); }
+    guarded(updateHistoryButtons);
+    if (!light) { guarded(placeCanvasBar); guarded(renderDoc); } // saisie : la barre est replacée avec les repères, juste après le rendu du canevas
     scheduleRender(quick);
     scheduleSave();
-    navListeners.forEach(function (f) { f(); });
+    navListeners.forEach(function (f) { guarded(f); });
   }
   function updateHistoryButtons() {
     $("[data-pb-undo]").disabled = !past.length || !canWrite;
@@ -756,7 +759,7 @@
   function setStyles(ids, map, opts) {
     ids = ids || selection;
     if (!ids.length || refuseLocked(ids)) return;
-    change(function () {
+    if (change(function () {
       ids.forEach(function (id) {
         var it = byId(id);
         if (!it) return;
@@ -769,7 +772,33 @@
         });
         cleanStyles(it);
       });
-    }, { key: opts && opts.key ? opts.key + ":" + device + ":" + styleState : null, light: opts && opts.light, label: "Style : " + Object.keys(map).map(function (k) { return SP[k] ? SP[k].label : COMPOSED_LABEL[k] || k; }).slice(0, 2).join(", ") + (device !== "desktop" ? " (" + bpLabel(device) + ")" : "") });
+    }, { key: opts && opts.key ? opts.key + ":" + device + ":" + styleState : null, light: opts && opts.light, label: "Style : " + Object.keys(map).map(function (k) { return SP[k] ? SP[k].label : COMPOSED_LABEL[k] || k; }).slice(0, 2).join(", ") + (device !== "desktop" ? " (" + bpLabel(device) + ")" : "") }) !== false) previewStyles(ids, map);
+  }
+  // Retour visuel IMMÉDIAT : la valeur choisie est posée tout de suite en style en ligne sur l'élément du canevas, sans attendre le rendu
+  // serveur. Le rendu serveur qui suit remplace la page et retire ces styles (clearPreviews) : seul ce qui est certain d'être identique
+  // au CSS généré est prévisualisé (propriétés simples, valeurs littérales, état normal, élément lui-même).
+  var PREVIEW = { fontSize: 1, color: 1, backgroundColor: 1, opacity: 1, letterSpacing: 1, width: 1, height: 1, maxWidth: 1, minHeight: 1, gap: 1, borderRadius: 1, paddingTop: 1, paddingRight: 1, paddingBottom: 1, paddingLeft: 1, marginTop: 1, marginRight: 1, marginBottom: 1, marginLeft: 1 };
+  var PREVIEW_VALUE = /^(-?\d{1,4}(\.\d{1,3})?(px|%|rem|em|vh|vw)?|#[0-9a-fA-F]{3,8})$/;
+  var previews = [];
+  function previewStyles(ids, map) {
+    if (styleState !== "normal" || styleTarget || !ids) return;
+    var doc = frame.contentDocument;
+    if (!doc || !doc.body || swapping) return;
+    ids.forEach(function (id) {
+      var el = doc.querySelector('[data-node-id="' + id + '"]');
+      if (!el) return;
+      Object.keys(map).forEach(function (key) {
+        var v = map[key];
+        if (!PREVIEW[key] || typeof v !== "string" && typeof v !== "number" || !PREVIEW_VALUE.test(String(v))) return;
+        var css = key.replace(/[A-Z]/g, function (c) { return "-" + c.toLowerCase(); });
+        if (!previews.some(function (x) { return x.el === el && x.css === css; })) previews.push({ el: el, css: css, was: el.style.getPropertyValue(css) });
+        el.style.setProperty(css, String(v));
+      });
+    });
+  }
+  function clearPreviews() {
+    previews.forEach(function (x) { if (x.was) x.el.style.setProperty(x.css, x.was); else x.el.style.removeProperty(x.css); });
+    previews = [];
   }
   // Largeur du contenu d'un conteneur : « full » (propriété) et « maxWidth » (style de l'écran affiché) changent ENSEMBLE, en une seule étape d'annulation
   function setContainerWidth(id, mode, customValue) {
@@ -2542,6 +2571,7 @@
     overflow: { values: [["visible", "Débordement visible", "T:Visible"], ["hidden", "Débordement masqué", "T:Masqué"], ["auto", "Défilement si nécessaire", "T:Défiler"]] },
   };
   // Axe physique (h / v) réglé par une propriété d'alignement, d'après le rendu réel du canevas (sens du conteneur)
+  var axisReal = {};
   function physicalAxis(it, key) {
     var spec = ICON_ENUMS[key];
     if (!spec || !spec.axis) return null;
@@ -2552,9 +2582,16 @@
     // Valeur du modèle (écran affiché, héritage compris) d'abord : juste même avant que le canevas soit redessiné ;
     // sinon le rendu réel (valeur par défaut de chaque conteneur)
     var disp = valueOf(target, "display"), dir = valueOf(target, "flexDirection");
-    var el = canvasEl(target.id), cs = el && frame.contentWindow ? frame.contentWindow.getComputedStyle(el) : null;
-    if (!disp && cs) disp = cs.display;
-    if (!dir && cs) dir = cs.flexDirection;
+    if (!disp || !dir) {
+      // Style réel du canevas lu UNE fois par élément et par reconstruction de l'inspecteur (chaque lecture force un calcul de style)
+      var real = axisReal[target.id];
+      if (!real) {
+        var el = canvasEl(target.id), cs = el && frame.contentWindow ? frame.contentWindow.getComputedStyle(el) : null;
+        real = axisReal[target.id] = cs ? { display: cs.display, flexDirection: cs.flexDirection } : {};
+      }
+      if (!disp) disp = real.display;
+      if (!dir) dir = real.flexDirection;
+    }
     var col = !/grid/.test(disp || "") && /column/.test(dir || "");
     return spec.axis === "main" ? (col ? "v" : "h") : (col ? "h" : "v");
   }
@@ -3384,6 +3421,7 @@
   function renderInspector() {
     if (typeof cpop !== "undefined" && cpop && !cpop.hidden) { cpop.hidden = true; cpopFor = null; }
     var box = $("[data-pb-inspector]");
+    axisReal = {};
     if (box.dataset.for !== selection.join(",")) styleTarget = null; // un autre élément : on repart du widget lui-même
     var keepScroll = box.dataset.for === selection.join(",") ? inspScroll : 0;
     box.textContent = "";
@@ -4228,6 +4266,7 @@
     Array.prototype.slice.call(main.children).forEach(function (el) { if (want.indexOf(el) < 0) el.remove(); });
     inlineTouched.forEach(function (el) { el.style.width = ""; el.style.height = ""; });
     inlineTouched = [];
+    clearPreviews();
     // Éléments créés : apparition très courte (opacité + micro-zoom, sans toucher à la mise en page). Seuls les plus hauts d'un lot sont animés (au plus 6)
     if (window.KolMotion) {
       var fresh = Array.prototype.filter.call(doc.querySelectorAll("[data-node-id],[data-section-id]"), function (e) { return !knownIds[idOfEl(e)]; });
@@ -4321,6 +4360,7 @@
   var targetOf = function (e) { return e.target && e.target.closest ? e.target.closest("[data-node-id],[data-section-id]") : null; };
   var idOfEl = function (el) { return el ? el.getAttribute("data-node-id") || el.getAttribute("data-section-id") : null; };
   function setupCanvas(y) {
+    previews = [];
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
     canvasReady = true;
@@ -4853,7 +4893,7 @@
     else {
       applyZoom();
       if (visualView) { try { frame.contentWindow.scrollTo(0, visualView.y); stage.scrollLeft = visualView.sl; stage.scrollTop = visualView.st; } catch (e) { /* cadre pas encore prêt : il se positionnera à son chargement */ } visualView = null; }
-      setTimeout(function () { drawOverlays(); drawRulers(); drawGuides(); }, 30);
+      requestAnimationFrame(function () { drawOverlays(); drawRulers(); drawGuides(); });
     }
     placeCanvasBar();
   }
@@ -5157,7 +5197,7 @@
     wrap.dataset.device = d;
     applyZoom();
     renderInspector(); renderContext();
-    setTimeout(function () { drawOverlays(); drawGuides(); drawRulers(); refreshInfo(); }, 60);
+    requestAnimationFrame(function () { drawOverlays(); drawGuides(); drawRulers(); refreshInfo(); });
   }
   $$(".pb-top .pb-devices button").forEach(function (b) { b.addEventListener("click", function () { setDevice(b.dataset.device); }); });
   var MAX_ZOOM = 4; // 400 %
@@ -5195,7 +5235,7 @@
       if (zoomFit) applyZoom(); else drawRulers();
     });
   }
-  function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(MAX_ZOOM, Math.max(0.25, z)); applyZoom(); setTimeout(function () { drawOverlays(); drawGuides(); }, 30); }
+  function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(MAX_ZOOM, Math.max(0.25, z)); applyZoom(); requestAnimationFrame(function () { drawOverlays(); drawGuides(); }); }
   $$("[data-pb-zoom]").forEach(function (b) { b.addEventListener("click", function () { var v = b.dataset.pbZoom; setZoom(v === "fit" ? "fit" : v === "100" ? 1 : v === "+" ? Math.round((zoom + 0.1) * 10) / 10 : Math.round((zoom - 0.1) * 10) / 10); }); });
   window.addEventListener("resize", queueZoom);
   // La zone du canevas change de taille (panneaux, fenêtre, mise en page initiale) : le cadre suit
@@ -5919,7 +5959,7 @@
     if (!live) store.set("panels", panels);
     queueZoom();
   }
-  function togglePanel(side) { panels[side + "Hidden"] = !panels[side + "Hidden"]; applyPanels(); renderTools(); if (!panels[side + "Hidden"] && window.KolMotion) window.KolMotion.appear($(side === "left" ? "[data-pb-left]" : "[data-pb-right]"), "panel-" + side); }
+  function togglePanel(side) { panels[side + "Hidden"] = !panels[side + "Hidden"]; applyPanels(); renderTools(); if (!panels[side + "Hidden"] && window.KolMotion) window.KolMotion.appear($(side === "left" ? "[data-pb-left]" : "[data-pb-right]"), "panel-" + side); if (pageSettingsStale) refreshPageSettings(); }
   $$("[data-pb-resize]").forEach(function (handle) {
     var side = handle.dataset.pbResize;
     // Largeur : jamais assez étroite pour rendre les contrôles illisibles (droite : 280 px au moins), ni plus de la moitié de la fenêtre
@@ -5956,14 +5996,20 @@
   });
   if (document.getElementById(store.get("lib-tab", ""))) openLibTab(document.getElementById(store.get("lib-tab", "")));
   var tabs = $$(".pb-tabs [role=tab]");
-  function openTab(tab) { if (panels.leftHidden) togglePanel("left"); tabs.forEach(function (t) { var on = t === tab; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; document.getElementById(t.getAttribute("aria-controls")).hidden = !on; }); }
+  function openTab(tab) { if (panels.leftHidden) togglePanel("left"); tabs.forEach(function (t) { var on = t === tab; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; document.getElementById(t.getAttribute("aria-controls")).hidden = !on; }); if (pageSettingsStale) refreshPageSettings(); }
   tabs.forEach(function (t, i) {
     t.addEventListener("click", function () { openTab(t); });
     t.addEventListener("keydown", function (e) { if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return; var next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length]; openTab(next); next.focus(); });
   });
 
   // ---------- Réglages de la page (titre, description, SEO, couleurs) ----------
+  // Le panneau « Page » (réglages, aperçu et analyse SEO côté serveur) n'est reconstruit que lorsqu'il est visible : sinon il est
+  // seulement marqué « à rafraîchir » et refait à l'ouverture de l'onglet (une requête et une reconstruction en moins par modification).
+  var pageSettingsStale = true;
+  function pageSettingsVisible() { var box = $("[data-pb-page-settings]"), pane = box && box.closest("[role=tabpanel]"); return Boolean(pane) && !pane.hidden && !panels.leftHidden; }
+  function refreshPageSettings() { if (!pageSettingsVisible()) { pageSettingsStale = true; return; } renderPageSettings(); }
   function renderPageSettings() {
+    pageSettingsStale = false;
     var box = $("[data-pb-page-settings]");
     if (box.contains(document.activeElement)) return; // saisie en cours : on ne redessine pas
     box.textContent = "";
@@ -6761,7 +6807,7 @@
   renderElements("");
   renderBlocks();
   renderComponents();
-  renderPageSettings();
+  refreshPageSettings();
   renderTree();
   renderInspector();
   renderContext();
