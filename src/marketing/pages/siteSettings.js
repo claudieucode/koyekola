@@ -178,7 +178,7 @@ function layoutCss(settings) {
   else if (L.contentWidth !== D.contentWidth) main.push(`max-width:${L.contentWidth}px`);
   if (L.gutter !== D.gutter) main.push(`padding-left:${L.gutter}px`, `padding-right:${L.gutter}px`);
   if (main.length) out.push(`.lp-site .lp-main{${main.join(";")}}`);
-  if (L.containerWidth !== D.containerWidth) out.push(`.lp-site :where(.kw-container:not(.kw-full)){max-width:${L.containerWidth}px}`);
+  if (L.containerWidth !== D.containerWidth) out.push(`.lp-site :where(.kw-container:not(.kw-full):not(.kw-container .kw-container)){max-width:${L.containerWidth}px}`);
   if (s.extras.smoothScroll) out.push(`@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}`);
   return out.join("\n");
 }

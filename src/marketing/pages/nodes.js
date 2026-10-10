@@ -374,7 +374,9 @@ const NODE_TYPES = {
   code: { label: "Code (texte)", category: "text", props: (p, at) => {
     const text = clean(p.text, 4000);
     if (!text) throw new Error(`${at} (code) : le texte est obligatoire.`);
-    return { text };
+    // Langage de coloration : facultatif (absent = texte brut, comme avant) ; une valeur inconnue est ignorée
+    const language = require("./highlight").LANGUAGES.includes(p.language) && p.language !== "text" ? p.language : "";
+    return { text, ...(language ? { language } : {}) };
   } },
   image: { label: "Image", category: "media", props: (p, at, h) => {
     const src = h.imageUrl(p.src, `${at} (image)`);
@@ -821,6 +823,11 @@ const SITE_SUB = { cmsmenu: SITE_SUBS[0], sitelogo: SITE_SUBS[0], sitetitle: SIT
   archiveinfo: SITE_SUBS[2], catfilter: SITE_SUBS[2], querylist: SITE_SUBS[3], posts: SITE_SUBS[3], account: SITE_SUBS[4], minicart: SITE_SUBS[4] };
 const WIDGET_SHORTCUTS = [
   { key: "soundcloud", label: "SoundCloud", group: "general", icon: "play", keywords: "soundcloud son musique podcast audio lecteur", type: "embed", provider: "soundcloud" },
+  { key: "youtubeplaylist", label: "Playlist YouTube", group: "general", icon: "video", keywords: "playlist youtube liste de lecture videos serie video", type: "embed", provider: "youtubelist" },
+  { key: "facebookpage", label: "Page Facebook", group: "social", icon: "users", keywords: "facebook page fil actualites abonnes plugin", type: "embed", provider: "facebookpage" },
+  { key: "facebookpost", label: "Publication Facebook", group: "social", icon: "fileText", keywords: "facebook publication post video integrer embed", type: "embed", provider: "facebookpost" },
+  { key: "instagrampost", label: "Instagram", group: "social", icon: "image", keywords: "instagram publication reel photo integrer embed", type: "embed", provider: "instagram" },
+  { key: "tiktokvideo", label: "TikTok", group: "social", icon: "video", keywords: "tiktok video integrer embed", type: "embed", provider: "tiktok" },
   // Titre de la page : texte dynamique (source « titre de la page ») préréglé, rien à demander
   { key: "pagetitle", label: "Titre de la page", group: "site", sub: SITE_SUBS[0], icon: "type", keywords: "titre de la page nom h1 h2", type: "dyntext", preset: { source: "pageTitle", tag: "h2", before: "", after: "", fallback: "" } },
   { key: "posttitle", label: "Titre de l'article", group: "site", sub: "Contenu de l'article", icon: "type", keywords: "titre article billet h1 post title", type: "heading", preset: {"text": "{{post.title | fallback: Titre de l'article}}", "level": "1"} },
@@ -855,29 +862,56 @@ const WIDGET_SHORTCUTS = [
   { key: "courselist2", label: "Formations (liste dynamique)", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "formations cours catalogue liste dynamique recents", type: "querylist", preset: {"title": "Nos formations", "source": "courses", "mode": "recent", "count": 6, "layout": "cards", "showDate": false} },
 ];
 
+// Description courte de chaque élément (infobulle de la bibliothèque) : ce qu'il fait, en une phrase. Les widgets personnalisés portent la leur (widgets/*.js).
+const WIDGET_DESCRIPTIONS = {
+  container: "Une boîte qui range d'autres éléments (colonne, ligne, section)", columns: "Plusieurs colonnes côte à côte", column: "Une colonne d'un ensemble de colonnes", grid: "Une grille de cases à colonnes réglables", stack: "Des éléments empilés avec un espacement régulier", group: "Un groupe d'éléments qui se déplacent ensemble",
+  spacer: "Un espace vertical réglable", divider: "Un trait de séparation, avec un texte au milieu si besoin", heading: "Un titre (H1 à H6)", text: "Un paragraphe de texte mis en forme", list: "Une liste à puces ou numérotée", quote: "Une citation mise en valeur", code: "Un bloc de code affiché tel quel, coloré selon le langage choisi",
+  image: "Une image avec son texte de remplacement et un lien possible", gallery: "Plusieurs images en grille, avec agrandissement", video: "Une vidéo YouTube, Vimeo ou un fichier", audio: "Un lecteur pour un fichier audio", button: "Un bouton d'appel à l'action", link: "Un lien texte",
+  accordion: "Des questions qui se déplient (FAQ)", tabs: "Des onglets pour organiser un contenu", badge: "Une petite étiquette (nouveau, promo…)", timeline: "Des étapes sur une ligne du temps", progress: "Une barre de progression", menu: "Le menu de navigation du site", carousel: "Des images qui défilent", toggle: "Un titre qui déplie son contenu",
+  alert: "Un message d'information, d'alerte ou de succès", counter: "Un nombre qui s'incrémente en arrivant à l'écran", testimonial: "Un témoignage avec son auteur", pricing: "Une offre tarifaire avec ses avantages et son bouton", breadcrumb: "Le fil d'Ariane de la page", social: "Des liens vers vos réseaux sociaux", sharebuttons: "Des boutons pour partager la page",
+  modal: "Une fenêtre qui s'ouvre au clic", html: "Du HTML sécurisé (réservé aux administrateurs)", embed: "Un contenu d'un service accepté (YouTube, Facebook, Spotify…)", iconlist: "Une liste d'éléments avec des icônes", tooltip: "Une infobulle au survol", hotspot: "Une image avec des points d'intérêt cliquables",
+  posts: "Les derniers articles du blog", courselist: "Les formations du catalogue", search: "Un champ de recherche dans le site", account: "Connexion ou compte du visiteur", dyntext: "Un texte rempli avec une donnée (prénom, page, site…)", table: "Un tableau de données", countdown: "Un compte à rebours jusqu'à une date",
+  course: "Une formation du catalogue en carte", sitelogo: "Le logo du site", postcontent: "Le contenu de l'article affiché", catfilter: "Un filtre par catégorie", sitetitle: "Le nom du site", copyright: "La ligne de copyright avec l'année", addtocart: "Un bouton pour acheter ou ajouter une formation au panier", courserating: "Les avis et la note d'une formation",
+  animatedheading: "Un titre dont un mot change ou s'écrit", flipbox: "Une boîte qui se retourne au survol", pricelist: "Une liste de prix avec descriptions", toc: "Une table des matières construite depuis les titres", readingprogress: "Une barre qui montre l'avancée de la lecture", signupform: "Un formulaire d'inscription du module Formulaires",
+  map: "Une carte Google Maps à partir d'une adresse", imagebox: "Une image avec un titre et un texte", iconbox: "Une icône avec un titre et un texte", rating: "Une note en étoiles", menuanchor: "Une ancre pour les liens internes (#nom)", icon: "Une icône", profilecard: "La fiche d'une personne (photo, nom, rôle)",
+  querylist: "Une liste dynamique de contenus (articles, pages, formations…)", postmeta: "Auteur, date, catégorie et lecture de l'article", postterms: "Les catégories et étiquettes de l'article", postnav: "Les liens vers l'article précédent et suivant", authorbox: "La présentation de l'auteur de l'article", archiveinfo: "Le titre et la description d'une archive", postcomments: "Les commentaires de l'article et leur formulaire",
+  cmsmenu: "Un menu géré dans le CMS", minicart: "Une icône de panier avec le nombre d'articles",
+};
 // ---------- Widgets personnalisés (src/marketing/pages/widgets/*.js) ----------
 // Chaque description (champs typés) devient un type d'élément ordinaire : validation, fiche de bibliothèque, contenu de
 // départ, champs de l'inspecteur, liens comptés, versions. Voir docs/widgets-personnalises.md.
 const CUSTOM_WIDGETS = {};
 const emptyValue = (v) => v === undefined || v === null || v === "";
+// Valide UN champ d'un widget personnalisé selon son type (aussi utilisé pour les sous-champs d'une liste)
+function validateField(f, raw, where, h) {
+  let v;
+  if (f.kind === "text") v = line(raw === undefined ? f.default : raw, f.max || 200);
+  else if (f.kind === "textarea") v = clean(raw === undefined ? f.default : raw, f.max || 1000);
+  else if (f.kind === "number") { v = numberIn(f.min, f.max, { integer: f.integer === true })(raw); if (v === null) v = numberIn(f.min, f.max)(f.default); }
+  else if (f.kind === "select") v = f.options.some((o) => o[0] === raw) ? raw : f.default !== undefined ? f.default : f.options[0][0];
+  else if (f.kind === "bool") v = typeof raw === "boolean" ? raw : f.default === true;
+  else if (f.kind === "link") v = h.linkUrl(raw, where);
+  else if (f.kind === "image") v = raw ? h.imageUrl(raw, where) : "";
+  else if (f.kind === "icon") v = h.iconNames.includes(String(raw || "")) ? String(raw) : h.iconNames.includes(String(f.default || "")) ? f.default : "";
+  else if (f.kind === "color") v = color(raw) || "";
+  else if (f.kind === "items") {
+    const list = raw === undefined ? (f.default || []) : raw;
+    if (!Array.isArray(list)) throw new Error(`${where} : une liste d'éléments est attendue.`);
+    if (list.length > f.max) throw new Error(`${where} : ${f.max} élément(s) au plus.`);
+    if (list.length < (f.min || 0)) throw new Error(`${where} : ${f.min} élément(s) au moins.`);
+    v = list.map((it, i) => {
+      if (!it || typeof it !== "object" || Array.isArray(it)) throw new Error(`${where} : l'élément ${i + 1} est invalide.`);
+      return Object.fromEntries(f.fields.map((sf) => [sf.key, validateField(sf, it[sf.key], `${where}, élément ${i + 1} (${sf.label})`, h)]));
+    });
+  }
+  if (f.required && (f.kind === "items" ? !v.length : emptyValue(v))) throw new Error(`${where} : obligatoire.`);
+  return v === null ? "" : v;
+}
 function schemaProps(def) {
   return (p, at, h) => {
     const out = {};
-    for (const f of def.schema) {
-      const raw = p[f.key], where = `${at} (${def.label}, ${f.label})`;
-      let v;
-      if (f.kind === "text") v = line(raw === undefined ? f.default : raw, f.max || 200);
-      else if (f.kind === "textarea") v = clean(raw === undefined ? f.default : raw, f.max || 1000);
-      else if (f.kind === "number") { v = numberIn(f.min, f.max, { integer: f.integer === true })(raw); if (v === null) v = numberIn(f.min, f.max)(f.default); }
-      else if (f.kind === "select") v = f.options.some((o) => o[0] === raw) ? raw : f.default !== undefined ? f.default : f.options[0][0];
-      else if (f.kind === "bool") v = typeof raw === "boolean" ? raw : f.default === true;
-      else if (f.kind === "link") v = h.linkUrl(raw, where);
-      else if (f.kind === "image") v = raw ? h.imageUrl(raw, where) : "";
-      else if (f.kind === "icon") v = h.iconNames.includes(String(raw || "")) ? String(raw) : h.iconNames.includes(String(f.default || "")) ? f.default : "";
-      else if (f.kind === "color") v = color(raw) || "";
-      if (f.required && emptyValue(v)) throw new Error(`${where} : obligatoire.`);
-      out[f.key] = v === null ? "" : v;
-    }
+    for (const f of def.schema) out[f.key] = validateField(f, p[f.key], `${at} (${def.label}, ${f.label})`, h);
+    if (def.validate) def.validate(out, `${at} (${def.label})`); // règles qui portent sur l'ensemble des réglages
     return out;
   };
 }
@@ -895,7 +929,7 @@ function registerWidget(def) {
 }
 // Contenu de départ : valeurs par défaut des champs (+ version)
 let paletteReady = false;
-const paletteEntry = (def) => ({ icon: def.icon, blank: () => ({ props: Object.fromEntries(def.schema.filter((f) => f.default !== undefined).map((f) => [f.key, f.default])), ...(def.version > 1 ? { v: def.version } : {}) }) });
+const paletteEntry = (def) => ({ icon: def.icon, blank: () => ({ props: Object.fromEntries(def.schema.filter((f) => f.default !== undefined).map((f) => [f.key, Array.isArray(f.default) ? JSON.parse(JSON.stringify(f.default)) : f.default])), ...(def.version > 1 ? { v: def.version } : {}) }) });
 // Permissions exigées par des widgets : libellé affiché sur le cadenas
 const WIDGET_PERMISSIONS = { "pages.code": "réservé aux administrateurs (le HTML s'affiche sur le même domaine que les comptes des élèves)" };
 const LOADED_WIDGETS = require("./widgets").load();
@@ -1055,8 +1089,8 @@ function editorSpec() {
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
   return {
-    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], ...(SITE_SUB[type] ? { sub: SITE_SUB[type] } : {}), keywords: WIDGETS[type][1], requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text" } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
-    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, siteSubs: SITE_SUBS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
+    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], ...(SITE_SUB[type] ? { sub: SITE_SUB[type] } : {}), keywords: WIDGETS[type][1], description: (CUSTOM_WIDGETS[type] && CUSTOM_WIDGETS[type].description) || WIDGET_DESCRIPTIONS[type] || "", requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text", ...(CUSTOM_WIDGETS[type].status ? { status: CUSTOM_WIDGETS[type].status } : {}), ...(CUSTOM_WIDGETS[type].dependencies ? { dependencies: CUSTOM_WIDGETS[type].dependencies } : {}) } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
+    codeLanguages: Object.entries(require("./highlight").LABELS), categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, siteSubs: SITE_SUBS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
     socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
@@ -1217,6 +1251,12 @@ const EMBED_PROVIDERS = [
   { key: "gforms", label: "Google Forms", re: /^https:\/\/docs\.google\.com\/forms\/d\/e\/([\w-]{20,80})\/viewform/i, src: (m) => `https://docs.google.com/forms/d/e/${m[1]}/viewform?embedded=true`, ratio: "3/4" },
   { key: "typeform", label: "Typeform", re: /^https:\/\/([\w-]{1,40})\.typeform\.com\/to\/([A-Za-z0-9]{4,20})/i, src: (m) => `https://${m[1]}.typeform.com/to/${m[2]}`, ratio: "3/4" },
   { key: "loom", label: "Loom", re: /^https:\/\/(?:www\.)?loom\.com\/(?:share|embed)\/([a-f0-9]{20,40})/i, src: (m) => `https://www.loom.com/embed/${m[1]}`, ratio: "16/9" },
+  { key: "youtubelist", label: "Playlist YouTube", re: /^https:\/\/(?:www\.)?youtube\.com\/playlist\?list=([\w-]{10,60})/i, src: (m) => `https://www.youtube-nocookie.com/embed/videoseries?list=${m[1]}`, ratio: "16/9" },
+  // Facebook : modules officiels d'intégration (cadres, sans clé ni script) ; l'adresse est reconstruite, jamais copiée telle quelle
+  { key: "facebookpage", label: "Page Facebook", re: /^https:\/\/(?:www\.)?facebook\.com\/([\w.-]{3,80})\/?$/i, src: (m) => `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(`https://www.facebook.com/${m[1]}`)}&tabs=timeline&width=500&height=600&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true`, ratio: "5/6" },
+  { key: "facebookpost", label: "Publication ou vidéo Facebook", re: /^https:\/\/(?:www\.)?facebook\.com\/([\w.-]{3,80})\/(posts|videos)\/([\w.-]{5,120})\/?$/i, src: (m) => `https://www.facebook.com/plugins/${m[2] === "videos" ? "video" : "post"}.php?href=${encodeURIComponent(`https://www.facebook.com/${m[1]}/${m[2]}/${m[3]}`)}&show_text=true&width=500`, ratio: "4/5" },
+  { key: "instagram", label: "Instagram (publication ou reel)", re: /^https:\/\/www\.instagram\.com\/(p|reel|tv)\/([\w-]{5,30})\/?/i, src: (m) => `https://www.instagram.com/${m[1]}/${m[2]}/embed`, ratio: "4/5" },
+  { key: "tiktok", label: "TikTok", re: /^https:\/\/www\.tiktok\.com\/@([\w.]{2,40})\/video\/(\d{10,25})/i, src: (m) => `https://www.tiktok.com/embed/v2/${m[2]}`, ratio: "9/16" },
   { key: "canva", label: "Canva (lien « Intégrer »)", re: /^https:\/\/www\.canva\.com\/design\/([\w-]{6,40})\/([\w-]{6,40})\/view/i, src: (m) => `https://www.canva.com/design/${m[1]}/${m[2]}/view?embed`, ratio: "16/9" },
 ];
 function embedOf(url) {

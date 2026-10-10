@@ -1,0 +1,9 @@
+<%# Lire la suite (widget personnalisé : src/marketing/pages/widgets/readmore.js). Variables : p, cls, attrs. %>
+<% const paras = (t) => String(t || "").split(/\n{2,}/).map((x) => x.trim()).filter(Boolean); %>
+<div class="<%= cls %>"<%- attrs %>>
+  <% paras(p.intro).forEach((t) => { %><p class="kw-readmore-intro"><%= t %></p><% }) %>
+  <details class="kw-readmore-more"<%- p.open ? " open" : "" %>>
+    <summary class="kw-readmore-toggle"><span class="kw-readmore-open"><%= p.openLabel || "Lire la suite" %></span><span class="kw-readmore-close"><%= p.closeLabel || "Réduire" %></span></summary>
+    <div class="kw-readmore-body"><% paras(p.more).forEach((t) => { %><p><%= t %></p><% }) %></div>
+  </details>
+</div>

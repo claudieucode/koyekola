@@ -1,0 +1,7 @@
+<%# Lien en bio (widget personnalisé : src/marketing/pages/widgets/linkinbio.js). Variables : p, cls, attrs, L (L.links[i].url). %>
+<section class="<%= cls %> <%= p.align === "left" ? "is-left" : "is-center" %>"<%- attrs %>>
+  <% if (p.avatar) { %><img class="kw-lib-avatar" src="<%= p.avatar %>" alt="" loading="lazy" decoding="async"><% } %>
+  <% if (p.name) { %><h2 class="kw-lib-name"><%= p.name %></h2><% } %>
+  <% if (p.bio) { %><p class="kw-lib-bio"><%= p.bio %></p><% } %>
+  <ul class="kw-lib-links"><% p.links.forEach((it, i) => { %><li><a class="kw-lib-link <%= it.style === "outline" ? "is-outline" : "is-primary" %>" href="<%= (L.links[i] || {}).url %>"><% if (it.icon) { %><span class="kw-lib-icon" aria-hidden="true"><%- icon(it.icon, { size: 18 }) %></span><% } %><span><%= it.label %></span></a></li><% }) %></ul>
+</section>

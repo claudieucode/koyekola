@@ -145,8 +145,11 @@
 /* Sections libres (Page Builder) : styles de base des éléments ; les réglages de chaque élément viennent de sa classe
    .kw-n-<id> (CSS généré après cette feuille, donc prioritaire à spécificité égale). */
 .kw-layout { display: flex; flex-direction: column; gap: 16px; }
-.kw-container { width: 100%; max-width: 1100px; margin-left: auto; margin-right: auto; display: flex; flex-direction: column; gap: 16px; }
-.kw-container.kw-full { max-width: none; }
+.kw-container { width: 100%; display: flex; flex-direction: column; gap: 16px; }
+/* Largeur max. et centrage PAR DÉFAUT, à spécificité nulle (:where) : le réglage « Largeur max. » (ou « Marge ») d'un conteneur, posé sous
+   .kw-n-<id>, l'emporte toujours, y compris sur un conteneur en pleine largeur ou imbriqué (sinon le réglage serait sans effet) */
+:where(.kw-container) { max-width: 1100px; margin-left: auto; margin-right: auto; }
+:where(.kw-container.kw-full) { max-width: none; }
 .kw-columns { display: flex; flex-wrap: wrap; gap: 24px; }
 .kw-column { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 .kw-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
@@ -202,6 +205,78 @@
 .kw-profile-role { margin: 0; font-weight: 600; color: var(--lp-accent, #0277b6); }
 .kw-profile-bio { margin: 4px 0 0; overflow-wrap: anywhere; }
 .kw-profilecard .kw-button { margin-top: 8px; align-self: inherit; }
+/* Lire la suite (widget « readmore ») : un court texte, la suite se déplie (<details> natif) */
+.kw-readmore-intro { margin: 0 0 8px; overflow-wrap: anywhere; }
+.kw-readmore-more { margin: 0; }
+.kw-readmore-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; cursor: pointer; font-weight: 700; color: var(--lp-accent, #0277b6); list-style: none; }
+.kw-readmore-toggle::-webkit-details-marker { display: none; }
+.kw-readmore-toggle:focus-visible { outline: 2px solid var(--lp-accent, #0277b6); outline-offset: 2px; border-radius: 4px; }
+.kw-readmore-close { display: none; }
+.kw-readmore-more[open] .kw-readmore-open { display: none; }
+.kw-readmore-more[open] .kw-readmore-close { display: inline; }
+.kw-readmore-body { margin-top: 8px; overflow-wrap: anywhere; }
+.kw-readmore-body p { margin: 0 0 12px; }
+/* Texte sur un tracé (widget « textpath ») */
+.kw-textpath { display: block; max-width: 100%; }
+.kw-textpath-link { display: block; color: inherit; text-decoration: none; }
+.kw-textpath-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.kw-textpath-line { vector-effect: non-scaling-stroke; }
+.kw-textpath-text { font-family: inherit; }
+/* Lien en bio (widget « linkinbio ») */
+.kw-linkinbio { display: flex; flex-direction: column; gap: 10px; max-width: 480px; margin-inline: auto; padding: 24px 16px; }
+.kw-linkinbio.is-center { align-items: center; text-align: center; }
+.kw-linkinbio.is-left { align-items: flex-start; text-align: left; }
+.kw-lib-avatar { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; }
+.kw-lib-name { margin: 0; font-size: 22px; }
+.kw-lib-bio { margin: 0; overflow-wrap: anywhere; opacity: 0.85; }
+.kw-lib-links { display: grid; gap: 10px; width: 100%; margin: 8px 0 0; padding: 0; list-style: none; }
+.kw-lib-link { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 12px 18px; border: 2px solid var(--lp-accent, #0277b6); border-radius: 12px; font-weight: 700; text-decoration: none; overflow-wrap: anywhere; transition: transform 0.12s, box-shadow 0.12s; }
+.kw-lib-link.is-primary { background: var(--lp-accent, #0277b6); color: #fff; }
+.kw-lib-link.is-outline { background: transparent; color: var(--lp-accent, #0277b6); }
+.kw-lib-link:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); }
+.kw-lib-link:focus-visible { outline: 2px solid var(--lp-accent, #0277b6); outline-offset: 3px; }
+.kw-lib-icon { display: inline-flex; }
+/* Panier (widget « cart ») */
+.kw-cart { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid rgba(16, 34, 47, 0.12); border-radius: 12px; background: #fff; }
+.kw-cart-title { margin: 0; font-size: 20px; }
+.kw-cart-empty { margin: 0; opacity: 0.75; }
+.kw-cart-lines { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.kw-cart-line { display: flex; align-items: center; gap: 10px; }
+.kw-cart-img { width: 56px; height: 40px; object-fit: cover; border-radius: 6px; }
+.kw-cart-name { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; text-decoration: none; color: inherit; }
+.kw-cart-price { white-space: nowrap; font-weight: 700; }
+.kw-cart-total { display: flex; justify-content: space-between; margin: 0; padding-top: 8px; border-top: 1px solid rgba(16, 34, 47, 0.12); font-size: 18px; }
+.kw-cart-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.kw-cart-edit { font-size: 14px; color: var(--lp-accent, #0277b6); }
+/* Bouton Facebook (widget « facebookbutton ») */
+.kw-facebookbutton { display: flex; max-width: 100%; }
+.kw-facebookbutton.is-left { justify-content: flex-start; } .kw-facebookbutton.is-center { justify-content: center; } .kw-facebookbutton.is-right { justify-content: flex-end; }
+.kw-fbbtn-frame { max-width: 100%; border: 0; overflow: hidden; }
+/* Diaporama, carrousel de témoignages, carrousel média (réutilisent .kw-carousel : défilement, boutons, points, lecture automatique) */
+/* Comme .kw-carousel : le conteneur est la référence de position des boutons précédent / suivant */
+.kw-slides, .kw-testimonialcarousel, .kw-mediacarousel { position: relative; min-width: 0; }
+.kw-slides .kw-carousel-track, .kw-testimonialcarousel .kw-carousel-track, .kw-mediacarousel .kw-carousel-track { gap: 12px; }
+.kw-slides .kw-carousel-slide { flex: 0 0 100%; }
+.kw-slide { position: relative; display: flex; align-items: center; overflow: hidden; border-radius: 12px; background: #10222f; color: #fff; }
+.kw-slide-img { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; border-radius: 0; }
+.kw-slide-veil { position: absolute; inset: 0; background: #000; pointer-events: none; }
+.kw-slide-body { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 10px; width: 100%; padding: 32px 56px; }
+.kw-slides.is-center .kw-slide-body { align-items: center; text-align: center; }
+.kw-slides.is-left .kw-slide-body { align-items: flex-start; text-align: left; }
+.kw-slide-title { margin: 0; font-size: clamp(24px, 4vw, 40px); line-height: 1.15; }
+.kw-slide-text { margin: 0; max-width: 56ch; font-size: 18px; overflow-wrap: anywhere; }
+.kw-testimonialcarousel .kw-carousel-slide { flex: 0 0 min(100%, 520px); padding: 24px; border: 1px solid rgba(16, 34, 47, 0.12); border-radius: 12px; background: #fff; }
+.kw-tcar-stars { margin: 0 0 8px; color: #e8a500; letter-spacing: 2px; }
+.kw-tcar-quote { margin: 0 0 14px; }
+.kw-tcar-quote p { margin: 0; font-size: 18px; line-height: 1.5; overflow-wrap: anywhere; }
+.kw-tcar-who { display: flex; align-items: center; gap: 12px; margin: 0; }
+.kw-tcar-who > span { display: flex; flex-direction: column; }
+.kw-tcar-photo { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
+.kw-tcar-name { font-weight: 700; }
+.kw-tcar-role { font-size: 14px; opacity: 0.75; }
+.kw-mcar-video { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; background: #000; }
+.kw-mcar-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.kw-mcar-img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; }
 /* Logo, titre du site, copyright */
 .kw-sitelogo { display: inline-flex; flex-direction: column; align-items: flex-start; }
 .kw-sitelogo-link { display: inline-flex; align-items: center; color: inherit; text-decoration: none; }
@@ -347,7 +422,7 @@
 .lp-builder .kw-add-end .kw-add-end-btn span { font-size: 22px; font-weight: 500; line-height: 1; }
 .kw-add { display: none; }
 /* Un conteneur imbriqué occupe la largeur de son parent (les structures « colonnes » en dépendent) */
-.kw-container .kw-container { max-width: none; margin-left: 0; margin-right: 0; }
+:where(.kw-container .kw-container) { max-width: none; margin-left: 0; margin-right: 0; }
 .kw-empty { margin: 0; padding: 12px; border: 1px dashed rgba(2, 119, 182, 0.5); border-radius: 6px; color: rgba(16, 34, 47, 0.6); font-size: 14px; text-align: center; }
 
 @media (max-width: 560px) {
@@ -533,6 +608,9 @@ body.pb-hand,body.pb-hand *{cursor:grab}
 .lp-main { overflow-wrap: anywhere; }
 .kw-node { min-width: 0; }
 .kw-code { white-space: pre-wrap; overflow-x: auto; }
+/* Coloration du code (src/marketing/pages/highlight.js) */
+.kw-tok-com { color: #5b7083; font-style: italic; } .kw-tok-str { color: #0a7a4a; } .kw-tok-num { color: #b45309; } .kw-tok-kw { color: #7c3aed; font-weight: 600; } .kw-tok-fn { color: #0277b6; }
+.kw-tok-tag { color: #b4235b; } .kw-tok-attr { color: #b45309; }
 .kw-progress-head > span:last-child:not(:first-child) { flex: none; white-space: nowrap; overflow-wrap: normal; }
 .kw-progress-head { align-items: flex-start; }
 /* Animations d'entrée (ajoutées par landing.js seulement : sans script, tout est visible) */
@@ -731,6 +809,7 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .kw-embed { min-width: 0; }
 .kw-embed-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: #0b1620; }
 .kw-embed-4x3 .kw-embed-frame { aspect-ratio: 4 / 3; } .kw-embed-3x4 .kw-embed-frame { aspect-ratio: 3 / 4; max-height: 760px; }
+.kw-embed-5x6 .kw-embed-frame { aspect-ratio: 5 / 6; max-height: 760px; } .kw-embed-4x5 .kw-embed-frame { aspect-ratio: 4 / 5; max-height: 760px; } .kw-embed-9x16 .kw-embed-frame { aspect-ratio: 9 / 16; max-height: 760px; }
 .kw-embed-spotify .kw-embed-frame { aspect-ratio: auto; height: 352px; } .kw-embed-soundcloud .kw-embed-frame { aspect-ratio: auto; height: 166px; }
 .kw-embed-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .kw-embed-16x9 { min-width: 0; }

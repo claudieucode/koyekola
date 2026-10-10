@@ -192,11 +192,11 @@
       future = []; futureLabels = [];
     } else if (pastLabels.length) pastLabels[pastLabels.length - 1].at = Date.now();
     lastKey = opts.key || null;
-    afterChange(opts.light);
+    afterChange(opts.light, !opts.key && !opts.light);
     return true;
   }
-  function undo() { if (!past.length) return; future.push(snapshot()); futureLabels.push(pastLabels.pop()); restore(past.pop()); lastKey = null; afterChange(false); }
-  function redo() { if (!future.length) return; past.push(snapshot()); pastLabels.push(futureLabels.pop()); restore(future.pop()); lastKey = null; afterChange(false); }
+  function undo() { if (!past.length) return; future.push(snapshot()); futureLabels.push(pastLabels.pop()); restore(past.pop()); lastKey = null; afterChange(false, true); }
+  function redo() { if (!future.length) return; past.push(snapshot()); pastLabels.push(futureLabels.pop()); restore(future.pop()); lastKey = null; afterChange(false, true); }
   // Revenir à un point de l'historique (n étapes en arrière ou en avant)
   function travel(steps) { var n = Math.abs(steps); for (var i = 0; i < n; i++) { if (steps < 0) undo(); else redo(); } }
   function openHistory(anchor) {
@@ -214,12 +214,12 @@
   // Saisie (light) : les calques sont redessinés au plus une fois par pause de frappe ; le reste suit tout de suite
   var treeTimer = null;
   function scheduleTree() { clearTimeout(treeTimer); treeTimer = setTimeout(renderTree, 120); }
-  function afterChange(light) {
+  function afterChange(light, quick) {
     if (light) scheduleTree(); else { clearTimeout(treeTimer); renderTree(); }
     if (!light) { renderInspector(); renderContext(); renderPageSettings(); }
     updateHistoryButtons();
     if (!light) { placeCanvasBar(); renderDoc(); } // saisie : la barre est replacée avec les repères, juste après le rendu du canevas
-    scheduleRender();
+    scheduleRender(quick);
     scheduleSave();
     navListeners.forEach(function (f) { f(); });
   }
@@ -748,62 +748,95 @@
   // ---------- Calques (arbre) ----------
   var treeEl = $("[data-pb-layers]");
   var dragIds = null, dragNew = null;
+  // Les calques ne sont reconstruits que si ce qu'ils affichent a changé (identifiants, noms, drapeaux, hiérarchie, repli, filtre) : une
+  // modification de style, de couleur ou de dimension ne touche à aucun calque (mesuré : la reconstruction coûte ~ 15 000 nœuds DOM à 400 éléments)
+  var treeSig = null, treeMarked = null, treeTab = null, treeNames = {}, treeLi = {};
+  function treeSignature() {
+    var out = [];
+    treeNames = {};
+    (function w(list, lvl) { list.forEach(function (it) { var k = kidsOf(it); var nm = treeNames[it.id] = nameOf(it); out.push(it.id + "|" + lvl + "|" + it.type + "|" + nm + "|" + (it.hidden ? 1 : 0) + (it.locked ? 1 : 0) + (collapsed[it.id] ? 1 : 0) + "|" + (k ? k.length : -1)); if (k) w(k, lvl + 1); }); })(content.sections, 1);
+    return out.join("\n") + "#" + treeQuery + "#" + errorItemId + "#" + canWrite;
+  }
   function renderTree() {
-    var frag = document.createDocumentFragment();
-    var matches = function (it) { return norm(nameOf(it)).indexOf(treeQuery) >= 0 || norm(typeLabel(it)).indexOf(treeQuery) >= 0; };
+    var sig = treeSignature();
+    if (sig === treeSig && treeEl.firstChild) { markTreeSelection(true); return; }
+    treeSig = sig;
+    var nm = function (it) { return treeNames[it.id] !== undefined ? treeNames[it.id] : nameOf(it); };
+    var matches = function (it) { return norm(nm(it)).indexOf(treeQuery) >= 0 || norm(typeLabel(it)).indexOf(treeQuery) >= 0; };
     var hasMatch = function (it) { return matches(it) || (kidsOf(it) || []).some(hasMatch); };
-    var build = function (list, level, into) {
+    // Une ligne (<li>) : créée une fois, puis RÉUTILISÉE tant que ce qu'elle affiche ne change pas. Les écouteurs lisent l'élément par son
+    // identifiant au moment du clic (jamais l'objet capturé : annuler / rétablir remplace tous les objets du document).
+    var makeRow = function (it0, level, kids, open) {
+      var id = it0.id, cur = function () { return byId(id) || it0; };
+      var on = selection.indexOf(id) >= 0;
+      var li = h("li", { role: "treeitem", "aria-level": String(level), "aria-selected": String(on), "aria-expanded": kids && kids.length ? String(Boolean(open)) : null, class: "pb-node" + (it0.hidden ? " is-hidden" : "") + (it0.locked ? " is-locked" : ""), dataset: { id: id } });
+      var label = nm(it0);
+      var row = h("div", { class: "pb-row-item" + (on ? " is-selected" : "") + (id === errorItemId ? " is-error" : ""), draggable: canWrite ? "true" : null, style: "--level:" + (level - 1), tabindex: "-1" },
+        kids && kids.length ? h("button", { type: "button", class: "pb-twist", tabindex: "-1", "aria-label": open ? "Replier" : "Déplier", onclick: function (e) { e.stopPropagation(); toggleCollapse(id); } }, icon(open ? "chevronDown" : "chevronRight")) : h("span", { class: "pb-twist-gap", "aria-hidden": "true" }),
+        h("span", { class: "pb-node-icon", "aria-hidden": "true" }, icon(isNode(it0) ? NT[it0.type].icon : it0.type === "layout" ? "layout" : "fileText")),
+        h("span", { class: "pb-node-name", text: label }),
+        h("span", { class: "pb-node-flags" },
+          h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it0.hidden ? " is-on" : ""), "aria-pressed": String(Boolean(it0.hidden)), "aria-label": (it0.hidden ? "Afficher « " : "Masquer « ") + label + " »", "data-tip": it0.hidden ? "Afficher" : "Masquer", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([id], "hidden", !cur().hidden); } }, icon(it0.hidden ? "eyeOff" : "eye")),
+          h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it0.locked ? " is-on" : ""), "aria-pressed": String(Boolean(it0.locked)), "aria-label": (it0.locked ? "Déverrouiller « " : "Verrouiller « ") + label + " »", "data-tip": it0.locked ? "Déverrouiller" : "Verrouiller", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([id], "locked", !cur().locked); } }, icon("lock")),
+          h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-more", "aria-haspopup": "menu", "aria-label": "Actions de « " + label + " »", "data-tip": "Actions (dupliquer, copier, renommer, déplacer…)",
+            onclick: function (e) { e.stopPropagation(); if (selection.indexOf(id) < 0) select(id); var r = e.currentTarget.getBoundingClientRect(); openMenu(r.right - 4, r.bottom + 4); } }, icon("moreVertical")),
+          h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-delete", "aria-label": "Supprimer « " + label + " »" + (kids && kids.length ? " et ses " + countDeep(it0) + " élément(s)" : ""), "data-tip": kids && kids.length ? "Supprimer (avec ses " + countDeep(it0) + " élément(s))" : "Supprimer", disabled: !canWrite || lockedDeep(id), onclick: function (e) { e.stopPropagation(); removeItems([id]); } }, icon("trash"))));
+      row.addEventListener("click", function (e) { select(id, e.shiftKey || e.metaKey || e.ctrlKey); });
+      row.addEventListener("dblclick", function (e) { if (canWrite && !e.target.closest("button")) startRename(row, cur()); });
+      row.addEventListener("contextmenu", function (e) { e.preventDefault(); if (selection.indexOf(id) < 0) select(id); openMenu(e.clientX, e.clientY); });
+      row.addEventListener("dragstart", function (e) {
+        if (lockedDeep(id)) { e.preventDefault(); toast("Élément verrouillé.", true); return; }
+        dragIds = selection.indexOf(id) >= 0 ? selection.slice() : [id]; dragNew = null;
+        e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "pb-move");
+      });
+      row.addEventListener("dragover", function (e) {
+        if (!dragIds && !dragNew) return;
+        var pos = dropPosition(row, e.clientY, cur());
+        e.preventDefault();
+        clearTreeDrop();
+        row.classList.add(pos === "before" ? "is-drop-before" : pos === "after" ? "is-drop-after" : "is-drop-inside");
+      });
+      row.addEventListener("dragleave", function () { row.classList.remove("is-drop-before", "is-drop-after", "is-drop-inside"); });
+      row.addEventListener("drop", function (e) {
+        var it = cur(), pos = dropPosition(row, e.clientY, it);
+        clearTreeDrop();
+        e.preventDefault();
+        var l = locate(id);
+        performDrop(pos === "inside" ? { parent: it, index: kidsOf(it).length } : { parent: l.parent, index: l.index + (pos === "after" ? 1 : 0) });
+      });
+      li.appendChild(row);
+      return li;
+    };
+    var nextLi = {};
+    var reconcile = function (list, level, into) {
+      var seq = [];
       list.forEach(function (it) {
         if (treeQuery && !hasMatch(it)) return;
-        var kids = kidsOf(it);
-        var open = kids && kids.length && (treeQuery ? true : !collapsed[it.id]);
-        var on = selection.indexOf(it.id) >= 0;
-        var li = h("li", { role: "treeitem", "aria-level": String(level), "aria-selected": String(on), "aria-expanded": kids && kids.length ? String(Boolean(open)) : null, class: "pb-node" + (it.hidden ? " is-hidden" : "") + (it.locked ? " is-locked" : ""), dataset: { id: it.id } });
-        var row = h("div", { class: "pb-row-item" + (on ? " is-selected" : "") + (it.id === errorItemId ? " is-error" : ""), draggable: canWrite ? "true" : null, style: "--level:" + (level - 1), tabindex: "-1" },
-          kids && kids.length ? h("button", { type: "button", class: "pb-twist", tabindex: "-1", "aria-label": open ? "Replier" : "Déplier", onclick: function (e) { e.stopPropagation(); toggleCollapse(it.id); } }, icon(open ? "chevronDown" : "chevronRight")) : h("span", { class: "pb-twist-gap", "aria-hidden": "true" }),
-          h("span", { class: "pb-node-icon", "aria-hidden": "true" }, icon(isNode(it) ? NT[it.type].icon : it.type === "layout" ? "layout" : "fileText")),
-          h("span", { class: "pb-node-name", text: nameOf(it) }),
-          h("span", { class: "pb-node-flags" },
-            h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it.hidden ? " is-on" : ""), "aria-pressed": String(Boolean(it.hidden)), "aria-label": (it.hidden ? "Afficher « " : "Masquer « ") + nameOf(it) + " »", "data-tip": it.hidden ? "Afficher" : "Masquer", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([it.id], "hidden", !it.hidden); } }, icon(it.hidden ? "eyeOff" : "eye")),
-            h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it.locked ? " is-on" : ""), "aria-pressed": String(Boolean(it.locked)), "aria-label": (it.locked ? "Déverrouiller « " : "Verrouiller « ") + nameOf(it) + " »", "data-tip": it.locked ? "Déverrouiller" : "Verrouiller", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([it.id], "locked", !it.locked); } }, icon("lock")),
-            h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-more", "aria-haspopup": "menu", "aria-label": "Actions de « " + nameOf(it) + " »", "data-tip": "Actions (dupliquer, copier, renommer, déplacer…)",
-              onclick: function (e) { e.stopPropagation(); if (selection.indexOf(it.id) < 0) select(it.id); var r = e.currentTarget.getBoundingClientRect(); openMenu(r.right - 4, r.bottom + 4); } }, icon("moreVertical")),
-            h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-delete", "aria-label": "Supprimer « " + nameOf(it) + " »" + (kids && kids.length ? " et ses " + countDeep(it) + " élément(s)" : ""), "data-tip": kids && kids.length ? "Supprimer (avec ses " + countDeep(it) + " élément(s))" : "Supprimer", disabled: !canWrite || lockedDeep(it.id), onclick: function (e) { e.stopPropagation(); removeItems([it.id]); } }, icon("trash"))));
-        row.addEventListener("click", function (e) { select(it.id, e.shiftKey || e.metaKey || e.ctrlKey); });
-        row.addEventListener("dblclick", function (e) { if (canWrite && !e.target.closest("button")) startRename(row, it); });
-        row.addEventListener("contextmenu", function (e) { e.preventDefault(); if (selection.indexOf(it.id) < 0) select(it.id); openMenu(e.clientX, e.clientY); });
-        row.addEventListener("dragstart", function (e) {
-          if (lockedDeep(it.id)) { e.preventDefault(); toast("Élément verrouillé.", true); return; }
-          dragIds = selection.indexOf(it.id) >= 0 ? selection.slice() : [it.id]; dragNew = null;
-          e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "pb-move");
-        });
-        row.addEventListener("dragover", function (e) {
-          if (!dragIds && !dragNew) return;
-          var pos = dropPosition(row, e.clientY, it);
-          e.preventDefault();
-          clearTreeDrop();
-          row.classList.add(pos === "before" ? "is-drop-before" : pos === "after" ? "is-drop-after" : "is-drop-inside");
-        });
-        row.addEventListener("dragleave", function () { row.classList.remove("is-drop-before", "is-drop-after", "is-drop-inside"); });
-        row.addEventListener("drop", function (e) {
-          var pos = dropPosition(row, e.clientY, it);
-          clearTreeDrop();
-          e.preventDefault();
-          var l = locate(it.id);
-          performDrop(pos === "inside" ? { parent: it, index: kidsOf(it).length } : { parent: l.parent, index: l.index + (pos === "after" ? 1 : 0) });
-        });
-        li.appendChild(row);
-        if (open) { var ul = h("ul", { role: "group", class: "pb-tree-group" }); build(kids, level + 1, ul); li.appendChild(ul); }
-        into.appendChild(li);
+        var kids = kidsOf(it), has = Boolean(kids && kids.length), open = has && (treeQuery ? true : !collapsed[it.id]);
+        // Signature de la LIGNE (sans ses enfants) : tout ce qu'elle affiche
+        var rsig = [level, it.type, nm(it), it.hidden ? 1 : 0, it.locked ? 1 : 0, has ? (open ? "o" : "c") : "-", it.id === errorItemId ? 1 : 0, canWrite ? 1 : 0, has ? countDeep(it) : 0, lockedDeep(it.id) ? 1 : 0].join("|");
+        var ent = treeLi[it.id];
+        if (!ent || ent.sig !== rsig) ent = { li: makeRow(it, level, kids, open), sig: rsig };
+        nextLi[it.id] = ent;
+        var li = ent.li, ul = li.lastElementChild && li.lastElementChild.tagName === "UL" ? li.lastElementChild : null;
+        if (open) { if (!ul) { ul = h("ul", { role: "group", class: "pb-tree-group" }); li.appendChild(ul); } reconcile(kids, level + 1, ul); } else if (ul) ul.remove();
+        seq.push(li);
       });
+      // Ordre : on ne déplace que les lignes qui ne sont pas déjà à leur place
+      var at = into.firstElementChild;
+      seq.forEach(function (li) { if (at === li) at = at.nextElementSibling; else into.insertBefore(li, at); });
+      while (at) { var nx = at.nextElementSibling; at.remove(); at = nx; }
     };
-    build(content.sections, 1, frag);
-    treeEl.textContent = "";
-    if (treeQuery && !frag.childNodes.length) treeEl.appendChild(h("li", { class: "pb-tree-empty", role: "none" }, h("p", { class: "pb-hint", text: "Aucun calque ne correspond." })));
+    $$(".pb-tree-empty", treeEl).forEach(function (e) { e.remove(); });
+    reconcile(content.sections, 1, treeEl);
+    treeLi = nextLi;
+    var anyRow = treeEl.firstElementChild;
+    if (treeQuery && !anyRow) treeEl.appendChild(h("li", { class: "pb-tree-empty", role: "none" }, h("p", { class: "pb-hint", text: "Aucun calque ne correspond." })));
     if (!content.sections.length) treeEl.appendChild(h("li", { class: "pb-tree-empty", role: "none" }, h("p", { class: "pb-hint", text: "Page vide : glissez un élément ou un bloc ici, ou dans la page." })));
-    treeEl.appendChild(frag);
+    treeMarked = null; markTreeSelection(true); // coches de sélection : lignes réutilisées comprises
     var cur = treeEl.querySelector(".pb-row-item.is-selected") || treeEl.querySelector(".pb-row-item");
     if (cur) cur.tabIndex = 0;
+    treeTab = cur; treeMarked = selection.slice();
     var info = $("[data-pb-page-count]");
     if (info) { var total = 0; walk(function () { total++; }); info.textContent = content.sections.length + " section" + (content.sections.length > 1 ? "s" : "") + " · " + (total - content.sections.length) + " élément" + (total - content.sections.length > 1 ? "s" : ""); }
   }
@@ -823,14 +856,24 @@
     if (dragNew) { var make = dragNew.make; dragNew = null; make(target); }
     else if (dragIds) { var ids = dragIds; dragIds = null; moveTo(ids, target.parent, target.index); }
   }
-  function markTreeSelection() {
-    $$(".pb-node", treeEl).forEach(function (li) {
-      var on = selection.indexOf(li.dataset.id) >= 0;
-      li.setAttribute("aria-selected", String(on));
-      li.firstElementChild.classList.toggle("is-selected", on);
-    });
+  // Sélection dans les calques : seules les lignes dont l'état change sont touchées (avant : les 400 lignes, à chaque sélection)
+  function markTreeSelection(noScroll) {
+    var mark = function (li, on) { if (!li) return; li.setAttribute("aria-selected", String(on)); if (li.firstElementChild) li.firstElementChild.classList.toggle("is-selected", on); };
+    var liOf = function (id) { return treeEl.querySelector('.pb-node[data-id="' + id + '"]'); };
+    if (!treeMarked) {
+      $$(".pb-node", treeEl).forEach(function (li) { mark(li, selection.indexOf(li.dataset.id) >= 0); });
+    } else {
+      treeMarked.forEach(function (id) { if (selection.indexOf(id) < 0) mark(liOf(id), false); });
+      selection.forEach(function (id) { if (treeMarked.indexOf(id) < 0) mark(liOf(id), true); });
+    }
+    treeMarked = selection.slice();
     var cur = selection.length ? treeEl.querySelector('.pb-node[data-id="' + selection[selection.length - 1] + '"] > .pb-row-item') : null;
-    if (cur) { $$(".pb-row-item", treeEl).forEach(function (r) { r.tabIndex = -1; }); cur.tabIndex = 0; cur.scrollIntoView({ block: "nearest" }); }
+    if (cur) {
+      if (treeTab && treeTab.isConnected) treeTab.tabIndex = -1; else $$(".pb-row-item", treeEl).forEach(function (r) { r.tabIndex = -1; });
+      cur.tabIndex = 0; treeTab = cur;
+      // Faire apparaître la ligne : au prochain affichage (le défilement impose une mise en page, inutile en plein traitement du clic)
+      if (!noScroll) requestAnimationFrame(function () { if (cur.isConnected) cur.scrollIntoView({ block: "nearest" }); });
+    }
   }
   function toggleCollapse(id, value) {
     if (value === undefined) value = !collapsed[id];
@@ -844,7 +887,7 @@
     nameEl.replaceWith(input);
     input.focus(); input.select();
     var done = false;
-    var finish = function (save) { if (done) return; done = true; if (save) rename(it.id, input.value); renderTree(); };
+    var finish = function (save) { if (done) return; done = true; if (save) rename(it.id, input.value); treeSig = null; treeLi = {}; renderTree(); }; // le champ de saisie a remplacé le nom dans le calque : reconstruction forcée même si rien n'a changé
     input.addEventListener("keydown", function (e) { e.stopPropagation(); if (e.key === "Enter") finish(true); if (e.key === "Escape") finish(false); });
     input.addEventListener("blur", function () { finish(true); });
     input.addEventListener("click", function (e) { e.stopPropagation(); });
@@ -1055,7 +1098,7 @@
   var elCategory = store.get("el-category", "");
   var elClosed = store.get("el-closed", []);
   function elementGroups() {
-    var item = function (t) { var need = deniedWidget(t.type); return { type: t.type, sub: t.sub || null, label: t.label, icon: t.icon, keywords: t.keywords, locked: need ? "Widget " + SPEC.widgetPermissions[need] + "." : null, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; };
+    var item = function (t) { var need = deniedWidget(t.type); return { type: t.type, sub: t.sub || null, label: t.label, desc: t.description || null, icon: t.icon, keywords: t.keywords, locked: need ? "Widget " + SPEC.widgetPermissions[need] + "." : null, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; };
     var groups = Object.keys(SPEC.widgetGroups).map(function (k) { return { key: k, label: SPEC.widgetGroups[k], items: SPEC.types.filter(function (t) { return t.group === k; }).map(item) }; });
     groups[0].items.unshift({ type: "layout", label: "Section libre", icon: "layout", keywords: "section libre bloc zone" });
     (SPEC.shortcuts || []).forEach(function (sc) { var g = groups.find(function (x) { return x.key === sc.group; }); if (g) g.items.push({ type: sc.type, sub: sc.sub || null, shortcut: sc, label: sc.label, icon: sc.icon, keywords: sc.keywords }); });
@@ -1107,7 +1150,7 @@
       g.items.forEach(function (it) {
         if (g.key === "site" && !f && it.sub !== lastSub) { lastSub = it.sub; ul.appendChild(h("li", { class: "pb-pal-subhead", text: it.sub || "Autres" })); }
         var off = it.disabled || it.locked;
-        var btn = h("button", { type: "button", class: "pb-pal-item" + (it.locked ? " is-locked" : ""), disabled: !canWrite || Boolean(it.disabled), "aria-disabled": it.locked ? "true" : null, "data-tip": off || null, "data-widget": it.shortcut ? it.shortcut.key : it.type,
+        var btn = h("button", { type: "button", class: "pb-pal-item" + (it.locked ? " is-locked" : ""), disabled: !canWrite || Boolean(it.disabled), "aria-disabled": it.locked ? "true" : null, "data-tip": off || it.desc || null, "data-widget": it.shortcut ? it.shortcut.key : it.type,
           onclick: function () { if (it.locked) { toast(it.label + " : " + it.locked, true); return; } useElement(it); if (it.shortcut) addShortcut(it.shortcut); else if (it.legacy) addLegacy(it.type); else addElement(it.type); } },
           icon(it.icon), h("span", { text: it.label }), f && it.legacy && it.type !== "form" ? h("span", { class: "pb-pal-kind", text: "Section prête" }) : null, it.locked ? h("span", { class: "pb-pal-lock", "aria-label": "Réservé" }, icon("lock")) : null);
         if (!off) draggableSource(btn, it.legacy ? { type: it.type, section: true } : { type: it.type }, function (target) { useElement(it); if (it.shortcut) addShortcut(it.shortcut, target); else if (it.legacy) addLegacy(it.type, target); else addElement(it.type, target); });
@@ -1405,20 +1448,57 @@
 
   // Contenu de chaque élément (onglet « Contenu »)
   // Widget personnalisé : champs de l'inspecteur générés depuis sa description (src/marketing/pages/widgets)
+  // Un champ simple d'un widget personnalisé ; set(valeur, léger, clé) l'enregistre (léger = saisie au clavier : une seule étape d'annulation par rafale)
+  function schemaScalar(f, val, set, disabled, widgetType) {
+    var frag = document.createDocumentFragment();
+    if (f.kind === "text" || f.kind === "textarea" || f.kind === "link") frag.appendChild(textField(f.label, val, function (v) { set(v, true); }, { max: f.max || (f.kind === "textarea" ? 1000 : f.kind === "link" ? 500 : 200), multiline: f.kind === "textarea", list: f.kind === "link" ? "pb-links" : null, placeholder: f.kind === "link" ? "/catalogue, /p/…, #ancre ou https://…" : null, disabled: disabled }));
+    else if (f.kind === "number") frag.appendChild(numberField(f.label, val, { min: f.min, max: f.max, step: f.step || 1, integer: f.integer || Number.isInteger(f.min) && Number.isInteger(f.max) && !f.step, disabled: disabled }, function (n, opts) { if (n === null) return false; set(n, opts && opts.light, opts && opts.key); }, "Entre " + f.min + " et " + f.max + "."));
+    else if (f.kind === "select") frag.appendChild(selectField(f.label, val, f.options, function (v) { set(v); }, { disabled: disabled }));
+    else if (f.kind === "bool") frag.appendChild(checkField(f.label, val === true, function (v) { set(v); }, { disabled: disabled }));
+    else if (f.kind === "image") {
+      frag.appendChild(h("p", { class: "pb-sub", text: f.label }));
+      frag.appendChild(mediaPreview(val, function (m) { set(m.path); }, disabled));
+      if (val && !f.required) frag.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled, onclick: function () { set(""); } }, "Retirer l'image"));
+    } else if (f.kind === "icon") { frag.appendChild(h("p", { class: "pb-sub", text: f.label })); frag.appendChild(iconPicker(val || "", function (v) { set(v); }, disabled)); }
+    else if (f.kind === "color") { var cid = fid(); frag.appendChild(h("div", { class: "pb-field" }, h("label", { for: cid, text: f.label }), colorButton(cid, val, undefined, disabled, function (v, o) { set(v || "", o && o.light); }, "w-" + widgetType + "-" + f.key))); }
+    return frag;
+  }
+  // Valeur de départ d'un nouvel élément d'une liste : défaut du sous-champ, sinon vide / 1re option / minimum
+  function blankItem(f) {
+    var o = {};
+    f.fields.forEach(function (sf) { o[sf.key] = sf.default !== undefined ? sf.default : sf.kind === "bool" ? false : sf.kind === "number" ? sf.min : sf.kind === "select" ? sf.options[0][0] : ""; });
+    return o;
+  }
+  // Liste d'éléments répétés (diapositives, liens, témoignages…) : ajouter, supprimer, réordonner, et chaque sous-champ modifie le rendu réel
+  function itemsEditor(it, f, disabled) {
+    var list = (it.props && it.props[f.key]) || [], min = f.min || 0;
+    // Les actions relisent TOUJOURS la liste courante de l'élément (une saisie « légère » ne reconstruit pas l'inspecteur : la liste capturée à l'affichage serait périmée)
+    var live = function () { var n = byId(it.id); return (n && n.props && n.props[f.key]) || []; };
+    var wrap = h("div", { class: "pb-items", role: "group", "aria-label": f.label });
+    wrap.appendChild(h("p", { class: "pb-sub", text: f.label + " (" + list.length + (f.max ? " sur " + f.max : "") + ")" }));
+    var commit = function (next, light, key) { setProp(it.id, f.key, next, light ? { key: key, light: true } : null); };
+    list.forEach(function (item, i) {
+      var move = function (d) { var cur = live(), next = cur.slice(), t = next[i]; next[i] = next[i + d]; next[i + d] = t; commit(next); };
+      var head = h("div", { class: "pb-items-head" }, h("strong", { text: "Élément " + (i + 1) }), h("span", { class: "pb-items-tools" },
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Monter l'élément " + (i + 1), "data-tip": "Monter", disabled: disabled || i === 0, onclick: function () { move(-1); } }, icon("arrowUp")),
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Descendre l'élément " + (i + 1), "data-tip": "Descendre", disabled: disabled || i === list.length - 1, onclick: function () { move(1); } }, icon("arrowDown")),
+        h("button", { type: "button", class: "pb-icon-btn is-danger", "aria-label": "Supprimer l'élément " + (i + 1), "data-tip": "Supprimer", disabled: disabled || list.length <= min, onclick: function () { commit(live().filter(function (_, k) { return k !== i; })); } }, icon("trash"))));
+      var card = h("div", { class: "pb-items-item" }, head);
+      f.fields.forEach(function (sf) {
+        var set = function (v, light, key) { var next = live().map(function (x) { return Object.assign({}, x); }); if (!next[i]) return; next[i][sf.key] = v; commit(next, light, key || it.id + ":" + f.key + ":" + i + ":" + sf.key); };
+        card.appendChild(schemaScalar(sf, item[sf.key], set, disabled, it.type));
+      });
+      wrap.appendChild(card);
+    });
+    wrap.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled || list.length >= f.max, onclick: function () { commit(live().concat([blankItem(f)])); } }, icon("plus"), "Ajouter un élément"));
+    return wrap;
+  }
   function schemaFields(it, box, disabled) {
     var p = it.props || (it.props = {});
     (NT[it.type].schema || []).forEach(function (f) {
-      var set = function (v, light) { setProp(it.id, f.key, v, light ? { key: it.id + ":" + f.key, light: true } : null); };
-      if (f.kind === "text" || f.kind === "textarea" || f.kind === "link") box.appendChild(textField(f.label + (f.required ? "" : ""), p[f.key], function (v) { set(v, true); }, { max: f.max || (f.kind === "textarea" ? 1000 : f.kind === "link" ? 500 : 200), multiline: f.kind === "textarea", list: f.kind === "link" ? "pb-links" : null, placeholder: f.kind === "link" ? "/catalogue, /p/…, #ancre ou https://…" : null, disabled: disabled }));
-      else if (f.kind === "number") box.appendChild(numberField(f.label, p[f.key], { min: f.min, max: f.max, step: f.step || 1, integer: f.integer || Number.isInteger(f.min) && Number.isInteger(f.max) && !f.step, disabled: disabled }, function (n, opts) { if (n === null) return false; setProp(it.id, f.key, n, opts && opts.light ? { key: opts.key, light: true } : null); }, "Entre " + f.min + " et " + f.max + "."));
-      else if (f.kind === "select") box.appendChild(selectField(f.label, p[f.key], f.options, function (v) { set(v); }, { disabled: disabled }));
-      else if (f.kind === "bool") box.appendChild(checkField(f.label, p[f.key] === true, function (v) { set(v); }, { disabled: disabled }));
-      else if (f.kind === "image") {
-        box.appendChild(h("p", { class: "pb-sub", text: f.label }));
-        box.appendChild(mediaPreview(p[f.key], function (m) { set(m.path); }, disabled));
-        if (p[f.key] && !f.required) box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled, onclick: function () { set(""); } }, "Retirer l'image"));
-      } else if (f.kind === "icon") { box.appendChild(h("p", { class: "pb-sub", text: f.label })); box.appendChild(iconPicker(p[f.key] || "", function (v) { set(v); }, disabled)); }
-      else if (f.kind === "color") { var cid = fid(); box.appendChild(h("div", { class: "pb-field" }, h("label", { for: cid, text: f.label }), colorButton(cid, p[f.key], undefined, disabled, function (v, o) { setProp(it.id, f.key, v || "", o && o.light ? { key: it.id + ":" + f.key, light: true } : null); }, "w-" + it.type + "-" + f.key))); }
+      if (f.kind === "items") { box.appendChild(itemsEditor(it, f, disabled)); return; }
+      var set = function (v, light, key) { setProp(it.id, f.key, v, light ? { key: key || it.id + ":" + f.key, light: true } : null); };
+      box.appendChild(schemaScalar(f, p[f.key], set, disabled, it.type));
     });
   }
   function nodeContentFields(it, box, disabled) {
@@ -1450,6 +1530,7 @@
         break;
       case "code":
         box.appendChild(textField("Texte affiché tel quel", p.text, set("text"), { multiline: true, rows: "8", max: 4000, disabled: disabled, hint: "Affiché comme texte, jamais exécuté." }));
+        box.appendChild(selectField("Coloration du code", p.language || "text", SPEC.codeLanguages, function (v) { change(function () { var x = byId(it.id); if (v === "text") delete x.props.language; else x.props.language = v; }); }, { disabled: disabled }));
         break;
       case "image":
         box.appendChild(mediaPreview(/^\{\{/.test(p.src || "") ? "" : p.src, function (m) { change(function () { var x = byId(it.id); x.props.src = m.path; if (m.alt && !x.props.alt) { x.props.alt = m.alt; delete x.props.decorative; } }); }, disabled));
@@ -3091,11 +3172,12 @@
 
   // ---------- Inspecteur ----------
   var inspTab = store.get("insp-tab", "content");
-  var headObserver = null;
+  var headObserver = null, inspHeadH = 0, inspScroll = 0;
+  (function () { var b = $("[data-pb-inspector]"); if (b) b.addEventListener("scroll", function () { inspScroll = b.scrollTop; }, { passive: true }); })();
   function renderInspector() {
     if (typeof cpop !== "undefined" && cpop && !cpop.hidden) { cpop.hidden = true; cpopFor = null; }
     var box = $("[data-pb-inspector]");
-    var keepScroll = box.dataset.for === selection.join(",") ? box.scrollTop : 0;
+    var keepScroll = box.dataset.for === selection.join(",") ? inspScroll : 0;
     box.textContent = "";
     box.dataset.for = selection.join(",");
     // fieldSeq n'est JAMAIS remis à zéro : les identifiants (pb-f-N) restent uniques dans toute la page, sinon un libellé de
@@ -3139,8 +3221,9 @@
     box.appendChild(head);
     // L'onglet qui suit reste collé sous l'en-tête quand on fait défiler : on lui donne la hauteur réelle de l'en-tête
     if (headObserver) headObserver.disconnect();
-    if (window.ResizeObserver) { headObserver = new ResizeObserver(function () { box.style.setProperty("--pb-insp-head-h", head.offsetHeight + "px"); }); headObserver.observe(head); }
-    box.style.setProperty("--pb-insp-head-h", head.offsetHeight + "px");
+    // Hauteur de l'en-tête : valeur connue d'avant, corrigée par l'observateur avant l'affichage (lire offsetHeight ici imposait une mise en page complète)
+    if (window.ResizeObserver) { headObserver = new ResizeObserver(function () { inspHeadH = head.offsetHeight; box.style.setProperty("--pb-insp-head-h", inspHeadH + "px"); }); headObserver.observe(head); }
+    box.style.setProperty("--pb-insp-head-h", (inspHeadH || 96) + "px");
     if (locked && canWrite) box.appendChild(h("p", { class: "pb-note is-warn", text: "Verrouillé : déverrouillez-le (cadenas dans les calques) pour le modifier." }));
     var boxTabs = !multi && schema.tabs === "box";
     var tabs = boxTabs ? [["general", "Général"], ["style", "Style"], ["interactions", "Interactions"]] : multi ? [["style", "Style"], ["advanced", "Avancé"]] : !schema.groups ? [["content", "Contenu"], ["advanced", "Avancé"]] : [["content", "Contenu"], ["style", "Style"], ["advanced", "Avancé"]];
@@ -3159,7 +3242,7 @@
       else legacyContentFields(it, body, locked);
     } else if (inspTab === "style") { styleTab(items, body); if (boxTabs) boxStyleExtras(items, body, locked); }
     else advancedTab(items, body, locked);
-    box.scrollTop = keepScroll;
+    if (keepScroll || inspScroll) { box.scrollTop = keepScroll; inspScroll = keepScroll; } // écrire le défilement impose une mise en page : seulement s'il y a quelque chose à restaurer
   }
   // Contenu d'une section libre ou d'un conteneur : sa structure (enfants cliquables), et comment y ajouter
   function structureContent(it, box) {
@@ -3842,7 +3925,8 @@
   // Pas de nouveau rendu pendant une édition directe ou un geste dans le canevas (guide, poignée) : le document serait
   // remplacé sous la souris ; le rendu attend la fin du geste
   var gesture = false;
-  function scheduleRender() { if (editing || gesture) { pendingRender = true; return; } clearTimeout(renderTimer); renderTimer = setTimeout(renderCanvas, 150); }
+  // Saisie continue : 150 ms de regroupement ; action isolée (dupliquer, supprimer, annuler, couleur choisie…) : rendu presque tout de suite
+  function scheduleRender(quick) { if (editing || gesture) { pendingRender = true; return; } clearTimeout(renderTimer); renderTimer = setTimeout(renderCanvas, quick ? 30 : 150); }
   function endGesture() { gesture = false; if (pendingRender && !editing) { pendingRender = false; scheduleRender(); } }
   var errorItemId = null;
   // « Section 3 › élément 2 « Titre » : … » → identifiant de l'élément en cause (mis en évidence dans les calques)
@@ -5947,11 +6031,13 @@
   // ---------- Sauvegarde automatique ----------
   var retry = 0;
   var saveEl = $("[data-pb-save]");
-  function setSave(text, cls) { saveEl.textContent = text; saveEl.className = "pb-save" + (cls ? " " + cls : ""); }
+  // Texte court : la largeur de l'en-tête ne doit pas dépendre de l'état d'enregistrement (un texte plus long que « Enregistré à 14:03 » faisait passer
+  // l'en-tête sur une ligne de plus à certaines largeurs : tout le canevas descendait de 46 px à chaque modification, puis remontait)
+  function setSave(text, cls, full) { saveEl.textContent = text; saveEl.title = full || text; saveEl.className = "pb-save" + (cls ? " " + cls : ""); }
   function scheduleSave() {
     if (!canWrite) return;
     dirty = true;
-    if (!blocked) setSave("Modifications non enregistrées", "is-dirty");
+    if (!blocked) setSave("Non enregistré", "is-dirty", "Modifications non enregistrées");
     clearTimeout(saveTimer);
     saveTimer = setTimeout(save, 1000);
     backup();
