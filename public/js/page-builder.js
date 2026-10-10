@@ -2721,7 +2721,10 @@
     };
     var btn = h("button", { type: "button", class: "pb-tokbtn" + (isTok ? " is-on" : ""), disabled: dis, "aria-haspopup": "menu", "aria-label": "Valeur du site pour « " + SP[key].label + " »", "data-tip": isTok ? "Lié au site : " + lenTokenLabel(own.slice(6)) + " (cliquer pour changer)" : "Utiliser une valeur du site (suit les réglages du site)", onclick: function () { pick(btn); } }, icon("link"));
     if (isTok) return h("div", { class: "pb-lenwrap is-token" }, h("span", { class: "pb-tokchip", text: "Site : " + lenTokenLabel(own.slice(6)) }), btn);
-    return h("div", { class: "pb-lenwrap" }, numeric, btn);
+    var wrapNum = h("div", { class: "pb-lenwrap" }, numeric, btn);
+    wrapNum.scrub = numeric.scrub; // le glissement sur le libellé vient du champ numérique : l'enveloppe « valeur du site » doit le transmettre
+    wrapNum.input = numeric.input;
+    return wrapNum;
   }
   function lengthControlPlain(items, key, id, own, inh, dis) {
     var units = unitsOf(key), cur = splitLen(own), base = splitLen(inh), cfg = LENCFG[key] || {};
