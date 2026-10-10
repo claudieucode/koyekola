@@ -121,6 +121,21 @@ describe("performance du Page Builder : exactitude (navigateur)", { skip: SKIP }
     assert.deepEqual(errors, []);
   });
 
+  test("reconstruction différentielle : supprimer / annuler ne touche qu'un petit nombre de lignes (les autres ne sont ni recréées ni déplacées)", async () => {
+    await clickRow(ids.tx[1]);
+    await page.evaluate(() => { window.__muts = 0; window.__obs = new MutationObserver((list) => { list.forEach((m) => { window.__muts += [...m.addedNodes, ...m.removedNodes].filter((n) => n.nodeType === 1).length; }); }); window.__obs.observe(document.querySelector("[data-pb-layers]"), { childList: true, subtree: true }); });
+    const rows0 = await rowCount();
+    await page.locator(`[data-pb-layers] .pb-node[data-id="${ids.tx[1]}"] .pb-flag-delete`).click();
+    await until(async () => (await rowCount()) === rows0 - 1, { what: "ligne supprimée" });
+    await page.locator("[data-pb-undo]").click();
+    await until(async () => (await rowCount()) === rows0, { what: "ligne rétablie" });
+    await wait(300);
+    const muts = await page.evaluate(() => { window.__obs.disconnect(); return window.__muts; });
+    // une ligne = ~15 éléments DOM ; supprimer + annuler = 2 lignes + 2 libellés : très loin des centaines d'éléments d'une reconstruction complète
+    assert.ok(muts < 120, `éléments ajoutés ou retirés dans les calques : ${muts}`);
+    assert.deepEqual(errors, []);
+  });
+
   test("grande page (400 éléments, limite du produit) : le rendu serveur reste dans le budget (gabarits compilés une seule fois)", async () => {
     const id = Number((await boss.post("/marketing/pages", { name: "Perf 400" })).location.match(/(\d+)$/)[1]);
     const c = content(400);

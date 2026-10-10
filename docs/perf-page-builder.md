@@ -35,18 +35,18 @@ Mesures non réalisées : consommation mémoire fine (seul `performance.memory` 
 
 | Mesure (ms) | 20 éléments | 100 | 300 | 400 |
 |---|---|---|---|---|
-| Chargement de l'éditeur | 825 → **2011** | 1212 → **687** | 2619 → **1271** | 2430 → **1077** |
-| Sélection d'un calque (médiane, jusqu'à l'image suivante) | 31.5 → **28.3** | 36.1 → **27.3** | 61.7 → **27.4** | 37.5 → **32.3** |
-| Frappe dans l'inspecteur (réponse du panneau) | 23.7 → **23** | 22.8 → **23.9** | 23.9 → **23.6** | 21.9 → **22** |
-| **Frappe → le CANEVAS est à jour** | 283 → **164** | 649 → **179** | 1824 → **207** | 2154 → **236** |
-| Dupliquer — traitement JS | 15.2 → **5.7** | 44.9 → **8.4** | 106.2 → **26.6** | 153.5 → **28.2** |
-| Dupliquer — jusqu'à l'image suivante | 28 → **25.6** | 64.7 → **46.6** | 133.5 → **127.3** | 187.7 → **136.2** |
-| Annuler — traitement JS | 6 → **3.6** | 30.7 → **4** | 92.7 → **10** | 116.4 → **15.5** |
-| Annuler — jusqu'à l'image suivante | 15.6 → **17.1** | 46 → **20** | 160.5 → **33.6** | 149 → **41.4** |
-| Rétablir — traitement JS | 3.6 → **2.2** | 25.4 → **5.2** | 87.4 → **13.6** | 105.5 → **23** |
-| Rétablir — jusqu'à l'image suivante | 17.9 → **17.6** | 42.9 → **33.6** | 119.9 → **74.6** | 146.7 → **128.5** |
-| Supprimer — traitement JS | 3.6 → **2.3** | 23.7 → **5.6** | 78 → **12.5** | 102.8 → **20.6** |
-| Supprimer — jusqu'à l'image suivante | 12.1 → **10.8** | 38.9 → **35.3** | 106.9 → **69.3** | 144.4 → **109.7** |
+| Chargement de l'éditeur | 825 → **1389** | 1212 → **983** | 2619 → **1445** | 2430 → **1696** |
+| Sélection d'un calque (médiane, jusqu'à l'image suivante) | 31.5 → **30.4** | 36.1 → **35.1** | 61.7 → **36.4** | 37.5 → **43** |
+| Frappe dans l'inspecteur (réponse du panneau) | 23.7 → **22.7** | 22.8 → **22.8** | 23.9 → **23.3** | 21.9 → **23.2** |
+| **Frappe → le CANEVAS est à jour** | 283 → **96** | 649 → **167** | 1824 → **218** | 2154 → **221** |
+| Dupliquer — traitement JS | 15.2 → **4.3** | 44.9 → **6.2** | 106.2 → **13.7** | 153.5 → **23.6** |
+| Dupliquer — jusqu'à l'image suivante | 28 → **24.9** | 64.7 → **27.6** | 133.5 → **40.6** | 187.7 → **55.8** |
+| Annuler — traitement JS | 6 → **3.4** | 30.7 → **4.6** | 92.7 → **11.8** | 116.4 → **16** |
+| Annuler — jusqu'à l'image suivante | 15.6 → **17.8** | 46 → **19.4** | 160.5 → **38.6** | 149 → **48.5** |
+| Rétablir — traitement JS | 3.6 → **2.1** | 25.4 → **3.6** | 87.4 → **9.9** | 105.5 → **15.7** |
+| Rétablir — jusqu'à l'image suivante | 17.9 → **16** | 42.9 → **17.7** | 119.9 → **30.7** | 146.7 → **39.7** |
+| Supprimer — traitement JS | 3.6 → **2.1** | 23.7 → **3.6** | 78 → **8.7** | 102.8 → **13.5** |
+| Supprimer — jusqu'à l'image suivante | 12.1 → **12** | 38.9 → **17.6** | 106.9 → **28.2** | 144.4 → **36.5** |
 | Défilement du canevas (images/s) | 62 → 61 | 62 → 61 | 62 → 61 | 62 → 61 |
 
 ## Goulots mesurés (par ordre d'impact) et causes confirmées
@@ -66,9 +66,13 @@ Mesures non réalisées : consommation mémoire fine (seul `performance.memory` 
    appliquée aux 400 lignes**. **Corrections** : signature des calques (identifiants, noms, drapeaux, hiérarchie, repli, filtre) : sans changement, pas de reconstruction
    (une modification de style ne touche plus aucun calque) ; **reconstruction différentielle** : une modification de structure ne crée que les lignes nouvelles ou changées
    (les autres sont réutilisées, leurs écouteurs lisent l'élément par son identifiant au moment du clic) ; marquage incrémental de la sélection ; noms calculés une fois ;
-   `contain: layout style` sur la liste des calques.
-4. **Délai de regroupement du rendu fixe à 150 ms** même pour une action isolée (dupliquer, supprimer, annuler, valeur choisie). **Correction** : 30 ms pour une action
-   isolée, 150 ms conservés pour la saisie continue.
+   `contain: layout style` sur la liste des calques. **Deux défauts trouvés par trace de rendu du navigateur** (catégories `devtools.timeline` + suivi des invalidations,
+   option `--trace` du banc) : (a) les lignes des CONTENEURS étaient recréées à chaque opération (leur libellé « supprimer … et ses N éléments » dépend du nombre de
+   descendants), ce qui déplaçait tous leurs descendants dans le DOM : plus de 4 800 invalidations de mise en page et un recalcul de style de ~13 700 éléments (91 à 420 ms) par
+   opération ; le libellé est maintenant mis à jour en place ; (b) l'ordre des lignes était rétabli en « déplaçant » la ligne suivante devant une ligne supprimée : les
+   lignes disparues sont retirées d'abord. Effet à 400 éléments (par opération) : mise en page 17 → 6 ms, calcul de style 28 → 5 ms.
+4. **Délai de regroupement du rendu fixe à 150 ms** même pour une action isolée (dupliquer, supprimer, annuler, valeur choisie) et pour une petite page. **Correction** : 30 ms
+   pour une action isolée ; pour la saisie, délai proportionnel au coût du dernier rendu (50 ms mini, 150 ms maxi).
 5. *Examiné et mesuré, non retenu comme goulot* : historique par copies JSON complètes (voir « Lots 4, 7 et 8 »), envoi du document complet à chaque rendu et
    chaque enregistrement (50 Ko à 400 éléments : enregistrement ≈ 20–30 ms côté serveur).
 
@@ -100,15 +104,15 @@ n'est pas un problème mesurable aujourd'hui (≈ 50 Ko × 150 = 7 Mo) ; il le d
 
 | Budget initial | Statut (mesuré, machine chargée) |
 |---|---|
-| Réponse visuelle < 50 ms pour les interactions courantes | sélection et frappe : atteint (≈ 23–32 ms, dont ~22 ms de plancher) ; annuler : atteint (≤ 41 ms à 400) ; **rétablir, supprimer et dupliquer : traitement JS 14–28 ms mais 70–136 ms jusqu'à l'image suivante à 300–400 éléments → non atteint** (reste : mise en page et peinture du canevas et du panneau après l'opération, non isolées plus avant) |
+| Réponse visuelle < 50 ms pour les interactions courantes | atteint, machine chargée : frappe (≈ 23 ms), annuler (≈ 48 ms), rétablir (≈ 39 ms), supprimer (≈ 37 ms), dupliquer (≈ 41–56 ms) à 300–400 éléments ; **sélection : 36–48 ms médiane à 300–400 éléments (plancher d'affichage ≈ 22 ms) mais des valeurs extrêmes jusqu'à 100–130 ms** ; dupliquer un conteneur entier est la plus lente |
 | 60 images/s en interaction continue | défilement du canevas et glisser-déposer : 60 images/s (médiane 16,6 ms) à toutes les tailles ; une image lente isolée (63–154 ms) au premier survol pendant un glisser sur 300–400 éléments |
 | Pas de remount injustifié du canevas | `patchCanvas` conservé ; vérifié par les tests de non-régression existants |
 | Enregistrement non bloquant | confirmé (20–30 ms serveur, une sauvegarde à la fois) |
 
 ## Prochaines optimisations prioritaires (non faites)
 
-1. Isoler le coût « jusqu'à l'image suivante » des opérations structurelles (profil de mise en page et de peinture : canevas patché + inspecteur reconstruit) : cible < 50 ms à 400 éléments.
-2. Rendu **par section** : envoyer au serveur seulement la section modifiée (le serveur sait déjà rendre une section) : la latence canevas ne dépendrait plus de la taille de la page.
+1. Latence « frappe → canevas » (≈ 200–250 ms à 300–400 éléments) : se compose du regroupement de la saisie (≤ 150 ms), de la requête (calcul serveur ≈ 65 ms à 400 éléments, le reste est le transport et les intergiciels) et du comparateur de sections du navigateur. Le rendu **par section** ne ferait gagner que ≈ 50 ms au maximum (calcul serveur) : **évalué, non retenu pour l'instant**.
+2. Valeurs extrêmes de la sélection (100–130 ms) : à profiler avec `--trace` quand la machine est calme.
 3. Historique par **commandes / correctifs** : seulement si le plafond de 400 éléments est relevé (7 Mo mesurés aujourd'hui).
 4. Virtualisation de la liste des calques seulement si le plafond de 400 éléments est relevé (aujourd'hui 15 000 nœuds : acceptable).
 
