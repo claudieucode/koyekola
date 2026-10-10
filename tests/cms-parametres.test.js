@@ -192,13 +192,14 @@ describe("lecture : page d'accueil et articles par page", () => {
   test("articles par page : le blog affiche exactement ce nombre, avec la bonne pagination", async () => {
     for (let i = 1; i <= 7; i++) db.prepare("INSERT INTO posts (slug, title, content, content_format, status, published, published_at) VALUES (?, ?, '<p>x</p>', 'html', 'published', 1, datetime('now', ?))").run(`pp-${i}`, `Article pagination ${i}`, `-${i} minutes`);
     await apiPut(boss, "posts_per_page", 3);
-    const cards = (html) => (html.match(/Article pagination \d/g) || []).filter((v, i, a) => a.indexOf(v) === i).length;
+    const cards = (html) => { const l = html.split('id="blog-latest-title"')[1] || ""; return ((l.split("</section>")[0]).match(/Article pagination \d/g) || []).filter((v, i, a) => a.indexOf(v) === i).length; }; // seule la liste « Articles » compte (pas « populaires » ni « à découvrir »)
     const p1 = (await anon.get("/blog")).text;
     assert.ok(cards(p1) <= 4 && cards(p1) >= 3, `page 1 : ${cards(p1)} articles`);
     assert.match(p1, /page=2/);
     const p3 = await anon.get("/blog?page=3");
     assert.equal(p3.status, 200);
-    assert.ok(/Article pagination 7/.test(p3.text) || /Article pagination/.test(p3.text), "la page 3 existe (7 articles, 3 par page)");
+    const listCards = (html) => ((html.split('id="blog-latest-title"')[1] || "").split("</section>")[0].match(/<article class="blog-card"/g) || []).length;
+    assert.ok(listCards(p3.text) >= 1 && listCards(p3.text) <= 3, "la page 3 existe et n'affiche pas plus de 3 articles");
     await apiPut(boss, "posts_per_page", 50);
     assert.doesNotMatch((await anon.get("/blog")).text, /page=2/, "tout tient sur une page");
     await apiPut(boss, "posts_per_page", 10);
