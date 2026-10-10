@@ -321,6 +321,79 @@
   document.querySelectorAll("nav.kw-loop-pages[data-mode]").forEach(bind);
 })();
 
+// Animations Lottie : la bibliothèque (public/js/vendor/lottie_light.min.js, SVG, sans expressions) n'est chargée que lorsqu'une animation approche de l'écran.
+(function () {
+  var stages = document.querySelectorAll("[data-kw-lottie]");
+  if (!stages.length) return;
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var loading = null;
+  function lib() {
+    if (window.lottie) return Promise.resolve(window.lottie);
+    if (loading) return loading;
+    loading = new Promise(function (resolve, reject) {
+      var s = document.createElement("script"); s.src = "/js/vendor/lottie_light.min.js"; s.async = true;
+      s.onload = function () { resolve(window.lottie); }; s.onerror = function () { reject(new Error("lottie")); }; document.head.appendChild(s);
+    });
+    return loading;
+  }
+  function start(box) {
+    if (box.getAttribute("data-kw-ready")) return;
+    box.setAttribute("data-kw-ready", "1");
+    lib().then(function (lottie) {
+      var anim = lottie.loadAnimation({ container: box, renderer: "svg", loop: box.hasAttribute("data-kw-loop"), autoplay: false, path: box.getAttribute("data-kw-lottie"), rendererSettings: { preserveAspectRatio: "xMidYMid meet" } });
+      anim.setSpeed(parseFloat(box.getAttribute("data-kw-speed")) || 1);
+      var trigger = box.getAttribute("data-kw-trigger");
+      box._kwAnim = anim;
+      anim.addEventListener("DOMLoaded", function () {
+        box.setAttribute("data-kw-state", "loaded");
+        if (reduce) { anim.goToAndStop(0, true); return; }
+        if (trigger === "hover") { box.addEventListener("mouseenter", function () { anim.play(); box.setAttribute("data-kw-state", "playing"); }); box.addEventListener("mouseleave", function () { anim.pause(); box.setAttribute("data-kw-state", "paused"); }); anim.goToAndStop(0, true); }
+        else if (trigger === "click") { anim.goToAndStop(0, true); box.style.cursor = "pointer"; box.addEventListener("click", function () { if (anim.isPaused) { anim.play(); box.setAttribute("data-kw-state", "playing"); } else { anim.pause(); box.setAttribute("data-kw-state", "paused"); } }); }
+        else { anim.play(); box.setAttribute("data-kw-state", "playing"); }
+      });
+      anim.addEventListener("data_failed", function () { box.setAttribute("data-kw-state", "error"); });
+    }).catch(function () { box.setAttribute("data-kw-state", "error"); });
+  }
+  Array.prototype.forEach.call(stages, function (box) {
+    var trigger = box.getAttribute("data-kw-trigger");
+    if (trigger === "load" || !("IntersectionObserver" in window)) { start(box); return; }
+    var io = new IntersectionObserver(function (entries) { entries.forEach(function (e) { if (e.isIntersecting) { io.disconnect(); start(box); } }); }, { rootMargin: "200px" });
+    io.observe(box);
+  });
+})();
+
+// Onglets imbriqués (conteneur en mode « onglets ») : un enfant = un onglet, titre = nom de l'enfant. Sans script, toutes les sections restent visibles
+// avec leur titre (voir .kw-ntabs:not(.is-enhanced) dans landing.css). Clavier : flèches, Début, Fin.
+(function () {
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-ntabs]"), function (box, k) {
+    var panels = Array.prototype.filter.call(box.children, function (c) { return c.classList.contains("kw-ntab-panel"); });
+    if (!panels.length || box.classList.contains("is-enhanced")) return;
+    var list = document.createElement("div"); list.className = "kw-ntab-list"; list.setAttribute("role", "tablist");
+    var tabs = panels.map(function (panel, i) {
+      var id = "kw-ntabs-" + k + "-" + i;
+      var b = document.createElement("button"); b.type = "button"; b.className = "kw-ntab"; b.id = id + "-tab"; b.setAttribute("role", "tab");
+      b.setAttribute("aria-controls", id + "-panel"); b.textContent = panel.getAttribute("data-kw-title") || "Onglet " + (i + 1);
+      panel.id = id + "-panel"; panel.setAttribute("role", "tabpanel"); panel.setAttribute("aria-labelledby", b.id);
+      list.appendChild(b); return b;
+    });
+    function show(i, focus) {
+      tabs.forEach(function (t, j) { var on = i === j; t.setAttribute("aria-selected", on ? "true" : "false"); t.tabIndex = on ? 0 : -1; panels[j].hidden = !on; });
+      if (focus) tabs[i].focus();
+    }
+    tabs.forEach(function (t, i) {
+      t.addEventListener("click", function () { show(i); });
+      t.addEventListener("keydown", function (e) {
+        var to = e.key === "ArrowRight" || e.key === "ArrowDown" ? (i + 1) % tabs.length : e.key === "ArrowLeft" || e.key === "ArrowUp" ? (i - 1 + tabs.length) % tabs.length : e.key === "Home" ? 0 : e.key === "End" ? tabs.length - 1 : -1;
+        if (to >= 0) { e.preventDefault(); show(to, true); }
+      });
+    });
+    box.insertBefore(list, box.firstChild);
+    box.classList.add("is-enhanced");
+    var start = parseInt(box.getAttribute("data-kw-tabs-start"), 10) || 1;
+    show(Math.min(Math.max(start, 1), tabs.length) - 1);
+  });
+})();
+
 // Carrousels de résultats : flèches Précédent / Suivant (le glissement et le clavier fonctionnent déjà sans elles)
 (function () {
   document.querySelectorAll("[data-kw-slider]").forEach(function (box) {

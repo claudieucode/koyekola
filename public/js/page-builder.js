@@ -3272,6 +3272,20 @@
     if (["container", "grid", "stack", "group"].indexOf(it.type) >= 0) {
       var dis = !canWrite || lockedDeep(it.id), p = it.props || {};
       if (it.type === "container") {
+        // Mode d'affichage des enfants : ordinaire, onglets (titre = nom de l'enfant) ou carrousel
+        box.appendChild(selectField("Affichage des éléments à l'intérieur", p.mode || "", [["", "Normal (les uns sous les autres)"], ["tabs", "Onglets (un conteneur enfant par onglet)"], ["carousel", "Carrousel (un conteneur enfant par diapositive)"]], function (v) { change(function () { var x = byId(it.id); if (v) { x.props.mode = v; } else { ["mode", "tabsLook", "tabsStart", "dots", "loop", "autoplay", "interval"].forEach(function (k) { delete x.props[k]; }); } }); }, { disabled: dis }));
+        var setNested = function (k) { return function (v) { setProp(it.id, k, v); }; };
+        if (p.mode === "tabs") {
+          box.appendChild(h("p", { class: "pb-hint", text: "Le nom de chaque conteneur enfant (menu ⋮ → Renommer, ou panneau Structure) devient le titre de son onglet ; sans nom : « Onglet 1 », « Onglet 2 »…" }));
+          box.appendChild(selectField("Style des onglets", p.tabsLook || "line", [["line", "Soulignés"], ["pills", "Boutons arrondis"]], setNested("tabsLook"), { disabled: dis }));
+          box.appendChild(numberField("Onglet ouvert au départ", p.tabsStart || 1, { min: 1, max: 12, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setProp(it.id, "tabsStart", n); }, "De 1 à 12."));
+        } else if (p.mode === "carousel") {
+          box.appendChild(h("p", { class: "pb-hint", text: "Chaque conteneur enfant est une diapositive (images, textes, boutons… à l'intérieur). Boutons précédent / suivant et défilement au doigt inclus." }));
+          box.appendChild(checkField("Points de navigation", p.dots !== false, setNested("dots"), { disabled: dis }));
+          box.appendChild(checkField("Reboucler", p.loop === true, setNested("loop"), { disabled: dis }));
+          box.appendChild(checkField("Lecture automatique", p.autoplay === true, setNested("autoplay"), { disabled: dis }));
+          if (p.autoplay) box.appendChild(numberField("Secondes entre deux diapositives", p.interval || 5, { min: 2, max: 20, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setProp(it.id, "interval", n); }, "De 2 à 20."));
+        }
         // Trois modèles de largeur : encadrée (largeur des conteneurs du site, centrée), pleine largeur, personnalisée (largeur max. propre à l'écran affiché)
         var mw = ownValue(it, "maxWidth"); if (mw === undefined) mw = inheritedValue(it, "maxWidth");
         var wmode = p.full ? "full" : p.band && (mw === undefined || mw === "") ? "band" : mw !== undefined && mw !== "" ? "custom" : "boxed";
