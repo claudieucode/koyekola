@@ -314,6 +314,7 @@ module.exports = () => {
         .concat(pages.listPages(ctx).filter((p) => p.status === "published" && p.id !== page.id).slice(0, 50).map((p) => ({ url: `/p/${p.slug}`, label: `Page « ${p.name} »` }))),
       siteUrl: String((site && site.settings && site.settings.seo && site.settings.seo.publicUrl) || process.env.SITE_URL || "").replace(/\/+$/, ""),
       // SEO (palier 11) : droits réels (revérifiés à l'enregistrement) et adresses du service SEO
+      layoutFormats: (({ FORMATS, PROTECTED, PROTECTED_LABELS }) => ({ formats: FORMATS, protected: PROTECTED, labels: PROTECTED_LABELS }))(require("../pages/layoutFormat")),
       seo: { canView: req.mk.can("seo.view"), canEdit: req.mk.can("seo.edit"), url: component ? null : `/marketing/pages/${page.id}/seo/analyse` },
       tags: require("../audience/tags").listTags(ctx).map((t) => t.name),
     };

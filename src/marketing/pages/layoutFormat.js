@@ -46,7 +46,11 @@ function css(layout) {
   if (!guided(layout)) return "";
   const g = layout.gutter, w = layout.maxWidth;
   const width = w > 0 ? `min(calc(100% - ${2 * g}px), ${w}px)` : `calc(100% - ${2 * g}px)`;
-  return `:where(.kw-layout) > .kw-node { width: ${width}; margin-left: auto; margin-right: auto; box-sizing: border-box; }`;
+  // `.lp-main` (colonne de 760 px par défaut ou réglage du site) cède la place au format ; les sections de l'ancien format suivent la même largeur
+  return [
+    "body.lp-body .lp-main { max-width: none; padding-left: 0; padding-right: 0; }",
+    `:where(.kw-layout) > .kw-node, :where(.lp-main) > .lp-section { width: ${width}; margin-left: auto; margin-right: auto; box-sizing: border-box; }`,
+  ].join("\n");
 }
 
 // ---------- Éléments de premier niveau et propriétés protégées ----------

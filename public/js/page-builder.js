@@ -756,6 +756,7 @@
   function setStyles(ids, map, opts) {
     ids = ids || selection;
     if (!ids.length || refuseLocked(ids)) return;
+    if (refuseFormat(ids, Object.keys(map))) return;
     change(function () {
       ids.forEach(function (id) {
         var it = byId(id);
@@ -3412,6 +3413,10 @@
     }
     var it = items[0];
     var multi = items.length > 1;
+    if (formatLocked() && items.every(function (x) { return isTopLevelId(x.id); })) {
+      box.appendChild(h("div", { class: "pb-note", role: "note" }, icon("lock"), h("span", { text: " Format verrouillé : largeur et marges de cet élément protégées. " }),
+        canWrite ? h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { setLayout(Object.assign({}, layoutOf(), { locked: false })); } }, "Déverrouiller") : null));
+    }
     var locked = lockedAny(items);
     var schema = inspectorFor(it);
     var l = locate(it.id);
@@ -5963,6 +5968,68 @@
   });
 
   // ---------- Réglages de la page (titre, description, SEO, couleurs) ----------
+  // ---------- Format de mise en page (conception guidée) : le serveur applique le verrou ; ici, refus immédiat et clair ----------
+  var LF = boot.layoutFormats || { formats: {}, protected: [], labels: {} };
+  function layoutOf() { var l = content.theme && content.theme.layout; return l && l.mode === "guided" ? l : null; }
+  function formatLocked() { var l = layoutOf(); return Boolean(l && l.locked); }
+  function isTopLevelId(id) { var l = locate(id); return Boolean(l && l.parent && l.parent.type === "layout"); }
+  function refuseFormat(ids, keys) {
+    if (!formatLocked() || !keys.some(function (k) { return LF.protected.indexOf(k) >= 0; }) || !ids.some(isTopLevelId)) return false;
+    toast("Format verrouillé : la largeur et les marges des éléments de premier niveau sont protégées. Déverrouillez le format dans l'onglet « Page ».", true);
+    return true;
+  }
+  function formatConflicts() {
+    var out = [];
+    content.sections.forEach(function (s) {
+      if (s.type !== "layout") return;
+      (s.children || []).forEach(function (n) {
+        var sets = Object.keys(n.styles || {}).map(function (k) { return n.styles[k]; }).concat(Object.keys(n.states || {}).map(function (k) { return n.states[k]; }));
+        if (sets.some(function (set) { return LF.protected.some(function (p) { return set && set[p] !== undefined && set[p] !== ""; }); })) out.push(n);
+      });
+    });
+    return out;
+  }
+  function setLayout(next, opts) {
+    opts = opts || {};
+    var conflicts = next && next.locked ? formatConflicts() : [];
+    if (conflicts.length && !opts.clear) {
+      if (!window.confirm(conflicts.length + " élément(s) de premier niveau ont déjà une largeur ou des marges. Pour verrouiller ce format, ces réglages doivent être remis à zéro (annulable avec Ctrl/⌘ + Z). Continuer ?")) { renderPageSettings(); return; }
+      opts.clear = true;
+    }
+    var label = next ? "Format : " + ((LF.formats[next.format] || {}).label || next.format) + (next.locked ? " (verrouillé)" : "") : "Conception libre";
+    change(function () {
+      content.theme = Object.assign({}, content.theme);
+      if (next) content.theme.layout = next; else delete content.theme.layout;
+      if (opts.clear) formatConflicts().forEach(function (n) {
+        Object.keys(n.styles || {}).concat(Object.keys(n.states || {})).forEach(function (k) {
+          var set = (n.styles && n.styles[k]) || (n.states && n.states[k]);
+          LF.protected.forEach(function (p) { if (set) delete set[p]; });
+          cleanStyles(n);
+        });
+      });
+    }, { label: label });
+    // Verrouiller / déverrouiller : enregistrement immédiat (le serveur n'accepte un déverrouillage que seul)
+    saveNow().then(function () { var ae = document.activeElement; if (ae && ae.blur && $("[data-pb-page-settings]").contains(ae)) ae.blur(); renderPageSettings(); renderInspector(); });
+  }
+  function formatSection(box) {
+    box.appendChild(h("p", { class: "pb-sub", text: "Format de mise en page" }));
+    var l = layoutOf(), locked = formatLocked();
+    var fmt = function (patch) { return Object.assign({ mode: "guided", format: "standard", maxWidth: 1200, gutter: 24, locked: false }, l || {}, patch); };
+    var presets = LF.formats;
+    box.appendChild(selectField("Conception", l ? "guided" : "free", [["free", "Libre : je règle tout moi-même"], ["guided", "Guidée par un format"]], function (v) {
+      if (v === "free") setLayout(null); else { var f = presets.standard; setLayout({ mode: "guided", format: "standard", maxWidth: f.maxWidth, gutter: f.gutter, locked: false }); }
+    }, { disabled: !canWrite || locked }));
+    if (!l) { box.appendChild(h("p", { class: "pb-hint", text: "Conteneurs, Flexbox et widgets : aucune contrainte. Le format n'est pas une taille d'écran : l'aperçu ordinateur / tablette / mobile ne change pas." })); return; }
+    box.appendChild(selectField("Format", l.format, Object.keys(presets).map(function (k) { return [k, presets[k].label + (k !== "custom" && presets[k].maxWidth ? " · " + presets[k].maxWidth + " px" : "")]; }), function (v) {
+      var f = presets[v]; setLayout(fmt({ format: v, maxWidth: v === "custom" ? l.maxWidth : f.maxWidth, gutter: v === "custom" ? l.gutter : f.gutter }));
+    }, { disabled: !canWrite || locked }));
+    box.appendChild(h("p", { class: "pb-hint", text: (presets[l.format] || {}).hint || "" }));
+    if (l.format === "custom") {
+      box.appendChild(textField("Largeur maximale du contenu (px, 0 = aucune)", String(l.maxWidth), function (v) { var n = Math.round(Number(v)); if (isFinite(n) && (n === 0 || (n >= 320 && n <= 2400))) setLayout(fmt({ maxWidth: n })); }, { type: "number", disabled: !canWrite || locked }));
+      box.appendChild(textField("Marge latérale minimale (px)", String(l.gutter), function (v) { var n = Math.round(Number(v)); if (isFinite(n) && n >= 0 && n <= 96) setLayout(fmt({ gutter: n })); }, { type: "number", disabled: !canWrite || locked }));
+    } else box.appendChild(h("p", { class: "pb-hint", text: "Largeur fluide plafonnée à " + (l.maxWidth ? l.maxWidth + " px" : "l'écran") + ", marges de " + l.gutter + " px minimum. Les éléments de premier niveau de chaque section suivent ce format ; un réglage manuel l'emporte tant que le format est déverrouillé." }));
+    box.appendChild(checkField("Verrouiller le format", l.locked, function (v) { setLayout(fmt({ locked: v })); }, { disabled: !canWrite, hint: locked ? "Protégé : " + LF.protected.map(function (p) { return LF.labels[p]; }).join(", ").toLowerCase() + " des éléments de premier niveau, le format lui-même. Textes, images, couleurs, widgets et sections restent libres." : "Verrouillé, le format protège la largeur et les marges des éléments de premier niveau, y compris pour l'IA." }));
+  }
   function renderPageSettings() {
     var box = $("[data-pb-page-settings]");
     if (box.contains(document.activeElement)) return; // saisie en cours : on ne redessine pas
@@ -5973,6 +6040,7 @@
     box.appendChild(h("p", { class: "pb-sub", text: "Page" }));
     box.appendChild(textField("Titre de la page (onglet du navigateur)", content.title, setC("title"), { max: 120, disabled: !canWrite }));
     box.appendChild(textField("Description (aperçu de partage)", content.description, setC("description"), { multiline: true, max: 300, disabled: !canWrite }));
+    if (!IS_COMPONENT) formatSection(box);
     // ----- Référencement (palier 11) : mêmes données que la page publique, aperçu et analyse calculés par le moteur SEO du serveur -----
     var seoCfg = boot.seo || {};
     var seoCan = canWrite && seoCfg.canEdit;

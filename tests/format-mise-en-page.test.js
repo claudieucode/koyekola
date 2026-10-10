@@ -49,7 +49,7 @@ describe("format de mise en page", () => {
   });
 
   test("CSS : largeur fluide plafonnée, spécificité nulle (le réglage d'un auteur déverrouillé l'emporte), fluide sans plafond", () => {
-    assert.match(lf.css({ mode: "guided", maxWidth: 1200, gutter: 24 }), /^:where\(\.kw-layout\) > \.kw-node \{ width: min\(calc\(100% - 48px\), 1200px\)/);
+    assert.match(lf.css({ mode: "guided", maxWidth: 1200, gutter: 24 }), /:where\(\.kw-layout\) > \.kw-node, :where\(\.lp-main\) > \.lp-section \{ width: min\(calc\(100% - 48px\), 1200px\)/);
     assert.match(lf.css({ mode: "guided", maxWidth: 0, gutter: 16 }), /width: calc\(100% - 32px\)/);
     const id = guidedPage();
     const view = landing.viewModel(A, pages.getPage(A, id).working && { ...pages.getPage(A, id), ...draft(id) });
