@@ -1354,3 +1354,32 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 .pb-sp-edge.is-bottom { border-bottom: 2px solid var(--editor-text); } .pb-sp-edge.is-left { border-left: 2px solid var(--editor-text); }
 .pb-sp-box .pb-len-unit.pb-sp-unit { flex: none; width: auto; height: 22px; padding: 0 14px 0 3px !important; border: 0 !important; background-color: var(--editor-panel-secondary) !important; border-radius: var(--pb-radius-sm); background-position: right 2px center !important; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--editor-muted); cursor: pointer; }
 .pb-sp-box .pb-len-unit.pb-sp-unit:focus-visible { outline: 2px solid var(--editor-accent); outline-offset: -1px; border-radius: 3px; }
+
+
+/* Sélecteur de mode (Éditeur visuel / Éditeur en blocs) : un seul contrôle segmenté dans la barre du haut. Purement visuel : aucune dimension ne change
+   d'un état à l'autre (graisse constante, anneau de focus en ombre, effet d'appui en transform) ; mêmes jetons que les autres boutons de la barre. */
+.pb-top {
+  --pb-mode-bg: rgba(255, 255, 255, 0.08); --pb-mode-border: rgba(255, 255, 255, 0.12);
+  --pb-mode-text: #cfe3f2; --pb-mode-hover-bg: rgba(255, 255, 255, 0.1); --pb-mode-hover-text: #fff;
+  --pb-mode-active-bg: rgba(125, 211, 252, 0.22); --pb-mode-active-text: #fff; --pb-mode-active-ring: rgba(125, 211, 252, 0.45);
+  --pb-mode-focus: 0 0 0 2px var(--editor-top, #0b2a40), 0 0 0 4px rgba(125, 211, 252, 0.85); --pb-mode-transition: 0.14s ease-out;
+}
+.pb-top .pb-mode-seg { background: var(--pb-mode-bg); border-color: var(--pb-mode-border); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18); }
+.pb-top .pb-mode-seg button {
+  position: relative; color: var(--pb-mode-text); outline: none;
+  transition: background-color var(--pb-mode-transition), color var(--pb-mode-transition), box-shadow var(--pb-mode-transition), transform 0.06s ease-out;
+}
+.pb-top .pb-mode-seg button .icon { opacity: 0.8; transition: opacity var(--pb-mode-transition); }
+.pb-top .pb-mode-seg button:hover:not([aria-checked="true"]) { background: var(--pb-mode-hover-bg); color: var(--pb-mode-hover-text); }
+.pb-top .pb-mode-seg button:hover .icon { opacity: 1; }
+.pb-top .pb-mode-seg button[aria-checked="true"] { background: var(--pb-mode-active-bg); color: var(--pb-mode-active-text); box-shadow: inset 0 0 0 1px var(--pb-mode-active-ring), 0 1px 2px rgba(0, 0, 0, 0.25); }
+.pb-top .pb-mode-seg button[aria-checked="true"] .icon { opacity: 1; }
+.pb-top .pb-mode-seg button:active { transform: scale(0.97); }
+.pb-top .pb-mode-seg button:focus-visible { box-shadow: var(--pb-mode-focus); z-index: 1; }
+.pb-top .pb-mode-seg button[aria-checked="true"]:focus-visible { box-shadow: inset 0 0 0 1px var(--pb-mode-active-ring), var(--pb-mode-focus); }
+@media (prefers-reduced-motion: reduce) { .pb-top .pb-mode-seg button, .pb-top .pb-mode-seg button .icon { transition: none; } .pb-top .pb-mode-seg button:active { transform: none; } }
+
+/* Infobulle : titre, puis raccourci en second plan (une seule infobulle pour toute l'interface) */
+.pb-tip { padding: 6px 10px; border: 1px solid rgba(255, 255, 255, 0.08); animation-duration: 0.14s; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes pb-tip-in { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: none; } }
+.pb-tip-key { display: block; margin-top: 2px; font-size: 11px; font-weight: 500; color: #a9c3d6; letter-spacing: 0.01em; }

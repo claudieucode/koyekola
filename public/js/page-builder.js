@@ -1275,14 +1275,19 @@
   var tipEl = h("div", { class: "pb-tip", role: "tooltip", id: "pb-tip", hidden: true });
   document.body.appendChild(tipEl);
   var tipTimer = null, tipFor = null;
-  function hideTip() { clearTimeout(tipTimer); tipTimer = null; if (tipFor) tipFor.removeAttribute("aria-describedby"); tipFor = null; tipEl.hidden = true; }
+  var tipHidAt = 0; // instant où la dernière infobulle visible s'est fermée : passer d'un bouton voisin à l'autre ne réattend pas le délai complet
+  function hideTip() { clearTimeout(tipTimer); tipTimer = null; if (tipFor) tipFor.removeAttribute("aria-describedby"); tipFor = null; if (!tipEl.hidden) tipHidAt = Date.now(); tipEl.hidden = true; }
   function showTip(el) {
     var text = el.getAttribute("data-tip");
     if (!text) return;
     // Barre étendue : le nom est déjà affiché, l'infobulle n'ajoute que ce qui manque (raccourci, indisponibilité)
     var label = el.querySelector(".pb-tool-label");
     if ((panels.toolsExpanded || panels.toolsDense) && label && el.closest(".pb-tools") && text === label.textContent && label.scrollWidth <= label.clientWidth) return;
-    tipEl.textContent = text;
+    // « Titre (Ctrl/⌘ + … pour …) » : le titre d'abord, le raccourci en second plan (même texte, rien n'est ajouté ni retiré)
+    var kb = /^(.*?)\s*\(([^()]*(?:Ctrl|⌘|Maj|Alt)[^()]*)\)\s*$/.exec(text);
+    tipEl.textContent = "";
+    if (kb && kb[1]) { tipEl.appendChild(h("span", { class: "pb-tip-title", text: kb[1] })); tipEl.appendChild(h("span", { class: "pb-tip-key", text: kb[2] })); }
+    else tipEl.textContent = text;
     tipEl.hidden = false;
     var r = el.getBoundingClientRect(), t = tipEl.getBoundingClientRect();
     var side = el.closest(".pb-tools");
@@ -1297,9 +1302,10 @@
   }
   function armTip(el) {
     if (tipFor === el) return;
+    var warm = Date.now() - tipHidAt < 250 || !tipEl.hidden;
     hideTip();
     tipFor = el;
-    tipTimer = setTimeout(function () { tipFor = null; showTip(el); }, 350);
+    tipTimer = setTimeout(function () { tipFor = null; showTip(el); }, warm ? 40 : 350);
   }
   document.addEventListener("mouseover", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el) armTip(el); else if (tipFor) hideTip(); });
   document.addEventListener("mouseout", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && !el.contains(e.relatedTarget)) hideTip(); });
