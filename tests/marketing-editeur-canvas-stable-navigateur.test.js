@@ -116,4 +116,29 @@ describe("éditeur d'e-mails : stabilité du canevas et de l'inspecteur (navigat
     assert.equal((await canvasState()).cs, b.cs);
     assert.deepEqual(errors, []);
   });
+
+  test("canevas : une modification met le document à jour EN PLACE (même document, aucune image blanche, défilement inchangé)", async () => {
+    await open(12, "button", { width: 1500, height: 850 });
+    await selectRow(await page.evaluate(() => document.getElementById("mk-frame").contentDocument.querySelectorAll("[data-mk-block]").length - 1));
+    await openTab(0);
+    const same = await page.evaluate(() => { window.__doc0 = document.getElementById("mk-frame").contentDocument; return true; });
+    assert.ok(same);
+    const box = await page.locator("#mk-frame").boundingBox();
+    const clip = { x: box.x + 20, y: box.y + 20, width: Math.min(box.width - 40, 500), height: 300 };
+    const sizes = []; let stop = false;
+    const shooter = (async () => { while (!stop) sizes.push((await page.screenshot({ clip, type: "png" })).length); })();
+    const url = page.locator("#mk-props [id$='-url']").first();
+    const scroll0 = await page.evaluate(() => document.getElementById("mk-canvas").scrollTop);
+    for (const v of ["https://a.fr", "https://b.fr", "https://c.fr", "https://d.fr", "https://e.fr", "https://f.fr"]) {
+      await url.fill(v); await url.press("Tab");
+      await until(() => page.evaluate((v) => [...document.getElementById("mk-frame").contentDocument.querySelectorAll("a")].some((a) => a.getAttribute("href") === v), v), `rendu de ${v}`);
+    }
+    await wait(300); stop = true; await shooter;
+    const median = [...sizes].sort((a, b) => a - b)[Math.floor(sizes.length / 2)];
+    assert.ok(sizes.length > 10, "assez de captures");
+    assert.equal(sizes.filter((n) => n < median * 0.6).length, 0, "image blanche pendant une mise à jour");
+    assert.equal(await page.evaluate(() => document.getElementById("mk-frame").contentDocument === window.__doc0), true, "le document n'est pas recréé");
+    assert.equal(await page.evaluate(() => document.getElementById("mk-canvas").scrollTop), scroll0);
+    assert.equal(await page.evaluate(() => !!document.getElementById("mk-frame").contentDocument.querySelector("[data-mk-selected]")), true, "la sélection est conservée");
+  });
 });

@@ -1960,3 +1960,6 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-pt-reset { margin-top: 10px; padding: 4px 0; border: 0; background: none; color: var(--accent-dark); font: inherit; cursor: pointer; }
 .mk-pt-reset:hover { text-decoration: underline; }
 .mk-pt-reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* Aperçu : le cadre n'apparaît qu'une fois le rendu prêt (voir preview.js#setReady) — pas d'état intermédiaire visible */
+.mk-b-preview[data-ready="false"] .mk-pv-device { visibility: hidden; }
