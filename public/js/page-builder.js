@@ -2867,13 +2867,13 @@
     // Unité commune des 4 côtés : elle s'applique aux valeurs déjà saisies (le CSS change vraiment) et sert aux prochaines saisies
     var unitSel = function (kind, label) {
       var first = SIDES.map(function (sd) { return splitLen(ownValue(it, kind + sd)); }).filter(function (p) { return p && p.unit !== "auto"; })[0];
-      var sel = h("select", { class: "pb-len-unit pb-link-unit", "aria-label": label + " : unité des 4 côtés", "data-tip": label + " : unité des 4 côtés", disabled: dis }, ["px", "%", "rem", "em"].map(function (u) { return h("option", { value: u, text: u }); }));
+      var sel = h("select", { class: "pb-len-unit pb-link-unit", "aria-label": label + " : unité des 4 côtés", "data-tip": label + " : unité des 4 côtés (les nombres sont conservés, sans conversion)", disabled: dis }, ["px", "%", "rem", "em"].map(function (u) { return h("option", { value: u, text: u }); }));
       sel.value = first ? first.unit : spUnit[kind];
       sel.addEventListener("change", function () {
         spUnit[kind] = sel.value;
         var map = {};
         SIDES.forEach(function (sd) { var p = splitLen(ownValue(it, kind + sd)); if (p && p.unit !== "auto" && p.num !== "") map[kind + sd] = Number(p.num) === 0 ? "0" : p.num + sel.value; });
-        if (Object.keys(map).length) setStyles(ids, map); else renderInspector();
+        if (Object.keys(map).length) { setStyles(ids, map); toast(label + " : unité " + sel.value + " — les nombres sont conservés (pas de conversion)."); } else renderInspector();
       });
       return sel;
     };
