@@ -2,16 +2,25 @@
 const { createRepository } = require("../db/repository");
 const { compile } = require("./engine");
 const { sendableSql } = require("../compliance/sendable");
-const { checkCtx, cleanText, audit, MarketingError } = require("../audience/shared");
+const { checkCtx, cleanText, audit, resolveSite, MarketingError } = require("../audience/shared");
 
 const MAX_PAGE = 200;
 const MAX_PREVIEW = 50;
 
-function build(ctx, definition, { sendableOnly = false } = {}) {
+// Contact appartenant à un site (site d'origine, ou événement enregistré sur ce site) — même règle que les écrans de contacts du Contact Core
+const belongsToSite = (a, siteId) => ({
+  sql: `(${a}.origin_site_id = ? OR EXISTS (SELECT 1 FROM mk_events e WHERE e.contact_id = ${a}.id AND e.organization_id = ${a}.organization_id AND e.site_id = ?))`,
+  params: [siteId, siteId],
+});
+
+// Un segment d'un SITE ne peut jamais désigner un contact d'un autre site (siteId explicite, sinon le site imposé à la personne connectée)
+function build(ctx, definition, { sendableOnly = false, siteId } = {}) {
   checkCtx(ctx);
   const { where, params } = compile(ctx, definition);
   const sendable = sendableOnly ? sendableSql("c") : null;
-  return { sql: `c.organization_id = ? AND ${where}${sendable ? ` AND ${sendable.sql}` : ""}`, params: [ctx.organizationId, ...params, ...(sendable ? sendable.params : [])] };
+  const sid = Number.isInteger(siteId) ? siteId : Number.isInteger(ctx.siteScope) ? ctx.siteScope : null;
+  const site = sid === null ? null : belongsToSite("c", sid);
+  return { sql: `c.organization_id = ? AND ${where}${sendable ? ` AND ${sendable.sql}` : ""}${site ? ` AND ${site.sql}` : ""}`, params: [ctx.organizationId, ...params, ...(sendable ? sendable.params : []), ...(site ? site.params : [])] };
 }
 
 const validateDefinition = (ctx, definition) => (checkCtx(ctx), compile(ctx, definition), { ok: true });
@@ -21,9 +30,9 @@ const countSegment = (ctx, definition, opts) => {
   return ctx.db.prepare(`SELECT COUNT(*) AS n FROM mk_contacts c WHERE ${sql}`).get(...params).n;
 };
 
-function segmentContacts(ctx, definition, { limit = 50, afterId, sendableOnly } = {}) {
+function segmentContacts(ctx, definition, { limit = 50, afterId, sendableOnly, siteId } = {}) {
   if (!Number.isInteger(limit) || limit < 1 || limit > MAX_PAGE) throw new MarketingError("invalid_field", `Limite invalide (entre 1 et ${MAX_PAGE}).`);
-  const { sql, params } = build(ctx, definition, { sendableOnly });
+  const { sql, params } = build(ctx, definition, { sendableOnly, siteId });
   if (afterId) params.push(Number(afterId));
   const rows = ctx.db.prepare(`SELECT c.* FROM mk_contacts c WHERE ${sql}${afterId ? " AND c.id > ?" : ""} ORDER BY c.id ASC LIMIT ?`).all(...params, limit + 1);
   const more = rows.length > limit;
@@ -43,7 +52,7 @@ function matches(ctx, definition, contactId) {
 }
 
 // --- Segments enregistrés ---
-const table = (ctx) => createRepository(ctx.db, ctx.organizationId).table("mk_segments");
+const table = (ctx) => createRepository(ctx.db, ctx.organizationId, { siteScope: ctx.siteScope }).table("mk_segments");
 const parse = (row) => (row ? { ...row, definition: JSON.parse(row.definition) } : null);
 
 function getSegment(ctx, id) {
@@ -51,14 +60,14 @@ function getSegment(ctx, id) {
   return parse(table(ctx).get(id));
 }
 
-function createSegment(ctx, { name, description = "", definition } = {}) {
+function createSegment(ctx, { name, description = "", definition, siteId } = {}) {
   checkCtx(ctx);
   const cleanName = cleanText(name, { max: 100, field: "name" });
   if (!cleanName) throw new MarketingError("invalid_field", "Le nom du segment est obligatoire.");
   compile(ctx, definition);
   const repo = table(ctx);
   if (repo.count({ name: cleanName }) > 0) throw new MarketingError("duplicate", "Un segment porte déjà ce nom.");
-  const row = repo.insert({ name: cleanName, description: cleanText(description, { max: 500, field: "description" }), definition: JSON.stringify(definition) });
+  const row = repo.insert({ name: cleanName, description: cleanText(description, { max: 500, field: "description" }), definition: JSON.stringify(definition), site_id: resolveSite(ctx, siteId) });
   audit(ctx, "segment.created", "segment", row.id, { name: cleanName });
   return parse(row);
 }
@@ -91,12 +100,12 @@ function deleteSegment(ctx, id) {
   return removed;
 }
 
-const listSegments = (ctx) => (checkCtx(ctx), table(ctx).list({ limit: 500, orderBy: "name" }).rows.map(parse));
+const listSegments = (ctx) => (checkCtx(ctx), table(ctx).list({ limit: 500, orderBy: "name", where: ctx.siteFilter === "principal" ? { site_id: null } : Number.isInteger(ctx.siteFilter) ? { site_id: ctx.siteFilter } : undefined }).rows.map(parse));
 
 function evaluateSegment(ctx, id, opts) {
   const segment = getSegment(ctx, id);
   if (!segment) throw new MarketingError("not_found", "Segment introuvable.");
-  return segmentContacts(ctx, segment.definition, opts);
+  return segmentContacts(ctx, segment.definition, { ...opts, siteId: segment.site_id ?? undefined });
 }
 
 // Condition SQL (alias c) d'un segment : pour les usages en masse (audience d'une campagne)
@@ -119,7 +128,7 @@ function duplicateSegment(ctx, id) {
   };
   let n = 1;
   while (taken.has(build(n).toLowerCase())) n++;
-  return createSegment(ctx, { name: build(n), description: source.description, definition: source.definition });
+  return createSegment(ctx, { name: build(n), description: source.description, definition: source.definition, siteId: source.site_id });
 }
 
 // Liste enrichie pour l'écran « Segments » : effectif, joignables, part de l'audience, usages. Un segment cassé est signalé, pas fatal.
@@ -128,10 +137,10 @@ function segmentOverview(ctx) {
   const total = ctx.db.prepare("SELECT COUNT(*) n FROM mk_contacts WHERE organization_id = ?").get(ctx.organizationId).n;
   const used = Object.fromEntries(ctx.db.prepare("SELECT target_id, COUNT(*) n FROM mk_campaigns WHERE organization_id = ? AND kind = 'campaign' AND target_type = 'segment' GROUP BY target_id").all(ctx.organizationId).map((r) => [r.target_id, r.n]));
   return listSegments(ctx).map((s) => {
-    const base = { id: s.id, name: s.name, description: s.description, updated_at: s.updated_at, usedBy: used[s.id] ?? 0 };
+    const base = { id: s.id, site_id: s.site_id, name: s.name, description: s.description, updated_at: s.updated_at, usedBy: used[s.id] ?? 0 };
     try {
-      const count = countSegment(ctx, s.definition);
-      return { ...base, count, sendable: countSegment(ctx, s.definition, { sendableOnly: true }), sharePercent: total > 0 ? Math.round((count / total) * 100) : 0, broken: null };
+      const count = countSegment(ctx, s.definition, { siteId: s.site_id ?? undefined });
+      return { ...base, site_id: s.site_id, count, sendable: countSegment(ctx, s.definition, { sendableOnly: true, siteId: s.site_id ?? undefined }), sharePercent: total > 0 ? Math.round((count / total) * 100) : 0, broken: null };
     } catch (error) {
       return { ...base, count: null, sendable: null, sharePercent: 0, broken: error.message };
     }

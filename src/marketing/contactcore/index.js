@@ -110,7 +110,8 @@ function identify(ctx, input = {}, { failIfExists = false } = {}) {
     // Les événements déjà reçus pour cette adresse (avant que la fiche n'existe) rejoignent la fiche — le journal lui-même n'est pas réécrit
     const attached = ctx.db.prepare("UPDATE mk_events SET contact_id = ? WHERE organization_id = ? AND contact_id IS NULL AND email = ?").run(contact.id, ctx.organizationId, check.email).changes;
     if (input.visitorId) visitors.linkVisitor(ctx.db, ctx.organizationId, String(input.visitorId), contact.id);
-    return { contact: contacts.getContact(ctx, contact.id), created, attachedEvents: attached };
+    // Lecture directe (le dépôt revérifie le schéma à chaque appel : trop coûteux pour un import de milliers de lignes)
+    return { contact: ctx.db.prepare("SELECT * FROM mk_contacts WHERE id = ? AND organization_id = ?").get(contact.id, ctx.organizationId), created, attachedEvents: attached };
   });
 }
 

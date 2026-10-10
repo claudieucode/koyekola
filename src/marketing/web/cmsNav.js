@@ -104,6 +104,7 @@ const SECTIONS = [
       leaf("parametres/seo", "SEO", `${BASE}/parametres/seo`, { permission: "settings.read" }),
       leaf("parametres/confidentialite", "Confidentialité", `${BASE}/parametres/confidentialite`, { permission: "settings.read" }),
       leaf("parametres/indexation", "Indexation", `${BASE}/parametres/indexation`, { permission: "settings.read" }),
+      leaf("parametres/emailing", "Emailing", `${BASE}/parametres/emailing`, { permission: "settings.read" }),
       leaf("parametres/avance", "Avancé", `${BASE}/parametres/avance`, { permission: "settings.read" }),
     ],
   },

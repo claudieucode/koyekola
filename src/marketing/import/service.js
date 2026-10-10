@@ -145,8 +145,9 @@ function normalizeOptions(ctx, options = {}) {
   const out = { updateExisting: options.updateExisting ?? "fill", listId: null, tag: "", consent: null };
   if (!MODES.includes(out.updateExisting)) throw new MarketingError("invalid_field", "Mode de mise à jour inconnu (fill, skip, overwrite).");
   if (options.listId !== undefined && options.listId !== null) {
-    requireList(ctx, options.listId);
+    const target = requireList(ctx, options.listId);
     out.listId = options.listId;
+    out.siteId = target.site_id ?? undefined; // une audience de site : les contacts importés ont ce site pour origine
   }
   if (options.tag) out.tag = cleanText(options.tag, { max: 64, field: "tag" });
   if (options.consent?.declared) {
@@ -245,14 +246,15 @@ function processRows(ctx, imp, parsed, from, to, { mapping, options, dryRun }) {
       transaction(ctx.db, () => {
         let contactId;
         if (outcome === "create") {
-          contactId = upsertContact(rowCtx, { email: check.email, ...cleanFields, source: "import", properties }, { failIfExists: true }).contact.id;
+          // Contact Core (palier 16) : toute création passe par identify (adresse et téléphone normalisés, cycle de vie, origine « import »)
+          contactId = require("../contactcore").identify(rowCtx, { email: check.email, ...cleanFields, source: "import", sourceDetail: options.listId ? `liste:${options.listId}` : "fichier", properties, siteId: options.siteId }, { failIfExists: true }).contact.id;
         } else {
           contactId = existing.id;
           if (outcome === "update") {
             if (options.updateExisting === "overwrite") {
               const patch = Object.fromEntries(Object.entries(cleanFields).filter(([, v]) => v !== ""));
               updateContact(rowCtx, contactId, { ...patch, properties: hasProps ? properties : undefined });
-            } else upsertContact(rowCtx, { email: check.email, ...cleanFields, properties }, {});
+            } else require("../contactcore").identify(rowCtx, { email: check.email, ...cleanFields, properties }, {});
           }
         }
         for (const tag of tags) tagContact(rowCtx, contactId, tag);

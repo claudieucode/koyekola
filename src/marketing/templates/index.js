@@ -2,7 +2,7 @@
 const { createRepository } = require("../db/repository");
 const { transaction } = require("../db/tx");
 const { getContact } = require("../audience/contacts");
-const { checkCtx, cleanText, audit, MarketingError } = require("../audience/shared");
+const { checkCtx, cleanText, audit, resolveSite, siteSql, MarketingError } = require("../audience/shared");
 const { compileTemplate, renderEmail } = require("./blocks");
 const { lintEmail } = require("./lint");
 const context = require("./context");
@@ -12,7 +12,7 @@ const { CATEGORIES, isCategory } = require("./categories");
 const KEEP_VERSIONS = 20;
 const CONTENT_KEYS = ["name", "kind", "category", "subject", "preheader", "theme", "footer", "blocks"];
 
-const table = (ctx) => createRepository(ctx.db, ctx.organizationId).table("mk_templates");
+const table = (ctx) => createRepository(ctx.db, ctx.organizationId, { siteScope: ctx.siteScope }).table("mk_templates");
 const parse = (row) => (row ? { ...row, theme: JSON.parse(row.theme), footer: JSON.parse(row.footer), blocks: JSON.parse(row.blocks) } : null);
 const content = (t) => Object.fromEntries(CONTENT_KEYS.map((k) => [k, t[k]]));
 
@@ -58,7 +58,7 @@ function createTemplate(ctx, input = {}) {
   const category = cleanCategory(input.category);
   const repo = table(ctx);
   if (repo.count({ name }) > 0) throw new MarketingError("duplicate", "Un modèle porte déjà ce nom.");
-  const row = repo.insert({ name, ...fields(normalized, category), created_by: ctx.userId ?? null, updated_by: ctx.userId ?? null });
+  const row = repo.insert({ name, ...fields(normalized, category), site_id: resolveSite(ctx, input.siteId), created_by: ctx.userId ?? null, updated_by: ctx.userId ?? null });
   audit(ctx, "template.created", "template", row.id, { kind: normalized.kind, blocks: normalized.blocks.length });
   return parse(row);
 }
@@ -67,9 +67,10 @@ const getTemplate = (ctx, id) => (checkCtx(ctx), parse(Number.isInteger(id) ? ta
 
 function listTemplates(ctx) {
   checkCtx(ctx);
+  const site = siteSql(ctx, "mk_templates");
   return ctx.db
-    .prepare("SELECT id, name, kind, category, subject, blocks, version, updated_at, created_at FROM mk_templates WHERE organization_id = ? ORDER BY updated_at DESC, id DESC")
-    .all(ctx.organizationId)
+    .prepare(`SELECT id, name, site_id, kind, category, subject, blocks, version, updated_at, created_at FROM mk_templates WHERE organization_id = ? AND ${site.sql} ORDER BY updated_at DESC, id DESC`)
+    .all(ctx.organizationId, ...site.params)
     .map(({ blocks, ...rest }) => ({ ...rest, blockCount: JSON.parse(blocks).length }));
 }
 
@@ -84,8 +85,9 @@ const escapeLike = (text) => text.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 function searchTemplates(ctx, { q, kind, category } = {}, { sort, dir } = {}) {
   checkCtx(ctx);
-  const where = ["t.organization_id = ?"];
-  const params = [ctx.organizationId];
+  const site = siteSql(ctx, "t");
+  const where = ["t.organization_id = ?", site.sql];
+  const params = [ctx.organizationId, ...site.params];
   if (typeof q === "string" && q.trim()) {
     const like = `%${escapeLike(q.trim().slice(0, 100))}%`;
     where.push("(t.name LIKE ? ESCAPE '\\' OR t.subject LIKE ? ESCAPE '\\')");
@@ -98,7 +100,7 @@ function searchTemplates(ctx, { q, kind, category } = {}, { sort, dir } = {}) {
   const direction = dir === "asc" || dir === "desc" ? dir : SORTS[key].defaultDir;
   return ctx.db
     .prepare(
-      `SELECT t.id, t.name, t.kind, t.category, t.subject, t.blocks, t.version, t.updated_at, t.created_at,
+      `SELECT t.id, t.name, t.site_id, t.kind, t.category, t.subject, t.blocks, t.version, t.updated_at, t.created_at,
               (SELECT COUNT(*) FROM mk_campaigns c WHERE c.template_id = t.id AND c.organization_id = t.organization_id AND c.kind = 'campaign') AS usedBy
        FROM mk_templates t WHERE ${where.join(" AND ")} ORDER BY ${SORTS[key][direction]} LIMIT 500`
     )
@@ -109,7 +111,8 @@ function searchTemplates(ctx, { q, kind, category } = {}, { sort, dir } = {}) {
 // Effectifs des onglets : all, none (sans catégorie) et chaque catégorie qui a au moins un modèle
 function templateCategoryCounts(ctx) {
   checkCtx(ctx);
-  const rows = ctx.db.prepare("SELECT category, COUNT(*) n FROM mk_templates WHERE organization_id = ? GROUP BY category").all(ctx.organizationId);
+  const site = siteSql(ctx, "mk_templates");
+  const rows = ctx.db.prepare(`SELECT category, COUNT(*) n FROM mk_templates WHERE organization_id = ? AND ${site.sql} GROUP BY category`).all(ctx.organizationId, ...site.params);
   const counts = { all: 0, none: 0 };
   for (const r of rows) {
     counts.all += r.n;
@@ -167,7 +170,7 @@ function duplicateTemplate(ctx, id) {
   const repo = table(ctx);
   let name = cleanName(`Copie de ${source.name}`.slice(0, 100));
   for (let n = 2; repo.count({ name }) > 0 && n < 100; n++) name = `${`Copie de ${source.name}`.slice(0, 90)} (${n})`;
-  return createTemplate(ctx, { ...content(source), name });
+  return createTemplate(ctx, { ...content(source), name, siteId: source.site_id });
 }
 
 function deleteTemplate(ctx, id) {

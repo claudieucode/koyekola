@@ -1,23 +1,23 @@
 // Listes : regroupements de contacts. Appartenir à une liste ne donne AUCUN consentement.
 const { createRepository } = require("../db/repository");
 const { transaction } = require("../db/tx");
-const { checkCtx, cleanText, audit, emit, MarketingError } = require("./shared");
+const { checkCtx, cleanText, audit, emit, resolveSite, siteSql, MarketingError } = require("./shared");
 const { sendableSql } = require("../compliance/sendable");
 
 const MAX_BATCH = 5000;
 
-function createList(ctx, { name, description = "" } = {}) {
+function createList(ctx, { name, description = "", siteId } = {}) {
   checkCtx(ctx);
   const cleanName = cleanText(name, { max: 100, field: "name" });
   if (!cleanName) throw new MarketingError("invalid_field", "Le nom de la liste est obligatoire.");
-  const repo = createRepository(ctx.db, ctx.organizationId).table("mk_lists");
+  const repo = createRepository(ctx.db, ctx.organizationId, { siteScope: ctx.siteScope }).table("mk_lists");
   if (repo.count({ name: cleanName }) > 0) throw new MarketingError("duplicate", "Une liste porte déjà ce nom.");
-  const list = repo.insert({ name: cleanName, description: cleanText(description, { max: 500, field: "description" }) });
+  const list = repo.insert({ name: cleanName, description: cleanText(description, { max: 500, field: "description" }), site_id: resolveSite(ctx, siteId) });
   audit(ctx, "list.created", "list", list.id, { name: cleanName });
   return list;
 }
 
-const getList = (ctx, id) => (checkCtx(ctx), createRepository(ctx.db, ctx.organizationId).table("mk_lists").get(id));
+const getList = (ctx, id) => (checkCtx(ctx), createRepository(ctx.db, ctx.organizationId, { siteScope: ctx.siteScope }).table("mk_lists").get(id));
 
 function requireList(ctx, id) {
   const list = getList(ctx, id);
@@ -27,12 +27,13 @@ function requireList(ctx, id) {
 
 function listLists(ctx) {
   checkCtx(ctx);
+  const site = siteSql(ctx, "l");
   return ctx.db
     .prepare(
       `SELECT l.*, (SELECT COUNT(*) FROM mk_list_members m WHERE m.list_id = l.id AND m.organization_id = l.organization_id) AS member_count
-       FROM mk_lists l WHERE l.organization_id = ? ORDER BY l.name COLLATE NOCASE`
+       FROM mk_lists l WHERE l.organization_id = ? AND ${site.sql} ORDER BY l.name COLLATE NOCASE`
     )
-    .all(ctx.organizationId);
+    .all(ctx.organizationId, ...site.params);
 }
 
 // Colonnes de tri autorisées pour la page « Listes » (clé de l'URL → champ réel de la ligne)
@@ -63,7 +64,7 @@ function listListsWithStats(ctx, { q, sort, dir } = {}) {
 
 function deleteList(ctx, id) {
   checkCtx(ctx);
-  const removed = createRepository(ctx.db, ctx.organizationId).table("mk_lists").remove(id);
+  const removed = createRepository(ctx.db, ctx.organizationId, { siteScope: ctx.siteScope }).table("mk_lists").remove(id);
   if (removed) audit(ctx, "list.deleted", "list", id, {});
   return removed;
 }
