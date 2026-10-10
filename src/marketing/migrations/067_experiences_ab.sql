@@ -11,7 +11,7 @@ ALTER TABLE mk_page_tests ADD COLUMN min_views INTEGER CHECK (min_views IS NULL 
 ALTER TABLE mk_page_tests ADD COLUMN archived_at TEXT;
 ALTER TABLE mk_page_tests ADD COLUMN ended_reason TEXT NOT NULL DEFAULT '';
 UPDATE mk_page_tests SET site_id = (SELECT p.site_id FROM mk_landing_pages p WHERE p.id = mk_page_tests.page_id);
-CREATE INDEX idx_mk_page_tests_site ON mk_page_tests(organization_id, site_id);
+CREATE INDEX idx_mk_page_tests_site ON mk_page_tests(site_id, organization_id);
 
 -- Un visiteur qui a accepté le suivi garde SA version pendant tout le test (identifiant du cookie kw_vid) ;
 -- sans accord, l'empreinte anonyme du jour reste la seule clé (consent = 0).
