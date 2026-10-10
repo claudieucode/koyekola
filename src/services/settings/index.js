@@ -150,6 +150,8 @@ def({ key: "search_visibility", group: "indexation", label: "Visibilité pour le
 // ---------- Validation (jamais de confiance envers le navigateur) ----------
 const EMAIL = /^[^\s@<>"',;:\\()[\]]{1,64}@[A-Za-z0-9][A-Za-z0-9.-]{0,251}\.[A-Za-z]{2,}$/;
 // --- Tunnels (palier 19) : délais d'abandon (lus par la détection des abandons, funnels/abandon.js) ---
+def({ key: "analytics_retention_days", group: "privacy", label: "Conservation des visites suivies (jours)", type: "integer", min: 30, max: 1825, scopes: ["main"],
+  help: "Durée de conservation des événements de visite (pages vues, clics…) des visiteurs ayant accepté la mesure. Au-delà, ils sont supprimés chaque jour. Par défaut 395 jours (13 mois).", ...mainKv("analytics_retention_days", 395) });
 def({ key: "funnel_abandon_hours", group: "tunnels", label: "Abandon d'un tunnel après (heures sans activité)", type: "integer", min: 1, max: 720, scopes: ["main"],
   help: "Un contact qui a atteint une étape d'un tunnel, sans le terminer ni revenir pendant ce délai, produit « funnel.abandoned ». Par défaut 24 h.", ...mainKv("funnel_abandon_hours", 24) });
 def({ key: "checkout_abandon_hours", group: "tunnels", label: "Abandon de commande après (heures)", type: "integer", min: 1, max: 168, scopes: ["main"],

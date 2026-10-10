@@ -206,12 +206,24 @@ function startBridge(db, organizationId, { now = Date.now } = {}) {
   return enqueue(db, { organizationId, type: "bridge.sync", payload: { organizationId }, runAt: at, priority: 6, maxAttempts: 3, idempotencyKey: `bridge.sync:${organizationId}:${bucket(at)}`, now: at });
 }
 
+// Conservation des visites suivies (palier 21) : le 13e mois était annoncé mais jamais appliqué. Une fois par jour au plus, durée réglable (Confidentialité).
+function purgeVisits(db, organizationId, nowMs) {
+  const key = "internal.visits_purged_at";
+  const last = db.prepare("SELECT value FROM mk_settings WHERE organization_id = ? AND key = ?").get(organizationId, key);
+  if (last && nowMs - Number(last.value) < 86400000) return null;
+  db.prepare("INSERT INTO mk_settings (organization_id, key, value) VALUES (?, ?, ?) ON CONFLICT (organization_id, key) DO UPDATE SET value = excluded.value").run(organizationId, key, String(nowMs));
+  const row = db.prepare("SELECT value FROM mk_settings WHERE organization_id = ? AND key = 'cms.analytics_retention_days'").get(organizationId);
+  const days = Number(row && row.value);
+  return require("../visitors").purge(db, nowMs, Number.isInteger(days) ? days : null);
+}
+
 function jobHandlers({ db, bus, now = Date.now, log = console }) {
   return {
     "bridge.sync": async ({ organizationId }) => {
       try {
         syncLmsEvents({ db, organizationId, userId: null, bus, log }, { limit: 200 });
         syncPaymentFailures({ db, organizationId, userId: null, bus, log });
+        purgeVisits(db, organizationId, now());
         // Palier 19 : détection des abandons (tunnel, commande) toutes les 5 minutes au plus, par la MÊME tâche récurrente (aucune seconde planification)
         const nowMs = now();
         const last = db.prepare("SELECT value FROM mk_settings WHERE organization_id = ? AND key = 'internal.funnel_sweep_at'").get(organizationId);
@@ -228,4 +240,4 @@ function jobHandlers({ db, bus, now = Date.now, log = console }) {
   };
 }
 
-module.exports = { SOURCES, syncPaymentFailures, syncLmsEvents, startBridge, jobHandlers, contactOf };
+module.exports = { purgeVisits, SOURCES, syncPaymentFailures, syncLmsEvents, startBridge, jobHandlers, contactOf };

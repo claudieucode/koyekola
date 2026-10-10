@@ -63,7 +63,8 @@ const ITEMS = [
   // Tunnels : suites d'étapes faites des pages du même moteur (même éditeur que Site Web) et des formations du catalogue
   live("tunnels", "funnels", "Tunnels", "/marketing/tunnels", "filter", "funnels.read", { label: "Créer un tunnel", href: "/marketing/tunnels#nouveau", permission: "funnels.write" }),
 
-  live("analytics", "analytics", "Analytics", "/marketing/analytics", "activity", "analytics.read"),
+  live("analytics", "analytics-global", "Tableau de bord", "/marketing/analytics/global", "barChart", "analytics.read"),
+  live("analytics", "analytics", "Envois e-mail", "/marketing/analytics", "activity", "analytics.read"),
   live("analytics", "revenue", "Revenus", "/marketing/revenus", "coin", "analytics.read"),
   live("analytics", "compare", "Rapports comparatifs", "/marketing/analytics/comparer", "barChart", "analytics.read"),
 

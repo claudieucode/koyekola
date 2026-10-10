@@ -4,6 +4,8 @@
 const express = require("express");
 const { getAnalyticsOverview, PERIODS } = require("../analytics");
 const compare = require("../analytics/compare");
+const engine = require("../analytics/engine");
+const { MarketingError } = require("../errors");
 const audience = require("../audience");
 const segments = require("../segments");
 const { attempt, need } = require("./kit");
@@ -21,6 +23,50 @@ module.exports = ({ db }) => {
     const overview = getAnalyticsOverview(req.mk.ctx, { days });
     res.render("marketing/analytics", { title: "Analytics", active: "analytics", overview });
   });
+
+  // ---------- Tableau de bord central (palier 21) ----------
+  const sitesOf = (ctx) => db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? ORDER BY name COLLATE NOCASE").all(ctx.organizationId).filter((x) => !Number.isInteger(ctx.siteScope) || x.id === ctx.siteScope);
+  const dashParams = (req) => ({ range: req.query.plage, from: req.query.du, to: req.query.au, source: req.query.source, device: req.query.appareil, model: req.query.modele });
+  router.get("/analytics/global", need("analytics.read"), (req, res, next) => {
+    try {
+      const d = engine.dashboard(req.mk.ctx, dashParams(req));
+      res.render("marketing/analytics-global", { title: "Tableau de bord Analytics", active: "analytics-global", d, sites: sitesOf(req.mk.ctx), canDefine: req.mk.can("automations.write"), query: req.query, flash: req.query.ok ? String(req.query.ok).slice(0, 120) : "" });
+    } catch (error) {
+      if (error instanceof MarketingError) return res.status(400).render("error", { message: error.message });
+      next(error);
+    }
+  });
+  // Export CSV d'un tableau (mêmes filtres, même portée de site, mêmes droits) — le système d'export des rapports existant (CSV), aucun autre
+  const csvCell = (v) => { let t = v === null || v === undefined ? "" : String(v); if (/^[=+\-@\t\r]/.test(t)) t = `'${t}`; return /[",\n;]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+  router.get("/analytics/global/export", need("analytics.read"), (req, res, next) => {
+    try {
+      const d = engine.dashboard(req.mk.ctx, dashParams(req));
+      const S = d.sections, section = String(req.query.section || "");
+      const tables = {
+        pages: [["Page", "Type", "Pages vues", "Visiteurs"], (S.traffic.topPages || []).map((r) => [r.path, r.kind, r.pageViews, r.visitors])],
+        sources: [["Source", "Campagne", "Sessions"], (S.traffic.sources || []).map((r) => [r.label, r.campaign, r.sessions])],
+        produits: [["Formation", "Ventes", "Revenu (centimes)"], ((S.commerce && S.commerce.products) || []).map((r) => [r.title, r.sold, r.cents])],
+        tunnels: [["Tunnel", "Entrées", "Terminés", "Abandons", "Conversion %", "Achats", "Revenu (centimes)"], ((S.funnels && S.funnels.rows) || []).map((r) => [r.name, r.entered, r.completed, r.abandoned, r.conversion === null ? "" : r.conversion, r.purchases, r.revenueCents])],
+        conversions: [["Conversion", "Événement", "Filtre", "Événements", "Contacts"], ((S.conversions && S.conversions.rows) || []).map((r) => [r.label, r.event, r.filter, r.events, r.contacts])],
+        attribution: [["Source", "Campagne", "Commandes", "Revenu (centimes)"], ((S.attribution && S.attribution.rows) || []).map((r) => [r.label, r.campaign, r.orders, r.revenueCents])],
+      };
+      if (!tables[section]) return res.status(404).render("error", { message: "Tableau inconnu." });
+      const [head, rows] = tables[section];
+      res.set({ "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="analytics-${section}-${d.period.fromYmd}_${d.period.toYmd}.csv"`, "Cache-Control": "no-store" });
+      res.send(`\ufeff${[head, ...rows].map((r) => r.map(csvCell).join(";")).join("\r\n")}\r\n`);
+    } catch (error) {
+      if (error instanceof MarketingError) return res.status(400).render("error", { message: error.message });
+      next(error);
+    }
+  });
+  // Conversions personnalisées : un événement déjà émis + un filtre simple (réservé à qui crée des scénarios, mêmes événements)
+  router.post("/analytics/conversions", need("automations.write"), (req, res, next) =>
+    attempt(req, res, next, "/marketing/analytics/global", () => {
+      engine.createConversion(req.mk.ctx, { name: req.body.nom, event: req.body.evenement, filterKey: req.body.cle, filterValue: req.body.valeur, siteId: req.body.site });
+      return "Conversion ajoutée : elle est comptée à partir des événements déjà enregistrés.";
+    }));
+  router.post("/analytics/conversions/:id/supprimer", need("automations.write"), (req, res, next) =>
+    attempt(req, res, next, "/marketing/analytics/global", () => { if (!engine.deleteConversion(req.mk.ctx, req.params.id)) throw new MarketingError("not_found", "Conversion introuvable."); return "Conversion supprimée."; }));
 
   // ---------- Rapports comparatifs ----------
   const filtersOf = (req) => {

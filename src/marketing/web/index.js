@@ -36,6 +36,8 @@ function createMarketingRouters({ db }) {
       const r = db.prepare(`SELECT site_id FROM ${tbl} WHERE id = ?`).get(Number(m[2]));
       return r ? { siteId: r.site_id } : { siteId: null, missing: true };
     }
+    // Analytics central (palier 21) : le tableau de bord d'UN site (?site=) s'ouvre aux personnes qui n'ont accès qu'à ce site
+    if (req.method === "GET" && /^\/analytics\/global(?:\/export)?$/.test(p) && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
     // Diagnostic d'un événement (palier 19) : le site est celui de l'événement
     m = /^\/evenements\/(\d{1,12})$/.exec(p);
     if (m) {
