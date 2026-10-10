@@ -243,6 +243,12 @@ module.exports = () => {
     const site = src === "marketing" ? [] : siteImages(req.mk.ctx.db, { q, limit: 100 });
     res.set("Cache-Control", "no-store").json({ items: mk.concat(site) });
   });
+  // Où une image est utilisée (pages, composants, modèles, articles, sites) : la même détection que le refus de suppression
+  router.get("/site-web/medias/:id(\\d+)/usage.json", need("forms.read"), (req, res) => {
+    const m = media.getMedia(req.mk.ctx, Number(req.params.id));
+    if (!m) return res.status(404).json({ error: { code: "not_found", message: "Fichier introuvable." } });
+    res.set("Cache-Control", "no-store").json({ items: media.mediaUsage(req.mk.ctx, m).map((u) => ({ kind: u.kind, name: u.name, href: media.usageHref(u) })) });
+  });
   router.post("/site-web/medias", need("forms.write"), (req, res, next) => {
     mediaUpload.single("file")(req, res, (uploadError) => {
       if (uploadError) return res.status(422).json({ error: { code: "invalid_field", message: uploadError.code === "LIMIT_FILE_SIZE" ? `Image trop lourde : ${media.MAX_IMAGE / 1048576} Mo au plus.` : "Envoi du fichier impossible." } });

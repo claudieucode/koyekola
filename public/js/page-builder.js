@@ -769,6 +769,7 @@
     if (!s) return "";
     if (/^-?\d{1,4}(\.\d{1,3})?$/.test(s)) s = s === "0" ? "0" : s + "px";
     if (s === "auto") return ["width", "height", "flexBasis", "marginTop", "marginRight", "marginBottom", "marginLeft"].indexOf(key) >= 0 ? s : null;
+    if (s === "fit-content" || s === "min-content" || s === "max-content") return ["width", "height", "minWidth", "maxWidth", "minHeight", "maxHeight"].indexOf(key) >= 0 ? s : null;
     if (s === "0" || LEN.test(s)) {
       if (/^-/.test(s) && !SIGNED_LEN.test(key)) return null;
       return s;
@@ -2142,7 +2143,7 @@
   var BOX_LAYOUT = ["display", "flexDirection", "flexWrap", "justifyContent", "alignItems", "alignContent", "gap", "rowGap", "columnGap"];
   var SIZE_W = ["width", "minWidth", "maxWidth"];
   var BOX = { layout: BOX_LAYOUT, size: null, spacing: true, color: null, background: true, border: null, effects: null };
-  var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: ["boxShadow", "opacity", "transitionDuration", "backdropBlur"] };
+  var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: ["boxShadow", "opacity", "transitionDuration", "transitionEasing", "backdropBlur"] };
   // Ordre des groupes selon la nature de l'élément (le premier est ouvert par défaut)
   var TEXT_ORDER = ["typography", "spacing", "size", "layout", "background", "border", "effects"];
   var INSPECTORS = {
@@ -2178,7 +2179,7 @@
     account: { kind: "Compte du visiteur", groups: TEXTUAL, order: TEXT_ORDER, states: true },
     dyntext: { kind: "Texte dynamique", groups: TEXTUAL, order: TEXT_ORDER },
     alert: { kind: "Alerte", groups: TEXTUAL, order: TEXT_ORDER },
-    counter: { kind: "Compteur", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, effects: ["opacity", "transitionDuration"] }, order: ["typography", "spacing", "size", "layout", "effects"] },
+    counter: { kind: "Compteur", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, effects: ["opacity", "transitionDuration", "transitionEasing"] }, order: ["typography", "spacing", "size", "layout", "effects"] },
     testimonial: { kind: "Témoignage", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: null }, order: ["typography", "background", "border", "effects", "spacing", "size", "layout"], states: true },
     pricing: { kind: "Offre tarifaire", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: null }, order: ["background", "border", "effects", "typography", "spacing", "size", "layout"], states: true },
     breadcrumb: { kind: "Fil d'Ariane", groups: TEXTUAL, order: TEXT_ORDER },
@@ -2220,6 +2221,9 @@
   };
   // Widgets personnalisés : schéma d'inspecteur selon leur nature (texte ou boîte)
   SPEC.types.forEach(function (t) { if (t.schema && !INSPECTORS[t.type]) INSPECTORS[t.type] = t.style === "box" ? { kind: t.label, groups: BOX } : { kind: t.label, groups: TEXTUAL, order: TEXT_ORDER }; });
+  // États : le serveur accepte survol / focus / clic pour tout type ; seules les fiches ne les proposaient pas. Survol pour les éléments de contenu et les widgets personnalisés.
+  ["heading", "text", "list", "quote", "badge", "iconlist", "rating", "counter", "progress", "gallery", "video", "carousel", "social", "sharebuttons", "iconbox", "imagebox", "map", "hotspot"].forEach(function (t) { if (INSPECTORS[t] && !INSPECTORS[t].states) INSPECTORS[t].states = ["hover"]; });
+  SPEC.types.forEach(function (t) { if (t.schema && INSPECTORS[t.type] && !INSPECTORS[t.type].states) INSPECTORS[t.type].states = ["hover"]; });
   function inspectorFor(it) {
     if (!it) return null;
     if (it.type === "layout") return INSPECTORS.section;
@@ -2235,9 +2239,12 @@
   // ---------- Contrôles de style compacts ----------
   // Une ligne par propriété : libellé | valeur | effacer. Le point devant le libellé signale une valeur propre à l'écran
   // modifié ; les petites icônes d'appareil, les écrans plus petits qui ont leur propre valeur pour cette propriété.
+  // Mots-clés de dimension : valeur sans nombre (comme « auto ») ; liste fermée, la même que celle du serveur
+  var KW = ["auto", "fit-content", "min-content", "max-content"];
+  var isKw = function (u) { return KW.indexOf(u) >= 0; };
   var UNITS = {
-    width: ["px", "%", "rem", "vw", "auto"], height: ["px", "%", "rem", "vh", "auto"], flexBasis: ["px", "%", "rem", "auto"],
-    minWidth: ["px", "%", "rem", "vw"], maxWidth: ["px", "%", "rem", "vw"], minHeight: ["px", "%", "rem", "vh"], maxHeight: ["px", "%", "rem", "vh"],
+    width: ["px", "%", "rem", "vw", "auto", "fit-content", "min-content", "max-content"], height: ["px", "%", "rem", "vh", "auto", "fit-content", "min-content", "max-content"], flexBasis: ["px", "%", "rem", "auto"],
+    minWidth: ["px", "%", "rem", "vw", "fit-content", "min-content", "max-content"], maxWidth: ["px", "%", "rem", "vw", "fit-content", "min-content", "max-content"], minHeight: ["px", "%", "rem", "vh", "fit-content", "min-content", "max-content"], maxHeight: ["px", "%", "rem", "vh", "fit-content", "min-content", "max-content"],
     gap: ["px", "rem", "em", "%"], rowGap: ["px", "rem", "em", "%"], columnGap: ["px", "rem", "em", "%"], fontSize: ["px", "em", "rem", "vw"], letterSpacing: ["px", "em", "rem"], wordSpacing: ["px", "em", "rem"], textIndent: ["px", "em", "rem", "%"], borderWidth: ["px"], borderTopWidth: ["px"], borderRightWidth: ["px"], borderBottomWidth: ["px"], borderLeftWidth: ["px"],
     borderRadius: ["px", "%", "rem"], borderTopLeftRadius: ["px", "%", "rem"], borderTopRightRadius: ["px", "%", "rem"], borderBottomRightRadius: ["px", "%", "rem"], borderBottomLeftRadius: ["px", "%", "rem"],
     top: ["px", "%", "rem"], left: ["px", "%", "rem"], right: ["px", "%", "rem"], bottom: ["px", "%", "rem"],
@@ -2248,7 +2255,7 @@
   function splitLen(v) {
     if (v === undefined || v === null || v === "") return null;
     var s = String(v);
-    if (s === "auto") return { num: "", unit: "auto" };
+    if (isKw(s)) return { num: "", unit: s };
     var m = /^(-?[\d.]+)([a-z%]*)$/.exec(s);
     return m ? { num: m[1], unit: m[2] || "px" } : null;
   }
@@ -2287,7 +2294,7 @@
     var rnd = function (n) { if (c.integer) return Math.round(n); var f = Math.pow(10, prec); return Math.round(n * f) / f; };
     var clamp = function (n) { return Math.min(max, Math.max(min, n)); };
     var shown = function (n, u) { return c.inlineUnit && u && u !== "px" ? n + u : String(n); };
-    var input = h("input", { id: c.id, type: "text", inputmode: "decimal", class: "pb-len-num", value: c.value === undefined || c.value === null ? "" : String(c.value), placeholder: c.placeholder === undefined ? "–" : String(c.placeholder), disabled: c.disabled || unitState === "auto", autocomplete: "off", "data-prop": c.prop || null, "aria-label": c.ariaLabel || null, "data-tip": c.tip || null });
+    var input = h("input", { id: c.id, type: "text", inputmode: "decimal", class: "pb-len-num", value: c.value === undefined || c.value === null ? "" : String(c.value), placeholder: c.placeholder === undefined ? "–" : String(c.placeholder), disabled: c.disabled || isKw(unitState), autocomplete: "off", "data-prop": c.prop || null, "aria-label": c.ariaLabel || null, "data-tip": c.tip || null });
     if (c.inputClass) input.className = c.inputClass;
     // Contrat : un champ numérique n'ouvre JAMAIS de liste au focus (ni datalist, ni autocomplétion) ; l'attribut « list » n'est volontairement pas pris en charge ici.
     var sel = null;
@@ -2323,21 +2330,21 @@
       var ok = c.onCommit(n === "" ? "" : String(n), u, opts);
       if (ok === false) return false;
       input.removeAttribute("aria-invalid");
-      mark(n !== "" || u === "auto");
+      mark(n !== "" || isKw(u));
       return true;
     };
     // Saisie validée (Entrée / sortie du champ) : « 32 », « 2rem » (si l'unité existe pour cette propriété), ou vide
     var commit = function (opts) {
       var u = unitNow();
       var raw = input.value.trim().replace(",", ".");
-      if (u === "auto") { input.value = ""; input.placeholder = "auto"; send("", "auto", opts); return true; }
-      if (/^auto$/i.test(raw)) { if (units && units.indexOf("auto") >= 0) { if (sel) sel.value = "auto"; else unitState = "auto"; send("", "auto", opts); return true; } return invalid("« auto » n'est pas possible ici."); }
+      if (isKw(u)) { input.value = ""; input.placeholder = u; send("", u, opts); return true; }
+      var kwTyped = KW.filter(function (k) { return k === raw.toLowerCase(); })[0]; if (kwTyped) { if (units && units.indexOf(kwTyped) >= 0) { if (sel) sel.value = kwTyped; else unitState = kwTyped; send("", kwTyped, opts); return true; } return invalid("« " + kwTyped + " » n'est pas possible ici."); }
       if (raw === "") { if (c.allowEmpty === false) return invalid("une valeur est nécessaire."); send("", u, opts); syncRange(); return true; }
       var m = (units ? /^(-?\d*\.?\d+)\s*(px|%|rem|em|vh|vw)?$/i : /^(-?\d*\.?\d+)$/).exec(raw);
       if (!m) return invalid(units ? "nombre attendu (ex. 24, 50 %, 2rem)." : "nombre attendu.");
       if (m[2]) {
         var tu = m[2].toLowerCase();
-        if (units.indexOf(tu) < 0) return invalid("l'unité « " + tu + " » n'existe pas pour ce réglage (" + units.filter(function (x) { return x !== "auto"; }).join(", ") + ").");
+        if (units.indexOf(tu) < 0) return invalid("l'unité « " + tu + " » n'existe pas pour ce réglage (" + units.filter(function (x) { return !isKw(x); }).join(", ") + ").");
         u = tu; if (sel) sel.value = tu; else unitState = tu;
       }
       var typed = parseFloat(m[1]);
@@ -2345,7 +2352,7 @@
       if (typed < min || typed > max) return invalid(isFinite(min) && isFinite(max) ? "entre " + min + " et " + max + "." : isFinite(max) ? max + " au plus." : min + " au moins.");
       var n = rnd(typed);
       input.value = shown(n, u);
-      if (u === "auto") u = units[0];
+      if (isKw(u)) u = units[0];
       if (send(n, u, opts) === false) return false;
       syncRange();
       return true;
@@ -2354,7 +2361,7 @@
     var bump = function (steps, opts) {
       if (c.disabled) return;
       var u = unitNow();
-      if (u === "auto") { u = units.filter(function (x) { return x !== "auto"; })[0] || "px"; if (sel) sel.value = u; else unitState = u; input.disabled = false; }
+      if (isKw(u)) { u = units.filter(function (x) { return !isKw(x); })[0] || "px"; if (sel) sel.value = u; else unitState = u; input.disabled = false; }
       var n = rnd(clamp(read() + steps * stepOf(u)));
       input.value = shown(n, u);
       input.removeAttribute("aria-invalid");
@@ -2378,8 +2385,8 @@
       bump((e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 10 : e.altKey ? 0.1 : 1), { key: e.repeat ? "step:" + c.id + ":" + burst : null, light: true });
     });
     if (sel) sel.addEventListener("change", function () {
-      input.disabled = Boolean(c.disabled) || sel.value === "auto";
-      if (sel.value === "auto" || input.value.trim() !== "") commit(); else { input.focus(); syncRange(); }
+      input.disabled = Boolean(c.disabled) || isKw(sel.value);
+      if (isKw(sel.value) || input.value.trim() !== "") commit(); else { input.focus(); syncRange(); }
     });
     // ▲▼ : deux vrais boutons compacts (hors de l'ordre de tabulation : le clavier a déjà les flèches)
     var stepBtn = function (dir, glyph, text) {
@@ -2397,7 +2404,7 @@
       range.addEventListener("pointerdown", function () { slide = ++ncSeq; });
       range.addEventListener("keydown", function () { slide = ++ncSeq; });
       range.addEventListener("input", function () {
-        var u = unitNow(); if (u === "auto") { u = units.filter(function (x) { return x !== "auto"; })[0] || "px"; if (sel) sel.value = u; input.disabled = false; }
+        var u = unitNow(); if (isKw(u)) { u = units.filter(function (x) { return !isKw(x); })[0] || "px"; if (sel) sel.value = u; input.disabled = false; }
         paintRange(range);
         var n = rnd(clamp(Number(range.value)));
         input.value = shown(n, u);
@@ -2417,7 +2424,7 @@
         var x0 = e.clientX, base = read(), moved = false, key = "drag:" + c.id + ":" + (++ncSeq), pending = null, raf = 0;
         var flush = function () {
           raf = 0; if (pending === null) return;
-          var u = unitNow(); if (u === "auto") u = units.filter(function (x) { return x !== "auto"; })[0] || "px";
+          var u = unitNow(); if (isKw(u)) u = units.filter(function (x) { return !isKw(x); })[0] || "px";
           var n = rnd(clamp(pending)); pending = null;
           input.value = shown(n, u); send(n, u, { key: key, light: true }); syncRange();
         };
@@ -2718,9 +2725,9 @@
     var units = unitsOf(key), cur = splitLen(own), base = splitLen(inh), cfg = LENCFG[key] || {};
     var unit = cur ? cur.unit : base ? base.unit : units[0];
     return numericControl(Object.assign({ id: id, label: SP[key].label, units: units, unit: unit, step: STEP_REL, min: isSigned(key) ? -9999 : 0, max: 9999, base: 0, drag: true, disabled: dis,
-      value: cur && cur.unit !== "auto" ? cur.num : "", placeholder: base ? (base.unit === "auto" ? "auto" : base.num) : cur && cur.unit === "auto" ? "auto" : "–" }, cfg, {
+      value: cur && !isKw(cur.unit) ? cur.num : "", placeholder: base ? (isKw(base.unit) ? base.unit : base.num) : cur && isKw(cur.unit) ? cur.unit : "–" }, cfg, {
       onCommit: function (raw, u, opts) {
-        var v = u === "auto" ? "auto" : raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
+        var v = isKw(u) ? u : raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
         if (parseLength(v, key) === null) { toast(SP[key].label + " : valeur invalide.", true); return false; }
         setStyle(idsOf(items), key, v, opts);
       },
@@ -5912,36 +5919,60 @@
 
   // ---------- Médiathèque ----------
   var mediaDialog = $("[data-pb-media]");
-  var mediaOpts = {}, mediaItems = [], mediaChosen = [];
+  var mediaOpts = {}, mediaItems = [], mediaChosen = [], mediaSavedFlash = null, mediaLoadedOnce = false;
   function openMedia(opts) {
     if (editing) commitEdit();
     mediaOpts = opts || {};
     mediaChosen = [];
     $("#pb-media-title").textContent = mediaOpts.title || "Médiathèque";
     mediaDialog.showModal();
+    $("[data-pb-media-q]").focus();
     loadMedia();
   }
   var mediaTimer = null;
+  var mediaCount = function (n) { return n + (n > 1 ? " images" : " image"); };
   function loadMedia(keep) {
     var q = $("[data-pb-media-q]").value, src = $("[data-pb-media-src]").value;
-    $("[data-pb-media-status]").textContent = "Chargement…";
-    return api("GET", "/marketing/site-web/medias.json?source=" + encodeURIComponent(src) + "&q=" + encodeURIComponent(q)).then(function (r) {
-      mediaItems = r.items;
-      if (keep) mediaChosen = mediaChosen.map(function (c) { return mediaItems.find(function (m) { return m.source === c.source && m.id === c.id; }) || c; });
-      $("[data-pb-media-status]").textContent = r.items.length ? r.items.length + " image(s)." : "Aucune image" + (q ? " pour cette recherche." : " : envoyez-en une.");
-      renderMediaGrid();
-    }, function (err) { $("[data-pb-media-status]").textContent = err.message; });
-  }
-  $("[data-pb-media-q]").addEventListener("input", function () { clearTimeout(mediaTimer); mediaTimer = setTimeout(loadMedia, 250); });
-  $("[data-pb-media-src]").addEventListener("change", function () { loadMedia(); });
-  var mediaKey = function (m) { return m.source + ":" + m.id; };
-  function renderMediaGrid() {
     var grid = $("[data-pb-media-grid]");
+    $("[data-pb-media-status]").textContent = "Chargement…";
+    if (!mediaItems.length && !mediaLoadedOnce) { // premier affichage : emplacements neutres plutôt qu'une zone vide
+      grid.setAttribute("aria-busy", "true"); grid.textContent = "";
+      for (var i = 0; i < 8; i++) grid.appendChild(h("li", { class: "pb-media-skel", "aria-hidden": "true" }));
+    }
+    return api("GET", "/marketing/site-web/medias.json?source=" + encodeURIComponent(src) + "&q=" + encodeURIComponent(q)).then(function (r) {
+      mediaItems = r.items; mediaLoadedOnce = true;
+      if (keep) mediaChosen = mediaChosen.map(function (c) { return mediaItems.find(function (m) { return m.source === c.source && m.id === c.id; }) || c; });
+      $("[data-pb-media-status]").textContent = r.items.length ? mediaCount(r.items.length) + (q ? " trouvée" + (r.items.length > 1 ? "s" : "") : "") : "";
+      grid.setAttribute("aria-busy", "false");
+      renderMediaGrid();
+    }, function (err) { grid.setAttribute("aria-busy", "false"); grid.textContent = ""; $("[data-pb-media-status]").textContent = err.message; });
+  }
+  $("[data-pb-media-q]").addEventListener("input", function () { clearTimeout(mediaTimer); mediaTimer = setTimeout(loadMedia, 180); });
+  $("[data-pb-media-src]").addEventListener("change", function () { loadMedia(); });
+  $("[data-pb-media-sort]").addEventListener("change", function () { renderMediaGrid(); });
+  var mediaKey = function (m) { return m.source + ":" + m.id; };
+  function sortedMedia() {
+    var mode = $("[data-pb-media-sort]").value, list = mediaItems.slice();
+    if (mode === "az" || mode === "za") list.sort(function (a, b) { return (mode === "az" ? 1 : -1) * String(a.name).localeCompare(String(b.name), "fr", { sensitivity: "base", numeric: true }); });
+    return list;
+  }
+  function renderMediaGrid() {
+    var grid = $("[data-pb-media-grid]"), empty = $("[data-pb-media-empty]");
     grid.textContent = "";
-    mediaItems.forEach(function (m) {
+    var list = sortedMedia(), q = $("[data-pb-media-q]").value.trim();
+    empty.hidden = list.length > 0;
+    if (!list.length) {
+      empty.textContent = "";
+      empty.appendChild(h("span", { class: "pb-media-empty-ico", "aria-hidden": "true" }, icon("image")));
+      empty.appendChild(h("strong", { text: q ? "Aucune image trouvée" : "Aucune image" }));
+      empty.appendChild(h("span", { text: q ? "Essayez un autre terme ou une autre bibliothèque." : "Importez votre première image pour commencer." }));
+      if (!q && canWrite) empty.appendChild(h("button", { type: "button", class: "btn btn-primary btn-sm", onclick: function () { $("[data-pb-upload]").click(); } }, icon("plus"), "Importer une image"));
+    }
+    list.forEach(function (m) {
       var chosen = mediaChosen.some(function (x) { return mediaKey(x) === mediaKey(m); });
-      var btn = h("button", { type: "button", class: "pb-media-item" + (chosen ? " is-chosen" : ""), "aria-pressed": String(chosen), "aria-label": (m.alt || m.name) + (m.width ? " (" + m.width + " × " + m.height + ")" : ""), onclick: function () { chooseMedia(m); }, ondblclick: function () { chooseMedia(m, true); } },
-        h("img", { src: m.path, alt: "", loading: "lazy" }), h("span", { class: "pb-media-name", text: m.name }), m.alt ? null : h("span", { class: "pb-media-flag", text: "Sans texte alt." }));
+      var btn = h("button", { type: "button", class: "pb-media-item" + (chosen ? " is-chosen" : ""), "aria-pressed": String(chosen), title: m.name, "aria-label": (m.alt || m.name) + (m.width ? " (" + m.width + " × " + m.height + ")" : "") + (m.alt ? "" : " — texte alternatif manquant"), onclick: function () { chooseMedia(m); }, ondblclick: function () { chooseMedia(m, true); } },
+        h("span", { class: "pb-media-thumb" }, h("img", { src: m.path, alt: "", loading: "lazy", decoding: "async" }), h("span", { class: "pb-media-check", "aria-hidden": "true" }, icon("check")), m.alt ? null : h("span", { class: "pb-media-flag", text: "Alt manquant" })),
+        h("span", { class: "pb-media-name", text: m.name }));
       grid.appendChild(h("li", {}, btn));
     });
     renderMediaDetail();
@@ -5960,28 +5991,89 @@
     mediaDialog.close();
     pick(multiple ? chosen : chosen[0]);
   }
+  var fmtSize = function (b) { return !b ? "—" : b >= 1048576 ? (b / 1048576).toFixed(2).replace(".", ",") + " Mo" : Math.max(1, Math.round(b / 1024)) + " Ko"; };
+  var shortPath = function (p) { return p.length > 38 ? p.slice(0, 20) + "…" + p.slice(-16) : p; };
+  function mediaInfoRow(label, value, full) { return h("div", { class: "pb-media-row" }, h("dt", { text: label }), h("dd", { title: full || null }, value)); }
   function renderMediaDetail() {
     var box = $("[data-pb-media-detail]");
     box.textContent = "";
     var m = mediaChosen[mediaChosen.length - 1];
-    if (!m) { box.appendChild(h("p", { class: "pb-hint", text: mediaOpts.onPick ? "Choisissez une image (double-clic pour l'insérer directement)." : "Cliquez une image pour voir ses informations." })); return; }
-    box.appendChild(h("img", { src: m.path, alt: "", class: "pb-media-big" }));
-    box.appendChild(h("dl", { class: "pb-meta" }, h("dt", { text: "Nom" }), h("dd", { text: m.name }), h("dt", { text: "Dimensions" }), h("dd", { text: m.width ? m.width + " × " + m.height + " px" : "inconnues" }),
-      h("dt", { text: "Poids" }), h("dd", { text: m.size ? Math.round(m.size / 1024) + " Ko" : "—" }), h("dt", { text: "Type" }), h("dd", { text: m.mime || "image" }), h("dt", { text: "Adresse" }), h("dd", {}, h("code", { text: m.path })), h("dt", { text: "Bibliothèque" }), h("dd", { text: m.source === "marketing" ? "Marketing" : "Site (gérée dans le Centre de gestion)" })));
+    if (!m) {
+      box.appendChild(h("div", { class: "pb-media-nosel" }, h("span", { class: "pb-media-empty-ico", "aria-hidden": "true" }, icon("image")), h("strong", { text: "Sélectionnez une image" }),
+        h("span", { text: mediaOpts.onPick ? "Choisissez une ressource pour afficher ses détails (double-clic pour l'insérer directement)." : "Choisissez une ressource pour afficher ses détails." })));
+      return;
+    }
+    // Aperçu (damier discret : les transparences restent visibles) ; en cas d'échec de chargement, message et « Réessayer »
+    var prev = h("div", { class: "pb-media-preview" });
+    var showImg = function (bust) {
+      prev.textContent = "";
+      var img = h("img", { src: m.path + (bust ? (m.path.indexOf("?") < 0 ? "?" : "&") + "r=" + Date.now() : ""), alt: m.alt || "" });
+      img.addEventListener("error", function () { prev.textContent = ""; prev.appendChild(h("div", { class: "pb-media-fail", role: "alert" }, h("span", { text: "Impossible de charger cette image." }), h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { showImg(true); } }, "Réessayer"))); });
+      prev.appendChild(img);
+    };
+    showImg(false);
+    box.appendChild(prev);
+    var pathBtn = h("button", { type: "button", class: "pb-media-copy", "data-tip": "Copier l'adresse", "aria-label": "Copier l'adresse de l'image", onclick: function () {
+      var done = function () { toast("Adresse copiée."); }, fail = function () { toast("Copie impossible : sélectionnez l'adresse à la main.", true); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(location.origin + m.path).then(done, fail); else fail();
+    } }, icon("copy"));
+    box.appendChild(h("dl", { class: "pb-media-info" },
+      mediaInfoRow("Nom", h("span", { class: "pb-media-ell", text: m.name }), m.name),
+      mediaInfoRow("Dimensions", m.width ? m.width + " × " + m.height + " px" : "inconnues"),
+      mediaInfoRow("Poids", fmtSize(m.size)),
+      mediaInfoRow("Type", m.mime || "image"),
+      mediaInfoRow("Bibliothèque", m.source === "marketing" ? "Marketing" : "Site (Centre de gestion)"),
+      mediaInfoRow("Adresse", h("span", { class: "pb-media-pathrow" }, h("code", { class: "pb-media-ell", text: shortPath(m.path) }), pathBtn), m.path)));
+    var usageBox = h("div", { class: "pb-media-usage", "aria-live": "polite" });
+    var usageList = null; // null = inconnu, [] = non utilisée
+    box.appendChild(usageBox);
+    if (m.source === "marketing") {
+      api("GET", "/marketing/site-web/medias/" + m.id + "/usage.json").then(function (r) {
+        if (mediaChosen[mediaChosen.length - 1] !== m && !usageBox.isConnected) return;
+        usageList = r.items;
+        if (!r.items.length) return;
+        usageBox.appendChild(h("p", { class: "pb-media-usage-title", text: "Utilisée dans " + r.items.length + (r.items.length > 1 ? " contenus" : " contenu") }));
+        var ul = h("ul", {});
+        r.items.slice(0, 6).forEach(function (u) { ul.appendChild(h("li", {}, u.href ? h("a", { href: u.href, target: "_blank", rel: "noopener", text: u.name }) : h("span", { text: u.name }), h("small", { text: " " + u.kind }))); });
+        if (r.items.length > 6) ul.appendChild(h("li", {}, h("small", { text: "… et " + (r.items.length - 6) + " autre(s)" })));
+        usageBox.appendChild(ul);
+      }, function () { /* information facultative : la suppression reste protégée côté serveur */ });
+    }
+    var actions = h("div", { class: "pb-media-actions" });
     if (m.editable && canWrite) {
       var name = textField("Nom", m.name, function () {}, { max: 120 });
-      var alt = textField("Texte de remplacement", m.alt, function () {}, { max: 200 });
-      box.appendChild(name); box.appendChild(alt);
-      box.appendChild(h("div", { class: "pb-row pb-wrap" },
-        h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () {
-          api("POST", "/marketing/site-web/medias/" + m.id, { alt: alt.querySelector("input").value, name: name.querySelector("input").value }).then(function (r) { Object.assign(m, r.media); toast("Image mise à jour."); loadMedia(true); }, apiFail);
-        } }, "Enregistrer"),
-        h("button", { type: "button", class: "btn btn-danger btn-sm", onclick: function () {
-          if (!window.confirm("Supprimer définitivement « " + m.name + " » ? (Refusé si une page, un composant ou un modèle d'e-mail l'utilise.)")) return;
-          api("POST", "/marketing/site-web/medias/" + m.id + "/supprimer", {}).then(function () { mediaChosen = []; toast("Image supprimée."); loadMedia(); }, apiFail);
-        } }, "Supprimer")));
-    } else if (!m.editable) box.appendChild(h("p", { class: "pb-hint", text: "Texte de remplacement et suppression : Centre de gestion → Ressources." }));
-    if (mediaOpts.onPick) box.appendChild(h("button", { type: "button", class: "btn btn-primary btn-sm", onclick: finishMedia }, mediaOpts.multiple ? "Insérer " + mediaChosen.length + " image(s)" : "Insérer cette image"));
+      var alt = textField("Texte alternatif", m.alt, function () {}, { max: 200 });
+      alt.appendChild(h("p", { class: "pb-media-help", text: m.alt ? "Lu par les lecteurs d'écran ; affiché si l'image ne charge pas." : "Manquant : décrivez l'image pour améliorer l'accessibilité." }));
+      var meta = h("div", { class: "pb-media-meta" }, h("h3", { text: "Métadonnées" }), name, alt);
+      box.appendChild(meta);
+      var save = h("button", { type: "button", class: "btn btn-primary btn-sm", disabled: true }, "Enregistrer");
+      var flashed = mediaSavedFlash === mediaKey(m); mediaSavedFlash = null;
+      if (flashed) { save.textContent = "Enregistré"; setTimeout(function () { if (save.isConnected && save.textContent === "Enregistré") save.textContent = "Enregistrer"; }, 1600); }
+      var nameIn = name.querySelector("input"), altIn = alt.querySelector("input");
+      var dirty = function () { save.disabled = nameIn.value === m.name && altIn.value === (m.alt || ""); if (!save.disabled && save.textContent === "Enregistré") save.textContent = "Enregistrer"; };
+      nameIn.addEventListener("input", dirty); altIn.addEventListener("input", dirty);
+      save.addEventListener("click", function () {
+        save.disabled = true; save.textContent = "Enregistrement…";
+        api("POST", "/marketing/site-web/medias/" + m.id, { alt: altIn.value, name: nameIn.value }).then(function (r) { Object.assign(m, r.media); mediaSavedFlash = mediaKey(m); toast("Modifications enregistrées."); loadMedia(true); }, function (err) { save.textContent = "Enregistrer"; save.disabled = false; apiFail(err); });
+      });
+      var del = h("button", { type: "button", class: "btn btn-sm pb-media-del" }, icon("trash"), "Supprimer");
+      del.addEventListener("click", function () { // confirmation sur place ; si le fichier est utilisé, la suppression est refusée (liste ci-dessus)
+        actions.textContent = "";
+        var inUse = usageList && usageList.length;
+        actions.appendChild(h("div", { class: "pb-media-confirm", role: "alertdialog", "aria-label": "Confirmer la suppression" },
+          h("strong", { text: "Supprimer cette image ?" }),
+          h("span", { text: inUse ? "Cette image est actuellement utilisée : retirez-la d'abord des contenus listés ci-dessus." : "Cette action ne peut pas être annulée." }),
+          h("div", { class: "pb-row pb-wrap" },
+            h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { renderMediaDetail(); } }, "Annuler"),
+            h("button", { type: "button", class: "btn btn-sm pb-media-del is-solid", disabled: Boolean(inUse), onclick: function () {
+              api("POST", "/marketing/site-web/medias/" + m.id + "/supprimer", {}).then(function () { mediaChosen = []; toast("Image supprimée."); loadMedia(); }, function (err) { apiFail(err); renderMediaDetail(); });
+            } }, "Supprimer définitivement"))));
+        actions.querySelector(".btn-outline").focus();
+      });
+      actions.appendChild(save); actions.appendChild(del);
+    } else if (!m.editable) box.appendChild(h("p", { class: "pb-media-help", text: "Texte alternatif et suppression : Centre de gestion → Ressources." }));
+    if (mediaOpts.onPick) box.insertBefore(h("button", { type: "button", class: "btn btn-primary pb-media-insert", onclick: finishMedia }, mediaOpts.multiple ? "Insérer " + mediaChosen.length + " image(s)" : "Insérer cette image"), box.children[1]);
+    if (actions.children.length) box.appendChild(actions);
   }
   function uploadFile(file) {
     if (!file) return;
@@ -5990,7 +6082,7 @@
     var fd = new FormData(); fd.append("file", file);
     $("[data-pb-media-status]").textContent = "Envoi de « " + file.name + " »…";
     api("POST", "/marketing/site-web/medias", fd, true).then(function (r) {
-      toast("Image envoyée : ajoutez son texte de remplacement à droite.");
+      toast("Image envoyée : ajoutez son texte alternatif à droite.");
       $("[data-pb-media-src]").value = "all"; $("[data-pb-media-q]").value = "";
       mediaChosen = mediaOpts.multiple ? mediaChosen.concat(r.media) : [r.media];
       loadMedia(true);
@@ -5998,9 +6090,11 @@
   }
   $("[data-pb-upload]").addEventListener("change", function () { uploadFile(this.files[0]); this.value = ""; });
   var drop = $("[data-pb-drop]");
-  ["dragenter", "dragover"].forEach(function (ev) { drop.addEventListener(ev, function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, "Files") >= 0) { e.preventDefault(); drop.classList.add("is-over"); } }); });
-  drop.addEventListener("dragleave", function () { drop.classList.remove("is-over"); });
-  drop.addEventListener("drop", function (e) { e.preventDefault(); drop.classList.remove("is-over"); if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); });
+  drop.addEventListener("click", function () { $("[data-pb-upload]").click(); });
+  drop.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("[data-pb-upload]").click(); } });
+  ["dragenter", "dragover"].forEach(function (ev) { mediaDialog.addEventListener(ev, function (e) { if (canWrite && e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, "Files") >= 0) { e.preventDefault(); drop.classList.add("is-over"); } }); });
+  mediaDialog.addEventListener("dragleave", function (e) { if (!mediaDialog.contains(e.relatedTarget)) drop.classList.remove("is-over"); });
+  mediaDialog.addEventListener("drop", function (e) { drop.classList.remove("is-over"); if (!canWrite) return; e.preventDefault(); if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); });
   if (!canWrite) { $(".pb-upload").hidden = true; drop.hidden = true; }
 
   // ---------- Fenêtre « demande de contenu » ----------
