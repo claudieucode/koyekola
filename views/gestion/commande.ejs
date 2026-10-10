@@ -23,15 +23,18 @@
       <dt>Élève</dt><dd><a href="/formateur/gestion/eleves/<%= order.user_id %>"><%= order.username %></a></dd>
       <dt>E-mail</dt><dd><%= order.email %></dd>
       <dt>Date</dt><dd><%= formatDateTime(order.created_at) %></dd>
-      <dt>Statut</dt><dd><span class="dash-status is-published">Payée</span></dd>
-      <dt>Paiement</dt><dd>Simulé (aucun prestataire de paiement connecté : aucune carte débitée)</dd>
+      <dt>Statut</dt><dd><span class="dash-status is-published"><%= refundedCents >= order.total_cents && order.total_cents > 0 ? "Remboursée" : refundedCents > 0 ? "Remboursée en partie" : "Payée" %></span></dd>
+      <dt>Paiement</dt><dd><%= stripePaid ? "Carte (Stripe) : paiement confirmé par Stripe" : "Sans paiement réel (commande gratuite ou démonstration) : aucune carte débitée" %></dd>
+      <% if (refunds.length) { %><dt>Remboursé</dt><dd><%= formatAmount(refundedCents) %> sur <%= formatAmount(order.total_cents) %> (annoncé par Stripe)</dd><% } %>
+      <% if (contact) { %><dt>Contact</dt><dd><a href="/marketing/contacts/<%= contact.id %>">Voir le contact</a></dd><% } %>
       <% if (order.coupon_code) { %><dt>Code promo</dt><dd><%= order.coupon_code %> · −<%= formatAmount(order.discount_cents) %></dd><% } %>
       <dt>Montant de vos formations</dt><dd><strong><%= formatAmount(myAmount) %></strong></dd>
       <% if (otherItems) { %><dt>Total de la commande</dt><dd><%= formatAmount(order.total_cents) %></dd><% } %>
     </dl>
     <h3 class="g-h3">Historique</h3>
     <ol class="g-timeline">
-      <li><time><%= formatDateTime(order.created_at) %></time> Commande enregistrée et payée (paiement simulé)</li>
+      <li><time><%= formatDateTime(order.created_at) %></time> Commande enregistrée<%= stripePaid ? " et payée par carte" : "" %></li>
+      <% refunds.forEach((r) => { %><li><time><%= formatDateTime(r.created_at) %></time> Remboursement de <%= formatAmount(r.amount_cents) %> (Stripe)</li><% }) %>
       <% items.forEach((i) => { if (i.enrolled_at) { %><li><time><%= formatDateTime(i.enrolled_at) %></time> Accès ouvert à « <%= i.title %> »</li><% } }) %>
     </ol>
   </aside>

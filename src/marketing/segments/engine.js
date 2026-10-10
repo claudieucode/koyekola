@@ -29,6 +29,7 @@ const EVENT_NAMES = {
   "email.clicked": false, "email.opened": false,
   "funnel.entered": false, "funnel.step.completed": false, "funnel.abandoned": false, "funnel.cta.clicked": false, "checkout.abandoned": false, "purchase.completed": false,
   "email.delivered": false, "email.bounced": false,
+  "cart.abandoned": true, "payment.failed": false, "refund.completed": false, "order.refunded": false, "order.partially_refunded": false,
 };
 const DAY_MS = 86400000;
 

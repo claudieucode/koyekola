@@ -143,7 +143,26 @@ function markCheckoutEnded(db, stripeSession, status) {
   db.prepare("UPDATE checkout_sessions SET status = ? WHERE ref = ? AND status = 'pending'").run(status, ref);
 }
 
+// Remboursement annoncé par Stripe (webhook signé « charge.refunded ») : un enregistrement par remboursement, rattaché à la commande payée par ce paiement.
+// Idempotent (identifiant Stripe UNIQUE). Ne touche NI à la commande NI aux accès : décision de l'équipe, pas d'un webhook.
+// → { status: "recorded" | "already" | "unknown", recorded: nombre de remboursements nouveaux }
+function recordRefunds(db, charge) {
+  const intent = charge && typeof charge.payment_intent === "string" ? charge.payment_intent : null;
+  const cs = intent && db.prepare("SELECT order_id FROM checkout_sessions WHERE stripe_payment_intent = ? AND order_id IS NOT NULL").get(intent);
+  if (!cs) return { status: "unknown", recorded: 0 };
+  const list = charge.refunds && Array.isArray(charge.refunds.data) && charge.refunds.data.length
+    ? charge.refunds.data
+    : [{ id: `${charge.id}:${charge.amount_refunded}`, amount: charge.amount_refunded, currency: charge.currency }]; // sans détail : un enregistrement par montant cumulé
+  const insert = db.prepare("INSERT OR IGNORE INTO order_refunds (order_id, stripe_refund_id, amount_cents, currency) VALUES (?, ?, ?, ?)");
+  let recorded = 0;
+  for (const r of list) {
+    if (!r || typeof r.id !== "string" || !Number.isInteger(r.amount) || r.amount <= 0 || (r.status && r.status !== "succeeded")) continue;
+    recorded += insert.run(cs.order_id, r.id, r.amount, String(r.currency || charge.currency || CURRENCY).toLowerCase()).changes;
+  }
+  return { status: recorded ? "recorded" : "already", recorded };
+}
+
 module.exports = {
-  CURRENCY, MIN_AMOUNT_CENTS, stripeEnabled, createStripeSession, retrieveStripeSession,
+  recordRefunds, CURRENCY, MIN_AMOUNT_CENTS, stripeEnabled, createStripeSession, retrieveStripeSession,
   verifyWebhookSignature, fulfillCheckout, markCheckoutEnded, encodeForm,
 };

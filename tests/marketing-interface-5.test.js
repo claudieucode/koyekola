@@ -335,8 +335,8 @@ describe("parcours réel avec le worker : inscription sur le site → e-mail de 
     assert.equal((await client.postJson(`/marketing/automatisations/${id}`, { steps: [{ type: "email", templateId: tplId }] })).status, 200);
     assert.match((await follow(client, await client.post(`/marketing/automatisations/${id}/activer`, {}))).text, /Scénario activé/);
     // le pont s'est initialisé au démarrage du worker : on attend les curseurs, puis on inscrit l'élève
-    for (let i = 0; i < 40 && q("SELECT COUNT(*) n FROM mk_bridge_cursors")[0].n < 7; i++) await new Promise((r) => setTimeout(r, 250));
-    assert.equal(q("SELECT COUNT(*) n FROM mk_bridge_cursors")[0].n, 7); // 6 sources du LMS + les certificats
+    for (let i = 0; i < 40 && q("SELECT COUNT(*) n FROM mk_bridge_cursors")[0].n < 8; i++) await new Promise((r) => setTimeout(r, 250));
+    assert.equal(q("SELECT COUNT(*) n FROM mk_bridge_cursors")[0].n, 8); // 6 sources du LMS + les certificats + les remboursements
     const student = new Client(e2e.base);
     const reg = await student.post("/inscription", { username: "eleve-e2e", email: "eleve-e2e@test.local", password: "MotDePasseEleve123" });
     assert.equal(reg.status, 302);

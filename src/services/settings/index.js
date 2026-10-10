@@ -154,6 +154,8 @@ def({ key: "funnel_abandon_hours", group: "tunnels", label: "Abandon d'un tunnel
   help: "Un contact qui a atteint une étape d'un tunnel, sans le terminer ni revenir pendant ce délai, produit « funnel.abandoned ». Par défaut 24 h.", ...mainKv("funnel_abandon_hours", 24) });
 def({ key: "checkout_abandon_hours", group: "tunnels", label: "Abandon de commande après (heures)", type: "integer", min: 1, max: 168, scopes: ["main"],
   help: "Un contact qui a ouvert la page de commande sans commande terminée après ce délai produit « checkout.abandoned ». Par défaut 1 h.", ...mainKv("checkout_abandon_hours", 1) });
+def({ key: "cart_abandon_hours", group: "tunnels", label: "Abandon du panier après (heures)", type: "integer", min: 1, max: 720, scopes: ["main"],
+  help: "Un contact connu qui a ajouté une formation au panier, sans ouvrir la commande ni acheter pendant ce délai, produit « cart.abandoned ». Par défaut 24 h.", ...mainKv("cart_abandon_hours", 24) });
 
 // --- Emailing (palier 16) : identité d'expédition ---
 // Source de vérité : la configuration d'envoi du module Marketing (site principal) et mk_settings « email.site_<id>.* » (un site). Aucun secret ici :
