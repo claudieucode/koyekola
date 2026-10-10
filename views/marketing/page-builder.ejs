@@ -148,21 +148,17 @@
 
   <%# ---------- Fenêtres : aperçu, médiathèque, commandes, demande de contenu ---------- %>
   <dialog class="pb-modal pb-preview-modal" data-pb-preview-dialog aria-labelledby="pb-preview-title">
-    <div class="pb-modal-head pb-preview-head"><h2 id="pb-preview-title">Aperçu</h2>
+    <div class="pb-modal-head"><h2 id="pb-preview-title">Aperçu</h2>
       <div class="pb-devices" role="radiogroup" aria-label="Écran de l'aperçu">
-        <button type="button" role="radio" aria-checked="true" data-preview-device="desktop" data-tip="Ordinateur"><%- icon("monitor", { size: 16 }) %><span class="sr-only">Ordinateur</span></button>
-        <button type="button" role="radio" aria-checked="false" data-preview-device="tablet" data-tip="Tablette"><%- icon("tablet", { size: 16 }) %><span class="sr-only">Tablette</span></button>
-        <button type="button" role="radio" aria-checked="false" data-preview-device="mobile" data-tip="Mobile"><%- icon("smartphone", { size: 16 }) %><span class="sr-only">Mobile</span></button>
+        <button type="button" role="radio" aria-checked="true" data-preview-device="desktop"><%- icon("monitor", { size: 16 }) %><span class="sr-only">Ordinateur</span></button>
+        <button type="button" role="radio" aria-checked="false" data-preview-device="tablet"><%- icon("tablet", { size: 16 }) %><span class="sr-only">Tablette</span></button>
+        <button type="button" role="radio" aria-checked="false" data-preview-device="mobile"><%- icon("smartphone", { size: 16 }) %><span class="sr-only">Mobile</span></button>
       </div>
       <span class="pb-modal-spacer"></span>
-      <a class="btn btn-ghost btn-sm pb-preview-open" href="/marketing/pages/<%= page.id %>/apercu" target="_blank" rel="noopener" data-tip="Ouvrir dans un onglet"><%- icon("externalLink", { size: 14 }) %><span>Ouvrir dans un onglet</span></a>
-      <button type="button" class="pb-icon-btn" data-pb-preview-full aria-pressed="false" data-tip="Plein écran" aria-label="Plein écran"><%- icon("maximize", { size: 16 }) %></button>
-      <button type="button" class="pb-icon-btn" data-pb-close data-tip="Fermer (Échap)" aria-label="Fermer l'aperçu"><%- icon("close", { size: 18 }) %></button></div>
-    <div class="pb-preview-stage">
-      <iframe class="pb-preview-frame" data-pb-preview-frame data-device="desktop" title="Aperçu de la page"></iframe>
-      <div class="pb-preview-veil" data-pb-preview-veil role="status" hidden>Chargement de l'aperçu…</div>
-      <div class="pb-preview-veil is-error" data-pb-preview-error role="alert" hidden><span>L'aperçu n'a pas pu s'afficher.</span><button type="button" class="btn btn-outline btn-sm" data-pb-preview-retry>Réessayer</button></div>
-    </div>
+      <a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= page.id %>/apercu" target="_blank" rel="noopener">Ouvrir dans un onglet</a>
+      <button type="button" class="pb-icon-btn" data-pb-preview-full aria-pressed="false" data-tip="Plein écran" aria-label="Plein écran"><%- icon("maximize", { size: 18 }) %></button>
+      <button type="button" class="pb-icon-btn" data-pb-close aria-label="Fermer l'aperçu"><%- icon("close", { size: 18 }) %></button></div>
+    <div class="pb-preview-stage"><iframe class="pb-preview-frame" data-pb-preview-frame data-device="desktop" title="Aperçu de la page"></iframe></div>
   </dialog>
 
   <dialog class="pb-modal pb-media-modal" data-pb-media aria-labelledby="pb-media-title">
@@ -231,7 +227,7 @@
   <div class="pb-menu" data-pb-menu role="menu" aria-label="Actions" hidden></div>
   <div class="pb-toast" data-pb-toast role="status" aria-live="polite" hidden></div>
 
-  <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "externalLink", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone", "sliders", "moreHorizontal", "listPlus", "listMinus", "undo", "redo", "sun", "moon", "palette"].concat(spec.types.map((t) => t.icon), spec.icons).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
+  <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone", "sliders", "moreHorizontal", "listPlus", "listMinus", "undo", "redo", "sun", "moon", "palette"].concat(spec.types.map((t) => t.icon), spec.icons).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
   <script type="application/json" id="pb-boot"><%- boot %></script>
   <script src="<%= asset('/js/page-builder-effects.js') %>" defer></script>
   <script src="<%= asset('/js/kol-motion.js') %>" defer></script>
