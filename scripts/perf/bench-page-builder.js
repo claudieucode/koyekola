@@ -50,7 +50,7 @@ function makeContent(total) {
 async function main() {
   const srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
   const boss = await loginInstructor(srv);
-  const browser = await chromium.launch({ executablePath: CHROME, headless: true });
+  const browser = await chromium.launch({ executablePath: CHROME, headless: true, args: ["--js-flags=--expose-gc"] });
   const version = browser.version();
   const results = { config: { os: `${os.type()} ${os.release()}`, cpus: os.cpus().length, model: os.cpus()[0].model, chrome: version, load: os.loadavg().map((x) => +x.toFixed(2)), date: new Date().toISOString().slice(0, 10) }, sizes: {} };
   console.log(`# Page Builder — banc de mesure (${results.config.date}) — ${results.config.model} ×${results.config.cpus}, Chrome ${version}, charge ${results.config.load.join(" ")}`);
@@ -147,11 +147,59 @@ async function main() {
       }
     });
     for (const k of Object.keys(acc)) res[k] = { synchro: med(acc[k].map((x) => x && x.sync)), image: med(acc[k].map((x) => x && x.image)) };
+    // Glisser-déposer d'un calque (HTML5, souris réelle) : cadence et plus long intervalle entre deux images pendant 40 déplacements, puis dépôt
+    res.glisser = await prof("glisser", async () => {
+      if ((await page.locator("[data-pb-layers] .pb-node[data-id] > .pb-row-item").count()) < 8) return null;
+      const src = page.locator("[data-pb-layers] .pb-node[data-id] > .pb-row-item").nth(3), dst = page.locator("[data-pb-layers] .pb-node[data-id] > .pb-row-item").nth(Math.min(24, Math.max(6, Math.floor(rows.length / 3))));
+      await src.scrollIntoViewIfNeeded(); const a = await src.boundingBox();
+      await dst.scrollIntoViewIfNeeded(); const b2 = await dst.boundingBox(); const a2 = await src.boundingBox();
+      if (!a2 || !b2) return null;
+      await page.evaluate(() => { window.__gaps = []; let last = performance.now(); window.__stop = false; const f = () => { const n = performance.now(); window.__gaps.push(n - last); last = n; if (!window.__stop) requestAnimationFrame(f); }; requestAnimationFrame(f); });
+      await page.mouse.move(a2.x + 40, a2.y + a2.height / 2); await page.mouse.down();
+      const steps = 40;
+      for (let i = 1; i <= steps; i++) { await page.mouse.move(a2.x + 40 + (b2.x - a2.x) * i / steps, a2.y + a2.height / 2 + (b2.y - a2.y) * i / steps); }
+      await page.mouse.up(); await sleep(300);
+      return page.evaluate(() => { window.__stop = true; const g = window.__gaps.slice(2); const sorted = g.slice().sort((x, y) => x - y); return { images: g.length, mediane: +sorted[Math.floor(sorted.length / 2)].toFixed(1), pire: +Math.max(...g).toFixed(1), tachesLongues: g.filter((x) => x > 50).length }; });
+    });
+    // Glisser un élément de la bibliothèque jusque dans le canevas (indicateur de dépôt calculé à chaque déplacement)
+    res.glisserCanevas = await prof("glisserCanevas", async () => {
+      await page.locator("[data-pb-left] .pb-tab, #pb-tab-elements").first().click().catch(() => {}); await sleep(200);
+      const item = page.locator(".pb-pal-item:visible").first();
+      if (!(await item.count())) return null;
+      const a = await item.boundingBox(), f = await page.locator("[data-pb-frame]").boundingBox();
+      if (!a || !f) return null;
+      await page.evaluate(() => { window.__gaps = []; let last = performance.now(); window.__stop = false; const fn = () => { const n = performance.now(); window.__gaps.push(n - last); last = n; if (!window.__stop) requestAnimationFrame(fn); }; requestAnimationFrame(fn); });
+      await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await page.mouse.down();
+      const steps = 40, tx = f.x + f.width / 2, ty = f.y + f.height / 2;
+      for (let i = 1; i <= steps; i++) await page.mouse.move(a.x + a.width / 2 + (tx - a.x - a.width / 2) * i / steps, a.y + a.height / 2 + (ty - a.y - a.height / 2) * i / steps + Math.sin(i / 3) * 20);
+      for (let i = 0; i < 20; i++) await page.mouse.move(tx + (i % 2 ? 30 : -30), ty + i * 8);
+      await page.keyboard.press("Escape"); await page.mouse.up(); await sleep(300);
+      return page.evaluate(() => { window.__stop = true; const g = window.__gaps.slice(2); const sorted = g.slice().sort((x, y) => x - y); return { images: g.length, mediane: +sorted[Math.floor(sorted.length / 2)].toFixed(1), pire: +Math.max(...g).toFixed(1), tachesLongues: g.filter((x) => x > 50).length }; });
+    });
     // Défilement du canevas : cadence (images/s) pendant 1 s de défilement continu
     res.fpsDefilement = await page.evaluate(async () => { const w = document.querySelector("[data-pb-frame]").contentWindow; let frames = 0; const t0 = performance.now(); const tick = () => { w.scrollBy(0, 40); frames++; if (performance.now() - t0 < 1000) requestAnimationFrame(tick); }; await new Promise((r) => { const done = () => r(); requestAnimationFrame(tick); setTimeout(done, 1050); }); return frames; });
     // Instantané mémoire / DOM en fin de scénario et taille des données
     res.memoireFinMo = await page.evaluate(() => (performance.memory ? +(performance.memory.usedJSHeapSize / 1048576).toFixed(1) : null));
     res.documentKo = await page.evaluate(async (pid) => (await (await fetch(`/marketing/pages/${pid}/editeur`)).text()).length / 1024 | 0, pageId);
+    // Montée en charge (--stress) : 150 modifications d'affilée (historique plein), mémoire après nettoyage, puis 150 annulations
+    if (process.argv.includes("--stress")) {
+      const heap = () => page.evaluate(() => { if (window.gc) window.gc(); return performance.memory ? +(performance.memory.usedJSHeapSize / 1048576).toFixed(1) : null; });
+      res.stress = { memoireAvantMo: await heap() };
+      await page.evaluate(() => document.querySelector('[data-pb-layers] .pb-node[data-id^="hd"] > .pb-row-item').click());
+      await sleep(400);
+      const t = await page.evaluate(async () => {
+        const sel = [...document.querySelectorAll("[data-pb-context] select")].find((x) => [...x.options].some((o) => o.value === "700"));
+        if (!sel) return null;
+        const xs = [];
+        for (let i = 0; i < 150; i++) { const t0 = performance.now(); sel.value = i % 2 ? "400" : "700"; sel.dispatchEvent(new Event("change", { bubbles: true })); xs.push(performance.now() - t0); await new Promise((r) => setTimeout(r, 8)); }
+        xs.sort((a, b) => a - b); return { med: +xs[75].toFixed(1), max: +xs[149].toFixed(1) };
+      });
+      res.stress.modifications150 = t; await sleep(1500);
+      res.stress.memoireApresMo = await heap();
+      const tu = await page.evaluate(async () => { const b = document.querySelector("[data-pb-undo]"); let n = 0; const t0 = performance.now(); while (!b.disabled && n < 200) { b.click(); n++; } await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); return { annulations: n, totalMs: +(performance.now() - t0).toFixed(0) }; });
+      res.stress.annuler = tu; await sleep(1500);
+      res.stress.memoireFinMo = await heap();
+    }
     results.sizes[size] = res;
     console.log(JSON.stringify({ taille: size, ...res }));
     await ctx.close();
