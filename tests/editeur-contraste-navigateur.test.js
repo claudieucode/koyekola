@@ -68,7 +68,8 @@ describe("lisibilité des panneaux sombres (navigateur)", { skip: SKIP }, () => 
 
   for (const [skin, label] of [["classic", "Classique sombre"], ["navy", "Navy Premium"]]) {
     test(`${label} : textes ≥ 4,5:1, désactivés lisibles, champs distincts, aucune surface claire`, async () => {
-      const ctx = await browser.newContext({ viewport: { width: 1700, height: 1100 } });
+      // Mouvement réduit : les apparitions (fondus de quelques dizaines de ms) ne faussent pas la mesure d'opacité des textes
+      const ctx = await browser.newContext({ viewport: { width: 1700, height: 1100 }, reducedMotion: "reduce" });
       await ctx.addCookies([...boss.cookies].map(([name, value]) => ({ name, value, url: srv.base })));
       await ctx.addInitScript(([k]) => { try { localStorage.setItem("pb:palette-theme", '"dark"'); localStorage.setItem("pb:editor-skin", JSON.stringify(k)); } catch { /* sans effet */ } }, [skin]);
       const page = await ctx.newPage();

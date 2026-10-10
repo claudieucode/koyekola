@@ -47,7 +47,7 @@
         <button type="button" class="pb-icon-btn" data-pb-toggle="outlines" aria-pressed="false" data-tip="Contours de tous les éléments" aria-label="Contours des éléments"><%- icon("borderBox", { size: 15 }) %></button>
         <button type="button" class="pb-icon-btn" data-pb-toggle="rulers" aria-pressed="false" data-tip="Règles et guides (R)" aria-label="Règles"><%- icon("spacing", { size: 15 }) %></button>
         <button type="button" class="pb-icon-btn" data-pb-toggle="snap" aria-pressed="true" data-tip="Magnétisme (Maj + M) : les tailles s'accrochent aux guides, à la grille et aux autres éléments. Alt : mouvement libre" aria-label="Magnétisme"><%- icon("grip", { size: 15 }) %></button>
-        <button type="button" class="pb-icon-btn" data-pb-rules-menu aria-haspopup="menu" aria-expanded="false" data-tip="Règles, guides et magnétisme : réglages" aria-label="Règles, guides et magnétisme : réglages"><%- icon("sliders", { size: 15 }) %></button>
+        <button type="button" class="pb-icon-btn" data-pb-rules-menu aria-haspopup="menu" aria-expanded="false" data-tip="Règles et magnétisme" aria-label="Règles, guides et magnétisme : réglages"><%- icon("sliders", { size: 15 }) %></button>
       </div>
       <span class="pb-save" data-pb-save role="status" aria-live="polite"></span>
       <button type="button" class="pb-icon-btn" data-pb-command data-tip="Commandes (Ctrl/⌘ + K)" aria-label="Rechercher une commande"><%- icon("search", { size: 16 }) %></button>
@@ -156,6 +156,7 @@
       </div>
       <span class="pb-modal-spacer"></span>
       <a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= page.id %>/apercu" target="_blank" rel="noopener">Ouvrir dans un onglet</a>
+      <button type="button" class="pb-icon-btn" data-pb-preview-full aria-pressed="false" data-tip="Plein écran" aria-label="Plein écran"><%- icon("maximize", { size: 18 }) %></button>
       <button type="button" class="pb-icon-btn" data-pb-close aria-label="Fermer l'aperçu"><%- icon("close", { size: 18 }) %></button></div>
     <div class="pb-preview-stage"><iframe class="pb-preview-frame" data-pb-preview-frame data-device="desktop" title="Aperçu de la page"></iframe></div>
   </dialog>
@@ -194,10 +195,17 @@
     <div class="pb-navmgr-body" data-pb-navmgr-body></div>
   </dialog>
 
-  <dialog class="pb-modal pb-command" data-pb-command-dialog aria-label="Commandes">
-    <label class="sr-only" for="pb-cmd-q">Rechercher une commande</label>
-    <input class="pb-search" id="pb-cmd-q" type="search" placeholder="Que voulez-vous faire ? (ajouter un titre, grouper, aperçu…)" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="pb-cmd-list" data-pb-cmd-q>
-    <ul class="pb-cmd-list" id="pb-cmd-list" role="listbox" aria-label="Commandes" data-pb-cmd-list></ul>
+  <dialog class="pb-modal pb-command" data-pb-command-dialog aria-labelledby="pb-cmd-title">
+    <div class="pb-cmd-box">
+      <div class="pb-cmd-head"><h2 id="pb-cmd-title">Commandes</h2><span class="pb-modal-spacer"></span><button type="button" class="pb-icon-btn" data-pb-close data-tip="Fermer (Échap)" aria-label="Fermer la palette de commandes"><%- icon("close", { size: 16 }) %></button></div>
+      <div class="pb-cmd-field">
+        <span class="pb-cmd-search-ico" aria-hidden="true"><%- icon("search", { size: 16 }) %></span>
+        <label class="sr-only" for="pb-cmd-q">Rechercher une commande</label>
+        <input class="pb-cmd-input" id="pb-cmd-q" type="search" placeholder="Que voulez-vous faire ? (ajouter un titre, grouper, aperçu…)" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="pb-cmd-list" data-pb-cmd-q>
+      </div>
+      <ul class="pb-cmd-list" id="pb-cmd-list" role="listbox" aria-label="Commandes" data-pb-cmd-list></ul>
+      <div class="pb-cmd-foot" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> naviguer</span><span><kbd>⏎</kbd> exécuter</span><span><kbd>Échap</kbd> fermer</span></div>
+    </div>
   </dialog>
 
   <%# Raccourcis clavier (menu principal) : la liste réelle de ce que gère l'éditeur %>
@@ -222,6 +230,7 @@
   <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone", "sliders", "moreHorizontal", "listPlus", "listMinus", "undo", "redo", "sun", "moon", "palette"].concat(spec.types.map((t) => t.icon), spec.icons).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
   <script type="application/json" id="pb-boot"><%- boot %></script>
   <script src="<%= asset('/js/page-builder-effects.js') %>" defer></script>
+  <script src="<%= asset('/js/kol-motion.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-snap.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-theme.js') %>" defer></script>
   <script src="<%= asset('/js/kwmedia.js') %>" defer></script>

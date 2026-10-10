@@ -61,9 +61,10 @@
     var t = $("[data-pb-toast]");
     t.textContent = text;
     t.classList.toggle("is-error", Boolean(isError));
+    if (window.KolMotion) window.KolMotion.cancelLeave(t);
     t.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.hidden = true; }, isError ? 6500 : 3200);
+    toastTimer = setTimeout(function () { if (window.KolMotion) window.KolMotion.leave(t, "fade"); t.hidden = true; }, isError ? 6500 : 3200);
   }
   function api(method, url, body, isForm) {
     var opts = { method: method, credentials: "same-origin", headers: { Accept: "application/json" } };
@@ -780,7 +781,7 @@
   var dragIds = null, dragNew = null;
   // Les calques ne sont reconstruits que si ce qu'ils affichent a changé (identifiants, noms, drapeaux, hiérarchie, repli, filtre) : une
   // modification de style, de couleur ou de dimension ne touche à aucun calque (mesuré : la reconstruction coûte ~ 15 000 nœuds DOM à 400 éléments)
-  var treeSig = null, treeMarked = null, treeTab = null, treeNames = {}, treeLi = {};
+  var treeRendered = false, treeSig = null, treeMarked = null, treeTab = null, treeNames = {}, treeLi = {};
   function treeSignature() {
     var out = [];
     treeNames = {};
@@ -855,8 +856,9 @@
         var kids = kidsOf(it), has = Boolean(kids && kids.length), open = has && (treeQuery ? true : !collapsed[it.id]);
         // Signature de la LIGNE (sans ses enfants) : tout ce qu'elle affiche
         var rsig = [level, it.type, nm(it), it.hidden ? 1 : 0, it.locked ? 1 : 0, has ? (open ? "o" : "c") : "-", it.id === errorItemId ? 1 : 0, canWrite ? 1 : 0].join("|");
-        var ent = treeLi[it.id];
+        var ent = treeLi[it.id], brandNew = treeRendered && !treeQuery && !ent;
         if (!ent || ent.sig !== rsig) ent = { li: makeRow(it, level, kids, open), sig: rsig };
+        if (brandNew) freshRows.push(ent.li);
         else syncDelete(ent.li, it, has);
         nextLi[it.id] = ent;
         var li = ent.li, ul = li.lastElementChild && li.lastElementChild.tagName === "UL" ? li.lastElementChild : null;
@@ -871,8 +873,11 @@
       seq.forEach(function (li) { if (at === li) at = at.nextElementSibling; else into.insertBefore(li, at); });
     };
     $$(".pb-tree-empty", treeEl).forEach(function (e) { e.remove(); });
+    var freshRows = []; // lignes réellement nouvelles (identifiant jamais vu) : apparition très courte ; pas pour un filtre ni pour un afflux (chargement, gros annuler)
     reconcile(content.sections, 1, treeEl);
     treeLi = nextLi;
+    if (window.KolMotion && freshRows.length && freshRows.length <= 12) freshRows.forEach(function (li) { window.KolMotion.appear(li, "fade"); });
+    treeRendered = true;
     var anyRow = treeEl.firstElementChild;
     if (treeQuery && !anyRow) treeEl.appendChild(h("li", { class: "pb-tree-empty", role: "none" }, h("p", { class: "pb-hint", text: "Aucun calque ne correspond." })));
     if (!content.sections.length) treeEl.appendChild(h("li", { class: "pb-tree-empty", role: "none" }, h("p", { class: "pb-hint", text: "Page vide : glissez un élément ou un bloc ici, ou dans la page." })));
@@ -1270,14 +1275,19 @@
   var tipEl = h("div", { class: "pb-tip", role: "tooltip", id: "pb-tip", hidden: true });
   document.body.appendChild(tipEl);
   var tipTimer = null, tipFor = null;
-  function hideTip() { clearTimeout(tipTimer); tipTimer = null; if (tipFor) tipFor.removeAttribute("aria-describedby"); tipFor = null; tipEl.hidden = true; }
+  var tipHidAt = 0; // instant où la dernière infobulle visible s'est fermée : passer d'un bouton voisin à l'autre ne réattend pas le délai complet
+  function hideTip() { clearTimeout(tipTimer); tipTimer = null; if (tipFor) tipFor.removeAttribute("aria-describedby"); tipFor = null; if (!tipEl.hidden) tipHidAt = Date.now(); tipEl.hidden = true; }
   function showTip(el) {
     var text = el.getAttribute("data-tip");
     if (!text) return;
     // Barre étendue : le nom est déjà affiché, l'infobulle n'ajoute que ce qui manque (raccourci, indisponibilité)
     var label = el.querySelector(".pb-tool-label");
     if ((panels.toolsExpanded || panels.toolsDense) && label && el.closest(".pb-tools") && text === label.textContent && label.scrollWidth <= label.clientWidth) return;
-    tipEl.textContent = text;
+    // « Titre (Ctrl/⌘ + … pour …) » : le titre d'abord, le raccourci en second plan (même texte, rien n'est ajouté ni retiré)
+    var kb = /^(.*?)\s*\(([^()]*(?:Ctrl|⌘|Maj|Alt)[^()]*)\)\s*$/.exec(text);
+    tipEl.textContent = "";
+    if (kb && kb[1]) { tipEl.appendChild(h("span", { class: "pb-tip-title", text: kb[1] })); tipEl.appendChild(h("span", { class: "pb-tip-key", text: kb[2] })); }
+    else tipEl.textContent = text;
     tipEl.hidden = false;
     var r = el.getBoundingClientRect(), t = tipEl.getBoundingClientRect();
     var side = el.closest(".pb-tools");
@@ -1290,18 +1300,22 @@
     el.setAttribute("aria-describedby", "pb-tip");
     tipFor = el;
   }
+  // Champ de saisie actif (focus ou saisie en cours) : aucune infobulle ne doit venir le recouvrir
+  var isEditing = function (el) { var ae = document.activeElement; return Boolean(ae && ae.matches && ae.matches("input, textarea, select, [contenteditable]") && (el === ae || el.contains(ae))); };
   function armTip(el) {
     if (tipFor === el) return;
+    if (isEditing(el) || el.getAttribute("aria-expanded") === "true") { hideTip(); return; }
+    var warm = Date.now() - tipHidAt < 250 || !tipEl.hidden;
     hideTip();
     tipFor = el;
-    tipTimer = setTimeout(function () { tipFor = null; showTip(el); }, 350);
+    tipTimer = setTimeout(function () { tipFor = null; showTip(el); }, warm ? 40 : 350);
   }
   document.addEventListener("mouseover", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el) armTip(el); else if (tipFor) hideTip(); });
   document.addEventListener("mouseout", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && !el.contains(e.relatedTarget)) hideTip(); });
-  document.addEventListener("focusin", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && el.matches(":focus-visible")) armTip(el); });
+  document.addEventListener("focusin", function (e) { if (e.target.matches && e.target.matches("input, textarea, select")) { hideTip(); return; } var el = e.target.closest && e.target.closest("[data-tip]"); if (el && el.matches(":focus-visible")) armTip(el); });
   document.addEventListener("focusout", hideTip);
   document.addEventListener("mousedown", hideTip, true);
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") hideTip(); }, true);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" || (e.target.matches && e.target.matches("input, textarea, select"))) hideTip(); }, true); // Échap, ou saisie dans un champ : l'infobulle disparaît
   function setTool(k) {
     tool = k;
     $$(".pb-tool[data-mode]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.mode === k)); });
@@ -1487,7 +1501,6 @@
   }
   document.body.appendChild(h("datalist", { id: "pb-tags" }, (boot.tags || []).map(function (t) { return h("option", { value: t }); })));
   document.body.appendChild(h("datalist", { id: "pb-links" }, boot.links.map(function (l) { return h("option", { value: l.url, label: l.label }); })));
-  document.body.appendChild(h("datalist", { id: "pb-scale" }, SPEC.spacingScale.map(function (n) { return h("option", { value: n + "px" }); }).concat(["auto", "100%", "50%"].map(function (v) { return h("option", { value: v }); }))));
 
   // Contenu de chaque élément (onglet « Contenu »)
   // Widget personnalisé : champs de l'inspecteur générés depuis sa description (src/marketing/pages/widgets)
@@ -2276,7 +2289,7 @@
     var shown = function (n, u) { return c.inlineUnit && u && u !== "px" ? n + u : String(n); };
     var input = h("input", { id: c.id, type: "text", inputmode: "decimal", class: "pb-len-num", value: c.value === undefined || c.value === null ? "" : String(c.value), placeholder: c.placeholder === undefined ? "–" : String(c.placeholder), disabled: c.disabled || unitState === "auto", autocomplete: "off", "data-prop": c.prop || null, "aria-label": c.ariaLabel || null, "data-tip": c.tip || null });
     if (c.inputClass) input.className = c.inputClass;
-    if (c.list) input.setAttribute("list", c.list);
+    // Contrat : un champ numérique n'ouvre JAMAIS de liste au focus (ni datalist, ni autocomplétion) ; l'attribut « list » n'est volontairement pas pris en charge ici.
     var sel = null;
     if (units && !c.inlineUnit) {
       if (units.length > 1) { sel = h("select", { class: "pb-len-unit", "aria-label": (c.label || "Valeur") + " : unité", disabled: c.disabled }, units.map(function (u) { return h("option", { value: u, text: u }); })); sel.value = unitState; }
@@ -2865,7 +2878,7 @@
       var isTok = typeof own === "string" && own.indexOf("token:") === 0;
       var u0 = (splitLen(own) || splitLen(inh) || { unit: spUnit[kind] }).unit;
       return numericControl({ prop: key, label: name, inlineUnit: true, hideSteps: false, units: unitsOf(key), unit: u0 === "auto" ? spUnit[kind] : u0, step: STEP_REL, min: isSigned(key) ? -9999 : 0, max: 9999, base: 0, disabled: dis,
-        value: isTok ? "" : showLen(own), placeholder: isTok ? lenTokenLabel(own.slice(6)).replace("Espacement ", "") : inh !== undefined ? showLen(inh) : "0", list: "pb-scale", inputClass: "pb-box-input " + cls + (own !== undefined ? " is-set" : "") + (isTok ? " is-token" : ""), cellClass: cls,
+        value: isTok ? "" : showLen(own), placeholder: isTok ? lenTokenLabel(own.slice(6)).replace("Espacement ", "") : inh !== undefined ? showLen(inh) : "0", inputClass: "pb-box-input " + cls + (own !== undefined ? " is-set" : "") + (isTok ? " is-token" : ""), cellClass: cls,
         ariaLabel: name + (linkState[kind] ? " (4 côtés liés)" : ""), tip: name + (inh !== undefined && own === undefined ? " · hérité : " + inh : ""),
         onCommit: function (raw, u, opts) {
           var v = u === "auto" ? "auto" : raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
@@ -2880,6 +2893,7 @@
     var unitSel = function (kind, label) {
       var first = SIDES.map(function (sd) { return splitLen(ownValue(it, kind + sd)); }).filter(function (p) { return p && p.unit !== "auto"; })[0];
       var sel = h("select", { class: "pb-len-unit pb-link-unit", "aria-label": label + " : unité des 4 côtés", "data-tip": label + " : unité des 4 côtés (les nombres sont conservés, sans conversion)", disabled: dis }, ["px", "%", "rem", "em"].map(function (u) { return h("option", { value: u, text: u }); }));
+      sel.classList.add("pb-sp-unit");
       sel.value = first ? first.unit : spUnit[kind];
       sel.addEventListener("change", function () {
         spUnit[kind] = sel.value;
@@ -2891,7 +2905,7 @@
     };
     var linkBtn = function (kind, label) {
       var on = Boolean(linkState[kind]);
-      return h("button", { type: "button", class: "pb-link-btn", "aria-pressed": String(on), "data-link": kind, "aria-label": (on ? "Délier les côtés : " : "Lier les 4 côtés : ") + label, "data-tip": on ? label + " : 4 côtés liés (une valeur pour tous)" : label + " : côtés indépendants — cliquer pour les lier", disabled: dis,
+      return h("button", { type: "button", class: "pb-link-btn is-icon", "aria-pressed": String(on), "data-link": kind, "aria-label": (on ? "Délier les côtés : " : "Lier les 4 côtés : ") + label, "data-tip": on ? label + " : 4 côtés liés (une valeur pour tous)" : label + " : côtés indépendants — cliquer pour les lier", disabled: dis,
         onclick: function () {
           linkState[kind] = !on; store.set("spacing-link", linkState);
           if (!on) {
@@ -2905,7 +2919,7 @@
             }
           }
           renderInspector();
-        } }, icon("link"), h("span", { text: label }));
+        } }, icon("link"));
     };
     // Valeur du site (espacement XS … XXL) pour les 4 côtés d'une boîte : une RÉFÉRENCE (« token:space-md »), pas une copie du nombre
     var tokBtn = function (kind, label) {
@@ -2921,14 +2935,20 @@
         } }, icon("palette"));
       return btn;
     };
-    return h("div", { class: "pb-spacing" },
-      h("div", { class: "pb-spacing-head" }, linkBtn("margin", "Marge"), unitSel("margin", "Marge"), tokBtn("margin", "Marge"), linkBtn("padding", "Intérieur"), unitSel("padding", "Intérieur"), tokBtn("padding", "Intérieur")),
-      h("div", { class: "pb-boxmodel" },
-        h("span", { class: "pb-box-label", text: "Marge", "aria-hidden": "true" }),
-        h("div", { class: "pb-box-pad", "aria-hidden": "true" }, h("span", { class: "pb-box-label", text: "Intérieur" })),
-        cell("margin", "Top"), cell("margin", "Right"), cell("margin", "Bottom"), cell("margin", "Left"),
-        cell("padding", "Top"), cell("padding", "Right"), cell("padding", "Bottom"), cell("padding", "Left"),
-        h("span", { class: "pb-box-core", "aria-hidden": "true" })));
+    // Présentation : deux blocs « Marge externe » / « Marge interne » (titre, valeur du site, liaison), grille 2 × 2 Haut / Droite / Bas / Gauche ;
+    // chaque champ porte l'icône de son côté et l'unité du groupe (vrai sélecteur, le même pour les 4 côtés). Mêmes données, même liaison que partout.
+    var ORDER = ["Top", "Right", "Bottom", "Left"], SIDE_NAME = { Top: "Haut", Right: "Droite", Bottom: "Bas", Left: "Gauche" };
+    var group = function (kind, title, label) {
+      var fields = ORDER.map(function (sd) {
+        return h("div", { class: "pb-sp-field" },
+          h("span", { class: "pb-sp-side", text: SIDE_NAME[sd] }),
+          h("div", { class: "pb-sp-box" }, h("span", { class: "pb-sp-edge is-" + sd.toLowerCase(), "aria-hidden": "true" }), cell(kind, sd), unitSel(kind, label)));
+      });
+      return h("div", { class: "pb-sp-group", "data-kind": kind },
+        h("div", { class: "pb-sp-head" }, h("span", { class: "pb-sp-title", text: title }), tokBtn(kind, label), linkBtn(kind, label)),
+        h("div", { class: "pb-sp-grid" }, fields));
+    };
+    return h("div", { class: "pb-spacing" }, group("margin", "Marge externe", "Marge"), group("padding", "Marge interne", "Intérieur"));
   }
 
   // ---------- Bordure : style d'abord ; épaisseur et couleur seulement s'il y a une bordure ; arrondi liable ----------
@@ -3827,7 +3847,7 @@
   function ctxLength(label, key, items, width) {
     var it = items[0], own = ownValue(it, key), inh = inheritedValue(it, key), dis = lockedAny(items);
     var isNum = SP[key].kind === "number", cfg = (isNum ? NUMCFG[key] : LENCFG[key]) || {};
-    var commonOpts = { label: label, ariaLabel: label, tip: label, list: isNum ? null : "pb-scale", inputClass: "pb-ctx-num", cellClass: "pb-ctx-cell", hideSteps: true, disabled: dis, drag: false, allowEmpty: true };
+    var commonOpts = { label: label, ariaLabel: label, tip: label, inputClass: "pb-ctx-num", cellClass: "pb-ctx-cell", hideSteps: true, disabled: dis, drag: false, allowEmpty: true };
     var wrap;
     if (isNum) {
       var lim = NUM[key] || [-9999, 9999, 1];
@@ -4087,6 +4107,8 @@
       if (INTERACTIVE.test(it.html) || (live && INTERACTIVE.test(prevHtml[it.key] || ""))) return false;
       want.push(doc.importNode(it.el, true)); replaced++;
     }
+    var knownIds = {};
+    Array.prototype.forEach.call(doc.querySelectorAll("[data-node-id],[data-section-id]"), function (e) { knownIds[idOfEl(e)] = 1; });
     // Tout est vérifié : on applique (aucun retour en arrière possible après ce point)
     liveStyles.forEach(function (el, i) { if (el.textContent !== next.styles[i]) el.textContent = next.styles[i]; });
     if (next.bodyStyle !== prev.bodyStyle) doc.body.setAttribute("style", next.bodyStyle);
@@ -4095,6 +4117,12 @@
     Array.prototype.slice.call(main.children).forEach(function (el) { if (want.indexOf(el) < 0) el.remove(); });
     inlineTouched.forEach(function (el) { el.style.width = ""; el.style.height = ""; });
     inlineTouched = [];
+    // Éléments créés : apparition très courte (opacité + micro-zoom, sans toucher à la mise en page). Seuls les plus hauts d'un lot sont animés (au plus 6)
+    if (window.KolMotion) {
+      var fresh = Array.prototype.filter.call(doc.querySelectorAll("[data-node-id],[data-section-id]"), function (e) { return !knownIds[idOfEl(e)]; });
+      var top = fresh.filter(function (e) { var up = e.parentElement && e.parentElement.closest("[data-node-id],[data-section-id]"); return !up || knownIds[idOfEl(up)]; });
+      if (top.length && top.length <= 6) top.forEach(function (e) { window.KolMotion.appear(e, "appear"); });
+    }
     markCanvasSelection(false);
     drawRulers();
     drawGuides();
@@ -4390,9 +4418,6 @@
     } else if (it.type === "grid") {
       plus("is-row", r.left + r.width / 2, r.top + r.height, "Ajouter une ligne", function () { gridAddRow(it.id); });
       plus("is-col", r.left + r.width, r.top + r.height / 2, "Ajouter une colonne", function () { gridSetColumns(it.id, gridColumnsOf(it) + 1); });
-    } else if (kidsOf(it) && !kidsOf(it).length) {
-      // À CÔTÉ du « + » de la zone vide (44 px, centré : « créer une structure »), jamais par-dessus : sinon il le recouvrait et la création d'un container devenait inaccessible au centre
-      plus("is-inside", Math.min(r.left + r.width / 2 + 46, r.left + r.width - 14), r.top + r.height / 2, "Ajouter un élément ici", function () { openCommands("Ajouter", { inside: it.id }); });
     }
   }
   // Tirer la séparation entre deux colonnes : les deux voisines se partagent leur largeur commune
@@ -4977,11 +5002,26 @@
     refreshInfo();
     placeCanvasBar();
   }
+  // Recalcul de la zone du canevas (largeur du cadre, zoom, règles, barre d'actions) : au plus UN par image, quel que soit le nombre de causes
+  // (glisser d'une poignée de panneau, observateur de taille, redimensionnement de la fenêtre)
+  // Pendant le glissement d'une poignée de panneau, le recalcul (qui refait la mise en page de toute la page du cadre à chaque nouvelle largeur) est limité
+  // à ~11 par seconde : le bord du panneau suit la main à chaque image, le canevas se met à jour en continu mais pas à chaque pixel ; au relâchement,
+  // un dernier recalcul exact est fait.
+  var zoomQueued = false, panelDragging = false, lastZoomAt = 0;
+  function queueZoom() {
+    if (zoomQueued) return;
+    zoomQueued = true;
+    requestAnimationFrame(function run() {
+      if (panelDragging && performance.now() - lastZoomAt < 90) { requestAnimationFrame(run); return; }
+      zoomQueued = false; lastZoomAt = performance.now();
+      if (zoomFit) applyZoom(); else drawRulers();
+    });
+  }
   function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(2, Math.max(0.25, z)); applyZoom(); setTimeout(function () { drawOverlays(); drawGuides(); }, 30); }
   $$("[data-pb-zoom]").forEach(function (b) { b.addEventListener("click", function () { var v = b.dataset.pbZoom; setZoom(v === "fit" ? "fit" : v === "100" ? 1 : v === "+" ? Math.round((zoom + 0.1) * 10) / 10 : Math.round((zoom - 0.1) * 10) / 10); }); });
-  window.addEventListener("resize", function () { if (zoomFit) applyZoom(); else drawRulers(); });
+  window.addEventListener("resize", queueZoom);
   // La zone du canevas change de taille (panneaux, fenêtre, mise en page initiale) : le cadre suit
-  if (window.ResizeObserver) new ResizeObserver(function () { applyZoom(); }).observe(stage);
+  if (window.ResizeObserver) new ResizeObserver(function () { queueZoom(); }).observe(stage);
   function setAid(k, v) {
     aids[k] = v; store.set("aids", aids);
     $$("[data-pb-toggle='" + k + "'], [data-aid='" + k + "']").forEach(function (b) { b.setAttribute("aria-pressed", String(k === "guides" ? v !== false : Boolean(v))); });
@@ -5447,6 +5487,7 @@
   function showSimpleMenu(entries, x, y) {
     menu.textContent = "";
     entries.forEach(function (en) { menu.appendChild(h("button", { type: "button", role: "menuitem", class: "pb-menu-item", disabled: en[2] || null, tabindex: "-1", onclick: function () { closeMenu(); en[1](); } }, h("span", { text: en[0] }), en[3] ? h("kbd", { text: en[3] }) : null)); });
+    if (window.KolMotion) window.KolMotion.cancelLeave(menu);
     menu.hidden = false;
     var r = menu.getBoundingClientRect();
     menu.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + "px";
@@ -5530,7 +5571,7 @@
     subscribe: function (fn) { rulesListeners.push(fn); },
     setZoom: setZoom,
     open: function () {}, // remplacé par le panneau
-    h: h, toast: toast,
+    h: h, toast: toast, icon: icon,
   };
 
   // ---------- Apparence de l'éditeur (claire / sombre / système) ----------
@@ -5678,10 +5719,16 @@
   }
   if (paletteMedia) { var onScheme = function () { if (paletteMode === "system") applyPalette(); }; if (paletteMedia.addEventListener) paletteMedia.addEventListener("change", onScheme); else if (paletteMedia.addListener) paletteMedia.addListener(onScheme); }
 
+  // Sections repliables de l'Inspecteur : le contenu apparaît en douceur quand l'AUTEUR ouvre (jamais quand l'Inspecteur est reconstruit avec des sections déjà ouvertes)
+  var accUser = 0;
+  ["pointerdown", "keydown"].forEach(function (ev) { document.addEventListener(ev, function (e) { if (e.target.closest && e.target.closest("summary")) accUser = Date.now(); }, true); });
+  document.addEventListener("toggle", function (e) { var d = e.target; if (window.KolMotion && d.open && d.matches && d.matches("details.pb-acc, details.pb-info") && Date.now() - accUser < 500) window.KolMotion.appear(d.querySelector(":scope > .pb-acc-body, :scope > .pb-meta"), "rise"); }, true);
+
   // ---------- Panneaux redimensionnables ----------
   var main = $("[data-pb-main]");
   var PANEL_MIN_RIGHT = 280;
-  function applyPanels() {
+  // live : glissement d'une poignée en cours — les préférences ne sont écrites qu'au relâchement (une écriture, pas une par pixel)
+  function applyPanels(live) {
     if (panels.right < PANEL_MIN_RIGHT) panels.right = PANEL_MIN_RIGHT; // largeur enregistrée avant ce minimum
     main.style.setProperty("--pb-tools-w", panels.toolsExpanded ? "176px" : panels.toolsDense ? "136px" : "48px");
     main.classList.toggle("is-tools-expanded", Boolean(panels.toolsExpanded));
@@ -5691,20 +5738,20 @@
     main.classList.toggle("is-left-hidden", panels.leftHidden);
     main.classList.toggle("is-right-hidden", panels.rightHidden);
     $("[data-pb-right]").style.setProperty("--pb-layers-h", panels.layers + "%");
-    store.set("panels", panels);
-    if (zoomFit) applyZoom(); else drawRulers();
+    if (!live) store.set("panels", panels);
+    queueZoom();
   }
-  function togglePanel(side) { panels[side + "Hidden"] = !panels[side + "Hidden"]; applyPanels(); renderTools(); }
+  function togglePanel(side) { panels[side + "Hidden"] = !panels[side + "Hidden"]; applyPanels(); renderTools(); if (!panels[side + "Hidden"] && window.KolMotion) window.KolMotion.appear($(side === "left" ? "[data-pb-left]" : "[data-pb-right]"), "panel-" + side); }
   $$("[data-pb-resize]").forEach(function (handle) {
     var side = handle.dataset.pbResize;
     // Largeur : jamais assez étroite pour rendre les contrôles illisibles (droite : 280 px au moins), ni plus de la moitié de la fenêtre
-    var setW = function (w) { var min = side === "right" ? PANEL_MIN_RIGHT : 200; panels[side] = Math.min(560, Math.max(min, Math.min(Math.round(w), Math.round(window.innerWidth * 0.5)))); panels[side + "Hidden"] = false; applyPanels(); };
+    var setW = function (w, live) { var min = side === "right" ? PANEL_MIN_RIGHT : 200; panels[side] = Math.min(560, Math.max(min, Math.min(Math.round(w), Math.round(window.innerWidth * 0.5)))); panels[side + "Hidden"] = false; applyPanels(live); };
     handle.addEventListener("pointerdown", function (e) {
-      e.preventDefault(); handle.setPointerCapture(e.pointerId);
+      e.preventDefault(); handle.setPointerCapture(e.pointerId); panelDragging = true;
       var sx = e.clientX, sw = panels[side];
       frame.style.pointerEvents = "none";
-      var move = function (ev) { setW(side === "left" ? sw + ev.clientX - sx : sw - (ev.clientX - sx)); };
-      var up = function () { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); frame.style.pointerEvents = ""; renderTools(); };
+      var move = function (ev) { setW(side === "left" ? sw + ev.clientX - sx : sw - (ev.clientX - sx), true); };
+      var up = function () { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); frame.style.pointerEvents = ""; panelDragging = false; store.set("panels", panels); queueZoom(); renderTools(); };
       handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", up);
     });
     handle.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); setW(panels[side] + ((e.key === "ArrowRight") === (side === "left") ? 16 : -16)); } });
@@ -5997,7 +6044,17 @@
   }
   $("[data-pb-preview]").addEventListener("click", openPreview);
   $$("[data-preview-device]").forEach(function (b) { b.addEventListener("click", function () { $$("[data-preview-device]").forEach(function (x) { x.setAttribute("aria-checked", String(x === b)); }); $("[data-pb-preview-frame]").dataset.device = b.dataset.previewDevice; }); });
-  previewDialog.addEventListener("close", function () { $("[data-pb-preview-frame]").src = "about:blank"; });
+  // Plein écran : le même dialogue, redimensionné (aucune reconstruction du cadre : appareil, défilement et page restent tels quels)
+  var previewFullBtn = $("[data-pb-preview-full]");
+  function setPreviewFull(on) {
+    previewDialog.classList.toggle("is-full", on);
+    previewFullBtn.setAttribute("aria-pressed", String(on));
+    var label = on ? "Quitter le plein écran" : "Plein écran";
+    previewFullBtn.setAttribute("aria-label", label); previewFullBtn.setAttribute("data-tip", label);
+  }
+  previewFullBtn.addEventListener("click", function () { setPreviewFull(!previewDialog.classList.contains("is-full")); });
+  previewDialog.addEventListener("keydown", function (e) { if (e.key === "Escape" && previewDialog.classList.contains("is-full")) { e.preventDefault(); setPreviewFull(false); } }); // Échap sort d'abord du plein écran
+  previewDialog.addEventListener("close", function () { $("[data-pb-preview-frame]").src = "about:blank"; setPreviewFull(false); });
 
   // ---------- Menu contextuel (clic droit) ----------
   var menu = $("[data-pb-menu]");
@@ -6044,13 +6101,14 @@
       if (typeof e === "object" && e.heading) { menu.appendChild(h("p", { class: "pb-menu-heading", text: e.heading })); return; }
       menu.appendChild(h("button", { type: "button", role: "menuitem", class: "pb-menu-item" + (e[0] === "Supprimer" ? " is-danger" : "") + (e[4] ? " " + e[4] : ""), disabled: e[2] || null, tabindex: "-1", onclick: function () { closeMenu(); e[1](); } }, h("span", { text: e[0] }), e[3] ? h("kbd", { text: e[3] }) : null));
     });
+    if (window.KolMotion) window.KolMotion.cancelLeave(menu);
     menu.hidden = false;
     var r = menu.getBoundingClientRect();
     menu.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + "px";
     menu.style.top = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + "px";
     var first = menu.querySelector(".pb-menu-item:not([disabled])"); if (first) first.focus();
   }
-  function closeMenu() { menu.hidden = true; var mb = $("[data-pb-mainmenu]"); if (mb) mb.setAttribute("aria-expanded", "false"); }
+  function closeMenu() { if (window.KolMotion && !menu.hidden) window.KolMotion.leave(menu); menu.hidden = true; var mb = $("[data-pb-mainmenu]"); if (mb) mb.setAttribute("aria-expanded", "false"); }
   menu.addEventListener("keydown", function (e) {
     var list = $$(".pb-menu-item:not([disabled])", menu);
     var i = list.indexOf(document.activeElement);
@@ -6068,8 +6126,8 @@
   var cmdAnchor = null, cmdIndex = 0, cmdShown = [];
   function commandList() {
     var has = selection.length > 0;
-    var adds = [{ type: "layout", label: "Section libre" }].concat(SPEC.types.map(function (t) { return { type: t.type, label: t.label }; })).concat(boot.types.map(function (t) { return { type: t.type, label: t.label + " (section prête)", legacy: true }; }));
-    var list = canWrite ? adds.map(function (a) { return { label: "Ajouter : " + a.label, run: function () { addAt(a.type, a.legacy); } }; }) : [];
+    var adds = [{ type: "layout", label: "Section libre", icon: "layout" }].concat(SPEC.types.map(function (t) { return { type: t.type, label: t.label, icon: t.icon }; })).concat(boot.types.map(function (t) { return { type: t.type, label: t.label + " (section prête)", legacy: true }; }));
+    var list = canWrite ? adds.map(function (a) { return { label: "Ajouter : " + a.label, icon: a.icon, run: function () { addAt(a.type, a.legacy); } }; }) : [];
     if (canWrite) boot.blocks.forEach(function (b) { list.push({ label: "Ajouter le bloc : " + b.label, run: function () { var btn = $(".pb-block-item[data-block='" + b.key + "']"); if (btn) btn.click(); } }); });
     return list.concat([
       { label: "Ouvrir la médiathèque", run: function () { openMedia({ title: "Médiathèque" }); } },
@@ -6114,34 +6172,89 @@
     }
     if (legacy) addLegacy(type, at); else addElement(type, at);
   }
+  // Catégories (déduites du début du libellé, sans rien renommer), icônes, raccourcis et synonymes : de simples tables à côté de la liste
+  var CMD_CATS = ["Créer", "Édition", "Page", "Affichage", "Interface"];
+  function cmdCategory(l) {
+    if (/^Ajouter/.test(l)) return "Créer";
+    if (/^(Dupliquer|Supprimer|Grouper|Dissocier|Masquer|Verrouiller|Copier|Coller|Réinitialiser|Sélectionner|Annuler|Rétablir|Vider)/.test(l)) return "Édition";
+    if (/^(Écran|Zoom|Grille|Guides|Contours|Règles)/.test(l)) return "Affichage";
+    if (/^(Structure|Calques|Panneau|Mode)/.test(l)) return "Interface";
+    return "Page";
+  }
+  var CMD_ICONS = [[/^Ouvrir la médiathèque/, "image"], [/^Aperçu/, "eye"], [/^Enregistrer/, "check"], [/^Publier/, "upload"], [/^Annuler/, "undo"], [/^Rétablir/, "redo"], [/^Dupliquer/, "copy"], [/^(Supprimer|Vider)/, "trash"], [/^(Grouper|Dissocier)/, "layers"], [/^Masquer/, "eyeOff"], [/^Verrouiller/, "lock"], [/style/, "palette"], [/^Sélectionner le parent/, "arrowUp"], [/^Écran : ordinateur/, "monitor"], [/^Écran : tablette/, "tablet"], [/^Écran : mobile/, "smartphone"], [/^Zoom/, "maximize"], [/^(Grille|Guides|Contours|Règles)/, "borderBox"], [/^(Structure|Calques|Panneau)/, "layers"], [/^Réglages/, "sliders"], [/^Mode/, "edit"], [/^Ajouter une structure/, "layout"], [/^Ajouter le bloc/, "listPlus"]];
+  var CMD_KEYS = [[/^Enregistrer/, "Ctrl+S"], [/^Annuler$/, "Ctrl+Z"], [/^Rétablir$/, "Ctrl+Maj+Z"], [/^Dupliquer/, "Ctrl+D"], [/^Supprimer la sélection/, "Suppr"], [/^Grouper$/, "Ctrl+G"], [/^Dissocier$/, "Ctrl+Maj+G"], [/^Masquer/, "Ctrl+Maj+H"], [/^Verrouiller/, "Ctrl+Maj+L"], [/^Copier le style/, "Ctrl+Alt+C"], [/^Coller le style$/, "Ctrl+Alt+V"], [/^Zoom : ajuster/, "Maj+1"], [/^Structure : (rouvrir|fermer)/, "Ctrl+Maj+Y"], [/^Mode :/, "Ctrl+Maj+E"]];
+  var CMD_ALIASES = [[/^Ajouter : Conteneur/, "container"], [/^Ajouter : Section/, "section"], [/^Ajouter : Colonne/, "columns column"], [/^Ajouter : Titre/, "heading title"], [/^Ajouter : Texte/, "text paragraph"], [/^Ajouter : Image/, "picture photo"], [/^Ajouter : Bouton/, "button"], [/^Ajouter : Vid/, "video"], [/^Supprimer/, "delete remove"], [/^Dupliquer/, "duplicate copy clone"], [/^Masquer/, "hide show"], [/^Verrouiller/, "lock unlock"], [/^Aperçu/, "preview"], [/^Enregistrer/, "save"], [/^Publier/, "publish"], [/^Annuler/, "undo"], [/^Rétablir/, "redo"], [/^Écran/, "responsive device"], [/^Zoom/, "scale"], [/^Grouper/, "group"]];
+  var cmdMac = /Mac|iPhone|iPad/.test(navigator.platform || "");
+  var CMD_MAX = 80, CMD_RECENT = 4;
+  function cmdLookup(table, label) { for (var i = 0; i < table.length; i++) if (table[i][0].test(label)) return table[i][1]; return ""; }
+  function cmdKbd(label) {
+    var k = cmdLookup(CMD_KEYS, label);
+    return k && cmdMac ? k.replace(/Ctrl\+?/, "⌘").replace(/Alt\+?/, "⌥").replace(/Maj\+?/, "⇧").replace(/Suppr/, "⌫") : k;
+  }
+  var cmdRows = [];
   function openCommands(prefill, anchor) {
     if (editing) commitEdit();
     cmdAnchor = anchor || null;
     var q = $("[data-pb-cmd-q]");
     q.value = prefill || "";
     cmdIndex = 0;
-    cmdDialog.showModal();
+    if (!cmdDialog.open) cmdDialog.showModal();
     renderCommands();
     q.focus();
   }
+  function cmdRow(c, i) {
+    var kbd = cmdKbd(c.label);
+    return h("li", { role: "option", id: "pb-cmd-" + i, "aria-selected": "false", class: "pb-cmd-item", onclick: function () { runCommand(i); } },
+      h("span", { class: "pb-cmd-ico", "aria-hidden": "true" }, c.icon || cmdLookup(CMD_ICONS, c.label) ? icon(c.icon || cmdLookup(CMD_ICONS, c.label)) : null),
+      h("span", { class: "pb-cmd-label", text: c.label }), kbd ? h("kbd", { class: "pb-cmd-kbd", text: kbd }) : null);
+  }
+  // Reconstruit la liste (frappe seulement) : favoris et récentes en tête quand la recherche est vide, puis les catégories
   function renderCommands() {
     var words = norm($("[data-pb-cmd-q]").value).split(/\s+/).filter(Boolean);
-    cmdShown = commandList().filter(function (c) { var t = norm(c.label); return words.every(function (w) { return t.indexOf(w) >= 0; }); }).slice(0, 80);
-    cmdIndex = Math.min(cmdIndex, Math.max(0, cmdShown.length - 1));
+    var pool = commandList().filter(function (c) { var t = norm(c.label + " " + cmdLookup(CMD_ALIASES, c.label)); return words.every(function (w) { return t.indexOf(w) >= 0; }); });
+    if (words.length) pool = pool.slice(0, CMD_MAX); // sans recherche, tout est listé par catégorie (les 80 premiers seraient tous des « Ajouter »)
+    var groups = [], favs = store.get("cmd-fav", []);
+    function take(title, list) { if (!list.length) return; groups.push([title, list]); pool = pool.filter(function (c) { return list.indexOf(c) < 0; }); }
+    take("Favoris", pool.filter(function (c) { return favs.indexOf(c.label) >= 0; }));
+    if (!words.length) take("Récentes", store.get("cmd-recent", []).map(function (l) { return pool.filter(function (c) { return c.label === l; })[0]; }).filter(Boolean));
+    CMD_CATS.forEach(function (cat) { take(cat, pool.filter(function (c) { return cmdCategory(c.label) === cat; })); });
     var ul = $("[data-pb-cmd-list]");
     ul.textContent = "";
-    cmdShown.forEach(function (c, i) { ul.appendChild(h("li", { role: "option", id: "pb-cmd-" + i, "aria-selected": String(i === cmdIndex), class: i === cmdIndex ? "is-active" : null, onclick: function () { runCommand(i); }, text: c.label })); });
-    if (!cmdShown.length) ul.appendChild(h("li", { class: "pb-hint", role: "none", text: "Aucune commande." }));
-    $("[data-pb-cmd-q]").setAttribute("aria-activedescendant", cmdShown.length ? "pb-cmd-" + cmdIndex : "");
+    cmdShown = []; cmdRows = [];
+    groups.forEach(function (g) {
+      ul.appendChild(h("li", { class: "pb-cmd-cat", role: "presentation", text: g[0] }));
+      g[1].forEach(function (c) { var li = cmdRow(c, cmdShown.length); cmdShown.push(c); cmdRows.push(li); ul.appendChild(li); });
+    });
+    if (!cmdShown.length) ul.appendChild(h("li", { class: "pb-cmd-empty", role: "presentation" }, h("strong", { text: "Aucune commande trouvée" }), h("span", { text: "Essayez un autre terme." })));
+    cmdIndex = Math.min(cmdIndex, Math.max(0, cmdShown.length - 1));
+    setCmdActive(cmdIndex, true);
   }
-  function runCommand(i) { var c = cmdShown[i]; if (!c) return; var anchor = cmdAnchor; cmdDialog.close(); cmdAnchor = anchor; c.run(); cmdAnchor = null; }
+  // Déplacer la sélection ne touche que deux lignes (pas de reconstruction, donc pas de scintillement)
+  function setCmdActive(i, top) {
+    var prev = $(".pb-cmd-list .is-active"); if (prev) { prev.classList.remove("is-active"); prev.setAttribute("aria-selected", "false"); }
+    cmdIndex = i;
+    var el = cmdRows[i], q = $("[data-pb-cmd-q]");
+    q.setAttribute("aria-activedescendant", el ? el.id : "");
+    if (!el) return;
+    el.classList.add("is-active"); el.setAttribute("aria-selected", "true");
+    if (top && i === 0) $("[data-pb-cmd-list]").scrollTop = 0; else el.scrollIntoView({ block: "nearest" });
+  }
+  function runCommand(i) {
+    var c = cmdShown[i]; if (!c) return;
+    store.set("cmd-recent", [c.label].concat(store.get("cmd-recent", []).filter(function (l) { return l !== c.label; })).slice(0, CMD_RECENT));
+    var anchor = cmdAnchor; cmdDialog.close(); cmdAnchor = anchor; c.run(); cmdAnchor = null;
+  }
   $("[data-pb-cmd-q]").addEventListener("input", function () { cmdIndex = 0; renderCommands(); });
   $("[data-pb-cmd-q]").addEventListener("keydown", function (e) {
-    if (e.key === "ArrowDown") { e.preventDefault(); cmdIndex = Math.min(cmdShown.length - 1, cmdIndex + 1); renderCommands(); scrollCmd(); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); cmdIndex = Math.max(0, cmdIndex - 1); renderCommands(); scrollCmd(); }
+    if (e.key === "ArrowDown") { e.preventDefault(); if (cmdShown.length) setCmdActive((cmdIndex + 1) % cmdShown.length); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); if (cmdShown.length) setCmdActive((cmdIndex - 1 + cmdShown.length) % cmdShown.length); }
     else if (e.key === "Enter") { e.preventDefault(); runCommand(cmdIndex); }
+    else if ((e.ctrlKey || e.metaKey) && (e.key || "").toLowerCase() === "k") { e.preventDefault(); e.stopPropagation(); cmdDialog.close(); } // le raccourci d'ouverture ferme aussi (l'écouteur global se tait quand une fenêtre est ouverte)
   });
-  function scrollCmd() { var a = $(".pb-cmd-list .is-active"); if (a) a.scrollIntoView({ block: "nearest" }); }
+  // Clic sur le fond : la cible est le <dialog> lui-même (son contenu le remplit entièrement) ; on exige aussi que l'appui ait commencé sur le fond
+  var cmdPressedBackdrop = false;
+  cmdDialog.addEventListener("mousedown", function (e) { cmdPressedBackdrop = e.target === cmdDialog; });
+  cmdDialog.addEventListener("click", function (e) { if (e.target === cmdDialog && cmdPressedBackdrop) cmdDialog.close(); cmdPressedBackdrop = false; });
   $("[data-pb-command]").addEventListener("click", function () { openCommands(""); });
 
   // ---------- Sauvegarde automatique ----------
@@ -6311,7 +6424,7 @@
     var k = (e.key || "").toLowerCase();
     if (mod && k === "s") { e.preventDefault(); saveNow(); return; }
     if (mod && e.shiftKey && k === "y") { e.preventDefault(); setDockMode(dock.mode === "closed" ? dock.last : "closed"); return; }
-    if (mod && k === "k") { e.preventDefault(); openCommands(""); return; }
+    if (mod && k === "k") { e.preventDefault(); if (cmdDialog.open) cmdDialog.close(); else openCommands(""); return; }
     if (mod && e.shiftKey && k === "e") { e.preventDefault(); setMode(mode === "structure" ? "visual" : "structure"); return; }
     if (typing || editing) return;
     if (mod && k === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }

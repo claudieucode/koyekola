@@ -110,9 +110,9 @@ describe("canvas de l'éditeur de pages : grande zone de création, « + », con
     await until(() => roots().length === 1, "container");
     const firstEmpty = () => frame().locator("[data-node-id] [data-kw-add]:not([data-kw-add='root']):visible").first();
     const depth = (x) => 1 + Math.max(0, ...(x.children || []).filter((c) => ["container", "grid"].includes(c.type)).map(depth));
-    // le « + » de création et l'outil flottant « Ajouter un élément ici » (conteneur sélectionné) ne se recouvrent pas
-    const overlap = await page.evaluate(() => { const d = document.querySelector("[data-pb-frame]").contentDocument; const a = d.querySelector(".kw-node [data-kw-add]:not([data-kw-add='root'])").getBoundingClientRect(), b = d.querySelector(".pb-struct-add.is-inside"); if (!b) return "outil flottant absent"; const c = b.getBoundingClientRect(); return a.left < c.right && c.left < a.right && a.top < c.bottom && c.top < a.bottom ? "se recouvrent" : "distincts"; });
-    assert.equal(overlap, "distincts", "deux « + » côte à côte, sans recouvrement");
+    // le conteneur vide est sélectionné : seul le « + » de création de la zone vide est là, le « + » rond qui doublait la palette de commandes n'existe plus
+    const plus = await page.evaluate(() => { const d = document.querySelector("[data-pb-frame]").contentDocument; return { inside: d.querySelectorAll(".pb-struct-add.is-inside").length, any: [...d.querySelectorAll(".pb-struct-add")].filter((b) => b.getAttribute("aria-label") === "Ajouter un élément ici").length, zone: d.querySelectorAll(".kw-node [data-kw-add]:not([data-kw-add='root'])").length }; });
+    assert.deepEqual(plus, { inside: 0, any: 0, zone: 1 }, "plus de « + » rond « Ajouter un élément ici » ; le « + » de la zone vide reste");
     for (const level of [2, 3]) {
       await createFrom(firstEmpty());
       await until(() => Math.max(...roots().map(depth)) >= level, `niveau ${level}`);

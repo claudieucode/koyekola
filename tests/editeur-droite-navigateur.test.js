@@ -143,10 +143,10 @@ describe("partie droite de l'éditeur : thème, structure, inspecteur (navigateu
     await openEditor(CONTENT, { theme: "dark" });
     const tr = () => page.evaluate(() => { const c = getComputedStyle(document.querySelector(".pb-inspector")); const r = getComputedStyle(document.querySelector(".pb-row-item")); return { insp: c.transitionProperty + " | " + c.transitionDuration, row: r.transitionProperty + " | " + r.transitionDuration }; });
     const normal = await tr();
-    assert.match(normal.insp, /background-color/); assert.match(normal.insp, /0\.16s/); assert.doesNotMatch(normal.insp, /width|height|top|left|transform|all/);
+    assert.match(normal.insp, /background-color/); assert.match(normal.insp, /0\.15s/); assert.doesNotMatch(normal.insp, /width|height|top|left|transform|all/);
     await openEditor(CONTENT, { theme: "dark", reduce: true });
     const calme = await tr();
-    assert.match(calme.insp, /0s/, "mouvement réduit : plus de transition"); assert.doesNotMatch(calme.insp, /0\.16s/);
+    assert.match(calme.insp, /0s/, "mouvement réduit : plus de transition"); assert.doesNotMatch(calme.insp, /0\.15s/);
   });
 
   test("structure : en-tête (icônes alignées, de même taille, sans chevauchement, nommées) ; replier, fermer, rouvrir ; thème clair et sombre", async () => {
