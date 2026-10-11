@@ -34,7 +34,7 @@ Serveurs de test jetables (base et dossier d'envois temporaires) : CMS, Page Bui
 | SIMULÉ UNIQUEMENT (4) | INT-COM-012, 013, 017, 018 |
 | ÉCHEC REPRODUIT (total) · ERREUR D'EXÉCUTION · BLOQUÉ · NON EXÉCUTÉ | aucun parmi les 21 (les non exécutés du plan sont listés au §9) |
 
-Plan prévu au palier 24 : 18 scénarios (T01–T18) → **exécutés ou couverts : 12 (T01, T02, T03, T04, T06 partiel, T07-T08 simulés, T09 partiel, T11, T12, T14) · bloqués par l'environnement : 2 (T05, T07-T08 réels) · non exécutés : 5 (T06 reprise, T09 abandon de panier, T13, T16, T18) · non applicable : 1 (T17)**. Détail au §9.
+Plan prévu au palier 24 (T01–T18), état de chacun : **réalisés (6)** T01, T02, T04, T11, T12, T14 · **réalisés en partie ou avec un faux fournisseur (7)** T03 (rôles : INT-CMS-006 et matrice du palier 23), T05 (consentement vérifié, envoi réel bloqué), T06 (exécution vérifiée, reprise après redémarrage non exécutée), T07 et T08 (faux Stripe, vrai Stripe bloqué), T09 (session expirée vérifiée, abandon de panier non exécuté), T10 (navigation vérifiée, événements de tunnel non testés ici) · **non exécutés (4)** T13, T15 (couvert par la suite existante), T16, T18 · **non applicable (1)** T17 (fonction absente). Détail au §9 et dans `05-tests-non-executes-et-simules.md`.
 
 ## 6. Matrice des intégrations
 `03-matrice-couverture-integrations.md` : 27 relations. Décompte : **13 réussies (preuves complètes, en test) · 4 réussies partiellement · 4 simulées uniquement · 6 non exécutées**. « Réussie » = dans l'environnement de test, jamais en production.
@@ -70,6 +70,10 @@ Même document, §A : INT-COM-012/013/017/018 prouvent **notre code** face à un
 4. Décisions D1 à D10 du palier 24 (multi-site, droits du Lecteur, branches non fusionnées, tunnel avec paiement, sauvegarde externe, 2FA…).
 
 ## Chiffres de référence
-Scénarios **prévus 21 (+ 6 du plan non réalisés)** · **exécutés 21** · réussis (preuves complètes) 14 · réussis partiellement 3 · simulés uniquement 4 · échoués (totalement) 0 · bloqués 0 parmi les 21 · non exécutés : 6 du plan du palier 24 (T05, T06 reprise, T09 abandon, T13, T16, T18) ; critères : **177 exécutés, 172 réussis, 5 en échec reproduit**. Ce ne sont pas des pourcentages de qualité du produit.
+- **Scénarios exécutés : 21** (14 réussis avec preuves complètes · 3 réussis partiellement · 4 simulés uniquement · 0 échec total · 0 bloqué · 0 non exécuté parmi eux). **Critères : 177 exécutés, 172 réussis, 5 en échec reproduit.**
+- **Plan du palier 24 : 18 scénarios** — 6 réalisés, 7 réalisés en partie ou simulés, 4 non exécutés, 1 non applicable (voir §5).
+- **Intégrations (27)** : 13 réussies, 4 partiellement, 4 simulées, 6 non exécutées.
+- **Suite complète** : 4 041 tests, 4 038 réussis, 0 échec, 3 ignorés.
+Ces chiffres ne sont pas des pourcentages de qualité du produit.
 
 **Je ne corrige rien, je ne déploie rien et je ne lance pas le palier 26 : j'attends ton autorisation explicite.**
