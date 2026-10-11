@@ -1056,3 +1056,109 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 @media (hover: none) { .kw-gallery.has-overlay .kw-gallery-item figcaption { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .kw-gallery.has-overlay .kw-gallery-item figcaption { transition: none; } }
 @media (max-width: 767px) { .kw-gallery.is-cols-4, .kw-gallery.is-cols-5, .kw-gallery.is-cols-6 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .kw-gallery.is-cols-1 { grid-template-columns: minmax(0, 1fr); } .kw-gallery.is-justified .kw-gallery-item { height: 140px; } }
+
+/* Animations de survol supplémentaires (Elementor : Float, Sink, Rotate, Skew, Push, Pop, Pulse, Bounce, Bob, Hang, Wobble, Buzz) */
+.kw-hover-float, .kw-hover-sink, .kw-hover-rotate, .kw-hover-skew { transition: transform .25s ease; }
+.kw-hover-float:hover { transform: var(--kw-tf,) translateY(-8px); }
+.kw-hover-sink:hover { transform: var(--kw-tf,) translateY(8px); }
+.kw-hover-rotate:hover { transform: var(--kw-tf,) rotate(4deg); }
+.kw-hover-skew:hover { transform: var(--kw-tf,) skew(-10deg); }
+@keyframes kw-hv-push { 50% { transform: scale(.92); } 100% { transform: scale(1); } }
+@keyframes kw-hv-pop { 50% { transform: scale(1.18); } }
+@keyframes kw-hv-pulse { 25% { transform: scale(1.08); } 75% { transform: scale(.94); } }
+@keyframes kw-hv-bounce { 0%, 20%, 53%, 100% { transform: translateY(0); } 40% { transform: translateY(-14px); } 70% { transform: translateY(-7px); } 90% { transform: translateY(-3px); } }
+@keyframes kw-hv-bob { 0% { transform: translateY(-6px); } 50% { transform: translateY(-2px); } 100% { transform: translateY(-6px); } }
+@keyframes kw-hv-hang { 0% { transform: translateY(6px); } 50% { transform: translateY(2px); } 100% { transform: translateY(6px); } }
+@keyframes kw-hv-wobble { 16% { transform: translateX(8px); } 33% { transform: translateX(-6px); } 50% { transform: translateX(4px); } 66% { transform: translateX(-2px); } 83% { transform: translateX(1px); } 100% { transform: translateX(0); } }
+@keyframes kw-hv-buzz { 50% { transform: translateX(3px) rotate(2deg); } 100% { transform: translateX(-3px) rotate(-2deg); } }
+.kw-hover-push:hover { animation: kw-hv-push .5s ease-out 1; }
+.kw-hover-pop:hover { animation: kw-hv-pop .4s ease-out 1; }
+.kw-hover-pulse:hover { animation: kw-hv-pulse .6s ease-in-out 1; }
+.kw-hover-bounce:hover { animation: kw-hv-bounce .9s ease-out 1; }
+.kw-hover-bob:hover { animation: kw-hv-bob 1.6s ease-in-out infinite; }
+.kw-hover-hang:hover { animation: kw-hv-hang 1.6s ease-in-out infinite; }
+.kw-hover-wobble:hover { animation: kw-hv-wobble .9s ease-in-out 1; }
+.kw-hover-buzz:hover { animation: kw-hv-buzz .12s linear 6 alternate; }
+@media (prefers-reduced-motion: reduce) { .kw-hover-float, .kw-hover-sink, .kw-hover-rotate, .kw-hover-skew { transition: none; } .kw-hover-push:hover, .kw-hover-pop:hover, .kw-hover-pulse:hover, .kw-hover-bounce:hover, .kw-hover-bob:hover, .kw-hover-hang:hover, .kw-hover-wobble:hover, .kw-hover-buzz:hover { animation: none; } }
+
+/* Lettrine (texte) : la première lettre du premier paragraphe est agrandie */
+.kw-dropcap > p:first-child::first-letter, .kw-dropcap > :first-child::first-letter { float: left; font-size: 3.4em; line-height: .85; padding: .06em .12em 0 0; font-weight: 700; color: var(--lp-accent, #0277b6); }
+
+/* Séparateurs de forme (haut / bas d'un conteneur) : forme en CSS, couleur et hauteur par règles générées (.kw-n-<id> > .kw-shape-…) */
+.kw-shape { position: absolute; left: 0; width: 100%; height: 100px; background: currentColor; color: var(--lp-bg, #fff); pointer-events: none; z-index: -1; }
+.kw-shape.is-front { z-index: 5; }
+.kw-shape-bottom { bottom: -1px; }
+.kw-shape-top { top: -1px; transform: scaleY(-1); }
+.kw-shape-top.is-flip { transform: scale(-1, -1); }
+.kw-shape-bottom.is-flip { transform: scaleX(-1); }
+.kw-shp-wave { clip-path: polygon(0.0% 77.8%, 2.5% 84.2%, 5.0% 88.4%, 7.5% 90.0%, 10.0% 88.9%, 12.5% 85.1%, 15.0% 79.1%, 17.5% 71.4%, 20.0% 62.8%, 22.5% 54.1%, 25.0% 46.2%, 27.5% 39.8%, 30.0% 35.6%, 32.5% 34.0%, 35.0% 35.1%, 37.5% 38.9%, 40.0% 44.9%, 42.5% 52.6%, 45.0% 61.2%, 47.5% 69.9%, 50.0% 77.8%, 52.5% 84.2%, 55.0% 88.4%, 57.5% 90.0%, 60.0% 88.9%, 62.5% 85.1%, 65.0% 79.1%, 67.5% 71.4%, 70.0% 62.8%, 72.5% 54.1%, 75.0% 46.2%, 77.5% 39.8%, 80.0% 35.6%, 82.5% 34.0%, 85.0% 35.1%, 87.5% 38.9%, 90.0% 44.9%, 92.5% 52.6%, 95.0% 61.2%, 97.5% 69.9%, 100.0% 77.8%, 100% 100%, 0% 100%); }
+.kw-shp-curve { clip-path: polygon(0.0% 100.0%, 3.3% 85.2%, 6.7% 74.4%, 10.0% 64.8%, 13.3% 56.2%, 16.7% 48.3%, 20.0% 41.2%, 23.3% 34.7%, 26.7% 29.0%, 30.0% 24.0%, 33.3% 19.8%, 36.7% 16.3%, 40.0% 13.5%, 43.3% 11.6%, 46.7% 10.4%, 50.0% 10.0%, 53.3% 10.4%, 56.7% 11.6%, 60.0% 13.5%, 63.3% 16.3%, 66.7% 19.8%, 70.0% 24.0%, 73.3% 29.0%, 76.7% 34.7%, 80.0% 41.2%, 83.3% 48.3%, 86.7% 56.2%, 90.0% 64.8%, 93.3% 74.4%, 96.7% 85.2%, 100.0% 100.0%, 100% 100%, 0% 100%); }
+.kw-shp-triangle { clip-path: polygon(0% 100%, 50% 10%, 100% 100%); }
+.kw-shp-tilt { clip-path: polygon(0% 100%, 100% 0%, 100% 100%); }
+.kw-shp-slope { clip-path: polygon(0% 0%, 100% 100%, 0% 100%); }
+.kw-shp-arrow { clip-path: polygon(0% 0%, 46% 0%, 50% 55%, 54% 0%, 100% 0%, 100% 100%, 0% 100%); }
+.kw-shp-zigzag { clip-path: polygon(0% 100%, 5% 45%, 10% 100%, 15% 45%, 20% 100%, 25% 45%, 30% 100%, 35% 45%, 40% 100%, 45% 45%, 50% 100%, 55% 45%, 60% 100%, 65% 45%, 70% 100%, 75% 45%, 80% 100%, 85% 45%, 90% 100%, 95% 45%, 100% 100%, 100% 100%, 0% 100%); }
+
+/* Appel à l'action (widget cta) */
+.kw-cta { position: relative; display: flex; flex-direction: column; overflow: hidden; border-radius: 12px; border: 1px solid rgba(15, 23, 42, .12); background: #fff; color: inherit; text-decoration: none; }
+.kw-cta.is-center { text-align: center; } .kw-cta.is-left { text-align: left; }
+.kw-cta-img { display: block; width: 100%; height: auto; object-fit: cover; }
+.kw-cta-body { display: flex; flex-direction: column; gap: 10px; padding: 20px; align-items: inherit; }
+.kw-cta.is-center .kw-cta-body { align-items: center; } .kw-cta.is-left .kw-cta-body { align-items: flex-start; }
+.kw-cta-title { margin: 0; font-size: 1.35rem; line-height: 1.25; }
+.kw-cta-text { margin: 0; opacity: .85; }
+.kw-cta-classic.is-img-left, .kw-cta-classic.is-img-right { flex-direction: row; }
+.kw-cta-classic.is-img-right { flex-direction: row-reverse; }
+.kw-cta-classic.is-img-left .kw-cta-img, .kw-cta-classic.is-img-right .kw-cta-img { width: 40%; height: auto; min-height: 100%; }
+.kw-cta-classic.is-img-left .kw-cta-body, .kw-cta-classic.is-img-right .kw-cta-body { flex: 1; justify-content: center; }
+.kw-cta-cover { min-height: 280px; justify-content: flex-end; color: #fff; background: #0f172a; }
+.kw-cta-cover .kw-cta-img { position: absolute; inset: 0; height: 100%; }
+.kw-cta-cover.has-img::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 20%, rgba(0, 0, 0, .7)); pointer-events: none; }
+.kw-cta-cover .kw-cta-body { position: relative; z-index: 1; }
+.kw-cta-ribbon { position: absolute; top: 14px; z-index: 2; padding: 4px 36px; background: var(--lp-accent, #0277b6); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.kw-cta-ribbon.is-right { right: -34px; transform: rotate(45deg); } .kw-cta-ribbon.is-left { left: -34px; transform: rotate(-45deg); }
+.kw-cta-whole { cursor: pointer; } .kw-cta-whole:hover .kw-cta-title { text-decoration: underline; }
+@media (max-width: 767px) { .kw-cta-classic.is-img-left, .kw-cta-classic.is-img-right { flex-direction: column; } .kw-cta-classic.is-img-left .kw-cta-img, .kw-cta-classic.is-img-right .kw-cta-img { width: 100%; min-height: 0; } }
+
+/* Playlist vidéo (widget videoplaylist) */
+.kw-videoplaylist { display: grid; gap: 14px; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: start; }
+.kw-videoplaylist.is-list-left { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); } .kw-videoplaylist.is-list-left .kw-vp-stage { order: 2; }
+.kw-videoplaylist.is-list-below { grid-template-columns: minmax(0, 1fr); }
+.kw-vp-stage { position: relative; aspect-ratio: 16 / 9; background: #0f172a; border-radius: 10px; overflow: hidden; }
+.kw-vp-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.kw-vp-title { margin: 0 0 8px; font-size: 1.05rem; }
+.kw-vp-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; max-height: 420px; overflow: auto; }
+.kw-vp-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: inherit; text-decoration: none; border: 1px solid transparent; }
+.kw-vp-item:hover, .kw-vp-item:focus-visible { background: rgba(15, 23, 42, .06); }
+.kw-vp-item.is-current { background: rgba(2, 119, 182, .1); border-color: rgba(2, 119, 182, .35); font-weight: 600; }
+.kw-vp-num { flex: 0 0 22px; text-align: center; opacity: .6; font-size: 13px; } .kw-vp-name { flex: 1; min-width: 0; } .kw-vp-dur { opacity: .6; font-size: 13px; }
+@media (max-width: 767px) { .kw-videoplaylist, .kw-videoplaylist.is-list-left { grid-template-columns: minmax(0, 1fr); } .kw-videoplaylist.is-list-left .kw-vp-stage { order: 0; } }
+
+/* Bouton flottant (widget floatingbutton) : l'enveloppe est fixée dans un coin, le bouton est dedans ; dans l'éditeur il reste à sa place */
+.kw-floatingbutton { position: fixed; bottom: 20px; z-index: 40; }
+.kw-floatingbutton.is-side-right { right: 20px; } .kw-floatingbutton.is-side-left { left: 20px; }
+.kw-fb-btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px; border-radius: 999px; background: var(--lp-accent, #0277b6); color: #fff; text-decoration: none; box-shadow: 0 8px 24px rgba(15, 23, 42, .28); }
+.kw-fb-icon { display: inline-flex; } .kw-fb-label { max-width: 0; overflow: hidden; white-space: nowrap; transition: max-width .25s ease; }
+.kw-fb-btn:hover .kw-fb-label, .kw-fb-btn:focus-visible .kw-fb-label { max-width: 14em; padding-right: 4px; }
+.lp-builder .kw-floatingbutton { position: static; display: inline-block; }
+@media (prefers-reduced-motion: reduce) { .kw-fb-label { transition: none; } }
+
+/* Liste d'icônes : disposition en ligne et séparateurs */
+.kw-iconlist.is-inline { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.kw-iconlist.has-divider:not(.is-inline) li + li { padding-top: 10px; border-top: 1px solid rgba(15, 23, 42, .15); }
+.kw-iconlist.has-divider.is-inline li + li { padding-left: 22px; border-left: 1px solid rgba(15, 23, 42, .15); }
+
+/* Diaporama : effet Ken Burns (zoom lent), coupé si « réduire les animations » */
+@keyframes kw-kb-in { from { transform: scale(1); } to { transform: scale(1.14); } }
+@keyframes kw-kb-out { from { transform: scale(1.14); } to { transform: scale(1); } }
+.kw-slides.is-kb-in .kw-slide-img { animation: kw-kb-in 14s ease-in-out infinite alternate; }
+.kw-slides.is-kb-out .kw-slide-img { animation: kw-kb-out 14s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .kw-slides.is-kb-in .kw-slide-img, .kw-slides.is-kb-out .kw-slide-img { animation: none; } }
+
+/* Diaporama en arrière-plan d'un conteneur : images en fondu derrière le contenu (la première reste affichée sans JavaScript) */
+.kw-bgslides { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.kw-bgslide { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.2s ease; aspect-ratio: auto; border-radius: 0; }
+.kw-bgslide.is-on { opacity: 1; }
+@keyframes kw-bgs-kb { from { transform: scale(1); } to { transform: scale(1.12); } }
+.kw-bgslides.is-kb .kw-bgslide.is-on { animation: kw-bgs-kb 14s ease-out forwards; }
+@media (prefers-reduced-motion: reduce) { .kw-bgslide { transition: none; } .kw-bgslides.is-kb .kw-bgslide.is-on { animation: none; } }

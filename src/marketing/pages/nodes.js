@@ -162,6 +162,7 @@ const STYLE_PROPS = {
   fontWeight: { css: "font-weight", check: oneOf("300", "400", "500", "600", "700", "800", "900"), group: "typography" },
   fontStyle: { css: "font-style", check: oneOf("normal", "italic"), group: "typography" },
   lineHeight: { css: "line-height", check: numberIn(0.8, 3), group: "typography" },
+  columnCount: { css: "column-count", check: numberIn(1, 6, { integer: true }), group: "typography" }, // texte en colonnes (journal) ; l'écart utilise « columnGap »
   lineClamp: { css: "-webkit-line-clamp", check: numberIn(1, 10, { integer: true }), group: "typography" }, // nombre de lignes maximum (le reste est coupé) : voir declarations()
   letterSpacing: { css: "letter-spacing", check: lenNeg, group: "typography" },
   wordSpacing: { css: "word-spacing", check: lenNeg, group: "typography" },
@@ -186,7 +187,7 @@ const STYLE_PROPS = {
   borderRightWidth: { css: "border-right-width", check: lenNoPercent, group: "border" },
   borderBottomWidth: { css: "border-bottom-width", check: lenNoPercent, group: "border" },
   borderLeftWidth: { css: "border-left-width", check: lenNoPercent, group: "border" },
-  borderStyle: { css: "border-style", check: oneOf("none", "solid", "dashed", "dotted"), group: "border" },
+  borderStyle: { css: "border-style", check: oneOf("none", "solid", "dashed", "dotted", "double", "groove"), group: "border" },
   borderColor: { css: "border-color", check: color, out: colorCss, group: "border" },
   borderRadius: { css: "border-radius", check: withLenToken("radius", len), out: lenTokenOut, group: "border" },
   // Arrondi coin par coin (arrondi « délié ») : toujours écrit après l'arrondi général, qu'il précise
@@ -261,7 +262,10 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
       if (c) out.overlay = { color: c };
     } else if (k === "gradient") {
       const from = color(v && v.from), to = color(v && v.to), angle = numberIn(0, 360, { integer: true })(v && v.angle);
-      if (from && to) out.gradient = { from, to, angle: angle === null ? 180 : angle };
+      // Dégradé linéaire (angle) ou radial, avec la position de chaque couleur en % (comme « Location » d'Elementor) ; valeurs par défaut non enregistrées
+      const at = (x, d) => { const n = numberIn(0, 100, { integer: true })(x); return n === null || n === d ? null : n; };
+      const fromAt = at(v && v.fromAt, 0), toAt = at(v && v.toAt, 100);
+      if (from && to) out.gradient = { from, to, angle: angle === null ? 180 : angle, ...(v && v.type === "radial" ? { type: "radial" } : {}), ...(fromAt !== null ? { fromAt } : {}), ...(toAt !== null ? { toAt } : {}) };
     } else if (k === "filter") {
       const f = {};
       const put = (name, min, max) => { const x = numberIn(min, max, { integer: true })(v && v[name]); if (x !== null) f[name] = x; };
@@ -311,6 +315,7 @@ function declarations(set, band = false) {
     const p = STYLE_PROPS[k];
     if (p) d.push(band && (k === "paddingLeft" || k === "paddingRight") ? `--kw-p${k === "paddingLeft" ? "l" : "r"}:${p.out ? p.out(v) : v}` : `${p.css}:${p.out ? p.out(v) : v}`);
   }
+  if (set.columnCount !== undefined && set.columnGap === undefined) d.push("column-gap:2rem"); // écart par défaut entre les colonnes de texte
   if (set.lineClamp !== undefined) d.push("display:-webkit-box", "-webkit-box-orient:vertical", "overflow:hidden");
   for (const [axis, css] of [["Column", "grid-column"], ["Row", "grid-row"]]) {
     const start = set[`grid${axis}Start`], end = set[`grid${axis}End`], span = set[`grid${axis}Span`];
@@ -319,7 +324,10 @@ function declarations(set, band = false) {
   }
   const layers = [];
   if (set.overlay) layers.push(`linear-gradient(${colorCss(set.overlay.color)}, ${colorCss(set.overlay.color)})`);
-  if (set.gradient) layers.push(`linear-gradient(${set.gradient.angle}deg, ${colorCss(set.gradient.from)}, ${colorCss(set.gradient.to)})`);
+  if (set.gradient) {
+    const g = set.gradient, stops = `${colorCss(g.from)}${g.fromAt ? ` ${g.fromAt}%` : ""}, ${colorCss(g.to)}${g.toAt !== undefined ? ` ${g.toAt}%` : ""}`;
+    layers.push(g.type === "radial" ? `radial-gradient(circle at center, ${stops})` : `linear-gradient(${g.angle}deg, ${stops})`);
+  }
   if (set.backgroundImage) layers.push(`url("${require("../media/variants").sourceFor(set.backgroundImage.src, set.backgroundImage.size)}")`);
   if (layers.length) d.push(`background-image:${layers.join(", ")}`);
   if (set.filter) {
@@ -426,7 +434,7 @@ const NODE_TYPES = {
   } },
   text: { label: "Texte", category: "text", props: (p, at) => {
     const html = sanitizeRich(p.html); // vide permis (paragraphe en cours d'écriture), jamais affiché sur la page publique
-    return { html };
+    return { html, ...(p.dropCap === true ? { dropCap: true } : {}) }; // lettrine : première lettre agrandie (classe CSS fixe)
   } },
   list: { label: "Liste", category: "text", props: (p, at) => {
     const items = (Array.isArray(p.items) ? p.items : []).map((x) => line(x, 300)).filter(Boolean).slice(0, 30);
@@ -487,6 +495,10 @@ const NODE_TYPES = {
     }
     const poster = p.poster ? h.imageUrl(p.poster, `${at} (image d'attente de la vidéo)`) : "";
     if (poster) out.poster = poster;
+    // Début et fin de lecture (secondes), comme « Start Time / End Time » d'Elementor
+    const start = numberIn(1, 86399, { integer: true })(p.start), end = numberIn(2, 86400, { integer: true })(p.end);
+    if (start) out.start = start;
+    if (end) { if (end <= (start || 0)) throw new Error(`${at} (vidéo) : la fin doit venir après le début.`); out.end = end; }
     return out;
   } },
   audio: { label: "Audio", category: "media", props: (p, at) => {
@@ -579,7 +591,8 @@ const NODE_TYPES = {
     if (value === null) throw new Error(`${at} (compteur) : un nombre réel est obligatoire.`);
     const label = line(p.label, 120);
     if (!label) throw new Error(`${at} (compteur) : dites ce que mesure ce nombre (et sa source).`);
-    return { value, prefix: line(p.prefix, 10), suffix: line(p.suffix, 16), label, decimals: numberIn(0, 2, { integer: true })(p.decimals) || 0, duration: numberIn(0, 5000, { integer: true })(p.duration) ?? 1500 };
+    const sep = oneOf("dot", "none")(p.separator); // séparateur des milliers : espace (défaut), point ou aucun
+    return { value, prefix: line(p.prefix, 10), suffix: line(p.suffix, 16), label, decimals: numberIn(0, 2, { integer: true })(p.decimals) || 0, duration: numberIn(0, 5000, { integer: true })(p.duration) ?? 1500, ...(sep ? { separator: sep } : {}) };
   } },
   testimonial: { label: "Témoignage", category: "marketing", props: (p, at, h) => {
     const text = clean(p.text, 1200), name = line(p.name, 80);
@@ -617,7 +630,7 @@ const NODE_TYPES = {
   // Boutons de partage : de vrais liens « partager cette page » (adresse publique de la page, construite à l'affichage par le
   // serveur : jamais saisie). Réseaux de partage uniquement ; l'adresse de la page n'existe qu'en https (sinon rien n'est affiché).
   sharebuttons: { label: "Boutons de partage", category: "interaction", props: (p, at) => {
-    const networks = (Array.isArray(p.networks) ? p.networks : []).filter((k, i, a) => Object.hasOwn(SHARE_NETWORKS, k) && a.indexOf(k) === i).slice(0, 6);
+    const networks = (Array.isArray(p.networks) ? p.networks : []).filter((k, i, a) => Object.hasOwn(SHARE_NETWORKS, k) && a.indexOf(k) === i).slice(0, 9);
     if (!networks.length) throw new Error(`${at} (partage) : au moins un réseau (${Object.values(SHARE_NETWORKS).join(", ")}).`);
     return { networks, size: oneOf("24", "32", "40", "48")(String(p.size)) || "32", shape: oneOf("circle", "square", "plain")(p.shape) || "circle", label: line(p.label, 60) || "Partager cette page", message: line(p.message, 120) };
   } },
@@ -649,7 +662,8 @@ const NODE_TYPES = {
       return { text, icon: h.iconNames.includes(String(x.icon)) ? String(x.icon) : "check", ...(link ? { link } : {}) };
     }).filter(Boolean);
     if (!items.length) throw new Error(`${at} (liste d'icônes) : au moins une ligne.`);
-    return { items, iconColor: color(p.iconColor) || "" };
+    // Disposition en ligne et séparateurs entre éléments (comme « Layout: Inline » et « Divider » de la liste d'icônes d'Elementor)
+    return { items, iconColor: color(p.iconColor) || "", ...(p.inline === true ? { inline: true } : {}), ...(p.divider === true ? { divider: true } : {}) };
   } },
   tooltip: { label: "Infobulle", category: "interaction", props: (p, at) => {
     const text = line(p.text, 120), tip = line(p.tip, 300);
@@ -697,11 +711,27 @@ const NODE_TYPES = {
     return { rows: rows.map((r) => r.concat(Array(width - r.length).fill(""))), header: p.header !== false, caption: line(p.caption, 150),
       footer: p.footer === true && rows.length > (p.header !== false ? 2 : 1), striped: p.striped === true, align: oneOf("left", "center", "right")(p.align) || "left" };
   } },
-  countdown: { label: "Compte à rebours", category: "marketing", props: (p, at) => {
+  countdown: { label: "Compte à rebours", category: "marketing", props: (p, at, h) => {
     const until = String(p.until || "");
     const t = Date.parse(until);
     if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:\d{2})$/.test(until) || !Number.isFinite(t)) throw new Error(`${at} (compte à rebours) : date et heure de fin invalides.`);
-    return { until: new Date(t).toISOString(), endText: line(p.endText, 120) || "C'est terminé." };
+    const out = { until: new Date(t).toISOString(), endText: line(p.endText, 120) || "C'est terminé." };
+    // Minuteur « évolutif » (par visiteur, comme Elementor) : chaque visiteur dispose de la durée donnée à partir de sa première visite ; la date fixe sert de repli sans JavaScript
+    if (p.mode === "evergreen") {
+      const minutes = numberIn(1, 14400, { integer: true })(p.minutes);
+      if (!minutes) throw new Error(`${at} (compte à rebours) : durée du minuteur par visiteur (1 à 14 400 minutes) attendue.`);
+      out.mode = "evergreen"; out.minutes = minutes;
+    }
+    // Que faire à la fin : afficher le texte (défaut), masquer le compte à rebours, ou rediriger vers une page du site
+    const expire = oneOf("hide", "redirect")(p.expire);
+    if (expire === "redirect") {
+      const url = h.linkUrl(p.redirectUrl, `${at} (adresse de redirection)`);
+      if (!url || !/^(\/(?!\/)|https:\/\/)/.test(url)) throw new Error(`${at} (compte à rebours) : adresse de redirection attendue (page du site « /… » ou https://…).`);
+      out.expire = "redirect"; out.redirectUrl = url;
+    } else if (expire === "hide") out.expire = "hide";
+    const hideUnits = (Array.isArray(p.hideUnits) ? p.hideUnits : []).filter((u, i, a) => ["days", "hours", "minutes", "seconds"].includes(u) && a.indexOf(u) === i);
+    if (hideUnits.length && hideUnits.length < 4) out.hideUnits = hideUnits;
+    return out;
   } },
   course: { label: "Formation", category: "commerce", props: (p, at, h) => {
     const courseId = Number(p.courseId);
@@ -1132,13 +1162,13 @@ const STYLE_UI = {
   paddingTop: ["Intérieur haut"], paddingRight: ["Intérieur droite"], paddingBottom: ["Intérieur bas"], paddingLeft: ["Intérieur gauche"],
   fontFamily: ["Police", { heading: "Titres du site", body: "Texte du site", system: "Système", serif: "Avec empattements", mono: "Chasse fixe" }],
   fontSize: ["Taille"], fontWeight: ["Graisse", { 300: "Légère", 400: "Normale", 500: "Moyenne", 600: "Demi-grasse", 700: "Grasse", 800: "Extra-grasse", 900: "Noire" }],
-  fontStyle: ["Style", { normal: "Normal", italic: "Italique" }], lineHeight: ["Interligne"], lineClamp: ["Lignes maximum"], textStrokeWidth: ["Contour du texte : épaisseur"], textStrokeColor: ["Contour du texte : couleur"], letterSpacing: ["Espacement des lettres"], wordSpacing: ["Espacement des mots"], textIndent: ["Retrait de première ligne"],
+  fontStyle: ["Style", { normal: "Normal", italic: "Italique" }], lineHeight: ["Interligne"], lineClamp: ["Lignes maximum"], columnCount: ["Colonnes de texte"], textStrokeWidth: ["Contour du texte : épaisseur"], textStrokeColor: ["Contour du texte : couleur"], letterSpacing: ["Espacement des lettres"], wordSpacing: ["Espacement des mots"], textIndent: ["Retrait de première ligne"],
   textTransform: ["Casse", { none: "Normale", uppercase: "MAJUSCULES", lowercase: "minuscules", capitalize: "Première Lettre" }],
   textAlign: ["Alignement du texte", { left: "Gauche", center: "Centre", right: "Droite", justify: "Justifié" }],
   textShadow: ["Ombre du texte", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", glow: "Halo clair" }],
   textDecoration: ["Décoration", { none: "Aucune", underline: "Soulignée", "line-through": "Barrée" }],
   color: ["Couleur du texte"], backgroundColor: ["Couleur de fond"],
-  borderWidth: ["Épaisseur de bordure"], borderStyle: ["Style de bordure", { none: "Aucune", solid: "Pleine", dashed: "Tirets", dotted: "Points" }], borderColor: ["Couleur de bordure"], borderRadius: ["Arrondi"],
+  borderWidth: ["Épaisseur de bordure"], borderStyle: ["Style de bordure", { none: "Aucune", solid: "Pleine", dashed: "Tirets", dotted: "Points", double: "Double", groove: "Gravée" }], borderColor: ["Couleur de bordure"], borderRadius: ["Arrondi"],
   borderTopWidth: ["Épaisseur haut"], borderRightWidth: ["Épaisseur droite"], borderBottomWidth: ["Épaisseur bas"], borderLeftWidth: ["Épaisseur gauche"],
   borderTopLeftRadius: ["Arrondi haut gauche"], borderTopRightRadius: ["Arrondi haut droit"], borderBottomRightRadius: ["Arrondi bas droit"], borderBottomLeftRadius: ["Arrondi bas gauche"],
   backdropBlur: ["Flou de l'arrière-plan (px)"],
@@ -1174,7 +1204,7 @@ function editorSpec() {
   const kind = (k) => {
     const p = STYLE_PROPS[k];
     if (p.check === color || [ "color", "backgroundColor", "borderColor" ].includes(k)) return "color";
-    if (["columns", "lineHeight", "lineClamp", "opacity", "zIndex", "flexGrow", "flexShrink", "order", "gridRows", "gridColumnSpan", "gridRowSpan", "gridColumnStart", "gridColumnEnd", "gridRowStart", "gridRowEnd", "transitionDuration", "backdropBlur"].includes(k)) return "number";
+    if (["columns", "columnCount", "lineHeight", "lineClamp", "opacity", "zIndex", "flexGrow", "flexShrink", "order", "gridRows", "gridColumnSpan", "gridRowSpan", "gridColumnStart", "gridColumnEnd", "gridRowStart", "gridRowEnd", "transitionDuration", "backdropBlur"].includes(k)) return "number";
     if (k === "gridTemplate" || k === "gridRowsTemplate" || k === "gridAutoRows" || k === "gridAutoColumns") return "text";
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
@@ -1183,7 +1213,7 @@ function editorSpec() {
     codeLanguages: Object.entries(require("./highlight").LABELS), categories: CATEGORIES, presetCategories: require("./stylePresets").CATEGORIES, widgetGroups: WIDGET_GROUPS, siteSubs: SITE_SUBS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, css: p.css, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
-    socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
+    shapeDividers: Object.entries(SHAPE_DIVIDERS), socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     structureKinds: require("./structures").KINDS, structures: require("./structures").STRUCTURES,
     colorTokens: COLOR_TOKENS, lengthTokens: Object.fromEntries(Object.entries(lenTokens()).map(([f, m]) => [f, Object.entries(m).map(([k, v]) => ({ key: k, value: v }))])), spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
     limits: { nodes: MAX_NODES, depth: MAX_DEPTH }, dynamic: dynamic.catalog(),
@@ -1356,8 +1386,8 @@ function embedOf(url) {
 }
 
 // Réseaux sociaux proposés (pictogrammes dessinés pour KOLAKISA, dans views/marketing-public/_social-icon.ejs)
-const SHARE_NETWORKS = { facebook: "Facebook", x: "X (Twitter)", linkedin: "LinkedIn", whatsapp: "WhatsApp", email: "E-mail" };
-const SOCIAL_NETWORKS = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn", youtube: "YouTube", x: "X (Twitter)", tiktok: "TikTok", whatsapp: "WhatsApp", email: "E-mail", website: "Site web" };
+const SHARE_NETWORKS = { facebook: "Facebook", x: "X (Twitter)", linkedin: "LinkedIn", whatsapp: "WhatsApp", telegram: "Telegram", pinterest: "Pinterest", reddit: "Reddit", threads: "Threads", email: "E-mail" };
+const SOCIAL_NETWORKS = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn", youtube: "YouTube", x: "X (Twitter)", tiktok: "TikTok", whatsapp: "WhatsApp", email: "E-mail", telegram: "Telegram", pinterest: "Pinterest", reddit: "Reddit", threads: "Threads", website: "Site web" };
 
 // ---------- CSS personnalisé, classes, attributs ----------
 // Sécurité : les pages sont servies sur le domaine des comptes des élèves. Le CSS saisi ne peut charger AUCUNE ressource
@@ -1432,9 +1462,33 @@ function normalizeSchedule(raw, at) {
   const from = d(raw.from), until = d(raw.until);
   if (Number.isNaN(from) || Number.isNaN(until)) throw new Error(`${at} : date de programmation invalide.`);
   if (from && until && from >= until) throw new Error(`${at} : la fin de la programmation doit suivre le début.`);
-  return from || until ? { ...(from ? { from } : {}), ...(until ? { until } : {}) } : undefined;
+  // Jours de la semaine (1 = lundi … 7 = dimanche) et plage horaire de la journée, en heure de Paris (comme « Day of the week » / « Time of day » d'Elementor, mais sur l'heure du site)
+  const days = [...new Set((Array.isArray(raw.days) ? raw.days : []).map(Number).filter((x) => Number.isInteger(x) && x >= 1 && x <= 7))].sort((a, b) => a - b);
+  const hm = (v) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(String(v || "")) ? String(v) : null);
+  const hours = raw.hours && typeof raw.hours === "object" ? { from: hm(raw.hours.from), to: hm(raw.hours.to) } : null;
+  if (hours && (hours.from === null) !== (hours.to === null)) throw new Error(`${at} : plage horaire incomplète (début et fin attendus, au format HH:MM).`);
+  if (hours && hours.from && hours.from === hours.to) throw new Error(`${at} : la plage horaire doit avoir une durée.`);
+  const out = { ...(from ? { from } : {}), ...(until ? { until } : {}), ...(days.length && days.length < 7 ? { days } : {}), ...(hours && hours.from ? { hours } : {}) };
+  return Object.keys(out).length ? out : undefined;
 }
-const scheduleMatches = (s, now = Date.now()) => !s || ((!s.from || Date.parse(s.from) <= now) && (!s.until || Date.parse(s.until) > now));
+// Jour (1–7) et minutes écoulées depuis minuit à Paris
+const parisClock = (now) => {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(now)).map((x) => [x.type, x.value]));
+  return { day: { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 }[p.weekday], minutes: Number(p.hour) * 60 + Number(p.minute) };
+};
+const scheduleMatches = (s, now = Date.now()) => {
+  if (!s) return true;
+  if ((s.from && Date.parse(s.from) > now) || (s.until && Date.parse(s.until) <= now)) return false;
+  if (s.days || s.hours) {
+    const c = parisClock(now);
+    if (s.days && !s.days.includes(c.day)) return false;
+    if (s.hours) {
+      const [fh, fm] = s.hours.from.split(":").map(Number), [th, tm] = s.hours.to.split(":").map(Number), a = fh * 60 + fm, b = th * 60 + tm;
+      if (!(a < b ? c.minutes >= a && c.minutes < b : c.minutes >= a || c.minutes < b)) return false; // une plage qui passe minuit (22:00 → 06:00) est permise
+    }
+  }
+  return true;
+};
 
 // ---------- Animations : entrée (à l'apparition à l'écran) et effet au survol ----------
 // Registre central des animations : src/marketing/pages/motion.js (une animation = une ligne ; le panneau, la validation, le CSS publié et l'aperçu le lisent)
@@ -1461,8 +1515,18 @@ const MASK_SHAPES = {
   hexagon: ["Hexagone", "polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%)"],
   octagon: ["Octogone", "polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)"],
   star: ["Étoile", "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)"],
+  // Formes organiques (comme « Fleur », « Croquis » et « Blob » d'Elementor) : polygones calculés, valeurs en % (s'adaptent à la taille de l'élément)
+  flower: ["Fleur", "polygon(100% 50%, 95% 55%, 84% 58%, 76% 59%, 74% 62%, 80% 69%, 86% 78%, 85% 85%, 78% 86%, 69% 80%, 62% 74%, 59% 76%, 58% 84%, 55% 95%, 50% 100%, 45% 95%, 42% 84%, 41% 76%, 38% 74%, 31% 80%, 22% 86%, 15% 85%, 14% 78%, 20% 69%, 26% 62%, 24% 59%, 16% 58%, 5% 55%, 0% 50%, 5% 45%, 16% 42%, 24% 41%, 26% 38%, 20% 31%, 14% 22%, 15% 15%, 22% 14%, 31% 20%, 38% 26%, 41% 24%, 42% 16%, 45% 5%, 50% 0%, 55% 5%, 58% 16%, 59% 24%, 62% 26%, 69% 20%, 78% 14%, 85% 15%, 86% 22%, 80% 31%, 74% 38%, 76% 41%, 84% 42%, 95% 45%)"],
+  blob: ["Blob", "polygon(96% 50%, 95% 56%, 93% 61%, 90% 67%, 87% 72%, 85% 77%, 81% 81%, 77% 85%, 71% 87%, 66% 88%, 60% 87%, 55% 86%, 50% 86%, 45% 86%, 40% 87%, 34% 89%, 27% 89%, 21% 88%, 15% 85%, 12% 79%, 10% 73%, 10% 66%, 11% 60%, 12% 55%, 12% 50%, 12% 45%, 12% 40%, 13% 35%, 15% 30%, 18% 25%, 22% 22%, 26% 18%, 29% 14%, 34% 10%, 38% 6%, 44% 3%, 50% 2%, 56% 3%, 62% 6%, 66% 11%, 69% 17%, 72% 22%, 75% 25%, 78% 28%, 83% 31%, 88% 34%, 92% 39%, 95% 44%)"],
+  sketch: ["Croquis", "polygon(91% 50%, 93% 56%, 96% 64%, 91% 69%, 83% 71%, 78% 74%, 77% 81%, 76% 90%, 68% 91%, 62% 90%, 56% 90%, 50% 90%, 44% 89%, 38% 92%, 31% 93%, 25% 90%, 23% 81%, 21% 75%, 15% 72%, 9% 69%, 5% 63%, 8% 56%, 5% 50%, 9% 44%, 14% 40%, 15% 34%, 11% 25%, 12% 17%, 22% 18%, 29% 18%, 33% 13%, 38% 9%, 44% 6%, 50% 7%, 56% 6%, 62% 9%, 66% 15%, 70% 18%, 79% 16%, 87% 18%, 88% 26%, 86% 34%, 90% 38%, 92% 44%)"],
 };
-const HOVERS = { grow: "Grossit", shrink: "Rétrécit", lift: "Se soulève", tilt: "S'incline" };
+// Séparateurs de forme (Elementor : « Shape Divider ») : formes dessinées en CSS (clip-path en %), liste fermée
+const SHAPE_DIVIDERS = { wave: "Vague", curve: "Courbe", triangle: "Triangle", tilt: "Incliné", slope: "Pente", arrow: "Flèche", zigzag: "Zigzag" };
+const HOVERS = {
+  grow: "Grossit", shrink: "Rétrécit", lift: "Se soulève", tilt: "S'incline",
+  // Animations de survol d'Elementor (liste officielle : /help/hover-animations/), en CSS pur, désactivées si « réduire les animations »
+  float: "Flotte vers le haut", sink: "S'enfonce", rotate: "Pivote", skew: "Se penche", push: "Appuie", pop: "Surgit", pulse: "Pulse", bounce: "Rebondit", bob: "Flotte (va-et-vient)", hang: "Se balance (suspendu)", wobble: "Vacille", buzz: "Vibre",
+};
 // Effets au DÉFILEMENT : chaque effet a une amplitude appliquée selon la position de l'élément dans la fenêtre (p = -1 quand
 // il entre par le bas, 0 au centre, +1 quand il sort par le haut). Valeurs entières bornées ; zéro = pas d'effet.
 const SCROLL_FX = {
@@ -1630,10 +1694,32 @@ function normalizeNode(raw, at, h, depth, counter) {
   if (raw.startHidden === true) node.startHidden = true;
   const schedule = normalizeSchedule(raw.schedule, where);
   if (schedule) node.schedule = schedule;
+  // Séparateur de forme (haut et / ou bas d'un conteneur) : forme d'une liste fixe, couleur validée, hauteur bornée ; rien d'autre n'atteint la page
+  if (def.container && Array.isArray(raw.shapes)) {
+    const seen = new Set(), shapes = [];
+    for (const s of raw.shapes.slice(0, 2)) {
+      const position = oneOf("top", "bottom")(s && s.position), shape = oneOf(...Object.keys(SHAPE_DIVIDERS))(s && s.shape);
+      if (!position || !shape || seen.has(position)) continue;
+      seen.add(position);
+      const colorV = s.color ? color(String(s.color).trim()) : null;
+      const height = numberIn(20, 300, { integer: true })(s.height);
+      shapes.push({ position, shape, ...(colorV ? { color: colorV } : {}), ...(height && height !== 100 ? { height } : {}), ...(s.flip === true ? { flip: true } : {}), ...(s.front === true ? { front: true } : {}) });
+    }
+    if (shapes.length) node.shapes = shapes;
+  }
+  // Diaporama en arrière-plan (comme « Background Slideshow » d'Elementor) : 2 à 8 images de la médiathèque qui se succèdent en fondu, temps par image, effet Ken Burns facultatif
+  if (def.container && raw.bgSlides && Array.isArray(raw.bgSlides.images)) {
+    const images = raw.bgSlides.images.slice(0, 8).map((src, i) => h.imageUrl(src, `${where} (diaporama de fond, image ${i + 1})`)).filter(Boolean);
+    if (images.length) { const seconds = numberIn(2, 30, { integer: true })(raw.bgSlides.seconds); node.bgSlides = { images, ...(seconds && seconds !== 5 ? { seconds } : {}), ...(raw.bgSlides.kenBurns === true ? { kenBurns: true } : {}) }; }
+  }
   if (def.container && raw.bgVideo && raw.bgVideo.src) {
     const src = line(raw.bgVideo.src, 1000);
     if (!/^(https:\/\/[^\s<>"'`\\/@]+\/[^\s<>"'`\\]*|\/uploads\/[a-z0-9/_.-]+)\.(mp4|webm)(\?[^\s<>"'`\\]*)?$/i.test(src)) throw new Error(`${where} : vidéo de fond : fichier .mp4 ou .webm (https:// ou médiathèque).`);
-    node.bgVideo = { src };
+    // Début / fin (secondes), image de secours (affichée si la vidéo ne charge pas) et lecture unique, comme « Background Video » d'Elementor
+    const bs = numberIn(1, 86399, { integer: true })(raw.bgVideo.start), be = numberIn(2, 86400, { integer: true })(raw.bgVideo.end);
+    if (be && be <= (bs || 0)) throw new Error(`${where} : vidéo de fond : la fin doit venir après le début.`);
+    const poster = raw.bgVideo.poster ? h.imageUrl(raw.bgVideo.poster, `${where} (image de secours de la vidéo de fond)`) : "";
+    node.bgVideo = { src, ...(bs ? { start: bs } : {}), ...(be ? { end: be } : {}), ...(poster ? { poster } : {}), ...(raw.bgVideo.once === true ? { once: true } : {}) };
   }
   const styles = normalizeStyles(raw.styles, raw.states, where, h);
   if (styles.styles) node.styles = styles.styles;
@@ -1863,6 +1949,10 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       if (n.css && NODE_ID.test(String(n.id || ""))) { try { const c = cssDeclarations(n.css, "CSS"); if (c) rules.custom.push(`.kw-node.kw-n-${n.id}{${c}}`); } catch { /* ignoré */ } }
       if (n.cssHover && NODE_ID.test(String(n.id || ""))) { try { const c = cssDeclarations(n.cssHover, "CSS"); if (c) rules.custom.push(`.kw-node.kw-n-${n.id}:hover{${c}}`); } catch { /* ignoré */ } }
       // Barre de progression : sa largeur vient de sa valeur (validée 0–100), pas d'un style écrit dans la page
+      if (n.shapes && NODE_ID.test(String(n.id || ""))) {
+        rules.base.push(`:where(.kw-n-${n.id}){position:relative;isolation:isolate}`);
+        for (const sh of n.shapes) rules.base.push(`.kw-n-${n.id}>.kw-shape-${sh.position}{height:${sh.height || 100}px;${sh.color ? "color:" + colorCss(sh.color) + ";" : ""}}`);
+      }
       if (n.type === "hotspot" && NODE_ID.test(String(n.id || "")) && n.props) n.props.spots.forEach((sp, k) => rules.base.push(`.kw-n-${n.id}-s${k}{left:${Number(sp.x)}%;top:${Number(sp.y)}%}`));
       if (n.type === "iconlist" && NODE_ID.test(String(n.id || "")) && n.props && n.props.iconColor) rules.base.push(`.kw-n-${n.id} .kw-iconlist-icon{color:${colorCss(n.props.iconColor)}}`);
       if ((n.type === "social" || n.type === "sharebuttons") && NODE_ID.test(String(n.id || "")) && n.props) rules.base.push(`.kw-n-${n.id}{--kw-soc:${Number(n.props.size) || 32}px}`);

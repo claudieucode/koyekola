@@ -27,7 +27,7 @@ const COVERED_BEFORE = ["width", "minWidth", "maxWidth", "height", "minHeight", 
 const CASES = [
   ["text", "fontFamily", "font.lobster", "font-family", /Lobster/], ["text", "fontWeight", "700", "font-weight", "700"], ["text", "fontStyle", "italic", "font-style", "italic"],
   ["text", "lineClamp", 2, "-webkit-line-clamp", "2"], ["text", "lineHeight", 2, "line-height", "40px", { fontSize: "20px" }], ["text", "letterSpacing", "3px", "letter-spacing", "3px"], ["text", "wordSpacing", "5px", "word-spacing", "5px"],
-  ["text", "textStrokeWidth", "2px", "-webkit-text-stroke-width", "2px"], ["text", "textStrokeColor", "#ff0000", "-webkit-text-stroke-color", "rgb(255, 0, 0)"],
+  ["text", "columnCount", 3, "column-count", "3"], ["text", "textStrokeWidth", "2px", "-webkit-text-stroke-width", "2px"], ["text", "textStrokeColor", "#ff0000", "-webkit-text-stroke-color", "rgb(255, 0, 0)"],
   ["text", "textIndent", "20px", "text-indent", "20px"], ["text", "textTransform", "uppercase", "text-transform", "uppercase"], ["text", "textAlign", "center", "text-align", "center"],
   ["text", "textDecoration", "underline", "text-decoration-line", "underline"], ["text", "textShadow", "md", "text-shadow", /rgba?\(15, 23, 42/],
   // Propriétés ajoutées (retour à la ligne, curseur, fusion, contour, débordement par axe, pistes de grille automatiques)

@@ -94,6 +94,10 @@
  "courserating": {
   "error": "da0387516f65a689efb314a1b81e555321ac06aa"
  },
+ "cta": {
+  "json": "1d020f3710532e39d449e3b9208b67eeefeea817",
+  "css": "da94d89ef381fe1c1af887cef2b0500558c5cd65"
+ },
  "divider": {
   "json": "2fbaf62538306e843bd3a3d6778c61ebe993a49a",
   "css": "3eb7ff8ad19ca18f5cb7d787ccdbe552a30e0447"
@@ -112,6 +116,10 @@
  "flipbox": {
   "json": "3cbaf2001562919b5ec87998f58335a54e60004c",
   "css": "1fc2a4138e88797d3503abc3ca9d0311c2cade5d"
+ },
+ "floatingbutton": {
+  "json": "41c86f10aeb3126b16d4844b49e81c54949b7357",
+  "css": "d5afa73345d86dcfb2a779f2eef37a7867316f90"
  },
  "gallery": {
   "error": "3fbd83b92ee7a4353f695bc4c01d91be951b6d5f"
@@ -270,7 +278,7 @@
   "css": "549cf388e0834f5279fe92d6594f9cb1ae9d4ee3"
  },
  "slides": {
-  "json": "a242284241abbee04ad56026759601fc0a6cc114",
+  "json": "39936600f56a206aca7f2c8f0d4cf0c34c5c8c65",
   "css": "d03a0ddb2f3bf374b4b5dac85acce06cfca30b49"
  },
  "social": {
@@ -327,5 +335,9 @@
  },
  "video": {
   "error": "087b1c2055f17ef88747527d1cdf788743c0d1ac"
+ },
+ "videoplaylist": {
+  "json": "42fae82264bcb06c9016855d7719ff8e99897e13",
+  "css": "840e9fb423817cbfce836ab56259f9f0a14cb556"
  }
 }

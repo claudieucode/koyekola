@@ -163,6 +163,24 @@
     dlg.addEventListener("click", function (e) { if (lbOverlayClose && e.target === dlg) dlg.close(); });
     pv.hidden = nx.hidden = links.length < 2 || !lbArrows;
   });
+  // Playlist vidéo : cliquer un titre lit la vidéo dans le lecteur (sans script, le titre ouvre la vidéo dans un nouvel onglet)
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-vplay]"), function (box) {
+    var frame = box.querySelector(".kw-vp-frame"), items = box.querySelectorAll(".kw-vp-item");
+    if (!frame) return;
+    var play = function (a) {
+      var src = a.getAttribute("data-kw-vp-src"); if (!src) return false;
+      frame.src = src; frame.title = a.getAttribute("data-kw-vp-title") || "";
+      Array.prototype.forEach.call(items, function (o) { var on = o === a; o.classList.toggle("is-current", on); if (on) o.setAttribute("aria-current", "true"); else o.removeAttribute("aria-current"); });
+      return true;
+    };
+    Array.prototype.forEach.call(items, function (a) { a.addEventListener("click", function (e) { if (play(a)) e.preventDefault(); }); a.removeAttribute("target"); });
+  });
+  // Diaporama en arrière-plan : une image après l'autre (immobile si « réduire les animations »)
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-bgslides]"), function (box) {
+    var imgs = box.querySelectorAll(".kw-bgslide"), sec = Math.max(2, Number(box.getAttribute("data-kw-bgslides")) || 5), at = 0;
+    if (imgs.length < 2 || document.body.hasAttribute("data-kw-builder") || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
+    setInterval(function () { imgs[at].classList.remove("is-on"); at = (at + 1) % imgs.length; imgs[at].classList.add("is-on"); }, sec * 1000);
+  });
   // Galerie : barre de filtres par étiquette (les images sans étiquette ne s'affichent que sous « Tous »)
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-gal-filters]"), function (bar) {
     var gal = bar.parentNode;
@@ -208,7 +226,8 @@
     var run = function (el) {
       var target = Number(el.getAttribute("data-kw-count")), dec = Number(el.getAttribute("data-kw-decimals")) || 0, dur = Number(el.getAttribute("data-kw-duration")) || 1500;
       var out = el.querySelector(".kw-counter-value"), t0 = null;
-      var fmt = function (v) { return v.toLocaleString("fr-FR", { minimumFractionDigits: dec, maximumFractionDigits: dec }); };
+      var sepMode = el.getAttribute("data-kw-sep");
+      var fmt = function (v) { var s = v.toLocaleString("fr-FR", { minimumFractionDigits: dec, maximumFractionDigits: dec }); return sepMode === "dot" ? s.replace(/[\u202f\u00a0]/g, ".") : sepMode === "none" ? s.replace(/[\u202f\u00a0]/g, "") : s; };
       var step = function (t) { if (t0 === null) t0 = t; var k = Math.min(1, (t - t0) / dur); var e = 1 - Math.pow(1 - k, 3); out.textContent = fmt(target * e); if (k < 1) requestAnimationFrame(step); else out.textContent = fmt(target); };
       requestAnimationFrame(step);
     };
@@ -282,12 +301,27 @@
   var LABELS = [["jours", 86400], ["heures", 3600], ["minutes", 60], ["secondes", 1]];
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-countdown]"), function (box) {
     var end = Date.parse(box.getAttribute("data-kw-countdown"));
+    // Minuteur par visiteur : la fin est fixée à la première visite (mémorisée dans ce navigateur), puis conservée
+    var ever = Number(box.getAttribute("data-kw-cd-evergreen"));
+    if (ever > 0) {
+      var key = "kw-cd-" + (box.getAttribute("data-kw-cd-key") || "x") + "-" + ever, saved = NaN;
+      try { saved = Number(window.localStorage.getItem(key)); } catch (e) { saved = NaN; }
+      if (!isFinite(saved) || saved <= 0) { saved = Date.now() + ever * 60000; try { window.localStorage.setItem(key, String(saved)); } catch (e) { /* stockage refusé : le minuteur repart à chaque visite */ } }
+      end = saved;
+    }
     if (!isFinite(end)) return;
+    var hidden = (box.getAttribute("data-kw-hide-units") || "").split(" "), HIDE = { jours: "days", heures: "hours", minutes: "minutes", secondes: "seconds" };
+    var expire = box.getAttribute("data-kw-expire"), redirect = box.getAttribute("data-kw-redirect");
     var render = function () {
       var left = Math.max(0, Math.floor((end - Date.now()) / 1000));
       box.textContent = "";
-      if (!left) { var p = document.createElement("p"); p.textContent = box.getAttribute("data-kw-end-text") || ""; box.appendChild(p); return false; }
+      if (!left) {
+        if (expire === "hide") { box.hidden = true; return false; }
+        if (expire === "redirect" && redirect) { window.location.assign(redirect); return false; }
+        var p = document.createElement("p"); p.textContent = box.getAttribute("data-kw-end-text") || ""; box.appendChild(p); return false;
+      }
       LABELS.forEach(function (l) {
+        if (hidden.indexOf(HIDE[l[0]]) >= 0) return; // unité masquée : son temps s'ajoute à l'unité plus petite
         var v = Math.floor(left / l[1]); left -= v * l[1];
         var u = document.createElement("span"); u.className = "kw-countdown-unit";
         var n = document.createElement("strong"); n.textContent = String(v);

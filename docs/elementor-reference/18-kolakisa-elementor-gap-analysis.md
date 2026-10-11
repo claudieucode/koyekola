@@ -1,41 +1,51 @@
-# 18 — Matrice de comparaison Elementor ↔ KOLAKISA
+# 18 — Matrice de comparaison Elementor ↔ KOLAKISA (fonctions transversales)
 
-_Établie le 2026-10-10. **Preuve** = ce qui a été réellement fait dans cette session : « code » = lecture du code ; « test » = test exécuté ; « —» = non testé. Les lignes « Présent (code) » ne sont **pas** « Présent et opérationnel » : ce statut exige un test de bout en bout, indiqué dans la colonne Preuve._
-Légende des statuts : OPÉ = présent et opérationnel (testé) · PRÉS = présent, vérifié dans le code seulement · INC = présent mais incomplet · ABS = absent · NA = non applicable · ? = à vérifier.
-Comparaison détaillée widget par widget (phase 1) : voir `ELEMENTOR_FEATURE_INVENTORY.md` (racine) ; cette matrice ne la remplace pas.
+_Mise à jour du 10 octobre 2026 (deuxième passe, après lecture d'environ 90 articles Elementor). La correspondance widget par widget est dans `19-widget-mapping.md`._
+**Erreurs de la première version, corrigées ici** (vérifiées dans le code après coup) : (1) les points de rupture tablette et mobile **sont déjà modifiables** (Réglages du site, `layout.breakpoints`) ; (2) le CSS personnalisé **par élément existe** (déclarations validées, normal et survol) ; (3) le copier-coller passe par le stockage du navigateur, donc **entre pages et sites de KOLAKISA du même navigateur** il fonctionnait déjà.
+Statuts : OPÉ = présent et testé de bout en bout · PRÉS = présent, vérifié dans le code seulement · NA = sans objet · ABS = absent (raison donnée) · « ajouté » = ajouté dans cette mission et testé.
 
-| # | Domaine | Fonctionnalité Elementor (source) | Dispo. Elementor | KOLAKISA | Preuve | Écart / décision | Prio | Action |
-|---|---|---|---|---|---|---|---|---|
-| 1 | Images | Résolution de l'image : miniature / taille / complète (image-widget) | Image, Image Box, Galerie, Carrousel… | **OPÉ (implémenté ici)** : 5 tailles + original + adaptative, Image / Galerie / Carrousel / Boîte d'image / Points d'intérêt | test : 8 serveur + 4 navigateur | Tailles carrées et « personnalisée » non reprises (voir limites) | P1 | fait |
-| 2 | Images | Résolution des autres widgets à source d'image | ✔ | **OPÉ (implémenté ici)** pour l'**image de fond** (tout conteneur) et la **photo de témoignage** ; **NA** pour les vignettes d'articles/formations/image mise en avant (elles viennent des bibliothèques du blog et du catalogue, hors médiathèque du Page Builder) | test : 2 serveur | logo du site et image du bandeau « héros » historique : non traités | P2 | fait / reste documenté |
-| 3 | Images | Object-fit / ratio d'aspect / filtres / opacité sur Image | ✔ | PRÉS (propriétés de style `objectFit`, `aspectRatio`, `filter`) | code | test de rendu public non refait | — | vérifier |
-| 4 | Images | Lien, légende, texte alternatif, titre, nouvel onglet | ✔ | OPÉ | test (cms-media, tests widgets) | — | — | conserver |
-| 5 | Images | Lightbox (visionneuse) | ✔ | **OPÉ** : galerie, et **widget Image seul (ajouté ici, désactivé par un lien)** | test : cms-media, images-resolutions, galerie-options | l'original s'ouvre même si une version réduite est affichée | — | fait |
-| 6 | Galerie | Dispositions Grille (ratios) / Justifiée / Maçonnerie ; 1–24 colonnes ; filtres ; surcouche | ✔ | **OPÉ (ajouté ici)** : disposition (grille, mosaïque, justifiée), colonnes 1–6, ratio d'aspect (grille), hauteur des lignes (justifiée), légende au survol, barre de filtres par étiquette ; la visionneuse saute les images filtrées | test : 5 navigateur | Elementor : jusqu'à 24 colonnes ; type « Multiple » avec titre : non repris | P2 | fait |
-| 7 | Texte | Contour du texte (text stroke) | ✔ | **OPÉ (ajouté ici)** : épaisseur + couleur, tous les éléments à typographie | test : 4 navigateur (propriétés restantes, rendu calculé) | — | P3 | fait |
-| 8 | Texte | Ombre du texte, mode de fusion | ✔ | PRÉS (`textShadow`, `mixBlendMode`) | code | — | — | vérifier |
-| 9 | Texte | Balise HTML du titre H1–H6 (+div/span/p) | ✔ | PRÉS (niveau 1–6) ; div/span/p non | code | partiel | P3 | évaluer |
-| 10 | Bouton | ID du bouton, icône + position | ✔ | PRÉS (ID d'ancre général, icône) | code | — | — | vérifier |
-| 11 | Accordéon | Schéma FAQ | ✔ | PRÉS (`faqSchema`) | code | test non refait | — | vérifier |
-| 12 | Formulaire | Types de champs, actions, anti-spam | ✔ | ➡️ module Formulaires de KOLAKISA | code | hors éditeur | — | — |
-| 13 | Structure | Conteneur flex : direction, justification, alignement, écart, retour à la ligne, débordement, hauteur min vh | ✔ | OPÉ (testés par les suites existantes, p. ex. canvas-vide-compatibilite) | test | — | — | conserver |
-| 14 | Structure | Grille (Grid) | non documenté (non vérifié) | PRÉS | code | ne pas comparer | — | — |
-| 15 | Structure | Conteneur « a » cliquable / balise HTML | ✔ | PRÉS (lien du conteneur, balises) | code | — | — | vérifier |
-| 16 | Responsive | Trois écrans par défaut, héritage descendant | ✔ | PRÉS : ordinateur, tablette (820), mobile (390) | code | héritage KOLAKISA : valeurs par écran ; non recomparé | — | ? |
-| 17 | Responsive | Points de rupture personnalisés / appareils supplémentaires | ✔ (statut ?) | ABS (3 écrans fixes) | code | à évaluer, coût élevé (moteur CSS) | P3 | reporter |
-| 18 | Responsive | Masquer par appareil | ✔ | OPÉ (`hideOn`) | code + tests antérieurs | — | — | conserver |
-| 19 | Avancé | ID CSS, classes CSS, attributs personnalisés, z-index, position, ordre | ✔ (attributs Pro) | PRÉS | code | — | — | conserver |
-| 20 | Avancé | CSS personnalisé **par widget** | Pro | NA : CSS personnalisé existe au niveau site/page, validé ; par widget = risque de sécurité | code | décision : exclu | — | exclu |
-| 21 | Avancé | Masque, transformation, arrière-plans/dégradés, bordure/ombre | ✔ | PRÉS | code | — | — | conserver |
-| 22 | Avancé | Conditions d'affichage | ✔ | PRÉS sous une autre forme (public cible, programmation) | code | modèle différent | — | conserver |
-| 23 | Animation | Animation d'entrée, effets de défilement, effets de souris, sticky | ✔ (défilement/sticky Pro) | PRÉS (moteur de mouvement) | code, mémoire projet | — | — | conserver |
-| 24 | Interface | Raccourcis : annuler/rétablir, copier/coller, coller le style, dupliquer, enregistrer, structure | ✔ | OPÉ (Ctrl+Z, Maj+Z, C, V, X, D, S, Ctrl+Maj+V, Ctrl+K palette, Ctrl+Maj+H) | code | Finder = palette Ctrl+K ; Historique Ctrl+Maj+H = *masquer* (autre sens) | P3 | documenter |
-| 25 | Interface | Menu contextuel : Copier/Coller/Coller le style/Réinitialiser le style/Enregistrer comme modèle/Structure | ✔ | PRÉS | code | détail non comparé | — | ? |
-| 26 | Interface | « Coller depuis un autre site » | ✔ | ABS | code (aucune occurrence) | pertinent seulement entre sites KOLAKISA | P3 | évaluer |
-| 27 | Historique | Historique de session + révisions + enregistrement auto | ✔ | OPÉ (annuler 150 pas, brouillon enregistré à 1 s, versions restaurables) | test (suites existantes) | pas d'effacement de l'historique | — | conserver |
-| 28 | Styles | Couleurs/polices globales, Theme Style | ✔ | PRÉS (réglages du site, jetons) | code | — | — | conserver |
-| 29 | Styles | Classes globales + états (V4), styles enregistrés | ✔ | PRÉS (« Enregistrer comme style », classes) | commit 011e395 | — | — | conserver |
-| 30 | Réutilisation | Composants / éléments globaux, détachement | Pro (V4) | PRÉS (composants cycle de vie) | commit 4e42592 | — | — | conserver |
-| 31 | Réutilisation | Modèles, import/export, kits | ✔ | PRÉS (modèles de pages) | code | export/import de kits non comparé | — | ? |
-| 32 | CMS | Étiquettes dynamiques, boucles, Theme Builder, conditions | ✔ | PRÉS | ELEMENTOR_FEATURE_INVENTORY | — | — | conserver |
-| 33 | IA | Modifier avec l'IA | ✔ | PRÉS (studio IA, respecte le verrou : test) | test format-mise-en-page | — | — | conserver |
+| # | Domaine | Fonctionnalité Elementor (source lue) | KOLAKISA | Preuve | Décision |
+|---|---|---|---|---|---|
+| 1 | Images | Résolution de l'image (image, image box, galerie, carrousels, CTA, témoignage…) | **ajouté** : 5 tailles + original + adaptative ; aussi fond d'image et photo de témoignage | 13 tests serveur + 4 navigateur | fait |
+| 2 | Images | Vignettes d'articles / formations, image mise en avant | NA : bibliothèques du blog et du catalogue, autre stockage | code | exclu |
+| 3 | Images | Object-fit, ratio, filtres CSS, opacité, survol | PRÉS (`objectFit`, `aspectRatio`, `filter`, `opacity`) | code | conserver |
+| 4 | Images | Lien, légende, alt, titre, nouvel onglet, visionneuse | OPÉ ; **ajouté** : visionneuse sur le widget Image seul | tests | fait |
+| 5 | Galerie | Grille / mosaïque / justifiée, colonnes, ratio, légende au survol, filtres | **ajouté** (colonnes 1–6 ; Elementor 1–24) | 5 tests navigateur | fait |
+| 6 | Texte | Contour du texte | **ajouté** (épaisseur + couleur) | test | fait |
+| 7 | Texte | Lettrine, colonnes de texte | **ajouté** | test | fait |
+| 8 | Texte | Ombre du texte, mode de fusion, typographie, espacement des mots | PRÉS | code | conserver |
+| 9 | Texte | Balise du titre p / div / span | ABS volontaire : titres sémantiques H1–H6 | — | exclu |
+| 10 | Widgets | Appel à l'action, Playlist vidéo, Bouton flottant | **ajoutés** | tests | fait |
+| 11 | Widgets | Sitemap, SVG, Stripe/PayPal, Sidebar, Shortcode | NA ou ➡️ autre module (voir 19) | — | exclu |
+| 12 | Widgets | Compteur : séparateur des milliers | **ajouté** | test | fait |
+| 13 | Widgets | Compte à rebours : minuteur par visiteur, action à la fin, unités | **ajouté** | test | fait |
+| 14 | Widgets | Liste d'icônes : en ligne, séparateurs | **ajouté** | test | fait |
+| 15 | Widgets | Partage / réseaux sociaux : Telegram, Pinterest, Reddit, Threads | **ajouté** | test | fait |
+| 16 | Widgets | Vidéo : début / fin | **ajouté** (YouTube, Vimeo, fichier) | test | fait |
+| 17 | Widgets | Slides : effet Ken Burns | **ajouté** | test | fait |
+| 18 | Widgets | Témoignage : position de la photo ; Hotspot : déclencheur ; Code : numéros de ligne / copier ; Suivi de progression circulaire | ABS (usage marginal) | — | non fait, documenté |
+| 19 | Structure | Conteneur flex : direction, justification, alignement, écart, retour à la ligne, débordement, hauteur min vh, balise, lien | OPÉ | tests | conserver |
+| 20 | Structure | Grille | PRÉS (non documentée chez Elementor dans les pages lues) | code | — |
+| 21 | Structure | Séparateur de forme (haut / bas) | **ajouté** : 7 formes, couleur, hauteur, retournement, premier plan | test | fait |
+| 22 | Fond | Vidéo en arrière-plan | PRÉS (`bgVideo`) ; options début / fin / image de secours : ABS | code | partiel |
+| 23 | Fond | Diaporama en arrière-plan + Ken Burns | **ajouté** | test | fait |
+| 24 | Masques | Formes Fleur, Croquis, Blob (+ cercle, triangle, hexagone) | **ajouté** : fleur, croquis, blob (+ 8 formes existantes) ; masque par image PNG/SVG : PRÉS (`mask.src`) | test | fait |
+| 25 | Mouvement | 14 animations de survol | **ajouté** : 12 nouvelles (16 au total) | test | fait |
+| 26 | Mouvement | Animations d'entrée (37), défilement, souris (3D, suivi), sticky, contrôle de fenêtre | PRÉS : 63 animations, effets de défilement, souris, sticky, plage | code | conserver |
+| 27 | Page | Magnétisme de défilement (Scroll Snap) | **ajouté** (haut / centre / bas, marge, arrêt obligatoire) | test | fait |
+| 28 | Avancé | ID, classes, attributs personnalisés, z-index, position, ordre | PRÉS | code | conserver |
+| 29 | Avancé | CSS personnalisé par élément (Pro chez Elementor) | PRÉS : déclarations validées (normal + survol), jamais d'`url()` ni `@import` | code | conserver |
+| 30 | Avancé | Conditions d'affichage : public, programmation, **jours / heures**, paramètre d'adresse | PRÉS ; **jours et heures ajoutés** (heure de Paris) | test | partiel : pas de groupes ET / OU |
+| 31 | Avancé | Conditions : rôle, catégorie / auteur de l'article, date d'inscription | ABS (modèle d'audience différent : contacts, abonnés, clients, élèves) | — | non fait |
+| 32 | Responsive | Trois écrans, héritage descendant, points de rupture modifiables | PRÉS (820–1279 et 400–767 px) | code | conserver |
+| 33 | Responsive | Appareils supplémentaires (portrait / paysage, grands écrans) | ABS : trois écrans fixes | — | reporté (moteur CSS) |
+| 34 | Interface | Raccourcis, menu contextuel, structure, sélection multiple, favoris, palette de commandes | OPÉ / PRÉS | code, tests | conserver |
+| 35 | Interface | Coller depuis un autre site ou navigateur | **ajouté** (presse-papiers du système, texte balisé, contenu borné et revalidé) | test | fait |
+| 36 | Historique | Historique de session, révisions, enregistrement auto | OPÉ | tests existants | conserver |
+| 37 | Styles | Couleurs / polices globales, classes, états, styles enregistrés, composants | PRÉS | commits | conserver |
+| 38 | CMS | Étiquettes dynamiques (groupes article, formation, produit, visiteur, page, site, date, adresse), boucles, modèles | PRÉS | code | conserver |
+| 39 | IA | Modification par IA, respect du verrou de format | PRÉS, testé | test | conserver |
+| 40 | Liens | Liens intelligents : agenda (Google / Outlook / Yahoo), Waze, Skype, Viber | ABS : seuls `tel:`, `mailto:` et les liens du site sont acceptés ; WhatsApp / e-mail / SMS existent dans le bouton flottant (ajouté) | code | non fait, documenté |
+| 41 | Fond | Dégradé radial et position de chaque couleur ; bordures double et gravée | **ajouté** | test | fait |
+| 42 | Fond | Vidéo de fond : début / fin, image de secours, lecture unique | **ajouté** | test | fait |
+| 43 | Éléments | Facebook : Embed, Commentaires, Flux de page ; Sitemap ; PayPal dons / abonnements ; icônes personnalisées | ABS : dépendent de services tiers ou d'un usage marginal | — | non fait, documenté |

@@ -322,7 +322,7 @@ function viewModel(ctx, page) {
     breakpoints = row ? require("../pages/siteSettings").breakpointsOf(require("../pages/siteSettings").normalizeSettings(JSON.parse(row.settings || "{}"))) : undefined;
   } catch { breakpoints = undefined; }
   // Polices de la bibliothèque utilisées par la page : leurs règles @font-face sont livrées avec elle (aucune autre n'est chargée)
-  const nodeCss = [require("../pages/layoutFormat").css(page.theme && page.theme.layout), pageNodes.pageCss(sections, breakpoints)].filter(Boolean).join("\n");
+  const nodeCss = [require("../pages/layoutFormat").css(page.theme && page.theme.layout), require("../pages/scrollSnap").css(page.theme && page.theme.scrollSnap), pageNodes.pageCss(sections, breakpoints)].filter(Boolean).join("\n");
   const faces = require("../../utils/fontLibrary").faceCssFor(nodeCss);
   return { ...page, sections, nodeCss: faces ? `${faces}\n${nodeCss}` : nodeCss, customCss };
 }

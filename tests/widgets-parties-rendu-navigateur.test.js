@@ -25,6 +25,7 @@ function probe(def) {
 }
 // Parties qui ne s'affichent pas sur une page nue d'essai (contenu réel nécessaire) — vérifiées par le test de contrat des gabarits
 const NEEDS_CONTENT = new Set([
+  "cta.image", "cta.ribbon", // image et bandeau facultatifs : absents du contenu de départ
   "posts.image", "courselist.*", "testimonial.avatar", "iconbox.media", "signupform.*", // image réelle, catalogue, formulaire existant
   "menu.burger", "modal.foot", "account.count", "sitelogo.image", "minicart.count", "querylist.thumb", "querylist.meta", "querylist.count", // éléments apparaissant seulement avec des données (écran étroit, panier, logo, termes…)
   "cart.*", "postmeta.*", "postterms.*", "postnav.*", "authorbox.*", "archiveinfo.*", "postcomments.*", "cmsmenu.*", // widgets de contexte (panier du visiteur, modèle « Article du blog », menu du CMS) : sélecteurs vérifiés par le contrat des gabarits

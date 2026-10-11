@@ -1,19 +1,20 @@
 # 17 — Inventaire fonctionnel consolidé
 
-_10 octobre 2026. Aucun pourcentage de complétion n'est annoncé : le périmètre lu d'Elementor est un échantillon (voir README), un pourcentage serait trompeur._
+_10 octobre 2026, deuxième passe. Aucun pourcentage de complétion n'est annoncé._
 
-## Décomptes (matrice `18-kolakisa-elementor-gap-analysis.md`)
-| Mesure | Nombre | Définition |
+## Décomptes (matrice `18-kolakisa-elementor-gap-analysis.md`, 43 lignes)
+| Mesure | Nombre | Détail |
 |---|---|---|
-| Fonctionnalités recensées dans la matrice | **33** | lignes de la matrice (une ligne peut regrouper plusieurs réglages) |
-| Applicables à KOLAKISA | **31** | recensées moins 1 « non applicable » (CSS par widget) et 1 couverte par un autre module (Formulaires) |
-| Absentes | **2** | lignes 17 (points de rupture personnalisés) et 26 (coller depuis un autre site) |
-| Incomplètes | **0** | la galerie (ligne 6) a été complétée |
-| Présentes, **vérifiées dans le code seulement** | **19** | « PRÉS » : pas de test de bout en bout dans cette session |
-| Testées de bout en bout (cette session ou suites existantes citées) | **10** | « OPÉ » |
-| **Ajoutées ou corrigées et validées dans cette mission** | **5** | lignes 1 (résolutions), 2 (fond d'image, photo de témoignage), 5 (visionneuse du widget Image), 6 (galerie), 7 (contour du texte) |
-Total : 10 + 19 + 2 + 1 + 1 = 33.
+| Fonctionnalités recensées | **43** | une ligne peut regrouper plusieurs réglages |
+| Applicables à KOLAKISA | **41** | moins 2 « sans objet » (lignes 2 et 11) |
+| **Ajoutées ou corrigées dans cette mission, testées de bout en bout** | **20** | lignes 1, 4, 5, 6, 7, 10, 12–17, 21, 23, 24, 25, 27, 35, 41, 42 (+ la ligne 30 en partie : jours et heures) |
+| Présentes et testées (suites existantes) | **3** | lignes 19, 34, 36 |
+| Présentes, **vérifiées dans le code seulement** | **12** | à ne pas lire comme « validées » |
+| Absentes (décision documentée) | **6** | lignes 9 (exclue), 18, 31, 33, 40, 43 |
+| Sans objet | **2** | lignes 2, 11 |
+Total : 20 + 3 + 12 + 6 + 2 = 43.
 
-## Ce que ces chiffres ne disent pas
-- Elementor compte des dizaines de widgets ; seuls 8 ont été lus en détail (voir 03/04). Les autres ne sont **ni inventoriés ni comparés** ici ; la comparaison de la phase 1 (`ELEMENTOR_FEATURE_INVENTORY.md`) les traite par type de widget.
-- « PRÉS » signifie « le code contient la propriété », pas « ça marche partout ».
+## Couverture de la lecture d'Elementor
+- Articles lus en entier (corps) : environ **140** — widgets (≈ 75), onglet Avancé, responsive, historique, réglages du site, conditions d'affichage, CSS personnalisé, masques, contour du texte, séparateur de forme, attributs, composants, sélection multiple, favoris, contrôle de fenêtre, magnétisme, export des classes, effets de mouvement, formulaire atomique, étiquettes dynamiques.
+- **Non lus** (titres connus par la liste officielle) : widgets WooCommerce et e-commerce, Theme Builder / kits / modèles (détails), IA et MCP, accessibilité, performance, hébergement, domaines, e-mail, tutoriels pas à pas (boucles, popups, Hello Bar, galerie héros, téléchargements PDF, playlist audio, articles liés, archive de recherche, services…), pages « how-to » diverses (CSS ID, mots, colonnes de texte, etc.), pages sur l'import de fichiers et le Finder.
+- Gratuit / Pro : établi seulement là où l'article le dit (voir `15-…`) ; le reste reste « non tranché ».

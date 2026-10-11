@@ -27,6 +27,7 @@ module.exports = [
           { key: "dark", kind: "number", label: "Voile sombre sur l'image (%)", min: 0, max: 80, integer: true, default: 45 },
         ] },
       { key: "align", kind: "select", label: "Alignement du texte", options: [["center", "Centré"], ["left", "À gauche"]], default: "center" },
+      { key: "kenBurns", kind: "select", label: "Effet Ken Burns (zoom lent sur l'image)", options: [["none", "Aucun"], ["in", "Zoom avant"], ["out", "Zoom arrière"]], default: "none" },
       ...behaviour(true),
     ],
     validate(p, at) { p.slides.forEach((s, i) => { if (s.buttonLabel && !s.buttonUrl) throw new Error(`${at}, diapositive ${i + 1} : un bouton demande une adresse.`); if (s.buttonUrl && !s.buttonLabel) throw new Error(`${at}, diapositive ${i + 1} : une adresse de bouton demande son texte.`); }); },

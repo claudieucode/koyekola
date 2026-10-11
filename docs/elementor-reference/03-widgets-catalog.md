@@ -18,4 +18,4 @@ _Vérifié le 2026-10-10. Source : https://elementor.com/help/build-with-the-edi
 Button, Div Block, Flexbox, Heading, Image, Paragraph, SVG, Tabs, YouTube (liste de la page ci-dessus). Les blogs d'annonce citent aussi des formulaires atomiques (« Forms ») : **non lu en détail**.
 
 ## Pour chaque widget : ce qui est documenté dans ce dossier
-Détail lu pour : Image, Image Box, Galerie, Bouton, Titre, Accordéon, Formulaire → `04-widget-controls.md`. **Tous les autres widgets : liste seulement, réglages non lus.**
+Réglages lus en détail : `04-widget-controls.md` (Image, Image Box, Galerie, Bouton, Titre, Accordéon, Formulaire) puis `04b` à `04g` (une quarantaine d'autres widgets). **Non lus** : widgets WooCommerce, Facebook (embed, commentaires, flux), Stripe, PayPal, Sitemap, Single Post, Template, Sidebar, Page Title. Équivalents KOLAKISA : `19-widget-mapping.md`.

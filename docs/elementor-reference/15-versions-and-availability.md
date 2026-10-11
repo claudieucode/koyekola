@@ -13,3 +13,22 @@ _Vérifié le 2026-10-10._
 | Conditions d'affichage | présentes dans l'onglet Avancé ; statut **non vérifié** | — |
 | Points de rupture personnalisés | statut **non vérifié** | mobile-editing |
 Consigne : ne rien reproduire « parce que c'est Pro » ; évaluer l'utilité (voir 18).
+
+## Compléments (deuxième passe de lecture)
+| Fonction | Statut Elementor établi par l'article lu |
+|---|---|
+| CSS personnalisé (site, page, élément) | **Pro** (article « Custom CSS in Elementor ») ; priorité élément > page > site |
+| Attributs personnalisés | **Pro** (article « Custom attributes ») |
+| Effets de défilement, Sticky | **Pro** (article Avancé / sticky) |
+| Composants (V4) | **Pro** pour créer ; administrateurs seulement |
+| Interactions V4, E-mail 2 du formulaire atomique, tailles variables | **Pro** (recherches / article du formulaire atomique) |
+| Onglets avec éléments imbriqués | **Pro**, exige l'expérience « Nested Elements » |
+| Menu à conteneurs imbriqués | marqué **expérimental** dans l'article |
+| Bouton flottant : conditions d'affichage | **Pro** (seule option marquée Pro de l'article) |
+| Fil d'Ariane | exige l'extension Yoast SEO |
+| Menu panier | exige WooCommerce |
+| Google Maps | exige une clé API (Elementor → Réglages → Intégrations) |
+| Formulaire de recherche | remplacé par le widget « Recherche » depuis 3.24 |
+| Accordéon imbriqué | absorbe la Bascule ; incompatible avec la boucle ; ID CSS impossible |
+| Conditions d'affichage | Pro **non tranché** par l'article ; l'heure utilisée est celle du **serveur** ; incompatibles avec un cache avancé |
+| Tous les autres widgets | gratuit / Pro **non indiqué** par leur article (les « tags de plan » des métadonnées ne tranchent pas) |

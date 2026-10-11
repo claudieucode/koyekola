@@ -238,6 +238,22 @@ const PARTS = {
     role: part("Fonction", ".kw-profile-role", TEXT),
     bio: part("Texte", ".kw-profile-bio", TEXT),
   },
+  cta: {
+    image: part("Image", ".kw-cta-img", IMAGE, ["hover"]),
+    body: part("Contenu", ".kw-cta-body", { ...LAYOUT, background: true }),
+    title: part("Titre", ".kw-cta-title", TEXT),
+    text: part("Description", ".kw-cta-text", TEXT),
+    button: part("Bouton", ".kw-cta-button", LINK, ["hover", "focus"]),
+    ribbon: part("Bandeau", ".kw-cta-ribbon", TEXT_BG),
+  },
+  videoplaylist: {
+    stage: part("Lecteur", ".kw-vp-stage", { border: true, effects: ["boxShadow", "opacity"], size: ["width", "maxWidth", "height"] }),
+    title: part("Nom de la playlist", ".kw-vp-title", TEXT),
+    item: part("Vidéo de la liste", ".kw-vp-item", LINK, ["hover", "focus"]),
+  },
+  floatingbutton: {
+    button: part("Bouton", ".kw-fb-btn", { background: true, border: true, effects: ["boxShadow", "opacity", "transitionDuration"], spacing: spacingAll }, ["hover", "focus"]),
+  },
   readmore: {
     intro: part("Début du texte", ".kw-readmore-intro", TEXT),
     body: part("Suite du texte", ".kw-readmore-body", TEXT),

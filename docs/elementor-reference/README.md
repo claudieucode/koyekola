@@ -5,7 +5,7 @@
 
 ## Honnêteté sur le périmètre (à lire d'abord)
 - Les pages du centre d'aide sont très longues (plus de 100 000 caractères avec la navigation) : le texte utile se trouve **après** le menu. Il a été lu avec un décalage de 100 000 caractères ; les pages dont l'article n'a pas été lu sont **marquées « non lu »**.
-- Ce dossier couvre **un échantillon représentatif**, pas la totalité d'Elementor : l'interface, les conteneurs, 8 widgets lus en détail (Image, Image Box, Gallery, Button, Heading, Accordion, Form + liste officielle des widgets), les réglages avancés, le responsive, l'historique, les réglages du site, les classes/états/composants de l'éditeur V4, les modèles. **Chaque fichier a une section « Non vérifié »**.
+- Couverture : environ **90 articles lus en entier** (≈ 75 widgets, onglet Avancé, responsive, historique, réglages du site, conditions d'affichage, masques, composants, mouvement, étiquettes dynamiques…). Ce qui n'a **pas** été lu est listé dans `17-functional-inventory.md` et `16-official-sources.md`. **Chaque fichier a une section « Non vérifié »**.
 - Aucune fonctionnalité n'est supposée : ce qui n'apparaît pas dans une source lue est écrit « non vérifié ».
 - Ce dossier **complète** `ELEMENTOR_FEATURE_AUDIT.md` et `ELEMENTOR_FEATURE_INVENTORY.md` (racine du dépôt, phase 1 du 8 octobre 2026), qui comparent déjà Elementor à KOLAKISA widget par widget. Il ne les remplace pas.
 
@@ -15,7 +15,8 @@
 | `01-editor-interface.md` | Panneaux, raccourcis, menus contextuels, Navigator |
 | `02-layout-and-containers.md` | Conteneurs, Flexbox, réglages de mise en page |
 | `03-widgets-catalog.md` | Liste officielle des widgets par catégorie |
-| `04-widget-controls.md` | Réglages détaillés des widgets lus |
+| `04-widget-controls.md` | Réglages détaillés des premiers widgets lus |
+| `04b…04i` | Réglages détaillés des autres widgets, fonctions transversales, mouvement, arrière-plans, contenu dynamique |
 | `05-images-and-media.md` | Résolutions d'image, tailles WordPress, optimisation |
 | `06-style-system.md` | Styles, couleurs et polices globales, Theme Style |
 | `07-advanced-controls.md` | Onglet Avancé |
@@ -29,6 +30,7 @@
 | `15-versions-and-availability.md` | Éditeur classique (v3) / V4 ; gratuit / Pro |
 | `16-official-sources.md` | Registre des sources et état de lecture |
 | `17-functional-inventory.md` | Inventaire consolidé avec décomptes |
-| `18-kolakisa-elementor-gap-analysis.md` | Matrice Elementor ↔ KOLAKISA |
+| `18-kolakisa-elementor-gap-analysis.md` | Matrice Elementor ↔ KOLAKISA (fonctions transversales) |
+| `19-widget-mapping.md` | Correspondance widget par widget |
 
 Les rapports de suivi sont à la racine du dépôt : `KOLAKISA_EDITOR_*.md`.

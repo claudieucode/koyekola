@@ -1,4 +1,4 @@
-# 04 — Réglages des widgets lus en détail
+# 04 — Réglages des premiers widgets lus en détail (suite : 04b à 04i)
 
 _Vérifié le 2026-10-10. Chaque section cite l'article lu (décalage 100 000 caractères). Le statut gratuit/Pro n'est donné que s'il est écrit dans l'article._
 
