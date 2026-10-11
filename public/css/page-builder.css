@@ -1365,6 +1365,22 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 /* Changement de thème : aucune transition pendant l'application des jetons (classe posée puis retirée dans la même tâche par applyPalette) */
 .pb-body.pb-theme-switching, .pb-body.pb-theme-switching *, .pb-body.pb-theme-switching *::before, .pb-body.pb-theme-switching *::after { transition: none !important; }
 
+/* Réinitialisation : revenir à la dernière version enregistrée. L'icône est toujours dans la page mais invisible tant que le
+   réglage n'a pas changé : elle apparaît sans rien déplacer. */
+.pb-restore { display: inline-grid; place-items: center; flex: none; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--accent-dark); cursor: pointer; visibility: hidden; opacity: 0; transition: opacity 0.12s ease, background-color 0.12s ease; }
+.pb-restore .icon { width: 12px; height: 12px; }
+.pb-restore.is-on { visibility: visible; opacity: 1; }
+.pb-restore:hover { background: var(--accent-light); }
+.pb-restore:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pb-has-restore { position: relative; }
+.pb-field.pb-has-restore > .pb-restore { position: absolute; top: -1px; right: 0; }
+label.pb-check.pb-has-restore > .pb-restore { position: absolute; top: 50%; right: 0; transform: translateY(-50%); }
+.pb-acc > summary .pb-restore { margin-left: -2px; }
+.pb-insp-head-actions .pb-restore { width: 28px; height: 28px; margin-right: 2px; border-radius: var(--pb-radius-md); }
+.pb-insp-head-actions .pb-restore .icon { width: 16px; height: 16px; }
+.pb-cbar-btn[data-action="restore"] { color: var(--accent-dark); }
+@media (prefers-reduced-motion: reduce) { .pb-restore { transition: none; } }
+
 /* Stabilité : la rangée contextuelle de la barre du haut garde TOUJOURS la même hauteur (celle de son état le plus haut : champs d'un texte,
    d'un bouton…). Avant, sa hauteur suivait l'élément sélectionné (38 / 43 / 47 px) et tout l'éditeur — panneaux et canevas — se décalait
    de 5 à 9 px à chaque sélection. */
