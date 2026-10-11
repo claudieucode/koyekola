@@ -13,6 +13,7 @@
 11. **Lien intelligent** : l'heure de l'événement est celle de Paris ; les schémas `skype:` et `viber://` ne marchent que si l'application est installée.
 12. **Plan du site** : reprend le plan XML (pages, articles, formations publiés et indexables) ; les pages d'un site à domaine propre n'y figurent pas.
 13. **Collage depuis un autre site** : demande l'autorisation du navigateur de lire le presse-papiers.
-14. **Poids des pages publiques** : `landing.css` et `landing.js` ont grossi (voir rapport de performance).
-15. **Navigateurs** : tout est testé sur Chrome seulement ; Safari et Firefox non testés.
-16. **Non faits** (raison dans `KOLAKISA_EDITOR_GAP_ANALYSIS.md`) : appareils supplémentaires, Commentaires Facebook, PayPal dons / abonnements, SVG, shortcodes, icônes personnalisées, conditions propres aux modèles d'article, popups (clics, pages vues, source), Notes, export des classes, modèle alterné de boucle.
+14. **Grand écran** : les effets de mouvement (défilement, souris) lisent un seuil fixe de 1920 px côté navigateur ; si le seuil du site est changé, seuls les styles et le masquage suivent exactement. « Ordinateur » masque aussi le grand écran (compatibilité avec les pages existantes).
+15. **Poids des pages publiques** : `landing.css` et `landing.js` ont grossi (voir rapport de performance).
+16. **Navigateurs** : tout est testé sur Chrome seulement ; Safari et Firefox non testés.
+17. **Non faits** (raison dans `KOLAKISA_EDITOR_GAP_ANALYSIS.md`) : autres écrans supplémentaires (portable, paysage), Commentaires Facebook, PayPal dons / abonnements, SVG, shortcodes, icônes personnalisées, conditions propres aux modèles d'article, popups (clics, pages vues, source), Notes, export des classes, modèle alterné de boucle.

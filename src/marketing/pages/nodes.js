@@ -22,6 +22,8 @@ const RESERVED_ANCHORS = new Set(["main", "contenu", "top", "haut", "kw-consent"
 // Écrans : la liste peut s'allonger (ordinateur portable, écran personnalisé) sans changer le modèle
 const BREAKPOINTS = [
   { key: "desktop", label: "Ordinateur", media: null },
+  // Grand écran (comme les écrans supplémentaires d'Elementor) : réglages propres au-delà d'une largeur réglable (1920 px par défaut) ; hérite de l'ordinateur, jamais de la tablette
+  { key: "wide", label: "Grand écran", media: "(min-width: 1920px)" },
   { key: "tablet", label: "Tablette", media: "(max-width: 1023px)" },
   { key: "mobile", label: "Mobile", media: "(max-width: 767px)" },
 ];
@@ -1661,7 +1663,7 @@ function normalizeMotion(raw, type) {
   // Écrans où les effets de défilement et de souris sont COUPÉS (indépendant par écran)
   if ((out.scroll || out.mouse || out.scrollFx || out.mouseFx) && Array.isArray(raw.off)) {
     const off = BREAKPOINTS.map((b) => b.key).filter((k) => raw.off.includes(k));
-    if (off.length && off.length < BREAKPOINTS.length) out.off = off;
+    if (off.length && !["desktop", "tablet", "mobile"].every((k) => off.includes(k))) out.off = off; // « ordinateur » couvre aussi le grand écran
   }
   if (Object.hasOwn(ENTRANCES, raw.entrance)) {
     out.entrance = raw.entrance;
@@ -1736,7 +1738,7 @@ function normalizeNode(raw, at, h, depth, counter) {
   // Visible sur certains écrans seulement (au moins un)
   if (Array.isArray(raw.hideOn)) {
     const hideOn = [...new Set(raw.hideOn.filter((b) => BREAKPOINTS.some((x) => x.key === b)))];
-    if (hideOn.length === BREAKPOINTS.length) throw new Error(`${where} : un élément ne peut pas être masqué sur tous les écrans (utilisez « Masquer »).`);
+    if (["desktop", "tablet", "mobile"].every((k) => hideOn.includes(k))) throw new Error(`${where} : un élément ne peut pas être masqué sur tous les écrans (utilisez « Masquer »).`);
     if (hideOn.length) node.hideOn = hideOn;
   }
   const motion = normalizeMotion(raw.motion, raw.type);
@@ -1890,7 +1892,7 @@ function motionAttrs(n) {
 
 // CSS d'une page : une règle par élément stylé (et par section stylée), par écran et par état. Valeurs déjà validées.
 // breakpoints : { tablet, mobile } = largeurs maximales (px) des écrans « Tablette » et « Mobile » du site (réglages du site)
-const DEFAULT_BREAKPOINTS = { tablet: 1023, mobile: 767 };
+const DEFAULT_BREAKPOINTS = { tablet: 1023, mobile: 767, wide: 1920 };
 // ---------- Classes globales du site ----------
 // Une classe globale = un nom + des styles (par écran et par état), définis une fois pour le site et appliqués à tout élément
 // qui porte ce nom dans « Classes ». Modifier la classe met à jour tous les éléments. Le style PROPRE d'un élément l'emporte
@@ -1919,18 +1921,18 @@ function normalizeClassDefs(raw, h, { strict = false } = {}) {
   return out;
 }
 function classCss(classes, breakpoints = DEFAULT_BREAKPOINTS) {
-  const base = [], media = { tablet: [], mobile: [] };
-  const mediaOf = (key) => (key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : `(max-width: ${breakpoints.mobile}px)`);
+  const base = [], media = { wide: [], tablet: [], mobile: [] };
+  const mediaOf = (key) => (key === "wide" ? `(min-width: ${breakpoints.wide || 1920}px)` : key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : `(max-width: ${breakpoints.mobile}px)`);
   for (const c of classes || []) {
     if (!/^[a-z][a-z0-9-]{0,29}$/.test(c.name)) continue;
     const sel = `.lp-site :where(.${c.name})`;
     for (const bp of BREAKPOINTS) { const d = c.styles && c.styles[bp.key] ? declarations(c.styles[bp.key]) : ""; if (d) (bp.media ? media[bp.key] : base).push(`${sel}{${d}}`); }
     for (const state of STATES) { const d = c.states && c.states[state.key] ? declarations(c.states[state.key]) : ""; if (d) base.push(`${sel}${state.sel}{${d}}`); }
   }
-  return [...base, ...["tablet", "mobile"].filter((k) => media[k].length).map((k) => `@media ${mediaOf(k)}{${media[k].join("")}}`)].join("\n");
+  return [...base, ...["wide", "tablet", "mobile"].filter((k) => media[k].length).map((k) => `@media ${mediaOf(k)}{${media[k].join("")}}`)].join("\n");
 }
 function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
-  const mediaOf = (bp) => (bp.key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : bp.key === "mobile" ? `(max-width: ${breakpoints.mobile}px)` : bp.media);
+  const mediaOf = (bp) => (bp.key === "wide" ? `(min-width: ${breakpoints.wide || 1920}px)` : bp.key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : bp.key === "mobile" ? `(max-width: ${breakpoints.mobile}px)` : bp.media);
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
   const usedAnims = new Set(); // animations réellement utilisées : seules leurs images-clés sont écrites dans la page
   const clamps = { tablet: [], mobile: [] }; // cases de grille ramenées au nombre de colonnes de l'écran : écrites après toutes les autres règles
@@ -2060,7 +2062,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   // « Masquer sur cet écran » : mêmes seuils que les écrans du site (réglages du site)
   // (écrites seulement si la page masque quelque chose selon l'écran)
   if (/"hideOn":\["/.test(JSON.stringify(sections))) {
-    css += `\n@media (min-width:${breakpoints.tablet + 1}px){.lp-hide-desktop{display:none}}\n@media (min-width:${breakpoints.mobile + 1}px) and (max-width:${breakpoints.tablet}px){.lp-hide-tablet{display:none}}\n@media (max-width:${breakpoints.mobile}px){.lp-hide-mobile{display:none}}`;
+    css += `\n@media (min-width:${breakpoints.tablet + 1}px){.lp-hide-desktop{display:none}}\n@media (min-width:${breakpoints.wide || 1920}px){.lp-hide-wide{display:none}}\n@media (min-width:${breakpoints.mobile + 1}px) and (max-width:${breakpoints.tablet}px){.lp-hide-tablet{display:none}}\n@media (max-width:${breakpoints.mobile}px){.lp-hide-mobile{display:none}}`;
   }
   // Le CSS personnalisé vient en dernier (il précise les réglages de l'inspecteur), avec une spécificité plus forte
   if (rules.custom.length) css += `\n${rules.custom.join("\n")}`;

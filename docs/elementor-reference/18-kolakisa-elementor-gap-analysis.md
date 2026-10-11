@@ -1,6 +1,6 @@
 # 18 — Matrice de comparaison Elementor ↔ KOLAKISA (fonctions transversales)
 
-_Mise à jour du 10 octobre 2026 (troisième passe : environ 180 articles Elementor lus). La correspondance widget par widget est dans `19-widget-mapping.md`._
+_Mise à jour du 10 octobre 2026 (quatrième passe : environ 180 articles Elementor lus ; écran « Grand écran » ajouté). La correspondance widget par widget est dans `19-widget-mapping.md`._
 **Erreurs de la première version, corrigées ici** (vérifiées dans le code après coup) : (1) les points de rupture tablette et mobile **sont déjà modifiables** (Réglages du site, `layout.breakpoints`) ; (2) le CSS personnalisé **par élément existe** (déclarations validées, normal et survol) ; (3) le copier-coller passe par le stockage du navigateur, donc **entre pages et sites de KOLAKISA du même navigateur** il fonctionnait déjà.
 Statuts : OPÉ = présent et testé de bout en bout · PRÉS = présent, vérifié dans le code seulement · NA = sans objet · ABS = absent (raison donnée) · « ajouté » = ajouté dans cette mission et testé.
 
@@ -42,7 +42,7 @@ Statuts : OPÉ = présent et testé de bout en bout · PRÉS = présent, vérifi
 | 34 | Avancé | Conditions d'affichage : public, programmation, jours / heures, paramètre d'adresse, **groupes ET / OU** | **ajouté** (jours / heures, ET / OU) ; public et rôles PRÉS | tests | fait |
 | 35 | Avancé | Conditions : catégorie / auteur de l'article, date d'inscription | ABS (propres aux modèles d'article ; modèle d'audience différent) | — | non fait, documenté |
 | 36 | Responsive | Trois écrans, héritage descendant, points de rupture modifiables | PRÉS (820–1279 et 400–767 px) | code | conserver |
-| 37 | Responsive | Appareils supplémentaires (portable, grand écran, paysage) | ABS : le moteur suppose trois écrans en cascade (héritage, aperçu, qualité, IA) ; un quatrième écran toucherait ~40 endroits sans test d'ensemble — **décision** de ne pas le faire | — | non fait, raison documentée |
+| 37 | Responsive | Appareils supplémentaires : **Grand écran** (seuil réglable, hérite de l'ordinateur) ; portable, tablette / mobile paysage | **ajouté** (grand écran) ; les autres : ABS (même mécanisme, non demandés en priorité) | test navigateur (7) + normalisation | fait / partiel, documenté |
 | 38 | Interface | Raccourcis, menu contextuel, structure, sélection multiple, favoris, palette de commandes | OPÉ / PRÉS | code, tests | conserver |
 | 39 | Interface | Coller depuis un autre site ou navigateur | **ajouté** | test | fait |
 | 40 | Interface | Notes (commentaires collaboratifs sur un élément) | ABS : pas de système de commentaires dans l'éditeur | — | non fait |

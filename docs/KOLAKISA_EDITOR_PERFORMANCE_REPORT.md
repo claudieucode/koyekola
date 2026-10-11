@@ -27,3 +27,11 @@ Ensuite la version est servie par le dossier statique (mêmes en-têtes, cache 3
 | `public/js/page-builder.js` (éditeur seulement) | 663 620 o | 678 838 o | non mesuré |
 Le coût est payé par toutes les pages publiques (CSS et script partagés) ; il n'a pas été mesuré en temps de chargement.
 Aucun gain de performance n'est annoncé pour les nouvelles fonctions (animations CSS pures, un seul `setInterval` par diaporama de fond, désactivés si « réduire les animations »).
+
+## Éditeur : comparaison avant la mission / après (machine au repos, 11 octobre 2026)
+Même scénario que ci-dessus (page de 12 images, 24 sélections, CDP `Performance.getMetrics`, 3 tours alternés), code d'avant la mission (`d6f4f27`) contre code final :
+| | Avant la mission | Après |
+|---|---|---|
+| Temps de script (24 sélections) | 104 – 105 ms | 99 – 113 ms |
+| Mises en page forcées | 148 – 151 | 121 – 162 |
+**Aucune différence au-delà du bruit de mesure** malgré les nouveaux champs de l'inspecteur (résolution, groupes de conditions, etc.). Non mesuré : temps d'ouverture de l'éditeur, coût d'ajout d'un widget, mémoire.

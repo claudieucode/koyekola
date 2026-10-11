@@ -55,7 +55,7 @@ describe("résolution d'image : éditeur (navigateur)", { skip: SKIP }, () => {
     await select();
     const opts = await page.locator("[data-pb-resolution] select option").allInnerTexts();
     assert.match(opts[0], /Taille originale \(1400 × 900 px\)/);
-    assert.deepEqual(opts.slice(1).map((o) => o.replace(/ \(.*/, "")), ["Miniature", "Petite", "Moyenne", "Grande", "Adaptative"], "pas de « Très grande » (1600 px) : plus grande que l'original de 1400 px");
+    assert.deepEqual(opts.slice(1).map((o) => o.replace(/ \(.*/, "")), ["Miniature", "Petite", "Moyenne", "Moyenne grande", "Grande", "Adaptative"], "paliers plus petits que l'original de 1400 px (ni 1536, ni 1600, ni 2048)");
   });
 
   test("choisir « Moyenne » : le canevas charge la version 640 px tout de suite, le choix est enregistré, et le canevas n'est pas remonté", async () => {

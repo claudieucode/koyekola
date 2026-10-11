@@ -59,6 +59,18 @@ describe("résolutions d'image", { skip: SKIP }, () => {
     assert.equal(r.status, 200); assert.equal(r.headers.get("content-type"), "image/webp"); assert.ok(fs.existsSync(f), "refabriquée");
   });
 
+  test("grande image : tous les paliers d'Elementor (miniature … 768, 1024, 1536, 2048) proposés et fabriqués à la bonne largeur", async () => {
+    const huge = await send(await make(2600, 1700), "enorme.jpg", "image/jpeg");
+    const info = json(await boss.get(`/marketing/site-web/medias/resolutions.json?src=${encodeURIComponent(huge.path)}`));
+    assert.deepEqual(info.sizes.map((x) => [x.key, x.width]), [["thumbnail", 150], ["small", 320], ["medium", 640], ["mediumlarge", 768], ["large", 1024], ["w1536", 1536], ["xlarge", 1600], ["w2048", 2048]]);
+    for (const w of [768, 1536, 2048]) {
+      const r = await get(variantUrl(huge, w));
+      assert.equal(r.status, 200, `${w}`);
+      const meta = await sharp(Buffer.from(await r.arrayBuffer())).metadata();
+      assert.equal(meta.width, w); assert.equal(meta.height, Math.round(1700 * w / 2600));
+    }
+  });
+
   test("aucun lien cassé : image plus petite que la taille demandée → l'original ; largeur inventée → 404 ; nom inventé → 404", async () => {
     const r = await get(variantUrl(small, 640));
     assert.equal(r.status, 302); assert.equal(r.headers.get("location"), small.path);
@@ -71,7 +83,7 @@ describe("résolutions d'image", { skip: SKIP }, () => {
   test("tailles proposées : seulement celles plus petites que l'original ; image de la médiathèque seulement", async () => {
     const a = json(await boss.get(`/marketing/site-web/medias/resolutions.json?src=${encodeURIComponent(big.path)}`));
     assert.equal(a.available, true); assert.equal(a.complete, true); assert.equal(a.width, 1400);
-    assert.deepEqual(a.sizes.map((s) => s.key), ["thumbnail", "small", "medium", "large", "xlarge"].filter((k) => ({ thumbnail: 150, small: 320, medium: 640, large: 1024, xlarge: 1600 })[k] < 1400));
+    assert.deepEqual(a.sizes.map((s) => s.key), ["thumbnail", "small", "medium", "mediumlarge", "large"], "paliers plus petits que 1400 px, dans l'ordre des largeurs");
     const s = json(await boss.get(`/marketing/site-web/medias/resolutions.json?src=${encodeURIComponent(small.path)}`));
     assert.deepEqual(s.sizes.map((x) => x.key), ["thumbnail"], "200 px : seule la miniature (150) est plus petite");
     const ext = json(await boss.get("/marketing/site-web/medias/resolutions.json?src=" + encodeURIComponent("https://exemple.test/a.jpg")));

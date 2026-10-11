@@ -16,14 +16,18 @@ let sharp = null;
 try { sharp = require("sharp"); sharp.cache(false); sharp.concurrency(1); } catch { /* sharp absent : seules les images d'origine sont servies */ }
 
 // Largeurs en pixels ; la hauteur suit le ratio de l'image (aucun recadrage).
+// Les paliers d'Elementor / WordPress (miniature 150, moyenne, moyenne grande 768, grande 1024, 1536, 2048) y figurent ; les clés historiques (small, medium, xlarge) restent valides.
 const SIZES = {
   thumbnail: { width: 150, label: "Miniature" },
   small: { width: 320, label: "Petite" },
   medium: { width: 640, label: "Moyenne" },
+  mediumlarge: { width: 768, label: "Moyenne grande" },
   large: { width: 1024, label: "Grande" },
+  w1536: { width: 1536, label: "1536 px" },
   xlarge: { width: 1600, label: "Très grande" },
+  w2048: { width: 2048, label: "2048 px" },
 };
-const KEYS = Object.keys(SIZES);
+const KEYS = Object.keys(SIZES).sort((a, b) => SIZES[a].width - SIZES[b].width);
 const WIDTHS = new Set(KEYS.map((k) => SIZES[k].width));
 const SIZE_CHOICES = ["full", ...KEYS, "auto"]; // full = original (défaut) ; auto = adaptatif (srcset)
 const SRC_RE = /^(\/uploads\/marketing\/(\d{1,9}))\/(\d{10,16}-[0-9a-f]{12})\.(jpg|png|webp|avif)$/; // noms fabriqués par saveUpload
