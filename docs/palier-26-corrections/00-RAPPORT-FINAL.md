@@ -83,3 +83,9 @@ P1 : G-01/G-02 (à constater en production), G-04 (branches). P2 : G-05, G-06, G
 - Multi-site du blog/médias/contacts (D1), droits du Lecteur (D3), 2FA/CSRF (D-sécurité), API de contenu (D5), événements du CMS (G-16) : oui/non ?
 - Stockage externe pour les sauvegardes ?
 - Authorisation de pousser/déployer ces corrections (rien n'est poussé).
+
+---
+## Addendum (même jour) — réussite à 100 % de la suite, poussée autorisée par l'utilisateur
+- **G-10 corrigée ET VALIDÉE** (import 5 000 lignes) : cause réelle trouvée par profil CPU — le dépôt de données refaisait à chaque ligne la lecture du schéma (`sqlite_master` + `PRAGMA table_info`) et re-préparait ses requêtes. Correctifs : `src/marketing/db/repository.js` (colonnes en mémoire, invalidées par `PRAGMA schema_version` ; requêtes préparées gardées), `src/marketing/audience/contacts.js` (`findByEmail`). **Mesure : 8,1 s → 2,7 s de CPU** pour 5 000 contacts, à charge machine comparable. Validation et isolation par organisation inchangées ; test `tests/repository-cache-schema.test.js` (colonne ajoutée après coup reconnue, colonne inconnue refusée, table `sqlite_master` refusée).
+- **Fiabilité des tests** : `tests/helpers.js` — `startServer` recommence sur un autre port si le port tiré au hasard est occupé (un test avait été annulé par `EADDRINUSE`, cause : autre programme de la machine).
+- **Suite complète finale : 4052 tests, 4049 réussis, 0 échec, 0 annulé, 3 ignorés** (contre 4048 / 4044 / 1 échec au départ).

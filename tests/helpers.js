@@ -9,7 +9,7 @@ const path = require("node:path");
 const ROOT = path.join(__dirname, "..");
 const INSTRUCTOR = { email: "prof@test.local", username: "Prof", password: "MotDePasseProf123" };
 
-async function startServer(extraEnv = {}) {
+async function startServerOnce(extraEnv = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "koyekola-test-"));
   const port = 20000 + Math.floor(Math.random() * 20000);
   const env = {
@@ -184,6 +184,15 @@ async function dismissStart(page) {
   await page.locator('[data-pb-start-go="guided"]').click();
   await page.locator("[data-pb-start-cancel]").click();
   await start.waitFor({ state: "hidden" });
+}
+
+// Le port est tiré au hasard : si un autre programme de la machine l'occupe déjà (EADDRINUSE), on recommence avec un autre port
+async function startServer(extraEnv = {}) {
+  for (let attempt = 1; ; attempt++) {
+    try { return await startServerOnce(extraEnv); } catch (error) {
+      if (attempt >= 5 || !/EADDRINUSE/.test(String(error.message))) throw error;
+    }
+  }
 }
 
 module.exports = { startServer, Client, loginInstructor, newStudent, createCourse, buy, INSTRUCTOR, dismissStart };
