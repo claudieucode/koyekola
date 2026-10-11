@@ -192,8 +192,9 @@ describe("le domaine d'un site ne sert pas le contenu du site principal (blog, f
     assert.equal(r.status, 200);
     assert.match(r.text, /NOUVEL-ACCUEIL-ALPHA|CONTENU-ALPHA-PRIVE/);
   });
-  test("domaine non enregistré (inconnu du serveur) : comportement actuel inchangé — sert le site principal (résiduel documenté)", async () => {
+  test("domaine non enregistré : 421, jamais le site principal (règle complète dans domaines-inconnus.test.js)", async () => {
     const r = await hostGet("inconnu.test", "/blog");
-    assert.equal(r.status, 200, "résiduel : un nom de domaine simplement pointé vers le serveur retombe sur le site principal");
+    assert.equal(r.status, 421);
+    assert.doesNotMatch(r.text, /ARTICLE-DU-SITE-PRINCIPAL/);
   });
 });

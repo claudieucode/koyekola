@@ -10,11 +10,36 @@ const isRead = (req) => req.method === "GET" || req.method === "HEAD";
 const queryOf = (req) => (req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "");
 const MISSING = "/__introuvable__"; // adresse qu'aucune route ne sert : la page d'erreur 404 habituelle prend le relais
 
+// Hôtes autorisés pour servir le site principal : le domaine configuré (SITE_URL) avec ou sans « www. », plus la liste facultative HOTES_AUTORISES
+// (séparée par des virgules : domaine provisoire de l'hébergeur, etc.). Hôtes locaux / réseau privé : toujours acceptés (sondes de l'hébergeur, développement, tests).
+// Sans SITE_URL (installation neuve, développement) : aucune restriction. → "main" | "unknown"
+// Hôte local STRICT : « localhost », adresse IP privée ou de bouclage COMPLÈTE (jamais un nom de domaine qui commence par des chiffres, ex. 127.evil.com), IPv6 de bouclage,
+// ou suffixe jamais délégué sur Internet (.local, .localhost, .internal, .lan)
+function isLocalHost(host) {
+  if (host === "localhost" || /\.(local|localhost|internal|lan)$/.test(host) || /^\[?::1\]?$/.test(host)) return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+  if (!m) return false;
+  const [a, b] = [Number(m[1]), Number(m[2])];
+  return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31);
+}
+function hostPolicy(host) {
+  if (!process.env.SITE_URL) return "main";
+  if (!host) return "unknown";
+  if (isLocalHost(host)) return "main";
+  const main = urls.mainHost();
+  const bare = main.replace(/^www\./, "");
+  if (host === main || host === bare || host === `www.${bare}`) return "main";
+  const extra = String(process.env.HOTES_AUTORISES || "").split(",").map((h) => urls.normHost(h)).filter(Boolean);
+  return extra.includes(host) ? "main" : "unknown";
+}
+
 // 1. Site de la requête (req.kwSite) : uniquement un domaine enregistré ; jamais déduit d'un hôte arbitraire
 function attachSite(req, res, next) {
   const host = urls.normHost(req.hostname);
   req.kwSite = host && host !== urls.mainHost() ? urls.siteForHost(host) : null;
   req.kwRetired = !req.kwSite && host && host !== urls.mainHost() ? urls.isRetiredHost(host) : false;
+  // Domaine ni principal, ni site actif, ni retiré : inconnu de Kolakisa (voir hostPolicy)
+  req.kwUnknownHost = !req.kwSite && !req.kwRetired && hostPolicy(host) === "unknown";
   // Sur le domaine d'un site, toutes les adresses absolues (canonical, plan du site, robots.txt, JSON-LD) sont celles de ce site
   if (req.kwSite && req.kwSite.base) req.seoBase = req.kwSite.base;
   next();
@@ -50,6 +75,9 @@ function siteRouting(req, res, next) {
 const MAIN_SITE_ONLY = /^\/(blog|cours|catalogue|categorie|a-propos|faq|feed|recherche|panier|favoris|formations?)(\/|$)/i;
 const ALWAYS_OK = /^\/(sante|uploads|css|js|img|fonts|favicon\.(ico|svg))(\/|$|\.)/i;
 function siteIsolation(req, res, next) {
+  if (req.path === "/sante") return next(); // sonde de santé : joignable quel que soit l'hôte
+  // Domaine inconnu de Kolakisa : jamais le site principal ni celui d'un autre site (421 « requête mal dirigée »)
+  if (req.kwUnknownHost) return res.status(421).type("text/plain").send("Ce domaine n'est pas configuré sur cette plateforme.");
   if (ALWAYS_OK.test(req.path)) return next();
   if (req.kwRetired || (req.kwSite && MAIN_SITE_ONLY.test(req.path))) {
     if (!isRead(req)) return res.status(404).type("text/plain").send("Introuvable");

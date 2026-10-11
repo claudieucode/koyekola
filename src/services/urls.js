@@ -92,7 +92,12 @@ function loadSites() {
 }
 const invalidateSites = () => { sitesCache = null; };
 const cacheInfo = () => ({ entries: sitesCache ? sitesCache.byId.size : 0, loaded: sitesCache !== null });
-const normHost = (h) => String(h || "").toLowerCase().replace(/:\d+$/, "").replace(/\.$/, "");
+// Nom d'hôte normalisé : minuscules, sans port, sans point final, internationalisé (IDN) en ASCII — pour comparer deux hôtes sans confusion possible
+const normHost = (h) => {
+  const raw = String(h || "").trim().toLowerCase().replace(/:\d+$/, "").replace(/\.+$/, "");
+  if (!raw || raw.startsWith("[")) return raw; // adresse IPv6 : telle quelle
+  try { return require("url").domainToASCII(raw) || raw; } catch { return raw; }
+};
 // Site dont l'adresse publique a cet hôte (null si aucun : l'hôte n'est alors pas un site)
 // Domaine d'un site archivé ou supprimé : il ne doit servir AUCUN contenu (surtout pas celui du site principal)
 const isRetiredHost = (host) => loadSites().retired.has(normHost(host));

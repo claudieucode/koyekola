@@ -12,6 +12,9 @@ Contrôlé en pratique : fichier source en lecture seule (`chmod a-w`) → empre
 ## Ce qui ne doit JAMAIS être partagé
 Le fichier `.db` contient des comptes, adresses e-mail, hachages de mots de passe, contacts : **ne le partagez pas, ne l'envoyez pas, ne le mettez pas sur un service en ligne**. Il reste sur votre Mac. Seul le résultat de l'audit (`resultat.txt`) est à me transmettre : il ne contient que des **nombres** et des intitulés techniques (aucun nom de site, de personne, d'e-mail ni de mot de passe). Il contient aussi le chemin du dossier sur votre Mac (ligne « Base : … ») : vous pouvez effacer cette ligne avant de me l'envoyer.
 
+## Quel fichier est la vraie base de production ? (inutile de connaître son chemin)
+La sauvegarde « Sauvegarder maintenant » est exécutée **par le site en ligne lui-même, sur la connexion qu'il utilise** (`VACUUM INTO` sur la base ouverte) : le fichier téléchargé est donc par construction une copie de la base réellement utilisée, WAL compris, sans que vous ayez à trouver un chemin sur le serveur. Contrôle de cohérence facultatif : dans **Centre de gestion → Outils → Informations système**, la ligne « Taille du fichier » de la base doit être du même ordre de grandeur que le fichier téléchargé (la copie peut être un peu plus petite : elle est compactée).
+
 ## Étapes
 Les commandes se tapent dans l'application **Terminal** de votre Mac.
 

@@ -96,3 +96,18 @@ Essai réel : base créée par la version précédente (jusqu'à la migration 07
 
 ## 12. Résultats finaux des tests (commit 255b6f6, suite complète `npm test`)
 4807 tests : **4804 réussis, 0 échoué, 0 annulé, 3 ignorés (SKIP)**. En plus, 11 tests se déclarent eux-mêmes « non exécutables sur cette machine » et sont comptés réussis sans rien vérifier : jsdom absent (5), sharp absent (5), Playwright/Chrome absent (1) — voir les lignes « ﹣ » de la sortie. Tests propres au palier : 17 (isolation, contexte, déclencheurs, cas limites) + 17 (caches, domaines, blog) + 14 (Site Manager), tous réussis. Ni lint ni vérification de types dans ce projet ; `node --check` sur les fichiers modifiés : OK.
+
+## 13. Règle des domaines (décision validée) — domaines inconnus
+Règle appliquée (`siteHost.hostPolicy` / `siteIsolation`, `urls.normHost`) :
+| Hôte demandé | Réponse |
+|---|---|
+| domaine principal (`SITE_URL`), avec ou sans `www.` | site principal (le `www.` est redirigé vers le domaine officiel comme avant) |
+| hôte local ou réseau privé complet (localhost, 127.x.x.x, 10.x, 192.168.x, 172.16-31.x, [::1], .local/.internal/.lan) — sondes de l'hébergeur, développement, administration en local | site principal / administration, comme avant |
+| un hôte de `HOTES_AUTORISES` (variable facultative, séparée par des virgules) | site principal |
+| domaine d'un site ACTIF | uniquement ce site |
+| domaine d'un site archivé ou supprimé | 404 |
+| tout autre hôte (non enregistré, domaine retiré d'un site, lookalike) | **421** « domaine non configuré », aucune page, ni administration, ni connexion |
+| `/sante` | toujours 200, quel que soit l'hôte |
+Sans `SITE_URL` (installation neuve, développement) : aucune restriction. Normalisation : minuscules, port, point final et IDN (punycode) ; aucun hôte ne correspond par préfixe ou suffixe (testé : `k.test.evil.com`, `sub.k.test`, `127.evil.com`, `10.0.0.1.evil.com`…).
+**À vérifier avant tout déploiement (action vous)** : (1) la valeur de `SITE_URL` en production est bien l'adresse publique du site ; (2) l'application n'est pas aussi consultée par un domaine provisoire de l'hébergeur (sinon l'ajouter dans `HOTES_AUTORISES`, que je ne modifie jamais moi-même) ; (3) aucune sonde externe (supervision) n'appelle une adresse autre que `/sante`. Résiduel : derrière le proxy (`trust proxy`), l'hôte lu est celui transmis par le proxy (`X-Forwarded-Host`) ; il n'est fiable que si le proxy de l'hébergeur le réécrit.
+Tests : `tests/domaines-inconnus.test.js` (10) + ajustement de `isolation-des-sites-caches.test.js`.
