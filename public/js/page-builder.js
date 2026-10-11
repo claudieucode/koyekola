@@ -2056,7 +2056,7 @@
         break;
       case "image":
         box.appendChild(mediaPreview(/^\{\{/.test(p.src || "") ? "" : p.src, function (m) { change(function () { var x = byId(it.id); x.props.src = m.path; if (m.alt && !x.props.alt) { x.props.alt = m.alt; delete x.props.decorative; } }); }, disabled));
-        box.appendChild(textField("…ou image dynamique", /^\{\{/.test(p.src || "") ? p.src : "", function (v) { if (/^\s*\{\{[^}]+\}\}\s*$/.test(v)) setProp(it.id, "src", v.trim()); }, { onChange: true, disabled: disabled, dyn: true, dynKinds: ["image"], placeholder: "{{post.image}} ou {{course.image}}", hint: "Remplace l'image choisie ; lue à chaque affichage (utile dans une boucle ou un modèle)." }));
+        box.appendChild(textField("…ou image dynamique", /^\{\{/.test(p.src || "") ? p.src : "", function (v) { if (/^\s*\{\{[^}]+\}\}\s*$/.test(v)) setProp(it.id, "src", v.trim()); else if (v.trim()) toast("Image dynamique : écrivez une étiquette entre doubles accolades, ex. {{post.image}} (ou utilisez le bouton d'étiquettes).", true); else if (/^\{\{/.test(p.src || "")) toast("Pour remplacer l'image dynamique, choisissez une image dans la médiathèque.", true); }, { onChange: true, disabled: disabled, dyn: true, dynKinds: ["image"], placeholder: "{{post.image}} ou {{course.image}}", hint: "Remplace l'image choisie ; lue à chaque affichage (utile dans une boucle ou un modèle)." }));
         box.appendChild(resolutionField(it, [p.src], disabled));
         if (!p.link) box.appendChild(checkField("Agrandir au clic (visionneuse)", p.lightbox, function (v) { setProp(it.id, "lightbox", v); }, { disabled: disabled, hint: "Ouvre l'image d'origine en grand. Indisponible si l'image a un lien." }));
         box.appendChild(textField("Texte de remplacement", p.alt, function (v) { change(function () { var x = byId(it.id); x.props.alt = v; if (v) delete x.props.decorative; else x.props.decorative = true; }, { key: it.id + ":alt", light: true }); }, { max: 200, disabled: disabled, dyn: true, hint: "Décrit l'image pour les personnes qui ne la voient pas (et pour le référencement). Vide = image décorative." }));
@@ -3238,11 +3238,11 @@
     zIndex: { integer: true },
     backdropBlur: { integer: true, staticUnit: "px" },
     transitionDuration: { integer: true, staticUnit: "ms" },
-    columns: { integer: true }, flexGrow: { precision: 1 }, flexShrink: { precision: 1 }, order: { integer: true },
+    columns: { integer: true }, columnCount: { integer: true }, lineClamp: { integer: true }, flexGrow: { precision: 1 }, flexShrink: { precision: 1 }, order: { integer: true },
     gridRows: { integer: true }, gridColumnSpan: { integer: true }, gridRowSpan: { integer: true },
     gridColumnStart: { integer: true }, gridColumnEnd: { integer: true }, gridRowStart: { integer: true }, gridRowEnd: { integer: true },
   };
-  var NUM = { backdropBlur: [1, 40, 1], opacity: [0, 1, 0.01], lineHeight: [0.8, 3, 0.1], zIndex: [-100, 9999, 1], columns: [1, 12, 1], flexGrow: [0, 20, 0.1], flexShrink: [0, 20, 0.1], order: [-20, 20, 1], gridRows: [1, 12, 1], gridColumnSpan: [1, 12, 1], gridRowSpan: [1, 6, 1], gridColumnStart: [1, 13, 1], gridColumnEnd: [1, 13, 1], gridRowStart: [1, 13, 1], gridRowEnd: [1, 13, 1], transitionDuration: [0, 2000, 50] };
+  var NUM = { backdropBlur: [1, 40, 1], opacity: [0, 1, 0.01], lineHeight: [0.8, 3, 0.1], zIndex: [-100, 9999, 1], columns: [1, 12, 1], columnCount: [1, 6, 1], lineClamp: [1, 10, 1], flexGrow: [0, 20, 0.1], flexShrink: [0, 20, 0.1], order: [-20, 20, 1], gridRows: [1, 12, 1], gridColumnSpan: [1, 12, 1], gridRowSpan: [1, 6, 1], gridColumnStart: [1, 13, 1], gridColumnEnd: [1, 13, 1], gridRowStart: [1, 13, 1], gridRowEnd: [1, 13, 1], transitionDuration: [0, 2000, 50] };
   // Nombre sans unité d'une propriété de style (opacité, interligne, plan…)
   function numberControl(items, key, id, own, inh, dis) {
     var lim = NUM[key] || [-9999, 9999, 1], cfg = NUMCFG[key] || {};

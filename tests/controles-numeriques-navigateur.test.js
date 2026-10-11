@@ -112,7 +112,7 @@ describe("contrôles numériques dans l'éditeur réel (navigateur simulé)", { 
     ed.set(cell("marginTop"), "-10"); await waitStyle(id, "box000000001", "marginTop", "-10px");
     ed.set(cell("marginLeft"), "auto"); await waitStyle(id, "box000000001", "marginLeft", "auto");
     ed.set(cell("marginBottom"), "16"); await waitStyle(id, "box000000001", "marginBottom", "16px");
-    const us = ed.insp.querySelector('.pb-spacing-head select[aria-label^="Intérieur"]');
+    const us = ed.insp.querySelector('select.pb-sp-unit[aria-label^="Intérieur"]');
     ed.set(us, "rem");
     await H.until(async () => { const s = await styleOf(id, "box000000001"); return s.paddingTop === "8rem" && s.paddingBottom === "30rem"; }, 8000, "l'unité commune change le CSS des côtés");
     assert.match(await publishedCss(id), /\.kw-n-box000000001\{[^}]*padding-top:8rem/);
@@ -126,7 +126,7 @@ describe("contrôles numériques dans l'éditeur réel (navigateur simulé)", { 
     // TEST 10 / 11
     ed.set(field(ed, "width"), "50"); ed.set(unitSel(ed, "width"), "%");
     await waitStyle(id, "box000000001", "width", "50%");
-    assert.deepEqual([...unitSel(ed, "width").options].map((o) => o.value), ["px", "%", "rem", "vw", "auto"]);
+    assert.deepEqual([...unitSel(ed, "width").options].map((o) => o.value), ["px", "%", "rem", "em", "vw", "auto", "fit-content", "min-content", "max-content"], "unités de la largeur : celles qui ont un sens pour une largeur (jamais vh)");
     ed.set(unitSel(ed, "width"), "auto"); await waitStyle(id, "box000000001", "width", "auto");
     assert.equal(field(ed, "width").disabled, true, "« auto » : pas de nombre à saisir");
     ed.set(field(ed, "height"), "300"); await waitStyle(id, "box000000001", "height", "300px");
