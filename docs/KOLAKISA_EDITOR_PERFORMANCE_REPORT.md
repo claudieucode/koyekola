@@ -13,7 +13,8 @@ Ensuite la version est servie par le dossier statique (mêmes en-têtes, cache 3
 
 ## Non mesuré / limites honnêtes
 - **Poids des fichiers** : l'image synthétique est très compressible (versions de 0,1 à 66 Ko) : ces poids **ne sont pas représentatifs d'une photo**. Aucun gain de poids réel n'est annoncé ; il dépend de l'image.
-- Coût de l'inspecteur : une requête `resolutions.json` par sélection d'un widget image (résultat gardé en mémoire dans l'éditeur) ; non chiffré.
+- **Inspecteur, mesure A/B** (nouveau code contre `main`, 3 tours alternés, page de 12 images, 24 sélections d'images, CDP `Performance.getMetrics`, machine chargée) : temps de script 144–244 ms contre 168–209 ms ; mises en page forcées 197–231 contre 210–250. **Aucune différence au-delà du bruit de mesure.** Le champ de résolution fait au plus une requête par jeu d'images, ensuite gardée en mémoire.
 - Temps de chargement de page avant/après : non mesuré.
-- Aucune régression mesurée sur le canevas ; non comparée chiffres à l'appui (le rendu n'ajoute qu'un test par image).
+- Canevas : le rendu n'ajoute qu'un test par image ; non mesuré à part.
+- Galerie : lignes justifiées et filtres = CSS et ~15 lignes de script, non mesurés.
 - Risque connu : un pic de visites sur une image jamais demandée déclenche une fabrication unique (déduplication en mémoire) ; la concurrence de `sharp` est limitée à 1.
