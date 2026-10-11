@@ -4040,14 +4040,41 @@
   function setNodeClasses(it, names, label, clearOwn) {
     change(function () { var x = byId(it.id); if (names.length) x.classes = names.join(" "); else delete x.classes; if (clearOwn) { delete x.styles; delete x.states; } }, { label: label });
   }
-  // ---------- « Enregistrer comme style » : l'utilisateur choisit les catégories (ou les propriétés) et les écrans à enregistrer ----------
-  // Un style enregistré = une classe globale du site (même format, même rendu, même mise à jour partout). Seules les propriétés choisies sont copiées.
+  // ---------- Style Studio : styles enregistrés = classes globales du site (liées : modifier le style met à jour tous ses éléments) ----------
+  // Un style contient seulement les catégories / propriétés / écrans / états choisis. Deux modes d'application :
+  //  • Compléter : le style est lié ; les réglages propres de l'élément gardent la priorité (rien n'est retiré).
+  //  • Remplacer : le style est lié ET les réglages propres de l'élément, dans les catégories du style, sont retirés (le style prend ces catégories).
+  // Dissocier : copie les valeurs du style dans l'élément (seulement là où il n'a rien) puis coupe le lien : apparence inchangée.
   var PRESET_CATS = SPEC.presetCategories || [];
   var COMPOSED_LABEL = { gradient: "Dégradé", overlay: "Voile", shadow: "Ombre", filter: "Filtres", transform: "Transformation", mask: "Masque" };
   var presetKeyLabel = function (k) { return (SP[k] && SP[k].label) || COMPOSED_LABEL[k] || k; };
   var presetCatOf = function (k) { for (var i = 0; i < PRESET_CATS.length; i++) if (PRESET_CATS[i].keys.indexOf(k) >= 0) return PRESET_CATS[i].id; return null; };
+  var presetCatLabel = function (id) { var c = PRESET_CATS.filter(function (x) { return x.id === id; })[0]; return c ? c.label : id; };
   var presetScopeLabel = function (scope) { var s = SPEC.states.filter(function (x) { return x.key === scope; })[0]; return s ? "État : " + s.label : bpLabel(scope); };
-  // Propriétés propres de l'élément qui peuvent entrer dans un style : { écran | état : [clés] }
+  var styleDef = function (name) { return siteClasses.filter(function (x) { return x.name === name; })[0] || null; };
+  var styleTitle = function (c) { return c.label || c.name; };
+  // Identifiant technique à partir du nom saisi (minuscules, tirets, sans accents, jamais un préfixe réservé)
+  function slugifyStyle(label) {
+    var s = String(label || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30).replace(/-+$/, "");
+    if (!s) return "";
+    if (!/^[a-z]/.test(s)) s = "s-" + s;
+    if (/^(kw|lp|pb|mk)-/.test(s)) s = "s-" + s;
+    return s.slice(0, 30).replace(/-+$/, "");
+  }
+  function presetKeysOf(def) {
+    var out = {};
+    ["styles", "states"].forEach(function (src) { Object.keys(def[src] || {}).forEach(function (s) { Object.keys(def[src][s]).forEach(function (k) { out[k] = true; }); }); });
+    return out;
+  }
+  // Catégories d'un style : celles enregistrées, sinon déduites de ses propriétés (styles créés avant le Style Studio)
+  function styleCats(def) {
+    if (def.meta && def.meta.categories && def.meta.categories.length) return def.meta.categories;
+    var seen = {}; Object.keys(presetKeysOf(def)).forEach(function (k) { var c = presetCatOf(k); if (c) seen[c] = true; });
+    return PRESET_CATS.map(function (c) { return c.id; }).filter(function (id) { return seen[id]; });
+  }
+  function stylesOf(it) { return classNames(it).filter(function (n) { return styleDef(n); }); }
+  function usersOfStyle(name) { var n = 0; walk(function (x) { if (isNode(x) && classNames(x).indexOf(name) >= 0) n++; }); return n; }
+  // Propriétés propres de l'élément qui peuvent entrer dans un style : { styles|states : { écran|état : [clés] } }
   function presetOwn(it) {
     var out = { styles: {}, states: {} };
     ["styles", "states"].forEach(function (src) {
@@ -4058,7 +4085,7 @@
     });
     return out;
   }
-  // Copie filtrée de styles / états (jamais l'original) : absent ≠ vide, valeurs copiées telles quelles
+  // Copie filtrée (jamais l'original) : absent ≠ vide, valeurs copiées telles quelles
   function presetPick(it, keys, scopes) {
     var out = { styles: {}, states: {}, n: 0 };
     ["styles", "states"].forEach(function (src) {
@@ -4071,29 +4098,89 @@
     });
     return out;
   }
-  // Point d'entrée commun (menu contextuel des calques et du canevas, barre flottante, palette) : un seul élément, avec un site
+  // Aperçu réel : les propriétés enregistrées appliquées à un échantillon (propriétés de taille / de position ignorées pour rester lisible)
+  var SAMPLE_SKIP = /^(width|height|min|max|margin|padding|aspectRatio|objectFit|objectPosition|transform$|transformOrigin|lineClamp|transition|backgroundAttachment|backgroundPosition|backgroundSize|backgroundRepeat|mask$)/;
+  function styleSample(def) {
+    var el = h("span", { class: "pb-sp-sample", "aria-hidden": "true", text: "Aa" }), set = (def.styles && def.styles.desktop) || {};
+    Object.keys(set).forEach(function (k) {
+      var v = set[k];
+      if (SAMPLE_SKIP.test(k)) return;
+      try {
+        if (k === "gradient" && v && v.from && v.to) el.style.backgroundImage = "linear-gradient(" + (Number(v.angle) || 180) + "deg," + v.from + "," + v.to + ")";
+        else if (SP[k] && SP[k].css && typeof v !== "object") el.style.setProperty(SP[k].css, String(v));
+      } catch (e) { /* valeur non affichable : ignorée */ }
+    });
+    return el;
+  }
+  // ----- Appliquer / dissocier / retirer (une seule étape d'annulation) -----
+  function applyStyleTo(ids, name, mode) {
+    var def = styleDef(name); if (!def) return;
+    var cats = styleCats(def);
+    change(function () {
+      ids.forEach(function (id) {
+        var x = byId(id); if (!x) return;
+        var cl = classNames(x); if (cl.indexOf(name) < 0) cl.push(name); x.classes = cl.join(" ");
+        if (mode !== "replace") return;
+        ["styles", "states"].forEach(function (src) {
+          Object.keys(x[src] || {}).forEach(function (scope) {
+            Object.keys(x[src][scope]).forEach(function (k) { if (cats.indexOf(presetCatOf(k)) >= 0) delete x[src][scope][k]; });
+            if (!Object.keys(x[src][scope]).length) delete x[src][scope];
+          });
+          if (x[src] && !Object.keys(x[src]).length) delete x[src];
+        });
+      });
+    }, { label: "Style « " + styleTitle(def) + " » appliqué (" + (mode === "replace" ? "remplacement" : "complément") + ")" });
+    var skipped = [];
+    ids.forEach(function (id) { var x = byId(id); if (x && def.meta && def.meta.source && def.meta.source !== x.type) { var no = presetUnsupported(x, def); if (no.length) skipped.push(no.length); } });
+    var all = Object.keys(presetKeysOf(def)).length;
+    if (skipped.length) toast("Style « " + styleTitle(def) + " » : certains réglages (" + skipped[0] + " sur " + all + ") n'ont pas d'effet sur ce type d'élément.");
+    else toast("Style « " + styleTitle(def) + " » appliqué.");
+  }
+  function unlinkStyleFrom(ids, name, copy) {
+    var def = styleDef(name); if (!def) return;
+    change(function () {
+      ids.forEach(function (id) {
+        var x = byId(id); if (!x) return;
+        var cl = classNames(x).filter(function (n) { return n !== name; });
+        if (copy) ["styles", "states"].forEach(function (src) {
+          Object.keys(def[src] || {}).forEach(function (scope) {
+            Object.keys(def[src][scope]).forEach(function (k) {
+              x[src] = x[src] || {}; x[src][scope] = x[src][scope] || {};
+              if (!Object.prototype.hasOwnProperty.call(x[src][scope], k)) x[src][scope][k] = clone(def[src][scope][k]);
+            });
+          });
+        });
+        if (cl.length) x.classes = cl.join(" "); else delete x.classes;
+      });
+    }, { label: copy ? "Dissocié du style « " + styleTitle(def) + " »" : "Style « " + styleTitle(def) + " » retiré" });
+  }
+  // ----- Points d'entrée communs (menus, barre flottante, palette) -----
   function saveStyleOf(it) {
     if (!it || !isNode(it)) { toast("Sélectionnez un widget ou un conteneur pour enregistrer son style.", true); return; }
     if (!PAGE.siteSettingsUrl) { toast("Les styles enregistrés appartiennent à un site : cette page n'en a pas.", true); return; }
     openStyleDialog(it);
   }
   var canSaveStyle = function (items) { return items.length === 1 && isNode(items[0]) && Boolean(PAGE.siteSettingsUrl) && Boolean(items[0].styles || items[0].states); };
-  function openStyleDialog(it, prefill) {
-    var own = presetOwn(it), scopes = {}, keys = {}, byCat = {};
+  // ----- Enregistrer / redéfinir -----
+  function openStyleDialog(it, redefineName) {
+    var own = presetOwn(it), scopes = {}, keys = {}, byCat = {}, redef = redefineName ? styleDef(redefineName) : null;
     ["styles", "states"].forEach(function (src) { Object.keys(own[src]).forEach(function (scope) { scopes[scope] = true; own[src][scope].forEach(function (k) { keys[k] = true; (byCat[presetCatOf(k)] = byCat[presetCatOf(k)] || {})[k] = true; }); }); });
     var scopeList = Object.keys(scopes);
     if (!scopeList.length) { toast("Cet élément n'a aucun réglage propre à enregistrer : modifiez d'abord son style dans l'inspecteur.", true); return; }
+    // Redéfinition : on part des catégories déjà contenues dans le style (le reste reste décoché)
+    if (redef) { var rc = styleCats(redef); Object.keys(keys).forEach(function (k) { keys[k] = rc.indexOf(presetCatOf(k)) >= 0; }); if (!Object.keys(keys).some(function (k) { return keys[k]; })) Object.keys(keys).forEach(function (k) { keys[k] = true; }); }
     var cats = PRESET_CATS.filter(function (c) { return byCat[c.id]; });
     var dlg = h("dialog", { class: "pb-modal pb-sp", "aria-labelledby": "pb-sp-title", "data-pb-style-dialog": "" });
     var form = h("form", { class: "pb-sp-form", method: "dialog", novalidate: "" });
     var master = h("input", { type: "checkbox", "data-sp-all": "", "aria-label": "Tout sélectionner" }), summary = h("p", { class: "pb-sp-summary", "data-sp-summary": "", "aria-live": "polite" });
-    var catBoxes = {}, keyBoxes = {}, catCounts = {};
-    var nameIn = h("input", { type: "text", class: "pb-input", maxlength: "30", placeholder: "nom-du-style", "aria-label": "Nom du style", "data-sp-name": "", value: prefill || "", autocomplete: "off" });
+    var catBoxes = {}, keyBoxes = {}, catCounts = {}, sampleHost = h("div", { class: "pb-sp-sample-host" });
+    var nameIn = h("input", { type: "text", class: "pb-input", maxlength: "60", placeholder: "Nom du style", "aria-label": "Nom du style", "data-sp-name": "", value: redef ? styleTitle(redef) : "", autocomplete: "off", disabled: redef ? true : null });
     var warn = h("p", { class: "pb-note is-warn", role: "alert", hidden: true, "data-sp-error": "" });
     var applyIn = h("input", { type: "checkbox", "data-sp-apply": "" }); applyIn.checked = true;
-    var saveBtn = h("button", { type: "submit", class: "btn btn-primary", "data-sp-save": "" }, "Enregistrer le style");
+    var saveBtn = h("button", { type: "submit", class: "btn btn-primary", "data-sp-save": "" }, redef ? "Redéfinir le style" : "Enregistrer le style");
     var chosenKeys = function () { return Object.keys(keys).filter(function (k) { return keys[k]; }); };
     var chosenScopes = function () { return scopeList.filter(function (s) { return scopes[s]; }); };
+    var slugNow = function () { return redef ? redef.name : slugifyStyle(nameIn.value); };
     function refresh() {
       var all = Object.keys(keys), on = chosenKeys();
       master.checked = on.length === all.length; master.indeterminate = on.length > 0 && on.length < all.length;
@@ -4105,18 +4192,21 @@
       });
       var p = presetPick(it, keys, scopes);
       summary.textContent = p.n ? p.n + " réglage" + (p.n > 1 ? "s" : "") + " seront enregistrés" + (scopeList.length > 1 ? " · " + chosenScopes().map(presetScopeLabel).join(", ") : "") + "." : "Rien n'est sélectionné.";
-      var name = nameIn.value.trim().toLowerCase(), exists = siteClasses.some(function (x) { return x.name === name; });
-      saveBtn.disabled = !p.n;
-      saveBtn.textContent = exists ? "Remplacer le style" : "Enregistrer le style";
-      if (exists) { warn.hidden = false; warn.textContent = "Le style « " + name + " » existe déjà : il sera remplacé pour tous les éléments du site qui l'utilisent."; } else warn.hidden = true;
+      sampleHost.textContent = ""; sampleHost.appendChild(styleSample(p));
+      var slug = slugNow(), exists = !redef && slug && siteClasses.some(function (x) { return x.name === slug; });
+      saveBtn.disabled = !p.n || !slug;
+      if (!redef) saveBtn.textContent = exists ? "Remplacer le style" : "Enregistrer le style";
+      if (exists) { warn.hidden = false; warn.textContent = "Le style « " + slug + " » existe déjà : il sera remplacé pour tous les éléments du site qui l'utilisent."; }
+      else if (redef) { var n = usersOfStyle(redef.name); warn.hidden = false; warn.textContent = "Ce style est utilisé par " + n + " élément" + (n > 1 ? "s" : "") + " de cette page (et peut-être d'autres pages du site) : tous suivront la nouvelle définition. Leurs réglages propres sont conservés."; }
+      else warn.hidden = true;
     }
     var setAll = function (v) { Object.keys(keys).forEach(function (k) { keys[k] = v; }); refresh(); };
     master.addEventListener("change", function () { setAll(master.checked); });
-    form.appendChild(h("div", { class: "pb-modal-head" }, h("h2", { id: "pb-sp-title", text: "Enregistrer comme style" }), h("span", { class: "pb-modal-spacer" }),
+    form.appendChild(h("div", { class: "pb-modal-head" }, h("h2", { id: "pb-sp-title", text: redef ? "Redéfinir le style" : "Enregistrer comme style" }), h("span", { class: "pb-modal-spacer" }),
       h("button", { type: "button", class: "btn btn-ghost btn-sm", "aria-label": "Fermer", onclick: function () { dlg.close(); } }, "×")));
     var body = h("div", { class: "pb-sp-body" });
     body.appendChild(h("p", { class: "pb-hint", text: "Source : " + ((inspectorFor(it) || {}).kind || it.type) + ". Cochez ce que le style doit contenir ; le texte, les images, les liens et la structure ne sont jamais copiés." }));
-    body.appendChild(h("div", { class: "pb-field" }, h("label", { text: "Nom du style" }), nameIn));
+    body.appendChild(h("div", { class: "pb-sp-namerow" }, h("div", { class: "pb-field" }, h("label", { text: "Nom du style" }), nameIn), sampleHost));
     body.appendChild(h("div", { class: "pb-sp-bar" }, h("label", { class: "pb-check pb-sp-master" }, master, " Tout sélectionner"),
       h("button", { type: "button", class: "btn btn-ghost btn-sm", "data-sp-none": "", onclick: function () { setAll(false); } }, "Tout désélectionner")));
     var list = h("div", { class: "pb-sp-cats", role: "group", "aria-label": "Catégories à enregistrer" });
@@ -4145,26 +4235,28 @@
       body.appendChild(sc);
     }
     body.appendChild(h("p", { class: "pb-hint", text: "Portée : ce site (le style sert à toutes ses pages)." }));
-    body.appendChild(h("label", { class: "pb-check" }, applyIn, " Appliquer à cet élément (ses réglages enregistrés passent dans le style, les autres restent)"));
+    if (!redef) body.appendChild(h("label", { class: "pb-check" }, applyIn, " Appliquer à cet élément (ses réglages enregistrés passent dans le style, les autres restent)"));
     body.appendChild(summary); body.appendChild(warn);
     form.appendChild(body);
     form.appendChild(h("div", { class: "pb-sp-actions" }, h("button", { type: "button", class: "btn btn-outline", onclick: function () { dlg.close(); } }, "Annuler"), saveBtn));
     nameIn.addEventListener("input", refresh);
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-      var name = nameIn.value.trim().toLowerCase();
-      if (!/^[a-z][a-z0-9-]{0,29}$/.test(name) || /^(kw|lp|pb|mk)-/.test(name)) { warn.hidden = false; warn.textContent = "Nom invalide : minuscules, chiffres et tirets, commence par une lettre (préfixes kw-, lp-, pb-, mk- réservés)."; nameIn.focus(); return; }
+      var name = slugNow(), label = nameIn.value.trim();
+      if (!/^[a-z][a-z0-9-]{0,29}$/.test(name)) { warn.hidden = false; warn.textContent = "Donnez un nom au style (lettres, chiffres, tirets)."; nameIn.focus(); return; }
       var p = presetPick(it, keys, scopes);
       if (!p.n) return;
       var picked = chosenKeys(), catIds = PRESET_CATS.filter(function (c) { return picked.some(function (k) { return byCat[c.id] && byCat[c.id][k]; }); }).map(function (c) { return c.id; });
-      var def = { name: name, meta: { source: it.type, categories: catIds, updated: new Date().toISOString().slice(0, 10) } };
+      var prev = styleDef(name), def = { name: name, meta: { source: it.type, categories: catIds, updated: new Date().toISOString().slice(0, 10) } };
+      if (label && label !== name) def.label = label.slice(0, 60);
+      if (redef && redef.label) def.label = redef.label;
       if (Object.keys(p.styles).length) def.styles = p.styles;
       if (Object.keys(p.states).length) def.states = p.states;
       var next = siteClasses.map(clone), at = -1; next.forEach(function (x, i) { if (x.name === name) at = i; });
       if (at >= 0) next[at] = def; else next.push(def);
       saveBtn.disabled = true;
       saveSiteClasses(next, function () {
-        if (applyIn.checked) change(function () {
+        if (applyIn.checked && !redef) change(function () {
           var x = byId(it.id), cl = classNames(x);
           if (cl.indexOf(name) < 0) cl.push(name);
           x.classes = cl.join(" ");
@@ -4175,9 +4267,10 @@
             });
             if (x[src] && !Object.keys(x[src]).length) delete x[src];
           });
-        }, { label: "Style « " + name + " » enregistré et appliqué" });
-        toast("Style « " + name + " » " + (at >= 0 ? "remplacé" : "enregistré") + " (" + p.n + " réglage" + (p.n > 1 ? "s" : "") + ").");
+        }, { label: "Style « " + (def.label || name) + " » enregistré et appliqué" });
+        toast("Style « " + (def.label || name) + " » " + (redef ? "redéfini" : prev ? "remplacé" : "enregistré") + " (" + p.n + " réglage" + (p.n > 1 ? "s" : "") + ").");
         dlg.close();
+        if (libraryPaint) libraryPaint();
       });
       setTimeout(function () { if (dlg.open) saveBtn.disabled = false; }, 4000);
     });
@@ -4186,19 +4279,97 @@
     document.body.appendChild(dlg);
     refresh();
     dlg.showModal();
-    nameIn.focus();
+    (redef ? saveBtn : nameIn).focus();
   }
-  // Compatibilité : réglages d'un style que le type de l'élément cible ne propose pas (ils restent écrits mais n'ont aucun effet sur lui)
+  // Compatibilité : réglages d'un style que le type de l'élément cible ne propose pas (écrits mais sans effet sur lui)
   function presetUnsupported(it, def) {
     var schema = inspectorFor(it), g = schema && schema.groups;
     if (!g) return Object.keys(presetKeysOf(def));
     var offered = function (k) { var gr = k === "backgroundColor" ? "background" : (SP[k] && SP[k].group) || (({ gradient: "background", overlay: "background", shadow: "effects", filter: "effects", transform: "position", mask: "mask" })[k]); var spec = gr && g[gr]; return spec === true || (Array.isArray(spec) && spec.indexOf(k) >= 0) || (k === "color" && g.typography !== undefined); };
     return Object.keys(presetKeysOf(def)).filter(function (k) { return !offered(k); });
   }
-  function presetKeysOf(def) {
-    var out = {};
-    ["styles", "states"].forEach(function (src) { Object.keys(def[src] || {}).forEach(function (s) { Object.keys(def[src][s]).forEach(function (k) { out[k] = true; }); }); });
-    return out;
+  // ----- Bibliothèque des styles du site -----
+  var libraryPaint = null;
+  function openStyleLibrary() {
+    if (!PAGE.siteSettingsUrl) { toast("Les styles enregistrés appartiennent à un site : cette page n'en a pas.", true); return; }
+    var dlg = h("dialog", { class: "pb-modal pb-sp pb-sl", "aria-labelledby": "pb-sl-title", "data-pb-style-library": "" });
+    var mode = store.get("style-mode", "complete") === "replace" ? "replace" : "complete";
+    var q = "", cat = "";
+    var search = h("input", { type: "search", class: "pb-input", placeholder: "Rechercher un style", "aria-label": "Rechercher un style", "data-sl-search": "" });
+    var catSel = h("select", { class: "pb-prop-select", "aria-label": "Filtrer par catégorie", "data-sl-cat": "" }, h("option", { value: "", text: "Toutes les catégories" }), PRESET_CATS.map(function (c) { return h("option", { value: c.id, text: c.label }); }));
+    var modeHint = h("p", { class: "pb-hint", "data-sl-hint": "" });
+    var seg = h("div", { class: "pb-seg", role: "radiogroup", "aria-label": "Mode d'application" });
+    var listEl = h("div", { class: "pb-sl-list", "data-sl-list": "" });
+    var HINT = { complete: "Compléter : le style s'ajoute ; les réglages propres de l'élément restent prioritaires et rien n'est retiré.", replace: "Remplacer : les réglages propres de l'élément, dans les catégories du style, sont retirés ; le style les remplace." };
+    function paintMode() {
+      seg.textContent = "";
+      [["complete", "Compléter"], ["replace", "Remplacer"]].forEach(function (m) {
+        seg.appendChild(h("button", { type: "button", role: "radio", "aria-checked": String(mode === m[0]), "data-sl-mode": m[0], onclick: function () { mode = m[0]; store.set("style-mode", mode); paintMode(); } }, m[1]));
+      });
+      modeHint.textContent = HINT[mode];
+    }
+    function targets() { return selectedItems().filter(function (x) { return isNode(x) && !lockedDeep(x.id); }); }
+    function paint() {
+      listEl.textContent = "";
+      var sel = selectedItems(), one = sel.length === 1 && isNode(sel[0]) ? sel[0] : null, used = one ? stylesOf(one) : [], tg = targets();
+      var rows = siteClasses.filter(function (c) {
+        var text = (styleTitle(c) + " " + c.name).toLowerCase();
+        return (!q || text.indexOf(q) >= 0) && (!cat || styleCats(c).indexOf(cat) >= 0);
+      });
+      if (!rows.length) listEl.appendChild(h("p", { class: "pb-hint", text: siteClasses.length ? "Aucun style ne correspond." : "Aucun style enregistré. Réglez un élément dans l'inspecteur, puis « Enregistrer comme style… »." }));
+      rows.forEach(function (c) {
+        var cl = styleCats(c), n = usersOfStyle(c.name), on = used.indexOf(c.name) >= 0;
+        var act = function (label, fn, dis, attrs) { return h("button", Object.assign({ type: "button", class: "btn btn-ghost btn-sm", disabled: dis || null, onclick: fn }, attrs || {}), label); };
+        listEl.appendChild(h("div", { class: "pb-sl-row" + (on ? " is-on" : ""), "data-style": c.name },
+          styleSample(c),
+          h("div", { class: "pb-sl-main" }, h("strong", { text: styleTitle(c) }), on ? h("span", { class: "pb-blk-badge", text: "Appliqué" }) : null,
+            h("small", { text: (cl.map(presetCatLabel).join(" · ") || "—") + " · " + n + " élément" + (n > 1 ? "s" : "") + " ici" })),
+          h("button", { type: "button", class: "btn btn-outline btn-sm", "data-sl-apply": c.name, disabled: !canWrite || !tg.length, "data-tip": !tg.length ? "Sélectionnez d'abord un élément (non verrouillé) dans le canevas" : null, onclick: function () { applyStyleTo(tg.map(function (x) { return x.id; }), c.name, mode); paint(); } }, "Appliquer"),
+          h("details", { class: "pb-sl-more" }, h("summary", { "aria-label": "Autres actions pour " + styleTitle(c), text: "⋯" }),
+            h("div", { class: "pb-sl-menu" },
+              act("Renommer", function () {
+                ask("Renommer le style", [["label", "text", "Nom du style"]], function (v) {
+                  var next = siteClasses.map(clone); next.forEach(function (x) { if (x.name === c.name) { if (v.label) x.label = v.label.slice(0, 60); else delete x.label; } });
+                  saveSiteClasses(next, paint);
+                });
+                var f = $("[data-pb-ask-fields] [name=label]"); if (f) { f.value = styleTitle(c); f.select(); }
+              }, !canWrite, { "data-sl-rename": c.name }),
+              act("Dupliquer", function () {
+                var base = c.name.slice(0, 24) + "-copie", nm = base, i = 2;
+                while (styleDef(nm)) nm = base.slice(0, 27) + "-" + (i++);
+                var copy = clone(c); copy.name = nm; copy.label = (styleTitle(c) + " (copie)").slice(0, 60);
+                saveSiteClasses(siteClasses.map(clone).concat([copy]), paint);
+              }, !canWrite, { "data-sl-dup": c.name }),
+              act("Redéfinir depuis la sélection", function () { dlg.close(); openStyleDialog(one, c.name); }, !canWrite || !one || !canSaveStyle([one]), { "data-sl-redefine": c.name }),
+              act("Supprimer", function () {
+                var msg = n ? n + " élément" + (n > 1 ? "s" : "") + " de cette page " + (n > 1 ? "utilisent" : "utilise") + " ce style : ils seront dissociés et garderont leur apparence. Les autres pages du site qui l'utilisent la perdront. Supprimer « " + styleTitle(c) + " » ?" : "Supprimer le style « " + styleTitle(c) + " » du site ? Les autres pages qui l'utilisent perdront son apparence.";
+                if (!window.confirm(msg)) return;
+                var ids = []; walk(function (x) { if (isNode(x) && classNames(x).indexOf(c.name) >= 0) ids.push(x.id); });
+                if (ids.length) unlinkStyleFrom(ids, c.name, true);
+                saveSiteClasses(siteClasses.filter(function (x) { return x.name !== c.name; }), function () { toast("Style supprimé."); paint(); });
+              }, !canWrite, { "data-sl-delete": c.name })))));
+      });
+    }
+    search.addEventListener("input", function () { q = search.value.trim().toLowerCase(); paint(); });
+    catSel.addEventListener("change", function () { cat = catSel.value; paint(); });
+    paintMode();
+    var form = h("div", { class: "pb-sp-form" },
+      h("div", { class: "pb-modal-head" }, h("h2", { id: "pb-sl-title", text: "Styles du site" }), h("span", { class: "pb-modal-spacer" }),
+        h("button", { type: "button", class: "btn btn-ghost btn-sm", "aria-label": "Fermer", onclick: function () { dlg.close(); } }, "×")),
+      h("div", { class: "pb-sp-body" },
+        h("div", { class: "pb-sl-tools" }, search, catSel),
+        h("div", { class: "pb-sl-mode" }, h("span", { class: "pb-sub", text: "Appliquer en mode" }), seg), modeHint,
+        listEl),
+      h("div", { class: "pb-sp-actions" },
+        h("button", { type: "button", class: "btn btn-outline", "data-sl-new": "", disabled: !canWrite, onclick: function () { var s = selectedItems(); if (s.length === 1 && canSaveStyle(s)) { dlg.close(); saveStyleOf(s[0]); } else toast("Sélectionnez un élément qui a des réglages propres pour enregistrer son style.", true); } }, "Enregistrer la sélection comme style…"),
+        h("button", { type: "button", class: "btn btn-primary", onclick: function () { dlg.close(); } }, "Fermer")));
+    dlg.appendChild(form);
+    dlg.addEventListener("close", function () { libraryPaint = null; dlg.remove(); });
+    document.body.appendChild(dlg);
+    libraryPaint = paint;
+    paint();
+    dlg.showModal();
+    search.focus();
   }
   function globalClassesBlock(it, locked) {
     var box = h("div", { class: "pb-global-classes" });
@@ -4217,12 +4388,12 @@
         }
       });
       box.appendChild(h("div", { class: "pb-gclass-row" },
-        h("label", { class: "pb-check" }, cb, " ." + c.name),
+        h("label", { class: "pb-check" }, cb, " " + (c.label || "." + c.name)),
         on ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked || !(it.styles || it.states), "data-tip": "Remplace le contenu du style par les réglages que vous choisissez parmi ceux de cet élément (tous les éléments qui l'utilisent suivent)", onclick: function () { openStyleDialog(it, c.name); } }, "Mettre à jour le style") : null,
         h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked, "aria-label": "Supprimer la classe " + c.name,
           onclick: function () { if (!window.confirm("Supprimer la classe « " + c.name + " » du site ? Les éléments qui la portent perdent son style.")) return; saveSiteClasses(siteClasses.filter(function (x) { return x.name !== c.name; }), function () { toast("Classe supprimée."); }); } }, "Supprimer")));
     });
-    box.appendChild(h("div", { class: "pb-gclass-new" }, h("button", { type: "button", class: "btn btn-outline btn-sm", "data-pb-save-style": "", disabled: locked || !PAGE.siteSettingsUrl || !(it.styles || it.states), "data-tip": "Choisissez les catégories de réglages de cet élément à enregistrer comme style réutilisable", onclick: function () { openStyleDialog(it); } }, "Enregistrer comme style…")));
+    box.appendChild(h("div", { class: "pb-gclass-new" }, h("button", { type: "button", class: "btn btn-outline btn-sm", "data-pb-save-style": "", disabled: locked || !PAGE.siteSettingsUrl || !(it.styles || it.states), "data-tip": "Choisissez les catégories de réglages de cet élément à enregistrer comme style réutilisable", onclick: function () { openStyleDialog(it); } }, "Enregistrer comme style…"), h("button", { type: "button", class: "btn btn-ghost btn-sm", "data-pb-style-library-open": "", onclick: openStyleLibrary }, "Bibliothèque")));
     if (!PAGE.siteSettingsUrl) box.appendChild(h("p", { class: "pb-hint", text: "Les classes globales appartiennent à un site : cette page n'en a pas." }));
     return box;
   }
@@ -6883,7 +7054,14 @@
       ["Copier le style", copyStyle, false, "Ctrl+Alt+C"],
       ["Coller le style", function () { pasteStyle(); }, !canWrite || locked, "Ctrl+Maj+V"],
       ["Réinitialiser le style", resetStyle, !canWrite || locked || !items.some(function (z) { return z.styles || z.states || z.parts; })],
+      "-",
+      { heading: "Style" },
+      PAGE.siteSettingsUrl && items.every(isNode) ? ["Appliquer un style…", openStyleLibrary, !canWrite || locked] : null,
       items.length === 1 && isNode(it) ? ["Enregistrer comme style…", function () { saveStyleOf(byId(it.id) || it); }, !canWrite || locked || !canSaveStyle(items)] : null,
+      items.length === 1 && isNode(it) && stylesOf(it).length ? ["Modifier le style « " + styleTitle(styleDef(stylesOf(it)[0])) + " »…", openStyleLibrary, false] : null,
+      items.length === 1 && isNode(it) && stylesOf(it).length ? ["Redéfinir « " + styleTitle(styleDef(stylesOf(it)[0])) + " » depuis cet élément…", function () { openStyleDialog(byId(it.id) || it, stylesOf(it)[0]); }, !canWrite || locked || !canSaveStyle(items)] : null,
+      items.length === 1 && isNode(it) && stylesOf(it).length ? ["Dissocier du style (garde l'apparence)", function () { unlinkStyleFrom([it.id], stylesOf(it)[0], true); }, !canWrite || locked] : null,
+      items.length === 1 && isNode(it) && stylesOf(it).length ? ["Retirer le style (perd son apparence)", function () { unlinkStyleFrom([it.id], stylesOf(it)[0], false); }, !canWrite || locked] : null,
       "-",
       items.length === 1 ? ["Renommer", function () { var row = treeEl.querySelector('.pb-node[data-id="' + it.id + '"] > .pb-row-item'); if (row) startRename(row, it); }, !canWrite, "F2"] : null,
       [items.some(function (z) { return z.hidden; }) ? "Afficher" : "Masquer", function () { setFlag(selection.slice(), "hidden", !items.some(function (z) { return z.hidden; })); }, !canWrite, "Ctrl+Maj+H"],
@@ -6957,6 +7135,7 @@
       { label: "Grouper", run: groupSelected, off: selection.length < 2 || !canWrite }, { label: "Dissocier", run: ungroupSelected, off: !has || !canWrite },
       { label: "Masquer / afficher", run: function () { setFlag(selection.slice(), "hidden", !selectedItems().some(function (z) { return z.hidden; })); }, off: !has || !canWrite },
       { label: "Verrouiller / déverrouiller", run: function () { setFlag(selection.slice(), "locked", !selectedItems().some(function (z) { return z.locked; })); }, off: !has || !canWrite },
+      { label: "Styles du site : bibliothèque", run: openStyleLibrary, off: !PAGE.siteSettingsUrl },
       { label: "Enregistrer comme style…", run: function () { saveStyleOf(selectedItems()[0]); }, off: !has || !canWrite || !canSaveStyle(selectedItems()) },
       { label: "Copier le style", run: copyStyle, off: !has }, { label: "Réinitialiser le style", run: resetStyle, off: !has || !canWrite }, { label: "Coller le style", run: function () { pasteStyle(); }, off: !has || !canWrite },
       ].concat(STYLE_GROUPS.map(function (g) { return { label: "Coller le style : " + g[1].toLowerCase() + " seulement", run: function () { pasteStyle([g[0]]); }, off: !has || !canWrite || !(styleClipboard || store.get("style-clipboard", null)) }; })).concat([
