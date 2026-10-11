@@ -80,10 +80,15 @@ function createMarketingRouters({ db }) {
     const perms = access.effectivePermissions(user.id, { organizationId: orgId, siteId });
     const allowed = (permission) => perms.has(permission);
     const role = membership ? membership.role : "site";
+    // Contexte de site (palier 2) : calculé pour CETTE requête seulement, à partir de la base (jamais d'état partagé). req.mk.site = le site visé,
+    // ou null (site principal / écran sans site) ; req.mk.siteContext = le détail du contrôle (reason : not_found, deleted, archived, forbidden).
+    const siteContext = require("../../services/siteContext");
+    const sc = siteId !== null ? siteContext.resolve(db, { userId: user.id, organizationId: orgId }, siteId, { allowArchived: true, allowDeleted: true }) : null;
     req.mk = {
+      site: sc && sc.ok ? sc.site : null, siteContext: sc,
       role, can: allowed, perms, siteId, marketing, siteOnly: !membership,
       // Email Engine (palier 16) : accès limité à un site → siteScope impose ce site à tout le moteur (jamais lu dans l'adresse) ; équipe de l'organisation → simple filtre d'affichage
-      ctx: { db, organizationId: orgId, userId: user.id, can: allowed, bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL,
+      ctx: { db, organizationId: orgId, userId: user.id, can: allowed, canOn: (target, permission) => siteContext.canOn(db, { userId: user.id, organizationId: orgId }, target, permission), bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL,
         ...(membership ? { siteFilter: /^\d{1,12}$/.test(String(req.query.site ?? "")) ? Number(req.query.site) : req.query.site === "principal" ? "principal" : undefined } : { siteScope: Number.isInteger(siteId) ? siteId : -1 }) },
     };
     res.locals.mk = { role, can: allowed, ctx: req.mk.ctx };

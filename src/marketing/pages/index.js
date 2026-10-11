@@ -82,10 +82,21 @@ function requirePage(ctx, id) {
 
 // Contenu validé et normalisé (sans rien enregistrer) : sert au brouillon et au rendu du canevas de l'éditeur.
 // Chaque section reçoit un identifiant stable (sélection, calques, composants, tests A/B à venir).
+// Isolation par site : un composant propre à un site ne s'insère que dans une page de CE site (un composant global, sans site, va partout).
+// Vérifié côté serveur à l'enregistrement ET au déplacement d'une page : jamais seulement par la liste proposée à l'éditeur.
+function assertComponentsUsable(ctx, sections, siteId) {
+  for (const s of sections) {
+    if (!s || s.type !== "component") continue;
+    const c = ctx.db.prepare("SELECT site_id, name FROM mk_web_components WHERE id = ? AND organization_id = ?").get(s.componentId, ctx.organizationId);
+    if (c && c.site_id !== null && c.site_id !== (siteId ?? null)) throw bad(`Le composant « ${c.name} » appartient à un autre site : il ne peut pas être utilisé dans cette page.`);
+  }
+}
 function normalizeContent(ctx, page, input = {}) {
   const raw = (Array.isArray(input.sections) ? input.sections : []).map((s) => (s && typeof s === "object" && s.id === undefined ? { ...s, id: newSectionId() } : s));
+  const normalized = normalizeSections(ctx, raw);
+  assertComponentsUsable(ctx, normalized, page.site_id);
   return {
-    sections: normalizeSections(ctx, raw),
+    sections: normalized,
     theme: normalizeTheme(input.theme),
     title: line(input.title, 120) || page.name,
     description: line(input.description, 300),
@@ -502,8 +513,11 @@ function setHomePage(ctx, siteId, pageId) {
   invalidateSites();
 }
 function movePage(ctx, pageId, siteId) {
-  requirePage(ctx, pageId);
+  const page = requirePage(ctx, pageId);
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
+  // Les composants propres à l'ancien site ne suivent pas la page : déplacer d'abord, ou retirer ces composants
+  assertComponentsUsable(ctx, page.working.sections, siteId);
+  assertComponentsUsable(ctx, page.published.sections, siteId);
   ctx.db.prepare("UPDATE mk_sites SET home_page_id = NULL WHERE home_page_id = ? AND organization_id = ? AND id IS NOT ?").run(pageId, ctx.organizationId, siteId);
   invalidateSites();
   ctx.db.prepare("UPDATE mk_landing_pages SET site_id = ?, updated_at = datetime('now') WHERE id = ?").run(siteId, pageId);

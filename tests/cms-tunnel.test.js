@@ -123,6 +123,9 @@ describe("isolation par site", () => {
     const pB = makePage("Page Bravo", { siteId: 2 });
     const f = funnels.createFunnel(A, { name: "Ancien", siteId: 1 });
     publishRaw(pB.id);
+    // Depuis le palier 2 la base refuse cette association (déclencheur) : on la prouve, puis on simule une donnée d'AVANT le palier 2 en retirant le déclencheur
+    assert.throws(() => db.prepare("INSERT INTO mk_funnel_steps (organization_id, funnel_id, position, type, name, page_id) VALUES (1, ?, 1, 'page', 'Cassée', ?)").run(f.id, pB.id), /site différent/);
+    db.exec("DROP TRIGGER mk_funnel_steps_same_site_insert");
     db.prepare("INSERT INTO mk_funnel_steps (organization_id, funnel_id, position, type, name, page_id) VALUES (1, ?, 1, 'page', 'Cassée', ?)").run(f.id, pB.id);
     const d = stepsOf(f)[0];
     assert.equal(d.live, false); assert.match(d.problem, /autre site/);

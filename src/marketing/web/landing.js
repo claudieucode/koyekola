@@ -268,6 +268,8 @@ module.exports = () => {
       const ctx = req.mk.ctx;
       landing.saveSettings(ctx, page.id, { name: b.name, slug: b.slug, formId: b.form_id, tags: b.tags, indexable: b.indexable === "on" });
       const siteId = intOrNull(b.site_id);
+      // Déplacer une page vers un autre site (ou vers le site principal) exige les droits d'écriture SUR le site de destination, vérifiés côté serveur
+      if (b.site_id !== undefined && siteId !== page.site_id && !ctx.canOn(siteId, "forms.write")) throw new MarketingError("forbidden", "Vous n'avez pas accès au site de destination : la page n'a pas été déplacée.");
       if (b.site_id !== undefined && siteId !== page.site_id) pages.movePage(ctx, page.id, siteId);
       // Page parente (hiérarchie préparée) : un changement de site retire d'abord le lien avec l'ancien parent
       if (b.site_id !== undefined && siteId !== page.site_id) cmsPages.setParent(ctx, page.id, null);
