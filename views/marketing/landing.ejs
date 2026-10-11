@@ -8,6 +8,17 @@
         <% if (page.status !== "published" || page.hasDraft) { %><form action="/marketing/pages/<%= page.id %>/publier" method="post"><button type="submit" class="btn btn-primary btn-sm"<%= check.ready ? "" : " disabled" %>><%= page.status === "published" ? "Publier les modifications" : "Publier" %></button></form><% } %>
         <% if (page.status === "published") { %><form action="/marketing/pages/<%= page.id %>/depublier" method="post"><button type="submit" class="btn btn-outline btn-sm">Mettre hors ligne</button></form><% } %>
       </div><% } %>
+    <% if (page.status !== "published" && canWrite && !archived && mk.can("pages.publish")) { %>
+      <% if (page.scheduled_at) { %>
+        <div class="mk-callout"><span><strong>Publication programmée</strong> le <time datetime="<%= page.scheduled_at.replace(" ", "T") %>Z" data-local-time><%= page.scheduled_at %> (UTC)</time>. La page est mise en ligne à la première visite du site après cette heure.</span>
+          <form class="mk-inline" action="/marketing/pages/<%= page.id %>/programmer/annuler" method="post"><button type="submit" class="btn btn-outline btn-sm">Annuler la programmation</button></form></div>
+      <% } else { %>
+        <form class="mk-callout" action="/marketing/pages/<%= page.id %>/programmer" method="post" onsubmit="this.offset.value = new Date(this.local.value).getTimezoneOffset()">
+          <span><label for="lp-schedule"><strong>Programmer la publication</strong></label> <input id="lp-schedule" type="datetime-local" name="local" required> <input type="hidden" name="offset" value="0"></span>
+          <button type="submit" class="btn btn-outline btn-sm"<%= check.ready ? "" : " disabled" %>>Programmer</button></form>
+      <% } %>
+      <script>document.querySelectorAll("time[data-local-time]").forEach(function (t) { var d = new Date(t.getAttribute("datetime")); if (!isNaN(d)) t.textContent = d.toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" }); });</script>
+    <% } %>
     </div>
     <% if (variantOf) { %><p class="mk-callout"><span><strong>Version B d'un test A/B</strong>Cette page est la version B du test de « <%= variantOf.name %> » : elle ne se publie pas seule. <a href="/marketing/pages/<%= variantOf.page_id %>/test-ab?test=<%= variantOf.id %>">Ouvrir le test</a>.</span></p>
     <% } else { %><p class="field-hint"><a href="/marketing/pages/<%= page.id %>/test-ab"><%= openTest ? `Test A/B « ${openTest.name} » (${openTest.status === "running" ? "en cours" : openTest.status === "stopped" ? "en pause" : "en préparation"})` : "Test A/B : comparer deux versions de cette page" %></a></p><% } %>

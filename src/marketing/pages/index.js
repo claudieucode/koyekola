@@ -144,7 +144,7 @@ function publish(ctx, id) {
     ctx.db.prepare("INSERT INTO mk_page_versions (organization_id, page_id, number, content, reason, created_by) VALUES (?, ?, ?, ?, 'publish', ?)")
       .run(ctx.organizationId, id, number, JSON.stringify(content), ctx.userId ?? null);
     ctx.db.prepare(`UPDATE mk_landing_pages SET sections = ?, theme = ?, title = ?, description = ?, seo = ?, draft = NULL, revision = revision + 1,
-        status = 'published', published_at = COALESCE(published_at, datetime('now')), updated_at = datetime('now') WHERE id = ?`)
+        status = 'published', published_at = COALESCE(published_at, datetime('now')), scheduled_at = NULL, updated_at = datetime('now') WHERE id = ?`)
       .run(JSON.stringify(content.sections), JSON.stringify(content.theme), content.title, content.description, JSON.stringify(content.seo), id);
     // Historique borné : les plus anciennes versions au-delà de MAX_VERSIONS sont effacées
     ctx.db.prepare("DELETE FROM mk_page_versions WHERE page_id = ? AND number <= ?").run(id, number - MAX_VERSIONS);
@@ -156,6 +156,55 @@ function publish(ctx, id) {
 function unpublish(ctx, id) {
   landing.unpublishPage(ctx, id);
 }
+
+// ---------- Programmation de la publication (palier 23) ----------
+// Une page peut être mise en ligne automatiquement à une date future (UTC). Il n'y a pas de tâche de fond : comme pour les articles, la page
+// est publiée à la première visite du site (ou lecture du plan du site, ou ouverture de la liste des pages) APRÈS l'heure prévue.
+// Les contrôles de publication (formulaire publié, etc.) sont faits dès la programmation ET au moment de publier ; si la page n'est plus publiable à
+// l'heure dite, la programmation est retirée et l'échec est consigné dans le journal d'audit (jamais d'échec silencieux).
+const SCHEDULE_FORMAT = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+function schedulePage(ctx, id, at) {
+  const page = requirePage(ctx, id);
+  if (page.archived_at) throw bad("Cette page est archivée : restaurez-la avant de la programmer.");
+  if (ctx.db.prepare("SELECT 1 FROM mk_page_tests WHERE variant_page_id = ?").get(id)) throw bad("Cette page est la version B d'un test A/B : elle ne se programme pas seule.");
+  const when = String(at || "");
+  if (!SCHEDULE_FORMAT.test(when) || Number.isNaN(Date.parse(when.replace(" ", "T") + "Z"))) throw bad("Date de programmation invalide.");
+  const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+  if (when <= now) throw bad("Programmation : choisissez une date et une heure dans le futur.");
+  const check = landing.preflight(ctx, { ...page, sections: resolveSections(ctx, page.working.sections) });
+  if (!check.ready) throw new MarketingError("preflight_failed", check.errors.join(" "));
+  ctx.db.prepare("UPDATE mk_landing_pages SET scheduled_at = ?, updated_at = datetime('now') WHERE id = ?").run(when, id);
+  audit(ctx, "page.scheduled", "landing", id, { at: when, slug: page.slug });
+  return { at: when };
+}
+function cancelSchedule(ctx, id) {
+  const page = requirePage(ctx, id);
+  if (!page.scheduled_at) return false;
+  ctx.db.prepare("UPDATE mk_landing_pages SET scheduled_at = NULL, updated_at = datetime('now') WHERE id = ?").run(id);
+  audit(ctx, "page.schedule_cancelled", "landing", id, { was: page.scheduled_at });
+  return true;
+}
+let lastPromotion = 0;
+function promoteScheduledPages(db, { force = false } = {}) {
+  const nowMs = Date.now();
+  if (!force && nowMs - lastPromotion < 15000) return 0; // au plus une vérification toutes les 15 s par processus
+  lastPromotion = nowMs;
+  let due;
+  try { due = db.prepare("SELECT id, organization_id FROM mk_landing_pages WHERE scheduled_at IS NOT NULL AND scheduled_at <= datetime('now') AND archived_at IS NULL ORDER BY scheduled_at LIMIT 25").all(); } catch { return 0; }
+  let done = 0;
+  for (const row of due) {
+    const ctx = { db, organizationId: row.organization_id, userId: null };
+    // `audit()` ignore les actions sans personne connectée : la mise en ligne automatique est consignée directement (utilisateur vide = le système)
+    const trace = (action, metadata) => { try { require("../audit").recordAudit(db, { organizationId: row.organization_id, userId: null, action, resourceType: "landing", resourceId: row.id, metadata }); } catch { /* la trace ne bloque pas la publication */ } };
+    try { publish(ctx, row.id); trace("page.published", { scheduled: true }); done += 1; } catch (error) {
+      db.prepare("UPDATE mk_landing_pages SET scheduled_at = NULL WHERE id = ?").run(row.id);
+      trace("page.schedule_failed", { reason: String(error.message || error).slice(0, 300) });
+    }
+  }
+  return done;
+}
+// Intergiciel du serveur : vérifie les programmations échues avant de servir une page
+const schedulerMiddleware = (req, res, next) => { try { promoteScheduledPages(require("../../config/database")); } catch { /* jamais bloquant */ } next(); };
 
 // Toutes les pages (Site Web → Pages) : site, brouillon en cours, statistiques réelles cumulées
 function listPages(ctx, { archived = false, siteId } = {}) {
@@ -210,7 +259,9 @@ function createPage(ctx, { name, siteId = null, kind = "page", template = null, 
   const fromTemplate = mine ? mine.content.sections : template ? require("./templates").buildTemplate(ctx, template) : null;
   if (template && !fromTemplate) throw bad("Modèle de page inconnu.");
   const page = landing.createPage(ctx, { name });
-  ctx.db.prepare("UPDATE mk_landing_pages SET kind = ?, site_id = ? WHERE id = ?").run(kind, siteId, page.id);
+  // Palier 23 : une page de SITE (À propos, Contact…) est indexable par défaut (comme sur WordPress) ; une page d'atterrissage ou une étape de tunnel reste non indexée
+  // jusqu'à ce qu'on la rende indexable. La personne peut toujours changer ce réglage dans la fiche de la page.
+  ctx.db.prepare("UPDATE mk_landing_pages SET kind = ?, site_id = ?, indexable = ? WHERE id = ?").run(kind, siteId, kind === "page" ? 1 : 0, page.id);
   if (fromTemplate) {
     const sections = normalizeSections(ctx, fromTemplate.map((s) => ({ ...s, id: newSectionId() })));
     checkWidgetRights(ctx, [], sections);
@@ -264,7 +315,7 @@ function archivePage(ctx, id, { detach = false } = {}) {
   // Palier 18 : une page utilisée par un tunnel actif ne part pas à la corbeille en silence (refus listant les tunnels, ou détachement explicite)
   require("../funnels").guardPageRemoval(ctx, id, { detach, action: "mise à la corbeille" });
   require("./abtests").guardPageRemoval(ctx, id, "mise à la corbeille"); // palier 22 : une page testée ne disparaît pas en silence
-  ctx.db.prepare("UPDATE mk_landing_pages SET archived_at = datetime('now'), status = CASE status WHEN 'published' THEN 'unpublished' ELSE status END, revision = revision + 1, updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
+  ctx.db.prepare("UPDATE mk_landing_pages SET archived_at = datetime('now'), scheduled_at = NULL, status = CASE status WHEN 'published' THEN 'unpublished' ELSE status END, revision = revision + 1, updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
   ctx.db.prepare("UPDATE mk_sites SET home_page_id = NULL WHERE home_page_id = ? AND organization_id = ?").run(id, ctx.organizationId);
   audit(ctx, "page.archived", "landing", id, {});
 }
@@ -794,7 +845,7 @@ function resolveSections(ctx, sections) {
 module.exports = {
   KINDS, MAX_VERSIONS,
   getPage, requirePage, listPages, normalizeContent, saveDraft, discardDraft, publish, unpublish, listVersions, getVersion, restoreVersion,
-  createPage, duplicatePage, archivePage, restorePage,
+  createPage, duplicatePage, archivePage, restorePage, schedulePage, cancelSchedule, promoteScheduledPages, schedulerMiddleware,
   getSite, requireSite, listSites, sitePages, createSite, updateSite, saveSiteDesign, colorUsage, setHomePage, movePage, archiveSite, restoreSite, duplicateSite,
   listComponents, getComponent, createComponent, updateComponent, componentUsage, componentInstances, saveComponentDraft, publishComponent, discardComponentDraft, deleteComponent, COMPONENT_KINDS, resolveSections,
   siteParts, withSiteParts, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,

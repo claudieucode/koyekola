@@ -78,6 +78,7 @@ module.exports = () => {
   // Site Web → Pages : toutes les pages (sites, tunnels, pages d'atterrissage), archivées à part
   router.get("/pages", need("forms.read"), (req, res) => {
     const ctx = req.mk.ctx;
+    pages.promoteScheduledPages(ctx.db, { force: true });
     // Ancien lien « ?vue=archivees » conservé : c'est la corbeille
     const state = req.query.vue === "archivees" ? "corbeille" : cmsPages.STATES.includes(req.query.etat) ? req.query.etat : "toutes";
     const filters = { q: String(req.query.q || "").trim().slice(0, 80), site: String(req.query.site || ""), auteur: String(req.query.auteur || ""), tri: Object.hasOwn(cmsPages.SORTS, req.query.tri) ? req.query.tri : "modifiee", ordre: req.query.ordre === "asc" || (req.query.tri === "titre" && req.query.ordre !== "desc") ? "asc" : "desc" };
@@ -448,6 +449,24 @@ module.exports = () => {
       pages.restoreVersion(req.mk.ctx, page.id, Number(req.params.n));
       return `Version ${req.params.n} copiée dans le brouillon. La page en ligne n'a pas changé : vérifiez l'aperçu, puis publiez.`;
     });
+  });
+  // Programmation (palier 23) : la date est saisie en heure locale (champ « local ») ; le navigateur joint son décalage horaire en minutes (« offset »)
+  router.post("/pages/:id(\\d+)/programmer", need("pages.publish"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    attempt(req, res, next, `/marketing/pages/${page.id}`, () => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(String(req.body.local || ""));
+      const offset = Number(req.body.offset);
+      if (!m || !Number.isInteger(offset) || Math.abs(offset) > 840) throw new (require("../errors").MarketingError)("invalid_field", "Date de programmation invalide.");
+      const utc = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) + offset * 60000).toISOString().slice(0, 19).replace("T", " ");
+      pages.schedulePage(req.mk.ctx, page.id, utc);
+      return "Publication programmée : la page sera mise en ligne à la première visite du site après l'heure choisie.";
+    });
+  });
+  router.post("/pages/:id(\\d+)/programmer/annuler", need("pages.publish"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    attempt(req, res, next, `/marketing/pages/${page.id}`, () => { pages.cancelSchedule(req.mk.ctx, page.id); return "Programmation annulée : la page reste hors ligne."; });
   });
   router.post("/pages/:id(\\d+)/depublier", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);

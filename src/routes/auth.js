@@ -11,6 +11,20 @@ const { openSession } = require("../middlewares/sessionUser");
 
 const router = express.Router();
 
+// Journal des connexions (palier 23) : réussites, échecs, comptes suspendus, dans le journal d'audit existant (CMS → Outils → Journal d'activité).
+// Jamais le mot de passe ; l'e-mail saisi d'un compte inconnu et l'adresse IP ne sont gardés que sous forme d'empreinte courte non réversible.
+// Une défaillance du journal ne bloque jamais la connexion.
+const short = (value) => require("node:crypto").createHash("sha256").update(`${process.env.SESSION_SECRET || "kolakisa"}:${String(value || "")}`).digest("hex").slice(0, 12);
+function journal(req, action, userId, extra = {}) {
+  try {
+    const org = db.prepare("SELECT id FROM mk_organizations ORDER BY id LIMIT 1").get();
+    if (!org) return;
+    // Seuls les comptes de l'équipe (créateur, membres de l'organisation, accès par site) sont journalisés : pas une ligne par connexion d'élève
+    if (userId && !db.prepare("SELECT 1 FROM users u WHERE u.id = ? AND (u.role = 'formateur' OR EXISTS (SELECT 1 FROM mk_org_members m WHERE m.user_id = u.id) OR EXISTS (SELECT 1 FROM mk_site_members x WHERE x.user_id = u.id))").get(userId)) return;
+    require("../marketing/audit").recordAudit(db, { organizationId: org.id, userId: userId ?? null, action, resourceType: "auth", resourceId: userId ?? null, metadata: { ip: short(req.ip), ...extra } });
+  } catch { /* le journal ne doit jamais faire échouer la connexion */ }
+}
+
 router.get("/inscription", (req, res) => {
   if (req.session.user) return res.redirect("/");
   res.render("register", { error: null, formValues: {}, consentText: SIGNUP_CONSENT_TEXT, redirect: safePath(req.query.redirect, "") });
@@ -72,11 +86,13 @@ router.post("/connexion", async (req, res, next) => {
 
     if (!user || typeof password !== "string" || !(await bcrypt.compare(password, user.password_hash))) {
       recordLoginFailure(req);
+      journal(req, "auth.login_failed", user ? user.id : null, user ? {} : { account: short(email) });
       return res.status(400).render("login", { error: "Email ou mot de passe incorrect.", redirect: redirect || "" });
     }
 
     // Compte suspendu ou désactivé par l'équipe : connexion refusée (message volontairement sobre)
     if (user.status && user.status !== "active") {
+      journal(req, "auth.login_refused", user.id, { status: user.status });
       return res.status(403).render("login", { error: "Ce compte est suspendu. Contactez l'administrateur du site.", redirect: redirect || "" });
     }
     clearLoginFailures(req);
@@ -86,6 +102,7 @@ router.post("/connexion", async (req, res, next) => {
 
     openSession(req, user, (error) => {
       if (error) return next(error);
+      journal(req, "auth.login", user.id);
       res.redirect(safePath(redirect, "/"));
     });
   } catch (error) {
