@@ -446,15 +446,24 @@ function duplicateSite(ctx, id) {
 
 // ---------- Composants réutilisables ----------
 
+const COMPONENT_KINDS = ["standard", "global"];
+// Nombre d'éléments (blocs) d'une section de composant : la section libre compte ses éléments imbriqués, un autre type de section compte pour un
+function countBlocks(section) {
+  if (!section) return 0;
+  const walk = (list) => list.reduce((n, x) => n + 1 + walk(Array.isArray(x.children) ? x.children : []), 0);
+  return section.type === "layout" ? walk(Array.isArray(section.children) ? section.children : []) : 1;
+}
+// « global » = portée (tous les sites) ; « kind » = nature (modèle standard ou référence globale à instances liées)
+const readComponent = (row) => row ? { ...row, section: json(row.section, null), draft: json(row.draft, null), hasDraft: Boolean(row.draft), global: row.site_id === null, kind: row.kind || "standard", blocks: countBlocks(json(row.section, null)) } : null;
 function listComponents(ctx, { siteId = null } = {}) {
   checkCtx(ctx);
   return ctx.db.prepare("SELECT * FROM mk_web_components WHERE organization_id = ? AND (site_id IS NULL OR site_id = ?) ORDER BY name COLLATE NOCASE")
-    .all(ctx.organizationId, siteId).map((c) => ({ ...c, section: json(c.section, null), global: c.site_id === null }));
+    .all(ctx.organizationId, siteId).map(readComponent);
 }
 function getComponent(ctx, id) {
   checkCtx(ctx);
   const row = Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_web_components WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) : null;
-  return row ? { ...row, section: json(row.section, null), global: row.site_id === null } : null;
+  return readComponent(row);
 }
 // Une section enregistrée comme composant : jamais un composant dans un composant (pas de boucle possible)
 function componentSection(ctx, section) {
@@ -462,16 +471,17 @@ function componentSection(ctx, section) {
   const { id: _id, ...rest } = section;
   return normalizeSection(ctx, rest, 0);
 }
-function createComponent(ctx, { name, section, siteId = null } = {}) {
+function createComponent(ctx, { name, section, siteId = null, kind = "standard" } = {}) {
   checkCtx(ctx);
+  if (!COMPONENT_KINDS.includes(kind)) throw bad("Nature de composant inconnue (standard ou global).");
   const n = line(name, 80);
   if (!n) throw bad("Le nom du composant est obligatoire.");
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   if (ctx.db.prepare("SELECT 1 FROM mk_web_components WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, n)) throw new MarketingError("duplicate", "Un composant porte déjà ce nom.");
   checkWidgetRights(ctx, [], [componentSection(ctx, section)]);
-  const id = Number(ctx.db.prepare("INSERT INTO mk_web_components (organization_id, site_id, name, section, created_by) VALUES (?, ?, ?, ?, ?)")
-    .run(ctx.organizationId, siteId, n, JSON.stringify(componentSection(ctx, section)), ctx.userId ?? null).lastInsertRowid);
-  audit(ctx, "component.created", "component", id, {});
+  const id = Number(ctx.db.prepare("INSERT INTO mk_web_components (organization_id, site_id, name, section, kind, created_by) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(ctx.organizationId, siteId, n, JSON.stringify(componentSection(ctx, section)), kind, ctx.userId ?? null).lastInsertRowid);
+  audit(ctx, "component.created", "component", id, { kind });
   return getComponent(ctx, id);
 }
 // global : true = partagé par tous les sites ; false = réservé au site siteId (refusé s'il est utilisé ailleurs)
@@ -498,6 +508,47 @@ function updateComponent(ctx, id, { name, section, global, siteId } = {}) {
   audit(ctx, "component.updated", "component", c.id, {});
   return getComponent(ctx, c.id);
 }
+// Copie de travail : modifiée dans l'éditeur du composant, SANS effet sur les pages tant que la mise à jour n'est pas demandée
+function saveComponentDraft(ctx, id, section) {
+  const c = getComponent(ctx, id);
+  if (!c) throw new MarketingError("not_found", "Composant introuvable.");
+  const s = componentSection(ctx, section);
+  checkWidgetRights(ctx, [c.section], [s]);
+  ctx.db.prepare("UPDATE mk_web_components SET draft = ?, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(s), c.id);
+  return getComponent(ctx, c.id);
+}
+// Mise à jour explicite : la copie de travail devient la version diffusée (les instances liées l'affichent), numéro de version + 1
+function publishComponent(ctx, id) {
+  const c = getComponent(ctx, id);
+  if (!c) throw new MarketingError("not_found", "Composant introuvable.");
+  if (!c.draft) return { component: c, changed: false, instances: componentInstances(ctx, c.id) };
+  checkWidgetRights(ctx, [c.section], [c.draft]);
+  transaction(ctx.db, () => {
+    ctx.db.prepare("UPDATE mk_web_components SET section = ?, draft = NULL, version = version + 1, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(c.draft), c.id);
+    audit(ctx, "component.published", "component", c.id, { version: c.version + 1 });
+  });
+  return { component: getComponent(ctx, c.id), changed: true, instances: componentInstances(ctx, c.id) };
+}
+function discardComponentDraft(ctx, id) {
+  const c = getComponent(ctx, id);
+  if (!c) throw new MarketingError("not_found", "Composant introuvable.");
+  ctx.db.prepare("UPDATE mk_web_components SET draft = NULL, updated_at = datetime('now') WHERE id = ?").run(c.id);
+  return getComponent(ctx, c.id);
+}
+// Instances liées réellement présentes dans le contenu de travail de chaque page (brouillon s'il existe, sinon version en ligne) : nombre exact, pas une recherche de texte
+function countRefs(list, id) {
+  return (Array.isArray(list) ? list : []).reduce((n, x) => n + (x && x.type === "component" && Number(x.componentId) === Number(id) ? 1 : 0), 0);
+}
+function componentInstances(ctx, id) {
+  const rows = ctx.db.prepare("SELECT id, name, status, site_id, sections, draft FROM mk_landing_pages WHERE organization_id = ? AND (sections LIKE ? OR sections LIKE ? OR draft LIKE ? OR draft LIKE ?) ORDER BY name")
+    .all(ctx.organizationId, `%"componentId":${Number(id)}}%`, `%"componentId":${Number(id)},%`, `%"componentId":${Number(id)}}%`, `%"componentId":${Number(id)},%`);
+  const out = rows.map((p) => {
+    const draft = json(p.draft, null);
+    const working = draft && Array.isArray(draft.sections) ? draft.sections : json(p.sections, []);
+    return { id: p.id, name: p.name, status: p.status, site_id: p.site_id, count: countRefs(working, id), live: countRefs(json(p.sections, []), id) };
+  }).filter((p) => p.count > 0 || p.live > 0);
+  return out;
+}
 // Pages (en ligne ou en brouillon) qui affichent ce composant synchronisé
 function componentUsage(ctx, id) {
   const n = Number(id);
@@ -505,17 +556,74 @@ function componentUsage(ctx, id) {
   return ctx.db.prepare("SELECT id, name, status, site_id FROM mk_landing_pages WHERE organization_id = ? AND (sections LIKE ? OR sections LIKE ? OR draft LIKE ? OR draft LIKE ?) ORDER BY name")
     .all(ctx.organizationId, end, mid, end, mid);
 }
-function deleteComponent(ctx, id) {
+// Copie profonde d'une section de composant avec de NOUVEAUX identifiants (sections et éléments) : une instance détachée ne partage aucun identifiant avec la source
+function freshIds(section) {
+  const crypto = require("crypto");
+  const nid = () => crypto.randomBytes(6).toString("hex");
+  const walk = (x) => {
+    const y = { ...x, id: nid() };
+    if (Array.isArray(x.children)) y.children = x.children.map(walk);
+    return y;
+  };
+  return walk(section);
+}
+// Transforme une liste de sections : chaque instance liée au composant est retirée (mode « instances ») ou remplacée par une copie indépendante (mode « detach »)
+function convertRefs(list, c, mode) {
+  let changed = 0;
+  const out = [];
+  for (const x of Array.isArray(list) ? list : []) {
+    if (x && x.type === "component" && Number(x.componentId) === c.id) {
+      changed += 1;
+      if (mode === "detach") {
+        const copy = freshIds(c.section);
+        const { type: _t, componentId: _c, ...attrs } = x;
+        out.push({ ...copy, ...(attrs.hideOn ? { hideOn: attrs.hideOn } : {}), ...(attrs.name ? { name: attrs.name } : {}), id: x.id || copy.id });
+      }
+    } else out.push(x);
+  }
+  return { list: out, changed };
+}
+const DELETE_MODES = ["instances", "detach"];
+// Suppression intelligente. Sans instance liée : suppression directe. Avec des instances : un choix OBLIGATOIRE — « instances » (supprimer aussi les instances liées)
+// ou « detach » (les conserver, devenues indépendantes). Tout se passe dans UNE transaction : en cas d'échec, rien n'est modifié (aucune instance orpheline).
+// skipDraftOfPage : le brouillon de cette page est converti par l'éditeur ouvert (annulable) ; sa version en ligne, elle, est traitée ici.
+function deleteComponent(ctx, id, { mode = null, skipDraftOfPage = null } = {}) {
   const c = getComponent(ctx, id);
   if (!c) throw new MarketingError("not_found", "Composant introuvable.");
   const asPart = ctx.db.prepare("SELECT name FROM mk_sites WHERE organization_id = ? AND (header_component_id = ? OR footer_component_id = ?)").all(ctx.organizationId, c.id, c.id);
   if (asPart.length) throw new MarketingError("in_use", `Ce composant est l'en-tête ou le pied de page du site ${asPart.map((x) => `« ${x.name} »`).join(", ")} : choisissez-en un autre d'abord.`);
   const asVariant = ctx.db.prepare("SELECT name FROM mk_landing_pages WHERE organization_id = ? AND header_component_id = ?").all(ctx.organizationId, c.id);
-  if (asVariant.length) throw new MarketingError("in_use", `Cette variante est l'en-tête de ${asVariant.length} page(s) : ${asVariant.map((x) => `« ${x.name} »`).join(", ")}. Remettez-les sur l'en-tête du site d'abord.`);
-  const used = componentUsage(ctx, c.id);
-  if (used.length) throw new MarketingError("in_use", `Ce composant est utilisé par ${used.length} page(s) : ${used.map((p) => `« ${p.name} »`).join(", ")}. Retirez-le de ces pages d'abord.`);
-  ctx.db.prepare("DELETE FROM mk_web_components WHERE id = ?").run(c.id);
-  audit(ctx, "component.deleted", "component", c.id, {});
+  if (asVariant.length) throw new MarketingError("in_use", `Cette variante est l'en-tête de ${asVariant.length} page(s) : ${asVariant.map((x) => `« ${x.name} »`).join(", ")}. Remettez-les sur l'en-tête du site (page › en-tête) avant de supprimer cette variante.`);
+  const used = componentInstances(ctx, c.id);
+  if (used.length && !mode) {
+    const error = new MarketingError("in_use", `Ce composant a encore des instances liées dans ${used.length} page(s) : ${used.map((p) => `« ${p.name} »`).join(", ")}. Choisissez : les supprimer aussi, ou les conserver comme blocs indépendants.`);
+    error.details = { instances: used.reduce((n, p) => n + p.count, 0), pages: used };
+    throw error;
+  }
+  if (mode && !DELETE_MODES.includes(mode)) throw bad("Choix de suppression inconnu (instances ou detach).");
+  let converted = 0, pagesTouched = 0;
+  const revisions = {}; // nouvelle révision des pages modifiées : l'éditeur ouvert sur l'une d'elles évite ainsi un faux conflit à son prochain enregistrement
+  transaction(ctx.db, () => {
+    for (const p of used) {
+      const row = ctx.db.prepare("SELECT id, sections, draft, revision FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(p.id, ctx.organizationId);
+      const live = convertRefs(json(row.sections, []), c, mode);
+      let draftJson = row.draft, dChanged = 0;
+      if (row.draft && Number(skipDraftOfPage) !== row.id) {
+        const d = json(row.draft, null);
+        if (d && Array.isArray(d.sections)) { const r = convertRefs(d.sections, c, mode); dChanged = r.changed; draftJson = JSON.stringify({ ...d, sections: r.list }); }
+      }
+      if (!live.changed && !dChanged) continue;
+      ctx.db.prepare("UPDATE mk_landing_pages SET sections = ?, draft = ?, revision = revision + 1, updated_at = datetime('now') WHERE id = ? AND organization_id = ?")
+        .run(live.changed ? JSON.stringify(live.list) : row.sections, draftJson, row.id, ctx.organizationId);
+      converted += live.changed + dChanged; pagesTouched += 1; revisions[row.id] = row.revision + 1;
+    }
+    // Garde-fou : plus aucune référence (hors brouillon géré par l'éditeur ouvert) ne doit pointer vers ce composant
+    const left = componentInstances(ctx, c.id).filter((p) => Number(skipDraftOfPage) !== p.id || p.live > 0);
+    if (left.length) throw new MarketingError("failed", "La conversion des instances n'a pas abouti : rien n'a été supprimé.");
+    ctx.db.prepare("DELETE FROM mk_web_components WHERE id = ?").run(c.id);
+    audit(ctx, "component.deleted", "component", c.id, { mode: mode || "none", pages: pagesTouched, instances: converted });
+  });
+  return { mode: mode || "none", pages: pagesTouched, instances: converted, revisions };
 }
 // Affichage : chaque composant synchronisé est remplacé par sa dernière version (un composant supprimé disparaît)
 // ---------- Parties globales d'un site (en-tête, pied de page) ----------
@@ -684,7 +792,7 @@ module.exports = {
   getPage, requirePage, listPages, normalizeContent, saveDraft, discardDraft, publish, unpublish, listVersions, getVersion, restoreVersion,
   createPage, duplicatePage, archivePage, restorePage,
   getSite, requireSite, listSites, sitePages, createSite, updateSite, saveSiteDesign, colorUsage, setHomePage, movePage, archiveSite, restoreSite, duplicateSite,
-  listComponents, getComponent, createComponent, updateComponent, componentUsage, deleteComponent, resolveSections,
+  listComponents, getComponent, createComponent, updateComponent, componentUsage, componentInstances, saveComponentDraft, publishComponent, discardComponentDraft, deleteComponent, COMPONENT_KINDS, resolveSections,
   siteParts, withSiteParts, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
   normalizeSeo, normalizeTheme, TYPES,
 };
