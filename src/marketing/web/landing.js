@@ -97,7 +97,7 @@ module.exports = () => {
       const template = typeof req.body.template === "string" && req.body.template ? req.body.template : null;
       // Nouvelle page du CMS : une page de site (bandeau + texte, publiable tout de suite) ; sans « ouvrir », comportement historique (page d'atterrissage)
       const layout = req.body.layoutMode === "guided" ? { mode: "guided", format: req.body.layoutFormat, maxWidth: req.body.layoutMax, gutter: req.body.layoutGutter, locked: req.body.layoutLocked === "1" } : null;
-      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId || toBuilder ? "page" : "landing", template, layout });
+      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId || toBuilder ? "page" : "landing", template, layout, blank: toBuilder && !template });
       return template ? "Page créée à partir du modèle (brouillon) : remplacez les textes entre crochets dans l'éditeur visuel, puis publiez-la." : "Page créée (brouillon) : composez-la, puis publiez-la.";
     });
   });

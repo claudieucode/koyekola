@@ -194,7 +194,7 @@ function uniqueName(ctx, table, base) {
 }
 
 // Nouvelle page dans un site (ou isolée) : même création que les pages d'atterrissage, avec sa nature
-function createPage(ctx, { name, siteId = null, kind = "page", template = null, layout = null } = {}) {
+function createPage(ctx, { name, siteId = null, kind = "page", template = null, layout = null, blank = false } = {}) {
   if (!Object.hasOwn(KINDS, kind)) throw bad("Nature de page inconnue.");
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   // Gabarit choisi : ses sections (validées par la grammaire commune, comme toute section enregistrée)
@@ -213,7 +213,9 @@ function createPage(ctx, { name, siteId = null, kind = "page", template = null, 
   }
   // Page de site : un bandeau et un texte (la section d'inscription des pages d'atterrissage demanderait un formulaire
   // avant toute publication)
-  if (kind === "page" || kind === "step") {
+  // Page vierge demandée explicitement (éditeur) : aucune section, l'éditeur propose alors création classique ou guidée. Sans `blank`, le contenu de départ historique est inchangé.
+  if (blank) ctx.db.prepare("UPDATE mk_landing_pages SET sections = '[]' WHERE id = ?").run(page.id);
+  else if (kind === "page" || kind === "step") {
     const start = [{ ...page.sections[0], id: newSectionId() }, { type: "text", markdown: "Présentez ici le contenu de la page.", id: newSectionId() }];
     ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(start), page.id);
   }

@@ -115,6 +115,8 @@
           <iframe class="pb-frame" data-pb-frame title="Page en cours d'édition"></iframe>
         </div>
       </div>
+      <%# Écran de démarrage d'une page réellement vide : rempli et affiché par page-builder.js (jamais pendant le chargement), limité à la zone du canevas %>
+      <section class="pb-start" data-pb-start aria-label="Comment voulez-vous commencer cette page ?" hidden></section>
       <%# Navigation du canevas (bas droite) : zoom réel, partagé avec les règles, les guides et le magnétisme %>
       <div class="pb-gizmo" role="group" aria-label="Zoom du canevas">
         <button type="button" class="pb-icon-btn" data-pb-zoom="-" data-tip="Zoom arrière (Ctrl/⌘ + -)" aria-label="Zoom arrière"><%- icon("minus", { size: 15 }) %></button>

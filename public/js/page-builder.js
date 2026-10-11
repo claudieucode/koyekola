@@ -226,6 +226,7 @@
     guarded(function () { if (light) scheduleTree(); else { clearTimeout(treeTimer); renderTree(); } });
     if (!light) { guarded(renderInspector); guarded(renderContext); guarded(refreshPageSettings); }
     guarded(updateHistoryButtons);
+    guarded(refreshStart);
     if (!light) { guarded(placeCanvasBar); guarded(renderDoc); } // saisie : la barre est replacée avec les repères, juste après le rendu du canevas
     scheduleRender(quick);
     scheduleSave();
@@ -4371,6 +4372,7 @@
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
     canvasReady = true;
+    guarded(refreshStart); // premier rendu terminé : seul moment où une page vide peut proposer le choix de création
     doc.body.classList.add("lp-builder");
     if (window.pbDirect) window.pbDirect.canvas(doc); // manipulation directe : couche de survol et poignées de ce document
     doc.body.classList.toggle("pb-outlines", aids.outlines);
@@ -6076,6 +6078,99 @@
       box.appendChild(textField("Marge latérale minimale (px)", String(l.gutter), function (v) { var n = Math.round(Number(v)); if (isFinite(n) && n >= 0 && n <= 96) setLayout(fmt({ gutter: n })); }, { type: "number", disabled: !canWrite || locked }));
     } else box.appendChild(h("p", { class: "pb-hint", text: "Largeur fluide plafonnée à " + (l.maxWidth ? l.maxWidth + " px" : "l'écran") + ", marges de " + l.gutter + " px minimum. Les éléments de premier niveau de chaque section suivent ce format ; un réglage manuel l'emporte tant que le format est déverrouillé." }));
     box.appendChild(checkField("Verrouiller le format", l.locked, function (v) { setLayout(fmt({ locked: v })); }, { disabled: !canWrite, hint: locked ? "Protégé : " + LF.protected.map(function (p) { return LF.labels[p]; }).join(", ").toLowerCase() + " des éléments de premier niveau, le format lui-même. Textes, images, couleurs, widgets et sections restent libres." : "Verrouillé, le format protège la largeur et les marges des éléments de premier niveau, y compris pour l'IA." }));
+  }
+  // ---------- Écran de démarrage d'une page vide : « Création classique » ou « Création guidée » ----------
+  // Aucun moteur de plus : « classique » ouvre le sélecteur de structures habituel, « guidée » écrit theme.layout par setLayout (même voie que l'onglet Page,
+  // verrou contrôlé par le serveur). Affiché seulement pour un vrai état vide : écriture permise, aucune section, aucun format, canevas rendu, aucune
+  // modification dans la session. Dès qu'une section ou une modification existe, il ne revient plus (vider une page existante ne le déclenche pas).
+  var startEl = $("[data-pb-start]"), startStep = "choice", startDraft = null, startDone = IS_COMPONENT || !canWrite || content.sections.length > 0 || Boolean(layoutOf());
+  function startEligible() { return !startDone && canvasReady && !past.length && !content.sections.length && !layoutOf(); }
+  function startFinish() { startDone = true; refreshStart(); }
+  function refreshStart() {
+    if (!startEl) return;
+    if (!startDone && (content.sections.length || past.length || layoutOf())) startDone = true;
+    if (!startEligible()) { if (!startEl.hidden) { startEl.hidden = true; startEl.textContent = ""; } return; }
+    if (!startEl.hidden) return; // déjà affiché : pas de redessin
+    startStep = "choice"; startDraft = null;
+    startEl.hidden = false;
+    paintStart();
+  }
+  function paintStart(focusFirst) {
+    startEl.textContent = "";
+    var box = h("div", { class: "pb-start-box" });
+    startEl.appendChild(box);
+    if (startStep === "choice") paintStartChoice(box); else paintStartConfig(box);
+    if (focusFirst !== false) { var f = box.querySelector("button:not([disabled]), input:not([disabled])"); if (f) f.focus({ preventScroll: true }); }
+  }
+  function startCard(iconName, title, text, hint, label, onclick, id) {
+    return h("div", { class: "pb-start-card", "data-pb-start-card": id },
+      h("span", { class: "pb-start-icon", "aria-hidden": "true" }, icon(iconName)),
+      h("h2", { class: "pb-start-title", text: title }),
+      h("p", { class: "pb-start-text", text: text }),
+      h("p", { class: "pb-start-hint", text: hint }),
+      h("button", { type: "button", class: "btn btn-primary pb-start-btn", "data-pb-start-go": id, onclick: onclick }, label));
+  }
+  function paintStartChoice(box) {
+    box.appendChild(h("h1", { class: "pb-start-head", text: "Comment voulez-vous commencer ?" }));
+    box.appendChild(h("div", { class: "pb-start-cards" },
+      startCard("layers", "Création classique", "Construisez librement votre page avec les conteneurs, Flexbox et les widgets Kolakisa.", "Aucune contrainte : vous réglez tout vous-même.", "Commencer",
+        function () { startFinish(); openStructurePicker({ parent: null, index: 0 }); }, "classic"),
+      startCard("layout", "Création guidée", "Choisissez un gabarit de conception web et définissez les règles de mise en page de votre page.", "Largeur du contenu et marges fixées au départ, protégeables par un verrou.", "Choisir un gabarit",
+        function () { startStep = "config"; var p = LF.formats.standard || {}; startDraft = { format: "standard", maxWidth: p.maxWidth || 1200, gutter: p.gutter || 24, locked: true }; paintStart(); }, "guided")));
+    box.appendChild(h("p", { class: "pb-start-foot", text: "Dans les deux cas vous utilisez les mêmes conteneurs, la même grille Flexbox et les mêmes widgets. Vous pourrez changer de mode plus tard dans l'onglet « Page »." }));
+  }
+  function startPreview() {
+    var d = startDraft, wide = d.maxWidth > 0 ? Math.max(20, Math.min(100, Math.round(d.maxWidth / 1600 * 100))) : 100;
+    var pv = h("div", { class: "pb-start-preview", "data-pb-start-preview": "", role: "img", "aria-label": "Aperçu : contenu centré, " + (d.maxWidth ? d.maxWidth + " px au plus" : "sans largeur maximale") + ", marges de " + d.gutter + " px au minimum" },
+      h("div", { class: "pb-start-pv-inner", style: "width:" + wide + "%" }, h("span", { class: "pb-start-pv-bar" }), h("span", { class: "pb-start-pv-bar is-short" }), h("span", { class: "pb-start-pv-block" })));
+    return h("div", null, pv, h("p", { class: "pb-hint pb-start-pv-note", "data-pb-start-note": "", text: d.maxWidth ? "Contenu : " + d.maxWidth + " px au plus, marges de " + d.gutter + " px au minimum. Sur un écran plus étroit, il suit l'écran." : "Contenu fluide : il suit toute la largeur de l'écran, marges de " + d.gutter + " px au minimum." }));
+  }
+  function paintStartConfig(box) {
+    var d = startDraft, presets = LF.formats, err = h("p", { class: "pb-note is-warn", role: "alert", hidden: true });
+    box.appendChild(h("h1", { class: "pb-start-head", text: "Choisissez un gabarit" }));
+    var list = h("div", { class: "pb-start-formats", role: "radiogroup", "aria-label": "Format de conception" });
+    Object.keys(presets).forEach(function (k) {
+      var f = presets[k], on = d.format === k;
+      list.appendChild(h("button", { type: "button", class: "pb-start-format" + (on ? " is-on" : ""), role: "radio", "aria-checked": on ? "true" : "false", "data-pb-start-format": k, onclick: function () {
+        d.format = k; if (k !== "custom") { d.maxWidth = f.maxWidth; d.gutter = f.gutter; }
+        paintStart(false); var b = box.parentNode && startEl.querySelector('[data-pb-start-format="' + k + '"]'); if (b) b.focus({ preventScroll: true });
+      } }, h("strong", { text: f.label }), h("span", { text: k === "custom" ? "320 à 2 400 px" : (f.maxWidth ? f.maxWidth + " px" : "Largeur de l'écran") })));
+    });
+    box.appendChild(list);
+    box.appendChild(h("p", { class: "pb-hint", text: (presets[d.format] || {}).hint || "" }));
+    var pvHost = h("div", { class: "pb-start-pvhost" });
+    var refreshPv = function () { pvHost.textContent = ""; pvHost.appendChild(startPreview()); };
+    if (d.format === "custom") {
+      var num = function (label, key, min, max, note) {
+        var inp = h("input", { type: "number", class: "pb-input", value: String(d[key]), min: String(min), max: String(max), "aria-label": label });
+        inp.setAttribute("data-pb-start-" + key, "");
+        inp.addEventListener("input", function () { d[key] = inp.value === "" ? NaN : Number(inp.value); refreshPv(); });
+        return h("label", { class: "pb-start-num" }, h("span", { text: label }), inp, h("small", { text: note }));
+      };
+      box.appendChild(h("div", { class: "pb-start-nums" }, num("Largeur maximale du contenu (px)", "maxWidth", 0, 2400, "0 = aucune limite, sinon 320 à 2 400"), num("Marge latérale minimale (px)", "gutter", 0, 96, "0 à 96")));
+    }
+    refreshPv();
+    box.appendChild(pvHost);
+    var lockText = function () { return d.locked ? "Protège " + LF.protected.map(function (p) { return LF.labels[p]; }).join(", ").toLowerCase() + " des éléments de premier niveau. Textes, images, couleurs et widgets restent libres. Modifiable ensuite dans l'onglet « Page »." : "Les réglages du format restent modifiables partout. Vous pourrez verrouiller plus tard dans l'onglet « Page »."; };
+    var lockLabel = h("strong", { text: d.locked ? "Format verrouillé" : "Format déverrouillé" }), lockHint = h("small", { text: lockText() });
+    var lock = h("button", { type: "button", class: "pb-start-lock" + (d.locked ? " is-on" : ""), role: "switch", "aria-checked": d.locked ? "true" : "false", "data-pb-start-lock": "", onclick: function () {
+      d.locked = !d.locked; lock.classList.toggle("is-on", d.locked); lock.setAttribute("aria-checked", d.locked ? "true" : "false"); lockLabel.textContent = d.locked ? "Format verrouillé" : "Format déverrouillé"; lockHint.textContent = lockText();
+    } }, icon("lock"), h("span", { class: "pb-start-lock-text" }, lockLabel, lockHint));
+    box.appendChild(lock);
+    box.appendChild(err);
+    box.appendChild(h("div", { class: "pb-start-actions" },
+      h("button", { type: "button", class: "btn btn-outline", "data-pb-start-back": "", onclick: function () { startStep = "choice"; paintStart(); } }, "Retour"),
+      h("button", { type: "button", class: "btn btn-outline", "data-pb-start-cancel": "", onclick: startFinish }, "Annuler"),
+      h("button", { type: "button", class: "btn btn-primary", "data-pb-start-continue": "", onclick: function () {
+        var wOk = d.maxWidth === 0 || (Number.isInteger(d.maxWidth) && d.maxWidth >= 320 && d.maxWidth <= 2400), gOk = Number.isInteger(d.gutter) && d.gutter >= 0 && d.gutter <= 96;
+        if (d.format === "custom" && !(wOk && gOk)) { err.textContent = !wOk ? "Largeur maximale : 0 (aucune limite) ou entre 320 et 2 400 px." : "Marge latérale : entre 0 et 96 px."; err.hidden = false; return; }
+        var layout = { mode: "guided", format: d.format, maxWidth: d.maxWidth, gutter: d.gutter, locked: d.locked };
+        startDone = true; // le panneau se retire d'abord : aucune retouche du canevas par lui
+        setLayout(layout);
+        refreshStart();
+        openStructurePicker({ parent: null, index: 0 });
+      } }, "Continuer")));
+    box.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.stopPropagation(); startStep = "choice"; paintStart(); } });
   }
   function renderPageSettings() {
     pageSettingsStale = false;

@@ -176,4 +176,14 @@ async function buy(student, course) {
   return student.post("/commande", {});
 }
 
-module.exports = { startServer, Client, loginInstructor, newStudent, createCourse, buy, INSTRUCTOR };
+// Page vide ouverte dans l'éditeur : l'écran « Création classique / guidée » recouvre le canevas. Les tests qui partent d'un canevas vide pour
+// manipuler le « + » le referment sans rien écrire (Choisir un gabarit → Annuler) ; sans effet si l'écran n'est pas affiché.
+async function dismissStart(page) {
+  const start = page.locator("[data-pb-start]");
+  if (!(await start.isVisible().catch(() => false))) return;
+  await page.locator('[data-pb-start-go="guided"]').click();
+  await page.locator("[data-pb-start-cancel]").click();
+  await start.waitFor({ state: "hidden" });
+}
+
+module.exports = { startServer, Client, loginInstructor, newStudent, createCourse, buy, INSTRUCTOR, dismissStart };
