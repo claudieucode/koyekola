@@ -1888,3 +1888,27 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-sp-summary { margin: 0; font-size: 13px; font-weight: 600; }
 .pb-sp-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--editor-border, var(--border)); }
 @media (max-width: 520px) { .pb-sp-props { grid-template-columns: 1fr; } }
+/* ---------- Composants réutilisables : bibliothèque, boîte de dialogue (jetons --editor-*, clair et sombre) ---------- */
+.pb-comp2 { grid-template-columns: 1fr auto; align-items: center; gap: 8px; }
+.pb-comp-main { min-width: 0; display: grid; gap: 2px; }
+.pb-comp-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.pb-comp-actions { display: flex; align-items: center; gap: 4px; }
+.pb-comp-badge { font-size: 10.5px; font-weight: 600; line-height: 1; padding: 3px 6px; border-radius: 999px; border: 1px solid var(--editor-border, var(--border)); color: var(--editor-text-muted, inherit); background: var(--editor-surface-2, transparent); }
+.pb-comp-badge.is-global { color: var(--editor-accent, inherit); border-color: var(--editor-accent, var(--border)); }
+.pb-comp-badge.is-draft { font-style: italic; }
+.pb-comp-dlg { width: min(480px, calc(100vw - 32px)); }
+.pb-comp-dlg-body { display: grid; gap: 12px; padding: 4px 0 8px; }
+.pb-comp-dlg-foot { display: flex; justify-content: flex-end; gap: 8px; padding-top: 8px; }
+.pb-comp-dlg .pb-field input[type=text] { width: 100%; }
+.pb-comp-sum { border: 1px solid var(--editor-border, var(--border)); border-radius: var(--pb-radius-md, 8px); padding: 8px 10px; display: grid; gap: 6px; background: var(--editor-surface-2, transparent); }
+.pb-comp-sum-title { margin: 0; font-weight: 600; font-size: 13px; }
+.pb-comp-tree { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 12.5px; }
+.pb-comp-tree li { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pb-comp-tree svg { width: 14px; height: 14px; flex: none; opacity: .7; }
+.pb-comp-kinds { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pb-comp-kinds legend { font-weight: 600; font-size: 13px; padding: 0 0 4px; }
+.pb-comp-kind { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 10px; border: 1px solid var(--editor-border, var(--border)); border-radius: var(--pb-radius-md, 8px); cursor: pointer; }
+.pb-comp-kind:has(input:checked) { border-color: var(--editor-accent, currentColor); }
+.pb-comp-kind:has(input:focus-visible) { outline: 2px solid var(--editor-accent, currentColor); outline-offset: 2px; }
+.pb-comp-kind small { display: block; opacity: .75; margin-top: 2px; }
+.pb-comp-pages { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
