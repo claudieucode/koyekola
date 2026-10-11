@@ -1727,6 +1727,9 @@ function normalizeNode(raw, at, h, depth, counter) {
   const node = { id, type: raw.type, props: def.props(rawProps, where, dynamicHelpers(h)) };
   if (cw && cw.version > 1) node.v = cw.version;
   if (label) node.name = label;
+  // Note privée de l'équipe (jamais écrite dans la page publique)
+  const note = clean(raw.note, 500);
+  if (note) node.note = note;
   if (raw.hidden === true) node.hidden = true;
   if (raw.locked === true) node.locked = true;
   // Ancre : identifiant HTML pour les liens internes (« /p/ma-page#tarifs »), unique dans la page

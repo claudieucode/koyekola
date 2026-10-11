@@ -122,5 +122,22 @@ describe("parité Elementor : réglages dans l'inspecteur (navigateur)", { skip:
     await until(() => ((doc().theme || {}).scrollSnap || {}).position === "center", { what: "magnétisme enregistré" });
   });
 
+  test("note de l'équipe : saisie dans Avancé, pastille dans la Structure, jamais publiée", async () => {
+    await pick("text00000001"); await tab("Avancé"); await openAll();
+    const area = page.locator('[data-pb-inspector] .pb-field:has(label:text-is("Note privée sur cet élément")) textarea');
+    await area.fill("À relire avec le juridique <script>x</script>"); await area.blur();
+    await until(() => node("text00000001") && node("text00000001").note, { what: "note enregistrée" });
+    await until(() => page.locator('[data-pb-layers] .pb-node[data-id="text00000001"] .pb-note-dot').count(), { what: "pastille de note" });
+    assert.match(await page.locator('[data-pb-layers] .pb-node[data-id="text00000001"] .pb-note-dot').first().getAttribute("aria-label"), /À relire/);
+    await page.waitForTimeout(1500); // enregistrement automatique du brouillon
+    await until(() => (doc().sections[0].children[0].children.find((n) => n.id === "text00000001") || {}).note, { what: "note dans le brouillon" });
+    // publique : la note n'apparaît nulle part dans la page rendue
+    const r = await boss.request(`/marketing/pages/${id}/apercu`);
+    assert.ok(!String(r.text || "").includes("juridique"), "la note ne doit jamais être écrite dans la page");
+    // effacer la note la retire
+    await area.fill(""); await area.blur();
+    await until(() => !node("text00000001").note, { what: "note retirée" });
+  });
+
   test("aucune erreur de script", () => { assert.deepEqual(errors, []); });
 });

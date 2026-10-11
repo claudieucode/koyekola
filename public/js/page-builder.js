@@ -1014,7 +1014,7 @@
   function treeSignature() {
     var out = [];
     treeNames = {};
-    (function w(list, lvl) { list.forEach(function (it) { var k = kidsOf(it); var nm = treeNames[it.id] = nameOf(it); out.push(it.id + "|" + lvl + "|" + it.type + "|" + nm + "|" + (it.hidden ? 1 : 0) + (it.locked ? 1 : 0) + (collapsed[it.id] ? 1 : 0) + "|" + (k ? k.length : -1)); if (k) w(k, lvl + 1); }); })(content.sections, 1);
+    (function w(list, lvl) { list.forEach(function (it) { var k = kidsOf(it); var nm = treeNames[it.id] = nameOf(it); out.push(it.id + "|" + lvl + "|" + it.type + "|" + nm + "|" + (it.hidden ? 1 : 0) + (it.locked ? 1 : 0) + (it.note ? "n" + it.note.length : "") + (collapsed[it.id] ? 1 : 0) + "|" + (k ? k.length : -1)); if (k) w(k, lvl + 1); }); })(content.sections, 1);
     return out.join("\n") + "#" + treeQuery + "#" + errorItemId + "#" + canWrite;
   }
   function renderTree() {
@@ -1035,6 +1035,7 @@
         kids && kids.length ? h("button", { type: "button", class: "pb-twist", tabindex: "-1", "aria-label": open ? "Replier" : "Déplier", onclick: function (e) { e.stopPropagation(); toggleCollapse(id); } }, icon(open ? "chevronDown" : "chevronRight")) : h("span", { class: "pb-twist-gap", "aria-hidden": "true" }),
         h("span", { class: "pb-node-icon", "aria-hidden": "true" }, icon(isNode(it0) ? NT[it0.type].icon : it0.type === "layout" ? "layout" : "fileText")),
         h("span", { class: "pb-node-name", text: label }),
+        it0.note ? h("span", { class: "pb-note-dot", role: "img", "aria-label": "Note de l'équipe : " + it0.note, "data-tip": it0.note }, icon("fileText")) : null,
         h("span", { class: "pb-node-flags" },
           h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it0.hidden ? " is-on" : ""), "aria-pressed": String(Boolean(it0.hidden)), "aria-label": (it0.hidden ? "Afficher « " : "Masquer « ") + label + " »", "data-tip": it0.hidden ? "Afficher" : "Masquer", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([id], "hidden", !cur().hidden); } }, icon(it0.hidden ? "eyeOff" : "eye")),
           h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it0.locked ? " is-on" : ""), "aria-pressed": String(Boolean(it0.locked)), "aria-label": (it0.locked ? "Déverrouiller « " : "Verrouiller « ") + label + " »", "data-tip": it0.locked ? "Déverrouiller" : "Verrouiller", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([id], "locked", !cur().locked); } }, icon("lock")),
@@ -1084,7 +1085,7 @@
         if (treeQuery && !hasMatch(it)) return;
         var kids = kidsOf(it), has = Boolean(kids && kids.length), open = has && (treeQuery ? true : !collapsed[it.id]);
         // Signature de la LIGNE (sans ses enfants) : tout ce qu'elle affiche
-        var rsig = [level, it.type, nm(it), it.hidden ? 1 : 0, it.locked ? 1 : 0, has ? (open ? "o" : "c") : "-", it.id === errorItemId ? 1 : 0, canWrite ? 1 : 0].join("|");
+        var rsig = [level, it.type, nm(it), it.hidden ? 1 : 0, it.locked ? 1 : 0, it.note || "", has ? (open ? "o" : "c") : "-", it.id === errorItemId ? 1 : 0, canWrite ? 1 : 0].join("|");
         var ent = treeLi[it.id], brandNew = treeRendered && !treeQuery && !ent;
         if (!ent || ent.sig !== rsig) ent = { li: makeRow(it, level, kids, open), sig: rsig };
         if (brandNew) freshRows.push(ent.li);
@@ -4131,6 +4132,7 @@
       box.appendChild(info);
       box.appendChild(textField("Nom du calque", it.name, function (v) { rename(it.id, v); }, { max: 60, placeholder: inspectorFor(it).kind, onChange: true, disabled: !canWrite }));
       if (isNode(it)) box.appendChild(anchorField(it, locked));
+      if (isNode(it)) box.appendChild(noteGroup(it, locked));
     }
     // Position et plan (propriétés avancées de placement), pour l'écran actif
     if (inspectorFor(it).groups) {
@@ -4216,6 +4218,12 @@
   }
   // Contenu d'un groupe existant (déjà repliable) placé dans un autre groupe : sans double titre
   var bodyOf = function (det) { var b = det.querySelector(":scope > .pb-acc-body"); return b || det; };
+  // Note privée de l'équipe sur un élément : visible seulement dans l'éditeur (jamais écrite dans la page publique)
+  function noteGroup(it, locked) {
+    return accGroup("g-note", "Note de l'équipe", Boolean(it.note), function (b) {
+      b.appendChild(textField("Note privée sur cet élément", it.note || "", function (v) { change(function () { var s = byId(it.id); if (!s) return false; var n = String(v || "").trim().slice(0, 500); if ((s.note || "") === n) return false; if (n) s.note = n; else delete s.note; }); }, { multiline: true, rows: 3, max: 500, disabled: locked, onChange: true, hint: "Visible seulement dans l'éditeur (pastille dans la Structure). Jamais publiée sur le site." }));
+    }, it.note ? 1 : 0);
+  }
   function generalTab(it, box, locked) {
     var dis = !canWrite || locked;
     var p = it.props || {};
@@ -4235,6 +4243,7 @@
       b.appendChild(audienceField(it, locked));
       b.appendChild(screensField(it, locked));
     }, (it.audience ? 1 : 0) + ((it.hideOn || []).length ? 1 : 0)));
+    box.appendChild(noteGroup(it, locked));
     box.appendChild(infoBlock(it));
     box.appendChild(accGroup("g-actions", "Actions", true, function (b) { actionsAndComponent([it], b, locked); }));
   }
