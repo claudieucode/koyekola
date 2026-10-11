@@ -29,3 +29,10 @@ Aucune migration de base. Les réglages ajoutés sont des propriétés facultati
 
 ## Conservé sans modification / exclu / reporté
 Voir `KOLAKISA_EDITOR_GAP_ANALYSIS.md` (liste des écarts non faits, avec la raison) et `KOLAKISA_EDITOR_LIMITATIONS.md`.
+
+## Dernière passe (11 octobre 2026)
+- `/sante` : champ `versions_images` (« ok » après fabrication réelle d'une image WebP par `sharp`, sinon « indisponible »).
+- Fenêtre (popup) : déclencheur « après N clics », pages vues minimum pendant la visite (compteur de session), provenance (direct, moteur de recherche, réseau social, autre site) ; valeurs bornées côté serveur.
+- Note de l'équipe par élément : champ `note` (500 caractères au plus), pastille dans la Structure, jamais écrite dans la page publiée.
+- Boucle : conteneur « carte insérée » (`loopInsert`) intercalé après le N-ième résultat (`loop.insertAt`), une fois ou tous les N (`insertEvery`).
+- Classes globales : export `.json` et import avec fusion par nom, validé par l'enregistrement normal des réglages du site.

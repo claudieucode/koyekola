@@ -14,6 +14,9 @@ Historique des passages complets de la mission : 4 665 (5 échecs réels, corrig
 
 ## Ce que les tests ne prouvent pas
 - Tout est vérifié sur **Chrome** ; Safari et Firefox non testés.
-- Le **chargement de `sharp` sur Hostinger** n'est vérifiable qu'après déploiement (le repli sans `sharp` est testé).
+- Le **chargement de `sharp` sur Hostinger** est vérifié après déploiement par `/sante` (`versions_images`) ; le repli sans `sharp` est testé.
 - Le responsive est vérifié par le CSS et par des tests à 1 400 px et 420 px (écran de démarrage) ; les nouveaux widgets ne sont pas mesurés à 390 px en navigateur.
 - Aucun test de charge sur la fabrication d'images.
+
+## Tests ajoutés dans la dernière passe
+`boucle-carte-inseree` (2), `classes-export-import-navigateur` (4), `elementor-parite-3-navigateur` (+1 : clics, pages vues, provenance), `elementor-parite-4-editeur-navigateur` (+2 : note, boucle), `images-resolutions` (+1 : `/sante`).

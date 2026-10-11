@@ -13,15 +13,15 @@ _Ce rapport ne déclare ni « tout est terminé » ni « parité parfaite ». Il
 | Mesure | Nombre |
 |---|---|
 | Fonctionnalités inventoriées | **109** (73 widgets / éléments, 36 fonctions transversales) |
-| Applicables à Kolakisa | **97** (109 moins 12 sans objet, exclues ou confiées à un autre module) |
-| Présentes dès le départ et validées (suites existantes) | **51** |
-| **Ajoutées ou complétées dans cette mission et validées** (test dédié) | **44** |
-| Partielles | **2** (Portfolio ; boucle sans modèle alterné) |
+| Applicables à Kolakisa | **101** (109 moins 8 sans objet, exclues ou confiées à un autre module) |
+| Présentes dès le départ et validées (suites existantes) | **52** |
+| **Ajoutées ou complétées dans cette mission et validées** (test dédié) | **49** |
+| Partielles | **0** |
 | Confiées à un autre module (formulaires) | **1** |
-| Non faites ou exclues avec raison | **11** |
-| Non testées | **0 parmi les lignes comptées « validées »** ; les 51 lignes « existantes » ne sont pas revalidées une à une dans cette mission : elles reposent sur la suite préexistante qui passe |
+| Non faites ou exclues avec raison | **7** |
+| Non testées | **0 parmi les lignes comptées « validées »** ; les 52 lignes « existantes » ne sont pas revalidées une à une dans cette mission : elles reposent sur la suite préexistante qui passe |
 
-## 3. Ce qui a été corrigé ou ajouté (44 lignes)
+## 3. Ce qui a été corrigé ou ajouté (49 lignes)
 Résolutions d'image (miniature 150, petite 320, moyenne 640, moyenne grande 768, grande 1024, 1536, 1600, 2048, entier, adaptative) sur 7 widgets, le fond d'image et la photo de témoignage ; visionneuse du widget Image ; galerie (3 dispositions, 1–12 colonnes, ratio, légende au survol, filtres) ; contour du texte, lettrine, colonnes, sens d'écriture, balise du titre ; **9 nouveaux widgets** (Appel à l'action, Playlist vidéo, Bouton flottant, Lien intelligent, Contenu Facebook, Plan du site, conteneur en accordéon, et deux complétés en profondeur : fenêtres, diaporama) ; séparateur de forme ; diaporama et vidéo de fond ; dégradé radial / multicolore, découpe du fond, bordures, filtres et filtres d'arrière-plan, formes de masque ; 12 animations de survol ; magnétisme de défilement ; jours / heures et groupes ET / OU ; popups automatiques ; **écran « Grand écran »** ; collage depuis un autre site ou navigateur ; compteur, compte à rebours, liste d'icônes, partage, vidéo, témoignage, points d'intérêt, code, suivi de lecture.
 
 ## 4. Cas de référence : résolution des images (partie VI)
@@ -42,8 +42,10 @@ Voir `KOLAKISA_EDITOR_PERFORMANCE_REPORT.md`. Éditeur (24 sélections, page de 
 - **Sécurité** : aucune valeur libre dans les pages (classes fixes, valeurs validées), adresses reconstruites pour les liens intelligents / Facebook / bouton flottant, SVG et shortcodes refusés, collage depuis le presse-papiers borné et revalidé par le serveur, CSS par élément limité aux déclarations (pas d'`url()`).
 - **Accessibilité** : test d'accessibilité du rendu publié (86 widgets) réussi ; objectif WCAG 2.2 AA **non certifié** (pas d'audit externe).
 
-## 8. Ce qui reste (11 + 2 lignes, toutes dans l'inventaire)
-Commentaires Facebook (ID d'application et script externe) ; PayPal dons / abonnements et boutons Stripe (module Commerce) ; SVG, shortcodes, icônes personnalisées (sécurité) ; popups : clics, pages vues, source de trafic ; conditions propres aux modèles d'article ; autres écrans supplémentaires (portable, paysage) ; Notes ; export / import des classes seules ; boucle : modèle alterné ; Portfolio (filtre par taxonomie). Détail et raisons : `KOLAKISA_EDITOR_GAP_ANALYSIS.md`, `KOLAKISA_EDITOR_LIMITATIONS.md`.
+## 8. Ce qui reste (7 lignes, toutes dans l'inventaire)
+Commentaires Facebook (ID d'application et script externe) ; PayPal dons / abonnements et boutons Stripe (module Commerce) ; SVG, shortcodes, icônes personnalisées (sécurité) ; conditions propres aux modèles d'article (exigent le contexte de rendu de l'article) ; autres écrans supplémentaires (portable, paysage : un cadre de bureau minimum casserait la géométrie testée). Raisons : `KOLAKISA_EDITOR_GAP_ANALYSIS.md`, `KOLAKISA_EDITOR_LIMITATIONS.md`.
+
+**Complété dans la dernière passe** : popups (après N clics, pages vues minimum, provenance du visiteur), note privée par élément, export / import des classes globales, carte insérée dans les boucles, vérification de `sharp` en production par `/sante` (champ `versions_images`), Portfolio (filtre par taxonomie = grille de boucle + Filtre de taxonomie).
 
 ## 9. Risques connus
-`sharp` natif non vérifié en production ; effets de mouvement : seuil du grand écran fixe côté navigateur ; fréquence des popups mémorisée dans le navigateur du visiteur ; collage depuis le presse-papiers soumis à l'autorisation du navigateur ; tout testé sur Chrome seulement.
+`sharp` : vérifiable en production par `/sante` (`versions_images`: « ok » ou « indisponible ») ; effets de mouvement : seuil du grand écran fixe côté navigateur ; fréquence des popups mémorisée dans le navigateur du visiteur ; collage depuis le presse-papiers soumis à l'autorisation du navigateur ; tout testé sur Chrome seulement.
