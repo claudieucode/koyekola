@@ -44,7 +44,7 @@
     <% if (appRail) { %><%- include("../../partials/app-rail", { railNav: appRail.nav, railActive: appRail.active, railUnread: appRail.unread, railStyle: appRail.style }) %><% } %>
     <aside class="mk-sidebar" id="mk-sidebar" aria-label="<%= cms ? 'Menu du CMS' : 'Menu marketing' %>">
       <div class="mk-sidebar-head">
-        <a class="mk-brand" href="<%= cms ? '/marketing/site-web' : '/marketing' %>"><span class="mk-brand-mark" aria-hidden="true">K</span><span class="mk-brand-text">KOLAKISA<small><%= cms ? "CMS" : "Marketing" %></small></span></a>
+        <a class="mk-brand" href="<%= cms ? '/marketing/site-web/sites' : '/marketing' %>"><span class="mk-brand-mark" aria-hidden="true">K</span><span class="mk-brand-text">KOLAKISA<small><%= cms ? "CMS" : "Marketing" %></small></span></a>
         <button type="button" class="mk-collapse-btn" data-mk-sidebar-collapse aria-pressed="false" aria-label="Réduire le menu" title="Réduire le menu"><%- icon("panelLeft", { size: 18 }) %></button>
         <button type="button" class="mk-close-btn" data-mk-sidebar-close aria-label="Fermer le menu"><%- icon("close", { size: 20 }) %></button>
       </div>

@@ -49,14 +49,18 @@ module.exports = () => {
   });
 
   router.get("/site-web/sites", need("forms.read"), (req, res) => {
-    const archived = req.query.vue === "archives";
-    res.render("marketing/sites", { title: "Sites", active: "sites", archived, sites: pages.listSites(req.mk.ctx, { archived }) });
+    const view = pages.SITE_VIEWS.includes(req.query.vue) ? req.query.vue : "actifs";
+    const q = String(req.query.q || "").trim().slice(0, 80);
+    res.render("marketing/sites", {
+      title: "Mes sites", active: "sites", view, q, sites: pages.listSites(req.mk.ctx, { view, q }), counts: pages.siteCounts(req.mk.ctx),
+      siteTypes: pages.SITE_TYPES, canWrite: req.mk.can("forms.write"), canDelete: !req.mk.siteOnly && req.mk.can("forms.write") && req.mk.can("pages.delete"),
+    });
   });
   router.post("/site-web/sites", need("forms.write"), (req, res, next) => {
     let created = null;
     attempt(req, res, next, () => (created ? `/marketing/site-web/sites/${created.id}` : "/marketing/site-web/sites"), () => {
-      created = pages.createSite(req.mk.ctx, { name: req.body.name });
-      return "Site créé : ajoutez ses pages, choisissez sa page d'accueil et réglez son design system.";
+      created = pages.createSite(req.mk.ctx, { name: req.body.name, slug: req.body.slug, description: req.body.description, siteType: req.body.site_type });
+      return `Site « ${created.name} » créé. Ajoutez ses pages, choisissez sa page d'accueil et réglez son design system.`;
     });
   });
 
@@ -90,7 +94,7 @@ module.exports = () => {
     const site = load(req, res);
     if (!site) return;
     res.render("marketing/site", {
-      title: site.name, active: "sites", site, sitePages: pages.listPages(req.mk.ctx, { siteId: site.id }), canWrite: req.mk.can("forms.write"),
+      title: site.name, active: "sites", site, siteTypes: pages.SITE_TYPES, canDelete: !req.mk.siteOnly && req.mk.can("forms.write") && req.mk.can("pages.delete"), sitePages: pages.listPages(req.mk.ctx, { siteId: site.id }), canWrite: req.mk.can("forms.write"),
       T: tokens, cssVars: tokens.tokensToCss(site.tokens), templates: require("../pages/templates").catalog(),
       components: pages.listComponents(req.mk.ctx, { siteId: site.id }), headerOverview: pages.headerOverview(req.mk.ctx, site.id),
     });
@@ -99,7 +103,7 @@ module.exports = () => {
     const site = load(req, res);
     if (!site) return;
     attempt(req, res, next, `/marketing/site-web/sites/${site.id}`, () => {
-      pages.updateSite(req.mk.ctx, site.id, { name: req.body.name });
+      pages.updateSite(req.mk.ctx, site.id, { name: req.body.name, slug: req.body.slug, description: req.body.description, siteType: req.body.site_type });
       if (req.body.home_page_id !== undefined) pages.setHomePage(req.mk.ctx, site.id, intOrNull(req.body.home_page_id));
       return "Réglages du site enregistrés.";
     });
@@ -213,8 +217,9 @@ module.exports = () => {
     if (!site) return;
     let copy = null;
     attempt(req, res, next, () => (copy ? `/marketing/site-web/sites/${copy.id}` : `/marketing/site-web/sites/${site.id}`), () => {
-      copy = pages.duplicateSite(req.mk.ctx, site.id);
-      return `Copie créée : « ${copy.name} » (ses pages sont hors ligne, en brouillon).`;
+      const withPages = req.body.contenu !== "configuration";
+      copy = pages.duplicateSite(req.mk.ctx, site.id, { withPages });
+      return withPages ? `Copie créée : « ${copy.name} » (réglages et pages ; les pages sont en brouillon, hors ligne). Médias, tunnels et articles ne sont pas copiés.` : `Copie créée : « ${copy.name} » (réglages seulement, sans pages).`;
     });
   });
   router.post("/site-web/sites/:id(\\d+)/archiver", need("forms.write"), (req, res, next) => {
@@ -226,6 +231,21 @@ module.exports = () => {
     const site = load(req, res);
     if (!site) return;
     attempt(req, res, next, `/marketing/site-web/sites/${site.id}`, () => { pages.restoreSite(req.mk.ctx, site.id); return "Site restauré. Ses pages restent hors ligne : publiez celles qui sont prêtes."; });
+  });
+  router.post("/site-web/sites/:id(\\d+)/supprimer", need("forms.write"), need("pages.delete"), (req, res, next) => {
+    if (req.mk.siteOnly) return res.status(403).render("error", { message: "Seule l'équipe de l'organisation peut supprimer un site." });
+    const site = load(req, res);
+    if (!site) return;
+    attempt(req, res, next, "/marketing/site-web/sites?vue=archives", () => {
+      if (String(req.body.confirmation || "").trim().toLowerCase() !== site.name.toLowerCase()) throw new (require("../errors").MarketingError)("invalid_field", "Pour supprimer le site, tapez son nom exact dans le champ de confirmation.");
+      pages.deleteSite(req.mk.ctx, site.id);
+      return `Site « ${site.name} » supprimé. Il est dans la corbeille (Mes sites → Supprimés) : rien n'est effacé et vous pouvez le récupérer.`;
+    });
+  });
+  router.post("/site-web/sites/:id(\\d+)/recuperer", need("forms.write"), (req, res, next) => {
+    const site = load(req, res);
+    if (!site) return;
+    attempt(req, res, next, "/marketing/site-web/sites?vue=archives", () => { pages.undeleteSite(req.mk.ctx, site.id); return `Site « ${site.name} » sorti de la corbeille (il reste archivé : restaurez-le pour le remettre en service).`; });
   });
   // ---------- Médiathèque de l'éditeur (JSON) ----------
   // Une seule bibliothèque d'images pour les pages : la médiathèque Marketing (envoi, texte de remplacement, suppression
