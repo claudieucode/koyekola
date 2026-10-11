@@ -201,7 +201,10 @@ describe("moteur de mouvement : page publiée dans Chrome", { skip: SKIP }, () =
   const target = (i, extra) => ({ id: nid(i), type: "heading", props: { text: "Cible", level: "2" }, styles: { desktop: { minHeight: "200px" } }, ...extra });
   const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg} : ${a} ≠ ${b} (± ${tol})`);
   // Place l'élément pour que sa progression brute dans la fenêtre vaille raw (0 = il entre par le bas, 1 = il sort par le haut)
-  const at = (page, id, raw) => page.evaluate(([nodeId, r]) => { const el = document.querySelector(`.kw-n-${nodeId}`); const b = el.getBoundingClientRect(); const vh = innerHeight; window.scrollTo(0, scrollY + b.top - (vh - r * (vh + b.height))); return new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok))); }, [id, raw]);
+  const at = (page, id, raw) => page.evaluate(([nodeId, r]) => { const el = document.querySelector(`.kw-n-${nodeId}`); const b = el.getBoundingClientRect(); const vh = innerHeight; window.scrollTo(0, scrollY + b.top - (vh - r * (vh + b.height))); // Sous forte charge de la machine, le moteur peut appliquer l'effet plusieurs images après le défilement : on attend une valeur stable (deux lectures identiques)
+    const read = () => { const e = document.querySelector(`.kw-n-${nodeId}`); return e.style.translate + "|" + e.style.opacity + "|" + e.style.scale + "|" + e.style.rotate + "|" + e.style.filter; };
+    const frame = () => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+    return (async () => { let last = null; for (let i = 0; i < 40; i++) { await frame(); await new Promise((ok) => setTimeout(ok, 30)); const now = read(); if (now === last) return; last = now; } })(); }, [id, raw]);
   const styleOfEl = (page, id) => page.evaluate((nodeId) => { const s = document.querySelector(`.kw-n-${nodeId}`).style; return { translate: s.translate, scale: s.scale, rotate: s.rotate, opacity: s.opacity, filter: s.filter }; }, id);
   const ty = (st) => Number((/(-?[\d.]+)px (-?[\d.]+)px/.exec(st.translate) || [0, 0, 0])[2]);
 
