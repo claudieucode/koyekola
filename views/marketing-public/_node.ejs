@@ -11,7 +11,7 @@
      + (n.attrs || []).map((a) => ` ${a.name}="${esc(a.value)}"`).join("")
      + (n.interactions && n.interactions.length ? ` data-kw-ix="${esc(JSON.stringify(n.interactions.map((x) => [x.trigger, x.action, x.target])))}"` : "")
      + (isBuilder && n.schedule ? ` data-schedule-label="Programmé${n.schedule.from ? " dès le " + new Date(n.schedule.from).toLocaleDateString("fr-FR") : ""}${n.schedule.until ? " jusqu'au " + new Date(n.schedule.until).toLocaleDateString("fr-FR") : ""}${n.schedule.days || n.schedule.hours ? " · jours / heures" : ""}"` : "") + (isBuilder ? ` data-node-id="${n.id}" data-node-type="${n.type}"` + (n.audienceLabel ? ` data-audience-label="${String(n.audienceLabel).replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[c])}"` : "") : "");
-   const kidsOne = (c) => { if (c.hidden && !isBuilder) return; %><%- include("_node", { n: c, isBuilder, href, depth: depth + 1 }) %><% };
+   const kidsOne = (c) => { if (c.hidden && !isBuilder) return; %><%- include("_node-safe", { n: c, isBuilder, href, depth: depth + 1 }) %><% };
    // Boucle (grille « répéter pour chaque … ») : chaque résultat dans son enveloppe, message si aucun résultat, pagination par l'adresse
    const kids = () => {
      const info = n.loopInfo;

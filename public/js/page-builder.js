@@ -105,7 +105,23 @@
       if (k) ensureIds(k);
     });
   }
-  function reId(it) { it.id = newId(); delete it.locked; delete it.anchor; var k = kidsOf(it); if (k) k.forEach(reId); return it; }
+  // Nouveaux identifiants pour une copie. `map` (ancien → nouveau) permet ensuite de rediriger les interactions de la copie vers les
+  // copies de leurs cibles (voir reIdAll) : sans cela, une copie continuerait à piloter les éléments d'origine.
+  function reId(it, map) { var old = it.id; it.id = newId(); if (map && old) map[old] = it.id; delete it.locked; delete it.anchor; var k = kidsOf(it); if (k) k.forEach(function (c) { reId(c, map); }); return it; }
+  function remapInteractions(it, map) {
+    if (it.interactions) it.interactions.forEach(function (x) { if (map[x.target]) x.target = map[x.target]; });
+    var k = kidsOf(it); if (k) k.forEach(function (c) { remapInteractions(c, map); });
+  }
+  function reIdAll(items) { var map = {}; items.forEach(function (it) { reId(it, map); }); items.forEach(function (it) { remapInteractions(it, map); }); return items; }
+  // Retire les interactions dont la cible vient d'être supprimée (dans le même pas d'historique : annuler les rétablit)
+  function dropInteractionsTo(removed) {
+    walk(function (it) {
+      if (!it.interactions) return;
+      var kept = it.interactions.filter(function (x) { return !removed[x.target]; });
+      if (kept.length === it.interactions.length) return;
+      if (kept.length) it.interactions = kept; else delete it.interactions;
+    });
+  }
   ensureIds(content.sections);
   // Dernière version ENREGISTRÉE de la page (voir « Réinitialisation » plus bas) : référence des icônes de réinitialisation
   var KR = window.KWReset;
@@ -410,8 +426,23 @@
   // ---------- Placement (règles de structure) ----------
   // Racine : uniquement des sections. Section libre et conteneurs : uniquement des éléments. Un élément posé à la racine
   // est placé dans une nouvelle section libre (jamais d'élément orphelin).
+  // Limites de la page, annoncées par le serveur (SPEC.limits) : vérifiées AVANT d'insérer, pour un message immédiat. Sans cela, l'ajout
+  // était accepté à l'écran puis refusé à l'enregistrement (« Trop d'éléments ») et le travail restait non enregistré.
+  function nodeTotal() { var n = 0; walk(function (x) { if (isNode(x)) n++; }); return n; }
+  function nodesIn(it) { return (isNode(it) ? 1 : 0) + countDeep(it); }
+  function heightOf(it) { var k = kidsOf(it), m = 0; (k || []).forEach(function (c) { m = Math.max(m, heightOf(c)); }); return isNode(it) ? 1 + m : m; }
+  function exceedsLimits(parent, items) {
+    var lim = SPEC.limits || {};
+    if (lim.nodes && nodeTotal() + items.reduce(function (n, it) { return n + nodesIn(it); }, 0) > lim.nodes) { toast("Une page compte au plus " + lim.nodes + " éléments : supprimez-en avant d'en ajouter.", true); return true; }
+    if (lim.depth) {
+      var base = parent ? locate(parent.id).depth : 0; // section = 0, ses éléments = 1
+      if (items.some(function (it) { return base + heightOf(it) > lim.depth; })) { toast("Les éléments ne peuvent pas être imbriqués sur plus de " + lim.depth + " niveaux.", true); return true; }
+    }
+    return false;
+  }
   function insertInto(parent, index, items) {
     if (refusesLockedWidget(items)) return null;
+    if (exceedsLimits(parent, items)) return null;
     if (parent === null) {
       var sections = [], pending = [];
       items.forEach(function (it) { if (isNode(it)) pending.push(it); else { if (pending.length) { sections.push({ id: newId(), type: "layout", children: pending }); pending = []; } sections.push(it); } });
@@ -532,7 +563,9 @@
     var label = ids.length === 1 ? "« " + nameOf(byId(ids[0])) + " »" : ids.length + " éléments";
     nextLabel = "Suppression : " + label;
     change(function () {
-      ids.forEach(function (id) { var l = locate(id); if (l) l.list.splice(l.index, 1); });
+      var gone = {};
+      ids.forEach(function (id) { var l = locate(id); if (l) { walk(function (x) { gone[x.id] = true; }, [l.item]); l.list.splice(l.index, 1); } });
+      dropInteractionsTo(gone);
       selection = selection.filter(function (id) { return byId(id); });
     });
     markCanvasSelection(false);
@@ -544,8 +577,9 @@
     var ids = topLevelSelection();
     if (!ids.length) return;
     if (ids.some(function (id) { return !isNode(byId(id)); }) && content.sections.length + ids.length > 30) { toast("Une page compte au plus 30 sections.", true); return; }
-    var made = ids.map(function (id) { return reId(clone(byId(id))); });
+    var made = reIdAll(ids.map(function (id) { return clone(byId(id)); }));
     if (refusesLockedWidget(made)) return;
+    if (SPEC.limits && SPEC.limits.nodes && nodeTotal() + made.reduce(function (n, it) { return n + nodesIn(it); }, 0) > SPEC.limits.nodes) { toast("Une page compte au plus " + SPEC.limits.nodes + " éléments : supprimez-en avant d'en dupliquer.", true); return; }
     nextLabel = "Duplication";
     change(function () {
       ids.forEach(function (id, i) { var l = locate(id); l.list.splice(l.index + 1, 0, made[i]); });
@@ -764,7 +798,7 @@
   function paste() {
     var items = clipboard || store.get("clipboard", null);
     if (!items || !items.length) { toast("Rien à coller.", true); return; }
-    addItems(items.map(function (it) { var c = reId(clone(it)); if (c.section) { delete c.section; markSection(c); } return c; }));
+    addItems(reIdAll(items.map(function (it) { return clone(it); })).map(function (c) { if (c.section) { delete c.section; markSection(c); } return c; }));
   }
   // Coller depuis le presse-papiers du système : éléments copiés dans un autre site KOLAKISA ou un autre navigateur. Le contenu est relu, borné, puis revalidé par le serveur à l'enregistrement.
   function pasteFromSystem() {
@@ -775,7 +809,7 @@
       var data; try { data = JSON.parse(text.slice(9)); } catch (e) { data = null; }
       var items = data && data.v === 1 && Array.isArray(data.items) ? data.items.filter(function (x) { return x && typeof x === "object" && typeof x.type === "string"; }).slice(0, 40) : [];
       if (!items.length) { toast("Aucun élément valide dans le presse-papiers.", true); return; }
-      addItems(items.map(function (it) { var c = reId(clone(it)); if (c.section) { delete c.section; markSection(c); } return c; }));
+      addItems(reIdAll(items.map(function (it) { return clone(it); })).map(function (c) { if (c.section) { delete c.section; markSection(c); } return c; }));
       toast("Collé depuis le presse-papiers (" + items.length + ").");
     }, function () { toast("Accès au presse-papiers refusé : autorisez-le dans le navigateur.", true); });
   }
@@ -1557,7 +1591,7 @@
   // Modèle de l'équipe inséré dans la page en cours : une copie de ses sections (nouveaux identifiants)
   function insertTemplate(t, target) {
     api("GET", "/marketing/site-web/modeles/" + t.id + ".json").then(function (r) {
-      var secs = clone(r.template.sections).map(function (s) { return markSection(reId(s)); });
+      var secs = reIdAll(clone(r.template.sections)).map(function (s) { return markSection(s); });
       if (secs.some(function (s) { return s.type === "form"; }) && content.sections.some(function (s) { return s.type === "form"; })) { toast("Une page n'a qu'un formulaire d'inscription : ce modèle en contient un.", true); return; }
       ensureIds(secs);
       var index = target && target.parent === null ? target.index : insertionPoint({ type: "layout" }).index;
@@ -1671,7 +1705,7 @@
     fetchComponent(c.id).then(function (comp) { insertCopy(comp, target, c.name); }, apiFail);
   }
   function insertCopy(comp, target, name) {
-    var sec = markSection(reId(clone(comp.section)));
+    var sec = markSection(reIdAll([clone(comp.section)])[0]);
     ensureIds([sec]);
     if (refusesLockedWidget([sec])) return;
     var sel = selection.length === 1 ? byId(selection[0]) : null;
@@ -7675,6 +7709,10 @@
     var seen = {};
     list.forEach(function (w) {
       var it = w.nodeId && byId(w.nodeId), p = it && it.parts && it.parts[w.part];
+      if (it && w.kind === "interaction_target" && it.interactions) {
+        var keep = it.interactions.filter(function (x) { return x.target !== w.target; });
+        if (keep.length) it.interactions = keep; else delete it.interactions;
+      }
       if (p) {
         if (w.kind === "part_prop") { var bag = (p.styles && p.styles[w.scope]) || (p.states && p.states[w.scope]); if (bag) delete bag[w.prop]; }
         if (w.kind === "part_state" && p.states) delete p.states[w.state];

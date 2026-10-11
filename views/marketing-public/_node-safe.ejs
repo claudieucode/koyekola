@@ -1,0 +1,16 @@
+<%#
+  Enveloppe de sécurité d'un élément : si le rendu d'UN élément échoue (données corrompues, ancienne version…), le reste de la page
+  s'affiche quand même. Rien n'est modifié ni supprimé dans les données : seul l'affichage est remplacé.
+  - Page publiée : l'élément est omis (jamais de message technique pour les visiteurs).
+  - Éditeur : un repère sélectionnable (même identifiant) explique le problème.
+  Le compteur de liens cliquables (/p/<adresse>/clic/<n>) est recalé sur le nombre de liens que l'élément aurait dû consommer
+  (même calcul que linksOf) : les liens des éléments suivants gardent leur bonne destination.
+%>
+<% let __html; const __mark = typeof href.mark === "function" ? href.mark() : null;
+   try { __html = include("_node", { n, isBuilder, href, depth }); }
+   catch (error) {
+     if (__mark !== null) href.skip(__mark + (typeof nodeLinkCount === "function" ? nodeLinkCount(n) : 0));
+     if (typeof console !== "undefined") console.error(`[KOLAKISA] rendu de l'élément ${n && n.id} (${n && n.type}) :`, error && error.message);
+     const __id = String((n && n.id) || "").replace(/[^a-zA-Z0-9_-]/g, ""), __type = String((n && n.type) || "").replace(/[^a-z0-9_-]/g, "");
+     __html = isBuilder ? `<div class="kw-node kw-node-error kw-n-${__id}" data-node-id="${__id}" data-node-type="${__type}" role="note">Cet élément ne peut pas s'afficher (données invalides). Ses réglages sont conservés : supprimez-le ou annulez la dernière modification.</div>` : "";
+   } %><%- __html %>
