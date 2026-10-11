@@ -44,8 +44,8 @@ Captures visuelles relues : choix initial et configuration « Personnalisé » (
 
 - **Critères 5, 6, 15, 17, 18 (Flexbox, widgets, vues responsive, erreurs, non-régression globale)** : non retestés un par un ; couverts seulement par les tests existants exécutés ci-dessus et par le fait que le mode guidé n'ajoute aucun code de rendu. Résultat de la suite complète : voir la section suivante.
 - **Critère 14 (IA)** : le comportement de l'IA face au verrou existe déjà (`studio.validate`, test `ia-studio`) et n'a pas été modifié ; aucun nouveau test IA propre à l'écran de démarrage.
-- **Restauration d'une version, duplication de page** : non testées spécifiquement (le format vit dans le thème versionné et dupliqué, selon l'architecture existante).
-- **Responsive de l'écran de démarrage lui-même** : règles CSS écrites (`auto-fit`, `@media 640px`), non vérifiées dans Chrome à petite largeur.
+- **Duplication et restauration d'une version** : vérifiées (`format-mise-en-page.test.js` : copie et publication conservent le format ; restauration d'une version ramène son format).
+- **Responsive de l'écran de démarrage** : vérifié dans Chrome à 420 px (aucun débordement horizontal, bouton « Continuer » atteignable).
 - Le choix « classique » n'est pas enregistré (conception libre = absence de `theme.layout`) ; une page toujours vide rechargée réaffiche donc le choix.
 - Pas de mesure de performance chiffrée ; l'écran n'ajoute ni requête, ni rendu du Canvas, ni état persisté.
 

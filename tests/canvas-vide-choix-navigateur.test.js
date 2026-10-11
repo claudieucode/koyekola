@@ -146,5 +146,20 @@ describe("canvas vide : choix du mode de création (navigateur)", { skip: SKIP }
     assert.equal(await start().isHidden(), true, "vidage volontaire : l'écran ne revient pas");
   });
 
+  test("petite largeur (téléphone) : l'écran reste dans la zone, sans débordement horizontal, et ses boutons sont atteignables", async () => {
+    const id = await create("Page vide D");
+    await start().waitFor({ state: "visible" });
+    await page.setViewportSize({ width: 420, height: 800 });
+    await wait(400);
+    const over = await page.evaluate(() => { const s = document.querySelector("[data-pb-start]"); return { sw: s.scrollWidth, cw: s.clientWidth }; });
+    assert.ok(over.sw <= over.cw + 1, `pas de défilement horizontal : ${over.sw} > ${over.cw}`);
+    await page.locator('[data-pb-start-go="guided"]').click();
+    await page.locator("[data-pb-start-continue]").scrollIntoViewIfNeeded();
+    const b = await page.locator("[data-pb-start-continue]").boundingBox();
+    assert.ok(b && b.x >= 0 && b.x + b.width <= 420, "bouton Continuer visible dans la largeur");
+    await page.setViewportSize({ width: 1600, height: 950 });
+    assert.equal(layout(id), undefined, "rien d'écrit");
+  });
+
   test("aucune erreur de script pendant tout le parcours", () => { assert.deepEqual(errors, []); });
 });
