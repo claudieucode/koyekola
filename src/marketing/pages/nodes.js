@@ -399,6 +399,8 @@ const loopProps = (p) => {
     // Défilement horizontal (carrousel) : pas de pagination (les éléments défilent, ils ne se tournent pas en pages)
     ...(l.slider === true ? { slider: true } : paginate ? { paginate: true, pagination: pagination !== "none" ? pagination : "numbers" } : {}),
     ...(l.urlFilter === true ? { urlFilter: true } : {}),
+    // Carte insérée : un conteneur enfant marqué « loopInsert » s'intercale après le N-ième résultat (une fois, ou tous les N résultats)
+    ...(numberIn(1, 50, { integer: true })(l.insertAt) ? { insertAt: numberIn(1, 50, { integer: true })(l.insertAt), ...(l.insertEvery === true ? { insertEvery: true } : {}) } : {}),
     empty: line(l.empty, 160) || EMPTY_LOOP[source] || "Aucun résultat ne correspond.",
   } };
 };
@@ -410,7 +412,7 @@ const dynamicHelpers = (h) => ({
 });
 const boxProps = (p, at, h) => {
   const link = h.linkUrl(p.link, `${at} (lien du conteneur)`);
-  return { ...boxTag(p), ...(link ? { link, ...(p.newTab === true && link.startsWith("https://") ? { newTab: true } : {}) } : {}) };
+  return { ...boxTag(p), ...(p.loopInsert === true ? { loopInsert: true } : {}), ...(link ? { link, ...(p.newTab === true && link.startsWith("https://") ? { newTab: true } : {}) } : {}) };
 };
 // Éléments qui sont eux-mêmes un lien, un bouton ou un champ (ou qui peuvent en contenir) : interdits dans un conteneur cliquable
 const INTERACTIVE_INSIDE_LINK = new Set(["button", "link", "menu", "search", "account", "toggle", "tabs", "accordion", "modal", "carousel", "tooltip", "hotspot", "html", "embed", "social", "breadcrumb", "course", "courselist", "posts", "pricing", "iconlist", "gallery", "table", "postcontent"]);

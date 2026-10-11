@@ -43,6 +43,7 @@ describe("parité Elementor : réglages dans l'inspecteur (navigateur)", { skip:
       { id: "modl00000001", type: "modal", props: { buttonLabel: "Ouvrir", title: "Fenêtre", text: "Contenu" } },
       { id: "text00000001", type: "text", props: { html: "<p>Texte</p>" } },
       { id: "ctdw00000001", type: "countdown", props: { until: new Date(Date.now() + 86400000).toISOString() } },
+      { id: "grid00000009", type: "grid", props: { loop: { source: "posts", count: 3 } }, children: [] },
       { id: "cont00000002", type: "container", styles: { desktop: { gradient: { from: "#112233", to: "#445566", angle: 90 } } }, children: [] },
     ] }] }] } } });
     assert.equal(r.status, 200, r.text);
@@ -137,6 +138,18 @@ describe("parité Elementor : réglages dans l'inspecteur (navigateur)", { skip:
     // effacer la note la retire
     await area.fill(""); await area.blur();
     await until(() => !node("text00000001").note, { what: "note retirée" });
+  });
+
+  test("boucle : carte insérée (grille) et conteneur « carte insérée »", async () => {
+    await pick("grid00000009"); await tab("Général"); await openAll();
+    const n = page.locator('[data-pb-inspector] .pb-field:has(label:text-is("Intercaler une carte après N résultats (vide = aucune)")) input').first();
+    await n.fill("2"); await n.press("Enter"); await n.blur();
+    await until(() => node("grid00000009").props.loop.insertAt === 2, { what: "insertAt enregistré" });
+    await check("Répéter la carte tous les N résultats").check();
+    await until(() => node("grid00000009").props.loop.insertEvery === true, { what: "insertEvery enregistré" });
+    await pick("cont00000002"); await tab("Général"); await openAll();
+    await check("Carte insérée dans la boucle de la grille parente").check();
+    await until(() => node("cont00000002").props && node("cont00000002").props.loopInsert === true, { what: "loopInsert enregistré" });
   });
 
   test("aucune erreur de script", () => { assert.deepEqual(errors, []); });

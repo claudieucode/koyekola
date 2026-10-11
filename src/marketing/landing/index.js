@@ -256,9 +256,17 @@ function nodeView(ctx, nodes, visitor, page, scope) {
     if (n.type === "grid" && n.props && n.props.loop && n.children) {
       const loop = n.props.loop, found = loopQuery(ctx, loop, n.id, visitor, scope);
       const children = [];
+      // Cartes insérées (conteneurs « loopInsert ») : hors du modèle, intercalées après le N-ième résultat (une fois ou tous les N)
+      const cards = loop.insertAt ? n.children.filter((c) => c.props && c.props.loopInsert) : [];
+      const template = cards.length ? n.children.filter((c) => !(c.props && c.props.loopInsert)) : n.children;
+      let placed = 0;
       found.items.forEach((item, i) => {
         const itemScope = { ...scope, ...{ [require("../pages/query").SOURCES.get(loop.source).scopeKey]: item } };
-        nodeView(ctx, n.children, visitor, page, itemScope).forEach((c) => children.push({ ...c, loopItem: i }));
+        nodeView(ctx, template, visitor, page, itemScope).forEach((c) => children.push({ ...c, loopItem: i }));
+        if (cards.length && (i + 1) % loop.insertAt === 0 && (loop.insertEvery || i + 1 === loop.insertAt)) {
+          const card = cards[placed++ % cards.length];
+          nodeView(ctx, [card], visitor, page, scope).forEach((c) => children.push({ ...c, loopItem: `carte-${i}` }));
+        }
       });
       return { ...n, children, loopInfo: { empty: !found.items.length, message: loop.empty, paginate: Boolean(loop.paginate) && found.pages > 1, pagination: loop.pagination || "numbers", pageNo: found.pageNo, pages: found.pages,
         base: Object.entries((visitor && visitor.query) || {}).filter(([k]) => k !== `lp-${n.id}`).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&") } };
