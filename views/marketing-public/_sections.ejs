@@ -6,6 +6,7 @@
 %>
 <% const isBuilder = typeof builder !== "undefined" && builder; let n = 0; const clicQs = page.visitor && page.visitor.query && Object.keys(page.visitor.query).length ? "?" + new URLSearchParams(page.visitor.query).toString() : ""; /* les boucles dépendent de l'adresse (?lp-…, ?q=) : le lien compté la reprend pour retrouver le même lien */
    const href = (url) => (preview || /^(#|mailto:)/.test(String(url)) ? url : `/p/${page.slug}/clic/${n++}${clicQs}`); /* ancre ou e-mail : non compté (même règle que linksOf) */
+   href.mark = () => n; href.skip = (v) => { n = v; }; /* recalage du compteur si un élément n'a pas pu s'afficher (voir _node-safe.ejs) */
    const firstHero = page.sections.findIndex((x) => x.type === "hero"); %>
 <% page.sections.forEach((s, i) => {
      if (s.hidden && !isBuilder) return;
@@ -16,7 +17,7 @@
 <div class="<%= cls %><%= s.sitePart ? ` lp-site-part lp-site-${s.sitePart}` : "" %>"<% if (isBuilder && s.sitePart) { %> data-site-part="<%= s.sitePart === "header" ? "En-tête du site" : "Pied de page du site" %>"<% } %><% if (editable) { %> data-section-id="<%= s.id || "" %>" data-section-index="<%= i %>"<% if (s.audienceLabel) { %> data-audience-label="<%= s.audienceLabel %>"<% } %><% } else if (s.id) { %> data-sid="<%= s.id %>" data-stype="<%= s.type %>"<% } %>>
   <% if (s.type === "layout") { %>
     <div class="kw-layout"><% if (isBuilder && !s.children.length) { %><button type="button" class="kw-add" data-kw-add aria-label="Ajouter une structure ou un élément à cette section" title="Ajouter une structure ou un élément">+</button><% } %>
-      <% s.children.forEach((c) => { if (c.hidden && !isBuilder) return; %><%- include("_node", { n: c, isBuilder: editable, href, depth: 1 }) %><% }) %></div>
+      <% s.children.forEach((c) => { if (c.hidden && !isBuilder) return; %><%- include("_node-safe", { n: c, isBuilder: editable, href, depth: 1 }) %><% }) %></div>
   <% } else if (s.type === "hero") { %>
     <header class="lp-hero">
       <% if (s.image) { %><img class="lp-hero-img" src="<%= s.image %>" alt="<%= s.imageAlt %>"<%= i > 0 ? ' loading="lazy"' : ' fetchpriority="high"' %> decoding="async"><% } %>

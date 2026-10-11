@@ -249,6 +249,24 @@ function normalizeSection(ctx, raw, i, counter) {
   return { ...def.normalize(ctx, raw, `Section ${i + 1}`, counter), ...common(raw, `Section ${i + 1}`) };
 }
 
+// Une interaction (« au clic, afficher tel élément ») dont la cible n'existe plus ne peut rien faire ; pire, un élément « masqué au
+// chargement » dont l'interaction a disparu resterait caché pour toujours. Elles sont écartées à l'enregistrement, avec un avertissement
+// non bloquant (l'éditeur retire la même interaction de son document, voir healIgnored).
+function pruneDanglingInteractions(nodes, known, ctx) {
+  const walk = (list) => (list || []).forEach((n) => {
+    if (n && Array.isArray(n.interactions)) {
+      const kept = n.interactions.filter((x) => known.has(x.target));
+      n.interactions.filter((x) => !known.has(x.target)).forEach((x) => {
+        const w = ctx && ctx.__warnings;
+        if (Array.isArray(w) && w.length < 50) w.push({ kind: "interaction_target", nodeId: n.id, target: x.target, message: "Une interaction visait un élément qui n'existe plus : elle a été retirée." });
+      });
+      if (kept.length) n.interactions = kept; else delete n.interactions;
+    }
+    walk(n && n.children);
+  });
+  walk(nodes);
+}
+
 function normalizeSections(ctx, list) {
   const raw = Array.isArray(list) ? list : [];
   if (raw.length > MAX_SECTIONS) throw bad(`Trop de sections (${MAX_SECTIONS} au plus).`);
@@ -257,6 +275,7 @@ function normalizeSections(ctx, list) {
   const ids = out.map((s) => s.id).filter(Boolean);
   if (new Set(ids).size !== ids.length) throw bad("Deux sections portent le même identifiant.");
   if (ids.some((id) => counter.ids.has(id))) throw bad("Une section et un élément portent le même identifiant.");
+  pruneDanglingInteractions(out, new Set([...ids, ...counter.ids]), ctx);
   return out;
 }
 

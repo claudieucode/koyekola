@@ -52,6 +52,7 @@ function injectLocals(req, res, next) {
   res.locals.signedBunnyUrl = signedBunnyUrl;
   res.locals.parseVideoUrl = parseVideoUrl;
   res.locals.renderMarkdown = renderMarkdown;
+  res.locals.nodeLinkCount = (node) => { try { return require("../marketing/landing").linksOf({ sections: [{ type: "layout", children: [node] }] }).length; } catch { return 0; } }; // liens cliquables d'un élément (recalage du compteur si son rendu échoue)
   res.locals.imageSource = imageSource; // résolution choisie d'un widget image (src, srcset, sizes)
   res.locals.asset = asset;
   // Apparence du site (CMS → Apparence) : styles, en-tête, pied de page. Version publiée ; en aperçu (?kwpreview=1, équipe seulement) le brouillon.

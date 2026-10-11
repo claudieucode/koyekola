@@ -344,7 +344,10 @@ function linksOf(page) {
     if (s.type === "image" && s.link) out.push({ section: i, label: `Image : ${s.alt}`, url: s.link });
     if (s.type === "course" && s.course) out.push({ section: i, label: `Formation : ${s.course.title}`, url: s.course.url });
     // Section libre : mêmes liens, dans l'ordre d'affichage des éléments
+    // Un élément aux données corrompues ne fait pas échouer le calcul des liens de toute la page : il n'en compte aucun (le rendu fait de même, voir _node-safe.ejs)
     if (s.type === "layout") pageNodes.walk(s.children, (n) => {
+      const mark = out.length;
+      try {
       if ((n.type === "sitelogo" || n.type === "sitetitle") && n.props.link && n.props.homeUrl) out.push({ section: i, label: n.type === "sitelogo" ? "Logo du site" : "Titre du site", url: n.props.homeUrl });
       if (["container", "grid", "stack", "group"].includes(n.type) && (n.props || {}).link) out.push({ section: i, label: `Conteneur : ${n.name || (pageNodes.NODE_TYPES[n.type] || {}).label || n.type}`, url: n.props.link });
       if (n.type === "flipbox" && n.props.ctaUrl) out.push({ section: i, label: `Boîte retournable : ${n.props.ctaLabel}`, url: n.props.ctaUrl });
@@ -371,7 +374,7 @@ function linksOf(page) {
       if (n.type === "courselist") (n.props.items || []).forEach((c) => out.push({ section: i, label: `Formation : ${c.title}`, url: c.url }));
       if (n.type === "account") { out.push({ section: i, label: n.props.loggedIn ? "Mon compte" : "Se connecter", url: n.props.loggedIn ? "/mon-compte" : "/connexion" }); if (n.props.showCart) out.push({ section: i, label: "Panier", url: "/panier" }); }
       if (n.type === "modal" && n.props.ctaUrl) out.push({ section: i, label: `Fenêtre : ${n.props.ctaLabel}`, url: n.props.ctaUrl });
-      if (n.type === "course" && n.props.course) out.push({ section: i, label: `Formation : ${n.props.course.title}`, url: n.props.course.url });
+      if (n.type === "course" && n.props.course) out.push({ section: i, label: `Formation : ${n.props.course.title}`, url: n.props.course.url });      } catch { out.length = mark; }
     });
   });
   // Les ancres (#…) sautent dans la page sans passer par le compteur de clics (même règle que href() du rendu)
