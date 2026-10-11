@@ -243,6 +243,20 @@ module.exports = () => {
     const site = src === "marketing" ? [] : siteImages(req.mk.ctx.db, { q, limit: 100 });
     res.set("Cache-Control", "no-store").json({ items: mk.concat(site) });
   });
+  // Résolutions proposables pour une ou plusieurs images de la médiathèque (widget Image, Galerie…) : seulement les tailles
+  // plus petites que l'image la plus petite du lot, et seulement si le serveur sait fabriquer des versions réduites.
+  router.get("/site-web/medias/resolutions.json", need("forms.read"), (req, res) => {
+    const variants = require("../media/variants");
+    const list = [].concat(req.query.src || []).map(String).slice(0, 24);
+    const rows = list.map((src) => (variants.isLocal(src) ? req.mk.ctx.db.prepare("SELECT width, height, size FROM mk_media WHERE organization_id = ? AND path = ? AND type = 'image'").get(req.mk.ctx.organizationId, src) : null));
+    const known = rows.filter((r) => r && r.width);
+    const complete = list.length > 0 && known.length === list.length;
+    const min = complete ? Math.min(...known.map((r) => r.width)) : 0;
+    res.set("Cache-Control", "no-store").json({
+      available: variants.available(), complete, width: complete ? min : null, height: complete && list.length === 1 ? known[0].height : null, bytes: complete && list.length === 1 ? known[0].size : null,
+      sizes: complete ? variants.offered(min) : [],
+    });
+  });
   // Où une image est utilisée (pages, composants, modèles, articles, sites) : la même détection que le refus de suppression
   router.get("/site-web/medias/:id(\\d+)/usage.json", need("forms.read"), (req, res) => {
     const m = media.getMedia(req.mk.ctx, Number(req.params.id));

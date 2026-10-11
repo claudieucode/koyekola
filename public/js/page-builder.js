@@ -1866,6 +1866,8 @@
       case "image":
         box.appendChild(mediaPreview(/^\{\{/.test(p.src || "") ? "" : p.src, function (m) { change(function () { var x = byId(it.id); x.props.src = m.path; if (m.alt && !x.props.alt) { x.props.alt = m.alt; delete x.props.decorative; } }); }, disabled));
         box.appendChild(textField("…ou image dynamique", /^\{\{/.test(p.src || "") ? p.src : "", function (v) { if (/^\s*\{\{[^}]+\}\}\s*$/.test(v)) setProp(it.id, "src", v.trim()); }, { onChange: true, disabled: disabled, dyn: true, dynKinds: ["image"], placeholder: "{{post.image}} ou {{course.image}}", hint: "Remplace l'image choisie ; lue à chaque affichage (utile dans une boucle ou un modèle)." }));
+        box.appendChild(resolutionField(it, [p.src], disabled));
+        if (!p.link) box.appendChild(checkField("Agrandir au clic (visionneuse)", p.lightbox, function (v) { setProp(it.id, "lightbox", v); }, { disabled: disabled, hint: "Ouvre l'image d'origine en grand. Indisponible si l'image a un lien." }));
         box.appendChild(textField("Texte de remplacement", p.alt, function (v) { change(function () { var x = byId(it.id); x.props.alt = v; if (v) delete x.props.decorative; else x.props.decorative = true; }, { key: it.id + ":alt", light: true }); }, { max: 200, disabled: disabled, dyn: true, hint: "Décrit l'image pour les personnes qui ne la voient pas (et pour le référencement). Vide = image décorative." }));
         box.appendChild(textField("Lien au clic (facultatif)", p.link, set("link"), { list: "pb-links", disabled: disabled, dyn: true, dynKinds: ["url"], placeholder: "/catalogue ou https://…" }));
         if (p.link) box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
@@ -1877,11 +1879,21 @@
           box.appendChild(h("div", { class: "pb-repeat-item" }, h("img", { src: im.src, alt: "", class: "pb-thumb" }),
             textField("Texte de remplacement " + (i + 1), im.alt, function (v) { change(function () { byId(it.id).props.images[i].alt = v; }, { key: it.id + ":img" + i, light: true }); }, { max: 200, disabled: disabled }),
             textField("Légende " + (i + 1), im.caption, function (v) { change(function () { byId(it.id).props.images[i].caption = v; }, { key: it.id + ":gcap" + i, light: true }); }, { max: 200, disabled: disabled }),
+            textField("Étiquette " + (i + 1) + " (filtre, facultatif)", im.tag, function (v) { change(function () { var x = byId(it.id).props.images[i]; if (v) x.tag = v; else delete x.tag; }, { key: it.id + ":gtag" + i, light: true }); }, { max: 30, disabled: disabled }),
             textField("Lien de l'image " + (i + 1) + " (facultatif)", im.link, function (v) { change(function () { byId(it.id).props.images[i].link = v; }, { key: it.id + ":glink" + i, light: true }); }, { list: "pb-links", disabled: disabled, placeholder: "/catalogue ou https://…" }),
             h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || p.images.length < 2, onclick: function () { change(function () { byId(it.id).props.images.splice(i, 1); }); } }, "Retirer")));
         });
+        box.appendChild(resolutionField(it, (p.images || []).map(function (im) { return im.src; }), disabled));
         box.appendChild(checkField("Agrandir au clic (visionneuse)", p.lightbox, function (v) { setProp(it.id, "lightbox", v); }, { disabled: disabled, hint: "Les images qui ont un lien ouvrent leur lien." }));
-        box.appendChild(checkField("Mosaïque (hauteurs naturelles, en colonnes)", p.masonry, function (v) { setProp(it.id, "masonry", v); }, { disabled: disabled }));
+        var galMode = p.masonry ? "masonry" : p.layout === "justified" ? "justified" : "grid";
+        box.appendChild(selectField("Disposition", galMode, [["grid", "Grille"], ["masonry", "Mosaïque (hauteurs naturelles)"], ["justified", "Justifiée (lignes de même hauteur)"]], function (v) {
+          change(function () { var x = byId(it.id); delete x.props.masonry; delete x.props.layout; if (v === "masonry") x.props.masonry = true; else if (v === "justified") x.props.layout = "justified"; });
+        }, { disabled: disabled }));
+        if (galMode !== "justified") box.appendChild(numberField("Colonnes", p.columns || 3, { min: 1, max: 6, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; change(function () { var x = byId(it.id); if (n === 3) delete x.props.columns; else x.props.columns = n; }); }, "De 1 à 6 (2 au plus sur téléphone)."));
+        if (galMode === "grid") box.appendChild(selectField("Ratio d'aspect des images", p.ratio || "1:1", [["1:1", "Carré (1:1)"], ["4:3", "4:3"], ["3:2", "3:2"], ["16:9", "16:9"], ["9:16", "Vertical (9:16)"], ["21:9", "Panoramique (21:9)"]], function (v) { change(function () { var x = byId(it.id); if (v === "1:1") delete x.props.ratio; else x.props.ratio = v; }); }, { disabled: disabled }));
+        if (galMode === "justified") box.appendChild(selectField("Hauteur des lignes", String(p.rowHeight || "200"), [["120", "120 px"], ["160", "160 px"], ["200", "200 px"], ["260", "260 px"], ["320", "320 px"]], function (v) { change(function () { var x = byId(it.id); if (v === "200") delete x.props.rowHeight; else x.props.rowHeight = v; }); }, { disabled: disabled }));
+        box.appendChild(checkField("Légende au survol (sur l'image)", p.overlay, function (v) { setProp(it.id, "overlay", v); }, { disabled: disabled, hint: "Sur écran tactile, la légende reste visible." }));
+        box.appendChild(checkField("Barre de filtres (par étiquette d'image)", p.filters, function (v) { setProp(it.id, "filters", v); }, { disabled: disabled, hint: "Donnez une étiquette à chaque image ci-dessus : « Tous » plus une touche par étiquette." }));
         box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled || (p.images || []).length >= 24, onclick: function () { openMedia({ title: "Ajouter à la galerie", multiple: true, onPick: function (list) { change(function () { var x = byId(it.id); list.forEach(function (m) { x.props.images.push({ src: m.path, alt: m.alt || "" }); }); }); } }); } }, "Ajouter des images"));
         break;
       case "video":
@@ -1979,6 +1991,7 @@
         break;
       case "carousel":
         box.appendChild(textField("Nom du carrousel (lecteurs d'écran)", p.label, set("label"), { max: 80, disabled: disabled }));
+        box.appendChild(resolutionField(it, (p.images || []).map(function (im) { return im.src; }), disabled));
         (p.images || []).forEach(function (im, i) {
           box.appendChild(h("div", { class: "pb-repeat-item" }, h("img", { src: im.src, alt: "", class: "pb-thumb" }),
             textField("Texte de remplacement " + (i + 1), im.alt, function (v) { change(function () { byId(it.id).props.images[i].alt = v; }, { key: it.id + ":img" + i, light: true }); }, { max: 200, disabled: disabled }),
@@ -2011,6 +2024,7 @@
         if (it.type === "imagebox") {
           box.appendChild(h("p", { class: "pb-sub", text: "Image" }));
           box.appendChild(mediaPreview(p.src, function (m) { change(function () { var x = byId(it.id).props; x.src = m.path; if (!x.alt && m.alt) x.alt = m.alt; }); }, disabled));
+          box.appendChild(resolutionField(it, [p.src], disabled));
           box.appendChild(textField("Texte de remplacement (vide = image décorative)", p.alt, set("alt"), { max: 200, disabled: disabled }));
         } else {
           box.appendChild(iconPicker(p.icon || "star", function (v) { setProp(it.id, "icon", v); }, disabled));
@@ -2139,6 +2153,7 @@
         break;
       case "hotspot":
         box.appendChild(mediaPreview(p.src, function (m) { change(function () { var x = byId(it.id).props; x.src = m.path; if (m.alt) x.alt = m.alt; }); }, disabled));
+        box.appendChild(resolutionField(it, [p.src], disabled));
         box.appendChild(textField("Texte de remplacement de l'image", p.alt, set("alt"), { max: 200, disabled: disabled }));
         (p.spots || []).forEach(function (sp, i) {
           box.appendChild(h("div", { class: "pb-repeat-item" },
@@ -2213,7 +2228,8 @@
         box.appendChild(selectField("Note", String(p.rating || 0), [["0", "Pas de note"], ["1", "1 / 5"], ["2", "2 / 5"], ["3", "3 / 5"], ["4", "4 / 5"], ["5", "5 / 5"]], function (v) { setProp(it.id, "rating", Number(v)); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-sub", text: "Photo (facultative)" }));
         box.appendChild(mediaPreview(p.avatar, function (m) { setProp(it.id, "avatar", m.path); }, disabled));
-        if (p.avatar) box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled, onclick: function () { change(function () { delete byId(it.id).props.avatar; }); } }, "Retirer la photo"));
+        if (p.avatar) box.appendChild(resolutionField(it, [p.avatar], disabled));
+        if (p.avatar) box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled, onclick: function () { change(function () { var x = byId(it.id).props; delete x.avatar; delete x.size; }); } }, "Retirer la photo"));
         break;
       case "pricing":
         box.appendChild(textField("Nom de l'offre", p.title, set("title"), { max: 80, disabled: disabled }));
@@ -2355,6 +2371,32 @@
   function mediaPreview(src, onPick, disabled) {
     return h("div", { class: "pb-media-pick" }, src ? h("img", { src: src, alt: "", class: "pb-thumb" }) : h("span", { class: "pb-hint", text: "Aucune image" }),
       h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, onclick: function () { openMedia({ title: "Choisir l'image", onPick: onPick }); } }, src ? "Remplacer" : "Choisir"));
+  }
+
+  // Résolution d'une image (service commun : tailles réellement disponibles pour les images de la médiathèque).
+  // `srcs` : adresses des images du widget (une seule pour Image, plusieurs pour Galerie / Carrousel). Les tailles proposées
+  // sont fournies par le serveur (plus petites que la plus petite image) ; la valeur « full » = original (rien n'est enregistré).
+  var resCache = {};
+  function resolutionField(it, srcs, disabled, io) {
+    var wrap = h("div", { class: "pb-res", "data-pb-resolution": "" });
+    var list = (srcs || []).filter(function (s) { return s && !/^\{\{/.test(s); });
+    var key = list.join("|");
+    function paint(info) {
+      wrap.textContent = "";
+      var cur = io ? io.get() : ((it.props && it.props.size) || "full");
+      var sizes = (info && info.sizes) || [];
+      var opts = [["full", "Taille originale" + (info && info.width && list.length === 1 ? " (" + info.width + " × " + info.height + " px)" : "")]];
+      sizes.forEach(function (z) { opts.push([z.key, z.label + " (" + z.width + " px)"]); });
+      if (sizes.length && !(io && io.noAuto)) opts.push(["auto", "Adaptative (selon l'écran)"]);
+      if (!opts.some(function (o) { return o[0] === cur; })) opts.push([cur, "Indisponible pour cette image (original affiché)"]);
+      var hint = !info ? "Chargement des tailles…" : !info.available ? "Les versions réduites ne sont pas disponibles sur ce serveur : l'image d'origine est affichée." : !info.complete ? "Disponible pour les images de la médiathèque." : !sizes.length ? "Cette image est déjà petite : seule la taille originale est proposée." : "Une version plus légère charge plus vite. L'image d'origine n'est pas modifiée.";
+      wrap.appendChild(selectField("Résolution de l'image", cur, opts, function (v) { if (io) { io.set(v); return; } change(function () { var x = byId(it.id); if (v === "full") delete x.props.size; else x.props.size = v; }); }, { disabled: disabled || !info || !sizes.length, hint: hint }));
+    }
+    if (!list.length) { paint({ available: true, complete: false, sizes: [] }); return wrap; }
+    if (resCache[key]) { paint(resCache[key]); return wrap; }
+    paint(null);
+    api("GET", "/marketing/site-web/medias/resolutions.json?" + list.map(function (s) { return "src=" + encodeURIComponent(s); }).join("&")).then(function (info) { resCache[key] = info; if (wrap.isConnected) paint(info); }, function () { if (wrap.isConnected) paint({ available: false, complete: false, sizes: [] }); });
+    return wrap;
   }
 
   // Sections prêtes (bandeau, formulaire…) : champs de contenu
@@ -2527,7 +2569,7 @@
   var UNITS = {
     width: ["px", "%", "rem", "em", "vw", "auto", "fit-content", "min-content", "max-content"], height: ["px", "%", "rem", "em", "vh", "auto", "fit-content", "min-content", "max-content"], outlineWidth: ["px"], outlineOffset: ["px", "rem"], flexBasis: ["px", "%", "rem", "auto"],
     minWidth: ["px", "%", "rem", "em", "vw", "fit-content", "min-content", "max-content"], maxWidth: ["px", "%", "rem", "em", "vw", "fit-content", "min-content", "max-content"], minHeight: ["px", "%", "rem", "em", "vh", "fit-content", "min-content", "max-content"], maxHeight: ["px", "%", "rem", "em", "vh", "fit-content", "min-content", "max-content"],
-    gap: ["px", "rem", "em", "%"], rowGap: ["px", "rem", "em", "%"], columnGap: ["px", "rem", "em", "%"], fontSize: ["px", "em", "rem", "vw"], letterSpacing: ["px", "em", "rem"], wordSpacing: ["px", "em", "rem"], textIndent: ["px", "em", "rem", "%"], borderWidth: ["px"], borderTopWidth: ["px"], borderRightWidth: ["px"], borderBottomWidth: ["px"], borderLeftWidth: ["px"],
+    gap: ["px", "rem", "em", "%"], rowGap: ["px", "rem", "em", "%"], columnGap: ["px", "rem", "em", "%"], fontSize: ["px", "em", "rem", "vw"], letterSpacing: ["px", "em", "rem"], wordSpacing: ["px", "em", "rem"], textStrokeWidth: ["px", "em"], textIndent: ["px", "em", "rem", "%"], borderWidth: ["px"], borderTopWidth: ["px"], borderRightWidth: ["px"], borderBottomWidth: ["px"], borderLeftWidth: ["px"],
     borderRadius: ["px", "%", "rem"], borderTopLeftRadius: ["px", "%", "rem"], borderTopRightRadius: ["px", "%", "rem"], borderBottomRightRadius: ["px", "%", "rem"], borderBottomLeftRadius: ["px", "%", "rem"],
     top: ["px", "%", "rem"], left: ["px", "%", "rem"], right: ["px", "%", "rem"], bottom: ["px", "%", "rem"],
   };
@@ -2738,7 +2780,7 @@
   // Libellés courts dans les lignes (le nom complet reste en infobulle et pour les lecteurs d'écran)
   var SHORT = { alignItems: "Aligner", alignSelf: "Alignement", justifySelf: "Justification", justifyItems: "Justifier", alignContent: "Aligner lignes", gridAutoFlow: "Remplissage", flexWrap: "Retour ligne", justifyContent: "Justifier", gap: "Écart", rowGap: "Écart lignes", columnGap: "Écart colonnes", flexDirection: "Direction", display: "Affichage",
     minWidth: "Largeur min.", maxWidth: "Largeur max.", minHeight: "Hauteur min.", maxHeight: "Hauteur max.", flexGrow: "Proportion", columns: "Colonnes",
-    fontFamily: "Police", fontWeight: "Graisse", fontSize: "Taille", lineHeight: "Interligne", letterSpacing: "Interlettrage", wordSpacing: "Esp. des mots", textIndent: "Retrait", textTransform: "Casse", textAlign: "Alignement", textDecoration: "Décoration", fontStyle: "Style",
+    fontFamily: "Police", fontWeight: "Graisse", fontSize: "Taille", lineHeight: "Interligne", letterSpacing: "Interlettrage", wordSpacing: "Esp. des mots", textStrokeWidth: "Contour", textStrokeColor: "Couleur du contour", textIndent: "Retrait", textTransform: "Casse", textAlign: "Alignement", textDecoration: "Décoration", fontStyle: "Style",
     zIndex: "Plan", boxShadow: "Ombre (préréglage)", gridTemplate: "Largeurs", gridRows: "Lignes", gridColumnSpan: "Colonnes occupées", gridRowSpan: "Lignes occupées", textShadow: "Ombre du texte", transitionDuration: "Transition (ms)", backdropBlur: "Flou arrière (px)", transformOrigin: "Origine", right: "Décalage droite", bottom: "Décalage bas", opacity: "Opacité", overflow: "Débordement", objectFit: "Cadrage", objectPosition: "Point focal", aspectRatio: "Proportions", top: "Décalage haut", left: "Décalage gauche" };
   function propRow(items, key, control, label, id, extra) {
     label = label || SHORT[key];
@@ -3338,6 +3380,7 @@
         bg ? h("img", { src: bg.src, alt: "" }) : h("span", { class: "pb-img-empty", "aria-hidden": "true" }), h("span", { class: "pb-color-text", text: bg ? bg.src.split("/").pop() : "Choisir une image" }));
       var rm = bg ? h("button", { type: "button", class: "pb-reset", "data-tip": "Retirer l'image de fond", "aria-label": "Retirer l'image de fond", disabled: dis, onclick: function () { setStyle(ids, "backgroundImage", ""); } }, "↺") : h("span", { class: "pb-reset-slot", "aria-hidden": "true" });
       inner.appendChild(h("div", { class: "pb-field pb-style-field pb-prop" + (bg ? " is-set" : ""), "data-prop": "backgroundImage" }, h("div", { class: "pb-prop-head" }, h("label", { for: pid, class: "pb-prop-label" }, "Image")), pick, rm));
+      if (bg && bg.src) inner.appendChild(resolutionField(it, [bg.src], dis, { noAuto: true, get: function () { return bg.size || "full"; }, set: function (v) { setStyle(ids, "backgroundImage", v === "full" ? { src: bg.src } : { src: bg.src, size: v }); } }));
       if (bg || valueOf(it, "backgroundImage")) {
         inner.appendChild(styleControl(items, "backgroundSize", "Taille"));
         inner.appendChild(styleControl(items, "backgroundPosition", "Position"));
@@ -3578,7 +3621,7 @@
       add("Format", (String(src).split("?")[0].split(".").pop() || "").toUpperCase());
       add("Texte de remplacement", p.decorative ? "Image décorative" : (p.alt || it.alt || it.imageAlt || "manquant"));
       var img = m && (m.el.tagName === "IMG" ? m.el : m.el.querySelector("img"));
-      if (img && img.naturalWidth) add("Taille d'origine", img.naturalWidth + " × " + img.naturalHeight + " px");
+      if (img && img.naturalWidth) add("Taille chargée", img.naturalWidth + " × " + img.naturalHeight + " px");
     }
     if (!node && it.type === "button") { add("Texte", it.label); add("Adresse", it.url); }
     if (node && (it.type === "button" || it.type === "link")) { add("Texte", p.label); add("Adresse", p.url); if (it.type === "button") add("Apparence", { primary: "Plein", outline: "Contour", ghost: "Discret" }[p.variant] || p.variant); add("Nouvel onglet", p.newTab ? "oui" : "non"); }

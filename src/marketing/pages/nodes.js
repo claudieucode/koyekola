@@ -78,6 +78,8 @@ const color = (v) => {
 const colorCss = (v) => (v.startsWith("token:") ? `var(--kw-${v.slice(6)})` : v);
 const fontLib = require("../../utils/fontLibrary");
 const oneOf = (...list) => (v) => (list.includes(v) ? v : null);
+// Résolution d'image (service commun : media/variants.js). « full » (l'original) est la valeur par défaut et n'est pas enregistrée.
+const imageSize = (p) => { const v = oneOf(...require("../media/variants").SIZE_CHOICES)(p && p.size); return v && v !== "full" ? { size: v } : {}; };
 const numberIn = (min, max, { integer = false } = {}) => (v) => {
   const n = Number(v);
   if (v === "" || v === null || v === undefined || !Number.isFinite(n) || n < min || n > max) return null;
@@ -168,6 +170,9 @@ const STYLE_PROPS = {
   textAlign: { css: "text-align", check: oneOf("left", "center", "right", "justify"), group: "typography" },
   textDecoration: { css: "text-decoration", check: oneOf("none", "underline", "line-through"), group: "typography" },
   textShadow: { css: "text-shadow", check: oneOf(...Object.keys(TEXT_SHADOWS)), out: (v) => TEXT_SHADOWS[v], group: "typography" },
+  // Contour du texte (comme « Text Stroke » d'Elementor) : épaisseur + couleur, deux propriétés simples (la couleur peut être un jeton du site)
+  textStrokeWidth: { css: "-webkit-text-stroke-width", check: len, group: "typography" },
+  textStrokeColor: { css: "-webkit-text-stroke-color", check: color, group: "typography" },
   // Retours à la ligne et débordement du texte (les points de suspension demandent « sans retour » + débordement masqué)
   whiteSpace: { css: "white-space", check: oneOf("normal", "nowrap", "pre", "pre-wrap", "pre-line"), group: "typography" },
   textWrap: { css: "text-wrap", check: oneOf("wrap", "nowrap", "balance", "pretty"), group: "typography" },
@@ -250,7 +255,7 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
       out[k] = ok;
     } else if (k === "backgroundImage") {
       const src = imageUrl(v && v.src, `${at} (image de fond)`);
-      if (src) out.backgroundImage = { src };
+      if (src) { const sz = oneOf(...require("../media/variants").KEYS)(v && v.size); out.backgroundImage = sz ? { src, size: sz } : { src }; }
     } else if (k === "overlay") {
       const c = color(v && v.color);
       if (c) out.overlay = { color: c };
@@ -315,7 +320,7 @@ function declarations(set, band = false) {
   const layers = [];
   if (set.overlay) layers.push(`linear-gradient(${colorCss(set.overlay.color)}, ${colorCss(set.overlay.color)})`);
   if (set.gradient) layers.push(`linear-gradient(${set.gradient.angle}deg, ${colorCss(set.gradient.from)}, ${colorCss(set.gradient.to)})`);
-  if (set.backgroundImage) layers.push(`url("${set.backgroundImage.src}")`);
+  if (set.backgroundImage) layers.push(`url("${require("../media/variants").sourceFor(set.backgroundImage.src, set.backgroundImage.size)}")`);
   if (layers.length) d.push(`background-image:${layers.join(", ")}`);
   if (set.filter) {
     const f = set.filter, unit = { blur: "px", hueRotate: "deg" }, fn = { hueRotate: "hue-rotate" };
@@ -446,7 +451,7 @@ const NODE_TYPES = {
     const alt = line(p.alt, 200);
     if (!alt && p.decorative !== true) throw new Error(`${at} (image) : un texte de remplacement est obligatoire (ou cochez « image décorative »).`);
     const link = h.linkUrl(p.link, `${at} (lien de l'image)`);
-    return { src, alt, decorative: p.decorative === true && !alt, link, caption: line(p.caption, 200), title: line(p.title, 150), newTab: p.newTab === true && link.startsWith("https://") };
+    return { src, alt, decorative: p.decorative === true && !alt, link, caption: line(p.caption, 200), title: line(p.title, 150), newTab: p.newTab === true && link.startsWith("https://"), ...(p.lightbox === true && !link ? { lightbox: true } : {}), ...imageSize(p) };
   } },
   gallery: { label: "Galerie", category: "media", props: (p, at, h) => {
     const images = (Array.isArray(p.images) ? p.images : []).slice(0, 24).map((im, i) => {
@@ -455,11 +460,15 @@ const NODE_TYPES = {
       if (src && !alt) throw new Error(`${at} (galerie) : texte de remplacement manquant pour l'image ${i + 1}.`);
       if (!src) return null;
       const caption = line(im && im.caption, 200), link = h.linkUrl(im && im.link, `${at} (lien de l'image ${i + 1})`);
-      return { src, alt, ...(caption ? { caption } : {}), ...(link ? { link } : {}) };
+      const tag = line(im && im.tag, 30);
+      return { src, alt, ...(caption ? { caption } : {}), ...(link ? { link } : {}), ...(tag ? { tag } : {}) };
     }).filter(Boolean);
     if (!images.length) throw new Error(`${at} (galerie) : au moins une image.`);
-    // lightbox : clic = image en grand (sauf image avec lien) ; masonry : hauteurs naturelles en colonnes
-    return { images, lightbox: p.lightbox === true, masonry: p.masonry === true };
+    // lightbox : clic = image en grand (sauf image avec lien) ; masonry : hauteurs naturelles en colonnes ; justified : lignes de même hauteur
+    // colonnes (grille), ratio d'aspect (grille), hauteur de ligne (justifiée), légende en surcouche au survol, barre de filtres par étiquette (valeurs par défaut non enregistrées)
+    const layout = p.masonry === true ? "" : oneOf("justified")(p.layout);
+    const columns = numberIn(1, 6, { integer: true })(p.columns), ratio = oneOf("4:3", "3:2", "16:9", "9:16", "21:9")(p.ratio), rowHeight = oneOf("120", "160", "260", "320")(String(p.rowHeight));
+    return { images, lightbox: p.lightbox === true, masonry: p.masonry === true, ...(layout ? { layout } : {}), ...(columns && columns !== 3 ? { columns } : {}), ...(ratio ? { ratio } : {}), ...(layout && rowHeight ? { rowHeight } : {}), ...(p.overlay === true ? { overlay: true } : {}), ...(p.filters === true && images.some((im) => im.tag) ? { filters: true } : {}), ...imageSize(p) };
   } },
   video: { label: "Vidéo", category: "media", props: (p, at, h) => {
     const url = line(p.url, 500);
@@ -553,7 +562,7 @@ const NODE_TYPES = {
       return src ? { src, alt, caption: line(im && im.caption, 200) } : null;
     }).filter(Boolean);
     if (images.length < 2) throw new Error(`${at} (carrousel) : au moins deux images.`);
-    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true };
+    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true, ...imageSize(p) };
   } },
   toggle: { label: "Bascule", category: "interaction", props: (p, at) => {
     const title = line(p.title, 150), text = clean(p.text, 4000);
@@ -576,7 +585,7 @@ const NODE_TYPES = {
     const text = clean(p.text, 1200), name = line(p.name, 80);
     if (!text || !name) throw new Error(`${at} (témoignage) : le texte et le nom de la personne sont obligatoires (témoignage réel, avec son accord).`);
     const avatar = p.avatar ? h.imageUrl(p.avatar, `${at} (photo du témoignage)`) : "";
-    return { text, name, role: line(p.role, 120), ...(avatar ? { avatar } : {}), rating: numberIn(0, 5, { integer: true })(p.rating) || 0 };
+    return { text, name, role: line(p.role, 120), ...(avatar ? { avatar, ...imageSize(p) } : {}), rating: numberIn(0, 5, { integer: true })(p.rating) || 0 };
   } },
   pricing: { label: "Offre tarifaire", category: "marketing", props: (p, at, h) => {
     const title = line(p.title, 80), price = line(p.price, 30);
@@ -657,7 +666,7 @@ const NODE_TYPES = {
       const xx = numberIn(0, 100)(x && x.x), yy = numberIn(0, 100)(x && x.y);
       return title && xx !== null && yy !== null ? { x: xx, y: yy, title, text: line(x.text, 300) } : null;
     }).filter(Boolean);
-    return { src, alt, spots };
+    return { src, alt, spots, ...imageSize(p) };
   } },
   posts: { label: "Derniers articles du blog", category: "dynamic", props: (p) => ({
     count: numberIn(1, 12, { integer: true })(p.count) || 3, category: line(p.category, 80),
@@ -775,7 +784,7 @@ const NODE_TYPES = {
     const alt = line(p.alt, 200), title = line(p.title, 120);
     if (!title) throw new Error(`${at} (boîte d'image) : le titre est obligatoire.`);
     const link = h.linkUrl(p.link, `${at} (lien de la boîte d'image)`);
-    return { src, alt, title, text: clean(p.text, 600), titleLevel: oneOf("2", "3", "4", "5", "6")(String(p.titleLevel)) || "3", position: oneOf("top", "left", "right")(p.position) || "top", ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}) };
+    return { src, alt, title, text: clean(p.text, 600), titleLevel: oneOf("2", "3", "4", "5", "6")(String(p.titleLevel)) || "3", position: oneOf("top", "left", "right")(p.position) || "top", ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}), ...imageSize(p) };
   } },
   iconbox: { label: "Boîte d'icône", category: "media", props: (p, at, h) => {
     const icon = String(p.icon || "");
@@ -1123,7 +1132,7 @@ const STYLE_UI = {
   paddingTop: ["Intérieur haut"], paddingRight: ["Intérieur droite"], paddingBottom: ["Intérieur bas"], paddingLeft: ["Intérieur gauche"],
   fontFamily: ["Police", { heading: "Titres du site", body: "Texte du site", system: "Système", serif: "Avec empattements", mono: "Chasse fixe" }],
   fontSize: ["Taille"], fontWeight: ["Graisse", { 300: "Légère", 400: "Normale", 500: "Moyenne", 600: "Demi-grasse", 700: "Grasse", 800: "Extra-grasse", 900: "Noire" }],
-  fontStyle: ["Style", { normal: "Normal", italic: "Italique" }], lineHeight: ["Interligne"], lineClamp: ["Lignes maximum"], letterSpacing: ["Espacement des lettres"], wordSpacing: ["Espacement des mots"], textIndent: ["Retrait de première ligne"],
+  fontStyle: ["Style", { normal: "Normal", italic: "Italique" }], lineHeight: ["Interligne"], lineClamp: ["Lignes maximum"], textStrokeWidth: ["Contour du texte : épaisseur"], textStrokeColor: ["Contour du texte : couleur"], letterSpacing: ["Espacement des lettres"], wordSpacing: ["Espacement des mots"], textIndent: ["Retrait de première ligne"],
   textTransform: ["Casse", { none: "Normale", uppercase: "MAJUSCULES", lowercase: "minuscules", capitalize: "Première Lettre" }],
   textAlign: ["Alignement du texte", { left: "Gauche", center: "Centre", right: "Droite", justify: "Justifié" }],
   textShadow: ["Ombre du texte", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", glow: "Halo clair" }],
