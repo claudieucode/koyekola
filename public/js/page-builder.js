@@ -426,8 +426,23 @@
   // ---------- Placement (règles de structure) ----------
   // Racine : uniquement des sections. Section libre et conteneurs : uniquement des éléments. Un élément posé à la racine
   // est placé dans une nouvelle section libre (jamais d'élément orphelin).
+  // Limites de la page, annoncées par le serveur (SPEC.limits) : vérifiées AVANT d'insérer, pour un message immédiat. Sans cela, l'ajout
+  // était accepté à l'écran puis refusé à l'enregistrement (« Trop d'éléments ») et le travail restait non enregistré.
+  function nodeTotal() { var n = 0; walk(function (x) { if (isNode(x)) n++; }); return n; }
+  function nodesIn(it) { return (isNode(it) ? 1 : 0) + countDeep(it); }
+  function heightOf(it) { var k = kidsOf(it), m = 0; (k || []).forEach(function (c) { m = Math.max(m, heightOf(c)); }); return isNode(it) ? 1 + m : m; }
+  function exceedsLimits(parent, items) {
+    var lim = SPEC.limits || {};
+    if (lim.nodes && nodeTotal() + items.reduce(function (n, it) { return n + nodesIn(it); }, 0) > lim.nodes) { toast("Une page compte au plus " + lim.nodes + " éléments : supprimez-en avant d'en ajouter.", true); return true; }
+    if (lim.depth) {
+      var base = parent ? locate(parent.id).depth : 0; // section = 0, ses éléments = 1
+      if (items.some(function (it) { return base + heightOf(it) > lim.depth; })) { toast("Les éléments ne peuvent pas être imbriqués sur plus de " + lim.depth + " niveaux.", true); return true; }
+    }
+    return false;
+  }
   function insertInto(parent, index, items) {
     if (refusesLockedWidget(items)) return null;
+    if (exceedsLimits(parent, items)) return null;
     if (parent === null) {
       var sections = [], pending = [];
       items.forEach(function (it) { if (isNode(it)) pending.push(it); else { if (pending.length) { sections.push({ id: newId(), type: "layout", children: pending }); pending = []; } sections.push(it); } });
@@ -564,6 +579,7 @@
     if (ids.some(function (id) { return !isNode(byId(id)); }) && content.sections.length + ids.length > 30) { toast("Une page compte au plus 30 sections.", true); return; }
     var made = reIdAll(ids.map(function (id) { return clone(byId(id)); }));
     if (refusesLockedWidget(made)) return;
+    if (SPEC.limits && SPEC.limits.nodes && nodeTotal() + made.reduce(function (n, it) { return n + nodesIn(it); }, 0) > SPEC.limits.nodes) { toast("Une page compte au plus " + SPEC.limits.nodes + " éléments : supprimez-en avant d'en dupliquer.", true); return; }
     nextLabel = "Duplication";
     change(function () {
       ids.forEach(function (id, i) { var l = locate(id); l.list.splice(l.index + 1, 0, made[i]); });

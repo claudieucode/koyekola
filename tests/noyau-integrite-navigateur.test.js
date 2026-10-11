@@ -98,3 +98,33 @@ describe("noyau : opérations sur le document (navigateur)", { skip: SKIP }, () 
     assert.deepEqual(errors, []);
   });
 });
+
+describe("noyau : limites de la page (navigateur)", { skip: SKIP }, () => {
+  let srv, boss, browser, page, id;
+  const row = () => srv.db().prepare("SELECT * FROM mk_landing_pages WHERE id = ?").get(id);
+  before(async () => {
+    srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
+    boss = await loginInstructor(srv);
+    id = Number((await boss.post("/marketing/pages", { name: "Limites", template: "", ouvrir: "editeur" })).location.match(/pages\/(\d+)/)[1]);
+    const kids = []; for (let i = 0; i < 396; i++) kids.push({ id: "t" + String(i).padStart(11, "0"), type: "heading", props: { text: "T" + i, level: "2" } });
+    const r = await boss.request(`/marketing/pages/${id}/brouillon`, { method: "PUT", headers: { Origin: srv.base }, json: { revision: row().revision, content: { title: "L", sections: [{ id: "sect00000001", type: "layout", children: [{ id: "cont00000001", type: "container", children: kids }] }] } } });
+    assert.equal(r.status, 200, r.text); // 397 éléments (396 titres + 1 conteneur)
+    browser = await chromium.launch({ executablePath: CHROME, headless: true });
+    const context = await browser.newContext({ viewport: { width: 1600, height: 950 } });
+    await context.addCookies([...boss.cookies].map(([name, value]) => ({ name, value, url: srv.base })));
+    page = await context.newPage();
+    await page.goto(`${srv.base}/marketing/pages/${id}/editeur`);
+    await page.waitForFunction(() => { const f = document.querySelector("[data-pb-frame]"); return f && f.contentDocument && f.contentDocument.body && f.contentDocument.body.classList.contains("lp-builder"); }, null, { timeout: 20000 });
+    await wait(800);
+  });
+  after(async () => { if (browser) await browser.close(); if (srv) await srv.stop(); });
+
+  test("dupliquer au-delà de 400 éléments est refusé tout de suite, sans toucher à la page", async () => {
+    await page.locator('[data-pb-layers] .pb-node[data-id="cont00000001"] > .pb-row-item').click(); await wait(300);
+    await page.keyboard.press("Control+d");
+    await until(async () => /au plus 400 éléments/.test(await page.locator("[data-pb-toast]").textContent()), { what: "message de limite" });
+    await wait(1500);
+    assert.equal(JSON.parse(row().draft).sections[0].children.length, 1, "aucune copie");
+    assert.ok(!/Non enregistré/.test(await page.locator("[data-pb-save-status], [data-pb-status]").first().textContent().catch(() => "")), "pas d'erreur d'enregistrement");
+  });
+});
