@@ -113,6 +113,10 @@
   "json": "fcb69252182e28a51a1c09699fba2cccbbf5de77",
   "css": "a659264a1272eff1ae753ec950fd30a5b122cb92"
  },
+ "facebookembed": {
+  "json": "85c569951b04bcca2c59305ba07dccacd7b36e3e",
+  "css": "a659264a1272eff1ae753ec950fd30a5b122cb92"
+ },
  "flipbox": {
   "json": "3cbaf2001562919b5ec87998f58335a54e60004c",
   "css": "1fc2a4138e88797d3503abc3ca9d0311c2cade5d"
@@ -273,6 +277,10 @@
   "json": "e0cf10ea8c9428be5ced5559aab8baac02a418ef",
   "css": "2a5d7e808fdb36d7f8c3ca49a3637fc93ec14094"
  },
+ "sitemap": {
+  "json": "a997d69adca6adc600717ccd8ee4476b0f92eb40",
+  "css": "8c3312ba4eea5de3f706425b4192c31eb02d569d"
+ },
  "sitetitle": {
   "json": "98b5485817431baefa926b3a050db9a63f0aa39f",
   "css": "549cf388e0834f5279fe92d6594f9cb1ae9d4ee3"
@@ -280,6 +288,10 @@
  "slides": {
   "json": "39936600f56a206aca7f2c8f0d4cf0c34c5c8c65",
   "css": "d03a0ddb2f3bf374b4b5dac85acce06cfca30b49"
+ },
+ "smartlink": {
+  "json": "a57d8b071832b95b6badc8162533a8cc182fb812",
+  "css": "51097793b526f3169569cde953cca8647694c87c"
  },
  "social": {
   "json": "98b62b7e9317d4df23426cdd90cc8367fb0a0228",

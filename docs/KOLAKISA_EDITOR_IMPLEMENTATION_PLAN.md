@@ -3,7 +3,7 @@
 | Palier | Contenu | État |
 |---|---|---|
 | 0 | Audit initial, état de référence | **Fait** |
-| 1 | Documentation Elementor + matrice | **Fait** : ≈ 140 articles lus (liste des non lus dans `17-…`), 30 documents, matrice de 43 lignes, correspondance widget par widget |
+| 1 | Documentation Elementor + matrice | **Fait** : ≈ 180 articles lus (liste des non lus dans `17-…`), 36 documents, matrice de 46 lignes, correspondance widget par widget |
 | 2 | Images : résolutions | **Fait** (7 widgets + fond + photo de témoignage) |
 | 3 | Widgets incomplets | **Fait** : galerie, compte à rebours, compteur, liste d'icônes, partage, vidéo, diaporama, texte ; 3 widgets ajoutés |
 | 4 | Mise en page / manipulation | Collage depuis un autre site ou navigateur ajouté ; reste déjà riche (audit initial) |

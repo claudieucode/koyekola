@@ -172,6 +172,7 @@ const STYLE_PROPS = {
   textDecoration: { css: "text-decoration", check: oneOf("none", "underline", "line-through"), group: "typography" },
   textShadow: { css: "text-shadow", check: oneOf(...Object.keys(TEXT_SHADOWS)), out: (v) => TEXT_SHADOWS[v], group: "typography" },
   // Contour du texte (comme « Text Stroke » d'Elementor) : épaisseur + couleur, deux propriétés simples (la couleur peut être un jeton du site)
+  direction: { css: "direction", check: oneOf("ltr", "rtl"), group: "typography" }, // sens d'écriture (langues écrites de droite à gauche)
   textStrokeWidth: { css: "-webkit-text-stroke-width", check: len, group: "typography" },
   textStrokeColor: { css: "-webkit-text-stroke-color", check: color, group: "typography" },
   // Retours à la ligne et débordement du texte (les points de suspension demandent « sans retour » + débordement masqué)
@@ -187,7 +188,7 @@ const STYLE_PROPS = {
   borderRightWidth: { css: "border-right-width", check: lenNoPercent, group: "border" },
   borderBottomWidth: { css: "border-bottom-width", check: lenNoPercent, group: "border" },
   borderLeftWidth: { css: "border-left-width", check: lenNoPercent, group: "border" },
-  borderStyle: { css: "border-style", check: oneOf("none", "solid", "dashed", "dotted", "double", "groove"), group: "border" },
+  borderStyle: { css: "border-style", check: oneOf("none", "solid", "dashed", "dotted", "double", "groove", "ridge", "inset", "outset"), group: "border" },
   borderColor: { css: "border-color", check: color, out: colorCss, group: "border" },
   borderRadius: { css: "border-radius", check: withLenToken("radius", len), out: lenTokenOut, group: "border" },
   // Arrondi coin par coin (arrondi « délié ») : toujours écrit après l'arrondi général, qu'il précise
@@ -227,6 +228,8 @@ const STYLE_PROPS = {
   objectFit: { css: "object-fit", check: oneOf("cover", "contain", "fill", "none"), group: "media" },
   objectPosition: { css: "object-position", check: oneOf("center", "top", "bottom", "left", "right"), group: "media" },
   aspectRatio: { css: "aspect-ratio", check: oneOf("auto", "1/1", "4/3", "3/2", "16/9", "21/9", "3/4"), out: (v) => v.replace("/", " / "), group: "media" },
+  backgroundClip: { css: "background-clip", check: oneOf("border-box", "padding-box", "content-box", "text"), group: "background" }, // « text » : le fond (dégradé, image) se voit à travers les lettres ; voir declarations()
+  scrollMarginTop: { css: "scroll-margin-top", check: len, group: "position" }, // décalage d'ancre : distance au haut de l'écran quand un lien #ancre saute ici (en-tête collant)
   backgroundSize: { css: "background-size", check: oneOf("cover", "contain", "auto"), group: "background" },
   backgroundPosition: { css: "background-position", check: oneOf("center", "top", "bottom", "left", "right"), group: "background" },
   backgroundRepeat: { css: "background-repeat", check: oneOf("no-repeat", "repeat", "repeat-x", "repeat-y"), group: "background" },
@@ -238,6 +241,7 @@ const COMPOSED = {
   gradient: { group: "background" },            // { from, to, angle }
   overlay: { group: "background" },
   shadow: { group: "effects" },
+  backdrop: { group: "effects" },               // { blur, brightness, contrast, grayscale, saturate, sepia, hueRotate, invert } : filtres appliqués à ce qui se trouve DERRIÈRE l'élément (verre dépoli)
   filter: { group: "effects" },                 // { blur, brightness, contrast, grayscale, saturate, sepia, hueRotate }                 // { x, y, blur, spread, color } : ombre personnalisée (remplace le préréglage)             // { color } : voile posé sur l'image ou le dégradé (lisibilité du texte)
   transform: { group: "position" },             // { x, y, rotate, scale, skewX, skewY }
   mask: { group: "mask" },                      // { shape, src, size, position, repeat } : découpe en forme ou masque d'image
@@ -265,14 +269,16 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
       // Dégradé linéaire (angle) ou radial, avec la position de chaque couleur en % (comme « Location » d'Elementor) ; valeurs par défaut non enregistrées
       const at = (x, d) => { const n = numberIn(0, 100, { integer: true })(x); return n === null || n === d ? null : n; };
       const fromAt = at(v && v.fromAt, 0), toAt = at(v && v.toAt, 100);
-      if (from && to) out.gradient = { from, to, angle: angle === null ? 180 : angle, ...(v && v.type === "radial" ? { type: "radial" } : {}), ...(fromAt !== null ? { fromAt } : {}), ...(toAt !== null ? { toAt } : {}) };
-    } else if (k === "filter") {
+      // Couleurs intermédiaires (jusqu'à 3), chacune avec sa position en % : « extra: [{ color, at }] »
+      const extra = (Array.isArray(v && v.extra) ? v.extra : []).slice(0, 3).map((e) => { const c = color(e && e.color), a = numberIn(0, 100, { integer: true })(e && e.at); return c && a !== null ? { color: c, at: a } : null; }).filter(Boolean);
+      if (from && to) out.gradient = { from, to, angle: angle === null ? 180 : angle, ...(v && v.type === "radial" ? { type: "radial" } : {}), ...(fromAt !== null ? { fromAt } : {}), ...(toAt !== null ? { toAt } : {}), ...(extra.length ? { extra } : {}) };
+    } else if (k === "filter" || k === "backdrop") {
       const f = {};
       const put = (name, min, max) => { const x = numberIn(min, max, { integer: true })(v && v[name]); if (x !== null) f[name] = x; };
-      put("blur", 0, 40); put("brightness", 0, 300); put("contrast", 0, 300); put("grayscale", 0, 100); put("saturate", 0, 300); put("sepia", 0, 100); put("hueRotate", -360, 360);
+      put("blur", 0, 40); put("brightness", 0, 300); put("contrast", 0, 300); put("grayscale", 0, 100); put("saturate", 0, 300); put("sepia", 0, 100); put("hueRotate", -360, 360); put("invert", 0, 100);
       // Valeurs neutres retirées (100 % de luminosité, 0 de flou…)
-      for (const [name, neutral] of Object.entries({ blur: 0, brightness: 100, contrast: 100, grayscale: 0, saturate: 100, sepia: 0, hueRotate: 0 })) if (f[name] === neutral) delete f[name];
-      if (Object.keys(f).length) out.filter = f;
+      for (const [name, neutral] of Object.entries({ blur: 0, brightness: 100, contrast: 100, grayscale: 0, saturate: 100, sepia: 0, hueRotate: 0, invert: 0 })) if (f[name] === neutral) delete f[name];
+      if (Object.keys(f).length) out[k] = f;
     } else if (k === "shadow") {
       const c = color(v && v.color);
       const px = (n, min, max) => { const x = numberIn(min, max, { integer: true })(n); return x === null ? 0 : x; };
@@ -325,7 +331,10 @@ function declarations(set, band = false) {
   const layers = [];
   if (set.overlay) layers.push(`linear-gradient(${colorCss(set.overlay.color)}, ${colorCss(set.overlay.color)})`);
   if (set.gradient) {
-    const g = set.gradient, stops = `${colorCss(g.from)}${g.fromAt ? ` ${g.fromAt}%` : ""}, ${colorCss(g.to)}${g.toAt !== undefined ? ` ${g.toAt}%` : ""}`;
+    const g = set.gradient;
+    const stops = g.extra && g.extra.length
+      ? [{ c: g.from, at: g.fromAt || 0 }, ...g.extra.map((e) => ({ c: e.color, at: e.at })), { c: g.to, at: g.toAt === undefined ? 100 : g.toAt }].sort((a, b) => a.at - b.at).map((s) => `${colorCss(s.c)} ${s.at}%`).join(", ")
+      : `${colorCss(g.from)}${g.fromAt ? ` ${g.fromAt}%` : ""}, ${colorCss(g.to)}${g.toAt !== undefined ? ` ${g.toAt}%` : ""}`;
     layers.push(g.type === "radial" ? `radial-gradient(circle at center, ${stops})` : `linear-gradient(${g.angle}deg, ${stops})`);
   }
   if (set.backgroundImage) layers.push(`url("${require("../media/variants").sourceFor(set.backgroundImage.src, set.backgroundImage.size)}")`);
@@ -334,6 +343,12 @@ function declarations(set, band = false) {
     const f = set.filter, unit = { blur: "px", hueRotate: "deg" }, fn = { hueRotate: "hue-rotate" };
     d.push(`filter:${Object.entries(f).map(([k, v]) => `${fn[k] || k}(${v}${unit[k] || (k === "blur" ? "px" : "%")})`).join(" ")}`);
   }
+  if (set.backdrop) { // « verre dépoli » : prime sur le simple flou d'arrière-plan
+    const f = set.backdrop, unit = { blur: "px", hueRotate: "deg" }, fn = { hueRotate: "hue-rotate" };
+    const v = Object.entries(f).map(([k, x]) => `${fn[k] || k}(${x}${unit[k] || "%"})`).join(" ");
+    d.push(`-webkit-backdrop-filter:${v}`, `backdrop-filter:${v}`);
+  }
+  if (set.backgroundClip === "text") d.push("-webkit-background-clip:text", "-webkit-text-fill-color:transparent"); // le fond apparaît dans les lettres
   if (set.shadow) { const h = set.shadow; d.push(`box-shadow:${h.inset ? "inset " : ""}${h.x}px ${h.y}px ${h.blur}px ${h.spread}px ${colorCss(h.color)}`); }
   if (set.mask) {
     const m = set.mask;
@@ -398,8 +413,10 @@ const boxProps = (p, at, h) => {
 // Éléments qui sont eux-mêmes un lien, un bouton ou un champ (ou qui peuvent en contenir) : interdits dans un conteneur cliquable
 const INTERACTIVE_INSIDE_LINK = new Set(["button", "link", "menu", "search", "account", "toggle", "tabs", "accordion", "modal", "carousel", "tooltip", "hotspot", "html", "embed", "social", "breadcrumb", "course", "courselist", "posts", "pricing", "iconlist", "gallery", "table", "postcontent"]);
 const nestedProps = (p) => {
-  const mode = oneOf("tabs", "carousel")(p.mode);
+  const mode = oneOf("tabs", "carousel", "accordion")(p.mode);
   if (!mode) return {};
+  // Accordéon : chaque conteneur enfant est un volet (titre = son nom) qui peut contenir n'importe quel élément ; ouvert au départ : le premier, aucun ou tous ; un seul volet ouvert à la fois ou plusieurs
+  if (mode === "accordion") return { mode, accStart: oneOf("none", "all")(p.accStart) || "first", accSingle: p.accSingle === true };
   if (mode === "tabs") return { mode, tabsLook: oneOf("line", "pills")(p.tabsLook) || "line", tabsStart: numberIn(1, 12, { integer: true })(p.tabsStart) || 1 };
   return { mode, dots: p.dots !== false, loop: p.loop === true, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5 };
 };
@@ -430,7 +447,9 @@ const NODE_TYPES = {
     const text = line(p.text, 200);
     // Lien facultatif sur tout le titre (compté comme les autres liens de la page)
     const link = h.linkUrl(p.link, `${at} (lien du titre)`);
-    return { text, level: oneOf("1", "2", "3", "4", "5", "6")(String(p.level)) || "2", ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}) };
+    // Balise : un titre H1–H6 par défaut ; « p », « div » ou « span » pour un texte d'apparence de titre qui n'entre pas dans le plan de la page
+    const tag = oneOf("p", "div", "span")(p.tag);
+    return { text, level: oneOf("1", "2", "3", "4", "5", "6")(String(p.level)) || "2", ...(tag ? { tag } : {}), ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}) };
   } },
   text: { label: "Texte", category: "text", props: (p, at) => {
     const html = sanitizeRich(p.html); // vide permis (paragraphe en cours d'écriture), jamais affiché sur la page publique
@@ -451,7 +470,9 @@ const NODE_TYPES = {
     if (!text) throw new Error(`${at} (code) : le texte est obligatoire.`);
     // Langage de coloration : facultatif (absent = texte brut, comme avant) ; une valeur inconnue est ignorée
     const language = require("./highlight").LANGUAGES.includes(p.language) && p.language !== "text" ? p.language : "";
-    return { text, ...(language ? { language } : {}) };
+    // Numéros de ligne, bouton « Copier » et lignes surlignées (plages « 2-4, 7 ») : réglages d'affichage, le texte reste du texte
+    const hl = [...new Set(String(p.highlight || "").split(",").flatMap((part) => { const m = /^\s*(\d{1,4})(?:\s*-\s*(\d{1,4}))?\s*$/.exec(part); if (!m) return []; const a = Number(m[1]), b = m[2] ? Number(m[2]) : a; return a >= 1 && b >= a && b - a < 200 ? Array.from({ length: b - a + 1 }, (_, i) => a + i) : []; }))].filter((x) => x <= 500).sort((a, b) => a - b).slice(0, 60);
+    return { text, ...(language ? { language } : {}), ...(p.lineNumbers === true ? { lineNumbers: true } : {}), ...(p.copy === true ? { copy: true } : {}), ...(hl.length ? { highlight: hl.join(",") } : {}) };
   } },
   image: { label: "Image", category: "media", props: (p, at, h) => {
     const src = h.imageUrl(p.src, `${at} (image)`);
@@ -475,7 +496,7 @@ const NODE_TYPES = {
     // lightbox : clic = image en grand (sauf image avec lien) ; masonry : hauteurs naturelles en colonnes ; justified : lignes de même hauteur
     // colonnes (grille), ratio d'aspect (grille), hauteur de ligne (justifiée), légende en surcouche au survol, barre de filtres par étiquette (valeurs par défaut non enregistrées)
     const layout = p.masonry === true ? "" : oneOf("justified")(p.layout);
-    const columns = numberIn(1, 6, { integer: true })(p.columns), ratio = oneOf("4:3", "3:2", "16:9", "9:16", "21:9")(p.ratio), rowHeight = oneOf("120", "160", "260", "320")(String(p.rowHeight));
+    const columns = numberIn(1, 12, { integer: true })(p.columns), ratio = oneOf("4:3", "3:2", "16:9", "9:16", "21:9")(p.ratio), rowHeight = oneOf("120", "160", "260", "320")(String(p.rowHeight));
     return { images, lightbox: p.lightbox === true, masonry: p.masonry === true, ...(layout ? { layout } : {}), ...(columns && columns !== 3 ? { columns } : {}), ...(ratio ? { ratio } : {}), ...(layout && rowHeight ? { rowHeight } : {}), ...(p.overlay === true ? { overlay: true } : {}), ...(p.filters === true && images.some((im) => im.tag) ? { filters: true } : {}), ...imageSize(p) };
   } },
   video: { label: "Vidéo", category: "media", props: (p, at, h) => {
@@ -598,7 +619,7 @@ const NODE_TYPES = {
     const text = clean(p.text, 1200), name = line(p.name, 80);
     if (!text || !name) throw new Error(`${at} (témoignage) : le texte et le nom de la personne sont obligatoires (témoignage réel, avec son accord).`);
     const avatar = p.avatar ? h.imageUrl(p.avatar, `${at} (photo du témoignage)`) : "";
-    return { text, name, role: line(p.role, 120), ...(avatar ? { avatar, ...imageSize(p) } : {}), rating: numberIn(0, 5, { integer: true })(p.rating) || 0 };
+    return { text, name, role: line(p.role, 120), ...(avatar ? { avatar, ...(oneOf("above", "left", "right")(p.avatarPos) ? { avatarPos: p.avatarPos } : {}), ...imageSize(p) } : {}), rating: numberIn(0, 5, { integer: true })(p.rating) || 0 };
   } },
   pricing: { label: "Offre tarifaire", category: "marketing", props: (p, at, h) => {
     const title = line(p.title, 80), price = line(p.price, 30);
@@ -640,7 +661,9 @@ const NODE_TYPES = {
     const ctaUrl = h.linkUrl(p.ctaUrl, `${at} (bouton de la fenêtre)`), ctaLabel = line(p.ctaLabel, 60);
     return { buttonLabel, variant: oneOf("primary", "outline", "ghost")(p.variant) || "primary", title, text, ...(ctaUrl && ctaLabel ? { ctaLabel, ctaUrl } : {}), size: oneOf("sm", "md", "lg")(p.size) || "md",
       // centre : fenêtre ; gauche / droite : panneau qui glisse depuis le bord (« off-canvas »)
-      position: oneOf("center", "left", "right")(p.position) || "center" };
+      position: oneOf("center", "left", "right", "corner", "bar")(p.position) || "center",
+      // Ouverture automatique (comme les déclencheurs d'une popup Elementor) : au chargement après un délai, au défilement, à la sortie de la page ou après inactivité ; fréquence limitée
+      ...modalAuto(p) };
   } },
   html: { label: "HTML (sécurisé)", category: "advanced", props: (p, at) => {
     const html = sanitizeHtmlBlock(p.html);
@@ -680,7 +703,7 @@ const NODE_TYPES = {
       const xx = numberIn(0, 100)(x && x.x), yy = numberIn(0, 100)(x && x.y);
       return title && xx !== null && yy !== null ? { x: xx, y: yy, title, text: line(x.text, 300) } : null;
     }).filter(Boolean);
-    return { src, alt, spots, ...imageSize(p) };
+    return { src, alt, spots, ...(p.trigger === "hover" ? { trigger: "hover" } : {}), ...imageSize(p) };
   } },
   posts: { label: "Derniers articles du blog", category: "dynamic", props: (p) => ({
     count: numberIn(1, 12, { integer: true })(p.count) || 3, category: line(p.category, 80),
@@ -790,7 +813,7 @@ const NODE_TYPES = {
   // Table des matières : construite à l'affichage à partir des titres de la page (jamais une liste recopiée à la main)
   toc: { label: "Table des matières", category: "interaction", props: (p) => ({ title: line(p.title, 80) || "Sommaire", depth: oneOf("2", "3", "4")(String(p.depth)) || "3", numbered: p.numbered === true }) },
   // Barre de lecture : progression du défilement de la page, en haut ou en bas de l'écran
-  readingprogress: { label: "Barre de lecture", category: "interaction", props: (p) => ({ position: oneOf("top", "bottom")(p.position) || "top", thickness: numberIn(2, 10, { integer: true })(p.thickness) || 4 }) },
+  readingprogress: { label: "Barre de lecture", category: "interaction", props: (p) => ({ position: oneOf("top", "bottom")(p.position) || "top", thickness: numberIn(2, 10, { integer: true })(p.thickness) || 4, ...(p.shape === "circle" ? { shape: "circle" } : {}) }) },
   // Formulaire : un formulaire du module « Formulaires d'inscription » (champs, consentement, anti-robot, double
   // confirmation, étiquettes : tout vient du formulaire). Plusieurs par page, chacun à son emplacement.
   signupform: { label: "Formulaire", category: "marketing", props: (p, at, h) => {
@@ -1168,10 +1191,12 @@ const STYLE_UI = {
   textShadow: ["Ombre du texte", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", glow: "Halo clair" }],
   textDecoration: ["Décoration", { none: "Aucune", underline: "Soulignée", "line-through": "Barrée" }],
   color: ["Couleur du texte"], backgroundColor: ["Couleur de fond"],
-  borderWidth: ["Épaisseur de bordure"], borderStyle: ["Style de bordure", { none: "Aucune", solid: "Pleine", dashed: "Tirets", dotted: "Points", double: "Double", groove: "Gravée" }], borderColor: ["Couleur de bordure"], borderRadius: ["Arrondi"],
+  borderWidth: ["Épaisseur de bordure"], borderStyle: ["Style de bordure", { none: "Aucune", solid: "Pleine", dashed: "Tirets", dotted: "Points", double: "Double", groove: "Gravée", ridge: "En relief", inset: "Creusée", outset: "Bombée" }], borderColor: ["Couleur de bordure"], borderRadius: ["Arrondi"],
   borderTopWidth: ["Épaisseur haut"], borderRightWidth: ["Épaisseur droite"], borderBottomWidth: ["Épaisseur bas"], borderLeftWidth: ["Épaisseur gauche"],
   borderTopLeftRadius: ["Arrondi haut gauche"], borderTopRightRadius: ["Arrondi haut droit"], borderBottomRightRadius: ["Arrondi bas droit"], borderBottomLeftRadius: ["Arrondi bas gauche"],
   backdropBlur: ["Flou de l'arrière-plan (px)"],
+  direction: ["Sens d'écriture", { ltr: "De gauche à droite", rtl: "De droite à gauche" }], scrollMarginTop: ["Décalage d'ancre (lien #…)"],
+  backgroundClip: ["Découpe du fond", { "border-box": "Jusqu'à la bordure", "padding-box": "Jusqu'au remplissage", "content-box": "Au contenu seulement", text: "Dans les lettres du texte" }],
   boxShadow: ["Ombre", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", xl: "Très forte" }], opacity: ["Opacité"],
   overflow: ["Débordement", { visible: "Visible", hidden: "Masqué", auto: "Défilement" }],
   overflowX: ["Débordement horizontal", { visible: "Visible", hidden: "Masqué", auto: "Auto", scroll: "Défilement", clip: "Coupé" }], overflowY: ["Débordement vertical", { visible: "Visible", hidden: "Masqué", auto: "Auto", scroll: "Défilement", clip: "Coupé" }],
@@ -1213,7 +1238,7 @@ function editorSpec() {
     codeLanguages: Object.entries(require("./highlight").LABELS), categories: CATEGORIES, presetCategories: require("./stylePresets").CATEGORIES, widgetGroups: WIDGET_GROUPS, siteSubs: SITE_SUBS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, css: p.css, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
-    shapeDividers: Object.entries(SHAPE_DIVIDERS), socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
+    shapeDividers: Object.entries(SHAPE_DIVIDERS), modalTriggers: Object.entries(MODAL_TRIGGERS), socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     structureKinds: require("./structures").KINDS, structures: require("./structures").STRUCTURES,
     colorTokens: COLOR_TOKENS, lengthTokens: Object.fromEntries(Object.entries(lenTokens()).map(([f, m]) => [f, Object.entries(m).map(([k, v]) => ({ key: k, value: v }))])), spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
     limits: { nodes: MAX_NODES, depth: MAX_DEPTH }, dynamic: dynamic.catalog(),
@@ -1271,7 +1296,7 @@ function registerCondition(key, def) {
   CUSTOM_CONDITIONS.set(key, def);
   AUDIENCES[key] = def.label;
 }
-function normalizeAudience(raw, at) {
+function normalizeAudienceOne(raw, at) {
   if (!raw || typeof raw !== "object" || !raw.who) return undefined;
   if (!Object.hasOwn(AUDIENCES, raw.who)) throw new Error(`${at} : public d'affichage inconnu.`);
   if (CUSTOM_CONDITIONS.has(raw.who)) {
@@ -1300,8 +1325,27 @@ function normalizeAudience(raw, at) {
   }
   return { who: raw.who };
 }
+// Groupes de conditions (comme les conditions d'affichage d'Elementor) : la condition principale ET celles de « and » forment le premier groupe ;
+// chaque groupe de « or » en est une alternative (ET entre ses conditions) ; l'élément s'affiche si UN groupe est satisfait.
+function normalizeAudience(raw, at) {
+  const first = normalizeAudienceOne(raw, at);
+  if (!first) return undefined;
+  const more = (list) => (Array.isArray(list) ? list : []).slice(0, 3).map((c) => normalizeAudienceOne(c, at)).filter(Boolean);
+  const and = more(raw.and), or = (Array.isArray(raw.or) ? raw.or : []).slice(0, 3).map((g) => {
+    const head = normalizeAudienceOne(g, at);
+    if (!head) return null;
+    const gand = more(g.and);
+    return gand.length ? { ...head, and: gand } : head;
+  }).filter(Boolean);
+  return { ...first, ...(and.length ? { and } : {}), ...(or.length ? { or } : {}) };
+}
 // Le visiteur correspond-il ? visitor = { known, student, subscribed, customer, tags: Set, score }
 function audienceMatches(audience, visitor) {
+  if (!audience) return true;
+  const group = (g) => audienceMatchesOne(g, visitor) && (g.and || []).every((c) => audienceMatchesOne(c, visitor));
+  return group(audience) || (audience.or || []).some(group);
+}
+function audienceMatchesOne(audience, visitor) {
   if (!audience) return true;
   const v = visitor || { known: false, student: false, subscribed: false, customer: false, tags: new Set(), score: 0 };
   switch (audience.who) {
@@ -1509,6 +1553,20 @@ function capsOf(type) {
   return caps;
 }
 // Formes de découpe (masque) : tracés CSS « clip-path », sans fichier à charger
+// Ouverture automatique d'une fenêtre : déclencheur, délai (s), seuil de défilement (%), fréquence, fermeture automatique (s), fermeture verrouillée
+const MODAL_TRIGGERS = { load: "Au chargement de la page", scroll: "Après un défilement", exit: "Quand le visiteur s'apprête à quitter la page", idle: "Après un temps d'inactivité" };
+function modalAuto(p) {
+  const auto = oneOf(...Object.keys(MODAL_TRIGGERS))(p.auto);
+  if (!auto) return {};
+  const out = { auto };
+  if (auto === "load" || auto === "idle") out.delay = numberIn(1, 600, { integer: true })(p.delay) || (auto === "idle" ? 20 : 5);
+  if (auto === "scroll") out.scrollAt = numberIn(5, 95, { integer: true })(p.scrollAt) || 50;
+  out.freq = oneOf("always", "session", "once")(p.freq) || "session";
+  const close = numberIn(1, 600, { integer: true })(p.autoClose);
+  if (close) out.autoClose = close;
+  if (p.lock === true) out.lock = true;
+  return out;
+}
 const MASK_SHAPES = {
   circle: ["Cercle", "circle(50% at 50% 50%)"], ellipse: ["Ellipse", "ellipse(50% 38% at 50% 50%)"], triangle: ["Triangle", "polygon(50% 0%, 100% 100%, 0% 100%)"],
   diamond: ["Losange", "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)"], pentagon: ["Pentagone", "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)"],
