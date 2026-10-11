@@ -44,11 +44,11 @@ describe("contrat des propriétés de style", () => {
     }
   });
 
-  test("toute propriété qui accepte une couleur du site (token:…) la convertit en variable CSS : la référence est conservée à l'affichage", () => {
+  test("toute propriété qui accepte une couleur du site (token:…) la convertit en variable CSS AVEC valeur de repli (pages hors site) : la référence est conservée à l'affichage", () => {
     for (const [k, p] of Object.entries(STYLE_PROPS)) {
       const r = p.check("token:primary");
       if (r === null) continue;
-      assert.equal(css(p, r), "var(--kw-primary)", `${k} : « token:primary » n'est pas converti en var(--kw-primary)`);
+      assert.equal(css(p, r), "var(--kw-primary, #0277b6)", `${k} : « token:primary » n'est pas converti en var(--kw-primary, <valeur d'origine>)`);
     }
   });
 

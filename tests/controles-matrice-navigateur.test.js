@@ -226,7 +226,7 @@ describe("matrice des contrôles de style (inspecteur réel, Chrome)", { skip: S
       await prop(key).locator(".pb-color-btn").first().click();
       await page.locator('.pb-cpop-token[data-token="primary"]').click();
       await until(() => styleOf(nid)[key] === "token:primary", { what: `${tag} = jeton` });
-      if (scope.name === "desktop" && scope.bag === "styles") assert.ok((await canvasRule(nid)).includes(`${p.css}:var(--kw-primary)`), `${tag} : la référence au jeton n'est pas écrite dans le CSS`);
+      if (scope.name === "desktop" && scope.bag === "styles") assert.ok((await canvasRule(nid)).includes(`${p.css}:var(--kw-primary, #0277b6)`), `${tag} : la référence au jeton n'est pas écrite dans le CSS`);
       await page.keyboard.press("Escape"); await wait(150);
       await prop(key).locator(".pb-reset").first().click();
       await until(() => styleOf(nid)[key] === undefined, { what: `${tag} effacé par ↺` });
