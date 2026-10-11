@@ -225,11 +225,22 @@
       var mark = function () { try { if (freq === "once") window.localStorage.setItem(key, "1"); else if (freq === "session") window.sessionStorage.setItem(key, "1"); } catch (e) { /* stockage refusé : la fenêtre pourra revenir */ } };
       var open = function () {
         if (done || seen() || dlg.open || document.querySelector("dialog[open]")) return; // jamais deux fenêtres en même temps
+        if (views < minViews || (source && source !== origin)) return; // règles d'affichage non remplies
         done = true; mark(); show();
         var secs = Number(dlg.getAttribute("data-kw-auto-close")) || 0;
         if (secs) setTimeout(function () { if (dlg.open) dlg.close(); }, secs * 1000);
       };
       var delay = (Number(dlg.getAttribute("data-kw-auto-delay")) || 0) * 1000;
+      // Pages vues pendant la visite (compteur de session, une seule fois par page chargée) et provenance du visiteur
+      var minViews = Number(dlg.getAttribute("data-kw-auto-views")) || 0, source = dlg.getAttribute("data-kw-auto-source") || "", views = 1, origin = "direct";
+      try { views = Number(window.sessionStorage.getItem("kw-views") || 0); if (!window.__kwViewed) { window.__kwViewed = true; views += 1; window.sessionStorage.setItem("kw-views", String(views)); } } catch (e) { /* stockage refusé */ }
+      var ref = document.referrer, host = ""; try { host = ref ? new URL(ref).hostname.replace(/^www\./, "") : ""; } catch (e) { host = ""; }
+      if (host && host !== location.hostname.replace(/^www\./, "")) origin = /(^|\.)(google|bing|duckduckgo|qwant|ecosia|yahoo|yandex|brave)\./.test(host) ? "search" : /(facebook|instagram|twitter|x\.com|t\.co|linkedin|tiktok|youtube|pinterest|reddit|whatsapp|snapchat)/.test(host) ? "social" : "other";
+      else if (host) origin = "internal";
+      if (mode === "clicks") {
+        var need = Number(dlg.getAttribute("data-kw-auto-clicks")) || 3, count = 0;
+        document.addEventListener("click", function onClk(e) { if (e.target.closest && e.target.closest("dialog")) return; if (++count >= need) { document.removeEventListener("click", onClk); open(); } });
+      }
       if (mode === "load") setTimeout(open, delay);
       else if (mode === "scroll") {
         var at = (Number(dlg.getAttribute("data-kw-auto-scroll")) || 50) / 100;

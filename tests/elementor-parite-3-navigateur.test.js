@@ -122,6 +122,33 @@ describe("parité Elementor : suite 3 (navigateur)", { skip: SKIP }, () => {
     assert.equal(JSON.parse(row().draft).sections[0].children[0].children[0].props.delay, undefined);
   });
 
+  test("fenêtre : déclencheur par nombre de clics, pages vues minimum et provenance", async () => {
+    let r = await put([{ type: "modal", id: "modal0000011", props: { buttonLabel: "O", title: "Clics", text: "x", auto: "clicks", clicks: 2, freq: "always" } }]);
+    assert.equal(r.status, 200, r.text);
+    const saved = JSON.parse(row().draft).sections[0].children[0].children[0].props;
+    assert.equal(saved.clicks, 2);
+    await open();
+    assert.equal(await page.locator("dialog.kw-modal").evaluate((d) => d.open), false);
+    await page.mouse.click(5, 5); await wait(150);
+    assert.equal(await page.locator("dialog.kw-modal").evaluate((d) => d.open), false, "1 clic : pas encore");
+    await page.mouse.click(6, 6);
+    await until(async () => page.locator("dialog.kw-modal").evaluate((d) => d.open), { timeout: 3000, what: "ouverture au 2e clic" });
+    // provenance : règle « moteur de recherche » non remplie par une arrivée directe
+    r = await put([{ type: "modal", id: "modal0000012", props: { buttonLabel: "O", title: "Source", text: "x", auto: "load", delay: 1, freq: "always", source: "search" } }]);
+    assert.equal(r.status, 200, r.text); await open(); await wait(2200);
+    assert.equal(await page.locator("dialog.kw-modal").evaluate((d) => d.open), false, "arrivée directe : règle non remplie");
+    // pages vues minimum : 2 pages vues exigées → s'ouvre au 2e chargement de la visite seulement
+    r = await put([{ type: "modal", id: "modal0000013", props: { buttonLabel: "O", title: "Vues", text: "x", auto: "load", delay: 1, freq: "always", minViews: 2 } }]);
+    assert.equal(r.status, 200, r.text); await page.evaluate(() => sessionStorage.clear()); await open(); await wait(2200);
+    assert.equal(await page.locator("dialog.kw-modal").evaluate((d) => d.open), false, "1re page vue : pas d'ouverture");
+    await page.reload();
+    await until(async () => page.locator("dialog.kw-modal").evaluate((d) => d.open), { timeout: 5000, what: "ouverture à la 2e page vue" });
+    // valeurs invalides ignorées
+    r = await put([{ type: "modal", id: "modal0000014", props: { buttonLabel: "O", title: "T", text: "x", auto: "load", minViews: 99, source: "pirate" } }]);
+    const bad = JSON.parse(row().draft).sections[0].children[0].children[0].props;
+    assert.equal(bad.minViews, undefined); assert.equal(bad.source, undefined);
+  });
+
   test("balise du titre : p / div / span ; valeur inconnue → titre", async () => {
     const r = await put([{ type: "heading", props: { text: "A", level: "2", tag: "p" } }, { type: "heading", props: { text: "B", level: "2", tag: "span" } }, { type: "heading", props: { text: "C", level: "3", tag: "script" } }, { type: "heading", props: { text: "D", level: "2" } }]);
     assert.equal(r.status, 200, r.text); await open();

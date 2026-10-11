@@ -1240,7 +1240,7 @@ function editorSpec() {
     codeLanguages: Object.entries(require("./highlight").LABELS), categories: CATEGORIES, presetCategories: require("./stylePresets").CATEGORIES, widgetGroups: WIDGET_GROUPS, siteSubs: SITE_SUBS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, css: p.css, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
-    shapeDividers: Object.entries(SHAPE_DIVIDERS), modalTriggers: Object.entries(MODAL_TRIGGERS), socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
+    shapeDividers: Object.entries(SHAPE_DIVIDERS), modalTriggers: Object.entries(MODAL_TRIGGERS), modalSources: Object.entries(MODAL_SOURCES), socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     structureKinds: require("./structures").KINDS, structures: require("./structures").STRUCTURES,
     colorTokens: COLOR_TOKENS, lengthTokens: Object.fromEntries(Object.entries(lenTokens()).map(([f, m]) => [f, Object.entries(m).map(([k, v]) => ({ key: k, value: v }))])), spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
     limits: { nodes: MAX_NODES, depth: MAX_DEPTH }, dynamic: dynamic.catalog(),
@@ -1556,17 +1556,24 @@ function capsOf(type) {
 }
 // Formes de découpe (masque) : tracés CSS « clip-path », sans fichier à charger
 // Ouverture automatique d'une fenêtre : déclencheur, délai (s), seuil de défilement (%), fréquence, fermeture automatique (s), fermeture verrouillée
-const MODAL_TRIGGERS = { load: "Au chargement de la page", scroll: "Après un défilement", exit: "Quand le visiteur s'apprête à quitter la page", idle: "Après un temps d'inactivité" };
+const MODAL_TRIGGERS = { load: "Au chargement de la page", scroll: "Après un défilement", exit: "Quand le visiteur s'apprête à quitter la page", idle: "Après un temps d'inactivité", clicks: "Après un nombre de clics sur la page" };
+const MODAL_SOURCES = { direct: "Visiteur arrivé directement (sans site d'origine)", search: "Visiteur venu d'un moteur de recherche", social: "Visiteur venu d'un réseau social", other: "Visiteur venu d'un autre site" };
 function modalAuto(p) {
   const auto = oneOf(...Object.keys(MODAL_TRIGGERS))(p.auto);
   if (!auto) return {};
   const out = { auto };
   if (auto === "load" || auto === "idle") out.delay = numberIn(1, 600, { integer: true })(p.delay) || (auto === "idle" ? 20 : 5);
+  if (auto === "clicks") out.clicks = numberIn(1, 50, { integer: true })(p.clicks) || 3;
   if (auto === "scroll") out.scrollAt = numberIn(5, 95, { integer: true })(p.scrollAt) || 50;
   out.freq = oneOf("always", "session", "once")(p.freq) || "session";
   const close = numberIn(1, 600, { integer: true })(p.autoClose);
   if (close) out.autoClose = close;
   if (p.lock === true) out.lock = true;
+  // Règles d'affichage : nombre minimum de pages vues pendant la visite, provenance du visiteur
+  const views = numberIn(2, 20, { integer: true })(p.minViews);
+  if (views) out.minViews = views;
+  const source = oneOf(...Object.keys(MODAL_SOURCES))(p.source);
+  if (source) out.source = source;
   return out;
 }
 const MASK_SHAPES = {
