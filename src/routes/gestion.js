@@ -73,6 +73,7 @@ function safely(back, fn) {
 }
 // Bouton « Retour » : le niveau parent réel (jamais history.back())
 function backOf(p) {
+  if (/^\/formateur\/gestion\/sauvegardes\/.+/.test(p)) return { href: "/formateur/gestion/sauvegardes", label: "Retour aux sauvegardes" };
   if (/^\/formateur\/gestion\/ventes\/commandes\/\d+/.test(p)) return { href: "/formateur/gestion/ventes", label: "Retour aux commandes" };
   if (/^\/formateur\/gestion\/eleves\/\d+/.test(p)) return { href: "/formateur/gestion/eleves", label: "Retour aux élèves" };
   if (/^\/formateur\/gestion\/support\/\d+/.test(p)) return { href: "/formateur/gestion/support", label: "Retour au support" };
@@ -413,6 +414,27 @@ router.post("/formateur/gestion/sauvegardes", safely("/formateur/gestion/sauvega
   const { name } = backups.createBackup({ auto: false });
   flash(req, "ok", `Sauvegarde « ${name} » créée. Téléchargez-la pour en garder une copie hors du serveur.`);
   res.redirect("/formateur/gestion/sauvegardes");
+}));
+// Audit d'isolation des sites (palier 2) : analyse en LECTURE SEULE d'une sauvegarde existante (ou de la base en service) ; n'affiche que des nombres.
+// Une sauvegarde est ouverte en lecture seule puis refermée ; rien n'est écrit, aucun contenu ni donnée personnelle n'est affiché.
+router.get("/formateur/gestion/sauvegardes/audit-sites", page("gestion/audit-sites", "Audit des sites", (req) => {
+  const source = String(req.query.source || "");
+  const auditSites = require("../services/auditSites");
+  let result;
+  let label;
+  if (source === "active") {
+    label = "Base en service (lecture seule)";
+    result = auditSites.run(require("../config/database"));
+  } else {
+    const file = backups.pathOf(source);
+    if (!file) return null;
+    label = `Sauvegarde ${source}`;
+    const { DatabaseSync } = require("node:sqlite");
+    const copy = new DatabaseSync(file, { readOnly: true });
+    try { result = auditSites.run(copy); } finally { copy.close(); }
+  }
+  const stat = source === "active" ? null : backups.list().find((b) => b.name === source) || null;
+  return { result, label, source, createdAt: stat ? stat.createdAt : null };
 }));
 router.get("/formateur/gestion/sauvegardes/fichiers.tar", (req, res, next) => {
   const stamp = new Date().toISOString().slice(0, 10);

@@ -1,5 +1,10 @@
 # Audit des sites sur une COPIE de la base de production — mode d'emploi
 
+## Méthode SANS Terminal (recommandée, après déploiement de cette version)
+**Mon espace → Centre de gestion → Sauvegardes** : cliquez sur **Audit des sites** à côté d'une sauvegarde existante (ou sur « Analyser la base en service »). La page affiche, en **lecture seule**, uniquement des **nombres** (aucun nom de site, e-mail ou contenu) et dit s'il y a des points à examiner. Recopiez-moi simplement le texte de la page (ou une capture d'écran). La sauvegarde n'est pas modifiée (empreinte vérifiée par test) et aucun fichier n'est créé. Cette méthode n'est disponible qu'une fois cette version mise en ligne ; en attendant, la méthode Terminal ci-dessous reste possible.
+
+# (Méthode Terminal)
+
 Objectif : vérifier, sur une copie, qu'aucune donnée de production n'associe deux sites différents. **Rien n'est modifié** : le site en ligne n'est pas touché, la copie est analysée en lecture seule, aucune correction n'est faite automatiquement.
 
 ## Ce que font les deux scripts (vérifié dans le code)

@@ -17,17 +17,24 @@
   <% } else { %>
     <div class="dtable-wrap"><table class="dtable g-table">
       <caption class="sr-only">Sauvegardes de la base, les plus récentes d'abord</caption>
-      <thead><tr><th scope="col">Date</th><th scope="col">Type</th><th scope="col" class="g-num">Taille</th><th scope="col"><span class="sr-only">Télécharger</span></th></tr></thead>
+      <thead><tr><th scope="col">Date</th><th scope="col">Type</th><th scope="col" class="g-num">Taille</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
       <tbody><% list.forEach((b) => { %>
         <tr>
           <td data-label="Date"><%= when(b.createdAt) %></td>
           <td data-label="Type"><%= kinds[b.kind] %></td>
           <td class="g-num" data-label="Taille"><%= sizeOf(b.size) %></td>
-          <td data-label="Télécharger"><a class="btn btn-outline btn-sm" href="/formateur/gestion/sauvegardes/<%= encodeURIComponent(b.name) %>" download><%- icon("download", { size: 16 }) %> Télécharger<span class="sr-only"> la sauvegarde du <%= when(b.createdAt) %></span></a></td>
+          <td data-label="Actions"><a class="btn btn-ghost btn-sm" href="/formateur/gestion/sauvegardes/audit-sites?source=<%= encodeURIComponent(b.name) %>" title="Vérifie, en lecture seule, qu'aucune donnée n'associe deux sites différents">Audit des sites<span class="sr-only"> de la sauvegarde du <%= when(b.createdAt) %></span></a>
+            <a class="btn btn-outline btn-sm" href="/formateur/gestion/sauvegardes/<%= encodeURIComponent(b.name) %>" download><%- icon("download", { size: 16 }) %> Télécharger<span class="sr-only"> la sauvegarde du <%= when(b.createdAt) %></span></a></td>
         </tr>
       <% }) %></tbody>
     </table></div>
   <% } %>
+</section>
+
+<section class="dpanel" aria-labelledby="bk-audit">
+  <h2 id="bk-audit">Audit des sites</h2>
+  <p class="field-hint">Vérifie, en <strong>lecture seule</strong>, qu'aucune donnée n'associe deux sites différents (étapes de tunnel, pages parentes, composants…). Le résultat ne contient que des nombres : aucun nom, e-mail ni contenu. Choisissez « Audit des sites » sur une sauvegarde ci-dessus, ou analysez la base en service :</p>
+  <a class="btn btn-outline" href="/formateur/gestion/sauvegardes/audit-sites?source=active">Analyser la base en service</a>
 </section>
 
 <section class="dpanel" aria-labelledby="bk-files">

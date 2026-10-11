@@ -1,0 +1,50 @@
+<%- include("../partials/header", { title }) %>
+<% const when = (d) => formatDateTime(d.toISOString().slice(0, 19).replace("T", " ")); %>
+<%- include("_head", { heading: "Audit des sites", subtitle: label + (createdAt ? " · créée le " + when(createdAt) : "") + " — lecture seule, rien n'est modifié." }) %>
+
+<% if (!result.hasSites) { %>
+  <div class="dash-empty g-state"><h3>Aucun site dans cette base</h3><p>Cette base n'a pas de module Site Web : il n'y a rien à vérifier.</p></div>
+<% } else { %>
+  <div class="g-flash <%= result.anomalies ? "is-warning" : "is-success" %>" role="status">
+    <% if (result.anomalies) { %><strong><%= result.anomalies %> point<%= result.anomalies > 1 ? "s" : "" %> à examiner.</strong> Rien n'a été modifié ni corrigé : copiez ce résultat (il ne contient que des nombres) et transmettez-le avant toute correction.
+    <% } else { %><strong>Aucune anomalie d'isolation détectée.</strong> Aucune donnée n'associe deux sites différents.<% } %>
+  </div>
+
+  <section class="dpanel" aria-labelledby="au-sites">
+    <h2 id="au-sites">Sites</h2>
+    <p><%= result.sites.total %> site<%= result.sites.total > 1 ? "s" : "" %> au total, dont <%= result.sites.archived %> archivé<%= result.sites.archived > 1 ? "s" : "" %><%= result.sites.deleted === null ? "" : " et " + result.sites.deleted + " supprimé" + (result.sites.deleted > 1 ? "s" : "") %>.</p>
+  </section>
+
+  <section class="dpanel" aria-labelledby="au-liens">
+    <h2 id="au-liens">Associations entre sites différents</h2>
+    <div class="dtable-wrap"><table class="dtable g-table">
+      <caption class="sr-only">Contrôles d'isolation entre sites</caption>
+      <thead><tr><th scope="col">Contrôle</th><th scope="col" class="g-num">Cas trouvés</th><th scope="col">Que faire</th></tr></thead>
+      <tbody><% result.checks.forEach((c) => { %>
+        <tr>
+          <td data-label="Contrôle"><%= c.label %></td>
+          <td class="g-num" data-label="Cas trouvés"><%= c.unavailable ? "non vérifiable" : c.n %></td>
+          <td data-label="Que faire"><%= c.unavailable ? "—" : c.n ? c.fix + " (à faire avec nous, jamais automatiquement.)" : "Rien à faire." %></td>
+        </tr>
+      <% }) %></tbody>
+    </table></div>
+  </section>
+
+  <section class="dpanel" aria-labelledby="au-tables">
+    <h2 id="au-tables">Répartition des données par site</h2>
+    <p class="field-hint">« Site principal » = données sans site (comportement d'origine). « Orphelines » = rattachées à un site qui n'existe plus (doit rester à 0).</p>
+    <div class="dtable-wrap"><table class="dtable g-table">
+      <caption class="sr-only">Répartition des données par site</caption>
+      <thead><tr><th scope="col">Données</th><th scope="col" class="g-num">Total</th><th scope="col" class="g-num">Site principal</th><th scope="col" class="g-num">Rattachées à un site</th><th scope="col" class="g-num">Orphelines</th></tr></thead>
+      <tbody><% result.tables.forEach((t) => { %>
+        <tr>
+          <td data-label="Données"><%= t.label %></td>
+          <% if (t.absent) { %><td class="g-num" colspan="4">non présent dans cette base</td><% } else { %>
+          <td class="g-num" data-label="Total"><%= t.total %></td><td class="g-num" data-label="Site principal"><%= t.principal %></td><td class="g-num" data-label="Rattachées à un site"><%= t.rattachees %></td><td class="g-num" data-label="Orphelines"><%= t.orphelines %></td>
+          <% } %>
+        </tr>
+      <% }) %></tbody>
+    </table></div>
+  </section>
+<% } %>
+<%- include("../partials/footer") %>
