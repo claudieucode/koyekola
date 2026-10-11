@@ -4,6 +4,7 @@ const db = require("../config/database");
 const { parseVideoUrl } = require("../utils/video");
 const { asset } = require("../utils/assets");
 const { renderMarkdown } = require("../utils/markdown");
+const { imageSource } = require("../marketing/media/variants");
 const { signedBunnyUrl } = require("../utils/bunny");
 const { absoluteUrl, plainText, jsonLdTags } = require("../utils/seo");
 const { slugify } = require("../utils/format");
@@ -51,6 +52,7 @@ function injectLocals(req, res, next) {
   res.locals.signedBunnyUrl = signedBunnyUrl;
   res.locals.parseVideoUrl = parseVideoUrl;
   res.locals.renderMarkdown = renderMarkdown;
+  res.locals.imageSource = imageSource; // résolution choisie d'un widget image (src, srcset, sizes)
   res.locals.asset = asset;
   // Apparence du site (CMS → Apparence) : styles, en-tête, pied de page. Version publiée ; en aperçu (?kwpreview=1, équipe seulement) le brouillon.
   // Une configuration absente = l'affichage d'origine, intact. Une seule lecture par requête.

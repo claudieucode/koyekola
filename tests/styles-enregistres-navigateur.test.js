@@ -151,4 +151,23 @@ describe("styles enregistrés (navigateur)", { skip: SKIP }, () => {
     await dlg().getByRole("button", { name: "Annuler" }).click();
     assert.deepEqual(errors, []);
   });
+
+  test("S6 le dialogue s'ouvre aussi depuis le menu contextuel des calques, le menu du canevas et la barre flottante du bloc", async () => {
+    await page.setViewportSize({ width: 1600, height: 950 });
+    await wait(400);
+    await select("head00000001");
+    await page.locator('[data-pb-layers] .pb-node[data-id="head00000001"] > .pb-row-item').click({ button: "right" });
+    await page.getByRole("menuitem", { name: /Enregistrer comme style/ }).click();
+    await dlg().waitFor({ state: "visible" });
+    await dlg().getByRole("button", { name: "Annuler" }).click();
+    await dlg().waitFor({ state: "detached" });
+    await select("head00000001");
+    await page.locator('.pb-cbar [data-action="saveStyle"]').click();
+    await dlg().waitFor({ state: "visible" });
+    await dlg().getByRole("button", { name: "Annuler" }).click();
+    await dlg().waitFor({ state: "detached" });
+    await select("butt00000001");
+    assert.equal(await page.locator('.pb-cbar [data-action="saveStyle"]').isDisabled(), true, "bouton sans réglage propre : désactivé");
+    assert.deepEqual(errors, []);
+  });
 });

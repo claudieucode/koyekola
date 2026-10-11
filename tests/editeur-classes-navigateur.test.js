@@ -106,7 +106,7 @@ describe("classes globales (navigateur)", { skip: SKIP }, () => {
     await select("head00000001");
     await openCode();
     await page.getByRole("button", { name: "Mettre à jour le style" }).click();
-    await page.getByRole("button", { name: "Remplacer le style" }).click();
+    await page.getByRole("button", { name: "Redéfinir le style" }).click();
     await until(() => siteSettings().classes[0].styles.desktop.backgroundColor === "#e0f2fe", { what: "classe mise à jour dans le site" });
     await until(async () => (await bg("head00000002")) === "rgb(224, 242, 254)", { what: "le second élément suit la classe mise à jour" });
     await until(async () => (await bg("head00000001")) === "rgb(224, 242, 254)", { what: "le premier aussi" });
