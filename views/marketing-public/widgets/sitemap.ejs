@@ -1,0 +1,5 @@
+<%# Plan du site (src/marketing/pages/widgets/sitemap.js). Variables : p, d (d.groups : { label, items: [{ path, title }] }), cls, attrs. %>
+<nav class="<%= cls %> is-cols-<%= ["1", "2", "3"].includes(String(p.columns)) ? p.columns : "2" %>" aria-label="<%= p.label %>"<%- attrs %>>
+  <% if (!d.groups.length) { %><p class="kw-sitemap-empty">Aucun contenu publié pour le moment.</p><% } %>
+  <% d.groups.forEach((g) => { %><div class="kw-sitemap-group"><p class="kw-sitemap-title"><%= g.label %></p><ul class="kw-sitemap-list"><% g.items.forEach((it) => { %><li><a class="kw-sitemap-link" href="<%= it.path %>"><%= it.title %></a></li><% }) %></ul></div><% }) %>
+</nav>

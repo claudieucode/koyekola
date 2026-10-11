@@ -5,7 +5,7 @@
 
 ## Honnêteté sur le périmètre (à lire d'abord)
 - Les pages du centre d'aide sont très longues (plus de 100 000 caractères avec la navigation) : le texte utile se trouve **après** le menu. Il a été lu avec un décalage de 100 000 caractères ; les pages dont l'article n'a pas été lu sont **marquées « non lu »**.
-- Couverture : environ **90 articles lus en entier** (≈ 75 widgets, onglet Avancé, responsive, historique, réglages du site, conditions d'affichage, masques, composants, mouvement, étiquettes dynamiques…). Ce qui n'a **pas** été lu est listé dans `17-functional-inventory.md` et `16-official-sources.md`. **Chaque fichier a une section « Non vérifié »**.
+- Couverture : environ **180 articles lus en entier** (≈ 75 widgets, onglet Avancé, responsive, historique, réglages du site, conditions d'affichage, masques, composants, mouvement, étiquettes dynamiques…). Ce qui n'a **pas** été lu est listé dans `17-functional-inventory.md` et `16-official-sources.md`. **Chaque fichier a une section « Non vérifié »**.
 - Aucune fonctionnalité n'est supposée : ce qui n'apparaît pas dans une source lue est écrit « non vérifié ».
 - Ce dossier **complète** `ELEMENTOR_FEATURE_AUDIT.md` et `ELEMENTOR_FEATURE_INVENTORY.md` (racine du dépôt, phase 1 du 8 octobre 2026), qui comparent déjà Elementor à KOLAKISA widget par widget. Il ne les remplace pas.
 
@@ -16,7 +16,7 @@
 | `02-layout-and-containers.md` | Conteneurs, Flexbox, réglages de mise en page |
 | `03-widgets-catalog.md` | Liste officielle des widgets par catégorie |
 | `04-widget-controls.md` | Réglages détaillés des premiers widgets lus |
-| `04b…04i` | Réglages détaillés des autres widgets, fonctions transversales, mouvement, arrière-plans, contenu dynamique |
+| `04b…04k` | Réglages détaillés des autres widgets, fonctions transversales, mouvement, arrière-plans, contenu dynamique, éléments V4, popups, boucles, tutoriels |
 | `05-images-and-media.md` | Résolutions d'image, tailles WordPress, optimisation |
 | `06-style-system.md` | Styles, couleurs et polices globales, Theme Style |
 | `07-advanced-controls.md` | Onglet Avancé |

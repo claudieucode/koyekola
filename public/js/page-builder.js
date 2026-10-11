@@ -908,7 +908,7 @@
     cleanSet(it);
     if (it.parts) { Object.keys(it.parts).forEach(function (k) { cleanSet(it.parts[k]); if (!Object.keys(it.parts[k]).length) delete it.parts[k]; }); if (!Object.keys(it.parts).length) delete it.parts; }
   }
-  var COMPOSED_LABEL = { filter: "filtres", shadow: "ombre personnalisée", overlay: "voile", gradient: "dégradé", backgroundImage: "image de fond", transform: "transformation", mask: "masque" };
+  var COMPOSED_LABEL = { filter: "filtres", backdrop: "filtres de l'arrière-plan", shadow: "ombre personnalisée", overlay: "voile", gradient: "dégradé", backgroundImage: "image de fond", transform: "transformation", mask: "masque" };
   function setStyle(ids, key, value, opts) { var m = {}; m[key] = value; setStyles(ids, m, opts); }
   // Plusieurs propriétés en une seule étape d'annulation (côtés liés, retrait du fond…)
   function setStyles(ids, map, opts) {
@@ -1986,6 +1986,7 @@
       case "heading":
         box.appendChild(textField("Texte", p.text, set("text"), { max: 200, disabled: disabled, dyn: true, hint: "Ou double-cliquez sur le titre dans la page. { } : insérer une donnée dynamique." }));
         box.appendChild(selectField("Niveau", p.level, [["1", "Titre 1 (un seul par page)"], ["2", "Titre 2"], ["3", "Titre 3"], ["4", "Titre 4"], ["5", "Titre 5"], ["6", "Titre 6"]], set("level", false), { disabled: disabled }));
+        box.appendChild(selectField("Balise HTML", p.tag || "", [["", "Titre (selon le niveau)"], ["p", "Paragraphe"], ["div", "Bloc (div)"], ["span", "Texte en ligne (span)"]], function (v) { change(function () { var x = byId(it.id).props; if (v) x.tag = v; else delete x.tag; }); }, { disabled: disabled, hint: "Un titre aide les moteurs de recherche et les lecteurs d'écran ; choisissez autre chose seulement pour un simple texte d'apparence de titre." }));
         box.appendChild(textField("Lien (facultatif)", p.link, set("link"), { list: "pb-links", disabled: disabled, dyn: true, dynKinds: ["url"], placeholder: "/catalogue, /p/…, #ancre ou https://…", hint: "Tout le titre devient cliquable sur la page publiée." }));
         box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
         break;
@@ -2008,6 +2009,9 @@
       case "code":
         box.appendChild(textField("Texte affiché tel quel", p.text, set("text"), { multiline: true, rows: "8", max: 4000, disabled: disabled, hint: "Affiché comme texte, jamais exécuté." }));
         box.appendChild(selectField("Coloration du code", p.language || "text", SPEC.codeLanguages, function (v) { change(function () { var x = byId(it.id); if (v === "text") delete x.props.language; else x.props.language = v; }); }, { disabled: disabled }));
+        box.appendChild(checkField("Numéros de ligne", p.lineNumbers, function (v) { setProp(it.id, "lineNumbers", v); }, { disabled: disabled }));
+        box.appendChild(checkField("Bouton « Copier »", p.copy, function (v) { setProp(it.id, "copy", v); }, { disabled: disabled }));
+        box.appendChild(textField("Lignes surlignées (ex. 2-4, 7)", p.highlight, function (v) { change(function () { var x = byId(it.id).props; if (v.trim()) x.highlight = v.trim(); else delete x.highlight; }, { key: it.id + ":hl", light: true }); }, { max: 80, disabled: disabled }));
         break;
       case "image":
         box.appendChild(mediaPreview(/^\{\{/.test(p.src || "") ? "" : p.src, function (m) { change(function () { var x = byId(it.id); x.props.src = m.path; if (m.alt && !x.props.alt) { x.props.alt = m.alt; delete x.props.decorative; } }); }, disabled));
@@ -2035,7 +2039,7 @@
         box.appendChild(selectField("Disposition", galMode, [["grid", "Grille"], ["masonry", "Mosaïque (hauteurs naturelles)"], ["justified", "Justifiée (lignes de même hauteur)"]], function (v) {
           change(function () { var x = byId(it.id); delete x.props.masonry; delete x.props.layout; if (v === "masonry") x.props.masonry = true; else if (v === "justified") x.props.layout = "justified"; });
         }, { disabled: disabled }));
-        if (galMode !== "justified") box.appendChild(numberField("Colonnes", p.columns || 3, { min: 1, max: 6, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; change(function () { var x = byId(it.id); if (n === 3) delete x.props.columns; else x.props.columns = n; }); }, "De 1 à 6 (2 au plus sur téléphone)."));
+        if (galMode !== "justified") box.appendChild(numberField("Colonnes", p.columns || 3, { min: 1, max: 12, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; change(function () { var x = byId(it.id); if (n === 3) delete x.props.columns; else x.props.columns = n; }); }, "De 1 à 12 (2 au plus sur téléphone)."));
         if (galMode === "grid") box.appendChild(selectField("Ratio d'aspect des images", p.ratio || "1:1", [["1:1", "Carré (1:1)"], ["4:3", "4:3"], ["3:2", "3:2"], ["16:9", "16:9"], ["9:16", "Vertical (9:16)"], ["21:9", "Panoramique (21:9)"]], function (v) { change(function () { var x = byId(it.id); if (v === "1:1") delete x.props.ratio; else x.props.ratio = v; }); }, { disabled: disabled }));
         if (galMode === "justified") box.appendChild(selectField("Hauteur des lignes", String(p.rowHeight || "200"), [["120", "120 px"], ["160", "160 px"], ["200", "200 px"], ["260", "260 px"], ["320", "320 px"]], function (v) { change(function () { var x = byId(it.id); if (v === "200") delete x.props.rowHeight; else x.props.rowHeight = v; }); }, { disabled: disabled }));
         box.appendChild(checkField("Légende au survol (sur l'image)", p.overlay, function (v) { setProp(it.id, "overlay", v); }, { disabled: disabled, hint: "Sur écran tactile, la légende reste visible." }));
@@ -2245,6 +2249,7 @@
         break;
       case "readingprogress":
         box.appendChild(selectField("Position", p.position || "top", [["top", "En haut de l'écran"], ["bottom", "En bas de l'écran"]], function (v) { setProp(it.id, "position", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Forme", p.shape === "circle" ? "circle" : "bar", [["bar", "Barre sur toute la largeur"], ["circle", "Cercle dans un coin (à droite)"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "circle") x.shape = "circle"; else delete x.shape; }); }, { disabled: disabled }));
         box.appendChild(selectField("Épaisseur", String(p.thickness || 4), ["2", "3", "4", "6", "8", "10"].map(function (n) { return [n, n + " px"]; }), function (v) { setProp(it.id, "thickness", Number(v)); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "Couleur : onglet Style › Couleurs (couleur du texte). Sur la page publiée, la barre suit la lecture." }));
         break;
@@ -2305,6 +2310,7 @@
       case "hotspot":
         box.appendChild(mediaPreview(p.src, function (m) { change(function () { var x = byId(it.id).props; x.src = m.path; if (m.alt) x.alt = m.alt; }); }, disabled));
         box.appendChild(resolutionField(it, [p.src], disabled));
+        box.appendChild(selectField("Ouvrir l'infobulle", p.trigger === "hover" ? "hover" : "click", [["click", "Au clic"], ["hover", "Au survol (et au clic)"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "hover") x.trigger = "hover"; else delete x.trigger; }); }, { disabled: disabled }));
         box.appendChild(textField("Texte de remplacement de l'image", p.alt, set("alt"), { max: 200, disabled: disabled }));
         (p.spots || []).forEach(function (sp, i) {
           box.appendChild(h("div", { class: "pb-repeat-item" },
@@ -2380,6 +2386,7 @@
         box.appendChild(selectField("Note", String(p.rating || 0), [["0", "Pas de note"], ["1", "1 / 5"], ["2", "2 / 5"], ["3", "3 / 5"], ["4", "4 / 5"], ["5", "5 / 5"]], function (v) { setProp(it.id, "rating", Number(v)); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-sub", text: "Photo (facultative)" }));
         box.appendChild(mediaPreview(p.avatar, function (m) { setProp(it.id, "avatar", m.path); }, disabled));
+        if (p.avatar) box.appendChild(selectField("Place de la photo", p.avatarPos || "", [["", "À côté du nom (défaut)"], ["above", "Au-dessus du témoignage"], ["left", "À gauche du témoignage"], ["right", "À droite du témoignage"]], function (v) { change(function () { var x = byId(it.id).props; if (v) x.avatarPos = v; else delete x.avatarPos; }); }, { disabled: disabled }));
         if (p.avatar) box.appendChild(resolutionField(it, [p.avatar], disabled));
         if (p.avatar) box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled, onclick: function () { change(function () { var x = byId(it.id).props; delete x.avatar; delete x.size; }); } }, "Retirer la photo"));
         break;
@@ -2431,7 +2438,16 @@
         box.appendChild(textField("Contenu (gras, liens…)", p.text, set("text"), { multiline: true, max: 4000, disabled: disabled }));
         box.appendChild(h("div", { class: "pb-grid-2" }, textField("Bouton dans la fenêtre (facultatif)", p.ctaLabel, set("ctaLabel"), { max: 60, disabled: disabled }), textField("Son adresse", p.ctaUrl, set("ctaUrl"), { list: "pb-links", disabled: disabled })));
         box.appendChild(selectField("Taille", p.size || "md", [["sm", "Petite"], ["md", "Moyenne"], ["lg", "Grande"]], function (v) { setProp(it.id, "size", v); }, { disabled: disabled }));
-        box.appendChild(selectField("Position", p.position || "center", [["center", "Fenêtre au centre"], ["left", "Panneau glissant depuis la gauche"], ["right", "Panneau glissant depuis la droite"]], function (v) { setProp(it.id, "position", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Position", p.position || "center", [["center", "Fenêtre au centre"], ["left", "Panneau glissant depuis la gauche"], ["right", "Panneau glissant depuis la droite"], ["corner", "Carte dans le coin bas droit (ne bloque pas la page)"], ["bar", "Barre en bas de l'écran (ne bloque pas la page)"]], function (v) { setProp(it.id, "position", v); }, { disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-sub", text: "Ouverture automatique" }));
+        box.appendChild(selectField("Quand ouvrir la fenêtre", p.auto || "", [["", "Seulement au clic sur le bouton"]].concat(SPEC.modalTriggers), function (v) { change(function () { var x = byId(it.id).props; if (!v) { ["auto", "delay", "scrollAt", "freq", "autoClose", "lock"].forEach(function (k) { delete x[k]; }); } else { x.auto = v; if (!x.freq) x.freq = "session"; } }); }, { disabled: disabled, hint: "Dans l'éditeur, la fenêtre ne s'ouvre jamais toute seule." }));
+        if (p.auto === "load" || p.auto === "idle") box.appendChild(numberField(p.auto === "idle" ? "Inactivité avant ouverture (secondes)" : "Délai avant ouverture (secondes)", p.delay || (p.auto === "idle" ? 20 : 5), { min: 1, max: 600, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; setProp(it.id, "delay", n); }));
+        if (p.auto === "scroll") box.appendChild(numberField("Défilement de la page (%)", p.scrollAt || 50, { min: 5, max: 95, step: 5, integer: true, disabled: disabled }, function (n) { if (n === null) return false; setProp(it.id, "scrollAt", n); }));
+        if (p.auto) {
+          box.appendChild(selectField("Fréquence", p.freq || "session", [["session", "Une fois par visite"], ["once", "Une seule fois pour ce visiteur"], ["always", "À chaque affichage de la page"]], function (v) { setProp(it.id, "freq", v); }, { disabled: disabled }));
+          box.appendChild(numberField("Fermeture automatique après (secondes, vide = jamais)", p.autoClose || "", { min: 1, max: 600, step: 1, integer: true, disabled: disabled }, function (n) { change(function () { var x = byId(it.id).props; if (!n) delete x.autoClose; else x.autoClose = n; }); }));
+          box.appendChild(checkField("Empêcher la fermeture par Échap ou clic à côté", p.lock, function (v) { setProp(it.id, "lock", v); }, { disabled: disabled, hint: "Le bouton « × » reste disponible." }));
+        }
         box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { var d = frame.contentDocument && frame.contentDocument.getElementById("kw-m-" + it.id); if (d && d.showModal) { d.showModal(); var c = d.querySelector("[data-kw-modal-close]"); if (c) c.onclick = function () { d.close(); }; d.onclick = function (e) { if (e.target === d) d.close(); }; } } }, "Ouvrir la fenêtre dans le canevas"));
         break;
       case "countdown":
@@ -2728,7 +2744,7 @@
   var UNITS = {
     width: ["px", "%", "rem", "em", "vw", "auto", "fit-content", "min-content", "max-content"], height: ["px", "%", "rem", "em", "vh", "auto", "fit-content", "min-content", "max-content"], outlineWidth: ["px"], outlineOffset: ["px", "rem"], flexBasis: ["px", "%", "rem", "auto"],
     minWidth: ["px", "%", "rem", "em", "vw", "fit-content", "min-content", "max-content"], maxWidth: ["px", "%", "rem", "em", "vw", "fit-content", "min-content", "max-content"], minHeight: ["px", "%", "rem", "em", "vh", "fit-content", "min-content", "max-content"], maxHeight: ["px", "%", "rem", "em", "vh", "fit-content", "min-content", "max-content"],
-    gap: ["px", "rem", "em", "%"], rowGap: ["px", "rem", "em", "%"], columnGap: ["px", "rem", "em", "%"], fontSize: ["px", "em", "rem", "vw"], letterSpacing: ["px", "em", "rem"], wordSpacing: ["px", "em", "rem"], textStrokeWidth: ["px", "em"], textIndent: ["px", "em", "rem", "%"], borderWidth: ["px"], borderTopWidth: ["px"], borderRightWidth: ["px"], borderBottomWidth: ["px"], borderLeftWidth: ["px"],
+    gap: ["px", "rem", "em", "%"], rowGap: ["px", "rem", "em", "%"], columnGap: ["px", "rem", "em", "%"], fontSize: ["px", "em", "rem", "vw"], letterSpacing: ["px", "em", "rem"], wordSpacing: ["px", "em", "rem"], scrollMarginTop: ["px", "rem", "em"], textStrokeWidth: ["px", "em"], textIndent: ["px", "em", "rem", "%"], borderWidth: ["px"], borderTopWidth: ["px"], borderRightWidth: ["px"], borderBottomWidth: ["px"], borderLeftWidth: ["px"],
     borderRadius: ["px", "%", "rem"], borderTopLeftRadius: ["px", "%", "rem"], borderTopRightRadius: ["px", "%", "rem"], borderBottomRightRadius: ["px", "%", "rem"], borderBottomLeftRadius: ["px", "%", "rem"],
     top: ["px", "%", "rem"], left: ["px", "%", "rem"], right: ["px", "%", "rem"], bottom: ["px", "%", "rem"],
   };
@@ -2939,7 +2955,7 @@
   // Libellés courts dans les lignes (le nom complet reste en infobulle et pour les lecteurs d'écran)
   var SHORT = { alignItems: "Aligner", alignSelf: "Alignement", justifySelf: "Justification", justifyItems: "Justifier", alignContent: "Aligner lignes", gridAutoFlow: "Remplissage", flexWrap: "Retour ligne", justifyContent: "Justifier", gap: "Écart", rowGap: "Écart lignes", columnGap: "Écart colonnes", flexDirection: "Direction", display: "Affichage",
     minWidth: "Largeur min.", maxWidth: "Largeur max.", minHeight: "Hauteur min.", maxHeight: "Hauteur max.", flexGrow: "Proportion", columns: "Colonnes",
-    fontFamily: "Police", fontWeight: "Graisse", fontSize: "Taille", lineHeight: "Interligne", letterSpacing: "Interlettrage", wordSpacing: "Esp. des mots", columnCount: "Colonnes", textStrokeWidth: "Contour", textStrokeColor: "Couleur du contour", textIndent: "Retrait", textTransform: "Casse", textAlign: "Alignement", textDecoration: "Décoration", fontStyle: "Style",
+    fontFamily: "Police", fontWeight: "Graisse", fontSize: "Taille", lineHeight: "Interligne", letterSpacing: "Interlettrage", wordSpacing: "Esp. des mots", columnCount: "Colonnes", textStrokeWidth: "Contour", textStrokeColor: "Couleur du contour", direction: "Sens", scrollMarginTop: "Décalage d'ancre", backgroundClip: "Découpe du fond", textIndent: "Retrait", textTransform: "Casse", textAlign: "Alignement", textDecoration: "Décoration", fontStyle: "Style",
     zIndex: "Plan", boxShadow: "Ombre (préréglage)", gridTemplate: "Largeurs", gridRows: "Lignes", gridColumnSpan: "Colonnes occupées", gridRowSpan: "Lignes occupées", textShadow: "Ombre du texte", transitionDuration: "Transition (ms)", backdropBlur: "Flou arrière (px)", transformOrigin: "Origine", right: "Décalage droite", bottom: "Décalage bas", opacity: "Opacité", overflow: "Débordement", objectFit: "Cadrage", objectPosition: "Point focal", aspectRatio: "Proportions", top: "Décalage haut", left: "Décalage gauche" };
   function propRow(items, key, control, label, id, extra) {
     label = label || SHORT[key];
@@ -3566,11 +3582,23 @@
       inner.appendChild(h("div", { class: "pb-grid-2" },
         numberField("Position départ (%)", g && g.fromAt !== undefined ? g.fromAt : 0, { min: 0, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; gset("fromAt")(n); }),
         numberField("Position arrivée (%)", g && g.toAt !== undefined ? g.toAt : 100, { min: 0, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; gset("toAt")(n); })));
+      // Couleurs intermédiaires (jusqu'à 3), chacune avec sa position en %
+      ((g && g.extra) || []).forEach(function (e, i) {
+        var cid = fid();
+        var setEx = function (patch) { var cur = Object.assign({ from: "#0277b6", to: "#102a3a", angle: 180 }, valueOf(byId(it.id), "gradient") || {}); var ex = (cur.extra || []).slice(); ex[i] = Object.assign({}, ex[i], patch); cur.extra = ex; setStyle(ids, "gradient", cur); };
+        inner.appendChild(h("div", { class: "pb-grid-2" },
+          row("Couleur " + (i + 2), colorButton(cid, e.color, undefined, dis, function (v) { if (v) setEx({ color: v }); }, "gradient-x" + i, { noClear: true }), cid),
+          numberField("Position (%)", e.at, { min: 0, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setEx({ at: n }); })));
+        inner.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { var cur = Object.assign({}, valueOf(byId(it.id), "gradient")); cur.extra = (cur.extra || []).filter(function (z, k) { return k !== i; }); if (!cur.extra.length) delete cur.extra; setStyle(ids, "gradient", cur); } }, "Retirer cette couleur"));
+      });
+      inner.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: dis || ((g && g.extra) || []).length >= 3 || !g, onclick: function () { var cur = Object.assign({ from: "#0277b6", to: "#102a3a", angle: 180 }, valueOf(byId(it.id), "gradient") || {}); cur.extra = (cur.extra || []).concat([{ color: "#ffffff", at: 50 }]); setStyle(ids, "gradient", cur); } }, "Ajouter une couleur au dégradé"));
       var angRow = numField("Angle", { min: 0, max: 360, step: 1, integer: true, staticUnit: "°", value: g ? g.angle : 180, placeholder: 180, base: 180, slider: [0, 360], drag: true, disabled: dis, prop: "gradient-angle",
         onCommit: function (raw, u, opts) { if (raw === "") return false; gset("angle")(Number(raw), opts); } }, false);
       inner.appendChild(angRow);
       if (has("gradient")) inner.appendChild(h("div", { class: "pb-prop-sub" }, h("span"), h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { if (bgChoice[it.id] === "gradient") delete bgChoice[it.id]; setStyle(ids, "gradient", ""); } }, "Retirer le dégradé")));
     }
+    // Découpe du fond : jusqu'à la bordure, au remplissage, au contenu, ou dans les lettres du texte (dégradé / image visibles à travers le texte)
+    if (type === "image" || type === "gradient" || has("backgroundImage") || has("gradient") || has("backgroundClip")) inner.appendChild(styleControl(items, "backgroundClip", "Découpe du fond"));
   }
   // Séparateur de forme (conteneurs) : une forme en haut et / ou en bas (forme, hauteur, couleur, retournement, au premier plan)
   function shapeDividerControls(it, dis) {
@@ -3619,12 +3647,20 @@
     var out = [];
     if (group === "effects") {
       var fl = ownValue(it, "filter") || {}, fli = inheritedValue(it, "filter") || {};
-      var FILTERS = [["blur", "Flou", 0, 40, "px", 0], ["brightness", "Luminosité", 0, 300, "%", 100], ["contrast", "Contraste", 0, 300, "%", 100], ["grayscale", "Noir et blanc", 0, 100, "%", 0], ["saturate", "Saturation", 0, 300, "%", 100], ["sepia", "Sépia", 0, 100, "%", 0], ["hueRotate", "Teinte", -360, 360, "°", 0]];
+      var FILTERS = [["blur", "Flou", 0, 40, "px", 0], ["brightness", "Luminosité", 0, 300, "%", 100], ["contrast", "Contraste", 0, 300, "%", 100], ["grayscale", "Noir et blanc", 0, 100, "%", 0], ["saturate", "Saturation", 0, 300, "%", 100], ["sepia", "Sépia", 0, 100, "%", 0], ["hueRotate", "Teinte", -360, 360, "°", 0], ["invert", "Inversion des couleurs", 0, 100, "%", 0]];
       out.push(h("p", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Filtres" }), Object.keys(fl).length ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { setStyle(ids, "filter", ""); } }, "Retirer") : null));
       FILTERS.forEach(function (f) {
         var putF = function (n, opts) { var next = Object.assign({}, ownValue(byId(it.id), "filter") || {}); if (n === null) delete next[f[0]]; else next[f[0]] = n; setStyle(ids, "filter", Object.keys(next).length ? next : "", opts); };
         out.push(numField(f[1], { min: f[2], max: f[3], step: 1, integer: true, staticUnit: f[4], value: fl[f[0]] === undefined ? "" : fl[f[0]], placeholder: fli[f[0]] !== undefined ? fli[f[0]] : f[5], base: f[5], slider: [f[2], f[3]], drag: true, disabled: dis, prop: "filter-" + f[0],
           onCommit: function (raw, u, opts) { putF(raw === "" ? null : Number(raw), opts); } }, fl[f[0]] !== undefined, function () { putF(null); }));
+      });
+      var bl = ownValue(it, "backdrop") || {}, bli = inheritedValue(it, "backdrop") || {};
+      var BFILTERS = [["blur", "Flou", 0, 40, "px", 0], ["brightness", "Luminosité", 0, 300, "%", 100], ["contrast", "Contraste", 0, 300, "%", 100], ["grayscale", "Noir et blanc", 0, 100, "%", 0], ["saturate", "Saturation", 0, 300, "%", 100], ["sepia", "Sépia", 0, 100, "%", 0], ["hueRotate", "Teinte", -360, 360, "°", 0], ["invert", "Inversion des couleurs", 0, 100, "%", 0]];
+      out.push(h("p", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Filtres de l'arrière-plan (verre dépoli)" }), Object.keys(bl).length ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { setStyle(ids, "backdrop", ""); } }, "Retirer") : null));
+      BFILTERS.forEach(function (f) {
+        var putF = function (n, opts) { var next = Object.assign({}, ownValue(byId(it.id), "backdrop") || {}); if (n === null) delete next[f[0]]; else next[f[0]] = n; setStyle(ids, "backdrop", Object.keys(next).length ? next : "", opts); };
+        out.push(numField(f[1], { min: f[2], max: f[3], step: 1, integer: true, staticUnit: f[4], value: bl[f[0]] === undefined ? "" : bl[f[0]], placeholder: bli[f[0]] !== undefined ? bli[f[0]] : f[5], base: f[5], slider: [f[2], f[3]], drag: true, disabled: dis, prop: "filter-" + f[0],
+          onCommit: function (raw, u, opts) { putF(raw === "" ? null : Number(raw), opts); } }, bl[f[0]] !== undefined, function () { putF(null); }));
       });
       var sh = ownValue(it, "shadow"), shi = inheritedValue(it, "shadow"), cur = sh || shi || { x: 0, y: 6, blur: 18, spread: 0, color: "#10222f29" };
       var put = function (k, v, opts) { var next = Object.assign({ x: 0, y: 6, blur: 18, spread: 0, color: "#10222f29" }, ownValue(byId(it.id), "shadow") || shi || {}); next[k] = v; setStyle(ids, "shadow", next, opts); };
@@ -3728,7 +3764,7 @@
       }
       if (g === "typography" && schema.groups.color !== undefined && keysOf("color").indexOf("color") >= 0) keys.splice(Math.min(3, keys.length), 0, "color");
       if (g === "layout" && !pdef) keys = withChildKeys(it, keys, plan); // le placement dans le parent concerne le WIDGET, jamais une de ses parties
-      if (g === "background") keys = ["backgroundColor", "backgroundImage", "gradient", "overlay", "backgroundSize", "backgroundPosition", "backgroundRepeat", "backgroundAttachment"];
+      if (g === "background") keys = ["backgroundColor", "backgroundImage", "gradient", "overlay", "backgroundClip", "backgroundSize", "backgroundPosition", "backgroundRepeat", "backgroundAttachment"];
       plan.push([g, keys]);
     });
     // Un élément sans groupe « Mise en page » (image, bouton…) reçoit tout de même les réglages d'enfant de son parent
@@ -3971,12 +4007,16 @@
       var dis = !canWrite || lockedDeep(it.id), p = it.props || {};
       if (it.type === "container") {
         // Mode d'affichage des enfants : ordinaire, onglets (titre = nom de l'enfant) ou carrousel
-        box.appendChild(selectField("Affichage des éléments à l'intérieur", p.mode || "", [["", "Normal (les uns sous les autres)"], ["tabs", "Onglets (un conteneur enfant par onglet)"], ["carousel", "Carrousel (un conteneur enfant par diapositive)"]], function (v) { change(function () { var x = byId(it.id); if (v) { x.props.mode = v; } else { ["mode", "tabsLook", "tabsStart", "dots", "loop", "autoplay", "interval"].forEach(function (k) { delete x.props[k]; }); } }); }, { disabled: dis }));
+        box.appendChild(selectField("Affichage des éléments à l'intérieur", p.mode || "", [["", "Normal (les uns sous les autres)"], ["tabs", "Onglets (un conteneur enfant par onglet)"], ["accordion", "Accordéon (un conteneur enfant par volet)"], ["carousel", "Carrousel (un conteneur enfant par diapositive)"]], function (v) { change(function () { var x = byId(it.id); if (v) { x.props.mode = v; } else { ["mode", "tabsLook", "tabsStart", "accStart", "accSingle", "dots", "loop", "autoplay", "interval"].forEach(function (k) { delete x.props[k]; }); } }); }, { disabled: dis }));
         var setNested = function (k) { return function (v) { setProp(it.id, k, v); }; };
         if (p.mode === "tabs") {
           box.appendChild(h("p", { class: "pb-hint", text: "Le nom de chaque conteneur enfant (menu ⋮ → Renommer, ou panneau Structure) devient le titre de son onglet ; sans nom : « Onglet 1 », « Onglet 2 »…" }));
           box.appendChild(selectField("Style des onglets", p.tabsLook || "line", [["line", "Soulignés"], ["pills", "Boutons arrondis"]], setNested("tabsLook"), { disabled: dis }));
           box.appendChild(numberField("Onglet ouvert au départ", p.tabsStart || 1, { min: 1, max: 12, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setProp(it.id, "tabsStart", n); }, "De 1 à 12."));
+        } else if (p.mode === "accordion") {
+          box.appendChild(h("p", { class: "pb-hint", text: "Le nom de chaque conteneur enfant (menu ⋮ → Renommer, ou panneau Structure) devient le titre de son volet ; il peut contenir n'importe quels éléments. Sans nom : « Volet 1 », « Volet 2 »…" }));
+          box.appendChild(selectField("Ouvert au départ", p.accStart || "first", [["first", "Le premier volet"], ["none", "Aucun"], ["all", "Tous"]], setNested("accStart"), { disabled: dis }));
+          box.appendChild(checkField("Un seul volet ouvert à la fois", p.accSingle === true, setNested("accSingle"), { disabled: dis }));
         } else if (p.mode === "carousel") {
           box.appendChild(h("p", { class: "pb-hint", text: "Chaque conteneur enfant est une diapositive (images, textes, boutons… à l'intérieur). Boutons précédent / suivant et défilement au doigt inclus." }));
           box.appendChild(checkField("Points de navigation", p.dots !== false, setNested("dots"), { disabled: dis }));
@@ -4316,7 +4356,7 @@
   //  • Remplacer : le style est lié ET les réglages propres de l'élément, dans les catégories du style, sont retirés (le style prend ces catégories).
   // Dissocier : copie les valeurs du style dans l'élément (seulement là où il n'a rien) puis coupe le lien : apparence inchangée.
   var PRESET_CATS = SPEC.presetCategories || [];
-  var COMPOSED_LABEL = { gradient: "Dégradé", overlay: "Voile", shadow: "Ombre", filter: "Filtres", transform: "Transformation", mask: "Masque" };
+  var COMPOSED_LABEL = { gradient: "Dégradé", overlay: "Voile", shadow: "Ombre", filter: "Filtres", backdrop: "Filtres de l'arrière-plan", transform: "Transformation", mask: "Masque" };
   var presetKeyLabel = function (k) { return (SP[k] && SP[k].label) || COMPOSED_LABEL[k] || k; };
   var presetCatOf = function (k) { for (var i = 0; i < PRESET_CATS.length; i++) if (PRESET_CATS[i].keys.indexOf(k) >= 0) return PRESET_CATS[i].id; return null; };
   var presetCatLabel = function (id) { var c = PRESET_CATS.filter(function (x) { return x.id === id; })[0]; return c ? c.label : id; };
@@ -4555,7 +4595,7 @@
   function presetUnsupported(it, def) {
     var schema = inspectorFor(it), g = schema && schema.groups;
     if (!g) return Object.keys(presetKeysOf(def));
-    var offered = function (k) { var gr = k === "backgroundColor" ? "background" : (SP[k] && SP[k].group) || (({ gradient: "background", overlay: "background", shadow: "effects", filter: "effects", transform: "position", mask: "mask" })[k]); var spec = gr && g[gr]; return spec === true || (Array.isArray(spec) && spec.indexOf(k) >= 0) || (k === "color" && g.typography !== undefined); };
+    var offered = function (k) { var gr = k === "backgroundColor" ? "background" : (SP[k] && SP[k].group) || (({ gradient: "background", overlay: "background", shadow: "effects", filter: "effects", backdrop: "effects", transform: "position", mask: "mask" })[k]); var spec = gr && g[gr]; return spec === true || (Array.isArray(spec) && spec.indexOf(k) >= 0) || (k === "color" && g.typography !== undefined); };
     return Object.keys(presetKeysOf(def)).filter(function (k) { return !offered(k); });
   }
   // ----- Bibliothèque des styles du site -----
@@ -4701,31 +4741,47 @@
   function audienceField(it, locked) {
     var wrap = h("div", { class: "pb-field" });
     var a = it.audience || {};
-    var id = fid();
-    var sel = h("select", { id: id, disabled: locked }, [h("option", { value: "", text: "Tout le monde" })].concat(SPEC.audiences.map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
-    sel.value = a.who || "";
     var needsValue = function (w) { return w === "tag" || w === "not_tag" || w === "score_min" || w === "param"; };
     var holder = function (w) { return w === "score_min" ? "Score minimal" : w === "param" ? "clé ou clé=valeur (ex. campagne=printemps)" : "Nom de l'étiquette"; };
-    var val = h("input", { type: a.who === "score_min" ? "number" : "text", min: "0", step: "1", maxlength: "60", placeholder: a.who === "score_min" ? "Score minimal" : a.who === "param" ? "clé ou clé=valeur (ex. campagne=printemps)" : "Nom de l'étiquette", value: a.value === undefined ? "" : String(a.value), disabled: locked, "aria-label": "Valeur du public d'affichage", list: a.who === "score_min" ? null : "pb-tags" });
-    val.hidden = !needsValue(a.who);
-    var apply = function () {
-      var who = sel.value;
-      val.hidden = !needsValue(who);
-      val.type = who === "score_min" ? "number" : "text";
-      val.placeholder = holder(who);
-      if (needsValue(who) && val.value.trim() === "") { val.focus(); return; }
-      change(function () {
-        var x = byId(it.id);
-        if (!who) delete x.audience;
-        else x.audience = needsValue(who) ? { who: who, value: who === "score_min" ? Number(val.value) : val.value.trim() } : { who: who };
-      });
-    };
-    sel.addEventListener("change", apply);
-    val.addEventListener("change", apply);
+    // Une ligne « condition » (liste + valeur éventuelle). get() lit la condition actuelle ; put(cond) l'enregistre (null = retirer).
+    function condRow(label, cond, put, removable) {
+      var id = fid(), c = cond || {};
+      var sel = h("select", { id: id, disabled: locked }, [h("option", { value: "", text: removable ? "— choisir —" : "Tout le monde" })].concat(SPEC.audiences.map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
+      sel.value = c.who || "";
+      var val = h("input", { type: c.who === "score_min" ? "number" : "text", min: "0", step: "1", maxlength: "60", placeholder: holder(c.who), value: c.value === undefined ? "" : String(c.value), disabled: locked, "aria-label": "Valeur de la condition" });
+      val.hidden = !needsValue(c.who);
+      var apply = function () {
+        var who = sel.value;
+        val.hidden = !needsValue(who); val.type = who === "score_min" ? "number" : "text"; val.placeholder = holder(who);
+        if (needsValue(who) && val.value.trim() === "") { val.focus(); return; }
+        put(!who ? null : needsValue(who) ? { who: who, value: who === "score_min" ? Number(val.value) : val.value.trim() } : { who: who });
+      };
+      sel.addEventListener("change", apply); val.addEventListener("change", apply);
+      var row = h("div", { class: "pb-field" }, h("label", { for: id, text: label }), sel, val);
+      if (removable) row.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked, onclick: function () { put(null); } }, "Retirer cette condition"));
+      return row;
+    }
+    // Écrit l'ensemble { who, value, and, or } après modification par fn(copie)
+    var edit = function (fn) { change(function () { var x = byId(it.id), cur = JSON.parse(JSON.stringify(x.audience || {})); fn(cur); if (!cur.who) delete x.audience; else { if (cur.and && !cur.and.length) delete cur.and; if (cur.or && !cur.or.length) delete cur.or; x.audience = cur; } }); };
     wrap.appendChild(h("p", { class: "pb-sub", text: "Personnalisation" }));
-    wrap.appendChild(h("label", { for: id, text: "Afficher à" }));
-    wrap.appendChild(sel);
-    wrap.appendChild(val);
+    wrap.appendChild(condRow("Afficher à", a.who ? { who: a.who, value: a.value } : null, function (c) {
+      edit(function (cur) { if (!c) { for (var k in cur) delete cur[k]; } else { cur.who = c.who; if (c.value !== undefined) cur.value = c.value; else delete cur.value; } });
+    }, false));
+    if (a.who) {
+      (a.and || []).forEach(function (c, i) {
+        wrap.appendChild(condRow("ET", c, function (nc) { edit(function (cur) { if (nc) cur.and[i] = nc; else cur.and.splice(i, 1); }); }, true));
+      });
+      wrap.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: locked || (a.and || []).length >= 3, onclick: function () { edit(function (cur) { cur.and = (cur.and || []).concat([{ who: "known" }]); }); } }, "Ajouter une condition (ET)"));
+      (a.or || []).forEach(function (g, gi) {
+        wrap.appendChild(condRow("OU bien (groupe " + (gi + 2) + ")", { who: g.who, value: g.value }, function (nc) { edit(function (cur) { if (nc) { cur.or[gi].who = nc.who; if (nc.value !== undefined) cur.or[gi].value = nc.value; else delete cur.or[gi].value; } else cur.or.splice(gi, 1); }); }, true));
+        (g.and || []).forEach(function (c, i) {
+          wrap.appendChild(condRow("ET (groupe " + (gi + 2) + ")", c, function (nc) { edit(function (cur) { var l = cur.or[gi].and; if (nc) l[i] = nc; else l.splice(i, 1); if (!l.length) delete cur.or[gi].and; }); }, true));
+        });
+        wrap.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked || (g.and || []).length >= 3, onclick: function () { edit(function (cur) { cur.or[gi].and = (cur.or[gi].and || []).concat([{ who: "known" }]); }); } }, "Ajouter une condition (ET) au groupe " + (gi + 2)));
+      });
+      wrap.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: locked || (a.or || []).length >= 3, onclick: function () { edit(function (cur) { cur.or = (cur.or || []).concat([{ who: "known" }]); }); } }, "Ajouter un autre groupe (OU)"));
+      wrap.appendChild(h("p", { class: "pb-hint", text: "Les conditions d'un même groupe s'additionnent (ET) ; l'élément s'affiche si l'un des groupes est satisfait (OU)." }));
+    }
     wrap.appendChild(h("p", { class: "pb-hint", text: "Selon ce que le site sait réellement du visiteur : son compte s'il est connecté, ou le contact relié à son navigateur (cookies acceptés). Un visiteur inconnu ne voit que ce qui s'adresse à tout le monde ou aux inconnus." }));
     return wrap;
   }

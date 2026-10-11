@@ -27,6 +27,7 @@ const COVERED_BEFORE = ["width", "minWidth", "maxWidth", "height", "minHeight", 
 const CASES = [
   ["text", "fontFamily", "font.lobster", "font-family", /Lobster/], ["text", "fontWeight", "700", "font-weight", "700"], ["text", "fontStyle", "italic", "font-style", "italic"],
   ["text", "lineClamp", 2, "-webkit-line-clamp", "2"], ["text", "lineHeight", 2, "line-height", "40px", { fontSize: "20px" }], ["text", "letterSpacing", "3px", "letter-spacing", "3px"], ["text", "wordSpacing", "5px", "word-spacing", "5px"],
+  ["text", "direction", "rtl", "direction", "rtl"], ["text", "backgroundClip", "content-box", "background-clip", "content-box"], ["text", "scrollMarginTop", "80px", "scroll-margin-top", "80px"],
   ["text", "columnCount", 3, "column-count", "3"], ["text", "textStrokeWidth", "2px", "-webkit-text-stroke-width", "2px"], ["text", "textStrokeColor", "#ff0000", "-webkit-text-stroke-color", "rgb(255, 0, 0)"],
   ["text", "textIndent", "20px", "text-indent", "20px"], ["text", "textTransform", "uppercase", "text-transform", "uppercase"], ["text", "textAlign", "center", "text-align", "center"],
   ["text", "textDecoration", "underline", "text-decoration-line", "underline"], ["text", "textShadow", "md", "text-shadow", /rgba?\(15, 23, 42/],
@@ -62,6 +63,7 @@ const COMPOSED = [
   ["backgroundImage", { src: "https://127.0.0.1:1/fond.jpg" }, "background-image", /url\(/], ["shadow", { x: 2, y: 3, blur: 4, spread: 1, color: "#000000", inset: false }, "box-shadow", (v) => v !== "none"],
   ["filter", { blur: 2, brightness: 120 }, "filter", /blur\(2px\) brightness\(1\.2\)/], ["transform", { x: "10px", y: "5px", rotate: 15, scale: 1.1 }, "transform", (v) => v.startsWith("matrix")],
   ["mask", { shape: "circle" }, "clip-path", /circle\(/],
+  ["backdrop", { blur: 8, saturate: 150 }, "backdrop-filter", /blur\(8px\) saturate\(1\.5\)/],
 ];
 const ID = (s) => (s + "x").padEnd(12, "0");
 

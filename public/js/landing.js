@@ -209,9 +209,40 @@
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-modal-open]"), function (b) {
     var dlg = document.getElementById(b.getAttribute("data-kw-modal-open"));
     if (!dlg || typeof dlg.showModal !== "function" || document.body.hasAttribute("data-kw-builder")) return;
-    b.addEventListener("click", function () { dlg.showModal(); });
+    // Coin et barre du bas : fenêtres NON bloquantes (le reste de la page reste utilisable) ; les autres sont des fenêtres modales
+    var soft = dlg.classList.contains("kw-popup-corner") || dlg.classList.contains("kw-popup-bar");
+    var show = function () { if (soft) dlg.show(); else dlg.showModal(); };
+    b.addEventListener("click", show);
     dlg.querySelector("[data-kw-modal-close]").addEventListener("click", function () { dlg.close(); b.focus(); });
-    dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+    var lock = dlg.hasAttribute("data-kw-lock");
+    dlg.addEventListener("click", function (e) { if (e.target === dlg && !lock) dlg.close(); });
+    if (lock) dlg.addEventListener("cancel", function (e) { e.preventDefault(); }); // Échap ne ferme pas : seul le bouton « × » ferme
+    // Ouverture automatique : déclencheur choisi, une fois par fenêtre ; fréquence mémorisée (toujours / une fois par visite / une seule fois pour ce visiteur)
+    var mode = dlg.getAttribute("data-kw-auto");
+    if (mode) {
+      var key = "kw-pop-" + dlg.id, freq = dlg.getAttribute("data-kw-auto-freq") || "session", done = false;
+      var seen = function () { try { return freq === "once" ? window.localStorage.getItem(key) : freq === "session" ? window.sessionStorage.getItem(key) : null; } catch (e) { return null; } };
+      var mark = function () { try { if (freq === "once") window.localStorage.setItem(key, "1"); else if (freq === "session") window.sessionStorage.setItem(key, "1"); } catch (e) { /* stockage refusé : la fenêtre pourra revenir */ } };
+      var open = function () {
+        if (done || seen() || dlg.open || document.querySelector("dialog[open]")) return; // jamais deux fenêtres en même temps
+        done = true; mark(); show();
+        var secs = Number(dlg.getAttribute("data-kw-auto-close")) || 0;
+        if (secs) setTimeout(function () { if (dlg.open) dlg.close(); }, secs * 1000);
+      };
+      var delay = (Number(dlg.getAttribute("data-kw-auto-delay")) || 0) * 1000;
+      if (mode === "load") setTimeout(open, delay);
+      else if (mode === "scroll") {
+        var at = (Number(dlg.getAttribute("data-kw-auto-scroll")) || 50) / 100;
+        var onScroll = function () { var h = document.documentElement.scrollHeight - window.innerHeight; if (h > 0 && window.scrollY / h >= at) { window.removeEventListener("scroll", onScroll); open(); } };
+        window.addEventListener("scroll", onScroll, { passive: true });
+      } else if (mode === "exit") {
+        document.addEventListener("mouseout", function onOut(e) { if (!e.relatedTarget && e.clientY <= 0) { document.removeEventListener("mouseout", onOut); open(); } });
+      } else if (mode === "idle") {
+        var timer, reset = function () { clearTimeout(timer); timer = setTimeout(open, delay || 20000); };
+        ["mousemove", "keydown", "scroll", "touchstart", "click"].forEach(function (ev) { window.addEventListener(ev, reset, { passive: true }); });
+        reset();
+      }
+    }
   });
   // Alertes que l'on peut fermer
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-dismiss]"), function (box) {
@@ -289,11 +320,20 @@
     box.addEventListener("click", function (e) { if (e.target.closest("a")) return; box.classList.toggle("is-flipped"); });
     box.addEventListener("keydown", function (e) { if (e.target === box && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); box.classList.toggle("is-flipped"); } });
   });
+  // Code : bouton « Copier » (presse-papiers ; sans autorisation, le texte est sélectionné)
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-copy]"), function (b) {
+    b.addEventListener("click", function () {
+      var code = b.parentNode.querySelector("pre code"); if (!code) return;
+      var done = function (ok) { var t = b.textContent; b.textContent = ok ? "Copié" : "Sélectionné"; setTimeout(function () { b.textContent = t; }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code.textContent).then(function () { done(true); }, function () { var r = document.createRange(); r.selectNodeContents(code); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); done(false); });
+      else { var r = document.createRange(); r.selectNodeContents(code); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); done(false); }
+    });
+  });
   // Barre de lecture : part de la page déjà défilée
-  var readbars = document.querySelectorAll(".kw-readbar-fill");
-  if (readbars.length && !inBuilder) {
+  var readbars = document.querySelectorAll(".kw-readbar-fill"), readrings = document.querySelectorAll(".kw-readring");
+  if ((readbars.length || readrings.length) && !inBuilder) {
     var readTick = false;
-    var readUpdate = function () { readTick = false; var d = document.documentElement, max = d.scrollHeight - d.clientHeight; var r = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0; Array.prototype.forEach.call(readbars, function (f) { f.style.transform = "scaleX(" + r + ")"; }); };
+    var readUpdate = function () { readTick = false; var d = document.documentElement, max = d.scrollHeight - d.clientHeight; var r = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0; Array.prototype.forEach.call(readrings, function (g) { g.style.setProperty("--kw-rp", String(Math.round(r * 100))); var tx = g.querySelector(".kw-readring-pct"); if (tx) tx.textContent = Math.round(r * 100) + "%"; }); Array.prototype.forEach.call(readbars, function (f) { f.style.transform = "scaleX(" + r + ")"; }); };
     window.addEventListener("scroll", function () { if (!readTick) { readTick = true; requestAnimationFrame(readUpdate); } }, { passive: true });
     window.addEventListener("resize", readUpdate);
     readUpdate();
@@ -438,6 +478,32 @@
     box.classList.add("is-enhanced");
     var start = parseInt(box.getAttribute("data-kw-tabs-start"), 10) || 1;
     show(Math.min(Math.max(start, 1), tabs.length) - 1);
+  });
+})();
+
+// Accordéon à volets libres (conteneur en mode « accordéon ») : chaque volet = un conteneur enfant ; bouton-titre, aria-expanded, clavier (Entrée / Espace natifs, Début / Fin / flèches)
+(function () {
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-nacc]"), function (box, k) {
+    var panels = Array.prototype.filter.call(box.children, function (c) { return c.classList.contains("kw-nacc-panel"); });
+    if (!panels.length || box.classList.contains("is-enhanced")) return;
+    var single = box.hasAttribute("data-kw-acc-single"), start = box.getAttribute("data-kw-acc-start") || "first", heads = [];
+    panels.forEach(function (panel, i) {
+      var id = "kw-nacc-" + k + "-" + i, b = document.createElement("button");
+      b.type = "button"; b.className = "kw-nacc-head"; b.id = id + "-head"; b.setAttribute("aria-controls", id + "-body"); b.textContent = panel.getAttribute("data-kw-title") || "Volet " + (i + 1);
+      panel.id = id + "-body"; panel.setAttribute("role", "region"); panel.setAttribute("aria-labelledby", b.id);
+      panel.parentNode.insertBefore(b, panel); heads.push(b);
+    });
+    var set = function (i, on) { heads[i].setAttribute("aria-expanded", on ? "true" : "false"); panels[i].hidden = !on; };
+    heads.forEach(function (b, i) {
+      set(i, start === "all" || (start === "first" && i === 0));
+      b.addEventListener("click", function () { var open = b.getAttribute("aria-expanded") !== "true"; if (open && single) heads.forEach(function (_, j) { set(j, false); }); set(i, open); });
+      b.addEventListener("keydown", function (e) {
+        var to = e.key === "ArrowDown" ? (i + 1) % heads.length : e.key === "ArrowUp" ? (i - 1 + heads.length) % heads.length : e.key === "Home" ? 0 : e.key === "End" ? heads.length - 1 : -1;
+        if (to >= 0) { e.preventDefault(); heads[to].focus(); }
+      });
+    });
+    if (single && start === "all") heads.forEach(function (_, j) { set(j, j === 0); });
+    box.classList.add("is-enhanced");
   });
 })();
 
