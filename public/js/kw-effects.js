@@ -10,7 +10,7 @@
   else { var api = factory(); root.kwEffects = api; if (root.document) api.autostart(root); }
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
-  var BP = { mobile: 767, tablet: 1023 };
+  var BP = { mobile: 767, tablet: 1023, wide: 1920 };
   var clamp = function (v, a, b) { return Math.min(b, Math.max(a, v)); };
   var round = function (v, d) { var k = Math.pow(10, d || 0); return Math.round(v * k) / k + 0; }; // « + 0 » : jamais de -0
   var breakpointOf = function (width) { return width <= BP.mobile ? "mobile" : width <= BP.tablet ? "tablet" : "desktop"; };
@@ -103,7 +103,7 @@
       });
     }
     var target = { x: 0, y: 0 }, raf = 0, destroyed = false, io = null, listening = false;
-    var active = function (r, kind) { return (!reduceQ.matches || r.always) && r.off.indexOf(breakpointOf(win.innerWidth)) < 0 && (kind !== "mouse" || hoverQ.matches); };
+    var active = function (r, kind) { return (!reduceQ.matches || r.always) && r.off.indexOf(breakpointOf(win.innerWidth)) < 0 && !(win.innerWidth >= BP.wide && r.off.indexOf("wide") >= 0) && (kind !== "mouse" || hoverQ.matches); };
 
     // Parent qui possède une boîte : l'enveloppe .kw-layout d'une Section libre est transparente (display: contents) et ne peut porter ni perspective ni dimensions
     function boxParent(el) { var p = el.parentElement; while (p && el.ownerDocument.defaultView.getComputedStyle(p).display === "contents") p = p.parentElement; return p; }

@@ -5,7 +5,7 @@ const { bad } = require("./sections");
 const { COLOR_REF } = require("./tokens");
 const { colorCss } = require("./themeCss");
 
-const DEFAULT_BREAKPOINTS = Object.freeze({ tablet: 1023, mobile: 767 });
+const DEFAULT_BREAKPOINTS = Object.freeze({ tablet: 1023, mobile: 767, wide: 1920 });
 const LANGUAGES = { fr: "Français", en: "English", es: "Español", pt: "Português", de: "Deutsch", it: "Italiano", ar: "العربية", sw: "Kiswahili" };
 const LB_ANIMATIONS = ["none", "fade", "zoom"];
 const TRANSITION_TYPES = ["none", "fade", "slide"];
@@ -17,7 +17,7 @@ const MAX_CSS = 20000;
 const DEFAULT_SETTINGS = Object.freeze({
   identity: { description: "", logoUrl: "", logoMobileUrl: "", faviconUrl: "" },
   background: { color: "", gradient: { enabled: false, from: "token:primary", to: "token:secondary", angle: 135 }, image: "", position: "center", size: "cover", repeat: "no-repeat", fixed: false },
-  layout: { fullWidth: false, contentWidth: 760, containerWidth: 1100, gutter: 16, breakpoints: { tablet: 1023, mobile: 767 } },
+  layout: { fullWidth: false, contentWidth: 760, containerWidth: 1100, gutter: 16, breakpoints: { tablet: 1023, mobile: 767, wide: 1920 } },
   lightbox: { enabled: true, overlay: "#050c14", overlayOpacity: 82, arrows: true, closeOnOverlay: true, captions: true, animation: "fade" },
   transitions: { type: "none", duration: 300 },
   customCss: "",
@@ -117,7 +117,7 @@ function normalizeSettings(input = {}, { strict = false } = {}) {
     contentWidth: num(ly.contentWidth, 480, 1600, "Largeur du contenu", strict, D.layout.contentWidth),
     containerWidth: num(ly.containerWidth, 480, 1600, "Largeur des conteneurs", strict, D.layout.containerWidth),
     gutter: num(ly.gutter, 0, 80, "Marges latérales", strict, D.layout.gutter),
-    breakpoints: { tablet: num(bp.tablet, 820, 1279, "Point de rupture tablette", strict, DEFAULT_BREAKPOINTS.tablet), mobile: num(bp.mobile, 400, 767, "Point de rupture mobile", strict, DEFAULT_BREAKPOINTS.mobile) },
+    breakpoints: { tablet: num(bp.tablet, 820, 1279, "Point de rupture tablette", strict, DEFAULT_BREAKPOINTS.tablet), mobile: num(bp.mobile, 400, 767, "Point de rupture mobile", strict, DEFAULT_BREAKPOINTS.mobile), wide: num(bp.wide, 1400, 3000, "Point de rupture grand écran", strict, DEFAULT_BREAKPOINTS.wide) },
   };
   if (layout.breakpoints.mobile >= layout.breakpoints.tablet) { if (strict) throw bad("Points de rupture : la tablette doit être plus large que le mobile."); layout.breakpoints = { ...DEFAULT_BREAKPOINTS }; }
   const lb = src.lightbox || {};

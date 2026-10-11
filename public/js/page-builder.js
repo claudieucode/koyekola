@@ -18,6 +18,9 @@
   var LEGACY = {}; boot.types.forEach(function (t) { LEGACY[t.type] = t; });
   var SP = {}; SPEC.styleProps.forEach(function (p) { SP[p.key] = p; });
   var BPS = SPEC.breakpoints.map(function (b) { return b.key; });
+  // Hiérarchie des écrans : la tablette hérite de l'ordinateur, le mobile de la tablette, le grand écran de l'ordinateur (il ne passe jamais par la tablette ni le mobile)
+  var DEVICE_PARENT = { tablet: "desktop", mobile: "tablet", wide: "desktop" };
+  function ancestors(dev) { var out = []; for (var d = DEVICE_PARENT[dev]; d; d = DEVICE_PARENT[d]) out.push(d); return out; }
   var bpLabel = function (k) { return SPEC.breakpoints.find(function (b) { return b.key === k; }).label; };
   var components = boot.components.slice();
 
@@ -563,22 +566,23 @@
   // ---------- Structures : colonnes et grille ----------
   // Largeur des colonnes : proportions (flex-grow) par écran, ramenées à une moyenne de 1 (1 / 1 = moitié-moitié).
   var MAX_COLS = 6;
-  function growAt(c, from) {
-    for (var j = from; j >= 0; j--) { var s = c.styles && c.styles[BPS[j]]; if (s && s.flexGrow !== undefined) return Number(s.flexGrow); }
+  function growIn(c, devs) {
+    for (var j = 0; j < devs.length; j++) { var s = c.styles && c.styles[devs[j]]; if (s && s.flexGrow !== undefined) return Number(s.flexGrow); }
     return 1;
   }
+  function growAt(c, dev) { return growIn(c, [dev].concat(ancestors(dev))); }
   // Parts de la largeur (en %) de chaque colonne, pour l'écran modifié
   function columnShares(it) {
-    var g = (kidsOf(it) || []).map(function (c) { return growAt(c, BPS.indexOf(device)); });
+    var g = (kidsOf(it) || []).map(function (c) { return growAt(c, device); });
     var tot = g.reduce(function (a, b) { return a + b; }, 0) || 1;
     return g.map(function (x) { return x / tot * 100; });
   }
   // Enregistre des parts (en %) pour l'écran modifié : une valeur égale à celle héritée n'est pas répétée
   function storeShares(colsItem, shares) {
-    var k = kidsOf(colsItem), avg = 100 / k.length, i0 = BPS.indexOf(device);
+    var k = kidsOf(colsItem), avg = 100 / k.length;
     k.forEach(function (c, i) {
       var g = Math.max(0.05, Math.round(shares[i] / avg * 100) / 100);
-      var inh = growAt(c, i0 - 1);
+      var inh = growIn(c, ancestors(device));
       var s = styleSet(c, device, "normal", true);
       if (Math.abs(g - inh) < 0.01) delete s.flexGrow; else s.flexGrow = g;
       cleanStyles(c);
@@ -624,7 +628,8 @@
   // Grille : nombre de colonnes réellement affiché (réglage de l'écran, sinon celui mesuré dans le canevas)
   function gridColumnsOf(it) {
     // Tablette / mobile sans réglage propre : la grille se resserre d'elle-même (voir pageCss) → lue dans le canevas
-    for (var j = BPS.indexOf(device); j >= (device === "desktop" ? 0 : 1); j--) { var s = it.styles && it.styles[BPS[j]]; if (s && s.columns !== undefined) return Number(s.columns); }
+    var gridChain = device === "wide" ? ["wide", "desktop"] : device === "mobile" ? ["mobile", "tablet"] : [device];
+    for (var j = 0; j < gridChain.length; j++) { var s = it.styles && it.styles[gridChain[j]]; if (s && s.columns !== undefined) return Number(s.columns); }
     var el = canvasEl(it.id);
     if (el) { var t = frame.contentWindow.getComputedStyle(el).gridTemplateColumns; if (t && t !== "none") return t.split(" ").length; }
     return 3;
@@ -891,13 +896,14 @@
     if (styleState !== "normal") return undefined;
     var i = BPS.indexOf(device);
     // Grille sans réglage propre à la tablette / au mobile : 2 colonnes au plus sur tablette, 1 sur mobile (voir pageCss)
-    if (!styleTarget && it.type === "grid" && (key === "columns" || key === "gridTemplate") && i > 0) {
+    if (!styleTarget && it.type === "grid" && (key === "columns" || key === "gridTemplate") && (device === "tablet" || device === "mobile")) {
       var own = function (b) { var st = it.styles && it.styles[b]; return st && (st.columns !== undefined || st.gridTemplate !== undefined); };
       var d = (it.styles && it.styles.desktop) || {}, cols = d.gridTemplate ? String(d.gridTemplate).split(" ").length : Number(d.columns) || 0;
       if (!own("tablet") && (device === "tablet" ? cols > 2 : !own("mobile") && cols > 1)) return key === "columns" ? (device === "tablet" ? 2 : 1) : undefined;
     }
     var ho = holderOf(it, false, key);
-    for (var j = i - 1; j >= 0; j--) { var s = ho && ho.styles && ho.styles[BPS[j]]; if (s && s[key] !== undefined) return s[key]; }
+    var up = ancestors(device);
+    for (var j = 0; j < up.length; j++) { var s = ho && ho.styles && ho.styles[up[j]]; if (s && s[key] !== undefined) return s[key]; }
     return undefined;
   }
   function cleanSet(o) {
@@ -2758,7 +2764,7 @@
     var m = /^(-?[\d.]+)([a-z%]*)$/.exec(s);
     return m ? { num: m[1], unit: m[2] || "px" } : null;
   }
-  var DEVICE_ICON = { desktop: "monitor", tablet: "tablet", smartphone: "smartphone", mobile: "smartphone" };
+  var DEVICE_ICON = { desktop: "monitor", wide: "monitor", tablet: "tablet", smartphone: "smartphone", mobile: "smartphone" };
   // Flèches ↑ / ↓ : un pas (Maj : 10 pas, Alt : un dixième) ; chaque pas s'applique tout de suite, une seule étape d'annulation
   function arrowStep(input, step, read, write) {
     input.addEventListener("keydown", function (e) {
@@ -6019,15 +6025,18 @@
   // largeur FLUIDE = l'espace réellement disponible dans le canevas (fenêtre − panneaux), jamais sous le point de rupture
   // « tablette » du site (sinon le cadre afficherait la mise en page tablette) ni au-dessus d'un plafond confortable. Si l'espace
   // est plus étroit que le minimum, la page garde ce minimum et le zoom « ajuster » la réduit pour qu'elle tienne.
-  var WIDTH = { desktop: 1280, tablet: 820, mobile: 390 }; // largeur nominale : repli, et valeur des appareils
-  var DESKTOP_MAX = 1920;
+  var WIDTH = { desktop: 1280, tablet: 820, mobile: 390, wide: 1920 }; // largeur nominale : repli, et valeur des appareils (grand écran : son point de rupture, réglable dans les réglages du site)
+  function wideFrom() { var w = PAGE.breakpoints && PAGE.breakpoints.wide; return Number.isInteger(w) ? w : 1920; }
+  function desktopMax() { return wideFrom() - 1; } // le cadre « ordinateur » reste sous le seuil du grand écran (sinon il afficherait la mise en page grand écran)
   var STAGE_PAD = 48; // 24 px de chaque côté de la surface de travail
+  WIDTH.wide = wideFrom();
   var shownWidth = WIDTH.desktop;
   function desktopMin() { var bp = PAGE.breakpoints && PAGE.breakpoints.tablet; return (Number.isInteger(bp) ? bp : 1023) + 1; }
   function frameWidth(avail) {
+    if (device === "wide") return wideFrom();
     if (device !== "desktop") return WIDTH[device];
     var target = zoomFit ? avail : Math.floor(avail / zoom);
-    return Math.min(DESKTOP_MAX, Math.max(desktopMin(), target));
+    return Math.min(desktopMax(), Math.max(desktopMin(), target));
   }
   function setDevice(d) {
     if (editing) commitEdit();

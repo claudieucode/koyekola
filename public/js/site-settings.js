@@ -394,6 +394,7 @@
     bodyEl.appendChild(section("Écrans (points de rupture)", [
       { kind: "number", path: "settings.layout.breakpoints.tablet", label: "Tablette : jusqu'à", min: 820, max: 1279, unit: "px", hint: "Les styles « Tablette » des éléments et « Masquer sur tablette » s'appliquent jusqu'à cette largeur." },
       { kind: "number", path: "settings.layout.breakpoints.mobile", label: "Mobile : jusqu'à", min: 400, max: 767, unit: "px", hint: "Les styles « Mobile » des éléments et « Masquer sur mobile » s'appliquent jusqu'à cette largeur. Les adaptations internes de chaque élément gardent leurs propres seuils." },
+      { kind: "number", path: "settings.layout.breakpoints.wide", label: "Grand écran : à partir de", min: 1400, max: 3000, unit: "px", hint: "Les styles « Grand écran » des éléments et « Masquer sur grand écran » s'appliquent à partir de cette largeur ; sans réglage propre, un élément garde son style « Ordinateur »." },
     ]));
   }
   function renderLightbox() {
