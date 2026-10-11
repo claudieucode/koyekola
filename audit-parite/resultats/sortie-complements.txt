@@ -1,0 +1,27 @@
+éditeur crée via CMS               302 /marketing/site-web/articles
+éditeur ouvre son article          403
+éditeur enregistre (éditeur riche) 403
+éditeur publie (CMS)               404
+auteur enregistré de l'article     undefined
+auteur liste CMS articles          200
+planifié (futur)                   {"id":1,"slug":"planifie-passe","status":"scheduled","published":0}
+sitemap avant 1re lecture          true
+lecture publique après échéance    200
+export                             302 /marketing/site-web/outils/exporter/1
+fichier d'export                   410 text/html; charset=utf-8 6929 octets
+export JSON valide                 NON <!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  
+  <meta http
+import (simulation)                302 /marketing/site-web/outils/importer
+compte avant/après import          {"posts":2,"pages":1,"terms":2} → {"posts":2,"pages":1,"terms":2}
+création site                      302 /marketing/site-web/sites/1
+articles.site_id existe            false
+taxonomy_terms.site_id existe      false
+blog_comments.site_id existe       false
+nav_menus.site_id existe           true
+mk_media.site_id existe            false
+mk_landing_pages.site_id existe    true
+mk_redirects site_id               seo_redirects,sqlite_autoindex_seo_redirects_1,idx_seo_redirects_site

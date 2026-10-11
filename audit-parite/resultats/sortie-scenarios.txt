@@ -1,0 +1,51 @@
+OK    SEO-article-statut — GET /blog/guide-seo-complet → 200
+OK    SEO-article-title — title="Titre SEO perso · KOLAKISA"
+OK    SEO-article-meta-description — meta description présente=true
+OK    SEO-article-canonical — https://k.test/blog/guide-seo-complet
+OK    SEO-article-og — og:title=true og:image=false twitter=true
+OK    SEO-article-jsonld — blocs JSON-LD=1; types=Organization,WebSite,SearchAction,EntryPoint,BreadcrumbList,ListItem,ListItem,ListItem,ListItem,WebPage,BlogPosting,Person,Organization
+OK    SEO-sitemap-article — sitemap contient l'article publié=true ; lastmod=true
+OK    SEO-sitemap-pas-de-brouillon — voir sonde 1 : un brouillon répond 404 au public
+OK    SEO-robots — User-agent: * | Disallow: /formateur | Disallow: /mes-cours | Disallow: /panier | Disallow: /commande | Disallow: /apprendre | Disallow: /certificat | Disallow:
+OK    TAX-archive-categorie — /blog/categorie/seo → 200, contient l'article=true, canonical=https://k.test/blog/categorie/seo
+OK    TAX-archive-etiquette — → 200
+OK    ED-archive-auteur — /blog/auteur/ → 200
+ECART ED-flux-RSS-blog — aucune adresse /feed, /blog/feed, /rss.xml, /blog/rss.xml (404) — voir src/marketing/rss : moteur de lecture de flux entrants pour l'emailing, pas de flux sortant
+ECART ED-recherche-site — recherche limitée au blog (/blog?q=) ; pas de recherche globale pages+articles
+OK    ED-recherche-blog — /blog?q=guide trouve l'article=true ; robots=noindex, follow
+ECART PAGE-brouillon-enregistre — PUT brouillon → 422
+OK    PAGE-publication — publier → 200
+OK    PAGE-rendu-public — /p/page-parcours → 200 ; title="Page Parcours · KOLAKISA"
+OK    SEO-page-canonical-og — canonical=https://k.test/p/page-parcours og=true jsonld=false robots=noindex, nofollow
+ECART SEO-page-sitemap — page publiée dans le sitemap (voir l'indexabilité réglée par page)
+OK    URL-changement-slug-301 — ancienne adresse → 301 /p/nouvelle-adresse
+OK    PAGE-depublication — après dépublication → 404 (WordPress : brouillon = 404 aussi)
+OK    PAGE-duplication — dupliquer → 302 /marketing/pages/2
+OK    PAGE-corbeille-restauration — archiver 302, restaurer 302, archived_at=null
+OK    PAGE-recherche — recherche par nom
+OK    PAGE-hierarchie-parent — colonne parent sur les pages = true (WordPress : pages parent/enfant) ; adresses uniquement /p/<slug>
+INFO  PAGE-auteur-date — colonnes auteur/date/programmation de la page
+OK    NAV-menu-public — menu affecté à l'en-tête visible sur l'accueil=true ; libellé HTML échappé=true
+OK    NAV-lien-vers-contenu-supprime — après corbeille de l'article, le lien du menu n'est plus affiché=true
+OK    ED-article-corbeille-public — article en corbeille → 404 (WordPress: 404)
+OK    SET-nom-du-site-effet — nom du site changé visible dans l'accueil=true
+OK    PERM-lecteur-reinitialiser — réinitialisation par un lecteur → 302 ; le nom du site est resté=true
+INFO  PERM-redaction-article-editor — ouvrir l'éditeur → 403 ; créer via éditeur → 403  ; via CMS → 302
+INFO  PERM-redaction-article-author — ouvrir l'éditeur → 403 ; créer via éditeur → 403  ; via CMS → 403
+INFO  PERM-redaction-article-contributor — ouvrir l'éditeur → 403 ; créer via éditeur → 403  ; via CMS → 403
+INFO  PERM-redaction-article-viewer — ouvrir l'éditeur → 403 ; créer via éditeur → 403  ; via CMS → 403
+INFO  SEC-origine-absente — POST sans Origin/Referer → 302 (accepté=true) ; Origin étranger → 403 (refusé=true) ; aucun jeton CSRF par formulaire (défense = Origin + cookie SameSite=Lax)
+INFO  SEC-cookie-session — Set-Cookie d'un visiteur: (aucun)
+INFO  SEC-en-têtes — x-frame-options=oui x-content-type-options=oui content-security-policy=oui referrer-policy=oui permissions-policy=oui strict-transport-security=NON
+OK    XSS-article-contenu — script/onclick/javascript: absents du HTML public=true ; titre échappé=true
+OK    XSS-liste-pages-admin — nom de page échappé dans l'admin=true
+OK    XSS-commentaire — commentaire public échappé=true (statut de création 302)
+OK    OUT-export-lance — POST exporter → 302 /marketing/site-web/outils/exporter/1
+INFO  PERF-blog page 1 — 200 · 35 ms (1re) / 23 ms (2e) · 26 Ko · gzip=gzip
+INFO  PERF-blog page 20 — 200 · 19 ms (1re) / 21 ms (2e) · 23 Ko · gzip=gzip
+INFO  PERF-article — 200 · 23 ms (1re) / 690 ms (2e) · 28 Ko · gzip=gzip
+INFO  PERF-sitemap — 200 · 2752 ms (1re) / 198 ms (2e) · 82 Ko · gzip=gzip
+INFO  PERF-admin articles — 200 · 181 ms (1re) / 234 ms (2e) · 105 Ko · gzip=gzip
+INFO  PERF-admin articles recherche — 200 · 156 ms (1re) / 115 ms (2e) · 105 Ko · gzip=gzip
+INFO  PERF-admin pages — 200 · 6 ms (1re) / 8 ms (2e) · 58 Ko · gzip=gzip
+INFO  PERF-accueil — 200 · 10 ms (1re) / 9 ms (2e) · 13 Ko · gzip=gzip

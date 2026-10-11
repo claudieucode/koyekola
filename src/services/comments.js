@@ -32,6 +32,31 @@ const registerContent = (type, def) => { CONTENT[type] = def; };
 const events = new EventEmitter();
 const emit = (name, payload) => { try { events.emit(name, { event: name, at: new Date().toISOString(), ...payload }); } catch { /* un abonné ne casse jamais l'action */ } };
 
+// ---------- Prévenir la modération (palier 23) ----------
+// Un commentaire « en attente » prévient l'adresse administrative (Paramètres → Général, sinon celle de l'hébergeur) par la file d'envoi existante.
+// Au plus UN e-mail par tranche de 10 minutes, qui annonce le nombre total de commentaires en attente (jamais le texte du commentaire : il vient d'un inconnu).
+// COMMENT_NOTIFY=0 coupe cette alerte. Un échec d'envoi ne gêne jamais l'envoi du commentaire.
+const NOTIFY_EVERY_MS = 10 * 60 * 1000;
+let lastNotified = 0;
+events.on("comment.pending", () => {
+  try {
+    if (process.env.COMMENT_NOTIFY === "0" || Date.now() - lastNotified < NOTIFY_EVERY_MS) return;
+    const mailer = require("../utils/mailer");
+    let to = "";
+    try { to = require("./settings").main().adminEmail; } catch { to = ""; }
+    to = to || process.env.CONTACT_EMAIL || mailer.fromAddress();
+    if (!to) return;
+    const waiting = db.prepare("SELECT COUNT(*) n FROM blog_comments WHERE status = 'pending'").get().n;
+    if (!waiting) return;
+    lastNotified = Date.now();
+    require("../utils/outbox").queueMail(db, {
+      kind: "comment_pending", to,
+      subject: `[KOLAKISA] ${waiting} commentaire${waiting > 1 ? "s" : ""} en attente de modération`,
+      text: `${waiting} commentaire${waiting > 1 ? "s attendent" : " attend"} votre modération.\n\nOuvrir la modération : ${mailer.siteUrl()}/marketing/site-web/commentaires/en-attente\n\n(Au plus un e-mail toutes les 10 minutes. Pour couper cette alerte : COMMENT_NOTIFY=0.)`,
+    });
+  } catch { /* l'alerte ne doit jamais gêner le commentaire */ }
+});
+
 // ---------- Réglages (une ligne par clé dans mk_settings, organisation par défaut) ----------
 const DEFAULTS = Object.freeze({
   enabled_default: true,   // nouveaux articles : commentaires ouverts

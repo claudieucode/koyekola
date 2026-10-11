@@ -1,0 +1,31 @@
+<%- include("partials/header", { title: title, seo: { noindex: true } }) %>
+
+  <div class="container" style="padding-top:32px;padding-bottom:48px;">
+    <h1>Recherche</h1>
+    <form action="/recherche" method="get" role="search" style="display:flex;gap:8px;margin:16px 0 24px;">
+      <label for="site-search" class="sr-only">Rechercher dans le site</label>
+      <input id="site-search" type="search" name="q" value="<%= q %>" maxlength="100" placeholder="Rechercher un article ou une page" style="flex:1;min-width:0;padding:10px 12px;">
+      <button type="submit" class="btn btn-primary">Rechercher</button>
+    </form>
+
+    <% if (!q) { %>
+      <p style="color:var(--muted);">Saisissez un mot pour chercher dans les articles et les pages du site.</p>
+    <% } else if (!articles.length && !pages.length) { %>
+      <p>Aucun résultat pour « <%= q %> ».</p>
+    <% } else { %>
+      <% if (articles.length) { %>
+        <h2>Articles (<%= articles.length %>)</h2>
+        <ul style="list-style:none;padding:0;">
+          <% articles.forEach((a) => { %><li style="margin:0 0 14px;"><a href="<%= a.url %>"><strong><%= a.title %></strong></a><br><span style="color:var(--muted);"><%= a.summary %></span></li><% }) %>
+        </ul>
+      <% } %>
+      <% if (pages.length) { %>
+        <h2>Pages (<%= pages.length %>)</h2>
+        <ul style="list-style:none;padding:0;">
+          <% pages.forEach((a) => { %><li style="margin:0 0 14px;"><a href="<%= a.url %>"><strong><%= a.title %></strong></a><% if (a.summary) { %><br><span style="color:var(--muted);"><%= a.summary %></span><% } %></li><% }) %>
+        </ul>
+      <% } %>
+    <% } %>
+  </div>
+
+<%- include("partials/footer") %>

@@ -1,0 +1,7 @@
+upload 201
+
+== Page Builder, thème clair : fond du dialogue rgb(255, 255, 255) ; 10 textes mesurés, 0 sous 4,5:1 
+  erreurs page: 0
+
+== Page Builder, thème sombre : fond du dialogue rgb(255, 255, 255) ; 10 textes mesurés, 0 sous 4,5:1 
+  erreurs page: 0

@@ -1,0 +1,32 @@
+create page 302 /marketing/pages/1 | create article 302 /formateur/blog/1/modifier
+page [Object: null prototype] { slug: 'page-audit', status: 'draft' }
+post [Object: null prototype] {
+  id: 1,
+  slug: 'article-audit',
+  published: 0,
+  status: 'draft'
+}
+200  /                            title= KOLAKISA — Formations en ligne, à apprendre à votre rythme | canon= https://k.test/ | robots=  | cache= private, no-cache
+200  /blog                        title= Blog · KOLAKISA | canon= https://k.test/blog | robots=  | cache= private, no-cache
+404  /blog/article-audit          title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= private, no-cache
+404  /p/page-audit                title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= no-store
+200  /sitemap.xml                 title=  | canon=  | robots=  | cache= public, max-age=300
+200  /robots.txt                  title=  | canon=  | robots=  | cache= public, max-age=300
+404  /blog/feed                   title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= private, no-cache
+404  /blog/rss.xml                title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= private, no-cache
+404  /rss.xml                     title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= private, no-cache
+404  /feed                        title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= private, no-cache
+404  /recherche?q=audit           title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= private, no-cache
+200  /blog?q=audit                title= Blog · KOLAKISA | canon= https://k.test/blog | robots= noindex, follow | cache= private, no-cache
+404  /blog/auteur/x               title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= private, no-cache
+404  /blog/archives               title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= private, no-cache
+404  /introuvable-xyz             title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= private, no-cache
+404  /blog/introuvable            title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= private, no-cache
+404  /wp-login.php                title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= private, no-cache
+404  /api                         title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= private, no-cache
+404  /humans.txt                  title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= private, no-cache
+301  /favicon.ico                 title=  | canon=  | robots=  | cache= private, no-cache
+404  /.well-known/security.txt    title= Erreur · KOLAKISA | canon=  | robots= noindex, nofollow | cache= private, no-cache
+HOME og: 5 jsonld: 1 lang: fr
+404 body has noindex: true len 6410
+tables: 156
