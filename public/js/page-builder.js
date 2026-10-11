@@ -3849,43 +3849,186 @@
     }).catch(function (e) { toast(e.message, true); });
   }
   // Styles propres de l'élément (écrans et états), prêts à entrer dans une classe
-  var ownStyles = function (it) { return { styles: clone(it.styles || {}), states: clone(it.states || {}) }; };
   var classNames = function (it) { return String(it.classes || "").split(/\s+/).filter(Boolean); };
   function setNodeClasses(it, names, label, clearOwn) {
     change(function () { var x = byId(it.id); if (names.length) x.classes = names.join(" "); else delete x.classes; if (clearOwn) { delete x.styles; delete x.states; } }, { label: label });
+  }
+  // ---------- « Enregistrer comme style » : l'utilisateur choisit les catégories (ou les propriétés) et les écrans à enregistrer ----------
+  // Un style enregistré = une classe globale du site (même format, même rendu, même mise à jour partout). Seules les propriétés choisies sont copiées.
+  var PRESET_CATS = SPEC.presetCategories || [];
+  var COMPOSED_LABEL = { gradient: "Dégradé", overlay: "Voile", shadow: "Ombre", filter: "Filtres", transform: "Transformation", mask: "Masque" };
+  var presetKeyLabel = function (k) { return (SP[k] && SP[k].label) || COMPOSED_LABEL[k] || k; };
+  var presetCatOf = function (k) { for (var i = 0; i < PRESET_CATS.length; i++) if (PRESET_CATS[i].keys.indexOf(k) >= 0) return PRESET_CATS[i].id; return null; };
+  var presetScopeLabel = function (scope) { var s = SPEC.states.filter(function (x) { return x.key === scope; })[0]; return s ? "État : " + s.label : bpLabel(scope); };
+  // Propriétés propres de l'élément qui peuvent entrer dans un style : { écran | état : [clés] }
+  function presetOwn(it) {
+    var out = { styles: {}, states: {} };
+    ["styles", "states"].forEach(function (src) {
+      Object.keys(it[src] || {}).forEach(function (scope) {
+        var keys = Object.keys(it[src][scope] || {}).filter(function (k) { return presetCatOf(k); });
+        if (keys.length) out[src][scope] = keys;
+      });
+    });
+    return out;
+  }
+  // Copie filtrée de styles / états (jamais l'original) : absent ≠ vide, valeurs copiées telles quelles
+  function presetPick(it, keys, scopes) {
+    var out = { styles: {}, states: {}, n: 0 };
+    ["styles", "states"].forEach(function (src) {
+      Object.keys(it[src] || {}).forEach(function (scope) {
+        if (!scopes[scope]) return;
+        var sub = {};
+        Object.keys(it[src][scope] || {}).forEach(function (k) { if (keys[k]) { sub[k] = clone(it[src][scope][k]); out.n++; } });
+        if (Object.keys(sub).length) out[src][scope] = sub;
+      });
+    });
+    return out;
+  }
+  function openStyleDialog(it, prefill) {
+    var own = presetOwn(it), scopes = {}, keys = {}, byCat = {};
+    ["styles", "states"].forEach(function (src) { Object.keys(own[src]).forEach(function (scope) { scopes[scope] = true; own[src][scope].forEach(function (k) { keys[k] = true; (byCat[presetCatOf(k)] = byCat[presetCatOf(k)] || {})[k] = true; }); }); });
+    var scopeList = Object.keys(scopes);
+    if (!scopeList.length) { toast("Cet élément n'a aucun réglage propre à enregistrer : modifiez d'abord son style dans l'inspecteur.", true); return; }
+    var cats = PRESET_CATS.filter(function (c) { return byCat[c.id]; });
+    var dlg = h("dialog", { class: "pb-modal pb-sp", "aria-labelledby": "pb-sp-title", "data-pb-style-dialog": "" });
+    var form = h("form", { class: "pb-sp-form", method: "dialog", novalidate: "" });
+    var master = h("input", { type: "checkbox", "data-sp-all": "", "aria-label": "Tout sélectionner" }), summary = h("p", { class: "pb-sp-summary", "data-sp-summary": "", "aria-live": "polite" });
+    var catBoxes = {}, keyBoxes = {}, catCounts = {};
+    var nameIn = h("input", { type: "text", class: "pb-input", maxlength: "30", placeholder: "nom-du-style", "aria-label": "Nom du style", "data-sp-name": "", value: prefill || "", autocomplete: "off" });
+    var warn = h("p", { class: "pb-note is-warn", role: "alert", hidden: true, "data-sp-error": "" });
+    var applyIn = h("input", { type: "checkbox", "data-sp-apply": "" }); applyIn.checked = true;
+    var saveBtn = h("button", { type: "submit", class: "btn btn-primary", "data-sp-save": "" }, "Enregistrer le style");
+    var chosenKeys = function () { return Object.keys(keys).filter(function (k) { return keys[k]; }); };
+    var chosenScopes = function () { return scopeList.filter(function (s) { return scopes[s]; }); };
+    function refresh() {
+      var all = Object.keys(keys), on = chosenKeys();
+      master.checked = on.length === all.length; master.indeterminate = on.length > 0 && on.length < all.length;
+      cats.forEach(function (c) {
+        var ks = Object.keys(byCat[c.id]), n = ks.filter(function (k) { return keys[k]; }).length;
+        catBoxes[c.id].checked = n === ks.length; catBoxes[c.id].indeterminate = n > 0 && n < ks.length;
+        catCounts[c.id].textContent = n + "/" + ks.length;
+        ks.forEach(function (k) { keyBoxes[k].checked = Boolean(keys[k]); });
+      });
+      var p = presetPick(it, keys, scopes);
+      summary.textContent = p.n ? p.n + " réglage" + (p.n > 1 ? "s" : "") + " seront enregistrés" + (scopeList.length > 1 ? " · " + chosenScopes().map(presetScopeLabel).join(", ") : "") + "." : "Rien n'est sélectionné.";
+      var name = nameIn.value.trim().toLowerCase(), exists = siteClasses.some(function (x) { return x.name === name; });
+      saveBtn.disabled = !p.n;
+      saveBtn.textContent = exists ? "Remplacer le style" : "Enregistrer le style";
+      if (exists) { warn.hidden = false; warn.textContent = "Le style « " + name + " » existe déjà : il sera remplacé pour tous les éléments du site qui l'utilisent."; } else warn.hidden = true;
+    }
+    var setAll = function (v) { Object.keys(keys).forEach(function (k) { keys[k] = v; }); refresh(); };
+    master.addEventListener("change", function () { setAll(master.checked); });
+    form.appendChild(h("div", { class: "pb-modal-head" }, h("h2", { id: "pb-sp-title", text: "Enregistrer comme style" }), h("span", { class: "pb-modal-spacer" }),
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", "aria-label": "Fermer", onclick: function () { dlg.close(); } }, "×")));
+    var body = h("div", { class: "pb-sp-body" });
+    body.appendChild(h("p", { class: "pb-hint", text: "Source : " + ((inspectorFor(it) || {}).kind || it.type) + ". Cochez ce que le style doit contenir ; le texte, les images, les liens et la structure ne sont jamais copiés." }));
+    body.appendChild(h("div", { class: "pb-field" }, h("label", { text: "Nom du style" }), nameIn));
+    body.appendChild(h("div", { class: "pb-sp-bar" }, h("label", { class: "pb-check pb-sp-master" }, master, " Tout sélectionner"),
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", "data-sp-none": "", onclick: function () { setAll(false); } }, "Tout désélectionner")));
+    var list = h("div", { class: "pb-sp-cats", role: "group", "aria-label": "Catégories à enregistrer" });
+    cats.forEach(function (c) {
+      var cb = h("input", { type: "checkbox", "data-sp-cat": c.id }); catBoxes[c.id] = cb;
+      cb.addEventListener("change", function () { Object.keys(byCat[c.id]).forEach(function (k) { keys[k] = cb.checked; }); refresh(); });
+      var det = h("details", { class: "pb-sp-cat" });
+      var props = h("div", { class: "pb-sp-props" });
+      Object.keys(byCat[c.id]).forEach(function (k) {
+        var kb = h("input", { type: "checkbox", "data-sp-key": k }); keyBoxes[k] = kb;
+        kb.addEventListener("change", function () { keys[k] = kb.checked; refresh(); });
+        props.appendChild(h("label", { class: "pb-check" }, kb, " " + presetKeyLabel(k)));
+      });
+      det.appendChild(h("summary", {}, h("label", { class: "pb-check", onclick: function (e) { e.stopPropagation(); } }, cb, " " + c.label), (catCounts[c.id] = h("span", { class: "pb-sp-count" }))));
+      det.appendChild(props);
+      list.appendChild(det);
+    });
+    body.appendChild(list);
+    if (scopeList.length > 1) {
+      var sc = h("div", { class: "pb-sp-scopes", role: "group", "aria-label": "Écrans et états à enregistrer" }, h("span", { class: "pb-sub", text: "Écrans et états" }));
+      scopeList.forEach(function (s) {
+        var cb = h("input", { type: "checkbox", "data-sp-scope": s }); cb.checked = true;
+        cb.addEventListener("change", function () { scopes[s] = cb.checked; refresh(); });
+        sc.appendChild(h("label", { class: "pb-check" }, cb, " " + presetScopeLabel(s)));
+      });
+      body.appendChild(sc);
+    }
+    body.appendChild(h("p", { class: "pb-hint", text: "Portée : ce site (le style sert à toutes ses pages)." }));
+    body.appendChild(h("label", { class: "pb-check" }, applyIn, " Appliquer à cet élément (ses réglages enregistrés passent dans le style, les autres restent)"));
+    body.appendChild(summary); body.appendChild(warn);
+    form.appendChild(body);
+    form.appendChild(h("div", { class: "pb-sp-actions" }, h("button", { type: "button", class: "btn btn-outline", onclick: function () { dlg.close(); } }, "Annuler"), saveBtn));
+    nameIn.addEventListener("input", refresh);
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var name = nameIn.value.trim().toLowerCase();
+      if (!/^[a-z][a-z0-9-]{0,29}$/.test(name) || /^(kw|lp|pb|mk)-/.test(name)) { warn.hidden = false; warn.textContent = "Nom invalide : minuscules, chiffres et tirets, commence par une lettre (préfixes kw-, lp-, pb-, mk- réservés)."; nameIn.focus(); return; }
+      var p = presetPick(it, keys, scopes);
+      if (!p.n) return;
+      var picked = chosenKeys(), catIds = PRESET_CATS.filter(function (c) { return picked.some(function (k) { return byCat[c.id] && byCat[c.id][k]; }); }).map(function (c) { return c.id; });
+      var def = { name: name, meta: { source: it.type, categories: catIds, updated: new Date().toISOString().slice(0, 10) } };
+      if (Object.keys(p.styles).length) def.styles = p.styles;
+      if (Object.keys(p.states).length) def.states = p.states;
+      var next = siteClasses.map(clone), at = -1; next.forEach(function (x, i) { if (x.name === name) at = i; });
+      if (at >= 0) next[at] = def; else next.push(def);
+      saveBtn.disabled = true;
+      saveSiteClasses(next, function () {
+        if (applyIn.checked) change(function () {
+          var x = byId(it.id), cl = classNames(x);
+          if (cl.indexOf(name) < 0) cl.push(name);
+          x.classes = cl.join(" ");
+          ["styles", "states"].forEach(function (src) {
+            Object.keys(p[src]).forEach(function (scope) {
+              Object.keys(p[src][scope]).forEach(function (k) { delete x[src][scope][k]; });
+              if (!Object.keys(x[src][scope]).length) delete x[src][scope];
+            });
+            if (x[src] && !Object.keys(x[src]).length) delete x[src];
+          });
+        }, { label: "Style « " + name + " » enregistré et appliqué" });
+        toast("Style « " + name + " » " + (at >= 0 ? "remplacé" : "enregistré") + " (" + p.n + " réglage" + (p.n > 1 ? "s" : "") + ").");
+        dlg.close();
+      });
+      setTimeout(function () { if (dlg.open) saveBtn.disabled = false; }, 4000);
+    });
+    dlg.appendChild(form);
+    dlg.addEventListener("close", function () { dlg.remove(); });
+    document.body.appendChild(dlg);
+    refresh();
+    dlg.showModal();
+    nameIn.focus();
+  }
+  // Compatibilité : réglages d'un style que le type de l'élément cible ne propose pas (ils restent écrits mais n'ont aucun effet sur lui)
+  function presetUnsupported(it, def) {
+    var schema = inspectorFor(it), g = schema && schema.groups;
+    if (!g) return Object.keys(presetKeysOf(def));
+    var offered = function (k) { var gr = k === "backgroundColor" ? "background" : (SP[k] && SP[k].group) || (({ gradient: "background", overlay: "background", shadow: "effects", filter: "effects", transform: "position", mask: "mask" })[k]); var spec = gr && g[gr]; return spec === true || (Array.isArray(spec) && spec.indexOf(k) >= 0) || (k === "color" && g.typography !== undefined); };
+    return Object.keys(presetKeysOf(def)).filter(function (k) { return !offered(k); });
+  }
+  function presetKeysOf(def) {
+    var out = {};
+    ["styles", "states"].forEach(function (src) { Object.keys(def[src] || {}).forEach(function (s) { Object.keys(def[src][s]).forEach(function (k) { out[k] = true; }); }); });
+    return out;
   }
   function globalClassesBlock(it, locked) {
     var box = h("div", { class: "pb-global-classes" });
     box.appendChild(h("p", { class: "pb-sub", text: "Classes globales du site" }));
     var names = classNames(it);
-    if (!siteClasses.length) box.appendChild(h("p", { class: "pb-hint", text: "Aucune classe globale. Réglez le style de cet élément, puis créez une classe : les autres éléments pourront la réutiliser, et la modifier mettra tout à jour." }));
+    if (!siteClasses.length) box.appendChild(h("p", { class: "pb-hint", text: "Aucune classe globale. Réglez le style de cet élément, puis « Enregistrer comme style » : les autres éléments pourront le réutiliser, et le modifier mettra tout à jour." }));
     siteClasses.forEach(function (c) {
       var on = names.indexOf(c.name) >= 0;
       var cb = h("input", { type: "checkbox", disabled: locked || null });
       cb.checked = on;
-      cb.addEventListener("change", function () { setNodeClasses(it, cb.checked ? names.concat([c.name]) : names.filter(function (n) { return n !== c.name; }), cb.checked ? "Classe « " + c.name + " » appliquée" : "Classe « " + c.name + " » retirée", false); });
+      cb.addEventListener("change", function () {
+        setNodeClasses(it, cb.checked ? names.concat([c.name]) : names.filter(function (n) { return n !== c.name; }), cb.checked ? "Classe « " + c.name + " » appliquée" : "Classe « " + c.name + " » retirée", false);
+        if (cb.checked && c.meta && c.meta.source && c.meta.source !== it.type) {
+          var no = presetUnsupported(it, c), all = Object.keys(presetKeysOf(c)).length;
+          if (no.length) toast("Style « " + c.name + " » : " + (all - no.length) + " réglage" + (all - no.length > 1 ? "s" : "") + " sur " + all + " s'appliquent à ce type d'élément (sans effet : " + no.slice(0, 4).map(presetKeyLabel).join(", ") + (no.length > 4 ? "…" : "") + ").");
+        }
+      });
       box.appendChild(h("div", { class: "pb-gclass-row" },
         h("label", { class: "pb-check" }, cb, " ." + c.name),
-        on ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked || !(it.styles || it.states), "data-tip": "Ajoute les réglages propres de cet élément à la classe (tous les éléments de la classe sont mis à jour), puis les retire de l'élément",
-          onclick: function () {
-            var own = ownStyles(it), list = siteClasses.map(function (x) { return clone(x); }), t = list.filter(function (x) { return x.name === c.name; })[0];
-            ["styles", "states"].forEach(function (k) { t[k] = t[k] || {}; Object.keys(own[k]).forEach(function (bp) { t[k][bp] = Object.assign({}, t[k][bp], own[k][bp]); }); });
-            saveSiteClasses(list, function () { setNodeClasses(it, classNames(byId(it.id) || it), "Classe « " + c.name + " » mise à jour", true); toast("Classe « " + c.name + " » mise à jour : tous ses éléments suivent."); });
-          } }, "Mettre à jour la classe") : null,
+        on ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked || !(it.styles || it.states), "data-tip": "Remplace le contenu du style par les réglages que vous choisissez parmi ceux de cet élément (tous les éléments qui l'utilisent suivent)", onclick: function () { openStyleDialog(it, c.name); } }, "Mettre à jour le style") : null,
         h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked, "aria-label": "Supprimer la classe " + c.name,
           onclick: function () { if (!window.confirm("Supprimer la classe « " + c.name + " » du site ? Les éléments qui la portent perdent son style.")) return; saveSiteClasses(siteClasses.filter(function (x) { return x.name !== c.name; }), function () { toast("Classe supprimée."); }); } }, "Supprimer")));
     });
-    var nameIn = h("input", { type: "text", maxlength: "30", placeholder: "nom-de-la-classe", "aria-label": "Nom de la nouvelle classe globale", disabled: locked || null });
-    box.appendChild(h("div", { class: "pb-gclass-new" }, nameIn, h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: locked || !PAGE.siteSettingsUrl, "data-tip": "Crée la classe avec les réglages de style propres de cet élément, et l'applique",
-      onclick: function () {
-        var name = nameIn.value.trim().toLowerCase();
-        if (!/^[a-z][a-z0-9-]{0,29}$/.test(name) || /^(kw|lp|pb|mk)-/.test(name)) { toast("Nom de classe invalide : minuscules, chiffres et tirets, commence par une lettre (préfixes kw-, lp-, pb-, mk- réservés).", true); return; }
-        if (siteClasses.some(function (x) { return x.name === name; })) { toast("Cette classe existe déjà : cochez-la pour l'appliquer.", true); return; }
-        var own = ownStyles(it), def = { name: name };
-        if (Object.keys(own.styles).length) def.styles = own.styles;
-        if (Object.keys(own.states).length) def.states = own.states;
-        saveSiteClasses(siteClasses.concat([def]), function () { setNodeClasses(it, classNames(it).concat([name]), "Classe « " + name + " » créée", true); toast("Classe « " + name + " » créée et appliquée."); });
-      } }, "Créer une classe depuis cet élément")));
+    box.appendChild(h("div", { class: "pb-gclass-new" }, h("button", { type: "button", class: "btn btn-outline btn-sm", "data-pb-save-style": "", disabled: locked || !PAGE.siteSettingsUrl || !(it.styles || it.states), "data-tip": "Choisissez les catégories de réglages de cet élément à enregistrer comme style réutilisable", onclick: function () { openStyleDialog(it); } }, "Enregistrer comme style…")));
     if (!PAGE.siteSettingsUrl) box.appendChild(h("p", { class: "pb-hint", text: "Les classes globales appartiennent à un site : cette page n'en a pas." }));
     return box;
   }
