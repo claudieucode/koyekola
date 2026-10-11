@@ -217,14 +217,20 @@
   // Saisie (light) : les calques sont redessinés au plus une fois par pause de frappe ; le reste suit tout de suite
   var treeTimer = null;
   function scheduleTree() { clearTimeout(treeTimer); treeTimer = setTimeout(renderTree, 120); }
+  // Un rendu secondaire (calques, inspecteur, réglages…) qui échoue ne doit JAMAIS empêcher le rendu du canevas ni l'enregistrement
+  // d'une modification déjà appliquée au document : chaque étape est isolée, l'erreur est signalée dans la console.
+  function guarded(fn) { try { fn(); } catch (err) { if (window.console) console.error("[KOLAKISA] rendu de l'éditeur :", err); } }
+  var docVersion = 0; // compteur de modifications du document (résultats de l'inspecteur de qualité : actuels ou obsolètes)
   function afterChange(light, quick) {
-    if (light) scheduleTree(); else { clearTimeout(treeTimer); renderTree(); }
-    if (!light) { renderInspector(); renderContext(); renderPageSettings(); }
-    updateHistoryButtons();
-    if (!light) { placeCanvasBar(); renderDoc(); } // saisie : la barre est replacée avec les repères, juste après le rendu du canevas
+    docVersion++;
+    guarded(function () { if (light) scheduleTree(); else { clearTimeout(treeTimer); renderTree(); } });
+    if (!light) { guarded(renderInspector); guarded(renderContext); guarded(refreshPageSettings); }
+    guarded(updateHistoryButtons);
+    guarded(refreshStart);
+    if (!light) { guarded(placeCanvasBar); guarded(renderDoc); } // saisie : la barre est replacée avec les repères, juste après le rendu du canevas
     scheduleRender(quick);
     scheduleSave();
-    navListeners.forEach(function (f) { f(); });
+    navListeners.forEach(function (f) { guarded(f); });
   }
   function updateHistoryButtons() {
     $("[data-pb-undo]").disabled = !past.length || !canWrite;
@@ -238,12 +244,13 @@
     if (!id) selection = [];
     else if (additive) selection = selection.indexOf(id) >= 0 ? selection.filter(function (x) { return x !== id; }) : selection.concat(id);
     else selection = [id];
+    var geo = mode === "structure" ? null : readOverlayGeo(); // lectures AVANT toute écriture (arbre, inspecteur, classes du canevas)
     if (id && !additive) revealInTree(id);
     styleState = "normal";
     markTreeSelection();
     renderInspector();
     renderContext();
-    markCanvasSelection(opts.scroll !== false);
+    markCanvasSelection(opts.scroll !== false, geo);
     markDocSelection(opts.scroll !== false);
     navListeners.forEach(function (f) { f(); });
   }
@@ -708,14 +715,24 @@
   // Cible des réglages : null = le widget lui-même ; sinon une de ses PARTIES (carte, image, titre…, déclarées par le registre). Les parties ont la même forme
   // que le widget ({ styles: { écran }, states: { état } }) : tous les contrôles, l'historique et l'enregistrement fonctionnent donc sans changement.
   var styleTarget = null;
-  function holderOf(it, create) {
-    if (!styleTarget || !partDef(it, styleTarget)) return it;
+  // Un réglage n'est écrit dans une PARTIE que si le registre des parties (parts.js, même source que le serveur) l'accepte pour cette partie ; sinon il
+  // revient au widget lui-même (ex. « Aligner dans le parent » de la barre contextuelle alors qu'une partie est choisie dans l'inspecteur).
+  var GROUP_OF = null;
+  function groupOfKey(k) { if (!GROUP_OF) { GROUP_OF = {}; SPEC.styleProps.forEach(function (p) { GROUP_OF[p.key] = p.group; }); } return k === "backgroundColor" ? "background" : GROUP_OF[k]; }
+  function partAllowsKey(it, key) {
+    var pd = styleTarget && partDef(it, styleTarget), g = pd && groupOfKey(key);
+    if (!pd || !g) return true; // pas de partie, ou réglage composé (fond, filtre, ombre…) géré par les contrôles de son groupe
+    var spec = pd.groups[g];
+    return spec === true || (Array.isArray(spec) && spec.indexOf(key) >= 0);
+  }
+  function holderOf(it, create, key) {
+    if (!styleTarget || !partDef(it, styleTarget) || (key !== undefined && !partAllowsKey(it, key))) return it;
     if (!it.parts || !it.parts[styleTarget]) { if (!create) return null; it.parts = it.parts || {}; it.parts[styleTarget] = {}; }
     return it.parts[styleTarget];
   }
   function partDef(it, key) { var d = it && isNode(it) && NT[it.type] && NT[it.type].parts; return d ? d.filter(function (x) { return x.key === key; })[0] || null : null; }
-  function styleSet(it, bp, state, create) {
-    var o = holderOf(it, create);
+  function styleSet(it, bp, state, create, key) {
+    var o = holderOf(it, create, key);
     if (!o) return null;
     if (state && state !== "normal") {
       if (!o.states) { if (!create) return null; o.states = {}; }
@@ -726,7 +743,7 @@
     if (!o.styles[bp]) { if (!create) return null; o.styles[bp] = {}; }
     return o.styles[bp];
   }
-  function ownValue(it, key) { var s = styleSet(it, device, styleState, false); return s && s[key] !== undefined ? s[key] : undefined; }
+  function ownValue(it, key) { var s = styleSet(it, device, styleState, false, key); return s && s[key] !== undefined ? s[key] : undefined; }
   // Valeur héritée (écrans plus grands) : affichée en indication grise
   function inheritedValue(it, key) {
     if (styleState !== "normal") return undefined;
@@ -737,7 +754,7 @@
       var d = (it.styles && it.styles.desktop) || {}, cols = d.gridTemplate ? String(d.gridTemplate).split(" ").length : Number(d.columns) || 0;
       if (!own("tablet") && (device === "tablet" ? cols > 2 : !own("mobile") && cols > 1)) return key === "columns" ? (device === "tablet" ? 2 : 1) : undefined;
     }
-    var ho = holderOf(it, false);
+    var ho = holderOf(it, false, key);
     for (var j = i - 1; j >= 0; j--) { var s = ho && ho.styles && ho.styles[BPS[j]]; if (s && s[key] !== undefined) return s[key]; }
     return undefined;
   }
@@ -755,20 +772,47 @@
   function setStyles(ids, map, opts) {
     ids = ids || selection;
     if (!ids.length || refuseLocked(ids)) return;
-    change(function () {
+    if (refuseFormat(ids, Object.keys(map))) return;
+    if (change(function () {
       ids.forEach(function (id) {
         var it = byId(id);
         if (!it) return;
         Object.keys(map).forEach(function (key) {
           var value = map[key];
           var empty = value === "" || value === null || value === undefined;
-          var set = styleSet(it, device, styleState, !empty);
+          var set = styleSet(it, device, styleState, !empty, key);
           if (!set) return;
           if (empty) delete set[key]; else set[key] = value;
         });
         cleanStyles(it);
       });
-    }, { key: opts && opts.key ? opts.key + ":" + device + ":" + styleState : null, light: opts && opts.light, label: "Style : " + Object.keys(map).map(function (k) { return SP[k] ? SP[k].label : COMPOSED_LABEL[k] || k; }).slice(0, 2).join(", ") + (device !== "desktop" ? " (" + bpLabel(device) + ")" : "") });
+    }, { key: opts && opts.key ? opts.key + ":" + device + ":" + styleState : null, light: opts && opts.light, label: "Style : " + Object.keys(map).map(function (k) { return SP[k] ? SP[k].label : COMPOSED_LABEL[k] || k; }).slice(0, 2).join(", ") + (device !== "desktop" ? " (" + bpLabel(device) + ")" : "") }) !== false) previewStyles(ids, map);
+  }
+  // Retour visuel IMMÉDIAT : la valeur choisie est posée tout de suite en style en ligne sur l'élément du canevas, sans attendre le rendu
+  // serveur. Le rendu serveur qui suit remplace la page et retire ces styles (clearPreviews) : seul ce qui est certain d'être identique
+  // au CSS généré est prévisualisé (propriétés simples, valeurs littérales, état normal, élément lui-même).
+  var PREVIEW = { fontSize: 1, color: 1, backgroundColor: 1, opacity: 1, letterSpacing: 1, width: 1, height: 1, maxWidth: 1, minHeight: 1, gap: 1, borderRadius: 1, paddingTop: 1, paddingRight: 1, paddingBottom: 1, paddingLeft: 1, marginTop: 1, marginRight: 1, marginBottom: 1, marginLeft: 1 };
+  var PREVIEW_VALUE = /^(-?\d{1,4}(\.\d{1,3})?(px|%|rem|em|vh|vw)?|#[0-9a-fA-F]{3,8})$/;
+  var previews = [];
+  function previewStyles(ids, map) {
+    if (styleState !== "normal" || styleTarget || !ids) return;
+    var doc = frame.contentDocument;
+    if (!doc || !doc.body || swapping) return;
+    ids.forEach(function (id) {
+      var el = doc.querySelector('[data-node-id="' + id + '"]');
+      if (!el) return;
+      Object.keys(map).forEach(function (key) {
+        var v = map[key];
+        if (!PREVIEW[key] || typeof v !== "string" && typeof v !== "number" || !PREVIEW_VALUE.test(String(v))) return;
+        var css = key.replace(/[A-Z]/g, function (c) { return "-" + c.toLowerCase(); });
+        if (!previews.some(function (x) { return x.el === el && x.css === css; })) previews.push({ el: el, css: css, was: el.style.getPropertyValue(css) });
+        el.style.setProperty(css, String(v));
+      });
+    });
+  }
+  function clearPreviews() {
+    previews.forEach(function (x) { if (x.was) x.el.style.setProperty(x.css, x.was); else x.el.style.removeProperty(x.css); });
+    previews = [];
   }
   // Largeur du contenu d'un conteneur : « full » (propriété) et « maxWidth » (style de l'écran affiché) changent ENSEMBLE, en une seule étape d'annulation
   function setContainerWidth(id, mode, customValue) {
@@ -2541,6 +2585,7 @@
     overflow: { values: [["visible", "Débordement visible", "T:Visible"], ["hidden", "Débordement masqué", "T:Masqué"], ["auto", "Défilement si nécessaire", "T:Défiler"]] },
   };
   // Axe physique (h / v) réglé par une propriété d'alignement, d'après le rendu réel du canevas (sens du conteneur)
+  var axisReal = {};
   function physicalAxis(it, key) {
     var spec = ICON_ENUMS[key];
     if (!spec || !spec.axis) return null;
@@ -2551,9 +2596,16 @@
     // Valeur du modèle (écran affiché, héritage compris) d'abord : juste même avant que le canevas soit redessiné ;
     // sinon le rendu réel (valeur par défaut de chaque conteneur)
     var disp = valueOf(target, "display"), dir = valueOf(target, "flexDirection");
-    var el = canvasEl(target.id), cs = el && frame.contentWindow ? frame.contentWindow.getComputedStyle(el) : null;
-    if (!disp && cs) disp = cs.display;
-    if (!dir && cs) dir = cs.flexDirection;
+    if (!disp || !dir) {
+      // Style réel du canevas lu UNE fois par élément et par reconstruction de l'inspecteur (chaque lecture force un calcul de style)
+      var real = axisReal[target.id];
+      if (!real) {
+        var el = canvasEl(target.id), cs = el && frame.contentWindow ? frame.contentWindow.getComputedStyle(el) : null;
+        real = axisReal[target.id] = cs ? { display: cs.display, flexDirection: cs.flexDirection } : {};
+      }
+      if (!disp) disp = real.display;
+      if (!dir) dir = real.flexDirection;
+    }
     var col = !/grid/.test(disp || "") && /column/.test(dir || "");
     return spec.axis === "main" ? (col ? "v" : "h") : (col ? "h" : "v");
   }
@@ -3233,12 +3285,12 @@
         if (hasTypo || !keys.length) return;
       }
       if (g === "typography" && schema.groups.color !== undefined && keysOf("color").indexOf("color") >= 0) keys.splice(Math.min(3, keys.length), 0, "color");
-      if (g === "layout") keys = withChildKeys(it, keys, plan);
+      if (g === "layout" && !pdef) keys = withChildKeys(it, keys, plan); // le placement dans le parent concerne le WIDGET, jamais une de ses parties
       if (g === "background") keys = ["backgroundColor", "backgroundImage", "gradient", "overlay", "backgroundSize", "backgroundPosition", "backgroundRepeat", "backgroundAttachment"];
       plan.push([g, keys]);
     });
     // Un élément sans groupe « Mise en page » (image, bouton…) reçoit tout de même les réglages d'enfant de son parent
-    if (!plan.some(function (x) { return x[0] === "layout"; })) { var ck = withChildKeys(it, [], plan); if (ck.length) plan.push(["layout", ck]); }
+    if (!pdef && !plan.some(function (x) { return x[0] === "layout"; })) { var ck = withChildKeys(it, [], plan); if (ck.length) plan.push(["layout", ck]); }
     if (it.type === "layout" && items.length === 1) {
       var wid = fid();
       var wsel = h("select", { id: wid, class: "pb-prop-select", disabled: lockedAny(items) }, STYLE.width.map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
@@ -3383,6 +3435,7 @@
   function renderInspector() {
     if (typeof cpop !== "undefined" && cpop && !cpop.hidden) { cpop.hidden = true; cpopFor = null; }
     var box = $("[data-pb-inspector]");
+    axisReal = {};
     if (box.dataset.for !== selection.join(",")) styleTarget = null; // un autre élément : on repart du widget lui-même
     var keepScroll = box.dataset.for === selection.join(",") ? inspScroll : 0;
     box.textContent = "";
@@ -3411,6 +3464,10 @@
     }
     var it = items[0];
     var multi = items.length > 1;
+    if (formatLocked() && items.every(function (x) { return isTopLevelId(x.id); })) {
+      box.appendChild(h("div", { class: "pb-note", role: "note" }, icon("lock"), h("span", { text: " Format verrouillé : largeur et marges de cet élément protégées. " }),
+        canWrite ? h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { setLayout(Object.assign({}, layoutOf(), { locked: false })); } }, "Déverrouiller") : null));
+    }
     var locked = lockedAny(items);
     var schema = inspectorFor(it);
     var l = locate(it.id);
@@ -3792,43 +3849,186 @@
     }).catch(function (e) { toast(e.message, true); });
   }
   // Styles propres de l'élément (écrans et états), prêts à entrer dans une classe
-  var ownStyles = function (it) { return { styles: clone(it.styles || {}), states: clone(it.states || {}) }; };
   var classNames = function (it) { return String(it.classes || "").split(/\s+/).filter(Boolean); };
   function setNodeClasses(it, names, label, clearOwn) {
     change(function () { var x = byId(it.id); if (names.length) x.classes = names.join(" "); else delete x.classes; if (clearOwn) { delete x.styles; delete x.states; } }, { label: label });
+  }
+  // ---------- « Enregistrer comme style » : l'utilisateur choisit les catégories (ou les propriétés) et les écrans à enregistrer ----------
+  // Un style enregistré = une classe globale du site (même format, même rendu, même mise à jour partout). Seules les propriétés choisies sont copiées.
+  var PRESET_CATS = SPEC.presetCategories || [];
+  var COMPOSED_LABEL = { gradient: "Dégradé", overlay: "Voile", shadow: "Ombre", filter: "Filtres", transform: "Transformation", mask: "Masque" };
+  var presetKeyLabel = function (k) { return (SP[k] && SP[k].label) || COMPOSED_LABEL[k] || k; };
+  var presetCatOf = function (k) { for (var i = 0; i < PRESET_CATS.length; i++) if (PRESET_CATS[i].keys.indexOf(k) >= 0) return PRESET_CATS[i].id; return null; };
+  var presetScopeLabel = function (scope) { var s = SPEC.states.filter(function (x) { return x.key === scope; })[0]; return s ? "État : " + s.label : bpLabel(scope); };
+  // Propriétés propres de l'élément qui peuvent entrer dans un style : { écran | état : [clés] }
+  function presetOwn(it) {
+    var out = { styles: {}, states: {} };
+    ["styles", "states"].forEach(function (src) {
+      Object.keys(it[src] || {}).forEach(function (scope) {
+        var keys = Object.keys(it[src][scope] || {}).filter(function (k) { return presetCatOf(k); });
+        if (keys.length) out[src][scope] = keys;
+      });
+    });
+    return out;
+  }
+  // Copie filtrée de styles / états (jamais l'original) : absent ≠ vide, valeurs copiées telles quelles
+  function presetPick(it, keys, scopes) {
+    var out = { styles: {}, states: {}, n: 0 };
+    ["styles", "states"].forEach(function (src) {
+      Object.keys(it[src] || {}).forEach(function (scope) {
+        if (!scopes[scope]) return;
+        var sub = {};
+        Object.keys(it[src][scope] || {}).forEach(function (k) { if (keys[k]) { sub[k] = clone(it[src][scope][k]); out.n++; } });
+        if (Object.keys(sub).length) out[src][scope] = sub;
+      });
+    });
+    return out;
+  }
+  function openStyleDialog(it, prefill) {
+    var own = presetOwn(it), scopes = {}, keys = {}, byCat = {};
+    ["styles", "states"].forEach(function (src) { Object.keys(own[src]).forEach(function (scope) { scopes[scope] = true; own[src][scope].forEach(function (k) { keys[k] = true; (byCat[presetCatOf(k)] = byCat[presetCatOf(k)] || {})[k] = true; }); }); });
+    var scopeList = Object.keys(scopes);
+    if (!scopeList.length) { toast("Cet élément n'a aucun réglage propre à enregistrer : modifiez d'abord son style dans l'inspecteur.", true); return; }
+    var cats = PRESET_CATS.filter(function (c) { return byCat[c.id]; });
+    var dlg = h("dialog", { class: "pb-modal pb-sp", "aria-labelledby": "pb-sp-title", "data-pb-style-dialog": "" });
+    var form = h("form", { class: "pb-sp-form", method: "dialog", novalidate: "" });
+    var master = h("input", { type: "checkbox", "data-sp-all": "", "aria-label": "Tout sélectionner" }), summary = h("p", { class: "pb-sp-summary", "data-sp-summary": "", "aria-live": "polite" });
+    var catBoxes = {}, keyBoxes = {}, catCounts = {};
+    var nameIn = h("input", { type: "text", class: "pb-input", maxlength: "30", placeholder: "nom-du-style", "aria-label": "Nom du style", "data-sp-name": "", value: prefill || "", autocomplete: "off" });
+    var warn = h("p", { class: "pb-note is-warn", role: "alert", hidden: true, "data-sp-error": "" });
+    var applyIn = h("input", { type: "checkbox", "data-sp-apply": "" }); applyIn.checked = true;
+    var saveBtn = h("button", { type: "submit", class: "btn btn-primary", "data-sp-save": "" }, "Enregistrer le style");
+    var chosenKeys = function () { return Object.keys(keys).filter(function (k) { return keys[k]; }); };
+    var chosenScopes = function () { return scopeList.filter(function (s) { return scopes[s]; }); };
+    function refresh() {
+      var all = Object.keys(keys), on = chosenKeys();
+      master.checked = on.length === all.length; master.indeterminate = on.length > 0 && on.length < all.length;
+      cats.forEach(function (c) {
+        var ks = Object.keys(byCat[c.id]), n = ks.filter(function (k) { return keys[k]; }).length;
+        catBoxes[c.id].checked = n === ks.length; catBoxes[c.id].indeterminate = n > 0 && n < ks.length;
+        catCounts[c.id].textContent = n + "/" + ks.length;
+        ks.forEach(function (k) { keyBoxes[k].checked = Boolean(keys[k]); });
+      });
+      var p = presetPick(it, keys, scopes);
+      summary.textContent = p.n ? p.n + " réglage" + (p.n > 1 ? "s" : "") + " seront enregistrés" + (scopeList.length > 1 ? " · " + chosenScopes().map(presetScopeLabel).join(", ") : "") + "." : "Rien n'est sélectionné.";
+      var name = nameIn.value.trim().toLowerCase(), exists = siteClasses.some(function (x) { return x.name === name; });
+      saveBtn.disabled = !p.n;
+      saveBtn.textContent = exists ? "Remplacer le style" : "Enregistrer le style";
+      if (exists) { warn.hidden = false; warn.textContent = "Le style « " + name + " » existe déjà : il sera remplacé pour tous les éléments du site qui l'utilisent."; } else warn.hidden = true;
+    }
+    var setAll = function (v) { Object.keys(keys).forEach(function (k) { keys[k] = v; }); refresh(); };
+    master.addEventListener("change", function () { setAll(master.checked); });
+    form.appendChild(h("div", { class: "pb-modal-head" }, h("h2", { id: "pb-sp-title", text: "Enregistrer comme style" }), h("span", { class: "pb-modal-spacer" }),
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", "aria-label": "Fermer", onclick: function () { dlg.close(); } }, "×")));
+    var body = h("div", { class: "pb-sp-body" });
+    body.appendChild(h("p", { class: "pb-hint", text: "Source : " + ((inspectorFor(it) || {}).kind || it.type) + ". Cochez ce que le style doit contenir ; le texte, les images, les liens et la structure ne sont jamais copiés." }));
+    body.appendChild(h("div", { class: "pb-field" }, h("label", { text: "Nom du style" }), nameIn));
+    body.appendChild(h("div", { class: "pb-sp-bar" }, h("label", { class: "pb-check pb-sp-master" }, master, " Tout sélectionner"),
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", "data-sp-none": "", onclick: function () { setAll(false); } }, "Tout désélectionner")));
+    var list = h("div", { class: "pb-sp-cats", role: "group", "aria-label": "Catégories à enregistrer" });
+    cats.forEach(function (c) {
+      var cb = h("input", { type: "checkbox", "data-sp-cat": c.id }); catBoxes[c.id] = cb;
+      cb.addEventListener("change", function () { Object.keys(byCat[c.id]).forEach(function (k) { keys[k] = cb.checked; }); refresh(); });
+      var det = h("details", { class: "pb-sp-cat" });
+      var props = h("div", { class: "pb-sp-props" });
+      Object.keys(byCat[c.id]).forEach(function (k) {
+        var kb = h("input", { type: "checkbox", "data-sp-key": k }); keyBoxes[k] = kb;
+        kb.addEventListener("change", function () { keys[k] = kb.checked; refresh(); });
+        props.appendChild(h("label", { class: "pb-check" }, kb, " " + presetKeyLabel(k)));
+      });
+      det.appendChild(h("summary", {}, h("label", { class: "pb-check", onclick: function (e) { e.stopPropagation(); } }, cb, " " + c.label), (catCounts[c.id] = h("span", { class: "pb-sp-count" }))));
+      det.appendChild(props);
+      list.appendChild(det);
+    });
+    body.appendChild(list);
+    if (scopeList.length > 1) {
+      var sc = h("div", { class: "pb-sp-scopes", role: "group", "aria-label": "Écrans et états à enregistrer" }, h("span", { class: "pb-sub", text: "Écrans et états" }));
+      scopeList.forEach(function (s) {
+        var cb = h("input", { type: "checkbox", "data-sp-scope": s }); cb.checked = true;
+        cb.addEventListener("change", function () { scopes[s] = cb.checked; refresh(); });
+        sc.appendChild(h("label", { class: "pb-check" }, cb, " " + presetScopeLabel(s)));
+      });
+      body.appendChild(sc);
+    }
+    body.appendChild(h("p", { class: "pb-hint", text: "Portée : ce site (le style sert à toutes ses pages)." }));
+    body.appendChild(h("label", { class: "pb-check" }, applyIn, " Appliquer à cet élément (ses réglages enregistrés passent dans le style, les autres restent)"));
+    body.appendChild(summary); body.appendChild(warn);
+    form.appendChild(body);
+    form.appendChild(h("div", { class: "pb-sp-actions" }, h("button", { type: "button", class: "btn btn-outline", onclick: function () { dlg.close(); } }, "Annuler"), saveBtn));
+    nameIn.addEventListener("input", refresh);
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var name = nameIn.value.trim().toLowerCase();
+      if (!/^[a-z][a-z0-9-]{0,29}$/.test(name) || /^(kw|lp|pb|mk)-/.test(name)) { warn.hidden = false; warn.textContent = "Nom invalide : minuscules, chiffres et tirets, commence par une lettre (préfixes kw-, lp-, pb-, mk- réservés)."; nameIn.focus(); return; }
+      var p = presetPick(it, keys, scopes);
+      if (!p.n) return;
+      var picked = chosenKeys(), catIds = PRESET_CATS.filter(function (c) { return picked.some(function (k) { return byCat[c.id] && byCat[c.id][k]; }); }).map(function (c) { return c.id; });
+      var def = { name: name, meta: { source: it.type, categories: catIds, updated: new Date().toISOString().slice(0, 10) } };
+      if (Object.keys(p.styles).length) def.styles = p.styles;
+      if (Object.keys(p.states).length) def.states = p.states;
+      var next = siteClasses.map(clone), at = -1; next.forEach(function (x, i) { if (x.name === name) at = i; });
+      if (at >= 0) next[at] = def; else next.push(def);
+      saveBtn.disabled = true;
+      saveSiteClasses(next, function () {
+        if (applyIn.checked) change(function () {
+          var x = byId(it.id), cl = classNames(x);
+          if (cl.indexOf(name) < 0) cl.push(name);
+          x.classes = cl.join(" ");
+          ["styles", "states"].forEach(function (src) {
+            Object.keys(p[src]).forEach(function (scope) {
+              Object.keys(p[src][scope]).forEach(function (k) { delete x[src][scope][k]; });
+              if (!Object.keys(x[src][scope]).length) delete x[src][scope];
+            });
+            if (x[src] && !Object.keys(x[src]).length) delete x[src];
+          });
+        }, { label: "Style « " + name + " » enregistré et appliqué" });
+        toast("Style « " + name + " » " + (at >= 0 ? "remplacé" : "enregistré") + " (" + p.n + " réglage" + (p.n > 1 ? "s" : "") + ").");
+        dlg.close();
+      });
+      setTimeout(function () { if (dlg.open) saveBtn.disabled = false; }, 4000);
+    });
+    dlg.appendChild(form);
+    dlg.addEventListener("close", function () { dlg.remove(); });
+    document.body.appendChild(dlg);
+    refresh();
+    dlg.showModal();
+    nameIn.focus();
+  }
+  // Compatibilité : réglages d'un style que le type de l'élément cible ne propose pas (ils restent écrits mais n'ont aucun effet sur lui)
+  function presetUnsupported(it, def) {
+    var schema = inspectorFor(it), g = schema && schema.groups;
+    if (!g) return Object.keys(presetKeysOf(def));
+    var offered = function (k) { var gr = k === "backgroundColor" ? "background" : (SP[k] && SP[k].group) || (({ gradient: "background", overlay: "background", shadow: "effects", filter: "effects", transform: "position", mask: "mask" })[k]); var spec = gr && g[gr]; return spec === true || (Array.isArray(spec) && spec.indexOf(k) >= 0) || (k === "color" && g.typography !== undefined); };
+    return Object.keys(presetKeysOf(def)).filter(function (k) { return !offered(k); });
+  }
+  function presetKeysOf(def) {
+    var out = {};
+    ["styles", "states"].forEach(function (src) { Object.keys(def[src] || {}).forEach(function (s) { Object.keys(def[src][s]).forEach(function (k) { out[k] = true; }); }); });
+    return out;
   }
   function globalClassesBlock(it, locked) {
     var box = h("div", { class: "pb-global-classes" });
     box.appendChild(h("p", { class: "pb-sub", text: "Classes globales du site" }));
     var names = classNames(it);
-    if (!siteClasses.length) box.appendChild(h("p", { class: "pb-hint", text: "Aucune classe globale. Réglez le style de cet élément, puis créez une classe : les autres éléments pourront la réutiliser, et la modifier mettra tout à jour." }));
+    if (!siteClasses.length) box.appendChild(h("p", { class: "pb-hint", text: "Aucune classe globale. Réglez le style de cet élément, puis « Enregistrer comme style » : les autres éléments pourront le réutiliser, et le modifier mettra tout à jour." }));
     siteClasses.forEach(function (c) {
       var on = names.indexOf(c.name) >= 0;
       var cb = h("input", { type: "checkbox", disabled: locked || null });
       cb.checked = on;
-      cb.addEventListener("change", function () { setNodeClasses(it, cb.checked ? names.concat([c.name]) : names.filter(function (n) { return n !== c.name; }), cb.checked ? "Classe « " + c.name + " » appliquée" : "Classe « " + c.name + " » retirée", false); });
+      cb.addEventListener("change", function () {
+        setNodeClasses(it, cb.checked ? names.concat([c.name]) : names.filter(function (n) { return n !== c.name; }), cb.checked ? "Classe « " + c.name + " » appliquée" : "Classe « " + c.name + " » retirée", false);
+        if (cb.checked && c.meta && c.meta.source && c.meta.source !== it.type) {
+          var no = presetUnsupported(it, c), all = Object.keys(presetKeysOf(c)).length;
+          if (no.length) toast("Style « " + c.name + " » : " + (all - no.length) + " réglage" + (all - no.length > 1 ? "s" : "") + " sur " + all + " s'appliquent à ce type d'élément (sans effet : " + no.slice(0, 4).map(presetKeyLabel).join(", ") + (no.length > 4 ? "…" : "") + ").");
+        }
+      });
       box.appendChild(h("div", { class: "pb-gclass-row" },
         h("label", { class: "pb-check" }, cb, " ." + c.name),
-        on ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked || !(it.styles || it.states), "data-tip": "Ajoute les réglages propres de cet élément à la classe (tous les éléments de la classe sont mis à jour), puis les retire de l'élément",
-          onclick: function () {
-            var own = ownStyles(it), list = siteClasses.map(function (x) { return clone(x); }), t = list.filter(function (x) { return x.name === c.name; })[0];
-            ["styles", "states"].forEach(function (k) { t[k] = t[k] || {}; Object.keys(own[k]).forEach(function (bp) { t[k][bp] = Object.assign({}, t[k][bp], own[k][bp]); }); });
-            saveSiteClasses(list, function () { setNodeClasses(it, classNames(byId(it.id) || it), "Classe « " + c.name + " » mise à jour", true); toast("Classe « " + c.name + " » mise à jour : tous ses éléments suivent."); });
-          } }, "Mettre à jour la classe") : null,
+        on ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked || !(it.styles || it.states), "data-tip": "Remplace le contenu du style par les réglages que vous choisissez parmi ceux de cet élément (tous les éléments qui l'utilisent suivent)", onclick: function () { openStyleDialog(it, c.name); } }, "Mettre à jour le style") : null,
         h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked, "aria-label": "Supprimer la classe " + c.name,
           onclick: function () { if (!window.confirm("Supprimer la classe « " + c.name + " » du site ? Les éléments qui la portent perdent son style.")) return; saveSiteClasses(siteClasses.filter(function (x) { return x.name !== c.name; }), function () { toast("Classe supprimée."); }); } }, "Supprimer")));
     });
-    var nameIn = h("input", { type: "text", maxlength: "30", placeholder: "nom-de-la-classe", "aria-label": "Nom de la nouvelle classe globale", disabled: locked || null });
-    box.appendChild(h("div", { class: "pb-gclass-new" }, nameIn, h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: locked || !PAGE.siteSettingsUrl, "data-tip": "Crée la classe avec les réglages de style propres de cet élément, et l'applique",
-      onclick: function () {
-        var name = nameIn.value.trim().toLowerCase();
-        if (!/^[a-z][a-z0-9-]{0,29}$/.test(name) || /^(kw|lp|pb|mk)-/.test(name)) { toast("Nom de classe invalide : minuscules, chiffres et tirets, commence par une lettre (préfixes kw-, lp-, pb-, mk- réservés).", true); return; }
-        if (siteClasses.some(function (x) { return x.name === name; })) { toast("Cette classe existe déjà : cochez-la pour l'appliquer.", true); return; }
-        var own = ownStyles(it), def = { name: name };
-        if (Object.keys(own.styles).length) def.styles = own.styles;
-        if (Object.keys(own.states).length) def.states = own.states;
-        saveSiteClasses(siteClasses.concat([def]), function () { setNodeClasses(it, classNames(it).concat([name]), "Classe « " + name + " » créée", true); toast("Classe « " + name + " » créée et appliquée."); });
-      } }, "Créer une classe depuis cet élément")));
+    box.appendChild(h("div", { class: "pb-gclass-new" }, h("button", { type: "button", class: "btn btn-outline btn-sm", "data-pb-save-style": "", disabled: locked || !PAGE.siteSettingsUrl || !(it.styles || it.states), "data-tip": "Choisissez les catégories de réglages de cet élément à enregistrer comme style réutilisable", onclick: function () { openStyleDialog(it); } }, "Enregistrer comme style…")));
     if (!PAGE.siteSettingsUrl) box.appendChild(h("p", { class: "pb-hint", text: "Les classes globales appartiennent à un site : cette page n'en a pas." }));
     return box;
   }
@@ -4154,7 +4354,16 @@
   // Saisie continue : 150 ms de regroupement ; action isolée (dupliquer, supprimer, annuler, couleur choisie…) : rendu presque tout de suite
   // Délai de regroupement de la saisie : proportionnel au coût du dernier rendu (petite page : réponse rapide ; grande page : on ne multiplie pas les requêtes)
   var lastRenderMs = 100;
-  function scheduleRender(quick) { if (editing || gesture) { pendingRender = true; return; } clearTimeout(renderTimer); renderTimer = setTimeout(renderCanvas, quick ? 30 : Math.max(50, Math.min(150, Math.round(lastRenderMs * 1.2)))); }
+  // Regroupement des rendus : le PREMIER changement après une pause (400 ms sans changement) est envoyé tout de suite — l'attente d'une fenêtre de regroupement
+  // n'aurait servi qu'à retarder l'affichage —, les suivants (frappes, séries) attendent la fenêtre habituelle pour ne pas multiplier les requêtes.
+  var lastScheduleAt = -1e9;
+  function scheduleRender(quick) {
+    if (editing || gesture) { pendingRender = true; return; }
+    clearTimeout(renderTimer);
+    var now = performance.now(), first = now - lastScheduleAt > 400;
+    lastScheduleAt = now;
+    renderTimer = setTimeout(renderCanvas, first ? 0 : quick ? 30 : Math.max(50, Math.min(150, Math.round(lastRenderMs * 1.2))));
+  }
   function endGesture() { gesture = false; if (pendingRender && !editing) { pendingRender = false; scheduleRender(); } }
   var errorItemId = null;
   // « Section 3 › élément 2 « Titre » : … » → identifiant de l'élément en cause (mis en évidence dans les calques)
@@ -4218,6 +4427,7 @@
     Array.prototype.slice.call(main.children).forEach(function (el) { if (want.indexOf(el) < 0) el.remove(); });
     inlineTouched.forEach(function (el) { el.style.width = ""; el.style.height = ""; });
     inlineTouched = [];
+    clearPreviews();
     // Éléments créés : apparition très courte (opacité + micro-zoom, sans toucher à la mise en page). Seuls les plus hauts d'un lot sont animés (au plus 6)
     if (window.KolMotion) {
       var fresh = Array.prototype.filter.call(doc.querySelectorAll("[data-node-id],[data-section-id]"), function (e) { return !knownIds[idOfEl(e)]; });
@@ -4311,9 +4521,11 @@
   var targetOf = function (e) { return e.target && e.target.closest ? e.target.closest("[data-node-id],[data-section-id]") : null; };
   var idOfEl = function (el) { return el ? el.getAttribute("data-node-id") || el.getAttribute("data-section-id") : null; };
   function setupCanvas(y) {
+    previews = [];
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
     canvasReady = true;
+    guarded(refreshStart); // premier rendu terminé : seul moment où une page vide peut proposer le choix de création
     doc.body.classList.add("lp-builder");
     if (window.pbDirect) window.pbDirect.canvas(doc); // manipulation directe : couche de survol et poignées de ce document
     doc.body.classList.toggle("pb-outlines", aids.outlines);
@@ -4487,40 +4699,59 @@
     $$(".pb-drop-line, .pb-drop-box, .pb-drop-label", doc).forEach(function (x) { x.remove(); });
   }
   // Sélection dans le canevas : cadre, nom, dimensions, parent en pointillés, poignées de redimensionnement
-  function markCanvasSelection(scroll) {
+  function markCanvasSelection(scroll, pre) {
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
     $$(".is-selected", doc).forEach(function (el) { el.classList.remove("is-selected"); });
     selection.forEach(function (id) { var el = doc.querySelector('[data-node-id="' + id + '"],[data-section-id="' + id + '"]'); if (el) el.classList.add("is-selected"); });
-    drawOverlays();
+    drawOverlays(pre);
     if (scroll && selection.length) {
       var first = doc.querySelector('[data-node-id="' + selection[0] + '"],[data-section-id="' + selection[0] + '"]');
-      if (first) { var r = first.getBoundingClientRect(); if (r.top < 0 || r.top > frame.contentWindow.innerHeight - 40) first.scrollIntoView({ block: "center", behavior: "smooth" }); }
+      if (first) { var r = pre && pre.items[0] && pre.items[0].client ? pre.items[0].client : first.getBoundingClientRect(); if (r.top < 0 || r.top > frame.contentWindow.innerHeight - 40) first.scrollIntoView({ block: "center", behavior: "smooth" }); }
     }
   }
-  function drawOverlays() {
+  // Géométrie nécessaire aux aides de sélection (cadres, parent, poignées, barre d'actions) : LUE EN BLOC, avant toute écriture dans la page, l'arbre ou l'inspecteur.
+  // La mise en page du canevas ne dépend pas de la sélection (simple contour) : lire avant ou après donne les mêmes valeurs, mais lire avant évite une mise en page forcée.
+  function readOverlayGeo() {
+    var doc = frame.contentDocument;
+    if (!doc || !doc.body) return null;
+    var geo = { pageW: doc.documentElement.clientWidth };
+    geo.items = selection.map(function (id, n) {
+      var el = doc.querySelector('[data-node-id="' + id + '"],[data-section-id="' + id + '"]');
+      if (!el) return null;
+      var rd = { el: el, r: pageRect(el) };
+      if (n === 0) { rd.l = locate(id); var pe = rd.l && rd.l.parent ? doc.querySelector('[data-node-id="' + rd.l.parent.id + '"],[data-section-id="' + rd.l.parent.id + '"]') : null; rd.pr = pe ? pageRect(pe) : null; rd.client = el.getBoundingClientRect(); }
+      return rd;
+    });
+    geo.bar = barGeo();
+    return geo;
+  }
+  function barGeo() {
+    var el = selection.length ? canvasEl(selection[0]) : null;
+    return { fr: frame.getBoundingClientRect(), sr: stage.getBoundingClientRect(), r: el ? el.getBoundingClientRect() : null };
+  }
+  function drawOverlays(pre) {
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
+    var geo = pre || readOverlayGeo();
+    if (!geo) return;
+    var pageW = geo.pageW, reads = geo.items;
     $$(".pb-sel-box, .pb-sel-badge, .pb-parent-box, .pb-handle, .pb-dim, .pb-col-split, .pb-struct-add", doc).forEach(function (x) { x.remove(); });
-    placeCanvasBar();
+    placeCanvasBar(geo.bar);
     selection.forEach(function (id, n) {
-      var el = doc.querySelector('[data-node-id="' + id + '"],[data-section-id="' + id + '"]');
-      if (!el) return;
-      var r = pageRect(el);
+      var rd = reads[n];
+      if (!rd) return;
+      var el = rd.el, r = rd.r;
       var box = doc.createElement("div"); box.className = "pb-sel-box"; box.style.cssText = "left:" + r.left + "px;top:" + r.top + "px;width:" + r.width + "px;height:" + r.height + "px"; doc.body.appendChild(box);
       if (n !== 0) return;
       var it = byId(id);
       var badge = doc.createElement("div"); badge.className = "pb-sel-badge"; badge.textContent = nameOf(it) + " · " + Math.round(r.width) + " × " + Math.round(r.height);
       badge.style.left = r.left + "px"; badge.style.top = Math.max(18, r.top) + "px"; doc.body.appendChild(badge);
-      var l = locate(id);
-      if (l && l.parent) {
-        var pe = doc.querySelector('[data-node-id="' + l.parent.id + '"],[data-section-id="' + l.parent.id + '"]');
-        if (pe) { var pr = pageRect(pe); var pb = doc.createElement("div"); pb.className = "pb-parent-box"; pb.style.cssText = "left:" + pr.left + "px;top:" + pr.top + "px;width:" + pr.width + "px;height:" + pr.height + "px"; doc.body.appendChild(pb); }
-      }
+      if (rd.pr) { var pr = rd.pr; var pb = doc.createElement("div"); pb.className = "pb-parent-box"; pb.style.cssText = "left:" + pr.left + "px;top:" + pr.top + "px;width:" + pr.width + "px;height:" + pr.height + "px"; doc.body.appendChild(pb); }
       if (selection.length === 1 && isNode(it) && canWrite && !lockedDeep(id) && !editing) {
         [["e", r.left + r.width, r.top + r.height / 2, "Largeur"], ["s", r.left + r.width / 2, r.top + r.height, "Hauteur"], ["se", r.left + r.width, r.top + r.height, "Largeur et hauteur"]].forEach(function (hd) {
           // Les poignées restent entièrement dans la page, même quand l'élément touche son bord (pleine largeur)
-          var hx = Math.max(7, Math.min(hd[1], doc.documentElement.clientWidth - 7));
+          var hx = Math.max(7, Math.min(hd[1], pageW - 7));
           var hEl = doc.createElement("div"); hEl.className = "pb-handle pb-handle-" + hd[0]; hEl.style.left = hx + "px"; hEl.style.top = hd[2] + "px";
           hEl.setAttribute("title", hd[3]);
           hEl.addEventListener("mousedown", function (e) { resizeStart(e, id, el, hd[0]); });
@@ -4746,7 +4977,8 @@
     });
   }
   // Position : au-dessus de l'élément (bord droit), en dessous s'il n'y a pas la place ; masquée hors de la zone visible
-  function placeCanvasBar() {
+  var barSizes = {};
+  function placeCanvasBar(pre) {
     if (!cbar) return; // appel pendant l'initialisation
     if (mode === "structure") { cbar.hidden = true; return; }
     var items = selectedItems();
@@ -4755,11 +4987,14 @@
     if (!el) { cbar.hidden = true; return; }
     var key = selection.join(",") + "|" + acts.join(",") + "|" + items.map(function (x) { return (x.hidden ? "h" : "") + (x.locked ? "l" : "") + ((kidsOf(x) || []).length); }).join(",") + "|" + device;
     if (cbar.dataset.key !== key) { buildCanvasBar(acts, items[0]); cbar.dataset.key = key; }
-    var fr = frame.getBoundingClientRect(), sr = stage.getBoundingClientRect(), r = el.getBoundingClientRect();
+    var g = pre && pre.r ? pre : null, fr = g ? g.fr : frame.getBoundingClientRect(), sr = g ? g.sr : stage.getBoundingClientRect(), r = g ? g.r : el.getBoundingClientRect();
     var top = fr.top + r.top * zoom, bottom = fr.top + r.bottom * zoom, right = fr.left + r.right * zoom;
     if (bottom < sr.top + 8 || top > sr.bottom - 8 || !r.width) { cbar.hidden = true; return; }
+    // Taille de la barre : ne dépend que de son jeu d'actions ; mesurée une fois (affichée), puis relue dans le cache (pas de mise en page forcée à chaque sélection)
+    var sizeKey = acts.join(",") + "|" + device, size = barSizes[sizeKey];
     cbar.hidden = false;
-    var bw = cbar.offsetWidth, bh = cbar.offsetHeight;
+    if (!size) size = barSizes[sizeKey] = [cbar.offsetWidth, cbar.offsetHeight];
+    var bw = size[0], bh = size[1];
     // Au-dessus si possible. Sinon : un conteneur qui a des enfants reçoit la barre EN DESSOUS (elle ne recouvre jamais ses
     // enfants) ; un élément vide ou sans enfants, assez grand, la reçoit dans son coin haut (on ne cache pas son voisin) ;
     // sinon en dessous ; en dernier recours en haut de la zone visible
@@ -4775,7 +5010,7 @@
     cbar.style.left = Math.round(x) + "px"; cbar.style.top = Math.round(y) + "px";
   }
   stage.addEventListener("scroll", placeCanvasBar, { passive: true });
-  window.addEventListener("resize", placeCanvasBar);
+  window.addEventListener("resize", function () { barSizes = {}; placeCanvasBar(); });
   // Ouvrir l'inspecteur sur un onglet (et un groupe de réglages déplié)
   function openInspector(tab, group) {
     if (panels.rightHidden) togglePanel("right");
@@ -4820,7 +5055,7 @@
     else {
       applyZoom();
       if (visualView) { try { frame.contentWindow.scrollTo(0, visualView.y); stage.scrollLeft = visualView.sl; stage.scrollTop = visualView.st; } catch (e) { /* cadre pas encore prêt : il se positionnera à son chargement */ } visualView = null; }
-      setTimeout(function () { drawOverlays(); drawRulers(); drawGuides(); }, 30);
+      requestAnimationFrame(function () { drawOverlays(); drawRulers(); drawGuides(); });
     }
     placeCanvasBar();
   }
@@ -5124,7 +5359,7 @@
     wrap.dataset.device = d;
     applyZoom();
     renderInspector(); renderContext();
-    setTimeout(function () { drawOverlays(); drawGuides(); drawRulers(); refreshInfo(); }, 60);
+    requestAnimationFrame(function () { drawOverlays(); drawGuides(); drawRulers(); refreshInfo(); });
   }
   $$(".pb-top .pb-devices button").forEach(function (b) { b.addEventListener("click", function () { setDevice(b.dataset.device); }); });
   var MAX_ZOOM = 4; // 400 %
@@ -5162,7 +5397,7 @@
       if (zoomFit) applyZoom(); else drawRulers();
     });
   }
-  function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(MAX_ZOOM, Math.max(0.25, z)); applyZoom(); setTimeout(function () { drawOverlays(); drawGuides(); }, 30); }
+  function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(MAX_ZOOM, Math.max(0.25, z)); applyZoom(); requestAnimationFrame(function () { drawOverlays(); drawGuides(); }); }
   $$("[data-pb-zoom]").forEach(function (b) { b.addEventListener("click", function () { var v = b.dataset.pbZoom; setZoom(v === "fit" ? "fit" : v === "100" ? 1 : v === "+" ? Math.round((zoom + 0.1) * 10) / 10 : Math.round((zoom - 0.1) * 10) / 10); }); });
   window.addEventListener("resize", queueZoom);
   // La zone du canevas change de taille (panneaux, fenêtre, mise en page initiale) : le cadre suit
@@ -5886,7 +6121,7 @@
     if (!live) store.set("panels", panels);
     queueZoom();
   }
-  function togglePanel(side) { panels[side + "Hidden"] = !panels[side + "Hidden"]; applyPanels(); renderTools(); if (!panels[side + "Hidden"] && window.KolMotion) window.KolMotion.appear($(side === "left" ? "[data-pb-left]" : "[data-pb-right]"), "panel-" + side); }
+  function togglePanel(side) { panels[side + "Hidden"] = !panels[side + "Hidden"]; applyPanels(); renderTools(); if (!panels[side + "Hidden"] && window.KolMotion) window.KolMotion.appear($(side === "left" ? "[data-pb-left]" : "[data-pb-right]"), "panel-" + side); if (pageSettingsStale) refreshPageSettings(); }
   $$("[data-pb-resize]").forEach(function (handle) {
     var side = handle.dataset.pbResize;
     // Largeur : jamais assez étroite pour rendre les contrôles illisibles (droite : 280 px au moins), ni plus de la moitié de la fenêtre
@@ -5923,14 +6158,175 @@
   });
   if (document.getElementById(store.get("lib-tab", ""))) openLibTab(document.getElementById(store.get("lib-tab", "")));
   var tabs = $$(".pb-tabs [role=tab]");
-  function openTab(tab) { if (panels.leftHidden) togglePanel("left"); tabs.forEach(function (t) { var on = t === tab; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; document.getElementById(t.getAttribute("aria-controls")).hidden = !on; }); }
+  function openTab(tab) { if (panels.leftHidden) togglePanel("left"); tabs.forEach(function (t) { var on = t === tab; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; document.getElementById(t.getAttribute("aria-controls")).hidden = !on; }); if (pageSettingsStale) refreshPageSettings(); }
   tabs.forEach(function (t, i) {
     t.addEventListener("click", function () { openTab(t); });
     t.addEventListener("keydown", function (e) { if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return; var next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length]; openTab(next); next.focus(); });
   });
 
   // ---------- Réglages de la page (titre, description, SEO, couleurs) ----------
+  // Le panneau « Page » (réglages, aperçu et analyse SEO côté serveur) n'est reconstruit que lorsqu'il est visible : sinon il est
+  // seulement marqué « à rafraîchir » et refait à l'ouverture de l'onglet (une requête et une reconstruction en moins par modification).
+  var pageSettingsStale = true;
+  function pageSettingsVisible() { var box = $("[data-pb-page-settings]"), pane = box && box.closest("[role=tabpanel]"); return Boolean(pane) && !pane.hidden && !panels.leftHidden; }
+  function refreshPageSettings() { if (!pageSettingsVisible()) { pageSettingsStale = true; return; } renderPageSettings(); }
+  // ---------- Format de mise en page (conception guidée) : le serveur applique le verrou ; ici, refus immédiat et clair ----------
+  var LF = boot.layoutFormats || { formats: {}, protected: [], labels: {} };
+  function layoutOf() { var l = content.theme && content.theme.layout; return l && l.mode === "guided" ? l : null; }
+  function formatLocked() { var l = layoutOf(); return Boolean(l && l.locked); }
+  function isTopLevelId(id) { var l = locate(id); return Boolean(l && l.parent && l.parent.type === "layout"); }
+  function refuseFormat(ids, keys) {
+    if (!formatLocked() || !keys.some(function (k) { return LF.protected.indexOf(k) >= 0; }) || !ids.some(isTopLevelId)) return false;
+    toast("Format verrouillé : la largeur et les marges des éléments de premier niveau sont protégées. Déverrouillez le format dans l'onglet « Page ».", true);
+    return true;
+  }
+  function formatConflicts() {
+    var out = [];
+    content.sections.forEach(function (s) {
+      if (s.type !== "layout") return;
+      (s.children || []).forEach(function (n) {
+        var sets = Object.keys(n.styles || {}).map(function (k) { return n.styles[k]; }).concat(Object.keys(n.states || {}).map(function (k) { return n.states[k]; }));
+        if (sets.some(function (set) { return LF.protected.some(function (p) { return set && set[p] !== undefined && set[p] !== ""; }); })) out.push(n);
+      });
+    });
+    return out;
+  }
+  function setLayout(next, opts) {
+    opts = opts || {};
+    var conflicts = next && next.locked ? formatConflicts() : [];
+    if (conflicts.length && !opts.clear) {
+      if (!window.confirm(conflicts.length + " élément(s) de premier niveau ont déjà une largeur ou des marges. Pour verrouiller ce format, ces réglages doivent être remis à zéro (annulable avec Ctrl/⌘ + Z). Continuer ?")) { renderPageSettings(); return; }
+      opts.clear = true;
+    }
+    var label = next ? "Format : " + ((LF.formats[next.format] || {}).label || next.format) + (next.locked ? " (verrouillé)" : "") : "Conception libre";
+    change(function () {
+      content.theme = Object.assign({}, content.theme);
+      if (next) content.theme.layout = next; else delete content.theme.layout;
+      if (opts.clear) formatConflicts().forEach(function (n) {
+        Object.keys(n.styles || {}).concat(Object.keys(n.states || {})).forEach(function (k) {
+          var set = (n.styles && n.styles[k]) || (n.states && n.states[k]);
+          LF.protected.forEach(function (p) { if (set) delete set[p]; });
+          cleanStyles(n);
+        });
+      });
+    }, { label: label });
+    // Verrouiller / déverrouiller : enregistrement immédiat (le serveur n'accepte un déverrouillage que seul)
+    saveNow().then(function () { var ae = document.activeElement; if (ae && ae.blur && $("[data-pb-page-settings]").contains(ae)) ae.blur(); renderPageSettings(); renderInspector(); });
+  }
+  function formatSection(box) {
+    box.appendChild(h("p", { class: "pb-sub", text: "Format de mise en page" }));
+    var l = layoutOf(), locked = formatLocked();
+    var fmt = function (patch) { return Object.assign({ mode: "guided", format: "standard", maxWidth: 1200, gutter: 24, locked: false }, l || {}, patch); };
+    var presets = LF.formats;
+    box.appendChild(selectField("Conception", l ? "guided" : "free", [["free", "Libre : je règle tout moi-même"], ["guided", "Guidée par un format"]], function (v) {
+      if (v === "free") setLayout(null); else { var f = presets.standard; setLayout({ mode: "guided", format: "standard", maxWidth: f.maxWidth, gutter: f.gutter, locked: false }); }
+    }, { disabled: !canWrite || locked }));
+    if (!l) { box.appendChild(h("p", { class: "pb-hint", text: "Conteneurs, Flexbox et widgets : aucune contrainte. Le format n'est pas une taille d'écran : l'aperçu ordinateur / tablette / mobile ne change pas." })); return; }
+    box.appendChild(selectField("Format", l.format, Object.keys(presets).map(function (k) { return [k, presets[k].label + (k !== "custom" && presets[k].maxWidth ? " · " + presets[k].maxWidth + " px" : "")]; }), function (v) {
+      var f = presets[v]; setLayout(fmt({ format: v, maxWidth: v === "custom" ? l.maxWidth : f.maxWidth, gutter: v === "custom" ? l.gutter : f.gutter }));
+    }, { disabled: !canWrite || locked }));
+    box.appendChild(h("p", { class: "pb-hint", text: (presets[l.format] || {}).hint || "" }));
+    if (l.format === "custom") {
+      box.appendChild(textField("Largeur maximale du contenu (px, 0 = aucune)", String(l.maxWidth), function (v) { var n = Math.round(Number(v)); if (isFinite(n) && (n === 0 || (n >= 320 && n <= 2400))) setLayout(fmt({ maxWidth: n })); }, { type: "number", disabled: !canWrite || locked }));
+      box.appendChild(textField("Marge latérale minimale (px)", String(l.gutter), function (v) { var n = Math.round(Number(v)); if (isFinite(n) && n >= 0 && n <= 96) setLayout(fmt({ gutter: n })); }, { type: "number", disabled: !canWrite || locked }));
+    } else box.appendChild(h("p", { class: "pb-hint", text: "Largeur fluide plafonnée à " + (l.maxWidth ? l.maxWidth + " px" : "l'écran") + ", marges de " + l.gutter + " px minimum. Les éléments de premier niveau de chaque section suivent ce format ; un réglage manuel l'emporte tant que le format est déverrouillé." }));
+    box.appendChild(checkField("Verrouiller le format", l.locked, function (v) { setLayout(fmt({ locked: v })); }, { disabled: !canWrite, hint: locked ? "Protégé : " + LF.protected.map(function (p) { return LF.labels[p]; }).join(", ").toLowerCase() + " des éléments de premier niveau, le format lui-même. Textes, images, couleurs, widgets et sections restent libres." : "Verrouillé, le format protège la largeur et les marges des éléments de premier niveau, y compris pour l'IA." }));
+  }
+  // ---------- Écran de démarrage d'une page vide : « Création classique » ou « Création guidée » ----------
+  // Aucun moteur de plus : « classique » ouvre le sélecteur de structures habituel, « guidée » écrit theme.layout par setLayout (même voie que l'onglet Page,
+  // verrou contrôlé par le serveur). Affiché seulement pour un vrai état vide : écriture permise, aucune section, aucun format, canevas rendu, aucune
+  // modification dans la session. Dès qu'une section ou une modification existe, il ne revient plus (vider une page existante ne le déclenche pas).
+  var startEl = $("[data-pb-start]"), startStep = "choice", startDraft = null, startDone = IS_COMPONENT || !canWrite || content.sections.length > 0 || Boolean(layoutOf());
+  function startEligible() { return !startDone && canvasReady && !past.length && !content.sections.length && !layoutOf(); }
+  function startFinish() { startDone = true; refreshStart(); }
+  function refreshStart() {
+    if (!startEl) return;
+    if (!startDone && (content.sections.length || past.length || layoutOf())) startDone = true;
+    if (!startEligible()) { if (!startEl.hidden) { startEl.hidden = true; startEl.textContent = ""; } return; }
+    if (!startEl.hidden) return; // déjà affiché : pas de redessin
+    startStep = "choice"; startDraft = null;
+    startEl.hidden = false;
+    paintStart();
+  }
+  function paintStart(focusFirst) {
+    startEl.textContent = "";
+    var box = h("div", { class: "pb-start-box" });
+    startEl.appendChild(box);
+    if (startStep === "choice") paintStartChoice(box); else paintStartConfig(box);
+    if (focusFirst !== false) { var f = box.querySelector("button:not([disabled]), input:not([disabled])"); if (f) f.focus({ preventScroll: true }); }
+  }
+  function startCard(iconName, title, text, hint, label, onclick, id) {
+    return h("div", { class: "pb-start-card", "data-pb-start-card": id },
+      h("span", { class: "pb-start-icon", "aria-hidden": "true" }, icon(iconName)),
+      h("h2", { class: "pb-start-title", text: title }),
+      h("p", { class: "pb-start-text", text: text }),
+      h("p", { class: "pb-start-hint", text: hint }),
+      h("button", { type: "button", class: "btn btn-primary pb-start-btn", "data-pb-start-go": id, onclick: onclick }, label));
+  }
+  function paintStartChoice(box) {
+    box.appendChild(h("h1", { class: "pb-start-head", text: "Comment voulez-vous commencer ?" }));
+    box.appendChild(h("div", { class: "pb-start-cards" },
+      startCard("layers", "Création classique", "Construisez librement votre page avec les conteneurs, Flexbox et les widgets Kolakisa.", "Aucune contrainte : vous réglez tout vous-même.", "Commencer",
+        function () { startFinish(); openStructurePicker({ parent: null, index: 0 }); }, "classic"),
+      startCard("layout", "Création guidée", "Choisissez un gabarit de conception web et définissez les règles de mise en page de votre page.", "Largeur du contenu et marges fixées au départ, protégeables par un verrou.", "Choisir un gabarit",
+        function () { startStep = "config"; var p = LF.formats.standard || {}; startDraft = { format: "standard", maxWidth: p.maxWidth || 1200, gutter: p.gutter || 24, locked: true }; paintStart(); }, "guided")));
+    box.appendChild(h("p", { class: "pb-start-foot", text: "Dans les deux cas vous utilisez les mêmes conteneurs, la même grille Flexbox et les mêmes widgets. Vous pourrez changer de mode plus tard dans l'onglet « Page »." }));
+  }
+  function startPreview() {
+    var d = startDraft, wide = d.maxWidth > 0 ? Math.max(20, Math.min(100, Math.round(d.maxWidth / 1600 * 100))) : 100;
+    var pv = h("div", { class: "pb-start-preview", "data-pb-start-preview": "", role: "img", "aria-label": "Aperçu : contenu centré, " + (d.maxWidth ? d.maxWidth + " px au plus" : "sans largeur maximale") + ", marges de " + d.gutter + " px au minimum" },
+      h("div", { class: "pb-start-pv-inner", style: "width:" + wide + "%" }, h("span", { class: "pb-start-pv-bar" }), h("span", { class: "pb-start-pv-bar is-short" }), h("span", { class: "pb-start-pv-block" })));
+    return h("div", null, pv, h("p", { class: "pb-hint pb-start-pv-note", "data-pb-start-note": "", text: d.maxWidth ? "Contenu : " + d.maxWidth + " px au plus, marges de " + d.gutter + " px au minimum. Sur un écran plus étroit, il suit l'écran." : "Contenu fluide : il suit toute la largeur de l'écran, marges de " + d.gutter + " px au minimum." }));
+  }
+  function paintStartConfig(box) {
+    var d = startDraft, presets = LF.formats, err = h("p", { class: "pb-note is-warn", role: "alert", hidden: true });
+    box.appendChild(h("h1", { class: "pb-start-head", text: "Choisissez un gabarit" }));
+    var list = h("div", { class: "pb-start-formats", role: "radiogroup", "aria-label": "Format de conception" });
+    Object.keys(presets).forEach(function (k) {
+      var f = presets[k], on = d.format === k;
+      list.appendChild(h("button", { type: "button", class: "pb-start-format" + (on ? " is-on" : ""), role: "radio", "aria-checked": on ? "true" : "false", "data-pb-start-format": k, onclick: function () {
+        d.format = k; if (k !== "custom") { d.maxWidth = f.maxWidth; d.gutter = f.gutter; }
+        paintStart(false); var b = box.parentNode && startEl.querySelector('[data-pb-start-format="' + k + '"]'); if (b) b.focus({ preventScroll: true });
+      } }, h("strong", { text: f.label }), h("span", { text: k === "custom" ? "320 à 2 400 px" : (f.maxWidth ? f.maxWidth + " px" : "Largeur de l'écran") })));
+    });
+    box.appendChild(list);
+    box.appendChild(h("p", { class: "pb-hint", text: (presets[d.format] || {}).hint || "" }));
+    var pvHost = h("div", { class: "pb-start-pvhost" });
+    var refreshPv = function () { pvHost.textContent = ""; pvHost.appendChild(startPreview()); };
+    if (d.format === "custom") {
+      var num = function (label, key, min, max, note) {
+        var inp = h("input", { type: "number", class: "pb-input", value: String(d[key]), min: String(min), max: String(max), "aria-label": label });
+        inp.setAttribute("data-pb-start-" + key, "");
+        inp.addEventListener("input", function () { d[key] = inp.value === "" ? NaN : Number(inp.value); refreshPv(); });
+        return h("label", { class: "pb-start-num" }, h("span", { text: label }), inp, h("small", { text: note }));
+      };
+      box.appendChild(h("div", { class: "pb-start-nums" }, num("Largeur maximale du contenu (px)", "maxWidth", 0, 2400, "0 = aucune limite, sinon 320 à 2 400"), num("Marge latérale minimale (px)", "gutter", 0, 96, "0 à 96")));
+    }
+    refreshPv();
+    box.appendChild(pvHost);
+    var lockText = function () { return d.locked ? "Protège " + LF.protected.map(function (p) { return LF.labels[p]; }).join(", ").toLowerCase() + " des éléments de premier niveau. Textes, images, couleurs et widgets restent libres. Modifiable ensuite dans l'onglet « Page »." : "Les réglages du format restent modifiables partout. Vous pourrez verrouiller plus tard dans l'onglet « Page »."; };
+    var lockLabel = h("strong", { text: d.locked ? "Format verrouillé" : "Format déverrouillé" }), lockHint = h("small", { text: lockText() });
+    var lock = h("button", { type: "button", class: "pb-start-lock" + (d.locked ? " is-on" : ""), role: "switch", "aria-checked": d.locked ? "true" : "false", "data-pb-start-lock": "", onclick: function () {
+      d.locked = !d.locked; lock.classList.toggle("is-on", d.locked); lock.setAttribute("aria-checked", d.locked ? "true" : "false"); lockLabel.textContent = d.locked ? "Format verrouillé" : "Format déverrouillé"; lockHint.textContent = lockText();
+    } }, icon("lock"), h("span", { class: "pb-start-lock-text" }, lockLabel, lockHint));
+    box.appendChild(lock);
+    box.appendChild(err);
+    box.appendChild(h("div", { class: "pb-start-actions" },
+      h("button", { type: "button", class: "btn btn-outline", "data-pb-start-back": "", onclick: function () { startStep = "choice"; paintStart(); } }, "Retour"),
+      h("button", { type: "button", class: "btn btn-outline", "data-pb-start-cancel": "", onclick: startFinish }, "Annuler"),
+      h("button", { type: "button", class: "btn btn-primary", "data-pb-start-continue": "", onclick: function () {
+        var wOk = d.maxWidth === 0 || (Number.isInteger(d.maxWidth) && d.maxWidth >= 320 && d.maxWidth <= 2400), gOk = Number.isInteger(d.gutter) && d.gutter >= 0 && d.gutter <= 96;
+        if (d.format === "custom" && !(wOk && gOk)) { err.textContent = !wOk ? "Largeur maximale : 0 (aucune limite) ou entre 320 et 2 400 px." : "Marge latérale : entre 0 et 96 px."; err.hidden = false; return; }
+        var layout = { mode: "guided", format: d.format, maxWidth: d.maxWidth, gutter: d.gutter, locked: d.locked };
+        startDone = true; // le panneau se retire d'abord : aucune retouche du canevas par lui
+        setLayout(layout);
+        refreshStart();
+        openStructurePicker({ parent: null, index: 0 });
+      } }, "Continuer")));
+    box.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.stopPropagation(); startStep = "choice"; paintStart(); } });
+  }
   function renderPageSettings() {
+    pageSettingsStale = false;
     var box = $("[data-pb-page-settings]");
     if (box.contains(document.activeElement)) return; // saisie en cours : on ne redessine pas
     box.textContent = "";
@@ -5940,6 +6336,7 @@
     box.appendChild(h("p", { class: "pb-sub", text: "Page" }));
     box.appendChild(textField("Titre de la page (onglet du navigateur)", content.title, setC("title"), { max: 120, disabled: !canWrite }));
     box.appendChild(textField("Description (aperçu de partage)", content.description, setC("description"), { multiline: true, max: 300, disabled: !canWrite }));
+    if (!IS_COMPONENT) formatSection(box);
     // ----- Référencement (palier 11) : mêmes données que la page publique, aperçu et analyse calculés par le moteur SEO du serveur -----
     var seoCfg = boot.seo || {};
     var seoCan = canWrite && seoCfg.canEdit;
@@ -6508,15 +6905,34 @@
     saveTimer = setTimeout(save, 1000);
     backup();
   }
+  // Réglages que le serveur a écartés (inapplicables à une partie) : l'éditeur les retire de SON document, sans nouvelle étape d'historique, et prévient une fois
+  function healIgnored(list) {
+    var seen = {};
+    list.forEach(function (w) {
+      var it = w.nodeId && byId(w.nodeId), p = it && it.parts && it.parts[w.part];
+      if (p) {
+        if (w.kind === "part_prop") { var bag = (p.styles && p.styles[w.scope]) || (p.states && p.states[w.scope]); if (bag) delete bag[w.prop]; }
+        if (w.kind === "part_state" && p.states) delete p.states[w.state];
+        cleanStyles(it);
+        if (!Object.keys(p).length) delete it.parts[w.part];
+      }
+      seen[w.message] = true;
+    });
+    var msgs = Object.keys(seen);
+    toast(msgs[0] + (msgs.length > 1 ? " (+" + (msgs.length - 1) + " autre" + (msgs.length > 2 ? "s" : "") + ")" : ""), false);
+    renderInspector(); scheduleRender(true);
+  }
   function backup() { try { localStorage.setItem("pb-backup-" + PAGE.id, JSON.stringify({ at: Date.now(), revision: revision, content: payload() })); } catch (e) { /* stockage indisponible */ } }
+  var aiHold = false; // aperçu d'une proposition de l'IA : rien n'est enregistré tant qu'elle n'est pas appliquée
   function save() {
-    if (!dirty || blocked) return Promise.resolve();
+    if (!dirty || blocked || aiHold) return Promise.resolve();
     if (saving) { clearTimeout(saveTimer); saveTimer = setTimeout(save, 500); return Promise.resolve(); }
     saving = true;
     dirty = false;
     setSave("Enregistrement…");
     return api("PUT", BASE + "/brouillon", { content: payload(), revision: revision }).then(function (r) {
       saving = false; retry = 0; revision = r.revision; hasDraft = true;
+      if (r.warnings && r.warnings.length) healIgnored(r.warnings);
       updateStatus();
       if (!dirty) { setSave("Enregistré à " + new Date(r.savedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), "is-ok"); try { localStorage.removeItem("pb-backup-" + PAGE.id); } catch (e) { /* rien */ } }
     }, function (err) {
@@ -6555,6 +6971,7 @@
   }
   $("[data-pb-publish]").addEventListener("click", function () {
     var btn = this;
+    if (window.pbQuality) window.pbQuality.beforePublish();
     if (editing) commitEdit();
     btn.disabled = true;
     clearTimeout(saveTimer);
@@ -6727,7 +7144,7 @@
   renderElements("");
   renderBlocks();
   renderComponents();
-  renderPageSettings();
+  refreshPageSettings();
   renderTree();
   renderInspector();
   renderContext();
@@ -6747,6 +7164,42 @@
     gesture: function (on) { if (on === undefined) return gesture; if (on) gesture = true; else endGesture(); }, ignoreClick: function (ms) { ignoreClickUntil = Date.now() + ms; },
     ownValue: ownValue, inheritedValue: inheritedValue, splitLen: splitLen, styleSet: styleSet, cleanStyles: cleanStyles, change: change,
     caps: function (it) { var ins = inspectorFor(it), g = (ins && ins.groups) || {}; return { gap: Array.isArray(g.layout) && g.layout.indexOf("gap") >= 0, spacing: Boolean(g.spacing), size: g.size !== undefined && g.size !== false }; }
+  });
+  // Pont vers l'inspecteur de qualité (page-builder-quality.js) : lecture du rendu réel, corrections natives annulables
+  if (window.pbQuality) window.pbQuality.attach({
+    api: api, store: store, icon: icon, toast: toast, canWrite: function () { return canWrite; }, pageId: function () { return PAGE.id; },
+    saveNow: function () { return saveNow(); }, subscribe: function (f) { navListeners.push(f); }, version: function () { return docVersion; },
+    busy: function () { return gesture || Boolean(editing); }, content: function () { return content; }, sections: function () { return content.sections; },
+    walk: function (fn) { walk(fn); }, byId: byId, nameOf: nameOf, frame: function () { return frame; }, canvasReady: function () { return canvasReady; }, canvasEl: canvasEl,
+    device: function () { return device; }, setDevice: setDevice, select: function (id) { select(id); }, openInspector: function () { openInspector(); },
+    seoUrl: function () { return (boot.seo || {}).canView ? boot.seo.url : null; },
+    applyStyles: function (id, bp, map, label) {
+      var it = byId(id);
+      if (!it || !canWrite || refuseLocked([id]) || refuseFormat([id], Object.keys(map))) return false;
+      change(function () { Object.keys(map).forEach(function (k) { styleSet(it, bp, "normal", true)[k] = map[k]; }); cleanStyles(it); }, { label: label || "Qualité" });
+      return true;
+    },
+  });
+  // Pont vers IA Kolakisa (page-builder-ai.js) : l'IA propose, l'éditeur applique en UNE étape d'historique
+  if (window.pbAi) window.pbAi.attach({
+    base: BASE, api: api, store: store, icon: icon, toast: toast, canWrite: function () { return canWrite; },
+    saveNow: function () { return saveNow(); }, revision: function () { return revision; },
+    snapshotKey: function () { return JSON.stringify([content.sections, content.title, content.description]); },
+    sections: function () { return content.sections; },
+    frame: function () { return frame; }, device: function () { return device; }, setDevice: setDevice,
+    byId: byId, canvasEl: canvasEl, pageRect: pageRect, selection: function () { return selection.slice(); },
+    applyContent: function (next, label, hold) {
+      if (hold) aiHold = true;
+      change(function () {
+        content.sections = clone(next.sections);
+        if (next.title !== undefined) content.title = next.title;
+        if (next.description !== undefined) content.description = next.description;
+        selection = selection.filter(function (id) { return byId(id); });
+      }, { label: label || "IA Kolakisa" });
+      if (!hold) { aiHold = false; scheduleSave(); }
+    },
+    keepPreview: function () { aiHold = false; scheduleSave(); },
+    discardPreview: function () { undo(); future.pop(); futureLabels.pop(); updateHistoryButtons(); aiHold = false; scheduleSave(); },
   });
   if (window.pbEffects) window.pbEffects.attach({
     h: h, store: store, toast: toast, SPEC: SPEC, BPS: BPS, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, idsOf: idsOf,

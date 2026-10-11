@@ -6,7 +6,7 @@ const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const { TEST_KEY } = require("./marketing-helpers");
-const { startServer, loginInstructor } = require("./helpers");
+const { startServer, loginInstructor, dismissStart } = require("./helpers");
 
 let chromium = null;
 try { chromium = require("playwright-core").chromium; } catch { /* module absent */ }
@@ -32,7 +32,7 @@ describe("canvas de l'éditeur de pages : grande zone de création, « + », con
     const put = await boss.request(`/marketing/pages/${pageId}/brouillon`, { method: "PUT", json: { revision, content }, headers: { Origin: srv.base } });
     assert.equal(put.status, 200, put.text.slice(0, 160));
     await page.goto(`${srv.base}/marketing/pages/${pageId}/editeur`);
-    await ready(); await wait(500);
+    await ready(); await dismissStart(page); await wait(500);
   }
   const draft = () => { const r = db().prepare("SELECT draft, sections FROM mk_landing_pages WHERE id = ?").get(pageId); return r.draft ? JSON.parse(r.draft) : { sections: JSON.parse(r.sections) }; };
   const until = async (fn, what, ms = 10000) => { const end = Date.now() + ms; for (;;) { let v = false; try { v = await fn(); } catch { /* on réessaie */ } if (v) return v; if (Date.now() > end) throw new Error(`Délai dépassé : ${what}`); await wait(100); } };

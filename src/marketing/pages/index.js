@@ -31,6 +31,9 @@ function normalizeTheme(input) {
     try { require("./nodes").normalizePageCss(css); } catch (e) { throw bad(e.message); }
     theme.css = css.slice(0, 8000);
   }
+  // Format de mise en page (conception guidée) : valeur du thème, enregistrée et versionnée avec la page
+  const layout = layoutFormat.normalizeLayout(input && input.layout);
+  if (layout) theme.layout = layout;
   return theme;
 }
 
@@ -89,6 +92,7 @@ function normalizeContent(ctx, page, input = {}) {
 
 // Widgets réservés (HTML…) : vérifiés pour la personne connectée (ctx.can, posé par les routes web). Un appel interne
 // sans ctx.can (script, tâche de fond, tests du moteur) n'est pas limité.
+const layoutFormat = require("./layoutFormat");
 function checkWidgetRights(ctx, before, after) {
   if (typeof ctx.can !== "function") return;
   try { require("./nodes").lockedWidgetChanges(before, after, ctx.can); } catch (e) { throw new MarketingError("forbidden_widget", e.message); }
@@ -100,15 +104,21 @@ function saveDraft(ctx, id, input = {}, { revision, record = true } = {}) {
   const page = requirePage(ctx, id);
   if (page.archived_at) throw bad("Cette page est archivée : restaurez-la pour la modifier.");
   if (!Number.isInteger(revision)) throw bad("Révision manquante.");
-  const content = normalizeContent(ctx, page, input);
+  // Diagnostics non bloquants (réglages écartés car inapplicables) : renvoyés à l'éditeur, qui nettoie son document
+  const warnings = [];
+  const previous = ctx.__warnings;
+  ctx.__warnings = warnings;
+  let content;
+  try { content = normalizeContent(ctx, page, input); } finally { ctx.__warnings = previous; }
   checkWidgetRights(ctx, [...page.working.sections, ...page.published.sections], content.sections);
+  layoutFormat.checkLocked(page.working, content);
   const next = revision + 1;
   const changed = ctx.db.prepare("UPDATE mk_landing_pages SET draft = ?, revision = ?, updated_at = datetime('now') WHERE id = ? AND organization_id = ? AND revision = ?")
     .run(JSON.stringify(content), next, id, ctx.organizationId, revision).changes;
   if (!changed) throw conflict();
   // Historique commun (palier 10) : l'état du brouillon est conservé comme point d'historique (jamais bloquant)
   if (record) require("../../services/revisions").hooks.pageDraft(ctx, page, content);
-  return { revision: next, content };
+  return { revision: next, content, warnings };
 }
 
 function discardDraft(ctx, id) {
@@ -189,7 +199,7 @@ function uniqueName(ctx, table, base) {
 }
 
 // Nouvelle page dans un site (ou isolée) : même création que les pages d'atterrissage, avec sa nature
-function createPage(ctx, { name, siteId = null, kind = "page", template = null } = {}) {
+function createPage(ctx, { name, siteId = null, kind = "page", template = null, layout = null, blank = false } = {}) {
   if (!Object.hasOwn(KINDS, kind)) throw bad("Nature de page inconnue.");
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   // Gabarit choisi : ses sections (validées par la grammaire commune, comme toute section enregistrée)
@@ -204,15 +214,30 @@ function createPage(ctx, { name, siteId = null, kind = "page", template = null }
     ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(sections), page.id);
     if (mine && mine.content.theme) ctx.db.prepare("UPDATE mk_landing_pages SET theme = ? WHERE id = ?").run(JSON.stringify(normalizeTheme(mine.content.theme)), page.id);
     audit(ctx, "page.created_from_template", "landing", page.id, { template });
-    return requirePage(ctx, page.id);
+    return withLayout(ctx, page.id, layout);
   }
   // Page de site : un bandeau et un texte (la section d'inscription des pages d'atterrissage demanderait un formulaire
   // avant toute publication)
-  if (kind === "page" || kind === "step") {
+  // Page vierge demandée explicitement (éditeur) : aucune section, l'éditeur propose alors création classique ou guidée. Sans `blank`, le contenu de départ historique est inchangé.
+  if (blank) ctx.db.prepare("UPDATE mk_landing_pages SET sections = '[]' WHERE id = ?").run(page.id);
+  else if (kind === "page" || kind === "step") {
     const start = [{ ...page.sections[0], id: newSectionId() }, { type: "text", markdown: "Présentez ici le contenu de la page.", id: newSectionId() }];
     ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(start), page.id);
   }
-  return requirePage(ctx, page.id);
+  return withLayout(ctx, page.id, layout);
+}
+// Conception guidée dès la création : le format est écrit dans le thème de la page (aucune migration)
+function withLayout(ctx, id, layout) {
+  if (layout) {
+    const norm = layoutFormat.normalizeLayout(layout);
+    if (norm) {
+      const row = ctx.db.prepare("SELECT theme FROM mk_landing_pages WHERE id = ?").get(id);
+      const theme = { ...JSON.parse(row.theme || "{}"), layout: norm };
+      ctx.db.prepare("UPDATE mk_landing_pages SET theme = ? WHERE id = ?").run(JSON.stringify(theme), id);
+      audit(ctx, "page.layout_format_set", "landing", id, { format: norm.format, locked: norm.locked });
+    }
+  }
+  return requirePage(ctx, id);
 }
 
 // Copie : contenu de travail (brouillon s'il existe), en brouillon, hors ligne, nouvelle adresse

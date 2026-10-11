@@ -14,6 +14,9 @@ const { listCourses } = require("../bridge/catalog");
 const { MarketingError } = require("../errors");
 const { renderMarkdown } = require("../../utils/markdown");
 const { attempt, need } = require("./kit");
+const ai = require("../ai");
+const studio = require("../ai/studio");
+const { AiError } = require("../../services/aiCore");
 
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 // Réglages SEO : modifiés seulement avec la permission « seo.edit » (vérifiée ici, pas seulement masquée dans l'interface)
@@ -79,7 +82,7 @@ module.exports = () => {
     const state = req.query.vue === "archivees" ? "corbeille" : cmsPages.STATES.includes(req.query.etat) ? req.query.etat : "toutes";
     const filters = { q: String(req.query.q || "").trim().slice(0, 80), site: String(req.query.site || ""), auteur: String(req.query.auteur || ""), tri: Object.hasOwn(cmsPages.SORTS, req.query.tri) ? req.query.tri : "modifiee", ordre: req.query.ordre === "asc" || (req.query.tri === "titre" && req.query.ordre !== "desc") ? "asc" : "desc" };
     const result = cmsPages.queryPages(ctx, { state, q: filters.q, siteId: filters.site, authorId: filters.auteur, sort: filters.tri, dir: filters.ordre, page: req.query.page });
-    res.render("marketing/landing-list", {
+    res.render("marketing/landing-list", { layoutFormats: require("../pages/layoutFormat").FORMATS,
       title: "Pages", active: "landing", state, filters, result, pages: result.rows, authors: cmsPages.authorsOfPages(ctx), sites: pages.listSites(ctx), templates: require("../pages/templates").catalog(),
       userTemplates: pages.listPageTemplates(ctx), canWrite: req.mk.can("forms.write"), canPublish: req.mk.can("pages.publish"), canDelete: req.mk.can("pages.delete"), cmsPagesJs: true,
       STATUSES: landing.STATUSES, STATUS_CLASS, KINDS: pages.KINDS,
@@ -93,7 +96,8 @@ module.exports = () => {
       const siteId = intOrNull(req.body.site_id);
       const template = typeof req.body.template === "string" && req.body.template ? req.body.template : null;
       // Nouvelle page du CMS : une page de site (bandeau + texte, publiable tout de suite) ; sans « ouvrir », comportement historique (page d'atterrissage)
-      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId || toBuilder ? "page" : "landing", template });
+      const layout = req.body.layoutMode === "guided" ? { mode: "guided", format: req.body.layoutFormat, maxWidth: req.body.layoutMax, gutter: req.body.layoutGutter, locked: req.body.layoutLocked === "1" } : null;
+      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId || toBuilder ? "page" : "landing", template, layout, blank: toBuilder && !template });
       return template ? "Page créée à partir du modèle (brouillon) : remplacez les textes entre crochets dans l'éditeur visuel, puis publiez-la." : "Page créée (brouillon) : composez-la, puis publiez-la.";
     });
   });
@@ -310,6 +314,7 @@ module.exports = () => {
         .concat(pages.listPages(ctx).filter((p) => p.status === "published" && p.id !== page.id).slice(0, 50).map((p) => ({ url: `/p/${p.slug}`, label: `Page « ${p.name} »` }))),
       siteUrl: String((site && site.settings && site.settings.seo && site.settings.seo.publicUrl) || process.env.SITE_URL || "").replace(/\/+$/, ""),
       // SEO (palier 11) : droits réels (revérifiés à l'enregistrement) et adresses du service SEO
+      layoutFormats: (({ FORMATS, PROTECTED, PROTECTED_LABELS }) => ({ formats: FORMATS, protected: PROTECTED, labels: PROTECTED_LABELS }))(require("../pages/layoutFormat")),
       seo: { canView: req.mk.can("seo.view"), canEdit: req.mk.can("seo.edit"), url: component ? null : `/marketing/pages/${page.id}/seo/analyse` },
       tags: require("../audience/tags").listTags(ctx).map((t) => t.name),
     };
@@ -317,6 +322,26 @@ module.exports = () => {
     const { ICONS } = require("../../utils/icons");
     res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, page, backTo: !component && req.query.retour === "pages" ? "/marketing/pages" : null, boot: safeJson(boot), spec: boot.spec, iconExists: (n) => Object.hasOwn(ICONS, n) });
   };
+  // ---------- IA Kolakisa : l'IA PROPOSE, l'éditeur applique (une étape d'historique) — rien n'est enregistré ici ----------
+  const IA_STATUS = { not_configured: 503, quota: 429, rate: 429, conflict: 409, busy: 429 };
+  const iaError = (res, next, error) => {
+    if (error instanceof AiError || error instanceof MarketingError) return res.status(IA_STATUS[error.code] || 400).set("Cache-Control", "no-store").json({ ok: false, error: error.message, code: error.code });
+    next(error);
+  };
+  router.get("/pages/:id(\\d+)/ia/etat", need("forms.read"), (req, res) => {
+    res.set("Cache-Control", "no-store").json({ configured: ai.getAiSettings(req.mk.ctx).configured, canWrite: req.mk.can("forms.write") });
+  });
+  router.post("/pages/:id(\\d+)/ia/proposer", need("forms.write"), async (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    try { res.set("Cache-Control", "no-store").json(await studio.propose(req.mk.ctx, page.id, req.body || {})); } catch (error) { iaError(res, next, error); }
+  });
+  // Analyse responsive : le navigateur mesure le rendu réel ; les corrections sont calculées par des règles (aucune clé IA nécessaire)
+  router.post("/pages/:id(\\d+)/ia/responsive", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    try { res.set("Cache-Control", "no-store").json(studio.responsiveFixes(req.mk.ctx, page.id, req.body || {})); } catch (error) { iaError(res, next, error); }
+  });
   router.get("/pages/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
     const page = load(req, res);
     if (!page) return;
@@ -386,8 +411,8 @@ module.exports = () => {
     try {
       const content = (req.body && req.body.content) || {};
       guardSeo(req, page.working.seo, content.seo);
-      const { revision } = pages.saveDraft(req.mk.ctx, page.id, content, { revision: Number(req.body && req.body.revision) });
-      res.set("Cache-Control", "no-store").json({ revision, savedAt: new Date().toISOString() });
+      const { revision, warnings } = pages.saveDraft(req.mk.ctx, page.id, content, { revision: Number(req.body && req.body.revision) });
+      res.set("Cache-Control", "no-store").json({ revision, savedAt: new Date().toISOString(), ...(warnings && warnings.length ? { warnings } : {}) });
     } catch (error) { jsonError(res, next, error); }
   });
   router.post("/pages/:id(\\d+)/publier.json", need("pages.publish"), (req, res, next) => {

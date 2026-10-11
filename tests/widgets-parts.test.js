@@ -24,13 +24,34 @@ describe("parties stylables : validation", () => {
     assert.equal(node.parts.card.states.hover.boxShadow, "lg");
     assert.equal(node.parts.title.styles.desktop.fontSize, "22px");
   });
-  test("refusés : partie inconnue, valeur hors grammaire, réglage hors des groupes de la partie, état non proposé, type sans parties", () => {
+  test("refusés : partie inconnue, valeur hors grammaire, type sans parties", () => {
     assert.throws(() => norm(posts({ footer: { styles: { desktop: { color: "#000000" } } } })), /n'est pas une partie stylable/);
     assert.throws(() => norm(posts({ card: { styles: { desktop: { borderRadius: "calc(1px + 2px)" } } } })), /./);
-    assert.throws(() => norm(posts({ title: { styles: { desktop: { backgroundColor: "#ff0000" } } } })), /n'est pas disponible pour cette partie/);
-    assert.throws(() => norm(posts({ excerpt: { states: { hover: { color: "#ff0000" } } } })), /état « hover » n'est pas disponible/);
     assert.throws(() => norm({ id: "head00000001", type: "heading", props: { text: "T", level: 2 }, parts: { x: { styles: { desktop: { color: "#000000" } } } } }), /n'est pas une partie stylable/);
     assert.throws(() => norm(posts("oops")), /parties invalides/);
+  });
+  test("réglage valide mais non proposé pour la partie (ou état non proposé) : écarté, le reste est conservé, diagnostic non bloquant", () => {
+    const warnings = [];
+    const h = { ...H, ctx: { __warnings: warnings } };
+    const node = n.normalizeNode(posts({ title: { styles: { desktop: { backgroundColor: "#ff0000", color: "#112233", alignSelf: "center" }, mobile: { alignSelf: "end" } } }, excerpt: { states: { hover: { color: "#ff0000" } }, styles: { desktop: { color: "#000000" } } } }), "test", h, 1, { n: 0, ids: new Set() });
+    assert.equal(node.parts.title.styles.desktop.color, "#112233");
+    assert.equal(node.parts.title.styles.desktop.alignSelf, undefined);
+    assert.equal(node.parts.title.styles.desktop.backgroundColor, undefined);
+    assert.equal(node.parts.title.styles.mobile, undefined, "écran vidé : retiré");
+    assert.equal(node.parts.excerpt.states, undefined);
+    assert.equal(node.parts.excerpt.styles.desktop.color, "#000000");
+    assert.deepEqual(warnings.map((w) => w.kind + ":" + (w.prop || w.state)).sort(), ["part_prop:alignSelf", "part_prop:alignSelf", "part_prop:backgroundColor", "part_state:hover"]);
+    assert.match(warnings[0].message, /n'a pas été appliqué/);
+    assert.equal(warnings[0].nodeId, "posts0000001");
+  });
+  test("une valeur invalide reste une erreur bloquante même sur un réglage proposé", () => {
+    assert.throws(() => norm(posts({ title: { styles: { desktop: { color: "pas-une-couleur" } } } })), /valeur invalide/);
+  });
+  test("contrôle des données existantes : repère les réglages non proposés (lecture seule)", () => {
+    const { scan } = require("../src/marketing/pages/parts");
+    const groupOf = (k) => (k === "backgroundColor" ? "background" : (n.STYLE_PROPS[k] || {}).group);
+    const found = scan([{ type: "layout", children: [{ id: "a", type: "accordion", parts: { item: { styles: { desktop: { alignSelf: "center", paddingTop: "4px" } } }, question: { styles: { desktop: { color: "#000000" } } } } }] }], groupOf);
+    assert.deepEqual(found.map((x) => x.part + ":" + x.prop), ["item:alignSelf"]);
   });
   test("aucune injection : valeurs et sélecteurs ne sont jamais recopiés tels quels", () => {
     for (const bad of ["red;}body{display:none", "url(javascript:alert(1))", "expression(1)", "</style><script>"]) {
