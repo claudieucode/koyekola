@@ -60,6 +60,21 @@ module.exports = () => {
   router.post("/site-web/commentaires/actions", need("comments.moderate"), (req, res, next) => run(req, res, next, String(req.body.action || ""), req.body.ids));
   router.post("/site-web/commentaires/:id(\\d+)/:action(approuver|indesirable|corbeille|restaurer|supprimer)", need("comments.moderate"), (req, res, next) => run(req, res, next, req.params.action, [req.params.id]));
 
+  // ----- Droit à l'effacement : tous les commentaires d'un invité, par son adresse e-mail (définitif, confirmé, journalisé sans l'adresse) -----
+  router.post("/site-web/commentaires/effacer-invite", need("comments.email"), (req, res, next) => {
+    if (!req.mk.can("comments.delete")) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
+    try {
+      if (req.body.confirm !== "1") throw new UserError("Cochez la confirmation : cette suppression est définitive.");
+      const n = comments.purgeGuest(req.body.email);
+      require("../audit").recordAudit(require("../../config/database"), { organizationId: req.mk.ctx.organizationId, userId: req.session.user.id, action: "comment.guest_erased", resourceType: "comment", metadata: { count: n } });
+      flash(req, "ok", n ? `${n} commentaire${n > 1 ? "s" : ""} supprimé${n > 1 ? "s" : ""} définitivement.` : "Aucun commentaire d'invité n'est associé à cette adresse.");
+      res.redirect("/marketing/site-web/commentaires");
+    } catch (error) {
+      if (!(error instanceof UserError)) return next(error);
+      flash(req, "error", error.message); res.redirect("/marketing/site-web/commentaires");
+    }
+  });
+
   // ----- Réponse d'un modérateur : publiée tout de suite sous son compte -----
   router.post("/site-web/commentaires/:id(\\d+)/repondre", need("comments.moderate"), (req, res, next) => {
     try {

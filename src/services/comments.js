@@ -252,6 +252,16 @@ function reply(parentId, actor, body, ip = "") {
 const uniqueIds = (v) => [...new Set([].concat(v || []).flatMap((x) => String(x).split(",")).map((x) => Number(x)).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 500);
 // Suppression par l'auteur d'un commentaire (site public) ou par un formateur : définitive, les réponses remontent d'un niveau
 function purge(id) { db.prepare("DELETE FROM blog_comments WHERE id = ?").run(id); }
+// Droit à l'effacement (palier 23) : supprime DÉFINITIVEMENT tous les commentaires d'invité écrits avec cette adresse e-mail (le texte peut contenir des données
+// personnelles, donc on supprime au lieu de masquer ; les réponses remontent d'un niveau). Les commentaires de membres connectés ne sont pas concernés
+// (ils partent avec la suppression du compte). Retourne le nombre supprimé ; l'adresse n'est jamais renvoyée ni journalisée en clair.
+function purgeGuest(email) {
+  const address = String(email || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address) || address.length > 254) throw new UserError("Saisissez une adresse e-mail valide.");
+  const rows = db.prepare("SELECT id, content_type, content_id FROM blog_comments WHERE user_id IS NULL AND lower(author_email) = ?").all(address);
+  for (const r of rows) { db.prepare("DELETE FROM blog_comments WHERE id = ?").run(r.id); emit("comment.purged", { commentId: r.id, contentType: r.content_type, contentId: Number(r.content_id) }); }
+  return rows.length;
+}
 
 // ---------- Liste d'administration : recherche, filtres, tri, pagination — tout dans la base ----------
 const PERIODS = { "7": "-7 days", "30": "-30 days", "90": "-90 days", "365": "-365 days" };
@@ -310,5 +320,5 @@ function countsForPosts(ids) {
 module.exports = {
   COMMENT_MAX, STATUSES, STATUS_LABELS, MAX_LINKS, IP_RETENTION_DAYS, PER_PAGE_PUBLIC, PER_PAGE_ADMIN, PERIODS, SORTS, DEFAULTS,
   CONTENT, registerContent, events, settings, saveSettings, resetCache,
-  clean, html, linksIn, ipHash, levelOf, create, thread, count, get, moderate, reply, purge, list, counts, commentedContents, contentInfo, countsForPosts, uniqueIds,
+  clean, html, linksIn, ipHash, levelOf, create, thread, count, get, moderate, reply, purge, purgeGuest, list, counts, commentedContents, contentInfo, countsForPosts, uniqueIds,
 };
