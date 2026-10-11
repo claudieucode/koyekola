@@ -4726,7 +4726,35 @@
     });
     box.appendChild(h("div", { class: "pb-gclass-new" }, h("button", { type: "button", class: "btn btn-outline btn-sm", "data-pb-save-style": "", disabled: locked || !PAGE.siteSettingsUrl || !(it.styles || it.states), "data-tip": "Choisissez les catégories de réglages de cet élément à enregistrer comme style réutilisable", onclick: function () { openStyleDialog(it); } }, "Enregistrer comme style…"), h("button", { type: "button", class: "btn btn-ghost btn-sm", "data-pb-style-library-open": "", onclick: openStyleLibrary }, "Bibliothèque")));
     if (!PAGE.siteSettingsUrl) box.appendChild(h("p", { class: "pb-hint", text: "Les classes globales appartiennent à un site : cette page n'en a pas." }));
+    else box.appendChild(classesTransfer(locked));
     return box;
+  }
+  // Export / import des classes globales seules (fichier .json) : l'import passe par l'enregistrement normal des réglages du site, donc par la même validation
+  function classesTransfer(locked) {
+    var file = h("input", { type: "file", accept: "application/json,.json", hidden: "", "data-pb-classes-import": "" });
+    file.addEventListener("change", function () {
+      var f = file.files && file.files[0]; file.value = "";
+      if (!f) return;
+      if (f.size > 1048576) { toast("Fichier trop volumineux (1 Mo au plus).", true); return; }
+      f.text().then(function (txt) {
+        var data; try { data = JSON.parse(txt); } catch (e) { toast("Ce fichier n'est pas un export de classes valide.", true); return; }
+        var list = Array.isArray(data) ? data : data && Array.isArray(data.classes) ? data.classes : null;
+        if (!list || !list.length) { toast("Aucune classe trouvée dans ce fichier.", true); return; }
+        var byName = {}; siteClasses.forEach(function (c) { byName[c.name] = c; });
+        var added = 0, replaced = 0;
+        list.forEach(function (c) { if (c && typeof c.name === "string") { if (byName[c.name]) replaced++; else added++; byName[c.name] = c; } });
+        if (!added && !replaced) { toast("Aucune classe trouvée dans ce fichier.", true); return; }
+        saveSiteClasses(Object.keys(byName).map(function (k) { return byName[k]; }), function () { toast("Classes importées : " + added + " ajoutée" + (added > 1 ? "s" : "") + ", " + replaced + " remplacée" + (replaced > 1 ? "s" : "") + "."); });
+      });
+    });
+    return h("div", { class: "pb-gclass-transfer" },
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", "data-pb-classes-export": "", disabled: !siteClasses.length, onclick: function () {
+        var blob = new Blob([JSON.stringify({ kolakisa: "classes", version: 1, classes: siteClasses }, null, 2)], { type: "application/json" });
+        var a = h("a", { href: URL.createObjectURL(blob), download: "classes-globales.json" }); document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+        toast(siteClasses.length + " classe" + (siteClasses.length > 1 ? "s exportées" : " exportée") + ".");
+      } }, "Exporter les classes"),
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked || !canWrite, onclick: function () { file.click(); } }, "Importer des classes"), file);
   }
   // Code : CSS propre à l'élément, classes et attributs (vérifiés à l'enregistrement : aucune ressource externe)
   function codeField(it, locked, opts) {

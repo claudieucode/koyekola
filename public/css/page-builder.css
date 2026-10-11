@@ -1958,3 +1958,4 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 @media (max-width: 520px) { .pb-sl-row { grid-template-columns: auto 1fr; } .pb-sl-tools { grid-template-columns: 1fr; } .pb-sp-namerow { grid-template-columns: 1fr; } }
 .pb-note-dot { display: inline-flex; align-items: center; margin-left: 4px; color: var(--accent-dark); flex: none; }
 .pb-note-dot .icon { width: 12px; height: 12px; }
+.pb-gclass-transfer { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
