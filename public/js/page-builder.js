@@ -4071,6 +4071,13 @@
     });
     return out;
   }
+  // Point d'entrée commun (menu contextuel des calques et du canevas, barre flottante, palette) : un seul élément, avec un site
+  function saveStyleOf(it) {
+    if (!it || !isNode(it)) { toast("Sélectionnez un widget ou un conteneur pour enregistrer son style.", true); return; }
+    if (!PAGE.siteSettingsUrl) { toast("Les styles enregistrés appartiennent à un site : cette page n'en a pas.", true); return; }
+    openStyleDialog(it);
+  }
+  var canSaveStyle = function (items) { return items.length === 1 && isNode(items[0]) && Boolean(PAGE.siteSettingsUrl) && Boolean(items[0].styles || items[0].states); };
   function openStyleDialog(it, prefill) {
     var own = presetOwn(it), scopes = {}, keys = {}, byCat = {};
     ["styles", "states"].forEach(function (src) { Object.keys(own[src]).forEach(function (scope) { scopes[scope] = true; own[src][scope].forEach(function (k) { keys[k] = true; (byCat[presetCatOf(k)] = byCat[presetCatOf(k)] || {})[k] = true; }); }); });
@@ -5114,6 +5121,7 @@
     gridRowDel: { icon: "listMinus", label: "Retirer la dernière ligne", off: function (it) { return kidsOf(it).length <= gridColumnsOf(it); }, run: function (it) { gridRemoveRow(it.id); } },
     addInside: { icon: "plus", label: "Ajouter un élément à l'intérieur", run: function (it) { openCommands("Ajouter", { inside: it.id }); } },
     addSection: { icon: "listPlus", label: "Ajouter une section en dessous", run: function (it) { openCommands("Ajouter", { after: topOf(it.id).id }); } },
+    saveStyle: { icon: "palette", label: "Enregistrer comme style : choisir les réglages à réutiliser", off: function (it) { return !canSaveStyle([it]); }, run: function (it) { saveStyleOf(byId(it.id) || it); } },
     duplicate: { icon: "copy", label: "Dupliquer (Ctrl/⌘ + D)", run: function () { duplicateSelected(); } },
     hide: { icon: function () { return anyFlag("hidden") ? "eye" : "eyeOff"; }, label: function () { return anyFlag("hidden") ? "Afficher (Ctrl/⌘ + Maj + H)" : "Masquer : reste dans la page et les calques (Ctrl/⌘ + Maj + H)"; }, pressed: function () { return anyFlag("hidden"); }, run: function () { setFlag(selection.slice(), "hidden", !anyFlag("hidden")); } },
     lock: { icon: "lock", label: function () { return anyFlag("locked") ? "Déverrouiller (Ctrl/⌘ + Maj + L)" : "Verrouiller : ni déplacé, ni modifié, ni supprimé (Ctrl/⌘ + Maj + L)"; }, pressed: function () { return anyFlag("locked"); }, run: function () { setFlag(selection.slice(), "locked", !anyFlag("locked")); } },
@@ -5131,7 +5139,7 @@
     if (it.locked) return ["lock", "more"];
     if (lockedDeep(it.id)) return l.parent ? ["parent", "more"] : ["more"];
     var key = isNode(it) ? it.type : it.type === "layout" || it.type === "component" || it.type === "form" ? it.type : "legacy";
-    var list = (l.parent ? ["parent"] : []).concat(isNode(it) ? ["move"] : []).concat(TYPE_ACTIONS[key] || []).concat(["duplicate", "hide"]);
+    var list = (l.parent ? ["parent"] : []).concat(isNode(it) ? ["move"] : []).concat(TYPE_ACTIONS[key] || []).concat(isNode(it) && PAGE.siteSettingsUrl ? ["saveStyle"] : []).concat(["duplicate", "hide"]);
     if (STRUCTURAL.indexOf(it.type) >= 0 || !isNode(it)) list.push("lock");
     return list.concat(["remove", "more"]);
   }
@@ -6875,6 +6883,7 @@
       ["Copier le style", copyStyle, false, "Ctrl+Alt+C"],
       ["Coller le style", function () { pasteStyle(); }, !canWrite || locked, "Ctrl+Maj+V"],
       ["Réinitialiser le style", resetStyle, !canWrite || locked || !items.some(function (z) { return z.styles || z.states || z.parts; })],
+      items.length === 1 && isNode(it) ? ["Enregistrer comme style…", function () { saveStyleOf(byId(it.id) || it); }, !canWrite || locked || !canSaveStyle(items)] : null,
       "-",
       items.length === 1 ? ["Renommer", function () { var row = treeEl.querySelector('.pb-node[data-id="' + it.id + '"] > .pb-row-item'); if (row) startRename(row, it); }, !canWrite, "F2"] : null,
       [items.some(function (z) { return z.hidden; }) ? "Afficher" : "Masquer", function () { setFlag(selection.slice(), "hidden", !items.some(function (z) { return z.hidden; })); }, !canWrite, "Ctrl+Maj+H"],
@@ -6948,6 +6957,7 @@
       { label: "Grouper", run: groupSelected, off: selection.length < 2 || !canWrite }, { label: "Dissocier", run: ungroupSelected, off: !has || !canWrite },
       { label: "Masquer / afficher", run: function () { setFlag(selection.slice(), "hidden", !selectedItems().some(function (z) { return z.hidden; })); }, off: !has || !canWrite },
       { label: "Verrouiller / déverrouiller", run: function () { setFlag(selection.slice(), "locked", !selectedItems().some(function (z) { return z.locked; })); }, off: !has || !canWrite },
+      { label: "Enregistrer comme style…", run: function () { saveStyleOf(selectedItems()[0]); }, off: !has || !canWrite || !canSaveStyle(selectedItems()) },
       { label: "Copier le style", run: copyStyle, off: !has }, { label: "Réinitialiser le style", run: resetStyle, off: !has || !canWrite }, { label: "Coller le style", run: function () { pasteStyle(); }, off: !has || !canWrite },
       ].concat(STYLE_GROUPS.map(function (g) { return { label: "Coller le style : " + g[1].toLowerCase() + " seulement", run: function () { pasteStyle([g[0]]); }, off: !has || !canWrite || !(styleClipboard || store.get("style-clipboard", null)) }; })).concat([
       { label: "Sélectionner le parent", run: function () { var l = locate(selection[0]); if (l && l.parent) select(l.parent.id); }, off: !has },
