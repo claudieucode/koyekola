@@ -1876,3 +1876,24 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
   .pb-top .pb-save:not(.is-error)::before { content: ""; display: block; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
   .pb-top .pb-save:not(.is-error):empty::before { visibility: hidden; }
 }
+
+/* ---- Enregistrer comme style ---- */
+.pb-sp { background: var(--editor-panel, var(--surface, #fff)); color: var(--editor-text, var(--text)); border-color: var(--editor-border, var(--border)); }
+.pb-sp-form { display: grid; }
+.pb-sp-body { display: grid; gap: 10px; padding: 14px 16px; max-height: calc(100vh - 190px); overflow: auto; }
+.pb-sp-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pb-sp-master { margin: 0; font-weight: 600; }
+.pb-sp-cats { display: grid; border: 1px solid var(--editor-border, var(--border)); border-radius: var(--pb-radius-md, 8px); overflow: hidden; }
+.pb-sp-cat + .pb-sp-cat { border-top: 1px solid var(--editor-border, var(--border)); }
+.pb-sp-cat > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; cursor: pointer; list-style: none; }
+.pb-sp-cat > summary::-webkit-details-marker { display: none; }
+.pb-sp-cat > summary .pb-check { margin: 0; font-weight: 500; }
+.pb-sp-cat[open] > summary { background: var(--editor-hover, #eef4f9); }
+.pb-sp-count { font-size: 12px; color: var(--editor-muted, #566a7a); font-variant-numeric: tabular-nums; }
+.pb-sp-props { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 12px; padding: 8px 10px 8px 28px; }
+.pb-sp-props .pb-check { margin: 0; }
+.pb-sp-scopes { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+.pb-sp-scopes .pb-check { margin: 0; }
+.pb-sp-summary { margin: 0; font-size: 13px; font-weight: 600; }
+.pb-sp-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--editor-border, var(--border)); }
+@media (max-width: 520px) { .pb-sp-props { grid-template-columns: 1fr; } }
