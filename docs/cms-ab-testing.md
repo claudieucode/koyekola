@@ -13,7 +13,7 @@ Le moteur d'A/B des pages (phase 12) a été **étendu**, pas remplacé : une se
 | Contenu des versions | Pages CMS + éditeur : la version B est une **copie de page** éditée dans l'éditeur existant (aucun second éditeur) |
 
 ## Modèle
-Migration `067_experiences_ab.sql` (additive) ajoute à `mk_page_tests` : `site_id`, `description`, `goal_key` (objectif « achat »), `confidence` (90/95/99, défaut 95), `attribution_days` (1–30, défaut 7), `min_views`, `archived_at`, `ended_reason` ; et à `mk_page_test_events` : `consent`.
+Migration `068_experiences_ab.sql` (additive) ajoute à `mk_page_tests` : `site_id`, `description`, `goal_key` (objectif « achat »), `confidence` (90/95/99, défaut 95), `attribution_days` (1–30, défaut 7), `min_views`, `archived_at`, `ended_reason` ; et à `mk_page_test_events` : `consent`.
 - **Statuts** : `draft` (brouillon) → `running` (en cours) ⇄ `stopped` (en pause) → `completed` (terminé). L'archivage (`archived_at`) est un drapeau : un test archivé ne peut plus rien faire tant qu'il n'est pas restauré. Les transitions incohérentes sont refusées (`TRANSITIONS`).
 - **Versions** : A = la page publiée ; B = copie de page (`variant_page_id`), figée au démarrage (`variant_b`). Aucun contenu dupliqué dans l'expérience au-delà de cette figeage.
 - **Répartition** : B reçoit `traffic_b` % (10 à 90), A le reste : le total vaut toujours 100 %. 50/50, 70/30, 90/10, 20/80… sont possibles.
