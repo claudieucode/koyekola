@@ -1,0 +1,919 @@
+[
+ {
+  "path": "/marketing/contacts",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "admin.js"
+ },
+ {
+  "path": "/marketing/contacts/nouveau",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "admin.js"
+ },
+ {
+  "path": "/marketing/contacts/1",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "admin.js"
+ },
+ {
+  "path": "/marketing/listes",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "admin.js"
+ },
+ {
+  "path": "/marketing/listes/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "admin.js"
+ },
+ {
+  "path": "/marketing/etiquettes",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "admin.js"
+ },
+ {
+  "path": "/marketing/proprietes",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "admin.js"
+ },
+ {
+  "path": "/marketing/composants",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "admin.js"
+ },
+ {
+  "path": "/marketing/conformite",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "admin.js"
+ },
+ {
+  "path": "/marketing/ia/etat",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "ai.js"
+ },
+ {
+  "path": "/marketing/ia",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "ai.js"
+ },
+ {
+  "path": "/marketing/analytics",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "analytics.js"
+ },
+ {
+  "path": "/marketing/analytics/global",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "analytics.js"
+ },
+ {
+  "path": "/marketing/analytics/comparer",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "analytics.js"
+ },
+ {
+  "path": "/marketing/api",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "apiKeys.js"
+ },
+ {
+  "path": "/marketing/apparence",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "appearance.js"
+ },
+ {
+  "path": "/marketing/site-web/articles/ajouter",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "articles.js"
+ },
+ {
+  "path": "/marketing/automatisations",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "automations.js"
+ },
+ {
+  "path": "/marketing/automatisations/historique",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "automations.js"
+ },
+ {
+  "path": "/marketing/automatisations/parcours",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "automations.js"
+ },
+ {
+  "path": "/marketing/automatisations/parcours/viewer",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "automations.js"
+ },
+ {
+  "path": "/marketing/automatisations/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "automations.js"
+ },
+ {
+  "path": "/marketing/automatisations/1/simulation",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "automations.js"
+ },
+ {
+  "path": "/marketing/automatisations/1/passages/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "automations.js"
+ },
+ {
+  "path": "/marketing/evenements",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "automations.js"
+ },
+ {
+  "path": "/marketing/evenements/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "automations.js"
+ },
+ {
+  "path": "/marketing/envoi",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "campaigns.js"
+ },
+ {
+  "path": "/marketing/campagnes",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "campaigns.js"
+ },
+ {
+  "path": "/marketing/tests-ab",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "campaigns.js"
+ },
+ {
+  "path": "/marketing/campagnes/nouvelle",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "campaigns.js"
+ },
+ {
+  "path": "/marketing/campagnes/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "campaigns.js"
+ },
+ {
+  "path": "/marketing/site-web/recherche",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "cmsSearch.js"
+ },
+ {
+  "path": "/marketing/site-web/commentaires",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "comments.js"
+ },
+ {
+  "path": "/marketing/contacts/doublons",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "contactCore.js"
+ },
+ {
+  "path": "/marketing/contacts/fusion",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "contactCore.js"
+ },
+ {
+  "path": "/marketing/domaines",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "domains.js"
+ },
+ {
+  "path": "/marketing/domaines/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "domains.js"
+ },
+ {
+  "path": "/marketing/formulaires",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "forms.js"
+ },
+ {
+  "path": "/marketing/formulaires/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "forms.js"
+ },
+ {
+  "path": "/marketing/tunnels",
+  "status": 200,
+  "soon": [],
+  "disabled": 1,
+  "hash": 0,
+  "file": "funnels.js"
+ },
+ {
+  "path": "/marketing/tunnels/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "funnels.js"
+ },
+ {
+  "path": "/marketing/site-web/historique/page/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "history.js"
+ },
+ {
+  "path": "/marketing/site-web/historique/page/1/version",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "history.js"
+ },
+ {
+  "path": "/marketing/site-web/historique/page/1/comparer",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "history.js"
+ },
+ {
+  "path": "/marketing/site-web/corbeille",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "history.js"
+ },
+ {
+  "path": "/marketing/importer",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "imports.js"
+ },
+ {
+  "path": "/marketing/importer/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "imports.js"
+ },
+ {
+  "path": "/marketing/pages",
+  "status": 200,
+  "soon": [
+   "prochain palier",
+   "bientôt"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "landing.js"
+ },
+ {
+  "path": "/marketing/pages/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "landing.js"
+ },
+ {
+  "path": "/marketing/pages/1/analyse",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "landing.js"
+ },
+ {
+  "path": "/marketing/pages/1/versions/1/comparer",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "landing.js"
+ },
+ {
+  "path": "/marketing/pages/1/ia/etat",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "landing.js"
+ },
+ {
+  "path": "/marketing/pages/1/editeur",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "landing.js"
+ },
+ {
+  "path": "/marketing/site-web/composants/1/editeur",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "landing.js"
+ },
+ {
+  "path": "/marketing/p/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "landingPublic.js"
+ },
+ {
+  "path": "/marketing/p/1/clic/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "landingPublic.js"
+ },
+ {
+  "path": "/marketing/site-web/navigation",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "navigation.js"
+ },
+ {
+  "path": "/marketing/site-web/apparence/menus",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "navigation.js"
+ },
+ {
+  "path": "/marketing/site-web/navigation/menus/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "navigation.js"
+ },
+ {
+  "path": "/marketing/site-web/navigation/ressources",
+  "status": 400,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "navigation.js"
+ },
+ {
+  "path": "/marketing/site-web/tests-ab",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "pageTests.js"
+ },
+ {
+  "path": "/marketing/pages/1/test-ab",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "pageTests.js"
+ },
+ {
+  "path": "/marketing/revenus",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "revenue.js"
+ },
+ {
+  "path": "/marketing/score",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "scoring.js"
+ },
+ {
+  "path": "/marketing/segments",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "segments.js"
+ },
+ {
+  "path": "/marketing/segments/nouveau",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "segments.js"
+ },
+ {
+  "path": "/marketing/segments/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "segments.js"
+ },
+ {
+  "path": "/marketing/site-web/parametres/avance",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "settings.js"
+ },
+ {
+  "path": "/marketing/site-web",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "siteWeb.js"
+ },
+ {
+  "path": "/marketing/site-web/sites",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "siteWeb.js"
+ },
+ {
+  "path": "/marketing/site-web/modeles-de-theme",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "siteWeb.js"
+ },
+ {
+  "path": "/marketing/site-web/sites/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "siteWeb.js"
+ },
+ {
+  "path": "/marketing/sms/reglages",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "sms.js"
+ },
+ {
+  "path": "/marketing/sms",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "smsCampaigns.js"
+ },
+ {
+  "path": "/marketing/sms/campagnes/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "smsCampaigns.js"
+ },
+ {
+  "path": "/marketing/sms/abonnes",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "smsCampaigns.js"
+ },
+ {
+  "path": "/marketing/reseaux",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "social.js"
+ },
+ {
+  "path": "/marketing/reseaux/reglages",
+  "status": 200,
+  "soon": [],
+  "disabled": 3,
+  "hash": 0,
+  "file": "social.js"
+ },
+ {
+  "path": "/marketing/sondages",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "surveys.js"
+ },
+ {
+  "path": "/marketing/sondages/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "surveys.js"
+ },
+ {
+  "path": "/marketing/sondages/1/resultats",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "surveys.js"
+ },
+ {
+  "path": "/marketing/modeles",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "templates.js"
+ },
+ {
+  "path": "/marketing/modeles/bibliotheque",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "templates.js"
+ },
+ {
+  "path": "/marketing/modeles/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "templates.js"
+ },
+ {
+  "path": "/marketing/medias",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "templates.js"
+ },
+ {
+  "path": "/marketing/site-web/outils",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "tools.js"
+ },
+ {
+  "path": "/marketing/site-web/outils/importer",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 3,
+  "hash": 0,
+  "file": "tools.js"
+ },
+ {
+  "path": "/marketing/site-web/outils/importer/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "tools.js"
+ },
+ {
+  "path": "/marketing/site-web/outils/diagnostic",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "tools.js"
+ },
+ {
+  "path": "/marketing/site-web/outils/systeme",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "tools.js"
+ },
+ {
+  "path": "/marketing/site-web/outils/maintenance",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "tools.js"
+ },
+ {
+  "path": "/marketing/site-web/outils/cache",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "tools.js"
+ },
+ {
+  "path": "/marketing/site-web/outils/contenu",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "tools.js"
+ },
+ {
+  "path": "/marketing/site-web/redirections",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "urls.js"
+ },
+ {
+  "path": "/marketing/site-web/liens-casses",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "urls.js"
+ },
+ {
+  "path": "/marketing/site-web/permaliens",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "urls.js"
+ },
+ {
+  "path": "/marketing/site-web/utilisateurs",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "users.js"
+ },
+ {
+  "path": "/marketing/site-web/utilisateurs/ajouter",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "users.js"
+ },
+ {
+  "path": "/marketing/site-web/utilisateurs/invitations",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "users.js"
+ },
+ {
+  "path": "/marketing/site-web/utilisateurs/roles",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "users.js"
+ },
+ {
+  "path": "/marketing/site-web/utilisateurs/permissions",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "users.js"
+ },
+ {
+  "path": "/marketing/site-web/utilisateurs/roles/nouveau",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "users.js"
+ },
+ {
+  "path": "/marketing/site-web/utilisateurs/roles/viewer",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "users.js"
+ },
+ {
+  "path": "/marketing/site-web/utilisateurs/1",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "users.js"
+ },
+ {
+  "path": "/marketing/site-web/mes-sites",
+  "status": 200,
+  "soon": [
+   "prochain palier"
+  ],
+  "disabled": 2,
+  "hash": 0,
+  "file": "users.js"
+ },
+ {
+  "path": "/marketing/webhooks",
+  "status": 200,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "webhooksOut.js"
+ },
+ {
+  "path": "/marketing/webhooks/1",
+  "status": 404,
+  "soon": [],
+  "disabled": 0,
+  "hash": 0,
+  "file": "webhooksOut.js"
+ }
+]
