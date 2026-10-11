@@ -1921,3 +1921,22 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-comp-kind:has(input:focus-visible) { outline: 2px solid var(--editor-accent, currentColor); outline-offset: 2px; }
 .pb-comp-kind small { display: block; opacity: .75; margin-top: 2px; }
 .pb-comp-pages { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.pb-sp-namerow { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+.pb-sp-namerow .pb-field { margin: 0; }
+.pb-sp-sample { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 36px; border-radius: 6px; font-size: 16px; line-height: 1; overflow: hidden; border: 1px dashed var(--editor-border, var(--border)); }
+.pb-sl { width: min(620px, calc(100vw - 32px)); }
+.pb-sl-tools { display: grid; grid-template-columns: 1fr minmax(120px, 180px); gap: 8px; }
+.pb-sl-mode { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pb-sl-list { display: grid; gap: 4px; max-height: 46vh; overflow: auto; }
+.pb-sl-row { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid var(--editor-border, var(--border)); border-radius: var(--pb-radius-md, 8px); }
+.pb-sl-row.is-on { border-color: var(--r-accent, var(--editor-accent, #0b6bcb)); }
+.pb-sl-main { display: grid; min-width: 0; }
+.pb-sl-main strong, .pb-sl-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-sl-main small { color: var(--editor-muted, #566a7a); font-size: 12px; }
+.pb-sl-more { position: relative; }
+.pb-sl-more > summary { list-style: none; cursor: pointer; padding: 2px 8px; border-radius: 6px; }
+.pb-sl-more > summary::-webkit-details-marker { display: none; }
+.pb-sl-more > summary:hover { background: var(--editor-hover, #eef4f9); }
+.pb-sl-menu { position: absolute; right: 0; top: 100%; z-index: 5; display: grid; min-width: 210px; padding: 4px; background: var(--editor-panel, var(--surface, #fff)); border: 1px solid var(--editor-border, var(--border)); border-radius: var(--pb-radius-md, 8px); box-shadow: 0 6px 20px rgba(0, 0, 0, .18); }
+.pb-sl-menu .btn { justify-content: flex-start; }
+@media (max-width: 520px) { .pb-sl-row { grid-template-columns: auto 1fr; } .pb-sl-tools { grid-template-columns: 1fr; } .pb-sp-namerow { grid-template-columns: 1fr; } }
