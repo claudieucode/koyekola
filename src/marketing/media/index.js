@@ -212,6 +212,7 @@ function removeMedia(ctx, media) {
   try {
     ctx.db.prepare("DELETE FROM mk_media WHERE id = ? AND organization_id = ?").run(media.id, ctx.organizationId);
     if (!sent) removeUploadedFile(media.path, "fichier de la médiathèque supprimé définitivement");
+    require("./variants").purge(media.path); // versions réduites fabriquées à la demande
     ctx.db.exec("RELEASE mk_media_delete");
   } catch (error) {
     ctx.db.exec("ROLLBACK TO mk_media_delete");

@@ -1866,6 +1866,7 @@
       case "image":
         box.appendChild(mediaPreview(/^\{\{/.test(p.src || "") ? "" : p.src, function (m) { change(function () { var x = byId(it.id); x.props.src = m.path; if (m.alt && !x.props.alt) { x.props.alt = m.alt; delete x.props.decorative; } }); }, disabled));
         box.appendChild(textField("…ou image dynamique", /^\{\{/.test(p.src || "") ? p.src : "", function (v) { if (/^\s*\{\{[^}]+\}\}\s*$/.test(v)) setProp(it.id, "src", v.trim()); }, { onChange: true, disabled: disabled, dyn: true, dynKinds: ["image"], placeholder: "{{post.image}} ou {{course.image}}", hint: "Remplace l'image choisie ; lue à chaque affichage (utile dans une boucle ou un modèle)." }));
+        box.appendChild(resolutionField(it, [p.src], disabled));
         box.appendChild(textField("Texte de remplacement", p.alt, function (v) { change(function () { var x = byId(it.id); x.props.alt = v; if (v) delete x.props.decorative; else x.props.decorative = true; }, { key: it.id + ":alt", light: true }); }, { max: 200, disabled: disabled, dyn: true, hint: "Décrit l'image pour les personnes qui ne la voient pas (et pour le référencement). Vide = image décorative." }));
         box.appendChild(textField("Lien au clic (facultatif)", p.link, set("link"), { list: "pb-links", disabled: disabled, dyn: true, dynKinds: ["url"], placeholder: "/catalogue ou https://…" }));
         if (p.link) box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
@@ -1880,6 +1881,7 @@
             textField("Lien de l'image " + (i + 1) + " (facultatif)", im.link, function (v) { change(function () { byId(it.id).props.images[i].link = v; }, { key: it.id + ":glink" + i, light: true }); }, { list: "pb-links", disabled: disabled, placeholder: "/catalogue ou https://…" }),
             h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || p.images.length < 2, onclick: function () { change(function () { byId(it.id).props.images.splice(i, 1); }); } }, "Retirer")));
         });
+        box.appendChild(resolutionField(it, (p.images || []).map(function (im) { return im.src; }), disabled));
         box.appendChild(checkField("Agrandir au clic (visionneuse)", p.lightbox, function (v) { setProp(it.id, "lightbox", v); }, { disabled: disabled, hint: "Les images qui ont un lien ouvrent leur lien." }));
         box.appendChild(checkField("Mosaïque (hauteurs naturelles, en colonnes)", p.masonry, function (v) { setProp(it.id, "masonry", v); }, { disabled: disabled }));
         box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled || (p.images || []).length >= 24, onclick: function () { openMedia({ title: "Ajouter à la galerie", multiple: true, onPick: function (list) { change(function () { var x = byId(it.id); list.forEach(function (m) { x.props.images.push({ src: m.path, alt: m.alt || "" }); }); }); } }); } }, "Ajouter des images"));
@@ -1979,6 +1981,7 @@
         break;
       case "carousel":
         box.appendChild(textField("Nom du carrousel (lecteurs d'écran)", p.label, set("label"), { max: 80, disabled: disabled }));
+        box.appendChild(resolutionField(it, (p.images || []).map(function (im) { return im.src; }), disabled));
         (p.images || []).forEach(function (im, i) {
           box.appendChild(h("div", { class: "pb-repeat-item" }, h("img", { src: im.src, alt: "", class: "pb-thumb" }),
             textField("Texte de remplacement " + (i + 1), im.alt, function (v) { change(function () { byId(it.id).props.images[i].alt = v; }, { key: it.id + ":img" + i, light: true }); }, { max: 200, disabled: disabled }),
@@ -2011,6 +2014,7 @@
         if (it.type === "imagebox") {
           box.appendChild(h("p", { class: "pb-sub", text: "Image" }));
           box.appendChild(mediaPreview(p.src, function (m) { change(function () { var x = byId(it.id).props; x.src = m.path; if (!x.alt && m.alt) x.alt = m.alt; }); }, disabled));
+          box.appendChild(resolutionField(it, [p.src], disabled));
           box.appendChild(textField("Texte de remplacement (vide = image décorative)", p.alt, set("alt"), { max: 200, disabled: disabled }));
         } else {
           box.appendChild(iconPicker(p.icon || "star", function (v) { setProp(it.id, "icon", v); }, disabled));
@@ -2139,6 +2143,7 @@
         break;
       case "hotspot":
         box.appendChild(mediaPreview(p.src, function (m) { change(function () { var x = byId(it.id).props; x.src = m.path; if (m.alt) x.alt = m.alt; }); }, disabled));
+        box.appendChild(resolutionField(it, [p.src], disabled));
         box.appendChild(textField("Texte de remplacement de l'image", p.alt, set("alt"), { max: 200, disabled: disabled }));
         (p.spots || []).forEach(function (sp, i) {
           box.appendChild(h("div", { class: "pb-repeat-item" },
@@ -2355,6 +2360,32 @@
   function mediaPreview(src, onPick, disabled) {
     return h("div", { class: "pb-media-pick" }, src ? h("img", { src: src, alt: "", class: "pb-thumb" }) : h("span", { class: "pb-hint", text: "Aucune image" }),
       h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, onclick: function () { openMedia({ title: "Choisir l'image", onPick: onPick }); } }, src ? "Remplacer" : "Choisir"));
+  }
+
+  // Résolution d'une image (service commun : tailles réellement disponibles pour les images de la médiathèque).
+  // `srcs` : adresses des images du widget (une seule pour Image, plusieurs pour Galerie / Carrousel). Les tailles proposées
+  // sont fournies par le serveur (plus petites que la plus petite image) ; la valeur « full » = original (rien n'est enregistré).
+  var resCache = {};
+  function resolutionField(it, srcs, disabled) {
+    var wrap = h("div", { class: "pb-res", "data-pb-resolution": "" });
+    var list = (srcs || []).filter(function (s) { return s && !/^\{\{/.test(s); });
+    var key = list.join("|");
+    function paint(info) {
+      wrap.textContent = "";
+      var cur = (it.props && it.props.size) || "full";
+      var sizes = (info && info.sizes) || [];
+      var opts = [["full", "Taille originale" + (info && info.width && list.length === 1 ? " (" + info.width + " × " + info.height + " px)" : "")]];
+      sizes.forEach(function (z) { opts.push([z.key, z.label + " (" + z.width + " px)"]); });
+      if (sizes.length) opts.push(["auto", "Adaptative (selon l'écran)"]);
+      if (!opts.some(function (o) { return o[0] === cur; })) opts.push([cur, "Indisponible pour cette image (original affiché)"]);
+      var hint = !info ? "Chargement des tailles…" : !info.available ? "Les versions réduites ne sont pas disponibles sur ce serveur : l'image d'origine est affichée." : !info.complete ? "Disponible pour les images de la médiathèque." : !sizes.length ? "Cette image est déjà petite : seule la taille originale est proposée." : "Une version plus légère charge plus vite. L'image d'origine n'est pas modifiée.";
+      wrap.appendChild(selectField("Résolution de l'image", cur, opts, function (v) { change(function () { var x = byId(it.id); if (v === "full") delete x.props.size; else x.props.size = v; }); }, { disabled: disabled || !info || !sizes.length, hint: hint }));
+    }
+    if (!list.length) { paint({ available: true, complete: false, sizes: [] }); return wrap; }
+    if (resCache[key]) { paint(resCache[key]); return wrap; }
+    paint(null);
+    api("GET", "/marketing/site-web/medias/resolutions.json?" + list.map(function (s) { return "src=" + encodeURIComponent(s); }).join("&")).then(function (info) { resCache[key] = info; if (wrap.isConnected) paint(info); }, function () { if (wrap.isConnected) paint({ available: false, complete: false, sizes: [] }); });
+    return wrap;
   }
 
   // Sections prêtes (bandeau, formulaire…) : champs de contenu
@@ -3578,7 +3609,7 @@
       add("Format", (String(src).split("?")[0].split(".").pop() || "").toUpperCase());
       add("Texte de remplacement", p.decorative ? "Image décorative" : (p.alt || it.alt || it.imageAlt || "manquant"));
       var img = m && (m.el.tagName === "IMG" ? m.el : m.el.querySelector("img"));
-      if (img && img.naturalWidth) add("Taille d'origine", img.naturalWidth + " × " + img.naturalHeight + " px");
+      if (img && img.naturalWidth) add("Taille chargée", img.naturalWidth + " × " + img.naturalHeight + " px");
     }
     if (!node && it.type === "button") { add("Texte", it.label); add("Adresse", it.url); }
     if (node && (it.type === "button" || it.type === "link")) { add("Texte", p.label); add("Adresse", p.url); if (it.type === "button") add("Apparence", { primary: "Plein", outline: "Contour", ghost: "Discret" }[p.variant] || p.variant); add("Nouvel onglet", p.newTab ? "oui" : "non"); }

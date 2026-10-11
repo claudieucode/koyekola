@@ -108,6 +108,8 @@ app.use("/uploads/thumbnails", express.static(path.join(uploadsRoot, "thumbnails
 app.use("/uploads/blog", express.static(path.join(uploadsRoot, "blog"), { maxAge: "30d", immutable: true }));
 // Médiathèque de KOLAKISA Marketing : images et PDF insérés dans les e-mails, publics (lus par les messageries).
 // Type vérifié à l'envoi (signature du fichier : JPEG, PNG, GIF, WebP, PDF — jamais de HTML ni de SVG) ; nosniff.
+// Résolutions d'image à la demande (…/<organisation>/v/<largeur>/<nom>.webp) : fabriquées au premier accès, jamais d'original modifié
+app.use("/uploads/marketing", require("./src/marketing/media/variants").middleware);
 app.use("/uploads/marketing", express.static(path.join(uploadsRoot, "marketing"), {
   maxAge: "30d", immutable: true, index: false,
   // Documents Office : toujours téléchargés (jamais ouverts dans le navigateur) ; tout le reste (images, PDF, vidéo, audio) s'affiche

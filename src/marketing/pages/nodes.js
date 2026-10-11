@@ -78,6 +78,8 @@ const color = (v) => {
 const colorCss = (v) => (v.startsWith("token:") ? `var(--kw-${v.slice(6)})` : v);
 const fontLib = require("../../utils/fontLibrary");
 const oneOf = (...list) => (v) => (list.includes(v) ? v : null);
+// Résolution d'image (service commun : media/variants.js). « full » (l'original) est la valeur par défaut et n'est pas enregistrée.
+const imageSize = (p) => { const v = oneOf(...require("../media/variants").SIZE_CHOICES)(p && p.size); return v && v !== "full" ? { size: v } : {}; };
 const numberIn = (min, max, { integer = false } = {}) => (v) => {
   const n = Number(v);
   if (v === "" || v === null || v === undefined || !Number.isFinite(n) || n < min || n > max) return null;
@@ -446,7 +448,7 @@ const NODE_TYPES = {
     const alt = line(p.alt, 200);
     if (!alt && p.decorative !== true) throw new Error(`${at} (image) : un texte de remplacement est obligatoire (ou cochez « image décorative »).`);
     const link = h.linkUrl(p.link, `${at} (lien de l'image)`);
-    return { src, alt, decorative: p.decorative === true && !alt, link, caption: line(p.caption, 200), title: line(p.title, 150), newTab: p.newTab === true && link.startsWith("https://") };
+    return { src, alt, decorative: p.decorative === true && !alt, link, caption: line(p.caption, 200), title: line(p.title, 150), newTab: p.newTab === true && link.startsWith("https://"), ...imageSize(p) };
   } },
   gallery: { label: "Galerie", category: "media", props: (p, at, h) => {
     const images = (Array.isArray(p.images) ? p.images : []).slice(0, 24).map((im, i) => {
@@ -459,7 +461,7 @@ const NODE_TYPES = {
     }).filter(Boolean);
     if (!images.length) throw new Error(`${at} (galerie) : au moins une image.`);
     // lightbox : clic = image en grand (sauf image avec lien) ; masonry : hauteurs naturelles en colonnes
-    return { images, lightbox: p.lightbox === true, masonry: p.masonry === true };
+    return { images, lightbox: p.lightbox === true, masonry: p.masonry === true, ...imageSize(p) };
   } },
   video: { label: "Vidéo", category: "media", props: (p, at, h) => {
     const url = line(p.url, 500);
@@ -553,7 +555,7 @@ const NODE_TYPES = {
       return src ? { src, alt, caption: line(im && im.caption, 200) } : null;
     }).filter(Boolean);
     if (images.length < 2) throw new Error(`${at} (carrousel) : au moins deux images.`);
-    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true };
+    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true, ...imageSize(p) };
   } },
   toggle: { label: "Bascule", category: "interaction", props: (p, at) => {
     const title = line(p.title, 150), text = clean(p.text, 4000);
@@ -657,7 +659,7 @@ const NODE_TYPES = {
       const xx = numberIn(0, 100)(x && x.x), yy = numberIn(0, 100)(x && x.y);
       return title && xx !== null && yy !== null ? { x: xx, y: yy, title, text: line(x.text, 300) } : null;
     }).filter(Boolean);
-    return { src, alt, spots };
+    return { src, alt, spots, ...imageSize(p) };
   } },
   posts: { label: "Derniers articles du blog", category: "dynamic", props: (p) => ({
     count: numberIn(1, 12, { integer: true })(p.count) || 3, category: line(p.category, 80),
@@ -775,7 +777,7 @@ const NODE_TYPES = {
     const alt = line(p.alt, 200), title = line(p.title, 120);
     if (!title) throw new Error(`${at} (boîte d'image) : le titre est obligatoire.`);
     const link = h.linkUrl(p.link, `${at} (lien de la boîte d'image)`);
-    return { src, alt, title, text: clean(p.text, 600), titleLevel: oneOf("2", "3", "4", "5", "6")(String(p.titleLevel)) || "3", position: oneOf("top", "left", "right")(p.position) || "top", ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}) };
+    return { src, alt, title, text: clean(p.text, 600), titleLevel: oneOf("2", "3", "4", "5", "6")(String(p.titleLevel)) || "3", position: oneOf("top", "left", "right")(p.position) || "top", ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}), ...imageSize(p) };
   } },
   iconbox: { label: "Boîte d'icône", category: "media", props: (p, at, h) => {
     const icon = String(p.icon || "");

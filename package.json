@@ -48,5 +48,8 @@
     "@tiptap/starter-kit": "^3.31.3",
     "drawflow": "^0.0.60",
     "esbuild": "^0.28.2"
+  },
+  "optionalDependencies": {
+    "sharp": "^0.35.5"
   }
 }
