@@ -140,9 +140,14 @@ function publish(ctx, id) {
   const check = landing.preflight(ctx, { ...page, sections: resolveSections(ctx, content.sections) });
   if (!check.ready) throw new MarketingError("preflight_failed", check.errors.join(" "));
   return transaction(ctx.db, () => {
-    const number = (ctx.db.prepare("SELECT MAX(number) n FROM mk_page_versions WHERE page_id = ?").get(id).n || 0) + 1;
-    ctx.db.prepare("INSERT INTO mk_page_versions (organization_id, page_id, number, content, reason, created_by) VALUES (?, ?, ?, ?, 'publish', ?)")
-      .run(ctx.organizationId, id, number, JSON.stringify(content), ctx.userId ?? null);
+    // Publier une seconde fois SANS aucun changement (double clic, page remise en ligne) ne fabrique pas une copie identique : elle chasserait de
+    // l'historique (borné) de vraies versions. Le contenu est comparé à la dernière version ; identique → on garde son numéro.
+    const last = ctx.db.prepare("SELECT number, content FROM mk_page_versions WHERE page_id = ? ORDER BY number DESC LIMIT 1").get(id);
+    const serialized = JSON.stringify(content);
+    const same = last && last.content === serialized;
+    const number = same ? last.number : (last ? last.number : 0) + 1;
+    if (!same) ctx.db.prepare("INSERT INTO mk_page_versions (organization_id, page_id, number, content, reason, created_by) VALUES (?, ?, ?, ?, 'publish', ?)")
+      .run(ctx.organizationId, id, number, serialized, ctx.userId ?? null);
     ctx.db.prepare(`UPDATE mk_landing_pages SET sections = ?, theme = ?, title = ?, description = ?, seo = ?, draft = NULL, revision = revision + 1,
         status = 'published', published_at = COALESCE(published_at, datetime('now')), scheduled_at = NULL, updated_at = datetime('now') WHERE id = ?`)
       .run(JSON.stringify(content.sections), JSON.stringify(content.theme), content.title, content.description, JSON.stringify(content.seo), id);

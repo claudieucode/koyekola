@@ -189,7 +189,7 @@
   var frame = $("[data-pb-frame]");
   var stage = $("[data-pb-stage]");
   var wrap = $("[data-pb-frame-wrap]");
-  var dirty = false, blocked = false, saving = false, saveTimer = null;
+  var dirty = false, blocked = false, saving = false, saveTimer = null, inflight = null; // inflight : la requête d'enregistrement en cours
 
   // ---------- Historique (annuler / rétablir) ----------
   var past = [], future = [], lastKey = null;
@@ -7478,7 +7478,7 @@
   function openPreview() {
     if (editing) commitEdit();
     var go = function () { $("[data-pb-preview-frame]").src = "/marketing/pages/" + PAGE.id + "/apercu?t=" + Date.now(); previewDialog.showModal(); };
-    if (dirty && !blocked) { clearTimeout(saveTimer); save().then(go); } else go();
+    if ((dirty || saving) && !blocked) { clearTimeout(saveTimer); saveNow().then(function () { if (dirty) { toast("Aperçu non ouvert : vos dernières modifications ne sont pas enregistrées (voir le message en haut).", true); return; } go(); }); } else go();
   }
   $("[data-pb-preview]").addEventListener("click", openPreview);
   $$("[data-preview-device]").forEach(function (b) { b.addEventListener("click", function () { $$("[data-preview-device]").forEach(function (x) { x.setAttribute("aria-checked", String(x === b)); }); $("[data-pb-preview-frame]").dataset.device = b.dataset.previewDevice; }); });
@@ -7763,7 +7763,7 @@
     setSave("Enregistrement…");
     // Ce qui part au serveur : c'est CET état (et pas celui, plus récent, de l'écran à l'arrivée de la réponse) qui devient la référence
     var sentJson = explicit ? JSON.stringify(content.sections) : null;
-    return api("PUT", BASE + "/brouillon", { content: payload(), revision: revision }).then(function (r) {
+    inflight = api("PUT", BASE + "/brouillon", { content: payload(), revision: revision }).then(function (r) {
       saving = false; retry = 0; revision = r.revision; hasDraft = true;
       if (r.warnings && r.warnings.length) healIgnored(r.warnings);
       if (sentJson !== null) commitSaved(sentJson);
@@ -7775,12 +7775,14 @@
       if (err.status === 422) { setSave("Non enregistré : " + err.message, "is-error"); errorItemId = itemFromError(err.message); markError(); return; }
       if (err.status === 403) { blocked = true; setSave("Non enregistré : droits insuffisants", "is-error"); return; }
       retry = Math.min(retry + 1, 5);
-      setSave("Erreur d'enregistrement : nouvel essai dans " + (retry * 5) + " s", "is-error");
+      // Session expirée : le message dit quoi faire (le travail est gardé dans ce navigateur, les essais reprennent seuls une fois reconnecté)
+      setSave(err.status === 401 ? "Session expirée : reconnectez-vous (dans un autre onglet). Nouvel essai dans " + (retry * 5) + " s" : "Erreur d'enregistrement : nouvel essai dans " + (retry * 5) + " s", "is-error", err.status === 401 ? "Votre session a expiré : le travail non enregistré est gardé dans ce navigateur. Connectez-vous dans un autre onglet : l'enregistrement reprendra tout seul." : null);
       clearTimeout(saveTimer);
       saveTimer = setTimeout(save, retry * 5000);
-    });
+    }).then(function () { inflight = null; });
+    return inflight;
   }
-  function saveNow() { if (editing) commitEdit(); clearTimeout(saveTimer); if (!dirty) { setSave("Tout est enregistré", "is-ok"); if (!saving && !blocked) commitSaved(); return Promise.resolve(); } return save(true); }
+  function saveNow() { if (editing) commitEdit(); clearTimeout(saveTimer); if (saving && inflight) return inflight.then(function () { return saveNow(); }); if (!dirty) { setSave("Tout est enregistré", "is-ok"); if (!saving && !blocked) commitSaved(); return Promise.resolve(); } return save(true); }
   $("[data-pb-save-now]").addEventListener("click", saveNow);
   if (!canWrite) $("[data-pb-save-now]").hidden = true;
   window.addEventListener("beforeunload", function (e) { if (editing) commitEdit(); if (dirty || saving) { backup(); e.preventDefault(); e.returnValue = ""; } });
@@ -7844,8 +7846,8 @@
     if (editing) commitEdit();
     btn.disabled = true;
     clearTimeout(saveTimer);
-    (dirty ? save(true) : Promise.resolve()).then(function () {
-      if (dirty || blocked) { btn.disabled = false; toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
+    saveNow().then(function () {
+      if (dirty || blocked || saving) { btn.disabled = false; toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
       return api("POST", "/marketing/pages/" + PAGE.id + "/publier.json", {}).then(function (r) {
         status = "published"; hasDraft = false; revision = r.revision;
         if (!saving) commitSaved();
