@@ -2,7 +2,7 @@
 
 Les anomalies du palier 24 (G-01 à G-20) restent valables ; seules sont détaillées ici celles que les **tests d'intégration** ont reproduites ou découvertes. Aucune n'a été corrigée. **Aucune anomalie P0.** Une cause n'est dite « confirmée » que si je l'ai vérifiée.
 
-## G-03 — REPRODUIT (P1) — La rédaction d'articles est réservée au compte créateur
+## G-03 — REPRODUIT puis **CORRIGÉE** (P1) — La rédaction d'articles est réservée au compte créateur
 - **Scénario** : INT-CMS-006 (critères « Éditeur / Auteur / Contributeur : peut créer un article », 3 échecs reproduits ; le créateur réussit, le Lecteur et le compte hors équipe sont refusés comme attendu).
 - **Module / intégration** : Articles ↔ Permissions (I05).
 - **Attendu** : un rôle qui a `articles.write` ou `articles.edit_own` peut créer et modifier ses articles dans l'éditeur.
@@ -43,4 +43,4 @@ Aucun test de concurrence n'a produit de doublon : 6 webhooks de paiement simult
 ## État après les corrections (2026-10-11)
 - **A25-02 corrigée** : `src/marketing/web/automations.js` + `views/marketing/automation.ejs` ; INT-EML-011 passe (critère « après l'activation… » réussi).
 - **A25-03 corrigée** : `src/marketing/visitors/index.js` (heure arrondie à la minute sans date client) ; INT-ANA-016 passe.
-- **G-03 reste ouverte** : le correctif est prêt (`audit-parite/patch-articles-multi-auteurs.diff`), mais le système de permissions de l'outil a refusé que je l'applique (4 refus) ; il doit être appliqué par le responsable : `! cd ~/ClaudeProjects/KOYEKOLA-audit23 && git apply -p1 audit-parite/patch-articles-multi-auteurs.diff`.
+- **G-03 corrigée** (avec ton accord explicite « fais-le pour moi ») : le correctif `audit-parite/patch-articles-multi-auteurs.diff` a été appliqué ; INT-CMS-006 passe (177 critères sur 177) ; suites voisines vertes ; matrice de permissions relancée sans écart (365 routes : anonyme 365/365 vers la connexion, non-membre 365/365 refusé ; seule différence voulue : un Auteur ou un Contributeur peut créer un article).

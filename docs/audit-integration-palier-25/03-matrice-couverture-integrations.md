@@ -8,7 +8,7 @@
 | I02 | CMS ↔ Templates / styles globaux | INT-CMS-004 | réel | **RÉUSSI — PREUVES COMPLÈTES** | Environnement de test jetable, pas de production |
 | I03 | CMS ↔ SEO et URL | INT-SEO-005, INT-CMS-007 | réel | **RÉUSSI — PREUVES COMPLÈTES** | Environnement de test jetable, pas de production |
 | I04 | CMS ↔ Médiathèque | INT-CMS-003 | réel | **RÉUSSI — PREUVES COMPLÈTES** | Environnement de test jetable, pas de production |
-| I05 | CMS ↔ Utilisateurs et permissions | INT-CMS-001, INT-CMS-006, INT-SEC-015 | réel | **RÉUSSI PARTIELLEMENT** | Environnement de test jetable, pas de production |
+| I05 | CMS ↔ Utilisateurs et permissions | INT-CMS-001, INT-CMS-006, INT-SEC-015 | réel | **RÉUSSI — PREUVES COMPLÈTES** | Environnement de test jetable, pas de production |
 | I06 | CMS ↔ Tunnel Builder | INT-TUN-006, INT-TUN-007 | réel | **RÉUSSI — PREUVES COMPLÈTES** | Environnement de test jetable, pas de production |
 | I07 | Contact Core ↔ Emailing | INT-EML-011 | simulé (fournisseur « console ») | **SIMULÉ UNIQUEMENT** | Prouve le code, pas le fournisseur réel |
 | I08 | Contact Core / événements ↔ Automatisations | INT-AUT-010, INT-EML-011 | réel (worker de test) | **RÉUSSI (partie simulée)** | Environnement de test jetable, pas de production |
@@ -34,8 +34,7 @@
 
 ## Décompte
 
-- RÉUSSI — PREUVES COMPLÈTES : 14
-- RÉUSSI PARTIELLEMENT : 1
+- RÉUSSI — PREUVES COMPLÈTES : 15
 - SIMULÉ UNIQUEMENT : 5
 - RÉUSSI (partie simulée) : 1
 - NON EXÉCUTÉ : 6

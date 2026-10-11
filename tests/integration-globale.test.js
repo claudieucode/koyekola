@@ -554,13 +554,13 @@ describe("Pages programmées et rédaction des articles par rôle", () => {
     c.check("la publication automatique est consignée au journal (utilisateur vide = système)", one("SELECT COUNT(*) n FROM mk_audit_logs WHERE action = 'page.published' AND resource_id = ? AND user_id IS NULL", String(id)).n === 1);
   });
 
-  scenario("INT-CMS-006", "rédaction d'articles selon les rôles (état actuel : réservée au compte créateur)", ["Articles", "Permissions", "Éditeur d'articles"], "REEL-TEST", async (c) => {
+  scenario("INT-CMS-006", "rédaction d'articles selon les rôles (Éditeur, Auteur, Contributeur créent ; Lecteur et compte hors équipe refusés)", ["Articles", "Permissions", "Éditeur d'articles"], "REEL-TEST", async (c) => {
     const author = await member("author"), contributor = await member("contributor");
     const fd = () => { const f = new FormData(); Object.entries({ title: "Article de rôle", excerpt: "r", content_format: "html", status: "draft", content: "<p>Texte</p>" }).forEach(([k, v]) => f.append(k, v)); return f; };
     for (const [label, client] of [["Éditeur", editorOrg], ["Auteur", author], ["Contributeur", contributor]]) {
       const before = one("SELECT COUNT(*) n FROM posts").n;
       const r = await client.request("/formateur/blog/nouveau", { method: "POST", multipart: fd(), headers: { "x-blog-editor": "1" } });
-      c.check(`${label} : peut créer un article (attendu par ses permissions)`, r.status === 200 && one("SELECT COUNT(*) n FROM posts").n === before + 1, `status ${r.status}`, { anomalie: "G-03" });
+      c.check(`${label} : peut créer un article (attendu par ses permissions)`, r.status === 200 && one("SELECT COUNT(*) n FROM posts").n === before + 1, `status ${r.status}`);
     }
     const cr = await boss.request("/formateur/blog/nouveau", { method: "POST", multipart: fd(), headers: { "x-blog-editor": "1" } });
     c.check("le compte créateur crée un article (200)", cr.status === 200, `status ${cr.status}`);
