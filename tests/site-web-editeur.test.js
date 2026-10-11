@@ -138,7 +138,7 @@ describe("éditeur visuel (vrai serveur)", () => {
     assert.match((await new Client(srv.base).get(`/p/${slug}`, { headers: UA })).text, /Promo -30 %/, "synchronisé : la page en ligne suit le composant");
     const del = await boss.request(`/marketing/site-web/composants/${comp.id}/supprimer`, { method: "POST", json: {} });
     assert.equal(del.status, 409);
-    assert.match(JSON.parse(del.text).error.message, /utilisé par 1 page/);
+    assert.match(JSON.parse(del.text).error.message, /instances liées dans 1 page/);
     const list = JSON.parse((await boss.get("/marketing/site-web/composants.json")).text).components;
     assert.deepEqual(list.map((c) => c.name), ["Bandeau promo"]);
   });

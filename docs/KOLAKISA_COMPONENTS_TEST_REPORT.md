@@ -12,7 +12,10 @@ Seuls les tests réellement exécutés sont marqués ✅. Environnement : Chrome
   5. suppression avec instance : deux options ; conversion en bloc indépendant ; aucune référence orpheline
 
 ## Régressions
-Voir tableau ci-dessous (rempli après exécution).
+Fichiers existants liés aux composants, exécutés après la refonte (✅ = 0 échec) :
+- editeur-v3 7/7 ✅ · editeur-widgets 18/18 ✅ · site-web-entete 12/12 ✅ · site-web-entete-navigateur 7/7 ✅
+- site-web-editeur 9/9 ✅ et site-web-fondations 22/22 ✅ : deux assertions mises à jour exprès, car l'ancien message de refus (« utilisé par 1 page ») est remplacé par le choix à deux options.
+Suite complète du dépôt : non relancée.
 
 ## Non exécutés / non couverts
 - Propagation globale à plusieurs pages publiées via l'interface « Mettre à jour » (couverte côté service uniquement).
