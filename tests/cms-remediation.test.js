@@ -227,3 +227,37 @@ describe("alerte de modération des commentaires", () => {
     assert.match(rows[0].body, /\/marketing\/site-web\/commentaires\/en-attente/);
   });
 });
+
+describe("droit à l'effacement des commentaires d'un invité", () => {
+  test("sans confirmation, rien n'est supprimé ; avec confirmation, tous les commentaires d'invité de cette adresse partent, pas ceux des autres", async () => {
+    const count = (email) => one("SELECT COUNT(*) n FROM blog_comments WHERE lower(author_email) = ?", email).n;
+    assert.equal(count("v1@exemple.test"), 1); assert.equal(count("v2@exemple.test"), 1);
+    await boss.post(`${M}/site-web/commentaires/effacer-invite`, { email: "v1@exemple.test" });
+    assert.equal(count("v1@exemple.test"), 1, "pas de confirmation = pas de suppression");
+    await boss.post(`${M}/site-web/commentaires/effacer-invite`, { email: "pas-une-adresse", confirm: "1" });
+    assert.equal(one("SELECT COUNT(*) n FROM blog_comments").n >= 2, true);
+    const r = await boss.post(`${M}/site-web/commentaires/effacer-invite`, { email: "V1@Exemple.test", confirm: "1" });
+    assert.equal(r.status, 302);
+    assert.equal(count("v1@exemple.test"), 0, "supprimés (adresse comparée sans tenir compte des majuscules)");
+    assert.equal(count("v2@exemple.test"), 1, "les autres invités ne sont pas touchés");
+  });
+  test("l'opération est journalisée avec le nombre, jamais l'adresse ; sans droit « comments.email » / « comments.delete », refus", async () => {
+    const log = one("SELECT metadata FROM mk_audit_logs WHERE action = 'comment.guest_erased' ORDER BY id DESC LIMIT 1");
+    assert.ok(log); assert.match(log.metadata, /"count":1/); assert.doesNotMatch(log.metadata, /exemple\.test/);
+    for (const role of ["editor", "viewer"]) {
+      const c = await member(role);
+      assert.equal((await c.post(`${M}/site-web/commentaires/effacer-invite`, { email: "v2@exemple.test", confirm: "1" })).status, 403, role);
+    }
+    assert.equal(one("SELECT COUNT(*) n FROM blog_comments WHERE lower(author_email) = 'v2@exemple.test'").n, 1);
+  });
+});
+
+describe("couleurs d'avatar lisibles", () => {
+  test("chaque teinte d'avatar offre au moins 4,5:1 avec la lettre blanche", () => {
+    const src = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "src", "utils", "format.js"), "utf8");
+    const colors = src.match(/AVATAR_COLORS = \[([^\]]*)\]/)[1].match(/#[0-9a-f]{6}/gi);
+    assert.equal(colors.length, 8);
+    const lum = (h) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4))); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+    for (const h of colors) assert.ok(1.05 / (lum(h) + 0.05) >= 4.5, `${h} trop clair pour une lettre blanche`);
+  });
+});

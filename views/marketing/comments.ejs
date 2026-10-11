@@ -15,6 +15,12 @@
     <div class="mk-head"><h1>Commentaires</h1>
       <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/site-web/parametres/commentaires">Réglages</a></div></div>
     <p class="mk-lead">Les commentaires de votre site, sous les articles. Chaque action change réellement l'état du commentaire : un commentaire approuvé est public, les autres restent invisibles pour les visiteurs.</p>
+    <% if (canEmail && canDelete) { %><details class="mk-panel"><summary>Effacer les commentaires d'une personne (droit à l'effacement)</summary>
+      <form action="/marketing/site-web/commentaires/effacer-invite" method="post">
+        <div class="field-group"><label for="cm-erase-email">Adresse e-mail de l'invité</label><input id="cm-erase-email" type="email" name="email" required maxlength="254"></div>
+        <div class="field-group"><label><input type="checkbox" name="confirm" value="1" required> Je confirme la suppression définitive de tous ses commentaires d'invité.</label></div>
+        <button type="submit" class="btn btn-outline btn-sm">Supprimer ses commentaires</button>
+      </form></details><% } %>
     <% if (focus) { %><p class="mk-sub">Commentaires de <a href="<%= focus.url %>" target="_blank" rel="noopener">« <%= focus.title %> »</a> · <a href="<%= tabHref(sub) + keep({ contenu: "" }) %>">Voir tous les contenus</a></p><% } %>
 
     <nav class="mk-tabs mk-cms-tabs" aria-label="Filtrer les commentaires par statut">

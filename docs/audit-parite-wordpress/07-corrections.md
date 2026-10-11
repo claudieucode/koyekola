@@ -15,11 +15,18 @@ Après le rapport, j'ai reçu la consigne « fais tout, puis pousse et déploie 
 
 **Trouvé en testant** : la fonction d'audit existante ignore les actions sans personne connectée. J'ai donc consigné directement la mise en ligne automatique et ses échecs (utilisateur vide = le système). Un de mes tests passait à vide (les invités n'étaient pas autorisés) : je l'ai rendu strict.
 
+## Deuxième lot (après « je te laisse la main, fais ce qui est juste et exhaustif »)
+
+| Anomalie | Ce qui a changé | Fichiers |
+|---|---|---|
+| **AN-12** effacement RGPD (fin) | Écran Commentaires : « Effacer les commentaires d'une personne ». Supprime **définitivement** tous les commentaires d'invité écrits avec une adresse e-mail (comparée sans tenir compte des majuscules), après confirmation cochée ; les réponses remontent d'un niveau ; les membres connectés et les autres invités ne sont pas touchés ; réservé aux droits `comments.email` **et** `comments.delete` ; journalisé avec le nombre, jamais l'adresse. | `src/services/comments.js`, `src/marketing/web/comments.js`, `views/marketing/comments.ejs` |
+| **AN-26** contraste des avatars | 6 teintes d'avatar sur 8 étaient sous 4,5:1 avec la lettre blanche (jusqu'à 2,5:1) ; elles sont assombries (même teinte), test automatique ajouté. | `src/utils/format.js` |
+
 ## Non fait, et pourquoi
 
 | Anomalie | Raison |
 |---|---|
-| **AN-01** rédaction par les autres rôles (**P1**) | **Bloqué par le système de permissions de l'outil** : élargir les droits d'accès à l'éditeur d'articles n'était pas explicitement approuvé. Je n'ai rien contourné. Le code est prêt dans ma tête et prévu : l'éditeur s'ouvrirait aux seuls rôles `articles.write` (tous les articles) ou `articles.edit_own` (les leurs), l'auteur resterait forcé à la personne connectée, publier garderait `articles.publish`, et un article en ligne ne serait pas modifiable sans ce droit. **Il faut ton accord explicite pour que je le fasse.** |
+| **AN-01** rédaction par les autres rôles (**P1**) | **Bloqué par le système de permissions de l'outil, à deux reprises** (même après « je te laisse la main ») : élargir les droits d'accès à l'éditeur d'articles n'était pas explicitement approuvé. Je n'ai rien contourné. Le code est prêt dans ma tête et prévu : l'éditeur s'ouvrirait aux seuls rôles `articles.write` (tous les articles) ou `articles.edit_own` (les leurs), l'auteur resterait forcé à la personne connectée, publier garderait `articles.publish`, et un article en ligne ne serait pas modifiable sans ce droit. **Il faut ton accord explicite pour que je le fasse.** |
 | AN-02 multi-site du blog / médias | Décision D1 : non pour l'instant (chantier lourd, quatre tables). |
 | AN-16 droits du Lecteur | Décision D3 : modifier la table des permissions touche beaucoup de modules ; à valider. |
 | AN-07 copie locale du Page Builder | Le fichier de l'éditeur (`public/js/marketing-editor.js`) est modifié en parallèle par d'autres sessions : je n'y touche pas. |
@@ -38,5 +45,5 @@ Lignes de la matrice qui changent : PG-14, PG-15, AR-10, AR-16, UX-05, CM-05, US
 
 ## Vérifications
 
-- `tests/cms-remediation.test.js` : 19 / 19.
+- `tests/cms-remediation.test.js` : 22 / 22.
 - Suites proches relancées : `cms-pages`, `cms-seo`, `cms-comments`, `cms-articles`, `cms-urls`, `cms-revisions`, `cms-outils`, `cms-interface`, `cms-abtest*`, `seo-core`, `seo-technical`, `audit-corrections` (migrations) : toutes vertes. Seul échec : « les ombres sont teintées de bleu nuit » (`refonte-design`), **déjà en échec avant mes changements** (CSS d'une autre session).

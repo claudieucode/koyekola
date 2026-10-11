@@ -1,4 +1,5 @@
-const AVATAR_COLORS = ["#0e7fa8","#e0507a", "#2fa66b", "#e0912e", "#3d8bf5", "#c2478b", "#17a2a2", "#e2574f"];
+// Palier 23 : teintes assombries pour que la lettre blanche reste lisible (contraste WCAG AA, au moins 4,5:1 ; avant, 6 teintes sur 8 étaient sous le seuil)
+const AVATAR_COLORS = ["#0e7fa8", "#c6476c", "#248254", "#a16821", "#3371c8", "#c2478b", "#117f7f", "#c04b43"];
 
 function avatarColor(username) {
   const str = username || "?";
