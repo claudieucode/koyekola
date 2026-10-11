@@ -51,6 +51,14 @@ describe("résolutions d'image", { skip: SKIP }, () => {
     assert.equal((await get(variantUrl(big, 640))).status, 200, "deuxième accès : servie depuis le disque");
   });
 
+  test("variante manquante : si le fichier d'une version a disparu du disque, la visite suivante le refabrique", async () => {
+    await get(variantUrl(big, 320));
+    const f = path.join(uploadsRoot, "marketing", String(big.path.split("/")[3]), "v", "320", path.basename(big.path).replace(/\.\w+$/, ".webp"));
+    assert.ok(fs.existsSync(f)); fs.unlinkSync(f);
+    const r = await get(variantUrl(big, 320));
+    assert.equal(r.status, 200); assert.equal(r.headers.get("content-type"), "image/webp"); assert.ok(fs.existsSync(f), "refabriquée");
+  });
+
   test("aucun lien cassé : image plus petite que la taille demandée → l'original ; largeur inventée → 404 ; nom inventé → 404", async () => {
     const r = await get(variantUrl(small, 640));
     assert.equal(r.status, 302); assert.equal(r.headers.get("location"), small.path);
@@ -126,5 +134,74 @@ describe("résolutions d'image", { skip: SKIP }, () => {
     const r = await boss.post(`${BASE}/${big2.id}/supprimer`, {});
     assert.ok(r.status < 300, r.text);
     assert.equal(fs.existsSync(f), false, "version supprimée avec l'original");
+  });
+});
+
+describe("résolutions d'image : fond d'image et photo de témoignage", { skip: SKIP }, () => {
+  let srv, boss, anon, db, img, pageId, slug;
+  const variantUrl = (m, w) => m.path.replace(/\/([^/]+)\.\w+$/, `/v/${w}/$1.webp`);
+  before(async () => {
+    srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
+    boss = await loginInstructor(srv); anon = new Client(srv.base); db = srv.db();
+    const buf = await sharp({ create: { width: 1800, height: 1000, channels: 3, background: { r: 10, g: 80, b: 160 } } }).jpeg().toBuffer();
+    const fd = new FormData(); fd.append("file", new Blob([buf], { type: "image/jpeg" }), "fond.jpg");
+    const up = await boss.request(`${BASE}/televerser`, { method: "POST", multipart: fd }); assert.equal(up.status, 201, up.text); img = json(up).media;
+    const created = await boss.post("/marketing/pages", { name: "Fonds", template: "", ouvrir: "editeur" });
+    pageId = Number(created.location.match(/pages\/(\d+)/)[1]);
+    slug = db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(pageId).slug;
+  });
+  after(() => srv.stop());
+  const save = (children) => { const rev = db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(pageId).revision; return boss.request(`/marketing/pages/${pageId}/brouillon`, { method: "PUT", json: { revision: rev, content: { title: "Fonds", sections: [{ type: "layout", children: [{ type: "container", children }] }] } } }); };
+  const publish = async () => { assert.equal((await boss.post(`/marketing/pages/${pageId}/publier.json`, {})).status, 200); return (await anon.get(`/p/${slug}`)).text; };
+
+  test("image de fond : la taille choisie est enregistrée et la feuille de style charge la version ; sans choix, l'original", async () => {
+    let r = await save([{ type: "container", styles: { desktop: { backgroundImage: { src: img.path, size: "large" }, minHeight: "200px" } }, children: [{ type: "text", props: { html: "<p>x</p>" } }] }]);
+    assert.equal(r.status, 200, r.text);
+    assert.equal(JSON.parse(db.prepare("SELECT draft FROM mk_landing_pages WHERE id = ?").get(pageId).draft).sections[0].children[0].children[0].styles.desktop.backgroundImage.size, "large");
+    let html = await publish();
+    assert.ok(html.includes(`url("${variantUrl(img, 1024)}")`), "version 1024 dans le CSS");
+    r = await save([{ type: "container", styles: { desktop: { backgroundImage: { src: img.path }, minHeight: "200px" } }, children: [{ type: "text", props: { html: "<p>x</p>" } }] }]);
+    html = await publish();
+    assert.ok(html.includes(`url("${img.path}")`) && !html.includes("/v/1024/"), "original sans choix");
+    r = await save([{ type: "container", styles: { desktop: { backgroundImage: { src: img.path, size: "enorme" } } }, children: [{ type: "text", props: { html: "<p>x</p>" } }] }]);
+    assert.equal(r.status, 200); assert.equal(JSON.parse(db.prepare("SELECT draft FROM mk_landing_pages WHERE id = ?").get(pageId).draft).sections[0].children[0].children[0].styles.desktop.backgroundImage.size, undefined);
+  });
+
+  test("photo de témoignage : même service", async () => {
+    await save([{ type: "testimonial", props: { text: "Super", name: "Ana", avatar: img.path, size: "thumbnail" } }]);
+    const html = await publish();
+    assert.ok(html.includes(`src="${variantUrl(img, 150)}"`), html.slice(html.indexOf("kw-avatar") - 40, html.indexOf("kw-avatar") + 200));
+    assert.equal((await fetch(srv.base + variantUrl(img, 150))).status, 200);
+  });
+});
+
+describe("widget Image : visionneuse", { skip: SKIP }, () => {
+  let srv, boss, anon, db, img, pageId, slug;
+  before(async () => {
+    srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
+    boss = await loginInstructor(srv); anon = new Client(srv.base); db = srv.db();
+    const buf = await sharp({ create: { width: 900, height: 600, channels: 3, background: { r: 1, g: 2, b: 3 } } }).jpeg().toBuffer();
+    const fd = new FormData(); fd.append("file", new Blob([buf], { type: "image/jpeg" }), "v.jpg");
+    img = json(await boss.request(`${BASE}/televerser`, { method: "POST", multipart: fd })).media;
+    const created = await boss.post("/marketing/pages", { name: "Visionneuse", template: "", ouvrir: "editeur" });
+    pageId = Number(created.location.match(/pages\/(\d+)/)[1]);
+    slug = db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(pageId).slug;
+  });
+  after(() => srv.stop());
+  const render = async (props) => {
+    const rev = db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(pageId).revision;
+    const r = await boss.request(`/marketing/pages/${pageId}/brouillon`, { method: "PUT", json: { revision: rev, content: { title: "V", sections: [{ type: "layout", children: [{ type: "container", children: [{ type: "image", props }] }] }] } } });
+    assert.equal(r.status, 200, r.text);
+    assert.equal((await boss.post(`/marketing/pages/${pageId}/publier.json`, {})).status, 200);
+    return (await anon.get(`/p/${slug}`)).text;
+  };
+  test("visionneuse : l'image d'origine s'ouvre en grand même si une version réduite est affichée ; un lien l'emporte", async () => {
+    let html = await render({ src: img.path, alt: "V", size: "small", lightbox: true });
+    assert.match(html, /data-kw-lightbox/); assert.ok(html.includes(`<a href="${img.path}" class="kw-lb-open"`));
+    assert.ok(html.includes("/v/320/"), "version réduite affichée dans la page");
+    html = await render({ src: img.path, alt: "V", lightbox: true, link: "/catalogue" });
+    assert.ok(!html.includes("kw-lb-open"), "un lien désactive la visionneuse");
+    html = await render({ src: img.path, alt: "V" });
+    assert.ok(!html.includes("kw-lb-open"), "sans réglage : rendu inchangé");
   });
 });

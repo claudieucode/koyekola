@@ -156,10 +156,23 @@
     var show = function (i) { at = (i + links.length) % links.length; var l = links[at], im = l.querySelector("img"); img.src = l.getAttribute("href"); img.alt = im ? im.alt : ""; var fc = l.parentNode.querySelector("figcaption"); cap.textContent = fc ? fc.textContent : img.alt; };
     Array.prototype.forEach.call(links, function (l, i) { l.addEventListener("click", function (e) { e.preventDefault(); show(i); dlg.showModal(); }); });
     close.addEventListener("click", function () { dlg.close(); });
-    pv.addEventListener("click", function () { show(at - 1); }); nx.addEventListener("click", function () { show(at + 1); });
-    dlg.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft") show(at - 1); if (e.key === "ArrowRight") show(at + 1); });
+    // précédente / suivante : les images masquées par un filtre sont sautées
+    var step = function (d) { var n = at; for (var k = 0; k < links.length; k++) { n = (n + d + links.length) % links.length; var fig = links[n].closest(".kw-gallery-item"); if (!fig || !fig.hidden) { show(n); return; } } };
+    pv.addEventListener("click", function () { step(-1); }); nx.addEventListener("click", function () { step(1); });
+    dlg.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft") step(-1); if (e.key === "ArrowRight") step(1); });
     dlg.addEventListener("click", function (e) { if (lbOverlayClose && e.target === dlg) dlg.close(); });
     pv.hidden = nx.hidden = links.length < 2 || !lbArrows;
+  });
+  // Galerie : barre de filtres par étiquette (les images sans étiquette ne s'affichent que sous « Tous »)
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-gal-filters]"), function (bar) {
+    var gal = bar.parentNode;
+    Array.prototype.forEach.call(bar.querySelectorAll(".kw-gal-filter"), function (b) {
+      b.addEventListener("click", function () {
+        var tag = b.getAttribute("data-tag");
+        Array.prototype.forEach.call(bar.querySelectorAll(".kw-gal-filter"), function (o) { var on = o === b; o.classList.toggle("is-on", on); o.setAttribute("aria-pressed", on ? "true" : "false"); });
+        Array.prototype.forEach.call(gal.querySelectorAll(".kw-gallery-item"), function (f) { f.hidden = Boolean(tag) && f.getAttribute("data-tag") !== tag; });
+      });
+    });
   });
   // Menus : sous-menus (bouton, clavier), et menu mobile replié derrière un bouton
   Array.prototype.forEach.call(document.querySelectorAll(".kw-sub-toggle"), function (b) {
