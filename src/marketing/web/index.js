@@ -36,6 +36,13 @@ function createMarketingRouters({ db }) {
       const r = db.prepare(`SELECT site_id FROM ${tbl} WHERE id = ?`).get(Number(m[2]));
       return r ? { siteId: r.site_id } : { siteId: null, missing: true };
     }
+    // Tests A/B (palier 22) : la liste d'UN site (?site=) s'ouvre aux personnes limitées à ce site ; une expérience porte le site de sa page
+    if (req.method === "GET" && p === "/site-web/tests-ab" && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
+    m = /^\/tests-ab\/(\d{1,12})(?:\/|$)/.exec(p);
+    if (m) {
+      const r = db.prepare("SELECT t.site_id FROM mk_page_tests t WHERE t.id = ?").get(Number(m[1]));
+      return r ? { siteId: r.site_id } : { siteId: null, missing: true };
+    }
     // Analytics central (palier 21) : le tableau de bord d'UN site (?site=) s'ouvre aux personnes qui n'ont accès qu'à ce site
     if (req.method === "GET" && /^\/analytics\/global(?:\/export)?$/.test(p) && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
     // Diagnostic d'un événement (palier 19) : le site est celui de l'événement

@@ -215,6 +215,19 @@ function automations(ctx, P, scope) {
 
 // ---------- Tableau de bord ----------
 // Chaque section est calculée à part : une section en erreur est signalée (error), les autres restent affichées — jamais un tableau vide qui masque une panne.
+// Tests A/B (palier 22) : lecture seule des expériences du périmètre — le moteur d'A/B reste propriétaire de leurs résultats et de leur verdict
+function experiments(ctx, P, scope) {
+  const ab = require("../pages/abtests");
+  const all = ab.listTests(ctx).filter((t) => !t.archived);
+  const active = all.filter((t) => ["running", "stopped"].includes(t.status));
+  const endedHere = all.filter((t) => t.status === "completed" && t.stopped_at && Date.parse(`${t.stopped_at.replace(" ", "T")}Z`) >= P.start && Date.parse(`${t.stopped_at.replace(" ", "T")}Z`) < P.end);
+  const rows = active.concat(endedHere).slice(0, 10).map((t) => {
+    const r = ab.results(ctx, t);
+    return { id: t.id, pageId: t.page_id, name: t.name, status: t.status, goal: t.goalKey, exposures: r.exposures.a + r.exposures.b, rateA: r.variants.a.rate, rateB: r.variants.b.rate, verdict: r.verdict.kind, leader: r.verdict.winner || r.verdict.leader || null, anomalies: r.anomalies.filter((x) => x.level !== "info").length };
+  });
+  return { running: all.filter((t) => t.status === "running").length, paused: all.filter((t) => t.status === "stopped").length, endedInPeriod: endedHere.length, rows, noData: !all.length };
+}
+
 function dashboard(ctx, { range, from, to, source, device, model } = {}) {
   checkCtx(ctx);
   const P = resolvePeriod(ctx, { range, from, to });
@@ -230,6 +243,7 @@ function dashboard(ctx, { range, from, to, source, device, model } = {}) {
   run("contacts", () => contacts(ctx, P, scope));
   run("email", () => email(ctx, P, scope));
   run("automations", () => automations(ctx, P, scope));
+  run("experiments", () => experiments(ctx, P, scope));
   const last = ctx.db.prepare("SELECT MAX(occurred_at) t FROM mk_events WHERE organization_id = ?").get(ctx.organizationId).t;
   const lastWeb = ctx.db.prepare("SELECT MAX(occurred_at) t FROM mk_web_events WHERE organization_id = ?").get(ctx.organizationId).t;
   return {
@@ -264,4 +278,4 @@ function deleteConversion(ctx, id) {
   return ctx.db.prepare(`DELETE FROM mk_conversions WHERE id = ? AND organization_id = ?${sc}`).run(Number(id), ctx.organizationId, ...(sc ? [ctx.siteScope] : [])).changes > 0;
 }
 
-module.exports = { dashboard, traffic, conversions, funnels, commerce, contacts, email, automations, scopeOf, createConversion, deleteConversion, BUILTIN_CONVERSIONS };
+module.exports = { dashboard, experiments, traffic, conversions, funnels, commerce, contacts, email, automations, scopeOf, createConversion, deleteConversion, BUILTIN_CONVERSIONS };

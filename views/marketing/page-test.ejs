@@ -2,77 +2,122 @@
 <%
   const pct = (r) => (r === null || r === undefined ? "—" : `${String(r).replace(".", ",")} %`);
   const STATUS_CLASS = { draft: "", running: "mk-status-ok", stopped: "mk-status-warn", completed: "" };
-  const edit = canWrite && test && test.status !== "completed";
+  const edit = canWrite && test && test.status !== "completed" && !test.archived;
+  const money = (c) => (c === null || c === undefined ? "—" : (c / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" }));
+  const p3 = (p) => (p < 0.001 ? "< 0,001" : p.toFixed(3).replace(".", ","));
+  const signed = (r) => (r === null || r === undefined ? "—" : `${r > 0 ? "+" : ""}${(r * 100).toFixed(1).replace(".", ",")} %`);
 %>
     <p class="mk-back"><a href="/marketing/pages/<%= page.id %>">← <%= page.name %></a></p>
-    <div class="mk-head"><div class="mk-builder-title"><h1>Test A/B<%= test ? ` — ${test.name}` : "" %></h1><% if (test) { %><span class="mk-status <%= STATUS_CLASS[test.status] %>"><%= STATUS[test.status] %></span><% } %></div>
+    <div class="mk-head"><div class="mk-builder-title"><h1>Test A/B<%= test ? ` — ${test.name}` : "" %></h1><% if (test) { %><span class="mk-status <%= STATUS_CLASS[test.status] %>"><%= test.archived ? "Archivé" : STATUS[test.status] %></span><% } %></div>
       <% if (test && canWrite) { %><div class="mk-actions">
-        <% if (test.status === "draft" || test.status === "stopped") { %><form action="/marketing/tests-ab/<%= test.id %>/demarrer" method="post"><button type="submit" class="btn btn-primary btn-sm"<%= page.status === "published" ? "" : " disabled" %>><%= test.status === "draft" ? "Démarrer le test" : "Reprendre" %></button></form><% } %>
-        <% if (test.status === "running") { %><form action="/marketing/tests-ab/<%= test.id %>/pause" method="post"><button type="submit" class="btn btn-outline btn-sm">Mettre en pause</button></form><% } %>
-        <% if (test.status === "draft" || test.status === "completed") { %><form action="/marketing/tests-ab/<%= test.id %>/supprimer" method="post"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="Le test et sa version B sont supprimés. La page n'est pas modifiée." data-mk-confirm-title="Supprimer ce test ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form><% } %>
+        <% if (!test.archived && (test.status === "draft" || test.status === "stopped")) { %><form action="/marketing/tests-ab/<%= test.id %>/demarrer" method="post"><button type="submit" class="btn btn-primary btn-sm"<%= check && check.blocking.length ? " disabled" : "" %>><%= test.status === "draft" ? "Démarrer le test" : "Reprendre" %></button></form><% } %>
+        <% if (!test.archived && test.status === "running") { %><form action="/marketing/tests-ab/<%= test.id %>/pause" method="post"><button type="submit" class="btn btn-outline btn-sm">Mettre en pause</button></form><% } %>
+        <% if (!test.archived && test.status === "completed") { %><form action="/marketing/tests-ab/<%= test.id %>/archiver" method="post"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="Le test quitte les listes ; ses résultats sont conservés et il peut être restauré." data-mk-confirm-title="Archiver ce test ?">Archiver</button></form><% } %>
+        <% if (test.archived) { %><form action="/marketing/tests-ab/<%= test.id %>/restaurer" method="post"><button type="submit" class="btn btn-outline btn-sm">Restaurer</button></form><% } %>
+        <% if (!test.archived && test.status === "draft") { %><form action="/marketing/tests-ab/<%= test.id %>/supprimer" method="post"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="Le test brouillon et sa version B sont supprimés. La page n'est pas modifiée." data-mk-confirm-title="Supprimer ce test ?">Supprimer</button></form><% } %>
       </div><% } %>
     </div>
 
+    <% const settingsFields = (t, pfx) => { %>
+            <div class="field-group"><label for="<%= pfx %>-desc">Description (facultative)</label><input id="<%= pfx %>-desc" type="text" name="description" maxlength="500" value="<%= t ? t.description : "" %>" placeholder="Hypothèse : un bouton plus direct fera plus d'inscriptions"></div>
+            <div class="mk-grid-2">
+              <div class="field-group"><label for="<%= pfx %>-conf">Niveau de confiance</label><select id="<%= pfx %>-conf" name="confidence"><% [90, 95, 99].forEach((c) => { %><option value="<%= c %>"<%= (t ? t.confidence : 95) === c ? " selected" : "" %>><%= c %> %<%= c === 95 ? " (usuel)" : "" %></option><% }) %></select>
+                <p class="field-hint">Un écart n'est dit significatif que si la probabilité qu'il soit dû au hasard est inférieure à 100 % moins ce niveau (5 % pour 95 %). Plus c'est exigeant, plus il faut de visiteurs.</p></div>
+              <div class="field-group"><label for="<%= pfx %>-attr">Fenêtre d'attribution (jours)</label><input id="<%= pfx %>-attr" type="number" name="attribution_days" min="1" max="30" step="1" value="<%= t ? t.attribution_days : 7 %>">
+                <p class="field-hint">Une conversion compte pour la version vue si elle survient au plus tard ce nombre de jours après la première exposition. 7 jours couvre un cycle hebdomadaire.</p></div>
+            </div>
+            <div class="field-group"><label for="<%= pfx %>-min">Visiteurs minimum par version (facultatif)</label><input id="<%= pfx %>-min" type="number" name="min_views" min="30" max="100000" step="10" value="<%= t && t.min_views ? t.min_views : "" %>" placeholder="<%= MIN_VIEWS %>">
+              <p class="field-hint">Aucun verdict avant ce nombre de visiteurs dans chaque version (<%= MIN_VIEWS %> par défaut).</p></div>
+    <% }; %>
     <% if (!test) { %>
-      <p class="mk-lead">Une partie des visiteurs de <code>/p/<%= page.slug %></code> verra une version B de la page : un autre titre, un autre bouton, d'autres sections ou une autre mise en page. Chaque visiteur voit la même version toute la journée, sans cookie supplémentaire.</p>
+      <p class="mk-lead">Une partie des visiteurs de <code>/p/<%= page.slug %></code> verra une version B de la page : un autre titre, un autre bouton, d'autres sections ou une autre mise en page. L'adresse reste la même : aucune page en double n'est publiée ni indexée.</p>
+      <% if (step) { %><p class="field-hint">Cette page est l'étape « <%= step.name %> » du tunnel <a href="/marketing/tunnels/<%= step.funnel_id %>"><%= step.funnel_name %></a> : le tunnel reste responsable de l'enchaînement, le test ne remplace que le contenu de l'étape.</p><% } %>
       <% if (page.status !== "published") { %><p class="mk-callout mk-callout-warn"><span>La page doit être en ligne pour être testée : la version A est la version publiée.</span></p><% } %>
       <% if (canWrite) { %>
         <section class="mk-panel" aria-labelledby="ab-new">
           <h2 id="ab-new">Nouveau test</h2>
           <form class="mk-form" action="/marketing/pages/<%= page.id %>/test-ab" method="post">
             <div class="field-group"><label for="ab-name">Nom du test</label><input id="ab-name" type="text" name="name" maxlength="100" placeholder="Nouveau titre du bandeau"></div>
-            <div class="field-group"><label for="ab-goal">Objectif mesuré</label><select id="ab-goal" name="goal"><% Object.entries(GOALS).forEach(([k, l]) => { %><option value="<%= k %>"<%= k === (hasForm ? "signup" : "click") ? " selected" : "" %>><%= l %></option><% }) %></select>
-              <% if (!hasForm) { %><p class="field-hint">Cette page n'a pas de formulaire : mesurez plutôt les clics.</p><% } %></div>
-            <div class="field-group"><label for="ab-traffic">Part des visiteurs qui voient la version B (%)</label><input id="ab-traffic" type="number" name="traffic_b" min="10" max="90" step="5" value="50"></div>
+            <div class="field-group"><label for="ab-goal">Objectif principal</label><select id="ab-goal" name="goal"><% Object.entries(GOALS).forEach(([k, l]) => { %><option value="<%= k %>"<%= k === (hasForm ? "signup" : "click") ? " selected" : "" %>><%= l %></option><% }) %></select>
+              <% if (!hasForm) { %><p class="field-hint">Cette page n'a pas de formulaire : mesurez plutôt les clics.</p><% } %>
+              <p class="field-hint">L'achat est lu dans la boutique ; il n'est attribuable qu'aux visiteurs qui ont accepté le suivi et sont reliés à un contact.</p></div>
+            <div class="field-group"><label for="ab-traffic">Part des visiteurs qui voient la version B (%)</label><input id="ab-traffic" type="number" name="traffic_b" min="10" max="90" step="5" value="50">
+              <p class="field-hint">A reçoit le reste : 50 / 50, 70 / 30, 90 / 10… le total fait toujours 100 %.</p></div>
+            <% settingsFields(null, "ab-n") %>
             <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Créer le test</button></div>
           </form>
         </section>
       <% } %>
     <% } else { %>
+      <% if (test.description) { %><p class="mk-lead"><%= test.description %></p><% } %>
       <section class="mk-panel" aria-labelledby="ab-setup">
         <h2 id="ab-setup">Les deux versions</h2>
+        <% if (step) { %><p class="field-hint">Étape « <%= step.name %> » du tunnel <a href="/marketing/tunnels/<%= step.funnel_id %>"><%= step.funnel_name %></a>.</p><% } %>
         <div class="mk-grid-2">
-          <div><h3 class="mk-journey-sub">Version A</h3><p>La page en ligne, telle que publiée.</p><p><a class="btn btn-outline btn-sm" href="/p/<%= page.slug %>" target="_blank" rel="noopener">Voir la version A</a></p></div>
-          <div><h3 class="mk-journey-sub">Version B</h3>
+          <div><h3 class="mk-journey-sub">Version A — <%= 100 - test.traffic_b %> %</h3><p>La page en ligne, telle que publiée.</p><p><a class="btn btn-outline btn-sm" href="/marketing/pages/<%= page.id %>/apercu" target="_blank" rel="noopener">Aperçu de la version A</a> <a class="btn btn-ghost btn-sm" href="/p/<%= page.slug %>" target="_blank" rel="noopener">Page en ligne</a></p></div>
+          <div><h3 class="mk-journey-sub">Version B — <%= test.traffic_b %> %</h3>
             <% if (test.status === "draft") { %>
               <p>Une copie de la page, à modifier : titre, bouton, sections, mise en page…</p>
-              <% if (variantPage && canWrite) { %><p><a class="btn btn-primary btn-sm" href="/marketing/pages/<%= variantPage.id %>/editeur">Modifier la version B dans l'éditeur</a> <a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= variantPage.id %>/apercu" target="_blank" rel="noopener">Aperçu</a></p><% } %>
+              <% if (variantPage && canWrite) { %><p><a class="btn btn-primary btn-sm" href="/marketing/pages/<%= variantPage.id %>/editeur">Modifier la version B dans l'éditeur</a> <a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= variantPage.id %>/apercu" target="_blank" rel="noopener">Aperçu de la version B</a></p><% } %>
             <% } else { %>
               <p>Figée au démarrage du test (<%= mkh.fdatetime(test.started_at) %>) : elle ne change plus pendant le test.</p>
+              <% if (variantPage) { %><p><a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= variantPage.id %>/apercu" target="_blank" rel="noopener">Aperçu de la version B</a></p><% } %>
             <% } %>
           </div>
         </div>
+        <p class="field-hint">Les aperçus n'enregistrent aucune visite : ils ne comptent jamais dans les résultats.</p>
+        <% if (check) { %>
+          <% check.blocking.forEach((m) => { %><p class="mk-callout mk-callout-warn"><span><strong>Démarrage impossible</strong><%= m %></span></p><% }) %>
+          <% check.warnings.forEach((m) => { %><p class="mk-callout"><span><%= m %></span></p><% }) %>
+        <% } %>
         <% if (edit) { %>
           <form class="mk-form" action="/marketing/tests-ab/<%= test.id %>" method="post">
             <div class="mk-grid-2">
               <div class="field-group"><label for="ab-ename">Nom</label><input id="ab-ename" type="text" name="name" maxlength="100" value="<%= test.name %>"></div>
-              <div class="field-group"><label for="ab-egoal">Objectif</label><select id="ab-egoal" name="goal"<%= test.status === "running" ? " disabled" : "" %>><% Object.entries(GOALS).forEach(([k, l]) => { %><option value="<%= k %>"<%= k === test.goal ? " selected" : "" %>><%= l %></option><% }) %></select><% if (test.status === "running") { %><input type="hidden" name="goal" value="<%= test.goal %>"><% } %></div>
+              <div class="field-group"><label for="ab-egoal">Objectif principal</label><select id="ab-egoal" name="goal"<%= test.status === "running" ? " disabled" : "" %>><% Object.entries(GOALS).forEach(([k, l]) => { %><option value="<%= k %>"<%= k === test.goalKey ? " selected" : "" %>><%= l %></option><% }) %></select><% if (test.status === "running") { %><p class="field-hint">Mettez le test en pause pour changer ses règles.</p><% } %></div>
             </div>
-            <div class="field-group"><label for="ab-etraffic">Part des visiteurs pour la version B (%)</label><input id="ab-etraffic" type="number" name="traffic_b" min="10" max="90" step="5" value="<%= test.traffic_b %>"></div>
+            <div class="field-group"><label for="ab-etraffic">Part des visiteurs pour la version B (%)</label><input id="ab-etraffic" type="number" name="traffic_b" min="10" max="90" step="5" value="<%= test.traffic_b %>"<%= test.status === "running" ? " disabled" : "" %>></div>
+            <% settingsFields(test, "ab-e") %>
             <div class="mk-actions"><button type="submit" class="btn btn-outline btn-sm">Enregistrer les réglages</button></div>
           </form>
         <% } %>
       </section>
 
-      <% if (results) { const v = results.variants, vd = results.verdict; %>
+      <% if (results) { const v = results.variants, vd = results.verdict, c = results.compare, com = results.commerce, purchase = results.goal === "purchase"; %>
         <section class="mk-panel" aria-labelledby="ab-res">
           <h2 id="ab-res">Résultats</h2>
-          <p class="field-hint">Objectif : <%= GOALS[test.goal].toLowerCase() %>. Visiteurs comptés une fois par jour (empreinte anonyme), robots exclus.</p>
+          <p class="field-hint">Objectif principal : <%= GOALS[test.goalKey].toLowerCase() %>. Une personne est comptée une fois ; les robots sont exclus. <%= purchase ? "Population : visiteurs ayant accepté le suivi (identifiés par leur cookie ou leur contact)." : "Taux de conversion = conversions ÷ visiteurs exposés à la version." %> Fenêtre d'attribution : <%= test.attribution_days %> jour(s).</p>
+          <% results.anomalies.forEach((an) => { %><p class="mk-callout<%= an.level === "error" ? " mk-callout-warn" : "" %>"><span><strong><%= an.level === "error" ? "Anomalie de mesure" : an.level === "warn" ? "À vérifier" : "À savoir" %></strong><%= an.message %></span></p><% }) %>
           <div class="mk-table-wrap"><table class="mk-table">
-            <caption class="sr-only">Résultats par version</caption>
-            <thead><tr><th scope="col">Version</th><th scope="col" class="mk-num">Visiteurs</th><th scope="col" class="mk-num">Conversions</th><th scope="col" class="mk-num">Taux de conversion</th></tr></thead>
+            <caption class="sr-only">Comparaison des versions</caption>
+            <thead><tr><th scope="col">Mesure</th><th scope="col" class="mk-num">A (en ligne)</th><th scope="col" class="mk-num">B</th></tr></thead>
             <tbody>
-              <tr><th scope="row">A (en ligne)</th><td class="mk-num"><%= mkh.fmt(v.a.views) %></td><td class="mk-num"><%= mkh.fmt(v.a.conversions) %></td><td class="mk-num"><%= pct(v.a.rate) %></td></tr>
-              <tr><th scope="row">B</th><td class="mk-num"><%= mkh.fmt(v.b.views) %></td><td class="mk-num"><%= mkh.fmt(v.b.conversions) %></td><td class="mk-num"><%= pct(v.b.rate) %></td></tr>
+              <tr><th scope="row">Expositions (pages affichées)</th><td class="mk-num"><%= mkh.fmt(results.exposures.a) %></td><td class="mk-num"><%= mkh.fmt(results.exposures.b) %></td></tr>
+              <% if (purchase) { %><tr><th scope="row">Visiteurs suivis (population mesurée)</th><td class="mk-num"><%= mkh.fmt(v.a.views) %></td><td class="mk-num"><%= mkh.fmt(v.b.views) %></td></tr><% } %>
+              <tr><th scope="row">Conversions<%= purchase ? " (acheteurs)" : "" %></th><td class="mk-num"><%= mkh.fmt(v.a.conversions) %></td><td class="mk-num"><%= mkh.fmt(v.b.conversions) %></td></tr>
+              <tr><th scope="row">Taux de conversion</th><td class="mk-num"><%= pct(v.a.rate) %></td><td class="mk-num"><%= pct(v.b.rate) %></td></tr>
+              <tr><th scope="row">Écart de B par rapport à A</th><td class="mk-num">—</td><td class="mk-num"><%= v.a.views && v.b.views ? signed(c.relative) : "—" %><% if (v.a.views && v.b.views) { %> <span class="mk-sub">(<%= (c.diff * 100).toFixed(2).replace(".", ",") %> point, intervalle <%= (c.diffLow * 100).toFixed(2).replace(".", ",") %> à <%= (c.diffHigh * 100).toFixed(2).replace(".", ",") %>)</span><% } %></td></tr>
+              <% if (com.available && (com.variants.a.units + com.variants.b.units) > 0) { %>
+              <tr><th scope="row">Commandes payées (boutique)</th><td class="mk-num"><%= mkh.fmt(com.variants.a.orders) %></td><td class="mk-num"><%= mkh.fmt(com.variants.b.orders) %></td></tr>
+              <tr><th scope="row">Chiffre d'affaires net</th><td class="mk-num"><%= money(com.variants.a.netCents) %></td><td class="mk-num"><%= money(com.variants.b.netCents) %></td></tr>
+              <tr><th scope="row">Chiffre d'affaires par visiteur suivi</th><td class="mk-num"><%= money(com.variants.a.revenuePerVisitorCents) %></td><td class="mk-num"><%= money(com.variants.b.revenuePerVisitorCents) %></td></tr>
+              <tr><th scope="row">Panier moyen</th><td class="mk-num"><%= money(com.variants.a.avgOrderCents) %></td><td class="mk-num"><%= money(com.variants.b.avgOrderCents) %></td></tr>
+              <% } %>
             </tbody>
           </table></div>
+          <% if (com.available && (com.variants.a.units + com.variants.b.units) > 0) { %><p class="field-hint">Chiffre d'affaires lu dans la boutique (commandes payées moins remboursements), attribué à la version vue en premier dans la fenêtre. Il est décrit, pas testé statistiquement.</p><% } %>
+          <h3 class="mk-journey-sub">Statut statistique</h3>
           <% if (vd.kind === "insufficient") { %>
-            <p class="mk-callout"><span><strong>Pas encore de gagnant : données insuffisantes</strong>Il faut au moins <%= MIN_VIEWS %> visiteurs par version et <%= MIN_CONVERSIONS %> conversions au total<%= vd.needViews ? ` (encore ${vd.needViews} visiteur(s) pour la version la moins vue)` : "" %><%= vd.needConversions ? `, encore ${vd.needConversions} conversion(s)` : "" %>. Les chiffres ci-dessus sont exacts, mais trop peu nombreux pour conclure.</span></p>
-          <% } else if (vd.kind === "no_difference") { %>
-            <p class="mk-callout"><span><strong>Pas de différence démontrée</strong>Avec ces données, l'écart entre A et B peut être dû au hasard (niveau de confiance <%= String(vd.confidence).replace(".", ",") %> %, il faut au moins 95 %). Continuez le test, ou gardez la version de votre choix.</span></p>
+            <p class="mk-callout"><span><strong>Données insuffisantes : pas encore concluant</strong><%= vd.leader ? `Pour l'instant ${vd.leader.toUpperCase()} est en tête, mais cela ne prouve rien. ` : "" %>Il faut au moins <%= results.minViews %> visiteurs par version et <%= MIN_CONVERSIONS %> conversions au total<%= vd.approximation ? ", avec au moins 5 conversions et 5 non-conversions dans chaque version" : "" %><%= vd.needViews ? ` (encore ${vd.needViews} visiteur(s) pour la version la moins vue)` : "" %><%= vd.needConversions ? `, encore ${vd.needConversions} conversion(s)` : "" %>.<%= results.requiredSample ? ` Pour détecter une amélioration de 20 % relatifs au taux actuel, comptez environ ${mkh.fmt(results.requiredSample)} visiteurs par version.` : "" %></span></p>
+          <% } else if (vd.kind === "inconclusive") { %>
+            <p class="mk-callout"><span><strong>Non concluant</strong><%= vd.leader ? `${vd.leader.toUpperCase()} est en tête, mais ` : "" %>l'écart peut être dû au hasard (valeur p = <%= p3(vd.p) %>, il faudrait moins de <%= String(vd.alpha).replace(".", ",") %> pour un niveau de confiance de <%= vd.confidence %> %). Continuez le test jusqu'à la taille prévue, ou gardez la version de votre choix.</span></p>
+          <% } else if (vd.kind === "significant") { %>
+            <p class="mk-callout mk-callout-info"><span><strong>Écart statistiquement significatif, pas encore de gagnant déclaré</strong>La version <%= vd.winner.toUpperCase() %> a un meilleur taux<%= vd.uplift !== null ? ` (${String(vd.uplift).replace(".", ",")} % de mieux)` : "" %> et l'écart est significatif au niveau de confiance de <%= vd.confidence %> % (valeur p = <%= p3(vd.p) %>), mais <%= vd.reasons.join(" et ") %>.</span></p>
           <% } else { %>
-            <p class="mk-callout mk-callout-info"><span><strong>Gagnant : version <%= vd.winner.toUpperCase() %></strong>Taux de conversion supérieur<%= vd.uplift !== null ? ` de ${String(vd.uplift).replace(".", ",")} %` : "" %>, avec un niveau de confiance <%= vd.confidence >= 99.9 ? "supérieur à 99,9" : "de " + String(vd.confidence).replace(".", ",") %> % (différence très probablement réelle).</span></p>
+            <p class="mk-callout mk-callout-info"><span><strong>Gagnant : version <%= vd.winner.toUpperCase() %></strong>Taux de conversion supérieur<%= vd.uplift !== null ? ` de ${String(vd.uplift).replace(".", ",")} %` : "" %> ; écart significatif au niveau de confiance de <%= vd.confidence %> % (valeur p = <%= p3(vd.p) %>), données suffisantes, au moins <%= results.minDays %> jours d'observation et répartition conforme.</span></p>
           <% } %>
+          <p class="field-hint">Méthode : comparaison de deux proportions (test du Z bilatéral). Regarder les résultats en cours de route augmente le risque d'un faux gagnant : décidez à la taille prévue. Détail dans la documentation.</p>
+          <% if (results.allocation.observed) { %><p class="field-hint">Répartition réglée A <%= results.allocation.share.a %> % / B <%= results.allocation.share.b %> % ; observée A <%= pct(results.allocation.observed.a) %> / B <%= pct(results.allocation.observed.b) %>.</p><% } %>
           <% if (results.evolution.length) { %>
             <h3 class="mk-journey-sub">Évolution (14 derniers jours)</h3>
             <div class="mk-table-wrap"><table class="mk-table">
@@ -80,13 +125,13 @@
               <thead><tr><th scope="col">Jour</th><th scope="col" class="mk-num">A : visiteurs · taux</th><th scope="col" class="mk-num">B : visiteurs · taux</th></tr></thead>
               <tbody><% results.evolution.forEach((d) => { %><tr><th scope="row"><%= new Date(d.date).toLocaleDateString("fr-FR") %></th><td class="mk-num"><%= d.a ? `${mkh.fmt(d.a.views)} · ${pct(d.a.rate)}` : "—" %></td><td class="mk-num"><%= d.b ? `${mkh.fmt(d.b.views)} · ${pct(d.b.rate)}` : "—" %></td></tr><% }) %></tbody>
             </table></div>
-          <% } %>
-          <% if (canWrite && (test.status === "running" || test.status === "stopped")) { %>
+          <% } else { %><p class="field-hint">Aucune donnée disponible pour la période affichée.</p><% } %>
+          <% if (canWrite && !test.archived && (test.status === "running" || test.status === "stopped")) { %>
             <h3 class="mk-journey-sub">Terminer le test</h3>
-            <p class="field-hint">Garder A ne change rien à la page. Appliquer B copie la version B dans le brouillon de la page : vous la vérifiez puis la publiez.</p>
+            <p class="field-hint">Garder A ne change rien à la page. Appliquer B copie la version B dans le brouillon de la page : vous la vérifiez puis la publiez. Les résultats sont conservés dans les deux cas.</p>
             <div class="mk-actions">
               <form action="/marketing/tests-ab/<%= test.id %>/terminer" method="post"><input type="hidden" name="winner" value="a"><button type="submit" class="btn btn-outline btn-sm">Garder la version A</button></form>
-              <form action="/marketing/tests-ab/<%= test.id %>/terminer" method="post"><input type="hidden" name="winner" value="b"><button type="submit" class="btn btn-<%= vd.kind === "winner" && vd.winner === "b" ? "primary" : "outline" %> btn-sm"<%- vd.kind === "winner" && vd.winner === "b" ? "" : ' data-mk-confirm="Aucune preuve que la version B fait mieux. L\'appliquer quand même ?" data-mk-confirm-title="Appliquer la version B ?" data-mk-confirm-ok="Appliquer"' %>>Appliquer la version B</button></form>
+              <form action="/marketing/tests-ab/<%= test.id %>/terminer" method="post"><input type="hidden" name="winner" value="b"><button type="submit" class="btn btn-<%= vd.kind === "winner" && vd.winner === "b" ? "primary" : "outline" %> btn-sm"<%- vd.kind === "winner" && vd.winner === "b" ? "" : ' data-mk-confirm="Aucune preuve statistique complète ne désigne B. Appliquer B quand même ?" data-mk-confirm-title="Appliquer la version B ?"' %>>Appliquer la version B</button></form>
             </div>
           <% } %>
           <% if (test.status === "completed") { %><p class="mk-callout"><span><strong>Test terminé</strong>Version retenue : <%= test.winner.toUpperCase() %>.</span></p><% } %>
@@ -96,7 +141,7 @@
     <% if (history.length) { %>
       <section class="mk-panel" aria-labelledby="ab-hist">
         <h2 id="ab-hist">Tests précédents</h2>
-        <ul class="mk-sw-recent"><% history.forEach((h) => { %><li><a href="/marketing/pages/<%= page.id %>/test-ab?test=<%= h.id %>"><%= h.name %></a><span class="mk-sub"><%= STATUS[h.status] %><%= h.winner ? ` · version ${h.winner.toUpperCase()} retenue` : "" %> · <%= mkh.fmt(h.views) %> visiteur(s)</span></li><% }) %></ul>
+        <ul class="mk-sw-recent"><% history.forEach((h) => { %><li><a href="/marketing/pages/<%= page.id %>/test-ab?test=<%= h.id %>"><%= h.name %></a><span class="mk-sub"><%= h.archived ? "Archivé" : STATUS[h.status] %><%= h.winner ? ` · version ${h.winner.toUpperCase()} retenue` : "" %> · <%= mkh.fmt(h.views) %> visiteur(s)</span></li><% }) %></ul>
       </section>
     <% } %>
 <%- include("partials/bottom") %>

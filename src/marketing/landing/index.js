@@ -149,6 +149,7 @@ function deletePage(ctx, id, { detach = false } = {}) {
   requirePage(ctx, id);
   // Palier 18 : une page utilisée par un tunnel actif n'est pas supprimée en silence (refus listant les tunnels, ou détachement explicite)
   require("../funnels").guardPageRemoval(ctx, id, { detach, action: "supprimée" });
+  require("../pages/abtests").guardPageRemoval(ctx, id, "suppression"); // palier 22 : le test A/B (et ses résultats) ne part pas avec la page
   ctx.db.prepare("DELETE FROM mk_landing_pages WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
   audit(ctx, "landing.deleted", "landing", id, {});
 }

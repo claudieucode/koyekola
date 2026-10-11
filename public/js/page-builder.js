@@ -1454,15 +1454,19 @@
   // Modifier un composant (nom, portée) : la réponse du serveur remplace la fiche locale
   function updateComponentMeta(c, body, done) {
     api("POST", "/marketing/site-web/composants/" + c.id, body).then(function (r) {
-      components = components.map(function (x) { return x.id === c.id ? Object.assign({}, x, { name: r.component.name, global: r.component.global, uses: r.component.uses }) : x; });
+      components = components.map(function (x) { return x.id === c.id ? Object.assign({}, x, { name: r.component.name, global: r.component.global, uses: r.component.uses, kind: r.component.kind, hasDraft: r.component.hasDraft, version: r.component.version, blocks: r.component.blocks }) : x; });
       renderComponents(); toast(done);
     }, apiFail);
   }
+  // ---------- Composants réutilisables : enregistrer, retrouver, insérer, modifier, mettre à jour, détacher, supprimer ----------
+  // Deux natures. STANDARD : un modèle, ses insertions sont des copies indépendantes. GLOBAL : une référence partagée ; ses insertions sont des instances LIÉES
+  // (section « composant ») qui affichent la dernière version diffusée. « Tous les sites » est une portée (colonne site_id), distincte de la nature.
+  var plural = function (n, one, many) { return n + " " + (n > 1 ? many : one); };
   function renderComponents() {
-    [[$("[data-pb-components]"), false, "Aucun composant de ce site. Sélectionnez un élément ou une section, puis « Enregistrer comme composant » (inspecteur, onglet Avancé)."],
-     [$("[data-pb-globals]"), true, "Aucun élément global. À l'enregistrement d'un composant, cochez « Utilisable par tous les sites (global) » : il apparaît ici, sur toutes les pages de tous vos sites."]].forEach(function (x) {
+    [[$("[data-pb-components]"), "standard", "Aucun composant standard. Sélectionnez un ou plusieurs blocs dans la page, puis « Enregistrer comme composant » (inspecteur, menu clic droit ou Ctrl/⌘ + K)."],
+     [$("[data-pb-globals]"), "global", "Aucun composant global. Sélectionnez plusieurs blocs, puis « Enregistrer comme composant » et choisissez « Composant global »."]].forEach(function (x) {
       x[0].textContent = "";
-      var all = components.filter(function (c) { return Boolean(c.global) === x[1]; });
+      var all = components.filter(function (c) { return (c.kind || "standard") === x[1]; });
       var list = all.filter(function (c) { return !compQuery || norm(c.name).indexOf(compQuery) >= 0; });
       if (!all.length) x[0].appendChild(h("li", {}, h("p", { class: "pb-hint", text: x[2] })));
       else if (!list.length) x[0].appendChild(h("li", {}, h("p", { class: "pb-hint", text: "Aucun composant ne correspond à la recherche." })));
@@ -1470,32 +1474,223 @@
     });
   }
   function componentRow(c) {
-      var insertSync = function (target) { addItems([{ type: "component", componentId: c.id }], { parent: null, index: target && target.parent === null ? target.index : insertionPoint({ type: "component" }).index }); };
-      var syncBtn = h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: !canWrite, onclick: function () { insertSync(null); } }, "Synchronisé");
-      draggableSource(syncBtn, { type: "component" }, insertSync);
-      return h("li", { class: "pb-comp" },
-        h("div", {}, h("strong", { text: c.name }), h("span", { class: "pb-hint", text: (c.global ? "Global" : "Ce site") + " · " + (c.type === "layout" ? "Section libre" : LEGACY[c.type] ? LEGACY[c.type].label : c.type) + (typeof c.uses === "number" ? " · " + (c.uses ? "utilisé sur " + c.uses + " page" + (c.uses > 1 ? "s" : "") : "pas encore utilisé") : "") })),
-        h("div", { class: "pb-row pb-wrap" }, syncBtn,
-          h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () { fetchComponent(c.id).then(function (comp) { var s = markSection(reId(clone(comp.section))); ensureIds([s]); addItems([s], { parent: null, index: insertionPoint({ type: "layout" }).index }); }, apiFail); } }, "Copie"),
-          h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () {
-            ask("Renommer le composant", [["name", "text", "Nouveau nom"]], function (v) { if (v.name && v.name !== c.name) updateComponentMeta(c, { name: v.name }, "Composant renommé : « " + v.name + " »."); });
-            var input = $("[data-pb-ask-fields] input[name='name']"); if (input) { input.value = c.name; input.select(); }
-          } }, "Renommer"),
-          c.global ? (PAGE.siteId ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, "data-tip": "Le réserver au site « " + (PAGE.siteName || "de cette page") + " » (refusé s'il est utilisé par une page d'un autre site)", onclick: function () { updateComponentMeta(c, { global: false, siteId: PAGE.siteId }, "« " + c.name + " » est maintenant réservé à ce site (onglet Composants)."); } }, "Réserver à ce site") : null)
-            : h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, "data-tip": "Le partager avec tous les sites de l'organisation", onclick: function () { updateComponentMeta(c, { global: true }, "« " + c.name + " » est maintenant global (onglet Globales)."); } }, "Rendre global"),
-          h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () {
-            if (!window.confirm("Supprimer le composant « " + c.name + " » ? (Refusé s'il est encore utilisé par une page.)")) return;
-            api("POST", "/marketing/site-web/composants/" + c.id + "/supprimer", {}).then(function () { components = components.filter(function (x) { return x.id !== c.id; }); renderComponents(); toast("Composant supprimé."); }, apiFail);
-          } }, "Supprimer")));
+    var isGlobal = c.kind === "global";
+    var meta = [];
+    if (c.blocks) meta.push(plural(c.blocks, "bloc", "blocs"));
+    if (isGlobal) meta.push(c.uses ? plural(c.uses, "instance liée", "instances liées") : "aucune instance liée");
+    if (c.global) meta.push("tous les sites");
+    var insertBtn = h("button", { type: "button", class: "btn btn-primary btn-sm", disabled: !canWrite, "data-comp-insert": c.id, "data-tip": isGlobal ? "Insérer une instance liée à ce composant global" : "Insérer une copie indépendante de ce modèle", onclick: function () { insertComponent(c, null); } }, "Insérer");
+    draggableSource(insertBtn, { type: isGlobal ? "component" : "layout" }, function (target) { insertComponent(c, target); });
+    var more = h("button", { type: "button", class: "pb-icon-btn", "data-comp-menu": c.id, "aria-haspopup": "menu", "aria-label": "Actions du composant « " + c.name + " »", "data-tip": "Plus d'actions", onclick: function (e) { var r = e.currentTarget.getBoundingClientRect(); showMenuEntries(componentMenu(c), r.left, r.bottom + 4, { wide: true }); } }, icon("moreHorizontal"));
+    return h("li", { class: "pb-comp pb-comp2", "data-comp": c.id, "data-kind": c.kind || "standard" },
+      h("div", { class: "pb-comp-main" },
+        h("div", { class: "pb-comp-line" }, h("strong", { class: "pb-comp-name", text: c.name }), h("span", { class: "pb-comp-badge is-" + (c.kind || "standard"), text: isGlobal ? "Global" : "Standard" }), c.hasDraft ? h("span", { class: "pb-comp-badge is-draft", "data-tip": "Des modifications ne sont pas encore diffusées : « Mettre à jour » dans l'éditeur du composant", text: "Brouillon" }) : null),
+        h("span", { class: "pb-hint pb-comp-meta", text: meta.join(" · ") })),
+      h("div", { class: "pb-comp-actions" }, insertBtn, more));
   }
-  // Enregistrer un élément ou une section comme composant (un élément est enregistré dans une section libre)
-  function saveAsComponent(it, name, global) {
-    var section = clone(it);
-    if (isNode(it)) section = { type: "layout", children: [section] };
-    delete section.id; delete section.locked;
-    return api("POST", "/marketing/site-web/composants", { name: name, section: section, global: global, siteId: PAGE.siteId }).then(function (r) {
-      components.push(r.component); renderComponents(); toast("Composant « " + r.component.name + " » enregistré (Éléments › " + (r.component.global ? "Globales" : "Composants") + ")."); return r.component;
+  function componentMenu(c) {
+    var isGlobal = c.kind === "global";
+    return [
+      ["Modifier le composant", function () { openComponentEditor(c); }, !canWrite],
+      ["Renommer", function () { renameComponent(c); }, !canWrite],
+      isGlobal ? ["Insérer une copie indépendante", function () { fetchComponent(c.id).then(function (comp) { insertCopy(comp, null, c.name); }, apiFail); }, !canWrite] : null,
+      isGlobal ? ["Pages qui l'utilisent…", function () { showComponentPages(c); }, false] : null,
+      "-",
+      c.global ? (PAGE.siteId ? ["Le réserver au site « " + (PAGE.siteName || "de cette page") + " »", function () { updateComponentMeta(c, { global: false, siteId: PAGE.siteId }, "« " + c.name + " » est maintenant réservé à ce site."); }, !canWrite] : null)
+        : ["Le partager avec tous les sites", function () { updateComponentMeta(c, { global: true }, "« " + c.name + " » est maintenant partagé avec tous les sites."); }, !canWrite],
+      "-",
+      ["Supprimer…", function () { deleteComponentFlow(c); }, !canWrite, "", "is-danger"],
+    ].filter(function (x) { return x !== null; });
+  }
+  function renameComponent(c) {
+    ask("Renommer le composant", [["name", "text", "Nouveau nom"]], function (v) { if (v.name && v.name !== c.name) updateComponentMeta(c, { name: v.name }, "Composant renommé : « " + v.name + " »."); });
+    var input = $("[data-pb-ask-fields] input[name='name']"); if (input) { input.value = c.name; input.select(); }
+  }
+  function openComponentEditor(c) {
+    var go = function () { window.open("/marketing/site-web/composants/" + c.id + "/editeur", "_blank", "noopener"); };
+    if (dirty || saving) saveNow().then(go); else go();
+  }
+  // Insertion : global → instance liée (référence) ; standard → copie indépendante avec de NOUVEAUX identifiants (jamais ceux du modèle)
+  function insertComponent(c, target) {
+    if (!canWrite) return;
+    if (c.kind === "global") {
+      addItems([{ type: "component", componentId: c.id }], { parent: null, index: target && target.parent === null ? target.index : insertionPoint({ type: "component" }).index }, "Insertion : composant global « " + c.name + " »");
+      return;
+    }
+    fetchComponent(c.id).then(function (comp) { insertCopy(comp, target, c.name); }, apiFail);
+  }
+  function insertCopy(comp, target, name) {
+    var sec = markSection(reId(clone(comp.section)));
+    ensureIds([sec]);
+    if (refusesLockedWidget([sec])) return;
+    var sel = selection.length === 1 ? byId(selection[0]) : null;
+    // Un élément ou un conteneur est sélectionné : les blocs du composant s'insèrent à sa place (règles de placement du moteur) ; sinon, une nouvelle section
+    if (!target && sec.type === "layout" && sel && isNode(sel) && sec.children && sec.children.length) addItems(sec.children, undefined, "Insertion : « " + name + " »");
+    else addItems([sec], { parent: null, index: target && target.parent === null ? target.index : insertionPoint({ type: "layout" }).index }, "Insertion : « " + name + " »");
+  }
+  // Instance liée → bloc indépendant : même apparence et même contenu, structure native avec de nouveaux identifiants ; annulable
+  function detachInstance(it) {
+    if (!canWrite || !it || it.type !== "component") return;
+    fetchComponent(it.componentId).then(function (comp) {
+      var sec = comp.section;
+      if (refusesLockedWidget([reId(clone(sec))])) return;
+      nextLabel = "Détacher du composant";
+      change(function () { var l = locate(it.id); if (!l) return false; var copy = markSection(reId(clone(sec))); copy.id = it.id; ensureIds([copy]); if (it.hideOn) copy.hideOn = it.hideOn; if (it.name) copy.name = it.name; l.list[l.index] = copy; selection = [copy.id]; });
+      markCanvasSelection(false);
+      toast("Détaché du composant : ce bloc est maintenant indépendant et entièrement modifiable.");
     }, apiFail);
+  }
+  function showComponentPages(c) {
+    api("GET", "/marketing/site-web/composants/" + c.id + "/instances.json").then(function (r) {
+      compDialog({ title: "Pages qui utilisent « " + c.name + " »", hideConfirm: true, cancelLabel: "Fermer", build: function (body) {
+        if (!r.pages.length) { body.appendChild(h("p", { class: "pb-hint", text: "Aucune page n'utilise ce composant pour l'instant." })); return; }
+        body.appendChild(h("p", { class: "pb-hint", text: plural(r.instances, "instance liée", "instances liées") + " dans " + plural(r.pages.length, "page", "pages") + "." }));
+        body.appendChild(h("ul", { class: "pb-comp-pages" }, r.pages.map(function (p) { return h("li", {}, h("a", { href: "/marketing/pages/" + p.id + "/editeur", target: "_blank", rel: "noopener", text: p.name }), h("span", { class: "pb-hint", text: " · " + plural(p.count || p.live, "instance", "instances") + (p.status === "published" ? " · en ligne" : "") })); })));
+      } });
+    }, apiFail);
+  }
+
+  // ---------- Boîte de dialogue des composants (une seule, réutilisée ; jetons de l'éditeur, clair et sombre) ----------
+  var compDlg = null;
+  function compDialog(o) {
+    if (!compDlg) {
+      compDlg = h("dialog", { class: "pb-modal pb-comp-dlg", "aria-labelledby": "pb-comp-dlg-title" },
+        h("form", { method: "dialog" },
+          h("div", { class: "pb-modal-head" }, h("h2", { id: "pb-comp-dlg-title", "data-cd-title": "" }), h("span", { class: "pb-modal-spacer" }), h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Fermer", "data-cd-x": "" }, icon("close"))),
+          h("div", { class: "pb-comp-dlg-body", "data-cd-body": "" }),
+          h("p", { class: "pb-note is-warn", role: "alert", "data-cd-error": "", hidden: true }),
+          h("div", { class: "pb-comp-dlg-foot" }, h("button", { type: "button", class: "btn btn-ghost btn-sm", "data-cd-cancel": "" }, "Annuler"), h("button", { type: "submit", class: "btn btn-primary btn-sm", "data-cd-ok": "" }, "Valider"))));
+      document.body.appendChild(compDlg);
+      compDlg.querySelector("[data-cd-x]").addEventListener("click", function () { compDlg.close(); });
+      compDlg.querySelector("[data-cd-cancel]").addEventListener("click", function () { compDlg.close(); });
+      compDlg.querySelector("form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var fn = compDlg._confirm; if (!fn) return;
+        var err = compDlg.querySelector("[data-cd-error]"), ok = compDlg.querySelector("[data-cd-ok]");
+        err.hidden = true; ok.disabled = true;
+        new Promise(function (resolve) { resolve(fn()); }).then(function (res) { ok.disabled = false; if (res === false) return; compDlg.close(); }, function (e2) { ok.disabled = false; err.textContent = e2 && e2.message ? e2.message : "L'opération a échoué."; err.hidden = false; });
+      });
+    }
+    compDlg.querySelector("[data-cd-title]").textContent = o.title;
+    var body = compDlg.querySelector("[data-cd-body]"); body.textContent = "";
+    compDlg.querySelector("[data-cd-error]").hidden = true;
+    var ok = compDlg.querySelector("[data-cd-ok]"); ok.hidden = Boolean(o.hideConfirm); ok.disabled = false; ok.textContent = o.confirmLabel || "Valider"; ok.classList.toggle("btn-danger", Boolean(o.danger)); ok.classList.toggle("btn-primary", !o.danger);
+    compDlg.querySelector("[data-cd-cancel]").textContent = o.cancelLabel || "Annuler";
+    compDlg._confirm = o.onConfirm || null;
+    o.build(body);
+    compDlg.showModal();
+    var first = body.querySelector("input:not([type=radio]), input[type=radio]:checked, button, a"); if (first) first.focus();
+  }
+
+  // ---------- Enregistrer comme composant : toujours depuis la sélection réelle ----------
+  // Un composant est UNE section : un seul bloc (section ou élément) ou plusieurs ÉLÉMENTS, enregistrés dans l'ordre du document avec leur structure interne.
+  function componentSource() {
+    var items = selectedItems();
+    if (!items.length) return { error: "Sélectionnez d'abord un ou plusieurs blocs dans la page." };
+    if (items.some(function (x) { return x.type === "component"; })) return { error: "Un composant ne peut pas contenir un autre composant (instance liée) : détachez-la d'abord." };
+    var picked = {}; items.forEach(function (x) { picked[x.id] = 1; });
+    var top = items.filter(function (x) { var l = locate(x.id); return l && !l.ancestors.some(function (a) { return picked[a.id]; }); });
+    var order = {}, n = 0; walk(function (x) { order[x.id] = n++; });
+    top.sort(function (a, b) { return order[a.id] - order[b.id]; });
+    var section;
+    if (top.length === 1 && !isNode(top[0])) section = clone(top[0]);
+    else if (top.every(isNode)) section = { type: "layout", children: top.map(clone) };
+    else return { error: "Un composant est une seule section : sélectionnez soit une section, soit des éléments (pas plusieurs sections)." };
+    delete section.id; delete section.locked;
+    var count = 0; var countIn = function (list) { (list || []).forEach(function (x) { count++; countIn(x.children); }); };
+    if (section.type === "layout") countIn(section.children); else count = 1;
+    return { section: section, top: top, count: count, signature: top.map(function (x) { return x.id; }).join(",") };
+  }
+  function structureRows(top) {
+    var rows = [];
+    var visit = function (x, depth) {
+      if (rows.length >= 8) return;
+      var kids = kidsOf(x) || [];
+      rows.push({ label: nameOf(x), depth: depth, icon: blockIcon(x) });
+      kids.forEach(function (k) { visit(k, depth + 1); });
+    };
+    top.forEach(function (x) { visit(x, 0); });
+    return rows;
+  }
+  function openSaveComponent() {
+    if (!canWrite) return;
+    var src = componentSource();
+    if (src.error) { toast(src.error, true); return; }
+    var multiple = src.top.length > 1;
+    var nameInput = h("input", { type: "text", id: "pb-comp-dlg-name", name: "name", maxlength: "80", required: true, autocomplete: "off", value: multiple ? "" : nameOf(src.top[0]) === typeLabel(src.top[0]) ? "" : nameOf(src.top[0]), placeholder: "Nom du composant" });
+    var kindStd = h("input", { type: "radio", name: "kind", value: "standard", id: "pb-comp-kind-std", checked: true });
+    var kindGlo = h("input", { type: "radio", name: "kind", value: "global", id: "pb-comp-kind-glo" });
+    compDialog({ title: "Enregistrer comme composant", confirmLabel: "Enregistrer", build: function (body) {
+      body.appendChild(h("div", { class: "pb-field" }, h("label", { for: "pb-comp-dlg-name", text: "Nom du composant" }), nameInput));
+      var rows = structureRows(src.top);
+      body.appendChild(h("div", { class: "pb-comp-sum" },
+        h("p", { class: "pb-comp-sum-title", text: multiple ? plural(src.top.length, "bloc sélectionné", "blocs sélectionnés") + " · " + plural(src.count, "élément", "éléments") : plural(src.count, "élément", "éléments") + " · " + (isNode(src.top[0]) ? typeLabel(src.top[0]) : "Section") }),
+        h("ul", { class: "pb-comp-tree", "aria-label": "Structure enregistrée" }, rows.map(function (r) { return h("li", { style: "padding-left:" + (r.depth * 14) + "px" }, icon(r.icon), h("span", { text: r.label })); })),
+        src.count > rows.length ? h("p", { class: "pb-hint", text: "… et " + (src.count - rows.length) + " autre(s) élément(s) imbriqué(s)." }) : null));
+      if (multiple) {
+        body.appendChild(h("fieldset", { class: "pb-comp-kinds" }, h("legend", { text: "Type de composant" }),
+          h("label", { class: "pb-comp-kind", for: "pb-comp-kind-std" }, kindStd, h("span", {}, h("strong", { text: "Composant standard" }), h("small", { text: "Un modèle réutilisable : chaque insertion est une copie indépendante." }))),
+          h("label", { class: "pb-comp-kind", for: "pb-comp-kind-glo" }, kindGlo, h("span", {}, h("strong", { text: "Composant global" }), h("small", { text: "Une référence partagée : ses instances liées reçoivent les mises à jour du composant principal." })))));
+      } else body.appendChild(h("p", { class: "pb-hint", text: "Composant standard : un modèle réutilisable, chaque insertion est une copie indépendante." }));
+    }, onConfirm: function () {
+      var nm = nameInput.value.trim();
+      if (!nm) throw new Error("Donnez un nom au composant.");
+      if (components.some(function (x) { return norm(x.name) === norm(nm); })) throw new Error("Un composant porte déjà ce nom.");
+      var now = componentSource();   // la sélection a pu changer pendant que la fenêtre était ouverte
+      if (now.error || now.signature !== src.signature) throw new Error("La sélection a changé : fermez cette fenêtre et recommencez.");
+      return saveAsComponent(now.section, nm, multiple && kindGlo.checked ? "global" : "standard").then(function () { return true; }, function (err) { throw err; });
+    } });
+    nameInput.focus();
+  }
+  function saveAsComponent(section, name, kind) {
+    return api("POST", "/marketing/site-web/composants", { name: name, section: section, kind: kind, global: !PAGE.siteId, siteId: PAGE.siteId }).then(function (r) {
+      r.component.uses = 0; components.push(r.component); renderComponents();
+      toast("Composant « " + r.component.name + " » enregistré (Éléments › " + (kind === "global" ? "Globales" : "Composants") + ").");
+      return r.component;
+    });
+  }
+
+  // ---------- Supprimer : choix explicite quand des instances liées existent ----------
+  function deleteComponentFlow(c) {
+    api("GET", "/marketing/site-web/composants/" + c.id + "/instances.json").then(function (r) {
+      var mode = h("input", { type: "radio", name: "mode", value: "detach", id: "pb-comp-del-detach", checked: true });
+      var modeAll = h("input", { type: "radio", name: "mode", value: "instances", id: "pb-comp-del-all" });
+      compDialog({ title: "Supprimer ce composant ?", confirmLabel: "Supprimer", danger: true, build: function (body) {
+        if (!r.instances) { body.appendChild(h("p", { text: "« " + c.name + " » n'est utilisé par aucune page. Il sera supprimé de la bibliothèque." })); return; }
+        body.appendChild(h("p", { text: "« " + c.name + " » possède encore " + plural(r.instances, "instance liée", "instances liées") + " dans " + plural(r.pages.length, "page", "pages") + " (" + r.pages.slice(0, 4).map(function (p) { return "« " + p.name + " »"; }).join(", ") + (r.pages.length > 4 ? "…" : "") + "). Que faire ?" }));
+        body.appendChild(h("fieldset", { class: "pb-comp-kinds" }, h("legend", { class: "sr-only", text: "Sort des instances" }),
+          h("label", { class: "pb-comp-kind", for: "pb-comp-del-all" }, modeAll, h("span", {}, h("strong", { text: "Supprimer le composant et ses instances" }), h("small", { text: "Retire le composant et ses " + plural(r.instances, "instance liée", "instances liées") + ". Les blocs indépendants ne sont pas touchés." }))),
+          h("label", { class: "pb-comp-kind", for: "pb-comp-del-detach" }, mode, h("span", {}, h("strong", { text: "Conserver les instances comme blocs indépendants" }), h("small", { text: "Supprime le composant de la bibliothèque ; chaque instance garde son apparence et son contenu, sans lien." })))));
+        body.appendChild(h("p", { class: "pb-hint", text: "Cette action n'est pas annulable : l'historique d'annulation de cette page est réinitialisé." }));
+      }, onConfirm: function () { return performComponentDelete(c, r.instances ? (modeAll.checked ? "instances" : "detach") : null); } });
+    }, apiFail);
+  }
+  // Serveur d'abord (une transaction : tout ou rien), puis la page ouverte : son brouillon est converti ici
+  function performComponentDelete(c, mode) {
+    var needSection = mode === "detach" ? fetchComponent(c.id) : Promise.resolve(null);
+    var pid = /^\d+$/.test(String(PAGE.id)) ? Number(PAGE.id) : null;
+    return needSection.then(function (comp) {
+      return api("POST", "/marketing/site-web/composants/" + c.id + "/supprimer", { mode: mode, skipDraftOfPage: pid }).then(function (r) {
+        if (r.revisions && pid && r.revisions[pid]) revision = r.revisions[pid];
+        if (mode) {
+          var swap = function (list) {
+            for (var i = list.length - 1; i >= 0; i--) {
+              if (list[i].type !== "component" || list[i].componentId !== c.id) continue;
+              if (mode === "instances") list.splice(i, 1);
+              else { var copy = markSection(reId(clone(comp.section))); copy.id = list[i].id || copy.id; if (list[i].hideOn) copy.hideOn = list[i].hideOn; if (list[i].name) copy.name = list[i].name; list[i] = copy; }
+            }
+          };
+          swap(content.sections);
+          ensureIds(content.sections);
+        }
+        components = components.filter(function (x) { return x.id !== c.id; });
+        past = []; future = []; pastLabels = []; futureLabels = []; lastKey = null; // une suppression de bibliothèque n'est pas annulable : on ne laisse aucune étape qui recréerait une référence orpheline
+        selection = selection.filter(function (id) { return byId(id); });
+        updateHistoryButtons(); renderTree(); renderInspector(); scheduleRender(); scheduleSave(); renderComponents();
+        toast(mode === "detach" ? "Composant supprimé ; ses " + plural(r.instances, "instance est devenue indépendante", "instances sont devenues indépendantes") + "." : mode === "instances" ? "Composant et " + plural(r.instances, "instance supprimés", "instances supprimés") + "." : "Composant supprimé.");
+        return true;
+      });
+    });
   }
 
   // ---------- Champs de l'inspecteur ----------
@@ -3669,17 +3864,9 @@
       items.length > 1 ? b("Grouper", groupSelected, { disabled: !canWrite || locked }) : null,
       single && ["group", "stack", "container"].indexOf(it.type) >= 0 ? b("Dissocier", ungroupSelected, { disabled: !canWrite || locked }) : null,
       b("Supprimer", removeSelected, { class: "btn btn-danger btn-sm", disabled: !canWrite || locked })));
-    if (single && canWrite && it.type !== "component") {
-      var form = h("form", { class: "pb-field" });
-      var nameInput = h("input", { type: "text", id: "pb-comp-name", maxlength: "80", required: true, placeholder: "Nom du composant" });
-      var global = h("input", { type: "checkbox" });
-      form.appendChild(h("p", { class: "pb-sub", text: "Composant réutilisable" }));
-      form.appendChild(h("label", { for: "pb-comp-name", text: "Enregistrer comme composant" }));
-      form.appendChild(nameInput);
-      if (PAGE.siteId) form.appendChild(h("label", { class: "pb-check" }, global, " Utilisable par tous les sites (global)"));
-      form.appendChild(h("button", { type: "submit", class: "btn btn-outline btn-sm" }, "Enregistrer le composant"));
-      form.addEventListener("submit", function (e) { e.preventDefault(); saveAsComponent(it, nameInput.value, !PAGE.siteId || global.checked).then(function () { nameInput.value = ""; }); });
-      box.appendChild(form);
+    if (canWrite && !IS_COMPONENT && items.every(function (x) { return x.type !== "component"; })) {
+      box.appendChild(h("p", { class: "pb-sub", text: "Composant réutilisable" }));
+      box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", "data-comp-save": "", onclick: openSaveComponent }, "Enregistrer comme composant…"));
     }
   }
   // « Afficher sur » : écrans sur lesquels l'élément est visible (au moins un doit rester)
@@ -4104,29 +4291,15 @@
   }
   // Composant synchronisé : sa source se modifie ici, pour TOUTES les pages qui l'affichent
   var compSaveTimer = null;
+  // Instance liée : on ne modifie pas son contenu ici (il vient du composant principal) ; on peut l'ouvrir, la détacher, voir ses pages
   function componentInspector(box, s) {
     var c = components.find(function (x) { return x.id === s.componentId; });
-    box.appendChild(h("p", { class: "pb-note", text: "Composant synchronisé « " + (c ? c.name : "?") + " » : le modifier ici modifie sa SOURCE, donc toutes les pages qui l'utilisent (enregistré automatiquement ; non concerné par « Annuler »)." }));
-    var holder = h("div", {}, h("p", { class: "pb-hint", text: "Chargement du composant…" }));
-    box.appendChild(holder);
-    fetchComponent(s.componentId).then(function (comp) {
-      holder.textContent = "";
-      var sec = comp.section;
-      if (sec.type === "layout") holder.appendChild(h("p", { class: "pb-hint", text: "Composant fait d'éléments : détachez-le pour modifier ses éléments dans cette page (il devient une copie indépendante)." }));
-      else (F[sec.type] || []).forEach(function (fd) {
-        if (fd[1] === "repeat" || fd[1] === "image") return;
-        holder.appendChild(textField(fd[2], fd[1] === "lines" ? (sec[fd[0]] || []).join("\n") : sec[fd[0]], function (v) {
-          sec[fd[0]] = fd[1] === "lines" ? v.split("\n") : v;
-          clearTimeout(compSaveTimer);
-          compSaveTimer = setTimeout(function () { api("POST", "/marketing/site-web/composants/" + comp.id, { section: sec }).then(function () { toast("Source du composant enregistrée (toutes les pages)."); scheduleRender(); }, apiFail); }, 800);
-        }, { multiline: fd[1] === "textarea" || fd[1] === "markdown" || fd[1] === "lines", disabled: !canWrite || lockedDeep(s.id) }));
-      });
-      if (canWrite) holder.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () {
-        if (refusesLockedWidget([reId(clone(sec))])) return;
-        change(function () { var l = locate(s.id); var copy = markSection(reId(clone(sec))); copy.id = s.id; ensureIds([copy]); if (s.hideOn) copy.hideOn = s.hideOn; if (s.name) copy.name = s.name; l.list[l.index] = copy; });
-        toast("Composant détaché : cette section est maintenant une copie indépendante.");
-      } }, "Détacher (copie indépendante)"));
-    }, function (err) { holder.textContent = ""; holder.appendChild(h("p", { class: "pb-note is-warn", text: err.message })); });
+    box.appendChild(h("p", { class: "pb-note", "data-comp-linked": "", text: "Instance liée au composant global « " + (c ? c.name : "?") + " » : son contenu vient du composant principal. Une mise à jour du composant principal s'y applique après « Mettre à jour »." }));
+    var row = h("div", { class: "pb-row pb-wrap" });
+    row.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: !c, "data-comp-main": "", onclick: function () { if (c) openComponentEditor(c); } }, "Accéder au composant principal"));
+    if (canWrite) row.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", "data-comp-detach": "", "data-tip": "Remplace cette instance par un bloc indépendant, sans lien avec le composant", onclick: function () { detachInstance(s); } }, "Détacher du composant"));
+    box.appendChild(row);
+    box.appendChild(h("p", { class: "pb-hint", text: "« Modifier cette instance » = la détacher : le bloc devient alors entièrement modifiable ici, sans toucher au composant." }));
   }
 
   // ---------- Barre contextuelle (selon la sélection) ----------
@@ -6707,6 +6880,8 @@
       [items.some(function (z) { return z.hidden; }) ? "Afficher" : "Masquer", function () { setFlag(selection.slice(), "hidden", !items.some(function (z) { return z.hidden; })); }, !canWrite, "Ctrl+Maj+H"],
       [items.some(function (z) { return z.locked; }) ? "Déverrouiller" : "Verrouiller", function () { setFlag(selection.slice(), "locked", !items.some(function (z) { return z.locked; })); }, !canWrite, "Ctrl+Maj+L"],
       items.length > 1 ? ["Grouper", groupSelected, !canWrite || locked, "Ctrl+G"] : null,
+      !IS_COMPONENT && items.every(function (x) { return x.type !== "component"; }) ? ["Enregistrer comme composant…", openSaveComponent, !canWrite] : null,
+      items.length === 1 && items[0].type === "component" ? ["Détacher du composant", function () { detachInstance(items[0]); }, !canWrite] : null,
       items.length === 1 && ["group", "stack", "container"].indexOf(it.type) >= 0 ? ["Dissocier", ungroupSelected, !canWrite || locked, "Ctrl+Maj+G"] : null,
       l && l.parent ? ["Sélectionner le parent", function () { select(l.parent.id); }, false] : null,
       ["Monter", function () { nudge(-1); }, !canWrite || locked, "Alt+↑"],
@@ -6768,6 +6943,8 @@
       { label: "Annuler", run: undo, off: !past.length }, { label: "Rétablir", run: redo, off: !future.length },
       { label: "Accordéons : un seul ouvert", run: function () { accSetMode("one"); } }, { label: "Accordéons : plusieurs ouverts", run: function () { accSetMode("many"); } }, { label: "Accordéons : fermer ceux situés en dessous", run: function () { accSetMode("below"); } },
       { label: "Dupliquer la sélection", run: duplicateSelected, off: !has || !canWrite }, { label: "Supprimer la sélection", run: removeSelected, off: !has || !canWrite },
+      { label: "Enregistrer comme composant…", run: openSaveComponent, off: !selection.length || !canWrite || IS_COMPONENT },
+      { label: "Détacher du composant", run: function () { var x = selection.length === 1 ? byId(selection[0]) : null; if (x && x.type === "component") detachInstance(x); }, off: !canWrite || selection.length !== 1 || (byId(selection[0]) || {}).type !== "component" },
       { label: "Grouper", run: groupSelected, off: selection.length < 2 || !canWrite }, { label: "Dissocier", run: ungroupSelected, off: !has || !canWrite },
       { label: "Masquer / afficher", run: function () { setFlag(selection.slice(), "hidden", !selectedItems().some(function (z) { return z.hidden; })); }, off: !has || !canWrite },
       { label: "Verrouiller / déverrouiller", run: function () { setFlag(selection.slice(), "locked", !selectedItems().some(function (z) { return z.locked; })); }, off: !has || !canWrite },
@@ -6956,6 +7133,16 @@
     var el = $("[data-pb-status]");
     // Composant (en-tête, pied de page…) : pas de brouillon ni de publication, chaque enregistrement s'applique à toutes les pages
     if (IS_COMPONENT) {
+      var cm = PAGE.component || {};
+      var staged = cm.role === "component";   // composants ordinaires : brouillon + « Mettre à jour » ; en-tête / pied / variantes : diffusion directe
+      var pubBtn = $("[data-pb-publish]");
+      if (staged) {
+        el.textContent = cm.hasDraft ? "Modifications non diffusées" : "À jour";
+        el.classList.toggle("is-live", !cm.hasDraft);
+        if (pubBtn) { pubBtn.hidden = !canWrite || !cm.hasDraft; pubBtn.textContent = cm.kind === "global" ? "Mettre à jour…" : "Mettre à jour le modèle"; }
+        ["[data-pb-preview]", "#pb-tab-page"].forEach(function (sel) { var x = $(sel); if (x) x.style.display = "none"; });
+        return;
+      }
       el.textContent = "Composant · appliqué à toutes les pages";
       el.classList.add("is-live");
       [".pb-publish-group", "[data-pb-preview]", "#pb-tab-page"].forEach(function (sel) { var x = $(sel); if (x) x.style.display = "none"; });
@@ -6969,8 +7156,33 @@
     pub.textContent = live ? "Publier les modifications" : "Publier";
     if (PAGE.abTest) el.textContent = "Version B d'un test A/B";
   }
+  // Éditeur d'un composant ordinaire : « Mettre à jour » diffuse le brouillon. Global → aperçu des pages touchées avant propagation ; standard → seul le modèle change.
+  function publishComponentUpdate(btn) {
+    var cm = PAGE.component, pid = null;
+    clearTimeout(saveTimer);
+    btn.disabled = true;
+    (dirty ? save() : Promise.resolve()).then(function () {
+      if (dirty || blocked) { toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
+      return api("GET", "/marketing/site-web/composants/" + cm.id + "/instances.json").then(function (r) {
+        var apply = function () {
+          return api("POST", "/marketing/site-web/composants/" + cm.id + "/mettre-a-jour", {}).then(function (res) {
+            cm.hasDraft = false; cm.version = res.component.version; updateStatus();
+            toast(cm.kind === "global" ? (r.instances ? "Composant mis à jour : " + plural(r.instances, "instance liée a reçu", "instances liées ont reçu") + " la nouvelle version." : "Composant mis à jour (aucune instance liée pour l'instant).") : "Modèle mis à jour : les futures insertions utiliseront cette version ; les copies déjà insérées ne changent pas.");
+            return true;
+          });
+        };
+        if (cm.kind !== "global" || !r.instances) return apply();
+        compDialog({ title: "Mettre à jour le composant global", confirmLabel: "Mettre à jour", build: function (body) {
+          body.appendChild(h("p", { text: "Cette mise à jour sera appliquée à " + plural(r.instances, "instance liée", "instances liées") + ", dans " + plural(r.pages.length, "page", "pages") + " :" }));
+          body.appendChild(h("ul", { class: "pb-comp-pages" }, r.pages.map(function (p) { return h("li", {}, h("span", { text: p.name }), h("span", { class: "pb-hint", text: " · " + plural(p.count, "instance", "instances") + (p.status === "published" ? " · en ligne" : "") })); })));
+          body.appendChild(h("p", { class: "pb-hint", text: "Les blocs détachés du composant ne sont pas modifiés. Tout est appliqué en une seule fois." }));
+        }, onConfirm: apply });
+      });
+    }).then(function () { btn.disabled = false; }, function (e) { btn.disabled = false; apiFail(e); });
+  }
   $("[data-pb-publish]").addEventListener("click", function () {
     var btn = this;
+    if (IS_COMPONENT) { if (PAGE.component && PAGE.component.role === "component") publishComponentUpdate(btn); return; }
     if (window.pbQuality) window.pbQuality.beforePublish();
     if (editing) commitEdit();
     btn.disabled = true;
