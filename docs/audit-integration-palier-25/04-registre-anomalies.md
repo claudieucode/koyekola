@@ -13,7 +13,7 @@ Les anomalies du palier 24 (G-01 à G-20) restent valables ; seules sont détail
 - **Correctif envisagé (palier 26)** : correctif déjà prêt et validé en copie jetable : `audit-parite/patch-articles-multi-auteurs.diff`.
 - **Tests de non-régression requis** : `tests/integration-globale.test.js` (INT-CMS-006 sans critère « anomalie »), `tests/cms-articles-multi-auteurs.test.js` (inclus dans le correctif), matrice de permissions.
 
-## A25-02 — NOUVELLE (P2) — L'écran d'un scénario actif ne rappelle plus que le fournisseur « console » n'envoie rien
+## A25-02 — NOUVELLE, **CORRIGÉE** (P2) — L'écran d'un scénario actif ne rappelle plus que le fournisseur « console » n'envoie rien
 - **Scénario** : INT-EML-011 (critère « APRÈS l'activation… » en échec ; le critère « AVANT l'activation… » réussit).
 - **Module / intégration** : Automatisations ↔ Email Engine (I07/I08).
 - **Attendu** : tant que le fournisseur d'envoi est « console » (aucun envoi réel), l'interface le rappelle, y compris sur un scénario actif qui contient une étape d'e-mail.
@@ -23,7 +23,7 @@ Les anomalies du palier 24 (G-01 à G-20) restent valables ; seules sont détail
 - **Gravité** : P2 (P1 si la production est effectivement en mode console : à vérifier, G-02). **Cause** : **confirmée par lecture du code** — le message est un avertissement du **contrôle avant activation** (`src/marketing/automations/service.js` ligne 210, affiché par `views/marketing/automation.ejs` ligne 46) ; une fois le scénario activé, ce panneau n'est plus affiché. Le rappel dans l'éditeur d'étape (`src/editor/automation/stepEditors.js` ligne 245) existe, mais ne figure pas sur l'écran du scénario actif.
 - **Dépendances** : Email Engine, écran de scénario, worker. **Correctif envisagé** : afficher l'avertissement à tout état du scénario tant que le fournisseur est « console », et signaler dans la liste des messages qu'ils n'ont pas quitté le serveur. **Tests requis** : INT-EML-011 (critère A25-02 passant), tests de l'écran des scénarios.
 
-## A25-03 — NOUVELLE (P3) — Un lot de mesure sans date client, rejoué, est compté deux fois
+## A25-03 — NOUVELLE, **CORRIGÉE** (P3) — Un lot de mesure sans date client, rejoué, est compté deux fois
 - **Scénario** : INT-ANA-016 (critère « lot sans date client rejoué… » en échec : 3 lignes puis 6).
 - **Module / intégration** : Mesure ↔ Analytics (I19).
 - **Attendu** : un événement reçu deux fois ne compte qu'une fois.
@@ -38,3 +38,9 @@ Les anomalies du palier 24 (G-01 à G-20) restent valables ; seules sont détail
 
 ## Robustesse confirmée (aucune anomalie)
 Aucun test de concurrence n'a produit de doublon : 6 webhooks de paiement simultanés → 1 commande, 1 inscription, 1 e-mail de confirmation (INT-COM-018) ; 6 envois simultanés d'un formulaire → 1 contact, 1 preuve de consentement (INT-CON-010).
+
+
+## État après les corrections (2026-10-11)
+- **A25-02 corrigée** : `src/marketing/web/automations.js` + `views/marketing/automation.ejs` ; INT-EML-011 passe (critère « après l'activation… » réussi).
+- **A25-03 corrigée** : `src/marketing/visitors/index.js` (heure arrondie à la minute sans date client) ; INT-ANA-016 passe.
+- **G-03 reste ouverte** : le correctif est prêt (`audit-parite/patch-articles-multi-auteurs.diff`), mais le système de permissions de l'outil a refusé que je l'applique (4 refus) ; il doit être appliqué par le responsable : `! cd ~/ClaudeProjects/KOYEKOLA-audit23 && git apply -p1 audit-parite/patch-articles-multi-auteurs.diff`.

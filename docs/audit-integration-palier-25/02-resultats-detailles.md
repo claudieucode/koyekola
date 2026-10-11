@@ -1,6 +1,6 @@
 # Résultats détaillés (palier 25)
 
-*Source : `docs/audit-integration-palier-25/resultats/resultats-scenarios.json`, écrit par l'exécution réelle de `tests/integration-globale.test.js` (2026-10-11T07:16:12.769Z). Chaque critère est un contrôle exécuté ; un critère « ÉCHEC REPRODUIT » reproduit un défaut documenté dans `04-registre-anomalies.md`.*
+*Source : `docs/audit-integration-palier-25/resultats/resultats-scenarios.json`, écrit par l'exécution réelle de `tests/integration-globale.test.js` (2026-10-11T07:22:50.101Z). Chaque critère est un contrôle exécuté ; un critère « ÉCHEC REPRODUIT » reproduit un défaut documenté dans `04-registre-anomalies.md`.*
 
 ## INT-ABT-014 — mesure et A/B : affectation collante, exposition seulement si la page est affichée, conversion associée, robots ignorés
 
@@ -21,7 +21,7 @@
 
 ## INT-ANA-016 — mesure d'audience : seuls les visiteurs consentants sont comptés, rejeu sans doublon, tableau de bord = lignes en base
 
-- **Statut** : **RÉUSSI PARTIELLEMENT** (6 critères réussis, 1 en échec reproduit)
+- **Statut** : **RÉUSSI — PREUVES COMPLÈTES** (7 critères réussis)
 - **Modules** : Mesure, Consentement, Analytics · **Mode** : RÉEL en test
 
 | # | Critère | Résultat | Preuve observée | Anomalie |
@@ -30,9 +30,9 @@
 | 2 | un visiteur sans consentement n'enregistre rien | réussi |  |  |
 | 3 | un robot (User-Agent) n'enregistre rien même avec les cookies | réussi |  |  |
 | 4 | un lot identique reçu deux fois ne double pas les lignes (déduplication) | réussi | lignes ajoutées : 9 |  |
-| 5 | un lot SANS date client rejoué est compté une seule fois (observation : l'index de déduplication inclut l'heure d'arrivée) | **ÉCHEC REPRODUIT** | lignes : 3 puis 6 | A25-03 |
-| 6 | Analytics : 3 visiteurs, 3 sessions, 6 pages vues, 9 événements pour ces visites | réussi | {"visitors":4,"sessions":4,"pageViews":10,"events":15} |  |
-| 7 | les compteurs restent distincts (visiteurs ≠ sessions ≠ pages vues ≠ événements) | réussi | {"visitors":4,"sessions":4,"pageViews":10,"events":15} |  |
+| 5 | un lot SANS date client rejoué dans la même minute est compté une seule fois | réussi | lignes : 3 puis 3 |  |
+| 6 | Analytics : 3 visiteurs, 3 sessions, 6 pages vues, 9 événements pour ces visites | réussi | {"visitors":4,"sessions":4,"pageViews":8,"events":12} |  |
+| 7 | les compteurs restent distincts (visiteurs ≠ sessions ≠ pages vues ≠ événements) | réussi | {"visitors":4,"sessions":4,"pageViews":8,"events":12} |  |
 
 ## INT-AUT-010 — un événement réel déclenche un scénario exécuté par le worker, une seule fois, et le consentement est respecté
 
@@ -256,7 +256,7 @@
 
 ## INT-EML-011 — e-mail : le consentement et la désinscription décident des destinataires ; messages enregistrés avec leur état (fournisseur « console » = aucun envoi réel)
 
-- **Statut** : **RÉUSSI PARTIELLEMENT** (12 critères réussis, 1 en échec reproduit)
+- **Statut** : **SIMULÉ UNIQUEMENT (critères réussis sur un faux fournisseur)** (13 critères réussis)
 - **Modules** : Formulaires, Contact Core, Automatisations, Email Engine, Consentements, Worker · **Mode** : SIMULÉ
 
 | # | Critère | Résultat | Preuve observée | Anomalie |
@@ -268,7 +268,7 @@
 | 5 | un scénario avec une étape d'e-mail est enregistré sans étape incomplète | réussi | {"ok":true,"incomplete":[]} |  |
 | 6 | avant l'activation, l'écran du scénario prévient que le fournisseur « console » n'envoie rien | réussi | Fournisseur « console » : rien ne sera réellement envoyé (réglages d&#39;envoi) |  |
 | 7 | le scénario est activé | réussi |  |  |
-| 8 | APRÈS l'activation, l'écran du scénario rappelle encore que le fournisseur « console » n'envoie rien | **ÉCHEC REPRODUIT** | l'avertissement a disparu de l'écran du scénario actif | A25-02 |
+| 8 | APRÈS l'activation, l'écran du scénario rappelle encore que le fournisseur « console » n'envoie rien | réussi | l'avertissement a disparu de l'écran du scénario actif |  |
 | 9 | avec consentement prouvé : un message est enregistré (une seule fois) | réussi | [{"status":"sent","provider":"console"}] |  |
 | 10 | état observé : « sent » par le fournisseur « console » (SIMULATION : rien n'est réellement transmis) | réussi | [{"status":"sent","provider":"console"}] |  |
 | 11 | sans consentement : AUCUN message n'est enregistré pour cette adresse | réussi | contact : [] |  |

@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-11T07:16:12.769Z",
+ "generatedAt": "2026-10-11T07:22:50.101Z",
  "environment": "serveur de test jetable (tests/helpers.js)",
  "results": [
   {
@@ -699,7 +699,7 @@
     "Worker"
    ],
    "mode": "SIMULE",
-   "status": "RÉUSSI PARTIELLEMENT",
+   "status": "SIMULÉ UNIQUEMENT (critères réussis sur un faux fournisseur)",
    "criteria": [
     {
      "label": "l'audience joignable contient l'abonné avec preuve de consentement",
@@ -745,9 +745,9 @@
     },
     {
      "label": "APRÈS l'activation, l'écran du scénario rappelle encore que le fournisseur « console » n'envoie rien",
-     "ok": false,
+     "ok": true,
      "evidence": "l'avertissement a disparu de l'écran du scénario actif",
-     "anomaly": "A25-02"
+     "anomaly": null
     },
     {
      "label": "avec consentement prouvé : un message est enregistré (une seule fois)",
@@ -1124,7 +1124,7 @@
     "Analytics"
    ],
    "mode": "REEL-TEST",
-   "status": "RÉUSSI PARTIELLEMENT",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
    "criteria": [
     {
      "label": "3 visiteurs consentants : 9 lignes de mesure enregistrées",
@@ -1151,21 +1151,21 @@
      "anomaly": null
     },
     {
-     "label": "un lot SANS date client rejoué est compté une seule fois (observation : l'index de déduplication inclut l'heure d'arrivée)",
-     "ok": false,
-     "evidence": "lignes : 3 puis 6",
-     "anomaly": "A25-03"
+     "label": "un lot SANS date client rejoué dans la même minute est compté une seule fois",
+     "ok": true,
+     "evidence": "lignes : 3 puis 3",
+     "anomaly": null
     },
     {
      "label": "Analytics : 3 visiteurs, 3 sessions, 6 pages vues, 9 événements pour ces visites",
      "ok": true,
-     "evidence": "{\"visitors\":4,\"sessions\":4,\"pageViews\":10,\"events\":15}",
+     "evidence": "{\"visitors\":4,\"sessions\":4,\"pageViews\":8,\"events\":12}",
      "anomaly": null
     },
     {
      "label": "les compteurs restent distincts (visiteurs ≠ sessions ≠ pages vues ≠ événements)",
      "ok": true,
-     "evidence": "{\"visitors\":4,\"sessions\":4,\"pageViews\":10,\"events\":15}",
+     "evidence": "{\"visitors\":4,\"sessions\":4,\"pageViews\":8,\"events\":12}",
      "anomaly": null
     }
    ],

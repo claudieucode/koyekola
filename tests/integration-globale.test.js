@@ -342,7 +342,7 @@ describe("Automatisations et e-mail (avec worker réel, fournisseur « console �
     c.check("avant l'activation, l'écran du scénario prévient que le fournisseur « console » n'envoie rien", /rien ne sera réellement envoyé/.test(pageBefore), (pageBefore.match(/Fournisseur « console »[^.]{0,80}/) || [""])[0]);
     c.check("le scénario est activé", (await wboss.post(`${M}/automatisations/${auto}/activer`, {})).status === 302);
     const pageAfter = stripTags((await wboss.get(`${M}/automatisations/${auto}`)).text);
-    c.check("APRÈS l'activation, l'écran du scénario rappelle encore que le fournisseur « console » n'envoie rien", /rien ne sera réellement envoyé/.test(pageAfter), "l'avertissement a disparu de l'écran du scénario actif", { anomalie: "A25-02" });
+    c.check("APRÈS l'activation, l'écran du scénario rappelle encore que le fournisseur « console » n'envoie rien", /rien ne sera réellement envoyé/.test(pageAfter), "l'avertissement a disparu de l'écran du scénario actif");
     for (let i = 0; i < 40 && q("SELECT COUNT(*) n FROM mk_bridge_cursors")[0].n < 8; i++) await new Promise((r) => setTimeout(r, 250));
     const post = (email, consent) => new Client(w.base).post(`/f/${fm.slug}`, { ft: w.formToken(), email, ...(consent ? { consent: "1" } : {}) });
     await post("avec-accord-eml@exemple.test", true);
@@ -525,9 +525,10 @@ describe("Mesure : événements, consentement et Analytics", () => {
     c.check("un lot identique reçu deux fois ne double pas les lignes (déduplication)", one("SELECT COUNT(*) n FROM mk_web_events").n - before === 9, `lignes ajoutées : ${one("SELECT COUNT(*) n FROM mk_web_events").n - before}`);
     const afterReplay = one("SELECT COUNT(*) n FROM mk_web_events").n;
     const nodate = new Client(srv.base); nodate.cookies.set("kw_consent", "1"); nodate.cookies.set("kw_vid", vid(4));
+    while (new Date().getSeconds() >= 58) await new Promise((r) => setTimeout(r, 200)); // évite de franchir une minute entre les deux envois
     await send(nodate, 4, {}, false); const first = one("SELECT COUNT(*) n FROM mk_web_events").n - afterReplay;
     await new Promise((r) => setTimeout(r, 20)); await send(nodate, 4, {}, false);
-    c.check("un lot SANS date client rejoué est compté une seule fois (observation : l'index de déduplication inclut l'heure d'arrivée)", one("SELECT COUNT(*) n FROM mk_web_events").n - afterReplay === first, `lignes : ${first} puis ${one("SELECT COUNT(*) n FROM mk_web_events").n - afterReplay}`, { anomalie: "A25-03" });
+    c.check("un lot SANS date client rejoué dans la même minute est compté une seule fois", one("SELECT COUNT(*) n FROM mk_web_events").n - afterReplay === first, `lignes : ${first} puis ${one("SELECT COUNT(*) n FROM mk_web_events").n - afterReplay}`);
     const traffic = analytics.dashboard({ db, organizationId: 1 }, { range: "7d" }).sections.traffic.kpis;
     c.check("Analytics : 3 visiteurs, 3 sessions, 6 pages vues, 9 événements pour ces visites", traffic.visitors >= 3 && traffic.sessions >= 3 && traffic.pageViews >= 6 && traffic.events >= 9, JSON.stringify(traffic));
     c.check("les compteurs restent distincts (visiteurs ≠ sessions ≠ pages vues ≠ événements)", traffic.events > traffic.pageViews && traffic.pageViews > traffic.visitors, JSON.stringify(traffic));

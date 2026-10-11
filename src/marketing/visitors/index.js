@@ -45,7 +45,8 @@ function record(db, organizationId, { visitorId, sessionId, events, userAgent = 
     const m = /^\/p\/([a-z0-9-]{1,60})\/?$/.exec(path);
     const page = m ? pageIdOf.get(organizationId, m[1]) : null;
     // Date envoyée par le navigateur : acceptée seulement si plausible (dans les 10 dernières minutes)
-    const at = Number.isInteger(e.at) && e.at <= now && now - e.at < 10 * 60000 ? e.at : now;
+    // Sans date plausible (client qui n'est pas le script du site), l'heure est arrondie à la minute : un lot rejoué dans la même minute reste dédupliqué (palier 25, A25-03)
+    const at = Number.isInteger(e.at) && e.at <= now && now - e.at < 10 * 60000 ? e.at : Math.floor(now / 60000) * 60000;
     const ref = cut(e.r, 120).toLowerCase();
     const done = insert.run(organizationId, visitorId, sid, contactId, e.t, path, page ? page.id : null, page ? page.site_id ?? null : null, cut(e.x, 120), /^[a-z0-9.-]+$/.test(ref) ? ref : "",
       cut(e.us, 80), cut(e.um, 80), cut(e.uc, 80), DEVICES.includes(e.d) ? e.d : "", at);

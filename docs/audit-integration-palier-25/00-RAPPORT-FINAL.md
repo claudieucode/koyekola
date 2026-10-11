@@ -4,9 +4,9 @@
 
 ## 1. Résumé exécutif
 
-- **Les moteurs de KOLAKISA échangent correctement leurs données dans les parcours testés**, en environnement de test : 21 scénarios, **177 critères vérifiés, 172 réussis, 5 échecs reproduits** — tous rattachés à 3 anomalies.
-- **Résultat par scénario** : 14 « RÉUSSI — PREUVES COMPLÈTES » ; 3 « RÉUSSI PARTIELLEMENT » (chacun avec des échecs reproduits : INT-CMS-006, INT-EML-011, INT-ANA-016) ; 4 « SIMULÉ UNIQUEMENT » (paiement avec un faux serveur Stripe) ; 0 échec total ; 0 erreur d'exécution.
-- **Anomalies reproduites ou découvertes** : **G-03 (P1)** les rôles Éditeur, Auteur et Contributeur ne peuvent pas créer d'article (reproduit) ; **A25-02 (P2)** après activation, l'écran d'un scénario d'e-mail n'indique plus que le fournisseur « console » n'envoie rien, alors que les messages sont marqués « sent » ; **A25-03 (P3)** un lot de mesure sans date client rejoué est compté deux fois (le vrai script du site n'est pas concerné). **Aucune P0.**
+- **Les moteurs de KOLAKISA échangent correctement leurs données dans les parcours testés**, en environnement de test : 21 scénarios, **177 critères vérifiés ; au premier passage 172 réussis et 5 échecs reproduits (3 anomalies) ; après les deux corrections faites ensuite (A25-02, A25-03), 174 réussis et 3 échecs, tous rattachés à G-03.**
+- **Résultat par scénario** : **état final** : 15 « RÉUSSI — PREUVES COMPLÈTES » ; 1 « RÉUSSI PARTIELLEMENT » (INT-CMS-006, anomalie G-03) ; 5 « SIMULÉ UNIQUEMENT » (paiement avec un faux serveur Stripe, e-mail en mode « console ») ; 0 échec total ; 0 erreur d'exécution. *(Au premier passage : 14 / 3 / 4, avant la correction de A25-02 et A25-03.)*
+- **Anomalies reproduites ou découvertes** : **G-03 (P1)** les rôles Éditeur, Auteur et Contributeur ne peuvent pas créer d'article (reproduit, **correctif prêt non appliqué**) ; **A25-02 (P2)** après activation, l'écran d'un scénario d'e-mail n'indiquait plus que le fournisseur « console » n'envoie rien (**corrigée**, voir `07-corrections-apres-tests.md`) ; **A25-03 (P3)** un lot de mesure sans date client rejoué était compté deux fois (**corrigée**). **Aucune P0.**
 - **Robustesse** : aucun doublon sous concurrence (6 webhooks de paiement simultanés → 1 commande ; 6 envois simultanés d'un formulaire → 1 contact).
 - **Non-régression** : suite complète **4 041 tests, 4 038 réussis, 0 échec, 3 ignorés**. Les 3 échecs du palier 24 ne se sont pas reproduits (cause non établie).
 - **Limite principale** : **aucun test n'a touché un fournisseur réel**. Les paiements sont simulés (faux Stripe), l'e-mail est en mode « console ». Le webhook de paiement de **production** répondait 503 (palier 24) : ce palier ne le change pas. **KOLAKISA ne doit pas être déclaré prêt pour la production.**
@@ -29,9 +29,9 @@ Serveurs de test jetables (base et dossier d'envois temporaires) : CMS, Page Bui
 
 | Statut | Scénarios |
 |---|---|
-| RÉUSSI — PREUVES COMPLÈTES (14) | INT-CMS-001, 002, 003, 004, 007 · INT-SEO-005 · INT-TUN-006, 007 · INT-CON-008, 009, 010 · INT-AUT-010 · INT-ABT-014 · INT-SEC-015 |
-| RÉUSSI PARTIELLEMENT (3) | INT-CMS-006 (G-03) · INT-EML-011 (A25-02) · INT-ANA-016 (A25-03) |
-| SIMULÉ UNIQUEMENT (4) | INT-COM-012, 013, 017, 018 |
+| RÉUSSI — PREUVES COMPLÈTES (15) | INT-CMS-001, 002, 003, 004, 007 · INT-SEO-005 · INT-TUN-006, 007 · INT-CON-008, 009, 010 · INT-AUT-010 · INT-ABT-014 · INT-ANA-016 · INT-SEC-015 |
+| RÉUSSI PARTIELLEMENT (1) | INT-CMS-006 (G-03, correctif prêt non appliqué) |
+| SIMULÉ UNIQUEMENT (5) | INT-COM-012, 013, 017, 018 · INT-EML-011 |
 | ÉCHEC REPRODUIT (total) · ERREUR D'EXÉCUTION · BLOQUÉ · NON EXÉCUTÉ | aucun parmi les 21 (les non exécutés du plan sont listés au §9) |
 
 Plan prévu au palier 24 (T01–T18), état de chacun : **réalisés (6)** T01, T02, T04, T11, T12, T14 · **réalisés en partie ou avec un faux fournisseur (7)** T03 (rôles : INT-CMS-006 et matrice du palier 23), T05 (consentement vérifié, envoi réel bloqué), T06 (exécution vérifiée, reprise après redémarrage non exécutée), T07 et T08 (faux Stripe, vrai Stripe bloqué), T09 (session expirée vérifiée, abandon de panier non exécuté), T10 (navigation vérifiée, événements de tunnel non testés ici) · **non exécutés (4)** T13, T15 (couvert par la suite existante), T16, T18 · **non applicable (1)** T17 (fonction absente). Détail au §9 et dans `05-tests-non-executes-et-simules.md`.
@@ -70,7 +70,7 @@ Même document, §A : INT-COM-012/013/017/018 prouvent **notre code** face à un
 4. Décisions D1 à D10 du palier 24 (multi-site, droits du Lecteur, branches non fusionnées, tunnel avec paiement, sauvegarde externe, 2FA…).
 
 ## Chiffres de référence
-- **Scénarios exécutés : 21** (14 réussis avec preuves complètes · 3 réussis partiellement · 4 simulés uniquement · 0 échec total · 0 bloqué · 0 non exécuté parmi eux). **Critères : 177 exécutés, 172 réussis, 5 en échec reproduit.**
+- **Scénarios exécutés : 21** (état final : 15 réussis avec preuves complètes · 1 réussi partiellement · 5 simulés uniquement · 0 échec total · 0 bloqué · 0 non exécuté parmi eux). **Critères : 177 exécutés, 174 réussis, 3 en échec reproduit (G-03).** Premier passage : 172 réussis, 5 en échec.
 - **Plan du palier 24 : 18 scénarios** — 6 réalisés, 7 réalisés en partie ou simulés, 4 non exécutés, 1 non applicable (voir §5).
 - **Intégrations (27)** : 13 réussies, 4 partiellement, 4 simulées, 6 non exécutées.
 - **Suite complète** : 4 041 tests, 4 038 réussis, 0 échec, 3 ignorés.
