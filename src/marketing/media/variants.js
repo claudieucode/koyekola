@@ -36,6 +36,17 @@ const EXTS = ["jpg", "png", "webp", "avif"];
 const QUALITY = 80;
 
 const available = () => Boolean(sharp);
+// Essai réel (pas seulement « le module se charge ») : fabrique une minuscule image WebP. Résultat gardé en mémoire ; utilisé par /sante pour vérifier la production.
+let selfTestResult = null;
+async function selfTest() {
+  if (selfTestResult !== null) return selfTestResult;
+  if (!sharp) return (selfTestResult = false);
+  try {
+    const out = await sharp({ create: { width: 8, height: 6, channels: 3, background: { r: 10, g: 120, b: 200 } } }).resize({ width: 4 }).webp().toBuffer();
+    selfTestResult = out.length > 0 && out.subarray(8, 12).toString("latin1") === "WEBP";
+  } catch { selfTestResult = false; }
+  return selfTestResult;
+}
 const isLocal = (src) => SRC_RE.test(String(src || ""));
 const variantUrl = (src, key) => {
   const m = SRC_RE.exec(String(src || ""));
@@ -141,4 +152,4 @@ function middleware(req, res, next) {
   }).catch(original);
 }
 
-module.exports = { SIZES, KEYS, SIZE_CHOICES, available, isLocal, variantUrl, sourceFor, offered, adaptive, dimensions, imageSource, purge, middleware };
+module.exports = { selfTest, SIZES, KEYS, SIZE_CHOICES, available, isLocal, variantUrl, sourceFor, offered, adaptive, dimensions, imageSource, purge, middleware };

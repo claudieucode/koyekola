@@ -217,3 +217,14 @@ describe("widget Image : visionneuse", { skip: SKIP }, () => {
     assert.ok(!html.includes("kw-lb-open"), "sans réglage : rendu inchangé");
   });
 });
+
+describe("santé du redimensionnement", { skip: SKIP }, () => {
+  test("/sante annonce que les versions d'images fonctionnent réellement (essai d'une vraie image)", async () => {
+    const srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
+    try {
+      const r = await fetch(srv.base + "/sante");
+      const body = await r.json();
+      assert.equal(r.status, 200); assert.equal(body.statut, "ok"); assert.equal(body.versions_images, "ok");
+    } finally { await srv.stop(); }
+  });
+});

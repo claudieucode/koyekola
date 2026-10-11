@@ -154,9 +154,10 @@ app.use(require("./src/services/tools/maintenance").middleware); // mode mainten
 app.get("/favicon.ico", (req, res) => res.redirect(301, "/favicon.svg"));
 
 // Vérification rapide que le site et sa base répondent (utile après un déploiement)
-app.get("/sante", (req, res) => {
+app.get("/sante", async (req, res) => {
   const { c } = db.prepare("SELECT COUNT(*) c FROM courses").get();
-  res.json({ statut: "ok", formations: c });
+  // « versions_images » : le redimensionnement des images (versions réduites des widgets) fonctionne réellement sur ce serveur ; sinon les images d'origine sont servies
+  res.json({ statut: "ok", formations: c, versions_images: (await require("./src/marketing/media/variants").selfTest()) ? "ok" : "indisponible" });
 });
 
 app.use(seoRoutes);
