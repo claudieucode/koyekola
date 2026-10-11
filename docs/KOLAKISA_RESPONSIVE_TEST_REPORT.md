@@ -9,7 +9,7 @@
 | Rejeu : `elementor-parite-5`, `format-mise-en-page-navigateur`, `inspecteur-navigateur`, `layout-apercu-immediat` | 14 réussis, 1 échec = le test de compatibilité « Ordinateur masque aussi le grand écran » (cause : ma correction, annulée depuis) |
 
 ## Échecs et interruptions (à lire)
-* Au premier passage du lot de régression, plusieurs fichiers ont échoué (`inspecteur-navigateur`, `layout-*`, `responsive-*`, `format-mise-en-page-navigateur`) **après que j'ai arrêté à la main un test de 20 minutes** (`controles-matrice-navigateur`, inclus par erreur dans le lot). Le rejeu groupé de quatre d'entre eux est vert (hors le test lié à ma correction). Je n'ai **pas** relancé tous les fichiers touchés : `responsive-isolation`, `responsive-apercu`, `layout-parite`, `layout-priorite` n'ont été rejoués qu'avant le lot (verts) et pas après.
+* Au premier passage du lot de régression, plusieurs fichiers ont échoué (`inspecteur-navigateur`, `layout-*`, `responsive-*`, `format-mise-en-page-navigateur`) **après que j'ai arrêté à la main un test de 20 minutes** (`controles-matrice-navigateur`, inclus par erreur dans le lot). Le rejeu groupé de quatre d'entre eux est vert (hors le test lié à ma correction). Après annulation de ma correction, j'ai rejoué ensemble `responsive-isolation`, `responsive-apercu`, `layout-parite`, `layout-priorite`, `layout-apercu-immediat` : **25 / 25 verts**.
 * `controles-matrice-navigateur` : interrompu volontairement (non exécuté dans ce lot ; vert à la mission 2).
 * Test numérique intermittent de la mission 2 : fait partie du lot, vert ; **cause toujours inconnue**.
 
