@@ -1,0 +1,237 @@
+diff -ruN a/src/marketing/web/articles.js b/src/marketing/web/articles.js
+--- a/src/marketing/web/articles.js	2026-10-10 22:35:00.000000000 -0700
++++ b/src/marketing/web/articles.js	2026-10-10 22:35:16.000000000 -0700
+@@ -15,7 +15,9 @@
+ // sensibles (publier, supprimer définitivement) gardent leur droit propre, sans variante « les siens ».
+ const ownerOf = (id) => (require("../../config/database").prepare("SELECT author_id FROM posts WHERE id = ?").get(id) || {}).author_id;
+ const mayManage = (req, id) => req.mk.can("articles.write") || (req.mk.can("articles.edit_own") && ownerOf(id) === req.session.user.id);
+-const isCreator = (req) => Boolean(req.session.user && req.session.user.role === "formateur");
++// Peut rédiger : le compte créateur, ou toute personne qui a « articles.write » (tous les articles) ou « articles.edit_own » (les siens) — l'éditeur s'ouvre alors pour elle
++const isCreator = (req) => Boolean(req.session.user && (req.session.user.role === "formateur" || req.mk.can("articles.write") || req.mk.can("articles.edit_own")));
++const canCreate = (req, res, next) => (req.mk.can("articles.write") || req.mk.can("articles.edit_own") ? next() : res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." }));
+ const BLOG_BASE = "/blog"; // adresse publique des articles (une seule constante : le préfixe pourra devenir un réglage)
+ 
+ module.exports = () => {
+@@ -44,11 +46,10 @@
+   router.get(/^\/site-web\/articles\/(brouillons|programmes|publies|corbeille)\/?$/, need("articles.read"), (req, res, next) => showList(SUBS[req.params[0]])(req, res, next));
+ 
+   // ----- Création : titre → vrai article en brouillon → éditeur -----
+-  router.get("/site-web/articles/ajouter", need("articles.write"), (req, res) => {
++  router.get("/site-web/articles/ajouter", canCreate, (req, res) => {
+     res.render("marketing/article-new", { title: "Nouvel article", active: "articles/ajouter", isCreator: isCreator(req), BASE });
+   });
+-  router.post("/site-web/articles", need("articles.write"), (req, res, next) => {
+-    if (!isCreator(req)) { flash(req, "error", "La rédaction des articles se fait dans l'éditeur du blog, réservé au compte créateur."); return res.redirect(BASE); }
++  router.post("/site-web/articles", canCreate, (req, res, next) => {
+     try {
+       const post = articles.createDraft({ title: req.body.title, userId: req.session.user.id });
+       res.redirect(`/formateur/blog/${post.id}/modifier`);
+diff -ruN a/src/routes/blog.js b/src/routes/blog.js
+--- a/src/routes/blog.js	2026-10-10 22:35:00.000000000 -0700
++++ b/src/routes/blog.js	2026-10-10 22:35:16.000000000 -0700
+@@ -432,8 +432,47 @@
+ 
+ // ---------- Éditeur (formateur) ----------
+ 
+-// Vérifié AVANT la réception d'un fichier : un élève ne peut rien envoyer
+-router.use("/formateur/blog", requireInstructor);
++// Vérifié AVANT la réception d'un fichier : un élève ne peut rien envoyer.
++// Le compte créateur garde tous les droits. Les AUTRES membres de l'équipe n'ouvrent que de quoi RÉDIGER (créer, modifier, aperçu, sauvegarde
++// automatique, versions), selon leurs droits : « articles.write » = tous les articles ; « articles.edit_own » = seulement les leurs. Publier reste
++// un droit à part (« articles.publish ») ; tout le reste de l'espace du blog (liste du créateur, SEO, apparence, IA, bibliothèque) reste réservé au créateur.
++const WRITER_ROUTES = [
++  /^\/nouveau$/, /^\/api\/brouillon$/, /^\/api\/(?:liens|suggestions|seo-check|termes)$/,
++  /^\/\d+\/(?:modifier|apercu|autosave|autosave\/abandonner|versions|corbeille)$/, /^\/\d+\/versions\/\d+(?:\/restaurer)?$/, /^\/\d+\/corbeille\/[^/]+$/,
++];
++function requireBlogAccess(req, res, next) {
++  const user = req.session.user;
++  if (!user) return res.redirect(`/connexion?redirect=${encodeURIComponent(req.originalUrl)}`);
++  if (user.role === "formateur") return next();
++  const asJson = wantsJson(req) || req.path.startsWith("/api/");
++  const deny = (message) => (asJson ? res.status(403).json({ error: message }) : res.status(403).render("error", { message }));
++  const orgId = marketingOrgId();
++  const can = (permission) => Boolean(orgId && cmsAccess.can(user.id, permission, { organizationId: orgId }));
++  const all = can("articles.write"), own = can("articles.edit_own");
++  if (!all && !own) return deny("Réservé aux personnes autorisées à rédiger des articles.");
++  if (!WRITER_ROUTES.some((re) => re.test(req.path))) return deny("Réservé au compte créateur.");
++  if (req.path === "/api/termes" && req.method !== "GET" && !can("taxonomies.write")) return deny("Vous n'avez pas la permission de créer des catégories ou des étiquettes.");
++  const m = /^\/(\d+)\//.exec(req.path);
++  const canPublish = can("articles.publish");
++  if (m) {
++    const post = db.prepare("SELECT author_id, status FROM posts WHERE id = ?").get(Number(m[1]));
++    if (post) {
++      if (!all && post.author_id !== user.id) return deny("Cet article appartient à une autre personne.");
++      // Restaurer une version modifie l'article : refusé sur un article en ligne à qui ne peut pas publier
++      if (/\/restaurer$/.test(req.path) && !canPublish && ["published", "scheduled"].includes(post.status)) return deny("Cet article est en ligne : seule une personne autorisée à publier peut restaurer une version.");
++    }
++  }
++  req.blogActor = { all, own, canPublish };
++  next();
++}
++// Rédacteur sans droit de publication : jamais d'article mis en ligne ou programmé par lui, et pas de modification d'un article déjà en ligne
++function guardActorStatus(req, wanted, current) {
++  const actor = req.blogActor;
++  if (!actor || actor.canPublish) return;
++  const live = (status) => status === "published" || status === "scheduled";
++  if (live(wanted.status) || (current && live(current.status))) throw new UserError("Votre rôle ne publie pas : enregistrez l'article en brouillon, une personne autorisée à publier le mettra en ligne. Un article déjà en ligne ne se modifie pas sans ce droit.");
++}
++router.use("/formateur/blog", requireBlogAccess);
+ 
+ const oneLine = (value, max) => String(value || "").replace(/[\r\n\u2028\u2029]+/g, " ").trim().slice(0, max);
+ // Case à cocher précédée d'un champ caché « 0 » : la dernière valeur reçue l'emporte
+@@ -743,7 +782,9 @@
+ // Création (formulaire classique ou éditeur)
+ router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
+   const f = readFields(req.body);
++  if (req.blogActor) f.author_id = null; // un rédacteur ne signe qu'en son nom
+   const st = applyStatus(req.body, null, f);
++  guardActorStatus(req, st, null);
+   guardPublication(f, st.status, req, { slug: req.body.slug });
+   const cover = registerUpload(req, fileOf(req, "thumbnail"), f.cover_alt) || libraryImage(req.body.cover_media);
+   const og = registerUpload(req, fileOf(req, "og_image")) || libraryImage(req.body.og_image_media);
+@@ -776,7 +817,9 @@
+     return wantsJson(req) ? res.status(409).json({ error: message, conflict: true, currentUpdatedAt: p.updated_at }) : res.status(409).render("error", { message });
+   }
+   const f = readFields(req.body, p);
++  if (req.blogActor) f.author_id = null; // un rédacteur ne change pas l'auteur d'un article
+   const st = applyStatus(req.body, p, f);
++  guardActorStatus(req, st, p);
+   guardPublication(f, st.status, req, { slug: req.body.slug || p.slug, cover_path: libraryImage(req.body.cover_media) || (req.body.remove_cover === "1" ? null : p.cover_path) });
+   // L'adresse ne change pas quand on retouche le titre ; elle ne change que si le formateur la modifie lui-même.
+   // Article déjà publié : l'ancienne adresse est gardée et redirige (301) vers la nouvelle, les liens partagés restent valides.
+diff -ruN a/src/routes/pages.js b/src/routes/pages.js
+--- a/src/routes/pages.js	2026-10-10 22:37:27.000000000 -0700
++++ b/src/routes/pages.js	2026-10-10 22:37:27.000000000 -0700
+@@ -9,8 +9,9 @@
+ 
+ const router = express.Router();
+ 
+-// Tout l'espace d'administration de ces pages est réservé au formateur
+-router.use("/formateur", requireInstructor);
++// Tout l'espace d'administration de ces pages est réservé au formateur — SAUF l'éditeur d'articles (/formateur/blog), dont le routeur du blog applique sa propre
++// barrière (compte créateur, ou rôle autorisé à rédiger selon ses droits : voir requireBlogAccess dans routes/blog.js)
++router.use("/formateur", (req, res, next) => (req.path === "/blog" || req.path.startsWith("/blog/") ? next() : requireInstructor(req, res, next)));
+ 
+ // ---------- À propos ----------
+ 
+diff -ruN a/tests/cms-articles-multi-auteurs.test.js b/tests/cms-articles-multi-auteurs.test.js
+--- a/tests/cms-articles-multi-auteurs.test.js	1969-12-31 16:00:00.000000000 -0800
++++ b/tests/cms-articles-multi-auteurs.test.js	2026-10-10 22:39:44.000000000 -0700
+@@ -0,0 +1,70 @@
++// Palier 23 — articles multi-auteurs : l'éditeur d'articles s'ouvre selon les droits (articles.write = tous, articles.edit_own = les siens),
++// publier reste un droit à part, personne ne signe au nom d'un autre. Fichier à placer dans tests/ (en retirant « .pending ») avec le correctif.
++const { test, describe, before, after } = require("node:test");
++const assert = require("node:assert/strict");
++const { TEST_KEY } = require("./marketing-helpers");
++const { startServer, loginInstructor, newStudent } = require("./helpers");
++
++let srv, boss, db, orgId;
++const M = "/marketing";
++const one = (sql, ...a) => db.prepare(sql).get(...a);
++const member = async (role) => { const c = await newStudent(srv); db.prepare("INSERT INTO mk_org_members (organization_id, user_id, role) VALUES (?, (SELECT id FROM users WHERE email = ?), ?)").run(orgId, c.email, role); c.id = one("SELECT id FROM users WHERE email = ?", c.email).id; return c; };
++const save = (client, fields, id) => { const fd = new FormData(); Object.entries({ excerpt: "Résumé.", content_format: "html", status: "draft", content: "<p>Texte</p>", ...fields }).forEach(([k, v]) => fd.append(k, v)); return client.request(id ? `/formateur/blog/${id}/modifier` : "/formateur/blog/nouveau", { method: "POST", multipart: fd, headers: { "x-blog-editor": "1" } }); };
++
++before(async () => { srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" }); boss = await loginInstructor(srv); db = srv.db(); orgId = one("SELECT id FROM mk_organizations").id; });
++after(() => { db.close(); srv.stop(); });
++
++describe("rédaction selon les rôles", () => {
++  test("un Éditeur (articles.write) crée, ouvre et modifie n'importe quel article, et peut publier", async () => {
++    const editor = await member("editor");
++    await save(boss, { title: "Article du créateur" });
++    const bossPost = one("SELECT id FROM posts WHERE title = 'Article du créateur'").id;
++    assert.equal((await editor.get(`/formateur/blog/${bossPost}/modifier`)).status, 200);
++    const created = await save(editor, { title: "Article de l'éditeur", status: "published" });
++    assert.equal(created.status, 200);
++    const mine = one("SELECT id, author_id, status FROM posts WHERE title = 'Article de l''éditeur'");
++    assert.equal(mine.author_id, editor.id); assert.equal(mine.status, "published");
++  });
++  test("un Auteur crée et modifie SES articles en brouillon ; jamais ceux des autres ; ne publie pas ; ne se déclare pas un autre auteur", async () => {
++    const author = await member("author");
++    const created = await save(author, { title: "Brouillon de l'auteur", author_id: String(1) });
++    assert.equal(created.status, 200);
++    const mine = one("SELECT id, author_id FROM posts WHERE title = 'Brouillon de l''auteur'");
++    assert.equal(mine.author_id, author.id, "signé en son nom malgré un author_id forcé dans le formulaire");
++    assert.equal((await save(author, { title: "Brouillon de l'auteur (v2)" }, mine.id)).status, 200);
++    const others = one("SELECT id FROM posts WHERE title = 'Article du créateur'").id;
++    assert.equal((await author.get(`/formateur/blog/${others}/modifier`)).status, 403);
++    assert.equal((await save(author, { title: "Piraté" }, others)).status, 403);
++    assert.equal(one("SELECT title FROM posts WHERE id = ?", others).title, "Article du créateur");
++    const publish = await save(author, { title: "Brouillon de l'auteur (v2)", status: "published" }, mine.id);
++    assert.equal(publish.status >= 400, true, "un auteur ne publie pas");
++    assert.equal(one("SELECT status FROM posts WHERE id = ?", mine.id).status, "draft");
++    const sched = await save(author, { title: "Brouillon de l'auteur (v2)", status: "scheduled", published_at_utc: new Date(Date.now() + 3600e3).toISOString() }, mine.id);
++    assert.equal(sched.status >= 400, true, "ni programmer");
++  });
++  test("un article déjà en ligne ne se modifie pas sans droit de publication ; les versions non plus", async () => {
++    const author = await member("author");
++    await save(author, { title: "Article futur en ligne" });
++    const id = one("SELECT id FROM posts WHERE title = 'Article futur en ligne'").id;
++    await boss.post(`${M}/site-web/articles/${id}/publier`, {});
++    const edit = await save(author, { title: "Modifié après mise en ligne" }, id);
++    assert.equal(edit.status >= 400, true);
++    assert.equal(one("SELECT title FROM posts WHERE id = ?", id).title, "Article futur en ligne");
++  });
++  test("un Contributeur écrit en brouillon ses articles ; un Lecteur n'écrit pas ; le reste de l'espace du blog reste réservé au créateur", async () => {
++    const contributor = await member("contributor"), viewer = await member("viewer"), author = await member("author");
++    assert.equal((await save(contributor, { title: "Brouillon du contributeur" })).status, 200);
++    assert.equal((await viewer.get("/formateur/blog/nouveau")).status, 403);
++    assert.equal((await save(viewer, { title: "Refusé" })).status, 403);
++    for (const path of ["/formateur/blog", "/formateur/blog/api/medias", "/formateur/blog/api/ia", "/formateur/blog/api/apparence"]) assert.equal((await author.get(path)).status, 403, path);
++  });
++  test("le CMS permet de créer un article aux rôles qui rédigent et affiche leurs liens d'édition seulement sur leurs articles", async () => {
++    const author = await member("author");
++    const r = await author.post(`${M}/site-web/articles`, { title: "Créé depuis le CMS" });
++    assert.equal(r.status, 302); assert.match(r.location, /\/formateur\/blog\/\d+\/modifier/);
++    const html = (await author.get(`${M}/site-web/articles`)).text;
++    assert.match(html, /Créé depuis le CMS/);
++    const viewer = await member("viewer");
++    assert.equal((await viewer.post(`${M}/site-web/articles`, { title: "Non" })).status, 403);
++  });
++});
+diff -ruN a/tests/cms-articles.test.js b/tests/cms-articles.test.js
+--- a/tests/cms-articles.test.js	2026-10-10 22:39:44.000000000 -0700
++++ b/tests/cms-articles.test.js	2026-10-10 22:39:44.000000000 -0700
+@@ -393,7 +393,7 @@
+     }
+     assert.equal(row(pid).deleted_at, null);
+   });
+-  test("éditeur (rôle) : copie, publie, corbeille, restaure ; ne supprime pas définitivement ; ne crée pas (éditeur d'articles réservé au compte créateur)", async () => {
++  test("éditeur (rôle) : copie, publie, corbeille, restaure ; ne supprime pas définitivement ; crée et rédige (palier 23 : l'éditeur d'articles s'ouvre selon les droits)", async () => {
+     assert.equal((await editor.post(`${CMS}/${pid}/dupliquer`, {})).status, 302);
+     assert.ok(db.prepare("SELECT 1 FROM posts WHERE title = 'Article des droits (copie)'").get());
+     await editor.post(`${CMS}/${pid}/corbeille`, {});
+@@ -403,9 +403,10 @@
+     await editor.post(`${CMS}/${pid}/restaurer`, {});
+     assert.equal(row(pid).deleted_at, null);
+     const before = db.prepare("SELECT COUNT(*) n FROM posts").get().n;
+-    await editor.post(CMS, { title: "Tentative de création" });
+-    assert.equal(db.prepare("SELECT COUNT(*) n FROM posts").get().n, before, "rien créé par un compte qui n'a pas l'éditeur");
+-    assert.doesNotMatch((await editor.get(CMS)).text, /data-mk-modal-open="nouvel-article"/);
++    const made = await editor.post(CMS, { title: "Création par un éditeur" });
++    assert.equal(made.status, 302); assert.match(made.location, /\/formateur\/blog\/\d+\/modifier/);
++    assert.equal(db.prepare("SELECT COUNT(*) n FROM posts").get().n, before + 1, "un éditeur (articles.write) crée un article");
++    assert.match((await editor.get(CMS)).text, /data-mk-modal-open="nouvel-article"/);
+   });
+   test("administrateur : supprime définitivement, depuis la corbeille", async () => {
+     await admin.post(`${CMS}/${pid}/corbeille`, {});
+diff -ruN a/views/marketing/articles.ejs b/views/marketing/articles.ejs
+--- a/views/marketing/articles.ejs	2026-10-10 22:35:00.000000000 -0700
++++ b/views/marketing/articles.ejs	2026-10-10 22:35:16.000000000 -0700
+@@ -59,7 +59,7 @@
+         <tbody><% rows.forEach((p) => { const menuId = "ar-menu-" + p.id; const stClass = inTrash ? "mk-status-off" : (badge[p.status] || "mk-status-off"); %>
+           <tr><% if (canWrite && mine(p)) { %><td class="mk-cms-check-col" data-label="Sélection"><input type="checkbox" name="ids" value="<%= p.id %>" form="pages-bulk" data-cms-row aria-label="Sélectionner « <%= p.title %> »"></td><% } %>
+             <th scope="row" data-label="Article"><span class="mk-ar-cell"><% if (p.cover_path) { %><img class="mk-ar-thumb" src="<%= p.cover_path %>" alt="" loading="lazy" width="48" height="36"><% } else { %><span class="mk-ar-thumb is-empty" aria-hidden="true"></span><% } %>
+-              <span><% if (isCreator) { %><a href="/formateur/blog/<%= p.id %>/modifier"><%= p.title %></a><% } else { %><%= p.title %><% } %><span class="mk-sub"><%= BLOG_BASE %>/<%= p.slug %></span></span></span></th>
++              <span><% if (isCreator && mine(p)) { %><a href="/formateur/blog/<%= p.id %>/modifier"><%= p.title %></a><% } else { %><%= p.title %><% } %><span class="mk-sub"><%= BLOG_BASE %>/<%= p.slug %></span></span></span></th>
+             <td data-label="État"><span class="mk-status <%= stClass %>"><%= inTrash ? "Corbeille" : STATUSES[p.status] || p.status %></span><% if (!inTrash && p.status === "scheduled") { %><span class="mk-sub"><%= fdt(p.published_at) %></span><% } %></td>
+             <td data-label="Auteur"><%= p.author || "—" %></td><td data-label="Catégorie"><%= p.primary_category || p.category || "—" %></td>
+             <td class="mk-num" data-label="Commentaires"><% if (p.comments_approved || p.comments_pending) { %><a href="/marketing/site-web/commentaires?contenu=post:<%= p.id %>"><%= p.comments_approved %></a><% if (p.comments_pending) { %><span class="mk-sub"><%= p.comments_pending %> en attente</span><% } %><% } else { %><%= p.comments_enabled ? "0" : "Fermés" %><% } %></td>
+@@ -71,7 +71,7 @@
+                 <button type="button" class="btn btn-ghost btn-sm mk-cms-more" aria-haspopup="menu" aria-expanded="false" aria-controls="<%= menuId %>" aria-label="Plus d'actions pour « <%= p.title %> »"><%- icon("moreHorizontal", { size: 18 }) %></button>
+                 <div class="mk-menu" id="<%= menuId %>" role="menu" hidden>
+                   <% if (mk.can("revisions.view") && mine(p)) { %><a role="menuitem" href="/marketing/site-web/historique/post/<%= p.id %>">Historique</a><% } %>
+-                  <% if (isCreator) { %><a role="menuitem" href="/formateur/blog/<%= p.id %>/modifier">Ouvrir dans l'éditeur</a><% if (!inTrash) { %><a role="menuitem" href="/formateur/blog/<%= p.id %>/apercu" target="_blank" rel="noopener">Prévisualiser</a><% } %><% } %>
++                  <% if (isCreator && mine(p)) { %><a role="menuitem" href="/formateur/blog/<%= p.id %>/modifier">Ouvrir dans l'éditeur</a><% if (!inTrash) { %><a role="menuitem" href="/formateur/blog/<%= p.id %>/apercu" target="_blank" rel="noopener">Prévisualiser</a><% } %><% } %>
+                   <% if (!inTrash && p.status === "published") { %><a role="menuitem" href="<%= BLOG_BASE %>/<%= p.slug %>" target="_blank" rel="noopener">Voir l'article en ligne</a><% } %>
+                   <% if (!inTrash && canWrite && mine(p)) { %>
+                     <% if (canPublish && p.status !== "published") { %><form action="/marketing/site-web/articles/<%= p.id %>/publier" method="post" role="none"><input type="hidden" name="retour" value="<%= here %>"><button type="submit" role="menuitem">Publier maintenant</button></form><% } %>

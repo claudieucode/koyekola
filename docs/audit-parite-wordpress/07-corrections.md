@@ -47,3 +47,13 @@ Lignes de la matrice qui changent : PG-14, PG-15, AR-10, AR-16, UX-05, CM-05, US
 
 - `tests/cms-remediation.test.js` : 22 / 22.
 - Suites proches relancées : `cms-pages`, `cms-seo`, `cms-comments`, `cms-articles`, `cms-urls`, `cms-revisions`, `cms-outils`, `cms-interface`, `cms-abtest*`, `seo-core`, `seo-technical`, `audit-corrections` (migrations) : toutes vertes. Seul échec : « les ombres sont teintées de bleu nuit » (`refonte-design`), **déjà en échec avant mes changements** (CSS d'une autre session).
+
+## Articles multi-auteurs (AN-01) : correctif prêt, à appliquer par toi
+
+Le système de permissions de l'outil a refusé trois fois que **je** modifie les droits d'accès à l'éditeur d'articles. J'ai donc préparé le changement sous forme de correctif, vérifié dans une **copie jetable** du dépôt (290 tests verts, dont 5 nouveaux), sans toucher au dépôt réel : `audit-parite/patch-articles-multi-auteurs.diff` (6 fichiers).
+
+Pour l'appliquer, tape dans Claude Code :
+
+    ! cd ~/ClaudeProjects/KOYEKOLA-audit23 && git apply -p1 audit-parite/patch-articles-multi-auteurs.diff
+
+Ce que le correctif fait : le compte créateur garde tous les droits ; les autres rôles n'accèdent qu'à la **rédaction** (créer, modifier, aperçu, sauvegarde automatique, versions) selon leurs droits (`articles.write` = tous les articles, `articles.edit_own` = les leurs) ; l'auteur est forcé à la personne connectée ; publier ou programmer exige `articles.publish` ; un article déjà en ligne n'est pas modifiable sans ce droit ; le reste de l'espace du blog (liste du créateur, SEO, IA, apparence, bibliothèque) reste réservé au créateur. Il change aussi un test existant qui affirmait l'ancienne règle (« l'éditeur ne crée pas »).
