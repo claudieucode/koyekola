@@ -1,6 +1,6 @@
 # Résultats détaillés (palier 25)
 
-*Source : `docs/audit-integration-palier-25/resultats/resultats-scenarios.json`, écrit par l'exécution réelle de `tests/integration-globale.test.js` (2026-10-11T07:22:50.101Z). Chaque critère est un contrôle exécuté ; un critère « ÉCHEC REPRODUIT » reproduit un défaut documenté dans `04-registre-anomalies.md`.*
+*Source : `docs/audit-integration-palier-25/resultats/resultats-scenarios.json`, écrit par l'exécution réelle de `tests/integration-globale.test.js` (2026-10-11T08:34:52.922Z). Chaque critère est un contrôle exécuté ; un critère « ÉCHEC REPRODUIT » reproduit un défaut documenté dans `04-registre-anomalies.md`.*
 
 ## INT-ABT-014 — mesure et A/B : affectation collante, exposition seulement si la page est affichée, conversion associée, robots ignorés
 
@@ -114,16 +114,16 @@
 | 6 | une personne sans droit de publication ne peut pas publier l'apparence | réussi |  |  |
 | 7 | retirer la configuration rend le site à son apparence d'origine | réussi |  |  |
 
-## INT-CMS-006 — rédaction d'articles selon les rôles (état actuel : réservée au compte créateur)
+## INT-CMS-006 — rédaction d'articles selon les rôles (Éditeur, Auteur, Contributeur créent ; Lecteur et compte hors équipe refusés)
 
-- **Statut** : **RÉUSSI PARTIELLEMENT** (3 critères réussis, 3 en échec reproduit)
+- **Statut** : **RÉUSSI — PREUVES COMPLÈTES** (6 critères réussis)
 - **Modules** : Articles, Permissions, Éditeur d'articles · **Mode** : RÉEL en test
 
 | # | Critère | Résultat | Preuve observée | Anomalie |
 |---|---|---|---|---|
-| 1 | Éditeur : peut créer un article (attendu par ses permissions) | **ÉCHEC REPRODUIT** | status 403 | G-03 |
-| 2 | Auteur : peut créer un article (attendu par ses permissions) | **ÉCHEC REPRODUIT** | status 403 | G-03 |
-| 3 | Contributeur : peut créer un article (attendu par ses permissions) | **ÉCHEC REPRODUIT** | status 403 | G-03 |
+| 1 | Éditeur : peut créer un article (attendu par ses permissions) | réussi | status 200 |  |
+| 2 | Auteur : peut créer un article (attendu par ses permissions) | réussi | status 200 |  |
+| 3 | Contributeur : peut créer un article (attendu par ses permissions) | réussi | status 200 |  |
 | 4 | le compte créateur crée un article (200) | réussi | status 200 |  |
 | 5 | un Lecteur ne peut pas créer d'article (403) | réussi |  |  |
 | 6 | un compte hors équipe ne peut pas créer d'article (403) | réussi |  |  |

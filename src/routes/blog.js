@@ -432,8 +432,47 @@ router.sitemapEntries = () => {
 
 // ---------- Éditeur (formateur) ----------
 
-// Vérifié AVANT la réception d'un fichier : un élève ne peut rien envoyer
-router.use("/formateur/blog", requireInstructor);
+// Vérifié AVANT la réception d'un fichier : un élève ne peut rien envoyer.
+// Le compte créateur garde tous les droits. Les AUTRES membres de l'équipe n'ouvrent que de quoi RÉDIGER (créer, modifier, aperçu, sauvegarde
+// automatique, versions), selon leurs droits : « articles.write » = tous les articles ; « articles.edit_own » = seulement les leurs. Publier reste
+// un droit à part (« articles.publish ») ; tout le reste de l'espace du blog (liste du créateur, SEO, apparence, IA, bibliothèque) reste réservé au créateur.
+const WRITER_ROUTES = [
+  /^\/nouveau$/, /^\/api\/brouillon$/, /^\/api\/(?:liens|suggestions|seo-check|termes)$/,
+  /^\/\d+\/(?:modifier|apercu|autosave|autosave\/abandonner|versions|corbeille)$/, /^\/\d+\/versions\/\d+(?:\/restaurer)?$/, /^\/\d+\/corbeille\/[^/]+$/,
+];
+function requireBlogAccess(req, res, next) {
+  const user = req.session.user;
+  if (!user) return res.redirect(`/connexion?redirect=${encodeURIComponent(req.originalUrl)}`);
+  if (user.role === "formateur") return next();
+  const asJson = wantsJson(req) || req.path.startsWith("/api/");
+  const deny = (message) => (asJson ? res.status(403).json({ error: message }) : res.status(403).render("error", { message }));
+  const orgId = marketingOrgId();
+  const can = (permission) => Boolean(orgId && cmsAccess.can(user.id, permission, { organizationId: orgId }));
+  const all = can("articles.write"), own = can("articles.edit_own");
+  if (!all && !own) return deny("Réservé aux personnes autorisées à rédiger des articles.");
+  if (!WRITER_ROUTES.some((re) => re.test(req.path))) return deny("Réservé au compte créateur.");
+  if (req.path === "/api/termes" && req.method !== "GET" && !can("taxonomies.write")) return deny("Vous n'avez pas la permission de créer des catégories ou des étiquettes.");
+  const m = /^\/(\d+)\//.exec(req.path);
+  const canPublish = can("articles.publish");
+  if (m) {
+    const post = db.prepare("SELECT author_id, status FROM posts WHERE id = ?").get(Number(m[1]));
+    if (post) {
+      if (!all && post.author_id !== user.id) return deny("Cet article appartient à une autre personne.");
+      // Restaurer une version modifie l'article : refusé sur un article en ligne à qui ne peut pas publier
+      if (/\/restaurer$/.test(req.path) && !canPublish && ["published", "scheduled"].includes(post.status)) return deny("Cet article est en ligne : seule une personne autorisée à publier peut restaurer une version.");
+    }
+  }
+  req.blogActor = { all, own, canPublish };
+  next();
+}
+// Rédacteur sans droit de publication : jamais d'article mis en ligne ou programmé par lui, et pas de modification d'un article déjà en ligne
+function guardActorStatus(req, wanted, current) {
+  const actor = req.blogActor;
+  if (!actor || actor.canPublish) return;
+  const live = (status) => status === "published" || status === "scheduled";
+  if (live(wanted.status) || (current && live(current.status))) throw new UserError("Votre rôle ne publie pas : enregistrez l'article en brouillon, une personne autorisée à publier le mettra en ligne. Un article déjà en ligne ne se modifie pas sans ce droit.");
+}
+router.use("/formateur/blog", requireBlogAccess);
 
 const oneLine = (value, max) => String(value || "").replace(/[\r\n\u2028\u2029]+/g, " ").trim().slice(0, max);
 // Case à cocher précédée d'un champ caché « 0 » : la dernière valeur reçue l'emporte
@@ -743,7 +782,9 @@ router.get("/formateur/blog/:id/modifier", loadPost, (req, res) => {
 // Création (formulaire classique ou éditeur)
 router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
   const f = readFields(req.body);
+  if (req.blogActor) f.author_id = null; // un rédacteur ne signe qu'en son nom
   const st = applyStatus(req.body, null, f);
+  guardActorStatus(req, st, null);
   guardPublication(f, st.status, req, { slug: req.body.slug });
   const cover = registerUpload(req, fileOf(req, "thumbnail"), f.cover_alt) || libraryImage(req.body.cover_media);
   const og = registerUpload(req, fileOf(req, "og_image")) || libraryImage(req.body.og_image_media);
@@ -776,7 +817,9 @@ router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, r
     return wantsJson(req) ? res.status(409).json({ error: message, conflict: true, currentUpdatedAt: p.updated_at }) : res.status(409).render("error", { message });
   }
   const f = readFields(req.body, p);
+  if (req.blogActor) f.author_id = null; // un rédacteur ne change pas l'auteur d'un article
   const st = applyStatus(req.body, p, f);
+  guardActorStatus(req, st, p);
   guardPublication(f, st.status, req, { slug: req.body.slug || p.slug, cover_path: libraryImage(req.body.cover_media) || (req.body.remove_cover === "1" ? null : p.cover_path) });
   // L'adresse ne change pas quand on retouche le titre ; elle ne change que si le formateur la modifie lui-même.
   // Article déjà publié : l'ancienne adresse est gardée et redirige (301) vers la nouvelle, les liens partagés restent valides.

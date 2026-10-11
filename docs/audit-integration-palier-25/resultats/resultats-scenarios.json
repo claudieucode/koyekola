@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-11T07:22:50.101Z",
+ "generatedAt": "2026-10-11T08:34:52.922Z",
  "environment": "serveur de test jetable (tests/helpers.js)",
  "results": [
   {
@@ -1224,32 +1224,32 @@
   },
   {
    "id": "INT-CMS-006",
-   "titre": "rédaction d'articles selon les rôles (état actuel : réservée au compte créateur)",
+   "titre": "rédaction d'articles selon les rôles (Éditeur, Auteur, Contributeur créent ; Lecteur et compte hors équipe refusés)",
    "modules": [
     "Articles",
     "Permissions",
     "Éditeur d'articles"
    ],
    "mode": "REEL-TEST",
-   "status": "RÉUSSI PARTIELLEMENT",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
    "criteria": [
     {
      "label": "Éditeur : peut créer un article (attendu par ses permissions)",
-     "ok": false,
-     "evidence": "status 403",
-     "anomaly": "G-03"
+     "ok": true,
+     "evidence": "status 200",
+     "anomaly": null
     },
     {
      "label": "Auteur : peut créer un article (attendu par ses permissions)",
-     "ok": false,
-     "evidence": "status 403",
-     "anomaly": "G-03"
+     "ok": true,
+     "evidence": "status 200",
+     "anomaly": null
     },
     {
      "label": "Contributeur : peut créer un article (attendu par ses permissions)",
-     "ok": false,
-     "evidence": "status 403",
-     "anomaly": "G-03"
+     "ok": true,
+     "evidence": "status 200",
+     "anomaly": null
     },
     {
      "label": "le compte créateur crée un article (200)",

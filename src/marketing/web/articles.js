@@ -15,7 +15,9 @@ const SUBS = { brouillons: "brouillons", programmes: "programmes", publies: "pub
 // sensibles (publier, supprimer définitivement) gardent leur droit propre, sans variante « les siens ».
 const ownerOf = (id) => (require("../../config/database").prepare("SELECT author_id FROM posts WHERE id = ?").get(id) || {}).author_id;
 const mayManage = (req, id) => req.mk.can("articles.write") || (req.mk.can("articles.edit_own") && ownerOf(id) === req.session.user.id);
-const isCreator = (req) => Boolean(req.session.user && req.session.user.role === "formateur");
+// Peut rédiger : le compte créateur, ou toute personne qui a « articles.write » (tous les articles) ou « articles.edit_own » (les siens) — l'éditeur s'ouvre alors pour elle
+const isCreator = (req) => Boolean(req.session.user && (req.session.user.role === "formateur" || req.mk.can("articles.write") || req.mk.can("articles.edit_own")));
+const canCreate = (req, res, next) => (req.mk.can("articles.write") || req.mk.can("articles.edit_own") ? next() : res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." }));
 const BLOG_BASE = "/blog"; // adresse publique des articles (une seule constante : le préfixe pourra devenir un réglage)
 
 module.exports = () => {
@@ -44,11 +46,10 @@ module.exports = () => {
   router.get(/^\/site-web\/articles\/(brouillons|programmes|publies|corbeille)\/?$/, need("articles.read"), (req, res, next) => showList(SUBS[req.params[0]])(req, res, next));
 
   // ----- Création : titre → vrai article en brouillon → éditeur -----
-  router.get("/site-web/articles/ajouter", need("articles.write"), (req, res) => {
+  router.get("/site-web/articles/ajouter", canCreate, (req, res) => {
     res.render("marketing/article-new", { title: "Nouvel article", active: "articles/ajouter", isCreator: isCreator(req), BASE });
   });
-  router.post("/site-web/articles", need("articles.write"), (req, res, next) => {
-    if (!isCreator(req)) { flash(req, "error", "La rédaction des articles se fait dans l'éditeur du blog, réservé au compte créateur."); return res.redirect(BASE); }
+  router.post("/site-web/articles", canCreate, (req, res, next) => {
     try {
       const post = articles.createDraft({ title: req.body.title, userId: req.session.user.id });
       res.redirect(`/formateur/blog/${post.id}/modifier`);
