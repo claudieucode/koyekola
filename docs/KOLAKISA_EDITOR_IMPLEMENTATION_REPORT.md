@@ -1,26 +1,25 @@
 # Rapport d'implémentation — 10 octobre 2026 (branche `elementor-reference`)
 
-## Ajouté : résolutions d'image (palier 2)
-- **Service commun** `src/marketing/media/variants.js` : 5 largeurs (Miniature 150, Petite 320, Moyenne 640, Grande 1024, Très grande 1600 px), « Taille originale » (défaut, comportement inchangé) et « Adaptative » (`srcset`).
-- **Stratégie** : versions WebP **fabriquées à la demande** à la première visite, puis conservées (`UPLOADS_DIR/marketing/<org>/v/<largeur>/`). Rien n'est précalculé : les anciennes images en profitent sans migration, le stockage ne croît que pour les tailles choisies, seules 5 largeurs sont acceptées (pas de fabrication illimitée). L'original n'est jamais modifié.
-- **Pas de lien cassé** : si `sharp` est absent, si l'image est plus petite que la taille demandée ou si la fabrication échoue → l'adresse renvoie vers l'original (302). Sans `sharp`, le rendu n'utilise jamais d'adresse de version.
-- **Widgets** : Image, Galerie, Carrousel, Boîte d'image, Image à points d'intérêt, photo de témoignage (propriété `size`, enregistrée seulement si différente de l'original ; valeur inconnue ignorée) et **image de fond** de tout conteneur (`backgroundImage.size`, sans option « adaptative »).
-- **Inspecteur** : champ « Résolution de l'image » avec les seules tailles plus petites que l'image (la plus petite pour un lot), dimensions de l'original affichées, aide contextuelle ; désactivé pour une image externe ou dynamique.
-- **Suppression définitive** d'une image : ses versions sont retirées.
+## Ajouté ou corrigé (tout est testé ; voir `KOLAKISA_EDITOR_TEST_REPORT.md`)
+**Images** — service commun `src/marketing/media/variants.js` : 5 largeurs (150 / 320 / 640 / 1024 / 1600 px), « Taille originale » (défaut, rien ne change), « Adaptative » (`srcset`). Versions WebP **fabriquées à la demande** à la première visite puis gardées ; l'original n'est jamais modifié ; aucune migration ; repli vers l'original si `sharp` est absent, si l'image est plus petite ou si la fabrication échoue. Widgets : Image, Galerie, Carrousel, Boîte d'image, Image à points d'intérêt, photo de témoignage, **image de fond** de tout conteneur. Suppression définitive d'une image : ses versions sont retirées.
+**Galerie** — disposition grille / mosaïque / justifiée, colonnes 1–6, ratio d'aspect, hauteur des lignes, légende au survol, barre de filtres par étiquette (la visionneuse saute les images filtrées).
+**Texte** — contour du texte (épaisseur + couleur), lettrine, colonnes de texte.
+**Visionneuse** sur le widget Image (désactivée par un lien).
+**Nouveaux widgets** (framework des widgets personnalisés : 3 fichiers chacun + parties stylables) : **Appel à l'action** (`cta`), **Playlist vidéo** (`videoplaylist`), **Bouton flottant** (`floatingbutton`).
+**Conteneurs** — séparateur de forme haut / bas (7 formes, couleur, hauteur, retournement, premier plan) ; diaporama en arrière-plan (jusqu'à 8 images, Ken Burns) ; vidéo de fond avec début / fin, image de secours, lecture unique ; dégradé **radial** et position de chaque couleur ; bordures double et gravée ; formes de masque fleur / blob / croquis.
+**Mouvement** — 12 animations de survol (16 au total) ; Ken Burns du diaporama.
+**Widgets existants complétés** — compteur (séparateur des milliers) ; compte à rebours (minuteur par visiteur, action à la fin : texte / masquer / rediriger, unités masquables) ; liste d'icônes (en ligne, séparateurs) ; partage et réseaux (+ Telegram, Pinterest, Reddit, Threads) ; vidéo (début / fin).
+**Page** — magnétisme de défilement (haut / centre / bas, marge, arrêt obligatoire) ; jours et heures d'affichage d'un élément (heure de Paris).
+**Interface** — « Coller depuis un autre site ou navigateur » (presse-papiers du système, texte balisé, borné, revalidé par le serveur) ; correction d'un défaut existant : l'angle 0° du dégradé n'était pas enregistrable.
 
-## Ajouté : galerie, contour du texte, visionneuse
-- **Galerie** : disposition (grille, mosaïque, **justifiée**), colonnes 1–6, ratio d'aspect (grille), hauteur des lignes (justifiée), **légende au survol** (visible en permanence sur écran tactile, sans transition si « réduire les animations »), **barre de filtres** par étiquette d'image (« Tous » + une touche par étiquette, `aria-pressed`, la visionneuse saute les images masquées). Classes CSS fixes, aucune valeur libre dans la page ; valeurs par défaut non enregistrées ; mosaïque et justifiée s'excluent.
-- **Contour du texte** : deux propriétés de style (`textStrokeWidth`, `textStrokeColor`) dans le groupe Typographie, donc disponibles pour tous les éléments à typographie, enregistrables dans les styles.
-- **Visionneuse du widget Image** : case « Agrandir au clic » (désactivée si l'image a un lien) ; l'image d'origine s'ouvre même si une version réduite est affichée.
-- **Défaut trouvé par un test et corrigé** : la légende au survol recouvrait le bas de l'image et bloquait le clic de la visionneuse (`pointer-events: none`).
+## Défauts trouvés par les tests pendant le travail, et corrigés
+La légende de galerie au survol bloquait le clic de la visionneuse ; la liste des parties stylables exigeait que le sélecteur désigne un **descendant** de la racine (bouton flottant restructuré) ; un remplacement de CSS avait effacé trois blocs (détecté par les tests, rétabli).
 
 ## Fichiers modifiés / ajoutés
-`src/marketing/media/variants.js` (nouveau), `src/marketing/media/index.js`, `src/marketing/pages/nodes.js`, `src/marketing/web/siteWeb.js` (route `/site-web/medias/resolutions.json`), `src/middlewares/locals.js`, `server.js` (montage avant le dossier statique), `views/marketing-public/_node.ejs`, `public/js/page-builder.js`, `public/js/landing.js`, `public/css/landing.css`, `src/marketing/pages/stylePresets.js`, `package.json` / `package-lock.json` (`sharp` en **optionalDependencies**), tests `images-resolutions*.test.js`, `galerie-options-navigateur.test.js` (et deux cas ajoutés à `editeur-canvas-proprietes-restantes-navigateur.test.js`), documentation `docs/elementor-reference/` (18 fichiers) et `docs/KOLAKISA_EDITOR_*.md`.
+Serveur : `src/marketing/media/variants.js`, `media/index.js`, `pages/nodes.js`, `pages/parts.js`, `pages/index.js`, `pages/scrollSnap.js`, `pages/stylePresets.js`, `pages/widgets/{cta,videoplaylist,floatingbutton,carrousels}.js`, `web/siteWeb.js`, `landing/index.js`, `middlewares/locals.js`, `server.js`. Affichage : `views/marketing-public/_node.ejs`, `_social-icon.ejs`, `widgets/{cta,videoplaylist,floatingbutton,slides}.ejs`, `public/css/landing.css`, `public/js/landing.js`. Éditeur : `public/js/page-builder.js`. Dépendances : `sharp` (**optionnelle**). Tests : voir le rapport de tests. Documentation : `docs/elementor-reference/` (29 fichiers) et `docs/KOLAKISA_EDITOR_*.md`.
 
 ## Migrations
-Aucune migration de base ; aucune donnée existante modifiée.
+Aucune migration de base. Les réglages ajoutés sont des propriétés facultatives des pages ; une page existante garde exactement son rendu (filet de sécurité des widgets : seules les 3 entrées des nouveaux widgets et l'ajout de « Ken Burns » au diaporama changent dans la référence).
 
-## Conservé sans modification
-Tout le reste de l'éditeur (la mission demandait de conserver l'existant).
-## Volontairement exclu ou reporté
-CSS personnalisé par widget (sécurité) ; balise div/span/p pour les titres (sémantique) ; tailles carrées recadrées (voir limitations) ; points de rupture personnalisés et « coller depuis un autre site » (reportés, décisions de produit). Détail : `KOLAKISA_EDITOR_GAP_ANALYSIS.md`, `KOLAKISA_EDITOR_LIMITATIONS.md`.
+## Conservé sans modification / exclu / reporté
+Voir `KOLAKISA_EDITOR_GAP_ANALYSIS.md` (liste des écarts non faits, avec la raison) et `KOLAKISA_EDITOR_LIMITATIONS.md`.

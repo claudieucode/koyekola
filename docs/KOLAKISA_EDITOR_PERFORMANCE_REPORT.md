@@ -18,3 +18,12 @@ Ensuite la version est servie par le dossier statique (mêmes en-têtes, cache 3
 - Canevas : le rendu n'ajoute qu'un test par image ; non mesuré à part.
 - Galerie : lignes justifiées et filtres = CSS et ~15 lignes de script, non mesurés.
 - Risque connu : un pic de visites sur une image jamais demandée déclenche une fabrication unique (déduplication en mémoire) ; la concurrence de `sharp` est limitée à 1.
+
+## Poids ajouté aux pages publiques (mesuré, fichiers du dépôt)
+| Fichier | Avant | Après | Compressé (gzip) avant → après |
+|---|---|---|---|
+| `public/css/landing.css` | 97 029 o | 108 247 o | 21 762 → 24 261 o (+2,5 Ko) |
+| `public/js/landing.js` | 31 705 o | 34 658 o | 8 518 → 9 332 o (+0,8 Ko) |
+| `public/js/page-builder.js` (éditeur seulement) | 663 620 o | 678 838 o | non mesuré |
+Le coût est payé par toutes les pages publiques (CSS et script partagés) ; il n'a pas été mesuré en temps de chargement.
+Aucun gain de performance n'est annoncé pour les nouvelles fonctions (animations CSS pures, un seul `setInterval` par diaporama de fond, désactivés si « réduire les animations »).

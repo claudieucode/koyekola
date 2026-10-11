@@ -10,7 +10,7 @@ module.exports = {
     { key: "imageAlt", kind: "text", label: "Texte de remplacement de l'image (vide = décorative)", max: 200, default: "" },
     { key: "position", kind: "select", label: "Place de l'image (habillage classique)", options: [["above", "Au-dessus"], ["left", "À gauche"], ["right", "À droite"]], default: "above" },
     { key: "title", kind: "text", label: "Titre", max: 120, required: true, default: "Un titre qui donne envie" },
-    { key: "titleTag", kind: "select", label: "Balise du titre", options: [["h2", "H2"], ["h3", "H3"], ["h4", "H4"], ["p", "Paragraphe"]], default: "h3" },
+    { key: "titleTag", kind: "select", label: "Balise du titre", options: [["h2", "H2"], ["h3", "H3"], ["h4", "H4"], ["p", "Paragraphe"]], default: "h2" },
     { key: "text", kind: "textarea", label: "Description", max: 400, default: "Quelques mots pour expliquer l'offre." },
     { key: "buttonLabel", kind: "text", label: "Texte du bouton (vide = pas de bouton)", max: 40, default: "En savoir plus" },
     { key: "link", kind: "link", label: "Lien", default: "/catalogue" },

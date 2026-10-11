@@ -18,7 +18,7 @@ describe("propriétés de style complétées", () => {
   test("les 16 nouvelles propriétés sont dans le registre et décrites pour l'éditeur (étiquette + type de contrôle)", () => {
     const spec = n.editorSpec().styleProps; const by = Object.fromEntries(spec.map((p) => [p.key, p]));
     for (const k of Object.keys(NEW)) { assert.ok(n.STYLE_PROPS[k], `${k} : registre`); assert.ok(by[k] && by[k].label, `${k} : étiquette`); assert.ok(["enum", "color", "length", "text", "number"].includes(by[k].kind), `${k} : contrôle ${by[k].kind}`); }
-    assert.equal(Object.keys(n.STYLE_PROPS).length, 104);
+    assert.equal(Object.keys(n.STYLE_PROPS).length, 107); // 104 + contour du texte (2) + colonnes de texte (1)
   });
   test("chaque propriété : valeur acceptée, publiée sur ordinateur, tablette, mobile et au survol", () => {
     for (const [k, [v, decl]] of Object.entries(NEW)) {

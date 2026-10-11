@@ -1937,6 +1937,6 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-sl-more > summary { list-style: none; cursor: pointer; padding: 2px 8px; border-radius: 6px; }
 .pb-sl-more > summary::-webkit-details-marker { display: none; }
 .pb-sl-more > summary:hover { background: var(--editor-hover, #eef4f9); }
-.pb-sl-menu { position: absolute; right: 0; top: 100%; z-index: 5; display: grid; min-width: 210px; padding: 4px; background: var(--editor-panel, var(--surface, #fff)); border: 1px solid var(--editor-border, var(--border)); border-radius: var(--pb-radius-md, 8px); box-shadow: 0 6px 20px rgba(0, 0, 0, .18); }
+.pb-sl-menu { position: absolute; right: 0; top: 100%; z-index: 5; display: grid; min-width: 210px; padding: 4px; background: var(--editor-panel, var(--surface, #fff)); border: 1px solid var(--editor-border, var(--border)); border-radius: var(--pb-radius-md, 8px); box-shadow: 0 6px 20px rgba(15, 23, 42, .18); }
 .pb-sl-menu .btn { justify-content: flex-start; }
 @media (max-width: 520px) { .pb-sl-row { grid-template-columns: auto 1fr; } .pb-sl-tools { grid-template-columns: 1fr; } .pb-sp-namerow { grid-template-columns: 1fr; } }
