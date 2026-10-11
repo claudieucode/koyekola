@@ -91,13 +91,16 @@ describe("moteur d'effets dans l'éditeur réel (navigateur simulé)", { skip: S
     const mobile = [...ed.section("Effets de défilement").querySelectorAll(".pb-checks label")].find((l) => /Mobile/.test(l.textContent)).querySelector("input");
     ed.set(mobile, false);
     await H.until(async () => JSON.stringify(((await H.serverNode(id, "btn000000001")).motion || {}).off) === '["mobile"]', 8000, "écran coupé enregistré");
-    const box = (i) => [...ed.section("Effets de défilement").querySelectorAll(".pb-checks input")][i];
-    ed.set(box(0), false); // ordinateur coupé en plus (valide : tablette reste active)
+    // Les cases suivent la liste des écrans du modèle (ordinateur, grand écran, tablette, mobile) : retrouvées par leur libellé
+    const box = (name) => [...ed.section("Effets de défilement").querySelectorAll(".pb-checks label")].find((l) => l.textContent.trim().startsWith(name)).querySelector("input");
+    ed.set(box("Ordinateur"), false); // ordinateur coupé en plus (valide : il reste des écrans actifs)
     await H.until(async () => JSON.stringify(((await H.serverNode(id, "btn000000001")).motion || {}).off) === '["desktop","mobile"]', 8000, "deuxième écran coupé enregistré");
-    ed.set(box(1), false); // couper aussi la tablette = plus aucun écran actif : refusé
+    ed.set(box("Grand écran"), false);
+    await H.until(async () => JSON.stringify(((await H.serverNode(id, "btn000000001")).motion || {}).off) === '["desktop","wide","mobile"]', 8000, "troisième écran coupé enregistré");
+    ed.set(box("Tablette"), false); // couper aussi la tablette = plus aucun écran actif : refusé
     await H.sleep(500);
     assert.match(ed.doc.querySelector("[data-pb-toast]").textContent, /au moins un écran/);
-    assert.deepEqual(((await H.serverNode(id, "btn000000001")).motion || {}).off, ["desktop", "mobile"]);
+    assert.deepEqual(((await H.serverNode(id, "btn000000001")).motion || {}).off, ["desktop", "wide", "mobile"], "refus : rien n'a changé");
   });
 
   test("effet de souris : disponible sur ordinateur, masqué sur mobile ; l'inclinaison 3D bloque la rotation au défilement", async () => {

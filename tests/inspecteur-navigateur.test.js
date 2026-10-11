@@ -206,7 +206,7 @@ describe("inspecteur d'un conteneur dans l'éditeur réel (navigateur simulé)",
     const ed = await openEditor(id);
     ed.selectLayer("box000000002");
     ed.tab("Style");
-    assert.deepEqual([...ed.insp.querySelectorAll("summary .pb-acc-title")].map((t) => t.textContent), ["Mise en page", "Espacement", "Dimensions", "Couleurs", "Fond", "Bordure", "Effets", "Position", "CSS personnalisé et classes"]);
+    assert.deepEqual([...ed.insp.querySelectorAll("summary .pb-acc-title")].map((t) => t.textContent), ["Mise en page", "Espacement", "Dimensions", "Typographie", "Fond", "Bordure", "Effets", "Position", "CSS personnalisé et classes"]);
     ed.section("Mise en page");
     assert.ok(ed.labels().includes("Aligner lignes"), "align-content proposé");
     ed.set(ed.prop("display"), "flex");

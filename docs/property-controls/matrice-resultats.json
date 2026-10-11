@@ -1,0 +1,336 @@
+{
+ "inventory": {
+  "fontFamily": {
+   "flexChild": "autre",
+   "grid": "autre"
+  },
+  "fontSize": {
+   "flexChild": "nombre",
+   "head": "nombre",
+   "button": "nombre",
+   "grid": "nombre"
+  },
+  "fontWeight": {
+   "flexChild": "liste",
+   "head": "liste",
+   "button": "liste",
+   "grid": "liste"
+  },
+  "color": {
+   "flexChild": "couleur",
+   "head": "couleur",
+   "button": "couleur",
+   "grid": "couleur"
+  },
+  "fontStyle": {
+   "flexChild": "icônes",
+   "grid": "icônes"
+  },
+  "lineHeight": {
+   "flexChild": "nombre",
+   "head": "nombre",
+   "button": "nombre",
+   "grid": "nombre"
+  },
+  "columnCount": {
+   "flexChild": "nombre",
+   "grid": "nombre"
+  },
+  "letterSpacing": {
+   "flexChild": "nombre",
+   "head": "nombre",
+   "button": "nombre",
+   "grid": "nombre"
+  },
+  "wordSpacing": {
+   "flexChild": "nombre",
+   "grid": "nombre"
+  },
+  "textIndent": {
+   "flexChild": "nombre",
+   "grid": "nombre"
+  },
+  "textTransform": {
+   "flexChild": "icônes",
+   "head": "icônes",
+   "button": "icônes",
+   "grid": "icônes"
+  },
+  "textAlign": {
+   "flexChild": "icônes",
+   "head": "icônes",
+   "button": "icônes",
+   "grid": "icônes"
+  },
+  "textDecoration": {
+   "flexChild": "icônes",
+   "grid": "icônes"
+  },
+  "textShadow": {
+   "flexChild": "liste",
+   "grid": "liste"
+  },
+  "direction": {
+   "flexChild": "liste",
+   "grid": "liste"
+  },
+  "textStrokeWidth": {
+   "flexChild": "nombre",
+   "grid": "nombre"
+  },
+  "textStrokeColor": {
+   "flexChild": "couleur",
+   "grid": "couleur"
+  },
+  "whiteSpace": {
+   "flexChild": "liste",
+   "grid": "liste"
+  },
+  "textWrap": {
+   "flexChild": "liste",
+   "grid": "liste"
+  },
+  "overflowWrap": {
+   "flexChild": "liste",
+   "grid": "liste"
+  },
+  "textOverflow": {
+   "flexChild": "liste",
+   "grid": "liste"
+  },
+  "width": {
+   "flexChild": "nombre",
+   "head": "nombre",
+   "button": "nombre",
+   "image": "nombre",
+   "grid": "nombre"
+  },
+  "minWidth": {
+   "flexChild": "nombre",
+   "grid": "nombre"
+  },
+  "maxWidth": {
+   "flexChild": "nombre",
+   "grid": "nombre"
+  },
+  "alignSelf": {
+   "flexChild": "icônes",
+   "head": "icônes",
+   "button": "icônes",
+   "image": "icônes"
+  },
+  "borderRadius": {
+   "flexChild": "nombre",
+   "head": "nombre",
+   "button": "nombre",
+   "image": "nombre",
+   "grid": "nombre"
+  },
+  "boxShadow": {
+   "flexChild": "liste",
+   "head": "liste",
+   "button": "liste",
+   "image": "liste",
+   "grid": "liste"
+  },
+  "opacity": {
+   "flexChild": "nombre",
+   "head": "nombre",
+   "button": "nombre",
+   "image": "nombre",
+   "grid": "nombre"
+  },
+  "transitionDuration": {
+   "flexChild": "nombre",
+   "head": "nombre",
+   "button": "nombre",
+   "image": "nombre",
+   "grid": "nombre"
+  },
+  "transitionEasing": {
+   "flexChild": "liste",
+   "grid": "liste"
+  },
+  "backdropBlur": {
+   "flexChild": "nombre",
+   "grid": "nombre"
+  },
+  "visibility": {
+   "flexChild": "liste",
+   "grid": "liste"
+  },
+  "cursor": {
+   "flexChild": "liste",
+   "head": "liste",
+   "button": "liste",
+   "image": "liste",
+   "grid": "liste"
+  },
+  "mixBlendMode": {
+   "flexChild": "liste",
+   "grid": "liste"
+  },
+  "position": {
+   "flexChild": "liste",
+   "grid": "liste"
+  },
+  "top": {
+   "flexChild": "nombre",
+   "grid": "nombre"
+  },
+  "right": {
+   "flexChild": "nombre",
+   "grid": "nombre"
+  },
+  "bottom": {
+   "flexChild": "nombre",
+   "grid": "nombre"
+  },
+  "left": {
+   "flexChild": "nombre",
+   "grid": "nombre"
+  },
+  "transformOrigin": {
+   "flexChild": "liste",
+   "grid": "liste"
+  },
+  "zIndex": {
+   "flexChild": "nombre",
+   "head": "nombre",
+   "button": "nombre",
+   "image": "nombre",
+   "grid": "nombre"
+  },
+  "scrollMarginTop": {
+   "flexChild": "nombre",
+   "grid": "nombre"
+  },
+  "borderStyle": {
+   "flexChild": "liste",
+   "grid": "liste"
+  },
+  "outlineStyle": {
+   "flexChild": "liste",
+   "grid": "liste"
+  },
+  "justifySelf": {
+   "head": "icônes"
+  },
+  "gridColumnStart": {
+   "head": "nombre"
+  },
+  "gridColumnEnd": {
+   "head": "nombre"
+  },
+  "gridColumnSpan": {
+   "head": "nombre"
+  },
+  "gridRowStart": {
+   "head": "nombre"
+  },
+  "gridRowEnd": {
+   "head": "nombre"
+  },
+  "gridRowSpan": {
+   "head": "nombre"
+  },
+  "backgroundColor": {
+   "head": "couleur"
+  },
+  "overflow": {
+   "button": "icônes",
+   "grid": "icônes"
+  },
+  "pointerEvents": {
+   "button": "liste",
+   "grid": "liste"
+  },
+  "overflowX": {
+   "button": "liste",
+   "grid": "liste"
+  },
+  "overflowY": {
+   "button": "liste",
+   "grid": "liste"
+  },
+  "height": {
+   "image": "nombre",
+   "grid": "nombre"
+  },
+  "minHeight": {
+   "image": "nombre",
+   "grid": "nombre"
+  },
+  "maxHeight": {
+   "image": "nombre",
+   "grid": "nombre"
+  },
+  "objectFit": {
+   "image": "liste"
+  },
+  "objectPosition": {
+   "image": "liste"
+  },
+  "aspectRatio": {
+   "image": "liste"
+  },
+  "flexDirection": {
+   "grid": "icônes"
+  },
+  "flexWrap": {
+   "grid": "icônes"
+  },
+  "justifyContent": {
+   "grid": "icônes"
+  },
+  "alignItems": {
+   "grid": "icônes"
+  },
+  "alignContent": {
+   "grid": "icônes"
+  },
+  "gap": {
+   "grid": "nombre"
+  },
+  "columnGap": {
+   "grid": "nombre"
+  },
+  "rowGap": {
+   "grid": "nombre"
+  },
+  "backgroundSize": {
+   "grid": "liste"
+  },
+  "backgroundPosition": {
+   "grid": "liste"
+  },
+  "backgroundRepeat": {
+   "grid": "liste"
+  },
+  "backgroundAttachment": {
+   "grid": "liste"
+  },
+  "backgroundClip": {
+   "grid": "liste"
+  },
+  "borderWidth": {
+   "grid": "nombre"
+  },
+  "borderColor": {
+   "grid": "couleur"
+  },
+  "outlineWidth": {
+   "grid": "nombre"
+  },
+  "outlineColor": {
+   "grid": "couleur"
+  },
+  "outlineOffset": {
+   "grid": "nombre"
+  },
+  "display": {
+   "grid": "icônes"
+  }
+ },
+ "problems": []
+}

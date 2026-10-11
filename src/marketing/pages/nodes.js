@@ -176,7 +176,7 @@ const STYLE_PROPS = {
   // Contour du texte (comme « Text Stroke » d'Elementor) : épaisseur + couleur, deux propriétés simples (la couleur peut être un jeton du site)
   direction: { css: "direction", check: oneOf("ltr", "rtl"), group: "typography" }, // sens d'écriture (langues écrites de droite à gauche)
   textStrokeWidth: { css: "-webkit-text-stroke-width", check: len, group: "typography" },
-  textStrokeColor: { css: "-webkit-text-stroke-color", check: color, group: "typography" },
+  textStrokeColor: { css: "-webkit-text-stroke-color", check: color, out: colorCss, group: "typography" },
   // Retours à la ligne et débordement du texte (les points de suspension demandent « sans retour » + débordement masqué)
   whiteSpace: { css: "white-space", check: oneOf("normal", "nowrap", "pre", "pre-wrap", "pre-line"), group: "typography" },
   textWrap: { css: "text-wrap", check: oneOf("wrap", "nowrap", "balance", "pretty"), group: "typography" },
@@ -228,12 +228,12 @@ const STYLE_PROPS = {
   transitionEasing: { css: "transition-timing-function", check: oneOf("ease", "linear", "ease-in", "ease-out", "ease-in-out"), group: "effects" },
   zIndex: { css: "z-index", check: numberIn(-100, 9999, { integer: true }), group: "position" },
   objectFit: { css: "object-fit", check: oneOf("cover", "contain", "fill", "none"), group: "media" },
-  objectPosition: { css: "object-position", check: oneOf("center", "top", "bottom", "left", "right"), group: "media" },
+  objectPosition: { css: "object-position", check: oneOf("center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"), group: "media" },
   aspectRatio: { css: "aspect-ratio", check: oneOf("auto", "1/1", "4/3", "3/2", "16/9", "21/9", "3/4"), out: (v) => v.replace("/", " / "), group: "media" },
   backgroundClip: { css: "background-clip", check: oneOf("border-box", "padding-box", "content-box", "text"), group: "background" }, // « text » : le fond (dégradé, image) se voit à travers les lettres ; voir declarations()
   scrollMarginTop: { css: "scroll-margin-top", check: len, group: "position" }, // décalage d'ancre : distance au haut de l'écran quand un lien #ancre saute ici (en-tête collant)
   backgroundSize: { css: "background-size", check: oneOf("cover", "contain", "auto"), group: "background" },
-  backgroundPosition: { css: "background-position", check: oneOf("center", "top", "bottom", "left", "right"), group: "background" },
+  backgroundPosition: { css: "background-position", check: oneOf("center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"), group: "background" },
   backgroundRepeat: { css: "background-repeat", check: oneOf("no-repeat", "repeat", "repeat-x", "repeat-y"), group: "background" },
   backgroundAttachment: { css: "background-attachment", check: oneOf("scroll", "fixed"), group: "background" },
 };
@@ -443,7 +443,8 @@ const NODE_TYPES = {
       lineStyle: oneOf("solid", "dashed", "dotted", "double")(p.lineStyle) || "solid",
       thickness: numberIn(1, 12, { integer: true })(p.thickness) || 1,
       ...(color(p.color) ? { color: color(p.color) } : {}),
-      ...(text ? { text, align: oneOf("left", "center", "right")(p.align) || "center" } : {}),
+      // La position du texte est conservée même quand le texte est vide : choisir « à droite » AVANT de saisir le texte ne doit pas perdre le choix
+      ...(text ? { text, align: oneOf("left", "center", "right")(p.align) || "center" } : oneOf("left", "right")(p.align) ? { align: p.align } : {}),
     };
   } },
   heading: { label: "Titre", category: "text", props: (p, at, h) => {
@@ -1220,12 +1221,12 @@ const STYLE_UI = {
   transformOrigin: ["Origine des transformations", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite", "top left": "Haut gauche", "top right": "Haut droit", "bottom left": "Bas gauche", "bottom right": "Bas droit" }],
   transitionDuration: ["Durée des transitions (ms)"], transitionEasing: ["Accélération des transitions", { ease: "Douce", linear: "Linéaire", "ease-in": "Départ lent", "ease-out": "Arrivée lente", "ease-in-out": "Départ et arrivée lents" }], zIndex: ["Plan (z-index)"],
   objectFit: ["Cadrage", { cover: "Remplir", contain: "Contenir", fill: "Étirer", none: "Taille réelle" }],
-  objectPosition: ["Point focal", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite" }],
+  objectPosition: ["Point focal", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite", "top left": "Haut gauche", "top right": "Haut droit", "bottom left": "Bas gauche", "bottom right": "Bas droit" }],
   aspectRatio: ["Proportions", { auto: "Libres", "1/1": "1:1", "4/3": "4:3", "3/2": "3:2", "16/9": "16:9", "21/9": "21:9", "3/4": "3:4" }],
   backgroundSize: ["Taille du fond", { cover: "Couvrir", contain: "Contenir", auto: "Réelle" }],
   backgroundRepeat: ["Répétition du fond", { "no-repeat": "Aucune", repeat: "Mosaïque", "repeat-x": "Horizontale", "repeat-y": "Verticale" }],
   backgroundAttachment: ["Défilement du fond", { scroll: "Avec la page", fixed: "Fixe (effet parallaxe)" }],
-  backgroundPosition: ["Position du fond", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite" }],
+  backgroundPosition: ["Position du fond", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite", "top left": "Haut gauche", "top right": "Haut droit", "bottom left": "Bas gauche", "bottom right": "Bas droit" }],
 };
 const GROUP_LABELS = { layout: "Mise en page", size: "Dimensions", spacing: "Espacement", typography: "Typographie", color: "Couleurs", background: "Fond", border: "Bordure", effects: "Effets", position: "Position", media: "Image", mask: "Masque" };
 // Description de l'éditeur (envoyée au navigateur) : types, palette, propriétés de style, écrans, états
