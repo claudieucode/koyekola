@@ -411,8 +411,8 @@ module.exports = () => {
     try {
       const content = (req.body && req.body.content) || {};
       guardSeo(req, page.working.seo, content.seo);
-      const { revision } = pages.saveDraft(req.mk.ctx, page.id, content, { revision: Number(req.body && req.body.revision) });
-      res.set("Cache-Control", "no-store").json({ revision, savedAt: new Date().toISOString() });
+      const { revision, warnings } = pages.saveDraft(req.mk.ctx, page.id, content, { revision: Number(req.body && req.body.revision) });
+      res.set("Cache-Control", "no-store").json({ revision, savedAt: new Date().toISOString(), ...(warnings && warnings.length ? { warnings } : {}) });
     } catch (error) { jsonError(res, next, error); }
   });
   router.post("/pages/:id(\\d+)/publier.json", need("pages.publish"), (req, res, next) => {

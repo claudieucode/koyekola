@@ -104,7 +104,12 @@ function saveDraft(ctx, id, input = {}, { revision, record = true } = {}) {
   const page = requirePage(ctx, id);
   if (page.archived_at) throw bad("Cette page est archivée : restaurez-la pour la modifier.");
   if (!Number.isInteger(revision)) throw bad("Révision manquante.");
-  const content = normalizeContent(ctx, page, input);
+  // Diagnostics non bloquants (réglages écartés car inapplicables) : renvoyés à l'éditeur, qui nettoie son document
+  const warnings = [];
+  const previous = ctx.__warnings;
+  ctx.__warnings = warnings;
+  let content;
+  try { content = normalizeContent(ctx, page, input); } finally { ctx.__warnings = previous; }
   checkWidgetRights(ctx, [...page.working.sections, ...page.published.sections], content.sections);
   layoutFormat.checkLocked(page.working, content);
   const next = revision + 1;
@@ -113,7 +118,7 @@ function saveDraft(ctx, id, input = {}, { revision, record = true } = {}) {
   if (!changed) throw conflict();
   // Historique commun (palier 10) : l'état du brouillon est conservé comme point d'historique (jamais bloquant)
   if (record) require("../../services/revisions").hooks.pageDraft(ctx, page, content);
-  return { revision: next, content };
+  return { revision: next, content, warnings };
 }
 
 function discardDraft(ctx, id) {
