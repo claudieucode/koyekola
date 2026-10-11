@@ -188,6 +188,42 @@ function renderList(req, res, { filter = null } = {}) {
 router.use(/^\/blog(\/|$)/, (req, res, next) => { if (req.method === "GET") taxonomy.reconcile(); next(); });
 router.get("/blog", (req, res) => renderList(req, res));
 
+// Flux RSS 2.0 du blog (palier 23) : les 20 derniers articles PUBLIÉS (jamais un brouillon, une programmation ou la corbeille) ; tout le texte est échappé.
+// /feed est l'adresse que les lecteurs de flux essaient d'abord : elle redirige vers le vrai flux.
+router.get("/feed", (req, res) => res.redirect(301, "/blog/feed.xml"));
+// Recherche dans le site (palier 23) : articles PUBLIÉS et pages de site PUBLIÉES (jamais un brouillon, une page archivée, une étape de tunnel ni une page d'un autre domaine).
+// Tous les mots saisis doivent figurer (sans tenir compte des accents ni des majuscules). Page en « noindex » : un résultat de recherche ne se référence pas.
+router.get("/recherche", (req, res) => {
+  const fold = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const q = String(req.query.q || "").replace(/\s+/g, " ").trim().slice(0, 100);
+  let articles = [], pages = [];
+  if (q) {
+    const terms = fold(q).split(" ").filter(Boolean);
+    const matches = (parts) => { const hay = fold(parts.join(" \n ")); return terms.every((t) => hay.includes(t)); };
+    articles = db.prepare("SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL ORDER BY published_at DESC, id DESC").all()
+      .filter((p) => matches([p.title, p.excerpt, p.category, p.subcategory, p.tags, blog.textOf(p)])).slice(0, 30)
+      .map((p) => ({ title: p.title, url: `/blog/${encodeURIComponent(p.slug)}`, summary: excerptOf(p) }));
+    pages = db.prepare("SELECT name, title, slug, description FROM mk_landing_pages WHERE status = 'published' AND archived_at IS NULL AND kind = 'page' AND site_id IS NULL ORDER BY published_at DESC, id DESC").all()
+      .filter((p) => matches([p.name, p.title, p.description])).slice(0, 30)
+      .map((p) => ({ title: p.title || p.name, url: `/p/${encodeURIComponent(p.slug)}`, summary: p.description || "" }));
+  }
+  res.set("Cache-Control", "private, no-cache").render("search", { q, articles, pages, seo: { noindex: true }, title: q ? `Recherche : ${q}` : "Recherche" });
+});
+
+router.get("/blog/feed.xml", (req, res) => {
+  const { escapeXml } = require("../utils/seo");
+  const rows = db.prepare("SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL ORDER BY published_at DESC, id DESC LIMIT 20").all();
+  const siteName = require("../seo/settings").get("site_name") || "KOLAKISA";
+  const date = (value) => { const d = new Date(String(value || "").replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(value)) ? "" : "Z")); return Number.isNaN(d.getTime()) ? new Date(0).toUTCString() : d.toUTCString(); };
+  const items = rows.map((p) => {
+    const url = absoluteUrl(req, `/blog/${encodeURIComponent(p.slug)}`);
+    return `<item><title>${escapeXml(p.title)}</title><link>${escapeXml(url)}</link><guid isPermaLink="true">${escapeXml(url)}</guid><pubDate>${date(p.published_at)}</pubDate><description>${escapeXml(excerptOf(p))}</description></item>`;
+  }).join("");
+  const channelLast = rows.length ? date(rows[0].published_at) : new Date(0).toUTCString();
+  res.set("Content-Type", "application/rss+xml; charset=utf-8").set("Cache-Control", "public, max-age=300");
+  res.send(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>${escapeXml(siteName)} — Blog</title><link>${escapeXml(absoluteUrl(req, "/blog"))}</link><description>Les derniers articles du blog.</description><language>fr</language><lastBuildDate>${channelLast}</lastBuildDate><atom:link href="${escapeXml(absoluteUrl(req, "/blog/feed.xml"))}" rel="self" type="application/rss+xml"/>${items}</channel></rss>`);
+});
+
 // Archives : adresses configurables (taxonomy.baseOf) ; un terme inexistant est une vraie 404 (jamais une archive « vide » inventée)
 const categoryBase = taxonomy.baseOf("category");
 const tagBase = taxonomy.baseOf("tag");

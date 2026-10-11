@@ -20,7 +20,7 @@
     <span class="mk-cms-menu-note" role="none">Le choix d'un site actif arrive dans un prochain palier.</span>
   </div>
 </div>
-<form class="mk-cms-topsearch" role="search" onsubmit="return false"><label class="mk-search"><span class="sr-only">Rechercher dans le CMS</span><%- icon("search", { size: 16 }) %><input type="search" placeholder="Rechercher…" disabled title="Disponible dans un prochain palier"></label></form>
+<form class="mk-cms-topsearch" role="search" action="/marketing/site-web/recherche" method="get"><label class="mk-search"><span class="sr-only">Rechercher dans le CMS</span><%- icon("search", { size: 16 }) %><input type="search" name="q" placeholder="Rechercher…" maxlength="80" autocomplete="off"></label></form>
 <a class="icon-btn mk-cms-iconbtn" href="/" target="_blank" rel="noopener" title="Voir le site" aria-label="Voir le site (nouvel onglet)"><%- icon("externalLink", { size: 18 }) %></a>
 <button type="button" class="icon-btn mk-cms-iconbtn" disabled title="Notifications : disponible dans un prochain palier" aria-label="Notifications (bientôt)"><%- icon("bell", { size: 18 }) %></button>
 <button type="button" class="icon-btn mk-cms-iconbtn" disabled title="Aide : disponible dans un prochain palier" aria-label="Aide (bientôt)"><%- icon("help", { size: 18 }) %></button>
