@@ -64,6 +64,22 @@ check("email", "integrations", "Envoi d'e-mails", async () => {
   return smtp ? R("good", "Un serveur d'envoi (SMTP) est configuré (identifiants non affichés).") : R("info", "Aucun serveur d'envoi (SMTP) configuré sur ce serveur.", { impact: "Pas d'e-mails (confirmation, mot de passe oublié, invitations).", recommendation: "Renseigner SMTP_HOST et ses variables si des e-mails sont attendus." });
 }, { site: false });
 
+// Fournisseur d'envoi du moteur d'e-mails (palier 26, G-02) : « console » n'envoie RIEN, mais les messages sont enregistrés « envoyés ».
+check("sending_provider", "integrations", "Fournisseur d'envoi des e-mails marketing", async (c) => {
+  const { getSendingConfig } = require("../../marketing/sending/config");
+  const cfg = getSendingConfig({ db, organizationId: c.organizationId, can: () => true, orgLevel: true, settings: runner.config && runner.config.settings });
+  if (cfg.provider === "console") return R("warning", "Le fournisseur d'envoi est « console » : aucun e-mail de campagne ou de scénario ne quitte le serveur.", { impact: "Les messages sont enregistrés comme « envoyés » sans être transmis à personne.", recommendation: "Choisir Resend ou SMTP dans les réglages d'envoi du marketing.", action: { label: "Ouvrir les réglages d'envoi", href: "/marketing/envoi" } });
+  return R("good", `Fournisseur d'envoi : ${cfg.provider}${cfg.from ? "" : " (adresse d'expédition à renseigner)"}.`);
+}, { site: false });
+// Paiement (palier 26, G-01) : lecture de la PRÉSENCE des variables, jamais de leur valeur.
+check("payments", "integrations", "Paiement en ligne (Stripe)", async () => {
+  const key = Boolean(process.env.STRIPE_SECRET_KEY), hook = Boolean(process.env.STRIPE_WEBHOOK_SECRET);
+  if (key && !hook) return R("critical", "Stripe est configuré mais le secret du webhook est absent : les paiements seraient encaissés sans être enregistrés.", { impact: "Pas de commande, pas d'accès à la formation après un paiement.", recommendation: "Renseigner STRIPE_WEBHOOK_SECRET (secret de signature du webhook Stripe) chez l'hébergeur." });
+  if (!key && hook) return R("warning", "Le secret du webhook Stripe est présent mais la clé secrète Stripe est absente : aucun paiement ne peut être lancé.", { recommendation: "Renseigner STRIPE_SECRET_KEY chez l'hébergeur." });
+  if (!key) return R("info", "Stripe n'est pas configuré : le paiement en ligne est désactivé.", { recommendation: "Renseigner STRIPE_SECRET_KEY et STRIPE_WEBHOOK_SECRET si des ventes en ligne sont prévues." });
+  return R("good", "Stripe est configuré (clé secrète et secret du webhook présents ; valeurs non affichées).");
+}, { site: false });
+
 // ---------- Réglages (palier 14) : cohérence de la configuration ----------
 const settingsScope = (c) => ({ siteId: c.siteId });
 check("settings_homepage", "configuration", "Page d'accueil choisie", async (c) => {
