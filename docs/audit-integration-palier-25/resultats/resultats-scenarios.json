@@ -1,0 +1,1381 @@
+{
+ "generatedAt": "2026-10-11T07:22:50.101Z",
+ "environment": "serveur de test jetable (tests/helpers.js)",
+ "results": [
+  {
+   "id": "INT-CMS-001",
+   "titre": "création, édition, rechargement, publication et rendu public d'une page",
+   "modules": [
+    "CMS",
+    "Page Builder",
+    "URL",
+    "Permissions",
+    "Sites"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "la page est créée par la route du CMS (302) et enregistrée sur le site A",
+     "ok": true,
+     "evidence": "status 302",
+     "anomaly": null
+    },
+    {
+     "label": "le Page Builder existant s'ouvre sur cette page",
+     "ok": true,
+     "evidence": "status 200",
+     "anomaly": null
+    },
+    {
+     "label": "le brouillon est enregistré (200) avec une nouvelle révision",
+     "ok": true,
+     "evidence": "status 200",
+     "anomaly": null
+    },
+    {
+     "label": "après rechargement, l'aperçu montre le contenu enregistré",
+     "ok": true,
+     "evidence": "aperçu relu depuis la base",
+     "anomaly": null
+    },
+    {
+     "label": "l'éditeur rechargé contient le contenu enregistré",
+     "ok": true,
+     "evidence": "contenu présent dans le document de l'éditeur",
+     "anomaly": null
+    },
+    {
+     "label": "avant publication, la page publique n'existe pas (404)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "la publication réussit (200) et crée une version",
+     "ok": true,
+     "evidence": "status 200",
+     "anomaly": null
+    },
+    {
+     "label": "la page publique est servie (200) avec le contenu publié",
+     "ok": true,
+     "evidence": "status 200",
+     "anomaly": null
+    },
+    {
+     "label": "la page publique n'est pas mise en cache (no-store)",
+     "ok": true,
+     "evidence": "no-store",
+     "anomaly": null
+    },
+    {
+     "label": "un lecteur de l'organisation ne peut pas enregistrer (403)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un membre du site B ne peut pas enregistrer la page du site A (403/404)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un anonyme est renvoyé vers la connexion",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "aucun contenu pirate n'a été enregistré",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "le membre du site A (accès limité) peut modifier sa propre page",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-CMS-002",
+   "titre": "révisions, version publiée conservée, restauration et modification concurrente",
+   "modules": [
+    "Page Builder",
+    "Historique",
+    "Publication"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "la version publiée reste « UN » pendant que le brouillon est « DEUX »",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "l'historique de la page répond et liste des points",
+     "ok": true,
+     "evidence": "status 200",
+     "anomaly": null
+    },
+    {
+     "label": "une modification concurrente (révision périmée) est refusée (409) sans écraser",
+     "ok": true,
+     "evidence": "status 409",
+     "anomaly": null
+    },
+    {
+     "label": "restaurer la version 1 copie son contenu dans le brouillon (302)",
+     "ok": true,
+     "evidence": "status 302",
+     "anomaly": null
+    },
+    {
+     "label": "la restauration ne change pas la page publique avant une nouvelle publication",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "abandonner le brouillon rend l'éditeur à la version en ligne",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-CMS-003",
+   "titre": "médiathèque : envoi, métadonnées, insertion dans une page, affichage public, protection à la suppression",
+   "modules": [
+    "Médiathèque",
+    "Page Builder",
+    "Pages publiques"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "le fichier est enregistré (201) avec un chemin /uploads/marketing/…",
+     "ok": true,
+     "evidence": "status 201",
+     "anomaly": null
+    },
+    {
+     "label": "le texte alternatif est enregistré et relu en base",
+     "ok": true,
+     "evidence": "status 200",
+     "anomaly": null
+    },
+    {
+     "label": "la page publique affiche l'image par son adresse permanente",
+     "ok": true,
+     "evidence": "adresse trouvée dans le HTML public",
+     "anomaly": null
+    },
+    {
+     "label": "le fichier est réellement servi (200, type image)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "la suppression définitive d'un média utilisé par une page est refusée",
+     "ok": true,
+     "evidence": "status 409",
+     "anomaly": null
+    },
+    {
+     "label": "un membre limité au site B ne peut pas gérer la médiathèque de l'organisation",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-CMS-004",
+   "titre": "styles globaux : brouillon, publication, effet réel sur le site public, aucune modification involontaire",
+   "modules": [
+    "Apparence",
+    "Pages publiques",
+    "Page Builder"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "sans configuration publiée, aucune feuille d'apparence n'est ajoutée",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "le brouillon n'est PAS visible sur le site public",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "la publication de l'apparence réussit",
+     "ok": true,
+     "evidence": "status 302",
+     "anomaly": null
+    },
+    {
+     "label": "la couleur publiée est dans la feuille du site public",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "une injection CSS est refusée : la feuille publique reste propre",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "une personne sans droit de publication ne peut pas publier l'apparence",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "retirer la configuration rend le site à son apparence d'origine",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-SEO-005",
+   "titre": "SEO, URL, 404, aperçu privé et plan du site",
+   "modules": [
+    "SEO",
+    "URL",
+    "Pages",
+    "Sitemap"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "balise title rendue",
+     "ok": true,
+     "evidence": "Titre SEO d&#39;intégration · KOLAKISA",
+     "anomaly": null
+    },
+    {
+     "label": "canonical vers l'adresse publique",
+     "ok": true,
+     "evidence": "https://k.test/p/page-seo-integration",
+     "anomaly": null
+    },
+    {
+     "label": "Open Graph présent",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "la page indexable est dans le plan du site",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "une page non indexable est servie mais absente du plan du site et en noindex",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un brouillon n'est pas public (404, noindex)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "l'aperçu d'un brouillon est privé (anonyme renvoyé à la connexion)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "une adresse inconnue répond 404 en noindex",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "l'ancienne adresse redirige (301) vers la nouvelle",
+     "ok": true,
+     "evidence": "301 /p/page-seo-renommee",
+     "anomaly": null
+    },
+    {
+     "label": "la nouvelle adresse est servie",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "une page dépubliée disparaît (404) et quitte le plan du site",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-TUN-006",
+   "titre": "une page du CMS est réutilisée par un tunnel : référence stable, aucune copie, protection de la page",
+   "modules": [
+    "CMS",
+    "Page Builder",
+    "Tunnel Builder",
+    "URL",
+    "Permissions"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "le tunnel est créé sur le site A",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "chaque étape référence la page par son identifiant (page_id)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "aucune copie de la page n'a été créée",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "le rendu de l'étape est celui de la page référencée",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "avant republication, le visiteur voit toujours la version en ligne",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "après republication, la modification apparaît dans l'étape",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "mettre à la corbeille une page d'un tunnel actif est refusé, la page reste en ligne",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un membre du site B ne voit pas le tunnel du site A",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un membre du site B ne peut pas y ajouter une étape",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-TUN-007",
+   "titre": "navigation entre les étapes du tunnel et cohérence avec l'ordre configuré",
+   "modules": [
+    "Tunnel Builder",
+    "Pages publiques"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "le bouton « Continuer » de l'étape 1 passe par le suivi de clic de la page",
+     "ok": true,
+     "evidence": "/p/etape-entree-integration/clic/0",
+     "anomaly": null
+    },
+    {
+     "label": "le clic redirige vers la page de l'étape 2 configurée",
+     "ok": true,
+     "evidence": "302 /p/etape-merci-integration",
+     "anomaly": null
+    },
+    {
+     "label": "un numéro de bouton inconnu ramène sur la page (aucune adresse inventée)",
+     "ok": true,
+     "evidence": "302 /p/etape-entree-integration",
+     "anomaly": null
+    },
+    {
+     "label": "un clic sur une page inconnue répond 404",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "la dernière étape (merci) n'a pas de bouton « étape suivante »",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-CON-008",
+   "titre": "soumission d'un formulaire : validation, contact, consentement, doublons, événements",
+   "modules": [
+    "Formulaires",
+    "Contact Core",
+    "Consentements",
+    "Événements"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "sans case cochée : aucun abonnement marketing (le contact, s'il existe, n'est pas abonné)",
+     "ok": true,
+     "evidence": "{}",
+     "anomaly": null
+    },
+    {
+     "label": "sans case cochée : aucune preuve de consentement",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "une adresse invalide est refusée, aucun contact créé",
+     "ok": true,
+     "evidence": "status 400",
+     "anomaly": null
+    },
+    {
+     "label": "avec la case : le contact est créé, adresse normalisée en minuscules",
+     "ok": true,
+     "evidence": "status 302",
+     "anomaly": null
+    },
+    {
+     "label": "avec la case : la preuve de consentement est enregistrée",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "avec la case : le contact est abonné",
+     "ok": true,
+     "evidence": "subscribed",
+     "anomaly": null
+    },
+    {
+     "label": "un second envoi (casse différente) ne crée pas de doublon",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "l'événement « formulaire envoyé » est écrit dans le journal du contact",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "le champ piège refuse l'envoi d'un robot (aucun contact)",
+     "ok": true,
+     "evidence": "status 302",
+     "anomaly": null
+    },
+    {
+     "label": "un prénom contenant du HTML est échappé dans l'administration",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-CON-009",
+   "titre": "cohérence du Contact Core : compte ≠ contact ≠ consentement, commentaire, site",
+   "modules": [
+    "Contact Core",
+    "Comptes",
+    "Commentaires",
+    "Sites"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "créer un compte crée (ou relie) UNE fiche de contact",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "créer un compte n'abonne personne (aucune preuve de consentement marketing)",
+     "ok": true,
+     "evidence": "unknown",
+     "anomaly": null
+    },
+    {
+     "label": "le commentaire est enregistré",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un commentaire n'abonne jamais son auteur à une liste marketing",
+     "ok": true,
+     "evidence": "{}",
+     "anomaly": null
+    },
+    {
+     "label": "un membre du site A voit les contacts de son site (lecture)",
+     "ok": true,
+     "evidence": "status 200",
+     "anomaly": null
+    },
+    {
+     "label": "un membre du site B ne voit pas les contacts du site A (refus)",
+     "ok": true,
+     "evidence": "status 403",
+     "anomaly": null
+    },
+    {
+     "label": "un compte hors équipe est refusé sur les contacts",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-CON-010",
+   "titre": "concurrence : 6 envois simultanés du même formulaire par la même personne ne créent qu'un contact et qu'un abonnement",
+   "modules": [
+    "Formulaires",
+    "Contact Core",
+    "Consentements",
+    "Concurrence"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "aucune requête ne provoque d'erreur serveur",
+     "ok": true,
+     "evidence": "302,302,302,302,302,302",
+     "anomaly": null
+    },
+    {
+     "label": "un seul contact existe pour cette adresse",
+     "ok": true,
+     "evidence": "1",
+     "anomaly": null
+    },
+    {
+     "label": "le contact est abonné une seule fois (statut stable)",
+     "ok": true,
+     "evidence": "subscribed",
+     "anomaly": null
+    },
+    {
+     "label": "la preuve de consentement « accordé » existe",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "les preuves de consentement ne sont pas multipliées sans limite (≤ 6, une par envoi accepté)",
+     "ok": true,
+     "evidence": "1",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-AUT-010",
+   "titre": "un événement réel déclenche un scénario exécuté par le worker, une seule fois, et le consentement est respecté",
+   "modules": [
+    "Formulaires",
+    "Contact Core",
+    "Automatisations",
+    "Worker",
+    "Email Engine"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "le scénario est enregistré avec une étape « étiquette »",
+     "ok": true,
+     "evidence": "status 200",
+     "anomaly": null
+    },
+    {
+     "label": "le scénario est activé (302)",
+     "ok": true,
+     "evidence": "status 302",
+     "anomaly": null
+    },
+    {
+     "label": "le worker exécute le passage jusqu'à son terme (completed)",
+     "ok": true,
+     "evidence": "[{\"status\":\"completed\"}]",
+     "anomaly": null
+    },
+    {
+     "label": "l'action a eu son effet réel : l'étiquette est posée sur le contact",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "le journal pas à pas du scénario est écrit",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "idempotence : un second envoi ne crée pas un second passage pour ce contact",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "aucun e-mail n'a été envoyé par ce scénario (aucune étape d'e-mail)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-EML-011",
+   "titre": "e-mail : le consentement et la désinscription décident des destinataires ; messages enregistrés avec leur état (fournisseur « console » = aucun envoi réel)",
+   "modules": [
+    "Formulaires",
+    "Contact Core",
+    "Automatisations",
+    "Email Engine",
+    "Consentements",
+    "Worker"
+   ],
+   "mode": "SIMULE",
+   "status": "SIMULÉ UNIQUEMENT (critères réussis sur un faux fournisseur)",
+   "criteria": [
+    {
+     "label": "l'audience joignable contient l'abonné avec preuve de consentement",
+     "ok": true,
+     "evidence": "[3]",
+     "anomaly": null
+    },
+    {
+     "label": "l'audience joignable exclut le désinscrit",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "l'audience joignable exclut la personne sans consentement",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un modèle d'e-mail est créé par la route",
+     "ok": true,
+     "evidence": "status 302",
+     "anomaly": null
+    },
+    {
+     "label": "un scénario avec une étape d'e-mail est enregistré sans étape incomplète",
+     "ok": true,
+     "evidence": "{\"ok\":true,\"incomplete\":[]}",
+     "anomaly": null
+    },
+    {
+     "label": "avant l'activation, l'écran du scénario prévient que le fournisseur « console » n'envoie rien",
+     "ok": true,
+     "evidence": "Fournisseur « console » : rien ne sera réellement envoyé (réglages d&#39;envoi)",
+     "anomaly": null
+    },
+    {
+     "label": "le scénario est activé",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "APRÈS l'activation, l'écran du scénario rappelle encore que le fournisseur « console » n'envoie rien",
+     "ok": true,
+     "evidence": "l'avertissement a disparu de l'écran du scénario actif",
+     "anomaly": null
+    },
+    {
+     "label": "avec consentement prouvé : un message est enregistré (une seule fois)",
+     "ok": true,
+     "evidence": "[{\"status\":\"sent\",\"provider\":\"console\"}]",
+     "anomaly": null
+    },
+    {
+     "label": "état observé : « sent » par le fournisseur « console » (SIMULATION : rien n'est réellement transmis)",
+     "ok": true,
+     "evidence": "[{\"status\":\"sent\",\"provider\":\"console\"}]",
+     "anomaly": null
+    },
+    {
+     "label": "sans consentement : AUCUN message n'est enregistré pour cette adresse",
+     "ok": true,
+     "evidence": "contact : []",
+     "anomaly": null
+    },
+    {
+     "label": "le passage du contact sans accord est tracé et ne reste pas bloqué en « running »",
+     "ok": true,
+     "evidence": "[]",
+     "anomaly": null
+    },
+    {
+     "label": "un second envoi du formulaire par la même personne ne produit pas un second e-mail",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-COM-012",
+   "titre": "commande de test : panier, session de paiement, aucun accès avant paiement confirmé, montant fixé par le serveur",
+   "modules": [
+    "Commerce",
+    "Stripe (faux serveur)",
+    "Accès aux formations"
+   ],
+   "mode": "SIMULE",
+   "status": "SIMULÉ UNIQUEMENT (critères réussis sur un faux fournisseur)",
+   "criteria": [
+    {
+     "label": "« Payer » redirige vers la page de paiement du fournisseur (303)",
+     "ok": true,
+     "evidence": "303 https://checkout.stripe.test/pay/cs_int_1",
+     "anomaly": null
+    },
+    {
+     "label": "le montant envoyé au fournisseur est celui du serveur (5000), pas celui du formulaire falsifié",
+     "ok": true,
+     "evidence": "5000",
+     "anomaly": null
+    },
+    {
+     "label": "aucune commande n'existe avant le paiement",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "aucun accès à la formation avant le paiement",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-COM-013",
+   "titre": "webhook de paiement : signature, idempotence, commande, accès, contact « Client », événement, Analytics ; échec de paiement",
+   "modules": [
+    "Commerce",
+    "Webhook signé",
+    "Contact Core",
+    "Événements",
+    "Analytics"
+   ],
+   "mode": "SIMULE",
+   "status": "SIMULÉ UNIQUEMENT (critères réussis sur un faux fournisseur)",
+   "criteria": [
+    {
+     "label": "signature invalide (mauvais secret) refusée (400), rien n'est accordé",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "signature absente refusée (400)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "webhook signé accepté (200)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "la commande existe avec le bon total (5000) APRÈS confirmation",
+     "ok": true,
+     "evidence": "5000",
+     "anomaly": null
+    },
+    {
+     "label": "l'accès à la formation est ouvert",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "idempotence : un rejeu du webhook ne crée pas une seconde commande",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "une session inconnue est ignorée sans erreur (200) et ne crée rien",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "l'événement « purchase.completed » est écrit dans le journal à partir de la commande réelle",
+     "ok": true,
+     "evidence": "source commerce",
+     "anomaly": null
+    },
+    {
+     "label": "le contact existe et correspond au compte acheteur (lien par le compte)",
+     "ok": true,
+     "evidence": "{\"id\":2,\"lifecycle_stage\":\"customer\"}",
+     "anomaly": null
+    },
+    {
+     "label": "l'événement d'achat est rattaché à ce contact",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "le premier achat réel passe le contact en « client »",
+     "ok": true,
+     "evidence": "customer",
+     "anomaly": null
+    },
+    {
+     "label": "Analytics lit la commande réelle : revenu brut de 50,00 € (5000 centimes) et 1 commande",
+     "ok": true,
+     "evidence": "{\"noData\":false,\"kpis\":{\"orders\":1,\"paidOrders\":1,\"grossCents\":5000,\"discountCents\":0,\"refunds\":0,\"refundCents\":0,\"netCents\":5000,\"avgBasketCents\":5000,\"newCustomers\":1,\"returningCustomers\":0},\"previo",
+     "anomaly": null
+    },
+    {
+     "label": "l'écran Analytics s'affiche (200)",
+     "ok": true,
+     "evidence": "status 200",
+     "anomaly": null
+    },
+    {
+     "label": "un remboursement signé est accepté (200)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un remboursement rejoué n'est enregistré qu'une fois",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un remboursement d'un paiement inconnu est ignoré",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "échec d'un paiement asynchrone : accepté sans créer de commande",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-COM-017",
+   "titre": "paiement non abouti : session expirée ou échouée, aucune commande, aucun accès, retour clair pour l'acheteur",
+   "modules": [
+    "Commerce",
+    "Webhook signé",
+    "Accès aux formations"
+   ],
+   "mode": "SIMULE",
+   "status": "SIMULÉ UNIQUEMENT (critères réussis sur un faux fournisseur)",
+   "criteria": [
+    {
+     "label": "la session de paiement est créée « en attente »",
+     "ok": true,
+     "evidence": "pending",
+     "anomaly": null
+    },
+    {
+     "label": "l'expiration signée de la session est acceptée (200)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "la session passe en « expired »",
+     "ok": true,
+     "evidence": "expired",
+     "anomaly": null
+    },
+    {
+     "label": "aucune commande n'est créée",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "aucun accès n'est ouvert",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "la page de retour dit clairement que rien n'a été débité (402)",
+     "ok": true,
+     "evidence": "status 402",
+     "anomaly": null
+    },
+    {
+     "label": "une expiration rejouée ne change rien (200, toujours « expired », aucune commande)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un autre compte ne peut pas lire le retour de cette commande",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-COM-018",
+   "titre": "concurrence : le même webhook de paiement reçu 6 fois en même temps ne crée qu'une commande, une inscription et un e-mail de confirmation",
+   "modules": [
+    "Commerce",
+    "Webhook signé",
+    "Concurrence",
+    "Accès aux formations"
+   ],
+   "mode": "SIMULE",
+   "status": "SIMULÉ UNIQUEMENT (critères réussis sur un faux fournisseur)",
+   "criteria": [
+    {
+     "label": "les 6 requêtes simultanées sont toutes acceptées (200)",
+     "ok": true,
+     "evidence": "200,200,200,200,200,200",
+     "anomaly": null
+    },
+    {
+     "label": "une seule commande existe pour cet acheteur",
+     "ok": true,
+     "evidence": "1",
+     "anomaly": null
+    },
+    {
+     "label": "une seule inscription à la formation",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un seul e-mail de confirmation d'achat en file",
+     "ok": true,
+     "evidence": "1",
+     "anomaly": null
+    },
+    {
+     "label": "une seule ligne de commande",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-ABT-014",
+   "titre": "mesure et A/B : affectation collante, exposition seulement si la page est affichée, conversion associée, robots ignorés",
+   "modules": [
+    "Page Builder",
+    "Tests A/B",
+    "Mesure",
+    "Consentement",
+    "Analytics"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "le test A/B est créé avec une copie B distincte (variant_page_id)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "le test démarre (302) et passe en « en cours »",
+     "ok": true,
+     "evidence": "status 302",
+     "anomaly": null
+    },
+    {
+     "label": "l'affectation est collante : chaque visiteur revoit la même version",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "les deux versions sont réellement servies à l'adresse unique",
+     "ok": true,
+     "evidence": "B vu par 7/12",
+     "anomaly": null
+    },
+    {
+     "label": "une exposition par visiteur (pas par visite)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un robot ne compte pas comme exposition",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "une adresse « ?variant=b » ne force aucune version",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "l'écran de résultats répond et annonce « données insuffisantes » (jamais un gagnant) avec 12 visiteurs",
+     "ok": true,
+     "evidence": "status 200",
+     "anomaly": null
+    },
+    {
+     "label": "aucun gagnant n'est déclaré (le test reste « en cours »)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-ANA-016",
+   "titre": "mesure d'audience : seuls les visiteurs consentants sont comptés, rejeu sans doublon, tableau de bord = lignes en base",
+   "modules": [
+    "Mesure",
+    "Consentement",
+    "Analytics"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "3 visiteurs consentants : 9 lignes de mesure enregistrées",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un visiteur sans consentement n'enregistre rien",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un robot (User-Agent) n'enregistre rien même avec les cookies",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un lot identique reçu deux fois ne double pas les lignes (déduplication)",
+     "ok": true,
+     "evidence": "lignes ajoutées : 9",
+     "anomaly": null
+    },
+    {
+     "label": "un lot SANS date client rejoué dans la même minute est compté une seule fois",
+     "ok": true,
+     "evidence": "lignes : 3 puis 3",
+     "anomaly": null
+    },
+    {
+     "label": "Analytics : 3 visiteurs, 3 sessions, 6 pages vues, 9 événements pour ces visites",
+     "ok": true,
+     "evidence": "{\"visitors\":4,\"sessions\":4,\"pageViews\":8,\"events\":12}",
+     "anomaly": null
+    },
+    {
+     "label": "les compteurs restent distincts (visiteurs ≠ sessions ≠ pages vues ≠ événements)",
+     "ok": true,
+     "evidence": "{\"visitors\":4,\"sessions\":4,\"pageViews\":8,\"events\":12}",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-CMS-007",
+   "titre": "publication programmée d'une page : invisible avant l'heure, publiée à la première visite après l'heure, présente au plan du site",
+   "modules": [
+    "Pages",
+    "Publication programmée",
+    "SEO",
+    "Pages publiques"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "la programmation est enregistrée (302, date en base)",
+     "ok": true,
+     "evidence": "status 302",
+     "anomaly": null
+    },
+    {
+     "label": "avant l'heure : la page est invisible (404)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "à l'heure dite, la première visite de l'administration publie la page",
+     "ok": true,
+     "evidence": "{\"status\":\"published\",\"scheduled_at\":null}",
+     "anomaly": null
+    },
+    {
+     "label": "la page est en ligne avec son contenu",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "la page programmée indexable est dans le plan du site",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "la publication automatique est consignée au journal (utilisateur vide = système)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-CMS-006",
+   "titre": "rédaction d'articles selon les rôles (état actuel : réservée au compte créateur)",
+   "modules": [
+    "Articles",
+    "Permissions",
+    "Éditeur d'articles"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI PARTIELLEMENT",
+   "criteria": [
+    {
+     "label": "Éditeur : peut créer un article (attendu par ses permissions)",
+     "ok": false,
+     "evidence": "status 403",
+     "anomaly": "G-03"
+    },
+    {
+     "label": "Auteur : peut créer un article (attendu par ses permissions)",
+     "ok": false,
+     "evidence": "status 403",
+     "anomaly": "G-03"
+    },
+    {
+     "label": "Contributeur : peut créer un article (attendu par ses permissions)",
+     "ok": false,
+     "evidence": "status 403",
+     "anomaly": "G-03"
+    },
+    {
+     "label": "le compte créateur crée un article (200)",
+     "ok": true,
+     "evidence": "status 200",
+     "anomaly": null
+    },
+    {
+     "label": "un Lecteur ne peut pas créer d'article (403)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "un compte hors équipe ne peut pas créer d'article (403)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  },
+  {
+   "id": "INT-SEC-015",
+   "titre": "isolation entre sites, accès par identifiant, webhooks invalides, secrets et données personnelles dans les journaux",
+   "modules": [
+    "Permissions",
+    "Sites",
+    "Webhooks",
+    "Journaux"
+   ],
+   "mode": "REEL-TEST",
+   "status": "RÉUSSI — PREUVES COMPLÈTES",
+   "criteria": [
+    {
+     "label": "membre du site B → page du site A refusé",
+     "ok": true,
+     "evidence": "status 403",
+     "anomaly": null
+    },
+    {
+     "label": "membre du site B → tunnel du site A refusé",
+     "ok": true,
+     "evidence": "status 403",
+     "anomaly": null
+    },
+    {
+     "label": "membre du site B → aperçu de page du site A refusé",
+     "ok": true,
+     "evidence": "status 403",
+     "anomaly": null
+    },
+    {
+     "label": "membre du site B → historique du site A refusé",
+     "ok": true,
+     "evidence": "status 403",
+     "anomaly": null
+    },
+    {
+     "label": "compte hors équipe → page refusé",
+     "ok": true,
+     "evidence": "status 403",
+     "anomaly": null
+    },
+    {
+     "label": "compte hors équipe → tunnel refusé",
+     "ok": true,
+     "evidence": "status 403",
+     "anomaly": null
+    },
+    {
+     "label": "compte hors équipe → aperçu de page refusé",
+     "ok": true,
+     "evidence": "status 403",
+     "anomaly": null
+    },
+    {
+     "label": "compte hors équipe → historique refusé",
+     "ok": true,
+     "evidence": "status 403",
+     "anomaly": null
+    },
+    {
+     "label": "membre du site B → supprimer la page refusé",
+     "ok": true,
+     "evidence": "status 403",
+     "anomaly": null
+    },
+    {
+     "label": "membre du site B → archiver refusé",
+     "ok": true,
+     "evidence": "status 403",
+     "anomaly": null
+    },
+    {
+     "label": "membre du site B → publier refusé",
+     "ok": true,
+     "evidence": "status 403",
+     "anomaly": null
+    },
+    {
+     "label": "webhook Stripe sans configuration : fermé (503) sur ce serveur de test",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "API publique sans clé : 401",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "fichiers sensibles non exposés (.env, base, code)",
+     "ok": true,
+     "evidence": "",
+     "anomaly": null
+    },
+    {
+     "label": "les journaux du serveur ne contiennent ni mot de passe ni clé secrète de test",
+     "ok": true,
+     "evidence": "recherche dans la sortie du serveur de test",
+     "anomaly": null
+    }
+   ],
+   "crash": null
+  }
+ ]
+}

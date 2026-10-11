@@ -160,6 +160,8 @@ module.exports = ({ db }) => {
       TRIGGER_NAMES: Object.fromEntries(Object.entries(auto.TRIGGERS).map(([k, v]) => [k, v.label])),
       GOAL_EVENTS: ["purchase.completed", "lms.order_completed", "funnel.completed", "contact.subscribed", "email.clicked"].filter((k) => auto.TRIGGERS[k]).map((k) => ({ value: k, label: auto.TRIGGERS[k].label })), STATUS, RUN_STATUS, STEP_LABELS: auto.STEP_LABELS, data: safeJson(payload), locked,
       check: a.status === "active" ? null : auto.automationPreflight(ctx, a.id, { workerOn: workerOn(), smtpAvailable: Boolean(process.env.SMTP_HOST) }),
+      // Palier 25 (A25-02) : un scénario ACTIF garde l'avertissement « console » (le contrôle avant activation n'est plus affiché, mais rien ne part vraiment tant que le fournisseur est « console »)
+      activeNotes: a.status === "active" ? auto.automationPreflight(ctx, a.id, { workerOn: workerOn(), smtpAvailable: Boolean(process.env.SMTP_HOST) }).warnings.filter((w) => w.code === "provider_console") : [],
       versions: auto.listVersions(ctx, a.id), canSimulate: req.mk.can("automations.write") && req.mk.can("contacts.read"),
       stats: auto.automationStats(ctx, a.id), revenue: require("../revenue").automationRevenue(ctx, a.id), runs: auto.listRuns(ctx, a.id, { limit: 50 }).map((r) => (req.mk.can("contacts.view_sensitive") ? r : { ...r, email: require("../contactcore").maskEmail(r.email) })),
     });

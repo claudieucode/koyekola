@@ -48,6 +48,11 @@
         <p class="field-hint">Enregistrez d'abord vos modifications : le contrôle porte sur la version enregistrée.</p>
       </section>
     <% } %>
+    <% if (!check && typeof activeNotes !== "undefined" && activeNotes.length) { %>
+      <section class="mk-panel mk-verdict is-no">
+        <ul class="mk-status-list"><% activeNotes.forEach((w) => { %><li class="mk-warn"><strong>Scénario actif :</strong> <%= w.message %> Les e-mails de ce scénario sont enregistrés comme « envoyés » sans quitter le serveur.</li><% }) %></ul>
+      </section>
+    <% } %>
 
     <section class="mk-panel">
       <h2>Déclencheur et objectif</h2>
