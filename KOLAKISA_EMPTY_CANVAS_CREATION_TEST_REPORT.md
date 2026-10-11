@@ -40,14 +40,20 @@ Régression ciblée (111 tests, tous réussis) : `format-mise-en-page`, `format-
 
 Captures visuelles relues : choix initial et configuration « Personnalisé » (1600 × 950).
 
-## Non vérifié ou limites
+## Limites levées (deuxième passe)
 
-- **Critères 5, 6, 15, 17, 18 (Flexbox, widgets, vues responsive, erreurs, non-régression globale)** : non retestés un par un ; couverts seulement par les tests existants exécutés ci-dessus et par le fait que le mode guidé n'ajoute aucun code de rendu. Résultat de la suite complète : voir la section suivante.
-- **Critère 14 (IA)** : le comportement de l'IA face au verrou existe déjà (`studio.validate`, test `ia-studio`) et n'a pas été modifié ; aucun nouveau test IA propre à l'écran de démarrage.
-- **Duplication et restauration d'une version** : vérifiées (`format-mise-en-page.test.js` : copie et publication conservent le format ; restauration d'une version ramène son format).
-- **Responsive de l'écran de démarrage** : vérifié dans Chrome à 420 px (aucun débordement horizontal, bouton « Continuer » atteignable).
-- Le choix « classique » n'est pas enregistré (conception libre = absence de `theme.layout`) ; une page toujours vide rechargée réaffiche donc le choix.
-- Pas de mesure de performance chiffrée ; l'écran n'ajoute ni requête, ni rendu du Canvas, ni état persisté.
+Nouveau fichier `tests/canvas-vide-compatibilite-navigateur.test.js` : **5/5 réussis** (Chrome réel, page créée par l'écran de choix en mode guidé « compact » verrouillé).
+
+- **5, 6 — Flexbox et widgets** : un conteneur `display:flex` avec deux widgets s'affiche en ligne, sous la largeur du format (960 px). ✔
+- **9 — Verrou et contenu ordinaire** : texte, couleur et ajout d'un widget acceptés (200) ; largeur d'un élément de premier niveau refusée (422 « Format verrouillé »), rien d'écrit. ✔
+- **15 — Vues responsive** : tablette et téléphone réduisent bien la largeur du canevas, le contenu reste affiché, sans erreur. ✔
+- **17 — Erreur d'enregistrement** : avec un enregistrement qui échoue (500 simulé), l'éditeur garde son contenu, le serveur reste inchangé, aucune erreur de script ; annuler (Ctrl+Z) rétablit l'élément. ✔
+- **14 — IA** : déjà couverte par `format-mise-en-page.test.js` (l'IA est refusée sur un format verrouillé, `studio.propose` et `responsiveFixes`) ; ces tests passent. ✔
+- **Duplication et restauration de version** : `format-mise-en-page.test.js`, ✔.
+- **Responsive de l'écran de démarrage** : Chrome à 420 px, ✔.
+- **Performance** : mesure alternée branche / `main` (script `perf-vide`, 3 tours chacun, page de 43 éléments, 20 cycles sélection → suppression → annulation, CDP `Performance.getMetrics`). Mises en page : 342–350 (branche) contre 330–352 (`main`). Temps de script : 215–264 ms contre 185–317 ms. **Aucune différence au-delà du bruit de mesure** ; l'écran n'ajoute ni requête ni rendu de canevas (`refreshStart` sort immédiatement quand la page n'est pas vide).
+- **Choix « classique » non enregistré** : décision de conception, pas un défaut. Une page qui reste vide n'a rien à conserver ; le choix est reproposé tant qu'aucun élément ni format n'existe. Une page libre = absence de `theme.layout` (aucune seconde source de vérité).
+- Reste hors de portée de cet environnement : Safari et Firefox.
 
 ## Suite complète (`npm test`, 4 502 tests)
 
