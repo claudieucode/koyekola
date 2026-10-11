@@ -70,20 +70,23 @@ function loadSites() {
   if (sitesCache && Date.now() - sitesAt < TTL) return sitesCache;
   const byHost = new Map();
   const byId = new Map();
+  const retired = new Set(); // domaines d'un site archivé ou supprimé (et repris par aucun site actif)
   try {
-    for (const s of db.prepare("SELECT id, organization_id, name, status, home_page_id, settings FROM mk_sites").all()) {
+    for (const s of db.prepare("SELECT id, organization_id, name, status, home_page_id, settings, deleted_at FROM mk_sites").all()) {
       let conf = {};
       try { conf = JSON.parse(s.settings || "{}"); } catch { conf = {}; }
       let base = "";
       let host = "";
       const url = conf.seo && conf.seo.publicUrl;
       if (url) { try { const u = new URL(url); if (u.protocol === "https:") { base = u.origin; host = u.hostname.toLowerCase(); } } catch { /* adresse invalide : ignorée */ } }
-      const info = { id: s.id, name: s.name, active: s.status === "active", homePageId: s.home_page_id, base, host, noindex: Boolean(conf.extras && conf.extras.noindex) };
+      const info = { id: s.id, name: s.name, active: s.status === "active" && !s.deleted_at, homePageId: s.home_page_id, base, host, noindex: Boolean(conf.extras && conf.extras.noindex) };
       byId.set(s.id, info);
       if (host && info.active && !byHost.has(host)) byHost.set(host, info);
+      else if (host && !info.active) retired.add(host);
     }
+    for (const h of byHost.keys()) retired.delete(h); // un domaine repris par un site actif n'est plus « retiré »
   } catch (error) { if (!/no such (table|column)/i.test(error.message)) throw error; }
-  sitesCache = { byHost, byId };
+  sitesCache = { byHost, byId, retired };
   sitesAt = Date.now();
   return sitesCache;
 }
@@ -91,6 +94,8 @@ const invalidateSites = () => { sitesCache = null; };
 const cacheInfo = () => ({ entries: sitesCache ? sitesCache.byId.size : 0, loaded: sitesCache !== null });
 const normHost = (h) => String(h || "").toLowerCase().replace(/:\d+$/, "").replace(/\.$/, "");
 // Site dont l'adresse publique a cet hôte (null si aucun : l'hôte n'est alors pas un site)
+// Domaine d'un site archivé ou supprimé : il ne doit servir AUCUN contenu (surtout pas celui du site principal)
+const isRetiredHost = (host) => loadSites().retired.has(normHost(host));
 const siteForHost = (host) => loadSites().byHost.get(normHost(host)) || null;
 const siteInfo = (id) => (id ? loadSites().byId.get(Number(id)) || null : null);
 // Hôte du site principal (SITE_URL) : jamais un domaine de site
@@ -269,7 +274,7 @@ wireTaxonomyEvents();
 
 module.exports = {
   RESERVED, isReserved, normalizeSlug, checkSlug, uniqueSlug, isTaken,
-  siteForHost, siteInfo, invalidateSites, cacheInfo, mainHost, normHost,
+  siteForHost, isRetiredHost, siteInfo, invalidateSites, cacheInfo, mainHost, normHost,
   pagePath, pageCanonicalPath, baseOfPage, publicPath, publicUrl,
   resolve, cleanPath, movedLocation, movedTarget,
   slugChanged, slugMovedTo, historyOf, purgeHistory,

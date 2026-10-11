@@ -14,6 +14,7 @@ const MISSING = "/__introuvable__"; // adresse qu'aucune route ne sert : la page
 function attachSite(req, res, next) {
   const host = urls.normHost(req.hostname);
   req.kwSite = host && host !== urls.mainHost() ? urls.siteForHost(host) : null;
+  req.kwRetired = !req.kwSite && host && host !== urls.mainHost() ? urls.isRetiredHost(host) : false;
   // Sur le domaine d'un site, toutes les adresses absolues (canonical, plan du site, robots.txt, JSON-LD) sont celles de ce site
   if (req.kwSite && req.kwSite.base) req.seoBase = req.kwSite.base;
   next();
@@ -38,6 +39,21 @@ function siteRouting(req, res, next) {
   if (r.type === "page" && /^\/[a-z0-9][a-z0-9-]*$/.test(req.path) && r.state === "live" && r.row.site_id === site.id) {
     if (r.path === "/") return res.redirect(301, `/${queryOf(req)}`);
     req.url = `/p/${r.row.slug}${queryOf(req)}`;
+  }
+  next();
+}
+
+// 2 ter. Isolation des domaines (palier 2) : le domaine d'un site ne sert JAMAIS le contenu public du site principal (blog, formations, catalogue,
+// pages éditoriales), et le domaine d'un site archivé ou supprimé ne sert rien du tout (il ne retombe pas sur le site principal).
+// Réponse 404 comme pour une adresse inconnue. Restent servis sur le domaine d'un site : ses pages, les fichiers, robots.txt / plan du site (adaptés au site),
+// les formulaires et le suivi, la connexion et les comptes (communs à la plateforme), les pages techniques.
+const MAIN_SITE_ONLY = /^\/(blog|cours|catalogue|categorie|a-propos|faq|feed|recherche|panier|favoris|formations?)(\/|$)/i;
+const ALWAYS_OK = /^\/(sante|uploads|css|js|img|fonts|favicon\.(ico|svg))(\/|$|\.)/i;
+function siteIsolation(req, res, next) {
+  if (ALWAYS_OK.test(req.path)) return next();
+  if (req.kwRetired || (req.kwSite && MAIN_SITE_ONLY.test(req.path))) {
+    if (!isRead(req)) return res.status(404).type("text/plain").send("Introuvable");
+    req.url = MISSING;
   }
   next();
 }
@@ -105,4 +121,4 @@ function indexingGuard(req, res, next) {
   next();
 }
 
-module.exports = { closedBySetting, attachSite, homeRouting, siteRouting, normalizePaths, movedFallback, indexingGuard, indexingAllowed, MISSING };
+module.exports = { closedBySetting, attachSite, siteIsolation, homeRouting, siteRouting, normalizePaths, movedFallback, indexingGuard, indexingAllowed, MISSING };

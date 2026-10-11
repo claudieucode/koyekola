@@ -62,7 +62,7 @@ Détail au §7 du message de rapport (résultats mis à jour à la fin de la sui
 ## 7. Limites du périmètre (non isolé, état actuel documenté)
 | Donnée | État réel aujourd'hui | Risque pour le Palier 3 |
 |---|---|---|
-| Articles `posts` | aucune colonne de site ; **vérifié : `/blog` sur le domaine d'un site affiche les articles du site principal** | un site tiers affiche le blog principal ; unicité du slug globale |
+| Articles `posts` | aucune colonne de site ; sur le domaine d'un site, le blog principal n'est plus servi (404, voir §10) | blog PROPRE à chaque site à construire ; unicité du slug globale |
 | Catégories / étiquettes | globales, unicité `(taxonomy, slug)` globale | fusion involontaire entre sites |
 | Commentaires | suivent l'article | idem articles |
 | Médias `media` / `mk_media` | par organisation, sans site ; deux tables | un site voit et utilise les fichiers des autres |
@@ -80,3 +80,16 @@ Retour arrière : `DROP TRIGGER` pour les 7 déclencheurs ; le code serveur se r
 
 ## 9. Contrôles de compilation / types / lint
 Le projet n'a ni lint ni vérification de types. `node --check` sur tous les fichiers JS modifiés : OK. Les scripts de build (`build:editor`, `build:automation-flow`) ne dépendent d'aucun fichier modifié et n'ont pas été relancés.
+
+## 10. Blog du site principal sur le domaine d'un autre site (traité au palier 2)
+**Cause (vérifiée)** : `siteHost.siteRouting` ne réécrit que `/` et `/<adresse>` ; tous les autres routeurs Express (`blog`, `courses`, catalogue, pages éditoriales, panier…) sont montés globalement et ne regardent jamais `req.kwSite`. Donc n'importe quel chemin demandé sur n'importe quel nom de domaine atteint les routeurs du site principal. De plus, `attachSite` n'associe un domaine qu'aux sites ACTIFS : le domaine d'un site archivé ou supprimé retombait sur le site principal.
+**Nature du défaut** : problème de routage / d'identité, pas une fuite de données privées. Seul du contenu déjà public sur le site principal était servi (les brouillons, articles privés ou programmés restent filtrés par les routes : testé). Conséquences réelles : contenu dupliqué sous un autre domaine (SEO), mélange d'identités, domaine retiré qui affiche le site principal.
+**Correction (sans refonte du CMS)** : `siteHost.siteIsolation` (monté avant les routeurs) :
+- sur le domaine d'un site actif : `/blog`, `/cours`, `/catalogue`, `/categorie`, `/a-propos`, `/faq`, `/feed`, `/recherche`, `/panier`, `/favoris`, `/formation(s)` répondent 404 (mêmes chemins en majuscules ou avec barre finale : redirigés puis 404) ; restent servis : les pages du site, fichiers statiques, `robots.txt` et plan du site (adaptés au site, testé : ne listent rien du site principal), formulaires et suivi, connexion / comptes (communs à la plateforme), `/sante` ;
+- sur le domaine d'un site archivé ou supprimé : 404 partout (sauf `/sante`) ; un domaine repris par un autre site actif sert ce site.
+**Tests** (`tests/isolation-des-sites-caches.test.js`) : témoin (le site principal sert toujours son blog, sans brouillon), 14 chemins × domaine de site, variantes d'écriture, plan du site / robots, domaine archivé, restauré, repris, domaine inconnu.
+**Résiduel (non corrigé, choix explicite)** : (1) un nom de domaine simplement pointé vers le serveur mais NON enregistré dans un site sert encore le site principal (comportement d'origine ; le corriger exigerait de refuser tout hôte inconnu, risquant de casser l'accès légitime — à décider : liste des hôtes autorisés) ; (2) `/contact`, `/cookies`, connexion / inscription restent communs ; (3) le blog PROPRE à un site (articles rattachés à un site) est le Palier 3.
+
+## 11. Mise à niveau d'une base existante (testée)
+Essai réel : base créée par la version précédente (jusqu'à la migration 070) avec données et une incohérence « ancienne », puis démarrée par le nouveau code. Résultats : migration 071 appliquée une fois ; **aucune table n'a changé de nombre de lignes** (seule `schema_migrations` gagne 1 ligne) ; l'incohérence ancienne est CONSERVÉE (rien n'est corrigé ni supprimé) ; 7 déclencheurs présents ; intégrité ok ; une **sauvegarde automatique AVANT migration** est créée (`data/backups/AVANT-MIGRATION-…-v071.db`). La migration ne contient que des `CREATE TRIGGER` (aucun `DELETE`, `UPDATE`, `DROP` de donnée). Reproductible : fichier numéroté, appliqué dans une transaction, empreinte vérifiée aux démarrages suivants.
+**Retour arrière** (si nécessaire, après avoir arrêté le site) : `DROP TRIGGER` des 7 déclencheurs (`mk_funnel_steps_same_site_insert`, `mk_funnel_steps_same_site_update`, `mk_landing_pages_parent_same_site_insert`, `mk_landing_pages_parent_same_site_update`, `mk_sites_home_same_site`, `mk_landing_pages_move_keeps_links`, `mk_funnels_move_keeps_steps`) puis `DELETE FROM schema_migrations WHERE scope='marketing' AND version='071'`. Les colonnes de la migration 070 peuvent rester (inoffensives). Restauration complète possible depuis la sauvegarde `AVANT-MIGRATION-…`.
