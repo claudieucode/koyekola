@@ -243,6 +243,26 @@ module.exports = () => {
     const site = src === "marketing" ? [] : siteImages(req.mk.ctx.db, { q, limit: 100 });
     res.set("Cache-Control", "no-store").json({ items: mk.concat(site) });
   });
+  // Résolutions proposables pour une ou plusieurs images de la médiathèque (widget Image, Galerie…) : seulement les tailles
+  // plus petites que l'image la plus petite du lot, et seulement si le serveur sait fabriquer des versions réduites.
+  router.get("/site-web/medias/resolutions.json", need("forms.read"), (req, res) => {
+    const variants = require("../media/variants");
+    const list = [].concat(req.query.src || []).map(String).slice(0, 24);
+    const rows = list.map((src) => (variants.isLocal(src) ? req.mk.ctx.db.prepare("SELECT width, height, size FROM mk_media WHERE organization_id = ? AND path = ? AND type = 'image'").get(req.mk.ctx.organizationId, src) : null));
+    const known = rows.filter((r) => r && r.width);
+    const complete = list.length > 0 && known.length === list.length;
+    const min = complete ? Math.min(...known.map((r) => r.width)) : 0;
+    res.set("Cache-Control", "no-store").json({
+      available: variants.available(), complete, width: complete ? min : null, height: complete && list.length === 1 ? known[0].height : null, bytes: complete && list.length === 1 ? known[0].size : null,
+      sizes: complete ? variants.offered(min) : [],
+    });
+  });
+  // Où une image est utilisée (pages, composants, modèles, articles, sites) : la même détection que le refus de suppression
+  router.get("/site-web/medias/:id(\\d+)/usage.json", need("forms.read"), (req, res) => {
+    const m = media.getMedia(req.mk.ctx, Number(req.params.id));
+    if (!m) return res.status(404).json({ error: { code: "not_found", message: "Fichier introuvable." } });
+    res.set("Cache-Control", "no-store").json({ items: media.mediaUsage(req.mk.ctx, m).map((u) => ({ kind: u.kind, name: u.name, href: media.usageHref(u) })) });
+  });
   router.post("/site-web/medias", need("forms.write"), (req, res, next) => {
     mediaUpload.single("file")(req, res, (uploadError) => {
       if (uploadError) return res.status(422).json({ error: { code: "invalid_field", message: uploadError.code === "LIMIT_FILE_SIZE" ? `Image trop lourde : ${media.MAX_IMAGE / 1048576} Mo au plus.` : "Envoi du fichier impossible." } });
@@ -269,9 +289,9 @@ module.exports = () => {
   const jsonError = (res, next, error) => {
     const { MarketingError } = require("../errors");
     if (!(error instanceof MarketingError)) return next(error);
-    res.status(error.code === "not_found" ? 404 : error.code === "in_use" || error.code === "duplicate" ? 409 : 422).json({ error: { code: error.code, message: error.message } });
+    res.status(error.code === "not_found" ? 404 : error.code === "in_use" || error.code === "duplicate" ? 409 : 422).json({ error: { code: error.code, message: error.message, ...(error.details ? { details: error.details } : {}) } });
   };
-  const describe = (c, ctx) => ({ id: c.id, name: c.name, global: c.global, type: c.section && c.section.type, section: c.section, uses: ctx ? pages.componentUsage(ctx, c.id).length : undefined });
+  const describe = (c, ctx) => ({ id: c.id, name: c.name, global: c.global, kind: c.kind, hasDraft: c.hasDraft, version: c.version, blocks: c.blocks, type: c.section && c.section.type, section: c.section, uses: ctx ? pages.componentInstances(ctx, c.id).reduce((n, p) => n + p.count, 0) : undefined });
   router.get("/site-web/composants.json", need("forms.read"), (req, res) => {
     res.set("Cache-Control", "no-store").json({ components: pages.listComponents(req.mk.ctx, { siteId: intOrNull(req.query.site) }).map(describe) });
   });
@@ -283,7 +303,7 @@ module.exports = () => {
   router.post("/site-web/composants", need("forms.write"), (req, res, next) => {
     try {
       const b = req.body || {};
-      const c = pages.createComponent(req.mk.ctx, { name: b.name, section: b.section, siteId: b.global ? null : intOrNull(b.siteId) });
+      const c = pages.createComponent(req.mk.ctx, { name: b.name, section: b.section, siteId: b.global ? null : intOrNull(b.siteId), kind: b.kind === "global" ? "global" : "standard" });
       res.status(201).json({ component: describe(c) });
     } catch (error) { jsonError(res, next, error); }
   });
@@ -313,10 +333,29 @@ module.exports = () => {
   router.post("/site-web/modeles/:id(\\d+)/supprimer", need("forms.write"), (req, res, next) => {
     attempt(req, res, next, "/marketing/pages#nouvelle", () => { pages.deletePageTemplate(req.mk.ctx, Number(req.params.id)); return "Modèle supprimé (les pages déjà créées avec lui ne changent pas)."; });
   });
+  // Pages et nombre d'instances liées (données réelles : contenu de travail de chaque page)
+  router.get("/site-web/composants/:id(\\d+)/instances.json", need("forms.read"), (req, res) => {
+    const c = pages.getComponent(req.mk.ctx, Number(req.params.id));
+    if (!c) return res.status(404).json({ error: { code: "not_found", message: "Composant introuvable." } });
+    const pagesUsing = pages.componentInstances(req.mk.ctx, c.id);
+    res.set("Cache-Control", "no-store").json({ id: c.id, name: c.name, kind: c.kind, instances: pagesUsing.reduce((n, p) => n + p.count, 0), pages: pagesUsing });
+  });
+  // Mise à jour explicite : la copie de travail devient la version diffusée aux instances liées
+  router.post("/site-web/composants/:id(\\d+)/mettre-a-jour", need("forms.write"), (req, res, next) => {
+    try {
+      const r = pages.publishComponent(req.mk.ctx, Number(req.params.id));
+      res.json({ component: describe(r.component, req.mk.ctx), changed: r.changed, pages: r.instances.length, instances: r.instances.reduce((n, p) => n + p.count, 0) });
+    } catch (error) { jsonError(res, next, error); }
+  });
+  router.post("/site-web/composants/:id(\\d+)/abandonner", need("forms.write"), (req, res, next) => {
+    try { res.json({ component: describe(pages.discardComponentDraft(req.mk.ctx, Number(req.params.id)), req.mk.ctx) }); } catch (error) { jsonError(res, next, error); }
+  });
+  // Suppression : sans instance liée, directe ; sinon le corps choisit « instances » (les supprimer aussi) ou « detach » (les conserver, devenues indépendantes)
   router.post("/site-web/composants/:id(\\d+)/supprimer", need("forms.write"), (req, res, next) => {
     try {
-      pages.deleteComponent(req.mk.ctx, Number(req.params.id));
-      res.json({ ok: true });
+      const b = req.body || {};
+      const r = pages.deleteComponent(req.mk.ctx, Number(req.params.id), { mode: b.mode || null, skipDraftOfPage: b.skipDraftOfPage ? Number(b.skipDraftOfPage) : null });
+      res.json({ ok: true, ...r });
     } catch (error) { jsonError(res, next, error); }
   });
   return router;

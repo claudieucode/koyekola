@@ -11,9 +11,9 @@
       <% if (canWrite) { %><div class="mk-actions">
         <% if (archived) { %><form action="/marketing/tunnels/<%= f.id %>/restaurer" method="post"><button type="submit" class="btn btn-primary btn-sm">Restaurer le tunnel</button></form>
         <% } else { %>
-          <form action="/marketing/tunnels/<%= f.id %>/dupliquer" method="post"><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form>
+          <form action="/marketing/tunnels/<%= f.id %>/dupliquer" method="post" class="mk-inline-form"><label for="dup-mode" class="sr-only">Pages de la copie</label><select id="dup-mode" name="pages"><option value="copy">Copier les pages (nouveaux brouillons)</option><option value="none">Sans page (à associer ensuite)</option></select><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form>
           <form action="/marketing/tunnels/<%= f.id %>/archiver" method="post"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="Les pages créées pour ce tunnel passent hors ligne ; une page de votre site utilisée comme étape reste en ligne. Rien n'est effacé." data-mk-confirm-title="Archiver ce tunnel ?" data-mk-confirm-ok="Archiver">Archiver</button></form>
-          <% if (f.steps.length) { %><form action="/marketing/tunnels/<%= f.id %>/publier" method="post"><button type="submit" class="btn btn-primary btn-sm">Mettre en ligne les étapes</button></form><% } %>
+          <% if (f.steps.length && canPublish) { %><form action="/marketing/tunnels/<%= f.id %>/publier" method="post"><button type="submit" class="btn btn-primary btn-sm">Mettre en ligne les étapes</button></form><% } %>
         <% } %>
       </div><% } %>
     </div>
@@ -47,8 +47,36 @@
                 </p>
                 <% if (s.problem) { %><p class="mk-callout mk-callout-warn"><span><%= s.problem %></span></p><% } %>
                 <div class="mk-flow-actions">
-                  <% if (s.pageId && edit) { %><a class="btn btn-outline btn-sm" href="/marketing/pages/<%= s.pageId %>/editeur">Modifier la page</a><% } %>
+                  <% if (s.pageId && edit) { %>
+                    <% if (canEditPages) { %><a class="btn btn-outline btn-sm" href="/marketing/pages/<%= s.pageId %>/editeur">Modifier la page dans KOLAKISA CMS</a>
+                    <% } else { %><button type="button" class="btn btn-outline btn-sm" disabled aria-describedby="noedit-<%= s.id %>">Modifier la page</button><span class="field-hint" id="noedit-<%= s.id %>">Vous pouvez gérer le tunnel, pas modifier ses pages (droit « modifier les pages » requis).</span><% } %>
+                    <a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= s.pageId %>/apercu" target="_blank" rel="noopener">Prévisualiser</a>
+                    <% if (canEditPages) { %><a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= s.pageId %>/test-ab">Tester en A/B</a><% } %>
+                  <% } %>
                   <% if (s.live) { %><a class="btn btn-ghost btn-sm" href="<%= s.path %>" target="_blank" rel="noopener">Voir en ligne</a><% } %>
+                  <% if (edit && !s.courseTitle) { %>
+                    <details class="mk-flash-details"><summary>Page et réglages de l'étape</summary>
+                      <% if (s.pageId) { %>
+                        <form class="mk-inline-form" action="/marketing/tunnels/<%= f.id %>/etapes/<%= s.id %>/detacher" method="post"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="L'étape reste, sans page. La page n'est pas supprimée : elle reste dans Pages.">Détacher la page</button></form>
+                      <% } else if (canEditPages) { %>
+                        <form class="mk-inline-form" action="/marketing/tunnels/<%= f.id %>/etapes/<%= s.id %>/creer-page" method="post"><button type="submit" class="btn btn-primary btn-sm">Créer avec KOLAKISA CMS</button></form>
+                      <% } %>
+                      <% if (availablePages.length) { %>
+                        <form class="mk-inline-form" action="/marketing/tunnels/<%= f.id %>/etapes/<%= s.id %>/remplacer" method="post">
+                          <label for="rep-<%= s.id %>" class="sr-only"><%= s.pageId ? "Remplacer par une autre page" : "Associer une page existante" %></label>
+                          <select id="rep-<%= s.id %>" name="page_id"><% availablePages.forEach((p) => { if (p.id !== s.pageId) { %><option value="<%= p.id %>"><%= p.name %></option><% } }) %></select>
+                          <button type="submit" class="btn btn-outline btn-sm"><%= s.pageId ? "Remplacer" : "Associer" %></button>
+                        </form>
+                      <% } %>
+                      <form class="mk-form" action="/marketing/tunnels/<%= f.id %>/etapes/<%= s.id %>/reglages" method="post">
+                        <p class="field-hint">Réglages propres à cette étape du tunnel : la page elle-même n'est pas modifiée (elle peut servir ailleurs normalement).</p>
+                        <label class="checkbox-row"><input type="checkbox" name="noindex"<%= s.settings.noindex ? " checked" : "" %>> Ne pas proposer cette étape aux moteurs de recherche</label>
+                        <label class="checkbox-row"><input type="checkbox" name="hideFooter"<%= s.settings.hideFooter ? " checked" : "" %>> Masquer le pied de page dans le tunnel</label>
+                        <div class="field-group"><label for="goal-<%= s.id %>">Objectif de conversion (pour vous)</label><input id="goal-<%= s.id %>" type="text" name="goal" maxlength="120" value="<%= s.settings.goal %>"></div>
+                        <button type="submit" class="btn btn-outline btn-sm">Enregistrer les réglages</button>
+                      </form>
+                    </details>
+                  <% } %>
                   <% if (edit) { %>
                     <form action="/marketing/tunnels/<%= f.id %>/etapes/<%= s.id %>/monter" method="post"><button type="submit" class="btn btn-ghost btn-sm"<%= i === 0 ? " disabled" : "" %> aria-label="Monter l'étape « <%= s.name %> »"><%- icon("arrowUp", { size: 16 }) %></button></form>
                     <form action="/marketing/tunnels/<%= f.id %>/etapes/<%= s.id %>/descendre" method="post"><button type="submit" class="btn btn-ghost btn-sm"<%= i === f.steps.length - 1 ? " disabled" : "" %> aria-label="Descendre l'étape « <%= s.name %> »"><%- icon("arrowDown", { size: 16 }) %></button></form>
@@ -124,7 +152,7 @@
       <h2 id="fn-auto">Automatisations</h2>
       <p class="field-hint">Un contact connu (inscrit, ou connecté) qui atteint une étape ou termine ce tunnel peut entrer dans un scénario : e-mail de relance, étiquette, liste… Déclencheurs : « Un contact atteint une étape d'un tunnel », « … la dernière étape d'un tunnel », « Un contact visite une page ».</p>
       <% if (automations.length) { %>
-        <ul class="mk-sw-recent"><% automations.forEach((a) => { %><li><a href="/marketing/automatisations/<%= a.id %>"><%= a.name %></a><span class="mk-sub"><%= a.status === "active" ? "Actif" : a.status === "paused" ? "En pause" : "Brouillon" %></span></li><% }) %></ul>
+        <ul class="mk-sw-recent"><% automations.forEach((a) => { %><li><a href="/marketing/automatisations/<%= a.id %>"><%= a.name %></a><span class="mk-sub"><%= a.status === "active" ? "Actif" : a.status === "paused" ? "En pause" : "Brouillon" %> · <%= (a.events || []).map((e) => ({ "funnel.entered": "à l'entrée", "funnel.step_reached": "à une étape atteinte", "funnel.step.completed": "à une étape terminée", "funnel.completed": "à la fin", "funnel.abandoned": "à l'abandon", "funnel.cta.clicked": "au clic d'un bouton", "page.visited": "à la visite d'une page" }[e] || e)).join(", ") %></span></li><% }) %></ul>
       <% } else { %><p>Aucun scénario lié à ce tunnel pour l'instant.</p><% } %>
       <% if (canAutomate) { %><div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/automatisations#nouveau">Créer un scénario</a></div><% } %>
     </section>

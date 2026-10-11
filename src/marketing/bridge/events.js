@@ -11,7 +11,7 @@ const { syncLmsUsers } = require("./lms");
 const { enqueue } = require("../queue/jobs");
 
 const INTERVAL_MS = 30000;
-const SOURCES = ["users", "orders", "enrollments", "lesson_progress", "reviews", "favorites", "certificates"];
+const SOURCES = ["users", "orders", "enrollments", "lesson_progress", "reviews", "favorites", "certificates", "order_refunds"];
 const idColumn = (source) => (source === "favorites" ? "rowid" : "id");
 const stamp = (text) => { const t = Date.parse(`${String(text).replace(" ", "T")}Z`); return Number.isFinite(t) ? t : Date.now(); };
 
@@ -23,13 +23,20 @@ function contactOf(ctx, userId) {
   return ctx.db.prepare("SELECT id, email FROM mk_contacts WHERE organization_id = ? AND lms_user_id = ? AND email = ?").get(ctx.organizationId, user.id, email) ?? findByEmail(ctx, email);
 }
 
+// Cycle de vie (Contact Core) : un achat réel fait passer en « Client » ; une fiche déjà cliente reste telle quelle
+function markCustomer(ctx, contactId) {
+  const row = ctx.db.prepare("SELECT lifecycle_stage FROM mk_contacts WHERE id = ? AND organization_id = ?").get(contactId, ctx.organizationId);
+  if (!row || row.lifecycle_stage === "customer") return;
+  try { require("../contactcore").setLifecycle({ ...ctx, userId: null }, contactId, "customer"); } catch (error) { console.error("[KOLAKISA] Cycle de vie (achat) :", error.message); }
+}
+
 function money(cents) {
   return `${(cents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 }
 
 const reader = {
   users: (ctx, cursor, limit) => ctx.db.prepare("SELECT id, id AS user_id, created_at, role FROM users WHERE id > ? ORDER BY id LIMIT ?").all(cursor, limit),
-  orders: (ctx, cursor, limit) => ctx.db.prepare("SELECT id, user_id, total_cents, created_at FROM orders WHERE id > ? ORDER BY id LIMIT ?").all(cursor, limit),
+  orders: (ctx, cursor, limit) => ctx.db.prepare("SELECT id, user_id, total_cents, coupon_code, discount_cents, created_at FROM orders WHERE id > ? ORDER BY id LIMIT ?").all(cursor, limit),
   enrollments: (ctx, cursor, limit) =>
     ctx.db.prepare("SELECT e.id, e.user_id, e.course_id, e.created_at, c.title, c.slug FROM enrollments e LEFT JOIN courses c ON c.id = e.course_id WHERE e.id > ? ORDER BY e.id LIMIT ?").all(cursor, limit),
   lesson_progress: (ctx, cursor, limit) =>
@@ -44,6 +51,8 @@ const reader = {
     ctx.db.prepare("SELECT r.id, r.user_id, r.course_id, r.rating, r.created_at, c.title, c.slug FROM reviews r LEFT JOIN courses c ON c.id = r.course_id WHERE r.id > ? ORDER BY r.id LIMIT ?").all(cursor, limit),
   certificates: (ctx, cursor, limit) =>
     ctx.db.prepare("SELECT c.id, c.user_id, c.course_id, c.code, c.issued_at AS created_at, c.course_title AS title, co.slug FROM certificates c LEFT JOIN courses co ON co.id = c.course_id WHERE c.id > ? ORDER BY c.id LIMIT ?").all(cursor, limit),
+  order_refunds: (ctx, cursor, limit) =>
+    ctx.db.prepare("SELECT r.id, o.user_id, r.order_id, r.amount_cents, r.currency, r.stripe_refund_id, r.created_at, o.total_cents FROM order_refunds r JOIN orders o ON o.id = r.order_id WHERE r.id > ? ORDER BY r.id LIMIT ?").all(cursor, limit),
   favorites: (ctx, cursor, limit) =>
     ctx.db.prepare("SELECT f.rowid AS id, f.user_id, f.course_id, f.created_at, c.title, c.slug FROM favorites f LEFT JOIN courses c ON c.id = f.course_id WHERE f.rowid > ? ORDER BY f.rowid LIMIT ?").all(cursor, limit),
 };
@@ -61,7 +70,18 @@ function eventsFor(ctx, source, row) {
         .map((i) => ({ courseId: i.course_id, title: i.title ?? "", priceCents: i.price_cents }));
       const title = items.length === 1 ? items[0].title : items.length > 1 ? `${items.length} formations` : "";
       const slug = items.length === 1 ? ctx.db.prepare("SELECT slug FROM courses WHERE id = ?").get(items[0].courseId)?.slug ?? "" : "";
-      return [{ name: "lms.order_completed", userId: row.user_id, key: `order:${row.id}`, at, metadata: { orderId: row.id, totalCents: row.total_cents, orderTotal: money(row.total_cents), items, courseTitle: title, courseSlug: slug } }];
+      return [{ name: "lms.order_completed", userId: row.user_id, key: `order:${row.id}`, at, metadata: { orderId: row.id, totalCents: row.total_cents, orderTotal: money(row.total_cents), items, courseIds: items.map((i) => i.courseId), ...(items.length === 1 ? { courseId: items[0].courseId } : {}), itemCount: items.length, ...(row.coupon_code ? { couponCode: row.coupon_code, discountCents: row.discount_cents } : {}), courseTitle: title, courseSlug: slug } }];
+    }
+    case "order_refunds": {
+      // Remboursement annoncé par Stripe (palier 20) : total remboursé À CE MOMENT-LÀ (somme des remboursements jusqu'à celui-ci) → partiel ou complet
+      const refunded = ctx.db.prepare("SELECT COALESCE(SUM(amount_cents), 0) s FROM order_refunds WHERE order_id = ? AND id <= ?").get(row.order_id, row.id).s;
+      const full = refunded >= row.total_cents;
+      const base = { orderId: row.order_id, refundCents: row.amount_cents, refundAmount: money(row.amount_cents), refundedCents: refunded, totalCents: row.total_cents, orderTotal: money(row.total_cents), currency: row.currency };
+      const common = { userId: row.user_id, at, source: "commerce", objectType: "order", objectId: row.order_id };
+      return [
+        { ...common, name: "refund.completed", key: `refund.completed:${row.stripe_refund_id}`, metadata: base },
+        { ...common, name: full ? "order.refunded" : "order.partially_refunded", key: `${full ? "order.refunded" : "order.partially_refunded"}:${row.stripe_refund_id}`, metadata: base },
+      ];
     }
     case "enrollments":
       return [{ name: "lms.course_enrolled", userId: row.user_id, key: `enrollment:${row.id}`, at, metadata: { courseId: row.course_id, title: row.title ?? "", slug: row.slug ?? "" } }];
@@ -113,6 +133,22 @@ function progressMilestones(ctx, rows) {
   return out;
 }
 
+// Paiements échoués (palier 20) : sessions de paiement Stripe passées en « failed » (paiement asynchrone refusé, montant inattendu, formation disparue).
+// Table mise à jour sur place (pas de curseur) : lecture des 7 derniers jours, clé d'idempotence par session → jamais deux événements.
+function syncPaymentFailures(ctx, { limit = 200 } = {}) {
+  if (!ctx.bus || !ctx.db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'checkout_sessions'").get()) return 0;
+  const rows = ctx.db.prepare("SELECT ref, user_id, total_cents, currency, failure_reason, created_at FROM checkout_sessions WHERE status = 'failed' AND created_at >= datetime('now', '-7 days') ORDER BY id LIMIT ?").all(limit);
+  let n = 0;
+  for (const r of rows) {
+    const contact = contactOf(ctx, r.user_id);
+    if (!contact) continue;
+    ctx.bus.emit({ organizationId: ctx.organizationId, name: "payment.failed", email: contact.email, contactId: contact.id, source: "commerce", objectType: "checkout", idempotencyKey: `payment.failed:${r.ref}`, occurredAt: stamp(r.created_at),
+      metadata: { totalCents: r.total_cents, orderTotal: money(r.total_cents), currency: r.currency, reason: String(r.failure_reason || "").slice(0, 120) } });
+    n++;
+  }
+  return n;
+}
+
 function syncLmsEvents(ctx, { limit = 200 } = {}) {
   const result = { initialized: [], emitted: {}, skipped: {} };
   const base = { ...ctx, userId: null };
@@ -139,8 +175,19 @@ function syncLmsEvents(ctx, { limit = 200 } = {}) {
       for (const ev of list) {
         const contact = contactOf(ctx, ev.userId);
         if (!contact) { skipped++; continue; }
-        ctx.bus.emit({ organizationId: ctx.organizationId, name: ev.name, email: contact.email, contactId: contact.id, source: "lms", metadata: ev.metadata, idempotencyKey: ev.key, occurredAt: ev.at });
+        ctx.bus.emit({ organizationId: ctx.organizationId, name: ev.name, email: contact.email, contactId: contact.id, source: ev.source || "lms", objectType: ev.objectType ?? null, objectId: ev.objectId ?? null, metadata: ev.metadata, idempotencyKey: ev.key, occurredAt: ev.at });
         emitted++;
+        // Palier 19 : un achat réel (commande terminée dans le LMS, source de vérité du paiement) devient aussi « purchase.completed » pour le Contact Core et les
+        // automatisations, avec le DERNIER tunnel touché avant l'achat (attribution « dernier contact », indicative — pas une preuve de causalité)
+        if (ev.name === "lms.order_completed") {
+          const touch = ctx.db.prepare("SELECT metadata FROM mk_events WHERE organization_id = ? AND contact_id = ? AND name = 'funnel.step_reached' AND occurred_at <= ? AND occurred_at >= ? ORDER BY occurred_at DESC, id DESC LIMIT 1").get(ctx.organizationId, contact.id, ev.at, ev.at - 30 * 86400000);
+          let t = {};
+          try { t = touch ? JSON.parse(touch.metadata) : {}; } catch { t = {}; }
+          ctx.bus.emit({ organizationId: ctx.organizationId, name: "purchase.completed", email: contact.email, contactId: contact.id, source: "commerce", objectType: "order", objectId: ev.metadata.orderId, idempotencyKey: `purchase.completed:${ev.key}`, occurredAt: ev.at,
+            metadata: { orderId: ev.metadata.orderId, totalCents: ev.metadata.totalCents, orderTotal: ev.metadata.orderTotal, items: ev.metadata.items, courseIds: ev.metadata.courseIds, ...(ev.metadata.courseId ? { courseId: ev.metadata.courseId } : {}), itemCount: ev.metadata.itemCount, ...(ev.metadata.couponCode ? { couponCode: ev.metadata.couponCode } : {}), ...(t.funnelId ? { funnelId: t.funnelId, funnelName: t.funnelName, funnelStepId: t.stepId, funnelStepName: t.stepName, attribution: "last_funnel_step_30d" } : {}) } });
+          // Premier achat réel : la personne devient « Client » (étape existante du Contact Core, jamais rétrogradée par ce pont)
+          markCustomer(ctx, contact.id);
+        }
       }
       // une ligne sans événement (formateur, compte sans contact) compte comme « ignorée » pour le rapport
       if (source !== "lesson_progress") skipped = Math.max(0, rows.length - emitted) ;
@@ -159,11 +206,31 @@ function startBridge(db, organizationId, { now = Date.now } = {}) {
   return enqueue(db, { organizationId, type: "bridge.sync", payload: { organizationId }, runAt: at, priority: 6, maxAttempts: 3, idempotencyKey: `bridge.sync:${organizationId}:${bucket(at)}`, now: at });
 }
 
+// Conservation des visites suivies (palier 21) : le 13e mois était annoncé mais jamais appliqué. Une fois par jour au plus, durée réglable (Confidentialité).
+function purgeVisits(db, organizationId, nowMs) {
+  const key = "internal.visits_purged_at";
+  const last = db.prepare("SELECT value FROM mk_settings WHERE organization_id = ? AND key = ?").get(organizationId, key);
+  if (last && nowMs - Number(last.value) < 86400000) return null;
+  db.prepare("INSERT INTO mk_settings (organization_id, key, value) VALUES (?, ?, ?) ON CONFLICT (organization_id, key) DO UPDATE SET value = excluded.value").run(organizationId, key, String(nowMs));
+  const row = db.prepare("SELECT value FROM mk_settings WHERE organization_id = ? AND key = 'cms.analytics_retention_days'").get(organizationId);
+  const days = Number(row && row.value);
+  return require("../visitors").purge(db, nowMs, Number.isInteger(days) ? days : null);
+}
+
 function jobHandlers({ db, bus, now = Date.now, log = console }) {
   return {
     "bridge.sync": async ({ organizationId }) => {
       try {
         syncLmsEvents({ db, organizationId, userId: null, bus, log }, { limit: 200 });
+        syncPaymentFailures({ db, organizationId, userId: null, bus, log });
+        purgeVisits(db, organizationId, now());
+        // Palier 19 : détection des abandons (tunnel, commande) toutes les 5 minutes au plus, par la MÊME tâche récurrente (aucune seconde planification)
+        const nowMs = now();
+        const last = db.prepare("SELECT value FROM mk_settings WHERE organization_id = ? AND key = 'internal.funnel_sweep_at'").get(organizationId);
+        if (!last || nowMs - Number(last.value) >= 5 * 60000) {
+          db.prepare("INSERT INTO mk_settings (organization_id, key, value) VALUES (?, 'internal.funnel_sweep_at', ?) ON CONFLICT (organization_id, key) DO UPDATE SET value = excluded.value").run(organizationId, String(nowMs));
+          require("../funnels/abandon").sweep({ db, organizationId, userId: null, bus, audit: false }, { now: nowMs });
+        }
       } finally {
         // Toujours reprogrammer, même après une erreur : le pont ne doit jamais s'arrêter en silence
         const next = now() + INTERVAL_MS;
@@ -173,4 +240,4 @@ function jobHandlers({ db, bus, now = Date.now, log = console }) {
   };
 }
 
-module.exports = { SOURCES, syncLmsEvents, startBridge, jobHandlers, contactOf };
+module.exports = { purgeVisits, SOURCES, syncPaymentFailures, syncLmsEvents, startBridge, jobHandlers, contactOf };

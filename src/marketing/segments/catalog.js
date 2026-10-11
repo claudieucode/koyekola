@@ -24,7 +24,10 @@ const EVENTS = [
   ["lms.course_progress_10", "Formation suivie à 10 %", true], ["lms.course_progress_50", "Formation suivie à 50 %", true], ["lms.course_progress_90", "Formation suivie à 90 %", true],
   ["lms.course_viewed", "Fiche formation consultée", true], ["lms.cart_added", "Formation ajoutée au panier", true], ["lms.checkout_started", "Page de commande ouverte", false],
   ["email.clicked", "Clic dans un e-mail", false], ["email.opened", "Ouverture d'un e-mail (indicatif)", false],
-  ["page.visited", "Page visitée (Site Web, Tunnels)", false], ["funnel.step_reached", "Étape de tunnel atteinte", false], ["funnel.completed", "Tunnel terminé", false],
+  ["page.visited", "Page visitée (Site Web, Tunnels)", false], ["funnel.entered", "Entrée dans un tunnel", false], ["funnel.step_reached", "Étape de tunnel atteinte", false], ["funnel.step.completed", "Étape de tunnel terminée", false], ["funnel.completed", "Tunnel terminé", false],
+  ["funnel.abandoned", "Tunnel abandonné", false], ["funnel.cta.clicked", "Bouton d'une étape de tunnel cliqué", false], ["checkout.abandoned", "Commande abandonnée", false], ["purchase.completed", "Achat terminé", false],
+  ["cart.abandoned", "Panier abandonné", true], ["payment.failed", "Paiement échoué", false], ["refund.completed", "Remboursement effectué", false], ["order.refunded", "Commande remboursée", false], ["order.partially_refunded", "Commande remboursée en partie", false],
+  ["email.delivered", "E-mail livré", false], ["email.bounced", "E-mail rebondi", false],
   ["lms.certificate_issued", "Certificat délivré", true],
 ];
 const ACTIVITY_NOTE = "Compté depuis l'activation du pont KOLAKISA : l'activité plus ancienne n'est pas incluse.";

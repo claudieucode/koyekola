@@ -96,17 +96,17 @@ const SECTIONS = [
   },
   {
     key: "parametres", label: "Paramètres", icon: "settings", items: [
-      leaf("parametres", "Général", `${BASE}/parametres`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/identite", "Identité du site", `${BASE}/parametres/identite`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/domaine", "Domaine", `${BASE}/parametres/domaine`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/seo", "SEO", `${BASE}/parametres/seo`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/performance", "Performance", `${BASE}/parametres/performance`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/securite", "Sécurité", `${BASE}/parametres/securite`, { permission: "settings.read", status: "preview" }),
+      leaf("parametres", "Général", `${BASE}/parametres`, { permission: "settings.read" }),
+      leaf("parametres/lecture", "Lecture", `${BASE}/parametres/lecture`, { permission: "settings.read" }),
       leaf("parametres/commentaires", "Commentaires", `${BASE}/parametres/commentaires`, { permission: "settings.read" }),
-      leaf("parametres/confidentialite", "Confidentialité", `${BASE}/parametres/confidentialite`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/cookies", "Cookies", `${BASE}/parametres/cookies`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/scripts", "Scripts", `${BASE}/parametres/scripts`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/code", "Code personnalisé", `${BASE}/parametres/code`, { permission: "settings.read", status: "preview" }),
+      leaf("parametres/medias", "Médias", `${BASE}/parametres/medias`, { permission: "settings.read" }),
+      leaf("parametres/permaliens", "Permaliens", `${BASE}/parametres/permaliens`, { permission: "settings.read" }),
+      leaf("parametres/seo", "SEO", `${BASE}/parametres/seo`, { permission: "settings.read" }),
+      leaf("parametres/confidentialite", "Confidentialité", `${BASE}/parametres/confidentialite`, { permission: "settings.read" }),
+      leaf("parametres/indexation", "Indexation", `${BASE}/parametres/indexation`, { permission: "settings.read" }),
+      leaf("parametres/emailing", "Emailing", `${BASE}/parametres/emailing`, { permission: "settings.read" }),
+      leaf("parametres/tunnels", "Tunnels", `${BASE}/parametres/tunnels`, { permission: "settings.read" }),
+      leaf("parametres/avance", "Avancé", `${BASE}/parametres/avance`, { permission: "settings.read" }),
     ],
   },
 ];
@@ -117,7 +117,7 @@ const itemOf = (key) => ALL.find((i) => i.key === key) || null;
 const isCmsKey = (key) => ALL.some((i) => i.key === key);
 
 // Clés servies par le routeur générique des écrans CMS (cmsScreens) : celles dont la route n'existe pas déjà ailleurs.
-const GENERIC_SECTIONS = ["articles", "navigation", "apparence", "commentaires", "utilisateurs", "seo", "redirections", "outils", "parametres"];
+const GENERIC_SECTIONS = ["articles", "navigation", "apparence", "commentaires", "utilisateurs", "seo", "redirections", "outils"];
 
 // Menu affiché pour un rôle : uniquement les entrées permises ; une section à une seule entrée devient un lien direct.
 function buildCmsNav({ can, active }) {

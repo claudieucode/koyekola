@@ -6,7 +6,7 @@ const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const { TEST_KEY } = require("./marketing-helpers");
-const { startServer, loginInstructor, createCourse } = require("./helpers");
+const { startServer, loginInstructor, createCourse, dismissStart } = require("./helpers");
 
 let chromium = null;
 try { chromium = require("playwright-core").chromium; } catch { /* module absent */ }
@@ -39,6 +39,7 @@ describe("structure : canevas, Flexbox, Grille, calques et panneau détachable (
   const saved = async (check, what) => until(() => { const c = draft(); return check(c) ? c : null; }, { what: `enregistré : ${what}`, timeout: 12000 });
   const ready = async () => {
     await page.waitForFunction(() => { const f = document.querySelector("[data-pb-frame]"); return f && f.contentDocument && f.contentDocument.body && f.contentDocument.body.classList.contains("lp-builder"); }, null, { timeout: 15000 });
+    await dismissStart(page);
     await wait(250);
   };
   async function openEditor() {

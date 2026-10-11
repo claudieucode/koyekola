@@ -33,15 +33,40 @@ const line = (v, max) => clean(v, max).replace(/\s+/g, " ");
 
 // ---------- Valeurs de style (validées une à une) ----------
 const LEN = /^(-?\d{1,4}(?:\.\d{1,3})?)(px|%|rem|em|vh|vw)$/;
-const lengthOf = ({ auto = false, negative = false } = {}) => (v) => {
+const INTRINSIC = new Set(["fit-content", "min-content", "max-content"]); // dimensions intrinsèques : liste fermée, jamais de CSS libre
+const lengthOf = ({ auto = false, negative = false, intrinsic = false } = {}) => (v) => {
   const s = String(v ?? "").trim().toLowerCase();
   if (s === "0") return "0";
   if (auto && s === "auto") return "auto";
+  if (intrinsic && INTRINSIC.has(s)) return s;
   const m = s.match(LEN);
   if (!m) return null;
   if (!negative && Number(m[1]) < 0) return null;
   return `${Number(m[1])}${m[2]}`;
 };
+// Valeurs GLOBALES du site référençables par un élément (comme les couleurs) : espacements, rayons, tailles de texte. L'élément enregistre « token:space-md » ;
+// le rendu écrit var(--kw-space-md, <valeur par défaut>) : changer le jeton dans les réglages du site met à jour tous les éléments qui le référencent, une valeur propre
+// reste intacte. Le repli sert aux pages hors site (jetons non posés).
+// (construit à la première utilisation : tokens.js et nodes.js se référencent mutuellement au chargement)
+let LEN_TOKENS_CACHE = null;
+const lenTokens = () => {
+  if (LEN_TOKENS_CACHE) return LEN_TOKENS_CACHE;
+  const siteTokens = require("./tokens");
+  LEN_TOKENS_CACHE = {
+    space: Object.fromEntries(siteTokens.SPACE_KEYS.map((k) => [`space-${k}`, `${siteTokens.DEFAULT_TOKENS.space[k]}px`])),
+    radius: Object.fromEntries(Object.keys(siteTokens.DEFAULT_TOKENS.radius).map((k) => [`radius-${k}`, `${siteTokens.DEFAULT_TOKENS.radius[k]}px`])),
+    type: Object.fromEntries(siteTokens.TYPE_KEYS.map((k) => [`${k}-size`, `${siteTokens.DEFAULT_TOKENS.type[k].size}px`])),
+  };
+  return LEN_TOKENS_CACHE;
+};
+const lenTokenValue = (name) => { const t = lenTokens(); return t.space[name] || t.radius[name] || t.type[name] || null; };
+// check : accepte « token:<famille> » en plus de la longueur ; out : le convertit en var() avec repli
+const withLenToken = (family, check) => (v) => {
+  const s = String(v ?? "").trim().toLowerCase();
+  if (s.startsWith("token:")) return Object.hasOwn(lenTokens()[family], s.slice(6)) ? s : null;
+  return check(v);
+};
+const lenTokenOut = (v) => (String(v).startsWith("token:") ? `var(--kw-${v.slice(6)}, ${lenTokenValue(v.slice(6))})` : v);
 const COLOR_TOKENS = ["primary", "secondary", "accent", "background", "surface", "text", "muted", "success", "warning", "error", "on-primary", "on-accent"];
 const color = (v) => {
   const s = String(v ?? "").trim().toLowerCase();
@@ -51,7 +76,10 @@ const color = (v) => {
   return null;
 };
 const colorCss = (v) => (v.startsWith("token:") ? `var(--kw-${v.slice(6)})` : v);
+const fontLib = require("../../utils/fontLibrary");
 const oneOf = (...list) => (v) => (list.includes(v) ? v : null);
+// Résolution d'image (service commun : media/variants.js). « full » (l'original) est la valeur par défaut et n'est pas enregistrée.
+const imageSize = (p) => { const v = oneOf(...require("../media/variants").SIZE_CHOICES)(p && p.size); return v && v !== "full" ? { size: v } : {}; };
 const numberIn = (min, max, { integer = false } = {}) => (v) => {
   const n = Number(v);
   if (v === "" || v === null || v === undefined || !Number.isFinite(n) || n < min || n > max) return null;
@@ -70,7 +98,10 @@ const gridTrack = (v) => {
   if (!s || parts.length > 12) return null;
   return parts.every((t) => /^(\d{1,2}(\.\d)?fr|\d{1,4}px|\d{1,3}%|auto)$/.test(t)) ? s : null;
 };
-const len = lengthOf(), lenAuto = lengthOf({ auto: true }), lenNeg = lengthOf({ negative: true }), marginLen = lengthOf({ auto: true, negative: true });
+const len = lengthOf(), lenAuto = lengthOf({ auto: true }), lenSize = lengthOf({ intrinsic: true }), lenSizeAuto = lengthOf({ auto: true, intrinsic: true }), lenNeg = lengthOf({ negative: true }), marginLen = lengthOf({ auto: true, negative: true });
+const partsLib = require("./parts");
+// Épaisseurs (bordure, contour) : le pourcentage n'a pas de sens en CSS (il serait ignoré par le navigateur) : refusé ici plutôt que publié en silence
+const lenNoPercent = (v) => (/%\s*$/.test(String(v)) ? null : len(v));
 const STYLE_PROPS = {
   display: { css: "display", check: oneOf("block", "flex", "grid", "inline-block", "inline", "inline-flex", "none"), group: "layout" },
   flexDirection: { css: "flex-direction", check: oneOf("row", "column", "row-reverse", "column-reverse"), group: "layout" },
@@ -84,15 +115,18 @@ const STYLE_PROPS = {
   justifySelf: { css: "justify-self", check: oneOf("auto", "start", "center", "end", "stretch"), group: "layout" },
   // Ordre d'affichage d'un enfant (flex ou grille), sans changer sa place dans les calques
   order: { css: "order", check: numberIn(-20, 20, { integer: true }), group: "layout" },
-  gap: { css: "gap", check: len, group: "layout" },
-  rowGap: { css: "row-gap", check: len, group: "layout" },
-  columnGap: { css: "column-gap", check: len, group: "layout" },
+  gap: { css: "gap", check: withLenToken("space", len), out: lenTokenOut, group: "layout" },
+  rowGap: { css: "row-gap", check: withLenToken("space", len), out: lenTokenOut, group: "layout" },
+  columnGap: { css: "column-gap", check: withLenToken("space", len), out: lenTokenOut, group: "layout" },
   columns: { css: "grid-template-columns", check: numberIn(1, 12, { integer: true }), out: (n) => `repeat(${n}, minmax(0, 1fr))`, group: "layout" },
   // Largeurs des colonnes d'une grille, ex. « 2fr 1fr » ou « 240px 1fr » (remplace le nombre de colonnes égales)
   gridTemplate: { css: "grid-template-columns", check: gridTrack, out: (v) => v.split(" ").map((t) => (/fr$/.test(t) ? `minmax(0, ${t})` : t)).join(" "), group: "layout" },
   gridRows: { css: "grid-template-rows", check: numberIn(1, 12, { integer: true }), out: (n) => `repeat(${n}, auto)`, group: "layout" },
   // Hauteurs des lignes (ex. « 200px 1fr ») : remplace le nombre de lignes égales (écrit après lui)
   gridRowsTemplate: { css: "grid-template-rows", check: gridTrack, out: (v) => v.split(" ").map((t) => (/fr$/.test(t) ? `minmax(0, ${t})` : t)).join(" "), group: "layout" },
+  // Pistes créées automatiquement quand il y a plus d'éléments que de cases (ex. « minmax(120px, auto) »)
+  gridAutoRows: { css: "grid-auto-rows", check: gridTrack, group: "layout" },
+  gridAutoColumns: { css: "grid-auto-columns", check: gridTrack, group: "layout" },
   gridAutoFlow: { css: "grid-auto-flow", check: oneOf("row", "column", "row dense", "column dense"), group: "layout" },
   justifyItems: { css: "justify-items", check: oneOf("stretch", "start", "center", "end"), group: "layout" },
   // Élément enfant d'une grille : nombre de colonnes / lignes occupées
@@ -104,29 +138,31 @@ const STYLE_PROPS = {
   gridColumnEnd: { css: "grid-column-end", check: numberIn(1, 13, { integer: true }), group: "layout" },
   gridRowStart: { css: "grid-row-start", check: numberIn(1, 13, { integer: true }), group: "layout" },
   gridRowEnd: { css: "grid-row-end", check: numberIn(1, 13, { integer: true }), group: "layout" },
-  width: { css: "width", check: lenAuto, group: "size" },
-  height: { css: "height", check: lenAuto, group: "size" },
-  minWidth: { css: "min-width", check: len, group: "size" },
-  maxWidth: { css: "max-width", check: len, group: "size" },
-  minHeight: { css: "min-height", check: len, group: "size" },
-  maxHeight: { css: "max-height", check: len, group: "size" },
+  width: { css: "width", check: lenSizeAuto, group: "size" },
+  height: { css: "height", check: lenSizeAuto, group: "size" },
+  minWidth: { css: "min-width", check: lenSize, group: "size" },
+  maxWidth: { css: "max-width", check: lenSize, group: "size" },
+  minHeight: { css: "min-height", check: lenSize, group: "size" },
+  maxHeight: { css: "max-height", check: lenSize, group: "size" },
   // Part de largeur d'une colonne dans « Colonnes » (proportions : 1 / 1 = moitié-moitié, 2 / 1 = deux tiers - un tiers)
   flexGrow: { css: "flex-grow", check: numberIn(0, 20), group: "size" },
   flexShrink: { css: "flex-shrink", check: numberIn(0, 20), group: "size" },
   flexBasis: { css: "flex-basis", check: lenAuto, group: "size" },
-  marginTop: { css: "margin-top", check: marginLen, group: "spacing" },
-  marginRight: { css: "margin-right", check: marginLen, group: "spacing" },
-  marginBottom: { css: "margin-bottom", check: marginLen, group: "spacing" },
-  marginLeft: { css: "margin-left", check: marginLen, group: "spacing" },
-  paddingTop: { css: "padding-top", check: len, group: "spacing" },
-  paddingRight: { css: "padding-right", check: len, group: "spacing" },
-  paddingBottom: { css: "padding-bottom", check: len, group: "spacing" },
-  paddingLeft: { css: "padding-left", check: len, group: "spacing" },
-  fontFamily: { css: "font-family", check: oneOf(...Object.keys(FONT_STACKS)), out: (v) => FONT_STACKS[v], group: "typography" },
-  fontSize: { css: "font-size", check: len, group: "typography" },
+  marginTop: { css: "margin-top", check: withLenToken("space", marginLen), out: lenTokenOut, group: "spacing" },
+  marginRight: { css: "margin-right", check: withLenToken("space", marginLen), out: lenTokenOut, group: "spacing" },
+  marginBottom: { css: "margin-bottom", check: withLenToken("space", marginLen), out: lenTokenOut, group: "spacing" },
+  marginLeft: { css: "margin-left", check: withLenToken("space", marginLen), out: lenTokenOut, group: "spacing" },
+  paddingTop: { css: "padding-top", check: withLenToken("space", len), out: lenTokenOut, group: "spacing" },
+  paddingRight: { css: "padding-right", check: withLenToken("space", len), out: lenTokenOut, group: "spacing" },
+  paddingBottom: { css: "padding-bottom", check: withLenToken("space", len), out: lenTokenOut, group: "spacing" },
+  paddingLeft: { css: "padding-left", check: withLenToken("space", len), out: lenTokenOut, group: "spacing" },
+  // Police : un des cinq réglages historiques du site OU une famille de la bibliothèque (Font Manager, identifiant « font.inter »)
+  fontFamily: { css: "font-family", check: (v) => (Object.hasOwn(FONT_STACKS, v) || fontLib.isId(v) ? v : null), out: (v) => FONT_STACKS[v] || fontLib.stackOf(v), group: "typography" },
+  fontSize: { css: "font-size", check: withLenToken("type", len), out: lenTokenOut, group: "typography" },
   fontWeight: { css: "font-weight", check: oneOf("300", "400", "500", "600", "700", "800", "900"), group: "typography" },
   fontStyle: { css: "font-style", check: oneOf("normal", "italic"), group: "typography" },
   lineHeight: { css: "line-height", check: numberIn(0.8, 3), group: "typography" },
+  lineClamp: { css: "-webkit-line-clamp", check: numberIn(1, 10, { integer: true }), group: "typography" }, // nombre de lignes maximum (le reste est coupé) : voir declarations()
   letterSpacing: { css: "letter-spacing", check: lenNeg, group: "typography" },
   wordSpacing: { css: "word-spacing", check: lenNeg, group: "typography" },
   textIndent: { css: "text-indent", check: lenNeg, group: "typography" },
@@ -134,17 +170,25 @@ const STYLE_PROPS = {
   textAlign: { css: "text-align", check: oneOf("left", "center", "right", "justify"), group: "typography" },
   textDecoration: { css: "text-decoration", check: oneOf("none", "underline", "line-through"), group: "typography" },
   textShadow: { css: "text-shadow", check: oneOf(...Object.keys(TEXT_SHADOWS)), out: (v) => TEXT_SHADOWS[v], group: "typography" },
+  // Contour du texte (comme « Text Stroke » d'Elementor) : épaisseur + couleur, deux propriétés simples (la couleur peut être un jeton du site)
+  textStrokeWidth: { css: "-webkit-text-stroke-width", check: len, group: "typography" },
+  textStrokeColor: { css: "-webkit-text-stroke-color", check: color, group: "typography" },
+  // Retours à la ligne et débordement du texte (les points de suspension demandent « sans retour » + débordement masqué)
+  whiteSpace: { css: "white-space", check: oneOf("normal", "nowrap", "pre", "pre-wrap", "pre-line"), group: "typography" },
+  textWrap: { css: "text-wrap", check: oneOf("wrap", "nowrap", "balance", "pretty"), group: "typography" },
+  overflowWrap: { css: "overflow-wrap", check: oneOf("normal", "break-word", "anywhere"), group: "typography" },
+  textOverflow: { css: "text-overflow", check: oneOf("clip", "ellipsis"), group: "typography" },
   color: { css: "color", check: color, out: colorCss, group: "color" },
   backgroundColor: { css: "background-color", check: color, out: colorCss, group: "color" },
-  borderWidth: { css: "border-width", check: len, group: "border" },
+  borderWidth: { css: "border-width", check: lenNoPercent, group: "border" },
   // Épaisseur côté par côté (bordure « déliée ») : écrite après l'épaisseur générale, qu'elle précise
-  borderTopWidth: { css: "border-top-width", check: len, group: "border" },
-  borderRightWidth: { css: "border-right-width", check: len, group: "border" },
-  borderBottomWidth: { css: "border-bottom-width", check: len, group: "border" },
-  borderLeftWidth: { css: "border-left-width", check: len, group: "border" },
+  borderTopWidth: { css: "border-top-width", check: lenNoPercent, group: "border" },
+  borderRightWidth: { css: "border-right-width", check: lenNoPercent, group: "border" },
+  borderBottomWidth: { css: "border-bottom-width", check: lenNoPercent, group: "border" },
+  borderLeftWidth: { css: "border-left-width", check: lenNoPercent, group: "border" },
   borderStyle: { css: "border-style", check: oneOf("none", "solid", "dashed", "dotted"), group: "border" },
   borderColor: { css: "border-color", check: color, out: colorCss, group: "border" },
-  borderRadius: { css: "border-radius", check: len, group: "border" },
+  borderRadius: { css: "border-radius", check: withLenToken("radius", len), out: lenTokenOut, group: "border" },
   // Arrondi coin par coin (arrondi « délié ») : toujours écrit après l'arrondi général, qu'il précise
   borderTopLeftRadius: { css: "border-top-left-radius", check: len, group: "border" },
   borderTopRightRadius: { css: "border-top-right-radius", check: len, group: "border" },
@@ -155,6 +199,18 @@ const STYLE_PROPS = {
   overflow: { css: "overflow", check: oneOf("visible", "hidden", "auto"), group: "effects" },
   // Flou de ce qui est DERRIÈRE l'élément (effet verre dépoli, avec un fond semi-transparent)
   backdropBlur: { css: "backdrop-filter", check: numberIn(1, 40, { integer: true }), out: (n) => `blur(${n}px)`, group: "effects" },
+  // Visibilité sans toucher à la mise en page (l'élément garde sa place), souris, curseur, fusion avec ce qui est derrière, débordement par axe
+  visibility: { css: "visibility", check: oneOf("visible", "hidden"), group: "effects" },
+  cursor: { css: "cursor", check: oneOf("auto", "default", "pointer", "text", "move", "grab", "not-allowed", "help", "zoom-in", "zoom-out"), group: "effects" },
+  pointerEvents: { css: "pointer-events", check: oneOf("auto", "none"), group: "effects" },
+  mixBlendMode: { css: "mix-blend-mode", check: oneOf("normal", "multiply", "screen", "overlay", "darken", "lighten", "color-dodge", "color-burn", "soft-light", "hard-light", "difference", "exclusion"), group: "effects" },
+  overflowX: { css: "overflow-x", check: oneOf("visible", "hidden", "auto", "scroll", "clip"), group: "effects" },
+  overflowY: { css: "overflow-y", check: oneOf("visible", "hidden", "auto", "scroll", "clip"), group: "effects" },
+  // Contour (hors de la bordure, ne change pas la taille) : accessibilité du focus, repères visuels
+  outlineWidth: { css: "outline-width", check: lenNoPercent, group: "border" },
+  outlineStyle: { css: "outline-style", check: oneOf("none", "solid", "dashed", "dotted"), group: "border" },
+  outlineColor: { css: "outline-color", check: color, out: colorCss, group: "border" },
+  outlineOffset: { css: "outline-offset", check: lenNeg, group: "border" },
   // Absolue : placée par rapport au parent positionné (relatif) ; fixe : par rapport à l'écran (bandeau, bouton flottant)
   position: { css: "position", check: oneOf("static", "relative", "sticky", "absolute", "fixed"), group: "position" },
   top: { css: "top", check: lenNeg, group: "position" },
@@ -164,6 +220,8 @@ const STYLE_PROPS = {
   transformOrigin: { css: "transform-origin", check: oneOf("center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"), group: "position" },
   // Durée des changements au survol / focus / clic (couleurs, ombre, transformation…)
   transitionDuration: { css: "transition", check: numberIn(0, 2000, { integer: true }), out: (n) => `color ${n}ms ease, background-color ${n}ms ease, border-color ${n}ms ease, box-shadow ${n}ms ease, transform ${n}ms ease, opacity ${n}ms ease`, group: "effects" },
+  // Accélération des transitions (écrite APRÈS « transition » : la propriété détaillée remplace l'accélération par défaut de la durée)
+  transitionEasing: { css: "transition-timing-function", check: oneOf("ease", "linear", "ease-in", "ease-out", "ease-in-out"), group: "effects" },
   zIndex: { css: "z-index", check: numberIn(-100, 9999, { integer: true }), group: "position" },
   objectFit: { css: "object-fit", check: oneOf("cover", "contain", "fill", "none"), group: "media" },
   objectPosition: { css: "object-position", check: oneOf("center", "top", "bottom", "left", "right"), group: "media" },
@@ -197,7 +255,7 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
       out[k] = ok;
     } else if (k === "backgroundImage") {
       const src = imageUrl(v && v.src, `${at} (image de fond)`);
-      if (src) out.backgroundImage = { src };
+      if (src) { const sz = oneOf(...require("../media/variants").KEYS)(v && v.size); out.backgroundImage = sz ? { src, size: sz } : { src }; }
     } else if (k === "overlay") {
       const c = color(v && v.color);
       if (c) out.overlay = { color: c };
@@ -242,15 +300,18 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
 // Placement dans la grille : écrit en « grid-column: début / fin » (même chose pour les lignes), jamais en déclarations qui
 // s'écrasent : début seul, fin seule, début + occupées (« 2 / span 3 ») ou occupées seules (« span 3 »)
 const PLACEMENT = new Set(["gridColumnStart", "gridColumnEnd", "gridColumnSpan", "gridRowStart", "gridRowEnd", "gridRowSpan"]);
-const CORNERS = new Set(["gridTemplate", "gridRowsTemplate", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth"]);
-function declarations(set) {
+const CORNERS = new Set(["overflowX", "overflowY", "gridTemplate", "gridRowsTemplate", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth"]);
+// band : conteneur « fond pleine largeur, contenu encadré » : ses intérieurs gauche / droite sont écrits dans des variables (--kw-pl, --kw-pr) que
+// la règle .kw-band de landing.css combine avec le retrait qui centre le contenu à la largeur du site : le réglage de l'auteur reste effectif
+function declarations(set, band = false) {
   const d = [];
   const entries = Object.entries(set);
   // Coins après l'arrondi général (sinon « border-radius » les écraserait)
-  for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k) && !PLACEMENT.has(k)).concat(entries.filter(([k]) => CORNERS.has(k)))) {
+  for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k) && !PLACEMENT.has(k) && k !== "transitionEasing").concat(entries.filter(([k]) => CORNERS.has(k) || k === "transitionEasing"))) {
     const p = STYLE_PROPS[k];
-    if (p) d.push(`${p.css}:${p.out ? p.out(v) : v}`);
+    if (p) d.push(band && (k === "paddingLeft" || k === "paddingRight") ? `--kw-p${k === "paddingLeft" ? "l" : "r"}:${p.out ? p.out(v) : v}` : `${p.css}:${p.out ? p.out(v) : v}`);
   }
+  if (set.lineClamp !== undefined) d.push("display:-webkit-box", "-webkit-box-orient:vertical", "overflow:hidden");
   for (const [axis, css] of [["Column", "grid-column"], ["Row", "grid-row"]]) {
     const start = set[`grid${axis}Start`], end = set[`grid${axis}End`], span = set[`grid${axis}Span`];
     if (start !== undefined || end !== undefined) d.push(`${css}:${start !== undefined ? start : "auto"} / ${end !== undefined ? end : span !== undefined ? `span ${span}` : "auto"}`);
@@ -259,7 +320,7 @@ function declarations(set) {
   const layers = [];
   if (set.overlay) layers.push(`linear-gradient(${colorCss(set.overlay.color)}, ${colorCss(set.overlay.color)})`);
   if (set.gradient) layers.push(`linear-gradient(${set.gradient.angle}deg, ${colorCss(set.gradient.from)}, ${colorCss(set.gradient.to)})`);
-  if (set.backgroundImage) layers.push(`url("${set.backgroundImage.src}")`);
+  if (set.backgroundImage) layers.push(`url("${require("../media/variants").sourceFor(set.backgroundImage.src, set.backgroundImage.size)}")`);
   if (layers.length) d.push(`background-image:${layers.join(", ")}`);
   if (set.filter) {
     const f = set.filter, unit = { blur: "px", hueRotate: "deg" }, fn = { hueRotate: "hue-rotate" };
@@ -328,9 +389,17 @@ const boxProps = (p, at, h) => {
 };
 // Éléments qui sont eux-mêmes un lien, un bouton ou un champ (ou qui peuvent en contenir) : interdits dans un conteneur cliquable
 const INTERACTIVE_INSIDE_LINK = new Set(["button", "link", "menu", "search", "account", "toggle", "tabs", "accordion", "modal", "carousel", "tooltip", "hotspot", "html", "embed", "social", "breadcrumb", "course", "courselist", "posts", "pricing", "iconlist", "gallery", "table", "postcontent"]);
+const nestedProps = (p) => {
+  const mode = oneOf("tabs", "carousel")(p.mode);
+  if (!mode) return {};
+  if (mode === "tabs") return { mode, tabsLook: oneOf("line", "pills")(p.tabsLook) || "line", tabsStart: numberIn(1, 12, { integer: true })(p.tabsStart) || 1 };
+  return { mode, dots: p.dots !== false, loop: p.loop === true, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5 };
+};
 const NODE_TYPES = {
   // Largeur du contenu : encadrée (1100 px centrés, par défaut) ou pleine largeur
-  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : {}) }) },
+  // Mode d'affichage des enfants (facultatif ; absent = conteneur ordinaire, comme avant) : « onglets » (un enfant = un onglet, titre = son nom) ou
+  // « carrousel » (un enfant = une diapositive, avec le carrousel du site). Les enfants restent de vrais conteneurs, modifiables dans le canevas.
+  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : p.band === true ? { band: true } : {}), ...nestedProps(p) }) },
   columns: { label: "Colonnes", category: "structure", container: true, props: () => ({}) },
   column: { label: "Colonne", category: "structure", container: true, props: () => ({}) },
   // Grille : peut devenir une BOUCLE (« Répéter pour chaque article / formation ») : ses enfants sont le modèle d'un élément
@@ -372,7 +441,9 @@ const NODE_TYPES = {
   code: { label: "Code (texte)", category: "text", props: (p, at) => {
     const text = clean(p.text, 4000);
     if (!text) throw new Error(`${at} (code) : le texte est obligatoire.`);
-    return { text };
+    // Langage de coloration : facultatif (absent = texte brut, comme avant) ; une valeur inconnue est ignorée
+    const language = require("./highlight").LANGUAGES.includes(p.language) && p.language !== "text" ? p.language : "";
+    return { text, ...(language ? { language } : {}) };
   } },
   image: { label: "Image", category: "media", props: (p, at, h) => {
     const src = h.imageUrl(p.src, `${at} (image)`);
@@ -380,7 +451,7 @@ const NODE_TYPES = {
     const alt = line(p.alt, 200);
     if (!alt && p.decorative !== true) throw new Error(`${at} (image) : un texte de remplacement est obligatoire (ou cochez « image décorative »).`);
     const link = h.linkUrl(p.link, `${at} (lien de l'image)`);
-    return { src, alt, decorative: p.decorative === true && !alt, link, caption: line(p.caption, 200), title: line(p.title, 150), newTab: p.newTab === true && link.startsWith("https://") };
+    return { src, alt, decorative: p.decorative === true && !alt, link, caption: line(p.caption, 200), title: line(p.title, 150), newTab: p.newTab === true && link.startsWith("https://"), ...(p.lightbox === true && !link ? { lightbox: true } : {}), ...imageSize(p) };
   } },
   gallery: { label: "Galerie", category: "media", props: (p, at, h) => {
     const images = (Array.isArray(p.images) ? p.images : []).slice(0, 24).map((im, i) => {
@@ -389,11 +460,15 @@ const NODE_TYPES = {
       if (src && !alt) throw new Error(`${at} (galerie) : texte de remplacement manquant pour l'image ${i + 1}.`);
       if (!src) return null;
       const caption = line(im && im.caption, 200), link = h.linkUrl(im && im.link, `${at} (lien de l'image ${i + 1})`);
-      return { src, alt, ...(caption ? { caption } : {}), ...(link ? { link } : {}) };
+      const tag = line(im && im.tag, 30);
+      return { src, alt, ...(caption ? { caption } : {}), ...(link ? { link } : {}), ...(tag ? { tag } : {}) };
     }).filter(Boolean);
     if (!images.length) throw new Error(`${at} (galerie) : au moins une image.`);
-    // lightbox : clic = image en grand (sauf image avec lien) ; masonry : hauteurs naturelles en colonnes
-    return { images, lightbox: p.lightbox === true, masonry: p.masonry === true };
+    // lightbox : clic = image en grand (sauf image avec lien) ; masonry : hauteurs naturelles en colonnes ; justified : lignes de même hauteur
+    // colonnes (grille), ratio d'aspect (grille), hauteur de ligne (justifiée), légende en surcouche au survol, barre de filtres par étiquette (valeurs par défaut non enregistrées)
+    const layout = p.masonry === true ? "" : oneOf("justified")(p.layout);
+    const columns = numberIn(1, 6, { integer: true })(p.columns), ratio = oneOf("4:3", "3:2", "16:9", "9:16", "21:9")(p.ratio), rowHeight = oneOf("120", "160", "260", "320")(String(p.rowHeight));
+    return { images, lightbox: p.lightbox === true, masonry: p.masonry === true, ...(layout ? { layout } : {}), ...(columns && columns !== 3 ? { columns } : {}), ...(ratio ? { ratio } : {}), ...(layout && rowHeight ? { rowHeight } : {}), ...(p.overlay === true ? { overlay: true } : {}), ...(p.filters === true && images.some((im) => im.tag) ? { filters: true } : {}), ...imageSize(p) };
   } },
   video: { label: "Vidéo", category: "media", props: (p, at, h) => {
     const url = line(p.url, 500);
@@ -487,7 +562,7 @@ const NODE_TYPES = {
       return src ? { src, alt, caption: line(im && im.caption, 200) } : null;
     }).filter(Boolean);
     if (images.length < 2) throw new Error(`${at} (carrousel) : au moins deux images.`);
-    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true };
+    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true, ...imageSize(p) };
   } },
   toggle: { label: "Bascule", category: "interaction", props: (p, at) => {
     const title = line(p.title, 150), text = clean(p.text, 4000);
@@ -510,7 +585,7 @@ const NODE_TYPES = {
     const text = clean(p.text, 1200), name = line(p.name, 80);
     if (!text || !name) throw new Error(`${at} (témoignage) : le texte et le nom de la personne sont obligatoires (témoignage réel, avec son accord).`);
     const avatar = p.avatar ? h.imageUrl(p.avatar, `${at} (photo du témoignage)`) : "";
-    return { text, name, role: line(p.role, 120), ...(avatar ? { avatar } : {}), rating: numberIn(0, 5, { integer: true })(p.rating) || 0 };
+    return { text, name, role: line(p.role, 120), ...(avatar ? { avatar, ...imageSize(p) } : {}), rating: numberIn(0, 5, { integer: true })(p.rating) || 0 };
   } },
   pricing: { label: "Offre tarifaire", category: "marketing", props: (p, at, h) => {
     const title = line(p.title, 80), price = line(p.price, 30);
@@ -591,7 +666,7 @@ const NODE_TYPES = {
       const xx = numberIn(0, 100)(x && x.x), yy = numberIn(0, 100)(x && x.y);
       return title && xx !== null && yy !== null ? { x: xx, y: yy, title, text: line(x.text, 300) } : null;
     }).filter(Boolean);
-    return { src, alt, spots };
+    return { src, alt, spots, ...imageSize(p) };
   } },
   posts: { label: "Derniers articles du blog", category: "dynamic", props: (p) => ({
     count: numberIn(1, 12, { integer: true })(p.count) || 3, category: line(p.category, 80),
@@ -709,7 +784,7 @@ const NODE_TYPES = {
     const alt = line(p.alt, 200), title = line(p.title, 120);
     if (!title) throw new Error(`${at} (boîte d'image) : le titre est obligatoire.`);
     const link = h.linkUrl(p.link, `${at} (lien de la boîte d'image)`);
-    return { src, alt, title, text: clean(p.text, 600), titleLevel: oneOf("2", "3", "4", "5", "6")(String(p.titleLevel)) || "3", position: oneOf("top", "left", "right")(p.position) || "top", ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}) };
+    return { src, alt, title, text: clean(p.text, 600), titleLevel: oneOf("2", "3", "4", "5", "6")(String(p.titleLevel)) || "3", position: oneOf("top", "left", "right")(p.position) || "top", ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}), ...imageSize(p) };
   } },
   iconbox: { label: "Boîte d'icône", category: "media", props: (p, at, h) => {
     const icon = String(p.icon || "");
@@ -819,6 +894,11 @@ const SITE_SUB = { cmsmenu: SITE_SUBS[0], sitelogo: SITE_SUBS[0], sitetitle: SIT
   archiveinfo: SITE_SUBS[2], catfilter: SITE_SUBS[2], querylist: SITE_SUBS[3], posts: SITE_SUBS[3], account: SITE_SUBS[4], minicart: SITE_SUBS[4] };
 const WIDGET_SHORTCUTS = [
   { key: "soundcloud", label: "SoundCloud", group: "general", icon: "play", keywords: "soundcloud son musique podcast audio lecteur", type: "embed", provider: "soundcloud" },
+  { key: "youtubeplaylist", label: "Playlist YouTube", group: "general", icon: "video", keywords: "playlist youtube liste de lecture videos serie video", type: "embed", provider: "youtubelist" },
+  { key: "facebookpage", label: "Page Facebook", group: "social", icon: "users", keywords: "facebook page fil actualites abonnes plugin", type: "embed", provider: "facebookpage" },
+  { key: "facebookpost", label: "Publication Facebook", group: "social", icon: "fileText", keywords: "facebook publication post video integrer embed", type: "embed", provider: "facebookpost" },
+  { key: "instagrampost", label: "Instagram", group: "social", icon: "image", keywords: "instagram publication reel photo integrer embed", type: "embed", provider: "instagram" },
+  { key: "tiktokvideo", label: "TikTok", group: "social", icon: "video", keywords: "tiktok video integrer embed", type: "embed", provider: "tiktok" },
   // Titre de la page : texte dynamique (source « titre de la page ») préréglé, rien à demander
   { key: "pagetitle", label: "Titre de la page", group: "site", sub: SITE_SUBS[0], icon: "type", keywords: "titre de la page nom h1 h2", type: "dyntext", preset: { source: "pageTitle", tag: "h2", before: "", after: "", fallback: "" } },
   { key: "posttitle", label: "Titre de l'article", group: "site", sub: "Contenu de l'article", icon: "type", keywords: "titre article billet h1 post title", type: "heading", preset: {"text": "{{post.title | fallback: Titre de l'article}}", "level": "1"} },
@@ -850,32 +930,66 @@ const WIDGET_SHORTCUTS = [
   { key: "tagcloud", label: "Nuage d'étiquettes", group: "site", sub: "Listes dynamiques", icon: "tag", keywords: "etiquettes tags nuage mots cles", type: "querylist", preset: {"title": "Étiquettes", "source": "tags", "mode": "popular", "count": 24, "layout": "inline"} },
   { key: "authorlist", label: "Liste des auteurs", group: "site", sub: "Listes dynamiques", icon: "users", keywords: "auteurs equipe redacteurs liste", type: "querylist", preset: {"title": "Nos auteurs", "source": "authors", "mode": "popular", "count": 8, "showExcerpt": true} },
   { key: "pagelist", label: "Liste des pages du site", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "pages du site menu plan navigation liste", type: "querylist", preset: {"title": "Pages", "source": "pages", "mode": "recent", "count": 12, "layout": "compact", "showImage": false, "showDate": false} },
+  // Produit = formation : mêmes données que la fiche d'une formation (modèle « Fiche d'une formation » du thème) ; l'élément se remplit à l'affichage
+  { key: "producttitle", label: "Titre du produit", group: "commerce", icon: "type", keywords: "produit titre formation nom product title", type: "heading", preset: {"text": "{{product.title | fallback: Titre de la formation}}", "level": "1"} },
+  { key: "productprice", label: "Prix du produit", group: "commerce", icon: "coin", keywords: "produit prix tarif formation product price", type: "text", preset: {"html": "<p><strong>{{product.price}}</strong></p>"} },
+  { key: "productimage", label: "Image du produit", group: "commerce", icon: "image", keywords: "produit image vignette couverture formation product images", type: "image", preset: {"src": "{{product.image}}", "alt": "{{product.title}}"} },
+  { key: "productshort", label: "Description du produit", group: "commerce", icon: "alignLeft", keywords: "produit description courte resume formation short description", type: "text", preset: {"html": "<p>{{product.subtitle}}</p><p>{{product.description}}</p>"} },
+  { key: "productmeta", label: "Informations du produit", group: "commerce", icon: "info", keywords: "produit meta categorie formateur informations product meta", type: "text", preset: {"html": "<p>Catégorie : {{product.category}} · Formateur : {{product.instructor}}</p>"} },
+  { key: "productrelated", label: "Produits apparentés", group: "commerce", icon: "list", keywords: "produits apparentes lies similaires formations related upsells", type: "querylist", preset: {"title": "Vous aimerez aussi", "source": "courses", "mode": "recent", "count": 3, "layout": "cards", "showDate": false, "excludeCurrent": true} },
   { key: "courselist2", label: "Formations (liste dynamique)", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "formations cours catalogue liste dynamique recents", type: "querylist", preset: {"title": "Nos formations", "source": "courses", "mode": "recent", "count": 6, "layout": "cards", "showDate": false} },
 ];
 
+// Description courte de chaque élément (infobulle de la bibliothèque) : ce qu'il fait, en une phrase. Les widgets personnalisés portent la leur (widgets/*.js).
+const WIDGET_DESCRIPTIONS = {
+  container: "Une boîte qui range d'autres éléments (colonne, ligne, section)", columns: "Plusieurs colonnes côte à côte", column: "Une colonne d'un ensemble de colonnes", grid: "Une grille de cases à colonnes réglables", stack: "Des éléments empilés avec un espacement régulier", group: "Un groupe d'éléments qui se déplacent ensemble",
+  spacer: "Un espace vertical réglable", divider: "Un trait de séparation, avec un texte au milieu si besoin", heading: "Un titre (H1 à H6)", text: "Un paragraphe de texte mis en forme", list: "Une liste à puces ou numérotée", quote: "Une citation mise en valeur", code: "Un bloc de code affiché tel quel, coloré selon le langage choisi",
+  image: "Une image avec son texte de remplacement et un lien possible", gallery: "Plusieurs images en grille, avec agrandissement", video: "Une vidéo YouTube, Vimeo ou un fichier", audio: "Un lecteur pour un fichier audio", button: "Un bouton d'appel à l'action", link: "Un lien texte",
+  accordion: "Des questions qui se déplient (FAQ)", tabs: "Des onglets pour organiser un contenu", badge: "Une petite étiquette (nouveau, promo…)", timeline: "Des étapes sur une ligne du temps", progress: "Une barre de progression", menu: "Le menu de navigation du site", carousel: "Des images qui défilent", toggle: "Un titre qui déplie son contenu",
+  alert: "Un message d'information, d'alerte ou de succès", counter: "Un nombre qui s'incrémente en arrivant à l'écran", testimonial: "Un témoignage avec son auteur", pricing: "Une offre tarifaire avec ses avantages et son bouton", breadcrumb: "Le fil d'Ariane de la page", social: "Des liens vers vos réseaux sociaux", sharebuttons: "Des boutons pour partager la page",
+  modal: "Une fenêtre qui s'ouvre au clic, ou un panneau latéral (off-canvas) à gauche ou à droite", html: "Du HTML sécurisé (réservé aux administrateurs)", embed: "Un contenu d'un service accepté (YouTube, Facebook, Spotify…)", iconlist: "Une liste d'éléments avec des icônes", tooltip: "Une infobulle au survol", hotspot: "Une image avec des points d'intérêt cliquables",
+  posts: "Les derniers articles du blog", courselist: "Les formations du catalogue", search: "Un champ de recherche dans le site", account: "Connexion ou compte du visiteur", dyntext: "Un texte rempli avec une donnée (prénom, page, site…)", table: "Un tableau de données", countdown: "Un compte à rebours jusqu'à une date",
+  course: "Une formation du catalogue en carte", sitelogo: "Le logo du site", postcontent: "Le contenu de l'article affiché", catfilter: "Un filtre par catégorie", sitetitle: "Le nom du site", copyright: "La ligne de copyright avec l'année", addtocart: "Un bouton pour acheter ou ajouter une formation au panier", courserating: "Les avis et la note d'une formation",
+  animatedheading: "Un titre dont un mot change ou s'écrit", flipbox: "Une boîte qui se retourne au survol", pricelist: "Une liste de prix avec descriptions", toc: "Une table des matières construite depuis les titres", readingprogress: "Une barre qui montre l'avancée de la lecture", signupform: "Un formulaire d'inscription du module Formulaires",
+  map: "Une carte Google Maps à partir d'une adresse", imagebox: "Une image avec un titre et un texte", iconbox: "Une icône avec un titre et un texte", rating: "Une note en étoiles", menuanchor: "Une ancre pour les liens internes (#nom)", icon: "Une icône du site, seule, avec sa taille, sa couleur et un lien possible", profilecard: "La fiche d'une personne (photo, nom, rôle)",
+  querylist: "Une liste dynamique de contenus (articles, pages, formations…)", postmeta: "Auteur, date, catégorie et lecture de l'article", postterms: "Les catégories et étiquettes de l'article", postnav: "Les liens vers l'article précédent et suivant", authorbox: "La présentation de l'auteur de l'article", archiveinfo: "Le titre et la description d'une archive", postcomments: "Les commentaires de l'article et leur formulaire",
+  cmsmenu: "Un menu géré dans le CMS", minicart: "Une icône de panier avec le nombre d'articles",
+};
 // ---------- Widgets personnalisés (src/marketing/pages/widgets/*.js) ----------
 // Chaque description (champs typés) devient un type d'élément ordinaire : validation, fiche de bibliothèque, contenu de
 // départ, champs de l'inspecteur, liens comptés, versions. Voir docs/widgets-personnalises.md.
 const CUSTOM_WIDGETS = {};
 const emptyValue = (v) => v === undefined || v === null || v === "";
+// Valide UN champ d'un widget personnalisé selon son type (aussi utilisé pour les sous-champs d'une liste)
+function validateField(f, raw, where, h) {
+  let v;
+  if (f.kind === "text") v = line(raw === undefined ? f.default : raw, f.max || 200);
+  else if (f.kind === "textarea") v = clean(raw === undefined ? f.default : raw, f.max || 1000);
+  else if (f.kind === "number") { v = numberIn(f.min, f.max, { integer: f.integer === true })(raw); if (v === null) v = numberIn(f.min, f.max)(f.default); }
+  else if (f.kind === "select") v = f.options.some((o) => o[0] === raw) ? raw : f.default !== undefined ? f.default : f.options[0][0];
+  else if (f.kind === "bool") v = typeof raw === "boolean" ? raw : f.default === true;
+  else if (f.kind === "link") v = h.linkUrl(raw, where);
+  else if (f.kind === "image") v = raw ? h.imageUrl(raw, where) : "";
+  else if (f.kind === "icon") v = h.iconNames.includes(String(raw || "")) ? String(raw) : h.iconNames.includes(String(f.default || "")) ? f.default : "";
+  else if (f.kind === "color") v = color(raw) || "";
+  else if (f.kind === "items") {
+    const list = raw === undefined ? (f.default || []) : raw;
+    if (!Array.isArray(list)) throw new Error(`${where} : une liste d'éléments est attendue.`);
+    if (list.length > f.max) throw new Error(`${where} : ${f.max} élément(s) au plus.`);
+    if (list.length < (f.min || 0)) throw new Error(`${where} : ${f.min} élément(s) au moins.`);
+    v = list.map((it, i) => {
+      if (!it || typeof it !== "object" || Array.isArray(it)) throw new Error(`${where} : l'élément ${i + 1} est invalide.`);
+      return Object.fromEntries(f.fields.map((sf) => [sf.key, validateField(sf, it[sf.key], `${where}, élément ${i + 1} (${sf.label})`, h)]));
+    });
+  }
+  if (f.required && (f.kind === "items" ? !v.length : emptyValue(v))) throw new Error(`${where} : obligatoire.`);
+  return v === null ? "" : v;
+}
 function schemaProps(def) {
   return (p, at, h) => {
     const out = {};
-    for (const f of def.schema) {
-      const raw = p[f.key], where = `${at} (${def.label}, ${f.label})`;
-      let v;
-      if (f.kind === "text") v = line(raw === undefined ? f.default : raw, f.max || 200);
-      else if (f.kind === "textarea") v = clean(raw === undefined ? f.default : raw, f.max || 1000);
-      else if (f.kind === "number") { v = numberIn(f.min, f.max, { integer: f.integer === true })(raw); if (v === null) v = numberIn(f.min, f.max)(f.default); }
-      else if (f.kind === "select") v = f.options.some((o) => o[0] === raw) ? raw : f.default !== undefined ? f.default : f.options[0][0];
-      else if (f.kind === "bool") v = typeof raw === "boolean" ? raw : f.default === true;
-      else if (f.kind === "link") v = h.linkUrl(raw, where);
-      else if (f.kind === "image") v = raw ? h.imageUrl(raw, where) : "";
-      else if (f.kind === "icon") v = h.iconNames.includes(String(raw || "")) ? String(raw) : h.iconNames.includes(String(f.default || "")) ? f.default : "";
-      else if (f.kind === "color") v = color(raw) || "";
-      if (f.required && emptyValue(v)) throw new Error(`${where} : obligatoire.`);
-      out[f.key] = v === null ? "" : v;
-    }
+    for (const f of def.schema) out[f.key] = validateField(f, p[f.key], `${at} (${def.label}, ${f.label})`, h);
+    if (def.validate) def.validate(out, `${at} (${def.label})`); // règles qui portent sur l'ensemble des réglages
     return out;
   };
 }
@@ -893,7 +1007,7 @@ function registerWidget(def) {
 }
 // Contenu de départ : valeurs par défaut des champs (+ version)
 let paletteReady = false;
-const paletteEntry = (def) => ({ icon: def.icon, blank: () => ({ props: Object.fromEntries(def.schema.filter((f) => f.default !== undefined).map((f) => [f.key, f.default])), ...(def.version > 1 ? { v: def.version } : {}) }) });
+const paletteEntry = (def) => ({ icon: def.icon, blank: () => ({ props: Object.fromEntries(def.schema.filter((f) => f.default !== undefined).map((f) => [f.key, Array.isArray(f.default) ? JSON.parse(JSON.stringify(f.default)) : f.default])), ...(def.version > 1 ? { v: def.version } : {}) }) });
 // Permissions exigées par des widgets : libellé affiché sur le cadenas
 const WIDGET_PERMISSIONS = { "pages.code": "réservé aux administrateurs (le HTML s'affiche sur le même domaine que les comptes des élèves)" };
 const LOADED_WIDGETS = require("./widgets").load();
@@ -925,7 +1039,8 @@ const CATEGORIES = { structure: "Structure", text: "Texte", media: "Média", int
 // Contenu de départ de chaque élément (toujours VALIDE : un élément ajouté s'enregistre tout de suite) et icône de la
 // palette. Les éléments qui demandent une donnée réelle (image, vidéo, formation…) la demandent à l'ajout (`asks`).
 const PALETTE = {
-  container: { icon: "borderBox", blank: () => ({ children: [] }) },
+  // Un conteneur ajouté naît avec un écart de 20 px entre ses enfants (valeur courante des constructeurs de pages) ; les conteneurs existants gardent le leur
+  container: { icon: "borderBox", blank: () => ({ children: [], styles: { desktop: { gap: "20px" } } }) },
   columns: { icon: "columns", blank: () => ({ children: [{ type: "column", children: [] }, { type: "column", children: [] }] }) },
   column: { icon: "moveVertical", blank: () => ({ children: [] }) },
   grid: { icon: "layout", blank: () => ({ children: [] }) },
@@ -1017,7 +1132,7 @@ const STYLE_UI = {
   paddingTop: ["Intérieur haut"], paddingRight: ["Intérieur droite"], paddingBottom: ["Intérieur bas"], paddingLeft: ["Intérieur gauche"],
   fontFamily: ["Police", { heading: "Titres du site", body: "Texte du site", system: "Système", serif: "Avec empattements", mono: "Chasse fixe" }],
   fontSize: ["Taille"], fontWeight: ["Graisse", { 300: "Légère", 400: "Normale", 500: "Moyenne", 600: "Demi-grasse", 700: "Grasse", 800: "Extra-grasse", 900: "Noire" }],
-  fontStyle: ["Style", { normal: "Normal", italic: "Italique" }], lineHeight: ["Interligne"], letterSpacing: ["Espacement des lettres"], wordSpacing: ["Espacement des mots"], textIndent: ["Retrait de première ligne"],
+  fontStyle: ["Style", { normal: "Normal", italic: "Italique" }], lineHeight: ["Interligne"], lineClamp: ["Lignes maximum"], textStrokeWidth: ["Contour du texte : épaisseur"], textStrokeColor: ["Contour du texte : couleur"], letterSpacing: ["Espacement des lettres"], wordSpacing: ["Espacement des mots"], textIndent: ["Retrait de première ligne"],
   textTransform: ["Casse", { none: "Normale", uppercase: "MAJUSCULES", lowercase: "minuscules", capitalize: "Première Lettre" }],
   textAlign: ["Alignement du texte", { left: "Gauche", center: "Centre", right: "Droite", justify: "Justifié" }],
   textShadow: ["Ombre du texte", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", glow: "Halo clair" }],
@@ -1029,11 +1144,22 @@ const STYLE_UI = {
   backdropBlur: ["Flou de l'arrière-plan (px)"],
   boxShadow: ["Ombre", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", xl: "Très forte" }], opacity: ["Opacité"],
   overflow: ["Débordement", { visible: "Visible", hidden: "Masqué", auto: "Défilement" }],
+  overflowX: ["Débordement horizontal", { visible: "Visible", hidden: "Masqué", auto: "Auto", scroll: "Défilement", clip: "Coupé" }], overflowY: ["Débordement vertical", { visible: "Visible", hidden: "Masqué", auto: "Auto", scroll: "Défilement", clip: "Coupé" }],
+  visibility: ["Visibilité (garde sa place)", { visible: "Visible", hidden: "Invisible" }],
+  cursor: ["Curseur de la souris", { auto: "Automatique", default: "Flèche", pointer: "Main", text: "Texte", move: "Déplacer", grab: "Attraper", "not-allowed": "Interdit", help: "Aide", "zoom-in": "Zoom +", "zoom-out": "Zoom −" }],
+  pointerEvents: ["Réaction à la souris", { auto: "Normale", none: "Aucune (traversée)" }],
+  mixBlendMode: ["Fusion avec l'arrière-plan", { normal: "Normale", multiply: "Produit", screen: "Écran", overlay: "Incrustation", darken: "Assombrir", lighten: "Éclaircir", "color-dodge": "Densité couleur −", "color-burn": "Densité couleur +", "soft-light": "Lumière tamisée", "hard-light": "Lumière crue", difference: "Différence", exclusion: "Exclusion" }],
+  whiteSpace: ["Retour à la ligne", { normal: "Normal", nowrap: "Jamais", pre: "Conserver les espaces", "pre-wrap": "Conserver + retour", "pre-line": "Conserver les sauts" }],
+  textWrap: ["Équilibrage du texte", { wrap: "Normal", nowrap: "Sans retour", balance: "Équilibré (titres)", pretty: "Soigné (paragraphes)" }],
+  overflowWrap: ["Mots trop longs", { normal: "Normal", "break-word": "Couper si besoin", anywhere: "Couper partout" }],
+  textOverflow: ["Texte coupé (avec « Masqué » et « Jamais »)", { clip: "Net", ellipsis: "Points de suspension" }],
+  outlineWidth: ["Contour : épaisseur"], outlineStyle: ["Contour : style", { none: "Aucun", solid: "Plein", dashed: "Tirets", dotted: "Points" }], outlineColor: ["Contour : couleur"], outlineOffset: ["Contour : décalage"],
+  gridAutoRows: ["Lignes automatiques (ex. minmax(120px, auto))"], gridAutoColumns: ["Colonnes automatiques (ex. 1fr)"],
   gridAutoFlow: ["Remplissage", { row: "Ligne par ligne", column: "Colonne par colonne", "row dense": "Lignes, sans trous", "column dense": "Colonnes, sans trous" }],
   justifyItems: ["Alignement horizontal des cases", { stretch: "Étirer", start: "Début", center: "Centre", end: "Fin" }],
   position: ["Position", { static: "Normale", relative: "Relative", sticky: "Collante", absolute: "Absolue (dans le parent)", fixed: "Fixe (à l'écran)" }], top: ["Décalage haut"], right: ["Décalage droite"], bottom: ["Décalage bas"], left: ["Décalage gauche"],
   transformOrigin: ["Origine des transformations", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite", "top left": "Haut gauche", "top right": "Haut droit", "bottom left": "Bas gauche", "bottom right": "Bas droit" }],
-  transitionDuration: ["Durée des transitions (ms)"], zIndex: ["Plan (z-index)"],
+  transitionDuration: ["Durée des transitions (ms)"], transitionEasing: ["Accélération des transitions", { ease: "Douce", linear: "Linéaire", "ease-in": "Départ lent", "ease-out": "Arrivée lente", "ease-in-out": "Départ et arrivée lents" }], zIndex: ["Plan (z-index)"],
   objectFit: ["Cadrage", { cover: "Remplir", contain: "Contenir", fill: "Étirer", none: "Taille réelle" }],
   objectPosition: ["Point focal", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite" }],
   aspectRatio: ["Proportions", { auto: "Libres", "1/1": "1:1", "4/3": "4:3", "3/2": "3:2", "16/9": "16:9", "21/9": "21:9", "3/4": "3:4" }],
@@ -1048,18 +1174,18 @@ function editorSpec() {
   const kind = (k) => {
     const p = STYLE_PROPS[k];
     if (p.check === color || [ "color", "backgroundColor", "borderColor" ].includes(k)) return "color";
-    if (["columns", "lineHeight", "opacity", "zIndex", "flexGrow", "flexShrink", "order", "gridRows", "gridColumnSpan", "gridRowSpan", "gridColumnStart", "gridColumnEnd", "gridRowStart", "gridRowEnd", "transitionDuration", "backdropBlur"].includes(k)) return "number";
-    if (k === "gridTemplate" || k === "gridRowsTemplate") return "text";
+    if (["columns", "lineHeight", "lineClamp", "opacity", "zIndex", "flexGrow", "flexShrink", "order", "gridRows", "gridColumnSpan", "gridRowSpan", "gridColumnStart", "gridColumnEnd", "gridRowStart", "gridRowEnd", "transitionDuration", "backdropBlur"].includes(k)) return "number";
+    if (k === "gridTemplate" || k === "gridRowsTemplate" || k === "gridAutoRows" || k === "gridAutoColumns") return "text";
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
   return {
-    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], ...(SITE_SUB[type] ? { sub: SITE_SUB[type] } : {}), keywords: WIDGETS[type][1], requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text" } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
-    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, siteSubs: SITE_SUBS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
-    styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
+    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], ...(partsLib.PARTS[type] ? { parts: partsLib.spec(type) } : {}), ...(SITE_SUB[type] ? { sub: SITE_SUB[type] } : {}), keywords: WIDGETS[type][1], description: (CUSTOM_WIDGETS[type] && CUSTOM_WIDGETS[type].description) || WIDGET_DESCRIPTIONS[type] || "", requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text", ...(CUSTOM_WIDGETS[type].status ? { status: CUSTOM_WIDGETS[type].status } : {}), ...(CUSTOM_WIDGETS[type].dependencies ? { dependencies: CUSTOM_WIDGETS[type].dependencies } : {}) } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
+    codeLanguages: Object.entries(require("./highlight").LABELS), categories: CATEGORIES, presetCategories: require("./stylePresets").CATEGORIES, widgetGroups: WIDGET_GROUPS, siteSubs: SITE_SUBS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
+    styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, css: p.css, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
     socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     structureKinds: require("./structures").KINDS, structures: require("./structures").STRUCTURES,
-    colorTokens: COLOR_TOKENS, spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
+    colorTokens: COLOR_TOKENS, lengthTokens: Object.fromEntries(Object.entries(lenTokens()).map(([f, m]) => [f, Object.entries(m).map(([k, v]) => ({ key: k, value: v }))])), spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
     limits: { nodes: MAX_NODES, depth: MAX_DEPTH }, dynamic: dynamic.catalog(),
   };
 }
@@ -1215,6 +1341,12 @@ const EMBED_PROVIDERS = [
   { key: "gforms", label: "Google Forms", re: /^https:\/\/docs\.google\.com\/forms\/d\/e\/([\w-]{20,80})\/viewform/i, src: (m) => `https://docs.google.com/forms/d/e/${m[1]}/viewform?embedded=true`, ratio: "3/4" },
   { key: "typeform", label: "Typeform", re: /^https:\/\/([\w-]{1,40})\.typeform\.com\/to\/([A-Za-z0-9]{4,20})/i, src: (m) => `https://${m[1]}.typeform.com/to/${m[2]}`, ratio: "3/4" },
   { key: "loom", label: "Loom", re: /^https:\/\/(?:www\.)?loom\.com\/(?:share|embed)\/([a-f0-9]{20,40})/i, src: (m) => `https://www.loom.com/embed/${m[1]}`, ratio: "16/9" },
+  { key: "youtubelist", label: "Playlist YouTube", re: /^https:\/\/(?:www\.)?youtube\.com\/playlist\?list=([\w-]{10,60})/i, src: (m) => `https://www.youtube-nocookie.com/embed/videoseries?list=${m[1]}`, ratio: "16/9" },
+  // Facebook : modules officiels d'intégration (cadres, sans clé ni script) ; l'adresse est reconstruite, jamais copiée telle quelle
+  { key: "facebookpage", label: "Page Facebook", re: /^https:\/\/(?:www\.)?facebook\.com\/([\w.-]{3,80})\/?$/i, src: (m) => `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(`https://www.facebook.com/${m[1]}`)}&tabs=timeline&width=500&height=600&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true`, ratio: "5/6" },
+  { key: "facebookpost", label: "Publication ou vidéo Facebook", re: /^https:\/\/(?:www\.)?facebook\.com\/([\w.-]{3,80})\/(posts|videos)\/([\w.-]{5,120})\/?$/i, src: (m) => `https://www.facebook.com/plugins/${m[2] === "videos" ? "video" : "post"}.php?href=${encodeURIComponent(`https://www.facebook.com/${m[1]}/${m[2]}/${m[3]}`)}&show_text=true&width=500`, ratio: "4/5" },
+  { key: "instagram", label: "Instagram (publication ou reel)", re: /^https:\/\/www\.instagram\.com\/(p|reel|tv)\/([\w-]{5,30})\/?/i, src: (m) => `https://www.instagram.com/${m[1]}/${m[2]}/embed`, ratio: "4/5" },
+  { key: "tiktok", label: "TikTok", re: /^https:\/\/www\.tiktok\.com\/@([\w.]{2,40})\/video\/(\d{10,25})/i, src: (m) => `https://www.tiktok.com/embed/v2/${m[2]}`, ratio: "9/16" },
   { key: "canva", label: "Canva (lien « Intégrer »)", re: /^https:\/\/www\.canva\.com\/design\/([\w-]{6,40})\/([\w-]{6,40})\/view/i, src: (m) => `https://www.canva.com/design/${m[1]}/${m[2]}/view?embed`, ratio: "16/9" },
 ];
 function embedOf(url) {
@@ -1506,6 +1638,8 @@ function normalizeNode(raw, at, h, depth, counter) {
   const styles = normalizeStyles(raw.styles, raw.states, where, h);
   if (styles.styles) node.styles = styles.styles;
   if (styles.states) node.states = styles.states;
+  const parts = normalizeParts(raw.type, raw.parts, where, h, raw.id);
+  if (parts) node.parts = parts;
   if (def.container) {
     const kids = Array.isArray(raw.children) ? raw.children : [];
     node.children = kids.map((c, i) => normalizeNode(c, `${where} › élément ${i + 1}`, h, depth + 1, counter));
@@ -1515,6 +1649,35 @@ function normalizeNode(raw, at, h, depth, counter) {
     }
   }
   return node;
+}
+// Parties stylables d'un widget (voir parts.js) : chaque partie reçoit le jeu de styles COMPLET validé comme celui de la racine, restreint aux groupes
+// et aux états que le registre autorise pour elle. Une partie inconnue ou une propriété hors de ses groupes est refusée (jamais ignorée en silence).
+// Diagnostics non bloquants collectés pendant la validation (lus par l'enregistrement du brouillon : ctx.__warnings)
+function ignored(h, w) { if (h && h.ctx && Array.isArray(h.ctx.__warnings) && h.ctx.__warnings.length < 50) h.ctx.__warnings.push(w); }
+function normalizeParts(type, raw, at, h, nodeId) {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${at} : parties invalides.`);
+  const defs = partsLib.PARTS[type];
+  const groupOf = (k) => (k === "backgroundColor" ? "background" : (STYLE_PROPS[k] || COMPOSED[k] || {}).group); // la couleur de fond est réglée dans « Fond » (comme dans l'Inspector)
+  const out = {};
+  for (const [key, val] of Object.entries(raw)) {
+    const def = defs && Object.hasOwn(defs, key) ? defs[key] : null;
+    if (!def) throw new Error(`${at} : « ${key} » n'est pas une partie stylable de cet élément.`);
+    const st = normalizeStyles(val && val.styles, val && val.states, `${at} › ${def.label}`, h);
+    // Réglage valide dans la grammaire mais que cette partie n'accepte pas (ex. « alignement dans le parent » sur « Question + réponse ») : il n'a aucun effet
+    // légitime ici. Il est écarté, le reste est enregistré, et la personne est prévenue (diagnostic non bloquant, jamais une erreur qui bloque la page).
+    const drop = (set, scope) => { for (const k of Object.keys(set)) if (!partsLib.allows(def, k, groupOf)) { delete set[k]; ignored(h, { kind: "part_prop", nodeId, part: key, partLabel: def.label, prop: k, scope, message: `Le réglage « ${(STYLE_UI[k] || [k])[0]} » n'existe pas pour la partie « ${def.label} » : il n'a pas été appliqué (le reste est enregistré).` }); } };
+    for (const [bp, set] of Object.entries(st.styles || {})) drop(set, bp);
+    for (const [state, set] of Object.entries(st.states || {})) {
+      if (!def.states.includes(state)) { delete st.states[state]; ignored(h, { kind: "part_state", nodeId, part: key, partLabel: def.label, state, message: `L'état « ${state} » n'existe pas pour la partie « ${def.label} » : il n'a pas été appliqué.` }); continue; }
+      drop(set, state);
+    }
+    for (const bag of [st.styles, st.states]) if (bag) for (const [k, set] of Object.entries(bag)) if (!Object.keys(set).length) delete bag[k];
+    if (st.styles && !Object.keys(st.styles).length) delete st.styles;
+    if (st.states && !Object.keys(st.states).length) delete st.states;
+    if (st.styles || st.states) out[key] = st;
+  }
+  return Object.keys(out).length ? out : null;
 }
 function normalizeStyles(styles, states, at, h) {
   const out = {};
@@ -1599,7 +1762,14 @@ function normalizeClassDefs(raw, h, { strict = false } = {}) {
       if (out.length >= GLOBAL_CLASS_MAX) throw new Error(`${GLOBAL_CLASS_MAX} classes globales au plus.`);
       const st = normalizeStyles(c.styles, c.states, `Classe « ${name} »`, h);
       seen.add(name);
-      out.push({ name, ...(line(c.label, 60) ? { label: line(c.label, 60) } : {}), ...(st.styles ? { styles: st.styles } : {}), ...(st.states ? { states: st.states } : {}) });
+      // Origine du style (type d'élément source, catégories choisies, date) : informatif, sert à la compatibilité et à l'affichage
+      const m = c.meta && typeof c.meta === "object" ? c.meta : null, sp = require("./stylePresets");
+      const meta = m ? {
+        ...(Object.hasOwn(NODE_TYPES, m.source) ? { source: m.source } : {}),
+        ...(Array.isArray(m.categories) ? { categories: sp.CATEGORIES.map((x) => x.id).filter((id) => m.categories.includes(id)) } : {}),
+        ...(/^\d{4}-\d{2}-\d{2}$/.test(String(m.updated || "")) ? { updated: m.updated } : {}),
+      } : null;
+      out.push({ name, ...(line(c.label, 60) ? { label: line(c.label, 60) } : {}), ...(st.styles ? { styles: st.styles } : {}), ...(st.states ? { states: st.states } : {}), ...(meta && Object.keys(meta).length ? { meta } : {}) });
     } catch (e) { if (strict) throw e; }
   }
   return out;
@@ -1620,26 +1790,74 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
   const usedAnims = new Set(); // animations réellement utilisées : seules leurs images-clés sont écrites dans la page
   const clamps = { tablet: [], mobile: [] }; // cases de grille ramenées au nombre de colonnes de l'écran : écrites après toutes les autres règles
-  const add = (id, styles, states) => {
+  // Parties d'un widget : mêmes écrans et mêmes états que la racine, sélecteur fixé par le registre (parts.js). `.kw-node.kw-n-<id>` donne à la règle une
+  // spécificité supérieure aux styles par défaut du site pour ces zones : le réglage de l'auteur l'emporte sans « !important ».
+  const addParts = (n) => {
+    const defs = partsLib.PARTS[n.type];
+    if (!defs || !n.parts || !NODE_ID.test(String(n.id || ""))) return;
+    for (const [key, set] of Object.entries(n.parts)) {
+      const def = defs[key];
+      if (!def) continue;
+      const sel = `.kw-node.kw-n-${n.id} ${def.select}`;
+      for (const bp of BREAKPOINTS) {
+        const d = set.styles && set.styles[bp.key] ? declarations(set.styles[bp.key]) : "";
+        if (d) (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
+      }
+      for (const state of STATES) {
+        const d = set.states && set.states[state.key] ? declarations(set.states[state.key]) : "";
+        if (d) rules.base.push(`${sel}${state.sel}{${d}}`);
+      }
+    }
+  };
+  const add = (id, styles, states, band = false) => {
     if (!NODE_ID.test(String(id || ""))) return;
     const sel = `.kw-n-${id}`;
     for (const bp of BREAKPOINTS) {
-      const d = styles && styles[bp.key] ? declarations(styles[bp.key]) : "";
+      const d = styles && styles[bp.key] ? declarations(styles[bp.key], band) : "";
       if (!d) continue;
       (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
     }
     for (const state of STATES) {
-      const d = states && states[state.key] ? declarations(states[state.key]) : "";
+      const d = states && states[state.key] ? declarations(states[state.key], band) : "";
       if (d) rules.base.push(`${sel}${state.sel}{${d}}`);
+    }
+  };
+  // Un conteneur centre sa propre largeur par des marges automatiques (landing.css : :where(.kw-container)). Dans une disposition EN LIGNE ou EN GRILLE
+  // d'un parent, ces marges se partageraient l'espace libre et prendraient le pas sur « Répartition » et « Écart » : c'est le PARENT qui doit répartir
+  // ses enfants. Pour chaque parent, on écrit donc (par écran, avec l'héritage ordinateur → tablette → mobile) une règle à spécificité nulle qui retire
+  // ces marges quand le parent est en ligne / en grille, et les rend quand un écran plus étroit repasse en colonne. Les marges choisies par l'auteur
+  // sur l'enfant (.kw-n-<id>) l'emportent toujours.
+  const DEFAULT_LAYOUT = { layout: ["flex", "column"], columns: ["flex", "row"], grid: ["grid", "row"] };
+  const rowMarginRules = (id, type, styles, kids, wrapper) => {
+    if (!NODE_ID.test(String(id || "")) || !(kids || []).some((k) => k && k.type === "container")) return;
+    const sel = `:where(.kw-n-${id} > ${wrapper ? ".kw-layout > " : ""}.kw-container)`;
+    let [display, dir] = DEFAULT_LAYOUT[type] || ["flex", "column"], prev = null;
+    for (const bp of BREAKPOINTS) {
+      const st = (styles && styles[bp.key]) || {};
+      if (st.display) display = st.display;
+      if (st.flexDirection) dir = st.flexDirection;
+      const row = display === "grid" || display === "inline-grid" || (/flex/.test(display) && /^row/.test(dir));
+      if (row !== prev && !(prev === null && !row)) (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{margin-left:${row ? "0" : "auto"};margin-right:${row ? "0" : "auto"}}`);
+      prev = row;
     }
   };
   const seenIds = new Set(); // les copies d'un modèle de boucle partagent leur identifiant : règles écrites une seule fois
   for (const s of sections || []) {
     add(s.id, s.styles, s.states);
+    if (s.type === "layout") rowMarginRules(s.id, "layout", s.styles, s.children, true);
     if (s.type === "layout") walk(s.children, (n) => {
       if (seenIds.has(n.id)) return;
       seenIds.add(n.id);
-      add(n.id, n.styles, n.states);
+      add(n.id, n.styles, n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full));
+    addParts(n);
+      if (n.children && n.children.length) rowMarginRules(n.id, n.type, n.styles, n.children, false);
+      // Image : « Hauteur » et « Proportions » de l'élément s'appliquent à la boîte (<figure>) ; l'image doit la REMPLIR pour que « Cadrage » et « Point focal »
+      // aient un effet (sans cela l'image garde sa hauteur naturelle et la boîte reste vide en dessous). Seulement pour un écran qui fixe l'une de ces valeurs :
+      // une image sans hauteur ni proportions garde sa taille naturelle.
+      if (n.type === "image" && NODE_ID.test(String(n.id || ""))) for (const bp of BREAKPOINTS) {
+        const st = n.styles && n.styles[bp.key];
+        if (st && ((st.height && st.height !== "auto") || (st.aspectRatio && st.aspectRatio !== "auto"))) (bp.media ? rules.media[bp.key] : rules.base).push(`.kw-n-${n.id} img{width:100%;height:100%}`);
+      }
       entranceRules(n, rules, usedAnims);
       // CSS personnalisé de l'élément (validé à l'enregistrement, revalidé ici : rien d'autre n'atteint la page)
       if (n.css && NODE_ID.test(String(n.id || ""))) { try { const c = cssDeclarations(n.css, "CSS"); if (c) rules.custom.push(`.kw-node.kw-n-${n.id}{${c}}`); } catch { /* ignoré */ } }

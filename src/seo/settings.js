@@ -102,8 +102,9 @@ function save(input, userId) {
   }
   if (errors.length) return { ok: false, errors };
   const current = all();
-  db.exec("BEGIN");
+  const { transaction } = require("../marketing/db/tx");
   try {
+    transaction(db, () => {
     for (const [key, value] of Object.entries(next)) {
       const before = JSON.stringify(current[key]);
       const after = JSON.stringify(value);
@@ -112,9 +113,9 @@ function save(input, userId) {
         .run(key, after, userId ?? null);
       logChange({ entityType: "settings", entityKey: "site", field: key, before: typeof current[key] === "string" ? current[key] : before, after: typeof value === "string" ? value : after, userId });
     }
-    db.exec("COMMIT");
+    });
   } catch (error) {
-    db.exec("ROLLBACK");
+    cache = null;
     throw error;
   }
   cache = null;

@@ -4,6 +4,7 @@ const db = require("../config/database");
 const { parseVideoUrl } = require("../utils/video");
 const { asset } = require("../utils/assets");
 const { renderMarkdown } = require("../utils/markdown");
+const { imageSource } = require("../marketing/media/variants");
 const { signedBunnyUrl } = require("../utils/bunny");
 const { absoluteUrl, plainText, jsonLdTags } = require("../utils/seo");
 const { slugify } = require("../utils/format");
@@ -16,12 +17,33 @@ const cmsAccess = require("../services/cmsAccess");
 // Espaces privés et pages sans intérêt pour les moteurs de recherche
 const NOINDEX_PREFIXES = ["/formateur", "/mes-cours", "/panier", "/commande", "/apprendre", "/certificat", "/favoris", "/support", "/notifications", "/connexion", "/inscription", "/deconnexion", "/mon-compte"];
 
+// Adresse de la page de confidentialité choisie dans les réglages (page publiée du CMS) ; sinon aucune
+function privacyUrlOf(m) {
+  if (!m.privacyPage) return null;
+  const row = require("../config/database").prepare("SELECT id, slug, site_id, status, archived_at FROM mk_landing_pages WHERE id = ?").get(m.privacyPage);
+  return row && row.status === "published" && !row.archived_at ? require("../services/urls").pagePath(row, { hostSite: null }) : null;
+}
 function injectLocals(req, res, next) {
   res.locals.absoluteUrl = (urlPath) => absoluteUrl(req, urlPath);
   res.locals.currentPath = req.path;
   res.locals.plainText = plainText;
   res.locals.slugify = slugify;
   res.locals.jsonLdTags = jsonLdTags;
+  // Réglages du site principal (palier 14) : langue de la page, dates dans le fuseau et les formats choisis
+  try { const m = require("../services/settings").main(); res.locals.htmlLang = m.htmlLang; res.locals.privacyUrl = privacyUrlOf(m); } catch { res.locals.htmlLang = "fr"; res.locals.privacyUrl = null; }
+  // Page de confidentialité d'un site du CMS (réglage du site) ou, à défaut, celle du site principal
+  res.locals.privacyFor = (site) => {
+    const id = site && site.settings && site.settings.general ? site.settings.general.privacyPageId : null;
+    if (!id) return res.locals.privacyUrl;
+    const row = db.prepare("SELECT id, slug, site_id, status, archived_at FROM mk_landing_pages WHERE id = ?").get(id);
+    return row && row.status === "published" && !row.archived_at ? require("../services/urls").pagePath(row, { hostSite: req.kwSite || null }) : null;
+  };
+  // Date d'un instant dans la langue, le fuseau et les formats d'un site (ou du site principal) : jamais de fuseau codé en dur
+  res.locals.siteDate = (value, site = null, withTime = false) => {
+    const g = site && site.settings && site.settings.general;
+    const cfg = g ? { locale: ({ fr: "fr-FR", en: "en-US", es: "es-ES", pt: "pt-PT", de: "de-DE", it: "it-IT", ar: "ar", sw: "sw" })[(site.settings.extras || {}).language] || "fr-FR", timeZone: g.timezone, dateFormat: g.dateFormat, timeFormat: g.timeFormat } : null;
+    return require("../utils/format").formatInstant(value, cfg, { withTime });
+  };
   res.locals.seoHead = (seo, title) => seoResolver.finalize(req, req.path, seo, title);
   // Balises SEO d'une page du CMS (/p/…) : même moteur, avec les réglages de la page et du site
   res.locals.webPageSeo = (page, site, preview) => require("../seo/webPages").head(req, { page, site, preview: Boolean(preview) });
@@ -30,6 +52,7 @@ function injectLocals(req, res, next) {
   res.locals.signedBunnyUrl = signedBunnyUrl;
   res.locals.parseVideoUrl = parseVideoUrl;
   res.locals.renderMarkdown = renderMarkdown;
+  res.locals.imageSource = imageSource; // résolution choisie d'un widget image (src, srcset, sizes)
   res.locals.asset = asset;
   // Apparence du site (CMS → Apparence) : styles, en-tête, pied de page. Version publiée ; en aperçu (?kwpreview=1, équipe seulement) le brouillon.
   // Une configuration absente = l'affichage d'origine, intact. Une seule lecture par requête.

@@ -20,12 +20,52 @@
     </section>
     <% } %>
 
+    <% if (mergedInto) { %><div class="mk-flash mk-flash-error" role="status"><span class="mk-flash-body"><p>Cette fiche a été fusionnée dans <a href="/marketing/contacts/<%= mergedInto.id %>"><%= mergedInto.email %></a> : elle est conservée pour l'historique et n'est plus jamais jointe.</p></span></div><% } %>
+    <section class="mk-panel" id="coeur" aria-labelledby="core-title">
+      <h2 id="core-title">Identité et origine</h2>
+      <ul class="mk-status-list">
+        <li><strong>Cycle de vie</strong> : <%= lifecycles[contact.lifecycle_stage] || contact.lifecycle_stage %></li>
+        <li><strong>État de la fiche</strong> : <%= recordLabels[contact.record_status] || contact.record_status %><%= contact.archived_at ? " depuis le " + mkh.fdate(contact.archived_at) : "" %></li>
+        <li><strong>Source</strong> : <%= mkh.sourceLabel(contact.source) %><%= contact.source_detail ? " — " + contact.source_detail : "" %></li>
+        <li><strong>Site d'origine</strong> : <%= originSite ? originSite.name : "Site principal" %></li>
+        <% if (contact.job_title) { %><li><strong>Fonction</strong> : <%= contact.job_title %></li><% } %>
+        <% if (contact.normalized_phone) { %><li><strong>Téléphone normalisé</strong> : <%= contact.normalized_phone %></li><% } %>
+        <% if (aliases.length) { %><li><strong>Autres adresses</strong> : <%= aliases.map((a) => a.email).join(", ") %></li><% } %>
+        <% if (absorbed.length) { %><li><strong>Fiches fusionnées</strong> : <%= absorbed.map((a) => a.email).join(", ") %> (conservées, archivées)</li><% } %>
+      </ul>
+      <% if (contact.record_status !== "merged") { %>
+      <div class="mk-actions">
+        <% if (mk.can("contacts.write")) { %>
+        <form action="/marketing/contacts/<%= contact.id %>/cycle-de-vie" method="post" class="mk-inline-form">
+          <label for="cl-stage" class="sr-only">Étape du cycle de vie</label>
+          <select id="cl-stage" name="etape"><% Object.entries(lifecycles).forEach(([k, label]) => { %><option value="<%= k %>" <%= contact.lifecycle_stage === k ? "selected" : "" %>><%= label %></option><% }) %></select>
+          <button type="submit" class="btn btn-outline btn-sm">Changer l'étape</button>
+        </form>
+        <% } %>
+        <% if (mk.can("contacts.archive")) { %>
+        <form action="/marketing/contacts/<%= contact.id %>/etat" method="post" class="mk-inline-form">
+          <% if (contact.record_status === "active") { %>
+            <button type="submit" name="etat" value="inactive" class="btn btn-outline btn-sm">Désactiver</button>
+            <button type="submit" name="etat" value="archived" class="btn btn-outline btn-sm">Archiver</button>
+          <% } else { %>
+            <button type="submit" name="etat" value="active" class="btn btn-outline btn-sm">Rétablir la fiche</button>
+            <% if (contact.record_status === "inactive") { %><button type="submit" name="etat" value="archived" class="btn btn-outline btn-sm">Archiver</button><% } %>
+          <% } %>
+        </form>
+        <% } %>
+        <% if (mk.can("contacts.merge")) { %><a class="btn btn-outline btn-sm" href="/marketing/contacts/doublons">Chercher des doublons</a><% } %>
+      </div>
+      <p class="field-hint">Une fiche archivée ou désactivée n'est jamais jointe par le marketing, même si elle avait donné son accord. Le cycle de vie est indépendant du consentement.</p>
+      <% } %>
+    </section>
+
     <section class="mk-panel mk-verdict <%= sendable.ok ? "is-ok" : "is-no" %>">
       <h2>Peut-on lui écrire (marketing) ?</h2>
       <p><strong><%= sendable.ok ? "Oui." : "Non." %></strong> <%= sendable.ok ? "Consentement prouvé, adresse non bloquée." : mkh.reasonLabel(sendable.reason) %></p>
     </section>
 
-    <% const smsReasons = { not_subscribed: "Pas d'accord SMS enregistré.", unsubscribed: "A retiré son accord SMS.", suppressed: "Numéro bloqué (STOP, numéro invalide ou blocage manuel).", no_phone: "Aucun numéro valide.", no_consent: "Pas de preuve d'accord SMS pour ce numéro.", not_found: "Contact introuvable." }; %>
+    <% const smsReasons = { inactive_record: "Fiche archivée, désactivée ou fusionnée.", not_subscribed: "Pas d'accord SMS enregistré.", unsubscribed: "A retiré son accord SMS.", suppressed: "Numéro bloqué (STOP, numéro invalide ou blocage manuel).", no_phone: "Aucun numéro valide.", no_consent: "Pas de preuve d'accord SMS pour ce numéro.", not_found: "Contact introuvable." }; %>
+    <% if (sensitiveOk) { %>
     <section class="mk-panel mk-verdict <%= smsSendable.ok ? "is-ok" : "is-no" %>" id="sms">
       <h2>Peut-on lui envoyer des SMS (marketing) ?</h2>
       <p><strong><%= smsSendable.ok ? "Oui." : "Non." %></strong> <%= smsSendable.ok ? "Accord SMS prouvé pour le " + smsPhoneMasked + ", numéro non bloqué." : smsReasons[smsSendable.reason] %></p>
@@ -44,6 +84,7 @@
         <form action="/marketing/contacts/<%= contact.id %>/sms/desinscrire" method="post" class="mk-actions"><button type="submit" class="btn btn-outline btn-sm">Désinscrire des SMS</button></form>
       <% } %>
     </section>
+    <% } %>
 
     <div class="mk-stats">
       <div class="mk-stat"><span class="mk-stat-label">E-mails reçus</span><span class="mk-stat-value"><%= mkh.fmt(summary.messages) %></span><span class="mk-stat-hint"><%= mkh.fmt(summary.clicked) %> avec clic</span></div>
@@ -80,7 +121,7 @@
             <div class="field-group"><label for="e-ln">Nom</label><input id="e-ln" type="text" name="last_name" value="<%= contact.last_name %>" maxlength="100" <%= mk.can("contacts.write") ? "" : "disabled" %>></div>
           </div>
           <div class="field-row">
-            <div class="field-group"><label for="e-phone">Téléphone</label><input id="e-phone" type="text" name="phone" value="<%= contact.phone %>" maxlength="40" <%= mk.can("contacts.write") ? "" : "disabled" %>></div>
+            <% if (!sensitiveOk) { %><div class="field-group"><label for="e-phone-m">Téléphone</label><input id="e-phone-m" type="text" value="•••" disabled aria-describedby="e-phone-h"><p class="field-hint" id="e-phone-h">Masqué : il faut le droit « voir les données sensibles ».</p></div><% } else { %><div class="field-group"><label for="e-phone">Téléphone</label><input id="e-phone" type="text" name="phone" value="<%= contact.phone %>" maxlength="40" <%= mk.can("contacts.write") ? "" : "disabled" %>></div><% } %>
             <div class="field-group"><label for="e-company">Société</label><input id="e-company" type="text" name="company" value="<%= contact.company %>" maxlength="200" <%= mk.can("contacts.write") ? "" : "disabled" %>></div>
           </div>
           <div class="field-row">
@@ -105,13 +146,16 @@
             <% defs.forEach((d) => { const v = values[d.key]; const dis = mk.can("contacts.write") ? "" : "disabled"; %>
               <div class="field-group">
                 <label for="p-<%= d.key %>"><%= d.label %> <span class="field-hint">(<%= d.type === "text" ? "texte" : d.type === "number" ? "nombre" : d.type === "date" ? "date AAAA-MM-JJ" : d.type === "boolean" ? "oui / non" : "choix" %>)</span></label>
-                <% if (d.type === "select") { %>
+                <% if (d.type === "select" && d.multiple === 1) { %>
+                  <input id="p-<%= d.key %>" type="text" name="prop_<%= d.key %>" value="<%= Array.isArray(v) ? v.join(", ") : "" %>" maxlength="500" <%= dis %> aria-describedby="p-<%= d.key %>-h">
+                  <p class="field-hint" id="p-<%= d.key %>-h">Séparez les valeurs par des virgules. Valeurs possibles : <%= JSON.parse(d.options).join(", ") %>.</p>
+                <% } else if (d.type === "select") { %>
                   <select id="p-<%= d.key %>" name="prop_<%= d.key %>" <%= dis %>><option value="">—</option>
                     <% JSON.parse(d.options).forEach((o) => { %><option value="<%= o %>" <%= v === o ? "selected" : "" %>><%= o %></option><% }) %></select>
                 <% } else if (d.type === "boolean") { %>
                   <select id="p-<%= d.key %>" name="prop_<%= d.key %>" <%= dis %>><option value="">—</option><option value="oui" <%= v === true ? "selected" : "" %>>Oui</option><option value="non" <%= v === false ? "selected" : "" %>>Non</option></select>
                 <% } else { %>
-                  <input id="p-<%= d.key %>" type="text" name="prop_<%= d.key %>" value="<%= v === undefined ? "" : v %>" maxlength="500" <%= dis %>>
+                  <input id="p-<%= d.key %>" type="text" name="prop_<%= d.key %>" value="<%= v === undefined ? "" : Array.isArray(v) ? v.join(", ") : v %>" maxlength="500" <%= dis %>>
                 <% } %>
               </div>
             <% }) %>
@@ -143,7 +187,7 @@
         <ul class="mk-status-list">
           <% if (!memberOf.length) { %><li class="field-hint">Dans aucune liste.</li><% } %>
           <% memberOf.forEach((l) => { %>
-            <li><a href="/marketing/listes/<%= l.id %>"><%= l.name %></a>
+            <li><a href="/marketing/listes/<%= l.id %>"><%= l.name %></a> <span class="field-hint">— <%= l.stateLabel %></span>
               <% if (mk.can("contacts.write")) { %><form action="/marketing/contacts/<%= contact.id %>/listes/retirer" method="post" class="mk-inline"><input type="hidden" name="list_id" value="<%= l.id %>"><button type="submit" class="btn btn-outline btn-sm">Retirer</button></form><% } %>
             </li>
           <% }) %>
@@ -159,6 +203,61 @@
       </section>
     </div>
 
+    <% if (commerce) { %>
+    <section class="mk-panel" id="commerce" aria-labelledby="cm-title">
+      <h2 id="cm-title">Commerce</h2>
+      <% if (!commerce.count) { %><p class="field-hint">Ce contact n'a passé aucune commande.<%= commerce.abandoned ? ` ${commerce.abandoned} panier(s) ou commande(s) abandonné(s).` : "" %></p>
+      <% } else { %>
+        <p><strong><%= commerce.count %></strong> commande(s) · <strong><%= mkh.euros(commerce.netCents) %></strong> dépensés<%= commerce.refundedCents ? ` (dont ${mkh.euros(commerce.refundedCents)} remboursés)` : "" %> · première le <%= mkh.fdate(commerce.first) %>, dernière le <%= mkh.fdate(commerce.last) %><%= commerce.abandoned ? ` · ${commerce.abandoned} abandon(s)` : "" %></p>
+        <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Commandes de ce contact</caption>
+          <thead><tr><th scope="col">Commande</th><th scope="col">Date</th><th scope="col">Formations</th><th scope="col">Montant</th><th scope="col">Remboursé</th></tr></thead>
+          <tbody><% commerce.recent.forEach((o) => { %><tr>
+            <td><a href="/formateur/gestion/ventes/commandes/<%= o.id %>">n° <%= o.id %></a></td>
+            <td><%= mkh.fdate(o.created_at) %></td>
+            <td><%= o.products.map((p) => p.title).join(", ") || "—" %></td>
+            <td><%= mkh.euros(o.total_cents) %><%= o.coupon_code ? ` (code ${o.coupon_code})` : "" %></td>
+            <td><%= o.refunded_cents ? mkh.euros(o.refunded_cents) : "—" %></td></tr><% }) %></tbody>
+        </table></div>
+      <% } %>
+    </section>
+    <% } %>
+
+    <% if (journeys) { %>
+    <section class="mk-panel" id="tunnels" aria-labelledby="tn-title">
+      <h2 id="tn-title">Tunnels</h2>
+      <% if (!journeys.length) { %><p class="field-hint">Ce contact n'a encore aucun parcours enregistré dans un tunnel.</p>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Parcours de ce contact dans les tunnels</caption>
+          <thead><tr><th scope="col">Tunnel</th><th scope="col">État</th><th scope="col">Étapes atteintes</th><th scope="col">Provenance</th><th scope="col">Dernière activité</th></tr></thead>
+          <tbody><% journeys.forEach((j) => { %><tr>
+            <td><a href="/marketing/tunnels/<%= j.funnelId %>"><%= j.name %></a></td>
+            <td><%= j.state === "completed" ? "Terminé" : j.state === "abandoned" ? "Abandonné" : "En cours" %></td>
+            <td><%= j.reached.length ? j.reached.join(" → ") : "—" %></td>
+            <td><%= j.attribution ? j.attribution.source + (j.attribution.campaign ? " · " + j.attribution.campaign : "") : "—" %></td>
+            <td><%= mkh.fdatetime(new Date(j.lastAt).toISOString().replace("T", " ").slice(0, 19)) %></td></tr><% }) %></tbody>
+        </table></div>
+      <% } %>
+    </section>
+    <% } %>
+
+    <% if (autoRuns) { %>
+    <section class="mk-panel" id="scenarios" aria-labelledby="sc-title">
+      <h2 id="sc-title">Scénarios d'automatisation</h2>
+      <% if (!autoRuns.length) { %><p class="field-hint">Ce contact n'est entré dans aucun scénario.</p>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Scénarios de ce contact</caption>
+          <thead><tr><th scope="col">Scénario</th><th scope="col">État</th><th scope="col">Prochaine étape</th><th scope="col">Prochaine exécution</th><th scope="col">Erreur</th></tr></thead>
+          <tbody><% autoRuns.forEach((r) => { %><tr>
+            <td><a href="/marketing/automatisations/<%= r.automationId %>/passages/<%= r.id %>"><%= r.automation %></a> <span class="field-hint">v<%= r.version || 1 %></span></td>
+            <td><%= r.state === "waiting" ? "En attente" : r.state === "due" ? "À exécuter" : r.statusLabel %></td>
+            <td><%= r.nextStep || "—" %></td>
+            <td><%= r.nextAt && r.state !== "completed" ? mkh.fdatetime(new Date(r.nextAt).toISOString().replace("T", " ").slice(0, 19)) : "—" %></td>
+            <td><%= r.error || "—" %></td></tr><% }) %></tbody>
+        </table></div>
+      <% } %>
+    </section>
+    <% } %>
+
     <% if (files.length) { %>
     <section class="mk-panel" aria-labelledby="ct-files">
       <h2 id="ct-files">Fichiers envoyés</h2>
@@ -169,9 +268,40 @@
     </section>
     <% } %>
 
+    <% if (eventsPage) { %>
+    <section class="mk-panel" id="journal" aria-labelledby="ev-title">
+      <h2 id="ev-title">Journal d'événements</h2>
+      <% if (!eventsPage.events.length) { %><p class="field-hint">Aucun événement enregistré pour ce contact. Les formulaires, commentaires, inscriptions et commandes y apparaissent dès qu'ils se produisent.</p>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table">
+          <caption class="sr-only">Événements enregistrés pour ce contact, du plus récent au plus ancien</caption>
+          <thead><tr><th scope="col">Date</th><th scope="col">Événement</th><th scope="col">Source</th><th scope="col">Objet</th></tr></thead>
+          <tbody><% eventsPage.events.forEach((e) => { %>
+            <tr><td><time datetime="<%= new Date(e.at).toISOString() %>"><%= mkh.fdatetime(new Date(e.at).toISOString().replace("T", " ").slice(0, 19)) %></time></td><td><code><%= e.type %></code></td><td><%= e.source %></td><td><%= e.objectType ? e.objectType + (e.objectId ? " #" + e.objectId : "") : "—" %></td></tr>
+          <% }) %></tbody>
+        </table></div>
+        <% if (eventsPage.next) { %><p><a href="?avant=<%= eventsPage.next %>#journal">Événements plus anciens</a></p><% } %>
+      <% } %>
+      <p class="field-hint">Le journal est un historique : un événement ne se modifie pas. Il peut provenir des fiches fusionnées dans celle-ci.</p>
+    </section>
+    <% } %>
+
+    <% if (absorbedProofs.length) { %>
+    <section class="mk-panel" aria-labelledby="ap-title">
+      <h2 id="ap-title">Preuves de consentement des fiches fusionnées</h2>
+      <div class="mk-table-wrap"><table class="mk-table">
+        <caption class="sr-only">Preuves conservées sur les fiches absorbées</caption>
+        <thead><tr><th scope="col">Date</th><th scope="col">Événement</th><th scope="col">Source</th><th scope="col">Texte présenté</th></tr></thead>
+        <tbody><% absorbedProofs.forEach((k) => { %><tr><td><%= mkh.fdate(k.created_at) %></td><td><%= k.action === "granted" ? "Consentement donné" : "Retrait" %></td><td><%= k.source %></td><td><%= k.text_shown %></td></tr><% }) %></tbody>
+      </table></div>
+      <p class="field-hint">Ces preuves restent attachées à l'ancienne fiche (elles ne se modifient pas). Elles ne rendent PAS cette fiche abonnée : seul un consentement enregistré sur elle le fait.</p>
+    </section>
+    <% } %>
+
     <section class="mk-panel">
       <h2>Consentement et désinscription</h2>
       <% if (!history.length) { %><p class="field-hint">Aucune preuve de consentement enregistrée.</p>
+      <% } else if (!sensitiveOk) { %><p class="field-hint"><%= history.length %> preuve<%= history.length > 1 ? "s" : "" %> enregistrée<%= history.length > 1 ? "s" : "" %> : le détail (texte présenté, adresse IP tronquée) demande le droit « voir les données sensibles ».</p>
       <% } else { %>
         <div class="mk-table-wrap"><table class="mk-table">
           <caption class="sr-only">Historique du consentement</caption>

@@ -1,0 +1,15 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/settings-head", { heading: "Avancé", intro: "Ce qui n'est PAS un réglage du site : la configuration de la plateforme (lecture seule) et vos préférences personnelles.", groups, BASE, q, scope, sites, siteOnly, tabKey: "advanced", tabPath: "/avance" }) %>
+<section class="mk-panel" aria-labelledby="st-a-p">
+  <h2 id="st-a-p">Configuration de la plateforme</h2>
+  <p class="mk-sub">Définie par l'hébergeur (variables d'environnement) : jamais modifiable depuis le CMS, et jamais partagée entre les sites. Les clés et secrets ne sont pas affichés.</p>
+  <dl class="mk-tl-dl"><% platform.forEach(([k, v]) => { %><div><dt><%= k %></dt><dd><%= v %></dd></div><% }) %></dl>
+  <p class="field-hint">Les indicateurs techniques internes (tâches, worker…) restent contrôlés par la plateforme. État détaillé : <a href="/marketing/site-web/outils/systeme">Outils → Informations système</a> ; contrôles : <a href="/marketing/site-web/outils">Santé du site</a>.</p>
+</section>
+<section class="mk-panel" aria-labelledby="st-a-u">
+  <h2 id="st-a-u">Vos préférences personnelles</h2>
+  <p class="mk-sub">Propres à votre compte, séparées des réglages du site : elles ne changent rien pour les autres personnes ni pour les visiteurs.</p>
+  <dl class="mk-tl-dl"><div><dt>Apparence de l'éditeur d'articles</dt><dd><%= prefs.editor_theme %></dd></div><div><dt>Couleur personnalisée</dt><dd><%= prefs.editor_color || "—" %></dd></div></dl>
+  <p class="field-hint">Elles se changent depuis l'éditeur d'articles. API : <code>GET / PUT <%= BASE %>/api/preferences</code> (votre compte uniquement).</p>
+</section>
+<%- include("partials/bottom") %>

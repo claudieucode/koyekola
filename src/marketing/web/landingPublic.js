@@ -15,6 +15,7 @@ const formUpload = require("./formUpload");
 const visitorsLib = require("../visitors");
 const { consentedVisitor } = require("./visitorsPublic");
 const funnels = require("../funnels");
+const funnelEvents = require("../funnels/events");
 const { visibleTree, audienceMatches, walk } = require("../pages/nodes");
 const { visitorContext } = require("../pages/visitorContext");
 const abtests = require("../pages/abtests");
@@ -48,8 +49,10 @@ module.exports = ({ db }) => {
   // widget : identifiant du widget « Formulaire » concerné (son message / ses erreurs ne touchent que lui)
   const show = (req, res, page, { status = 200, error = null, values = {}, thanks = null, widget = null } = {}) => {
     const form = loadForm(page);
+    // Palier 18 : une page servie dans un tunnel actif reçoit les réglages de CONTEXTE de son étape (noindex, pied de page masqué) — la page CMS reste une seule ressource
+    const funnelContext = funnels.contextForPage(db, page);
     res.status(status).render("marketing-public/landing", {
-      page: shownPage(req, page), site: siteOf(req, page), tokensToCss, form: form && form.status === "published" ? form : null, fieldCatalog: forms.FIELD_CATALOG,
+      funnelContext, page: { ...shownPage(req, page), funnelNoindex: Boolean(funnelContext && funnelContext.noindex) }, site: siteOf(req, page), tokensToCss, form: form && form.status === "published" ? form : null, fieldCatalog: forms.FIELD_CATALOG,
       propertyDefs: form ? forms.propertyFieldDefs(db, page.organization_id, form) : [], renderMarkdown, preview: false,
       error: widget ? null : error, values: widget ? {} : values, thanks: widget ? null : thanks, widgetForm: widget ? { id: widget, error, values, thanks } : null,
     });
@@ -63,31 +66,35 @@ module.exports = ({ db }) => {
     try { return forms.getForm({ db, organizationId: page.organization_id }, Number(found.props.formId)); } catch { return null; }
   };
 
-  // Test A/B en cours : version du visiteur (stable pour la journée, sans cookie) et contenu correspondant
+  // Test A/B en cours : version du visiteur (collante s'il a accepté le suivi, sinon stable pour la journée, sans cookie) et contenu correspondant
   const forVisitor = (req, page) => {
     const test = abtests.runningTestFor(db, page.id);
     if (!test || !test.variantB) return { page, test: null, visitor: null };
-    const visitor = landing.visitorOf(req, secret());
-    const variant = abtests.variantFor(test, visitor);
+    const { visitor, variant, consent } = abtests.assignment(db, test, { vid: consentedVisitor(req), fingerprint: landing.visitorOf(req, secret()) });
     const shown = variant === "b" ? { ...page, sections: test.variantB.sections, title: test.variantB.title, description: test.variantB.description } : page;
-    return { page: shown, test, visitor, variant };
+    return { page: shown, test, visitor, variant, consent };
   };
 
   router.get("/p/:slug", (req, res) => {
     const published = landing.getPublishedPage(db, req.params.slug);
     if (!published) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
-    const { page, test, visitor } = forVisitor(req, published);
+    const { page, test, visitor, consent } = forVisitor(req, published);
     if (!page) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
     const widget = req.query.w && widgetOf(page, req.query.w) ? String(req.query.w) : null;
     const thanks = req.query.inscrit === "1" ? (req.query.confirmer === "1" ? PENDING_TEXT : ((widget ? widgetOf(page, widget) : loadForm(page)) || {}).thankYouText || "Merci, votre inscription est enregistrée.") : null;
     // Retour sur la page après sa propre inscription : pas une nouvelle visite. Arrivée sur l'étape suivante d'un tunnel
     // (remerciement…) : c'est bien une visite de cette page.
     const selfReturn = thanks && (widget || page.sections.some((s) => s.type === "form"));
+    const exposure = Boolean(test) && !selfReturn && !landing.isBot(req);
     if (!selfReturn && !landing.isBot(req)) {
       landing.record(db, page, "view", landing.visitorOf(req, secret()));
-      if (test) abtests.recordView(db, test, visitor);
     }
     show(req, res, page, { thanks, widget });
+    // Exposition : seulement si la page a réellement été servie (réponse 200) — une erreur de rendu n'expose personne
+    if (exposure) {
+      const record = () => { if (res.statusCode === 200) { try { abtests.recordView(db, test, visitor, Date.now(), { consent }); } catch (error) { console.error("[KOLAKISA] Exposition A/B :", error.message); } } };
+      if (res.writableEnded || res.headersSent) record(); else res.once("finish", record);
+    }
   });
 
   router.get("/p/:slug/clic/:n(\\d{1,3})", (req, res) => {
@@ -100,8 +107,22 @@ module.exports = ({ db }) => {
       landing.record(db, page, "click", landing.visitorOf(req, secret()), link.label);
       if (test) abtests.recordConversion(db, test, visitor, "click");
     }
+    // Palier 19 : un contact connu (visiteur ayant accepté la mesure) qui clique un bouton d'une étape de tunnel produit « funnel.cta.clicked » (le tunnel produit, l'automatisation décide)
+    try {
+      const vid = consentedVisitor(req);
+      const known = vid ? db.prepare("SELECT contact_id FROM mk_web_visitors WHERE id = ?").get(vid) : null;
+      if (known && known.contact_id && !landing.isBot(req)) {
+        const cctx = { ...ctxOf({ mkPages: { organizationId: page.organization_id, bus: req.app.locals.marketing && req.app.locals.marketing.bus, settings: null } }), audit: false };
+        const contact = db.prepare("SELECT id, email FROM mk_contacts WHERE id = ? AND organization_id = ?").get(known.contact_id, page.organization_id);
+        const dest = link.url === funnels.NEXT_URL ? "next_step" : /^\/etape\/\d+$/.test(link.url) ? "step" : /^https?:\/\//i.test(link.url) ? "external" : "internal";
+        if (contact) funnelEvents.emitCta(cctx, contact, funnelEvents.stepsWhere(cctx, "s.page_id = ?", page.id), { label: link.label, index: Number(req.params.n), destination: dest });
+      }
+    } catch (error) { console.error("[KOLAKISA] Événements du tunnel (bouton) :", error.message); }
     // Bouton « étape suivante » : la prochaine étape en ligne du tunnel de la page (sinon, retour sur la page)
     if (link.url === funnels.NEXT_URL) return res.redirect(funnels.nextUrlForPage(db, page) || `/p/${page.slug}`);
+    // Bouton « étape précise du tunnel » (/etape/<identifiant>) : seulement une étape du MÊME tunnel, atteignable ; sinon retour sur la page (jamais d'adresse inventée)
+    const specific = /^\/etape\/(\d{1,9})$/.exec(link.url);
+    if (specific) return res.redirect(funnels.stepUrlForPage(db, page, Number(specific[1])) || `/p/${page.slug}`);
     res.redirect(link.url);
   });
 
@@ -130,6 +151,15 @@ module.exports = ({ db }) => {
       landing.record(db, page, "signup", landing.visitorOf(req, secret()), result.pending ? "en attente de confirmation" : "confirmée");
       if (test) abtests.recordConversion(db, test, visitor, "signup");
       if (result.contact && consentedVisitor(req)) visitorsLib.recordFormSubmit(db, page.organization_id, { visitorId: consentedVisitor(req), contactId: result.contact.id, path: `/p/${page.slug}`, formName: form.name });
+      // Palier 19 : le formulaire d'une étape de tunnel TERMINE cette étape (fait établi côté serveur) ; le parcours déjà suivi de ce visiteur rejoint son contact, daté de son vrai moment
+      if (result.contact) {
+        try {
+          const fctx = { ...ctx, userId: null, audit: false };
+          const contactRow = { id: result.contact.id, email: result.contact.email };
+          if (consentedVisitor(req)) funnelEvents.replayVisitor(fctx, consentedVisitor(req), result.contact.id);
+          funnelEvents.emitFormCompletion(fctx, contactRow, funnelEvents.stepsWhere(fctx, "s.page_id = ?", page.id));
+        } catch (error) { console.error("[KOLAKISA] Événements du tunnel (formulaire) :", error.message); }
+      }
       // Page d'un tunnel : le visiteur passe à l'étape suivante (une page du tunnel affiche le message de confirmation ;
       // une formation, non : en attente de confirmation, il reste donc ici pour lire la consigne)
       const next = funnels.nextUrlForPage(db, page);

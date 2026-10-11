@@ -18,7 +18,9 @@ function bindable(value) {
   throw new Error("Valeur non prise en charge : une valeur doit être un texte, un nombre, un booléen ou null (sérialisez les objets explicitement).");
 }
 
-function createRepository(db, organizationId) {
+// siteScope (palier 16) : un numéro de site → TOUTES les lectures/écritures des tables qui ont une colonne site_id sont limitées à ce site
+// (une personne dont l'accès est limité à un site ne peut ni voir, ni modifier, ni créer hors de son site). Absent = toute l'organisation.
+function createRepository(db, organizationId, { siteScope } = {}) {
   if (!Number.isInteger(organizationId) || organizationId < 1) throw new Error("Identifiant d'organisation invalide.");
 
   function table(name) {
@@ -27,6 +29,8 @@ function createRepository(db, organizationId) {
     const columns = new Set(db.prepare(`PRAGMA table_info(${name})`).all().map((c) => c.name));
     if (!columns.has("organization_id")) throw new Error(`${name} n'a pas de colonne organization_id : elle ne peut pas passer par le dépôt.`);
     if (!columns.has("id")) throw new Error(`${name} n'a pas de colonne id : elle ne peut pas passer par le dépôt.`);
+
+    const scoped = Number.isInteger(siteScope) && columns.has("site_id");
 
     const column = (col) => {
       if (col === "organization_id") throw new Error("organization_id ne peut pas être utilisée ici : elle est imposée par le dépôt.");
@@ -37,6 +41,7 @@ function createRepository(db, organizationId) {
     function buildWhere(where = {}) {
       const clauses = ["organization_id = ?"];
       const params = [organizationId];
+      if (scoped) { clauses.push("site_id = ?"); params.push(siteScope); }
       for (const [key, condition] of Object.entries(where)) {
         const col = column(key);
         if (condition === null) clauses.push(`${col} IS NULL`);
@@ -69,13 +74,14 @@ function createRepository(db, organizationId) {
 
     return {
       insert(row = {}) {
-        const { keys, values } = assignments(row);
+        if (scoped && row.site_id !== undefined && row.site_id !== siteScope) throw new Error("Cette création est limitée à votre site.");
+        const { keys, values } = assignments(scoped ? { ...row, site_id: siteScope } : row);
         const cols = ["organization_id", ...keys];
         return db.prepare(`INSERT INTO ${name} (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")}) RETURNING *`).get(organizationId, ...values);
       },
       get(id) {
         if (!Number.isInteger(id)) return null;
-        return db.prepare(`SELECT * FROM ${name} WHERE id = ? AND organization_id = ?`).get(id, organizationId) ?? null;
+        return db.prepare(`SELECT * FROM ${name} WHERE id = ? AND organization_id = ?${scoped ? " AND site_id = ?" : ""}`).get(id, organizationId, ...(scoped ? [siteScope] : [])) ?? null;
       },
       list({ where, orderBy, limit = DEFAULT_LIMIT, afterId } = {}) {
         if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) throw new Error(`Limite invalide (entre 1 et ${MAX_LIMIT}).`);
@@ -105,15 +111,16 @@ function createRepository(db, organizationId) {
       },
       update(id, patch = {}) {
         if (!Number.isInteger(id)) return null;
+        if (scoped && patch.site_id !== undefined && patch.site_id !== siteScope) throw new Error("Cette modification est limitée à votre site.");
         const { keys, values } = assignments(patch, { forUpdate: true });
         if (!keys.length) return this.get(id);
         return (
-          db.prepare(`UPDATE ${name} SET ${keys.map((k) => `${k} = ?`).join(", ")} WHERE id = ? AND organization_id = ? RETURNING *`).get(...values, id, organizationId) ?? null
+          db.prepare(`UPDATE ${name} SET ${keys.map((k) => `${k} = ?`).join(", ")} WHERE id = ? AND organization_id = ?${scoped ? " AND site_id = ?" : ""} RETURNING *`).get(...values, id, organizationId, ...(scoped ? [siteScope] : [])) ?? null
         );
       },
       remove(id) {
         if (!Number.isInteger(id)) return false;
-        return db.prepare(`DELETE FROM ${name} WHERE id = ? AND organization_id = ?`).run(id, organizationId).changes > 0;
+        return db.prepare(`DELETE FROM ${name} WHERE id = ? AND organization_id = ?${scoped ? " AND site_id = ?" : ""}`).run(id, organizationId, ...(scoped ? [siteScope] : [])).changes > 0;
       },
     };
   }

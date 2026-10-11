@@ -101,7 +101,7 @@ module.exports = () => {
   router.get("/site-web/outils/exporter", need("tools.export"), (req, res) => withSite(req, res, (siteId) => {
     const ctx = toolsCtx(req);
     const allowed = exporter.allowedTypes(ctx, { siteId, mode: "export" });
-    const types = exporter.ORDER.map((t) => ({ key: t, label: exporter.TYPES[t].label, scope: exporter.TYPES[t].scope, allowed: allowed.includes(t), count: allowed.includes(t) ? exporter.count(ctx, t, siteId) : null }));
+    const types = exporter.ORDER.map((t) => ({ key: t, label: exporter.TYPES[t].label, scope: exporter.TYPES[t].scope, sensitive: Boolean(exporter.TYPES[t].sensitive), allowed: allowed.includes(t), count: allowed.includes(t) ? exporter.count(ctx, t, siteId) : null }));
     res.render("marketing/tools-export", { title: "Exporter", active: "outils", ...shell(req, siteId, "exporter"), types, recent: runs.list(ctx.organizationId, "export", { limit: 8 }) });
   }));
   router.post("/site-web/outils/exporter", need("tools.export"), (req, res) => withSite(req, res, (siteId) => {

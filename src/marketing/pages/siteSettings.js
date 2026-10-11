@@ -26,8 +26,12 @@ const DEFAULT_SETTINGS = Object.freeze({
   // Référencement du site (palier 11) : valeurs par défaut des pages du site. La description du site est identity.description,
   // l'interdiction d'indexer tout le site est extras.noindex : une seule source pour chaque valeur.
   seo: { title: "", ogImage: "", publicUrl: "", follow: true },
+  // Réglages généraux du site (palier 14) : fuseau horaire, formats de date et d'heure, page de confidentialité
+  general: { timezone: "Europe/Paris", dateFormat: "long", timeFormat: "24h", privacyPageId: null },
 });
 
+// Fuseau horaire reconnu par le moteur d'internationalisation du serveur (jamais une valeur libre)
+const validTimezone = (tz) => { try { new Intl.DateTimeFormat("fr-FR", { timeZone: tz }); return typeof tz === "string" && tz.length > 0; } catch { return false; } };
 const clean = (v, max) => (typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, max) : "");
 
 // Adresse d'une image : fichier de la médiathèque (/uploads/…) ou adresse https ; jamais de guillemet, parenthèse ou barre oblique inverse
@@ -139,7 +143,16 @@ function normalizeSettings(input = {}, { strict = false } = {}) {
   let publicUrl = clean(sx.publicUrl, 200).replace(/\/+$/, "");
   if (publicUrl && !/^https:\/\/[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d{2,5})?$/i.test(publicUrl)) { if (strict) throw bad("Adresse publique du site : une adresse https:// sans chemin (ex. https://www.monsite.com)."); publicUrl = ""; }
   const seo = { title: clean(sx.title, 70).replace(/\s+/g, " "), ogImage: mediaUrl(sx.ogImage, "Image de partage du site", strict), publicUrl, follow: bool(sx.follow, true) };
-  return { identity, background, layout, lightbox, transitions, customCss, classes, extras, seo };
+  const gx = src.general || {};
+  const timezone = clean(gx.timezone, 60) || "Europe/Paris";
+  if (!validTimezone(timezone)) { if (strict) throw bad("Fuseau horaire inconnu."); }
+  const general = {
+    timezone: validTimezone(timezone) ? timezone : "Europe/Paris",
+    dateFormat: oneOf(gx.dateFormat, ["long", "medium", "short"], "Format de date", strict, "long"),
+    timeFormat: oneOf(gx.timeFormat, ["24h", "12h"], "Format de l'heure", strict, "24h"),
+    privacyPageId: Number.isInteger(Number(gx.privacyPageId)) && Number(gx.privacyPageId) > 0 ? Number(gx.privacyPageId) : null,
+  };
+  return { identity, background, layout, lightbox, transitions, customCss, classes, extras, seo, general };
 }
 
 // Points de rupture effectifs d'un site (utilisés par le CSS des éléments : pageCss) ; défauts si inconnus
@@ -165,7 +178,8 @@ function layoutCss(settings) {
   else if (L.contentWidth !== D.contentWidth) main.push(`max-width:${L.contentWidth}px`);
   if (L.gutter !== D.gutter) main.push(`padding-left:${L.gutter}px`, `padding-right:${L.gutter}px`);
   if (main.length) out.push(`.lp-site .lp-main{${main.join(";")}}`);
-  if (L.containerWidth !== D.containerWidth) out.push(`.lp-site :where(.kw-container:not(.kw-full)){max-width:${L.containerWidth}px}`);
+  if (L.containerWidth !== D.containerWidth) out.push(`.lp-site{--kw-band-w:${L.containerWidth}px}`);
+  if (L.containerWidth !== D.containerWidth) out.push(`.lp-site :where(.kw-container:not(.kw-full):not(.kw-band):not(.kw-container .kw-container)){max-width:${L.containerWidth}px}`);
   if (s.extras.smoothScroll) out.push(`@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}`);
   return out.join("\n");
 }

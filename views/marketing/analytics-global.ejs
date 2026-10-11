@@ -1,0 +1,206 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const S = d.sections, P = d.period, T = S.traffic, C = S.commerce, K = S.contacts, E = S.email, A = S.automations, F = S.funnels, V = S.conversions, AT = S.attribution;
+  const NODATA = "Aucune donnée disponible pour cette période.";
+  // Variation : relative (%) pour un nombre ou un montant, en POINTS pour un taux ; jamais de variation inventée
+  const dlt = (x) => {
+    if (!x || x.state === "nodata") return "";
+    if (x.state === "new") return "nouveau (période précédente à zéro)";
+    if (x.state === "flat") return "stable";
+    const sign = x.state === "up" ? "▲ +" : "▼ −";
+    return x.points !== undefined ? `${sign}${String(Math.abs(x.points)).replace(".", ",")} point${Math.abs(x.points) > 1 ? "s" : ""}` : `${sign}${String(Math.abs(x.pct)).replace(".", ",")} %`;
+  };
+  const q = (extra) => {
+    const base = { plage: P.key, du: query.du, au: query.au, site: query.site, source: query.source, appareil: query.appareil, modele: query.modele, ...extra };
+    return Object.entries(base).filter(([, v]) => v !== undefined && v !== null && v !== "").map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
+  };
+  const fmtTs = (ms) => (ms ? mkh.fdatetime(ms) : "");
+  const errorBox = (s) => s && s.error;
+%>
+    <div class="mk-head"><h1>Tableau de bord Analytics</h1></div>
+    <p class="mk-lead">Une seule lecture de ce que fait réellement KOLAKISA : visites, parcours, boutique, e-mails et scénarios. Rien n'est estimé : sans donnée, la page le dit.</p>
+    <% if (flash) { %><p class="mk-note" role="status"><%= flash %></p><% } %>
+
+    <form class="mk-filterbar" method="get" action="/marketing/analytics/global" aria-label="Filtres">
+      <div class="field-group"><label for="an-plage">Période</label>
+        <select id="an-plage" name="plage"><% Object.entries(d.presets).forEach(([k, label]) => { %><option value="<%= k %>"<%= P.key === k ? " selected" : "" %>><%= label %></option><% }) %></select></div>
+      <div class="field-group"><label for="an-du">Du</label><input id="an-du" type="date" name="du" value="<%= P.key === "custom" ? P.fromYmd : "" %>"></div>
+      <div class="field-group"><label for="an-au">Au</label><input id="an-au" type="date" name="au" value="<%= P.key === "custom" ? P.toYmd : "" %>"></div>
+      <% if (sites.length > 1 || (sites.length === 1 && d.scope === "all")) { %>
+      <div class="field-group"><label for="an-site">Site</label>
+        <select id="an-site" name="site"><% if (d.scope !== "site" || mk.ctx.siteScope === undefined) { %><option value="">Tous les sites</option><option value="principal"<%= query.site === "principal" ? " selected" : "" %>>Site principal</option><% } %>
+          <% sites.forEach((s) => { %><option value="<%= s.id %>"<%= String(query.site) === String(s.id) ? " selected" : "" %>><%= s.name %></option><% }) %></select></div>
+      <% } %>
+      <div class="field-group"><label for="an-source">Source (trafic)</label>
+        <select id="an-source" name="source"><option value="">Toutes</option><% [["direct", "Direct"], ["organic", "Recherche naturelle"], ["social", "Réseaux sociaux"], ["email", "E-mail"], ["paid", "Publicité payante"], ["campaign", "Campagne (UTM)"], ["referral", "Lien externe"]].forEach(([k, l]) => { %><option value="<%= k %>"<%= d.filters.source === k ? " selected" : "" %>><%= l %></option><% }) %></select></div>
+      <div class="field-group"><label for="an-app">Appareil (trafic)</label>
+        <select id="an-app" name="appareil"><option value="">Tous</option><% [["desktop", "Ordinateur"], ["mobile", "Mobile"], ["tablet", "Tablette"]].forEach(([k, l]) => { %><option value="<%= k %>"<%= d.filters.device === k ? " selected" : "" %>><%= l %></option><% }) %></select></div>
+      <button type="submit" class="btn btn-primary btn-sm">Appliquer</button>
+    </form>
+    <p class="field-hint">Période : du <strong><%= mkh.fdate(P.fromYmd) %></strong> au <strong><%= mkh.fdate(P.toYmd) %></strong> (<%= P.days %> jour<%= P.days > 1 ? "s" : "" %>, fuseau <%= P.tz %>), comparée aux <%= P.days %> jour<%= P.days > 1 ? "s" : "" %> précédents (<%= mkh.fdate(P.prevFromYmd) %> → <%= mkh.fdate(P.prevToYmd) %>). Les filtres source et appareil ne s'appliquent qu'au trafic.</p>
+    <p class="field-hint">Dernière mise à jour : à l'ouverture de cette page. Dernier événement enregistré : <%= d.freshness.lastEventAt ? fmtTs(d.freshness.lastEventAt) : "aucun" %> · dernière visite suivie : <%= d.freshness.lastVisitAt ? fmtTs(d.freshness.lastVisitAt) : "aucune" %>. <%= d.freshness.note %></p>
+
+    <h2 class="mk-h2">Vue d'ensemble</h2>
+    <div class="mk-stats mk-stats-4">
+      <% const card = (label, value, hint, delta) => { %><div class="mk-stat"><span class="mk-stat-label"><%= label %></span><span class="mk-stat-value"><%= value %></span><span class="mk-stat-hint"><%= hint %><%= delta ? ` · ${delta}` : "" %></span></div><% }; %>
+      <% const trOk = T && !T.error && T.kpis; %>
+      <% card("Visiteurs mesurés", trOk ? mkh.fmt(T.kpis.visitors) : "—", trOk ? "ayant accepté la mesure" : (T && T.error ? "erreur de calcul" : NODATA), trOk ? dlt(T.deltas && T.deltas.visitors) : ""); %>
+      <% card("Sessions", trOk ? mkh.fmt(T.kpis.sessions) : "—", trOk ? "visites distinctes" : NODATA, trOk ? dlt(T.deltas && T.deltas.sessions) : ""); %>
+      <% card("Pages vues", trOk ? mkh.fmt(T.kpis.pageViews) : "—", trOk ? `${mkh.fmt(T.kpis.events)} événements de visite` : NODATA, trOk ? dlt(T.deltas && T.deltas.pageViews) : ""); %>
+      <% card("Nouveaux contacts", K && !K.error ? mkh.fmt(K.newContacts) : "—", K && !K.error ? (K.noData ? NODATA : `${mkh.fmt(K.newCustomers)} devenu(s) client`) : "erreur de calcul", K && !K.error ? dlt(K.delta) : ""); %>
+      <% if (C && C.kpis) { %>
+        <% card("Commandes", mkh.fmt(C.kpis.orders), `${mkh.fmt(C.kpis.paidOrders)} payante(s)`, dlt(C.deltas.orders)); %>
+        <% card("Revenu brut", mkh.euros(C.kpis.grossCents), "paiements confirmés", dlt(C.deltas.gross)); %>
+        <% card("Revenu net", mkh.euros(C.kpis.netCents), `${mkh.euros(C.kpis.refundCents)} remboursés`, dlt(C.deltas.net)); %>
+        <% card("Panier moyen", mkh.euros(C.kpis.avgBasketCents), C.kpis.avgBasketCents === null ? "aucune commande payante" : "commandes payantes", dlt(C.deltas.avgBasket)); %>
+      <% } else { %>
+        <% card("Boutique", "—", C && C.unavailable ? C.unavailable : (C && C.error ? "erreur de calcul" : NODATA), ""); %>
+      <% } %>
+    </div>
+    <% if (C && C.kpis && C.noData) { %><p class="field-hint">Boutique : <%= NODATA %> (les « 0 » ci-dessus sont de vraies valeurs : aucune commande ni remboursement enregistrés).</p><% } %>
+
+    <section class="mk-panel" aria-labelledby="an-traffic">
+      <h2 id="an-traffic">Trafic</h2>
+      <% if (errorBox(T)) { %><p class="mk-note" role="alert"><%= T.error %></p>
+      <% } else if (T.noData) { %>
+        <div class="mk-empty"><%- icon("activity", { size: 32 }) %><h2><%= NODATA %></h2>
+          <p><%= T.tracked ? "Aucune visite suivie sur cette période (avec ces filtres)." : "Analytics commence à collecter les visites dès qu'un visiteur accepte la mesure d'audience dans le bandeau du site." %></p></div>
+      <% } else { %>
+        <%- mkh.columnChart(T.series.map((s) => ({ label: s.ymd.slice(8, 10) + "/" + s.ymd.slice(5, 7), count: s.pageViews })), { title: "Pages vues par jour", unit: " page(s) vue(s)" }) %>
+        <p class="field-hint">Mesure limitée aux visiteurs qui ont accepté le suivi : les chiffres sont un minimum, pas le trafic total du site. Un visiteur = un navigateur ; une session = une visite ; une page vue = une page affichée ; un événement = toute action suivie.<%= T.truncated ? " Données tronquées (volume très élevé) : réduisez la période." : "" %></p>
+        <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption>Pages les plus vues</caption>
+          <thead><tr><th scope="col">Page</th><th scope="col">Type</th><th scope="col" class="mk-num">Pages vues</th><th scope="col" class="mk-num">Visiteurs</th></tr></thead>
+          <tbody><% T.topPages.slice(0, 10).forEach((r) => { %><tr><td data-label="Page"><code><%= r.path %></code></td><td data-label="Type"><%= r.kind %></td><td data-label="Pages vues" class="mk-num"><%= mkh.fmt(r.pageViews) %></td><td data-label="Visiteurs" class="mk-num"><%= mkh.fmt(r.visitors) %></td></tr><% }) %></tbody></table></div>
+        <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "pages" }) %>">Exporter les pages (CSV)</a></div>
+        <% if (T.articles.length) { %>
+        <h3 class="mk-h2">Articles</h3>
+        <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption>Articles les plus lus</caption>
+          <thead><tr><th scope="col">Article</th><th scope="col" class="mk-num">Vues</th><th scope="col" class="mk-num">Visiteurs</th></tr></thead>
+          <tbody><% T.articles.forEach((r) => { %><tr><td data-label="Article"><code><%= r.path %></code></td><td data-label="Vues" class="mk-num"><%= mkh.fmt(r.pageViews) %></td><td data-label="Visiteurs" class="mk-num"><%= mkh.fmt(r.visitors) %></td></tr><% }) %></tbody></table></div>
+        <p class="field-hint">Le temps passé sur un article n'est pas mesuré (aucun signal de présence fiable) : il n'est donc pas affiché plutôt que estimé.</p>
+        <% } %>
+        <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption>Sources de trafic (sessions)</caption>
+          <thead><tr><th scope="col">Source</th><th scope="col">Campagne</th><th scope="col" class="mk-num">Sessions</th></tr></thead>
+          <tbody><% T.sources.forEach((r) => { %><tr><td data-label="Source"><%= r.label %></td><td data-label="Campagne"><%= r.campaign || "—" %></td><td data-label="Sessions" class="mk-num"><%= mkh.fmt(r.sessions) %></td></tr><% }) %></tbody></table></div>
+        <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "sources" }) %>">Exporter les sources (CSV)</a></div>
+        <p class="field-hint">Appareils : <%= T.devices.map((x) => `${x.label} ${mkh.fmt(x.sessions)}`).join(" · ") || "—" %></p>
+      <% } %>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="an-conv">
+      <h2 id="an-conv">Conversions</h2>
+      <p class="field-hint">Chaque type de conversion est compté à part (jamais additionné). Elles lisent les événements déjà enregistrés par les autres moteurs.</p>
+      <% if (errorBox(V)) { %><p class="mk-note" role="alert"><%= V.error %></p><% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption>Conversions de la période</caption>
+          <thead><tr><th scope="col">Conversion</th><th scope="col" class="mk-num">Événements</th><th scope="col" class="mk-num">Contacts</th><th scope="col">Évolution</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody><% V.rows.forEach((r) => { %><tr>
+            <td data-label="Conversion"><%= r.label %><% if (r.filter) { %> <small>(<%= r.filter %>)</small><% } %><br><code class="mk-sub"><%= r.event %></code></td>
+            <td data-label="Événements" class="mk-num"><%= mkh.fmt(r.events) %></td><td data-label="Contacts" class="mk-num"><%= mkh.fmt(r.contacts) %></td>
+            <td data-label="Évolution"><%= dlt(r.delta) || "—" %></td>
+            <td><% if (r.custom && canDefine) { %><form action="/marketing/analytics/conversions/<%= r.id %>/supprimer" method="post"><button type="submit" class="btn btn-outline btn-sm">Supprimer</button></form><% } %></td></tr><% }) %></tbody></table></div>
+        <% if (V.noData) { %><p class="field-hint"><%= NODATA %></p><% } %>
+        <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "conversions" }) %>">Exporter les conversions (CSV)</a></div>
+      <% } %>
+      <% if (canDefine) { %>
+      <form action="/marketing/analytics/conversions" method="post" class="mk-filterbar" aria-label="Nouvelle conversion personnalisée">
+        <div class="field-group"><label for="cv-nom">Nom</label><input id="cv-nom" type="text" name="nom" maxlength="80" required></div>
+        <div class="field-group"><label for="cv-ev">Événement</label><input id="cv-ev" type="text" name="evenement" maxlength="64" placeholder="purchase.completed" required></div>
+        <div class="field-group"><label for="cv-cle">Filtre : clé (facultatif)</label><input id="cv-cle" type="text" name="cle" maxlength="40" placeholder="courseId"></div>
+        <div class="field-group"><label for="cv-val">Filtre : valeur</label><input id="cv-val" type="text" name="valeur" maxlength="120"></div>
+        <button type="submit" class="btn btn-primary btn-sm">Ajouter une conversion</button>
+      </form>
+      <% } %>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="an-funnels">
+      <h2 id="an-funnels">Tunnels</h2>
+      <% if (errorBox(F)) { %><p class="mk-note" role="alert"><%= F.error %></p>
+      <% } else if (F.noData) { %><p class="field-hint"><%= NODATA %> Les tunnels comptent les contacts connus ayant accepté le suivi.</p>
+      <% } else { F.rows.filter((f) => !f.noData).forEach((f) => { %>
+        <h3 class="mk-h2"><%= f.name %></h3>
+        <ol class="mk-funnel">
+          <li class="mk-funnel-step"><div class="mk-funnel-head"><span class="mk-funnel-label">Entrées</span><span class="mk-funnel-num"><%= mkh.fmt(f.entered) %> contact(s)</span></div></li>
+          <% f.steps.forEach((s, i) => { %><li class="mk-funnel-step">
+            <div class="mk-funnel-head"><span class="mk-funnel-label"><%= i + 1 %>. <%= s.name %></span><span class="mk-funnel-num"><%= mkh.fmt(s.contacts) %> contact(s) · <%= mkh.rate(s.fromStart) %> des entrées<%= i > 0 ? ` · ${mkh.rate(s.fromPrevious)} de l'étape précédente` : "" %></span></div>
+            <div class="mk-funnel-track" role="img" aria-label="<%= mkh.rate(s.fromStart) %> des entrées"><span class="mk-funnel-bar" style="width: <%= Math.max(0, Math.min(100, s.fromStart || 0)) %>%"></span></div></li><% }) %>
+        </ol>
+        <p class="field-hint">Terminés : <strong><%= mkh.fmt(f.completed) %></strong> · abandons : <strong><%= mkh.fmt(f.abandoned) %></strong> · conversion globale (terminés / entrées) : <strong><%= mkh.rate(f.conversion) %></strong> · achats rattachés : <strong><%= mkh.fmt(f.purchases) %></strong> (<%= mkh.euros(f.revenueCents) %>, dernière étape touchée avant l'achat)</p>
+      <% }) %>
+        <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "tunnels" }) %>">Exporter les tunnels (CSV)</a></div>
+      <% } %>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="an-shop">
+      <h2 id="an-shop">Boutique et attribution</h2>
+      <% if (errorBox(C)) { %><p class="mk-note" role="alert"><%= C.error %></p>
+      <% } else if (C.unavailable) { %><p class="mk-note"><%= C.unavailable %></p>
+      <% } else if (C.noData) { %><p class="field-hint"><%= NODATA %></p>
+      <% } else { %>
+        <p class="field-hint">Définitions : <strong>revenu brut</strong> = total des commandes dont le paiement est confirmé (une commande n'existe qu'après paiement) ; <strong>remboursements</strong> = montants annoncés par Stripe, comptés à la date du remboursement ; <strong>revenu net</strong> = brut − remboursements ; remises : <%= mkh.euros(C.kpis.discountCents) %> accordées. <%= C.unavailable_metrics.join(" et ") %> : non gérés par la boutique, donc non affichés. Nouveaux clients : <%= mkh.fmt(C.kpis.newCustomers) %> · clients récurrents : <%= mkh.fmt(C.kpis.returningCustomers) %> · paniers abandonnés : <%= mkh.fmt(C.abandonedCarts) %> · commandes abandonnées : <%= mkh.fmt(C.abandonedCheckouts) %>.</p>
+        <% if (C.products.length) { %>
+        <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption>Formations vendues</caption>
+          <thead><tr><th scope="col">Formation</th><th scope="col" class="mk-num">Ventes</th><th scope="col" class="mk-num">Revenu</th></tr></thead>
+          <tbody><% C.products.forEach((r) => { %><tr><td data-label="Formation"><%= r.title %></td><td data-label="Ventes" class="mk-num"><%= mkh.fmt(r.sold) %></td><td data-label="Revenu" class="mk-num"><%= mkh.euros(r.cents) %></td></tr><% }) %></tbody></table></div>
+        <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "produits" }) %>">Exporter les formations (CSV)</a></div>
+        <% } %>
+        <% if (AT && !AT.error && !AT.unavailable) { %>
+        <h3 class="mk-h2">Revenu par source — <%= AT.modelLabel %></h3>
+        <nav class="mk-tabs" aria-label="Modèle d'attribution"><a class="mk-tab" href="?<%= q({ modele: "last" }) %>"<%- AT.model === "last" ? ' aria-current="page"' : "" %>>Dernier contact</a><a class="mk-tab" href="?<%= q({ modele: "first" }) %>"<%- AT.model === "first" ? ' aria-current="page"' : "" %>>Premier contact</a></nav>
+        <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption>Revenu par source (<%= AT.modelLabel %>)</caption>
+          <thead><tr><th scope="col">Source</th><th scope="col">Campagne</th><th scope="col" class="mk-num">Commandes</th><th scope="col" class="mk-num">Revenu</th></tr></thead>
+          <tbody><% AT.rows.forEach((r) => { %><tr><td data-label="Source"><%= r.label %></td><td data-label="Campagne"><%= r.campaign || "—" %></td><td data-label="Commandes" class="mk-num"><%= mkh.fmt(r.orders) %></td><td data-label="Revenu" class="mk-num"><%= mkh.euros(r.revenueCents) %></td></tr><% }) %></tbody></table></div>
+        <p class="field-hint"><%= AT.notes.join(" ") %> <%= mkh.fmt(AT.attributed) %> commande(s) attribuée(s) sur <%= mkh.fmt(AT.orders) %>.</p>
+        <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "attribution" }) %>">Exporter l'attribution (CSV)</a></div>
+        <% } %>
+      <% } %>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="an-mail">
+      <h2 id="an-mail">E-mails</h2>
+      <% if (errorBox(E)) { %><p class="mk-note" role="alert"><%= E.error %></p>
+      <% } else if (E.noData) { %><p class="field-hint"><%= NODATA %></p>
+      <% } else { %>
+        <div class="mk-stats mk-stats-4">
+          <% card("Envoyés", mkh.fmt(E.sent), `${mkh.fmt(E.delivered)} délivré(s)`, dlt(E.deltas.sent)); %>
+          <% card("Délivrabilité", mkh.rate(E.rates.delivery), "délivrés / envoyés", ""); %>
+          <% card("Taux d'ouverture (indicatif)", mkh.rate(E.rates.open), `${mkh.fmt(E.uniqueOpens)} ouverture(s) unique(s)`, dlt(E.deltas.open)); %>
+          <% card("Taux de clic", mkh.rate(E.rates.click), `${mkh.fmt(E.uniqueClicks)} clic(s) unique(s)`, dlt(E.deltas.click)); %>
+          <% card("Rebonds", mkh.rate(E.rates.bounce), `${mkh.fmt(E.bounced)} rebond(s)`, ""); %>
+          <% card("Plaintes", mkh.rate(E.rates.complaint), `${mkh.fmt(E.complained)} plainte(s)`, ""); %>
+          <% card("Désinscriptions", mkh.rate(E.rates.unsubscribe), `${mkh.fmt(E.unsubscribed)} désinscription(s)`, ""); %>
+        </div>
+        <p class="field-hint"><%= E.notes.join(" ") %></p>
+      <% } %>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="an-auto">
+      <h2 id="an-auto">Scénarios</h2>
+      <% if (errorBox(A)) { %><p class="mk-note" role="alert"><%= A.error %></p>
+      <% } else if (A.noData) { %><p class="field-hint"><%= NODATA %></p>
+      <% } else { %>
+        <div class="mk-stats mk-stats-4">
+          <% card("Passages démarrés", mkh.fmt(A.started), `${mkh.fmt(A.running)} en cours`, dlt(A.delta)); %>
+          <% card("Terminés", mkh.fmt(A.completed), `taux de complétion ${mkh.rate(A.completionRate)}`, ""); %>
+          <% card("Sortis", mkh.fmt(A.exited), "contact injoignable, désinscrit, condition…", ""); %>
+          <% card("En erreur", mkh.fmt(A.failed), `${mkh.rate(A.failureRate)} des passages`, ""); %>
+        </div>
+        <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption>Scénarios les plus actifs</caption>
+          <thead><tr><th scope="col">Scénario</th><th scope="col" class="mk-num">Démarrés</th><th scope="col" class="mk-num">Terminés</th><th scope="col" class="mk-num">En erreur</th></tr></thead>
+          <tbody><% A.top.forEach((r) => { %><tr><td data-label="Scénario"><% if (mk.can("automations.read")) { %><a href="/marketing/automatisations/<%= r.id %>"><%= r.name %></a><% } else { %><%= r.name %><% } %></td><td data-label="Démarrés" class="mk-num"><%= mkh.fmt(r.started) %></td><td data-label="Terminés" class="mk-num"><%= mkh.fmt(r.completed) %></td><td data-label="En erreur" class="mk-num"><%= mkh.fmt(r.failed) %></td></tr><% }) %></tbody></table></div>
+        <p class="field-hint">Ce tableau résume les passages (le détail de chaque exécution reste dans le journal du scénario). Un passage « terminé » n'est pas une conversion : voir les conversions ci-dessus.</p>
+      <% } %>
+    </section>
+    <% const X = S.experiments; if (X) { %>
+    <section class="mk-panel" aria-labelledby="an-ab">
+      <h2 id="an-ab">Tests A/B</h2>
+      <% if (X.error) { %><p class="mk-callout mk-callout-warn"><span><%= X.error %></span></p>
+      <% } else if (X.noData) { %><p class="field-hint">Aucune expérience A/B pour l'instant. <a href="/marketing/site-web/tests-ab">Tests A/B</a></p>
+      <% } else { %>
+        <p class="field-hint"><%= mkh.fmt(X.running) %> en cours · <%= mkh.fmt(X.paused) %> en pause · <%= mkh.fmt(X.endedInPeriod) %> terminé(s) sur la période. Les résultats et le verdict viennent du moteur d'A/B ; ici, simple lecture.</p>
+        <% if (X.rows.length) { %><div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption class="sr-only">Expériences A/B</caption>
+          <thead><tr><th scope="col">Test</th><th scope="col">État</th><th scope="col" class="mk-num">Expositions</th><th scope="col" class="mk-num">Taux A</th><th scope="col" class="mk-num">Taux B</th><th scope="col">Statut statistique</th></tr></thead>
+          <tbody><% const VL = { insufficient: "Données insuffisantes", inconclusive: "Non concluant", significant: "Significatif (pas encore de gagnant)", winner: "Gagnant" }; X.rows.forEach((r) => { %><tr><td data-label="Test"><a href="/marketing/pages/<%= r.pageId %>/test-ab?test=<%= r.id %>"><%= r.name %></a></td><td data-label="État"><%= r.status === "running" ? "En cours" : r.status === "stopped" ? "En pause" : "Terminé" %></td><td class="mk-num" data-label="Expositions"><%= mkh.fmt(r.exposures) %></td><td class="mk-num" data-label="Taux A"><%= mkh.rate(r.rateA) %></td><td class="mk-num" data-label="Taux B"><%= mkh.rate(r.rateB) %></td><td data-label="Statut"><%= VL[r.verdict] %><%= r.leader && r.verdict !== "inconclusive" ? ` — ${r.leader.toUpperCase()}` : "" %><%= r.anomalies ? " · anomalie" : "" %></td></tr><% }) %></tbody></table></div><% } %>
+      <% } %>
+    </section>
+    <% } %>
+<%- include("partials/bottom") %>

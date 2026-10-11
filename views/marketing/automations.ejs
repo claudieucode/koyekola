@@ -6,6 +6,8 @@
     <p class="mk-lead">Un scénario réagit à un événement (compte créé, achat, formation terminée…) et enchaîne des étapes : e-mail, attente, condition, étiquette, liste. Seuls les événements <strong>futurs</strong> les déclenchent.</p>
     <%- include("partials/worker-note", { workerOn, consequence: "aucun scénario ne s'exécutera tant qu'il n'est pas rétabli" }) %>
 
+    <%- include("partials/site-filter", { action: "/marketing/automatisations" }) %>
+    <p><a href="/marketing/automatisations/historique">Historique de tous les passages</a></p>
     <% if (!automations.length) { %>
       <div class="mk-empty">
         <%- icon("zap", { size: 32 }) %>
@@ -18,7 +20,7 @@
         <caption class="sr-only">Scénarios</caption>
         <thead><tr><th scope="col">Nom</th><th scope="col">Type</th><th scope="col">Déclencheur</th><th scope="col">État</th><th scope="col">Étapes</th><th scope="col">Passages</th></tr></thead>
         <tbody><% automations.forEach((a) => { const st = STATUS[a.status]; %>
-          <tr><td><a href="/marketing/automatisations/<%= a.id %>"><%= a.name %></a></td><td><%= a.kind === "marketing" ? "Marketing" : "Transactionnel" %></td>
+          <tr><td><a href="/marketing/automatisations/<%= a.id %>"><%= a.name %></a><% if (a.site_id && siteNames[a.site_id]) { %> <span class="mk-chip mk-chip-static"><%= siteNames[a.site_id] %></span><% } %></td><td><%= a.kind === "marketing" ? "Marketing" : "Transactionnel" %></td>
             <td><%= triggers[a.trigger_event] ? triggers[a.trigger_event].label : a.trigger_event %></td>
             <td><span class="badge <%= st[1] %>"><%= st[0] %></span></td><td><%= a.stepCount %></td><td><%= mkh.fmt(a.run_count) %> (<%= a.running_count %> en cours)</td></tr>
         <% }) %></tbody>
@@ -36,6 +38,7 @@
             <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button>
           </header>
           <div class="mk-dialog-body">
+            <%- include("partials/site-field", { id: "a-site" }) %>
             <div class="field-group"><label for="a-name">Nom *</label><input id="a-name" type="text" name="name" maxlength="100" required placeholder="Bienvenue après inscription" data-mk-required-message="Le nom du scénario est obligatoire."></div>
             <div class="field-group"><label for="a-kind">Type</label>
               <select id="a-kind" name="kind"><option value="transactional">Transactionnel (lié au compte : bienvenue, confirmation…)</option><option value="marketing">Marketing (avec consentement et désinscription)</option></select></div>

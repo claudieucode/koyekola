@@ -52,7 +52,7 @@ async function applyPlan(run, api, data, plan, opts) {
   const todo = plan.items.filter((i) => ["create", "update", "duplicate", "skip", "error"].includes(i.action));
   api.setTotal(todo.length);
   api.reset();
-  const sourcesByType = (type) => (type === "site" ? [data.resources.site] : data.resources[type] || []);
+  const sourcesByType = (type) => (type === "site" || type === "settings" ? [data.resources[type]] : data.resources[type] || []);
   // Ordre de dépendance : termes → pages → articles → menus → redirections → médias → SEO
   const ordered = [];
   for (const type of exporter.ORDER) {
@@ -107,12 +107,19 @@ const uniqueName = (table, base, where = "", args = []) => { let name = base; fo
 const resolve = (idMap, ref, type) => { const m = ref && idMap.get(ref); return m && m.type === type ? m.id : null; };
 
 const APPLY = {
+  settings(ctx, { it, raw, siteId }) {
+    const engine = require("../settings");
+    const r = engine.update({ siteId }, it.apply || {}, ctx, { confirm: false });
+    if (!r.ok) throw new Error((r.errors || ["Réglages refusés."]).join(" "));
+    return { result: "updated", id: siteId || 1, message: `${r.changed.length} réglage(s) mis à jour.` };
+  },
+
   site(ctx, { raw, siteId, it }) {
     const pages = require("../../marketing/pages");
     const site = pages.requireSite(ctx, siteId);
     const incoming = raw.settings || {};
     // L'adresse publique du site de destination est conservée (jamais importée) ; le reste du design est remplacé par un enregistrement validé
-    const settings = { ...incoming, seo: { ...(incoming.seo || {}), publicUrl: (site.settings.seo || {}).publicUrl || "" } };
+    const settings = { ...incoming, seo: { ...(incoming.seo || {}), publicUrl: (site.settings.seo || {}).publicUrl || "" }, extras: { ...(incoming.extras || {}), noindex: Boolean((site.settings.extras || {}).noindex) } }; // domaine et indexation de la destination : jamais importés
     pages.saveSiteDesign(ctx, siteId, { tokens: raw.tokens, settings, revision: site.settings_revision });
     void it;
     return { result: "updated", id: siteId, message: "Réglages du site remplacés (adresse publique conservée)." };

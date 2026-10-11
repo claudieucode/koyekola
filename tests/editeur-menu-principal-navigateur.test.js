@@ -45,7 +45,7 @@ describe("menu principal de l'éditeur (navigateur)", { skip: SKIP }, () => {
   after(async () => { if (browser) await browser.close(); if (srv) await srv.stop(); });
 
   test("clic dans le canevas (iframe) : fermeture immédiate", async () => {
-    await closedWithin(() => page.frameLocator("[data-pb-frame]").locator("body").click({ position: { x: 5, y: 5 } }));
+    await closedWithin(() => page.frameLocator("[data-pb-frame]").locator("body").click({ position: { x: 900, y: 5 } }) /* coin libre : le menu, plus haut, recouvre le coin gauche */);
   });
   test("clic dans le panneau de gauche et dans l'en-tête : fermeture immédiate", async () => {
     await closedWithin(() => page.locator(".pb-left").click({ position: { x: 5, y: 700 } }));

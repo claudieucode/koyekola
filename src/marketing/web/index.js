@@ -23,11 +23,41 @@ function createMarketingRouters({ db }) {
     m = /^\/site-web\/composants\/(\d+)/.exec(p);
     if (m) { const r = db.prepare("SELECT site_id FROM mk_web_components WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
     // Outils (palier 13) : le site choisi (?site=) fixe le contexte des droits ; sans lui, l'organisation / le site principal
-    if (/^\/site-web\/outils(?:\/|$)/.test(p)) {
+    if (/^\/site-web\/(?:outils|parametres)(?:\/|$)/.test(p)) {
       const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
       if (/^\d{1,12}$/.test(String(raw ?? ""))) return { siteId: Number(raw) };
       return null;
     }
+    // Email Engine (palier 16) : audiences, segments, modèles et campagnes d'UN site. Par identifiant : le site est celui de la ressource ;
+    // pour les pages sans identifiant (liste, création), c'est « ?site= » ou le champ « site » envoyé — la personne limitée à un site n'ouvre que le sien.
+    m = /^\/(campagnes|listes|segments|modeles|automatisations|tunnels)\/(\d{1,12})(?:\/|$)/.exec(p);
+    if (m) {
+      const tbl = { campagnes: "mk_campaigns", listes: "mk_lists", segments: "mk_segments", modeles: "mk_templates", automatisations: "mk_automations", tunnels: "mk_funnels" }[m[1]];
+      const r = db.prepare(`SELECT site_id FROM ${tbl} WHERE id = ?`).get(Number(m[2]));
+      return r ? { siteId: r.site_id } : { siteId: null, missing: true };
+    }
+    // Tests A/B (palier 22) : la liste d'UN site (?site=) s'ouvre aux personnes limitées à ce site ; une expérience porte le site de sa page
+    if (req.method === "GET" && p === "/site-web/tests-ab" && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
+    m = /^\/tests-ab\/(\d{1,12})(?:\/|$)/.exec(p);
+    if (m) {
+      const r = db.prepare("SELECT t.site_id FROM mk_page_tests t WHERE t.id = ?").get(Number(m[1]));
+      return r ? { siteId: r.site_id } : { siteId: null, missing: true };
+    }
+    // Analytics central (palier 21) : le tableau de bord d'UN site (?site=) s'ouvre aux personnes qui n'ont accès qu'à ce site
+    if (req.method === "GET" && /^\/analytics\/global(?:\/export)?$/.test(p) && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
+    // Diagnostic d'un événement (palier 19) : le site est celui de l'événement
+    m = /^\/evenements\/(\d{1,12})$/.exec(p);
+    if (m) {
+      const r = db.prepare("SELECT site_id FROM mk_events WHERE id = ?").get(Number(m[1]));
+      return r ? { siteId: r.site_id } : { siteId: null, missing: true };
+    }
+    if (/^\/(?:campagnes|listes|segments|modeles|automatisations|tunnels)(?:\/(?:nouvelle|nouveau|apercu|apercu-cible|historique|parcours(?:\/.*)?|bibliotheque(?:\/.*)?))?$/.test(p)) {
+      const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
+      if (/^\d{1,12}$/.test(String(raw ?? ""))) return { siteId: Number(raw) };
+      return null;
+    }
+    // Contact Core (palier 15) : lecture des contacts d'UN site (?site=) — c'est ce qui ouvre l'écran aux personnes qui n'ont accès qu'à ce site
+    if (req.method === "GET" && /^\/contacts(?:\/\d+(?:\/evenements\.json)?)?$/.test(p) && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
     if (req.method === "POST" && (p === "/pages" || p === "/site-web/composants") && req.body && /^\d+$/.test(String(req.body.site_id || ""))) return { siteId: Number(req.body.site_id) };
     return null;
   };
@@ -52,9 +82,13 @@ function createMarketingRouters({ db }) {
     const role = membership ? membership.role : "site";
     req.mk = {
       role, can: allowed, perms, siteId, marketing, siteOnly: !membership,
-      ctx: { db, organizationId: orgId, userId: user.id, can: allowed, bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL },
+      // Email Engine (palier 16) : accès limité à un site → siteScope impose ce site à tout le moteur (jamais lu dans l'adresse) ; équipe de l'organisation → simple filtre d'affichage
+      ctx: { db, organizationId: orgId, userId: user.id, can: allowed, bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL,
+        ...(membership ? { siteFilter: /^\d{1,12}$/.test(String(req.query.site ?? "")) ? Number(req.query.site) : req.query.site === "principal" ? "principal" : undefined } : { siteScope: Number.isInteger(siteId) ? siteId : -1 }) },
     };
     res.locals.mk = { role, can: allowed, ctx: req.mk.ctx };
+    // Email Engine (palier 16) : sites proposés / site imposé, disponibles pour les écrans des audiences, segments, modèles et campagnes
+    if (/^\/(?:campagnes|listes|segments|modeles|automatisations|tunnels)(?:\/|$)/.test(req.path)) Object.assign(res.locals, require("./kit").siteChoices(req));
     res.locals.mkTheme = themeOf(marketing.settings, orgId, user.id); // Paramètres → Apparence
     res.locals.mkh = helpers;
     // Message « flash » : affiché une seule fois après une action
@@ -63,6 +97,7 @@ function createMarketingRouters({ db }) {
     next();
   });
 
+  admin.use(require("./contactCore")()); // Contact Core (palier 15) : doublons, fusion, cycle de vie, état, journal — avant admin.js (« /contacts/:id »)
   admin.use(require("./segments")({ db }));
   admin.use(require("./templates")({ db }));
   admin.use(require("./campaigns")({ db }));
@@ -73,6 +108,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./pageTests")());
   admin.use(require("./articles")()); // KOLAKISA CMS → Articles (palier 4) : gestion des articles du blog
   admin.use(require("./taxonomies")()); // Catégories et étiquettes (palier 5)
+  admin.use(require("./settings")()); // Paramètres : moteur de réglages (palier 14) — avant les modules qui avaient leur propre écran
   admin.use(require("./comments")()); // Commentaires : modération et réglages (palier 6)
   admin.use(require("./navigation")()); // Navigation : menus, éléments, emplacements (palier 7)
   admin.use(require("./history")()); // Historique des modifications et corbeille commune (palier 10)

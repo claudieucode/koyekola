@@ -590,7 +590,7 @@
     rerender: function () { renderProps(); },
     theme: function () { var t = {}; Object.keys(THEME_DEFAULTS).forEach(function (k) { t[k] = state.theme && state.theme[k] != null ? state.theme[k] : THEME_DEFAULTS[k]; }); return t; },
     fonts: function () { return (data.fonts || Object.keys(FONT_LABELS)).map(function (k) { return [k, FONT_LABELS[k] || k]; }); },
-    fontLabel: function (k) { return FONT_LABELS[k] || k; },
+    fontLabel: function (k) { var f = window.KFonts && window.KFonts.byId(k); return FONT_LABELS[k] || (f ? f.family : String(k).replace(/^font\./, "").replace(/-/g, " ")); },
   });
   function th(k) { return state.theme && state.theme[k] != null ? state.theme[k] : THEME_DEFAULTS[k]; }
   var SPACING_PX = { compact: 4, normal: 8, large: 16 };
@@ -947,10 +947,29 @@
     bar.appendChild(iconBtn("trash", "Supprimer le bloc", function () { remove(block.id); }, { "class": "mk-b-icon is-danger mk-b-blocktools-del" }));
     return bar;
   }
+  // Volets du panneau gauche (Styles, Message, Assistant…) : sections repliables, la première ouverte
+  if (window.MKSections) [].forEach.call(document.querySelectorAll(".mk-b-pane"), function (p) { MKSections.pane(p, p.id); });
   var builder = $("mk-editor");
   var propsTab = "content";
+  // Réglages du bloc : reconstruits à chaque changement de structure des champs. Pour le MÊME bloc et le MÊME onglet, le défilement du
+  // panneau et le champ en cours de saisie (focus, curseur) sont conservés : modifier une propriété ne déplace jamais l'inspecteur.
+  var propsShown = { id: null, tab: null };
   function renderProps() {
     if (!props) return;
+    var same = !!selectedId && propsShown.id === selectedId && propsShown.tab === propsTab;
+    var top = props.scrollTop, a = document.activeElement;
+    var keep = same && a && props.contains(a) && a !== props ? { id: a.id, tag: a.tagName, name: a.getAttribute("aria-label") || a.textContent, s: a.selectionStart, e: a.selectionEnd } : null;
+    renderPropsNow();
+    propsShown = { id: selectedId, tab: propsTab };
+    if (!same) return;
+    props.scrollTop = top;
+    if (keep) {
+      var n = keep.id ? document.getElementById(keep.id) : [].filter.call(props.querySelectorAll(keep.tag), function (x) { return (x.getAttribute("aria-label") || x.textContent) === keep.name; })[0]; // champ sans id (bouton) : retrouvé par son nom
+      if (n && n !== document.activeElement) { n.focus({ preventScroll: true }); try { if (keep.s != null) n.setSelectionRange(keep.s, keep.e); } catch (err) { /* champ sans sélection (case, liste…) */ } }
+    }
+    props.scrollTop = top;
+  }
+  function renderPropsNow() {
     props.textContent = "";
     var block = selectedId ? blockById(selectedId) : null;
     builder.classList.toggle("has-selection", !!block); // écran moyen / mobile : les réglages s'ouvrent en panneau
@@ -1000,13 +1019,18 @@
       tabs.appendChild(b);
     });
     props.appendChild(tabs);
+    // Sections repliables : la première est ouverte, les autres fermées (l'état choisi est mémorisé, jamais enregistré dans le message)
+    var shownSections = 0, collapsible = 0;
     tabSections(block, propsTab).forEach(function (sct) {
       if (!sct.nodes.length) return;
       var box = el("section", { "class": "mk-b-section" + (sct.cls ? " " + sct.cls : "") });
       if (sct.title) box.appendChild(el("h3", { "class": "mk-b-section-title" }, sct.title));
       sct.nodes.forEach(function (n) { box.appendChild(n); });
       panel.appendChild(box);
+      if (window.MKSections && sct.title && MKSections.enhance(box, { key: "props:" + propsTab + ":" + sct.title, open: collapsible === 0 })) collapsible++;
+      shownSections++;
     });
+    if (window.MKSections && collapsible > 1) panel.insertBefore(MKSections.tools(panel), panel.firstChild);
     props.appendChild(panel);
     if (toolbar) toolbar.render();
   }
@@ -1043,9 +1067,32 @@
     if (opts.disabled) b.disabled = true;
     return b;
   }
+  // La liste n'est reconstruite que si son contenu a vraiment changé (noms, résumés, étiquettes, ordre, boutons grisés). Avant, CHAQUE modification
+  // (et chaque réponse d'aperçu) la détruisait et la recréait en entier : la carte survolée perdait son survol, ses actions apparaissaient /
+  // disparaissaient et toutes les cartes se repeignaient. La sélection, elle, se met à jour sur place (markSelection) : elle n'entre pas dans la comparaison.
+  var structureSigs = null;
+  var normStructure = function (li) { return li.outerHTML.replace(/ is-selected/g, "").replace(/ aria-current="true"/g, ""); };
   function renderStructure() {
     if (!structure) return;
-    structure.textContent = "";
+    var live = structure, scratch = document.createElement("ol");
+    structure = scratch; // les écouteurs créés ci-dessous lisent « structure » à l'appel : elle est rétablie juste après la construction
+    try { buildStructure(); } finally { structure = live; }
+    var fresh = [].slice.call(scratch.children), sigs = fresh.map(normStructure);
+    if (structureSigs && structureSigs.length === sigs.length && live.children.length === sigs.length) {
+      // Même nombre de cartes : seules celles dont le contenu a changé sont remplacées, les autres ne sont pas touchées
+      sigs.forEach(function (sg, i) { if (sg !== structureSigs[i]) live.replaceChild(fresh[i], live.children[i]); });
+      [].forEach.call(live.querySelectorAll(".mk-structure-item"), function (li) { // la sélection est remise d'aplomb sur place
+        var on = li.getAttribute("data-id") === selectedId, b = li.querySelector(".mk-structure-btn");
+        li.classList.toggle("is-selected", on);
+        if (b) { if (on) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current"); }
+      });
+    } else {
+      live.textContent = "";
+      fresh.forEach(function (li) { live.appendChild(li); });
+    }
+    structureSigs = sigs;
+  }
+  function buildStructure() {
     var count = $("mk-structure-count"); if (count) count.textContent = state.blocks.length ? String(state.blocks.length) : "";
     if (!state.blocks.length) structure.appendChild(el("li", { "class": "mk-structure-empty" }, readOnly ? "Aucun bloc." : "Aucun bloc : ajoutez-en depuis l'onglet « Blocs »."));
     state.blocks.forEach(function (b, index) {
@@ -1292,6 +1339,14 @@
   bind("t-subject", function () { return state.subject || ""; }, function (v) { state.subject = v; });
   bind("t-preheader", function () { return state.preheader || ""; }, function (v) { state.preheader = v; });
   bind("t-footer", function () { return state.footer.text || ""; }, function (v) { state.footer.text = v; });
+  // Police principale du message : bibliothèque centrale (Font Manager) ; les polices sûres pour l'e-mail restent proposées en tête
+  (function () {
+    var sel = $("t-font");
+    if (!sel || !window.KFonts) return;
+    var legacy = [].map.call(sel.options, function (o) { return [o.value, o.textContent]; });
+    var picker = window.KFonts.picker({ value: sel.value, legacy: legacy, legacyStacks: function () { return FONT_STACKS; }, mode: "email", label: "Police principale", disabled: readOnly });
+    picker.id = "t-font"; sel.parentNode.replaceChild(picker, sel);
+  })();
   [["t-bg", "background"], ["t-cbg", "contentBackground"], ["t-text", "textColor"], ["t-accent", "accent"], ["t-secondary", "secondary"], ["t-font", "fontFamily"], ["t-spacing", "spacing"]].forEach(function (pair) {
     bind(pair[0], function () { return state.theme[pair[1]] || THEME_DEFAULTS[pair[1]]; }, function (v) { state.theme[pair[1]] = v; });
   });
@@ -1421,8 +1476,13 @@
         if (seq !== previewSeq) return; // réponse périmée
         if (!r.ok) { showError(r.j.error || "Aperçu impossible."); previewDone(); return; }
         showError("");
-        frame.style.minHeight = frame.offsetHeight + "px"; // pas de saut de défilement pendant le rechargement
-        frame.srcdoc = r.j.html;
+        captureAnchor();
+        // Mise à jour EN PLACE du document déjà affiché (aucune navigation : pas d'image blanche entre deux rendus, défilement et écouteurs
+        // conservés). Le rechargement complet (srcdoc) ne sert plus qu'au premier affichage ou si le cadre n'est pas dans l'état attendu.
+        if (!patchFrame(r.j.html)) {
+          frame.style.minHeight = frame.offsetHeight + "px"; // pas de saut de défilement pendant le rechargement
+          frame.srcdoc = r.j.html;
+        }
         $("mk-subject").textContent = r.j.subject;
         $("mk-text").textContent = r.j.text;
         blockErrors = r.j.blockErrors || [];
@@ -1433,6 +1493,25 @@
       .catch(function (e) { if (seq === previewSeq) { console.error("[éditeur] aperçu", e); showError("Aperçu impossible pour le moment : vérifiez votre connexion."); previewDone(); } });
   }
   function frameDoc() { try { return frame.contentDocument; } catch (e) { return null; } }
+  // Ancre de défilement : le canevas est rechargé à chaque modification (rendu serveur). On retient le défilement et la position du bloc
+  // sélectionné, puis on les rétablit au chargement (et quand une image ou une police finit de charger), pour que la vue ne saute pas.
+  // Un défilement fait par l'auteur annule l'ancre.
+  var anchor = null, anchorTimer = null;
+  function captureAnchor() {
+    var top = canvas.scrollTop, box = selectedId ? blockBox(selectedId) : null;
+    var vis = !!box && box.bottom > top && box.top < top + canvas.clientHeight;
+    anchor = { top: top, left: canvas.scrollLeft, id: vis ? selectedId : null, off: vis ? box.top - top : 0 };
+  }
+  function restoreAnchor() {
+    if (!anchor) return;
+    var t = anchor.top;
+    if (anchor.id) { var nb = blockBox(anchor.id); if (nb) t = nb.top - anchor.off; }
+    t = Math.max(0, Math.round(t));
+    if (Math.abs(canvas.scrollTop - t) > 1) canvas.scrollTop = t;
+    if (Math.abs(canvas.scrollLeft - anchor.left) > 1) canvas.scrollLeft = anchor.left;
+    clearTimeout(anchorTimer); anchorTimer = setTimeout(function () { anchor = null; }, 1500); // le temps que images et polices se posent
+  }
+  ["wheel", "touchstart", "mousedown", "keydown"].forEach(function (n) { canvas.addEventListener(n, function () { anchor = null; }, { passive: true }); });
   function rows() { var d = frameDoc(); return d ? [].slice.call(d.querySelectorAll("[data-mk-block]")) : []; }
   function fitFrame() { var d = frameDoc(); if (!d || !d.documentElement) return; frame.style.height = Math.max(400, d.documentElement.scrollHeight) + "px"; frame.style.minHeight = ""; placeBlockbar(); }
   // Coordonnées d'un bloc du rendu dans le canevas (le rendu peut être réduit : coordonnées internes × zoom)
@@ -1460,14 +1539,48 @@
     "[data-mk-block][data-mk-selected]>td{background-image:linear-gradient(rgba(2,119,182,.04),rgba(2,119,182,.04))}" +
     "[data-mk-block][data-mk-dragging]>td{opacity:.35}" +
     "#mk-insert::after{content:'Déposer ici';position:absolute;left:50%;top:-11px;transform:translateX(-50%);padding:0 10px;border-radius:10px;background:#0277b6;color:#fff;font:600 12px/20px -apple-system,Segoe UI,Roboto,Arial,sans-serif;white-space:nowrap}";
+  // Remplace le contenu du document du canevas par un nouveau rendu SANS le recharger : la tête (styles du message) est renouvelée en gardant le
+  // style d'édition injecté, le corps est reconstruit dans la même tâche (aucune image intermédiaire n'est peinte). Retourne false si le cadre
+  // n'est pas prêt : l'appelant recharge alors le document de façon classique.
+  function patchFrame(html) {
+    var d = frameDoc();
+    if (!d || !d.body || !d.head) return false;
+    var injected = d.head.querySelector("style[data-mk-injected]");
+    if (!injected) return false;
+    var next;
+    try { next = new DOMParser().parseFromString(html, "text/html"); } catch (e) { return false; }
+    if (!next.body || !next.head) return false;
+    [].slice.call(d.head.children).forEach(function (n) { if (n !== injected) d.head.removeChild(n); });
+    [].slice.call(next.head.children).forEach(function (n) { d.head.insertBefore(d.importNode(n, true), injected); });
+    [].slice.call(d.body.attributes).forEach(function (a) { d.body.removeAttribute(a.name); });
+    [].slice.call(next.body.attributes).forEach(function (a) { d.body.setAttribute(a.name, a.value); });
+    d.body.style.position = "relative";
+    while (d.body.firstChild) d.body.removeChild(d.body.firstChild);
+    [].slice.call(next.body.childNodes).forEach(function (n) { d.body.appendChild(d.importNode(n, true)); });
+    if (next.documentElement.lang) d.documentElement.lang = next.documentElement.lang;
+    fitFrame();
+    markSelection();
+    restoreAnchor();
+    watchLate(d);
+    setTimeout(previewDone, 0);
+    return true;
+  }
+  // Images et polices qui finissent de charger après coup : la hauteur du rendu est recalculée et la vue reste ancrée
+  function watchLate(d) {
+    var settle = function () { if (frameDoc() !== d) return; fitFrame(); restoreAnchor(); };
+    [].forEach.call(d.images || [], function (img) { if (!img.complete) { img.addEventListener("load", settle); img.addEventListener("error", settle); } });
+    if (d.fonts && d.fonts.ready) d.fonts.ready.then(settle);
+  }
   frame.addEventListener("load", decorateFrame);
   function decorateFrame() {
     var d = frameDoc();
     if (!d || !d.body) return;
-    var st = d.createElement("style"); st.textContent = EDIT_CSS; d.head.appendChild(st);
+    var st = d.createElement("style"); st.setAttribute("data-mk-injected", ""); st.textContent = EDIT_CSS; d.head.appendChild(st);
     d.body.style.position = "relative";
     fitFrame();
     markSelection();
+    restoreAnchor();
+    watchLate(d);
     setTimeout(previewDone, 0);
     d.addEventListener("click", function (e) {
       e.preventDefault(); // un lien de l'e-mail ne s'ouvre jamais dans l'éditeur
@@ -1982,7 +2095,9 @@
   }
   function applyInlineStyle() {
     var b = blockById(inline.id), st = inline.box.style;
-    st.fontFamily = FONT_STACKS[b.font || themeValue("fontFamily")] || "";
+    var fk = b.font || themeValue("fontFamily"), fl = window.KFonts && window.KFonts.byId(fk);
+    if (fl && window.KFonts) window.KFonts.ensure([fl.id]);
+    st.fontFamily = fl ? fl.stack + ", Arial, sans-serif" : FONT_STACKS[fk] || "";
     st.fontSize = (b.fontSize || 16) + "px";
     st.lineHeight = String(b.lineHeight || 1.6);
     st.color = b.color || themeValue("textColor");

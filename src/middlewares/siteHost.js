@@ -42,10 +42,29 @@ function siteRouting(req, res, next) {
   next();
 }
 
+// 2 bis. Page d'accueil du site principal choisie dans Paramètres → Lecture : « / » affiche cette page (réécriture interne, comme sur le domaine
+// d'un site) ; son adresse /p/<adresse> redirige vers « / » (une seule adresse). Si la page n'est plus publiée, l'accueil standard reprend.
+function mainHome() {
+  const id = require("../services/settings").main().homepagePage;
+  if (!id) return null;
+  const row = require("../config/database").prepare("SELECT id, slug, status, archived_at, site_id, kind FROM mk_landing_pages WHERE id = ?").get(id);
+  return row && row.status === "published" && !row.archived_at && row.site_id === null && row.kind !== "step" ? row : null;
+}
+function homeRouting(req, res, next) {
+  if (req.kwSite || !isRead(req)) return next();
+  let home = null;
+  try { home = mainHome(); } catch { return next(); }
+  if (!home) return next();
+  if (req.path === "/") { req.url = `/p/${home.slug}${queryOf(req)}`; return next(); }
+  if (req.path === `/p/${home.slug}`) return res.redirect(301, `/${queryOf(req)}`);
+  next();
+}
+
 // 3. Casse et barre finale : seulement pour les adresses de contenu public (jamais jetons, administration, fichiers, API)
 const NORMALIZED = /^\/(p|blog|cours|categorie|catalogue)(\/|$)/;
 function normalizePaths(req, res, next) {
   if (!isRead(req)) return next();
+  try { if (!require("../services/settings").main().normalizePaths) return next(); } catch { /* réglage indisponible : normalisation active */ }
   const raw = req.path;
   if (raw.includes("%")) return next(); // adresse encodée : jamais réécrite (les séquences %XX ne sont pas de la « casse »)
   const single = req.kwSite && /^\/[A-Za-z0-9-]+\/?$/.test(raw);
@@ -68,16 +87,22 @@ function movedFallback(req, res, next) {
 
 // 5. Environnement non public : jamais indexé (développement, adresse locale ou réseau privé), ou ALLOW_INDEXING=0 ; ALLOW_INDEXING=1 force l'ouverture
 const PRIVATE_HOST = /^(localhost|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1\]?$)|\.(local|localhost|internal|lan)$/i;
+// Visibilité masquée dans Paramètres → Indexation (site principal) : un seul point de décision pour l'en-tête HTTP, la balise robots, robots.txt et le plan du site
+function closedBySetting() {
+  try { return require("../services/settings").main().searchVisibility === "closed"; } catch { return false; }
+}
 function indexingAllowed(req) {
   if (process.env.ALLOW_INDEXING === "0") return false;
+  if (closedBySetting() && !(req && req.kwSite)) return false; // la visibilité du site principal ne ferme pas un site à domaine propre : il a son propre réglage
   if (process.env.ALLOW_INDEXING === "1") return true; // forcé (tests, préproduction publique volontaire)
   let host = "";
   try { host = process.env.SITE_URL ? new URL(process.env.SITE_URL).hostname : req.hostname; } catch { host = req.hostname; }
   return !PRIVATE_HOST.test(String(host || ""));
 }
 function indexingGuard(req, res, next) {
-  if (!indexingAllowed(req)) res.set("X-Robots-Tag", "noindex, nofollow");
+  // Environnement non public, visibilité masquée (site principal) ou site entier en noindex (réglage du site) : en-tête HTTP lu par les moteurs
+  if (!indexingAllowed(req) || (req.kwSite && req.kwSite.noindex)) res.set("X-Robots-Tag", "noindex, nofollow");
   next();
 }
 
-module.exports = { attachSite, siteRouting, normalizePaths, movedFallback, indexingGuard, indexingAllowed, MISSING };
+module.exports = { closedBySetting, attachSite, homeRouting, siteRouting, normalizePaths, movedFallback, indexingGuard, indexingAllowed, MISSING };

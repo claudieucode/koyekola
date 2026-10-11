@@ -56,7 +56,8 @@ function renderRegion(req, res, db, type, { category = "", categories = [], tag 
       if (err) return end(null);
       // Source de vérité unique : si l'apparence du site (Apparence → Styles) est publiée, ses jetons habillent aussi les modèles de thème
       const main = require("../../services/appearance").publishedTokens();
-      const css = [main ? require("../pages/themeCss").themeCss(main) : siteOk && siteOk.assets.theme, vm.nodeCss, siteOk && siteOk.assets.custom, vm.customCss].filter(Boolean).join("\n").replace(/</g, "");
+      const faces = require("../../utils/fontLibrary").faceCssFor(tokens.tokensToCss(main || (siteOk && siteOk.tokens) || {}));
+      const css = [faces, main ? require("../pages/themeCss").themeCss(main) : siteOk && siteOk.assets.theme, vm.nodeCss, siteOk && siteOk.assets.custom, vm.customCss].filter(Boolean).join("\n").replace(/</g, "");
       const style = siteOk || main ? ` style="${tokens.tokensToCss(main || siteOk.tokens).replace(/"/g, "&quot;")} --lp-accent: var(--kw-primary)"` : "";
       end(`<div class="kw-theme-template${siteOk || main ? " lp-site" : ""}"${style}><link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/landing.css") : "/css/landing.css"}"><style>${css}</style><div class="lp-main">${body}</div></div>`);
     });
@@ -70,7 +71,7 @@ function previewScope(db, ctx, page) {
     if (types.includes("single_course")) {
       const c = db.prepare("SELECT * FROM courses WHERE published = 1 ORDER BY created_at DESC, id DESC LIMIT 1").get();
       if (!c) return {};
-      return { course: { title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "", category: c.category || "", instructor: "", description: String(c.description || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 400) } };
+      return { course: { id: c.id, title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "", category: c.category || "", instructor: "", description: String(c.description || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 400) } };
     }
     if (types.some((t) => ["blog_archive", "author_archive", "search_results"].includes(t)) && !types.includes("single_post")) {
       const total = db.prepare("SELECT COUNT(*) n FROM posts WHERE published = 1 AND deleted_at IS NULL").get().n;

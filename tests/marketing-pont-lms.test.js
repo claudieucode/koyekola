@@ -101,7 +101,7 @@ describe("inscription", () => {
     assert.equal(c.status, "subscribed");
     const [proof] = compliance.consentHistory(A, c.id);
     assert.deepEqual([proof.source, proof.text_shown, proof.ip], ["signup", bridge.SIGNUP_CONSENT_TEXT, "203.0.113.0"]);
-    assert.deepEqual(m.db.prepare("SELECT name FROM mk_events ORDER BY id").all().map((e) => e.name), ["contact.created", "contact.subscribed"]);
+    assert.deepEqual(m.db.prepare("SELECT name FROM mk_events ORDER BY id").all().map((e) => e.name), ["contact.created", "user.registered", "contact.subscribed"]); // Contact Core : l'inscription est journalisée
     assert.equal(compliance.isSendable(A, c.id).ok, true);
   });
   test("un ancien désinscrit qui coche la case lui-même se réabonne (c'est bien la personne) ; un supprimé, jamais", () => {

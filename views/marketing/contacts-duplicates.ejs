@@ -1,0 +1,29 @@
+<%- include("partials/top", { title, active }) %>
+    <p class="mk-back"><a href="/marketing/contacts">← Contacts</a></p>
+    <div class="mk-head"><h1>Doublons possibles <span class="mk-count"><%= groups.length %></span></h1></div>
+    <p class="mk-lead">KOLAKISA repère les fiches qui semblent concerner la même personne. Rien n'est fusionné automatiquement : vous comparez, puis vous décidez. Une fusion ne supprime aucune fiche.</p>
+    <% if (!groups.length) { %>
+      <div class="mk-empty">
+        <%- icon("users", { size: 32 }) %>
+        <h2>Aucun doublon repéré</h2>
+        <p>Les doublons sont cherchés sur le numéro de téléphone normalisé (fiable) et sur le même nom avec la même entreprise (à vérifier). Les adresses e-mail identiques ne peuvent pas exister : une adresse = une fiche.</p>
+      </div>
+    <% } else { groups.forEach((g, n) => { %>
+      <section class="mk-panel" aria-labelledby="dup-<%= n %>">
+        <h2 id="dup-<%= n %>"><%= g.reason %> <span class="mk-status <%= g.level === "strong" ? "mk-status-warn" : "" %>"><%= g.level === "strong" ? "Probable" : "À vérifier" %></span></h2>
+        <div class="mk-table-wrap"><table class="mk-table">
+          <caption class="sr-only"><%= g.reason %> : fiches concernées</caption>
+          <thead><tr><th scope="col">E-mail</th><th scope="col">Nom</th><th scope="col">Entreprise</th><th scope="col">Créée le</th><th scope="col">Comparer</th></tr></thead>
+          <tbody>
+            <% g.contacts.forEach((c, i) => { %>
+              <tr>
+                <td><a href="/marketing/contacts/<%= c.id %>"><%= c.email %></a></td>
+                <td><%= mkh.fullName(c) || "—" %></td><td><%= c.company || "—" %></td><td><%= mkh.fdate(c.created_at) %></td>
+                <td><% if (i > 0) { %><a class="btn btn-outline btn-sm" href="/marketing/contacts/fusion?maitre=<%= g.contacts[0].id %>&source=<%= c.id %>">Fusionner dans la fiche #<%= g.contacts[0].id %></a><% } else { %><span class="field-hint">fiche la plus ancienne</span><% } %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table></div>
+      </section>
+    <% }) } %>
+<%- include("partials/bottom") %>

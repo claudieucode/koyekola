@@ -242,7 +242,7 @@ router.get("/cours/:slug", (req, res) => {
   ];
 
   // Modèle de thème « Formation » (Page Builder) : remplace l'en-tête de la fiche ; le programme, l'achat et les avis restent
-  const courseScope = { title: course.title, subtitle: course.subtitle || "", priceCents: course.price_cents || 0, url: `/cours/${encodeURIComponent(course.slug)}`,
+  const courseScope = { id: course.id, title: course.title, subtitle: course.subtitle || "", priceCents: course.price_cents || 0, url: `/cours/${encodeURIComponent(course.slug)}`,
     image: /^\/uploads\/thumbnails\/[A-Za-z0-9._-]+$/.test(course.thumbnail_path || "") || /^https:\/\/[^\s"'<>]+$/.test(course.thumbnail_path || "") ? course.thumbnail_path : "",
     category: course.category || "", instructor: course.instructor_name || "", description: plainText(course.description || "").slice(0, 400) };
   themeRender.renderRegion(req, res, db, "single_course", { category: course.category || "", scope: { course: courseScope } }, (themeTemplate) => res.render("course-detail", {

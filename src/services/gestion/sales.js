@@ -43,7 +43,10 @@ function getOrder(instructorId, id) {
       (SELECT COUNT(*) FROM lesson_progress lp JOIN lessons l ON l.id = lp.lesson_id JOIN sections s ON s.id = l.section_id WHERE s.course_id = c.id AND lp.user_id = ?) AS done
     FROM order_items oi JOIN courses c ON c.id = oi.course_id WHERE oi.order_id = ? ORDER BY oi.id`).all(instructorId, order.user_id, order.user_id, order.id);
   const mine = items.filter((i) => i.mine);
-  return { order, items: mine, otherItems: items.length - mine.length, myAmount: mine.reduce((s, i) => s + i.price_cents, 0) };
+  // Paiement réel (Stripe) ou non : lu dans la session de paiement qui a créé la commande ; remboursements annoncés par Stripe (palier 20)
+  const paid = db.prepare("SELECT 1 FROM checkout_sessions WHERE order_id = ? AND stripe_session_id IS NOT NULL").get(order.id);
+  const refunds = db.prepare("SELECT id, amount_cents, created_at FROM order_refunds WHERE order_id = ? ORDER BY id").all(order.id);
+  return { order, items: mine, otherItems: items.length - mine.length, myAmount: mine.reduce((s, i) => s + i.price_cents, 0), stripePaid: Boolean(paid), refunds, refundedCents: refunds.reduce((n, r) => n + r.amount_cents, 0) };
 }
 
 function myCourses(instructorId) {

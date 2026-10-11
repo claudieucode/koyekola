@@ -1,7 +1,9 @@
 <%- include("partials/top", { title, active }) %>
 <%
-  const canWrite = mk.can("contacts.write");
+  const canWrite = mk.can("contacts.manage_fields");
   const TYPE_LABEL = { text: "Texte", number: "Nombre", date: "Date", boolean: "Oui / non", select: "Choix" };
+  const FORMAT_LABEL = { url: "Adresse web (URL)", email: "Adresse e-mail", phone: "Téléphone" };
+  const typeLabel = (d) => (d.format ? FORMAT_LABEL[d.format] : d.type === "select" && d.multiple === 1 ? "Choix multiple" : TYPE_LABEL[d.type]);
 %>
     <div class="mk-head"><h1>Propriétés personnalisées <span class="mk-count"><%= defs.length %></span></h1></div>
     <p class="mk-lead">Des champs supplémentaires sur vos contacts (niveau, ville, date de naissance…), typés et utilisables dans les segments.</p>
@@ -23,7 +25,7 @@
               <tr>
                 <td data-label="Propriété"><%= d.label %></td>
                 <td data-label="Clé"><code><%= d.key %></code></td>
-                <td data-label="Type"><%= TYPE_LABEL[d.type] %></td>
+                <td data-label="Type"><%= typeLabel(d) %></td>
                 <td data-label="Options"><%= JSON.parse(d.options).join(", ") || "—" %></td>
                 <td class="mk-num" data-label="Renseignée pour"><%= mkh.fmt(n) %> contact<%= n > 1 ? "s" : "" %></td>
               </tr>
@@ -60,9 +62,13 @@
                 <option value="date">Date</option>
                 <option value="boolean">Oui / non</option>
                 <option value="select">Choix dans une liste</option>
+                <option value="multiselect">Choix multiple (plusieurs valeurs)</option>
+                <option value="url">Adresse web (URL)</option>
+                <option value="email">Adresse e-mail</option>
+                <option value="phone">Téléphone</option>
               </select>
             </div>
-            <div class="field-group" data-mk-show-for="select">
+            <div class="field-group" data-mk-show-for="select,multiselect">
               <label for="pr-options">Options <span class="field-hint">(une par ligne)</span></label>
               <textarea id="pr-options" name="options" rows="3" placeholder="débutant&#10;confirmé"></textarea>
             </div>

@@ -79,6 +79,16 @@
       options.forEach(function (x) { sel.appendChild(el("option", { value: String(x[0]) }, x[1])); });
       sel.value = target[key] == null ? (o.inherit ? "" : String(o.fallback)) : String(target[key]);
       sel.disabled = ro();
+      // Police : bibliothèque centrale (Font Manager) ; même comportement, mêmes valeurs enregistrées
+      if ((key === "font" || key === "fontFamily") && window.KFonts) {
+        var kf = window.KFonts.picker({ value: sel.value, legacy: options, emptyLabel: o.inherit || null, mode: "email", label: labelText, disabled: ro() });
+        kf.id = sel.id;
+        kf.addEventListener("change", function () {
+          if (kf.value === "" && o.inherit) delete target[key]; else target[key] = kf.value;
+          changed(o.structural); if (o.rerender) api.rerender();
+        });
+        return field(labelText, kf, { hint: o.hint });
+      }
       sel.addEventListener("change", function () {
         if (sel.value === "" && o.inherit) delete target[key];
         else target[key] = o.int ? parseInt(sel.value, 10) : o.float ? parseFloat(sel.value) : sel.value;

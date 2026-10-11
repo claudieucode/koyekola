@@ -37,7 +37,11 @@ module.exports = ({ db }) => {
       const user = req.session && req.session.user;
       if (user) {
         const contact = db.prepare("SELECT id FROM mk_contacts WHERE organization_id = ? AND email = lower(trim(?))").get(marketing.organizationId, user.email);
-        if (contact) visitors.linkVisitor(db, marketing.organizationId, visitorId, contact.id);
+        if (contact) {
+          visitors.linkVisitor(db, marketing.organizationId, visitorId, contact.id);
+          // Personne connectée : son parcours déjà suivi rejoint son contact (une seule fois par visiteur : idempotent de toute façon)
+          try { require("../funnels/events").replayVisitor({ db, organizationId: marketing.organizationId, bus: marketing.bus, userId: null, audit: false }, visitorId, contact.id); } catch (error) { console.error("[KOLAKISA] Parcours du visiteur :", error.message); }
+        }
       }
       // Contact connu : ses visites de pages et d'étapes de tunnels peuvent déclencher des automatisations
       if (result.ok && (result.pageViews.length || result.signals.length)) {

@@ -31,6 +31,9 @@ function normalizeTheme(input) {
     try { require("./nodes").normalizePageCss(css); } catch (e) { throw bad(e.message); }
     theme.css = css.slice(0, 8000);
   }
+  // Format de mise en page (conception guidée) : valeur du thème, enregistrée et versionnée avec la page
+  const layout = layoutFormat.normalizeLayout(input && input.layout);
+  if (layout) theme.layout = layout;
   return theme;
 }
 
@@ -89,6 +92,7 @@ function normalizeContent(ctx, page, input = {}) {
 
 // Widgets réservés (HTML…) : vérifiés pour la personne connectée (ctx.can, posé par les routes web). Un appel interne
 // sans ctx.can (script, tâche de fond, tests du moteur) n'est pas limité.
+const layoutFormat = require("./layoutFormat");
 function checkWidgetRights(ctx, before, after) {
   if (typeof ctx.can !== "function") return;
   try { require("./nodes").lockedWidgetChanges(before, after, ctx.can); } catch (e) { throw new MarketingError("forbidden_widget", e.message); }
@@ -100,15 +104,21 @@ function saveDraft(ctx, id, input = {}, { revision, record = true } = {}) {
   const page = requirePage(ctx, id);
   if (page.archived_at) throw bad("Cette page est archivée : restaurez-la pour la modifier.");
   if (!Number.isInteger(revision)) throw bad("Révision manquante.");
-  const content = normalizeContent(ctx, page, input);
+  // Diagnostics non bloquants (réglages écartés car inapplicables) : renvoyés à l'éditeur, qui nettoie son document
+  const warnings = [];
+  const previous = ctx.__warnings;
+  ctx.__warnings = warnings;
+  let content;
+  try { content = normalizeContent(ctx, page, input); } finally { ctx.__warnings = previous; }
   checkWidgetRights(ctx, [...page.working.sections, ...page.published.sections], content.sections);
+  layoutFormat.checkLocked(page.working, content);
   const next = revision + 1;
   const changed = ctx.db.prepare("UPDATE mk_landing_pages SET draft = ?, revision = ?, updated_at = datetime('now') WHERE id = ? AND organization_id = ? AND revision = ?")
     .run(JSON.stringify(content), next, id, ctx.organizationId, revision).changes;
   if (!changed) throw conflict();
   // Historique commun (palier 10) : l'état du brouillon est conservé comme point d'historique (jamais bloquant)
   if (record) require("../../services/revisions").hooks.pageDraft(ctx, page, content);
-  return { revision: next, content };
+  return { revision: next, content, warnings };
 }
 
 function discardDraft(ctx, id) {
@@ -189,7 +199,7 @@ function uniqueName(ctx, table, base) {
 }
 
 // Nouvelle page dans un site (ou isolée) : même création que les pages d'atterrissage, avec sa nature
-function createPage(ctx, { name, siteId = null, kind = "page", template = null } = {}) {
+function createPage(ctx, { name, siteId = null, kind = "page", template = null, layout = null, blank = false } = {}) {
   if (!Object.hasOwn(KINDS, kind)) throw bad("Nature de page inconnue.");
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   // Gabarit choisi : ses sections (validées par la grammaire commune, comme toute section enregistrée)
@@ -204,15 +214,30 @@ function createPage(ctx, { name, siteId = null, kind = "page", template = null }
     ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(sections), page.id);
     if (mine && mine.content.theme) ctx.db.prepare("UPDATE mk_landing_pages SET theme = ? WHERE id = ?").run(JSON.stringify(normalizeTheme(mine.content.theme)), page.id);
     audit(ctx, "page.created_from_template", "landing", page.id, { template });
-    return requirePage(ctx, page.id);
+    return withLayout(ctx, page.id, layout);
   }
   // Page de site : un bandeau et un texte (la section d'inscription des pages d'atterrissage demanderait un formulaire
   // avant toute publication)
-  if (kind === "page" || kind === "step") {
+  // Page vierge demandée explicitement (éditeur) : aucune section, l'éditeur propose alors création classique ou guidée. Sans `blank`, le contenu de départ historique est inchangé.
+  if (blank) ctx.db.prepare("UPDATE mk_landing_pages SET sections = '[]' WHERE id = ?").run(page.id);
+  else if (kind === "page" || kind === "step") {
     const start = [{ ...page.sections[0], id: newSectionId() }, { type: "text", markdown: "Présentez ici le contenu de la page.", id: newSectionId() }];
     ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(start), page.id);
   }
-  return requirePage(ctx, page.id);
+  return withLayout(ctx, page.id, layout);
+}
+// Conception guidée dès la création : le format est écrit dans le thème de la page (aucune migration)
+function withLayout(ctx, id, layout) {
+  if (layout) {
+    const norm = layoutFormat.normalizeLayout(layout);
+    if (norm) {
+      const row = ctx.db.prepare("SELECT theme FROM mk_landing_pages WHERE id = ?").get(id);
+      const theme = { ...JSON.parse(row.theme || "{}"), layout: norm };
+      ctx.db.prepare("UPDATE mk_landing_pages SET theme = ? WHERE id = ?").run(JSON.stringify(theme), id);
+      audit(ctx, "page.layout_format_set", "landing", id, { format: norm.format, locked: norm.locked });
+    }
+  }
+  return requirePage(ctx, id);
 }
 
 // Copie : contenu de travail (brouillon s'il existe), en brouillon, hors ligne, nouvelle adresse
@@ -231,8 +256,11 @@ function duplicatePage(ctx, id, { siteId } = {}) {
 }
 
 // Archiver : la page est retirée du site (hors ligne) et des listes ; rien n'est effacé (statistiques, versions)
-function archivePage(ctx, id) {
+function archivePage(ctx, id, { detach = false } = {}) {
   requirePage(ctx, id);
+  // Palier 18 : une page utilisée par un tunnel actif ne part pas à la corbeille en silence (refus listant les tunnels, ou détachement explicite)
+  require("../funnels").guardPageRemoval(ctx, id, { detach, action: "mise à la corbeille" });
+  require("./abtests").guardPageRemoval(ctx, id, "mise à la corbeille"); // palier 22 : une page testée ne disparaît pas en silence
   ctx.db.prepare("UPDATE mk_landing_pages SET archived_at = datetime('now'), status = CASE status WHEN 'published' THEN 'unpublished' ELSE status END, revision = revision + 1, updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
   ctx.db.prepare("UPDATE mk_sites SET home_page_id = NULL WHERE home_page_id = ? AND organization_id = ?").run(id, ctx.organizationId);
   audit(ctx, "page.archived", "landing", id, {});
@@ -419,15 +447,24 @@ function duplicateSite(ctx, id) {
 
 // ---------- Composants réutilisables ----------
 
+const COMPONENT_KINDS = ["standard", "global"];
+// Nombre d'éléments (blocs) d'une section de composant : la section libre compte ses éléments imbriqués, un autre type de section compte pour un
+function countBlocks(section) {
+  if (!section) return 0;
+  const walk = (list) => list.reduce((n, x) => n + 1 + walk(Array.isArray(x.children) ? x.children : []), 0);
+  return section.type === "layout" ? walk(Array.isArray(section.children) ? section.children : []) : 1;
+}
+// « global » = portée (tous les sites) ; « kind » = nature (modèle standard ou référence globale à instances liées)
+const readComponent = (row) => row ? { ...row, section: json(row.section, null), draft: json(row.draft, null), hasDraft: Boolean(row.draft), global: row.site_id === null, kind: row.kind || "standard", blocks: countBlocks(json(row.section, null)) } : null;
 function listComponents(ctx, { siteId = null } = {}) {
   checkCtx(ctx);
   return ctx.db.prepare("SELECT * FROM mk_web_components WHERE organization_id = ? AND (site_id IS NULL OR site_id = ?) ORDER BY name COLLATE NOCASE")
-    .all(ctx.organizationId, siteId).map((c) => ({ ...c, section: json(c.section, null), global: c.site_id === null }));
+    .all(ctx.organizationId, siteId).map(readComponent);
 }
 function getComponent(ctx, id) {
   checkCtx(ctx);
   const row = Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_web_components WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) : null;
-  return row ? { ...row, section: json(row.section, null), global: row.site_id === null } : null;
+  return readComponent(row);
 }
 // Une section enregistrée comme composant : jamais un composant dans un composant (pas de boucle possible)
 function componentSection(ctx, section) {
@@ -435,16 +472,17 @@ function componentSection(ctx, section) {
   const { id: _id, ...rest } = section;
   return normalizeSection(ctx, rest, 0);
 }
-function createComponent(ctx, { name, section, siteId = null } = {}) {
+function createComponent(ctx, { name, section, siteId = null, kind = "standard" } = {}) {
   checkCtx(ctx);
+  if (!COMPONENT_KINDS.includes(kind)) throw bad("Nature de composant inconnue (standard ou global).");
   const n = line(name, 80);
   if (!n) throw bad("Le nom du composant est obligatoire.");
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   if (ctx.db.prepare("SELECT 1 FROM mk_web_components WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, n)) throw new MarketingError("duplicate", "Un composant porte déjà ce nom.");
   checkWidgetRights(ctx, [], [componentSection(ctx, section)]);
-  const id = Number(ctx.db.prepare("INSERT INTO mk_web_components (organization_id, site_id, name, section, created_by) VALUES (?, ?, ?, ?, ?)")
-    .run(ctx.organizationId, siteId, n, JSON.stringify(componentSection(ctx, section)), ctx.userId ?? null).lastInsertRowid);
-  audit(ctx, "component.created", "component", id, {});
+  const id = Number(ctx.db.prepare("INSERT INTO mk_web_components (organization_id, site_id, name, section, kind, created_by) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(ctx.organizationId, siteId, n, JSON.stringify(componentSection(ctx, section)), kind, ctx.userId ?? null).lastInsertRowid);
+  audit(ctx, "component.created", "component", id, { kind });
   return getComponent(ctx, id);
 }
 // global : true = partagé par tous les sites ; false = réservé au site siteId (refusé s'il est utilisé ailleurs)
@@ -471,6 +509,47 @@ function updateComponent(ctx, id, { name, section, global, siteId } = {}) {
   audit(ctx, "component.updated", "component", c.id, {});
   return getComponent(ctx, c.id);
 }
+// Copie de travail : modifiée dans l'éditeur du composant, SANS effet sur les pages tant que la mise à jour n'est pas demandée
+function saveComponentDraft(ctx, id, section) {
+  const c = getComponent(ctx, id);
+  if (!c) throw new MarketingError("not_found", "Composant introuvable.");
+  const s = componentSection(ctx, section);
+  checkWidgetRights(ctx, [c.section], [s]);
+  ctx.db.prepare("UPDATE mk_web_components SET draft = ?, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(s), c.id);
+  return getComponent(ctx, c.id);
+}
+// Mise à jour explicite : la copie de travail devient la version diffusée (les instances liées l'affichent), numéro de version + 1
+function publishComponent(ctx, id) {
+  const c = getComponent(ctx, id);
+  if (!c) throw new MarketingError("not_found", "Composant introuvable.");
+  if (!c.draft) return { component: c, changed: false, instances: componentInstances(ctx, c.id) };
+  checkWidgetRights(ctx, [c.section], [c.draft]);
+  transaction(ctx.db, () => {
+    ctx.db.prepare("UPDATE mk_web_components SET section = ?, draft = NULL, version = version + 1, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(c.draft), c.id);
+    audit(ctx, "component.published", "component", c.id, { version: c.version + 1 });
+  });
+  return { component: getComponent(ctx, c.id), changed: true, instances: componentInstances(ctx, c.id) };
+}
+function discardComponentDraft(ctx, id) {
+  const c = getComponent(ctx, id);
+  if (!c) throw new MarketingError("not_found", "Composant introuvable.");
+  ctx.db.prepare("UPDATE mk_web_components SET draft = NULL, updated_at = datetime('now') WHERE id = ?").run(c.id);
+  return getComponent(ctx, c.id);
+}
+// Instances liées réellement présentes dans le contenu de travail de chaque page (brouillon s'il existe, sinon version en ligne) : nombre exact, pas une recherche de texte
+function countRefs(list, id) {
+  return (Array.isArray(list) ? list : []).reduce((n, x) => n + (x && x.type === "component" && Number(x.componentId) === Number(id) ? 1 : 0), 0);
+}
+function componentInstances(ctx, id) {
+  const rows = ctx.db.prepare("SELECT id, name, status, site_id, sections, draft FROM mk_landing_pages WHERE organization_id = ? AND (sections LIKE ? OR sections LIKE ? OR draft LIKE ? OR draft LIKE ?) ORDER BY name")
+    .all(ctx.organizationId, `%"componentId":${Number(id)}}%`, `%"componentId":${Number(id)},%`, `%"componentId":${Number(id)}}%`, `%"componentId":${Number(id)},%`);
+  const out = rows.map((p) => {
+    const draft = json(p.draft, null);
+    const working = draft && Array.isArray(draft.sections) ? draft.sections : json(p.sections, []);
+    return { id: p.id, name: p.name, status: p.status, site_id: p.site_id, count: countRefs(working, id), live: countRefs(json(p.sections, []), id) };
+  }).filter((p) => p.count > 0 || p.live > 0);
+  return out;
+}
 // Pages (en ligne ou en brouillon) qui affichent ce composant synchronisé
 function componentUsage(ctx, id) {
   const n = Number(id);
@@ -478,17 +557,74 @@ function componentUsage(ctx, id) {
   return ctx.db.prepare("SELECT id, name, status, site_id FROM mk_landing_pages WHERE organization_id = ? AND (sections LIKE ? OR sections LIKE ? OR draft LIKE ? OR draft LIKE ?) ORDER BY name")
     .all(ctx.organizationId, end, mid, end, mid);
 }
-function deleteComponent(ctx, id) {
+// Copie profonde d'une section de composant avec de NOUVEAUX identifiants (sections et éléments) : une instance détachée ne partage aucun identifiant avec la source
+function freshIds(section) {
+  const crypto = require("crypto");
+  const nid = () => crypto.randomBytes(6).toString("hex");
+  const walk = (x) => {
+    const y = { ...x, id: nid() };
+    if (Array.isArray(x.children)) y.children = x.children.map(walk);
+    return y;
+  };
+  return walk(section);
+}
+// Transforme une liste de sections : chaque instance liée au composant est retirée (mode « instances ») ou remplacée par une copie indépendante (mode « detach »)
+function convertRefs(list, c, mode) {
+  let changed = 0;
+  const out = [];
+  for (const x of Array.isArray(list) ? list : []) {
+    if (x && x.type === "component" && Number(x.componentId) === c.id) {
+      changed += 1;
+      if (mode === "detach") {
+        const copy = freshIds(c.section);
+        const { type: _t, componentId: _c, ...attrs } = x;
+        out.push({ ...copy, ...(attrs.hideOn ? { hideOn: attrs.hideOn } : {}), ...(attrs.name ? { name: attrs.name } : {}), id: x.id || copy.id });
+      }
+    } else out.push(x);
+  }
+  return { list: out, changed };
+}
+const DELETE_MODES = ["instances", "detach"];
+// Suppression intelligente. Sans instance liée : suppression directe. Avec des instances : un choix OBLIGATOIRE — « instances » (supprimer aussi les instances liées)
+// ou « detach » (les conserver, devenues indépendantes). Tout se passe dans UNE transaction : en cas d'échec, rien n'est modifié (aucune instance orpheline).
+// skipDraftOfPage : le brouillon de cette page est converti par l'éditeur ouvert (annulable) ; sa version en ligne, elle, est traitée ici.
+function deleteComponent(ctx, id, { mode = null, skipDraftOfPage = null } = {}) {
   const c = getComponent(ctx, id);
   if (!c) throw new MarketingError("not_found", "Composant introuvable.");
   const asPart = ctx.db.prepare("SELECT name FROM mk_sites WHERE organization_id = ? AND (header_component_id = ? OR footer_component_id = ?)").all(ctx.organizationId, c.id, c.id);
   if (asPart.length) throw new MarketingError("in_use", `Ce composant est l'en-tête ou le pied de page du site ${asPart.map((x) => `« ${x.name} »`).join(", ")} : choisissez-en un autre d'abord.`);
   const asVariant = ctx.db.prepare("SELECT name FROM mk_landing_pages WHERE organization_id = ? AND header_component_id = ?").all(ctx.organizationId, c.id);
-  if (asVariant.length) throw new MarketingError("in_use", `Cette variante est l'en-tête de ${asVariant.length} page(s) : ${asVariant.map((x) => `« ${x.name} »`).join(", ")}. Remettez-les sur l'en-tête du site d'abord.`);
-  const used = componentUsage(ctx, c.id);
-  if (used.length) throw new MarketingError("in_use", `Ce composant est utilisé par ${used.length} page(s) : ${used.map((p) => `« ${p.name} »`).join(", ")}. Retirez-le de ces pages d'abord.`);
-  ctx.db.prepare("DELETE FROM mk_web_components WHERE id = ?").run(c.id);
-  audit(ctx, "component.deleted", "component", c.id, {});
+  if (asVariant.length) throw new MarketingError("in_use", `Cette variante est l'en-tête de ${asVariant.length} page(s) : ${asVariant.map((x) => `« ${x.name} »`).join(", ")}. Remettez-les sur l'en-tête du site (page › en-tête) avant de supprimer cette variante.`);
+  const used = componentInstances(ctx, c.id);
+  if (used.length && !mode) {
+    const error = new MarketingError("in_use", `Ce composant a encore des instances liées dans ${used.length} page(s) : ${used.map((p) => `« ${p.name} »`).join(", ")}. Choisissez : les supprimer aussi, ou les conserver comme blocs indépendants.`);
+    error.details = { instances: used.reduce((n, p) => n + p.count, 0), pages: used };
+    throw error;
+  }
+  if (mode && !DELETE_MODES.includes(mode)) throw bad("Choix de suppression inconnu (instances ou detach).");
+  let converted = 0, pagesTouched = 0;
+  const revisions = {}; // nouvelle révision des pages modifiées : l'éditeur ouvert sur l'une d'elles évite ainsi un faux conflit à son prochain enregistrement
+  transaction(ctx.db, () => {
+    for (const p of used) {
+      const row = ctx.db.prepare("SELECT id, sections, draft, revision FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(p.id, ctx.organizationId);
+      const live = convertRefs(json(row.sections, []), c, mode);
+      let draftJson = row.draft, dChanged = 0;
+      if (row.draft && Number(skipDraftOfPage) !== row.id) {
+        const d = json(row.draft, null);
+        if (d && Array.isArray(d.sections)) { const r = convertRefs(d.sections, c, mode); dChanged = r.changed; draftJson = JSON.stringify({ ...d, sections: r.list }); }
+      }
+      if (!live.changed && !dChanged) continue;
+      ctx.db.prepare("UPDATE mk_landing_pages SET sections = ?, draft = ?, revision = revision + 1, updated_at = datetime('now') WHERE id = ? AND organization_id = ?")
+        .run(live.changed ? JSON.stringify(live.list) : row.sections, draftJson, row.id, ctx.organizationId);
+      converted += live.changed + dChanged; pagesTouched += 1; revisions[row.id] = row.revision + 1;
+    }
+    // Garde-fou : plus aucune référence (hors brouillon géré par l'éditeur ouvert) ne doit pointer vers ce composant
+    const left = componentInstances(ctx, c.id).filter((p) => Number(skipDraftOfPage) !== p.id || p.live > 0);
+    if (left.length) throw new MarketingError("failed", "La conversion des instances n'a pas abouti : rien n'a été supprimé.");
+    ctx.db.prepare("DELETE FROM mk_web_components WHERE id = ?").run(c.id);
+    audit(ctx, "component.deleted", "component", c.id, { mode: mode || "none", pages: pagesTouched, instances: converted });
+  });
+  return { mode: mode || "none", pages: pagesTouched, instances: converted, revisions };
 }
 // Affichage : chaque composant synchronisé est remplacé par sa dernière version (un composant supprimé disparaît)
 // ---------- Parties globales d'un site (en-tête, pied de page) ----------
@@ -657,7 +793,7 @@ module.exports = {
   getPage, requirePage, listPages, normalizeContent, saveDraft, discardDraft, publish, unpublish, listVersions, getVersion, restoreVersion,
   createPage, duplicatePage, archivePage, restorePage,
   getSite, requireSite, listSites, sitePages, createSite, updateSite, saveSiteDesign, colorUsage, setHomePage, movePage, archiveSite, restoreSite, duplicateSite,
-  listComponents, getComponent, createComponent, updateComponent, componentUsage, deleteComponent, resolveSections,
+  listComponents, getComponent, createComponent, updateComponent, componentUsage, componentInstances, saveComponentDraft, publishComponent, discardComponentDraft, deleteComponent, COMPONENT_KINDS, resolveSections,
   siteParts, withSiteParts, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
   normalizeSeo, normalizeTheme, TYPES,
 };

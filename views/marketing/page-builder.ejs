@@ -10,6 +10,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/page-builder.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/font-manager.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/media-picker.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/page-builder-menu.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/site-settings.css') %>">
@@ -46,8 +47,10 @@
         <button type="button" class="pb-icon-btn" data-pb-toggle="outlines" aria-pressed="false" data-tip="Contours de tous les éléments" aria-label="Contours des éléments"><%- icon("borderBox", { size: 15 }) %></button>
         <button type="button" class="pb-icon-btn" data-pb-toggle="rulers" aria-pressed="false" data-tip="Règles et guides (R)" aria-label="Règles"><%- icon("spacing", { size: 15 }) %></button>
         <button type="button" class="pb-icon-btn" data-pb-toggle="snap" aria-pressed="true" data-tip="Magnétisme (Maj + M) : les tailles s'accrochent aux guides, à la grille et aux autres éléments. Alt : mouvement libre" aria-label="Magnétisme"><%- icon("grip", { size: 15 }) %></button>
-        <button type="button" class="pb-icon-btn" data-pb-rules-menu aria-haspopup="menu" aria-expanded="false" data-tip="Règles, guides et magnétisme : réglages" aria-label="Règles, guides et magnétisme : réglages"><%- icon("sliders", { size: 15 }) %></button>
+        <button type="button" class="pb-icon-btn" data-pb-rules-menu aria-haspopup="menu" aria-expanded="false" data-tip="Règles et magnétisme" aria-label="Règles, guides et magnétisme : réglages"><%- icon("sliders", { size: 15 }) %></button>
       </div>
+      <button type="button" class="pb-icon-btn pb-q-btn" data-pb-quality aria-haspopup="dialog" aria-expanded="false" data-state="idle" data-tip="Qualité de la page" aria-label="Qualité de la page"><%- icon("shield", { size: 16 }) %><span class="pb-q-badge" aria-hidden="true"></span></button>
+      <button type="button" class="pb-ai-btn" data-pb-ai aria-haspopup="dialog" aria-expanded="false" data-tip="IA Kolakisa : créer, adapter, corriger"><%- icon("sparkles", { size: 15 }) %><span>IA Kolakisa</span></button>
       <span class="pb-save" data-pb-save role="status" aria-live="polite"></span>
       <button type="button" class="pb-icon-btn" data-pb-command data-tip="Commandes (Ctrl/⌘ + K)" aria-label="Rechercher une commande"><%- icon("search", { size: 16 }) %></button>
       <button type="button" class="btn btn-outline btn-sm" data-pb-save-now>Enregistrer</button>
@@ -80,12 +83,12 @@
           <div data-pb-elements></div>
         </div>
         <div id="pb-lib-pane-components" role="tabpanel" aria-labelledby="pb-lib-components" hidden>
-          <p class="pb-hint">Composants de ce site. « Synchronisé » : s'affiche partout dans sa dernière version (modifier la source modifie toutes les pages). « Copie » : indépendante.</p>
+          <p class="pb-hint">Composants standard : des modèles. Chaque insertion est une copie indépendante, modifiable librement.</p>
           <label class="sr-only" for="pb-comp-q-site">Rechercher un composant</label><input class="pb-search" id="pb-comp-q-site" type="search" placeholder="Rechercher un composant..." data-pb-comp-q autocomplete="off">
           <ul class="pb-components" data-pb-components></ul>
         </div>
         <div id="pb-lib-pane-globals" role="tabpanel" aria-labelledby="pb-lib-globals" hidden>
-          <p class="pb-hint">Éléments globaux : partagés par tous les sites de votre organisation. Insérés « Synchronisé », une modification de la source s'applique partout.</p>
+          <p class="pb-hint">Composants globaux : une référence partagée. Les instances liées reçoivent les changements quand vous cliquez « Mettre à jour » dans l'éditeur du composant.</p>
           <label class="sr-only" for="pb-comp-q-global">Rechercher un élément global</label><input class="pb-search" id="pb-comp-q-global" type="search" placeholder="Rechercher un élément global..." data-pb-comp-q autocomplete="off">
           <ul class="pb-components" data-pb-globals></ul>
         </div>
@@ -112,6 +115,8 @@
           <iframe class="pb-frame" data-pb-frame title="Page en cours d'édition"></iframe>
         </div>
       </div>
+      <%# Écran de démarrage d'une page réellement vide : rempli et affiché par page-builder.js (jamais pendant le chargement), limité à la zone du canevas %>
+      <section class="pb-start" data-pb-start aria-label="Comment voulez-vous commencer cette page ?" hidden></section>
       <%# Navigation du canevas (bas droite) : zoom réel, partagé avec les règles, les guides et le magnétisme %>
       <div class="pb-gizmo" role="group" aria-label="Zoom du canevas">
         <button type="button" class="pb-icon-btn" data-pb-zoom="-" data-tip="Zoom arrière (Ctrl/⌘ + -)" aria-label="Zoom arrière"><%- icon("minus", { size: 15 }) %></button>
@@ -119,6 +124,7 @@
         <button type="button" class="pb-icon-btn" data-pb-zoom="+" data-tip="Zoom avant (Ctrl/⌘ + +)" aria-label="Zoom avant"><%- icon("plus", { size: 15 }) %></button>
         <span class="pb-gizmo-sep" aria-hidden="true"></span>
         <button type="button" class="pb-gizmo-btn" data-pb-zoom="100" data-tip="Taille réelle : 100 % (Ctrl/⌘ + 0)" aria-label="Zoom à 100 %">1:1</button>
+        <button type="button" class="pb-icon-btn" data-pb-pan aria-pressed="false" data-tip="Main : déplacer le canevas (maintenir Espace, ou touche H)" aria-label="Main : déplacer le canevas"><%- icon("arrowRightLeft", { size: 15 }) %></button>
         <button type="button" class="pb-icon-btn" data-pb-zoom="fit" data-tip="Ajuster à l'écran : toute la largeur de la page visible (Maj + 1)" aria-label="Ajuster à l'écran"><%- icon("maximize", { size: 15 }) %></button>
       </div>
     </main>
@@ -155,24 +161,31 @@
       </div>
       <span class="pb-modal-spacer"></span>
       <a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= page.id %>/apercu" target="_blank" rel="noopener">Ouvrir dans un onglet</a>
+      <button type="button" class="pb-icon-btn" data-pb-preview-full aria-pressed="false" data-tip="Plein écran" aria-label="Plein écran"><%- icon("maximize", { size: 18 }) %></button>
       <button type="button" class="pb-icon-btn" data-pb-close aria-label="Fermer l'aperçu"><%- icon("close", { size: 18 }) %></button></div>
     <div class="pb-preview-stage"><iframe class="pb-preview-frame" data-pb-preview-frame data-device="desktop" title="Aperçu de la page"></iframe></div>
   </dialog>
 
-  <dialog class="pb-modal pb-media-modal" data-pb-media aria-labelledby="pb-media-title">
-    <div class="pb-modal-head"><h2 id="pb-media-title">Médiathèque</h2><span class="pb-modal-spacer"></span><button type="button" class="pb-icon-btn" data-pb-close aria-label="Fermer la médiathèque"><%- icon("close", { size: 18 }) %></button></div>
-    <div class="pb-media-body">
-      <div class="pb-media-bar">
-        <label class="sr-only" for="pb-media-q">Rechercher une image</label><input class="pb-search" id="pb-media-q" type="search" placeholder="Rechercher (nom, texte de remplacement)…" data-pb-media-q>
-        <label class="sr-only" for="pb-media-src">Bibliothèque</label><select id="pb-media-src" data-pb-media-src><option value="all">Toutes les images</option><option value="marketing">Marketing</option><option value="site">Site (blog, Centre de gestion)</option></select>
-        <label class="btn btn-primary btn-sm pb-upload">Envoyer une image<input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-pb-upload class="sr-only"></label>
+  <dialog class="pb-modal pb-media-modal" data-pb-media aria-labelledby="pb-media-title" aria-describedby="pb-media-sub">
+    <div class="pb-media-head">
+      <span class="pb-media-head-ico" aria-hidden="true"><%- icon("image", { size: 18 }) %></span>
+      <div class="pb-media-titles"><h2 id="pb-media-title">Médiathèque</h2><p id="pb-media-sub">Les images utilisées dans votre site</p></div>
+      <button type="button" class="pb-icon-btn" data-pb-close data-tip="Fermer (Échap)" aria-label="Fermer la médiathèque"><%- icon("close", { size: 18 }) %></button>
+    </div>
+    <div class="pb-media-toolbar">
+      <div class="pb-media-search"><span aria-hidden="true"><%- icon("search", { size: 15 }) %></span><label class="sr-only" for="pb-media-q">Rechercher une image</label><input id="pb-media-q" type="search" placeholder="Rechercher une image…" autocomplete="off" data-pb-media-q></div>
+      <label class="sr-only" for="pb-media-src">Bibliothèque</label><select id="pb-media-src" data-pb-media-src><option value="all">Toutes les images</option><option value="marketing">Marketing</option><option value="site">Site (blog, Centre de gestion)</option></select>
+      <label class="sr-only" for="pb-media-sort">Tri</label><select id="pb-media-sort" data-pb-media-sort><option value="recent">Plus récentes</option><option value="az">Nom A → Z</option><option value="za">Nom Z → A</option></select>
+      <label class="btn btn-primary btn-sm pb-upload"><%- icon("plus", { size: 14 }) %><span>Importer</span><input type="file" accept="image/jpeg,image/png,image/gif,image/webp" data-pb-upload class="sr-only" aria-label="Importer une image"></label>
+    </div>
+    <div class="pb-media-main">
+      <div class="pb-media-left">
+        <div class="pb-drop" data-pb-drop role="button" tabindex="0"><%- icon("upload", { size: 15 }) %><span>Glissez-déposez une image ici, ou cliquez pour importer</span><small>JPEG, PNG, GIF ou WebP · 5 Mo au plus</small></div>
+        <p class="pb-media-status" data-pb-media-status role="status" aria-live="polite"></p>
+        <ul class="pb-media-grid" data-pb-media-grid aria-label="Images" aria-busy="false"></ul>
+        <div class="pb-media-empty" data-pb-media-empty hidden></div>
       </div>
-      <div class="pb-drop" data-pb-drop>Ou déposez une image ici (JPEG, PNG, GIF ou WebP, 5 Mo au plus)</div>
-      <p class="pb-hint" data-pb-media-status role="status" aria-live="polite"></p>
-      <div class="pb-media-layout">
-        <ul class="pb-media-grid" data-pb-media-grid aria-label="Images"></ul>
-        <div class="pb-media-detail" data-pb-media-detail></div>
-      </div>
+      <aside class="pb-media-detail" data-pb-media-detail aria-label="Détails de l'image"></aside>
     </div>
   </dialog>
 
@@ -193,19 +206,54 @@
     <div class="pb-navmgr-body" data-pb-navmgr-body></div>
   </dialog>
 
-  <dialog class="pb-modal pb-command" data-pb-command-dialog aria-label="Commandes">
-    <label class="sr-only" for="pb-cmd-q">Rechercher une commande</label>
-    <input class="pb-search" id="pb-cmd-q" type="search" placeholder="Que voulez-vous faire ? (ajouter un titre, grouper, aperçu…)" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="pb-cmd-list" data-pb-cmd-q>
-    <ul class="pb-cmd-list" id="pb-cmd-list" role="listbox" aria-label="Commandes" data-pb-cmd-list></ul>
+  <dialog class="pb-modal pb-command" data-pb-command-dialog aria-labelledby="pb-cmd-title">
+    <div class="pb-cmd-box">
+      <div class="pb-cmd-head"><h2 id="pb-cmd-title">Commandes</h2><span class="pb-modal-spacer"></span><button type="button" class="pb-icon-btn" data-pb-close data-tip="Fermer (Échap)" aria-label="Fermer la palette de commandes"><%- icon("close", { size: 16 }) %></button></div>
+      <div class="pb-cmd-field">
+        <span class="pb-cmd-search-ico" aria-hidden="true"><%- icon("search", { size: 16 }) %></span>
+        <label class="sr-only" for="pb-cmd-q">Rechercher une commande</label>
+        <input class="pb-cmd-input" id="pb-cmd-q" type="search" placeholder="Que voulez-vous faire ? (ajouter un titre, grouper, aperçu…)" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="pb-cmd-list" data-pb-cmd-q>
+      </div>
+      <ul class="pb-cmd-list" id="pb-cmd-list" role="listbox" aria-label="Commandes" data-pb-cmd-list></ul>
+      <div class="pb-cmd-foot" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> naviguer</span><span><kbd>⏎</kbd> exécuter</span><span><kbd>Échap</kbd> fermer</span></div>
+    </div>
   </dialog>
 
   <%# Raccourcis clavier (menu principal) : la liste réelle de ce que gère l'éditeur %>
-  <dialog class="pb-modal pb-shortcuts" data-pb-shortcuts aria-labelledby="pb-sc-title">
-    <h2 id="pb-sc-title">Raccourcis clavier</h2>
-    <dl class="pb-sc-list">
-      <% [["Ctrl/⌘ + S", "Enregistrer"], ["Ctrl/⌘ + Z / Maj + Z", "Annuler / rétablir"], ["Ctrl/⌘ + K", "Commandes et recherche"], ["Ctrl/⌘ + Maj + Y", "Afficher / masquer le panneau Structure"], ["Ctrl/⌘ + Maj + E", "Éditeur visuel / Éditeur en blocs"], ["Ctrl/⌘ + C / X / V", "Copier, couper, coller"], ["Ctrl/⌘ + Alt + C / V", "Copier / coller le style"], ["Ctrl/⌘ + D", "Dupliquer"], ["Suppr", "Supprimer"], ["Ctrl/⌘ + G / Maj + G", "Grouper / dissocier"], ["Ctrl/⌘ + Maj + H / L", "Masquer / verrouiller"], ["Alt + ↑ / ↓", "Monter / descendre"], ["Entrée", "Écrire dans le texte sélectionné"], ["Échap", "Désélectionner"], ["Ctrl/⌘ + + / − / 0", "Zoom"], ["Maj + 1", "Ajuster à l'écran"], ["R", "Règles"], ["V / H", "Sélection / main"], ["T / I / B", "Ajouter un texte, une image, un bouton"]].forEach((k) => { %><dt><kbd><%= k[0] %></kbd></dt><dd><%= k[1] %></dd><% }) %>
-    </dl>
-    <form method="dialog"><button class="btn btn-outline btn-sm">Fermer</button></form>
+  <dialog class="pb-modal pb-shortcuts" data-pb-shortcuts role="dialog" aria-modal="true" aria-labelledby="pb-sc-title" aria-describedby="pb-sc-sub">
+    <%# Liste réelle des raccourcis gérés par l'éditeur : données INCHANGÉES (même ordre), seulement regroupées et présentées en touches %>
+    <%
+      const SC_ALL = [["Ctrl/⌘ + S", "Enregistrer"], ["Ctrl/⌘ + Z / Maj + Z", "Annuler / rétablir"], ["Ctrl/⌘ + K", "Commandes et recherche"], ["Ctrl/⌘ + Maj + Y", "Afficher / masquer le panneau Structure"], ["Ctrl/⌘ + Maj + E", "Éditeur visuel / Éditeur en blocs"], ["Ctrl/⌘ + C / X / V", "Copier, couper, coller"], ["Ctrl/⌘ + Alt + C / V", "Copier / coller le style"], ["Ctrl/⌘ + Maj + V", "Coller le style (fusion : les autres réglages de la cible sont conservés)"], ["Ctrl/⌘ + D", "Dupliquer"], ["Suppr", "Supprimer"], ["Ctrl/⌘ + G / Maj + G", "Grouper / dissocier"], ["Ctrl/⌘ + Maj + H / L", "Masquer / verrouiller"], ["Alt + ↑ / ↓", "Monter / descendre"], ["Entrée", "Écrire dans le texte sélectionné"], ["Échap", "Désélectionner"], ["Ctrl/⌘ + + / − / 0", "Zoom"], ["Maj + 1", "Ajuster à l'écran"], ["R", "Règles"], ["V / H", "Sélection / main"], ["T / I / B", "Ajouter un texte, une image, un bouton"]];
+      const SC_GROUPS = [["Général", 0, 3], ["Panneaux et modes", 3, 5], ["Édition", 5, 15], ["Affichage", 15, 18], ["Outils et ajout", 18, 20]];
+      // « Ctrl/⌘ + Maj + Y », « Alt + ↑ / ↓ », « Ctrl/⌘ + + / − / 0 » : chaque touche devient une pastille ; « + » et « / » entre deux touches sont des séparateurs
+      const scTokens = (s) => { const out = []; let prevSep = true; s.split(" ").forEach((t) => { const sep = (t === "+" || t === "/") && !prevSep; out.push({ t, sep }); prevSep = sep; }); return out; };
+    %>
+    <header class="pb-sc-head">
+      <span class="pb-sc-icon" aria-hidden="true"><%- icon("keyboard", { size: 18 }) %></span>
+      <div class="pb-sc-titles"><h2 id="pb-sc-title">Raccourcis clavier</h2><p id="pb-sc-sub">Commandes disponibles dans l’éditeur</p></div>
+      <form method="dialog"><button class="pb-icon-btn pb-sc-close" aria-label="Fermer les raccourcis clavier" data-tip="Fermer (Échap)"><%- icon("close", { size: 16 }) %></button></form>
+    </header>
+    <div class="pb-sc-searchbar">
+      <span class="pb-sc-search-icon" aria-hidden="true"><%- icon("search", { size: 15 }) %></span>
+      <input type="text" class="pb-sc-search" data-sc-search inputmode="search" autocomplete="off" spellcheck="false" autofocus placeholder="Rechercher un raccourci…" aria-label="Rechercher un raccourci (action ou touche)">
+      <span class="pb-sc-sr" data-sc-status role="status" aria-live="polite"></span>
+    </div>
+    <div class="pb-sc-body" tabindex="0" role="region" aria-label="Liste des raccourcis">
+      <div class="pb-sc-cols" aria-hidden="true"><span>Raccourci</span><span>Action</span></div>
+      <% SC_GROUPS.forEach((g) => { %>
+      <section class="pb-sc-group" aria-label="<%= g[0] %>">
+        <h3><%= g[0] %></h3>
+        <dl class="pb-sc-list">
+          <% SC_ALL.slice(g[1], g[2]).forEach((k) => { %><dt><% scTokens(k[0]).forEach((x) => { %><% if (x.sep) { %><span class="pb-sc-sep" aria-hidden="true"><%= x.t %></span><% } else { %><kbd class="pb-key" data-k="<%= x.t %>"><%= x.t %></kbd><% } %><% }) %></dt><dd><%= k[1] %></dd><% }) %>
+        </dl>
+      </section>
+      <% }) %>
+      <div class="pb-sc-empty" data-sc-empty hidden><span aria-hidden="true"><%- icon("search", { size: 22 }) %></span><p><strong>Aucun raccourci trouvé</strong></p><p>Essayez un autre terme.</p></div>
+    </div>
+    <footer class="pb-sc-foot">
+      <span class="pb-sc-hint">Appuyez sur <kbd class="pb-key">Échap</kbd> pour fermer</span>
+      <form method="dialog"><button class="btn btn-outline btn-sm">Fermer</button></form>
+    </footer>
   </dialog>
   <input type="file" accept="application/json,.json" hidden data-pb-import-file>
 
@@ -218,16 +266,23 @@
   <div class="pb-menu" data-pb-menu role="menu" aria-label="Actions" hidden></div>
   <div class="pb-toast" data-pb-toast role="status" aria-live="polite" hidden></div>
 
-  <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone", "sliders", "moreHorizontal", "listPlus", "listMinus", "undo", "redo", "sun", "moon", "palette"].concat(spec.types.map((t) => t.icon), spec.icons).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
+  <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone", "sliders", "moreHorizontal", "listPlus", "listMinus", "undo", "redo", "sun", "moon", "palette", "sparkles", "eraser", "annotArrow", "annotCircle", "annotRect", "send"].concat(spec.types.map((t) => t.icon), spec.icons).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
   <script type="application/json" id="pb-boot"><%- boot %></script>
   <script src="<%= asset('/js/page-builder-effects.js') %>" defer></script>
+  <script src="<%= asset('/js/page-builder-direct.js') %>" defer></script>
+  <script src="<%= asset('/js/page-builder-ai.js') %>" defer></script>
+  <script src="<%= asset('/js/page-builder-quality.js') %>" defer></script>
+  <script src="<%= asset('/js/kol-motion.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-snap.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-reset.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-theme.js') %>" defer></script>
   <script src="<%= asset('/js/kwmedia.js') %>" defer></script>
   <script src="<%= asset('/js/media-picker.js') %>" defer></script>
+  <script src="<%= asset('/js/font-manager.js') %>" defer></script>
+  <script src="<%= asset('/js/accordion-engine.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-menu.js') %>" defer></script>
+  <script src="<%= asset('/js/page-builder-shortcuts.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-rules.js') %>" defer></script>
   <script src="<%= asset('/js/site-settings.js') %>" defer></script>
 </body>

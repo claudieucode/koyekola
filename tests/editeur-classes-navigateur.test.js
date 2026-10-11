@@ -76,8 +76,9 @@ describe("classes globales (navigateur)", { skip: SKIP }, () => {
   test("T1 créer une classe depuis un élément : enregistrée dans le site, appliquée, le style passe dans la classe", async () => {
     await select("head00000001");
     await openCode();
-    await page.getByLabel("Nom de la nouvelle classe globale").fill("mise-en-avant");
-    await page.getByRole("button", { name: "Créer une classe depuis cet élément" }).click();
+    await page.getByRole("button", { name: "Enregistrer comme style…" }).click();
+    await page.getByLabel("Nom du style").fill("mise-en-avant");
+    await page.getByRole("button", { name: "Enregistrer le style" }).click();
     await until(() => (siteSettings().classes || []).some((c) => c.name === "mise-en-avant"), { what: "classe enregistrée dans le site" });
     const cls = siteSettings().classes.find((c) => c.name === "mise-en-avant");
     assert.equal(cls.styles.desktop.backgroundColor, "#fdf2dc");
@@ -94,7 +95,7 @@ describe("classes globales (navigateur)", { skip: SKIP }, () => {
     await until(async () => (await bg("head00000002")) === "rgb(253, 242, 220)", { what: "le second prend le style de la classe" });
     // le style propre du second l'emporte sur la classe
     await select("head00000002");
-    // modification de la classe depuis le premier élément : un réglage propre puis « Mettre à jour la classe »
+    // modification de la classe depuis le premier élément : un réglage propre puis « Mettre à jour le style »
     const rev = db().prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(pageId).revision;
     const d = draft();
     nodesOf(d.sections).find((n) => n.id === "head00000001").styles = { desktop: { backgroundColor: "#e0f2fe" } };
@@ -104,7 +105,8 @@ describe("classes globales (navigateur)", { skip: SKIP }, () => {
     await wait(600);
     await select("head00000001");
     await openCode();
-    await page.getByRole("button", { name: "Mettre à jour la classe" }).click();
+    await page.getByRole("button", { name: "Mettre à jour le style" }).click();
+    await page.getByRole("button", { name: "Redéfinir le style" }).click();
     await until(() => siteSettings().classes[0].styles.desktop.backgroundColor === "#e0f2fe", { what: "classe mise à jour dans le site" });
     await until(async () => (await bg("head00000002")) === "rgb(224, 242, 254)", { what: "le second élément suit la classe mise à jour" });
     await until(async () => (await bg("head00000001")) === "rgb(224, 242, 254)", { what: "le premier aussi" });

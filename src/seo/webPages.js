@@ -50,9 +50,10 @@ function indexing(page, site, { preview = false } = {}) {
   if (preview) reasons.push("aperçu (jamais indexé)");
   if (!page.indexable) reasons.push("« Autoriser les moteurs de recherche » est décoché");
   if (seo.noindex) reasons.push("noindex réglé sur la page");
+  if (page.funnelNoindex) reasons.push("étape de tunnel réglée « ne pas proposer aux moteurs de recherche »");
   if (sx && sx.extras && sx.extras.noindex) reasons.push("le site entier est réglé en noindex");
   const follow = !seo.nofollow && !(sx && sx.seo && sx.seo.follow === false);
-  return { indexable: reasons.length === 0, follow, reasons, blockAll: preview || !page.indexable || Boolean(sx && sx.extras && sx.extras.noindex) };
+  return { indexable: reasons.length === 0, follow, reasons, blockAll: preview || !page.indexable || Boolean(page.funnelNoindex) || Boolean(sx && sx.extras && sx.extras.noindex) };
 }
 
 // Données d'entrée du moteur (format commun `s` de resolver.finalize) pour une page du CMS

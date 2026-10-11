@@ -118,7 +118,7 @@ router.get("/formateur/gestion", page("gestion/index", "Centre de gestion", (req
 // ---------- Ventes ----------
 router.get("/formateur/gestion/ventes", page("gestion/ventes", "Ventes", (req) => ({ tab: "commandes", orders: sales.listOrders(me(req), req.query), courses: sales.myCourses(me(req)) })));
 router.get("/formateur/gestion/ventes/commandes", (req, res) => res.redirect(301, `/formateur/gestion/ventes${req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : ""}`));
-router.get("/formateur/gestion/ventes/commandes/:id(\\d+)", (req, res, next) => page("gestion/commande", `Commande #${req.params.id}`, (r) => sales.getOrder(me(r), Number(r.params.id)) || null)(req, res, next));
+router.get("/formateur/gestion/ventes/commandes/:id(\\d+)", (req, res, next) => page("gestion/commande", `Commande #${req.params.id}`, (r) => { const o = sales.getOrder(me(r), Number(r.params.id)); return o ? { ...o, contact: crm.contactOfUser(r.app.locals.marketing, o.order.user_id) } : null; })(req, res, next));
 // Paiements par carte (Stripe) des formations du formateur : lus dans checkout_sessions, jamais inventés.
 // Sans Stripe, le paiement du site est une démonstration : l'onglet le dit.
 function stripePayments(instructorId) {

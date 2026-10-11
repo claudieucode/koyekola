@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="<%= asset("/css/landing.css") %>">
   <%# Styles du thème et de la mise en page du site : avant les styles des éléments, qui restent prioritaires %>
   <% if (siteX && siteX.assets.theme) { %><style><%- siteX.assets.theme %></style><% } %>
+  <% if (siteStyle && typeof fontFacesFor === "function") { const ff = fontFacesFor(siteStyle); if (ff) { %><style><%- ff %></style><% } } %>
   <% if (page.nodeCss) { %><style><%- page.nodeCss %></style><% } %>
   <%# CSS personnalisé du site (réglages du site), puis transition entre les pages (jamais dans l'éditeur) %>
   <% if (siteX && siteX.assets.custom) { %><style><%- siteX.assets.custom %></style><% } %>
@@ -26,7 +27,7 @@
     <%- include("_sections", { page, form, preview, thanks, error, values, fieldCatalog, propertyDefs, builder: typeof builder !== "undefined" && builder }) %>
   </main>
   <%# Pied de page : la marque du site (logo et nom des réglages du site) ; sans site, la marque de la plateforme %>
-  <footer class="lp-foot"><a href="/"><% if (sx && sx.identity.logoUrl) { %><picture><% if (sx.identity.logoMobileUrl) { %><source media="(max-width: <%= sx.layout.breakpoints.mobile %>px)" srcset="<%= sx.identity.logoMobileUrl %>"><% } %><img class="lp-foot-logo" src="<%= sx.identity.logoUrl %>" alt="<%= siteX.name %>"></picture><% } else { %><%= siteX ? siteX.name : "KOLAKISA" %><% } %></a> · <a href="/cookies" data-kw-consent-open>Cookies</a></footer>
+  <% if (!(typeof funnelContext !== "undefined" && funnelContext && funnelContext.hideFooter)) { %><footer class="lp-foot"><a href="/"><% if (sx && sx.identity.logoUrl) { %><picture><% if (sx.identity.logoMobileUrl) { %><source media="(max-width: <%= sx.layout.breakpoints.mobile %>px)" srcset="<%= sx.identity.logoMobileUrl %>"><% } %><img class="lp-foot-logo" src="<%= sx.identity.logoUrl %>" alt="<%= siteX.name %>"></picture><% } else { %><%= siteX ? siteX.name : "KOLAKISA" %><% } %></a> · <a href="/cookies" data-kw-consent-open>Cookies</a><% const pv = typeof privacyFor === "function" ? privacyFor(siteX) : null; if (pv) { %> · <a href="<%= pv %>">Confidentialité</a><% } %></footer><% } %>
   <% if (!preview) { %><%- include("../partials/consent-banner") %>
   <script src="<%= asset("/js/visitor.js") %>" defer></script><% } %>
   <script src="<%= asset("/js/landing.js") %>" defer></script>

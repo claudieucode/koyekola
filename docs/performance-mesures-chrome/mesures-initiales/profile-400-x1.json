@@ -1,0 +1,234 @@
+{
+ "nodes": 405,
+ "throttle": 1,
+ "report": {
+  "selection x20": {
+   "scriptMs": 91.4,
+   "layoutMs": 38.3,
+   "styleMs": 68.4,
+   "taskMs": 539.4,
+   "layoutCount": 144,
+   "callerTop": [
+    "getBoundingClientRect ← placeCanvasBar:4730 ← drawOverlays:4483 122ms",
+    "scrollIntoView ← anon:958 6.7ms",
+    "getBoundingClientRect ← pageRect:4437 ← anon:4488 3.8ms"
+   ],
+   "styleCount": 197,
+   "top": [
+    "(program) :0 373.1ms",
+    "(idle) :0 228.6ms",
+    "getBoundingClientRect :0 125.8ms",
+    "(garbage collector) :0 15.4ms",
+    "querySelector :0 10.1ms",
+    "scrollIntoView :0 6.7ms",
+    "renderInspector page-builder.js?v=c99342c2:3366 5.3ms",
+    "locate page-builder.js?v=c99342c2:108 4.9ms",
+    "renderContext page-builder.js?v=c99342c2:3964 3.5ms",
+    "(anonyme) :1 3.1ms"
+   ]
+  },
+  "deselection x10": {
+   "scriptMs": 45.7,
+   "layoutMs": 29.4,
+   "styleMs": 62.8,
+   "taskMs": 420.8,
+   "layoutCount": 102,
+   "callerTop": [
+    "getBoundingClientRect ← placeCanvasBar:4730 ← drawOverlays:4483 45.1ms",
+    "getBoundingClientRect ← pageRect:4437 ← anon:4488 2.3ms",
+    "scrollIntoView ← anon:958 0.8ms"
+   ],
+   "styleCount": 172,
+   "top": [
+    "(program) :0 340.8ms",
+    "(idle) :0 244.8ms",
+    "getBoundingClientRect :0 47.4ms",
+    "querySelector :0 13.3ms",
+    "appendChild :0 3.2ms",
+    "placeCanvasBar page-builder.js?v=c99342c2:4730 3ms",
+    "createElement :0 2.6ms",
+    "renderInspector page-builder.js?v=c99342c2:3366 2.4ms",
+    "cloneNode :0 2ms",
+    "querySelectorAll :0 1.7ms"
+   ]
+  },
+  "style x20 (touche ▲, 150 ms entre)": {
+   "scriptMs": 77.6,
+   "layoutMs": 169.3,
+   "styleMs": 21.3,
+   "taskMs": 778.2,
+   "layoutCount": 162,
+   "callerTop": [
+    "getBoundingClientRect ← placeCanvasBar:4730 ← drawOverlays:4483 148ms",
+    "getBoundingClientRect ← pageRect:4437 ← anon:4488 3.1ms"
+   ],
+   "styleCount": 243,
+   "top": [
+    "(idle) :0 4087.9ms",
+    "(program) :0 426.7ms",
+    "getBoundingClientRect :0 151.1ms",
+    "fetch :0 38.8ms",
+    "(garbage collector) :0 27.1ms",
+    "parseFromString :0 27.1ms",
+    "querySelector :0 18.6ms",
+    "bump page-builder.js?v=c99342c2:2395 12.8ms",
+    "preview page-builder.js?v=c99342c2:132 5.9ms",
+    "(anonyme) page-builder.js?v=c99342c2:4169 5.6ms"
+   ]
+  },
+  "changements discrets x10 (Entrée)": {
+   "scriptMs": 210,
+   "layoutMs": 71.9,
+   "styleMs": 104.4,
+   "taskMs": 1341.7,
+   "layoutCount": 110,
+   "callerTop": [
+    "getBoundingClientRect ← placeCanvasBar:4730 ← afterChange:220 78.2ms",
+    "elementsFromPoint ←  43.3ms",
+    "elementFromPoint ←  39ms",
+    "getBoundingClientRect ← placeCanvasBar:4730 ← drawOverlays:4483 5.3ms",
+    "getBoundingClientRect ← pageRect:4437 ← anon:4488 1.6ms",
+    "getBoundingClientRect ←  0.3ms"
+   ],
+   "styleCount": 229,
+   "top": [
+    "(idle) :0 6886.4ms",
+    "(program) :0 790.6ms",
+    "physicalAxis page-builder.js?v=c99342c2:2535 88.4ms",
+    "getBoundingClientRect :0 85.5ms",
+    "query :5816 64.5ms",
+    "(garbage collector) :0 47.2ms",
+    "elementsFromPoint :0 43.3ms",
+    "elementFromPoint :0 39ms",
+    "querySelector :0 38.2ms",
+    "fetch :0 28.1ms"
+   ]
+  },
+  "annuler x8": {
+   "scriptMs": 103.4,
+   "layoutMs": 50,
+   "styleMs": 77.7,
+   "taskMs": 561.2,
+   "layoutCount": 72,
+   "callerTop": [
+    "getBoundingClientRect ← placeCanvasBar:4730 ← afterChange:220 60.4ms",
+    "getBoundingClientRect ← placeCanvasBar:4730 ← drawOverlays:4483 4.1ms",
+    "getBoundingClientRect ← pageRect:4437 ← anon:4488 0.7ms"
+   ],
+   "styleCount": 96,
+   "top": [
+    "(idle) :0 2875.5ms",
+    "(program) :0 289.1ms",
+    "physicalAxis page-builder.js?v=c99342c2:2535 70.2ms",
+    "getBoundingClientRect :0 65.2ms",
+    "(garbage collector) :0 27.6ms",
+    "fetch :0 18.5ms",
+    "parseFromString :0 11.1ms",
+    "renderInspector page-builder.js?v=c99342c2:3366 10.2ms",
+    "querySelector :0 10ms",
+    "appendChild :0 8.3ms"
+   ]
+  },
+  "rétablir x8": {
+   "scriptMs": 106.8,
+   "layoutMs": 50.7,
+   "styleMs": 79.5,
+   "taskMs": 597.2,
+   "layoutCount": 72,
+   "callerTop": [
+    "getBoundingClientRect ← placeCanvasBar:4730 ← afterChange:220 63.8ms",
+    "getBoundingClientRect ← placeCanvasBar:4730 ← drawOverlays:4483 3.8ms",
+    "getBoundingClientRect ← pageRect:4437 ← anon:4488 1ms"
+   ],
+   "styleCount": 96,
+   "top": [
+    "(idle) :0 2859.2ms",
+    "(program) :0 307.5ms",
+    "getBoundingClientRect :0 68.7ms",
+    "physicalAxis page-builder.js?v=c99342c2:2535 61.8ms",
+    "(garbage collector) :0 37.6ms",
+    "api page-builder.js?v=c99342c2:71 18ms",
+    "fetch :0 17.1ms",
+    "parseFromString :0 11.4ms",
+    "querySelector :0 9.1ms",
+    "appendChild :0 8.1ms"
+   ]
+  },
+  "Structure fermer/ouvrir x6": {
+   "scriptMs": 13.6,
+   "layoutMs": 77,
+   "styleMs": 187.1,
+   "taskMs": 692.8,
+   "layoutCount": 12,
+   "callerTop": [
+    "scrollIntoView ← anon:958 1.3ms",
+    "getBoundingClientRect ← placeCanvasBar:4730 ← applyZoom:5110 0.9ms"
+   ],
+   "styleCount": 73,
+   "top": [
+    "(idle) :0 1399.6ms",
+    "(program) :0 485.9ms",
+    "applyZoom page-builder.js?v=c99342c2:5110 204.6ms",
+    "querySelector :0 5.7ms",
+    "(garbage collector) :0 2.8ms",
+    "querySelectorAll :0 2.7ms",
+    "scrollIntoView :0 1.3ms",
+    "getBoundingClientRect :0 0.9ms",
+    "evaluate :364 0.8ms",
+    "(anonyme) page-builder.js?v=c99342c2:5124 0.6ms"
+   ]
+  },
+  "zoom x6": {
+   "scriptMs": 13.6,
+   "layoutMs": 3.3,
+   "styleMs": 3.1,
+   "taskMs": 144.5,
+   "layoutCount": 53,
+   "callerTop": [
+    "getBoundingClientRect ← placeCanvasBar:4730 ← applyZoom:5110 2.5ms",
+    "getBoundingClientRect ← pageRect:4437 ← anon:4488 1.6ms"
+   ],
+   "styleCount": 68,
+   "top": [
+    "(idle) :0 968.8ms",
+    "(program) :0 134.4ms",
+    "querySelector :0 6.8ms",
+    "getBoundingClientRect :0 4.1ms",
+    "querySelectorAll :0 3.4ms",
+    "placeCanvasBar page-builder.js?v=c99342c2:4730 1.2ms",
+    "applyZoom page-builder.js?v=c99342c2:5110 0.6ms",
+    "(anonyme) :0 0.4ms",
+    "pageSize page-builder.js?v=c99342c2:5259 0.3ms",
+    "(anonyme) page-builder.js?v=c99342c2:4503 0.3ms"
+   ]
+  },
+  "règles actives + survol 200": {
+   "scriptMs": 113.9,
+   "layoutMs": 32.4,
+   "styleMs": 15.5,
+   "taskMs": 1408.8,
+   "layoutCount": 205,
+   "callerTop": [
+    "getBoundingClientRect ← pageRect:4437 ← selectionBand:5196 41.2ms",
+    "elementsFromPoint ←  4.8ms",
+    "elementFromPoint ←  4.1ms",
+    "getBoundingClientRect ← drawRulers:5205 ← setAid:5149 1.7ms",
+    "getBoundingClientRect ← drawRulers:5205 ← anon:4387 1.6ms",
+    "getComputedStyle ← unitCtx:5178 ← paint:5214 0.3ms"
+   ],
+   "styleCount": 621,
+   "top": [
+    "(idle) :0 2016.5ms",
+    "(program) :0 1224.8ms",
+    "getBoundingClientRect :0 44.5ms",
+    "dispatchEvent :0 40.1ms",
+    "paint page-builder.js?v=c99342c2:5214 39.4ms",
+    "querySelector :0 33.4ms",
+    "drawRulers page-builder.js?v=c99342c2:5205 10.3ms",
+    "query :5816 6.9ms",
+    "elementsFromPoint :0 4.8ms",
+    "elementFromPoint :0 4.1ms"
+   ]
+  }
+ }
+}

@@ -78,7 +78,7 @@ function systemFor(ctx, channel) {
   ].filter(Boolean).join(" ");
 }
 
-async function call(ctx, action, { channel = "email", prompt, schema, effort = "medium" }) {
+async function call(ctx, action, { channel = "email", prompt, schema, effort = "medium", system = null }) {
   checkCtx(ctx);
   const now = nowOf(ctx);
   const settings = getAiSettings(ctx);
@@ -86,7 +86,7 @@ async function call(ctx, action, { channel = "email", prompt, schema, effort = "
   if (usage(ctx, now).last24h >= settings.dailyLimit) throw new AiError("quota", `Plafond atteint : ${settings.dailyLimit} demandes à l'IA sur les dernières 24 heures (réglable dans Paramètres → Assistant IA).`);
   const log = (ok, code = "", out = 0) => ctx.db.prepare("INSERT INTO mk_ai_requests (organization_id, user_id, action, ok, error_code, input_chars, output_tokens, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(ctx.organizationId, ctx.userId ?? null, action, ok ? 1 : 0, code, prompt.length, out, now);
   try {
-    const r = await runJson({ system: systemFor(ctx, channel), prompt, schema, effort });
+    const r = await runJson({ system: system || systemFor(ctx, channel), prompt, schema, effort });
     log(true, "", (r.usage && r.usage.output_tokens) || 0);
     return r.data;
   } catch (error) {
@@ -227,5 +227,5 @@ async function smsText(ctx, { brief, text, mode = "write", trackClicks = true } 
 
 module.exports = {
   ACTIONS, TONES, LENGTHS, REWRITE, AREAS, DEFAULT_LIMIT, AiError,
-  getAiSettings, saveAiSettings, usage, suggestSubjects, rewrite, draftEmail, optimize, smsText, listCourses,
+  getAiSettings, saveAiSettings, usage, call, suggestSubjects, rewrite, draftEmail, optimize, smsText, listCourses,
 };

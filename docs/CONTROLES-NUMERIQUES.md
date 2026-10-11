@@ -52,7 +52,7 @@ registres `LENCFG` (longueurs), `NUMCFG` (nombres), `NUM` (bornes), `UNITS` (uni
 | wordSpacing, textIndent (**nouveaux**) | — | NumericControl | 0,1 px · 1 | −100…100 · −999…999 | px em rem (+ %) | non | oui |
 | width, height, min/max-width/height | `lengthControl` | NumericControl | 1 · 0,1 | 0 / 9999 | px % rem vw/vh auto | non | oui |
 | margin ×4, padding ×4 | cases + flèches | NumericControl compact (`inlineUnit`) + unité commune + liaison 4 côtés | 1 · 0,1 | marge −9999 / 9999 ; intérieur 0 / 9999 | px % rem em (+ auto pour la marge) | non | non (cases trop petites : saisie, ▲▼ au survol, flèches) |
-| gap, rowGap, columnGap | `lengthControl` | NumericControl | 1 · 0,1 | 0 / 9999 | px rem em % | non | oui |
+| gap, rowGap, columnGap | `lengthControl` | NumericControl | 1 · 0,1 | 0 / 9999 | px rem em % | oui : 0–100 px · 0–6 rem/em · 0–20 % (la saisie reste libre jusqu'à 9999 ; une valeur enregistrée hors plage n'est jamais ramenée dans la plage) | oui |
 | borderWidth (+ 4 côtés), borderRadius (+ 4 coins) | `lengthControl` | NumericControl | 1 | 0 / 9999 | px (rayon : px % rem) | rayon : 0–100 px | oui |
 | top / right / bottom / left | `lengthControl` | NumericControl | 1 · 0,1 | −9999 / 9999 | px % rem | non | oui |
 | zIndex | `numberControl` | NumericControl | 1 | −100 / 9999 (élargi) | — | non | oui |
@@ -88,3 +88,27 @@ registres `LENCFG` (longueurs), `NUMCFG` (nombres), `NUM` (bornes), `UNITS` (uni
   rechargement, valeurs négatives / décimales / vides / très grandes, accessibilité.
 * `tests/controles-numeriques-chrome.test.js` (vrai Chrome, Playwright) : vraie souris et vrai clavier (tout sélectionner, taper, Entrée, Maj + flèche,
   Retour arrière / Suppr dans le champ sans effacer l'élément), rendu réel (taille calculée = 2 rem), glissement à la souris, curseur.
+
+## Apparence des curseurs
+
+Un seul langage visuel pour tous les curseurs de l'éditeur de pages : `.pb-nc-range` (tous les contrôles numériques) et `.pb-cpop-range` (opacité d'une couleur),
+dans `public/css/page-builder.css` (bloc « Curseurs »). Jetons : `--pb-slider-hit` (zone cliquable 16 px), `--pb-slider-track-height` (4 px), `--pb-slider-thumb-size` (12 px),
+`--pb-slider-track-color` (= `--editor-border`), `--pb-slider-progress-color` et `--pb-slider-thumb-color` (= `--editor-accent`), `--pb-slider-thumb-ring` (= `--editor-panel`),
+`--pb-slider-focus` (= `--editor-focus`) : ils suivent les thèmes clair et sombre. La partie parcourue est dessinée par `--pb-fill` (posée par `paintRange`, purement visuelle).
+Survol : poignée ×1,15 ; appui : ×1,25 (transform seulement, 90 ms, supprimé avec « réduire les animations »).
+Test : `tests/editeur-curseurs-apparence-navigateur.test.js` (jetons et règles ; Chrome ne lit pas le style calculé des pseudo-éléments internes d'un curseur).
+
+## Flèches ▲▼ (toujours visibles)
+
+Un seul composant (`numericControl`), deux dispositions : `.pb-len` (champ + ▲▼ + unité, presque tous les champs) et `.pb-boxcell` (cases d'espacement). Les ▲▼ sont **toujours visibles**,
+dans le champ, entre la valeur et l'unité (avant : dans les cases d'espacement, elles n'apparaissaient qu'au survol ou au focus, en superposition de la valeur). La barre contextuelle sur le canevas n'a
+volontairement pas de flèches (`hideSteps`). Jetons : `--pb-stepper-width` (14 px), `-color`, `-bg`, `-hover-bg`, `-hover-color`, `-active-bg`, `-divider` (dérivés des jetons `--editor-*`). Flèches dessinées en CSS
+(même rendu partout), zone cliquable élargie par un pseudo-élément. Test : `tests/editeur-fleches-numeriques-navigateur.test.js`.
+
+## Contrat d'un champ numérique (NumericInput) : « un clic = je veux saisir »
+
+* **Focus** : le champ prend le focus et rien d'autre ne s'ouvre (pas de liste de valeurs, pas de menu, pas d'infobulle, pas de panneau flottant). L'autocomplétion du navigateur est coupée (`autocomplete="off"`).
+* **Pas de `list` / `datalist`** : `numericControl` ne pose volontairement jamais l'attribut `list` (cause de l'ancien popup « 0px, 4px, 8px… » et de son triangle natif, qui venaient du `datalist` `pb-scale` branché sur les cases d'espacement et la barre contextuelle ; supprimé). Garde-fou CSS : `::-webkit-calendar-picker-indicator { display: none }`.
+* **Actions explicites seulement** : ▲ / ▼ = pas ; clavier = saisie, flèches, Maj ×10, Alt ÷10 ; « PX ▾ » = menu des unités. Des préréglages éventuels devraient avoir leur propre bouton, jamais le simple focus.
+* **Infobulles** : autorisées au survol AVANT toute interaction ; masquées dès le focus, le clic, la saisie, et tant que le champ est actif (`isEditing`, `focusin`, `keydown` dans `page-builder.js`).
+* Test de référence : `tests/editeur-champ-numerique-contrat-navigateur.test.js`.

@@ -1,0 +1,23 @@
+<%- include("partials/top", { title, active }) %>
+    <p class="mk-back"><a href="/marketing/automatisations/<%= a.id %>">← <%= a.name %></a></p>
+    <div class="mk-head"><h1>Simulation</h1></div>
+    <p class="mk-lead">Voyez ce que ce scénario ferait pour un contact réel, <strong>sans rien envoyer ni modifier</strong>. Les conditions sont évaluées sur les vraies données du contact ; le consentement est vraiment contrôlé ; les actions qui écrivent sont seulement annoncées.</p>
+    <form class="mk-form" method="get" action="/marketing/automatisations/<%= a.id %>/simulation">
+      <div class="field-group"><label for="sim-contact">Contact (adresse e-mail exacte ou numéro de fiche)</label>
+        <input id="sim-contact" type="text" name="contact" value="<%= raw %>" maxlength="254" required autocomplete="off"></div>
+      <button type="submit" class="btn btn-primary btn-sm">Simuler</button>
+    </form>
+    <% if (error) { %><div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-body"><p><%= error %></p></span></div><% } %>
+    <% if (report) { %>
+      <section class="mk-panel" aria-labelledby="sim-h">
+        <h2 id="sim-h">Résultat pour <%= contact.email %></h2>
+        <p><strong><%= report.status === "completed" ? "Le passage irait jusqu'au bout." : "Le contact sortirait du scénario avant la fin." %></strong> Durée d'attente cumulée : <%= report.totalWaitMs ? Math.round(report.totalWaitMs / 3600000 * 10) / 10 + " h" : "aucune" %>. <%= report.notice %></p>
+        <ol class="mk-status-list">
+          <% report.steps.forEach((s) => { %>
+            <li><strong>Étape <%= s.index + 1 %> — <%= s.label %></strong> :
+              <%= { would_execute: "serait exécutée", blocked: "BLOQUÉE", wait: "attente", branch: "embranchement", end: "fin", step: "passée" }[s.outcome] || s.outcome %> — <%= s.detail %></li>
+          <% }) %>
+        </ol>
+      </section>
+    <% } %>
+<%- include("partials/bottom") %>
