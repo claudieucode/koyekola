@@ -74,10 +74,19 @@ function siteRouting(req, res, next) {
 // les formulaires et le suivi, la connexion et les comptes (communs à la plateforme), les pages techniques.
 const MAIN_SITE_ONLY = /^\/(blog|cours|catalogue|categorie|a-propos|faq|feed|recherche|panier|favoris|formations?)(\/|$)/i;
 const ALWAYS_OK = /^\/(sante|uploads|css|js|img|fonts|favicon\.(ico|svg))(\/|$|\.)/i;
+const refusedLogged = new Set();
 function siteIsolation(req, res, next) {
   if (req.path === "/sante") return next(); // sonde de santé : joignable quel que soit l'hôte
   // Domaine inconnu de Kolakisa : jamais le site principal ni celui d'un autre site (421 « requête mal dirigée »)
-  if (req.kwUnknownHost) return res.status(421).type("text/plain").send("Ce domaine n'est pas configuré sur cette plateforme.");
+  if (req.kwUnknownHost) {
+    // Diagnostic : l'hôte lu et les en-têtes reçus sont consignés (une fois par hôte et par processus) pour repérer tout de suite un hôte légitime refusé par erreur
+    const seen = String(req.hostname || "").slice(0, 100);
+    if (!refusedLogged.has(seen) && refusedLogged.size < 200) {
+      refusedLogged.add(seen);
+      console.warn(`[KOLAKISA] Hôte refusé (421) : « ${seen} » — en-tête Host : « ${String(req.headers.host || "").slice(0, 100)} », X-Forwarded-Host : « ${String(req.headers["x-forwarded-host"] || "").slice(0, 100)} ». S'il s'agit d'un domaine légitime, l'ajouter à HOTES_AUTORISES.`);
+    }
+    return res.status(421).type("text/plain").send(`Ce domaine (${seen.replace(/[^a-z0-9.\-:\[\]]/gi, "?")}) n'est pas configuré sur cette plateforme.`);
+  }
   if (ALWAYS_OK.test(req.path)) return next();
   if (req.kwRetired || (req.kwSite && MAIN_SITE_ONLY.test(req.path))) {
     if (!isRead(req)) return res.status(404).type("text/plain").send("Introuvable");

@@ -67,6 +67,13 @@ describe("hôtes d'un déploiement avec SITE_URL (https://k.test)", () => {
     }
     assert.equal((await get("inconnu.test", "/sante")).status, 200, "la sonde de santé reste joignable");
   });
+  test("un hôte refusé est consigné dans le journal du serveur (diagnostic) et nommé dans la réponse", async () => {
+    const r = await get("journal-test.example", "/blog");
+    assert.equal(r.status, 421);
+    assert.match(r.text, /journal-test\.example/);
+    await new Promise((res) => setTimeout(res, 200));
+    assert.match(srv.log(), /Hôte refusé \(421\) : « journal-test\.example »/);
+  });
   test("hôtes qui ressemblent à un hôte autorisé : refusés (aucune confusion par préfixe, suffixe, sous-domaine ou IP trompeuse)", async () => {
     for (const h of ["k.test.evil.com", "evilk.test", "xk.test", "sub.k.test", "un.test.evil.com", "sub.un.test", "127.evil.com", "10.0.0.1.evil.com", "localhost.evil.com", "192.168.1.1.evil.com", "k.test@evil.com", "", "k test"]) {
       const r = await get(h || "x", "/blog");
