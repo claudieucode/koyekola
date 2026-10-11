@@ -328,6 +328,7 @@ function archivePage(ctx, id, { detach = false } = {}) {
   require("./abtests").guardPageRemoval(ctx, id, "mise à la corbeille"); // palier 22 : une page testée ne disparaît pas en silence
   ctx.db.prepare("UPDATE mk_landing_pages SET archived_at = datetime('now'), scheduled_at = NULL, status = CASE status WHEN 'published' THEN 'unpublished' ELSE status END, revision = revision + 1, updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
   ctx.db.prepare("UPDATE mk_sites SET home_page_id = NULL WHERE home_page_id = ? AND organization_id = ?").run(id, ctx.organizationId);
+  invalidateSites();
   audit(ctx, "page.archived", "landing", id, {});
 }
 // Restaurer une page archivée : elle revient hors ligne (jamais republiée d'office)
@@ -439,6 +440,7 @@ function updateSite(ctx, id, { name, tokens, slug, description, siteType } = {})
   const newDesc = description === undefined ? site.description : line(description, 500);
   const newType = siteType === undefined ? site.site_type : cleanSiteType(siteType);
   ctx.db.prepare("UPDATE mk_sites SET name = ?, slug = ?, description = ?, site_type = ?, tokens = ?, updated_at = datetime('now') WHERE id = ?").run(newName, newSlug, newDesc, newType, JSON.stringify(newTokens), site.id);
+  invalidateSites();
   audit(ctx, "site.updated", "site", site.id, { tokens: tokens !== undefined });
   return getSite(ctx, site.id);
 }
@@ -518,9 +520,21 @@ function movePage(ctx, pageId, siteId) {
   // Les composants propres à l'ancien site ne suivent pas la page : déplacer d'abord, ou retirer ces composants
   assertComponentsUsable(ctx, page.working.sections, siteId);
   assertComponentsUsable(ctx, page.published.sections, siteId);
-  ctx.db.prepare("UPDATE mk_sites SET home_page_id = NULL WHERE home_page_id = ? AND organization_id = ? AND id IS NOT ?").run(pageId, ctx.organizationId, siteId);
+  if ((page.site_id ?? null) === (siteId ?? null)) return;
+  // Une page utilisée par un tunnel ne change pas de site en silence : le tunnel doit d'abord s'en détacher
+  const funnel = ctx.db.prepare("SELECT f.name FROM mk_funnel_steps s JOIN mk_funnels f ON f.id = s.funnel_id WHERE s.page_id = ? AND f.site_id IS NOT ? LIMIT 1").get(pageId, siteId ?? null);
+  if (funnel) throw bad(`Cette page est une étape du tunnel « ${funnel.name} » : retirez-la du tunnel avant de la déplacer vers un autre site.`);
+  transaction(ctx.db, () => {
+    ctx.db.prepare("UPDATE mk_sites SET home_page_id = NULL WHERE home_page_id = ? AND organization_id = ? AND id IS NOT ?").run(pageId, ctx.organizationId, siteId);
+    // Liens hiérarchiques avec l'ancien site (page parente, pages enfants) : retirés avant le déplacement
+    ctx.db.prepare("UPDATE mk_landing_pages SET parent_id = NULL WHERE id = ? OR parent_id = ?").run(pageId, pageId);
+    // Les expériences A/B de la page suivent son site (le site y est recopié de la page)
+    ctx.db.prepare("UPDATE mk_page_tests SET site_id = ? WHERE page_id = ?").run(siteId, pageId);
+    // Une variante d'en-tête propre à l'ancien site ne suit pas la page : elle reprend l'en-tête du nouveau site
+    ctx.db.prepare("UPDATE mk_landing_pages SET header_mode = 'inherit', header_component_id = NULL WHERE id = ? AND header_component_id IN (SELECT id FROM mk_web_components WHERE site_id IS NOT NULL AND site_id IS NOT ?)").run(pageId, siteId ?? null);
+    ctx.db.prepare("UPDATE mk_landing_pages SET site_id = ?, updated_at = datetime('now') WHERE id = ?").run(siteId, pageId);
+  });
   invalidateSites();
-  ctx.db.prepare("UPDATE mk_landing_pages SET site_id = ?, updated_at = datetime('now') WHERE id = ?").run(siteId, pageId);
   audit(ctx, "page.moved", "landing", pageId, { siteId });
 }
 // Archiver un site : ses pages en ligne passent hors ligne (rien n'est effacé) ; restaurer ne republie rien d'office
@@ -639,6 +653,10 @@ function updateComponent(ctx, id, { name, section, global, siteId } = {}) {
     const sid = Number(siteId);
     if (!Number.isInteger(sid)) throw bad("Choisissez le site auquel réserver ce composant.");
     requireSite(ctx, sid, { active: true });
+    // Aussi : en-tête / pied de page d'un autre site, et variantes d'en-tête de pages d'un autre site
+    const partOf = ctx.db.prepare("SELECT name FROM mk_sites WHERE (header_component_id = ? OR footer_component_id = ?) AND id <> ? LIMIT 1").get(c.id, c.id, sid)
+      || ctx.db.prepare("SELECT name FROM mk_landing_pages WHERE header_component_id = ? AND site_id IS NOT ? LIMIT 1").get(c.id, sid);
+    if (partOf) throw new MarketingError("in_use", `Ce composant sert d'en-tête ou de pied de page à « ${partOf.name} » (autre site) : il doit rester global.`);
     const elsewhere = componentUsage(ctx, c.id).filter((p) => p.site_id !== sid);
     if (elsewhere.length) throw new MarketingError("in_use", `Ce composant est utilisé par des pages d'un autre site ou hors site (${elsewhere.map((p) => `« ${p.name} »`).join(", ")}) : il doit rester global.`);
     site = sid;

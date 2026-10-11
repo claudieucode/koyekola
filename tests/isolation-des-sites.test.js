@@ -189,7 +189,7 @@ describe("D — migration et contrôle d'audit", () => {
   });
   test("migrations 070 et 071 appliquées une seule fois", () => {
     assert.equal(one("SELECT COUNT(*) n FROM schema_migrations WHERE version IN ('070','071')").n, 2);
-    assert.equal(one("SELECT COUNT(*) n FROM sqlite_master WHERE type='trigger' AND name LIKE '%same_site%'").n, 5);
+    assert.equal(one("SELECT COUNT(*) n FROM sqlite_master WHERE type='trigger' AND (name LIKE '%same_site%' OR name LIKE '%keeps%' OR name LIKE '%move%')").n, 7);
   });
   test("le script d'audit signale une incohérence (composant d'un autre site dans une page) et ne modifie rien", () => {
     const file = db.prepare("PRAGMA database_list").all()[0].file;
@@ -205,3 +205,60 @@ describe("D — migration et contrôle d'audit", () => {
   });
 });
 
+
+describe("déplacement de page, composants et déclencheurs : cas limites", () => {
+  const form = (id, site) => { const r = page(id); return { name: r.name, slug: r.slug, site_id: site === null ? "" : String(site), revision: String(r.revision), title: "T", description: "", form_id: "", tags: "" }; };
+  const flash = async (c = boss) => ((await c.get("/marketing/site-web/sites")).text.match(/class="mk-flash[^"]*"[^>]*>[\s\S]*?<\/div>/) || [""])[0];
+  let funnelA, stepPage, parent, child;
+  before(() => {
+    funnelA = Number(db.prepare("INSERT INTO mk_funnels (organization_id, name, site_id) VALUES (?, 'Tunnel A', ?)").run(orgId, A).lastInsertRowid);
+    stepPage = mkPage(A, "Page Etape");
+    db.prepare("INSERT INTO mk_funnel_steps (organization_id, funnel_id, position, type, name, page_id) VALUES (?, ?, 1, 'page', 'E1', ?)").run(orgId, funnelA, stepPage);
+    parent = mkPage(A, "Parent"); child = mkPage(A, "Enfant");
+    db.prepare("UPDATE mk_landing_pages SET parent_id = ? WHERE id = ?").run(parent, child);
+  });
+  test("une page qui est une étape de tunnel ne change pas de site en silence (serveur), et la base refuse aussi", async () => {
+    await boss.post(`/marketing/pages/${stepPage}`, form(stepPage, B));
+    assert.equal(page(stepPage).site_id, A);
+    assert.throws(() => db.prepare("UPDATE mk_landing_pages SET site_id = ? WHERE id = ?").run(B, stepPage), /site différent/);
+    assert.throws(() => db.prepare("UPDATE mk_funnels SET site_id = ? WHERE id = ?").run(B, funnelA), /site différent/);
+  });
+  test("déplacer une page parente détache ses enfants au lieu de laisser un lien entre deux sites ; la base refuse un déplacement brut", async () => {
+    assert.throws(() => db.prepare("UPDATE mk_landing_pages SET site_id = ? WHERE id = ?").run(B, parent), /site différent/);
+    await boss.post(`/marketing/pages/${parent}`, form(parent, B));
+    assert.equal(page(parent).site_id, B);
+    assert.equal(page(child).parent_id, null, "l'enfant est détaché");
+    assert.equal(page(child).site_id, A);
+  });
+  test("une page d'accueil déplacée ne reste pas l'accueil de son ancien site", async () => {
+    const h = mkPage(A, "Accueil Mobile");
+    db.prepare("UPDATE mk_sites SET home_page_id = ? WHERE id = ?").run(h, A);
+    await boss.post(`/marketing/pages/${h}`, form(h, B));
+    assert.equal(page(h).site_id, B);
+    assert.equal(one("SELECT home_page_id FROM mk_sites WHERE id = ?", A).home_page_id, null);
+  });
+  test("variante d'en-tête propre à l'ancien site : remise à « en-tête du site » au déplacement", async () => {
+    const v = mkComp(A, "Variante A"); const p = mkPage(A, "Page Variante");
+    db.prepare("UPDATE mk_landing_pages SET header_mode = 'variant', header_component_id = ? WHERE id = ?").run(v, p);
+    await boss.post(`/marketing/pages/${p}`, form(p, B));
+    assert.equal(page(p).site_id, B);
+    assert.deepEqual([page(p).header_mode, page(p).header_component_id], ["inherit", null]);
+  });
+  test("réserver un composant global à un site est refusé s'il sert d'en-tête à un autre site", async () => {
+    const g = mkComp(null, "Entete Global");
+    db.prepare("UPDATE mk_sites SET header_component_id = ? WHERE id = ?").run(g, B);
+    const r = await boss.post(`/marketing/site-web/composants/${g}`, { name: "Entete Global", global: "0", site_id: String(A) });
+    assert.equal(one("SELECT site_id FROM mk_web_components WHERE id = ?", g).site_id, null, "reste global");
+    db.prepare("UPDATE mk_sites SET header_component_id = NULL WHERE id = ?").run(B);
+    assert.ok(r.status);
+  });
+  test("opérations légitimes : déplacer une page libre vers un autre site, composant global partout, étape de tunnel du même site", async () => {
+    const free = mkPage(A, "Page Libre");
+    await boss.post(`/marketing/pages/${free}`, form(free, B));
+    assert.equal(page(free).site_id, B);
+    const f2 = mkPage(B, "Page Etape B");
+    db.prepare("INSERT INTO mk_funnel_steps (organization_id, funnel_id, position, type, name, page_id) VALUES (?, ?, 5, 'page', 'E5', ?)").run(orgId, funnelB, f2);
+    const r = await memA.request(`/marketing/pages/${pageA}/brouillon`, { method: "PUT", json: { revision: page(pageA).revision, content: { sections: [{ type: "component", componentId: compGlobal }], title: "T" } }, headers: ORIGIN() });
+    assert.equal(r.status, 200);
+  });
+});

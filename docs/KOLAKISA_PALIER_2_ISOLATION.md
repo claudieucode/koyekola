@@ -1,41 +1,82 @@
-# KOLAKISA — Palier 2 : contexte de site et isolation des données
+# KOLAKISA — Palier 2 : contexte de site et isolation des données (rapport actualisé)
 
-## 1. État initial (vérifié dans le code)
-- SQLite (pas de Supabase, donc pas de RLS) ; une organisation ; `mk_sites` + `mk_site_members` (rôle par site) ; contrôle d'accès par adresse dans `src/marketing/web/index.js` (`siteOfRequest`) ; refus par défaut des écrans non rattachés à un site pour un accès limité à un site.
-- Palier 1 en place (Site Manager, migration 070).
-- Failles réelles trouvées par les tests d'accès croisé (corrigées) :
-  1. une personne limitée au site A pouvait **déplacer sa page vers le site B ou vers le site principal** (champ `site_id` du formulaire d'enregistrement) : le droit n'était vérifié que sur le site d'origine ;
-  2. une page du site A pouvait **embarquer un composant propre au site B** (`componentId` seulement contrôlé dans l'organisation) et donc afficher son contenu.
+## 1. État initial (vérifié)
+SQLite (pas de Supabase : pas de RLS) ; une organisation ; `mk_sites` + `mk_site_members` ; Palier 1 en place (migration 070) ; contrôle d'accès par adresse dans `src/marketing/web/index.js`, avec refus par défaut des écrans non rattachés à un site pour un accès limité à un site.
 
-## 2. Modifications
-- `src/services/siteContext.js` (nouveau) : `resolve(db, {userId, organizationId}, siteId, options)` → site vérifié + droits, ou refus (`invalid`, `not_found`, `deleted`, `archived`, `forbidden`) ; `canOn(...)` pour les opérations qui touchent un second site. Aucun état global : calculé à chaque requête.
-- `src/marketing/web/index.js` : `req.mk.site` et `req.mk.siteContext` (contexte de la requête) ; `ctx.canOn(siteDestination, permission)` pour les services.
-- `src/marketing/web/landing.js` : déplacer une page vers un autre site ou le site principal exige les droits d'écriture sur la destination.
-- `src/marketing/pages/index.js` : un composant propre à un site ne s'insère que dans une page du même site (enregistrement du brouillon, import, déplacement de page) ; un composant global reste utilisable partout.
-- `src/marketing/migrations/071_isolation_des_sites.sql` : 5 déclencheurs (étape de tunnel ↔ page du même site, page parente, page d'accueil du site). Additifs, aucune donnée touchée, valables pour les écritures futures ; retour arrière : `DROP TRIGGER`.
-- `scripts/audit-sites.js` : contrôle en lecture seule (lignes par site, site principal, références orphelines, associations entre sites différents) à lancer avant/après migration et sur une copie de la production ; code de sortie 1 s'il y a une anomalie.
-- Tests : `tests/isolation-des-sites.test.js` (22) ; `tests/cms-tunnel.test.js` adapté (la donnée « ancienne » invalide est maintenant refusée par la base : le test retire le déclencheur pour simuler une donnée d'avant).
+Failles réelles trouvées par les tests d'accès croisé (corrigées) :
+1. un accès limité au site A pouvait déplacer sa page vers le site B ou le site principal (champ `site_id` du formulaire) ;
+2. une page du site A pouvait embarquer un composant propre au site B ;
+3. (trouvées au contrôle des déclencheurs) déplacer une page laissait des liens vers l'ancien site : étape de tunnel, page parente / enfants, page d'accueil, variante d'en-tête propre à l'ancien site, expériences A/B ; et réserver un composant global à un site était possible s'il servait d'en-tête à un autre site.
 
-## 3. Fonctionnement
-- **Site actif** : l'adresse porte l'identifiant (`/marketing/site-web/sites/:id`, ou la ressource appartenant au site). L'identifiant est une demande, vérifiée à chaque requête (existence dans l'organisation, état, accès). Aucun cookie ni variable serveur ne mémorise « le site courant » : changer de site ou recharger ne peut donc pas mélanger deux sites.
-- **Autorisations** : `cmsAccess.effectivePermissions` (rôle d'équipe + rôle sur CE site). Une personne limitée à un site n'ouvre que les adresses rattachées à ses sites ; tout le reste est refusé par défaut.
-- **Site principal** : contenus sans `site_id` (NULL), réservé à l'équipe.
+## 2. Protections réellement actives
+**Serveur** (`src/services/siteContext.js`, `web/index.js`, `web/landing.js`, `pages/index.js`)
+- Contexte de site calculé à chaque requête (`req.mk.site`, `req.mk.siteContext`) : existence, état (supprimé / archivé), accès. Aucune variable partagée.
+- `ctx.canOn(site, permission)` : toute opération touchant un second site (déplacement) exige les droits sur la destination.
+- Composant propre à un site : insérable seulement dans une page du même site (enregistrement, import, déplacement) ; réservation d'un composant global refusée s'il est utilisé ailleurs (pages, en-tête / pied de page, variantes).
+- Déplacement d'une page : refusé si elle est étape d'un tunnel d'un autre site ; sinon retire proprement parent / enfants / accueil / variante d'en-tête, et aligne les expériences A/B.
 
-## 4. Classification des données (stratégie d'association)
-| Catégorie | Tables | Décision |
+**Base de données — 7 déclencheurs (migration 071, additive)**
+| Déclencheur | Interdit |
+|---|---|
+| `mk_funnel_steps_same_site_insert/update` | étape de tunnel ↔ page d'un autre site |
+| `mk_landing_pages_parent_same_site_insert/update` | page parente d'un autre site |
+| `mk_sites_home_same_site` | page d'accueil d'un autre site |
+| `mk_landing_pages_move_keeps_links` | changer le site d'une page liée (étape, parent, enfant, accueil) |
+| `mk_funnels_move_keeps_steps` | changer le site d'un tunnel dont les étapes sont d'un autre site |
+Vérifié : chaque chemin d'écriture existant (`funnels/index.js`, `cmsPages.setParent`, `pages.movePage/setHomePage/duplicatePage/createPage`, `updateComponent`) a été relu ; les opérations légitimes passent (suite complète). Ils ne couvrent PAS : les composants (JSON dans les sections : contrôle serveur seulement), les listes / segments / campagnes (contrôlés par `siteScope` du moteur d'e-mailing).
+
+## 3. Caches (audit)
+| Cache | Contenu | Risque entre sites | Verdict |
+|---|---|---|---|
+| Domaines (`services/urls.js`, 5 s) | domaine → site, accueil, nom | un ancien domaine pourrait servir un site | invalidé à chaque changement de domaine, accueil, archivage, restauration, suppression, déplacement, renommage (2 invalidations manquantes ajoutées : renommage et mise à la corbeille de l'accueil). Testé : effet immédiat |
+| Redirections (`seo/redirects.js`) | source → cible, site | redirection d'un site appliquée à un autre | la redirection n'est appliquée que sur le domaine de son site ; testé |
+| Rôles (`cmsAccess`) | définition des rôles | — | pas de données de site ni d'utilisateur ; les droits effectifs sont relus en base à chaque requête (retrait d'accès immédiat, testé) |
+| `apCache`, `menus` (`locals.js`) | par requête | — | durée = une requête |
+| Pages publiques | HTTP | cache partagé (CDN/proxy) | `Cache-Control: no-store` (pages `/p`) / `private, no-cache` (autres) ; testé |
+| Réglages SEO, dimensions d'images, empreintes de fichiers | globaux au site principal / aux fichiers | — | pas de donnée privée de site |
+Aucun autre cache serveur propre à un site n'a été trouvé (recherche des `Map` / `WeakMap` / `cache` dans `src/`). Non audité : cache éventuel du serveur d'hébergement (Hostinger) devant l'application — les en-têtes ci-dessus l'excluent pour les pages dynamiques.
+
+## 4. Données : audit sur une copie
+- **Base de production : non accessible depuis cette session, aucun audit n'a été fait dessus.** La base locale `data/KOYEKOLA.db` est vide.
+- Outils livrés : `scripts/copie-base-audit.js <source> <copie>` (copie cohérente par `VACUUM INTO`, source en lecture seule, refuse d'écraser, vérifie l'intégrité et les nombres de lignes) puis `scripts/audit-sites.js <copie>` (lecture seule, code 1 si anomalie).
+- Exécution réelle sur une copie d'une base **représentative construite pour l'occasion** (serveur migré 001→071, 3 sites, 9 pages, tunnel, composant, listes + 5 anomalies « d'avant » simulées) : copie fidèle (intégrité ok, 155 tables, 0 écart), refus d'écraser vérifié, les 5 anomalies détectées, rien modifié.
+| Anomalie détectée | Cause probable en production | Correction (jamais automatique) |
 |---|---|---|
-| Propre à un site, isolé (colonne présente, contrôlé) | `mk_landing_pages`, `mk_web_components` (NULL = global), `mk_funnels`, `mk_lists`, `mk_segments`, `mk_templates`, `mk_campaigns`, `mk_automations`, `mk_page_tests`, `mk_web_events`, `mk_events`, `mk_conversions`, `nav_menus`, `nav_locations`, `appearance_*`, `seo_redirects` | déjà rattachés ; NULL = site principal, conservé |
-| Propre à un site, **à rattacher au Palier 3** (pas de colonne aujourd'hui) | `posts`, `taxonomy_terms/relations`, `blog_comments`, `media`/`mk_media`, `mk_page_templates`, `mk_forms`, `seo_meta`, `seo_settings` | colonne nullable puis règles ; non fait ici faute d'usage (pas de colonne décorative) |
-| Partagé, droits contrôlés | `mk_contacts` (organisation, `origin_site_id`), consentements et suppressions | décision métier requise (Palier 7) |
-| Global | `users`, `mk_organizations`, `mk_roles`, catalogue des permissions, LMS (`courses`, `orders`…) | légitimement global |
-Aucune donnée ancienne n'est attribuée à un site : tout ce qui n'avait pas de site reste « site principal ».
+| Étape de tunnel → page d'un autre site | page déplacée après coup, avant le palier 2 | décider : détacher l'étape ou déplacer la page ; l'application la signale déjà comme étape cassée |
+| Page dont le parent est d'un autre site | déplacement de page avant le palier 2 | mettre `parent_id` à NULL |
+| Accueil d'un site = page d'un autre site | idem | mettre `home_page_id` à NULL |
+| Page contenant un composant d'un autre site | composant réservé après coup | rendre le composant global ou retirer l'instance |
+| Page en ligne dans un site archivé/supprimé | archivage avant la mise hors ligne automatique | mettre la page hors ligne |
+Références orphelines : 0 (les clés étrangères sont actives, elles empêchent ce cas).
+**Action manuelle requise** : lancer ces deux scripts sur une copie de la production et m'envoyer la sortie ; chaque ligne signalée sera examinée avec vous avant toute correction.
 
-## 5. Données existantes et retour arrière
-Aucune migration de données. La migration 071 n'ajoute que des déclencheurs. Le démarrage fait déjà une sauvegarde avant migration lorsque des données existent (`backupBeforeMigration`). Avant déploiement, lancer `node scripts/audit-sites.js <copie de la base>` sur la production : à défaut d'anomalie rien ne bloque ; sinon les lignes signalées sont à traiter à la main (le script ne modifie rien).
+## 5. Tests
+Détail au §7 du message de rapport (résultats mis à jour à la fin de la suite complète). Fichiers : `tests/isolation-des-sites.test.js` (isolation, contexte, déclencheurs, cas limites, migration, audit), `tests/isolation-des-sites-caches.test.js` (caches, domaines, redirections, permissions, requêtes simultanées).
 
-## 6. Limites restantes
-- Articles, catégories, médias, formulaires, modèles de pages et réglages SEO (`seo_meta`) ne sont **pas encore isolés par site** (Palier 3).
-- Pas de RLS (SQLite) : protection = contrôles serveur + 5 déclencheurs ; les déclencheurs ne couvrent que quelques associations.
-- Le contexte vient de l'adresse (méthode par expressions régulières de `siteOfRequest`, héritée) : toute NOUVELLE route rattachée à un site doit y être déclarée, sinon elle est refusée pour un accès limité (sûr par défaut, mais à penser).
-- Le script d'audit n'a pas été exécuté sur la base de production (inaccessible d'ici).
-- Cache : le cache de domaines est invalidé aux changements de site ; aucun autre cache propre à un site n'a été trouvé, non audité en profondeur.
+## 6. Test instable `marketing-interface-5` (« parcours réel avec le worker »)
+- Cause trouvée : le test attend que le message passe à `sent`, puis lit tout de suite le passage du scénario ; le worker écrit le message `sent` AVANT de marquer le passage `completed` (deux écritures successives) : sous charge, le test lit l'état intermédiaire `running`. Reproduit sous charge (1 échec sur 3, message exact `'running' ≠ 'completed'`).
+- Rapport avec les sites : aucun dans le code (le worker et le moteur d'automatisations ne sont pas modifiés). Mesure sous charge identique : 0/12 échecs sur la version d'avant le palier 2 et 0/12 sur la version avec palier 2 : l'échec est rare dans les deux cas, donc ces chiffres ne le démontrent pas ; la preuve est l'analyse de la cause.
+- Correction : le test attend maintenant la fin du passage (`completed`) comme il attend déjà celle du message.
+- Risque résiduel : d'autres tests qui lisent deux écritures successives du worker pourraient avoir la même fragilité ; non recherchés.
+
+## 7. Limites du périmètre (non isolé, état actuel documenté)
+| Donnée | État réel aujourd'hui | Risque pour le Palier 3 |
+|---|---|---|
+| Articles `posts` | aucune colonne de site ; **vérifié : `/blog` sur le domaine d'un site affiche les articles du site principal** | un site tiers affiche le blog principal ; unicité du slug globale |
+| Catégories / étiquettes | globales, unicité `(taxonomy, slug)` globale | fusion involontaire entre sites |
+| Commentaires | suivent l'article | idem articles |
+| Médias `media` / `mk_media` | par organisation, sans site ; deux tables | un site voit et utilise les fichiers des autres |
+| Formulaires `mk_forms`, prospects | par organisation | un formulaire d'un site utilisable sur un autre |
+| Modèles de pages `mk_page_templates` | par organisation | idem |
+| Réglages SEO `seo_settings` / `seo_meta` | globaux au site principal | métadonnées partagées |
+| Contacts et consentements | par organisation (`origin_site_id` seulement) ; **conservés tels quels, décision métier requise** | un désabonnement vaut pour tous les sites |
+Rien n'a été rattaché artificiellement au site principal ; aucune colonne n'a été ajoutée à ces tables.
+
+## 8. Fichiers
+Créés : `src/services/siteContext.js`, `src/marketing/migrations/071_isolation_des_sites.sql`, `scripts/audit-sites.js`, `scripts/copie-base-audit.js`, `tests/isolation-des-sites.test.js`, `tests/isolation-des-sites-caches.test.js`, ce rapport.
+Modifiés : `src/marketing/web/index.js`, `web/landing.js`, `src/marketing/pages/index.js`, `tests/cms-tunnel.test.js`, `tests/marketing-interface-5.test.js`.
+Migrations : 070 (Palier 1) et 071 (Palier 2) — jamais appliquées en production ; additives.
+Retour arrière : `DROP TRIGGER` pour les 7 déclencheurs ; le code serveur se retire avec le commit.
+
+## 9. Contrôles de compilation / types / lint
+Le projet n'a ni lint ni vérification de types. `node --check` sur tous les fichiers JS modifiés : OK. Les scripts de build (`build:editor`, `build:automation-flow`) ne dépendent d'aucun fichier modifié et n'ont pas été relancés.

@@ -23,3 +23,18 @@ BEGIN SELECT RAISE(ABORT, 'site différent : la page parente doit être du même
 CREATE TRIGGER mk_sites_home_same_site BEFORE UPDATE OF home_page_id ON mk_sites
 WHEN NEW.home_page_id IS NOT NULL AND (SELECT site_id FROM mk_landing_pages WHERE id = NEW.home_page_id) IS NOT NEW.id
 BEGIN SELECT RAISE(ABORT, 'site différent : la page d''accueil doit être une page de ce site'); END;
+
+-- Changer une page de site ne doit pas laisser de lien vers l'ancien site : étape de tunnel, page parente, pages enfants, page d'accueil.
+-- (Le serveur retire d'abord ces liens ou refuse le déplacement ; ce déclencheur est le filet de la base si un autre chemin d'écriture passait à côté.)
+CREATE TRIGGER mk_landing_pages_move_keeps_links BEFORE UPDATE OF site_id ON mk_landing_pages
+WHEN NEW.site_id IS NOT OLD.site_id AND (
+     EXISTS (SELECT 1 FROM mk_funnel_steps s JOIN mk_funnels f ON f.id = s.funnel_id WHERE s.page_id = OLD.id AND f.site_id IS NOT NEW.site_id)
+  OR EXISTS (SELECT 1 FROM mk_landing_pages p WHERE p.id = OLD.parent_id AND p.site_id IS NOT NEW.site_id)
+  OR EXISTS (SELECT 1 FROM mk_landing_pages c WHERE c.parent_id = OLD.id AND c.site_id IS NOT NEW.site_id)
+  OR EXISTS (SELECT 1 FROM mk_sites h WHERE h.home_page_id = OLD.id AND h.id IS NOT NEW.site_id))
+BEGIN SELECT RAISE(ABORT, 'site différent : cette page est liée (tunnel, page parente ou enfant, page d''accueil) à son site actuel'); END;
+
+-- Changer le site d'un tunnel : toutes ses étapes doivent utiliser des pages du nouveau site
+CREATE TRIGGER mk_funnels_move_keeps_steps BEFORE UPDATE OF site_id ON mk_funnels
+WHEN NEW.site_id IS NOT OLD.site_id AND EXISTS (SELECT 1 FROM mk_funnel_steps s JOIN mk_landing_pages p ON p.id = s.page_id WHERE s.funnel_id = OLD.id AND p.site_id IS NOT NEW.site_id)
+BEGIN SELECT RAISE(ABORT, 'site différent : les étapes de ce tunnel utilisent des pages de son site actuel'); END;

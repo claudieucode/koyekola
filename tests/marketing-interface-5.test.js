@@ -349,7 +349,14 @@ describe("parcours réel avec le worker : inscription sur le site → e-mail de 
     }
     assert.equal(msgs.length, 1);
     assert.deepEqual([msgs[0].status, msgs[0].provider], ["sent", "console"]);
-    assert.equal(q("SELECT status FROM mk_automation_runs WHERE automation_id = ?", id)[0].status, "completed");
+    // Le message passe à « sent » AVANT que le worker marque le passage « completed » (deux écritures successives) : on attend la fin du passage,
+    // sinon le test lit parfois l'état intermédiaire « running » quand la machine est chargée (instabilité constatée, sans rapport avec les sites)
+    let run = "";
+    for (let i = 0; i < 60 && run !== "completed"; i++) {
+      run = (q("SELECT status FROM mk_automation_runs WHERE automation_id = ?", id)[0] || {}).status;
+      if (run !== "completed") await new Promise((r) => setTimeout(r, 250));
+    }
+    assert.equal(run, "completed");
     assert.equal(q("SELECT status FROM mk_contacts WHERE email = 'eleve-e2e@test.local'")[0].status, "unknown", "un e-mail transactionnel ne donne aucun consentement");
   });
   test("l'historique n'a rien déclenché : les comptes existants avant l'activation n'ont reçu aucun e-mail", async () => {

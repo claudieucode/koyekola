@@ -7,7 +7,8 @@ const path = require("path");
 const { DatabaseSync } = require("node:sqlite");
 
 const file = path.resolve(process.argv[2] || path.join(__dirname, "..", "data", "KOYEKOLA.db"));
-const db = new DatabaseSync(file, { readOnly: true });
+let db;
+try { db = new DatabaseSync(file, { readOnly: true }); } catch (e) { console.error(`Impossible d'ouvrir la base ${file} : ${e.message}`); process.exit(2); }
 const has = (t) => Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(t));
 const cols = (t) => db.prepare(`PRAGMA table_info(${t})`).all().map((c) => c.name);
 const TABLES = [
