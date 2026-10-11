@@ -1420,7 +1420,7 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
   --pb-mode-active-bg: rgba(125, 211, 252, 0.22); --pb-mode-active-text: #fff; --pb-mode-active-ring: rgba(125, 211, 252, 0.45);
   --pb-mode-focus: 0 0 0 2px var(--editor-top, #0b2a40), 0 0 0 4px rgba(125, 211, 252, 0.85); --pb-mode-transition: 0.14s ease-out;
 }
-.pb-top .pb-mode-seg { background: var(--pb-mode-bg); border-color: var(--pb-mode-border); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18); }
+.pb-top .pb-mode-seg { background: var(--pb-mode-bg); border-color: var(--pb-mode-border); box-shadow: inset 0 1px 2px rgba(11, 42, 64, 0.18); }
 .pb-top .pb-mode-seg button {
   position: relative; color: var(--pb-mode-text); outline: none;
   transition: background-color var(--pb-mode-transition), color var(--pb-mode-transition), box-shadow var(--pb-mode-transition), transform 0.06s ease-out;
@@ -1428,7 +1428,7 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 .pb-top .pb-mode-seg button .icon { opacity: 0.8; transition: opacity var(--pb-mode-transition); }
 .pb-top .pb-mode-seg button:hover:not([aria-checked="true"]) { background: var(--pb-mode-hover-bg); color: var(--pb-mode-hover-text); }
 .pb-top .pb-mode-seg button:hover .icon { opacity: 1; }
-.pb-top .pb-mode-seg button[aria-checked="true"] { background: var(--pb-mode-active-bg); color: var(--pb-mode-active-text); box-shadow: inset 0 0 0 1px var(--pb-mode-active-ring), 0 1px 2px rgba(0, 0, 0, 0.25); }
+.pb-top .pb-mode-seg button[aria-checked="true"] { background: var(--pb-mode-active-bg); color: var(--pb-mode-active-text); box-shadow: inset 0 0 0 1px var(--pb-mode-active-ring), 0 1px 2px rgba(11, 42, 64, 0.25); }
 .pb-top .pb-mode-seg button[aria-checked="true"] .icon { opacity: 1; }
 .pb-top .pb-mode-seg button:active { transform: scale(0.97); }
 .pb-top .pb-mode-seg button:focus-visible { box-shadow: var(--pb-mode-focus); z-index: 1; }
@@ -1731,7 +1731,7 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-ai-head h2 { display: flex; align-items: center; gap: 6px; margin: 0 auto 0 0; font-size: 14px; }
 .pb-ai-tabs { display: flex; gap: 2px; padding: 2px; border-radius: 9px; background: var(--ai-border); }
 .pb-ai-tab { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border: 0; border-radius: 7px; background: transparent; color: var(--ai-muted); font: 600 12.5px/1 inherit; cursor: pointer; }
-.pb-ai-tab.is-on { background: var(--ai-bg); color: var(--ai-text); box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
+.pb-ai-tab.is-on { background: var(--ai-bg); color: var(--ai-text); box-shadow: 0 1px 3px rgba(11, 42, 64, .15); }
 .pb-ai-tab:focus-visible { outline: 2px solid var(--ai-accent); }
 .pb-ai-notice { margin: 0; padding: 8px 14px; font-size: 12.5px; background: var(--editor-active, #dcecf8); }
 .pb-ai-notice.is-warn { background: #fff4d6; color: #5c4400; }
@@ -1867,3 +1867,12 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-start-lock-text small { font-size: 12px; color: var(--editor-muted); line-height: 1.4; }
 .pb-start-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 @media (max-width: 640px) { .pb-start { padding: 12px; } .pb-start-actions { justify-content: stretch; } .pb-start-actions .btn { flex: 1 1 auto; } }
+
+/* Barre du haut : sur écran moyen, l'état d'enregistrement est un point coloré à place réservée (le texte « Non enregistré » élargissait la partie droite,
+   la renvoyait sur une 2e ligne et décalait tout l'éditeur de 46 px à la première modification). Le texte complet reste en info-bulle et pour les lecteurs
+   d'écran ; les erreurs gardent leur texte. */
+@media (max-width: 1560px) {
+  .pb-top .pb-save:not(.is-error) { flex: 0 0 12px; width: 12px; min-width: 12px; max-width: 12px; font-size: 0; line-height: 0; overflow: visible; }
+  .pb-top .pb-save:not(.is-error)::before { content: ""; display: block; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+  .pb-top .pb-save:not(.is-error):empty::before { visibility: hidden; }
+}

@@ -10,7 +10,7 @@ describe("SEO CORE : tâches programmées et rapports", () => {
   const msgOf = (r) => decodeURIComponent(String(r.location || "").split(/[?&](?:msg|err)=/)[1] || "");
   const job = (name) => q("SELECT * FROM seo_jobs WHERE name = ?", name)[0];
   before(async () => {
-    srv = await startServer({ SEO_JOBS: "on", SEO_JOBS_TICK_MS: "300" });
+    srv = await startServer({ SEO_JOBS: "on", SEO_JOBS_TICK_MS: "300", ENCRYPTION_KEY: require("crypto").randomBytes(32).toString("hex") }); // clé fixée : « Non connecté » (et non « Configuration requise ») ne dépend plus de l'environnement de la machine
     prof = await loginInstructor(srv);
     await createCourse(prof, srv, { title: "Excel avancé", price: 49 });
   });

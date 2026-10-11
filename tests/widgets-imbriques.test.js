@@ -94,10 +94,12 @@ describe("page publiée et navigateur", () => {
     const track = page.locator(".kw-ncarousel .kw-carousel-track").first();
     const pos = () => track.evaluate((t) => Math.round(t.scrollLeft));
     const until = async (fn) => { const end = Date.now() + 8000; while (Date.now() < end) { if (await fn()) return true; await page.waitForTimeout(100); } throw new Error("délai"); };
+    const settled = async () => { let last = -1; await until(async () => { const a = await pos(); const ok = a === last; last = a; if (!ok) await page.waitForTimeout(250); return ok; }); };
     assert.equal(await pos(), 0);
     await page.locator(".kw-ncarousel .kw-carousel-btn.is-next").click(); await until(async () => (await pos()) > 100);
     await page.locator(".kw-ncarousel .kw-carousel-dot").nth(2).click(); await until(async () => (await pos()) > (await track.evaluate((t) => t.clientWidth)));
-    await page.locator(".kw-ncarousel .kw-carousel-btn.is-prev").click(); await until(async () => { const a = await pos(); await page.waitForTimeout(250); return (await pos()) === a && a < 800; }); // le défilement doux est terminé
+    await settled(); // défilement doux terminé : sinon « précédent » part d'une position intermédiaire et peut retomber au début (bouton désactivé)
+    await page.locator(".kw-ncarousel .kw-carousel-btn.is-prev").click(); await settled(); assert.ok((await pos()) > 5, "une diapositive en arrière, pas encore au début");
     await page.locator(".kw-ncarousel .kw-carousel-btn.is-prev").click(); await until(async () => (await pos()) < 5);
     assert.equal(await page.locator(".kw-ncarousel .kw-carousel-dot").count(), 3);
     await page.close();
