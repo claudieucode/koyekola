@@ -159,7 +159,7 @@ describe("lot 2 — Basique", () => {
     assert.equal(out[2].props.size, "lg");
     assert.equal(out[3].props.size, undefined, "taille inconnue = normale (non enregistrée)");
     assert.deepEqual([out[4].props.text, out[4].props.align], ["ou", "center"]);
-    assert.equal(out[5].props.align, undefined, "position sans texte : rien");
+    assert.equal(out[5].props.text, undefined, "pas de texte enregistré"); // la position choisie est conservée (voir controles-coherence) : elle ne s'applique qu'avec un texte
     assert.throws(() => save([{ id: "map000000001", type: "map", props: { address: "" } }]), /indiquez une adresse/);
     assert.throws(() => save([{ id: "hed000000001", type: "heading", props: { text: "T", level: "2", link: "javascript:alert(1)" } }]));
     assert.equal(nodes.editorSpec().types.find((t) => t.type === "map").group, "basic");
