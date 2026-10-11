@@ -65,6 +65,7 @@ Première exécution : 4 458 réussis, 44 échecs. Analyse :
   - `refonte-design` : « les ombres sont teintées de bleu nuit » ;
   - `seo-jobs` : « rapports : audit CSV/JSON… » ;
   - `widgets-imbriques` : « carrousel (Chrome) ».
-- La suite complète n'a **pas** été relancée en entier après la correction des tests ; seuls les fichiers concernés l'ont été.
+- Les 4 échecs sont corrigés (ombres teintées, pastille d'enregistrement compacte, clé de chiffrement fixée dans seo-jobs, attente de stabilité du carrousel). Rejoués : 66/66 réussis (canvas-vide x2, refonte-design, seo-jobs, widgets-imbriques, editeur-stabilite, format-mise-en-page, mk-ab-pages).
+- Une relance complète (4 517 tests) a donné 81 échecs et 313 annulés, tous dus à une collision de numéro de migration (067) survenue pendant la fusion de `origin/main` en cours de run (corrigée ensuite par le commit 65cbce7). Cette relance n'est donc pas probante ; la suite complète n'a pas été relancée proprement ensuite.
 
 Playwright n'est pas installé dans le projet : les parcours Chrome ont été exécutés avec `playwright-core` installé hors du dépôt (`NODE_PATH`), et le Chrome local.
