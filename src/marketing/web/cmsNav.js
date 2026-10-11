@@ -13,8 +13,8 @@ const leaf = (key, label, href, extra = {}) => ({ key, label, href, status: "liv
 // Les clés « sitedash », « sites », « landing » et « pagetests » sont celles que passent déjà les écrans existants
 // (tableau de bord, sites, pages, tests A/B) : ils entrent dans la coque CMS sans changer.
 const SECTIONS = [
-  { key: "dashboard", label: "Tableau de bord", icon: "activity", items: [leaf("sitedash", "Tableau de bord", BASE)] },
-  { key: "sites", label: "Sites", icon: "globe", items: [leaf("sites", "Sites", `${BASE}/sites`, { primary: { label: "Créer un site", href: `${BASE}/sites#nouveau`, permission: "forms.write" } })] },
+  { key: "sites", label: "Mes sites", icon: "globe", items: [leaf("sites", "Mes sites", `${BASE}/sites`, { primary: { label: "Créer un site", href: `${BASE}/sites#nouveau`, permission: "forms.write" } })] },
+  { key: "dashboard", label: "Site principal", icon: "activity", items: [leaf("sitedash", "Tableau de bord du site principal", BASE)] },
   { key: "pages", label: "Pages", icon: "layout", items: [leaf("landing", "Pages", "/marketing/pages", { primary: { label: "Ajouter une page", href: "/marketing/pages#nouvelle", permission: "forms.write" } })] },
   {
     key: "articles", label: "Articles", icon: "fileText", items: [

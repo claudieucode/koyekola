@@ -339,22 +339,63 @@ const parseSite = (row) => {
   const settings = siteSettingsLib.normalizeSettings(json(row.settings, {}));
   return { ...row, tokens, settings, assets: siteSettingsLib.siteAssets(tokens, settings, themeCss) };
 };
+const SITE_TYPES = { "": "Non précisé", vitrine: "Site vitrine", blog: "Blog", boutique: "Boutique", formation: "Formation", autre: "Autre" };
+const SITE_VIEWS = ["actifs", "archives", "supprimes", "tous"];
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+function freeSiteSlug(ctx, base, exceptId = null) {
+  let slug = base, n = 2;
+  while (ctx.db.prepare("SELECT 1 FROM mk_sites WHERE organization_id = ? AND slug = ? AND id IS NOT ?").get(ctx.organizationId, slug, exceptId)) slug = `${base.slice(0, 55)}-${n++}`;
+  return slug;
+}
+// Les sites créés avant le Site Manager n'ont pas d'identifiant lisible : il leur est attribué (une seule fois) d'après leur nom
+function backfillSlugs(ctx) {
+  const rows = ctx.db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? AND slug IS NULL ORDER BY id").all(ctx.organizationId);
+  for (const r of rows) ctx.db.prepare("UPDATE mk_sites SET slug = ? WHERE id = ?").run(freeSiteSlug(ctx, landing.slugify(r.name).replace(/^page$/, "site"), r.id), r.id);
+}
+function cleanSiteSlug(ctx, value, { exceptId = null } = {}) {
+  const v = String(value ?? "").trim().toLowerCase();
+  if (!SLUG_RE.test(v) || v.length < 2 || v.length > 60) throw bad("Identifiant lisible invalide : 2 à 60 caractères, lettres minuscules, chiffres et tirets (ex. mon-site).");
+  if (ctx.db.prepare("SELECT 1 FROM mk_sites WHERE organization_id = ? AND slug = ? AND id IS NOT ?").get(ctx.organizationId, v, exceptId)) throw new MarketingError("duplicate", "Cet identifiant est déjà utilisé par un autre site.");
+  return v;
+}
+function cleanSiteType(value) {
+  const v = String(value ?? "").trim();
+  if (!Object.prototype.hasOwnProperty.call(SITE_TYPES, v)) throw bad("Type de site inconnu.");
+  return v;
+}
 function getSite(ctx, id) {
   checkCtx(ctx);
+  backfillSlugs(ctx);
   return parseSite(Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_sites WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) : null);
 }
 function requireSite(ctx, id, { active = false } = {}) {
   const site = getSite(ctx, Number(id));
   if (!site) throw new MarketingError("not_found", "Site introuvable.");
-  if (active && site.status !== "active") throw bad("Ce site est archivé : restaurez-le d'abord.");
+  if (active && (site.status !== "active" || site.deleted_at)) throw bad("Ce site est archivé ou supprimé : restaurez-le d'abord.");
   return site;
 }
-function listSites(ctx, { archived = false } = {}) {
+// view : actifs | archives | supprimes | tous (hors supprimés) ; q : recherche dans le nom, l'identifiant lisible et la description (lecture seule)
+function listSites(ctx, { archived = false, view = null, q = "", only = null } = {}) {
   checkCtx(ctx);
+  backfillSlugs(ctx);
+  const v = SITE_VIEWS.includes(view) ? view : archived ? "archives" : "actifs";
+  const where = ["s.organization_id = ?"];
+  const args = [ctx.organizationId];
+  if (v === "supprimes") where.push("s.deleted_at IS NOT NULL");
+  else { where.push("s.deleted_at IS NULL"); if (v !== "tous") { where.push("s.status = ?"); args.push(v === "archives" ? "archived" : "active"); } }
+  const term = String(q || "").trim().slice(0, 80);
+  if (term) { const like = `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`; where.push("(s.name LIKE ? ESCAPE '\\' OR s.slug LIKE ? ESCAPE '\\' OR s.description LIKE ? ESCAPE '\\')"); args.push(like, like, like); }
+  if (Array.isArray(only)) { where.push(`s.id IN (${only.length ? only.map(() => "?").join(",") : "NULL"})`); args.push(...only); }
   return ctx.db.prepare(`SELECT s.*,
       (SELECT COUNT(*) FROM mk_landing_pages p WHERE p.site_id = s.id AND p.archived_at IS NULL) AS pages,
       (SELECT COUNT(*) FROM mk_landing_pages p WHERE p.site_id = s.id AND p.archived_at IS NULL AND p.status = 'published') AS published
-    FROM mk_sites s WHERE s.organization_id = ? AND s.status = ? ORDER BY s.updated_at DESC, s.id DESC`).all(ctx.organizationId, archived ? "archived" : "active").map(parseSite);
+    FROM mk_sites s WHERE ${where.join(" AND ")} ORDER BY s.updated_at DESC, s.id DESC`).all(...args).map(parseSite);
+}
+function siteCounts(ctx) {
+  checkCtx(ctx);
+  const r = ctx.db.prepare(`SELECT COALESCE(SUM(deleted_at IS NULL AND status = 'active'), 0) AS actifs, COALESCE(SUM(deleted_at IS NULL AND status = 'archived'), 0) AS archives,
+    COALESCE(SUM(deleted_at IS NOT NULL), 0) AS supprimes FROM mk_sites WHERE organization_id = ?`).get(ctx.organizationId);
+  return { actifs: r.actifs, archives: r.archives, supprimes: r.supprimes, tous: r.actifs + r.archives };
 }
 function sitePages(ctx, siteId, { archived = false } = {}) {
   requireSite(ctx, siteId);
@@ -362,24 +403,31 @@ function sitePages(ctx, siteId, { archived = false } = {}) {
     WHERE organization_id = ? AND site_id = ? AND archived_at IS ${archived ? "NOT " : ""}NULL ORDER BY name COLLATE NOCASE`).all(ctx.organizationId, siteId);
 }
 
-function createSite(ctx, { name, tokens } = {}) {
+function createSite(ctx, { name, tokens, slug, description, siteType } = {}) {
   checkCtx(ctx);
   const clean_ = line(name, 100);
   if (!clean_) throw bad("Le nom du site est obligatoire.");
   if (ctx.db.prepare("SELECT 1 FROM mk_sites WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, clean_)) throw new MarketingError("duplicate", "Un site porte déjà ce nom.");
-  const id = Number(ctx.db.prepare("INSERT INTO mk_sites (organization_id, name, tokens, created_by) VALUES (?, ?, ?, ?)")
-    .run(ctx.organizationId, clean_, JSON.stringify(normalizeTokens(tokens || DEFAULT_TOKENS, { strict: Boolean(tokens) })), ctx.userId ?? null).lastInsertRowid);
+  backfillSlugs(ctx);
+  const finalSlug = slug !== undefined && String(slug).trim() !== "" ? cleanSiteSlug(ctx, slug) : freeSiteSlug(ctx, landing.slugify(clean_).replace(/^page$/, "site"));
+  const desc = line(description ?? "", 500);
+  const type = cleanSiteType(siteType ?? "");
+  const id = Number(ctx.db.prepare("INSERT INTO mk_sites (organization_id, name, slug, description, site_type, tokens, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .run(ctx.organizationId, clean_, finalSlug, desc, type, JSON.stringify(normalizeTokens(tokens || DEFAULT_TOKENS, { strict: Boolean(tokens) })), ctx.userId ?? null).lastInsertRowid);
   audit(ctx, "site.created", "site", id, {});
   return getSite(ctx, id);
 }
-function updateSite(ctx, id, { name, tokens } = {}) {
+function updateSite(ctx, id, { name, tokens, slug, description, siteType } = {}) {
   const site = requireSite(ctx, id, { active: true });
   const newName = name === undefined ? site.name : line(name, 100);
   if (!newName) throw bad("Le nom du site est obligatoire.");
   const dup = ctx.db.prepare("SELECT id FROM mk_sites WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, newName);
   if (dup && dup.id !== site.id) throw new MarketingError("duplicate", "Un site porte déjà ce nom.");
   const newTokens = tokens === undefined ? site.tokens : normalizeTokens(tokens, { strict: true });
-  ctx.db.prepare("UPDATE mk_sites SET name = ?, tokens = ?, updated_at = datetime('now') WHERE id = ?").run(newName, JSON.stringify(newTokens), site.id);
+  const newSlug = slug === undefined ? site.slug : cleanSiteSlug(ctx, slug, { exceptId: site.id });
+  const newDesc = description === undefined ? site.description : line(description, 500);
+  const newType = siteType === undefined ? site.site_type : cleanSiteType(siteType);
+  ctx.db.prepare("UPDATE mk_sites SET name = ?, slug = ?, description = ?, site_type = ?, tokens = ?, updated_at = datetime('now') WHERE id = ?").run(newName, newSlug, newDesc, newType, JSON.stringify(newTokens), site.id);
   audit(ctx, "site.updated", "site", site.id, { tokens: tokens !== undefined });
   return getSite(ctx, site.id);
 }
@@ -464,6 +512,7 @@ function movePage(ctx, pageId, siteId) {
 // Archiver un site : ses pages en ligne passent hors ligne (rien n'est effacé) ; restaurer ne republie rien d'office
 function archiveSite(ctx, id) {
   const site = requireSite(ctx, id);
+  if (site.deleted_at) throw bad("Ce site est supprimé : restaurez-le d'abord.");
   transaction(ctx.db, () => {
     ctx.db.prepare("UPDATE mk_landing_pages SET status = 'unpublished', updated_at = datetime('now') WHERE site_id = ? AND status = 'published'").run(site.id);
     ctx.db.prepare("UPDATE mk_sites SET status = 'archived', archived_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(site.id);
@@ -473,6 +522,7 @@ function archiveSite(ctx, id) {
 }
 function restoreSite(ctx, id) {
   const site = requireSite(ctx, id);
+  if (site.deleted_at) throw bad("Ce site est dans la corbeille : sortez-le d'abord de la corbeille.");
   // Le domaine d'un site archivé a pu être repris par un autre site : il n'est pas rendu en silence (le site restauré retrouve ses réglages sans domaine)
   const restoredUrl = site.settings.seo && site.settings.seo.publicUrl;
   if (restoredUrl) {
@@ -484,19 +534,39 @@ function restoreSite(ctx, id) {
   invalidateSites();
   audit(ctx, "site.restored", "site", site.id, {});
 }
-// Dupliquer un site : design system et pages (en brouillon, hors ligne, nouvelles adresses)
-function duplicateSite(ctx, id) {
+// Dupliquer un site : configuration (design system, réglages, description, type) et, si demandé, ses pages (en brouillon, hors ligne, nouvelles adresses).
+// Médias, tunnels, articles et autres données du CMS ne sont jamais copiés.
+function duplicateSite(ctx, id, { withPages = true } = {}) {
   const site = requireSite(ctx, id);
+  if (site.deleted_at) throw bad("Ce site est supprimé : restaurez-le d'abord.");
   return transaction(ctx.db, () => {
-    const copy = createSite(ctx, { name: uniqueName(ctx, "mk_sites", `${site.name} (copie)`), tokens: site.tokens });
+    const copy = createSite(ctx, { name: uniqueName(ctx, "mk_sites", `${site.name} (copie)`), tokens: site.tokens, description: site.description, siteType: site.site_type });
     // Une copie n'hérite jamais du domaine de l'original (un domaine ne sert qu'un seul site)
     ctx.db.prepare("UPDATE mk_sites SET settings = ? WHERE id = ?").run(JSON.stringify({ ...site.settings, seo: { ...site.settings.seo, publicUrl: "" } }), copy.id);
-    const map = new Map();
-    for (const p of sitePages(ctx, site.id)) map.set(p.id, duplicatePage(ctx, p.id, { siteId: copy.id }).id);
-    if (site.home_page_id && map.has(site.home_page_id)) setHomePage(ctx, copy.id, map.get(site.home_page_id));
-    audit(ctx, "site.duplicated", "site", copy.id, { from: site.id });
+    if (withPages) {
+      const map = new Map();
+      for (const p of sitePages(ctx, site.id)) map.set(p.id, duplicatePage(ctx, p.id, { siteId: copy.id }).id);
+      if (site.home_page_id && map.has(site.home_page_id)) setHomePage(ctx, copy.id, map.get(site.home_page_id));
+    }
+    audit(ctx, "site.duplicated", "site", copy.id, { from: site.id, withPages });
     return getSite(ctx, copy.id);
   });
+}
+// Suppression logique : seulement un site archivé (donc hors ligne). Rien n'est effacé : pages, accès et réglages restent en base et le site se restaure depuis la corbeille.
+function deleteSite(ctx, id) {
+  const site = requireSite(ctx, id);
+  if (site.deleted_at) throw bad("Ce site est déjà supprimé.");
+  if (site.status !== "archived") throw bad("Archivez d'abord ce site : seul un site archivé peut être supprimé.");
+  ctx.db.prepare("UPDATE mk_sites SET deleted_at = datetime('now'), deleted_by = ?, updated_at = datetime('now') WHERE id = ?").run(ctx.userId ?? null, site.id);
+  invalidateSites();
+  audit(ctx, "site.deleted", "site", site.id, {});
+}
+function undeleteSite(ctx, id) {
+  const site = requireSite(ctx, id);
+  if (!site.deleted_at) throw bad("Ce site n'est pas supprimé.");
+  ctx.db.prepare("UPDATE mk_sites SET deleted_at = NULL, deleted_by = NULL, updated_at = datetime('now') WHERE id = ?").run(site.id);
+  invalidateSites();
+  audit(ctx, "site.undeleted", "site", site.id, {});
 }
 
 // ---------- Composants réutilisables ----------
@@ -846,7 +916,7 @@ module.exports = {
   KINDS, MAX_VERSIONS,
   getPage, requirePage, listPages, normalizeContent, saveDraft, discardDraft, publish, unpublish, listVersions, getVersion, restoreVersion,
   createPage, duplicatePage, archivePage, restorePage, schedulePage, cancelSchedule, promoteScheduledPages, schedulerMiddleware,
-  getSite, requireSite, listSites, sitePages, createSite, updateSite, saveSiteDesign, colorUsage, setHomePage, movePage, archiveSite, restoreSite, duplicateSite,
+  getSite, requireSite, listSites, sitePages, createSite, updateSite, saveSiteDesign, colorUsage, setHomePage, movePage, archiveSite, restoreSite, duplicateSite, deleteSite, undeleteSite, siteCounts, SITE_TYPES, SITE_VIEWS,
   listComponents, getComponent, createComponent, updateComponent, componentUsage, componentInstances, saveComponentDraft, publishComponent, discardComponentDraft, deleteComponent, COMPONENT_KINDS, resolveSections,
   siteParts, withSiteParts, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
   normalizeSeo, normalizeTheme, TYPES,

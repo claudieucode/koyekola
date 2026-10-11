@@ -10,6 +10,28 @@ const MAX_LIMIT = 1000;
 const DEFAULT_LIMIT = 50;
 const MAX_IN = 500;
 
+// Colonnes d'une table (null si elle n'existe pas). Le résultat est gardé en mémoire (un import appelle le dépôt à chaque ligne) et
+// recalculé dès que le schéma de la base change (PRAGMA schema_version : migration, colonne ajoutée) : la validation reste exacte.
+const statements = new WeakMap(); // db -> Map(SQL -> requête préparée) : préparer une requête coûte plus cher que de l'exécuter
+function prepared(db, sql) {
+  let map = statements.get(db);
+  if (!map) { map = new Map(); statements.set(db, map); }
+  let st = map.get(sql);
+  if (!st) { if (map.size > 500) map.clear(); st = db.prepare(sql); map.set(sql, st); }
+  return st;
+}
+const schemaCache = new WeakMap(); // db -> { version, tables: Map(nom -> Set | null) }
+function tableColumns(db, name) {
+  const version = db.prepare("PRAGMA schema_version").get().schema_version;
+  let entry = schemaCache.get(db);
+  if (!entry || entry.version !== version) { entry = { version, tables: new Map() }; schemaCache.set(db, entry); }
+  if (!entry.tables.has(name)) {
+    const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name);
+    entry.tables.set(name, exists ? new Set(db.prepare(`PRAGMA table_info(${name})`).all().map((c) => c.name)) : null);
+  }
+  return entry.tables.get(name);
+}
+
 function bindable(value) {
   if (value === null || typeof value === "string" || typeof value === "bigint") return value;
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -25,8 +47,8 @@ function createRepository(db, organizationId, { siteScope } = {}) {
 
   function table(name) {
     if (typeof name !== "string" || !TABLE_NAME.test(name)) throw new Error("Nom de table invalide : il doit commencer par mk_ et ne contenir que des minuscules, chiffres et « _ ».");
-    if (!db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name)) throw new Error(`Table introuvable : ${name}.`);
-    const columns = new Set(db.prepare(`PRAGMA table_info(${name})`).all().map((c) => c.name));
+    const columns = tableColumns(db, name);
+    if (!columns) throw new Error(`Table introuvable : ${name}.`);
     if (!columns.has("organization_id")) throw new Error(`${name} n'a pas de colonne organization_id : elle ne peut pas passer par le dépôt.`);
     if (!columns.has("id")) throw new Error(`${name} n'a pas de colonne id : elle ne peut pas passer par le dépôt.`);
 
@@ -77,7 +99,7 @@ function createRepository(db, organizationId, { siteScope } = {}) {
         if (scoped && row.site_id !== undefined && row.site_id !== siteScope) throw new Error("Cette création est limitée à votre site.");
         const { keys, values } = assignments(scoped ? { ...row, site_id: siteScope } : row);
         const cols = ["organization_id", ...keys];
-        return db.prepare(`INSERT INTO ${name} (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")}) RETURNING *`).get(organizationId, ...values);
+        return prepared(db, `INSERT INTO ${name} (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")}) RETURNING *`).get(organizationId, ...values);
       },
       get(id) {
         if (!Number.isInteger(id)) return null;
@@ -128,4 +150,4 @@ function createRepository(db, organizationId, { siteScope } = {}) {
   return { organizationId, table };
 }
 
-module.exports = { createRepository };
+module.exports = { createRepository, prepared };

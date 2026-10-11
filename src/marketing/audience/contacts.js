@@ -1,7 +1,7 @@
 // Contacts : création/mise à jour, recherche, suppression. Le STATUT d'un contact n'est jamais modifiable ici :
 // seul le module de conformité (consentement, désinscription, suppression) le change. Un import, une synchronisation
 // ou une saisie manuelle ne peut donc jamais (ré)abonner quelqu'un par accident.
-const { createRepository } = require("../db/repository");
+const { createRepository, prepared } = require("../db/repository");
 const { transaction } = require("../db/tx");
 const { validateEmail, normalizeEmail } = require("./email");
 const { checkCtx, cleanText, audit, emit, MarketingError } = require("./shared");
@@ -39,10 +39,10 @@ function findByEmail(ctx, email) {
   checkCtx(ctx);
   const normalized = normalizeEmail(email);
   if (!normalized) return null;
-  const direct = ctx.db.prepare("SELECT * FROM mk_contacts WHERE organization_id = ? AND email = ?").get(ctx.organizationId, normalized);
+  const direct = prepared(ctx.db, "SELECT * FROM mk_contacts WHERE organization_id = ? AND email = ?").get(ctx.organizationId, normalized);
   if (direct) return direct;
   // Autre adresse d'un contact fusionné (palier 15) : on retrouve la fiche maître
-  return ctx.db.prepare("SELECT c.* FROM mk_contact_aliases a JOIN mk_contacts c ON c.id = a.contact_id WHERE a.organization_id = ? AND a.email = ?").get(ctx.organizationId, normalized) ?? null;
+  return prepared(ctx.db, "SELECT c.* FROM mk_contact_aliases a JOIN mk_contacts c ON c.id = a.contact_id WHERE a.organization_id = ? AND a.email = ?").get(ctx.organizationId, normalized) ?? null;
 }
 
 function getContact(ctx, id) {
