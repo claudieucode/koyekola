@@ -1,0 +1,387 @@
+# Inventaire des fonctionnalités (palier 23)
+
+## A. Fonctionnalités validées (119)
+
+Chacune a une preuve et un test (T = suite automatisée, S = sonde d'audit).
+
+- **PG-01** Créer une page — CMS → Pages → nouvelle page (gabarit au choix) ; ouvre le Page Builder
+  - Preuve : tests/cms-pages.test.js (31) ; sonde : POST /marketing/pages → 302 vers la fiche
+- **PG-02** Modifier titre, adresse, description, auteur — Fiche de la page : nom, adresse, titre, description, page parente, site, formulaire, indexation
+  - Preuve : cms-pages (réglages, adresse refusée si invalide/doublon)
+- **PG-03** Dupliquer — Action « Dupliquer » (copie en brouillon)
+  - Preuve : sonde : dupliquer → 302 /pages/2 ; cms-pages
+- **PG-04** Corbeille et restauration — Archiver / restaurer (`archived_at`) ; une page testée en A/B ou liée à un tunnel est protégée
+  - Preuve : sonde : archiver 302, restaurer 302, `archived_at` revenu à null ; cms-pages ; protections palier 18/22
+- **PG-05** Suppression définitive — Supprimer (après corbeille) avec contrôle des dépendances
+  - Preuve : cms-pages (suppression refusée si utilisée), cms-abtest
+- **PG-06** Publier / dépublier ; brouillon distinct du public — Version publiée figée ≠ brouillon ; publier archive une version
+  - Preuve : sonde : publié → 200, dépublié → 404 ; cms-pages (le public garde la version A tant que B n'est pas publiée)
+- **PG-07** Brouillon automatique et protection contre l'écrasement — PUT /brouillon avec numéro de révision (409 si périmé)
+  - Preuve : cms-pages (révision périmée refusée) ; cms-revisions
+- **PG-08** Prévisualisation — /pages/:id/apercu (vrai rendu), aperçu d'un point d'historique
+  - Preuve : sonde palier 22 + cms-pages
+- **PG-09** Recherche, filtres, tri, pagination — Recherche, filtre état/site, tri, pagination côté base (25/page), onglets avec vrais compteurs
+  - Preuve : cms-pages « liste : recherche, filtres, tri, pagination, actions groupées » ; sonde : recherche
+- **PG-10** Actions groupées — POST /pages/actions
+  - Preuve : cms-pages (même bloc de tests)
+- **PG-11** Unicité des adresses et conflits — Adresse unique globale ; refus des adresses invalides ou déjà prises
+  - Preuve : cms-pages (adresses refusées : majuscules, underscore, doublon)
+- **PG-12** Changement d'adresse → redirection — 301 de l'ancienne adresse + historique `cms_url_history`
+  - Preuve : sonde : /p/page-parcours → 301 /p/nouvelle-adresse ; cms-urls
+- **PG-16** Choisir la page d'accueil — `home_page_id` consommé par le routage, le canonical et le sitemap
+  - Preuve : cms-parametres ; cms-urls
+- **PG-17** Isolation par site des pages — Droits calculés par site (`cmsAccess`), filtre `site_id` partout
+  - Preuve : cms-pages (filtre par site), cms-users (accès par site, IDOR)
+- **PG-18** Permissions réelles sur les pages — forms.read / forms.write / pages.delete contrôlés côté serveur
+  - Preuve : sonde matrice : 360 routes × 6 profils ; cms-users
+- **PG-20** Modèles de page / de thème — Modèles de thème affectés par famille (article, archive, 404, recherche, page) avec priorité
+  - Preuve : cms-appearance (42)
+- **PB-01** Ajouter sections, conteneurs, widgets — 86 types de widgets (banc d'essai documenté) ; ajout par clic ou glisser
+  - Preuve : tests Chrome editeur-* (68 fichiers passés un par un dans cet audit, tous verts quand lancés seuls) ; docs/WIDGETS-INVENTAIRE.md (86 types, banc non rejoué)
+- **PB-02** Déplacer, dupliquer, supprimer, sélectionner — Canevas + panneau Structure synchronisés
+  - Preuve : editeur-structure-navigateur : 25/25 (relancé seul)
+- **PB-03** Hiérarchie / panneau Structure (calques) — Panneau détachable, repli, renommer, verrouiller, masquer
+  - Preuve : editeur-structure-navigateur
+- **PB-04** Panneau de propriétés et styles — Inspecteur universel (propriétés, états, classes globales, styles enregistrés)
+  - Preuve : tests editeur-droite, proprietes-*, styles-enregistres (Chrome)
+- **PB-05** Responsive ordinateur / tablette / mobile — Valeurs par écran, aperçu 3 tailles
+  - Preuve : editeur-structure T15/T15b ; editeur-apercu-navigateur
+- **PB-06** Annuler / rétablir — Annuler/rétablir avec état exact restauré
+  - Preuve : editeur-structure T11/T12
+- **PB-07** Enregistrement automatique — Brouillon enregistré sur le serveur (PUT /brouillon)
+  - Preuve : cms-pages ; editeur-* (enregistrer, quitter, revenir)
+- **PB-08** Historique, comparaison, restauration — Historique par page (cms_revisions + versions publiées), comparer, restaurer sûr
+  - Preuve : cms-revisions (39)
+- **PB-11** Réutiliser la médiathèque dans les widgets — Sélecteur partagé KWMediaPicker
+  - Preuve : cms-media (31) ; sonde Chrome : sélecteur ouvert dans l'éditeur
+- **PB-12** Données lisibles, non enfermées — Arbre JSON ouvert ; export/import de pages (`/pages/:id/exporter`, importer.json)
+  - Preuve : routes + cms-outils (export de pages)
+- **PB-14** Composants et patterns réutilisables — Composants synchronisés + patterns statiques
+  - Preuve : cms-appearance ; tests composants (Chrome)
+- **AR-01** Créer et modifier un article (éditeur riche) — Éditeur Tiptap avec autosave, versions, SEO
+  - Preuve : cms-articles (35) ; sonde : article créé, publié, rendu
+- **AR-03** Brouillon / publication / dépublication — Statuts réels, date de publication, CMS : publier/dépublier
+  - Preuve : cms-articles ; sonde : brouillon 404 public, publié 200
+- **AR-04** Programmation de la publication — Publié à la première lecture après l'heure (pas de tâche de fond) ; même principe que wp-cron
+  - Preuve : cms-articles ; sonde : planifié → promu à la lecture, présent au sitemap
+- **AR-05** Extrait, image mise en avant — Extrait ; image de la médiathèque (`featured_media_id`)
+  - Preuve : cms-articles
+- **AR-06** Catégories et étiquettes sur l'article — Via le moteur de taxonomies
+  - Preuve : cms-taxonomy ; sonde : archives catégorie/étiquette listent l'article
+- **AR-07** Archives : catégorie, étiquette, auteur — /blog/categorie/:slug, /blog/etiquette/:slug, /blog/auteur/:id
+  - Preuve : sonde : 200 et article présent, canonical correct
+- **AR-09** Pagination du blog — Pagination côté base
+  - Preuve : cms-articles (24 articles, 20/page) ; sonde : page 20 en 460 ms sur 1000 articles
+- **AR-11** Adresse d'un article stable, changement géré — /blog/<slug> ; historique des adresses (301)
+  - Preuve : cms-urls ; cms-articles
+- **AR-12** Prévisualisation d'un brouillon — /formateur/blog/:id/apercu
+  - Preuve : cms-articles
+- **AR-13** Corbeille et restauration — `deleted_at`, restauration en brouillon, jamais republié d'office
+  - Preuve : cms-articles ; sonde : corbeille → 404 public + lien de menu retiré
+- **AR-14** Révisions, autosave, conflits — post_revisions (100), autosave, conflit 409
+  - Preuve : cms-revisions
+- **AR-18** Actions groupées — Publier, dépublier, corbeille, restaurer, supprimer avec rapport
+  - Preuve : cms-articles
+- **AR-19** Nettoyage du HTML saisi — Assainissement serveur à chaque enregistrement (`blogHtml.js`)
+  - Preuve : sonde : script, onclick, iframe javascript: retirés ; titre échappé
+- **TX-01** Catégories hiérarchiques, étiquettes — Termes, parents (10 niveaux), cycles refusés
+  - Preuve : cms-taxonomy (28)
+- **TX-02** Création, modification, slug, conflits — UNIQUE (taxonomie, slug)
+  - Preuve : cms-taxonomy
+- **TX-03** Suppression sûre / références — Réassignation ou fusion ; jamais en silence ; fusion en plus
+  - Preuve : cms-taxonomy
+- **TX-04** Comptages — Calculés en SQL
+  - Preuve : cms-taxonomy
+- **TX-05** Archives publiques et SEO — Pages publiques + canonical ; SEO via `seo_meta`
+  - Preuve : sonde : 200, canonical
+- **TX-08** Permissions — taxonomies.read/write/delete
+  - Preuve : sonde matrice ; cms-taxonomy
+- **MD-01** Importer des fichiers — Téléversement (clic, glisser) ; fiche en base
+  - Preuve : cms-media (31) ; sonde Chrome
+- **MD-02** Validation des types et tailles — Contrôle du contenu réel (signature), SVG/HTML/exe refusés, limite de taille
+  - Preuve : cms-media (html, svg, exe, faux docx refusés)
+- **MD-03** Recherche, filtres, tri, pagination — Recherche (nom, titre, alt), filtre par type, tri, « charger la suite »
+  - Preuve : cms-media (120 fichiers)
+- **MD-04** Métadonnées : texte alternatif, titre, dimensions, taille — Champs réels ; le sélecteur signale « Sans texte alt. »
+  - Preuve : cms-media ; capture du sélecteur
+- **MD-05** Suppression avec détection des références — Refus tant que le fichier sert (articles, pages) ; corbeille d'abord
+  - Preuve : cms-media (supprimer refusé si utilisé)
+- **MD-09** Lisibilité de la médiathèque dans l'éditeur (défaut signalé) — Défaut NON reproduit : 10 textes mesurés, aucun sous 4,5:1, thème clair et sombre ; fenêtre blanche dans les deux thèmes (non adaptée au thème sombre de l'éditeur) *(P3)*
+  - Preuve : sonde contraste (Chrome) ; capture mediatheque-sombre.png
+- **MD-10** Permissions — media.read/upload/delete
+  - Preuve : cms-media (éditeur : suppression 403)
+- **CM-01** Commenter (public) et afficher — Formulaire public, affichage imbriqué (3 niveaux)
+  - Preuve : cms-comments (39)
+- **CM-02** Modération : approuver, indésirable, corbeille, restaurer, supprimer — Écran dédié, actions groupées, répondre
+  - Preuve : cms-comments
+- **CM-03** Anti-spam et abus — Piège caché, jeton d'heure, débit, doublons, 3 liens = relu
+  - Preuve : cms-comments
+- **CM-04** Échappement / XSS — Texte brut échappé ; liens `nofollow ugc`
+  - Preuve : sonde : `<img onerror>` et `<script>` neutralisés
+- **CM-07** Un commentaire n'inscrit pas à une liste marketing — Garanti par conception ; événements émis mais rien d'abonné
+  - Preuve : cms-comments ; cms-contacts
+- **NV-01** Créer, modifier, supprimer des menus — CMS → Navigation
+  - Preuve : cms-navigation (39)
+- **NV-02** Éléments : pages, articles, catégories, étiquettes, liens, ancres — Types résolus par le service central ; liens sûrs (liste blanche)
+  - Preuve : cms-navigation ; sonde : libellé HTML échappé
+- **NV-03** Hiérarchie et réorganisation — 3 niveaux, boutons et glisser
+  - Preuve : cms-navigation
+- **NV-04** Emplacements : en-tête, pied, mobile — nav_locations
+  - Preuve : sonde : menu affecté visible sur l'accueil
+- **NV-05** Liens vers un contenu supprimé — Lien masqué sur le site, signalé et réparable dans l'admin
+  - Preuve : sonde : article en corbeille → lien retiré de l'accueil
+- **AP-01** Styles globaux (couleurs, polices, tailles…) qui changent le site public — Jetons validés, CSS compilé, `<style id=kw-appearance>`
+  - Preuve : cms-appearance (42) ; sonde : réglages visibles
+- **AP-02** En-tête et pied de page éditables — Parties de template du site public (brouillon → publication)
+  - Preuve : cms-appearance
+- **AP-03** Templates par famille (article, archives, recherche, 404) — Familles + priorité + repli
+  - Preuve : cms-appearance
+- **AP-07** Aperçu avant publication — `?kwpreview=1` (équipe, noindex) + cadre ordinateur/tablette/mobile
+  - Preuve : cms-appearance
+- **US-01** Liste, profils, statut, suspension — Écrans avec filtres ; suspension immédiate
+  - Preuve : cms-users (42)
+- **US-02** Rôles du système et rôles personnalisés — 6 rôles + rôles personnalisés ; chaque case = vérification serveur réelle
+  - Preuve : cms-users ; sonde matrice
+- **US-03** Accès par site — mk_site_members ; une personne limitée à un site n'ouvre que ce site
+  - Preuve : cms-users ; sonde : non-membres 403 sur 360/360 routes
+- **US-04** Invitations — Jeton à usage unique, e-mail, renvoi, révocation
+  - Preuve : cms-users
+- **US-05** Garde-fous d'escalade de privilèges — Jamais plus de droits que soi, jamais soi-même, dernier propriétaire protégé
+  - Preuve : cms-users
+- **US-06** Contrôle des permissions côté serveur (pas seulement les boutons) — Sonde : 360 routes d'administration × 6 profils (anonyme, élève, lecteur, contributeur, auteur, éditeur)
+  - Preuve : sonde matrice : anonyme 360/360 redirigé vers la connexion ; élève non membre 360/360 refusé (403) ; aucune écriture permise à un lecteur hors prévisualisation et préférences personnelles
+- **US-09** Limitation des tentatives de connexion — 10 échecs / 15 min par adresse
+  - Preuve : src/middlewares/security.js (limiteur lu dans le code ; tests d'authentification non relancés ici)
+- **RV-01** Historique, comparaison, restauration (pages, articles, apparence, patterns) — Couche commune `revisions.js` ; restauration transactionnelle avec état « avant » conservé
+  - Preuve : cms-revisions (39)
+- **RV-02** Conflits de modification simultanée — 409 + texte conservé (pages, articles, apparence)
+  - Preuve : cms-revisions
+- **RV-03** Corbeille commune — `/site-web/corbeille` pour tous les types ; purge manuelle seulement
+  - Preuve : cms-revisions
+- **SE-01** Titre SEO, meta description, canonical, robots — Présents dans le HTML rendu et conformes aux réglages saisis
+  - Preuve : sonde : title « Titre SEO perso », description, canonical https://k.test/blog/… ; cms-seo (24)
+- **SE-02** Open Graph / Twitter — og:title, og:description, twitter:card ; og:image seulement avec une image
+  - Preuve : sonde : og=true, twitter=true, og:image=false sans image mise en avant
+- **SE-03** Données structurées — JSON-LD : Organization, WebSite+SearchAction, BreadcrumbList, BlogPosting, Person
+  - Preuve : sonde : 1 bloc JSON-LD, types listés
+- **SE-04** Sitemap — Contenus publiés ET indexables ; index automatique au-delà de 5 000 URL ; `lastmod`
+  - Preuve : sonde : article présent ; cms-seo ; production : 200
+- **SE-05** robots.txt — Généré, avec `Sitemap:` ; l'indexation dépend de l'environnement
+  - Preuve : sonde ; production : contenu relu
+- **SE-06** Fil d'Ariane — BreadcrumbList en JSON-LD (article) ; widget visible dans le Page Builder
+  - Preuve : sonde (types BreadcrumbList)
+- **SE-07** 404 et recherche en noindex — noindex sur 404 et sur /blog?q=
+  - Preuve : sonde : `noindex, nofollow` (404), `noindex, follow` (recherche)
+- **UR-01** Résolution des adresses (/p, /blog, archives) — Bases fixes (`/p/`, `/blog/`) ; résolveur `src/seo/resolver.js`
+  - Preuve : cms-urls (tests)
+- **UR-02** Redirections 301/302, boucles, tests — Écran Redirections, détection des boucles, test d'une adresse
+  - Preuve : cms-urls
+- **UR-03** Erreurs 404 suivies et liens cassés — Journal des 404 + analyse des liens cassés
+  - Preuve : cms-urls ; seo-*
+- **UR-05** Domaines personnalisés par site — Un site se rattache à un domaine complet (accueil et pages à la racine)
+  - Preuve : cms-urls ; server.js `siteRouting`
+- **UR-06** Ressource supprimée ou renommée sans lien mort silencieux — Historique d'adresses, menus qui masquent, gardes de suppression
+  - Preuve : sonde : lien de menu retiré ; cms-urls
+- **TL-02** Importer avec aperçu, conflits et annulation — Analyse → rapport → confirmer → possibilité de défaire
+  - Preuve : sonde : mode « ignorer » = aucun doublon (1/1/2/1 avant et après) ; mode « dupliquer » = copies créées ; JSON cassé refusé ; cms-outils
+- **TL-04** Santé du site et diagnostic d'intégrité — 5 contrôles + diagnostic des références
+  - Preuve : cms-outils
+- **TL-05** Mode maintenance, caches — Par site ; l'équipe n'est jamais bloquée
+  - Preuve : cms-outils
+- **TL-06** Recherche / remplacement dans le contenu — Simulation puis remplacement
+  - Preuve : cms-outils
+- **ST-01** Identité du site (nom) qui change réellement le rendu — Nom → titres, partage, données structurées
+  - Preuve : sonde : « NomAuditXYZ » visible sur l'accueil après enregistrement ; cms-parametres (32)
+- **ST-02** Langue, fuseau, formats de date — `<html lang>`, formats consommés par `utils/format`
+  - Preuve : cms-parametres ; sonde : lang=fr
+- **ST-03** Lecture : page d'accueil, articles par page — Consommés par le routage et le blog
+  - Preuve : cms-parametres
+- **ST-04** Commentaires, médias, confidentialité, indexation — Moteur de réglages avec validation, confirmation des réglages sensibles, audit
+  - Preuve : cms-parametres
+- **ST-07** Un utilisateur non autorisé ne réinitialise pas un réglage — Route sans garde de route : le moteur refuse (le nom du site est resté après une demande d'un lecteur)
+  - Preuve : sonde : lecteur → 302, nom conservé
+- **SC-01** Aucune route d'administration ouverte à un anonyme — 360 routes testées : 360 redirections vers la connexion
+  - Preuve : sonde matrice (audit-parite/resultats/matrice.json)
+- **SC-02** Aucune route d'administration ouverte à un compte non membre — 360 routes testées : 360 refus 403
+  - Preuve : sonde matrice
+- **SC-03** IDOR et fuite inter-sites — Accès limité au site : refus sur les ressources des autres sites
+  - Preuve : cms-users (accès par site), cms-pages (filtre par site), cms-outils (« compte limité au site B ne peut pas importer dans A »), cms-abtest-web (IDOR)
+- **SC-04** XSS (contenu, titres, commentaires, listes d'administration) — Échappement et assainissement vérifiés
+  - Preuve : sonde : 4 vecteurs ; tests de chaque module
+- **SC-05** Dépôts de fichiers dangereux — Signature réelle contrôlée, SVG/HTML/exe refusés
+  - Preuve : cms-media
+- **SC-09** Cookies de session — httpOnly, SameSite=Lax, Secure automatique ; aucun cookie posé à un visiteur anonyme
+  - Preuve : server.js ligne 139 ; sonde : aucun Set-Cookie sur l'accueil
+- **SC-10** Secrets non exposés dans le dépôt — Aucun motif de clé (sk_live, AKIA, clé privée) dans les fichiers suivis (hors tests/docs) ; seul `.env.example` est suivi
+  - Preuve : git grep ; git ls-files
+- **UX-01** Aucune erreur dans la console du navigateur — 24 écrans × 2 largeurs : 0 erreur de console, 0 erreur de page, 0 requête échouée
+  - Preuve : sonde navigateur (Chrome réel)
+- **UX-02** Responsive : pas de défilement horizontal — 24 écrans à 1280 et 375 px : débordement horizontal 0
+  - Preuve : sonde navigateur
+- **UX-03** Champs de formulaire étiquetés — 0 champ sans nom accessible sur les écrans mesurés
+  - Preuve : sonde navigateur (nolabel=0)
+- **UX-04** Contraste du texte (WCAG AA) — 8 écrans × 4 thèmes de menu : 1 seule combinaison sous le seuil (initiale d'avatar blanc sur rose : 3,75:1) *(P3)*
+  - Preuve : sonde contraste administration
+- **UX-09** États vides, messages, confirmations — États vides présents (ex. « Aucune entrée », « Aucune sauvegarde ») ; messages d'erreur explicites (ex. rédaction réservée)
+  - Preuve : sonde ; tests d'écrans
+- **PF-02** Blog avec 1 000 articles — Page 1 : 26 ms ; page 20 : 460 ms ; article : 180–220 ms ; sitemap 82 Ko en 90–160 ms (base locale de test, machine chargée)
+  - Preuve : sonde HTTP (1 000 articles ajoutés à la base de test)
+
+### Moteurs propres à KOLAKISA validés par leurs suites (catégorie E)
+
+- **KO-01** Contact Core — Contacts, doublons, fusion, cycle de vie, journal, API
+  - Preuve : cms-contacts-core (24) + cms-contacts-web (21)
+- **KO-02** Email Engine — Audiences, segments, modèles, campagnes par site
+  - Preuve : cms-email-engine (12) + web (14)
+- **KO-03** Automation Engine — Versions, simulation, historique, par site
+  - Preuve : cms-automation-engine (22) + web (11)
+- **KO-04** Tunnel Engine — Tunnels qui référencent les pages, protections de suppression
+  - Preuve : cms-tunnel + cms-tunnel-web
+- **KO-05** E-commerce ↔ Contact Core ↔ Automation ↔ Email — Commandes, remboursements, événements d'achat
+  - Preuve : cms-commerce (15) + web (5)
+- **KO-06** Analytics central — Couche de lecture sur les données existantes
+  - Preuve : cms-analytics (21) + web (10)
+- **KO-07** A/B Testing — Affectation collante, statistiques, verdict prudent ; 2 versions seulement
+  - Preuve : cms-abtest (31) + web (15) + 3 Chrome
+- **KO-08** Orchestration Tunnel ↔ Automation ↔ Email — Événements entre moteurs
+  - Preuve : cms-orchestration (17) + web (8)
+
+## B. Fonctionnalités partielles ou non validées (29)
+
+- **PG-13** Hiérarchie parent / enfant — Champ « Page parente » enregistré, mais l'adresse reste /p/<adresse> (aucun chemin hiérarchique) ; sert à l'organisation *(P3)*
+  - Preuve : views/marketing/landing.ejs : « préparation : l'adresse reste /p/… » ; export porte `parentRef`
+- **PG-15** Page publiée = indexable par défaut — Une page publiée est « en ligne mais non indexée » tant qu'on ne coche pas l'indexation (héritage des pages d'atterrissage). Constaté : `robots = noindex, nofollow` et absente du sitemap *(P2)*
+  - Preuve : sonde : `robots=noindex, nofollow`, page absente du sitemap ; migration 027 : `indexable DEFAULT 0`
+- **PB-10** Page publiée fidèle à l'éditeur — Même rendu `_node.ejs` pour canevas et public *(P3)*
+  - Preuve : architecture documentée (un seul rendu) ; fidélité visuelle non mesurée dans cet audit
+- **PB-13** Code / HTML / CSS personnalisé — Pas de champ CSS libre (volontaire, sécurité) ; classes globales et styles enregistrés ; aucun widget « HTML libre » identifié *(P3)*
+  - Preuve : docs/cms-appearance.md « pas de champ CSS libre » ; liste des widgets
+- **PB-15** Performance de l'éditeur — Chargement mesuré : 1,3 à 2,6 s ; 1,2 à 1,8 Mo non compressés ; 144 cibles de moins de 24 px (éditeur dense) *(P3)*
+  - Preuve : sonde navigateur (Chrome réel) ; docs/KOLAKISA_PERFORMANCE_*
+- **AR-10** Recherche dans le site — Recherche limitée au blog (/blog?q=) ; aucune recherche globale ; résultats en noindex *(P2)*
+  - Preuve : sonde : /recherche → 404 ; /blog?q= trouve l'article
+- **TX-06** Taxonomies personnalisées — Registre `registerTaxonomy` présent ; pas de page publique ni d'écran pour ces taxonomies *(P3)*
+  - Preuve : docs/cms-seo.md, cms-taxonomy.md « préparé, non implémenté »
+- **NV-06** Menus des sites du Page Builder — `nav_menus.site_id` existe mais n'est pas branché dans les pages *(P2)*
+  - Preuve : docs/cms-navigation.md « préparé, non implémenté »
+- **AP-04** Page 404 personnalisable — Modèle « Page introuvable » ; sans modèle, page d'erreur générique « Erreur · KOLAKISA » (noindex) *(P3)*
+  - Preuve : sonde : /introuvable → 404 générique, noindex ; modèle disponible dans Apparence
+- **AP-05** Le site editor réutilise le Page Builder — Les modèles de thème sont des pages du Page Builder ; l'en-tête/pied du site public passent par un formulaire dédié (pas par le Page Builder) *(P3)*
+  - Preuve : docs/cms-appearance.md
+- **SE-08** Plan du site par site / domaine propre — `seo_redirects` a un `site_id` ; le sitemap lit `site_id` 4 fois ; couverture complète par domaine non vérifiée *(P3)*
+  - Preuve : src/seo/sitemap.js ; cms-urls (domaines)
+- **UR-04** Permaliens configurables — Structure affichée, non modifiable (volontaire, pour ne pas casser les liens) *(P3)*
+  - Preuve : docs/cms-urls.md « Volontairement non fait »
+- **TL-01** Exporter pages, articles, menus, taxonomies, réglages — Export JSON asynchrone avec intégrité ; fichier conservé 24 h ; **fichiers médias non inclus** *(P3)*
+  - Preuve : sonde : export 200 JSON valide (clés format, resources, integrity) ; cms-outils (37)
+- **TL-07** Sauvegardes — Copie automatique quotidienne de la base (14 gardées) sur le MÊME disque ; téléchargement manuel base + fichiers depuis le Centre de gestion ; archive des fichiers non automatique ; pas de copie hors serveur automatique *(P2)*
+  - Preuve : src/services/backups.js ; sonde : liste affichant la sauvegarde « avant migration »
+- **TL-08** Journal d'activité — Écran présent ; vide sur un site neuf ; alimenté par `mk_audit_logs` *(P3)*
+  - Preuve : sonde : « Aucune entrée » sur base neuve ; contenu non vérifié après actions
+- **ST-05** Permaliens — Affichage seul (voir UR-04) *(P3)*
+  - Preuve : views : `permalinkStructure()`
+- **ST-06** Logo, favicon — Chemins de la médiathèque ; logo du site principal géré dans Apparence (deux endroits) *(P3)*
+  - Preuve : docs/cms-parametres.md « limites connues »
+- **SC-06** Injection SQL — Requêtes préparées ; les 182 gabarits SQL avec fragment dynamique : aucun ne reçoit directement `req.*` (recherche automatique) ; les `ORDER BY` passent par des tables blanches ; revue manuelle non exhaustive *(P3)*
+  - Preuve : git grep (0 interpolation directe de `req./body./query./params.`) ; revue d'échantillon
+- **SC-07** Protection CSRF — Pas de jeton par formulaire. Défense : contrôle de l'en-tête Origin/Referer + cookie SameSite=Lax. Une requête SANS Origin ni Referer est acceptée (constaté : POST sans en-tête → 302 accepté ; Origin étranger → 403) *(P3)*
+  - Preuve : sonde : sans Origin = accepté ; origine étrangère = refusée ; security.js ligne 41
+- **SC-08** En-têtes de sécurité — nosniff, X-Frame-Options, CSP (partielle), Referrer-Policy, Permissions-Policy ; HSTS en production (relevé sur kolakisa.com). CSP limitée à object-src/base-uri/frame-ancestors (pas de script-src) *(P3)*
+  - Preuve : curl -I https://kolakisa.com/ ; sonde (HSTS absent seulement en HTTP local)
+- **SC-11** Dépendances vulnérables — `npm audit` (production) : 1 haute (source-map-js, déni de service par fichier de cartes source, dépendance indirecte), 0 critique *(P3)*
+  - Preuve : npm audit --omit=dev (réseau requis, exécuté)
+- **SC-12** Journalisation des actions sensibles — mk_audit_logs : réglages, rôles, invitations, tests A/B… ; connexions non journalisées *(P2)*
+  - Preuve : docs/cms-utilisateurs.md
+- **UX-07** Navigation au clavier / focus — Gérée dans les composants (menu, sélecteur, dialogues) ; parcours clavier complet non testé écran par écran *(P3)*
+  - Preuve : tests de composants ; non testé globalement
+- **UX-08** Taille des cibles tactiles — 1 à 8 contrôles de moins de 24 px par écran selon l'écran (à 375 px : 0 à 5) *(P3)*
+  - Preuve : sonde navigateur (small)
+- **PF-01** Écrans d'administration — 0,66 à 1,8 s au chargement complet dans Chrome ; ~515 Ko décodés par écran (le serveur compresse en gzip) ; réponses HTML serveur 8–30 ms *(P3)*
+  - Preuve : sonde navigateur et sonde HTTP
+- **PF-03** Pages publiques (cache) — Pas de cache de page (`private, no-cache`) ; accueil 6–7 ms ; images servies sans variantes *(P3)*
+  - Preuve : sonde ; MD-06
+- **KO-10** Événements du CMS branchés sur l'automatisation — Événements `comment.*`, `term.*`, `menu.*` émis ; « rien n'y est branché » (aucun abonné) *(P2)*
+  - Preuve : docs/cms-comments.md, cms-taxonomy.md, cms-navigation.md
+- **EX-02** Extensions / modules tiers — Pas de système de plugins ; registres internes (`registerContent`, `registerTaxonomy`, widgets personnalisés par fichier) *(P3)*
+  - Preuve : docs/widgets-personnalises.md ; registres
+- **EX-03** Webhooks sortants et clés d'API — webhooksOut.js, apiKeys.js (périmètre marketing) *(P3)*
+  - Preuve : routes présentes ; non retestées dans cet audit
+
+## C. Fonctionnalités absentes ou défectueuses (26)
+
+*Aucune fonctionnalité « buguée » n'a été constatée par reproduction (statut B : 0). Les « décoratives » sont des commandes désactivées et libellées, pas de faux boutons actifs.*
+
+- **PG-14** Programmer la publication d'une page — Aucune colonne ni action de programmation pour les pages (existe pour les articles) *(P2)*
+  - Preuve : colonnes de mk_landing_pages : aucune date de programmation ; `promoteScheduled` ne traite que `posts`
+- **PG-19** Page privée / protégée par mot de passe — Non implémenté (cité « préparé, non construit » pour les articles ; rien pour les pages) *(P3)*
+  - Preuve : docs/cms-articles.md ; aucune colonne `visibility`/`password` sur les pages
+- **PB-09** Récupération après coupure réseau / fermeture — Aucune copie locale dans le Page Builder (le serveur ne reçoit que ce qui a été envoyé) ; l'éditeur d'articles en a une *(P2)*
+  - Preuve : docs/cms-revisions.md « le Page Builder n'a pas de copie locale »
+- **AR-02** Rédaction par plusieurs rôles (auteur, éditeur, contributeur) — Seul le compte créateur ouvre l'éditeur et crée. Administrateur, Éditeur, Auteur, Contributeur : 403 sur l'éditeur ; Auteur/Contributeur ne peuvent ni créer ni publier ; la permission `articles.edit_own` n'a aucun effet pratique *(P1)*
+  - Preuve : sonde : 5 profils × (éditeur, liste, publier, créer) ; message d'écran « réservé au compte créateur »
+- **AR-08** Archives par date — Absentes *(P3)*
+  - Preuve : sonde : /blog/archives → 404 ; aucune route de date
+- **AR-15** Article privé / protégé par mot de passe — Non implémenté (« préparé ») *(P3)*
+  - Preuve : docs/cms-articles.md
+- **AR-16** Flux RSS du blog — Aucun flux sortant (`/feed`, `/blog/feed`, `/rss.xml`, `/blog/rss.xml` : 404). Le dossier `rss` du marketing lit des flux entrants *(P2)*
+  - Preuve : sonde : 4 adresses testées en 404 ; src/marketing/rss
+- **AR-17** Articles propres à un site — Le blog est celui du site principal : `posts` n'a pas de `site_id` *(P2)*
+  - Preuve : sonde : colonne `site_id` absente de posts, taxonomy_terms, blog_comments, mk_media
+- **TX-07** Taxonomies par site — Aucun `site_id` *(P2)*
+  - Preuve : sonde : `taxonomy_terms.site_id` absent
+- **MD-06** Miniatures et tailles multiples d'image — Aucun traitement d'image (pas de bibliothèque) : le fichier original est servi ; pas de `srcset` généré *(P2)*
+  - Preuve : package.json (pas de sharp/jimp) ; media/index.js ne lit que les dimensions
+- **MD-07** Retouche d'image (recadrer, pivoter) — Absent *(P3)*
+  - Preuve : aucune route d'édition d'image
+- **MD-08** Isolation par site — `mk_media` sans `site_id` : médiathèque de l'organisation *(P2)*
+  - Preuve : sonde : `mk_media.site_id` absent
+- **CM-05** Notification par e-mail des nouveaux commentaires — Absent (« préparé ») *(P2)*
+  - Preuve : docs/cms-comments.md
+- **CM-06** Blocage d'auteurs, mots interdits — Absent *(P3)*
+  - Preuve : docs/cms-comments.md
+- **CM-08** Export / effacement des données d'un commentateur — Absent pour les invités (e-mail, empreinte IP) *(P2)*
+  - Preuve : docs/cms-comments.md « préparé, non implémenté »
+- **CM-09** Commentaires par site — Suivent leur contenu ; pas de `site_id` *(P2)*
+  - Preuve : sonde : `blog_comments.site_id` absent
+- **US-07** Journal des connexions — Non journalisées (dernière connexion sur le compte) *(P2)*
+  - Preuve : docs/cms-utilisateurs.md
+- **US-08** Authentification à deux facteurs — Absente *(P2)*
+  - Preuve : recherche dans le code : aucune trace de TOTP/2FA
+- **RV-04** Vidage automatique de la corbeille — Aucun nettoyage automatique *(P3)*
+  - Preuve : docs/cms-revisions.md « pas de nettoyage automatique »
+- **RV-05** Historique des menus — Menus non versionnés *(P3)*
+  - Preuve : docs/cms-revisions.md
+- **TL-03** Importer un site WordPress (WXR) — Absent : aucune importation de format WordPress *(P2)*
+  - Preuve : formats acceptés : export KOLAKISA JSON uniquement
+- **ST-08** Début de semaine, slogan, types JSON — Non implémentés (limites connues) *(P3)*
+  - Preuve : docs/cms-parametres.md
+- **UX-05** Recherche globale d'administration — Champ « Rechercher… » **désactivé** (« Disponible dans un prochain palier ») *(P2)*
+  - Preuve : sonde « décoratif » : input disabled sur tous les écrans
+- **UX-06** Notifications et aide — Deux boutons **désactivés** et libellés « bientôt » (honnêtes : non cliquables) *(P3)*
+  - Preuve : sonde « décoratif »
+- **PF-04** Requêtes lentes, journal d'erreurs serveur — « non mesuré » (aucune plateforme de journalisation centralisée) *(P3)*
+  - Preuve : docs/cms-outils.md
+- **EX-01** API REST sur le contenu (pages, articles, médias, menus) — L'API publique /api/v1 couvre contacts, événements, campagnes, listes, aperçu : AUCUNE ressource de contenu CMS *(P2)*
+  - Preuve : src/marketing/api/router.js (routes listées)
+
+## D. Fonctionnalités présentes mais dupliquées ou mal intégrées (4)
+
+- **PB-16** Éditeur d'articles séparé du Page Builder — Deux éditeurs : Page Builder (pages) et éditeur de document Tiptap (articles) — choix assumé, documenté *(P3)*
+  - Preuve : docs/cms-articles.md « Choix d'architecture »
+- **NV-08** En-tête / pied d'origine codés en dur comme repli — Sans menu affecté, l'en-tête d'origine (dans `views/partials`) s'affiche ; deux chemins de rendu coexistent *(P3)*
+  - Preuve : docs/cms-navigation.md « sans rien casser »
+- **AP-06** Apparence par site — Deux systèmes : `appearance_configs` (site public principal) et `mk_sites.tokens` (sites du Page Builder) *(P2)*
+  - Preuve : docs/cms-appearance.md « Ce qui existait »
+- **KO-09** Doublons entre moteurs — Deux A/B (pages et e-mails, séparés et documentés) ; deux systèmes de suivi (visiteurs web et événements marketing) reliés par l'identifiant visiteur ; deux stockages d'images (anciennes miniatures du blog et médiathèque) ; commandes sans `site_id` *(P2)*
+  - Preuve : docs/cms-ab-testing.md ; docs/cms-articles.md ; docs/cms-commerce.md
+
+## E. Non applicables (4)
+
+- **AR-20** Formats d'article, articles épinglés — Non repris
+  - Preuve : —
+- **NV-07** Méga-menu — Colonnes préparées, non construit
+  - Preuve : —
+- **AP-08** Installer des thèmes tiers — Hors périmètre (système propriétaire)
+  - Preuve : —
+- **US-10** Import / export d'utilisateurs — Volontairement exclu (sécurité)
+  - Preuve : docs/cms-utilisateurs.md

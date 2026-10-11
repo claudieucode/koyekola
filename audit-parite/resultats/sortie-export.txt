@@ -1,0 +1,10 @@
+fichier d'export               200 application/json; charset=utf-8 6574 octets
+JSON valide                    clés: format, exportedAt, generator, source, selection, counts, media, resources, integrity
+avant import                   {"posts":1,"pages":1,"terms":2,"menus":1}
+import skip: dépôt             302 /marketing/site-web/outils/importer/2
+  aperçu                       200 ignoré(s) Analyse terminée : vérifiez le rapport avant de confirmer
+  confirmé                     302 → {"posts":1,"pages":1,"terms":2,"menus":1}
+import duplicate: dépôt        302 /marketing/site-web/outils/importer/3
+  aperçu                       200 ignoré(s) Analyse terminée : vérifiez le rapport avant de confirmer
+  confirmé                     302 → {"posts":2,"pages":2,"terms":4,"menus":2}
+import JSON cassé              302 /marketing/site-web/outils/importer

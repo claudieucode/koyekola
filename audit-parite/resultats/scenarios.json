@@ -1,0 +1,257 @@
+[
+ {
+  "id": "SEO-article-statut",
+  "ok": true,
+  "note": "GET /blog/guide-seo-complet → 200"
+ },
+ {
+  "id": "SEO-article-title",
+  "ok": true,
+  "note": "title=\"Titre SEO perso · KOLAKISA\""
+ },
+ {
+  "id": "SEO-article-meta-description",
+  "ok": true,
+  "note": "meta description présente=true"
+ },
+ {
+  "id": "SEO-article-canonical",
+  "ok": true,
+  "note": "https://k.test/blog/guide-seo-complet"
+ },
+ {
+  "id": "SEO-article-og",
+  "ok": true,
+  "note": "og:title=true og:image=false twitter=true"
+ },
+ {
+  "id": "SEO-article-jsonld",
+  "ok": true,
+  "note": "blocs JSON-LD=1; types=Organization,WebSite,SearchAction,EntryPoint,BreadcrumbList,ListItem,ListItem,ListItem,ListItem,WebPage,BlogPosting,Person,Organization"
+ },
+ {
+  "id": "SEO-sitemap-article",
+  "ok": true,
+  "note": "sitemap contient l'article publié=true ; lastmod=true"
+ },
+ {
+  "id": "SEO-sitemap-pas-de-brouillon",
+  "ok": true,
+  "note": "voir sonde 1 : un brouillon répond 404 au public"
+ },
+ {
+  "id": "SEO-robots",
+  "ok": true,
+  "note": "User-agent: * | Disallow: /formateur | Disallow: /mes-cours | Disallow: /panier | Disallow: /commande | Disallow: /apprendre | Disallow: /certificat | Disallow:"
+ },
+ {
+  "id": "TAX-archive-categorie",
+  "ok": true,
+  "note": "/blog/categorie/seo → 200, contient l'article=true, canonical=https://k.test/blog/categorie/seo"
+ },
+ {
+  "id": "TAX-archive-etiquette",
+  "ok": true,
+  "note": "→ 200"
+ },
+ {
+  "id": "ED-archive-auteur",
+  "ok": true,
+  "note": "/blog/auteur/ → 200"
+ },
+ {
+  "id": "ED-flux-RSS-blog",
+  "ok": false,
+  "note": "aucune adresse /feed, /blog/feed, /rss.xml, /blog/rss.xml (404) — voir src/marketing/rss : moteur de lecture de flux entrants pour l'emailing, pas de flux sortant"
+ },
+ {
+  "id": "ED-recherche-site",
+  "ok": false,
+  "note": "recherche limitée au blog (/blog?q=) ; pas de recherche globale pages+articles"
+ },
+ {
+  "id": "ED-recherche-blog",
+  "ok": true,
+  "note": "/blog?q=guide trouve l'article=true ; robots=noindex, follow"
+ },
+ {
+  "id": "PAGE-brouillon-enregistre",
+  "ok": false,
+  "note": "PUT brouillon → 422"
+ },
+ {
+  "id": "PAGE-publication",
+  "ok": true,
+  "note": "publier → 200"
+ },
+ {
+  "id": "PAGE-rendu-public",
+  "ok": true,
+  "note": "/p/page-parcours → 200 ; title=\"Page Parcours · KOLAKISA\""
+ },
+ {
+  "id": "SEO-page-canonical-og",
+  "ok": true,
+  "note": "canonical=https://k.test/p/page-parcours og=true jsonld=false robots=noindex, nofollow"
+ },
+ {
+  "id": "SEO-page-sitemap",
+  "ok": false,
+  "note": "page publiée dans le sitemap (voir l'indexabilité réglée par page)"
+ },
+ {
+  "id": "URL-changement-slug-301",
+  "ok": true,
+  "note": "ancienne adresse → 301 /p/nouvelle-adresse"
+ },
+ {
+  "id": "PAGE-depublication",
+  "ok": true,
+  "note": "après dépublication → 404 (WordPress : brouillon = 404 aussi)"
+ },
+ {
+  "id": "PAGE-duplication",
+  "ok": true,
+  "note": "dupliquer → 302 /marketing/pages/2"
+ },
+ {
+  "id": "PAGE-corbeille-restauration",
+  "ok": true,
+  "note": "archiver 302, restaurer 302, archived_at=null"
+ },
+ {
+  "id": "PAGE-recherche",
+  "ok": true,
+  "note": "recherche par nom"
+ },
+ {
+  "id": "PAGE-hierarchie-parent",
+  "ok": true,
+  "note": "colonne parent sur les pages = true (WordPress : pages parent/enfant) ; adresses uniquement /p/<slug>"
+ },
+ {
+  "id": "PAGE-auteur-date",
+  "ok": "published_at,created_by",
+  "note": "colonnes auteur/date/programmation de la page"
+ },
+ {
+  "id": "NAV-menu-public",
+  "ok": true,
+  "note": "menu affecté à l'en-tête visible sur l'accueil=true ; libellé HTML échappé=true"
+ },
+ {
+  "id": "NAV-lien-vers-contenu-supprime",
+  "ok": true,
+  "note": "après corbeille de l'article, le lien du menu n'est plus affiché=true"
+ },
+ {
+  "id": "ED-article-corbeille-public",
+  "ok": true,
+  "note": "article en corbeille → 404 (WordPress: 404)"
+ },
+ {
+  "id": "SET-nom-du-site-effet",
+  "ok": true,
+  "note": "nom du site changé visible dans l'accueil=true"
+ },
+ {
+  "id": "PERM-lecteur-reinitialiser",
+  "ok": true,
+  "note": "réinitialisation par un lecteur → 302 ; le nom du site est resté=true"
+ },
+ {
+  "id": "PERM-redaction-article-editor",
+  "ok": null,
+  "note": "ouvrir l'éditeur → 403 ; créer via éditeur → 403  ; via CMS → 302"
+ },
+ {
+  "id": "PERM-redaction-article-author",
+  "ok": null,
+  "note": "ouvrir l'éditeur → 403 ; créer via éditeur → 403  ; via CMS → 403"
+ },
+ {
+  "id": "PERM-redaction-article-contributor",
+  "ok": null,
+  "note": "ouvrir l'éditeur → 403 ; créer via éditeur → 403  ; via CMS → 403"
+ },
+ {
+  "id": "PERM-redaction-article-viewer",
+  "ok": null,
+  "note": "ouvrir l'éditeur → 403 ; créer via éditeur → 403  ; via CMS → 403"
+ },
+ {
+  "id": "SEC-origine-absente",
+  "ok": null,
+  "note": "POST sans Origin/Referer → 302 (accepté=true) ; Origin étranger → 403 (refusé=true) ; aucun jeton CSRF par formulaire (défense = Origin + cookie SameSite=Lax)"
+ },
+ {
+  "id": "SEC-cookie-session",
+  "ok": null,
+  "note": "Set-Cookie d'un visiteur: (aucun)"
+ },
+ {
+  "id": "SEC-en-têtes",
+  "ok": null,
+  "note": "x-frame-options=oui x-content-type-options=oui content-security-policy=oui referrer-policy=oui permissions-policy=oui strict-transport-security=NON"
+ },
+ {
+  "id": "XSS-article-contenu",
+  "ok": true,
+  "note": "script/onclick/javascript: absents du HTML public=true ; titre échappé=true"
+ },
+ {
+  "id": "XSS-liste-pages-admin",
+  "ok": true,
+  "note": "nom de page échappé dans l'admin=true"
+ },
+ {
+  "id": "XSS-commentaire",
+  "ok": true,
+  "note": "commentaire public échappé=true (statut de création 302)"
+ },
+ {
+  "id": "OUT-export-lance",
+  "ok": true,
+  "note": "POST exporter → 302 /marketing/site-web/outils/exporter/1"
+ },
+ {
+  "id": "PERF-blog page 1",
+  "ok": null,
+  "note": "200 · 26 ms (1re) / 178 ms (2e) · 26 Ko · gzip=gzip"
+ },
+ {
+  "id": "PERF-blog page 20",
+  "ok": null,
+  "note": "200 · 460 ms (1re) / 256 ms (2e) · 23 Ko · gzip=gzip"
+ },
+ {
+  "id": "PERF-article",
+  "ok": null,
+  "note": "200 · 220 ms (1re) / 180 ms (2e) · 28 Ko · gzip=gzip"
+ },
+ {
+  "id": "PERF-sitemap",
+  "ok": null,
+  "note": "200 · 162 ms (1re) / 89 ms (2e) · 82 Ko · gzip=gzip"
+ },
+ {
+  "id": "PERF-admin articles",
+  "ok": null,
+  "note": "200 · 21 ms (1re) / 14 ms (2e) · 105 Ko · gzip=gzip"
+ },
+ {
+  "id": "PERF-admin articles recherche",
+  "ok": null,
+  "note": "200 · 29 ms (1re) / 12 ms (2e) · 105 Ko · gzip=gzip"
+ },
+ {
+  "id": "PERF-admin pages",
+  "ok": null,
+  "note": "200 · 23 ms (1re) / 8 ms (2e) · 58 Ko · gzip=gzip"
+ },
+ {
+  "id": "PERF-accueil",
+  "ok": null,
+  "note": "200 · 6 ms (1re) / 7 ms (2e) · 13 Ko · gzip=gzip"
+ }
+]

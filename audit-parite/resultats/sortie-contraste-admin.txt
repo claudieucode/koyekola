@@ -1,0 +1,12 @@
+
+== thème de menu « clair » : 8 textes sous le seuil WCAG AA, 1 combinaisons distinctes
+   3.75 "P" rgb(255, 255, 255) sur rgb(224,80,122) · avatar avatar-sm · Pages/Articles/Médiathèque/Commentaires/Navigation/Utilisateurs/Paramètres/Apparence
+
+== thème de menu « nuit » : 8 textes sous le seuil WCAG AA, 1 combinaisons distinctes
+   3.75 "P" rgb(255, 255, 255) sur rgb(224,80,122) · avatar avatar-sm · Pages/Articles/Médiathèque/Commentaires/Navigation/Utilisateurs/Paramètres/Apparence
+
+== thème de menu « gris » : 8 textes sous le seuil WCAG AA, 1 combinaisons distinctes
+   3.75 "P" rgb(255, 255, 255) sur rgb(224,80,122) · avatar avatar-sm · Pages/Articles/Médiathèque/Commentaires/Navigation/Utilisateurs/Paramètres/Apparence
+
+== thème de menu « noir » : 8 textes sous le seuil WCAG AA, 1 combinaisons distinctes
+   3.75 "P" rgb(255, 255, 255) sur rgb(224,80,122) · avatar avatar-sm · Pages/Articles/Médiathèque/Commentaires/Navigation/Utilisateurs/Paramètres/Apparence
