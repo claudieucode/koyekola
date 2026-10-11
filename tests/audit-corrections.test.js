@@ -184,7 +184,8 @@ describe("finitions de l'audit", () => {
     assert.equal(r.status, 301);
     assert.equal(r.headers.get("location"), "https://kolakisa.test/catalogue?q=excel");
     assert.equal((await get("/catalogue", "kolakisa.test")).status, 200);
-    assert.equal((await get("/catalogue", "autre.test")).status, 200);
+    // Règle des domaines (palier 2, décision validée) : un hôte inconnu ne sert plus le site principal
+    assert.equal((await get("/catalogue", "autre.test")).status, 421);
   });
 
   test("catalogue filtré ou trié : non indexé (liens suivis) ; catalogue seul : indexable", async () => {
