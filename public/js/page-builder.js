@@ -5674,13 +5674,34 @@
       smartClear();
       gesture = false;
       ignoreClickUntil = Date.now() + 250;
-      if (cur.w === null && cur.h === null) { endGesture(); return; }
+      // Une borne (largeur / hauteur min. ou max.) peut empêcher l'élément d'atteindre la taille demandée : écrire quand même cette taille
+      // enregistrerait une valeur que la page n'affiche jamais. Elle n'est alors pas enregistrée (et l'utilisateur est prévenu).
+      var limited = [];
+      var csr = frame.contentWindow.getComputedStyle(el);
+      if (csr.boxSizing === "border-box") {
+        // Seule une borne min. / max. DÉCLARÉE explique une taille inatteignable (en Flexbox, la taille rendue peut aussi différer de la valeur : c'est normal)
+        var par = el.parentElement;
+        var bound = function (v, base) { if (!v || v === "none" || v === "auto") return null; if (/%$/.test(v)) return base ? parseFloat(v) * base / 100 : null; var n = parseFloat(v); return isFinite(n) ? n : null; };
+        var over = function (req, min, max) { return (max !== null && req > max + 1.5) || (min !== null && req < min - 1.5); };
+        if (cur.w !== null && over(cur.w, bound(csr.minWidth, par && par.clientWidth), bound(csr.maxWidth, par && par.clientWidth))) { limited.push("largeur"); cur.w = null; }
+        if (cur.h !== null && over(cur.h, bound(csr.minHeight, par && par.clientHeight), bound(csr.maxHeight, par && par.clientHeight))) { limited.push("hauteur"); cur.h = null; }
+      }
+      if (cur.w === null && cur.h === null) { endGesture(); if (limited.length) toast("La " + limited.join(" et la ") + " demandée n'est pas atteignable (limite min. / max. de l'élément) : rien n'a été enregistré.", true); return; }
+      // Unité d'origine conservée : un élément réglé en % (ou rem, em, vw, vh) reste fluide ; seul un élément sans valeur propre ou en mots-clés
+      // (auto, fit-content…) reçoit des pixels. Le facteur px ↔ unité est mesuré sur l'élément lui-même au début du geste.
+      var inUnit = function (key, px, startPx) {
+        var it0 = byId(id), own = ownValue(it0, key), v = own !== undefined ? own : inheritedValue(it0, key);
+        var m = typeof v === "string" ? /^(-?\d+(?:\.\d+)?)(%|rem|em|vw|vh)$/.exec(v) : null;
+        if (!m || !(Number(m[1]) > 0) || !(startPx > 0)) return Math.round(px) + "px";
+        var n = Math.round((px / (startPx / Number(m[1]))) * 100) / 100;
+        return n + m[2];
+      };
       change(function () {
         var s = styleSet(byId(id), device, "normal", true);
-        if (cur.w !== null) s.width = cur.w + "px";
-        if (cur.h !== null) s.height = cur.h + "px";
+        if (cur.w !== null) s.width = inUnit("width", cur.w, start.w);
+        if (cur.h !== null) s.height = inUnit("height", cur.h, start.h);
       });
-      toast("Dimensions enregistrées pour l'écran « " + bpLabel(device) + " ».");
+      toast("Dimensions enregistrées pour l'écran « " + bpLabel(device) + " »." + (limited.length ? " (" + limited.join(" et ") + " limitée par un min. / max.)" : ""));
     };
     doc.addEventListener("mousemove", move); doc.addEventListener("mouseup", up);
   }
