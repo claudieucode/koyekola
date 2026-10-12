@@ -46,5 +46,29 @@
       <% }) %></tbody>
     </table></div>
   </section>
+
+  <% if (result.palier3) { const p3 = result.palier3; %>
+  <section class="dpanel" aria-labelledby="au-p3">
+    <h2 id="au-p3">Préparation du palier 3 (informatif)</h2>
+    <p class="field-hint">Ces nombres ne sont pas des anomalies : ils servent à préparer l'indépendance des sites. Les cas « utilisés par plusieurs sites » demandent une décision avant tout rattachement.</p>
+    <div class="dtable-wrap"><table class="dtable g-table">
+      <caption class="sr-only">Volumes de données du palier 3</caption>
+      <thead><tr><th scope="col">Données</th><th scope="col" class="g-num">Nombre</th></tr></thead>
+      <tbody><% p3.volumes.forEach((v) => { %><tr><td data-label="Données"><%= v.label %></td><td class="g-num" data-label="Nombre"><%= v.n === null ? "non vérifiable" : v.n %></td></tr><% }) %></tbody>
+    </table></div>
+    <% [["Médias du CMS", p3.medias], ["Formulaires", p3.formulaires]].forEach(([label, u]) => { if (u) { %>
+      <h3><%= label %> : qui les utilise ?</h3>
+      <p><%= u.total %> au total — inutilisés : <%= u.inutilises %> · site principal seulement : <%= u.principal %> · un seul autre site : <%= u.un_site %> · <strong>plusieurs sites (à décider) : <%= u.plusieurs %></strong></p>
+    <% } }) %>
+    <% if (p3.contacts) { const c = p3.contacts; %>
+      <h3>Contacts</h3>
+      <p><%= c.total %> au total — origine site principal : <%= c.origine_principal %> · origine un autre site : <%= c.origine_site %><% if (c.listes_plusieurs_sites !== undefined) { %> · dans des listes de plusieurs sites : <strong><%= c.listes_plusieurs_sites === null ? "n/a" : c.listes_plusieurs_sites %></strong> · dans une liste d'un autre site que leur origine : <%= c.liste_autre_que_origine === null ? "n/a" : c.liste_autre_que_origine %><% } %></p>
+    <% } %>
+    <% if (p3.taxonomies) { const t = p3.taxonomies; %>
+      <h3>Catégories et étiquettes</h3>
+      <p>Liens vers une catégorie disparue : <%= t.liens_sans_terme === null ? "n/a" : t.liens_sans_terme %> · liens vers un article disparu : <%= t.liens_article_sans_article === null ? "n/a" : t.liens_article_sans_article %><% if (t.termes_par_type.length) { %> · <%= t.termes_par_type.map((x) => x.type + " : " + x.n).join(" · ") %><% } %></p>
+    <% } %>
+  </section>
+  <% } %>
 <% } %>
 <%- include("../partials/footer") %>

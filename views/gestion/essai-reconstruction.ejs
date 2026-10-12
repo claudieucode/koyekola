@@ -1,0 +1,51 @@
+<%- include("../partials/header", { title }) %>
+<% const when = (d) => formatDateTime(d.toISOString().slice(0, 19).replace("T", " "));
+   const labels = { conforme: ["is-success", "Essai conforme : aucune différence inexpliquée."], bloque: ["is-warning", "Essai BLOQUÉ : au moins une différence inexpliquée ou un contrôle en échec. Ne rien migrer."], erreur: ["is-warning", "L'essai n'a pas pu aller au bout. Ne rien migrer."], inutile: ["is-success", "Rien à reconstruire : les quatre tables ont déjà leur colonne de site."] };
+   const v = labels[result.verdict] || labels.erreur;
+   const mark = (ok) => ok === true ? "✔" : ok === false ? "✖" : "·"; %>
+<%- include("_head", { heading: "Essai de reconstruction", subtitle: label + (createdAt ? " · créée le " + when(createdAt) : "") + " — exécuté sur une copie temporaire, rien n'est modifié." }) %>
+
+<div class="g-flash <%= v[0] %>" role="status"><strong><%= v[1] %></strong><% if (result.error) { %> Détail : <%= result.error %><% } %></div>
+
+<section class="dpanel" aria-labelledby="es-etapes">
+  <h2 id="es-etapes">Déroulement</h2>
+  <ol>
+    <% (result.steps || []).forEach((s) => { %><li><span aria-hidden="true"><%= mark(s.ok) %></span> <%= s.label %><span class="sr-only"> : <%= s.ok === true ? "réussi" : s.ok === false ? "échec" : "non vérifiable" %></span></li><% }) %>
+  </ol>
+  <% if (result.source) { %><p class="field-hint">Taille de la sauvegarde : <%= Math.round(result.source.size / 1024) %> Ko · durée de l'essai : <%= Math.round((result.durationMs || 0) / 100) / 10 %> s.</p><% } %>
+</section>
+
+<% if (result.tables && result.tables.length) { %>
+<section class="dpanel" aria-labelledby="es-tables">
+  <h2 id="es-tables">Les quatre tables</h2>
+  <div class="dtable-wrap"><table class="dtable g-table">
+    <caption class="sr-only">Lignes avant et après, et données identiques</caption>
+    <thead><tr><th scope="col">Table</th><th scope="col" class="g-num">Lignes avant</th><th scope="col" class="g-num">Lignes après</th><th scope="col">Données identiques</th></tr></thead>
+    <tbody><% result.tables.forEach((t) => { %><tr><td data-label="Table"><%= t.table %></td><td class="g-num" data-label="Lignes avant"><%= t.rowsBefore %></td><td class="g-num" data-label="Lignes après"><%= t.rowsAfter %></td><td data-label="Données identiques"><%= t.dataIdentical ? "oui" : "NON" %></td></tr><% }) %></tbody>
+  </table></div>
+  <% if (result.global) { const g = result.global; %><p class="field-hint">Ensemble de la base : <%= g.tablesBefore %> → <%= g.tablesAfter %> tables · <%= g.rowsBefore %> → <%= g.rowsAfter %> lignes · index et déclencheurs <%= g.indexTriggersBefore %> → <%= g.indexTriggersAfter %> · relations <%= g.relationsBefore %> → <%= g.relationsAfter %> · intégrité : <%= result.integrity.before %> → <%= result.integrity.after %> · relations invalides : <%= result.fkcheck.before %> → <%= result.fkcheck.after %>.</p><% } %>
+</section>
+
+<section class="dpanel" aria-labelledby="es-diff">
+  <h2 id="es-diff">Différences</h2>
+  <h3>Attendues (documentées)</h3>
+  <ul><% result.expected.forEach((e) => { %><li><%= e %></li><% }) %></ul>
+  <h3>Inexpliquées (bloquent la suite)</h3>
+  <% if (!result.unexplained.length) { %><p>Aucune.</p><% } else { %><ul><% result.unexplained.forEach((e) => { %><li><strong><%= e %></strong></li><% }) %></ul><% } %>
+</section>
+
+<section class="dpanel" aria-labelledby="es-comp">
+  <h2 id="es-comp">Comportement de la base reconstruite (lignes fictives annulées)</h2>
+  <ul><% result.behaviour.forEach((b) => { %><li><span aria-hidden="true"><%= mark(b.ok) %></span> <%= b.name %><span class="sr-only"> : <%= b.ok === true ? "réussi" : b.ok === false ? "échec" : "non exécutable" %></span></li><% }) %></ul>
+  <h2 id="es-rb">Retour arrière</h2>
+  <ul><% result.rollback.forEach((b) => { %><li><span aria-hidden="true"><%= mark(b.ok) %></span> <%= b.name %><span class="sr-only"> : <%= b.ok ? "réussi" : "échec" %></span></li><% }) %></ul>
+</section>
+<% } %>
+
+<section class="dpanel" aria-labelledby="es-net">
+  <h2 id="es-net">Nettoyage</h2>
+  <% const c = result.cleanup || {}; %>
+  <p>Dossier temporaire supprimé : <strong><%= c.workDirRemoved ? "oui" : "NON" %></strong> · verrou libéré : <strong><%= c.lockReleased ? "oui" : "NON" %></strong> · restes d'essais précédents : <strong><%= c.leftovers === undefined ? "n/a" : c.leftovers %></strong>.</p>
+  <p><a class="btn btn-outline btn-sm" href="/formateur/gestion/sauvegardes">Retour aux sauvegardes</a></p>
+</section>
+<%- include("../partials/footer") %>

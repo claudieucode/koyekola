@@ -436,6 +436,23 @@ router.get("/formateur/gestion/sauvegardes/audit-sites", page("gestion/audit-sit
   const stat = source === "active" ? null : backups.list().find((b) => b.name === source) || null;
   return { result, label, source, createdAt: stat ? stat.createdAt : null };
 }));
+// Essai de reconstruction (palier 3, livraison 1) : sur une COPIE TEMPORAIRE d'une sauvegarde existante, jamais sur la base en service. Nombres uniquement.
+router.get("/formateur/gestion/sauvegardes/essai-reconstruction", (req, res) => res.redirect("/formateur/gestion/sauvegardes"));
+router.post("/formateur/gestion/sauvegardes/essai-reconstruction", async (req, res) => {
+  const essai = require("../services/essaiReconstruction");
+  const name = String((req.body && req.body.source) || "");
+  const stat = backups.list().find((b) => b.name === name) || null;
+  if (!stat) return res.status(404).render("gestion/erreur", { title: "Introuvable", notFound: true, retry: null, back: backOf("/formateur/gestion/sauvegardes") });
+  try {
+    const result = await essai.run(name);
+    res.set("Cache-Control", "no-store");
+    res.render("gestion/essai-reconstruction", { title: "Essai de reconstruction", flash: takeFlash(req), query: req.query, url: urlFor(req), result, label: `Sauvegarde ${name}`, createdAt: stat.createdAt });
+  } catch (error) {
+    if (error instanceof essai.EssaiError) { flash(req, "error", error.message); return res.redirect("/formateur/gestion/sauvegardes"); }
+    console.error("[KOLAKISA] Essai de reconstruction :", error.stack || error.message);
+    res.status(500).render("gestion/erreur", { title: "Essai de reconstruction", retry: null, back: backOf("/formateur/gestion/sauvegardes"), detail: String(error.message || error).slice(0, 200) });
+  }
+});
 router.get("/formateur/gestion/sauvegardes/fichiers.tar", (req, res, next) => {
   const stamp = new Date().toISOString().slice(0, 10);
   res.set({ "Content-Type": "application/x-tar", "Content-Disposition": `attachment; filename="KOYEKOLA-fichiers-${stamp}.tar"`, "Cache-Control": "no-store" });
