@@ -21,6 +21,81 @@ const CHECKS = [
     sql: "SELECT COUNT(*) n FROM mk_landing_pages p JOIN mk_sites s ON s.id = p.site_id WHERE p.status = 'published' AND (s.status <> 'active' OR s.deleted_at IS NOT NULL)" },
 ];
 
+
+// Préparation du palier 3 (CMS indépendant par site) — INFORMATIF, jamais compté dans les anomalies, uniquement des NOMBRES.
+// Mesure ce qui existe et surtout les cas AMBIGUS : un média ou un formulaire déjà utilisé par plusieurs sites ne peut pas être rattaché à un seul site sans décision.
+const KEY = (siteId) => (siteId === null || siteId === undefined ? 0 : Number(siteId)); // 0 = site principal
+function classify(ownerSets) {
+  const c = { inutilises: 0, principal: 0, un_site: 0, plusieurs: 0 };
+  for (const owners of ownerSets) {
+    if (!owners.size) c.inutilises++;
+    else if (owners.size > 1) c.plusieurs++;
+    else if (owners.has(0)) c.principal++;
+    else c.un_site++;
+  }
+  return c;
+}
+function palier3(db) {
+  const has = (t) => Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(t));
+  const cols = (t) => (has(t) ? db.prepare(`PRAGMA table_info(${t})`).all().map((c) => c.name) : []);
+  const count = (sql, ...a) => { try { return db.prepare(sql).get(...a).n; } catch { return null; } };
+  const out = { volumes: [], medias: null, formulaires: null, contacts: null, taxonomies: null };
+  const vol = (label, table, where = "") => { if (has(table)) out.volumes.push({ label, n: count(`SELECT COUNT(*) n FROM ${table} ${where}`) }); };
+  const postCols = cols("posts");
+  vol("Articles (tous)", "posts"); if (postCols.includes("deleted_at")) { vol("— dont publiés", "posts", "WHERE deleted_at IS NULL AND status = 'published'"); vol("— dont brouillons", "posts", "WHERE deleted_at IS NULL AND status = 'draft'"); vol("— dont à la corbeille", "posts", "WHERE deleted_at IS NOT NULL"); }
+  vol("Catégories et étiquettes", "taxonomy_terms"); vol("Liens article ↔ catégorie/étiquette", "taxonomy_relations"); vol("Commentaires du blog", "blog_comments");
+  vol("Médias du blog", "media"); vol("Médias du CMS (hors corbeille)", "mk_media", cols("mk_media").includes("deleted_at") ? "WHERE deleted_at IS NULL" : "");
+  vol("Formulaires", "mk_forms"); vol("Fichiers reçus par formulaire", "mk_form_files"); vol("Modèles de pages", "mk_page_templates"); vol("Blocs enregistrés", "mk_saved_blocks"); vol("Blocs réutilisables du blog", "blog_reusable_blocks");
+  vol("Contacts", "mk_contacts"); vol("Consentements", "mk_consents"); vol("Métadonnées SEO (par contenu)", "seo_meta"); vol("Réglages SEO globaux", "seo_settings");
+
+  // Qui utilise chaque média ? Texte des pages, composants, modèles d'e-mail, réglages de sites et articles (même recherche que la bibliothèque de médias, mais regroupée par site)
+  if (has("mk_media") && has("mk_landing_pages")) {
+    const texts = [];
+    const add = (rows, f) => { for (const r of rows) texts.push({ owner: f(r), text: Object.values(r).filter((v) => typeof v === "string").join("\n") }); };
+    const safeAll = (sql) => { try { return db.prepare(sql).all(); } catch { return []; } };
+    add(safeAll("SELECT site_id, sections, draft, seo FROM mk_landing_pages"), (r) => KEY(r.site_id));
+    add(safeAll("SELECT site_id, section FROM mk_web_components"), (r) => KEY(r.site_id));
+    add(safeAll("SELECT site_id, blocks FROM mk_templates"), (r) => KEY(r.site_id));
+    add(safeAll("SELECT id, tokens, settings FROM mk_sites"), (r) => KEY(r.id));
+    const articles = safeAll("SELECT content, cover_path, og_image_path, twitter_image_path FROM posts");
+    add(articles, () => 0);
+    const where = cols("mk_media").includes("deleted_at") ? "WHERE deleted_at IS NULL" : "";
+    const medias = safeAll(`SELECT path FROM mk_media ${where}`);
+    const sets = medias.map((m) => { const o = new Set(); for (const t of texts) if (t.text.includes(m.path)) o.add(t.owner); return o; });
+    out.medias = { total: medias.length, ...classify(sets) };
+  }
+  // Qui utilise chaque formulaire ? Colonne form_id des pages et références « formId » dans leur contenu
+  if (has("mk_forms") && has("mk_landing_pages")) {
+    const pages = (() => { try { return db.prepare("SELECT site_id, form_id, sections, draft FROM mk_landing_pages").all(); } catch { return []; } })();
+    const forms = db.prepare("SELECT id FROM mk_forms").all();
+    const sets = forms.map((f) => {
+      const o = new Set();
+      const re = new RegExp(`"formId":\\s*"?${f.id}"?(?![0-9])`);
+      for (const p of pages) if (p.form_id === f.id || re.test(String(p.sections || "")) || re.test(String(p.draft || ""))) o.add(KEY(p.site_id));
+      return o;
+    });
+    out.formulaires = { total: forms.length, ...classify(sets) };
+  }
+  // Contacts : origine, et appartenance à des listes de plusieurs sites (cas qui exigent la décision D12)
+  if (has("mk_contacts") && cols("mk_contacts").includes("origin_site_id")) {
+    const c = { total: count("SELECT COUNT(*) n FROM mk_contacts"), origine_principal: count("SELECT COUNT(*) n FROM mk_contacts WHERE origin_site_id IS NULL"), origine_site: count("SELECT COUNT(*) n FROM mk_contacts WHERE origin_site_id IS NOT NULL") };
+    if (has("mk_list_members") && has("mk_lists") && cols("mk_lists").includes("site_id")) {
+      c.listes_plusieurs_sites = count("SELECT COUNT(*) n FROM (SELECT m.contact_id FROM mk_list_members m JOIN mk_lists l ON l.id = m.list_id GROUP BY m.contact_id HAVING COUNT(DISTINCT COALESCE(l.site_id, 0)) > 1)");
+      c.liste_autre_que_origine = count("SELECT COUNT(DISTINCT m.contact_id) n FROM mk_list_members m JOIN mk_lists l ON l.id = m.list_id JOIN mk_contacts k ON k.id = m.contact_id WHERE COALESCE(l.site_id, 0) <> COALESCE(k.origin_site_id, 0)");
+    }
+    out.contacts = c;
+  }
+  // Catégories : liens orphelins (contenu ou terme disparu) — à connaître avant de reconstruire les tables
+  if (has("taxonomy_relations") && has("taxonomy_terms")) {
+    out.taxonomies = {
+      liens_sans_terme: count("SELECT COUNT(*) n FROM taxonomy_relations r LEFT JOIN taxonomy_terms t ON t.id = r.term_id WHERE t.id IS NULL"),
+      liens_article_sans_article: has("posts") ? count("SELECT COUNT(*) n FROM taxonomy_relations r LEFT JOIN posts p ON p.id = r.content_id WHERE r.content_type = 'post' AND p.id IS NULL") : null,
+      termes_par_type: db.prepare("SELECT taxonomy, COUNT(*) n FROM taxonomy_terms GROUP BY taxonomy ORDER BY taxonomy").all().map((r) => ({ type: r.taxonomy, n: r.n })),
+    };
+  }
+  return out;
+}
+
 function run(db) {
   const has = (t) => Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(t));
   const cols = (t) => db.prepare(`PRAGMA table_info(${t})`).all().map((c) => c.name);
@@ -47,7 +122,8 @@ function run(db) {
     out.anomalies += n;
     out.checks.push({ key: c.key, label: c.label, fix: c.fix, n });
   }
+  try { out.palier3 = palier3(db); } catch { out.palier3 = null; }
   return out;
 }
 
-module.exports = { run, TABLES, CHECKS };
+module.exports = { run, palier3, TABLES, CHECKS };
