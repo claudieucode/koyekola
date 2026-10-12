@@ -120,7 +120,8 @@ const isCmsKey = (key) => ALL.some((i) => i.key === key);
 const GENERIC_SECTIONS = ["articles", "navigation", "apparence", "commentaires", "utilisateurs", "seo", "redirections", "outils"];
 
 // Menu affiché pour un rôle : uniquement les entrées permises ; une section à une seule entrée devient un lien direct.
-function buildCmsNav({ can, active }) {
+function buildCmsNav({ can, active, space = null }) {
+  if (space) return buildSiteNav({ can, active, space });
   const current = itemOf(active);
   if (!current) return null;
   const sections = [];
@@ -140,4 +141,70 @@ function buildCmsNav({ can, active }) {
   return { sections, trail, primary, current, section };
 }
 
-module.exports = { BASE, SECTIONS, ALL, GENERIC_SECTIONS, buildCmsNav, isCmsKey, itemOf, sectionOf };
+// ---------- Espace d'un site (palier 3, B1) ----------
+// Le MÊME moteur et les MÊMES écrans, vus d'UN site : adresses /marketing/site-web/sites/<id>/<module> (ou /principal/<module>).
+// space = { siteId (nombre | null), principal (booléen), base (préfixe d'adresse), name }. Le site vient de l'adresse vérifiée par le serveur.
+//   live    : l'écran existe et ne montre que les données de CE site ;
+//   preview : module d'un prochain palier (« Bientôt ») : aucune donnée, aucune action ;
+//   phase   : palier qui l'isolera (affiché sur l'écran).
+const SOON_PHASE = { B2: "médias", B3: "modèles et blocs", B4: "formulaires et contacts", B5: "blog", B6: "SEO" };
+function siteSections(space) {
+  const s = space.base;
+  const P = space.principal;
+  const q = P ? "?site=principal" : `?site=${space.siteId}`;
+  const own = (key, label, extra = {}) => ({ key: `espace/${key}`, label, href: `${s}/${key}`, status: "live", permission: "forms.read", ...extra });
+  const out = (key, label, href, extra = {}) => ({ key: `espace/${key}`, label, href, status: "live", permission: "forms.read", external: true, ...extra });
+  // Module d'un prochain palier pour un site ; le site principal garde son écran historique (déjà en service)
+  const later = (key, label, phase, legacy, extra = {}) => (P && legacy ? out(key, label, legacy, extra) : { key: `espace/${key}`, label, href: `${s}/${key}`, status: "preview", phase, permission: "forms.read", ...extra });
+  const G = BASE;
+  return [
+    { key: "tableau", label: "Tableau de bord", icon: "activity", items: [own("tableau-de-bord", "Tableau de bord")] },
+    { key: "pages", label: "Pages", icon: "layout", items: [own("pages", "Pages", { primary: { label: "Ajouter une page", href: `${s}/pages#nouvelle`, permission: "forms.write" } }), own("composants", "Composants")] },
+    { key: "articles", label: "Articles", icon: "fileText", items: [
+      later("articles", "Articles", "B5", `${G}/articles`, { permission: "articles.read" }),
+      later("categories", "Catégories et étiquettes", "B5", `${G}/articles/categories`, { permission: "taxonomies.read" }),
+      later("commentaires", "Commentaires", "B5", `${G}/commentaires`, { permission: "comments.read" }),
+    ] },
+    { key: "medias", label: "Médias", icon: "image", items: [later("medias", "Médias", "B2", `${G}/mediatheque`, { permission: "media.read" })] },
+    { key: "formulaires", label: "Formulaires et contacts", icon: "inbox", items: [
+      later("formulaires", "Formulaires", "B4", "/marketing/formulaires"),
+      later("contacts", "Contacts", "B4", "/marketing/contacts"),
+    ] },
+    { key: "apparence", label: "Apparence", icon: "palette", items: [
+      P ? out("apparence", "Éditeur et styles", `${G}/apparence`, { permission: "appearance.read" }) : out("design", "Design du site", `${s}/reglages#design`, { permission: "appearance.read" }),
+      P ? out("entete", "En-tête et pied de page", `${G}/apparence/en-tete`, { permission: "appearance.read" }) : out("entete", "En-tête et pied de page", `${s}/reglages#entete`, { permission: "appearance.read" }),
+      P ? out("navigation", "Menus", `${G}/navigation`, { permission: "navigation.read" }) : { key: "espace/navigation", label: "Menus", href: `${s}/navigation`, status: "preview", phase: "menus", permission: "navigation.read" },
+      later("modeles", "Modèles et blocs", "B3", `${G}/apparence/templates`, { permission: "appearance.read" }),
+    ] },
+    { key: "emailing", label: "Emailing", icon: "mail", items: [
+      out("listes", "Listes", `/marketing/listes${q}`), out("segments", "Segments", `/marketing/segments${q}`), out("modeles-email", "Modèles d'e-mail", `/marketing/modeles${q}`),
+      out("campagnes", "Campagnes", `/marketing/campagnes${q}`), out("automatisations", "Automatisations", `/marketing/automatisations${q}`), out("tunnels", "Tunnels", `/marketing/tunnels${q}`),
+    ] },
+    { key: "mesure", label: "Mesure", icon: "barChart", items: [out("tests-ab", "Tests A/B", P ? `${G}/tests-ab` : `${G}/tests-ab${q}`), out("analytique", "Analytics", P ? "/marketing/analytics/global" : `/marketing/analytics/global${q}`)] },
+    { key: "seo", label: "SEO et adresses", icon: "searchCheck", items: [later("seo", "SEO", "B6", `${G}/seo`, { permission: "forms.read" }), own("redirections", "Redirections", { permission: "redirects.view" })] },
+    { key: "equipe", label: "Équipe", icon: "users", items: [P ? out("equipe", "Utilisateurs", `${G}/utilisateurs`, { permission: "users.view" }) : own("equipe", "Équipe du site", { permission: "users.view" })] },
+    { key: "outils", label: "Outils", icon: "sliders", items: [out("outils", "Santé du site", `${G}/outils${P ? "" : q}`, { permission: "tools.view" })] },
+    { key: "reglages", label: "Réglages", icon: "settings", items: [P ? out("reglages", "Paramètres du site principal", `${G}/parametres`, { permission: "settings.read" }) : own("reglages", "Réglages du site", { permission: "settings.read" })] },
+  ];
+}
+
+function buildSiteNav({ can, active, space }) {
+  const all = siteSections(space);
+  const flat = all.flatMap((sec) => sec.items.map((i) => ({ ...i, section: sec.key })));
+  const current = flat.find((i) => i.key === active) || null;
+  if (!current) return null;
+  const sections = [];
+  for (const sec of all) {
+    const items = sec.items.filter((i) => can(i.permission)).map((i) => ({ key: i.key, label: i.label, href: i.href, status: i.status, current: i.key === active }));
+    if (!items.length) continue;
+    sections.push({ key: sec.key, label: sec.label, icon: sec.icon, items, flat: items.length === 1, open: items.some((i) => i.current), soon: items.length === 1 && items[0].status === "preview" });
+  }
+  const sec = all.find((x) => x.key === current.section);
+  const trail = [{ label: "Site Web", href: BASE }, { label: "Mes sites", href: `${BASE}/sites` }, { label: space.name, href: `${space.base}/tableau-de-bord` }];
+  if (current.key !== "espace/tableau-de-bord") { if (sec.items.length > 1 && sec.label !== current.label) trail.push({ label: sec.label }); trail.push({ label: current.label, href: current.href }); }
+  const primary = current.primary && can(current.primary.permission) ? { label: current.primary.label, href: current.primary.href } : null;
+  return { sections, trail, primary, current, section: sec, space };
+}
+const siteModuleOf = (space, key) => siteSections(space).flatMap((sec) => sec.items).find((i) => i.key === `espace/${key}`) || null;
+
+module.exports = { BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, buildCmsNav, buildSiteNav, siteSections, siteModuleOf, isCmsKey, itemOf, sectionOf };

@@ -41,7 +41,7 @@
             <td class="mk-num" data-label="En ligne"><%= mkh.fmt(st.published) %></td>
             <td data-label="Créé le"><%= st.created_at ? String(st.created_at).slice(0, 10) : "—" %></td>
             <td data-label="Actions"><div class="mk-actions">
-              <% if (!st.deleted_at) { %><a class="btn btn-outline btn-sm" href="/marketing/site-web/sites/<%= st.id %>">Ouvrir</a><% } %>
+              <% if (!st.deleted_at) { %><a class="btn btn-outline btn-sm" href="/marketing/site-web/sites/<%= st.id %>/tableau-de-bord">Ouvrir</a><% } %>
               <% if (canWrite && !st.deleted_at && st.status === "active") { %>
                 <form action="/marketing/site-web/sites/<%= st.id %>/dupliquer" method="post"><input type="hidden" name="contenu" value="pages"><button type="submit" class="btn btn-ghost btn-sm" title="Copie le design system, les réglages et les pages (en brouillon)">Dupliquer</button></form>
                 <form action="/marketing/site-web/sites/<%= st.id %>/archiver" method="post"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Les pages en ligne de « <%= st.name %> » passent hors ligne. Rien n'est effacé et vous pourrez le restaurer.">Archiver</button></form>

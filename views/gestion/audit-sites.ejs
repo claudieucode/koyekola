@@ -12,7 +12,8 @@
 
   <section class="dpanel" aria-labelledby="au-sites">
     <h2 id="au-sites">Sites</h2>
-    <p><%= result.sites.total %> site<%= result.sites.total > 1 ? "s" : "" %> au total, dont <%= result.sites.archived %> archivé<%= result.sites.archived > 1 ? "s" : "" %><%= result.sites.deleted === null ? "" : " et " + result.sites.deleted + " supprimé" + (result.sites.deleted > 1 ? "s" : "") %>.</p>
+    <p><%= result.sites.total %> site<%= result.sites.total > 1 ? "s" : "" %> au total : <strong><%= result.sites.active %> actif<%= result.sites.active > 1 ? "s" : "" %></strong>, <%= result.sites.archived %> archivé<%= result.sites.archived > 1 ? "s" : "" %><%= result.sites.trashed ? " (dont " + result.sites.trashed + " dans la corbeille)" : "" %>.</p>
+    <p class="field-hint">Un site doit être archivé avant d'être supprimé : les archivés incluent donc ceux de la corbeille.</p>
   </section>
 
   <section class="dpanel" aria-labelledby="au-liens">

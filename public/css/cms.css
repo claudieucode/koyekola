@@ -323,3 +323,13 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label { display: none; }
 .mk-st-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .mk-st-confirm { border-color: #d98a00; }
 .mk-st-impacts { margin: 8px 0 14px; padding-left: 20px; display: grid; gap: 10px; overflow-wrap: anywhere; }
+
+/* Espace d'un site (palier 3, B1) : bandeau d'identité + formulaire de création */
+.mk-site-banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 16px; padding: 10px 14px; background: var(--mk-surface, #fff); border: 1px solid var(--mk-border); border-left: 4px solid var(--accent, #7a1f3d); border-radius: 6px; }
+.mk-site-banner-icon { display: inline-flex; color: var(--accent, #7a1f3d); }
+.mk-site-banner-text { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; flex: 1 1 220px; min-width: 0; }
+.mk-site-banner-label { font-size: 0.8rem; color: var(--mk-muted, #5b6470); }
+.mk-site-banner-name { font-size: 1.05rem; overflow-wrap: anywhere; }
+.mk-cms-create { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin: 0 0 16px; }
+.mk-cms-create .field-group { flex: 1 1 260px; margin: 0; }
+@media (max-width: 640px) { .mk-site-banner > .btn { margin-left: auto; } }

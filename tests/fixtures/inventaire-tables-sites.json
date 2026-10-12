@@ -1,0 +1,625 @@
+{
+ "tables": {
+  "activity_reads": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "activity_state": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "appearance_configs": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "appearance_patterns": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "appearance_revisions": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "audit_log": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "blog_block_trash": {
+   "siteId": false,
+   "classe": "a-isoler-B5"
+  },
+  "blog_comments": {
+   "siteId": false,
+   "classe": "a-isoler-B5"
+  },
+  "blog_reusable_blocks": {
+   "siteId": false,
+   "classe": "a-isoler-B5"
+  },
+  "certificates": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "checkout_sessions": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "cms_maintenance": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "cms_revisions": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "cms_tool_runs": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "cms_url_history": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "contact_messages": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "coupons": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "course_slug_history": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "courses": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "dashboard_prefs": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "editor_prefs": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "enrollments": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "faqs": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "favorites": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "lesson_attachments": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "lesson_notes": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "lesson_progress": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "lesson_state": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "lessons": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mail_outbox": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "media": {
+   "siteId": false,
+   "classe": "a-isoler-B2"
+  },
+  "mk_ai_requests": {
+   "siteId": false,
+   "classe": "a-decider"
+  },
+  "mk_api_keys": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_audit_logs": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_automation_log": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_automation_runs": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_automation_versions": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_automations": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_bridge_cursors": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_campaign_recipients": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_campaigns": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_consents": {
+   "siteId": false,
+   "classe": "a-isoler-B4"
+  },
+  "mk_contact_aliases": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_contact_merges": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_contact_notes": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_contact_preferences": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_contact_property_values": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_contact_tags": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_contacts": {
+   "siteId": true,
+   "classe": "a-isoler-B4"
+  },
+  "mk_conversions": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_events": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_form_files": {
+   "siteId": false,
+   "classe": "a-isoler-B4"
+  },
+  "mk_forms": {
+   "siteId": false,
+   "classe": "a-isoler-B4"
+  },
+  "mk_funnel_steps": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_funnels": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_import_rejects": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_imports": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_invitations": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_jobs": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_journey_favorites": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_journey_usage": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_landing_events": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_landing_pages": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_links": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_list_members": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_lists": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_media": {
+   "siteId": false,
+   "classe": "a-isoler-B2"
+  },
+  "mk_message_events": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_messages": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_order_attributions": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_org_members": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_organizations": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_page_templates": {
+   "siteId": false,
+   "classe": "a-isoler-B3"
+  },
+  "mk_page_test_events": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_page_tests": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_page_versions": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_pending_confirmations": {
+   "siteId": false,
+   "classe": "a-isoler-B4"
+  },
+  "mk_preference_categories": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_property_defs": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_roles": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_rss_campaigns": {
+   "siteId": false,
+   "classe": "a-decider"
+  },
+  "mk_rss_seen": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_saved_blocks": {
+   "siteId": false,
+   "classe": "a-isoler-B3"
+  },
+  "mk_saved_reports": {
+   "siteId": false,
+   "classe": "a-decider"
+  },
+  "mk_score_levels": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_score_log": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_score_rules": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_segments": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_sending_domains": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_settings": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_site_members": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_sites": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_sms_campaigns": {
+   "siteId": false,
+   "classe": "a-decider"
+  },
+  "mk_sms_clicks": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_sms_links": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_sms_messages": {
+   "siteId": false,
+   "classe": "a-decider"
+  },
+  "mk_sms_short_links": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_sms_suppressions": {
+   "siteId": false,
+   "classe": "a-decider"
+  },
+  "mk_social_posts": {
+   "siteId": false,
+   "classe": "a-decider"
+  },
+  "mk_suppressions": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_survey_responses": {
+   "siteId": false,
+   "classe": "a-decider"
+  },
+  "mk_surveys": {
+   "siteId": false,
+   "classe": "a-decider"
+  },
+  "mk_tags": {
+   "siteId": false,
+   "classe": "a-decider"
+  },
+  "mk_template_versions": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_templates": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_unsubscribes": {
+   "siteId": false,
+   "classe": "a-decider"
+  },
+  "mk_web_components": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_web_events": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_web_visitors": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_webhook_endpoints": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "nav_items": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "nav_locations": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "nav_menus": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "notifications": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "offers": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "order_items": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "order_refunds": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "orders": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "password_resets": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "post_autosaves": {
+   "siteId": false,
+   "classe": "a-isoler-B5"
+  },
+  "post_revisions": {
+   "siteId": false,
+   "classe": "a-isoler-B5"
+  },
+  "post_slug_history": {
+   "siteId": false,
+   "classe": "a-isoler-B5"
+  },
+  "posts": {
+   "siteId": false,
+   "classe": "a-isoler-B5"
+  },
+  "quiz_attempts": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "quiz_options": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "quiz_questions": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "quizzes": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "reviews": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "schema_migrations": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "sections": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "seo_404": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "seo_alerts": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "seo_audits": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "seo_changes": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "seo_integration_cache": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "seo_integrations": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "seo_issues": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "seo_job_runs": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "seo_jobs": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "seo_meta": {
+   "siteId": false,
+   "classe": "a-isoler-B6"
+  },
+  "seo_monitor_snapshots": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "seo_pagespeed": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "seo_redirects": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "seo_settings": {
+   "siteId": false,
+   "classe": "a-isoler-B6"
+  },
+  "seo_tasks_done": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "seo_workspace_prefs": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "seo_workspaces": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "sessions": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "site_pages": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "support_messages": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "support_tickets": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "taxonomy_relations": {
+   "siteId": false,
+   "classe": "a-isoler-B5"
+  },
+  "taxonomy_terms": {
+   "siteId": false,
+   "classe": "a-isoler-B5"
+  },
+  "user_prefs": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "users": {
+   "siteId": false,
+   "classe": "plateforme"
+  }
+ },
+ "_lisez_moi": "Inventaire des tables (palier 3, B1). Classes : isolee = colonne de site ; plateforme = pas de contenu propre à un site (comptes, formations, journaux, réglages globaux) ; a-isoler-Bn = contenu qui sera isolé à la phase Bn. Une table nouvelle doit être classée ici (test tests/site-espace-unitaire.test.js). a-decider = contenu ou donnée liée à un site que le plan du palier 3 ne couvre pas encore (sondages, SMS, flux RSS, réseaux sociaux, étiquettes de contacts, rapports, désinscriptions) : décision à prendre avant d'y toucher."
+}

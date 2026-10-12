@@ -74,20 +74,22 @@ describe("recherche, filtres, ouverture, réglages", () => {
     assert.match((await boss.get(`${S}?q=%25_%5C`)).text, /Aucun site ne correspond/, "caractères spéciaux sans effet de joker");
     assert.deepEqual(one("SELECT COUNT(*) n, MAX(updated_at) u FROM mk_sites"), before_);
   });
-  test("T9/T10 : ouverture = espace du site identifié, avec retour à la liste", async () => {
-    const html = (await boss.get(`${S}/${id}`)).text;
-    assert.match(html, /Espace d'administration du site « Académie Photo »/);
-    assert.match(html, new RegExp(`n° ${id}`));
-    assert.match(html, /href="\/marketing\/site-web\/sites">← Mes sites/);
-    assert.match(html, /À venir pour ce site/);
+  test("T9/T10 : ouverture = espace du site identifié (palier 3, B1), avec retour à la liste ; la fiche de réglages en fait partie", async () => {
+    const open = await boss.get(`${S}/${id}`);
+    assert.equal(open.status, 302);
+    assert.equal(open.location, `${S}/${id}/tableau-de-bord`, "« Ouvrir » mène à l'espace d'administration du site");
+    const html = (await boss.get(`${S}/${id}/reglages`)).text;
+    assert.match(html, /Vous êtes dans le site/);
+    assert.match(html, /Académie Photo/);
+    assert.match(html, /href="\/marketing\/site-web\/sites">[\s\S]*?Mes sites/);
   });
   test("T11/T12 : modification des réglages, identifiant interne stable, persistance", async () => {
     await boss.post(`${S}/${id}`, { name: "Académie Photo Pro", slug: "photo-pro", description: "Nouveau texte", site_type: "blog" });
     const s = site(id);
     assert.deepEqual([s.id, s.name, s.slug, s.description, s.site_type], [id, "Académie Photo Pro", "photo-pro", "Nouveau texte", "blog"]);
-    assert.match((await boss.get(`${S}/${id}`)).text, /value="photo-pro"/);
+    assert.match((await boss.get(`${S}/${id}/reglages`)).text, /value="photo-pro"/);
     await boss.post(`${S}/${id}`, { name: "Académie Photo Pro", slug: "x y" });
-    assert.match(flashOf((await boss.get(`${S}/${id}`)).text), /Identifiant lisible invalide/);
+    assert.match(flashOf((await boss.get(`${S}/${id}/reglages`)).text), /Identifiant lisible invalide/);
     assert.equal(site(id).slug, "photo-pro");
   });
   test("anciens sites sans identifiant : attribué au premier affichage", async () => {
@@ -168,7 +170,7 @@ describe("permissions entre comptes (T15)", () => {
     const list = await member.get(S);
     assert.equal(list.status, 302);
     assert.equal(list.location, "/marketing/site-web/mes-sites");
-    assert.equal((await member.get(`${S}/${id}`)).status, 200);
+    assert.equal((await member.get(`${S}/${id}/reglages`)).status, 200);
     assert.equal((await member.get(`${S}/${other}`)).status, 403, "autre site : refusé côté serveur");
     assert.equal((await member.post(S, { name: "Pirate" })).status, 403);
     assert.equal((await member.post(`${S}/${other}/archiver`, {})).status, 403);
