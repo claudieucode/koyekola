@@ -344,6 +344,8 @@ module.exports = () => {
   router.post("/site-web/composants/:id(\\d+)", need("forms.write"), (req, res, next) => {
     try {
       const b = req.body || {};
+      // Le contenu d'un en-tête / pied de page / variante ne se change plus que par la copie de travail puis « Mettre à jour » : jamais diffusé directement
+      if (b.section !== undefined && pages.componentRole(req.mk.ctx, pages.getComponent(req.mk.ctx, Number(req.params.id))) !== "component") throw new (require("../errors").MarketingError)("invalid", "Le contenu d'un en-tête ou d'un pied de page se modifie dans son éditeur (brouillon), puis « Mettre à jour » le publie.");
       res.json({ component: describe(pages.updateComponent(req.mk.ctx, Number(req.params.id), { name: b.name, section: b.section, global: typeof b.global === "boolean" ? b.global : undefined, siteId: b.siteId, revision: Number.isInteger(b.revision) ? b.revision : undefined }), req.mk.ctx) });
     } catch (error) { jsonError(res, next, error); }
   });

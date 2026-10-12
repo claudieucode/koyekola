@@ -7495,7 +7495,7 @@
   var previewDialog = $("[data-pb-preview-dialog]");
   function openPreview() {
     if (editing) commitEdit();
-    var go = function () { $("[data-pb-preview-frame]").src = "/marketing/pages/" + PAGE.id + "/apercu?t=" + Date.now(); previewDialog.showModal(); };
+    var go = function () { $("[data-pb-preview-frame]").src = IS_COMPONENT ? "/marketing/site-web/composants/" + PAGE.component.id + "/apercu?rev=" + revision + "&t=" + Date.now() : "/marketing/pages/" + PAGE.id + "/apercu?t=" + Date.now(); previewDialog.showModal(); };
     if ((dirty || saving) && !blocked) { clearTimeout(saveTimer); saveNow().then(function () { if (dirty) { toast("Aperçu non ouvert : vos dernières modifications ne sont pas enregistrées (voir le message en haut).", true); return; } go(); }); } else go();
   }
   $("[data-pb-preview]").addEventListener("click", openPreview);
@@ -7810,21 +7810,17 @@
   // ---------- Statut, publication ----------
   function updateStatus() {
     var el = $("[data-pb-status]");
-    // Composant (en-tête, pied de page…) : pas de brouillon ni de publication, chaque enregistrement s'applique à toutes les pages
+    // Composant (en-tête, pied de page, variante, composant ordinaire) : copie de travail enregistrée ; seule « Mettre à jour » change ce que voient les visiteurs
     if (IS_COMPONENT) {
       var cm = PAGE.component || {};
-      var staged = cm.role === "component";   // composants ordinaires : brouillon + « Mettre à jour » ; en-tête / pied / variantes : diffusion directe
       var pubBtn = $("[data-pb-publish]");
-      if (staged) {
-        el.textContent = cm.hasDraft ? "Modifications non diffusées" : "À jour";
-        el.classList.toggle("is-live", !cm.hasDraft);
-        if (pubBtn) { pubBtn.hidden = !canWrite || !cm.hasDraft; pubBtn.textContent = cm.kind === "global" ? "Mettre à jour…" : "Mettre à jour le modèle"; }
-        ["[data-pb-preview]", "#pb-tab-page"].forEach(function (sel) { var x = $(sel); if (x) x.style.display = "none"; });
-        return;
-      }
-      el.textContent = "Composant · appliqué à toutes les pages";
-      el.classList.add("is-live");
-      [".pb-publish-group", "[data-pb-preview]", "#pb-tab-page"].forEach(function (sel) { var x = $(sel); if (x) x.style.display = "none"; });
+      var part = cm.role === "header" || cm.role === "footer" || cm.role === "variant";
+      var what = cm.role === "footer" ? "Pied de page" : cm.role === "variant" ? "Variante d'en-tête" : cm.role === "header" ? "En-tête" : "";
+      el.textContent = cm.hasDraft ? (what ? what + " : brouillon non publié" : "Modifications non diffusées") : (what ? what + " : publié, à jour" : "À jour");
+      el.classList.toggle("is-live", !cm.hasDraft);
+      if (pubBtn) { pubBtn.hidden = !canWrite || !cm.hasDraft; pubBtn.textContent = part ? "Mettre à jour" : cm.kind === "global" ? "Mettre à jour…" : "Mettre à jour le modèle"; }
+      var pv = $("[data-pb-preview]"); if (pv) pv.style.display = "";
+      var tab = $("#pb-tab-page"); if (tab) tab.style.display = "none";
       return;
     }
     var live = status === "published";
@@ -7844,14 +7840,16 @@
     saveNow().then(function () {
       if (dirty || blocked || saving) { toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
       return api("GET", "/marketing/site-web/composants/" + cm.id + "/instances.json").then(function (r) {
+        var isPart = cm.role === "header" || cm.role === "footer" || cm.role === "variant";
         var apply = function () {
           return api("POST", "/marketing/site-web/composants/" + cm.id + "/mettre-a-jour", { revision: revision }).then(function (res) {
             cm.hasDraft = false; cm.version = res.component.version; if (res.component.revision !== undefined) revision = res.component.revision; updateStatus();
+            if (isPart) { toast((cm.role === "footer" ? "Pied de page" : cm.role === "variant" ? "Variante d'en-tête" : "En-tête") + " mis à jour (version " + res.component.version + ") : les visiteurs voient maintenant cette version."); return true; }
             toast(cm.kind === "global" ? (r.instances ? "Composant mis à jour : " + plural(r.instances, "instance liée a reçu", "instances liées ont reçu") + " la nouvelle version." : "Composant mis à jour (aucune instance liée pour l'instant).") : "Modèle mis à jour : les futures insertions utiliseront cette version ; les copies déjà insérées ne changent pas.");
             return true;
           });
         };
-        if (cm.kind !== "global" || !r.instances) return apply();
+        if (isPart || cm.kind !== "global" || !r.instances) return apply();
         compDialog({ title: "Mettre à jour le composant global", confirmLabel: "Mettre à jour", build: function (body) {
           body.appendChild(h("p", { text: "Cette mise à jour sera appliquée à " + plural(r.instances, "instance liée", "instances liées") + ", dans " + plural(r.pages.length, "page", "pages") + " :" }));
           body.appendChild(h("ul", { class: "pb-comp-pages" }, r.pages.map(function (p) { return h("li", {}, h("span", { text: p.name }), h("span", { class: "pb-hint", text: " · " + plural(p.count, "instance", "instances") + (p.status === "published" ? " · en ligne" : "") })); })));
@@ -7862,7 +7860,7 @@
   }
   $("[data-pb-publish]").addEventListener("click", function () {
     var btn = this;
-    if (IS_COMPONENT) { if (PAGE.component && PAGE.component.role === "component") publishComponentUpdate(btn); return; }
+    if (IS_COMPONENT) { if (PAGE.component) publishComponentUpdate(btn); return; }
     if (window.pbQuality) window.pbQuality.beforePublish();
     if (editing) commitEdit();
     btn.disabled = true;
@@ -7915,6 +7913,11 @@
       showMenuEntries([
         { heading: "Composant du site" },
         ["Retour à la fiche du site", function () { saveNow().then(function () { window.location.href = $(".pb-back").getAttribute("href"); }); }],
+        "-",
+        ["Abandonner les modifications non publiées", function () {
+          if (!(PAGE.component && PAGE.component.hasDraft)) { toast("Aucune modification non publiée."); return; }
+          saveNow().then(function () { return api("POST", "/marketing/site-web/composants/" + PAGE.component.id + "/abandonner", { revision: revision }); }).then(function () { window.location.reload(); }, apiFail);
+        }, !canWrite],
         "-",
         ["Historique des actions", function () { openHistory($("[data-pb-history]")); }],
         ["Raccourcis clavier", function () { $("[data-pb-shortcuts]").showModal(); }],

@@ -67,12 +67,12 @@ describe("en-tête du site : fiche du site et éditeur (navigateur)", { skip: SK
     for (const id of [accueil, tunnel]) assert.match(await publicHtml(id), /lp-site-part lp-site-header/);
   });
 
-  test("B2 « Modifier l'en-tête » ouvre l'éditeur sur la source : pas de publication, retour à la fiche, canevas = en-tête seul", async () => {
+  test("B2 « Modifier l'en-tête » ouvre l'éditeur sur la source : rien à publier tant qu'il n'y a pas de brouillon, retour à la fiche, canevas = en-tête seul", async () => {
     await page.locator("[data-header-edit]").click();
     await page.waitForURL(new RegExp(`/composants/${headerId}/editeur`));
     await ready();
-    assert.match(await page.locator("[data-pb-status]").innerText(), /Composant · appliqué à toutes les pages/);
-    assert.equal(await page.locator(".pb-publish-group").isVisible(), false, "aucune publication : chaque enregistrement s'applique tout de suite");
+    assert.match(await page.locator("[data-pb-status]").innerText(), /En-tête : publié, à jour/);
+    assert.equal(await page.locator("[data-pb-publish]").isVisible(), false, "rien à publier : aucun brouillon");
     assert.equal(await page.locator("#pb-tab-page").isVisible(), false, "pas d'onglet « Page » (SEO, adresse…)");
     assert.match(await page.locator(".pb-back").getAttribute("href"), new RegExp(`/sites/${siteId}#entete`));
     const inFrame = await page.evaluate(() => { const d = document.querySelector("[data-pb-frame]").contentDocument; return { header: d.querySelectorAll(".lp-site-header").length, logo: d.querySelectorAll(".kw-sitelogo, .kw-sitetitle").length }; });
@@ -80,14 +80,17 @@ describe("en-tête du site : fiche du site et éditeur (navigateur)", { skip: SK
     assert.ok(inFrame.logo >= 1, "la source (logo, nom du site) est affichée et modifiable");
   });
 
-  test("B3 modifier l'en-tête dans l'éditeur : enregistrement automatique, mise à jour des pages publiées", async () => {
+  test("B3 modifier l'en-tête dans l'éditeur : enregistrement automatique en brouillon, pages publiées inchangées jusqu'à « Mettre à jour »", async () => {
     await page.frameLocator("[data-pb-frame]").locator(".kw-container").first().click({ position: { x: 4, y: 4 } });
     await page.locator(".pb-pal-item", { hasText: /^Titre$/ }).first().click();
-    const section = () => JSON.parse(db().prepare("SELECT section FROM mk_web_components WHERE id = ?").get(headerId).section);
+    const section = () => JSON.parse(db().prepare("SELECT draft FROM mk_web_components WHERE id = ?").get(headerId).draft || "null") || { type: "none" };
     const find = (n, type, out = []) => { if (n.type === type) out.push(n); (n.children || []).forEach((c) => find(c, type, out)); return out; };
     const heading = await until(() => find(section(), "heading")[0], { what: "titre enregistré dans la source de l'en-tête" });
     await until(async () => /Enregistré/.test(await page.locator("[data-pb-save]").innerText()), { what: "enregistrement" });
-    for (const id of [accueil, tunnel]) assert.ok((await publicHtml(id)).includes(heading.props.text), "page publiée mise à jour");
+    for (const id of [accueil, tunnel]) assert.ok(!(await publicHtml(id)).includes(heading.props.text), "page publiée inchangée : le brouillon n'est pas diffusé");
+    await page.locator("[data-pb-publish]").click();
+    await until(async () => /publié, à jour/.test(await page.locator("[data-pb-status]").innerText()), { what: "mise à jour confirmée" });
+    for (const id of [accueil, tunnel]) assert.ok((await publicHtml(id)).includes(heading.props.text), "page publiée mise à jour après « Mettre à jour »");
     // menu principal réduit
     await page.locator("[data-pb-mainmenu]").click();
     const labels = await page.locator(".pb-menu-item").allInnerTexts();

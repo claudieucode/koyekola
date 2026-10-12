@@ -96,12 +96,15 @@ describe("Theme Builder dans l'éditeur réel (Chrome)", { skip: SKIP }, () => {
     const slug = db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(pageId).slug;
     const rev = () => db.prepare("SELECT revision FROM mk_web_components WHERE id = ?").get(headerId).revision;
     assert.equal((await json("PUT", `/marketing/site-web/composants/${headerId}/brouillon`, { revision: rev(), content: { sections: [layout("MARQUE-DEPART")] } })).status, 200);
+    assert.equal((await json("POST", `/marketing/site-web/composants/${headerId}/mettre-a-jour`, { revision: rev() })).status, 200);
     const p = await newTab();
     await ready(p, `/marketing/site-web/composants/${headerId}/editeur`);
-    assert.match(await p.locator("[data-pb-status]").innerText(), /appliqué à toutes les pages/);
+    assert.match(await p.locator("[data-pb-status]").innerText(), /En-tête : publié, à jour/);
     await choose(p, "head00000001");
     await field(p, "Texte").fill("MARQUE-TEST"); await field(p, "Texte").press("Tab");
     await p.waitForFunction(() => !window.__pb.dirty(), null, { timeout: 15000 });
+    await p.locator("[data-pb-publish]").click();
+    await p.waitForFunction(() => /publié, à jour/.test(document.querySelector("[data-pb-status]").textContent), null, { timeout: 15000 });
     const inCanvas = await p.evaluate(() => document.querySelector("[data-pb-frame]").contentDocument.body.innerText);
     assert.match(inCanvas, /MARQUE-TEST/, "canevas");
     for (const width of [320, 768, 1440]) {
