@@ -19,7 +19,7 @@ describe("en-tête du site (vrai serveur)", () => {
   const slugOf = (id) => db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug;
   const panel = async (who = boss) => (await who.get(`/marketing/site-web/sites/${siteId}`)).text;
   const choose = (pageId, choice, who = boss) => who.post(`/marketing/site-web/sites/${siteId}/entete/pages/${pageId}`, { choice });
-  const putComponent = (cid, content, who = boss) => who.request(`/marketing/site-web/composants/${cid}/brouillon`, { method: "PUT", json: { content, revision: 0 }, headers: { Origin: srv.base } });
+  const putComponent = (cid, content, who = boss) => who.request(`/marketing/site-web/composants/${cid}/brouillon`, { method: "PUT", json: { content, revision: db.prepare("SELECT revision FROM mk_web_components WHERE id = ?").get(cid).revision }, headers: { Origin: srv.base } });
   let headerId, variantId;
 
   before(async () => {

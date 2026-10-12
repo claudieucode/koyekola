@@ -362,7 +362,7 @@ module.exports = () => {
   const componentPage = (ctx, c) => {
     const site = c.site_id ? pages.getSite(ctx, c.site_id) : null;
     const role = site && site.header_component_id === c.id ? "header" : site && site.footer_component_id === c.id ? "footer" : c.variant_of ? "variant" : "component";
-    return { id: `c${c.id}`, name: c.name, slug: "", title: c.name, description: "", status: "published", kind: "page", hasDraft: false, revision: 0, site_id: c.site_id, form_id: null, indexable: 0, archived_at: null, header_mode: "inherit",
+    return { id: `c${c.id}`, name: c.name, slug: "", title: c.name, description: "", status: "published", kind: "page", hasDraft: false, revision: c.revision, site_id: c.site_id, form_id: null, indexable: 0, archived_at: null, header_mode: "inherit",
       back: c.site_id ? `/marketing/site-web/sites/${c.site_id}#entete` : "/marketing/site-web/sites", working: { sections: [c.draft || c.section], title: c.name, description: "", theme: pages.normalizeTheme({}), seo: {} }, role };
   };
   router.get("/site-web/composants/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
@@ -391,9 +391,11 @@ module.exports = () => {
       if (content.sections.length !== 1) throw new MarketingError("invalid", "Ce composant est UNE seule section : gardez une seule section dans l'éditeur (placez tous les éléments dedans).");
       // Composant ordinaire : copie de travail (aucun effet sur les pages avant « Mettre à jour ») ; en-tête, pied de page et variantes du site : application directe, comme avant
       const direct = c.variant_of || (c.site_id && ((pages.getSite(ctx, c.site_id) || {}).header_component_id === c.id || (pages.getSite(ctx, c.site_id) || {}).footer_component_id === c.id));
-      if (direct) pages.updateComponent(ctx, c.id, { section: content.sections[0] });
-      else pages.saveComponentDraft(ctx, c.id, content.sections[0]);
-      res.set("Cache-Control", "no-store").json({ revision: 0, savedAt: new Date().toISOString(), draft: !direct });
+      const asked = Number(req.body && req.body.revision);
+      const revision = Number.isInteger(asked) ? asked : undefined;
+      if (direct) pages.updateComponent(ctx, c.id, { section: content.sections[0], revision });
+      else pages.saveComponentDraft(ctx, c.id, content.sections[0], { revision });
+      res.set("Cache-Control", "no-store").json({ revision: pages.getComponent(ctx, c.id).revision, savedAt: new Date().toISOString(), draft: !direct });
     } catch (error) { jsonError(res, next, error); }
   });
   // Rendu du canevas : contenu de l'éditeur validé (rien n'est enregistré), même gabarit que la page publiée

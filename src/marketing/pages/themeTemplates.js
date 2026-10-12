@@ -101,7 +101,48 @@ function pick(ctx, type, { category = "", categories = [], tag = "", tags = [], 
   }
   return null;
 }
+// Une page qui sert de modèle ne part pas à la corbeille en silence : refus qui liste les modèles, ou détachement explicite (les affectations sont alors retirées :
+// aucune référence orpheline, le site reprend son affichage d'origine pour ces pages).
+function guardPageRemoval(ctx, pageId, { detach = false, action = "archivée" } = {}) {
+  const used = read(ctx).filter((t) => t.pageId === pageId);
+  if (!used.length) return [];
+  if (!detach) throw new MarketingError("in_use", `Cette page sert de modèle de thème (${used.map((t) => `« ${TYPES[t.type].label} »`).join(", ")}). Elle ne peut pas être ${action} tant que le modèle est affecté : retirez-le d'abord (Apparence › Templates), ou confirmez le détachement.`);
+  write(ctx, read(ctx).filter((t) => t.pageId !== pageId));
+    return used;
+}
+// Explication d'une résolution : pour une famille et un contexte donnés, le modèle appliqué ET la raison pour laquelle chacun des autres ne l'est pas.
+// Même règle que pick() (une seule source de vérité pour le score) ; ne modifie rien.
+function explain(ctx, type, { category = "", categories = [], tag = "", tags = [], postId = null, visitor } = {}) {
+  if (!Object.hasOwn(TYPES, type)) throw new MarketingError("invalid", "Type de modèle inconnu.");
+  const lc = (v) => String(v || "").toLowerCase();
+  const cats = [category, ...categories].filter(Boolean).map(lc);
+  const tgs = [tag, ...tags].filter(Boolean).map(lc);
+  const rows = [];
+  read(ctx).forEach((t, order) => {
+    if (t.type !== type) return;
+    const p = pageRow(ctx, t.pageId);
+    const base = { id: t.id, pageId: t.pageId, pageName: p ? p.name : "(page supprimée)", conditions: { category: t.category || "", tag: t.tag || "", postId: t.postId || null, audience: t.audience ? nodes.audienceLabel(t.audience) : "" } };
+    let score = 0, reason = "";
+    if (t.postId && Number(postId) !== t.postId) reason = "L'article demandé n'est pas celui du modèle.";
+    else if (t.postId) score += 8;
+    if (!reason && t.category) { const at = cats.indexOf(lc(t.category)); if (at < 0) reason = `La catégorie « ${t.category} » ne correspond pas à la page demandée.`; else score += 4 + (at === 0 ? 0.5 : 0); }
+    if (!reason && t.tag) { if (!tgs.includes(lc(t.tag))) reason = `L'étiquette « ${t.tag} » ne correspond pas à la page demandée.`; else score += 2; }
+    if (!reason && t.audience) { if (visitor !== undefined && !nodes.audienceMatches(t.audience, visitor)) reason = "Le public du modèle ne correspond pas au visiteur."; else score += 1; }
+    if (!reason && (!p || p.archived_at)) reason = "La page du modèle est archivée ou supprimée.";
+    else if (!reason && p.status !== "published") reason = "La page du modèle n'est pas en ligne (brouillon ou hors ligne).";
+    rows.push({ ...base, score, order, eligible: !reason, reason });
+  });
+  const eligible = rows.filter((r) => r.eligible).sort((a, b) => b.score - a.score || a.order - b.order);
+  const winner = eligible[0] || null;
+  const candidates = rows.map((r) => {
+    if (winner && r.id === winner.id) return { ...r, applied: true, reason: "Appliqué : c'est le plus précis parmi les modèles qui conviennent." };
+    if (r.eligible) return { ...r, applied: false, reason: r.score === winner.score ? "Convient aussi, mais un modèle affecté avant lui a la même précision." : "Convient, mais un modèle plus précis est appliqué à sa place." };
+    return { ...r, applied: false };
+  });
+  return { type, typeLabel: TYPES[type].label, winner: winner ? { id: winner.id, pageId: winner.pageId, pageName: winner.pageName, score: winner.score } : null, candidates,
+    fallback: winner ? "" : "Aucun modèle en ligne ne convient : le site garde son affichage d'origine pour cette page." };
+}
 // Type d'affectation d'une page (pour montrer des données d'exemple pendant qu'on la dessine)
 const typesOfPage = (ctx, pageId) => read(ctx).filter((t) => t.pageId === pageId).map((t) => t.type);
 
-module.exports = { registerTemplateType, TYPES, CONDITIONS, KEY, MAX_TEMPLATES, list, add, remove, pick, typesOfPage, read };
+module.exports = { guardPageRemoval, explain, registerTemplateType, TYPES, CONDITIONS, KEY, MAX_TEMPLATES, list, add, remove, pick, typesOfPage, read };

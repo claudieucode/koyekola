@@ -7783,13 +7783,15 @@
     var sentJson = explicit ? JSON.stringify(content.sections) : null;
     inflight = api("PUT", BASE + "/brouillon", { content: payload(), revision: revision }).then(function (r) {
       saving = false; retry = 0; revision = r.revision; hasDraft = true;
+      // Composant ordinaire : le serveur garde une copie de travail non diffusée → « Modifications non diffusées » et le bouton « Mettre à jour » apparaissent tout de suite
+      if (IS_COMPONENT && PAGE.component && r.draft !== undefined) PAGE.component.hasDraft = Boolean(r.draft);
       if (r.warnings && r.warnings.length) healIgnored(r.warnings);
       if (sentJson !== null) commitSaved(sentJson);
       updateStatus();
       if (!dirty) { setSave("Enregistré à " + new Date(r.savedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), "is-ok"); try { localStorage.removeItem("pb-backup-" + PAGE.id); } catch (e) { /* rien */ } }
     }, function (err) {
       saving = false; dirty = true; backup();
-      if (err.status === 409) { blocked = true; setSave("Non enregistré : page modifiée ailleurs", "is-error"); toast(err.message + " Une copie de votre travail est gardée dans ce navigateur.", true); return; }
+      if (err.status === 409) { blocked = true; setSave("Non enregistré : " + (IS_COMPONENT ? "composant modifié" : "page modifiée") + " ailleurs", "is-error"); toast(err.message + " Une copie de votre travail est gardée dans ce navigateur.", true); return; }
       if (err.status === 422) { setSave("Non enregistré : " + err.message, "is-error"); errorItemId = itemFromError(err.message); markError(); return; }
       if (err.status === 403) { blocked = true; setSave("Non enregistré : droits insuffisants", "is-error"); return; }
       retry = Math.min(retry + 1, 5);
@@ -7838,12 +7840,13 @@
     var cm = PAGE.component, pid = null;
     clearTimeout(saveTimer);
     btn.disabled = true;
-    (dirty ? save() : Promise.resolve()).then(function () {
-      if (dirty || blocked) { toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
+    // Même garantie que la publication d'une page (palier 7) : on attend la fin de l'enregistrement en cours, puis on diffuse la version confirmée par le serveur
+    saveNow().then(function () {
+      if (dirty || blocked || saving) { toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
       return api("GET", "/marketing/site-web/composants/" + cm.id + "/instances.json").then(function (r) {
         var apply = function () {
-          return api("POST", "/marketing/site-web/composants/" + cm.id + "/mettre-a-jour", {}).then(function (res) {
-            cm.hasDraft = false; cm.version = res.component.version; updateStatus();
+          return api("POST", "/marketing/site-web/composants/" + cm.id + "/mettre-a-jour", { revision: revision }).then(function (res) {
+            cm.hasDraft = false; cm.version = res.component.version; if (res.component.revision !== undefined) revision = res.component.revision; updateStatus();
             toast(cm.kind === "global" ? (r.instances ? "Composant mis à jour : " + plural(r.instances, "instance liée a reçu", "instances liées ont reçu") + " la nouvelle version." : "Composant mis à jour (aucune instance liée pour l'instant).") : "Modèle mis à jour : les futures insertions utiliseront cette version ; les copies déjà insérées ne changent pas.");
             return true;
           });
