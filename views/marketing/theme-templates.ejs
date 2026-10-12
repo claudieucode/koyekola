@@ -20,7 +20,7 @@
       </table></div>
     <% } %>
     <section class="mk-panel" aria-labelledby="tt-why"><h2 id="tt-why">Pourquoi ce modèle ?</h2>
-      <p class="mk-hint">Choisissez une famille de pages et, si besoin, une catégorie ou une étiquette : l'écran indique quel modèle le site utilise et pourquoi les autres ne sont pas utilisés. Rien n'est modifié.</p>
+      <p class="field-hint">Choisissez une famille de pages et, si besoin, une catégorie ou une étiquette : l'écran indique quel modèle le site utilise et pourquoi les autres ne sont pas utilisés. Rien n'est modifié.</p>
       <form action="/marketing/site-web/modeles-de-theme" method="get" class="mk-form">
         <label for="tt-why-type">Famille de pages</label>
         <select id="tt-why-type" name="why_type"><% Object.entries(types).forEach(([key, t]) => { %><option value="<%= key %>"<%= whyQuery.type === key ? " selected" : "" %>><%= t.label %></option><% }) %></select>
@@ -33,8 +33,8 @@
         <div data-why role="status">
           <p><strong><%= why.winner ? "Modèle utilisé : « " + why.winner.pageName + " »" : "Aucun modèle utilisé" %></strong><%= why.fallback ? " : " + why.fallback : "" %></p>
           <% if (why.candidates.length) { %><ul class="mk-cms-list"><% why.candidates.forEach((c) => { %><li><span><strong><%= c.pageName %></strong> (<%= c.conditions.category || c.conditions.tag || c.conditions.audience || (c.conditions.postId ? "article " + c.conditions.postId : "général") %>) : <%= c.applied ? "utilisé. " : "non utilisé. " %><%= c.reason %></span></li><% }) %></ul>
-          <% } else { %><p class="mk-hint">Aucun modèle n'est affecté à cette famille de pages.</p><% } %>
-          <p class="mk-hint">Le public du visiteur n'est pas simulé ici : un modèle réservé à un public est compté comme s'il convenait.</p>
+          <% } else { %><p class="field-hint">Aucun modèle n'est affecté à cette famille de pages.</p><% } %>
+          <p class="field-hint">Le public du visiteur n'est pas simulé ici : un modèle réservé à un public est compté comme s'il convenait.</p>
         </div>
       <% } %>
     </section>
