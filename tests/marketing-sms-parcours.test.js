@@ -275,7 +275,7 @@ describe("formulaires : case « accepter les SMS »", () => {
     assert.equal(r.pending, true);
     assert.equal(consentRow(r.contact), undefined);
     setSms("Texte modifié entre-temps, plus long que dix.", { doubleOptin: true });
-    assert.equal(forms.confirmSubscription(A, r.token, { now: Date.now() }).ok, true);
+    assert.equal(forms.confirmSubscription(A, r.token, { now: NOON + 60 * 1000 }).ok, true);
     const k = consentRow(r.contact);
     assert.equal(k.text_shown, "J'accepte de recevoir des SMS de KOLAKISA.");
     assert.equal(audience.getContact(A, r.contact.id).sms_status, "subscribed");

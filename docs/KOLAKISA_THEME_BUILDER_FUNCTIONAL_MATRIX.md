@@ -1,5 +1,7 @@
 # Mission 9 — Theme Builder : matrice fonctionnelle
 
+> **Mise à jour (mission 9.1, commit `4189ed9`)** : l'en-tête, le pied de page et les variantes d'un site ne s'appliquent plus à chaque enregistrement. Ils ont maintenant un brouillon, un aperçu privé et un bouton « Mettre à jour » (voir `KOLAKISA_SITE_HEADER_FOOTER_DRAFT_*.md`). Les passages ci-dessous qui parlent d'application directe décrivent l'état *avant* 9.1.
+
 Statuts : VALIDÉE (démontrée par un test que j'ai exécuté) · PARTIELLE · DÉFECTUEUSE · ABSENTE · BLOQUÉE · NON TESTÉE.
 « M9 » = test ajouté par cette mission ; « existant » = test d'avant la mission, **rejoué** avec succès.
 
@@ -7,7 +9,7 @@ Statuts : VALIDÉE (démontrée par un test que j'ai exécuté) · PARTIELLE · 
 | Fonction | Statut | Preuve / remarque |
 |---|---|---|
 | En-tête d'un site du Page Builder : créer, modifier, associer, appliquer aux pages | VALIDÉE | existant `site-web-entete` ; M9 navigateur : canevas = page publiée (320 / 768 / 1440 px) |
-| En-tête : prévisualisation **avant** publication | PARTIELLE | application directe à chaque enregistrement, pas de brouillon (L1) |
+| En-tête : prévisualisation **avant** publication | VALIDÉE depuis 9.1 | brouillon + aperçu privé + « Mettre à jour » (test serveur et Chrome) ; la mention « application directe » ci-contre est périmée |
 | Pied de page d'un site : affiché une fois, jamais hors de son site, retiré proprement | VALIDÉE | M9 serveur |
 | En-tête / pied de page du site public (blog) | PARTIELLE | configuration structurée (logo, liens, mentions) avec brouillon → publication ; pas d'édition par widgets du catalogue (L5) |
 | Article individuel (`single_post`) : titre, contenu, auteur, date, catégorie, image, champs `{{post.…}}` | VALIDÉE | existant `editeur-modeles-theme` ; M9 : un seul document HTML |

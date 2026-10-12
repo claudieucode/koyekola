@@ -1,5 +1,7 @@
 # Mission 9 — Theme Builder : audit préalable
 
+> **Mise à jour (mission 9.1, commit `4189ed9`)** : l'en-tête, le pied de page et les variantes d'un site ne s'appliquent plus à chaque enregistrement. Ils ont maintenant un brouillon, un aperçu privé et un bouton « Mettre à jour » (voir `KOLAKISA_SITE_HEADER_FOOTER_DRAFT_*.md`). Les passages ci-dessous qui parlent d'application directe décrivent l'état *avant* 9.1.
+
 *Faits relevés dans le code réel le 2026-10-12, avant toute modification.*
 
 ## 1. État Git de départ

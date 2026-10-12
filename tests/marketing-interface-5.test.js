@@ -349,6 +349,9 @@ describe("parcours réel avec le worker : inscription sur le site → e-mail de 
     }
     assert.equal(msgs.length, 1);
     assert.deepEqual([msgs[0].status, msgs[0].provider], ["sent", "console"]);
+    // Le message passe à « sent » AVANT que le moteur écrive la fin du parcours (deux écritures successives du worker, dans le serveur) : sous forte charge, lire le
+    // parcours juste après l'envoi pouvait le voir encore « running ». On attend donc sa fin, avec la même borne que l'attente de l'envoi (15 s), et on vérifie le même état final.
+    for (let i = 0; i < 60 && q("SELECT status FROM mk_automation_runs WHERE automation_id = ?", id)[0].status !== "completed"; i++) await new Promise((r) => setTimeout(r, 250));
     assert.equal(q("SELECT status FROM mk_automation_runs WHERE automation_id = ?", id)[0].status, "completed");
     assert.equal(q("SELECT status FROM mk_contacts WHERE email = 'eleve-e2e@test.local'")[0].status, "unknown", "un e-mail transactionnel ne donne aucun consentement");
   });

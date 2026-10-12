@@ -1,5 +1,7 @@
 # Mission 9 — Theme Builder : rapport de sécurité
 
+> **Mise à jour (mission 9.1, commit `4189ed9`)** : l'en-tête, le pied de page et les variantes d'un site ne s'appliquent plus à chaque enregistrement. Ils ont maintenant un brouillon, un aperçu privé et un bouton « Mettre à jour » (voir `KOLAKISA_SITE_HEADER_FOOTER_DRAFT_*.md`). Les passages ci-dessous qui parlent d'application directe décrivent l'état *avant* 9.1.
+
 ## Ce qui a été vérifié (avec un test M9 qui s'exécute à chaque suite)
 | Vérification | Résultat |
 |---|---|
