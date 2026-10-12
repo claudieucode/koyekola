@@ -143,7 +143,8 @@ function compare(A, B, { rebuilt = PLAN_TABLES } = {}) {
   const fa = new Set(A.fks), fb = new Set(B.fks);
   for (const f of fa) if (!fb.has(f)) bad(`relation disparue : ${f}`);
   for (const f of fb) if (!fa.has(f)) (planned.has(f.split(".")[0]) && /^[a-z_]+\.site_id->mk_sites\(id\)\[NO ACTION\/NO ACTION\]$/.test(f)) ? exp(`relation ajoutée : ${f.split("[")[0]}`) : bad(`relation apparue : ${f}`);
-  for (const k of new Set([...Object.keys(A.seq), ...Object.keys(B.seq)])) if (A.seq[k] !== B.seq[k]) bad(`séquence ${k} : ${A.seq[k]} → ${B.seq[k]}`);
+  // Séquence AUTOINCREMENT absente ≡ 0 (table jamais remplie : le prochain identifiant est 1 dans les deux cas) ; toute autre différence est inexpliquée
+  for (const k of new Set([...Object.keys(A.seq), ...Object.keys(B.seq)])) if ((A.seq[k] ?? 0) !== (B.seq[k] ?? 0)) bad(`séquence ${k} : ${A.seq[k] ?? 0} → ${B.seq[k] ?? 0}`);
   if (B.integrity !== "ok") bad("contrôle d'intégrité en échec après");
   if (B.fkcheck !== 0) bad(`contrôle des relations : ${B.fkcheck} anomalie(s) après`);
   return { expected, unexplained };

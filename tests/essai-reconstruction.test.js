@@ -194,6 +194,14 @@ describe("reconstruction : le comparateur détecte les vraies différences", () 
     const r = await essai.runOnFile(done, { root });
     assert.equal(r.verdict, "inutile");
   });
+  test("tables jamais remplies (aucune séquence AUTOINCREMENT) : conforme, sans fausse alerte — et une vraie dérive de séquence reste détectée", () => {
+    const d = copyOf("vides.db");
+    for (const t of tables.PLAN_TABLES) { d.exec(`DELETE FROM ${t}`); d.exec(`DELETE FROM sqlite_sequence WHERE name = '${t}'`); } // clés étrangères actives : les lignes liées partent en cascade, aucune orpheline
+    const A = tables.snapshot(d); tables.rebuild(d);
+    assert.deepEqual(tables.compare(A, tables.snapshot(d, A)).unexplained, []);
+    d.exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('mk_forms_fictive', 5)"); // ligne de séquence qui n'existait pas : écart réel
+    assert.ok(tables.compare(A, tables.snapshot(d, A)).unexplained.some((x) => /mk_forms_fictive/.test(x))); d.close();
+  });
   test("comportement de la base reconstruite : tous les contrôles réussis", () => {
     const { d } = rebuiltCopy("comp.db"); const b = tables.behaviour(d);
     assert.ok(b.length >= 19); assert.deepEqual(b.filter((x) => x.ok !== true), []); d.close();
