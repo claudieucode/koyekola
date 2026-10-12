@@ -38,9 +38,9 @@ describe("cohérence des valeurs de style (vrai serveur)", () => {
     for (const [where, html] of [["canevas", await rendu(draft())], ["page publiée", await publish()]]) {
       const css = (html.match(/<style[^>]*>[\s\S]*?<\/style>/g) || []).join("\n");
       assert.doesNotMatch(css, /token:/, `${where} : une référence « token: » est restée dans le CSS`);
-      assert.match(css, /-webkit-text-stroke-color:var\(--kw-text\)/, `${where} : contour du texte`);
-      assert.match(css, /outline-color:var\(--kw-primary\)/, `${where} : contour`);
-      assert.match(css, /border-color:var\(--kw-accent\)/, `${where} : bordure`);
+      assert.match(css, /-webkit-text-stroke-color:var\(--kw-text, #10222f\)/, `${where} : contour du texte`);
+      assert.match(css, /outline-color:var\(--kw-primary, #0277b6\)/, `${where} : contour`);
+      assert.match(css, /border-color:var\(--kw-accent, #f59e0b\)/, `${where} : bordure`);
     }
   });
 

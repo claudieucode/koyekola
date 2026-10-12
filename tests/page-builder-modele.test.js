@@ -68,7 +68,7 @@ describe("modèle (sans serveur)", () => {
     assert.equal(s.children[0].children[0].children[0].children[0].props.text, "Apprenez Photoshop");
     assert.equal(s.children[0].children[0].children[0].children[0].props.level, "1");
     const css = nodes.pageCss(r.content.sections);
-    assert.match(css, /\.kw-n-cont00000001\{padding-top:64px;background-color:var\(--kw-surface\)\}/);
+    assert.match(css, /\.kw-n-cont00000001\{padding-top:64px;background-color:var\(--kw-surface, #ffffff\)\}/);
     assert.match(css, /\.kw-n-btn000000001:hover\{background-color:#0b5c8a\}/);
     assert.match(css, /\.kw-n-btn000000001:focus-visible\{box-shadow:0 6px 16px/);
     assert.match(css, /@media \(max-width: 1023px\)\{\.kw-n-cont00000001\{padding-top:48px\}\}/);

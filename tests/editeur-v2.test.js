@@ -81,7 +81,7 @@ describe("modèle (sans serveur)", () => {
     assert.equal(by("tbl000000001").footer, true);
     assert.equal(by("menu00000001").items[0].children.length, 1);
     const css = nodes.pageCss([layout(kids)]);
-    assert.match(css, /\.kw-n-div000000001\{border:0;border-top:3px dashed var\(--kw-primary\)\}/);
+    assert.match(css, /\.kw-n-div000000001\{border:0;border-top:3px dashed var\(--kw-primary, #0277b6\)\}/);
     assert.match(css, /\.kw-n-soc000000001\{--kw-soc:40px\}/);
     for (const [node, re] of [
       [{ type: "counter", props: { value: "beaucoup", label: "x" } }, /nombre réel/],

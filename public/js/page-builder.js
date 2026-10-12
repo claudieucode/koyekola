@@ -189,7 +189,7 @@
   var frame = $("[data-pb-frame]");
   var stage = $("[data-pb-stage]");
   var wrap = $("[data-pb-frame-wrap]");
-  var dirty = false, blocked = false, saving = false, saveTimer = null;
+  var dirty = false, blocked = false, saving = false, saveTimer = null, inflight = null; // inflight : la requête d'enregistrement en cours
 
   // ---------- Historique (annuler / rétablir) ----------
   var past = [], future = [], lastKey = null;
@@ -5674,13 +5674,34 @@
       smartClear();
       gesture = false;
       ignoreClickUntil = Date.now() + 250;
-      if (cur.w === null && cur.h === null) { endGesture(); return; }
+      // Une borne (largeur / hauteur min. ou max.) peut empêcher l'élément d'atteindre la taille demandée : écrire quand même cette taille
+      // enregistrerait une valeur que la page n'affiche jamais. Elle n'est alors pas enregistrée (et l'utilisateur est prévenu).
+      var limited = [];
+      var csr = frame.contentWindow.getComputedStyle(el);
+      if (csr.boxSizing === "border-box") {
+        // Seule une borne min. / max. DÉCLARÉE explique une taille inatteignable (en Flexbox, la taille rendue peut aussi différer de la valeur : c'est normal)
+        var par = el.parentElement;
+        var bound = function (v, base) { if (!v || v === "none" || v === "auto") return null; if (/%$/.test(v)) return base ? parseFloat(v) * base / 100 : null; var n = parseFloat(v); return isFinite(n) ? n : null; };
+        var over = function (req, min, max) { return (max !== null && req > max + 1.5) || (min !== null && req < min - 1.5); };
+        if (cur.w !== null && over(cur.w, bound(csr.minWidth, par && par.clientWidth), bound(csr.maxWidth, par && par.clientWidth))) { limited.push("largeur"); cur.w = null; }
+        if (cur.h !== null && over(cur.h, bound(csr.minHeight, par && par.clientHeight), bound(csr.maxHeight, par && par.clientHeight))) { limited.push("hauteur"); cur.h = null; }
+      }
+      if (cur.w === null && cur.h === null) { endGesture(); if (limited.length) toast("La " + limited.join(" et la ") + " demandée n'est pas atteignable (limite min. / max. de l'élément) : rien n'a été enregistré.", true); return; }
+      // Unité d'origine conservée : un élément réglé en % (ou rem, em, vw, vh) reste fluide ; seul un élément sans valeur propre ou en mots-clés
+      // (auto, fit-content…) reçoit des pixels. Le facteur px ↔ unité est mesuré sur l'élément lui-même au début du geste.
+      var inUnit = function (key, px, startPx) {
+        var it0 = byId(id), own = ownValue(it0, key), v = own !== undefined ? own : inheritedValue(it0, key);
+        var m = typeof v === "string" ? /^(-?\d+(?:\.\d+)?)(%|rem|em|vw|vh)$/.exec(v) : null;
+        if (!m || !(Number(m[1]) > 0) || !(startPx > 0)) return Math.round(px) + "px";
+        var n = Math.round((px / (startPx / Number(m[1]))) * 100) / 100;
+        return n + m[2];
+      };
       change(function () {
         var s = styleSet(byId(id), device, "normal", true);
-        if (cur.w !== null) s.width = cur.w + "px";
-        if (cur.h !== null) s.height = cur.h + "px";
+        if (cur.w !== null) s.width = inUnit("width", cur.w, start.w);
+        if (cur.h !== null) s.height = inUnit("height", cur.h, start.h);
       });
-      toast("Dimensions enregistrées pour l'écran « " + bpLabel(device) + " ».");
+      toast("Dimensions enregistrées pour l'écran « " + bpLabel(device) + " »." + (limited.length ? " (" + limited.join(" et ") + " limitée par un min. / max.)" : ""));
     };
     doc.addEventListener("mousemove", move); doc.addEventListener("mouseup", up);
   }
@@ -7457,7 +7478,7 @@
   function openPreview() {
     if (editing) commitEdit();
     var go = function () { $("[data-pb-preview-frame]").src = "/marketing/pages/" + PAGE.id + "/apercu?t=" + Date.now(); previewDialog.showModal(); };
-    if (dirty && !blocked) { clearTimeout(saveTimer); save().then(go); } else go();
+    if ((dirty || saving) && !blocked) { clearTimeout(saveTimer); saveNow().then(function () { if (dirty) { toast("Aperçu non ouvert : vos dernières modifications ne sont pas enregistrées (voir le message en haut).", true); return; } go(); }); } else go();
   }
   $("[data-pb-preview]").addEventListener("click", openPreview);
   $$("[data-preview-device]").forEach(function (b) { b.addEventListener("click", function () { $$("[data-preview-device]").forEach(function (x) { x.setAttribute("aria-checked", String(x === b)); }); $("[data-pb-preview-frame]").dataset.device = b.dataset.previewDevice; }); });
@@ -7742,7 +7763,7 @@
     setSave("Enregistrement…");
     // Ce qui part au serveur : c'est CET état (et pas celui, plus récent, de l'écran à l'arrivée de la réponse) qui devient la référence
     var sentJson = explicit ? JSON.stringify(content.sections) : null;
-    return api("PUT", BASE + "/brouillon", { content: payload(), revision: revision }).then(function (r) {
+    inflight = api("PUT", BASE + "/brouillon", { content: payload(), revision: revision }).then(function (r) {
       saving = false; retry = 0; revision = r.revision; hasDraft = true;
       if (r.warnings && r.warnings.length) healIgnored(r.warnings);
       if (sentJson !== null) commitSaved(sentJson);
@@ -7754,12 +7775,14 @@
       if (err.status === 422) { setSave("Non enregistré : " + err.message, "is-error"); errorItemId = itemFromError(err.message); markError(); return; }
       if (err.status === 403) { blocked = true; setSave("Non enregistré : droits insuffisants", "is-error"); return; }
       retry = Math.min(retry + 1, 5);
-      setSave("Erreur d'enregistrement : nouvel essai dans " + (retry * 5) + " s", "is-error");
+      // Session expirée : le message dit quoi faire (le travail est gardé dans ce navigateur, les essais reprennent seuls une fois reconnecté)
+      setSave(err.status === 401 ? "Session expirée : reconnectez-vous (dans un autre onglet). Nouvel essai dans " + (retry * 5) + " s" : "Erreur d'enregistrement : nouvel essai dans " + (retry * 5) + " s", "is-error", err.status === 401 ? "Votre session a expiré : le travail non enregistré est gardé dans ce navigateur. Connectez-vous dans un autre onglet : l'enregistrement reprendra tout seul." : null);
       clearTimeout(saveTimer);
       saveTimer = setTimeout(save, retry * 5000);
-    });
+    }).then(function () { inflight = null; });
+    return inflight;
   }
-  function saveNow() { if (editing) commitEdit(); clearTimeout(saveTimer); if (!dirty) { setSave("Tout est enregistré", "is-ok"); if (!saving && !blocked) commitSaved(); return Promise.resolve(); } return save(true); }
+  function saveNow() { if (editing) commitEdit(); clearTimeout(saveTimer); if (saving && inflight) return inflight.then(function () { return saveNow(); }); if (!dirty) { setSave("Tout est enregistré", "is-ok"); if (!saving && !blocked) commitSaved(); return Promise.resolve(); } return save(true); }
   $("[data-pb-save-now]").addEventListener("click", saveNow);
   if (!canWrite) $("[data-pb-save-now]").hidden = true;
   window.addEventListener("beforeunload", function (e) { if (editing) commitEdit(); if (dirty || saving) { backup(); e.preventDefault(); e.returnValue = ""; } });
@@ -7823,8 +7846,8 @@
     if (editing) commitEdit();
     btn.disabled = true;
     clearTimeout(saveTimer);
-    (dirty ? save(true) : Promise.resolve()).then(function () {
-      if (dirty || blocked) { btn.disabled = false; toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
+    saveNow().then(function () {
+      if (dirty || blocked || saving) { btn.disabled = false; toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
       return api("POST", "/marketing/pages/" + PAGE.id + "/publier.json", {}).then(function (r) {
         status = "published"; hasDraft = false; revision = r.revision;
         if (!saving) commitSaved();

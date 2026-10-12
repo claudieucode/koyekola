@@ -77,7 +77,16 @@ const color = (v) => {
   if (s.startsWith("token:") && (COLOR_TOKENS.includes(s.slice(6)) || /^c-[a-z0-9]{1,20}$/.test(s.slice(6)))) return s;
   return null;
 };
-const colorCss = (v) => (v.startsWith("token:") ? `var(--kw-${v.slice(6)})` : v);
+// Couleur du site → var(--kw-<clé>, <valeur d'origine>) : le repli sert aux pages HORS site (aucune variable posée, sinon la couleur serait ignorée
+// en silence) ; comme pour les longueurs du site. Une couleur personnalisée (c-…) n'existe que dans un site : pas de repli possible.
+const colorFallback = (key) => {
+  const t = require("./tokens");
+  if (Object.hasOwn(t.DEFAULT_TOKENS.colors, key)) return t.DEFAULT_TOKENS.colors[key];
+  if (key === "on-primary") return t.onColor(t.DEFAULT_TOKENS.colors.primary);
+  if (key === "on-accent") return t.onColor(t.DEFAULT_TOKENS.colors.accent);
+  return null;
+};
+const colorCss = (v) => { if (!v.startsWith("token:")) return v; const key = v.slice(6), f = colorFallback(key); return f ? `var(--kw-${key}, ${f})` : `var(--kw-${key})`; };
 const fontLib = require("../../utils/fontLibrary");
 const oneOf = (...list) => (v) => (list.includes(v) ? v : null);
 // Résolution d'image (service commun : media/variants.js). « full » (l'original) est la valeur par défaut et n'est pas enregistrée.

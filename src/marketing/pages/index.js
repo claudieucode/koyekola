@@ -151,9 +151,14 @@ function publish(ctx, id) {
   const check = landing.preflight(ctx, { ...page, sections: resolveSections(ctx, content.sections) });
   if (!check.ready) throw new MarketingError("preflight_failed", check.errors.join(" "));
   return transaction(ctx.db, () => {
-    const number = (ctx.db.prepare("SELECT MAX(number) n FROM mk_page_versions WHERE page_id = ?").get(id).n || 0) + 1;
-    ctx.db.prepare("INSERT INTO mk_page_versions (organization_id, page_id, number, content, reason, created_by) VALUES (?, ?, ?, ?, 'publish', ?)")
-      .run(ctx.organizationId, id, number, JSON.stringify(content), ctx.userId ?? null);
+    // Publier une seconde fois SANS aucun changement (double clic, page remise en ligne) ne fabrique pas une copie identique : elle chasserait de
+    // l'historique (borné) de vraies versions. Le contenu est comparé à la dernière version ; identique → on garde son numéro.
+    const last = ctx.db.prepare("SELECT number, content FROM mk_page_versions WHERE page_id = ? ORDER BY number DESC LIMIT 1").get(id);
+    const serialized = JSON.stringify(content);
+    const same = last && last.content === serialized;
+    const number = same ? last.number : (last ? last.number : 0) + 1;
+    if (!same) ctx.db.prepare("INSERT INTO mk_page_versions (organization_id, page_id, number, content, reason, created_by) VALUES (?, ?, ?, ?, 'publish', ?)")
+      .run(ctx.organizationId, id, number, serialized, ctx.userId ?? null);
     ctx.db.prepare(`UPDATE mk_landing_pages SET sections = ?, theme = ?, title = ?, description = ?, seo = ?, draft = NULL, revision = revision + 1,
         status = 'published', published_at = COALESCE(published_at, datetime('now')), scheduled_at = NULL, updated_at = datetime('now') WHERE id = ?`)
       .run(JSON.stringify(content.sections), JSON.stringify(content.theme), content.title, content.description, JSON.stringify(content.seo), id);
@@ -444,6 +449,22 @@ function updateSite(ctx, id, { name, tokens, slug, description, siteType } = {})
   audit(ctx, "site.updated", "site", site.id, { tokens: tokens !== undefined });
   return getSite(ctx, site.id);
 }
+// Où le site lui-même référence une couleur personnalisée (pour le message de refus) : libellés lisibles, jamais de chemin technique
+function siteColorHolders(tokens, settings) {
+  const has = (v, key) => JSON.stringify(v === undefined ? null : v).includes(`"token:${key}"`);
+  return (key) => {
+    const where = [];
+    if ((settings.classes || []).some((c) => has(c.styles, key) || has(c.states, key))) where.push("classes globales");
+    if (has(tokens.buttons, key)) where.push("boutons");
+    if (has(tokens.link, key)) where.push("liens");
+    if (has(tokens.list, key)) where.push("listes");
+    if (has(tokens.forms, key)) where.push("champs de formulaire");
+    if (has(tokens.images, key) || has(tokens.typeExtra, key) || has(tokens.border, key)) where.push("images, textes ou bordures");
+    if (has(settings.background, key)) where.push("fond du site");
+    if (!where.length) where.push("autres réglages");
+    return where;
+  };
+}
 // Enregistrement des réglages d'un site (couleurs, polices… = jetons). Une seule révision pour l'ensemble des réglages :
 // deux enregistrements concurrents ne s'écrasent jamais en silence.
 function saveSiteDesign(ctx, id, { tokens, settings, name, revision } = {}) {
@@ -463,6 +484,12 @@ function saveSiteDesign(ctx, id, { tokens, settings, name, revision } = {}) {
   // Supprimer une couleur personnalisée encore utilisée casserait des widgets : refusé, avec le détail
   const removed = site.tokens.customColors.filter((c) => !nextTokens.customColors.some((n) => n.key === c.key));
   if (removed.length) {
+    // Références portées par le site lui-même (classes globales, boutons, liens, puces, champs, fond…) : elles aussi laisseraient une variable CSS inexistante
+    const siteText = JSON.stringify({ tokens: { ...nextTokens, customColors: undefined }, settings: nextSettings });
+    const ownerOf = siteColorHolders(nextTokens, nextSettings);
+    for (const c of removed) {
+      if (siteText.includes(`"token:${c.key}"`)) throw bad(`La couleur « ${c.label} » est utilisée par les réglages du site (${ownerOf(c.key).join(", ")}) : remplacez-la avant de la supprimer.`);
+    }
     const usage = colorUsage(ctx, site.id);
     const busy = removed.filter((c) => usage[c.key] && usage[c.key].pages > 0);
     if (busy.length) {
