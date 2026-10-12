@@ -1844,12 +1844,10 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 @media (max-width: 1280px) { .pb-quality { inset: 56px 8px 8px auto; } }
 
 /* ---------- Écran de démarrage d'une page vide (création classique / guidée) : limité à la zone du canevas, sans animation ---------- */
-.pb-start { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; overflow: auto; padding: 24px; background: var(--editor-bg, var(--editor-panel-secondary)); color: var(--editor-text); }
+.pb-start { container: pbstart / inline-size; position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; overflow: auto; padding: 24px; background: var(--editor-bg, var(--editor-panel-secondary)); color: var(--editor-text); }
 .pb-start[hidden] { display: none; }
 .pb-start-box { width: min(760px, 100%); display: grid; gap: 14px; }
-.pb-start-box:has(.pb-start-cards.is-home) { width: min(960px, 100%); }
-.pb-start-cards.is-home { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
-.pb-start-cards.is-single { grid-template-columns: 1fr; }
+.pb-start-box:has(.pb-start-cards.is-home) { width: min(880px, 100%); gap: 16px; }
 .pb-start-card .pb-start-btn[disabled] { cursor: not-allowed; }
 .pb-start-head { margin: 0; font-size: 18px; font-weight: 650; text-align: center; color: var(--editor-text); }
 .pb-start-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
@@ -1963,3 +1961,53 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-note-dot { display: inline-flex; align-items: center; margin-left: 4px; color: var(--accent-dark); flex: none; }
 .pb-note-dot .icon { width: 12px; height: 12px; }
 .pb-gclass-transfer { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+
+/* ---------- Accueil rouvert (hiérarchie : reprendre > trois autres façons de commencer) — jetons de l'éditeur uniquement ---------- */
+.pb-home-head { display: grid; gap: 4px; justify-items: center; text-align: center; }
+.pb-home-head .pb-start-head { font-size: 20px; font-weight: 650; letter-spacing: -0.01em; }
+.pb-home-sub { margin: 0; font-size: 13px; color: var(--editor-text-secondary, var(--editor-muted)); }
+.pb-home-label { margin: 6px 0 -4px; font-size: 11px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: var(--editor-muted); }
+.pb-start-card { transition: border-color 0.15s ease, background-color 0.15s ease; }
+.pb-home-resume { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 16px; padding: 16px 18px; border-color: var(--editor-accent); }
+.pb-home-resume .pb-start-title { margin: 0; font-size: 15px; }
+.pb-home-resume .pb-start-text { margin: 2px 0 0; }
+.pb-start-cards.is-home { grid-template-columns: 1fr; gap: 12px; }
+.pb-home-card { grid-template-rows: auto auto 1fr auto; gap: 6px; padding: 16px; }
+.pb-home-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pb-home-card .pb-start-icon { width: 32px; height: 32px; }
+.pb-home-card .pb-start-icon svg { width: 17px; height: 17px; }
+.pb-home-tag { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--editor-muted); }
+.pb-home-card .pb-start-title { margin: 6px 0 0; font-size: 14.5px; }
+.pb-home-card .pb-start-text { font-size: 12.5px; }
+.pb-home-card .pb-start-btn { justify-self: stretch; margin-top: 10px; }
+.pb-start .pb-start-btn { min-height: 34px; padding-inline: 14px; font-size: 13px; box-shadow: none; }
+.pb-start .pb-start-btn:focus-visible { outline: none; box-shadow: var(--pb-focus); }
+.pb-start-card:hover { border-color: var(--editor-border-strong); }
+@media (max-width: 99999px) and (max-width: 760px) { .pb-home-resume { grid-template-columns: auto minmax(0, 1fr); } .pb-home-resume .pb-start-btn { grid-column: 1 / -1; justify-self: stretch; } }
+@media (prefers-reduced-motion: reduce) { .pb-start-card { transition: none; } }
+/* Boutons secondaires : propres à l'accueil, sur les jetons de l'éditeur (le style « outline » du site est blanc fixe, illisible en sombre) */
+.pb-start .btn-outline { background: transparent; color: var(--editor-text); border: 1px solid var(--editor-border-strong); }
+.pb-start .btn-outline:hover:not(:disabled) { background: var(--editor-hover); }
+.pb-start .btn-outline:disabled { opacity: 0.55; cursor: not-allowed; }
+/* Largeur UTILE du canevas (entre les panneaux), pas celle de la fenêtre : lignes horizontales de 520 px, trois colonnes dès 760 px */
+@container pbstart (min-width: 520px) {
+  .pb-home-card { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto auto; column-gap: 14px; row-gap: 2px; align-items: center; }
+  .pb-home-top { display: contents; }
+  .pb-home-card .pb-start-icon { grid-row: 1 / 4; grid-column: 1; align-self: center; }
+  .pb-home-tag { grid-column: 2; grid-row: 1; }
+  .pb-home-card .pb-start-title { grid-column: 2; grid-row: 2; margin: 0; }
+  .pb-home-card .pb-start-text { grid-column: 2; grid-row: 3; }
+  .pb-home-card .pb-start-btn { grid-column: 3; grid-row: 1 / 4; margin-top: 0; justify-self: end; min-width: 168px; }
+}
+@container pbstart (min-width: 760px) {
+  .pb-start-cards.is-home { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pb-home-card { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto; row-gap: 6px; align-items: start; }
+  .pb-home-top { display: flex; }
+  .pb-home-card .pb-start-icon, .pb-home-tag, .pb-home-card .pb-start-title, .pb-home-card .pb-start-text, .pb-home-card .pb-start-btn { grid-column: auto; grid-row: auto; }
+  .pb-home-card .pb-start-title { margin: 6px 0 0; }
+  .pb-home-card .pb-start-btn { margin-top: 10px; justify-self: stretch; min-width: 0; }
+}
+.pb-start-cards:not(.is-home) .pb-start-card { grid-template-rows: auto auto auto 1fr auto; }
+.pb-start-actions .btn { min-height: 34px; font-size: 13px; box-shadow: none; }
+.pb-start-actions .btn-outline { background: transparent; color: var(--editor-text); border: 1px solid var(--editor-border-strong); }
+.pb-start-actions .btn-outline:hover:not(:disabled) { background: var(--editor-hover); }

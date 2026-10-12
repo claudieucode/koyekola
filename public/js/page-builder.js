@@ -7143,22 +7143,32 @@
         function () { startStep = "config"; var p = LF.formats.standard || {}; startDraft = { format: "standard", maxWidth: p.maxWidth || 1200, gutter: p.gutter || 24, locked: true }; paintStart(); }, "guided")));
     box.appendChild(h("p", { class: "pb-start-foot", text: "Dans les deux cas vous utilisez les mêmes conteneurs, la même grille Flexbox et les mêmes widgets. Vous pourrez changer de mode plus tard dans l'onglet « Page »." }));
   }
-  // Accueil rouvert : trois actions distinctes (reprendre / ajouter une structure / nouvelle page vierge) + la création guidée en rangée secondaire
+  // Accueil rouvert : reprendre (action principale, pleine largeur) puis trois autres façons de commencer, étiquetées par ce qu'elles touchent :
+  // « Sur cette page » (ajouter une structure, gabarit) ou « Nouveau document » (page vierge). Les identifiants data-pb-* des actions sont inchangés.
+  function homeCard(iconName, tag, title, text, label, onclick, id) {
+    return h("div", { class: "pb-start-card pb-home-card", "data-pb-start-card": id },
+      h("div", { class: "pb-home-top" }, h("span", { class: "pb-start-icon", "aria-hidden": "true" }, icon(iconName)), h("span", { class: "pb-home-tag", text: tag })),
+      h("h2", { class: "pb-start-title", text: title }),
+      h("p", { class: "pb-start-text", text: text }),
+      h("button", { type: "button", class: "btn btn-outline pb-start-btn", "data-pb-start-go": id, onclick: onclick }, label));
+  }
   function paintHomeChoice(box) {
     var n = content.sections.length, lockedHome = formatLocked(), busy = newPageBusy;
-    box.appendChild(h("h1", { class: "pb-start-head", text: "Que voulez-vous faire ?" }));
+    var summary = n ? plural(n, "section", "sections") + (past.length ? " · " + plural(past.length, "modification annulable", "modifications annulables") : "") + ". Rien n'est modifié en revenant." : "Page vide, réglages conservés. Rien n'est modifié en revenant.";
+    box.appendChild(h("div", { class: "pb-home-head" }, h("h1", { class: "pb-start-head", text: "Que voulez-vous faire ?" }), h("p", { class: "pb-home-sub", text: "Votre travail est conservé : choisissez comment poursuivre." })));
     if (homeNotice) box.appendChild(h("p", { class: "pb-note" + (homeNotice.error ? " is-warn" : ""), role: homeNotice.error ? "alert" : "status", "data-pb-home-note": "", text: homeNotice.text }));
-    var summary = n ? "Votre page est intacte : " + plural(n, "section", "sections") + (past.length ? ", " + plural(past.length, "modification annulable", "modifications annulables") : "") + "." : "Votre page est vide, avec les réglages déjà choisis.";
+    box.appendChild(h("div", { class: "pb-start-card pb-home-resume", "data-pb-start-card": "resume" },
+      h("span", { class: "pb-start-icon", "aria-hidden": "true" }, icon("edit")),
+      h("div", { class: "pb-home-resume-text" }, h("h2", { class: "pb-start-title", text: "Votre travail en cours" }), h("p", { class: "pb-start-text", text: summary })),
+      h("button", { type: "button", class: "btn btn-primary pb-start-btn", "data-pb-start-go": "resume", "data-pb-home-resume": "", onclick: closeHome }, "Reprendre mon travail")));
+    box.appendChild(h("p", { class: "pb-home-label", text: "Ou commencer autrement" }));
     box.appendChild(h("div", { class: "pb-start-cards is-home" },
-      startCard("edit", "Reprendre mon travail", summary, "Retour à l'éditeur, rien n'est modifié.", "Reprendre mon travail", closeHome, "resume"),
-      startCard("layers", "Ajouter une structure", "Ajoutez une structure (conteneurs, colonnes, grille) à la fin de cette page.", "Sans rien effacer ni créer de nouvelle page.", "Ajouter une structure",
+      homeCard("layers", "Sur cette page", "Ajouter une structure", "Ajoutez conteneurs, colonnes ou grille à la fin de la page. Rien n'est effacé.", "Ajouter une structure",
         function () { startFinish(); openStructurePicker({ parent: null, index: content.sections.length }); }, "classic"),
-      startCard("plus", "Nouvelle page vierge", "Quittez ce document et créez une page vide, indépendante de celle-ci.", "Cette page reste enregistrée et rouvrable depuis « Pages ».", busy ? "Création en cours…" : "Nouvelle page vierge", requestNewPage, "blank")));
-    var resumeBtn = box.querySelector('[data-pb-start-go="resume"]'); if (resumeBtn) resumeBtn.setAttribute("data-pb-home-resume", "");
+      homeCard("layout", "Sur cette page", "Création guidée", lockedHome ? "Format verrouillé : déverrouillez-le d'abord dans l'onglet « Page »." : "Appliquez un gabarit et ses règles de mise en page. Annulable avec Ctrl/⌘ + Z.", "Choisir un gabarit",
+        function () { if (lockedHome) return; startStep = "config"; var p = layoutOf() || LF.formats.standard || {}; startDraft = layoutOf() ? { format: p.format, maxWidth: p.maxWidth, gutter: p.gutter, locked: Boolean(p.locked) } : { format: "standard", maxWidth: p.maxWidth || 1200, gutter: p.gutter || 24, locked: true }; paintStart(); }, "guided"),
+      homeCard("plus", "Nouveau document", "Nouvelle page vierge", "Créez une page vide et indépendante. La page actuelle reste enregistrée dans « Pages ».", busy ? "Création en cours…" : "Nouvelle page vierge", requestNewPage, "blank")));
     var blankBtn = box.querySelector('[data-pb-start-go="blank"]'); if (blankBtn) { blankBtn.disabled = busy; blankBtn.setAttribute("aria-busy", String(busy)); }
-    box.appendChild(h("div", { class: "pb-start-cards is-single" },
-      startCard("layout", "Création guidée", "Appliquez un gabarit de conception web à cette page (annulable avec Ctrl/⌘ + Z).", lockedHome ? "Format verrouillé : déverrouillez-le d'abord dans l'onglet « Page »." : "Largeur du contenu et marges, sans rien effacer.", "Choisir un gabarit",
-        function () { if (lockedHome) return; startStep = "config"; var p = layoutOf() || LF.formats.standard || {}; startDraft = layoutOf() ? { format: p.format, maxWidth: p.maxWidth, gutter: p.gutter, locked: Boolean(p.locked) } : { format: "standard", maxWidth: p.maxWidth || 1200, gutter: p.gutter || 24, locked: true }; paintStart(); }, "guided")));
     if (lockedHome) { var gb = box.querySelector('[data-pb-start-go="guided"]'); if (gb) gb.disabled = true; }
   }
   // ---------- Nouvelle page vierge : enregistrement vérifié, puis création par la route existante ----------

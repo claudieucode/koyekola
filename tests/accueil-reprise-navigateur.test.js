@@ -349,5 +349,30 @@ describe("accueil persistant et reprise du travail (navigateur)", { skip: SKIP }
     assert.equal(wide, 1, "trois colonnes sur grand écran");
   });
 
+  test("composition : « reprendre » au-dessus, trois actions alignées, boutons secondaires lisibles en sombre, aucun débordement aux largeurs utiles", async () => {
+    await withContent("Accueil Q");
+    await home().click(); await start().waitFor({ state: "visible" });
+    const box = (sel) => page.locator(sel).first().boundingBox();
+    const resume = await box('[data-pb-start-card="resume"]'), first = await box('[data-pb-start-card="classic"]');
+    assert.ok(resume.y + resume.height <= first.y, "reprendre est au-dessus des autres actions");
+    const tops = await page.locator(".pb-start-cards.is-home .pb-home-card .pb-start-btn").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+    assert.equal(new Set(tops).size, 1, `boutons alignés (grand écran) : ${tops}`);
+    // largeur utile : on fait varier la fenêtre ET on masque le panneau de gauche
+    for (const w of [1600, 1280, 1000, 700, 420]) {
+      await page.setViewportSize({ width: w, height: 900 }); await wait(300);
+      const o = await page.evaluate(() => { const e = document.querySelector("[data-pb-start]"); const b = e.querySelector(".pb-start-box"); return { sw: e.scrollWidth <= e.clientWidth + 1, btns: [...e.querySelectorAll("button")].every((x) => { const r = x.getBoundingClientRect(), c = b.getBoundingClientRect(); return r.left >= c.left - 1 && r.right <= c.right + 1; }) }; });
+      assert.equal(o.sw, true, `pas de défilement horizontal à ${w}px`); assert.equal(o.btns, true, `boutons dans le bloc à ${w}px`);
+      assert.equal(await page.locator('[data-pb-start-card]').count(), 4, "les quatre actions restent présentes");
+    }
+    await page.setViewportSize({ width: 1600, height: 950 }); await wait(300);
+    await page.evaluate(() => { const b = [...document.querySelectorAll("[data-pb-theme-toggle]")].find((x) => x.offsetParent); if (b) b.click(); });
+    await wait(500);
+    assert.equal(await page.evaluate(() => document.body.dataset.palette), "dark");
+    const c = await page.locator('[data-pb-start-go="blank"]').evaluate((e) => { const s = getComputedStyle(e); return { bg: s.backgroundColor, fg: s.color }; });
+    assert.ok(luminance(c.bg) < 0.35, `bouton secondaire sombre en mode sombre : ${c.bg}`); assert.ok(contrast(c.bg === "rgba(0, 0, 0, 0)" ? "rgb(15,15,15)" : c.bg, c.fg) >= 4.5);
+    await page.evaluate(() => { const b = [...document.querySelectorAll("[data-pb-theme-toggle]")].find((x) => x.offsetParent); if (b) b.click(); });
+    await wait(400);
+  });
+
   test("aucune erreur de script pendant tout le parcours", () => { assert.deepEqual(errors, []); });
 });
