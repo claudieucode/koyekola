@@ -1846,6 +1846,8 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 /* ---------- Écran de démarrage d'une page vide (création classique / guidée) : limité à la zone du canevas, sans animation ---------- */
 .pb-start { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; overflow: auto; padding: 24px; background: var(--editor-bg, var(--editor-panel-secondary)); color: var(--editor-text); }
 .pb-start[hidden] { display: none; }
+.pb-start-resume { display: grid; gap: 10px; justify-items: center; padding: 14px 16px; border: 1px solid var(--editor-border, currentColor); border-radius: 10px; text-align: center; }
+.pb-start-resume .pb-start-text { margin: 0; }
 .pb-start-box { width: min(760px, 100%); display: grid; gap: 14px; }
 .pb-start-head { margin: 0; font-size: 18px; font-weight: 650; text-align: center; color: var(--editor-text); }
 .pb-start-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }

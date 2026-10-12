@@ -7046,9 +7046,39 @@
   // modification dans la session. Dès qu'une section ou une modification existe, il ne revient plus (vider une page existante ne le déclenche pas).
   var startEl = $("[data-pb-start]"), startStep = "choice", startDraft = null, startDone = IS_COMPONENT || !canWrite || content.sections.length > 0 || Boolean(layoutOf());
   function startEligible() { return !startDone && canvasReady && !past.length && !content.sections.length && !layoutOf(); }
-  function startFinish() { startDone = true; refreshStart(); }
+  function startFinish() { homeOpen = false; if (homeBtn) homeBtn.setAttribute("aria-pressed", "false"); startDone = true; refreshStart(); }
+  // ---------- Accueil rouvert à la demande (icône Accueil) : même panneau, vue de navigation seulement ----------
+  // Ouvrir l'accueil ne touche ni au document, ni à l'historique, ni à l'enregistrement, ni à la sélection : « Reprendre mon travail » ne fait que
+  // refermer le panneau, tout l'état de travail étant resté en mémoire. Aucun stockage de plus : après un rechargement, la page est restaurée
+  // par le brouillon serveur (et la copie locale proposée par offerBackup), comme avant.
+  var homeOpen = false, homeBtn = $("[data-pb-home]"), homeFrom = null;
+  function hasWork() { return content.sections.length > 0 || past.length > 0 || Boolean(layoutOf()); }
+  function homeButtonState() { if (homeBtn) { homeBtn.setAttribute("aria-pressed", String(homeOpen)); } }
+  function closeHome() {
+    if (!homeOpen) return;
+    homeOpen = false; homeButtonState();
+    startEl.hidden = true; startEl.textContent = "";
+    refreshStart();
+    var back = homeFrom; homeFrom = null;
+    if (back && back.isConnected && back.focus) back.focus({ preventScroll: true });
+  }
+  function openHome() {
+    if (!startEl || IS_COMPONENT || !canWrite) return;
+    if (homeOpen) { closeHome(); return; }
+    if (!startEl.hidden) { var f0 = startEl.querySelector("button:not([disabled])"); if (f0) f0.focus({ preventScroll: true }); return; } // l'écran de démarrage est déjà affiché
+    if (editing) commitEdit();
+    if (mode !== "visual") setMode("visual"); // le panneau se pose sur le canevas visuel
+    homeFrom = document.activeElement;
+    homeOpen = true; homeButtonState();
+    startStep = "choice"; startDraft = null;
+    startEl.hidden = false;
+    paintStart();
+  }
+  if (homeBtn) { if (IS_COMPONENT || !canWrite) homeBtn.hidden = true; else homeBtn.addEventListener("click", openHome); }
+  if (startEl) startEl.addEventListener("keydown", function (e) { if (e.key === "Escape" && homeOpen && startStep === "choice") { e.stopPropagation(); closeHome(); } });
   function refreshStart() {
     if (!startEl) return;
+    if (homeOpen) return; // accueil ouvert volontairement : seule une action explicite le referme (pas le rendu qui suit une modification)
     if (!startDone && (content.sections.length || past.length || layoutOf())) startDone = true;
     if (!startEligible()) { if (!startEl.hidden) { startEl.hidden = true; startEl.textContent = ""; } return; }
     if (!startEl.hidden) return; // déjà affiché : pas de redessin
@@ -7072,12 +7102,21 @@
       h("button", { type: "button", class: "btn btn-primary pb-start-btn", "data-pb-start-go": id, onclick: onclick }, label));
   }
   function paintStartChoice(box) {
-    box.appendChild(h("h1", { class: "pb-start-head", text: "Comment voulez-vous commencer ?" }));
+    var home = homeOpen, at = function () { return home ? content.sections.length : 0; }; // accueil rouvert : on AJOUTE à la fin, jamais de remplacement
+    if (home && hasWork()) {
+      var n = content.sections.length;
+      box.appendChild(h("div", { class: "pb-start-resume", "data-pb-home-resume-box": "" },
+        h("p", { class: "pb-start-text", text: n ? "Votre page est intacte : " + n + " section" + (n > 1 ? "s" : "") + (past.length ? ", " + past.length + " modification" + (past.length > 1 ? "s" : "") + " annulable" + (past.length > 1 ? "s" : "") : "") + "." : "Votre page est vide, avec les réglages déjà choisis." }),
+        h("button", { type: "button", class: "btn btn-primary pb-start-btn", "data-pb-home-resume": "", onclick: closeHome }, "Reprendre mon travail")));
+    }
+    box.appendChild(h("h1", { class: "pb-start-head", text: home ? "Ou commencer autrement" : "Comment voulez-vous commencer ?" }));
+    var lockedHome = home && formatLocked();
     box.appendChild(h("div", { class: "pb-start-cards" },
-      startCard("layers", "Création classique", "Construisez librement votre page avec les conteneurs, Flexbox et les widgets Kolakisa.", "Aucune contrainte : vous réglez tout vous-même.", "Commencer",
-        function () { startFinish(); openStructurePicker({ parent: null, index: 0 }); }, "classic"),
-      startCard("layout", "Création guidée", "Choisissez un gabarit de conception web et définissez les règles de mise en page de votre page.", "Largeur du contenu et marges fixées au départ, protégeables par un verrou.", "Choisir un gabarit",
-        function () { startStep = "config"; var p = LF.formats.standard || {}; startDraft = { format: "standard", maxWidth: p.maxWidth || 1200, gutter: p.gutter || 24, locked: true }; paintStart(); }, "guided")));
+      startCard("layers", "Création classique", "Construisez librement votre page avec les conteneurs, Flexbox et les widgets Kolakisa.", home ? "Ajoute une structure à la fin de votre page, sans rien effacer." : "Aucune contrainte : vous réglez tout vous-même.", home ? "Ajouter une structure" : "Commencer",
+        function () { startFinish(); openStructurePicker({ parent: null, index: at() }); }, "classic"),
+      startCard("layout", "Création guidée", "Choisissez un gabarit de conception web et définissez les règles de mise en page de votre page.", lockedHome ? "Format verrouillé : déverrouillez-le d'abord dans l'onglet « Page »." : home ? "Applique le gabarit à votre page (annulable avec Ctrl/⌘ + Z), sans rien effacer." : "Largeur du contenu et marges fixées au départ, protégeables par un verrou.", "Choisir un gabarit",
+        function () { if (lockedHome) return; startStep = "config"; var p = layoutOf() || LF.formats.standard || {}; startDraft = layoutOf() ? { format: p.format, maxWidth: p.maxWidth, gutter: p.gutter, locked: Boolean(p.locked) } : { format: "standard", maxWidth: p.maxWidth || 1200, gutter: p.gutter || 24, locked: true }; paintStart(); }, "guided")));
+    if (lockedHome) { var gb = box.querySelector('[data-pb-start-go="guided"]'); if (gb) gb.disabled = true; }
     box.appendChild(h("p", { class: "pb-start-foot", text: "Dans les deux cas vous utilisez les mêmes conteneurs, la même grille Flexbox et les mêmes widgets. Vous pourrez changer de mode plus tard dans l'onglet « Page »." }));
   }
   function startPreview() {
@@ -7126,10 +7165,12 @@
         var wOk = d.maxWidth === 0 || (Number.isInteger(d.maxWidth) && d.maxWidth >= 320 && d.maxWidth <= 2400), gOk = Number.isInteger(d.gutter) && d.gutter >= 0 && d.gutter <= 96;
         if (d.format === "custom" && !(wOk && gOk)) { err.textContent = !wOk ? "Largeur maximale : 0 (aucune limite) ou entre 320 et 2 400 px." : "Marge latérale : entre 0 et 96 px."; err.hidden = false; return; }
         var layout = { mode: "guided", format: d.format, maxWidth: d.maxWidth, gutter: d.gutter, locked: d.locked };
-        startDone = true; // le panneau se retire d'abord : aucune retouche du canevas par lui
+        var wasHome = homeOpen;
+        homeOpen = false; startDone = true; // le panneau se retire d'abord : aucune retouche du canevas par lui
         setLayout(layout);
         refreshStart();
-        openStructurePicker({ parent: null, index: 0 });
+        if (wasHome) homeButtonState();
+        openStructurePicker({ parent: null, index: wasHome ? content.sections.length : 0 });
       } }, "Continuer")));
     box.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.stopPropagation(); startStep = "choice"; paintStart(); } });
   }
@@ -7953,6 +7994,7 @@
     var k = (e.key || "").toLowerCase();
     if (!typing && styleTarget) styleTarget = null; // touches de l'éditeur (déplacements…) : sur le widget, jamais sur une partie
     if (mod && k === "s") { e.preventDefault(); saveNow(); return; }
+    if (homeOpen) return; // accueil ouvert : aucun raccourci du canevas (Suppr, coller…) ne doit agir sur la page cachée dessous
     if (mod && e.shiftKey && k === "y") { e.preventDefault(); setDockMode(dock.mode === "closed" ? dock.last : "closed"); return; }
     if (mod && k === "k") { e.preventDefault(); if (cmdDialog.open) cmdDialog.close(); else openCommands(""); return; }
     if (mod && e.shiftKey && k === "e") { e.preventDefault(); setMode(mode === "structure" ? "visual" : "structure"); return; }
