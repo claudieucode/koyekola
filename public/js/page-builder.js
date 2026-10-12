@@ -250,6 +250,7 @@
     guarded(function () { if (light) scheduleTree(); else { clearTimeout(treeTimer); renderTree(); } });
     if (!light) { guarded(renderInspector); guarded(renderContext); guarded(refreshPageSettings); }
     guarded(updateHistoryButtons);
+    guarded(scheduleHistorySave);
     guarded(refreshStart);
     if (!light) { guarded(placeCanvasBar); guarded(renderDoc); } // saisie : la barre est replacée avec les repères, juste après le rendu du canevas
     scheduleRender(quick);
@@ -257,6 +258,37 @@
     navListeners.forEach(function (f) { guarded(f); });
     guarded(refreshResets);
   }
+  // ---------- Historique conservé après rechargement ----------
+  // L'historique (étapes + libellés) est copié dans ce navigateur (localStorage « pb-history-<page> ») avec l'empreinte du document auquel il
+  // s'applique. Au rechargement il n'est repris QUE si le document chargé est identique à cette empreinte : sinon (page modifiée ailleurs, version
+  // restaurée…) il est écarté, jamais appliqué à un autre contenu. Taille plafonnée : les étapes les plus anciennes partent d'abord.
+  var HISTORY_KEY = "pb-history-" + PAGE.id, HISTORY_MAX_CHARS = 2000000, historyTimer = null;
+  function docKey() { return JSON.stringify({ sections: content.sections, title: content.title, description: content.description, seo: content.seo, theme: content.theme }); }
+  function writeHistory() {
+    clearTimeout(historyTimer); historyTimer = null;
+    try {
+      if (!canWrite || (!past.length && !future.length)) { localStorage.removeItem(HISTORY_KEY); return; }
+      var p = past.slice(), pl = pastLabels.slice(), f = future.slice(), fl = futureLabels.slice();
+      var size = function () { var n = 0; p.forEach(function (x) { n += x.length; }); f.forEach(function (x) { n += x.length; }); return n; };
+      var total = size();
+      while (total > HISTORY_MAX_CHARS && p.length) { total -= p[0].length; p.shift(); pl.shift(); }
+      while (total > HISTORY_MAX_CHARS && f.length) { total -= f[0].length; f.shift(); fl.shift(); }
+      localStorage.setItem(HISTORY_KEY, JSON.stringify({ cur: docKey(), past: p, pastLabels: pl, future: f, futureLabels: fl }));
+    } catch (e) { try { localStorage.removeItem(HISTORY_KEY); } catch (e2) { /* stockage indisponible */ } }
+  }
+  function scheduleHistorySave() { clearTimeout(historyTimer); historyTimer = setTimeout(writeHistory, 800); }
+  // Reprise : renvoie vrai si l'historique enregistré correspond exactement au document courant
+  function restoreHistory() {
+    if (!canWrite) return false;
+    var raw = null;
+    try { raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || "null"); } catch (e) { raw = null; }
+    if (!raw || raw.cur !== docKey() || !Array.isArray(raw.past) || !Array.isArray(raw.future) || raw.past.length !== (raw.pastLabels || []).length || raw.future.length !== (raw.futureLabels || []).length) return false;
+    past = raw.past; pastLabels = raw.pastLabels; future = raw.future; futureLabels = raw.futureLabels; lastKey = null;
+    updateHistoryButtons();
+    return true;
+  }
+  window.addEventListener("pagehide", function () { if (historyTimer) writeHistory(); });
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden" && historyTimer) writeHistory(); });
   function updateHistoryButtons() {
     $("[data-pb-undo]").disabled = !past.length || !canWrite;
     $("[data-pb-redo]").disabled = !future.length || !canWrite;
@@ -1875,7 +1907,7 @@
         components = components.filter(function (x) { return x.id !== c.id; });
         past = []; future = []; pastLabels = []; futureLabels = []; lastKey = null; // une suppression de bibliothèque n'est pas annulable : on ne laisse aucune étape qui recréerait une référence orpheline
         selection = selection.filter(function (id) { return byId(id); });
-        updateHistoryButtons(); renderTree(); renderInspector(); scheduleRender(); scheduleSave(); renderComponents();
+        updateHistoryButtons(); scheduleHistorySave(); renderTree(); renderInspector(); scheduleRender(); scheduleSave(); renderComponents();
         toast(mode === "detach" ? "Composant supprimé ; ses " + plural(r.instances, "instance est devenue indépendante", "instances sont devenues indépendantes") + "." : mode === "instances" ? "Composant et " + plural(r.instances, "instance supprimés", "instances supprimés") + "." : "Composant supprimé.");
         return true;
       });
@@ -8038,6 +8070,7 @@
   document.addEventListener("keydown", function (e) { if (!menu.hidden || document.querySelector("dialog[open]:not([data-pb-navmgr]):not([data-pb-rules])")) return; onKey(e); });
 
   // ---------- Démarrage ----------
+  var historyRestored = restoreHistory();
   (function offerBackup() {
     var raw = null;
     try { raw = JSON.parse(localStorage.getItem("pb-backup-" + PAGE.id) || "null"); } catch (e) { raw = null; }
@@ -8045,6 +8078,7 @@
     if (JSON.stringify(raw.content.sections) === JSON.stringify(content.sections)) { try { localStorage.removeItem("pb-backup-" + PAGE.id); } catch (e) { /* rien */ } return; }
     if (window.confirm("Une copie non enregistrée de cette page (" + new Date(raw.at).toLocaleString("fr-FR") + ") est gardée dans ce navigateur. La reprendre ?")) {
       change(function () { content.sections = raw.content.sections || content.sections; ensureIds(content.sections); if (raw.content.seo) content.seo = raw.content.seo; if (raw.content.title) content.title = raw.content.title; if (raw.content.description !== undefined) content.description = raw.content.description; });
+      if (!historyRestored) restoreHistory(); // l'historique gardé s'applique à cette copie non enregistrée : on le reprend à la place de l'étape unique créée ci-dessus
     } else { try { localStorage.removeItem("pb-backup-" + PAGE.id); } catch (e) { /* rien */ } }
   })();
   if (!canWrite) setSave("Lecture seule");

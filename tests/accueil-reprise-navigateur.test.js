@@ -178,5 +178,36 @@ describe("accueil persistant et reprise du travail (navigateur)", { skip: SKIP }
     await page.setViewportSize({ width: 1600, height: 950 });
   });
 
+  test("historique conservé après rechargement : Annuler et Rétablir fonctionnent encore, et l'écran de démarrage ne revient pas", async () => {
+    const id = await withContent("Accueil I");
+    await deleteContainer();
+    await until(() => (draft(id).sections[0].children || []).length === 0, { what: "vidage enregistré", timeout: 12000 });
+    await wait(1200); // l'historique est copié dans le navigateur après une courte pause
+    await open(id);
+    assert.equal(await page.locator("[data-pb-undo]").isDisabled(), false, "Annuler disponible après rechargement");
+    assert.equal(await nodes(), 0);
+    assert.equal(await start().isHidden(), true, "page vidée volontairement : pas de retour à l'écran de choix");
+    await page.locator("[data-pb-undo]").click();
+    await until(async () => (await nodes()) > 0, { what: "annulation après rechargement" });
+    assert.equal(await page.locator("[data-pb-redo]").isDisabled(), false);
+    await wait(1200);
+    await open(id); // Rétablir aussi survit à un rechargement
+    assert.equal(await page.locator("[data-pb-redo]").isDisabled(), false, "Rétablir disponible après rechargement");
+    await page.locator("[data-pb-redo]").click();
+    await until(async () => (await nodes()) === 0, { what: "rétablissement après rechargement" });
+  });
+
+  test("historique écarté si la page a changé ailleurs : jamais appliqué à un autre contenu", async () => {
+    const id = await withContent("Accueil J");
+    await deleteContainer();
+    await until(() => (draft(id).sections[0].children || []).length === 0, { what: "vidage enregistré", timeout: 12000 });
+    await wait(1200);
+    const other = { ...draft(id), sections: [{ id: "sect00000009", type: "layout", children: [{ id: "cont00000009", type: "container", children: [] }] }] };
+    const put = await boss.request(`/marketing/pages/${id}/brouillon`, { method: "PUT", json: { revision: row(id).revision, content: other }, headers: { Origin: srv.base } });
+    assert.equal(put.status, 200, put.text.slice(0, 200));
+    await open(id);
+    assert.equal(await page.locator("[data-pb-undo]").isDisabled(), true, "historique d'un autre contenu écarté");
+  });
+
   test("aucune erreur de script pendant tout le parcours", () => { assert.deepEqual(errors, []); });
 });
