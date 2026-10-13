@@ -7214,13 +7214,13 @@
   function askPageName(spec) {
     spec = spec || {};
     return new Promise(function (resolve) {
-      var done = false, busy = false, checkTimer = null, checkSeq = 0, valid = false, input = null, msg = null;
+      var done = false, busy = false, checkTimer = null, checkSeq = 0, valid = false, input = null, msg = null, touched = false, badge = null;
       var okBtn = function () { return compDlg && compDlg.querySelector("[data-cd-ok]"); };
       var setState = function (text, kind) { msg.textContent = text || ""; msg.className = "pb-hint pb-name-msg" + (kind ? " is-" + kind : ""); input.setAttribute("aria-invalid", kind === "error" ? "true" : "false"); };
       var apply = function () { var b = okBtn(); if (b && !busy) b.disabled = !valid; };
       var validate = function () {
         var text = input.value.trim(); clearTimeout(checkTimer); valid = false; apply();
-        if (!text) { setState("Le nom est obligatoire.", ""); return; }
+        if (!text) { setState(touched ? "Le nom est obligatoire." : "", ""); return; }
         if (text.length > NAME_MAX) { setState("Le nom ne peut pas dépasser " + NAME_MAX + " caractères (" + text.length + " saisis).", "error"); return; }
         setState("Vérification…", "");
         var seq = ++checkSeq;
@@ -7232,12 +7232,16 @@
         }, 250);
       };
       compDialog({ title: spec.rename ? "Renommer la page" : "Créer une nouvelle page", confirmLabel: spec.rename ? "Renommer" : "Créer la page", cancelLabel: "Annuler", build: function (body) {
-        body.appendChild(h("p", { class: "pb-hint", text: spec.rename ? "Le nom change partout ; l'adresse de la page et son identifiant restent les mêmes." : "Donnez un nom à votre page pour la retrouver facilement dans votre espace de travail." }));
+        // Habillage propre à ce dialogue (classe retirée à la fermeture : le dialogue partagé reste identique pour les autres usages)
+        compDlg.classList.add("pb-name-dlg");
+        badge = h("span", { class: "pb-name-badge", "aria-hidden": "true" }, icon(spec.rename ? "edit" : "fileText"));
+        var headEl = compDlg.querySelector(".pb-modal-head"); headEl.insertBefore(badge, headEl.firstChild);
+        body.appendChild(h("p", { class: "pb-hint pb-name-intro", text: spec.rename ? "Le nom change partout ; l'adresse de la page et son identifiant restent les mêmes." : "Donnez un nom à votre page pour la retrouver facilement dans votre espace de travail." }));
         input = h("input", { type: "text", class: "pb-input", "data-pb-name-input": "", id: "pb-name-input", maxlength: String(NAME_MAX + 50), placeholder: "Ex. : Accueil, À propos, Nos services…", autocomplete: "off", "aria-describedby": "pb-name-msg", "aria-required": "true" });
         msg = h("p", { class: "pb-hint pb-name-msg", id: "pb-name-msg", role: "status", "aria-live": "polite" });
         body.appendChild(h("div", { class: "pb-field" }, h("label", { for: "pb-name-input", text: "Nom de la page" }), input));
         body.appendChild(msg);
-        input.addEventListener("input", validate);
+        input.addEventListener("input", function () { touched = true; validate(); });
         if (spec.rename) input.value = spec.rename.name;
         setTimeout(function () { validate(); input.focus(); input.select(); }, 0);
       }, onConfirm: function () {
@@ -7252,7 +7256,7 @@
           throw e;
         });
       } });
-      compDlg.addEventListener("close", function onClose() { compDlg.removeEventListener("close", onClose); clearTimeout(checkTimer); if (!done) resolve(null); });
+      compDlg.addEventListener("close", function onClose() { compDlg.removeEventListener("close", onClose); clearTimeout(checkTimer); compDlg.classList.remove("pb-name-dlg"); if (badge && badge.parentNode) badge.parentNode.removeChild(badge); if (!done) resolve(null); });
     });
   }
   // Renommer depuis la barre supérieure : mêmes règles et même dialogue ; le nom est mis à jour partout où il est affiché sans recharger l'éditeur
