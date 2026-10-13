@@ -2152,3 +2152,6 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 @media (prefers-reduced-motion: reduce) { .pb-start-card, .pb-home-card .pb-start-btn { transition: none; } .pb-home-card .pb-start-btn:active { transform: none; } }
 .pb-recents-head .btn-ghost { color: var(--editor-accent-text, var(--editor-text)); font-weight: 600; }
 .pb-recents-head .btn-ghost:hover { background: var(--editor-hover); }
+/* Accueil : le bouton principal suit l'accent de l'apparence (y compris « Personnalisé ») */
+.pb-start .btn-primary { background: var(--editor-accent); border-color: var(--editor-accent); color: var(--editor-on-accent, #fff); }
+.pb-start .btn-primary:hover:not(:disabled) { background: var(--editor-accent); border-color: var(--editor-accent); filter: brightness(1.1); transform: none; }
