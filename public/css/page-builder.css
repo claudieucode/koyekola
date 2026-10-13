@@ -2125,3 +2125,7 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-recent-pin:focus-visible { outline: none; box-shadow: var(--pb-focus); }
 .pb-start { z-index: 40; }
 .pb-cat-actions { z-index: 1; }
+/* Dialogue de nommage d'une nouvelle page */
+.pb-name-msg { min-height: 18px; margin: 6px 0 0; }
+.pb-name-msg.is-error { color: var(--editor-danger); }
+#pb-name-input[aria-invalid="true"] { border-color: var(--editor-danger); }

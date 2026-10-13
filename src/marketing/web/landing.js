@@ -102,6 +102,21 @@ module.exports = () => {
       return template ? "Page créée à partir du modèle (brouillon) : remplacez les textes entre crochets dans l'éditeur visuel, puis publiez-la." : "Page créée (brouillon) : composez-la, puis publiez-la.";
     });
   });
+  // Nommage à la création (éditeur) : contrôle en direct du nom (mêmes règles que la création et le renommage) puis création JSON, sans passer par la liste des pages
+  router.get("/pages/nom.json", need("forms.write"), (req, res, next) => {
+    try { res.set("Cache-Control", "no-store").json({ ok: true, name: landing.checkName(req.mk.ctx, req.query.name) }); }
+    catch (error) { if (error instanceof MarketingError) return res.set("Cache-Control", "no-store").json({ ok: false, code: error.code, message: error.message }); next(error); }
+  });
+  router.post("/pages/creer.json", need("forms.write"), (req, res, next) => {
+    try {
+      const b = req.body || {};
+      const siteId = intOrNull(b.siteId);
+      const template = typeof b.template === "string" && b.template ? b.template : null;
+      const layout = b.layout && typeof b.layout === "object" && b.layout.mode === "guided" ? b.layout : null;
+      const page = pages.createPage(req.mk.ctx, { name: b.name, siteId, kind: "page", template, layout, blank: !template });
+      res.status(201).json({ page: { id: page.id, name: page.name, slug: page.slug }, url: `/marketing/pages/${page.id}/editeur?retour=pages` });
+    } catch (error) { jsonError(res, next, error); }
+  });
   // Actions groupées de la liste (publier, mettre hors ligne, corbeille, restaurer, supprimer définitivement) : droits vérifiés par action
   router.post("/pages/actions", need("forms.write"), (req, res, next) => {
     const ctx = req.mk.ctx;
