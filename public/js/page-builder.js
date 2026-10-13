@@ -7126,10 +7126,20 @@
     if (startStep === "choice") paintStartChoice(box); else if (startStep === "catalog" && PC) paintCatalog(box); else paintStartConfig(box);
     if (focusFirst !== false) { var f = box.querySelector("button:not([disabled]), input:not([disabled])"); if (f) f.focus({ preventScroll: true }); }
   }
-  // Petites compositions d'interface (HTML/CSS, jetons --editor-*) qui expliquent chaque action ; décoratives (aria-hidden), aucune image à charger
+  // Illustrations SVG vectorielles inline (constantes, ~1 Ko chacune, aucune image ni requête) : même grammaire pour les quatre (fenêtre de navigateur,
+  // trait de 1,5, rayons 6/3, accent réservé à l'élément « action »). Les couleurs viennent des jetons --editor-* via les classes il-* : elles suivent donc le thème.
+  var IL_WIN = '<rect class="il-w" x="14" y="10" width="212" height="100" rx="8"/><path class="il-bar" d="M14 18a8 8 0 0 1 8-8h196a8 8 0 0 1 8 8v8H14z"/><circle class="il-t" cx="26" cy="18" r="2"/><circle class="il-t" cx="34" cy="18" r="2"/><circle class="il-t" cx="42" cy="18" r="2"/>';
+  var IL_SVG = {
+    resume: IL_WIN + '<rect class="il-s" x="26" y="34" width="188" height="28" rx="4"/><rect class="il-a" x="36" y="43" width="74" height="6" rx="3"/><rect class="il-t" x="36" y="53" width="104" height="3" rx="1.5"/><rect class="il-t" x="26" y="72" width="120" height="4" rx="2"/><rect class="il-bar" x="26" y="82" width="158" height="4" rx="2"/><rect class="il-bar" x="26" y="92" width="96" height="4" rx="2"/><rect class="il-a" x="148" y="68" width="1.8" height="14" rx="1"/><path class="il-cur" d="M176 70l0 22 5.5-5 4 9 3.5-1.6-4-8.6 7.5-.2z"/>',
+    structure: IL_WIN + '<rect class="il-s" x="26" y="34" width="188" height="20" rx="4"/><rect class="il-t" x="36" y="41" width="70" height="4" rx="2"/><rect class="il-d" x="26" y="62" width="188" height="38" rx="5"/><rect class="il-w2" x="34" y="69" width="48" height="24" rx="3"/><rect class="il-w2" x="96" y="69" width="48" height="24" rx="3"/><rect class="il-w2" x="158" y="69" width="48" height="24" rx="3"/><circle class="il-a" cx="206" cy="100" r="11"/><path class="il-plus" d="M206 94.5v11M200.5 100h11"/>',
+    blank: '<rect class="il-w" x="14" y="10" width="212" height="100" rx="8"/><path class="il-bar" d="M14 18a8 8 0 0 1 8-8h196a8 8 0 0 1 8 8v8H14z"/><circle class="il-t" cx="26" cy="18" r="2"/><circle class="il-t" cx="34" cy="18" r="2"/><circle class="il-t" cx="42" cy="18" r="2"/><rect class="il-d" x="30" y="36" width="180" height="64" rx="5"/><circle class="il-a" cx="120" cy="68" r="14"/><path class="il-plus" d="M120 60v16M112 68h16"/><path class="il-spark" d="M168 48l1.8 4.2 4.2 1.8-4.2 1.8L168 60l-1.8-4.2-4.2-1.8 4.2-1.8zM70 82l1.2 2.8 2.8 1.2-2.8 1.2L70 90l-1.2-2.8-2.8-1.2 2.8-1.2z"/>',
+    guided: '<rect class="il-w" x="22" y="24" width="64" height="82" rx="6"/><rect class="il-s" x="30" y="32" width="48" height="22" rx="3"/><rect class="il-bar" x="30" y="62" width="48" height="4" rx="2"/><rect class="il-bar" x="30" y="72" width="32" height="4" rx="2"/><rect class="il-w" x="154" y="24" width="64" height="82" rx="6"/><rect class="il-bar" x="162" y="32" width="22" height="22" rx="3"/><rect class="il-bar" x="188" y="32" width="22" height="22" rx="3"/><rect class="il-bar" x="162" y="62" width="48" height="4" rx="2"/><rect class="il-bar" x="162" y="72" width="36" height="4" rx="2"/><rect class="il-w il-front" x="82" y="12" width="76" height="98" rx="7"/><rect class="il-s" x="91" y="21" width="58" height="26" rx="4"/><rect class="il-a" x="98" y="29" width="30" height="5" rx="2.5"/><rect class="il-t" x="98" y="37" width="40" height="3" rx="1.5"/><rect class="il-bar" x="91" y="55" width="26" height="18" rx="3"/><rect class="il-bar" x="123" y="55" width="26" height="18" rx="3"/><rect class="il-t" x="91" y="81" width="58" height="4" rx="2"/><rect class="il-a" x="91" y="92" width="26" height="9" rx="4.5"/>'
+  };
+  IL_SVG.classic = IL_SVG.structure;
   function illus(kind) {
-    var parts = { resume: ["doc", "ln", "ln s", "ln", "cur"], structure: ["box", "box", "box b", "plus"], blank: ["page", "plus"], guided: ["tile", "tile", "tile", "tile", "tile", "tile"], classic: ["box", "box", "box b", "plus"] }[kind] || [];
-    return h("div", { class: "pb-illus is-" + kind, "aria-hidden": "true" }, parts.map(function (c) { return h("span", { class: "pb-il-" + c.replace(" ", " pb-il-") }); }));
+    var el = h("div", { class: "pb-illus is-" + kind, "aria-hidden": "true" });
+    el.innerHTML = '<svg viewBox="0 0 240 120" focusable="false" preserveAspectRatio="xMidYMid meet">' + (IL_SVG[kind] || "") + '</svg>';
+    return el;
   }
   function startCard(iconName, title, text, hint, label, onclick, id) {
     return h("div", { class: "pb-start-card", "data-pb-start-card": id },
