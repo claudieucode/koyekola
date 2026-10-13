@@ -7251,6 +7251,7 @@
         lock(true);
         return saveConfirmed().then(function () {
           lock(false);
+          if (opts.auto) { opts.getUrl().then(function (u) { leaveFor(u, false); }, function (e) { notifyLeave(e.message, true); }); resolve("saved"); lock(false); return true; }
           notifyLeave(opts.saved, false);
           resolve("saved"); return true;
         }, function (e) { lock(false); throw e; });
@@ -7314,6 +7315,12 @@
         return catMatches(words, norm(t.name + " " + t.groupLabel));
       });
       var showBlank = !words.length && st.group === "all";
+      var recentG = store.get("pb-gab-recent", []).map(function (k) { return gabs.filter(function (g) { return g.key === k; })[0]; }).filter(Boolean);
+      if (recentG.length && !words.length && st.group === "all") {
+        var rg = h("div", { class: "pb-cat-groups", "data-pb-cat-recentg": "", role: "group", "aria-label": "Gabarits récemment appliqués" }, h("span", { class: "pb-home-label", text: "Récemment appliqués" }));
+        recentG.forEach(function (g) { rg.appendChild(h("button", { type: "button", class: "pb-cat-chip" + (d.gabarit === g.key ? " is-on" : ""), "data-pb-cat-pick": g.key, onclick: function () { var c = box.querySelector('[data-pb-cat-card="' + g.key + '"]'); if (c) { c.click(); c.scrollIntoView({ block: "nearest" }); } } }, g.name)); });
+        results.appendChild(rg);
+      }
       var grid = h("div", { class: "pb-cat-grid", role: "radiogroup", "aria-label": "Gabarits" });
       if (showBlank) grid.appendChild(catCard("", "Page vide", "Aucune section : vous choisissez seulement le format du canevas, puis construisez librement.", [], ["hero"].slice(0, 0), "Format seul"));
       okGab.forEach(function (g) { grid.appendChild(catCard(g.key, g.name, g.description, g.types.slice(0, 3).map(function (id) { return typeById[id].name; }).concat(g.types.length > 3 ? ["+" + (g.types.length - 3)] : []), g.shape, plural(g.shape.length, "section", "sections"))); });
@@ -7363,6 +7370,7 @@
       nextLabel = "Gabarit appliqué : « " + name + " »";
       change(function () { if (!insertInto(null, atEnd ? content.sections.length : 0, secs)) return false; selection = secs.length ? [secs[0].id] : []; });
       markCanvasSelection(true);
+      store.set("pb-gab-recent", [key].concat(store.get("pb-gab-recent", []).filter(function (k) { return k !== key; })).slice(0, 4));
       toast("Gabarit « " + name + " » ajouté (" + plural(secs.length, "section", "sections") + "). Annulable avec Ctrl/⌘ + Z.");
       return true;
     });
@@ -7381,15 +7389,17 @@
   function statusOf(p) { return p.status === "published" ? (p.hasDraft ? { t: "Publiée · brouillon en cours", c: "is-live" } : { t: "Publiée", c: "is-live" }) : p.status === "unpublished" ? { t: "Dépubliée", c: "" } : { t: "Brouillon", c: "is-draft" }; }
   var KIND_LABEL = { page: "Page du site", landing: "Page d'atterrissage", step: "Étape de tunnel", post: "Article" };
   function paintRecents(box) {
-    var list = (boot.recentPages || []).filter(function (p) { return recentFilter === "all" || (recentFilter === "draft" ? p.status !== "published" || p.hasDraft : p.status === "published"); });
+    var pins = store.get("pb-pins", []);
+    var list = (boot.recentPages || []).filter(function (p) { return recentFilter === "all" || (recentFilter === "pin" ? pins.indexOf(p.id) >= 0 : recentFilter === "draft" ? p.status !== "published" || p.hasDraft : p.status === "published"); })
+      .map(function (p, i) { return { p: p, i: i }; }).sort(function (a, b) { return (pins.indexOf(b.p.id) >= 0) - (pins.indexOf(a.p.id) >= 0) || a.i - b.i; }).map(function (x) { return x.p; });
     var sec = h("section", { class: "pb-recents", "data-pb-recents": "", "aria-label": "Pages récentes" });
     var head = h("div", { class: "pb-recents-head" }, h("h2", { class: "pb-cat-h", text: "Pages récentes" }));
     var chips = h("div", { class: "pb-cat-seg", role: "group", "aria-label": "Filtrer les pages récentes" });
-    [["all", "Toutes"], ["draft", "Brouillons"], ["live", "Publiées"]].forEach(function (o) {
+    [["all", "Toutes"], ["pin", "Épinglées"], ["draft", "Brouillons"], ["live", "Publiées"]].forEach(function (o) {
       chips.appendChild(h("button", { type: "button", class: "pb-cat-chip" + (recentFilter === o[0] ? " is-on" : ""), "aria-pressed": String(recentFilter === o[0]), "data-pb-recent-filter": o[0], onclick: function () { recentFilter = o[0]; paintStart(false); } }, o[1]));
     });
     head.appendChild(chips);
-    head.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", "data-pb-recent-all": "", onclick: function () { requestLeave({ getUrl: function () { return Promise.resolve("/marketing/pages"); }, text: "Vous allez quitter le document actuel pour afficher toutes les pages. Enregistrez vos modifications pour pouvoir reprendre ce travail plus tard.", saved: "Votre travail est enregistré. Vous pouvez maintenant afficher toutes les pages." }); } }, "Voir toutes les pages"));
+    head.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", "data-pb-recent-all": "", onclick: function () { requestLeave({ getUrl: function () { return Promise.resolve("/marketing/pages"); }, text: "Vous allez quitter le document actuel pour afficher toutes les pages. Enregistrez vos modifications pour pouvoir reprendre ce travail plus tard.", saved: "", auto: true }); } }, "Voir toutes les pages"));
     sec.appendChild(head);
     if (!(boot.recentPages || []).length) {
       sec.appendChild(h("div", { class: "pb-recents-empty", "data-pb-recents-empty": "" }, icon("fileText"), h("p", { class: "pb-start-text", text: "Aucune autre page pour l'instant. Quand vous en créerez, les dernières pages modifiées apparaîtront ici pour être rouvertes en un clic." })));
@@ -7403,7 +7413,8 @@
           h("span", { class: "pb-recent-ico", "aria-hidden": "true" }, icon("fileText")),
           h("span", { class: "pb-recent-main" }, h("strong", { class: "pb-recent-name", text: p.name }), h("span", { class: "pb-recent-meta", text: (KIND_LABEL[p.kind] || "Page") + (p.siteName ? " · " + p.siteName : "") + " · modifiée " + ago(p.updatedAt) })),
           h("span", { class: "pb-cat-badge " + s.c, text: s.t }),
-          h("button", { type: "button", class: "btn btn-outline btn-sm", "data-pb-recent-open": String(p.id), "aria-label": "Ouvrir la page « " + p.name + " »", onclick: function () { requestLeave({ getUrl: function () { return Promise.resolve("/marketing/pages/" + p.id + "/editeur"); }, text: "Vous allez quitter le document actuel pour ouvrir « " + p.name + " ». Enregistrez vos modifications pour pouvoir reprendre ce travail plus tard.", saved: "Votre travail est enregistré. Vous pouvez maintenant ouvrir « " + p.name + " »." }); } }, "Ouvrir")));
+          h("button", { type: "button", class: "pb-recent-pin" + (pins.indexOf(p.id) >= 0 ? " is-on" : ""), "data-pb-recent-pin": String(p.id), "aria-pressed": String(pins.indexOf(p.id) >= 0), "aria-label": (pins.indexOf(p.id) >= 0 ? "Désépingler « " : "Épingler « ") + p.name + " » (sur cet appareil)", "data-tip": "Épingler sur cet appareil", onclick: function () { var cur = store.get("pb-pins", []); store.set("pb-pins", cur.indexOf(p.id) >= 0 ? cur.filter(function (x) { return x !== p.id; }) : [p.id].concat(cur).slice(0, 20)); paintStart(false); } }, icon("star")),
+          h("button", { type: "button", class: "btn btn-outline btn-sm", "data-pb-recent-open": String(p.id), "aria-label": "Ouvrir la page « " + p.name + " »", onclick: function () { requestLeave({ getUrl: function () { return Promise.resolve("/marketing/pages/" + p.id + "/editeur"); }, text: "Vous allez quitter le document actuel pour ouvrir « " + p.name + " ». Enregistrez vos modifications pour pouvoir reprendre ce travail plus tard.", saved: "", auto: true }); } }, "Ouvrir")));
       });
       sec.appendChild(ul);
     }

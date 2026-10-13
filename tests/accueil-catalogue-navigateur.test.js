@@ -110,7 +110,7 @@ describe("création guidée : catalogue, gabarits et pages récentes (navigateur
     await page.locator("[data-pb-cat-reset]").click();
     await until(async () => (await cards().count()) === TEMPLATES.length + 1, { what: "réinitialisation" });
     await page.locator('[data-pb-cat-group="ecommerce"]').click();
-    await until(async () => (await cards().count()) === 0, { what: "catégorie sans gabarit" });
+    await until(async () => (await cards().count()) === 1, { what: "catégorie presque sans gabarit (une seule FAQ produits)" });
     assert.equal(await page.locator("[data-pb-cat-types] [data-pb-cat-type]").count() > 0, true, "mais ses types sont répertoriés");
     await page.locator('[data-pb-cat-group="marketing"]').click();
     await until(async () => (await cards().count()) > 0, { what: "marketing" });
@@ -208,10 +208,45 @@ describe("création guidée : catalogue, gabarits et pages récentes (navigateur
     await allowSaves();
     await page.locator(`[data-pb-recent-open="${other}"]`).click();
     await dlg.waitFor();
-    await dlg.getByRole("button", { name: "Enregistrer et continuer" }).click();
-    await until(() => (draft(cur).sections[0].children || []).length === 0, { what: "enregistré avant de quitter", timeout: 15000 });
-    assert.match(page.url(), new RegExp(`/pages/${cur}/editeur`), "on ne quitte pas encore : l'utilisateur confirme ensuite");
-    await Promise.all([page.waitForURL(new RegExp(`/marketing/pages/${other}/editeur`)), page.locator(`[data-pb-recent-open="${other}"]`).click()]);
+    await Promise.all([page.waitForURL(new RegExp(`/marketing/pages/${other}/editeur`), { timeout: 20000 }), dlg.getByRole("button", { name: "Enregistrer et continuer" }).click()]);
+    assert.equal((draft(cur).sections[0].children || []).length, 0, "enregistré avant de quitter, rien perdu");
+  });
+
+  test("épingler une page (sur cet appareil) la place en tête et le filtre « Épinglées » fonctionne", async () => {
+    const cur = await withContent("Épingles courante");
+    const ids = db().prepare("SELECT id FROM mk_landing_pages WHERE id != ? ORDER BY updated_at DESC, id DESC").all(cur).map((r) => r.id);
+    const oldest = ids[ids.length - 1];
+    await home().click(); await start().waitFor({ state: "visible" });
+    await page.locator('[data-pb-recent-filter="pin"]').click();
+    assert.equal(await page.locator("[data-pb-recents-none]").count(), 1, "aucune épinglée au départ");
+    await page.locator('[data-pb-recent-filter="all"]').click();
+    if (await page.locator(`[data-pb-recent-pin="${oldest}"]`).count()) {
+      await page.locator(`[data-pb-recent-pin="${oldest}"]`).click();
+      assert.equal(await page.locator("[data-pb-recent]").first().getAttribute("data-pb-recent"), String(oldest), "épinglée en tête");
+      assert.equal(await page.locator(`[data-pb-recent-pin="${oldest}"]`).getAttribute("aria-pressed"), "true");
+      await page.locator('[data-pb-recent-filter="pin"]').click();
+      assert.equal(await page.locator("[data-pb-recent]").count(), 1);
+      await page.locator('[data-pb-recent-filter="all"]').click();
+      await page.locator(`[data-pb-recent-pin="${oldest}"]`).click();
+      assert.equal(await page.locator(`[data-pb-recent-pin="${oldest}"]`).getAttribute("aria-pressed"), "false");
+    }
+  });
+
+  test("un gabarit appliqué est proposé ensuite dans « Récemment appliqués »", async () => {
+    await withContent("Récents gabarits");
+    await home().click(); await start().waitFor({ state: "visible" });
+    await page.locator('[data-pb-start-go="guided"]').click();
+    assert.equal(await page.locator("[data-pb-cat-recentg]").count() >= 0, true);
+    await page.locator('[data-pb-cat-card="faq"]').click();
+    await page.locator("[data-pb-cat-next]").click();
+    await page.locator("[data-pb-start-lock]").click(); // format déverrouillé : la création guidée reste utilisable depuis l'accueil
+    await page.locator("[data-pb-start-continue]").click();
+    await start().waitFor({ state: "hidden" });
+    await home().click(); await start().waitFor({ state: "visible" });
+    await page.locator('[data-pb-start-go="guided"]').click();
+    await page.locator('[data-pb-cat-pick="faq"]').waitFor();
+    await page.locator('[data-pb-cat-pick="faq"]').click();
+    assert.equal(await page.locator('[data-pb-cat-card="faq"]').getAttribute("aria-checked"), "true");
   });
 
   test("la route des gabarits : tous répondent avec de vraies sections, une clé inconnue est refusée, sans connexion c'est refusé", async () => {

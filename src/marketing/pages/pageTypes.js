@@ -34,7 +34,7 @@ const GABARIT_TYPES = {
   produit: ["produit-numerique", "lancement-produit"], service: ["services", "service", "service-creatif"], newsletter: ["newsletter"], telechargement: ["telechargement", "telechargement-ressource"],
   lancement: ["lancement-produit", "promotion"], bientot: ["bientot", "temporaire"], inscription: ["inscription"], consultation: ["rdv", "consultation", "reservation"],
   merci: ["remerciement", "confirmation", "confirmation-inscription", "confirmation-formation"], evenement: ["evenement", "inscription-evenement", "programme"], apropos: ["apropos", "equipe"],
-  contact: ["contact", "contact-commercial", "devis"], portfolio: ["portfolio", "projet", "agence", "design", "photographie"], saas: ["application", "tarifs", "landing"], entreprise: ["entreprise", "accueil", "services", "references"],
+  contact: ["contact", "contact-commercial", "devis"], portfolio: ["portfolio", "projet", "agence", "design", "photographie"], saas: ["application", "landing"], faq: ["faq", "centre-aide", "questions-produits"], tarifs: ["tarifs", "comparaison"], temoignages: ["temoignages", "references"], p404: ["p404"], entreprise: ["entreprise", "accueil", "services"],
 };
 
 function typeList() {

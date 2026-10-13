@@ -2103,7 +2103,7 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-recents-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .pb-recents-head .pb-cat-seg { margin-right: auto; }
 .pb-recents-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: 8px; }
-.pb-recent { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--editor-border); border-radius: var(--pb-radius-md); background: var(--editor-card, var(--editor-panel)); }
+.pb-recent { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--editor-border); border-radius: var(--pb-radius-md); background: var(--editor-card, var(--editor-panel)); }
 .pb-recent:hover { border-color: var(--editor-border-strong); }
 .pb-recent-ico { display: grid; place-items: center; width: 34px; height: 34px; border-radius: var(--pb-radius-md); background: var(--editor-active); color: var(--editor-accent-text, var(--editor-text)); }
 .pb-recent-ico svg { width: 17px; height: 17px; }
@@ -2113,7 +2113,15 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-recents-empty { display: flex; gap: 10px; align-items: center; padding: 14px; border: 1px dashed var(--editor-border-strong); border-radius: var(--pb-radius-md); color: var(--editor-muted); }
 .pb-recents-empty svg { width: 20px; height: 20px; flex: 0 0 auto; }
 @container pbstart (min-width: 900px) { .pb-recents-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@container pbstart (max-width: 560px) { .pb-recent { grid-template-columns: auto minmax(0, 1fr); } .pb-recent .pb-cat-badge, .pb-recent .btn { grid-column: 2; justify-self: start; } .pb-cat-bar { grid-template-columns: 1fr; } }
+@container pbstart (max-width: 560px) { .pb-recent { grid-template-columns: auto minmax(0, 1fr); } .pb-recent .pb-cat-badge, .pb-recent .btn, .pb-recent .pb-recent-pin { grid-column: 2; justify-self: start; } .pb-cat-bar { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .pb-cat-card { transition: none; } }
 .pb-il-tile { background: var(--editor-active) !important; }
 .pb-il-tile:nth-child(2n) { background: var(--editor-card, var(--editor-panel)) !important; }
+.pb-recent-pin { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; color: var(--editor-muted); background: transparent; border: 1px solid transparent; border-radius: var(--pb-radius-md); cursor: pointer; }
+.pb-recent-pin svg { width: 16px; height: 16px; }
+.pb-recent-pin:hover { background: var(--editor-hover); color: var(--editor-text); }
+.pb-recent-pin.is-on { color: var(--editor-accent-text, var(--editor-accent)); }
+.pb-recent-pin.is-on svg { fill: currentColor; }
+.pb-recent-pin:focus-visible { outline: none; box-shadow: var(--pb-focus); }
+.pb-start { z-index: 40; }
+.pb-cat-actions { z-index: 1; }
