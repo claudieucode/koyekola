@@ -46,7 +46,7 @@ describe("création depuis un modèle (vrai serveur)", () => {
 
   test("modèle depuis la fiche d'un site ; modèle inconnu refusé avec un message", async () => {
     const siteId = Number((await boss.post("/marketing/site-web/sites", { name: "Académie" })).location.match(/(\d+)$/)[1]);
-    assert.match((await boss.get(`/marketing/site-web/sites/${siteId}`)).text, /<option value="webinaire">Inscription à un webinaire — Webinaire<\/option>/);
+    assert.match((await boss.get(`/marketing/site-web/sites/${siteId}/reglages`)).text, /<option value="webinaire">Inscription à un webinaire — Webinaire<\/option>/);
     const r = await boss.post("/marketing/pages", { name: "Webinaire mars", site_id: String(siteId), template: "webinaire" });
     const row = db.prepare("SELECT site_id, kind, sections FROM mk_landing_pages WHERE id = ?").get(Number(r.location.match(/(\d+)$/)[1]));
     assert.equal(row.site_id, siteId);

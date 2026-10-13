@@ -389,8 +389,8 @@ describe("accès par site (multi-site)", () => {
   });
   test("utilisateur du site A : ouvre ses pages et ses sites, jamais ceux du site B (même en manipulant les adresses)", async () => {
     assert.equal((await userA.get(`/marketing/pages/${pageA}/editeur`)).status, 200);
-    assert.equal((await userA.get(`/marketing/site-web/sites/${siteA}`)).status, 200);
-    for (const path of [`/marketing/pages/${pageB}/editeur`, `/marketing/pages/${pageB}`, `/marketing/pages/${pageB}/apercu`, `/marketing/site-web/sites/${siteB}`, `/marketing/site-web/sites/${siteB}/reglages.json`]) {
+    assert.equal((await userA.get(`/marketing/site-web/sites/${siteA}/reglages`)).status, 200);
+    for (const path of [`/marketing/pages/${pageB}/editeur`, `/marketing/pages/${pageB}`, `/marketing/pages/${pageB}/apercu`, `/marketing/site-web/sites/${siteB}/reglages`, `/marketing/site-web/sites/${siteB}/reglages.json`]) {
       assert.equal((await userA.get(path)).status, 403, path);
     }
     for (const [path, body] of [[`/marketing/pages/${pageB}`, { name: "Piraté" }], [`/marketing/site-web/sites/${siteB}/design`, {}], [`/marketing/site-web/sites/${siteB}/archiver`, {}], [`/marketing/pages/${pageB}/publier.json`, {}]]) {
@@ -409,7 +409,7 @@ describe("accès par site (multi-site)", () => {
     assert.equal(mine.status, 200); assert.match(mine.text, /Site A/); assert.doesNotMatch(mine.text, /Site B/);
   });
   test("le site A voit ses pages dans la fiche du site ; le site B n'apparaît jamais", async () => {
-    const r = await userA.get(`/marketing/site-web/sites/${siteA}`);
+    const r = await userA.get(`/marketing/site-web/sites/${siteA}/reglages`);
     assert.match(r.text, /Page du site A/); assert.doesNotMatch(r.text, /Page du site B/);
   });
   test("rôle par site différent : Éditeur du site A, Lecteur du site B, rien sur C — le même compte", async () => {

@@ -41,7 +41,7 @@ const SCREENS = {
   // ----- Apparence -----
   apparence(req, ctx, sub) {
     const sites = pages.listSites(ctx);
-    const siteRows = (anchor, linkLabel) => sites.map((s) => ({ cells: [{ text: s.name, href: `${BASE}/sites/${s.id}` }, String(s.page_count ?? s.pages ?? "—"), s.status === "active" ? { status: { label: "Actif", cls: "mk-status-ok" } } : { status: { label: "Archivé", cls: "mk-status-off" } }], actions: [{ label: linkLabel, href: `${BASE}/sites/${s.id}${anchor}` }] }));
+    const siteRows = (anchor, linkLabel) => sites.map((s) => ({ cells: [{ text: s.name, href: `${BASE}/sites/${s.id}` }, String(s.page_count ?? s.pages ?? "—"), s.status === "active" ? { status: { label: "Actif", cls: "mk-status-ok" } } : { status: { label: "Archivé", cls: "mk-status-off" } }], actions: [{ label: linkLabel, href: `${BASE}/sites/${s.id}/reglages${anchor}` }] }));
     const siteTable = (caption, anchor, linkLabel) => ({ caption, columns: [{ label: "Site" }, { label: "Pages", num: true }, { label: "Statut" }], rows: siteRows(anchor, linkLabel), empty: empty("globe", "Aucun site", "Créez un site pour régler son design, son en-tête et son pied de page.", { label: "Créer un site", href: `${BASE}/sites#nouveau` }) });
     if (sub === "templates") {
       const user = pages.listPageTemplates(ctx);

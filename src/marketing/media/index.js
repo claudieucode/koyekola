@@ -199,7 +199,7 @@ function mediaUsage(ctx, media) {
   const articles = safe(() => db.prepare("SELECT id, title AS name, 'article' AS kind FROM posts WHERE featured_media_id = ? OR cover_path = ? OR og_image_path = ? OR twitter_image_path = ? OR content LIKE ? ESCAPE '\\'").all(media.id, media.path, media.path, media.path, like));
   return [...templates, ...pages, ...components, ...pageTemplates, ...sites, ...articles];
 }
-const usageHref = (u) => ({ page: `/marketing/pages/${u.id}`, composant: `/marketing/site-web/composants/${u.id}/editeur`, site: `/marketing/site-web/sites/${u.id}`, modèle: `/marketing/modeles/${u.id}`, article: `/formateur/blog/${u.id}/modifier` }[u.kind] || null);
+const usageHref = (u) => ({ page: `/marketing/pages/${u.id}`, composant: `/marketing/site-web/composants/${u.id}/editeur`, site: `/marketing/site-web/sites/${u.id}/reglages`, modèle: `/marketing/modeles/${u.id}`, article: `/formateur/blog/${u.id}/modifier` }[u.kind] || null);
 
 // Suppression définitive : refusée si un contenu utilise le fichier ; le fichier n'est retiré du disque que s'il n'a
 // jamais servi dans une campagne lancée (les e-mails déjà envoyés pointent vers lui)

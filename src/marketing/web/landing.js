@@ -365,7 +365,7 @@ module.exports = () => {
     const site = c.site_id ? pages.getSite(ctx, c.site_id) : null;
     const role = site && site.header_component_id === c.id ? "header" : site && site.footer_component_id === c.id ? "footer" : c.variant_of ? "variant" : "component";
     return { id: `c${c.id}`, name: c.name, slug: "", title: c.name, description: "", status: "published", kind: "page", hasDraft: false, revision: 0, site_id: c.site_id, form_id: null, indexable: 0, archived_at: null, header_mode: "inherit",
-      back: c.site_id ? `/marketing/site-web/sites/${c.site_id}#entete` : "/marketing/site-web/sites", working: { sections: [c.draft || c.section], title: c.name, description: "", theme: pages.normalizeTheme({}), seo: {} }, role };
+      back: c.site_id ? `/marketing/site-web/sites/${c.site_id}/reglages#entete` : "/marketing/site-web/sites", working: { sections: [c.draft || c.section], title: c.name, description: "", theme: pages.normalizeTheme({}), seo: {} }, role };
   };
   router.get("/site-web/composants/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
     const c = loadComponent(req, res);
