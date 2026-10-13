@@ -2135,7 +2135,7 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-home-head { gap: 6px; padding-bottom: 4px; }
 .pb-home-head .pb-start-head { font-size: 30px; font-weight: 750; letter-spacing: -0.025em; }
 .pb-home-sub { font-size: 14.5px; }
-.pb-home-resume { grid-template-columns: 200px minmax(0, 1fr) auto; gap: 8px 24px; padding: 22px 24px; background-color: var(--editor-card, var(--editor-panel)); background-image: linear-gradient(100deg, var(--editor-active), transparent 55%); }
+.pb-home-resume { grid-template-columns: 200px minmax(0, 1fr) auto; gap: 8px 24px; padding: 22px 24px; background-color: var(--editor-card, var(--editor-panel)); }
 .pb-home-resume .pb-illus { width: 200px; }
 .pb-home-card .pb-illus { width: 100%; }
 @container pbstart (max-width: 719px) {
