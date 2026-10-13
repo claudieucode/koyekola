@@ -51,11 +51,30 @@ function freeSlug(ctx, base, exceptId = null) {
   return slug;
 }
 
+// Règles du nom visible d'une page, UNE seule fois pour la création et le renommage : espaces inutiles retirés, obligatoire, 100 caractères au plus
+// (limite du modèle), unique dans l'organisation sans tenir compte de la casse (contrainte de la table). Le nom n'est ni l'identifiant ni l'adresse (slug).
+const NAME_MAX = 100;
+function checkName(ctx, raw, { exceptId = null } = {}) {
+  checkCtx(ctx);
+  const text = String(raw === undefined || raw === null ? "" : raw).trim();
+  if (!text) throw bad("Le nom de la page est obligatoire.");
+  if (text.length > NAME_MAX) throw bad(`Le nom de la page ne peut pas dépasser ${NAME_MAX} caractères (${text.length} saisis).`);
+  const name = line(text, NAME_MAX);
+  const dup = ctx.db.prepare("SELECT id FROM mk_landing_pages WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, name);
+  if (dup && dup.id !== exceptId) throw new MarketingError("duplicate", "Une page porte déjà ce nom. Choisissez un nom différent.");
+  return name;
+}
+// Renommer SEULEMENT le nom visible : mêmes règles que la création, identifiant et adresse inchangés
+function renamePage(ctx, id, name) {
+  requirePage(ctx, id);
+  const clean_ = checkName(ctx, name, { exceptId: id });
+  ctx.db.prepare("UPDATE mk_landing_pages SET name = ?, updated_at = datetime('now') WHERE id = ?").run(clean_, id);
+  audit(ctx, "landing.renamed", "landing", id, {});
+  return getPage(ctx, id);
+}
 function createPage(ctx, { name } = {}) {
   checkCtx(ctx);
-  const clean_ = line(name, 100);
-  if (!clean_) throw bad("Le nom de la page est obligatoire.");
-  if (ctx.db.prepare("SELECT 1 FROM mk_landing_pages WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, clean_)) throw new MarketingError("duplicate", "Une page porte déjà ce nom.");
+  const clean_ = checkName(ctx, name);
   const sections = [{ type: "hero", title: clean_, subtitle: "Une phrase qui dit clairement ce que la personne y gagne.", image: "", imageAlt: "", buttonLabel: "", buttonUrl: "" }, { type: "form", heading: "Inscrivez-vous", intro: "" }];
   const id = Number(ctx.db.prepare("INSERT INTO mk_landing_pages (organization_id, name, slug, title, sections, created_by) VALUES (?, ?, ?, ?, ?, ?)")
     .run(ctx.organizationId, clean_, freeSlug(ctx, slugify(clean_)), clean_, JSON.stringify(sections), ctx.userId ?? null).lastInsertRowid);
@@ -67,10 +86,7 @@ function createPage(ctx, { name } = {}) {
 // partie du contenu publié (le contenu, lui, passe par le brouillon du moteur de pages : src/marketing/pages)
 function saveSettings(ctx, id, input = {}) {
   const before = requirePage(ctx, id);
-  const name = line(input.name, 100);
-  if (!name) throw bad("Le nom de la page est obligatoire.");
-  const dup = ctx.db.prepare("SELECT id FROM mk_landing_pages WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, name);
-  if (dup && dup.id !== id) throw new MarketingError("duplicate", "Une page porte déjà ce nom.");
+  const name = checkName(ctx, input.name, { exceptId: id });
   const slug = line(input.slug, 60).toLowerCase();
   if (!SLUG.test(slug)) throw bad("Adresse de la page : lettres minuscules sans accent, chiffres et tirets (ex. « guide-gratuit »).");
   // Page d'un site : elle peut être servie à la racine du domaine du site, une adresse réservée à une route du site est donc refusée (palier 12)
@@ -403,6 +419,6 @@ function pageReport(ctx, id, { days = 30, now = Date.now() } = {}) {
 }
 
 module.exports = {
-  createPage, savePage, saveSettings, getPage, requirePage, getPublishedPage, listPages, publishPage, unpublishPage, deletePage, preflight, viewModel, linksOf, freeSlug,
+  createPage, renamePage, checkName, NAME_MAX, savePage, saveSettings, getPage, requirePage, getPublishedPage, listPages, publishPage, unpublishPage, deletePage, preflight, viewModel, linksOf, freeSlug,
   visitorOf, isBot, record, pageReport, normalizeSection, slugify, SECTION_TYPES, STATUSES, DEFAULT_THEME, MAX_TAGS,
 };

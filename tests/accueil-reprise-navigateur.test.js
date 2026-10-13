@@ -155,6 +155,7 @@ describe("accueil persistant et reprise du travail (navigateur)", { skip: SKIP }
     const id = await withContent("Accueil F");
     await home().click(); await start().waitFor({ state: "visible" });
     await page.locator('[data-pb-start-go="guided"]').click();
+    await page.locator("[data-pb-cat-next]").click();
     await page.locator('[data-pb-start-format="compact"]').click();
     await page.locator("[data-pb-start-continue]").click();
     await until(() => { const l = layout(id); return l && l.format === "compact"; }, { what: "format enregistré" });
@@ -219,6 +220,14 @@ describe("accueil persistant et reprise du travail (navigateur)", { skip: SKIP }
       throw new Error(`pas de navigation : note=${JSON.stringify(note)} erreur=${JSON.stringify(err)} url=${page.url()} posts=${JSON.stringify((global.__posts || []).slice(-6))}`);
     }
   };
+  // Dialogue commun de nommage : on saisit le nom puis on confirme (le bouton n'est actif qu'une fois le nom validé par le serveur)
+  const nameDialog = () => page.locator("dialog.pb-comp-dlg[open]").filter({ has: page.locator("[data-pb-name-input]") });
+  const nameNewPage = async (name) => {
+    const dlg = nameDialog(); await dlg.waitFor({ state: "visible", timeout: 15000 });
+    await dlg.locator("[data-pb-name-input]").fill(name);
+    await until(async () => !(await dlg.locator("[data-cd-ok]").isDisabled()), { what: "nom validé", timeout: 8000 });
+    return dlg;
+  };
   const pageCount = () => db().prepare("SELECT COUNT(*) n FROM mk_landing_pages").get().n;
   const failSaves = async () => { await page.route("**/brouillon", (route) => (route.request().method() === "PUT" ? route.abort() : route.continue())); };
   const allowSaves = async () => { await page.unroute("**/brouillon"); };
@@ -237,7 +246,10 @@ describe("accueil persistant et reprise du travail (navigateur)", { skip: SKIP }
     const id = await withContent("Accueil K");
     const before = pageCount(), oldDraft = JSON.stringify(draft(id)), oldRevision = row(id).revision;
     await home().click(); await start().waitFor({ state: "visible" });
-    await page.locator('[data-pb-start-go="blank"]').dblclick(); // double clic : une seule création
+    await page.locator('[data-pb-start-go="blank"]').dblclick(); // double clic : un seul dialogue
+    assert.equal(await page.locator("dialog[open] [data-pb-name-input]").count(), 1);
+    const dlgK = await nameNewPage("  Ma page nommée  ");
+    await dlgK.locator("[data-cd-ok]").dblclick(); // double clic : une seule création
     await page.waitForURL((u) => /\/pages\/\d+\/editeur/.test(u.pathname) && !u.pathname.includes(`/pages/${id}/`), { timeout: 15000 });
     const newId = Number(page.url().match(/pages\/(\d+)/)[1]);
     assert.notEqual(newId, id);
@@ -245,7 +257,7 @@ describe("accueil persistant et reprise du travail (navigateur)", { skip: SKIP }
     assert.equal(JSON.stringify(draft(id)), oldDraft, "l'ancien document n'a pas changé");
     assert.equal(row(id).revision, oldRevision);
     assert.equal((draft(newId).sections || []).length, 0, "aucun élément transféré");
-    assert.notEqual(row(newId).name, row(id).name);
+    assert.equal(row(newId).name, "Ma page nommée", "le nom saisi (espaces retirés) est celui du document");
     await page.waitForFunction(() => document.querySelector("[data-pb-frame]"), null, { timeout: 15000 });
     await start().waitFor({ state: "visible" });
     assert.equal(await page.locator('[data-pb-start-card="classic"]').count(), 1, "la nouvelle page propose l'écran de démarrage");
@@ -291,12 +303,13 @@ describe("accueil persistant et reprise du travail (navigateur)", { skip: SKIP }
     assert.equal(pageCount(), before, "aucune page créée"); assert.equal(page.url().includes(`/pages/${id}/`), true);
     await allowSaves(); // le réseau revient : on réessaie
     await dlg.getByRole("button", { name: "Enregistrer et continuer" }).click();
-    await dlg.waitFor({ state: "hidden", timeout: 20000 });
     await until(() => (draft(id).sections[0].children || []).length === 0, { what: "modification réellement enregistrée sur le serveur", timeout: 12000 });
-    assert.equal(pageCount(), before, "retour à l'accueil : aucune page créée automatiquement");
-    assert.equal(await start().isVisible(), true);
-    assert.match(await page.locator("[data-pb-home-note]").innerText(), /enregistré/);
-    await page.locator('[data-pb-start-go="blank"]').click(); // propre : création directe
+    const dlgM = nameDialog(); await dlgM.waitFor({ state: "visible", timeout: 15000 }); // enregistrement réussi : le nommage s'ouvre tout seul
+    assert.equal(pageCount(), before, "rien n'est créé avant la confirmation du nom");
+    await dlgM.getByRole("button", { name: "Annuler" }).click(); await dlgM.waitFor({ state: "hidden" });
+    assert.equal(pageCount(), before, "annuler le nom ne crée rien"); assert.equal(await start().isVisible(), true);
+    await page.locator('[data-pb-start-go="blank"]').click();
+    await (await nameNewPage("Après échec")).locator("[data-cd-ok]").click();
     await leftFor(id);
     assert.equal(pageCount(), before + 1);
     assert.equal((draft(id).sections[0].children || []).length, 0, "l'ancien document garde le travail enregistré");
@@ -314,6 +327,7 @@ describe("accueil persistant et reprise du travail (navigateur)", { skip: SKIP }
     assert.equal(pageCount(), before, "pas encore de création : il faut confirmer");
     await allowSaves();
     await dlg.locator("[data-pb-leave-quit]").click();
+    await (await nameNewPage("Quitter nommée")).locator("[data-cd-ok]").click();
     await leftFor(id);
     assert.equal(pageCount(), before + 1);
     await wait(1500);

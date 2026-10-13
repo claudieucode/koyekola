@@ -349,6 +349,14 @@ module.exports = () => {
     if (!t) return res.status(404).json({ error: { code: "not_found", message: "Modèle introuvable." } });
     res.set("Cache-Control", "no-store").json({ template: { id: t.id, name: t.name, category: t.category, sections: t.content.sections } });
   });
+  // Sections d'un gabarit intégré (écran « Création guidée » de l'éditeur) : copie neuve à chaque appel, rien n'est enregistré
+  router.get("/site-web/gabarits/:key([a-z0-9-]+).json", need("forms.read"), (req, res, next) => {
+    try {
+      const sections = pages.gabaritSections(req.mk.ctx, req.params.key);
+      if (!sections) return res.status(404).json({ error: { code: "not_found", message: "Gabarit introuvable." } });
+      res.set("Cache-Control", "no-store").json({ gabarit: { key: req.params.key, sections } });
+    } catch (error) { jsonError(res, next, error); }
+  });
   router.post("/site-web/modeles", need("forms.write"), (req, res, next) => {
     try {
       const b = req.body || {};
