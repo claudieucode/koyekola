@@ -296,6 +296,19 @@ function createPage(ctx, { name, siteId = null, kind = "page", template = null, 
   }
   return withLayout(ctx, page.id, layout);
 }
+// Sections d'un gabarit intégré, validées comme toute section (insertion dans une page ouverte dans l'éditeur) ; null si la clé est inconnue
+function gabaritSections(ctx, key) {
+  const raw = typeof key === "string" ? require("./templates").buildTemplate(ctx, key) : null;
+  if (!raw) return null;
+  const sections = normalizeSections(ctx, raw.map((s) => ({ ...s, id: newSectionId() })));
+  checkWidgetRights(ctx, [], sections);
+  return sections;
+}
+// Pages les plus récemment MODIFIÉES (aucune date d'ouverture n'est enregistrée) : données réelles de la table des pages, sans copie
+function recentPages(ctx, { limit = 8, exceptId = null } = {}) {
+  return listPages(ctx).filter((p) => p.id !== exceptId).slice(0, limit)
+    .map((p) => ({ id: p.id, name: p.name, status: p.status, kind: p.kind, siteName: p.site_name || "", updatedAt: p.updated_at, hasDraft: Boolean(p.has_draft) }));
+}
 // Conception guidée dès la création : le format est écrit dans le thème de la page (aucune migration)
 function withLayout(ctx, id, layout) {
   if (layout) {
@@ -977,6 +990,6 @@ module.exports = {
   createPage, duplicatePage, archivePage, restorePage, schedulePage, cancelSchedule, promoteScheduledPages, schedulerMiddleware,
   getSite, requireSite, listSites, sitePages, createSite, updateSite, saveSiteDesign, colorUsage, setHomePage, movePage, archiveSite, restoreSite, duplicateSite, deleteSite, undeleteSite, siteCounts, SITE_TYPES, SITE_VIEWS,
   listComponents, getComponent, createComponent, updateComponent, componentUsage, componentInstances, saveComponentDraft, publishComponent, discardComponentDraft, deleteComponent, COMPONENT_KINDS, resolveSections,
-  siteParts, withSiteParts, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
+  siteParts, withSiteParts, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, gabaritSections, recentPages, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
   normalizeSeo, normalizeTheme, TYPES,
 };

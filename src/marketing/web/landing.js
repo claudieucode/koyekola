@@ -310,6 +310,8 @@ module.exports = () => {
       courses: listCourses(ctx).map((c) => ({ id: c.id, title: c.title })),
       components: pages.listComponents(ctx, { siteId: page.site_id }).map((c) => ({ id: c.id, name: c.name, global: c.global, kind: c.kind, hasDraft: c.hasDraft, version: c.version, blocks: c.blocks, type: c.section && c.section.type, uses: pages.componentInstances(ctx, c.id).reduce((n, p) => n + p.count, 0) })),
       // Modèles de pages de l'équipe (onglet Blocs : insérables dans la page en cours)
+      // Écran d'accueil / création guidée : registre des types et gabarits intégrés, pages récemment modifiées (données réelles)
+      pageCatalog: component ? null : require("../pages/pageTypes").catalog(ctx), recentPages: component ? [] : pages.recentPages(ctx, { exceptId: page.id }),
       templates: pages.listPageTemplates(ctx).map((t) => ({ id: t.id, name: t.name, category: t.category, sections: t.content.sections.length })),
       // Adresses proposées pour les liens : pages en ligne, pages du site, étape suivante (page d'un tunnel)
       links: [{ url: "/catalogue", label: "Catalogue des formations" }, { url: "/blog", label: "Blog" }, { url: "/", label: "Accueil du site" }]

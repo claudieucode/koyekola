@@ -182,6 +182,7 @@ async function dismissStart(page) {
   const start = page.locator("[data-pb-start]");
   if (!(await start.isVisible().catch(() => false))) return;
   await page.locator('[data-pb-start-go="guided"]').click();
+  await page.locator("[data-pb-cat-next]").click();
   await page.locator("[data-pb-start-cancel]").click();
   await start.waitFor({ state: "hidden" });
 }

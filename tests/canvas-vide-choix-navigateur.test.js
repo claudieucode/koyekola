@@ -69,10 +69,14 @@ describe("canvas vide : choix du mode de création (navigateur)", { skip: SKIP }
 
   test("Annuler (configuration) : ferme sans rien écrire ; Retour revient au choix", async () => {
     await page.locator('[data-pb-start-go="guided"]').click();
+    await page.locator("[data-pb-cat-next]").click();
     await page.locator("[data-pb-start-format]").first().waitFor();
+    await page.locator("[data-pb-start-back]").click();
+    await page.locator("[data-pb-cat-next]").waitFor(); // Retour de la configuration : le catalogue
     await page.locator("[data-pb-start-back]").click();
     await page.locator('[data-pb-start-card="classic"]').waitFor();
     await page.locator('[data-pb-start-go="guided"]').click();
+    await page.locator("[data-pb-cat-next]").click();
     await page.locator("[data-pb-start-cancel]").click();
     await until(async () => start().isHidden(), { what: "panneau fermé" });
     await wait(1200);
@@ -95,6 +99,7 @@ describe("canvas vide : choix du mode de création (navigateur)", { skip: SKIP }
     await start().waitFor({ state: "visible" });
     await page.evaluate(() => { window.__frameBefore = document.querySelector("[data-pb-frame]"); });
     await page.locator('[data-pb-start-go="guided"]').click();
+    await page.locator("[data-pb-cat-next]").click();
     assert.equal(await page.locator('[data-pb-start-format="compact"]').count(), 1);
     assert.equal(await page.locator('[data-pb-start-lock]').getAttribute("aria-checked"), "true", "verrouillé par défaut, explicite");
     assert.match(await page.locator("[data-pb-start-lock]").innerText(), /Format verrouillé/);
@@ -119,6 +124,7 @@ describe("canvas vide : choix du mode de création (navigateur)", { skip: SKIP }
     const id = await create("Page vide C");
     await start().waitFor({ state: "visible" });
     await page.locator('[data-pb-start-go="guided"]').click();
+    await page.locator("[data-pb-cat-next]").click();
     await page.locator('[data-pb-start-format="custom"]').click();
     await page.locator("[data-pb-start-maxWidth]").fill("100");
     await page.locator("[data-pb-start-continue]").click();
@@ -154,6 +160,7 @@ describe("canvas vide : choix du mode de création (navigateur)", { skip: SKIP }
     const over = await page.evaluate(() => { const s = document.querySelector("[data-pb-start]"); return { sw: s.scrollWidth, cw: s.clientWidth }; });
     assert.ok(over.sw <= over.cw + 1, `pas de défilement horizontal : ${over.sw} > ${over.cw}`);
     await page.locator('[data-pb-start-go="guided"]').click();
+    await page.locator("[data-pb-cat-next]").click();
     await page.locator("[data-pb-start-continue]").scrollIntoViewIfNeeded();
     const b = await page.locator("[data-pb-start-continue]").boundingBox();
     assert.ok(b && b.x >= 0 && b.x + b.width <= 420, "bouton Continuer visible dans la largeur");

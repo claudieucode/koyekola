@@ -155,6 +155,7 @@ describe("accueil persistant et reprise du travail (navigateur)", { skip: SKIP }
     const id = await withContent("Accueil F");
     await home().click(); await start().waitFor({ state: "visible" });
     await page.locator('[data-pb-start-go="guided"]').click();
+    await page.locator("[data-pb-cat-next]").click();
     await page.locator('[data-pb-start-format="compact"]').click();
     await page.locator("[data-pb-start-continue]").click();
     await until(() => { const l = layout(id); return l && l.format === "compact"; }, { what: "format enregistré" });
