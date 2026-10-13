@@ -250,6 +250,7 @@
     guarded(function () { if (light) scheduleTree(); else { clearTimeout(treeTimer); renderTree(); } });
     if (!light) { guarded(renderInspector); guarded(renderContext); guarded(refreshPageSettings); }
     guarded(updateHistoryButtons);
+    guarded(scheduleHistorySave);
     guarded(refreshStart);
     if (!light) { guarded(placeCanvasBar); guarded(renderDoc); } // saisie : la barre est replacée avec les repères, juste après le rendu du canevas
     scheduleRender(quick);
@@ -257,6 +258,37 @@
     navListeners.forEach(function (f) { guarded(f); });
     guarded(refreshResets);
   }
+  // ---------- Historique conservé après rechargement ----------
+  // L'historique (étapes + libellés) est copié dans ce navigateur (localStorage « pb-history-<page> ») avec l'empreinte du document auquel il
+  // s'applique. Au rechargement il n'est repris QUE si le document chargé est identique à cette empreinte : sinon (page modifiée ailleurs, version
+  // restaurée…) il est écarté, jamais appliqué à un autre contenu. Taille plafonnée : les étapes les plus anciennes partent d'abord.
+  var HISTORY_KEY = "pb-history-" + PAGE.id, HISTORY_MAX_CHARS = 2000000, historyTimer = null;
+  function docKey() { return JSON.stringify({ sections: content.sections, title: content.title, description: content.description, seo: content.seo, theme: content.theme }); }
+  function writeHistory() {
+    clearTimeout(historyTimer); historyTimer = null;
+    try {
+      if (!canWrite || (!past.length && !future.length)) { localStorage.removeItem(HISTORY_KEY); return; }
+      var p = past.slice(), pl = pastLabels.slice(), f = future.slice(), fl = futureLabels.slice();
+      var size = function () { var n = 0; p.forEach(function (x) { n += x.length; }); f.forEach(function (x) { n += x.length; }); return n; };
+      var total = size();
+      while (total > HISTORY_MAX_CHARS && p.length) { total -= p[0].length; p.shift(); pl.shift(); }
+      while (total > HISTORY_MAX_CHARS && f.length) { total -= f[0].length; f.shift(); fl.shift(); }
+      localStorage.setItem(HISTORY_KEY, JSON.stringify({ cur: docKey(), past: p, pastLabels: pl, future: f, futureLabels: fl }));
+    } catch (e) { try { localStorage.removeItem(HISTORY_KEY); } catch (e2) { /* stockage indisponible */ } }
+  }
+  function scheduleHistorySave() { clearTimeout(historyTimer); historyTimer = setTimeout(writeHistory, 800); }
+  // Reprise : renvoie vrai si l'historique enregistré correspond exactement au document courant
+  function restoreHistory() {
+    if (!canWrite) return false;
+    var raw = null;
+    try { raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || "null"); } catch (e) { raw = null; }
+    if (!raw || raw.cur !== docKey() || !Array.isArray(raw.past) || !Array.isArray(raw.future) || raw.past.length !== (raw.pastLabels || []).length || raw.future.length !== (raw.futureLabels || []).length) return false;
+    past = raw.past; pastLabels = raw.pastLabels; future = raw.future; futureLabels = raw.futureLabels; lastKey = null;
+    updateHistoryButtons();
+    return true;
+  }
+  window.addEventListener("pagehide", function () { if (historyTimer) writeHistory(); });
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden" && historyTimer) writeHistory(); });
   function updateHistoryButtons() {
     $("[data-pb-undo]").disabled = !past.length || !canWrite;
     $("[data-pb-redo]").disabled = !future.length || !canWrite;
@@ -1875,7 +1907,7 @@
         components = components.filter(function (x) { return x.id !== c.id; });
         past = []; future = []; pastLabels = []; futureLabels = []; lastKey = null; // une suppression de bibliothèque n'est pas annulable : on ne laisse aucune étape qui recréerait une référence orpheline
         selection = selection.filter(function (id) { return byId(id); });
-        updateHistoryButtons(); renderTree(); renderInspector(); scheduleRender(); scheduleSave(); renderComponents();
+        updateHistoryButtons(); scheduleHistorySave(); renderTree(); renderInspector(); scheduleRender(); scheduleSave(); renderComponents();
         toast(mode === "detach" ? "Composant supprimé ; ses " + plural(r.instances, "instance est devenue indépendante", "instances sont devenues indépendantes") + "." : mode === "instances" ? "Composant et " + plural(r.instances, "instance supprimés", "instances supprimés") + "." : "Composant supprimé.");
         return true;
       });
@@ -7056,7 +7088,7 @@
   function homeButtonState() { if (homeBtn) { homeBtn.setAttribute("aria-pressed", String(homeOpen)); } }
   function closeHome() {
     if (!homeOpen) return;
-    homeOpen = false; homeButtonState();
+    homeOpen = false; homeButtonState(); homeNotice = null;
     startEl.hidden = true; startEl.textContent = "";
     refreshStart();
     var back = homeFrom; homeFrom = null;
@@ -7069,7 +7101,7 @@
     if (editing) commitEdit();
     if (mode !== "visual") setMode("visual"); // le panneau se pose sur le canevas visuel
     homeFrom = document.activeElement;
-    homeOpen = true; homeButtonState();
+    homeOpen = true; homeButtonState(); homeNotice = null;
     startStep = "choice"; startDraft = null;
     startEl.hidden = false;
     paintStart();
@@ -7102,22 +7134,113 @@
       h("button", { type: "button", class: "btn btn-primary pb-start-btn", "data-pb-start-go": id, onclick: onclick }, label));
   }
   function paintStartChoice(box) {
-    var home = homeOpen, at = function () { return home ? content.sections.length : 0; }; // accueil rouvert : on AJOUTE à la fin, jamais de remplacement
-    if (home && hasWork()) {
-      var n = content.sections.length;
-      box.appendChild(h("div", { class: "pb-start-resume", "data-pb-home-resume-box": "" },
-        h("p", { class: "pb-start-text", text: n ? "Votre page est intacte : " + n + " section" + (n > 1 ? "s" : "") + (past.length ? ", " + past.length + " modification" + (past.length > 1 ? "s" : "") + " annulable" + (past.length > 1 ? "s" : "") : "") + "." : "Votre page est vide, avec les réglages déjà choisis." }),
-        h("button", { type: "button", class: "btn btn-primary pb-start-btn", "data-pb-home-resume": "", onclick: closeHome }, "Reprendre mon travail")));
-    }
-    box.appendChild(h("h1", { class: "pb-start-head", text: home ? "Ou commencer autrement" : "Comment voulez-vous commencer ?" }));
-    var lockedHome = home && formatLocked();
+    if (homeOpen) { paintHomeChoice(box); return; }
+    box.appendChild(h("h1", { class: "pb-start-head", text: "Comment voulez-vous commencer ?" }));
     box.appendChild(h("div", { class: "pb-start-cards" },
-      startCard("layers", "Création classique", "Construisez librement votre page avec les conteneurs, Flexbox et les widgets Kolakisa.", home ? "Ajoute une structure à la fin de votre page, sans rien effacer." : "Aucune contrainte : vous réglez tout vous-même.", home ? "Ajouter une structure" : "Commencer",
-        function () { startFinish(); openStructurePicker({ parent: null, index: at() }); }, "classic"),
-      startCard("layout", "Création guidée", "Choisissez un gabarit de conception web et définissez les règles de mise en page de votre page.", lockedHome ? "Format verrouillé : déverrouillez-le d'abord dans l'onglet « Page »." : home ? "Applique le gabarit à votre page (annulable avec Ctrl/⌘ + Z), sans rien effacer." : "Largeur du contenu et marges fixées au départ, protégeables par un verrou.", "Choisir un gabarit",
-        function () { if (lockedHome) return; startStep = "config"; var p = layoutOf() || LF.formats.standard || {}; startDraft = layoutOf() ? { format: p.format, maxWidth: p.maxWidth, gutter: p.gutter, locked: Boolean(p.locked) } : { format: "standard", maxWidth: p.maxWidth || 1200, gutter: p.gutter || 24, locked: true }; paintStart(); }, "guided")));
-    if (lockedHome) { var gb = box.querySelector('[data-pb-start-go="guided"]'); if (gb) gb.disabled = true; }
+      startCard("layers", "Création classique", "Construisez librement votre page avec les conteneurs, Flexbox et les widgets Kolakisa.", "Aucune contrainte : vous réglez tout vous-même.", "Commencer",
+        function () { startFinish(); openStructurePicker({ parent: null, index: 0 }); }, "classic"),
+      startCard("layout", "Création guidée", "Choisissez un gabarit de conception web et définissez les règles de mise en page de votre page.", "Largeur du contenu et marges fixées au départ, protégeables par un verrou.", "Choisir un gabarit",
+        function () { startStep = "config"; var p = LF.formats.standard || {}; startDraft = { format: "standard", maxWidth: p.maxWidth || 1200, gutter: p.gutter || 24, locked: true }; paintStart(); }, "guided")));
     box.appendChild(h("p", { class: "pb-start-foot", text: "Dans les deux cas vous utilisez les mêmes conteneurs, la même grille Flexbox et les mêmes widgets. Vous pourrez changer de mode plus tard dans l'onglet « Page »." }));
+  }
+  // Accueil rouvert : reprendre (action principale, pleine largeur) puis trois autres façons de commencer, étiquetées par ce qu'elles touchent :
+  // « Sur cette page » (ajouter une structure, gabarit) ou « Nouveau document » (page vierge). Les identifiants data-pb-* des actions sont inchangés.
+  function homeCard(iconName, tag, title, text, label, onclick, id) {
+    return h("div", { class: "pb-start-card pb-home-card", "data-pb-start-card": id },
+      h("div", { class: "pb-home-top" }, h("span", { class: "pb-start-icon", "aria-hidden": "true" }, icon(iconName)), h("span", { class: "pb-home-tag", text: tag })),
+      h("h2", { class: "pb-start-title", text: title }),
+      h("p", { class: "pb-start-text", text: text }),
+      h("button", { type: "button", class: "btn btn-outline pb-start-btn", "data-pb-start-go": id, onclick: onclick }, label));
+  }
+  function paintHomeChoice(box) {
+    var n = content.sections.length, lockedHome = formatLocked(), busy = newPageBusy;
+    var summary = n ? plural(n, "section", "sections") + (past.length ? " · " + plural(past.length, "modification annulable", "modifications annulables") : "") + ". Rien n'est modifié en revenant." : "Page vide, réglages conservés. Rien n'est modifié en revenant.";
+    box.appendChild(h("div", { class: "pb-home-head" }, h("h1", { class: "pb-start-head", text: "Que voulez-vous faire ?" }), h("p", { class: "pb-home-sub", text: "Votre travail est conservé : choisissez comment poursuivre." })));
+    if (homeNotice) box.appendChild(h("p", { class: "pb-note" + (homeNotice.error ? " is-warn" : ""), role: homeNotice.error ? "alert" : "status", "data-pb-home-note": "", text: homeNotice.text }));
+    box.appendChild(h("div", { class: "pb-start-card pb-home-resume", "data-pb-start-card": "resume" },
+      h("span", { class: "pb-start-icon", "aria-hidden": "true" }, icon("edit")),
+      h("div", { class: "pb-home-resume-text" }, h("h2", { class: "pb-start-title", text: "Votre travail en cours" }), h("p", { class: "pb-start-text", text: summary })),
+      h("button", { type: "button", class: "btn btn-primary pb-start-btn", "data-pb-start-go": "resume", "data-pb-home-resume": "", onclick: closeHome }, "Reprendre mon travail")));
+    box.appendChild(h("p", { class: "pb-home-label", text: "Ou commencer autrement" }));
+    box.appendChild(h("div", { class: "pb-start-cards is-home" },
+      homeCard("layers", "Sur cette page", "Ajouter une structure", "Ajoutez conteneurs, colonnes ou grille à la fin de la page. Rien n'est effacé.", "Ajouter une structure",
+        function () { startFinish(); openStructurePicker({ parent: null, index: content.sections.length }); }, "classic"),
+      homeCard("layout", "Sur cette page", "Création guidée", lockedHome ? "Format verrouillé : déverrouillez-le d'abord dans l'onglet « Page »." : "Appliquez un gabarit et ses règles de mise en page. Annulable avec Ctrl/⌘ + Z.", "Choisir un gabarit",
+        function () { if (lockedHome) return; startStep = "config"; var p = layoutOf() || LF.formats.standard || {}; startDraft = layoutOf() ? { format: p.format, maxWidth: p.maxWidth, gutter: p.gutter, locked: Boolean(p.locked) } : { format: "standard", maxWidth: p.maxWidth || 1200, gutter: p.gutter || 24, locked: true }; paintStart(); }, "guided"),
+      homeCard("plus", "Nouveau document", "Nouvelle page vierge", "Créez une page vide et indépendante. La page actuelle reste enregistrée dans « Pages ».", busy ? "Création en cours…" : "Nouvelle page vierge", requestNewPage, "blank")));
+    var blankBtn = box.querySelector('[data-pb-start-go="blank"]'); if (blankBtn) { blankBtn.disabled = busy; blankBtn.setAttribute("aria-busy", String(busy)); }
+    if (lockedHome) { var gb = box.querySelector('[data-pb-start-go="guided"]'); if (gb) gb.disabled = true; }
+  }
+  // ---------- Nouvelle page vierge : enregistrement vérifié, puis création par la route existante ----------
+  // La page courante n'est jamais vidée ni remplacée : une page DISTINCTE est créée (POST /marketing/pages, comme « Nouvelle page » du CMS), puis on y navigue.
+  var newPageBusy = false, homeNotice = null;
+  function setHomeNotice(text, error) { homeNotice = text ? { text: text, error: Boolean(error) } : null; if (homeOpen && startEl && !startEl.hidden && startStep === "choice") paintStart(false); }
+  function setNewPageBusy(on) { newPageBusy = on; if (homeOpen && startEl && !startEl.hidden && startStep === "choice") paintStart(false); }
+  // Enregistrement RÉEL du brouillon (même service que le bouton Enregistrer) ; réussi seulement si plus rien n'est en attente ni en erreur
+  function saveConfirmed() {
+    if (editing) commitEdit();
+    return Promise.resolve(saveNow()).then(function () {
+      if (saving && inflight) return inflight.then(function () { return saveConfirmed(); });
+      if (dirty || blocked || aiHold || saving) throw new Error("L'enregistrement n'a pas abouti. Votre travail est conservé dans l'éditeur ; réessayez.");
+      return true;
+    });
+  }
+  // Le nom d'une page est unique dans l'organisation (règle existante) : on date le nom, et on retente avec un numéro si la même seconde est déjà prise.
+  function createBlankPage(attempt) {
+    attempt = attempt || 0;
+    var d = new Date(), pad = function (x) { return (x < 10 ? "0" : "") + x; };
+    var name = "Nouvelle page vierge (" + pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()) + ")" + (attempt ? " " + (attempt + 1) : "");
+    var body = new URLSearchParams(); body.set("ouvrir", "editeur"); body.set("name", name); body.set("template", "");
+    if (PAGE.siteId) body.set("site_id", String(PAGE.siteId));
+    return fetch("/marketing/pages", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "text/html" }, body: body.toString() }).then(function (r) {
+      var m = /\/marketing\/pages\/(\d+)\/editeur/.exec(r.url || "");
+      if (r.ok && m && Number(m[1]) !== Number(PAGE.id)) return r.url;
+      if (attempt < 2 && r.ok) return createBlankPage(attempt + 1); // nom déjà pris (même seconde) : redirigé vers la liste, rien n'a été créé
+      throw new Error("La nouvelle page n'a pas pu être créée. Ce document n'a pas été modifié.");
+    });
+  }
+  function leaveFor(url, discard) {
+    if (discard) { dirty = false; clearTimeout(saveTimer); try { localStorage.removeItem("pb-backup-" + PAGE.id); localStorage.removeItem(HISTORY_KEY); } catch (e) { /* stockage indisponible */ } }
+    window.location.assign(url);
+  }
+  function requestNewPage() {
+    if (newPageBusy || !canWrite) return;
+    if (blocked || aiHold) { setHomeNotice(blocked ? "Ce document est dans un état incertain (modifié ailleurs ou enregistrement refusé) : rien n'est quitté. Actualisez ou copiez votre travail d'abord." : "Une proposition de l'IA est en cours d'aperçu : appliquez-la ou annulez-la avant de quitter ce document.", true); return; }
+    if (editing) commitEdit();
+    setNewPageBusy(true); setHomeNotice(null);
+    var settle = saving && inflight ? inflight.then(function () {}) : Promise.resolve();
+    settle.then(function () {
+      if (blocked || aiHold) throw new Error("Ce document est dans un état incertain : rien n'est quitté.");
+      if (!dirty && !saving) return createBlankPage().then(function (url) { leaveFor(url, false); return "left"; });
+      setNewPageBusy(false); // modifications en attente : la boîte de dialogue décide
+      return openLeaveDialog().then(function () { return "dialog"; });
+    }).catch(function (err) { setNewPageBusy(false); setHomeNotice(err.message || "L'opération a échoué.", true); });
+  }
+  function openLeaveDialog() {
+    return new Promise(function (resolve) {
+      var confirming = false, working = false, quitBtn = null;
+      var lock = function (on) { working = on; if (!compDlg) return; Array.prototype.forEach.call(compDlg.querySelectorAll("button"), function (b) { b.disabled = on; }); };
+      compDialog({ title: "Enregistrer votre travail avant de continuer ?", confirmLabel: "Enregistrer et continuer", cancelLabel: "Annuler", build: function (body) {
+        body.appendChild(h("p", { class: "pb-hint", "data-pb-leave-text": "", text: "Vous allez quitter le document actuel pour créer une nouvelle page vierge. Enregistrez vos modifications pour pouvoir reprendre ce travail plus tard." }));
+        quitBtn = h("button", { type: "button", class: "btn btn-outline btn-sm", "data-pb-leave-quit": "", onclick: function () {
+          if (working) return;
+          var err = compDlg.querySelector("[data-cd-error]");
+          if (!confirming) { confirming = true; quitBtn.textContent = "Confirmer : abandonner mes modifications"; quitBtn.classList.add("btn-danger"); err.textContent = "Les modifications non enregistrées de ce document seront perdues. La dernière version enregistrée reste intacte."; err.hidden = false; return; }
+          lock(true); err.hidden = true;
+          createBlankPage().then(function (url) { compDlg.close(); leaveFor(url, true); resolve("quit"); }, function (e) { lock(false); err.textContent = e.message; err.hidden = false; });
+        } }, "Quitter sans enregistrer");
+        body.appendChild(quitBtn);
+      }, onConfirm: function () {
+        if (working) return false;
+        lock(true);
+        return saveConfirmed().then(function () {
+          lock(false);
+          setHomeNotice("Votre travail est enregistré. Vous pouvez maintenant créer la nouvelle page vierge.", false);
+          resolve("saved"); return true;
+        }, function (e) { lock(false); throw e; });
+      } });
+      compDlg.addEventListener("close", function onClose() { compDlg.removeEventListener("close", onClose); resolve("closed"); });
+    });
   }
   function startPreview() {
     var d = startDraft, wide = d.maxWidth > 0 ? Math.max(20, Math.min(100, Math.round(d.maxWidth / 1600 * 100))) : 100;
@@ -8038,6 +8161,7 @@
   document.addEventListener("keydown", function (e) { if (!menu.hidden || document.querySelector("dialog[open]:not([data-pb-navmgr]):not([data-pb-rules])")) return; onKey(e); });
 
   // ---------- Démarrage ----------
+  var historyRestored = restoreHistory();
   (function offerBackup() {
     var raw = null;
     try { raw = JSON.parse(localStorage.getItem("pb-backup-" + PAGE.id) || "null"); } catch (e) { raw = null; }
@@ -8045,6 +8169,7 @@
     if (JSON.stringify(raw.content.sections) === JSON.stringify(content.sections)) { try { localStorage.removeItem("pb-backup-" + PAGE.id); } catch (e) { /* rien */ } return; }
     if (window.confirm("Une copie non enregistrée de cette page (" + new Date(raw.at).toLocaleString("fr-FR") + ") est gardée dans ce navigateur. La reprendre ?")) {
       change(function () { content.sections = raw.content.sections || content.sections; ensureIds(content.sections); if (raw.content.seo) content.seo = raw.content.seo; if (raw.content.title) content.title = raw.content.title; if (raw.content.description !== undefined) content.description = raw.content.description; });
+      if (!historyRestored) restoreHistory(); // l'historique gardé s'applique à cette copie non enregistrée : on le reprend à la place de l'étape unique créée ci-dessus
     } else { try { localStorage.removeItem("pb-backup-" + PAGE.id); } catch (e) { /* rien */ } }
   })();
   if (!canWrite) setSave("Lecture seule");
