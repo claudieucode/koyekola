@@ -64,6 +64,14 @@ function checkName(ctx, raw, { exceptId = null } = {}) {
   if (dup && dup.id !== exceptId) throw new MarketingError("duplicate", "Une page porte déjà ce nom. Choisissez un nom différent.");
   return name;
 }
+// Renommer SEULEMENT le nom visible : mêmes règles que la création, identifiant et adresse inchangés
+function renamePage(ctx, id, name) {
+  requirePage(ctx, id);
+  const clean_ = checkName(ctx, name, { exceptId: id });
+  ctx.db.prepare("UPDATE mk_landing_pages SET name = ?, updated_at = datetime('now') WHERE id = ?").run(clean_, id);
+  audit(ctx, "landing.renamed", "landing", id, {});
+  return getPage(ctx, id);
+}
 function createPage(ctx, { name } = {}) {
   checkCtx(ctx);
   const clean_ = checkName(ctx, name);
@@ -411,6 +419,6 @@ function pageReport(ctx, id, { days = 30, now = Date.now() } = {}) {
 }
 
 module.exports = {
-  createPage, checkName, NAME_MAX, savePage, saveSettings, getPage, requirePage, getPublishedPage, listPages, publishPage, unpublishPage, deletePage, preflight, viewModel, linksOf, freeSlug,
+  createPage, renamePage, checkName, NAME_MAX, savePage, saveSettings, getPage, requirePage, getPublishedPage, listPages, publishPage, unpublishPage, deletePage, preflight, viewModel, linksOf, freeSlug,
   visitorOf, isBot, record, pageReport, normalizeSection, slugify, SECTION_TYPES, STATUSES, DEFAULT_THEME, MAX_TAGS,
 };

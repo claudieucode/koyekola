@@ -104,8 +104,12 @@ module.exports = () => {
   });
   // Nommage à la création (éditeur) : contrôle en direct du nom (mêmes règles que la création et le renommage) puis création JSON, sans passer par la liste des pages
   router.get("/pages/nom.json", need("forms.write"), (req, res, next) => {
-    try { res.set("Cache-Control", "no-store").json({ ok: true, name: landing.checkName(req.mk.ctx, req.query.name) }); }
+    try { res.set("Cache-Control", "no-store").json({ ok: true, name: landing.checkName(req.mk.ctx, req.query.name, { exceptId: intOrNull(req.query.except) }) }); }
     catch (error) { if (error instanceof MarketingError) return res.set("Cache-Control", "no-store").json({ ok: false, code: error.code, message: error.message }); next(error); }
+  });
+  router.post("/pages/:id(\\d+)/renommer.json", need("forms.write"), (req, res, next) => {
+    try { const p = landing.renamePage(req.mk.ctx, intOrNull(req.params.id), (req.body || {}).name); res.json({ page: { id: p.id, name: p.name, slug: p.slug } }); }
+    catch (error) { jsonError(res, next, error); }
   });
   router.post("/pages/creer.json", need("forms.write"), (req, res, next) => {
     try {

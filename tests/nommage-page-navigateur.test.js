@@ -250,6 +250,37 @@ describe("nommage d'une page à la création (navigateur)", { skip: SKIP }, () =
     assert.equal(row(a).id, a); assert.equal(row(a).slug, slug);
   });
 
+  test("renommer depuis la barre supérieure : champ prérempli, mêmes règles, nom mis à jour sans recharger, identifiant et adresse inchangés", async () => {
+    await create("Renom pris");
+    const id = await withContent("Renom barre");
+    const slug = row(id).slug;
+    await page.evaluate(() => { window.__marker = "same-page"; });
+    await page.locator("[data-pb-rename]").click();
+    await dlg().waitFor({ state: "visible" });
+    assert.match(await dlg().innerText(), /Renommer la page/);
+    assert.equal(await dlg().locator("[data-pb-name-input]").inputValue(), "Renom barre");
+    await dlg().locator("[data-pb-name-input]").fill("renom PRIS");
+    await until(async () => /déjà ce nom/.test(await dlg().innerText()), { what: "doublon au renommage" });
+    assert.equal(await ok().isDisabled(), true);
+    await dlg().locator("[data-pb-name-input]").fill("");
+    await wait(400);
+    assert.equal(await ok().isDisabled(), true);
+    await dlg().locator("[data-pb-name-input]").fill("  Nouveau titre  ");
+    await valid();
+    await ok().click();
+    await dlg().waitFor({ state: "hidden" });
+    assert.equal(await page.locator(".pb-title h1").innerText(), "Nouveau titre");
+    assert.equal(await page.evaluate(() => window.__marker), "same-page", "pas de rechargement de l'éditeur");
+    assert.equal(row(id).name, "Nouveau titre"); assert.equal(row(id).id, id); assert.equal(row(id).slug, slug);
+    assert.match((await boss.request("/marketing/pages")).text, /Nouveau titre/);
+    await page.locator("[data-pb-rename]").click();
+    await dlg().waitFor({ state: "visible" });
+    await dlg().locator("[data-pb-name-input]").fill("nouveau TITRE"); // même page : son propre nom n'est pas un doublon
+    await valid();
+    await page.keyboard.press("Escape");
+    assert.equal(row(id).name, "Nouveau titre", "annuler ne change rien");
+  });
+
   test("route de création : sans connexion refusée, nom vide refusé, doublon refusé", async () => {
     const res = await fetch(`${srv.base}/marketing/pages/creer.json`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Sans session" }), redirect: "manual" });
     assert.notEqual(res.status, 201);

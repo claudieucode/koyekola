@@ -7215,23 +7215,25 @@
         setState("Vérification…", "");
         var seq = ++checkSeq;
         checkTimer = setTimeout(function () {
-          api("GET", "/marketing/pages/nom.json?name=" + encodeURIComponent(text)).then(function (r) {
+          api("GET", "/marketing/pages/nom.json?name=" + encodeURIComponent(text) + (spec.rename ? "&except=" + spec.rename.id : "")).then(function (r) {
             if (seq !== checkSeq) return;
             valid = Boolean(r.ok); setState(r.ok ? "" : r.message, r.ok ? "" : "error"); apply();
           }, function () { if (seq !== checkSeq) return; valid = true; setState("", ""); apply(); }); // réseau indisponible : le serveur revérifiera à la création
         }, 250);
       };
-      compDialog({ title: "Créer une nouvelle page", confirmLabel: "Créer la page", cancelLabel: "Annuler", build: function (body) {
-        body.appendChild(h("p", { class: "pb-hint", text: "Donnez un nom à votre page pour la retrouver facilement dans votre espace de travail." }));
+      compDialog({ title: spec.rename ? "Renommer la page" : "Créer une nouvelle page", confirmLabel: spec.rename ? "Renommer" : "Créer la page", cancelLabel: "Annuler", build: function (body) {
+        body.appendChild(h("p", { class: "pb-hint", text: spec.rename ? "Le nom change partout ; l'adresse de la page et son identifiant restent les mêmes." : "Donnez un nom à votre page pour la retrouver facilement dans votre espace de travail." }));
         input = h("input", { type: "text", class: "pb-input", "data-pb-name-input": "", id: "pb-name-input", maxlength: String(NAME_MAX + 50), placeholder: "Ex. : Accueil, À propos, Nos services…", autocomplete: "off", "aria-describedby": "pb-name-msg", "aria-required": "true" });
         msg = h("p", { class: "pb-hint pb-name-msg", id: "pb-name-msg", role: "status", "aria-live": "polite" });
         body.appendChild(h("div", { class: "pb-field" }, h("label", { for: "pb-name-input", text: "Nom de la page" }), input));
         body.appendChild(msg);
         input.addEventListener("input", validate);
-        setTimeout(function () { validate(); input.focus(); }, 0);
+        if (spec.rename) input.value = spec.rename.name;
+        setTimeout(function () { validate(); input.focus(); input.select(); }, 0);
       }, onConfirm: function () {
         if (busy || !valid) return false;
-        busy = true; var b = okBtn(); if (b) { b.disabled = true; b.setAttribute("aria-busy", "true"); b.textContent = "Création…"; }
+        busy = true; var b = okBtn(); if (b) { b.disabled = true; b.setAttribute("aria-busy", "true"); b.textContent = spec.rename ? "Enregistrement…" : "Création…"; }
+        if (spec.rename) return api("POST", "/marketing/pages/" + spec.rename.id + "/renommer.json", { name: input.value.trim() }).then(function (r) { done = true; resolve({ name: r.page.name }); return true; }, function (e) { busy = false; var b3 = okBtn(); if (b3) { b3.removeAttribute("aria-busy"); b3.textContent = "Renommer"; } setTimeout(apply, 0); throw e; });
         var body = { name: input.value.trim(), template: spec.template || "", layout: spec.layout || null };
         if (PAGE.siteId) body.siteId = PAGE.siteId;
         return api("POST", "/marketing/pages/creer.json", body).then(function (r) { done = true; resolve({ url: r.url }); return true; }, function (e) {
@@ -7241,6 +7243,20 @@
         });
       } });
       compDlg.addEventListener("close", function onClose() { compDlg.removeEventListener("close", onClose); clearTimeout(checkTimer); if (!done) resolve(null); });
+    });
+  }
+  // Renommer depuis la barre supérieure : mêmes règles et même dialogue ; le nom est mis à jour partout où il est affiché sans recharger l'éditeur
+  var titleEl = $(".pb-title h1");
+  if (titleEl && !IS_COMPONENT && canWrite && PAGE.id) {
+    var renameBtn = h("button", { type: "button", class: "pb-icon-btn pb-title-edit", "data-pb-rename": "", "data-tip": "Renommer la page", "aria-label": "Renommer la page" }, icon("edit"));
+    titleEl.parentNode.insertBefore(renameBtn, titleEl.nextSibling);
+    renameBtn.addEventListener("click", function () {
+      askPageName({ rename: { id: PAGE.id, name: PAGE.name || titleEl.textContent } }).then(function (r) {
+        if (!r) return;
+        PAGE.name = r.name; titleEl.textContent = r.name;
+        document.title = document.title.replace(/^[^·]*/, "Éditeur — " + r.name + " ");
+        toast("Page renommée : « " + r.name + " ».");
+      });
     });
   }
   var CANCELLED = function () { var e = new Error("Création annulée."); e.cancelled = true; return e; };
