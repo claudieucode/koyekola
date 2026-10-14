@@ -26,7 +26,7 @@ const mkPage = (site, name) => row("INSERT INTO mk_landing_pages (organization_i
 const main = (html) => (html.match(/<main[\s\S]*<\/main>/) || [""])[0];
 const navOf = (html) => { const i = html.indexOf('class="mk-nav-list mk-cms-nav"'); return i < 0 ? "" : html.slice(i, html.indexOf("</nav>", i)); };
 const navLinks = (html) => [...navOf(html).matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1].replace(/&amp;/g, "&"));
-const topLabels = (html) => [...navOf(html).matchAll(/class="mk-nav-(?:link|head)"[^>]*title="([^"]+)"/g)].map((m) => m[1].replace(/ \(bientôt\)$/, "").replace(/&#39;/g, "'"));
+const topLabels = (html) => [...navOf(html).matchAll(/class="mk-nav-(?:link(?: is-soon)?|head)"[^>]*title="([^"]+)"/g)].map((m) => m[1].replace(/ \(bientôt\)$/, "").replace(/&#39;/g, "'"));
 const activeLabel = (html) => { const m = /<a [^>]*aria-current="page"[^>]*>([\s\S]*?)<\/a>/.exec(navOf(html)); return m ? m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").replace(/&#39;/g, "'").trim() : null; };
 const hasBanner = (html, name) => /mk-site-banner/.test(html) && (name ? new RegExp(`mk-site-banner-name">${name}<`).test(html) : true);
 let lists = {}, ids = {};
@@ -54,13 +54,17 @@ describe("1 — le menu d'un site est la projection du registre", () => {
   test("les 14 groupes du registre, dans l'ordre, plus « Marketing du site » avant Outils", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
     const labels = topLabels(html);
-    const expected = ["Mes sites", "Tableau de bord", "Pages", "Articles", "Médias", "Navigation", "Apparence", "Commentaires", "Équipe du site", "SEO", "Redirections", "Tests A/B", "Marketing du site", "Santé du site", "Réglages du site"];
+    const expected = ["Mes sites", "Tableau de bord", "Pages", "Articles", "Médias", "Navigation", "Apparence", "Commentaires", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Marketing du site", "Outils", "Paramètres"];
     assert.deepEqual(labels, expected);
     assert.equal(nav.SECTIONS.length, 14, "le registre compte 14 groupes");
   });
-  test("un groupe indisponible = UNE seule entrée « Bientôt » ; aucune donnée ni action derrière", async () => {
+  test("C1 : une entrée pas encore ouverte est visible, grisée « Bientôt », SANS lien ; son ancienne adresse n'affiche ni donnée ni action", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
-    assert.equal((navOf(html).match(/mk-cms-tag[^>]*>Bientôt/g) || []).length, 6, "Articles, Médias, Navigation, Commentaires, SEO + Formulaires et contacts");
+    const space = { siteId: A, principal: false, base: `${SP}/${A}`, name: "Site Alpha", listHref: "/marketing/site-web/sites" };
+    const soon = nav.projectSections(space).flatMap((g) => g.items).filter((i) => i.disabled);
+    assert.equal((navOf(html).match(/mk-cms-tag[^>]*>Bientôt/g) || []).length, soon.length);
+    assert.equal((navOf(html).match(/is-soon" aria-disabled="true"/g) || []).length, soon.length, "chaque entrée grisée est un élément désactivé");
+    for (const i of soon) assert.doesNotMatch(navOf(html), new RegExp(`<a [^>]*>[^<]*<span>${i.label.replace(/[()]/g, ".")}</span><span class="mk-cms-tag">Bientôt`), `${i.key} : pas de lien`);
     for (const m of ["articles", "medias", "navigation", "commentaires", "seo", "formulaires"]) {
       const r = await boss.get(`${SP}/${A}/${m}`);
       assert.equal(r.status, 200, m);

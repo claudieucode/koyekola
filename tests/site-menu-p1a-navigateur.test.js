@@ -51,7 +51,7 @@ describe("menu d'un site (P1a) dans un navigateur réel", { skip: SKIP }, () => 
     const { context, page } = await open();
     await page.goto(`${srv.base}${SP}/${A}/tableau-de-bord`);
     const screens = [["Marketing du site", "listes", "Listes"], ["Marketing du site", "segments", "Segments"], ["Marketing du site", "modeles-email", "Modèles d'e-mail"], ["Marketing du site", "campagnes", "Campagnes"],
-      ["Marketing du site", "automatisations", "Automatisations"], ["Marketing du site", "tunnels", "Tunnels"], ["Marketing du site", "analytics", "Analytics"], [null, "tests-ab", "Tests A/B"], [null, "outils", "Santé du site"]];
+      ["Marketing du site", "automatisations", "Automatisations"], ["Marketing du site", "tunnels", "Tunnels"], ["Marketing du site", "analytics", "Analytics"], [null, "tests-ab", "Tests A/B"], ["Outils", "outils", "Santé du site"]];
     for (const [group, mod, label] of screens) {
       await go(page, group, `${SP}/${A}/${mod}`);
       assert.ok(await banner(page, "Site Alpha"), `${mod} : bandeau`);
@@ -100,7 +100,7 @@ describe("menu d'un site (P1a) dans un navigateur réel", { skip: SKIP }, () => 
     const reachable = [];
     for (const m of ["listes", "tests-ab", "outils"]) { const l = page.locator(`.mk-cms-nav a[href="${SP}/${A}/${m}"]`); if (await l.count()) reachable.push(m); }
     assert.ok(reachable.length >= 1, "au moins un écran partagé est proposé à l'éditeur");
-    for (const m of reachable) { await go(page, "Marketing du site", `${SP}/${A}/${m}`); assert.ok(await banner(page, "Site Alpha"), m); }
+    for (const m of reachable) { await go(page, m === "outils" ? "Outils" : "Marketing du site", `${SP}/${A}/${m}`); assert.ok(await banner(page, "Site Alpha"), m); }
     const r = await page.goto(`${srv.base}${SP}/${B}/listes`);
     assert.equal(r.status(), 403);
     assert.equal(await page.locator("body", { hasText: "Liste Beta" }).count(), 0);

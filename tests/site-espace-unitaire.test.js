@@ -34,7 +34,7 @@ describe("menu de l'espace d'un site (buildSiteNav)", () => {
   const all = () => true;
   test("tous les liens propres au site portent l'identifiant du site de l'espace, aucun autre", () => {
     const r = nav.buildCmsNav({ can: all, active: "espace/pages", space });
-    const hrefs = r.sections.flatMap((s) => s.items.map((i) => i.href));
+    const hrefs = r.sections.flatMap((s) => s.items.map((i) => i.href)).filter(Boolean); // C1 : une entrée « Bientôt » n'a pas de lien
     for (const h of hrefs.filter((x) => x.startsWith(space.base))) assert.match(h, /^\/marketing\/site-web\/sites\/5\//);
     assert.ok(!hrefs.some((h) => /sites\/(?!5\/)\d+/.test(h)), "aucun lien vers un autre site");
     for (const h of hrefs.filter((x) => /[?&]site=/.test(x))) assert.match(h, /site=5$/);
@@ -46,10 +46,11 @@ describe("menu de l'espace d'un site (buildSiteNav)", () => {
   test("un module sans droit n'apparaît pas ; une clé d'un autre écran n'appartient pas à l'espace", () => {
     const r = nav.buildCmsNav({ can: (p) => p === "forms.read", active: "espace/pages", space });
     const keys = r.sections.flatMap((s) => s.items.map((i) => i.key));
-    assert.ok(keys.includes("espace/pages")); assert.ok(!keys.includes("espace/equipe")); assert.ok(!keys.includes("espace/seo") === false || true);
+    assert.ok(keys.includes("landing")); assert.ok(!keys.includes("utilisateurs")); assert.ok(!keys.includes("espace/seo") === false || true);
     // P1a : l'écran « Pages » du registre (clé « landing ») trouve son entrée dans le menu du site ; une clé que le site n'ouvre pas n'y trouve rien
-    assert.equal(nav.buildCmsNav({ can: all, active: "landing", space }).current.key, "espace/pages");
-    assert.equal(nav.buildCmsNav({ can: all, active: "articles/ajouter", space }), null);
+    assert.equal(nav.buildCmsNav({ can: all, active: "landing", space }).current.key, "landing");
+    // C1 : « Ajouter » (Articles) est une entrée du menu, grisée « Bientôt » : elle existe, mais n'ouvre rien
+    assert.equal(nav.buildCmsNav({ can: all, active: "articles/ajouter", space }).current.disabled, true);
     assert.equal(nav.buildCmsNav({ can: all, active: "espace/inconnu", space }), null);
   });
   test("modules des paliers suivants : 'preview' pour un site, écran historique 'live' pour le site principal", () => {

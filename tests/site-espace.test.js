@@ -3,6 +3,7 @@
 // d'un vrai serveur et la vraie base (aucune donnée de démonstration : tout est créé ici, dans une base d'essai).
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
+const nav = require("../src/marketing/web/cmsNav");
 const fs = require("fs");
 const path = require("path");
 const { TEST_KEY } = require("./marketing-helpers");
@@ -51,7 +52,10 @@ describe("1 — « Ouvrir » mène à l'espace du site (unitaires + intégration
     assert.match(r.text, /Vous êtes dans le site/);
     assert.match(r.text, /<strong class="mk-site-banner-name">Site Alpha<\/strong>/);
     assert.match(r.text, /<title>Tableau de bord · Site Alpha · CMS · KOLAKISA<\/title>/);
-    for (const m of ["pages", "composants", "redirections", "reglages", "articles", "medias"]) assert.match(r.text, new RegExp(`href="${SP}/${A}/${m}"`), `menu : ${m}`);
+    for (const m of ["pages", "composants", "redirections", "reglages"]) assert.match(r.text, new RegExp(`href="${SP}/${A}/${m}`), `menu : ${m}`);
+    // C1 : Articles et Médias sont visibles mais grisés « Bientôt » (aucun lien)
+    for (const m of ["articles", "medias"]) assert.doesNotMatch(r.text, new RegExp(`href="${SP}/${A}/${m}"`), `${m} : pas de lien`);
+    assert.match(r.text, /class="mk-nav-link is-soon" aria-disabled="true" title="Médias \(bientôt\)"/);
     assert.match(r.text, /Pages en ligne/);
   });
   test("chaque module disponible répond 200 pour l'équipe, avec le bandeau du bon site", async () => {
@@ -171,8 +175,11 @@ describe("4 — modules « Bientôt » : aucune donnée, aucune action simulée"
   });
   test("le menu signale « Bientôt » pour ces modules", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
-    // P1a : UNE seule entrée « Bientôt » par groupe indisponible (Articles, Médias, Menus, Commentaires, SEO) + « Formulaires et contacts » dans Marketing du site
-    assert.equal((html.match(/mk-cms-tag[^>]*>Bientôt/g) || []).length, 6);
+    // C1 : toutes les entrées du registre non encore ouvertes à un site sont visibles, grisées, sans lien ; leur nombre est celui de la projection
+    const space = { siteId: A, principal: false, base: `${SP}/${A}`, name: "Site Alpha", listHref: "/marketing/site-web/sites" };
+    const soon = nav.projectSections(space).flatMap((x) => x.items).filter((i) => i.disabled).length;
+    assert.equal((html.match(/mk-cms-tag[^>]*>Bientôt/g) || []).length, soon);
+    assert.equal(soon, 53);
   });
 });
 

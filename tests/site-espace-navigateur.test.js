@@ -52,7 +52,7 @@ describe("espace d'un site dans un navigateur réel", { skip: SKIP }, () => {
     await page.waitForURL(`**${SP}/${A}/tableau-de-bord`);
     assert.ok(await page.locator(".mk-site-banner-name", { hasText: "Site Alpha" }).isVisible());
     assert.match(await page.title(), /Site Alpha/);
-    for (const label of ["Tableau de bord", "Pages", "Articles", "Médias", "Marketing du site", "SEO", "Redirections", "Équipe du site", "Santé du site", "Réglages du site"]) assert.ok(await page.locator(".mk-cms-nav", { hasText: label }).count(), `menu : ${label}`);
+    for (const label of ["Tableau de bord", "Pages", "Articles", "Médias", "Marketing du site", "SEO", "Redirections", "Utilisateurs", "Outils", "Paramètres"]) assert.ok(await page.locator(".mk-cms-nav", { hasText: label }).count(), `menu : ${label}`);
     await shot(page, "b1-01-tableau-de-bord-bureau");
     await context.close();
   });
@@ -88,14 +88,19 @@ describe("espace d'un site dans un navigateur réel", { skip: SKIP }, () => {
     await context.close();
   });
 
-  test("module « Bientôt » : identifié dans le menu et sur l'écran, sans donnée ni action", async () => {
+  test("module « Bientôt » : visible et grisé dans le menu, sans lien ; son explication reste lisible par son adresse, sans donnée ni action", async () => {
     const { context, page } = await open();
     await page.goto(`${srv.base}${SP}/${A}/tableau-de-bord`);
     await openGroup(page, "Articles");
-    await page.locator(`.mk-cms-nav a[href="${SP}/${A}/articles"]`).first().click();
-    await page.waitForURL(`**${SP}/${A}/articles`);
-    assert.ok(await page.locator(".mk-cms-soon", { hasText: "Prochain palier" }).isVisible());
+    const soon = page.locator(".mk-cms-nav .mk-nav-sublink.is-soon", { hasText: "Ajouter" }).first();
+    assert.ok(await soon.isVisible(), "l'entrée grisée est visible");
+    assert.equal(await soon.getAttribute("aria-disabled"), "true");
+    assert.equal(await page.locator(`.mk-cms-nav a[href="${SP}/${A}/articles"]`).count(), 0, "aucun lien vers un module pas prêt");
     assert.ok(await page.locator(".mk-cms-nav .mk-cms-tag", { hasText: "Bientôt" }).first().isVisible());
+    await soon.click({ force: true });
+    assert.equal(new URL(page.url()).pathname, `${SP}/${A}/tableau-de-bord`, "cliquer sur une entrée grisée ne change pas de page");
+    await page.goto(`${srv.base}${SP}/${A}/articles`);
+    assert.ok(await page.locator(".mk-cms-soon", { hasText: "Prochain palier" }).isVisible());
     assert.equal(await page.locator("main table, main form").count(), 0);
     await shot(page, "b1-04-module-bientot");
     await context.close();

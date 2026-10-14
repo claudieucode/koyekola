@@ -98,6 +98,9 @@ const SOON_TEXT = {
   B2: "Médiathèque propre à chaque site, avec partage explicite entre sites.", B3: "Modèles de pages et blocs privés à un site ou partagés.",
   B4: "Formulaires, soumissions et contacts rattachés à chaque site, avec leurs consentements.", B5: "Blog propre à chaque site : articles, catégories, étiquettes et commentaires.", B6: "Réglages et métadonnées SEO propres à chaque site.",
   menus: "L'édition des menus d'un site n'a pas encore d'écran.",
+  C4: "Cet écran existe dans le CMS principal ; son ouverture pour chaque site est prévue après vérification de son isolation.",
+  P2: "Styles et design propres à chaque site, avec le même moteur que le site principal.",
+  corbeille: "La corbeille d'un site ne sera activée qu'une fois démontré qu'un site ne peut ni consulter ni modifier les éléments supprimés d'un autre site.",
 };
 
 module.exports = () => {

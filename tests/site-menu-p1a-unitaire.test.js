@@ -20,21 +20,26 @@ describe("projection du registre (menu d'un site)", () => {
   test("chaque groupe emprunte son libellé et son icône au registre (pas de définition parallèle)", () => {
     for (const s of nav.siteSections(site)) { const reg = nav.SECTIONS.find((x) => x.key === s.key); if (reg) { assert.equal(s.label, reg.label, s.key); assert.equal(s.icon, reg.icon, s.key); } }
   });
-  test("tout module du plan existe ; tout module délégué porte la clé de l'écran existant et figure parmi les écrans propres au site", () => {
-    for (const [, mods] of nav.SITE_PLAN) for (const m of mods) assert.ok(m.startsWith("@") || nav.SITE_MODULES[m], `module inconnu : ${m}`);
+  test("tout module ouvert par la table d'aptitude existe ; tout module délégué porte la clé de l'écran existant et figure parmi les écrans propres au site", () => {
+    for (const [key, a] of Object.entries(nav.ABILITY)) { assert.ok(nav.ALL.some((i) => i.key === key), `clé hors registre : ${key}`); if (a.mode === "open") assert.ok(nav.SITE_MODULES[a.module], `module inconnu : ${a.module}`); }
     for (const [mod, m] of Object.entries(nav.SITE_MODULES)) if (m.kind === "delegate") { assert.ok(m.reg, mod); assert.ok(nav.isSiteScopedKey(m.reg), mod); assert.equal(nav.DELEGATED[mod], m.to); }
     for (const k of ["landing", "dashboard", "utilisateurs", "contacts", "apparence", "parametres", "articles"]) assert.equal(nav.isSiteScopedKey(k), false, `${k} n'ouvre pas l'espace d'un site`);
   });
-  test("un groupe sans module disponible = exactement UNE entrée « Bientôt »", () => {
-    const g = Object.fromEntries(nav.siteSections(site).map((s) => [s.key, s.items]));
-    for (const k of ["articles", "mediatheque", "navigation", "commentaires", "seo"]) { assert.equal(g[k].length, 1, k); assert.equal(g[k][0].status, "preview", k); assert.equal(g[k][0].label, nav.SECTIONS.find((x) => x.key === k).label, k); }
+  test("C1 : les entrées du registre non ouvertes à un site sont toutes visibles, grisées « Bientôt », sans lien ; une clé absente de la table est « Bientôt »", () => {
+    const items = flat(nav.siteSections(site));
+    for (const k of ["articles", "mediatheque", "navigation", "commentaires", "seo", "articles/ajouter", "utilisateurs/roles", "outils/importer", "parametres/lecture", "corbeille"]) {
+      const i = items.find((x) => x.key === k); assert.ok(i, k); assert.equal(i.status, "preview", k); assert.equal(i.disabled, true, k); assert.equal(i.href, null, k);
+      assert.equal(i.label, nav.ALL.find((x) => x.key === k).label, `${k} : libellé du registre`);
+    }
   });
-  test("ce qui appartient aux lots suivants n'est PAS encore ouvert pour un site (P1b, P1c, B2-B6, hors administration centrale)", () => {
-    const hrefs = flat(nav.siteSections(site)).map((i) => i.href).join(" ");
+  test("ce qui est réservé à l'administration centrale ou à un lot suivant n'a AUCUN lien dans un site", () => {
+    const hrefs = flat(nav.siteSections(site)).map((i) => i.href || "").join(" ");
     for (const w of ["corbeille", "sauvegardes", "logs", "systeme", "importer", "exporter", "diagnostic", "maintenance", "roles", "permissions", "invitations", "liens-casses", "permaliens", "parametres"]) assert.ok(!hrefs.includes(w), `ne doit pas apparaître : ${w}`);
+    const keys = flat(nav.siteSections(site)).map((i) => i.key);
+    for (const k of ["outils/sauvegardes", "outils/systeme", "outils/logs"]) assert.ok(!keys.includes(k), `${k} reste dans l'administration centrale`);
   });
   test("aucun lien ne mène à un autre site ; les liens partagés passent par l'adresse du site (jamais par « ?site= »)", () => {
-    const items = flat(nav.siteSections(site));
+    const items = flat(nav.siteSections(site)).filter((i) => i.href);
     for (const i of items) { assert.ok(!/[?&]site=/.test(i.href), i.href); assert.ok(!/sites\/(?!5\/)\d+/.test(i.href), i.href); }
     for (const m of ["listes", "segments", "modeles-email", "campagnes", "automatisations", "tunnels", "tests-ab", "analytics", "outils"]) assert.ok(items.some((i) => i.href === `${site.base}/${m}`), m);
   });
@@ -42,13 +47,13 @@ describe("projection du registre (menu d'un site)", () => {
     assert.deepEqual(nav.buildSiteNav({ can: () => false, active: "espace/pages", space: site }).sections, []);
     const r = nav.buildSiteNav({ can: (p) => p === "forms.read", active: "espace/pages", space: site });
     const keys = flat(r.sections).map((i) => i.key);
-    assert.ok(keys.includes("espace/pages") && keys.includes("espace/tests-ab"));
-    for (const k of ["espace/listes", "espace/campagnes", "espace/analytics", "espace/outils", "espace/equipe", "espace/redirections"]) assert.ok(!keys.includes(k), k);
+    assert.ok(keys.includes("landing") && keys.includes("pagetests"));
+    for (const k of ["espace/listes", "espace/campagnes", "espace/analytics", "outils", "utilisateurs", "redirections"]) assert.ok(!keys.includes(k), k);
   });
   test("chaque écran existant retrouve son entrée par la clé qu'il porte déjà", () => {
-    const expected = { pagetests: "espace/tests-ab", outils: "espace/outils", lists: "espace/listes", segments: "espace/segments", templates: "espace/modeles-email", campaigns: "espace/campagnes", automations: "espace/automatisations", funnels: "espace/tunnels", "analytics-global": "espace/analytics", landing: "espace/pages", sitedash: "espace/tableau-de-bord", redirections: "espace/redirections", utilisateurs: "espace/equipe" };
+    const expected = { pagetests: "pagetests", outils: "outils", lists: "espace/listes", segments: "espace/segments", templates: "espace/modeles-email", campaigns: "espace/campagnes", automations: "espace/automatisations", funnels: "espace/tunnels", "analytics-global": "espace/analytics", landing: "landing", sitedash: "sitedash", redirections: "redirections", utilisateurs: "utilisateurs" };
     for (const [active, key] of Object.entries(expected)) assert.equal(nav.buildSiteNav({ can: all, active, space: site }).current.key, key, active);
-    assert.equal(nav.buildSiteNav({ can: all, active: "articles/ajouter", space: site }), null);
+    assert.equal(nav.buildSiteNav({ can: all, active: "articles/ajouter", space: site }).current.disabled, true, "entrée grisée du menu, sans écran");
   });
 });
 

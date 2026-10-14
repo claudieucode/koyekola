@@ -186,25 +186,6 @@ const SCOPED_KEYS = new Set(Object.values(SITE_MODULES).filter((m) => m.kind ===
 // Un écran partagé prend le cadre du site seulement s'il est déclaré propre au site ET que le serveur a vérifié un site pour la requête
 const isSiteScopedKey = (key) => SCOPED_KEYS.has(key);
 
-// Pour chaque groupe du registre : modules d'un site. Un module absent d'une liste n'est pas (encore) ouvert dans ce groupe.
-const SITE_PLAN = [
-  ["sites", ["@sites"]],
-  ["dashboard", ["tableau-de-bord"]],
-  ["pages", ["pages", "composants"]],
-  ["articles", ["articles"]],
-  ["mediatheque", ["medias"]],
-  ["navigation", ["navigation"]],
-  ["apparence", ["@design", "@entete"]],
-  ["commentaires", ["commentaires"]],
-  ["utilisateurs", ["equipe"]],
-  ["seo", ["seo"]],
-  ["redirections", ["redirections"]],
-  ["tests", ["tests-ab"]],
-  ["@marketing", ["listes", "segments", "modeles-email", "campagnes", "automatisations", "tunnels", "analytics", "formulaires"]],
-  ["outils", ["outils"]],
-  ["parametres", ["reglages"]],
-];
-
 // Un module vu depuis un espace : { key, label, href, status, phase, permission, external, reg, primary }
 function siteModule(space, mod) {
   const m = SITE_MODULES[mod];
@@ -222,59 +203,99 @@ function siteModule(space, mod) {
 }
 const siteModuleOf = (space, mod) => siteModule(space, mod);
 
-// Entrées « fiche du site » : même moteur que l'éditeur du principal, vu d'un site
-function siteExtra(space, which) {
-  const P = space.principal;
-  if (which === "@design") return { key: "espace/design", label: P ? "Éditeur et styles" : "Design du site", href: P ? `${BASE}/apparence` : `${space.base}/reglages#design`, status: "live", permission: "appearance.read", external: true, reg: "apparence" };
-  if (which === "@entete") return { key: "espace/entete", label: "En-tête et pied de page", href: P ? `${BASE}/apparence/en-tete` : `${space.base}/reglages#entete`, status: "live", permission: "appearance.read", external: true, reg: "apparence/en-tete" };
-  if (which === "@sites") return { key: "espace/mes-sites", label: "Mes sites", href: space.listHref || `${BASE}/sites`, status: "live", permission: "forms.read", external: true, reg: "sites" };
-  return null;
-}
-const GROUP_META = { "@marketing": { key: "marketing", label: "Marketing du site", icon: "mail" } };
+// ─── UNE SEULE définition du menu : le registre SECTIONS ────────────────────────────────────────────────────────────────────────────
+// Le menu du site principal et celui d'un site sont deux PRÉSENTATIONS de ce registre, calculées par la même fonction (projectSections) :
+// mêmes groupes, mêmes entrées, mêmes libellés, même ordre, mêmes clés, mêmes icônes. Seule différence permise : l'ÉTAT d'une entrée dans un site.
+// ABILITY dit, pour une entrée du registre (par sa clé), ce qu'elle devient dans l'espace d'UN site :
+//   link    : lien simple (Mes sites) ;
+//   open    : écran ouvert dans le cadre du site (`module` = SITE_MODULES[module], `hash` = ancre éventuelle) ;
+//   central : reste dans l'administration centrale (décision 4) : absente du menu d'un site ;
+//   (absente) : « Bientôt » — visible, grisée, sans action ni donnée. Une entrée du registre qui n'est PAS listée ici n'est donc jamais
+//   ouverte à un site par défaut : un module n'est activé qu'après démonstration de son isolation.
+const ABILITY = {
+  sites: { mode: "link" },
+  sitedash: { mode: "open", module: "tableau-de-bord", label: "Tableau de bord" },
+  landing: { mode: "open", module: "pages" },
+  apparence: { mode: "open", module: "reglages", hash: "design" },
+  "apparence/en-tete": { mode: "open", module: "reglages", hash: "entete" },
+  "apparence/pied-de-page": { mode: "open", module: "reglages", hash: "entete" },
+  redirections: { mode: "open", module: "redirections" },
+  utilisateurs: { mode: "open", module: "equipe" },
+  pagetests: { mode: "open", module: "tests-ab" },
+  outils: { mode: "open", module: "outils" },
+  parametres: { mode: "open", module: "reglages" },
+  "outils/sauvegardes": { mode: "central" },
+  "outils/systeme": { mode: "central" },
+  "outils/logs": { mode: "central" },
+};
+// Lot où une entrée « Bientôt » sera ouverte (texte de l'écran explicatif : SOON_TEXT de siteSpace.js)
+const soonPhase = (key) => {
+  if (key.startsWith("articles") || key.startsWith("commentaires")) return "B5";
+  if (key === "mediatheque") return "B2";
+  if (key === "apparence/templates" || key === "apparence/patterns") return "B3";
+  if (key === "apparence/styles") return "P2";
+  if (key === "navigation" || key === "apparence/menus") return "menus";
+  if (key.startsWith("seo")) return "B6";
+  if (key === "corbeille") return "corbeille";
+  return "C4";
+};
+// Anciennes adresses d'écrans « Bientôt » (/sites/N/articles, …) : elles continuent d'afficher leur explication
+const SOON_SLUG = { articles: "articles", mediatheque: "medias", navigation: "navigation", commentaires: "commentaires", seo: "seo" };
 
-// Le menu d'un site : le registre, projeté. Retourne [{ key, label, icon, items:[…] }]
-function siteSections(space) {
+// Extensions de l'espace, communes au principal et aux sites (hors registre) : Composants (groupe Pages) et le groupe « Marketing du site »
+const MARKETING_MODULES = ["listes", "segments", "modeles-email", "campagnes", "automatisations", "tunnels", "analytics", "formulaires"];
+function marketingGroup(space) {
+  const P = space.principal;
+  const items = (P ? [...MARKETING_MODULES, "contacts"] : MARKETING_MODULES).map((m) => {
+    if (P) { const x = SITE_MODULES[m] || { label: "Contacts", legacy: "/marketing/contacts", permission: "forms.read" }; return { key: `espace/${m}`, module: m, label: x.legacyLabel || x.label, href: x.legacy, status: "live", permission: x.permission, reg: x.reg || null, section: "marketing" }; }
+    const it = siteModule(space, m);
+    return it.status === "preview" ? { ...it, href: null, disabled: true } : it;
+  });
+  return { key: "marketing", label: "Marketing du site", icon: "mail", items };
+}
+
+// Une entrée du registre vue depuis un espace : { key, label, href, status, permission, reg, alias?, disabled?, phase?, primary? } — ou null (central)
+function projectItem(item, group, space) {
+  const base = { key: item.key, label: item.label, permission: item.permission, reg: item.key, section: group.key };
+  if (space.principal) return { ...item, ...base };
+  const a = ABILITY[item.key];
+  if (a && a.mode === "central") return null;
+  if (a && a.mode === "link") return { ...base, href: space.listHref || `${BASE}/sites`, status: "live", external: true };
+  if (a && a.mode === "open") {
+    const m = siteModule(space, a.module);
+    return { ...base, label: a.label || item.label, href: a.hash ? `${m.href}#${a.hash}` : m.href, status: "live", external: m.external, ...(a.hash ? {} : { alias: `espace/${a.module}` }), module: a.module, ...(m.primary ? { primary: m.primary } : {}) };
+  }
+  const slug = SOON_SLUG[item.key];
+  return { ...base, href: null, status: "preview", disabled: true, phase: soonPhase(item.key), ...(slug ? { alias: `espace/${slug}`, module: slug } : {}) };
+}
+
+// LA fonction qui produit le menu d'un espace (principal ou site) à partir du registre
+function projectSections(space) {
   const out = [];
-  for (const [gkey, mods] of SITE_PLAN) {
-    const reg = SECTIONS.find((x) => x.key === gkey);
-    const meta = GROUP_META[gkey] || { key: reg.key, label: reg.label, icon: reg.icon };
-    const items = mods.map((m) => (m.startsWith("@") ? siteExtra(space, m) : siteModule(space, m))).filter(Boolean);
-    const live = items.filter((i) => i.status === "live" || i.keepSoon);
-    // « Formulaires et contacts » reste visible (Bientôt) dans le groupe Marketing : c'est un module à part entière, pas un groupe indisponible
-    const kept = items.filter((i) => i.status === "live" || (gkey === "@marketing" && i.status === "preview"));
-    if (kept.some((i) => i.status === "live")) out.push({ ...meta, items: kept });
-    else if (items.length) out.push({ ...meta, items: [{ ...items[0], label: meta.label }] }); // groupe indisponible : UNE seule entrée « Bientôt »
+  for (const s of SECTIONS) {
+    if (s.key === "outils") out.push(marketingGroup(space));
+    const items = s.items.map((i) => projectItem(i, s, space)).filter(Boolean);
+    if (s.key === "pages") items.push({ ...siteModule(space, "composants"), section: "pages" });
+    if (items.length) out.push({ key: s.key, label: s.label, icon: s.icon, items });
   }
   return out;
 }
-
-// Espace du site principal : le menu COMPLET du registre (les 66 entrées, adresses historiques), plus « Marketing du site », dans le cadre du bandeau.
-// Les écrans propres de l'espace (tableau de bord, pages, redirections) portent leur clé `espace/…` : on les rattache à leur entrée du registre.
+const siteSections = projectSections;
+const principalSections = projectSections;
+// Les écrans propres de l'espace du principal portent leur clé `espace/…` : on les rattache à leur entrée du registre.
 const PRINCIPAL_ALIAS = { "espace/tableau-de-bord": "sitedash", "espace/pages": "landing", "espace/redirections": "redirections" };
-function principalSections(space) {
-  const out = SECTIONS.map((s) => ({ key: s.key, label: s.label, icon: s.icon, items: s.items.map((i) => ({ ...i, reg: i.key, section: s.key })) }));
-  const pages = out.find((x) => x.key === "pages");
-  pages.items.push({ key: "espace/composants", module: "composants", label: "Composants", href: `${space.base}/composants`, status: "live", permission: "forms.read", reg: null, section: "pages" });
-  const mk = ["listes", "segments", "modeles-email", "campagnes", "automatisations", "tunnels", "analytics", "formulaires", "contacts"].map((m) => {
-    const x = SITE_MODULES[m] || { label: "Contacts", legacy: "/marketing/contacts", permission: "forms.read" };
-    return { key: `espace/${m}`, module: m, label: x.legacyLabel || x.label, href: x.legacy, status: "live", permission: x.permission, reg: x.reg || null, section: "marketing" };
-  });
-  const at = out.findIndex((x) => x.key === "outils");
-  out.splice(at, 0, { key: "marketing", label: "Marketing du site", icon: "mail", items: mk });
-  return out;
-}
 
 function buildSiteNav({ can, active, space }) {
-  const all = space.principal ? principalSections(space) : siteSections(space);
+  const all = projectSections(space);
   const flat = all.flatMap((sec) => sec.items.map((i) => ({ ...i, section: sec.key })));
   // Un écran existant garde son cadre : on retrouve son entrée par sa clé `active` propre OU par la clé qu'il porte déjà dans le registre
   const regKey = space.principal && PRINCIPAL_ALIAS[active] ? PRINCIPAL_ALIAS[active] : active;
-  const hit = (i) => (i.reg && i.reg === regKey) || i.key === regKey;
+  const hit = (i) => (i.reg && i.reg === regKey) || i.key === regKey || i.alias === regKey;
   const current = flat.find((i) => i.key === active) || flat.find(hit) || null;
   if (!current) return null;
   const sections = [];
   for (const sec of all) {
-    const items = sec.items.filter((i) => can(i.permission)).map((i) => ({ key: i.key, label: i.label, href: i.href, status: i.status, current: i.key === current.key }));
+    const items = sec.items.filter((i) => can(i.permission)).map((i) => ({ key: i.key, label: i.label, href: i.href, status: i.status, current: i.key === current.key, ...(i.disabled ? { disabled: true, phase: i.phase } : {}) }));
     if (!items.length) continue;
     sections.push({ key: sec.key, label: sec.label, icon: sec.icon, items, flat: items.length === 1, open: items.some((i) => i.current), soon: items.length === 1 && items[0].status === "preview" });
   }
@@ -285,4 +306,4 @@ function buildSiteNav({ can, active, space }) {
   return { sections, trail, primary, current, section: sec, space };
 }
 
-module.exports = { BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, SITE_PLAN, DELEGATED, buildCmsNav, buildSiteNav, siteSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };
+module.exports = { BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, ABILITY, DELEGATED, buildCmsNav, buildSiteNav, projectSections, siteSections, principalSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };

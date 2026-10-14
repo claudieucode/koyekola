@@ -6,6 +6,8 @@
 .is-cms .mk-nav-sublink { min-height: 32px; padding: 4px 12px; font-size: 0.88rem; justify-content: space-between; gap: 8px; }
 .mk-cms-tag { flex: none; margin-left: auto; padding: 1px 7px; border-radius: 4px; font-size: 0.66rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); background: var(--mk-hover); border: 1px solid var(--mk-border); }
 .mk-nav-link .mk-cms-tag { margin-left: auto; }
+/* Entrée du menu d'un site pas encore disponible : visible, grisée, sans lien ni action */
+.mk-nav-link.is-soon, .mk-nav-sublink.is-soon { opacity: .6; cursor: not-allowed; }
 .mk-cms-back { display: flex; align-items: center; gap: 10px; margin: auto 8px 10px; padding: 8px 12px; border-top: 1px solid var(--mk-border); color: var(--muted); font-size: 0.86rem; text-decoration: none; border-radius: 6px; }
 .mk-cms-back:hover { background: var(--mk-hover); color: var(--mk-text); }
 html[data-sidebar="collapsed"] .mk-cms-back { justify-content: center; padding: 8px 0; }
