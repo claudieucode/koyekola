@@ -1984,8 +1984,25 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-body :where(input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=url], input[type=tel], input[type=search], input[type=datetime-local], select, textarea):hover:not(:disabled):not(:focus) { border-color: color-mix(in srgb, var(--field-border) 70%, var(--mk-text)); }
 .mk-body :where(input, select, textarea):focus, .mk-body .mk-search input:focus { border-color: var(--accent); }
 /* Tableaux de données : marges de cellule alignées sur les tableaux CMS (U-01), pour tenir sans défilement dès 1440 px */
-.mk-body .mk-datatable th, .mk-body .mk-datatable td { padding-left: 12px; padding-right: 12px; }
+.mk-body .mk-datatable th, .mk-body .mk-datatable td { padding-left: 10px; padding-right: 10px; }
 /* Mouvement réduit sur toute la coque Marketing/CMS (P-02) : transitions et animations coupées */
 @media (prefers-reduced-motion: reduce) {
   .mk-app *, .mk-app *::before, .mk-app *::after, .mk-dialog, .mk-dialog::backdrop { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* ===== Finition visuelle partagée (Marketing et CMS) : en-têtes de tableau, liens, retours au survol ===== */
+/* En-tête de tableau teinté : sépare nettement titres de colonnes et données */
+.mk-body .mk-table th { background: var(--mk-bg); color: var(--mk-text-soft); letter-spacing: 0.01em; }
+.mk-body .mk-table-wrap, .mk-body .mk-panel, .mk-body .mk-empty { box-shadow: 0 1px 2px rgba(11, 42, 64, 0.04); }
+.mk-body .mk-table tbody tr { transition: background-color 0.12s ease; }
+/* Liens du texte courant : bleu d'accent souligné finement (les titres de ligne et les boutons gardent leur style) */
+.mk-content :is(p, li, dd, .field-hint, .mk-lead, .mk-sub, .mk-empty p) a:not(.btn):not(.mk-tab) { color: var(--accent-dark); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--accent) 38%, transparent); transition: color 0.12s ease, text-decoration-color 0.12s ease; }
+.mk-content :is(p, li, dd, .field-hint, .mk-lead, .mk-sub, .mk-empty p) a:not(.btn):not(.mk-tab):hover { color: var(--accent); text-decoration-color: currentColor; }
+/* Retour tactile des boutons et onglets */
+.mk-body .btn { transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease, box-shadow 0.14s ease, transform 0.08s ease; }
+.mk-body .btn:active:not(:disabled) { transform: translateY(1px); }
+.mk-tab { transition: color 0.14s ease, border-color 0.14s ease; }
+.mk-nav-link, .mk-nav-head { transition: background-color 0.14s ease, color 0.14s ease; }
+/* Tableaux de données : coupure aux espaces (pas au milieu d'un mot) ; dates et source sur une ligne */
+.mk-body .mk-datatable td { overflow-wrap: break-word; }
+.mk-body .mk-datatable td[data-label="Ajouté le"], .mk-body .mk-datatable td[data-label="Dernière activité"], .mk-body .mk-datatable td[data-label="Source"] { white-space: nowrap; }

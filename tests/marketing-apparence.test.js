@@ -10,16 +10,16 @@ describe("apparence de l'espace marketing", () => {
   before(async () => { srv = await startServer({ ENCRYPTION_KEY: TEST_KEY }); boss = await loginInstructor(srv); });
   after(() => srv.stop());
 
-  test("par défaut : thème clair, aucune feuille de thème sombre chargée", async () => {
+  test("par défaut : menu bleu foncé (marine, identité Kolakisa), feuille de thème chargée", async () => {
     const html = (await boss.get("/marketing")).text;
-    assert.match(html, /<html lang="fr">/);
-    assert.doesNotMatch(html, /marketing-themes\.css/);
+    assert.match(html, /<html lang="fr" data-mk-theme="nuit">/);
+    assert.match(html, /marketing-themes\.css/);
     assert.match(html, /href="\/marketing\/apparence"/);
   });
-  test("la page propose les 4 thèmes, Clair coché", async () => {
+  test("la page propose les 4 thèmes, Bleu foncé coché par défaut", async () => {
     const html = (await boss.get("/marketing/apparence")).text;
     for (const label of ["Clair", "Bleu foncé", "Gris", "Noir"]) assert.match(html, new RegExp(`<strong>${label}</strong>`));
-    assert.match(html, /value="clair" checked/);
+    assert.match(html, /value="nuit" checked/);
   });
   for (const theme of ["nuit", "gris", "noir"]) {
     test(`choisir « ${theme} » : appliqué sur toutes les pages marketing, sans flash (posé par le serveur)`, async () => {
@@ -44,7 +44,7 @@ describe("apparence de l'espace marketing", () => {
     await boss.post("/marketing/apparence", { theme: "noir" });
     const c = await newStudent(srv);
     run("INSERT INTO mk_org_members (organization_id, user_id, role) VALUES (1, (SELECT id FROM users WHERE email = ?), 'viewer')", c.email);
-    assert.match((await c.get("/marketing")).text, /<html lang="fr">/);
+    assert.match((await c.get("/marketing")).text, /<html lang="fr" data-mk-theme="nuit">/, "sans choix : le défaut (bleu foncé), pas celui du chef");
     await c.post("/marketing/apparence", { theme: "gris" });
     assert.match((await c.get("/marketing")).text, /data-mk-theme="gris"/);
     assert.match((await boss.get("/marketing")).text, /data-mk-theme="noir"/);

@@ -473,3 +473,9 @@
   .dash *, .dash *::before, .dash *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
   .dash-sidebar { transition: none !important; }
 }
+
+/* « Mon espace » : liens de liste en accent (distincts du texte), soulignés au survol ; retours au survol des cartes et lignes */
+.dlist a.grow { color: var(--dash-accent-text, var(--dash-accent)); font-weight: 600; text-decoration: none; }
+.dlist a.grow:hover { text-decoration: underline; text-underline-offset: 3px; }
+.dlist li { transition: background-color 0.12s ease; }
+.dash .btn:active:not(:disabled) { transform: translateY(1px); }
