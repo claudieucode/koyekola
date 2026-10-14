@@ -140,7 +140,7 @@ Légende : **V** complète et vérifiée (existe, répond, tests présents) · *
 | Menus / navigation | V | A (« Bientôt ») | oui (nav_menus.site_id, 22 réf.) | Lever la restriction « site_id NULL » de l'écran ; emplacements de menu par site |
 | Redirections, liens cassés, permaliens | V | P (Redirections seulement) | oui (urls.js, redirects.js) | Exposer Liens cassés et Permaliens dans le menu du site (déjà filtrés par ?site=) |
 | Utilisateurs, rôles, permissions, invitations | V | P (« Équipe du site » seulement) | oui (rôle par site, ?site=) | Exposer Inviter/Rôles/Permissions/Invitations pour ce site |
-| Outils : santé, importer, exporter, sauvegardes, diagnostic, maintenance, journal, contenu | V (Caches : « Bientôt ») | P (« Santé du site » seulement, hors coque) | oui (withSite sur 16 routes sur 25) | Exposer les écrans déjà filtrés ; garder dans la coque du site |
+| Outils : santé, importer, exporter, sauvegardes, diagnostic, maintenance, journal, contenu | V (Caches : « Bientôt ») | P (« Santé du site » seulement, hors coque) | oui (withSite sur les 21 adresses d'Outils) | Exposer les écrans déjà filtrés ; garder dans la coque du site |
 | Corbeille / révisions | V | A | oui (cms_revisions.site_id) | Ajouter l'entrée, filtrée par site |
 | Paramètres (général, lecture, confidentialité, indexation, e-mail, tunnels, avancé) | V | P (« Réglages du site » = fiche du site) | oui (settings, ?site=, défauts hérités) | Exposer les 11 écrans pour le site, en indiquant ce qui est hérité |
 | Articles (liste, brouillons, programmés, publiés, corbeille, auteurs) | V | A (« Bientôt », B5) | NON (posts sans site_id) | Migration + moteur : lot B5 |
@@ -174,7 +174,7 @@ Kolakisa n'a **pas** de système d'extensions ni de thèmes tiers (décision D11
 | # | Écart | Preuve | Gravité | Type |
 |---|---|---|---|---|
 | E1 | Deux menus de structures différentes (12 groupes / 26 entrées contre 14 / 66) | §2 et §3 ; `buildSiteNav` ≠ `buildCmsNav` | Haute (objectif produit) | Conception B1 |
-| E2 | Outils, Paramètres, Utilisateurs, Redirections, Corbeille : 1 entrée au lieu de 3 à 11 alors que le moteur filtre déjà par site | §4.1 ; `tools.js` 16/25 routes `withSite`, `settings.js` et `users.js` acceptent `?site=` | Haute | Menu incomplet, sans migration |
+| E2 | Outils, Paramètres, Utilisateurs, Redirections, Corbeille : 1 entrée au lieu de 3 à 11 alors que le moteur filtre déjà par site | §4.1 ; `tools.js` : les 21 adresses passent par `withSite` ; `settings.js` et `users.js` acceptent `?site=` | Haute | Menu incomplet, sans migration |
 | E3 | 9 écrans sur 26 sortent de la coque du site (Emailing ×6, Tests A/B, Analytics, Santé du site) | Colonne « Coque du site » du §3 | Moyenne | Incohérence d'affichage |
 | E4 | Apparence et Menus : moteur prêt, écrans câblés sur le principal (`appearance.*(null)`, refus des menus non NULL) | `appearanceEditor.js` lignes 64-160 ; `navigation.js` ligne 21 | Moyenne | Câblage à faire ; rendu public par site à vérifier |
 | E5 | Articles, Catégories, Commentaires, Médias, Formulaires, Contacts, Modèles/Blocs, SEO : données non séparées | Inventaire des tables : a-isoler-B2 à B6 (20 tables) | Haute mais déjà planifiée | B2-B6, avec migration |
