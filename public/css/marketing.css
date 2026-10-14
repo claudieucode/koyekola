@@ -47,7 +47,7 @@
 .mk-app { display: grid; grid-template-columns: var(--mk-sidebar-w) minmax(0, 1fr); min-height: 100vh; }
 html[data-sidebar="collapsed"] .mk-app { grid-template-columns: var(--mk-sidebar-w-collapsed) minmax(0, 1fr); }
 .mk-main { min-width: 0; display: flex; flex-direction: column; }
-.mk-content { padding: 32px 40px 72px; max-width: 1320px; width: 100%; }
+.mk-content { padding: 32px 40px 72px; max-width: 1760px; width: 100%; margin-inline: auto; }
 .mk-content:focus { outline: 2px solid transparent; }
 
 /* ===== Menu latéral (clair, à la Mailchimp) ===== */
