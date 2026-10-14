@@ -12,7 +12,6 @@
   const pageHref = (n) => { const p = new URLSearchParams(query || {}); p.set("page", n); return "?" + p; };
   const cellOf = (c) => (c !== null && typeof c === "object" ? c : { text: String(c ?? "") });
 %>
-    <% if (typeof siteSpace !== "undefined" && siteSpace) { %><%- include("partials/site-banner", { siteSpace }) %><% } %>
     <div class="mk-head">
       <h1><%= title %></h1>
       <% if (typeof actions !== "undefined" && actions && actions.length) { %><div class="mk-actions">

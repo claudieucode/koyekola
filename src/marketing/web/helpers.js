@@ -63,7 +63,7 @@ function maskEmail(email) {
 const fullName = (c) => [c.first_name, c.last_name].filter(Boolean).join(" ");
 
 const { buildNav } = require("./nav");
-const { buildCmsNav } = require("./cmsNav");
+const { buildCmsNav, isSiteScopedKey } = require("./cmsNav");
 // Sites réels du CMS (sélecteur de la barre du haut) ; liste vide si le moteur de pages est indisponible
 // Sites proposés dans le menu : tous pour l'équipe ; seulement les siens pour une personne qui n'a accès qu'à certains sites (aucune fuite de noms)
 const cmsSites = (ctx) => {
@@ -90,4 +90,4 @@ const campaignStatus = (status) => CAMPAIGN_STATUS[status] ?? { label: String(st
 
 const { WORKER_DETAIL, workerHuman } = require("../workerNotice");
 
-module.exports = { WORKER_DETAIL, workerHuman, buildNav, buildCmsNav, cmsSites, barChart, columnChart, rate, campaignStatus, contactStatus, esc, statusLabel, statusClass, reasonLabel, sourceLabel, fdate, fdatetime, eventLabel, eventSourceLabel, fmt, euros, maskEmail, fullName, STATUS };
+module.exports = { WORKER_DETAIL, workerHuman, buildNav, buildCmsNav, isSiteScopedKey, cmsSites, barChart, columnChart, rate, campaignStatus, contactStatus, esc, statusLabel, statusClass, reasonLabel, sourceLabel, fdate, fdatetime, eventLabel, eventSourceLabel, fmt, euros, maskEmail, fullName, STATUS };

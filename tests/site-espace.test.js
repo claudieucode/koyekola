@@ -171,7 +171,8 @@ describe("4 — modules « Bientôt » : aucune donnée, aucune action simulée"
   });
   test("le menu signale « Bientôt » pour ces modules", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
-    assert.ok((html.match(/mk-cms-tag[^>]*>Bientôt/g) || []).length >= 8);
+    // P1a : UNE seule entrée « Bientôt » par groupe indisponible (Articles, Médias, Menus, Commentaires, SEO) + « Formulaires et contacts » dans Marketing du site
+    assert.equal((html.match(/mk-cms-tag[^>]*>Bientôt/g) || []).length, 6);
   });
 });
 

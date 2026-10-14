@@ -47,7 +47,9 @@ describe("menu de l'espace d'un site (buildSiteNav)", () => {
     const r = nav.buildCmsNav({ can: (p) => p === "forms.read", active: "espace/pages", space });
     const keys = r.sections.flatMap((s) => s.items.map((i) => i.key));
     assert.ok(keys.includes("espace/pages")); assert.ok(!keys.includes("espace/equipe")); assert.ok(!keys.includes("espace/seo") === false || true);
-    assert.equal(nav.buildCmsNav({ can: all, active: "landing", space }), null);
+    // P1a : l'écran « Pages » du registre (clé « landing ») trouve son entrée dans le menu du site ; une clé que le site n'ouvre pas n'y trouve rien
+    assert.equal(nav.buildCmsNav({ can: all, active: "landing", space }).current.key, "espace/pages");
+    assert.equal(nav.buildCmsNav({ can: all, active: "articles/ajouter", space }), null);
     assert.equal(nav.buildCmsNav({ can: all, active: "espace/inconnu", space }), null);
   });
   test("modules des paliers suivants : 'preview' pour un site, écran historique 'live' pour le site principal", () => {

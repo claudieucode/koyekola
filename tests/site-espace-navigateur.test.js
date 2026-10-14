@@ -52,7 +52,7 @@ describe("espace d'un site dans un navigateur réel", { skip: SKIP }, () => {
     await page.waitForURL(`**${SP}/${A}/tableau-de-bord`);
     assert.ok(await page.locator(".mk-site-banner-name", { hasText: "Site Alpha" }).isVisible());
     assert.match(await page.title(), /Site Alpha/);
-    for (const label of ["Tableau de bord", "Pages", "Articles", "Médias", "Emailing", "SEO et adresses", "Équipe", "Réglages"]) assert.ok(await page.locator(".mk-cms-nav", { hasText: label }).count(), `menu : ${label}`);
+    for (const label of ["Tableau de bord", "Pages", "Articles", "Médias", "Marketing du site", "SEO", "Redirections", "Équipe du site", "Santé du site", "Réglages du site"]) assert.ok(await page.locator(".mk-cms-nav", { hasText: label }).count(), `menu : ${label}`);
     await shot(page, "b1-01-tableau-de-bord-bureau");
     await context.close();
   });

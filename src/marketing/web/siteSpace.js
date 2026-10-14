@@ -23,13 +23,15 @@ const pageStatus = (p) => ({ status: PAGE_STATUS[p.status] || { label: String(p.
 const safeCount = (db, sql, params = []) => { try { return db.prepare(sql).get(...params).n; } catch { return 0; } };
 
 // Informations du « bandeau d'identité » : seulement ce qui est vrai pour ce site
+const describe = (req, site) => ({ siteId: site.id, principal: false, base: `${BASE}/sites/${site.id}`, name: site.name, status: site.status === "archived" ? "archived" : "active", deleted: Boolean(site.deleted_at), slug: site.slug || null, listHref: listHref(req) });
+const listHref = (req) => (req.mk.siteOnly ? `${BASE}/mes-sites` : `${BASE}/sites`);
 function spaceOf(req) {
   const m = /^\/site-web\/(?:sites\/(\d{1,12})|principal)(?:\/|$)/.exec(req.path);
   if (!m) return null;
-  if (m[1] === undefined) return req.mk.siteId === null ? { siteId: null, principal: true, base: `${BASE}/principal`, name: "Site principal", status: "active", deleted: false, slug: null } : null;
+  if (m[1] === undefined) return req.mk.siteId === null ? { siteId: null, principal: true, base: `${BASE}/principal`, name: "Site principal", status: "active", deleted: false, slug: null, listHref: listHref(req) } : null;
   const site = req.mk.site;
   if (!site || site.id !== Number(m[1])) return null;
-  return { siteId: site.id, principal: false, base: `${BASE}/sites/${site.id}`, name: site.name, status: site.status === "archived" ? "archived" : "active", deleted: Boolean(site.deleted_at), slug: site.slug || null };
+  return describe(req, site);
 }
 
 const readOnlyNote = (space) => (space.status === "archived" || space.deleted ? "Ce site est archivé : ses pages sont hors ligne et aucune création n'est possible. Restaurez-le depuis ses réglages." : null);
@@ -48,8 +50,8 @@ const SCREENS = {
       { label: "Brouillons", value: pg.brouillons, href: `${space.base}/pages` },
       { label: "Composants propres au site", value: own("mk_web_components"), href: `${space.base}/composants` },
       { label: "Redirections", value: own("seo_redirects"), href: `${space.base}/redirections` },
-      { label: "Listes d'envoi", value: own("mk_lists"), href: `/marketing/listes?site=${space.siteId ?? "principal"}` },
-      { label: "Campagnes", value: own("mk_campaigns"), href: `/marketing/campagnes?site=${space.siteId ?? "principal"}` },
+      { label: "Listes d'envoi", value: own("mk_lists"), href: space.principal ? "/marketing/listes?site=principal" : `${space.base}/listes` },
+      { label: "Campagnes", value: own("mk_campaigns"), href: space.principal ? "/marketing/campagnes?site=principal" : `${space.base}/campagnes` },
     ];
     return { title: "Tableau de bord", lead: `Vue d'ensemble de « ${space.name} » : uniquement les contenus de ce site.`, note: readOnlyNote(space), stats,
       table: { caption: "Pages récemment modifiées", columns: [{ label: "Page" }, { label: "État" }, { label: "Modifiée le" }], rows: recent.map((p) => ({ cells: [{ text: p.name, href: `/marketing/pages/${p.id}`, sub: `/${p.slug}` }, pageStatus(p), fdate(p.updated_at)] })),
@@ -127,11 +129,32 @@ module.exports = () => {
   router.get("/site-web/principal/:module([a-z-]+)", need("forms.read"), handle);
   return router;
 };
-// Le site de l'adresse, disponible pour toute la requête (coque, bandeau, titre) — jamais lu ailleurs que dans l'adresse.
+// Le site de la requête, disponible pour toute la requête (coque, bandeau, titre) — jamais lu ailleurs que dans l'adresse ou dans le contexte vérifié par le serveur.
 // Monté tôt (avant siteWeb) pour que la fiche de réglages et les écrans de l'espace partagent le même contexte.
+//   • siteSpace     : l'adresse EST celle d'un espace (/sites/<id>/… ou /principal/…) ;
+//   • siteCandidate : un écran partagé (Emailing, Tests A/B, Analytics, Outils) servi pour un site que le serveur a vérifié (req.mk.site) ; la vue ne
+//                     s'en sert que si l'écran est déclaré propre au site (cmsNav.isSiteScopedKey). Jamais un « ?site= » non vérifié.
+// Délégation (P1a) : GET /sites/<id>/<module partagé> sert l'écran EXISTANT avec ce site fixé par l'adresse (le « site » reçu du client est écrasé).
 module.exports.attach = (req, res, next) => {
   const space = spaceOf(req);
   if (space) res.locals.siteSpace = space;
+  else if (req.mk.site && Number.isInteger(req.mk.siteId) && req.mk.site.id === req.mk.siteId) res.locals.siteCandidate = describe(req, req.mk.site);
+  const m = /^\/site-web\/sites\/(\d{1,12})\/([a-z-]+)\/?$/.exec(req.path);
+  if (!m || !Object.hasOwn(nav.DELEGATED, m[2]) || (req.method !== "GET" && req.method !== "HEAD")) return next();
+  if (!space) {
+    const reason = req.mk.siteContext && !req.mk.siteContext.ok ? req.mk.siteContext.reason : "not_found";
+    return res.status(reason === "forbidden" ? 403 : 404).render("error", { message: reason === "forbidden" ? "Vous n'avez pas accès à ce site." : "Site introuvable." });
+  }
+  const id = space.siteId;
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(req.query || {})) if (k !== "site" && typeof v === "string") q.set(k, v);
+  q.set("site", String(id));
+  req.query = { ...req.query, site: String(id) };
+  req.url = `${nav.DELEGATED[m[2]]}?${q}`;
+  // L'équipe de l'organisation filtre les écrans d'Emailing par `siteFilter` (calculé AVANT ce point depuis l'adresse d'origine) : on le fixe sur ce site
+  if (req.mk.ctx.siteScope === undefined) req.mk.ctx.siteFilter = id;
+  // Sites proposés par les écrans d'Emailing : préparés par la barrière d'accès d'après l'adresse d'ORIGINE (qui n'a pas la forme d'un écran d'Emailing) → ici, d'après le site fixé
+  Object.assign(res.locals, require("./kit").siteChoices(req));
   next();
 };
 module.exports.SCREENS = SCREENS;

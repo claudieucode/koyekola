@@ -3,7 +3,7 @@
   // Environnement « Site Web » = KOLAKISA CMS : les écrans dont la clé figure dans cmsNav.js prennent la coque CMS
   // (même coque, mêmes composants et même charte que le Marketing ; seuls le menu latéral et la barre du haut changent)
   // Espace d'un site (palier 3, B1) : le menu est celui du site de l'adresse (siteSpace), jamais un site choisi ailleurs
-  const space = typeof siteSpace !== "undefined" && siteSpace ? siteSpace : null;
+  const space = typeof siteSpace !== "undefined" && siteSpace ? siteSpace : (typeof siteCandidate !== "undefined" && siteCandidate && mkh.isSiteScopedKey(active) ? siteCandidate : null);
   const cms = mkh.buildCmsNav({ can: mk.can, active, space });
   const cmsSites = cms ? mkh.cmsSites(mk.ctx) : [];
   const crumbs = nav.breadcrumb || [title];
@@ -132,6 +132,7 @@
       </header>
 
       <main id="main" tabindex="-1" class="mk-content">
+        <% if (cms && cms.space) { %><%- include("site-banner", { siteSpace: cms.space }) %><% } %>
         <% if (typeof flash !== "undefined" && flash) { %>
           <% if (flash.type === "error") { %>
             <div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-icon" aria-hidden="true"><%- icon("alertTriangle", { size: 18 }) %></span><span class="mk-flash-body"><p><%= flash.text %></p><% if (flash.detail) { %><details class="mk-flash-details"><summary>Détails techniques</summary><p><%= flash.detail %></p></details><% } %></span></div>
