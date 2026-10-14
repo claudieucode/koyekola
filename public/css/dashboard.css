@@ -458,3 +458,9 @@
   .g-files { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 420px) { .g-files { grid-template-columns: 1fr; } }
+
+/* « Mon espace » : bouton principal posé et sobre (pas de grosse ombre ni de soulèvement : réservés au site public) */
+.dash .btn-primary { box-shadow: none; }
+.dash .btn-primary:hover { box-shadow: none; transform: none; }
+.dash-sidebar-foot { border-top-color: color-mix(in srgb, var(--dash-sidebar-text) 16%, transparent); }
+.dash-sidebar { border-right-color: color-mix(in srgb, var(--dash-sidebar-text) 14%, transparent); }
