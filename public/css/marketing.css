@@ -1977,3 +1977,15 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
   .mk-nav-sub { transition: opacity 0.16s ease, display 0.16s allow-discrete; }
   @starting-style { .mk-nav-group.is-open > .mk-nav-sub { opacity: 0; } }
 }
+
+/* Champs Marketing/CMS : contour ≥ 3:1 (A-02) ; survol un peu plus marqué ; focus inchangé (bordure d'accent + halo) */
+.mk-body :where(input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=url], input[type=tel], input[type=search], input[type=datetime-local], select, textarea),
+.mk-search input { border-color: var(--field-border); }
+.mk-body :where(input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=url], input[type=tel], input[type=search], input[type=datetime-local], select, textarea):hover:not(:disabled):not(:focus) { border-color: color-mix(in srgb, var(--field-border) 70%, var(--mk-text)); }
+.mk-body :where(input, select, textarea):focus, .mk-body .mk-search input:focus { border-color: var(--accent); }
+/* Tableaux de données : marges de cellule alignées sur les tableaux CMS (U-01), pour tenir sans défilement dès 1440 px */
+.mk-body .mk-datatable th, .mk-body .mk-datatable td { padding-left: 12px; padding-right: 12px; }
+/* Mouvement réduit sur toute la coque Marketing/CMS (P-02) : transitions et animations coupées */
+@media (prefers-reduced-motion: reduce) {
+  .mk-app *, .mk-app *::before, .mk-app *::after, .mk-dialog, .mk-dialog::backdrop { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
