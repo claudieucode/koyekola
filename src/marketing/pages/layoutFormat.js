@@ -55,6 +55,8 @@ function css(layout) {
     "body.lp-body .lp-main { max-width: none; padding-left: 0; padding-right: 0; }",
     `:where(.kw-layout) > .kw-node, :where(.lp-main) > .lp-section { width: ${width}; margin-left: auto; margin-right: auto; box-sizing: border-box; }`,
     `${typed} { width: ${width}; margin-left: auto; margin-right: auto; box-sizing: border-box; }`,
+    // Blocs pleine largeur : le fond reste pleine largeur, le contenu s'aligne sur la colonne du format (et non sur l'ancienne colonne de 760 px)
+    `:where(.lp-main) { --kw-fmt-pad: ${w > 0 ? `max(${g}px, calc(50vw - ${w / 2}px))` : `${g}px`}; }`,
   ].join("\n");
 }
 

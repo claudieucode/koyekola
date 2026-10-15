@@ -168,5 +168,26 @@ describe("formats de mise en page (navigateur)", { skip: SKIP }, () => {
     await ed.close();
   });
 
+  test("bloc pleine largeur : le fond reste pleine largeur, le texte suit la colonne du format (guidé) ou l'ancienne colonne (libre)", async () => {
+    const mk = async (mode) => {
+      const res = await boss.request("/marketing/pages", { method: "POST", form: { name: "Pleine " + mode, ouvrir: "editeur", template: "vente", layoutMode: mode, layoutFormat: "standard" }, headers: { Origin: srv.base } });
+      const id = Number(res.location.match(/pages\/(\d+)/)[1]);
+      const r = db().prepare("SELECT draft, sections, theme, revision FROM mk_landing_pages WHERE id = ?").get(id);
+      const raw = JSON.parse(r.draft || r.sections), c = raw.sections ? raw : { sections: raw };
+      c.sections[0].style = { ...(c.sections[0].style || {}), width: "full", background: "dark" };
+      const put = await boss.request(`/marketing/pages/${id}/brouillon`, { method: "PUT", json: { revision: r.revision, content: { ...c, theme: JSON.parse(r.theme || "{}") } }, headers: { Origin: srv.base } });
+      assert.equal(put.status, 200, put.text.slice(0, 200));
+      return id;
+    };
+    const pv = await context.newPage();
+    await pv.setViewportSize({ width: 1440, height: 900 });
+    const read = async (id) => { await pv.goto(`${srv.base}/marketing/pages/${id}/apercu`); return pv.evaluate(() => { const b = document.querySelector(".lp-block-hero").getBoundingClientRect(), t = document.querySelector(".lp-block-hero h1").getBoundingClientRect(); return { bl: Math.round(b.left), br: Math.round(b.right), tl: Math.round(t.left), tr: Math.round(t.right) }; }); };
+    const guided = await read(await mk("guided"));
+    assert.deepEqual(guided, { bl: 0, br: 1440, tl: 120, tr: 1320 }, "guidé : fond pleine largeur, texte sur la colonne du format (1200 px)");
+    const free = await read(await mk("free"));
+    assert.deepEqual(free, { bl: 0, br: 1440, tl: 340, tr: 1100 }, "libre : comportement historique inchangé (colonne de 760 px)");
+    await pv.close();
+  });
+
   test("aucune erreur de script", () => { assert.deepEqual(errors, []); });
 });
