@@ -47,9 +47,14 @@ function css(layout) {
   const g = layout.gutter, w = layout.maxWidth;
   const width = w > 0 ? `min(calc(100% - ${2 * g}px), ${w}px)` : `calc(100% - ${2 * g}px)`;
   // `.lp-main` (colonne de 760 px par défaut ou réglage du site) cède la place au format ; les sections de l'ancien format suivent la même largeur
+  // Sections « typées » (bandeau, texte, liste, FAQ… des gabarits) : rendues dans un `div.lp-block`, jamais en enfant direct de `.lp-main` en tant que
+  // `.lp-section` ; sans cette règle elles s'étalent sur tout l'écran (0 px de marge) dès que `.lp-main` perd son padding. Restent hors format :
+  // les sections libres (déjà couvertes par `.kw-node`), l'en-tête / pied du site et les blocs dont l'auteur a choisi une largeur (`lp-w-*`).
+  const typed = ":where(.lp-main > .lp-block:not(.lp-block-layout, .lp-site-part, [class*=\"lp-w-\"]))";
   return [
     "body.lp-body .lp-main { max-width: none; padding-left: 0; padding-right: 0; }",
     `:where(.kw-layout) > .kw-node, :where(.lp-main) > .lp-section { width: ${width}; margin-left: auto; margin-right: auto; box-sizing: border-box; }`,
+    `${typed} { width: ${width}; margin-left: auto; margin-right: auto; box-sizing: border-box; }`,
   ].join("\n");
 }
 
