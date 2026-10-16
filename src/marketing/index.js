@@ -21,6 +21,7 @@ const MIGRATIONS_DIR = path.join(__dirname, "migrations");
 function initMarketing({ db, dbFile, dataDir, env = process.env, log = console }) {
   try {
     const migrations = migrate(db, { dir: MIGRATIONS_DIR, dbPath: dbFile, backupDir: path.join(dataDir, "backups"), log });
+    require("../services/siteContent").ensureCoreTriggers(db); // R6 lot 1 : déclencheurs d'intégrité des contenus par site (idempotents, additifs)
     const organization = ensureDefaultOrganization(db, { name: "KOLAKISA", slug: "koyekola" });
     syncInstructorMembers(db, organization.id);
     // Comptes du LMS → contacts « unknown » (jamais de consentement déduit). Une panne ici ne rend pas le module indisponible.
