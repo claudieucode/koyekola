@@ -7,14 +7,14 @@ const pages = require("../src/marketing/pages");
 const { TEMPLATES, catalog } = require("../src/marketing/pages/templates");
 const { startServer, loginInstructor, createCourse } = require("./helpers");
 
-test("19 catégories ; chaque gabarit donne une page valide, à identifiants de section uniques, sans faux chiffres", () => {
+test("23 catégories ; chaque gabarit donne une page valide, à identifiants de section uniques, sans faux chiffres", () => {
   const { A } = freshMarketing();
-  assert.equal(TEMPLATES.length, 19);
-  assert.deepEqual(catalog().map((t) => t.category), ["Génération de prospects", "Vente", "Webinaire", "Formation", "Produit", "Service", "Newsletter", "Téléchargement", "Lancement", "Bientôt disponible", "Inscription", "Consultation", "Remerciement", "Événement", "À propos", "Contact", "Portfolio", "Logiciel (SaaS)", "Entreprise"]);
+  assert.equal(TEMPLATES.length, 23);
+  assert.deepEqual(catalog().map((t) => t.category), ["Génération de prospects", "Vente", "Webinaire", "Formation", "Produit", "Service", "Newsletter", "Téléchargement", "Lancement", "Bientôt disponible", "Inscription", "Consultation", "Remerciement", "Événement", "À propos", "Contact", "Portfolio", "Logiciel (SaaS)", "Aide", "Tarifs", "Preuve sociale", "Erreur", "Entreprise"]);
   for (const t of TEMPLATES) {
     const p = pages.createPage(A, { name: `Page ${t.key}`, template: t.key });
     const ids = p.working.sections.map((s) => s.id);
-    assert.ok(ids.length >= 2, t.key);
+    assert.ok(ids.length >= (t.key === "p404" ? 1 : 2), t.key); // la page 404 est volontairement un seul bandeau
     assert.equal(new Set(ids).size, ids.length, t.key);
     assert.doesNotMatch(JSON.stringify(p.working.sections), /\b\d{2,}\s?%|\b\d{3,} (élèves|clients|inscrits)/, `${t.key} : aucun chiffre inventé`);
   }
