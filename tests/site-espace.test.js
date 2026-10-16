@@ -216,9 +216,9 @@ describe("audit des sites : libellé clair", () => {
 });
 
 describe("6 — aucune migration, aucun changement de structure", () => {
-  test("le dossier des migrations s'arrête toujours à 071", () => {
+  test("l'espace d'un site n'ajoute aucune migration : seule la 073 de R3 (plafond de droits par site) suit la 071", () => {
     const files = fs.readdirSync(path.join(__dirname, "..", "src", "marketing", "migrations")).filter((f) => /^\d+_/.test(f)).sort();
-    assert.match(files[files.length - 1], /^071_/);
+    assert.deepEqual(files.filter((f) => parseInt(f, 10) > 71), ["073_plafond_droits_par_site.sql"]);
   });
   test("le schéma de la base ne change pas en parcourant l'espace", async () => {
     const schema = () => JSON.stringify(db.prepare("SELECT type, name, sql FROM sqlite_master ORDER BY type, name").all());
