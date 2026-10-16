@@ -102,6 +102,25 @@ module.exports = () => {
       return template ? "Page créée à partir du modèle (brouillon) : remplacez les textes entre crochets dans l'éditeur visuel, puis publiez-la." : "Page créée (brouillon) : composez-la, puis publiez-la.";
     });
   });
+  // Nommage à la création (éditeur) : contrôle en direct du nom (mêmes règles que la création et le renommage) puis création JSON, sans passer par la liste des pages
+  router.get("/pages/nom.json", need("forms.write"), (req, res, next) => {
+    try { res.set("Cache-Control", "no-store").json({ ok: true, name: landing.checkName(req.mk.ctx, req.query.name, { exceptId: intOrNull(req.query.except) }) }); }
+    catch (error) { if (error instanceof MarketingError) return res.set("Cache-Control", "no-store").json({ ok: false, code: error.code, message: error.message }); next(error); }
+  });
+  router.post("/pages/:id(\\d+)/renommer.json", need("forms.write"), (req, res, next) => {
+    try { const p = landing.renamePage(req.mk.ctx, intOrNull(req.params.id), (req.body || {}).name); res.json({ page: { id: p.id, name: p.name, slug: p.slug } }); }
+    catch (error) { jsonError(res, next, error); }
+  });
+  router.post("/pages/creer.json", need("forms.write"), (req, res, next) => {
+    try {
+      const b = req.body || {};
+      const siteId = intOrNull(b.siteId);
+      const template = typeof b.template === "string" && b.template ? b.template : null;
+      const layout = b.layout && typeof b.layout === "object" && b.layout.mode === "guided" ? b.layout : null;
+      const page = pages.createPage(req.mk.ctx, { name: b.name, siteId, kind: "page", template, layout, blank: !template });
+      res.status(201).json({ page: { id: page.id, name: page.name, slug: page.slug }, url: `/marketing/pages/${page.id}/editeur?retour=pages` });
+    } catch (error) { jsonError(res, next, error); }
+  });
   // Actions groupées de la liste (publier, mettre hors ligne, corbeille, restaurer, supprimer définitivement) : droits vérifiés par action
   router.post("/pages/actions", need("forms.write"), (req, res, next) => {
     const ctx = req.mk.ctx;
@@ -367,7 +386,7 @@ module.exports = () => {
     const site = c.site_id ? pages.getSite(ctx, c.site_id) : null;
     const role = site && site.header_component_id === c.id ? "header" : site && site.footer_component_id === c.id ? "footer" : c.variant_of ? "variant" : "component";
     return { id: `c${c.id}`, name: c.name, slug: "", title: c.name, description: "", status: "published", kind: "page", hasDraft: false, revision: 0, site_id: c.site_id, form_id: null, indexable: 0, archived_at: null, header_mode: "inherit",
-      back: c.site_id ? `/marketing/site-web/sites/${c.site_id}#entete` : "/marketing/site-web/sites", working: { sections: [c.draft || c.section], title: c.name, description: "", theme: pages.normalizeTheme({}), seo: {} }, role };
+      back: c.site_id ? `/marketing/site-web/sites/${c.site_id}/reglages#entete` : "/marketing/site-web/sites", working: { sections: [c.draft || c.section], title: c.name, description: "", theme: pages.normalizeTheme({}), seo: {} }, role };
   };
   router.get("/site-web/composants/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
     const c = loadComponent(req, res);

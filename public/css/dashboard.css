@@ -458,3 +458,24 @@
   .g-files { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 420px) { .g-files { grid-template-columns: 1fr; } }
+
+/* « Mon espace » : bouton principal posé et sobre (pas de grosse ombre ni de soulèvement : réservés au site public) */
+.dash .btn-primary { box-shadow: none; }
+.dash .btn-primary:hover { box-shadow: none; transform: none; }
+.dash-sidebar-foot { border-top-color: color-mix(in srgb, var(--dash-sidebar-text) 16%, transparent); }
+.dash-sidebar { border-right-color: color-mix(in srgb, var(--dash-sidebar-text) 14%, transparent); }
+
+/* Champs de « Mon espace » : contour ≥ 3:1 quel que soit le thème (A-02), calculé depuis la couleur du texte */
+.dash :is(input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="date"], input[type="url"], input[type="tel"], input[type="search"], input[type="datetime-local"], select, textarea):not(.rt-editor *) { border-color: color-mix(in srgb, var(--dash-text) 55%, var(--dash-card)); }
+.dash :is(input, select, textarea):focus:not(.rt-editor *) { border-color: var(--dash-accent); }
+/* Mouvement réduit (P-02) */
+@media (prefers-reduced-motion: reduce) {
+  .dash *, .dash *::before, .dash *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+  .dash-sidebar { transition: none !important; }
+}
+
+/* « Mon espace » : liens de liste en accent (distincts du texte), soulignés au survol ; retours au survol des cartes et lignes */
+.dlist a.grow { color: var(--dash-accent-text, var(--dash-accent)); font-weight: 600; text-decoration: none; }
+.dlist a.grow:hover { text-decoration: underline; text-underline-offset: 3px; }
+.dlist li { transition: background-color 0.12s ease; }
+.dash .btn:active:not(:disabled) { transform: translateY(1px); }

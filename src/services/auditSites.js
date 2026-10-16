@@ -107,6 +107,9 @@ function run(db) {
     deleted: hasDeleted ? db.prepare("SELECT COUNT(*) n FROM mk_sites WHERE deleted_at IS NOT NULL").get().n : null,
     archived: db.prepare("SELECT COUNT(*) n FROM mk_sites WHERE status = 'archived'").get().n,
   };
+  // Les comptages se recouvrent : un site supprimé est toujours archivé d'abord (pages.deleteSite). On donne donc aussi les parts qui ne se recouvrent pas.
+  out.sites.active = db.prepare(`SELECT COUNT(*) n FROM mk_sites WHERE status <> 'archived'${hasDeleted ? " AND deleted_at IS NULL" : ""}`).get().n;
+  out.sites.trashed = hasDeleted ? db.prepare("SELECT COUNT(*) n FROM mk_sites WHERE deleted_at IS NOT NULL AND status = 'archived'").get().n : null;
   for (const [t, c, label] of TABLES) {
     if (!has(t) || !cols(t).includes(c)) { out.tables.push({ table: t, label, absent: true }); continue; }
     const r = db.prepare(`SELECT COUNT(*) total, COALESCE(SUM(${c} IS NULL), 0) principal, COALESCE(SUM(${c} IS NOT NULL), 0) rattachees,

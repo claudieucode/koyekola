@@ -22,6 +22,17 @@
     </div>
     <% if (typeof lead !== "undefined" && lead) { %><p class="mk-lead"><%= lead %></p><% } %>
 
+    <% if (typeof note !== "undefined" && note) { %>
+      <div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p><%= note %></p></div>
+    <% } %>
+    <% if (typeof createForm !== "undefined" && createForm) { %>
+      <form id="nouvelle" action="<%= createForm.action %>" method="post" class="mk-form mk-cms-create">
+        <% Object.entries(createForm.hidden || {}).forEach(([k, v]) => { %><input type="hidden" name="<%= k %>" value="<%= v %>"><% }) %>
+        <div class="field-group"><label for="cms-create-field"><%= createForm.label %></label><input id="cms-create-field" type="text" name="<%= createForm.field %>" maxlength="100" required placeholder="<%= createForm.placeholder %>"></div>
+        <button type="submit" class="btn btn-primary btn-sm"><%= createForm.button %></button>
+      </form>
+    <% } %>
+
     <% if (typeof soon !== "undefined" && soon) { %>
       <div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p><strong>Prochain palier.</strong> <%= soon %></p></div>
     <% } %>

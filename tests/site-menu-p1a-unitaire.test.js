@@ -1,0 +1,69 @@
+// Palier 3, lot P1a — inventaire du registre et de sa projection (aucun serveur) : ce qui est ouvert pour un site est exactement ce que le plan annonce.
+const { test, describe } = require("node:test");
+const assert = require("node:assert/strict");
+const nav = require("../src/marketing/web/cmsNav");
+
+const site = { siteId: 5, principal: false, base: "/marketing/site-web/sites/5", name: "Site Cinq", listHref: "/marketing/site-web/sites" };
+const principal = { siteId: null, principal: true, base: "/marketing/site-web/principal", name: "Site principal", listHref: "/marketing/site-web/sites" };
+const all = () => true;
+const flat = (sections) => sections.flatMap((s) => s.items.map((i) => ({ ...i, group: s.key })));
+
+describe("projection du registre (menu d'un site)", () => {
+  test("les 14 groupes du registre sont tous présents, une fois, dans l'ordre du registre ; « Marketing du site » vient avant Outils", () => {
+    const groups = nav.siteSections(site).map((s) => s.key);
+    const registry = nav.SECTIONS.map((s) => s.key);
+    assert.equal(registry.length, 14);
+    assert.deepEqual(groups.filter((g) => g !== "marketing"), registry);
+    assert.equal(new Set(groups).size, groups.length);
+    assert.equal(groups.indexOf("marketing"), groups.indexOf("outils") - 1);
+  });
+  test("chaque groupe emprunte son libellé et son icône au registre (pas de définition parallèle)", () => {
+    for (const s of nav.siteSections(site)) { const reg = nav.SECTIONS.find((x) => x.key === s.key); if (reg) { assert.equal(s.label, reg.label, s.key); assert.equal(s.icon, reg.icon, s.key); } }
+  });
+  test("tout module du plan existe ; tout module délégué porte la clé de l'écran existant et figure parmi les écrans propres au site", () => {
+    for (const [, mods] of nav.SITE_PLAN) for (const m of mods) assert.ok(m.startsWith("@") || nav.SITE_MODULES[m], `module inconnu : ${m}`);
+    for (const [mod, m] of Object.entries(nav.SITE_MODULES)) if (m.kind === "delegate") { assert.ok(m.reg, mod); assert.ok(nav.isSiteScopedKey(m.reg), mod); assert.equal(nav.DELEGATED[mod], m.to); }
+    for (const k of ["landing", "dashboard", "utilisateurs", "contacts", "apparence", "parametres", "articles"]) assert.equal(nav.isSiteScopedKey(k), false, `${k} n'ouvre pas l'espace d'un site`);
+  });
+  test("un groupe sans module disponible = exactement UNE entrée « Bientôt »", () => {
+    const g = Object.fromEntries(nav.siteSections(site).map((s) => [s.key, s.items]));
+    for (const k of ["articles", "mediatheque", "navigation", "commentaires", "seo"]) { assert.equal(g[k].length, 1, k); assert.equal(g[k][0].status, "preview", k); assert.equal(g[k][0].label, nav.SECTIONS.find((x) => x.key === k).label, k); }
+  });
+  test("ce qui appartient aux lots suivants n'est PAS encore ouvert pour un site (P1b, P1c, B2-B6, hors administration centrale)", () => {
+    const hrefs = flat(nav.siteSections(site)).map((i) => i.href).join(" ");
+    for (const w of ["corbeille", "sauvegardes", "logs", "systeme", "importer", "exporter", "diagnostic", "maintenance", "roles", "permissions", "invitations", "liens-casses", "permaliens", "parametres"]) assert.ok(!hrefs.includes(w), `ne doit pas apparaître : ${w}`);
+  });
+  test("aucun lien ne mène à un autre site ; les liens partagés passent par l'adresse du site (jamais par « ?site= »)", () => {
+    const items = flat(nav.siteSections(site));
+    for (const i of items) { assert.ok(!/[?&]site=/.test(i.href), i.href); assert.ok(!/sites\/(?!5\/)\d+/.test(i.href), i.href); }
+    for (const m of ["listes", "segments", "modeles-email", "campagnes", "automatisations", "tunnels", "tests-ab", "analytics", "outils"]) assert.ok(items.some((i) => i.href === `${site.base}/${m}`), m);
+  });
+  test("chaque entrée disparaît si l'utilisateur n'en a pas le droit (permission du registre ou du module d'origine)", () => {
+    assert.deepEqual(nav.buildSiteNav({ can: () => false, active: "espace/pages", space: site }).sections, []);
+    const r = nav.buildSiteNav({ can: (p) => p === "forms.read", active: "espace/pages", space: site });
+    const keys = flat(r.sections).map((i) => i.key);
+    assert.ok(keys.includes("espace/pages") && keys.includes("espace/tests-ab"));
+    for (const k of ["espace/listes", "espace/campagnes", "espace/analytics", "espace/outils", "espace/equipe", "espace/redirections"]) assert.ok(!keys.includes(k), k);
+  });
+  test("chaque écran existant retrouve son entrée par la clé qu'il porte déjà", () => {
+    const expected = { pagetests: "espace/tests-ab", outils: "espace/outils", lists: "espace/listes", segments: "espace/segments", templates: "espace/modeles-email", campaigns: "espace/campagnes", automations: "espace/automatisations", funnels: "espace/tunnels", "analytics-global": "espace/analytics", landing: "espace/pages", sitedash: "espace/tableau-de-bord", redirections: "espace/redirections", utilisateurs: "espace/equipe" };
+    for (const [active, key] of Object.entries(expected)) assert.equal(nav.buildSiteNav({ can: all, active, space: site }).current.key, key, active);
+    assert.equal(nav.buildSiteNav({ can: all, active: "articles/ajouter", space: site }), null);
+  });
+});
+
+describe("espace du site principal", () => {
+  test("le menu complet du registre est conservé : toutes les entrées, mêmes adresses historiques, plus Composants et Marketing du site", () => {
+    const r = nav.buildSiteNav({ can: all, active: "espace/pages", space: principal });
+    const hrefs = new Set(flat(r.sections).map((i) => i.href));
+    for (const it of nav.ALL) assert.ok(hrefs.has(it.href), it.href);
+    assert.equal(nav.ALL.length, 66);
+    assert.equal(r.sections.length, 15);
+    assert.equal(flat(r.sections).length, 66 + 1 + 9);
+  });
+  test("le menu global du principal (hors espace) est inchangé et ne contient aucune clé d'espace", () => {
+    const g = nav.buildCmsNav({ can: all, active: "landing" });
+    assert.equal(g.sections.length, 14);
+    assert.ok(!JSON.stringify(g).includes("espace/"));
+  });
+});

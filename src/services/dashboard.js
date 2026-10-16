@@ -14,14 +14,16 @@ db.exec(`
 
 // Thèmes prédéfinis : couleurs de la barre latérale, du fond, des cartes, du texte et de l'accent
 const THEMES = {
-  clair: { label: "Clair (par défaut)", sidebar: "#ffffff", sidebarText: "#334155", bg: "#f4f8fb", card: "#ffffff", text: "#102a3a", muted: "#64748b", border: "#e2e8f0", primary: "#0b83c6", button: "#0b83c6", dark: false },
-  "bleu-fonce": { label: "Bleu foncé", sidebar: "#0b2538", sidebarText: "#c9d8e4", bg: "#f4f8fb", card: "#ffffff", text: "#102a3a", muted: "#64748b", border: "#dce7ef", primary: "#0b83c6", button: "#0b83c6", dark: false },
+  clair: { label: "Clair", sidebar: "#ffffff", sidebarText: "#334155", bg: "#f4f8fb", card: "#ffffff", text: "#102a3a", muted: "#64748b", border: "#e2e8f0", primary: "#0b83c6", button: "#0b83c6", dark: false },
+  "bleu-fonce": { label: "Bleu foncé (par défaut)", sidebar: "#0b2538", sidebarText: "#c9d8e4", bg: "#f4f8fb", card: "#ffffff", text: "#102a3a", muted: "#64748b", border: "#dce7ef", primary: "#0b83c6", button: "#0b83c6", dark: false },
   noir: { label: "Noir", sidebar: "#0b0d0f", sidebarText: "#b8c0c8", bg: "#111418", card: "#181c21", text: "#e8ecef", muted: "#98a2ad", border: "#262c33", primary: "#3aa8e8", button: "#2b8fd0", dark: true },
   "gris-clair": { label: "Gris clair", sidebar: "#e9ecef", sidebarText: "#2b3440", bg: "#f4f5f7", card: "#ffffff", text: "#17202a", muted: "#5f6b78", border: "#dde1e6", primary: "#2563a8", button: "#2563a8", dark: false },
   "gris-moyen": { label: "Gris moyen", sidebar: "#4b525b", sidebarText: "#e3e6ea", bg: "#e6e8eb", card: "#f7f8f9", text: "#1c232b", muted: "#55606c", border: "#cfd4da", primary: "#1f6fb2", button: "#1f6fb2", dark: false },
   "gris-fonce": { label: "Gris foncé", sidebar: "#1f2329", sidebarText: "#c3c9d0", bg: "#2a2f36", card: "#33393f", text: "#e6e9ec", muted: "#a3acb6", border: "#424951", primary: "#5aa9e0", button: "#3d8fcc", dark: true },
 };
 const HEX = /^#[0-9a-f]{6}$/i;
+// Thème des personnes qui n'ont encore rien choisi : le bleu marine, couleur de l'identité Kolakisa (les choix déjà enregistrés sont conservés)
+const DEFAULT_THEME = "bleu-fonce";
 const COLOR_KEYS = ["primary", "accent", "sidebar", "bg", "card", "button"];
 
 // Luminance relative (WCAG) : texte clair ou foncé selon le fond choisi
@@ -59,11 +61,11 @@ function prefsOf(userId) {
   const r = db.prepare("SELECT theme, colors FROM dashboard_prefs WHERE user_id = ?").get(userId);
   let colors = {};
   try { colors = r ? JSON.parse(r.colors) : {}; } catch { colors = {}; }
-  const theme = r && (THEMES[r.theme] || r.theme === "perso") ? r.theme : "clair";
+  const theme = r && (THEMES[r.theme] || r.theme === "perso") ? r.theme : DEFAULT_THEME;
   return { theme, colors: cleanColors(colors) };
 }
 function savePrefs(userId, { theme, colors }) {
-  const t = THEMES[theme] || theme === "perso" ? theme : "clair";
+  const t = THEMES[theme] || theme === "perso" ? theme : DEFAULT_THEME;
   const c = cleanColors(colors);
   db.prepare("INSERT INTO dashboard_prefs (user_id, theme, colors, updated_at) VALUES (?, ?, ?, datetime('now')) ON CONFLICT(user_id) DO UPDATE SET theme = excluded.theme, colors = excluded.colors, updated_at = excluded.updated_at").run(userId, t, JSON.stringify(c));
   return prefsOf(userId);

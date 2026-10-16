@@ -7135,10 +7135,20 @@
     if (startStep === "choice") paintStartChoice(box); else if (startStep === "catalog" && PC) paintCatalog(box); else paintStartConfig(box);
     if (focusFirst !== false) { var f = box.querySelector("button:not([disabled]), input:not([disabled])"); if (f) f.focus({ preventScroll: true }); }
   }
-  // Petites compositions d'interface (HTML/CSS, jetons --editor-*) qui expliquent chaque action ; décoratives (aria-hidden), aucune image à charger
+  // Illustrations SVG vectorielles inline (constantes, ~1 Ko chacune, aucune image ni requête) : même grammaire pour les quatre (fenêtre de navigateur,
+  // trait de 1,5, rayons 6/3, accent réservé à l'élément « action »). Les couleurs viennent des jetons --editor-* via les classes il-* : elles suivent donc le thème.
+  var IL_WIN = '<rect class="il-w" x="14" y="10" width="212" height="100" rx="8"/><path class="il-bar" d="M14 18a8 8 0 0 1 8-8h196a8 8 0 0 1 8 8v8H14z"/><circle class="il-t" cx="26" cy="18" r="2"/><circle class="il-t" cx="34" cy="18" r="2"/><circle class="il-t" cx="42" cy="18" r="2"/>';
+  var IL_SVG = {
+    resume: IL_WIN + '<rect class="il-s" x="26" y="34" width="188" height="28" rx="4"/><rect class="il-a" x="36" y="43" width="74" height="6" rx="3"/><rect class="il-t" x="36" y="53" width="104" height="3" rx="1.5"/><rect class="il-t" x="26" y="72" width="120" height="4" rx="2"/><rect class="il-bar" x="26" y="82" width="158" height="4" rx="2"/><rect class="il-bar" x="26" y="92" width="96" height="4" rx="2"/><rect class="il-a" x="148" y="68" width="1.8" height="14" rx="1"/><path class="il-cur" d="M176 70l0 22 5.5-5 4 9 3.5-1.6-4-8.6 7.5-.2z"/>',
+    structure: IL_WIN + '<rect class="il-s" x="26" y="34" width="188" height="20" rx="4"/><rect class="il-t" x="36" y="41" width="70" height="4" rx="2"/><rect class="il-d" x="26" y="62" width="188" height="38" rx="5"/><rect class="il-w2" x="34" y="69" width="48" height="24" rx="3"/><rect class="il-w2" x="96" y="69" width="48" height="24" rx="3"/><rect class="il-w2" x="158" y="69" width="48" height="24" rx="3"/><circle class="il-a" cx="206" cy="100" r="11"/><path class="il-plus" d="M206 94.5v11M200.5 100h11"/>',
+    blank: '<rect class="il-w" x="14" y="10" width="212" height="100" rx="8"/><path class="il-bar" d="M14 18a8 8 0 0 1 8-8h196a8 8 0 0 1 8 8v8H14z"/><circle class="il-t" cx="26" cy="18" r="2"/><circle class="il-t" cx="34" cy="18" r="2"/><circle class="il-t" cx="42" cy="18" r="2"/><rect class="il-d" x="30" y="36" width="180" height="64" rx="5"/><circle class="il-a" cx="120" cy="68" r="14"/><path class="il-plus" d="M120 60v16M112 68h16"/><path class="il-spark" d="M168 48l1.8 4.2 4.2 1.8-4.2 1.8L168 60l-1.8-4.2-4.2-1.8 4.2-1.8zM70 82l1.2 2.8 2.8 1.2-2.8 1.2L70 90l-1.2-2.8-2.8-1.2 2.8-1.2z"/>',
+    guided: '<rect class="il-w" x="22" y="24" width="64" height="82" rx="6"/><rect class="il-s" x="30" y="32" width="48" height="22" rx="3"/><rect class="il-bar" x="30" y="62" width="48" height="4" rx="2"/><rect class="il-bar" x="30" y="72" width="32" height="4" rx="2"/><rect class="il-w" x="154" y="24" width="64" height="82" rx="6"/><rect class="il-bar" x="162" y="32" width="22" height="22" rx="3"/><rect class="il-bar" x="188" y="32" width="22" height="22" rx="3"/><rect class="il-bar" x="162" y="62" width="48" height="4" rx="2"/><rect class="il-bar" x="162" y="72" width="36" height="4" rx="2"/><rect class="il-w il-front" x="82" y="12" width="76" height="98" rx="7"/><rect class="il-s" x="91" y="21" width="58" height="26" rx="4"/><rect class="il-a" x="98" y="29" width="30" height="5" rx="2.5"/><rect class="il-t" x="98" y="37" width="40" height="3" rx="1.5"/><rect class="il-bar" x="91" y="55" width="26" height="18" rx="3"/><rect class="il-bar" x="123" y="55" width="26" height="18" rx="3"/><rect class="il-t" x="91" y="81" width="58" height="4" rx="2"/><rect class="il-a" x="91" y="92" width="26" height="9" rx="4.5"/>'
+  };
+  IL_SVG.classic = IL_SVG.structure;
   function illus(kind) {
-    var parts = { resume: ["doc", "ln", "ln s", "ln", "cur"], structure: ["box", "box", "box b", "plus"], blank: ["page", "plus"], guided: ["tile", "tile", "tile", "tile", "tile", "tile"], classic: ["box", "box", "box b", "plus"] }[kind] || [];
-    return h("div", { class: "pb-illus is-" + kind, "aria-hidden": "true" }, parts.map(function (c) { return h("span", { class: "pb-il-" + c.replace(" ", " pb-il-") }); }));
+    var el = h("div", { class: "pb-illus is-" + kind, "aria-hidden": "true" });
+    el.innerHTML = '<svg viewBox="0 0 240 120" focusable="false" preserveAspectRatio="xMidYMid meet">' + (IL_SVG[kind] || "") + '</svg>';
+    return el;
   }
   function startCard(iconName, title, text, hint, label, onclick, id) {
     return h("div", { class: "pb-start-card", "data-pb-start-card": id },
@@ -7205,25 +7215,81 @@
       return true;
     });
   }
-  // Le nom d'une page est unique dans l'organisation (règle existante) : on date le nom, et on retente avec un numéro si la même seconde est déjà prise.
-  function createBlankPage(attempt) {
-    attempt = attempt || 0;
-    var d = new Date(), pad = function (x) { return (x < 10 ? "0" : "") + x; };
-    var name = "Nouvelle page vierge (" + pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()) + ")" + (attempt ? " " + (attempt + 1) : "");
-    var body = new URLSearchParams(); body.set("ouvrir", "editeur"); body.set("name", name); body.set("template", "");
-    if (PAGE.siteId) body.set("site_id", String(PAGE.siteId));
-    return fetch("/marketing/pages", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "text/html" }, body: body.toString() }).then(function (r) {
-      var m = /\/marketing\/pages\/(\d+)\/editeur/.exec(r.url || "");
-      if (r.ok && m && Number(m[1]) !== Number(PAGE.id)) return r.url;
-      if (attempt < 2 && r.ok) return createBlankPage(attempt + 1); // nom déjà pris (même seconde) : redirigé vers la liste, rien n'a été créé
-      throw new Error("La nouvelle page n'a pas pu être créée. Ce document n'a pas été modifié.");
+  // ---------- Dialogue commun de nommage : toute création réelle d'un NOUVEAU document passe ici ----------
+  // Le nom est validé par le serveur (mêmes règles que le renommage : obligatoire, 100 caractères au plus, unique sans tenir compte de la casse), puis la page est
+  // créée EN UNE FOIS avec ce nom (POST /marketing/pages/creer.json) : aucune page anonyme n'existe, même brièvement. Annuler ne crée rien ; une erreur garde le dialogue.
+  // Résultat : { url } si la page est créée, null si l'utilisateur annule. `spec` : { template, layout } du parcours guidé (conservés tels quels).
+  var NAME_MAX = 100;
+  function askPageName(spec) {
+    spec = spec || {};
+    return new Promise(function (resolve) {
+      var done = false, busy = false, checkTimer = null, checkSeq = 0, valid = false, input = null, msg = null, touched = false, badge = null;
+      var okBtn = function () { return compDlg && compDlg.querySelector("[data-cd-ok]"); };
+      var setState = function (text, kind) { msg.textContent = text || ""; msg.className = "pb-hint pb-name-msg" + (kind ? " is-" + kind : ""); input.setAttribute("aria-invalid", kind === "error" ? "true" : "false"); };
+      var apply = function () { var b = okBtn(); if (b && !busy) b.disabled = !valid; };
+      var validate = function () {
+        var text = input.value.trim(); clearTimeout(checkTimer); valid = false; apply();
+        if (!text) { setState(touched ? "Le nom est obligatoire." : "", ""); return; }
+        if (text.length > NAME_MAX) { setState("Le nom ne peut pas dépasser " + NAME_MAX + " caractères (" + text.length + " saisis).", "error"); return; }
+        setState("Vérification…", "");
+        var seq = ++checkSeq;
+        checkTimer = setTimeout(function () {
+          api("GET", "/marketing/pages/nom.json?name=" + encodeURIComponent(text) + (spec.rename ? "&except=" + spec.rename.id : "")).then(function (r) {
+            if (seq !== checkSeq) return;
+            valid = Boolean(r.ok); setState(r.ok ? "" : r.message, r.ok ? "" : "error"); apply();
+          }, function () { if (seq !== checkSeq) return; valid = true; setState("", ""); apply(); }); // réseau indisponible : le serveur revérifiera à la création
+        }, 250);
+      };
+      compDialog({ title: spec.rename ? "Renommer la page" : "Créer une nouvelle page", confirmLabel: spec.rename ? "Renommer" : "Créer la page", cancelLabel: "Annuler", build: function (body) {
+        // Habillage propre à ce dialogue (classe retirée à la fermeture : le dialogue partagé reste identique pour les autres usages)
+        compDlg.classList.add("pb-name-dlg");
+        badge = h("span", { class: "pb-name-badge", "aria-hidden": "true" }, icon(spec.rename ? "edit" : "fileText"));
+        var headEl = compDlg.querySelector(".pb-modal-head"); headEl.insertBefore(badge, headEl.firstChild);
+        body.appendChild(h("p", { class: "pb-hint pb-name-intro", text: spec.rename ? "Le nom change partout ; l'adresse de la page et son identifiant restent les mêmes." : "Donnez un nom à votre page pour la retrouver facilement dans votre espace de travail." }));
+        input = h("input", { type: "text", class: "pb-input", "data-pb-name-input": "", id: "pb-name-input", maxlength: String(NAME_MAX + 50), placeholder: "Ex. : Accueil, À propos, Nos services…", autocomplete: "off", "aria-describedby": "pb-name-msg", "aria-required": "true" });
+        msg = h("p", { class: "pb-hint pb-name-msg", id: "pb-name-msg", role: "status", "aria-live": "polite" });
+        body.appendChild(h("div", { class: "pb-field" }, h("label", { for: "pb-name-input", text: "Nom de la page" }), input));
+        body.appendChild(msg);
+        input.addEventListener("input", function () { touched = true; validate(); });
+        if (spec.rename) input.value = spec.rename.name;
+        setTimeout(function () { validate(); input.focus(); input.select(); }, 0);
+      }, onConfirm: function () {
+        if (busy || !valid) return false;
+        busy = true; var b = okBtn(); if (b) { b.disabled = true; b.setAttribute("aria-busy", "true"); b.textContent = spec.rename ? "Enregistrement…" : "Création…"; }
+        if (spec.rename) return api("POST", "/marketing/pages/" + spec.rename.id + "/renommer.json", { name: input.value.trim() }).then(function (r) { done = true; resolve({ name: r.page.name }); return true; }, function (e) { busy = false; var b3 = okBtn(); if (b3) { b3.removeAttribute("aria-busy"); b3.textContent = "Renommer"; } setTimeout(apply, 0); throw e; });
+        var body = { name: input.value.trim(), template: spec.template || "", layout: spec.layout || null };
+        if (PAGE.siteId) body.siteId = PAGE.siteId;
+        return api("POST", "/marketing/pages/creer.json", body).then(function (r) { done = true; resolve({ url: r.url }); return true; }, function (e) {
+          busy = false; var b2 = okBtn(); if (b2) { b2.removeAttribute("aria-busy"); b2.textContent = "Créer la page"; }
+          setTimeout(function () { apply(); if (/déjà ce nom/.test(e.message || "")) { valid = false; setState(e.message, "error"); apply(); } }, 0);
+          throw e;
+        });
+      } });
+      compDlg.addEventListener("close", function onClose() { compDlg.removeEventListener("close", onClose); clearTimeout(checkTimer); compDlg.classList.remove("pb-name-dlg"); if (badge && badge.parentNode) badge.parentNode.removeChild(badge); if (!done) resolve(null); });
     });
   }
+  // Renommer depuis la barre supérieure : mêmes règles et même dialogue ; le nom est mis à jour partout où il est affiché sans recharger l'éditeur
+  var titleEl = $(".pb-title h1");
+  if (titleEl && !IS_COMPONENT && canWrite && PAGE.id) {
+    var renameBtn = h("button", { type: "button", class: "pb-icon-btn pb-title-edit", "data-pb-rename": "", "data-tip": "Renommer la page", "aria-label": "Renommer la page" }, icon("edit"));
+    titleEl.parentNode.insertBefore(renameBtn, titleEl.nextSibling);
+    renameBtn.addEventListener("click", function () {
+      askPageName({ rename: { id: PAGE.id, name: PAGE.name || titleEl.textContent } }).then(function (r) {
+        if (!r) return;
+        PAGE.name = r.name; titleEl.textContent = r.name;
+        document.title = document.title.replace(/^[^·]*/, "Éditeur — " + r.name + " ");
+        toast("Page renommée : « " + r.name + " ».");
+      });
+    });
+  }
+  var CANCELLED = function () { var e = new Error("Création annulée."); e.cancelled = true; return e; };
+  // Adresse de la page créée, ou rejet « annulé » (rien n'a été créé)
+  function nameThenCreate(spec) { return askPageName(spec).then(function (r) { if (!r) throw CANCELLED(); return r.url; }); }
   function leaveFor(url, discard) {
     if (discard) { dirty = false; clearTimeout(saveTimer); try { localStorage.removeItem("pb-backup-" + PAGE.id); localStorage.removeItem(HISTORY_KEY); } catch (e) { /* stockage indisponible */ } }
     window.location.assign(url);
   }
-  var NEWPAGE_LEAVE = { getUrl: function () { return createBlankPage(); }, text: "Vous allez quitter le document actuel pour créer une nouvelle page vierge. Enregistrez vos modifications pour pouvoir reprendre ce travail plus tard.", saved: "Votre travail est enregistré. Vous pouvez maintenant créer la nouvelle page vierge." };
+  var NEWPAGE_LEAVE = { getUrl: function () { return nameThenCreate({}); }, auto: true, text: "Vous allez quitter le document actuel pour créer une nouvelle page vierge. Enregistrez vos modifications pour pouvoir reprendre ce travail plus tard.", saved: "Votre travail est enregistré. Vous pouvez maintenant créer la nouvelle page vierge." };
   function requestNewPage() { requestLeave(NEWPAGE_LEAVE); }
   // Quitter ce document pour un autre (nouvelle page, page récente, liste des pages) : jamais de perte silencieuse, enregistrement vérifié d'abord.
   // opts : getUrl() → promesse de l'adresse à ouvrir ; text : explication de la boîte de dialogue ; saved : message après un enregistrement réussi.
@@ -7239,7 +7305,7 @@
       if (!dirty && !saving) return opts.getUrl().then(function (url) { leaveFor(url, false); return "left"; });
       setNewPageBusy(false); // modifications en attente : la boîte de dialogue décide
       return openLeaveDialog(opts).then(function () { return "dialog"; });
-    }).catch(function (err) { setNewPageBusy(false); notifyLeave(err.message || "L'opération a échoué.", true); });
+    }).catch(function (err) { setNewPageBusy(false); if (err && err.cancelled) return; notifyLeave(err.message || "L'opération a échoué.", true); });
   }
   function openLeaveDialog(opts) {
     return new Promise(function (resolve) {
@@ -7252,7 +7318,9 @@
           var err = compDlg.querySelector("[data-cd-error]");
           if (!confirming) { confirming = true; quitBtn.textContent = "Confirmer : abandonner mes modifications"; quitBtn.classList.add("btn-danger"); err.textContent = "Les modifications non enregistrées de ce document seront perdues. La dernière version enregistrée reste intacte."; err.hidden = false; return; }
           lock(true); err.hidden = true;
-          opts.getUrl().then(function (url) { compDlg.close(); leaveFor(url, true); resolve("quit"); }, function (e) { lock(false); err.textContent = e.message; err.hidden = false; });
+          // Le document n'est abandonné (leaveFor) qu'APRÈS la création réussie de la nouvelle page : si le nom est annulé, rien n'est perdu
+          lock(false); compDlg.close();
+          setTimeout(function () { opts.getUrl().then(function (url) { leaveFor(url, true); resolve("quit"); }, function (e) { if (!e.cancelled) notifyLeave(e.message, true); }); }, 50);
         } }, "Quitter sans enregistrer");
         body.appendChild(quitBtn);
       }, onConfirm: function () {
@@ -7260,7 +7328,7 @@
         lock(true);
         return saveConfirmed().then(function () {
           lock(false);
-          if (opts.auto) { opts.getUrl().then(function (u) { leaveFor(u, false); }, function (e) { notifyLeave(e.message, true); }); resolve("saved"); lock(false); return true; }
+          if (opts.auto) { lock(false); resolve("saved"); setTimeout(function () { opts.getUrl().then(function (u) { leaveFor(u, false); }, function (e) { setNewPageBusy(false); if (!e.cancelled) notifyLeave(e.message, true); }); }, 50); return true; }
           notifyLeave(opts.saved, false);
           resolve("saved"); return true;
         }, function (e) { lock(false); throw e; });
@@ -7374,6 +7442,10 @@
     return api("GET", "/marketing/site-web/gabarits/" + encodeURIComponent(key) + ".json").then(function (r) {
       var secs = reIdAll(clone(r.gabarit.sections)).map(function (s) { return markSection(s); });
       if (secs.some(function (s) { return s.type === "form"; }) && content.sections.some(function (s) { return s.type === "form"; })) { toast("Une page n'a qu'un formulaire d'inscription : ce gabarit en contient un, il n'a pas été ajouté.", true); return false; }
+      var lay = layoutOf();
+      if (lay && lay.locked) { // le format verrouillé règle la largeur et les marges de premier niveau : le gabarit n'y touche pas (sinon l'enregistrement serait refusé)
+        secs.forEach(function (sec) { (sec.children || []).forEach(function (n) { [n.styles, n.states].forEach(function (grp) { Object.keys(grp || {}).forEach(function (k) { LF.protected.forEach(function (pr) { if (grp[k]) delete grp[k][pr]; }); }); }); }); });
+      }
       ensureIds(secs);
       var name = (PC.gabarits.filter(function (g) { return g.key === key; })[0] || {}).name || key;
       nextLabel = "Gabarit appliqué : « " + name + " »";
@@ -7471,6 +7543,12 @@
     box.appendChild(h("div", { class: "pb-start-actions" },
       h("button", { type: "button", class: "btn btn-outline", "data-pb-start-back": "", onclick: function () { startStep = PC ? "catalog" : "choice"; paintStart(); } }, "Retour"),
       h("button", { type: "button", class: "btn btn-outline", "data-pb-start-cancel": "", onclick: startFinish }, "Annuler"),
+      h("button", { type: "button", class: "btn btn-outline", "data-pb-start-newpage": "", title: "Crée une page distincte avec ce gabarit et ce format ; la page actuelle n'est pas modifiée", onclick: function () {
+        var wOk2 = d.maxWidth === 0 || (Number.isInteger(d.maxWidth) && d.maxWidth >= 320 && d.maxWidth <= 2400), gOk2 = Number.isInteger(d.gutter) && d.gutter >= 0 && d.gutter <= 96;
+        if (d.format === "custom" && !(wOk2 && gOk2)) { err.textContent = !wOk2 ? "Largeur maximale : 0 (aucune limite) ou entre 320 et 2 400 px." : "Marge latérale : entre 0 et 96 px."; err.hidden = false; return; }
+        var spec = { template: d.gabarit || "", layout: { mode: "guided", format: d.format, maxWidth: d.maxWidth, gutter: d.gutter, locked: d.locked } };
+        requestLeave({ getUrl: function () { return nameThenCreate(spec); }, auto: true, saved: "", text: "Vous allez quitter le document actuel pour créer une nouvelle page" + (d.gabarit ? " à partir du gabarit choisi" : "") + ". Enregistrez vos modifications pour pouvoir reprendre ce travail plus tard." });
+      } }, "Créer dans une nouvelle page"),
       h("button", { type: "button", class: "btn btn-primary", "data-pb-start-continue": "", onclick: function () {
         var wOk = d.maxWidth === 0 || (Number.isInteger(d.maxWidth) && d.maxWidth >= 320 && d.maxWidth <= 2400), gOk = Number.isInteger(d.gutter) && d.gutter >= 0 && d.gutter <= 96;
         if (d.format === "custom" && !(wOk && gOk)) { err.textContent = !wOk ? "Largeur maximale : 0 (aucune limite) ou entre 320 et 2 400 px." : "Marge latérale : entre 0 et 96 px."; err.hidden = false; return; }

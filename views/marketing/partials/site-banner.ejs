@@ -1,0 +1,16 @@
+<%# Bandeau d'identité de l'espace d'un site : toujours visible, pour ne jamais modifier le mauvais site. Rien n'est affiché qui ne soit vrai. %>
+<%
+  const archived = siteSpace.status === "archived";
+  const stateLabel = siteSpace.deleted ? "Dans la corbeille" : archived ? "Archivé" : "Actif";
+  const stateCls = siteSpace.deleted || archived ? "mk-status-warn" : "mk-status-ok";
+%>
+<section class="mk-site-banner" aria-label="Site en cours d'édition">
+  <span class="mk-site-banner-icon" aria-hidden="true"><%- icon("globe", { size: 20 }) %></span>
+  <div class="mk-site-banner-text">
+    <span class="mk-site-banner-label">Vous êtes dans le site</span>
+    <strong class="mk-site-banner-name"><%= siteSpace.name %></strong>
+    <% if (siteSpace.slug) { %><span class="mk-sub"><%= siteSpace.slug %></span><% } %>
+  </div>
+  <span class="mk-status <%= stateCls %>"><%= siteSpace.principal ? "Site principal" : stateLabel %></span>
+  <a class="btn btn-ghost btn-sm" href="/marketing/site-web/sites"><%- icon("arrowLeft", { size: 14 }) %> Mes sites</a>
+</section>

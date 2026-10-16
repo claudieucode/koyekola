@@ -11,7 +11,24 @@ function attempt(req, res, next, back, action) {
     if (!(error instanceof MarketingError)) return next(error);
     req.session.mkFlash = { type: "error", text: error.message, detail: error.detail };
   }
-  res.redirect(typeof back === "function" ? back() : back);
+  res.redirect(keepSite(req, typeof back === "function" ? back() : back));
+}
+
+// Lot P1a : une action lancée depuis l'espace d'UN site (écrans partagés ouverts par /sites/<id>/<module>) revient sur ce même écran DANS ce site, pas sur
+// la liste de l'organisation. Sûr parce que : (1) le site est celui que le serveur a vérifié pour cette requête (req.mk.site), jamais celui de l'en-tête ;
+// (2) l'en-tête « Referer » sert seulement à reconnaître que l'on vient bien de l'espace de CE site ; (3) seules les listes racines des écrans partagés sont
+// concernées ; hors de l'espace d'un site, rien ne change.
+const SHARED_ROOTS = /^\/marketing\/(?:listes|segments|modeles|campagnes|automatisations|tunnels|analytics\/global|site-web\/tests-ab|site-web\/outils)\/?$/;
+function keepSite(req, target) {
+  try {
+    const site = req.mk && req.mk.site;
+    if (!site || typeof target !== "string") return target;
+    const [path, query = ""] = target.split("?");
+    if (!SHARED_ROOTS.test(path) || /(?:^|&)site=/.test(query)) return target;
+    const from = new URL(req.get("referer") || "", "http://x.invalid").pathname;
+    if (!new RegExp(`^/marketing/site-web/sites/${site.id}/`).test(from)) return target;
+    return `${path}?${query ? `${query}&` : ""}site=${site.id}`;
+  } catch { return target; }
 }
 
 const need = (permission) => (req, res, next) => {

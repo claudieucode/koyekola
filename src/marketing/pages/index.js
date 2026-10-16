@@ -314,9 +314,14 @@ function withLayout(ctx, id, layout) {
   if (layout) {
     const norm = layoutFormat.normalizeLayout(layout);
     if (norm) {
-      const row = ctx.db.prepare("SELECT theme FROM mk_landing_pages WHERE id = ?").get(id);
+      const row = ctx.db.prepare("SELECT theme, sections FROM mk_landing_pages WHERE id = ?").get(id);
       const theme = { ...JSON.parse(row.theme || "{}"), layout: norm };
       ctx.db.prepare("UPDATE mk_landing_pages SET theme = ? WHERE id = ?").run(JSON.stringify(theme), id);
+      // Format verrouillé + gabarit : la largeur et les marges des éléments de premier niveau sont réglées par le format, pas par le gabarit (sinon le verrou refuserait chaque enregistrement)
+      if (norm.locked) {
+        const cleaned = layoutFormat.apply({ sections: JSON.parse(row.sections || "[]") }, norm, { clearConflicts: true }).sections;
+        ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(cleaned), id);
+      }
       audit(ctx, "page.layout_format_set", "landing", id, { format: norm.format, locked: norm.locked });
     }
   }

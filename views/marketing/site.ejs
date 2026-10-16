@@ -1,8 +1,5 @@
 <%- include("partials/top", { title, active }) %>
 <% const archived = site.status === "archived" || Boolean(site.deleted_at); const dis = canWrite && !archived ? "" : " disabled"; const t = site.tokens; const STATUS = { draft: "Brouillon", published: "En ligne", unpublished: "Hors ligne" }; const STATUS_CLASS = { draft: "", published: "mk-status-ok", unpublished: "mk-status-warn" }; %>
-    <p class="mk-back"><a href="/marketing/site-web/sites">← Mes sites</a></p>
-    <div class="mk-panel" role="note" aria-label="Site actif" style="margin-bottom:16px"><strong>Espace d'administration du site « <%= site.name %> »</strong> · identifiant <code><%= site.slug %></code> · n° <%= site.id %>.
-      <span class="mk-sub">Pages, design system et réglages de ce site. Les articles, médias, contacts et modules ne sont pas encore séparés par site (paliers suivants).</span></div>
     <div class="mk-head"><div class="mk-builder-title"><h1><%= site.name %></h1><% if (site.deleted_at) { %><span class="mk-status mk-status-warn">Supprimé</span><% } else if (archived) { %><span class="mk-status mk-status-warn">Archivé</span><% } %></div>
       <% if (canWrite) { %><div class="mk-actions">
         <% if (site.deleted_at) { %><form action="/marketing/site-web/sites/<%= site.id %>/recuperer" method="post"><button type="submit" class="btn btn-primary btn-sm">Récupérer le site</button></form>

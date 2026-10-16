@@ -233,15 +233,17 @@ describe("création guidée : catalogue, gabarits et pages récentes (navigateur
   });
 
   test("un gabarit appliqué est proposé ensuite dans « Récemment appliqués »", async () => {
-    await withContent("Récents gabarits");
+    const rid = await withContent("Récents gabarits");
     await home().click(); await start().waitFor({ state: "visible" });
     await page.locator('[data-pb-start-go="guided"]').click();
     assert.equal(await page.locator("[data-pb-cat-recentg]").count() >= 0, true);
     await page.locator('[data-pb-cat-card="faq"]').click();
     await page.locator("[data-pb-cat-next]").click();
-    await page.locator("[data-pb-start-lock]").click(); // format déverrouillé : la création guidée reste utilisable depuis l'accueil
-    await page.locator("[data-pb-start-continue]").click();
+    await page.locator("[data-pb-start-continue]").click(); // format VERROUILLÉ (défaut) : le gabarit « FAQ » (largeur propre à ses blocs) doit rester enregistrable
     await start().waitFor({ state: "hidden" });
+    await until(() => draft(rid).sections.length > 1 && draft(rid).theme.layout.locked === true, { timeout: 15000, what: "gabarit enregistré malgré le format verrouillé" });
+    assert.equal(await page.locator("[data-pb-save]").innerText().then((t) => /Non enregistré/.test(t)), false);
+    await withContent("Récents gabarits 2"); // autre page sans format : le gabarit appliqué avant est proposé dans « Récemment appliqués »
     await home().click(); await start().waitFor({ state: "visible" });
     await page.locator('[data-pb-start-go="guided"]').click();
     await page.locator('[data-pb-cat-pick="faq"]').waitFor();

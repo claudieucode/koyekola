@@ -161,7 +161,7 @@ describe("B — non connecté et sans accès", () => {
   test("l'équipe de l'organisation garde l'accès à tous les sites (non-régression)", async () => {
     assert.equal((await boss.get(`/marketing/pages/${pageA}`)).status, 200);
     assert.equal((await boss.get(`/marketing/pages/${pageB}`)).status, 200);
-    assert.equal((await boss.get(`/marketing/site-web/sites/${B}`)).status, 200);
+    assert.equal((await boss.get(`/marketing/site-web/sites/${B}/tableau-de-bord`)).status, 200);
   });
 });
 

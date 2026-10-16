@@ -18,6 +18,8 @@ function createMarketingRouters({ db }) {
     if (m) { const r = db.prepare("SELECT site_id FROM mk_landing_pages WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
     m = /^\/site-web\/sites\/(\d+)(?:\/|$)/.exec(p);
     if (m) return { siteId: Number(m[1]) };
+    // Espace du site principal (palier 3, B1) : le site principal est « siteId null » — réservé à l'équipe de l'organisation (jamais à un accès limité à un site)
+    if (/^\/site-web\/principal(?:\/|$)/.test(p)) return { siteId: null };
     m = /^\/site-web\/historique\/page\/(\d+)(?:\/|$)/.exec(p);
     if (m) { const r = db.prepare("SELECT site_id FROM mk_landing_pages WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
     m = /^\/site-web\/composants\/(\d+)/.exec(p);
@@ -102,6 +104,7 @@ function createMarketingRouters({ db }) {
     next();
   });
 
+  admin.use(require("./siteSpace").attach); // contexte de l'espace d'un site (palier 3, B1) : avant les routeurs qui affichent des écrans
   admin.use(require("./contactCore")()); // Contact Core (palier 15) : doublons, fusion, cycle de vie, état, journal — avant admin.js (« /contacts/:id »)
   admin.use(require("./segments")({ db }));
   admin.use(require("./templates")({ db }));
@@ -109,6 +112,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./rss")());
   admin.use(require("./landing")());
   admin.use(require("./siteWeb")());
+  admin.use(require("./siteSpace")()); // Espace d'administration d'UN site (palier 3, B1) : après siteWeb (ses routes /sites/:id/… sont plus précises)
   admin.use(require("./funnels")());
   admin.use(require("./pageTests")());
   admin.use(require("./articles")()); // KOLAKISA CMS → Articles (palier 4) : gestion des articles du blog

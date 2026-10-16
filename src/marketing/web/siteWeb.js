@@ -90,11 +90,17 @@ module.exports = () => {
     if (!site) res.status(404).render("error", { message: "Site introuvable." });
     return site;
   };
+  // « Ouvrir » un site : son espace d'administration (palier 3, B1) ; la fiche de réglages en est l'écran « Réglages »
   router.get("/site-web/sites/:id(\\d+)", need("forms.read"), (req, res) => {
     const site = load(req, res);
     if (!site) return;
+    res.redirect(`/marketing/site-web/sites/${site.id}/tableau-de-bord`);
+  });
+  router.get("/site-web/sites/:id(\\d+)/reglages", need("forms.read"), (req, res) => {
+    const site = load(req, res);
+    if (!site) return;
     res.render("marketing/site", {
-      title: site.name, active: "sites", site, siteTypes: pages.SITE_TYPES, canDelete: !req.mk.siteOnly && req.mk.can("forms.write") && req.mk.can("pages.delete"), sitePages: pages.listPages(req.mk.ctx, { siteId: site.id }), canWrite: req.mk.can("forms.write"),
+      title: "Réglages du site", active: "espace/reglages", site, siteTypes: pages.SITE_TYPES, canDelete: !req.mk.siteOnly && req.mk.can("forms.write") && req.mk.can("pages.delete"), sitePages: pages.listPages(req.mk.ctx, { siteId: site.id }), canWrite: req.mk.can("forms.write"),
       T: tokens, cssVars: tokens.tokensToCss(site.tokens), templates: require("../pages/templates").catalog(),
       components: pages.listComponents(req.mk.ctx, { siteId: site.id }), headerOverview: pages.headerOverview(req.mk.ctx, site.id),
     });
@@ -102,7 +108,7 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages`, () => {
       pages.updateSite(req.mk.ctx, site.id, { name: req.body.name, slug: req.body.slug, description: req.body.description, siteType: req.body.site_type });
       if (req.body.home_page_id !== undefined) pages.setHomePage(req.mk.ctx, site.id, intOrNull(req.body.home_page_id));
       return "Réglages du site enregistrés.";
@@ -111,7 +117,7 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)/design", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}#design`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#design`, () => {
       const t = req.body.reset === "1" ? tokens.DEFAULT_TOKENS : tokensFromBody(req.body, site.tokens);
       pages.updateSite(req.mk.ctx, site.id, { tokens: t });
       const live = pages.listPages(req.mk.ctx, { siteId: site.id }).filter((p) => p.status === "published").length;
@@ -171,7 +177,7 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)/parties", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}#parties`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#parties`, () => {
       pages.setSiteParts(req.mk.ctx, site.id, { header: intOrNull(req.body.header), footer: intOrNull(req.body.footer) });
       return "En-tête et pied de page enregistrés : ils s'affichent sur toutes les pages du site.";
     });
@@ -182,7 +188,7 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)/entete/creer", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}#entete`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#entete`, () => {
       if (site.header_component_id) throw new (require("../errors").MarketingError)("invalid", "Ce site a déjà un en-tête.");
       let name = "En-tête principal", n = 1;
       while (req.mk.ctx.db.prepare("SELECT 1 FROM mk_web_components WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(req.mk.ctx.organizationId, name)) { n += 1; name = `En-tête principal ${n}`; }
@@ -195,7 +201,7 @@ module.exports = () => {
     const site = load(req, res);
     if (!site) return;
     let variant = null;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}#entete`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#entete`, () => {
       variant = pages.createHeaderVariant(req.mk.ctx, site.id, { name: req.body.name });
       return `Variante « ${variant.name} » créée (copie de l'en-tête du site). Modifiez-la, puis choisissez les pages qui l'utilisent.`;
     });
@@ -203,7 +209,7 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)/entete/pages/:pageId(\\d+)", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}#entete`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#entete`, () => {
       const page = pages.requirePage(req.mk.ctx, Number(req.params.pageId));
       if (page.site_id !== site.id) throw new (require("../errors").MarketingError)("invalid", "Cette page n'appartient pas à ce site.");
       const choice = String(req.body.choice || "inherit");
@@ -216,7 +222,7 @@ module.exports = () => {
     const site = load(req, res);
     if (!site) return;
     let copy = null;
-    attempt(req, res, next, () => (copy ? `/marketing/site-web/sites/${copy.id}` : `/marketing/site-web/sites/${site.id}`), () => {
+    attempt(req, res, next, () => (copy ? `/marketing/site-web/sites/${copy.id}` : `/marketing/site-web/sites/${site.id}/reglages`), () => {
       const withPages = req.body.contenu !== "configuration";
       copy = pages.duplicateSite(req.mk.ctx, site.id, { withPages });
       return withPages ? `Copie créée : « ${copy.name} » (réglages et pages ; les pages sont en brouillon, hors ligne). Médias, tunnels et articles ne sont pas copiés.` : `Copie créée : « ${copy.name} » (réglages seulement, sans pages).`;
@@ -230,7 +236,7 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)/restaurer", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}`, () => { pages.restoreSite(req.mk.ctx, site.id); return "Site restauré. Ses pages restent hors ligne : publiez celles qui sont prêtes."; });
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages`, () => { pages.restoreSite(req.mk.ctx, site.id); return "Site restauré. Ses pages restent hors ligne : publiez celles qui sont prêtes."; });
   });
   router.post("/site-web/sites/:id(\\d+)/supprimer", need("forms.write"), need("pages.delete"), (req, res, next) => {
     if (req.mk.siteOnly) return res.status(403).render("error", { message: "Seule l'équipe de l'organisation peut supprimer un site." });

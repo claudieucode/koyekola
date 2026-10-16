@@ -2,7 +2,9 @@
   const nav = mkh.buildNav({ can: mk.can, active });
   // Environnement « Site Web » = KOLAKISA CMS : les écrans dont la clé figure dans cmsNav.js prennent la coque CMS
   // (même coque, mêmes composants et même charte que le Marketing ; seuls le menu latéral et la barre du haut changent)
-  const cms = mkh.buildCmsNav({ can: mk.can, active });
+  // Espace d'un site (palier 3, B1) : le menu est celui du site de l'adresse (siteSpace), jamais un site choisi ailleurs
+  const space = typeof siteSpace !== "undefined" && siteSpace ? siteSpace : (typeof siteCandidate !== "undefined" && siteCandidate && mkh.isSiteScopedKey(active) ? siteCandidate : null);
+  const cms = mkh.buildCmsNav({ can: mk.can, active, space });
   const cmsSites = cms ? mkh.cmsSites(mk.ctx) : [];
   const crumbs = nav.breadcrumb || [title];
   // Fil d'Ariane cliquable : Mon espace → Marketing → section → page (le dernier élément n'est pas un lien)
@@ -23,7 +25,7 @@
   <%# Doublon de l'en-tête HTTP (le CDN de l'hébergeur remplace la politique envoyée par le serveur) %>
   <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= title %> · <%= cms ? "CMS" : "Marketing" %> · KOLAKISA</title>
+  <title><%= title %> · <%= cms && cms.space ? cms.space.name + " · " : "" %><%= cms ? "CMS" : "Marketing" %> · KOLAKISA</title>
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#ffffff">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -112,7 +114,7 @@
           </ol>
         </nav>
         <div class="mk-topbar-actions">
-          <% if (cms) { %><%- include("cms-topbar", { cms, cmsSites }) %><% } %>
+          <% if (cms) { %><%- include("cms-topbar", { cms, cmsSites, space: cms.space || null }) %><% } %>
           <% if (!cms && nav.primary) { %><a class="btn btn-primary btn-sm mk-primary" href="<%= nav.primary.href %>"><%= nav.primary.label %></a><% } %>
           <div class="mk-dropdown" data-mk-dropdown>
             <button type="button" class="mk-user" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-user-menu">
@@ -130,6 +132,7 @@
       </header>
 
       <main id="main" tabindex="-1" class="mk-content">
+        <% if (cms && cms.space) { %><%- include("site-banner", { siteSpace: cms.space }) %><% } %>
         <% if (typeof flash !== "undefined" && flash) { %>
           <% if (flash.type === "error") { %>
             <div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-icon" aria-hidden="true"><%- icon("alertTriangle", { size: 18 }) %></span><span class="mk-flash-body"><p><%= flash.text %></p><% if (flash.detail) { %><details class="mk-flash-details"><summary>Détails techniques</summary><p><%= flash.detail %></p></details><% } %></span></div>
