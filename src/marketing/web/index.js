@@ -25,6 +25,9 @@ function createMarketingRouters({ db }) {
     m = /^\/site-web\/composants\/(\d+)/.exec(p);
     if (m) { const r = db.prepare("SELECT site_id FROM mk_web_components WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
     // Outils (palier 13) : le site choisi (?site=) fixe le contexte des droits ; sans lui, l'organisation / le site principal
+    // Moteur des pages (R6) : création / import JSON (site dans le corps), contrôle du nom (site dans l'adresse) ; sans cela un accès limité à un site ne pouvait pas créer une page depuis l'éditeur
+    if (req.method === "POST" && (p === "/pages/creer.json" || p === "/pages/importer.json") && req.body && /^\d{1,12}$/.test(String(req.body.siteId ?? ""))) return { siteId: Number(req.body.siteId) };
+    if (req.method === "GET" && p === "/pages/nom.json" && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
     if (/^\/site-web\/(?:outils|parametres)(?:\/|$)/.test(p)) {
       const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
       if (/^\d{1,12}$/.test(String(raw ?? ""))) return { siteId: Number(raw) };

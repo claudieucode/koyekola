@@ -119,14 +119,16 @@ const RUNNERS = { publier: "publish", depublier: "unpublish", corbeille: "archiv
 // Participe passé au singulier et au pluriel (« 1 page publiée », « 3 pages publiées »)
 const ACTIONS = { publier: ["publiée", "publiées"], depublier: ["mise hors ligne", "mises hors ligne"], corbeille: ["mise à la corbeille", "mises à la corbeille"], restaurer: ["restaurée", "restaurées"], supprimer: ["supprimée définitivement", "supprimées définitivement"] };
 // run : { publish, unpublish, archive, restore, remove } fournis par la route (moteur de pages) ; can(action) filtre les droits
-function bulk(ctx, action, ids, run) {
+// allow(row, action) : droit de CETTE page (son site), vérifié page par page ; refus individuel signalé sans arrêter les autres
+function bulk(ctx, action, ids, run, allow = null) {
   if (!Object.hasOwn(ACTIONS, action)) throw bad("Action inconnue.");
   const list = [...new Set((Array.isArray(ids) ? ids : [ids]).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 200);
   if (!list.length) throw bad("Sélectionnez au moins une page.");
   const done = []; const failed = [];
   for (const id of list) {
-    const row = ctx.db.prepare("SELECT id, name, archived_at FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId);
-    if (!row) { failed.push({ id, name: `#${id}`, message: "page introuvable" }); continue; }
+    const row = ctx.db.prepare("SELECT id, name, archived_at, site_id FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId);
+    if (!row || (Number.isInteger(ctx.siteScope) && (row.site_id ?? null) !== ctx.siteScope)) { failed.push({ id, name: `#${id}`, message: "page introuvable" }); continue; }
+    if (allow && !allow(row, action)) { failed.push({ id, name: row.name, message: "vous n'avez pas ce droit sur le site de cette page" }); continue; }
     try {
       if (action === "supprimer" && !row.archived_at) throw bad("mettez d'abord la page à la corbeille");
       if (action === "restaurer" && !row.archived_at) throw bad("la page n'est pas dans la corbeille");

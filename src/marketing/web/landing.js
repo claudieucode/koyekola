@@ -134,7 +134,7 @@ module.exports = () => {
       const r = cmsPages.bulk(ctx, action, req.body.ids, {
         publish: (id) => pages.publish(ctx, id), unpublish: (id) => landing.unpublishPage(ctx, id), archive: (id) => pages.archivePage(ctx, id),
         restore: (id) => pages.restorePage(ctx, id), remove: (id) => landing.deletePage(ctx, id),
-      });
+      }, (row) => (typeof ctx.canOn === "function" ? ctx.canOn(row.site_id ?? null, needs) : true)); // droit vérifié sur le site de CHAQUE page (plafond de droits compris)
       const n = r.done.length;
       const head = n ? `${n} page${n > 1 ? "s" : ""} ${r.label[n > 1 ? 1 : 0]}.` : "";
       const detail = r.failed.map((f) => `« ${f.name} » : ${f.message}`).join(" · ");
@@ -506,6 +506,20 @@ module.exports = () => {
     if (!page) return;
     let copy = null;
     attempt(req, res, next, () => (copy ? `/marketing/pages/${copy.id}` : `/marketing/pages/${page.id}`), () => { copy = pages.duplicatePage(req.mk.ctx, page.id); return `Copie créée (hors ligne) : « ${copy.name} ».`; });
+  });
+  // Déplacer une page vers un autre site (ou le site principal) : droit d'écrire sur la page (garde de la route) ET sur le site d'arrivée ; équipe seulement pour le site principal
+  router.post("/pages/:id(\\d+)/deplacer", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    attempt(req, res, next, `/marketing/pages/${page.id}`, () => {
+      const raw = req.body.site_id;
+      const target = raw === undefined || raw === "" ? null : intOrNull(raw);
+      if (raw !== undefined && raw !== "" && target === null) throw new MarketingError("invalid_field", "Site de destination invalide.");
+      if (req.mk.siteOnly && target === null) throw new MarketingError("forbidden", "Le site principal est réservé à l'équipe de l'organisation.");
+      if (typeof req.mk.ctx.canOn === "function" && !req.mk.ctx.canOn(target, "forms.write")) throw new MarketingError("forbidden", "Vous ne pouvez pas écrire dans le site de destination.");
+      pages.movePage(req.mk.ctx, page.id, target);
+      return `Page « ${page.name} » déplacée.`;
+    });
   });
   router.post("/pages/:id(\\d+)/archiver", need("forms.write"), (req, res, next) => {
     const page = load(req, res);

@@ -7234,7 +7234,7 @@
         setState("Vérification…", "");
         var seq = ++checkSeq;
         checkTimer = setTimeout(function () {
-          api("GET", "/marketing/pages/nom.json?name=" + encodeURIComponent(text) + (spec.rename ? "&except=" + spec.rename.id : "")).then(function (r) {
+          api("GET", "/marketing/pages/nom.json?name=" + encodeURIComponent(text) + (spec.rename ? "&except=" + spec.rename.id : "") + (PAGE.siteId ? "&site=" + PAGE.siteId : "")).then(function (r) {
             if (seq !== checkSeq) return;
             valid = Boolean(r.ok); setState(r.ok ? "" : r.message, r.ok ? "" : "error"); apply();
           }, function () { if (seq !== checkSeq) return; valid = true; setState("", ""); apply(); }); // réseau indisponible : le serveur revérifiera à la création

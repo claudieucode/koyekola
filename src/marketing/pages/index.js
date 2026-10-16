@@ -65,10 +65,16 @@ function normalizeSeo(input = {}) {
 // Contenu en ligne d'une ligne de page
 const publishedContent = (row) => ({ sections: json(row.sections, []), theme: { ...landing.DEFAULT_THEME, ...json(row.theme, {}) }, title: row.title, description: row.description, seo: json(row.seo, {}) });
 
+// Portée de site (R6) : un contexte limité à un site (ctx.siteScope, imposé par le serveur) ne lit et n'écrit que les pages de CE site ; défense en profondeur
+// derrière la garde des routes (une page d'un autre site est « introuvable », comme une page inconnue)
+const inScope = (ctx, siteId) => !Number.isInteger(ctx.siteScope) || (siteId ?? null) === ctx.siteScope;
+function assertSiteScope(ctx, siteId) {
+  if (!inScope(ctx, siteId)) throw new MarketingError("forbidden", "Ce site n'est pas accessible avec vos droits.");
+}
 function getPage(ctx, id) {
   checkCtx(ctx);
   const row = Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) : null;
-  if (!row) return null;
+  if (!row || !inScope(ctx, row.site_id)) return null;
   const published = publishedContent(row);
   const draft = row.draft ? { ...published, ...json(row.draft, {}) } : null;
   const { draft: _d, sections: _s, theme: _t, seo: _seo, ...meta } = row;
@@ -269,6 +275,7 @@ function uniqueName(ctx, table, base) {
 // Nouvelle page dans un site (ou isolée) : même création que les pages d'atterrissage, avec sa nature
 function createPage(ctx, { name, siteId = null, kind = "page", template = null, layout = null, blank = false } = {}) {
   if (!Object.hasOwn(KINDS, kind)) throw bad("Nature de page inconnue.");
+  assertSiteScope(ctx, siteId);
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   // Gabarit choisi : ses sections (validées par la grammaire commune, comme toute section enregistrée)
   const mine = typeof template === "string" && /^mine:\d+$/.test(template) ? getPageTemplate(ctx, Number(template.slice(5))) : null;
@@ -332,6 +339,7 @@ function withLayout(ctx, id, layout) {
 function duplicatePage(ctx, id, { siteId } = {}) {
   const page = requirePage(ctx, id);
   const target = siteId === undefined ? page.site_id : siteId;
+  assertSiteScope(ctx, target);
   if (target !== null && target !== undefined) requireSite(ctx, target, { active: true });
   const name = uniqueName(ctx, "mk_landing_pages", `${page.name} (copie)`);
   const c = page.working;
@@ -561,6 +569,8 @@ function setHomePage(ctx, siteId, pageId) {
 }
 function movePage(ctx, pageId, siteId) {
   const page = requirePage(ctx, pageId);
+  if (page.archived_at) throw bad("Cette page est à la corbeille : restaurez-la avant de la déplacer.");
+  assertSiteScope(ctx, siteId); // un accès limité à un site ne déplace pas une page vers un autre site
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   // Les composants propres à l'ancien site ne suivent pas la page : déplacer d'abord, ou retirer ces composants
   assertComponentsUsable(ctx, page.working.sections, siteId);
@@ -965,6 +975,7 @@ function exportPage(ctx, id) {
 }
 // Import : une NOUVELLE page (aucune page existante n'est remplacée), contenu revalidé comme une saisie
 function importPage(ctx, data, { siteId = null } = {}) {
+  assertSiteScope(ctx, siteId);
   if (!data || data.format !== EXPORT_FORMAT || !data.content || !Array.isArray(data.content.sections)) throw bad("Fichier non reconnu : exportez une page depuis l'éditeur KOLAKISA (format kolakisa-page@1).");
   const name = uniqueName(ctx, "mk_landing_pages", line(data.name, 100) || "Page importée");
   const kind = Object.hasOwn(KINDS, data.kind) ? data.kind : "page";
