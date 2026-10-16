@@ -216,9 +216,9 @@ describe("audit des sites : libellé clair", () => {
 });
 
 describe("6 — aucune migration, aucun changement de structure", () => {
-  test("le dossier des migrations s'arrête à 074 (R5 : médias par site ; 072 et 073 sont attribuées à R2 et R3)", () => {
+  test("le dossier des migrations s'arrête à 075 (R6 lot 1 : contenus par site ; 072, 073 et 074 sont attribuées à R2, R3 et R5)", () => {
     const files = fs.readdirSync(path.join(__dirname, "..", "src", "marketing", "migrations")).filter((f) => /^\d+_/.test(f)).sort();
-    assert.match(files[files.length - 1], /^074_/);
+    assert.match(files[files.length - 1], /^075_/);
   });
   test("le schéma de la base ne change pas en parcourant l'espace", async () => {
     const schema = () => JSON.stringify(db.prepare("SELECT type, name, sql FROM sqlite_master ORDER BY type, name").all());
