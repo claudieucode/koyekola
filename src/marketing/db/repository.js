@@ -42,7 +42,8 @@ function bindable(value) {
 
 // siteScope (palier 16) : un numéro de site → TOUTES les lectures/écritures des tables qui ont une colonne site_id sont limitées à ce site
 // (une personne dont l'accès est limité à un site ne peut ni voir, ni modifier, ni créer hors de son site). Absent = toute l'organisation.
-function createRepository(db, organizationId, { siteScope } = {}) {
+// hiddenSites (R4) : sites dont la personne ne peut pas LIRE les éléments (visibility.js) — exclus des lectures en liste et des comptages, jamais des écritures.
+function createRepository(db, organizationId, { siteScope, hiddenSites } = {}) {
   if (!Number.isInteger(organizationId) || organizationId < 1) throw new Error("Identifiant d'organisation invalide.");
 
   function table(name) {
@@ -64,6 +65,10 @@ function createRepository(db, organizationId, { siteScope } = {}) {
       const clauses = ["organization_id = ?"];
       const params = [organizationId];
       if (scoped) { clauses.push("site_id = ?"); params.push(siteScope); }
+      if (!scoped && columns.has("site_id") && Array.isArray(hiddenSites) && hiddenSites.length) {
+        const ids = hiddenSites.filter((n) => Number.isInteger(n));
+        if (ids.length) { clauses.push(`(site_id IS NULL OR site_id NOT IN (${ids.map(() => "?").join(", ")}))`); params.push(...ids); }
+      }
       for (const [key, condition] of Object.entries(where)) {
         const col = column(key);
         if (condition === null) clauses.push(`${col} IS NULL`);

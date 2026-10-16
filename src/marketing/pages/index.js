@@ -226,13 +226,14 @@ const schedulerMiddleware = (req, res, next) => { try { promoteScheduledPages(re
 function listPages(ctx, { archived = false, siteId } = {}) {
   checkCtx(ctx);
   const bySite = siteId === undefined ? "" : siteId === null ? " AND p.site_id IS NULL" : " AND p.site_id = ?";
-  const params = [ctx.organizationId, ...(siteId ? [siteId] : [])];
+  const hid = require("../visibility").notHiddenSql(ctx.hiddenSites, "p.site_id"); // R4 : pages des sites cachés exclues
+  const params = [ctx.organizationId, ...(siteId ? [siteId] : []), ...hid.params];
   return ctx.db.prepare(`SELECT p.id, p.name, p.slug, p.title, p.status, p.kind, p.site_id, p.published_at, p.updated_at, p.archived_at, p.draft IS NOT NULL AS has_draft,
       s.name AS site_name,
       (SELECT COUNT(DISTINCT e.visitor || ':' || (e.occurred_at / 86400000)) FROM mk_landing_events e WHERE e.page_id = p.id AND e.type = 'view') AS visitors,
       (SELECT COUNT(*) FROM mk_landing_events e WHERE e.page_id = p.id AND e.type = 'signup') AS signups
     FROM mk_landing_pages p LEFT JOIN mk_sites s ON s.id = p.site_id
-    WHERE p.organization_id = ? AND p.archived_at IS ${archived ? "NOT " : ""}NULL${bySite}
+    WHERE p.organization_id = ? AND p.archived_at IS ${archived ? "NOT " : ""}NULL${bySite} AND ${hid.sql}
       AND p.id NOT IN (SELECT variant_page_id FROM mk_page_tests WHERE variant_page_id IS NOT NULL) -- versions B des tests A/B : gérées dans leur test
     ORDER BY p.updated_at DESC, p.id DESC`).all(...params);
 }

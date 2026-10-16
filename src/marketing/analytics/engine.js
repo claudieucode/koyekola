@@ -5,6 +5,7 @@
 //   e-mails       → mk_message_events        scénarios → mk_automation_runs        contacts → mk_contacts
 // Toutes les lectures respectent la portée de site (ctx.siteScope imposé, ctx.siteFilter d'affichage) et le fuseau du site.
 // Règle d'honnêteté : « pas de donnée » (null / noData) n'est JAMAIS affiché comme « 0 ».
+const { notHiddenSql } = require("../visibility"); // R4
 const { checkCtx } = require("../audience/shared");
 const { resolvePeriod, dayBoundaries, dayIndex, sqlUtc, delta, PRESETS } = require("./period");
 const { classify } = require("../funnels/events");
@@ -21,12 +22,12 @@ function scopeOf(ctx) {
   if (Number.isInteger(ctx.siteScope)) return { kind: "site", id: ctx.siteScope, commerce: false };
   if (Number.isInteger(ctx.siteFilter)) return { kind: "site", id: ctx.siteFilter, commerce: false };
   if (ctx.siteFilter === "principal") return { kind: "main", commerce: true };
-  return { kind: "all", commerce: true };
+  return { kind: "all", commerce: true, hidden: ctx.hiddenSites }; // R4 : sites dont la personne ne peut pas lire les statistiques, exclus de l'agrégat de l'organisation
 }
 function siteClause(scope, expr) {
   if (scope.kind === "site") return { sql: `${expr} = ?`, params: [scope.id] };
   if (scope.kind === "main") return { sql: `${expr} IS NULL`, params: [] };
-  return { sql: "1 = 1", params: [] };
+  return notHiddenSql(scope.hidden, expr);
 }
 
 // ---------- Trafic (visites suivies) ----------
@@ -114,7 +115,7 @@ const BUILTIN_CONVERSIONS = [
 // Chaque type de conversion reste SÉPARÉ (jamais additionné dans un seul compteur). Les conversions personnalisées lisent des événements déjà émis.
 function conversions(ctx, P, scope) {
   const custom = has(ctx, "mk_conversions") ? ctx.db.prepare("SELECT id, name, event, filter_key, filter_value, site_id FROM mk_conversions WHERE organization_id = ? ORDER BY name COLLATE NOCASE").all(ctx.organizationId)
-    .filter((c) => scope.kind === "all" || (scope.kind === "main" ? c.site_id === null : c.site_id === scope.id || c.site_id === null)) : [];
+    .filter((c) => (scope.kind === "all" ? !(scope.hidden || []).includes(c.site_id) : scope.kind === "main" ? c.site_id === null : c.site_id === scope.id || c.site_id === null)) : [];
   const defs = [...BUILTIN_CONVERSIONS.map((c) => ({ ...c, custom: false })), ...custom.map((c) => ({ key: `custom-${c.id}`, id: c.id, label: c.name, event: c.event, filterKey: c.filter_key, filterValue: c.filter_value, custom: true }))];
   const rows = defs.map((d) => {
     const extra = d.filterKey ? " AND CAST(json_extract(e.metadata, '$.' || ?) AS TEXT) = ?" : "";
@@ -171,7 +172,7 @@ function commerce(ctx, P, scope) {
 
 // ---------- Contacts ----------
 function contacts(ctx, P, scope) {
-  const sc = scope.kind === "site" ? { sql: "c.origin_site_id = ?", params: [scope.id] } : scope.kind === "main" ? { sql: "c.origin_site_id IS NULL", params: [] } : { sql: "1 = 1", params: [] };
+  const sc = scope.kind === "site" ? { sql: "c.origin_site_id = ?", params: [scope.id] } : scope.kind === "main" ? { sql: "c.origin_site_id IS NULL", params: [] } : notHiddenSql(scope.hidden, "c.origin_site_id");
   const count = (from, to) => ctx.db.prepare(`SELECT COUNT(*) n FROM mk_contacts c WHERE c.organization_id = ? AND c.record_status = 'active' AND c.created_at >= ? AND c.created_at < ? AND ${sc.sql}`).get(ctx.organizationId, sqlUtc(from), sqlUtc(to), ...sc.params).n;
   const created = count(P.start, P.end), before = count(P.prevStart, P.prevEnd);
   const stages = ctx.db.prepare(`SELECT c.lifecycle_stage stage, COUNT(*) n FROM mk_contacts c WHERE c.organization_id = ? AND c.record_status = 'active' AND c.created_at >= ? AND c.created_at < ? AND ${sc.sql} GROUP BY c.lifecycle_stage ORDER BY n DESC`).all(ctx.organizationId, sqlUtc(P.start), sqlUtc(P.end), ...sc.params);

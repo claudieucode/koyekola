@@ -31,8 +31,13 @@ function keepSite(req, target) {
   } catch { return target; }
 }
 
+const visibility = require("../visibility");
 const need = (permission) => (req, res, next) => {
-  if (req.mk.can(permission)) return next();
+  if (req.mk.can(permission)) {
+    // R4 : sites dont la personne ne peut pas lire les éléments de cet écran (équipe de l'organisation seulement) : appliqué par les modules via siteSql, dépôt, requêtes
+    visibility.attach(req, permission);
+    return next();
+  }
   res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
 };
 
