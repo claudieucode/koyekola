@@ -229,6 +229,6 @@ describe("7 — site principal et régressions", () => {
     assert.ok(fs.existsSync(dir)); assert.ok(last, "migrations lues");
     const root = path.join(__dirname, "..");
     const all = [dir, path.join(root, "src", "migrations"), path.join(root, "migrations")].filter((d) => fs.existsSync(d)).flatMap((d) => fs.readdirSync(d)).filter((f) => /^\d+/.test(f)).map((f) => parseInt(f, 10));
-    assert.ok(Math.max(...all) <= 71, `dernière migration : ${Math.max(...all)}`);
+    assert.deepEqual(all.filter((n) => n > 71), [72], `migrations après 071 : ${all.filter((n) => n > 71)}`); // R2 : seule la 072 (portée de l'API et des webhooks) suit la 071 ; P1a n'en ajoute aucune
   });
 });
