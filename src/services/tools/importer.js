@@ -121,8 +121,8 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
             const external = /^https?:\/\//i.test(item.target.trim());
             if (external && !ctx.can("redirects.external")) it.issues.push("Redirection vers un site extérieur : réservée aux administrateurs.");
             const v = redirects.validate({ source: item.source, target: item.target, status: item.status, siteId });
-            const exists = v.value.source_path && db.prepare("SELECT id FROM seo_redirects WHERE source_path = ?").get(v.value.source_path);
-            if (exists) { it.existing = exists.id; it.action = "conflict"; it.reason = "une redirection existe déjà pour cette adresse"; }
+            const exists = v.value.source_path && db.prepare("SELECT id, site_id FROM seo_redirects WHERE source_path = ?").get(v.value.source_path);
+            if (exists) { it.existing = exists.id; it.action = "conflict"; it.reason = (exists.site_id ?? null) !== (siteId ?? null) ? "une redirection d'un autre site existe déjà pour cette adresse" : "une redirection existe déjà pour cette adresse"; it.crossSite = (exists.site_id ?? null) !== (siteId ?? null); }
             else for (const e of v.errors) it.issues.push(e);
           }
         } else if (type === "media") {
@@ -187,7 +187,7 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
     if (it.action !== "conflict") continue;
     if (onConflict === "update") {
       if (!ctx.can("tools.overwrite")) { it.action = "error"; it.issues.push("Mettre à jour des éléments existants exige la permission « tools.overwrite »."); }
-      else if (it.type === "pages" && (it.crossSite || it.trashed)) { it.action = "skip"; it.warnings.push(`Non modifiée : ${it.reason}.`); }
+      else if ((it.type === "pages" || it.type === "redirects") && (it.crossSite || it.trashed)) { it.action = "skip"; it.warnings.push(`Non modifiée : ${it.reason}.`); }
       else if (it.type === "articles" && (it.live || it.trashed)) { it.action = "skip"; it.warnings.push(it.live ? "Article en ligne : jamais modifié par un import (créez une copie)." : `Non modifié : ${it.reason}.`); }
       else if (it.type === "menus") { it.action = "skip"; it.warnings.push("Un menu existant n'est jamais modifié par un import (créez une copie)."); }
       else it.action = "update";

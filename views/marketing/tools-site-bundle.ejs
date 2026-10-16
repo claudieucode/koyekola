@@ -1,0 +1,40 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Sauvegarde du site", intro: "Téléchargez UN site avec son contenu et ses fichiers médias dans un seul paquet vérifiable (sommes de contrôle), ou restaurez un paquet : il est d'abord ANALYSÉ sans rien écrire. Les autres sites ne sont jamais touchés.", tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
+<% if (!siteId) { %>
+<section class="mk-panel"><p>Choisissez un site en haut de la page : le site principal n'a pas de paquet de sauvegarde.</p></section>
+<% } else { %>
+<% if (canExport) { %>
+<section class="mk-panel" aria-labelledby="sb-e">
+  <h2 id="sb-e">Télécharger le paquet de ce site</h2>
+  <p class="mk-sub">Contenu (réglages, pages, menus, redirections) et fichiers du site, plus les fichiers que ce contenu utilise. Aucun secret, aucun compte.</p>
+  <form method="post" action="<%= BASE %>/sauvegarde-site/telecharger<%= q %>"><button type="submit" class="btn btn-primary btn-sm"><%- icon("download", { size: 16 }) %> Télécharger le paquet</button></form>
+</section>
+<% } %>
+<% if (canImport) { %>
+<section class="mk-panel" aria-labelledby="sb-i">
+  <h2 id="sb-i">Restaurer un paquet dans ce site</h2>
+  <% if (!report) { %>
+  <form method="post" action="<%= BASE %>/sauvegarde-site/analyser<%= q %>" enctype="multipart/form-data" class="mk-tl-form">
+    <div class="field-group"><label for="sb-file">Paquet (.kksite, <%= maxMb %> Mo au plus) *</label><input id="sb-file" type="file" name="file" accept=".kksite,application/octet-stream" required></div>
+    <button type="submit" class="btn btn-primary btn-sm"><%- icon("upload", { size: 16 }) %> Analyser le paquet</button>
+  </form>
+  <% } else if (!report.ok) { %>
+  <div class="mk-alert mk-alert-error" role="alert"><strong>Paquet refusé : rien n'a été modifié.</strong>
+    <ul><% report.errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></div>
+  <a class="btn btn-secondary btn-sm" href="<%= BASE %>/sauvegarde-site<%= q %>">Choisir un autre paquet</a>
+  <% } else { %>
+  <p><strong>Paquet valide.</strong> Site d'origine : « <%= report.source && report.source.siteName %> ». <%= report.files %> fichier(s) (dont <%= report.reuse %> déjà présent(s), réutilisé(s)), <%= Math.round(report.bytes / 1024) %> Ko.</p>
+  <ul class="mk-tl-list"><% Object.entries(report.counts).forEach(([k, n]) => { %><li><%= k %> : <%= n %></li><% }) %></ul>
+  <% report.warnings.forEach((w) => { %><p class="field-hint"><%= w %></p><% }) %>
+  <form method="post" action="<%= BASE %>/sauvegarde-site/restaurer<%= q %>" class="mk-tl-form">
+    <input type="hidden" name="token" value="<%= report.token %>">
+    <div class="field-group"><label for="sb-strategy">Si un élément existe déjà</label>
+      <select id="sb-strategy" name="on_conflict"><% Object.entries(STRATEGIES).filter(([k]) => k !== "update").forEach(([k, label]) => { %><option value="<%= k %>"><%= label %></option><% }) %></select></div>
+    <div class="mk-tl-option"><input type="checkbox" id="sb-ok" name="confirm" value="1"><label for="sb-ok">Je confirme la restauration dans ce site (les autres sites ne changent pas ; pages en brouillon).</label></div>
+    <button type="submit" class="btn btn-primary btn-sm">Restaurer</button>
+  </form>
+  <% } %>
+</section>
+<% } %>
+<% } %>
+<%- include("partials/bottom") %>
