@@ -10,7 +10,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { uploadsRoot } = require("../../config/paths");
-const { checkCtx, audit, MarketingError } = require("../audience/shared");
+const { checkCtx, audit, resolveSite, MarketingError } = require("../audience/shared");
 const { removeUploadedFile } = require("../../utils/uploads");
 
 const MAX_IMAGE = 5 * 1024 * 1024; // une image d'e-mail au-delà de 5 Mo n'a pas de sens (chargement, filtres)
@@ -104,11 +104,47 @@ const publicUrl = (ctx, p) => `${String(ctx.baseUrl || "").replace(/\/+$/, "")}$
 const shape = (ctx, row) => (row ? {
   id: row.id, kind: row.kind, type: row.type || (row.kind === "image" ? "image" : "document"), name: row.name, title: row.title || "", alt: row.alt, caption: row.caption || "", description: row.description || "",
   mime: row.mime, size: row.size, width: row.width, height: row.height, path: row.path, url: publicUrl(ctx, row.path), createdAt: row.created_at, createdBy: row.created_by ?? null, deletedAt: row.deleted_at || null,
+  reach: row.reach || "shared", siteId: row.site_id ?? null, // R5 : médiathèque commune (shared) ou propre à un site
 } : null);
 
+// ---------- Portée de site des médias (R5, décision D6) ----------
+// 'shared' (défaut, tous les médias existants) : médiathèque commune de l'organisation. 'site' : propre à UN site, dossier à part (/uploads/marketing/<organisation>/site-<id>/).
+// Un accès limité à un site (ctx.siteScope, imposé par le serveur) voit les médias communs et ceux de SON site, ne modifie que ceux de son site. L'équipe de l'organisation voit tout ;
+// avec un site choisi (ctx.siteFilter) elle voit la médiathèque de CE site : ses médias et les communs.
+const orgLevel = (ctx) => !Number.isInteger(ctx.siteScope);
+function visibleSql(ctx) {
+  if (Number.isInteger(ctx.siteScope)) return { sql: "(reach = 'shared' OR site_id = ?)", params: [ctx.siteScope] };
+  if (Number.isInteger(ctx.siteFilter)) return { sql: "(reach = 'shared' OR site_id = ?)", params: [ctx.siteFilter] };
+  if (ctx.siteFilter === "principal") return { sql: "reach = 'shared'", params: [] };
+  return { sql: "1 = 1", params: [] };
+}
+// Site d'un nouveau téléversement : imposé pour un accès limité à un site ; choisi (et vérifié) par l'équipe ; sinon médiathèque commune (comportement historique)
+function uploadSite(ctx, siteId) {
+  const none = siteId === undefined || siteId === null || siteId === "" || siteId === "shared";
+  if (Number.isInteger(ctx.siteScope)) {
+    if (ctx.siteScope < 1 || (!none && Number(siteId) !== ctx.siteScope)) throw new MarketingError("not_found", "Site introuvable.");
+    return ctx.siteScope;
+  }
+  return none ? null : resolveSite(ctx, siteId);
+}
+const siteFolder = (siteId) => (siteId ? `site-${siteId}` : null);
+// Adresse publique d'un nouveau fichier : jamais un nom venu du navigateur (nom entièrement fabriqué ici)
+function newPublicPath(ctx, siteId, ext) {
+  const file = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}${ext}`;
+  return [PUBLIC_BASE, String(ctx.organizationId), siteFolder(siteId), file].filter(Boolean).join("/");
+}
+// Chemin sur le disque d'une adresse publique de la médiathèque de CETTE organisation ; null si l'adresse n'a pas exactement la forme attendue (jamais de « .. », de sous-dossier libre)
+const SAFE_PUBLIC = /^\/uploads\/marketing\/(\d{1,9})\/(?:site-(\d{1,9})\/)?([A-Za-z0-9][A-Za-z0-9_.-]{0,150})$/;
+function parsePublicPath(ctx, publicPath) {
+  const m = SAFE_PUBLIC.exec(String(publicPath || ""));
+  if (!m || Number(m[1]) !== ctx.organizationId || m[3].includes("..")) return null;
+  return { siteId: m[2] ? Number(m[2]) : null, file: m[3], absolute: path.join(uploadsRoot, "marketing", String(ctx.organizationId), ...(m[2] ? [`site-${m[2]}`] : []), m[3]) };
+}
+
 // allow : types acceptés par l'appelant (les e-mails n'acceptent que images et PDF) ; sans allow, toute la liste blanche
-function saveUpload(ctx, { buffer, originalName, declaredType, allow = null }) {
+function saveUpload(ctx, { buffer, originalName, declaredType, allow = null, siteId } = {}) {
   checkCtx(ctx);
+  const mediaSite = uploadSite(ctx, siteId); // R5 : médiathèque commune ou propre à un site
   if (!Buffer.isBuffer(buffer) || !buffer.length) throw new MarketingError("invalid_field", "Fichier vide.");
   const info = sniff(buffer, originalName);
   if (!info) throw new MarketingError("invalid_field", refuse(originalName, declaredType));
@@ -119,25 +155,32 @@ function saveUpload(ctx, { buffer, originalName, declaredType, allow = null }) {
   try { const m = require("../../services/settings").main().mediaLimits; const k = info.type === "pdf" ? "document" : info.type; if (m[k]) max = Math.min(max, m[k]); } catch { /* réglages indisponibles : plafond du serveur */ }
   if (buffer.length > max) throw new MarketingError("invalid_field", `Fichier trop lourd (${(buffer.length / 1048576).toFixed(1)} Mo) : ${max / 1048576} Mo au plus pour ${LIMIT_WORDS[info.type]}.`);
   if (info.type === "image" && info.mime !== "image/avif" && (!info.width || !info.height)) throw new MarketingError("invalid_field", "Image illisible : ses dimensions n'ont pas pu être lues.");
-  const dir = path.join(uploadsRoot, "marketing", String(ctx.organizationId));
-  fs.mkdirSync(dir, { recursive: true });
-  const file = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}${info.ext}`; // nom entièrement fabriqué ici
-  fs.writeFileSync(path.join(dir, file), buffer);
-  const publicPath = `${PUBLIC_BASE}/${ctx.organizationId}/${file}`;
-  const row = ctx.db
-    .prepare("INSERT INTO mk_media (organization_id, kind, type, path, name, mime, size, width, height, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *")
-    .get(ctx.organizationId, info.kind, info.type, publicPath, displayName(originalName), info.mime, buffer.length, info.width || null, info.height || null, ctx.userId ?? null);
-  audit(ctx, "media.uploaded", "media", row.id, { type: info.type, size: buffer.length });
+  const publicPath = newPublicPath(ctx, mediaSite, info.ext); // nom entièrement fabriqué ici
+  const where = parsePublicPath(ctx, publicPath);
+  fs.mkdirSync(path.dirname(where.absolute), { recursive: true });
+  fs.writeFileSync(where.absolute, buffer, { flag: "wx" });
+  let row;
+  try {
+    row = ctx.db
+      .prepare("INSERT INTO mk_media (organization_id, kind, type, path, name, mime, size, width, height, created_by, reach, site_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *")
+      .get(ctx.organizationId, info.kind, info.type, publicPath, displayName(originalName), info.mime, buffer.length, info.width || null, info.height || null, ctx.userId ?? null, mediaSite ? "site" : "shared", mediaSite);
+  } catch (error) { try { fs.unlinkSync(where.absolute); } catch { /* fichier déjà absent */ } throw error; } // jamais de fichier sans fiche
+  audit(ctx, "media.uploaded", "media", row.id, { type: info.type, size: buffer.length, reach: row.reach, site_id: row.site_id });
   return shape(ctx, row);
 }
 
 const SORTS = { recent: "id DESC", ancien: "id ASC", nom: "name COLLATE NOCASE ASC, id DESC", nom_desc: "name COLLATE NOCASE DESC, id DESC", taille: "size DESC, id DESC" };
 // type : un des TYPES, ou « documents » (PDF + documents Office). kind (historique, e-mails) : « image » ou « document »
 // (PDF et documents Office : jamais les vidéos ni l'audio). trashed : la corbeille. from : date (AAAA-MM-JJ HH:MM:SS) minimale.
-function listMedia(ctx, { q = "", kind = "", type = "", trashed = false, sort = "recent", from = "", limit = 40, offset = 0 } = {}) {
+function listMedia(ctx, { q = "", kind = "", type = "", trashed = false, sort = "recent", from = "", limit = 40, offset = 0, reach = "", siteId } = {}) {
   checkCtx(ctx);
   const where = ["organization_id = ?", trashed ? "deleted_at IS NOT NULL" : "deleted_at IS NULL"];
   const args = [ctx.organizationId];
+  const vis = visibleSql(ctx);
+  where.push(vis.sql); args.push(...vis.params);
+  // Filtre choisi par l'écran (en plus de la visibilité imposée par le serveur) : médias communs, ou médias propres à un site
+  if (reach === "shared") where.push("reach = 'shared'");
+  else if (reach === "site") { where.push("reach = 'site'"); if (Number.isInteger(siteId)) { where.push("site_id = ?"); args.push(siteId); } }
   if (kind === "image") where.push("type = 'image'");
   else if (kind === "document") where.push("type IN ('pdf', 'document')");
   if (type === "documents") where.push("type IN ('pdf', 'document')");
@@ -158,20 +201,30 @@ function listMedia(ctx, { q = "", kind = "", type = "", trashed = false, sort = 
 // Compteurs de la bibliothèque (hors corbeille) par type, et corbeille
 function mediaCounts(ctx) {
   checkCtx(ctx);
-  const rows = ctx.db.prepare("SELECT type, COUNT(*) n FROM mk_media WHERE organization_id = ? AND deleted_at IS NULL GROUP BY type").all(ctx.organizationId);
+  const vis = visibleSql(ctx);
+  const rows = ctx.db.prepare(`SELECT type, COUNT(*) n FROM mk_media WHERE organization_id = ? AND deleted_at IS NULL AND ${vis.sql} GROUP BY type`).all(ctx.organizationId, ...vis.params);
   const by = Object.fromEntries(rows.map((r) => [r.type, r.n]));
   const counts = Object.fromEntries(TYPES.map((t) => [t, by[t] || 0]));
   counts.documents = counts.pdf + counts.document;
   counts.all = TYPES.reduce((s, t) => s + counts[t], 0);
-  counts.trash = ctx.db.prepare("SELECT COUNT(*) n FROM mk_media WHERE organization_id = ? AND deleted_at IS NOT NULL").get(ctx.organizationId).n;
+  counts.trash = ctx.db.prepare(`SELECT COUNT(*) n FROM mk_media WHERE organization_id = ? AND deleted_at IS NOT NULL AND ${vis.sql}`).get(ctx.organizationId, ...vis.params).n;
   return counts;
 }
 
-const getMedia = (ctx, id) => (checkCtx(ctx), shape(ctx, Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_media WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) : null));
+const getMedia = (ctx, id) => {
+  checkCtx(ctx);
+  const vis = visibleSql(ctx);
+  return shape(ctx, Number.isInteger(id) ? ctx.db.prepare(`SELECT * FROM mk_media WHERE id = ? AND organization_id = ? AND ${vis.sql}`).get(id, ctx.organizationId, ...vis.params) : null);
+};
+// Écriture (modifier, corbeille, restaurer, supprimer, changer de portée) : un accès limité à un site ne modifie que les médias de SON site, jamais les médias communs
+function assertWritable(ctx, media) {
+  if (Number.isInteger(ctx.siteScope) && !(media.reach === "site" && media.siteId === ctx.siteScope)) throw new MarketingError("forbidden", "Ce fichier est commun à tous les sites : seule l'équipe de l'organisation peut le modifier.");
+}
 
 function updateMedia(ctx, id, { name, alt, title, caption, description } = {}) {
   const current = getMedia(ctx, id);
   if (!current) throw new MarketingError("not_found", "Fichier introuvable.");
+  assertWritable(ctx, current);
   const next = {
     name: name === undefined ? current.name : displayName(name),
     alt: alt === undefined ? current.alt : clip(alt, 200),
@@ -190,14 +243,55 @@ function mediaUsage(ctx, media) {
   const like = likeOf(media.path);
   const db = ctx.db, org = ctx.organizationId;
   const safe = (fn) => { try { return fn(); } catch (e) { if (/no such (table|column)/i.test(e.message)) return []; throw e; } };
-  const templates = db.prepare("SELECT id, name, 'modèle' AS kind FROM mk_templates WHERE organization_id = ? AND blocks LIKE ? ESCAPE '\\'").all(org, like);
-  const pages = db.prepare("SELECT id, name, 'page' AS kind FROM mk_landing_pages WHERE organization_id = ? AND (sections LIKE ? ESCAPE '\\' OR draft LIKE ? ESCAPE '\\' OR seo LIKE ? ESCAPE '\\')").all(org, like, like, like);
-  const components = db.prepare("SELECT id, name, 'composant' AS kind FROM mk_web_components WHERE organization_id = ? AND section LIKE ? ESCAPE '\\'").all(org, like);
-  const pageTemplates = safe(() => db.prepare("SELECT id, name, 'modèle de page' AS kind FROM mk_page_templates WHERE organization_id = ? AND content LIKE ? ESCAPE '\\'").all(org, like));
-  const sites = safe(() => db.prepare("SELECT id, name, 'site' AS kind FROM mk_sites WHERE organization_id = ? AND (tokens LIKE ? ESCAPE '\\' OR settings LIKE ? ESCAPE '\\')").all(org, like, like));
+  const templates = db.prepare("SELECT id, name, 'modèle' AS kind, site_id FROM mk_templates WHERE organization_id = ? AND blocks LIKE ? ESCAPE '\\'").all(org, like);
+  const pages = db.prepare("SELECT id, name, 'page' AS kind, site_id FROM mk_landing_pages WHERE organization_id = ? AND (sections LIKE ? ESCAPE '\\' OR draft LIKE ? ESCAPE '\\' OR seo LIKE ? ESCAPE '\\')").all(org, like, like, like);
+  const components = db.prepare("SELECT id, name, 'composant' AS kind, site_id FROM mk_web_components WHERE organization_id = ? AND section LIKE ? ESCAPE '\\'").all(org, like);
+  const pageTemplates = safe(() => db.prepare("SELECT id, name, 'modèle de page' AS kind, NULL AS site_id FROM mk_page_templates WHERE organization_id = ? AND content LIKE ? ESCAPE '\\'").all(org, like));
+  const sites = safe(() => db.prepare("SELECT id, name, 'site' AS kind, id AS site_id FROM mk_sites WHERE organization_id = ? AND (tokens LIKE ? ESCAPE '\\' OR settings LIKE ? ESCAPE '\\')").all(org, like, like));
   // Articles (image mise en avant, images de partage, images dans le texte) : le texte cite l'adresse du fichier
-  const articles = safe(() => db.prepare("SELECT id, title AS name, 'article' AS kind FROM posts WHERE featured_media_id = ? OR cover_path = ? OR og_image_path = ? OR twitter_image_path = ? OR content LIKE ? ESCAPE '\\'").all(media.id, media.path, media.path, media.path, like));
+  const articles = safe(() => db.prepare("SELECT id, title AS name, 'article' AS kind, NULL AS site_id FROM posts WHERE featured_media_id = ? OR cover_path = ? OR og_image_path = ? OR twitter_image_path = ? OR content LIKE ? ESCAPE '\\'").all(media.id, media.path, media.path, media.path, like));
   return [...templates, ...pages, ...components, ...pageTemplates, ...sites, ...articles];
+}
+// ---------- Partage explicite entre sites (R5) ----------
+// Changer la portée d'un média, JAMAIS d'un site à un autre directement :
+//  - « site → commun » : l'équipe de l'organisation seulement (rend le fichier visible de tous les sites) ;
+//  - « commun → site » : l'équipe seulement, et uniquement si TOUS les contenus qui utilisent le fichier appartiennent à ce site (sinon ils perdraient l'image) ;
+// Aucun fichier n'est déplacé : l'adresse publique reste la même, donc aucune référence ne casse.
+function setMediaScope(ctx, id, { reach, siteId = null } = {}) {
+  checkCtx(ctx);
+  if (!orgLevel(ctx)) throw new MarketingError("forbidden", "Seule l'équipe de l'organisation peut changer le partage d'un fichier.");
+  const media = getMedia(ctx, id);
+  if (!media) throw new MarketingError("not_found", "Fichier introuvable.");
+  if (reach === "shared") {
+    if (media.reach === "shared") return media;
+    ctx.db.prepare("UPDATE mk_media SET reach = 'shared', site_id = NULL WHERE id = ? AND organization_id = ?").run(media.id, ctx.organizationId);
+    audit(ctx, "media.shared", "media", media.id, { from_site: media.siteId });
+    return getMedia(ctx, id);
+  }
+  if (reach !== "site") throw new MarketingError("invalid", "Portée inconnue.");
+  const target = resolveSite(ctx, siteId);
+  if (!target) throw new MarketingError("invalid", "Choisissez un site.");
+  if (media.reach === "site") {
+    if (media.siteId === target) return media;
+    throw new MarketingError("invalid_state", "Ce fichier appartient à un autre site : rendez-le d'abord commun, puis attribuez-le.");
+  }
+  const outside = mediaUsage(ctx, media).filter((u) => u.site_id !== target);
+  if (outside.length) throw new MarketingError("invalid_state", `Ce fichier est utilisé hors de ce site par ${outside.length} élément${outside.length > 1 ? "s" : ""} (${outside.slice(0, 3).map((u) => `${u.kind} « ${u.name} »`).join(", ")}) : il reste commun.`);
+  ctx.db.prepare("UPDATE mk_media SET reach = 'site', site_id = ? WHERE id = ? AND organization_id = ?").run(target, media.id, ctx.organizationId);
+  audit(ctx, "media.assigned", "media", media.id, { site_id: target });
+  return getMedia(ctx, id);
+}
+// Rapport d'isolation : médias propres à un site utilisés par un contenu d'un AUTRE site (ou de l'organisation). Lecture seule, à l'usage de l'équipe.
+function crossSiteUsage(ctx) {
+  checkCtx(ctx);
+  const rows = ctx.db.prepare("SELECT * FROM mk_media WHERE organization_id = ? AND reach = 'site' AND deleted_at IS NULL").all(ctx.organizationId);
+  const out = [];
+  for (const row of rows) {
+    const media = shape(ctx, row);
+    const foreign = mediaUsage(ctx, media).filter((u) => u.site_id !== media.siteId);
+    if (foreign.length) out.push({ media, foreign });
+  }
+  return out;
 }
 const usageHref = (u) => ({ page: `/marketing/pages/${u.id}`, composant: `/marketing/site-web/composants/${u.id}/editeur`, site: `/marketing/site-web/sites/${u.id}/reglages`, modèle: `/marketing/modeles/${u.id}`, article: `/formateur/blog/${u.id}/modifier` }[u.kind] || null);
 
@@ -225,12 +319,14 @@ function removeMedia(ctx, media) {
 function deleteMedia(ctx, id) {
   const media = getMedia(ctx, id);
   if (!media) throw new MarketingError("not_found", "Fichier introuvable.");
+  assertWritable(ctx, media);
   return removeMedia(ctx, media);
 }
 // Corbeille : le fichier reste en place (les contenus qui l'utilisent continuent de l'afficher) ; restaurable
 function trashMedia(ctx, id) {
   const media = getMedia(ctx, id);
   if (!media) throw new MarketingError("not_found", "Fichier introuvable.");
+  assertWritable(ctx, media);
   if (media.deletedAt) return media;
   ctx.db.prepare("UPDATE mk_media SET deleted_at = datetime('now'), deleted_by = ? WHERE id = ? AND organization_id = ?").run(ctx.userId ?? null, id, ctx.organizationId);
   audit(ctx, "media.trashed", "media", id, {});
@@ -239,6 +335,7 @@ function trashMedia(ctx, id) {
 function restoreMedia(ctx, id) {
   const media = getMedia(ctx, id);
   if (!media) throw new MarketingError("not_found", "Fichier introuvable.");
+  assertWritable(ctx, media);
   ctx.db.prepare("UPDATE mk_media SET deleted_at = NULL, deleted_by = NULL WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
   audit(ctx, "media.restored", "media", id, {});
   return getMedia(ctx, id);
@@ -247,11 +344,12 @@ function restoreMedia(ctx, id) {
 function purgeMedia(ctx, id) {
   const media = getMedia(ctx, id);
   if (!media) throw new MarketingError("not_found", "Fichier introuvable.");
+  assertWritable(ctx, media);
   if (!media.deletedAt) throw new MarketingError("invalid_state", "Mettez d'abord le fichier à la corbeille : il ne peut être supprimé définitivement que depuis la corbeille.");
   return removeMedia(ctx, media);
 }
 
 module.exports = {
-  saveUpload, listMedia, mediaCounts, getMedia, updateMedia, deleteMedia, trashMedia, restoreMedia, purgeMedia, mediaUsage, usageHref, sniff,
+  visibleSql, siteOfUpload: (ctx) => (Number.isInteger(ctx.siteFilter) ? ctx.siteFilter : undefined), saveUpload, setMediaScope, crossSiteUsage, parsePublicPath, newPublicPath, orgLevel, listMedia, mediaCounts, getMedia, updateMedia, deleteMedia, trashMedia, restoreMedia, purgeMedia, mediaUsage, usageHref, sniff,
   MAX_IMAGE, MAX_DOCUMENT, MAX_AUDIO, MAX_VIDEO, MAX_UPLOAD, PUBLIC_BASE, TYPES, TYPE_LABELS, FORMATS, SORTS,
 };

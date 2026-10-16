@@ -259,7 +259,7 @@ module.exports = () => {
   const mediaError = (res, next, error) => {
     const { MarketingError } = require("../errors");
     if (!(error instanceof MarketingError)) return next(error);
-    res.status(error.code === "not_found" ? 404 : 422).json({ error: { code: error.code, message: error.message } });
+    res.status(error.code === "not_found" ? 404 : error.code === "forbidden" ? 403 : 422).json({ error: { code: error.code, message: error.message } });
   };
   const marketingItem = (m) => ({ source: "marketing", id: m.id, path: m.path, name: m.name, alt: m.alt || "", width: m.width, height: m.height, size: m.size, mime: m.mime, editable: true });
   router.get("/site-web/medias.json", need("forms.read"), (req, res) => {
@@ -274,7 +274,8 @@ module.exports = () => {
   router.get("/site-web/medias/resolutions.json", need("forms.read"), (req, res) => {
     const variants = require("../media/variants");
     const list = [].concat(req.query.src || []).map(String).slice(0, 24);
-    const rows = list.map((src) => (variants.isLocal(src) ? req.mk.ctx.db.prepare("SELECT width, height, size FROM mk_media WHERE organization_id = ? AND path = ? AND type = 'image'").get(req.mk.ctx.organizationId, src) : null));
+    const vis = media.visibleSql(req.mk.ctx);
+    const rows = list.map((src) => (variants.isLocal(src) ? req.mk.ctx.db.prepare(`SELECT width, height, size FROM mk_media WHERE organization_id = ? AND path = ? AND type = 'image' AND ${vis.sql}`).get(req.mk.ctx.organizationId, src, ...vis.params) : null));
     const known = rows.filter((r) => r && r.width);
     const complete = list.length > 0 && known.length === list.length;
     const min = complete ? Math.min(...known.map((r) => r.width)) : 0;
@@ -298,7 +299,7 @@ module.exports = () => {
         const utf8 = Buffer.from(req.file.originalname, "latin1").toString("utf8");
         const originalName = utf8.includes("\uFFFD") ? req.file.originalname : utf8;
         if (media.sniff(req.file.buffer) && media.sniff(req.file.buffer).kind !== "image") throw new MarketingError("invalid_field", "Une page affiche des images : JPEG, PNG, GIF ou WebP. Un PDF se partage par un lien.");
-        let saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype, allow: ["image"] });
+        let saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype, allow: ["image"], siteId: media.siteOfUpload(req.mk.ctx) });
         if (req.body && typeof req.body.alt === "string" && req.body.alt.trim()) saved = media.updateMedia(req.mk.ctx, saved.id, { alt: req.body.alt });
         res.status(201).json({ media: marketingItem(saved) });
       } catch (error) { mediaError(res, next, error); }

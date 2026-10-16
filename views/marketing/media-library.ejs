@@ -4,7 +4,7 @@
 %><%- include("partials/top", { title, active }) %>
 <%
   const typeTabs = [["", "Tous", counts.all], ["image", "Images", counts.image], ["video", "Vidéos", counts.video], ["audio", "Audio", counts.audio], ["documents", "Documents", counts.documents]];
-  const keep = (over = {}) => { const p = new URLSearchParams(); const o = { type: f.type, corbeille: f.trashed ? "1" : "", q: f.q, tri: f.sort === "recent" ? "" : f.sort, periode: f.period, vue: view === "liste" ? "liste" : "", ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return "/marketing/site-web/mediatheque" + (t ? "?" + t : ""); };
+  const keep = (over = {}) => { const p = new URLSearchParams(); const o = { type: f.type, corbeille: f.trashed ? "1" : "", q: f.q, tri: f.sort === "recent" ? "" : f.sort, periode: f.period, vue: view === "liste" ? "liste" : "", portee: f.reach === "shared" ? "commun" : f.reach === "site" ? "site" : "", ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return "/marketing/site-web/mediatheque" + (t ? "?" + t : ""); };
   const dimsOf = (m) => (m.width ? `${m.width} × ${m.height} px` : "—");
   const filtered = Boolean(f.q || f.period || f.type);
   const small = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " Mo" : n >= 1024 ? Math.round(n / 1024) + " Ko" : n + " o");
@@ -16,6 +16,10 @@
       <% if (canUpload && !f.trashed) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-ml-browse><%- icon("upload", { size: 16 }) %> Ajouter des fichiers</button></div><% } %></div>
     <p class="mk-lead">Tous les fichiers de votre site : images, vidéos, audio et documents. Ce sont ceux que vous choisissez dans l'éditeur de pages et dans vos e-mails.</p>
 
+    <p class="mk-sub" aria-label="Portée des fichiers">Portée :
+      <a href="<%= keep({ portee: "", page: "" }) %>"<%- !f.reach ? ' aria-current="page"' : "" %>>Tous</a> ·
+      <a href="<%= keep({ portee: "commun", page: "" }) %>"<%- f.reach === "shared" ? ' aria-current="page"' : "" %>>Communs à tous les sites</a> ·
+      <a href="<%= keep({ portee: "site", page: "" }) %>"<%- f.reach === "site" ? ' aria-current="page"' : "" %>>Propres à un site</a></p>
     <nav class="mk-tabs mk-cms-tabs" aria-label="Types de fichiers">
       <% typeTabs.forEach(([k, name, n]) => { %><a class="mk-tab" href="<%= keep({ type: k, corbeille: "", page: "" }) %>"<%- !f.trashed && f.type === k ? ' aria-current="page"' : "" %>><%= name %> <span class="mk-tab-count" data-ml-count="<%= k || "all" %>"><%= n %></span></a>
       <% }) %>
@@ -70,7 +74,7 @@
               <tr data-ml-item data-id="<%= m.id %>">
                 <% if (canWrite) { %><td class="mk-cms-check-col" data-label="Sélection"><input type="checkbox" data-ml-check value="<%= m.id %>" aria-label="Sélectionner « <%= m.name %> »"></td><% } %>
                 <th scope="row" data-label="Fichier"><button type="button" class="mk-ml-link" data-ml-open aria-label="Détails de « <%= m.name %> »"><span class="mk-ml-mini"><% if (m.type === "image") { %><img src="<%= m.path %>" alt="" loading="lazy" width="36" height="36"><% } else { %><span class="mk-ml-badge"><%= ext(m) %></span><% } %></span><span data-ml-name><%= m.name %></span></button></th>
-                <td data-label="Type"><%= label(m) %></td><td class="mk-num" data-label="Taille"><%= small(m.size) %></td><td data-label="Dimensions"><%= dimsOf(m) %></td>
+                <td data-label="Type"><%= label(m) %><% if (m.reach === "site") { %> <span class="mk-sub">· propre à un site</span><% } %></td><td class="mk-num" data-label="Taille"><%= small(m.size) %></td><td data-label="Dimensions"><%= dimsOf(m) %></td>
                 <td data-label="Ajouté le"><%= fdate(m.createdAt) %></td><td data-label="Auteur"><%= authors[m.createdBy] || "—" %></td>
                 <td class="mk-row-actions mk-cms-actions-col"><button type="button" class="btn btn-ghost btn-sm" data-ml-open>Détails</button></td></tr>
             <% }) %></tbody></table></div>
@@ -82,7 +86,7 @@
                 <button type="button" class="mk-ml-thumb" data-ml-open aria-label="Détails de « <%= m.name %> » (<%= label(m) %>, <%= small(m.size) %>)">
                   <% if (m.type === "image") { %><img src="<%= m.path %>" alt="" loading="lazy" width="<%= m.width || 160 %>" height="<%= m.height || 120 %>"><% } else { %><span class="mk-ml-badge"><%= ext(m) %></span><% } %>
                 </button>
-                <span class="mk-ml-name" data-ml-name><%= m.name %></span><span class="mk-sub"><%= label(m) %> · <%= small(m.size) %></span>
+                <span class="mk-ml-name" data-ml-name><%= m.name %></span><span class="mk-sub"><%= label(m) %> · <%= small(m.size) %><% if (m.reach === "site") { %> · propre à un site<% } %></span>
               </li>
             <% }) %>
           </ul>

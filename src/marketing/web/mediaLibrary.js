@@ -26,16 +26,17 @@ const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null)
 
 // Filtres lus dans l'adresse (liste, page et API)
 function filtersOf(query) {
+  const reach = query.portee === "commun" ? "shared" : query.portee === "site" ? "site" : "";
   const type = media.TYPES.includes(query.type) || query.type === "documents" ? query.type : "";
   const trashed = query.corbeille === "1";
   const sort = Object.hasOwn(media.SORTS, query.tri) ? query.tri : "recent";
   const period = Object.hasOwn(PERIODS, query.periode) ? String(query.periode) : "";
   const q = String(query.q || "").trim().slice(0, 100);
   const page = Math.max(1, Number(query.page) || 1);
-  return { type, trashed, sort, period, q, page };
+  return { type, trashed, sort, period, q, page, reach };
 }
 function search(ctx, f, perPage = PER_PAGE) {
-  const found = media.listMedia(ctx, { q: f.q, type: f.type, trashed: f.trashed, sort: f.sort, from: sinceOf(f.period), limit: perPage, offset: (f.page - 1) * perPage });
+  const found = media.listMedia(ctx, { q: f.q, type: f.type, trashed: f.trashed, sort: f.sort, from: sinceOf(f.period), reach: f.reach, limit: perPage, offset: (f.page - 1) * perPage });
   return { ...found, pages: Math.max(1, Math.ceil(found.total / perPage)), page: f.page, perPage };
 }
 
@@ -45,7 +46,7 @@ module.exports = () => {
 
   const fail = (res, next, error) => {
     if (!(error instanceof MarketingError)) return next(error);
-    res.status(error.code === "not_found" ? 404 : error.code === "invalid_state" ? 409 : 422).json({ error: { code: error.code, message: error.message } });
+    res.status(error.code === "not_found" ? 404 : error.code === "forbidden" ? 403 : error.code === "invalid_state" ? 409 : 422).json({ error: { code: error.code, message: error.message } });
   };
   const authorsOf = (ctx, ids) => {
     const list = [...new Set(ids.filter(Boolean))];
@@ -91,7 +92,7 @@ module.exports = () => {
         if (!req.file) throw new MarketingError("invalid_field", "Aucun fichier reçu.");
         const utf8 = Buffer.from(req.file.originalname, "latin1").toString("utf8"); // les navigateurs envoient le nom en latin1
         const originalName = utf8.includes("�") ? req.file.originalname : utf8;
-        let saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype });
+        let saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype, siteId: media.siteOfUpload(req.mk.ctx) });
         if (req.body && (req.body.alt || req.body.title)) saved = media.updateMedia(req.mk.ctx, saved.id, { alt: req.body.alt, title: req.body.title });
         res.status(201).json({ media: saved });
       } catch (error) { fail(res, next, error); }
@@ -118,6 +119,13 @@ module.exports = () => {
     try {
       const b = req.body || {};
       res.json({ media: media.updateMedia(req.mk.ctx, Number(req.params.id), { name: b.name, alt: b.alt, title: b.title, caption: b.caption, description: b.description }) });
+    } catch (error) { fail(res, next, error); }
+  });
+  // Partage explicite (R5) : rendre un fichier commun à tous les sites, ou l'attribuer à UN site. Réservé à l'équipe de l'organisation (le service le vérifie aussi).
+  router.post(`${base}/:id(\\d+)/partage`, need("media.write"), (req, res, next) => {
+    try {
+      const b = req.body || {};
+      res.json({ media: media.setMediaScope(req.mk.ctx, Number(req.params.id), { reach: b.reach, siteId: b.site_id }) });
     } catch (error) { fail(res, next, error); }
   });
   router.post(`${base}/:id(\\d+)/corbeille`, need("media.write"), (req, res, next) => {

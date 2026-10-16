@@ -61,6 +61,17 @@ function createMarketingRouters({ db }) {
     // Contact Core (palier 15) : lecture des contacts d'UN site (?site=) — c'est ce qui ouvre l'écran aux personnes qui n'ont accès qu'à ce site
     if (req.method === "GET" && /^\/contacts(?:\/\d+(?:\/evenements\.json)?)?$/.test(p) && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
     if (req.method === "POST" && (p === "/pages" || p === "/site-web/composants") && req.body && /^\d+$/.test(String(req.body.site_id || ""))) return { siteId: Number(req.body.site_id) };
+    // Médias par site (R5) : un fichier visé par son identifiant relève du site qui le possède (commun = organisation, donc fermé à un accès limité à un site) ;
+    // les écrans sans identifiant (liste, envoi) relèvent du site choisi (?site=), validé comme pour les autres familles
+    m = /^\/site-web\/(?:mediatheque|medias)\/(\d{1,12})(?:\.json|\/|$)/.exec(p);
+    if (m) {
+      const r = db.prepare("SELECT site_id FROM mk_media WHERE id = ?").get(Number(m[1]));
+      return r ? { siteId: r.site_id } : { siteId: null, missing: true };
+    }
+    if (/^\/site-web\/(?:mediatheque|medias)(?:\/|\.json$|$)/.test(p)) {
+      const raw = req.query && req.query.site;
+      return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
+    }
     return null;
   };
   admin.use((req, res, next) => {
