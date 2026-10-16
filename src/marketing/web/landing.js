@@ -517,7 +517,12 @@ module.exports = () => {
       if (raw !== undefined && raw !== "" && target === null) throw new MarketingError("invalid_field", "Site de destination invalide.");
       if (req.mk.siteOnly && target === null) throw new MarketingError("forbidden", "Le site principal est réservé à l'équipe de l'organisation.");
       if (typeof req.mk.ctx.canOn === "function" && !req.mk.ctx.canOn(target, "forms.write")) throw new MarketingError("forbidden", "Vous ne pouvez pas écrire dans le site de destination.");
-      pages.movePage(req.mk.ctx, page.id, target);
+      // Les droits sur la page source (garde de la route) et sur le site d'arrivée (ci-dessus) sont établis : la portée « un seul site » de la requête est levée pour CE déplacement seulement,
+      // afin qu'une personne autorisée sur deux sites puisse déplacer de l'un à l'autre (sans cela, le service refuse tout site autre que celui de la requête)
+      const sourceOk = typeof req.mk.ctx.canOn !== "function" || req.mk.ctx.canOn(page.site_id ?? null, "forms.write");
+      if (!sourceOk) throw new MarketingError("forbidden", "Vous ne pouvez pas écrire dans le site de cette page.");
+      const moveCtx = Number.isInteger(req.mk.ctx.siteScope) ? { ...req.mk.ctx, siteScope: undefined } : req.mk.ctx;
+      pages.movePage(moveCtx, page.id, target);
       return `Page « ${page.name} » déplacée.`;
     });
   });

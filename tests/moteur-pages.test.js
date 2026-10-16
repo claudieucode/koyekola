@@ -252,6 +252,39 @@ describe("moteur central des pages : cycle de vie, révisions, déplacement, iso
     });
   });
 
+  describe("déplacement : droits sur la page source, la page cible et le site de destination (comptes distincts)", () => {
+    let src, dst, onlyA, aEditB, aViewerB, aAdminBViewer;
+    before(async () => {
+      src = mkSite("Source"); dst = mkSite("Destination");
+      onlyA = await person(src, "admin");                       // accès au site source seulement
+      aEditB = await person(src, "admin");                      // admin de la source, éditeur de la destination
+      db.prepare("INSERT INTO mk_site_members (site_id, user_id, role) VALUES (?, ?, 'editor')").run(dst, idOf(aEditB));
+      aViewerB = await person(src, "admin");                    // admin de la source, simple lecteur de la destination
+      db.prepare("INSERT INTO mk_site_members (site_id, user_id, role) VALUES (?, ?, 'viewer')").run(dst, idOf(aViewerB));
+      aAdminBViewer = await person(dst, "admin");               // admin de la destination, aucun accès à la source
+    });
+    const move = (client, id, to) => client.post(`/marketing/pages/${id}/deplacer`, { site_id: String(to) });
+    test("autorisé : écriture sur la page source ET sur le site de destination", async () => {
+      const p = await create(boss, "Mobile autorisée", src);
+      const r = await move(aEditB, p, dst);
+      assert.equal(r.status, 302);
+      assert.equal(row(p).site_id, dst, "déplacée");
+    });
+    test("refusé : destination sans droit d'écriture (lecteur), destination inconnue de la personne, page source hors de ses sites", async () => {
+      const p1 = await create(boss, "Lecteur", src), p2 = await create(boss, "Sans accès", src), p3 = await create(boss, "Source étrangère", src);
+      await move(aViewerB, p1, dst);
+      assert.equal(row(p1).site_id, src, "lecteur sur la destination : refusé");
+      await move(onlyA, p2, dst);
+      assert.equal(row(p2).site_id, src, "aucun accès à la destination : refusé");
+      const r = await move(aAdminBViewer, p3, dst);
+      assert.ok(r.status === 403 || r.status === 404 || r.status === 302);
+      assert.equal(row(p3).site_id, src, "aucun accès à la source : refusé");
+      const toMain = await onlyA.post(`/marketing/pages/${p2}/deplacer`, { site_id: "" });
+      assert.ok(toMain.status === 302 || toMain.status === 403);
+      assert.equal(row(p2).site_id, src, "le site principal est réservé à l'équipe");
+    });
+  });
+
   describe("actions groupées : droits vérifiés page par page", () => {
     test("le droit est contrôlé sur le site de CHAQUE page : pages d'un site archivé refusées, autres traitées, inconnues signalées", async () => {
       const C = mkSite("Gelé");
