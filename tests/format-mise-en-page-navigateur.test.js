@@ -189,5 +189,22 @@ describe("formats de mise en page (navigateur)", { skip: SKIP }, () => {
     await pv.close();
   });
 
+  test("Page › Format : la largeur effective du contenu est affichée et suit l'écran (ordinateur / tablette / mobile)", async () => {
+    const res = await boss.request("/marketing/pages", { method: "POST", form: { name: "Largeur effective", ouvrir: "editeur", template: "vente", layoutMode: "guided", layoutFormat: "standard" }, headers: { Origin: srv.base } });
+    const id = Number(res.location.match(/pages\/(\d+)/)[1]);
+    const ed = await context.newPage();
+    await ed.goto(`${srv.base}/marketing/pages/${id}/editeur`);
+    await ed.waitForFunction(() => { const f = document.querySelector("[data-pb-frame]"); return f && f.contentDocument && f.contentDocument.body && f.contentDocument.body.classList.contains("lp-builder") && f.contentDocument.querySelector(".lp-block"); });
+    await wait(600);
+    await ed.locator("#pb-tab-page").click(); await wait(300);
+    for (const dev of ["desktop", "tablet", "mobile"]) {
+      await ed.locator(`.pb-top .pb-devices [data-device="${dev}"]`).click();
+      const vw = await until(() => ed.evaluate(() => document.querySelector("[data-pb-frame]").clientWidth), { what: "largeur du canevas" });
+      const want = Math.min(vw - 48, 1200);
+      await until(() => ed.evaluate((w) => (document.querySelector("[data-pb-format-effective]") || { textContent: "" }).textContent.includes("contenu à cet écran : " + w + " px"), want), { what: `largeur effective ${want} px (${dev}, écran ${vw} px)` });
+    }
+    await ed.close();
+  });
+
   test("aucune erreur de script", () => { assert.deepEqual(errors, []); });
 });

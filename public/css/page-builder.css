@@ -1864,6 +1864,7 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-start-format { display: grid; gap: 2px; padding: 10px 12px; text-align: left; font: inherit; color: var(--editor-text); cursor: pointer; border: 1px solid var(--editor-border); border-radius: var(--pb-radius-md); background: var(--editor-card, var(--editor-panel)); }
 .pb-start-format strong { font-size: 13px; }
 .pb-start-format span { font-size: 12px; color: var(--editor-muted); }
+.pb-start-format small { font-size: 11.5px; color: var(--editor-muted); }
 .pb-start-format:hover { border-color: var(--editor-border-strong); }
 .pb-start-format.is-on { border-color: var(--editor-accent); box-shadow: 0 0 0 1px var(--editor-accent); background: var(--editor-active); }
 .pb-start-format:focus-visible, .pb-start-lock:focus-visible { outline: none; box-shadow: var(--pb-focus); }

@@ -7070,6 +7070,15 @@
       box.appendChild(textField("Largeur maximale du contenu (px, 0 = aucune)", String(l.maxWidth), function (v) { var n = Math.round(Number(v)); if (isFinite(n) && (n === 0 || (n >= 320 && n <= 2400))) setLayout(fmt({ maxWidth: n })); }, { type: "number", disabled: !canWrite || locked }));
       box.appendChild(textField("Marge latérale minimale (px)", String(l.gutter), function (v) { var n = Math.round(Number(v)); if (isFinite(n) && n >= 0 && n <= 96) setLayout(fmt({ gutter: n })); }, { type: "number", disabled: !canWrite || locked }));
     } else box.appendChild(h("p", { class: "pb-hint", text: "Largeur fluide plafonnée à " + (l.maxWidth ? l.maxWidth + " px" : "l'écran") + ", marges de " + l.gutter + " px minimum. Les éléments de premier niveau de chaque section suivent ce format ; un réglage manuel l'emporte tant que le format est déverrouillé." }));
+    // Largeur effective du contenu à l'écran actuel (ordinateur / tablette / mobile) : mesurée sur la largeur LOGIQUE de l'iframe (clientWidth : le zoom n'y change rien)
+    var eff = h("p", { class: "pb-hint", "data-pb-format-effective": "", "aria-live": "polite" });
+    var paintEff = function () {
+      var fr = $("[data-pb-frame]"), vw = fr ? fr.clientWidth : 0, avail = vw - 2 * l.gutter, cap = l.maxWidth > 0 && avail > l.maxWidth, w = cap ? l.maxWidth : avail;
+      eff.textContent = vw > 0 && w > 0 ? "Largeur effective du contenu à cet écran : " + w + " px (écran de " + vw + " px, marges de " + l.gutter + " px de chaque côté" + (cap ? ", contenu centré" : ", le contenu suit l'écran") + ")." : "";
+    };
+    paintEff();
+    box.appendChild(eff);
+    if (window.ResizeObserver && $("[data-pb-frame]")) { var ro = new ResizeObserver(function () { if (!eff.isConnected) { ro.disconnect(); return; } paintEff(); }); ro.observe($("[data-pb-frame]")); }
     box.appendChild(checkField("Verrouiller le format", l.locked, function (v) { setLayout(fmt({ locked: v })); }, { disabled: !canWrite, hint: locked ? "Protégé : " + LF.protected.map(function (p) { return LF.labels[p]; }).join(", ").toLowerCase() + " des éléments de premier niveau, le format lui-même. Textes, images, couleurs, widgets et sections restent libres." : "Verrouillé, le format protège la largeur et les marges des éléments de premier niveau, y compris pour l'IA." }));
   }
   // ---------- Écran de démarrage d'une page vide : « Création classique » ou « Création guidée » ----------
@@ -7435,7 +7444,7 @@
       list.appendChild(h("button", { type: "button", class: "pb-start-format" + (on ? " is-on" : ""), role: "radio", "aria-checked": on ? "true" : "false", "data-pb-start-format": k, onclick: function () {
         d.format = k; if (k !== "custom") { d.maxWidth = f.maxWidth; d.gutter = f.gutter; }
         paintStart(false); var b = box.parentNode && startEl.querySelector('[data-pb-start-format="' + k + '"]'); if (b) b.focus({ preventScroll: true });
-      } }, h("strong", { text: f.label }), h("span", { text: k === "custom" ? "320 à 2 400 px" : (f.maxWidth ? f.maxWidth + " px" : "Largeur de l'écran") })));
+      } }, h("strong", { text: f.label }), h("span", { text: k === "custom" ? "320 à 2 400 px" : (f.maxWidth ? f.maxWidth + " px maximum" : "Largeur de l'écran") }), h("small", { text: k === "custom" ? "Vos valeurs" : "Marges " + f.gutter + " px · fluide sous " + (f.maxWidth ? f.maxWidth + " px" : "l'écran") })));
     });
     box.appendChild(list);
     box.appendChild(h("p", { class: "pb-hint", text: (presets[d.format] || {}).hint || "" }));
