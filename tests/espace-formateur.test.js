@@ -138,7 +138,7 @@ describe("Apparence", () => {
   test("thème par défaut, puis thème prédéfini enregistré et appliqué", async () => {
     let page = await prof.get("/formateur/apparence");
     assert.match(page.text, /data-theme="bleu-fonce"/);
-    assert.match(page.text, /--dash-sidebar: #ffffff/);
+    assert.match(page.text, /--dash-sidebar: #0b2538/, "défaut : bleu marine de l'identité Kolakisa");
     const r = await prof.postJson("/formateur/apparence", { theme: "noir" });
     assert.equal(r.status, 200);
     assert.equal(JSON.parse(r.text).prefs.theme, "noir");
@@ -159,7 +159,7 @@ describe("Apparence", () => {
 
   test("thème inconnu → thème par défaut ; réinitialisation", async () => {
     let r = await prof.postJson("/formateur/apparence", { theme: "<script>" });
-    assert.equal(JSON.parse(r.text).prefs.theme, "clair");
+    assert.equal(JSON.parse(r.text).prefs.theme, "bleu-fonce");
     r = await prof.postJson("/formateur/apparence", { theme: "clair", colors: {} });
     assert.deepEqual(JSON.parse(r.text).prefs, { theme: "clair", colors: {} });
   });

@@ -67,6 +67,19 @@ describe("format de mise en page", () => {
     assert.match(view.nodeCss, /:where\(\.kw-layout\)/);
   });
 
+  test("CSS : les blocs typés des gabarits (div.lp-block) suivent le format ; sections libres, en-tête / pied du site et largeurs choisies exclus", () => {
+    const rule = lf.css({ mode: "guided", maxWidth: 960, gutter: 24 }).split("\n").find((l) => l.includes(".lp-block"));
+    assert.ok(rule, "règle des blocs typés présente");
+    assert.match(rule, /^:where\(\.lp-main > \.lp-block:not\(\.lp-block-layout, \.lp-site-part, \[class\*="lp-w-"\]\)\) \{ width: min\(calc\(100% - 48px\), 960px\); margin-left: auto; margin-right: auto/);
+    assert.equal(lf.css(null), "", "conception libre : aucune règle");
+  });
+
+  test("CSS : retrait des blocs pleine largeur calé sur la colonne du format (variable), seulement en conception guidée", () => {
+    assert.match(lf.css({ mode: "guided", maxWidth: 1200, gutter: 24 }), /--kw-fmt-pad: max\(24px, calc\(50vw - 600px\)\)/);
+    assert.match(lf.css({ mode: "guided", maxWidth: 0, gutter: 16 }), /--kw-fmt-pad: 16px/);
+    assert.doesNotMatch(lf.css(null), /kw-fmt-pad/);
+  });
+
   test("personnalisé : valeurs validées ; format inconnu refusé", () => {
     assert.deepEqual(lf.normalizeLayout({ mode: "guided", format: "custom", maxWidth: 1000, gutter: 10, locked: true }), { mode: "guided", format: "custom", maxWidth: 1000, gutter: 10, locked: true });
     assert.equal(code(() => lf.normalizeLayout({ mode: "guided", format: "custom", maxWidth: 100, gutter: 10 })), "invalid_field");

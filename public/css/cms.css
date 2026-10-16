@@ -25,7 +25,6 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label { display: none; }
 .mk-cms-menu-note { display: block; padding: 8px 14px; font-size: 0.8rem; color: var(--muted); max-width: 260px; }
 
 /* ----- Contenu des écrans ----- */
-.is-cms .mk-content { max-width: 1280px; }
 .mk-cms-soon { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 16px; padding: 10px 14px; background: var(--accent-light); color: var(--accent-dark); border: 1px solid var(--mk-border); border-radius: 6px; }
 .mk-cms-soon .icon { flex: none; margin-top: 2px; }
 .mk-cms-soon p { margin: 0; font-size: 0.9rem; }
@@ -335,3 +334,11 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label { display: none; }
 .mk-cms-create { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin: 0 0 16px; }
 .mk-cms-create .field-group { flex: 1 1 260px; margin: 0; }
 @media (max-width: 640px) { .mk-site-banner > .btn { margin-left: auto; } }
+
+/* ----- Tableaux CMS : colonnes courtes lisibles, colonne de titre souple ----- */
+/* « anywhere » (style.css) comptait chaque lettre comme point de coupure : les dates se brisaient en 3 lignes et la colonne titre prenait tout. */
+.mk-cms-table td, .mk-cms-table th[scope="row"] { overflow-wrap: break-word; }
+.mk-ar-table td[data-label="Date"], .mk-ar-table td[data-label="Modifié"], .mk-ar-table td[data-label="Commentaires"] { white-space: nowrap; }
+.mk-cms-table tbody th[scope="row"] { white-space: normal; } /* style.css impose nowrap à tous les th : le titre ne pouvait jamais se replier */
+.mk-ar-table th[scope="row"] { min-width: 220px; }
+.mk-body .mk-cms-table th, .mk-body .mk-cms-table td { padding-left: 12px; padding-right: 12px; }

@@ -93,7 +93,8 @@
 /* Largeur : étroite, large (jusqu'à 1080 px) ou pleine largeur de l'écran */
 .lp-w-narrow { max-width: 560px; margin-inline: auto; }
 .lp-w-wide { margin-inline: calc(50% - min(540px, 50vw - 16px)); }
-.lp-block.lp-w-full { margin-inline: calc(50% - 50vw); border-radius: 0; padding-inline: max(16px, calc(50vw - 380px)); }
+/* --kw-fmt-pad : retrait du contenu d'un bloc pleine largeur, posé par le format du canevas (conception guidée) ; sinon la colonne de 760 px */
+.lp-block.lp-w-full { margin-inline: calc(50% - 50vw); border-radius: 0; padding-inline: var(--kw-fmt-pad, max(16px, calc(50vw - 380px))); }
 /* Masquer selon l'écran : règles émises avec le CSS de la page (pageCss), selon les points de rupture du site */
 .lp-intro { margin: 0 0 16px; opacity: 0.85; }
 .lp-features > h2, .lp-faq > h2, .lp-testimonials > h2 { margin-bottom: 16px; }

@@ -130,5 +130,81 @@ describe("formats de mise en page (navigateur)", { skip: SKIP }, () => {
     assert.equal(draft().sections[0].children.length, 2);
   });
 
+  // Régression : les sections « typées » d'un gabarit (bandeau, texte, liste, FAQ…) sont rendues dans `div.lp-block`. Le format ne les atteignait pas :
+  // `.lp-main` perdait son padding et le texte touchait le bord de l'écran (0 px). Mesuré ici dans l'éditeur ET dans l'aperçu, sur 3 largeurs.
+  test("gabarit en conception guidée : les blocs typés respectent la largeur du format et gardent des marges latérales (éditeur et aperçu)", async () => {
+    const res = await boss.request("/marketing/pages", { method: "POST", form: { name: "Gabarit guidé", ouvrir: "editeur", template: "vente", layoutMode: "guided", layoutFormat: "standard" }, headers: { Origin: srv.base } });
+    const id = Number(res.location.match(/pages\/(\d+)/)[1]);
+    // Mesure : chaque bloc de premier niveau (hors en-tête / pied du site) et chaque texte, dans la page ou l'iframe `target`
+    const measure = (target) => target.evaluate(() => {
+      const main = document.querySelector(".lp-main");
+      const blocks = [...main.children].filter((b) => b.classList.contains("lp-block") && !b.classList.contains("lp-site-part"));
+      const edge = [...main.querySelectorAll("h1,h2,h3,p,li,a.lp-btn")].filter((e) => !e.closest(".lp-preview-bar,.kw-add") && e.getBoundingClientRect().width > 0)
+        .map((e) => Math.min(e.getBoundingClientRect().left, innerWidth - e.getBoundingClientRect().right));
+      return { vw: innerWidth, n: blocks.length, widths: blocks.map((b) => Math.round(b.getBoundingClientRect().width)), minEdge: Math.round(Math.min(...edge)), overflow: document.documentElement.scrollWidth - innerWidth };
+    });
+    const check = (m, where) => {
+      assert.ok(m.n >= 5, `${where} : blocs trouvés (${m.n})`);
+      const want = Math.min(m.vw - 48, 1200);
+      for (const w of m.widths) assert.equal(w, want, `${where} : largeur d'un bloc (${w}) = format (${want}) à ${m.vw} px`);
+      assert.ok(m.minEdge >= 24, `${where} : un texte est à ${m.minEdge} px du bord (marge latérale du format : 24 px) à ${m.vw} px`);
+      assert.equal(m.overflow, 0, `${where} : pas de débordement horizontal`);
+    };
+    const pv = await context.newPage();
+    for (const w of [1440, 820, 390]) {
+      await pv.setViewportSize({ width: w, height: 900 });
+      await pv.goto(`${srv.base}/marketing/pages/${id}/apercu`); await wait(400);
+      check(await measure(pv), `aperçu ${w}`);
+    }
+    await pv.close();
+    const ed = await context.newPage();
+    await ed.goto(`${srv.base}/marketing/pages/${id}/editeur`);
+    await ed.waitForFunction(() => { const f = document.querySelector("[data-pb-frame]"); return f && f.contentDocument && f.contentDocument.body && f.contentDocument.body.classList.contains("lp-builder") && f.contentDocument.querySelector(".lp-block"); });
+    await wait(600);
+    for (const dev of ["desktop", "tablet", "mobile"]) {
+      await ed.locator(`.pb-top .pb-devices [data-device="${dev}"]`).click(); await wait(600);
+      check(await measure(await (await ed.$("[data-pb-frame]")).contentFrame()), `éditeur ${dev}`);
+    }
+    await ed.close();
+  });
+
+  test("bloc pleine largeur : le fond reste pleine largeur, le texte suit la colonne du format (guidé) ou l'ancienne colonne (libre)", async () => {
+    const mk = async (mode) => {
+      const res = await boss.request("/marketing/pages", { method: "POST", form: { name: "Pleine " + mode, ouvrir: "editeur", template: "vente", layoutMode: mode, layoutFormat: "standard" }, headers: { Origin: srv.base } });
+      const id = Number(res.location.match(/pages\/(\d+)/)[1]);
+      const r = db().prepare("SELECT draft, sections, theme, revision FROM mk_landing_pages WHERE id = ?").get(id);
+      const raw = JSON.parse(r.draft || r.sections), c = raw.sections ? raw : { sections: raw };
+      c.sections[0].style = { ...(c.sections[0].style || {}), width: "full", background: "dark" };
+      const put = await boss.request(`/marketing/pages/${id}/brouillon`, { method: "PUT", json: { revision: r.revision, content: { ...c, theme: JSON.parse(r.theme || "{}") } }, headers: { Origin: srv.base } });
+      assert.equal(put.status, 200, put.text.slice(0, 200));
+      return id;
+    };
+    const pv = await context.newPage();
+    await pv.setViewportSize({ width: 1440, height: 900 });
+    const read = async (id) => { await pv.goto(`${srv.base}/marketing/pages/${id}/apercu`); return pv.evaluate(() => { const b = document.querySelector(".lp-block-hero").getBoundingClientRect(), t = document.querySelector(".lp-block-hero h1").getBoundingClientRect(); return { bl: Math.round(b.left), br: Math.round(b.right), tl: Math.round(t.left), tr: Math.round(t.right) }; }); };
+    const guided = await read(await mk("guided"));
+    assert.deepEqual(guided, { bl: 0, br: 1440, tl: 120, tr: 1320 }, "guidé : fond pleine largeur, texte sur la colonne du format (1200 px)");
+    const free = await read(await mk("free"));
+    assert.deepEqual(free, { bl: 0, br: 1440, tl: 340, tr: 1100 }, "libre : comportement historique inchangé (colonne de 760 px)");
+    await pv.close();
+  });
+
+  test("Page › Format : la largeur effective du contenu est affichée et suit l'écran (ordinateur / tablette / mobile)", async () => {
+    const res = await boss.request("/marketing/pages", { method: "POST", form: { name: "Largeur effective", ouvrir: "editeur", template: "vente", layoutMode: "guided", layoutFormat: "standard" }, headers: { Origin: srv.base } });
+    const id = Number(res.location.match(/pages\/(\d+)/)[1]);
+    const ed = await context.newPage();
+    await ed.goto(`${srv.base}/marketing/pages/${id}/editeur`);
+    await ed.waitForFunction(() => { const f = document.querySelector("[data-pb-frame]"); return f && f.contentDocument && f.contentDocument.body && f.contentDocument.body.classList.contains("lp-builder") && f.contentDocument.querySelector(".lp-block"); });
+    await wait(600);
+    await ed.locator("#pb-tab-page").click(); await wait(300);
+    for (const dev of ["desktop", "tablet", "mobile"]) {
+      await ed.locator(`.pb-top .pb-devices [data-device="${dev}"]`).click();
+      const vw = await until(() => ed.evaluate(() => document.querySelector("[data-pb-frame]").clientWidth), { what: "largeur du canevas" });
+      const want = Math.min(vw - 48, 1200);
+      await until(() => ed.evaluate((w) => (document.querySelector("[data-pb-format-effective]") || { textContent: "" }).textContent.includes("contenu à cet écran : " + w + " px"), want), { what: `largeur effective ${want} px (${dev}, écran ${vw} px)` });
+    }
+    await ed.close();
+  });
+
   test("aucune erreur de script", () => { assert.deepEqual(errors, []); });
 });

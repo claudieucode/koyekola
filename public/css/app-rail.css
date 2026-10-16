@@ -56,3 +56,16 @@ html[data-sidebar="collapsed"] .mk-app.has-rail { grid-template-columns: 64px va
   .mk-app.has-rail .mk-sidebar { left: 64px; width: min(280px, calc(86vw - 64px)); }
 }
 @media (prefers-reduced-motion: reduce) { .app-rail, .app-rail-link { transition: none; } }
+
+/* Écrans de moins de 900 px de haut : icônes un peu plus compactes pour que toute la liste tienne sans qu'une icône soit coupée */
+@media (max-height: 900px) and (min-width: 761px) {
+  .app-rail { padding: 8px 0; }
+  .app-rail-brand { margin-bottom: 8px; }
+  .app-rail-link { width: 36px; height: 36px; margin: 0 14px; }
+  .app-rail-link[aria-current="true"]::before { left: -14px; top: 7px; bottom: 7px; }
+  .app-rail-sep { margin: 4px 14px; }
+  .app-rail-foot { padding-top: 4px; }
+}
+
+/* Filets de la barre latérale et du rail : dérivés de la couleur de leur texte (sur un fond marine, le filet clair des cartes était trop vif) */
+.app-rail-foot { border-top-color: color-mix(in srgb, var(--dash-sidebar-text, #fff) 16%, transparent); }
