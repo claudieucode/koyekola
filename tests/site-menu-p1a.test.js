@@ -229,6 +229,6 @@ describe("7 — site principal et régressions", () => {
     assert.ok(fs.existsSync(dir)); assert.ok(last, "migrations lues");
     const root = path.join(__dirname, "..");
     const all = [dir, path.join(root, "src", "migrations"), path.join(root, "migrations")].filter((d) => fs.existsSync(d)).flatMap((d) => fs.readdirSync(d)).filter((f) => /^\d+/.test(f)).map((f) => parseInt(f, 10));
-    assert.ok(Math.max(...all) <= 71, `dernière migration : ${Math.max(...all)}`);
+    assert.ok(Math.max(...all) <= 74, `dernière migration : ${Math.max(...all)}`); // 74 = R5 (médias par site) ; 72 et 73 sont attribuées à R2 et R3
   });
 });
