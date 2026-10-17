@@ -33,7 +33,7 @@ const SCREENS = {
   // ----- Articles -----
   articles(req, ctx, sub) {
     // Liste, états, création, corbeille : articles.js ; catégories et étiquettes : taxonomies.js ; ici : auteurs (lecture seule)
-    const rows = data.authors(ctx.db).map((a) => ({ cells: [{ text: a.username, href: `/blog/auteur/${a.id}` }, String(a.n), String(a.published || 0)] }));
+    const rows = data.authors(ctx.db, require("../../services/siteContent").scopePredicate(ctx, "post", "p.id")).map((a) => ({ cells: [{ text: a.username, href: `/blog/auteur/${a.id}` }, String(a.n), String(a.published || 0)] }));
     return { title: "Auteurs", lead: "Les auteurs des articles du blog.", actions: [dis("Ajouter un auteur")],
       table: { caption: "Auteurs", columns: [{ label: "Auteur" }, { label: "Articles", num: true }, { label: "Publiés", num: true }], rows, empty: empty("user", "Aucun auteur", "Un auteur apparaît dès qu'il a écrit un article.") } };
   },

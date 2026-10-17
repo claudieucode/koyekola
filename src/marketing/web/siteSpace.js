@@ -23,7 +23,7 @@ const pageStatus = (p) => ({ status: PAGE_STATUS[p.status] || { label: String(p.
 const safeCount = (db, sql, params = []) => { try { return db.prepare(sql).get(...params).n; } catch { return 0; } };
 
 // Informations du « bandeau d'identité » : seulement ce qui est vrai pour ce site
-const describe = (req, site) => ({ siteId: site.id, principal: false, base: `${BASE}/sites/${site.id}`, name: site.name, status: site.status === "archived" ? "archived" : "active", deleted: Boolean(site.deleted_at), slug: site.slug || null, listHref: listHref(req) });
+const describe = (req, site) => ({ limited: Boolean(req.mk.siteOnly), siteId: site.id, principal: false, base: `${BASE}/sites/${site.id}`, name: site.name, status: site.status === "archived" ? "archived" : "active", deleted: Boolean(site.deleted_at), slug: site.slug || null, listHref: listHref(req) });
 const listHref = (req) => (req.mk.siteOnly ? `${BASE}/mes-sites` : `${BASE}/sites`);
 function spaceOf(req) {
   const m = /^\/site-web\/(?:sites\/(\d{1,12})|principal)(?:\/|$)/.exec(req.path);
@@ -142,8 +142,9 @@ module.exports.attach = (req, res, next) => {
   const space = spaceOf(req);
   if (space) res.locals.siteSpace = space;
   else if (req.mk.site && Number.isInteger(req.mk.siteId) && req.mk.site.id === req.mk.siteId) res.locals.siteCandidate = describe(req, req.mk.site);
-  const m = /^\/site-web\/sites\/(\d{1,12})\/([a-z-]+)\/?$/.exec(req.path);
+  const m = /^\/site-web\/sites\/(\d{1,12})\/([a-z-]+)(?:\/([a-z0-9-]+))?\/?$/.exec(req.path);
   if (!m || !Object.hasOwn(nav.DELEGATED, m[2]) || (req.method !== "GET" && req.method !== "HEAD")) return next();
+  if (m[3] !== undefined && !(Object.hasOwn(nav.NESTED, m[2]) && nav.NESTED[m[2]].includes(m[3]))) return next(); // sous-page hors de la liste fermée : jamais déléguée
   if (!space) {
     const reason = req.mk.siteContext && !req.mk.siteContext.ok ? req.mk.siteContext.reason : "not_found";
     return res.status(reason === "forbidden" ? 403 : 404).render("error", { message: reason === "forbidden" ? "Vous n'avez pas accès à ce site." : "Site introuvable." });
@@ -153,7 +154,7 @@ module.exports.attach = (req, res, next) => {
   for (const [k, v] of Object.entries(req.query || {})) if (k !== "site" && typeof v === "string") q.set(k, v);
   q.set("site", String(id));
   req.query = { ...req.query, site: String(id) };
-  req.url = `${nav.DELEGATED[m[2]]}?${q}`;
+  req.url = `${nav.DELEGATED[m[2]]}${m[3] !== undefined ? `/${m[3]}` : ""}?${q}`;
   // L'équipe de l'organisation filtre les écrans d'Emailing par `siteFilter` (calculé AVANT ce point depuis l'adresse d'origine) : on le fixe sur ce site
   if (req.mk.ctx.siteScope === undefined) req.mk.ctx.siteFilter = id;
   // Sites proposés par les écrans d'Emailing : préparés par la barrière d'accès d'après l'adresse d'ORIGINE (qui n'a pas la forme d'un écran d'Emailing) → ici, d'après le site fixé

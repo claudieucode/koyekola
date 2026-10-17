@@ -91,15 +91,15 @@ describe("espace d'un site dans un navigateur réel", { skip: SKIP }, () => {
   test("module « Bientôt » : visible et grisé dans le menu, sans lien ; son explication reste lisible par son adresse, sans donnée ni action", async () => {
     const { context, page } = await open();
     await page.goto(`${srv.base}${SP}/${A}/tableau-de-bord`);
-    await openGroup(page, "Articles");
-    const soon = page.locator(".mk-cms-nav .mk-nav-sublink.is-soon", { hasText: "Ajouter" }).first();
+    await openGroup(page, "SEO");
+    const soon = page.locator(".mk-cms-nav .mk-nav-sublink.is-soon", { hasText: "Meta" }).first();
     assert.ok(await soon.isVisible(), "l'entrée grisée est visible");
     assert.equal(await soon.getAttribute("aria-disabled"), "true");
-    assert.equal(await page.locator(`.mk-cms-nav a[href="${SP}/${A}/articles"]`).count(), 0, "aucun lien vers un module pas prêt");
+    assert.equal(await page.locator(`.mk-cms-nav a[href="${SP}/${A}/seo"]`).count(), 0, "aucun lien vers un module pas prêt");
     assert.ok(await page.locator(".mk-cms-nav .mk-cms-tag", { hasText: "Bientôt" }).first().isVisible());
     await soon.click({ force: true });
     assert.equal(new URL(page.url()).pathname, `${SP}/${A}/tableau-de-bord`, "cliquer sur une entrée grisée ne change pas de page");
-    await page.goto(`${srv.base}${SP}/${A}/articles`);
+    await page.goto(`${srv.base}${SP}/${A}/seo`);
     assert.ok(await page.locator(".mk-cms-soon", { hasText: "Prochain palier" }).isVisible());
     assert.equal(await page.locator("main table, main form").count(), 0);
     await shot(page, "b1-04-module-bientot");

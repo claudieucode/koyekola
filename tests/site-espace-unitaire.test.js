@@ -49,13 +49,15 @@ describe("menu de l'espace d'un site (buildSiteNav)", () => {
     assert.ok(keys.includes("landing")); assert.ok(!keys.includes("utilisateurs")); assert.ok(!keys.includes("espace/seo") === false || true);
     // P1a : l'écran « Pages » du registre (clé « landing ») trouve son entrée dans le menu du site ; une clé que le site n'ouvre pas n'y trouve rien
     assert.equal(nav.buildCmsNav({ can: all, active: "landing", space }).current.key, "landing");
-    // C1 : « Ajouter » (Articles) est une entrée du menu, grisée « Bientôt » : elle existe, mais n'ouvre rien
-    assert.equal(nav.buildCmsNav({ can: all, active: "articles/ajouter", space }).current.disabled, true);
+    // C1 : « Meta » (SEO) est une entrée du menu, grisée « Bientôt » : elle existe, mais n'ouvre rien ; « Ajouter » (Articles) est ouverte depuis R8 lot 2
+    assert.equal(nav.buildCmsNav({ can: all, active: "seo/meta", space }).current.disabled, true);
+    assert.equal(nav.buildCmsNav({ can: all, active: "articles/ajouter", space }).current.disabled, undefined);
     assert.equal(nav.buildCmsNav({ can: all, active: "espace/inconnu", space }), null);
   });
   test("modules des paliers suivants : 'preview' pour un site, écran historique 'live' pour le site principal", () => {
     const status = (sp, key) => nav.siteModuleOf(sp, key).status;
-    for (const k of ["articles", "categories", "commentaires", "medias", "formulaires", "contacts", "modeles", "navigation", "seo"]) {
+    for (const k of ["articles", "categories", "commentaires", "medias"]) { assert.equal(status(space, k), "live", `site : ${k} (ouvert, R8 lot 2)`); assert.equal(nav.siteModuleOf(space, k).external, true, k); }
+    for (const k of ["formulaires", "contacts", "modeles", "navigation", "seo"]) {
       assert.equal(status(space, k), "preview", `site : ${k}`);
       assert.equal(Boolean(nav.siteModuleOf(space, k).external), false);
     }

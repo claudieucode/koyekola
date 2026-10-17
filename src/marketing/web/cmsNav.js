@@ -19,7 +19,8 @@ const SECTIONS = [
   {
     key: "articles", label: "Articles", icon: "fileText", items: [
       leaf("articles", "Tous les articles", `${BASE}/articles`, { permission: "articles.read", primary: { label: "Nouvel article", href: `${BASE}/articles/ajouter`, permission: "articles.write" } }),
-      leaf("articles/ajouter", "Ajouter", `${BASE}/articles/ajouter`, { permission: "articles.read" }),
+      // Créer un article exige articles.write (tous) OU articles.edit_own (les siens) : un lecteur ne voit pas un lien qui répondrait 403
+      leaf("articles/ajouter", "Ajouter", `${BASE}/articles/ajouter`, { permission: "articles.write", anyOf: ["articles.write", "articles.edit_own"] }),
       leaf("articles/brouillons", "Brouillons", `${BASE}/articles/brouillons`, { permission: "articles.read" }),
       leaf("articles/programmes", "Programmés", `${BASE}/articles/programmes`, { permission: "articles.read" }),
       leaf("articles/publies", "Publiés", `${BASE}/articles/publies`, { permission: "articles.read" }),
@@ -126,7 +127,7 @@ function buildCmsNav({ can, active, space = null }) {
   if (!current) return null;
   const sections = [];
   for (const s of SECTIONS) {
-    const items = s.items.filter((i) => can(i.permission)).map((i) => ({ key: i.key, label: i.label, href: i.href, status: i.status, current: i.key === active }));
+    const items = s.items.filter((i) => (i.anyOf ? i.anyOf.some((p) => can(p)) : can(i.permission))).map((i) => ({ key: i.key, label: i.label, href: i.href, status: i.status, current: i.key === active }));
     if (!items.length) continue;
     sections.push({ key: s.key, label: s.label, icon: s.icon, items, flat: items.length === 1, open: items.some((i) => i.current), soon: items.length === 1 && items[0].status === "preview" });
   }
@@ -160,10 +161,11 @@ const SITE_MODULES = {
   redirections: { label: "Redirections", kind: "own", reg: "redirections", permission: "redirects.view" },
   equipe: { label: "Équipe du site", kind: "own", reg: "utilisateurs", permission: "users.view", legacy: `${BASE}/utilisateurs` },
   reglages: { label: "Réglages du site", kind: "own", permission: "settings.read", legacy: `${BASE}/parametres`, legacyLabel: "Paramètres du site principal" },
-  articles: { label: "Articles", kind: "soon", phase: "B5", permission: "articles.read", legacy: `${BASE}/articles`, reg: "articles" },
-  categories: { label: "Catégories et étiquettes", kind: "soon", phase: "B5", permission: "taxonomies.read", legacy: `${BASE}/articles/categories` },
-  commentaires: { label: "Commentaires", kind: "soon", phase: "B5", permission: "comments.read", legacy: `${BASE}/commentaires`, reg: "commentaires" },
-  medias: { label: "Médias", kind: "soon", phase: "B2", permission: "media.read", legacy: `${BASE}/mediatheque`, reg: "mediatheque" },
+  // R8 lot 2 : Articles, Commentaires et Médias s'ouvrent dans le cadre du site (écrans existants, isolation R5/R6 : le site vient de l'adresse, jamais du navigateur)
+  articles: { label: "Articles", kind: "delegate", to: "/site-web/articles", reg: "articles", permission: "articles.read", legacy: `${BASE}/articles` },
+  categories: { label: "Catégories et étiquettes", kind: "delegate", to: "/site-web/articles/categories", reg: "articles/categories", permission: "taxonomies.read", legacy: `${BASE}/articles/categories` },
+  commentaires: { label: "Commentaires", kind: "delegate", to: "/site-web/commentaires", reg: "commentaires", permission: "comments.read", legacy: `${BASE}/commentaires` },
+  medias: { label: "Médias", kind: "delegate", to: "/site-web/mediatheque", reg: "mediatheque", permission: "media.read", legacy: `${BASE}/mediatheque` },
   formulaires: { label: "Formulaires et contacts", kind: "soon", phase: "B4", permission: "forms.read", legacy: "/marketing/formulaires", legacyLabel: "Formulaires" },
   contacts: { label: "Contacts", kind: "soon", phase: "B4", permission: "forms.read", legacy: "/marketing/contacts" },
   modeles: { label: "Modèles et blocs", kind: "soon", phase: "B3", permission: "appearance.read", legacy: `${BASE}/apparence/templates` },
@@ -184,7 +186,14 @@ const SITE_MODULES = {
 const DELEGATED = Object.fromEntries(Object.entries(SITE_MODULES).filter(([, m]) => m.kind === "delegate").map(([k, m]) => [k, m.to]));
 const SCOPED_KEYS = new Set(Object.values(SITE_MODULES).filter((m) => m.kind === "delegate").map((m) => m.reg));
 // Un écran partagé prend le cadre du site seulement s'il est déclaré propre au site ET que le serveur a vérifié un site pour la requête
-const isSiteScopedKey = (key) => SCOPED_KEYS.has(key);
+// Sous-pages (une seule position) d'un module délégué, ouvertes dans le cadre du site : liste FERMÉE, jamais déduite de l'adresse
+const NESTED = Object.freeze({
+  articles: ["ajouter", "brouillons", "programmes", "publies", "corbeille", "categories", "etiquettes", "auteurs"],
+  commentaires: ["en-attente", "approuves", "indesirables", "corbeille"],
+});
+// Entrées du registre ouvertes comme sous-pages déléguées : leur clé `active` prend aussi le cadre du site quand le serveur a vérifié un site
+const FRAMED = new Set();
+const isSiteScopedKey = (key) => SCOPED_KEYS.has(key) || FRAMED.has(key);
 
 // Un module vu depuis un espace : { key, label, href, status, phase, permission, external, reg, primary }
 function siteModule(space, mod) {
@@ -224,6 +233,22 @@ const ABILITY = {
   pagetests: { mode: "open", module: "tests-ab" },
   outils: { mode: "open", module: "outils" },
   parametres: { mode: "open", module: "reglages" },
+  // R8 lot 2 : contenus déjà isolés par site (R5 médias, R6 articles/termes/commentaires), ouverts par délégation (`sub` = sous-page de la liste fermée NESTED)
+  articles: { mode: "open", module: "articles" },
+  "articles/brouillons": { mode: "open", module: "articles", sub: "brouillons" },
+  "articles/programmes": { mode: "open", module: "articles", sub: "programmes" },
+  "articles/publies": { mode: "open", module: "articles", sub: "publies" },
+  "articles/corbeille": { mode: "open", module: "articles", sub: "corbeille" },
+  "articles/categories": { mode: "open", module: "articles", sub: "categories" },
+  "articles/etiquettes": { mode: "open", module: "articles", sub: "etiquettes" },
+  "articles/ajouter": { mode: "open", module: "articles", sub: "ajouter" }, // création : permise aux accès limités (éditeur ouvert, contenus-par-site-editeur)
+  "articles/auteurs": { mode: "open", module: "articles", sub: "auteurs" },
+  mediatheque: { mode: "open", module: "medias" },
+  commentaires: { mode: "open", module: "commentaires" },
+  "commentaires/en-attente": { mode: "open", module: "commentaires", sub: "en-attente" },
+  "commentaires/approuves": { mode: "open", module: "commentaires", sub: "approuves" },
+  "commentaires/indesirables": { mode: "open", module: "commentaires", sub: "indesirables" },
+  "commentaires/corbeille": { mode: "open", module: "commentaires", sub: "corbeille" },
   "outils/sauvegardes": { mode: "central" },
   "outils/systeme": { mode: "central" },
   "outils/logs": { mode: "central" },
@@ -256,14 +281,16 @@ function marketingGroup(space) {
 
 // Une entrée du registre vue depuis un espace : { key, label, href, status, permission, reg, alias?, disabled?, phase?, primary? } — ou null (central)
 function projectItem(item, group, space) {
-  const base = { key: item.key, label: item.label, permission: item.permission, reg: item.key, section: group.key };
+  const base = { key: item.key, label: item.label, permission: item.permission, reg: item.key, section: group.key, ...(item.anyOf ? { anyOf: item.anyOf } : {}) };
   if (space.principal) return { ...item, ...base };
   const a = ABILITY[item.key];
   if (a && a.mode === "central") return null;
   if (a && a.mode === "link") return { ...base, href: space.listHref || `${BASE}/sites`, status: "live", external: true };
   if (a && a.mode === "open") {
+    if (a.teamOnly && space.limited) return null; // création d'article : réservée à l'équipe (décision A-D9 non approuvée) → absente du menu d'un accès limité
     const m = siteModule(space, a.module);
-    return { ...base, label: a.label || item.label, href: a.hash ? `${m.href}#${a.hash}` : m.href, status: "live", external: m.external, ...(a.hash ? {} : { alias: `espace/${a.module}` }), module: a.module, ...(m.primary ? { primary: m.primary } : {}) };
+    const href = a.sub ? `${m.href}/${a.sub}` : m.href;
+    return { ...base, label: a.label || item.label, href: a.hash ? `${m.href}#${a.hash}` : href, status: "live", external: m.external, ...(a.hash || a.sub ? {} : { alias: `espace/${a.module}` }), module: a.module, ...(m.primary ? { primary: m.primary } : {}) };
   }
   const slug = SOON_SLUG[item.key];
   return { ...base, href: null, status: "preview", disabled: true, phase: soonPhase(item.key), ...(slug ? { alias: `espace/${slug}`, module: slug } : {}) };
@@ -295,7 +322,7 @@ function buildSiteNav({ can, active, space }) {
   if (!current) return null;
   const sections = [];
   for (const sec of all) {
-    const items = sec.items.filter((i) => can(i.permission)).map((i) => ({ key: i.key, label: i.label, href: i.href, status: i.status, current: i.key === current.key, ...(i.disabled ? { disabled: true, phase: i.phase } : {}) }));
+    const items = sec.items.filter((i) => (i.anyOf ? i.anyOf.some((p) => can(p)) : can(i.permission))).map((i) => ({ key: i.key, label: i.label, href: i.href, status: i.status, current: i.key === current.key, ...(i.disabled ? { disabled: true, phase: i.phase } : {}) }));
     if (!items.length) continue;
     sections.push({ key: sec.key, label: sec.label, icon: sec.icon, items, flat: items.length === 1, open: items.some((i) => i.current), soon: items.length === 1 && items[0].status === "preview" });
   }
@@ -306,4 +333,5 @@ function buildSiteNav({ can, active, space }) {
   return { sections, trail, primary, current, section: sec, space };
 }
 
-module.exports = { BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, ABILITY, DELEGATED, buildCmsNav, buildSiteNav, projectSections, siteSections, principalSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };
+for (const [key, a] of Object.entries(ABILITY)) if (a.mode === "open" && a.sub) FRAMED.add(key);
+module.exports = { NESTED, BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, ABILITY, DELEGATED, buildCmsNav, buildSiteNav, projectSections, siteSections, principalSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };

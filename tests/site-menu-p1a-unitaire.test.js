@@ -23,18 +23,20 @@ describe("projection du registre (menu d'un site)", () => {
   test("tout module ouvert par la table d'aptitude existe ; tout module délégué porte la clé de l'écran existant et figure parmi les écrans propres au site", () => {
     for (const [key, a] of Object.entries(nav.ABILITY)) { assert.ok(nav.ALL.some((i) => i.key === key), `clé hors registre : ${key}`); if (a.mode === "open") assert.ok(nav.SITE_MODULES[a.module], `module inconnu : ${a.module}`); }
     for (const [mod, m] of Object.entries(nav.SITE_MODULES)) if (m.kind === "delegate") { assert.ok(m.reg, mod); assert.ok(nav.isSiteScopedKey(m.reg), mod); assert.equal(nav.DELEGATED[mod], m.to); }
-    for (const k of ["landing", "dashboard", "utilisateurs", "contacts", "apparence", "parametres", "articles"]) assert.equal(nav.isSiteScopedKey(k), false, `${k} n'ouvre pas l'espace d'un site`);
+    for (const k of ["landing", "dashboard", "utilisateurs", "contacts", "apparence", "parametres", "navigation", "seo"]) assert.equal(nav.isSiteScopedKey(k), false, `${k} n'ouvre pas l'espace d'un site`);
+    for (const k of ["articles", "articles/brouillons", "articles/categories", "articles/auteurs", "mediatheque", "commentaires", "commentaires/en-attente"]) assert.equal(nav.isSiteScopedKey(k), true, `${k} : contenu isolé par site (R5/R6), ouvert dans le cadre du site (R8 lot 2)`);
   });
   test("C1 : les entrées du registre non ouvertes à un site sont toutes visibles, grisées « Bientôt », sans lien ; une clé absente de la table est « Bientôt »", () => {
     const items = flat(nav.siteSections(site));
-    for (const k of ["articles", "mediatheque", "navigation", "commentaires", "seo", "articles/ajouter", "utilisateurs/roles", "outils/importer", "parametres/lecture", "corbeille"]) {
+    for (const k of ["navigation", "seo", "seo/meta", "utilisateurs/roles", "outils/importer", "parametres/lecture", "corbeille"]) {
       const i = items.find((x) => x.key === k); assert.ok(i, k); assert.equal(i.status, "preview", k); assert.equal(i.disabled, true, k); assert.equal(i.href, null, k);
       assert.equal(i.label, nav.ALL.find((x) => x.key === k).label, `${k} : libellé du registre`);
     }
   });
   test("ce qui est réservé à l'administration centrale ou à un lot suivant n'a AUCUN lien dans un site", () => {
     const hrefs = flat(nav.siteSections(site)).map((i) => i.href || "").join(" ");
-    for (const w of ["corbeille", "sauvegardes", "logs", "systeme", "importer", "exporter", "diagnostic", "maintenance", "roles", "permissions", "invitations", "liens-casses", "permaliens", "parametres"]) assert.ok(!hrefs.includes(w), `ne doit pas apparaître : ${w}`);
+    for (const w of ["sauvegardes", "logs", "systeme", "importer", "exporter", "diagnostic", "maintenance", "roles", "permissions", "invitations", "liens-casses", "permaliens", "parametres"]) assert.ok(!hrefs.includes(w), `ne doit pas apparaître : ${w}`);
+    assert.ok(!flat(nav.siteSections(site)).some((i) => i.href === `${site.base}/corbeille`), "la corbeille du site (Outils) reste fermée ; seules celles des articles et des commentaires sont ouvertes");
     const keys = flat(nav.siteSections(site)).map((i) => i.key);
     for (const k of ["outils/sauvegardes", "outils/systeme", "outils/logs"]) assert.ok(!keys.includes(k), `${k} reste dans l'administration centrale`);
   });
@@ -53,7 +55,8 @@ describe("projection du registre (menu d'un site)", () => {
   test("chaque écran existant retrouve son entrée par la clé qu'il porte déjà", () => {
     const expected = { pagetests: "pagetests", outils: "outils", lists: "espace/listes", segments: "espace/segments", templates: "espace/modeles-email", campaigns: "espace/campagnes", automations: "espace/automatisations", funnels: "espace/tunnels", "analytics-global": "espace/analytics", landing: "landing", sitedash: "sitedash", redirections: "redirections", utilisateurs: "utilisateurs" };
     for (const [active, key] of Object.entries(expected)) assert.equal(nav.buildSiteNav({ can: all, active, space: site }).current.key, key, active);
-    assert.equal(nav.buildSiteNav({ can: all, active: "articles/ajouter", space: site }).current.disabled, true, "entrée grisée du menu, sans écran");
+    assert.equal(nav.buildSiteNav({ can: all, active: "seo/meta", space: site }).current.disabled, true, "entrée grisée du menu, sans écran");
+    assert.equal(nav.buildSiteNav({ can: all, active: "articles/ajouter", space: site }).current.href, `${site.base}/articles/ajouter`, "ouverte (équipe)");
   });
 });
 

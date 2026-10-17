@@ -193,7 +193,8 @@ describe("contenus par site : parcours éditorial d'un accès limité", () => {
       const first = await client.get(startUrl);
       assert.equal(first.status, 200, startUrl);
       const internal = [...new Set(hrefs(first.text).filter((h) => h.startsWith("/marketing/site-web/") && !h.startsWith("/marketing/site-web/parametres")))];
-      const unscoped = internal.filter((h) => !/[?&]site=\d+/.test(h) && !/^\/marketing\/site-web\/(?:articles|commentaires)\/\d/.test(h));
+      // R8 lot 2 : les liens du menu du site portent le site DANS L'ADRESSE (/sites/<A>/…) ; un lien vers un autre site resterait signalé
+      const unscoped = internal.filter((h) => !/[?&]site=\d+/.test(h) && !/^\/marketing\/site-web\/(?:articles|commentaires)\/\d/.test(h) && !h.startsWith(`/marketing/site-web/sites/${A}/`));
       return { first, internal, unscoped, mustContain };
     };
     test("articles : onglets, pagination, réinitialisation et formulaires portent le site ; chaque destination répond 200 et reste limitée au site", async () => {
@@ -228,7 +229,7 @@ describe("contenus par site : parcours éditorial d'un accès limité", () => {
         const { first, internal } = await followAll(guestA, start);
         const mine = internal.filter((h) => /articles\/(?:categories|etiquettes)|commentaires/.test(h));
         assert.ok(mine.length > 0);
-        const lost = mine.filter((h) => !/[?&]site=\d+/.test(h) && !/commentaires\/\d/.test(h));
+        const lost = mine.filter((h) => !/[?&]site=\d+/.test(h) && !/commentaires\/\d/.test(h) && !h.startsWith(`/marketing/site-web/sites/${A}/`));
         assert.deepEqual(lost, [], `liens sans site sur ${start} : ${lost.join(" | ")}`);
         for (const h of mine) { const r = await guestA.get(h); assert.equal(r.status, 200, h); assert.ok(!r.text.includes(other), h); }
         assert.ok(first.text.includes(`name="site" value="${A}"`));

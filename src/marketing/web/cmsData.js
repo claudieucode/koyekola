@@ -45,8 +45,9 @@ function tags(db) {
     return [...count].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, "fr"));
   }, []);
 }
-function authors(db) {
-  return safe(() => db.prepare(`SELECT u.id, u.username, COUNT(p.id) n, SUM(p.status = 'published') published FROM users u JOIN posts p ON p.author_id = u.id AND p.deleted_at IS NULL GROUP BY u.id ORDER BY n DESC, u.username`).all(), []);
+// scope (facultatif) : fragment { sql, params } sur p.id (siteContent.scopePredicate) — un accès limité à un site et un site choisi ne comptent que les articles de CE site ; absent = tous (comportement historique)
+function authors(db, scope = null) {
+  return safe(() => db.prepare(`SELECT u.id, u.username, COUNT(p.id) n, SUM(p.status = 'published') published FROM users u JOIN posts p ON p.author_id = u.id AND p.deleted_at IS NULL${scope ? ` AND ${scope.sql}` : ""} GROUP BY u.id ORDER BY n DESC, u.username`).all(...(scope ? scope.params : [])), []);
 }
 
 // ---------- Commentaires (tableau de bord) : seuls les commentaires approuvés, publics ----------
