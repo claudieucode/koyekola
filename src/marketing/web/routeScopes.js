@@ -93,6 +93,9 @@ const SITE_RULES = Object.freeze([
   { id: "evenement-par-identifiant", pattern: /^\/evenements\/(\d{1,12})$/, kind: "resource", table: "evenement", idGroup: 1 },
   { id: "email-liste-et-creation", pattern: new RegExp(`^\\/(?:${EMAIL_FAMILIES})(?:\\/(?:nouvelle|nouveau|apercu|apercu-cible|historique|parcours(?:\\/.*)?|bibliotheque(?:\\/.*)?))?$`), kind: "param", terminal: true },
   { id: "contacts-du-site", pattern: /^\/contacts(?:\/\d+(?:\/evenements\.json)?)?$/, methods: ["GET"], kind: "queryGet" },
+  // Contacts par site (R7, décision D2) : écriture d'un contact par un accès limité à un site — le site vient de « ?site= » ou du champ « site » (validé par les droits) ; le DROIT de modifier ce contact
+  // (origine = ce site) est ensuite vérifié par contactcore/siteAccess ; fusion et doublons restent réservés à l'équipe (contactCore.js)
+  { id: "contacts-ecriture-du-site", pattern: /^\/contacts(?:\/(?:actions|\d+(?:\/(?:proprietes|etiquettes(?:\/retirer)?|listes(?:\/retirer)?|cycle-de-vie|etat|consentement|desinscrire|supprimer-adresse|effacer))?))?$/, methods: ["POST"], kind: "param" },
   { id: "creation-avec-site", pattern: /^(?:\/pages|\/site-web\/composants)$/, methods: ["POST"], kind: "bodySiteId" },
   // Médias par site (R5) : un fichier visé par son identifiant relève du site qui le possède (commun = organisation, fermé à un accès limité à un site)
   { id: "media-par-identifiant", pattern: /^\/site-web\/(?:mediatheque|medias)\/(\d{1,12})(?:\.json|\/|$)/, kind: "resource", table: "media", idGroup: 1 },

@@ -27,7 +27,7 @@ describe("contenus par site : serveur réel", () => {
 
   test("au démarrage : la table d'association et les 9 déclencheurs d'intégrité existent ; aucun contenu n'est rattaché", () => {
     assert.ok(one("SELECT 1 FROM sqlite_master WHERE type='table' AND name='mk_content_sites'"));
-    assert.equal(one("SELECT COUNT(*) n FROM sqlite_master WHERE type='trigger' AND name LIKE 'trg_mk_cs_%' AND name NOT IN ('trg_mk_cs_insert', 'trg_mk_cs_update')").n, 9);
+    assert.equal(one("SELECT COUNT(*) n FROM sqlite_master WHERE type='trigger' AND name GLOB 'trg_mk_cs_*' AND name NOT IN ('trg_mk_cs_insert', 'trg_mk_cs_update')").n, 9);
     assert.equal(one("SELECT COUNT(*) n FROM mk_content_sites").n, 0);
     assert.ok(one("SELECT 1 FROM schema_migrations WHERE version = '075'"));
   });

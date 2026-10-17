@@ -188,6 +188,10 @@
    "siteId": false,
    "classe": "plateforme"
   },
+  "mk_contact_sites": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_contact_tags": {
    "siteId": false,
    "classe": "plateforme"

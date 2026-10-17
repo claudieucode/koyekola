@@ -18,14 +18,14 @@ const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null)
 
 module.exports = ({ db }) => {
   const router = express.Router();
+  const siteAccess = require("../contactcore/siteAccess");
 
   // Charge la fiche ou répond 404 (identifiant non numérique, inconnu ou d'une autre organisation)
   const loadContact = (req, res) => {
     const id = intOrNull(req.params.id);
     let contact = id ? audience.getContact(req.mk.ctx, id) : null;
-    // Contact Core : une personne qui n'a accès qu'à un site ne voit que les contacts de CE site
-    if (contact && req.mk.siteOnly && !(req.mk.siteId !== null && (contact.origin_site_id === req.mk.siteId
-      || db.prepare("SELECT 1 FROM mk_events WHERE organization_id = ? AND contact_id = ? AND site_id = ? LIMIT 1").get(contact.organization_id, contact.id, req.mk.siteId)))) contact = null;
+    // R7 : accès selon le site (contactcore/siteAccess) — lecture : contacts associés au site ; écriture (toute requête autre que GET) : contacts dont l'origine est ce site
+    if (contact && req.mk.siteOnly) { const ok = req.method === "GET" ? siteAccess.canRead(req.mk.ctx, contact) : siteAccess.canWrite(req.mk.ctx, contact); if (!ok) contact = null; }
     if (!contact) res.status(404).render("error", { message: "Contact introuvable." });
     return contact;
   };
@@ -121,6 +121,7 @@ module.exports = ({ db }) => {
     const back = safeBack(req.body.back);
     attempt(req, res, next, back, () => {
       const { ctx } = req.mk;
+      siteAccess.assertWritableIds(ctx, ids); // R7 : un accès limité à un site n'agit que sur les contacts dont l'origine est son site
       if (op === "tag_add" || op === "tag_remove") {
         const r = op === "tag_add" ? audience.bulkTag(ctx, ids, req.body.tag) : audience.bulkUntag(ctx, ids, req.body.tag);
         const name = String(req.body.tag).trim();

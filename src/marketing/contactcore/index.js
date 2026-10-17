@@ -197,6 +197,7 @@ function setRecordStatus(ctx, contactId, next) {
 // Détection seulement : rien n'est fusionné automatiquement. « strong » = même numéro normalisé ; « possible » = même nom + même entreprise.
 function findDuplicates(ctx, { limit = 50 } = {}) {
   checkCtx(ctx);
+  require("./siteAccess").assertTeam(ctx, "La fusion de contacts"); // R7 : équipe de l'organisation seulement
   const cap = Math.min(Math.max(Number(limit) || 50, 1), 200);
   const org = ctx.organizationId;
   const live = "record_status IN ('active', 'inactive')";
@@ -228,6 +229,7 @@ function loadPair(ctx, masterId, sourceId) {
 // Ce qu'une fusion ferait, sans rien écrire (comparaison côte à côte)
 function mergePreview(ctx, masterId, sourceId) {
   checkCtx(ctx);
+  require("./siteAccess").assertTeam(ctx, "La fusion de contacts"); // R7 : équipe de l'organisation seulement
   const { master, source } = loadPair(ctx, masterId, sourceId);
   const fills = MERGE_FIELDS.filter((f) => !master[f] && source[f]);
   const conflicts = MERGE_FIELDS.filter((f) => master[f] && source[f] && master[f] !== source[f]);
@@ -250,6 +252,7 @@ function mergePreview(ctx, masterId, sourceId) {
 //  - le statut d'abonnement du maître ne devient JAMAIS plus permissif ; il devient plus restrictif si la source l'était.
 function mergeContacts(ctx, masterId, sourceId) {
   checkCtx(ctx);
+  require("./siteAccess").assertTeam(ctx, "La fusion de contacts"); // R7 : équipe de l'organisation seulement
   const { master, source } = loadPair(ctx, masterId, sourceId);
   const org = ctx.organizationId;
   return transaction(ctx.db, () => {

@@ -3,6 +3,7 @@
 // src/marketing/contactcore (jamais de SQL d'écriture ici) et vérifie la permission côté serveur.
 const express = require("express");
 const core = require("../contactcore");
+const siteAccess = require("../contactcore/siteAccess");
 const audience = require("../audience");
 const { attempt, need } = require("./kit");
 
@@ -11,28 +12,30 @@ const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null)
 module.exports = () => {
   const router = express.Router();
 
-  // Une personne qui n'a accès qu'à un site ne voit que les contacts de CE site (jamais ceux des autres)
-  const inScope = (req, contact) => !req.mk.siteOnly || (req.mk.siteId !== null && (contact.origin_site_id === req.mk.siteId
-    || Boolean(req.mk.ctx.db.prepare("SELECT 1 FROM mk_events WHERE organization_id = ? AND contact_id = ? AND site_id = ? LIMIT 1").get(req.mk.ctx.organizationId, contact.id, req.mk.siteId))));
+  // R7 : accès selon le site (contactcore/siteAccess) — lecture : contacts associés au site ; écriture (autre que GET) : contacts dont l'origine est ce site
+  const inScope = (req, contact) => !req.mk.siteOnly || (req.method === "GET" ? siteAccess.canRead(req.mk.ctx, contact) : siteAccess.canWrite(req.mk.ctx, contact));
   const loadOr404 = (req, res, id) => {
     const contact = id ? audience.getContact(req.mk.ctx, id) : null;
     if (!contact || !inScope(req, contact)) { res.status(404).render("error", { message: "Contact introuvable." }); return null; }
     return contact;
   };
 
+  // R7 : doublons et fusion = équipe de l'organisation seulement (un accès limité à un site ne peut pas parcourir ni fusionner les contacts des autres sites)
+  const teamOnly = (req, res, next) => (req.mk.siteOnly ? res.status(403).render("error", { message: "La détection des doublons et la fusion sont réservées à l'équipe de l'organisation." }) : next());
+
   // ---------- Doublons ----------
-  router.get("/contacts/doublons", need("contacts.merge"), (req, res) => {
+  router.get("/contacts/doublons", need("contacts.merge"), teamOnly, (req, res) => {
     res.render("marketing/contacts-duplicates", { title: "Doublons", active: "contactdupes", groups: core.findDuplicates(req.mk.ctx, { limit: 100 }) });
   });
 
   // ---------- Fusion : aperçu puis confirmation ----------
-  router.get("/contacts/fusion", need("contacts.merge"), (req, res) => {
+  router.get("/contacts/fusion", need("contacts.merge"), teamOnly, (req, res) => {
     const master = intOrNull(req.query.maitre), source = intOrNull(req.query.source);
     let preview = null, error = null;
     try { if (master && source) preview = core.mergePreview(req.mk.ctx, master, source); } catch (e) { if (!e.code) throw e; error = e.message; }
     res.render("marketing/contacts-merge", { title: "Fusionner deux contacts", active: "contactdupes", preview, error, masterId: master, sourceId: source });
   });
-  router.post("/contacts/fusion", need("contacts.merge"), (req, res, next) => {
+  router.post("/contacts/fusion", need("contacts.merge"), teamOnly, (req, res, next) => {
     const master = intOrNull(req.body.maitre), source = intOrNull(req.body.source);
     let done = null;
     attempt(req, res, next, () => (done ? `/marketing/contacts/${done}` : `/marketing/contacts/fusion?maitre=${master || ""}&source=${source || ""}`), () => {
