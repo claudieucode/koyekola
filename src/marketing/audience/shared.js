@@ -36,11 +36,16 @@ function resolveSite(ctx, siteId) {
   return id;
 }
 // Fragment SQL de portée pour une table portant site_id (alias `a`)
+const { notHiddenSql } = require("../visibility");
 function siteSql(ctx, a) {
   if (Number.isInteger(ctx.siteScope)) return { sql: `${a}.site_id = ?`, params: [ctx.siteScope] };
-  if (ctx.siteFilter === "principal") return { sql: `${a}.site_id IS NULL`, params: [] };
-  if (Number.isInteger(ctx.siteFilter)) return { sql: `${a}.site_id = ?`, params: [ctx.siteFilter] };
-  return { sql: "1 = 1", params: [] };
+  // R4 : sites dont la personne ne peut pas lire les éléments de cet écran (ctx.hiddenSites, posé par visibility.attach) : toujours exclus, avec ou sans filtre d'affichage
+  const hid = notHiddenSql(ctx.hiddenSites, `${a}.site_id`);
+  let base;
+  if (ctx.siteFilter === "principal") base = { sql: `${a}.site_id IS NULL`, params: [] };
+  else if (Number.isInteger(ctx.siteFilter)) base = { sql: `${a}.site_id = ?`, params: [ctx.siteFilter] };
+  else return hid;
+  return hid.params.length ? { sql: `${base.sql} AND ${hid.sql}`, params: [...base.params, ...hid.params] } : base;
 }
 
 module.exports = { checkCtx, cleanText, audit, emit, resolveSite, siteSql, MarketingError };

@@ -52,7 +52,7 @@ function matches(ctx, definition, contactId) {
 }
 
 // --- Segments enregistrés ---
-const table = (ctx) => createRepository(ctx.db, ctx.organizationId, { siteScope: ctx.siteScope }).table("mk_segments");
+const table = (ctx) => createRepository(ctx.db, ctx.organizationId, { siteScope: ctx.siteScope, hiddenSites: ctx.hiddenSites }).table("mk_segments"); // R4 : sites cachés exclus des lectures en liste
 const parse = (row) => (row ? { ...row, definition: JSON.parse(row.definition) } : null);
 
 function getSegment(ctx, id) {

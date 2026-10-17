@@ -3,6 +3,7 @@
 // (mk_landing_pages, brouillon / publication / versions / corbeille = archived_at) : aucune table parallèle.
 const { MarketingError } = require("../errors");
 const { checkCtx, audit } = require("../audience/shared");
+const { notHiddenSql } = require("../visibility"); // R4 : pages des sites dont la personne ne peut pas lire les éléments
 
 const STATES = ["toutes", "publiees", "brouillons", "corbeille"];
 const SORTS = { modifiee: "p.updated_at", titre: "p.name COLLATE NOCASE", creee: "p.id", publiee: "p.published_at" };
@@ -22,16 +23,18 @@ const stateSql = (state) => ({
 }[state]);
 
 function counts(ctx) {
+  const hid = notHiddenSql(ctx.hiddenSites, "p.site_id");
   const r = ctx.db.prepare(`SELECT COALESCE(SUM(p.archived_at IS NULL), 0) toutes,
       COALESCE(SUM(p.archived_at IS NULL AND p.status = 'published'), 0) publiees,
       COALESCE(SUM(p.archived_at IS NULL AND p.status IN ('draft', 'unpublished')), 0) brouillons,
       COALESCE(SUM(p.archived_at IS NOT NULL), 0) corbeille
-    FROM mk_landing_pages p WHERE p.organization_id = ? AND ${NOT_VARIANT}`).get(ctx.organizationId);
+    FROM mk_landing_pages p WHERE p.organization_id = ? AND ${NOT_VARIANT} AND ${hid.sql}`).get(ctx.organizationId, ...hid.params);
   return { toutes: r.toutes, publiees: r.publiees, brouillons: r.brouillons, corbeille: r.corbeille };
 }
 
 function authorsOfPages(ctx) {
-  return ctx.db.prepare("SELECT DISTINCT u.id, u.username FROM mk_landing_pages p JOIN users u ON u.id = p.created_by WHERE p.organization_id = ? ORDER BY u.username COLLATE NOCASE").all(ctx.organizationId);
+  const hid = notHiddenSql(ctx.hiddenSites, "p.site_id");
+  return ctx.db.prepare(`SELECT DISTINCT u.id, u.username FROM mk_landing_pages p JOIN users u ON u.id = p.created_by WHERE p.organization_id = ? AND ${hid.sql} ORDER BY u.username COLLATE NOCASE`).all(ctx.organizationId, ...hid.params);
 }
 
 // Liste filtrée, triée et paginée DANS la base ; les chiffres de fréquentation ne sont calculés que pour la page affichée
@@ -40,6 +43,8 @@ function queryPages(ctx, { state = "toutes", q = "", siteId = "", authorId = "",
   if (!STATES.includes(state)) state = "toutes";
   const where = ["p.organization_id = ?", stateSql(state), NOT_VARIANT];
   const args = [ctx.organizationId];
+  const hid = notHiddenSql(ctx.hiddenSites, "p.site_id");
+  if (hid.params.length) { where.push(hid.sql); args.push(...hid.params); }
   const needle = String(q || "").trim();
   if (needle) { where.push("(p.name LIKE ? ESCAPE '\\' OR p.slug LIKE ? ESCAPE '\\' OR p.title LIKE ? ESCAPE '\\')"); args.push(like(needle), like(needle), like(needle)); }
   if (siteId === "none") where.push("p.site_id IS NULL");
