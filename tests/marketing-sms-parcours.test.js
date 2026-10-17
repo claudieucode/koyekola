@@ -275,7 +275,8 @@ describe("formulaires : case « accepter les SMS »", () => {
     assert.equal(r.pending, true);
     assert.equal(consentRow(r.contact), undefined);
     setSms("Texte modifié entre-temps, plus long que dix.", { doubleOptin: true });
-    assert.equal(forms.confirmSubscription(A, r.token, { now: Date.now() }).ok, true);
+    // Horloge COHÉRENTE : la confirmation est créée avec l'horloge du contexte (NOON, fixée) ; la confirmer avec l'heure réelle la rendait « expirée » (7 jours de validité) dès que le test tournait plus d'une semaine après NOON
+    assert.equal(forms.confirmSubscription(A, r.token, { now: A.now() }).ok, true);
     const k = consentRow(r.contact);
     assert.equal(k.text_shown, "J'accepte de recevoir des SMS de KOLAKISA.");
     assert.equal(audience.getContact(A, r.contact.id).sms_status, "subscribed");

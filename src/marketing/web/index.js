@@ -48,6 +48,8 @@ function createMarketingRouters({ db }) {
         ...(membership ? { siteFilter: /^\d{1,12}$/.test(String(contentSiteRaw(req) ?? "")) ? Number(contentSiteRaw(req)) : req.query.site === "principal" ? "principal" : undefined } : { siteScope: Number.isInteger(siteId) ? siteId : -1 }) },
     };
     res.locals.mk = { role, can: allowed, ctx: req.mk.ctx };
+    // R7 lot 6.0 : écrans des six moteurs secondaires — un accès LIMITÉ à un site n'y entre que si le module est activé pour CE site (en plus des permissions et de la portée des routes) ; jamais pour un site inconnu
+    if (require("../siteModules").denies(req.mk, req.path, db, orgId)) return res.status(403).render("error", { message: "Ce module n'est pas activé pour ce site." });
     // Écrans de contenu d'un site (R6 lot 2) : le site courant est conservé dans les formulaires (champ caché « site »)
     { const s = require("../../services/siteContent").siteParam(req.mk.ctx); res.locals.mkSiteField = s ? `<input type="hidden" name="site" value="${s}">` : ""; res.locals.mkSiteId = s; res.locals.mkNavUrl = (u) => (s && typeof u === "string" && /^\/marketing\/site-web\/(?:articles|commentaires)(?:[/?#]|$)/.test(u) && !/[?&]site=/.test(u) ? u + (u.includes("?") ? "&" : "?") + "site=" + s : u); res.locals.mkRestricted = Number.isInteger(req.mk.ctx.siteScope) && req.mk.ctx.siteScope > 0; }
     // Email Engine (palier 16) : sites proposés / site imposé, disponibles pour les écrans des audiences, segments, modèles et campagnes
@@ -61,6 +63,7 @@ function createMarketingRouters({ db }) {
   });
 
   admin.use(require("./siteSpace").attach); // contexte de l'espace d'un site (palier 3, B1) : avant les routeurs qui affichent des écrans
+  admin.use(require("./siteModules")()); // R7 lot 6.0 : activation des modules par site (équipe seulement)
   admin.use(require("./contactRequests")()); // R7 lot 5 : demandes de rattachement de contacts entre sites — avant contactCore et admin.js (« /contacts/:id »)
   admin.use(require("./contactCore")()); // Contact Core (palier 15) : doublons, fusion, cycle de vie, état, journal — avant admin.js (« /contacts/:id »)
   admin.use(require("./segments")({ db }));

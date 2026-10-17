@@ -376,6 +376,10 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "mk_site_modules": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_sites": {
    "siteId": false,
    "classe": "plateforme"
