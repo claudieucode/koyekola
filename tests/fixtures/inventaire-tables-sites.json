@@ -125,7 +125,7 @@
    "classe": "a-isoler-B2"
   },
   "mk_ai_requests": {
-   "siteId": false,
+   "siteId": true,
    "classe": "a-decider"
   },
   "mk_api_keys": {
@@ -133,7 +133,7 @@
    "classe": "plateforme"
   },
   "mk_audit_logs": {
-   "siteId": false,
+   "siteId": true,
    "classe": "plateforme"
   },
   "mk_automation_log": {
@@ -188,6 +188,14 @@
    "siteId": false,
    "classe": "plateforme"
   },
+  "mk_contact_requests": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_contact_sites": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_contact_tags": {
    "siteId": false,
    "classe": "plateforme"
@@ -213,7 +221,7 @@
    "classe": "a-isoler-B4"
   },
   "mk_forms": {
-   "siteId": false,
+   "siteId": true,
    "classe": "a-isoler-B4"
   },
   "mk_funnel_steps": {
@@ -281,7 +289,7 @@
    "classe": "plateforme"
   },
   "mk_order_attributions": {
-   "siteId": false,
+   "siteId": true,
    "classe": "plateforme"
   },
   "mk_org_members": {
@@ -345,7 +353,7 @@
    "classe": "plateforme"
   },
   "mk_score_log": {
-   "siteId": false,
+   "siteId": true,
    "classe": "plateforme"
   },
   "mk_score_rules": {
@@ -368,12 +376,16 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "mk_site_modules": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_sites": {
    "siteId": false,
    "classe": "plateforme"
   },
   "mk_sms_campaigns": {
-   "siteId": false,
+   "siteId": true,
    "classe": "a-decider"
   },
   "mk_sms_clicks": {
@@ -397,8 +409,12 @@
    "classe": "a-decider"
   },
   "mk_social_posts": {
-   "siteId": false,
+   "siteId": true,
    "classe": "a-decider"
+  },
+  "mk_social_site_grants": {
+   "siteId": true,
+   "classe": "isolee"
   },
   "mk_suppressions": {
    "siteId": false,

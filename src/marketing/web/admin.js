@@ -18,14 +18,15 @@ const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null)
 
 module.exports = ({ db }) => {
   const router = express.Router();
+  const siteAccess = require("../contactcore/siteAccess");
+  const requests = require("../contactcore/requests");
 
   // Charge la fiche ou répond 404 (identifiant non numérique, inconnu ou d'une autre organisation)
   const loadContact = (req, res) => {
     const id = intOrNull(req.params.id);
     let contact = id ? audience.getContact(req.mk.ctx, id) : null;
-    // Contact Core : une personne qui n'a accès qu'à un site ne voit que les contacts de CE site
-    if (contact && req.mk.siteOnly && !(req.mk.siteId !== null && (contact.origin_site_id === req.mk.siteId
-      || db.prepare("SELECT 1 FROM mk_events WHERE organization_id = ? AND contact_id = ? AND site_id = ? LIMIT 1").get(contact.organization_id, contact.id, req.mk.siteId)))) contact = null;
+    // R7 : accès selon le site (contactcore/siteAccess) — lecture : contacts associés au site ; écriture (toute requête autre que GET) : contacts dont l'origine est ce site
+    if (contact && req.mk.siteOnly) { const ok = req.method === "GET" ? siteAccess.canRead(req.mk.ctx, contact) : siteAccess.canWrite(req.mk.ctx, contact); if (!ok) contact = null; }
     if (!contact) res.status(404).render("error", { message: "Contact introuvable." });
     return contact;
   };
@@ -121,6 +122,7 @@ module.exports = ({ db }) => {
     const back = safeBack(req.body.back);
     attempt(req, res, next, back, () => {
       const { ctx } = req.mk;
+      siteAccess.assertWritableIds(ctx, ids); // R7 : un accès limité à un site n'agit que sur les contacts dont l'origine est son site
       if (op === "tag_add" || op === "tag_remove") {
         const r = op === "tag_add" ? audience.bulkTag(ctx, ids, req.body.tag) : audience.bulkUntag(ctx, ids, req.body.tag);
         const name = String(req.body.tag).trim();
@@ -149,10 +151,21 @@ module.exports = ({ db }) => {
 
   router.post("/contacts", need("contacts.write"), (req, res, next) => {
     let created = null;
-    // Réussite : vers la fiche du nouveau contact ; erreur : retour au formulaire avec le message
-    attempt(req, res, next, () => (created ? `/marketing/contacts/${created.id}` : "/marketing/contacts/nouveau"), () => {
-      created = audience.upsertContact(req.mk.ctx, { email: req.body.email, ...pick(req.body, PROFILE_FIELDS), source: "manual" }, { failIfExists: true }).contact;
-      return "Contact créé.";
+    // Réussite : vers la fiche du nouveau contact ; erreur : retour au formulaire avec le message.
+    // R7 : pour un accès LIMITÉ à un site, la réponse est la même que l'adresse soit nouvelle ou déjà connue d'un autre site (retour à la liste, même message) : aucune
+    // fiche n'est exposée et l'existence d'une adresse protégée n'est pas confirmée. Une adresse déjà visible de son site garde le message « existe déjà ».
+    const target = () => {
+      const q = req.mk.siteOnly ? `?site=${req.mk.siteId}` : "";
+      if (created === null) return `/marketing/contacts/nouveau${q}`;
+      return req.mk.siteOnly ? `/marketing/contacts${q}` : `/marketing/contacts/${created.id}`;
+    };
+    attempt(req, res, next, target, () => {
+      if (req.mk.siteOnly) requests.guard(req.mk.ctx); // limite de débit par site : même refus quel que soit le résultat de la création
+      const out = audience.upsertContact(req.mk.ctx, { email: req.body.email, ...pick(req.body, PROFILE_FIELDS), source: "manual" }, { failIfExists: true });
+      // R7 lot 5 : adresse déjà connue d'un autre site → demande mise en file (même réponse visible que pour une création) ; adresse nouvelle → créée tout de suite
+      if (req.mk.siteOnly && out.withheld) requests.enqueue(req.mk.ctx, { email: req.body.email, source: "admin" });
+      created = req.mk.siteOnly ? { masked: true } : out.contact;
+      return req.mk.siteOnly ? "Contact enregistré." : "Contact créé.";
     });
   });
 

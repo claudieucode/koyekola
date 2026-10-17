@@ -137,9 +137,11 @@ describe("API /api/v1 : portée de site des clés", () => {
       assert.match(res.text, /"code":"read_only"/);
     });
     test("un contact créé est rattaché au site de la clé (origine), visible de A, invisible de B", async () => {
+      // R7 lot 2 : la création par une clé de site répond 202 SANS donnée (identique au cas d'une adresse déjà connue ailleurs : aucune confirmation d'existence) ; la fiche se retrouve par la liste
       const res = await call(key.aW, "/contacts", { method: "POST", json: { email: "nouveau-a@ex.fr", first_name: "Ada" } });
-      assert.equal(res.status, 201);
-      const id = json(res).data.id;
+      assert.equal(res.status, 202);
+      assert.deepEqual(json(res), { data: null, accepted: true });
+      const id = one("SELECT id FROM mk_contacts WHERE email = 'nouveau-a@ex.fr'").id;
       assert.equal(one("SELECT origin_site_id o FROM mk_contacts WHERE id = ?", id).o, A);
       assert.equal((await call(key.aR, `/contacts/${id}`)).status, 200);
       assert.equal((await call(key.bR, `/contacts/${id}`)).status, 404);
@@ -150,11 +152,13 @@ describe("API /api/v1 : portée de site des clés", () => {
       assert.equal(json(res).created, false);
       assert.equal(one("SELECT first_name f FROM mk_contacts WHERE id = ?", cA).f, "Alice");
     });
-    test("une adresse déjà connue hors du site : refus générique, la fiche n'est ni lue ni modifiée, la tentative est journalisée", async () => {
+    test("une adresse déjà connue hors du site : MÊME réponse qu'une création (202, aucune donnée), la fiche n'est ni lue ni modifiée, la tentative est journalisée (R7 lot 2 : plus de 403, qui confirmait l'existence)", async () => {
       const before = one("SELECT first_name f, updated_at u FROM mk_contacts WHERE id = ?", cB);
       const res = await call(key.aW, "/contacts", { method: "POST", json: { email: "b@ex.fr", first_name: "Pirate" } });
-      assert.equal(res.status, 403);
-      assert.match(res.text, /"code":"out_of_scope"/);
+      assert.equal(res.status, 202);
+      const fresh = await call(key.aW, "/contacts", { method: "POST", json: { email: "jamais-vu@ex.fr", first_name: "Neuf" } });
+      assert.equal(fresh.status, 202);
+      assert.equal(res.text, fresh.text, "réponses strictement identiques");
       assert.ok(!/b@ex\.fr|Pirate/.test(res.text));
       assert.deepEqual({ ...one("SELECT first_name f, updated_at u FROM mk_contacts WHERE id = ?", cB) }, { ...before });
       const logged = one("SELECT COUNT(*) n FROM mk_audit_logs WHERE action = 'api_key.out_of_scope'").n;
@@ -162,7 +166,7 @@ describe("API /api/v1 : portée de site des clés", () => {
     });
     test("champs réservés du Contact Core (compte lié, étape, site) : ignorés pour une clé de site", async () => {
       const res = await call(key.aW, "/contacts", { method: "POST", json: { email: "champs@ex.fr", siteId: B, site_id: B, userId: 1, lifecycleStage: "customer", origin_site_id: B } });
-      assert.equal(res.status, 201);
+      assert.equal(res.status, 202);
       const row = one("SELECT origin_site_id o, lms_user_id u, lifecycle_stage s FROM mk_contacts WHERE email = 'champs@ex.fr'");
       assert.deepEqual({ ...row }, { o: A, u: null, s: row.s });
       assert.notEqual(row.s, "customer");
@@ -176,7 +180,11 @@ describe("API /api/v1 : portée de site des clés", () => {
       const otherSite = await call(key.aW, "/events", { method: "POST", json: { name: "page.viewed", contact_id: cA, site_id: B } });
       assert.equal(otherSite.status, 403);
       assert.equal((await call(key.aW, "/events", { method: "POST", json: { name: "page.viewed", contact_id: cB } })).status, 404);
-      assert.equal((await call(key.aW, "/events", { method: "POST", json: { name: "page.viewed", email: "b@ex.fr" } })).status, 403);
+      // R7 lot 2 : un événement par adresse d'un contact d'un autre site est enregistré SANS identité (même réponse qu'une adresse inconnue) ; jamais rattaché au contact
+      const byEmail = await call(key.aW, "/events", { method: "POST", json: { name: "page.viewed", email: "b@ex.fr" } });
+      assert.equal(byEmail.status, 201);
+      const ev = one("SELECT contact_id c, email e, site_id s FROM mk_events WHERE id = ?", json(byEmail).data.id);
+      assert.deepEqual({ ...ev }, { c: null, e: null, s: A });
       assert.equal(one("SELECT COUNT(*) n FROM mk_events WHERE contact_id = ? AND site_id = ?", cB, A).n, 0, "le contact de B n'a pas été rattaché à A");
       assert.equal((await call(key.aR, `/contacts/${cB}`)).status, 404);
     });

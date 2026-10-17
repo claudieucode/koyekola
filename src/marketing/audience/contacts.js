@@ -70,6 +70,14 @@ function upsertContact(ctx, input = {}, { failIfExists = false } = {}) {
     const repo = createRepository(ctx.db, ctx.organizationId).table("mk_contacts");
     const existing = findByEmail(ctx, check.email);
     if (existing) {
+      // R7 : un accès limité à un site ne complète que les contacts dont l'origine est son site ; sinon AUCUNE écriture et `withheld: true` (jamais exposer cette fiche ni confirmer son existence)
+      if (Number.isInteger(ctx.siteScope)) {
+        const access = require("../contactcore/siteAccess");
+        if (!access.canWrite(ctx, existing)) {
+          if (failIfExists && access.canRead(ctx, existing)) throw new MarketingError("duplicate", "Un contact avec cette adresse existe déjà.");
+          return { contact: existing, created: false, withheld: true };
+        }
+      }
       if (failIfExists) throw new MarketingError("duplicate", "Un contact avec cette adresse existe déjà.");
       const fill = {};
       for (const [k, v] of Object.entries(fields)) if ((existing[k] === "" || existing[k] === null) && v !== "" && v !== null) fill[k] = v;
@@ -78,7 +86,9 @@ function upsertContact(ctx, input = {}, { failIfExists = false } = {}) {
       if (input.properties) setContactProperties({ ...ctx, audit: false }, contact.id, input.properties, { skipEmpty: true });
       return { contact, created: false };
     }
-    const contact = repo.insert({ email: check.email, ...fields, status: isSuppressed(ctx, check.email) ? "suppressed" : "unknown" });
+    // R7 : un contact créé par un accès LIMITÉ à un site a ce site pour origine (imposé par le serveur) — c'est ce qui lui en donne ensuite l'écriture
+    const origin = Number.isInteger(ctx.siteScope) && ctx.siteScope > 0 ? { origin_site_id: ctx.siteScope } : {};
+    const contact = repo.insert({ email: check.email, ...fields, ...origin, status: isSuppressed(ctx, check.email) ? "suppressed" : "unknown" });
     if (input.properties) setContactProperties({ ...ctx, audit: false }, contact.id, input.properties, { skipEmpty: true });
     emit(ctx, "contact.created", { contact, idempotencyKey: `contact.created:${ctx.organizationId}:${contact.id}`, metadata: { source: contact.source } });
     audit(ctx, "contact.created", "contact", contact.id, { source: contact.source });
@@ -203,11 +213,14 @@ function filters(ctx, { status, q, listId, tagId, source, sendable, sinceDays, c
     if (!RECORD_STATUSES.includes(recordStatus)) throw new MarketingError("invalid_field", "État de fiche inconnu.");
     where.push("c.record_status = ?"); params.push(recordStatus);
   }
+  // R7 : filtre d'affichage par site (équipe) — contacts associés au site (origine ou événement), via mk_contact_sites
   if (siteId !== undefined && siteId !== null) {
     if (!Number.isInteger(Number(siteId)) || Number(siteId) < 1) throw new MarketingError("invalid_field", "Site invalide.");
-    where.push("(c.origin_site_id = ? OR EXISTS (SELECT 1 FROM mk_events e WHERE e.contact_id = c.id AND e.organization_id = c.organization_id AND e.site_id = ?))");
-    params.push(Number(siteId), Number(siteId));
+    where.push("EXISTS (SELECT 1 FROM mk_contact_sites cs WHERE cs.contact_id = c.id AND cs.site_id = ? AND cs.organization_id = c.organization_id)");
+    params.push(Number(siteId));
   }
+  // R7 : un accès LIMITÉ à un site ne liste que les contacts de son site, quel que soit l'appelant (jamais déduit de l'adresse)
+  { const r = require("../contactcore/siteAccess").readSql(ctx, "c"); if (r) { where.push(r.sql); params.push(...r.params); } }
   if (consent !== undefined && consent !== "") {
     if (!CONSENT_FILTERS.includes(consent)) throw new MarketingError("invalid_field", "Filtre de consentement inconnu.");
     const last = "(SELECT k.action FROM mk_consents k WHERE k.contact_id = c.id AND k.organization_id = c.organization_id AND k.purpose = 'marketing' ORDER BY k.id DESC LIMIT 1)";

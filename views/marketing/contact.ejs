@@ -90,7 +90,7 @@
       <div class="mk-stat"><span class="mk-stat-label">E-mails reçus</span><span class="mk-stat-value"><%= mkh.fmt(summary.messages) %></span><span class="mk-stat-hint"><%= mkh.fmt(summary.clicked) %> avec clic</span></div>
       <div class="mk-stat"><span class="mk-stat-label">Scénarios en cours</span><span class="mk-stat-value"><%= mkh.fmt(summary.runningAutomations) %></span></div>
       <div class="mk-stat"><span class="mk-stat-label">Dernière activité</span><span class="mk-stat-value mk-stat-small"><%= summary.lastActivity ? mkh.fdate(summary.lastActivity) : "—" %></span><span class="mk-stat-hint">clic ou ouverture d'un e-mail</span></div>
-      <% if (score) { %><div class="mk-stat"><span class="mk-stat-label">Score</span><span class="mk-stat-value"><%= mkh.fmt(score.score) %></span><span class="mk-stat-hint"><%= score.level %> · <a href="/marketing/score">règles</a></span></div><% } %>
+      <% if (score) { %><div class="mk-stat"><span class="mk-stat-label">Score</span><span class="mk-stat-value"><%= mkh.fmt(score.score) %></span><span class="mk-stat-hint"><%= score.level %><%= score.siteScore ? " · score du site" : "" %> · <a href="/marketing/score<%= score.siteScore ? "?site=" + mk.ctx.siteScope : "" %>"><%= score.siteScore ? "détails" : "règles" %></a></span></div><% } %>
     </div>
     <% if (score && score.history.length) { %>
       <details class="mk-panel mk-score-history"><summary>D'où vient ce score ? (20 dernières attributions)</summary>

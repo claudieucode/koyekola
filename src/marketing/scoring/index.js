@@ -8,6 +8,15 @@ const { MarketingError } = require("../errors");
 const { checkCtx, audit, emit } = require("../audience/shared");
 const { transaction } = require("../db/tx");
 const { TRIGGERS } = require("../automations/catalog");
+const siteModules = require("../siteModules");
+const siteAccess = require("../contactcore/siteAccess");
+const { validSite } = require("../audit");
+
+// R7 lot 6.4 — par site : les règles, les niveaux et le score STOCKÉ du contact sont des données d'organisation (équipe seulement) ; le calcul est inchangé et chaque ligne du journal porte le site de l'événement.
+// Un accès limité à un site ne voit que le « score du site » : la somme des lignes de SON site, pour les seuls contacts que son site peut lire (jamais le score de l'organisation, ni les règles).
+const limited = (ctx) => ctx.siteScope !== undefined && ctx.siteScope !== null;
+const teamOnly = (ctx, what = "Cette opération") => { if (limited(ctx)) throw new MarketingError("forbidden", `${what} est réservée à l'équipe de l'organisation.`); };
+const SITE_SCORE = "MAX(0, COALESCE((SELECT SUM(l.points) FROM mk_score_log l WHERE l.contact_id = c.id AND l.organization_id = c.organization_id AND l.site_id = ?), 0))";
 
 const LEVEL_EVENT = "contact.score_level_changed";
 const DEFAULT_LEVELS = [["Froid", 0], ["Intéressé", 21], ["Chaud", 51], ["Très chaud", 101]];
@@ -35,6 +44,7 @@ function ruleEvents() {
 // ---------- Niveaux ----------
 function levels(ctx) {
   checkCtx(ctx);
+  if (limited(ctx) && !ctx.db.prepare("SELECT 1 FROM mk_score_levels WHERE organization_id = ?").get(ctx.organizationId)) return DEFAULT_LEVELS.map(([name, min], i) => ({ id: -(i + 1), name, min_score: min })); // lecture seule : un site n'écrit jamais
   let rows = ctx.db.prepare("SELECT id, name, min_score FROM mk_score_levels WHERE organization_id = ? ORDER BY min_score").all(ctx.organizationId);
   if (!rows.length) {
     const ins = ctx.db.prepare("INSERT OR IGNORE INTO mk_score_levels (organization_id, name, min_score) VALUES (?, ?, ?)");
@@ -46,6 +56,8 @@ function levels(ctx) {
 const levelOf = (list, score) => list.filter((l) => score >= l.min_score).pop() || list[0];
 // Remplacer les niveaux : [{ id?, name, min }] ; le premier commence à 0, seuils croissants et distincts
 function saveLevels(ctx, input) {
+  teamOnly(ctx, "La modification des niveaux");
+
   const current = levels(ctx);
   const list = (Array.isArray(input) ? input : []).map((l) => ({ id: Number(l.id) || null, name: String(l.name || "").replace(/\s+/g, " ").trim().slice(0, 40), min: Number(l.min) }))
     .filter((l) => l.name);
@@ -74,6 +86,8 @@ function saveLevels(ctx, input) {
 // ---------- Règles ----------
 function listRules(ctx) {
   checkCtx(ctx);
+  teamOnly(ctx, "La lecture des règles de score");
+
   return ctx.db.prepare(`SELECT r.*, (SELECT COUNT(*) FROM mk_score_log l WHERE l.rule_id = r.id) AS applied,
       (SELECT COUNT(DISTINCT l.contact_id) FROM mk_score_log l WHERE l.rule_id = r.id) AS contacts
     FROM mk_score_rules r WHERE r.organization_id = ? ORDER BY r.event, r.id`).all(ctx.organizationId);
@@ -92,6 +106,8 @@ function normalizeRule(input) {
 }
 function createRule(ctx, input = {}) {
   checkCtx(ctx);
+  teamOnly(ctx, "La création d'une règle de score");
+
   const r = normalizeRule(input);
   if (ctx.db.prepare("SELECT COUNT(*) n FROM mk_score_rules WHERE organization_id = ?").get(ctx.organizationId).n >= 100) throw bad("100 règles au plus.");
   const id = Number(ctx.db.prepare("INSERT INTO mk_score_rules (organization_id, event, filter_key, filter_value, points, max_times, active, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
@@ -101,6 +117,8 @@ function createRule(ctx, input = {}) {
 }
 function updateRule(ctx, id, input = {}) {
   checkCtx(ctx);
+  teamOnly(ctx, "La modification d'une règle de score");
+
   const rule = ctx.db.prepare("SELECT * FROM mk_score_rules WHERE id = ? AND organization_id = ?").get(Number(id), ctx.organizationId);
   if (!rule) throw new MarketingError("not_found", "Règle introuvable.");
   const r = normalizeRule({ event: rule.event, filterValue: rule.filter_value, points: rule.points, maxTimes: rule.max_times, active: Boolean(rule.active), ...input });
@@ -109,11 +127,15 @@ function updateRule(ctx, id, input = {}) {
 }
 function deleteRule(ctx, id) {
   checkCtx(ctx);
+  teamOnly(ctx, "La suppression d'une règle de score");
+
   const changed = ctx.db.prepare("DELETE FROM mk_score_rules WHERE id = ? AND organization_id = ?").run(Number(id), ctx.organizationId).changes;
   if (!changed) throw new MarketingError("not_found", "Règle introuvable.");
 }
 function addSuggested(ctx) {
   checkCtx(ctx);
+  teamOnly(ctx, "L'ajout des règles proposées");
+
   const existing = new Set(listRules(ctx).map((r) => `${r.event}|${r.filter_value}`));
   let n = 0;
   for (const [event, points, maxTimes] of SUGGESTED) {
@@ -137,8 +159,8 @@ function applyEvent(ctx, event, { silent = false } = {}) {
   for (const r of rules) {
     if (!require("../automations/catalog").filterMatches(md, { key: r.filter_key, value: r.filter_value })) continue;
     if (r.max_times !== null && ctx.db.prepare("SELECT COUNT(*) n FROM mk_score_log WHERE rule_id = ? AND contact_id = ?").get(r.id, contact.id).n >= r.max_times) continue;
-    const ins = ctx.db.prepare("INSERT OR IGNORE INTO mk_score_log (organization_id, contact_id, rule_id, event_id, event, points, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .run(ctx.organizationId, contact.id, r.id, event.id, event.name, r.points, event.occurredAt || Date.now());
+    const ins = ctx.db.prepare("INSERT OR IGNORE INTO mk_score_log (organization_id, contact_id, rule_id, event_id, event, points, created_at, site_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(ctx.organizationId, contact.id, r.id, event.id, event.name, r.points, event.occurredAt || Date.now(), validSite(ctx.db, ctx.organizationId, event.siteId)); // site de l'ÉVÉNEMENT (écrit par le serveur), jamais une valeur de requête
     if (ins.changes) delta += r.points;
   }
   if (!delta) return 0;
@@ -159,7 +181,7 @@ function applyEvent(ctx, event, { silent = false } = {}) {
 // des règles. `key` identifie le passage et l'étape : rejouer la même étape ne change rien. Aucun événement de changement de
 // niveau n'est émis (les actions d'un scénario n'en émettent jamais : pas de scénarios qui se déclenchent en boucle).
 const MAX_ADJUST = 100000;
-function adjustScore(ctx, contactId, { mode, points, key } = {}) {
+function adjustScore(ctx, contactId, { mode, points, key, siteId } = {}) {
   checkCtx(ctx);
   if (!["add", "subtract", "set"].includes(mode)) throw bad("Mode de score invalide (ajouter, retirer, définir).");
   if (!Number.isInteger(points) || points < 0 || points > MAX_ADJUST || (mode !== "set" && points < 1)) throw bad(`Points invalides (un entier de ${mode === "set" ? 0 : 1} à ${MAX_ADJUST}).`);
@@ -169,8 +191,8 @@ function adjustScore(ctx, contactId, { mode, points, key } = {}) {
     if (!c) throw bad("Contact introuvable.");
     const next = mode === "add" ? c.score + points : mode === "subtract" ? Math.max(0, c.score - points) : points;
     const delta = next - c.score;
-    const ins = ctx.db.prepare("INSERT OR IGNORE INTO mk_score_log (organization_id, contact_id, rule_id, event_id, event, points, created_at, source) VALUES (?, ?, NULL, ?, 'automation.score', ?, ?, 'automation')")
-      .run(ctx.organizationId, c.id, key, delta, ctx.now ? ctx.now() : Date.now());
+    const ins = ctx.db.prepare("INSERT OR IGNORE INTO mk_score_log (organization_id, contact_id, rule_id, event_id, event, points, created_at, source, site_id) VALUES (?, ?, NULL, ?, 'automation.score', ?, ?, 'automation', ?)")
+      .run(ctx.organizationId, c.id, key, delta, ctx.now ? ctx.now() : Date.now(), validSite(ctx.db, ctx.organizationId, siteId)); // siteId = site du scénario (relu en base par l'appelant)
     if (!ins.changes) return { applied: false, delta: 0, score: c.score }; // étape déjà exécutée
     if (delta) ctx.db.prepare("UPDATE mk_contacts SET score = ? WHERE id = ?").run(next, c.id);
     return { applied: true, delta, score: next };
@@ -180,6 +202,8 @@ function adjustScore(ctx, contactId, { mode, points, key } = {}) {
 // Recalcul complet à partir des événements reçus (les règles actuelles appliquées à tout l'historique)
 function recompute(ctx) {
   checkCtx(ctx);
+  teamOnly(ctx, "Le recalcul des scores");
+
   return transaction(ctx.db, () => {
     ctx.db.prepare("DELETE FROM mk_score_log WHERE organization_id = ? AND source = 'rule'").run(ctx.organizationId);
     ctx.db.prepare("UPDATE mk_contacts SET score = 0 WHERE organization_id = ? AND score <> 0").run(ctx.organizationId);
@@ -189,7 +213,7 @@ function recompute(ctx) {
     const rows = ctx.db.prepare(`SELECT * FROM mk_events WHERE organization_id = ? AND contact_id IS NOT NULL AND name IN (${names.map(() => "?").join(",")}) ORDER BY id`).all(ctx.organizationId, ...names);
     let n = 0;
     for (const row of rows) {
-      const ev = { id: row.id, name: row.name, contactId: row.contact_id, occurredAt: row.occurred_at, metadata: JSON.parse(row.metadata || "{}") };
+      const ev = { id: row.id, name: row.name, contactId: row.contact_id, occurredAt: row.occurred_at, siteId: row.site_id ?? null, metadata: JSON.parse(row.metadata || "{}") };
       if (applyEvent(ctx, ev, { silent: true })) n += 1;
     }
     keepAdjustments();
@@ -205,6 +229,8 @@ function eventHandler({ db, bus }) {
 
 // ---------- Lecture ----------
 function overview(ctx) {
+  checkCtx(ctx);
+  if (limited(ctx)) return siteOverview(ctx);
   const lv = levels(ctx);
   const counts = lv.map((l, i) => {
     const next = lv[i + 1];
@@ -215,8 +241,33 @@ function overview(ctx) {
     .map((c) => ({ ...c, level: levelOf(lv, c.score).name }));
   return { levels: counts, top };
 }
+// Accès limité : contacts lisibles par le site, score = somme des lignes de CE site (jamais le score de l'organisation)
+function siteOverview(ctx) {
+  siteModules.assertEnabled(ctx, "scoring");
+  const lv = levels(ctx);
+  const rd = siteAccess.readSql(ctx, "c");
+  const base = `SELECT c.id, c.email, c.first_name, c.last_name, ${SITE_SCORE} AS score FROM mk_contacts c WHERE c.organization_id = ? AND ${rd.sql}`;
+  const args = [ctx.siteScope, ctx.organizationId, ...rd.params];
+  const counts = lv.map((l, i) => {
+    const next = lv[i + 1];
+    const n = ctx.db.prepare(`SELECT COUNT(*) n FROM (${base}) WHERE score >= ?${next ? " AND score < ?" : ""}`).get(...args, l.min_score, ...(next ? [next.min_score] : [])).n;
+    return { ...l, contacts: n };
+  });
+  const top = ctx.db.prepare(`SELECT * FROM (${base}) WHERE score > 0 ORDER BY score DESC, id LIMIT 10`).all(...args).map((c) => ({ ...c, level: levelOf(lv, c.score).name }));
+  return { levels: counts, top };
+}
 function contactScore(ctx, contactId) {
   checkCtx(ctx);
+  if (limited(ctx)) {
+    // Contact lisible par le site ET module activé pour lui, sinon aucun score n'est montré (la fiche du contact reste ouverte)
+    if (!Number.isInteger(ctx.siteScope) || !siteModules.isEnabled(ctx.db, ctx.organizationId, ctx.siteScope, "scoring")) return null;
+    const contact = ctx.db.prepare("SELECT id FROM mk_contacts WHERE id = ? AND organization_id = ?").get(contactId, ctx.organizationId);
+    if (!siteAccess.canRead(ctx, contact)) return null;
+    const total = ctx.db.prepare("SELECT MAX(0, COALESCE(SUM(points), 0)) AS s FROM mk_score_log WHERE contact_id = ? AND organization_id = ? AND site_id = ?").get(contactId, ctx.organizationId, ctx.siteScope).s;
+    const lv = levels(ctx);
+    const history = ctx.db.prepare("SELECT event, points, created_at, source FROM mk_score_log WHERE contact_id = ? AND organization_id = ? AND site_id = ? ORDER BY created_at DESC, id DESC LIMIT 20").all(contactId, ctx.organizationId, ctx.siteScope);
+    return { score: total, level: levelOf(lv, total).name, siteScore: true, history: history.map((h) => ({ ...h, label: h.source === "automation" ? "Scénario d'automatisation" : (ruleEvents()[h.event] || {}).label || h.event })) };
+  }
   const c = ctx.db.prepare("SELECT score FROM mk_contacts WHERE id = ? AND organization_id = ?").get(contactId, ctx.organizationId);
   if (!c) return null;
   const lv = levels(ctx);

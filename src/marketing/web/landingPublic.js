@@ -36,7 +36,9 @@ module.exports = ({ db }) => {
     next();
   });
   const ctxOf = (req) => ({ db, organizationId: req.mkPages.organizationId, userId: null, bus: req.mkPages.bus, settings: req.mkPages.settings, baseUrl: process.env.SITE_URL });
-  const loadForm = (page) => (page.form_id ? forms.getForm({ db, organizationId: page.organization_id }, page.form_id) : null);
+  // R7 lot 3 : le formulaire d'un AUTRE site que celui de la page n'est jamais affiché (donnée historique incluse) — le rendu ne contourne pas la règle d'isolation
+  const sameSite = (page, f) => Boolean(f) && (f.siteId ?? null) === (page.site_id ?? null);
+  const loadForm = (page) => { if (!page.form_id) return null; const f = forms.getForm({ db, organizationId: page.organization_id }, page.form_id); return sameSite(page, f) ? f : null; };
   // Page affichée : composants synchronisés résolus, formations relues dans le catalogue
   // Personnalisation : sections et éléments filtrés selon ce que le site sait réellement du visiteur
   const shownPage = (req, page) => {
@@ -63,7 +65,7 @@ module.exports = ({ db }) => {
     let found = null;
     for (const s of page.sections) if (s.type === "layout") walk(s.children, (n) => { if (n.id === id && n.type === "signupform" && !n.hidden) found = n; });
     if (!found) return null;
-    try { return forms.getForm({ db, organizationId: page.organization_id }, Number(found.props.formId)); } catch { return null; }
+    try { const f = forms.getForm({ db, organizationId: page.organization_id }, Number(found.props.formId)); return sameSite(page, f) ? f : null; } catch { return null; }
   };
 
   // Test A/B en cours : version du visiteur (collante s'il a accepté le suivi, sinon stable pour la journée, sans cookie) et contenu correspondant
@@ -147,12 +149,12 @@ module.exports = ({ db }) => {
       const result = forms.submitForm(ctx, form.id, { ...req.body, ip: req.ip, file: req.file, page: `/p/${page.slug}` });
       if (!result.ok) return show(req, res, page, { status: 400, error: result.reason === "invalid_email" ? "Adresse e-mail invalide." : result.message || "Inscription impossible pour le moment.", values: req.body, widget });
       // Étiquettes propres à la page (en plus de celles du formulaire) : on sait d'où vient l'inscription
-      if (result.contact) for (const tag of page.tags) tagContact({ ...ctx, audit: false }, result.contact.id, tag);
+      if (result.contact && !result.withheld) for (const tag of page.tags) tagContact({ ...ctx, audit: false }, result.contact.id, tag); // R7 lot 3 : jamais d'étiquette sur un contact d'une autre origine
       landing.record(db, page, "signup", landing.visitorOf(req, secret()), result.pending ? "en attente de confirmation" : "confirmée");
       if (test) abtests.recordConversion(db, test, visitor, "signup");
-      if (result.contact && consentedVisitor(req)) visitorsLib.recordFormSubmit(db, page.organization_id, { visitorId: consentedVisitor(req), contactId: result.contact.id, path: `/p/${page.slug}`, formName: form.name });
+      if (result.contact && !result.withheld && consentedVisitor(req)) visitorsLib.recordFormSubmit(db, page.organization_id, { visitorId: consentedVisitor(req), contactId: result.contact.id, path: `/p/${page.slug}`, formName: form.name });
       // Palier 19 : le formulaire d'une étape de tunnel TERMINE cette étape (fait établi côté serveur) ; le parcours déjà suivi de ce visiteur rejoint son contact, daté de son vrai moment
-      if (result.contact) {
+      if (result.contact && !result.withheld) { // R7 lot 3 : ni parcours de visiteur ni étape de tunnel rattachés à un contact d'une autre origine
         try {
           const fctx = { ...ctx, userId: null, audit: false };
           const contactRow = { id: result.contact.id, email: result.contact.email };

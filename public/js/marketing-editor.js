@@ -2280,6 +2280,8 @@
   function aiCall(action, body, btn, out) {
     if (!aiOn) return Promise.reject(new Error("Assistant IA non activé."));
     aiBusy(btn, true); out.textContent = "";
+    var siteMeta = document.querySelector('meta[name="mk-site"]'); // accès limité à un site (R7 lot 6.2)
+    if (siteMeta) body = Object.assign({}, body, { site: siteMeta.content });
     return postJson("/marketing/ia/" + action, body)
       .then(function (r) { aiBusy(btn, false); return r; })
       .catch(function (e) { aiBusy(btn, false); out.textContent = ""; out.appendChild(el("p", { "class": "form-error", role: "alert" }, e.message)); throw e; });

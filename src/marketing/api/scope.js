@@ -6,11 +6,12 @@ const { recordAudit } = require("../audit");
 
 const isSiteKey = (auth) => auth.reach === "site" && Number.isInteger(auth.siteId);
 
-// Fragment SQL « le contact (alias `a`) appartient au site » — même définition que le filtre de site de la liste des contacts (audience/contacts.js)
+// Fragment SQL « le contact (alias `a`) est LISIBLE depuis le site » — même définition que partout (R7 : table d'association mk_contact_sites, contactcore/siteAccess.js).
+// L'ÉCRITURE est plus étroite : seulement les contacts dont l'origine est ce site (siteAccess.canWrite).
 function contactInSite(a, siteId) {
   return {
-    sql: `(${a}.origin_site_id = ? OR EXISTS (SELECT 1 FROM mk_events e WHERE e.contact_id = ${a}.id AND e.organization_id = ${a}.organization_id AND e.site_id = ?))`,
-    params: [siteId, siteId],
+    sql: `EXISTS (SELECT 1 FROM mk_contact_sites cs WHERE cs.contact_id = ${a}.id AND cs.site_id = ? AND cs.organization_id = ${a}.organization_id)`,
+    params: [siteId],
   };
 }
 
@@ -26,7 +27,7 @@ function contactOutsideScope(db, auth, { contactId = null, contact = null }) {
 // Journal : tentative d'une clé de site hors de sa portée (jamais le contenu de la requête, jamais la clé)
 function auditDenied(db, auth, route, reason) {
   try {
-    recordAudit(db, { organizationId: auth.organizationId, userId: null, action: "api_key.out_of_scope", resourceType: "api_key", resourceId: auth.keyId, metadata: { route, reason, site_id: auth.siteId } });
+    recordAudit(db, { organizationId: auth.organizationId, userId: null, action: "api_key.out_of_scope", resourceType: "api_key", resourceId: auth.keyId, siteId: auth.siteId, metadata: { route, reason, site_id: auth.siteId } });
   } catch { /* le journal ne doit jamais empêcher la réponse de refus */ }
 }
 

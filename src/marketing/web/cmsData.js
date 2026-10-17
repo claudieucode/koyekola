@@ -91,8 +91,9 @@ function pagesSeo(ctx) {
 }
 
 // ---------- Outils : journal d'audit et sauvegardes (lecture seule) ----------
-const auditLog = (ctx, limit = 100) => safe(() => ctx.db.prepare(`SELECT l.id, l.action, l.resource_type, l.resource_id, l.created_at, u.username FROM mk_audit_logs l LEFT JOIN users u ON u.id = l.user_id
-    WHERE l.organization_id = ? ORDER BY l.id DESC LIMIT ?`).all(ctx.organizationId, limit), []);
+// R7 lot 4 : lecture filtrée côté serveur par la politique du journal (audit.scopeSql) — un accès limité à un site ne voit que les lignes de CE site
+const auditLog = (ctx, limit = 100) => safe(() => { const s = require("../audit").scopeSql(ctx, "l"); return ctx.db.prepare(`SELECT l.id, l.action, l.resource_type, l.resource_id, l.created_at, u.username FROM mk_audit_logs l LEFT JOIN users u ON u.id = l.user_id
+    WHERE l.organization_id = ? AND ${s.sql} ORDER BY l.id DESC LIMIT ?`).all(ctx.organizationId, ...s.params, limit); }, []);
 const listBackups = () => { try { return backups.list(); } catch { return []; } };
 
 // ---------- Tableau de bord : aperçu réel ----------

@@ -88,9 +88,9 @@ defineAction({
     if (!Number.isInteger(raw.points) || raw.points < min || raw.points > scoring.MAX_ADJUST) throw bad(i, `points invalides (un nombre entier de ${min} à ${scoring.MAX_ADJUST}).`);
     return withNext({ type: "adjust_score", mode: raw.mode, points: raw.points }, raw, i, steps);
   },
-  execute({ ctx, run, index, step, contact }) {
+  execute({ ctx, run, index, step, contact, automation }) {
     try {
-      const r = scoring.adjustScore(ctx, contact.id, { mode: step.mode, points: step.points, key: run.id * 100 + index });
+      const r = scoring.adjustScore(ctx, contact.id, { mode: step.mode, points: step.points, key: run.id * 100 + index, siteId: automation && automation.site_id });
       if (!r.applied) return { next: true, log: ["already_done", "score déjà modifié par cette étape"] };
       return { next: true, log: ["adjust_score", `${MODE_TEXT[step.mode]} ${step.points} → ${r.delta >= 0 ? "+" : ""}${r.delta} (score ${r.score})`] };
     } catch (error) {

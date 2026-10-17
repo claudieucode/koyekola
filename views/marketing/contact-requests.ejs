@@ -1,0 +1,18 @@
+<%- include("partials/top", { title, active }) %>
+    <p class="mk-back"><a href="/marketing/contacts<%= mk.ctx.siteScope ? '?site=' + mk.ctx.siteScope : '' %>">← Contacts</a></p>
+    <div class="mk-head"><h1>Mes demandes <span class="mk-count"><%= items.length %></span></h1></div>
+    <p class="mk-lead">Quand une adresse ne peut pas être ajoutée directement à votre site, une demande est transmise à l'équipe de l'organisation. Vous voyez ici seulement si elle est <strong>en attente</strong> ou <strong>traitée</strong>. Si l'équipe y donne suite, le contact apparaît dans votre liste.</p>
+    <% if (!items.length) { %>
+      <div class="mk-empty"><%- icon("users", { size: 32 }) %><h2>Aucune demande</h2><p>Les demandes apparaissent ici lorsque l'équipe doit intervenir.</p></div>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table">
+        <caption class="sr-only">Vos demandes</caption>
+        <thead><tr><th scope="col">Adresse e-mail</th><th scope="col">Demandée le</th><th scope="col">État</th></tr></thead>
+        <tbody>
+          <% items.forEach((r) => { %>
+            <tr><td><%= r.email %></td><td><%= mkh.fdate(r.createdAt) %></td><td><span class="mk-status <%= r.state === 'pending' ? 'mk-status-warn' : '' %>"><%= r.state === 'pending' ? 'En attente' : 'Traitée' %></span></td></tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+    <% } %>
+<%- include("partials/bottom") %>

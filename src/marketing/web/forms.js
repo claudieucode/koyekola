@@ -26,7 +26,7 @@ module.exports = ({ db }) => {
 
   router.post("/formulaires", need("forms.write"), (req, res, next) => {
     try {
-      const created = forms.createForm(req.mk.ctx, { name: req.body.name, fields: [], consentText: req.body.consentText, listId: null, doubleOptin: true });
+      const created = forms.createForm(req.mk.ctx, { name: req.body.name, fields: [], consentText: req.body.consentText, listId: null, doubleOptin: true, siteId: req.body.site });
       res.redirect(`/marketing/formulaires/${created.id}`);
     } catch (error) {
       if (!(error instanceof MarketingError)) return next(error);

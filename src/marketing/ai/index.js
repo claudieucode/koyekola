@@ -16,6 +16,8 @@ const { markdownToRich } = require("../templates/richtext");
 const { getCourse, listCourses } = require("../bridge/catalog");
 const smsRender = require("../sms/render");
 const { getSmsConfig } = require("../sms/config");
+const siteModules = require("../siteModules");
+const { validSite } = require("../audit");
 
 const DAY = 86400000;
 const VOICE_KEY = "ai.brand_voice";
@@ -57,11 +59,18 @@ function saveAiSettings(ctx, { voice, dailyLimit }) {
   audit(ctx, "ai.settings_updated", "settings", null, { dailyLimit: n, voice: Boolean(v) });
   return getAiSettings(ctx);
 }
+// R7 lot 6.2 — le QUOTA est commun à l'organisation (`orgLast24h`, jamais borné par le site) ; la CONSOMMATION se lit par site : un accès limité ne voit que celle de SON site, l'équipe voit le total et la répartition.
+const limited = (ctx) => ctx.siteScope !== undefined && ctx.siteScope !== null;
+const orgLast24h = (ctx, now) => ctx.db.prepare("SELECT COUNT(*) n FROM mk_ai_requests WHERE organization_id = ? AND created_at > ?").get(ctx.organizationId, now - DAY).n;
 function usage(ctx, now = nowOf(ctx)) {
   const since = now - DAY;
-  const r = ctx.db.prepare("SELECT COUNT(*) n, COALESCE(SUM(ok), 0) ok FROM mk_ai_requests WHERE organization_id = ? AND created_at > ?").get(ctx.organizationId, since);
-  const byAction = ctx.db.prepare("SELECT action, COUNT(*) n FROM mk_ai_requests WHERE organization_id = ? AND created_at > ? GROUP BY action").all(ctx.organizationId, now - 30 * DAY);
-  return { last24h: r.n, ok24h: r.ok, last30d: Object.fromEntries(byAction.map((x) => [x.action, x.n])) };
+  const site = limited(ctx) ? (Number.isInteger(ctx.siteScope) ? { sql: " AND site_id = ?", params: [ctx.siteScope] } : { sql: " AND 1 = 0", params: [] }) : { sql: "", params: [] };
+  const r = ctx.db.prepare(`SELECT COUNT(*) n, COALESCE(SUM(ok), 0) ok FROM mk_ai_requests WHERE organization_id = ? AND created_at > ?${site.sql}`).get(ctx.organizationId, since, ...site.params);
+  const byAction = ctx.db.prepare(`SELECT action, COUNT(*) n FROM mk_ai_requests WHERE organization_id = ? AND created_at > ?${site.sql} GROUP BY action`).all(ctx.organizationId, now - 30 * DAY, ...site.params);
+  const out = { last24h: r.n, ok24h: r.ok, last30d: Object.fromEntries(byAction.map((x) => [x.action, x.n])) };
+  // Répartition par site (équipe seulement) : NULL = organisation / site principal / historique sans site
+  if (!limited(ctx)) out.bySite24h = ctx.db.prepare("SELECT r.site_id, s.name, COUNT(*) n FROM mk_ai_requests r LEFT JOIN mk_sites s ON s.id = r.site_id WHERE r.organization_id = ? AND r.created_at > ? GROUP BY r.site_id ORDER BY n DESC").all(ctx.organizationId, since).map((x) => ({ siteId: x.site_id, name: x.name || null, n: x.n }));
+  return out;
 }
 
 // ---------- Appel commun : plafond, consigne de marque, journal ----------
@@ -78,13 +87,18 @@ function systemFor(ctx, channel) {
   ].filter(Boolean).join(" ");
 }
 
-async function call(ctx, action, { channel = "email", prompt, schema, effort = "medium", system = null }) {
+async function call(ctx, action, { channel = "email", prompt, schema, effort = "medium", system = null, siteId } = {}) {
   checkCtx(ctx);
+  // R7 lot 6.2 — un accès LIMITÉ à un site n'utilise l'IA que si le module est activé pour CE site (chemin unique : e-mails, SMS, studio de pages)
+  siteModules.assertEnabled(ctx, "ai");
   const now = nowOf(ctx);
   const settings = getAiSettings(ctx);
   if (!settings.configured) throw new AiError("not_configured", "L'assistant IA n'est pas activé : ajoutez la variable ANTHROPIC_API_KEY (clé de console.anthropic.com) dans la configuration du serveur.");
-  if (usage(ctx, now).last24h >= settings.dailyLimit) throw new AiError("quota", `Plafond atteint : ${settings.dailyLimit} demandes à l'IA sur les dernières 24 heures (réglable dans Paramètres → Assistant IA).`);
-  const log = (ok, code = "", out = 0) => ctx.db.prepare("INSERT INTO mk_ai_requests (organization_id, user_id, action, ok, error_code, input_chars, output_tokens, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(ctx.organizationId, ctx.userId ?? null, action, ok ? 1 : 0, code, prompt.length, out, now);
+  if (orgLast24h(ctx, now) >= settings.dailyLimit) throw new AiError("quota", `Plafond atteint : ${settings.dailyLimit} demandes à l'IA sur les dernières 24 heures (réglable dans Paramètres → Assistant IA).`);
+  // Site de la consommation : jamais lu d'une requête — site explicite d'un appelant interne (ex. site de la page éditée, relu en base), sinon le site imposé à un accès limité ; toujours revalidé
+  // (un accès LIMITÉ est toujours attribué à SON site, quoi qu'un appelant interne passe ; l'équipe : site explicite relu en base, sinon aucun)
+  const site = limited(ctx) ? validSite(ctx.db, ctx.organizationId, ctx.siteScope) : validSite(ctx.db, ctx.organizationId, siteId);
+  const log = (ok, code = "", out = 0) => ctx.db.prepare("INSERT INTO mk_ai_requests (organization_id, user_id, action, ok, error_code, input_chars, output_tokens, created_at, site_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(ctx.organizationId, ctx.userId ?? null, action, ok ? 1 : 0, code, prompt.length, out, now, site);
   try {
     const r = await runJson({ system: system || systemFor(ctx, channel), prompt, schema, effort });
     log(true, "", (r.usage && r.usage.output_tokens) || 0);

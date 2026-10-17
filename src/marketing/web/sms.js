@@ -92,7 +92,7 @@ module.exports = () => {
     const contact = contactOf(req);
     if (!contact) return res.status(404).render("error", { message: "Contact introuvable." });
     attempt(req, res, next, `/marketing/contacts/${contact.id}#sms`, () => {
-      const r = sms.recordSmsConsent(req.mk.ctx, contact.id, { phone: req.body.phone, source: "admin", textShown: req.body.text, ip: req.ip });
+      const r = sms.recordSmsConsent(req.mk.ctx, contact.id, { phone: req.body.phone, source: "admin", textShown: req.body.text, ip: req.ip, siteId: Number.isInteger(req.mk.ctx.siteScope) ? req.mk.ctx.siteScope : null });
       if (!r.ok) throw new MarketingError(r.reason, r.reason === "suppressed" ? "Ce numéro est bloqué : il ne peut pas recevoir de SMS marketing." : "Ce contact a retiré son accord SMS : seule la personne elle-même peut le redonner (formulaire d'inscription).");
       return r.already ? "Accord SMS déjà enregistré pour ce numéro." : "Accord SMS enregistré.";
     });

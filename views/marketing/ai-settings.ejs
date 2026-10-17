@@ -15,6 +15,15 @@
           <div class="mk-stat"><span class="mk-stat-label"><%= label %></span><span class="mk-stat-value"><%= mkh.fmt(usage.last30d[k] || 0) %></span><span class="mk-stat-hint">sur 30 jours</span></div>
         <% }) %>
       </div>
+      <% if (usage.bySite24h && usage.bySite24h.length) { %>
+        <h3>Consommation des dernières 24 h par site</h3>
+        <p class="field-hint">Le plafond ci-dessus est <strong>commun à l'organisation</strong> ; cette répartition indique seulement quel site a fait chaque demande.</p>
+        <div class="mk-table-wrap"><table class="mk-table">
+          <caption class="sr-only">Demandes par site sur 24 heures</caption>
+          <thead><tr><th scope="col">Site</th><th scope="col">Demandes</th></tr></thead>
+          <tbody><% usage.bySite24h.forEach((r) => { %><tr><td><%= r.name || (r.siteId ? "Site #" + r.siteId : "Organisation / site principal") %></td><td><%= mkh.fmt(r.n) %></td></tr><% }) %></tbody>
+        </table></div>
+      <% } %>
       <p class="field-hint">Seuls l'action, le résultat et des tailles sont notés pour ce décompte : vos textes ne sont jamais conservés par le site. Ils sont transmis à Anthropic le temps de la demande.</p>
     </section>
 

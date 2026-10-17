@@ -8,6 +8,7 @@
 //  - un événement est un fait historique, enregistré uniquement par recordEvent() (jamais par INSERT direct) ;
 //  - fusion = absorption réversible à la main : la fiche absorbée est conservée (jamais supprimée), son historique reste lisible.
 const { transaction } = require("../db/tx");
+const siteAccess = require("./siteAccess");
 const { MarketingError } = require("../errors");
 const { checkCtx, cleanText, audit } = require("../audience/shared");
 const { validateEmail } = require("../audience/email");
@@ -58,7 +59,9 @@ function identify(ctx, input = {}, { failIfExists = false } = {}) {
   checkCtx(ctx);
   const check = validateEmail(input.email);
   if (!check.ok) throw new MarketingError("invalid_email", check.reason);
-  const siteId = checkSite(ctx, input.siteId ?? null);
+  // R7 : pour un accès LIMITÉ à un site, le site d'origine est celui du serveur (ctx.siteScope), jamais celui de l'appelant
+  const scoped = Number.isInteger(ctx.siteScope);
+  const siteId = checkSite(ctx, scoped ? ctx.siteScope : input.siteId ?? null);
   const source = cleanText(input.source ?? "api", { max: 50, field: "source" }) || "api";
   const sourceDetail = cleanText(input.sourceDetail ?? "", { max: 200, field: "source_detail" });
   const jobTitle = cleanText(input.jobTitle ?? "", { max: 120, field: "job_title" });
@@ -79,6 +82,12 @@ function identify(ctx, input = {}, { failIfExists = false } = {}) {
 
   return transaction(ctx.db, () => {
     const found = contacts.findByEmail(ctx, check.email);
+    // R7 : un accès limité à un site ne complète ni ne modifie QUE les contacts dont l'origine est son site (une simple activité ne suffit pas, un contact sans association non plus).
+    // Sinon : AUCUNE écriture (champs, étape, téléphone, compte, événements orphelins) et `withheld: true` — l'appelant ne doit jamais exposer cette fiche ni confirmer son existence.
+    if (found && scoped && !siteAccess.canWrite(ctx, found)) {
+      if (failIfExists && siteAccess.canRead(ctx, found)) throw new MarketingError("duplicate", "Un contact avec cette adresse existe déjà.");
+      return { contact: found, created: false, withheld: true, attachedEvents: 0 };
+    }
     if (found && failIfExists) throw new MarketingError("duplicate", "Un contact avec cette adresse existe déjà.");
     const base = { email: check.email, source };
     for (const f of ["first_name", "last_name", "company", "country", "language", "timezone"]) if (input[f] !== undefined) base[f] = input[f];
@@ -197,6 +206,7 @@ function setRecordStatus(ctx, contactId, next) {
 // Détection seulement : rien n'est fusionné automatiquement. « strong » = même numéro normalisé ; « possible » = même nom + même entreprise.
 function findDuplicates(ctx, { limit = 50 } = {}) {
   checkCtx(ctx);
+  require("./siteAccess").assertTeam(ctx, "La fusion de contacts"); // R7 : équipe de l'organisation seulement
   const cap = Math.min(Math.max(Number(limit) || 50, 1), 200);
   const org = ctx.organizationId;
   const live = "record_status IN ('active', 'inactive')";
@@ -228,6 +238,7 @@ function loadPair(ctx, masterId, sourceId) {
 // Ce qu'une fusion ferait, sans rien écrire (comparaison côte à côte)
 function mergePreview(ctx, masterId, sourceId) {
   checkCtx(ctx);
+  require("./siteAccess").assertTeam(ctx, "La fusion de contacts"); // R7 : équipe de l'organisation seulement
   const { master, source } = loadPair(ctx, masterId, sourceId);
   const fills = MERGE_FIELDS.filter((f) => !master[f] && source[f]);
   const conflicts = MERGE_FIELDS.filter((f) => master[f] && source[f] && master[f] !== source[f]);
@@ -250,6 +261,7 @@ function mergePreview(ctx, masterId, sourceId) {
 //  - le statut d'abonnement du maître ne devient JAMAIS plus permissif ; il devient plus restrictif si la source l'était.
 function mergeContacts(ctx, masterId, sourceId) {
   checkCtx(ctx);
+  require("./siteAccess").assertTeam(ctx, "La fusion de contacts"); // R7 : équipe de l'organisation seulement
   const { master, source } = loadPair(ctx, masterId, sourceId);
   const org = ctx.organizationId;
   return transaction(ctx.db, () => {

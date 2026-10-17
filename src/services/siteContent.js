@@ -62,7 +62,7 @@ function siteOf(db, type, id) {
   return row ? row.site_id : null;
 }
 const scopeOf = (db, type, id) => (type === "term" ? (db.prepare("SELECT taxonomy FROM taxonomy_terms WHERE id = ?").get(id) || {}).taxonomy || "" : "");
-const audit = (ctx, action, id, meta) => { if (ctx.userId != null && ctx.audit !== false) recordAudit(ctx.db, { organizationId: ctx.organizationId, userId: ctx.userId, action, resourceType: "content_site", resourceId: id, metadata: meta }); };
+const audit = (ctx, action, id, meta) => { if (ctx.userId != null && ctx.audit !== false) recordAudit(ctx.db, { organizationId: ctx.organizationId, userId: ctx.userId, action, resourceType: "content_site", resourceId: id, metadata: meta, siteId: meta && Number.isInteger(meta.site_id) ? meta.site_id : (meta && Number.isInteger(meta.from) ? meta.from : undefined) }); };
 
 function checkAddress(address) {
   if (address === undefined || address === null || address === "") return null;

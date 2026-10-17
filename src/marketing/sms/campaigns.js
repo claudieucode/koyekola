@@ -9,7 +9,8 @@
 const crypto = require("crypto");
 const { transaction } = require("../db/tx");
 const { MarketingError } = require("../errors");
-const { checkCtx, cleanText, audit } = require("../audience/shared");
+const { checkCtx, cleanText, audit, resolveSite, siteSql } = require("../audience/shared");
+const siteModules = require("../siteModules");
 const { getContact } = require("../audience/contacts");
 const { targetClause } = require("../sending/audience");
 const { enqueue } = require("../queue/jobs");
@@ -33,9 +34,18 @@ const bad = (message) => new MarketingError("invalid_field", message);
 const intOrNull = (v) => (v === null || v === undefined || v === "" ? null : Number.isInteger(Number(v)) ? Number(v) : NaN);
 
 // ---------- Brouillons ----------
+// R7 lot 6.1 — un accès LIMITÉ à un site (ctx.siteScope, imposé par le serveur) : module SMS activé pour CE site, campagnes de CE site seulement, prix et coûts jamais communiqués.
+const limited = (ctx) => ctx.siteScope !== undefined && ctx.siteScope !== null;
+const guardModule = (ctx) => siteModules.assertEnabled(ctx, "sms");
+// Prix par segment et devise figés à l'envoi : réservés à l'équipe (le NOMBRE de segments reste visible)
+const redact = (ctx, row) => (row && limited(ctx) ? { ...row, price_per_segment: "", currency: "" } : row);
 function getSmsCampaign(ctx, id) {
   checkCtx(ctx);
-  return Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_sms_campaigns WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) ?? null : null;
+  guardModule(ctx);
+  if (!Number.isInteger(id)) return null;
+  const row = ctx.db.prepare("SELECT * FROM mk_sms_campaigns WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) ?? null;
+  if (row && limited(ctx) && row.site_id !== ctx.siteScope) return null; // la campagne d'un autre site ou de l'organisation est « introuvable »
+  return redact(ctx, row);
 }
 function requireSmsCampaign(ctx, id) {
   const c = getSmsCampaign(ctx, id);
@@ -49,11 +59,17 @@ function checkName(name) {
   return value;
 }
 
-function createSmsCampaign(ctx, { name, body = "", targetType = "all", targetId = null } = {}) {
+function createSmsCampaign(ctx, { name, body = "", targetType, targetId = null, siteId } = {}) {
   checkCtx(ctx);
+  guardModule(ctx);
+  // « Tous les abonnés SMS de l'organisation » est réservé à l'équipe ; un accès limité cible une liste ou un segment de son site
+  // (le brouillon d'un accès limité démarre sans cible choisie — valeur « all » de repos — et ne peut PAS être lancé tant qu'une liste ou un segment de son site n'est pas choisi : voir le contrôle avant envoi)
+  if (limited(ctx) && targetType === "all") throw bad("Choisissez une liste ou un segment de votre site : « tous les abonnés » est réservé à l'équipe de l'organisation.");
+  if (targetType === undefined) targetType = "all";
+  const site = resolveSite(ctx, siteId); // accès limité : toujours SON site (jamais celui d'une requête) ; équipe : site choisi (vérifié) ou aucun
   const info = ctx.db
-    .prepare("INSERT INTO mk_sms_campaigns (organization_id, name, body, target_type, target_id, created_by) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(ctx.organizationId, checkName(name), String(body).slice(0, MAX_BODY), targetType, targetId, ctx.userId ?? null);
+    .prepare("INSERT INTO mk_sms_campaigns (organization_id, name, body, target_type, target_id, created_by, site_id) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .run(ctx.organizationId, checkName(name), String(body).slice(0, MAX_BODY), targetType, targetId, ctx.userId ?? null, site);
   const id = Number(info.lastInsertRowid);
   audit(ctx, "sms_campaign.created", "sms_campaign", id, {});
   return getSmsCampaign(ctx, id);
@@ -72,9 +88,16 @@ function updateSmsCampaign(ctx, id, patch = {}) {
   if (patch.targetType !== undefined) {
     if (!["all", "list", "segment"].includes(patch.targetType)) throw bad("Destinataires : tous les abonnés SMS, une liste ou un segment.");
     const targetId = patch.targetType === "all" ? null : intOrNull(patch.targetId);
+    if (patch.targetType === "all" && limited(ctx)) throw bad("« Tous les abonnés » est réservé à l'équipe de l'organisation : choisissez une liste ou un segment de votre site.");
     if (patch.targetType !== "all") {
       if (!Number.isInteger(targetId)) throw bad("Choisissez la liste ou le segment.");
-      targetClause(ctx, { targetType: patch.targetType, targetId }); // lève si introuvable
+      targetClause(ctx, { targetType: patch.targetType, targetId }); // lève si introuvable (un accès limité ne voit que les listes et segments de SON site)
+      // Campagne d'un site : la liste ou le segment doit être de CE site (l'équipe ne peut pas y mettre la liste d'un autre site)
+      if (c.site_id !== null) {
+        const row = patch.targetType === "list" ? ctx.db.prepare("SELECT site_id FROM mk_lists WHERE id = ? AND organization_id = ?").get(targetId, ctx.organizationId)
+          : ctx.db.prepare("SELECT site_id FROM mk_segments WHERE id = ? AND organization_id = ?").get(targetId, ctx.organizationId);
+        if (!row || row.site_id !== c.site_id) throw bad("Cette liste ou ce segment n'appartient pas au site de la campagne.");
+      }
     }
     next.target_type = patch.targetType;
     next.target_id = targetId;
@@ -88,7 +111,7 @@ function updateSmsCampaign(ctx, id, patch = {}) {
 
 function duplicateSmsCampaign(ctx, id) {
   const c = requireSmsCampaign(ctx, id);
-  const copy = createSmsCampaign(ctx, { name: `${c.name} (copie)`.slice(0, 120), body: c.body, targetType: c.target_type, targetId: c.target_id });
+  const copy = createSmsCampaign(ctx, { name: `${c.name} (copie)`.slice(0, 120), body: c.body, targetType: c.target_type, targetId: c.target_id, siteId: c.site_id ?? undefined });
   ctx.db.prepare("UPDATE mk_sms_campaigns SET track_clicks = ? WHERE id = ?").run(c.track_clicks, copy.id);
   return getSmsCampaign(ctx, copy.id);
 }
@@ -103,11 +126,13 @@ function deleteSmsCampaign(ctx, id) {
 const TABS = { draft: ["draft"], scheduled: ["scheduled"], running: ["sending", "paused"], sent: ["sent"], stopped: ["cancelled", "failed"] };
 function listSmsCampaigns(ctx, { tab = "" } = {}) {
   checkCtx(ctx);
+  guardModule(ctx);
   const statuses = TABS[tab];
   const where = statuses ? `AND status IN (${statuses.map(() => "?").join(", ")})` : "";
-  const rows = ctx.db.prepare(`SELECT * FROM mk_sms_campaigns WHERE organization_id = ? AND kind = 'campaign' ${where} ORDER BY id DESC LIMIT 200`).all(ctx.organizationId, ...(statuses || []));
+  const site = siteSql(ctx, "mk_sms_campaigns"); // accès limité : SON site seulement ; équipe : tout (filtre d'affichage possible)
+  const rows = ctx.db.prepare(`SELECT * FROM mk_sms_campaigns WHERE organization_id = ? AND kind = 'campaign' AND ${site.sql} ${where} ORDER BY id DESC LIMIT 200`).all(ctx.organizationId, ...site.params, ...(statuses || [])).map((r) => redact(ctx, r));
   const counts = Object.fromEntries(Object.keys(TABS).map((k) => [k, 0]));
-  for (const r of ctx.db.prepare("SELECT status, COUNT(*) n FROM mk_sms_campaigns WHERE organization_id = ? AND kind = 'campaign' GROUP BY status").all(ctx.organizationId)) {
+  for (const r of ctx.db.prepare(`SELECT status, COUNT(*) n FROM mk_sms_campaigns WHERE organization_id = ? AND kind = 'campaign' AND ${site.sql} GROUP BY status`).all(ctx.organizationId, ...site.params)) {
     for (const [k, list] of Object.entries(TABS)) if (list.includes(r.status)) counts[k] += r.n;
   }
   counts.all = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -115,15 +140,17 @@ function listSmsCampaigns(ctx, { tab = "" } = {}) {
 }
 
 // ---------- Audience ----------
-function audienceFrom(ctx, { targetType, targetId }) {
-  if (targetType === "all") return { from: "FROM mk_contacts c WHERE c.organization_id = ?", params: [ctx.organizationId] };
-  const t = targetClause(ctx, { targetType, targetId });
-  return { from: t.from, params: t.params };
+// Destinataires d'une campagne. Campagne d'un SITE (`siteId`) : la cible (liste, segment, ou « tous » = tous les abonnés DE CE SITE) est toujours recoupée avec les contacts LISIBLES par ce site
+// (mk_contact_sites : origine, activité ou rattachement accepté) — la garantie ne dépend pas de la définition de la liste ou du segment. Campagne d'organisation (siteId nul) : inchangé.
+function audienceFrom(ctx, { targetType, targetId, siteId = null }) {
+  const base = targetType === "all" ? { from: "FROM mk_contacts c WHERE c.organization_id = ?", params: [ctx.organizationId] } : (() => { const t = targetClause(ctx, { targetType, targetId }); return { from: t.from, params: t.params }; })();
+  if (!Number.isInteger(siteId)) return base;
+  return { from: `${base.from} AND EXISTS (SELECT 1 FROM mk_contact_sites cs WHERE cs.contact_id = c.id AND cs.site_id = ? AND cs.organization_id = c.organization_id)`, params: [...base.params, siteId] };
 }
 
 function smsAudienceSummary(ctx, target) {
   checkCtx(ctx);
-  const t = audienceFrom(ctx, target);
+  const t = audienceFrom(ctx, target); // `target.siteId` : campagne de site
   const s = smsSendableSql("c");
   const targetTotal = ctx.db.prepare(`SELECT COUNT(*) n ${t.from}`).get(...t.params).n;
   const sendable = ctx.db.prepare(`SELECT COUNT(*) n ${t.from} AND ${s.sql}`).get(...t.params).n;
@@ -149,7 +176,7 @@ function priceOf(cfg) {
 function estimateSmsCampaign(ctx, id) {
   const c = requireSmsCampaign(ctx, id);
   const cfg = getSmsConfig(ctx);
-  const t = audienceFrom(ctx, { targetType: c.target_type, targetId: c.target_id });
+  const t = audienceFrom(ctx, { targetType: c.target_type, targetId: c.target_id, siteId: c.site_id });
   const s = smsSendableSql("c");
   const contacts = ctx.db.prepare(`SELECT c.first_name, c.last_name ${t.from} AND ${s.sql} ORDER BY c.id LIMIT ${ESTIMATE_LIMIT}`).all(...t.params);
   const opts = { baseUrl: ctx.baseUrl, trackClicks: Boolean(c.track_clicks) };
@@ -163,9 +190,11 @@ function estimateSmsCampaign(ctx, id) {
   }
   const sample = R.estimateFor(c.body, contacts[0] || { first_name: "Marie", last_name: "Kabila" }, opts);
   const price = priceOf(cfg);
+  // Le NOMBRE de segments est visible d'un administrateur de site ; le prix, le coût et la devise ne le sont jamais (équipe seulement)
+  const hide = limited(ctx);
   return {
     recipients: contacts.length, segments, maxSegments, overLimit, unicode, limit: cfg.maxSegments, sample,
-    cost: price === null ? null : Math.round(segments * price * 100) / 100, currency: cfg.currency, price,
+    cost: hide || price === null ? null : Math.round(segments * price * 100) / 100, currency: hide ? "" : cfg.currency, price: hide ? null : price,
   };
 }
 
@@ -176,13 +205,14 @@ function smsPreflight(ctx, id, { workerOn = process.env.MARKETING_WORKER === "on
   const warnings = [];
   const add = (list, key, message) => list.push({ key, message });
 
+  if (limited(ctx) && c.target_type === "all") add(errors, "audience", "Choisissez une liste ou un segment de votre site : « tous les abonnés » est réservé à l'équipe de l'organisation.");
   if (!c.body.trim()) add(errors, "body", "Le message est vide.");
   const tags = R.unknownTags(c.body);
   if (tags.length) add(errors, "body", `Balise de personnalisation inconnue : ${tags.join(", ")}. Utilisez {{prenom}} ou {{nom}}.`);
   if (!/^https:\/\//.test(String(ctx.baseUrl || ""))) add(errors, "site", "L'adresse publique du site (SITE_URL, en https) n'est pas définie : le lien de désinscription obligatoire ne peut pas être créé.");
   let audienceInfo = null;
   try {
-    audienceInfo = smsAudienceSummary(ctx, { targetType: c.target_type, targetId: c.target_id });
+    audienceInfo = smsAudienceSummary(ctx, { targetType: c.target_type, targetId: c.target_id, siteId: c.site_id });
     if (!audienceInfo.sendable) add(errors, "audience", "Aucun destinataire joignable par SMS (il faut un accord SMS prouvé et un numéro valide).");
   } catch (error) {
     if (!(error instanceof MarketingError)) throw error;
@@ -192,12 +222,14 @@ function smsPreflight(ctx, id, { workerOn = process.env.MARKETING_WORKER === "on
   if (estimate && estimate.overLimit) add(errors, "length", `${estimate.overLimit} SMS dépasseraient ${cfg.maxSegments} segment(s) facturé(s) : raccourcissez le message (ou augmentez la limite dans les réglages SMS).`);
   if (estimate && estimate.unicode) add(warnings, "unicode", `Le message contient des caractères spéciaux (${estimate.sample.unsupported.join(" ") || "accents"}) : chaque SMS est limité à 70 caractères au lieu de 160. Le bouton « Remplacer les accents » peut diviser le coût par deux.`);
   if (cfg.provider === "console") add(warnings, "provider", "Fournisseur « console » : aucun SMS ne partira réellement (mode essai).");
-  else if (!cfg.sender || !cfg.accountSid || !cfg.authTokenSet) add(errors, "provider", "Réglages Twilio incomplets (expéditeur, identifiant de compte, jeton).");
+  else if (!cfg.sender || !cfg.accountSid || !cfg.authTokenSet) add(errors, "provider", limited(ctx) ? "Les réglages SMS de l'organisation sont incomplets : contactez l'équipe." : "Réglages Twilio incomplets (expéditeur, identifiant de compte, jeton).");
   if (!workerOn) add(errors, "worker", "Le traitement en arrière-plan est arrêté (MARKETING_WORKER) : aucune campagne ne peut partir.");
-  if (estimate && estimate.cost === null) add(warnings, "price", "Renseignez le prix d'un SMS dans les réglages SMS pour voir le coût estimé.");
+  if (estimate && estimate.cost === null && !limited(ctx)) add(warnings, "price", "Renseignez le prix d'un SMS dans les réglages SMS pour voir le coût estimé.");
   if (audienceInfo && audienceInfo.sendable > cfg.dailyLimit) add(warnings, "daily", `Plafond quotidien de ${cfg.dailyLimit} SMS : l'envoi s'étalera sur plusieurs jours.`);
   add(warnings, "quiet", `Heures de silence de ${cfg.quietStart} h à ${cfg.quietEnd} h (à l'heure de chaque destinataire) : les SMS prévus pendant cette plage partiront le matin.`);
-  return { ready: errors.length === 0, errors, warnings, audience: audienceInfo, estimate, config: cfg };
+  // Accès limité à un site : aucun détail du fournisseur ni de la facturation (identifiants, prix, devise)
+  const config = limited(ctx) ? { provider: cfg.provider, sender: cfg.sender, maxSegments: cfg.maxSegments, dailyLimit: cfg.dailyLimit, quietStart: cfg.quietStart, quietEnd: cfg.quietEnd, defaultCountry: cfg.defaultCountry, currency: "", pricePerSegment: "" } : cfg;
+  return { ready: errors.length === 0, errors, warnings, audience: audienceInfo, estimate, config };
 }
 
 // ---------- Lancement ----------
@@ -213,13 +245,13 @@ function startSmsCampaign(ctx, id, { scheduledAt, now = Date.now(), workerOn } =
   }
   const check = smsPreflight(ctx, id, workerOn === undefined ? {} : { workerOn });
   if (!check.ready) throw new MarketingError("preflight_failed", check.errors.map((e) => e.message).join(" "));
-  const cfg = check.config;
+  const cfg = getSmsConfig(ctx); // les réglages complets (prix figé à l'envoi) : le contrôle ci-dessus peut avoir masqué le prix à un accès limité
   return transaction(ctx.db, () => {
     if (c.track_clicks) {
       const insert = ctx.db.prepare("INSERT OR IGNORE INTO mk_sms_links (organization_id, campaign_id, url) VALUES (?, ?, ?)");
       for (const url of R.linksIn(c.body)) insert.run(ctx.organizationId, id, url);
     }
-    const t = audienceFrom(ctx, { targetType: c.target_type, targetId: c.target_id });
+    const t = audienceFrom(ctx, { targetType: c.target_type, targetId: c.target_id, siteId: c.site_id });
     const s = smsSendableSql("c");
     const recipients = ctx.db
       .prepare(`INSERT OR IGNORE INTO mk_sms_messages (organization_id, campaign_id, contact_id, phone, updated_at) SELECT c.organization_id, ?, c.id, c.sms_phone, ? ${t.from} AND ${s.sql}`)
@@ -276,6 +308,10 @@ async function processMessage(ctx, { campaign, message, cfg, links, provider, no
 
   const contact = getContact(ctx, message.contact_id);
   if (!contact) { set("skipped", "contact_removed"); bumpC(ctx, campaign.id, "skipped_count"); return "skipped"; }
+  // R7 lot 6.1 : campagne de site — le destinataire doit rester LISIBLE par ce site (jamais un contact qui n'y est pas rattaché)
+  if (Number.isInteger(campaign.site_id) && !ctx.db.prepare("SELECT 1 FROM mk_contact_sites WHERE contact_id = ? AND site_id = ? AND organization_id = ?").get(contact.id, campaign.site_id, ctx.organizationId)) {
+    set("skipped", "out_of_scope"); bumpC(ctx, campaign.id, "skipped_count"); return "skipped";
+  }
   const check = isSmsSendable(ctx, contact.id);
   if (!check.ok || check.phone !== message.phone) { set("skipped", check.ok ? "phone_changed" : check.reason); bumpC(ctx, campaign.id, "skipped_count"); return "skipped"; }
 
@@ -352,6 +388,12 @@ async function dispatchSmsBatch(ctx, campaignId, { provider, now = Date.now(), b
   checkCtx(ctx);
   let campaign = requireSmsCampaign(ctx, campaignId);
   if (campaign.status === "paused") return { done: false, paused: true };
+  // R7 lot 6.1 — tâche d'arrière-plan : le module SMS doit être ENCORE activé pour le site de la campagne au moment de l'envoi (désactivation = pause avant tout envoi, rien n'est perdu ni envoyé)
+  if (Number.isInteger(campaign.site_id) && ["scheduled", "sending"].includes(campaign.status) && !siteModules.isEnabled(ctx.db, ctx.organizationId, campaign.site_id, "sms")) {
+    ctx.db.prepare("UPDATE mk_sms_campaigns SET status = 'paused', error = ?, updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run("Le module SMS n'est plus activé pour ce site : la campagne est en pause (rien n'a été perdu).", campaignId, ctx.organizationId);
+    audit(ctx, "sms_campaign.paused", "sms_campaign", campaignId, { reason: "module_disabled" });
+    return { done: false, paused: true, reason: "module_disabled" };
+  }
   if (!["scheduled", "sending"].includes(campaign.status)) return { done: campaign.status !== "draft", state: campaign.status };
   if (campaign.status === "scheduled") {
     if (campaign.scheduled_at && campaign.scheduled_at > now) return { done: false, reason: "scheduled", waitMs: campaign.scheduled_at - now };
@@ -437,7 +479,7 @@ function smsCampaignReport(ctx, id) {
   return {
     campaign: c, queued: queued.n, nextAttemptAt: queued.next,
     rates: { delivery: pct(c.delivered_count, c.sent_count), click: pct(c.click_count, c.sent_count), unsubscribe: pct(c.unsubscribe_count, c.sent_count) },
-    cost: c.price_per_segment !== "" && Number.isFinite(price) ? Math.round(c.segments_count * price * 100) / 100 : null,
+    cost: !limited(ctx) && c.price_per_segment !== "" && Number.isFinite(price) ? Math.round(c.segments_count * price * 100) / 100 : null, // coût : équipe seulement
     reasons, links,
   };
 }

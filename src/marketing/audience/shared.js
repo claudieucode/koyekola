@@ -17,7 +17,8 @@ function cleanText(value, { max, field }) {
 // Journal d'audit des actions d'un utilisateur (jamais d'adresse e-mail : l'audit est en écriture seule, donc non effaçable)
 function audit(ctx, action, resourceType, resourceId, metadata) {
   if (ctx.userId == null || ctx.audit === false) return;
-  recordAudit(ctx.db, { organizationId: ctx.organizationId, userId: ctx.userId, action, resourceType, resourceId, metadata });
+  // R7 lot 4 : site de l'événement = site de la ressource relu en base ; à défaut, le site imposé à un accès LIMITÉ (ctx.siteScope, posé par le serveur)
+  recordAudit(ctx.db, { organizationId: ctx.organizationId, userId: ctx.userId, action, resourceType, resourceId, metadata, fallbackSiteId: Number.isInteger(ctx.siteScope) ? ctx.siteScope : undefined });
 }
 
 function emit(ctx, name, { contact, metadata = {}, idempotencyKey = null, source = "marketing", siteId = null, objectType = null, objectId = null, actorUserId = null, occurredAt }) {

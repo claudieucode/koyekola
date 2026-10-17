@@ -7,6 +7,7 @@
       <% overview.levels.forEach((l) => { %><div class="mk-stat"><span class="mk-stat-label"><%= l.name %></span><span class="mk-stat-value"><%= mkh.fmt(l.contacts) %></span><span class="mk-stat-hint">contacts à partir de <%= l.min_score %> point<%= l.min_score > 1 ? "s" : "" %></span></div><% }) %>
     </div>
 
+    <% if (!siteOnly) { %>
     <section class="mk-panel" id="regles" aria-labelledby="sc-rules">
       <h2 id="sc-rules">Règles</h2>
       <% if (!rules.length) { %>
@@ -67,6 +68,8 @@
         <% if (canWrite) { %><div class="mk-actions"><button type="submit" class="btn btn-outline btn-sm">Enregistrer les niveaux</button></div><% } %>
       </form>
     </section>
+
+    <% } else { %><p class="field-hint">Score du site : seuls les points gagnés par les actions de ce site sont comptés. Les règles et les niveaux sont gérés par l'équipe de l'organisation.</p><% } %>
 
     <section class="mk-panel" aria-labelledby="sc-top">
       <h2 id="sc-top">Contacts les plus engagés</h2>

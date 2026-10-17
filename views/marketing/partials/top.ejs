@@ -27,6 +27,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= title %> · <%= cms && cms.space ? cms.space.name + " · " : "" %><%= cms ? "CMS" : "Marketing" %> · KOLAKISA</title>
   <meta name="robots" content="noindex, nofollow">
+  <% if (mk && mk.ctx && Number.isInteger(mk.ctx.siteScope)) { %><meta name="mk-site" content="<%= mk.ctx.siteScope %>"><% } /* R7 lot 6.2 : accès limité à un site — l'assistant IA envoie ce site (imposé par le serveur, revérifié à chaque appel) */ %>
   <meta name="theme-color" content="#ffffff">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <script>try { if (localStorage.getItem("mkSidebar") === "collapsed") document.documentElement.setAttribute("data-sidebar", "collapsed"); } catch (e) {}</script>

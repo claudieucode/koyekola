@@ -59,6 +59,50 @@ const legacySiteOfRequest = (db) => (req) => {
     }
     // Contact Core (palier 15) : lecture des contacts d'UN site (?site=) — c'est ce qui ouvre l'écran aux personnes qui n'ont accès qu'à ce site
     if (req.method === "GET" && /^\/contacts(?:\/\d+(?:\/evenements\.json)?)?$/.test(p) && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
+    // Formulaires par site (R7 lot 2)
+    m = /^\/formulaires\/(\d{1,12})(?:\/|$)/.exec(p);
+    if (m) { const r = db.prepare("SELECT site_id FROM mk_forms WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
+    if (/^\/formulaires(?:\/|$)/.test(p)) {
+      const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
+      return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
+    }
+    // Assistant IA (R7 lot 6.2)
+    if (/^\/ia\/(?:etat|objets|reecrire|brouillon|optimiser|sms)$/.test(p)) {
+      const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
+      return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
+    }
+    // SMS par site (R7 lot 6.1)
+    m = /^\/sms\/campagnes\/(\d{1,12})(?:\/|$)/.exec(p);
+    if (m) { const r = db.prepare("SELECT site_id FROM mk_sms_campaigns WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
+    if (/^\/sms(?:\/(?:campagnes|abonnes))?$/.test(p)) {
+      const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
+      return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
+    }
+    // Revenus par site (R7 lot 6.5) : aperçu en lecture seule
+    if (req.method === "GET" && p === "/revenus") {
+      const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
+      return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
+    }
+    // Score par site (R7 lot 6.4) : aperçu en lecture seule
+    if (req.method === "GET" && p === "/score") {
+      const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
+      return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
+    }
+    // Réseaux sociaux par site (R7 lot 6.3)
+    m = /^\/reseaux\/(\d{1,12})\/(?:annuler|relancer|supprimer)$/.exec(p);
+    if (m) { const r = db.prepare("SELECT site_id FROM mk_social_posts WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
+    if (p === "/reseaux") {
+      const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
+      return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
+    }
+    // Demandes de rattachement (R7 lot 5) : « Mes demandes » d'un site
+    if (req.method === "GET" && p === "/contacts/demandes" && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
+    // Contacts par site (R7) : écriture d'un contact par un accès limité à un site (site = « ?site= » ou champ « site »)
+    if (req.method === "POST" && /^\/contacts(?:\/(?:actions|\d+(?:\/(?:proprietes|etiquettes(?:\/retirer)?|listes(?:\/retirer)?|cycle-de-vie|etat|consentement|desinscrire|supprimer-adresse|effacer))?))?$/.test(p)) {
+      const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
+      if (/^\d{1,12}$/.test(String(raw ?? ""))) return { siteId: Number(raw) };
+      return null;
+    }
     if (req.method === "POST" && (p === "/pages" || p === "/site-web/composants") && req.body && /^\d+$/.test(String(req.body.site_id || ""))) return { siteId: Number(req.body.site_id) };
     // Médias par site (R5) et contenus par site (R6 lot 2) : règles ajoutées à la cascade d'origine, dans l'ordre de la branche R6
     m = /^\/site-web\/(?:mediatheque|medias)\/(\d{1,12})(?:\.json|\/|$)/.exec(p);
@@ -99,6 +143,9 @@ before(() => {
   db.exec("CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY, slug TEXT, title TEXT); CREATE TABLE IF NOT EXISTS taxonomy_terms (id INTEGER PRIMARY KEY, taxonomy TEXT, name TEXT, slug TEXT); CREATE TABLE IF NOT EXISTS blog_comments (id INTEGER PRIMARY KEY, post_id INTEGER, content_type TEXT, content_id INTEGER, body TEXT)");
   db.exec("INSERT INTO posts (id, slug, title) VALUES (1, 'a', 'A'), (2, 'b', 'B'); INSERT INTO taxonomy_terms (id, taxonomy, name, slug) VALUES (1, 'category', 'C', 'c'); INSERT INTO blog_comments (id, post_id, content_type, content_id, body) VALUES (1, 1, 'post', 1, 'x'), (2, 1, 'page', 1, 'y')");
   db.prepare("INSERT INTO mk_content_sites (content_type, content_id, organization_id, site_id, scope) VALUES ('post', 1, 1, ?, ''), ('term', 1, 1, ?, 'category')").run(S1, S2);
+  db.prepare("INSERT INTO mk_forms (organization_id, name, slug, consent_text, site_id) VALUES (1, 'F1', 'f1', 'consentement', ?), (1, 'F2', 'f2', 'consentement', NULL)").run(S1);
+  db.prepare("INSERT INTO mk_sms_campaigns (organization_id, name, body, site_id) VALUES (1, 'C1', 'x', ?), (1, 'C2', 'x', NULL)").run(S1);
+  db.prepare("INSERT INTO mk_social_posts (organization_id, group_key, network, body, scheduled_at, site_id) VALUES (1, 'g', 'facebook', 'x', 1, ?), (1, 'g', 'facebook', 'x', 1, NULL)").run(S1);
   const sites = [S1, S2, null];
   for (const s of sites) {
     row("INSERT INTO mk_landing_pages (organization_id, name, slug, title, status, site_id) VALUES (1, ?, ?, 't', 'draft', ?)", `P${s}`, `p-${s}`, s);
@@ -155,7 +202,7 @@ describe("la table déclarative reproduit EXACTEMENT l'ancienne logique (oracle)
     "/campagnes", "/campagnes/nouvelle", "/campagnes/1", "/campagnes/2/pause", "/campagnes/99999", "/listes", "/listes/1", "/segments/3", "/modeles/1", "/modeles/bibliotheque", "/modeles/bibliotheque/k/apercu", "/modeles/apercu",
     "/automatisations", "/automatisations/parcours", "/automatisations/parcours/abc", "/automatisations/historique", "/automatisations/1", "/tunnels/1/etapes/2", "/tunnels/nouveau",
     "/tests-ab/1", "/tests-ab/99999", "/site-web/tests-ab", "/analytics/global", "/analytics/global/export", "/analytics/global/x", "/analytics", "/evenements/1", "/evenements/99999", "/evenements/1/x", "/evenements",
-    "/contacts", "/contacts/12", "/contacts/12/evenements.json", "/contacts/12/x", "/contacts/doublons", "/webhooks", "/site-web/utilisateurs"];
+    "/contacts", "/contacts/actions", "/contacts/12", "/contacts/12/etiquettes", "/contacts/12/etiquettes/retirer", "/contacts/12/cycle-de-vie", "/contacts/12/etat", "/contacts/12/effacer", "/contacts/fusion", "/ia", "/ia/etat", "/ia/sms", "/ia/objets", "/ia/reecrire", "/ia/brouillon", "/ia/optimiser", "/sms", "/sms/abonnes", "/sms/campagnes", "/sms/campagnes/1", "/sms/campagnes/1/lancer", "/sms/campagnes/99999/annuler", "/sms/reglages", "/sms/test", "/sms/blocages", "/revenus", "/revenus/fenetre", "/score", "/score/regles", "/score/regles/1", "/score/niveaux", "/score/recalculer", "/reseaux", "/reseaux/1/annuler", "/reseaux/2/relancer", "/reseaux/99999/supprimer", "/reseaux/reglages", "/reseaux/reglages/sites", "/contacts/demandes", "/contacts/demandes/traiter", "/contacts/demandes/3/accepter", "/contacts/12/evenements.json", "/formulaires", "/formulaires/1", "/formulaires/1/publier", "/formulaires/99999/supprimer", "/contacts/12/x", "/contacts/doublons", "/webhooks", "/site-web/utilisateurs"];
   const paths = new Set(handmade);
   before(() => { for (const r of mountedRoutes()) for (const id of [1, 2, 99999]) for (const p of concrete(r.path, id)) paths.add(p); });
 

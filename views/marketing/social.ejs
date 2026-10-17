@@ -1,5 +1,5 @@
 <%- include("partials/top", { title, active }) %>
-<% const connected = Object.keys(NETWORKS).filter((n) => cfg[n].connected); %>
+<% const connected = Object.keys(NETWORKS).filter((n) => cfg[n].connected); const sq = siteOnly ? "?site=" + mk.ctx.siteScope : ""; const siteHidden = siteOnly ? `<input type="hidden" name="site" value="${mk.ctx.siteScope}">` : ""; %>
     <div class="mk-head"><h1>Réseaux sociaux</h1></div>
     <p class="mk-lead">Écrivez une publication une fois, publiez-la tout de suite ou programmez-la sur votre page Facebook, votre compte Instagram professionnel et LinkedIn. Le lien éventuel est raccourci et ses clics sont comptés ici.</p>
 
@@ -9,17 +9,19 @@
       <% if (!connected.length) { %>
         <div class="mk-empty">
           <%- icon("send", { size: 32 }) %>
-          <h2>Aucun réseau relié</h2>
-          <p>Reliez votre page Facebook, votre compte Instagram professionnel ou LinkedIn dans Paramètres → Réseaux sociaux (un jeton d'accès suffit ; il est chiffré et jamais affiché).</p>
-          <% if (mk.can("settings.read")) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/reseaux/reglages">Relier un réseau</a></div><% } %>
+          <h2><%= siteOnly ? "Aucun réseau autorisé pour ce site" : "Aucun réseau relié" %></h2>
+          <p><%- siteOnly ? "L'équipe de l'organisation relie les comptes et autorise chaque site à publier sur un réseau donné : demandez-lui l'autorisation pour ce site." : "Reliez votre page Facebook, votre compte Instagram professionnel ou LinkedIn dans Paramètres → Réseaux sociaux (un jeton d'accès suffit ; il est chiffré et jamais affiché)." %></p>
+          <% if (!siteOnly && mk.can("settings.read")) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/reseaux/reglages">Relier un réseau</a></div><% } %>
         </div>
       <% } else { %>
-        <form method="post" action="/marketing/reseaux" class="mk-form" data-social-form>
+        <form method="post" action="/marketing/reseaux<%= sq %>" class="mk-form" data-social-form>
+          <%- siteHidden %>
+          <% if (!siteOnly && siteChoices.length) { %><div class="field-group"><label for="soc-site">Publier pour</label><select id="soc-site" name="for_site"><option value="">L'organisation (sans site)</option><% siteChoices.forEach((s) => { %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select><span class="field-hint">Un site ne peut publier que sur les réseaux que vous lui avez autorisés (Paramètres → Réseaux sociaux).</span></div><% } %>
           <% if (prefill.campaignId) { %><input type="hidden" name="campaign_id" value="<%= prefill.campaignId %>"><p class="mk-note">Partage d'une campagne envoyée : le lien mène à sa version web (sans données personnelles).</p><% } %>
           <fieldset class="seo-fieldset">
             <legend>Réseaux</legend>
             <% Object.entries(NETWORKS).forEach(([n, label]) => { %>
-              <label class="checkbox-row"><input type="checkbox" name="networks" value="<%= n %>" data-limit="<%= LIMITS[n] %>"<%= cfg[n].connected ? " checked" : " disabled" %>> <%= label %><%= cfg[n].connected ? (n === "facebook" && cfg.facebook.pageName ? ` — ${cfg.facebook.pageName}` : "") : " (non relié)" %></label>
+              <label class="checkbox-row"><input type="checkbox" name="networks" value="<%= n %>" data-limit="<%= LIMITS[n] %>"<%= cfg[n].connected ? " checked" : " disabled" %>> <%= label %><%= cfg[n].connected ? (n === "facebook" && cfg.facebook.pageName ? ` — ${cfg.facebook.pageName}` : "") : (siteOnly ? " (non autorisé pour ce site)" : " (non relié)") %></label>
             <% }) %>
           </fieldset>
           <div class="field-group"><label for="soc-body">Texte</label><textarea id="soc-body" name="body" rows="5" maxlength="5000" required data-social-body><%= prefill.body %></textarea><p class="field-hint" data-social-count aria-live="polite"></p></div>
@@ -47,19 +49,20 @@
       <% } else { %>
         <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-soc-table">
           <caption class="sr-only">Publications sur les réseaux, les plus récentes d'abord</caption>
-          <thead><tr><th scope="col">Publication</th><th scope="col">Réseau</th><th scope="col">État</th><th scope="col">Date</th><th scope="col" class="mk-num">Clics</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+          <thead><tr><th scope="col">Publication</th><th scope="col">Réseau</th><% if (!siteOnly) { %><th scope="col">Site</th><% } %><th scope="col">État</th><th scope="col">Date</th><th scope="col" class="mk-num">Clics</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
           <tbody>
             <% posts.forEach((p) => { %>
               <tr>
                 <th scope="row" data-label="Publication"><span class="mk-soc-text"><%= p.body.length > 140 ? p.body.slice(0, 137) + "…" : p.body %></span><% if (p.link_url) { %><span class="mk-sub mk-soc-url" title="<%= p.link_url %>"><%= p.link_url.length > 70 ? p.link_url.slice(0, 67) + "…" : p.link_url %></span><% } %><% if (p.error) { %><span class="mk-sub mk-soc-error"><%= p.error %></span><% } %></th>
                 <td data-label="Réseau"><%= p.networkLabel %></td>
+                <% if (!siteOnly) { %><td data-label="Site"><%= p.site_name || "Organisation" %></td><% } %>
                 <td data-label="État"><span class="mk-status <%= p.status === "published" ? "mk-status-ok" : p.status === "failed" ? "mk-status-err" : p.status === "scheduled" ? "mk-status-warn" : "" %>"><%= p.statusLabel %></span><% if (p.external_url) { %> <a href="<%= p.external_url %>" target="_blank" rel="noopener noreferrer">Voir<span class="sr-only"> la publication sur <%= p.networkLabel %></span></a><% } %></td>
                 <td data-label="Date"><%= mkh.fdatetime(p.published_at || p.scheduled_at) %></td>
                 <td class="mk-num" data-label="Clics"><%= p.link_code ? mkh.fmt(p.click_count) : "—" %></td>
                 <td data-label="Actions"><% if (canWrite) { %><div class="mk-row-actions">
-                  <% if (p.status === "scheduled") { %><form method="post" action="/marketing/reseaux/<%= p.id %>/annuler"><button type="submit" class="btn btn-ghost btn-sm">Annuler</button></form><% } %>
-                  <% if (p.status === "failed") { %><form method="post" action="/marketing/reseaux/<%= p.id %>/relancer"><button type="submit" class="btn btn-outline btn-sm">Relancer</button></form><% } %>
-                  <% if (p.status !== "publishing") { %><form method="post" action="/marketing/reseaux/<%= p.id %>/supprimer"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="La publication est retirée de cette liste. Si elle est déjà parue, elle reste sur le réseau." data-mk-confirm-title="Retirer cette publication ?" data-mk-confirm-ok="Retirer">Retirer</button></form><% } %>
+                  <% if (p.status === "scheduled") { %><form method="post" action="/marketing/reseaux/<%= p.id %>/annuler<%= sq %>"><%- siteHidden %><button type="submit" class="btn btn-ghost btn-sm">Annuler</button></form><% } %>
+                  <% if (p.status === "failed") { %><form method="post" action="/marketing/reseaux/<%= p.id %>/relancer<%= sq %>"><%- siteHidden %><button type="submit" class="btn btn-outline btn-sm">Relancer</button></form><% } %>
+                  <% if (p.status !== "publishing") { %><form method="post" action="/marketing/reseaux/<%= p.id %>/supprimer<%= sq %>"><%- siteHidden %><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="La publication est retirée de cette liste. Si elle est déjà parue, elle reste sur le réseau." data-mk-confirm-title="Retirer cette publication ?" data-mk-confirm-ok="Retirer">Retirer</button></form><% } %>
                 </div><% } %></td>
               </tr>
             <% }) %>

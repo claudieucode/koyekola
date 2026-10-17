@@ -1,4 +1,5 @@
 <%- include("partials/top", { title, active }) %>
+<% const showCost = (mk.ctx.siteScope === undefined); /* R7 lot 6.1 : prix, coûts et réglages du fournisseur : équipe seulement */ %>
 <% const canWrite = mk.can("campaigns.write"); %>
     <div class="mk-head"><h1>Campagnes SMS <span class="mk-count"><%= mkh.fmt(counts.all) %></span></h1>
       <% if (canWrite) { %><a class="btn btn-primary" href="#nouvelle"><%- icon("plus", { size: 16 }) %> Créer une campagne SMS</a><% } %></div>
@@ -6,10 +7,10 @@
 
     <div class="mk-stats">
       <div class="mk-stat"><span class="mk-stat-label">Abonnés SMS joignables</span><span class="mk-stat-value"><%= mkh.fmt(subscribers) %></span><span class="mk-stat-hint"><a href="/marketing/sms/abonnes">Voir les abonnés</a></span></div>
-      <div class="mk-stat"><span class="mk-stat-label">Fournisseur</span><span class="mk-stat-value mk-stat-small"><%= cfg.provider === "twilio" ? "Twilio" : "Mode essai" %></span><span class="mk-stat-hint"><a href="/marketing/sms/reglages">Réglages SMS</a></span></div>
+      <% if (showCost) { %><div class="mk-stat"><span class="mk-stat-label">Fournisseur</span><span class="mk-stat-value mk-stat-small"><%= cfg.provider === "twilio" ? "Twilio" : "Mode essai" %></span><span class="mk-stat-hint"><a href="/marketing/sms/reglages">Réglages SMS</a></span></div><% } %>
       <div class="mk-stat"><span class="mk-stat-label">Expéditeur</span><span class="mk-stat-value mk-stat-small"><%= cfg.sender || "—" %></span><span class="mk-stat-hint">silence <%= cfg.quietStart %> h → <%= cfg.quietEnd %> h</span></div>
     </div>
-    <% if (cfg.provider === "console") { %><p class="mk-note">Mode essai (« console ») : aucun SMS ne part réellement. Branchez Twilio dans les <a href="/marketing/sms/reglages">réglages SMS</a> pour un vrai envoi.</p><% } %>
+    <% if (showCost && cfg.provider === "console") { %><p class="mk-note">Mode essai (« console ») : aucun SMS ne part réellement. Branchez Twilio dans les <a href="/marketing/sms/reglages">réglages SMS</a> pour un vrai envoi.</p><% } %>
     <%- include("partials/worker-note", { workerOn, consequence: "aucune campagne SMS ne partira tant qu'il n'est pas rétabli" }) %>
 
     <% if (canWrite) { %>

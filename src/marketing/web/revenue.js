@@ -8,7 +8,7 @@ module.exports = () => {
 
   router.get("/revenus", need("analytics.read"), (req, res) => {
     const overview = revenue.revenueOverview(req.mk.ctx, { days: req.query.periode });
-    res.render("marketing/revenue", { title: "Revenus", active: "revenue", overview, canSet: req.mk.can("settings.write"), limits: { min: revenue.MIN_WINDOW, max: revenue.MAX_WINDOW } });
+    res.render("marketing/revenue", { title: "Revenus", active: "revenue", overview, canSet: !req.mk.siteOnly && req.mk.can("settings.write"), siteOnly: req.mk.siteOnly, limits: { min: revenue.MIN_WINDOW, max: revenue.MAX_WINDOW } });
   });
 
   router.post("/revenus/fenetre", need("settings.write"), (req, res, next) =>

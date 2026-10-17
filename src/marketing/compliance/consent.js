@@ -46,12 +46,14 @@ function requireContact(ctx, id) {
 const isSuppressedEmail = (ctx, email) =>
   Boolean(ctx.db.prepare("SELECT 1 FROM mk_suppressions WHERE organization_id = ? AND email = ?").get(ctx.organizationId, email));
 
-function recordConsent(ctx, contactId, { source, textShown, ip, formId = null } = {}) {
+function recordConsent(ctx, contactId, { source, textShown, ip, formId = null, siteId = null } = {}) {
   checkCtx(ctx);
   checkSource(source);
   const proof = cleanText(textShown, { max: 1000, field: "textShown" });
   if (proof.length < 3) throw new MarketingError("proof_required", "Une preuve est obligatoire : le texte exact présenté à la personne.");
   if (formId !== null && !Number.isInteger(formId)) throw new MarketingError("invalid_field", "formId doit être un entier.");
+  // R7 : site où le consentement a été collecté (preuve), quand il est connu ; vérifié comme site de l'organisation, sinon ignoré (jamais une valeur du navigateur)
+  const collectedAt = Number.isInteger(siteId) && ctx.db.prepare("SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, ctx.organizationId) ? siteId : null;
   const contact = requireContact(ctx, contactId);
   if (BLOCKED.has(contact.status) || isSuppressedEmail(ctx, contact.email)) return { ok: false, reason: "suppressed", status: contact.status };
   if (contact.status === "unsubscribed" && !PERSON_SOURCES.has(source)) return { ok: false, reason: "unsubscribed", status: contact.status };
@@ -59,8 +61,8 @@ function recordConsent(ctx, contactId, { source, textShown, ip, formId = null } 
 
   return transaction(ctx.db, () => {
     const info = ctx.db
-      .prepare("INSERT INTO mk_consents (organization_id, contact_id, purpose, action, source, text_shown, ip, form_id) VALUES (?, ?, 'marketing', 'granted', ?, ?, ?, ?)")
-      .run(ctx.organizationId, contactId, source, proof, truncateIp(ip), formId);
+      .prepare("INSERT INTO mk_consents (organization_id, contact_id, purpose, action, source, text_shown, ip, form_id, site_id) VALUES (?, ?, 'marketing', 'granted', ?, ?, ?, ?, ?)")
+      .run(ctx.organizationId, contactId, source, proof, truncateIp(ip), formId, collectedAt);
     ctx.db.prepare("UPDATE mk_contacts SET status = 'subscribed', unsubscribed_at = NULL, updated_at = ? WHERE id = ? AND organization_id = ?").run(now(), contactId, ctx.organizationId);
     ctx.db.prepare("DELETE FROM mk_unsubscribes WHERE contact_id = ? AND scope = 'all' AND organization_id = ?").run(contactId, ctx.organizationId);
     emit(ctx, "contact.subscribed", { contact, source: "marketing", idempotencyKey: `contact.subscribed:${contactId}:${info.lastInsertRowid}`, metadata: { consentSource: source } });

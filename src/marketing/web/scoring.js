@@ -9,6 +9,15 @@ module.exports = () => {
 
   router.get("/score", need("contacts.read"), (req, res) => {
     const { ctx } = req.mk;
+    // R7 lot 6.4 : un accès limité à un site voit le score DE SON SITE (contacts lisibles par ce site) ; règles, niveaux modifiables et recalcul restent à l'équipe
+    if (req.mk.siteOnly) {
+      const ov = scoring.overview(ctx);
+      const mask = req.mk.can("contacts.view_sensitive") ? (e) => e : require("../contactcore").maskEmail;
+      return res.render("marketing/scoring", {
+        title: "Score des contacts", active: "scoring", siteOnly: true, rules: [], levels: scoring.levels(ctx), events: {}, choices: {}, canWrite: false,
+        overview: { levels: ov.levels, top: ov.top.map((c) => ({ ...c, email: mask(c.email) })) },
+      });
+    }
     const events = scoring.ruleEvents();
     // Choix des filtres (mêmes listes réelles que les déclencheurs d'automatisation)
     const pagesList = require("../pages").listPages(ctx);
@@ -29,7 +38,7 @@ module.exports = () => {
     };
     res.render("marketing/scoring", {
       title: "Score des contacts", active: "scoring", rules: scoring.listRules(ctx).map((r) => ({ ...r, eventLabel: events[r.event] ? events[r.event].label : r.event, filterLabel: label(r) })),
-      levels: scoring.levels(ctx), overview: scoring.overview(ctx), events, choices, canWrite: req.mk.can("contacts.write"),
+      siteOnly: false, levels: scoring.levels(ctx), overview: scoring.overview(ctx), events, choices, canWrite: req.mk.can("contacts.write"),
     });
   });
   router.post("/score/regles", need("contacts.write"), (req, res, next) => {
