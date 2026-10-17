@@ -106,6 +106,8 @@ const SITE_RULES = Object.freeze([
   // Réseaux sociaux par site (R7 lot 6.3) : une publication par son identifiant relève de son site (NULL = organisation, fermée à un accès limité) ; liste et création : site choisi ; comptes, jetons et autorisations : organisation
   { id: "reseau-publication-par-identifiant", pattern: /^\/reseaux\/(\d{1,12})\/(?:annuler|relancer|supprimer)$/, kind: "resource", table: "socialPost", idGroup: 1 },
   { id: "reseaux-du-site", pattern: /^\/reseaux$/, kind: "param", terminal: true },
+  // Score par site (R7 lot 6.4) : l'écran /score vise le site choisi (aperçu du score DU site, lecture seule) ; règles, niveaux et recalcul restent des écrans d'organisation (équipe)
+  { id: "score-du-site", pattern: /^\/score$/, methods: ["GET"], kind: "param", terminal: true },
   { id: "demandes-du-site", pattern: /^\/contacts\/demandes$/, methods: ["GET"], kind: "queryGet" },
   { id: "contacts-ecriture-du-site", pattern: /^\/contacts(?:\/(?:actions|\d+(?:\/(?:proprietes|etiquettes(?:\/retirer)?|listes(?:\/retirer)?|cycle-de-vie|etat|consentement|desinscrire|supprimer-adresse|effacer))?))?$/, methods: ["POST"], kind: "param" },
   { id: "creation-avec-site", pattern: /^(?:\/pages|\/site-web\/composants)$/, methods: ["POST"], kind: "bodySiteId" },
@@ -132,6 +134,7 @@ const FAMILIES = Object.freeze([
   { id: "ia-assistant", scope: "site", pattern: /^\/ia\/(?:etat|objets|reecrire|brouillon|optimiser|sms)$/ },
   { id: "sms-campagnes", scope: "site", pattern: /^\/sms(?:\/campagnes(?:\/|$)|\/abonnes$|$)/ },
   { id: "reseaux-publications", scope: "site", pattern: /^\/reseaux(?:\/\d+\/(?:annuler|relancer|supprimer))?$/ },
+  { id: "score-apercu", scope: "site", pattern: /^\/score$/ },
   { id: "formulaires", scope: "site", pattern: /^\/formulaires(?:\/|$)/ },
   { id: "contenus-par-site", scope: "site", pattern: /^\/site-web\/(?:articles|commentaires|mediatheque|medias|medias\.json)(?:\/|$)/ },
   { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|outils|parametres|tests-ab)(?:\/|$)/ },

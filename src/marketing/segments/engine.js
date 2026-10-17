@@ -179,6 +179,8 @@ function createCompiler(ctx) {
     }
     // Score des contacts (règles de score) : nombre entier
     if (kind === "score") {
+      // R7 lot 6.4 : le score stocké est une donnée d'organisation (tous les sites) : un critère de score dévoilerait par inférence l'activité des autres sites → équipe seulement
+      if (ctx.siteScope !== undefined && ctx.siteScope !== null) throw fail(path, "Le critère « Score » est réservé à l'équipe de l'organisation (le score regroupe l'activité de tous les sites).");
       const int = (v) => { const n = checkNumber(v, path); if (!Number.isInteger(n) || n < 0) throw fail(path, "Score invalide : un nombre entier positif est attendu."); return n; };
       if (cmp === "between") {
         const pair = Array.isArray(value) && value.length === 2 ? value.map(int) : null;

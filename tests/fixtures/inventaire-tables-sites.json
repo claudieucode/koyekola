@@ -353,7 +353,7 @@
    "classe": "plateforme"
   },
   "mk_score_log": {
-   "siteId": false,
+   "siteId": true,
    "classe": "plateforme"
   },
   "mk_score_rules": {

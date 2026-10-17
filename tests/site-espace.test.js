@@ -216,9 +216,9 @@ describe("audit des sites : libellé clair", () => {
 });
 
 describe("6 — aucune migration, aucun changement de structure", () => {
-  test("le dossier des migrations s'arrête à 087 (réseaux sociaux par site, R7 lot 6.3 ; 086 = IA par site, R7 lot 6.2 ; 085 = SMS par site, R7 lot 6.1 ; 084 = modules par site, R7 lot 6.0 ; 083 = demandes de rattachement de contacts, R7 lot 5 ; 082 = journal d'audit par site, R7 lot 4 ; 081 = formulaires par site, R7 lot 2 ; 080 = contacts par site, R7 lot 1 ; 079 = index des médias par site, lot 7C ; 075 = R6 lot 1 ; 072, 073 et 074 = R2, R3 et R5 ; 076 à 078 réservées aux reconstructions)", () => {
+  test("le dossier des migrations s'arrête à 088 (score par site, R7 lot 6.4 ; 087 = réseaux sociaux par site, R7 lot 6.3 ; 086 = IA par site, R7 lot 6.2 ; 085 = SMS par site, R7 lot 6.1 ; 084 = modules par site, R7 lot 6.0 ; 083 = demandes de rattachement de contacts, R7 lot 5 ; 082 = journal d'audit par site, R7 lot 4 ; 081 = formulaires par site, R7 lot 2 ; 080 = contacts par site, R7 lot 1 ; 079 = index des médias par site, lot 7C ; 075 = R6 lot 1 ; 072, 073 et 074 = R2, R3 et R5 ; 076 à 078 réservées aux reconstructions)", () => {
     const files = fs.readdirSync(path.join(__dirname, "..", "src", "marketing", "migrations")).filter((f) => /^\d+_/.test(f)).sort();
-    assert.match(files[files.length - 1], /^087_/);
+    assert.match(files[files.length - 1], /^088_/);
     assert.ok(!files.some((f) => /^07[678]_/.test(f)), "076 à 078 restent réservées aux reconstructions");
   });
   test("le schéma de la base ne change pas en parcourant l'espace", async () => {
