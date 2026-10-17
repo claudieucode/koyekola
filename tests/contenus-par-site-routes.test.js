@@ -86,12 +86,14 @@ describe("contenus par site : routes d'administration (articles, termes, comment
       assert.ok(!trashed(pA2));
       assert.equal((await guestA.post(`${R}/articles/actions`, pairs("corbeille", [pB1]))).status, 403, "sans site : refusé");
     });
-    test("création : refusée à un accès limité (éditeur non ouvert, A-D9) sans rien écrire ; l'équipe crée dans le site choisi (rattachement écrit avec l'article) ou sur le site principal", async () => {
+    test("création : un accès limité crée dans SON site (brouillon rattaché, en une transaction) ; un autre site lui est refusé sans rien écrire ; l'équipe crée dans le site choisi ou sur le principal", async () => {
       const n = one("SELECT COUNT(*) n FROM posts").n, ncs = one("SELECT COUNT(*) n FROM mk_content_sites").n;
-      const refused = await guestA.post(`${R}/articles`, { title: "Intrus", site: String(A) });
+      const refused = await guestA.post(`${R}/articles`, { title: "Intrus", site: String(B) });
       assert.equal(refused.status, 403);
-      assert.equal((await guestA.get(`${R}/articles/ajouter?site=${A}`)).status, 403);
-      assert.deepEqual([one("SELECT COUNT(*) n FROM posts").n, one("SELECT COUNT(*) n FROM mk_content_sites").n], [n, ncs]);
+      assert.equal((await guestA.post(`${R}/articles`, { title: "Sans site" })).status, 403);
+      assert.deepEqual([one("SELECT COUNT(*) n FROM posts").n, one("SELECT COUNT(*) n FROM mk_content_sites").n], [n, ncs], "aucune écriture après refus");
+      assert.equal((await guestA.post(`${R}/articles`, { title: "Créé par Alpha", site: String(A) })).status, 302);
+      assert.equal(siteOf("post", one("SELECT id FROM posts WHERE title = 'Créé par Alpha'").id), A);
       const mine = await boss.post(`${R}/articles`, { title: "Créé pour Beta", site: String(B) });
       assert.equal(mine.status, 302);
       const created = one("SELECT id FROM posts WHERE title = 'Créé pour Beta'");

@@ -3,7 +3,8 @@
   date), tri, pagination, actions groupées et par ligne. Les e-mails des invités ne s'affichent qu'avec le droit comments.email.
 %><%- include("partials/top", { title, active }) %>
 <%
-  const keep = (over = {}) => { const p = new URLSearchParams(); const o = { q: f.q, contenu: f.contenu, auteur: f.auteur, periode: f.periode, tri: f.tri === "recent" ? "" : f.tri, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return t ? "?" + t : ""; };
+  const S = typeof mkSiteId === "number" ? mkSiteId : ""; const siteQ = S ? "?site=" + S : ""; // site courant (accès limité ou site choisi) : conservé dans tous les liens
+  const keep = (over = {}) => { const p = new URLSearchParams(); const o = { site: S, q: f.q, contenu: f.contenu, auteur: f.auteur, periode: f.periode, tri: f.tri === "recent" ? "" : f.tri, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return t ? "?" + t : ""; };
   const tabHref = (s) => BASE + (s ? "/" + s : "");
   const here = tabHref(sub) + keep({ page: result.page > 1 ? result.page : "" });
   const filtered = Boolean(f.q || f.contenu || f.auteur || f.periode);
@@ -13,7 +14,7 @@
   const empties = { "": "Aucun commentaire.", pending: "Aucun commentaire en attente.", approved: "Aucun commentaire approuvé.", spam: "Aucun commentaire indésirable.", trash: "La corbeille est vide." };
 %>
     <div class="mk-head"><h1>Commentaires</h1>
-      <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/site-web/parametres/commentaires">Réglages</a></div></div>
+      <% if (!(typeof mkRestricted !== "undefined" && mkRestricted)) { %><div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/site-web/parametres/commentaires">Réglages</a></div><% } %></div>
     <p class="mk-lead">Les commentaires de votre site, sous les articles. Chaque action change réellement l'état du commentaire : un commentaire approuvé est public, les autres restent invisibles pour les visiteurs.</p>
     <% if (canEmail && canDelete) { %><details class="mk-panel"><summary>Effacer les commentaires d'une personne (droit à l'effacement)</summary>
       <form action="/marketing/site-web/commentaires/effacer-invite" method="post">
@@ -28,7 +29,7 @@
       <% }) %>
     </nav>
 
-    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= tabHref(sub) %><%- typeof mkSiteField === "string" ? mkSiteField : "" %>" role="search" aria-label="Rechercher et filtrer les commentaires">
+    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= tabHref(sub) %>" role="search" aria-label="Rechercher et filtrer les commentaires"><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
       <label class="mk-search"><span class="sr-only">Rechercher (texte, auteur, contenu<%= canEmail ? ", e-mail" : "" %>)</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" placeholder="Rechercher un commentaire"></label>
       <% if (contents.length) { %><label class="sr-only" for="cm-contenu">Contenu</label>
       <select id="cm-contenu" name="contenu"><option value="">Tous les contenus</option><% contents.forEach((c) => { %><option value="<%= c.value %>"<%= c.value === f.contenu ? " selected" : "" %>><%= c.label %></option><% }) %></select><% } %>
@@ -37,7 +38,7 @@
       <select id="cm-periode" name="periode"><option value="">Toutes les dates</option><% [["7", "7 derniers jours"], ["30", "30 derniers jours"], ["90", "90 derniers jours"], ["365", "12 derniers mois"]].forEach(([k, name]) => { %><option value="<%= k %>"<%= f.periode === k ? " selected" : "" %>><%= name %></option><% }) %></select>
       <label class="sr-only" for="cm-tri">Trier par</label>
       <select id="cm-tri" name="tri"><% [["recent", "Plus récents"], ["ancien", "Plus anciens"], ["auteur", "Auteur A → Z"], ["contenu", "Contenu A → Z"]].forEach(([k, name]) => { %><option value="<%= k %>"<%= f.tri === k ? " selected" : "" %>><%= name %></option><% }) %></select>
-      <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (filtered || f.tri !== "recent") { %><a class="btn btn-ghost btn-sm" href="<%= tabHref(sub) %>">Réinitialiser</a><% } %>
+      <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (filtered || f.tri !== "recent") { %><a class="btn btn-ghost btn-sm" href="<%= tabHref(sub) + siteQ %>">Réinitialiser</a><% } %>
     </form>
 
     <% if (!rows.length) { %>
@@ -45,7 +46,7 @@
         <p><%= filtered ? "Aucun commentaire ne correspond à ces critères." : status === "" ? "Les commentaires laissés sous vos articles apparaîtront ici." : "" %></p></div>
     <% } else { %>
       <% if (canModerate) { %>
-      <form id="cm-bulk" class="mk-cms-bulk" action="<%= BASE %><%- typeof mkSiteField === "string" ? mkSiteField : "" %>/actions" method="post" data-cms-bulk data-cms-noun="commentaire" data-cms-delete-text="Cette action est irréversible.">
+      <form id="cm-bulk" class="mk-cms-bulk" action="<%= BASE %>/actions" method="post" data-cms-bulk data-cms-noun="commentaire" data-cms-delete-text="Cette action est irréversible."><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
         <input type="hidden" name="retour" value="<%= here %>">
         <label class="sr-only" for="cm-bulk-action">Action groupée</label>
         <select id="cm-bulk-action" name="action" disabled><option value="">Action groupée</option><% bulk.forEach(([k, name]) => { %><option value="<%= k %>"><%= name %></option><% }) %></select>

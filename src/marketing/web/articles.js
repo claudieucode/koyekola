@@ -28,8 +28,6 @@ module.exports = () => {
   // Retour : adresse demandée si elle est valide, sinon la liste (en conservant le site courant : un accès limité à un site n'entre que par « ?site= »)
   const withSite = (req, url) => { const s = siteContent.siteParam(req.mk.ctx); return s && !/[?&]site=/.test(url) ? `${url}${url.includes("?") ? "&" : "?"}site=${s}` : url; };
   const back = (req) => withSite(req, /^\/marketing\/site-web\/articles(\/[a-z]+)?(\?[^#\s]*)?$/.test(String(req.body.retour || "")) ? req.body.retour : BASE);
-  // Création d'articles : l'éditeur (/formateur/blog) n'est pas ouvert aux accès limités à un site (décision A-D9 non approuvée) : ils ne créent donc pas d'article ici
-  const noEditorForLimited = (req, res) => res.status(403).render("error", { message: "L'éditeur d'articles n'est pas encore ouvert aux accès limités à un site : demandez à l'équipe de l'organisation de créer l'article." });
   const fail = (req, res, next, to, error) => {
     if (!(error instanceof UserError)) return next(error);
     flash(req, "error", error.message); res.redirect(to);
@@ -54,11 +52,9 @@ module.exports = () => {
 
   // ----- Création : titre → vrai article en brouillon → éditeur -----
   router.get("/site-web/articles/ajouter", canCreate, (req, res) => {
-    if (siteContent.restricted(req.mk.ctx)) return noEditorForLimited(req, res);
     res.render("marketing/article-new", { title: "Nouvel article", active: "articles/ajouter", isCreator: isCreator(req), BASE });
   });
   router.post("/site-web/articles", canCreate, (req, res, next) => {
-    if (siteContent.restricted(req.mk.ctx)) return noEditorForLimited(req, res);
     try {
       // Tout ou rien : l'article et son rattachement au site choisi (si l'équipe a choisi un site) sont écrits ensemble
       const post = transaction(req.mk.ctx.db, () => { const p = articles.createDraft({ title: req.body.title, userId: req.session.user.id }); siteContent.adopt(req.mk.ctx, { type: "post", id: p.id }); return p; });

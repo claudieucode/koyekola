@@ -123,6 +123,9 @@ function start() {
     const opts = { method, credentials: "same-origin", headers: { Accept: "application/json", ...headers } };
     if (json !== undefined) { opts.body = JSON.stringify(json); opts.headers["Content-Type"] = "application/json"; }
     if (body !== undefined) opts.body = body;
+    // Accès limité à un site (R6 lot 3) : le site de l'article accompagne chaque appel d'API de l'éditeur (le serveur le valide ; il n'est jamais cru sur parole)
+    const siteId = (document.getElementById("be-form") || { dataset: {} }).dataset.site;
+    if (siteId && typeof url === "string" && url.startsWith("/formateur/blog/api/")) url += (url.includes("?") ? "&" : "?") + "site=" + encodeURIComponent(siteId);
     const res = await fetch(url, opts);
     let data = null;
     try { data = await res.json(); } catch { data = null; }

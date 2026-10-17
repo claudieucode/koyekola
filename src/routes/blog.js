@@ -22,6 +22,8 @@ const { sanitizeBlogHtml, markdownToEditorHtml } = require("../utils/blogHtml");
 const { escapeHtml } = require("../utils/markdown");
 const blog = require("../services/blog");
 const taxonomy = require("../services/taxonomy");
+const siteContent = require("../services/siteContent");
+const { transaction: siteTransaction } = require("../marketing/db/tx");
 const themeRender = require("../marketing/web/themeRender");
 const blockTrash = require("../services/blockTrash");
 const blogAi = require("../services/blogAi");
@@ -447,7 +449,16 @@ function requireBlogAccess(req, res, next) {
   const asJson = wantsJson(req) || req.path.startsWith("/api/");
   const deny = (message) => (asJson ? res.status(403).json({ error: message }) : res.status(403).render("error", { message }));
   const orgId = marketingOrgId();
-  const can = (permission) => Boolean(orgId && cmsAccess.can(user.id, permission, { organizationId: orgId }));
+  // Accès limité à certains sites (décision A-D9 : l'éditeur s'ouvre « avec les droits articles.* de leur site ») : le site vient de l'ARTICLE (adresse) ou de « ?site= » pour les appels sans article,
+  // jamais d'un champ libre ; l'équipe de l'organisation garde exactement son fonctionnement d'avant
+  const team = Boolean(orgId && cmsAccess.membershipOf(user.id, orgId));
+  let siteId = null;
+  if (!team) {
+    const where = limitedSite(req, user);
+    if (where.error) return deny(where.error);
+    siteId = where.siteId;
+  }
+  const can = (permission) => Boolean(orgId && cmsAccess.can(user.id, permission, team ? { organizationId: orgId } : { organizationId: orgId, siteId }));
   const all = can("articles.write"), own = can("articles.edit_own");
   if (!all && !own) return deny("Réservé aux personnes autorisées à rédiger des articles.");
   if (!WRITER_ROUTES.some((re) => re.test(req.path))) return deny("Réservé au compte créateur.");
@@ -463,7 +474,27 @@ function requireBlogAccess(req, res, next) {
     }
   }
   req.blogActor = { all, own, canPublish };
+  if (!team) req.blogSite = siteId; // accès limité : portée de site imposée à toute la suite de la requête
   next();
+}
+// Site d'une requête de l'éditeur pour un accès limité à certains sites ; { error } si la requête sort de ses sites. Refus uniformes (aucune fuite d'existence).
+const LIMITED_API = new Set(["/api/termes", "/api/liens", "/api/suggestions", "/api/seo-check"]);
+function limitedSite(req, user) {
+  const mine = new Set(cmsAccess.siteMemberships(user.id).map((s) => s.site_id));
+  const queried = /^\d{1,12}$/.test(String(req.query.site ?? "")) ? Number(req.query.site) : null;
+  const m = /^\/(\d+)\//.exec(req.path);
+  let siteId;
+  if (m) {
+    const site = siteContent.siteOf(db, "post", Number(m[1]));
+    if (site === undefined || site === null || !mine.has(site)) return { error: "Vous n'avez pas accès à cet article." }; // inconnu, du site principal ou d'un autre site : même réponse
+    siteId = site;
+  } else if (LIMITED_API.has(req.path)) {
+    if (queried === null) return { error: "Site non précisé." };
+    siteId = queried;
+  } else return { error: "Créez l'article depuis la liste des articles de votre site : l'éditeur s'ouvre ensuite sur cet article." };
+  if (queried !== null && queried !== siteId) return { error: "Site incohérent avec l'article demandé." }; // paramètre falsifié
+  if (!mine.has(siteId)) return { error: "Vous n'avez pas accès à ce site." };
+  return { siteId };
 }
 // Rédacteur sans droit de publication : jamais d'article mis en ligne ou programmé par lui, et pas de modification d'un article déjà en ligne
 function guardActorStatus(req, wanted, current) {
@@ -484,6 +515,12 @@ const wantsJson = (req) => req.get("x-blog-editor") === "1";
 // par l'ancienne saisie texte (category / subcategory / tags) ; les relations de la taxonomie sont la source, le texte en est le miroir
 function applyTaxonomy(postId, body) {
   const has = (k) => Object.hasOwn(body, k);
+  // Les termes choisis appartiennent au MÊME site que l'article (refus avant toute écriture, même réponse qu'un terme inconnu) ; le classement par noms (ancienne saisie) crée des termes
+  // sans site : refusé pour un article d'un site
+  const site = siteContent.siteOf(db, "post", postId) ?? null;
+  const asked = [].concat(body.category_ids || [], body.tag_ids || [], body.primary_category_id || []).flatMap((v) => String(v).split(",")).map(Number);
+  if (siteContent.termsOutsideSite(db, asked, site).length) throw new UserError("Terme introuvable.");
+  if (site !== null && !(has("category_ids") || has("primary_category_id") || has("tag_ids")) && (has("category") || has("subcategory") || has("tags"))) throw new UserError("Choisissez les catégories et étiquettes dans le sélecteur de l'éditeur.");
   if (has("category_ids") || has("primary_category_id") || has("tag_ids")) {
     taxonomy.setTerms("post", postId, {
       categoryIds: has("category_ids") ? body.category_ids : undefined,
@@ -614,6 +651,9 @@ function loadPost(req, res, next) {
   next();
 }
 
+// Site de l'article en cours d'édition (ou du site de la requête pour un nouvel article) ; null = site principal
+const editorSite = (req, post) => (post ? (siteContent.siteOf(db, "post", post.id) ?? null) : (req.blogSite ?? null));
+
 function editorData(req, post) {
   const autosave = post ? blog.getAutosave(post.id) : null;
   const marketing = req.app.locals.marketing;
@@ -623,8 +663,10 @@ function editorData(req, post) {
     // Sauvegarde automatique plus récente que la dernière version enregistrée : proposée à la restauration
     autosave: autosave && post && autosave.saved_at > post.updated_at ? autosave : null,
     revisions: post ? blog.listRevisions(post.id) : [], revisionTotal: post ? blog.countRevisions(post.id) : 0,
-    instructors: blog.instructors(), categories: blog.categories(), subcategories: blog.subcategories(), tags: blog.allTags(),
-    taxo: { categories: taxonomy.tree("category").map(termJson), selected: post ? taxonomy.termsOf("post", post.id) : { categories: [], tags: [], primary: null } },
+    // Les listes de l'éditeur ne montrent que ce qui appartient au site de l'article (aucun terme ni suggestion d'un autre site) ; accès limité : pas de listes globales
+    siteId: editorSite(req, post), restrictedSite: req.blogSite ?? null,
+    instructors: blog.instructors(), categories: req.blogSite ? [] : blog.categories(), subcategories: req.blogSite ? [] : blog.subcategories(), tags: req.blogSite ? [] : blog.allTags(),
+    taxo: { categories: taxonomy.tree("category", siteContent.scopeForSite("term", "t.id", editorSite(req, post))).map(termJson), selected: post ? taxonomy.termsOf("post", post.id) : { categories: [], tags: [], primary: null } },
     courses: db.prepare("SELECT slug, title FROM courses WHERE published = 1 AND archived = 0 ORDER BY title COLLATE NOCASE").all(),
     statuses: blog.STATUSES, languages: Object.keys(LANGUAGES), currentUserId: req.session.user.id,
     aiConfigured: blogAi.isConfigured(), siteUrl: absoluteUrl(req, "/").replace(/\/$/, ""),
@@ -638,6 +680,8 @@ function editorData(req, post) {
 // Contrôle SEO avant publication (panneau de publication de l'éditeur) et historique SEO de l'article
 router.post("/formateur/blog/api/seo-check", upload.none(), (req, res) => {
   const existing = /^\d{1,9}$/.test(String(req.body.post_id || "")) ? db.prepare("SELECT * FROM posts WHERE id = ?").get(Number(req.body.post_id)) : null;
+  // Accès limité : l'article contrôlé est celui de son site (jamais celui d'un autre site, même désigné par son identifiant)
+  if (req.blogSite !== undefined && existing && siteContent.siteOf(db, "post", existing.id) !== req.blogSite) return res.status(403).json({ error: "Vous n'avez pas accès à cet article." });
   let f;
   // Données incomplètes (ex. titre vide) : le contrôle porte alors sur les valeurs brutes, pour tout signaler d'un coup
   try { f = readFields(req.body, existing); } catch (error) { if (!(error instanceof UserError)) throw error; f = { ...req.body, robots_index: req.body.robots_index === "0" ? 0 : 1 }; }
@@ -1057,30 +1101,51 @@ router.post("/formateur/blog/api/medias/:mid/supprimer", (req, res) => {
 
 // ---------- Classement : catégories et étiquettes (sélecteur de l'éditeur, création rapide) ----------
 // GET : catégories en arbre (sans recherche) ou termes qui correspondent (étiquettes : saisie semi-automatique) ; POST : création réelle
+// Site des appels d'API de l'éditeur (termes) : celui de l'accès limité ; pour l'équipe, « ?site= » s'il est donné (sinon aucune restriction, comme avant)
+const apiSite = (req) => (req.blogSite !== undefined ? req.blogSite : /^\d{1,12}$/.test(String(req.query.site ?? "")) ? Number(req.query.site) : undefined);
 const termJson = (t) => ({ id: t.id, name: t.name, slug: t.slug, taxonomy: t.taxonomy, parent_id: t.parent_id, depth: t.depth || 0, count: t.n ?? t.total ?? 0 });
 router.get("/formateur/blog/api/termes", (req, res) => {
   const key = req.query.taxonomy === "tag" ? "tag" : "category";
   const q = String(req.query.q || "").trim().slice(0, 60);
-  if (key === "category" && !q) return res.json({ terms: taxonomy.tree("category").map(termJson) });
-  const found = taxonomy.list({ taxonomy: key, q, sort: q ? "nom" : "utilisation", perPage: Math.min(Number(req.query.limite) || 12, 50) });
+  const scope = siteContent.scopeForSite("term", "t.id", apiSite(req));
+  if (key === "category" && !q) return res.json({ terms: taxonomy.tree("category", scope).map(termJson) });
+  const found = taxonomy.list({ taxonomy: key, q, sort: q ? "nom" : "utilisation", perPage: Math.min(Number(req.query.limite) || 12, 50), scope });
   res.json({ terms: found.rows.map(termJson) });
 });
 router.post("/formateur/blog/api/termes", express.json({ limit: "4kb" }), (req, res) => {
   const b = req.body || {};
   try {
     const key = b.taxonomy === "tag" ? "tag" : "category";
-    const term = key === "tag" ? taxonomy.findOrCreateTag(b.name) : taxonomy.create({ taxonomy: "category", name: b.name, parentId: b.parent_id ? Number(b.parent_id) : null });
+    const site = apiSite(req);
+    if (b.parent_id && (siteContent.siteOf(db, "term", Number(b.parent_id)) ?? null) !== (site ?? null)) throw new UserError("La catégorie parente doit appartenir au même site.");
+    // Tout ou rien : le terme et son rattachement au site (s'il y en a un) sont écrits ensemble
+    const term = siteTransaction(db, () => {
+      const created = key === "tag" ? taxonomy.findOrCreateTag(b.name) : taxonomy.create({ taxonomy: "category", name: b.name, parentId: b.parent_id ? Number(b.parent_id) : null });
+      const there = siteContent.siteOf(db, "term", created.id) ?? null;
+      if (site != null && there !== null && there !== site) throw new UserError("Ce nom n'est pas disponible : choisissez-en un autre."); // étiquette existante d'un autre site : jamais renvoyée
+      if (site != null && there === null) siteContent.adopt({ db, organizationId: marketingOrgId(), userId: req.session.user.id, siteScope: site }, { type: "term", id: created.id });
+      return created;
+    });
     res.status(201).json({ term: termJson({ ...term, depth: key === "category" && term.parent_id ? taxonomy.ancestors(term.id).length : 0 }) });
   } catch (e) { if (e instanceof UserError) return res.status(400).json({ error: e.message }); throw e; }
 });
 
 // ---------- Liens internes ----------
-router.get("/formateur/blog/api/liens", (req, res) => res.json({ results: blog.searchLinks(String(req.query.q || "").slice(0, 80), 12) }));
+// Liens internes proposés : accès limité = seulement les articles et catégories DE SON SITE (formations et pages publiques inchangées)
+const inLinkScope = (req, item) => {
+  if (req.blogSite === undefined) return true;
+  let m = /^\/blog\/categorie\/([^/?#]+)$/.exec(item.url || "");
+  if (m) { const t = db.prepare("SELECT id FROM taxonomy_terms WHERE taxonomy = 'category' AND slug = ?").get(m[1]); return Boolean(t) && siteContent.siteOf(db, "term", t.id) === req.blogSite; }
+  m = /^\/blog\/([^/?#]+)$/.exec(item.url || "");
+  if (m) { const p = db.prepare("SELECT id FROM posts WHERE slug = ?").get(m[1]); return Boolean(p) && siteContent.siteOf(db, "post", p.id) === req.blogSite; }
+  return true;
+};
+router.get("/formateur/blog/api/liens", (req, res) => res.json({ results: blog.searchLinks(String(req.query.q || "").slice(0, 80), req.blogSite === undefined ? 12 : 300).filter((r) => inLinkScope(req, r)).slice(0, 12) }));
 
 router.post("/formateur/blog/api/suggestions", (req, res) => {
   const b = req.body || {};
   const linked = Array.isArray(b.linked) ? b.linked.map(String).slice(0, 200) : [];
-  res.json({ suggestions: blog.suggestLinks({ text: String(b.text || "").slice(0, 60000), postId: Number(b.postId) || 0, alreadyLinked: linked }) });
+  res.json({ suggestions: blog.suggestLinks({ text: String(b.text || "").slice(0, 60000), postId: Number(b.postId) || 0, alreadyLinked: linked }).filter((s) => inLinkScope(req, s)) });
 });
 
 // ---------- Assistant IA (propositions uniquement) ----------

@@ -128,7 +128,7 @@ function createMarketingRouters({ db }) {
     };
     res.locals.mk = { role, can: allowed, ctx: req.mk.ctx };
     // Écrans de contenu d'un site (R6 lot 2) : le site courant est conservé dans les formulaires (champ caché « site »)
-    { const s = require("../../services/siteContent").siteParam(req.mk.ctx); res.locals.mkSiteField = s ? `<input type="hidden" name="site" value="${s}">` : ""; res.locals.mkSiteId = s; }
+    { const s = require("../../services/siteContent").siteParam(req.mk.ctx); res.locals.mkSiteField = s ? `<input type="hidden" name="site" value="${s}">` : ""; res.locals.mkSiteId = s; res.locals.mkNavUrl = (u) => (s && typeof u === "string" && /^\/marketing\/site-web\/(?:articles|commentaires)(?:[/?#]|$)/.test(u) && !/[?&]site=/.test(u) ? u + (u.includes("?") ? "&" : "?") + "site=" + s : u); res.locals.mkRestricted = Number.isInteger(req.mk.ctx.siteScope) && req.mk.ctx.siteScope > 0; }
     // Email Engine (palier 16) : sites proposés / site imposé, disponibles pour les écrans des audiences, segments, modèles et campagnes
     if (/^\/(?:campagnes|listes|segments|modeles|automatisations|tunnels)(?:\/|$)/.test(req.path)) Object.assign(res.locals, require("./kit").siteChoices(req));
     res.locals.mkTheme = themeOf(marketing.settings, orgId, user.id); // Paramètres → Apparence

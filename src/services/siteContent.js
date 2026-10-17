@@ -172,9 +172,10 @@ function adopt(ctx, { type, id } = {}) {
 //  - FILTRE D'AFFICHAGE (ctx.siteFilter, équipe qui choisit un site) : seules les LISTES sont filtrées ; l'équipe garde ses droits sur tous les contenus (comportement historique).
 const listSite = (ctx) => (Number.isInteger(ctx.siteScope) ? ctx.siteScope : Number.isInteger(ctx.siteFilter) ? ctx.siteFilter : ctx.siteFilter === "principal" ? 0 : null);
 // Fragment SQL « le contenu est dans la portée » pour une liste ; null = aucune restriction. idExpr : expression SQL de l'identifiant (ex. « p.id »)
-function scopePredicate(ctx, type, idExpr) {
-  const site = listSite(ctx);
-  if (site === null) return null;
+function scopePredicate(ctx, type, idExpr) { return scopeForSite(type, idExpr, listSite(ctx)); }
+// Même fragment pour un SITE donné (0 = site principal ; null = aucune restriction) : sert à l'éditeur, où les termes proposés sont ceux du site DE L'ARTICLE
+function scopeForSite(type, idExpr, site) {
+  if (site === null || site === undefined) return null;
   const base = `FROM mk_content_sites cs WHERE cs.content_type = '${type}' AND cs.content_id = ${idExpr}`;
   return site === 0 ? { sql: `NOT EXISTS (SELECT 1 ${base})`, params: [] } : { sql: `EXISTS (SELECT 1 ${base} AND cs.site_id = ?)`, params: [site] };
 }
@@ -186,6 +187,8 @@ function commentPredicate(ctx, alias = "c") {
   return site === 0 ? { sql: `(${alias}.content_type <> 'post' OR NOT EXISTS (SELECT 1 ${base}))`, params: [] } : { sql: `(${alias}.content_type = 'post' AND EXISTS (SELECT 1 ${base} AND cs.site_id = ?))`, params: [site] };
 }
 // Opération par identifiant : refusée seulement pour un accès limité à un site hors de son site (l'équipe garde tout)
+// Les termes donnés appartiennent-ils tous au site indiqué (null = site principal) ? Renvoie les identifiants qui n'en sont pas (inconnus compris)
+const termsOutsideSite = (db, termIds, siteId) => [...new Set((termIds || []).map(Number).filter((n) => Number.isInteger(n) && n > 0))].filter((id) => siteOf(db, "term", id) === undefined || (siteOf(db, "term", id) ?? null) !== (siteId ?? null));
 const restricted = (ctx) => Number.isInteger(ctx.siteScope);
 // Site « courant » des écrans de contenu (pour conserver ?site= dans les redirections et les formulaires) : accès limité ou site choisi par l'équipe ; sinon null
 const siteParam = (ctx) => (Number.isInteger(ctx.siteScope) && ctx.siteScope > 0 ? ctx.siteScope : Number.isInteger(ctx.siteFilter) ? ctx.siteFilter : null);
@@ -209,4 +212,4 @@ function inventory(db) {
   return out;
 }
 
-module.exports = { TYPES, ensureCoreTriggers, siteOf, assign, clear, adopt, siteParam, scopePredicate, commentPredicate, restricted, allowedContent, allowedComment, listPosts, listTerms, listComments, siteOfComment, requirePostInScope, requireTermInScope, inventory, visibleSql };
+module.exports = { TYPES, ensureCoreTriggers, siteOf, assign, clear, adopt, siteParam, scopePredicate, scopeForSite, termsOutsideSite, commentPredicate, restricted, allowedContent, allowedComment, listPosts, listTerms, listComments, siteOfComment, requirePostInScope, requireTermInScope, inventory, visibleSql };

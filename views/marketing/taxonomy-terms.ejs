@@ -5,7 +5,8 @@
 <%
   const hier = def.hierarchical;
   const one = key === "tag" ? "étiquette" : "catégorie";
-  const keep = (over = {}) => { const p = new URLSearchParams(); const o = { q: f.q, tri: f.tri === "nom" ? "" : f.tri, inutilises: f.inutilises ? "1" : "", parent: f.parent, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return PATHS[key] + (t ? "?" + t : ""); };
+  const S = typeof mkSiteId === "number" ? mkSiteId : ""; const siteQ = S ? "?site=" + S : ""; // site courant (accès limité ou site choisi) : conservé dans tous les liens
+  const keep = (over = {}) => { const p = new URLSearchParams(); const o = { site: S, q: f.q, tri: f.tri === "nom" ? "" : f.tri, inutilises: f.inutilises ? "1" : "", parent: f.parent, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return PATHS[key] + (t ? "?" + t : ""); };
   const filtered = Boolean(f.q || f.inutilises || f.parent);
   const here = keep({ page: page > 1 ? page : "" });
   const n = (v) => Number(v || 0);
@@ -16,18 +17,18 @@
     <p class="mk-lead"><%= key === "tag" ? "Les étiquettes sont des mots-clés transversaux (Google, Conversion…), sans hiérarchie : un article peut en avoir plusieurs." : "Les catégories classent les articles, de façon structurée : Marketing › SEO › SEO technique. Un article a une catégorie principale et peut en avoir d'autres." %></p>
 
     <nav class="mk-tabs mk-cms-tabs" aria-label="Taxonomies">
-      <a class="mk-tab" href="<%= PATHS.category %>"<%- key === "category" ? ' aria-current="page"' : "" %>>Catégories</a>
-      <a class="mk-tab" href="<%= PATHS.tag %>"<%- key === "tag" ? ' aria-current="page"' : "" %>>Étiquettes</a>
+      <a class="mk-tab" href="<%= PATHS.category + siteQ %>"<%- key === "category" ? ' aria-current="page"' : "" %>>Catégories</a>
+      <a class="mk-tab" href="<%= PATHS.tag + siteQ %>"<%- key === "tag" ? ' aria-current="page"' : "" %>>Étiquettes</a>
     </nav>
 
-    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= PATHS[key] %><%- typeof mkSiteField === "string" ? mkSiteField : "" %>" role="search" aria-label="Rechercher parmi les <%= def.plural.toLowerCase() %>">
+    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= PATHS[key] %>" role="search" aria-label="Rechercher parmi les <%= def.plural.toLowerCase() %>"><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
       <label class="mk-search"><span class="sr-only">Rechercher (nom, adresse, description)</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" placeholder="Rechercher une <%= one %>"></label>
       <% if (hier) { %><label class="sr-only" for="tx-f-parent">Catégorie parente</label>
       <select id="tx-f-parent" name="parent"><option value="">Tous les niveaux</option><option value="0"<%= f.parent === "0" ? " selected" : "" %>>Premier niveau seulement</option><% options.forEach((o) => { %><option value="<%= o.id %>"<%= String(o.id) === f.parent ? " selected" : "" %>>Sous « <%= o.name %> »</option><% }) %></select><% } %>
       <label class="sr-only" for="tx-f-tri">Trier par</label>
       <select id="tx-f-tri" name="tri"><% [["nom", "Nom A → Z"], ["nom_desc", "Nom Z → A"], ["utilisation", "Plus utilisées"], ["recent", "Plus récentes"], ["ancien", "Plus anciennes"]].forEach(([k, name]) => { %><option value="<%= k %>"<%= f.tri === k ? " selected" : "" %>><%= name %></option><% }) %></select>
       <label class="mk-cms-check"><input type="checkbox" name="inutilises" value="1"<%= f.inutilises ? " checked" : "" %>> Inutilisées</label>
-      <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (filtered || f.tri !== "nom") { %><a class="btn btn-ghost btn-sm" href="<%= PATHS[key] %>">Réinitialiser</a><% } %>
+      <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (filtered || f.tri !== "nom") { %><a class="btn btn-ghost btn-sm" href="<%= PATHS[key] + siteQ %>">Réinitialiser</a><% } %>
     </form>
 
     <% if (!rows.length) { %>
@@ -36,7 +37,7 @@
         <% if (canWrite && !filtered) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-tx-new>Ajouter <%= key === "tag" ? "une étiquette" : "une catégorie" %></button></div><% } %></div>
     <% } else { %>
       <% if (canDelete) { %>
-      <form id="tx-bulk" class="mk-cms-bulk" action="/marketing/site-web/articles/termes/actions" method="post" data-cms-bulk data-cms-delete-text="Aucun article n'est supprimé ; les termes utilisés sont refusés." data-cms-noun="<%= one %><%- typeof mkSiteField === "string" ? mkSiteField : "" %>">
+      <form id="tx-bulk" class="mk-cms-bulk" action="/marketing/site-web/articles/termes/actions" method="post" data-cms-bulk data-cms-delete-text="Aucun article n'est supprimé ; les termes utilisés sont refusés." data-cms-noun="<%= one %>"><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
         <input type="hidden" name="taxonomy" value="<%= key %>"><input type="hidden" name="retour" value="<%= here %>">
         <label class="sr-only" for="tx-bulk-action">Action groupée</label><select id="tx-bulk-action" name="action" disabled><option value="">Action groupée</option><option value="supprimer">Supprimer</option></select>
         <button type="submit" class="btn btn-outline btn-sm" disabled>Appliquer</button><span class="mk-sub" data-cms-bulk-count aria-live="polite"></span>
