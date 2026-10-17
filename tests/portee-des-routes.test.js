@@ -66,6 +66,13 @@ const legacySiteOfRequest = (db) => (req) => {
       const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
       return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
     }
+    // SMS par site (R7 lot 6.1)
+    m = /^\/sms\/campagnes\/(\d{1,12})(?:\/|$)/.exec(p);
+    if (m) { const r = db.prepare("SELECT site_id FROM mk_sms_campaigns WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
+    if (/^\/sms(?:\/(?:campagnes|abonnes))?$/.test(p)) {
+      const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
+      return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
+    }
     // Demandes de rattachement (R7 lot 5) : « Mes demandes » d'un site
     if (req.method === "GET" && p === "/contacts/demandes" && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
     // Contacts par site (R7) : écriture d'un contact par un accès limité à un site (site = « ?site= » ou champ « site »)
@@ -115,6 +122,7 @@ before(() => {
   db.exec("INSERT INTO posts (id, slug, title) VALUES (1, 'a', 'A'), (2, 'b', 'B'); INSERT INTO taxonomy_terms (id, taxonomy, name, slug) VALUES (1, 'category', 'C', 'c'); INSERT INTO blog_comments (id, post_id, content_type, content_id, body) VALUES (1, 1, 'post', 1, 'x'), (2, 1, 'page', 1, 'y')");
   db.prepare("INSERT INTO mk_content_sites (content_type, content_id, organization_id, site_id, scope) VALUES ('post', 1, 1, ?, ''), ('term', 1, 1, ?, 'category')").run(S1, S2);
   db.prepare("INSERT INTO mk_forms (organization_id, name, slug, consent_text, site_id) VALUES (1, 'F1', 'f1', 'consentement', ?), (1, 'F2', 'f2', 'consentement', NULL)").run(S1);
+  db.prepare("INSERT INTO mk_sms_campaigns (organization_id, name, body, site_id) VALUES (1, 'C1', 'x', ?), (1, 'C2', 'x', NULL)").run(S1);
   const sites = [S1, S2, null];
   for (const s of sites) {
     row("INSERT INTO mk_landing_pages (organization_id, name, slug, title, status, site_id) VALUES (1, ?, ?, 't', 'draft', ?)", `P${s}`, `p-${s}`, s);
@@ -171,7 +179,7 @@ describe("la table déclarative reproduit EXACTEMENT l'ancienne logique (oracle)
     "/campagnes", "/campagnes/nouvelle", "/campagnes/1", "/campagnes/2/pause", "/campagnes/99999", "/listes", "/listes/1", "/segments/3", "/modeles/1", "/modeles/bibliotheque", "/modeles/bibliotheque/k/apercu", "/modeles/apercu",
     "/automatisations", "/automatisations/parcours", "/automatisations/parcours/abc", "/automatisations/historique", "/automatisations/1", "/tunnels/1/etapes/2", "/tunnels/nouveau",
     "/tests-ab/1", "/tests-ab/99999", "/site-web/tests-ab", "/analytics/global", "/analytics/global/export", "/analytics/global/x", "/analytics", "/evenements/1", "/evenements/99999", "/evenements/1/x", "/evenements",
-    "/contacts", "/contacts/actions", "/contacts/12", "/contacts/12/etiquettes", "/contacts/12/etiquettes/retirer", "/contacts/12/cycle-de-vie", "/contacts/12/etat", "/contacts/12/effacer", "/contacts/fusion", "/contacts/demandes", "/contacts/demandes/traiter", "/contacts/demandes/3/accepter", "/contacts/12/evenements.json", "/formulaires", "/formulaires/1", "/formulaires/1/publier", "/formulaires/99999/supprimer", "/contacts/12/x", "/contacts/doublons", "/webhooks", "/site-web/utilisateurs"];
+    "/contacts", "/contacts/actions", "/contacts/12", "/contacts/12/etiquettes", "/contacts/12/etiquettes/retirer", "/contacts/12/cycle-de-vie", "/contacts/12/etat", "/contacts/12/effacer", "/contacts/fusion", "/sms", "/sms/abonnes", "/sms/campagnes", "/sms/campagnes/1", "/sms/campagnes/1/lancer", "/sms/campagnes/99999/annuler", "/sms/reglages", "/sms/test", "/sms/blocages", "/contacts/demandes", "/contacts/demandes/traiter", "/contacts/demandes/3/accepter", "/contacts/12/evenements.json", "/formulaires", "/formulaires/1", "/formulaires/1/publier", "/formulaires/99999/supprimer", "/contacts/12/x", "/contacts/doublons", "/webhooks", "/site-web/utilisateurs"];
   const paths = new Set(handmade);
   before(() => { for (const r of mountedRoutes()) for (const id of [1, 2, 99999]) for (const p of concrete(r.path, id)) paths.add(p); });
 

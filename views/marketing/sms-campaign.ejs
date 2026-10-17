@@ -1,4 +1,5 @@
 <%- include("partials/top", { title, active }) %>
+<% const showCost = (mk.ctx.siteScope === undefined); /* R7 lot 6.1 : prix, coûts et réglages du fournisseur : équipe seulement */ %>
 <%
   const dis = canWrite ? "" : "disabled";
   const target = c.target_type === "all" ? "all" : c.target_type + ":" + c.target_id;
@@ -17,7 +18,7 @@
           <div class="field-group"><label for="c-name">Nom de la campagne (interne)</label><input id="c-name" type="text" name="name" maxlength="120" required value="<%= c.name %>" <%= dis %>></div>
           <div class="field-group"><label for="c-target">Destinataires</label>
             <select id="c-target" name="target" <%= dis %>>
-              <option value="all" <%= target === "all" ? "selected" : "" %>>Tous les abonnés SMS</option>
+              <% if (showCost) { %><option value="all" <%= target === "all" ? "selected" : "" %>>Tous les abonnés SMS</option><% } %>
               <% if (lists.length) { %><optgroup label="Listes"><% lists.forEach((l) => { %><option value="list:<%= l.id %>" <%= target === "list:" + l.id ? "selected" : "" %>><%= l.name %></option><% }) %></optgroup><% } %>
               <% if (segmentsList.length) { %><optgroup label="Segments"><% segmentsList.forEach((s) => { %><option value="segment:<%= s.id %>" <%= target === "segment:" + s.id ? "selected" : "" %>><%= s.name %></option><% }) %></optgroup><% } %>
             </select>
@@ -67,7 +68,7 @@
         <div class="mk-stats">
           <div class="mk-stat"><span class="mk-stat-label">Destinataires joignables</span><span class="mk-stat-value"><%= mkh.fmt(a.sendable) %></span><span class="mk-stat-hint">sur <%= mkh.fmt(a.targetTotal) %> contact(s) de la cible</span></div>
           <div class="mk-stat"><span class="mk-stat-label">SMS facturés (segments)</span><span class="mk-stat-value"><%= est ? mkh.fmt(est.segments) : "—" %></span><span class="mk-stat-hint"><%= est ? "jusqu'à " + est.maxSegments + " par destinataire" : "" %></span></div>
-          <div class="mk-stat"><span class="mk-stat-label">Coût estimé</span><span class="mk-stat-value"><%= est ? money(est.cost) : "—" %></span><span class="mk-stat-hint"><%= est && est.price !== null ? est.price + " " + cfg.currency + " par segment" : "prix à saisir dans les réglages" %></span></div>
+          <% if (showCost) { %><div class="mk-stat"><span class="mk-stat-label">Coût estimé</span><span class="mk-stat-value"><%= est ? money(est.cost) : "—" %></span><span class="mk-stat-hint"><%= est && est.price !== null ? est.price + " " + cfg.currency + " par segment" : "prix à saisir dans les réglages" %></span></div><% } %>
         </div>
         <% if (a.excluded.total) { %>
           <p class="field-hint"><strong><%= mkh.fmt(a.excluded.total) %> contact(s) exclus :</strong>
@@ -104,7 +105,7 @@
             <div class="field-group" data-sms-later hidden><label for="l-at">Date et heure (votre heure)</label><input id="l-at" type="datetime-local" name="send_at"><input type="hidden" name="send_at_utc" data-sms-utc></div>
           </fieldset>
           <div class="field-group"><label for="l-count">Pour confirmer, tapez le nombre de destinataires : <strong><%= a.sendable %></strong></label><input id="l-count" type="number" name="confirm_count" required min="1" inputmode="numeric" autocomplete="off"></div>
-          <label class="checkbox-row"><input type="checkbox" name="confirm_cost" value="on" required> J'ai vérifié le coût estimé (<%= est ? money(est.cost) : "non calculé" %>) : chaque SMS envoyé est facturé.</label>
+          <label class="checkbox-row"><input type="checkbox" name="confirm_cost" value="on" required> J'ai vérifié <%= showCost ? "le coût estimé (" + (est ? money(est.cost) : "non calculé") + ")" : "le nombre de SMS facturés (" + (est ? est.segments : 0) + ")" %> : chaque SMS envoyé est facturé.</label>
           <div class="mk-actions"><button type="submit" class="btn btn-primary">Envoyer la campagne SMS</button></div>
         </form>
       <% } %>

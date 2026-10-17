@@ -385,7 +385,7 @@
    "classe": "plateforme"
   },
   "mk_sms_campaigns": {
-   "siteId": false,
+   "siteId": true,
    "classe": "a-decider"
   },
   "mk_sms_clicks": {

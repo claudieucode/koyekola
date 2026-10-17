@@ -1,4 +1,5 @@
 <%- include("partials/top", { title, active }) %>
+<% const showCost = (mk.ctx.siteScope === undefined); /* R7 lot 6.1 : prix, coûts et réglages du fournisseur : équipe seulement */ %>
 <%
   const money = (v) => v === null ? "—" : v.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + (c.currency || "");
   const when = (ms) => ms ? new Date(ms).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "—";
@@ -18,7 +19,7 @@
       <div class="mk-stat"><span class="mk-stat-label">Livrés</span><span class="mk-stat-value"><%= report.rates.delivery %> %</span><span class="mk-stat-hint"><%= mkh.fmt(c.delivered_count) %> confirmé(s) par l'opérateur</span></div>
       <div class="mk-stat"><span class="mk-stat-label">Clics</span><span class="mk-stat-value"><%= report.rates.click %> %</span><span class="mk-stat-hint"><%= mkh.fmt(c.click_count) %> personne(s)</span></div>
       <div class="mk-stat"><span class="mk-stat-label">Désinscriptions</span><span class="mk-stat-value"><%= report.rates.unsubscribe %> %</span><span class="mk-stat-hint"><%= mkh.fmt(c.unsubscribe_count) %> personne(s)</span></div>
-      <div class="mk-stat"><span class="mk-stat-label">SMS facturés</span><span class="mk-stat-value"><%= mkh.fmt(c.segments_count) %></span><span class="mk-stat-hint">coût estimé : <%= money(report.cost) %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">SMS facturés</span><span class="mk-stat-value"><%= mkh.fmt(c.segments_count) %></span><span class="mk-stat-hint"><%= showCost ? "coût estimé : " + money(report.cost) : "" %></span></div>
       <div class="mk-stat"><span class="mk-stat-label">Non livrés / échecs</span><span class="mk-stat-value"><%= mkh.fmt(c.undelivered_count + c.failed_count) %></span><span class="mk-stat-hint"><%= mkh.fmt(c.skipped_count) %> non envoyé(s)</span></div>
     </div>
     <p class="field-hint">« Livrés » dépend des accusés de réception des opérateurs (Twilio) : certains réseaux ne les renvoient pas, le chiffre réel peut être plus élevé.</p>

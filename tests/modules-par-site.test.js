@@ -26,7 +26,8 @@ describe("migration 084 : table additive, sans aucune ligne, aucune donnée de m
       const before = rows(db, "SELECT * FROM mk_sms_campaigns");
       assert.deepEqual(migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet }).applied.filter((v) => v === "084"), ["084"]);
       assert.equal(db.prepare("SELECT COUNT(*) n FROM mk_site_modules").get().n, 0, "aucune ligne : aucun site n'est activé d'office, aucun ne perd quoi que ce soit");
-      assert.deepEqual(rows(db, "SELECT * FROM mk_sms_campaigns"), before);
+      const stripSite = (r) => r.map(({ site_id, ...rest }) => rest); // la 085 (R7-6.1) ajoute mk_sms_campaigns.site_id : on compare les données existantes
+      assert.deepEqual(stripSite(rows(db, "SELECT * FROM mk_sms_campaigns")), stripSite(before));
       assert.deepEqual(migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet }).applied, []);
       const ins = (site = 1, org = 1, mod = "sms") => db.prepare("INSERT INTO mk_site_modules (site_id, organization_id, module, enabled) VALUES (?, ?, ?, 1)").run(site, org, mod);
       ins(); assert.throws(() => ins(), /UNIQUE|PRIMARY/);
@@ -184,11 +185,11 @@ describe("de bout en bout (serveur réel) : activation réservée à l'équipe, 
     assert.equal((await boss.post(`${M(A)}/sms`, { etat: "n'importe quoi" })).status, 302); assert.equal(enabledNow(A, "sms"), false, "état inconnu : rien");
     assert.equal((await boss.get(M(99999))).status, 404);
   });
-  test("les six moteurs restent FERMÉS aux personnes limitées à un site — avec ou sans module activé — tant que leur sous-lot n'est pas livré ; aucune donnée n'est affichée", async () => {
+  test("les moteurs dont le sous-lot n'est PAS livré restent FERMÉS aux personnes limitées à un site — avec ou sans module activé ; les réglages et blocages SMS (organisation) restent fermés ; aucune donnée n'est affichée", async () => {
     db.prepare("INSERT INTO mk_sms_campaigns (organization_id, name, body) VALUES (1, 'CAMPAGNE-SECRETE', 'texte')").run();
     db.prepare("INSERT INTO mk_social_posts (organization_id, group_key, network, body, scheduled_at) VALUES (1, 'g', 'facebook', 'PUBLICATION-SECRETE', 1)").run();
     for (const mod of modules.KEYS) await boss.post(`${M(A)}/${mod}`, { etat: "activer" });
-    const routes = ["/sms", "/sms/campagnes/1", "/sms/reglages", "/sms/abonnes", "/reseaux", "/reseaux/reglages", "/score", "/ia", "/ia/etat", "/revenus"];
+    const routes = ["/sms/reglages", "/sms/blocages", "/sms/test", "/reseaux", "/reseaux/reglages", "/score", "/ia", "/ia/etat", "/revenus"];
     for (const client of [adminA, editorA]) for (const r of routes) for (const q of ["", `?site=${A}`]) {
       const res = await client.get(`/marketing${r}${q}`);
       assert.ok([302, 403, 404].includes(res.status), `${r}${q} -> ${res.status}`);
