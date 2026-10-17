@@ -108,6 +108,8 @@ const SITE_RULES = Object.freeze([
   { id: "reseaux-du-site", pattern: /^\/reseaux$/, kind: "param", terminal: true },
   // Score par site (R7 lot 6.4) : l'écran /score vise le site choisi (aperçu du score DU site, lecture seule) ; règles, niveaux et recalcul restent des écrans d'organisation (équipe)
   { id: "score-du-site", pattern: /^\/score$/, methods: ["GET"], kind: "param", terminal: true },
+  // Revenus par site (R7 lot 6.5) : l'écran /revenus vise le site choisi (revenus attribués aux e-mails DU site, lecture seule) ; la fenêtre d'attribution reste un réglage d'organisation
+  { id: "revenus-du-site", pattern: /^\/revenus$/, methods: ["GET"], kind: "param", terminal: true },
   { id: "demandes-du-site", pattern: /^\/contacts\/demandes$/, methods: ["GET"], kind: "queryGet" },
   { id: "contacts-ecriture-du-site", pattern: /^\/contacts(?:\/(?:actions|\d+(?:\/(?:proprietes|etiquettes(?:\/retirer)?|listes(?:\/retirer)?|cycle-de-vie|etat|consentement|desinscrire|supprimer-adresse|effacer))?))?$/, methods: ["POST"], kind: "param" },
   { id: "creation-avec-site", pattern: /^(?:\/pages|\/site-web\/composants)$/, methods: ["POST"], kind: "bodySiteId" },
@@ -135,6 +137,7 @@ const FAMILIES = Object.freeze([
   { id: "sms-campagnes", scope: "site", pattern: /^\/sms(?:\/campagnes(?:\/|$)|\/abonnes$|$)/ },
   { id: "reseaux-publications", scope: "site", pattern: /^\/reseaux(?:\/\d+\/(?:annuler|relancer|supprimer))?$/ },
   { id: "score-apercu", scope: "site", pattern: /^\/score$/ },
+  { id: "revenus-apercu", scope: "site", pattern: /^\/revenus$/ },
   { id: "formulaires", scope: "site", pattern: /^\/formulaires(?:\/|$)/ },
   { id: "contenus-par-site", scope: "site", pattern: /^\/site-web\/(?:articles|commentaires|mediatheque|medias|medias\.json)(?:\/|$)/ },
   { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|outils|parametres|tests-ab)(?:\/|$)/ },

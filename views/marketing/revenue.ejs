@@ -13,7 +13,7 @@
 
     <div class="mk-stats mk-stats-3">
       <div class="mk-stat"><span class="mk-stat-label">Revenus des e-mails</span><span class="mk-stat-value"><%= mkh.euros(o.totals.cents) %></span><span class="mk-stat-hint"><%= mkh.fmt(o.totals.orders) %> commande<%= o.totals.orders > 1 ? "s" : "" %> · <%= mkh.fmt(o.totals.buyers) %> acheteur<%= o.totals.buyers > 1 ? "s" : "" %></span></div>
-      <div class="mk-stat"><span class="mk-stat-label">Part des ventes du site</span><span class="mk-stat-value"><%= o.share === null ? "—" : String(o.share).replace(".", ",") + " %" %></span><span class="mk-stat-hint"><%= o.sales ? "sur " + mkh.euros(o.sales.cents) + " de ventes (" + mkh.fmt(o.sales.orders) + " commande" + (o.sales.orders > 1 ? "s" : "") + ")" : "ventes du site indisponibles" %></span></div>
+      <% if (!siteOnly) { %><div class="mk-stat"><span class="mk-stat-label">Part des ventes du site</span><span class="mk-stat-value"><%= o.share === null ? "—" : String(o.share).replace(".", ",") + " %" %></span><span class="mk-stat-hint"><%= o.sales ? "sur " + mkh.euros(o.sales.cents) + " de ventes (" + mkh.fmt(o.sales.orders) + " commande" + (o.sales.orders > 1 ? "s" : "") + ")" : "ventes du site indisponibles" %></span></div><% } %>
       <div class="mk-stat"><span class="mk-stat-label">Panier moyen (e-mails)</span><span class="mk-stat-value"><%= mkh.euros(o.totals.average) %></span><span class="mk-stat-hint">par commande attribuée</span></div>
     </div>
 
@@ -57,7 +57,7 @@
         <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Dernières commandes attribuées à un e-mail</caption>
           <thead><tr><th scope="col">Acheteur</th><th scope="col">E-mail à l'origine</th><th scope="col" class="mk-num">Montant</th><th scope="col">Clic</th><th scope="col">Achat (UTC)</th></tr></thead>
           <tbody><% o.recent.forEach((r) => { %><tr>
-            <td data-label="Acheteur"><%= r.email ? mkh.maskEmail(r.email) : "(contact supprimé)" %></td>
+            <td data-label="Acheteur"><%= r.hidden ? "(hors de votre périmètre)" : r.email ? mkh.maskEmail(r.email) : "(contact supprimé)" %></td>
             <td data-label="E-mail à l'origine"><% if (r.automation_id) { %>Automatisation « <%= r.automation_name || "(supprimée)" %> »<% } else if (r.campaign_name) { %><a href="/marketing/campagnes/<%= r.campaign_id %>"><%= r.campaign_name %></a><% } else { %>(campagne supprimée)<% } %></td>
             <td class="mk-num" data-label="Montant"><strong><%= mkh.euros(r.amount_cents) %></strong></td>
             <td data-label="Clic"><%= when(r.clicked_at) %></td>

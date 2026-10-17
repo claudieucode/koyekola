@@ -289,7 +289,7 @@
    "classe": "plateforme"
   },
   "mk_order_attributions": {
-   "siteId": false,
+   "siteId": true,
    "classe": "plateforme"
   },
   "mk_org_members": {

@@ -13,7 +13,7 @@ const MODULES = Object.freeze({
   ai: { label: "Intelligence artificielle", phase: "R7-6.2", ready: true },
   social: { label: "Réseaux sociaux", phase: "R7-6.3", ready: true },
   scoring: { label: "Score des contacts", phase: "R7-6.4", ready: true },
-  commerce: { label: "Commerce", phase: "R7-6.5", ready: false },
+  commerce: { label: "Commerce", phase: "R7-6.5", ready: true },
   lms: { label: "Formations", phase: "R7-6.6", ready: false },
 });
 const KEYS = Object.keys(MODULES);

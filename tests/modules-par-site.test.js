@@ -189,7 +189,7 @@ describe("de bout en bout (serveur réel) : activation réservée à l'équipe, 
     db.prepare("INSERT INTO mk_sms_campaigns (organization_id, name, body) VALUES (1, 'CAMPAGNE-SECRETE', 'texte')").run();
     db.prepare("INSERT INTO mk_social_posts (organization_id, group_key, network, body, scheduled_at) VALUES (1, 'g', 'facebook', 'PUBLICATION-SECRETE', 1)").run();
     for (const mod of modules.KEYS) await boss.post(`${M(A)}/${mod}`, { etat: "activer" });
-    const routes = ["/sms/reglages", "/sms/blocages", "/sms/test", "/reseaux/reglages", "/score/regles", "/score/recalculer", "/ia", "/revenus"];
+    const routes = ["/sms/reglages", "/sms/blocages", "/sms/test", "/reseaux/reglages", "/score/regles", "/score/recalculer", "/ia", "/revenus/fenetre"];
     for (const client of [adminA, editorA]) for (const r of routes) for (const q of ["", `?site=${A}`]) {
       const res = await client.get(`/marketing${r}${q}`);
       assert.ok([302, 403, 404].includes(res.status), `${r}${q} -> ${res.status}`);
