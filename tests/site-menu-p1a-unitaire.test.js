@@ -28,7 +28,7 @@ describe("projection du registre (menu d'un site)", () => {
   });
   test("C1 : les entrées du registre non ouvertes à un site sont toutes visibles, grisées « Bientôt », sans lien ; une clé absente de la table est « Bientôt »", () => {
     const items = flat(nav.siteSections(site));
-    for (const k of ["seo", "seo/meta", "utilisateurs/roles", "outils/importer", "parametres/lecture", "corbeille"]) {
+    for (const k of ["seo/meta", "utilisateurs/roles", "outils/importer", "parametres/lecture", "corbeille"]) {
       const i = items.find((x) => x.key === k); assert.ok(i, k); assert.equal(i.status, "preview", k); assert.equal(i.disabled, true, k); assert.equal(i.href, null, k);
       assert.equal(i.label, nav.ALL.find((x) => x.key === k).label, `${k} : libellé du registre`);
     }

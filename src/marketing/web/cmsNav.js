@@ -63,7 +63,7 @@ const SECTIONS = [
   },
   {
     key: "seo", label: "SEO", icon: "searchCheck", items: [
-      leaf("seo", "Vue générale", `${BASE}/seo`),
+      leaf("seo", "Vue générale", `${BASE}/seo`, { permission: "seo.view" }),
       leaf("seo/analyse", "Analyse SEO", `${BASE}/seo/analyse`),
       leaf("seo/meta", "Meta", `${BASE}/seo/meta`),
       leaf("seo/indexation", "Indexation", `${BASE}/seo/indexation`),
@@ -71,7 +71,7 @@ const SECTIONS = [
       leaf("seo/schema", "Schema", `${BASE}/seo/schema`),
       leaf("seo/open-graph", "Open Graph", `${BASE}/seo/open-graph`),
       leaf("seo/robots", "Robots", `${BASE}/seo/robots`),
-      leaf("seo/404", "Erreurs 404", `${BASE}/seo/404`),
+      leaf("seo/404", "Erreurs 404", `${BASE}/seo/404`, { permission: "seo.view" }),
     ],
   },
   { key: "redirections", label: "Redirections", icon: "arrowRightLeft", items: [
@@ -172,7 +172,8 @@ const SITE_MODULES = {
   modeles: { label: "Modèles et blocs", kind: "soon", phase: "B3", permission: "appearance.read", legacy: `${BASE}/apparence/templates` },
   // R8 lot 4 : Navigation / Menus par site (menus et emplacements PROPRES au site ; ressources limitées à celles du site)
   navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "navigation", permission: "navigation.read", legacy: `${BASE}/navigation` },
-  seo: { label: "SEO", kind: "soon", phase: "B6", permission: "forms.read", legacy: `${BASE}/seo`, reg: "seo" },
+  // R8 lot 6C : SEO du site = réglages SEO du site + erreurs 404 du site (les autres écrans SEO restent « Bientôt » : leur isolation n'est pas démontrée)
+  seo: { label: "SEO", kind: "own", permission: "seo.view", legacy: `${BASE}/seo`, reg: "seo" },
   // Écrans partagés ouverts dans le cadre du site. `to` = adresse de l'écran existant, relative au routeur d'administration ; `reg` = sa clé `active`.
   listes: { label: "Listes", kind: "delegate", to: "/listes", reg: "lists", permission: "lists.read", legacy: "/marketing/listes" },
   segments: { label: "Segments", kind: "delegate", to: "/segments", reg: "segments", permission: "segments.read", legacy: "/marketing/segments" },
@@ -232,6 +233,8 @@ const ABILITY = {
   "apparence/en-tete": { mode: "open", module: "reglages", hash: "entete" },
   "apparence/pied-de-page": { mode: "open", module: "reglages", hash: "entete" },
   redirections: { mode: "open", module: "redirections" },
+  seo: { mode: "open", module: "seo" },
+  "seo/404": { mode: "open", module: "seo", sub: "404" },
   utilisateurs: { mode: "open", module: "equipe" },
   pagetests: { mode: "open", module: "tests-ab" },
   outils: { mode: "open", module: "outils" },

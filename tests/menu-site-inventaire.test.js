@@ -13,13 +13,14 @@ const nav = require("../src/marketing/web/cmsNav");
 // ferme (motif) : « Bientôt » visible, grisé, sans lien — l'isolation ou l'écran du site n'existe pas encore
 const OUVERT = ["sites", "sitedash", "landing", "apparence", "apparence/en-tete", "apparence/pied-de-page", "redirections", "utilisateurs", "pagetests", "outils", "parametres",
   "articles", "articles/brouillons", "articles/programmes", "articles/publies", "articles/corbeille", "articles/categories", "articles/etiquettes", "articles/auteurs", "articles/ajouter", "mediatheque",
-  "navigation", "apparence/menus", "commentaires", "commentaires/en-attente", "commentaires/approuves", "commentaires/indesirables", "commentaires/corbeille"];
+  "seo", "seo/404", "navigation", "apparence/menus", "commentaires", "commentaires/en-attente", "commentaires/approuves", "commentaires/indesirables", "commentaires/corbeille"];
 const OUVERT_EQUIPE = []; // aucune entrée réservée à l'équipe pour l'instant
 const CENTRAL = ["outils/sauvegardes", "outils/systeme", "outils/logs"];
 const MOTIFS = {
   "apparence/templates": "modèles de site complets : lot B3 non réalisé", "apparence/patterns": "blocs et patterns partagés/privés : lot B3",
   "apparence/styles": "styles par site : lot P2", "utilisateurs/ajouter": "invitations par site : lot C4", "utilisateurs/roles": "rôles : lot C4", "utilisateurs/permissions": "permissions : lot C4", "utilisateurs/invitations": "invitations : lot C4",
-  seo: "suite SEO (/formateur/seo) globale à l'organisation, sans portée par site : aucune isolation", "seo/analyse": "idem seo", "seo/meta": "idem seo", "seo/indexation": "idem seo", "seo/sitemap": "idem seo", "seo/schema": "idem seo", "seo/open-graph": "idem seo", "seo/robots": "idem seo", "seo/404": "idem seo",
+  // R8 lot 6C : « SEO » (réglages du site) et « Erreurs 404 » sont ouverts (isolation démontrée, seo-par-site-espace) ; les autres écrans SEO ne sont pas isolés par site
+  "seo/analyse": "audit/analyse : explore l'hôte principal, équipe seulement", "seo/meta": "métadonnées de contenu : écran global", "seo/indexation": "indexation : écran global", "seo/sitemap": "plan du site : écran global", "seo/schema": "données structurées : écran global", "seo/open-graph": "partage : écran global", "seo/robots": "robots.txt : écran global (la règle supplémentaire du site est dans ses réglages SEO)",
   "redirections/liens-casses": "lot C4", "redirections/permaliens": "lot C4", corbeille: "corbeille globale : ne sera activée qu'une fois démontré qu'un site ne voit pas la corbeille d'un autre", "outils/importer": "lot C4", "outils/exporter": "lot C4",
   "outils/diagnostic": "lot C4", "outils/maintenance": "lot C4", "outils/cache": "lot C4", "outils/contenu": "lot C4",
 };
@@ -168,7 +169,7 @@ describe("entrées fermées : « Bientôt » sans donnée ni action", () => {
     const menu = (await boss.get(`/marketing/site-web/sites/${A}/tableau-de-bord`)).text;
     const nbBientot = (menu.match(/mk-cms-tag[^>]*>Bientôt/g) || []).length;
     assert.equal(nbBientot, Object.keys(MOTIFS).length, "autant d'entrées « Bientôt » que d'entrées fermées de l'inventaire (Formulaires et Contacts sont ouverts depuis R8 lot 3)");
-    for (const slug of ["seo", "modeles"]) for (const c of [boss, adminA]) {
+    for (const slug of ["modeles"]) for (const c of [boss, adminA]) { // R8 lot 6C : « seo » est ouvert (seo-par-site-espace)
       const r = await c.get(`/marketing/site-web/sites/${A}/${slug}`);
       assert.equal(r.status, 200, slug); assert.match(r.text, /Prochain palier/, slug);
       const main = (r.text.match(/<main[\s\S]*<\/main>/) || [""])[0];

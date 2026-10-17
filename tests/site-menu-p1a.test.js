@@ -65,11 +65,7 @@ describe("1 — le menu d'un site est la projection du registre", () => {
     assert.equal((navOf(html).match(/mk-cms-tag[^>]*>Bientôt/g) || []).length, soon.length);
     assert.equal((navOf(html).match(/is-soon" aria-disabled="true"/g) || []).length, soon.length, "chaque entrée grisée est un élément désactivé");
     for (const i of soon) assert.doesNotMatch(navOf(html), new RegExp(`<a [^>]*>[^<]*<span>${i.label.replace(/[()]/g, ".")}</span><span class="mk-cms-tag">Bientôt`), `${i.key} : pas de lien`);
-    for (const m of ["seo"]) { // navigation : ouverte depuis R8 lot 4 ; formulaires et contacts : ouverts depuis R8 lot 3 ; articles, médias et commentaires sont ouverts depuis R8 lot 2 (voir menu-site-inventaire)
-      const r = await boss.get(`${SP}/${A}/${m}`);
-      assert.equal(r.status, 200, m);
-      assert.doesNotMatch(main(r.text), /Liste Beta|Page Beta|<table|<form/, `${m} : ni donnée ni action`);
-    }
+    // R8 lot 6C : l'écran « SEO » du site est ouvert (formulaire de réglages) : il a son propre test (seo-par-site-espace) ; plus aucun module « Bientôt » à vérifier ici hormis les entrées grisées ci-dessus
   });
   test("tout lien du menu s'ouvre (le menu ne montre que ce qui répond), pour l'équipe et pour un éditeur du site", async () => {
     for (const who of [boss, memA]) {
@@ -229,6 +225,6 @@ describe("7 — site principal et régressions", () => {
     assert.ok(fs.existsSync(dir)); assert.ok(last, "migrations lues");
     const root = path.join(__dirname, "..");
     const all = [dir, path.join(root, "src", "migrations"), path.join(root, "migrations")].filter((d) => fs.existsSync(d)).flatMap((d) => fs.readdirSync(d)).filter((f) => /^\d+/.test(f)).map((f) => parseInt(f, 10));
-    assert.ok(Math.max(...all) <= 89, `dernière migration : ${Math.max(...all)}`); // 89 = revenus par site (R7 lot 6.5) ; 88 = score par site (R7 lot 6.4) ; 87 = réseaux sociaux par site (R7 lot 6.3) ; 86 = IA par site (R7 lot 6.2) ; 85 = SMS par site (R7 lot 6.1) ; 84 = modules par site (R7 lot 6.0) ; 83 = demandes de rattachement de contacts (R7 lot 5) ; 82 = journal d'audit par site (R7 lot 4) ; 81 = formulaires par site (R7 lot 2) ; 80 = contacts par site (R7) ; 79 = index des médias par site (lot 7C) ; 75 = R6 lot 1 (contenus par site) ; 72, 73 et 74 sont attribuées à R2, R3 et R5
+    assert.ok(Math.max(...all) <= 91, `dernière migration : ${Math.max(...all)}`); // 91 = imports par site et 90 = SEO par site (R8 lot 6A) ; 89 = revenus par site (R7 lot 6.5) ; 88 = score par site (R7 lot 6.4) ; 87 = réseaux sociaux par site (R7 lot 6.3) ; 86 = IA par site (R7 lot 6.2) ; 85 = SMS par site (R7 lot 6.1) ; 84 = modules par site (R7 lot 6.0) ; 83 = demandes de rattachement de contacts (R7 lot 5) ; 82 = journal d'audit par site (R7 lot 4) ; 81 = formulaires par site (R7 lot 2) ; 80 = contacts par site (R7) ; 79 = index des médias par site (lot 7C) ; 75 = R6 lot 1 (contenus par site) ; 72, 73 et 74 sont attribuées à R2, R3 et R5
   });
 });

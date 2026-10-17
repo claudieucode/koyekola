@@ -76,7 +76,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
   });
   test("une entrée grisée n'ouvre rien : ni adresse « Bientôt » dans le menu, ni écran du principal, ni donnée", async () => {
     const html = navHtml((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
-    for (const w of ["/utilisateurs/roles", "/outils/importer", "/parametres/lecture", `/${A}/corbeille`, "/outils/sauvegardes", "/outils/logs", "/outils/systeme", "/seo"]) assert.ok(!html.includes(w), w);
+    for (const w of ["/utilisateurs/roles", "/outils/importer", "/parametres/lecture", `/${A}/corbeille`, "/outils/sauvegardes", "/outils/logs", "/outils/systeme", "/seo/analyse"]) assert.ok(!html.includes(w), w);
     assert.ok(!/href="\/marketing\/site-web\/(?!sites)/.test(html), "aucun lien vers l'administration du site principal");
   });
   test("rôles limités à un site : même ordre de groupes, sous-ensemble selon les permissions, jamais un lien vers un autre site", async () => {

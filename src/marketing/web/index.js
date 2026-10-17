@@ -74,6 +74,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./rss")());
   admin.use(require("./landing")());
   admin.use(require("./siteWeb")());
+  admin.use(require("./siteSeo")()); // R8 lot 6C : SEO d'un site (réglages, redirections, 404) — avant l'espace du site (ses routes /sites/:id/redirections sont plus précises)
   admin.use(require("./siteSpace")()); // Espace d'administration d'UN site (palier 3, B1) : après siteWeb (ses routes /sites/:id/… sont plus précises)
   admin.use(require("./funnels")());
   admin.use(require("./pageTests")());

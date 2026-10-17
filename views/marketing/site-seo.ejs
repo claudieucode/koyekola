@@ -1,0 +1,68 @@
+<%#
+  SEO d'UN site (R8 lot 6C) : réglages, redirections, erreurs 404. Le site est celui de l'adresse (space), jamais un champ du formulaire.
+  Les formulaires n'envoient AUCUN identifiant de site : le serveur le déduit de l'adresse vérifiée.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const fmt = (v) => (v ? String(v).slice(0, 16).replace("T", " ") : "—");
+  const esc = (s) => String(s ?? "");
+%>
+    <div class="mk-head"><h1><%= title %></h1></div>
+    <p class="mk-lead">Site « <%= space.name %> ». <% if (mode === "settings") { %>Ces réglages ne concernent que ce site ; un champ laissé vide revient à la valeur neutre du site (jamais celle du site principal).<% } else if (mode === "redirects") { %>Les redirections ci-dessous ne s'appliquent que sur le domaine de ce site.<% } else { %>Adresses introuvables demandées sur le domaine de ce site.<% } %></p>
+    <% if (note) { %><div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p><%= note %></p></div><% } %>
+
+<% if (mode === "settings") { %>
+    <form method="post" action="<%= space.base %>/seo" class="mk-form" id="seo-site-form">
+      <% fields.forEach((f) => { %>
+        <div class="field-group">
+          <label for="seo-<%= f.key %>"><%= f.label %><% if (f.own) { %> <span class="mk-status mk-status-ok">réglé pour ce site</span><% } %></label>
+          <% if (f.type === "choice") { %>
+            <select id="seo-<%= f.key %>" name="<%= f.key %>" <%= canEdit ? "" : "disabled" %>><option value="">Valeur par défaut</option><% f.choices.forEach((c) => { %><option value="<%= c %>" <%= f.own && f.value === c ? "selected" : "" %>><%= (f.labels && f.labels[c]) || c %></option><% }) %></select>
+          <% } else if (f.type === "multiline" || f.type === "urls") { %>
+            <textarea id="seo-<%= f.key %>" name="<%= f.key %>" rows="4" <%= canEdit ? "" : "readonly" %> placeholder="<%= f.type === 'urls' ? 'https://…' : '' %>"><%= Array.isArray(f.value) ? f.value.join("\n") : esc(f.value) %></textarea>
+          <% } else { %>
+            <input id="seo-<%= f.key %>" type="text" name="<%= f.key %>" maxlength="<%= f.max || 200 %>" value="<%= esc(f.value) %>" placeholder="<%= Array.isArray(f.effective) ? '' : esc(f.effective) %>" <%= canEdit ? "" : "readonly" %>>
+          <% } %>
+          <% if (f.help) { %><small><%= f.help %></small><% } %>
+        </div>
+      <% }) %>
+      <% if (canEdit) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button></div><% } else { %><p class="mk-lead">Lecture seule : la permission « modifier les réglages SEO » est nécessaire.</p><% } %>
+    </form>
+
+<% } else if (mode === "notfound") { %>
+    <p class="mk-lead"><%= stats.urls %> adresse(s) · <%= stats.human %> visite(s) de personnes · <%= stats.bot %> de robots.</p>
+    <% if (!list.length) { %><div class="mk-cms-soon"><p>Aucune erreur 404 enregistrée pour ce site.</p></div><% } else { %>
+    <div class="table-wrap"><table class="mk-table" id="seo-404-table"><thead><tr><th>Adresse</th><th>Personnes</th><th>Robots</th><th>Dernière visite</th><th></th></tr></thead><tbody>
+      <% list.forEach((r) => { %><tr><td><code><%= r.path %></code></td><td><%= r.hits_human %></td><td><%= r.hits_bot %></td><td><%= fmt(r.last_seen) %></td>
+        <td><% if (canRedirect) { %><a class="btn btn-outline btn-sm" href="<%= space.base %>/redirections?source=<%= encodeURIComponent(r.path) %>#nouvelle">Rediriger</a><% } %></td></tr><% }) %>
+    </tbody></table></div><% } %>
+
+<% } else { %>
+    <% if (can.create) { %>
+    <form id="nouvelle" method="post" action="<%= space.base %>/redirections" class="mk-form mk-cms-create">
+      <div class="field-group"><label for="rd-source">Ancienne adresse</label><input id="rd-source" type="text" name="source" maxlength="300" required placeholder="/ancienne-page" value="<%= prefill %>"></div>
+      <div class="field-group"><label for="rd-target">Nouvelle adresse</label><input id="rd-target" type="text" name="target" maxlength="500" required placeholder="/nouvelle-page"></div>
+      <div class="field-group"><label for="rd-status">Type</label><select id="rd-status" name="status"><option value="301">301 — définitive</option><option value="302">302 — temporaire</option></select></div>
+      <div class="field-group"><label for="rd-note">Note</label><input id="rd-note" type="text" name="note" maxlength="200"></div>
+      <button type="submit" class="btn btn-primary btn-sm">Créer la redirection</button>
+    </form>
+    <% } %>
+    <form method="get" class="dash-search" role="search"><label class="sr-only" for="rd-q">Rechercher</label><input type="search" id="rd-q" name="q" value="<%= search %>" placeholder="Rechercher"><button class="btn btn-outline btn-sm" type="submit">Rechercher</button></form>
+    <% if (!q.rows.length) { %><div class="mk-cms-soon"><p>Ce site n'a aucune redirection.</p></div><% } else { %>
+    <div class="table-wrap"><table class="mk-table" id="seo-redirects-table"><thead><tr><th>Ancienne adresse</th><th>Nouvelle adresse</th><th>Type</th><th>État</th><th>Visites</th><th></th></tr></thead><tbody>
+      <% q.rows.forEach((r) => { %><tr data-redirect="<%= r.id %>"><td><code><%= r.source_path %></code></td><td><code><%= r.target %></code></td><td><%= r.status %></td><td><%= r.enabled ? "Active" : "Désactivée" %></td><td><%= r.hits %></td>
+        <td><% if (can.edit) { %><details><summary>Modifier</summary>
+            <form method="post" action="<%= space.base %>/redirections/<%= r.id %>" class="mk-form">
+              <input type="text" name="source" value="<%= r.source_path %>" maxlength="300" required aria-label="Ancienne adresse"><input type="text" name="target" value="<%= r.target %>" maxlength="500" required aria-label="Nouvelle adresse">
+              <select name="status" aria-label="Type"><option value="301" <%= r.status === 301 ? "selected" : "" %>>301</option><option value="302" <%= r.status === 302 ? "selected" : "" %>>302</option></select>
+              <label><input type="checkbox" name="enabled" value="1" <%= r.enabled ? "checked" : "" %>> Active</label><input type="text" name="note" value="<%= r.note %>" maxlength="200" aria-label="Note">
+              <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button></form></details><% } %>
+          <% if (can.delete) { %><form method="post" action="<%= space.base %>/redirections/<%= r.id %>/supprimer" data-confirm="Supprimer cette redirection ?"><button type="submit" class="btn btn-outline btn-sm">Supprimer</button></form><% } %></td></tr><% }) %>
+    </tbody></table></div>
+    <p class="mk-lead">Page <%= q.page %> / <%= q.pages %> · <%= q.total %> redirection(s).</p>
+    <% } %>
+    <p><a class="btn btn-outline btn-sm" href="<%= space.base %>/redirections/export.csv">Exporter (CSV)</a></p>
+    <% if (can.create) { %>
+    <form method="post" action="<%= space.base %>/redirections/import" class="mk-form"><div class="field-group"><label for="rd-csv">Importer (CSV : source, destination, type, note)</label><textarea id="rd-csv" name="csv" rows="4" maxlength="400000"></textarea></div><button type="submit" class="btn btn-outline btn-sm">Importer</button></form>
+    <% } %>
+<% } %>
+<%- include("partials/bottom") %>
