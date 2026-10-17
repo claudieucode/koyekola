@@ -144,8 +144,8 @@ function assertCanManage(actorId, actorPerms, organizationId, targetId, { self =
   const target = membershipOf(targetId, organizationId);
   if (target && getRole(target.role) && !subset(getRole(target.role).permissions, actorPerms)) throw new UserError("Cette personne a des droits que vous n'avez pas vous-même : vous ne pouvez pas la modifier.");
 }
-const audit = (organizationId, actorId, action, resourceType, resourceId, metadata) => {
-  try { recordAudit(db, { organizationId, userId: actorId, action, resourceType, resourceId, metadata }); } catch { /* la journalisation ne casse jamais l'action */ }
+const audit = (organizationId, actorId, action, resourceType, resourceId, metadata, siteId) => {
+  try { recordAudit(db, { organizationId, userId: actorId, action, resourceType, resourceId, metadata, siteId }); } catch { /* la journalisation ne casse jamais l'action */ }
 };
 
 // ---------- Rôles personnalisés ----------
@@ -282,7 +282,7 @@ function setSiteRole(organizationId, actor, targetId, siteId, roleKey, { mode } 
   // Repasser de « limit » à « add » ÉLARGIT les droits de la personne sur ce site : on ne peut le faire que si l'on possède tous ces droits soi-même
   if (before && before.mode === "limit" && newMode === "add") assertCanGrantRole(actor.perms, before.role);
   db.prepare("INSERT INTO mk_site_members (site_id, user_id, role, mode, created_by) VALUES (?, ?, ?, ?, ?) ON CONFLICT (site_id, user_id) DO UPDATE SET role = excluded.role, mode = excluded.mode").run(siteId, targetId, roleKey, newMode, actor.id);
-  audit(organizationId, actor.id, "site_access.granted", "user", targetId, { site: site.name, role: roleKey, mode: newMode });
+  audit(organizationId, actor.id, "site_access.granted", "user", targetId, { site: site.name, role: roleKey, mode: newMode }, site.id);
   return site;
 }
 // Un plafond n'a de sens que pour un membre de l'équipe, et jamais pour un Super administrateur (qui doit garder la maîtrise de l'organisation)
@@ -301,14 +301,14 @@ function setSiteMode(organizationId, actor, targetId, siteId, mode) {
   if (mode === "limit") assertCanLimit(organizationId, targetId);
   else if (row.mode === "limit") assertCanGrantRole(actor.perms, row.role); // retirer un plafond élargit les droits : même règle anti-escalade qu'un octroi
   db.prepare("UPDATE mk_site_members SET mode = ? WHERE site_id = ? AND user_id = ?").run(mode, siteId, targetId);
-  audit(organizationId, actor.id, "site_access.mode_changed", "user", targetId, { site: site.name, role: row.role, from: row.mode, to: mode });
+  audit(organizationId, actor.id, "site_access.mode_changed", "user", targetId, { site: site.name, role: row.role, from: row.mode, to: mode }, siteId);
   return site;
 }
 function removeSiteRole(organizationId, actor, targetId, siteId) {
   assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès" });
   const info = db.prepare("DELETE FROM mk_site_members WHERE site_id = ? AND user_id = ?").run(siteId, targetId);
   if (!info.changes) throw new UserError("Aucun accès à retirer.");
-  audit(organizationId, actor.id, "site_access.revoked", "user", targetId, { siteId });
+  audit(organizationId, actor.id, "site_access.revoked", "user", targetId, { siteId }, siteId);
 }
 
 // ---------- Invitations ----------
@@ -336,7 +336,7 @@ function invite(organizationId, actor, { email, role, siteId = null }) {
   if (db.prepare("SELECT 1 FROM mk_invitations WHERE organization_id = ? AND email = ? AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > datetime('now')").get(organizationId, mail)) throw new UserError("Une invitation est déjà en attente pour cette adresse : renvoyez-la ou révoquez-la.");
   const token = crypto.randomBytes(24).toString("base64url");
   const id = Number(db.prepare("INSERT INTO mk_invitations (organization_id, email, role, site_id, token_hash, invited_by, expires_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now', ?))").run(organizationId, mail, role, siteId, tokenHash(token), actor.id, `+${INVITE_DAYS} days`).lastInsertRowid);
-  audit(organizationId, actor.id, "user.invited", "invitation", id, { email: mail, role, siteId });
+  audit(organizationId, actor.id, "user.invited", "invitation", id, { email: mail, role, siteId }, siteId);
   return { added: false, token, email: mail, id };
 }
 // Nouveau lien pour une invitation (l'ancien cesse de fonctionner)

@@ -303,7 +303,7 @@ function createPage(ctx, { name, siteId = null, kind = "page", template = null, 
   const mine = typeof template === "string" && /^mine:\d+$/.test(template) ? getPageTemplate(ctx, Number(template.slice(5))) : null;
   const fromTemplate = mine ? mine.content.sections : template ? require("./templates").buildTemplate(ctx, template) : null;
   if (template && !fromTemplate) throw bad("Modèle de page inconnu.");
-  const page = landing.createPage(ctx, { name });
+  const page = landing.createPage(ctx, { name, siteId });
   // Palier 23 : une page de SITE (À propos, Contact…) est indexable par défaut (comme sur WordPress) ; une page d'atterrissage ou une étape de tunnel reste non indexée
   // jusqu'à ce qu'on la rende indexable. La personne peut toujours changer ce réglage dans la fiche de la page.
   ctx.db.prepare("UPDATE mk_landing_pages SET kind = ?, site_id = ?, indexable = ? WHERE id = ?").run(kind, siteId, kind === "page" ? 1 : 0, page.id);

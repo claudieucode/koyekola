@@ -50,7 +50,7 @@ describe("contenus par site : migration 075 et service", () => {
     before0 = fingerprint(); schema0 = schemaOfCore();
     // Application de 075 par le vrai lanceur, puis des déclencheurs (comme au démarrage)
     const r = migrate(db, { dir: MIGRATIONS, dbPath: dbFile, backupDir: path.join(SCRATCH, "backups"), log: quiet });
-    assert.deepEqual(r.applied, ["075", "079", "080", "081"]); // 079 (lot 7C, index des médias), 080 et 081 (R7, contacts et formulaires par site) suivent la 075
+    assert.deepEqual(r.applied, ["075", "079", "080", "081", "082"]); // 079 (lot 7C, index des médias), 080 à 082 (R7, contacts, formulaires et journal par site) suivent la 075
     site = require("../src/services/siteContent");
     assert.ok(site.ensureCoreTriggers(db).created >= 9);
   });

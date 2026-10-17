@@ -133,7 +133,7 @@
    "classe": "plateforme"
   },
   "mk_audit_logs": {
-   "siteId": false,
+   "siteId": true,
    "classe": "plateforme"
   },
   "mk_automation_log": {

@@ -136,7 +136,7 @@ module.exports = () => {
     const groups = access.GROUPS.map((g) => ({ ...g, have: g.perms.filter((p) => u.permissions.has(p[0])) })).filter((g) => g.have.length);
     res.render("marketing/user-detail", {
       title: u.username, active: "utilisateurs", u, groups, roles: grantable(req), sites: sites(req), roleName, BASE, me: req.session.user.id, canEdit: req.mk.can("users.edit"), canRoles: req.mk.can("users.manage_roles"), canDelete: req.mk.can("users.delete"),
-      activity: listAudit(db, org(req), { limit: 15, resourceType: "user", resourceId: u.id }), ownerCount: access.activeOwners(org(req)).length,
+      activity: listAudit(db, org(req), { limit: 15, resourceType: "user", resourceId: u.id, scope: req.mk && req.mk.ctx }), ownerCount: access.activeOwners(org(req)).length,
     });
   });
   const userRoute = (path, perm, run) => router.post(`/site-web/utilisateurs/:id(\\d+)${path}`, need(perm), (req, res, next) => {

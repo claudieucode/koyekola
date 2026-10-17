@@ -135,6 +135,9 @@ module.exports = () => {
     if (!known.has(key)) return next();
     const item = nav.itemOf(key);
     if (!req.mk.can(item.permission)) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'ouvrir cet écran." });
+    // R7 lot 4 : le journal d'activité d'un SITE n'est lisible, par un accès limité à ce site, qu'avec la permission « audit.read » du site (rôle Administrateur) — jamais par simple droit « tools.view » ;
+    // la liste elle-même est de toute façon réduite aux lignes de CE site (audit.scopeSql). L'équipe de l'organisation garde son accès actuel.
+    if (key === "outils/logs" && req.mk.siteOnly && !req.mk.can("audit.read")) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'ouvrir cet écran." });
     const model = SCREENS[section](req, req.mk.ctx, sub);
     res.render("marketing/cms-screen", { active: key, query: req.query, preview: item.status === "preview", PER_PAGE, ...model, title: model.title });
   });

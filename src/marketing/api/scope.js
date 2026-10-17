@@ -27,7 +27,7 @@ function contactOutsideScope(db, auth, { contactId = null, contact = null }) {
 // Journal : tentative d'une clé de site hors de sa portée (jamais le contenu de la requête, jamais la clé)
 function auditDenied(db, auth, route, reason) {
   try {
-    recordAudit(db, { organizationId: auth.organizationId, userId: null, action: "api_key.out_of_scope", resourceType: "api_key", resourceId: auth.keyId, metadata: { route, reason, site_id: auth.siteId } });
+    recordAudit(db, { organizationId: auth.organizationId, userId: null, action: "api_key.out_of_scope", resourceType: "api_key", resourceId: auth.keyId, siteId: auth.siteId, metadata: { route, reason, site_id: auth.siteId } });
   } catch { /* le journal ne doit jamais empêcher la réponse de refus */ }
 }
 

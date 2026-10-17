@@ -72,12 +72,13 @@ function renamePage(ctx, id, name) {
   audit(ctx, "landing.renamed", "landing", id, {});
   return getPage(ctx, id);
 }
-function createPage(ctx, { name } = {}) {
+// `siteId` : site de la page dès l'insertion (R7 lot 4 : l'événement « page créée » du journal porte alors le bon site, relu en base)
+function createPage(ctx, { name, siteId = null } = {}) {
   checkCtx(ctx);
   const clean_ = checkName(ctx, name);
   const sections = [{ type: "hero", title: clean_, subtitle: "Une phrase qui dit clairement ce que la personne y gagne.", image: "", imageAlt: "", buttonLabel: "", buttonUrl: "" }, { type: "form", heading: "Inscrivez-vous", intro: "" }];
-  const id = Number(ctx.db.prepare("INSERT INTO mk_landing_pages (organization_id, name, slug, title, sections, created_by) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(ctx.organizationId, clean_, freeSlug(ctx, slugify(clean_)), clean_, JSON.stringify(sections), ctx.userId ?? null).lastInsertRowid);
+  const id = Number(ctx.db.prepare("INSERT INTO mk_landing_pages (organization_id, name, slug, title, sections, created_by, site_id) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .run(ctx.organizationId, clean_, freeSlug(ctx, slugify(clean_)), clean_, JSON.stringify(sections), ctx.userId ?? null, Number.isInteger(siteId) ? siteId : null).lastInsertRowid);
   audit(ctx, "landing.created", "landing", id, {});
   return getPage(ctx, id);
 }
