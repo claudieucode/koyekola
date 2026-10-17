@@ -203,14 +203,17 @@ router.get("/formateur/seo/redirections.csv", (req, res) => {
 // ---------- Erreurs 404 ----------
 router.get("/formateur/seo/erreurs-404", (req, res) => {
   const filter = ["all", "human", "bot", "ignored"].includes(req.query.filtre) ? req.query.filtre : "all";
-  res.render("seo/notfound", { list: notfound.list({ filter, q: String(req.query.q || "") }), stats: notfound.stats(), ignored: notfound.list({ filter: "ignored" }).length, toHandle: notfound.list({ filter: "human" }).length, filter, q: String(req.query.q || ""), done: req.query.ok || null });
+  // R8 lot 6 : une adresse introuvable est rattachée au site de son domaine. Par défaut l'hôte principal (comportement historique) ; « ?site=N » : celui d'un site (équipe)
+  const site = /^\d{1,12}$/.test(String(req.query.site || "")) ? Number(req.query.site) : null;
+  res.render("seo/notfound", { list: notfound.list({ filter, q: String(req.query.q || ""), site }), stats: notfound.stats({ site }), ignored: notfound.list({ filter: "ignored", site }).length, toHandle: notfound.list({ filter: "human", site }).length, filter, q: String(req.query.q || ""), done: req.query.ok || null, site });
 });
 router.post("/formateur/seo/erreurs-404/action", (req, res) => {
   const path = String(req.body.path || "");
-  if (req.body.action === "ignorer") notfound.setIgnored(path, true);
-  else if (req.body.action === "retablir") notfound.setIgnored(path, false);
-  else if (req.body.action === "supprimer") notfound.remove(path);
-  res.redirect("/formateur/seo/erreurs-404?ok=1");
+  const site = /^\d{1,12}$/.test(String(req.body.site || "")) ? Number(req.body.site) : null;
+  if (req.body.action === "ignorer") notfound.setIgnored(path, true, { site });
+  else if (req.body.action === "retablir") notfound.setIgnored(path, false, { site });
+  else if (req.body.action === "supprimer") notfound.remove(path, { site });
+  res.redirect(`/formateur/seo/erreurs-404?ok=1${site ? `&site=${site}` : ""}`);
 });
 
 // ---------- robots.txt et plan du site ----------

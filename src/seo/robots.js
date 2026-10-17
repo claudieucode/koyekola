@@ -51,7 +51,7 @@ function check(custom) {
 function text(req) {
   // Environnement non public (développement, adresse locale) : tout est interdit, aucun plan du site n'est annoncé
   if (!require("../middlewares/siteHost").indexingAllowed(req)) return "User-agent: *\nDisallow: /\n";
-  const custom = settings.get("robots_custom") || "";
+  const custom = settings.forRequest(req).robots_custom || ""; // R8 lot 6 : les règles supplémentaires du domaine d'un site sont les SIENNES (vides par défaut), jamais celles du site principal
   const lines = ["User-agent: *", ...PRIVATE.map((p) => `Disallow: ${p}`), ""];
   if (custom) lines.push(custom, "");
   lines.push(`Sitemap: ${absoluteUrl(req, "/sitemap.xml")}`, "");

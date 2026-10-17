@@ -23,14 +23,16 @@ function imageObject(req, publicPath, id) {
 }
 
 // Référence courte à l'organisation (utilisée comme éditeur / fournisseur)
-function orgRef(req) {
-  const s = settings.all();
+// R8 lot 6 : l'identité vient du SITE (page ou hôte), jamais des réglages du site principal pour un autre site
+const settingsOf = (req, siteId) => settings.allFor(Number.isInteger(siteId) ? siteId : (req && req.kwSite ? req.kwSite.id : null));
+function orgRef(req, siteId) {
+  const s = settingsOf(req, siteId);
   return { "@type": s.org_type, "@id": ids(req).org, name: s.org_name_effective, url: `${ids(req).base}/` };
 }
 
-function organization(req) {
-  const s = settings.all();
-  const node = { ...orgRef(req) };
+function organization(req, siteId) {
+  const s = settingsOf(req, siteId);
+  const node = { ...orgRef(req, siteId) };
   const logo = imageObject(req, s.org_logo, ids(req).logo);
   if (logo) node.logo = logo;
   if (s.org_description) node.description = s.org_description;
@@ -38,8 +40,8 @@ function organization(req) {
   return node;
 }
 
-function website(req, { search = true } = {}) {
-  const s = settings.all();
+function website(req, { search = true, siteId } = {}) {
+  const s = settingsOf(req, siteId);
   const { base, website: id, org } = ids(req);
   const node = { "@type": "WebSite", "@id": id, url: `${base}/`, name: s.site_name, inLanguage: "fr", publisher: { "@id": org } };
   if (search) {
@@ -57,9 +59,9 @@ function breadcrumb(req, url, crumbs) {
 }
 
 // page : { url, type, name, description, crumbs, imagePath, inLanguage, datePublished, dateModified } ; main : nœuds du contenu
-function build(req, { page, main = [] }) {
+function build(req, { page, main = [], siteId }) {
   const { website: websiteId } = ids(req);
-  const nodes = [organization(req), website(req)];
+  const nodes = [organization(req, siteId), website(req, { siteId })];
   const webpage = { "@type": page.type || "WebPage", "@id": `${page.url}#webpage`, url: page.url, name: page.name, isPartOf: { "@id": websiteId }, inLanguage: page.inLanguage || "fr-FR" };
   if (page.description) webpage.description = page.description;
   if (page.datePublished) webpage.datePublished = page.datePublished;

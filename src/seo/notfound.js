@@ -1,7 +1,7 @@
 // Journal des erreurs 404 : chaque adresse introuvable demandée (GET), avec nombre de visites humaines et de robots,
 // première et dernière fois, dernière page d'origine (referrer) et dernier navigateur. Aucune adresse IP n'est conservée.
 // Volume borné : 5 000 adresses au plus (les plus anciennes et les moins vues sont retirées).
-const { db } = require("./store");
+const { db, siteSchemaReady } = require("./store");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS seo_404 (
@@ -30,12 +30,20 @@ function record(req) {
   const ua = String(req.get("user-agent") || "").slice(0, 300);
   const ref = String(req.get("referer") || "").slice(0, 300) || null;
   const bot = !ua || BOT.test(ua);
-  db.prepare(`INSERT INTO seo_404 (path, hits_human, hits_bot, last_referrer, last_user_agent) VALUES (?, ?, ?, ?, ?)
-    ON CONFLICT(path) DO UPDATE SET hits_human = hits_human + excluded.hits_human, hits_bot = hits_bot + excluded.hits_bot, last_seen = datetime('now'),
-      last_referrer = COALESCE(excluded.last_referrer, last_referrer), last_user_agent = excluded.last_user_agent`).run(path, bot ? 0 : 1, bot ? 1 : 0, ref, ua);
+  // R8 lot 6 : l'adresse introuvable est rattachée au SITE du domaine servi (req.kwSite, vérifié par le serveur) ; NULL = hôte principal. Deux sites peuvent avoir la même adresse introuvable.
+  const siteId = req.kwSite ? req.kwSite.id : null;
+  if (siteSchemaReady()) {
+    db.prepare(`INSERT INTO seo_404 (path, site_id, hits_human, hits_bot, last_referrer, last_user_agent) VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(COALESCE(site_id, 0), path) DO UPDATE SET hits_human = hits_human + excluded.hits_human, hits_bot = hits_bot + excluded.hits_bot, last_seen = datetime('now'),
+        last_referrer = COALESCE(excluded.last_referrer, last_referrer), last_user_agent = excluded.last_user_agent`).run(path, siteId, bot ? 0 : 1, bot ? 1 : 0, ref, ua);
+  } else {
+    db.prepare(`INSERT INTO seo_404 (path, hits_human, hits_bot, last_referrer, last_user_agent) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(path) DO UPDATE SET hits_human = hits_human + excluded.hits_human, hits_bot = hits_bot + excluded.hits_bot, last_seen = datetime('now'),
+        last_referrer = COALESCE(excluded.last_referrer, last_referrer), last_user_agent = excluded.last_user_agent`).run(path, bot ? 0 : 1, bot ? 1 : 0, ref, ua);
+  }
   if (++writes % 200 === 0) {
     const n = db.prepare("SELECT COUNT(*) n FROM seo_404").get().n;
-    if (n > MAX_ROWS) db.prepare("DELETE FROM seo_404 WHERE path IN (SELECT path FROM seo_404 ORDER BY (hits_human + hits_bot) ASC, last_seen ASC LIMIT ?)").run(n - MAX_ROWS);
+    if (n > MAX_ROWS) db.prepare("DELETE FROM seo_404 WHERE rowid IN (SELECT rowid FROM seo_404 ORDER BY (hits_human + hits_bot) ASC, last_seen ASC LIMIT ?)").run(n - MAX_ROWS);
   }
 }
 
@@ -53,17 +61,25 @@ function middleware(req, res, next) {
   next();
 }
 
-function list({ filter = "all", q = "", limit = 300 } = {}) {
-  const where = ["1 = 1"];
-  const params = [];
+// Périmètre : site undefined = toutes les lignes (équipe) ; null = hôte principal ; entier = CE site seulement
+const scopeSql = (site) => (!siteSchemaReady() || site === undefined ? { sql: "1 = 1", params: [] } : Number.isInteger(site) ? { sql: "site_id = ?", params: [site] } : { sql: "site_id IS NULL", params: [] });
+function list({ filter = "all", q = "", limit = 300, site } = {}) {
+  const sc = scopeSql(site);
+  const where = [sc.sql];
+  const params = [...sc.params];
   if (filter === "human") where.push("hits_human > 0");
   if (filter === "bot") where.push("hits_bot > 0 AND hits_human = 0");
   if (filter !== "ignored") where.push("ignored = 0"); else where.push("ignored = 1");
-  if (q) { where.push("path LIKE ?"); params.push(`%${q}%`); }
-  return db.prepare(`SELECT * FROM seo_404 WHERE ${where.join(" AND ")} ORDER BY hits_human DESC, (hits_human + hits_bot) DESC, last_seen DESC LIMIT ?`).all(...params, limit);
+  if (q) { where.push("path LIKE ? ESCAPE '\\'"); params.push(`%${String(q).replace(/[\\%_]/g, (c) => `\\${c}`)}%`); }
+  const withSite = siteSchemaReady() ? ", site_id" : "";
+  return db.prepare(`SELECT *${withSite ? "" : ", NULL AS site_id"} FROM seo_404 WHERE ${where.join(" AND ")} ORDER BY hits_human DESC, (hits_human + hits_bot) DESC, last_seen DESC LIMIT ?`).all(...params, limit);
 }
-const stats = () => db.prepare("SELECT COUNT(*) urls, COALESCE(SUM(hits_human), 0) human, COALESCE(SUM(hits_bot), 0) bot FROM seo_404 WHERE ignored = 0").get();
-const setIgnored = (path, ignored) => db.prepare("UPDATE seo_404 SET ignored = ? WHERE path = ?").run(ignored ? 1 : 0, path).changes > 0;
-const remove = (path) => db.prepare("DELETE FROM seo_404 WHERE path = ?").run(path).changes > 0;
+function stats({ site } = {}) {
+  const sc = scopeSql(site);
+  return db.prepare(`SELECT COUNT(*) urls, COALESCE(SUM(hits_human), 0) human, COALESCE(SUM(hits_bot), 0) bot FROM seo_404 WHERE ignored = 0 AND ${sc.sql}`).get(...sc.params);
+}
+// Les actions visent une ligne PRÉCISE (adresse + site). Sans précision : l'hôte principal (comportement historique).
+const setIgnored = (path, ignored, { site = null } = {}) => { const sc = scopeSql(site === undefined ? null : site); return db.prepare(`UPDATE seo_404 SET ignored = ? WHERE path = ? AND ${sc.sql}`).run(ignored ? 1 : 0, path, ...sc.params).changes > 0; };
+const remove = (path, { site = null } = {}) => { const sc = scopeSql(site === undefined ? null : site); return db.prepare(`DELETE FROM seo_404 WHERE path = ? AND ${sc.sql}`).run(path, ...sc.params).changes > 0; };
 
 module.exports = { middleware, record, list, stats, setIgnored, remove, BOT };

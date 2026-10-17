@@ -193,9 +193,10 @@ function siteInfo(ctx, page) {
   let siteLogo = "";
   try { siteLogo = site ? require("../pages/siteSettings").normalizeSettings(JSON.parse(site.settings || "{}")).identity.logoUrl : ""; } catch { siteLogo = ""; }
   const home = site && site.home_page_id ? ctx.db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ? AND status = 'published'").get(site.home_page_id) : null;
-  const logo = String(seo.org_logo || "");
+  // R8 lot 6 : une page d'un SITE n'emprunte jamais le logo ni le nom des réglages du site principal ; seule une page sans site (principal) les utilise
+  const logo = page && page.site_id ? "" : String(seo.org_logo || "");
   const safeLogo = (/^\/uploads\/[A-Za-z0-9_\/.-]{1,200}\.(png|jpe?g|webp|gif|avif|svg)$/i.test(logo) && !logo.includes("..")) || /^https:\/\/[^\s"'<>]{3,300}$/i.test(logo) ? logo : "";
-  return { name: (site && site.name) || seo.site_name || "KOLAKISA", homeUrl: home ? `/p/${home.slug}` : "/", logo: siteLogo || safeLogo };
+  return { name: (site && site.name) || (page && page.site_id ? "" : seo.site_name) || (page && page.site_id ? "" : "KOLAKISA"), homeUrl: home ? `/p/${home.slug}` : "/", logo: siteLogo || safeLogo };
 }
 function dynamicProps(ctx, n, visitor, page) {
   const p = n.props;

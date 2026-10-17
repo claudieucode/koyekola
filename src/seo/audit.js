@@ -276,7 +276,7 @@ async function evaluate({ pages, hosts }, { kind = "full", req }) {
   }
   // Site : chaînes de redirections gérées, adresses introuvables visitées par des personnes (30 derniers jours)
   for (const c of redirects.chains().filter((x) => !x.loop && x.id)) run("redirect_chain", c.source, c.path.join(" → "), { redirectId: c.id });
-  for (const r of db.prepare("SELECT path, hits_human, last_seen FROM seo_404 WHERE ignored = 0 AND hits_human > 0 AND last_seen >= datetime('now', '-30 days') ORDER BY hits_human DESC LIMIT 50").all()) run("not_found_hits", r.path, `${r.hits_human} visite(s) de personnes, dernière le ${r.last_seen}`);
+  for (const r of db.prepare(`SELECT path, hits_human, last_seen FROM seo_404 WHERE ignored = 0 AND hits_human > 0 AND last_seen >= datetime('now', '-30 days')${require("./store").siteSchemaReady() ? " AND site_id IS NULL" : ""} ORDER BY hits_human DESC LIMIT 50`).all()) run("not_found_hits", r.path, `${r.hits_human} visite(s) de personnes, dernière le ${r.last_seen}`);
   return { issues, checks };
 }
 

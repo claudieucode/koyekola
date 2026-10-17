@@ -31,9 +31,9 @@
               <button type="button" class="dmenu-btn" aria-haspopup="true" aria-expanded="false" aria-label="Actions : <%= r.path %>" title="Actions"><%- icon('moreVertical', { size: 16 }) %></button>
               <div class="dmenu-list" role="menu" hidden>
                 <a role="menuitem" href="<%= r.path %>" target="_blank" rel="noopener"><%- icon('eye', { size: 16 }) %> Voir</a>
-                <form method="post" action="/formateur/seo/erreurs-404/action"><input type="hidden" name="path" value="<%= r.path %>"><button type="submit" role="menuitem" name="action" value="<%= r.ignored ? "retablir" : "ignorer" %>"><%- icon(r.ignored ? 'inbox' : 'minus', { size: 16 }) %> <%= r.ignored ? "Rétablir" : "Ignorer" %></button></form>
+                <form method="post" action="/formateur/seo/erreurs-404/action"><input type="hidden" name="path" value="<%= r.path %>"><input type="hidden" name="site" value="<%= typeof site !== 'undefined' && site ? site : '' %>"><button type="submit" role="menuitem" name="action" value="<%= r.ignored ? "retablir" : "ignorer" %>"><%- icon(r.ignored ? 'inbox' : 'minus', { size: 16 }) %> <%= r.ignored ? "Rétablir" : "Ignorer" %></button></form>
                 <hr>
-                <form method="post" action="/formateur/seo/erreurs-404/action" data-confirm="Effacer <%= r.path %> du journal ?"><input type="hidden" name="path" value="<%= r.path %>"><button type="submit" role="menuitem" class="is-danger" name="action" value="supprimer"><%- icon('trash', { size: 16 }) %> Effacer</button></form>
+                <form method="post" action="/formateur/seo/erreurs-404/action" data-confirm="Effacer <%= r.path %> du journal ?"><input type="hidden" name="path" value="<%= r.path %>"><input type="hidden" name="site" value="<%= typeof site !== 'undefined' && site ? site : '' %>"><button type="submit" role="menuitem" class="is-danger" name="action" value="supprimer"><%- icon('trash', { size: 16 }) %> Effacer</button></form>
               </div>
             </div>
           </td>

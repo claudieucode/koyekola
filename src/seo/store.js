@@ -44,22 +44,34 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_seo_changes_date ON seo_changes(created_at);
 `);
 
-// Journal : une ligne par champ réellement modifié
-function logChange({ entityType, entityKey, field, before, after, userId = null, source = "admin" }) {
+// R8 lot 6 : les colonnes « site » (migrations 090) peuvent manquer le temps d'un démarrage où les migrations marketing ont échoué : le journal reste alors utilisable (sans site)
+const hasSiteColumn = (table) => db.prepare(`SELECT 1 FROM pragma_table_info('${table}') WHERE name = 'site_id'`).get() !== undefined;
+let siteColumnKnown = null;
+const siteSchemaReady = () => (siteColumnKnown === true ? true : (siteColumnKnown = hasSiteColumn("seo_changes") && hasSiteColumn("seo_404")));
+
+// Journal : une ligne par champ réellement modifié ; siteId = site concerné (NULL = réglages globaux / site principal)
+function logChange({ entityType, entityKey, field, before, after, userId = null, source = "admin", siteId = null }) {
   const b = before === undefined || before === null ? null : String(before);
   const a = after === undefined || after === null ? null : String(after);
   if (b === a) return;
+  if (siteSchemaReady()) {
+    db.prepare("INSERT INTO seo_changes (entity_type, entity_key, field, old_value, new_value, user_id, source, site_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(entityType, String(entityKey), field, b, a, userId, source, Number.isInteger(siteId) ? siteId : null);
+    return;
+  }
   db.prepare("INSERT INTO seo_changes (entity_type, entity_key, field, old_value, new_value, user_id, source) VALUES (?, ?, ?, ?, ?, ?, ?)")
     .run(entityType, String(entityKey), field, b, a, userId, source);
 }
 
-function listChanges({ entityType = null, entityKey = null, limit = 50 } = {}) {
+// site : undefined = toutes les lignes (équipe) ; null = site principal / global ; entier = CE site seulement
+function listChanges({ entityType = null, entityKey = null, limit = 50, site } = {}) {
   const where = [];
   const params = [];
+  if (site !== undefined && siteSchemaReady()) { if (Number.isInteger(site)) { where.push("c.site_id = ?"); params.push(site); } else where.push("c.site_id IS NULL"); }
   if (entityType) { where.push("c.entity_type = ?"); params.push(entityType); }
   if (entityKey !== null && entityKey !== undefined) { where.push("c.entity_key = ?"); params.push(String(entityKey)); }
   return db.prepare(`SELECT c.*, u.username FROM seo_changes c LEFT JOIN users u ON u.id = c.user_id ${where.length ? `WHERE ${where.join(" AND ")}` : ""} ORDER BY c.id DESC LIMIT ?`)
     .all(...params, Math.min(500, Math.max(1, limit)));
 }
 
-module.exports = { db, logChange, listChanges };
+module.exports = { db, logChange, listChanges, siteSchemaReady };

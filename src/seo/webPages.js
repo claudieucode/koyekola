@@ -58,17 +58,17 @@ function indexing(page, site, { preview = false } = {}) {
 
 // Données d'entrée du moteur (format commun `s` de resolver.finalize) pour une page du CMS
 function inputs(req, { page, site = null, preview = false }) {
-  const st = settings.all();
+  const st = settings.allFor(site ? site.id : null); // R8 lot 6 : réglages du site de la page, jamais ceux du site principal
   const seo = parseSeo(page);
   const sx = siteConf(site);
   const siteSeo = (sx && sx.seo) || {};
   // Adresse publique propre au site : toutes les adresses absolues (canonical, og:url, JSON-LD) en dépendent
   if (siteSeo.publicUrl) req.seoBase = siteSeo.publicUrl;
-  const siteLabel = siteSeo.title || (site && site.name) || st.site_name;
+  const siteLabel = siteSeo.title || (site && settings.storedFor(site.id).site_name) || (site && site.name) || st.site_name; // nom SEO du site (réglages du site) → nom enregistré dans ses réglages SEO → nom du site
   const pageTitle = page.title || page.name;
   const own = urls.pageCanonicalPath(page); // adresse de référence de la page (racine du domaine du site, sinon /p/<adresse>)
   const ix = indexing(page, site, { preview });
-  const s = { siteName: siteLabel, locale: LOCALES[(sx && sx.extras && sx.extras.language) || "fr"] || st.og_locale };
+  const s = { siteId: site ? site.id : null, siteName: siteLabel, locale: LOCALES[(sx && sx.extras && sx.extras.language) || "fr"] || st.og_locale };
   // Titre : SEO personnalisé (complet) → titre de la page + nom du site
   if (seo.title) s.rawTitle = seo.title;
   else s.rawTitle = render(st.title_template, { title: pageTitle, sep: st.title_separator, site_name: siteLabel });

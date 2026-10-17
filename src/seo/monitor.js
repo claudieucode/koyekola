@@ -40,7 +40,7 @@ async function snapshot(req) {
     blocked: robots.conflicts(req, included),
     sitemap: included,
     pages,
-    notFound: Object.fromEntries(db.prepare("SELECT path, hits_human FROM seo_404 WHERE ignored = 0 AND hits_human > 0").all().map((r) => [r.path, r.hits_human])),
+    notFound: Object.fromEntries(db.prepare(`SELECT path, hits_human FROM seo_404 WHERE ignored = 0 AND hits_human > 0${require("./store").siteSchemaReady() ? " AND site_id IS NULL" : ""}`).all().map((r) => [r.path, r.hits_human])),
   };
 }
 

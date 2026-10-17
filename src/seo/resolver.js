@@ -37,9 +37,11 @@ function localPath(req, url) {
 
 // Résultat final pour l'en-tête <head>
 function finalize(req, currentPath, s = {}, viewTitle = null) {
-  const st = settings.all();
+  // R8 lot 6 : réglages du SITE de la page (ou de l'hôte) ; jamais ceux du site principal pour un autre site
+  const siteId = Number.isInteger(s.siteId) ? s.siteId : (req && req.kwSite ? req.kwSite.id : null);
+  const st = settings.allFor(siteId);
   const pageTitle = s.rawTitle ? null : s.title || viewTitle;
-  const title = s.rawTitle || (pageTitle ? render(st.title_template, { title: pageTitle, sep: st.title_separator, site_name: st.site_name }) : `${st.site_name} — Mes formations en ligne`);
+  const title = s.rawTitle || (pageTitle ? render(st.title_template, { title: pageTitle, sep: st.title_separator, site_name: st.site_name }) : (Number.isInteger(siteId) ? st.site_name : `${st.site_name} — Mes formations en ligne`));
   const description = s.description || st.default_description;
   const canonical = s.canonical || absoluteUrl(req, currentPath);
   // Visibilité masquée (Paramètres → Indexation) ou environnement non public : toutes les pages sont « noindex »
@@ -68,7 +70,7 @@ function finalize(req, currentPath, s = {}, viewTitle = null) {
   });
   // Données structurées : graphe relié (pages du SEO CORE) ou blocs fournis tels quels
   if (s.graph) {
-    head.jsonLd = schema.build(req, { page: { ...s.graph.page, name: s.graph.page.name || title, description: s.graph.page.description || description, url: s.graph.page.url || canonical }, main: s.graph.main || [] });
+    head.jsonLd = schema.build(req, { siteId, page: { ...s.graph.page, name: s.graph.page.name || title, description: s.graph.page.description || description, url: s.graph.page.url || canonical }, main: s.graph.main || [] });
   } else head.jsonLd = s.jsonLd || [];
   return head;
 }

@@ -107,8 +107,9 @@ function slugChanged(ctx, { id = null, oldSlug, newSlug, status, publishedAt = n
   try {
     const db = ctx.db;
     // Une redirection manuelle qui masquerait la nouvelle adresse est retirée ; celles qui visaient l'ancienne visent la nouvelle (pas de chaîne)
-    db.prepare("DELETE FROM seo_redirects WHERE source_path = ?").run(`/p/${newSlug}`);
-    db.prepare("UPDATE seo_redirects SET target = ?, updated_at = datetime('now') WHERE target = ?").run(`/p/${newSlug}`, `/p/${oldSlug}`);
+    // R8 lot 6 : seules les redirections de LA PORTÉE de la page (son site, ou communes pour une page du principal) sont touchées — jamais celles d'un autre site
+    db.prepare("DELETE FROM seo_redirects WHERE source_path = ? AND COALESCE(site_id, 0) = COALESCE(?, 0)").run(`/p/${newSlug}`, siteId);
+    db.prepare("UPDATE seo_redirects SET target = ?, updated_at = datetime('now') WHERE target = ? AND COALESCE(site_id, 0) = COALESCE(?, 0)").run(`/p/${newSlug}`, `/p/${oldSlug}`, siteId);
     // Historique des adresses (palier 12) : l'ancienne adresse redirige (301) vers l'adresse COURANTE de la page, tant que la page a été en ligne
     if (id) require("../../services/urls").slugChanged("page", id, { oldSlug, newSlug, siteId, wasLive: status === "published" || Boolean(publishedAt), userId: ctx.userId ?? null });
     try { require("../../seo/redirects").invalidate(); } catch { /* module SEO indisponible : le cache se renouvelle au redémarrage */ }

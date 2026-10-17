@@ -89,7 +89,8 @@ function entries({ hostSite = null } = {}) {
     if (rule.index === 1 || (rule.index === null && st.index_authors)) add(e, rule); else excluded.push({ ...e, reason: "Auteurs non indexés (Réglages)" });
   }
   // Une adresse redirigée n'a pas sa place dans le plan du site
-  const redirected = new Set(db.prepare("SELECT source_path FROM seo_redirects WHERE enabled = 1").all().map((r) => r.source_path));
+  // R8 lot 6 : seules comptent les redirections qui s'appliquent à CET hôte (communes + celles du site du domaine) ; celle d'un autre site n'exclut rien ici
+  const redirected = new Set(db.prepare("SELECT source_path FROM seo_redirects WHERE enabled = 1 AND (site_id IS NULL OR site_id = ?)").all(hostSite ? hostSite.id : 0).map((r) => r.source_path));
   const final = [];
   for (const e of included) (redirected.has(e.path) ? excluded.push({ ...e, reason: "Adresse redirigée" }) : final.push(e));
   let kept = final;
