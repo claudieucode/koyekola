@@ -61,6 +61,7 @@ function createMarketingRouters({ db }) {
   });
 
   admin.use(require("./siteSpace").attach); // contexte de l'espace d'un site (palier 3, B1) : avant les routeurs qui affichent des écrans
+  admin.use(require("./contactRequests")()); // R7 lot 5 : demandes de rattachement de contacts entre sites — avant contactCore et admin.js (« /contacts/:id »)
   admin.use(require("./contactCore")()); // Contact Core (palier 15) : doublons, fusion, cycle de vie, état, journal — avant admin.js (« /contacts/:id »)
   admin.use(require("./segments")({ db }));
   admin.use(require("./templates")({ db }));

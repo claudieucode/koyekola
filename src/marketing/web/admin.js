@@ -19,6 +19,7 @@ const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null)
 module.exports = ({ db }) => {
   const router = express.Router();
   const siteAccess = require("../contactcore/siteAccess");
+  const requests = require("../contactcore/requests");
 
   // Charge la fiche ou répond 404 (identifiant non numérique, inconnu ou d'une autre organisation)
   const loadContact = (req, res) => {
@@ -159,7 +160,10 @@ module.exports = ({ db }) => {
       return req.mk.siteOnly ? `/marketing/contacts${q}` : `/marketing/contacts/${created.id}`;
     };
     attempt(req, res, next, target, () => {
+      if (req.mk.siteOnly) requests.guard(req.mk.ctx); // limite de débit par site : même refus quel que soit le résultat de la création
       const out = audience.upsertContact(req.mk.ctx, { email: req.body.email, ...pick(req.body, PROFILE_FIELDS), source: "manual" }, { failIfExists: true });
+      // R7 lot 5 : adresse déjà connue d'un autre site → demande mise en file (même réponse visible que pour une création) ; adresse nouvelle → créée tout de suite
+      if (req.mk.siteOnly && out.withheld) requests.enqueue(req.mk.ctx, { email: req.body.email, source: "admin" });
       created = req.mk.siteOnly ? { masked: true } : out.contact;
       return req.mk.siteOnly ? "Contact enregistré." : "Contact créé.";
     });

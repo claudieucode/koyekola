@@ -66,6 +66,8 @@ const legacySiteOfRequest = (db) => (req) => {
       const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
       return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
     }
+    // Demandes de rattachement (R7 lot 5) : « Mes demandes » d'un site
+    if (req.method === "GET" && p === "/contacts/demandes" && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
     // Contacts par site (R7) : écriture d'un contact par un accès limité à un site (site = « ?site= » ou champ « site »)
     if (req.method === "POST" && /^\/contacts(?:\/(?:actions|\d+(?:\/(?:proprietes|etiquettes(?:\/retirer)?|listes(?:\/retirer)?|cycle-de-vie|etat|consentement|desinscrire|supprimer-adresse|effacer))?))?$/.test(p)) {
       const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
@@ -169,7 +171,7 @@ describe("la table déclarative reproduit EXACTEMENT l'ancienne logique (oracle)
     "/campagnes", "/campagnes/nouvelle", "/campagnes/1", "/campagnes/2/pause", "/campagnes/99999", "/listes", "/listes/1", "/segments/3", "/modeles/1", "/modeles/bibliotheque", "/modeles/bibliotheque/k/apercu", "/modeles/apercu",
     "/automatisations", "/automatisations/parcours", "/automatisations/parcours/abc", "/automatisations/historique", "/automatisations/1", "/tunnels/1/etapes/2", "/tunnels/nouveau",
     "/tests-ab/1", "/tests-ab/99999", "/site-web/tests-ab", "/analytics/global", "/analytics/global/export", "/analytics/global/x", "/analytics", "/evenements/1", "/evenements/99999", "/evenements/1/x", "/evenements",
-    "/contacts", "/contacts/actions", "/contacts/12", "/contacts/12/etiquettes", "/contacts/12/etiquettes/retirer", "/contacts/12/cycle-de-vie", "/contacts/12/etat", "/contacts/12/effacer", "/contacts/fusion", "/contacts/12/evenements.json", "/formulaires", "/formulaires/1", "/formulaires/1/publier", "/formulaires/99999/supprimer", "/contacts/12/x", "/contacts/doublons", "/webhooks", "/site-web/utilisateurs"];
+    "/contacts", "/contacts/actions", "/contacts/12", "/contacts/12/etiquettes", "/contacts/12/etiquettes/retirer", "/contacts/12/cycle-de-vie", "/contacts/12/etat", "/contacts/12/effacer", "/contacts/fusion", "/contacts/demandes", "/contacts/demandes/traiter", "/contacts/demandes/3/accepter", "/contacts/12/evenements.json", "/formulaires", "/formulaires/1", "/formulaires/1/publier", "/formulaires/99999/supprimer", "/contacts/12/x", "/contacts/doublons", "/webhooks", "/site-web/utilisateurs"];
   const paths = new Set(handmade);
   before(() => { for (const r of mountedRoutes()) for (const id of [1, 2, 99999]) for (const p of concrete(r.path, id)) paths.add(p); });
 

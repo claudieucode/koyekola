@@ -19,7 +19,8 @@ const RATE_WINDOW = 60_000;
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 
-const STATUS_OF = { invalid_field: 400, invalid_email: 400, duplicate: 409, not_found: 404, invalid_state: 400 };
+const STATUS_OF = { invalid_field: 400, invalid_email: 400, duplicate: 409, not_found: 404, invalid_state: 400, rate_limited: 429 };
+const requestsLib = require("../contactcore/requests");
 const fail = (res, status, code, message) => res.status(status).json({ error: { code, message } });
 const intId = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 
@@ -89,9 +90,10 @@ function createApiRouter({ db }) {
         const body = req.body || {};
         const input = {};
         for (const k of ["email", "first_name", "last_name", "company", "country", "language", "timezone", "phone", "properties", "source"]) if (body[k] !== undefined) input[k] = body[k];
+        requestsLib.guard(req.mkCtx); // limite de débit par site (429), quel que soit le résultat
         outcome = contactCore.identify(req.mkCtx, { ...input, siteId: req.mkApi.siteId });
         if (outcome.created || outcome.withheld) {
-          if (outcome.withheld) auditDenied(db, req.mkApi, "POST /contacts", "contact hors de la portée d'écriture");
+          if (outcome.withheld) { auditDenied(db, req.mkApi, "POST /contacts", "contact hors de la portée d'écriture"); requestsLib.enqueue(req.mkCtx, { email: input.email, source: "api", keyId: req.mkApi.keyId }); } // R7 lot 5 : demande mise en file pour l'équipe
           return res.status(202).json({ data: null, accepted: true });
         }
       } else {

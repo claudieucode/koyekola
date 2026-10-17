@@ -33,6 +33,7 @@
       <h1>Contacts <span class="mk-count"><%= mkh.fmt(result.total) %></span></h1>
       <div class="mk-actions">
         <% if (mk.can("contacts.merge")) { %><a href="/marketing/contacts/doublons" class="btn btn-outline btn-sm">Doublons</a><% } %>
+        <% if (siteScoped) { %><a href="/marketing/contacts/demandes?site=<%= mk.ctx.siteScope %>" class="btn btn-outline btn-sm">Mes demandes</a><% } else if (mk.can("contacts.requests")) { %><a href="/marketing/contacts/demandes/traiter" class="btn btn-outline btn-sm">Demandes de rattachement</a><% } %>
         <% if (mk.can("contacts.import")) { %><a href="/marketing/importer" class="btn btn-outline btn-sm">Importer</a><% } %>
         <% if (mk.can("contacts.export")) { %><a href="<%= exportUrl %>" class="btn btn-outline btn-sm">Exporter (CSV)</a><% } %>
       </div>

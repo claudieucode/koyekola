@@ -98,6 +98,7 @@ const SITE_RULES = Object.freeze([
   // Formulaires par site (R7 lot 2) : un formulaire visé par son identifiant relève de son site (NULL = site principal, fermé à un accès limité) ; liste et création : site choisi
   { id: "formulaire-par-identifiant", pattern: /^\/formulaires\/(\d{1,12})(?:\/|$)/, kind: "resource", table: "form", idGroup: 1 },
   { id: "formulaires-du-site", pattern: /^\/formulaires(?:\/|$)/, kind: "param", terminal: true },
+  { id: "demandes-du-site", pattern: /^\/contacts\/demandes$/, methods: ["GET"], kind: "queryGet" },
   { id: "contacts-ecriture-du-site", pattern: /^\/contacts(?:\/(?:actions|\d+(?:\/(?:proprietes|etiquettes(?:\/retirer)?|listes(?:\/retirer)?|cycle-de-vie|etat|consentement|desinscrire|supprimer-adresse|effacer))?))?$/, methods: ["POST"], kind: "param" },
   { id: "creation-avec-site", pattern: /^(?:\/pages|\/site-web\/composants)$/, methods: ["POST"], kind: "bodySiteId" },
   // Médias par site (R5) : un fichier visé par son identifiant relève du site qui le possède (commun = organisation, fermé à un accès limité à un site)

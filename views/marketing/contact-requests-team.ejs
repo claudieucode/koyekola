@@ -1,0 +1,26 @@
+<%- include("partials/top", { title, active }) %>
+    <p class="mk-back"><a href="/marketing/contacts">← Contacts</a></p>
+    <div class="mk-head"><h1>Demandes de rattachement <span class="mk-count"><%= items.length %></span></h1></div>
+    <p class="mk-lead">Un site demande une adresse déjà connue d'un autre site. <strong>Accepter</strong> donne au site une <strong>lecture seule</strong> de la fiche (jamais de modification, ni des données, ni des consentements). <strong>Refuser</strong> ne change rien. Rien n'est fusionné.</p>
+    <% if (!items.length) { %>
+      <div class="mk-empty"><%- icon("users", { size: 32 }) %><h2>Aucune demande en attente</h2></div>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table">
+        <caption class="sr-only">Demandes en attente</caption>
+        <thead><tr><th scope="col">Adresse</th><th scope="col">Site demandeur</th><th scope="col">Contact existant</th><th scope="col">Origine</th><th scope="col">Demandée le</th><th scope="col">Décision</th></tr></thead>
+        <tbody>
+          <% items.forEach((r) => { %>
+            <tr>
+              <td><%= r.email %></td><td><%= r.site_name %></td>
+              <td><% if (r.contact_id) { %><a href="/marketing/contacts/<%= r.contact_id %>"><%= mkh.fullName(r) || r.email %></a><% } else { %>—<% } %></td>
+              <td><%= r.origin_name || "Site principal" %></td><td><%= mkh.fdate(r.created_at) %></td>
+              <td>
+                <form action="/marketing/contacts/demandes/<%= r.id %>/accepter" method="post" class="mk-inline"><button class="btn btn-primary btn-sm" type="submit">Accepter (lecture seule)</button></form>
+                <form action="/marketing/contacts/demandes/<%= r.id %>/refuser" method="post" class="mk-inline"><button class="btn btn-outline btn-sm" type="submit">Refuser</button></form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+    <% } %>
+<%- include("partials/bottom") %>
