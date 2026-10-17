@@ -167,8 +167,8 @@ describe("entrées fermées : « Bientôt » sans donnée ni action", () => {
   test("le menu montre chaque entrée fermée grisée sans lien ; son adresse directe n'affiche ni tableau, ni formulaire, ni donnée (équipe et administrateur du site)", async () => {
     const menu = (await boss.get(`/marketing/site-web/sites/${A}/tableau-de-bord`)).text;
     const nbBientot = (menu.match(/mk-cms-tag[^>]*>Bientôt/g) || []).length;
-    assert.equal(nbBientot, Object.keys(MOTIFS).length + 1, "autant d'entrées « Bientôt » que d'entrées fermées de l'inventaire + « Formulaires et contacts » du groupe Marketing du site (isolation R7 livrée, écran de site à ouvrir : R8-3)");
-    for (const slug of ["navigation", "seo", "formulaires", "contacts", "modeles"]) for (const c of [boss, adminA]) {
+    assert.equal(nbBientot, Object.keys(MOTIFS).length, "autant d'entrées « Bientôt » que d'entrées fermées de l'inventaire (Formulaires et Contacts sont ouverts depuis R8 lot 3)");
+    for (const slug of ["navigation", "seo", "modeles"]) for (const c of [boss, adminA]) {
       const r = await c.get(`/marketing/site-web/sites/${A}/${slug}`);
       assert.equal(r.status, 200, slug); assert.match(r.text, /Prochain palier/, slug);
       const main = (r.text.match(/<main[\s\S]*<\/main>/) || [""])[0];

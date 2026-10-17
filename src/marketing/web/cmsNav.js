@@ -166,8 +166,9 @@ const SITE_MODULES = {
   categories: { label: "Catégories et étiquettes", kind: "delegate", to: "/site-web/articles/categories", reg: "articles/categories", permission: "taxonomies.read", legacy: `${BASE}/articles/categories` },
   commentaires: { label: "Commentaires", kind: "delegate", to: "/site-web/commentaires", reg: "commentaires", permission: "comments.read", legacy: `${BASE}/commentaires` },
   medias: { label: "Médias", kind: "delegate", to: "/site-web/mediatheque", reg: "mediatheque", permission: "media.read", legacy: `${BASE}/mediatheque` },
-  formulaires: { label: "Formulaires et contacts", kind: "soon", phase: "B4", permission: "forms.read", legacy: "/marketing/formulaires", legacyLabel: "Formulaires" },
-  contacts: { label: "Contacts", kind: "soon", phase: "B4", permission: "forms.read", legacy: "/marketing/contacts" },
+  // R8 lot 3 : Formulaires et Contacts s'ouvrent dans le cadre du site (isolation R7 : formulaires, contacts, consentements, demandes de rattachement ; le site vient de l'adresse)
+  formulaires: { label: "Formulaires", kind: "delegate", to: "/formulaires", reg: "forms", permission: "forms.read", legacy: "/marketing/formulaires", legacyLabel: "Formulaires" },
+  contacts: { label: "Contacts", kind: "delegate", to: "/contacts", reg: "contacts", permission: "contacts.read", legacy: "/marketing/contacts" },
   modeles: { label: "Modèles et blocs", kind: "soon", phase: "B3", permission: "appearance.read", legacy: `${BASE}/apparence/templates` },
   navigation: { label: "Menus", kind: "soon", phase: "menus", permission: "navigation.read", legacy: `${BASE}/navigation`, reg: "navigation" },
   seo: { label: "SEO", kind: "soon", phase: "B6", permission: "forms.read", legacy: `${BASE}/seo`, reg: "seo" },
@@ -190,6 +191,7 @@ const SCOPED_KEYS = new Set(Object.values(SITE_MODULES).filter((m) => m.kind ===
 const NESTED = Object.freeze({
   articles: ["ajouter", "brouillons", "programmes", "publies", "corbeille", "categories", "etiquettes", "auteurs"],
   commentaires: ["en-attente", "approuves", "indesirables", "corbeille"],
+  contacts: ["nouveau", "demandes"],
 });
 // Entrées du registre ouvertes comme sous-pages déléguées : leur clé `active` prend aussi le cadre du site quand le serveur a vérifié un site
 const FRAMED = new Set();
@@ -268,10 +270,10 @@ const soonPhase = (key) => {
 const SOON_SLUG = { articles: "articles", mediatheque: "medias", navigation: "navigation", commentaires: "commentaires", seo: "seo" };
 
 // Extensions de l'espace, communes au principal et aux sites (hors registre) : Composants (groupe Pages) et le groupe « Marketing du site »
-const MARKETING_MODULES = ["listes", "segments", "modeles-email", "campagnes", "automatisations", "tunnels", "analytics", "formulaires"];
+const MARKETING_MODULES = ["listes", "segments", "modeles-email", "campagnes", "automatisations", "tunnels", "analytics", "formulaires", "contacts"];
 function marketingGroup(space) {
   const P = space.principal;
-  const items = (P ? [...MARKETING_MODULES, "contacts"] : MARKETING_MODULES).map((m) => {
+  const items = MARKETING_MODULES.map((m) => {
     if (P) { const x = SITE_MODULES[m] || { label: "Contacts", legacy: "/marketing/contacts", permission: "forms.read" }; return { key: `espace/${m}`, module: m, label: x.legacyLabel || x.label, href: x.legacy, status: "live", permission: x.permission, reg: x.reg || null, section: "marketing" }; }
     const it = siteModule(space, m);
     return it.status === "preview" ? { ...it, href: null, disabled: true } : it;

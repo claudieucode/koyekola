@@ -65,7 +65,7 @@ describe("1 — le menu d'un site est la projection du registre", () => {
     assert.equal((navOf(html).match(/mk-cms-tag[^>]*>Bientôt/g) || []).length, soon.length);
     assert.equal((navOf(html).match(/is-soon" aria-disabled="true"/g) || []).length, soon.length, "chaque entrée grisée est un élément désactivé");
     for (const i of soon) assert.doesNotMatch(navOf(html), new RegExp(`<a [^>]*>[^<]*<span>${i.label.replace(/[()]/g, ".")}</span><span class="mk-cms-tag">Bientôt`), `${i.key} : pas de lien`);
-    for (const m of ["navigation", "seo", "formulaires"]) { // articles, médias et commentaires sont ouverts depuis R8 lot 2 (voir menu-site-inventaire)
+    for (const m of ["navigation", "seo"]) { // formulaires et contacts : ouverts depuis R8 lot 3 ; articles, médias et commentaires sont ouverts depuis R8 lot 2 (voir menu-site-inventaire)
       const r = await boss.get(`${SP}/${A}/${m}`);
       assert.equal(r.status, 200, m);
       assert.doesNotMatch(main(r.text), /Liste Beta|Page Beta|<table|<form/, `${m} : ni donnée ni action`);
@@ -179,7 +179,7 @@ describe("5 — le cadre ne s'active que sur un site vérifié et un écran prop
     for (const u of ["/marketing/listes?site=987654", "/marketing/listes?site=abc", "/marketing/listes?site=1%20OR%201=1"]) { const r = await boss.get(u); assert.ok(!/mk-site-banner/.test(r.text), u); }
   });
   test("un écran d'organisation qui accepte « ?site= » comme simple filtre n'ouvre pas l'espace du site", async () => {
-    for (const u of [`/marketing/site-web/utilisateurs?site=${A}`, `/marketing/contacts?site=${A}`, `/marketing/site-web/redirections?site=${A}`]) assert.ok(!/mk-site-banner/.test((await boss.get(u)).text), u);
+    for (const u of [`/marketing/site-web/utilisateurs?site=${A}`, `/marketing/site-web/redirections?site=${A}`]) assert.ok(!/mk-site-banner/.test((await boss.get(u)).text), u);
   });
   test("un membre limité ne reçoit jamais le cadre d'un site qui n'est pas le sien", async () => {
     assert.ok(!/mk-site-banner/.test((await memA.get(`/marketing/listes?site=${B}`)).text));

@@ -50,7 +50,7 @@ describe("C1 — une seule définition, deux présentations", () => {
   test("les clés d'un site sont celles du registre (plus Composants et le groupe Marketing) : pas de clé inventée", () => {
     const keys = nav.projectSections(site).flatMap((g) => g.items.map((i) => i.key));
     const extra = keys.filter((k) => !registryKeys.includes(k));
-    assert.deepEqual(extra.filter((k) => !EXTENSIONS.includes(k)).filter((k) => !/^espace\/(listes|segments|modeles-email|campagnes|automatisations|tunnels|analytics|formulaires)$/.test(k)), []);
+    assert.deepEqual(extra.filter((k) => !EXTENSIONS.includes(k)).filter((k) => !/^espace\/(listes|segments|modeles-email|campagnes|automatisations|tunnels|analytics|formulaires|contacts)$/.test(k)), []);
   });
   test("aucune entrée n'est ouverte à un site par défaut : une NOUVELLE entrée du registre est « Bientôt » dans un site et normale dans le principal", () => {
     const grp = nav.SECTIONS.find((s) => s.key === "pages");

@@ -55,8 +55,18 @@
 
     <% if (typeof stats !== "undefined" && stats) { %>
       <div class="mk-stats mk-stats-4"><% stats.forEach((s) => { %>
-        <a class="mk-stat mk-cms-stat" href="<%= s.href %>"><span class="mk-stat-label"><%= s.label %></span><span class="mk-stat-value"><%= mkh.fmt(s.value) %></span></a>
+        <a class="mk-stat mk-cms-stat" href="<%= s.href %>"><span class="mk-stat-label"><%= s.label %></span><span class="mk-stat-value"><%= s.value === null || s.value === undefined ? "—" : mkh.fmt(s.value) %></span><% if (s.hint) { %><span class="mk-stat-hint"><%= s.hint %></span><% } %></a>
       <% }) %></div>
+    <% } %>
+
+    <% if (typeof activity !== "undefined" && activity) { %>
+      <section class="mk-panel" aria-labelledby="cms-activity"><h2 id="cms-activity">Activité récente</h2>
+        <% if (activity.unavailable) { %><p class="field-hint">Le journal d'activité est momentanément indisponible.</p>
+        <% } else if (!activity.rows.length) { %><p class="field-hint">Aucune activité enregistrée pour ce site.</p>
+        <% } else { %><div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Activité récente du site</caption>
+          <thead><tr><th scope="col">Quand</th><th scope="col">Qui</th><th scope="col">Action</th></tr></thead>
+          <tbody><% activity.rows.forEach((r) => { %><tr><td data-label="Quand"><%= r.at %></td><td data-label="Qui"><%= r.who %></td><td data-label="Action"><code><%= r.action %></code></td></tr><% }) %></tbody></table></div><% } %>
+      </section>
     <% } %>
 
     <% if (typeof cards !== "undefined" && cards && cards.length) { %>

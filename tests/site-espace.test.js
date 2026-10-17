@@ -20,7 +20,7 @@ const mkPage = (site, name, status = "draft") => Number(db.prepare("INSERT INTO 
 const mkComp = (site, name) => Number(db.prepare("INSERT INTO mk_web_components (organization_id, site_id, name, section) VALUES (?, ?, ?, ?)").run(orgId, site, name, JSON.stringify({ type: "text", title: name, body: "x" })).lastInsertRowid);
 const mkRedirect = (site, from) => db.prepare("INSERT INTO seo_redirects (source_path, target, status, enabled, site_id) VALUES (?, '/ailleurs', 301, 1, ?)").run(from, site);
 const MODULES_LIVE = ["tableau-de-bord", "pages", "composants", "redirections", "reglages"];
-const MODULES_SOON = ["formulaires", "contacts", "modeles", "navigation", "seo"]; // R8 lot 2 : articles, catégories, commentaires et médias sont ouverts (voir menu-site-inventaire)
+const MODULES_SOON = ["modeles", "navigation", "seo"]; // R8 lot 2 : articles, catégories, commentaires et médias sont ouverts (voir menu-site-inventaire)
 
 before(async () => {
   srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
@@ -180,7 +180,7 @@ describe("4 — modules « Bientôt » : aucune donnée, aucune action simulée"
     const space = { siteId: A, principal: false, base: `${SP}/${A}`, name: "Site Alpha", listHref: "/marketing/site-web/sites" };
     const soon = nav.projectSections(space).flatMap((x) => x.items).filter((i) => i.disabled).length;
     assert.equal((html.match(/mk-cms-tag[^>]*>Bientôt/g) || []).length, soon);
-    assert.equal(soon, 38, "R8 lot 2 : 53 − 15 entrées ouvertes (articles ×8 dont Ajouter, médias, commentaires ×5, auteurs…)");
+    assert.equal(soon, 37, "R8 lots 2 et 3 : 53 − 15 (articles, médias, commentaires) − 1 (formulaires)");
   });
 });
 

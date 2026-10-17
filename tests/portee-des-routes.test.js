@@ -79,6 +79,7 @@ const legacySiteOfRequest = (db) => (req) => {
       return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
     }
     // Revenus par site (R7 lot 6.5) : aperçu en lecture seule
+    if (req.method === "GET" && p === "/contacts/nouveau") { const raw = (req.query && req.query.site) ?? ""; return /^\d{1,12}$/.test(String(raw)) ? { siteId: Number(raw) } : null; } // R8 lot 3
     if (req.method === "GET" && p === "/revenus") {
       const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
       return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;

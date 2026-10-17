@@ -53,7 +53,7 @@
           <% } %>
         </form>
         <% } %>
-        <% if (mk.can("contacts.merge")) { %><a class="btn btn-outline btn-sm" href="/marketing/contacts/doublons">Chercher des doublons</a><% } %>
+        <% if (mk.can("contacts.merge") && mk.ctx.siteScope === undefined) { %><a class="btn btn-outline btn-sm" href="/marketing/contacts/doublons">Chercher des doublons</a><% } %>
       </div>
       <p class="field-hint">Une fiche archivée ou désactivée n'est jamais jointe par le marketing, même si elle avait donné son accord. Le cycle de vie est indépendant du consentement.</p>
       <% } %>

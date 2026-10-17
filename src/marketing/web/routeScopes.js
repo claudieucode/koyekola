@@ -92,7 +92,7 @@ const SITE_RULES = Object.freeze([
   { id: "analytics-du-site", pattern: /^\/analytics\/global(?:\/export)?$/, methods: ["GET"], kind: "queryGet" },
   { id: "evenement-par-identifiant", pattern: /^\/evenements\/(\d{1,12})$/, kind: "resource", table: "evenement", idGroup: 1 },
   { id: "email-liste-et-creation", pattern: new RegExp(`^\\/(?:${EMAIL_FAMILIES})(?:\\/(?:nouvelle|nouveau|apercu|apercu-cible|historique|parcours(?:\\/.*)?|bibliotheque(?:\\/.*)?))?$`), kind: "param", terminal: true },
-  { id: "contacts-du-site", pattern: /^\/contacts(?:\/\d+(?:\/evenements\.json)?)?$/, methods: ["GET"], kind: "queryGet" },
+  { id: "contacts-du-site", pattern: /^\/contacts(?:\/nouveau|\/\d+(?:\/evenements\.json)?)?$/, methods: ["GET"], kind: "queryGet" }, // R8 lot 3 : + « nouveau » (page de création, dans le cadre du site)
   // Contacts par site (R7, décision D2) : écriture d'un contact par un accès limité à un site — le site vient de « ?site= » ou du champ « site » (validé par les droits) ; le DROIT de modifier ce contact
   // (origine = ce site) est ensuite vérifié par contactcore/siteAccess ; fusion et doublons restent réservés à l'équipe (contactCore.js)
   // Formulaires par site (R7 lot 2) : un formulaire visé par son identifiant relève de son site (NULL = site principal, fermé à un accès limité) ; liste et création : site choisi

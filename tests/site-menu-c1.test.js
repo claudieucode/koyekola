@@ -60,7 +60,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
   test("les entrées non ouvertes sont des éléments grisés SANS lien ; les entrées ouvertes ont toutes un lien dans le cadre du site", async () => {
     const site = parse((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
     const entries = site.flatMap((g) => g.entrees);
-    assert.ok(entries.filter((e) => e.grise).length >= 38, "R8 lot 2 : médias, articles et commentaires sont ouverts ; le reste reste grisé");
+    assert.ok(entries.filter((e) => e.grise).length >= 36, "R8 lots 2 et 3 : médias, articles et commentaires sont ouverts ; le reste reste grisé");
     for (const e of entries) { if (e.grise) assert.equal(e.href, null, e.libelle); else assert.match(e.href, new RegExp(`^(${SP}/${A}/|${SP}$)`), e.libelle); }
   });
   test("chaque lien ouvert du menu répond 200 DANS le cadre du site (bandeau + menu) : aucun lien ne renvoie au CMS principal", async () => {

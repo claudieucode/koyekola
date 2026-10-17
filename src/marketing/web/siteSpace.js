@@ -45,15 +45,17 @@ const SCREENS = {
     const wc = scope.where(space.siteId);
     const own = (t) => safeCount(db, `SELECT COUNT(*) n FROM ${t} WHERE 1 = 1${wc.sql}`, wc.params);
     const recent = db.prepare(`SELECT p.id, p.name, p.slug, p.status, p.updated_at FROM mk_landing_pages p WHERE p.organization_id = ? AND p.archived_at IS NULL AND p.kind <> 'step'${w.sql} ORDER BY p.updated_at DESC, p.id DESC LIMIT 8`).all(req.mk.ctx.organizationId, ...w.params);
+    const dash = require("./siteDashboard");
     const stats = [
       { label: "Pages en ligne", value: pg.publiees, href: `${space.base}/pages` },
       { label: "Brouillons", value: pg.brouillons, href: `${space.base}/pages` },
+      ...dash.indicators(req, space), // R8 lot 3 : articles, commentaires, médias, contacts, formulaires (selon les droits, bornés au site)
       { label: "Composants propres au site", value: own("mk_web_components"), href: `${space.base}/composants` },
       { label: "Redirections", value: own("seo_redirects"), href: `${space.base}/redirections` },
       { label: "Listes d'envoi", value: own("mk_lists"), href: space.principal ? "/marketing/listes?site=principal" : `${space.base}/listes` },
       { label: "Campagnes", value: own("mk_campaigns"), href: space.principal ? "/marketing/campagnes?site=principal" : `${space.base}/campagnes` },
     ];
-    return { title: "Tableau de bord", lead: `Vue d'ensemble de « ${space.name} » : uniquement les contenus de ce site.`, note: readOnlyNote(space), stats,
+    return { title: "Tableau de bord", lead: `Vue d'ensemble de « ${space.name} » : uniquement les contenus de ce site.`, note: readOnlyNote(space), stats, activity: dash.activity(req, space),
       table: { caption: "Pages récemment modifiées", columns: [{ label: "Page" }, { label: "État" }, { label: "Modifiée le" }], rows: recent.map((p) => ({ cells: [{ text: p.name, href: `/marketing/pages/${p.id}`, sub: `/${p.slug}` }, pageStatus(p), fdate(p.updated_at)] })),
         empty: empty("layout", "Aucune page pour l'instant", "Les pages de ce site apparaîtront ici dès leur création.", space.status === "active" && req.mk.can("forms.write") ? { label: "Ajouter une page", href: `${space.base}/pages#nouvelle` } : null) } };
   },
