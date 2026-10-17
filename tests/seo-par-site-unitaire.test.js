@@ -45,6 +45,14 @@ describe("SEO par site", () => {
     assert.equal(main.site_name, "MARQUE-PRINCIPALE", "le site principal est inchangé");
     for (const s of [a, b]) assert.doesNotMatch(JSON.stringify(s), /PRINCIPALE|principale/, "aucune donnée de marque du principal");
   });
+  test("logo : sans réglage SEO propre, le logo d'un site est celui de ses réglages d'identité (jamais celui du principal)", () => {
+    db.prepare("UPDATE mk_sites SET settings = ? WHERE id = ?").run(JSON.stringify({ identity: { logoUrl: "/uploads/marketing/1/logo-beta.png" } }), B);
+    settings.resetCache();
+    assert.equal(settings.allFor(B).org_logo, "/uploads/marketing/1/logo-beta.png"); assert.equal(settings.allFor(A).org_logo, "", "un site sans logo n'emprunte rien");
+    assert.equal(settings.saveForSite(A, { org_logo: "/uploads/thumbnails/a.png" }, null).ok, true); assert.equal(settings.allFor(A).org_logo, "/uploads/thumbnails/a.png", "le réglage propre passe avant");
+    assert.equal(settings.saveForSite(A, { org_logo: null }, null).ok, true);
+    db.prepare("UPDATE mk_sites SET settings = '{}' WHERE id = ?").run(B); settings.resetCache();
+  });
   test("écriture : seules les clés propres aux sites sont acceptées, validées comme les globales ; un site inexistant ou une clé globale sont refusés ; le retrait revient au neutre ; tout est journalisé avec le site", () => {
     assert.equal(settings.saveForSite(999, { site_name: "X" }, null).ok, false);
     const g = settings.saveForSite(A, { publish_guard: "block_critical" }, null); assert.equal(g.ok, false); assert.match(g.errors[0], /global/);
@@ -84,6 +92,14 @@ describe("SEO par site", () => {
     assert.equal(org(gm).name, "ORG-PRINCIPALE"); assert.deepEqual(org(gm).sameAs, ["https://facebook.com/principale"]);
     assert.doesNotMatch(JSON.stringify([ga, gb]), /PRINCIPALE|principale/);
     assert.equal(ga.find((n) => n["@type"] === "WebSite").name, "Alpha Officiel"); assert.equal(gb.find((n) => n["@type"] === "WebSite").name, "Site Beta");
+  });
+  test("page d'un site servie sans domaine propre (hôte principal) : l'identité reste celle du SITE de la page (siteId explicite), jamais celle du principal", () => {
+    const req = reqFor(null, "/p/accueil");                                   // aucun site déduit de l'hôte
+    const g = schema.build(req, { page: { url: "https://k.test/p/accueil", name: "P" }, siteId: B })[0]["@graph"];
+    assert.equal(g.find((n) => /Organization/.test(n["@type"])).name, "Site Beta"); assert.doesNotMatch(JSON.stringify(g), /PRINCIPALE|principale/);
+    const h = resolver.finalize(req, "/p/accueil", { siteId: B, rawTitle: "Titre", graph: { page: { name: "P" } } });
+    assert.equal(h.siteName, "Site Beta"); assert.doesNotMatch(JSON.stringify(h.jsonLd), /PRINCIPALE|principale/);
+    assert.equal(resolver.finalize(req, "/", { title: "Accueil" }).siteName, "MARQUE-PRINCIPALE", "sans site : le principal, inchangé");
   });
   test("robots.txt : chaque domaine a SES règles supplémentaires (vides par défaut) ; le principal garde les siennes ; l'indexation n'est pas modifiée", () => {
     const ta = robots.text(reqFor(siteA())), tb = robots.text(reqFor(siteB())), tm = robots.text(reqFor(null));

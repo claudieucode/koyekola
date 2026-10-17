@@ -79,12 +79,18 @@ function allFor(siteId) {
   if (!Number.isInteger(siteId)) return all();
   if (siteCache.has(siteId)) return siteCache.get(siteId);
   const stored = storedFor(siteId);
-  let siteName = "";
-  try { siteName = (db.prepare("SELECT name FROM mk_sites WHERE id = ?").get(siteId) || {}).name || ""; } catch { siteName = ""; }
+  let siteName = "", siteLogo = "";
+  try {
+    const row = db.prepare("SELECT name, settings FROM mk_sites WHERE id = ?").get(siteId) || {};
+    siteName = row.name || "";
+    // Le logo neutre d'un site est SON logo (Réglages du site ▸ Identité), jamais celui de l'organisation du site principal
+    try { siteLogo = require("../marketing/pages/siteSettings").normalizeSettings(JSON.parse(row.settings || "{}")).identity.logoUrl || ""; } catch { siteLogo = ""; }
+  } catch { siteName = ""; }
   const out = { ...all() };
   for (const key of SITE_KEYS) {
     if (Object.hasOwn(stored, key)) out[key] = stored[key];
     else if (key === "site_name") out[key] = siteName;
+    else if (key === "org_logo") out[key] = siteLogo;
     else out[key] = Object.hasOwn(NEUTRAL, key) ? NEUTRAL[key] : FIELDS[key].default;
   }
   out.org_name_effective = out.org_name || out.site_name;
